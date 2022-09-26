@@ -5,3 +5,4 @@ var Port int = 7379
 var KeysLimit int = 5
 
 var EvictionStrategy string = "simple-first"
+var AOFFile string = "./dice-master.aof"
