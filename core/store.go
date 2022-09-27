@@ -30,13 +30,17 @@ func Put(k string, obj *Obj) {
 		evict()
 	}
 	store[k] = obj
+	if KeyspaceStat[0] == nil {
+		KeyspaceStat[0] = make(map[string]int)
+	}
+	KeyspaceStat[0]["keys"]++
 }
 
 func Get(k string) *Obj {
 	v := store[k]
 	if v != nil {
 		if v.ExpiresAt != -1 && v.ExpiresAt <= time.Now().UnixMilli() {
-			delete(store, k)
+			Del(k)
 			return nil
 		}
 	}
@@ -46,6 +50,7 @@ func Get(k string) *Obj {
 func Del(k string) bool {
 	if _, ok := store[k]; ok {
 		delete(store, k)
+		KeyspaceStat[0]["keys"]--
 		return true
 	}
 	return false
