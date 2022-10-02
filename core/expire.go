@@ -4,6 +4,19 @@ import (
 	"time"
 )
 
+func hasExpired(obj *Obj) bool {
+	exp, ok := expires[obj]
+	if !ok {
+		return false
+	}
+	return exp <= uint64(time.Now().UnixMilli())
+}
+
+func getExpiry(obj *Obj) (uint64, bool) {
+	exp, ok := expires[obj]
+	return exp, ok
+}
+
 // TODO: Optimize
 //   - Sampling
 //   - Unnecessary iteration
@@ -13,13 +26,10 @@ func expireSample() float32 {
 
 	// assuming iteration of golang hash table in randomized
 	for key, obj := range store {
-		if obj.ExpiresAt != -1 {
-			limit--
-			// if the key is expired
-			if obj.ExpiresAt <= time.Now().UnixMilli() {
-				Del(key)
-				expiredCount++
-			}
+		limit--
+		if hasExpired(obj) {
+			Del(key)
+			expiredCount++
 		}
 
 		// once we iterated to 20 keys that have some expiration set

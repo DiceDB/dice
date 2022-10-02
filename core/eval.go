@@ -82,7 +82,7 @@ func evalGET(args []string) []byte {
 	}
 
 	// if key already expired then return nil
-	if obj.ExpiresAt != -1 && obj.ExpiresAt <= time.Now().UnixMilli() {
+	if hasExpired(obj) {
 		return RESP_NIL
 	}
 
@@ -105,18 +105,19 @@ func evalTTL(args []string) []byte {
 	}
 
 	// if object exist, but no expiration is set on it then send -1
-	if obj.ExpiresAt == -1 {
+	exp, isExpirySet := getExpiry(obj)
+	if !isExpirySet {
 		return RESP_MINUS_1
+	}
+
+	// if key expired i.e. key does not exist hence return -2
+	if exp < uint64(time.Now().UnixMilli()) {
+		return RESP_MINUS_2
 	}
 
 	// compute the time remaining for the key to expire and
 	// return the RESP encoded form of it
-	durationMs := obj.ExpiresAt - time.Now().UnixMilli()
-
-	// if key expired i.e. key does not exist hence return -2
-	if durationMs < 0 {
-		return RESP_MINUS_2
-	}
+	durationMs := exp - uint64(time.Now().UnixMilli())
 
 	return Encode(int64(durationMs/1000), false)
 }
@@ -151,7 +152,7 @@ func evalEXPIRE(args []string) []byte {
 		return RESP_ZERO
 	}
 
-	obj.ExpiresAt = time.Now().UnixMilli() + exDurationSec*1000
+	setExpiry(obj, exDurationSec*1000)
 
 	// 1 if the timeout was set.
 	return RESP_ONE
@@ -208,6 +209,11 @@ func evalLATENCY(args []string) []byte {
 	return Encode([]string{}, false)
 }
 
+func evalLRU(args []string) []byte {
+	evictAllkeysLRU()
+	return RESP_OK
+}
+
 func EvalAndRespond(cmds RedisCmds, c io.ReadWriter) {
 	var response []byte
 	buf := bytes.NewBuffer(response)
@@ -236,6 +242,8 @@ func EvalAndRespond(cmds RedisCmds, c io.ReadWriter) {
 			buf.Write(evalCLIENT(cmd.Args))
 		case "LATENCY":
 			buf.Write(evalLATENCY(cmd.Args))
+		case "LRU":
+			buf.Write(evalLRU(cmd.Args))
 		default:
 			buf.Write(evalPING(cmd.Args))
 		}
