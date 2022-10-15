@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"syscall"
 	"time"
 )
 
@@ -166,8 +167,13 @@ func evalEXPIRE(args []string) []byte {
 
 // TODO: Make it async by forking a new process
 func evalBGREWRITEAOF(args []string) []byte {
-	DumpAllAOF()
-	return RESP_OK
+	newChild, _, _ := syscall.Syscall(syscall.SYS_FORK, 0, 0, 0)
+	if newChild == 0 {
+		DumpAllAOF()
+		return []byte("")
+	} else {
+		return RESP_OK
+	}
 }
 
 func evalINCR(args []string) []byte {
