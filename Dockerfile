@@ -8,7 +8,7 @@ RUN apt install -y netcat
 # Set destination for COPY
 WORKDIR /app
 
-# Download Go modules
+# copy project files to /app dir
 COPY . .
 
 
