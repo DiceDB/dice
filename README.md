@@ -33,7 +33,7 @@ Because Dice speaks Redis' dialect, you can connect to it with any Redis Client 
 
 ## Getting Started
 
-To get started with building and contributing to DiceDB, please refer to the [issues](issues) created in this repository.
+To get started with building and contributing to DiceDB, please refer to the [issues](https://github.com/DiceDB/dice/issues) created in this repository.
 
 ## The story
 
