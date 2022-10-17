@@ -20,7 +20,7 @@ func setupFlags() {
 
 func main() {
 	setupFlags()
-	log.Println("rolling the dice 🎲")
+	log.Println("rolling the dice \u2684\uFE0E")
 
 	var sigs chan os.Signal = make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
