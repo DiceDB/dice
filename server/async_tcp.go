@@ -156,7 +156,7 @@ func RunAsyncTCPServer(wg *sync.WaitGroup) error {
 				}
 
 				connectedClients[fd] = core.NewClient(fd)
-				syscall.SetNonblock(serverFD, true)
+				syscall.SetNonblock(fd, true)
 
 				// add this new TCP connection to be monitored
 				var socketClientEvent syscall.EpollEvent = syscall.EpollEvent{
