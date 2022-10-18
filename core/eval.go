@@ -58,7 +58,7 @@ func evalSET(args []string) []byte {
 				return Encode(errors.New("ERR syntax error"), false)
 			}
 
-			exDurationSec, err := strconv.ParseInt(args[3], 10, 64)
+			exDurationSec, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
 				return Encode(errors.New("ERR value is not an integer or out of range"), false)
 			}
