@@ -110,21 +110,26 @@ func DecodeOne(data []byte) (interface{}, int, error) {
 	return nil, 0, nil
 }
 
-func Decode(data []byte) ([]interface{}, error) {
+func Decode(data []byte) ([]interface{}, bool, error) {
 	if len(data) == 0 {
-		return nil, errors.New("no data")
+		return nil, false, errors.New("no data")
 	}
 	var values []interface{} = make([]interface{}, 0)
 	var index int = 0
+	var maliciousFlag bool
 	for index < len(data) {
 		value, delta, err := DecodeOne(data[index:])
 		if err != nil {
-			return values, err
+			return values, false, err
+		}
+		if delta == 0 {
+			maliciousFlag = true
+			break
 		}
 		index = index + delta
 		values = append(values, value)
 	}
-	return values, nil
+	return values, maliciousFlag, nil
 }
 
 func encodeString(v string) []byte {
