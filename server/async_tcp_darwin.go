@@ -1,12 +1,3 @@
-/**
-Author: Yakshit Jain
-Date: 19 Oct 2022
-
-Implementation Reference:
-i) https://overengineered.dev/writing-an-event-loop-in-go
-ii) https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
-**/
-
 package server
 
 import (
@@ -21,6 +12,11 @@ import (
 	"github.com/dicedb/dice/core"
 )
 
+/*
+Implementation Reference for OSX Support:
+i) https://overengineered.dev/writing-an-event-loop-in-go
+ii) https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
+*/
 func RunAsyncTCPServer(wg *sync.WaitGroup) error {
 	defer wg.Done()
 	defer func() {

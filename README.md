@@ -19,7 +19,9 @@ Building a database from scratch has its own thrill, and you can leverage this t
 To run DiceDB locally, you will need
 
 1. [Golang](https://go.dev/)
-2. [Linux based environment](https://en.wikipedia.org/wiki/Comparison_of_Linux_distributions)
+2. Any of the below supported platform environment:
+    1. [Linux based environment](https://en.wikipedia.org/wiki/Comparison_of_Linux_distributions)
+    2. [OSX (Darwin) based environment](https://en.wikipedia.org/wiki/MacOS)
 
 ```
 $ git clone https://github.com/dicedb/dice
