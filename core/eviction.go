@@ -70,14 +70,28 @@ func evictAllkeysLRU() {
 	}
 }
 
+func evictAllkeysLFU() {
+	evictCount := int16(config.EvictionRatio * float64(config.KeysLimit))
+	for i := 0; i < int(evictCount) && len(store) > 0; i++ {
+		item := freqList.RemoveLRU()
+		if item == nil {
+			return
+		}
+		Del(item.key)
+	}
+}
+
 // TODO: implement LFU
 func evict() {
 	switch config.EvictionStrategy {
-	case "simple-first":
+	case config.SIMPLE_FITST:
 		evictFirst()
-	case "allkeys-random":
+	case config.RANDOM:
 		evictAllkeysRandom()
-	case "allkeys-lru":
+	case config.LRU:
 		evictAllkeysLRU()
+	case config.LFU:
+		evictAllkeysLFU()
 	}
+
 }

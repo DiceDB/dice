@@ -235,6 +235,10 @@ func evalLRU(args []string) []byte {
 	evictAllkeysLRU()
 	return RESP_OK
 }
+func evalLFU(args []string) []byte {
+	evictAllkeysLFU()
+	return RESP_OK
+}
 
 func evalSLEEP(args []string) []byte {
 	if len(args) != 1 {
@@ -279,6 +283,8 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		return evalLATENCY(cmd.Args)
 	case "LRU":
 		return evalLRU(cmd.Args)
+	case "LFU":
+		return evalLFU(cmd.Args)
 	case "SLEEP":
 		return evalSLEEP(cmd.Args)
 	case "MULTI":
