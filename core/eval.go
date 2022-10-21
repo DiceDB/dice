@@ -253,6 +253,18 @@ func evalMULTI(args []string) []byte {
 	return RESP_OK
 }
 
+func evalFILTERVALS(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR wrong number of arguments for 'FILTERVALS' command"), false)
+	}
+
+	resp, err := FilterVals(args[0])
+	if err != nil {
+		return Encode(err, false)
+	}
+	return Encode(resp, false)
+}
+
 func executeCommand(cmd *RedisCmd, c *Client) []byte {
 	switch cmd.Cmd {
 	case "PING":
@@ -284,6 +296,8 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 	case "MULTI":
 		c.TxnBegin()
 		return evalMULTI(cmd.Args)
+	case "FILTERVALS":
+		return evalFILTERVALS(cmd.Args)
 	case "EXEC":
 		if !c.isTxn {
 			return Encode(errors.New("ERR EXEC without MULTI"), false)

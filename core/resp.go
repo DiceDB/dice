@@ -152,6 +152,16 @@ func Encode(value interface{}, isSimple bool) []byte {
 			buf.Write(encodeString(b))
 		}
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
+	case []filterValTuple:
+		var b []byte
+		buf := bytes.NewBuffer(b)
+		for _, elem := range value.([]filterValTuple) {
+			keyValueList := []string{elem.Rkey, elem.Rvalue.(string)}
+
+			encodedTuple := Encode(keyValueList, false)
+			buf.Write(encodedTuple)
+		}
+		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
 	case error:
 		return []byte(fmt.Sprintf("-%s\r\n", v))
 	default:

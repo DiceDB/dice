@@ -1,6 +1,7 @@
 package core
 
 import (
+	"path/filepath"
 	"time"
 
 	"github.com/dicedb/dice/config"
@@ -8,6 +9,11 @@ import (
 
 var store map[string]*Obj
 var expires map[*Obj]uint64
+
+type filterValTuple struct {
+	Rkey   string
+	Rvalue interface{}
+}
 
 func init() {
 	store = make(map[string]*Obj)
@@ -62,4 +68,24 @@ func Del(k string) bool {
 		return true
 	}
 	return false
+}
+
+func FilterVals(pattern string) ([]filterValTuple, error) {
+	var filteredVals []filterValTuple
+	for key, value := range store {
+		val := value.Value.(string)
+		// look for a pattern match
+		// TODO: use regex or something light weight
+		ok, err := filepath.Match(pattern, val)
+		if err != nil {
+			return []filterValTuple{}, err
+		}
+		// match found
+		if ok {
+			keyValuePair := filterValTuple{Rkey: key, Rvalue: val}
+			filteredVals = append(filteredVals, keyValuePair)
+		}
+	}
+
+	return filteredVals, nil
 }
