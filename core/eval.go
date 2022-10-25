@@ -23,6 +23,7 @@ func init() {
 	txnCommands = map[string]bool{"EXEC": true, "DISCARD": true}
 }
 
+// Returns the status of the connection with a "PONG"
 func evalPING(args []string) []byte {
 	var b []byte
 
@@ -39,6 +40,8 @@ func evalPING(args []string) []byte {
 	return b
 }
 
+// Adds new entry for the specifid key-value pair
+// as per the sent expiry time.
 func evalSET(args []string) []byte {
 	if len(args) <= 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'set' command"), false)
@@ -73,6 +76,8 @@ func evalSET(args []string) []byte {
 	return RESP_OK
 }
 
+// Returns the value for the specified key if it exists
+// Returns nil if key is expired
 func evalGET(args []string) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'get' command"), false)
@@ -97,6 +102,9 @@ func evalGET(args []string) []byte {
 	return Encode(obj.Value, false)
 }
 
+// Returns the Time-to-Live for the specified key if it exists
+// Returns -1 in case no expiration is set on the key
+// Returns -2 in case key doesn't exist
 func evalTTL(args []string) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'ttl' command"), false)
@@ -129,6 +137,8 @@ func evalTTL(args []string) []byte {
 	return Encode(int64(durationMs/1000), false)
 }
 
+// Deletes all the specified keys if exists
+// Returns the count of total deleted keys
 func evalDEL(args []string) []byte {
 	var countDeleted int = 0
 
@@ -141,6 +151,9 @@ func evalDEL(args []string) []byte {
 	return Encode(countDeleted, false)
 }
 
+// Sets a expiry time on the specified key if it exists
+// The expiry time should be in integer format
+// Once the timeout is lapsed, the key will automatically be deleted
 func evalEXPIRE(args []string) []byte {
 	if len(args) <= 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'expire' command"), false)
@@ -186,6 +199,9 @@ func evalBGREWRITEAOF(args []string) []byte {
 	}
 }
 
+// Increments the value of the key by 1 if the key exists and the value is integer formet
+// If the key does not exist, new key is created with value 0
+// the value of the new key is then incremented
 func evalINCR(args []string) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'incr' command"), false)
@@ -213,6 +229,7 @@ func evalINCR(args []string) []byte {
 	return Encode(i, false)
 }
 
+// Prints the info of total keys per db
 func evalINFO(args []string) []byte {
 	var info []byte
 	buf := bytes.NewBuffer(info)
@@ -223,19 +240,23 @@ func evalINFO(args []string) []byte {
 	return Encode(buf.String(), false)
 }
 
+// TODO: Placeholder to support monitoring
 func evalCLIENT(args []string) []byte {
 	return RESP_OK
 }
 
+// TODO: Placeholder to support monitoring
 func evalLATENCY(args []string) []byte {
 	return Encode([]string{}, false)
 }
 
+// Deletes all the keys from the LRU
 func evalLRU(args []string) []byte {
 	evictAllkeysLRU()
 	return RESP_OK
 }
 
+// Sets db to sleep for the specified number of seconds
 func evalSLEEP(args []string) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'SLEEP' command"), false)
@@ -249,6 +270,9 @@ func evalSLEEP(args []string) []byte {
 	return RESP_OK
 }
 
+// Marks the start of the transaction.
+// All subsequent commands will be queued for 
+// atomic execution using EXEC
 func evalMULTI(args []string) []byte {
 	return RESP_OK
 }
