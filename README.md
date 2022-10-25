@@ -45,6 +45,8 @@ DiceDB started as a re-implementation of Redis in Golang and the idea was to - b
 
 The Code Contribution Guidelines are published at [CONTRIBUTING.md](CONTRIBUTING.md); please read them before you start making any changes. This would allow us to have a consistent standard of coding practices and developer experience.
 
+Contributors can join the [Discord Server](https://discord.gg/6r8uXWtXh7) for quick collaboration.
+
 ## Contributors
 
 <a href = "https://github.com/dicedb/dice/graphs/contributors">
