@@ -34,11 +34,10 @@ func newEvent(ePEvent syscall.EpollEvent) Event {
 func (op Operations) toNative() uint32 {
 	native := uint32(0)
 
-	switch {
-	case op&OP_READ != 0:
+	if op&OP_READ != 0 {
 		native |= syscall.EPOLLIN
-		fallthrough
-	case op&OP_WRITE != 0:
+	}
+	if op&OP_WRITE != 0 {
 		native |= syscall.EPOLLOUT
 	}
 
@@ -49,11 +48,10 @@ func (op Operations) toNative() uint32 {
 func newOperations(events uint32) Operations {
 	op := Operations(0)
 
-	switch {
-	case events&syscall.EPOLLIN != 0:
+	if events&syscall.EPOLLIN != 0 {
 		op |= OP_READ
-		fallthrough
-	case events&syscall.EPOLLOUT != 0:
+	}
+	if events&syscall.EPOLLOUT != 0 {
 		op |= OP_WRITE
 	}
 

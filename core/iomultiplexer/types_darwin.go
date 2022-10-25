@@ -37,11 +37,10 @@ func newEvent(kEvent syscall.Kevent_t) Event {
 func (op Operations) toNative() int16 {
 	native := int16(0)
 
-	switch {
-	case op&OP_READ != 0:
+	if op&OP_READ != 0 {
 		native |= syscall.EVFILT_READ
-		fallthrough
-	case op&OP_WRITE != 0:
+	}
+	if op&OP_WRITE != 0 {
 		native |= syscall.EVFILT_WRITE
 	}
 
@@ -52,11 +51,10 @@ func (op Operations) toNative() int16 {
 func newOperations(filter int16) Operations {
 	op := Operations(0)
 
-	switch {
-	case filter&syscall.EVFILT_READ != 0:
+	if filter&syscall.EVFILT_READ != 0 {
 		op |= OP_READ
-		fallthrough
-	case filter&syscall.EVFILT_WRITE != 0:
+	}
+	if filter&syscall.EVFILT_WRITE != 0 {
 		op |= OP_WRITE
 	}
 
