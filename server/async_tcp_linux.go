@@ -133,13 +133,16 @@ func RunAsyncTCPServer(wg *sync.WaitGroup) error {
 				if comm == nil {
 					continue
 				}
-				cmds, maliciousFlag, err := readCommands(comm)
-				if err != nil || maliciousFlag {
+				cmds, hasABORT, err := readCommands(comm)
+				if err != nil {
 					syscall.Close(int(events[i].Fd))
 					delete(connectedClients, int(events[i].Fd))
 					continue
 				}
 				respond(cmds, comm)
+				if hasABORT {
+					return nil
+				}
 			}
 		}
 
