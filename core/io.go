@@ -3,14 +3,17 @@ package core
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
+	"log"
 
 	"github.com/dicedb/dice/config"
 )
 
 type RESPParser struct {
-	c   io.ReadWriter
-	buf *bytes.Buffer
+	c    io.ReadWriter
+	buf  *bytes.Buffer
+	tbuf []byte
 }
 
 func NewRESPParser(c io.ReadWriter) *RESPParser {
@@ -24,35 +27,41 @@ func NewRESPParserWithBytes(c io.ReadWriter, initBytes []byte) *RESPParser {
 	return &RESPParser{
 		c:   c,
 		buf: buf,
+		// assigning temporary buffer to read 512 bytes in one shot
+		// and reading them in a loop until we have all the data
+		// we want.
+		// note: the size 512 is arbitrarily chosen, and we can put
+		// a decent thought into deciding the optimal value (in case it affects the perf)
+		tbuf: make([]byte, config.IOBufferLength),
 	}
 }
 
 func (rp *RESPParser) DecodeOne() (interface{}, error) {
-	// assigning temporary buffer to read 512 bytes in one shot
-	// and reading them in a loop until we have all the data
-	// we want.
-	// note: the size 512 is arbitrarily chosen, and we can put
-	// a decent thought into deciding the optimal value (in case it affects the perf)
-	var buf []byte = make([]byte, config.IOBufferLength)
-
-	// keep reading the bytes from the buffer until the first /r is found
-	// note: there may be extra bytes read over the socket post /r
+	// keep reading the bytes from the buffer until the first \r is found
+	// note: there may be extra bytes read over the socket post \r
 	// but that is fine.
 	for {
-		n, err := rp.c.Read(buf)
+		n, err := rp.c.Read(rp.tbuf)
 		if n <= 0 {
 			break
 		}
 		if err != nil {
 			if err == io.EOF {
+				if n > 0 {
+					rp.buf.Write(rp.tbuf[:n])
+				}
 				break
 			}
 			return nil, err
 		}
-		rp.buf.Write(buf[:n])
+		rp.buf.Write(rp.tbuf[:n])
 
-		if bytes.Contains(buf, []byte{'\r', '\n'}) {
+		if bytes.Contains(rp.tbuf, []byte{'\r', '\n'}) {
 			break
+		}
+
+		if rp.buf.Len() > config.IOBufferLengthMAX {
+			return nil, fmt.Errorf("input too long. max input can be %d bytes", config.IOBufferLengthMAX)
 		}
 	}
 
@@ -79,6 +88,7 @@ func (rp *RESPParser) DecodeOne() (interface{}, error) {
 	// not start with any of the above special chars will be a potential
 	// attack.
 	// Details: https://bou.ke/blog/hacking-developers/
+	log.Println("possible cross protocol scripting attack detected. dropping the request.")
 	return nil, errors.New("possible cross protocol scripting attack detected")
 }
 

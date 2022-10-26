@@ -13,3 +13,4 @@ var AOFFile string = "./dice-master.aof"
 
 // Network
 var IOBufferLength int = 512
+var IOBufferLengthMAX int = 50 * 1024
