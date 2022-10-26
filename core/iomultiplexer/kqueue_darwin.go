@@ -38,7 +38,7 @@ func New(maxClients int) (*KQueue, error) {
 // Subscribe subscribes to the given event
 func (kq *KQueue) Subscribe(event Event) error {
 	if subscribed, err := syscall.Kevent(kq.fd, []syscall.Kevent_t{event.toNative(syscall.EV_ADD)}, nil, nil); err != nil || subscribed == -1 {
-		return fmt.Errorf("failed to subscribe to event: %w", err)
+		return fmt.Errorf("kqueue subscribe: %w", err)
 	}
 	return nil
 }
@@ -49,7 +49,7 @@ func (kq *KQueue) Subscribe(event Event) error {
 func (kq *KQueue) Poll(timeout time.Duration) ([]Event, error) {
 	nEvents, err := syscall.Kevent(kq.fd, nil, kq.kQEvents, newTime(timeout))
 	if err != nil {
-		return nil, fmt.Errorf("failed to poll events: %w", err)
+		return nil, fmt.Errorf("kqueue poll: %w", err)
 	}
 
 	for i := 0; i < nEvents; i++ {

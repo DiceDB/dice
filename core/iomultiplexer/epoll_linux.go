@@ -39,7 +39,7 @@ func New(maxClients int) (*Epoll, error) {
 func (ep *Epoll) Subscribe(event Event) error {
 	nativeEvent := event.toNative()
 	if err := syscall.EpollCtl(ep.fd, syscall.EPOLL_CTL_ADD, event.Fd, &nativeEvent); err != nil {
-		return fmt.Errorf("failed to subscribe to event: %w", err)
+		return fmt.Errorf("epoll subscribe: %w", err)
 	}
 	return nil
 }
@@ -50,7 +50,7 @@ func (ep *Epoll) Subscribe(event Event) error {
 func (ep *Epoll) Poll(timeout time.Duration) ([]Event, error) {
 	nEvents, err := syscall.EpollWait(ep.fd, ep.ePollEvents, newTime(timeout))
 	if err != nil {
-		return nil, fmt.Errorf("failed to poll events: %w", err)
+		return nil, fmt.Errorf("epoll poll: %w", err)
 	}
 
 	for i := 0; i < nEvents; i++ {
