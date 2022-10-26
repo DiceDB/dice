@@ -1,8 +1,5 @@
-# This is an example .goreleaser.yml file with some sensible defaults.
-# Make sure to check the documentation at https://goreleaser.com
 before:
   hooks:
-    # You may remove this if you don't use go modules.
     - go mod tidy
 builds:
   - env:
@@ -30,28 +27,3 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
-# announce:
-#   discord:
-#     # Whether its enabled or not.
-#     # Defaults to false.
-#     enabled: true
-
-#     # Message template to use while publishing.
-#     # Defaults to `{{ .ProjectName }} {{ .Tag }} is out! Check it out at {{ .ReleaseURL }}`
-#     message_template: 'DiceDB {{ .Tag }} is out!'
-
-#     # Set author of the embed.
-#     # Defaults to `GoReleaser`
-#     author: 'DiceDB'
-
-#     # Color code of the embed. You have to use decimal numeral system, not hexadecimal.
-#     # Defaults to `3888754` - the grey-ish from goreleaser
-#     color: '16711680'
-
-#     # URL to an image to use as the icon for the embed.
-#     # Defaults to `https://goreleaser.com/static/avatar.png`
-#     icon_url: 'https://avatars.githubusercontent.com/u/112580013?s=200&v=4'
-
-# modelines, feel free to remove those if you don't want/use them:
-# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
-# vim: set ts=2 sw=2 tw=0 fo=cnqoj
