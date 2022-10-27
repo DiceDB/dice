@@ -29,12 +29,12 @@ $ go run main.go
 ## Run project inside Docker
 1. go to project root folder and run  ```docker build .``` 
 2. find docker image id using ```docker images``` and run the docker image ```docker run [Image ID]```
-![Docker](/dice/images/dice-doc-2.jpg?raw=true "docker")
+![Docker](/images/dice-doc-2.jpg?raw=true "docker")
 3. find [CONTAINER ID] using  
 ```docker ps``` and get inside container using ```docker exec -it [CONTAINER ID] bash```
 4. Test the project working fine using 
 ```(printf '*1\r\n$4\r\nPING\r\n*3\r\n$3\r\nSET\r\n$1\r\nk\r\n$1\r\nv\r\n*2\r\n$3\r\nGET\r\n$1\r\nk\r\n';) | nc localhost 7379```
-![Docker](/dice/images/dice-doc-1.jpg?raw=true "docker")
+![Docker](/images/dice-doc-1.jpg?raw=true "docker")
 
 
 ## Dice in action
