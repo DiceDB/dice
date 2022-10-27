@@ -42,19 +42,19 @@ func (rp *RESPParser) DecodeOne() (interface{}, error) {
 	// but that is fine.
 	for {
 		n, err := rp.c.Read(rp.tbuf)
+		// this condition needs to be explicitly added to ensure
+		// we break the loop if we read `0` bytes from the socket
+		// implying end of the input
 		if n <= 0 {
 			break
 		}
+		rp.buf.Write(rp.tbuf[:n])
 		if err != nil {
 			if err == io.EOF {
-				if n > 0 {
-					rp.buf.Write(rp.tbuf[:n])
-				}
 				break
 			}
 			return nil, err
 		}
-		rp.buf.Write(rp.tbuf[:n])
 
 		if bytes.Contains(rp.tbuf, []byte{'\r', '\n'}) {
 			break

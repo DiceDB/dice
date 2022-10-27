@@ -2,6 +2,7 @@ package tests
 
 import (
 	"io"
+	"log"
 	"net"
 	"strings"
 
@@ -20,7 +21,7 @@ func fireCommand(conn net.Conn, cmd string) interface{} {
 	var err error
 	_, err = conn.Write(core.Encode(strings.Split(cmd, " "), false))
 	if err != nil {
-		panic(err)
+		log.Fatalf("error %s while firing command: %s", err, cmd)
 	}
 
 	rp := core.NewRESPParser(conn)
@@ -29,7 +30,7 @@ func fireCommand(conn net.Conn, cmd string) interface{} {
 		if err == io.EOF {
 			return nil
 		}
-		panic(err)
+		log.Fatalf("error %s while firing command: %s", err, cmd)
 	}
 	return v
 }
