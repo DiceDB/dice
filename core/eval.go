@@ -67,9 +67,14 @@ func evalSET(args []string) []byte {
 			return Encode(errors.New("ERR syntax error"), false)
 		}
 	}
+	valueInt, valueIntOrErr := strconv.ParseInt(value, 10, 64)
 
 	// putting the k and value in a Hash Table
-	Put(key, NewObj(value, exDurationMs, oType, oEnc))
+	if valueIntOrErr == nil {
+		Put(key, NewObj(valueInt, exDurationMs, oType, oEnc))
+	} else {
+		Put(key, NewObj(value, exDurationMs, oType, oEnc))
+	}
 	return RESP_OK
 }
 
