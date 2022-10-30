@@ -23,7 +23,9 @@ func init() {
 	txnCommands = map[string]bool{"EXEC": true, "DISCARD": true}
 }
 
-// Returns the status of the connection with a "PONG"
+// evalPING returns with an encoded "PONG"
+// If any message is added with the ping command,
+// the message will be returned. 
 func evalPING(args []string) []byte {
 	var b []byte
 
@@ -40,8 +42,14 @@ func evalPING(args []string) []byte {
 	return b
 }
 
-// Adds new entry for the specifid key-value pair
-// as per the sent expiry time.
+// evalSET puts a new <key, value> pair in db as in the args
+// args must contain key and value.
+// args can also contain multiple options -
+//	 	EX or ex which will set the expiry time(in secs) for the key
+// Returns encoded error response if at least a <key, value> pair is not part of args
+// Returns encoded error response if expiry tme value in not integer
+// Returns encoded OK RESP once new entry is added
+// If the key already exists then the value will be overwritten and expiry will be discarded
 func evalSET(args []string) []byte {
 	if len(args) <= 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'set' command"), false)
@@ -76,8 +84,10 @@ func evalSET(args []string) []byte {
 	return RESP_OK
 }
 
-// Returns the value for the specified key if it exists
-// Returns nil if key is expired
+// evalGET returns the value for the queried key in args
+// The key should be the only param in args
+// The RESP value of the key is encoded and then returned
+// evalGET returns RESP_NIL if key is expired or it does not exist
 func evalGET(args []string) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'get' command"), false)
@@ -102,9 +112,11 @@ func evalGET(args []string) []byte {
 	return Encode(obj.Value, false)
 }
 
-// Returns the Time-to-Live for the specified key if it exists
-// Returns -1 in case no expiration is set on the key
-// Returns -2 in case key doesn't exist
+// evalTTL returns Time-to-Live in secs for the queried key in args
+// The key should be the only param in args else returns with an error
+// Returns	RESP encoded time (in secs) remaining for the key to expire
+//			RESP encoded -2 stating key doesn't exist or key is expired
+//			RESP encoded -1 in case no expiration is set on the key
 func evalTTL(args []string) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'ttl' command"), false)
@@ -137,8 +149,8 @@ func evalTTL(args []string) []byte {
 	return Encode(int64(durationMs/1000), false)
 }
 
-// Deletes all the specified keys if exists
-// Returns the count of total deleted keys
+// evalDEL deletes all the specified keys in args list
+// returns the count of total deleted keys after encoding
 func evalDEL(args []string) []byte {
 	var countDeleted int = 0
 
@@ -151,9 +163,11 @@ func evalDEL(args []string) []byte {
 	return Encode(countDeleted, false)
 }
 
-// Sets a expiry time on the specified key if it exists
-// The expiry time should be in integer format
-// Once the timeout is lapsed, the key will automatically be deleted
+// evalEXPIRE sets a expiry time(in secs) on the specified key in args
+// args should contain 2 values, key and the expiry time to be set for the key
+// The expiry time should be in integer format; if not, it returns encoded error response
+// Returns RESP_ONE if expiry was set on the key successfully.
+// Once the time is lapsed, the key will be deleted automatically
 func evalEXPIRE(args []string) []byte {
 	if len(args) <= 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'expire' command"), false)
@@ -199,9 +213,14 @@ func evalBGREWRITEAOF(args []string) []byte {
 	}
 }
 
-// Increments the value of the key by 1 if the key exists and the value is integer formet
-// If the key does not exist, new key is created with value 0
-// the value of the new key is then incremented
+// evalINCR increments the value of the specified key in args by 1,
+// if the key exists and the value is integer format.
+// The key should be the only param in args.
+// If the key does not exist, new key is created with value 0,
+// the value of the new key is then incremented.
+// The value for the queried key should be of integer format,
+// if not evalINCR returns encoded error response.
+// evalINCR returns the incremented value for the key if there are no errors.
 func evalINCR(args []string) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'incr' command"), false)
@@ -229,7 +248,8 @@ func evalINCR(args []string) []byte {
 	return Encode(i, false)
 }
 
-// Prints the info of total keys per db
+// evalINFO creates a buffer with the info of total keys per db
+// Returns the encoded buffer as response
 func evalINFO(args []string) []byte {
 	var info []byte
 	buf := bytes.NewBuffer(info)
@@ -250,13 +270,17 @@ func evalLATENCY(args []string) []byte {
 	return Encode([]string{}, false)
 }
 
-// Deletes all the keys from the LRU
+// evalLRU deletes all the keys from the LRU
+// returns encoded RESP OK
 func evalLRU(args []string) []byte {
 	evictAllkeysLRU()
 	return RESP_OK
 }
 
-// Sets db to sleep for the specified number of seconds
+// evalSLEEP sets db to sleep for the specified number of seconds.
+// The sleep time should be the only param in args.
+// Returns error response if the time param in args is not of integer format.
+// evalSLEEP returns RESP_OK after sleeping for mentioned seconds
 func evalSLEEP(args []string) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'SLEEP' command"), false)
@@ -270,9 +294,11 @@ func evalSLEEP(args []string) []byte {
 	return RESP_OK
 }
 
-// Marks the start of the transaction.
-// All subsequent commands will be queued for 
-// atomic execution using EXEC
+// evalMULTI marks the start of the transaction for the client.
+// All subsequent commands fired will be queued for atomic execution.
+// The commands will not be executed until EXEC is triggered.
+// Once EXEC is triggered it executes all the commands in queue,
+// and closes the MULTI transaction.
 func evalMULTI(args []string) []byte {
 	return RESP_OK
 }
