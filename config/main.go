@@ -10,3 +10,7 @@ var EvictionRatio float64 = 0.40
 
 var EvictionStrategy string = "allkeys-lru"
 var AOFFile string = "./dice-master.aof"
+
+// Network
+var IOBufferLength int = 512
+var IOBufferLengthMAX int = 50 * 1024

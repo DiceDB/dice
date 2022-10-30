@@ -345,6 +345,8 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		}
 		c.TxnDiscard()
 		return RESP_OK
+	case "ABORT":
+		return RESP_OK
 	default:
 		return evalPING(cmd.Args)
 	}

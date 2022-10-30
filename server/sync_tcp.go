@@ -2,7 +2,6 @@ package server
 
 import (
 	"io"
-	"log"
 	"strings"
 
 	"github.com/dicedb/dice/core"
@@ -17,22 +16,11 @@ func toArrayString(ai []interface{}) ([]string, error) {
 }
 
 func readCommands(c io.ReadWriter) (core.RedisCmds, bool, error) {
-	// TODO: Max read in one shot is 512 bytes
-	// To allow input > 512 bytes, then repeated read until
-	// we get EOF or designated delimiter
-	var buf []byte = make([]byte, 512)
-	n, err := c.Read(buf[:])
+	var hasABORT bool = false
+	rp := core.NewRESPParser(c)
+	values, err := rp.DecodeMultiple()
 	if err != nil {
 		return nil, false, err
-	}
-
-	values, maliciousFlag, err := core.Decode(buf[:n])
-	if err != nil {
-		return nil, maliciousFlag, err
-	}
-	if maliciousFlag {
-		log.Println("Possible SECURITY ATTACK detected. This is likely due to an attacker attempting to use Cross Protocol Scripting to compromise your instance. Connection aborted.")
-		return nil, true, nil
 	}
 
 	var cmds []*core.RedisCmd = make([]*core.RedisCmd, 0)
@@ -41,12 +29,17 @@ func readCommands(c io.ReadWriter) (core.RedisCmds, bool, error) {
 		if err != nil {
 			return nil, false, err
 		}
+		cmd := strings.ToUpper(tokens[0])
 		cmds = append(cmds, &core.RedisCmd{
-			Cmd:  strings.ToUpper(tokens[0]),
+			Cmd:  cmd,
 			Args: tokens[1:],
 		})
+
+		if cmd == "ABORT" {
+			hasABORT = true
+		}
 	}
-	return cmds, false, err
+	return cmds, hasABORT, err
 }
 
 func respond(cmds core.RedisCmds, c *core.Client) {
