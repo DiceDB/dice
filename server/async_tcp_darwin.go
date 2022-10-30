@@ -150,7 +150,7 @@ func RunAsyncTCPServer(wg *sync.WaitGroup) error {
 				}
 				respond(cmds, comm)
 				if hasABORT {
-					return
+					return nil
 				}
 			}
 		}
