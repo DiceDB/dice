@@ -2,134 +2,124 @@ package core
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
+	"io"
+	"strconv"
 )
 
-// reads the length typically the first integer of the string
-// until hit by an non-digit byte and returns
-// the integer and the delta = length + 2 (CRLF)
-// TODO: Make it simpler and read until we get `\r` just like other functions
-func readLength(data []byte) (int, int) {
-	pos, length := 0, 0
-	for pos = range data {
-		b := data[pos]
-		if !(b >= '0' && b <= '9') {
-			return length, pos + 2
-		}
-		length = length*10 + int(b-'0')
+func readLength(buf *bytes.Buffer) (int64, error) {
+	s, err := readStringUntilSr(buf)
+	if err != nil {
+		return 0, err
 	}
-	return 0, 0
+
+	v, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	return v, nil
+}
+
+func readStringUntilSr(buf *bytes.Buffer) (string, error) {
+	s, err := buf.ReadString('\r')
+	if err != nil {
+		return "", err
+	}
+	// increamenting to skip `\n`
+	buf.ReadByte()
+	return s[:len(s)-1], nil
 }
 
 // reads a RESP encoded simple string from data and returns
-// the string, the delta, and the error
-func readSimpleString(data []byte) (string, int, error) {
-	// first character +
-	pos := 1
-
-	for ; data[pos] != '\r'; pos++ {
-	}
-
-	return string(data[1:pos]), pos + 2, nil
+// the string and the error
+// the function internally manipulates the buffer pointer
+// and keepts it at a point where the subsequent value can be read from.
+func readSimpleString(c io.ReadWriter, buf *bytes.Buffer) (string, error) {
+	return readStringUntilSr(buf)
 }
 
 // reads a RESP encoded error from data and returns
-// the error string, the delta, and the error
-func readError(data []byte) (string, int, error) {
-	return readSimpleString(data)
+// the error string and the error
+// the function internally manipulates the buffer pointer
+// and keepts it at a point where the subsequent value can be read from.
+func readError(c io.ReadWriter, buf *bytes.Buffer) (string, error) {
+	return readStringUntilSr(buf)
 }
 
 // reads a RESP encoded integer from data and returns
-// the intger value, the delta, and the error
-func readInt64(data []byte) (int64, int, error) {
-	// first character :
-	pos := 1
-	var value int64 = 0
-
-	for ; data[pos] != '\r'; pos++ {
-		value = value*10 + int64(data[pos]-'0')
+// the intger value and the error
+// the function internally manipulates the buffer pointer
+// and keepts it at a point where the subsequent value can be read from.
+func readInt64(c io.ReadWriter, buf *bytes.Buffer) (int64, error) {
+	s, err := readStringUntilSr(buf)
+	if err != nil {
+		return 0, err
 	}
 
-	return value, pos + 2, nil
+	v, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	return v, nil
 }
 
 // reads a RESP encoded string from data and returns
-// the string, the delta, and the error
-func readBulkString(data []byte) (string, int, error) {
-	// first character $
-	pos := 1
+// the string, and the error
+// the function internally manipulates the buffer pointer
+// and keepts it at a point where the subsequent value can be read from.
+func readBulkString(c io.ReadWriter, buf *bytes.Buffer) (string, error) {
+	len, err := readLength(buf)
+	if err != nil {
+		return "", err
+	}
 
-	// reading the length and forwarding the pos by
-	// the lenth of the integer + the first special character
-	len, delta := readLength(data[pos:])
-	pos += delta
+	var bytesRem int64 = len + 2 // 2 for \r\n
+	bytesRem = bytesRem - int64(buf.Len())
+	for bytesRem > 0 {
+		tbuf := make([]byte, bytesRem)
+		n, err := c.Read(tbuf)
+		if err != nil {
+			return "", nil
+		}
+		buf.Write(tbuf[:n])
+		bytesRem = bytesRem - int64(n)
+	}
+
+	bulkStr := make([]byte, len)
+	_, err = buf.Read(bulkStr)
+	if err != nil {
+		return "", err
+	}
+
+	// moving buffer pointer by 2 for \r and \n
+	buf.ReadByte()
+	buf.ReadByte()
 
 	// reading `len` bytes as string
-	return string(data[pos:(pos + len)]), pos + len + 2, nil
+	return string(bulkStr), nil
 }
 
 // reads a RESP encoded array from data and returns
 // the array, the delta, and the error
-func readArray(data []byte) (interface{}, int, error) {
-	// first character *
-	pos := 1
-
-	// reading the length
-	count, delta := readLength(data[pos:])
-	pos += delta
+// the function internally manipulates the buffer pointer
+// and keepts it at a point where the subsequent value can be read from.
+func readArray(c io.ReadWriter, buf *bytes.Buffer, rp *RESPParser) (interface{}, error) {
+	count, err := readLength(buf)
+	if err != nil {
+		return nil, err
+	}
 
 	var elems []interface{} = make([]interface{}, count)
 	for i := range elems {
-		elem, delta, err := DecodeOne(data[pos:])
+		elem, err := rp.DecodeOne()
 		if err != nil {
-			return nil, 0, err
+			return nil, err
 		}
 		elems[i] = elem
-		pos += delta
 	}
-	return elems, pos, nil
-}
-
-func DecodeOne(data []byte) (interface{}, int, error) {
-	if len(data) == 0 {
-		return nil, 0, errors.New("no data")
-	}
-	switch data[0] {
-	case '+':
-		return readSimpleString(data)
-	case '-':
-		return readError(data)
-	case ':':
-		return readInt64(data)
-	case '$':
-		return readBulkString(data)
-	case '*':
-		return readArray(data)
-	}
-	return nil, 0, nil
-}
-
-func Decode(data []byte) ([]interface{}, bool, error) {
-	if len(data) == 0 {
-		return nil, false, errors.New("no data")
-	}
-	var values []interface{} = make([]interface{}, 0)
-	var index int = 0
-	var maliciousFlag bool
-	for index < len(data) {
-		value, delta, err := DecodeOne(data[index:])
-		if err != nil {
-			return values, false, err
-		}
-		if delta == 0 {
-			maliciousFlag = true
-			break
-		}
-		index = index + delta
-		values = append(values, value)
-	}
-	return values, maliciousFlag, nil
+	return elems, nil
 }
 
 func encodeString(v string) []byte {
@@ -150,6 +140,13 @@ func Encode(value interface{}, isSimple bool) []byte {
 		buf := bytes.NewBuffer(b)
 		for _, b := range value.([]string) {
 			buf.Write(encodeString(b))
+		}
+		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
+	case []interface{}:
+		var b []byte
+		buf := bytes.NewBuffer(b)
+		for _, b := range value.([]string) {
+			buf.Write(Encode(b, false))
 		}
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
 	case error:

@@ -33,6 +33,28 @@ $ go run main.go
 
 Because Dice speaks Redis' dialect, you can connect to it with any Redis Client and the simplest way it to use a [Redis CLI](https://redis.io/docs/manual/cli/). Programmatically, depending on the language you prefer, you can use your favourite Redis library to connect.
 
+## Running Tests
+
+To run all the unit tests fire the following command
+
+```sh
+$ go test github.com/dicedb/dice/tests
+```
+
+### Running a single test
+
+```sh
+$ go test -timeout 30s -run <pattern> github.com/dicedb/dice/tests
+$ go test -timeout 30s -run ^TestHugeResponse$ github.com/dicedb/dice/tests
+```
+
+## Running Benchmark
+
+```sh
+$ go test -test.bench <pattern>
+$ go test -test.bench BenchmarkListRedis
+```
+
 ## Getting Started
 
 To get started with building and contributing to DiceDB, please refer to the [issues](https://github.com/DiceDB/dice/issues) created in this repository.
@@ -44,6 +66,8 @@ DiceDB started as a re-implementation of Redis in Golang and the idea was to - b
 ## How to contribute
 
 The Code Contribution Guidelines are published at [CONTRIBUTING.md](CONTRIBUTING.md); please read them before you start making any changes. This would allow us to have a consistent standard of coding practices and developer experience.
+
+Contributors can join the [Discord Server](https://discord.gg/6r8uXWtXh7) for quick collaboration.
 
 ## Contributors
 
