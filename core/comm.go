@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"syscall"
+
+	"github.com/dicedb/dice/handlers"
 )
 
 type Client struct {
@@ -26,13 +28,13 @@ func (c *Client) TxnBegin() {
 	c.isTxn = true
 }
 
-func (c *Client) TxnExec() []byte {
+func (c *Client) TxnExec(dh *handlers.DiceKVstoreHandler) []byte {
 	var out []byte
 	buf := bytes.NewBuffer(out)
 
 	buf.WriteString(fmt.Sprintf("*%d\r\n", len(c.cqueue)))
 	for _, _cmd := range c.cqueue {
-		buf.Write(executeCommand(_cmd, c))
+		buf.Write(executeCommand(_cmd, c, dh))
 	}
 
 	c.cqueue = make(RedisCmds, 0)

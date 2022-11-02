@@ -1,83 +1,80 @@
-package core
+package eviction
 
 import (
-	"time"
-
+	dbEngine "github.com/dicedb/dice/IStorageEngines"
 	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/object"
+	"github.com/dicedb/dice/utils"
 )
 
 // Evicts the first key it found while iterating the map
 // TODO: Make it efficient by doing thorough sampling
-func evictFirst() {
-	for k := range store {
-		Del(k)
-		return
-	}
+func evictFirst(dh dbEngine.IKVStorage) {
+	dh.GetStorage().Range(func (k, v interface{}) bool {
+		key := k.(string)
+		dh.Del(key)
+		return false
+	})
 }
 
 // Randomly removes keys to make space for the new data added.
 // The number of keys removed will be sufficient to free up least 10% space
-func evictAllkeysRandom() {
+func evictAllkeysRandom(dh dbEngine.IKVStorage) {
 	evictCount := int64(config.EvictionRatio * float64(config.KeysLimit))
 	// Iteration of Golang dictionary can be considered as a random
 	// because it depends on the hash of the inserted key
-	for k := range store {
-		Del(k)
+	dh.GetStorage().Range(func(k, v interface{}) bool {
+		key := k.(string)
+		dh.Del(key)
 		evictCount--
-		if evictCount <= 0 {
-			break
-		}
-	}
+		return evictCount > 0
+	})
 }
 
 /*
  *  The approximated LRU algorithm
  */
-func getCurrentClock() uint32 {
-	return uint32(time.Now().Unix()) & 0x00FFFFFF
-}
-
 func getIdleTime(lastAccessedAt uint32) uint32 {
-	c := getCurrentClock()
+	c := utils.GetCurrentClock()
 	if c >= lastAccessedAt {
 		return c - lastAccessedAt
 	}
 	return (0x00FFFFFF - lastAccessedAt) + c
 }
 
-func populateEvictionPool() {
+func populateEvictionPool(dh dbEngine.IKVStorage) {
 	sampleSize := 5
-	for k := range store {
-		ePool.Push(k, store[k].LastAccessedAt)
-		sampleSize--
-		if sampleSize == 0 {
-			break
-		}
-	}
+
+	dh.GetStorage().Range(func(k, v interface{}) bool {
+		key := k.(string)
+		value := v.(*object.Obj)
+		ePool.Push(key, value.LastAccessedAt)
+		return sampleSize != 0
+	})
 }
 
 // TODO: no need to populate everytime. should populate
 // only when the number of keys to evict is less than what we have in the pool
-func evictAllkeysLRU() {
-	populateEvictionPool()
+func EvictAllkeysLRU(dh dbEngine.IKVStorage) {
+	populateEvictionPool(dh)
 	evictCount := int16(config.EvictionRatio * float64(config.KeysLimit))
 	for i := 0; i < int(evictCount) && len(ePool.pool) > 0; i++ {
 		item := ePool.Pop()
 		if item == nil {
 			return
 		}
-		Del(item.key)
+		dh.Del(item.key)
 	}
 }
 
 // TODO: implement LFU
-func evict() {
+func Evict(dh dbEngine.IKVStorage) {
 	switch config.EvictionStrategy {
 	case "simple-first":
-		evictFirst()
+		evictFirst(dh)
 	case "allkeys-random":
-		evictAllkeysRandom()
+		evictAllkeysRandom(dh)
 	case "allkeys-lru":
-		evictAllkeysLRU()
+		EvictAllkeysLRU(dh)
 	}
 }

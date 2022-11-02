@@ -1,4 +1,8 @@
-package core
+package object
+
+import (
+	"time"
+)
 
 type Obj struct {
 	TypeEncoding uint8
@@ -9,6 +13,23 @@ type Obj struct {
 	// For now, we continue with 32 bit integer to store the LastAccessedAt
 	LastAccessedAt uint32
 	Value          interface{}
+}
+
+func NewObj(value interface{}, expDurationMs int64, oType uint8, oEnc uint8) *Obj {
+	obj := &Obj{
+		Value:          value,
+		TypeEncoding:   oType | oEnc,
+		LastAccessedAt: uint32(time.Now().Unix()) & 0x00FFFFFF,
+	}
+	if expDurationMs > 0 {
+		expires.SetExpiry(obj, expDurationMs)
+	}
+	return obj
+}
+
+type DiceWorkerBuffer struct {
+	Key   string
+	Value *Obj
 }
 
 var OBJ_TYPE_STRING uint8 = 0 << 4

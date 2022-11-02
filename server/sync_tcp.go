@@ -1,11 +1,13 @@
 package server
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"strings"
 
 	"github.com/dicedb/dice/core"
+	"github.com/dicedb/dice/handlers"
 )
 
 func toArrayString(ai []interface{}) ([]string, error) {
@@ -38,6 +40,7 @@ func readCommands(c io.ReadWriter) (core.RedisCmds, bool, error) {
 	var cmds []*core.RedisCmd = make([]*core.RedisCmd, 0)
 	for _, value := range values {
 		tokens, err := toArrayString(value.([]interface{}))
+		fmt.Println(tokens)
 		if err != nil {
 			return nil, false, err
 		}
@@ -49,6 +52,6 @@ func readCommands(c io.ReadWriter) (core.RedisCmds, bool, error) {
 	return cmds, false, err
 }
 
-func respond(cmds core.RedisCmds, c *core.Client) {
-	core.EvalAndRespond(cmds, c)
+func respond(cmds core.RedisCmds, c *core.Client, dh *handlers.DiceKVstoreHandler) {
+	core.EvalAndRespond(cmds, c, dh)
 }

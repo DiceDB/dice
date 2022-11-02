@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"sync"
 )
 
 // reads the length typically the first integer of the string
@@ -154,6 +155,17 @@ func Encode(value interface{}, isSimple bool) []byte {
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
 	case error:
 		return []byte(fmt.Sprintf("-%s\r\n", v))
+	case sync.Map:
+		var b []byte
+		buf := bytes.NewBuffer(b)
+		val := value.(sync.Map)
+		var count uint64 = 0
+		val.Range(func(key, value interface{}) bool {
+			buf.Write(encodeString(fmt.Sprintf("{Key: %v, Val: %v}", key, value)))
+			count++
+			return true
+		})
+		return []byte(fmt.Sprintf("*%d\r\n%s", count, buf.Bytes()))
 	default:
 		return RESP_NIL
 	}

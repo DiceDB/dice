@@ -12,8 +12,8 @@ func TestSimpleStringDecode(t *testing.T) {
 		"+OK\r\n": "OK",
 	}
 	for k, v := range cases {
-		value, _ := core.Decode([]byte(k))
-		if v != value {
+		value, _, _ := core.Decode([]byte(k))
+		if v != value[0].(string) {
 			t.Fail()
 		}
 	}
@@ -24,8 +24,8 @@ func TestError(t *testing.T) {
 		"-Error message\r\n": "Error message",
 	}
 	for k, v := range cases {
-		value, _ := core.Decode([]byte(k))
-		if v != value {
+		value, _, _ := core.Decode([]byte(k))
+		if v != value[0].(string) {
 			t.Fail()
 		}
 	}
@@ -37,8 +37,8 @@ func TestInt64(t *testing.T) {
 		":1000\r\n": 1000,
 	}
 	for k, v := range cases {
-		value, _ := core.Decode([]byte(k))
-		if v != value {
+		value, _, _ := core.Decode([]byte(k))
+		if v != value[0].(int64) {
 			t.Fail()
 		}
 	}
@@ -50,8 +50,8 @@ func TestBulkStringDecode(t *testing.T) {
 		"$0\r\n\r\n":      "",
 	}
 	for k, v := range cases {
-		value, _ := core.Decode([]byte(k))
-		if v != value {
+		value, _, _ := core.Decode([]byte(k))
+		if v != value[0].(string) {
 			t.Fail()
 		}
 	}
@@ -66,13 +66,12 @@ func TestArrayDecode(t *testing.T) {
 		"*2\r\n*3\r\n:1\r\n:2\r\n:3\r\n*2\r\n+Hello\r\n-World\r\n": {[]int64{int64(1), int64(2), int64(3)}, []interface{}{"Hello", "World"}},
 	}
 	for k, v := range cases {
-		value, _ := core.Decode([]byte(k))
-		array := value.([]interface{})
-		if len(array) != len(v) {
+		value, _, _ := core.Decode([]byte(k))
+		if len(value) != len(v) {
 			t.Fail()
 		}
-		for i := range array {
-			if fmt.Sprintf("%v", v[i]) != fmt.Sprintf("%v", array[i]) {
+		for i := range value {
+			if fmt.Sprintf("%v", v[i]) != fmt.Sprintf("%v", value[i]) {
 				t.Fail()
 			}
 		}

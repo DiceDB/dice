@@ -1,5 +1,7 @@
 package core
 
-func Shutdown() {
-	evalBGREWRITEAOF([]string{})
+import "github.com/dicedb/dice/handlers"
+
+func Shutdown(dh *handlers.DiceKVstoreHandler) {
+	evalBGREWRITEAOF([]string{}, dh)
 }

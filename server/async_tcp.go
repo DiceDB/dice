@@ -11,6 +11,8 @@ import (
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core"
+	"github.com/dicedb/dice/expiry"
+	"github.com/dicedb/dice/handlers"
 )
 
 var cronFrequency time.Duration = 1 * time.Second
@@ -22,11 +24,12 @@ const EngineStatus_SHUTTING_DOWN int32 = 1 << 3
 const EngineStatus_TRANSACTION int32 = 1 << 4
 
 var eStatus int32 = EngineStatus_WAITING
-
 var connectedClients map[int]*core.Client
+var dbHandler *handlers.DiceKVstoreHandler
 
 func init() {
 	connectedClients = make(map[int]*core.Client)
+	dbHandler = handlers.NewDiceKVstoreHandler()
 }
 
 func WaitForSignal(wg *sync.WaitGroup, sigs chan os.Signal) {
@@ -46,7 +49,7 @@ func WaitForSignal(wg *sync.WaitGroup, sigs chan os.Signal) {
 	atomic.StoreInt32(&eStatus, EngineStatus_SHUTTING_DOWN)
 
 	// if server is in any other state, initiate a shutdown
-	core.Shutdown()
+	core.Shutdown(dbHandler)
 	os.Exit(0)
 }
 
@@ -110,11 +113,10 @@ func RunAsyncTCPServer(wg *sync.WaitGroup) error {
 	if err = syscall.EpollCtl(epollFD, syscall.EPOLL_CTL_ADD, serverFD, &socketServerEvent); err != nil {
 		return err
 	}
-
 	// loop until the server is not shutting down
 	for atomic.LoadInt32(&eStatus) != EngineStatus_SHUTTING_DOWN {
 		if time.Now().After(lastCronExecTime.Add(cronFrequency)) {
-			core.DeleteExpiredKeys()
+			expiry.DeleteExpiredKeys(dbHandler)
 			lastCronExecTime = time.Now()
 		}
 
@@ -177,7 +179,8 @@ func RunAsyncTCPServer(wg *sync.WaitGroup) error {
 					delete(connectedClients, int(events[i].Fd))
 					continue
 				}
-				respond(cmds, comm)
+
+				respond(cmds, comm, dbHandler)
 			}
 		}
 
