@@ -25,7 +25,7 @@ func init() {
 
 // evalPING returns with an encoded "PONG"
 // If any message is added with the ping command,
-// the message will be returned. 
+// the message will be returned.
 func evalPING(args []string) []byte {
 	var b []byte
 
@@ -248,6 +248,19 @@ func evalINCR(args []string) []byte {
 	return Encode(i, false)
 }
 
+func evalSUMVAL(args []string) []byte {
+	var sum int64 = 0
+	for _, obj := range store {
+		if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_INT); err != nil {
+			continue
+		} else {
+			val, _ := strconv.ParseInt(obj.Value.(string), 10, 64)
+			sum += val
+		}
+	}
+	return Encode(sum, false)
+}
+
 // evalINFO creates a buffer with the info of total keys per db
 // Returns the encoded buffer as response
 func evalINFO(args []string) []byte {
@@ -329,6 +342,8 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		return evalLATENCY(cmd.Args)
 	case "LRU":
 		return evalLRU(cmd.Args)
+	case "SUMVAL":
+		return evalSUMVAL(cmd.Args)
 	case "SLEEP":
 		return evalSLEEP(cmd.Args)
 	case "MULTI":
