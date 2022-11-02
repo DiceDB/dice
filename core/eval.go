@@ -248,6 +248,7 @@ func evalINCR(args []string) []byte {
 	return Encode(i, false)
 }
 
+//SUMVAL return sum of all integer keys present in the store
 func evalSUMVAL(args []string) []byte {
 	var sum int64 = 0
 	for _, obj := range store {
