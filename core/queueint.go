@@ -4,7 +4,7 @@ import (
 	"errors"
 	"unsafe"
 
-	"github.com/dicedb/dice/core/xencoding"
+	"github.com/dicedb/dice/core/dencoding"
 )
 
 const QueueIntMaxBuf int = 256
@@ -30,7 +30,7 @@ func (q *QueueInt) Size() int64 {
 func (q *QueueInt) Insert(x int64) {
 	var xb []byte
 	if x >= 0 {
-		xb = xencoding.XEncodeUInt(uint64(x))
+		xb = dencoding.EncodeUInt(uint64(x))
 	} else {
 		// TODO: support negative integers
 		panic("negative integers not supported yet")
@@ -71,7 +71,7 @@ func (q *QueueInt) Remove() (int64, error) {
 
 		// if b is the terminating byte
 		if b&0b10000000 == 0 {
-			val = int64(xencoding.XDecodeUInt(tbuf[:tbufIdx]))
+			val = int64(dencoding.DecodeUInt(tbuf[:tbufIdx]))
 			tbufIdx = 0
 			break
 		}
@@ -99,7 +99,7 @@ func (q *QueueInt) Iterate() []int64 {
 			tbufIdx++
 			// if b is the terminating byte
 			if b&0b10000000 == 0 {
-				vals = append(vals, int64(xencoding.XDecodeUInt(tbuf[:tbufIdx])))
+				vals = append(vals, int64(dencoding.DecodeUInt(tbuf[:tbufIdx])))
 				tbufIdx = 0
 			}
 		}

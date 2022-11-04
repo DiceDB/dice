@@ -1,4 +1,4 @@
-package xencoding
+package dencoding
 
 var BITMASK = []byte{
 	0x01,
@@ -24,9 +24,9 @@ func getLSB(x byte, n uint8) byte {
 var buf [11]byte
 var bitShifts []uint8 = []uint8{7, 7, 7, 7, 7, 7, 7, 7, 7, 1}
 
-// XEncodeInt encodes the unsigned 64 bit integer value into a varint
+// EncodeInt encodes the unsigned 64 bit integer value into a varint
 // and returns an array of bytes (little endian encoded)
-func XEncodeUInt(x uint64) []byte {
+func EncodeUInt(x uint64) []byte {
 	var i int = 0
 	for i = 0; i < len(bitShifts); i++ {
 		buf[i] = getLSB(byte(x), bitShifts[i]) | 0b10000000 // marking the continuation bit
@@ -39,8 +39,8 @@ func XEncodeUInt(x uint64) []byte {
 	return append(make([]byte, 0, i+1), buf[:i+1]...)
 }
 
-// XDecodeInt decodes the array of bytes and returns an unsigned 64 bit integer
-func XDecodeUInt(vint []byte) uint64 {
+// DecodeUInt decodes the array of bytes and returns an unsigned 64 bit integer
+func DecodeUInt(vint []byte) uint64 {
 	var i int = 0
 	var v uint64 = 0
 	for i = 0; i < len(vint); i++ {

@@ -1,13 +1,13 @@
-package xencoding_test
+package dencoding_test
 
 import (
 	"testing"
 
-	"github.com/dicedb/dice/core/xencoding"
+	"github.com/dicedb/dice/core/dencoding"
 	"github.com/dicedb/dice/testutils"
 )
 
-func TestXencodingInt(t *testing.T) {
+func TestDencodingInt(t *testing.T) {
 	var tests []uint64
 
 	tests = append(tests, 0)
@@ -18,8 +18,8 @@ func TestXencodingInt(t *testing.T) {
 	}
 
 	for _, v := range tests {
-		if v != xencoding.XDecodeUInt(xencoding.XEncodeUInt(v)) {
-			t.Errorf("xencoding failed for value: %d\n", v)
+		if v != dencoding.DecodeUInt(dencoding.EncodeUInt(v)) {
+			t.Errorf("dencoding failed for value: %d\n", v)
 		}
 	}
 
@@ -29,9 +29,9 @@ func TestXencodingInt(t *testing.T) {
 		128: 2,
 		129: 2,
 	} {
-		b := xencoding.XEncodeUInt(k)
+		b := dencoding.EncodeUInt(k)
 		if len(b) != v {
-			t.Errorf("xencoding for integer value %d failed. encoded length should be: %d, but found %d\n", k, v, len(b))
+			t.Errorf("dencoding for integer value %d failed. encoded length should be: %d, but found %d\n", k, v, len(b))
 		}
 	}
 
@@ -44,9 +44,9 @@ func TestXencodingInt(t *testing.T) {
 		130: {0b10000010, 0b00000001},
 		131: {0b10000011, 0b00000001},
 	} {
-		obs := xencoding.XEncodeUInt(uint64(k))
+		obs := dencoding.EncodeUInt(uint64(k))
 		if !testutils.EqualByteSlice(obs, v) {
-			t.Errorf("xencoding for integer value %d failed. should be: %d, but found %d\n", k, v, obs)
+			t.Errorf("dencoding for integer value %d failed. should be: %d, but found %d\n", k, v, obs)
 		}
 	}
 }
