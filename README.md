@@ -38,15 +38,14 @@ Because Dice speaks Redis' dialect, you can connect to it with any Redis Client 
 To run all the unit tests fire the following command
 
 ```sh
-$ go test github.com/dicedb/dice/core
-$ go test github.com/dicedb/dice/tests
+$ go test ./...
 ```
 
 ### Running a single test
 
 ```sh
 $ go test -timeout 30s -run <pattern> <package path>
-$ go test -timeout 30s -run ^TestByteList$ github.com/dicedb/dice/core
+$ go test -timeout 30s -run ^TestByteList$ ./...
 ```
 
 ## Running Benchmark

@@ -7,7 +7,7 @@ import (
 
 func newNode(bl *byteList, b byte) *byteListNode {
 	bn := bl.NewNode()
-	bn.buf[0] = b
+	bn.buf = append(bn.buf, b)
 	return bn
 }
 
@@ -63,8 +63,6 @@ func TestByteList(t *testing.T) {
 		r := toByteArray(bl)
 		if !bytes.Equal(r, tc.val) {
 			t.Errorf("bytelist test failed. should have been %v but found %v", tc.val, r)
-		} else {
-			t.Logf("pass for %v", tc.val)
 		}
 	}
 }

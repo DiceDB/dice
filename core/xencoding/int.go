@@ -1,5 +1,25 @@
 package xencoding
 
+var BITMASK = []byte{
+	0x01,
+	0x03,
+	0x07,
+	0x0F,
+	0x1F,
+	0x3F,
+	0x7F,
+	0xFF,
+}
+
+// getLSB returns the least significant `n` bits from
+// the byte value `x`.
+func getLSB(x byte, n uint8) byte {
+	if n > 8 {
+		panic("can extract at max 8 bits from the number")
+	}
+	return byte(x) & BITMASK[n-1]
+}
+
 // TOOD: not thread safe
 var buf [11]byte
 var bitShifts []uint8 = []uint8{7, 7, 7, 7, 7, 7, 7, 7, 7, 1}
@@ -15,7 +35,7 @@ func XEncodeUInt(x uint64) []byte {
 			break
 		}
 	}
-	buf[len(buf)-1] = buf[len(buf)-1] & 0b01111111 // marking the termination bit
+	buf[i] = buf[i] & 0b01111111 // marking the termination bit
 	return append(make([]byte, 0, i+1), buf[:i+1]...)
 }
 

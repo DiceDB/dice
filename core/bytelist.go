@@ -24,7 +24,7 @@ func NewByteList(bufLen int) *byteList {
 
 func (b *byteList) NewNode() *byteListNode {
 	return &byteListNode{
-		buf: make([]byte, b.bufLen),
+		buf: make([]byte, 0, b.bufLen),
 	}
 }
 
