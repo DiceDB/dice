@@ -2,26 +2,32 @@ package core
 
 import (
 	"errors"
+	"unsafe"
 
 	"github.com/dicedb/dice/core/xencoding"
 )
 
-const QueueIntMaxBuf int = 32
+const QueueIntMaxBuf int = 256
 
 type QueueInt struct {
 	Length int64
-	List   *byteList
+	list   *byteList
 }
 
 func NewQueueInt() *QueueInt {
-	return &QueueInt{
+	q := &QueueInt{
 		Length: 0,
-		List:   NewByteList(QueueIntMaxBuf),
+		list:   newByteList(QueueIntMaxBuf),
 	}
+	return q
 }
 
-// QueueIntInsert inserts the integer `x` in the the QueueInt q.
-func (q *QueueInt) QueueIntInsert(x int64) {
+func (q *QueueInt) Size() int64 {
+	return int64(unsafe.Sizeof(*q)) + q.list.size
+}
+
+// Insert inserts the integer `x` in the the QueueInt q.
+func (q *QueueInt) Insert(x int64) {
 	var xb []byte
 	if x >= 0 {
 		xb = xencoding.XEncodeUInt(uint64(x))
@@ -31,27 +37,27 @@ func (q *QueueInt) QueueIntInsert(x int64) {
 	}
 
 	var bn *byteListNode
-	if q.List.head == nil {
-		bn = q.List.NewNode()
-		q.List.Append(bn)
+	if q.list.head == nil {
+		bn = q.list.newNode()
+		q.list.append(bn)
 	} else {
-		bn = q.List.tail
+		bn = q.list.tail
 	}
 
 	// add new node in bytelist is space is insufficient
 	if cap(bn.buf)-len(bn.buf) < len(xb) {
-		bn = q.List.NewNode()
-		q.List.Append(bn)
+		bn = q.list.newNode()
+		q.list.append(bn)
 	}
 
 	bn.buf = append(bn.buf, xb...)
 	q.Length++
 }
 
-// QueueIntRemove removes the integer from the queue q.
-func (q *QueueInt) QueueIntRemove() (int64, error) {
+// Remove removes the integer from the queue q.
+func (q *QueueInt) Remove() (int64, error) {
 	var val int64
-	bn := q.List.head
+	bn := q.list.head
 	if bn == nil || len(bn.buf) == 0 {
 		return 0, errors.New("queueint is empty")
 	}
@@ -72,18 +78,18 @@ func (q *QueueInt) QueueIntRemove() (int64, error) {
 	}
 	bn.buf = bn.buf[i+1:]
 	if len(bn.buf) == 0 {
-		q.List.Delete(bn)
+		q.list.delete(bn)
 	}
 
 	q.Length--
 	return val, nil
 }
 
-// QueueIntInsert inserts the integer `x` in the the QueueInt q.
-func (q *QueueInt) QueueIntIterate() []int64 {
+// Iterate inserts the integer `x` in the the QueueInt q.
+func (q *QueueInt) Iterate() []int64 {
 	var vals []int64
 
-	p := q.List.head
+	p := q.list.head
 	for p != nil {
 		var tbuf []byte = make([]byte, 11)
 		var tbufIdx int = 0

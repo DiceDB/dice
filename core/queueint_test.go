@@ -48,12 +48,12 @@ func TestQueueInt(t *testing.T) {
 	} {
 		switch tc.op {
 		case 'i':
-			qi.QueueIntInsert(tc.val)
+			qi.Insert(tc.val)
 		case 'r':
-			qi.QueueIntRemove()
+			qi.Remove()
 		}
 
-		obsList := qi.QueueIntIterate()
+		obsList := qi.Iterate()
 		if !testutils.EqualInt64Slice(tc.list, obsList) {
 			t.Errorf("queueint test failed. should have been %v but found %v", tc.list, obsList)
 		}

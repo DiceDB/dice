@@ -1,9 +1,21 @@
 package core
 
+import (
+	"unsafe"
+)
+
+var byteListNodeSize int64 = 0
+
+func init() {
+	var n byteListNode
+	byteListNodeSize = int64(unsafe.Sizeof(n))
+}
+
 // ByteList is the linkedlist implementation
 // where each node holds the byte array
 type byteList struct {
 	bufLen int
+	size   int64
 	head   *byteListNode
 	tail   *byteListNode
 }
@@ -14,7 +26,7 @@ type byteListNode struct {
 	prev *byteListNode
 }
 
-func NewByteList(bufLen int) *byteList {
+func newByteList(bufLen int) *byteList {
 	return &byteList{
 		head:   nil,
 		tail:   nil,
@@ -22,13 +34,15 @@ func NewByteList(bufLen int) *byteList {
 	}
 }
 
-func (b *byteList) NewNode() *byteListNode {
-	return &byteListNode{
+func (b *byteList) newNode() *byteListNode {
+	bn := &byteListNode{
 		buf: make([]byte, 0, b.bufLen),
 	}
+	b.size += byteListNodeSize
+	return bn
 }
 
-func (b *byteList) Append(bn *byteListNode) {
+func (b *byteList) append(bn *byteListNode) {
 	bn.prev = b.tail
 	if b.tail != nil {
 		b.tail.next = bn
@@ -39,7 +53,7 @@ func (b *byteList) Append(bn *byteListNode) {
 	}
 }
 
-func (b *byteList) Prepend(bn *byteListNode) {
+func (b *byteList) prepend(bn *byteListNode) {
 	bn.next = b.head
 	if b.head != nil {
 		b.head.prev = bn
@@ -50,7 +64,7 @@ func (b *byteList) Prepend(bn *byteListNode) {
 	}
 }
 
-func (b *byteList) Delete(bn *byteListNode) {
+func (b *byteList) delete(bn *byteListNode) {
 	if bn == b.head {
 		b.head = bn.next
 	}
@@ -66,4 +80,6 @@ func (b *byteList) Delete(bn *byteListNode) {
 	if bn.next != nil {
 		bn.next.prev = bn.prev
 	}
+
+	b.size -= byteListNodeSize
 }

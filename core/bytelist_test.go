@@ -6,7 +6,7 @@ import (
 )
 
 func newNode(bl *byteList, b byte) *byteListNode {
-	bn := bl.NewNode()
+	bn := bl.newNode()
 	bn.buf = append(bn.buf, b)
 	return bn
 }
@@ -38,7 +38,7 @@ type tcase struct {
 }
 
 func TestByteList(t *testing.T) {
-	bl := NewByteList(1)
+	bl := newByteList(1)
 	for _, tc := range []tcase{
 		{"a1", []byte{byte('1')}},
 		{"a2", []byte{byte('1'), byte('2')}},
@@ -53,11 +53,11 @@ func TestByteList(t *testing.T) {
 	} {
 		switch tc.op[0] {
 		case 'a':
-			bl.Append(newNode(bl, tc.op[1]))
+			bl.append(newNode(bl, tc.op[1]))
 		case 'p':
-			bl.Prepend(newNode(bl, tc.op[1]))
+			bl.prepend(newNode(bl, tc.op[1]))
 		case 'd':
-			bl.Delete(getNode(bl, tc.op[1]))
+			bl.delete(getNode(bl, tc.op[1]))
 		}
 
 		r := toByteArray(bl)
