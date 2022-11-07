@@ -62,7 +62,7 @@ func TestQueueInt(t *testing.T) {
 			t.Errorf("we expected the error: %v but got %v", tc.err, err)
 		}
 
-		obsList := qi.Iterate()
+		obsList := qi.Iterate(50)
 		if !testutils.EqualInt64Slice(tc.list, obsList) {
 			t.Errorf("queueint test failed. should have been %v but found %v", tc.list, obsList)
 		}

@@ -87,8 +87,14 @@ func (q *QueueInt) Remove() (int64, error) {
 	return val, nil
 }
 
-// Iterate inserts the integer `x` in the the QueueInt q.
-func (q *QueueInt) Iterate() []int64 {
+// Iterate inserts the integer `x` in the the QueueInt q
+// through at max `n` elements.
+// the function returns empty list for invalid `n`
+func (q *QueueInt) Iterate(n int) []int64 {
+	if n <= 0 {
+		return []int64{}
+	}
+
 	var vals []int64
 
 	p := q.list.head
@@ -101,8 +107,15 @@ func (q *QueueInt) Iterate() []int64 {
 			tbufIdx++
 			// if b is the terminating byte
 			if b&0b10000000 == 0 {
+				// TODO: set the index instead of append
+				// needs benchmarking
 				vals = append(vals, int64(dencoding.DecodeUInt(tbuf[:tbufIdx])))
 				tbufIdx = 0
+
+				n--
+				if n == 0 {
+					return vals
+				}
 			}
 		}
 		p = p.next

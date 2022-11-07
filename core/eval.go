@@ -16,6 +16,7 @@ var RESP_ZERO []byte = []byte(":0\r\n")
 var RESP_ONE []byte = []byte(":1\r\n")
 var RESP_MINUS_1 []byte = []byte(":-1\r\n")
 var RESP_MINUS_2 []byte = []byte(":-2\r\n")
+var RESP_EMPTY_ARRAY []byte = []byte("*0\r\n")
 
 var txnCommands map[string]bool
 
@@ -396,6 +397,31 @@ func evalQINTLEN(args []string) []byte {
 	return Encode(q.Length, false)
 }
 
+// evalQINTPEEK peeks into the QINT and returns 5 elements without popping them
+// returns the array of integers as the response.
+// if the key does not exist, then we return an empty array
+func evalQINTPEEK(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR invalid number of arguments for `QINTPEEK` command"), false)
+	}
+
+	obj := Get(args[0])
+	if obj == nil {
+		return RESP_EMPTY_ARRAY
+	}
+
+	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+		return Encode(err, false)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_QINT); err != nil {
+		return Encode(err, false)
+	}
+
+	q := obj.Value.(*QueueInt)
+	return Encode(q.Iterate(5), false)
+}
+
 func executeCommand(cmd *RedisCmd, c *Client) []byte {
 	switch cmd.Cmd {
 	case "PING":
@@ -430,6 +456,8 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		return evalQINTREM(cmd.Args)
 	case "QINTLEN":
 		return evalQINTLEN(cmd.Args)
+	case "QINTPEEK":
+		return evalQINTPEEK(cmd.Args)
 	case "MULTI":
 		c.TxnBegin()
 		return evalMULTI(cmd.Args)
