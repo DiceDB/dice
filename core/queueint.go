@@ -9,6 +9,8 @@ import (
 
 const QueueIntMaxBuf int = 256
 
+var ErrQueueEmpty = errors.New("queue is empty")
+
 type QueueInt struct {
 	Length int64
 	list   *byteList
@@ -59,7 +61,7 @@ func (q *QueueInt) Remove() (int64, error) {
 	var val int64
 	bn := q.list.head
 	if bn == nil || len(bn.buf) == 0 {
-		return 0, errors.New("queueint is empty")
+		return 0, ErrQueueEmpty
 	}
 	var i int
 	var tbuf []byte = make([]byte, 11)

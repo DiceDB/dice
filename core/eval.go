@@ -338,6 +338,39 @@ func evalQINTINS(args []string) []byte {
 	return RESP_OK
 }
 
+// evalQINTREM removes the element from the QINT identified by key
+// first argument will be the key, that should be of type `QINT`
+// if the key does not exist, evalQINTREM returns nil otherwise it
+// returns the integer value popped from the queue
+// if we remove from the empty queue, nil is returned
+func evalQINTREM(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR invalid number of arguments for `QINTREM` command"), false)
+	}
+
+	obj := Get(args[0])
+	if obj == nil {
+		return RESP_NIL
+	}
+
+	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+		return Encode(err, false)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_QINT); err != nil {
+		return Encode(err, false)
+	}
+
+	q := obj.Value.(*QueueInt)
+	x, err := q.Remove()
+
+	if err == ErrQueueEmpty {
+		return RESP_NIL
+	}
+
+	return Encode(x, false)
+}
+
 func executeCommand(cmd *RedisCmd, c *Client) []byte {
 	switch cmd.Cmd {
 	case "PING":
@@ -368,6 +401,8 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		return evalSLEEP(cmd.Args)
 	case "QINTINS":
 		return evalQINTINS(cmd.Args)
+	case "QINTREM":
+		return evalQINTREM(cmd.Args)
 	case "MULTI":
 		c.TxnBegin()
 		return evalMULTI(cmd.Args)
