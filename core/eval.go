@@ -371,6 +371,31 @@ func evalQINTREM(args []string) []byte {
 	return Encode(x, false)
 }
 
+// evalQINTLEN returns the length of the QINT identified by key
+// returns the integer value indicating the length of the queue
+// if the key does not exist, the response is 0
+func evalQINTLEN(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR invalid number of arguments for `QINTLEN` command"), false)
+	}
+
+	obj := Get(args[0])
+	if obj == nil {
+		return RESP_ZERO
+	}
+
+	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+		return Encode(err, false)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_QINT); err != nil {
+		return Encode(err, false)
+	}
+
+	q := obj.Value.(*QueueInt)
+	return Encode(q.Length, false)
+}
+
 func executeCommand(cmd *RedisCmd, c *Client) []byte {
 	switch cmd.Cmd {
 	case "PING":
@@ -403,6 +428,8 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		return evalQINTINS(cmd.Args)
 	case "QINTREM":
 		return evalQINTREM(cmd.Args)
+	case "QINTLEN":
+		return evalQINTLEN(cmd.Args)
 	case "MULTI":
 		c.TxnBegin()
 		return evalMULTI(cmd.Args)
