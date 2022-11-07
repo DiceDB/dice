@@ -401,8 +401,18 @@ func evalQINTLEN(args []string) []byte {
 // returns the array of integers as the response.
 // if the key does not exist, then we return an empty array
 func evalQINTPEEK(args []string) []byte {
-	if len(args) != 1 {
+	var num int64 = 5
+	var err error
+
+	if len(args) > 2 {
 		return Encode(errors.New("ERR invalid number of arguments for `QINTPEEK` command"), false)
+	}
+
+	if len(args) == 2 {
+		num, err = strconv.ParseInt(args[1], 10, 32)
+		if err != nil || num <= 0 || num > 100 {
+			return Encode(errors.New("ERR number of elements to peek should be a positive number less than 100"), false)
+		}
 	}
 
 	obj := Get(args[0])
@@ -419,7 +429,7 @@ func evalQINTPEEK(args []string) []byte {
 	}
 
 	q := obj.Value.(*QueueInt)
-	return Encode(q.Iterate(5), false)
+	return Encode(q.Iterate(int(num)), false)
 }
 
 func executeCommand(cmd *RedisCmd, c *Client) []byte {
