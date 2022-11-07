@@ -149,6 +149,13 @@ func Encode(value interface{}, isSimple bool) []byte {
 			buf.Write(Encode(b, false))
 		}
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
+	case []int64:
+		var b []byte
+		buf := bytes.NewBuffer(b)
+		for _, b := range value.([]int64) {
+			buf.Write(Encode(b, false))
+		}
+		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
 	case error:
 		return []byte(fmt.Sprintf("-%s\r\n", v))
 	default:

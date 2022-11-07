@@ -16,6 +16,7 @@ var RESP_ZERO []byte = []byte(":0\r\n")
 var RESP_ONE []byte = []byte(":1\r\n")
 var RESP_MINUS_1 []byte = []byte(":-1\r\n")
 var RESP_MINUS_2 []byte = []byte(":-2\r\n")
+var RESP_EMPTY_ARRAY []byte = []byte("*0\r\n")
 
 var txnCommands map[string]bool
 
@@ -25,7 +26,7 @@ func init() {
 
 // evalPING returns with an encoded "PONG"
 // If any message is added with the ping command,
-// the message will be returned. 
+// the message will be returned.
 func evalPING(args []string) []byte {
 	var b []byte
 
@@ -303,6 +304,134 @@ func evalMULTI(args []string) []byte {
 	return RESP_OK
 }
 
+// evalQINTINS inserts the provided integer in the key identified by key
+// first argument will be the key, that should be of type `QINT`
+// second argument will be the integer value
+// if the key does not exist, evalQINTINS will also create the integer queue
+func evalQINTINS(args []string) []byte {
+	if len(args) != 2 {
+		return Encode(errors.New("ERR invalid number of arguments for `QINTINS` command"), false)
+	}
+
+	x, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return Encode(errors.New("ERR only integer values can be inserted in QINT"), false)
+	}
+
+	obj := Get(args[0])
+	if obj == nil {
+		obj = NewObj(NewQueueInt(), -1, OBJ_TYPE_BYTELIST, OBJ_ENCODING_QINT)
+	}
+
+	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+		return Encode(err, false)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_QINT); err != nil {
+		return Encode(err, false)
+	}
+
+	Put(args[0], obj)
+
+	q := obj.Value.(*QueueInt)
+	q.Insert(x)
+
+	return RESP_OK
+}
+
+// evalQINTREM removes the element from the QINT identified by key
+// first argument will be the key, that should be of type `QINT`
+// if the key does not exist, evalQINTREM returns nil otherwise it
+// returns the integer value popped from the queue
+// if we remove from the empty queue, nil is returned
+func evalQINTREM(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR invalid number of arguments for `QINTREM` command"), false)
+	}
+
+	obj := Get(args[0])
+	if obj == nil {
+		return RESP_NIL
+	}
+
+	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+		return Encode(err, false)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_QINT); err != nil {
+		return Encode(err, false)
+	}
+
+	q := obj.Value.(*QueueInt)
+	x, err := q.Remove()
+
+	if err == ErrQueueEmpty {
+		return RESP_NIL
+	}
+
+	return Encode(x, false)
+}
+
+// evalQINTLEN returns the length of the QINT identified by key
+// returns the integer value indicating the length of the queue
+// if the key does not exist, the response is 0
+func evalQINTLEN(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR invalid number of arguments for `QINTLEN` command"), false)
+	}
+
+	obj := Get(args[0])
+	if obj == nil {
+		return RESP_ZERO
+	}
+
+	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+		return Encode(err, false)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_QINT); err != nil {
+		return Encode(err, false)
+	}
+
+	q := obj.Value.(*QueueInt)
+	return Encode(q.Length, false)
+}
+
+// evalQINTPEEK peeks into the QINT and returns 5 elements without popping them
+// returns the array of integers as the response.
+// if the key does not exist, then we return an empty array
+func evalQINTPEEK(args []string) []byte {
+	var num int64 = 5
+	var err error
+
+	if len(args) > 2 {
+		return Encode(errors.New("ERR invalid number of arguments for `QINTPEEK` command"), false)
+	}
+
+	if len(args) == 2 {
+		num, err = strconv.ParseInt(args[1], 10, 32)
+		if err != nil || num <= 0 || num > 100 {
+			return Encode(errors.New("ERR number of elements to peek should be a positive number less than 100"), false)
+		}
+	}
+
+	obj := Get(args[0])
+	if obj == nil {
+		return RESP_EMPTY_ARRAY
+	}
+
+	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+		return Encode(err, false)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_QINT); err != nil {
+		return Encode(err, false)
+	}
+
+	q := obj.Value.(*QueueInt)
+	return Encode(q.Iterate(int(num)), false)
+}
+
 func executeCommand(cmd *RedisCmd, c *Client) []byte {
 	switch cmd.Cmd {
 	case "PING":
@@ -331,6 +460,14 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		return evalLRU(cmd.Args)
 	case "SLEEP":
 		return evalSLEEP(cmd.Args)
+	case "QINTINS":
+		return evalQINTINS(cmd.Args)
+	case "QINTREM":
+		return evalQINTREM(cmd.Args)
+	case "QINTLEN":
+		return evalQINTLEN(cmd.Args)
+	case "QINTPEEK":
+		return evalQINTPEEK(cmd.Args)
 	case "MULTI":
 		c.TxnBegin()
 		return evalMULTI(cmd.Args)

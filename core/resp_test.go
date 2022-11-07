@@ -1,4 +1,4 @@
-package tests
+package core_test
 
 import (
 	"bytes"
