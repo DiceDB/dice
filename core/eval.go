@@ -25,7 +25,7 @@ func init() {
 
 // evalPING returns with an encoded "PONG"
 // If any message is added with the ping command,
-// the message will be returned. 
+// the message will be returned.
 func evalPING(args []string) []byte {
 	var b []byte
 
@@ -303,6 +303,41 @@ func evalMULTI(args []string) []byte {
 	return RESP_OK
 }
 
+// evalQINTINS inserts the provided integer in the key identified by key
+// first argument will be the key, that should be of type `QINT`
+// second argument will be the integer value
+// if the key does not exist, evalQINTINS will also create the integer queue
+func evalQINTINS(args []string) []byte {
+	if len(args) != 2 {
+		return Encode(errors.New("ERR invalid number of arguments for `QINTINS` command"), false)
+	}
+
+	x, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return Encode(errors.New("ERR only integer values can be inserted in QINT"), false)
+	}
+
+	obj := Get(args[0])
+	if obj == nil {
+		obj = NewObj(NewQueueInt(), -1, OBJ_TYPE_BYTELIST, OBJ_ENCODING_QINT)
+	}
+
+	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+		return Encode(err, false)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_QINT); err != nil {
+		return Encode(err, false)
+	}
+
+	Put(args[0], obj)
+
+	q := obj.Value.(*QueueInt)
+	q.Insert(x)
+
+	return RESP_OK
+}
+
 func executeCommand(cmd *RedisCmd, c *Client) []byte {
 	switch cmd.Cmd {
 	case "PING":
@@ -331,6 +366,8 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		return evalLRU(cmd.Args)
 	case "SLEEP":
 		return evalSLEEP(cmd.Args)
+	case "QINTINS":
+		return evalQINTINS(cmd.Args)
 	case "MULTI":
 		c.TxnBegin()
 		return evalMULTI(cmd.Args)
