@@ -277,6 +277,10 @@ func evalLRU(args []string) []byte {
 	evictAllkeysLRU()
 	return RESP_OK
 }
+func evalLFU(args []string) []byte {
+	evictAllkeysLFU()
+	return RESP_OK
+}
 
 // evalSLEEP sets db to sleep for the specified number of seconds.
 // The sleep time should be the only param in args.
@@ -458,6 +462,8 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		return evalLATENCY(cmd.Args)
 	case "LRU":
 		return evalLRU(cmd.Args)
+	case "LFU":
+		return evalLFU(cmd.Args)
 	case "SLEEP":
 		return evalSLEEP(cmd.Args)
 	case "QINTINS":

@@ -8,7 +8,7 @@ var KeysLimit int = 100
 // Will evict EvictionRatio of keys whenever eviction runs
 var EvictionRatio float64 = 0.40
 
-var EvictionStrategy string = "allkeys-lru"
+var EvictionStrategy string = LFU
 var AOFFile string = "./dice-master.aof"
 
 // Network

@@ -12,6 +12,11 @@ var expires map[*Obj]uint64
 func init() {
 	store = make(map[string]*Obj)
 	expires = make(map[*Obj]uint64)
+
+	switch config.EvictionStrategy {
+	case config.LFU:
+		initLFU()
+	}
 }
 
 func setExpiry(obj *Obj, expDurationMs int64) {
@@ -40,6 +45,12 @@ func Put(k string, obj *Obj) {
 		KeyspaceStat[0] = make(map[string]int)
 	}
 	KeyspaceStat[0]["keys"]++
+
+	switch config.EvictionStrategy {
+	case config.LFU:
+		freqList.Insert(k)
+	}
+
 }
 
 func Get(k string) *Obj {
@@ -51,6 +62,12 @@ func Get(k string) *Obj {
 		}
 		v.LastAccessedAt = getCurrentClock()
 	}
+
+	switch config.EvictionStrategy {
+	case config.LFU:
+		freqList.ReBalanceList(k)
+	}
+
 	return v
 }
 
@@ -59,6 +76,12 @@ func Del(k string) bool {
 		delete(store, k)
 		delete(expires, obj)
 		KeyspaceStat[0]["keys"]--
+
+		switch config.EvictionStrategy {
+		case config.LFU:
+			freqList.RemoveByKey(k)
+		}
+
 		return true
 	}
 	return false
