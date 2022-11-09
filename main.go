@@ -24,6 +24,8 @@ func main() {
 
 	var sigs chan os.Signal = make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
+	//Need to clean up zombie process as soon as they appear once AOF background thread exits.
+	signal.Ignore(syscall.SIGCHLD)
 	var wg sync.WaitGroup
 	wg.Add(1)
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"syscall"
 	"time"
@@ -46,7 +47,9 @@ func evalPING(args []string) []byte {
 // evalSET puts a new <key, value> pair in db as in the args
 // args must contain key and value.
 // args can also contain multiple options -
-//	 	EX or ex which will set the expiry time(in secs) for the key
+//
+//	EX or ex which will set the expiry time(in secs) for the key
+//
 // Returns encoded error response if at least a <key, value> pair is not part of args
 // Returns encoded error response if expiry tme value in not integer
 // Returns encoded OK RESP once new entry is added
@@ -116,8 +119,9 @@ func evalGET(args []string) []byte {
 // evalTTL returns Time-to-Live in secs for the queried key in args
 // The key should be the only param in args else returns with an error
 // Returns	RESP encoded time (in secs) remaining for the key to expire
-//			RESP encoded -2 stating key doesn't exist or key is expired
-//			RESP encoded -1 in case no expiration is set on the key
+//
+//	RESP encoded -2 stating key doesn't exist or key is expired
+//	RESP encoded -1 in case no expiration is set on the key
 func evalTTL(args []string) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'ttl' command"), false)
@@ -206,7 +210,13 @@ func evalBGREWRITEAOF(args []string) []byte {
 	newChild, _, _ := syscall.Syscall(syscall.SYS_FORK, 0, 0, 0)
 	if newChild == 0 {
 		//We are inside child process now, so we'll start flushing to disk.
-		DumpAllAOF()
+		err := DumpAllAOF()
+		if err != nil {
+			return Encode(errors.New("ERR AOF failed"), false)
+		} else {
+			log.Println("AOF file rewrite completed")
+		}
+		syscall.Exit(0)
 		return []byte("")
 	} else {
 		//Back to main thread
