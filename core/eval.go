@@ -193,6 +193,38 @@ func evalEXPIRE(args []string) []byte {
 	return RESP_ONE
 }
 
+// evalEXPIREAT is same as evalEXPIRE but takes absolute unix timestamp in second argument
+func evalEXPIREAT(args []string) []byte {
+	if len(args) <= 1 {
+		return Encode(errors.New("ERR wrong number of arguments for 'expireat' command"), false)
+	}
+
+	var key string = args[0]
+	expiryTime, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return Encode(errors.New("ERR value is not an integer or out of range"), false)
+	}
+
+
+	obj := Get(key)
+
+	// 0 if the timeout was not set. e.g. key doesn't exist, or operation skipped due to the provided arguments
+	if obj == nil {
+		return RESP_ZERO
+	}
+
+	if expiryTime < time.Now().Unix() {
+		// Key has expired
+		Del(key)
+		return RESP_ONE
+	}
+
+	setExpiryAt(obj, expiryTime*1000)
+
+	// 1 if the expiry timestamp is set
+	return RESP_ONE
+}
+
 /* Description - Spawn a background thread to persist the data via AOF technique. Current implementation is
 based on CoW optimization and Fork */
 // TODO: Implement Acknowledgement so that main process could know whether child has finished writing to its AOF file or not.
@@ -446,6 +478,8 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		return evalDEL(cmd.Args)
 	case "EXPIRE":
 		return evalEXPIRE(cmd.Args)
+	case "EXPIREAT":
+		return evalEXPIREAT(cmd.Args)
 	case "BGREWRITEAOF":
 		return evalBGREWRITEAOF(cmd.Args)
 	case "INCR":

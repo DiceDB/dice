@@ -18,6 +18,10 @@ func setExpiry(obj *Obj, expDurationMs int64) {
 	expires[obj] = uint64(time.Now().UnixMilli()) + uint64(expDurationMs)
 }
 
+func setExpiryAt(obj *Obj, expiryTimestamp int64) {
+	expires[obj] = uint64(expiryTimestamp)
+}
+
 func NewObj(value interface{}, expDurationMs int64, oType uint8, oEnc uint8) *Obj {
 	obj := &Obj{
 		Value:          value,
