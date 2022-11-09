@@ -25,7 +25,6 @@ func DumpAllAOF() {
 		fmt.Print("error", err)
 		return
 	}
-	
 	/* Note: A close function also returns an error, a plain defer is harmful. 
 	A successful close does not guarantee that the data has been successfully saved 
 	to disk,as the kernel uses the buffer cache to defer writes or write calls delays the writing 
@@ -38,12 +37,9 @@ func DumpAllAOF() {
 		return
 	}
 	}()
-
 	log.Println("rewriting AOF file at", config.AOFFile)
 	for k, obj := range store {
 		dumpKey(fp, k, obj)
 	}
-	
-
 	log.Println("AOF file rewrite complete")
 }
