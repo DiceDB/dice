@@ -20,7 +20,7 @@ func dumpKey(fp *os.File, key string, obj *Obj) {
 
 // TODO: To to new and switch
 func DumpAllAOF() {
-	fp, err := os.OpenFile(config.AOFFile, os.O_CREATE|os.O_WRONLY, os.ModeAppend)
+	fp, err := os.OpenFile(config.AOFFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		fmt.Print("error", err)
 		return
