@@ -14,5 +14,5 @@ var AOFFile string = "./dice-master.aof"
 // Network
 var IOBufferLength int = 512
 var IOBufferLengthMAX int = 50 * 1024
-var DEBUG bool = true
+var DEBUG bool = false
 var DEBUG_PORTS = []int{7380, 7381}
