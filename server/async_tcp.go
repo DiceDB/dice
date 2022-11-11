@@ -80,7 +80,27 @@ func RunAsyncTCPServer(wg *sync.WaitGroup) error {
 		Port: config.Port,
 		Addr: [4]byte{ip4[0], ip4[1], ip4[2], ip4[3]},
 	}); err != nil {
-		return err
+
+		if !config.DEBUG {
+			log.Fatal(err)
+			return err
+		}
+		log.Printf("debug mode enabled. trying to start the asynchronous TCP server on %d", config.DEBUG_PORTS)
+		for _, debugPort := range config.DEBUG_PORTS {
+			log.Println(err)
+			log.Println("debug mode enabled. starting an asynchronous TCP server on", config.Host, debugPort)
+			if err = syscall.Bind(serverFD, &syscall.SockaddrInet4{
+				Port: debugPort,
+				Addr: [4]byte{ip4[0], ip4[1], ip4[2], ip4[3]}}); err == nil {
+				break
+			}
+		}
+		if err != nil {
+			log.Fatal(err)
+			log.Printf("could not start the synchronous TCP server on %d", config.DEBUG_PORTS)
+			return err
+		}
+
 	}
 
 	// Start listening
