@@ -46,7 +46,9 @@ func evalPING(args []string) []byte {
 // evalSET puts a new <key, value> pair in db as in the args
 // args must contain key and value.
 // args can also contain multiple options -
-//	 	EX or ex which will set the expiry time(in secs) for the key
+//
+//	EX or ex which will set the expiry time(in secs) for the key
+//
 // Returns encoded error response if at least a <key, value> pair is not part of args
 // Returns encoded error response if expiry tme value in not integer
 // Returns encoded OK RESP once new entry is added
@@ -116,8 +118,9 @@ func evalGET(args []string) []byte {
 // evalTTL returns Time-to-Live in secs for the queried key in args
 // The key should be the only param in args else returns with an error
 // Returns	RESP encoded time (in secs) remaining for the key to expire
-//			RESP encoded -2 stating key doesn't exist or key is expired
-//			RESP encoded -1 in case no expiration is set on the key
+//
+//	RESP encoded -2 stating key doesn't exist or key is expired
+//	RESP encoded -1 in case no expiration is set on the key
 func evalTTL(args []string) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'ttl' command"), false)
@@ -468,6 +471,14 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		return evalQINTLEN(cmd.Args)
 	case "QINTPEEK":
 		return evalQINTPEEK(cmd.Args)
+	case "BFINIT":
+		return evalBFInit(cmd.Args)
+	case "BFADD":
+		return evalBFAdd(cmd.Args)
+	case "BFEXISTS":
+		return evalBFExists(cmd.Args)
+	case "BFINFO":
+		return evalBFInfo(cmd.Args)
 	case "MULTI":
 		c.TxnBegin()
 		return evalMULTI(cmd.Args)
