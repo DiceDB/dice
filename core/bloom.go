@@ -14,15 +14,14 @@ const (
 var (
 	errWrongArgs            = errors.New("ERR wrong number of arguments")
 	errInvalidErrorRateType = errors.New("ERR only float values can be provided for error rate")
-	errInvalidErrorRate     = errors.New("ERR invalid error rate provided")
-	errInvalidEntriessType  = errors.New("ERR only integer values can be provided for entries")
-	errInvalidEntries       = errors.New("ERR invalid entries provided")
+	errInvalidErrorRate     = errors.New("ERR invalid error rate value provided")
+	errInvalidCapacityType  = errors.New("ERR only integer values can be provided for capacity")
+	errInvalidCapacity      = errors.New("ERR invalid capacity value provided")
 )
 
 type BloomOpts struct {
-	errorRate float64 // error rate for the bloom filter (the false positive rate)
-	entries   uint64  // max number of expected entries in a bloom filter
-	// add other params here
+	errorRate float64 // desired error rate (the false positive rate) of the filter
+	capacity  uint64  // number of expected entries to be added to the filter
 }
 
 type Bloom struct {
@@ -30,8 +29,9 @@ type Bloom struct {
 	bitset []byte     // underlying bit representation
 }
 
-// newBloomOpts creates options for a bloom filter given user defined values. It also
-// falls back to default values if `useDefaults` is set to true.
+// newBloomOpts extracts the user defined values from `args`. It falls back to
+// default values if `useDefaults` is set to true. Using those values, it
+// creates and returns the options for bloom filter.
 func newBloomOpts(args []string, useDefaults bool) (*BloomOpts, error) {
 	if useDefaults {
 		return &BloomOpts{defaultErrorRate, defaultCapacity}, nil
@@ -46,16 +46,16 @@ func newBloomOpts(args []string, useDefaults bool) (*BloomOpts, error) {
 		return nil, errInvalidErrorRate
 	}
 
-	entries, err := strconv.ParseUint(args[1], 10, 64)
+	capacity, err := strconv.ParseUint(args[1], 10, 64)
 	if err != nil {
-		return nil, errInvalidEntriessType
+		return nil, errInvalidCapacityType
 	}
 
-	if entries < 1 {
-		return nil, errInvalidEntries
+	if capacity < 1 {
+		return nil, errInvalidCapacity
 	}
 
-	return &BloomOpts{errorRate, entries}, nil
+	return &BloomOpts{errorRate, capacity}, nil
 }
 
 // newBloomFilter creates and returns a new filter. It is responsible for initializing the
