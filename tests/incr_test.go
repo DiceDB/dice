@@ -6,62 +6,35 @@ import (
 	"testing"
 )
 
-func TestINCRWhenKeyAlreadyExists(t *testing.T) {
-	var wg sync.WaitGroup
-	go runTestServer(&wg)
-
-	conn := getLocalConnection()
-
-	cmd := fmt.Sprintf("SET key %s", "1")
-	fireCommand(conn, cmd)
-
-	cmd = fmt.Sprintf("INCR key")
-
-	value := fireCommand(conn, cmd)
-
-	if value.(int64) != 2 {
-		t.Fail()
-	}
-
-	fireCommand(conn, "ABORT")
-	wg.Wait()
+type tcase struct {
+	op  string
+	val int64
 }
 
-func TestINCRWhenKeyDoesNotExist(t *testing.T) {
+func TestINCR(t *testing.T) {
 	var wg sync.WaitGroup
 	go runTestServer(&wg)
-
 	conn := getLocalConnection()
 
-	cmd := fmt.Sprintf("INCR key")
+	for _, tc := range []tcase{
+		{"s1", 0},
+		{"i1", 1},
+		{"i1", 1},
+	} {
 
-	value := fireCommand(conn, cmd)
-
-	if value.(int64) != 1 {
-		t.Fail()
+		switch tc.op[0] {
+		case 's':
+			cmd := fmt.Sprintf("SET Key %d", tc.val)
+			fireCommand(conn, cmd)
+		case 'i':
+			cmd := fmt.Sprintf("INCR Key")
+			fireCommand(conn, cmd)
+		}
 	}
 
-	fireCommand(conn, "ABORT")
-	wg.Wait()
-}
-
-func TestINCRWhenMultipleCommandsFired(t *testing.T) {
-	var wg sync.WaitGroup
-	go runTestServer(&wg)
-
-	conn := getLocalConnection()
-
-	cmd := fmt.Sprintf("SET k%d %s", 1, "0")
-	fireCommand(conn, cmd)
-
-	for i := 1; i <= 5; i++ {
-		cmd := fmt.Sprintf("INCR k%d", 1)
-		fireCommand(conn, cmd)
-	}
-
-	cmd = fmt.Sprintf("GET k1")
-	value := fireCommand(conn, cmd)
-	if value != "5" {
+	cmd := fmt.Sprintf("GET Key")
+	r := fireCommand(conn, cmd)
+	if r != "2" {
 		t.Fail()
 	}
 
