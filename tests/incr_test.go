@@ -36,8 +36,8 @@ func TestINCR(t *testing.T) {
 			fireCommand(conn, cmd)
 		case 'g':
 			cmd := fmt.Sprintf("GET %s", tc.key)
-			r := fireCommand(conn, cmd)
-			assertResult(t, r, strconv.FormatInt(tc.val, 10))
+			result := fireCommand(conn, cmd)
+			assertResult(t, result, strconv.FormatInt(tc.val, 10))
 
 		}
 	}
@@ -46,8 +46,8 @@ func TestINCR(t *testing.T) {
 	wg.Wait()
 }
 
-func assertResult(t *testing.T, r interface{}, expected string) {
-	if r != expected {
+func assertResult(t *testing.T, result interface{}, expected string) {
+	if result != expected {
 		t.Fail()
 	}
 }
