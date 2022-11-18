@@ -142,6 +142,13 @@ func Encode(value interface{}, isSimple bool) []byte {
 			buf.Write(encodeString(b))
 		}
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
+	case []*Obj:
+		var b []byte
+		buf := bytes.NewBuffer(b)
+		for _, b := range value.([]*Obj) {
+			buf.Write(Encode(b.Value, false))
+		}
+		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
 	case []interface{}:
 		var b []byte
 		buf := bytes.NewBuffer(b)

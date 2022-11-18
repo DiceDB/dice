@@ -4,8 +4,6 @@ import (
 	"unsafe"
 )
 
-const QueueRefMaxBuf int = 256
-
 type QueueRef struct {
 	qi *QueueInt
 }
