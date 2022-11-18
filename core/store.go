@@ -2,16 +2,19 @@ package core
 
 import (
 	"time"
+	"unsafe"
 
 	"github.com/dicedb/dice/config"
 )
 
-var store map[string]*Obj
+var store map[unsafe.Pointer]*Obj
 var expires map[*Obj]uint64
+var keypool map[string]unsafe.Pointer
 
 func init() {
-	store = make(map[string]*Obj)
+	store = make(map[unsafe.Pointer]*Obj)
 	expires = make(map[*Obj]uint64)
+	keypool = make(map[string]unsafe.Pointer)
 }
 
 func setExpiry(obj *Obj, expDurationMs int64) {
@@ -35,7 +38,14 @@ func Put(k string, obj *Obj) {
 		evict()
 	}
 	obj.LastAccessedAt = getCurrentClock()
-	store[k] = obj
+
+	ptr, ok := keypool[k]
+	if !ok {
+		keypool[k] = unsafe.Pointer(&k)
+		ptr = unsafe.Pointer(&k)
+	}
+
+	store[ptr] = obj
 	if KeyspaceStat[0] == nil {
 		KeyspaceStat[0] = make(map[string]int)
 	}
@@ -43,7 +53,12 @@ func Put(k string, obj *Obj) {
 }
 
 func Get(k string) *Obj {
-	v := store[k]
+	ptr, ok := keypool[k]
+	if !ok {
+		return nil
+	}
+
+	v := store[ptr]
 	if v != nil {
 		if hasExpired(v) {
 			Del(k)
@@ -55,9 +70,26 @@ func Get(k string) *Obj {
 }
 
 func Del(k string) bool {
-	if obj, ok := store[k]; ok {
-		delete(store, k)
+	ptr, ok := keypool[k]
+	if !ok {
+		return false
+	}
+
+	if obj, ok := store[ptr]; ok {
+		delete(store, ptr)
 		delete(expires, obj)
+		delete(keypool, k)
+		KeyspaceStat[0]["keys"]--
+		return true
+	}
+	return false
+}
+
+func DelByPtr(ptr unsafe.Pointer) bool {
+	if obj, ok := store[ptr]; ok {
+		delete(store, ptr)
+		delete(expires, obj)
+		delete(keypool, *((*string)(ptr)))
 		KeyspaceStat[0]["keys"]--
 		return true
 	}

@@ -27,7 +27,7 @@ func DumpAllAOF() {
 	}
 	log.Println("rewriting AOF file at", config.AOFFile)
 	for k, obj := range store {
-		dumpKey(fp, k, obj)
+		dumpKey(fp, *((*string)(k)), obj)
 	}
 	log.Println("AOF file rewrite complete")
 }
