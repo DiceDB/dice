@@ -25,10 +25,10 @@ func expireSample() float32 {
 	var expiredCount int = 0
 
 	// assuming iteration of golang hash table in randomized
-	for key, obj := range store {
+	for keyPtr, obj := range store {
 		limit--
 		if hasExpired(obj) {
-			Del(key)
+			DelByPtr(keyPtr)
 			expiredCount++
 		}
 

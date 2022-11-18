@@ -2,10 +2,11 @@ package core
 
 import (
 	"sort"
+	"unsafe"
 )
 
 type PoolItem struct {
-	key            string
+	keyPtr         unsafe.Pointer
 	lastAccessedAt uint32
 }
 
@@ -13,7 +14,7 @@ type PoolItem struct {
 // update the poolItem correponding to that
 type EvictionPool struct {
 	pool   []*PoolItem
-	keyset map[string]*PoolItem
+	keyset map[unsafe.Pointer]*PoolItem
 }
 
 type ByIdleTime []*PoolItem
@@ -31,12 +32,12 @@ func (a ByIdleTime) Less(i, j int) bool {
 }
 
 // TODO: Make the implementation efficient to not need repeated sorting
-func (pq *EvictionPool) Push(key string, lastAccessedAt uint32) {
+func (pq *EvictionPool) Push(key unsafe.Pointer, lastAccessedAt uint32) {
 	_, ok := pq.keyset[key]
 	if ok {
 		return
 	}
-	item := &PoolItem{key: key, lastAccessedAt: lastAccessedAt}
+	item := &PoolItem{keyPtr: key, lastAccessedAt: lastAccessedAt}
 	if len(pq.pool) < ePoolSizeMax {
 		pq.keyset[key] = item
 		pq.pool = append(pq.pool, item)
@@ -56,14 +57,14 @@ func (pq *EvictionPool) Pop() *PoolItem {
 	}
 	item := pq.pool[0]
 	pq.pool = pq.pool[1:]
-	delete(pq.keyset, item.key)
+	delete(pq.keyset, item.keyPtr)
 	return item
 }
 
 func newEvictionPool(size int) *EvictionPool {
 	return &EvictionPool{
 		pool:   make([]*PoolItem, size),
-		keyset: make(map[string]*PoolItem),
+		keyset: make(map[unsafe.Pointer]*PoolItem),
 	}
 }
 
