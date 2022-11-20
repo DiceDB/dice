@@ -156,6 +156,23 @@ func Encode(value interface{}, isSimple bool) []byte {
 			buf.Write(Encode(b, false))
 		}
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
+	case *QueueElement:
+		var b []byte
+		buf := bytes.NewBuffer(b)
+		qe := value.(*QueueElement)
+		buf.Write(Encode(qe.Key, false))
+		buf.Write(Encode(qe.Obj.Value, false))
+		return []byte(fmt.Sprintf("*2\r\n%s", buf.Bytes()))
+	case []*QueueElement:
+		var b []byte
+		buf := bytes.NewBuffer(b)
+		elements := value.([]*QueueElement)
+		for _, qe := range elements {
+			buf.Write([]byte("*2\r\n"))
+			buf.Write(Encode(qe.Key, false))
+			buf.Write(Encode(qe.Obj.Value, false))
+		}
+		return []byte(fmt.Sprintf("*%d\r\n%s", len(elements), buf.Bytes()))
 	case []int64:
 		var b []byte
 		buf := bytes.NewBuffer(b)

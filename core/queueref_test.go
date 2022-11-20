@@ -32,7 +32,7 @@ func TestQueueRef(t *testing.T) {
 		t.Error("inserting the reference of the key that exists should work but it did not")
 	}
 
-	if obj, _ := qr.Remove(); obj.Value != 10 {
+	if qe, _ := qr.Remove(); qe.Obj.Value != 10 {
 		t.Error("removing from the queueref should return the obj")
 	}
 
@@ -49,8 +49,8 @@ func TestQueueRef(t *testing.T) {
 	core.Put("key7", core.NewObj(60, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
 
 	observedVals := make([]int64, 0, 6)
-	for _, obj := range qr.Iterate(6) {
-		observedVals = append(observedVals, obj.Value.(int64))
+	for _, qe := range qr.Iterate(6) {
+		observedVals = append(observedVals, qe.Obj.Value.(int64))
 	}
 
 	testutils.EqualInt64Slice(observedVals, []int64{10, 20, 30, 40, 50, 60})

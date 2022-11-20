@@ -436,8 +436,8 @@ func evalQINTPEEK(args []string) []byte {
 // first argument will be the key, that should be of type `QREF`
 // second argument will be the key that needs to be added to the queueref
 // if the queue does not exist, evalQREFINS will also create the queueref
-// returns true if the key reference was inserted
-// returns false otherwise
+// returns 1 if the key reference was inserted
+// returns 0 otherwise
 func evalQREFINS(args []string) []byte {
 	if len(args) != 2 {
 		return Encode(errors.New("ERR invalid number of arguments for `QREFINS` command"), false)
@@ -459,7 +459,10 @@ func evalQREFINS(args []string) []byte {
 	Put(args[0], obj)
 
 	q := obj.Value.(*QueueRef)
-	return Encode(q.Insert(args[1]), false)
+	if q.Insert(args[1]) {
+		return Encode(1, false)
+	}
+	return Encode(0, false)
 }
 
 // evalQREFREM removes the element from the QREF identified by key
@@ -492,7 +495,7 @@ func evalQREFREM(args []string) []byte {
 		return RESP_NIL
 	}
 
-	return Encode(x.Value, false)
+	return Encode(x, false)
 }
 
 // evalQREFLEN returns the length of the QREF identified by key
@@ -527,7 +530,7 @@ func evalQREFPEEK(args []string) []byte {
 	var num int64 = 5
 	var err error
 
-	if len(args) > 2 {
+	if len(args) == 0 {
 		return Encode(errors.New("ERR invalid number of arguments for `QREFPEEK` command"), false)
 	}
 
