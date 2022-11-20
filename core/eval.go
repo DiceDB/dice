@@ -432,6 +432,132 @@ func evalQINTPEEK(args []string) []byte {
 	return Encode(q.Iterate(int(num)), false)
 }
 
+// evalQREFINS inserts the reference of the provided key identified by key
+// first argument will be the key, that should be of type `QREF`
+// second argument will be the key that needs to be added to the queueref
+// if the queue does not exist, evalQREFINS will also create the queueref
+// returns 1 if the key reference was inserted
+// returns 0 otherwise
+func evalQREFINS(args []string) []byte {
+	if len(args) != 2 {
+		return Encode(errors.New("ERR invalid number of arguments for `QREFINS` command"), false)
+	}
+
+	obj := Get(args[0])
+	if obj == nil {
+		obj = NewObj(NewQueueRef(), -1, OBJ_TYPE_BYTELIST, OBJ_ENCODING_QREF)
+	}
+
+	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+		return Encode(err, false)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_QREF); err != nil {
+		return Encode(err, false)
+	}
+
+	Put(args[0], obj)
+
+	q := obj.Value.(*QueueRef)
+	if q.Insert(args[1]) {
+		return Encode(1, false)
+	}
+	return Encode(0, false)
+}
+
+// evalQREFREM removes the element from the QREF identified by key
+// first argument will be the key, that should be of type `QREF`
+// if the key does not exist, evalQREFREM returns nil otherwise it
+// returns the RESP encoded value of the key reference from the queue
+// if we remove from the empty queue, nil is returned
+func evalQREFREM(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR invalid number of arguments for `QREFREM` command"), false)
+	}
+
+	obj := Get(args[0])
+	if obj == nil {
+		return RESP_NIL
+	}
+
+	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+		return Encode(err, false)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_QREF); err != nil {
+		return Encode(err, false)
+	}
+
+	q := obj.Value.(*QueueRef)
+	x, err := q.Remove()
+
+	if err == ErrQueueEmpty {
+		return RESP_NIL
+	}
+
+	return Encode(x, false)
+}
+
+// evalQREFLEN returns the length of the QREF identified by key
+// returns the integer value indicating the length of the queue
+// if the key does not exist, the response is 0
+func evalQREFLEN(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR invalid number of arguments for `QREFLEN` command"), false)
+	}
+
+	obj := Get(args[0])
+	if obj == nil {
+		return RESP_ZERO
+	}
+
+	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+		return Encode(err, false)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_QREF); err != nil {
+		return Encode(err, false)
+	}
+
+	q := obj.Value.(*QueueRef)
+	return Encode(q.qi.Length, false)
+}
+
+// evalQREFPEEK peeks into the QREF and returns 5 elements without popping them
+// returns the array of resp encoded values as the response.
+// if the key does not exist, then we return an empty array
+func evalQREFPEEK(args []string) []byte {
+	var num int64 = 5
+	var err error
+
+	if len(args) == 0 {
+		return Encode(errors.New("ERR invalid number of arguments for `QREFPEEK` command"), false)
+	}
+
+	if len(args) == 2 {
+		num, err = strconv.ParseInt(args[1], 10, 32)
+		if err != nil || num <= 0 || num > 100 {
+			return Encode(errors.New("ERR number of elements to peek should be a positive number less than 100"), false)
+		}
+	}
+
+	obj := Get(args[0])
+	if obj == nil {
+		return RESP_EMPTY_ARRAY
+	}
+
+	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+		return Encode(err, false)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_QREF); err != nil {
+		return Encode(err, false)
+	}
+
+	q := obj.Value.(*QueueRef)
+	return Encode(q.Iterate(int(num)), false)
+}
+
 func executeCommand(cmd *RedisCmd, c *Client) []byte {
 	switch cmd.Cmd {
 	case "PING":
@@ -468,6 +594,14 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		return evalQINTLEN(cmd.Args)
 	case "QINTPEEK":
 		return evalQINTPEEK(cmd.Args)
+	case "QREFINS":
+		return evalQREFINS(cmd.Args)
+	case "QREFREM":
+		return evalQREFREM(cmd.Args)
+	case "QREFLEN":
+		return evalQREFLEN(cmd.Args)
+	case "QREFPEEK":
+		return evalQREFPEEK(cmd.Args)
 	case "MULTI":
 		c.TxnBegin()
 		return evalMULTI(cmd.Args)
