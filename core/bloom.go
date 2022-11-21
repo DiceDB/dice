@@ -3,12 +3,19 @@ package core
 import (
 	"errors"
 	"fmt"
+	"hash"
+	"math"
 	"strconv"
 )
 
 const (
-	defaultErrorRate float64 = 0.01 // (TODO): Update values
-	defaultCapacity  uint64  = 1024 // (TODO): Update values
+	defaultErrorRate float64 = 0.01
+	defaultCapacity  uint64  = 1024
+)
+
+var (
+	ln2      float64 = math.Log(2)
+	ln2Power float64 = ln2 * ln2
 )
 
 var (
@@ -22,6 +29,10 @@ var (
 type BloomOpts struct {
 	errorRate float64 // desired error rate (the false positive rate) of the filter
 	capacity  uint64  // number of expected entries to be added to the filter
+
+	bits    uint64        // total number of bits reserved for the filter
+	hashFns []hash.Hash32 // array of hash functions
+	bpe     float64       // bits per element
 }
 
 type Bloom struct {
@@ -34,7 +45,7 @@ type Bloom struct {
 // creates and returns the options for bloom filter.
 func newBloomOpts(args []string, useDefaults bool) (*BloomOpts, error) {
 	if useDefaults {
-		return &BloomOpts{defaultErrorRate, defaultCapacity}, nil
+		return &BloomOpts{errorRate: defaultErrorRate, capacity: defaultCapacity}, nil
 	}
 
 	errorRate, err := strconv.ParseFloat(args[0], 64)
@@ -55,14 +66,37 @@ func newBloomOpts(args []string, useDefaults bool) (*BloomOpts, error) {
 		return nil, errInvalidCapacity
 	}
 
-	return &BloomOpts{errorRate, capacity}, nil
+	return &BloomOpts{errorRate: errorRate, capacity: capacity}, nil
 }
 
 // newBloomFilter creates and returns a new filter. It is responsible for initializing the
 // underlying bit array.
 func newBloomFilter(opts *BloomOpts) *Bloom {
-	// Allocate bit capacity here and perform other calculations if required
-	return &Bloom{opts, nil}
+	// Calculate bits per element
+	// 		bpe = -log(errorRate)/ln(2)^2
+	num := -1 * math.Log(opts.errorRate)
+	opts.bpe = num / ln2Power // (TODO): type conversion or use ceil here
+
+	// Calculate the number of hash functions to be used
+	// 		k = ceil(ln(2) * bpe)
+	k := math.Ceil(ln2 * opts.bpe)
+	opts.hashFns = make([]hash.Hash32, int(k))
+
+	// Calculate the number of bytes to be used
+	// 		bits = k * entries / ln(2)
+	//		bytes = bits * 8
+	bits := uint64(math.Ceil((k * float64(opts.capacity)) / ln2))
+	var bytes uint64
+	if bits%8 == 0 {
+		bytes = bits / 8
+	} else {
+		bytes = (bits / 8) + 1
+	}
+	opts.bits = bytes * 8
+
+	bitset := make([]byte, bytes)
+
+	return &Bloom{opts, bitset}
 }
 
 func evalBFInit(args []string) []byte {
@@ -76,9 +110,12 @@ func evalBFInit(args []string) []byte {
 		return Encode(fmt.Errorf("%w for 'BINIT' command", err), false)
 	}
 
-	getOrCreateBloomFilter(key, opts)
+	_, err = getOrCreateBloomFilter(key, opts)
+	if err != nil {
+		return Encode(fmt.Errorf("%w for 'BINIT' command", err), false)
+	}
 
-	return nil
+	return RESP_OK
 }
 
 func evalBFAdd(args []string) []byte {
