@@ -75,7 +75,7 @@ func newBloomFilter(opts *BloomOpts) *Bloom {
 	// Calculate bits per element
 	// 		bpe = -log(errorRate)/ln(2)^2
 	num := -1 * math.Log(opts.errorRate)
-	opts.bpe = num / ln2Power // (TODO): type conversion or use ceil here
+	opts.bpe = num / ln2Power
 
 	// Calculate the number of hash functions to be used
 	// 		k = ceil(ln(2) * bpe)
@@ -101,18 +101,18 @@ func newBloomFilter(opts *BloomOpts) *Bloom {
 
 func evalBFInit(args []string) []byte {
 	if len(args) != 3 {
-		return Encode(fmt.Errorf("%w for 'BINIT' command", errWrongArgs), false)
+		return Encode(fmt.Errorf("%w for 'BFINIT' command", errWrongArgs), false)
 	}
 
 	var key string = args[0]
 	opts, err := newBloomOpts(args[1:], true)
 	if err != nil {
-		return Encode(fmt.Errorf("%w for 'BINIT' command", err), false)
+		return Encode(fmt.Errorf("%w for 'BFINIT' command", err), false)
 	}
 
 	_, err = getOrCreateBloomFilter(key, opts)
 	if err != nil {
-		return Encode(fmt.Errorf("%w for 'BINIT' command", err), false)
+		return Encode(fmt.Errorf("%w for 'BFINIT' command", err), false)
 	}
 
 	return RESP_OK
