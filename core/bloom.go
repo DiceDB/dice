@@ -99,6 +99,20 @@ func newBloomFilter(opts *BloomOpts) *Bloom {
 	return &Bloom{opts, bitset}
 }
 
+func (b *Bloom) info(name string) string {
+	info := ""
+	if name != "" {
+		info = "name: " + name + ", "
+	}
+	info += fmt.Sprintf("error rate: %f, ", b.opts.errorRate)
+	info += fmt.Sprintf("capacity: %d, ", b.opts.capacity)
+	info += fmt.Sprintf("total bits reserved: %d, ", b.opts.bits)
+	info += fmt.Sprintf("bits per element: %f, ", b.opts.bpe)
+	info += fmt.Sprintf("hash functions: %d", len(b.opts.hashFns))
+
+	return info
+}
+
 func evalBFInit(args []string) []byte {
 	if len(args) != 3 {
 		return Encode(fmt.Errorf("%w for 'BFINIT' command", errWrongArgs), false)
@@ -127,7 +141,16 @@ func evalBFExists(args []string) []byte {
 }
 
 func evalBFInfo(args []string) []byte {
-	return nil
+	if len(args) != 1 {
+		return Encode(fmt.Errorf("%w for 'BFINFO' command", errWrongArgs), false)
+	}
+
+	bloom, err := getOrCreateBloomFilter(args[0], nil)
+	if err != nil {
+		return Encode(fmt.Errorf("%w for 'BFINFO' command", err), false)
+	}
+
+	return Encode(bloom.info(args[0]), false)
 }
 
 // getOrCreateBloomFilter attempts to fetch an existing bloom filter from
@@ -135,7 +158,7 @@ func evalBFInfo(args []string) []byte {
 // given `opts` and returns it.
 func getOrCreateBloomFilter(key string, opts *BloomOpts) (*Bloom, error) {
 	obj := Get(key)
-	if obj == nil {
+	if obj == nil && opts != nil {
 		obj = NewObj(newBloomFilter(opts), -1, OBJ_TYPE_BITSET, OBJ_ENCODING_BF)
 		Put(key, obj)
 	}
@@ -149,4 +172,19 @@ func getOrCreateBloomFilter(key string, opts *BloomOpts) (*Bloom, error) {
 	}
 
 	return obj.Value.(*Bloom), nil
+}
+
+func setBit(buf []byte, b int) {
+	idx, offset := b/8, b%8
+	buf[idx] = buf[idx] | 1<<offset
+}
+
+func resetBit(buf []byte, b int) {
+	idx, offset := b/8, b%8
+	buf[idx] = buf[idx] & ^(1 << offset)
+}
+
+func getBit(buf []byte, b int) byte {
+	idx, offset := b/8, b%8
+	return buf[idx] & (1 << offset)
 }
