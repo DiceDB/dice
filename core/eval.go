@@ -342,30 +342,30 @@ func evalQINTINS(args []string) []byte {
 	return RESP_OK
 }
 
-// evalSINTPUSH pushes the provided integer in the key identified by key
-// first argument will be the key, that should be of type `SINT`
+// evalSTACKINTPUSH pushes the provided integer in the key identified by key
+// first argument will be the key, that should be of type `STACKINT`
 // second argument will be the integer value
-// if the key does not exist, evalSINTPUSH will also create the integer stack
-func evalSINTPUSH(args []string) []byte {
+// if the key does not exist, evalSTACKINTPUSH will also create the integer stack
+func evalSTACKINTPUSH(args []string) []byte {
 	if len(args) != 2 {
-		return Encode(errors.New("ERR invalid number of arguments for `SINTPUSH` command"), false)
+		return Encode(errors.New("ERR invalid number of arguments for `STACKINTPUSH` command"), false)
 	}
 
 	x, err := strconv.ParseInt(args[1], 10, 64)
 	if err != nil {
-		return Encode(errors.New("ERR only integer values can be inserted in SINT"), false)
+		return Encode(errors.New("ERR only integer values can be inserted in STACKINT"), false)
 	}
 
 	obj := Get(args[0])
 	if obj == nil {
-		obj = NewObj(NewStackInt(), -1, OBJ_TYPE_BYTELIST, OBJ_ENCODING_SINT)
+		obj = NewObj(NewStackInt(), -1, OBJ_TYPE_BYTELIST, OBJ_ENCODING_STACKINT)
 	}
 
 	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_SINT); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_STACKINT); err != nil {
 		return Encode(err, false)
 	}
 
@@ -410,14 +410,14 @@ func evalQINTREM(args []string) []byte {
 	return Encode(x, false)
 }
 
-// evalSINTPOP pops the element from the SINT identified by key
-// first argument will be the key, that should be of type `SINT`
-// if the key does not exist, evalSINTPOP returns nil otherwise it
-// returns the integer value popped from the queue
-// if we remove from the empty queue, nil is returned
-func evalSINTPOP(args []string) []byte {
+// evalSTACKINTPOP pops the element from the STACKINT identified by key
+// first argument will be the key, that should be of type `STACKINT`
+// if the key does not exist, evalSTACKINTPOP returns nil otherwise it
+// returns the integer value popped from the stack
+// if we remove from the empty stack, nil is returned
+func evalSTACKINTPOP(args []string) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR invalid number of arguments for `SINTPOP` command"), false)
+		return Encode(errors.New("ERR invalid number of arguments for `STACKINTPOP` command"), false)
 	}
 
 	obj := Get(args[0])
@@ -429,7 +429,7 @@ func evalSINTPOP(args []string) []byte {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_SINT); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_STACKINT); err != nil {
 		return Encode(err, false)
 	}
 
@@ -468,12 +468,12 @@ func evalQINTLEN(args []string) []byte {
 	return Encode(q.Length, false)
 }
 
-// evalSINTLEN returns the length of the SINT identified by key
-// returns the integer value indicating the length of the queue
+// evalSTACKINTLEN returns the length of the STACKINT identified by key
+// returns the integer value indicating the length of the stack
 // if the key does not exist, the response is 0
-func evalSINTLEN(args []string) []byte {
+func evalSTACKINTLEN(args []string) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR invalid number of arguments for `SINTLEN` command"), false)
+		return Encode(errors.New("ERR invalid number of arguments for `STACKINTLEN` command"), false)
 	}
 
 	obj := Get(args[0])
@@ -485,7 +485,7 @@ func evalSINTLEN(args []string) []byte {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_SINT); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_STACKINT); err != nil {
 		return Encode(err, false)
 	}
 
@@ -528,15 +528,15 @@ func evalQINTPEEK(args []string) []byte {
 	return Encode(q.Iterate(int(num)), false)
 }
 
-// evalSINTPEEK peeks into the DINT and returns 5 elements without popping them
+// evalSTACKINTPEEK peeks into the DINT and returns 5 elements without popping them
 // returns the array of integers as the response.
 // if the key does not exist, then we return an empty array
-func evalSINTPEEK(args []string) []byte {
+func evalSTACKINTPEEK(args []string) []byte {
 	var num int64 = 5
 	var err error
 
 	if len(args) > 2 {
-		return Encode(errors.New("ERR invalid number of arguments for `SINTPEEK` command"), false)
+		return Encode(errors.New("ERR invalid number of arguments for `STACKINTPEEK` command"), false)
 	}
 
 	if len(args) == 2 {
@@ -555,7 +555,7 @@ func evalSINTPEEK(args []string) []byte {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_SINT); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_STACKINT); err != nil {
 		return Encode(err, false)
 	}
 
@@ -596,27 +596,27 @@ func evalQREFINS(args []string) []byte {
 	return Encode(0, false)
 }
 
-// evalSREFPUSH inserts the reference of the provided key identified by key
-// first argument will be the key, that should be of type `SREF`
-// second argument will be the key that needs to be added to the queueref
-// if the stack does not exist, evalSREFPUSH will also create the stackref
+// evalSTACKREFPUSH inserts the reference of the provided key identified by key
+// first argument will be the key, that should be of type `STACKREF`
+// second argument will be the key that needs to be added to the stackref
+// if the stack does not exist, evalSTACKREFPUSH will also create the stackref
 // returns 1 if the key reference was inserted
 // returns 0 otherwise
-func evalSREFPUSH(args []string) []byte {
+func evalSTACKREFPUSH(args []string) []byte {
 	if len(args) != 2 {
-		return Encode(errors.New("ERR invalid number of arguments for `SREFPUSH` command"), false)
+		return Encode(errors.New("ERR invalid number of arguments for `STACKREFPUSH` command"), false)
 	}
 
 	obj := Get(args[0])
 	if obj == nil {
-		obj = NewObj(NewStackRef(), -1, OBJ_TYPE_BYTELIST, OBJ_ENCODING_SREF)
+		obj = NewObj(NewStackRef(), -1, OBJ_TYPE_BYTELIST, OBJ_ENCODING_STACKREF)
 	}
 
 	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_SREF); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_STACKREF); err != nil {
 		return Encode(err, false)
 	}
 
@@ -662,14 +662,14 @@ func evalQREFREM(args []string) []byte {
 	return Encode(x, false)
 }
 
-// evalSREFPOP removes the element from the DREF identified by key
-// first argument will be the key, that should be of type `SREF`
-// if the key does not exist, evalSREFPOP returns nil otherwise it
+// evalSTACKREFPOP removes the element from the DREF identified by key
+// first argument will be the key, that should be of type `STACKREF`
+// if the key does not exist, evalSTACKREFPOP returns nil otherwise it
 // returns the RESP encoded value of the key reference from the stack
 // if we remove from the empty stack, nil is returned
-func evalSREFPOP(args []string) []byte {
+func evalSTACKREFPOP(args []string) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR invalid number of arguments for `SREFPOP` command"), false)
+		return Encode(errors.New("ERR invalid number of arguments for `STACKREFPOP` command"), false)
 	}
 
 	obj := Get(args[0])
@@ -681,7 +681,7 @@ func evalSREFPOP(args []string) []byte {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_SREF); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_STACKREF); err != nil {
 		return Encode(err, false)
 	}
 
@@ -720,12 +720,12 @@ func evalQREFLEN(args []string) []byte {
 	return Encode(q.qi.Length, false)
 }
 
-// evalSREFLEN returns the length of the SREF identified by key
+// evalSTACKREFLEN returns the length of the STACKREF identified by key
 // returns the integer value indicating the length of the stack
 // if the key does not exist, the response is 0
-func evalSREFLEN(args []string) []byte {
+func evalSTACKREFLEN(args []string) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR invalid number of arguments for `SREFLEN` command"), false)
+		return Encode(errors.New("ERR invalid number of arguments for `STACKREFLEN` command"), false)
 	}
 
 	obj := Get(args[0])
@@ -737,7 +737,7 @@ func evalSREFLEN(args []string) []byte {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_SREF); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_STACKREF); err != nil {
 		return Encode(err, false)
 	}
 
@@ -780,15 +780,15 @@ func evalQREFPEEK(args []string) []byte {
 	return Encode(q.Iterate(int(num)), false)
 }
 
-// evalSREFPEEK peeks into the SREF and returns 5 elements without popping them
+// evalSTACKREFPEEK peeks into the STACKREF and returns 5 elements without popping them
 // returns the array of resp encoded values as the response.
 // if the key does not exist, then we return an empty array
-func evalSREFPEEK(args []string) []byte {
+func evalSTACKREFPEEK(args []string) []byte {
 	var num int64 = 5
 	var err error
 
 	if len(args) == 0 {
-		return Encode(errors.New("ERR invalid number of arguments for `SREFPEEK` command"), false)
+		return Encode(errors.New("ERR invalid number of arguments for `STACKREFPEEK` command"), false)
 	}
 
 	if len(args) == 2 {
@@ -807,7 +807,7 @@ func evalSREFPEEK(args []string) []byte {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_SREF); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_STACKREF); err != nil {
 		return Encode(err, false)
 	}
 
@@ -859,22 +859,22 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		return evalQREFLEN(cmd.Args)
 	case "QREFPEEK":
 		return evalQREFPEEK(cmd.Args)
-	case "SINTPUSH":
-		return evalSINTPUSH(cmd.Args)
-	case "SINTPOP":
-		return evalSINTPOP(cmd.Args)
-	case "SINTLEN":
-		return evalSINTLEN(cmd.Args)
-	case "SINTPEEK":
-		return evalSINTPEEK(cmd.Args)
-	case "SREFPUSH":
-		return evalSREFPUSH(cmd.Args)
-	case "SREFPOP":
-		return evalSREFPOP(cmd.Args)
-	case "SREFLEN":
-		return evalSREFLEN(cmd.Args)
-	case "SREFPEEK":
-		return evalSREFPEEK(cmd.Args)
+	case "STACKINTPUSH":
+		return evalSTACKINTPUSH(cmd.Args)
+	case "STACKINTPOP":
+		return evalSTACKINTPOP(cmd.Args)
+	case "STACKINTLEN":
+		return evalSTACKINTLEN(cmd.Args)
+	case "STACKINTPEEK":
+		return evalSTACKINTPEEK(cmd.Args)
+	case "STACKREFPUSH":
+		return evalSTACKREFPUSH(cmd.Args)
+	case "STACKREFPOP":
+		return evalSTACKREFPOP(cmd.Args)
+	case "STACKREFLEN":
+		return evalSTACKREFLEN(cmd.Args)
+	case "STACKREFPEEK":
+		return evalSTACKREFPEEK(cmd.Args)
 	case "MULTI":
 		c.TxnBegin()
 		return evalMULTI(cmd.Args)

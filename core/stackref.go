@@ -37,7 +37,7 @@ func (s *StackRef) Push(key string) bool {
 
 // Pop pops the reference from the stack s.
 // returns nil if key does not exist in the store any more
-// if the expired key is popped from the queue, we continue to pop until
+// if the expired key is popped from the stack, we continue to pop until
 // until we find one non-expired key
 // TODO: test for expired keys
 func (s *StackRef) Pop() (*StackElement, error) {
