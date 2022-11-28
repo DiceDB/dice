@@ -59,7 +59,7 @@ func (s *StackInt) Push(x int64) {
 }
 
 // Pop Pops an integer from the Stack s.
-func (s *StackInt) Remove() (int64, error) {
+func (s *StackInt) Pop() (int64, error) {
 	var val int64
 	bn := s.list.tail
 

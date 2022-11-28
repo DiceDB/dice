@@ -15,7 +15,7 @@ type stackinttcase struct {
 }
 
 func TestStackInt(t *testing.T) {
-	qi := core.NewStackInt()
+	si := core.NewStackInt()
 	for _, tc := range []stackinttcase{
 		{'i', 1, []int64{1}, nil},
 		{'i', 2, []int64{2, 1}, nil},
@@ -54,16 +54,16 @@ func TestStackInt(t *testing.T) {
 		var err error
 		switch tc.op {
 		case 'i':
-			qi.Push(tc.val)
+			si.Push(tc.val)
 		case 'r':
-			_, err = qi.Remove()
+			_, err = si.Pop()
 		}
 
 		if err != tc.err {
 			t.Errorf("we expected the error: %v but got %v", tc.err, err)
 		}
 
-		obsList := qi.Iterate(50)
+		obsList := si.Iterate(50)
 		if !testutils.EqualInt64Slice(tc.list, obsList) {
 			t.Errorf("queueint test failed. should have been %v but found %v", tc.list, obsList)
 		}
