@@ -9,7 +9,7 @@ import (
 
 const StackIntMaxBuf int = 256
 
-var ErrStackEmpty = errors.New("queue is empty")
+var ErrStackEmpty = errors.New("stack is empty")
 
 // Represents a stack of integers
 type StackInt struct {
@@ -64,7 +64,7 @@ func (s *StackInt) Pop() (int64, error) {
 	bn := s.list.tail
 
 	if bn == nil || len(bn.buf) == 0 {
-		return 0, ErrQueueEmpty
+		return 0, ErrStackEmpty
 	}
 
 	// tailIdx represents the index of the terminating byte of the element
@@ -102,7 +102,7 @@ func (s *StackInt) Pop() (int64, error) {
 	return val, nil
 }
 
-// Iterate inserts the integer `x` in the the QueueInt q
+// Iterate inserts the integer `x` in the the StackInt q
 // through at max `n` elements.
 // the function returns empty list for invalid `n`
 func (s *StackInt) Iterate(n int) []int64 {
