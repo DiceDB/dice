@@ -1,2 +1,3 @@
 bin/dice
 *.aof
+.vscode/
