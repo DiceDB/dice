@@ -14,6 +14,16 @@ Building a database from scratch has its own thrill, and you can leverage this t
 - learn about advanced data structures, algorithms, and event loops
 - collaborate with other engineers and contribute back to Open Source
 
+## Tenet
+
+- remain product-first
+- remain the easiest to work with
+
+### Highlights
+
+- [planned] Semi-persistent Storage
+- [planned] Efficient concurrency using Goroutines
+
 ## Setting up
 
 To run DiceDB locally, you will need
