@@ -1,8 +1,9 @@
-package core
+package core_test
 
 import (
 	"testing"
 
+	"github.com/dicedb/dice/core"
 	"github.com/dicedb/dice/testutils"
 )
 
@@ -14,7 +15,7 @@ type queueinttcase struct {
 }
 
 func TestQueueInt(t *testing.T) {
-	qi := NewQueueInt()
+	qi := core.NewQueueInt()
 	for _, tc := range []queueinttcase{
 		{'i', 1, []int64{1}, nil},
 		{'i', 2, []int64{1, 2}, nil},
@@ -44,9 +45,9 @@ func TestQueueInt(t *testing.T) {
 		{'r', 0, []int64{79283552, 67459748}, nil},
 		{'r', 0, []int64{67459748}, nil},
 		{'r', 0, []int64{}, nil},
-		{'r', 0, []int64{}, ErrQueueEmpty},
-		{'r', 0, []int64{}, ErrQueueEmpty},
-		{'r', 0, []int64{}, ErrQueueEmpty},
+		{'r', 0, []int64{}, core.ErrQueueEmpty},
+		{'r', 0, []int64{}, core.ErrQueueEmpty},
+		{'r', 0, []int64{}, core.ErrQueueEmpty},
 		{'i', 1, []int64{1}, nil},
 		{'i', 2, []int64{1, 2}, nil},
 	} {

@@ -9,8 +9,8 @@ import (
 // Evicts the first key it found while iterating the map
 // TODO: Make it efficient by doing thorough sampling
 func evictFirst() {
-	for k := range store {
-		Del(k)
+	for keyPtr := range store {
+		DelByPtr(keyPtr)
 		return
 	}
 }
@@ -21,8 +21,8 @@ func evictAllkeysRandom() {
 	evictCount := int64(config.EvictionRatio * float64(config.KeysLimit))
 	// Iteration of Golang dictionary can be considered as a random
 	// because it depends on the hash of the inserted key
-	for k := range store {
-		Del(k)
+	for keyPtr := range store {
+		DelByPtr(keyPtr)
 		evictCount--
 		if evictCount <= 0 {
 			break
@@ -66,7 +66,7 @@ func evictAllkeysLRU() {
 		if item == nil {
 			return
 		}
-		Del(item.key)
+		DelByPtr(item.keyPtr)
 	}
 }
 

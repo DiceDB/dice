@@ -5,6 +5,12 @@ Dice 🎲 is an extremely simple Golang-based in-memory KV store that speaks the
 
 > This is not production ready
 
+## Story
+
+[Arpit Bhayani](https://arpitbhayani.me) started building Dice DB to understand [Redis](https://redis.io/) better.
+He compiled almost all of his learning in a course titled [Redis Internals](https://arpitbhayani.me/redis) that
+actually laid the foundation of Dice DB.
+
 ## Why should you care?
 
 Building a database from scratch has its own thrill, and you can leverage this to
@@ -13,6 +19,16 @@ Building a database from scratch has its own thrill, and you can leverage this t
 - learn database internals, starting with Redis
 - learn about advanced data structures, algorithms, and event loops
 - collaborate with other engineers and contribute back to Open Source
+
+## Tenet
+
+- remain product-first
+- remain the easiest to work with
+
+### Highlights
+
+- [planned] Semi-persistent Storage
+- [planned] Efficient concurrency using Goroutines
 
 ## Setting up
 
