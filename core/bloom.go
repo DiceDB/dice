@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"hash"
 	"math"
+	"math/rand"
 	"strconv"
+
+	"github.com/twmb/murmur3"
 )
 
 const (
@@ -24,6 +27,11 @@ var (
 	errInvalidErrorRate     = errors.New("ERR invalid error rate value provided")
 	errInvalidCapacityType  = errors.New("ERR only integer values can be provided for capacity")
 	errInvalidCapacity      = errors.New("ERR invalid capacity value provided")
+
+	errInvalidKey = errors.New("ERR invalid key: no bloom filter found")
+
+	errEmptyValue   = errors.New("ERR empty value provided")
+	errUnableToHash = errors.New("ERR unable to hash given value")
 )
 
 type BloomOpts struct {
@@ -31,7 +39,7 @@ type BloomOpts struct {
 	capacity  uint64  // number of expected entries to be added to the filter
 
 	bits    uint64        // total number of bits reserved for the filter
-	hashFns []hash.Hash32 // array of hash functions
+	hashFns []hash.Hash64 // array of hash functions
 	bpe     float64       // bits per element
 }
 
@@ -80,7 +88,12 @@ func newBloomFilter(opts *BloomOpts) *Bloom {
 	// Calculate the number of hash functions to be used
 	// 		k = ceil(ln(2) * bpe)
 	k := math.Ceil(ln2 * opts.bpe)
-	opts.hashFns = make([]hash.Hash32, int(k))
+	opts.hashFns = make([]hash.Hash64, int(k))
+
+	// Initialize hash functions with random seeds
+	for i := 0; i < int(k); i++ {
+		opts.hashFns[i] = murmur3.SeedNew64(rand.Uint64())
+	}
 
 	// Calculate the number of bytes to be used
 	// 		bits = k * entries / ln(2)
@@ -113,13 +126,105 @@ func (b *Bloom) info(name string) string {
 	return info
 }
 
+// add adds a new entry for `value` in the filter. It hashes the given
+// value and sets the bit of the underlying bitset. Returns "-1" in
+// case of errors, "0" if all the bits were already set and "1" if
+// atleast 1 new bit was set.
+func (b *Bloom) add(value string) ([]byte, error) {
+	// We're sure that empty values will be handled upper functions itself.
+	// This is just a property check for the bloom struct.
+	if value == "" {
+		return RESP_MINUS_1, errEmptyValue
+	}
+
+	// Get the indexes where bits are supposed to be set
+	indexes, err := b.opts.getIndexes(value)
+	if err != nil {
+		fmt.Println("error in getting indexes for value:", value, "err:", err)
+		return RESP_MINUS_1, errUnableToHash
+	}
+
+	// Set the bits and keep a count of already set ones
+	count := 0
+	for _, v := range indexes {
+		if isBitSet(b.bitset, int(v)) {
+			count++
+		} else {
+			setBit(b.bitset, int(v))
+		}
+	}
+
+	if count == len(indexes) {
+		// All the bits were already set, return 0 in that case.
+		return RESP_ZERO, nil
+	}
+
+	return RESP_ONE, nil
+}
+
+// exists checks if the given `value` exists in the filter or not.
+// It hashes the given value and checks if the bits are set or not in
+// the underlying bitset. Returns "-1" in case of errors, "0" if the
+// element surely does not exist in the filter, and "1" if the element
+// may or may not exist in the filter.
+func (b *Bloom) exists(value string) ([]byte, error) {
+	// We're sure that empty values will be handled upper functions itself.
+	// This is just a property check for the bloom struct.
+	if value == "" {
+		return RESP_MINUS_1, errEmptyValue
+	}
+
+	// Get the indexes where bits are supposed to be set
+	indexes, err := b.opts.getIndexes(value)
+	if err != nil {
+		fmt.Println("error in getting indexes for value:", value, "err:", err)
+		return RESP_MINUS_1, errUnableToHash
+	}
+
+	// Check if all the bits at given indexes are set or not
+	// Ideally if the element is present, we should find all set bits.
+	for _, v := range indexes {
+		if !isBitSet(b.bitset, int(v)) {
+			// Return with "0" as we found one non-set bit (which is enough to conclude)
+			return RESP_ZERO, nil
+		}
+	}
+
+	// We reached here, which means the element may exist in the filter. Return "1" now.
+	return RESP_ONE, nil
+}
+
+// getIndexes returns a list of indexes of the underlying bit array where
+// bits are supposed to be set (to 1). It uses the set hash function against
+// the given `value` and caps the index with the total number of bits.
+func (opts *BloomOpts) getIndexes(value string) ([]uint64, error) {
+	indexes := make([]uint64, len(opts.hashFns))
+
+	// Iterate through the hash functions and get indexes
+	for i := 0; i < len(opts.hashFns); i++ {
+		fn := opts.hashFns[i]
+		fn.Reset()
+
+		if _, err := fn.Write([]byte(value)); err != nil {
+			return nil, err
+		}
+
+		// Save the index capped by total number of bits in the underlying array
+		indexes[i] = fn.Sum64() % opts.bits
+	}
+
+	return indexes, nil
+}
+
+// evalBFInit evaluates the BFINIT command responsible for initializing a
+// new bloom filter and allocation it's relevant parameters based on given inputs.
 func evalBFInit(args []string) []byte {
 	if len(args) != 3 {
 		return Encode(fmt.Errorf("%w for 'BFINIT' command", errWrongArgs), false)
 	}
 
 	var key string = args[0]
-	opts, err := newBloomOpts(args[1:], true)
+	opts, err := newBloomOpts(args[1:], false)
 	if err != nil {
 		return Encode(fmt.Errorf("%w for 'BFINIT' command", err), false)
 	}
@@ -132,14 +237,53 @@ func evalBFInit(args []string) []byte {
 	return RESP_OK
 }
 
+// evalBFAdd evaluates the BFADD command responsible for adding an element to
+// a bloom filter. If the filter does not exists, it will create a new one
+// with default parameters.
 func evalBFAdd(args []string) []byte {
-	return nil
+	if len(args) != 2 {
+		return Encode(fmt.Errorf("%w for 'BFADD' command", errWrongArgs), false)
+	}
+
+	var key string = args[0]
+	opts, _ := newBloomOpts(args[1:], true)
+
+	bloom, err := getOrCreateBloomFilter(key, opts)
+	if err != nil {
+		return Encode(fmt.Errorf("%w for 'BFADD' command", err), false)
+	}
+
+	resp, err := bloom.add(args[1])
+	if err != nil {
+		return Encode(fmt.Errorf("%w for 'BFADD' command", err), false)
+	}
+
+	return resp
 }
 
+// evalBFExists evaluates the BFEXISTS command responsible for checking existance
+// of an element in a bloom filter.
 func evalBFExists(args []string) []byte {
-	return nil
+	if len(args) != 2 {
+		return Encode(fmt.Errorf("%w for 'BFEXISTS' command", errWrongArgs), false)
+	}
+
+	var key string = args[0]
+	bloom, err := getOrCreateBloomFilter(key, nil)
+	if err != nil {
+		return Encode(fmt.Errorf("%w for 'BFEXISTS' command", err), false)
+	}
+
+	resp, err := bloom.exists(args[1])
+	if err != nil {
+		return Encode(fmt.Errorf("%w for 'BFEXISTS' command", err), false)
+	}
+
+	return resp
 }
 
+// evalBFInfo evaluates the BFINFO command responsible for returning the
+// parameters and metadata of an existing bloom filter.
 func evalBFInfo(args []string) []byte {
 	if len(args) != 1 {
 		return Encode(fmt.Errorf("%w for 'BFINFO' command", errWrongArgs), false)
@@ -158,9 +302,16 @@ func evalBFInfo(args []string) []byte {
 // given `opts` and returns it.
 func getOrCreateBloomFilter(key string, opts *BloomOpts) (*Bloom, error) {
 	obj := Get(key)
+
+	// If we don't have a filter yet and `opts` are provided, create one.
 	if obj == nil && opts != nil {
 		obj = NewObj(newBloomFilter(opts), -1, OBJ_TYPE_BITSET, OBJ_ENCODING_BF)
 		Put(key, obj)
+	}
+
+	// If no `opts` are provided for filter creation, return err
+	if obj == nil && opts == nil {
+		return nil, errInvalidKey
 	}
 
 	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BITSET); err != nil {
@@ -174,17 +325,18 @@ func getOrCreateBloomFilter(key string, opts *BloomOpts) (*Bloom, error) {
 	return obj.Value.(*Bloom), nil
 }
 
+// setBit sets the bit at index `b` to "1" in `buf`.
 func setBit(buf []byte, b int) {
-	idx, offset := b/8, b%8
+	idx, offset := b/8, 7-b%8
 	buf[idx] = buf[idx] | 1<<offset
 }
 
-func resetBit(buf []byte, b int) {
-	idx, offset := b/8, b%8
-	buf[idx] = buf[idx] & ^(1 << offset)
-}
-
-func getBit(buf []byte, b int) byte {
-	idx, offset := b/8, b%8
-	return buf[idx] & (1 << offset)
+// isBitSet checks if the bit at index `b` is set to "1" or not in `buf`.
+func isBitSet(buf []byte, b int) bool {
+	idx, offset := b/8, 7-b%8
+	if buf[idx]&(1<<offset) == 1<<offset {
+		return true
+	} else {
+		return false
+	}
 }
