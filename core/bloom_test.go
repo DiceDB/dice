@@ -2,8 +2,6 @@ package core
 
 import (
 	"testing"
-
-	"github.com/stretchr/testify/require"
 )
 
 func TestIsBitSet(t *testing.T) {
@@ -28,10 +26,12 @@ func TestIsBitSet(t *testing.T) {
 
 	for _, tc := range testCases {
 		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(tc.name, func(_ *testing.T) {
 			t.Parallel()
 			actual := isBitSet(buf, tc.index)
-			require.Equal(t, actual, tc.expected, tc.name)
+			if actual != tc.expected {
+				t.Errorf("error in %s for case: %s - expected %t, got %t", t.Name(), tc.name, tc.expected, actual)
+			}
 		})
 	}
 }
@@ -58,15 +58,19 @@ func TestSetBit(t *testing.T) {
 
 	for _, tc := range testCases {
 		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(tc.name, func(_ *testing.T) {
 			// Set bit first and then try to read it
 			setBit(buf, tc.index)
 			actual := isBitSet(buf, tc.index)
-			require.Equal(t, actual, tc.expected, tc.name)
+			if actual != tc.expected {
+				t.Errorf("error in %s for case: %s - expected %t, got %t", t.Name(), tc.name, tc.expected, actual)
+			}
 		})
 	}
 
 	// The final values are 10111011 (=187)
-	require.Equal(t, int(buf[0]), 187, "Expect buffer to have updated value")
-	require.Equal(t, int(buf[1]), 187, "Expect buffer to have updated value")
+	expected1, expected2 := 187, 187
+	if int(buf[0]) != expected1 || int(buf[1]) != expected2 {
+		t.Errorf("error in %s while comparing final buffer values - expected [%d, %d], got [%d, %d]", t.Name(), expected1, expected2, int(buf[0]), int(buf[1]))
+	}
 }
