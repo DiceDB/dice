@@ -26,11 +26,11 @@ func TestIsBitSet(t *testing.T) {
 
 	for _, tc := range testCases {
 		tc := tc
-		t.Run(tc.name, func(_ *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			actual := isBitSet(buf, tc.index)
 			if actual != tc.expected {
-				t.Errorf("error in %s for case: %s - expected %t, got %t", t.Name(), tc.name, tc.expected, actual)
+				t.Errorf("error in %s - expected %t, got %t", t.Name(), tc.expected, actual)
 			}
 		})
 	}
@@ -58,12 +58,12 @@ func TestSetBit(t *testing.T) {
 
 	for _, tc := range testCases {
 		tc := tc
-		t.Run(tc.name, func(_ *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			// Set bit first and then try to read it
 			setBit(buf, tc.index)
 			actual := isBitSet(buf, tc.index)
 			if actual != tc.expected {
-				t.Errorf("error in %s for case: %s - expected %t, got %t", t.Name(), tc.name, tc.expected, actual)
+				t.Errorf("error in %s - expected %t, got %t", t.Name(), tc.expected, actual)
 			}
 		})
 	}
