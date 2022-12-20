@@ -327,13 +327,29 @@ func getOrCreateBloomFilter(key string, opts *BloomOpts) (*Bloom, error) {
 
 // setBit sets the bit at index `b` to "1" in `buf`.
 func setBit(buf []byte, b int) {
+	if b < 0 {
+		return
+	}
+
 	idx, offset := b/8, 7-b%8
+	if idx < 0 || idx >= len(buf) {
+		return
+	}
+
 	buf[idx] = buf[idx] | 1<<offset
 }
 
 // isBitSet checks if the bit at index `b` is set to "1" or not in `buf`.
 func isBitSet(buf []byte, b int) bool {
+	if b < 0 {
+		return false
+	}
+
 	idx, offset := b/8, 7-b%8
+	if idx >= len(buf) {
+		return false
+	}
+
 	if buf[idx]&(1<<offset) == 1<<offset {
 		return true
 	} else {
