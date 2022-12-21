@@ -1,8 +1,49 @@
 package core
 
 import (
+	"reflect"
 	"testing"
 )
+
+func TestBloomOpts(t *testing.T) {
+	var testCases = []struct {
+		name        string
+		args        []string
+		useDefaults bool
+		response    *BloomOpts
+		err         error
+	}{
+		{"default values", []string{""}, true, &BloomOpts{errorRate: defaultErrorRate, capacity: defaultCapacity}, nil},
+		{"should return valid values - 1", []string{"0.01", "1000"}, false, &BloomOpts{errorRate: 0.01, capacity: 1000}, nil},
+		{"should return valid values - 2", []string{"0.1", "200"}, false, &BloomOpts{errorRate: 0.1, capacity: 200}, nil},
+		{"should return invalid error rate type - 1", []string{"aa", "100"}, false, nil, errInvalidErrorRateType},
+		{"should return invalid error rate type - 2", []string{"0.1a", "100"}, false, nil, errInvalidErrorRateType},
+		{"should return invalid error rate - 1", []string{"-0.1", "100"}, false, nil, errInvalidErrorRate},
+		{"should return invalid error rate - 2", []string{"1.001", "100"}, false, nil, errInvalidErrorRate},
+		{"should return invalid capacity type - 1", []string{"0.01", "aa"}, false, nil, errInvalidCapacityType},
+		{"should return invalid capacity type - 2", []string{"0.01", "100a"}, false, nil, errInvalidCapacityType},
+		{"should return invalid capacity type - 3", []string{"0.01", "-1"}, false, nil, errInvalidCapacityType},
+		{"should return invalid capacity - 1", []string{"0.01", "0"}, false, nil, errInvalidCapacity},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			opts, err := newBloomOpts(tc.args, tc.useDefaults)
+			// Using reflect.DeepEqual as we have pointers to struct and direct value
+			// comparision is not possible because of []hash.Hash64 type.
+			if !reflect.DeepEqual(opts, tc.response) {
+				t.Errorf("invalid response in %s - expected %v, got %v", t.Name(), tc.response, opts)
+			}
+
+			if err != tc.err {
+				t.Errorf("invalid error in %s - expected %v, got %v", t.Name(), tc.err, err)
+			}
+		})
+	}
+}
 
 func TestIsBitSet(t *testing.T) {
 	buf := []byte{170, 43} // 10101010 00101011
