@@ -1,9 +1,150 @@
 package core
 
 import (
+	"bytes"
 	"reflect"
 	"testing"
 )
+
+func TestBloomFilter(t *testing.T) {
+	// This test only contains some basic checks for all the bloom filter
+	// operations like BFINIT, BFADD, BFEXISTS. It assumes that the
+	// functions called in the main function are working correctly and
+	// are tested independently.
+	t.Parallel()
+
+	// BFINIT
+	args := []string{"bf"}
+	resp := evalBFInit(args)
+
+	// We're just checking if the resposne is an error or not. This test does
+	// not checks the type of error. That is kept for different test.
+	if bytes.Equal(resp, RESP_OK) {
+		t.Errorf("BFINIT: invalid response, args: %v - expected an error, got: %v", args, resp)
+	}
+
+	// BFINIT bf 0.01 10000
+	args = append(args, "0.01", "10000") // Add error rate and capacity
+	resp = evalBFInit(args)
+	if !bytes.Equal(resp, RESP_OK) {
+		t.Errorf("BFINIT: invalid response, args: %v - expected: %v, got error: %v", args, RESP_OK, resp)
+	}
+
+	// BFADD
+	args = []string{"bf"}
+	resp = evalBFAdd(args)
+	if bytes.Equal(resp, RESP_MINUS_1) || bytes.Equal(resp, RESP_ZERO) || bytes.Equal(resp, RESP_ONE) {
+		t.Errorf("BFADD: invalid response, args: %v - expected an error, got: %v", args, resp)
+	}
+
+	args = []string{"bf", "hello"} // BFADD bf hello
+	resp = evalBFAdd(args)
+	if !bytes.Equal(resp, RESP_ONE) {
+		t.Errorf("BFADD: invalid response, args: %v - expected: %v, got error: %v", args, RESP_ONE, resp)
+	}
+
+	args[1] = "world" // BFADD bf world
+	resp = evalBFAdd(args)
+	if !bytes.Equal(resp, RESP_ONE) {
+		t.Errorf("BFADD: invalid response, args: %v - expected: %v, got error: %v", args, RESP_ONE, resp)
+	}
+
+	args[1] = "hello" // BFADD bf hello
+	resp = evalBFAdd(args)
+	if !bytes.Equal(resp, RESP_ZERO) {
+		t.Errorf("BFADD: invalid response, args: %v - expected: %v, got error: %v", args, RESP_ZERO, resp)
+	}
+
+	// Try adding element into an un-existing filter
+	args = []string{"bf1", "hello"} // BFADD bf1 hello
+	resp = evalBFAdd(args)
+	if !bytes.Equal(resp, RESP_ONE) {
+		t.Errorf("BFADD: invalid response, args: %v - expected: %v, got error: %v", args, RESP_ONE, resp)
+	}
+
+	// BFEXISTS
+	args = []string{"bf"}
+	resp = evalBFExists(args)
+	if bytes.Equal(resp, RESP_MINUS_1) || bytes.Equal(resp, RESP_ZERO) || bytes.Equal(resp, RESP_ONE) {
+		t.Errorf("BFEXISTS: invalid response, args: %v - expected an error, got: %v", args, resp)
+	}
+
+	args = []string{"bf", "hello"} // BFEXISTS bf hello
+	resp = evalBFExists(args)
+	if !bytes.Equal(resp, RESP_ONE) {
+		t.Errorf("BFEXISTS: invalid response, args: %v - expected: %v, got error: %v", args, RESP_ONE, resp)
+	}
+
+	args[1] = "hello" // BFEXISTS bf world
+	resp = evalBFExists(args)
+	if !bytes.Equal(resp, RESP_ONE) {
+		t.Errorf("BFEXISTS: invalid response, args: %v - expected: %v, got error: %v", args, RESP_ONE, resp)
+	}
+
+	args[1] = "programming" // BFEXISTS bf programming
+	resp = evalBFExists(args)
+	if !bytes.Equal(resp, RESP_ZERO) {
+		t.Errorf("BFEXISTS: invalid response, args: %v - expected: %v, got error: %v", args, RESP_ZERO, resp)
+	}
+}
+
+func TestGetOrCreateBloomFilter(t *testing.T) {
+	t.Parallel()
+
+	// Create a key and default opts
+	key := "bf"
+	opts, _ := newBloomOpts([]string{}, true)
+
+	// Should create a new filter under the key `key`.
+	bloom, err := getOrCreateBloomFilter(key, opts)
+	if bloom == nil || err != nil {
+		t.Errorf("nil bloom or non-nil error returned while creating new filter - key: %s, opts: %+v, err: %v", key, opts, err)
+	}
+
+	// Should get the filter (which was created above)
+	bloom, err = getOrCreateBloomFilter(key, opts)
+	if bloom == nil || err != nil {
+		t.Errorf("nil bloom or non-nil error returned while fetching existing filter - key: %s, opts: %+v, err: %v", key, opts, err)
+	}
+
+	// Should get the filter with nil opts
+	bloom, err = getOrCreateBloomFilter(key, nil)
+	if bloom == nil || err != nil {
+		t.Errorf("nil bloom or non-nil error returned while fetching existing filter - key: %s, opts: %+v, err: %v", key, opts, err)
+	}
+
+	// Should return an error (errInvalidKey) for fetching a bloom filter
+	// against a non existing key
+	key = "bf1"
+	_, err = getOrCreateBloomFilter(key, nil)
+	if err != errInvalidKey {
+		t.Errorf("nil or wrong error while fetching non existing bloom filter - key: %s, opts: %+v, err: %v", key, opts, err)
+	}
+}
+
+func TestGetIndexes(t *testing.T) {
+	t.Parallel()
+
+	// Create a value, default opts and initialize all params of the filter
+	value := "hello"
+	opts, _ := newBloomOpts([]string{}, true)
+	newBloomFilter(opts)
+
+	indexes, err := opts.getIndexes(value)
+	if err != nil {
+		t.Errorf("non-nil error returned from getIndexes - value: %s, opts: %+v", value, opts)
+	}
+
+	if len(indexes) != len(opts.hashFns) {
+		t.Errorf("length of indexes does not match with number of hash functions - value: %s, expected: %v, got: %v", value, len(opts.hashFns), len(indexes))
+	}
+
+	for i := 0; i < len(indexes); i++ {
+		if indexes[i] >= opts.bits {
+			t.Errorf("bit index returned is out of bounds - value: %s, indexes[i]: %d, bound: %d", value, indexes[i], opts.bits)
+		}
+	}
+}
 
 func TestBloomOpts(t *testing.T) {
 	var testCases = []struct {
@@ -35,11 +176,11 @@ func TestBloomOpts(t *testing.T) {
 			// Using reflect.DeepEqual as we have pointers to struct and direct value
 			// comparision is not possible because of []hash.Hash64 type.
 			if !reflect.DeepEqual(opts, tc.response) {
-				t.Errorf("invalid response in %s - expected %v, got %v", t.Name(), tc.response, opts)
+				t.Errorf("invalid response in %s - expected: %v, got: %v", t.Name(), tc.response, opts)
 			}
 
 			if err != tc.err {
-				t.Errorf("invalid error in %s - expected %v, got %v", t.Name(), tc.err, err)
+				t.Errorf("invalid error in %s - expected: %v, got: %v", t.Name(), tc.err, err)
 			}
 		})
 	}
@@ -71,7 +212,7 @@ func TestIsBitSet(t *testing.T) {
 			t.Parallel()
 			actual := isBitSet(buf, tc.index)
 			if actual != tc.expected {
-				t.Errorf("error in %s - expected %t, got %t", t.Name(), tc.expected, actual)
+				t.Errorf("error in %s - expected: %t, got: %t", t.Name(), tc.expected, actual)
 			}
 		})
 	}
@@ -104,7 +245,7 @@ func TestSetBit(t *testing.T) {
 			setBit(buf, tc.index)
 			actual := isBitSet(buf, tc.index)
 			if actual != tc.expected {
-				t.Errorf("error in %s - expected %t, got %t", t.Name(), tc.expected, actual)
+				t.Errorf("error in %s - expected: %t, got: %t", t.Name(), tc.expected, actual)
 			}
 		})
 	}
@@ -112,6 +253,6 @@ func TestSetBit(t *testing.T) {
 	// The final values are 10111011 (=187)
 	expected1, expected2 := 187, 187
 	if int(buf[0]) != expected1 || int(buf[1]) != expected2 {
-		t.Errorf("error in %s while comparing final buffer values - expected [%d, %d], got [%d, %d]", t.Name(), expected1, expected2, int(buf[0]), int(buf[1]))
+		t.Errorf("error in %s while comparing final buffer values - expected: [%d, %d], got: [%d, %d]", t.Name(), expected1, expected2, int(buf[0]), int(buf[1]))
 	}
 }
