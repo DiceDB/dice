@@ -1,0 +1,45 @@
+// References
+// Redis C implementation - https://github.com/RedisBloom/RedisBloom/blob/master/src/rebloom.c
+// Redis's reference - https://github.com/jvirkki/libbloom (slightly slower, but maybe more readable?)
+// Wikipedia
+
+// Bloom Filters
+// Varying params
+// 		Error rate (default 0.01) (e)
+// 		Capacity (default 1024) (m)
+// 		Number of hash functions (k)
+
+// (n) is the number of elements expected in the filter
+
+// Formulas
+// False positive rate has a formula which depends on k, n, and m (n is just an estimate, not a user input)
+// k can be derived from m and n
+
+// Commands to support for now
+// BINIT <name> <error_rate> <capacity> - return string "OK"
+// BADD <name> <element> - return string "OK"
+// BEXISTS <name> <element> - return integer 0, 1
+// BINFO <name> - return params of the filter (error rate, total bits/capacity, set bit ratio)
+
+// TODOs
+// 1. Check redis's implementation
+// 2. Decide upon the structure, functions, and flow
+// 3. Abstract bit logic (check arpit's implementation)
+// 				https://medium.com/@val_deleplace/7-ways-to-implement-a-bit-set-in-go-91650229b386
+// 				https://stackoverflow.com/questions/23192262/how-would-you-set-and-clear-a-single-bit-in-go
+// 				https://hermanschaaf.com/bit-manipulation-in-go-1-9/
+//
+// 4. Decide upon the formulas to calculate / estimate based on given values
+// 5. Abstract hashing logic
+// 6. Start implementation of each command
+// 7. Write tests
+// 8. Write benchmarks (with default and custom values of error rate and bit size)
+// 9. Prepare charts if possible
+
+// Future ideas
+// 1. Implement delete BF if required
+// 2. Implement reset BF
+// 3. Implement "load" and "save" bloom filter from a file
+
+// https://go.dev/play/p/zZL0htCWdfv
+// https://go.dev/play/p/kZqeE_oIGMB

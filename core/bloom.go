@@ -216,20 +216,25 @@ func (opts *BloomOpts) getIndexes(value string) ([]uint64, error) {
 	return indexes, nil
 }
 
-// evalBFInit evaluates the BFINIT command responsible for initializing a
+// evalBFINIT evaluates the BFINIT command responsible for initializing a
 // new bloom filter and allocation it's relevant parameters based on given inputs.
-func evalBFInit(args []string) []byte {
-	if len(args) != 3 {
+// If no params are provided, it uses defaults.
+func evalBFINIT(args []string) []byte {
+	if len(args) != 1 && len(args) != 3 {
 		return Encode(fmt.Errorf("%w for 'BFINIT' command", errWrongArgs), false)
 	}
 
-	var key string = args[0]
-	opts, err := newBloomOpts(args[1:], false)
+	useDefaults := false
+	if len(args) == 1 {
+		useDefaults = true
+	}
+
+	opts, err := newBloomOpts(args[1:], useDefaults)
 	if err != nil {
 		return Encode(fmt.Errorf("%w for 'BFINIT' command", err), false)
 	}
 
-	_, err = getOrCreateBloomFilter(key, opts)
+	_, err = getOrCreateBloomFilter(args[0], opts)
 	if err != nil {
 		return Encode(fmt.Errorf("%w for 'BFINIT' command", err), false)
 	}
@@ -237,18 +242,17 @@ func evalBFInit(args []string) []byte {
 	return RESP_OK
 }
 
-// evalBFAdd evaluates the BFADD command responsible for adding an element to
+// evalBFADD evaluates the BFADD command responsible for adding an element to
 // a bloom filter. If the filter does not exists, it will create a new one
 // with default parameters.
-func evalBFAdd(args []string) []byte {
+func evalBFADD(args []string) []byte {
 	if len(args) != 2 {
 		return Encode(fmt.Errorf("%w for 'BFADD' command", errWrongArgs), false)
 	}
 
-	var key string = args[0]
 	opts, _ := newBloomOpts(args[1:], true)
 
-	bloom, err := getOrCreateBloomFilter(key, opts)
+	bloom, err := getOrCreateBloomFilter(args[0], opts)
 	if err != nil {
 		return Encode(fmt.Errorf("%w for 'BFADD' command", err), false)
 	}
@@ -261,15 +265,14 @@ func evalBFAdd(args []string) []byte {
 	return resp
 }
 
-// evalBFExists evaluates the BFEXISTS command responsible for checking existance
+// evalBFEXISTS evaluates the BFEXISTS command responsible for checking existance
 // of an element in a bloom filter.
-func evalBFExists(args []string) []byte {
+func evalBFEXISTS(args []string) []byte {
 	if len(args) != 2 {
 		return Encode(fmt.Errorf("%w for 'BFEXISTS' command", errWrongArgs), false)
 	}
 
-	var key string = args[0]
-	bloom, err := getOrCreateBloomFilter(key, nil)
+	bloom, err := getOrCreateBloomFilter(args[0], nil)
 	if err != nil {
 		return Encode(fmt.Errorf("%w for 'BFEXISTS' command", err), false)
 	}
@@ -282,9 +285,9 @@ func evalBFExists(args []string) []byte {
 	return resp
 }
 
-// evalBFInfo evaluates the BFINFO command responsible for returning the
+// evalBFINFO evaluates the BFINFO command responsible for returning the
 // parameters and metadata of an existing bloom filter.
-func evalBFInfo(args []string) []byte {
+func evalBFINFO(args []string) []byte {
 	if len(args) != 1 {
 		return Encode(fmt.Errorf("%w for 'BFINFO' command", errWrongArgs), false)
 	}
