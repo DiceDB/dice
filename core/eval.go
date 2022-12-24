@@ -851,6 +851,14 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		return evalQINTLEN(cmd.Args)
 	case "QINTPEEK":
 		return evalQINTPEEK(cmd.Args)
+	case "BFINIT":
+		return evalBFINIT(cmd.Args)
+	case "BFADD":
+		return evalBFADD(cmd.Args)
+	case "BFEXISTS":
+		return evalBFEXISTS(cmd.Args)
+	case "BFINFO":
+		return evalBFINFO(cmd.Args)
 	case "QREFINS":
 		return evalQREFINS(cmd.Args)
 	case "QREFREM":
