@@ -41,6 +41,11 @@ type BloomOpts struct {
 	bits    uint64        // total number of bits reserved for the filter
 	hashFns []hash.Hash64 // array of hash functions
 	bpe     float64       // bits per element
+
+	// indexes slice will hold the indexes, representing bits to be set/read and
+	// is under the assumption that it's consumed at only 1 place at a time. Add
+	// a lock when multiple clients can be supported.
+	indexes []uint64
 }
 
 type Bloom struct {
@@ -95,6 +100,9 @@ func newBloomFilter(opts *BloomOpts) *Bloom {
 		opts.hashFns[i] = murmur3.SeedNew64(rand.Uint64())
 	}
 
+	// initialize the common slice for storing indexes of bits to be set
+	opts.indexes = make([]uint64, len(opts.hashFns))
+
 	// Calculate the number of bytes to be used
 	// 		bits = k * entries / ln(2)
 	//		bytes = bits * 8
@@ -137,8 +145,8 @@ func (b *Bloom) add(value string) ([]byte, error) {
 		return RESP_MINUS_1, errEmptyValue
 	}
 
-	// Get the indexes where bits are supposed to be set
-	indexes, err := b.opts.getIndexes(value)
+	// Update the indexes where bits are supposed to be set
+	err := b.opts.updateIndexes(value)
 	if err != nil {
 		fmt.Println("error in getting indexes for value:", value, "err:", err)
 		return RESP_MINUS_1, errUnableToHash
@@ -146,7 +154,7 @@ func (b *Bloom) add(value string) ([]byte, error) {
 
 	// Set the bits and keep a count of already set ones
 	count := 0
-	for _, v := range indexes {
+	for _, v := range b.opts.indexes {
 		if isBitSet(b.bitset, v) {
 			count++
 		} else {
@@ -154,7 +162,7 @@ func (b *Bloom) add(value string) ([]byte, error) {
 		}
 	}
 
-	if count == len(indexes) {
+	if count == len(b.opts.indexes) {
 		// All the bits were already set, return 0 in that case.
 		return RESP_ZERO, nil
 	}
@@ -174,8 +182,8 @@ func (b *Bloom) exists(value string) ([]byte, error) {
 		return RESP_MINUS_1, errEmptyValue
 	}
 
-	// Get the indexes where bits are supposed to be set
-	indexes, err := b.opts.getIndexes(value)
+	// Update the indexes where bits are supposed to be set
+	err := b.opts.updateIndexes(value)
 	if err != nil {
 		fmt.Println("error in getting indexes for value:", value, "err:", err)
 		return RESP_MINUS_1, errUnableToHash
@@ -183,7 +191,7 @@ func (b *Bloom) exists(value string) ([]byte, error) {
 
 	// Check if all the bits at given indexes are set or not
 	// Ideally if the element is present, we should find all set bits.
-	for _, v := range indexes {
+	for _, v := range b.opts.indexes {
 		if !isBitSet(b.bitset, v) {
 			// Return with "0" as we found one non-set bit (which is enough to conclude)
 			return RESP_ZERO, nil
@@ -194,26 +202,24 @@ func (b *Bloom) exists(value string) ([]byte, error) {
 	return RESP_ONE, nil
 }
 
-// getIndexes returns a list of indexes of the underlying bit array where
-// bits are supposed to be set (to 1). It uses the set hash function against
-// the given `value` and caps the index with the total number of bits.
-func (opts *BloomOpts) getIndexes(value string) ([]uint64, error) {
-	indexes := make([]uint64, len(opts.hashFns))
-
+// updateIndexes updates the list with indexes where bits are supposed to be
+// set (to 1) or read in/from the underlying array. It uses the set hash function
+// against the given `value` and caps the index with the total number of bits.
+func (opts *BloomOpts) updateIndexes(value string) error {
 	// Iterate through the hash functions and get indexes
 	for i := 0; i < len(opts.hashFns); i++ {
 		fn := opts.hashFns[i]
 		fn.Reset()
 
 		if _, err := fn.Write([]byte(value)); err != nil {
-			return nil, err
+			return err
 		}
 
 		// Save the index capped by total number of bits in the underlying array
-		indexes[i] = fn.Sum64() % opts.bits
+		opts.indexes[i] = fn.Sum64() % opts.bits
 	}
 
-	return indexes, nil
+	return nil
 }
 
 // evalBFINIT evaluates the BFINIT command responsible for initializing a

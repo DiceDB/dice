@@ -136,26 +136,26 @@ func TestGetOrCreateBloomFilter(t *testing.T) {
 	}
 }
 
-func TestGetIndexes(t *testing.T) {
+func TestUpdateIndexes(t *testing.T) {
 	t.Parallel()
 
 	// Create a value, default opts and initialize all params of the filter
 	value := "hello"
 	opts, _ := newBloomOpts([]string{}, true)
-	newBloomFilter(opts)
+	bloom := newBloomFilter(opts)
 
-	indexes, err := opts.getIndexes(value)
+	err := opts.updateIndexes(value)
 	if err != nil {
 		t.Errorf("non-nil error returned from getIndexes - value: %s, opts: %+v", value, opts)
 	}
 
-	if len(indexes) != len(opts.hashFns) {
-		t.Errorf("length of indexes does not match with number of hash functions - value: %s, expected: %v, got: %v", value, len(opts.hashFns), len(indexes))
+	if len(bloom.opts.indexes) != len(opts.hashFns) {
+		t.Errorf("length of indexes does not match with number of hash functions - value: %s, expected: %v, got: %v", value, len(opts.hashFns), len(bloom.opts.indexes))
 	}
 
-	for i := 0; i < len(indexes); i++ {
-		if indexes[i] >= opts.bits {
-			t.Errorf("bit index returned is out of bounds - value: %s, indexes[i]: %d, bound: %d", value, indexes[i], opts.bits)
+	for _, index := range bloom.opts.indexes {
+		if index >= opts.bits {
+			t.Errorf("bit index returned is out of bounds - value: %s, indexes[i]: %d, bound: %d", value, index, opts.bits)
 		}
 	}
 }
