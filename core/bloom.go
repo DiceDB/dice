@@ -147,10 +147,10 @@ func (b *Bloom) add(value string) ([]byte, error) {
 	// Set the bits and keep a count of already set ones
 	count := 0
 	for _, v := range indexes {
-		if isBitSet(b.bitset, int(v)) {
+		if isBitSet(b.bitset, v) {
 			count++
 		} else {
-			setBit(b.bitset, int(v))
+			setBit(b.bitset, v)
 		}
 	}
 
@@ -184,7 +184,7 @@ func (b *Bloom) exists(value string) ([]byte, error) {
 	// Check if all the bits at given indexes are set or not
 	// Ideally if the element is present, we should find all set bits.
 	for _, v := range indexes {
-		if !isBitSet(b.bitset, int(v)) {
+		if !isBitSet(b.bitset, v) {
 			// Return with "0" as we found one non-set bit (which is enough to conclude)
 			return RESP_ZERO, nil
 		}
@@ -329,13 +329,9 @@ func getOrCreateBloomFilter(key string, opts *BloomOpts) (*Bloom, error) {
 }
 
 // setBit sets the bit at index `b` to "1" in `buf`.
-func setBit(buf []byte, b int) {
-	if b < 0 {
-		return
-	}
-
+func setBit(buf []byte, b uint64) {
 	idx, offset := b/8, 7-b%8
-	if idx < 0 || idx >= len(buf) {
+	if idx >= uint64(len(buf)) {
 		return
 	}
 
@@ -343,13 +339,9 @@ func setBit(buf []byte, b int) {
 }
 
 // isBitSet checks if the bit at index `b` is set to "1" or not in `buf`.
-func isBitSet(buf []byte, b int) bool {
-	if b < 0 {
-		return false
-	}
-
+func isBitSet(buf []byte, b uint64) bool {
 	idx, offset := b/8, 7-b%8
-	if idx >= len(buf) {
+	if idx >= uint64(len(buf)) {
 		return false
 	}
 

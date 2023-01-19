@@ -204,10 +204,9 @@ func TestIsBitSet(t *testing.T) {
 	buf := []byte{170, 43} // 10101010 00101011
 	var testCases = []struct {
 		name     string
-		index    int
+		index    uint64
 		expected bool
 	}{
-		{"Handle negative index", -1, false},
 		{"Handle index equal to length", 16, false},
 		{"Handle index more than length", 17, false},
 		{"Handle start bit 1", 0, true},
@@ -236,10 +235,9 @@ func TestSetBit(t *testing.T) {
 	buf := []byte{170, 43} // 10101010 00101011
 	var testCases = []struct {
 		name     string
-		index    int
+		index    uint64
 		expected bool
 	}{
-		{"Handle negative index", -1, false},
 		{"Handle index equal to length", 16, false},
 		{"Handle index more than length", 17, false},
 		{"Handle start bit 1", 0, true}, // 10101010 00101011
