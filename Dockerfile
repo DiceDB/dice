@@ -25,7 +25,7 @@ WORKDIR /app/server
 
 COPY --from=builder /go/src/github.com/dicedb/dice ./
 
-EXPOSE 8080
+EXPOSE 7379
 
 RUN chmod +x ./dice
 
