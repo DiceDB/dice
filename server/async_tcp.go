@@ -80,6 +80,7 @@ func RunAsyncTCPServer(wg *sync.WaitGroup) error {
 		Port: config.Port,
 		Addr: [4]byte{ip4[0], ip4[1], ip4[2], ip4[3]},
 	}); err != nil {
+		log.Fatal(err)
 		return err
 	}
 
