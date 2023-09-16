@@ -71,7 +71,6 @@ func TestSetAndGet(t *testing.T) {
 	t.Run("LargeInput", func(t *testing.T) {
 		key := "large_key"
 		largeValue := strings.Repeat("a", 1024*2024)
-		log.Println(largeValue)
 		fireCommand(conn, fmt.Sprintf("SET %s %s", key, largeValue))
 		retValue := fireCommand(conn, fmt.Sprintf("GET %s", key)).(string)
 		if retValue != largeValue {
