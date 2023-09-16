@@ -2,7 +2,6 @@ package tests
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 	"testing"
