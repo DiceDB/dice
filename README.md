@@ -3,14 +3,6 @@ Dice
 
 Dice 🎲 is an extremely simple Golang-based in-memory KV store that speaks the Redis dialect.
 
-> This is not production ready
-
-## Story
-
-[Arpit Bhayani](https://arpitbhayani.me) started building Dice DB to understand [Redis](https://redis.io/) better.
-He compiled almost all of his learning in a course titled [Redis Internals](https://arpitbhayani.me/redis) that
-actually laid the foundation of Dice DB.
-
 ## Why should you care?
 
 Building a database from scratch has its own thrill, and you can leverage this to
@@ -90,6 +82,12 @@ Contributors can join the [Discord Server](https://discord.gg/6r8uXWtXh7) for qu
 <a href = "https://github.com/dicedb/dice/graphs/contributors">
   <img src = "https://contrib.rocks/image?repo=dicedb/dice"/>
 </a>
+
+## Story
+
+[Arpit Bhayani](https://arpitbhayani.me) started building Dice DB to understand [Redis](https://redis.io/) better and
+compiled his learning in a course [Redis Internals](https://arpitbhayani.me/redis) that
+laid the foundation of Dice DB.
 
 ## License
 
