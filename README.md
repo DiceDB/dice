@@ -1,4 +1,4 @@
-Dice
+DiceDB
 ===
 
 Dice 🎲 is an extremely simple Golang-based in-memory KV store that speaks the Redis dialect.
