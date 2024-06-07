@@ -7,6 +7,6 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o /dicedb/dice
+RUN CGO_ENABLED=0 GOOS=linux go build -o /dicedb/dice-server
 EXPOSE 7379
-CMD ["/dicedb/dice"]
+CMD ["/dicedb/dice-server"]
