@@ -3,6 +3,14 @@ DiceDB
 
 Dice 🎲 is an extremely simple Golang-based in-memory KV store that speaks the Redis dialect.
 
+## Get started
+
+### Docker
+
+```
+$ docker run dicedb/dice-server
+```
+
 ## Why should you care?
 
 Building a database from scratch has its own thrill, and you can leverage this to
