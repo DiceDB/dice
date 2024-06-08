@@ -199,6 +199,14 @@ func Encode(value interface{}, isSimple bool) []byte {
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
 	case error:
 		return []byte(fmt.Sprintf("-%s\r\n", v))
+	case WatchEvent:
+		var b []byte
+		buf := bytes.NewBuffer(b)
+		we := value.(WatchEvent)
+		buf.Write(Encode(fmt.Sprintf("key:%s", we.Key), false))
+		buf.Write(Encode(fmt.Sprintf("op:%s", we.Operation), false))
+		buf.Write(Encode(we.Value.Value, false))
+		return []byte(fmt.Sprintf("*3\r\n%s", buf.Bytes()))
 	default:
 		return RESP_NIL
 	}
