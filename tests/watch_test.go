@@ -2,9 +2,10 @@ package tests
 
 import (
 	"fmt"
-	"log"
 	"sync"
 	"testing"
+
+	"gotest.tools/v3/assert"
 )
 
 func TestWatch(t *testing.T) {
@@ -23,33 +24,22 @@ func TestWatch(t *testing.T) {
 
 	// Read first message (OK)
 	v, err := rp.DecodeOne()
-	if err != nil {
-		t.Fail()
-	}
-	if v.(string) != "OK" {
-		log.Fatalf("expected OK, got %s", v.(string))
-	}
+	assert.NilError(t, err)
+	assert.Equal(t, "OK", v.(string))
 
 	for _, msg := range messages {
 		fireCommand(publisher, fmt.Sprintf("SET k1 %s", msg))
 
 		// Check if the update is received by the subscriber.
 		v, err := rp.DecodeOne()
-		if err != nil {
-			t.Fail()
-		}
+		assert.NilError(t, err)
 
 		// Message format: [key, op, message]
 		// Ensure the update matches the expected value.
-		if v.([]interface{})[0].(string) != "key:k1" {
-			log.Fatalf("expected %s, got %s", msg, v.([]interface{})[1].(string))
-		}
-		if v.([]interface{})[1].(string) != "op:SET" {
-			log.Fatalf("expected %s, got %s", msg, v.([]interface{})[1].(string))
-		}
-		if v.([]interface{})[2].(string) != msg {
-			log.Fatalf("expected %s, got %s", msg, v.([]interface{})[2].(string))
-		}
+		update := v.([]interface{})
+		assert.Equal(t, "key:k1", update[0].(string), "unexpected key")
+		assert.Equal(t, "op:SET", update[1].(string), "unexpected operation")
+		assert.Equal(t, msg, update[2].(string), "unexpected message")
 	}
 
 	fireCommand(publisher, "ABORT")

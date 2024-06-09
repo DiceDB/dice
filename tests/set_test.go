@@ -3,8 +3,11 @@ package tests
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"sync"
 	"testing"
+
+	"gotest.tools/v3/assert"
 )
 
 func TestSet(t *testing.T) {
@@ -23,10 +26,10 @@ func TestSet(t *testing.T) {
 	for i := 1; i < 100; i++ {
 		cmd := fmt.Sprintf("GET k%d", i)
 		v := fireCommand(conn, cmd)
-		if len(v.(string)) != i {
-			t.Fail()
-		}
+		expectedValue := strings.Repeat("a", i)
+		assert.Equal(t, expectedValue, v.(string), "Value mismatch for key k%d", i)
 	}
+
 	fireCommand(conn, "ABORT")
 	wg.Wait()
 }
