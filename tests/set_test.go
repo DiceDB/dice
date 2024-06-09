@@ -5,17 +5,7 @@ import (
 	"fmt"
 	"sync"
 	"testing"
-
-	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/server"
 )
-
-func runTestServer(wg *sync.WaitGroup) {
-	config.IOBufferLength = 16
-	config.Port = 8379
-	wg.Add(1)
-	server.RunAsyncTCPServer(wg)
-}
 
 func TestSet(t *testing.T) {
 	var wg sync.WaitGroup

@@ -3,7 +3,6 @@ package core
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 
@@ -37,31 +36,30 @@ func NewRESPParserWithBytes(c io.ReadWriter, initBytes []byte) *RESPParser {
 }
 
 func (rp *RESPParser) DecodeOne() (interface{}, error) {
-	// keep reading the bytes from the buffer until the first \r is found
-	// note: there may be extra bytes read over the socket post \r
-	// but that is fine.
+	// Read data until we find \r\n or hit an error/EOF
 	for {
-		n, err := rp.c.Read(rp.tbuf)
-		// this condition needs to be explicitly added to ensure
-		// we break the loop if we read `0` bytes from the socket
-		// implying end of the input
-		if n <= 0 {
+		// 1. Check if the accumulated buffer (rp.buf) contains \r\n before reading
+		// more data. This ensures the function does not hang if \r\n is split
+		// across multiple reads.
+		// 2. Check presence of \r\n in the accumulated buffer (rp.buf.Bytes())
+		// rather than the temporary buffer (rp.tbuf). This ensures that data read
+		// across multiple iterations of the loop is correctly considered.
+		if rp.buf.Len() > 0 && bytes.Contains(rp.buf.Bytes(), []byte{'\r', '\n'}) {
 			break
 		}
-		rp.buf.Write(rp.tbuf[:n])
+
+		n, err := rp.c.Read(rp.tbuf)
+		if n > 0 {
+			rp.buf.Write(rp.tbuf[:n])
+		}
+
 		if err != nil {
-			if err == io.EOF {
+			// If we have read some data and hit EOF, break to allow the remaining
+			// data to be processed.
+			if err == io.EOF && rp.buf.Len() > 0 {
 				break
 			}
 			return nil, err
-		}
-
-		if bytes.Contains(rp.tbuf, []byte{'\r', '\n'}) {
-			break
-		}
-
-		if rp.buf.Len() > config.IOBufferLengthMAX {
-			return nil, fmt.Errorf("input too long. max input can be %d bytes", config.IOBufferLengthMAX)
 		}
 	}
 
