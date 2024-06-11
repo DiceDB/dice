@@ -815,11 +815,11 @@ func evalSTACKREFPEEK(args []string) []byte {
 	return Encode(s.Iterate(int(num)), false)
 }
 
-// evalWATCH adds the specified key to the watch list for the caller client.
+// evalQWATCH adds the specified key to the watch list for the caller client.
 // Every time a key in the watch list is modified, the client will be sent a response
 // containing the new value of the key along with the operation that was performed on it.
 // Contains only one argument, the key to be watched.
-func evalWATCH(args []string, c *Client) []byte {
+func evalQWATCH(args []string, c *Client) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR invalid number of arguments for `WATCH` command"), false)
 	}
@@ -838,8 +838,8 @@ func evalWATCH(args []string, c *Client) []byte {
 	return RESP_OK
 }
 
-// evalUNWATCH removes the caller's file descriptor from the watch list of the specified key.
-func evalUNWATCH(args []string, c *Client) []byte {
+// evalUNQWATCH removes the caller's file descriptor from the watch list of the specified key.
+func evalUNQWATCH(args []string, c *Client) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR invalid number of arguments for `UNWATCH` command"), false)
 	}
@@ -926,10 +926,10 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		return evalSTACKREFLEN(cmd.Args)
 	case "STACKREFPEEK":
 		return evalSTACKREFPEEK(cmd.Args)
-	case "SUBSCRIBE": // TODO: Change to "WATCH" once client supports it.
-		return evalWATCH(cmd.Args, c)
+	case "SUBSCRIBE": // TODO: Change to "QWATCH" once client supports it.
+		return evalQWATCH(cmd.Args, c)
 	case "UNWATCH":
-		return evalUNWATCH(cmd.Args, c)
+		return evalUNQWATCH(cmd.Args, c)
 	case "MULTI":
 		c.TxnBegin()
 		return evalMULTI(cmd.Args)

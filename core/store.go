@@ -68,7 +68,6 @@ func Put(k string, obj *Obj) {
 	}
 	KeyspaceStat[0]["keys"]++
 
-	// Notify the Watcher goroutine that the key has been updated.
 	WatchChannel <- WatchEvent{k, "SET", obj}
 }
 
