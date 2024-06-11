@@ -928,7 +928,7 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		return evalSTACKREFPEEK(cmd.Args)
 	case "SUBSCRIBE": // TODO: Change to "QWATCH" once client supports it.
 		return evalQWATCH(cmd.Args, c)
-	case "UNWATCH":
+	case "UNQWATCH":
 		return evalUNQWATCH(cmd.Args, c)
 	case "MULTI":
 		c.TxnBegin()
