@@ -3,19 +3,12 @@ package tests
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"sync"
 	"testing"
 
-	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/server"
+	"gotest.tools/v3/assert"
 )
-
-func runTestServer(wg *sync.WaitGroup) {
-	config.IOBufferLength = 16
-	config.Port = 8379
-	wg.Add(1)
-	server.RunAsyncTCPServer(wg)
-}
 
 func TestSet(t *testing.T) {
 	var wg sync.WaitGroup
@@ -33,10 +26,10 @@ func TestSet(t *testing.T) {
 	for i := 1; i < 100; i++ {
 		cmd := fmt.Sprintf("GET k%d", i)
 		v := fireCommand(conn, cmd)
-		if len(v.(string)) != i {
-			t.Fail()
-		}
+		expectedValue := strings.Repeat("a", i)
+		assert.Equal(t, expectedValue, v.(string), "Value mismatch for key k%d", i)
 	}
+
 	fireCommand(conn, "ABORT")
 	wg.Wait()
 }

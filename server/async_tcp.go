@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"log"
 	"net"
 	"os"
@@ -30,6 +31,33 @@ func init() {
 	connectedClients = make(map[int]*core.Client)
 }
 
+// Waits on `core.WatchChannel` to receive updates about keys. Sends the update
+// to all the clients that are watching the key.
+// The message sent to the client will contain the new value and the operation
+// that was performed on the key.
+func WatchKeys(ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for {
+		select {
+		case event := <-core.WatchChannel:
+			core.WatchListMutex.Lock()
+			if clients, ok := core.WatchList[event.Key]; ok {
+				for clientFd := range clients {
+					_, err := syscall.Write(clientFd, core.Encode(event, false))
+
+					// if the client is not reachable, remove it from the watch list.
+					if err != nil {
+						delete(clients, clientFd)
+					}
+				}
+			}
+			core.WatchListMutex.Unlock()
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
 func WaitForSignal(wg *sync.WaitGroup, sigs chan os.Signal) {
 	defer wg.Done()
 	<-sigs
@@ -53,6 +81,10 @@ func WaitForSignal(wg *sync.WaitGroup, sigs chan os.Signal) {
 
 func RunAsyncTCPServer(wg *sync.WaitGroup) error {
 	defer wg.Done()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	defer func() {
 		atomic.StoreInt32(&eStatus, EngineStatus_SHUTTING_DOWN)
 	}()
@@ -60,6 +92,9 @@ func RunAsyncTCPServer(wg *sync.WaitGroup) error {
 	log.Println("starting an asynchronous TCP server on", config.Host, config.Port)
 
 	maxClients := 20000
+
+	wg.Add(1)
+	go WatchKeys(ctx, wg)
 
 	// Create a socket
 	serverFD, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, 0)
@@ -174,6 +209,7 @@ func RunAsyncTCPServer(wg *sync.WaitGroup) error {
 				}
 				respond(cmds, comm)
 				if hasABORT {
+					ctx.Done()
 					return nil
 				}
 			}
