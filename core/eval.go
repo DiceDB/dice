@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -820,11 +821,21 @@ func evalSTACKREFPEEK(args []string) []byte {
 // containing the new value of the key along with the operation that was performed on it.
 // Contains only one argument, the key to be watched.
 func evalQWATCH(args []string, c *Client) []byte {
-	if len(args) != 1 {
+	if len(args) < 2 {
 		return Encode(errors.New("ERR invalid number of arguments for `WATCH` command"), false)
 	}
 
-	var key string = args[0]
+	// Join the args to form the query.
+	// TODO: In future we should support additional options for the QWATCH
+	// command, in that case we will need more sophisticated argument parsing logic.
+	var sql string = strings.Join(args, " ")
+
+	// Parse and get the selection from the query.
+	key, error := ParseQuery(sql)
+
+	if error != nil {
+		return Encode(error, false)
+	}
 
 	WatchListMutex.Lock()
 	defer WatchListMutex.Unlock()

@@ -15,7 +15,7 @@ func TestWatch(t *testing.T) {
 	publisher := getLocalConnection()
 	subscriber := getLocalConnection()
 
-	rp := fireCommandAndGetRESPParser(subscriber, "SUBSCRIBE k1")
+	rp := fireCommandAndGetRESPParser(subscriber, "SUBSCRIBE SELECT k1")
 	if rp == nil {
 		t.Fail()
 	}
