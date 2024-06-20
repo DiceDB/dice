@@ -1,3 +1,7 @@
+// This file contains the core logic for parsing DSQL queries. DSQL stands for
+// Dice SQL, and is a simple SQL-like language that is used to query data from
+// DiceDB.
+
 package core
 
 import (
@@ -6,19 +10,19 @@ import (
 	"github.com/xwb1989/sqlparser"
 )
 
-type UnsupportedSqlStatementError struct {
+type UnsupportedDSQLStatementError struct {
 	Stmt sqlparser.Statement
 }
 
-func (e *UnsupportedSqlStatementError) Error() string {
-	return fmt.Sprintf("unsupported SQL statement: %T", e.Stmt)
+func (e *UnsupportedDSQLStatementError) Error() string {
+	return fmt.Sprintf("unsupported DSQL statement: %T", e.Stmt)
 }
 
-func newUnsupportedSqlStatementError(stmt sqlparser.Statement) *UnsupportedSqlStatementError {
-	return &UnsupportedSqlStatementError{Stmt: stmt}
+func newUnsupportedSqlStatementError(stmt sqlparser.Statement) *UnsupportedDSQLStatementError {
+	return &UnsupportedDSQLStatementError{Stmt: stmt}
 }
 
-// ParseQuery takes a SQL string and checks if it is a simple "SELECT <field_name>" statement.
+// ParseQuery takes a DSQL string and checks if it is a simple "SELECT <field_name>" statement.
 func ParseQuery(sql string) (string, error) {
 	stmt, err := sqlparser.Parse(sql)
 	if err != nil {

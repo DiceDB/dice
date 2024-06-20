@@ -8,14 +8,14 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func TestWatch(t *testing.T) {
+func TestQWATCH(t *testing.T) {
 	var wg sync.WaitGroup
 	go runTestServer(&wg)
 
 	publisher := getLocalConnection()
 	subscriber := getLocalConnection()
 
-	rp := fireCommandAndGetRESPParser(subscriber, "SUBSCRIBE SELECT k1")
+	rp := fireCommandAndGetRESPParser(subscriber, "QWATCH SELECT k1")
 	if rp == nil {
 		t.Fail()
 	}
