@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 	"syscall"
 	"time"
 )
@@ -825,13 +824,8 @@ func evalQWATCH(args []string, c *Client) []byte {
 		return Encode(errors.New("ERR invalid number of arguments for `QWATCH` command (expected 1)"), false)
 	}
 
-	// Join the args to form the query.
-	// TODO: In future we should support additional options for the QWATCH
-	// command, in that case we will need more sophisticated argument parsing logic.
-	var sql string = strings.Join(args, " ")
-
 	// Parse and get the selection from the query.
-	key, error := ParseQuery(sql)
+	key, error := ParseQuery( /*sql=*/ args[0])
 
 	if error != nil {
 		return Encode(error, false)
