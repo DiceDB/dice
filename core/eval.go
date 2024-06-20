@@ -821,8 +821,8 @@ func evalSTACKREFPEEK(args []string) []byte {
 // containing the new value of the key along with the operation that was performed on it.
 // Contains only one argument, the key to be watched.
 func evalQWATCH(args []string, c *Client) []byte {
-	if len(args) < 2 {
-		return Encode(errors.New("ERR invalid number of arguments for `QWATCH` command"), false)
+	if len(args) != 1 {
+		return Encode(errors.New("ERR invalid number of arguments for `QWATCH` command (expected 1)"), false)
 	}
 
 	// Join the args to form the query.

@@ -15,7 +15,7 @@ func TestQWATCH(t *testing.T) {
 	publisher := getLocalConnection()
 	subscriber := getLocalConnection()
 
-	rp := fireCommandAndGetRESPParser(subscriber, "QWATCH SELECT k1")
+	rp := fireCommandAndGetRESPParser(subscriber, "QWATCH \"SELECT k1\"")
 	if rp == nil {
 		t.Fail()
 	}
