@@ -821,10 +821,15 @@ func evalSTACKREFPEEK(args []string) []byte {
 // Contains only one argument, the key to be watched.
 func evalQWATCH(args []string, c *Client) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR invalid number of arguments for `WATCH` command"), false)
+		return Encode(errors.New("ERR invalid number of arguments for `QWATCH` command (expected 1)"), false)
 	}
 
-	var key string = args[0]
+	// Parse and get the selection from the query.
+	key, error := ParseQuery( /*sql=*/ args[0])
+
+	if error != nil {
+		return Encode(error, false)
+	}
 
 	WatchListMutex.Lock()
 	defer WatchListMutex.Unlock()
@@ -926,7 +931,9 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		return evalSTACKREFLEN(cmd.Args)
 	case "STACKREFPEEK":
 		return evalSTACKREFPEEK(cmd.Args)
-	case "SUBSCRIBE": // TODO: Change to "QWATCH" once client supports it.
+	case "SUBSCRIBE": // TODO: Remove this override once we support QWATCH in dice-cli.
+		return evalQWATCH(cmd.Args, c)
+	case "QWATCH":
 		return evalQWATCH(cmd.Args, c)
 	case "UNQWATCH":
 		return evalUNQWATCH(cmd.Args, c)
