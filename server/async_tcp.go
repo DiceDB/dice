@@ -42,24 +42,32 @@ func WatchKeys(ctx context.Context, wg *sync.WaitGroup) {
 		case event := <-core.WatchChannel:
 			core.WatchListMutex.Lock()
 			// Check if the key matches any RegexMatcher in the watch list.
-			var pendingUpdates []core.DSQLQuery
+			var affectedQueries []core.DSQLQuery
 			for query := range core.WatchList {
-				var regex = query.RegexMatcher
+				var regex = query.KeyRegex
 				// Check if event.KEY matches the regex.
 				if core.RegexMatch(regex, event.Key) {
-					pendingUpdates = append(pendingUpdates, query)
+					affectedQueries = append(affectedQueries, query)
 				}
 			}
-			// if clients, ok := core.WatchList[event.Key]; ok {
-			// 	for clientFd := range clients {
-			// 		_, err := syscall.Write(clientFd, core.Encode(event, false))
 
-			// 		// if the client is not reachable, remove it from the watch list.
-			// 		if err != nil {
-			// 			delete(clients, clientFd)
-			// 		}
-			// 	}
-			// }
+			// Execute all the affected queries and send the results to the subscribed clients.
+			for _, query := range affectedQueries {
+				result, err := core.ExecuteQuery(query)
+				if err != nil {
+					log.Println("Error executing query", err)
+					continue
+				}
+
+				for clientFd := range core.WatchList[query] {
+					_, err := syscall.Write(clientFd, core.Encode(result, false))
+
+					// if the client is not reachable, remove it from the watch list.
+					if err != nil {
+						delete(core.WatchList[query], clientFd)
+					}
+				}
+			}
 			core.WatchListMutex.Unlock()
 		case <-ctx.Done():
 			return

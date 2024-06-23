@@ -41,10 +41,10 @@ type QueryOrder struct {
 }
 
 type DSQLQuery struct {
-	Selection    QuerySelection
-	RegexMatcher string
-	OrderBy      QueryOrder
-	Limit        int
+	Selection QuerySelection
+	KeyRegex  string
+	OrderBy   QueryOrder
+	Limit     int
 }
 
 // Utility functions for custom syntax handling
@@ -99,10 +99,10 @@ func ParseQuery(sql string) (DSQLQuery, error) {
 	}
 
 	return DSQLQuery{
-		Selection:    querySelection,
-		RegexMatcher: tableName,
-		OrderBy:      orderBy,
-		Limit:        limit,
+		Selection: querySelection,
+		KeyRegex:  tableName,
+		OrderBy:   orderBy,
+		Limit:     limit,
 	}, nil
 }
 
@@ -163,6 +163,10 @@ func parseOrderBy(selectStmt *sqlparser.Select) (QueryOrder, error) {
 	orderBy := QueryOrder{}
 	if len(selectStmt.OrderBy) > 0 {
 		orderBy.OrderBy = revertCustomSyntax(sqlparser.String(selectStmt.OrderBy[0].Expr))
+		// Order by expr should either be $key or $value
+		if orderBy.OrderBy != CustomKey && orderBy.OrderBy != CustomValue {
+			return QueryOrder{}, fmt.Errorf("only $key and $value are supported in ORDER BY clause")
+		}
 		orderBy.Order = selectStmt.OrderBy[0].Direction
 	}
 	return orderBy, nil
