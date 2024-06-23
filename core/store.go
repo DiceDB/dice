@@ -17,7 +17,7 @@ type WatchEvent struct {
 var store map[unsafe.Pointer]*Obj
 var expires map[*Obj]uint64
 var keypool map[string]unsafe.Pointer
-var WatchList map[string]map[int]struct{} // Maps keys to the file descriptors of clients that are watching them.
+var WatchList map[DSQLQuery]map[int]struct{} // Maps keys to the file descriptors of clients that are watching them.
 var WatchListMutex = &sync.Mutex{}
 
 // Channel to receive updates about keys that are being watched.
@@ -30,7 +30,7 @@ func init() {
 	store = make(map[unsafe.Pointer]*Obj)
 	expires = make(map[*Obj]uint64)
 	keypool = make(map[string]unsafe.Pointer)
-	WatchList = make(map[string]map[int]struct{})
+	WatchList = make(map[DSQLQuery]map[int]struct{})
 	WatchChannel = make(chan WatchEvent, 100)
 }
 
