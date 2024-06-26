@@ -825,7 +825,7 @@ func evalQWATCH(args []string, c *Client) []byte {
 	}
 
 	// Parse and get the selection from the query.
-	key, error := ParseQuery( /*sql=*/ args[0])
+	query, error := ParseQuery( /*sql=*/ args[0])
 
 	if error != nil {
 		return Encode(error, false)
@@ -833,32 +833,32 @@ func evalQWATCH(args []string, c *Client) []byte {
 
 	WatchListMutex.Lock()
 	defer WatchListMutex.Unlock()
-	if WatchList[key] == nil {
-		WatchList[key] = make(map[int]struct{})
+	if WatchList[query] == nil {
+		WatchList[query] = make(map[int]struct{})
 	}
 
 	// Add the client to this key's watch list
-	WatchList[key][c.Fd] = struct{}{}
+	WatchList[query][c.Fd] = struct{}{}
 
 	return RESP_OK
 }
 
 // evalUNQWATCH removes the caller's file descriptor from the watch list of the specified key.
 func evalUNQWATCH(args []string, c *Client) []byte {
-	if len(args) != 1 {
-		return Encode(errors.New("ERR invalid number of arguments for `UNWATCH` command"), false)
-	}
+	// if len(args) != 1 {
+	// 	return Encode(errors.New("ERR invalid number of arguments for `UNWATCH` command"), false)
+	// }
 
-	var key string = args[0]
+	// var key string = args[0]
 
-	WatchListMutex.Lock()
-	defer WatchListMutex.Unlock()
-	if WatchList[key] != nil {
-		delete(WatchList[key], c.Fd)
-		if len(WatchList[key]) == 0 {
-			delete(WatchList, key)
-		}
-	}
+	// WatchListMutex.Lock()
+	// defer WatchListMutex.Unlock()
+	// if WatchList[key] != nil {
+	// 	delete(WatchList[key], c.Fd)
+	// 	if len(WatchList[key]) == 0 {
+	// 		delete(WatchList, key)
+	// 	}
+	// }
 
 	return RESP_OK
 }
