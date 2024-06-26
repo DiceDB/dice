@@ -10,12 +10,12 @@ import (
 
 func TestQWATCH(t *testing.T) {
 	var wg sync.WaitGroup
-	go runTestServer(&wg)
+	runTestServer(&wg)
 
 	publisher := getLocalConnection()
 	subscriber := getLocalConnection()
 
-	rp := fireCommandAndGetRESPParser(subscriber, "QWATCH \"SELECT k1\"")
+	rp := fireCommandAndGetRESPParser(subscriber, "QWATCH \"SELECT $key, $value FROM `match:100:*` ORDER BY $value DESC LIMIT 10\"")
 	if rp == nil {
 		t.Fail()
 	}
@@ -27,8 +27,8 @@ func TestQWATCH(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Equal(t, "OK", v.(string))
 
-	for _, msg := range messages {
-		fireCommand(publisher, fmt.Sprintf("SET k1 %s", msg))
+	for idx, msg := range messages {
+		fireCommand(publisher, fmt.Sprintf("SET match:100:%d %s", idx, msg))
 
 		// Check if the update is received by the subscriber.
 		v, err := rp.DecodeOne()

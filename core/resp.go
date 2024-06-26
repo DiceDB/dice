@@ -207,7 +207,17 @@ func Encode(value interface{}, isSimple bool) []byte {
 		buf.Write(Encode(fmt.Sprintf("op:%s", we.Operation), false))
 		buf.Write(Encode(we.Value.Value, false))
 		return []byte(fmt.Sprintf("*3\r\n%s", buf.Bytes()))
+	case []DSQLQueryResultRow:
+		var b []byte
+		buf := bytes.NewBuffer(b)
+		for _, row := range value.([]DSQLQueryResultRow) {
+			buf.Write([]byte("*2\r\n"))
+			buf.Write(Encode(row.Key, false))
+			buf.Write(Encode(row.Value.Value, false))
+		}
+		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
 	default:
+		fmt.Printf("Unsupported type: %T\n", v)
 		return RESP_NIL
 	}
 }

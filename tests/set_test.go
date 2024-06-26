@@ -12,7 +12,7 @@ import (
 
 func TestSet(t *testing.T) {
 	var wg sync.WaitGroup
-	go runTestServer(&wg)
+	runTestServer(&wg)
 
 	var b []byte
 	var buf = bytes.NewBuffer(b)
