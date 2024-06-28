@@ -843,26 +843,6 @@ func evalQWATCH(args []string, c *Client) []byte {
 	return RESP_OK
 }
 
-// evalUNQWATCH removes the caller's file descriptor from the watch list of the specified key.
-func evalUNQWATCH(args []string, c *Client) []byte {
-	// if len(args) != 1 {
-	// 	return Encode(errors.New("ERR invalid number of arguments for `UNWATCH` command"), false)
-	// }
-
-	// var key string = args[0]
-
-	// WatchListMutex.Lock()
-	// defer WatchListMutex.Unlock()
-	// if WatchList[key] != nil {
-	// 	delete(WatchList[key], c.Fd)
-	// 	if len(WatchList[key]) == 0 {
-	// 		delete(WatchList, key)
-	// 	}
-	// }
-
-	return RESP_OK
-}
-
 func executeCommand(cmd *RedisCmd, c *Client) []byte {
 	switch cmd.Cmd {
 	case "PING":
@@ -935,8 +915,6 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		return evalQWATCH(cmd.Args, c)
 	case "QWATCH":
 		return evalQWATCH(cmd.Args, c)
-	case "UNQWATCH":
-		return evalUNQWATCH(cmd.Args, c)
 	case "MULTI":
 		c.TxnBegin()
 		return evalMULTI(cmd.Args)

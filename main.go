@@ -26,7 +26,6 @@ func main() {
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 	var wg sync.WaitGroup
 	wg.Add(1)
-
 	go server.RunAsyncTCPServer(&wg)
 	go server.WaitForSignal(&wg, sigs)
 

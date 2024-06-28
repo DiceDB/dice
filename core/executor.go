@@ -13,18 +13,28 @@ func ExecuteQuery(query DSQLQuery) ([]DSQLQueryResultRow, error) {
 
 	for key, ptr := range keypool {
 		if RegexMatch(query.KeyRegex, key) {
-			row := DSQLQueryResultRow{}
-			if query.Selection.KeySelection {
-				row.Key = key
+			row := DSQLQueryResultRow{
+				Key:   key,
+				Value: store[ptr],
 			}
-			if query.Selection.ValueSelection {
-				row.Value = store[ptr]
-			}
+
 			result = append(result, row)
 		}
 	}
 
 	sortResults(query, result)
+
+	if !query.Selection.KeySelection {
+		for i := range result {
+			result[i].Key = ""
+		}
+	}
+
+	if !query.Selection.ValueSelection {
+		for i := range result {
+			result[i].Value = nil
+		}
+	}
 
 	if query.Limit > 0 && query.Limit < len(result) {
 		result = result[:query.Limit]

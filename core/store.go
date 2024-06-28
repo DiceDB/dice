@@ -99,6 +99,8 @@ func Del(k string) bool {
 		delete(expires, obj)
 		delete(keypool, k)
 		KeyspaceStat[0]["keys"]--
+
+		WatchChannel <- WatchEvent{k, "DEL", obj}
 		return true
 	}
 	return false
