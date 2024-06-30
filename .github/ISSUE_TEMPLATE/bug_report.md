@@ -1,23 +1,29 @@
 ---
 name: Bug report
-about: Create a report to help us improve
+about: Report a bug that you encountered while using DiceDB
 title: ''
 labels: ''
 assignees: ''
 
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+> A clear and concise description of what the bug is.
+> Remove this note when you submit raise the issue.
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. do ...
-2. then do ...
-3. then do ...
+**How to reproduce**
+
+> Provide the exact steps to be taken to reproduce the bug
+> If you are seeing it while programatically interfacing with DiceDB
+> then, do provide the code snippet.
+> Do mention the OS and database version in which you observed the issue.
+> Remove this note when you submit raise the issue.
 
 **Expected behavior**
-A clear and concise description of what you expected to happen.
 
-**Additional context**
-Add any other context about the problem here.
+> Mention what were you expecting to happen and what really happened.
+> Remove this note when you submit raise the issue.
+
+**Screenshots**
+
+> If applicable, add screenshots to help explain your problem.
+> Remove this note when you submit raise the issue.
