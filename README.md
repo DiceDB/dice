@@ -1,38 +1,28 @@
 DiceDB
 ===
 
-Dice 🎲 is an extremely simple Golang-based in-memory KV store that speaks the Redis dialect.
+Dice 🎲 is a drop-in replacement of Redis with SQL-based realtime reactivity baked in.
+
+> Note: DiceDB is still in development and it supports a subset of Redis commands. So, please do not use it in production. But, feel free to go through the [open issues](https://github.com/DiceDB/dice/issues) and contribute to help us speed up the development.
+
+## How is it different from Redis?
+
+1. DiceDB is multi-threaded and follows [shared-nothing architecture](https://en.wikipedia.org/wiki/Shared-nothing_architecture).
+2. DiceDB supports a new command called `QWATCH` that lets clients listen to a SQL query and get notified in real-time whenever something changes.
 
 ## Get started
 
-### Docker
+### Using Docker
+
+The easiest way to get started with DiceDB is using [Docker](https://www.docker.com/) by running the following command.
 
 ```
 $ docker run dicedb/dice-server
 ```
 
-## Why should you care?
+### Setting up
 
-Building a database from scratch has its own thrill, and you can leverage this to
-
-- build a database from scratch
-- learn database internals, starting with Redis
-- learn about advanced data structures, algorithms, and event loops
-- collaborate with other engineers and contribute back to Open Source
-
-## Tenet
-
-- remain product-first
-- remain the easiest to work with
-
-### Highlights
-
-- [planned] Semi-persistent Storage
-- [planned] Efficient concurrency using Goroutines
-
-## Setting up
-
-To run DiceDB locally, you will need
+To run DiceDB for local development or running from source, you will need
 
 1. [Golang](https://go.dev/)
 2. Any of the below supported platform environment:
@@ -48,6 +38,12 @@ $ go run main.go
 ## Dice in action
 
 Because Dice speaks Redis' dialect, you can connect to it with any Redis Client and the simplest way it to use a [Redis CLI](https://redis.io/docs/manual/cli/). Programmatically, depending on the language you prefer, you can use your favourite Redis library to connect.
+
+But if you are planning to use `QWATCH` feature then you need to use the DiceDB CLI that you can download from [PyPI](https://pypi.org/project/dicedb-cli/) by running the following command. The codebase for the same can be found at [dicedb/cli](https://github.com/DiceDB/cli/).
+
+```
+$ pip install dicedb-cli
+```
 
 ## Running Tests
 
@@ -90,13 +86,3 @@ Contributors can join the [Discord Server](https://discord.gg/6r8uXWtXh7) for qu
 <a href = "https://github.com/dicedb/dice/graphs/contributors">
   <img src = "https://contrib.rocks/image?repo=dicedb/dice"/>
 </a>
-
-## Story
-
-[Arpit Bhayani](https://arpitbhayani.me) started building Dice DB to understand [Redis](https://redis.io/) better and
-compiled his learning in a course [Redis Internals](https://arpitbhayani.me/redis) that
-laid the foundation of Dice DB.
-
-## License
-
-DiceDB is open-sourced under [Apache License, Version 2.0](LICENSE.md).
