@@ -69,3 +69,106 @@ func TestQueueInt(t *testing.T) {
 		}
 	}
 }
+
+func TestSize(t *testing.T) {
+	qi := core.NewQueueInt()
+	for i := 0; i < 20; i++ {
+		qi.Insert(int64(i))
+	}
+	qsize := qi.Length
+	if qsize != 20 {
+		t.Errorf("queueint test failed. should have been 20 but found %v", qsize)
+	}
+}
+
+func insertMany(howmany int, qi core.QueueIntI, b *testing.B) {
+	for i := 0; i < howmany; i++ {
+		qi.Insert(int64(i))
+	}
+	obsList := qi.Iterate(howmany + 10)
+	if len(obsList) != howmany {
+		b.Errorf("queueint test failed. should have been %d but found %v", howmany, len(obsList))
+	}
+}
+
+func BenchmarkInsert20(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		insertMany(20, core.NewQueueInt(), b)
+	}
+}
+
+func BenchmarkInsert200(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		insertMany(200, core.NewQueueInt(), b)
+	}
+}
+
+func BenchmarkInsert2000(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		insertMany(2000, core.NewQueueInt(), b)
+	}
+}
+
+func BenchmarkInsertLL20(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		insertMany(20, core.NewQueueIntLL(), b)
+	}
+}
+
+func BenchmarkInsertLL200(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		insertMany(200, core.NewQueueIntLL(), b)
+	}
+}
+
+func BenchmarkInsertLL2000(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		insertMany(2000, core.NewQueueIntLL(), b)
+	}
+}
+
+func BenchmarkInsertBasic20(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		insertMany(20, core.NewQueueIntBasic(), b)
+	}
+}
+
+func BenchmarkInsertBasic200(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		insertMany(200, core.NewQueueIntBasic(), b)
+	}
+}
+
+func BenchmarkInsertBasic2000(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		insertMany(2000, core.NewQueueIntBasic(), b)
+	}
+}
+
+func BenchmarkInsertRemove(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		qi := core.NewQueueInt()
+		for i := 0; i < 20; i++ {
+			qi.Insert(int64(i))
+		}
+		for i := 0; i < 20; i++ {
+			_, err := qi.Remove()
+			if err != nil {
+				b.Errorf("queueint test failed. should have been nil but found %v", err)
+			}
+		}
+	}
+}
+
+func BenchmarkSize(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		qi := core.NewQueueInt()
+		for i := 0; i < 20; i++ {
+			qi.Insert(int64(i))
+		}
+		qsize := qi.Length
+		if qsize != 20 {
+			b.Errorf("queueint test failed. should have been 20 but found %v", qsize)
+		}
+	}
+}

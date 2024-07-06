@@ -11,10 +11,19 @@ const QueueIntMaxBuf int = 256
 
 var ErrQueueEmpty = errors.New("queue is empty")
 
+type QueueIntI interface {
+	Size() int64
+	Insert(int64)
+	Remove() (int64, error)
+	Iterate(int) []int64
+}
+
 type QueueInt struct {
 	Length int64
 	list   *byteList
 }
+
+var _ QueueIntI = (*QueueInt)(nil)
 
 func NewQueueInt() *QueueInt {
 	q := &QueueInt{
@@ -122,4 +131,143 @@ func (q *QueueInt) Iterate(n int) []int64 {
 	}
 
 	return vals
+}
+
+type doublyLinkedList struct {
+	head *listNode
+	tail *listNode
+	size int
+}
+
+type listNode struct {
+	prev *listNode
+	next *listNode
+	data int64
+}
+
+func newDoublyLinkedList() *doublyLinkedList {
+	return &doublyLinkedList{
+		head: nil,
+		tail: nil,
+		size: 0,
+	}
+}
+
+func (l *doublyLinkedList) Append(n *listNode) {
+	if l.head == nil {
+		l.head = n
+		l.tail = n
+	} else {
+		l.tail.next = n
+		n.prev = l.tail
+		l.tail = n
+	}
+	l.size++
+}
+
+func (l *doublyLinkedList) Pop() *listNode {
+	if l.head == nil {
+		return nil
+	}
+	n := l.head
+	l.head = n.next
+	l.size--
+	return n
+}
+
+func (l *doublyLinkedList) Size() int {
+	return l.size
+}
+
+func (l *doublyLinkedList) Iterate(n int) []*listNode {
+	var vals []*listNode
+	pos := l.head
+	for i := 0; i < n; i++ {
+		if pos == nil {
+			break
+		}
+		vals = append(vals, pos)
+		pos = pos.next
+	}
+	return vals
+}
+
+type QueueIntLL struct {
+	list *doublyLinkedList
+}
+
+var _ QueueIntI = (*QueueIntLL)(nil)
+
+func NewQueueIntLL() *QueueIntLL {
+	return &QueueIntLL{
+		list: newDoublyLinkedList(),
+	}
+}
+
+func (q *QueueIntLL) Size() int64 {
+	return int64(q.list.Size())
+}
+
+func (q *QueueIntLL) Insert(x int64) {
+	q.list.Append(&listNode{data: x})
+}
+
+func (q *QueueIntLL) Remove() (int64, error) {
+	n := q.list.Pop()
+	if n == nil {
+		return 0, ErrQueueEmpty
+	}
+	return n.data, nil
+}
+
+func (q *QueueIntLL) Iterate(n int) []int64 {
+	nodes := q.list.Iterate(n)
+	var vals []int64
+	for _, node := range nodes {
+		vals = append(vals, node.data)
+	}
+	return vals
+}
+
+type QueueIntBasic struct {
+	l    []int64
+	size int
+}
+
+var _ QueueIntI = (*QueueIntBasic)(nil)
+
+func NewQueueIntBasic() *QueueIntBasic {
+	return &QueueIntBasic{
+		l:    make([]int64, 0),
+		size: 0,
+	}
+}
+
+func (q *QueueIntBasic) Size() int64 {
+	return int64(q.size)
+}
+
+func (q *QueueIntBasic) Insert(x int64) {
+	q.l = append(q.l, x)
+	q.size++
+}
+
+func (q *QueueIntBasic) Remove() (int64, error) {
+	if q.size == 0 {
+		return 0, ErrQueueEmpty
+	}
+	val := q.l[0]
+	q.l = q.l[1:]
+	q.size--
+	return val, nil
+}
+
+func (q *QueueIntBasic) Iterate(n int) []int64 {
+	if n <= 0 {
+		return []int64{}
+	}
+	if n > q.size {
+		n = q.size
+	}
+	return q.l[:n]
 }
