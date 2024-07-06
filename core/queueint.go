@@ -1,6 +1,7 @@
 package core
 
 import (
+	"container/list"
 	"errors"
 	"unsafe"
 
@@ -133,98 +134,51 @@ func (q *QueueInt) Iterate(n int) []int64 {
 	return vals
 }
 
-type doublyLinkedList struct {
-	head *listNode
-	tail *listNode
-	size int
-}
-
-type listNode struct {
-	prev *listNode
-	next *listNode
-	data int64
-}
-
-func newDoublyLinkedList() *doublyLinkedList {
-	return &doublyLinkedList{
-		head: nil,
-		tail: nil,
-		size: 0,
-	}
-}
-
-func (l *doublyLinkedList) Append(n *listNode) {
-	if l.head == nil {
-		l.head = n
-		l.tail = n
-	} else {
-		l.tail.next = n
-		n.prev = l.tail
-		l.tail = n
-	}
-	l.size++
-}
-
-func (l *doublyLinkedList) Pop() *listNode {
-	if l.head == nil {
-		return nil
-	}
-	n := l.head
-	l.head = n.next
-	l.size--
-	return n
-}
-
-func (l *doublyLinkedList) Size() int {
-	return l.size
-}
-
-func (l *doublyLinkedList) Iterate(n int) []*listNode {
-	var vals []*listNode
-	pos := l.head
-	for i := 0; i < n; i++ {
-		if pos == nil {
-			break
-		}
-		vals = append(vals, pos)
-		pos = pos.next
-	}
-	return vals
-}
-
 type QueueIntLL struct {
-	list *doublyLinkedList
+	list *list.List
 }
 
 var _ QueueIntI = (*QueueIntLL)(nil)
 
 func NewQueueIntLL() *QueueIntLL {
 	return &QueueIntLL{
-		list: newDoublyLinkedList(),
+		list: list.New(),
 	}
 }
 
 func (q *QueueIntLL) Size() int64 {
-	return int64(q.list.Size())
+	return int64(q.list.Len())
 }
 
 func (q *QueueIntLL) Insert(x int64) {
-	q.list.Append(&listNode{data: x})
+	q.list.PushBack(x)
 }
 
 func (q *QueueIntLL) Remove() (int64, error) {
-	n := q.list.Pop()
+	n := q.list.Front()
 	if n == nil {
 		return 0, ErrQueueEmpty
 	}
-	return n.data, nil
+	q.list.Remove(n)
+	return n.Value.(int64), nil
 }
 
 func (q *QueueIntLL) Iterate(n int) []int64 {
-	nodes := q.list.Iterate(n)
-	var vals []int64
-	for _, node := range nodes {
-		vals = append(vals, node.data)
+	if n <= 0 {
+		return []int64{}
+	}
+	outLen := n
+	if n > q.list.Len() {
+		outLen = q.list.Len()
+	}
+	vals := make([]int64, outLen)
+	count := 0
+	for e := q.list.Front(); e != nil; e = e.Next() {
+		vals[count] = e.Value.(int64)
+		count++
+		if count == outLen {
+			break
+		}
 	}
 	return vals
 }
