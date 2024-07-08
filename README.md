@@ -47,18 +47,40 @@ $ pip install dicedb-cli
 
 ## Running Tests
 
-To run all the unit tests fire the following command
+Unit tests and integration tests are essential for ensuring correctness and in the case of DiceDB, both types of tests are available to validate its functionality.
 
-```sh
-$ go test ./...
+For unit testing, you can execute individual unit tests by specifying the name of the test function using the `TEST_FUNC` environment variable and running the `make unittest-one` command. Alternatively, running `make unittest` will execute all unit tests.
+
+### Executing a single unit test
+
+```
+$ TEST_FUNC=<name of the test function> make unittest-one
+$ TEST_FUNC=TestByteList make unittest-one
 ```
 
-### Running a single test
+### Running all unit tests
 
-```sh
-$ go test -timeout 30s -run <pattern> <package path>
-$ go test -timeout 30s -run ^TestByteList$ ./...
 ```
+$ make unittest
+```
+
+Integration tests, on the other hand, involve starting up the DiceDB server and running a series of commands to verify the expected end state and output. To execute a single integration test, you can set the `TEST_FUNC` environment variable to the name of the test function and run `make test-one`. Running `make test` will execute all integration tests.
+
+### Executing a single integration test
+
+```
+$ TEST_FUNC=<name of the test function> make test-one
+$ TEST_FUNC=TestSet make test-one
+```
+
+### Running all integration tests
+
+```
+$ make test
+```
+
+> Work to add more tests in DiceDB is in progress and we will soon port the
+> test [Redis suite](https://github.com/redis/redis/tree/f60370ce28b946c1146dcea77c9c399d39601aaa) to this codebase to ensure full compatability.
 
 ## Running Benchmark
 
@@ -86,3 +108,12 @@ Contributors can join the [Discord Server](https://discord.gg/6r8uXWtXh7) for qu
 <a href = "https://github.com/dicedb/dice/graphs/contributors">
   <img src = "https://contrib.rocks/image?repo=dicedb/dice"/>
 </a>
+
+## Troubleshoot
+
+### Forcefully killing the process
+
+```
+$ sudo netstat -atlpn | grep :7379
+$ sudo kill -9 <process_id>
+```
