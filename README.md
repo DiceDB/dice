@@ -47,6 +47,22 @@ $ pip install dicedb-cli
 
 ## Running Tests
 
+Given that DiceDB is a drop-in replacement of [Redis](https://github.com/redis/redis/commit/f60370ce28b946c1146dcea77c9c399d39601aaa), the tests are borrowed and can be run using the
+following setup and command.
+
+### Pre-requisites
+
+```
+$ sudo apt-get install -y tcl8.6 tclx
+```
+
+### Running the tests
+
+```
+$ make build
+$ make test
+```
+
 To run all the unit tests fire the following command
 
 ```sh
