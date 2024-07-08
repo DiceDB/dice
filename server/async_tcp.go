@@ -97,9 +97,12 @@ func WaitForSignal(wg *sync.WaitGroup, sigs chan os.Signal) {
 }
 
 func FindPortAndBind() (int, error) {
-	// Create a socket
 	serverFD, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, 0)
 	if err != nil {
+		return 0, err
+	}
+
+	if err = syscall.SetsockoptInt(serverFD, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
 		return 0, err
 	}
 
