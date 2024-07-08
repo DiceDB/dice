@@ -2,16 +2,12 @@ package tests
 
 import (
 	"fmt"
-	"sync"
 	"testing"
 
 	"gotest.tools/v3/assert"
 )
 
 func TestQWATCH(t *testing.T) {
-	var wg sync.WaitGroup
-	runTestServer(&wg)
-
 	publisher := getLocalConnection()
 	subscriber := getLocalConnection()
 
@@ -42,7 +38,4 @@ func TestQWATCH(t *testing.T) {
 		// assert.Equal(t, fmt.Sprintf("match:100:user:%d", idx), update[0].(string), "unexpected key")
 		// assert.Equal(t, msg, update[1].(string), "unexpected operation")
 	}
-
-	fireCommand(publisher, "ABORT")
-	wg.Wait()
 }

@@ -3,22 +3,19 @@ package tests
 import (
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"strings"
 	"sync"
+
+	"github.com/charmbracelet/log"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core"
 	"github.com/dicedb/dice/server"
 )
 
-const (
-	serverPort = 8379
-)
-
 func getLocalConnection() net.Conn {
-	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", serverPort))
+	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.Port))
 	if err != nil {
 		panic(err)
 	}
@@ -57,9 +54,33 @@ func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *core.RESPParser {
 
 func runTestServer(wg *sync.WaitGroup) {
 	config.IOBufferLength = 16
-	config.Port = serverPort
+	config.Port = 8739
+
+	var totalRetries int = 100
+	var serverFD int = 0
+	var err error
+
+	for i := 0; i < totalRetries; i++ {
+		serverFD, err = server.FindPortAndBind()
+		if err == nil {
+			break
+		}
+
+		if err.Error() == "address already in use" {
+			log.Infof("port %d already in use, trying another port", config.Port)
+			config.Port += 1
+		} else {
+			panic(err)
+		}
+	}
+	if serverFD == 0 {
+		log.Fatalf("Tried %d times, could not find any port. Cannot start DiceDB. Please try after some time.", totalRetries)
+		return
+	}
+
+	fmt.Println("starting the test server on port", config.Port)
 	wg.Add(1)
-	server.RunAsyncTCPServer(wg)
+	go server.RunAsyncTCPServer(serverFD, wg)
 }
 
 func parseCommand(cmd string) []string {

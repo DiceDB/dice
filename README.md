@@ -47,17 +47,33 @@ $ pip install dicedb-cli
 
 ## Running Tests
 
-To run all the unit tests fire the following command
+Most tests are executed by starting up the DiceDB server,
+firing a series of commands on it, and expecting some end state and output.
 
-```sh
-$ go test ./...
+### Executing a single integration test
+
+```
+$ TEST_FUNC=<name of the test function> make test-one
+$ TEST_FUNC=TestSet make test-one
 ```
 
-### Running a single test
+### Running all integration tests
 
-```sh
-$ go test -timeout 30s -run <pattern> <package path>
-$ go test -timeout 30s -run ^TestByteList$ ./...
+```
+$ make test
+```
+
+### Executing a single unit test
+
+```
+$ TEST_FUNC=<name of the test function> make unittest-one
+$ TEST_FUNC=TestByteList make unittest-one
+```
+
+### Running all integration tests
+
+```
+$ make unittest
 ```
 
 ## Running Benchmark
@@ -86,3 +102,12 @@ Contributors can join the [Discord Server](https://discord.gg/6r8uXWtXh7) for qu
 <a href = "https://github.com/dicedb/dice/graphs/contributors">
   <img src = "https://contrib.rocks/image?repo=dicedb/dice"/>
 </a>
+
+## Troubleshoot
+
+### Forcefully killing the process
+
+```
+$ sudo netstat -atlpn | grep :7379
+$ sudo kill -9 <process_id>
+```
