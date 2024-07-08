@@ -47,8 +47,24 @@ $ pip install dicedb-cli
 
 ## Running Tests
 
-Most tests are executed by starting up the DiceDB server,
-firing a series of commands on it, and expecting some end state and output.
+Unit tests and integration tests are essential for ensuring correctness and in the case of DiceDB, both types of tests are available to validate its functionality.
+
+For unit testing, you can execute individual unit tests by specifying the name of the test function using the `TEST_FUNC` environment variable and running the `make unittest-one` command. Alternatively, running `make unittest` will execute all unit tests.
+
+### Executing a single unit test
+
+```
+$ TEST_FUNC=<name of the test function> make unittest-one
+$ TEST_FUNC=TestByteList make unittest-one
+```
+
+### Running all unit tests
+
+```
+$ make unittest
+```
+
+Integration tests, on the other hand, involve starting up the DiceDB server and running a series of commands to verify the expected end state and output. To execute a single integration test, you can set the `TEST_FUNC` environment variable to the name of the test function and run `make test-one`. Running `make test` will execute all integration tests.
 
 ### Executing a single integration test
 
@@ -63,18 +79,8 @@ $ TEST_FUNC=TestSet make test-one
 $ make test
 ```
 
-### Executing a single unit test
-
-```
-$ TEST_FUNC=<name of the test function> make unittest-one
-$ TEST_FUNC=TestByteList make unittest-one
-```
-
-### Running all integration tests
-
-```
-$ make unittest
-```
+> Work to add more tests in DiceDB is in progress and we will soon port the
+> test [Redis suite](https://github.com/redis/redis/tree/f60370ce28b946c1146dcea77c9c399d39601aaa) to this codebase to ensure full compatability.
 
 ## Running Benchmark
 
