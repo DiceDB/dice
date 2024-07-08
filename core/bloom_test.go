@@ -103,8 +103,6 @@ func TestBloomFilter(t *testing.T) {
 }
 
 func TestGetOrCreateBloomFilter(t *testing.T) {
-	t.Parallel()
-
 	// Create a key and default opts
 	key := "bf"
 	opts, _ := newBloomOpts([]string{}, true)
@@ -137,8 +135,6 @@ func TestGetOrCreateBloomFilter(t *testing.T) {
 }
 
 func TestUpdateIndexes(t *testing.T) {
-	t.Parallel()
-
 	// Create a value, default opts and initialize all params of the filter
 	value := "hello"
 	opts, _ := newBloomOpts([]string{}, true)
