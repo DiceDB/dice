@@ -1,6 +1,7 @@
 package core
 
 import (
+	"container/list"
 	"errors"
 	"unsafe"
 
@@ -11,10 +12,19 @@ const QueueIntMaxBuf int = 256
 
 var ErrQueueEmpty = errors.New("queue is empty")
 
+type QueueIntI interface {
+	Size() int64
+	Insert(int64)
+	Remove() (int64, error)
+	Iterate(int) []int64
+}
+
 type QueueInt struct {
 	Length int64
 	list   *byteList
 }
+
+var _ QueueIntI = (*QueueInt)(nil)
 
 func NewQueueInt() *QueueInt {
 	q := &QueueInt{
@@ -122,4 +132,96 @@ func (q *QueueInt) Iterate(n int) []int64 {
 	}
 
 	return vals
+}
+
+type QueueIntLL struct {
+	list *list.List
+}
+
+var _ QueueIntI = (*QueueIntLL)(nil)
+
+func NewQueueIntLL() *QueueIntLL {
+	return &QueueIntLL{
+		list: list.New(),
+	}
+}
+
+func (q *QueueIntLL) Size() int64 {
+	return int64(q.list.Len())
+}
+
+func (q *QueueIntLL) Insert(x int64) {
+	q.list.PushBack(x)
+}
+
+func (q *QueueIntLL) Remove() (int64, error) {
+	n := q.list.Front()
+	if n == nil {
+		return 0, ErrQueueEmpty
+	}
+	q.list.Remove(n)
+	return n.Value.(int64), nil
+}
+
+func (q *QueueIntLL) Iterate(n int) []int64 {
+	if n <= 0 {
+		return []int64{}
+	}
+	outLen := n
+	if n > q.list.Len() {
+		outLen = q.list.Len()
+	}
+	vals := make([]int64, outLen)
+	count := 0
+	for e := q.list.Front(); e != nil; e = e.Next() {
+		vals[count] = e.Value.(int64)
+		count++
+		if count == outLen {
+			break
+		}
+	}
+	return vals
+}
+
+type QueueIntBasic struct {
+	l    []int64
+	size int
+}
+
+var _ QueueIntI = (*QueueIntBasic)(nil)
+
+func NewQueueIntBasic() *QueueIntBasic {
+	return &QueueIntBasic{
+		l:    make([]int64, 0),
+		size: 0,
+	}
+}
+
+func (q *QueueIntBasic) Size() int64 {
+	return int64(q.size)
+}
+
+func (q *QueueIntBasic) Insert(x int64) {
+	q.l = append(q.l, x)
+	q.size++
+}
+
+func (q *QueueIntBasic) Remove() (int64, error) {
+	if q.size == 0 {
+		return 0, ErrQueueEmpty
+	}
+	val := q.l[0]
+	q.l = q.l[1:]
+	q.size--
+	return val, nil
+}
+
+func (q *QueueIntBasic) Iterate(n int) []int64 {
+	if n <= 0 {
+		return []int64{}
+	}
+	if n > q.size {
+		n = q.size
+	}
+	return q.l[:n]
 }
