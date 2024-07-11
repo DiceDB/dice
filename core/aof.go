@@ -15,7 +15,9 @@ import (
 func dumpKey(fp *os.File, key string, obj *Obj) {
 	cmd := fmt.Sprintf("SET %s %s", key, obj.Value)
 	tokens := strings.Split(cmd, " ")
-	fp.Write(Encode(tokens, false))
+	if _, err := fp.Write(Encode(tokens, false)); err != nil {
+		log.Panic(err)
+	}
 }
 
 // TODO: To to new and switch

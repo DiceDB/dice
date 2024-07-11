@@ -211,7 +211,9 @@ func RunAsyncTCPServer(serverFD int, wg *sync.WaitGroup) {
 				}
 
 				connectedClients[fd] = core.NewClient(fd)
-				syscall.SetNonblock(fd, true)
+				if err := syscall.SetNonblock(fd, true); err != nil {
+					log.Fatal(err)
+				}
 
 				// add this new TCP connection to be monitored
 				if err := multiplexer.Subscribe(iomultiplexer.Event{

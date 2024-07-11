@@ -27,7 +27,9 @@ func readStringUntilSr(buf *bytes.Buffer) (string, error) {
 		return "", err
 	}
 	// increamenting to skip `\n`
-	buf.ReadByte()
+	if _, err := buf.ReadByte(); err != nil {
+		return "", err
+	}
 	return s[:len(s)-1], nil
 }
 
@@ -88,14 +90,17 @@ func readBulkString(c io.ReadWriter, buf *bytes.Buffer) (string, error) {
 	}
 
 	bulkStr := make([]byte, len)
-	_, err = buf.Read(bulkStr)
-	if err != nil {
+	if _, err := buf.Read(bulkStr); err != nil {
 		return "", err
 	}
 
 	// moving buffer pointer by 2 for \r and \n
-	buf.ReadByte()
-	buf.ReadByte()
+	if _, err := buf.ReadByte(); err != nil {
+		return "", err
+	}
+	if _, err := buf.ReadByte(); err != nil {
+		return "", err
+	}
 
 	// reading `len` bytes as string
 	return string(bulkStr), nil
