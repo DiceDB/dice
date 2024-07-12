@@ -21,7 +21,7 @@ var RESP_MINUS_1 []byte = []byte(":-1\r\n")
 var RESP_MINUS_2 []byte = []byte(":-2\r\n")
 var RESP_EMPTY_ARRAY []byte = []byte("*0\r\n")
 
-// Allsupported Dice Commands
+// All supported Dice Commands
 const (
 	PING         = "PING"
 	SET          = "SET"
