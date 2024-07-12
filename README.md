@@ -117,3 +117,4 @@ Contributors can join the [Discord Server](https://discord.gg/6r8uXWtXh7) for qu
 $ sudo netstat -atlpn | grep :7379
 $ sudo kill -9 <process_id>
 ```
+
