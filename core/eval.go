@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"log"
+	"sort"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -21,11 +22,63 @@ var RESP_MINUS_1 []byte = []byte(":-1\r\n")
 var RESP_MINUS_2 []byte = []byte(":-2\r\n")
 var RESP_EMPTY_ARRAY []byte = []byte("*0\r\n")
 
+// Allsupported Dice Commands
+const (
+	PING         = "PING"
+	SET          = "SET"
+	GET          = "GET"
+	TTL          = "TTL"
+	DEL          = "DEL"
+	EXPIRE       = "EXPIRE"
+	BGREWRITEAOF = "BGREWRITEAOF"
+	INCR         = "INCR"
+	INFO         = "INFO"
+	CLIENT       = "CLIENT"
+	LATENCY      = "LATENCY"
+	LRU          = "LRU"
+	SLEEP        = "SLEEP"
+	QINTINS      = "QINTINS"
+	QINTREM      = "QINTREM"
+	QINTLEN      = "QINTLEN"
+	QINTPEEK     = "QINTPEEK"
+	BFINIT       = "BFINIT"
+	BFADD        = "BFADD"
+	BFEXISTS     = "BFEXISTS"
+	BFINFO       = "BFINFO"
+	QREFINS      = "QREFINS"
+	QREFREM      = "QREFREM"
+	QREFLEN      = "QREFLEN"
+	QREFPEEK     = "QREFPEEK"
+	STACKINTPUSH = "STACKINTPUSH"
+	STACKINTPOP  = "STACKINTPOP"
+	STACKINTLEN  = "STACKINTLEN"
+	STACKINTPEEK = "STACKINTPEEK"
+	STACKREFPUSH = "STACKREFPUSH"
+	STACKREFPOP  = "STACKREFPOP"
+	STACKREFLEN  = "STACKREFLEN"
+	STACKREFPEEK = "STACKREFPEEK"
+	SUBSCRIBE    = "SUBSCRIBE"
+	QWATCH       = "QWATCH"
+	LIST         = "LIST"
+	MULTI        = "MULTI"
+	EXEC         = "EXEC"
+	DISCARD      = "DISCARD"
+	ABORT        = "ABORT"
+	HELLO        = "HELLO"
+)
+
+var diceCommands = []string{
+	PING, SET, GET, TTL, DEL, EXPIRE, BGREWRITEAOF, INCR, INFO, CLIENT, LATENCY, LRU,
+	SLEEP, QINTINS, QINTREM, QINTLEN, QINTPEEK, BFINIT, BFADD, BFEXISTS, BFINFO,
+	QREFINS, QREFREM, QREFLEN, QREFPEEK, STACKINTPUSH, STACKINTPOP, STACKINTLEN,
+	STACKINTPEEK, STACKREFPUSH, STACKREFPOP, STACKREFLEN, STACKREFPEEK, SUBSCRIBE,
+	QWATCH, LIST, MULTI, EXEC, DISCARD, ABORT, HELLO}
+
 var txnCommands map[string]bool
 var serverID string
 
 func init() {
-	txnCommands = map[string]bool{"EXEC": true, "DISCARD": true}
+	txnCommands = map[string]bool{EXEC: true, DISCARD: true}
 	serverID = fmt.Sprintf("%s:%d", config.Host, config.Port)
 }
 
@@ -863,95 +916,103 @@ func evalQWATCH(args []string, c *Client) []byte {
 	return RESP_OK
 }
 
+// evalLIST returns an array of commands supported by DiceDB
+func evalLIST() []byte {
+	sort.Strings(diceCommands)
+	return Encode(strings.Join(diceCommands, ", "), false)
+}
+
 func executeCommand(cmd *RedisCmd, c *Client) []byte {
 	switch cmd.Cmd {
-	case "PING":
+	case PING:
 		return evalPING(cmd.Args)
-	case "SET":
+	case SET:
 		return evalSET(cmd.Args)
-	case "GET":
+	case GET:
 		return evalGET(cmd.Args)
-	case "TTL":
+	case TTL:
 		return evalTTL(cmd.Args)
-	case "DEL":
+	case DEL:
 		return evalDEL(cmd.Args)
-	case "EXPIRE":
+	case EXPIRE:
 		return evalEXPIRE(cmd.Args)
-	case "HELLO":
+	case HELLO:
 		return evalHELLO(cmd.Args)
-	case "BGREWRITEAOF":
+	case BGREWRITEAOF:
 		return evalBGREWRITEAOF(cmd.Args)
-	case "INCR":
+	case INCR:
 		return evalINCR(cmd.Args)
-	case "INFO":
+	case INFO:
 		return evalINFO(cmd.Args)
-	case "CLIENT":
+	case CLIENT:
 		return evalCLIENT(cmd.Args)
-	case "LATENCY":
+	case LATENCY:
 		return evalLATENCY(cmd.Args)
-	case "LRU":
+	case LRU:
 		return evalLRU(cmd.Args)
-	case "SLEEP":
+	case SLEEP:
 		return evalSLEEP(cmd.Args)
-	case "QINTINS":
+	case QINTINS:
 		return evalQINTINS(cmd.Args)
-	case "QINTREM":
+	case QINTREM:
 		return evalQINTREM(cmd.Args)
-	case "QINTLEN":
+	case QINTLEN:
 		return evalQINTLEN(cmd.Args)
-	case "QINTPEEK":
+	case QINTPEEK:
 		return evalQINTPEEK(cmd.Args)
-	case "BFINIT":
+	case BFINIT:
 		return evalBFINIT(cmd.Args)
-	case "BFADD":
+	case BFADD:
 		return evalBFADD(cmd.Args)
-	case "BFEXISTS":
+	case BFEXISTS:
 		return evalBFEXISTS(cmd.Args)
-	case "BFINFO":
+	case BFINFO:
 		return evalBFINFO(cmd.Args)
-	case "QREFINS":
+	case QREFINS:
 		return evalQREFINS(cmd.Args)
-	case "QREFREM":
+	case QREFREM:
 		return evalQREFREM(cmd.Args)
-	case "QREFLEN":
+	case QREFLEN:
 		return evalQREFLEN(cmd.Args)
-	case "QREFPEEK":
+	case QREFPEEK:
 		return evalQREFPEEK(cmd.Args)
-	case "STACKINTPUSH":
+	case STACKINTPUSH:
 		return evalSTACKINTPUSH(cmd.Args)
-	case "STACKINTPOP":
+	case STACKINTPOP:
 		return evalSTACKINTPOP(cmd.Args)
-	case "STACKINTLEN":
+	case STACKINTLEN:
 		return evalSTACKINTLEN(cmd.Args)
-	case "STACKINTPEEK":
+	case STACKINTPEEK:
 		return evalSTACKINTPEEK(cmd.Args)
-	case "STACKREFPUSH":
+	case STACKREFPUSH:
 		return evalSTACKREFPUSH(cmd.Args)
-	case "STACKREFPOP":
+	case STACKREFPOP:
 		return evalSTACKREFPOP(cmd.Args)
-	case "STACKREFLEN":
+	case STACKREFLEN:
 		return evalSTACKREFLEN(cmd.Args)
-	case "STACKREFPEEK":
+	case STACKREFPEEK:
 		return evalSTACKREFPEEK(cmd.Args)
-	case "SUBSCRIBE": // TODO: Remove this override once we support QWATCH in dice-cli.
+	case SUBSCRIBE: // TODO: Remove this override once we support QWATCH in dice-cli.
 		return evalQWATCH(cmd.Args, c)
-	case "QWATCH":
+	case QWATCH:
 		return evalQWATCH(cmd.Args, c)
-	case "MULTI":
+	case LIST:
+		return evalLIST()
+	case MULTI:
 		c.TxnBegin()
 		return evalMULTI(cmd.Args)
-	case "EXEC":
+	case EXEC:
 		if !c.isTxn {
 			return Encode(errors.New("ERR EXEC without MULTI"), false)
 		}
 		return c.TxnExec()
-	case "DISCARD":
+	case DISCARD:
 		if !c.isTxn {
 			return Encode(errors.New("ERR DISCARD without MULTI"), false)
 		}
 		c.TxnDiscard()
 		return RESP_OK
-	case "ABORT":
+	case ABORT:
 		return RESP_OK
 	default:
 		return evalPING(cmd.Args)
@@ -987,8 +1048,5 @@ func EvalAndRespond(cmds RedisCmds, c *Client) {
 			executeCommandToBuffer(cmd, buf, c)
 		}
 	}
-
-	if _, err := c.Write(buf.Bytes()); err != nil {
-		log.Panic(err)
-	}
+	c.Write(buf.Bytes())
 }
