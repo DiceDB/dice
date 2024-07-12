@@ -20,17 +20,16 @@ func TestCommandLIST(t *testing.T) {
 
 	subscriber := getLocalConnection()
 
-	rp := fireCommandAndGetRESPParser(subscriber, "LIST")
-	if rp == nil {
+	responseValue := fireCommand(subscriber, "LIST")
+	if responseValue == nil {
 		t.Fail()
 	}
 
-	// Read first message (OK)
-	v, err := rp.DecodeOne()
-	assert.NilError(t, err)
+	assert.Assert(t, len(strings.Split(responseValue.(string), ",")) == len(commands),
+		fmt.Sprintf("Unexpected number of CLI commands found. %d expected, %d found", len(commands), len(strings.Split(responseValue.(string), ","))))
 
 	for _, expectedCmd := range commands {
-		contains := strings.Contains(v.(string), expectedCmd)
+		contains := strings.Contains(responseValue.(string), expectedCmd)
 		assert.Assert(t, contains, fmt.Sprintf("Expected command not found: %s", expectedCmd))
 	}
 }
@@ -43,10 +42,6 @@ func call(howmany int, t *testing.B) {
 			t.Fail()
 		}
 	}
-}
-
-func BenchmarkListCommand20(t *testing.B) {
-	call(20, t)
 }
 
 func BenchmarkListCommand200(t *testing.B) {
