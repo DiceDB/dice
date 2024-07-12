@@ -84,7 +84,6 @@ func (q *QueueInt) Remove() (int64, error) {
 		// if b is the terminating byte
 		if b&0b10000000 == 0 {
 			val = int64(dencoding.DecodeUInt(tbuf[:tbufIdx]))
-			tbufIdx = 0
 			break
 		}
 	}
