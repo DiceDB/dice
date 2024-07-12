@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"log"
 	"sort"
 	"strconv"
 	"strings"
@@ -1048,5 +1049,8 @@ func EvalAndRespond(cmds RedisCmds, c *Client) {
 			executeCommandToBuffer(cmd, buf, c)
 		}
 	}
-	c.Write(buf.Bytes())
+
+	if _, err := c.Write(buf.Bytes()); err != nil {
+		log.Panic(err)
+	}
 }
