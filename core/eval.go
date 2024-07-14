@@ -22,11 +22,63 @@ var RESP_MINUS_1 []byte = []byte(":-1\r\n")
 var RESP_MINUS_2 []byte = []byte(":-2\r\n")
 var RESP_EMPTY_ARRAY []byte = []byte("*0\r\n")
 
+// All supported Dice Commands
+const (
+	PING         = "PING"
+	SET          = "SET"
+	GET          = "GET"
+	TTL          = "TTL"
+	DEL          = "DEL"
+	EXPIRE       = "EXPIRE"
+	HELLO		 = "HELLO"
+	BGREWRITEAOF = "BGREWRITEAOF"
+	INCR         = "INCR"
+	INFO         = "INFO"
+	CLIENT       = "CLIENT"
+	LATENCY      = "LATENCY"
+	LRU          = "LRU"
+	SLEEP        = "SLEEP"
+	QINTINS      = "QINTINS"
+	QINTREM      = "QINTREM"
+	QINTLEN      = "QINTLEN"
+	QINTPEEK     = "QINTPEEK"
+	BFINIT       = "BFINIT"
+	BFADD        = "BFADD"
+	BFEXISTS     = "BFEXISTS"
+	BFINFO       = "BFINFO"
+	QREFINS      = "QREFINS"
+	QREFREM      = "QREFREM"
+	QREFLEN      = "QREFLEN"
+	QREFPEEK     = "QREFPEEK"
+	STACKINTPUSH = "STACKINTPUSH"
+	STACKINTPOP  = "STACKINTPOP"
+	STACKINTLEN  = "STACKINTLEN"
+	STACKINTPEEK = "STACKINTPEEK"
+	STACKREFPUSH = "STACKREFPUSH"
+	STACKREFPOP  = "STACKREFPOP"
+	STACKREFLEN  = "STACKREFLEN"
+	STACKREFPEEK = "STACKREFPEEK"
+	SUBSCRIBE    = "SUBSCRIBE"
+	QWATCH       = "QWATCH"
+	COUNT        = "COUNT"
+	MULTI        = "MULTI"
+	EXEC         = "EXEC"
+	DISCARD      = "DISCARD"
+	ABORT        = "ABORT"
+)
+
+var diceCommands = []string{
+	PING, SET, GET, TTL, DEL, EXPIRE, BGREWRITEAOF, INCR, INFO, CLIENT, LATENCY, LRU,
+	SLEEP, QINTINS, QINTREM, QINTLEN, QINTPEEK, BFINIT, BFADD, BFEXISTS, BFINFO,
+	QREFINS, QREFREM, QREFLEN, QREFPEEK, STACKINTPUSH, STACKINTPOP, STACKINTLEN,
+	STACKINTPEEK, STACKREFPUSH, STACKREFPOP, STACKREFLEN, STACKREFPEEK, SUBSCRIBE,
+	QWATCH, COUNT, MULTI, EXEC, DISCARD, ABORT}
+
 var txnCommands map[string]bool
 var serverID string
 
 func init() {
-	txnCommands = map[string]bool{"EXEC": true, "DISCARD": true}
+	txnCommands = map[string]bool{EXEC: true, DISCARD: true}
 	serverID = fmt.Sprintf("%s:%d", config.Host, config.Port)
 }
 
@@ -855,6 +907,11 @@ func evalQWATCH(args []string, c *Client) []byte {
 	AddWatcher(query, c.Fd)
 
 	return RESP_OK
+}
+
+// evalCOUNT returns an number of commands supported by DiceDB
+func evalCOUNT() []byte {
+	return Encode(len(diceCommands), false)
 }
 
 func executeCommand(cmd *RedisCmd, c *Client) []byte {
