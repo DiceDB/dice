@@ -157,8 +157,8 @@ func Encode(value interface{}, isSimple bool) []byte {
 	case []interface{}:
 		var b []byte
 		buf := bytes.NewBuffer(b)
-		for _, b := range value.([]string) {
-			buf.Write(Encode(b, false))
+		for _, elem := range v {
+			buf.Write(Encode(elem, false))
 		}
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
 	case *QueueElement:
