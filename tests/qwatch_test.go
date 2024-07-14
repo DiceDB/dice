@@ -16,26 +16,73 @@ func TestQWATCH(t *testing.T) {
 		t.Fail()
 	}
 
-	messages := []int{11, 33, 22, 0}
+	type testCase struct {
+		userID          int
+		score           int
+		expectedUpdates [][]interface{}
+	}
+
+	testCases := []testCase{
+		// Initial insertion.
+		{ /*key=*/ 0, 11, [][]interface{}{
+			{[]interface{}{"match:100:user:0", "11"}},
+		}},
+		// Insertion of a second key.
+		{ /*key=*/ 1 /*value=*/, 33, [][]interface{}{
+			{[]interface{}{"match:100:user:1", "33"}, []interface{}{"match:100:user:0", "11"}},
+		}},
+		// Insertion of a third key.
+		{ /*key=*/ 2 /*value=*/, 22, [][]interface{}{
+			{[]interface{}{"match:100:user:1", "33"}, []interface{}{"match:100:user:2", "22"}, []interface{}{"match:100:user:0", "11"}},
+		}},
+		// Insertion of a fourth key with value 0, should not affect the order.
+		{ /*key=*/ 3 /*value=*/, 0, [][]interface{}{
+			{[]interface{}{"match:100:user:1", "33"}, []interface{}{"match:100:user:2", "22"}, []interface{}{"match:100:user:0", "11"}},
+		}},
+		// Insertion of a fifth key with value 44, should reorder the list.
+		{ /*key=*/ 4 /*value=*/, 44, [][]interface{}{
+			{[]interface{}{"match:100:user:4", "44"}, []interface{}{"match:100:user:1", "33"}, []interface{}{"match:100:user:2", "22"}},
+		}},
+		// Insertion of a sixth key with value 50, should reorder the list.
+		{ /*key=*/ 5 /*value=*/, 50, [][]interface{}{
+			{[]interface{}{"match:100:user:5", "50"}, []interface{}{"match:100:user:4", "44"}, []interface{}{"match:100:user:1", "33"}},
+		}},
+		// Update an existing key, should reorder the list.
+		{ /*key=*/ 2 /*value=*/, 40, [][]interface{}{
+			{[]interface{}{"match:100:user:5", "50"}, []interface{}{"match:100:user:4", "44"}, []interface{}{"match:100:user:2", "40"}},
+		}},
+		// Add a new key with value 55, should reorder the list.
+		{ /*key=*/ 6 /*value=*/, 55, [][]interface{}{
+			{[]interface{}{"match:100:user:6", "55"}, []interface{}{"match:100:user:5", "50"}, []interface{}{"match:100:user:4", "44"}},
+		}},
+		// Update the value of an existing key, should reorder the list.
+		{ /*key=*/ 0 /*value=*/, 60, [][]interface{}{
+			{[]interface{}{"match:100:user:0", "60"}, []interface{}{"match:100:user:6", "55"}, []interface{}{"match:100:user:5", "50"}},
+		}},
+		// Reuse another user, should reorder the list
+		{ /*key=*/ 5 /*value=*/, 70, [][]interface{}{
+			{[]interface{}{"match:100:user:5", "70"}, []interface{}{"match:100:user:0", "60"}, []interface{}{"match:100:user:6", "55"}},
+		}},
+	}
 
 	// Read first message (OK)
 	v, err := rp.DecodeOne()
 	assert.NilError(t, err)
 	assert.Equal(t, "OK", v.(string))
 
-	for idx, msg := range messages {
-		fireCommand(publisher, fmt.Sprintf("SET match:100:user:%d %d", idx, msg))
+	for _, tc := range testCases {
+		// Set the value for the userID
+		fireCommand(publisher, fmt.Sprintf("SET match:100:user:%d %d", tc.userID, tc.score))
 
-		// Check if the update is received by the subscriber.
-		v, err := rp.DecodeOne()
-		assert.NilError(t, err)
+		for _, expectedUpdate := range tc.expectedUpdates {
+			// Check if the update is received by the subscriber.
+			v, err := rp.DecodeOne()
+			assert.NilError(t, err)
 
-		// Message format: [key, op, message]
-		// Ensure the update matches the expected value.
-		update := v.([]interface{})
-		// print the update object.
-		fmt.Println(update)
-		// assert.Equal(t, fmt.Sprintf("match:100:user:%d", idx), update[0].(string), "unexpected key")
-		// assert.Equal(t, msg, update[1].(string), "unexpected operation")
+			// Message format: [key, op, message]
+			// Ensure the update matches the expected value.
+			update := v.([]interface{})
+			assert.DeepEqual(t, expectedUpdate, update)
+		}
 	}
 }
