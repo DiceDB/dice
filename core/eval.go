@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+
+	"github.com/dicedb/dice/config"
 )
 
 var RESP_NIL []byte = []byte("$-1\r\n")
@@ -20,9 +22,11 @@ var RESP_MINUS_2 []byte = []byte(":-2\r\n")
 var RESP_EMPTY_ARRAY []byte = []byte("*0\r\n")
 
 var txnCommands map[string]bool
+var serverID string
 
 func init() {
 	txnCommands = map[string]bool{"EXEC": true, "DISCARD": true}
+	serverID = fmt.Sprintf("%s:%d", config.Host, config.Port)
 }
 
 // evalPING returns with an encoded "PONG"
@@ -195,6 +199,21 @@ func evalEXPIRE(args []string) []byte {
 
 	// 1 if the timeout was set.
 	return RESP_ONE
+}
+
+func evalHELLO(args []string) []byte {
+	if len(args) > 1 {
+		return Encode(errors.New("ERR wrong number of arguments for 'hello' command"), false)
+	}
+
+	var response []interface{}
+	response = append(response, "proto", 2)
+	response = append(response, "id", serverID)
+	response = append(response, "mode", "standalone")
+	response = append(response, "role", "master")
+	response = append(response, "modules", []interface{}{})
+
+	return Encode(response, false)
 }
 
 /* Description - Spawn a background thread to persist the data via AOF technique. Current implementation is
@@ -858,6 +877,8 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		return evalDEL(cmd.Args)
 	case "EXPIRE":
 		return evalEXPIRE(cmd.Args)
+	case "HELLO":
+		return evalHELLO(cmd.Args)
 	case "BGREWRITEAOF":
 		return evalBGREWRITEAOF(cmd.Args)
 	case "INCR":
