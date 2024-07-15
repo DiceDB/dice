@@ -60,7 +60,7 @@ const (
 	STACKREFPEEK = "STACKREFPEEK"
 	SUBSCRIBE    = "SUBSCRIBE"
 	QWATCH       = "QWATCH"
-	LIST         = "LIST"
+	COMMAND_LIST = "COMMAND_LIST"
 	MULTI        = "MULTI"
 	EXEC         = "EXEC"
 	DISCARD      = "DISCARD"
@@ -68,12 +68,15 @@ const (
 	HELLO        = "HELLO"
 )
 
+// Collection Commands that have Sub-Commands
+var collectionCommands = []string{"COMMAND"}
+
 var diceCommands = []string{
 	PING, SET, GET, TTL, DEL, EXPIRE, BGREWRITEAOF, INCR, INFO, CLIENT, LATENCY, LRU,
 	SLEEP, QINTINS, QINTREM, QINTLEN, QINTPEEK, BFINIT, BFADD, BFEXISTS, BFINFO,
 	QREFINS, QREFREM, QREFLEN, QREFPEEK, STACKINTPUSH, STACKINTPOP, STACKINTLEN,
 	STACKINTPEEK, STACKREFPUSH, STACKREFPOP, STACKREFLEN, STACKREFPEEK, SUBSCRIBE,
-	QWATCH, LIST, MULTI, EXEC, DISCARD, ABORT, HELLO}
+	QWATCH, COMMAND_LIST, MULTI, EXEC, DISCARD, ABORT, HELLO}
 
 var txnCommands map[string]bool
 var serverID string
@@ -918,12 +921,48 @@ func evalQWATCH(args []string, c *Client) []byte {
 }
 
 // evalLIST returns an array of commands supported by DiceDB
-func evalLIST() []byte {
+func evalCOMMANDLIST() []byte {
 	sort.Strings(diceCommands)
 	return Encode(strings.Join(diceCommands, ", "), false)
 }
 
-func executeCommand(cmd *RedisCmd, c *Client) []byte {
+// Handled Collection commands that have Sub-Commands
+// and namespaces them by the base command prefix.
+// Currently supports 1 Level of nexting. If we intend to have more
+// nexting, might be good to explore a CLI parser lib.
+func handleCollectionOfCommands(cmd *RedisCmd) (*RedisCmd, error) {
+	var isCollectionCommand bool = false
+
+	for _, item := range collectionCommands {
+		if item == cmd.Cmd {
+			// This is a collection Command
+			isCollectionCommand = true
+		}
+	}
+
+	// Command needs formatting
+	if isCollectionCommand {
+		// This needs to have a Sub-command
+		if len(cmd.Args) == 0 {
+			// Error
+			return nil, errors.New("ERR No Sub-Command provided for a Collection Command")
+		}
+
+		// Format command with Collection name
+		return &RedisCmd{Cmd: cmd.Cmd + "_" + cmd.Args[0], Args: cmd.Args[1:]}, nil
+	} else {
+		return cmd, nil
+	}
+
+}
+
+func executeCommand(rawCmd *RedisCmd, c *Client) []byte {
+	// Handle Collection of commands
+	cmd, err := handleCollectionOfCommands(rawCmd)
+	if err != nil {
+		return Encode(errors.New("ERR Collection COMMAND used without Sub-Command"), false)
+	}
+
 	switch cmd.Cmd {
 	case PING:
 		return evalPING(cmd.Args)
@@ -997,8 +1036,8 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		return evalQWATCH(cmd.Args, c)
 	case QWATCH:
 		return evalQWATCH(cmd.Args, c)
-	case LIST:
-		return evalLIST()
+	case COMMAND_LIST:
+		return evalCOMMANDLIST()
 	case MULTI:
 		c.TxnBegin()
 		return evalMULTI(cmd.Args)

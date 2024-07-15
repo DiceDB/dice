@@ -11,16 +11,16 @@ import (
 func TestCommandLIST(t *testing.T) {
 	commands := []string{
 		"ABORT", "BFADD", "BFEXISTS", "BFINFO", "BFINIT", "BGREWRITEAOF", "CLIENT",
-		"DEL", "DISCARD", "EXEC", "EXPIRE", "GET", "INCR", "INFO", "LATENCY", "LIST", "LRU",
+		"DEL", "DISCARD", "EXEC", "EXPIRE", "GET", "INCR", "INFO", "LATENCY", "COMMAND_LIST", "LRU",
 		"MULTI", "PING", "QINTINS", "QINTLEN", "QINTPEEK", "QINTREM", "QREFINS", "QREFLEN",
 		"QREFPEEK", "QREFREM", "QWATCH", "SET", "SLEEP", "STACKINTLEN", "STACKINTPEEK",
 		"STACKINTPOP", "STACKINTPUSH", "STACKREFLEN", "STACKREFPEEK", "STACKREFPOP",
 		"STACKREFPUSH", "SUBSCRIBE", "TTL",
 	}
 
-	subscriber := getLocalConnection()
+	conn := getLocalConnection()
 
-	responseValue := fireCommand(subscriber, "LIST")
+	responseValue := fireCommand(conn, "COMMAND LIST")
 	if responseValue == nil {
 		t.Fail()
 	}
@@ -34,20 +34,22 @@ func TestCommandLIST(t *testing.T) {
 	}
 }
 
-func call(howmany int, t *testing.B) {
-	subscriber := getLocalConnection()
-	for i := 0; i < howmany; i++ {
-		rp := fireCommandAndGetRESPParser(subscriber, "LIST")
+func BenchmarkListCommand200(t *testing.B) {
+	conn := getLocalConnection()
+	for i := 0; i < 200; i++ {
+		rp := fireCommandAndGetRESPParser(conn, "COMMAND LIST")
 		if rp == nil {
 			t.Fail()
 		}
 	}
 }
 
-func BenchmarkListCommand200(t *testing.B) {
-	call(200, t)
-}
-
 func BenchmarkListCommand2000(t *testing.B) {
-	call(2000, t)
+	conn := getLocalConnection()
+	for i := 0; i < 2000; i++ {
+		rp := fireCommandAndGetRESPParser(conn, "COMMAND LIST")
+		if rp == nil {
+			t.Fail()
+		}
+	}
 }
