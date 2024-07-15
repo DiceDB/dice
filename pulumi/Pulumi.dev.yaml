@@ -1,0 +1,6 @@
+encryptionsalt: v1:KwvTlW5pKiE=:v1:C6Jv32y38hqCXwbj:XprqfQxo5SCkgtsxLzD/YrnS29hKlA==
+config:
+  aws:region: us-east-1
+  instance_name: dice-db
+  instance_type: t2.medium
+  aws-native:region: us-east-1

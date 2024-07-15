@@ -1,0 +1,5 @@
+pulumi
+pulumi-aws
+pulumi-aws-native
+pulumi-command
+boto3
