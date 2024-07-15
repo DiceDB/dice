@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -878,6 +879,9 @@ func evalCOMMANDDOCS(args []string) []byte {
 func evalCOMMANDGETKEYS(args []string) []byte {
 	return RESP_OK
 }
+func evalCOMMANDHELP(args []string) []byte {
+	return RESP_OK
+}
 
 // evalCOMMAND returns info of all the commands in Dice when no args are provided
 // When args are provided:
@@ -891,7 +895,7 @@ func evalCOMMAND(args []string) []byte {
 		return evalCOMMANDINFO(args)
 	}
 
-	subcommand := args[0]
+	subcommand := strings.ToUpper(args[0])
 	switch subcommand {
 	case "LIST":
 		return evalCOMMANDLIST(args)
@@ -903,6 +907,8 @@ func evalCOMMAND(args []string) []byte {
 		return evalCOMMANDDOCS(args)
 	case "GETKEYS":
 		return evalCOMMANDGETKEYS(args)
+	case "HELP":
+		return evalCOMMANDHELP(args)
 	default:
 		return Encode(fmt.Errorf("ERR unknown subcommand '%s'. Try COMMAND HELP", subcommand), false)
 	}
