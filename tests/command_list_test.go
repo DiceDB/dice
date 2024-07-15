@@ -15,7 +15,7 @@ func TestCommandLIST(t *testing.T) {
 		"MULTI", "PING", "QINTINS", "QINTLEN", "QINTPEEK", "QINTREM", "QREFINS", "QREFLEN",
 		"QREFPEEK", "QREFREM", "QWATCH", "SET", "SLEEP", "STACKINTLEN", "STACKINTPEEK",
 		"STACKINTPOP", "STACKINTPUSH", "STACKREFLEN", "STACKREFPEEK", "STACKREFPOP",
-		"STACKREFPUSH", "SUBSCRIBE", "TTL",
+		"STACKREFPUSH", "SUBSCRIBE", "TTL", "HELLO",
 	}
 
 	conn := getLocalConnection()
@@ -26,7 +26,8 @@ func TestCommandLIST(t *testing.T) {
 	}
 
 	assert.Assert(t, len(strings.Split(responseValue.(string), ",")) == len(commands),
-		fmt.Sprintf("Unexpected number of CLI commands found. %d expected, %d found", len(commands), len(strings.Split(responseValue.(string), ","))))
+		fmt.Sprintf("Unexpected number of CLI commands found. %d expected, %d found. Update TestCommandLIST if new commands have been added.",
+			len(commands), len(strings.Split(responseValue.(string), ","))))
 
 	for _, expectedCmd := range commands {
 		contains := strings.Contains(responseValue.(string), expectedCmd)
