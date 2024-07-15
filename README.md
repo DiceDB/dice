@@ -80,7 +80,7 @@ $ make test
 ```
 
 > Work to add more tests in DiceDB is in progress and we will soon port the
-> test [Redis suite](https://github.com/redis/redis/tree/f60370ce28b946c1146dcea77c9c399d39601aaa) to this codebase to ensure full compatability.
+> test [Redis suite](https://github.com/redis/redis/tree/f60370ce28b946c1146dcea77c9c399d39601aaa) to this codebase to ensure full compatibility.
 
 ## Running Benchmark
 
