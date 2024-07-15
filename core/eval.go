@@ -863,6 +863,51 @@ func evalQWATCH(args []string, c *Client) []byte {
 	return RESP_OK
 }
 
+func evalCOMMANDLIST(args []string) []byte {
+	return RESP_OK
+}
+func evalCOMMANDCOUNT(args []string) []byte {
+	return RESP_OK
+}
+func evalCOMMANDINFO(args []string) []byte {
+	return RESP_OK
+}
+func evalCOMMANDDOCS(args []string) []byte {
+	return RESP_OK
+}
+func evalCOMMANDGETKEYS(args []string) []byte {
+	return RESP_OK
+}
+
+// evalCOMMAND returns info of all the commands in Dice when no args are provided
+// When args are provided:
+// LIST: return lists all the Dice commands.
+// COUNT: return total count of commands in Dice.
+// INF0: returns info of command(s).
+// DOCS: returns docs of command(s).
+// GETKEYS: returns keys from a full Dice command.
+func evalCOMMAND(args []string) []byte {
+	if len(args) == 0 {
+		return evalCOMMANDINFO(args)
+	}
+
+	subcommand := args[0]
+	switch subcommand {
+	case "LIST":
+		return evalCOMMANDLIST(args)
+	case "COUNT":
+		return evalCOMMANDCOUNT(args)
+	case "INFO":
+		return evalCOMMANDINFO(args)
+	case "DOCS":
+		return evalCOMMANDDOCS(args)
+	case "GETKEYS":
+		return evalCOMMANDGETKEYS(args)
+	default:
+		return Encode(fmt.Errorf("ERR unknown subcommand '%s'. Try COMMAND HELP", subcommand), false)
+	}
+}
+
 func executeCommand(cmd *RedisCmd, c *Client) []byte {
 	switch cmd.Cmd {
 	case "PING":
@@ -937,6 +982,8 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		return evalQWATCH(cmd.Args, c)
 	case "QWATCH":
 		return evalQWATCH(cmd.Args, c)
+	case "COMMAND":
+		return evalCOMMAND(cmd.Args)
 	case "MULTI":
 		c.TxnBegin()
 		return evalMULTI(cmd.Args)
