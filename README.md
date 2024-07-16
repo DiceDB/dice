@@ -1,38 +1,28 @@
-Dice
+DiceDB
 ===
 
-Dice 🎲 is an extremely simple Golang-based in-memory KV store that speaks the Redis dialect.
+Dice 🎲 is a drop-in replacement of Redis with SQL-based realtime reactivity baked in.
 
-> This is not production ready
+> Note: DiceDB is still in development and it supports a subset of Redis commands. So, please do not use it in production. But, feel free to go through the [open issues](https://github.com/DiceDB/dice/issues) and contribute to help us speed up the development.
 
-## Story
+## How is it different from Redis?
 
-[Arpit Bhayani](https://arpitbhayani.me) started building Dice DB to understand [Redis](https://redis.io/) better.
-He compiled almost all of his learning in a course titled [Redis Internals](https://arpitbhayani.me/redis) that
-actually laid the foundation of Dice DB.
+1. DiceDB is multi-threaded and follows [shared-nothing architecture](https://en.wikipedia.org/wiki/Shared-nothing_architecture).
+2. DiceDB supports a new command called `QWATCH` that lets clients listen to a SQL query and get notified in real-time whenever something changes.
 
-## Why should you care?
+## Get started
 
-Building a database from scratch has its own thrill, and you can leverage this to
+### Using Docker
 
-- build a database from scratch
-- learn database internals, starting with Redis
-- learn about advanced data structures, algorithms, and event loops
-- collaborate with other engineers and contribute back to Open Source
+The easiest way to get started with DiceDB is using [Docker](https://www.docker.com/) by running the following command.
 
-## Tenet
+```
+$ docker run dicedb/dice-server
+```
 
-- remain product-first
-- remain the easiest to work with
+### Setting up
 
-### Highlights
-
-- [planned] Semi-persistent Storage
-- [planned] Efficient concurrency using Goroutines
-
-## Setting up
-
-To run DiceDB locally, you will need
+To run DiceDB for local development or running from source, you will need
 
 1. [Golang](https://go.dev/)
 2. Any of the below supported platform environment:
@@ -49,20 +39,48 @@ $ go run main.go
 
 Because Dice speaks Redis' dialect, you can connect to it with any Redis Client and the simplest way it to use a [Redis CLI](https://redis.io/docs/manual/cli/). Programmatically, depending on the language you prefer, you can use your favourite Redis library to connect.
 
+But if you are planning to use `QWATCH` feature then you need to use the DiceDB CLI that you can download from [PyPI](https://pypi.org/project/dicedb-cli/) by running the following command. The codebase for the same can be found at [dicedb/cli](https://github.com/DiceDB/cli/).
+
+```
+$ pip install dicedb-cli
+```
+
 ## Running Tests
 
-To run all the unit tests fire the following command
+Unit tests and integration tests are essential for ensuring correctness and in the case of DiceDB, both types of tests are available to validate its functionality.
 
-```sh
-$ go test ./...
+For unit testing, you can execute individual unit tests by specifying the name of the test function using the `TEST_FUNC` environment variable and running the `make unittest-one` command. Alternatively, running `make unittest` will execute all unit tests.
+
+### Executing a single unit test
+
+```
+$ TEST_FUNC=<name of the test function> make unittest-one
+$ TEST_FUNC=TestByteList make unittest-one
 ```
 
-### Running a single test
+### Running all unit tests
 
-```sh
-$ go test -timeout 30s -run <pattern> <package path>
-$ go test -timeout 30s -run ^TestByteList$ ./...
 ```
+$ make unittest
+```
+
+Integration tests, on the other hand, involve starting up the DiceDB server and running a series of commands to verify the expected end state and output. To execute a single integration test, you can set the `TEST_FUNC` environment variable to the name of the test function and run `make test-one`. Running `make test` will execute all integration tests.
+
+### Executing a single integration test
+
+```
+$ TEST_FUNC=<name of the test function> make test-one
+$ TEST_FUNC=TestSet make test-one
+```
+
+### Running all integration tests
+
+```
+$ make test
+```
+
+> Work to add more tests in DiceDB is in progress and we will soon port the
+> test [Redis suite](https://github.com/redis/redis/tree/f60370ce28b946c1146dcea77c9c399d39601aaa) to this codebase to ensure full compatability.
 
 ## Running Benchmark
 
@@ -91,6 +109,11 @@ Contributors can join the [Discord Server](https://discord.gg/6r8uXWtXh7) for qu
   <img src = "https://contrib.rocks/image?repo=dicedb/dice"/>
 </a>
 
-## License
+## Troubleshoot
 
-DiceDB is open-sourced under [Apache License, Version 2.0](LICENSE.md).
+### Forcefully killing the process
+
+```
+$ sudo netstat -atlpn | grep :7379
+$ sudo kill -9 <process_id>
+```

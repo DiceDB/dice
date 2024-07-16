@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"syscall"
 	"time"
+
+	"github.com/dicedb/dice/config"
 )
 
 var RESP_NIL []byte = []byte("$-1\r\n")
@@ -19,9 +22,11 @@ var RESP_MINUS_2 []byte = []byte(":-2\r\n")
 var RESP_EMPTY_ARRAY []byte = []byte("*0\r\n")
 
 var txnCommands map[string]bool
+var serverID string
 
 func init() {
 	txnCommands = map[string]bool{"EXEC": true, "DISCARD": true}
+	serverID = fmt.Sprintf("%s:%d", config.Host, config.Port)
 }
 
 // evalPING returns with an encoded "PONG"
@@ -194,6 +199,21 @@ func evalEXPIRE(args []string) []byte {
 
 	// 1 if the timeout was set.
 	return RESP_ONE
+}
+
+func evalHELLO(args []string) []byte {
+	if len(args) > 1 {
+		return Encode(errors.New("ERR wrong number of arguments for 'hello' command"), false)
+	}
+
+	var response []interface{}
+	response = append(response, "proto", 2)
+	response = append(response, "id", serverID)
+	response = append(response, "mode", "standalone")
+	response = append(response, "role", "master")
+	response = append(response, "modules", []interface{}{})
+
+	return Encode(response, false)
 }
 
 /* Description - Spawn a background thread to persist the data via AOF technique. Current implementation is
@@ -815,6 +835,34 @@ func evalSTACKREFPEEK(args []string) []byte {
 	return Encode(s.Iterate(int(num)), false)
 }
 
+// evalQWATCH adds the specified key to the watch list for the caller client.
+// Every time a key in the watch list is modified, the client will be sent a response
+// containing the new value of the key along with the operation that was performed on it.
+// Contains only one argument, the key to be watched.
+func evalQWATCH(args []string, c *Client) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR invalid number of arguments for `QWATCH` command (expected 1)"), false)
+	}
+
+	// Parse and get the selection from the query.
+	query, error := ParseQuery( /*sql=*/ args[0])
+
+	if error != nil {
+		return Encode(error, false)
+	}
+
+	WatchListMutex.Lock()
+	defer WatchListMutex.Unlock()
+	if WatchList[query] == nil {
+		WatchList[query] = make(map[int]struct{})
+	}
+
+	// Add the client to this key's watch list
+	WatchList[query][c.Fd] = struct{}{}
+
+	return RESP_OK
+}
+
 func executeCommand(cmd *RedisCmd, c *Client) []byte {
 	switch cmd.Cmd {
 	case "PING":
@@ -829,6 +877,8 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		return evalDEL(cmd.Args)
 	case "EXPIRE":
 		return evalEXPIRE(cmd.Args)
+	case "HELLO":
+		return evalHELLO(cmd.Args)
 	case "BGREWRITEAOF":
 		return evalBGREWRITEAOF(cmd.Args)
 	case "INCR":
@@ -883,6 +933,10 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		return evalSTACKREFLEN(cmd.Args)
 	case "STACKREFPEEK":
 		return evalSTACKREFPEEK(cmd.Args)
+	case "SUBSCRIBE": // TODO: Remove this override once we support QWATCH in dice-cli.
+		return evalQWATCH(cmd.Args, c)
+	case "QWATCH":
+		return evalQWATCH(cmd.Args, c)
 	case "MULTI":
 		c.TxnBegin()
 		return evalMULTI(cmd.Args)
@@ -933,5 +987,8 @@ func EvalAndRespond(cmds RedisCmds, c *Client) {
 			executeCommandToBuffer(cmd, buf, c)
 		}
 	}
-	c.Write(buf.Bytes())
+
+	if _, err := c.Write(buf.Bytes()); err != nil {
+		log.Panic(err)
+	}
 }

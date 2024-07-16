@@ -2,11 +2,11 @@
 
 Before you begin to contribute, make sure you have reviewed [Dev Environment Setup](https://github.com/dicedb/dice/blob/master/README.md) sections and that you have created your own fork of the source code.
 
-### Create a design document
+## Create a design document
 
 If your change is relatively minor, you can skip this step. If you are adding new major feature, we suggest that you add a design document and solicit comments from the community before submitting any code.
 
-### Create an issue for the change
+## Create an issue for the change
 
 Create an issue [here](https://github.com/dicedb/dice/issues) for the change you would like to make. Provide information on why the change is needed and how you plan to address it. Use the conversations on the issue as a way to validate assumptions and the right way to proceed.
 
@@ -14,7 +14,7 @@ If you have a design document, please refer to the design documents in your Issu
 
 Once you are clear about what you want to do, proceed with the next steps listed below.
 
-### Create a branch for your change
+## Create a branch for your change
 
 ```text
 $ cd dice
@@ -31,37 +31,38 @@ $ git checkout -b <your issue branch>
 
 Make the necessary changes. If the changes you plan to make are too big, make sure you break it down into smaller tasks.
 
-### Making the changes
+## Making the changes
 
 Follow the best-practices when you are making changes.
 
-#### Code documentation
+### Code documentation
 
 Please ensure your code is adequately documented. Some things to consider for documentation:
 
-* Always include struct, module, and package level docs. We are looking for information about what functionality is provided, what state is maintained, whether there are concurrency/thread-safety concerns and any exceptional behavior that the class might exhibit.
-* Document public methods and their parameters.
+- Always include struct, module, and package level docs. We are looking for information about what functionality is provided, what state is maintained, whether there are concurrency/thread-safety concerns and any exceptional behavior that the class might exhibit.
+- Document public methods and their parameters.
 
-#### Logging
+### Logging
 
-* Ensure there is adequate logging for positive paths as well as exceptional paths. As a corollary to this, ensure logs are not noisy.
-* Do not use fmt.Println to log messages. Use the `logrus` logger.
-* Use logging levels correctly: set level to `debug` for verbose logs useful for only for debugging.
+- Ensure there is adequate logging for positive paths as well as exceptional paths. As a corollary to this, ensure logs are not noisy.
+- Do not use fmt.Println to log messages. Use the `logrus` logger.
+- Use logging levels correctly: set level to `debug` for verbose logs useful for only for debugging.
 
-#### Code Formatting
-* Ensure that the code you add is properly formatted as per the `gofmt`.
+### Code Formatting
 
-#### Backward and Forward compatibility changes
+- Ensure that the code you add is properly formatted as per the `gofmt`.
+
+### Backward and Forward compatibility changes
 
 Make sure you consider both backward and forward compatibility issues while making your changes.
 
-* For backward compatibility, consider cases where one component is using the new version and another is still on the old version. Will it break?
-* For forward compatibility, consider rollback cases.
+- For backward compatibility, consider cases where one component is using the new version and another is still on the old version. Will it break?
+- For forward compatibility, consider rollback cases.
 
-### Creating a Pull Request (PR)
+## Creating a Pull Request (PR)
 
-* **Verify code-style**
-* **Push changes and create a PR for review**
+- **Verify code-style**
+- **Push changes and create a PR for review**
 
   Commit your changes with a meaningful commit message.
 
@@ -81,7 +82,7 @@ After this, create a PullRequest in `github <https://github.com/dicedb/dice/pull
   * Evidence of sufficient testing. You ``MUST`` indicate the tests done, either manually or automated.
 ```
 
-* Once you receive comments on github on your changes, be sure to respond to them on github and address the concerns. If any discussions happen offline for the changes in question, make sure to capture the outcome of the discussion, so others can follow along as well.
+- Once you receive comments on github on your changes, be sure to respond to them on github and address the concerns. If any discussions happen offline for the changes in question, make sure to capture the outcome of the discussion, so others can follow along as well.
 
   It is possible that while your change is being reviewed, other changes were made to the master branch. Be sure to pull rebase your change on the new changes thus:
 
@@ -101,12 +102,27 @@ Run additional tests/validations for the new changes and update the PR by pushin
 ```
 
 ```text
-$ git push origin <your issue branch>
+git push origin <your issue branch>
 ```
 
-* When you have addressed all comments and have an approved PR, one of the committers can merge your PR.
-* After your change is merged, check to see if any documentation needs to be updated. If so, create a PR for documentation.
+- When you have addressed all comments and have an approved PR, one of the committers can merge your PR.
+- After your change is merged, check to see if any documentation needs to be updated. If so, create a PR for documentation.
 
-### Update Documentation
+## Update Documentation
 
 Usually for new features, functionalities, API changes, documentation update is required to keep users up to date and keep track of our development.
+
+## Timeline for working on Issues
+
+### Issues
+
+- Assigned issues imply intent to work on them.
+- Can't work on it? Unassign yourself to allow others to contribute.
+- Provide updates on long-running issues to show progress.
+- Inactive issues may be unassigned after a reasonable period.
+
+### Pull Requests (PRs)
+
+- We appreciate timely completion of PRs.
+- If a PR becomes inactive, we may close it.
+- Need more time? Just let us know in the comments.

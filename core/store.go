@@ -1,20 +1,37 @@
 package core
 
 import (
+	"sync"
 	"time"
 	"unsafe"
 
 	"github.com/dicedb/dice/config"
 )
 
+type WatchEvent struct {
+	Key       string
+	Operation string
+	Value     *Obj
+}
+
 var store map[unsafe.Pointer]*Obj
 var expires map[*Obj]uint64
 var keypool map[string]unsafe.Pointer
+var WatchList map[DSQLQuery]map[int]struct{} // Maps keys to the file descriptors of clients that are watching them.
+var WatchListMutex = &sync.Mutex{}
+
+// Channel to receive updates about keys that are being watched.
+// The Watcher goroutine will wait on this channel. When a key is updated, the
+// goroutine will send the updated value and the related operation to all the
+// clients that are watching the key.
+var WatchChannel chan WatchEvent
 
 func init() {
 	store = make(map[unsafe.Pointer]*Obj)
 	expires = make(map[*Obj]uint64)
 	keypool = make(map[string]unsafe.Pointer)
+	WatchList = make(map[DSQLQuery]map[int]struct{})
+	WatchChannel = make(chan WatchEvent, 100)
 }
 
 func setExpiry(obj *Obj, expDurationMs int64) {
@@ -50,6 +67,8 @@ func Put(k string, obj *Obj) {
 		KeyspaceStat[0] = make(map[string]int)
 	}
 	KeyspaceStat[0]["keys"]++
+
+	WatchChannel <- WatchEvent{k, "SET", obj}
 }
 
 func Get(k string) *Obj {
@@ -80,6 +99,8 @@ func Del(k string) bool {
 		delete(expires, obj)
 		delete(keypool, k)
 		KeyspaceStat[0]["keys"]--
+
+		WatchChannel <- WatchEvent{k, "DEL", obj}
 		return true
 	}
 	return false

@@ -27,7 +27,7 @@ var bitShifts []uint8 = []uint8{7, 7, 7, 7, 7, 7, 7, 7, 7, 1}
 // EncodeInt encodes the unsigned 64 bit integer value into a varint
 // and returns an array of bytes (little endian encoded)
 func EncodeUInt(x uint64) []byte {
-	var i int = 0
+	var i int
 	for i = 0; i < len(bitShifts); i++ {
 		buf[i] = getLSB(byte(x), bitShifts[i]) | 0b10000000 // marking the continuation bit
 		x = x >> bitShifts[i]
@@ -41,7 +41,7 @@ func EncodeUInt(x uint64) []byte {
 
 // DecodeUInt decodes the array of bytes and returns an unsigned 64 bit integer
 func DecodeUInt(vint []byte) uint64 {
-	var i int = 0
+	var i int
 	var v uint64 = 0
 	for i = 0; i < len(vint); i++ {
 		b := getLSB(vint[i], 7)

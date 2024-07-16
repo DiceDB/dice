@@ -27,7 +27,9 @@ func readStringUntilSr(buf *bytes.Buffer) (string, error) {
 		return "", err
 	}
 	// increamenting to skip `\n`
-	buf.ReadByte()
+	if _, err := buf.ReadByte(); err != nil {
+		return "", err
+	}
 	return s[:len(s)-1], nil
 }
 
@@ -88,14 +90,17 @@ func readBulkString(c io.ReadWriter, buf *bytes.Buffer) (string, error) {
 	}
 
 	bulkStr := make([]byte, len)
-	_, err = buf.Read(bulkStr)
-	if err != nil {
+	if _, err := buf.Read(bulkStr); err != nil {
 		return "", err
 	}
 
 	// moving buffer pointer by 2 for \r and \n
-	buf.ReadByte()
-	buf.ReadByte()
+	if _, err := buf.ReadByte(); err != nil {
+		return "", err
+	}
+	if _, err := buf.ReadByte(); err != nil {
+		return "", err
+	}
 
 	// reading `len` bytes as string
 	return string(bulkStr), nil
@@ -152,8 +157,8 @@ func Encode(value interface{}, isSimple bool) []byte {
 	case []interface{}:
 		var b []byte
 		buf := bytes.NewBuffer(b)
-		for _, b := range value.([]string) {
-			buf.Write(Encode(b, false))
+		for _, elem := range v {
+			buf.Write(Encode(elem, false))
 		}
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
 	case *QueueElement:
@@ -199,7 +204,25 @@ func Encode(value interface{}, isSimple bool) []byte {
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
 	case error:
 		return []byte(fmt.Sprintf("-%s\r\n", v))
+	case WatchEvent:
+		var b []byte
+		buf := bytes.NewBuffer(b)
+		we := value.(WatchEvent)
+		buf.Write(Encode(fmt.Sprintf("key:%s", we.Key), false))
+		buf.Write(Encode(fmt.Sprintf("op:%s", we.Operation), false))
+		buf.Write(Encode(we.Value.Value, false))
+		return []byte(fmt.Sprintf("*3\r\n%s", buf.Bytes()))
+	case []DSQLQueryResultRow:
+		var b []byte
+		buf := bytes.NewBuffer(b)
+		for _, row := range value.([]DSQLQueryResultRow) {
+			buf.Write([]byte("*2\r\n"))
+			buf.Write(Encode(row.Key, false))
+			buf.Write(Encode(row.Value.Value, false))
+		}
+		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
 	default:
+		fmt.Printf("Unsupported type: %T\n", v)
 		return RESP_NIL
 	}
 }

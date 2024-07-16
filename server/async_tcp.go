@@ -1,7 +1,7 @@
 package server
 
 import (
-	"log"
+	"context"
 	"net"
 	"os"
 	"sync"
@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core"
 	"github.com/dicedb/dice/core/iomultiplexer"
@@ -28,6 +29,50 @@ var connectedClients map[int]*core.Client
 
 func init() {
 	connectedClients = make(map[int]*core.Client)
+}
+
+// Waits on `core.WatchChannel` to receive updates about keys. Sends the update
+// to all the clients that are watching the key.
+// The message sent to the client will contain the new value and the operation
+// that was performed on the key.
+func WatchKeys(ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for {
+		select {
+		case event := <-core.WatchChannel:
+			core.WatchListMutex.Lock()
+			// Check if the key matches any RegexMatcher in the watch list.
+			var affectedQueries []core.DSQLQuery
+			for query := range core.WatchList {
+				var regex = query.KeyRegex
+				// Check if event.KEY matches the regex.
+				if core.RegexMatch(regex, event.Key) {
+					affectedQueries = append(affectedQueries, query)
+				}
+			}
+
+			// Execute all the affected queries and send the results to the subscribed clients.
+			for _, query := range affectedQueries {
+				result, err := core.ExecuteQuery(query)
+				if err != nil {
+					log.Error(err)
+					continue
+				}
+
+				for clientFd := range core.WatchList[query] {
+					_, err := syscall.Write(clientFd, core.Encode(result, false))
+
+					// if the client is not reachable, remove it from the watch list.
+					if err != nil {
+						delete(core.WatchList[query], clientFd)
+					}
+				}
+			}
+			core.WatchListMutex.Unlock()
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 
 func WaitForSignal(wg *sync.WaitGroup, sigs chan os.Signal) {
@@ -51,26 +96,19 @@ func WaitForSignal(wg *sync.WaitGroup, sigs chan os.Signal) {
 	os.Exit(0)
 }
 
-func RunAsyncTCPServer(wg *sync.WaitGroup) error {
-	defer wg.Done()
-	defer func() {
-		atomic.StoreInt32(&eStatus, EngineStatus_SHUTTING_DOWN)
-	}()
-
-	log.Println("starting an asynchronous TCP server on", config.Host, config.Port)
-
-	maxClients := 20000
-
-	// Create a socket
+func FindPortAndBind() (int, error) {
 	serverFD, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, 0)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	defer syscall.Close(serverFD)
+
+	if err = syscall.SetsockoptInt(serverFD, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
+		return 0, err
+	}
 
 	// Set the Socket operate in a non-blocking mode
 	if err = syscall.SetNonblock(serverFD, true); err != nil {
-		return err
+		return 0, err
 	}
 
 	// Bind the IP and the port
@@ -80,19 +118,41 @@ func RunAsyncTCPServer(wg *sync.WaitGroup) error {
 		Port: config.Port,
 		Addr: [4]byte{ip4[0], ip4[1], ip4[2], ip4[3]},
 	}); err != nil {
-		return err
+		return 0, err
 	}
 
+	return serverFD, nil
+}
+
+func RunAsyncTCPServer(serverFD int, wg *sync.WaitGroup) {
+	defer wg.Done()
+	defer syscall.Close(serverFD)
+
+	log.Info("starting an asynchronous TCP server on", config.Host, config.Port)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	defer func() {
+		atomic.StoreInt32(&eStatus, EngineStatus_SHUTTING_DOWN)
+	}()
+	maxClients := 20000
+
+	wg.Add(1)
+	go WatchKeys(ctx, wg)
+
 	// Start listening
-	if err = syscall.Listen(serverFD, maxClients); err != nil {
-		return err
+	if err := syscall.Listen(serverFD, maxClients); err != nil {
+		log.Fatal("error while listening", err)
 	}
+
+	log.Info("ready to accept connections")
 
 	// AsyncIO starts here!!
 
 	// creating multiplexer instance
 	var multiplexer iomultiplexer.IOMultiplexer
-	multiplexer, err = iomultiplexer.New(maxClients)
+	multiplexer, err := iomultiplexer.New(maxClients)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -103,7 +163,7 @@ func RunAsyncTCPServer(wg *sync.WaitGroup) error {
 		Fd: serverFD,
 		Op: iomultiplexer.OP_READ,
 	}); err != nil {
-		return err
+		log.Fatal(err)
 	}
 
 	// loop until the server is not shutting down
@@ -136,7 +196,7 @@ func RunAsyncTCPServer(wg *sync.WaitGroup) error {
 			// if swap unsuccessful then the existing status is not WAITING, but something else
 			switch eStatus {
 			case EngineStatus_SHUTTING_DOWN:
-				return nil
+				return
 			}
 		}
 
@@ -146,19 +206,21 @@ func RunAsyncTCPServer(wg *sync.WaitGroup) error {
 				// accept the incoming connection from a client
 				fd, _, err := syscall.Accept(serverFD)
 				if err != nil {
-					log.Println("err", err)
+					log.Warn(err)
 					continue
 				}
 
 				connectedClients[fd] = core.NewClient(fd)
-				syscall.SetNonblock(fd, true)
+				if err := syscall.SetNonblock(fd, true); err != nil {
+					log.Fatal(err)
+				}
 
 				// add this new TCP connection to be monitored
 				if err := multiplexer.Subscribe(iomultiplexer.Event{
 					Fd: fd,
 					Op: iomultiplexer.OP_READ,
 				}); err != nil {
-					return err
+					log.Fatal(err)
 				}
 			} else {
 				comm := connectedClients[event.Fd]
@@ -174,7 +236,8 @@ func RunAsyncTCPServer(wg *sync.WaitGroup) error {
 				}
 				respond(cmds, comm)
 				if hasABORT {
-					return nil
+					ctx.Done()
+					return
 				}
 			}
 		}
@@ -184,6 +247,4 @@ func RunAsyncTCPServer(wg *sync.WaitGroup) error {
 		// the engine is BUSY
 		atomic.StoreInt32(&eStatus, EngineStatus_WAITING)
 	}
-
-	return nil
 }
