@@ -24,7 +24,7 @@ func getLocalConnection() net.Conn {
 	return conn
 }
 
-func getLocalConnectionWithSdk() *redis.Client {
+func getLocalSdk() *redis.Client {
 	return redis.NewClient(&redis.Options{
 		Addr: fmt.Sprintf(":%d", config.Port),
 

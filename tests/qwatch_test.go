@@ -95,8 +95,8 @@ func TestQWATCHWithSDK(t *testing.T) {
 	resetQWatchStore()
 	ctx := context.Background()
 
-	publisher := getLocalConnectionWithSdk()
-	subscriber := getLocalConnectionWithSdk()
+	publisher := getLocalSdk()
+	subscriber := getLocalSdk()
 
 	qwatch := subscriber.QWatch(ctx)
 	if qwatch == nil {
