@@ -6,12 +6,14 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/charmbracelet/log"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core"
 	"github.com/dicedb/dice/server"
+	redis "github.com/dicedb/go-dice"
 )
 
 func getLocalConnection() net.Conn {
@@ -20,6 +22,23 @@ func getLocalConnection() net.Conn {
 		panic(err)
 	}
 	return conn
+}
+
+func getLocalConnectionWithSdk() *redis.Client {
+	return redis.NewClient(&redis.Options{
+		Addr: fmt.Sprintf(":%d", config.Port),
+
+		DialTimeout:           10 * time.Second,
+		ReadTimeout:           30 * time.Second,
+		WriteTimeout:          30 * time.Second,
+		ContextTimeoutEnabled: true,
+
+		MaxRetries: -1,
+
+		PoolSize:        10,
+		PoolTimeout:     30 * time.Second,
+		ConnMaxIdleTime: time.Minute,
+	})
 }
 
 func fireCommand(conn net.Conn, cmd string) interface{} {
