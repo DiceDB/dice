@@ -18,29 +18,31 @@ func getRandomKeyValue() (string, int64) {
 	return "k" + strconv.FormatInt(token, 10), token
 }
 
-func stormSet(wg *sync.WaitGroup) {
+func stormSet(wg *sync.WaitGroup, conn net.Conn) {
 	defer wg.Done()
-	conn, err := net.Dial("tcp", "localhost:7379")
-	if err != nil {
-		panic(err)
-	}
-	defer conn.Close()
 	for {
 		time.Sleep(500 * time.Millisecond)
 		k, v := getRandomKeyValue()
-		var buf [512]byte
 		cmd := fmt.Sprintf("SET %s %d", k, v)
 		fmt.Println(cmd)
-		_, err = conn.Write(core.Encode(strings.Split(cmd, " "), false))
+		buf, err := core.Encode(strings.Split(cmd, " "), false)
 		if err != nil {
-			panic(err)
+			log.Println(err)
+			return
 		}
-		_, err = conn.Read(buf[:])
+		_, err = conn.Write(buf)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		resp := make([]byte, 512)
+		_, err = conn.Read(resp)
 		if err != nil {
 			if err == io.EOF {
 				return
 			}
-			panic(err)
+			log.Println(err)
+			return
 		}
 	}
 }
@@ -48,8 +50,12 @@ func stormSet(wg *sync.WaitGroup) {
 func main() {
 	var wg sync.WaitGroup
 	for i := 0; i < 5; i++ {
+		conn, err := net.Dial("tcp", "localhost:7379")
+		if err != nil {
+			log.Fatal(err)
+		}
 		wg.Add(1)
-		go stormSet(&wg)
+		go stormSet(&wg, conn)
 	}
 	wg.Wait()
 }
