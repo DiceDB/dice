@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 
 	"github.com/dicedb/dice/config"
@@ -22,25 +21,22 @@ func main() {
 	setupFlags()
 
 	// Handle SIGTERM and SIGINT
-	var sigs chan os.Signal = make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
 
 	// Find a port and bind
-	// If port not available, raise FATAL error
 	serverFD, err := server.FindPortAndBind()
 	if err != nil {
-		log.Fatal(err)
-		return
+		log.Fatalf("failed to find and bind port: %v", err)
 	}
 
-	var wg sync.WaitGroup
-
 	// Run the server, listen to incoming connections and handle them
+	wg := &sync.WaitGroup{}
 	wg.Add(1)
-	go server.RunAsyncTCPServer(serverFD, &wg)
+	go server.RunAsyncTCPServer(serverFD, wg)
 
-	// Listento signals, but not a hardblocker to shutdown
-	go server.WaitForSignal(&wg, sigs)
+	// Listen to signals, but not a hard blocker to shutdown
+	go server.WaitForSignal(wg, sigChan)
 
 	// Wait for all goroutines to finish
 	wg.Wait()
