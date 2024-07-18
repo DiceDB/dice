@@ -1,21 +1,13 @@
-# Setting Up DiceDB end-to-end infra on AWS using Pulumi
+
+# Setting Up DiceDB Infrastructure on AWS using Pulumi
 
 ## Prerequisites
 
 - AWS CLI installed and configured
-- [Pulumi CLI installed](https://www.pulumi.com/docs/install/)
-- This Pulumi project uses an S3 backend for state management. Ensure that the specified S3 bucket (or any suitable bucketname mentioned in the backend of Pulumi configuration) is created before running the Pulumi script. Alternatively we can use the pulumi cloud for storing the state.
+- Pulumi CLI installed
+- This Pulumi project uses an S3 backend for state management. Ensure that the specified S3 bucket (dice-pulumi or any suitable bucketname) is created before running the Pulumi script. Alternatively we can use the pulumi cloud for storing the state
 
 ## Setup Steps
-
-### 0. Setup ENVIRONMENT variables
-
-```
-export AWS_REGION=us-east-1
-export AWS_PROFILE=<profile_name>
-export STACK_NAME=full
-export PULUMI_CONFIG_PASSPHRASE=
-```
 
 ### 1. Configure AWS Credentials
 
@@ -27,42 +19,42 @@ aws configure
 
 Follow the prompts to configure the AWS Access Key ID, Secret Access Key, and default region.
 
-### 2. Ensure Key Pair
-
-Make sure you have a keypair named `ddb-keypair` and you have uploaded the PEM file into Parameter Store
-with the key `/ec2/keypair/ddb-keypair`.
-
 ### 2. Create and Activate a Virtual Environment
 
 ```bash
-cd pulumi
 python -m venv venv
-source venv/bin/activate
+source venv/bin/activate # On Windows, use `venv\Scripts\activate`
 ```
+
 ### 3. Install Required Dependencies
 
 ```bash
+cd pulumi
 pip install -r requirements.txt
 ```
 
 ### 4. Initialize or Select a Pulumi Stack
 
-Create a new stack
-
+Create a new stack:
 ```bash
-cd $STACK_NAME
-pulumi stack init $STACK_NAME
+pulumi stack init <stack-name>
 ```
-
 Or select an existing stack:
-
 ```bash
-pulumi stack select $STACK_NAME
+pulumi stack select <stack-name>
 ```
 
-When asked for the password or paraphrase, just hit `ENTER`.
+### 5. Configure the Pulumi Stack
 
-### 5. Preview the Infrastructure Changes
+Review and update the configuration in `Pulumi.<stack-name>.yaml`. You can also set config values using the CLI:
+
+```bash
+pulumi config set aws:region us-east-1
+pulumi config set instance_name dice-db
+pulumi config set instance_type t2.medium
+```
+
+### 6. Preview the Infrastructure Changes
 
 ```bash
 pulumi preview
@@ -70,7 +62,7 @@ pulumi preview
 
 This command shows you what changes will be made without actually applying them.
 
-### 6. Deploy the Infrastructure
+### 7. Deploy the Infrastructure
 
 When you're ready to create the resources:
 
@@ -80,10 +72,9 @@ pulumi up
 
 Review the proposed changes and confirm to proceed.
 
-### 7. Access Your Resources
+### 8. Access Your Resources
 
-After deployment, Pulumi will output important information like the instance's public IP and SSH command.
-Make note of these for accessing the DiceDB instance; or SSH into the instance via the console.
+After deployment, Pulumi will output important information like the instance's public IP and SSH command. Make note of these for accessing the DiceDB instance; or SSH into the instance via the console.
 
 ## Clean Up
 
