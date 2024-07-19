@@ -76,3 +76,37 @@ func BenchmarkWildCardMatch(b *testing.B) {
 		})
 	}
 }
+
+func TestWildCardMatch(t *testing.T){
+	tests := []struct{
+		pattern string
+		key 	string
+		want	bool
+	}{
+		{"a*b*c", "axybzxc", true},
+		{"", "", true},
+		{"abc", "abc", true},
+		{"a?c", "abc", true},
+		{"ac?", "abc", false},
+		{"ab?", "abc", true},
+		{"?bc", "xbc", true},
+		{"a*c", "abbbbbbc", true},
+		{"abc*", "abcdef", true},
+		{"*abc", "xyzabc", true},
+		{"a*b*c", "axbyczc", true},
+		{"abc", "abd", false},
+		{"abc", "ab", false},
+		{"a*b?c*d", "axbyczdxxd", true},
+		{"*?*", "abc", true},
+		{"a*", "", false},
+		{"", "abc", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.pattern+"_"+tt.key, func(t *testing.T) {
+			if got := core.WildCardMatch(tt.pattern, tt.key); got != tt.want {
+				t.Errorf("WildcardMatch(%q, %q) = %v, want %v", tt.pattern, tt.key, got, tt.want)
+			}
+		})
+	}
+}

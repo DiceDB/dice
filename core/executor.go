@@ -25,32 +25,14 @@ type DSQLQueryResultRow struct {
 func ExecuteQuery(query DSQLQuery, store *Store) ([]DSQLQueryResultRow, error) {
 	var result []DSQLQueryResultRow
 
-	var err error
-	withLocks(func() {
-		for key, ptr := range store.keypool {
-			if WildCardMatch(query.KeyRegex, key) {
-				row := DSQLQueryResultRow{
-					Key:   key,
-					Value: store.store[ptr],
-				}
-
-				if query.Where != nil {
-					match, evalErr := evaluateWhereClause(query.Where, row)
-					if errors.Is(evalErr, ErrNoResultsFound) {
-						continue
-					}
-					if evalErr != nil {
-						err = evalErr
-						return
-					}
-					if !match {
-						continue
-					}
-				}
-
-				if err := MarshalResultIfJSON(row); err != nil {
-					return
-				}
+	storeMutex.RLock()
+	keypoolMutex.RLock()
+	for key, ptr := range keypool {
+		if WildCardMatch(query.KeyRegex, key) {
+			row := DSQLQueryResultRow{
+				Key:   key,
+				Value: store[ptr],
+			}
 
 				result = append(result, row)
 			}
