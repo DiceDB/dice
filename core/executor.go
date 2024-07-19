@@ -12,7 +12,7 @@ func ExecuteQuery(query DSQLQuery) ([]DSQLQueryResultRow, error) {
 	var result []DSQLQueryResultRow
 
 	for key, ptr := range keypool {
-		if RegexMatch(query.KeyRegex, key) {
+		if WildCardMatch(query.KeyRegex, key) {
 			row := DSQLQueryResultRow{
 				Key:   key,
 				Value: store[ptr],
