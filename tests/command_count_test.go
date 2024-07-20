@@ -2,33 +2,35 @@ package tests
 
 import (
 	"fmt"
+	"net"
 	"testing"
 	"gotest.tools/v3/assert"
 )
 
 func TestCommandCount(t *testing.T) {
 	connection := getLocalConnection()
-	responseValue := fireCommand(connection, "COMMAND COUNT")
-	responseCount  := responseValue.(int64)
-	if responseValue == nil {
+	commandCount := getCommandCount(connection)
+	if commandCount <= 0 {
 		t.Fail()
 	}
-
-	assert.Assert(t, responseCount > 0,
-		fmt.Sprintf("Unexpected number of CLI commands found. expected greater than 0, %d found", responseCount))
+	assert.Assert(t, commandCount > 0,
+		fmt.Sprintf("Unexpected number of CLI commands found. expected greater than 0, %d found", commandCount))
 }
 
-func getCommandCount(t *testing.B) {
-	connection := getLocalConnection()
+func getCommandCount(connection net.Conn) int64 {
 	responseValue := fireCommand(connection, "COMMAND COUNT")
-	responseCount  := responseValue.(int64)
-	if responseValue == nil || responseCount <= 0 {
-		t.Fail()
+	if responseValue == nil {
+		return -1
 	}
+	return responseValue.(int64)
 }
 
 func BenchmarkCountCommand(b *testing.B) {
+	connection := getLocalConnection()
 	for n := 0; n < b.N; n++ {
-		getCommandCount(b)
+		commandCount := getCommandCount(connection)
+		if commandCount <= 0 {
+			b.Fail()
+		}
 	}
 }
