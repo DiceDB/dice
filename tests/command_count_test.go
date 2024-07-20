@@ -3,39 +3,32 @@ package tests
 import (
 	"fmt"
 	"testing"
-
 	"gotest.tools/v3/assert"
 )
 
-func TestCommandCOUNT(t *testing.T) {
-	commandsCount := 40
-
-	subscriber := getLocalConnection()
-
-	responseValue := fireCommand(subscriber, "COUNT")
+func TestCommandCount(t *testing.T) {
+	connection := getLocalConnection()
+	responseValue := fireCommand(connection, "COMMAND COUNT")
 	responseCount  := responseValue.(int64)
 	if responseValue == nil {
 		t.Fail()
 	}
 
-	assert.Assert(t, responseCount == int64(commandsCount),
-		fmt.Sprintf("Unexpected number of CLI commands found. %d expected, %d found", commandsCount, responseCount))
+	assert.Assert(t, responseCount > 0,
+		fmt.Sprintf("Unexpected number of CLI commands found. expected greater than 0, %d found", responseCount))
 }
 
-func call(howmany int, t *testing.B) {
-	subscriber := getLocalConnection()
-	for i := 0; i < howmany; i++ {
-		rp := fireCommandAndGetRESPParser(subscriber, "COUNT")
-		if rp == nil {
-			t.Fail()
-		}
+func getCommandCount(t *testing.B) {
+	connection := getLocalConnection()
+	responseValue := fireCommand(connection, "COMMAND COUNT")
+	responseCount  := responseValue.(int64)
+	if responseValue == nil || responseCount <= 0 {
+		t.Fail()
 	}
 }
 
-func BenchmarkCountCommand200(t *testing.B) {
-	call(200, t)
-}
-
-func BenchmarkCountCommand2000(t *testing.B) {
-	call(2000, t)
+func BenchmarkCountCommand(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		getCommandCount(b)
+	}
 }

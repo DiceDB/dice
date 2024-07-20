@@ -9,7 +9,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
-
+	"strings"
 	"github.com/dicedb/dice/config"
 )
 
@@ -60,7 +60,7 @@ const (
 	STACKREFPEEK = "STACKREFPEEK"
 	SUBSCRIBE    = "SUBSCRIBE"
 	QWATCH       = "QWATCH"
-	COUNT        = "COUNT"
+	COMMAND      = "COMMAND"
 	MULTI        = "MULTI"
 	EXEC         = "EXEC"
 	DISCARD      = "DISCARD"
@@ -72,7 +72,7 @@ var diceCommands = []string{
 	SLEEP, QINTINS, QINTREM, QINTLEN, QINTPEEK, BFINIT, BFADD, BFEXISTS, BFINFO,
 	QREFINS, QREFREM, QREFLEN, QREFPEEK, STACKINTPUSH, STACKINTPOP, STACKINTLEN,
 	STACKINTPEEK, STACKREFPUSH, STACKREFPOP, STACKREFLEN, STACKREFPEEK, SUBSCRIBE,
-	QWATCH, COUNT, MULTI, EXEC, DISCARD, ABORT}
+	QWATCH, COMMAND, MULTI, EXEC, DISCARD, ABORT}
 
 var txnCommands map[string]bool
 var serverID string
@@ -909,8 +909,23 @@ func evalQWATCH(args []string, c *Client) []byte {
 	return RESP_OK
 }
 
-// evalCOUNT returns an number of commands supported by DiceDB
-func evalCOUNT() []byte {
+// evalCOMMAND evaluates COMMAND <subcommand> command based on subcommand
+// COUNT: return total count of commands in Dice.
+func evalCOMMAND(args []string) []byte {
+	if len(args) == 0 {
+		return Encode(fmt.Errorf("(error) ERR wrong number of arguments for 'command' command"), false)
+	}
+	subcommand := strings.ToUpper(args[0])
+	switch subcommand {
+		case "COUNT":
+			return evalCOMMANDCOUNT()
+		default:
+			return Encode(fmt.Errorf("ERR unknown subcommand '%s'. Try COMMAND HELP", subcommand), false)
+	}
+}
+
+// evalCOMMANDCOUNT returns an number of commands supported by DiceDB
+func evalCOMMANDCOUNT() []byte {
 	return Encode(len(diceCommands), false)
 }
 
