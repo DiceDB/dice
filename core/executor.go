@@ -1,6 +1,8 @@
 package core
 
-import "sort"
+import (
+	"sort"
+)
 
 type DSQLQueryResultRow struct {
 	Key   string
@@ -11,6 +13,8 @@ type DSQLQueryResultRow struct {
 func ExecuteQuery(query DSQLQuery) ([]DSQLQueryResultRow, error) {
 	var result []DSQLQueryResultRow
 
+	storeMutex.RLock()
+	keypoolMutex.RLock()
 	for key, ptr := range keypool {
 		if RegexMatch(query.KeyRegex, key) {
 			row := DSQLQueryResultRow{
@@ -21,6 +25,8 @@ func ExecuteQuery(query DSQLQuery) ([]DSQLQueryResultRow, error) {
 			result = append(result, row)
 		}
 	}
+	keypoolMutex.RUnlock()
+	storeMutex.RUnlock()
 
 	sortResults(query, result)
 

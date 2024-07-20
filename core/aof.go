@@ -28,6 +28,10 @@ func DumpAllAOF() {
 		return
 	}
 	log.Println("rewriting AOF file at", config.AOFFile)
+
+	storeMutex.RLock()
+	defer storeMutex.RUnlock()
+
 	for k, obj := range store {
 		dumpKey(fp, *((*string)(k)), obj)
 	}
