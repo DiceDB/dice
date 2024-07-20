@@ -2,9 +2,9 @@ package tests
 
 import (
 	"fmt"
+	"gotest.tools/v3/assert"
 	"net"
 	"testing"
-	"gotest.tools/v3/assert"
 )
 
 func TestCommandCount(t *testing.T) {

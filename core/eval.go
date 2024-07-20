@@ -4,13 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/dicedb/dice/config"
 	"log"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
-	"strings"
-	"github.com/dicedb/dice/config"
 )
 
 var RESP_NIL []byte = []byte("$-1\r\n")
@@ -30,7 +29,7 @@ const (
 	TTL          = "TTL"
 	DEL          = "DEL"
 	EXPIRE       = "EXPIRE"
-	HELLO		 = "HELLO"
+	HELLO        = "HELLO"
 	BGREWRITEAOF = "BGREWRITEAOF"
 	INCR         = "INCR"
 	INFO         = "INFO"
@@ -917,10 +916,10 @@ func evalCOMMAND(args []string) []byte {
 	}
 	subcommand := strings.ToUpper(args[0])
 	switch subcommand {
-		case "COUNT":
-			return evalCOMMANDCOUNT()
-		default:
-			return Encode(fmt.Errorf("ERR unknown subcommand '%s'. Try COMMAND HELP", subcommand), false)
+	case "COUNT":
+		return evalCOMMANDCOUNT()
+	default:
+		return Encode(fmt.Errorf("ERR unknown subcommand '%s'. Try COMMAND HELP", subcommand), false)
 	}
 }
 
