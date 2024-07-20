@@ -74,7 +74,7 @@ func WatchKeys(ctx context.Context, wg *sync.WaitGroup) {
 						clientFd := clientKey.(int)
 						_, err := syscall.Write(clientFd, encodedResult)
 						if err != nil {
-							asyncStore.RemoveWatcher(query, clientFd)
+							clients.Delete(clientFd)
 						}
 						return true
 					})

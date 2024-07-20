@@ -15,15 +15,10 @@ type WatchEvent struct {
 	Value     *Obj
 }
 
-type Store struct {
-	store        map[unsafe.Pointer]*Obj
-	expires      map[*Obj]uint64 // Does not need to be thread-safe as it is only accessed by a single thread.
-	keypool      map[string]unsafe.Pointer
-	storeMutex   sync.RWMutex
-	keypoolMutex sync.RWMutex
-	WatchList    sync.Map // Maps queries to the file descriptors of clients that are watching them.
-
-}
+var store map[unsafe.Pointer]*Obj
+var expires map[*Obj]uint64 // Does not need to be thread-safe as it is only accessed by a single thread.
+var keypool map[string]unsafe.Pointer
+var WatchList sync.Map // Maps queries to the file descriptors of clients that are watching them.
 
 // WatchChannel Channel to receive updates about keys that are being watched.
 var WatchChannel chan WatchEvent
@@ -212,103 +207,20 @@ func (store *Store) GetDBSize() uint64 {
 }
 
 // Function to add a new watcher to a query.
-func (store *Store) AddWatcher(query DSQLQuery, clientFd int) { //nolint:gocritic
-	clients, _ := store.WatchList.LoadOrStore(query, &sync.Map{})
+func AddWatcher(query DSQLQuery, clientFd int) {
+	clients, _ := WatchList.LoadOrStore(query, &sync.Map{})
 	clients.(*sync.Map).Store(clientFd, struct{}{})
 }
 
 // Function to remove a watcher from a query.
-func (store *Store) RemoveWatcher(query DSQLQuery, clientFd int) { //nolint:gocritic
-	if clients, ok := store.WatchList.Load(query); ok {
+func RemoveWatcher(query DSQLQuery, clientFd int) {
+	if clients, ok := WatchList.Load(query); ok {
 		clients.(*sync.Map).Delete(clientFd)
 		// If no more clients for this query, remove the query from WatchList
-		if countClients(clients.(*sync.Map)) == 0 {
-			store.WatchList.Delete(query)
+		if clientCount := countClients(clients.(*sync.Map)); clientCount == 0 {
+			WatchList.Delete(query)
 		}
 	}
-}
-
-// Rename function to implement RENAME functionality using existing helpers
-
-func (store *Store) Rename(sourceKey, destKey string) bool {
-	return withLocksReturn(func() bool {
-		// If source and destination are the same, do nothing and return true
-		if sourceKey == destKey {
-			return true
-		}
-
-		sourcePtr, sourceOk := store.keypool[sourceKey]
-		if !sourceOk {
-			return false
-		}
-
-		sourceObj := store.store[sourcePtr]
-		if sourceObj == nil || hasExpired(sourceObj, store) {
-			if sourceObj != nil {
-				store.deleteKey(sourceKey, sourcePtr, sourceObj)
-			}
-			return false
-		}
-
-		// Use putHelper to handle putting the object at the destination key
-		store.putHelper(destKey, sourceObj)
-
-		// Remove the source key
-		delete(store.store, sourcePtr)
-		delete(store.keypool, sourceKey)
-		if KeyspaceStat[0] != nil {
-			KeyspaceStat[0]["keys"]--
-		}
-
-		// Notify watchers about the deletion of the source key
-		notifyWatchers(sourceKey, "DEL", sourceObj)
-
-		return true
-	}, store, WithStoreLock(), WithKeypoolLock())
-}
-
-func (store *Store) incrementKeyCount() {
-	if KeyspaceStat[0] == nil {
-		KeyspaceStat[0] = make(map[string]int)
-	}
-	KeyspaceStat[0]["keys"]++
-}
-
-func (store *Store) Get(k string) *Obj {
-	return store.getHelper(k, true)
-}
-
-func (store *Store) GetDel(k string) *Obj {
-	var v *Obj
-	withLocks(func() {
-		ptr, ok := store.keypool[k]
-		if !ok {
-			return
-		}
-
-		v = store.store[ptr]
-		if v != nil {
-			expired := hasExpired(v, store)
-			store.deleteKey(k, ptr, v)
-			if expired {
-				v = nil
-			}
-		}
-	}, store, WithStoreLock(), WithKeypoolLock())
-	return v
-}
-
-// setExpiry sets the expiry time for an object.
-// This method is not thread-safe. It should be called within a lock.
-func (store *Store) setExpiry(obj *Obj, expDurationMs int64) {
-	store.expires[obj] = uint64(utils.GetCurrentTime().UnixMilli()) + uint64(expDurationMs)
-}
-
-// setUnixTimeExpiry sets the expiry time for an object.
-// This method is not thread-safe. It should be called within a lock.
-func (store *Store) setUnixTimeExpiry(obj *Obj, exUnixTimeSec int64) {
-	// convert unix-time-seconds to unix-time-milliseconds
-	store.expires[obj] = uint64(exUnixTimeSec * 1000)
 }
 
 // Helper function to count clients
@@ -321,35 +233,29 @@ func countClients(clients *sync.Map) int {
 	return count
 }
 
-func (store *Store) ensureKeyInPool(k string) unsafe.Pointer {
-	ptr, ok := store.keypool[k]
-	if !ok {
-		ptr = unsafe.Pointer(&k)
-		store.keypool[k] = ptr
-	}
-	return ptr
+// Function to add a new watcher to a query.
+func AddWatcher(query DSQLQuery, clientFd int) {
+	clients, _ := WatchList.LoadOrStore(query, &sync.Map{})
+	clients.(*sync.Map).Store(clientFd, struct{}{})
 }
 
-func (store *Store) deleteKey(k string, ptr unsafe.Pointer, obj *Obj) bool {
-	if obj != nil {
-		delete(store.store, ptr)
-		delete(store.expires, obj)
-		delete(store.keypool, k)
-		KeyspaceStat[0]["keys"]--
-		notifyWatchers(k, "DEL", obj)
+// Function to remove a watcher from a query.
+func RemoveWatcher(query DSQLQuery, clientFd int) {
+	if clients, ok := WatchList.Load(query); ok {
+		clients.(*sync.Map).Delete(clientFd)
+		// If no more clients for this query, remove the query from WatchList
+		if clientCount := countClients(clients.(*sync.Map)); clientCount == 0 {
+			WatchList.Delete(query)
+		}
+	}
+}
+
+// Helper function to count clients
+func countClients(clients *sync.Map) int {
+	count := 0
+	clients.Range(func(_, _ interface{}) bool {
+		count++
 		return true
-	}
-	return false
-}
-
-func (store *Store) delByPtr(ptr unsafe.Pointer) bool {
-	if obj, ok := store.store[ptr]; ok {
-		key := *((*string)(ptr))
-		return store.deleteKey(key, ptr, obj)
-	}
-	return false
-}
-
-func notifyWatchers(k, operation string, obj *Obj) {
-	WatchChannel <- WatchEvent{k, operation, obj}
+	})
+	return count
 }
