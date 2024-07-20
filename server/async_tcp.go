@@ -57,7 +57,7 @@ func WatchKeys(ctx context.Context, wg *sync.WaitGroup) {
 						clientFd := clientKey.(int)
 						_, err := syscall.Write(clientFd, encodedResult)
 						if err != nil {
-							clients.Delete(clientFd)
+							core.RemoveWatcher(query, clientFd)
 						}
 						return true
 					})
