@@ -17,8 +17,7 @@ type WatchEvent struct {
 var store map[unsafe.Pointer]*Obj
 var expires map[*Obj]uint64
 var keypool map[string]unsafe.Pointer
-var WatchList map[DSQLQuery]map[int]struct{} // Maps keys to the file descriptors of clients that are watching them.
-var WatchListMutex = &sync.Mutex{}
+var WatchList sync.Map // Maps queries to the file descriptors of clients that are watching them.
 
 // Channel to receive updates about keys that are being watched.
 // The Watcher goroutine will wait on this channel. When a key is updated, the
@@ -30,7 +29,6 @@ func init() {
 	store = make(map[unsafe.Pointer]*Obj)
 	expires = make(map[*Obj]uint64)
 	keypool = make(map[string]unsafe.Pointer)
-	WatchList = make(map[DSQLQuery]map[int]struct{})
 	WatchChannel = make(chan WatchEvent, 100)
 }
 
@@ -115,4 +113,31 @@ func DelByPtr(ptr unsafe.Pointer) bool {
 		return true
 	}
 	return false
+}
+
+// Function to add a new watcher to a query.
+func AddWatcher(query DSQLQuery, clientFd int) {
+	clients, _ := WatchList.LoadOrStore(query, &sync.Map{})
+	clients.(*sync.Map).Store(clientFd, struct{}{})
+}
+
+// Function to remove a watcher from a query.
+func RemoveWatcher(query DSQLQuery, clientFd int) {
+	if clients, ok := WatchList.Load(query); ok {
+		clients.(*sync.Map).Delete(clientFd)
+		// If no more clients for this query, remove the query from WatchList
+		if clientCount := countClients(clients.(*sync.Map)); clientCount == 0 {
+			WatchList.Delete(query)
+		}
+	}
+}
+
+// Helper function to count clients
+func countClients(clients *sync.Map) int {
+	count := 0
+	clients.Range(func(_, _ interface{}) bool {
+		count++
+		return true
+	})
+	return count
 }
