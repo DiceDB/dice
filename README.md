@@ -92,7 +92,7 @@ $ make test
 
 ```sh
 $ go test -test.bench <pattern>
-$ go test -test.bench BenchmarkListRedis
+$ go test -test.bench BenchmarkListRedis -benchmem
 ```
 
 ## Getting Started
