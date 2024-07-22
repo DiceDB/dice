@@ -231,7 +231,7 @@ func RunAsyncTCPServer(serverFD int, wg *sync.WaitGroup) {
 				}
 				respond(cmds, comm)
 				if hasABORT {
-					ctx.Done()
+					cancel()
 					return
 				}
 			}

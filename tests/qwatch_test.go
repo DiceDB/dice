@@ -3,8 +3,11 @@ package tests
 import (
 	"context"
 	"fmt"
+	"net"
 	"testing"
 
+	"github.com/dicedb/dice/core"
+	redis "github.com/dicedb/go-dice"
 	"gotest.tools/v3/assert"
 )
 
@@ -62,31 +65,37 @@ func TestQWATCH(t *testing.T) {
 	resetQWatchStore()
 
 	publisher := getLocalConnection()
-	subscriber := getLocalConnection()
+	subscribers := []net.Conn{getLocalConnection(), getLocalConnection(), getLocalConnection()}
+	respParsers := make([]*core.RESPParser, len(subscribers))
 
-	rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("QWATCH \"%s\"", qWatchQuery))
-	if rp == nil {
-		t.Fail()
+	for i, subscriber := range subscribers {
+		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("QWATCH \"%s\"", qWatchQuery))
+		if rp == nil {
+			t.Fail()
+		}
+		respParsers[i] = rp
+
+		// Read first message (OK)
+		v, err := rp.DecodeOne()
+		assert.NilError(t, err)
+		assert.Equal(t, "OK", v.(string))
 	}
-
-	// Read first message (OK)
-	v, err := rp.DecodeOne()
-	assert.NilError(t, err)
-	assert.Equal(t, "OK", v.(string))
 
 	for _, tc := range qWatchTestCases {
 		// Set the value for the userID
 		fireCommand(publisher, fmt.Sprintf("SET match:100:user:%d %d", tc.userID, tc.score))
 
 		for _, expectedUpdate := range tc.expectedUpdates {
-			// Check if the update is received by the subscriber.
-			v, err := rp.DecodeOne()
-			assert.NilError(t, err)
+			for _, rp := range respParsers {
+				// Check if the update is received by the subscriber.
+				v, err := rp.DecodeOne()
+				assert.NilError(t, err)
 
-			// Message format: [key, op, message]
-			// Ensure the update matches the expected value.
-			update := v.([]interface{})
-			assert.DeepEqual(t, expectedUpdate, update)
+				// Message format: [key, op, message]
+				// Ensure the update matches the expected value.
+				update := v.([]interface{})
+				assert.DeepEqual(t, expectedUpdate, update)
+			}
 		}
 	}
 }
@@ -96,17 +105,22 @@ func TestQWATCHWithSDK(t *testing.T) {
 	ctx := context.Background()
 
 	publisher := getLocalSdk()
-	subscriber := getLocalSdk()
+	subscribers := []*redis.Client{getLocalSdk(), getLocalSdk(), getLocalSdk()}
+	qwatches := make([]*redis.QWatch, len(subscribers))
+	channels := make([]<-chan *redis.QMessage, len(subscribers))
 
-	qwatch := subscriber.QWatch(ctx)
-	if qwatch == nil {
-		t.Fail()
+	for i, subscriber := range subscribers {
+		qwatch := subscriber.QWatch(ctx)
+		if qwatch == nil {
+			t.Fail()
+		}
+		qwatches[i] = qwatch
+
+		err := qwatch.WatchQuery(ctx, qWatchQuery)
+		assert.NilError(t, err)
+
+		channels[i] = qwatch.Channel()
 	}
-
-	err := qwatch.WatchQuery(ctx, qWatchQuery)
-	assert.NilError(t, err)
-
-	ch := qwatch.Channel()
 
 	for _, tc := range qWatchTestCases {
 		// Set the value for the userID
@@ -114,13 +128,14 @@ func TestQWATCHWithSDK(t *testing.T) {
 		assert.NilError(t, err)
 
 		for _, expectedUpdate := range tc.expectedUpdates {
-			// Check if the update is received by the subscriber.
-			v := <-ch
+			for _, ch := range channels {
 
-			assert.Equal(t, len(v.Updates), len(expectedUpdate))
+				v := <-ch
+				assert.Equal(t, len(v.Updates), len(expectedUpdate))
 
-			for i, update := range v.Updates {
-				assert.DeepEqual(t, expectedUpdate[i], []interface{}{update.Key, update.Value})
+				for i, update := range v.Updates {
+					assert.DeepEqual(t, expectedUpdate[i], []interface{}{update.Key, update.Value})
+				}
 			}
 		}
 	}
