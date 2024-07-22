@@ -1,0 +1,84 @@
+package core
+
+import (
+	"testing"
+
+	"gotest.tools/v3/assert"
+)
+
+func TestMixedOperations(t *testing.T) {
+	byteArray := NewByteArray(8)
+
+	// Mixed operations
+	byteArray.SetBit(0, true)
+	byteArray.SetBit(1, true)
+	byteArray.SetBit(2, false)
+	byteArray.SetBit(3, true)
+	byteArray.SetBit(4, true)
+
+	assert.Equal(t, byteArray.BitCount(), 4, "Total set bits should be 4")
+
+	byteArray.SetBit(0, false)
+	byteArray.SetBit(1, false)
+
+	assert.Equal(t, byteArray.BitCount(), 2, "Total set bits should be 2")
+}
+
+func TestByteArray(t *testing.T) {
+	byteArray := NewByteArray(100) // Larger array size
+
+	// Test SetBit and GetBit
+	byteArray.SetBit(10, true)
+	assert.Equal(t, byteArray.GetBit(10), true, "Bit at position 10 should be set to true")
+
+	byteArray.SetBit(10, false)
+	assert.Equal(t, byteArray.GetBit(10), false, "Bit at position 10 should be set to false")
+
+	// Test BitCount with multiple bits
+	byteArray.SetBit(10, true)
+	byteArray.SetBit(15, true)
+	byteArray.SetBit(100, true)
+	byteArray.SetBit(200, true)
+	byteArray.SetBit(300, true)
+	assert.Equal(t, byteArray.BitCount(), 5, "Total set bits should be 5")
+
+	byteArray.SetBit(15, false)
+	assert.Equal(t, byteArray.BitCount(), 4, "Total set bits should be 4 after unsetting bit 15")
+
+	// Test edge/boundary cases
+	byteArray.SetBit(799, true)
+	assert.Equal(t, byteArray.GetBit(799), true, "Bit at position 799 should be set to true")
+
+	byteArray.SetBit(799, false)
+	assert.Equal(t, byteArray.GetBit(799), false, "Bit at position 799 should be set to false")
+
+	byteArray.SetBit(0, true)
+	assert.Equal(t, byteArray.GetBit(0), true, "Bit at position 0 should be set to true")
+
+	byteArray.SetBit(0, false)
+	assert.Equal(t, byteArray.GetBit(0), false, "Bit at position 0 should be set to false")
+}
+
+func TestLargeByteArray(t *testing.T) {
+	byteArray := NewByteArray(10000) // Even larger array size
+
+	var setcount = 0
+	// Set and test bits in various positions
+	for i := 0; i < 10000*8; i += 1000 {
+		byteArray.SetBit(i, true)
+		assert.Equal(t, byteArray.GetBit(i), true, "Bit at position should be set to true")
+		setcount++
+	}
+
+	// Test BitCount
+	assert.Equal(t, byteArray.BitCount(), setcount, "Total set bits should match the number of set positions")
+
+	// Unset and test bits
+	for i := 0; i < 10000*8; i += 1000 {
+		byteArray.SetBit(i, false)
+		assert.Equal(t, byteArray.GetBit(i), false, "Bit at position should be set to false")
+	}
+
+	// Test BitCount after unsetting
+	assert.Equal(t, byteArray.BitCount(), 0, "Total set bits should be 0 after unsetting all bits")
+}
