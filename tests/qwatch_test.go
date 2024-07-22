@@ -3,9 +3,10 @@ package tests
 import (
 	"context"
 	"fmt"
-	"github.com/dicedb/dice/internal/constants"
 	"net"
 	"testing"
+
+	"github.com/dicedb/dice/internal/constants"
 
 	"github.com/bytedance/sonic"
 
@@ -60,72 +61,63 @@ func TestQWATCH(t *testing.T) {
 	publisher := getLocalConnection()
 
 	subscribers := []net.Conn{getLocalConnection(), getLocalConnection(), getLocalConnection()}
-
-	// Cleanup Store for next tests
-	defer func() {
-		for _, tc := range qWatchTestCases {
-			fireCommand(publisher, fmt.Sprintf("DEL match:100:user:%d", tc.userID))
-		}
-
-		publisher.Close()
-		for _, sub := range subscribers {
-			sub.Close()
-		}
-	}()
-
 	respParsers := make([]*core.RESPParser, len(subscribers))
 
-	// Subscribe to the QWATCH query
 	for i, subscriber := range subscribers {
 		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("QWATCH \"%s\"", qWatchQuery))
-		assert.Assert(t, rp != nil)
+		if rp == nil {
+			t.Fail()
+		}
 		respParsers[i] = rp
 
+		// Read first message (OK)
 		v, err := rp.DecodeOne()
 		assert.NilError(t, err)
-		assert.Equal(t, 3, len(v.([]interface{})))
+		assert.Equal(t, "OK", v.(string))
 	}
 
-	runQWatchScenarios(t, publisher, respParsers)
+	for _, tc := range qWatchTestCases {
+		// Set the value for the userID
+		fireCommand(publisher, fmt.Sprintf("SET match:100:user:%d %d", tc.userID, tc.score))
+
+		for _, expectedUpdate := range tc.expectedUpdates {
+			for _, rp := range respParsers {
+				// Check if the update is received by the subscriber.
+				v, err := rp.DecodeOne()
+				assert.NilError(t, err)
+
+				// Message format: [key, op, message]
+				// Ensure the update matches the expected value.
+				update := v.([]interface{})
+				assert.DeepEqual(t, expectedUpdate, update)
+			}
+		}
+	}
 }
 
-// TestQWATCHWithSDK tests the QWATCH functionality using the Redis SDK.
 func TestQWATCHWithSDK(t *testing.T) {
 	ctx := context.Background()
 	publisher := getLocalSdk()
 
 	subscribers := []*redis.Client{getLocalSdk(), getLocalSdk(), getLocalSdk()}
-
-	// Cleanup Store for next tests
-	defer func() {
-		for _, tc := range qWatchTestCases {
-			publisher.Del(context.Background(), fmt.Sprintf("match:100:user:%d", tc.userID))
-		}
-
-		publisher.Close()
-		for _, sub := range subscribers {
-			sub.Close()
-		}
-	}()
-
+	qwatches := make([]*redis.QWatch, len(subscribers))
 	channels := make([]<-chan *redis.QMessage, len(subscribers))
 
-	// Subscribe to the QWATCH query
 	for i, subscriber := range subscribers {
 		qwatch := subscriber.QWatch(ctx)
-		assert.Assert(t, qwatch != nil)
+		if qwatch == nil {
+			t.Fail()
+		}
+		qwatches[i] = qwatch
+
 		err := qwatch.WatchQuery(ctx, qWatchQuery)
 		assert.NilError(t, err)
+
 		channels[i] = qwatch.Channel()
 		//	Get the first message
 		<-channels[i]
 	}
 
-	runQWatchScenarios(t, publisher, channels)
-}
-
-// runQWatchScenario executes the QWATCH test scenarios.
-func runQWatchScenarios(t *testing.T, publisher interface{}, receivers interface{}) {
 	for _, tc := range qWatchTestCases {
 		// Publish updates based on the publisher type
 		switch p := publisher.(type) {
@@ -138,24 +130,13 @@ func runQWatchScenarios(t *testing.T, publisher interface{}, receivers interface
 
 		// For raw connections, parse RESP responses
 		for _, expectedUpdate := range tc.expectedUpdates {
+			for _, ch := range channels {
 
-			switch r := receivers.(type) {
-			case []*core.RESPParser:
-				// For raw connections, parse RESP responses
-				for _, rp := range r {
-					v, err := rp.DecodeOne()
-					assert.NilError(t, err)
-					update := v.([]interface{})
-					assert.DeepEqual(t, []interface{}{constants.Qwatch, qWatchQuery, expectedUpdate}, update)
-				}
-			case []<-chan *redis.QMessage:
-				// For raw connections, parse RESP responses
-				for _, ch := range r {
-					v := <-ch
-					assert.Equal(t, len(v.Updates), len(expectedUpdate))
-					for i, update := range v.Updates {
-						assert.DeepEqual(t, expectedUpdate[i], []interface{}{update.Key, update.Value})
-					}
+				v := <-ch
+				assert.Equal(t, len(v.Updates), len(expectedUpdate))
+
+				for i, update := range v.Updates {
+					assert.DeepEqual(t, expectedUpdate[i], []interface{}{update.Key, update.Value})
 				}
 			}
 		}
