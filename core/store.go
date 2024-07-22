@@ -20,7 +20,13 @@ var expires map[*Obj]uint64 // Does not need to be thread-safe as it is only acc
 var keypool map[string]unsafe.Pointer
 var WatchList sync.Map // Maps queries to the file descriptors of clients that are watching them.
 
-// WatchChannel Channel to receive updates about keys that are being watched.
+var storeMutex sync.RWMutex   // Mutex to protect the store map, must be acquired before keypoolMutex if both are needed.
+var keypoolMutex sync.RWMutex // Mutex to protect the keypool map, must be acquired after storeMutex if both are needed.
+
+// Channel to receive updates about keys that are being watched.
+// The Watcher goroutine will wait on this channel. When a key is updated, the
+// goroutine will send the updated value and the related operation to all the
+// clients that are watching the key.
 var WatchChannel chan WatchEvent
 
 func NewStore() *Store {
