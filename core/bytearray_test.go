@@ -82,3 +82,21 @@ func TestLargeByteArray(t *testing.T) {
 	// Test BitCount after unsetting
 	assert.Equal(t, byteArray.BitCount(), 0, "Total set bits should be 0 after unsetting all bits")
 }
+
+func BenchmarkLargeByteArray1(t *testing.B) {
+	byteArray := NewByteArray(10000)
+
+	for i := 0; i < 10000*8; i += 100 {
+		byteArray.SetBit(i, true)
+		assert.Equal(t, byteArray.GetBit(i), true, "Bit at position should be set to true")
+	}
+}
+
+func BenchmarkLargeByteArray2(t *testing.B) {
+	byteArray := NewByteArray(1000000)
+
+	for i := 0; i < 10000*8; i += 100 {
+		byteArray.SetBit(i, true)
+		assert.Equal(t, byteArray.GetBit(i), true, "Bit at position should be set to true")
+	}
+}
