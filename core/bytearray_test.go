@@ -89,14 +89,16 @@ func BenchmarkLargeByteArray1(t *testing.B) {
 	for i := 0; i < 10000*8; i += 100 {
 		byteArray.SetBit(i, true)
 		assert.Equal(t, byteArray.GetBit(i), true, "Bit at position should be set to true")
+		byteArray.BitCount()
 	}
 }
 
 func BenchmarkLargeByteArray2(t *testing.B) {
 	byteArray := NewByteArray(1000000)
 
-	for i := 0; i < 10000*8; i += 100 {
+	for i := 0; i < 1000000*8; i += 500 {
 		byteArray.SetBit(i, true)
 		assert.Equal(t, byteArray.GetBit(i), true, "Bit at position should be set to true")
+		byteArray.BitCount()
 	}
 }
