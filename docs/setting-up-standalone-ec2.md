@@ -1,4 +1,4 @@
-# Setting Up DiceDB end-to-end infra on AWS using Pulumi
+# Setting Up DiceDB Standalone EC2 instance on AWS using Pulumi
 
 ## Prerequisites
 
@@ -13,7 +13,7 @@
 ```
 export AWS_REGION=us-east-1
 export AWS_PROFILE=<profile_name>
-export STACK_NAME=full
+export STACK_NAME=standalone
 export PULUMI_CONFIG_PASSPHRASE=
 ```
 
@@ -39,6 +39,7 @@ cd pulumi
 python -m venv venv
 source venv/bin/activate
 ```
+
 ### 3. Install Required Dependencies
 
 ```bash

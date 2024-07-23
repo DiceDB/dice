@@ -141,7 +141,7 @@ private_key = pulumi.Output.all(key_pair.key_pair_id).apply(
 
 # Create an EC2 instance
 instance = aws.ec2.Instance(
-    "dice-instance",
+    "dicedb",
     instance_type=instance_type,
     ami=ami_id,
     subnet_id=subnet.id,
