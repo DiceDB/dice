@@ -4,4 +4,3 @@ bin/dice
 dice-server
 venv
 __pycache__
-.idea/

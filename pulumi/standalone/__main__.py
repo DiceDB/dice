@@ -1,4 +1,4 @@
-constants.EmptyStr"
+"""
 Pulumi script for deploying DiceDB on AWS EC2
 
 This script creates the necessary AWS infrastructure to run DiceDB,
@@ -7,7 +7,7 @@ sets up DiceDB as a systemd service on the instance.
 
 Important: Ensure an S3 bucket for Pulumi state management is created
 before running this script. The bucket name is specified in Pulumi.yaml.
-constants.EmptyStr"
+"""
 
 import pulumi
 import pulumi_aws as aws
@@ -80,7 +80,7 @@ setup_dice = command.remote.Command(
         private_key=private_key,
     ),
     create=pulumi.Output.all(instance.public_ip).apply(
-        lambda args: constants.EmptyStr"
+        lambda args: """
         set -e
         sudo yum update -y
         sudo yum install -y git golang
@@ -107,7 +107,7 @@ EOT'
         sudo systemctl start dicedb
         sudo systemctl enable dicedb
         echo "DiceDB setup completed successfully"
-        constants.EmptyStr"
+        """
     ),
 )
 
