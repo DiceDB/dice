@@ -7,16 +7,16 @@ import (
 	"github.com/dicedb/dice/internal/constants"
 )
 
-func TestWildCardMatch(t *testing.T) {
-	tests := []struct {
+func TestWildCardMatch(t *testing.T){
+	tests := []struct{
 		pattern string
-		key     string
-		want    bool
+		key 	string
+		want	bool
 	}{
 		{"*", "anything", true},
-		{"*", constants.EmptyStr, true},
+		{"*", "", true},
 		{"?", "a", true},
-		{"?", constants.EmptyStr, false},
+		{"?", "", false},
 		{"a?", "ab", true},
 		{"a?", "a", false},
 		{"a*", "abc", true},
