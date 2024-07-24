@@ -16,7 +16,7 @@ func ExecuteQuery(query DSQLQuery) ([]DSQLQueryResultRow, error) {
 	storeMutex.RLock()
 	keypoolMutex.RLock()
 	for key, ptr := range keypool {
-		if RegexMatch(query.KeyRegex, key) {
+		if WildCardMatch(query.KeyRegex, key) {
 			row := DSQLQueryResultRow{
 				Key:   key,
 				Value: store[ptr],
