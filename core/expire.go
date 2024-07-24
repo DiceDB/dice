@@ -2,6 +2,7 @@ package core
 
 import (
 	"time"
+	"unsafe"
 )
 
 func hasExpired(obj *Obj) bool {
@@ -23,20 +24,27 @@ func getExpiry(obj *Obj) (uint64, bool) {
 func expireSample() float32 {
 	var limit int = 20
 	var expiredCount int = 0
+	var keysToDelete []unsafe.Pointer
 
-	// assuming iteration of golang hash table in randomized
+	storeMutex.RLock()
+	// Collect keys to be deleted
 	for keyPtr, obj := range store {
-		limit--
-		if hasExpired(obj) {
-			DelByPtr(keyPtr)
-			expiredCount++
-		}
-
 		// once we iterated to 20 keys that have some expiration set
 		// we break the loop
 		if limit == 0 {
 			break
 		}
+		limit--
+		if hasExpired(obj) {
+			keysToDelete = append(keysToDelete, keyPtr)
+			expiredCount++
+		}
+	}
+	storeMutex.RUnlock()
+
+	// Delete the keys outside the read lock
+	for _, keyPtr := range keysToDelete {
+		DelByPtr(keyPtr)
 	}
 
 	return float32(expiredCount) / float32(20.0)

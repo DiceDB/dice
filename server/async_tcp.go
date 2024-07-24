@@ -40,35 +40,29 @@ func WatchKeys(ctx context.Context, wg *sync.WaitGroup) {
 	for {
 		select {
 		case event := <-core.WatchChannel:
-			core.WatchListMutex.Lock()
-			// Check if the key matches any RegexMatcher in the watch list.
-			var affectedQueries []core.DSQLQuery
-			for query := range core.WatchList {
-				var regex = query.KeyRegex
-				// Check if event.KEY matches the regex.
-				if core.WildCardMatch(regex, event.Key) {
-					affectedQueries = append(affectedQueries, query)
-				}
-			}
+			core.WatchList.Range(func(key, value interface{}) bool {
+				query := key.(core.DSQLQuery)
+				clients := value.(*sync.Map)
 
-			// Execute all the affected queries and send the results to the subscribed clients.
-			for _, query := range affectedQueries {
-				result, err := core.ExecuteQuery(query)
-				if err != nil {
-					log.Error(err)
-					continue
-				}
-
-				for clientFd := range core.WatchList[query] {
-					_, err := syscall.Write(clientFd, core.Encode(result, false))
-
-					// if the client is not reachable, remove it from the watch list.
+				if core.WildCardMatch(query.KeyRegex, event.Key) {
+					result, err := core.ExecuteQuery(query)
 					if err != nil {
-						delete(core.WatchList[query], clientFd)
+						log.Error(err)
+						return true // continue to next item
 					}
+
+					encodedResult := core.Encode(result, false)
+					clients.Range(func(clientKey, _ interface{}) bool {
+						clientFd := clientKey.(int)
+						_, err := syscall.Write(clientFd, encodedResult)
+						if err != nil {
+							core.RemoveWatcher(query, clientFd)
+						}
+						return true
+					})
 				}
-			}
-			core.WatchListMutex.Unlock()
+				return true
+			})
 		case <-ctx.Done():
 			return
 		}
@@ -236,7 +230,7 @@ func RunAsyncTCPServer(serverFD int, wg *sync.WaitGroup) {
 				}
 				respond(cmds, comm)
 				if hasABORT {
-					ctx.Done()
+					cancel()
 					return
 				}
 			}

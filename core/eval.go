@@ -851,14 +851,7 @@ func evalQWATCH(args []string, c *Client) []byte {
 		return Encode(error, false)
 	}
 
-	WatchListMutex.Lock()
-	defer WatchListMutex.Unlock()
-	if WatchList[query] == nil {
-		WatchList[query] = make(map[int]struct{})
-	}
-
-	// Add the client to this key's watch list
-	WatchList[query][c.Fd] = struct{}{}
+	AddWatcher(query, c.Fd)
 
 	return RESP_OK
 }

@@ -26,7 +26,10 @@ func (q *QueueRef) Size() int64 {
 // Insert inserts reference of the key in the QueueRef q.
 // returns false if key does not exist
 func (q *QueueRef) Insert(key string) bool {
+	keypoolMutex.RLock()
 	x, ok := keypool[key]
+	keypoolMutex.RUnlock()
+
 	if !ok {
 		return false
 	}
