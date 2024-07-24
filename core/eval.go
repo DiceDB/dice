@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/core/bit"
 )
 
 var RESP_NIL []byte = []byte("$-1\r\n")
@@ -856,6 +857,104 @@ func evalQWATCH(args []string, c *Client) []byte {
 	return RESP_OK
 }
 
+func evalBITCOUNT(args []string) []byte {
+	var err error
+
+	// if more than 4 arguments are provided, return error
+	if len(args) > 4 {
+		return Encode(errors.New("ERR invalid number of arguments for `evalBITCOUNT` command"), false)
+	}
+
+	// fetching value of the key
+	var key string = args[0]
+	var obj = Get(key)
+	if obj == nil {
+		return Encode(errors.New("ERR key does not exist for `evalBITCOUNT` command"), false)
+	}
+	var valueInterface = obj.Value
+	if err := assertType(obj.TypeEncoding, OBJ_TYPE_STRING); err != nil {
+		return Encode("ERR string value do not exists on key", false)
+	}
+	value := []byte(valueInterface.(string))
+
+	// defining constants of the function
+	valueLength := int64(len(value))
+	start := int64(0)
+	end := valueLength - 1
+	var unit = bit.BYTE
+
+	// checking which arguments are present and according validating arguments
+	if len(args) > 1 {
+		start, err = strconv.ParseInt(args[1], 10, 64)
+		if err != nil {
+			return Encode(errors.New("ERR start invalid number for `evalBITCOUNT` command"), false)
+		}
+		// if start is negative then output error
+		if start < 0 {
+			return Encode(errors.New("ERR start cannot be negative for `evalBITCOUNT` command"), false)
+		}
+	}
+	if len(args) > 2 {
+		end, err = strconv.ParseInt(args[2], 10, 64)
+		if err != nil {
+			return Encode(errors.New("ERR end invalid number for `evalBITCOUNT` command"), false)
+		}
+
+		// if end is negative then output error
+		if end < 0 {
+			return Encode(errors.New("ERR end cannot be negative for `evalBITCOUNT` command"), false)
+		}
+	}
+	if len(args) > 3 {
+		unit = args[3]
+		if unit != bit.BYTE && unit != bit.BIT {
+			return Encode(errors.New("ERR invalid unit input` command"), false)
+		}
+	}
+	if start > end {
+		return Encode(errors.New("ERR start cannot be greater than end for `evalBITCOUNT` command"), false)
+	}
+	if end > valueLength && unit == bit.BYTE {
+		return Encode(errors.New("ERR end cannot be greater than length of value for `evalBITCOUNT` command"), false)
+	}
+
+	bitCount := 0
+	if unit == bit.BYTE {
+		for i := start; i <= end; i++ {
+			bitCount += int(popcount(value[i]))
+		}
+		return Encode(bitCount, true)
+	} else {
+		startBitRange := start / 8
+		endBitRange := end / 8
+
+		for i := startBitRange; i <= endBitRange; i++ {
+			// fmt.Println("Starting work for i", i)
+			// fmt.Println("Value work for i", value[i])
+
+			// valueBinary := byteToBinary(value[i])
+			// fmt.Println("Binary for value[i]", valueBinary)
+
+			if i == startBitRange {
+				considerBits := start % 8
+				for j := 8 - considerBits - 1; j >= 0; j-- {
+					bitCount += int(popcount(byte(int(value[i]) & (1 << j))))
+				}
+			} else if i == endBitRange {
+				considerBits := end % 8
+
+				for j := considerBits; j >= 0; j-- {
+					bitCount += int(popcount(byte(int(value[i]) & (1 << (8 - j - 1)))))
+				}
+			} else {
+				bitCount += int(popcount(value[i]))
+			}
+			// fmt.Println("Ending work for i", i)
+		}
+		return Encode(bitCount, true)
+	}
+}
+
 func executeCommand(cmd *RedisCmd, c *Client) []byte {
 	switch cmd.Cmd {
 	case "PING":
@@ -944,6 +1043,8 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		}
 		c.TxnDiscard()
 		return RESP_OK
+	case "BITCOUNT":
+		return evalBITCOUNT(cmd.Args)
 	case "ABORT":
 		return RESP_OK
 	default:
