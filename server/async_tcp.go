@@ -46,7 +46,7 @@ func WatchKeys(ctx context.Context, wg *sync.WaitGroup) {
 			for query := range core.WatchList {
 				var regex = query.KeyRegex
 				// Check if event.KEY matches the regex.
-				if core.RegexMatch(regex, event.Key) {
+				if core.WildCardMatch(regex, event.Key) {
 					affectedQueries = append(affectedQueries, query)
 				}
 			}
