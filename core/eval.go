@@ -929,12 +929,6 @@ func evalBITCOUNT(args []string) []byte {
 		endBitRange := end / 8
 
 		for i := startBitRange; i <= endBitRange; i++ {
-			// fmt.Println("Starting work for i", i)
-			// fmt.Println("Value work for i", value[i])
-
-			// valueBinary := byteToBinary(value[i])
-			// fmt.Println("Binary for value[i]", valueBinary)
-
 			if i == startBitRange {
 				considerBits := start % 8
 				for j := 8 - considerBits - 1; j >= 0; j-- {
@@ -949,7 +943,6 @@ func evalBITCOUNT(args []string) []byte {
 			} else {
 				bitCount += int(popcount(value[i]))
 			}
-			// fmt.Println("Ending work for i", i)
 		}
 		return Encode(bitCount, true)
 	}

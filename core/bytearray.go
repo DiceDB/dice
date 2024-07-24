@@ -51,29 +51,3 @@ func popcount(x byte) byte {
 	// which now contain the total count of set bits in the original byte
 	return (x + (x >> 4)) & 0x0F
 }
-
-// // countBits counts the number of bits set to 1 in a byte.
-// func countBits(b byte) int {
-// 	count := 0
-// 	for b != 0 {
-// 		count += int(b & 1)
-// 		b >>= 1
-// 	}
-// 	return count
-// }
-
-// // byteToBinary converts a byte to its binary string representation
-// func byteToBinary(b byte) []byte {
-
-// 	// Convert integer to binary string
-// 	binaryStr := strconv.FormatInt(int64(b), 2)
-
-// 	// Prepend zeros if the length is less than 8
-// 	for len(binaryStr) < 8 {
-// 		binaryStr = "0" + binaryStr
-// 	}
-
-// 	// Convert binary string to a slice of bytes
-// 	binaryBytes := []byte(binaryStr)
-// 	return binaryBytes
-// }
