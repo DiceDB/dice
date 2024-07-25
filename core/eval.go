@@ -272,6 +272,20 @@ func evalINCR(args []string) []byte {
 	return Encode(i, false)
 }
 
+//SUMVAL return sum of all integer keys present in the store
+func evalSUMVAL(args []string) []byte {
+	var sum int64 = 0
+	for _, obj := range store {
+		if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_INT); err != nil {
+			continue
+		} else {
+			val, _ := strconv.ParseInt(obj.Value.(string), 10, 64)
+			sum += val
+		}
+	}
+	return Encode(sum, false)
+}
+
 // evalINFO creates a buffer with the info of total keys per db
 // Returns the encoded buffer as response
 func evalINFO(args []string) []byte {
@@ -884,6 +898,8 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		return evalLATENCY(cmd.Args)
 	case "LRU":
 		return evalLRU(cmd.Args)
+	case "SUMVAL":
+		return evalSUMVAL(cmd.Args)
 	case "SLEEP":
 		return evalSLEEP(cmd.Args)
 	case "QINTINS":
