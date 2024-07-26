@@ -11,37 +11,57 @@ var (
 
 	pingCmdMeta = DiceCmdMeta{
 		Name: "PING",
-		Info: "ping command info here",
+		Info: `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
 		Eval: evalPING,
 	}
 	setCmdMeta = DiceCmdMeta{
 		Name: "SET",
-		Info: "set command info here",
+		Info: `SET puts a new <key, value> pair in db as in the args
+		args must contain key and value.
+		args can also contain multiple options -
+		EX or ex which will set the expiry time(in secs) for the key
+		Returns encoded error response if at least a <key, value> pair is not part of args
+		Returns encoded error response if expiry tme value in not integer
+		Returns encoded OK RESP once new entry is added
+		If the key already exists then the value will be overwritten and expiry will be discarded`,
 		Eval: evalSET,
 	}
 	getCmdMeta = DiceCmdMeta{
 		Name: "GET",
-		Info: "get command info here",
+		Info: `GET returns the value for the queried key in args
+		The key should be the only param in args
+		The RESP value of the key is encoded and then returned
+		evalGET returns RESP_NIL if key is expired or it does not exist`,
 		Eval: evalGET,
 	}
 	ttlCmdMeta = DiceCmdMeta{
 		Name: "TTL",
-		Info: "ttl command info here",
+		Info: `TTL returns Time-to-Live in secs for the queried key in args
+		 The key should be the only param in args else returns with an error
+		 Returns	
+		 RESP encoded time (in secs) remaining for the key to expire
+		 RESP encoded -2 stating key doesn't exist or key is expired
+		 RESP encoded -1 in case no expiration is set on the key`,
 		Eval: evalTTL,
 	}
 	delCmdMeta = DiceCmdMeta{
 		Name: "DEL",
-		Info: "del command info here",
+		Info: `DEL deletes all the specified keys in args list
+		returns the count of total deleted keys after encoding`,
 		Eval: evalDEL,
 	}
 	expireCmdMeta = DiceCmdMeta{
 		Name: "EXPIRE",
-		Info: "expire command info here",
+		Info: `EXPIRE sets a expiry time(in secs) on the specified key in args
+		args should contain 2 values, key and the expiry time to be set for the key
+		The expiry time should be in integer format; if not, it returns encoded error response
+		Returns RESP_ONE if expiry was set on the key successfully.
+		Once the time is lapsed, the key will be deleted automatically`,
 		Eval: evalEXPIRE,
 	}
 	helloCmdMeta = DiceCmdMeta{
 		Name: "HELLO",
-		Info: "hello command info here",
+		Info: `HELLO always replies with a list of current server and connection properties, such as: versions, modules loaded, client ID, replication role and so forth`,
 		Eval: evalHELLO,
 	}
 	bgrewriteaofCmdMeta = DiceCmdMeta{
@@ -51,163 +71,236 @@ var (
 	}
 	incrCmdMeta = DiceCmdMeta{
 		Name: "INCR",
-		Info: "incr command info here",
+		Info: `INCR increments the value of the specified key in args by 1,
+		if the key exists and the value is integer format.
+		The key should be the only param in args.
+		If the key does not exist, new key is created with value 0,
+		the value of the new key is then incremented.
+		The value for the queried key should be of integer format,
+		if not evalINCR returns encoded error response.
+		evalINCR returns the incremented value for the key if there are no errors.`,
 		Eval: evalINCR,
 	}
 	infoCmdMeta = DiceCmdMeta{
 		Name: "INFO",
-		Info: "info command info here",
+		Info: `INFO creates a buffer with the info of total keys per db
+		Returns the encoded buffer as response`,
 		Eval: evalINFO,
 	}
 	clientCmdMeta = DiceCmdMeta{
 		Name: "CLIENT",
-		Info: "client command info here",
+		Info: `This is a container command for client connection commands.`,
 		Eval: evalCLIENT,
 	}
 	latencyCmdMeta = DiceCmdMeta{
 		Name: "LATENCY",
-		Info: "latency command info here",
+		Info: `This is a container command for latency diagnostics commands.`,
 		Eval: evalLATENCY,
 	}
 	lruCmdMeta = DiceCmdMeta{
 		Name: "LRU",
-		Info: "lru command info here",
+		Info: `LRU deletes all the keys from the LRU
+		returns encoded RESP OK`,
 		Eval: evalLRU,
 	}
 	sleepCmdMeta = DiceCmdMeta{
 		Name: "SLEEP",
-		Info: "sleep command info here",
+		Info: `SLEEP sets db to sleep for the specified number of seconds.
+		The sleep time should be the only param in args.
+		Returns error response if the time param in args is not of integer format.
+		SLEEP returns RESP_OK after sleeping for mentioned seconds`,
 		Eval: evalSLEEP,
 	}
 	qintinsCmdMeta = DiceCmdMeta{
 		Name: "QINTINS",
-		Info: "qintins command info here",
+		Info: `QINTINS inserts the provided integer in the key identified by key
+		first argument will be the key, that should be of type "QINT"
+		second argument will be the integer value
+		if the key does not exist, QINTINS will also create the integer queue`,
 		Eval: evalQINTINS,
 	}
 	qintremCmdMeta = DiceCmdMeta{
 		Name: "QINTREM",
-		Info: "qintrem command info here",
+		Info: `QINTREM removes the element from the QINT identified by key
+		first argument will be the key, that should be of type "QINT"
+		if the key does not exist, QINTREM returns nil otherwise it
+		returns the integer value popped from the queue
+		if we remove from the empty queue, nil is returned`,
 		Eval: evalQINTREM,
 	}
 	qintlenCmdMeta = DiceCmdMeta{
 		Name: "QINTLEN",
-		Info: "qintlen command info here",
+		Info: `QINTLEN returns the length of the QINT identified by key
+		returns the integer value indicating the length of the queue
+		if the key does not exist, the response is 0`,
 		Eval: evalQINTLEN,
 	}
 	qintpeekCmdMeta = DiceCmdMeta{
 		Name: "QINTPEEK",
-		Info: "qintpeek command info here",
+		Info: `QINTPEEK peeks into the QINT and returns 5 elements without popping them
+		returns the array of integers as the response.
+		if the key does not exist, then we return an empty array`,
 		Eval: evalQINTPEEK,
 	}
 	bfinitCmdMeta = DiceCmdMeta{
 		Name: "BFINIT",
-		Info: "bfinit command info here",
+		Info: `BFINIT command initializes a new bloom filter and allocation it's relevant parameters based on given inputs.
+		If no params are provided, it uses defaults.`,
 		Eval: evalBFINIT,
 	}
 	bfaddCmdMeta = DiceCmdMeta{
 		Name: "BFADD",
-		Info: "bfadd command info here",
+		Info: `BFADD adds an element to
+		a bloom filter. If the filter does not exists, it will create a new one
+		with default parameters.`,
 		Eval: evalBFADD,
 	}
 	bfexistsCmdMeta = DiceCmdMeta{
 		Name: "BFEXISTS",
-		Info: "bfexists command info here",
+		Info: `BFEXISTS checks existance of an element in a bloom filter.`,
 		Eval: evalBFEXISTS,
 	}
 	bfinfoCmdMeta = DiceCmdMeta{
 		Name: "BFINFO",
-		Info: "bfinfo command info here",
+		Info: `BFINFO returns the parameters and metadata of an existing bloom filter.`,
 		Eval: evalBFINFO,
 	}
 	qrefinsCmdMeta = DiceCmdMeta{
 		Name: "QREFINS",
-		Info: "qrefins command info here",
+		Info: `QREFINS inserts the reference of the provided key identified by key
+		first argument will be the key, that should be of type "QREF"
+		second argument will be the key that needs to be added to the queueref
+		if the queue does not exist, QREFINS will also create the queueref
+		returns 1 if the key reference was inserted
+		returns 0 otherwise`,
 		Eval: evalQREFINS,
 	}
 	qrefremCmdMeta = DiceCmdMeta{
 		Name: "QREFREM",
-		Info: "qrefrem command info here",
+		Info: `QREFREM removes the element from the QREF identified by key
+		first argument will be the key, that should be of type "QREF"
+		if the key does not exist, QREFREM returns nil otherwise it
+		returns the RESP encoded value of the key reference from the queue
+		if we remove from the empty queue, nil is returned`,
 		Eval: evalQREFREM,
 	}
 	qreflenCmdMeta = DiceCmdMeta{
 		Name: "QREFLEN",
-		Info: "qreflen command info here",
+		Info: `QREFLEN returns the length of the QREF identified by key
+		returns the integer value indicating the length of the queue
+		if the key does not exist, the response is 0`,
 		Eval: evalQREFLEN,
 	}
 	qrefpeekCmdMeta = DiceCmdMeta{
-		Name: "GET",
-		Info: "qrefpeek command info here",
-		Eval: evalGET,
+		Name: "QREFPEEK",
+		Info: `QREFPEEK peeks into the QREF and returns 5 elements without popping them
+		returns the array of resp encoded values as the response.
+		if the key does not exist, then we return an empty array`,
+		Eval: evalQREFPEEK,
 	}
 	stackintpushCmdMeta = DiceCmdMeta{
 		Name: "STACKINTPUSH",
-		Info: "stackintpush command info here",
+		Info: `STACKINTPUSH pushes the provided integer in the key identified by key
+		first argument will be the key, that should be of type "STACKINT"
+		second argument will be the integer value
+		if the key does not exist, STACKINTPUSH will also create the integer stack`,
 		Eval: evalSTACKINTPUSH,
 	}
 	stackintpopCmdMeta = DiceCmdMeta{
 		Name: "STACKINTPOP",
-		Info: "stackintpop command info here",
+		Info: `STACKINTPOP pops the element from the STACKINT identified by key
+		first argument will be the key, that should be of type "STACKINT"
+		if the key does not exist, STACKINTPOP returns nil otherwise it
+		returns the integer value popped from the stack
+		if we remove from the empty stack, nil is returned`,
 		Eval: evalSTACKINTPOP,
 	}
 	stackintlenCmdMeta = DiceCmdMeta{
 		Name: "STACKINTLEN",
-		Info: "stackintlen command info here",
+		Info: `STACKINTLEN returns the length of the STACKINT identified by key
+		returns the integer value indicating the length of the stack
+		if the key does not exist, the response is 0`,
 		Eval: evalSTACKINTLEN,
 	}
 	stackintpeekCmdMeta = DiceCmdMeta{
 		Name: "STACKINTPEEK",
-		Info: "stackintpeek command info here",
+		Info: `STACKINTPEEK peeks into the DINT and returns 5 elements without popping them
+		returns the array of integers as the response.
+		if the key does not exist, then we return an empty array`,
 		Eval: evalSTACKINTPEEK,
 	}
 	stackrefpushCmdMeta = DiceCmdMeta{
 		Name: "STACKREFPUSH",
-		Info: "stackrefpush command info here",
+		Info: `STACKREFPUSH inserts the reference of the provided key identified by key
+		first argument will be the key, that should be of type "STACKREF"
+		second argument will be the key that needs to be added to the stackref
+		if the stack does not exist, STACKREFPUSH will also create the stackref
+		returns 1 if the key reference was inserted
+		returns 0 otherwise`,
 		Eval: evalSTACKREFPUSH,
 	}
 	stackrefpopCmdMeta = DiceCmdMeta{
 		Name: "STACKREFPOP",
-		Info: "stackrefpop command info here",
+		Info: `STACKREFPOP removes the element from the DREF identified by key
+		first argument will be the key, that should be of type "STACKREF"
+		if the key does not exist, STACKREFPOP returns nil otherwise it
+		returns the RESP encoded value of the key reference from the stack
+		if we remove from the empty stack, nil is returned`,
 		Eval: evalSTACKREFPOP,
 	}
 	stackreflenCmdMeta = DiceCmdMeta{
 		Name: "STACKREFLEN",
-		Info: "stackreflen command info here",
+		Info: `STACKREFLEN returns the length of the STACKREF identified by key
+		returns the integer value indicating the length of the stack
+		if the key does not exist, the response is 0`,
 		Eval: evalSTACKREFLEN,
 	}
 	stackrefpeekCmdMeta = DiceCmdMeta{
 		Name: "STACKREFPEEK",
-		Info: "stackrefpeek command info here",
+		Info: `STACKREFPEEK peeks into the STACKREF and returns 5 elements without popping them
+		returns the array of resp encoded values as the response.
+		if the key does not exist, then we return an empty array`,
 		Eval: evalSTACKREFPEEK,
 	}
 	// TODO: Remove this override once we support QWATCH in dice-cli.
 	subscribeCmdMeta = DiceCmdMeta{
 		Name: "SUBSCRIBE",
-		Info: "subscribe command info here",
+		Info: `SUBSCRIBE(or QWATCH) adds the specified key to the watch list for the caller client.
+		Every time a key in the watch list is modified, the client will be sent a response
+		containing the new value of the key along with the operation that was performed on it.
+		Contains only one argument, the key to be watched.`,
 		Eval: nil,
 	}
 	qwatchCmdMeta = DiceCmdMeta{
 		Name: "QWATCH",
-		Info: "qwatch command info here",
+		Info: `QWATCH adds the specified key to the watch list for the caller client.
+		Every time a key in the watch list is modified, the client will be sent a response
+		containing the new value of the key along with the operation that was performed on it.
+		Contains only one argument, the key to be watched.`,
 		Eval: nil,
 	}
 	multiCmdMeta = DiceCmdMeta{
 		Name: "MULTI",
-		Info: "multi command info here",
+		Info: `MULTI marks the start of the transaction for the client.
+		All subsequent commands fired will be queued for atomic execution.
+		The commands will not be executed until EXEC is triggered.
+		Once EXEC is triggered it executes all the commands in queue,
+		and closes the MULTI transaction.`,
 		Eval: evalMULTI,
 	}
 	execCmdMeta = DiceCmdMeta{
 		Name: "EXEC",
-		Info: "exec command info here",
+		Info: `EXEC executes commands in a transaction, which is initiated by MULTI`,
 		Eval: nil,
 	}
 	discardCmdMeta = DiceCmdMeta{
 		Name: "DISCARD",
-		Info: "discard command info here",
+		Info: `DISCARD discards all the commands in a transaction, which is initiated by MULTI`,
 		Eval: nil,
 	}
 	abortCmdMeta = DiceCmdMeta{
 		Name: "ABORT",
-		Info: "abort command info here",
+		Info: "",
 		Eval: nil,
 	}
 )
