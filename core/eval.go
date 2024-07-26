@@ -890,6 +890,9 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		c.TxnDiscard()
 		return RESP_OK
 	}
+	if diceCmd.Name == "ABORT" {
+		return RESP_OK
+	}
 
 	return diceCmd.Eval(cmd.Args)
 }
