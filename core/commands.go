@@ -31,7 +31,7 @@ var (
 		Info: `GET returns the value for the queried key in args
 		The key should be the only param in args
 		The RESP value of the key is encoded and then returned
-		evalGET returns RESP_NIL if key is expired or it does not exist`,
+		GET returns RESP_NIL if key is expired or it does not exist`,
 		Eval: evalGET,
 	}
 	ttlCmdMeta = DiceCmdMeta{
@@ -66,7 +66,7 @@ var (
 	}
 	bgrewriteaofCmdMeta = DiceCmdMeta{
 		Name: "BGREWRITEAOF",
-		Info: "bgrewriteaof command info here",
+		Info: `Instruct Dice to start an Append Only File rewrite process. The rewrite will create a small optimized version of the current Append Only File.`,
 		Eval: evalBGREWRITEAOF,
 	}
 	incrCmdMeta = DiceCmdMeta{
@@ -77,7 +77,7 @@ var (
 		If the key does not exist, new key is created with value 0,
 		the value of the new key is then incremented.
 		The value for the queried key should be of integer format,
-		if not evalINCR returns encoded error response.
+		if not INCR returns encoded error response.
 		evalINCR returns the incremented value for the key if there are no errors.`,
 		Eval: evalINCR,
 	}
@@ -300,7 +300,7 @@ var (
 	}
 	abortCmdMeta = DiceCmdMeta{
 		Name: "ABORT",
-		Info: "",
+		Info: "Quit the server",
 		Eval: nil,
 	}
 )
