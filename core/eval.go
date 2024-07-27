@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -857,25 +858,136 @@ func evalQWATCH(args []string, c *Client) []byte {
 	return RESP_OK
 }
 
+// SETBIT key offset value
+func evalSETBIT(args []string) []byte {
+	var err error
+
+	if len(args) != 3 {
+		return Encode(errors.New("ERR wrong number of arguments for 'setbit' command"), false)
+	}
+
+	key := args[0]
+	offset, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return Encode(errors.New("ERR bit offset is not an integer or out of range"), false)
+	}
+
+	value, err := strconv.ParseBool(args[2])
+	if err != nil {
+		return Encode(errors.New("ERR bit is not an integer or out of range"), false)
+	}
+
+	obj := Get(key)
+	requiredByteArraySize := int(offset/8 + 1)
+
+	if obj == nil {
+		obj = NewObj(NewByteArray(requiredByteArraySize), -1, OBJ_TYPE_BYTEARRAY, OBJ_ENCODING_BYTEARRAY)
+		Put(args[0], obj)
+	}
+
+	// handle the case when it is byte array
+	if assertType(obj.TypeEncoding, OBJ_TYPE_BYTEARRAY) == nil {
+		byteArray := obj.Value.(*ByteArray)
+		byteArrayObject := *byteArray
+
+		// check whether resize required or not
+		if requiredByteArraySize > len(byteArrayObject.data) {
+			// resize as per the offset
+			byteArray = byteArray.IncreaseSize(requiredByteArraySize)
+		}
+
+		response := byteArray.GetBit(int(offset))
+
+		byteArray.SetBit(int(offset), value)
+		Put(args[0], NewObj(byteArray, -1, OBJ_TYPE_BYTEARRAY, OBJ_ENCODING_BYTEARRAY))
+
+		if response {
+			return Encode(int(1), true)
+		}
+		return Encode(int(0), true)
+	}
+
+	// TODO: handle the case when it is string
+	if assertType(obj.TypeEncoding, OBJ_TYPE_STRING) != nil {
+		// byteArray := obj.Value.(*string)
+	}
+
+	return Encode(0, false)
+}
+
+// GETBIT key offset
+func evalGETBIT(args []string) []byte {
+	var err error
+
+	if len(args) != 2 {
+		return Encode(errors.New("ERR wrong number of arguments for 'setbit' command"), false)
+	}
+
+	key := args[0]
+	offset, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return Encode(errors.New("ERR bit offset is not an integer or out of range"), false)
+	}
+
+	obj := Get(key)
+	if obj == nil {
+		return Encode(0, true)
+	}
+
+	requiredByteArraySize := int(offset/8 + 1)
+
+	// handle the case when it is byte array
+	if assertType(obj.TypeEncoding, OBJ_TYPE_BYTEARRAY) == nil {
+		byteArray := obj.Value.(*ByteArray)
+		byteArrayObject := *byteArray
+
+		// check whether offset, length exists or not
+		if requiredByteArraySize > len(byteArrayObject.data) {
+			return Encode(0, true)
+		} else {
+			value := byteArray.GetBit(int(offset))
+			if value {
+				return Encode(1, true)
+			}
+			return Encode(0, true)
+		}
+	}
+
+	// TODO: handle the case when it is string
+	if assertType(obj.TypeEncoding, OBJ_TYPE_STRING) != nil {
+		// byteArray := obj.Value.(*string)
+	}
+
+	return Encode(0, true)
+}
+
 func evalBITCOUNT(args []string) []byte {
 	var err error
 
 	// if more than 4 arguments are provided, return error
 	if len(args) > 4 {
-		return Encode(errors.New("ERR invalid number of arguments for `evalBITCOUNT` command"), false)
+		return Encode(errors.New("ERR syntax error"), false)
 	}
 
 	// fetching value of the key
 	var key string = args[0]
 	var obj = Get(key)
 	if obj == nil {
-		return Encode(errors.New("ERR key does not exist for `evalBITCOUNT` command"), false)
+		return Encode(0, false)
 	}
+
 	var valueInterface = obj.Value
-	if err := assertType(obj.TypeEncoding, OBJ_TYPE_STRING); err != nil {
-		return Encode("ERR string value do not exists on key", false)
+	value := []byte{}
+
+	if assertType(obj.TypeEncoding, OBJ_TYPE_BYTEARRAY) == nil {
+		byteArray := obj.Value.(*ByteArray)
+		byteArrayObject := *byteArray
+		value = byteArrayObject.data
 	}
-	value := []byte(valueInterface.(string))
+
+	if assertType(obj.TypeEncoding, OBJ_TYPE_STRING) == nil {
+		value = []byte(valueInterface.(string))
+	}
 
 	// defining constants of the function
 	valueLength := int64(len(value))
@@ -887,35 +999,38 @@ func evalBITCOUNT(args []string) []byte {
 	if len(args) > 1 {
 		start, err = strconv.ParseInt(args[1], 10, 64)
 		if err != nil {
-			return Encode(errors.New("ERR start invalid number for `evalBITCOUNT` command"), false)
+			return Encode(errors.New("ERR value is not an integer or out of range"), false)
 		}
-		// if start is negative then output error
+		// Adjust start index if it is negative
 		if start < 0 {
-			return Encode(errors.New("ERR start cannot be negative for `evalBITCOUNT` command"), false)
+			start += valueLength
 		}
 	}
 	if len(args) > 2 {
 		end, err = strconv.ParseInt(args[2], 10, 64)
 		if err != nil {
-			return Encode(errors.New("ERR end invalid number for `evalBITCOUNT` command"), false)
+			return Encode(errors.New("ERR value is not an integer or out of range"), false)
 		}
 
-		// if end is negative then output error
+		// Adjust end index if it is negative
 		if end < 0 {
-			return Encode(errors.New("ERR end cannot be negative for `evalBITCOUNT` command"), false)
+			end += valueLength
 		}
 	}
 	if len(args) > 3 {
-		unit = args[3]
+		unit = strings.ToUpper(args[3])
 		if unit != bit.BYTE && unit != bit.BIT {
-			return Encode(errors.New("ERR invalid unit input` command"), false)
+			return Encode(errors.New("ERR syntax error"), false)
 		}
 	}
 	if start > end {
-		return Encode(errors.New("ERR start cannot be greater than end for `evalBITCOUNT` command"), false)
+		return Encode(0, true)
+	}
+	if start > valueLength && unit == bit.BYTE {
+		return Encode(0, true)
 	}
 	if end > valueLength && unit == bit.BYTE {
-		return Encode(errors.New("ERR end cannot be greater than length of value for `evalBITCOUNT` command"), false)
+		end = valueLength - 1
 	}
 
 	bitCount := 0
@@ -928,7 +1043,20 @@ func evalBITCOUNT(args []string) []byte {
 		startBitRange := start / 8
 		endBitRange := end / 8
 
+		isKeyValueByteArray := false
+		if assertType(obj.TypeEncoding, OBJ_TYPE_BYTEARRAY) == nil {
+			isKeyValueByteArray = true
+		}
+
 		for i := startBitRange; i <= endBitRange; i++ {
+
+			// need to reverse the byte structure as per the current implementation of evalBITCOUNT, for BIT level operation
+			// example, byte stores 128, then it will be stored as 10000000, but we need to reverse it as 00000001
+			// so that we can count the bits properly
+			if isKeyValueByteArray {
+				value[i] = reverseByte(value[i])
+			}
+
 			if i == startBitRange {
 				considerBits := start % 8
 				for j := 8 - considerBits - 1; j >= 0; j-- {
@@ -1036,6 +1164,10 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		}
 		c.TxnDiscard()
 		return RESP_OK
+	case "SETBIT":
+		return evalSETBIT(cmd.Args)
+	case "GETBIT":
+		return evalGETBIT(cmd.Args)
 	case "BITCOUNT":
 		return evalBITCOUNT(cmd.Args)
 	case "ABORT":

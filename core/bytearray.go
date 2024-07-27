@@ -40,6 +40,23 @@ func (b *ByteArray) BitCount() int {
 	return count
 }
 
+func (b *ByteArray) IncreaseSize(increaseSizeTo int) *ByteArray {
+	currentByteArray := b.data
+	currentByteArraySize := len(currentByteArray)
+
+	// Input is decreasing the size
+	if currentByteArraySize >= increaseSizeTo {
+		return b
+	}
+
+	sizeDifference := increaseSizeTo - currentByteArraySize
+	currentByteArray = append(currentByteArray, make([]byte, sizeDifference)...)
+
+	return &ByteArray{
+		data: currentByteArray,
+	}
+}
+
 // population counting, counts the number of set bits in a byte
 // Using: https://en.wikipedia.org/wiki/Hamming_weight
 func popcount(x byte) byte {
@@ -50,4 +67,14 @@ func popcount(x byte) byte {
 	// isolates the lower four bits
 	// which now contain the total count of set bits in the original byte
 	return (x + (x >> 4)) & 0x0F
+}
+
+// reverseByte reverses the order of bits in a single byte.
+func reverseByte(b byte) byte {
+	var reversed byte = 0
+	for i := 0; i < 8; i++ {
+		reversed = (reversed << 1) | (b & 1)
+		b >>= 1
+	}
+	return reversed
 }

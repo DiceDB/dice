@@ -6,6 +6,54 @@ import (
 	"gotest.tools/v3/assert"
 )
 
+func TestBitSet(t *testing.T) {
+	conn := getLocalConnection()
+	for _, tcase := range []DTestCase{
+		{
+			InCmds: []string{"SETBIT mykey 7 1"},
+			Out:    []interface{}{int64(0)},
+		},
+		{
+			InCmds: []string{"SETBIT mykey 122 1"},
+			Out:    []interface{}{int64(0)},
+		},
+		{
+			InCmds: []string{"GETBIT mykey 1223232"},
+			Out:    []interface{}{int64(0)},
+		},
+		{
+			InCmds: []string{"GETBIT mykey 7"},
+			Out:    []interface{}{int64(1)},
+		},
+		{
+			InCmds: []string{"GETBIT mykey 122"},
+			Out:    []interface{}{int64(1)},
+		},
+		{
+			InCmds: []string{"GETBIT mykey 8"},
+			Out:    []interface{}{int64(0)},
+		},
+		{
+			InCmds: []string{"BITCOUNT mykey 3 7 BIT"},
+			Out:    []interface{}{int64(1)},
+		},
+		{
+			InCmds: []string{"BITCOUNT mykey 3 7"},
+			Out:    []interface{}{int64(0)},
+		},
+		{
+			InCmds: []string{"BITCOUNT mykey 0 0"},
+			Out:    []interface{}{int64(1)},
+		},
+	} {
+		for i := 0; i < len(tcase.InCmds); i++ {
+			cmd := tcase.InCmds[i]
+			out := tcase.Out[i]
+			assert.Equal(t, out, fireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
+		}
+	}
+}
+
 func TestBitCount(t *testing.T) {
 	conn := getLocalConnection()
 	for _, tcase := range []DTestCase{
