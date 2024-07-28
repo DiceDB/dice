@@ -1,13 +1,15 @@
 package core
 
 type ByteArray struct {
-	data []byte
+	data   []byte
+	Length int64
 }
 
 // NewByteArray initializes a new ByteArray with the given size
 func NewByteArray(size int) *ByteArray {
 	return &ByteArray{
-		data: make([]byte, size),
+		data:   make([]byte, size),
+		Length: int64(size),
 	}
 }
 
@@ -53,7 +55,8 @@ func (b *ByteArray) IncreaseSize(increaseSizeTo int) *ByteArray {
 	currentByteArray = append(currentByteArray, make([]byte, sizeDifference)...)
 
 	return &ByteArray{
-		data: currentByteArray,
+		data:   currentByteArray,
+		Length: int64(increaseSizeTo),
 	}
 }
 

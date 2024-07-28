@@ -14,6 +14,10 @@ func TestBitSet(t *testing.T) {
 			Out:    []interface{}{int64(0)},
 		},
 		{
+			InCmds: []string{"SETBIT mykey 7 1"},
+			Out:    []interface{}{int64(1)},
+		},
+		{
 			InCmds: []string{"SETBIT mykey 122 1"},
 			Out:    []interface{}{int64(0)},
 		},

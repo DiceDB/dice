@@ -878,22 +878,22 @@ func evalSETBIT(args []string) []byte {
 	}
 
 	obj := Get(key)
-	requiredByteArraySize := int(offset/8 + 1)
+	requiredByteArraySize := offset/8 + 1
 
 	if obj == nil {
-		obj = NewObj(NewByteArray(requiredByteArraySize), -1, OBJ_TYPE_BYTEARRAY, OBJ_ENCODING_BYTEARRAY)
+		obj = NewObj(NewByteArray(int(requiredByteArraySize)), -1, OBJ_TYPE_BYTEARRAY, OBJ_ENCODING_BYTEARRAY)
 		Put(args[0], obj)
 	}
 
 	// handle the case when it is byte array
 	if assertType(obj.TypeEncoding, OBJ_TYPE_BYTEARRAY) == nil {
 		byteArray := obj.Value.(*ByteArray)
-		byteArrayObject := *byteArray
+		byteArrayLength := byteArray.Length
 
 		// check whether resize required or not
-		if requiredByteArraySize > len(byteArrayObject.data) {
+		if requiredByteArraySize > byteArrayLength {
 			// resize as per the offset
-			byteArray = byteArray.IncreaseSize(requiredByteArraySize)
+			byteArray = byteArray.IncreaseSize(int(requiredByteArraySize))
 		}
 
 		response := byteArray.GetBit(int(offset))
@@ -934,15 +934,15 @@ func evalGETBIT(args []string) []byte {
 		return Encode(0, true)
 	}
 
-	requiredByteArraySize := int(offset/8 + 1)
+	requiredByteArraySize := offset/8 + 1
 
 	// handle the case when it is byte array
 	if assertType(obj.TypeEncoding, OBJ_TYPE_BYTEARRAY) == nil {
 		byteArray := obj.Value.(*ByteArray)
-		byteArrayObject := *byteArray
+		byteArrayLength := byteArray.Length
 
 		// check whether offset, length exists or not
-		if requiredByteArraySize > len(byteArrayObject.data) {
+		if requiredByteArraySize > byteArrayLength {
 			return Encode(0, true)
 		} else {
 			value := byteArray.GetBit(int(offset))
@@ -978,19 +978,21 @@ func evalBITCOUNT(args []string) []byte {
 
 	var valueInterface = obj.Value
 	value := []byte{}
+	valueLength := int64(0)
 
 	if assertType(obj.TypeEncoding, OBJ_TYPE_BYTEARRAY) == nil {
 		byteArray := obj.Value.(*ByteArray)
 		byteArrayObject := *byteArray
 		value = byteArrayObject.data
+		valueLength = byteArray.Length
 	}
 
 	if assertType(obj.TypeEncoding, OBJ_TYPE_STRING) == nil {
 		value = []byte(valueInterface.(string))
+		valueLength = int64(len(value))
 	}
 
 	// defining constants of the function
-	valueLength := int64(len(value))
 	start := int64(0)
 	end := valueLength - 1
 	var unit = bit.BYTE
