@@ -54,10 +54,10 @@ func (b *ByteArray) IncreaseSize(increaseSizeTo int) *ByteArray {
 	sizeDifference := increaseSizeTo - currentByteArraySize
 	currentByteArray = append(currentByteArray, make([]byte, sizeDifference)...)
 
-	return &ByteArray{
-		data:   currentByteArray,
-		Length: int64(increaseSizeTo),
-	}
+	b.data = currentByteArray
+	b.Length = int64(increaseSizeTo)
+
+	return b
 }
 
 // population counting, counts the number of set bits in a byte

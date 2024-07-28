@@ -899,7 +899,6 @@ func evalSETBIT(args []string) []byte {
 		response := byteArray.GetBit(int(offset))
 
 		byteArray.SetBit(int(offset), value)
-		Put(args[0], NewObj(byteArray, -1, OBJ_TYPE_BYTEARRAY, OBJ_ENCODING_BYTEARRAY))
 
 		if response {
 			return Encode(int(1), true)
