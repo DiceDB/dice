@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/dicedb/dice/config"
@@ -115,6 +116,72 @@ func evalGET(args []string) []byte {
 
 	// return the RESP encoded value
 	return Encode(obj.Value, false)
+}
+
+// evalJSONGET retrieves a JSON value stored at the specified key
+// args must contain at least the key;  (path unused in this implementation)
+// Returns RESP_NIL if key is expired or it does not exist
+// Returns encoded error response if incorrect number of arguments
+// The RESP value of the key is encoded and then returned
+func evalJSONGET(args []string) []byte {
+	// Check for correct number of arguments
+	if len(args) < 1 {
+		return Encode(errors.New("ERR wrong number of arguments for 'JSON.GET' command"), false)
+	}
+
+	key := args[0]
+
+	// Retrieve the object from the database
+	obj := Get(key)
+
+	// Return nil if the key doesn't exist or has expired
+	if obj == nil || hasExpired(obj) {
+		return RESP_NIL
+	}
+
+	// Check if the object is of JSON type
+	objType, _ := ExtractTypeEncoding(obj)
+	if objType != OBJ_TYPE_JSON {
+		return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+	}
+
+	// Serialize the JSON value
+	jsonBytes, err := json.Marshal(obj.Value)
+	if err != nil {
+		return Encode(errors.New("ERR could not serialize JSON value"), false)
+	}
+
+	// Return the JSON value as an encoded string
+	return Encode(string(jsonBytes), false)
+}
+
+// evalJSONSET stores a JSON value at the specified key
+// args must contain at least the key, path (unused in this implementation), and JSON string
+// Returns encoded error response if incorrect number of arguments
+// Returns encoded error if the JSON string is invalid
+// Returns RESP_OK if the JSON value is successfully stored
+func evalJSONSET(args []string) []byte {
+	// Check for correct number of arguments
+	if len(args) < 3 {
+		return Encode(errors.New("ERR wrong number of arguments for 'JSON.SET' command"), false)
+	}
+
+	key := args[0]
+	// Note: args[1] (path) is ignored in this implementation
+	jsonStr := args[2]
+
+	// Parse the JSON string
+	var jsonValue interface{}
+	err := json.Unmarshal([]byte(jsonStr), &jsonValue)
+	if err != nil {
+		return Encode(errors.New("ERR invalid JSON"), false)
+	}
+
+	// Create a new object with the JSON value and store it
+	obj := NewObj(jsonValue, -1, OBJ_TYPE_JSON, OBJ_ENCODING_JSON)
+	Put(key, obj)
+
+	return RESP_OK
 }
 
 // evalTTL returns Time-to-Live in secs for the queried key in args

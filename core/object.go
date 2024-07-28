@@ -21,6 +21,9 @@ var OBJ_TYPE_BYTELIST uint8 = 1 << 4
 var OBJ_ENCODING_QINT uint8 = 0
 var OBJ_ENCODING_QREF uint8 = 1
 
+var OBJ_TYPE_JSON uint8 = 2 << 4 // 00100000
+var OBJ_ENCODING_JSON uint8 = 0
+
 var OBJ_ENCODING_STACKINT uint8 = 2
 var OBJ_ENCODING_STACKREF uint8 = 3
 

@@ -12,6 +12,7 @@ require (
 	github.com/dicedb/go-dice v0.0.0-20240717053902-2a3e67c8bda0 // indirect
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
+	github.com/kinbiko/jsonassert v1.1.1 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
