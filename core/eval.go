@@ -867,7 +867,7 @@ func evalQWATCH(args []string, c *Client) []byte {
 // COUNT: return total count of commands in Dice.
 func evalCommand(args []string) []byte {
 	if len(args) == 0 {
-		return Encode(fmt.Errorf("(error) ERR wrong number of arguments for 'command' command"), false)
+		return Encode(errors.New("(error) ERR wrong number of arguments for 'command' command"), false)
 	}
 	subcommand := strings.ToUpper(args[0])
 	switch subcommand {
