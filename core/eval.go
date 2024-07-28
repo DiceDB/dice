@@ -230,7 +230,9 @@ func evalBGREWRITEAOF(args []string) []byte {
 	newChild, _, _ := syscall.Syscall(syscall.SYS_FORK, 0, 0, 0)
 	if newChild == 0 {
 		//We are inside child process now, so we'll start flushing to disk.
-		DumpAllAOF()
+		if err := DumpAllAOF(); err != nil {
+			return Encode(errors.New("ERR AOF failed"), false)
+		}
 		return []byte("")
 	} else {
 		//Back to main thread
