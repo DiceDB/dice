@@ -897,8 +897,13 @@ func evalSETBIT(args []string) []byte {
 		}
 
 		response := byteArray.GetBit(int(offset))
-
 		byteArray.SetBit(int(offset), value)
+
+		// if earlier bit was 1 and the new bit is 0
+		// propability is that, we can remove some space from the byte array
+		if response && !value {
+			byteArray.ResizeIfNecessary()
+		}
 
 		if response {
 			return Encode(int(1), true)

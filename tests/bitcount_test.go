@@ -22,15 +22,23 @@ func TestBitSet(t *testing.T) {
 			Out:    []interface{}{int64(0)},
 		},
 		{
+			InCmds: []string{"GETBIT mykey 122"},
+			Out:    []interface{}{int64(1)},
+		},
+		{
+			InCmds: []string{"SETBIT mykey 122 0"},
+			Out:    []interface{}{int64(1)},
+		},
+		{
+			InCmds: []string{"GETBIT mykey 122"},
+			Out:    []interface{}{int64(0)},
+		},
+		{
 			InCmds: []string{"GETBIT mykey 1223232"},
 			Out:    []interface{}{int64(0)},
 		},
 		{
 			InCmds: []string{"GETBIT mykey 7"},
-			Out:    []interface{}{int64(1)},
-		},
-		{
-			InCmds: []string{"GETBIT mykey 122"},
 			Out:    []interface{}{int64(1)},
 		},
 		{

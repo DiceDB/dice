@@ -60,6 +60,29 @@ func (b *ByteArray) IncreaseSize(increaseSizeTo int) *ByteArray {
 	return b
 }
 
+func (b *ByteArray) ResizeIfNecessary() *ByteArray {
+
+	byteArrayLength := b.Length
+	decreaseLengthBy := 0
+	for i := byteArrayLength - 1; i >= 0; i-- {
+		if b.data[i] == 0x0 {
+			decreaseLengthBy++
+		} else {
+			break
+		}
+	}
+
+	// Decrease the size of the slice to n elements
+	// and create a new slice with reduced capacity
+	capacityReducedSlice := make([]byte, byteArrayLength-int64(decreaseLengthBy))
+	copy(capacityReducedSlice, b.data[:byteArrayLength-int64(decreaseLengthBy)])
+
+	b.data = capacityReducedSlice
+	b.Length = int64(len(capacityReducedSlice))
+
+	return b
+}
+
 // population counting, counts the number of set bits in a byte
 // Using: https://en.wikipedia.org/wiki/Hamming_weight
 func popcount(x byte) byte {
