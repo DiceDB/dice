@@ -21,63 +21,18 @@ var RESP_MINUS_1 []byte = []byte(":-1\r\n")
 var RESP_MINUS_2 []byte = []byte(":-2\r\n")
 var RESP_EMPTY_ARRAY []byte = []byte("*0\r\n")
 
-// All supported Dice Commands
-const (
-	PING         = "PING"
-	SET          = "SET"
-	GET          = "GET"
-	TTL          = "TTL"
-	DEL          = "DEL"
-	EXPIRE       = "EXPIRE"
-	HELLO        = "HELLO"
-	BGREWRITEAOF = "BGREWRITEAOF"
-	INCR         = "INCR"
-	INFO         = "INFO"
-	CLIENT       = "CLIENT"
-	LATENCY      = "LATENCY"
-	LRU          = "LRU"
-	SLEEP        = "SLEEP"
-	QINTINS      = "QINTINS"
-	QINTREM      = "QINTREM"
-	QINTLEN      = "QINTLEN"
-	QINTPEEK     = "QINTPEEK"
-	BFINIT       = "BFINIT"
-	BFADD        = "BFADD"
-	BFEXISTS     = "BFEXISTS"
-	BFINFO       = "BFINFO"
-	QREFINS      = "QREFINS"
-	QREFREM      = "QREFREM"
-	QREFLEN      = "QREFLEN"
-	QREFPEEK     = "QREFPEEK"
-	STACKINTPUSH = "STACKINTPUSH"
-	STACKINTPOP  = "STACKINTPOP"
-	STACKINTLEN  = "STACKINTLEN"
-	STACKINTPEEK = "STACKINTPEEK"
-	STACKREFPUSH = "STACKREFPUSH"
-	STACKREFPOP  = "STACKREFPOP"
-	STACKREFLEN  = "STACKREFLEN"
-	STACKREFPEEK = "STACKREFPEEK"
-	SUBSCRIBE    = "SUBSCRIBE"
-	QWATCH       = "QWATCH"
-	COMMAND      = "COMMAND"
-	MULTI        = "MULTI"
-	EXEC         = "EXEC"
-	DISCARD      = "DISCARD"
-	ABORT        = "ABORT"
-)
-
-var diceCommands = []string{
-	PING, SET, GET, TTL, DEL, EXPIRE, BGREWRITEAOF, INCR, INFO, CLIENT, LATENCY, LRU,
-	SLEEP, QINTINS, QINTREM, QINTLEN, QINTPEEK, BFINIT, BFADD, BFEXISTS, BFINFO,
-	QREFINS, QREFREM, QREFLEN, QREFPEEK, STACKINTPUSH, STACKINTPOP, STACKINTLEN,
-	STACKINTPEEK, STACKREFPUSH, STACKREFPOP, STACKREFLEN, STACKREFPEEK, SUBSCRIBE,
-	QWATCH, COMMAND, MULTI, EXEC, DISCARD, ABORT}
-
 var txnCommands map[string]bool
 var serverID string
 
+var (
+	diceCommandsCount = len(diceCmds)
+)
+
 func init() {
-	txnCommands = map[string]bool{EXEC: true, DISCARD: true}
+	if len(diceCmds) != diceCommandsCount {
+		panic("diceCmds map has been modified")
+	}
+	txnCommands = map[string]bool{"EXEC": true, "DISCARD": true}
 	serverID = fmt.Sprintf("%s:%d", config.Host, config.Port)
 }
 
@@ -908,24 +863,24 @@ func evalQWATCH(args []string, c *Client) []byte {
 	return RESP_OK
 }
 
-// evalCOMMAND evaluates COMMAND <subcommand> command based on subcommand
+// evalCommand evaluates COMMAND <subcommand> command based on subcommand
 // COUNT: return total count of commands in Dice.
-func evalCOMMAND(args []string) []byte {
+func evalCommand(args []string) []byte {
 	if len(args) == 0 {
 		return Encode(fmt.Errorf("(error) ERR wrong number of arguments for 'command' command"), false)
 	}
 	subcommand := strings.ToUpper(args[0])
 	switch subcommand {
 	case "COUNT":
-		return evalCOMMANDCOUNT()
+		return evalCommandCount(nil)
 	default:
 		return Encode(fmt.Errorf("ERR unknown subcommand '%s'. Try COMMAND HELP", subcommand), false)
 	}
 }
 
-// evalCOMMANDCOUNT returns an number of commands supported by DiceDB
-func evalCOMMANDCOUNT() []byte {
-	return Encode(len(diceCommands), false)
+// evalCommandCount returns an number of commands supported by DiceDB
+func evalCommandCount(args []string) []byte {
+	return Encode(diceCommandsCount, false)
 }
 
 func executeCommand(cmd *RedisCmd, c *Client) []byte {

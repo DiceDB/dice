@@ -303,6 +303,11 @@ var (
 		Info: "Quit the server",
 		Eval: nil,
 	}
+	commandCmdMeta = DiceCmdMeta{
+		Name: "COMMAND <subcommand>",
+		Info: "Evaluates COMMAND <subcommand> command based on subcommand",
+		Eval: evalCommand,
+	}
 )
 
 func init() {
@@ -346,4 +351,5 @@ func init() {
 	diceCmds["EXEC"] = execCmdMeta
 	diceCmds["DISCARD"] = discardCmdMeta
 	diceCmds["ABORT"] = abortCmdMeta
+	diceCmds["COMMAND"] = commandCmdMeta
 }
