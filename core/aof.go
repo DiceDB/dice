@@ -98,6 +98,7 @@ func DumpAllAOF() error {
 	if aof, err = NewAOF(config.AOFFile); err != nil {
 		return err
 	}
+	defer aof.Close()
 
 	log.Println("rewriting AOF file at", config.AOFFile)
 
