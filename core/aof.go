@@ -94,6 +94,11 @@ func DumpAllAOF() error {
 		return err
 	}
 
+	log.Println("rewriting AOF file at", config.AOFFile)
+
+	storeMutex.RLock()
+	defer storeMutex.RUnlock()
+
 	for k, obj := range store {
 		if err = dumpKey(aof, *((*string)(k)), obj); err != nil {
 			return err
