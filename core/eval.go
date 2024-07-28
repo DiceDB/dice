@@ -4,13 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/dicedb/dice/config"
 	"log"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
-
-	"github.com/dicedb/dice/config"
 )
 
 var RESP_NIL []byte = []byte("$-1\r\n")
@@ -24,8 +23,10 @@ var RESP_EMPTY_ARRAY []byte = []byte("*0\r\n")
 
 var txnCommands map[string]bool
 var serverID string
+var diceCommandsCount int
 
 func init() {
+	diceCommandsCount = len(diceCmds)
 	txnCommands = map[string]bool{"EXEC": true, "DISCARD": true}
 	serverID = fmt.Sprintf("%s:%d", config.Host, config.Port)
 }
@@ -855,6 +856,26 @@ func evalQWATCH(args []string, c *Client) []byte {
 	AddWatcher(query, c.Fd)
 
 	return RESP_OK
+}
+
+// evalCommand evaluates COMMAND <subcommand> command based on subcommand
+// COUNT: return total count of commands in Dice.
+func evalCommand(args []string) []byte {
+	if len(args) == 0 {
+		return Encode(errors.New("(error) ERR wrong number of arguments for 'command' command"), false)
+	}
+	subcommand := strings.ToUpper(args[0])
+	switch subcommand {
+	case "COUNT":
+		return evalCommandCount(nil)
+	default:
+		return Encode(fmt.Errorf("ERR unknown subcommand '%s'. Try COMMAND HELP", subcommand), false)
+	}
+}
+
+// evalCommandCount returns an number of commands supported by DiceDB
+func evalCommandCount(args []string) []byte {
+	return Encode(diceCommandsCount, false)
 }
 
 func executeCommand(cmd *RedisCmd, c *Client) []byte {
