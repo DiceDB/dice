@@ -38,8 +38,13 @@ func (a *AOF) Write(operation string) error {
 	if _, err := a.writer.WriteString(operation + "\n"); err != nil {
 		return err
 	}
-
-	return a.writer.Flush()
+	if err := a.writer.Flush(); err != nil {
+		return err
+	}
+	if err := a.file.Sync(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (a *AOF) Close() error {
