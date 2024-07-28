@@ -23,15 +23,10 @@ var RESP_EMPTY_ARRAY []byte = []byte("*0\r\n")
 
 var txnCommands map[string]bool
 var serverID string
-
-var (
-	diceCommandsCount = len(diceCmds)
-)
+var diceCommandsCount int
 
 func init() {
-	if len(diceCmds) != diceCommandsCount {
-		panic("diceCmds map has been modified")
-	}
+	diceCommandsCount = len(diceCmds)
 	txnCommands = map[string]bool{"EXEC": true, "DISCARD": true}
 	serverID = fmt.Sprintf("%s:%d", config.Host, config.Port)
 }
