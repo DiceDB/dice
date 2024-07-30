@@ -25,8 +25,10 @@ var RESP_EMPTY_ARRAY []byte = []byte("*0\r\n")
 
 var txnCommands map[string]bool
 var serverID string
+var diceCommandsCount int
 
 func init() {
+	diceCommandsCount = len(diceCmds)
 	txnCommands = map[string]bool{"EXEC": true, "DISCARD": true}
 	serverID = fmt.Sprintf("%s:%d", config.Host, config.Port)
 }
@@ -231,7 +233,9 @@ func evalBGREWRITEAOF(args []string) []byte {
 	newChild, _, _ := syscall.Syscall(syscall.SYS_FORK, 0, 0, 0)
 	if newChild == 0 {
 		//We are inside child process now, so we'll start flushing to disk.
-		DumpAllAOF()
+		if err := DumpAllAOF(); err != nil {
+			return Encode(errors.New("ERR AOF failed"), false)
+		}
 		return []byte("")
 	} else {
 		//Back to main thread
@@ -1203,107 +1207,57 @@ func evalBITOP(args []string) []byte {
 	}
 }
 
+// evalCommand evaluates COMMAND <subcommand> command based on subcommand
+// COUNT: return total count of commands in Dice.
+func evalCommand(args []string) []byte {
+	if len(args) == 0 {
+		return Encode(errors.New("(error) ERR wrong number of arguments for 'command' command"), false)
+	}
+	subcommand := strings.ToUpper(args[0])
+	switch subcommand {
+	case "COUNT":
+		return evalCommandCount(nil)
+	default:
+		return Encode(fmt.Errorf("ERR unknown subcommand '%s'. Try COMMAND HELP", subcommand), false)
+	}
+}
+
+// evalCommandCount returns an number of commands supported by DiceDB
+func evalCommandCount(args []string) []byte {
+	return Encode(diceCommandsCount, false)
+}
+
 func executeCommand(cmd *RedisCmd, c *Client) []byte {
-	switch cmd.Cmd {
-	case "PING":
-		return evalPING(cmd.Args)
-	case "SET":
-		return evalSET(cmd.Args)
-	case "GET":
-		return evalGET(cmd.Args)
-	case "TTL":
-		return evalTTL(cmd.Args)
-	case "DEL":
-		return evalDEL(cmd.Args)
-	case "EXPIRE":
-		return evalEXPIRE(cmd.Args)
-	case "HELLO":
-		return evalHELLO(cmd.Args)
-	case "BGREWRITEAOF":
-		return evalBGREWRITEAOF(cmd.Args)
-	case "INCR":
-		return evalINCR(cmd.Args)
-	case "INFO":
-		return evalINFO(cmd.Args)
-	case "CLIENT":
-		return evalCLIENT(cmd.Args)
-	case "LATENCY":
-		return evalLATENCY(cmd.Args)
-	case "LRU":
-		return evalLRU(cmd.Args)
-	case "SLEEP":
-		return evalSLEEP(cmd.Args)
-	case "QINTINS":
-		return evalQINTINS(cmd.Args)
-	case "QINTREM":
-		return evalQINTREM(cmd.Args)
-	case "QINTLEN":
-		return evalQINTLEN(cmd.Args)
-	case "QINTPEEK":
-		return evalQINTPEEK(cmd.Args)
-	case "BFINIT":
-		return evalBFINIT(cmd.Args)
-	case "BFADD":
-		return evalBFADD(cmd.Args)
-	case "BFEXISTS":
-		return evalBFEXISTS(cmd.Args)
-	case "BFINFO":
-		return evalBFINFO(cmd.Args)
-	case "QREFINS":
-		return evalQREFINS(cmd.Args)
-	case "QREFREM":
-		return evalQREFREM(cmd.Args)
-	case "QREFLEN":
-		return evalQREFLEN(cmd.Args)
-	case "QREFPEEK":
-		return evalQREFPEEK(cmd.Args)
-	case "STACKINTPUSH":
-		return evalSTACKINTPUSH(cmd.Args)
-	case "STACKINTPOP":
-		return evalSTACKINTPOP(cmd.Args)
-	case "STACKINTLEN":
-		return evalSTACKINTLEN(cmd.Args)
-	case "STACKINTPEEK":
-		return evalSTACKINTPEEK(cmd.Args)
-	case "STACKREFPUSH":
-		return evalSTACKREFPUSH(cmd.Args)
-	case "STACKREFPOP":
-		return evalSTACKREFPOP(cmd.Args)
-	case "STACKREFLEN":
-		return evalSTACKREFLEN(cmd.Args)
-	case "STACKREFPEEK":
-		return evalSTACKREFPEEK(cmd.Args)
-	case "SUBSCRIBE": // TODO: Remove this override once we support QWATCH in dice-cli.
+	diceCmd, ok := diceCmds[cmd.Cmd]
+	if !ok {
+		return Encode(fmt.Errorf("ERR unknown command '%s', with args beginning with: %s", cmd.Cmd, strings.Join(cmd.Args, " ")), false)
+	}
+
+	if diceCmd.Name == "SUBSCRIBE" || diceCmd.Name == "QWATCH" {
 		return evalQWATCH(cmd.Args, c)
-	case "QWATCH":
-		return evalQWATCH(cmd.Args, c)
-	case "MULTI":
+	}
+	if diceCmd.Name == "MULTI" {
 		c.TxnBegin()
-		return evalMULTI(cmd.Args)
-	case "EXEC":
+		return diceCmd.Eval(cmd.Args)
+	}
+	if diceCmd.Name == "EXEC" {
 		if !c.isTxn {
 			return Encode(errors.New("ERR EXEC without MULTI"), false)
 		}
 		return c.TxnExec()
-	case "DISCARD":
+	}
+	if diceCmd.Name == "DISCARD" {
 		if !c.isTxn {
 			return Encode(errors.New("ERR DISCARD without MULTI"), false)
 		}
 		c.TxnDiscard()
 		return RESP_OK
-	case "SETBIT":
-		return evalSETBIT(cmd.Args)
-	case "GETBIT":
-		return evalGETBIT(cmd.Args)
-	case "BITCOUNT":
-		return evalBITCOUNT(cmd.Args)
-	case "BITOP":
-		return evalBITOP(cmd.Args)
-	case "ABORT":
-		return RESP_OK
-	default:
-		return evalPING(cmd.Args)
 	}
+	if diceCmd.Name == "ABORT" {
+		return RESP_OK
+	}
+
+	return diceCmd.Eval(cmd.Args)
 }
 
 func executeCommandToBuffer(cmd *RedisCmd, buf *bytes.Buffer, c *Client) {

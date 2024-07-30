@@ -40,12 +40,11 @@ func WatchKeys(ctx context.Context, wg *sync.WaitGroup) {
 	for {
 		select {
 		case event := <-core.WatchChannel:
-			// Check if the key matches any RegexMatcher in the watch list.
 			core.WatchList.Range(func(key, value interface{}) bool {
 				query := key.(core.DSQLQuery)
 				clients := value.(*sync.Map)
 
-				if core.RegexMatch(query.KeyRegex, event.Key) {
+				if core.WildCardMatch(query.KeyRegex, event.Key) {
 					result, err := core.ExecuteQuery(query)
 					if err != nil {
 						log.Error(err)

@@ -43,6 +43,7 @@ type QueryOrder struct {
 type DSQLQuery struct {
 	Selection QuerySelection
 	KeyRegex  string
+	Where     sqlparser.Expr
 	OrderBy   QueryOrder
 	Limit     int
 }
@@ -98,9 +99,15 @@ func ParseQuery(sql string) (DSQLQuery, error) {
 		return DSQLQuery{}, err
 	}
 
+	where, err := parseWhere(selectStmt)
+	if err != nil {
+		return DSQLQuery{}, err
+	}
+
 	return DSQLQuery{
 		Selection: querySelection,
 		KeyRegex:  tableName,
+		Where:     where,
 		OrderBy:   orderBy,
 		Limit:     limit,
 	}, nil
@@ -155,6 +162,12 @@ func parseTableName(selectStmt *sqlparser.Select) (string, error) {
 
 	// Remove backticks from table name if present.
 	tableName := strings.Trim(sqlparser.String(tableExpr.Expr), "`")
+
+	// Ensure table name is not dual, which means no table name was provided.
+	if tableName == "dual" {
+		return "", fmt.Errorf("no table name provided")
+	}
+
 	return tableName, nil
 }
 
@@ -183,4 +196,12 @@ func parseLimit(selectStmt *sqlparser.Select) (int, error) {
 		limit = limitVal
 	}
 	return limit, nil
+}
+
+// Function to parse WHERE clause
+func parseWhere(selectStmt *sqlparser.Select) (sqlparser.Expr, error) {
+	if selectStmt.Where == nil {
+		return nil, nil
+	}
+	return selectStmt.Where.Expr, nil
 }

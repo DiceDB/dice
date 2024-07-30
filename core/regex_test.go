@@ -6,11 +6,11 @@ import (
 	"github.com/dicedb/dice/core"
 )
 
-func TestRegexMatch(t *testing.T) {
-	tests := []struct {
+func TestWildCardMatch(t *testing.T){
+	tests := []struct{
 		pattern string
-		key     string
-		match   bool
+		key 	string
+		want	bool
 	}{
 		{"*", "anything", true},
 		{"*", "", true},
@@ -43,9 +43,34 @@ func TestRegexMatch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.pattern+"_"+tt.key, func(t *testing.T) {
-			match := core.RegexMatch(tt.pattern, tt.key)
-			if match != tt.match {
-				t.Errorf("RegexMatch(%q, %q) = %v; want %v", tt.pattern, tt.key, match, tt.match)
+			if got := core.WildCardMatch(tt.pattern, tt.key); got != tt.want {
+				t.Errorf("WildcardMatch(%q, %q) = %v, want %v", tt.pattern, tt.key, got, tt.want)
+			}
+		})
+	}
+}
+
+func BenchmarkWildCardMatch(b *testing.B) {
+	testCases := []struct {
+		pattern string
+		key     string
+	}{
+		{"*", "anystringwillmatch"},
+		{"?????", "exact"},
+		{"a?c*d", "abcdefgd"},
+		{"*test*", "thisIsATestString"},
+		{"???*", "abcdefghijklmnop"},
+		{"*a*b*c*", "111a222b333c444"},
+		{"a?b*c??d", "acb123cxxd"},
+		{"*a*b?c*d*", "111aaa222bxc333ddd444"},
+		{"a*b*c*d*e*", "axbxxcxxxdxxxxe"},
+		{"*a*b*c*d*e*", "11aa22bb33cc44dd55ee66"},
+	}
+
+	for _, tc := range testCases {
+		b.Run(tc.pattern, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				core.WildCardMatch(tc.pattern, tc.key)
 			}
 		})
 	}
