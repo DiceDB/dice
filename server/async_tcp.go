@@ -31,6 +31,11 @@ func init() {
 	connectedClients = make(map[int]*core.Client)
 }
 
+func newConn(fd int) net.Conn {
+	// Implement a function that wraps the file descriptor in a net.Conn
+	return NewNetConn(fd)
+}
+
 // Waits on `core.WatchChannel` to receive updates about keys. Sends the update
 // to all the clients that are watching the key.
 // The message sent to the client will contain the new value and the operation
@@ -125,7 +130,7 @@ func RunAsyncTCPServer(serverFD int, wg *sync.WaitGroup) {
 
 	log.Info("starting an asynchronous TCP server on", config.Host, config.Port)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	_, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	defer func() {
@@ -133,8 +138,12 @@ func RunAsyncTCPServer(serverFD int, wg *sync.WaitGroup) {
 	}()
 	maxClients := 20000
 
-	wg.Add(1)
-	go WatchKeys(ctx, wg)
+	// Initialize thread pools
+	ipool := NewIOThreadPool(4)
+
+	// testing multithreading
+	// wg.Add(1)
+	// go WatchKeys(ctx, wg)
 
 	// Start listening
 	if err := syscall.Listen(serverFD, maxClients); err != nil {
@@ -217,6 +226,9 @@ func RunAsyncTCPServer(serverFD int, wg *sync.WaitGroup) {
 				}); err != nil {
 					log.Fatal(err)
 				}
+
+				// dispatch the request to the IO thread pool
+				ipool.Get().reqch <- &Request{conn: newConn(fd)}
 			} else {
 				comm := connectedClients[event.Fd]
 				if comm == nil {
