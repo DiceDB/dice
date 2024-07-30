@@ -25,10 +25,30 @@ func (b *ByteArray) SetBit(pos int, value bool) {
 	}
 }
 
+// SetBitByArrayPosition sets the bit at the given position to the specified value
+func (b *ByteArray) SetBitByByteArrayPosition(pos int, value bool) {
+	byteIndex := pos / 8
+	bitIndex := 7 - uint(pos%8)
+
+	if value {
+		b.data[byteIndex] |= (1 << bitIndex)
+	} else {
+		b.data[byteIndex] &^= (1 << bitIndex)
+	}
+}
+
 // GetBit gets the bit at the given position
 func (b *ByteArray) GetBit(pos int) bool {
 	byteIndex := pos / 8
 	bitIndex := uint(pos % 8)
+
+	return (b.data[byteIndex] & (1 << bitIndex)) != 0
+}
+
+// GetBit gets the bit at the given position
+func (b *ByteArray) GetBitByByteArrayPosition(pos int) bool {
+	byteIndex := pos / 8
+	bitIndex := 7 - uint(pos%8)
 
 	return (b.data[byteIndex] & (1 << bitIndex)) != 0
 }
