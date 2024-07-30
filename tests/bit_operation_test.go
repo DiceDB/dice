@@ -1,6 +1,8 @@
 package tests
 
 import (
+	"fmt"
+	"net"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -114,6 +116,44 @@ func TestBitCount(t *testing.T) {
 			cmd := tcase.InCmds[i]
 			out := tcase.Out[i]
 			assert.Equal(t, out, fireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
+		}
+	}
+}
+
+func generateSetBitCommand(connection net.Conn, bitPosition int) int64 {
+	command := fmt.Sprintf("SETBIT unitTestKeyA %d 1", bitPosition)
+	responseValue := fireCommand(connection, command)
+	if responseValue == nil {
+		return -1
+	}
+	return responseValue.(int64)
+}
+
+func BenchmarkSetBitCommand(b *testing.B) {
+	connection := getLocalConnection()
+	for n := 0; n < 1000; n++ {
+		setBitCommand := generateSetBitCommand(connection, n)
+		if setBitCommand < 0 {
+			b.Fail()
+		}
+	}
+}
+
+func generateGetBitCommand(connection net.Conn, bitPosition int) int64 {
+	command := fmt.Sprintf("GETBIT unitTestKeyA %d", bitPosition)
+	responseValue := fireCommand(connection, command)
+	if responseValue == nil {
+		return -1
+	}
+	return responseValue.(int64)
+}
+
+func BenchmarkGetBitCommand(b *testing.B) {
+	connection := getLocalConnection()
+	for n := 0; n < 1000; n++ {
+		getBitCommand := generateGetBitCommand(connection, n)
+		if getBitCommand < 0 {
+			b.Fail()
 		}
 	}
 }
