@@ -113,11 +113,6 @@ func evalGET(args []string) []byte {
 		return RESP_NIL
 	}
 
-	// if key already expired then return nil
-	if hasExpired(obj) {
-		return RESP_NIL
-	}
-
 	// return the RESP encoded value
 	return Encode(obj.Value, false)
 }
@@ -146,11 +141,6 @@ func evalTTL(args []string) []byte {
 	exp, isExpirySet := getExpiry(obj)
 	if !isExpirySet {
 		return RESP_MINUS_1
-	}
-
-	// if key expired i.e. key does not exist hence return -2
-	if exp < uint64(time.Now().UnixMilli()) {
-		return RESP_MINUS_2
 	}
 
 	// compute the time remaining for the key to expire and
