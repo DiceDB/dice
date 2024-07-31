@@ -1,10 +1,14 @@
 package tests
 
 import (
+	"fmt"
+	"net"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/dicedb/dice/testutils"
 	"gotest.tools/v3/assert"
 )
 
@@ -16,6 +20,9 @@ type TestCase struct {
 
 func TestSet(t *testing.T) {
 	conn := getLocalConnection()
+	keyValLen := 200
+	longKey := testutils.GenerateRandomString(keyValLen, "abc123@#$")
+	longVal := testutils.GenerateRandomString(keyValLen, "abc123@#$")
 	defer conn.Close()
 
 	testCases := []TestCase{
@@ -33,6 +40,16 @@ func TestSet(t *testing.T) {
 			name:     "Overwrite Existing Key",
 			commands: []string{"SET k v1", "SET k 5", "GET k"},
 			expected: []interface{}{"OK", "OK", int64(5)},
+		},
+		{
+			name:     "Set and get a long key",
+			commands: []string{"SET " + *longKey + " " + *longVal, "GET " + *longKey},
+			expected: []interface{}{"OK", *longVal},
+		},
+		{
+			name:     "Set and get a boolean",
+			commands: []string{"SET k true", "GET k"},
+			expected: []interface{}{"OK", "true"},
 		},
 	}
 
@@ -197,4 +214,58 @@ func TestWithKeepTTLFlag(t *testing.T) {
 	out := "(nil)"
 
 	assert.Equal(t, out, fireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
+}
+
+/*
+We open some connections to the db and fire concurrent SET commands for a particular key
+with different values. We expect that there are no dirty reads/writes.
+All the values read should be among the values that were attempted to set in the first place.
+*/
+func TestConcurrentSetCommands(t *testing.T) {
+	numOfConnections := 4
+	connectionValues := make(map[*net.Conn]*string)
+	expectedValues := make(map[string]struct{})
+	valuesReadChan := make(chan interface{}, numOfConnections)
+
+	// Create connections and the values to set through them.
+	for connNum := 0; connNum < numOfConnections; connNum++ {
+		value := testutils.GenerateRandomString(8, "abcdefghizklmopqrs12345")
+		connectionValues[getLocalConnectionPtr()] = value
+		expectedValues[*value] = struct{}{}
+	}
+
+	// Execute the SET commands from the connections, and pass the output of GET to a channel
+	var wgroup sync.WaitGroup
+	key := "sample_key"
+	for conn, value := range connectionValues {
+		wgroup.Add(1)
+		go executeCommands(conn, &key, value, valuesReadChan, &wgroup)
+	}
+	wgroup.Wait()
+	fmt.Println("Received values from all connections")
+	close(valuesReadChan)
+
+	// Verify the values received in the channel
+	assert.Equal(t, numOfConnections, len(valuesReadChan))
+	for valueRead := range valuesReadChan {
+		if valueRead != nil {
+			valueReadStr := valueRead.(string)
+			_, ok := expectedValues[valueReadStr]
+			if !ok {
+				fmt.Println("Value read is not in expected values' map")
+				t.Fail()
+				break
+			}
+		}
+	}
+}
+
+func executeCommands(conn *net.Conn, key, value *string, valReadChan chan interface{}, wGroup *sync.WaitGroup) {
+	defer wGroup.Done()
+	defer (*conn).Close()
+	fmt.Println("Goroutine started")
+	fireCommand(*conn, "SET "+*key+" "+*value)
+	var readValue = fireCommand(*conn, "GET "+*key)
+	valReadChan <- readValue
+	fmt.Println("Goroutine done")
 }
