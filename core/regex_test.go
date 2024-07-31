@@ -6,11 +6,11 @@ import (
 	"github.com/dicedb/dice/core"
 )
 
-func TestWildCardMatch(t *testing.T){
-	tests := []struct{
+func TestWildCardMatch(t *testing.T) {
+	tests := []struct {
 		pattern string
-		key 	string
-		want	bool
+		key     string
+		want    bool
 	}{
 		{"*", "anything", true},
 		{"*", "", true},

@@ -3,6 +3,9 @@
 build:
 	CGO_ENABLED=0 GOOS=linux go build -o ./dice-server
 
+format:
+	go fmt ./...
+
 run:
 	go run main.go
 
