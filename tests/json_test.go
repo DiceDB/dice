@@ -11,6 +11,37 @@ func TestJSONOperations(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 	ja := jsonassert.New(t)
+
+	t.Run("Set and Get Integer", func(t *testing.T) {
+		setCmd := `JSON.SET tools $ 2`
+		result := fireCommand(conn, setCmd)
+		assert.Equal(t, "OK", result)
+
+		getCmd := `JSON.GET tools`
+		result = fireCommand(conn, getCmd)
+		ja.Assertf(result.(string), `2`)
+	})
+
+	t.Run("Set and Get Boolean True", func(t *testing.T) {
+		setCmd := `JSON.SET booleanTrue $ true`
+		result := fireCommand(conn, setCmd)
+		assert.Equal(t, "OK", result)
+
+		getCmd := `JSON.GET booleanTrue`
+		result = fireCommand(conn, getCmd)
+		ja.Assertf(result.(string), `true`)
+	})
+
+	t.Run("Set and Get Boolean False", func(t *testing.T) {
+		setCmd := `JSON.SET booleanFalse $ false`
+		result := fireCommand(conn, setCmd)
+		assert.Equal(t, "OK", result)
+
+		getCmd := `JSON.GET booleanFalse`
+		result = fireCommand(conn, getCmd)
+		ja.Assertf(result.(string), `false`)
+	})
+
 	t.Run("Set and Get Simple JSON", func(t *testing.T) {
 		setCmd := `JSON.SET user $ {"name":"John","age":30}`
 		result := fireCommand(conn, setCmd)
