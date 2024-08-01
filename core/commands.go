@@ -34,6 +34,23 @@ var (
 		GET returns RESP_NIL if key is expired or it does not exist`,
 		Eval: evalGET,
 	}
+	jsonsetCmdMeta = DiceCmdMeta{
+		Name: "JSON.SET",
+		Info: `JSON.SET key path json-string
+		Sets a JSON value at the specified key.
+		Returns OK if successful.
+		Returns encoded error message if the number of arguments is incorrect or the JSON string is invalid.`,
+		Eval: evalJSONSET,
+	}
+
+	jsongetCmdMeta = DiceCmdMeta{
+		Name: "JSON.GET",
+		Info: `JSON.GET key [path]
+		Returns the encoded RESP value of the key, if present
+		Null reply: If the key doesn't exist or has expired.
+		Error reply: If the number of arguments is incorrect or the stored value is not a JSON type.`,
+		Eval: evalJSONGET,
+	}
 	ttlCmdMeta = DiceCmdMeta{
 		Name: "TTL",
 		Info: `TTL returns Time-to-Live in secs for the queried key in args
@@ -314,6 +331,8 @@ func init() {
 	diceCmds["PING"] = pingCmdMeta
 	diceCmds["SET"] = setCmdMeta
 	diceCmds["GET"] = getCmdMeta
+	diceCmds["JSON.SET"] = jsonsetCmdMeta
+	diceCmds["JSON.GET"] = jsongetCmdMeta
 	diceCmds["TTL"] = ttlCmdMeta
 	diceCmds["DEL"] = delCmdMeta
 	diceCmds["EXPIRE"] = expireCmdMeta
