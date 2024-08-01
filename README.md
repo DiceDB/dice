@@ -8,24 +8,24 @@ DiceDB is a drop-in replacement of Redis with SQL-based real-time reactivity bak
 ## How is it different from Redis?
 
 1. DiceDB is multi-threaded and follows [shared-nothing architecture](https://en.wikipedia.org/wiki/Shared-nothing_architecture).
-2. DiceDB supports a new command called `QWATCH` that lets clients listen to a SQL query and get notified in real-time whenever something changes.
+2. DiceDB supports a new command called `QWATCH` that lets clients listen to a SQL query and get notified in real-time whenever data changes.
 
 ## Get started
 
 ### Using Docker
 
-The easiest way to get started with DiceDB is using [Docker](https://www.docker.com/) by running the following command.
+The easiest way to start using DiceDB is through [Docker](https://www.docker.com/) by running the following command.
 
 ```
 $ docker run dicedb/dice-server
 ```
 
 The above command will start the DiceDB server running locally on the port `7379` and you can connect
-to it using DiceDB CLI and SDKs, or even Redis CLIs and SDKs.
+to it using DiceDB CLI and SDKs.
 
 > Note: Given it is a drop-in replacement of Redis, you can also use any Redis CLI and SDK to connect to DiceDB.
 
-### Setting up
+### Setting up for local development
 
 To run DiceDB for local development or running from source, you will need
 
