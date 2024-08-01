@@ -165,8 +165,7 @@ func evalJSONSET(args []string) []byte {
 	jsonStr := args[2]
 
 	// Parse the JSON string
-	var p fastjson.Parser
-	v, err := p.Parse(jsonStr)
+	v, err := parser.Parse(jsonStr)
 	if err != nil {
 		return Encode(errors.New("ERR invalid JSON"), false)
 	}
