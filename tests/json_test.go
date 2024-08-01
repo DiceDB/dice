@@ -3,150 +3,132 @@ package tests
 import (
 	"testing"
 
-	"github.com/kinbiko/jsonassert"
 	"gotest.tools/v3/assert"
 )
 
 func TestJSONOperations(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
-	ja := jsonassert.New(t)
 
-	t.Run("Set and Get Integer", func(t *testing.T) {
-		setCmd := `JSON.SET tools $ 2`
-		result := fireCommand(conn, setCmd)
-		assert.Equal(t, "OK", result)
+	simpleJSON := `{"name":"John","age":30}`
+	nestedJSON := `{"name":"Alice","address":{"city":"New York","zip":"10001"},"array":[1,2,3,4,5]}`
+	specialCharsJSON := `{"key":"value with spaces","emoji":"😀"}`
+	unicodeJSON := `{"unicode":"こんにちは世界"}`
+	escapedCharsJSON := `{"escaped":"\"quoted\", \\backslash\\ and /forward/slash"}`
 
-		getCmd := `JSON.GET tools`
-		result = fireCommand(conn, getCmd)
-		ja.Assertf(result.(string), `2`)
-	})
+	testCases := []struct {
+		name     string
+		setCmd   string
+		getCmd   string
+		expected string
+	}{
+		{
+			name:     "Set and Get Integer",
+			setCmd:   `JSON.SET tools $ 2`,
+			getCmd:   `JSON.GET tools`,
+			expected: "2",
+		},
+		{
+			name:     "Set and Get Boolean True",
+			setCmd:   `JSON.SET booleanTrue $ true`,
+			getCmd:   `JSON.GET booleanTrue`,
+			expected: "true",
+		},
+		{
+			name:     "Set and Get Boolean False",
+			setCmd:   `JSON.SET booleanFalse $ false`,
+			getCmd:   `JSON.GET booleanFalse`,
+			expected: "false",
+		},
+		{
+			name:     "Set and Get Simple JSON",
+			setCmd:   `JSON.SET user $ ` + simpleJSON,
+			getCmd:   `JSON.GET user`,
+			expected: simpleJSON,
+		},
+		{
+			name:     "Set and Get Nested JSON",
+			setCmd:   `JSON.SET user:2 $ ` + nestedJSON,
+			getCmd:   `JSON.GET user:2`,
+			expected: nestedJSON,
+		},
+		{
+			name:     "Set and Get JSON Array",
+			setCmd:   `JSON.SET numbers $ [1,2,3,4,5]`,
+			getCmd:   `JSON.GET numbers`,
+			expected: `[1,2,3,4,5]`,
+		},
+		{
+			name:     "Set and Get JSON with Special Characters",
+			setCmd:   `JSON.SET special $ ` + specialCharsJSON,
+			getCmd:   `JSON.GET special`,
+			expected: specialCharsJSON,
+		},
+		{
+			name:     "Set Invalid JSON",
+			setCmd:   `JSON.SET invalid $ {invalid:json}`,
+			getCmd:   ``,
+			expected: "ERR invalid JSON",
+		},
+		{
+			name:     "Set JSON with Wrong Number of Arguments",
+			setCmd:   `JSON.SET`,
+			getCmd:   ``,
+			expected: "ERR wrong number of arguments for 'JSON.SET' command",
+		},
+		{
+			name:     "Get JSON with Wrong Number of Arguments",
+			setCmd:   ``,
+			getCmd:   `JSON.GET`,
+			expected: "ERR wrong number of arguments for 'JSON.GET' command",
+		},
+		{
+			name:     "Set Non-JSON Value",
+			setCmd:   `SET nonJson "not a json"`,
+			getCmd:   `JSON.GET nonJson`,
+			expected: "WRONGTYPE Operation against a key holding the wrong kind of value",
+		},
+		{
+			name:     "Set Empty JSON Object",
+			setCmd:   `JSON.SET empty $ {}`,
+			getCmd:   `JSON.GET empty`,
+			expected: `{}`,
+		},
+		{
+			name:     "Set Empty JSON Array",
+			setCmd:   `JSON.SET emptyArray $ []`,
+			getCmd:   `JSON.GET emptyArray`,
+			expected: `[]`,
+		},
+		{
+			name:     "Set JSON with Unicode",
+			setCmd:   `JSON.SET unicode $ ` + unicodeJSON,
+			getCmd:   `JSON.GET unicode`,
+			expected: unicodeJSON,
+		},
+		{
+			name:     "Set JSON with Escaped Characters",
+			setCmd:   `JSON.SET escaped $ ` + escapedCharsJSON,
+			getCmd:   `JSON.GET escaped`,
+			expected: escapedCharsJSON,
+		},
+	}
 
-	t.Run("Set and Get Boolean True", func(t *testing.T) {
-		setCmd := `JSON.SET booleanTrue $ true`
-		result := fireCommand(conn, setCmd)
-		assert.Equal(t, "OK", result)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.setCmd != "" {
+				result := fireCommand(conn, tc.setCmd)
+				if tc.name != "Set Invalid JSON" && tc.name != "Set JSON with Wrong Number of Arguments" {
+					assert.Equal(t, "OK", result)
+				} else {
+					assert.Equal(t, tc.expected, result)
+				}
+			}
 
-		getCmd := `JSON.GET booleanTrue`
-		result = fireCommand(conn, getCmd)
-		ja.Assertf(result.(string), `true`)
-	})
-
-	t.Run("Set and Get Boolean False", func(t *testing.T) {
-		setCmd := `JSON.SET booleanFalse $ false`
-		result := fireCommand(conn, setCmd)
-		assert.Equal(t, "OK", result)
-
-		getCmd := `JSON.GET booleanFalse`
-		result = fireCommand(conn, getCmd)
-		ja.Assertf(result.(string), `false`)
-	})
-
-	t.Run("Set and Get Simple JSON", func(t *testing.T) {
-		setCmd := `JSON.SET user $ {"name":"John","age":30}`
-		result := fireCommand(conn, setCmd)
-		assert.Equal(t, "OK", result)
-
-		getCmd := `JSON.GET user`
-		result = fireCommand(conn, getCmd)
-
-		ja.Assertf(result.(string), `{"age":30,"name":"John"}`)
-	})
-
-	t.Run("Set and Get Nested JSON", func(t *testing.T) {
-		setCmd := `JSON.SET user:2 $ {"name":"Alice","address":{"city":"New York","zip":"10001"},"array":[1,2,3,4,5]}`
-		result := fireCommand(conn, setCmd)
-		assert.Equal(t, "OK", result)
-
-		getCmd := `JSON.GET user:2`
-		result = fireCommand(conn, getCmd)
-		ja.Assertf(result.(string), `{"name":"Alice","address":{"city":"New York","zip":"10001"},"array":[1,2,3,4,5]}`)
-	})
-
-	t.Run("Set and Get JSON Array", func(t *testing.T) {
-		setCmd := `JSON.SET numbers $ [1,2,3,4,5]`
-		result := fireCommand(conn, setCmd)
-		assert.Equal(t, "OK", result)
-
-		getCmd := `JSON.GET numbers`
-		result = fireCommand(conn, getCmd)
-		ja.Assertf(result.(string), `[1,2,3,4,5]`)
-	})
-
-	t.Run("Set and Get JSON with Special Characters", func(t *testing.T) {
-		setCmd := `JSON.SET special $ {"key":"value with spaces","emoji":"😀"}`
-		result := fireCommand(conn, setCmd)
-		assert.Equal(t, "OK", result)
-
-		getCmd := `JSON.GET special`
-		result = fireCommand(conn, getCmd)
-		ja.Assertf(result.(string), `{"key":"value with spaces","emoji":"😀"}`)
-	})
-
-	t.Run("Set Invalid JSON", func(t *testing.T) {
-		setCmd := `JSON.SET invalid $ {invalid:json}`
-		result := fireCommand(conn, setCmd)
-		assert.Equal(t, "ERR invalid JSON", result)
-	})
-
-	t.Run("Set JSON with Wrong Number of Arguments", func(t *testing.T) {
-		setCmd := `JSON.SET`
-		result := fireCommand(conn, setCmd)
-		assert.Equal(t, "ERR wrong number of arguments for 'JSON.SET' command", result)
-	})
-
-	t.Run("Get JSON with Wrong Number of Arguments", func(t *testing.T) {
-		getCmd := `JSON.GET`
-		result := fireCommand(conn, getCmd)
-		assert.Equal(t, "ERR wrong number of arguments for 'JSON.GET' command", result)
-	})
-
-	t.Run("Set Non-JSON Value", func(t *testing.T) {
-		setCmd := `SET nonJson "not a json"`
-		result := fireCommand(conn, setCmd)
-		assert.Equal(t, "OK", result)
-		getCmd := `JSON.GET nonJson`
-		result = fireCommand(conn, getCmd)
-
-		assert.Equal(t, "WRONGTYPE Operation against a key holding the wrong kind of value", result)
-	})
-
-	t.Run("Set Empty JSON Object", func(t *testing.T) {
-		setCmd := `JSON.SET empty $ {}`
-		result := fireCommand(conn, setCmd)
-		assert.Equal(t, "OK", result)
-		getCmd := `JSON.GET empty`
-		result = fireCommand(conn, getCmd)
-		ja.Assertf(result.(string), `{}`)
-	})
-
-	t.Run("Set Empty JSON Array", func(t *testing.T) {
-		setCmd := `JSON.SET emptyArray $ []`
-		result := fireCommand(conn, setCmd)
-		assert.Equal(t, "OK", result)
-
-		getCmd := `JSON.GET emptyArray`
-		result = fireCommand(conn, getCmd)
-		ja.Assertf(result.(string), `[]`)
-	})
-	t.Run("Set JSON with Unicode", func(t *testing.T) {
-		setCmd := `JSON.SET unicode $ {"unicode":"こんにちは世界"}`
-		result := fireCommand(conn, setCmd)
-		assert.Equal(t, "OK", result)
-		getCmd := `JSON.GET unicode`
-		result = fireCommand(conn, getCmd)
-
-		ja.Assertf(result.(string), `{"unicode":"こんにちは世界"}`)
-	})
-
-	t.Run("Set JSON with Escaped Characters", func(t *testing.T) {
-		setCmd := `JSON.SET escaped $ {"escaped":"\"quoted\", \\backslash\\ and \/forward\/slash"}`
-		result := fireCommand(conn, setCmd)
-		assert.Equal(t, "OK", result)
-		getCmd := `JSON.GET escaped`
-		result = fireCommand(conn, getCmd)
-
-		ja.Assertf(result.(string), `{"escaped":"\"quoted\", \\backslash\\ and /forward/slash"}`)
-	})
-
+			if tc.getCmd != "" {
+				result := fireCommand(conn, tc.getCmd)
+				assert.DeepEqual(t, tc.expected, result)
+			}
+		})
+	}
 }

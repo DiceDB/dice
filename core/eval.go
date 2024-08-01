@@ -2,15 +2,16 @@ package core
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dicedb/dice/config"
 	"log"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/dicedb/dice/config"
+	"github.com/valyala/fastjson"
 )
 
 var RESP_NIL []byte = []byte("$-1\r\n")
@@ -25,6 +26,7 @@ var RESP_EMPTY_ARRAY []byte = []byte("*0\r\n")
 var txnCommands map[string]bool
 var serverID string
 var diceCommandsCount int
+var parser fastjson.Parser
 
 func init() {
 	diceCommandsCount = len(diceCmds)
@@ -124,35 +126,28 @@ func evalGET(args []string) []byte {
 // Returns encoded error response if incorrect number of arguments
 // The RESP value of the key is encoded and then returned
 func evalJSONGET(args []string) []byte {
-	// Check for correct number of arguments
 	if len(args) < 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'JSON.GET' command"), false)
 	}
 
 	key := args[0]
-
-	// Retrieve the object from the database
 	obj := Get(key)
-
-	// Return nil if the key doesn't exist or has expired
-	if obj == nil || hasExpired(obj) {
+	// Return nil if the key doesn't exist
+	if obj == nil {
 		return RESP_NIL
 	}
 
-	// Check if the object is of JSON type
 	objType, _ := ExtractTypeEncoding(obj)
 	if objType != OBJ_TYPE_JSON {
 		return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
 	}
 
-	// Serialize the JSON value
-	jsonBytes, err := json.Marshal(obj.Value)
-	if err != nil {
-		return Encode(errors.New("ERR could not serialize JSON value"), false)
+	jsonValue, ok := obj.Value.(*fastjson.Value)
+	if !ok {
+		return Encode(errors.New("ERR internal error: stored value is not a valid JSON"), false)
 	}
 
-	// Return the JSON value as an encoded string
-	return Encode(string(jsonBytes), false)
+	return Encode(string(jsonValue.MarshalTo(nil)), false)
 }
 
 // evalJSONSET stores a JSON value at the specified key
@@ -161,7 +156,6 @@ func evalJSONGET(args []string) []byte {
 // Returns encoded error if the JSON string is invalid
 // Returns RESP_OK if the JSON value is successfully stored
 func evalJSONSET(args []string) []byte {
-	// Check for correct number of arguments
 	if len(args) < 3 {
 		return Encode(errors.New("ERR wrong number of arguments for 'JSON.SET' command"), false)
 	}
@@ -171,14 +165,14 @@ func evalJSONSET(args []string) []byte {
 	jsonStr := args[2]
 
 	// Parse the JSON string
-	var jsonValue interface{}
-	err := json.Unmarshal([]byte(jsonStr), &jsonValue)
+	var p fastjson.Parser
+	v, err := p.Parse(jsonStr)
 	if err != nil {
 		return Encode(errors.New("ERR invalid JSON"), false)
 	}
 
 	// Create a new object with the JSON value and store it
-	obj := NewObj(jsonValue, -1, OBJ_TYPE_JSON, OBJ_ENCODING_JSON)
+	obj := NewObj(v, -1, OBJ_TYPE_JSON, OBJ_ENCODING_JSON)
 	Put(key, obj)
 
 	return RESP_OK

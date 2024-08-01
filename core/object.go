@@ -21,14 +21,14 @@ var OBJ_TYPE_BYTELIST uint8 = 1 << 4
 var OBJ_ENCODING_QINT uint8 = 0
 var OBJ_ENCODING_QREF uint8 = 1
 
-var OBJ_TYPE_JSON uint8 = 2 << 4 // 00100000
-var OBJ_ENCODING_JSON uint8 = 0
-
 var OBJ_ENCODING_STACKINT uint8 = 2
 var OBJ_ENCODING_STACKREF uint8 = 3
 
-var OBJ_TYPE_BITSET uint8 = 1 << 5 // 00100000
+var OBJ_TYPE_BITSET uint8 = 2 << 4 // 00100000
 var OBJ_ENCODING_BF uint8 = 2      // 00000010
+
+var OBJ_TYPE_JSON uint8 = 3 << 4 // 00110000
+var OBJ_ENCODING_JSON uint8 = 0
 
 func ExtractTypeEncoding(obj *Obj) (uint8, uint8) {
 	return obj.TypeEncoding & 0b11110000, obj.TypeEncoding & 0b00001111
