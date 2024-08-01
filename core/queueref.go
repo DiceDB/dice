@@ -5,7 +5,8 @@ import (
 )
 
 type QueueRef struct {
-	qi *QueueInt
+	qi    *QueueInt
+	store *Store
 }
 
 type QueueElement struct {
@@ -13,9 +14,10 @@ type QueueElement struct {
 	Obj *Obj
 }
 
-func NewQueueRef() *QueueRef {
+func NewQueueRef(store *Store) *QueueRef {
 	return &QueueRef{
-		qi: NewQueueInt(),
+		qi:    NewQueueInt(),
+		store: store,
 	}
 }
 
@@ -26,9 +28,9 @@ func (q *QueueRef) Size() int64 {
 // Insert inserts reference of the key in the QueueRef q.
 // returns false if key does not exist
 func (q *QueueRef) Insert(key string) bool {
-	store.keypoolMutex.RLock()
-	x, ok := store.keypool[key]
-	store.keypoolMutex.RUnlock()
+	q.store.keypoolMutex.RLock()
+	x, ok := q.store.keypool[key]
+	q.store.keypoolMutex.RUnlock()
 
 	if !ok {
 		return false
@@ -49,7 +51,7 @@ func (q *QueueRef) Remove() (*QueueElement, error) {
 			return nil, err
 		}
 		key := *((*string)(unsafe.Pointer(uintptr(val))))
-		obj := store.Get(key)
+		obj := q.store.Get(key)
 		if obj != nil {
 			return &QueueElement{key, obj}, nil
 		}
@@ -63,7 +65,7 @@ func (q *QueueRef) Iterate(n int) []*QueueElement {
 	elements := make([]*QueueElement, 0, len(vals))
 	for _, val := range vals {
 		key := *((*string)(unsafe.Pointer(uintptr(val))))
-		obj := store.Get(key)
+		obj := q.store.Get(key)
 		if obj != nil {
 			elements = append(elements, &QueueElement{key, obj})
 		}

@@ -18,7 +18,7 @@ import (
 
 func TestQueueRef(t *testing.T) {
 	store := core.NewStore()
-	qr := core.NewQueueRef()
+	qr := core.NewQueueRef(store)
 
 	if _, err := qr.Remove(); err != core.ErrQueueEmpty {
 		t.Error("removing from an empty queueref should return an empty queue error")

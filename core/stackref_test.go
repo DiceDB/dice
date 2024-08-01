@@ -8,8 +8,8 @@ import (
 )
 
 func TestStackRef(t *testing.T) {
-	sr := core.NewStackRef()
 	store := core.NewStore()
+	sr := core.NewStackRef(store)
 
 	if _, err := sr.Pop(); err != core.ErrStackEmpty {
 		t.Error("popping from an empty stackref should return an empty stack error")

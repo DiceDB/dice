@@ -598,7 +598,7 @@ func evalQREFINS(args []string) []byte {
 
 	obj := store.Get(args[0])
 	if obj == nil {
-		obj = NewObj(NewQueueRef(), OBJ_TYPE_BYTELIST, OBJ_ENCODING_QREF)
+		obj = NewObj(NewQueueRef(store), OBJ_TYPE_BYTELIST, OBJ_ENCODING_QREF)
 	}
 
 	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
@@ -631,7 +631,7 @@ func evalSTACKREFPUSH(args []string) []byte {
 
 	obj := store.Get(args[0])
 	if obj == nil {
-		obj = NewObj(NewStackRef(), OBJ_TYPE_BYTELIST, OBJ_ENCODING_STACKREF)
+		obj = NewObj(store, OBJ_TYPE_BYTELIST, OBJ_ENCODING_STACKREF)
 	}
 
 	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {

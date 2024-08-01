@@ -5,7 +5,8 @@ import (
 )
 
 type StackRef struct {
-	si *StackInt
+	si    *StackInt
+	store *Store
 }
 
 type StackElement struct {
@@ -13,9 +14,10 @@ type StackElement struct {
 	Obj *Obj
 }
 
-func NewStackRef() *StackRef {
+func NewStackRef(store *Store) *StackRef {
 	return &StackRef{
-		si: NewStackInt(),
+		si:    NewStackInt(),
+		store: store,
 	}
 }
 
@@ -26,9 +28,9 @@ func (s *StackRef) Size() int64 {
 // Push pushes reference of the key in the StackRef s.
 // returns false if key does not exist
 func (s *StackRef) Push(key string) bool {
-	store.keypoolMutex.RLock()
-	x, ok := store.keypool[key]
-	store.keypoolMutex.RUnlock()
+	s.store.keypoolMutex.RLock()
+	x, ok := s.store.keypool[key]
+	s.store.keypoolMutex.RUnlock()
 
 	if !ok {
 		return false
@@ -51,7 +53,7 @@ func (s *StackRef) Pop() (*StackElement, error) {
 		}
 
 		key := *((*string)(unsafe.Pointer(uintptr(val))))
-		obj := store.Get(key)
+		obj := s.store.Get(key)
 		if obj != nil {
 			return &StackElement{key, obj}, nil
 		}
@@ -65,7 +67,7 @@ func (s *StackRef) Iterate(n int) []*StackElement {
 	elements := make([]*StackElement, 0, len(vals))
 	for _, val := range vals {
 		key := *((*string)(unsafe.Pointer(uintptr(val))))
-		obj := store.Get(key)
+		obj := s.store.Get(key)
 		if obj != nil {
 			elements = append(elements, &StackElement{key, obj})
 		}
