@@ -26,9 +26,9 @@ func (q *QueueRef) Size() int64 {
 // Insert inserts reference of the key in the QueueRef q.
 // returns false if key does not exist
 func (q *QueueRef) Insert(key string) bool {
-	keypoolMutex.RLock()
-	x, ok := keypool[key]
-	keypoolMutex.RUnlock()
+	store.keypoolMutex.RLock()
+	x, ok := store.keypool[key]
+	store.keypoolMutex.RUnlock()
 
 	if !ok {
 		return false
@@ -49,7 +49,7 @@ func (q *QueueRef) Remove() (*QueueElement, error) {
 			return nil, err
 		}
 		key := *((*string)(unsafe.Pointer(uintptr(val))))
-		obj := Get(key)
+		obj := store.Get(key)
 		if obj != nil {
 			return &QueueElement{key, obj}, nil
 		}
@@ -63,7 +63,7 @@ func (q *QueueRef) Iterate(n int) []*QueueElement {
 	elements := make([]*QueueElement, 0, len(vals))
 	for _, val := range vals {
 		key := *((*string)(unsafe.Pointer(uintptr(val))))
-		obj := Get(key)
+		obj := store.Get(key)
 		if obj != nil {
 			elements = append(elements, &QueueElement{key, obj})
 		}

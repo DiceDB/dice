@@ -27,10 +27,13 @@ var eStatus int32 = EngineStatus_WAITING
 
 var connectedClients map[int]*core.Client
 
-var store = core.NewStore()
-
 func init() {
 	connectedClients = make(map[int]*core.Client)
+}
+
+func newConn(fd int) net.Conn {
+	// Implement a function that wraps the file descriptor in a net.Conn
+	return NewNetConn(fd)
 }
 
 // Waits on `core.WatchChannel` to receive updates about keys. Sends the update
@@ -42,11 +45,12 @@ func WatchKeys(ctx context.Context, wg *sync.WaitGroup) {
 	for {
 		select {
 		case event := <-core.WatchChannel:
+			// Check if the key matches any RegexMatcher in the watch list.
 			core.WatchList.Range(func(key, value interface{}) bool {
 				query := key.(core.DSQLQuery)
 				clients := value.(*sync.Map)
 
-				if core.WildCardMatch(query.KeyRegex, event.Key) {
+				if core.RegexMatch(query.KeyRegex, event.Key) {
 					result, err := core.ExecuteQuery(store, query)
 					if err != nil {
 						log.Error(err)
@@ -126,7 +130,7 @@ func RunAsyncTCPServer(serverFD int, wg *sync.WaitGroup) {
 
 	log.Info("starting an asynchronous TCP server on", config.Host, config.Port)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	_, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	defer func() {
@@ -134,8 +138,12 @@ func RunAsyncTCPServer(serverFD int, wg *sync.WaitGroup) {
 	}()
 	maxClients := 20000
 
-	wg.Add(1)
-	go WatchKeys(ctx, wg)
+	// Initialize thread pools
+	ipool := NewIOThreadPool(4)
+
+	// testing multithreading
+	// wg.Add(1)
+	// go WatchKeys(ctx, wg)
 
 	// Start listening
 	if err := syscall.Listen(serverFD, maxClients); err != nil {
@@ -218,6 +226,9 @@ func RunAsyncTCPServer(serverFD int, wg *sync.WaitGroup) {
 				}); err != nil {
 					log.Fatal(err)
 				}
+
+				// dispatch the request to the IO thread pool
+				ipool.Get().reqch <- &Request{conn: newConn(fd)}
 			} else {
 				comm := connectedClients[event.Fd]
 				if comm == nil {

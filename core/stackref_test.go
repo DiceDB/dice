@@ -9,6 +9,7 @@ import (
 
 func TestStackRef(t *testing.T) {
 	sr := core.NewStackRef()
+	store := core.NewStore()
 
 	if _, err := sr.Pop(); err != core.ErrStackEmpty {
 		t.Error("popping from an empty stackref should return an empty stack error")
@@ -18,7 +19,7 @@ func TestStackRef(t *testing.T) {
 		t.Error("inserting the reference of the key that does not exist should not work but it did")
 	}
 
-	core.Put("key that exists", core.NewObj(10, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	store.Put("key that exists", core.NewObj(10, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT), -1)
 	if sr.Push("key that exists") != true {
 		t.Error("inserting the reference of the key that exists should work but it did not")
 	}
@@ -31,19 +32,19 @@ func TestStackRef(t *testing.T) {
 		t.Error("removing again from an empty stackref should return an empty stack error")
 	}
 
-	core.Put("key1", core.NewObj(10, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	store.Put("key1", core.NewObj(10, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT), -1)
 	sr.Push("key1")
-	core.Put("key2", core.NewObj(20, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	store.Put("key2", core.NewObj(20, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT), -1)
 	sr.Push("key2")
-	core.Put("key3", core.NewObj(30, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	store.Put("key3", core.NewObj(30, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT), -1)
 	sr.Push("key3")
-	core.Put("key4", core.NewObj(40, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	store.Put("key4", core.NewObj(40, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT), -1)
 	sr.Push("key4")
-	core.Put("key5", core.NewObj(50, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	store.Put("key5", core.NewObj(50, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT), -1)
 	sr.Push("key5")
-	core.Put("key6", core.NewObj(60, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	store.Put("key6", core.NewObj(60, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT), -1)
 	sr.Push("key6")
-	core.Put("key7", core.NewObj(60, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	store.Put("key7", core.NewObj(60, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT), -1)
 	sr.Push("key7")
 
 	observedVals := make([]int64, 0, 6)

@@ -3,14 +3,19 @@ package server
 import (
 	"fmt"
 	"net"
+	"runtime"
+
+	"github.com/dicedb/dice/core"
 )
+
+var numCPU int = runtime.NumCPU()
 
 var ipool *IOThreadPool
 var spool *ShardPool
 
 func init() {
-	ipool = NewIOThreadPool(4)
-	spool = NewShardPool(4)
+	ipool = NewIOThreadPool(numCPU)
+	spool = NewShardPool(numCPU)
 }
 
 type Operation struct {
@@ -73,7 +78,7 @@ func (p *IOThreadPool) Put(t *IOThread) {
 }
 
 type ShardThread struct {
-	store map[string]string
+	store *core.Store
 	reqch chan *Operation
 }
 
@@ -99,8 +104,8 @@ func (p *ShardPool) Init(poolsize int) {
 	p.shardThreads = make([]*ShardThread, poolsize)
 	for i := 0; i < poolsize; i++ {
 		p.shardThreads[i] = &ShardThread{
+			store: core.NewStore(),
 			reqch: make(chan *Operation),
-			store: make(map[string]string),
 		}
 		go p.shardThreads[i].Run()
 	}

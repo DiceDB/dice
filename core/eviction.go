@@ -9,11 +9,11 @@ import (
 // Evicts the first key it found while iterating the map
 // TODO: Make it efficient by doing thorough sampling
 func evictFirst() {
-	storeMutex.Lock()
-	defer storeMutex.Unlock()
+	store.storeMutex.Lock()
+	defer store.storeMutex.Unlock()
 
-	for keyPtr := range store {
-		DelByPtr(keyPtr)
+	for keyPtr := range store.store {
+		store.DelByPtr(keyPtr)
 		return
 	}
 }
@@ -22,13 +22,13 @@ func evictFirst() {
 // The number of keys removed will be sufficient to free up at least 10% space
 func evictAllkeysRandom() {
 	evictCount := int64(config.EvictionRatio * float64(config.KeysLimit))
-	storeMutex.Lock()
-	defer storeMutex.Unlock()
+	store.storeMutex.Lock()
+	defer store.storeMutex.Unlock()
 
 	// Iteration of Golang dictionary can be considered as a random
 	// because it depends on the hash of the inserted key
-	for keyPtr := range store {
-		DelByPtr(keyPtr)
+	for keyPtr := range store.store {
+		store.DelByPtr(keyPtr)
 		evictCount--
 		if evictCount <= 0 {
 			break
@@ -53,11 +53,11 @@ func getIdleTime(lastAccessedAt uint32) uint32 {
 
 func populateEvictionPool() {
 	sampleSize := 5
-	storeMutex.RLock()
-	defer storeMutex.RUnlock()
+	store.storeMutex.RLock()
+	defer store.storeMutex.RUnlock()
 
-	for k := range store {
-		ePool.Push(k, store[k].LastAccessedAt)
+	for k := range store.store {
+		ePool.Push(k, store.store[k].LastAccessedAt)
 		sampleSize--
 		if sampleSize == 0 {
 			break
@@ -75,7 +75,7 @@ func evictAllkeysLRU() {
 		if item == nil {
 			return
 		}
-		DelByPtr(item.keyPtr)
+		store.DelByPtr(item.keyPtr)
 	}
 }
 

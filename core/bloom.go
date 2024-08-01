@@ -310,12 +310,12 @@ func evalBFINFO(args []string) []byte {
 // the kv store. If it does not exist, it tries to create one with
 // given `opts` and returns it.
 func getOrCreateBloomFilter(key string, opts *BloomOpts) (*Bloom, error) {
-	obj := Get(key)
+	obj := store.Get(key)
 
 	// If we don't have a filter yet and `opts` are provided, create one.
 	if obj == nil && opts != nil {
-		obj = NewObj(newBloomFilter(opts), -1, OBJ_TYPE_BITSET, OBJ_ENCODING_BF)
-		Put(key, obj)
+		obj = NewObj(newBloomFilter(opts), OBJ_TYPE_BITSET, OBJ_ENCODING_BF)
+		store.Put(key, obj, -1)
 	}
 
 	// If no `opts` are provided for filter creation, return err

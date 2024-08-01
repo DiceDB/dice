@@ -22,14 +22,16 @@ var dataset = []keyValue{
 	{"k1", "v5"},
 }
 
+var store = core.NewStore()
+
 func setup() {
 	// delete all keys
 	for _, data := range dataset {
-		core.Del(data.key)
+		store.Del(data.key)
 	}
 
 	for _, data := range dataset {
-		core.Put(data.key, &core.Obj{Value: data.value})
+		store.Put(data.key, &core.Obj{Value: data.value}, -1)
 	}
 }
 
@@ -48,7 +50,7 @@ func TestExecuteQueryOrderBykey(t *testing.T) {
 		},
 	}
 
-	result, err := core.ExecuteQuery(query)
+	result, err := core.ExecuteQuery(store, query)
 
 	assert.NilError(t, err)
 	assert.Equal(t, len(result), len(dataset))
@@ -82,7 +84,7 @@ func TestExecuteQueryBasicOrderByValue(t *testing.T) {
 		},
 	}
 
-	result, err := core.ExecuteQuery(query)
+	result, err := core.ExecuteQuery(store, query)
 
 	assert.NilError(t, err)
 	assert.Equal(t, len(result), len(dataset))
@@ -117,7 +119,7 @@ func TestExecuteQueryLimit(t *testing.T) {
 		Limit: 3,
 	}
 
-	result, err := core.ExecuteQuery(query)
+	result, err := core.ExecuteQuery(store, query)
 
 	assert.NilError(t, err)
 	assert.Assert(t, cmp.Len(result, 3)) // Checks if limit is respected
@@ -147,7 +149,7 @@ func TestExecuteQueryNoMatch(t *testing.T) {
 		},
 	}
 
-	result, err := core.ExecuteQuery(query)
+	result, err := core.ExecuteQuery(store, query)
 
 	assert.NilError(t, err)
 	assert.Assert(t, cmp.Len(result, 0)) // No keys match "x*"

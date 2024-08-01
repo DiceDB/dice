@@ -26,9 +26,9 @@ func (s *StackRef) Size() int64 {
 // Push pushes reference of the key in the StackRef s.
 // returns false if key does not exist
 func (s *StackRef) Push(key string) bool {
-	keypoolMutex.RLock()
-	x, ok := keypool[key]
-	keypoolMutex.RUnlock()
+	store.keypoolMutex.RLock()
+	x, ok := store.keypool[key]
+	store.keypoolMutex.RUnlock()
 
 	if !ok {
 		return false
@@ -51,7 +51,7 @@ func (s *StackRef) Pop() (*StackElement, error) {
 		}
 
 		key := *((*string)(unsafe.Pointer(uintptr(val))))
-		obj := Get(key)
+		obj := store.Get(key)
 		if obj != nil {
 			return &StackElement{key, obj}, nil
 		}
@@ -65,7 +65,7 @@ func (s *StackRef) Iterate(n int) []*StackElement {
 	elements := make([]*StackElement, 0, len(vals))
 	for _, val := range vals {
 		key := *((*string)(unsafe.Pointer(uintptr(val))))
-		obj := Get(key)
+		obj := store.Get(key)
 		if obj != nil {
 			elements = append(elements, &StackElement{key, obj})
 		}

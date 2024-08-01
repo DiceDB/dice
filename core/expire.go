@@ -6,7 +6,7 @@ import (
 )
 
 func hasExpired(obj *Obj) bool {
-	exp, ok := expires[obj]
+	exp, ok := store.expires[obj]
 	if !ok {
 		return false
 	}
@@ -14,7 +14,7 @@ func hasExpired(obj *Obj) bool {
 }
 
 func getExpiry(obj *Obj) (uint64, bool) {
-	exp, ok := expires[obj]
+	exp, ok := store.expires[obj]
 	return exp, ok
 }
 
@@ -26,9 +26,9 @@ func expireSample() float32 {
 	var expiredCount int = 0
 	var keysToDelete []unsafe.Pointer
 
-	storeMutex.RLock()
+	store.storeMutex.RLock()
 	// Collect keys to be deleted
-	for keyPtr, obj := range store {
+	for keyPtr, obj := range store.store {
 		// once we iterated to 20 keys that have some expiration set
 		// we break the loop
 		if limit == 0 {
@@ -40,11 +40,11 @@ func expireSample() float32 {
 			expiredCount++
 		}
 	}
-	storeMutex.RUnlock()
+	store.storeMutex.RUnlock()
 
 	// Delete the keys outside the read lock
 	for _, keyPtr := range keysToDelete {
-		DelByPtr(keyPtr)
+		store.DelByPtr(keyPtr)
 	}
 
 	return float32(expiredCount) / float32(20.0)

@@ -10,23 +10,23 @@ type DSQLQueryResultRow struct {
 }
 
 // TODO: Implement thread-safe access to the keypool and store.
-func ExecuteQuery(query DSQLQuery) ([]DSQLQueryResultRow, error) {
+func ExecuteQuery(store *Store, query DSQLQuery) ([]DSQLQueryResultRow, error) {
 	var result []DSQLQueryResultRow
 
-	storeMutex.RLock()
-	keypoolMutex.RLock()
-	for key, ptr := range keypool {
+	store.storeMutex.RLock()
+	store.keypoolMutex.RLock()
+	for key, ptr := range store.keypool {
 		if RegexMatch(query.KeyRegex, key) {
 			row := DSQLQueryResultRow{
 				Key:   key,
-				Value: store[ptr],
+				Value: store.store[ptr],
 			}
 
 			result = append(result, row)
 		}
 	}
-	keypoolMutex.RUnlock()
-	storeMutex.RUnlock()
+	store.keypoolMutex.RUnlock()
+	store.storeMutex.RUnlock()
 
 	sortResults(query, result)
 

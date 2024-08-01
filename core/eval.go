@@ -29,6 +29,8 @@ func init() {
 	serverID = fmt.Sprintf("%s:%d", config.Host, config.Port)
 }
 
+var store = NewStore()
+
 // evalPING returns with an encoded "PONG"
 // If any message is added with the ping command,
 // the message will be returned.
@@ -88,7 +90,7 @@ func evalSET(args []string) []byte {
 	}
 
 	// putting the k and value in a Hash Table
-	Put(key, NewObj(value, exDurationMs, oType, oEnc))
+	store.Put(key, NewObj(value, oType, oEnc), exDurationMs)
 	return RESP_OK
 }
 
@@ -104,7 +106,7 @@ func evalGET(args []string) []byte {
 	var key string = args[0]
 
 	// Get the key from the hash table
-	obj := Get(key)
+	obj := store.Get(key)
 
 	// if key does not exist, return RESP encoded nil
 	if obj == nil {
@@ -133,7 +135,7 @@ func evalTTL(args []string) []byte {
 
 	var key string = args[0]
 
-	obj := Get(key)
+	obj := store.Get(key)
 
 	// if key does not exist, return RESP encoded -2 denoting key does not exist
 	if obj == nil {
@@ -164,7 +166,7 @@ func evalDEL(args []string) []byte {
 	var countDeleted int = 0
 
 	for _, key := range args {
-		if ok := Del(key); ok {
+		if ok := store.Del(key); ok {
 			countDeleted++
 		}
 	}
@@ -188,14 +190,14 @@ func evalEXPIRE(args []string) []byte {
 		return Encode(errors.New("ERR value is not an integer or out of range"), false)
 	}
 
-	obj := Get(key)
+	obj := store.Get(key)
 
 	// 0 if the timeout was not set. e.g. key doesn't exist, or operation skipped due to the provided arguments
 	if obj == nil {
 		return RESP_ZERO
 	}
 
-	setExpiry(obj, exDurationSec*1000)
+	store.setExpiry(obj, exDurationSec*1000)
 
 	// 1 if the timeout was set.
 	return RESP_ONE
@@ -251,10 +253,10 @@ func evalINCR(args []string) []byte {
 	}
 
 	var key string = args[0]
-	obj := Get(key)
+	obj := store.Get(key)
 	if obj == nil {
-		obj = NewObj("0", -1, OBJ_TYPE_STRING, OBJ_ENCODING_INT)
-		Put(key, obj)
+		obj = NewObj("0", OBJ_TYPE_STRING, OBJ_ENCODING_INT)
+		store.Put(key, obj, -1)
 	}
 
 	if err := assertType(obj.TypeEncoding, OBJ_TYPE_STRING); err != nil {
@@ -341,9 +343,9 @@ func evalQINTINS(args []string) []byte {
 		return Encode(errors.New("ERR only integer values can be inserted in QINT"), false)
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
-		obj = NewObj(NewQueueInt(), -1, OBJ_TYPE_BYTELIST, OBJ_ENCODING_QINT)
+		obj = NewObj(NewQueueInt(), OBJ_TYPE_BYTELIST, OBJ_ENCODING_QINT)
 	}
 
 	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
@@ -354,7 +356,7 @@ func evalQINTINS(args []string) []byte {
 		return Encode(err, false)
 	}
 
-	Put(args[0], obj)
+	store.Put(args[0], obj, -1)
 
 	q := obj.Value.(*QueueInt)
 	q.Insert(x)
@@ -376,9 +378,9 @@ func evalSTACKINTPUSH(args []string) []byte {
 		return Encode(errors.New("ERR only integer values can be inserted in STACKINT"), false)
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
-		obj = NewObj(NewStackInt(), -1, OBJ_TYPE_BYTELIST, OBJ_ENCODING_STACKINT)
+		obj = NewObj(NewStackInt(), OBJ_TYPE_BYTELIST, OBJ_ENCODING_STACKINT)
 	}
 
 	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
@@ -389,7 +391,7 @@ func evalSTACKINTPUSH(args []string) []byte {
 		return Encode(err, false)
 	}
 
-	Put(args[0], obj)
+	store.Put(args[0], obj, -1)
 
 	s := obj.Value.(*StackInt)
 	s.Push(x)
@@ -407,7 +409,7 @@ func evalQINTREM(args []string) []byte {
 		return Encode(errors.New("ERR invalid number of arguments for `QINTREM` command"), false)
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
 		return RESP_NIL
 	}
@@ -440,7 +442,7 @@ func evalSTACKINTPOP(args []string) []byte {
 		return Encode(errors.New("ERR invalid number of arguments for `STACKINTPOP` command"), false)
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
 		return RESP_NIL
 	}
@@ -471,7 +473,7 @@ func evalQINTLEN(args []string) []byte {
 		return Encode(errors.New("ERR invalid number of arguments for `QINTLEN` command"), false)
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
 		return RESP_ZERO
 	}
@@ -496,7 +498,7 @@ func evalSTACKINTLEN(args []string) []byte {
 		return Encode(errors.New("ERR invalid number of arguments for `STACKINTLEN` command"), false)
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
 		return RESP_ZERO
 	}
@@ -531,7 +533,7 @@ func evalQINTPEEK(args []string) []byte {
 		}
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
 		return RESP_EMPTY_ARRAY
 	}
@@ -566,7 +568,7 @@ func evalSTACKINTPEEK(args []string) []byte {
 		}
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
 		return RESP_EMPTY_ARRAY
 	}
@@ -594,9 +596,9 @@ func evalQREFINS(args []string) []byte {
 		return Encode(errors.New("ERR invalid number of arguments for `QREFINS` command"), false)
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
-		obj = NewObj(NewQueueRef(), -1, OBJ_TYPE_BYTELIST, OBJ_ENCODING_QREF)
+		obj = NewObj(NewQueueRef(), OBJ_TYPE_BYTELIST, OBJ_ENCODING_QREF)
 	}
 
 	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
@@ -607,7 +609,7 @@ func evalQREFINS(args []string) []byte {
 		return Encode(err, false)
 	}
 
-	Put(args[0], obj)
+	store.Put(args[0], obj, -1)
 
 	q := obj.Value.(*QueueRef)
 	if q.Insert(args[1]) {
@@ -627,9 +629,9 @@ func evalSTACKREFPUSH(args []string) []byte {
 		return Encode(errors.New("ERR invalid number of arguments for `STACKREFPUSH` command"), false)
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
-		obj = NewObj(NewStackRef(), -1, OBJ_TYPE_BYTELIST, OBJ_ENCODING_STACKREF)
+		obj = NewObj(NewStackRef(), OBJ_TYPE_BYTELIST, OBJ_ENCODING_STACKREF)
 	}
 
 	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
@@ -640,7 +642,7 @@ func evalSTACKREFPUSH(args []string) []byte {
 		return Encode(err, false)
 	}
 
-	Put(args[0], obj)
+	store.Put(args[0], obj, -1)
 
 	s := obj.Value.(*StackRef)
 	if s.Push(args[1]) {
@@ -659,7 +661,7 @@ func evalQREFREM(args []string) []byte {
 		return Encode(errors.New("ERR invalid number of arguments for `QREFREM` command"), false)
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
 		return RESP_NIL
 	}
@@ -692,7 +694,7 @@ func evalSTACKREFPOP(args []string) []byte {
 		return Encode(errors.New("ERR invalid number of arguments for `STACKREFPOP` command"), false)
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
 		return RESP_NIL
 	}
@@ -723,7 +725,7 @@ func evalQREFLEN(args []string) []byte {
 		return Encode(errors.New("ERR invalid number of arguments for `QREFLEN` command"), false)
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
 		return RESP_ZERO
 	}
@@ -748,7 +750,7 @@ func evalSTACKREFLEN(args []string) []byte {
 		return Encode(errors.New("ERR invalid number of arguments for `STACKREFLEN` command"), false)
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
 		return RESP_ZERO
 	}
@@ -783,7 +785,7 @@ func evalQREFPEEK(args []string) []byte {
 		}
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
 		return RESP_EMPTY_ARRAY
 	}
@@ -818,7 +820,7 @@ func evalSTACKREFPEEK(args []string) []byte {
 		}
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
 		return RESP_EMPTY_ARRAY
 	}
