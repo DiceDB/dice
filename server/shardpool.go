@@ -23,9 +23,8 @@ func init() {
 
 // Shouod we use reddis command here?
 type Operation struct {
-	Key      string
-	Value    string
-	Op       string
+	cmd *RedisCmd
+	keys []string
 	ResultCH chan<- *Result
 }
 
@@ -34,6 +33,8 @@ type Result struct {
 }
 
 type Request struct {
+	cmd *RedisCmd
+	keys []string
 	conn net.Conn
 }
 
@@ -42,12 +43,49 @@ type IOThread struct {
 	resch chan *Result
 }
 
+func findOwnerShard(key string) int {
+	hash := fnv.New32a()
+	hash.Write([]byte(key))
+	hashValue := int(hash.Sum32())
+	bucket := hashValue % SHARDPOOL_SIZE
+	return bucket
+}
+
+
+// Should we pass redis command here?
+func (p *ShardPool) Submit(cmd *RedisCmd, keys []string) {
+	// Non Key Operation.
+	// We need to fan out and execute Operation on all Shards
+	if len(keys) == 0 {
+		for _,index := range SHARDPOOL_SIZE {
+			p.shardThreads[index].reqch <- op
+		}
+	}
+
+	// We have a Key operation and we can target
+	// specific shardds to execute the operation
+	for _, key := range keys {
+		// from the operation, find the owner shard
+		index := findOwnerShard(key)
+
+		// put the operation in that shard
+		// right now `ch` is unbuffered, but we can create a buffer,
+		// enqueue it, and then batch process it, or
+		// when we look at transactions in multi-threaded setup
+		// we can re-order it and process it in the correct order
+		p.shardThreads[index].reqch <- op
+	}
+
+}
+
 func (t *IOThread) Run() {
 	for req := range t.reqch {
 		fmt.Println("handling req", req)
 		// read the request
 		// create the operation
 		spool.Submit(&Operation{
+			req.cmd,
+			req.keys,
 			ResultCH: t.resch,
 		})
 	}
@@ -93,7 +131,7 @@ func (t *ShardThread) Run() {
 		fmt.Println("handling op", op)
 		// execute the operation and create the result
 		var msg = ""
-		executeCommand(cmd*RedisCmd, c*Client, t.store)
+		executeCommand(op.cmd, c*Client, t.store)
 
 		fmt.Println(msg)
 		op.ResultCH <- &Result{msg}
@@ -121,22 +159,6 @@ func (p *ShardPool) Init(poolsize int) {
 	}
 }
 
-func findOwnerShard(key string) int {
-	hash := fnv.New32a()
-	hash.Write([]byte(key))
-	hashValue := int(hash.Sum32())
-	bucket := hashValue % SHARDPOOL_SIZE
-	return bucket
-}
 
-func (p *ShardPool) Submit(op *Operation) {
-	// from the operation, find the owner shard
-	index := findOwnerShard(op.Key)
-
-	// put the operation in that shard
-	// right now `ch` is unbuffered, but we can create a buffer,
-	// enqueue it, and then batch process it, or
-	// when we look at transactions in multi-threaded setup
-	// we can re-order it and process it in the correct order
-	p.shardThreads[index].reqch <- op
-}
+// Trigger
+// ipool.Get().reqch <- &Request{conn: conn}
