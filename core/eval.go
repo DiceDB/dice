@@ -29,8 +29,6 @@ func init() {
 	serverID = fmt.Sprintf("%s:%d", config.Host, config.Port)
 }
 
-var store = NewStore()
-
 // evalPING returns with an encoded "PONG"
 // If any message is added with the ping command,
 // the message will be returned.
@@ -60,7 +58,7 @@ func evalPING(args []string) []byte {
 // Returns encoded error response if expiry tme value in not integer
 // Returns encoded OK RESP once new entry is added
 // If the key already exists then the value will be overwritten and expiry will be discarded
-func evalSET(args []string) []byte {
+func evalSET(args []string, store *Store) []byte {
 	if len(args) <= 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'set' command"), false)
 	}
@@ -98,7 +96,7 @@ func evalSET(args []string) []byte {
 // The key should be the only param in args
 // The RESP value of the key is encoded and then returned
 // evalGET returns RESP_NIL if key is expired or it does not exist
-func evalGET(args []string) []byte {
+func evalGET(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'get' command"), false)
 	}
@@ -114,7 +112,7 @@ func evalGET(args []string) []byte {
 	}
 
 	// if key already expired then return nil
-	if hasExpired(obj) {
+	if hasExpired(obj, store) {
 		return RESP_NIL
 	}
 
@@ -128,7 +126,7 @@ func evalGET(args []string) []byte {
 //
 //	RESP encoded -2 stating key doesn't exist or key is expired
 //	RESP encoded -1 in case no expiration is set on the key
-func evalTTL(args []string) []byte {
+func evalTTL(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'ttl' command"), false)
 	}
@@ -143,7 +141,7 @@ func evalTTL(args []string) []byte {
 	}
 
 	// if object exist, but no expiration is set on it then send -1
-	exp, isExpirySet := getExpiry(obj)
+	exp, isExpirySet := getExpiry(obj, store)
 	if !isExpirySet {
 		return RESP_MINUS_1
 	}
@@ -162,7 +160,7 @@ func evalTTL(args []string) []byte {
 
 // evalDEL deletes all the specified keys in args list
 // returns the count of total deleted keys after encoding
-func evalDEL(args []string) []byte {
+func evalDEL(args []string, store *Store) []byte {
 	var countDeleted int = 0
 
 	for _, key := range args {
@@ -179,7 +177,7 @@ func evalDEL(args []string) []byte {
 // The expiry time should be in integer format; if not, it returns encoded error response
 // Returns RESP_ONE if expiry was set on the key successfully.
 // Once the time is lapsed, the key will be deleted automatically
-func evalEXPIRE(args []string) []byte {
+func evalEXPIRE(args []string, store *Store) []byte {
 	if len(args) <= 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'expire' command"), false)
 	}
@@ -223,7 +221,7 @@ based on CoW optimization and Fork */
 // TODO: Implement Acknowledgement so that main process could know whether child has finished writing to its AOF file or not.
 // TODO: Make it safe from failure, an stable policy would be to write the new flushes to a temporary files and then rename them to the main process's AOF file
 // TODO: Add fsync() and fdatasync() to persist to AOF for above cases.
-func evalBGREWRITEAOF(args []string) []byte {
+func evalBGREWRITEAOF(args []string, store *Store) []byte {
 	// Fork a child process, this child process would inherit all the uncommitted pages from main process.
 	// This technique utilizes the CoW or copy-on-write, so while the main process is free to modify them
 	// the child would save all the pages to disk.
@@ -231,7 +229,7 @@ func evalBGREWRITEAOF(args []string) []byte {
 	newChild, _, _ := syscall.Syscall(syscall.SYS_FORK, 0, 0, 0)
 	if newChild == 0 {
 		//We are inside child process now, so we'll start flushing to disk.
-		DumpAllAOF()
+		DumpAllAOF(store)
 		return []byte("")
 	} else {
 		//Back to main thread
@@ -247,7 +245,7 @@ func evalBGREWRITEAOF(args []string) []byte {
 // The value for the queried key should be of integer format,
 // if not evalINCR returns encoded error response.
 // evalINCR returns the incremented value for the key if there are no errors.
-func evalINCR(args []string) []byte {
+func evalINCR(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'incr' command"), false)
 	}
@@ -298,8 +296,8 @@ func evalLATENCY(args []string) []byte {
 
 // evalLRU deletes all the keys from the LRU
 // returns encoded RESP OK
-func evalLRU(args []string) []byte {
-	evictAllkeysLRU()
+func evalLRU(args []string, store *Store) []byte {
+	evictAllkeysLRU(store)
 	return RESP_OK
 }
 
@@ -333,7 +331,7 @@ func evalMULTI(args []string) []byte {
 // first argument will be the key, that should be of type `QINT`
 // second argument will be the integer value
 // if the key does not exist, evalQINTINS will also create the integer queue
-func evalQINTINS(args []string) []byte {
+func evalQINTINS(args []string, store *Store) []byte {
 	if len(args) != 2 {
 		return Encode(errors.New("ERR invalid number of arguments for `QINTINS` command"), false)
 	}
@@ -368,7 +366,7 @@ func evalQINTINS(args []string) []byte {
 // first argument will be the key, that should be of type `STACKINT`
 // second argument will be the integer value
 // if the key does not exist, evalSTACKINTPUSH will also create the integer stack
-func evalSTACKINTPUSH(args []string) []byte {
+func evalSTACKINTPUSH(args []string, store *Store) []byte {
 	if len(args) != 2 {
 		return Encode(errors.New("ERR invalid number of arguments for `STACKINTPUSH` command"), false)
 	}
@@ -404,7 +402,7 @@ func evalSTACKINTPUSH(args []string) []byte {
 // if the key does not exist, evalQINTREM returns nil otherwise it
 // returns the integer value popped from the queue
 // if we remove from the empty queue, nil is returned
-func evalQINTREM(args []string) []byte {
+func evalQINTREM(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR invalid number of arguments for `QINTREM` command"), false)
 	}
@@ -437,7 +435,7 @@ func evalQINTREM(args []string) []byte {
 // if the key does not exist, evalSTACKINTPOP returns nil otherwise it
 // returns the integer value popped from the stack
 // if we remove from the empty stack, nil is returned
-func evalSTACKINTPOP(args []string) []byte {
+func evalSTACKINTPOP(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR invalid number of arguments for `STACKINTPOP` command"), false)
 	}
@@ -468,7 +466,7 @@ func evalSTACKINTPOP(args []string) []byte {
 // evalQINTLEN returns the length of the QINT identified by key
 // returns the integer value indicating the length of the queue
 // if the key does not exist, the response is 0
-func evalQINTLEN(args []string) []byte {
+func evalQINTLEN(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR invalid number of arguments for `QINTLEN` command"), false)
 	}
@@ -493,7 +491,7 @@ func evalQINTLEN(args []string) []byte {
 // evalSTACKINTLEN returns the length of the STACKINT identified by key
 // returns the integer value indicating the length of the stack
 // if the key does not exist, the response is 0
-func evalSTACKINTLEN(args []string) []byte {
+func evalSTACKINTLEN(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR invalid number of arguments for `STACKINTLEN` command"), false)
 	}
@@ -518,7 +516,7 @@ func evalSTACKINTLEN(args []string) []byte {
 // evalQINTPEEK peeks into the QINT and returns 5 elements without popping them
 // returns the array of integers as the response.
 // if the key does not exist, then we return an empty array
-func evalQINTPEEK(args []string) []byte {
+func evalQINTPEEK(args []string, store *Store) []byte {
 	var num int64 = 5
 	var err error
 
@@ -553,7 +551,7 @@ func evalQINTPEEK(args []string) []byte {
 // evalSTACKINTPEEK peeks into the DINT and returns 5 elements without popping them
 // returns the array of integers as the response.
 // if the key does not exist, then we return an empty array
-func evalSTACKINTPEEK(args []string) []byte {
+func evalSTACKINTPEEK(args []string, store *Store) []byte {
 	var num int64 = 5
 	var err error
 
@@ -591,7 +589,7 @@ func evalSTACKINTPEEK(args []string) []byte {
 // if the queue does not exist, evalQREFINS will also create the queueref
 // returns 1 if the key reference was inserted
 // returns 0 otherwise
-func evalQREFINS(args []string) []byte {
+func evalQREFINS(args []string, store *Store) []byte {
 	if len(args) != 2 {
 		return Encode(errors.New("ERR invalid number of arguments for `QREFINS` command"), false)
 	}
@@ -624,7 +622,7 @@ func evalQREFINS(args []string) []byte {
 // if the stack does not exist, evalSTACKREFPUSH will also create the stackref
 // returns 1 if the key reference was inserted
 // returns 0 otherwise
-func evalSTACKREFPUSH(args []string) []byte {
+func evalSTACKREFPUSH(args []string, store *Store) []byte {
 	if len(args) != 2 {
 		return Encode(errors.New("ERR invalid number of arguments for `STACKREFPUSH` command"), false)
 	}
@@ -656,7 +654,7 @@ func evalSTACKREFPUSH(args []string) []byte {
 // if the key does not exist, evalQREFREM returns nil otherwise it
 // returns the RESP encoded value of the key reference from the queue
 // if we remove from the empty queue, nil is returned
-func evalQREFREM(args []string) []byte {
+func evalQREFREM(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR invalid number of arguments for `QREFREM` command"), false)
 	}
@@ -689,7 +687,7 @@ func evalQREFREM(args []string) []byte {
 // if the key does not exist, evalSTACKREFPOP returns nil otherwise it
 // returns the RESP encoded value of the key reference from the stack
 // if we remove from the empty stack, nil is returned
-func evalSTACKREFPOP(args []string) []byte {
+func evalSTACKREFPOP(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR invalid number of arguments for `STACKREFPOP` command"), false)
 	}
@@ -720,7 +718,7 @@ func evalSTACKREFPOP(args []string) []byte {
 // evalQREFLEN returns the length of the QREF identified by key
 // returns the integer value indicating the length of the queue
 // if the key does not exist, the response is 0
-func evalQREFLEN(args []string) []byte {
+func evalQREFLEN(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR invalid number of arguments for `QREFLEN` command"), false)
 	}
@@ -745,7 +743,7 @@ func evalQREFLEN(args []string) []byte {
 // evalSTACKREFLEN returns the length of the STACKREF identified by key
 // returns the integer value indicating the length of the stack
 // if the key does not exist, the response is 0
-func evalSTACKREFLEN(args []string) []byte {
+func evalSTACKREFLEN(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR invalid number of arguments for `STACKREFLEN` command"), false)
 	}
@@ -770,7 +768,7 @@ func evalSTACKREFLEN(args []string) []byte {
 // evalQREFPEEK peeks into the QREF and returns 5 elements without popping them
 // returns the array of resp encoded values as the response.
 // if the key does not exist, then we return an empty array
-func evalQREFPEEK(args []string) []byte {
+func evalQREFPEEK(args []string, store *Store) []byte {
 	var num int64 = 5
 	var err error
 
@@ -805,7 +803,7 @@ func evalQREFPEEK(args []string) []byte {
 // evalSTACKREFPEEK peeks into the STACKREF and returns 5 elements without popping them
 // returns the array of resp encoded values as the response.
 // if the key does not exist, then we return an empty array
-func evalSTACKREFPEEK(args []string) []byte {
+func evalSTACKREFPEEK(args []string, store *Store) []byte {
 	var num int64 = 5
 	var err error
 
@@ -858,26 +856,26 @@ func evalQWATCH(args []string, c *Client) []byte {
 	return RESP_OK
 }
 
-func executeCommand(cmd *RedisCmd, c *Client) []byte {
+func executeCommand(cmd *RedisCmd, c *Client, store *Store) []byte {
 	switch cmd.Cmd {
 	case "PING":
 		return evalPING(cmd.Args)
 	case "SET":
-		return evalSET(cmd.Args)
+		return evalSET(cmd.Args, store)
 	case "GET":
-		return evalGET(cmd.Args)
+		return evalGET(cmd.Args, store)
 	case "TTL":
-		return evalTTL(cmd.Args)
+		return evalTTL(cmd.Args, store)
 	case "DEL":
-		return evalDEL(cmd.Args)
+		return evalDEL(cmd.Args, store)
 	case "EXPIRE":
-		return evalEXPIRE(cmd.Args)
+		return evalEXPIRE(cmd.Args, store)
 	case "HELLO":
 		return evalHELLO(cmd.Args)
 	case "BGREWRITEAOF":
-		return evalBGREWRITEAOF(cmd.Args)
+		return evalBGREWRITEAOF(cmd.Args, store)
 	case "INCR":
-		return evalINCR(cmd.Args)
+		return evalINCR(cmd.Args, store)
 	case "INFO":
 		return evalINFO(cmd.Args)
 	case "CLIENT":
@@ -885,49 +883,49 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 	case "LATENCY":
 		return evalLATENCY(cmd.Args)
 	case "LRU":
-		return evalLRU(cmd.Args)
+		return evalLRU(cmd.Args, store)
 	case "SLEEP":
 		return evalSLEEP(cmd.Args)
 	case "QINTINS":
-		return evalQINTINS(cmd.Args)
+		return evalQINTINS(cmd.Args, store)
 	case "QINTREM":
-		return evalQINTREM(cmd.Args)
+		return evalQINTREM(cmd.Args, store)
 	case "QINTLEN":
-		return evalQINTLEN(cmd.Args)
+		return evalQINTLEN(cmd.Args, store)
 	case "QINTPEEK":
-		return evalQINTPEEK(cmd.Args)
+		return evalQINTPEEK(cmd.Args, store)
 	case "BFINIT":
-		return evalBFINIT(cmd.Args)
+		return evalBFINIT(cmd.Args, store)
 	case "BFADD":
-		return evalBFADD(cmd.Args)
+		return evalBFADD(cmd.Args, store)
 	case "BFEXISTS":
-		return evalBFEXISTS(cmd.Args)
+		return evalBFEXISTS(cmd.Args, store)
 	case "BFINFO":
-		return evalBFINFO(cmd.Args)
+		return evalBFINFO(cmd.Args, store)
 	case "QREFINS":
-		return evalQREFINS(cmd.Args)
+		return evalQREFINS(cmd.Args, store)
 	case "QREFREM":
-		return evalQREFREM(cmd.Args)
+		return evalQREFREM(cmd.Args, store)
 	case "QREFLEN":
-		return evalQREFLEN(cmd.Args)
+		return evalQREFLEN(cmd.Args, store)
 	case "QREFPEEK":
-		return evalQREFPEEK(cmd.Args)
+		return evalQREFPEEK(cmd.Args, store)
 	case "STACKINTPUSH":
-		return evalSTACKINTPUSH(cmd.Args)
+		return evalSTACKINTPUSH(cmd.Args, store)
 	case "STACKINTPOP":
-		return evalSTACKINTPOP(cmd.Args)
+		return evalSTACKINTPOP(cmd.Args, store)
 	case "STACKINTLEN":
-		return evalSTACKINTLEN(cmd.Args)
+		return evalSTACKINTLEN(cmd.Args, store)
 	case "STACKINTPEEK":
-		return evalSTACKINTPEEK(cmd.Args)
+		return evalSTACKINTPEEK(cmd.Args, store)
 	case "STACKREFPUSH":
-		return evalSTACKREFPUSH(cmd.Args)
+		return evalSTACKREFPUSH(cmd.Args, store)
 	case "STACKREFPOP":
-		return evalSTACKREFPOP(cmd.Args)
+		return evalSTACKREFPOP(cmd.Args, store)
 	case "STACKREFLEN":
-		return evalSTACKREFLEN(cmd.Args)
+		return evalSTACKREFLEN(cmd.Args, store)
 	case "STACKREFPEEK":
-		return evalSTACKREFPEEK(cmd.Args)
+		return evalSTACKREFPEEK(cmd.Args, store)
 	case "SUBSCRIBE": // TODO: Remove this override once we support QWATCH in dice-cli.
 		return evalQWATCH(cmd.Args, c)
 	case "QWATCH":
@@ -939,7 +937,7 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		if !c.isTxn {
 			return Encode(errors.New("ERR EXEC without MULTI"), false)
 		}
-		return c.TxnExec()
+		return c.TxnExec(store)
 	case "DISCARD":
 		if !c.isTxn {
 			return Encode(errors.New("ERR DISCARD without MULTI"), false)
@@ -953,11 +951,11 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 	}
 }
 
-func executeCommandToBuffer(cmd *RedisCmd, buf *bytes.Buffer, c *Client) {
-	buf.Write(executeCommand(cmd, c))
+func executeCommandToBuffer(cmd *RedisCmd, buf *bytes.Buffer, c *Client, store *Store) {
+	buf.Write(executeCommand(cmd, c, store))
 }
 
-func EvalAndRespond(cmds RedisCmds, c *Client) {
+func EvalAndRespond(cmds RedisCmds, c *Client, store *Store) {
 	var response []byte
 	buf := bytes.NewBuffer(response)
 
@@ -965,7 +963,7 @@ func EvalAndRespond(cmds RedisCmds, c *Client) {
 		// if txn is not in progress, then we can simply
 		// execute the command and add the response to the buffer
 		if !c.isTxn {
-			executeCommandToBuffer(cmd, buf, c)
+			executeCommandToBuffer(cmd, buf, c, store)
 			continue
 		}
 
@@ -979,7 +977,7 @@ func EvalAndRespond(cmds RedisCmds, c *Client) {
 			// if txn is active and the command is non-queuable
 			// ex: EXEC, DISCARD
 			// we execute the command and gather the response in buffer
-			executeCommandToBuffer(cmd, buf, c)
+			executeCommandToBuffer(cmd, buf, c, store)
 		}
 	}
 

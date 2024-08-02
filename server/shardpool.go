@@ -2,22 +2,26 @@ package server
 
 import (
 	"fmt"
+	"hash/fnv"
 	"net"
 	"runtime"
 
 	"github.com/dicedb/dice/core"
 )
 
-var numCPU int = runtime.NumCPU()
+var SHARDPOOL_SIZE int = runtime.NumCPU()
+var CONCURRENT_CLIENTS = 1000
 
 var ipool *IOThreadPool
 var spool *ShardPool
 
 func init() {
-	ipool = NewIOThreadPool(numCPU)
-	spool = NewShardPool(numCPU)
+	ipool = NewIOThreadPool(CONCURRENT_CLIENTS) // handle client connections
+	runtime.GOMAXPROCS(SHARDPOOL_SIZE)
+	spool = NewShardPool(SHARDPOOL_SIZE) // handles data
 }
 
+// Shouod we use reddis command here?
 type Operation struct {
 	Key      string
 	Value    string
@@ -25,7 +29,9 @@ type Operation struct {
 	ResultCH chan<- *Result
 }
 
-type Result struct{}
+type Result struct {
+	message string
+}
 
 type Request struct {
 	conn net.Conn
@@ -86,7 +92,11 @@ func (t *ShardThread) Run() {
 	for op := range t.reqch {
 		fmt.Println("handling op", op)
 		// execute the operation and create the result
-		op.ResultCH <- &Result{}
+		var msg = ""
+		executeCommand(cmd*RedisCmd, c*Client, t.store)
+
+		fmt.Println(msg)
+		op.ResultCH <- &Result{msg}
 	}
 }
 
@@ -111,9 +121,17 @@ func (p *ShardPool) Init(poolsize int) {
 	}
 }
 
+func findOwnerShard(key string) int {
+	hash := fnv.New32a()
+	hash.Write([]byte(key))
+	hashValue := int(hash.Sum32())
+	bucket := hashValue % SHARDPOOL_SIZE
+	return bucket
+}
+
 func (p *ShardPool) Submit(op *Operation) {
 	// from the operation, find the owner shard
-	index := 0
+	index := findOwnerShard(op.Key)
 
 	// put the operation in that shard
 	// right now `ch` is unbuffered, but we can create a buffer,

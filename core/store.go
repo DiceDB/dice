@@ -63,7 +63,7 @@ func (s *Store) Put(k string, obj *Obj, expDurationMs int64) {
 	defer s.keypoolMutex.Unlock()
 
 	if len(s.store) >= config.KeysLimit {
-		evict()
+		evict(s)
 	}
 	obj.LastAccessedAt = getCurrentClock()
 
@@ -100,7 +100,7 @@ func (s *Store) Get(k string) *Obj {
 
 	v := s.store[ptr]
 	if v != nil {
-		if hasExpired(v) {
+		if hasExpired(v, s) {
 			s.storeMutex.RUnlock()
 			s.Del(k)
 			s.storeMutex.RLock()

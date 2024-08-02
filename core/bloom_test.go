@@ -7,6 +7,7 @@ import (
 )
 
 func TestBloomFilter(t *testing.T) {
+	var store = NewStore()
 	// This test only contains some basic checks for all the bloom filter
 	// operations like BFINIT, BFADD, BFEXISTS. It assumes that the
 	// functions called in the main function are working correctly and
@@ -15,7 +16,7 @@ func TestBloomFilter(t *testing.T) {
 
 	// BFINIT
 	args := []string{} // empty args
-	resp := evalBFINIT(args)
+	resp := evalBFINIT(args, store)
 
 	// We're just checking if the resposne is an error or not. This test does
 	// not checks the type of error. That is kept for different test.
@@ -25,102 +26,103 @@ func TestBloomFilter(t *testing.T) {
 
 	// BFINIT bf 0.01 10000
 	args = append(args, "bf", "0.01", "10000") // Add key, error rate and capacity
-	resp = evalBFINIT(args)
+	resp = evalBFINIT(args, store)
 	if !bytes.Equal(resp, RESP_OK) {
 		t.Errorf("BFINIT: invalid response, args: %v - expected: %s, got error: %s", args, string(RESP_OK), string(resp))
 	}
 
 	// BFINIT bf1
 	args = []string{"bf1"}
-	resp = evalBFINIT(args)
+	resp = evalBFINIT(args, store)
 	if !bytes.Equal(resp, RESP_OK) {
 		t.Errorf("BFINIT: invalid response, args: %v - expected: %s, got error: %s", args, string(RESP_OK), string(resp))
 	}
 
 	// BFADD
 	args = []string{"bf"}
-	resp = evalBFADD(args)
+	resp = evalBFADD(args, store)
 	if bytes.Equal(resp, RESP_MINUS_1) || bytes.Equal(resp, RESP_ZERO) || bytes.Equal(resp, RESP_ONE) {
 		t.Errorf("BFADD: invalid response, args: %v - expected an error, got: %s", args, string(resp))
 	}
 
 	args = []string{"bf", "hello"} // BFADD bf hello
-	resp = evalBFADD(args)
+	resp = evalBFADD(args, store)
 	if !bytes.Equal(resp, RESP_ONE) {
 		t.Errorf("BFADD: invalid response, args: %v - expected: %s, got error: %s", args, string(RESP_ONE), string(resp))
 	}
 
 	args[1] = "world" // BFADD bf world
-	resp = evalBFADD(args)
+	resp = evalBFADD(args, store)
 	if !bytes.Equal(resp, RESP_ONE) {
 		t.Errorf("BFADD: invalid response, args: %v - expected: %s, got error: %s", args, string(RESP_ONE), string(resp))
 	}
 
 	args[1] = "hello" // BFADD bf hello
-	resp = evalBFADD(args)
+	resp = evalBFADD(args, store)
 	if !bytes.Equal(resp, RESP_ZERO) {
 		t.Errorf("BFADD: invalid response, args: %v - expected: %s, got error: %s", args, string(RESP_ZERO), string(resp))
 	}
 
 	// Try adding element into an non-existing filter
 	args = []string{"bf2", "hello"} // BFADD bf2 hello
-	resp = evalBFADD(args)
+	resp = evalBFADD(args, store)
 	if !bytes.Equal(resp, RESP_ONE) {
 		t.Errorf("BFADD: invalid response, args: %v - expected: %s, got error: %s", args, string(RESP_ONE), string(resp))
 	}
 
 	// BFEXISTS
 	args = []string{"bf"}
-	resp = evalBFEXISTS(args)
+	resp = evalBFEXISTS(args, store)
 	if bytes.Equal(resp, RESP_MINUS_1) || bytes.Equal(resp, RESP_ZERO) || bytes.Equal(resp, RESP_ONE) {
 		t.Errorf("BFEXISTS: invalid response, args: %v - expected an error, got: %s", args, string(resp))
 	}
 
 	args = []string{"bf", "hello"} // BFEXISTS bf hello
-	resp = evalBFEXISTS(args)
+	resp = evalBFEXISTS(args, store)
 	if !bytes.Equal(resp, RESP_ONE) {
 		t.Errorf("BFEXISTS: invalid response, args: %v - expected: %s, got error: %s", args, string(RESP_ONE), string(resp))
 	}
 
 	args[1] = "hello" // BFEXISTS bf world
-	resp = evalBFEXISTS(args)
+	resp = evalBFEXISTS(args, store)
 	if !bytes.Equal(resp, RESP_ONE) {
 		t.Errorf("BFEXISTS: invalid response, args: %v - expected: %s, got error: %s", args, string(RESP_ONE), string(resp))
 	}
 
 	args[1] = "programming" // BFEXISTS bf programming
-	resp = evalBFEXISTS(args)
+	resp = evalBFEXISTS(args, store)
 	if !bytes.Equal(resp, RESP_ZERO) {
 		t.Errorf("BFEXISTS: invalid response, args: %v - expected: %s, got error: %s", args, string(RESP_ZERO), string(resp))
 	}
 
 	// Try searching for an element in a non-existing filter
 	args = []string{"bf3", "hello"} // BFEXISTS bf3 hello
-	resp = evalBFEXISTS(args)
+	resp = evalBFEXISTS(args, store)
 	if bytes.Equal(resp, RESP_MINUS_1) || bytes.Equal(resp, RESP_ZERO) || bytes.Equal(resp, RESP_ONE) {
 		t.Errorf("BFEXISTS: invalid response, args: %v - expected an error, got error: %s", args, string(resp))
 	}
 }
 
 func TestGetOrCreateBloomFilter(t *testing.T) {
+	var store = NewStore()
 	// Create a key and default opts
 	key := "bf"
 	opts, _ := newBloomOpts([]string{}, true)
 
 	// Should create a new filter under the key `key`.
-	bloom, err := getOrCreateBloomFilter(key, opts)
+	bloom, err := getOrCreateBloomFilter(key, opts, store)
 	if bloom == nil || err != nil {
 		t.Errorf("nil bloom or non-nil error returned while creating new filter - key: %s, opts: %+v, err: %v", key, opts, err)
 	}
 
 	// Should get the filter (which was created above)
-	bloom, err = getOrCreateBloomFilter(key, opts)
+	bloom, err = getOrCreateBloomFilter(key, opts, store)
 	if bloom == nil || err != nil {
 		t.Errorf("nil bloom or non-nil error returned while fetching existing filter - key: %s, opts: %+v, err: %v", key, opts, err)
 	}
 
 	// Should get the filter with nil opts
-	bloom, err = getOrCreateBloomFilter(key, nil)
+	bloom, err = getOrCreateBloomFilter(key, nil, store)
 	if bloom == nil || err != nil {
 		t.Errorf("nil bloom or non-nil error returned while fetching existing filter - key: %s, opts: %+v, err: %v", key, opts, err)
 	}
@@ -128,7 +130,7 @@ func TestGetOrCreateBloomFilter(t *testing.T) {
 	// Should return an error (errInvalidKey) for fetching a bloom filter
 	// against a non existing key
 	key = "bf1"
-	_, err = getOrCreateBloomFilter(key, nil)
+	_, err = getOrCreateBloomFilter(key, nil, store)
 	if err != errInvalidKey {
 		t.Errorf("nil or wrong error while fetching non existing bloom filter - key: %s, opts: %+v, err: %v", key, opts, err)
 	}

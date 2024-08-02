@@ -21,7 +21,7 @@ func dumpKey(fp *os.File, key string, obj *Obj) {
 }
 
 // TODO: To to new and switch
-func DumpAllAOF() {
+func DumpAllAOF(store *Store) {
 	fp, err := os.OpenFile(config.AOFFile, os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		fmt.Print("error", err)

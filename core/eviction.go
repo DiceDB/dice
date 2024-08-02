@@ -8,7 +8,7 @@ import (
 
 // Evicts the first key it found while iterating the map
 // TODO: Make it efficient by doing thorough sampling
-func evictFirst() {
+func evictFirst(store *Store) {
 	store.storeMutex.Lock()
 	defer store.storeMutex.Unlock()
 
@@ -20,7 +20,7 @@ func evictFirst() {
 
 // Randomly removes keys to make space for the new data added.
 // The number of keys removed will be sufficient to free up at least 10% space
-func evictAllkeysRandom() {
+func evictAllkeysRandom(store *Store) {
 	evictCount := int64(config.EvictionRatio * float64(config.KeysLimit))
 	store.storeMutex.Lock()
 	defer store.storeMutex.Unlock()
@@ -51,7 +51,7 @@ func getIdleTime(lastAccessedAt uint32) uint32 {
 	return (0x00FFFFFF - lastAccessedAt) + c
 }
 
-func populateEvictionPool() {
+func populateEvictionPool(store *Store) {
 	sampleSize := 5
 	store.storeMutex.RLock()
 	defer store.storeMutex.RUnlock()
@@ -67,8 +67,8 @@ func populateEvictionPool() {
 
 // TODO: no need to populate everytime. should populate
 // only when the number of keys to evict is less than what we have in the pool
-func evictAllkeysLRU() {
-	populateEvictionPool()
+func evictAllkeysLRU(store *Store) {
+	populateEvictionPool(store)
 	evictCount := int16(config.EvictionRatio * float64(config.KeysLimit))
 	for i := 0; i < int(evictCount) && len(ePool.pool) > 0; i++ {
 		item := ePool.Pop()
@@ -80,13 +80,13 @@ func evictAllkeysLRU() {
 }
 
 // TODO: implement LFU
-func evict() {
+func evict(store *Store) {
 	switch config.EvictionStrategy {
 	case "simple-first":
-		evictFirst()
+		evictFirst(store)
 	case "allkeys-random":
-		evictAllkeysRandom()
+		evictAllkeysRandom(store)
 	case "allkeys-lru":
-		evictAllkeysLRU()
+		evictAllkeysLRU(store)
 	}
 }
