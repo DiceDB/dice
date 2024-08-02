@@ -1306,6 +1306,19 @@ func evalCommand(args []string) []byte {
 	}
 }
 
+// evalKeys returns the list of keys that match the pattern
+// The pattern should be the only param in args
+func evalKeys(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR wrong number of arguments for 'keys' command"), false)
+	}
+
+	pattern := args[0]
+	keys := Keys(pattern)
+
+	return Encode(keys, false)
+}
+
 // evalCommandCount returns an number of commands supported by DiceDB
 func evalCommandCount(args []string) []byte {
 	return Encode(diceCommandsCount, false)
