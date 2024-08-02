@@ -70,7 +70,7 @@ func evalSET(args []string) []byte {
 
 	var key, value string
 	var exDurationMs int64 = -1
-	var keepttl int64 = -1
+	var keepttl bool = false
 
 	key, value = args[0], args[1]
 	oType, oEnc := deduceTypeEncoding(value)
@@ -89,7 +89,7 @@ func evalSET(args []string) []byte {
 			}
 			exDurationMs = exDurationSec * 1000
 		case "KEEPTTL", "keepttl":
-			keepttl = 1
+			keepttl = true
 		default:
 			return Encode(errors.New("ERR syntax error"), false)
 		}
@@ -97,7 +97,7 @@ func evalSET(args []string) []byte {
 
 	// putting the k and value in a Hash Table
 	Put(key, NewObj(value, exDurationMs, oType, oEnc), &PutOptions{
-		KeepTTL: keepttl == 1,
+		KeepTTL: keepttl,
 	})
 	return RESP_OK
 }
