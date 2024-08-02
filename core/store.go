@@ -14,6 +14,10 @@ type WatchEvent struct {
 	Value     *Obj
 }
 
+type PutOptions struct {
+	KeepTTL bool
+}
+
 var store map[unsafe.Pointer]*Obj
 var expires map[*Obj]uint64 // Does not need to be thread-safe as it is only accessed by a single thread.
 var keypool map[string]unsafe.Pointer
@@ -51,7 +55,7 @@ func NewObj(value interface{}, expDurationMs int64, oType uint8, oEnc uint8) *Ob
 	return obj
 }
 
-func Put(k string, obj *Obj) {
+func Put(k string, obj *Obj, options *PutOptions) {
 	storeMutex.Lock()
 	defer storeMutex.Unlock()
 	keypoolMutex.Lock()
@@ -66,6 +70,22 @@ func Put(k string, obj *Obj) {
 	if !ok {
 		keypool[k] = unsafe.Pointer(&k)
 		ptr = unsafe.Pointer(&k)
+	}
+
+	currentStoredObject, ok := store[ptr]
+	if ok {
+		// NOTE: In case there is an value present
+		// for a given key 'k', then any updates
+		// performed with the 'KEEPTTL' flag need
+		// to ensure that we save the new value
+		// with the same expiration time as before
+		// Without the flag, the expiration time
+		// stored earlier will be removed.
+		_, ok = expires[currentStoredObject]
+		if options != nil && options.KeepTTL && ok {
+			expires[obj] = expires[currentStoredObject]
+		}
+		delete(expires, currentStoredObject)
 	}
 
 	store[ptr] = obj

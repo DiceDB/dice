@@ -70,6 +70,7 @@ func evalSET(args []string) []byte {
 
 	var key, value string
 	var exDurationMs int64 = -1
+	var keepttl int64 = -1
 
 	key, value = args[0], args[1]
 	oType, oEnc := deduceTypeEncoding(value)
@@ -87,13 +88,17 @@ func evalSET(args []string) []byte {
 				return Encode(errors.New("ERR value is not an integer or out of range"), false)
 			}
 			exDurationMs = exDurationSec * 1000
+		case "KEEPTTL", "keepttl":
+			keepttl = 1
 		default:
 			return Encode(errors.New("ERR syntax error"), false)
 		}
 	}
 
 	// putting the k and value in a Hash Table
-	Put(key, NewObj(value, exDurationMs, oType, oEnc))
+	Put(key, NewObj(value, exDurationMs, oType, oEnc), &PutOptions{
+		KeepTTL: keepttl == 1,
+	})
 	return RESP_OK
 }
 
@@ -172,7 +177,7 @@ func evalJSONSET(args []string) []byte {
 
 	// Create a new object with the JSON value and store it
 	obj := NewObj(v, -1, OBJ_TYPE_JSON, OBJ_ENCODING_JSON)
-	Put(key, obj)
+	Put(key, obj, nil)
 
 	return RESP_OK
 }
@@ -308,7 +313,7 @@ func evalINCR(args []string) []byte {
 	obj := Get(key)
 	if obj == nil {
 		obj = NewObj("0", -1, OBJ_TYPE_STRING, OBJ_ENCODING_INT)
-		Put(key, obj)
+		Put(key, obj, nil)
 	}
 
 	if err := assertType(obj.TypeEncoding, OBJ_TYPE_STRING); err != nil {
@@ -408,7 +413,7 @@ func evalQINTINS(args []string) []byte {
 		return Encode(err, false)
 	}
 
-	Put(args[0], obj)
+	Put(args[0], obj, nil)
 
 	q := obj.Value.(*QueueInt)
 	q.Insert(x)
@@ -443,7 +448,7 @@ func evalSTACKINTPUSH(args []string) []byte {
 		return Encode(err, false)
 	}
 
-	Put(args[0], obj)
+	Put(args[0], obj, nil)
 
 	s := obj.Value.(*StackInt)
 	s.Push(x)
@@ -661,7 +666,7 @@ func evalQREFINS(args []string) []byte {
 		return Encode(err, false)
 	}
 
-	Put(args[0], obj)
+	Put(args[0], obj, nil)
 
 	q := obj.Value.(*QueueRef)
 	if q.Insert(args[1]) {
@@ -694,7 +699,7 @@ func evalSTACKREFPUSH(args []string) []byte {
 		return Encode(err, false)
 	}
 
-	Put(args[0], obj)
+	Put(args[0], obj, nil)
 
 	s := obj.Value.(*StackRef)
 	if s.Push(args[1]) {
