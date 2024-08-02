@@ -23,8 +23,9 @@ func init() {
 
 // Shouod we use reddis command here?
 type Operation struct {
-	cmd *RedisCmd
+	cmd *core.RedisCmd
 	keys []string
+	conn *core.Client
 	ResultCH chan<- *Result
 }
 
@@ -33,7 +34,7 @@ type Result struct {
 }
 
 type Request struct {
-	cmd *RedisCmd
+	cmd *core.RedisCmd
 	keys []string
 	conn net.Conn
 }
@@ -53,18 +54,18 @@ func findOwnerShard(key string) int {
 
 
 // Should we pass redis command here?
-func (p *ShardPool) Submit(cmd *RedisCmd, keys []string) {
+func (p *ShardPool) Submit(op *Operation) {
 	// Non Key Operation.
 	// We need to fan out and execute Operation on all Shards
-	if len(keys) == 0 {
-		for _,index := range SHARDPOOL_SIZE {
-			p.shardThreads[index].reqch <- op
+	if len(op.keys) == 0 {
+		for i := 0; i < SHARDPOOL_SIZE; i++ {
+			p.shardThreads[i].reqch <- op
 		}
 	}
 
 	// We have a Key operation and we can target
 	// specific shardds to execute the operation
-	for _, key := range keys {
+	for _, key := range op.keys {
 		// from the operation, find the owner shard
 		index := findOwnerShard(key)
 
@@ -86,6 +87,7 @@ func (t *IOThread) Run() {
 		spool.Submit(&Operation{
 			req.cmd,
 			req.keys,
+			req.conn,
 			ResultCH: t.resch,
 		})
 	}
@@ -131,7 +133,7 @@ func (t *ShardThread) Run() {
 		fmt.Println("handling op", op)
 		// execute the operation and create the result
 		var msg = ""
-		executeCommand(op.cmd, c*Client, t.store)
+		executeCommand(op.cmd, op.conn, t.store)
 
 		fmt.Println(msg)
 		op.ResultCH <- &Result{msg}
