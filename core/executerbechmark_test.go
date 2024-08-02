@@ -26,7 +26,6 @@ var keys = []struct {
 
 func populateData(count int) {
 	if itr == 0 {
-		// fmt.Println("Starting to populate data...")
 		dataset := []tupple{}
 
 		for i := 0; i < count; i++ {
@@ -65,8 +64,9 @@ func BenchmarkExecuteQueryOrderBykey(b *testing.B) {
 				Order:   "asc",
 			},
 		}
-
+		// Reset the timer to exclude the setup time from the benchmark
 		b.ResetTimer()
+
 		b.Run(fmt.Sprintf("keys_%d", v.count), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				core.ExecuteQuery(query)
@@ -116,7 +116,7 @@ func BenchmarkExecuteQueryLimit(b *testing.B) {
 				OrderBy: "$key",
 				Order:   "asc",
 			},
-			Limit: 3,
+			Limit: v.count / 3,
 		}
 
 		b.ResetTimer()
