@@ -315,7 +315,7 @@ func getOrCreateBloomFilter(key string, opts *BloomOpts) (*Bloom, error) {
 	// If we don't have a filter yet and `opts` are provided, create one.
 	if obj == nil && opts != nil {
 		obj = NewObj(newBloomFilter(opts), -1, OBJ_TYPE_BITSET, OBJ_ENCODING_BF)
-		Put(key, obj)
+		Put(key, obj, nil)
 	}
 
 	// If no `opts` are provided for filter creation, return err

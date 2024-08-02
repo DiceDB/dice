@@ -31,7 +31,7 @@ func setup() {
 	}
 
 	for _, data := range dataset {
-		core.Put(data.key, &core.Obj{Value: data.value})
+		core.Put(data.key, &core.Obj{Value: data.value}, nil)
 	}
 }
 
@@ -279,7 +279,7 @@ func TestExecuteQueryWithIncompatibleTypes(t *testing.T) {
 	t.Run("NullValue", func(t *testing.T) {
 		// We don't support NULL values in Dice, however, we should include a
 		// test for it to ensure the executor handles it correctly.
-		core.Put("nullKey", &core.Obj{Value: nil})
+		core.Put("nullKey", &core.Obj{Value: nil}, nil)
 		defer core.Del("nullKey")
 
 		query := core.DSQLQuery{
