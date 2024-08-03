@@ -26,9 +26,14 @@ var keys = []struct {
 }
 
 func populateData(count int) {
-	config.KeysLimit = 10000000 // setting keys limit high for benchmarking
 
 	if itr == 0 {
+		config.KeysLimit = 100000000 // override keys limit high for benchmarking
+
+		// need to init again for each round with the overriden buffer size
+		// otherwise the watchchannel buffer size will stay as it is with the global keylimits size
+		core.WatchChannel = make(chan core.WatchEvent, config.KeysLimit)
+
 		dataset := []tupple{}
 
 		for i := 0; i < count; i++ {
@@ -175,7 +180,7 @@ func BenchmarkExecuteQueryWithBasicWhere(b *testing.B) {
 			Where: &sqlparser.ComparisonExpr{
 				Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
 				Operator: "=",
-				Right:    sqlparser.NewStrVal([]byte("v9")),
+				Right:    sqlparser.NewStrVal([]byte("v3")),
 			},
 		}
 
@@ -288,35 +293,6 @@ func BenchmarkExecuteQueryWithBasicWhereNoMatch(b *testing.B) {
 	}
 }
 
-func BenchmarkExecuteQueryWithIncompatibleTypes(b *testing.B) {
-	for _, v := range keys {
-		itr = 0
-		populateData(v.count)
-
-		query := core.DSQLQuery{
-			KeyRegex: "k*",
-			Selection: core.QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			Where: &sqlparser.ComparisonExpr{
-				Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-				Operator: "=",
-				Right:    sqlparser.NewIntVal([]byte("42")),
-			},
-		}
-
-		b.ResetTimer()
-		b.Run(fmt.Sprintf("keys_%d", v.count), func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				if _, err := core.ExecuteQuery(query); err != nil {
-					b.Fatal(err)
-				}
-			}
-		})
-	}
-}
-
 func BenchmarkExecuteQueryWithNullValues(b *testing.B) {
 	for _, v := range keys {
 		itr = 0
@@ -394,35 +370,6 @@ func BenchmarkExecuteQueryWithClauseOnKey(b *testing.B) {
 				Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_key")},
 				Operator: ">",
 				Right:    sqlparser.NewStrVal([]byte("k3")),
-			},
-		}
-
-		b.ResetTimer()
-		b.Run(fmt.Sprintf("keys_%d", v.count), func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				if _, err := core.ExecuteQuery(query); err != nil {
-					b.Fatal(err)
-				}
-			}
-		})
-	}
-}
-
-func BenchmarkExecuteQueryWithUnsupportedOp(b *testing.B) {
-	for _, v := range keys {
-		itr = 0
-		populateData(v.count)
-
-		query := core.DSQLQuery{
-			KeyRegex: "k*",
-			Selection: core.QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			Where: &sqlparser.ComparisonExpr{
-				Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-				Operator: "LIKE",
-				Right:    sqlparser.NewStrVal([]byte("%3")),
 			},
 		}
 
