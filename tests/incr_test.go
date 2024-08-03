@@ -3,8 +3,9 @@ package tests
 import (
 	"fmt"
 	"strconv"
-	"sync"
 	"testing"
+
+	"gotest.tools/v3/assert"
 )
 
 type tcase struct {
@@ -14,8 +15,6 @@ type tcase struct {
 }
 
 func TestINCR(t *testing.T) {
-	var wg sync.WaitGroup
-	go runTestServer(&wg)
 	conn := getLocalConnection()
 
 	for _, tc := range []tcase{
@@ -37,17 +36,7 @@ func TestINCR(t *testing.T) {
 		case 'g':
 			cmd := fmt.Sprintf("GET %s", tc.key)
 			result := fireCommand(conn, cmd)
-			assertResult(t, result, strconv.FormatInt(tc.val, 10))
-
+			assert.DeepEqual(t, strconv.FormatInt(tc.val, 10), result)
 		}
-	}
-
-	fireCommand(conn, "ABORT")
-	wg.Wait()
-}
-
-func assertResult(t *testing.T, result interface{}, expected string) {
-	if result != expected {
-		t.Fail()
 	}
 }

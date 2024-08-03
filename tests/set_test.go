@@ -30,6 +30,7 @@ func TestSet(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
+				deleteTestKeys([]string{"k"})
 				for i, cmd := range tc.commands {
 					result := fireCommand(conn, cmd)
 					assert.DeepEqual(t, tc.expected[i], result)
