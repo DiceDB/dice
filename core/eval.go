@@ -16,6 +16,7 @@ import (
 
 var RESP_NIL []byte = []byte("$-1\r\n")
 var RESP_OK []byte = []byte("+OK\r\n")
+var RESP_AUTH_FAILURE []byte = []byte("+NOAUTH\r\n")
 var RESP_QUEUED []byte = []byte("+QUEUED\r\n")
 var RESP_ZERO []byte = []byte(":0\r\n")
 var RESP_ONE []byte = []byte(":1\r\n")
@@ -48,6 +49,38 @@ func evalPING(args []string) []byte {
 		b = Encode("PONG", true)
 	} else {
 		b = Encode(args[0], false)
+	}
+
+	return b
+}
+
+// evalAUTH returns with an encoded "OK" if the user is authenticated
+// If the user is not authenticated, it returns with an encoded error message
+func evalAUTH(args []string, c *Client) []byte {
+	var (
+		b   []byte
+		err error
+	)
+	log.Print("Authenticating user")
+
+	if len(args) < 1 || len(args) > 2 {
+		return Encode(errors.New("ERR wrong number of arguments for 'AUTH' command"), false)
+	}
+
+	if len(args) == 1 {
+		if err = c.Session.Validate(DefaultUserName, args[0]); err != nil {
+			log.Println("AUTH failed: ", err)
+			return Encode(errors.New("AUTH failed"), false)
+		}
+		return RESP_OK
+	}
+
+	if len(args) == 2 {
+		if err = c.Session.Validate(args[0], args[1]); err != nil {
+			log.Println("AUTH failed: ", err)
+			return Encode(errors.New("AUTH failed"), false)
+		}
+		return RESP_OK
 	}
 
 	return b
@@ -984,6 +1017,9 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		c.TxnBegin()
 		return diceCmd.Eval(cmd.Args)
 	}
+	if diceCmd.Name == AuthCmd {
+		return evalAUTH(cmd.Args, c)
+	}
 	if diceCmd.Name == "EXEC" {
 		if !c.isTxn {
 			return Encode(errors.New("ERR EXEC without MULTI"), false)
@@ -1013,6 +1049,13 @@ func EvalAndRespond(cmds RedisCmds, c *Client) {
 	buf := bytes.NewBuffer(response)
 
 	for _, cmd := range cmds {
+		// Check if the command has been authenticated
+		if cmd.Cmd != AuthCmd && !c.Session.IsActive() {
+			// TODO: Check required response
+			log.Println("Session not active for CMD:", cmd.Cmd)
+			c.Write(RESP_AUTH_FAILURE)
+			continue
+		}
 		// if txn is not in progress, then we can simply
 		// execute the command and add the response to the buffer
 		if !c.isTxn {
