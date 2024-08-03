@@ -12,16 +12,19 @@ func TestNewUsers(t *testing.T) {
 	if users == nil {
 		t.Error("NewUsers() returned nil")
 	}
-	if users.store == nil {
+	if users != nil && users.store == nil {
 		t.Error("NewUsers() created Users with nil store")
 	}
-	if users.stLock == nil {
+	if users != nil && users.stLock == nil {
 		t.Error("NewUsers() created Users with nil stLock")
 	}
 }
 
 func TestUsersAddAndGet(t *testing.T) {
 	users := NewUsers()
+	if users == nil {
+		t.Fatal("NewUsers() returned nil")
+	}
 	username := "testuser"
 
 	// Test Add
@@ -29,14 +32,23 @@ func TestUsersAddAndGet(t *testing.T) {
 	if err != nil {
 		t.Errorf("Users.Add() returned an error: %v", err)
 	}
+	if user == nil {
+		t.Fatal("Users.Add() returned nil user")
+	}
 	if user.Username != username {
 		t.Errorf("Users.Add() created user with incorrect username. Got %s, want %s", user.Username, username)
 	}
 
 	// Test Get
+	if users == nil {
+		t.Fatal("Users is nil")
+	}
 	retrievedUser, err := users.Get(username)
 	if err != nil {
 		t.Errorf("Users.Get() returned an error: %v", err)
+	}
+	if retrievedUser == nil {
+		t.Fatal("Users.Get() returned nil user")
 	}
 	if retrievedUser != user {
 		t.Error("Users.Get() returned a different user than the one added")
@@ -61,7 +73,7 @@ func TestNewSession(t *testing.T) {
 	if session == nil {
 		t.Error("NewSession() returned nil")
 	}
-	if session.Status != SessionStatusPending {
+	if session != nil && session.Status != SessionStatusPending {
 		t.Errorf("NewSession() created session with incorrect status. Got %v, want %v", session.Status, SessionStatusPending)
 	}
 }
@@ -108,7 +120,9 @@ func TestSessionValidate(t *testing.T) {
 	password := "testpassword"
 
 	user, _ := UserStore.Add(username)
-	user.SetPassword(password)
+	if err := user.SetPassword(password); err != nil {
+		t.Fatalf("User.SetPassword() returned an error: %v", err)
+	}
 
 	session := NewSession()
 	err := session.Validate(username, password)

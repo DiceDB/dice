@@ -101,7 +101,9 @@ func NewSession() (session *Session) {
 
 func (session *Session) IsActive() (isActive bool) {
 	if config.RequirePass == "" && session.Status != SessionStatusActive {
-		session.Activate(session.User)
+		if err := session.Activate(session.User); err != nil {
+			return
+		}
 	}
 	isActive = session.Status == SessionStatusActive
 	if isActive {
@@ -126,7 +128,9 @@ func (session *Session) Validate(username, password string) (err error) {
 		return
 	}
 	if username == DefaultUserName && len(user.Passwords) == 0 {
-		session.Activate(user)
+		if err = session.Activate(user); err != nil {
+			return
+		}
 		return
 	}
 	for _, userPassword := range user.Passwords {
