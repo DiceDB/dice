@@ -87,6 +87,15 @@ func evalSET(args []string) []byte {
 				return Encode(errors.New("ERR value is not an integer or out of range"), false)
 			}
 			exDurationMs = exDurationSec * 1000
+		case "XX", "xx":
+			// Get the key from the hash table
+			obj := Get(key)
+
+			// if key does not exist, return RESP encoded nil
+			if obj == nil {
+				return RESP_NIL
+			}
+
 		default:
 			return Encode(errors.New("ERR syntax error"), false)
 		}
