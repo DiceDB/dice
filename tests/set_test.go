@@ -32,7 +32,7 @@ func TestSetWithXX(t *testing.T) {
 	for _, tcase := range []DTestCase{
 		{
 			InCmds: []string{"SET k v XX"},
-			Out:    []interface{}{"nil"},
+			Out:    []interface{}{"(nil)"},
 		},
 		{
 			InCmds: []string{"SET k v1", "SET k v2 XX", "GET k"},
@@ -44,7 +44,7 @@ func TestSetWithXX(t *testing.T) {
 		},
 		{
 			InCmds: []string{"SET k v1", "SET k v2 XX", "DEL k", "GET k", "SET k v XX"},
-			Out:    []interface{}{"OK", "OK", "1", "nil", "nil"},
+			Out:    []interface{}{"OK", "OK", int64(1), "(nil)", "(nil)"},
 		},
 	} {
 		for i := 0; i < len(tcase.InCmds); i++ {
