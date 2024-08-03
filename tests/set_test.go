@@ -23,10 +23,15 @@ func TestSet(t *testing.T) {
 }
 func TestSetWithNX(t *testing.T) {
 	conn := getLocalConnection()
+	deleteTestKeys(conn, []string{"K", "k"})
 	for _, tcase := range []DTestCase{
 		{
 			InCmds: []string{"SET K V NX", "GET K"},
 			Out:    []interface{}{"OK", "V"},
+		},
+		{
+			InCmds: []string{"SET k v", "GET k", "SET k V NX"},
+			Out:    []interface{}{"OK", "v", "nil"},
 		},
 	} {
 		for i := 0; i < len(tcase.InCmds); i++ {
@@ -39,10 +44,15 @@ func TestSetWithNX(t *testing.T) {
 
 func BenchmarkSetWithNX(b *testing.B) {
 	conn := getLocalConnection()
+	deleteTestKeys(conn, []string{"K", "k"})
 	for _, tcase := range []DTestCase{
 		{
 			InCmds: []string{"SET K V NX", "GET K"},
 			Out:    []interface{}{"OK", "V"},
+		},
+		{
+			InCmds: []string{"SET k v", "GET k", "SET k V NX"},
+			Out:    []interface{}{"OK", "v", "nil"},
 		},
 	} {
 		for i := 0; i < len(tcase.InCmds); i++ {
