@@ -131,3 +131,37 @@ func TestJSONOperations(t *testing.T) {
 		})
 	}
 }
+
+func TestJSONSetWithNXAndXX(t *testing.T) {
+
+	conn := getLocalConnection()
+	deleteTestKeys(conn, []string{"user"})
+
+	user1 := `{"name":"John","age":30}`
+	user2 := `{"name":"Rahul","age":28}`
+
+	for _, tcase := range []DTestCase{
+		{
+			InCmds: []string{"JSON.SET user $ " + user1 + " XX", "JSON.SET user $ " + user1 + " NX", "JSON.GET user"},
+			Out:    []interface{}{"ERR key doesn't exists", "OK", user1},
+		},
+		{
+			InCmds: []string{"DEL user", "JSON.SET user $ " + user1, "JSON.SET user $ " + user1 + " NX"},
+			Out:    []interface{}{int64(1), "OK", "ERR key already exists"},
+		},
+		{
+			InCmds: []string{"JSON.SET user $ " + user2 + " XX", "JSON.GET user", "DEL user"},
+			Out:    []interface{}{"OK", user2, int64(1)},
+		},
+		{
+			InCmds: []string{"JSON.SET user $ " + user2 + " NX", "JSON.SET user $ " + user1 + " NX", "JSON.GET user"},
+			Out:    []interface{}{"OK", "ERR key already exists", user2},
+		},
+	} {
+		for i := 0; i < len(tcase.InCmds); i++ {
+			cmd := tcase.InCmds[i]
+			out := tcase.Out[i]
+			assert.Equal(t, out, fireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
+		}
+	}
+}
