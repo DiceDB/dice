@@ -87,6 +87,11 @@ func evalSET(args []string) []byte {
 				return Encode(errors.New("ERR value is not an integer or out of range"), false)
 			}
 			exDurationMs = exDurationSec * 1000
+		case "NX", "nx":
+			obj := Get(key);
+			if obj != nil {
+				return RESP_NIL;
+			}
 		default:
 			return Encode(errors.New("ERR syntax error"), false)
 		}
