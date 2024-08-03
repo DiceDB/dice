@@ -32,7 +32,7 @@ func init() {
 	store = make(map[unsafe.Pointer]*Obj)
 	expires = make(map[*Obj]uint64)
 	keypool = make(map[string]unsafe.Pointer)
-	WatchChannel = make(chan WatchEvent, 10000000)
+	WatchChannel = make(chan WatchEvent, config.KeysLimit)
 }
 
 func setExpiry(obj *Obj, expDurationMs int64) {
