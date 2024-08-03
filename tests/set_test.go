@@ -55,3 +55,32 @@ func BenchmarkSetWithNX(b *testing.B) {
 		}
 	}
 }
+
+func TestSetWithXX(t *testing.T) {
+	conn := getLocalConnection()
+	deleteTestKeys(conn, []string{"k"})
+	for _, tcase := range []DTestCase{
+		{
+			InCmds: []string{"SET k v XX"},
+			Out:    []interface{}{"nil"},
+		},
+		{
+			InCmds: []string{"SET k v1", "SET k v2 XX", "GET k"},
+			Out:    []interface{}{"OK", "OK", "v2"},
+		},
+		{
+			InCmds: []string{"SET k v1", "SET k v2 XX", "SET k v3 XX", "GET k"},
+			Out:    []interface{}{"OK", "OK", "OK", "v3"},
+		},
+		{
+			InCmds: []string{"SET k v1", "SET k v2 XX", "DEL k", "GET k", "SET k v XX"},
+			Out:    []interface{}{"OK", "OK", "1", "nil", "nil"},
+		},
+	} {
+		for i := 0; i < len(tcase.InCmds); i++ {
+			cmd := tcase.InCmds[i]
+			out := tcase.Out[i]
+			assert.Equal(t, out, fireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
+		}
+	}
+}
