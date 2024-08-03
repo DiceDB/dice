@@ -259,7 +259,9 @@ func RunAsyncTCPServer(serverFD int, wg *sync.WaitGroup) {
 
 	// loop until the server is not shutting down
 	for atomic.LoadInt32(&eStatus) != EngineStatus_SHUTTING_DOWN {
-		asyncServer.deleteExpiredKeys()
+		if err = asyncServer.deleteExpiredKeys(); err != nil {
+			log.Error("error while deleting expired keys", err)
+		}
 
 		// Say, the Engine triggered SHUTTING down when the control flow is here ->
 		// Current: Engine status == WAITING
