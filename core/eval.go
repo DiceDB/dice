@@ -58,6 +58,7 @@ func evalPING(args []string) []byte {
 // args can also contain multiple options -
 //
 //	EX or ex which will set the expiry time(in secs) for the key
+//	EXAT or exat which will set the specified Unix time at which the key will expire, in seconds (a positive integer).
 //
 // Returns encoded error response if at least a <key, value> pair is not part of args
 // Returns encoded error response if expiry tme value in not integer
@@ -87,6 +88,23 @@ func evalSET(args []string) []byte {
 				return Encode(errors.New("ERR value is not an integer or out of range"), false)
 			}
 			exDurationMs = exDurationSec * 1000
+		case "EXAT", "exat":
+			i++
+			if i == len(args) {
+				return Encode(errors.New("ERR syntax error"), false)
+			}
+
+			exAt, err := strconv.ParseInt(args[i], 10, 64)
+			if err != nil {
+				return Encode(errors.New("ERR value is not an integer or out of range"), false)
+			}
+
+			currentTime := time.Now().Unix()
+			if exAt <= currentTime {
+				return Encode(errors.New("ERR invalid EXAT time in the past"), false)
+			}
+
+			exDurationMs = (exAt - currentTime) * 1000
 		default:
 			return Encode(errors.New("ERR syntax error"), false)
 		}
