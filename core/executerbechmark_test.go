@@ -69,7 +69,8 @@ func BenchmarkExecuteQueryOrderBykey(b *testing.B) {
 
 		b.Run(fmt.Sprintf("keys_%d", v.count), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				core.ExecuteQuery(query)
+				//nolint: errcheck
+				core.ExecuteQuery(query) // no need to check fo return values that;s covered in tests
 			}
 		})
 	}
@@ -95,7 +96,8 @@ func BenchmarkExecuteQueryBasicOrderByValue(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v.count), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				core.ExecuteQuery(query)
+				//nolint: errcheck
+				core.ExecuteQuery(query) // no need to check fo return values that;s covered in tests
 			}
 		})
 	}
@@ -122,7 +124,8 @@ func BenchmarkExecuteQueryLimit(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v.count), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				core.ExecuteQuery(query)
+				//nolint: errcheck
+				core.ExecuteQuery(query) // no need to check fo return values that;s covered in tests
 			}
 		})
 	}
@@ -144,7 +147,8 @@ func BenchmarkExecuteQueryNoMatch(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v.count), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				core.ExecuteQuery(query)
+				//nolint: errcheck
+				core.ExecuteQuery(query) // no need to check fo return values that;s covered in tests
 			}
 		})
 	}
@@ -171,7 +175,8 @@ func BenchmarkExecuteQueryWithBasicWhere(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v.count), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				core.ExecuteQuery(query)
+				//nolint: errcheck
+				core.ExecuteQuery(query) // no need to check fo return values that;s covered in tests
 			}
 		})
 	}
@@ -209,7 +214,8 @@ func BenchmarkExecuteQueryWithComplexWhere(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v.count), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				core.ExecuteQuery(query)
+				//nolint: errcheck
+				core.ExecuteQuery(query) // no need to check fo return values that;s covered in tests
 			}
 		})
 	}
@@ -236,7 +242,8 @@ func BenchmarkExecuteQueryWithCompareWhereKeyandValue(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v.count), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				core.ExecuteQuery(query)
+				//nolint: errcheck
+				core.ExecuteQuery(query) // no need to check fo return values that;s covered in tests
 			}
 		})
 	}
@@ -263,7 +270,8 @@ func BenchmarkExecuteQueryWithBasicWhereNoMatch(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v.count), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				core.ExecuteQuery(query)
+				//nolint: errcheck
+				core.ExecuteQuery(query) // no need to check fo return values that;s covered in tests
 			}
 		})
 	}
@@ -290,7 +298,8 @@ func BenchmarkExecuteQueryWithIncompatibleTypes(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v.count), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				core.ExecuteQuery(query)
+				//nolint: errcheck
+				core.ExecuteQuery(query) // no need to check fo return values that;s covered in tests
 			}
 		})
 	}
@@ -317,7 +326,8 @@ func BenchmarkExecuteQueryWithNullValues(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v.count), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				core.ExecuteQuery(query)
+				//nolint: errcheck
+				core.ExecuteQuery(query) // no need to check fo return values that;s covered in tests
 			}
 		})
 	}
@@ -344,7 +354,8 @@ func BenchmarkExecuteQueryWithCaseSesnsitivity(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v.count), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				core.ExecuteQuery(query)
+				//nolint: errcheck
+				core.ExecuteQuery(query) // no need to check fo return values that;s covered in tests
 			}
 		})
 	}
@@ -375,7 +386,8 @@ func BenchmarkExecuteQueryWithClauseOnKey(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v.count), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				core.ExecuteQuery(query)
+				//nolint: errcheck
+				core.ExecuteQuery(query) // no need to check fo return values that;s covered in tests
 			}
 		})
 	}
@@ -402,7 +414,8 @@ func BenchmarkExecuteQueryWithUnsupportedOp(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v.count), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				core.ExecuteQuery(query)
+				//nolint: errcheck
+				core.ExecuteQuery(query) // no need to check fo return values that;s covered in tests
 			}
 		})
 	}
@@ -424,7 +437,8 @@ func BenchmarkExecuteQueryWithEmptyKeyRegex(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v.count), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				core.ExecuteQuery(query)
+				//nolint: errcheck
+				core.ExecuteQuery(query) // no need to check fo return values that;s covered in tests
 			}
 		})
 	}
