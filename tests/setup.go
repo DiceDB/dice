@@ -25,9 +25,9 @@ func getLocalConnection() net.Conn {
 }
 
 // deleteTestKeys is a utility to delete a list of keys before running a test
-func deleteTestKeys(conn net.Conn, keysToDelete []string) {
+func deleteTestKeys(keysToDelete []string) {
 	for _, key := range keysToDelete {
-		fireCommand(conn, fmt.Sprintf("DEL %s", key))
+		core.Del(key)
 	}
 }
 
