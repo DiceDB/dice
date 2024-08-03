@@ -8,7 +8,6 @@ import (
 
 func TestSet(t *testing.T) {
 	conn := getLocalConnection()
-	defer conn.Close()
 
 	t.Run("Basic SET and GET", func(t *testing.T) {
 		testCases := []struct {
@@ -42,7 +41,6 @@ func TestSet(t *testing.T) {
 
 func TestSetWithOptions(t *testing.T) {
 	conn := getLocalConnection()
-	defer conn.Close()
 
 	t.Run("SET with XX option", func(t *testing.T) {
 		testCases := []struct {
@@ -80,28 +78,6 @@ func TestSetWithOptions(t *testing.T) {
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				deleteTestKeys([]string{"k"})
-				for i, cmd := range tc.commands {
-					result := fireCommand(conn, cmd)
-					assert.Equal(t, tc.expected[i], result)
-				}
-			})
-		}
-	})
-}
-
-func TestSetWithExpiration(t *testing.T) {
-	conn := getLocalConnection()
-	defer conn.Close()
-
-	t.Run("SET with expiration", func(t *testing.T) {
-		testCases := []struct {
-			name     string
-			commands []string
-			expected []interface{}
-		}{}
-
-		for _, tc := range testCases {
-			t.Run(tc.name, func(t *testing.T) {
 				for i, cmd := range tc.commands {
 					result := fireCommand(conn, cmd)
 					assert.Equal(t, tc.expected[i], result)
