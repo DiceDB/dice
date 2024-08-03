@@ -15,10 +15,12 @@ type WatchEvent struct {
 }
 
 var store map[unsafe.Pointer]*Obj
-var expires map[*Obj]uint64
+var expires map[*Obj]uint64 // Does not need to be thread-safe as it is only accessed by a single thread.
 var keypool map[string]unsafe.Pointer
-var WatchList map[DSQLQuery]map[int]struct{} // Maps keys to the file descriptors of clients that are watching them.
-var WatchListMutex = &sync.Mutex{}
+var WatchList sync.Map // Maps queries to the file descriptors of clients that are watching them.
+
+var storeMutex sync.RWMutex   // Mutex to protect the store map, must be acquired before keypoolMutex if both are needed.
+var keypoolMutex sync.RWMutex // Mutex to protect the keypool map, must be acquired after storeMutex if both are needed.
 
 // Channel to receive updates about keys that are being watched.
 // The Watcher goroutine will wait on this channel. When a key is updated, the
@@ -30,7 +32,6 @@ func init() {
 	store = make(map[unsafe.Pointer]*Obj)
 	expires = make(map[*Obj]uint64)
 	keypool = make(map[string]unsafe.Pointer)
-	WatchList = make(map[DSQLQuery]map[int]struct{})
 	WatchChannel = make(chan WatchEvent, 100)
 }
 
@@ -51,6 +52,11 @@ func NewObj(value interface{}, expDurationMs int64, oType uint8, oEnc uint8) *Ob
 }
 
 func Put(k string, obj *Obj) {
+	storeMutex.Lock()
+	defer storeMutex.Unlock()
+	keypoolMutex.Lock()
+	defer keypoolMutex.Unlock()
+
 	if len(store) >= config.KeysLimit {
 		evict()
 	}
@@ -72,6 +78,11 @@ func Put(k string, obj *Obj) {
 }
 
 func Get(k string) *Obj {
+	storeMutex.RLock()
+	defer storeMutex.RUnlock()
+	keypoolMutex.RLock()
+	defer keypoolMutex.RUnlock()
+
 	ptr, ok := keypool[k]
 	if !ok {
 		return nil
@@ -80,7 +91,9 @@ func Get(k string) *Obj {
 	v := store[ptr]
 	if v != nil {
 		if hasExpired(v) {
+			storeMutex.RUnlock()
 			Del(k)
+			storeMutex.RLock()
 			return nil
 		}
 		v.LastAccessedAt = getCurrentClock()
@@ -89,6 +102,11 @@ func Get(k string) *Obj {
 }
 
 func Del(k string) bool {
+	storeMutex.Lock()
+	defer storeMutex.Unlock()
+	keypoolMutex.Lock()
+	defer keypoolMutex.Unlock()
+
 	ptr, ok := keypool[k]
 	if !ok {
 		return false
@@ -107,6 +125,11 @@ func Del(k string) bool {
 }
 
 func DelByPtr(ptr unsafe.Pointer) bool {
+	storeMutex.Lock()
+	defer storeMutex.Unlock()
+	keypoolMutex.Lock()
+	defer keypoolMutex.Unlock()
+
 	if obj, ok := store[ptr]; ok {
 		delete(store, ptr)
 		delete(expires, obj)
@@ -115,4 +138,31 @@ func DelByPtr(ptr unsafe.Pointer) bool {
 		return true
 	}
 	return false
+}
+
+// Function to add a new watcher to a query.
+func AddWatcher(query DSQLQuery, clientFd int) {
+	clients, _ := WatchList.LoadOrStore(query, &sync.Map{})
+	clients.(*sync.Map).Store(clientFd, struct{}{})
+}
+
+// Function to remove a watcher from a query.
+func RemoveWatcher(query DSQLQuery, clientFd int) {
+	if clients, ok := WatchList.Load(query); ok {
+		clients.(*sync.Map).Delete(clientFd)
+		// If no more clients for this query, remove the query from WatchList
+		if clientCount := countClients(clients.(*sync.Map)); clientCount == 0 {
+			WatchList.Delete(query)
+		}
+	}
+}
+
+// Helper function to count clients
+func countClients(clients *sync.Map) int {
+	count := 0
+	clients.Range(func(_, _ interface{}) bool {
+		count++
+		return true
+	})
+	return count
 }

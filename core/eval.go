@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/dicedb/dice/config"
+	"github.com/valyala/fastjson"
 )
 
 var RESP_NIL []byte = []byte("$-1\r\n")
@@ -23,8 +25,11 @@ var RESP_EMPTY_ARRAY []byte = []byte("*0\r\n")
 
 var txnCommands map[string]bool
 var serverID string
+var diceCommandsCount int
+var parser fastjson.Parser
 
 func init() {
+	diceCommandsCount = len(diceCmds)
 	txnCommands = map[string]bool{"EXEC": true, "DISCARD": true}
 	serverID = fmt.Sprintf("%s:%d", config.Host, config.Port)
 }
@@ -111,13 +116,65 @@ func evalGET(args []string) []byte {
 		return RESP_NIL
 	}
 
-	// if key already expired then return nil
-	if hasExpired(obj) {
+	// return the RESP encoded value
+	return Encode(obj.Value, false)
+}
+
+// evalJSONGET retrieves a JSON value stored at the specified key
+// args must contain at least the key;  (path unused in this implementation)
+// Returns RESP_NIL if key is expired or it does not exist
+// Returns encoded error response if incorrect number of arguments
+// The RESP value of the key is encoded and then returned
+func evalJSONGET(args []string) []byte {
+	if len(args) < 1 {
+		return Encode(errors.New("ERR wrong number of arguments for 'JSON.GET' command"), false)
+	}
+
+	key := args[0]
+	obj := Get(key)
+	// Return nil if the key doesn't exist
+	if obj == nil {
 		return RESP_NIL
 	}
 
-	// return the RESP encoded value
-	return Encode(obj.Value, false)
+	objType, _ := ExtractTypeEncoding(obj)
+	if objType != OBJ_TYPE_JSON {
+		return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+	}
+
+	jsonValue, ok := obj.Value.(*fastjson.Value)
+	if !ok {
+		return Encode(errors.New("ERR internal error: stored value is not a valid JSON"), false)
+	}
+
+	return Encode(string(jsonValue.MarshalTo(nil)), false)
+}
+
+// evalJSONSET stores a JSON value at the specified key
+// args must contain at least the key, path (unused in this implementation), and JSON string
+// Returns encoded error response if incorrect number of arguments
+// Returns encoded error if the JSON string is invalid
+// Returns RESP_OK if the JSON value is successfully stored
+func evalJSONSET(args []string) []byte {
+	if len(args) < 3 {
+		return Encode(errors.New("ERR wrong number of arguments for 'JSON.SET' command"), false)
+	}
+
+	key := args[0]
+	// Note: args[1] (path) is ignored in this implementation
+	jsonStr := args[2]
+
+	// Parse the JSON string
+	v, err := parser.Parse(jsonStr)
+	if err != nil {
+		return Encode(errors.New("ERR invalid JSON"), false)
+	}
+
+	// Create a new object with the JSON value and store it
+	obj := NewObj(v, -1, OBJ_TYPE_JSON, OBJ_ENCODING_JSON)
+	Put(key, obj)
+
+	return RESP_OK
 }
 
 // evalTTL returns Time-to-Live in secs for the queried key in args
@@ -144,11 +201,6 @@ func evalTTL(args []string) []byte {
 	exp, isExpirySet := getExpiry(obj)
 	if !isExpirySet {
 		return RESP_MINUS_1
-	}
-
-	// if key expired i.e. key does not exist hence return -2
-	if exp < uint64(time.Now().UnixMilli()) {
-		return RESP_MINUS_2
 	}
 
 	// compute the time remaining for the key to expire and
@@ -229,7 +281,9 @@ func evalBGREWRITEAOF(args []string) []byte {
 	newChild, _, _ := syscall.Syscall(syscall.SYS_FORK, 0, 0, 0)
 	if newChild == 0 {
 		//We are inside child process now, so we'll start flushing to disk.
-		DumpAllAOF()
+		if err := DumpAllAOF(); err != nil {
+			return Encode(errors.New("ERR AOF failed"), false)
+		}
 		return []byte("")
 	} else {
 		//Back to main thread
@@ -851,111 +905,62 @@ func evalQWATCH(args []string, c *Client) []byte {
 		return Encode(error, false)
 	}
 
-	WatchListMutex.Lock()
-	defer WatchListMutex.Unlock()
-	if WatchList[query] == nil {
-		WatchList[query] = make(map[int]struct{})
-	}
-
-	// Add the client to this key's watch list
-	WatchList[query][c.Fd] = struct{}{}
+	AddWatcher(query, c.Fd)
 
 	return RESP_OK
 }
 
+// evalCommand evaluates COMMAND <subcommand> command based on subcommand
+// COUNT: return total count of commands in Dice.
+func evalCommand(args []string) []byte {
+	if len(args) == 0 {
+		return Encode(errors.New("(error) ERR wrong number of arguments for 'command' command"), false)
+	}
+	subcommand := strings.ToUpper(args[0])
+	switch subcommand {
+	case "COUNT":
+		return evalCommandCount(nil)
+	default:
+		return Encode(fmt.Errorf("ERR unknown subcommand '%s'. Try COMMAND HELP", subcommand), false)
+	}
+}
+
+// evalCommandCount returns an number of commands supported by DiceDB
+func evalCommandCount(args []string) []byte {
+	return Encode(diceCommandsCount, false)
+}
+
 func executeCommand(cmd *RedisCmd, c *Client) []byte {
-	switch cmd.Cmd {
-	case "PING":
-		return evalPING(cmd.Args)
-	case "SET":
-		return evalSET(cmd.Args)
-	case "GET":
-		return evalGET(cmd.Args)
-	case "TTL":
-		return evalTTL(cmd.Args)
-	case "DEL":
-		return evalDEL(cmd.Args)
-	case "EXPIRE":
-		return evalEXPIRE(cmd.Args)
-	case "HELLO":
-		return evalHELLO(cmd.Args)
-	case "BGREWRITEAOF":
-		return evalBGREWRITEAOF(cmd.Args)
-	case "INCR":
-		return evalINCR(cmd.Args)
-	case "INFO":
-		return evalINFO(cmd.Args)
-	case "CLIENT":
-		return evalCLIENT(cmd.Args)
-	case "LATENCY":
-		return evalLATENCY(cmd.Args)
-	case "LRU":
-		return evalLRU(cmd.Args)
-	case "SLEEP":
-		return evalSLEEP(cmd.Args)
-	case "QINTINS":
-		return evalQINTINS(cmd.Args)
-	case "QINTREM":
-		return evalQINTREM(cmd.Args)
-	case "QINTLEN":
-		return evalQINTLEN(cmd.Args)
-	case "QINTPEEK":
-		return evalQINTPEEK(cmd.Args)
-	case "BFINIT":
-		return evalBFINIT(cmd.Args)
-	case "BFADD":
-		return evalBFADD(cmd.Args)
-	case "BFEXISTS":
-		return evalBFEXISTS(cmd.Args)
-	case "BFINFO":
-		return evalBFINFO(cmd.Args)
-	case "QREFINS":
-		return evalQREFINS(cmd.Args)
-	case "QREFREM":
-		return evalQREFREM(cmd.Args)
-	case "QREFLEN":
-		return evalQREFLEN(cmd.Args)
-	case "QREFPEEK":
-		return evalQREFPEEK(cmd.Args)
-	case "STACKINTPUSH":
-		return evalSTACKINTPUSH(cmd.Args)
-	case "STACKINTPOP":
-		return evalSTACKINTPOP(cmd.Args)
-	case "STACKINTLEN":
-		return evalSTACKINTLEN(cmd.Args)
-	case "STACKINTPEEK":
-		return evalSTACKINTPEEK(cmd.Args)
-	case "STACKREFPUSH":
-		return evalSTACKREFPUSH(cmd.Args)
-	case "STACKREFPOP":
-		return evalSTACKREFPOP(cmd.Args)
-	case "STACKREFLEN":
-		return evalSTACKREFLEN(cmd.Args)
-	case "STACKREFPEEK":
-		return evalSTACKREFPEEK(cmd.Args)
-	case "SUBSCRIBE": // TODO: Remove this override once we support QWATCH in dice-cli.
+	diceCmd, ok := diceCmds[cmd.Cmd]
+	if !ok {
+		return Encode(fmt.Errorf("ERR unknown command '%s', with args beginning with: %s", cmd.Cmd, strings.Join(cmd.Args, " ")), false)
+	}
+
+	if diceCmd.Name == "SUBSCRIBE" || diceCmd.Name == "QWATCH" {
 		return evalQWATCH(cmd.Args, c)
-	case "QWATCH":
-		return evalQWATCH(cmd.Args, c)
-	case "MULTI":
+	}
+	if diceCmd.Name == "MULTI" {
 		c.TxnBegin()
-		return evalMULTI(cmd.Args)
-	case "EXEC":
+		return diceCmd.Eval(cmd.Args)
+	}
+	if diceCmd.Name == "EXEC" {
 		if !c.isTxn {
 			return Encode(errors.New("ERR EXEC without MULTI"), false)
 		}
 		return c.TxnExec()
-	case "DISCARD":
+	}
+	if diceCmd.Name == "DISCARD" {
 		if !c.isTxn {
 			return Encode(errors.New("ERR DISCARD without MULTI"), false)
 		}
 		c.TxnDiscard()
 		return RESP_OK
-	case "ABORT":
-		return RESP_OK
-	default:
-		return evalPING(cmd.Args)
 	}
+	if diceCmd.Name == "ABORT" {
+		return RESP_OK
+	}
+
+	return diceCmd.Eval(cmd.Args)
 }
 
 func executeCommandToBuffer(cmd *RedisCmd, buf *bytes.Buffer, c *Client) {

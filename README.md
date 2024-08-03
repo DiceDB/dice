@@ -1,7 +1,7 @@
 DiceDB
 ===
 
-Dice 🎲 is a drop-in replacement of Redis with SQL-based realtime reactivity baked in.
+DiceDB is a drop-in replacement of Redis with SQL-based real-time reactivity baked in.
 
 > Note: DiceDB is still in development and it supports a subset of Redis commands. So, please do not use it in production. But, feel free to go through the [open issues](https://github.com/DiceDB/dice/issues) and contribute to help us speed up the development.
 
@@ -20,6 +20,11 @@ The easiest way to get started with DiceDB is using [Docker](https://www.docker.
 $ docker run dicedb/dice-server
 ```
 
+The above command will start the DiceDB server running locally on the port `7379` and you can connect
+to it using DiceDB CLI and SDKs, or even Redis CLIs and SDKs.
+
+> Note: Given it is a drop-in replacement of Redis, you can also use any Redis CLI and SDK to connect to DiceDB.
+
 ### Setting up
 
 To run DiceDB for local development or running from source, you will need
@@ -35,15 +40,16 @@ $ cd dice
 $ go run main.go
 ```
 
-## Dice in action
+## Setting up CLI
 
-Because Dice speaks Redis' dialect, you can connect to it with any Redis Client and the simplest way it to use a [Redis CLI](https://redis.io/docs/manual/cli/). Programmatically, depending on the language you prefer, you can use your favourite Redis library to connect.
-
-But if you are planning to use `QWATCH` feature then you need to use the DiceDB CLI that you can download from [PyPI](https://pypi.org/project/dicedb-cli/) by running the following command. The codebase for the same can be found at [dicedb/cli](https://github.com/DiceDB/cli/).
+The best way to connect to DiceDB is using DiceDB CLI and you can install it by running the following command.
 
 ```
 $ pip install dicedb-cli
 ```
+
+> Because DiceDB speaks Redis dialect, you can connect to it with any Redis Client and SDK also.
+> But if you are planning to use the `QWATCH` feature then you need to use the DiceDB CLI.
 
 ## Running Tests
 
@@ -51,7 +57,7 @@ Unit tests and integration tests are essential for ensuring correctness and in t
 
 For unit testing, you can execute individual unit tests by specifying the name of the test function using the `TEST_FUNC` environment variable and running the `make unittest-one` command. Alternatively, running `make unittest` will execute all unit tests.
 
-### Executing a single unit test
+### Executing one unit test
 
 ```
 $ TEST_FUNC=<name of the test function> make unittest-one
@@ -80,13 +86,13 @@ $ make test
 ```
 
 > Work to add more tests in DiceDB is in progress and we will soon port the
-> test [Redis suite](https://github.com/redis/redis/tree/f60370ce28b946c1146dcea77c9c399d39601aaa) to this codebase to ensure full compatability.
+> test [Redis suite](https://github.com/redis/redis/tree/f60370ce28b946c1146dcea77c9c399d39601aaa) to this codebase to ensure full compatibility.
 
 ## Running Benchmark
 
 ```sh
 $ go test -test.bench <pattern>
-$ go test -test.bench BenchmarkListRedis
+$ go test -test.bench BenchmarkListRedis -benchmem
 ```
 
 ## Getting Started
@@ -95,7 +101,7 @@ To get started with building and contributing to DiceDB, please refer to the [is
 
 ## The story
 
-DiceDB started as a re-implementation of Redis in Golang and the idea was to - build a DB from scratch and understand the micro-nuances that comes with its implementation. The database does not aim to replace Redis, instead it will fit in and optimize itself for multi-core computations running on a single-threaded event loop.
+DiceDB started as a re-implementation of Redis in Golang and the idea was to - build a DB from scratch and understand the micro-nuances that come with its implementation. The database does not aim to replace Redis, instead, it will fit in and optimize itself for multi-core computations running on a single-threaded event loop.
 
 ## How to contribute
 
