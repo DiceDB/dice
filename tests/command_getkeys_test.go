@@ -2,6 +2,8 @@ package tests
 
 import (
 	"testing"
+
+	"gotest.tools/v3/assert"
 )
 
 type commandGetKeysTestCase struct {
@@ -24,16 +26,15 @@ var getKeysTestCases = []commandGetKeysTestCase{
 	{"NotValidCommand", "ERR invalid command specified"},
 }
 
-// func TestCommandGetKeys(t *testing.T) {
-// 	conn := getLocalConnection()
-// 	defer conn.Close()
+func TestCommandGetKeys(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
 
-// 	for _, tcase := range getKeysTestCases {
-// 		fmt.Println("done")
-// 		result := fireCommand(conn, "COMMAND GETKEYS "+tcase.inCmd)
-// 		assert.DeepEqual(t, tcase.expected, result)
-// 	}
-// }
+	for _, tcase := range getKeysTestCases {
+		result := fireCommand(conn, "COMMAND GETKEYS "+tcase.inCmd)
+		assert.DeepEqual(t, tcase.expected, result)
+	}
+}
 
 func BenchmarkGetKeysMatch(b *testing.B) {
 	conn := getLocalConnection()
