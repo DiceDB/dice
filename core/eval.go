@@ -949,7 +949,7 @@ func evalCommandGetKeys(args []string) []byte {
 		return Encode(errors.New("ERR invalid number of arguments specified for command"), false)
 	}
 
-	keys := make([]string, 0, len(args))
+	keys := make([]string, 0)
 	step := max(keySpecs.Step, 1)
 	lastIdx := keySpecs.BeginIndex
 	if keySpecs.LastKey != 0 {
