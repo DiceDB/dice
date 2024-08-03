@@ -3,6 +3,8 @@ package core
 import (
 	"testing"
 	"time"
+
+	"github.com/dicedb/dice/config"
 )
 
 func TestNewUsers(t *testing.T) {
@@ -65,6 +67,7 @@ func TestNewSession(t *testing.T) {
 }
 
 func TestSessionIsActive(t *testing.T) {
+	config.RequirePass = "testpassword"
 	session := NewSession()
 	if session.IsActive() {
 		t.Error("New session should not be active")
@@ -81,6 +84,7 @@ func TestSessionIsActive(t *testing.T) {
 	if !session.LastAccessedAt.After(oldLastAccessed) {
 		t.Error("IsActive() should update LastAccessedAt")
 	}
+	config.RequirePass = ""
 }
 
 func TestSessionActivate(t *testing.T) {
