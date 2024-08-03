@@ -13,6 +13,10 @@ func TestSet(t *testing.T) {
 			InCmds: []string{"SET k v", "GET k"},
 			Out:    []interface{}{"OK", "v"},
 		},
+		{
+			InCmds: []string{"SET k v EX 1", "SLEEP 2", "GET k"},
+			Out:    []interface{}{"OK", "OK", "(nil)"},
+		},
 	} {
 		for i := 0; i < len(tcase.InCmds); i++ {
 			cmd := tcase.InCmds[i]
