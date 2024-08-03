@@ -28,7 +28,6 @@ var getKeysTestCases = []commandGetKeysTestCase{
 
 func TestCommandGetKeys(t *testing.T) {
 	conn := getLocalConnection()
-	defer conn.Close()
 
 	for _, tcase := range getKeysTestCases {
 		result := fireCommand(conn, "COMMAND GETKEYS "+tcase.inCmd)
