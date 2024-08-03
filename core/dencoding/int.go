@@ -49,3 +49,15 @@ func DecodeUInt(vint []byte) uint64 {
 	}
 	return v
 }
+
+// EncodeInt encodes the signed 64 bit integer value into a varint
+// and returns an array of bytes (little endian encoded)
+func EncodeInt(x int64) []byte {
+	return EncodeUInt(uint64((x << 1) ^ (x >> 63)))
+}
+
+// DecodeInt decodes the array of bytes and returns a signed 64 bit integer
+func DecodeInt(vint []byte) int64 {
+	ux := DecodeUInt(vint)
+	return int64((ux >> 1) ^ uint64((int64(ux)<<63)>>63))
+}
