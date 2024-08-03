@@ -112,8 +112,10 @@ func Get(k string) *Obj {
 	if v != nil {
 		if hasExpired(v) {
 			storeMutex.RUnlock()
+			keypoolMutex.RUnlock()
 			Del(k)
 			storeMutex.RLock()
+			keypoolMutex.RLock()
 			return nil
 		}
 		v.LastAccessedAt = getCurrentClock()
