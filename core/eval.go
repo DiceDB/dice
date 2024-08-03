@@ -88,10 +88,6 @@ func evalSET(args []string) []byte {
 			}
 			exDurationMs = exDurationSec * 1000
 		case "XX", "xx":
-			if i != len(args) {
-				return Encode(errors.New("ERR syntax error"), false)
-			}
-
 			// Get the key from the hash table
 			obj := Get(key)
 
