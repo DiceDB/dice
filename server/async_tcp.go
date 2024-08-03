@@ -89,6 +89,10 @@ func WaitForSignal(wg *sync.WaitGroup, sigs chan os.Signal) {
 	defer wg.Done()
 	<-sigs
 
+	// if server is busy continue to wait
+	for atomic.LoadInt32(&eStatus) == EngineStatus_BUSY {
+	}
+
 	// CRITICAL TO HANDLE
 	// We do not want server to ever go back to BUSY state
 	// when control flow is here ->
@@ -191,6 +195,7 @@ func (asyncServer *AsyncServer) deleteExpiredKeys() (err error) {
 
 func (asyncServer *AsyncServer) acceptConn(serverFD int) (err error) {
 	// accept the incoming connection from a client
+	log.Info("Accepting a new connection")
 	fd, _, err := syscall.Accept(serverFD)
 	if err != nil {
 		log.Warn(err)
@@ -198,9 +203,8 @@ func (asyncServer *AsyncServer) acceptConn(serverFD int) (err error) {
 	}
 
 	connectedClients[fd] = core.NewClient(fd)
-	if err = syscall.SetNonblock(fd, true); err != nil {
-		log.Error(err)
-		return
+	if err := syscall.SetNonblock(fd, true); err != nil {
+		log.Fatal(err)
 	}
 
 	// add this new TCP connection to be monitored
@@ -228,6 +232,7 @@ func (asyncServer *AsyncServer) acceptBytesFromConn(serverFD int) (err error) {
 	}
 	respond(cmds, comm)
 	if hasABORT {
+		log.Info("ABORT received, closing the connection")
 		asyncServer.cancelFunc()
 		return
 	}
@@ -264,6 +269,7 @@ func RunAsyncTCPServer(serverFD int, wg *sync.WaitGroup) {
 		// poll for events that are ready for IO
 		events, err := asyncServer.mux.Poll(-1)
 		if err != nil {
+			log.Error("error while polling", err)
 			continue
 		}
 
@@ -295,5 +301,9 @@ func RunAsyncTCPServer(serverFD int, wg *sync.WaitGroup) {
 				}
 			}
 		}
+		// mark engine as WAITING
+		// no contention as the signal handler is blocked until
+		// the engine is BUSY
+		atomic.StoreInt32(&eStatus, EngineStatus_WAITING)
 	}
 }
