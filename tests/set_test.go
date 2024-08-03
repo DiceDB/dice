@@ -31,7 +31,7 @@ func TestSetWithNX(t *testing.T) {
 		},
 		{
 			InCmds: []string{"SET k v", "GET k", "SET k V NX"},
-			Out:    []interface{}{"OK", "v", "nil"},
+			Out:    []interface{}{"OK", "v", "(nil)"},
 		},
 	} {
 		for i := 0; i < len(tcase.InCmds); i++ {
@@ -52,7 +52,7 @@ func BenchmarkSetWithNX(b *testing.B) {
 		},
 		{
 			InCmds: []string{"SET k v", "GET k", "SET k V NX"},
-			Out:    []interface{}{"OK", "v", "nil"},
+			Out:    []interface{}{"OK", "v", "(nil)"},
 		},
 	} {
 		for i := 0; i < len(tcase.InCmds); i++ {
