@@ -1,18 +1,10 @@
 package tests
 
 import (
-	"fmt"
-	"net"
 	"testing"
 
 	"gotest.tools/v3/assert"
 )
-
-func deleteKeys(conn net.Conn, keysToDelete []string) {
-	for _, key := range keysToDelete {
-		fireCommand(conn, fmt.Sprintf("DEL %s", key))
-	}
-}
 
 func TestSet(t *testing.T) {
 	conn := getLocalConnection()
@@ -32,7 +24,7 @@ func TestSet(t *testing.T) {
 
 func TestSetWithXX(t *testing.T) {
 	conn := getLocalConnection()
-	deleteKeys(conn, []string{"k"})
+	deleteTestKeys(conn, []string{"k"})
 	for _, tcase := range []DTestCase{
 		{
 			InCmds: []string{"SET k v XX"},

@@ -24,6 +24,13 @@ func getLocalConnection() net.Conn {
 	return conn
 }
 
+// deleteTestKeys is a utility to delete a list of keys before running a test
+func deleteTestKeys(conn net.Conn, keysToDelete []string) {
+	for _, key := range keysToDelete {
+		fireCommand(conn, fmt.Sprintf("DEL %s", key))
+	}
+}
+
 func getLocalSdk() *redis.Client {
 	return redis.NewClient(&redis.Options{
 		Addr: fmt.Sprintf(":%d", config.Port),
