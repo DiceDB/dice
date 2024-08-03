@@ -12,6 +12,7 @@ import (
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core/bit"
+	"github.com/valyala/fastjson"
 )
 
 var RESP_NIL []byte = []byte("$-1\r\n")
@@ -26,6 +27,7 @@ var RESP_EMPTY_ARRAY []byte = []byte("*0\r\n")
 var txnCommands map[string]bool
 var serverID string
 var diceCommandsCount int
+var parser fastjson.Parser
 
 func init() {
 	diceCommandsCount = len(diceCmds)
@@ -115,13 +117,65 @@ func evalGET(args []string) []byte {
 		return RESP_NIL
 	}
 
-	// if key already expired then return nil
-	if hasExpired(obj) {
+	// return the RESP encoded value
+	return Encode(obj.Value, false)
+}
+
+// evalJSONGET retrieves a JSON value stored at the specified key
+// args must contain at least the key;  (path unused in this implementation)
+// Returns RESP_NIL if key is expired or it does not exist
+// Returns encoded error response if incorrect number of arguments
+// The RESP value of the key is encoded and then returned
+func evalJSONGET(args []string) []byte {
+	if len(args) < 1 {
+		return Encode(errors.New("ERR wrong number of arguments for 'JSON.GET' command"), false)
+	}
+
+	key := args[0]
+	obj := Get(key)
+	// Return nil if the key doesn't exist
+	if obj == nil {
 		return RESP_NIL
 	}
 
-	// return the RESP encoded value
-	return Encode(obj.Value, false)
+	objType, _ := ExtractTypeEncoding(obj)
+	if objType != OBJ_TYPE_JSON {
+		return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+	}
+
+	jsonValue, ok := obj.Value.(*fastjson.Value)
+	if !ok {
+		return Encode(errors.New("ERR internal error: stored value is not a valid JSON"), false)
+	}
+
+	return Encode(string(jsonValue.MarshalTo(nil)), false)
+}
+
+// evalJSONSET stores a JSON value at the specified key
+// args must contain at least the key, path (unused in this implementation), and JSON string
+// Returns encoded error response if incorrect number of arguments
+// Returns encoded error if the JSON string is invalid
+// Returns RESP_OK if the JSON value is successfully stored
+func evalJSONSET(args []string) []byte {
+	if len(args) < 3 {
+		return Encode(errors.New("ERR wrong number of arguments for 'JSON.SET' command"), false)
+	}
+
+	key := args[0]
+	// Note: args[1] (path) is ignored in this implementation
+	jsonStr := args[2]
+
+	// Parse the JSON string
+	v, err := parser.Parse(jsonStr)
+	if err != nil {
+		return Encode(errors.New("ERR invalid JSON"), false)
+	}
+
+	// Create a new object with the JSON value and store it
+	obj := NewObj(v, -1, OBJ_TYPE_JSON, OBJ_ENCODING_JSON)
+	Put(key, obj)
+
+	return RESP_OK
 }
 
 // evalTTL returns Time-to-Live in secs for the queried key in args
@@ -148,11 +202,6 @@ func evalTTL(args []string) []byte {
 	exp, isExpirySet := getExpiry(obj)
 	if !isExpirySet {
 		return RESP_MINUS_1
-	}
-
-	// if key expired i.e. key does not exist hence return -2
-	if exp < uint64(time.Now().UnixMilli()) {
-		return RESP_MINUS_2
 	}
 
 	// compute the time remaining for the key to expire and
