@@ -1053,7 +1053,9 @@ func EvalAndRespond(cmds RedisCmds, c *Client) {
 		if cmd.Cmd != AuthCmd && !c.Session.IsActive() {
 			// TODO: Check required response
 			log.Println("Session not active for CMD:", cmd.Cmd)
-			c.Write(RESP_AUTH_FAILURE)
+			if _, err := c.Write(RESP_AUTH_FAILURE); err != nil {
+				log.Panic(err)
+			}
 			continue
 		}
 		// if txn is not in progress, then we can simply
