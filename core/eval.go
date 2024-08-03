@@ -61,7 +61,6 @@ func evalAUTH(args []string, c *Client) []byte {
 		b   []byte
 		err error
 	)
-	log.Print("Authenticating user")
 
 	if len(args) < 1 || len(args) > 2 {
 		return Encode(errors.New("ERR wrong number of arguments for 'AUTH' command"), false)
@@ -1051,10 +1050,8 @@ func EvalAndRespond(cmds RedisCmds, c *Client) {
 	for _, cmd := range cmds {
 		// Check if the command has been authenticated
 		if cmd.Cmd != AuthCmd && !c.Session.IsActive() {
-			// TODO: Check required response
-			log.Println("Session not active for CMD:", cmd.Cmd)
 			if _, err := c.Write(RESP_AUTH_FAILURE); err != nil {
-				log.Panic(err)
+				log.Println("Error writing to client:", err)
 			}
 			continue
 		}

@@ -20,7 +20,7 @@ const (
 )
 
 var (
-	UserStore *Users = NewUsers()
+	UserStore *Users = NewUsersStore()
 )
 
 type (
@@ -47,7 +47,7 @@ type (
 	}
 )
 
-func NewUsers() (users *Users) {
+func NewUsersStore() (users *Users) {
 	users = &Users{
 		store:  make(map[string]*User),
 		stLock: &sync.RWMutex{},

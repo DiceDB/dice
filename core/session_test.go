@@ -8,7 +8,7 @@ import (
 )
 
 func TestNewUsers(t *testing.T) {
-	users := NewUsers()
+	users := NewUsersStore()
 	if users == nil {
 		t.Error("NewUsers() returned nil")
 	}
@@ -21,7 +21,7 @@ func TestNewUsers(t *testing.T) {
 }
 
 func TestUsersAddAndGet(t *testing.T) {
-	users := NewUsers()
+	users := NewUsersStore()
 	if users == nil {
 		t.Fatal("NewUsers() returned nil")
 	}
