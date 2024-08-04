@@ -92,7 +92,7 @@ func TestSetWithKeepTTLFlag(t *testing.T) {
 	conn := getLocalConnection()
 	for _, tcase := range []DTestCase{
 		{
-			InCmds: []string{"SET k v EX 5", "SET k vv KEEPTTL", "GET k"},
+			InCmds: []string{"SET k v EX 2", "SET k vv KEEPTTL", "GET k"},
 			Out:    []interface{}{"OK", "OK", "vv"},
 		},
 	} {
@@ -103,8 +103,8 @@ func TestSetWithKeepTTLFlag(t *testing.T) {
 		}
 	}
 
-	time.Sleep(5 * time.Second)
-	// cmd := "GET k"
-	// out := "nil"
-	// assert.Equal(t, out, fireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
+	time.Sleep(2 * time.Second)
+	cmd := "GET k"
+	out := "(nil)"
+	assert.Equal(t, out, fireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
 }
