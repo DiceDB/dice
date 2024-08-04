@@ -87,6 +87,15 @@ func evalSET(args []string) []byte {
 				return Encode(errors.New("ERR value is not an integer or out of range"), false)
 			}
 			exDurationMs = exDurationSec * 1000
+		case "XX", "xx":
+			// Get the key from the hash table
+			obj := Get(key)
+
+			// if key does not exist, return RESP encoded nil
+			if obj == nil {
+				return RESP_NIL
+			}
+
 		default:
 			return Encode(errors.New("ERR syntax error"), false)
 		}
@@ -920,6 +929,8 @@ func evalCommand(args []string) []byte {
 	switch subcommand {
 	case "COUNT":
 		return evalCommandCount(nil)
+	case "GETKEYS":
+		return evalCommandGetKeys(args[1:])
 	default:
 		return Encode(fmt.Errorf("ERR unknown subcommand '%s'. Try COMMAND HELP", subcommand), false)
 	}
@@ -928,6 +939,36 @@ func evalCommand(args []string) []byte {
 // evalCommandCount returns an number of commands supported by DiceDB
 func evalCommandCount(args []string) []byte {
 	return Encode(diceCommandsCount, false)
+}
+
+func evalCommandGetKeys(args []string) []byte {
+	diceCmd, ok := diceCmds[strings.ToUpper(args[0])]
+	if !ok {
+		return Encode(errors.New("ERR invalid command specified"), false)
+	}
+
+	keySpecs := diceCmd.KeySpecs
+	if keySpecs.BeginIndex == 0 {
+		return Encode(errors.New("ERR the command has no key arguments"), false)
+	}
+
+	arity := diceCmd.Arity
+	if (arity < 0 && len(args) < -arity) ||
+		(arity >= 0 && len(args) != arity) {
+		return Encode(errors.New("ERR invalid number of arguments specified for command"), false)
+	}
+
+	keys := make([]string, 0)
+	step := max(keySpecs.Step, 1)
+	lastIdx := keySpecs.BeginIndex
+	if keySpecs.LastKey != 0 {
+		lastIdx = len(args) + keySpecs.LastKey
+	}
+	for i := keySpecs.BeginIndex; i <= lastIdx; i += step {
+		keys = append(keys, args[i])
+	}
+
+	return Encode(keys, false)
 }
 
 func executeCommand(cmd *RedisCmd, c *Client) []byte {
