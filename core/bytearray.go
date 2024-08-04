@@ -16,18 +16,6 @@ func NewByteArray(size int) *ByteArray {
 // SetBit sets the bit at the given position to the specified value
 func (b *ByteArray) SetBit(pos int, value bool) {
 	byteIndex := pos / 8
-	bitIndex := uint(pos % 8)
-
-	if value {
-		b.data[byteIndex] |= (1 << bitIndex)
-	} else {
-		b.data[byteIndex] &^= (1 << bitIndex)
-	}
-}
-
-// SetBitByArrayPosition sets the bit at the given position to the specified value
-func (b *ByteArray) SetBitByByteArrayPosition(pos int, value bool) {
-	byteIndex := pos / 8
 	bitIndex := 7 - uint(pos%8)
 
 	if value {
@@ -39,14 +27,6 @@ func (b *ByteArray) SetBitByByteArrayPosition(pos int, value bool) {
 
 // GetBit gets the bit at the given position
 func (b *ByteArray) GetBit(pos int) bool {
-	byteIndex := pos / 8
-	bitIndex := uint(pos % 8)
-
-	return (b.data[byteIndex] & (1 << bitIndex)) != 0
-}
-
-// GetBit gets the bit at the given position
-func (b *ByteArray) GetBitByByteArrayPosition(pos int) bool {
 	byteIndex := pos / 8
 	bitIndex := 7 - uint(pos%8)
 
@@ -90,6 +70,10 @@ func (b *ByteArray) ResizeIfNecessary() *ByteArray {
 		} else {
 			break
 		}
+	}
+
+	if decreaseLengthBy == 0 {
+		return b
 	}
 
 	// Decrease the size of the slice to n elements

@@ -954,8 +954,8 @@ func evalSETBIT(args []string) []byte {
 			byteArray = byteArray.IncreaseSize(int(requiredByteArraySize))
 		}
 
-		response := byteArray.GetBitByByteArrayPosition(int(offset))
-		byteArray.SetBitByByteArrayPosition(int(offset), value)
+		response := byteArray.GetBit(int(offset))
+		byteArray.SetBit(int(offset), value)
 
 		// if earlier bit was 1 and the new bit is 0
 		// propability is that, we can remove some space from the byte array
@@ -1007,7 +1007,7 @@ func evalGETBIT(args []string) []byte {
 		if requiredByteArraySize > byteArrayLength {
 			return Encode(0, true)
 		} else {
-			value := byteArray.GetBitByByteArrayPosition(int(offset))
+			value := byteArray.GetBit(int(offset))
 			if value {
 				return Encode(1, true)
 			}
