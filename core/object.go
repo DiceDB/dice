@@ -27,11 +27,11 @@ var OBJ_ENCODING_STACKREF uint8 = 3
 var OBJ_TYPE_BITSET uint8 = 2 << 4 // 00100000
 var OBJ_ENCODING_BF uint8 = 2      // 00000010
 
-var OBJ_TYPE_BYTEARRAY uint8 = 1 << 6
-var OBJ_ENCODING_BYTEARRAY uint8 = 4
-
 var OBJ_TYPE_JSON uint8 = 3 << 4 // 00110000
 var OBJ_ENCODING_JSON uint8 = 0
+
+var OBJ_TYPE_BYTEARRAY uint8 = 4 << 4 // 01000000
+var OBJ_ENCODING_BYTEARRAY uint8 = 4
 
 func ExtractTypeEncoding(obj *Obj) (uint8, uint8) {
 	return obj.TypeEncoding & 0b11110000, obj.TypeEncoding & 0b00001111

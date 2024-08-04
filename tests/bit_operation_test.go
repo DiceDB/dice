@@ -10,7 +10,7 @@ import (
 
 func TestBitOp(t *testing.T) {
 	conn := getLocalConnection()
-	for _, tcase := range []DTestCase{
+	testcases := []DTestCase{
 		{
 			InCmds: []string{"SETBIT unitTestKeyA 1 1", "SETBIT unitTestKeyA 3 1", "SETBIT unitTestKeyA 5 1", "SETBIT unitTestKeyA 7 1", "SETBIT unitTestKeyA 8 1"},
 			Out:    []interface{}{int64(0), int64(0), int64(0), int64(0), int64(0)},
@@ -51,7 +51,9 @@ func TestBitOp(t *testing.T) {
 			InCmds: []string{"GETBIT unitTestKeyXOR 1", "GETBIT unitTestKeyXOR 2", "GETBIT unitTestKeyXOR 3", "GETBIT unitTestKeyXOR 7", "GETBIT unitTestKeyXOR 8"},
 			Out:    []interface{}{int64(1), int64(1), int64(1), int64(0), int64(1)},
 		},
-	} {
+	}
+
+	for _, tcase := range testcases {
 		for i := 0; i < len(tcase.InCmds); i++ {
 			cmd := tcase.InCmds[i]
 			out := tcase.Out[i]
@@ -62,7 +64,7 @@ func TestBitOp(t *testing.T) {
 
 func TestBitCount(t *testing.T) {
 	conn := getLocalConnection()
-	for _, tcase := range []DTestCase{
+	testcases := []DTestCase{
 		{
 			InCmds: []string{"SETBIT mykey 7 1"},
 			Out:    []interface{}{int64(0)},
@@ -111,7 +113,9 @@ func TestBitCount(t *testing.T) {
 			InCmds: []string{"BITCOUNT mykey 0 0"},
 			Out:    []interface{}{int64(1)},
 		},
-	} {
+	}
+
+	for _, tcase := range testcases {
 		for i := 0; i < len(tcase.InCmds); i++ {
 			cmd := tcase.InCmds[i]
 			out := tcase.Out[i]
