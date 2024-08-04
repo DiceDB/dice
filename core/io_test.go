@@ -189,3 +189,18 @@ func TestDecodeOneVeryLargeMessage(t *testing.T) {
 		t.Fatalf("Expected large string, got %v", result)
 	}
 }
+
+		
+func TestDecodeOneNoDataRead(t *testing.T) {
+	mockRW := &MockReadWriter{
+		ReadChunks: [][]byte{
+			[]byte(""), // Empty read chunk
+		},
+	}
+	parser := NewRESPParser(mockRW)
+
+	_, err := parser.DecodeOne()
+	if err == nil || err.Error() != "ERR possible client-side connection closure" {
+		t.Fatalf("Expected 'ERR possible client-side connection closure' error, got %v", err)
+	}
+}

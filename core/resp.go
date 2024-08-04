@@ -77,6 +77,11 @@ func readBulkString(c io.ReadWriter, buf *bytes.Buffer) (string, error) {
 		return "", err
 	}
 
+	//handling RESP_NIL case
+	if len == -1 {
+		return "(nil)", nil
+	}
+
 	var bytesRem int64 = len + 2 // 2 for \r\n
 	bytesRem = bytesRem - int64(buf.Len())
 	for bytesRem > 0 {

@@ -8,7 +8,6 @@ import (
 
 func TestJSONOperations(t *testing.T) {
 	conn := getLocalConnection()
-	defer conn.Close()
 
 	simpleJSON := `{"name":"John","age":30}`
 	nestedJSON := `{"name":"Alice","address":{"city":"New York","zip":"10001"},"array":[1,2,3,4,5]}`

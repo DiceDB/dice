@@ -36,7 +36,7 @@ func init() {
 	store = make(map[unsafe.Pointer]*Obj)
 	expires = make(map[*Obj]uint64)
 	keypool = make(map[string]unsafe.Pointer)
-	WatchChannel = make(chan WatchEvent, 100)
+	WatchChannel = make(chan WatchEvent, config.KeysLimit)
 }
 
 func setExpiry(obj *Obj, expDurationMs int64) {
@@ -111,6 +111,7 @@ func Get(k string) *Obj {
 	v := store[ptr]
 	if v != nil {
 		if hasExpired(v) {
+			keypoolMutex.RUnlock()
 			storeMutex.RUnlock()
 			keypoolMutex.RUnlock()
 			Del(k)

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"log"
+	"net"
 
 	"github.com/dicedb/dice/config"
 )
@@ -60,6 +61,12 @@ func (rp *RESPParser) DecodeOne() (interface{}, error) {
 				break
 			}
 			return nil, err
+		}
+
+		// Handle the case where no data is read but no error is returned
+		if n == 0 {
+			// This can happen if the connection is closed on the client side but not properly detected
+			return nil, net.ErrClosed
 		}
 	}
 
