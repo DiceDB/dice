@@ -7,29 +7,33 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-type DDelayTestCase struct {
-	InCmds []string
-	Out    []interface{}
-	Delay  []time.Duration
-}
-
 func TestGet(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
-	for _, tcase := range []DDelayTestCase{
+
+	testCases := []struct {
+		name   string
+		cmds   []string
+		expect []interface{}
+		delays []time.Duration
+	}{
 		{
-			InCmds: []string{"SET k v EX 4", "GET k", "GET k"},
-			Out:    []interface{}{"OK", "v", "(nil)"},
-			Delay:  []time.Duration{0, 0, 5 * time.Second},
+			name:   "Get with expiration",
+			cmds:   []string{"SET k v EX 4", "GET k", "GET k"},
+			expect: []interface{}{"OK", "v", "(nil)"},
+			delays: []time.Duration{0, 0, 5 * time.Second},
 		},
-	} {
-		for i := 0; i < len(tcase.InCmds); i++ {
-			if tcase.Delay[i] > 0 {
-				time.Sleep(tcase.Delay[i])
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for i, cmd := range tc.cmds {
+				if tc.delays[i] > 0 {
+					time.Sleep(tc.delays[i])
+				}
+				result := fireCommand(conn, cmd)
+				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
 			}
-			cmd := tcase.InCmds[i]
-			out := tcase.Out[i]
-			assert.Equal(t, out, fireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
-		}
+		})
 	}
 }
