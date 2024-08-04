@@ -40,7 +40,6 @@ $ cd dice
 $ go run main.go
 ```
 
-
 ### Live Development Server
 
 DiceDB provides a hot-reloading development environment, which allows you to instantly view your code changes in a live server. This functionality is supported by [Air](https://github.com/air-verse/air)
