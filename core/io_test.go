@@ -3,10 +3,12 @@ package core
 import (
 	"bytes"
 	"io"
+	"net"
 	"strconv"
 	"testing"
 
 	"github.com/dicedb/dice/config"
+	"gotest.tools/v3/assert"
 )
 
 // MockReadWriter to simulate different io behaviors
@@ -190,7 +192,6 @@ func TestDecodeOneVeryLargeMessage(t *testing.T) {
 	}
 }
 
-		
 func TestDecodeOneNoDataRead(t *testing.T) {
 	mockRW := &MockReadWriter{
 		ReadChunks: [][]byte{
@@ -200,7 +201,5 @@ func TestDecodeOneNoDataRead(t *testing.T) {
 	parser := NewRESPParser(mockRW)
 
 	_, err := parser.DecodeOne()
-	if err == nil || err.Error() != "ERR possible client-side connection closure" {
-		t.Fatalf("Expected 'ERR possible client-side connection closure' error, got %v", err)
-	}
+	assert.Equal(t, err, net.ErrClosed)
 }

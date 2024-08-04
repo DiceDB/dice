@@ -7,15 +7,6 @@ import (
 	"github.com/dicedb/dice/testutils"
 )
 
-// type queuereftcase struct {
-// 	op            byte
-// 	key           string
-// 	value         interface{}
-// 	expectedValue bool
-// 	expectedError error
-// 	list          []interface{}
-// }
-
 func TestQueueRef(t *testing.T) {
 	qr := core.NewQueueRef()
 
