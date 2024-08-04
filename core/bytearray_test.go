@@ -102,3 +102,14 @@ func BenchmarkLargeByteArray2(t *testing.B) {
 		byteArray.BitCount()
 	}
 }
+
+func TestReverseByte(t *testing.T) {
+	byteArray := NewByteArray(1) // Larger array size
+
+	byteArray.SetBit(2, true)
+	byteArray.SetBit(4, true)
+
+	reversedByte := reverseByte(byteArray.data[0])
+
+	assert.Equal(t, reversedByte, byte(0b10001), "Reversed byte should be 0b10001")
+}
