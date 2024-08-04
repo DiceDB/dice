@@ -6,40 +6,44 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-type commandGetKeysTestCase struct {
+var getKeysTestCases = []struct {
+	name     string
 	inCmd    string
 	expected interface{}
-}
-
-var getKeysTestCases = []commandGetKeysTestCase{
-	{"set 1 2 3 4", []interface{}{"1"}},
-	{"get key", []interface{}{"key"}},
-	{"ttl key", []interface{}{"key"}},
-	{"del 1 2 3 4 5 6", []interface{}{"1", "2", "3", "4", "5", "6"}},
-	{"expire key time extra", []interface{}{"key"}},
-	{"QINTINS k 1", []interface{}{"k"}},
-	{"BFINIT bloom some parameters", []interface{}{"bloom"}},
-
-	{"ping", "ERR the command has no key arguments"},
-	{"get", "ERR invalid number of arguments specified for command"},
-	{"abort", "ERR the command has no key arguments"},
-	{"NotValidCommand", "ERR invalid command specified"},
+}{
+	{"Set command", "set 1 2 3 4", []interface{}{"1"}},
+	{"Get command", "get key", []interface{}{"key"}},
+	{"TTL command", "ttl key", []interface{}{"key"}},
+	{"Del command", "del 1 2 3 4 5 6", []interface{}{"1", "2", "3", "4", "5", "6"}},
+	{"Expire command", "expire key time extra", []interface{}{"key"}},
+	{"QINTINS command", "QINTINS k 1", []interface{}{"k"}},
+	{"BFINIT command", "BFINIT bloom some parameters", []interface{}{"bloom"}},
+	{"Ping command", "ping", "ERR the command has no key arguments"},
+	{"Invalid Get command", "get", "ERR invalid number of arguments specified for command"},
+	{"Abort command", "abort", "ERR the command has no key arguments"},
+	{"Invalid command", "NotValidCommand", "ERR invalid command specified"},
 }
 
 func TestCommandGetKeys(t *testing.T) {
 	conn := getLocalConnection()
+	defer conn.Close()
 
-	for _, tcase := range getKeysTestCases {
-		result := fireCommand(conn, "COMMAND GETKEYS "+tcase.inCmd)
-		assert.DeepEqual(t, tcase.expected, result)
+	for _, tc := range getKeysTestCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := fireCommand(conn, "COMMAND GETKEYS "+tc.inCmd)
+			assert.DeepEqual(t, tc.expected, result)
+		})
 	}
 }
 
 func BenchmarkGetKeysMatch(b *testing.B) {
 	conn := getLocalConnection()
-	for _, tcase := range getKeysTestCases {
-		for i := 0; i < b.N; i++ {
-			fireCommand(conn, "COMMAND GETKEYS "+tcase.inCmd)
+	defer conn.Close()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for _, tc := range getKeysTestCases {
+			fireCommand(conn, "COMMAND GETKEYS "+tc.inCmd)
 		}
 	}
 }
