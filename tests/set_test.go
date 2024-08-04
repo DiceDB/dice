@@ -37,50 +37,6 @@ func TestSet(t *testing.T) {
 		})
 	}
 }
-func TestSetWithNX(t *testing.T) {
-	conn := getLocalConnection()
-	deleteTestKeys(conn, []string{"K", "k"})
-	for _, tcase := range []DTestCase{
-		{
-			InCmds: []string{"SET K V NX", "GET K"},
-			Out:    []interface{}{"OK", "V"},
-		},
-		{
-			InCmds: []string{"SET k v", "GET k", "SET k V NX"},
-			Out:    []interface{}{"OK", "v", "(nil)"},
-		},
-	} {
-		for i := 0; i < len(tcase.InCmds); i++ {
-			cmd := tcase.InCmds[i]
-			out := tcase.Out[i]
-			assert.Equal(t, out, fireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
-		}
-	}
-}
-
-func BenchmarkSetWithNX(b *testing.B) {
-	conn := getLocalConnection()
-	deleteTestKeys(conn, []string{"K", "k"})
-	for _, tcase := range []DTestCase{
-		{
-			InCmds: []string{"SET K V NX", "GET K"},
-			Out:    []interface{}{"OK", "V"},
-		},
-		{
-			InCmds: []string{"SET k v", "GET k", "SET k V NX"},
-			Out:    []interface{}{"OK", "v", "(nil)"},
-		},
-	} {
-		for i := 0; i < len(tcase.InCmds); i++ {
-			cmd := tcase.InCmds[i]
-			b.Run(cmd, func(b *testing.B) {
-				for n := 0; n < b.N; n++ {
-					fireCommand(conn, cmd)
-				}
-			})
-		}
-	}
-}
 
 func TestSetWithOptions(t *testing.T) {
 	conn := getLocalConnection()
@@ -96,7 +52,16 @@ func TestSetWithOptions(t *testing.T) {
 			commands: []string{"DEL k", "SET k v XX", "GET k"},
 			expected: []interface{}{int64(0), "(nil)", "(nil)"},
 		},
-		// ... (keep other test cases)
+		{
+			name: "NX on non-existing key",
+			commands: []string {"DEL k", "SET k v NX", "GET k"},
+			expected: []interface{}{int64(0), "OK", "v"},
+		},
+		{
+			name: "NX on existing key",
+			commands: []string {"DEL k", "SET k v NX", "GET k", "SET k v NX"},
+			expected: []interface{}{int64(0), "OK", "v", "(nil)"},
+		},
 	}
 
 	for _, tc := range testCases {
