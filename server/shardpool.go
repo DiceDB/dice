@@ -15,6 +15,8 @@ var CONCURRENT_CLIENTS = 1000
 var ipool *IOThreadPool
 var spool *ShardPool
 
+// break out OP pool from shard pool
+
 func init() {
 	ipool = NewIOThreadPool(CONCURRENT_CLIENTS) // handle client connections
 	runtime.GOMAXPROCS(SHARDPOOL_SIZE)
@@ -23,9 +25,9 @@ func init() {
 
 // Shouod we use reddis command here?
 type Operation struct {
+	conn *core.Client
 	cmd *core.RedisCmd
 	keys []string
-	conn *core.Client
 	ResultCH chan<- *Result
 }
 
@@ -34,9 +36,9 @@ type Result struct {
 }
 
 type Request struct {
+	conn *core.Client
 	cmd *core.RedisCmd
 	keys []string
-	conn net.Conn
 }
 
 type IOThread struct {
@@ -44,6 +46,7 @@ type IOThread struct {
 	resch chan *Result
 }
 
+// Look up functional options for abstracting if we need to switch the toppology
 func findOwnerShard(key string) int {
 	hash := fnv.New32a()
 	hash.Write([]byte(key))
@@ -85,9 +88,9 @@ func (t *IOThread) Run() {
 		// read the request
 		// create the operation
 		spool.Submit(&Operation{
+			req.conn,
 			req.cmd,
 			req.keys,
-			req.conn,
 			ResultCH: t.resch,
 		})
 	}

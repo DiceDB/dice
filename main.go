@@ -37,8 +37,18 @@ func main() {
 
 	// Run the server, listen to incoming connections and handle them
 	wg.Add(1)
-	go server.RunAsyncTCPServer(serverFD, &wg)
 
+	// Start threaded server only if enabled
+	var usethreadedserver, _ = strconv.ParseBool(os.Getenv("DICE_THREADED_SERVER_ENABLE"))
+
+	if usethreadedserver {
+		log.Info("Starting ThreadedServer")
+		go server.RunThreadedServer(serverFD, &wg)
+	} else {
+		log.Info("Starting AsyncTCPServer")
+		go server.RunAsyncTCPServer(serverFD, &wg)
+	}
+	
 	// Listento signals, but not a hardblocker to shutdown
 	go server.WaitForSignal(&wg, sigs)
 

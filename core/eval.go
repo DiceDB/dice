@@ -859,9 +859,9 @@ func evalQWATCH(args []string, c *Client) []byte {
 // Identifies the Key used in the operation
 // Otherwise fails if an operation is not bound to a key
 // and needs to be fanned out across all shards
-func getKeyForOperation(cmd *RedisCmd) ([]string, error) {
+func getKeyForOperation(cmd *RedisCmd) []string {
 	if cmd.Cmd == "DEL" {
-		return cmd.Args, nil
+		return cmd.Args
 	} else {
 		keyBasedCommands := []string{
 			"SET", "GET", "TTL", "EXPIRE", "INCR", "QINTINS", "QINTLEN", "QINTPEEK",
@@ -872,12 +872,11 @@ func getKeyForOperation(cmd *RedisCmd) ([]string, error) {
 
 		for _, b := range keyBasedCommands {
 			if b == cmd.Cmd {
-				return []string{cmd.Args[0]}, nil
+				return []string{cmd.Args[0]}
 			}
 		}
-
+		return []string{}
 	}
-	return nil, errors.New("NON_KEY_OPERATION")
 }
 
 func executeCommand(cmd *RedisCmd, c *Client, store *Store) []byte {
