@@ -54,87 +54,98 @@ var qWatchTestCases = []qWatchTestCase{
 
 // Before each test, we need to reset the database.
 func resetQWatchStore() {
-	conn := getLocalConnection()
 	// iterate over all the test cases and Delete the keys
 	for _, tc := range qWatchTestCases {
-		fireCommand(conn, fmt.Sprintf("DEL match:100:user:%d", tc.userID))
+		core.Del(fmt.Sprintf("match:100:user:%d", tc.userID))
 	}
 }
 
+// TestQWATCH tests the QWATCH functionality using raw network connections.
 func TestQWATCH(t *testing.T) {
 	resetQWatchStore()
-
 	publisher := getLocalConnection()
 	subscribers := []net.Conn{getLocalConnection(), getLocalConnection(), getLocalConnection()}
+	defer func() {
+		publisher.Close()
+		for _, sub := range subscribers {
+			sub.Close()
+		}
+	}()
+
 	respParsers := make([]*core.RESPParser, len(subscribers))
 
+	// Subscribe to the QWATCH query
 	for i, subscriber := range subscribers {
 		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("QWATCH \"%s\"", qWatchQuery))
-		if rp == nil {
-			t.Fail()
-		}
+		assert.Assert(t, rp != nil)
 		respParsers[i] = rp
 
-		// Read first message (OK)
 		v, err := rp.DecodeOne()
 		assert.NilError(t, err)
 		assert.Equal(t, "OK", v.(string))
 	}
 
-	for _, tc := range qWatchTestCases {
-		// Set the value for the userID
-		fireCommand(publisher, fmt.Sprintf("SET match:100:user:%d %d", tc.userID, tc.score))
-
-		for _, expectedUpdate := range tc.expectedUpdates {
-			for _, rp := range respParsers {
-				// Check if the update is received by the subscriber.
-				v, err := rp.DecodeOne()
-				assert.NilError(t, err)
-
-				// Message format: [key, op, message]
-				// Ensure the update matches the expected value.
-				update := v.([]interface{})
-				assert.DeepEqual(t, expectedUpdate, update)
-			}
-		}
-	}
+	runQWatchScenarios(t, publisher, respParsers)
 }
 
+// TestQWATCHWithSDK tests the QWATCH functionality using the Redis SDK.
 func TestQWATCHWithSDK(t *testing.T) {
 	resetQWatchStore()
 	ctx := context.Background()
-
 	publisher := getLocalSdk()
 	subscribers := []*redis.Client{getLocalSdk(), getLocalSdk(), getLocalSdk()}
-	qwatches := make([]*redis.QWatch, len(subscribers))
+	defer func() {
+		publisher.Close()
+		for _, sub := range subscribers {
+			sub.Close()
+		}
+	}()
+
 	channels := make([]<-chan *redis.QMessage, len(subscribers))
 
+	// Subscribe to the QWATCH query
 	for i, subscriber := range subscribers {
 		qwatch := subscriber.QWatch(ctx)
-		if qwatch == nil {
-			t.Fail()
-		}
-		qwatches[i] = qwatch
-
+		assert.Assert(t, qwatch != nil)
 		err := qwatch.WatchQuery(ctx, qWatchQuery)
 		assert.NilError(t, err)
-
 		channels[i] = qwatch.Channel()
 	}
 
+	runQWatchScenarios(t, publisher, channels)
+}
+
+// runQWatchScenario executes the QWATCH test scenarios.
+func runQWatchScenarios(t *testing.T, publisher interface{}, receivers interface{}) {
 	for _, tc := range qWatchTestCases {
-		// Set the value for the userID
-		err := publisher.Set(ctx, fmt.Sprintf("match:100:user:%d", tc.userID), tc.score, 0).Err()
-		assert.NilError(t, err)
+		// Publish updates based on the publisher type
+		switch p := publisher.(type) {
+		case net.Conn:
+			fireCommand(p, fmt.Sprintf("SET match:100:user:%d %d", tc.userID, tc.score))
+		case *redis.Client:
+			err := p.Set(context.Background(), fmt.Sprintf("match:100:user:%d", tc.userID), tc.score, 0).Err()
+			assert.NilError(t, err)
+		}
 
+		// For raw connections, parse RESP responses
 		for _, expectedUpdate := range tc.expectedUpdates {
-			for _, ch := range channels {
-
-				v := <-ch
-				assert.Equal(t, len(v.Updates), len(expectedUpdate))
-
-				for i, update := range v.Updates {
-					assert.DeepEqual(t, expectedUpdate[i], []interface{}{update.Key, update.Value})
+			switch r := receivers.(type) {
+			case []*core.RESPParser:
+				// For raw connections, parse RESP responses
+				for _, rp := range r {
+					v, err := rp.DecodeOne()
+					assert.NilError(t, err)
+					update := v.([]interface{})
+					assert.DeepEqual(t, expectedUpdate, update)
+				}
+			case []<-chan *redis.QMessage:
+				// For raw connections, parse RESP responses
+				for _, ch := range r {
+					v := <-ch
+					assert.Equal(t, len(v.Updates), len(expectedUpdate))
+					for i, update := range v.Updates {
+						assert.DeepEqual(t, expectedUpdate[i], []interface{}{update.Key, update.Value})
+					}
 				}
 			}
 		}
