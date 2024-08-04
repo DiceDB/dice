@@ -2,6 +2,7 @@ package dencoding_test
 
 import (
 	"math"
+	"sync"
 	"testing"
 
 	"github.com/dicedb/dice/core/dencoding"
@@ -70,6 +71,20 @@ func TestDencodingInt(t *testing.T) {
 			t.Errorf("dencoding failed for value: %d\n", v)
 		}
 	}
+
+	var wg sync.WaitGroup
+	for _, v := range tests {
+		wg.Add(1)
+		go func(v int64) {
+			defer wg.Done()
+			if v != dencoding.DecodeInt(dencoding.EncodeInt(v)) {
+				t.Errorf("dencoding failed for value: %d\n", v)
+			}
+		}(v)
+
+	}
+
+	wg.Wait()
 
 	for k, v := range map[int64]int{
 		0:   1,
