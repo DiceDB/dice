@@ -59,11 +59,11 @@ func evalPING(args []string) []byte {
 // args can also contain multiple options -
 //
 //	EX or ex which will set the expiry time(in secs) for the key
-//	PX or px which will set the expiry time(in milliseconds) for the key
+//	PXAT or PX which will the specified Unix time at which the key will expire, in milliseconds (a positive integer).
+//	XX orr xx which will only set the key if it already exists.
 //
 // Returns encoded error response if at least a <key, value> pair is not part of args
-// Returns encoded error response if expiry tme value in not integer
-// Returns encoded error response if both PX and EX flags are present
+// Returns encoded error response if expiry time value in not integer
 // Returns encoded OK RESP once new entry is added
 // If the key already exists then the value will be overwritten and expiry will be discarded
 func evalSET(args []string) []byte {
@@ -93,20 +93,29 @@ func evalSET(args []string) []byte {
 				return Encode(errors.New("ERR value is not an integer or out of range"), false)
 			}
 			exDurationMs = exDurationSec * 1000
-		case "PX", "px":
-			if exDurationMs != -1 {
-				return Encode(errors.New("ERR syntax error"), false)
-			}
+
+		case "PXAT", "pxat":
 			i++
 			if i == len(args) {
 				return Encode(errors.New("ERR syntax error"), false)
 			}
 
-			pxDurationMs, err := strconv.ParseInt(args[i], 10, 64)
+			exDurationUnixMs, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
 				return Encode(errors.New("ERR value is not an integer or out of range"), false)
 			}
-			exDurationMs = pxDurationMs
+
+			if exDurationUnixMs < 0 {
+				return Encode(errors.New("ERR invalid expire time in 'set' command"), false)
+			}
+
+			exDurationMs = exDurationUnixMs - time.Now().UnixMilli()
+			// If the expiry time is in the past, set exDurationMs to 0
+			// This will be used to signal immediate expiration
+			if exDurationMs < 0 {
+				exDurationMs = 0
+			}
+
 		case "XX", "xx":
 			// Get the key from the hash table
 			obj := Get(key)
@@ -115,7 +124,6 @@ func evalSET(args []string) []byte {
 			if obj == nil {
 				return RESP_NIL
 			}
-
 		default:
 			return Encode(errors.New("ERR syntax error"), false)
 		}
