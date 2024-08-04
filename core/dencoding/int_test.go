@@ -103,6 +103,15 @@ func TestDencodingInt(t *testing.T) {
 	}
 }
 
+func TestEncodeDecodeInt64Min(t *testing.T) {
+	value := int64(math.MinInt64)
+	encoded := dencoding.EncodeInt(value)
+	decoded := dencoding.DecodeInt(encoded)
+	if decoded != value {
+		t.Errorf("DecodeInt(%v) = %d; want %d", encoded, decoded, value)
+	}
+}
+
 func BenchmarkEncodeDecodeInt(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		value := int64(i % math.MaxInt64)
