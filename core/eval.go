@@ -89,23 +89,21 @@ func evalSET(args []string) []byte {
 			}
 			exDurationMs = exDurationSec * 1000
 
-		case "EXAT", "exat":
+		case "EX", "ex":
 			i++
 			if i == len(args) {
 				return Encode(errors.New("ERR syntax error"), false)
 			}
-
-			exAt, err := strconv.ParseInt(args[i], 10, 64)
-			if err != nil {
-				return Encode(errors.New("ERR value is not an integer or out of range"), false)
+			exDurationSec, err := strconv.ParseInt(args[i], 10, 64)
+			if err != nil || exDurationSec <= 0 {
+				return Encode(errors.New("ERR value is not a positive integer"), false)
 			}
-
-			currentTime := time.Now().Unix()
-			if exAt <= currentTime {
-				return Encode(errors.New("ERR invalid EXAT time in the past"), false)
+			if exDurationSec < time.Now().Unix() {
+				Put(key, NewObj(value, 0, oType, oEnc))
+				Del(key)
+				return RESP_OK
 			}
-
-			exDurationMs = (exAt - currentTime) * 1000
+			exDurationMs = exDurationSec * 1000
 
 		case "XX", "xx":
 			// Get the key from the hash table
@@ -115,7 +113,6 @@ func evalSET(args []string) []byte {
 			if obj == nil {
 				return RESP_NIL
 			}
-
 
 		default:
 			return Encode(errors.New("ERR syntax error"), false)
