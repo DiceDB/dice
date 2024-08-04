@@ -5,7 +5,7 @@ var (
 	Port int    = 7379
 )
 
-var KeysLimit int = 100
+var KeysLimit int = 10000 // default buffer size.
 
 // Will evict EvictionRatio of keys whenever eviction runs
 var (
