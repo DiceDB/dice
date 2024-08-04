@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.17
+FROM golang:1.21
 
 WORKDIR /dicedb
 COPY go.mod go.sum ./
