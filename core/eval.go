@@ -859,24 +859,29 @@ func evalQWATCH(args []string, c *Client) []byte {
 // Identifies the Key used in the operation
 // Otherwise fails if an operation is not bound to a key
 // and needs to be fanned out across all shards
-func getKeyForOperation(cmd *RedisCmd) []string {
-	if cmd.Cmd == "DEL" {
-		return cmd.Args
-	} else {
-		keyBasedCommands := []string{
-			"SET", "GET", "TTL", "EXPIRE", "INCR", "QINTINS", "QINTLEN", "QINTPEEK",
-			"QINTREM", "BFINIT", "BFADD", "BFEXISTS", "BFINFO", "QREFINS", "QREFREM",
-			"QREFLEN", "QREFLEN", "QREFPEEK", "STACKINTPUSH", "STACKINTPOP", "STACKINTLEN",
-			"STACKINTPEEK", "STACKREFPUSH", "STACKREFPOP", "STACKREFLEN", "STACKREFPEEK",
-		}
+func GetKeyForOperation(cmds RedisCmds) []string {
+	var keys = []string {}
 
-		for _, b := range keyBasedCommands {
-			if b == cmd.Cmd {
-				return []string{cmd.Args[0]}
+	for _, cmd := range cmds {
+		if cmd.Cmd == "DEL" {
+			keys = append(keys, cmd.Args...)
+		} else {
+			keyBasedCommands := []string{
+				"SET", "GET", "TTL", "EXPIRE", "INCR", "QINTINS", "QINTLEN", "QINTPEEK",
+				"QINTREM", "BFINIT", "BFADD", "BFEXISTS", "BFINFO", "QREFINS", "QREFREM",
+				"QREFLEN", "QREFLEN", "QREFPEEK", "STACKINTPUSH", "STACKINTPOP", "STACKINTLEN",
+				"STACKINTPEEK", "STACKREFPUSH", "STACKREFPOP", "STACKREFLEN", "STACKREFPEEK",
+			}
+	
+			for _, b := range keyBasedCommands {
+				if b == cmd.Cmd {
+					keys = append(keys, cmd.Args[0])
+				}
 			}
 		}
-		return []string{}
 	}
+	
+	return keys
 }
 
 func executeCommand(cmd *RedisCmd, c *Client, store *Store) []byte {

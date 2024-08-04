@@ -3,7 +3,6 @@ package server
 import (
 	"fmt"
 	"hash/fnv"
-	"net"
 	"runtime"
 
 	"github.com/dicedb/dice/core"
@@ -26,24 +25,26 @@ func init() {
 // Shouod we use reddis command here?
 type Operation struct {
 	conn *core.Client
-	cmd *core.RedisCmd
+	// cmd *core.RedisCmd
+	cmds *core.RedisCmds
 	keys []string
-	ResultCH chan<- *Result
+	ResultCH chan<- *IOResult
 }
 
-type Result struct {
+type IOResult struct {
 	message string
 }
 
-type Request struct {
+type IORequest struct {
 	conn *core.Client
-	cmd *core.RedisCmd
+	// cmd *core.RedisCmd
+	cmds *core.RedisCmds
 	keys []string
 }
 
 type IOThread struct {
-	reqch chan *Request
-	resch chan *Result
+	reqch chan *IORequest
+	resch chan *IOResult
 }
 
 // Look up functional options for abstracting if we need to switch the toppology
@@ -88,9 +89,10 @@ func (t *IOThread) Run() {
 		// read the request
 		// create the operation
 		spool.Submit(&Operation{
-			req.conn,
-			req.cmd,
-			req.keys,
+			conn: req.conn,
+			// cmd: req.cmd,
+			cmds: req.cmds,
+			keys: req.keys,
 			ResultCH: t.resch,
 		})
 	}
@@ -109,8 +111,8 @@ func NewIOThreadPool(poolsize int) *IOThreadPool {
 func (p *IOThreadPool) Init(poolsize int) {
 	p.pool = make(chan *IOThread, poolsize)
 	iothread := &IOThread{
-		reqch: make(chan *Request),
-		resch: make(chan *Result),
+		reqch: make(chan *IORequest),
+		resch: make(chan *IOResult),
 	}
 	go iothread.Run()
 	for i := 0; i < poolsize; i++ {
@@ -136,10 +138,11 @@ func (t *ShardThread) Run() {
 		fmt.Println("handling op", op)
 		// execute the operation and create the result
 		var msg = ""
-		executeCommand(op.cmd, op.conn, t.store)
+		core.EvalAndRespond(*op.cmds, op.conn, t.store)
+		//core.ExecuteCommand(op.cmd, op.conn, t.store)
 
 		fmt.Println(msg)
-		op.ResultCH <- &Result{msg}
+		op.ResultCH <- &IOResult{msg}
 	}
 }
 
@@ -163,7 +166,3 @@ func (p *ShardPool) Init(poolsize int) {
 		go p.shardThreads[i].Run()
 	}
 }
-
-
-// Trigger
-// ipool.Get().reqch <- &Request{conn: conn}

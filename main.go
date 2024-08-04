@@ -2,12 +2,13 @@ package main
 
 import (
 	"flag"
-	"log"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+	"strconv"
 
+	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/server"
 )
@@ -42,7 +43,7 @@ func main() {
 	var usethreadedserver, _ = strconv.ParseBool(os.Getenv("DICE_THREADED_SERVER_ENABLE"))
 
 	if usethreadedserver {
-		log.Info("Starting ThreadedServer")
+		log.Info("Starting Multi-Threaded Server")
 		go server.RunThreadedServer(serverFD, &wg)
 	} else {
 		log.Info("Starting AsyncTCPServer")
