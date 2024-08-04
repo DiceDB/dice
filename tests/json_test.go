@@ -148,11 +148,11 @@ func TestJSONSetWithNXAndXX(t *testing.T) {
 	}{
 		{
 			commands: []string{"JSON.SET user $ " + user1 + " XX", "JSON.SET user $ " + user1 + " NX", "JSON.GET user"},
-			expected: []interface{}{"ERR key doesn't exists", "OK", user1},
+			expected: []interface{}{"(nil)", "OK", user1},
 		},
 		{
 			commands: []string{"DEL user", "JSON.SET user $ " + user1, "JSON.SET user $ " + user1 + " NX"},
-			expected: []interface{}{int64(1), "OK", "ERR key already exists"},
+			expected: []interface{}{int64(1), "OK", "(nil)"},
 		},
 		{
 			commands: []string{"JSON.SET user $ " + user2 + " XX", "JSON.GET user", "DEL user"},
@@ -160,7 +160,7 @@ func TestJSONSetWithNXAndXX(t *testing.T) {
 		},
 		{
 			commands: []string{"JSON.SET user $ " + user2 + " NX", "JSON.SET user $ " + user1 + " NX", "JSON.GET user"},
-			expected: []interface{}{"OK", "ERR key already exists", user2},
+			expected: []interface{}{"OK", "(nil)", user2},
 		},
 	}
 

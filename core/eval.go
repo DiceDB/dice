@@ -179,12 +179,12 @@ func evalJSONSET(args []string) []byte {
 		case "NX", "nx":
 			obj := Get(key)
 			if obj != nil {
-				return Encode(errors.New("ERR key already exists"), false)
+				return RESP_NIL
 			}
 		case "XX", "xx":
 			obj := Get(key)
 			if obj == nil {
-				return Encode(errors.New("ERR key doesn't exists"), false)
+				return RESP_NIL
 			}
 
 		default:
