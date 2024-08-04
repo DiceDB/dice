@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/core/bit"
 	"github.com/valyala/fastjson"
 )
 
@@ -935,6 +936,351 @@ func evalQWATCH(args []string, c *Client) []byte {
 	AddWatcher(query, c.Fd)
 
 	return RESP_OK
+}
+
+// SETBIT key offset value
+func evalSETBIT(args []string) []byte {
+	var err error
+
+	if len(args) != 3 {
+		return Encode(errors.New("ERR wrong number of arguments for 'setbit' command"), false)
+	}
+
+	key := args[0]
+	offset, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return Encode(errors.New("ERR bit offset is not an integer or out of range"), false)
+	}
+
+	value, err := strconv.ParseBool(args[2])
+	if err != nil {
+		return Encode(errors.New("ERR bit is not an integer or out of range"), false)
+	}
+
+	obj := Get(key)
+	requiredByteArraySize := offset/8 + 1
+
+	if obj == nil {
+		obj = NewObj(NewByteArray(int(requiredByteArraySize)), -1, OBJ_TYPE_BYTEARRAY, OBJ_ENCODING_BYTEARRAY)
+		Put(args[0], obj)
+	}
+
+	// handle the case when it is string
+	if assertType(obj.TypeEncoding, OBJ_TYPE_STRING) == nil {
+		return Encode(errors.New("ERR value is not a valid byte array"), false)
+	}
+
+	// handle the case when it is byte array
+	if assertType(obj.TypeEncoding, OBJ_TYPE_BYTEARRAY) == nil {
+		byteArray := obj.Value.(*ByteArray)
+		byteArrayLength := byteArray.Length
+
+		// check whether resize required or not
+		if requiredByteArraySize > byteArrayLength {
+			// resize as per the offset
+			byteArray = byteArray.IncreaseSize(int(requiredByteArraySize))
+		}
+
+		response := byteArray.GetBit(int(offset))
+		byteArray.SetBit(int(offset), value)
+
+		// if earlier bit was 1 and the new bit is 0
+		// propability is that, we can remove some space from the byte array
+		if response && !value {
+			byteArray.ResizeIfNecessary()
+		}
+
+		if response {
+			return Encode(int(1), true)
+		}
+		return Encode(int(0), true)
+	}
+
+	return Encode(0, false)
+}
+
+// GETBIT key offset
+func evalGETBIT(args []string) []byte {
+	var err error
+
+	if len(args) != 2 {
+		return Encode(errors.New("ERR wrong number of arguments for 'setbit' command"), false)
+	}
+
+	key := args[0]
+	offset, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return Encode(errors.New("ERR bit offset is not an integer or out of range"), false)
+	}
+
+	obj := Get(key)
+	if obj == nil {
+		return Encode(0, true)
+	}
+
+	requiredByteArraySize := offset/8 + 1
+
+	// handle the case when it is string
+	if assertType(obj.TypeEncoding, OBJ_TYPE_STRING) == nil {
+		return Encode(errors.New("ERR value is not a valid byte array"), false)
+	}
+
+	// handle the case when it is byte array
+	if assertType(obj.TypeEncoding, OBJ_TYPE_BYTEARRAY) == nil {
+		byteArray := obj.Value.(*ByteArray)
+		byteArrayLength := byteArray.Length
+
+		// check whether offset, length exists or not
+		if requiredByteArraySize > byteArrayLength {
+			return Encode(0, true)
+		} else {
+			value := byteArray.GetBit(int(offset))
+			if value {
+				return Encode(1, true)
+			}
+			return Encode(0, true)
+		}
+	}
+
+	return Encode(0, true)
+}
+
+func evalBITCOUNT(args []string) []byte {
+	var err error
+
+	// if more than 4 arguments are provided, return error
+	if len(args) > 4 {
+		return Encode(errors.New("ERR syntax error"), false)
+	}
+
+	// fetching value of the key
+	var key string = args[0]
+	var obj = Get(key)
+	if obj == nil {
+		return Encode(0, false)
+	}
+
+	var valueInterface = obj.Value
+	value := []byte{}
+	valueLength := int64(0)
+
+	if assertType(obj.TypeEncoding, OBJ_TYPE_BYTEARRAY) == nil {
+		byteArray := obj.Value.(*ByteArray)
+		byteArrayObject := *byteArray
+		value = byteArrayObject.data
+		valueLength = byteArray.Length
+	}
+
+	if assertType(obj.TypeEncoding, OBJ_TYPE_STRING) == nil {
+		value = []byte(valueInterface.(string))
+		valueLength = int64(len(value))
+	}
+
+	// defining constants of the function
+	start := int64(0)
+	end := valueLength - 1
+	var unit = bit.BYTE
+
+	// checking which arguments are present and according validating arguments
+	if len(args) > 1 {
+		start, err = strconv.ParseInt(args[1], 10, 64)
+		if err != nil {
+			return Encode(errors.New("ERR value is not an integer or out of range"), false)
+		}
+		// Adjust start index if it is negative
+		if start < 0 {
+			start += valueLength
+		}
+	}
+	if len(args) > 2 {
+		end, err = strconv.ParseInt(args[2], 10, 64)
+		if err != nil {
+			return Encode(errors.New("ERR value is not an integer or out of range"), false)
+		}
+
+		// Adjust end index if it is negative
+		if end < 0 {
+			end += valueLength
+		}
+	}
+	if len(args) > 3 {
+		unit = strings.ToUpper(args[3])
+		if unit != bit.BYTE && unit != bit.BIT {
+			return Encode(errors.New("ERR syntax error"), false)
+		}
+	}
+	if start > end {
+		return Encode(0, true)
+	}
+	if start > valueLength && unit == bit.BYTE {
+		return Encode(0, true)
+	}
+	if end > valueLength && unit == bit.BYTE {
+		end = valueLength - 1
+	}
+
+	bitCount := 0
+	if unit == bit.BYTE {
+		for i := start; i <= end; i++ {
+			bitCount += int(popcount(value[i]))
+		}
+		return Encode(bitCount, true)
+	} else {
+		startBitRange := start / 8
+		endBitRange := end / 8
+
+		for i := startBitRange; i <= endBitRange; i++ {
+			if i == startBitRange {
+				considerBits := start % 8
+				for j := 8 - considerBits - 1; j >= 0; j-- {
+					bitCount += int(popcount(byte(int(value[i]) & (1 << j))))
+				}
+			} else if i == endBitRange {
+				considerBits := end % 8
+				for j := considerBits; j >= 0; j-- {
+					bitCount += int(popcount(byte(int(value[i]) & (1 << (8 - j - 1)))))
+				}
+			} else {
+				bitCount += int(popcount(value[i]))
+			}
+		}
+		return Encode(bitCount, true)
+	}
+}
+
+// BITOP <AND | OR | XOR | NOT> destkey key [key ...]
+func evalBITOP(args []string) []byte {
+	operation, destKey := args[0], args[1]
+	operation = strings.ToUpper(operation)
+
+	// get all the keys
+	keys := args[2:]
+
+	// validation of commands
+	// if operation is not from enums, then error out
+	if !(operation == "AND" || operation == "OR" || operation == "XOR" || operation == "NOT") {
+		return Encode(errors.New("ERR syntax error"), false)
+	}
+	// if operation is not, then keys lenght should be only 1
+	if operation == "NOT" && len(keys) != 1 {
+		return Encode(errors.New("ERR BITOP NOT must be called with a single source key."), false)
+	}
+
+	if operation == "NOT" {
+		obj := Get(keys[0])
+		if obj == nil {
+			return Encode(0, true)
+		}
+
+		var value []byte
+		if assertType(obj.TypeEncoding, OBJ_TYPE_BYTEARRAY) == nil {
+			byteArray := obj.Value.(*ByteArray)
+			byteArrayObject := *byteArray
+			value = byteArrayObject.data
+		} else {
+			return Encode(errors.New("ERR value is not a valid byte array"), false)
+		}
+
+		// perform the operation
+		result := make([]byte, len(value))
+		for i := 0; i < len(value); i++ {
+			result[i] = ^value[i]
+		}
+
+		// initialize result with byteArray
+		operationResult := NewByteArray(len(result))
+		operationResult.data = result
+		operationResult.Length = int64(len(result))
+
+		// resize the byte array if necessary
+		operationResult.ResizeIfNecessary()
+
+		// create object related to result
+		obj = NewObj(operationResult, -1, OBJ_TYPE_BYTEARRAY, OBJ_ENCODING_BYTEARRAY)
+
+		// store the result in destKey
+		Put(destKey, obj)
+		return Encode(len(value), true)
+	} else {
+		// if operation is AND, OR, XOR
+		values := make([][]byte, len(keys))
+
+		// get the values of all keys
+		for i, key := range keys {
+			obj := Get(key)
+			if obj == nil {
+				values[i] = make([]byte, 0)
+			} else {
+				// handle the case when it is byte array
+				if assertType(obj.TypeEncoding, OBJ_TYPE_BYTEARRAY) == nil {
+					byteArray := obj.Value.(*ByteArray)
+					byteArrayObject := *byteArray
+					values[i] = byteArrayObject.data
+				} else {
+					return Encode(errors.New("ERR value is not a valid byte array"), false)
+				}
+			}
+		}
+
+		// get the length of the largest value
+		maxLength := 0
+		minLength := len(values[0])
+		maxKeyIterator := 0
+		for keyIterator, value := range values {
+			if len(value) > maxLength {
+				maxLength = len(value)
+				maxKeyIterator = keyIterator
+			}
+			if len(value) < minLength {
+				minLength = len(value)
+			}
+		}
+
+		result := make([]byte, maxLength)
+		if operation == "AND" {
+			for i := 0; i < maxLength; i++ {
+				if i < minLength {
+					result[i] = values[maxKeyIterator][i]
+				} else {
+					result[i] = 0
+				}
+			}
+		}
+		if operation == "XOR" || operation == "OR" {
+			for i := 0; i < maxLength; i++ {
+				result[i] = 0x00
+			}
+		}
+
+		// perform the operation
+		for _, value := range values {
+			for i := 0; i < len(value); i++ {
+				if operation == "AND" {
+					result[i] &= value[i]
+				} else if operation == "OR" {
+					result[i] |= value[i]
+				} else if operation == "XOR" {
+					result[i] ^= value[i]
+				}
+			}
+		}
+
+		// initialize result with byteArray
+		operationResult := NewByteArray(len(result))
+		operationResult.data = result
+		operationResult.Length = int64(len(result))
+
+		// resize the byte array if necessary
+		operationResult.ResizeIfNecessary()
+
+		// create object related to result
+		operationResultObject := NewObj(operationResult, -1, OBJ_TYPE_BYTEARRAY, OBJ_ENCODING_BYTEARRAY)
+
+		// store the result in destKey
+		Put(destKey, operationResultObject)
+
+		return Encode(len(result), true)
+	}
 }
 
 // evalCommand evaluates COMMAND <subcommand> command based on subcommand

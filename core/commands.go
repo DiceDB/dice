@@ -396,6 +396,26 @@ var (
 		Eval:  nil,
 		Arity: 1,
 	}
+	setBitCmdMeta = DiceCmdMeta{
+		Name: "SETBIT",
+		Info: "SETBIT sets or clears the bit at offset in the string value stored at key",
+		Eval: evalSETBIT,
+	}
+	getBitCmdMeta = DiceCmdMeta{
+		Name: "GETBIT",
+		Info: "GETBIT returns the bit value at offset in the string value stored at key",
+		Eval: evalGETBIT,
+	}
+	bitCountCmdMeta = DiceCmdMeta{
+		Name: "BITCOUNT",
+		Info: "BITCOUNT counts the number of set bits in the string value stored at key",
+		Eval: evalBITCOUNT,
+	}
+	bitOpCmdMeta = DiceCmdMeta{
+		Name: "BITOP",
+		Info: "BITOP performs bitwise operations between multiple keys",
+		Eval: evalBITOP,
+	}
 	commandCmdMeta = DiceCmdMeta{
 		Name:  "COMMAND <subcommand>",
 		Info:  "Evaluates COMMAND <subcommand> command based on subcommand",
@@ -448,4 +468,8 @@ func init() {
 	diceCmds["DISCARD"] = discardCmdMeta
 	diceCmds["ABORT"] = abortCmdMeta
 	diceCmds["COMMAND"] = commandCmdMeta
+	diceCmds["SETBIT"] = setBitCmdMeta
+	diceCmds["GETBIT"] = getBitCmdMeta
+	diceCmds["BITCOUNT"] = bitCountCmdMeta
+	diceCmds["BITOP"] = bitOpCmdMeta
 }

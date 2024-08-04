@@ -7,11 +7,6 @@ import (
 	"time"
 )
 
-type DTestCase struct {
-	InCmds []string
-	Out    []interface{}
-}
-
 func TestMain(m *testing.M) {
 	var wg sync.WaitGroup
 
@@ -21,16 +16,24 @@ func TestMain(m *testing.M) {
 	// to start the server
 	runTestServer(&wg)
 
+	// Wait for the server to start
 	time.Sleep(1 * time.Second)
-	conn := getLocalConnection()
 
-	// run the test suite
+	conn := getLocalConnection()
+	if conn == nil {
+		panic("Failed to connect to the test server")
+	}
+	defer conn.Close()
+
+	// Run the test suite
 	exitCode := m.Run()
 
 	// Fire the ABORT command to gracefully terminate the server
-	fireCommand(conn, "ABORT")
+	result := fireCommand(conn, "ABORT")
+	if result != "OK" {
+		panic("Failed to abort the server")
+	}
 
-	// wait for all the goroutines to finish
 	wg.Wait()
 	os.Exit(exitCode)
 }
