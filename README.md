@@ -60,7 +60,7 @@ Once `air` is installed you can verify using command `air -v`
 
 To run the DiceDB for local development:
 
-```
+```sh
 $ git clone https://github.com/dicedb/dice
 $ cd dice
 $ air
