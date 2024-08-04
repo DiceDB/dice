@@ -1,9 +1,10 @@
 package tests
 
 import (
-	"testing"
-
 	"gotest.tools/v3/assert"
+	"strconv"
+	"testing"
+	"time"
 )
 
 func TestSet(t *testing.T) {
@@ -40,6 +41,7 @@ func TestSet(t *testing.T) {
 
 func TestSetWithOptions(t *testing.T) {
 	conn := getLocalConnection()
+	expiryTime := strconv.FormatInt(time.Now().Add(1*time.Minute).UnixMilli(), 10)
 	defer conn.Close()
 
 	testCases := []struct {
@@ -52,12 +54,46 @@ func TestSetWithOptions(t *testing.T) {
 			commands: []string{"DEL k", "SET k v XX", "GET k"},
 			expected: []interface{}{int64(0), "(nil)", "(nil)"},
 		},
-		// ... (keep other test cases)
+		{
+			name:     "PXAT option",
+			commands: []string{"SET k v PXAT " + expiryTime, "GET k"},
+			expected: []interface{}{"OK", "v"},
+		},
+		{
+			name:     "PXAT option with delete",
+			commands: []string{"SET k1 v1 PXAT " + expiryTime, "GET k1", "SLEEP 2", "DEL k1"},
+			expected: []interface{}{"OK", "v1", "OK", int64(1)},
+		},
+		{
+			name:     "PXAT option with invalid unix time ms",
+			commands: []string{"SET k2 v2 PXAT 123123", "GET k2"},
+			expected: []interface{}{"OK", "(nil)"},
+		},
+		{
+			name:     "XX on existing key",
+			commands: []string{"SET k v1", "SET k v2 XX", "GET k"},
+			expected: []interface{}{"OK", "OK", "v2"},
+		},
+		{
+			name:     "Multiple XX operations",
+			commands: []string{"SET k v1", "SET k v2 XX", "SET k v3 XX", "GET k"},
+			expected: []interface{}{"OK", "OK", "OK", "v3"},
+		},
+		{
+			name:     "EX option",
+			commands: []string{"SET k v EX 1", "GET k", "SLEEP 2", "GET k"},
+			expected: []interface{}{"OK", "v", "OK", "(nil)"},
+		},
+		{
+			name:     "XX option",
+			commands: []string{"SET k v XX EX 1", "GET k", "SLEEP 2", "GET k", "SET k v XX EX 1", "GET k"},
+			expected: []interface{}{"(nil)", "(nil)", "OK", "(nil)", "(nil)", "(nil)"},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			deleteTestKeys([]string{"k"})
+			deleteTestKeys([]string{"k", "k1", "k2"})
 			for i, cmd := range tc.commands {
 				result := fireCommand(conn, cmd)
 				assert.Equal(t, tc.expected[i], result)
