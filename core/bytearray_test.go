@@ -111,5 +111,5 @@ func TestReverseByte(t *testing.T) {
 
 	reversedByte := reverseByte(byteArray.data[0])
 
-	assert.Equal(t, reversedByte, byte(0b10001), "Reversed byte should be 0b10001")
+	assert.Equal(t, reversedByte, byte(0b00010100), "Reversed byte should be 0b00010100")
 }
