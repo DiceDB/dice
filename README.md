@@ -45,7 +45,8 @@ DiceDB provides a hot-reloading development environment, which allows you to ins
 To Install Air on your system you have following options.
 
 1. If you're on go 1.22+
-`go install github.com/air-verse/air@latest`
+```sh
+go install github.com/air-verse/air@latest
 
 
 
