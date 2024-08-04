@@ -40,7 +40,7 @@ $ cd dice
 $ go run main.go
 ```
 
-Enjoy a hussle free hot reload function using [Air package](https://github.com/air-verse/air)
+DiceDB provides a hot-reloading development environment, which allows you to instantly view your code changes in a live server. This functionality is supported by [Air](https://github.com/air-verse/air)
 
 To Install Air on your system you have following options.
 
