@@ -3,10 +3,12 @@ package core
 import (
 	"bytes"
 	"io"
+	"net"
 	"strconv"
 	"testing"
 
 	"github.com/dicedb/dice/config"
+	"gotest.tools/v3/assert"
 )
 
 // MockReadWriter to simulate different io behaviors
@@ -188,4 +190,16 @@ func TestDecodeOneVeryLargeMessage(t *testing.T) {
 	if result != string(largeString) {
 		t.Fatalf("Expected large string, got %v", result)
 	}
+}
+
+func TestDecodeOneNoDataRead(t *testing.T) {
+	mockRW := &MockReadWriter{
+		ReadChunks: [][]byte{
+			[]byte(""), // Empty read chunk
+		},
+	}
+	parser := NewRESPParser(mockRW)
+
+	_, err := parser.DecodeOne()
+	assert.Equal(t, err, net.ErrClosed)
 }
