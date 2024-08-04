@@ -28,7 +28,7 @@ var bufPool = sync.Pool{
 	},
 }
 
-var bitShifts []uint8 = []uint8{7, 7, 7, 7, 7, 7, 7, 7, 7, 1}
+var bitShifts = [10]uint8{7, 7, 7, 7, 7, 7, 7, 7, 7, 1}
 
 // EncodeInt encodes the unsigned 64 bit integer value into a varint
 // and returns an array of bytes (little endian encoded)
