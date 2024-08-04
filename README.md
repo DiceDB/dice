@@ -58,7 +58,7 @@ curl -sSfL https://raw.githubusercontent.com/air-verse/air/master/install.sh | s
 
 Once `air` is installed you can verify the installation using the command `air -v`
 
-To run the DiceDB for local development:
+To run the live DiceDB server for local development:
 
 ```sh
 $ git clone https://github.com/dicedb/dice
