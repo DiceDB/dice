@@ -40,6 +40,32 @@ $ cd dice
 $ go run main.go
 ```
 
+Enjoy a hussle free hot reload function using [Air package](https://github.com/air-verse/air)
+
+To Install Air on your system you have following options.
+
+1. If you're on go 1.22+
+`go install github.com/air-verse/air@latest`
+
+
+
+2. Install using binary
+```sh
+# binary will be $(go env GOPATH)/bin/air
+curl -sSfL https://raw.githubusercontent.com/air-verse/air/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
+```
+
+Once `air` is installed you can verify using command `air -v`
+
+To run the DiceDB for local development:
+
+```
+$ git clone https://github.com/dicedb/dice
+$ cd dice
+$ air
+```
+
+
 ## Setting up CLI
 
 The best way to connect to DiceDB is using DiceDB CLI and you can install it by running the following command.
