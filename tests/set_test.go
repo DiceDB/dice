@@ -62,6 +62,7 @@ func TestSetWithOptions(t *testing.T) {
 			commands: []string {"DEL k", "SET k v NX", "GET k", "SET k v NX"},
 			expected: []interface{}{int64(0), "OK", "v", "(nil)"},
 		},
+		// ... (keep other test cases)
 	}
 
 	for _, tc := range testCases {
