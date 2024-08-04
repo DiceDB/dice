@@ -1,0 +1,45 @@
+package testutils
+
+import (
+	"encoding/json"
+	"reflect"
+	"testing"
+
+	"gotest.tools/v3/assert"
+)
+
+func IsJSONResponse(s string) bool {
+	return (len(s) > 0 && (s[0] == '{' || s[0] == '['))
+}
+
+func AssertJSONEqual(t *testing.T, expected, actual string) {
+	var expectedJSON, actualJSON interface{}
+
+	err := json.Unmarshal([]byte(expected), &expectedJSON)
+	assert.NilError(t, err, "Failed to unmarshal expected JSON")
+
+	err = json.Unmarshal([]byte(actual), &actualJSON)
+	assert.NilError(t, err, "Failed to unmarshal actual JSON")
+
+	if !reflect.DeepEqual(NormalizeJSON(expectedJSON), NormalizeJSON(actualJSON)) {
+		t.Errorf("JSON not equal.\nExpected: %s\nActual: %s", expected, actual)
+	}
+}
+
+func NormalizeJSON(v interface{}) interface{} {
+	switch v := v.(type) {
+	case map[string]interface{}:
+		nm := make(map[string]interface{})
+		for k, v := range v {
+			nm[k] = NormalizeJSON(v)
+		}
+		return nm
+	case []interface{}:
+		for i, e := range v {
+			v[i] = NormalizeJSON(e)
+		}
+		return v
+	default:
+		return v
+	}
+}
