@@ -61,6 +61,12 @@ func (rp *RESPParser) DecodeOne() (interface{}, error) {
 			}
 			return nil, err
 		}
+
+		// Handle the case where no data is read but no error is returned
+		if n == 0 {
+			// This can happen if the connection is closed on the client side but not properly detected
+			return nil, errors.New("ERR possible client-side connection closure")
+		}
 	}
 
 	b, err := rp.buf.ReadByte()
