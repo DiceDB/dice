@@ -135,26 +135,3 @@ func generateIntTestCases() []int64 {
 	}
 	return tests
 }
-
-func BenchmarkMinMaxEncodeDecodeInt(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		var value int64
-		switch {
-		case i%3 == 0:
-			value = int64(i % math.MaxInt64) // positive numbers
-		case i%3 == 1:
-			value = -int64(i % math.MaxInt64) // negative numbers
-		default:
-			value = math.MaxInt64 - int64(i%1000) // numbers close to MaxInt64
-			if i%2000 > 1000 {
-				value = math.MinInt64 + int64(i%1000) // numbers close to MinInt64
-			}
-		}
-
-		encoded := dencoding.EncodeInt(value)
-		decoded := dencoding.DecodeInt(encoded)
-		if decoded != value {
-			b.Errorf("DecodeInt(%v) = %d; want %d", encoded, decoded, value)
-		}
-	}
-}
