@@ -56,7 +56,7 @@ go install github.com/air-verse/air@latest
 curl -sSfL https://raw.githubusercontent.com/air-verse/air/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
 ```
 
-Once `air` is installed you can verify using command `air -v`
+Once `air` is installed you can verify the installation using the command `air -v`
 
 To run the DiceDB for local development:
 
