@@ -50,7 +50,7 @@ go install github.com/air-verse/air@latest
 
 
 
-2. Install using binary
+2. Install the Air binary
 ```sh
 # binary will be $(go env GOPATH)/bin/air
 curl -sSfL https://raw.githubusercontent.com/air-verse/air/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
