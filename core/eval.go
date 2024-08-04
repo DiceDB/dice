@@ -98,7 +98,7 @@ func evalSET(args []string) []byte {
 			if err != nil || exDurationSec <= 0 {
 				return Encode(errors.New("ERR value is not a positive integer"), false)
 			}
-			if exDurationSec < time.Now().Unix() {
+			if exDurationSec <= time.Now().Unix() {
 				Put(key, NewObj(value, 0, oType, oEnc))
 				Del(key)
 				return RESP_OK
