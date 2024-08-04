@@ -49,6 +49,7 @@ To Install Air on your system you have following options.
 1. If you're on go 1.22+
 ```sh
 go install github.com/air-verse/air@latest
+```
 
 
 
