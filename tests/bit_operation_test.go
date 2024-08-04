@@ -10,7 +10,10 @@ import (
 
 func TestBitOp(t *testing.T) {
 	conn := getLocalConnection()
-	testcases := []DTestCase{
+	testcases := []struct {
+		InCmds []string
+		Out    []interface{}
+	}{
 		{
 			InCmds: []string{"SETBIT unitTestKeyA 1 1", "SETBIT unitTestKeyA 3 1", "SETBIT unitTestKeyA 5 1", "SETBIT unitTestKeyA 7 1", "SETBIT unitTestKeyA 8 1"},
 			Out:    []interface{}{int64(0), int64(0), int64(0), int64(0), int64(0)},
@@ -64,7 +67,10 @@ func TestBitOp(t *testing.T) {
 
 func TestBitCount(t *testing.T) {
 	conn := getLocalConnection()
-	testcases := []DTestCase{
+	testcases := []struct {
+		InCmds []string
+		Out    []interface{}
+	}{
 		{
 			InCmds: []string{"SETBIT mykey 7 1"},
 			Out:    []interface{}{int64(0)},
