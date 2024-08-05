@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -12,7 +13,7 @@ import (
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core/bit"
-	"github.com/valyala/fastjson"
+	"github.com/ohler55/ojg/jp"
 )
 
 var RESP_NIL []byte = []byte("$-1\r\n")
@@ -27,7 +28,8 @@ var RESP_EMPTY_ARRAY []byte = []byte("*0\r\n")
 var txnCommands map[string]bool
 var serverID string
 var diceCommandsCount int
-var parser fastjson.Parser
+
+const defaultRootPath = "$"
 
 func init() {
 	diceCommandsCount = len(diceCmds)
@@ -165,23 +167,58 @@ func evalJSONGET(args []string) []byte {
 	}
 
 	key := args[0]
+	// Default path is root if not specified
+	path := defaultRootPath
+	if len(args) > 1 {
+		path = args[1]
+	}
+
+	// Retrieve the object from the database
 	obj := Get(key)
-	// Return nil if the key doesn't exist
 	if obj == nil {
 		return RESP_NIL
 	}
 
-	objType, _ := ExtractTypeEncoding(obj)
-	if objType != OBJ_TYPE_JSON {
+	// Check if the object is of JSON type
+	err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_JSON)
+	if err != nil {
 		return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
 	}
 
-	jsonValue, ok := obj.Value.(*fastjson.Value)
-	if !ok {
-		return Encode(errors.New("ERR internal error: stored value is not a valid JSON"), false)
+	jsonData := obj.Value
+
+	// If path is root, return the entire JSON
+	if path == defaultRootPath {
+		resultBytes, err := json.Marshal(jsonData)
+		if err != nil {
+			return Encode(errors.New("ERR could not serialize result"), false)
+		}
+		return Encode(string(resultBytes), false)
 	}
 
-	return Encode(string(jsonValue.MarshalTo(nil)), false)
+	// Parse the JSONPath expression
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return Encode(errors.New("ERR invalid JSONPath"), false)
+	}
+
+	// Execute the JSONPath query
+	results := expr.Get(jsonData)
+	if len(results) == 0 {
+		return RESP_NIL
+	}
+
+	// Serialize the result
+	var resultBytes []byte
+	if len(results) == 1 {
+		resultBytes, err = json.Marshal(results[0])
+	} else {
+		resultBytes, err = json.Marshal(results)
+	}
+	if err != nil {
+		return Encode(errors.New("ERR could not serialize result"), false)
+	}
+	return Encode(string(resultBytes), false)
 }
 
 // evalJSONSET stores a JSON value at the specified key
@@ -190,23 +227,60 @@ func evalJSONGET(args []string) []byte {
 // Returns encoded error if the JSON string is invalid
 // Returns RESP_OK if the JSON value is successfully stored
 func evalJSONSET(args []string) []byte {
+	// Check if there are enough arguments
 	if len(args) < 3 {
 		return Encode(errors.New("ERR wrong number of arguments for 'JSON.SET' command"), false)
 	}
 
 	key := args[0]
-	// Note: args[1] (path) is ignored in this implementation
+	path := args[1]
 	jsonStr := args[2]
 
 	// Parse the JSON string
-	v, err := parser.Parse(jsonStr)
-	if err != nil {
-		return Encode(errors.New("ERR invalid JSON"), false)
+	var jsonValue interface{}
+	if err := json.Unmarshal([]byte(jsonStr), &jsonValue); err != nil {
+		return Encode(fmt.Errorf("ERR invalid JSON: %v", err), false)
 	}
 
-	// Create a new object with the JSON value and store it
-	obj := NewObj(v, -1, OBJ_TYPE_JSON, OBJ_ENCODING_JSON)
-	Put(key, obj)
+	// Retrieve existing object or create new one
+	obj := Get(key)
+	var rootData interface{}
+
+	if obj == nil {
+		// If the key doesn't exist, create a new object
+		if path != defaultRootPath {
+			rootData = make(map[string]interface{})
+		} else {
+			rootData = jsonValue
+		}
+	} else {
+		// If the key exists, check if it's a JSON object
+		err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_JSON)
+		if err != nil {
+			return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+		}
+		rootData = obj.Value
+	}
+
+	// If path is not root, use JSONPath to set the value
+	if path != defaultRootPath {
+		expr, err := jp.ParseString(path)
+		if err != nil {
+			return Encode(errors.New("ERR invalid JSONPath"), false)
+		}
+
+		err = expr.Set(rootData, jsonValue)
+		if err != nil {
+			return Encode(errors.New("ERR failed to set value"), false)
+		}
+	} else {
+		// If path is root, replace the entire JSON
+		rootData = jsonValue
+	}
+
+	// Create a new object with the updated JSON data
+	newObj := NewObj(rootData, -1, OBJ_TYPE_JSON, OBJ_ENCODING_JSON)
+	Put(key, newObj)
 
 	return RESP_OK
 }
