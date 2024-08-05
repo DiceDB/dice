@@ -3,39 +3,9 @@ package tests
 import (
 	"testing"
 
+	"github.com/dicedb/dice/testutils"
 	"gotest.tools/v3/assert"
 )
-
-func unorderedEqual(expected, actual interface{}) bool {
-	expectedSlice, ok := expected.([]interface{})
-	if !ok {
-		return false
-	}
-
-	actualSlice, ok := actual.([]interface{})
-	if !ok {
-		return false
-	}
-
-	if len(expectedSlice) != len(actualSlice) {
-		return false
-	}
-
-	for _, e := range expectedSlice {
-		found := false
-		for _, a := range actualSlice {
-			if e == a {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return false
-		}
-	}
-
-	return true
-}
 
 func TestKeys(t *testing.T) {
 	conn := getLocalConnection()
@@ -84,7 +54,7 @@ func TestKeys(t *testing.T) {
 
 				// because the order of keys is not guaranteed, we need to check if the result is an array
 				if slice, ok := tc.expected[i].([]interface{}); ok {
-					assert.Assert(t, unorderedEqual(slice, result))
+					assert.Assert(t, testutils.UnorderedEqual(slice, result))
 				} else {
 					assert.DeepEqual(t, tc.expected[i], result)
 				}
