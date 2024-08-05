@@ -114,7 +114,6 @@ func evalSET(args []string) []byte {
 				return Encode(errors.New("ERR invalid expire time in 'set' command"), false)
 			}
 			exDurationMs = pxDurationMs
-
 		case "PXAT", "pxat":
 			i++
 			if i == len(args) {
