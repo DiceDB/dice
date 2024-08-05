@@ -195,7 +195,6 @@ func (asyncServer *AsyncServer) deleteExpiredKeys() (err error) {
 
 func (asyncServer *AsyncServer) acceptConn(serverFD int) (err error) {
 	// accept the incoming connection from a client
-	log.Info("Accepting a new connection")
 	fd, _, err := syscall.Accept(serverFD)
 	if err != nil {
 		log.Warn(err)
