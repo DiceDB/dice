@@ -70,6 +70,16 @@ func TestSetWithOptions(t *testing.T) {
 			expected: []interface{}{int64(0), "(nil)", "(nil)"},
 		},
 		{
+			name: "NX on non-existing key",
+			commands: []string {"DEL k", "SET k v NX", "GET k"},
+			expected: []interface{}{int64(0), "OK", "v"},
+		},
+		{
+			name: "NX on existing key",
+			commands: []string {"DEL k", "SET k v NX", "GET k", "SET k v NX"},
+			expected: []interface{}{int64(0), "OK", "v", "(nil)"},
+		},
+		{
 			name:     "PXAT option",
 			commands: []string{"SET k v PXAT " + expiryTime, "GET k"},
 			expected: []interface{}{"OK", "v"},
@@ -114,5 +124,22 @@ func TestSetWithOptions(t *testing.T) {
 				assert.Equal(t, tc.expected[i], result)
 			}
 		})
+	}
+}
+
+func TestSetWithExat(t *testing.T) {
+	conn := getLocalConnection()
+	Etime := strconv.FormatInt(time.Now().Unix()+10, 10)
+	for _, tcase := range []DTestCase{
+		{
+			InCmds: []string{"SET k v EXAT " + Etime, "TTL k"},
+			Out:    []interface{}{"OK", int64(10)},
+		},
+	} {
+		for i := 0; i < len(tcase.InCmds); i++ {
+			cmd := tcase.InCmds[i]
+			out := tcase.Out[i]
+			assert.Equal(t, out, fireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
+		}
 	}
 }

@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -12,7 +13,7 @@ import (
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core/bit"
-	"github.com/valyala/fastjson"
+	"github.com/ohler55/ojg/jp"
 )
 
 type exDurationState int
@@ -24,6 +25,7 @@ const (
 
 var RESP_NIL []byte = []byte("$-1\r\n")
 var RESP_OK []byte = []byte("+OK\r\n")
+var RESP_AUTH_FAILURE []byte = []byte("+NOAUTH\r\n")
 var RESP_QUEUED []byte = []byte("+QUEUED\r\n")
 var RESP_ZERO []byte = []byte(":0\r\n")
 var RESP_ONE []byte = []byte(":1\r\n")
@@ -34,7 +36,8 @@ var RESP_EMPTY_ARRAY []byte = []byte("*0\r\n")
 var txnCommands map[string]bool
 var serverID string
 var diceCommandsCount int
-var parser fastjson.Parser
+
+const defaultRootPath = "$"
 
 func init() {
 	diceCommandsCount = len(diceCmds)
@@ -61,13 +64,45 @@ func evalPING(args []string) []byte {
 	return b
 }
 
+// evalAUTH returns with an encoded "OK" if the user is authenticated
+// If the user is not authenticated, it returns with an encoded error message
+func evalAUTH(args []string, c *Client) []byte {
+	var (
+		b   []byte
+		err error
+	)
+
+	if len(args) < 1 || len(args) > 2 {
+		return Encode(errors.New("ERR wrong number of arguments for 'AUTH' command"), false)
+	}
+
+	if len(args) == 1 {
+		if err = c.Session.Validate(DefaultUserName, args[0]); err != nil {
+			log.Println("AUTH failed: ", err)
+			return Encode(errors.New("AUTH failed"), false)
+		}
+		return RESP_OK
+	}
+
+	if len(args) == 2 {
+		if err = c.Session.Validate(args[0], args[1]); err != nil {
+			log.Println("AUTH failed: ", err)
+			return Encode(errors.New("AUTH failed"), false)
+		}
+		return RESP_OK
+	}
+
+	return b
+}
+
 // evalSET puts a new <key, value> pair in db as in the args
 // args must contain key and value.
 // args can also contain multiple options -
 //
 //	EX or ex which will set the expiry time(in secs) for the key
 //	PX or px which will set the expiry time(in milliseconds) for the key
-//	PXAT which will the specified Unix time at which the key will expire, in milliseconds (a positive integer).
+//	EXAT or exat which will set the specified Unix time at which the key will expire, in seconds (a positive integer).
+//	PXAT or PX which will the specified Unix time at which the key will expire, in milliseconds (a positive integer).
 //	XX orr xx which will only set the key if it already exists.
 //
 // Returns encoded error response if at least a <key, value> pair is not part of args
@@ -121,7 +156,6 @@ func evalSET(args []string) []byte {
 			if i == len(args) {
 				return Encode(errors.New("ERR syntax error"), false)
 			}
-
 			exDurationUnixMs, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
 				return Encode(errors.New("ERR value is not an integer or out of range"), false)
@@ -146,6 +180,11 @@ func evalSET(args []string) []byte {
 			// if key does not exist, return RESP encoded nil
 			if obj == nil {
 				return RESP_NIL
+			}
+		case "NX", "nx":
+			obj := Get(key);
+			if obj != nil {
+				return RESP_NIL;
 			}
 		default:
 			return Encode(errors.New("ERR syntax error"), false)
@@ -191,23 +230,62 @@ func evalJSONGET(args []string) []byte {
 	}
 
 	key := args[0]
+	// Default path is root if not specified
+	path := defaultRootPath
+	if len(args) > 1 {
+		path = args[1]
+	}
+
+	// Retrieve the object from the database
 	obj := Get(key)
-	// Return nil if the key doesn't exist
 	if obj == nil {
 		return RESP_NIL
 	}
 
-	objType, _ := ExtractTypeEncoding(obj)
-	if objType != OBJ_TYPE_JSON {
-		return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+	// Check if the object is of JSON type
+	err := assertType(obj.TypeEncoding, OBJ_TYPE_JSON)
+	if err != nil {
+		return Encode(err, false)
+	}
+	err = assertEncoding(obj.TypeEncoding, OBJ_ENCODING_JSON)
+	if err != nil {
+		return Encode(err, false)
 	}
 
-	jsonValue, ok := obj.Value.(*fastjson.Value)
-	if !ok {
-		return Encode(errors.New("ERR internal error: stored value is not a valid JSON"), false)
+	jsonData := obj.Value
+
+	// If path is root, return the entire JSON
+	if path == defaultRootPath {
+		resultBytes, err := json.Marshal(jsonData)
+		if err != nil {
+			return Encode(errors.New("ERR could not serialize result"), false)
+		}
+		return Encode(string(resultBytes), false)
 	}
 
-	return Encode(string(jsonValue.MarshalTo(nil)), false)
+	// Parse the JSONPath expression
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return Encode(errors.New("ERR invalid JSONPath"), false)
+	}
+
+	// Execute the JSONPath query
+	results := expr.Get(jsonData)
+	if len(results) == 0 {
+		return RESP_NIL
+	}
+
+	// Serialize the result
+	var resultBytes []byte
+	if len(results) == 1 {
+		resultBytes, err = json.Marshal(results[0])
+	} else {
+		resultBytes, err = json.Marshal(results)
+	}
+	if err != nil {
+		return Encode(errors.New("ERR could not serialize result"), false)
+	}
+	return Encode(string(resultBytes), false)
 }
 
 // evalJSONSET stores a JSON value at the specified key
@@ -216,23 +294,64 @@ func evalJSONGET(args []string) []byte {
 // Returns encoded error if the JSON string is invalid
 // Returns RESP_OK if the JSON value is successfully stored
 func evalJSONSET(args []string) []byte {
+	// Check if there are enough arguments
 	if len(args) < 3 {
 		return Encode(errors.New("ERR wrong number of arguments for 'JSON.SET' command"), false)
 	}
 
 	key := args[0]
-	// Note: args[1] (path) is ignored in this implementation
+	path := args[1]
 	jsonStr := args[2]
 
 	// Parse the JSON string
-	v, err := parser.Parse(jsonStr)
-	if err != nil {
-		return Encode(errors.New("ERR invalid JSON"), false)
+	var jsonValue interface{}
+	if err := json.Unmarshal([]byte(jsonStr), &jsonValue); err != nil {
+		return Encode(fmt.Errorf("ERR invalid JSON: %v", err), false)
 	}
 
-	// Create a new object with the JSON value and store it
-	obj := NewObj(v, -1, OBJ_TYPE_JSON, OBJ_ENCODING_JSON)
-	Put(key, obj)
+	// Retrieve existing object or create new one
+	obj := Get(key)
+	var rootData interface{}
+
+	if obj == nil {
+		// If the key doesn't exist, create a new object
+		if path != defaultRootPath {
+			rootData = make(map[string]interface{})
+		} else {
+			rootData = jsonValue
+		}
+	} else {
+		// If the key exists, check if it's a JSON object
+		err := assertType(obj.TypeEncoding, OBJ_TYPE_JSON)
+		if err != nil {
+			return Encode(err, false)
+		}
+		err = assertEncoding(obj.TypeEncoding, OBJ_ENCODING_JSON)
+		if err != nil {
+			return Encode(err, false)
+		}
+		rootData = obj.Value
+	}
+
+	// If path is not root, use JSONPath to set the value
+	if path != defaultRootPath {
+		expr, err := jp.ParseString(path)
+		if err != nil {
+			return Encode(errors.New("ERR invalid JSONPath"), false)
+		}
+
+		err = expr.Set(rootData, jsonValue)
+		if err != nil {
+			return Encode(errors.New("ERR failed to set value"), false)
+		}
+	} else {
+		// If path is root, replace the entire JSON
+		rootData = jsonValue
+	}
+
+	// Create a new object with the updated JSON data
+	newObj := NewObj(rootData, -1, OBJ_TYPE_JSON, OBJ_ENCODING_JSON)
+	Put(key, newObj)
 
 	return RESP_OK
 }
@@ -1332,6 +1451,22 @@ func evalCommand(args []string) []byte {
 	}
 }
 
+// evalKeys returns the list of keys that match the pattern
+// The pattern should be the only param in args
+func evalKeys(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR wrong number of arguments for 'keys' command"), false)
+	}
+
+	pattern := args[0]
+	keys, err := Keys(pattern)
+	if err != nil {
+		return Encode(err, false)
+	}
+
+	return Encode(keys, false)
+}
+
 // evalCommandCount returns an number of commands supported by DiceDB
 func evalCommandCount(args []string) []byte {
 	return Encode(diceCommandsCount, false)
@@ -1380,6 +1515,9 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		c.TxnBegin()
 		return diceCmd.Eval(cmd.Args)
 	}
+	if diceCmd.Name == AuthCmd {
+		return evalAUTH(cmd.Args, c)
+	}
 	if diceCmd.Name == "EXEC" {
 		if !c.isTxn {
 			return Encode(errors.New("ERR EXEC without MULTI"), false)
@@ -1409,6 +1547,13 @@ func EvalAndRespond(cmds RedisCmds, c *Client) {
 	buf := bytes.NewBuffer(response)
 
 	for _, cmd := range cmds {
+		// Check if the command has been authenticated
+		if cmd.Cmd != AuthCmd && !c.Session.IsActive() {
+			if _, err := c.Write(RESP_AUTH_FAILURE); err != nil {
+				log.Println("Error writing to client:", err)
+			}
+			continue
+		}
 		// if txn is not in progress, then we can simply
 		// execute the command and add the response to the buffer
 		if !c.isTxn {
