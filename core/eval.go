@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"log"
 	"strconv"
 	"syscall"
 	"time"
 
 	"github.com/dicedb/dice/config"
+	"github.com/charmbracelet/log"
 )
 
 var RESP_NIL []byte = []byte("$-1\r\n")
@@ -105,6 +105,9 @@ func evalGET(args []string, store *Store) []byte {
 
 	// Get the key from the hash table
 	obj := store.Get(key)
+
+	log.Info("Looking up key from store :", key)
+	log.Info("Got value from store :", obj)
 
 	// if key does not exist, return RESP encoded nil
 	if obj == nil {
@@ -984,10 +987,14 @@ func executeCommandToBuffer(cmd *RedisCmd, buf *bytes.Buffer, c *Client, store *
 }
 
 func EvalAndRespond(cmds RedisCmds, c *Client, store *Store) {
+	log.Info("In EvalAndRespond. cmds:", cmds)
+	log.Info("Store: ", store)
 	var response []byte
 	buf := bytes.NewBuffer(response)
 
 	for _, cmd := range cmds {
+		log.Info("Got command: ", cmd.Cmd)
+
 		// if txn is not in progress, then we can simply
 		// execute the command and add the response to the buffer
 		if !c.isTxn {
@@ -1010,6 +1017,15 @@ func EvalAndRespond(cmds RedisCmds, c *Client, store *Store) {
 	}
 
 	if _, err := c.Write(buf.Bytes()); err != nil {
-		log.Panic(err)
+		log.Error(err)
 	}
+}
+
+func ExecuteCommandThreaded(cmds RedisCmds, c *Client, store *Store) []string {
+	var resp []string
+
+	for _, cmd := range cmds {
+		resp = append(resp, string(executeCommand(cmd, c , store)))
+	}
+	return resp
 }

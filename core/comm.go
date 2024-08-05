@@ -56,7 +56,3 @@ func NewClient(fd int) *Client {
 		cqueue: make(RedisCmds, 0),
 	}
 }
-
-func ExecuteCommand(cmd *RedisCmd, c *Client, store *Store) []byte {
-	return executeCommand(cmd, c, store)
-}

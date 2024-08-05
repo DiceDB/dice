@@ -6,6 +6,7 @@ import (
 	"runtime"
 
 	"github.com/dicedb/dice/core"
+	"github.com/charmbracelet/log"
 )
 
 var SHARDPOOL_SIZE int = runtime.NumCPU()
@@ -17,6 +18,7 @@ var spool *ShardPool
 // break out OP pool from shard pool
 
 func init() {
+	log.Info("Initializinf thread and shard pool")
 	ipool = NewIOThreadPool(CONCURRENT_CLIENTS) // handle client connections
 	runtime.GOMAXPROCS(SHARDPOOL_SIZE)
 	spool = NewShardPool(SHARDPOOL_SIZE) // handles data
@@ -49,6 +51,7 @@ type IOThread struct {
 
 // Look up functional options for abstracting if we need to switch the toppology
 func findOwnerShard(key string) int {
+	log.Info("Finding owner shard for key:", key)
 	hash := fnv.New32a()
 	hash.Write([]byte(key))
 	hashValue := int(hash.Sum32())
@@ -59,9 +62,11 @@ func findOwnerShard(key string) int {
 
 // Should we pass redis command here?
 func (p *ShardPool) Submit(op *Operation) {
+	log.Info("Operation submitted on Shard")
 	// Non Key Operation.
 	// We need to fan out and execute Operation on all Shards
 	if len(op.keys) == 0 {
+		log.Info("Fan out to all shards")
 		for i := 0; i < SHARDPOOL_SIZE; i++ {
 			p.shardThreads[i].reqch <- op
 		}
@@ -72,6 +77,7 @@ func (p *ShardPool) Submit(op *Operation) {
 	for _, key := range op.keys {
 		// from the operation, find the owner shard
 		index := findOwnerShard(key)
+		log.Info("Sending operation to shard:", index)
 
 		// put the operation in that shard
 		// right now `ch` is unbuffered, but we can create a buffer,
@@ -85,7 +91,7 @@ func (p *ShardPool) Submit(op *Operation) {
 
 func (t *IOThread) Run() {
 	for req := range t.reqch {
-		fmt.Println("handling req", req)
+		fmt.Println("thread handling req", req)
 		// read the request
 		// create the operation
 		spool.Submit(&Operation{
@@ -109,6 +115,7 @@ func NewIOThreadPool(poolsize int) *IOThreadPool {
 }
 
 func (p *IOThreadPool) Init(poolsize int) {
+	log.Info("Initializing Thread pool with pool size =", poolsize)
 	p.pool = make(chan *IOThread, poolsize)
 	iothread := &IOThread{
 		reqch: make(chan *IORequest),
@@ -135,15 +142,20 @@ type ShardThread struct {
 
 func (t *ShardThread) Run() {
 	for op := range t.reqch {
-		fmt.Println("handling op", op)
+		fmt.Println("handling op", op.cmds)
 		// execute the operation and create the result
-		var msg = ""
+		log.Info("Executing command:", op.cmds)
 		core.EvalAndRespond(*op.cmds, op.conn, t.store)
-		//core.ExecuteCommand(op.cmd, op.conn, t.store)
+		// var resp = core.ExecuteCommandThreaded(*op.cmds, op.conn, t.store)
 
-		fmt.Println(msg)
-		op.ResultCH <- &IOResult{msg}
+		// op.ResultCH <- &IOResult{"Returned hard coded resp"}
+
+		//fmt.Println("Command execution response:", resp)
+		//for _, respStr := range resp {
+		//	op.ResultCH <- &IOResult{respStr}
+		//}
 	}
+	log.Info("Done executing on Shard")
 }
 
 type ShardPool struct {
@@ -157,6 +169,7 @@ func NewShardPool(poolsize int) *ShardPool {
 }
 
 func (p *ShardPool) Init(poolsize int) {
+	log.Info("Initializing Shard pool with poolsize=", poolsize)
 	p.shardThreads = make([]*ShardThread, poolsize)
 	for i := 0; i < poolsize; i++ {
 		p.shardThreads[i] = &ShardThread{
