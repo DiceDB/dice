@@ -45,7 +45,7 @@ func NewObj(value interface{}, expDurationMs int64, oType uint8, oEnc uint8) *Ob
 		TypeEncoding:   oType | oEnc,
 		LastAccessedAt: getCurrentClock(),
 	}
-	if expDurationMs > 0 {
+	if expDurationMs >= 0 {
 		setExpiry(obj, expDurationMs)
 	}
 	return obj
