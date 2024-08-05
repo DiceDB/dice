@@ -303,6 +303,24 @@ func evalJSONSET(args []string) []byte {
 	path := args[1]
 	jsonStr := args[2]
 
+	for i := 3; i < len(args); i++ {
+		switch args[i] {
+		case "NX", "nx":
+			obj := Get(key)
+			if obj != nil {
+				return RESP_NIL
+			}
+		case "XX", "xx":
+			obj := Get(key)
+			if obj == nil {
+				return RESP_NIL
+			}
+
+		default:
+			return Encode(errors.New("ERR syntax error"), false)
+		}
+	}
+
 	// Parse the JSON string
 	var jsonValue interface{}
 	if err := json.Unmarshal([]byte(jsonStr), &jsonValue); err != nil {

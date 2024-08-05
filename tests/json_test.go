@@ -218,3 +218,49 @@ func TestUnsupportedJSONPathPatterns(t *testing.T) {
 		})
 	}
 }
+
+func TestJSONSetWithNXAndXX(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	deleteTestKeys([]string{"user"})
+
+	user1 := `{"name":"John","age":30}`
+	user2 := `{"name":"Rahul","age":28}`
+
+	testCases := []struct {
+		commands []string
+		expected []interface{}
+	}{
+		{
+			commands: []string{"JSON.SET user $ " + user1 + " XX", "JSON.SET user $ " + user1 + " NX", "JSON.GET user"},
+			expected: []interface{}{"(nil)", "OK", user1},
+		},
+		{
+			commands: []string{"DEL user", "JSON.SET user $ " + user1, "JSON.SET user $ " + user1 + " NX"},
+			expected: []interface{}{int64(1), "OK", "(nil)"},
+		},
+		{
+			commands: []string{"JSON.SET user $ " + user2 + " XX", "JSON.GET user", "DEL user"},
+			expected: []interface{}{"OK", user2, int64(1)},
+		},
+		{
+			commands: []string{"JSON.SET user $ " + user2 + " NX", "JSON.SET user $ " + user1 + " NX", "JSON.GET user"},
+			expected: []interface{}{"OK", "(nil)", user2},
+		},
+	}
+
+	for _, tcase := range testCases {
+		for i := 0; i < len(tcase.commands); i++ {
+			cmd := tcase.commands[i]
+			out := tcase.expected[i]
+			result := fireCommand(conn, cmd)
+			jsonResult, isString := result.(string)
+			if isString && testutils.IsJSONResponse(jsonResult) {
+				testutils.AssertJSONEqual(t, out.(string), jsonResult)
+			} else {
+				assert.Equal(t, out, result)
+			}
+		}
+	}
+}
