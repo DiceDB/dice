@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"hash/fnv"
 	"runtime"
 
@@ -91,7 +90,6 @@ func (p *ShardPool) Submit(op *Operation) {
 
 func (t *IOThread) Run() {
 	for req := range t.reqch {
-		fmt.Println("thread handling req", req)
 		// read the request
 		// create the operation
 		spool.Submit(&Operation{
@@ -142,7 +140,6 @@ type ShardThread struct {
 
 func (t *ShardThread) Run() {
 	for op := range t.reqch {
-		fmt.Println("handling op", op.cmds)
 		// execute the operation and create the result
 		log.Info("Executing command:", op.cmds)
 		core.EvalAndRespond(*op.cmds, op.conn, t.store)

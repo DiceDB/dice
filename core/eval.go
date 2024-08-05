@@ -987,8 +987,6 @@ func executeCommandToBuffer(cmd *RedisCmd, buf *bytes.Buffer, c *Client, store *
 }
 
 func EvalAndRespond(cmds RedisCmds, c *Client, store *Store) {
-	log.Info("In EvalAndRespond. cmds:", cmds)
-	log.Info("Store: ", store)
 	var response []byte
 	buf := bytes.NewBuffer(response)
 
