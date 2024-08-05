@@ -422,6 +422,11 @@ var (
 		Eval:  evalCommand,
 		Arity: -1,
 	}
+	keysCmdMeta = DiceCmdMeta{
+		Name: "KEYS",
+		Info: "KEYS command is used to get all the keys in the database. Complexity is O(n) where n is the number of keys in the database.",
+		Eval: evalKeys,
+	}
 )
 
 func init() {
@@ -472,4 +477,5 @@ func init() {
 	diceCmds["GETBIT"] = getBitCmdMeta
 	diceCmds["BITCOUNT"] = bitCountCmdMeta
 	diceCmds["BITOP"] = bitOpCmdMeta
+	diceCmds["KEYS"] = keysCmdMeta
 }
