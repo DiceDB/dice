@@ -93,6 +93,7 @@ func evalAUTH(args []string, c *Client) []byte {
 // args can also contain multiple options -
 //
 //	EX or ex which will set the expiry time(in secs) for the key
+//	EXAT or exat which will set the specified Unix time at which the key will expire, in seconds (a positive integer).
 //	PXAT or PX which will the specified Unix time at which the key will expire, in milliseconds (a positive integer).
 //	XX orr xx which will only set the key if it already exists.
 //
@@ -130,7 +131,6 @@ func evalSET(args []string) []byte {
 			if i == len(args) {
 				return Encode(errors.New("ERR syntax error"), false)
 			}
-
 			exDurationUnixMs, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
 				return Encode(errors.New("ERR value is not an integer or out of range"), false)
