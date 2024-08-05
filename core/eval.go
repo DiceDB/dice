@@ -16,6 +16,13 @@ import (
 	"github.com/ohler55/ojg/jp"
 )
 
+type exDurationState int
+
+const (
+	Uninitialized exDurationState = iota
+	Initialized
+)
+
 var RESP_NIL []byte = []byte("$-1\r\n")
 var RESP_OK []byte = []byte("+OK\r\n")
 var RESP_AUTH_FAILURE []byte = []byte("+NOAUTH\r\n")
@@ -93,12 +100,14 @@ func evalAUTH(args []string, c *Client) []byte {
 // args can also contain multiple options -
 //
 //	EX or ex which will set the expiry time(in secs) for the key
+//	PX or px which will set the expiry time(in milliseconds) for the key
 //	EXAT or exat which will set the specified Unix time at which the key will expire, in seconds (a positive integer).
 //	PXAT or PX which will the specified Unix time at which the key will expire, in milliseconds (a positive integer).
 //	XX orr xx which will only set the key if it already exists.
 //
 // Returns encoded error response if at least a <key, value> pair is not part of args
 // Returns encoded error response if expiry time value in not integer
+// Returns encoded error response if both PX and EX flags are present
 // Returns encoded OK RESP once new entry is added
 // If the key already exists then the value will be overwritten and expiry will be discarded
 func evalSET(args []string) []byte {
@@ -108,25 +117,41 @@ func evalSET(args []string) []byte {
 
 	var key, value string
 	var exDurationMs int64 = -1
+	var state exDurationState = Uninitialized
 
 	key, value = args[0], args[1]
 	oType, oEnc := deduceTypeEncoding(value)
 
 	for i := 2; i < len(args); i++ {
 		switch args[i] {
-		case "EX", "ex":
+		case "EX", "ex", "PX", "px":
+			if state != Uninitialized {
+				return Encode(errors.New("ERR syntax error"), false)
+			}
 			i++
 			if i == len(args) {
 				return Encode(errors.New("ERR syntax error"), false)
 			}
 
-			exDurationSec, err := strconv.ParseInt(args[i], 10, 64)
+			exDuration, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
 				return Encode(errors.New("ERR value is not an integer or out of range"), false)
 			}
-			exDurationMs = exDurationSec * 1000
+			if exDuration <= 0 {
+				return Encode(errors.New("ERR invalid expire time in 'set' command"), false)
+			}
+
+			// converting seconds to milliseconds
+			if args[i-1] == "EX" || args[i-1] == "ex" {
+				exDuration = exDuration * 1000
+			}
+			exDurationMs = exDuration
+			state = Initialized
 
 		case "PXAT", "pxat":
+			if state != Uninitialized {
+				return Encode(errors.New("ERR syntax error"), false)
+			}
 			i++
 			if i == len(args) {
 				return Encode(errors.New("ERR syntax error"), false)
@@ -146,6 +171,7 @@ func evalSET(args []string) []byte {
 			if exDurationMs < 0 {
 				exDurationMs = 0
 			}
+			state = Initialized
 
 		case "XX", "xx":
 			// Get the key from the hash table

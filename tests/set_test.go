@@ -50,6 +50,21 @@ func TestSetWithOptions(t *testing.T) {
 		expected []interface{}
 	}{
 		{
+			name:     "Set with EX option",
+			commands: []string{"SET k v EX 2", "GET k", "SLEEP 3", "GET k"},
+			expected: []interface{}{"OK", "v", "OK", "(nil)"},
+		},
+		{
+			name:     "Set with PX option",
+			commands: []string{"SET k v PX 2000", "GET k", "SLEEP 3", "GET k"},
+			expected: []interface{}{"OK", "v", "OK", "(nil)"},
+		},
+		{
+			name:     "Set with EX and PX option",
+			commands: []string{"SET k v EX 2 PX 2000"},
+			expected: []interface{}{"ERR syntax error"},
+		},
+		{
 			name:     "XX on non-existing key",
 			commands: []string{"DEL k", "SET k v XX", "GET k"},
 			expected: []interface{}{int64(0), "(nil)", "(nil)"},
