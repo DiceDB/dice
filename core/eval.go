@@ -180,9 +180,13 @@ func evalJSONGET(args []string) []byte {
 	}
 
 	// Check if the object is of JSON type
-	err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_JSON)
+	err := assertType(obj.TypeEncoding, OBJ_TYPE_JSON)
 	if err != nil {
-		return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+		return Encode(err, false)
+	}
+	err = assertEncoding(obj.TypeEncoding, OBJ_ENCODING_JSON)
+	if err != nil {
+		return Encode(err, false)
 	}
 
 	jsonData := obj.Value
@@ -255,9 +259,13 @@ func evalJSONSET(args []string) []byte {
 		}
 	} else {
 		// If the key exists, check if it's a JSON object
-		err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_JSON)
+		err := assertType(obj.TypeEncoding, OBJ_TYPE_JSON)
 		if err != nil {
-			return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+			return Encode(err, false)
+		}
+		err = assertEncoding(obj.TypeEncoding, OBJ_ENCODING_JSON)
+		if err != nil {
+			return Encode(err, false)
 		}
 		rootData = obj.Value
 	}

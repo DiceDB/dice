@@ -88,7 +88,7 @@ func TestJSONOperations(t *testing.T) {
 			name:     "Set Non-JSON Value",
 			setCmd:   `SET nonJson "not a json"`,
 			getCmd:   `JSON.GET nonJson`,
-			expected: "WRONGTYPE Operation against a key holding the wrong kind of value",
+			expected: "the operation is not permitted on this type",
 		},
 		{
 			name:     "Set Empty JSON Object",
