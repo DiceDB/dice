@@ -148,20 +148,27 @@ func DelByPtr(ptr unsafe.Pointer) bool {
 }
 
 // List all keys in the store by given pattern
-func Keys(p string) []string {
+func Keys(p string) ([]string, error) {
 	storeMutex.RLock()
 	defer storeMutex.RUnlock()
 	keypoolMutex.RLock()
 	defer keypoolMutex.RUnlock()
 
-	keys := make([]string, 0)
+	keyCap := 0
+	if p == "*" {
+		keyCap = len(keypool)
+	}
+
+	keys := make([]string, 0, keyCap)
 	for k := range keypool {
-		if found, err := path.Match(p, k); err == nil && found {
+		if found, err := path.Match(p, k); err != nil {
+			return nil, err
+		} else if found {
 			keys = append(keys, k)
 		}
 	}
 
-	return keys
+	return keys, nil
 }
 
 // Function to add a new watcher to a query.

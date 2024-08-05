@@ -6,30 +6,90 @@ import (
 	"gotest.tools/v3/assert"
 )
 
+func unorderedEqual(expected, actual interface{}) bool {
+	expectedSlice, ok := expected.([]interface{})
+	if !ok {
+		return false
+	}
+
+	actualSlice, ok := actual.([]interface{})
+	if !ok {
+		return false
+	}
+
+	if len(expectedSlice) != len(actualSlice) {
+		return false
+	}
+
+	for _, e := range expectedSlice {
+		found := false
+		for _, a := range actualSlice {
+			if e == a {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+
+	return true
+}
+
 func TestKeys(t *testing.T) {
 	conn := getLocalConnection()
-	for _, tcase := range []DTestCase{
+	testCases := []struct {
+		name     string
+		commands []string
+		expected []interface{}
+	}{
 		{
-			InCmds: []string{"SET k v", "KEYS k"},
-			Out:    []interface{}{"OK", []interface{}{"k"}},
+			name:     "k matches with k",
+			commands: []string{"SET k v", "KEYS k"},
+			expected: []interface{}{"OK", []interface{}{"k"}},
 		},
 		{
-			InCmds: []string{"SET good v", "SET great v", "KEYS g*"},
-			Out:    []interface{}{"OK", "OK", []interface{}{"good", "great"}},
+			name:     "g* matches good and great",
+			commands: []string{"SET good v", "SET great v", "KEYS g*"},
+			expected: []interface{}{"OK", "OK", []interface{}{"good", "great"}},
 		},
 		{
-			InCmds: []string{"SET good v", "SET great v", "KEYS g?od", "KEYS g?eat"},
-			Out:    []interface{}{"OK", "OK", []interface{}{"good"}, []interface{}{"great"}},
+			name:     "g?od matches good",
+			commands: []string{"SET good v", "SET great v", "KEYS g?od"},
+			expected: []interface{}{"OK", "OK", []interface{}{"good"}},
 		},
 		{
-			InCmds: []string{"SET hallo v", "SET hbllo v", "SET hello v", "KEYS h[^e]llo"},
-			Out:    []interface{}{"OK", "OK", "OK", []interface{}{"hallo", "hbllo"}},
+			name:     "g?eat matches great",
+			commands: []string{"SET good v", "SET great v", "KEYS g?eat"},
+			expected: []interface{}{"OK", "OK", []interface{}{"great"}},
 		},
-	} {
-		for i := 0; i < len(tcase.InCmds); i++ {
-			cmd := tcase.InCmds[i]
-			out := tcase.Out[i]
-			assert.DeepEqual(t, out, fireCommand(conn, cmd))
-		}
+		{
+			name:     "h[^e]llo matches hallo and hbllo",
+			commands: []string{"SET hallo v", "SET hbllo v", "SET hello v", "KEYS h[^e]llo"},
+			expected: []interface{}{"OK", "OK", "OK", []interface{}{"hallo", "hbllo"}},
+		},
+
+		{
+			name:     "h[a-b]llo matches hallo and hbllo",
+			commands: []string{"SET hallo v", "SET hbllo v", "SET hello v", "KEYS h[a-b]llo"},
+			expected: []interface{}{"OK", "OK", "OK", []interface{}{"hallo", "hbllo"}},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for i, cmd := range tc.commands {
+				result := fireCommand(conn, cmd)
+
+				// because the order of keys is not guaranteed, we need to check if the result is an array
+				if slice, ok := tc.expected[i].([]interface{}); ok {
+					assert.Assert(t, unorderedEqual(slice, result))
+				} else {
+					assert.DeepEqual(t, tc.expected[i], result)
+				}
+
+			}
+		})
 	}
 }

@@ -1314,7 +1314,10 @@ func evalKeys(args []string) []byte {
 	}
 
 	pattern := args[0]
-	keys := Keys(pattern)
+	keys, err := Keys(pattern)
+	if err != nil {
+		return Encode(err, false)
+	}
 
 	return Encode(keys, false)
 }
