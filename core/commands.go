@@ -23,6 +23,12 @@ var (
 		Eval:  evalPING,
 		Arity: -1,
 	}
+	authCmdMeta = DiceCmdMeta{
+		Name: "AUTH",
+		Info: `AUTH returns with an encoded "OK" if the user is authenticated.
+		If the user is not authenticated, it returns with an encoded error message`,
+		Eval: nil,
+	}
 	setCmdMeta = DiceCmdMeta{
 		Name: "SET",
 		Info: `SET puts a new <key, value> pair in db as in the args
@@ -431,6 +437,7 @@ var (
 
 func init() {
 	diceCmds["PING"] = pingCmdMeta
+	diceCmds["AUTH"] = authCmdMeta
 	diceCmds["SET"] = setCmdMeta
 	diceCmds["GET"] = getCmdMeta
 	diceCmds["JSON.SET"] = jsonsetCmdMeta
