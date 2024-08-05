@@ -55,6 +55,16 @@ func TestSetWithOptions(t *testing.T) {
 			expected: []interface{}{int64(0), "(nil)", "(nil)"},
 		},
 		{
+			name: "NX on non-existing key",
+			commands: []string {"DEL k", "SET k v NX", "GET k"},
+			expected: []interface{}{int64(0), "OK", "v"},
+		},
+		{
+			name: "NX on existing key",
+			commands: []string {"DEL k", "SET k v NX", "GET k", "SET k v NX"},
+			expected: []interface{}{int64(0), "OK", "v", "(nil)"},
+		},
+		{
 			name:     "PXAT option",
 			commands: []string{"SET k v PXAT " + expiryTime, "GET k"},
 			expected: []interface{}{"OK", "v"},

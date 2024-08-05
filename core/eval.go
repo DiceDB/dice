@@ -155,6 +155,11 @@ func evalSET(args []string) []byte {
 			if obj == nil {
 				return RESP_NIL
 			}
+		case "NX", "nx":
+			obj := Get(key);
+			if obj != nil {
+				return RESP_NIL;
+			}
 		default:
 			return Encode(errors.New("ERR syntax error"), false)
 		}
