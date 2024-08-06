@@ -463,6 +463,12 @@ var (
 		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
 	}
+	existsCmdMeta = DiceCmdMeta{
+		Name: "EXISTS",
+		Info: `EXISTS key1 key2 ... key_N
+		Return value is the number of keys existing.`,
+		Eval: evalEXISTS,
+	}
 )
 
 func init() {
@@ -518,4 +524,5 @@ func init() {
 	diceCmds["KEYS"] = keysCmdMeta
 	diceCmds["PERSIST"] = persistCmdMeta
 	diceCmds["DECR"] = decrCmdMeta
+	diceCmds["EXISTS"] = existsCmdMeta
 }
