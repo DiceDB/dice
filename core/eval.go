@@ -1105,7 +1105,13 @@ func evalQWATCH(args []string, c *Client) []byte {
 
 	AddWatcher(query, c.Fd)
 
-	return RESP_OK
+	// Return the result of the query.
+	result, err := ExecuteQuery(query)
+	if err != nil {
+		return Encode(err, false)
+	}
+
+	return Encode(result, false)
 }
 
 // SETBIT key offset value
