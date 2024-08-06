@@ -67,18 +67,6 @@ func TestJSONOperations(t *testing.T) {
 			expected: specialCharsJSON,
 		},
 		{
-			name:     "Set Invalid JSON",
-			setCmd:   `JSON.SET invalid $ {invalid:json}`,
-			getCmd:   ``,
-			expected: "ERR invalid JSON: invalid character 'i' looking for beginning of object key string",
-		},
-		{
-			name:     "Set JSON with Wrong Number of Arguments",
-			setCmd:   `JSON.SET`,
-			getCmd:   ``,
-			expected: "ERR wrong number of arguments for 'JSON.SET' command",
-		},
-		{
 			name:     "Get JSON with Wrong Number of Arguments",
 			setCmd:   ``,
 			getCmd:   `JSON.GET`,
@@ -175,6 +163,35 @@ func TestJSONOperations(t *testing.T) {
 	}
 }
 
+func TestJSONSetWithInvalidJSON(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	testCases := []struct {
+		name     string
+		command  string
+		expected string
+	}{
+		{
+			name:     "Set Invalid JSON",
+			command:  `JSON.SET invalid $ {invalid:json}`,
+			expected: "ERR invalid JSON: \"Syntax error at index 1: expect a json key\\n\\n\\t{invalid:json}\\n\\t.^............\\n\"",
+		},
+		{
+			name:     "Set JSON with Wrong Number of Arguments",
+			command:  `JSON.SET`,
+			expected: "ERR wrong number of arguments for 'JSON.SET' command",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := fireCommand(conn, tc.command)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
 func TestUnsupportedJSONPathPatterns(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
@@ -216,5 +233,51 @@ func TestUnsupportedJSONPathPatterns(t *testing.T) {
 			result := fireCommand(conn, tc.command)
 			assert.Equal(t, tc.expected, result)
 		})
+	}
+}
+
+func TestJSONSetWithNXAndXX(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	deleteTestKeys([]string{"user"})
+
+	user1 := `{"name":"John","age":30}`
+	user2 := `{"name":"Rahul","age":28}`
+
+	testCases := []struct {
+		commands []string
+		expected []interface{}
+	}{
+		{
+			commands: []string{"JSON.SET user $ " + user1 + " XX", "JSON.SET user $ " + user1 + " NX", "JSON.GET user"},
+			expected: []interface{}{"(nil)", "OK", user1},
+		},
+		{
+			commands: []string{"DEL user", "JSON.SET user $ " + user1, "JSON.SET user $ " + user1 + " NX"},
+			expected: []interface{}{int64(1), "OK", "(nil)"},
+		},
+		{
+			commands: []string{"JSON.SET user $ " + user2 + " XX", "JSON.GET user", "DEL user"},
+			expected: []interface{}{"OK", user2, int64(1)},
+		},
+		{
+			commands: []string{"JSON.SET user $ " + user2 + " NX", "JSON.SET user $ " + user1 + " NX", "JSON.GET user"},
+			expected: []interface{}{"OK", "(nil)", user2},
+		},
+	}
+
+	for _, tcase := range testCases {
+		for i := 0; i < len(tcase.commands); i++ {
+			cmd := tcase.commands[i]
+			out := tcase.expected[i]
+			result := fireCommand(conn, cmd)
+			jsonResult, isString := result.(string)
+			if isString && testutils.IsJSONResponse(jsonResult) {
+				testutils.AssertJSONEqual(t, out.(string), jsonResult)
+			} else {
+				assert.Equal(t, out, result)
+			}
+		}
 	}
 }

@@ -2,7 +2,6 @@ package core
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -10,6 +9,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/bytedance/sonic"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core/bit"
@@ -261,7 +262,7 @@ func evalJSONGET(args []string) []byte {
 
 	// If path is root, return the entire JSON
 	if path == defaultRootPath {
-		resultBytes, err := json.Marshal(jsonData)
+		resultBytes, err := sonic.Marshal(jsonData)
 		if err != nil {
 			return Encode(errors.New("ERR could not serialize result"), false)
 		}
@@ -283,9 +284,9 @@ func evalJSONGET(args []string) []byte {
 	// Serialize the result
 	var resultBytes []byte
 	if len(results) == 1 {
-		resultBytes, err = json.Marshal(results[0])
+		resultBytes, err = sonic.Marshal(results[0])
 	} else {
-		resultBytes, err = json.Marshal(results)
+		resultBytes, err = sonic.Marshal(results)
 	}
 	if err != nil {
 		return Encode(errors.New("ERR could not serialize result"), false)
@@ -308,10 +309,28 @@ func evalJSONSET(args []string) []byte {
 	path := args[1]
 	jsonStr := args[2]
 
+	for i := 3; i < len(args); i++ {
+		switch args[i] {
+		case "NX", "nx":
+			obj := Get(key)
+			if obj != nil {
+				return RESP_NIL
+			}
+		case "XX", "xx":
+			obj := Get(key)
+			if obj == nil {
+				return RESP_NIL
+			}
+
+		default:
+			return Encode(errors.New("ERR syntax error"), false)
+		}
+	}
+
 	// Parse the JSON string
 	var jsonValue interface{}
-	if err := json.Unmarshal([]byte(jsonStr), &jsonValue); err != nil {
-		return Encode(fmt.Errorf("ERR invalid JSON: %v", err), false)
+	if err := sonic.Unmarshal([]byte(jsonStr), &jsonValue); err != nil {
+		return Encode(fmt.Errorf("ERR invalid JSON: %v", err.Error()), false)
 	}
 
 	// Retrieve existing object or create new one
