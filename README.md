@@ -40,6 +40,36 @@ $ cd dice
 $ go run main.go
 ```
 
+### Live Development Server
+
+DiceDB provides a hot-reloading development environment, which allows you to instantly view your code changes in a live server. This functionality is supported by [Air](https://github.com/air-verse/air)
+
+To Install Air on your system you have following options.
+
+1. If you're on go 1.22+
+```sh
+go install github.com/air-verse/air@latest
+```
+
+
+
+2. Install the Air binary
+```sh
+# binary will be installed at $(go env GOPATH)/bin/air
+curl -sSfL https://raw.githubusercontent.com/air-verse/air/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
+```
+
+Once `air` is installed you can verify the installation using the command `air -v`
+
+To run the live DiceDB server for local development:
+
+```sh
+$ git clone https://github.com/dicedb/dice
+$ cd dice
+$ air
+```
+
+
 ## Setting up CLI
 
 The best way to connect to DiceDB is using DiceDB CLI and you can install it by running the following command.

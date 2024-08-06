@@ -9,9 +9,10 @@ import (
 
 type Client struct {
 	io.ReadWriter
-	Fd     int
-	cqueue RedisCmds
-	isTxn  bool
+	Fd      int
+	cqueue  RedisCmds
+	isTxn   bool
+	Session *Session
 }
 
 func (c Client) Write(b []byte) (int, error) {
@@ -52,7 +53,8 @@ func (c *Client) TxnQueue(cmd *RedisCmd) {
 
 func NewClient(fd int) *Client {
 	return &Client{
-		Fd:     fd,
-		cqueue: make(RedisCmds, 0),
+		Fd:      fd,
+		cqueue:  make(RedisCmds, 0),
+		Session: NewSession(),
 	}
 }

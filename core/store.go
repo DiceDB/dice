@@ -1,6 +1,7 @@
 package core
 
 import (
+	"path"
 	"sync"
 	"time"
 	"unsafe"
@@ -18,13 +19,17 @@ type PutOptions struct {
 	KeepTTL bool
 }
 
-var store map[unsafe.Pointer]*Obj
-var expires map[*Obj]uint64 // Does not need to be thread-safe as it is only accessed by a single thread.
-var keypool map[string]unsafe.Pointer
-var WatchList sync.Map // Maps queries to the file descriptors of clients that are watching them.
+var (
+	store     map[unsafe.Pointer]*Obj
+	expires   map[*Obj]uint64 // Does not need to be thread-safe as it is only accessed by a single thread.
+	keypool   map[string]unsafe.Pointer
+	WatchList sync.Map // Maps queries to the file descriptors of clients that are watching them.
+)
 
-var storeMutex sync.RWMutex   // Mutex to protect the store map, must be acquired before keypoolMutex if both are needed.
-var keypoolMutex sync.RWMutex // Mutex to protect the keypool map, must be acquired after storeMutex if both are needed.
+var (
+	storeMutex   sync.RWMutex // Mutex to protect the store map, must be acquired before keypoolMutex if both are needed.
+	keypoolMutex sync.RWMutex // Mutex to protect the keypool map, must be acquired after storeMutex if both are needed.
+)
 
 // Channel to receive updates about keys that are being watched.
 // The Watcher goroutine will wait on this channel. When a key is updated, the
@@ -49,7 +54,7 @@ func NewObj(value interface{}, expDurationMs int64, oType uint8, oEnc uint8) *Ob
 		TypeEncoding:   oType | oEnc,
 		LastAccessedAt: getCurrentClock(),
 	}
-	if expDurationMs > 0 {
+	if expDurationMs >= 0 {
 		setExpiry(obj, expDurationMs)
 	}
 	return obj
@@ -160,6 +165,30 @@ func DelByPtr(ptr unsafe.Pointer) bool {
 		return true
 	}
 	return false
+}
+
+// List all keys in the store by given pattern
+func Keys(p string) ([]string, error) {
+	storeMutex.RLock()
+	defer storeMutex.RUnlock()
+	keypoolMutex.RLock()
+	defer keypoolMutex.RUnlock()
+
+	keyCap := 0
+	if p == "*" {
+		keyCap = len(keypool)
+	}
+
+	keys := make([]string, 0, keyCap)
+	for k := range keypool {
+		if found, err := path.Match(p, k); err != nil {
+			return nil, err
+		} else if found {
+			keys = append(keys, k)
+		}
+	}
+
+	return keys, nil
 }
 
 // Function to add a new watcher to a query.

@@ -11,11 +11,6 @@ import (
 
 var itr int
 
-type tupple struct {
-	key   string
-	value string
-}
-
 var keys = []struct {
 	count int
 }{
@@ -34,10 +29,10 @@ func populateData(count int) {
 		// otherwise the watchchannel buffer size will stay as it is with the global keylimits size
 		core.WatchChannel = make(chan core.WatchEvent, config.KeysLimit)
 
-		dataset := []tupple{}
+		dataset := []keyValue{}
 
 		for i := 0; i < count; i++ {
-			dataset = append(dataset, tupple{fmt.Sprintf("k%d", i), fmt.Sprintf("v%d", i)})
+			dataset = append(dataset, keyValue{fmt.Sprintf("k%d", i), fmt.Sprintf("v%d", i)})
 		}
 
 		// Delete all keys
