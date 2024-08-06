@@ -67,18 +67,6 @@ func TestJSONOperations(t *testing.T) {
 			expected: specialCharsJSON,
 		},
 		{
-			name:     "Set Invalid JSON",
-			setCmd:   `JSON.SET invalid $ {invalid:json}`,
-			getCmd:   ``,
-			expected: "ERR invalid JSON: invalid character 'i' looking for beginning of object key string",
-		},
-		{
-			name:     "Set JSON with Wrong Number of Arguments",
-			setCmd:   `JSON.SET`,
-			getCmd:   ``,
-			expected: "ERR wrong number of arguments for 'JSON.SET' command",
-		},
-		{
 			name:     "Get JSON with Wrong Number of Arguments",
 			setCmd:   ``,
 			getCmd:   `JSON.GET`,
@@ -171,6 +159,35 @@ func TestJSONOperations(t *testing.T) {
 					assert.Equal(t, tc.expected, result)
 				}
 			}
+		})
+	}
+}
+
+func TestJSONSetWithInvalidJSON(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	testCases := []struct {
+		name     string
+		command  string
+		expected string
+	}{
+		{
+			name:     "Set Invalid JSON",
+			command:  `JSON.SET invalid $ {invalid:json}`,
+			expected: "ERR invalid JSON: \"Syntax error at index 1: expect a json key\\n\\n\\t{invalid:json}\\n\\t.^............\\n\"",
+		},
+		{
+			name:     "Set JSON with Wrong Number of Arguments",
+			command:  `JSON.SET`,
+			expected: "ERR wrong number of arguments for 'JSON.SET' command",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := fireCommand(conn, tc.command)
+			assert.Equal(t, tc.expected, result)
 		})
 	}
 }
