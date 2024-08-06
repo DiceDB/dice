@@ -1526,6 +1526,42 @@ func evalCommandGetKeys(args []string) []byte {
 
 	return Encode(keys, false)
 }
+func evalRename(args []string) []byte {
+
+	if len(args) != 2 {
+		return Encode(errors.New("ERR wrong number of arguments for 'RENAME' command"), false)
+	}
+	sourceKey := args[0]
+	destKey := args[1]
+
+	//if Source and Destination Keys are same return RESP encoded ok
+	if sourceKey == destKey {
+		return RESP_OK
+	}
+
+	sourceObj := Get(sourceKey)
+
+	// if Source key does not exist, return RESP encoded nil
+	if sourceObj == nil {
+		return Encode("(error) ERR no such key", false)
+	}
+
+	destObj := Get(destKey)
+
+	//Delete the destination key if exists
+	if destObj != nil {
+		Del(destKey)
+	}
+
+	// Rename the key by putting the source key's value in the destination key
+	Put(destKey, sourceObj)
+
+	//Deleting the source Key
+	Del(sourceKey)
+
+	return RESP_OK
+
+}
 
 func executeCommand(cmd *RedisCmd, c *Client) []byte {
 	diceCmd, ok := diceCmds[cmd.Cmd]
