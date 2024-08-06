@@ -1,6 +1,6 @@
 module github.com/dicedb/dice
 
-go 1.17
+go 1.21
 
 require gotest.tools/v3 v3.5.1
 
