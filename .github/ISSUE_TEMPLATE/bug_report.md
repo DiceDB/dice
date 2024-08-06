@@ -13,7 +13,7 @@ assignees: ''
 **How to reproduce**
 
 > Provide the exact steps to be taken to reproduce the bug
-> If you are seeing it while programatically interfacing with DiceDB
+> If you are seeing it while programmatically interfacing with DiceDB
 > then, do provide the code snippet.
 > Do mention the OS and database version in which you observed the issue.
 > Remove this note when you submit raise the issue.

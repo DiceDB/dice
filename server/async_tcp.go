@@ -31,6 +31,20 @@ func init() {
 	connectedClients = make(map[int]*core.Client)
 }
 
+func setupUsers() {
+	var (
+		user *core.User
+		err  error
+	)
+	log.Info("setting up default user.", "password required", !(config.RequirePass == ""))
+	if user, err = core.UserStore.Add(core.DefaultUserName); err != nil {
+		log.Fatal(err)
+	}
+	if err = user.SetPassword(config.RequirePass); err != nil {
+		log.Fatal(err)
+	}
+}
+
 // Waits on `core.WatchChannel` to receive updates about keys. Sends the update
 // to all the clients that are watching the key.
 // The message sent to the client will contain the new value and the operation
@@ -123,6 +137,8 @@ func RunAsyncTCPServer(serverFD int, wg *sync.WaitGroup) {
 	defer syscall.Close(serverFD)
 
 	log.Info("starting an asynchronous TCP server on", config.Host, config.Port)
+
+	setupUsers()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

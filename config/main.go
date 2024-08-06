@@ -5,7 +5,7 @@ var (
 	Port int    = 7379
 )
 
-var KeysLimit int = 100
+var KeysLimit int = 10000 // default buffer size.
 
 // Will evict EvictionRatio of keys whenever eviction runs
 var (
@@ -18,4 +18,10 @@ var (
 var (
 	IOBufferLength    int = 512
 	IOBufferLengthMAX int = 50 * 1024
+)
+
+// Users and ACLs
+var (
+	// If requirepass is set to an empty string, no authentication is required
+	RequirePass string = ""
 )
