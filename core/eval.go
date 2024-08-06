@@ -189,13 +189,17 @@ func evalSET(args []string) []byte {
 			}
 		case "GET":
 			obj := Get(key)
+			tempObj := obj
 
 			if obj == nil {
 				return RESP_NIL
 			}
 
-			// Return the RESP encoded value 
-			return Encode(obj.Value, false)
+			// putting the key and the value in a hash table.
+			Put(key, NewObj(value, exDurationMs, oType, oEnc))
+
+			// Return the RESP encoded value
+			return Encode(tempObj.Value, false)
 		default:
 			return Encode(errors.New("ERR syntax error"), false)
 		}
