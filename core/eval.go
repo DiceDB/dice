@@ -307,11 +307,17 @@ func evalJSONSET(args []string) []byte {
 	for i := 3; i < len(args); i++ {
 		switch args[i] {
 		case "NX", "nx":
+			if i != len(args)-1 {
+				return Encode(errors.New("ERR syntax error"), false)
+			}
 			obj := Get(key)
 			if obj != nil {
 				return RESP_NIL
 			}
 		case "XX", "xx":
+			if i != len(args)-1 {
+				return Encode(errors.New("ERR syntax error"), false)
+			}
 			obj := Get(key)
 			if obj == nil {
 				return RESP_NIL
