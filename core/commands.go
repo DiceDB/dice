@@ -444,6 +444,12 @@ var (
 		Info: "KEYS command is used to get all the keys in the database. Complexity is O(n) where n is the number of keys in the database.",
 		Eval: evalKeys,
 	}
+	existsCmdMeta = DiceCmdMeta{
+		Name: "EXISTS",
+		Info: `EXISTS key1 key2 ... key_N
+		Return value is the number of keys existing.`,
+		Eval: evalEXISTS,
+	}
 )
 
 func init() {
@@ -497,4 +503,5 @@ func init() {
 	diceCmds["BITCOUNT"] = bitCountCmdMeta
 	diceCmds["BITOP"] = bitOpCmdMeta
 	diceCmds["KEYS"] = keysCmdMeta
+	diceCmds["EXISTS"] = existsCmdMeta
 }
