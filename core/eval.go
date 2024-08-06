@@ -182,9 +182,9 @@ func evalSET(args []string) []byte {
 				return RESP_NIL
 			}
 		case "NX", "nx":
-			obj := Get(key);
+			obj := Get(key)
 			if obj != nil {
-				return RESP_NIL;
+				return RESP_NIL
 			}
 		default:
 			return Encode(errors.New("ERR syntax error"), false)
@@ -1596,4 +1596,30 @@ func EvalAndRespond(cmds RedisCmds, c *Client) {
 	if _, err := c.Write(buf.Bytes()); err != nil {
 		log.Panic(err)
 	}
+}
+
+func evalPersist(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR wrong number of arguments for 'persist' command"), false)
+	}
+
+	key := args[0]
+
+	obj := Get(key)
+
+	// If the key does not exist, return RESP encoded 0 to denote the key does not exist
+	if obj == nil {
+		return RESP_ZERO
+	}
+
+	// If the object exists but no expiration is set on it, return -1
+	_, isExpirySet := getExpiry(obj)
+	if !isExpirySet {
+		return RESP_MINUS_1
+	}
+
+	// If the object exists, remove the expiration time
+	delExpiry(obj)
+
+	return RESP_ONE
 }
