@@ -186,6 +186,15 @@ func evalSET(args []string) []byte {
 			if obj != nil {
 				return RESP_NIL;
 			}
+		case "GET":
+			obj := Get(key)
+
+			if obj == nil {
+				return RESP_NIL
+			}
+
+			// Return the RESP encoded value 
+			return Encode(obj.Value, false)
 		default:
 			return Encode(errors.New("ERR syntax error"), false)
 		}
