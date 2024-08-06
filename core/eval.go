@@ -197,6 +197,29 @@ func evalSET(args []string) []byte {
 	return RESP_OK
 }
 
+// evalMSET puts multiple <key, value> pairs in db as in the args
+// args must contain key and value pairs.
+
+// Returns encoded error response if at least a <key, value> pair is not part of args
+// Returns encoded OK RESP once new entries are added
+// If the key already exists then the value will be overwritten and expiry will be discarded
+func evalMSET(args []string) []byte {
+	if len(args) <= 1 || len(args)%2 != 0 {
+		return Encode(errors.New("ERR wrong number of arguments for 'mset' command"), false)
+	}
+
+	// MSET does not have expiry support
+	var exDurationMs int64 = -1
+
+	for i := 0; i < len(args); i += 2 {
+		key, value := args[i], args[i+1]
+		oType, oEnc := deduceTypeEncoding(value)
+		Put(key, NewObj(value, exDurationMs, oType, oEnc))
+	}
+
+	return RESP_OK
+}
+
 // evalGET returns the value for the queried key in args
 // The key should be the only param in args
 // The RESP value of the key is encoded and then returned
