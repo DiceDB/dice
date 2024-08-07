@@ -126,7 +126,7 @@ func evalSET(args []string) []byte {
 	for i := 2; i < len(args); i++ {
 		arg := strings.ToUpper(args[i])
 		switch arg {
-		case "EX", "PX":
+		case "EX","PX":
 			if state != Uninitialized {
 				return Encode(errors.New("ERR syntax error"), false)
 			}
@@ -150,7 +150,7 @@ func evalSET(args []string) []byte {
 			exDurationMs = exDuration
 			state = Initialized
 
-		case "PXAT", "EXAT":
+		case "PXAT","EXAT":
 			if state != Uninitialized {
 				return Encode(errors.New("ERR syntax error"), false)
 			}
@@ -166,11 +166,10 @@ func evalSET(args []string) []byte {
 			if exDuration < 0 {
 				return Encode(errors.New("ERR invalid expire time in 'set' command"), false)
 			}
-
+			
 			if arg == "EXAT" {
 				exDuration = exDuration * 1000
 			}
-
 			exDurationMs = exDuration - time.Now().UnixMilli()
 			// If the expiry time is in the past, set exDurationMs to 0
 			// This will be used to signal immediate expiration
