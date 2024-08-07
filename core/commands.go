@@ -416,6 +416,12 @@ var (
 		Info: "BITOP performs bitwise operations between multiple keys",
 		Eval: evalBITOP,
 	}
+	bitPosCmdMeta = DiceCmdMeta{
+		Name: "BITPOS",
+		Info: "BITPOS finds the position of the first bit set or clear in a string",
+		Eval: evalBITPOS,
+	}
+
 	commandCmdMeta = DiceCmdMeta{
 		Name:  "COMMAND <subcommand>",
 		Info:  "Evaluates COMMAND <subcommand> command based on subcommand",
@@ -472,4 +478,5 @@ func init() {
 	diceCmds["GETBIT"] = getBitCmdMeta
 	diceCmds["BITCOUNT"] = bitCountCmdMeta
 	diceCmds["BITOP"] = bitOpCmdMeta
+	diceCmds["BITPOS"] = bitPosCmdMeta
 }
