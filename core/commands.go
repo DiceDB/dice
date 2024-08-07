@@ -53,6 +53,17 @@ var (
 		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	msetCmdMeta = DiceCmdMeta{
+		Name: "MSET",
+		Info: `MSET sets multiple keys to multiple values in the db
+		args should contain an even number of elements
+		each pair of elements will be treated as <key, value> pair
+		Returns encoded error response if the number of arguments is not even
+		Returns encoded OK RESP once all entries are added`,
+		Eval:     evalMSET,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 2},
+	}
 	jsonsetCmdMeta = DiceCmdMeta{
 		Name: "JSON.SET",
 		Info: `JSON.SET key path json-string
@@ -440,6 +451,7 @@ func init() {
 	diceCmds["AUTH"] = authCmdMeta
 	diceCmds["SET"] = setCmdMeta
 	diceCmds["GET"] = getCmdMeta
+	diceCmds["MSET"] = msetCmdMeta
 	diceCmds["JSON.SET"] = jsonsetCmdMeta
 	diceCmds["JSON.GET"] = jsongetCmdMeta
 	diceCmds["TTL"] = ttlCmdMeta
