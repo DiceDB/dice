@@ -258,11 +258,6 @@ func GetNoTouch(k string) *Obj {
 	v := store[ptr]
 	if v != nil {
 		if hasExpired(v) {
-			keypoolMutex.RUnlock()
-			storeMutex.RUnlock()
-			Del(k)
-			storeMutex.RLock()
-			keypoolMutex.RLock()
 			return nil
 		}
 	}
