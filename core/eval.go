@@ -1506,7 +1506,6 @@ func evalCommandGetKeys(args []string) []byte {
 		(arity >= 0 && len(args) != arity) {
 		return Encode(errors.New("ERR invalid number of arguments specified for command"), false)
 	}
-
 	keys := make([]string, 0)
 	step := max(keySpecs.Step, 1)
 	lastIdx := keySpecs.BeginIndex
@@ -1516,8 +1515,26 @@ func evalCommandGetKeys(args []string) []byte {
 	for i := keySpecs.BeginIndex; i <= lastIdx; i += step {
 		keys = append(keys, args[i])
 	}
-
 	return Encode(keys, false)
+}
+
+// evalMGET returns list of values for provided keys in args
+// return RESP_NIL if key expires or not exists
+// return Encoded values for provided keys
+func evalMGET(args []string) []byte {
+	if len(args) < 1 {
+		return Encode(errors.New("ERR wrong number of arguments for command"), false)
+	}
+	response := make([]interface{}, 0);
+	for _, key := range args {
+		obj := Get(key)
+		if obj == nil {
+			response = append(response, RESP_NIL)
+		} else {
+			response = append(response, obj.Value)
+		}
+	}
+	return Encode(response, false)
 }
 
 func executeCommand(cmd *RedisCmd, c *Client) []byte {

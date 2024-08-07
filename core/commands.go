@@ -433,6 +433,15 @@ var (
 		Info: "KEYS command is used to get all the keys in the database. Complexity is O(n) where n is the number of keys in the database.",
 		Eval: evalKeys,
 	}
+	MGetCmdMeta = DiceCmdMeta{
+		Name: "MGET",
+		Info: `MGET returns the values for the queried keys in args
+		The RESP value of the key is encoded and then returned
+		MGET returns RESP_NIL if key is expired or it does not exist`,
+		Eval: evalMGET,
+		Arity: -2,
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1, LastKey: -1},
+	}
 )
 
 func init() {
@@ -485,4 +494,5 @@ func init() {
 	diceCmds["BITCOUNT"] = bitCountCmdMeta
 	diceCmds["BITOP"] = bitOpCmdMeta
 	diceCmds["KEYS"] = keysCmdMeta
+	diceCmds["MGET"] = MGetCmdMeta
 }
