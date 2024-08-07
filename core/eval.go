@@ -126,7 +126,7 @@ func evalSET(args []string) []byte {
 	for i := 2; i < len(args); i++ {
 		arg := strings.ToUpper(args[i])
 		switch arg {
-		case "EX","PX":
+		case "EX", "PX":
 			if state != Uninitialized {
 				return Encode(errors.New("ERR syntax error"), false)
 			}
@@ -150,7 +150,7 @@ func evalSET(args []string) []byte {
 			exDurationMs = exDuration
 			state = Initialized
 
-		case "PXAT","EXAT":
+		case "PXAT", "EXAT":
 			if state != Uninitialized {
 				return Encode(errors.New("ERR syntax error"), false)
 			}
@@ -166,7 +166,7 @@ func evalSET(args []string) []byte {
 			if exDuration < 0 {
 				return Encode(errors.New("ERR invalid expire time in 'set' command"), false)
 			}
-			
+
 			if arg == "EXAT" {
 				exDuration = exDuration * 1000
 			}
@@ -203,6 +203,7 @@ func evalSET(args []string) []byte {
 }
 
 // evalMSET puts multiple <key, value> pairs in db as in the args
+// MSET is atomic, so all given keys are set at once.
 // args must contain key and value pairs.
 
 // Returns encoded error response if at least a <key, value> pair is not part of args
@@ -216,12 +217,14 @@ func evalMSET(args []string) []byte {
 	// MSET does not have expiry support
 	var exDurationMs int64 = -1
 
+	insertMap := make(map[string]*Obj)
 	for i := 0; i < len(args); i += 2 {
 		key, value := args[i], args[i+1]
 		oType, oEnc := deduceTypeEncoding(value)
-		Put(key, NewObj(value, exDurationMs, oType, oEnc))
+		insertMap[key] = NewObj(value, exDurationMs, oType, oEnc)
 	}
 
+	PutAll(insertMap)
 	return RESP_OK
 }
 
