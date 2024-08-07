@@ -102,6 +102,36 @@ func Put(k string, obj *Obj, options *PutOptions) {
 	WatchChannel <- WatchEvent{k, "SET", obj}
 }
 
+// PutAll is a bulk insert function that takes a map of
+// keys and values and inserts them into the store
+func PutAll(data map[string]*Obj) {
+	storeMutex.Lock()
+	defer storeMutex.Unlock()
+	keypoolMutex.Lock()
+	defer keypoolMutex.Unlock()
+
+	for k, obj := range data {
+		if len(store) >= config.KeysLimit {
+			evict()
+		}
+		obj.LastAccessedAt = getCurrentClock()
+
+		ptr, ok := keypool[k]
+		if !ok {
+			keypool[k] = unsafe.Pointer(&k)
+			ptr = unsafe.Pointer(&k)
+		}
+
+		store[ptr] = obj
+		if KeyspaceStat[0] == nil {
+			KeyspaceStat[0] = make(map[string]int)
+		}
+		KeyspaceStat[0]["keys"]++
+
+		WatchChannel <- WatchEvent{k, "SET", obj}
+	}
+}
+
 func Get(k string) *Obj {
 	storeMutex.RLock()
 	defer storeMutex.RUnlock()

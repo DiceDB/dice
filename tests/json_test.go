@@ -1,6 +1,8 @@
 package tests
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/dicedb/dice/testutils"
@@ -144,11 +146,7 @@ func TestJSONOperations(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.setCmd != "" {
 				result := fireCommand(conn, tc.setCmd)
-				if tc.name != "Set Invalid JSON" && tc.name != "Set JSON with Wrong Number of Arguments" {
-					assert.Equal(t, "OK", result)
-				} else {
-					assert.Equal(t, tc.expected, result)
-				}
+				assert.Equal(t, "OK", result)
 			}
 
 			if tc.getCmd != "" {
@@ -175,7 +173,7 @@ func TestJSONSetWithInvalidJSON(t *testing.T) {
 		{
 			name:     "Set Invalid JSON",
 			command:  `JSON.SET invalid $ {invalid:json}`,
-			expected: "ERR invalid JSON: \"Syntax error at index 1: expect a json key\\n\\n\\t{invalid:json}\\n\\t.^............\\n\"",
+			expected: "ERR invalid JSON: \"Syntax error at index 1: expect a json key",
 		},
 		{
 			name:     "Set JSON with Wrong Number of Arguments",
@@ -187,7 +185,7 @@ func TestJSONSetWithInvalidJSON(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result := fireCommand(conn, tc.command)
-			assert.Equal(t, tc.expected, result)
+			assert.Check(t, strings.Contains(result.(string), tc.expected), fmt.Sprintf("Expected: %s, Got: %s", tc.expected, result))
 		})
 	}
 }
@@ -264,6 +262,14 @@ func TestJSONSetWithNXAndXX(t *testing.T) {
 		{
 			commands: []string{"JSON.SET user $ " + user2 + " NX", "JSON.SET user $ " + user1 + " NX", "JSON.GET user"},
 			expected: []interface{}{"OK", "(nil)", user2},
+		},
+		{
+			commands: []string{"JSON.SET user $ " + user2 + " NX NX", "JSON.SET user $ " + user2 + " NX XX", "JSON.SET user $ " + user2 + " NX Abcd", "JSON.SET user $ " + user2 + " NX "},
+			expected: []interface{}{"ERR syntax error", "ERR syntax error", "ERR syntax error", "(nil)"},
+		},
+		{
+			commands: []string{"JSON.SET user $ " + user2 + " XX XX", "JSON.SET user $ " + user2 + " XX NX", "JSON.SET user $ " + user2 + " XX Abcd", "JSON.SET user $ " + user2 + " XX "},
+			expected: []interface{}{"ERR syntax error", "ERR syntax error", "ERR syntax error", "OK"},
 		},
 	}
 

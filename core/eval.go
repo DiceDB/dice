@@ -125,8 +125,9 @@ func evalSET(args []string) []byte {
 	oType, oEnc := deduceTypeEncoding(value)
 
 	for i := 2; i < len(args); i++ {
-		switch args[i] {
-		case "EX", "ex", "PX", "px":
+		arg := strings.ToUpper(args[i])
+		switch arg {
+		case "EX", "PX":
 			if state != Uninitialized {
 				return Encode(errors.New("ERR syntax error"), false)
 			}
@@ -145,15 +146,14 @@ func evalSET(args []string) []byte {
 			}
 
 			// converting seconds to milliseconds
-			if args[i-1] == "EX" || args[i-1] == "ex" {
+			if arg == "EX" {
 				exDuration = exDuration * 1000
 			}
 			exDurationMs = exDuration
 			state = Initialized
 		case "KEEPTTL", "keepttl":
 			keepttl = true
-
-		case "PXAT", "pxat":
+		case "PXAT", "EXAT":
 			if state != Uninitialized {
 				return Encode(errors.New("ERR syntax error"), false)
 			}
@@ -161,23 +161,26 @@ func evalSET(args []string) []byte {
 			if i == len(args) {
 				return Encode(errors.New("ERR syntax error"), false)
 			}
-			exDurationUnixMs, err := strconv.ParseInt(args[i], 10, 64)
+			exDuration, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
 				return Encode(errors.New("ERR value is not an integer or out of range"), false)
 			}
 
-			if exDurationUnixMs < 0 {
+			if exDuration < 0 {
 				return Encode(errors.New("ERR invalid expire time in 'set' command"), false)
 			}
 
-			exDurationMs = exDurationUnixMs - time.Now().UnixMilli()
+			if arg == "EXAT" {
+				exDuration = exDuration * 1000
+			}
+			exDurationMs = exDuration - time.Now().UnixMilli()
 			// If the expiry time is in the past, set exDurationMs to 0
 			// This will be used to signal immediate expiration
 			if exDurationMs < 0 {
 				exDurationMs = 0
 			}
 			state = Initialized
-		case "XX", "xx":
+		case "XX":
 			// Get the key from the hash table
 			obj := Get(key)
 
@@ -185,7 +188,7 @@ func evalSET(args []string) []byte {
 			if obj == nil {
 				return RESP_NIL
 			}
-		case "NX", "nx":
+		case "NX":
 			obj := Get(key)
 			if obj != nil {
 				return RESP_NIL
@@ -199,6 +202,32 @@ func evalSET(args []string) []byte {
 	Put(key, NewObj(value, exDurationMs, oType, oEnc), &PutOptions{
 		KeepTTL: keepttl,
 	})
+	return RESP_OK
+}
+
+// evalMSET puts multiple <key, value> pairs in db as in the args
+// MSET is atomic, so all given keys are set at once.
+// args must contain key and value pairs.
+
+// Returns encoded error response if at least a <key, value> pair is not part of args
+// Returns encoded OK RESP once new entries are added
+// If the key already exists then the value will be overwritten and expiry will be discarded
+func evalMSET(args []string) []byte {
+	if len(args) <= 1 || len(args)%2 != 0 {
+		return Encode(errors.New("ERR wrong number of arguments for 'mset' command"), false)
+	}
+
+	// MSET does not have expiry support
+	var exDurationMs int64 = -1
+
+	insertMap := make(map[string]*Obj)
+	for i := 0; i < len(args); i += 2 {
+		key, value := args[i], args[i+1]
+		oType, oEnc := deduceTypeEncoding(value)
+		insertMap[key] = NewObj(value, exDurationMs, oType, oEnc)
+	}
+
+	PutAll(insertMap)
 	return RESP_OK
 }
 
@@ -312,11 +341,17 @@ func evalJSONSET(args []string) []byte {
 	for i := 3; i < len(args); i++ {
 		switch args[i] {
 		case "NX", "nx":
+			if i != len(args)-1 {
+				return Encode(errors.New("ERR syntax error"), false)
+			}
 			obj := Get(key)
 			if obj != nil {
 				return RESP_NIL
 			}
 		case "XX", "xx":
+			if i != len(args)-1 {
+				return Encode(errors.New("ERR syntax error"), false)
+			}
 			obj := Get(key)
 			if obj == nil {
 				return RESP_NIL
@@ -1110,7 +1145,13 @@ func evalQWATCH(args []string, c *Client) []byte {
 
 	AddWatcher(query, c.Fd)
 
-	return RESP_OK
+	// Return the result of the query.
+	result, err := ExecuteQuery(query)
+	if err != nil {
+		return Encode(err, false)
+	}
+
+	return Encode(result, false)
 }
 
 // SETBIT key offset value
