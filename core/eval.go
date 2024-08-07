@@ -2,7 +2,6 @@ package core
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -10,6 +9,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/bytedance/sonic"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core/bit"
@@ -123,8 +124,9 @@ func evalSET(args []string) []byte {
 	oType, oEnc := deduceTypeEncoding(value)
 
 	for i := 2; i < len(args); i++ {
-		switch args[i] {
-		case "EX", "ex", "PX", "px":
+		arg := strings.ToUpper(args[i])
+		switch arg {
+		case "EX","PX":
 			if state != Uninitialized {
 				return Encode(errors.New("ERR syntax error"), false)
 			}
@@ -142,13 +144,13 @@ func evalSET(args []string) []byte {
 			}
 
 			// converting seconds to milliseconds
-			if args[i-1] == "EX" || args[i-1] == "ex" {
+			if arg == "EX" {
 				exDuration = exDuration * 1000
 			}
 			exDurationMs = exDuration
 			state = Initialized
 
-		case "PXAT", "pxat":
+		case "PXAT","EXAT":
 			if state != Uninitialized {
 				return Encode(errors.New("ERR syntax error"), false)
 			}
@@ -156,16 +158,20 @@ func evalSET(args []string) []byte {
 			if i == len(args) {
 				return Encode(errors.New("ERR syntax error"), false)
 			}
-			exDurationUnixMs, err := strconv.ParseInt(args[i], 10, 64)
+			exDuration, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
 				return Encode(errors.New("ERR value is not an integer or out of range"), false)
 			}
 
-			if exDurationUnixMs < 0 {
+			if exDuration < 0 {
 				return Encode(errors.New("ERR invalid expire time in 'set' command"), false)
 			}
+			
+			if arg == "EXAT" {
+				exDuration = exDuration * 1000
+			}
 
-			exDurationMs = exDurationUnixMs - time.Now().UnixMilli()
+			exDurationMs = exDuration - time.Now().UnixMilli()
 			// If the expiry time is in the past, set exDurationMs to 0
 			// This will be used to signal immediate expiration
 			if exDurationMs < 0 {
@@ -173,7 +179,7 @@ func evalSET(args []string) []byte {
 			}
 			state = Initialized
 
-		case "XX", "xx":
+		case "XX":
 			// Get the key from the hash table
 			obj := Get(key)
 
@@ -181,7 +187,11 @@ func evalSET(args []string) []byte {
 			if obj == nil {
 				return RESP_NIL
 			}
+<<<<<<< HEAD
 		case "NX", "nx":
+=======
+		case "NX":
+>>>>>>> origin/master
 			obj := Get(key)
 			if obj != nil {
 				return RESP_NIL
@@ -256,7 +266,7 @@ func evalJSONGET(args []string) []byte {
 
 	// If path is root, return the entire JSON
 	if path == defaultRootPath {
-		resultBytes, err := json.Marshal(jsonData)
+		resultBytes, err := sonic.Marshal(jsonData)
 		if err != nil {
 			return Encode(errors.New("ERR could not serialize result"), false)
 		}
@@ -278,9 +288,9 @@ func evalJSONGET(args []string) []byte {
 	// Serialize the result
 	var resultBytes []byte
 	if len(results) == 1 {
-		resultBytes, err = json.Marshal(results[0])
+		resultBytes, err = sonic.Marshal(results[0])
 	} else {
-		resultBytes, err = json.Marshal(results)
+		resultBytes, err = sonic.Marshal(results)
 	}
 	if err != nil {
 		return Encode(errors.New("ERR could not serialize result"), false)
@@ -323,8 +333,8 @@ func evalJSONSET(args []string) []byte {
 
 	// Parse the JSON string
 	var jsonValue interface{}
-	if err := json.Unmarshal([]byte(jsonStr), &jsonValue); err != nil {
-		return Encode(fmt.Errorf("ERR invalid JSON: %v", err), false)
+	if err := sonic.Unmarshal([]byte(jsonStr), &jsonValue); err != nil {
+		return Encode(fmt.Errorf("ERR invalid JSON: %v", err.Error()), false)
 	}
 
 	// Retrieve existing object or create new one
@@ -1104,7 +1114,13 @@ func evalQWATCH(args []string, c *Client) []byte {
 
 	AddWatcher(query, c.Fd)
 
-	return RESP_OK
+	// Return the result of the query.
+	result, err := ExecuteQuery(query)
+	if err != nil {
+		return Encode(err, false)
+	}
+
+	return Encode(result, false)
 }
 
 // SETBIT key offset value
