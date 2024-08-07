@@ -127,3 +127,38 @@ func TestSetWithOptions(t *testing.T) {
 		})
 	}
 }
+
+func TestSetWithExat(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+	Etime := strconv.FormatInt(time.Now().Unix()+10, 10)
+	BadTime := "123123"
+
+	t.Run("SET with EXAT",
+		func(t *testing.T) {
+			deleteTestKeys([]string{"k"})
+			assert.Equal(t, "OK", fireCommand(conn, "SET k v EXAT "+Etime), "Value mismatch for cmd SET k v EXAT "+Etime)
+			assert.Equal(t, "v", fireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
+			assert.Assert(t, fireCommand(conn, "TTL k").(int64) <= 10, "Value mismatch for cmd TTL k")
+			time.Sleep(5 * time.Second)
+			assert.Assert(t, fireCommand(conn, "TTL k").(int64) <= 5, "Value mismatch for cmd TTL k")
+			time.Sleep(5 * time.Second)
+			assert.Equal(t, "(nil)", fireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
+			assert.Equal(t, int64(-2), fireCommand(conn, "TTL k"), "Value mismatch for cmd TTL k")
+		})
+
+	t.Run("SET with invalid EXAT expires key immediately",
+		func(t *testing.T) {
+			deleteTestKeys([]string{"k"})
+			assert.Equal(t, "OK", fireCommand(conn, "SET k v EXAT "+BadTime), "Value mismatch for cmd SET k v EXAT "+BadTime)
+			assert.Equal(t, "(nil)", fireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
+			assert.Equal(t, int64(-2), fireCommand(conn, "TTL k"), "Value mismatch for cmd TTL k")
+		})
+
+	t.Run("SET with EXAT and PXAT returns syntax error",
+		func(t *testing.T) {
+			deleteTestKeys([]string{"k"})
+			assert.Equal(t, "ERR syntax error", fireCommand(conn, "SET k v PXAT "+Etime+" EXAT "+Etime), "Value mismatch for cmd SET k v PXAT "+Etime+" EXAT "+Etime)
+			assert.Equal(t, "(nil)", fireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
+		})
+}
