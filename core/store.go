@@ -185,6 +185,9 @@ func DelByPtr(ptr unsafe.Pointer) bool {
 		delete(expires, obj)
 		delete(keypool, *((*string)(ptr)))
 		KeyspaceStat[0]["keys"]--
+
+		key := *((*string)(ptr))
+		WatchChannel <- WatchEvent{key, "DEL", obj}
 		return true
 	}
 	return false
