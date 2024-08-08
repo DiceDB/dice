@@ -11,10 +11,26 @@ var renameKeysTestCases = []struct {
 	inCmd    []string
 	expected []interface{}
 }{
-	{"Set key and Rename key", []string{"set sourceKey hello", "get sourceKey", "rename sourceKey destKey", "get destKey", "get sourceKey"}, []interface{}{"OK", "hello", "OK", "hello", "(nil)"}},
-	{"same key for source and destination on Rename", []string{"set Key hello", "get Key", "rename Key Key", "get Key"}, []interface{}{"OK", "hello", "OK", "hello"}},
-	{"If source key doesn't exists", []string{"rename unknownKey Key"}, []interface{}{"(error) ERR no such key"}},
-	{"If destination Key already presents", []string{"set destinationKey world", "set newKey hello", "rename newKey destinationKey", "get newKey", "get destinationKey"}, []interface{}{"OK", "OK", "OK", "(nil)", "hello"}},
+	{
+		name:     "Set key and Rename key",
+		inCmd:    []string{"set sourceKey hello", "get sourceKey", "rename sourceKey destKey", "get destKey", "get sourceKey"},
+		expected: []interface{}{"OK", "hello", "OK", "hello", "(nil)"},
+	},
+	{
+		name:     "same key for source and destination on Rename",
+		inCmd:    []string{"set Key hello", "get Key", "rename Key Key", "get Key"},
+		expected: []interface{}{"OK", "hello", "OK", "hello"},
+	},
+	{
+		name:     "If source key doesn't exists",
+		inCmd:    []string{"rename unknownKey Key"},
+		expected: []interface{}{"ERR no such key"},
+	},
+	{
+		name:     "If destination Key already presents",
+		inCmd:    []string{"set destinationKey world", "set newKey hello", "rename newKey destinationKey", "get newKey", "get destinationKey"},
+		expected: []interface{}{"OK", "OK", "OK", "(nil)", "hello"},
+	},
 }
 
 func TestCommandRename(t *testing.T) {
