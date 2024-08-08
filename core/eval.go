@@ -1504,7 +1504,7 @@ func evalBITPOS(args []string) []byte {
 	// defining constants of the function
 	var start int64
 	var end int64
-	var unit = bit.BYTE
+	var unit string
 	var bitToFind byte
 
 	if args[1] == "1" {
@@ -1521,11 +1521,11 @@ func evalBITPOS(args []string) []byte {
 	unit = strings.ToUpper(args[4])
 
 	// input validations
-	if unit != bit.BYTE && unit != bit.BIT {
-		return Encode(errors.New("ERR syntax error"), false)
-	}
 	if startConversionError != nil || endConversionError != nil {
 		return Encode(errors.New("ERR value is not an integer or out of range"), false)
+	}
+	if unit != bit.BYTE && unit != bit.BIT {
+		return Encode(errors.New("ERR syntax error"), false)
 	}
 
 	// Adjust start index if it is negative
