@@ -126,7 +126,7 @@ func evalSET(args []string) []byte {
 	for i := 2; i < len(args); i++ {
 		arg := strings.ToUpper(args[i])
 		switch arg {
-		case "EX","PX":
+		case "EX", "PX":
 			if state != Uninitialized {
 				return Encode(errors.New("ERR syntax error"), false)
 			}
@@ -150,7 +150,7 @@ func evalSET(args []string) []byte {
 			exDurationMs = exDuration
 			state = Initialized
 
-		case "PXAT","EXAT":
+		case "PXAT", "EXAT":
 			if state != Uninitialized {
 				return Encode(errors.New("ERR syntax error"), false)
 			}
@@ -166,7 +166,7 @@ func evalSET(args []string) []byte {
 			if exDuration < 0 {
 				return Encode(errors.New("ERR invalid expire time in 'set' command"), false)
 			}
-			
+
 			if arg == "EXAT" {
 				exDuration = exDuration * 1000
 			}
@@ -1561,6 +1561,44 @@ func evalCommandGetKeys(args []string) []byte {
 	}
 
 	return Encode(keys, false)
+}
+func evalRename(args []string) []byte {
+
+	if len(args) != 2 {
+		return Encode(errors.New("ERR wrong number of arguments for 'RENAME' command"), false)
+	}
+	sourceKey := args[0]
+	destKey := args[1]
+
+	//if Source and Destination Keys are same return RESP encoded ok
+	if sourceKey == destKey {
+		return RESP_OK
+	}
+
+	sourceObj := Get(sourceKey)
+
+	// if Source key does not exist, return RESP encoded nil
+	if sourceObj == nil {
+		return Encode("ERR no such key", false)
+	}
+
+	destObj := Get(destKey)
+
+	//TODO : below operations should be done via atomic operation
+
+	//Delete the destination key if exists
+	if destObj != nil {
+		Del(destKey)
+	}
+
+	// Rename the key by putting the source key's value in the destination key
+	Put(destKey, sourceObj)
+
+	//Deleting the source Key
+	Del(sourceKey)
+
+	return RESP_OK
+
 }
 
 func executeCommand(cmd *RedisCmd, c *Client) []byte {

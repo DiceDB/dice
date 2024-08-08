@@ -444,6 +444,13 @@ var (
 		Info: "KEYS command is used to get all the keys in the database. Complexity is O(n) where n is the number of keys in the database.",
 		Eval: evalKeys,
 	}
+	renameCmdMeta = DiceCmdMeta{
+		Name:     "RENAME",
+		Info:     "Renames a key and overwrites the destination",
+		Eval:     evalRename,
+		Arity:    3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -497,4 +504,5 @@ func init() {
 	diceCmds["BITCOUNT"] = bitCountCmdMeta
 	diceCmds["BITOP"] = bitOpCmdMeta
 	diceCmds["KEYS"] = keysCmdMeta
+	diceCmds["RENAME"] = renameCmdMeta
 }
