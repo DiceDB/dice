@@ -82,7 +82,7 @@ func TestQWATCH(t *testing.T) {
 
 		v, err := rp.DecodeOne()
 		assert.NilError(t, err)
-		assert.Equal(t, "OK", v.(string))
+		assert.Equal(t, 0, len(v.([]interface{})))
 	}
 
 	runQWatchScenarios(t, publisher, respParsers)

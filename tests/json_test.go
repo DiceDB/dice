@@ -1,6 +1,8 @@
 package tests
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/dicedb/dice/testutils"
@@ -65,18 +67,6 @@ func TestJSONOperations(t *testing.T) {
 			setCmd:   `JSON.SET special $ ` + specialCharsJSON,
 			getCmd:   `JSON.GET special`,
 			expected: specialCharsJSON,
-		},
-		{
-			name:     "Set Invalid JSON",
-			setCmd:   `JSON.SET invalid $ {invalid:json}`,
-			getCmd:   ``,
-			expected: "ERR invalid JSON: invalid character 'i' looking for beginning of object key string",
-		},
-		{
-			name:     "Set JSON with Wrong Number of Arguments",
-			setCmd:   `JSON.SET`,
-			getCmd:   ``,
-			expected: "ERR wrong number of arguments for 'JSON.SET' command",
 		},
 		{
 			name:     "Get JSON with Wrong Number of Arguments",
@@ -156,11 +146,7 @@ func TestJSONOperations(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.setCmd != "" {
 				result := fireCommand(conn, tc.setCmd)
-				if tc.name != "Set Invalid JSON" && tc.name != "Set JSON with Wrong Number of Arguments" {
-					assert.Equal(t, "OK", result)
-				} else {
-					assert.Equal(t, tc.expected, result)
-				}
+				assert.Equal(t, "OK", result)
 			}
 
 			if tc.getCmd != "" {
@@ -171,6 +157,35 @@ func TestJSONOperations(t *testing.T) {
 					assert.Equal(t, tc.expected, result)
 				}
 			}
+		})
+	}
+}
+
+func TestJSONSetWithInvalidJSON(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	testCases := []struct {
+		name     string
+		command  string
+		expected string
+	}{
+		{
+			name:     "Set Invalid JSON",
+			command:  `JSON.SET invalid $ {invalid:json}`,
+			expected: "ERR invalid JSON: \"Syntax error at index 1: expect a json key",
+		},
+		{
+			name:     "Set JSON with Wrong Number of Arguments",
+			command:  `JSON.SET`,
+			expected: "ERR wrong number of arguments for 'JSON.SET' command",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := fireCommand(conn, tc.command)
+			assert.Check(t, strings.Contains(result.(string), tc.expected), fmt.Sprintf("Expected: %s, Got: %s", tc.expected, result))
 		})
 	}
 }
@@ -247,6 +262,14 @@ func TestJSONSetWithNXAndXX(t *testing.T) {
 		{
 			commands: []string{"JSON.SET user $ " + user2 + " NX", "JSON.SET user $ " + user1 + " NX", "JSON.GET user"},
 			expected: []interface{}{"OK", "(nil)", user2},
+		},
+		{
+			commands: []string{"JSON.SET user $ " + user2 + " NX NX", "JSON.SET user $ " + user2 + " NX XX", "JSON.SET user $ " + user2 + " NX Abcd", "JSON.SET user $ " + user2 + " NX "},
+			expected: []interface{}{"ERR syntax error", "ERR syntax error", "ERR syntax error", "(nil)"},
+		},
+		{
+			commands: []string{"JSON.SET user $ " + user2 + " XX XX", "JSON.SET user $ " + user2 + " XX NX", "JSON.SET user $ " + user2 + " XX Abcd", "JSON.SET user $ " + user2 + " XX "},
+			expected: []interface{}{"ERR syntax error", "ERR syntax error", "ERR syntax error", "OK"},
 		},
 	}
 
