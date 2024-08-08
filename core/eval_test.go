@@ -44,6 +44,7 @@ func TestEval(t *testing.T) {
 		"JSONSET": testEvalJSONSET,
 		"TTL":     testEvalTTL,
 		"DEL":     testEvalDel,
+		"PERSIST": TestEvalPersist,
 	}
 
 	for name, testFunc := range testCases {
@@ -387,6 +388,45 @@ func testEvalDel(t *testing.T) {
 	runTests(t, tests, evalDEL)
 }
 
+// TestEvalPersist tests the evalPersist function using table-driven tests.
+func TestEvalPersist(t *testing.T) {
+	// Define test cases
+	tests := map[string]testCase{
+		"wrong number of arguments": {
+			input:  []string{"key1", "key2"},
+			output: Encode(errors.New("ERR wrong number of arguments for 'persist' command"), false),
+		},
+		"key does not exist": {
+			input:  []string{"nonexistent"},
+			output: RESP_ZERO,
+		},
+		"key exists but no expiration set": {
+			input: []string{"existent_no_expiry"},
+			setup: func() {
+				evalSET([]string{"existent_no_expiry", "value"})
+			},
+			output: RESP_MINUS_1,
+		},
+		"key exists and expiration removed": {
+			input: []string{"existent_with_expiry"},
+			setup: func() {
+				evalSET([]string{"existent_with_expiry", "value", "EX", "1"})
+			},
+			output: RESP_ONE,
+		},
+		"key exists with expiration set and not expired": {
+			input: []string{"existent_with_expiry_not_expired"},
+			setup: func() {
+				// Simulate setting a key with an expiration time that has not yet passed
+				evalSET([]string{"existent_with_expiry_not_expired", "value", "EX", "10000"}) // 10000 seconds in the future
+			},
+			output: RESP_ONE,
+		},
+	}
+
+	runTests(t, tests, evalPersist)
+}
+
 func runTests(t *testing.T, tests map[string]testCase, evalFunc func([]string) []byte) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -410,70 +450,5 @@ func runTests(t *testing.T, tests map[string]testCase, evalFunc func([]string) [
 func BenchmarkEvalMSET(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"})
-	}
-}
-
-// TestEvalPersist tests the evalPersist function using table-driven tests.
-func TestEvalPersist(t *testing.T) {
-	// Define test cases
-	tests := []struct {
-		name     string
-		args     []string
-		setup    func()
-		expected []byte
-	}{
-		{
-			name:     "wrong number of arguments",
-			args:     []string{"key1", "key2"},
-			expected: Encode(errors.New("ERR wrong number of arguments for 'persist' command"), false),
-		},
-		{
-			name:     "key does not exist",
-			args:     []string{"nonexistent"},
-			expected: RESP_ZERO,
-		},
-		{
-			name: "key exists but no expiration set",
-			args: []string{"existent_no_expiry"},
-			setup: func() {
-				evalSET([]string{"existent_no_expiry", "value"})
-			},
-			expected: RESP_MINUS_1,
-		},
-		{
-			name: "key exists and expiration removed",
-			args: []string{"existent_with_expiry"},
-			setup: func() {
-				evalSET([]string{"existent_with_expiry", "value", "EX", "1"})
-			},
-			expected: RESP_ONE,
-		},
-		{
-			name: "key exists with expiration set and not expired",
-			args: []string{"existent_with_expiry_not_expired"},
-			setup: func() {
-				// Simulate setting a key with an expiration time that has not yet passed
-				evalSET([]string{"existent_with_expiry_not_expired", "value", "EX", "10000"}) // 10000 seconds in the future
-			},
-			expected: RESP_ONE,
-		},
-	}
-
-	// Run test cases
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			// Setup test case
-			if tc.setup != nil {
-				tc.setup()
-			}
-
-			// Call function under test
-			got := evalPersist(tc.args)
-
-			// Assert expected result
-			if string(got) != string(tc.expected) {
-				t.Errorf("evalPersist(%v) = %v, want %v", tc.args, string(got), string(tc.expected))
-			}
-		})
 	}
 }
