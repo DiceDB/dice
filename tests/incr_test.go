@@ -39,6 +39,7 @@ func TestINCR(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			deleteTestKeys([]string{"key1", "key2"})
 			for _, cmd := range tc.commands {
 				switch cmd.op {
 				case "s":
