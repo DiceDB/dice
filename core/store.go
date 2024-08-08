@@ -38,6 +38,10 @@ var (
 var WatchChannel chan WatchEvent
 
 func init() {
+	ResetStore()
+}
+
+func ResetStore() {
 	store = make(map[unsafe.Pointer]*Obj)
 	expires = make(map[*Obj]uint64)
 	keypool = make(map[string]unsafe.Pointer)
@@ -118,8 +122,17 @@ func PutAll(data map[string]*Obj) {
 
 		ptr, ok := keypool[k]
 		if !ok {
-			keypool[k] = unsafe.Pointer(&k)
-			ptr = unsafe.Pointer(&k)
+			// we need to create a new string for each key, ensuring that each key in
+			// the keypool map has its own unique memory address. Reusing the same
+			// memory address (&k) for multiple keys will cause the keypool map to
+			// have incorrect entries, because the address of k remains the same
+			// throughout the loop iterations, but its value changes.
+			// As a result, all entries in the keypool map end up pointing to the same
+			// memory location, which contains the last value of k after the loop
+			// finishes.
+			keyCopy := string([]byte(k))
+			keypool[k] = unsafe.Pointer(&keyCopy)
+			ptr = unsafe.Pointer(&keyCopy)
 		}
 
 		store[ptr] = obj
@@ -192,6 +205,9 @@ func DelByPtr(ptr unsafe.Pointer) bool {
 		delete(expires, obj)
 		delete(keypool, *((*string)(ptr)))
 		KeyspaceStat[0]["keys"]--
+
+		key := *((*string)(ptr))
+		WatchChannel <- WatchEvent{key, "DEL", obj}
 		return true
 	}
 	return false

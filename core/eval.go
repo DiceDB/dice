@@ -220,7 +220,7 @@ func evalMSET(args []string) []byte {
 	// MSET does not have expiry support
 	var exDurationMs int64 = -1
 
-	insertMap := make(map[string]*Obj)
+	insertMap := make(map[string]*Obj, len(args)/2)
 	for i := 0; i < len(args); i += 2 {
 		key, value := args[i], args[i+1]
 		oType, oEnc := deduceTypeEncoding(value)
@@ -1643,4 +1643,30 @@ func EvalAndRespond(cmds RedisCmds, c *Client) {
 	if _, err := c.Write(buf.Bytes()); err != nil {
 		log.Panic(err)
 	}
+}
+
+func evalPersist(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR wrong number of arguments for 'persist' command"), false)
+	}
+
+	key := args[0]
+
+	obj := Get(key)
+
+	// If the key does not exist, return RESP encoded 0 to denote the key does not exist
+	if obj == nil {
+		return RESP_ZERO
+	}
+
+	// If the object exists but no expiration is set on it, return -1
+	_, isExpirySet := getExpiry(obj)
+	if !isExpirySet {
+		return RESP_MINUS_1
+	}
+
+	// If the object exists, remove the expiration time
+	delExpiry(obj)
+
+	return RESP_ONE
 }

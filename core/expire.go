@@ -18,6 +18,10 @@ func getExpiry(obj *Obj) (uint64, bool) {
 	return exp, ok
 }
 
+func delExpiry(obj *Obj) {
+	delete(expires, obj)
+}
+
 // TODO: Optimize
 //   - Sampling
 //   - Unnecessary iteration

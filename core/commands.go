@@ -444,6 +444,11 @@ var (
 		Info: "KEYS command is used to get all the keys in the database. Complexity is O(n) where n is the number of keys in the database.",
 		Eval: evalKeys,
 	}
+	persistCmdMeta = DiceCmdMeta{
+		Name: "PERSIST",
+		Info: "PERSIST removes the expiration from a key",
+		Eval: evalPersist,
+	}
 )
 
 func init() {
@@ -497,4 +502,5 @@ func init() {
 	diceCmds["BITCOUNT"] = bitCountCmdMeta
 	diceCmds["BITOP"] = bitOpCmdMeta
 	diceCmds["KEYS"] = keysCmdMeta
+	diceCmds["PERSIST"] = persistCmdMeta
 }
