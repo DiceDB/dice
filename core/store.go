@@ -34,6 +34,10 @@ var (
 var WatchChannel chan WatchEvent
 
 func init() {
+	ResetStore()
+}
+
+func ResetStore() {
 	store = make(map[unsafe.Pointer]*Obj)
 	expires = make(map[*Obj]uint64)
 	keypool = make(map[string]unsafe.Pointer)
