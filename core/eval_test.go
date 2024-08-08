@@ -16,7 +16,8 @@ type testCase struct {
 
 func TestEval(t *testing.T) {
 	testCases := map[string]func(*testing.T){
-		"SET": testEvalSET,
+		"SET":  testEvalSET,
+		"MSET": testEvalMSET,
 	}
 
 	for name, testFunc := range testCases {
@@ -47,12 +48,31 @@ func testEvalSET(t *testing.T) {
 	runTests(t, tests, evalSET)
 }
 
+func testEvalMSET(t *testing.T) {
+	tests := map[string]testCase{
+		"nil value":         {input: nil, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
+		"empty array":       {input: []string{}, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
+		"one value":         {input: []string{"KEY"}, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
+		"key val pair":      {input: []string{"KEY", "VAL"}, output: RESP_OK},
+		"odd key val pair":  {input: []string{"KEY", "VAL", "KEY2"}, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
+		"even key val pair": {input: []string{"KEY", "VAL", "KEY2", "VAL2"}, output: RESP_OK},
+	}
+
+	runTests(t, tests, evalMSET)
+}
+
 func runTests(t *testing.T, tests map[string]testCase, evalFunc func([]string) []byte) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			output := evalFunc(tc.input)
 			assert.Equal(t, string(tc.output), string(output))
 		})
+	}
+}
+
+func BenchmarkEvalMSET(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"})
 	}
 }
 
