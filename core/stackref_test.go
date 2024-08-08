@@ -144,7 +144,7 @@ func BenchmarkRemoveLargeNumberOfExpiredKeys(b *testing.B) {
 				}
 				b.StartTimer()
 				if _, err := sr.Pop(); err == core.ErrStackEmpty {
-					break
+					continue
 				}
 			}
 		})
