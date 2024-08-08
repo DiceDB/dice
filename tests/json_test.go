@@ -263,6 +263,14 @@ func TestJSONSetWithNXAndXX(t *testing.T) {
 			commands: []string{"JSON.SET user $ " + user2 + " NX", "JSON.SET user $ " + user1 + " NX", "JSON.GET user"},
 			expected: []interface{}{"OK", "(nil)", user2},
 		},
+		{
+			commands: []string{"JSON.SET user $ " + user2 + " NX NX", "JSON.SET user $ " + user2 + " NX XX", "JSON.SET user $ " + user2 + " NX Abcd", "JSON.SET user $ " + user2 + " NX "},
+			expected: []interface{}{"ERR syntax error", "ERR syntax error", "ERR syntax error", "(nil)"},
+		},
+		{
+			commands: []string{"JSON.SET user $ " + user2 + " XX XX", "JSON.SET user $ " + user2 + " XX NX", "JSON.SET user $ " + user2 + " XX Abcd", "JSON.SET user $ " + user2 + " XX "},
+			expected: []interface{}{"ERR syntax error", "ERR syntax error", "ERR syntax error", "OK"},
+		},
 	}
 
 	for _, tcase := range testCases {
