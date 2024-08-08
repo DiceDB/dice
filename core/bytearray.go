@@ -112,13 +112,13 @@ func reverseByte(b byte) byte {
 // findBitPosition finds the position of the first occurrence of the specified bit (0 or 1)
 // within a byte. The position is 0-indexed, meaning the most significant bit is at index 0
 // and the least significant bit is at index 7.
-func findBitPosition(a byte, bitToFind int) int {
+func findBitPosition(a byte, bitToFind byte) int {
 	if bitToFind != 0 && bitToFind != 1 {
 		return -1 // Invalid bitToFind value
 	}
 
 	for i := 0; i < 8; i++ {
-		if int((a>>uint(7-i))&1) == bitToFind {
+		if (a>>uint(7-i))&1 == bitToFind {
 			return i
 		}
 	}

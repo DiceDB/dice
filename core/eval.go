@@ -126,7 +126,7 @@ func evalSET(args []string) []byte {
 	for i := 2; i < len(args); i++ {
 		arg := strings.ToUpper(args[i])
 		switch arg {
-		case "EX","PX":
+		case "EX", "PX":
 			if state != Uninitialized {
 				return Encode(errors.New("ERR syntax error"), false)
 			}
@@ -150,7 +150,7 @@ func evalSET(args []string) []byte {
 			exDurationMs = exDuration
 			state = Initialized
 
-		case "PXAT","EXAT":
+		case "PXAT", "EXAT":
 			if state != Uninitialized {
 				return Encode(errors.New("ERR syntax error"), false)
 			}
@@ -166,7 +166,7 @@ func evalSET(args []string) []byte {
 			if exDuration < 0 {
 				return Encode(errors.New("ERR invalid expire time in 'set' command"), false)
 			}
-			
+
 			if arg == "EXAT" {
 				exDuration = exDuration * 1000
 			}
@@ -1466,11 +1466,20 @@ func evalBITOP(args []string) []byte {
 
 // BITPOS key bit [start [end [BYTE | BIT]]]
 func evalBITPOS(args []string) []byte {
-	var err error
-
 	// if more than 5 arguments are provided or less than 2 return error
 	if len(args) > 5 || len(args) < 2 {
 		return Encode(errors.New("ERR syntax error"), false)
+	}
+
+	// appending args with constant values
+	if len(args) == 2 {
+		args = append(args, "0")
+	}
+	if len(args) == 3 {
+		args = append(args, "-1")
+	}
+	if len(args) == 4 {
+		args = append(args, "BYTE")
 	}
 
 	// fetching value of the key
@@ -1493,55 +1502,48 @@ func evalBITPOS(args []string) []byte {
 	}
 
 	// defining constants of the function
-	start := int64(0)
-	end := valueLength - 1
+	var start int64
+	var end int64
 	var unit = bit.BYTE
-	bitToFind := int64(1)
+	var bitToFind byte
 
-	if len(args) > 1 {
-		bitToFind, err = strconv.ParseInt(args[1], 10, 64)
-		if err != nil {
-			return Encode(0, false)
-		}
-		if bitToFind > 1 || bitToFind < 0 {
-			return Encode(errors.New("ERR The bit argument must be 1 or 0."), false)
-		}
+	if args[1] == "1" {
+		bitToFind = byte(1)
+	} else if args[1] == "0" {
+		bitToFind = byte(0)
+	} else {
+		return Encode(errors.New("ERR The bit argument must be 1 or 0."), false)
 	}
 
 	// checking which arguments are present and according validating arguments
-	if len(args) > 2 {
-		start, err = strconv.ParseInt(args[2], 10, 64)
-		if err != nil {
-			return Encode(0, false)
-		}
-		// Adjust start index if it is negative
-		if start < 0 {
-			start += valueLength
-		}
-		if start < 0 {
-			start = 0
-		}
-	}
-	if len(args) > 3 {
-		end, err = strconv.ParseInt(args[3], 10, 64)
-		if err != nil {
-			return Encode(errors.New("ERR value is not an integer or out of range"), false)
-		}
+	start, startConversionError := strconv.ParseInt(args[2], 10, 64)
+	end, endConversionError := strconv.ParseInt(args[3], 10, 64)
+	unit = strings.ToUpper(args[4])
 
-		// Adjust end index if it is negative
-		if end < 0 {
-			end += valueLength
-		}
-		if end < 0 {
-			end = 0
-		}
+	// input validations
+	if unit != bit.BYTE && unit != bit.BIT {
+		return Encode(errors.New("ERR syntax error"), false)
 	}
-	if len(args) > 4 {
-		unit = strings.ToUpper(args[4])
-		if unit != bit.BYTE && unit != bit.BIT {
-			return Encode(errors.New("ERR syntax error"), false)
-		}
+	if startConversionError != nil || endConversionError != nil {
+		return Encode(errors.New("ERR value is not an integer or out of range"), false)
 	}
+
+	// Adjust start index if it is negative
+	if start < 0 {
+		start += valueLength
+	}
+	if start < 0 {
+		start = 0
+	}
+
+	// Adjust end index if it is negative
+	if end < 0 {
+		end += valueLength
+	}
+	if end < 0 {
+		end = 0
+	}
+
 	if start > end {
 		return Encode(-1, true)
 	}
@@ -1555,52 +1557,18 @@ func evalBITPOS(args []string) []byte {
 	// logic to implement the bitpos
 	if unit == bit.BYTE {
 		for i := start; i <= end; i++ {
-			bitPosition := findBitPosition(value[i], int(bitToFind))
+			bitPosition := findBitPosition(value[i], bitToFind)
 			if bitPosition != -1 {
 				return Encode(i*8+int64(bitPosition), true)
 			}
 		}
 	} else {
-		startBitRange := start / 8
-		endBitRange := end / 8
-
-		for i := startBitRange; i <= endBitRange; i++ {
-			if i == startBitRange {
-				considerBits := start % 8
-				bitIterator := considerBits
-
-				// if start and end bit is same range
-				endBit := int64(7)
-				if startBitRange == endBitRange {
-					endBit = end % 8
-				}
-
-				for j := 8 - considerBits - 1; j >= 7-endBit; j-- {
-					byteValue := value[i] & (1 << j)
-					if byteValue == 0 && bitToFind == 0 {
-						return Encode(i*8+int64(bitIterator), true)
-					} else if byteValue != 0 && bitToFind == 1 {
-						return Encode(i*8+int64(bitIterator), true)
-					}
-					bitIterator++
-				}
-			} else if i == endBitRange {
-				considerBits := end % 8
-				bitIterator := 0
-				for j := considerBits; j >= 0; j-- {
-					byteValue := value[i] & (1 << (8 - j - 1))
-					if byteValue == 0 && bitToFind == 0 {
-						return Encode(i*8+int64(bitIterator), true)
-					} else if byteValue != 0 && bitToFind == 1 {
-						return Encode(i*8+int64(bitIterator), true)
-					}
-					bitIterator++
-				}
-			} else {
-				bitPosition := findBitPosition(value[i], int(bitToFind))
-				if bitPosition != -1 {
-					return Encode(i*8+int64(bitPosition), true)
-				}
+		for i := start; i <= end; i++ {
+			byteIndex := i / 8
+			bitIndex := 7 - (i % 8)
+			byteValue := (value[byteIndex] >> bitIndex) & 1
+			if byteValue == bitToFind {
+				return Encode(i, true)
 			}
 		}
 	}
