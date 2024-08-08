@@ -98,8 +98,17 @@ func PutAll(data map[string]*Obj) {
 
 		ptr, ok := keypool[k]
 		if !ok {
-			keypool[k] = unsafe.Pointer(&k)
-			ptr = unsafe.Pointer(&k)
+			// we need to create a new string for each key, ensuring that each key in
+			// the keypool map has its own unique memory address. Reusing the same
+			// memory address (&k) for multiple keys will cause the keypool map to
+			// have incorrect entries, because the address of k remains the same
+			// throughout the loop iterations, but its value changes.
+			// As a result, all entries in the keypool map end up pointing to the same
+			// memory location, which contains the last value of k after the loop
+			// finishes.
+			keyCopy := string([]byte(k))
+			keypool[k] = unsafe.Pointer(&keyCopy)
+			ptr = unsafe.Pointer(&keyCopy)
 		}
 
 		store[ptr] = obj

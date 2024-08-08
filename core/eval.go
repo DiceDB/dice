@@ -216,7 +216,7 @@ func evalMSET(args []string) []byte {
 	// MSET does not have expiry support
 	var exDurationMs int64 = -1
 
-	insertMap := make(map[string]*Obj)
+	insertMap := make(map[string]*Obj, len(args)/2)
 	for i := 0; i < len(args); i += 2 {
 		key, value := args[i], args[i+1]
 		oType, oEnc := deduceTypeEncoding(value)
