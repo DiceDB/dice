@@ -126,7 +126,7 @@ func evalSET(args []string) []byte {
 	for i := 2; i < len(args); i++ {
 		arg := strings.ToUpper(args[i])
 		switch arg {
-		case "EX","PX":
+		case "EX", "PX":
 			if state != Uninitialized {
 				return Encode(errors.New("ERR syntax error"), false)
 			}
@@ -150,7 +150,7 @@ func evalSET(args []string) []byte {
 			exDurationMs = exDuration
 			state = Initialized
 
-		case "PXAT","EXAT":
+		case "PXAT", "EXAT":
 			if state != Uninitialized {
 				return Encode(errors.New("ERR syntax error"), false)
 			}
@@ -166,7 +166,7 @@ func evalSET(args []string) []byte {
 			if exDuration < 0 {
 				return Encode(errors.New("ERR invalid expire time in 'set' command"), false)
 			}
-			
+
 			if arg == "EXAT" {
 				exDuration = exDuration * 1000
 			}
@@ -1639,4 +1639,30 @@ func EvalAndRespond(cmds RedisCmds, c *Client) {
 	if _, err := c.Write(buf.Bytes()); err != nil {
 		log.Panic(err)
 	}
+}
+
+func evalPersist(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR wrong number of arguments for 'persist' command"), false)
+	}
+
+	key := args[0]
+
+	obj := Get(key)
+
+	// If the key does not exist, return RESP encoded 0 to denote the key does not exist
+	if obj == nil {
+		return RESP_ZERO
+	}
+
+	// If the object exists but no expiration is set on it, return -1
+	_, isExpirySet := getExpiry(obj)
+	if !isExpirySet {
+		return RESP_MINUS_1
+	}
+
+	// If the object exists, remove the expiration time
+	delExpiry(obj)
+
+	return RESP_ONE
 }
