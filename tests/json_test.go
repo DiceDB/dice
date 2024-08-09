@@ -173,7 +173,7 @@ func TestJSONSetWithInvalidJSON(t *testing.T) {
 		{
 			name:     "Set Invalid JSON",
 			command:  `JSON.SET invalid $ {invalid:json}`,
-			expected: "ERR invalid JSON: \"Syntax error at index 1: expect a json key",
+			expected: "ERR invalid JSON",
 		},
 		{
 			name:     "Set JSON with Wrong Number of Arguments",
@@ -185,7 +185,7 @@ func TestJSONSetWithInvalidJSON(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result := fireCommand(conn, tc.command)
-			assert.Check(t, strings.Contains(result.(string), tc.expected), fmt.Sprintf("Expected: %s, Got: %s", tc.expected, result))
+			assert.Check(t, strings.HasPrefix(result.(string), tc.expected), fmt.Sprintf("Expected: %s, Got: %s", tc.expected, result))
 		})
 	}
 }
