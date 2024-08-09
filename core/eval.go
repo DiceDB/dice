@@ -119,6 +119,7 @@ func evalSET(args []string) []byte {
 	var key, value string
 	var exDurationMs int64 = -1
 	var state exDurationState = Uninitialized
+	var XX bool
 
 	key, value = args[0], args[1]
 	oType, oEnc := deduceTypeEncoding(value)
@@ -179,6 +180,9 @@ func evalSET(args []string) []byte {
 			state = Initialized
 
 		case "XX":
+			// Set XX to true
+			XX = true
+
 			// Get the key from the hash table
 			obj := Get(key)
 
@@ -191,6 +195,26 @@ func evalSET(args []string) []byte {
 			if obj != nil {
 				return RESP_NIL
 			}
+		case "GET":
+			obj := Get(key)
+			if XX == true {
+				if obj == nil {
+					return RESP_NIL
+				} else {
+					Put(key, NewObj(value, exDurationMs, oType, oEnc))
+					return Encode(obj.Value, false)
+				}
+			} else {
+				if obj == nil {
+					Put(key, NewObj(value, exDurationMs, oType, oEnc))
+					return Encode(obj.Value, false)
+				} else {
+					return RESP_NIL
+				}
+			}
+
+			// Put(key, NewObj(value, exDurationMs, oType, oEnc))
+			// return Encode(obj.Value, false)
 		default:
 			return Encode(errors.New("ERR syntax error"), false)
 		}
