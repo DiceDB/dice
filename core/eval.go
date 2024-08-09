@@ -360,7 +360,7 @@ func evalJSONSET(args []string) []byte {
 
 	// Parse the JSON string
 	var jsonValue interface{}
-	if err := sonic.Unmarshal([]byte(jsonStr), &jsonValue); err != nil {
+	if err := sonic.UnmarshalString(jsonStr, &jsonValue); err != nil {
 		return Encode(fmt.Errorf("ERR invalid JSON: %v", err.Error()), false)
 	}
 
