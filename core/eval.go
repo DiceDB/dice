@@ -1796,7 +1796,6 @@ func evalGETEX(args []string) []byte {
 		return RESP_NIL
 	}
 
-	var exDurationMs int64 = -1
 	var state exDurationState = Uninitialized
 
 	for i := 1; i < len(args); i++ {
@@ -1823,7 +1822,7 @@ func evalGETEX(args []string) []byte {
 			if arg == "EX" {
 				exDuration = exDuration * 1000
 			}
-			exDurationMs = exDuration
+			exDurationMs := exDuration
 			state = Initialized
 			setExpiry(obj, exDurationMs)
 
@@ -1847,7 +1846,7 @@ func evalGETEX(args []string) []byte {
 			if arg == "EXAT" {
 				exDuration = exDuration * 1000
 			}
-			exDurationMs = exDuration - time.Now().UnixMilli()
+			exDurationMs := exDuration - time.Now().UnixMilli()
 			// If the expiry time is in the past, set exDurationMs to 0
 			// This will be used to signal immediate expiration
 			if exDurationMs < 0 {
