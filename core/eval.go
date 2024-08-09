@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	DiceErrors "github.com/dicedb/dice/core/diceerrors"
 	"log"
 	"strconv"
 	"strings"
@@ -53,7 +54,7 @@ func evalPING(args []string) []byte {
 	var b []byte
 
 	if len(args) >= 2 {
-		return Encode(errors.New("ERR wrong number of arguments for 'ping' command"), false)
+		return DiceErrors.NewErrArity(PING)
 	}
 
 	if len(args) == 0 {
@@ -74,7 +75,7 @@ func evalAUTH(args []string, c *Client) []byte {
 	)
 
 	if len(args) < 1 || len(args) > 2 {
-		return Encode(errors.New("ERR wrong number of arguments for 'AUTH' command"), false)
+		return DiceErrors.NewErrArity(AUTH)
 	}
 
 	if len(args) == 1 {
@@ -113,7 +114,7 @@ func evalAUTH(args []string, c *Client) []byte {
 // If the key already exists then the value will be overwritten and expiry will be discarded
 func evalSET(args []string) []byte {
 	if len(args) <= 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'set' command"), false)
+		return DiceErrors.NewErrArity(SET)
 	}
 
 	var key, value string
@@ -128,11 +129,11 @@ func evalSET(args []string) []byte {
 		switch arg {
 		case "EX", "PX":
 			if state != Uninitialized {
-				return Encode(errors.New("ERR syntax error"), false)
+				return DiceErrors.NewErrObject(DiceErrors.SyntaxErr)
 			}
 			i++
 			if i == len(args) {
-				return Encode(errors.New("ERR syntax error"), false)
+				return DiceErrors.NewErrObject(DiceErrors.SyntaxErr)
 			}
 
 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
@@ -140,7 +141,7 @@ func evalSET(args []string) []byte {
 				return Encode(errors.New("ERR value is not an integer or out of range"), false)
 			}
 			if exDuration <= 0 {
-				return Encode(errors.New("ERR invalid expire time in 'set' command"), false)
+				return DiceErrors.NewErrExpireTime(SET)
 			}
 
 			// converting seconds to milliseconds
@@ -152,11 +153,11 @@ func evalSET(args []string) []byte {
 
 		case "PXAT", "EXAT":
 			if state != Uninitialized {
-				return Encode(errors.New("ERR syntax error"), false)
+				return DiceErrors.NewErrObject(DiceErrors.SyntaxErr)
 			}
 			i++
 			if i == len(args) {
-				return Encode(errors.New("ERR syntax error"), false)
+				return DiceErrors.NewErrObject(DiceErrors.SyntaxErr)
 			}
 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
@@ -164,7 +165,7 @@ func evalSET(args []string) []byte {
 			}
 
 			if exDuration < 0 {
-				return Encode(errors.New("ERR invalid expire time in 'set' command"), false)
+				return DiceErrors.NewErrExpireTime(SET)
 			}
 
 			if arg == "EXAT" {
@@ -192,7 +193,7 @@ func evalSET(args []string) []byte {
 				return RESP_NIL
 			}
 		default:
-			return Encode(errors.New("ERR syntax error"), false)
+			return DiceErrors.NewErrObject(DiceErrors.SyntaxErr)
 		}
 	}
 
@@ -210,7 +211,7 @@ func evalSET(args []string) []byte {
 // If the key already exists then the value will be overwritten and expiry will be discarded
 func evalMSET(args []string) []byte {
 	if len(args) <= 1 || len(args)%2 != 0 {
-		return Encode(errors.New("ERR wrong number of arguments for 'mset' command"), false)
+		return DiceErrors.NewErrArity(MSET)
 	}
 
 	// MSET does not have expiry support
@@ -233,7 +234,7 @@ func evalMSET(args []string) []byte {
 // evalGET returns RESP_NIL if key is expired or it does not exist
 func evalGET(args []string) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'get' command"), false)
+		return DiceErrors.NewErrArity(GET)
 	}
 
 	var key string = args[0]
@@ -257,7 +258,7 @@ func evalGET(args []string) []byte {
 // The RESP value of the key is encoded and then returned
 func evalJSONGET(args []string) []byte {
 	if len(args) < 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'JSON.GET' command"), false)
+		return DiceErrors.NewErrArity(JSONGET)
 	}
 
 	key := args[0]
@@ -327,7 +328,7 @@ func evalJSONGET(args []string) []byte {
 func evalJSONSET(args []string) []byte {
 	// Check if there are enough arguments
 	if len(args) < 3 {
-		return Encode(errors.New("ERR wrong number of arguments for 'JSON.SET' command"), false)
+		return DiceErrors.NewErrArity(JSONSET)
 	}
 
 	key := args[0]
@@ -338,7 +339,7 @@ func evalJSONSET(args []string) []byte {
 		switch args[i] {
 		case "NX", "nx":
 			if i != len(args)-1 {
-				return Encode(errors.New("ERR syntax error"), false)
+				return DiceErrors.NewErrObject(DiceErrors.SyntaxErr)
 			}
 			obj := Get(key)
 			if obj != nil {
@@ -346,7 +347,7 @@ func evalJSONSET(args []string) []byte {
 			}
 		case "XX", "xx":
 			if i != len(args)-1 {
-				return Encode(errors.New("ERR syntax error"), false)
+				return DiceErrors.NewErrObject(DiceErrors.SyntaxErr)
 			}
 			obj := Get(key)
 			if obj == nil {
@@ -354,7 +355,7 @@ func evalJSONSET(args []string) []byte {
 			}
 
 		default:
-			return Encode(errors.New("ERR syntax error"), false)
+			return DiceErrors.NewErrObject(DiceErrors.SyntaxErr)
 		}
 	}
 
@@ -419,7 +420,7 @@ func evalJSONSET(args []string) []byte {
 //	RESP encoded -1 in case no expiration is set on the key
 func evalTTL(args []string) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'ttl' command"), false)
+		return DiceErrors.NewErrArity(TTL)
 	}
 
 	var key string = args[0]
@@ -465,7 +466,7 @@ func evalDEL(args []string) []byte {
 // Once the time is lapsed, the key will be deleted automatically
 func evalEXPIRE(args []string) []byte {
 	if len(args) <= 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'expire' command"), false)
+		return DiceErrors.NewErrArity(EXPIRE)
 	}
 
 	var key string = args[0]
@@ -489,7 +490,7 @@ func evalEXPIRE(args []string) []byte {
 
 func evalHELLO(args []string) []byte {
 	if len(args) > 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'hello' command"), false)
+		return DiceErrors.NewErrArity(HELLO)
 	}
 
 	var response []interface{}
@@ -535,7 +536,7 @@ func evalBGREWRITEAOF(args []string) []byte {
 // evalINCR returns the incremented value for the key if there are no errors.
 func evalINCR(args []string) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'incr' command"), false)
+		return DiceErrors.NewErrArity(INCR)
 	}
 
 	var key string = args[0]
@@ -595,7 +596,7 @@ func evalLRU(args []string) []byte {
 // evalSLEEP returns RESP_OK after sleeping for mentioned seconds
 func evalSLEEP(args []string) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'SLEEP' command"), false)
+		return DiceErrors.NewErrArity(SLEEP)
 	}
 
 	durationSec, err := strconv.ParseInt(args[0], 10, 64)
@@ -1155,7 +1156,7 @@ func evalSETBIT(args []string) []byte {
 	var err error
 
 	if len(args) != 3 {
-		return Encode(errors.New("ERR wrong number of arguments for 'setbit' command"), false)
+		return DiceErrors.NewErrArity(SETBIT)
 	}
 
 	key := args[0]
@@ -1216,7 +1217,7 @@ func evalGETBIT(args []string) []byte {
 	var err error
 
 	if len(args) != 2 {
-		return Encode(errors.New("ERR wrong number of arguments for 'setbit' command"), false)
+		return DiceErrors.NewErrArity(GETBIT)
 	}
 
 	key := args[0]
@@ -1262,7 +1263,7 @@ func evalBITCOUNT(args []string) []byte {
 
 	// if more than 4 arguments are provided, return error
 	if len(args) > 4 {
-		return Encode(errors.New("ERR syntax error"), false)
+		return DiceErrors.NewErrObject(DiceErrors.SyntaxErr)
 	}
 
 	// fetching value of the key
@@ -1318,7 +1319,7 @@ func evalBITCOUNT(args []string) []byte {
 	if len(args) > 3 {
 		unit = strings.ToUpper(args[3])
 		if unit != bit.BYTE && unit != bit.BIT {
-			return Encode(errors.New("ERR syntax error"), false)
+			return DiceErrors.NewErrObject(DiceErrors.SyntaxErr)
 		}
 	}
 	if start > end {
@@ -1371,7 +1372,7 @@ func evalBITOP(args []string) []byte {
 	// validation of commands
 	// if operation is not from enums, then error out
 	if !(operation == "AND" || operation == "OR" || operation == "XOR" || operation == "NOT") {
-		return Encode(errors.New("ERR syntax error"), false)
+		return DiceErrors.NewErrObject(DiceErrors.SyntaxErr)
 	}
 	// if operation is not, then keys lenght should be only 1
 	if operation == "NOT" && len(keys) != 1 {
@@ -1499,7 +1500,7 @@ func evalBITOP(args []string) []byte {
 // COUNT: return total count of commands in Dice.
 func evalCommand(args []string) []byte {
 	if len(args) == 0 {
-		return Encode(errors.New("(error) ERR wrong number of arguments for 'command' command"), false)
+		return DiceErrors.NewErrArity(COMMAND)
 	}
 	subcommand := strings.ToUpper(args[0])
 	switch subcommand {
@@ -1516,7 +1517,7 @@ func evalCommand(args []string) []byte {
 // The pattern should be the only param in args
 func evalKeys(args []string) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'keys' command"), false)
+		return DiceErrors.NewErrArity(KEYS)
 	}
 
 	pattern := args[0]
@@ -1643,7 +1644,7 @@ func EvalAndRespond(cmds RedisCmds, c *Client) {
 
 func evalPersist(args []string) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'persist' command"), false)
+		return DiceErrors.NewErrArity(PERSIST)
 	}
 
 	key := args[0]
