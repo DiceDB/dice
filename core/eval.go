@@ -119,6 +119,7 @@ func evalSET(args []string) []byte {
 
 	var key, value string
 	var exDurationMs int64 = -1
+	var keepttl bool = false
 	var state exDurationState = Uninitialized
 
 	key, value = args[0], args[1]
@@ -140,6 +141,7 @@ func evalSET(args []string) []byte {
 			if err != nil {
 				return Encode(errors.New("ERR value is not an integer or out of range"), false)
 			}
+
 			if exDuration <= 0 {
 				return Encode(errors.New("ERR invalid expire time in 'set' command"), false)
 			}
@@ -150,7 +152,8 @@ func evalSET(args []string) []byte {
 			}
 			exDurationMs = exDuration
 			state = Initialized
-
+		case "KEEPTTL", "keepttl":
+			keepttl = true
 		case "PXAT", "EXAT":
 			if state != Uninitialized {
 				return Encode(errors.New("ERR syntax error"), false)
@@ -178,7 +181,6 @@ func evalSET(args []string) []byte {
 				exDurationMs = 0
 			}
 			state = Initialized
-
 		case "XX":
 			// Get the key from the hash table
 			obj := Get(key)
@@ -198,7 +200,9 @@ func evalSET(args []string) []byte {
 	}
 
 	// putting the k and value in a Hash Table
-	Put(key, NewObj(value, exDurationMs, oType, oEnc))
+	Put(key, NewObj(value, exDurationMs, oType, oEnc), &PutOptions{
+		KeepTTL: keepttl,
+	})
 	return RESP_OK
 }
 
@@ -407,7 +411,7 @@ func evalJSONSET(args []string) []byte {
 
 	// Create a new object with the updated JSON data
 	newObj := NewObj(rootData, -1, OBJ_TYPE_JSON, OBJ_ENCODING_JSON)
-	Put(key, newObj)
+	Put(key, newObj, nil)
 
 	return RESP_OK
 }
@@ -561,7 +565,7 @@ func incrDecrCmd(args []string, incr int64) []byte {
 	obj := Get(key)
 	if obj == nil {
 		obj = NewObj("0", -1, OBJ_TYPE_STRING, OBJ_ENCODING_INT)
-		Put(key, obj)
+		Put(key, obj, nil)
 	}
 
 	if err := assertType(obj.TypeEncoding, OBJ_TYPE_STRING); err != nil {
@@ -667,7 +671,7 @@ func evalQINTINS(args []string) []byte {
 		return Encode(err, false)
 	}
 
-	Put(args[0], obj)
+	Put(args[0], obj, nil)
 
 	q := obj.Value.(*QueueInt)
 	q.Insert(x)
@@ -702,7 +706,7 @@ func evalSTACKINTPUSH(args []string) []byte {
 		return Encode(err, false)
 	}
 
-	Put(args[0], obj)
+	Put(args[0], obj, nil)
 
 	s := obj.Value.(*StackInt)
 	s.Push(x)
@@ -920,7 +924,7 @@ func evalQREFINS(args []string) []byte {
 		return Encode(err, false)
 	}
 
-	Put(args[0], obj)
+	Put(args[0], obj, nil)
 
 	q := obj.Value.(*QueueRef)
 	if q.Insert(args[1]) {
@@ -953,7 +957,7 @@ func evalSTACKREFPUSH(args []string) []byte {
 		return Encode(err, false)
 	}
 
-	Put(args[0], obj)
+	Put(args[0], obj, nil)
 
 	s := obj.Value.(*StackRef)
 	if s.Push(args[1]) {
@@ -1199,7 +1203,7 @@ func evalSETBIT(args []string) []byte {
 
 	if obj == nil {
 		obj = NewObj(NewByteArray(int(requiredByteArraySize)), -1, OBJ_TYPE_BYTEARRAY, OBJ_ENCODING_BYTEARRAY)
-		Put(args[0], obj)
+		Put(args[0], obj, nil)
 	}
 
 	// handle the case when it is string
@@ -1400,7 +1404,7 @@ func evalBITOP(args []string) []byte {
 	}
 	// if operation is not, then keys lenght should be only 1
 	if operation == "NOT" && len(keys) != 1 {
-		return Encode(errors.New("ERR BITOP NOT must be called with a single source key."), false)
+		return Encode(errors.New("ERR BITOP NOT must be called with a single source key"), false)
 	}
 
 	if operation == "NOT" {
@@ -1436,7 +1440,7 @@ func evalBITOP(args []string) []byte {
 		obj = NewObj(operationResult, -1, OBJ_TYPE_BYTEARRAY, OBJ_ENCODING_BYTEARRAY)
 
 		// store the result in destKey
-		Put(destKey, obj)
+		Put(destKey, obj, nil)
 		return Encode(len(value), true)
 	} else {
 		// if operation is AND, OR, XOR
@@ -1514,7 +1518,7 @@ func evalBITOP(args []string) []byte {
 		operationResultObject := NewObj(operationResult, -1, OBJ_TYPE_BYTEARRAY, OBJ_ENCODING_BYTEARRAY)
 
 		// store the result in destKey
-		Put(destKey, operationResultObject)
+		Put(destKey, operationResultObject, nil)
 
 		return Encode(len(result), true)
 	}

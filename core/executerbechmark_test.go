@@ -46,7 +46,7 @@ func populateData(count int) {
 
 		// Insert all keys
 		for _, data := range dataset {
-			core.Put(data.key, &core.Obj{Value: data.value})
+			core.Put(data.key, &core.Obj{Value: data.value}, nil)
 		}
 		itr++ // Set count to 1 to indicate data has been populated (Prevent Benchamarker to again populate the data)
 	}
