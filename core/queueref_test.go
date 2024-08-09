@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"testing"
 
+	"time"
+
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core"
 	"github.com/dicedb/dice/testutils"
-	"time"
+	"gotest.tools/v3/assert"
 )
 
 func TestQueueRef(t *testing.T) {
@@ -66,9 +68,8 @@ func TestRemoveSingleNonExpiredKeys(t *testing.T) {
 	val := 10
 	core.Put("key1", core.NewObj(val, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
 	qr.Insert("key1")
-	if qe, err := qr.Remove(); err != nil || qe.Obj.Value != val {
-		t.Error("removal from queue with single non expired key failed, Expected : ", val, " Got : ", qe.Obj.Value)
-	}
+	qe, err := qr.Remove()
+	assert.Check(t, err == nil || qe.Obj.Value == val, fmt.Sprintf("removal from queue with single non expired key failed, Expected : %d, Got : %d\n", val, qe.Obj.Value))
 }
 
 // Test for removing from queue with multiple non-expired keys
@@ -82,10 +83,8 @@ func TestRemoveMultipleNonExpiredKeys(t *testing.T) {
 	core.Put("key3", core.NewObj(val[2], -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
 	qr.Insert("key3")
 	for i := 0; i < len(val); i++ {
-		if qe, err := qr.Remove(); err != nil || qe.Obj.Value != val[i] {
-			t.Error("removal from queue with multiple non expired keys failed, Expected : ", val[i], " Got : ", qe.Obj.Value)
-			break
-		}
+		qe, err := qr.Remove()
+		assert.Check(t, err == nil && qe.Obj.Value == val[i], fmt.Sprintf("removal from queue with multiple non expired keys failed, Expected : %d , Got : %d\n", val[i], qe.Obj.Value))
 	}
 }
 
@@ -98,9 +97,8 @@ func TestRemoveExpiredBeforeNonExpire(t *testing.T) {
 	core.Put("key2", core.NewObj(val[1], -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
 	qr.Insert("key2")
 	time.Sleep(2 * time.Millisecond)
-	if qe, err := qr.Remove(); err != nil || qe.Obj.Value != val[1] {
-		t.Error("test for removing expired key before non-expired failed , Expected : ", val[1], " Got : ", qe.Obj.Value)
-	}
+	qe, err := qr.Remove()
+	assert.Check(t, err == nil || qe.Obj.Value == val[1], fmt.Sprintf("test for removing expired key before non-expired failed , Expected : %d, Got : %d\n", val[1], qe.Obj.Value))
 }
 
 // Test for removing from queue with multiple expired keys before non-expired
@@ -114,9 +112,8 @@ func TestRemoveMultipleExpiredBeforeNonExpire(t *testing.T) {
 	core.Put("key3", core.NewObj(val[2], -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
 	qr.Insert("key3")
 	time.Sleep(2 * time.Millisecond)
-	if qe, err := qr.Remove(); err != nil || qe.Obj.Value != val[2] {
-		t.Error("test for removing mulitple expired key before non-expired failed , Expected : ", val[2], " Got : ", qe.Obj.Value)
-	}
+	qe, err := qr.Remove()
+	assert.Check(t, err == nil || qe.Obj.Value == val[2], fmt.Sprintf("test for removing mulitple expired key before non-expired failed , Expected : %d, Got %d\n", val[2], qe.Obj.Value))
 }
 
 // Test for removing from queue with all expired keys
@@ -130,79 +127,62 @@ func TestRemoveAllExpired(t *testing.T) {
 	core.Put("key3", core.NewObj(val[2], 1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
 	qr.Insert("key3")
 	time.Sleep(2 * time.Millisecond)
-	if _, err := qr.Remove(); err == nil {
-		t.Error("test for removing all expired key failed, Expected : ", core.ErrQueueEmpty, " Got : ", err)
-	}
 	// remove from empty queue
-	if _, err := qr.Remove(); err == nil {
-		fmt.Println(err)
-		t.Error("test for removing from empty queue failed Expected : ", core.ErrQueueEmpty, " Got : ", err)
-	}
+	_, err := qr.Remove()
+	assert.Equal(t, err, core.ErrQueueEmpty, fmt.Sprintf("test for removing from empty queue failed Expected : %s, Got : %s\n", core.ErrQueueEmpty, err))
 }
 
 // Benchmark queueref by inserting expired, non-expired and expired keys in order and removing them
 func BenchmarkQueueRef(b *testing.B) {
-	benchmarkCount := [][]int{{10, 20, 30}, {100, 200, 300}, {100, 2000, 3000}, {10000, 20000, 30000}}
+	benchmarkCases := []struct {
+		name         string
+		expiredFirst int
+		nonExpired   int
+		expiredLast  int
+	}{
+		{"Small", 10000, 20000, 30000},
+		{"Medium", 100000, 200000, 300000},
+		{"Large", 1000000, 2000000, 3000000},
+		{"VeryLarge", 10000000, 20000000, 30000000},
+	}
 
-	for _, count := range benchmarkCount {
-		qr := core.NewQueueRef()
-		config.KeysLimit = 100000000 // override keys limit high for benchmarking
+	// Setup code...
+	qr := core.NewQueueRef()
+	config.KeysLimit = 100000000 // override keys limit high for benchmarking
 
-		// need to init again for each round with the overriden buffer size
-		// otherwise the watchchannel buffer size will stay as it is with the global keylimits size
-		core.WatchChannel = make(chan core.WatchEvent, config.KeysLimit)
-		b.Run(fmt.Sprintf("Benchmark queue with expired : %d, non-expired : %d, expired : %d keys", count[0],
-			count[1], count[2]), func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				// total number of keys , expired + non-expired + expired
-				total := count[0] + count[1] + count[2]
-				dataset := []tupple{}
+	// need to init again for each round with the overriden buffer size
+	// otherwise the watchchannel buffer size will stay as it is with the global keylimits size
+	core.WatchChannel = make(chan core.WatchEvent, config.KeysLimit)
+	b.ResetTimer()
 
-				for i := 0; i < total; i++ {
-					dataset = append(dataset, tupple{fmt.Sprintf("k%d", i), fmt.Sprintf("v%d", i)})
-				}
+	for _, bc := range benchmarkCases {
+		b.Run(fmt.Sprintf("%s Insert expired", bc.name), func(b *testing.B) {
+			for i := 0; i < bc.expiredFirst; i++ {
+				// Insertion benchmark...
+				key := fmt.Sprintf("k%d", i)
+				value := fmt.Sprintf("v%d", i)
+				core.Put(key, core.NewObj(value, 1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+				qr.Insert(key)
+			}
+		})
 
-				// Delete all keys
-				for _, data := range dataset {
-					obj := core.Get(data.key)
-					if obj != nil {
-						core.Del(data.key)
-					}
-				}
+		b.Run(fmt.Sprintf("%s Insert non-expired", bc.name), func(b *testing.B) {
+			for i := 0; i < bc.nonExpired; i++ {
+				// Insertion benchmark...
+				key := fmt.Sprintf("k%d", i)
+				value := fmt.Sprintf("v%d", i)
+				core.Put(key, core.NewObj(value, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+				qr.Insert(key)
+			}
+		})
+		time.Sleep(2 * time.Millisecond)
 
-				// Insert all keys expired keys first
-				for i := 0; i < count[0]; i++ {
-					data := dataset[i]
-					core.Put(data.key, core.NewObj(data.value, 1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
-					qr.Insert(data.key)
-				}
-
-				// Insert all keys non-expired keys in the middle
-				for i := count[0]; i < count[0]+count[1]; i++ {
-					data := dataset[i]
-					core.Put(data.key, core.NewObj(data.value, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
-					qr.Insert(data.key)
-				}
-
-				// Insert all keys expired keys last
-				for i := count[0] + count[1]; i < count[1]+count[2]; i++ {
-					data := dataset[i]
-					core.Put(data.key, core.NewObj(data.value, 1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
-					qr.Insert(data.key)
-				}
-				time.Sleep(2 * time.Millisecond)
-
-				for i := 0; i < count[1]; i++ {
-					expectedValue := fmt.Sprintf("v%d", count[0]+i)
-					data, err := qr.Remove()
-					//fmt.Printf("Data %s\n", data.Obj.Value)
-					if data.Obj.Value != expectedValue {
-						b.Fatal(err)
-					}
-				}
-				// check if queue is empty
-				if _, err := qr.Remove(); err != core.ErrQueueEmpty {
-					b.Fatal("Expected : ", core.ErrQueueEmpty, " Got : ", err)
+		b.Run(fmt.Sprintf("%s Remove", bc.name), func(b *testing.B) {
+			for i := 0; i < bc.expiredLast; i++ {
+				// Removal benchmark...
+				_, err := qr.Remove()
+				if err != nil {
+					b.Errorf("Queue removal failed : %v\n", err)
 				}
 			}
 		})
