@@ -1495,6 +1495,117 @@ func evalBITOP(args []string) []byte {
 	}
 }
 
+// BITPOS key bit [start [end [BYTE | BIT]]]
+func evalBITPOS(args []string) []byte {
+	// if more than 5 arguments are provided or less than 2 return error
+	if len(args) > 5 || len(args) < 2 {
+		return Encode(errors.New("ERR syntax error"), false)
+	}
+
+	// appending args with constant values
+	if len(args) == 2 {
+		args = append(args, "0")
+	}
+	if len(args) == 3 {
+		args = append(args, "-1")
+	}
+	if len(args) == 4 {
+		args = append(args, "BYTE")
+	}
+
+	// fetching value of the key
+	var key string = args[0]
+	var obj = Get(key)
+	if obj == nil {
+		return Encode(0, false)
+	}
+
+	var value []byte
+	valueLength := int64(0)
+
+	if assertType(obj.TypeEncoding, OBJ_TYPE_BYTEARRAY) == nil {
+		byteArray := obj.Value.(*ByteArray)
+		byteArrayObject := *byteArray
+		value = byteArrayObject.data
+		valueLength = byteArray.Length
+	} else {
+		return Encode(errors.New("ERR value is not a valid byte array"), false)
+	}
+
+	// defining constants of the function
+	var start int64
+	var end int64
+	var unit string
+	var bitToFind byte
+
+	if args[1] == "1" {
+		bitToFind = byte(1)
+	} else if args[1] == "0" {
+		bitToFind = byte(0)
+	} else {
+		return Encode(errors.New("ERR The bit argument must be 1 or 0."), false)
+	}
+
+	// checking which arguments are present and according validating arguments
+	start, startConversionError := strconv.ParseInt(args[2], 10, 64)
+	end, endConversionError := strconv.ParseInt(args[3], 10, 64)
+	unit = strings.ToUpper(args[4])
+
+	// input validations
+	if startConversionError != nil || endConversionError != nil {
+		return Encode(errors.New("ERR value is not an integer or out of range"), false)
+	}
+	if unit != bit.BYTE && unit != bit.BIT {
+		return Encode(errors.New("ERR syntax error"), false)
+	}
+
+	// Adjust start index if it is negative
+	if start < 0 {
+		start += valueLength
+	}
+	if start < 0 {
+		start = 0
+	}
+
+	// Adjust end index if it is negative
+	if end < 0 {
+		end += valueLength
+	}
+	if end < 0 {
+		end = 0
+	}
+
+	if start > end {
+		return Encode(-1, true)
+	}
+	if start > valueLength && unit == bit.BYTE {
+		return Encode(-1, true)
+	}
+	if end > valueLength && unit == bit.BYTE {
+		end = valueLength - 1
+	}
+
+	// logic to implement the bitpos
+	if unit == bit.BYTE {
+		for i := start; i <= end; i++ {
+			bitPosition := findBitPosition(value[i], bitToFind)
+			if bitPosition != -1 {
+				return Encode(i*8+int64(bitPosition), true)
+			}
+		}
+	} else {
+		for i := start; i <= end; i++ {
+			byteIndex := i / 8
+			bitIndex := 7 - (i % 8)
+			byteValue := (value[byteIndex] >> bitIndex) & 1
+			if byteValue == bitToFind {
+				return Encode(i, true)
+			}
+		}
+	}
+	return Encode(int64(-1), true)
+}
+
 // evalCommand evaluates COMMAND <subcommand> command based on subcommand
 // COUNT: return total count of commands in Dice.
 func evalCommand(args []string) []byte {

@@ -8,6 +8,48 @@ import (
 	"gotest.tools/v3/assert"
 )
 
+func TestBitPos(t *testing.T) {
+	conn := getLocalConnection()
+	testcases := []struct {
+		InCmds []string
+		Out    []interface{}
+	}{
+		// 010010010000111101011010
+		{
+			InCmds: []string{"SETBIT unitTestKeyA 1 1", "SETBIT unitTestKeyA 4 1", "SETBIT unitTestKeyA 7 1"},
+			Out:    []interface{}{int64(0), int64(0), int64(0)},
+		},
+		{
+			InCmds: []string{"SETBIT unitTestKeyA 12 1", "SETBIT unitTestKeyA 13 1", "SETBIT unitTestKeyA 14 1", "SETBIT unitTestKeyA 15 1"},
+			Out:    []interface{}{int64(0), int64(0), int64(0), int64(0)},
+		},
+		{
+			InCmds: []string{"SETBIT unitTestKeyA 17 1", "SETBIT unitTestKeyA 19 1", "SETBIT unitTestKeyA 20 1", "SETBIT unitTestKeyA 22 1"},
+			Out:    []interface{}{int64(0), int64(0), int64(0), int64(0)},
+		},
+		{
+			InCmds: []string{"BITPOS unitTestKeyA 0 0 1 BIT", "BITPOS unitTestKeyA 1 0 1 BIT", "BITPOS unitTestKeyA 1 2 5 BIT"},
+			Out:    []interface{}{int64(0), int64(1), int64(4)},
+		},
+		{
+			InCmds: []string{"BITPOS unitTestKeyA 1 1 2 BYTE", "BITPOS unitTestKeyA 0 0 2 BYTE", "BITPOS unitTestKeyA 1 2 3 BYTE", "BITPOS unitTestKeyA 1 12 14 BYTE"},
+			Out:    []interface{}{int64(12), int64(0), int64(17), int64(-1)},
+		},
+		{
+			InCmds: []string{"BITPOS unitTestKeyA 1 12 14 BYTE", "BITPOS unitTestKeyA 1 12 14 BIT"},
+			Out:    []interface{}{int64(-1), int64(12)},
+		},
+	}
+
+	for _, tcase := range testcases {
+		for i := 0; i < len(tcase.InCmds); i++ {
+			cmd := tcase.InCmds[i]
+			out := tcase.Out[i]
+			assert.Equal(t, out, fireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
+		}
+	}
+}
+
 func TestBitOp(t *testing.T) {
 	conn := getLocalConnection()
 	testcases := []struct {
