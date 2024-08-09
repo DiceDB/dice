@@ -88,7 +88,7 @@ var (
 		Name: "TTL",
 		Info: `TTL returns Time-to-Live in secs for the queried key in args
 		 The key should be the only param in args else returns with an error
-		 Returns	
+		 Returns
 		 RESP encoded time (in secs) remaining for the key to expire
 		 RESP encoded -2 stating key doesn't exist or key is expired
 		 RESP encoded -1 in case no expiration is set on the key`,
@@ -449,6 +449,12 @@ var (
 		Info: "PERSIST removes the expiration from a key",
 		Eval: evalPersist,
 	}
+	copyCmdMeta = DiceCmdMeta{
+		Name:  "COPY",
+		Info:  `COPY command copies the value stored at the source key to the destination key.`,
+		Eval:  evalCOPY,
+		Arity: -2,
+	}
 )
 
 func init() {
@@ -503,4 +509,5 @@ func init() {
 	diceCmds["BITOP"] = bitOpCmdMeta
 	diceCmds["KEYS"] = keysCmdMeta
 	diceCmds["PERSIST"] = persistCmdMeta
+	diceCmds["COPY"] = copyCmdMeta
 }

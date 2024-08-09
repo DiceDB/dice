@@ -1666,3 +1666,41 @@ func evalPersist(args []string) []byte {
 
 	return RESP_ONE
 }
+
+func evalCOPY(args []string) []byte {
+    if len(args) < 2 {
+        return Encode(errors.New("ERR wrong number of arguments for 'copy' command"), false)
+    }
+
+    isReplace := false
+
+    sourceKey := args[0]
+    destinationKey := args[1]
+
+    sourceObj := Get(sourceKey)
+    if sourceObj == nil {
+        return RESP_ZERO
+    }
+
+	for i := 2; i < len(args); i++ {
+        arg := strings.ToUpper(args[i])
+        switch arg {
+            case "REPLACE":
+                isReplace = true
+        }
+    }
+
+    if isReplace == true {
+        Del(destinationKey)
+    }
+
+    destinationObj := Get(destinationKey)
+    if destinationObj != nil {
+        return RESP_ZERO
+    }
+
+    // TODO: replace sourceObj with deep copy opbject
+    Put(destinationKey, sourceObj)
+
+    return RESP_ONE
+}
