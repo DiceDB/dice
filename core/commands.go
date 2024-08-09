@@ -1,9 +1,5 @@
 package core
 
-import (
-	"strings"
-)
-
 type DiceCmdMeta struct {
 	Name  string
 	Info  string
@@ -508,10 +504,6 @@ var (
 		Eval: evalPersist,
 	}
 )
-
-func getCmdName(cmd string) string {
-	return diceCmds[strings.ToUpper(cmd)].Name
-}
 
 func init() {
 	diceCmds[PING] = pingCmdMeta
