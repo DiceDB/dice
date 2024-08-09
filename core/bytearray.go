@@ -87,6 +87,19 @@ func (b *ByteArray) ResizeIfNecessary() *ByteArray {
 	return b
 }
 
+// creates a deep copy of the ByteArray
+func (b *ByteArray) DeepCopy() *ByteArray {
+	if b == nil {
+		return nil
+	}
+
+    copyArray := NewByteArray(int(b.Length))
+
+	// Copy the data from the original to the new ByteArray
+	copy(copyArray.data, b.data)
+	return copyArray
+}
+
 // population counting, counts the number of set bits in a byte
 // Using: https://en.wikipedia.org/wiki/Hamming_weight
 func popcount(x byte) byte {
