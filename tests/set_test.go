@@ -115,6 +115,11 @@ func TestSetWithOptions(t *testing.T) {
 			commands: []string{"SET k v XX EX 1", "GET k", "SLEEP 2", "GET k", "SET k v XX EX 1", "GET k"},
 			expected: []interface{}{"(nil)", "(nil)", "OK", "(nil)", "(nil)", "(nil)"},
 		},
+		{
+			name: "GET option",
+			commands: []string{"SET k v1", "SET k v2 NX GET", "GET k"},
+			expected: []interface{}{"OK", "(nil)", "v1"},
+		},
 	}
 
 	for _, tc := range testCases {
