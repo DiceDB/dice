@@ -251,6 +251,30 @@ func evalGET(args []string) []byte {
 	return Encode(obj.Value, false)
 }
 
+// evalGETDEL returns the value for the queried key in args
+// The key should be the only param in args
+// The RESP value of the key is encoded and then returned
+// In evalGETDEL  If the key exists, it will be deleted before its value is returned.
+// evalGETDEL returns RESP_NIL if key is expired or it does not exist
+func evalGETDEL(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR wrong number of arguments for 'getdel' command"), false)
+	}
+
+	var key = args[0]
+
+	// Get the key from the hash table
+	obj := GetDel(key)
+
+	// if key does not exist, return RESP encoded nil
+	if obj == nil {
+		return RESP_NIL
+	}
+
+	// return the RESP encoded value
+	return Encode(obj.Value, false)
+}
+
 // evalJSONGET retrieves a JSON value stored at the specified key
 // args must contain at least the key;  (path unused in this implementation)
 // Returns RESP_NIL if key is expired or it does not exist
