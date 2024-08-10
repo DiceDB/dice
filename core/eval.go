@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"strconv"
 	"strings"
 	"syscall"
@@ -126,7 +127,7 @@ func evalSET(args []string) []byte {
 	for i := 2; i < len(args); i++ {
 		arg := strings.ToUpper(args[i])
 		switch arg {
-		case "EX","PX":
+		case "EX", "PX":
 			if state != Uninitialized {
 				return Encode(errors.New("ERR syntax error"), false)
 			}
@@ -150,7 +151,7 @@ func evalSET(args []string) []byte {
 			exDurationMs = exDuration
 			state = Initialized
 
-		case "PXAT","EXAT":
+		case "PXAT", "EXAT":
 			if state != Uninitialized {
 				return Encode(errors.New("ERR syntax error"), false)
 			}
@@ -360,7 +361,7 @@ func evalJSONSET(args []string) []byte {
 
 	// Parse the JSON string
 	var jsonValue interface{}
-	if err := sonic.Unmarshal([]byte(jsonStr), &jsonValue); err != nil {
+	if err := sonic.UnmarshalString(jsonStr, &jsonValue); err != nil {
 		return Encode(fmt.Errorf("ERR invalid JSON: %v", err.Error()), false)
 	}
 
@@ -537,7 +538,25 @@ func evalINCR(args []string) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'incr' command"), false)
 	}
+	return incrDecrCmd(args, 1)
+}
 
+// evalDECR decrements the value of the specified key in args by 1,
+// if the key exists and the value is integer format.
+// The key should be the only param in args.
+// If the key does not exist, new key is created with value 0,
+// the value of the new key is then decremented.
+// The value for the queried key should be of integer format,
+// if not evalDECR returns encoded error response.
+// evalDECR returns the decremented value for the key if there are no errors.
+func evalDECR(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR wrong number of arguments for 'decr' command"), false)
+	}
+	return incrDecrCmd(args, -1)
+}
+
+func incrDecrCmd(args []string, incr int64) []byte {
 	var key string = args[0]
 	obj := Get(key)
 	if obj == nil {
@@ -554,7 +573,13 @@ func evalINCR(args []string) []byte {
 	}
 
 	i, _ := strconv.ParseInt(obj.Value.(string), 10, 64)
-	i++
+	// check overflow
+	if (incr < 0 && i < 0 && incr < (math.MinInt64-i)) ||
+		(incr > 0 && i > 0 && incr > (math.MaxInt64-i)) {
+		return Encode(errors.New("ERR value is out of range"), false)
+	}
+
+	i += int64(incr)
 	obj.Value = strconv.FormatInt(i, 10)
 
 	return Encode(i, false)
@@ -1657,4 +1682,30 @@ func EvalAndRespond(cmds RedisCmds, c *Client) {
 	if _, err := c.Write(buf.Bytes()); err != nil {
 		log.Panic(err)
 	}
+}
+
+func evalPersist(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR wrong number of arguments for 'persist' command"), false)
+	}
+
+	key := args[0]
+
+	obj := Get(key)
+
+	// If the key does not exist, return RESP encoded 0 to denote the key does not exist
+	if obj == nil {
+		return RESP_ZERO
+	}
+
+	// If the object exists but no expiration is set on it, return -1
+	_, isExpirySet := getExpiry(obj)
+	if !isExpirySet {
+		return RESP_MINUS_1
+	}
+
+	// If the object exists, remove the expiration time
+	delExpiry(obj)
+
+	return RESP_ONE
 }

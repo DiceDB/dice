@@ -27,6 +27,7 @@ func populateData(count int) {
 
 		// need to init again for each round with the overriden buffer size
 		// otherwise the watchchannel buffer size will stay as it is with the global keylimits size
+		core.ResetStore()
 		core.WatchChannel = make(chan core.WatchEvent, config.KeysLimit)
 
 		dataset := []keyValue{}

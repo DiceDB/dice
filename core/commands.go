@@ -446,12 +446,33 @@ var (
 	}
 	MGetCmdMeta = DiceCmdMeta{
 		Name: "MGET",
-		Info: `MGET returns the values for the queried keys in args
-		The RESP value of the key is encoded and then returned
-		MGET returns RESP_NIL if key is expired or it does not exist`,
+		Info: `MGET returns the values for the provided keys in args
+		returns the array of RESP values for provided keys,
+		for each key if it is expired or not-exists then response will be RESP_NIL
+		or it will be RESP of value
+		`,
 		Eval: evalMGET,
 		Arity: -2,
 		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1, LastKey: -1},
+	}
+	persistCmdMeta = DiceCmdMeta{
+		Name: "PERSIST",
+		Info: "PERSIST removes the expiration from a key",
+		Eval: evalPersist,
+	}
+	decrCmdMeta = DiceCmdMeta{
+		Name: "DECR",
+		Info: `DECR decrements the value of the specified key in args by 1,
+		if the key exists and the value is integer format.
+		The key should be the only param in args.
+		If the key does not exist, new key is created with value 0,
+		the value of the new key is then decremented.
+		The value for the queried key should be of integer format,
+		if not DECR returns encoded error response.
+		evalDECR returns the decremented value for the key if there are no errors.`,
+		Eval:     evalDECR,
+		Arity:    2,
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
 	}
 )
 
@@ -507,4 +528,6 @@ func init() {
 	diceCmds["BITOP"] = bitOpCmdMeta
 	diceCmds["KEYS"] = keysCmdMeta
 	diceCmds["MGET"] = MGetCmdMeta
+	diceCmds["PERSIST"] = persistCmdMeta
+	diceCmds["DECR"] = decrCmdMeta
 }
