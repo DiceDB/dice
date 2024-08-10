@@ -5,6 +5,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/dicedb/dice/core"
 )
 
 func TestMain(m *testing.M) {
@@ -27,6 +29,8 @@ func TestMain(m *testing.M) {
 
 	// Run the test suite
 	exitCode := m.Run()
+
+	core.ResetStore()
 
 	// Fire the ABORT command to gracefully terminate the server
 	result := fireCommand(conn, "ABORT")

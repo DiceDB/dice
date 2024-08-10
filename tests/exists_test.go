@@ -44,7 +44,7 @@ func TestExists(t *testing.T) {
 	}
 	for _, tcase := range testCases {
 		t.Run(tcase.name, func(t *testing.T) {
-			deleteTestKeys([]string{"key", "key2", "key3"})
+			deleteTestKeys([]string{"key", "key2", "key3", "key4"})
 			for i := 0; i < len(tcase.command); i++ {
 				if tcase.delay[i] > 0 {
 					time.Sleep(tcase.delay[i])
