@@ -165,7 +165,7 @@ func Get(k string) *Obj {
 	defer keypoolMutex.RUnlock()
 
 	ptr, ok := keypool[k]
-	if !ok {he mutexes are un
+	if !ok {
 		return nil
 	}
 
