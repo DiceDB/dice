@@ -53,6 +53,17 @@ var (
 		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	getDelCmdMeta = DiceCmdMeta{
+		Name: "GETDEL",
+		Info: `GETDEL returns the value for the queried key in args
+		The key should be the only param in args
+        If the key exists, it will be deleted before its value is returned.
+		The RESP value of the key is encoded and then returned
+		GETDEL returns RESP_NIL if key is expired or it does not exist`,
+		Eval:     evalGETDEL,
+		Arity:    2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	msetCmdMeta = DiceCmdMeta{
 		Name: "MSET",
 		Info: `MSET sets multiple keys to multiple values in the db
@@ -444,6 +455,16 @@ var (
 		Info: "KEYS command is used to get all the keys in the database. Complexity is O(n) where n is the number of keys in the database.",
 		Eval: evalKeys,
 	}
+	MGetCmdMeta = DiceCmdMeta{
+		Name: "MGET",
+		Info: `The MGET command returns an array of RESP values corresponding to the provided keys. 
+		For each key, if the key is expired or does not exist, the response will be RESP_NIL; 
+		otherwise, the response will be the RESP value of the key.
+		`,
+		Eval:     evalMGET,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1, LastKey: -1},
+	}
 	persistCmdMeta = DiceCmdMeta{
 		Name: "PERSIST",
 		Info: "PERSIST removes the expiration from a key",
@@ -483,15 +504,11 @@ var (
 		Return value is the number of keys existing.`,
 		Eval: evalEXISTS,
 	}
-	getDelCmdMeta = DiceCmdMeta{
-		Name: "GETDEL",
-		Info: `GETDEL returns the value for the queried key in args
-		The key should be the only param in args
-        If the key exists, it will be deleted before its value is returned.
-		The RESP value of the key is encoded and then returned
-		GETDEL returns RESP_NIL if key is expired or it does not exist`,
-		Eval:     evalGETDEL,
-		Arity:    2,
+	renameCmdMeta = DiceCmdMeta{
+		Name:     "RENAME",
+		Info:     "Renames a key and overwrites the destination",
+		Eval:     evalRename,
+		Arity:    3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 )
@@ -547,9 +564,11 @@ func init() {
 	diceCmds["BITCOUNT"] = bitCountCmdMeta
 	diceCmds["BITOP"] = bitOpCmdMeta
 	diceCmds["KEYS"] = keysCmdMeta
+	diceCmds["MGET"] = MGetCmdMeta
 	diceCmds["PERSIST"] = persistCmdMeta
 	diceCmds["DECR"] = decrCmdMeta
 	diceCmds["EXISTS"] = existsCmdMeta
 	diceCmds["GETDEL"] = getDelCmdMeta
 	diceCmds["DECRBY"] = decrByCmdMeta
+	diceCmds["RENAME"] = renameCmdMeta
 }
