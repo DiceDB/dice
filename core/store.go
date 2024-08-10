@@ -34,6 +34,10 @@ var (
 var WatchChannel chan WatchEvent
 
 func init() {
+	ResetStore()
+}
+
+func ResetStore() {
 	store = make(map[unsafe.Pointer]*Obj)
 	expires = make(map[*Obj]uint64)
 	keypool = make(map[string]unsafe.Pointer)
@@ -140,6 +144,9 @@ func DelByPtr(ptr unsafe.Pointer) bool {
 		delete(expires, obj)
 		delete(keypool, *((*string)(ptr)))
 		KeyspaceStat[0]["keys"]--
+
+		key := *((*string)(ptr))
+		WatchChannel <- WatchEvent{key, "DEL", obj}
 		return true
 	}
 	return false

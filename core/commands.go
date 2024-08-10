@@ -444,6 +444,25 @@ var (
 		Info: "KEYS command is used to get all the keys in the database. Complexity is O(n) where n is the number of keys in the database.",
 		Eval: evalKeys,
 	}
+	persistCmdMeta = DiceCmdMeta{
+		Name: "PERSIST",
+		Info: "PERSIST removes the expiration from a key",
+		Eval: evalPersist,
+	}
+	decrCmdMeta = DiceCmdMeta{
+		Name: "DECR",
+		Info: `DECR decrements the value of the specified key in args by 1,
+		if the key exists and the value is integer format.
+		The key should be the only param in args.
+		If the key does not exist, new key is created with value 0,
+		the value of the new key is then decremented.
+		The value for the queried key should be of integer format,
+		if not DECR returns encoded error response.
+		evalDECR returns the decremented value for the key if there are no errors.`,
+		Eval:     evalDECR,
+		Arity:    2,
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+	}
 	renameCmdMeta = DiceCmdMeta{
 		Name:     "RENAME",
 		Info:     "Renames a key and overwrites the destination",
@@ -504,5 +523,7 @@ func init() {
 	diceCmds["BITCOUNT"] = bitCountCmdMeta
 	diceCmds["BITOP"] = bitOpCmdMeta
 	diceCmds["KEYS"] = keysCmdMeta
+	diceCmds["PERSIST"] = persistCmdMeta
+	diceCmds["DECR"] = decrCmdMeta
 	diceCmds["RENAME"] = renameCmdMeta
 }
