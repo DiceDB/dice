@@ -109,15 +109,16 @@ func PutAll(data map[string]*Obj) {
 }
 
 func Get(k string) *Obj {
-	storeMutex.RLock()
-	defer storeMutex.RUnlock()
-	keypoolMutex.RLock()
-	defer keypoolMutex.RUnlock()
+	storeMutex.Lock()
+	defer storeMutex.Unlock()
+	keypoolMutex.Lock()
+	defer keypoolMutex.Unlock()
 
 	obj := getOperation(k)
 	if obj == nil {
 		return nil
 	}
+
 	return obj
 }
 
@@ -203,6 +204,26 @@ func countClients(clients *sync.Map) int {
 	return count
 }
 
+func GetNoTouch(k string) *Obj {
+	storeMutex.RLock()
+	defer storeMutex.RUnlock()
+	keypoolMutex.RLock()
+	defer keypoolMutex.RUnlock()
+
+	ptr, ok := keypool[k]
+	if !ok {
+		return nil
+	}
+
+	v := store[ptr]
+	if v != nil {
+		if hasExpired(v) {
+			return nil
+		}
+	}
+	return v
+}
+
 //Helper function for Get operation
 
 func getOperation(k string) *Obj {
@@ -214,11 +235,11 @@ func getOperation(k string) *Obj {
 	value := store[ptr]
 	if value != nil {
 		if hasExpired(value) {
-			keypoolMutex.RUnlock()
-			storeMutex.RUnlock()
-			Del(k)
-			storeMutex.RLock()
-			keypoolMutex.RLock()
+			delete(store, ptr)
+			delete(expires, value)
+			delete(keypool, k)
+			KeyspaceStat[0]["keys"]--
+			WatchChannel <- WatchEvent{k, "DEL", value}
 			return nil
 		}
 		value.LastAccessedAt = getCurrentClock()
