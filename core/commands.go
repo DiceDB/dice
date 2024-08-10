@@ -444,6 +444,16 @@ var (
 		Info: "KEYS command is used to get all the keys in the database. Complexity is O(n) where n is the number of keys in the database.",
 		Eval: evalKeys,
 	}
+	MGetCmdMeta = DiceCmdMeta{
+		Name: "MGET",
+		Info: `The MGET command returns an array of RESP values corresponding to the provided keys. 
+		For each key, if the key is expired or does not exist, the response will be RESP_NIL; 
+		otherwise, the response will be the RESP value of the key.
+		`,
+		Eval: evalMGET,
+		Arity: -2,
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1, LastKey: -1},
+	}
 	persistCmdMeta = DiceCmdMeta{
 		Name: "PERSIST",
 		Info: "PERSIST removes the expiration from a key",
@@ -536,6 +546,7 @@ func init() {
 	diceCmds["BITCOUNT"] = bitCountCmdMeta
 	diceCmds["BITOP"] = bitOpCmdMeta
 	diceCmds["KEYS"] = keysCmdMeta
+	diceCmds["MGET"] = MGetCmdMeta
 	diceCmds["PERSIST"] = persistCmdMeta
 	diceCmds["DECR"] = decrCmdMeta
 	diceCmds["EXISTS"] = existsCmdMeta
