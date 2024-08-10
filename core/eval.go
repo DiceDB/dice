@@ -1575,29 +1575,16 @@ func evalRename(args []string) []byte {
 		return RESP_OK
 	}
 
-	sourceObj := Get(sourceKey)
-
 	// if Source key does not exist, return RESP encoded nil
+	sourceObj := Get(sourceKey)
 	if sourceObj == nil {
 		return Encode("ERR no such key", false)
 	}
 
-	destObj := Get(destKey)
-
-	//TODO : below operations should be done via atomic operation
-
-	//Delete the destination key if exists
-	if destObj != nil {
-		Del(destKey)
+	if ok := Rename(sourceKey, destKey); ok {
+		return RESP_OK
 	}
-
-	// Rename the key by putting the source key's value in the destination key
-	Put(destKey, sourceObj)
-
-	//Deleting the source Key
-	Del(sourceKey)
-
-	return RESP_OK
+	return RESP_NIL
 
 }
 
