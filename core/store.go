@@ -243,3 +243,23 @@ func countClients(clients *sync.Map) int {
 	})
 	return count
 }
+
+func GetNoTouch(k string) *Obj {
+	storeMutex.RLock()
+	defer storeMutex.RUnlock()
+	keypoolMutex.RLock()
+	defer keypoolMutex.RUnlock()
+
+	ptr, ok := keypool[k]
+	if !ok {
+		return nil
+	}
+
+	v := store[ptr]
+	if v != nil {
+		if hasExpired(v) {
+			return nil
+		}
+	}
+	return v
+}
