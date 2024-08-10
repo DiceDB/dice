@@ -98,6 +98,27 @@ func TestGetEx(t *testing.T) {
 			assert_type: []string{"equal", "equal", "assert", "equal", "equal"},
 			delay:       []time.Duration{0, 0, 0, 0, 0},
 		},
+		{
+			name:        "GetEx with multiple expiry options",
+			commands:    []string{"SET foo bar", "GETEX foo ex 2 px 123123", "TTL foo", "GETEX foo"},
+			expected:    []interface{}{"OK", "ERR syntax error", int64(-1), "bar"},
+			assert_type: []string{"equal", "equal", "equal", "equal"},
+			delay:       []time.Duration{0, 0, 0, 0},
+		},
+		{
+			name:        "GetEx with persist and ex options",
+			commands:    []string{"SET foo bar", "GETEX foo ex 2", "TTL foo", "GETEX foo persist ex 2", "TTL foo"},
+			expected:    []interface{}{"OK", "bar", int64(2), "ERR syntax error", int64(2)},
+			assert_type: []string{"equal", "equal", "assert", "equal", "assert"},
+			delay:       []time.Duration{0, 0, 0, 0, 0},
+		},
+		{
+			name:        "GetEx with persist and px options",
+			commands:    []string{"SET foo bar", "GETEX foo px 2000", "TTL foo", "GETEX foo px 2000 persist", "TTL foo"},
+			expected:    []interface{}{"OK", "bar", int64(2), "ERR syntax error", int64(2)},
+			assert_type: []string{"equal", "equal", "assert", "equal", "assert"},
+			delay:       []time.Duration{0, 0, 0, 0, 0},
+		},
 	}
 
 	for _, tc := range testCases {

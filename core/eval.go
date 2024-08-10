@@ -1796,8 +1796,9 @@ func evalGETEX(args []string) []byte {
 		return RESP_NIL
 	}
 
+	var exDurationMs int64 = -1
 	var state exDurationState = Uninitialized
-
+	var persist bool = false
 	for i := 1; i < len(args); i++ {
 		arg := strings.ToUpper(args[i])
 		switch arg {
@@ -1822,9 +1823,8 @@ func evalGETEX(args []string) []byte {
 			if arg == "EX" {
 				exDuration = exDuration * 1000
 			}
-			exDurationMs := exDuration
+			exDurationMs = exDuration
 			state = Initialized
-			setExpiry(obj, exDurationMs)
 
 		case "PXAT", "EXAT":
 			if state != Uninitialized {
@@ -1846,19 +1846,30 @@ func evalGETEX(args []string) []byte {
 			if arg == "EXAT" {
 				exDuration = exDuration * 1000
 			}
-			exDurationMs := exDuration - time.Now().UnixMilli()
+			exDurationMs = exDuration - time.Now().UnixMilli()
 			// If the expiry time is in the past, set exDurationMs to 0
 			// This will be used to signal immediate expiration
 			if exDurationMs < 0 {
 				exDurationMs = 0
 			}
 			state = Initialized
-			setExpiry(obj, exDurationMs)
 
 		case "PERSIST":
-			delExpiry(obj)
+			if state != Uninitialized {
+				return Encode(errors.New("ERR syntax error"), false)
+			}
+			persist = true
+			state = Initialized
 		default:
 			return Encode(errors.New("ERR syntax error"), false)
+		}
+	}
+
+	if state == Initialized {
+		if persist {
+			delExpiry(obj)
+		} else {
+			setExpiry(obj, exDurationMs)
 		}
 	}
 
