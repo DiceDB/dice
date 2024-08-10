@@ -151,6 +151,31 @@ func Get(k string) *Obj {
 	return v
 }
 
+func GetDel(k string) *Obj {
+	storeMutex.RLock()
+	defer storeMutex.RUnlock()
+	keypoolMutex.RLock()
+	defer keypoolMutex.RUnlock()
+	ptr, ok := keypool[k]
+	if !ok {
+		return nil
+	}
+
+	v := store[ptr]
+	if v != nil {
+		expired := hasExpired(v)
+		keypoolMutex.RUnlock()
+		storeMutex.RUnlock()
+		Del(k)
+		storeMutex.RLock()
+		keypoolMutex.RLock()
+		if expired {
+			return nil
+		}
+	}
+	return v
+}
+
 func Del(k string) bool {
 	storeMutex.Lock()
 	defer storeMutex.Unlock()
