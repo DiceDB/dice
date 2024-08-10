@@ -43,7 +43,7 @@ func ResetStore() {
 		expires = make(map[*Obj]uint64)
 		keypool = make(map[string]unsafe.Pointer)
 		WatchChannel = make(chan WatchEvent, config.KeysLimit)
-	})
+	}, WithStoreLock(), WithKeypoolLock())
 }
 
 func NewObj(value interface{}, expDurationMs int64, oType uint8, oEnc uint8) *Obj {
@@ -61,7 +61,7 @@ func NewObj(value interface{}, expDurationMs int64, oType uint8, oEnc uint8) *Ob
 func Put(k string, obj *Obj) {
 	withLocks(func() {
 		putHelper(k, obj)
-	})
+	}, WithStoreLock(), WithKeypoolLock())
 }
 
 // PutAll is a bulk insert function that takes a map of
@@ -71,7 +71,7 @@ func PutAll(data map[string]*Obj) {
 		for k, obj := range data {
 			putHelper(k, obj)
 		}
-	})
+	}, WithStoreLock(), WithKeypoolLock())
 }
 
 // GetNoTouch is a function to retrieve a value from the store without updating
@@ -97,7 +97,7 @@ func getHelper(k string, touch bool) *Obj {
 				v.LastAccessedAt = getCurrentClock()
 			}
 		}
-	})
+	}, WithStoreRLock(), WithKeypoolRLock())
 	return v
 }
 
@@ -125,7 +125,7 @@ func GetAll(keys []string) []*Obj {
 				response = append(response, nil)
 			}
 		}
-	})
+	}, WithStoreRLock(), WithKeypoolRLock())
 	return response
 }
 
@@ -136,17 +136,13 @@ func Del(k string) bool {
 			return false
 		}
 		return deleteKey(k, ptr, store[ptr])
-	})
+	}, WithStoreLock(), WithKeypoolLock())
 }
 
 func DelByPtr(ptr unsafe.Pointer) bool {
 	return withLocksReturn(func() bool {
-		if obj, ok := store[ptr]; ok {
-			key := *((*string)(ptr))
-			return deleteKey(key, ptr, obj)
-		}
-		return false
-	})
+		return delByPtr(ptr)
+	}, WithStoreLock(), WithKeypoolLock())
 }
 
 // List all keys in the store by given pattern
@@ -154,7 +150,7 @@ func Keys(p string) ([]string, error) {
 	var keys []string
 	var err error
 
-	withReadLocks(func() {
+	withLocks(func() {
 		keys = make([]string, 0, len(keypool))
 		for k := range keypool {
 			if found, e := path.Match(p, k); e != nil {
@@ -164,7 +160,7 @@ func Keys(p string) ([]string, error) {
 				keys = append(keys, k)
 			}
 		}
-	})
+	}, WithStoreRLock(), WithKeypoolRLock())
 
 	return keys, err
 }
@@ -221,7 +217,7 @@ func Rename(sourceKey string, destKey string) bool {
 		notifyWatchers(sourceKey, "DEL", sourceObj)
 
 		return true
-	})
+	}, WithStoreLock(), WithKeypoolLock())
 }
 
 // Helper functions
@@ -303,32 +299,12 @@ func deleteKey(k string, ptr unsafe.Pointer, obj *Obj) bool {
 	return false
 }
 
-// withLocks is a helper function that acquires both storeMutex and keypoolMutex
-// before executing the function f. It releases the locks after f returns.
-func withLocks(f func()) {
-	storeMutex.Lock()
-	keypoolMutex.Lock()
-	defer keypoolMutex.Unlock()
-	defer storeMutex.Unlock()
-	f()
-}
-
-// withReadLocks is a helper function that acquires both storeMutex and keypoolMutex
-// with read locks before executing the function f. It releases the locks after f returns.
-func withReadLocks(f func()) {
-	storeMutex.RLock()
-	keypoolMutex.RLock()
-	defer keypoolMutex.RUnlock()
-	defer storeMutex.RUnlock()
-	f()
-}
-
-// withLocksReturn is a helper function that acquires both storeMutex and keypoolMutex
-// before executing the function f. It releases the locks after f returns and returns the result of f.
-func withLocksReturn(f func() bool) bool {
-	storeMutex.Lock()
-	keypoolMutex.Lock()
-	defer keypoolMutex.Unlock()
-	defer storeMutex.Unlock()
-	return f()
+// delByPtr deletes a key from the store, keypool, and expires maps using a pointer.
+// This method is not thread-safe. It should be called within a lock.
+func delByPtr(ptr unsafe.Pointer) bool {
+	if obj, ok := store[ptr]; ok {
+		key := *((*string)(ptr))
+		return deleteKey(key, ptr, obj)
+	}
+	return false
 }
