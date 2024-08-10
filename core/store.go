@@ -130,9 +130,9 @@ func PutAll(data map[string]*Obj) {
 	}
 }
 
-// getAll is a bulk retrieve function that takes array of
+// GetAll is a bulk retrieve function that takes array of
 // keys and retrieves values for keys from the store
-func getAll(keys []string) []*Obj {
+func GetAll(keys []string) []*Obj {
 	storeMutex.Lock()
 	defer storeMutex.Unlock()
 

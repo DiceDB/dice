@@ -1,10 +1,10 @@
 package testutils
 
 import (
-	"encoding/json"
 	"reflect"
 	"testing"
 
+	"github.com/bytedance/sonic"
 	"gotest.tools/v3/assert"
 )
 
@@ -15,10 +15,10 @@ func IsJSONResponse(s string) bool {
 func AssertJSONEqual(t *testing.T, expected, actual string) {
 	var expectedJSON, actualJSON interface{}
 
-	err := json.Unmarshal([]byte(expected), &expectedJSON)
+	err := sonic.UnmarshalString(expected, &expectedJSON)
 	assert.NilError(t, err, "Failed to unmarshal expected JSON")
 
-	err = json.Unmarshal([]byte(actual), &actualJSON)
+	err = sonic.UnmarshalString(actual, &actualJSON)
 	assert.NilError(t, err, "Failed to unmarshal actual JSON")
 
 	if !reflect.DeepEqual(NormalizeJSON(expectedJSON), NormalizeJSON(actualJSON)) {
