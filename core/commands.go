@@ -56,8 +56,7 @@ var (
 	getDelCmdMeta = DiceCmdMeta{
 		Name: "GETDEL",
 		Info: `GETDEL returns the value for the queried key in args
-		The key should be the only param in args
-        If the key exists, it will be deleted before its value is returned.
+		The key should be the only param in args And If the key exists, it will be deleted before its value is returned.
 		The RESP value of the key is encoded and then returned
 		GETDEL returns RESP_NIL if key is expired or it does not exist`,
 		Eval:     evalGETDEL,

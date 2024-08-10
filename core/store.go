@@ -38,19 +38,12 @@ func init() {
 }
 
 func ResetStore() {
-	storeMutex.Lock()
-	defer storeMutex.Unlock()
-	keypoolMutex.Lock()
-	defer keypoolMutex.Unlock()
-
-	store = make(map[unsafe.Pointer]*Obj)
-	expires = make(map[*Obj]uint64)
-	keypool = make(map[string]unsafe.Pointer)
-	WatchChannel = make(chan WatchEvent, config.KeysLimit)
-}
-
-func setExpiry(obj *Obj, expDurationMs int64) {
-	expires[obj] = uint64(time.Now().UnixMilli()) + uint64(expDurationMs)
+	withLocks(func() {
+		store = make(map[unsafe.Pointer]*Obj)
+		expires = make(map[*Obj]uint64)
+		keypool = make(map[string]unsafe.Pointer)
+		WatchChannel = make(chan WatchEvent, config.KeysLimit)
+	}, WithStoreLock(), WithKeypoolLock())
 }
 
 func NewObj(value interface{}, expDurationMs int64, oType uint8, oEnc uint8) *Obj {
@@ -66,179 +59,110 @@ func NewObj(value interface{}, expDurationMs int64, oType uint8, oEnc uint8) *Ob
 }
 
 func Put(k string, obj *Obj) {
-	storeMutex.Lock()
-	defer storeMutex.Unlock()
-	keypoolMutex.Lock()
-	defer keypoolMutex.Unlock()
-
-	putOperation(k, obj)
+	withLocks(func() {
+		putHelper(k, obj)
+	}, WithStoreLock(), WithKeypoolLock())
 }
 
 // PutAll is a bulk insert function that takes a map of
 // keys and values and inserts them into the store
 func PutAll(data map[string]*Obj) {
-	storeMutex.Lock()
-	defer storeMutex.Unlock()
-	keypoolMutex.Lock()
-	defer keypoolMutex.Unlock()
-
-	for k, obj := range data {
-		if len(store) >= config.KeysLimit {
-			evict()
+	withLocks(func() {
+		for k, obj := range data {
+			putHelper(k, obj)
 		}
-		obj.LastAccessedAt = getCurrentClock()
+	}, WithStoreLock(), WithKeypoolLock())
+}
 
+// GetNoTouch is a function to retrieve a value from the store without updating
+// the last accessed time of the object.
+func GetNoTouch(k string) *Obj {
+	return getHelper(k, false)
+}
+
+func getHelper(k string, touch bool) *Obj {
+	var v *Obj
+	withLocks(func() {
 		ptr, ok := keypool[k]
 		if !ok {
-			// we need to create a new string for each key, ensuring that each key in
-			// the keypool map has its own unique memory address. Reusing the same
-			// memory address (&k) for multiple keys will cause the keypool map to
-			// have incorrect entries, because the address of k remains the same
-			// throughout the loop iterations, but its value changes.
-			// As a result, all entries in the keypool map end up pointing to the same
-			// memory location, which contains the last value of k after the loop
-			// finishes.
-			keyCopy := string([]byte(k))
-			keypool[k] = unsafe.Pointer(&keyCopy)
-			ptr = unsafe.Pointer(&keyCopy)
+			return
 		}
 
-		store[ptr] = obj
-		if KeyspaceStat[0] == nil {
-			KeyspaceStat[0] = make(map[string]int)
+		v = store[ptr]
+		if v != nil {
+			if hasExpired(v) {
+				deleteKey(k, ptr, v)
+				v = nil
+			} else if touch {
+				v.LastAccessedAt = getCurrentClock()
+			}
 		}
-		KeyspaceStat[0]["keys"]++
-
-		WatchChannel <- WatchEvent{k, "SET", obj}
-	}
+	}, WithStoreRLock(), WithKeypoolRLock())
+	return v
 }
 
 // GetAll is a bulk retrieve function that takes array of
 // keys and retrieves values for keys from the store
 func GetAll(keys []string) []*Obj {
-	storeMutex.Lock()
-	defer storeMutex.Unlock()
-
-	keypoolMutex.Lock()
-	defer keypoolMutex.Unlock()
-
-	response := make([]*Obj, 0)
-	for _, k := range keys {
-		ptr, ok := keypool[k]
-		if !ok {
-			response = append(response, nil)
-			continue
-		}
-		v := store[ptr]
-		if v != nil {
-			if hasExpired(v) {
-				delete(store, ptr)
-				delete(expires, v)
-				delete(keypool, k)
-				KeyspaceStat[0]["keys"]--
-				WatchChannel <- WatchEvent{k, "DEL", v}
+	response := make([]*Obj, 0, len(keys))
+	withLocks(func() {
+		for _, k := range keys {
+			ptr, ok := keypool[k]
+			if !ok {
+				response = append(response, nil)
 				continue
 			}
-			v.LastAccessedAt = getCurrentClock()
+			v := store[ptr]
+			if v != nil {
+				if hasExpired(v) {
+					deleteKey(k, ptr, v)
+					response = append(response, nil)
+				} else {
+					v.LastAccessedAt = getCurrentClock()
+					response = append(response, v)
+				}
+			} else {
+				response = append(response, nil)
+			}
 		}
-		response = append(response, v)
-	}
+	}, WithStoreRLock(), WithKeypoolRLock())
 	return response
 }
 
-func Get(k string) *Obj {
-	storeMutex.Lock()
-	defer storeMutex.Unlock()
-	keypoolMutex.Lock()
-	defer keypoolMutex.Unlock()
-
-	obj := getOperation(k)
-	if obj == nil {
-		return nil
-	}
-
-	return obj
-}
-
-func GetDel(k string) *Obj {
-	storeMutex.Lock()
-	defer storeMutex.Unlock()
-	keypoolMutex.Lock()
-	defer keypoolMutex.Unlock()
-
-	ptr, ok := keypool[k]
-	if !ok {
-		return nil
-	}
-
-	obj, exists := store[ptr]
-	if !exists {
-		return nil
-	}
-
-	expired := hasExpired(obj)
-	executeDelete(ptr, obj, k)
-	// Notify watchers
-	WatchChannel <- WatchEvent{k, "GETDEL", obj}
-	if expired {
-		return nil
-	}
-	return obj
-}
-
 func Del(k string) bool {
-	storeMutex.Lock()
-	defer storeMutex.Unlock()
-	keypoolMutex.Lock()
-	defer keypoolMutex.Unlock()
-
-	if ok := delOperation(k); ok {
-		return true
-	}
-	return false
+	return withLocksReturn(func() bool {
+		ptr, ok := keypool[k]
+		if !ok {
+			return false
+		}
+		return deleteKey(k, ptr, store[ptr])
+	}, WithStoreLock(), WithKeypoolLock())
 }
 
 func DelByPtr(ptr unsafe.Pointer) bool {
-	storeMutex.Lock()
-	defer storeMutex.Unlock()
-	keypoolMutex.Lock()
-	defer keypoolMutex.Unlock()
-
-	if obj, ok := store[ptr]; ok {
-		delete(store, ptr)
-		delete(expires, obj)
-		delete(keypool, *((*string)(ptr)))
-		KeyspaceStat[0]["keys"]--
-
-		key := *((*string)(ptr))
-		WatchChannel <- WatchEvent{key, "DEL", obj}
-		return true
-	}
-	return false
+	return withLocksReturn(func() bool {
+		return delByPtr(ptr)
+	}, WithStoreLock(), WithKeypoolLock())
 }
 
 // List all keys in the store by given pattern
 func Keys(p string) ([]string, error) {
-	storeMutex.RLock()
-	defer storeMutex.RUnlock()
-	keypoolMutex.RLock()
-	defer keypoolMutex.RUnlock()
+	var keys []string
+	var err error
 
-	keyCap := 0
-	if p == "*" {
-		keyCap = len(keypool)
-	}
-
-	keys := make([]string, 0, keyCap)
-	for k := range keypool {
-		if found, err := path.Match(p, k); err != nil {
-			return nil, err
-		} else if found {
-			keys = append(keys, k)
+	withLocks(func() {
+		keys = make([]string, 0, len(keypool))
+		for k := range keypool {
+			if found, e := path.Match(p, k); e != nil {
+				err = e
+				return
+			} else if found {
+				keys = append(keys, k)
+			}
 		}
-	}
+	}, WithStoreRLock(), WithKeypoolRLock())
 
-	return keys, nil
+	return keys, err
 }
 
 // Function to add a new watcher to a query.
@@ -252,10 +176,96 @@ func RemoveWatcher(query DSQLQuery, clientFd int) {
 	if clients, ok := WatchList.Load(query); ok {
 		clients.(*sync.Map).Delete(clientFd)
 		// If no more clients for this query, remove the query from WatchList
-		if clientCount := countClients(clients.(*sync.Map)); clientCount == 0 {
+		if countClients(clients.(*sync.Map)) == 0 {
 			WatchList.Delete(query)
 		}
 	}
+}
+
+// Rename function to implement RENAME functionality using existing helpers
+func Rename(sourceKey string, destKey string) bool {
+	return withLocksReturn(func() bool {
+		// If source and destination are the same, do nothing and return true
+		if sourceKey == destKey {
+			return true
+		}
+
+		sourcePtr, sourceOk := keypool[sourceKey]
+		if !sourceOk {
+			return false
+		}
+
+		sourceObj := store[sourcePtr]
+		if sourceObj == nil || hasExpired(sourceObj) {
+			if sourceObj != nil {
+				deleteKey(sourceKey, sourcePtr, sourceObj)
+			}
+			return false
+		}
+
+		// Use putHelper to handle putting the object at the destination key
+		putHelper(destKey, sourceObj)
+
+		// Remove the source key
+		delete(store, sourcePtr)
+		delete(keypool, sourceKey)
+		if KeyspaceStat[0] != nil {
+			KeyspaceStat[0]["keys"]--
+		}
+
+		// Notify watchers about the deletion of the source key
+		notifyWatchers(sourceKey, "DEL", sourceObj)
+
+		return true
+	}, WithStoreLock(), WithKeypoolLock())
+}
+
+// Helper functions
+
+// putHelper is a helper function to insert a key-value pair into the store.
+// It also increments the key count in the KeyspaceStat map and notifies watchers.
+// This method is not thread-safe. It should be called within a lock.
+func putHelper(k string, obj *Obj) {
+	if len(store) >= config.KeysLimit {
+		evict()
+	}
+	obj.LastAccessedAt = getCurrentClock()
+
+	ptr := ensureKeyInPool(k)
+	store[ptr] = obj
+
+	incrementKeyCount()
+	notifyWatchers(k, "SET", obj)
+}
+
+func Get(k string) *Obj {
+	return getHelper(k, true)
+}
+
+func GetDel(k string) *Obj {
+	var v *Obj
+	withLocks(func() {
+		ptr, ok := keypool[k]
+		if !ok {
+			return
+		}
+
+		v = store[ptr]
+		if v != nil {
+			expired := hasExpired(v)
+			deleteKeyWithOperationName(k, ptr, v, "GETDEL")
+			if expired {
+				v = nil
+			}
+		}
+	}, WithStoreRLock(), WithKeypoolRLock())
+	return v
+}
+
+// setExpiry sets the expiry time for an object.
+// This method is not thread-safe. It should be called within a lock.
+func setExpiry(obj *Obj, expDurationMs int64) {
+	expires[obj] = uint64(time.Now().UnixMilli()) + uint64(expDurationMs)
 }
 
 // Helper function to count clients
@@ -268,111 +278,57 @@ func countClients(clients *sync.Map) int {
 	return count
 }
 
-func GetNoTouch(k string) *Obj {
-	storeMutex.RLock()
-	defer storeMutex.RUnlock()
-	keypoolMutex.RLock()
-	defer keypoolMutex.RUnlock()
-
+// This method is not thread-safe. It should be called within a lock.
+func ensureKeyInPool(k string) unsafe.Pointer {
 	ptr, ok := keypool[k]
 	if !ok {
-		return nil
-	}
-
-	v := store[ptr]
-	if v != nil {
-		if hasExpired(v) {
-			return nil
-		}
-	}
-	return v
-}
-
-//Helper function for Get operation
-
-func getOperation(k string) *Obj {
-	ptr, ok := keypool[k]
-	if !ok {
-		return nil
-	}
-
-	value := store[ptr]
-	if value != nil {
-		if hasExpired(value) {
-			delete(store, ptr)
-			delete(expires, value)
-			delete(keypool, k)
-			KeyspaceStat[0]["keys"]--
-			WatchChannel <- WatchEvent{k, "DEL", value}
-			return nil
-		}
-		value.LastAccessedAt = getCurrentClock()
-	}
-	return value
-}
-
-// Helper function for Put operation
-func putOperation(k string, obj *Obj) {
-	if len(store) >= config.KeysLimit {
-		evict()
-	}
-	obj.LastAccessedAt = getCurrentClock()
-
-	ptr, ok := keypool[k]
-	if !ok {
-		keypool[k] = unsafe.Pointer(&k)
 		ptr = unsafe.Pointer(&k)
+		keypool[k] = ptr
 	}
+	return ptr
+}
 
-	store[ptr] = obj
+// incrementKeyCount increments the key count in the KeyspaceStat map.
+// This method is not thread-safe. It should be called within a lock.
+func incrementKeyCount() {
 	if KeyspaceStat[0] == nil {
 		KeyspaceStat[0] = make(map[string]int)
 	}
 	KeyspaceStat[0]["keys"]++
-
-	WatchChannel <- WatchEvent{k, "SET", obj}
 }
 
-// Helper function for Delete operations
-func delOperation(k string) bool {
-	ptr, ok := keypool[k]
-	if !ok {
-		return false
-	}
+// notifyWatchers sends a WatchEvent to the WatchChannel.
+// This function is called whenever a key is updated.
+func notifyWatchers(k string, operation string, obj *Obj) {
+	WatchChannel <- WatchEvent{k, operation, obj}
+}
 
-	if obj, ok := store[ptr]; ok {
-		if success := executeDelete(ptr, obj, k); success {
-			WatchChannel <- WatchEvent{k, "DEL", obj}
-			return true
-		}
+// deleteKey deletes a key from the store, keypool, and expires maps. it also
+// decrements the key count in the KeyspaceStat map and notifies watchers about
+// the deletion of the key.
+// This method is not thread-safe. It should be called within a lock.
+func deleteKey(k string, ptr unsafe.Pointer, obj *Obj) bool {
+	return deleteKeyWithOperationName(k, ptr, obj, "DEL")
+}
+
+func deleteKeyWithOperationName(k string, ptr unsafe.Pointer, obj *Obj, operation string) bool {
+	if obj != nil {
+		delete(store, ptr)
+		delete(expires, obj)
+		delete(keypool, k)
+		KeyspaceStat[0]["keys"]--
+		notifyWatchers(k, operation, obj)
+		return true
 	}
 	return false
 }
 
-func executeDelete(ptr unsafe.Pointer, obj *Obj, key string) bool {
-	if obj == nil {
-		return false
+// delByPtr deletes a key from the store, keypool, and expires maps using a pointer.
+// This method is not thread-safe. It should be called within a lock.
+func delByPtr(ptr unsafe.Pointer) bool {
+	if obj, ok := store[ptr]; ok {
+		key := *((*string)(ptr))
+		return deleteKey(key, ptr, obj)
 	}
-	delete(store, ptr)
-	delete(expires, obj)
-	delete(keypool, key)
-	KeyspaceStat[0]["keys"]--
-	return true
-}
-
-func Rename(sourceKey string, destKey string) bool {
-	storeMutex.Lock()
-	defer storeMutex.Unlock()
-	keypoolMutex.Lock()
-	defer keypoolMutex.Unlock()
-
-	sourceObj := getOperation(sourceKey)
-	if sourceObj == nil {
-		return false
-	}
-	delOperation(destKey)
-	putOperation(destKey, sourceObj)
-	delOperation(sourceKey)
-
-	return true
+	return false
 }
