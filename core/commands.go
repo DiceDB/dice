@@ -62,7 +62,7 @@ var (
 		Returns encoded OK RESP once all entries are added`,
 		Eval:     evalMSET,
 		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 2},
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 2, LastKey: -1},
 	}
 	jsonsetCmdMeta = DiceCmdMeta{
 		Name: "JSON.SET",
