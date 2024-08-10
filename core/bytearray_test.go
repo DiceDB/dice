@@ -144,11 +144,9 @@ func TestDeepCopy(t *testing.T) {
 
 	// Modify the copy's data to ensure it's independent of the original
 	copy.data[0] = 9
-
     assert.Assert(t, copy.data[0] != original.data[0], "ByteArray DeepCopy did not create an independent copy, original and copy data are linked")
 
 	// Modify the original's data to ensure it doesn't affect the copy
 	original.data[1] = 8
-
     assert.Assert(t, copy.data[1] != original.data[1], "ByteArray DeepCopy did not create an independent copy, original and copy data are linked")
 }

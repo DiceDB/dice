@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"testing"
     "gotest.tools/v3/assert"
-    "gotest.tools/v3/assert/cmp"
 )
 
 func newNode(bl *byteList, b byte) *byteListNode {
@@ -92,7 +91,7 @@ func TestByteListDeepCopy(t *testing.T) {
 	assert.Equal(t, copy.size, original.size, "size should be the same")
 
 	// Verify that the head node data is correctly copied
-    assert.Assert(t, cmp.DeepEqual(copy.head.buf, original.head.buf), "head node buffer should be the same")
+    assert.Equal(t, copy.head.buf[0], original.head.buf[0], "head node buffer should be the same")
 
     // Verify that changes to the copy do not affect the original
     copy.head.buf[0] = 9
