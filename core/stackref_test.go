@@ -5,11 +5,12 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core"
 	"github.com/dicedb/dice/testutils"
 )
 
-func createAndPushKey(sr *core.StackRef, key string, value int, expDurationMs int64) {
+func CreateAndPushKeyToStack(sr *core.StackRef, key string, value int, expDurationMs int64) {
 	obj := core.NewObj(value, expDurationMs, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT)
 	core.Put(key, obj)
 	sr.Push(key)
@@ -93,7 +94,7 @@ func TestStackRef(t *testing.T) {
 	}
 
 	for _, k := range keys {
-		createAndPushKey(sr2, k.key, k.value, k.expDurationMs)
+		CreateAndPushKeyToStack(sr2, k.key, k.value, k.expDurationMs)
 	}
 
 	expectedVals = []int64{100, 90, 80}
@@ -130,17 +131,17 @@ func TestStackRef(t *testing.T) {
 }
 
 func BenchmarkRemoveLargeNumberOfExpiredKeys(b *testing.B) {
+	for _, v := range benchmarkDataSizes {
+		config.KeysLimit = 20000000 // Set a high limit for benchmarking
+		core.WatchChannel = make(chan core.WatchEvent, config.KeysLimit)
 
-	for _, v := range keys {
-		populateData(v.count)
-
-		b.Run(fmt.Sprintf("keys_%d", v.count), func(b *testing.B) {
+		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				b.StopTimer()
 				sr := core.NewStackRef()
-				createAndPushKey(sr, "initialKey", 0, -1)
-				for j := 1; j < v.count; j++ {
-					createAndPushKey(sr, strconv.Itoa(j), j, 0)
+				CreateAndPushKeyToStack(sr, "initialKey", 0, -1)
+				for j := 1; j < v; j++ {
+					CreateAndPushKeyToStack(sr, strconv.Itoa(j), j, 0)
 				}
 				b.StartTimer()
 				if _, err := sr.Pop(); err == core.ErrStackEmpty {
