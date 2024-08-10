@@ -144,8 +144,8 @@ func BenchmarkRemoveLargeNumberOfExpiredKeys(b *testing.B) {
 					CreateAndPushKeyToStack(sr, strconv.Itoa(j), j, 0)
 				}
 				b.StartTimer()
-				if _, err := sr.Pop(); err == core.ErrStackEmpty {
-					continue
+				if _, err := sr.Pop(); err != nil {
+					b.Fatal(err)
 				}
 			}
 		})
