@@ -166,7 +166,7 @@ func evalSET(args []string) []byte {
 			if exDuration < 0 {
 				return Encode(errors.New("ERR invalid expire time in 'set' command"), false)
 			}
-			
+
 			if arg == "EXAT" {
 				exDuration = exDuration * 1000
 			}
@@ -1564,13 +1564,14 @@ func evalCommandGetKeys(args []string) []byte {
 // evalMGET returns list of values for provided keys in args
 // return RESP_NIL if key expires or not exists
 // return Encoded values for provided keys
+// MGET is atomic
 func evalMGET(args []string) []byte {
 	if len(args) < 1 {
 		return Encode(errors.New("ERR wrong number of arguments for command"), false)
 	}
-	response := make([]interface{}, 0);
-	for _, key := range args {
-		obj := Get(key)
+	values := getAll(args)
+	response := make([]interface{}, 0)
+	for _, obj := range values {
 		if obj == nil {
 			response = append(response, RESP_NIL)
 		} else {

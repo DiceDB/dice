@@ -121,6 +121,39 @@ func PutAll(data map[string]*Obj) {
 	}
 }
 
+// PutAll is a bulk retrieve function that takes array of
+// keys and retrieves values for keys from the store
+func getAll(keys []string) []*Obj {
+	storeMutex.Lock()
+	defer storeMutex.Unlock()
+
+	keypoolMutex.Lock()
+	defer keypoolMutex.Unlock()
+
+	response := make([]*Obj, 0)
+	for _, key := range keys {
+		ptr, ok := keypool[key]
+		if !ok {
+			response = append(response, nil)
+			continue
+		}
+		v := store[ptr]
+		if v != nil {
+			if hasExpired(v) {
+				keypoolMutex.RUnlock()
+				storeMutex.RUnlock()
+				Del(key)
+				storeMutex.RLock()
+				keypoolMutex.RLock()
+				continue
+			}
+			v.LastAccessedAt = getCurrentClock()
+		}
+		response = append(response, v)
+	}
+	return response
+}
+
 func Get(k string) *Obj {
 	storeMutex.RLock()
 	defer storeMutex.RUnlock()
@@ -128,7 +161,7 @@ func Get(k string) *Obj {
 	defer keypoolMutex.RUnlock()
 
 	ptr, ok := keypool[k]
-	if !ok {
+	if !ok {he mutexes are un
 		return nil
 	}
 
