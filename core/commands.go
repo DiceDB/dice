@@ -53,6 +53,16 @@ var (
 		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	getDelCmdMeta = DiceCmdMeta{
+		Name: "GETDEL",
+		Info: `GETDEL returns the value for the queried key in args
+		The key should be the only param in args And If the key exists, it will be deleted before its value is returned.
+		The RESP value of the key is encoded and then returned
+		GETDEL returns RESP_NIL if key is expired or it does not exist`,
+		Eval:     evalGETDEL,
+		Arity:    2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	msetCmdMeta = DiceCmdMeta{
 		Name: "MSET",
 		Info: `MSET sets multiple keys to multiple values in the db
@@ -450,8 +460,8 @@ var (
 		For each key, if the key is expired or does not exist, the response will be RESP_NIL; 
 		otherwise, the response will be the RESP value of the key.
 		`,
-		Eval: evalMGET,
-		Arity: -2,
+		Eval:     evalMGET,
+		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1, LastKey: -1},
 	}
 	persistCmdMeta = DiceCmdMeta{
@@ -557,6 +567,7 @@ func init() {
 	diceCmds["PERSIST"] = persistCmdMeta
 	diceCmds["DECR"] = decrCmdMeta
 	diceCmds["EXISTS"] = existsCmdMeta
+	diceCmds["GETDEL"] = getDelCmdMeta
 	diceCmds["DECRBY"] = decrByCmdMeta
 	diceCmds["RENAME"] = renameCmdMeta
 }
