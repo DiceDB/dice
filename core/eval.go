@@ -1594,7 +1594,6 @@ func evalCommandGetKeys(args []string) []byte {
 		(arity >= 0 && len(args) != arity) {
 		return Encode(errors.New("ERR invalid number of arguments specified for command"), false)
 	}
-
 	keys := make([]string, 0)
 	step := max(keySpecs.Step, 1)
 	lastIdx := keySpecs.BeginIndex
@@ -1604,8 +1603,27 @@ func evalCommandGetKeys(args []string) []byte {
 	for i := keySpecs.BeginIndex; i <= lastIdx; i += step {
 		keys = append(keys, args[i])
 	}
-
 	return Encode(keys, false)
+}
+
+//The MGET command returns an array of RESP values corresponding to the provided keys.
+//For each key, if the key is expired or does not exist, the response will be RESP_NIL; 
+//otherwise, the response will be the RESP value of the key.
+// MGET is atomic, it retrieves all values at once
+func evalMGET(args []string) []byte {
+	if len(args) < 1 {
+		return Encode(errors.New("ERR wrong number of arguments for command"), false)
+	}
+	values := getAll(args)
+	response := make([]interface{}, len(args))
+	for i, obj := range values {
+		if obj == nil {
+			response[i] = RESP_NIL
+		} else {
+			response[i] = obj.Value
+		}
+	}
+	return Encode(response, false)
 }
 
 func evalEXISTS(args []string) []byte {
