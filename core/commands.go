@@ -493,6 +493,13 @@ var (
 		Return value is the number of keys existing.`,
 		Eval: evalEXISTS,
 	}
+	renameCmdMeta = DiceCmdMeta{
+		Name:     "RENAME",
+		Info:     "Renames a key and overwrites the destination",
+		Eval:     evalRename,
+		Arity:    3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -551,4 +558,5 @@ func init() {
 	diceCmds["DECR"] = decrCmdMeta
 	diceCmds["EXISTS"] = existsCmdMeta
 	diceCmds["DECRBY"] = decrByCmdMeta
+	diceCmds["RENAME"] = renameCmdMeta
 }

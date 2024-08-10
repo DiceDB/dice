@@ -1604,6 +1604,31 @@ func evalCommandGetKeys(args []string) []byte {
 	}
 	return Encode(keys, false)
 }
+func evalRename(args []string) []byte {
+
+	if len(args) != 2 {
+		return Encode(errors.New("ERR wrong number of arguments for 'RENAME' command"), false)
+	}
+	sourceKey := args[0]
+	destKey := args[1]
+
+	//if Source and Destination Keys are same return RESP encoded ok
+	if sourceKey == destKey {
+		return RESP_OK
+	}
+
+	// if Source key does not exist, return RESP encoded nil
+	sourceObj := Get(sourceKey)
+	if sourceObj == nil {
+		return Encode("ERR no such key", false)
+	}
+
+	if ok := Rename(sourceKey, destKey); ok {
+		return RESP_OK
+	}
+	return RESP_NIL
+
+}
 
 // The MGET command returns an array of RESP values corresponding to the provided keys.
 // For each key, if the key is expired or does not exist, the response will be RESP_NIL;
