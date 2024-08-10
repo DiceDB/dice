@@ -557,6 +557,25 @@ func evalDECR(args []string) []byte {
 	return incrDecrCmd(args, -1)
 }
 
+// evalDECRBY decrements the value of the specified key in args by the specified decrement,
+// if the key exists and the value is integer format.
+// The key should be the first parameter in args, and the decrement should be the second parameter.
+// If the key does not exist, new key is created with value 0,
+// the value of the new key is then decremented by specified decrement.
+// The value for the queried key should be of integer format,
+// if not evalDECRBY returns an encoded error response.
+// evalDECRBY returns the decremented value for the key after applying the specified decrement if there are no errors.
+func evalDECRBY(args []string) []byte {
+	if len(args) != 2 {
+		return Encode(errors.New("ERR wrong number of arguments for 'decrby' command"), false)
+	}
+	decrementAmount, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return Encode(errors.New("ERR value is not an integer or out of range"), false)
+	}
+	return incrDecrCmd(args, -decrementAmount)
+}
+
 func incrDecrCmd(args []string, incr int64) []byte {
 	var key string = args[0]
 	obj := Get(key)

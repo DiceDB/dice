@@ -463,6 +463,20 @@ var (
 		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
 	}
+	decrByCmdMeta = DiceCmdMeta{
+		Name: "DECRBY",
+		Info: `DECRBY decrements the value of the specified key in args by the specified decrement,
+		if the key exists and the value is in integer format.
+		The key should be the first parameter in args, and the decrement should be the second parameter.
+		If the key does not exist, new key is created with value 0,
+		the value of the new key is then decremented by specified decrement.
+		The value for the queried key should be of integer format,
+		if not, DECRBY returns an encoded error response.
+		evalDECRBY returns the decremented value for the key after applying the specified decrement if there are no errors.`,
+		Eval:     evalDECRBY,
+		Arity:    3,
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+	}
 	existsCmdMeta = DiceCmdMeta{
 		Name: "EXISTS",
 		Info: `EXISTS key1 key2 ... key_N
@@ -525,4 +539,5 @@ func init() {
 	diceCmds["PERSIST"] = persistCmdMeta
 	diceCmds["DECR"] = decrCmdMeta
 	diceCmds["EXISTS"] = existsCmdMeta
+	diceCmds["DECRBY"] = decrByCmdMeta
 }
