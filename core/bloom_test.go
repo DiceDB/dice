@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"reflect"
 	"testing"
+    "hash"
+    "hash/fnv"
+    "gotest.tools/v3/assert"
 )
 
 func TestBloomFilter(t *testing.T) {
@@ -263,4 +266,39 @@ func TestSetBit(t *testing.T) {
 	if int(buf[0]) != expected1 || int(buf[1]) != expected2 {
 		t.Errorf("error in %s while comparing final buffer values - expected: [%d, %d], got: [%d, %d]", t.Name(), expected1, expected2, int(buf[0]), int(buf[1]))
 	}
+}
+
+func TestBloomDeepCopy(t *testing.T) {
+    // mock data
+    originalOpts := &BloomOpts{
+		errorRate: 0.01,
+		capacity:  1000,
+		bits:      8000,
+		bpe:       8.0,
+		hashFns: []hash.Hash64{
+			fnv.New64a(),
+			fnv.New64(),
+		},
+		indexes: []uint64{1, 2, 3, 4, 5},
+	}
+
+	original := &Bloom{
+		opts:   originalOpts,
+		bitset: []byte{0x0F, 0xF0, 0xAA, 0x55},
+	}
+
+	// Create a deep copy of the Bloom filter
+	copyBloom := original.DeepCopy()
+
+	// Verify that the copy is not nil
+	assert.Assert(t, copyBloom != nil, "DeepCopy returned nil, expected a valid copy")
+
+    assert.Assert(t, original.opts.indexes[0] == copyBloom.opts.indexes[0], "Original and copy indexes values should be same")
+	assert.Assert(t, original.bitset[0] == copyBloom.bitset[0], "Original and copy bitset values should be same")
+
+    // Verify that changes to the copy do not affect the original
+	copyBloom.opts.indexes[0] = 10
+	copyBloom.bitset[0] = 0xFF
+	assert.Assert(t, original.opts.indexes[0] != copyBloom.opts.indexes[0], "Original and copy indexes should not be linked")
+	assert.Assert(t, original.bitset[0] != copyBloom.bitset[0], "Original and copy bitset should not be linked")
 }
