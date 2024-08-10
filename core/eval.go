@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"strconv"
 	"strings"
 	"syscall"
@@ -561,7 +562,44 @@ func evalINCR(args []string) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'incr' command"), false)
 	}
+	return incrDecrCmd(args, 1)
+}
 
+// evalDECR decrements the value of the specified key in args by 1,
+// if the key exists and the value is integer format.
+// The key should be the only param in args.
+// If the key does not exist, new key is created with value 0,
+// the value of the new key is then decremented.
+// The value for the queried key should be of integer format,
+// if not evalDECR returns encoded error response.
+// evalDECR returns the decremented value for the key if there are no errors.
+func evalDECR(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR wrong number of arguments for 'decr' command"), false)
+	}
+	return incrDecrCmd(args, -1)
+}
+
+// evalDECRBY decrements the value of the specified key in args by the specified decrement,
+// if the key exists and the value is integer format.
+// The key should be the first parameter in args, and the decrement should be the second parameter.
+// If the key does not exist, new key is created with value 0,
+// the value of the new key is then decremented by specified decrement.
+// The value for the queried key should be of integer format,
+// if not evalDECRBY returns an encoded error response.
+// evalDECRBY returns the decremented value for the key after applying the specified decrement if there are no errors.
+func evalDECRBY(args []string) []byte {
+	if len(args) != 2 {
+		return Encode(errors.New("ERR wrong number of arguments for 'decrby' command"), false)
+	}
+	decrementAmount, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return Encode(errors.New("ERR value is not an integer or out of range"), false)
+	}
+	return incrDecrCmd(args, -decrementAmount)
+}
+
+func incrDecrCmd(args []string, incr int64) []byte {
 	var key string = args[0]
 	obj := Get(key)
 	if obj == nil {
@@ -578,7 +616,13 @@ func evalINCR(args []string) []byte {
 	}
 
 	i, _ := strconv.ParseInt(obj.Value.(string), 10, 64)
-	i++
+	// check overflow
+	if (incr < 0 && i < 0 && incr < (math.MinInt64-i)) ||
+		(incr > 0 && i > 0 && incr > (math.MaxInt64-i)) {
+		return Encode(errors.New("ERR value is out of range"), false)
+	}
+
+	i += int64(incr)
 	obj.Value = strconv.FormatInt(i, 10)
 
 	return Encode(i, false)
@@ -1573,7 +1617,6 @@ func evalCommandGetKeys(args []string) []byte {
 		(arity >= 0 && len(args) != arity) {
 		return Encode(errors.New("ERR invalid number of arguments specified for command"), false)
 	}
-
 	keys := make([]string, 0)
 	step := max(keySpecs.Step, 1)
 	lastIdx := keySpecs.BeginIndex
@@ -1583,8 +1626,67 @@ func evalCommandGetKeys(args []string) []byte {
 	for i := keySpecs.BeginIndex; i <= lastIdx; i += step {
 		keys = append(keys, args[i])
 	}
-
 	return Encode(keys, false)
+}
+func evalRename(args []string) []byte {
+
+	if len(args) != 2 {
+		return Encode(errors.New("ERR wrong number of arguments for 'RENAME' command"), false)
+	}
+	sourceKey := args[0]
+	destKey := args[1]
+
+	//if Source and Destination Keys are same return RESP encoded ok
+	if sourceKey == destKey {
+		return RESP_OK
+	}
+
+	// if Source key does not exist, return RESP encoded nil
+	sourceObj := Get(sourceKey)
+	if sourceObj == nil {
+		return Encode("ERR no such key", false)
+	}
+
+	if ok := Rename(sourceKey, destKey); ok {
+		return RESP_OK
+	}
+	return RESP_NIL
+
+}
+
+// The MGET command returns an array of RESP values corresponding to the provided keys.
+// For each key, if the key is expired or does not exist, the response will be RESP_NIL;
+// otherwise, the response will be the RESP value of the key.
+// MGET is atomic, it retrieves all values at once
+func evalMGET(args []string) []byte {
+	if len(args) < 1 {
+		return Encode(errors.New("ERR wrong number of arguments for command"), false)
+	}
+	values := GetAll(args)
+	response := make([]interface{}, len(args))
+	for i, obj := range values {
+		if obj == nil {
+			response[i] = RESP_NIL
+		} else {
+			response[i] = obj.Value
+		}
+	}
+	return Encode(response, false)
+}
+
+func evalEXISTS(args []string) []byte {
+	if len(args) == 0 {
+		return Encode(errors.New("ERR wrong number of arguments for 'exists' command"), false)
+	}
+
+	var count int
+	for _, key := range args {
+		if GetNoTouch(key) != nil {
+			count++
+		}
+	}
+
+	return Encode(count, false)
 }
 
 func executeCommand(cmd *RedisCmd, c *Client) []byte {

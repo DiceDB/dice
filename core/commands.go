@@ -62,7 +62,7 @@ var (
 		Returns encoded OK RESP once all entries are added`,
 		Eval:     evalMSET,
 		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 2},
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 2, LastKey: -1},
 	}
 	jsonsetCmdMeta = DiceCmdMeta{
 		Name: "JSON.SET",
@@ -444,10 +444,61 @@ var (
 		Info: "KEYS command is used to get all the keys in the database. Complexity is O(n) where n is the number of keys in the database.",
 		Eval: evalKeys,
 	}
+	MGetCmdMeta = DiceCmdMeta{
+		Name: "MGET",
+		Info: `The MGET command returns an array of RESP values corresponding to the provided keys. 
+		For each key, if the key is expired or does not exist, the response will be RESP_NIL; 
+		otherwise, the response will be the RESP value of the key.
+		`,
+		Eval: evalMGET,
+		Arity: -2,
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1, LastKey: -1},
+	}
 	persistCmdMeta = DiceCmdMeta{
 		Name: "PERSIST",
 		Info: "PERSIST removes the expiration from a key",
 		Eval: evalPersist,
+	}
+	decrCmdMeta = DiceCmdMeta{
+		Name: "DECR",
+		Info: `DECR decrements the value of the specified key in args by 1,
+		if the key exists and the value is integer format.
+		The key should be the only param in args.
+		If the key does not exist, new key is created with value 0,
+		the value of the new key is then decremented.
+		The value for the queried key should be of integer format,
+		if not DECR returns encoded error response.
+		evalDECR returns the decremented value for the key if there are no errors.`,
+		Eval:     evalDECR,
+		Arity:    2,
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+	}
+	decrByCmdMeta = DiceCmdMeta{
+		Name: "DECRBY",
+		Info: `DECRBY decrements the value of the specified key in args by the specified decrement,
+		if the key exists and the value is in integer format.
+		The key should be the first parameter in args, and the decrement should be the second parameter.
+		If the key does not exist, new key is created with value 0,
+		the value of the new key is then decremented by specified decrement.
+		The value for the queried key should be of integer format,
+		if not, DECRBY returns an encoded error response.
+		evalDECRBY returns the decremented value for the key after applying the specified decrement if there are no errors.`,
+		Eval:     evalDECRBY,
+		Arity:    3,
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+	}
+	existsCmdMeta = DiceCmdMeta{
+		Name: "EXISTS",
+		Info: `EXISTS key1 key2 ... key_N
+		Return value is the number of keys existing.`,
+		Eval: evalEXISTS,
+	}
+	renameCmdMeta = DiceCmdMeta{
+		Name:     "RENAME",
+		Info:     "Renames a key and overwrites the destination",
+		Eval:     evalRename,
+		Arity:    3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 )
 
@@ -502,5 +553,10 @@ func init() {
 	diceCmds["BITCOUNT"] = bitCountCmdMeta
 	diceCmds["BITOP"] = bitOpCmdMeta
 	diceCmds["KEYS"] = keysCmdMeta
+	diceCmds["MGET"] = MGetCmdMeta
 	diceCmds["PERSIST"] = persistCmdMeta
+	diceCmds["DECR"] = decrCmdMeta
+	diceCmds["EXISTS"] = existsCmdMeta
+	diceCmds["DECRBY"] = decrByCmdMeta
+	diceCmds["RENAME"] = renameCmdMeta
 }
