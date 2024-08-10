@@ -153,51 +153,16 @@ func Get(k string) *Obj {
 }
 
 func GetDel(k string) *Obj {
-	storeMutex.RLock()
-	defer storeMutex.RUnlock()
-	keypoolMutex.RLock()
-	defer keypoolMutex.RUnlock()
-	ptr, ok := keypool[k]
-	if !ok {
+	obj, expired := deleteAndRetrieveObjectWithExpiryCheck(k)
+	if obj != nil && expired {
 		return nil
 	}
-
-	v := store[ptr]
-	if v != nil {
-		expired := hasExpired(v)
-		keypoolMutex.RUnlock()
-		storeMutex.RUnlock()
-		Del(k)
-		storeMutex.RLock()
-		keypoolMutex.RLock()
-		if expired {
-			return nil
-		}
-	}
-	return v
+	return obj
 }
 
 func Del(k string) bool {
-	storeMutex.Lock()
-	defer storeMutex.Unlock()
-	keypoolMutex.Lock()
-	defer keypoolMutex.Unlock()
-
-	ptr, ok := keypool[k]
-	if !ok {
-		return false
-	}
-
-	if obj, ok := store[ptr]; ok {
-		delete(store, ptr)
-		delete(expires, obj)
-		delete(keypool, k)
-		KeyspaceStat[0]["keys"]--
-
-		WatchChannel <- WatchEvent{k, "DEL", obj}
-		return true
-	}
-	return false
+	obj, _ := deleteAndRetrieveObjectWithExpiryCheck(k)
+	return obj != nil
 }
 
 func DelByPtr(ptr unsafe.Pointer) bool {
@@ -288,4 +253,33 @@ func GetNoTouch(k string) *Obj {
 		}
 	}
 	return v
+}
+
+// Helper function to delete an object and return it (if it existed) and also return if it was expired.
+func deleteAndRetrieveObjectWithExpiryCheck(k string) (*Obj, bool) {
+	storeMutex.Lock()
+	defer storeMutex.Unlock()
+	keypoolMutex.Lock()
+	defer keypoolMutex.Unlock()
+
+	ptr, ok := keypool[k]
+	if !ok {
+		return nil, false
+	}
+
+	obj, exists := store[ptr]
+	if !exists {
+		return nil, false
+	}
+	expired := hasExpired(obj)
+	// Delete the object from all data structures
+	delete(store, ptr)
+	delete(expires, obj)
+	delete(keypool, k)
+	KeyspaceStat[0]["keys"]--
+
+	// Notify watchers
+	WatchChannel <- WatchEvent{k, "DEL", obj}
+
+	return obj, expired
 }

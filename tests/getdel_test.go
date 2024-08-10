@@ -24,16 +24,16 @@ func TestGetDel(t *testing.T) {
 		},
 		{
 			name:   "GetDel with expiration, checking if key exist and is already expired, then it should return null",
-			cmds:   []string{"GETDEL k", "SET k v EX 4", "GETDEL k"},
+			cmds:   []string{"GETDEL k", "SET k v EX 2", "GETDEL k"},
 			expect: []interface{}{"(nil)", "OK", "(nil)"},
-			delays: []time.Duration{0, 0, 5 * time.Second},
+			delays: []time.Duration{0, 0, 3 * time.Second},
 		},
 		{
 			name: "GetDel with expiration, checking if key exist and is not yet expired, then it should return its " +
 				"value",
 			cmds:   []string{"SET k v EX 40", "GETDEL k"},
 			expect: []interface{}{"OK", "v"},
-			delays: []time.Duration{0, 5 * time.Second},
+			delays: []time.Duration{0, 2 * time.Second},
 		},
 		{
 			name: "GetDel with invalid command",
@@ -51,7 +51,8 @@ func TestGetDel(t *testing.T) {
 					time.Sleep(tc.delays[i])
 				}
 				result := fireCommand(conn, cmd)
-				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
+				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s, expected this %s, "+
+					"got this %s", cmd, tc.expect[i], result)
 			}
 		})
 	}
