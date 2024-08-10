@@ -446,10 +446,9 @@ var (
 	}
 	MGetCmdMeta = DiceCmdMeta{
 		Name: "MGET",
-		Info: `MGET returns the values for the provided keys in args
-		returns the array of RESP values for provided keys,
-		for each key if it is expired or not-exists then response will be RESP_NIL
-		or it will be RESP of value
+		Info: `The MGET command returns an array of RESP values corresponding to the provided keys. 
+		For each key, if the key is expired or does not exist, the response will be RESP_NIL; 
+		otherwise, the response will be the RESP value of the key.
 		`,
 		Eval: evalMGET,
 		Arity: -2,
