@@ -1588,6 +1588,21 @@ func evalCommandGetKeys(args []string) []byte {
 	return Encode(keys, false)
 }
 
+func evalEXISTS(args []string) []byte {
+	if len(args) == 0 {
+		return Encode(errors.New("ERR wrong number of arguments for 'exists' command"), false)
+	}
+
+	var count int
+	for _, key := range args {
+		if GetNoTouch(key) != nil {
+			count++
+		}
+	}
+
+	return Encode(count, false)
+}
+
 func executeCommand(cmd *RedisCmd, c *Client) []byte {
 	diceCmd, ok := diceCmds[cmd.Cmd]
 	if !ok {
