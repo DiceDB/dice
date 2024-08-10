@@ -26,9 +26,12 @@ func (s *StackRef) Size() int64 {
 // Push pushes reference of the key in the StackRef s.
 // returns false if key does not exist
 func (s *StackRef) Push(key string) bool {
-	keypoolMutex.RLock()
-	x, ok := keypool[key]
-	keypoolMutex.RUnlock()
+	var x unsafe.Pointer
+	var ok bool
+
+	withLocks(func() {
+		x, ok = keypool[key]
+	}, WithKeypoolRLock())
 
 	if !ok {
 		return false
