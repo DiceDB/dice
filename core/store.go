@@ -140,8 +140,8 @@ func GetAll(keys []string) []*Obj {
 	defer keypoolMutex.Unlock()
 
 	response := make([]*Obj, 0)
-	for _, key := range keys {
-		ptr, ok := keypool[key]
+	for _, k := range keys {
+		ptr, ok := keypool[k]
 		if !ok {
 			response = append(response, nil)
 			continue
@@ -149,11 +149,11 @@ func GetAll(keys []string) []*Obj {
 		v := store[ptr]
 		if v != nil {
 			if hasExpired(v) {
-				keypoolMutex.RUnlock()
-				storeMutex.RUnlock()
-				Del(key)
-				storeMutex.RLock()
-				keypoolMutex.RLock()
+				delete(store, ptr)
+				delete(expires, v)
+				delete(keypool, k)
+				KeyspaceStat[0]["keys"]--
+				WatchChannel <- WatchEvent{k, "DEL", v}
 				continue
 			}
 			v.LastAccessedAt = getCurrentClock()
