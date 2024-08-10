@@ -1595,12 +1595,12 @@ func evalMGET(args []string) []byte {
 		return Encode(errors.New("ERR wrong number of arguments for command"), false)
 	}
 	values := getAll(args)
-	response := make([]interface{}, 0)
-	for _, obj := range values {
+	response := make([]interface{}, len(args))
+	for i, obj := range values {
 		if obj == nil {
-			response = append(response, RESP_NIL)
+			response[i] = RESP_NIL
 		} else {
-			response = append(response, obj.Value)
+			response[i] = obj.Value
 		}
 	}
 	return Encode(response, false)
