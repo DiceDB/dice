@@ -253,12 +253,12 @@ func GetDel(k string) *Obj {
 		v = store[ptr]
 		if v != nil {
 			expired := hasExpired(v)
-			deleteKeyWithOperationName(k, ptr, v, "GETDEL")
+			deleteKey(k, ptr, v)
 			if expired {
 				v = nil
 			}
 		}
-	}, WithStoreRLock(), WithKeypoolRLock())
+	}, WithStoreLock(), WithKeypoolLock())
 	return v
 }
 
@@ -308,16 +308,12 @@ func notifyWatchers(k string, operation string, obj *Obj) {
 // the deletion of the key.
 // This method is not thread-safe. It should be called within a lock.
 func deleteKey(k string, ptr unsafe.Pointer, obj *Obj) bool {
-	return deleteKeyWithOperationName(k, ptr, obj, "DEL")
-}
-
-func deleteKeyWithOperationName(k string, ptr unsafe.Pointer, obj *Obj, operation string) bool {
 	if obj != nil {
 		delete(store, ptr)
 		delete(expires, obj)
 		delete(keypool, k)
 		KeyspaceStat[0]["keys"]--
-		notifyWatchers(k, operation, obj)
+		notifyWatchers(k, "DEL", obj)
 		return true
 	}
 	return false
