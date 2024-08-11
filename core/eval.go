@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"strconv"
 	"strings"
 	"syscall"
@@ -240,6 +241,30 @@ func evalGET(args []string) []byte {
 
 	// Get the key from the hash table
 	obj := Get(key)
+
+	// if key does not exist, return RESP encoded nil
+	if obj == nil {
+		return RESP_NIL
+	}
+
+	// return the RESP encoded value
+	return Encode(obj.Value, false)
+}
+
+// evalGETDEL returns the value for the queried key in args
+// The key should be the only param in args
+// The RESP value of the key is encoded and then returned
+// In evalGETDEL  If the key exists, it will be deleted before its value is returned.
+// evalGETDEL returns RESP_NIL if key is expired or it does not exist
+func evalGETDEL(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR wrong number of arguments for 'getdel' command"), false)
+	}
+
+	var key = args[0]
+
+	// Get the key from the hash table
+	obj := GetDel(key)
 
 	// if key does not exist, return RESP encoded nil
 	if obj == nil {
@@ -537,7 +562,44 @@ func evalINCR(args []string) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'incr' command"), false)
 	}
+	return incrDecrCmd(args, 1)
+}
 
+// evalDECR decrements the value of the specified key in args by 1,
+// if the key exists and the value is integer format.
+// The key should be the only param in args.
+// If the key does not exist, new key is created with value 0,
+// the value of the new key is then decremented.
+// The value for the queried key should be of integer format,
+// if not evalDECR returns encoded error response.
+// evalDECR returns the decremented value for the key if there are no errors.
+func evalDECR(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR wrong number of arguments for 'decr' command"), false)
+	}
+	return incrDecrCmd(args, -1)
+}
+
+// evalDECRBY decrements the value of the specified key in args by the specified decrement,
+// if the key exists and the value is integer format.
+// The key should be the first parameter in args, and the decrement should be the second parameter.
+// If the key does not exist, new key is created with value 0,
+// the value of the new key is then decremented by specified decrement.
+// The value for the queried key should be of integer format,
+// if not evalDECRBY returns an encoded error response.
+// evalDECRBY returns the decremented value for the key after applying the specified decrement if there are no errors.
+func evalDECRBY(args []string) []byte {
+	if len(args) != 2 {
+		return Encode(errors.New("ERR wrong number of arguments for 'decrby' command"), false)
+	}
+	decrementAmount, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return Encode(errors.New("ERR value is not an integer or out of range"), false)
+	}
+	return incrDecrCmd(args, -decrementAmount)
+}
+
+func incrDecrCmd(args []string, incr int64) []byte {
 	var key string = args[0]
 	obj := Get(key)
 	if obj == nil {
@@ -554,7 +616,13 @@ func evalINCR(args []string) []byte {
 	}
 
 	i, _ := strconv.ParseInt(obj.Value.(string), 10, 64)
-	i++
+	// check overflow
+	if (incr < 0 && i < 0 && incr < (math.MinInt64-i)) ||
+		(incr > 0 && i > 0 && incr > (math.MaxInt64-i)) {
+		return Encode(errors.New("ERR value is out of range"), false)
+	}
+
+	i += int64(incr)
 	obj.Value = strconv.FormatInt(i, 10)
 
 	return Encode(i, false)
@@ -1549,7 +1617,6 @@ func evalCommandGetKeys(args []string) []byte {
 		(arity >= 0 && len(args) != arity) {
 		return Encode(errors.New("ERR invalid number of arguments specified for command"), false)
 	}
-
 	keys := make([]string, 0)
 	step := max(keySpecs.Step, 1)
 	lastIdx := keySpecs.BeginIndex
@@ -1559,8 +1626,67 @@ func evalCommandGetKeys(args []string) []byte {
 	for i := keySpecs.BeginIndex; i <= lastIdx; i += step {
 		keys = append(keys, args[i])
 	}
-
 	return Encode(keys, false)
+}
+func evalRename(args []string) []byte {
+
+	if len(args) != 2 {
+		return Encode(errors.New("ERR wrong number of arguments for 'RENAME' command"), false)
+	}
+	sourceKey := args[0]
+	destKey := args[1]
+
+	//if Source and Destination Keys are same return RESP encoded ok
+	if sourceKey == destKey {
+		return RESP_OK
+	}
+
+	// if Source key does not exist, return RESP encoded nil
+	sourceObj := Get(sourceKey)
+	if sourceObj == nil {
+		return Encode("ERR no such key", false)
+	}
+
+	if ok := Rename(sourceKey, destKey); ok {
+		return RESP_OK
+	}
+	return RESP_NIL
+
+}
+
+// The MGET command returns an array of RESP values corresponding to the provided keys.
+// For each key, if the key is expired or does not exist, the response will be RESP_NIL;
+// otherwise, the response will be the RESP value of the key.
+// MGET is atomic, it retrieves all values at once
+func evalMGET(args []string) []byte {
+	if len(args) < 1 {
+		return Encode(errors.New("ERR wrong number of arguments for command"), false)
+	}
+	values := GetAll(args)
+	response := make([]interface{}, len(args))
+	for i, obj := range values {
+		if obj == nil {
+			response[i] = RESP_NIL
+		} else {
+			response[i] = obj.Value
+		}
+	}
+	return Encode(response, false)
+}
+
+func evalEXISTS(args []string) []byte {
+	if len(args) == 0 {
+		return Encode(errors.New("ERR wrong number of arguments for 'exists' command"), false)
+	}
+
+	var count int
+	for _, key := range args {
+		if GetNoTouch(key) != nil {
+			count++
+		}
+	}
+
+	return Encode(count, false)
 }
 
 func executeCommand(cmd *RedisCmd, c *Client) []byte {
@@ -1754,4 +1880,112 @@ func evalCOPY(args []string) []byte {
 	}
 	Put(destinationKey, NewObj(value, exDurationMs, sourceType, sourceEncoding))
 	return RESP_ONE
+}
+
+// GETEX key [EX seconds | PX milliseconds | EXAT unix-time-seconds |
+// PXAT unix-time-milliseconds | PERSIST]
+// Get the value of key and optionally set its expiration.
+// GETEX is similar to GET, but is a write command with additional options.
+// The GETEX command supports a set of options that modify its behavior:
+// EX seconds -- Set the specified expire time, in seconds.
+// PX milliseconds -- Set the specified expire time, in milliseconds.
+// EXAT timestamp-seconds -- Set the specified Unix time at which the key will expire, in seconds.
+// PXAT timestamp-milliseconds -- Set the specified Unix time at which the key will expire, in milliseconds.
+// PERSIST -- Remove the time to live associated with the key.
+// The RESP value of the key is encoded and then returned
+// evalGET returns RESP_NIL if key is expired or it does not exist
+func evalGETEX(args []string) []byte {
+	if len(args) < 1 {
+		return Encode(errors.New("ERR wrong number of arguments for 'getex' command"), false)
+	}
+
+	var key string = args[0]
+
+	// Get the key from the hash table
+	obj := Get(key)
+
+	// if key does not exist, return RESP encoded nil
+	if obj == nil {
+		return RESP_NIL
+	}
+
+	var exDurationMs int64 = -1
+	var state exDurationState = Uninitialized
+	var persist bool = false
+	for i := 1; i < len(args); i++ {
+		arg := strings.ToUpper(args[i])
+		switch arg {
+		case "EX", "PX":
+			if state != Uninitialized {
+				return Encode(errors.New("ERR syntax error"), false)
+			}
+			i++
+			if i == len(args) {
+				return Encode(errors.New("ERR syntax error"), false)
+			}
+
+			exDuration, err := strconv.ParseInt(args[i], 10, 64)
+			if err != nil {
+				return Encode(errors.New("ERR value is not an integer or out of range"), false)
+			}
+			if exDuration <= 0 {
+				return Encode(errors.New("ERR invalid expire time in 'getex' command"), false)
+			}
+
+			// converting seconds to milliseconds
+			if arg == "EX" {
+				exDuration = exDuration * 1000
+			}
+			exDurationMs = exDuration
+			state = Initialized
+
+		case "PXAT", "EXAT":
+			if state != Uninitialized {
+				return Encode(errors.New("ERR syntax error"), false)
+			}
+			i++
+			if i == len(args) {
+				return Encode(errors.New("ERR syntax error"), false)
+			}
+			exDuration, err := strconv.ParseInt(args[i], 10, 64)
+			if err != nil {
+				return Encode(errors.New("ERR value is not an integer or out of range"), false)
+			}
+
+			if exDuration < 0 {
+				return Encode(errors.New("ERR invalid expire time in 'getex' command"), false)
+			}
+
+			if arg == "EXAT" {
+				exDuration = exDuration * 1000
+			}
+			exDurationMs = exDuration - time.Now().UnixMilli()
+			// If the expiry time is in the past, set exDurationMs to 0
+			// This will be used to signal immediate expiration
+			if exDurationMs < 0 {
+				exDurationMs = 0
+			}
+			state = Initialized
+
+		case "PERSIST":
+			if state != Uninitialized {
+				return Encode(errors.New("ERR syntax error"), false)
+			}
+			persist = true
+			state = Initialized
+		default:
+			return Encode(errors.New("ERR syntax error"), false)
+		}
+	}
+
+	if state == Initialized {
+		if persist {
+			delExpiry(obj)
+		} else {
+			setExpiry(obj, exDurationMs)
+		}
+	}
+
+	// return the RESP encoded value
+	return Encode(obj.Value, false)
 }

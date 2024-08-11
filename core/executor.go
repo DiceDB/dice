@@ -16,32 +16,34 @@ type DSQLQueryResultRow struct {
 func ExecuteQuery(query DSQLQuery) ([]DSQLQueryResultRow, error) {
 	var result []DSQLQueryResultRow
 
-	storeMutex.RLock()
-	keypoolMutex.RLock()
-	for key, ptr := range keypool {
-		if WildCardMatch(query.KeyRegex, key) {
-			row := DSQLQueryResultRow{
-				Key:   key,
-				Value: store[ptr],
-			}
-
-			if query.Where != nil {
-				match, err := evaluateWhereClause(query.Where, row)
-				if err != nil {
-					keypoolMutex.RUnlock()
-					storeMutex.RUnlock()
-					return nil, err
+	var err error
+	withLocks(func() {
+		for key, ptr := range keypool {
+			if WildCardMatch(query.KeyRegex, key) {
+				row := DSQLQueryResultRow{
+					Key:   key,
+					Value: store[ptr],
 				}
-				if !match {
-					continue
-				}
-			}
 
-			result = append(result, row)
+				if query.Where != nil {
+					match, evalErr := evaluateWhereClause(query.Where, row)
+					if evalErr != nil {
+						err = evalErr
+						return
+					}
+					if !match {
+						continue
+					}
+				}
+
+				result = append(result, row)
+			}
 		}
+	}, WithStoreRLock(), WithKeypoolRLock())
+
+	if err != nil {
+		return nil, err
 	}
-	keypoolMutex.RUnlock()
-	storeMutex.RUnlock()
 
 	sortResults(query, result)
 
