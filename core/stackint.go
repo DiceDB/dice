@@ -147,8 +147,8 @@ func (s *StackInt) Iterate(n int) []int64 {
 }
 
 func (s *StackInt) DeepCopy() *StackInt {
-    return &StackInt{
+	return &StackInt{
 		Length: s.Length,
 		list:   s.list.DeepCopy(),
-    }
+	}
 }
