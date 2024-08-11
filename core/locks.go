@@ -1,5 +1,7 @@
 package core
 
+import "log"
+
 var (
 	LockHsh *LockHasher = NewLockHasher()
 )
@@ -55,16 +57,21 @@ func WithKeypoolRLock() *LockRequest {
 // withLocks takes a function and a list of LockOptions and executes the function
 // with the specified locks. It manages the locking and unlocking of the mutexes
 // based on the LockOptions provided.
-func withLocks(id string, f func(), reqs ...*LockRequest) (err error) {
+func withLocks(id string, f func(), reqs ...*LockRequest) {
+	var (
+		err error
+	)
 	for _, req := range reqs {
 		var (
 			lock  *Lock
 			lockH *LockH
 		)
 		if lockH, err = LockHsh.GetStore(id); err != nil {
+			log.Println("error in fetching lockStore for id", id, err)
 			return
 		}
 		if lock, err = lockH.getLock(req.Name); err != nil {
+			log.Println("error in fetching lock for name", req.Name, err)
 			return
 		}
 		switch req.Op {
@@ -77,7 +84,6 @@ func withLocks(id string, f func(), reqs ...*LockRequest) (err error) {
 		}
 	}
 	f()
-	return
 }
 
 // Helper function for operations that return a boolean

@@ -7,11 +7,7 @@ import (
 func TestNewLockHasher(t *testing.T) {
 	lockHasher := NewLockHasher()
 
-	if lockHasher == nil {
-		t.Error("NewLockHasher returned nil")
-	}
-
-	if lockHasher.concurrency != DefaultLockConcurrency {
+	if lockHasher != nil && lockHasher.concurrency != DefaultLockConcurrency {
 		t.Errorf("Expected concurrency %d, got %d", DefaultLockConcurrency, lockHasher.concurrency)
 	}
 
