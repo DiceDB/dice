@@ -30,21 +30,21 @@ func expireSample() float32 {
 	var expiredCount int = 0
 	var keysToDelete []unsafe.Pointer
 
-	storeMutex.RLock()
-	// Collect keys to be deleted
-	for keyPtr, obj := range store {
-		// once we iterated to 20 keys that have some expiration set
-		// we break the loop
-		if limit == 0 {
-			break
+	withLocks(func() {
+		// Collect keys to be deleted
+		for keyPtr, obj := range store {
+			// once we iterated to 20 keys that have some expiration set
+			// we break the loop
+			if limit == 0 {
+				break
+			}
+			limit--
+			if hasExpired(obj) {
+				keysToDelete = append(keysToDelete, keyPtr)
+				expiredCount++
+			}
 		}
-		limit--
-		if hasExpired(obj) {
-			keysToDelete = append(keysToDelete, keyPtr)
-			expiredCount++
-		}
-	}
-	storeMutex.RUnlock()
+	}, WithStoreRLock())
 
 	// Delete the keys outside the read lock
 	for _, keyPtr := range keysToDelete {

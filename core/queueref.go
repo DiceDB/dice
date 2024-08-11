@@ -26,9 +26,12 @@ func (q *QueueRef) Size() int64 {
 // Insert inserts reference of the key in the QueueRef q.
 // returns false if key does not exist
 func (q *QueueRef) Insert(key string) bool {
-	keypoolMutex.RLock()
-	x, ok := keypool[key]
-	keypoolMutex.RUnlock()
+	var x unsafe.Pointer
+	var ok bool
+
+	withLocks(func() {
+		x, ok = keypool[key]
+	}, WithKeypoolRLock())
 
 	if !ok {
 		return false
@@ -69,4 +72,9 @@ func (q *QueueRef) Iterate(n int) []*QueueElement {
 		}
 	}
 	return elements
+}
+
+// Returns the length of the queue
+func (q *QueueRef) Length() int64 {
+	return q.qi.Length
 }
