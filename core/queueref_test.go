@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"testing"
 
-	"time"
-
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core"
 	"github.com/dicedb/dice/testutils"
 	"gotest.tools/v3/assert"
+	"math/rand"
+	"time"
 )
 
 func TestQueueRef(t *testing.T) {
@@ -112,6 +112,7 @@ func TestRemoveMultipleExpiredBeforeNonExpire(t *testing.T) {
 	core.Put("key3", core.NewObj(val[2], -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
 	qr.Insert("key3")
 	time.Sleep(2 * time.Millisecond)
+	fmt.Printf("Queue size : %d\n", qr.Length())
 	qe, err := qr.Remove()
 	assert.Check(t, err == nil || qe.Obj.Value == val[2], fmt.Sprintf("test for removing mulitple expired key before non-expired failed , Expected : %d, Got %d\n", val[2], qe.Obj.Value))
 }
@@ -134,18 +135,6 @@ func TestRemoveAllExpired(t *testing.T) {
 
 // Benchmark queueref by inserting expired, non-expired and expired keys in order and removing them
 func BenchmarkQueueRef(b *testing.B) {
-	benchmarkCases := []struct {
-		name         string
-		expiredFirst int
-		nonExpired   int
-		expiredLast  int
-	}{
-		{"Small", 10000, 20000, 30000},
-		{"Medium", 100000, 200000, 300000},
-		{"Large", 1000000, 2000000, 3000000},
-		{"VeryLarge", 10000000, 20000000, 30000000},
-	}
-
 	// Setup code...
 	qr := core.NewQueueRef()
 	config.KeysLimit = 100000000 // override keys limit high for benchmarking
@@ -153,38 +142,46 @@ func BenchmarkQueueRef(b *testing.B) {
 	// need to init again for each round with the overriden buffer size
 	// otherwise the watchchannel buffer size will stay as it is with the global keylimits size
 	core.WatchChannel = make(chan core.WatchEvent, config.KeysLimit)
+
+	expiredCount := 0
+	nonExpiredCount := 0
 	b.ResetTimer()
-
-	for _, bc := range benchmarkCases {
-		b.Run(fmt.Sprintf("%s Insert expired", bc.name), func(b *testing.B) {
-			for i := 0; i < bc.expiredFirst; i++ {
-				// Insertion benchmark...
-				key := fmt.Sprintf("k%d", i)
-				value := fmt.Sprintf("v%d", i)
-				core.Put(key, core.NewObj(value, 1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
-				qr.Insert(key)
+	b.Run("Insertion of expired and non-expired keys", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			key := fmt.Sprintf("k%d", i)
+			value := fmt.Sprintf("v%d", i)
+			random := rand.Intn(2)
+			// Insert keys without expiration
+			expiration := -1
+			if random == 1 {
+				// Insert keys with expiration of 1ms
+				expiration = 1
+				expiredCount++
+			} else {
+				nonExpiredCount++
 			}
-		})
+			core.Put(key, core.NewObj(value, int64(expiration), core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+			qr.Insert(key)
+		}
+	})
+	b.StopTimer()
+	// Allow keys to expire
+	time.Sleep(2 * time.Millisecond)
+	b.StartTimer()
 
-		b.Run(fmt.Sprintf("%s Insert non-expired", bc.name), func(b *testing.B) {
-			for i := 0; i < bc.nonExpired; i++ {
-				// Insertion benchmark...
-				key := fmt.Sprintf("k%d", i)
-				value := fmt.Sprintf("v%d", i)
-				core.Put(key, core.NewObj(value, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
-				qr.Insert(key)
+	b.Run("Removal of keys", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			// Removal benchmark...
+			_, err := qr.Remove()
+			if err == core.ErrQueueEmpty {
+				break
 			}
-		})
-		time.Sleep(2 * time.Millisecond)
-
-		b.Run(fmt.Sprintf("%s Remove", bc.name), func(b *testing.B) {
-			for i := 0; i < bc.expiredLast; i++ {
-				// Removal benchmark...
-				_, err := qr.Remove()
-				if err != nil {
-					b.Errorf("Queue removal failed : %v\n", err)
-				}
-			}
-		})
+		}
+	})
+	b.StopTimer()
+	_, err := qr.Remove()
+	len := qr.Length()
+	if err != core.ErrQueueEmpty {
+		b.Fatalf("Expired : %v, Got : %v, Size : %v", core.ErrQueueEmpty, err, len)
 	}
 }
