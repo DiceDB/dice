@@ -13,24 +13,26 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-type testCase struct {
+type evalTestCase struct {
 	setup     func()
 	input     []string
 	output    []byte
 	validator func(output []byte)
 }
 
+func resetStore() {
+	store = nil
+	keypool = nil
+	expires = nil
+	KeyspaceStat[0] = nil
+}
+
 func setupTest() {
+	resetStore()
 	store = make(map[unsafe.Pointer]*Obj)
 	keypool = make(map[string]unsafe.Pointer)
 	expires = make(map[*Obj]uint64)
 	KeyspaceStat[0] = make(map[string]int)
-}
-
-func teardownTest() {
-	store = nil
-	keypool = nil
-	expires = nil
 }
 
 func TestEval(t *testing.T) {
@@ -53,14 +55,14 @@ func TestEval(t *testing.T) {
 }
 
 func testEvalPING(t *testing.T) {
-	tests := map[string]testCase{
+	tests := map[string]evalTestCase{
 		"nil value":            {input: nil, output: []byte("+PONG\r\n")},
 		"empty args":           {input: []string{}, output: []byte("+PONG\r\n")},
 		"one value":            {input: []string{"HEY"}, output: []byte("$3\r\nHEY\r\n")},
 		"more than one values": {input: []string{"HEY", "HELLO"}, output: []byte("-ERR wrong number of arguments for 'ping' command\r\n")},
 	}
 
-	runTests(t, tests, evalPING)
+	runEvalTests(t, tests, evalPING)
 }
 
 func testEvalHELLO(t *testing.T) {
@@ -72,18 +74,18 @@ func testEvalHELLO(t *testing.T) {
 		"modules", []interface{}{},
 	}
 
-	tests := map[string]testCase{
+	tests := map[string]evalTestCase{
 		"nil value":            {input: nil, output: Encode(response, false)},
 		"empty args":           {input: []string{}, output: Encode(response, false)},
 		"one value":            {input: []string{"HEY"}, output: Encode(response, false)},
 		"more than one values": {input: []string{"HEY", "HELLO"}, output: []byte("-ERR wrong number of arguments for 'hello' command\r\n")},
 	}
 
-	runTests(t, tests, evalHELLO)
+	runEvalTests(t, tests, evalHELLO)
 }
 
 func testEvalSET(t *testing.T) {
-	tests := map[string]testCase{
+	tests := map[string]evalTestCase{
 		"nil value":                       {input: nil, output: []byte("-ERR wrong number of arguments for 'set' command\r\n")},
 		"empty array":                     {input: []string{}, output: []byte("-ERR wrong number of arguments for 'set' command\r\n")},
 		"one value":                       {input: []string{"KEY"}, output: []byte("-ERR wrong number of arguments for 'set' command\r\n")},
@@ -102,11 +104,11 @@ func testEvalSET(t *testing.T) {
 		"key val pair and valid PXAT":     {input: []string{"KEY", "VAL", "PXAT", strconv.FormatInt(time.Now().Add(2*time.Minute).UnixMilli(), 10)}, output: RESP_OK},
 	}
 
-	runTests(t, tests, evalSET)
+	runEvalTests(t, tests, evalSET)
 }
 
 func testEvalMSET(t *testing.T) {
-	tests := map[string]testCase{
+	tests := map[string]evalTestCase{
 		"nil value":         {input: nil, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
 		"empty array":       {input: []string{}, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
 		"one value":         {input: []string{"KEY"}, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
@@ -115,11 +117,11 @@ func testEvalMSET(t *testing.T) {
 		"even key val pair": {input: []string{"KEY", "VAL", "KEY2", "VAL2"}, output: RESP_OK},
 	}
 
-	runTests(t, tests, evalMSET)
+	runEvalTests(t, tests, evalMSET)
 }
 
 func testEvalGET(t *testing.T) {
-	tests := map[string]testCase{
+	tests := map[string]evalTestCase{
 		"nil value": {
 			setup:  func() {},
 			input:  nil,
@@ -171,11 +173,11 @@ func testEvalGET(t *testing.T) {
 		},
 	}
 
-	runTests(t, tests, evalGET)
+	runEvalTests(t, tests, evalGET)
 }
 
 func testEvalJSONGET(t *testing.T) {
-	tests := map[string]testCase{
+	tests := map[string]evalTestCase{
 		"nil value": {
 			setup:  func() {},
 			input:  nil,
@@ -236,11 +238,11 @@ func testEvalJSONGET(t *testing.T) {
 		},
 	}
 
-	runTests(t, tests, evalJSONGET)
+	runEvalTests(t, tests, evalJSONGET)
 }
 
 func testEvalJSONSET(t *testing.T) {
-	tests := map[string]testCase{
+	tests := map[string]evalTestCase{
 		"nil value": {
 			setup:  func() {},
 			input:  nil,
@@ -273,11 +275,11 @@ func testEvalJSONSET(t *testing.T) {
 		},
 	}
 
-	runTests(t, tests, evalJSONSET)
+	runEvalTests(t, tests, evalJSONSET)
 }
 
 func testEvalTTL(t *testing.T) {
-	tests := map[string]testCase{
+	tests := map[string]evalTestCase{
 		"nil value": {
 			setup:  func() {},
 			input:  nil,
@@ -348,11 +350,11 @@ func testEvalTTL(t *testing.T) {
 		},
 	}
 
-	runTests(t, tests, evalTTL)
+	runEvalTests(t, tests, evalTTL)
 }
 
 func testEvalDel(t *testing.T) {
-	tests := map[string]testCase{
+	tests := map[string]evalTestCase{
 		"nil value": {
 			setup:  func() {},
 			input:  nil,
@@ -385,13 +387,13 @@ func testEvalDel(t *testing.T) {
 		},
 	}
 
-	runTests(t, tests, evalDEL)
+	runEvalTests(t, tests, evalDEL)
 }
 
 // TestEvalPersist tests the evalPersist function using table-driven tests.
 func TestEvalPersist(t *testing.T) {
 	// Define test cases
-	tests := map[string]testCase{
+	tests := map[string]evalTestCase{
 		"wrong number of arguments": {
 			input:  []string{"key1", "key2"},
 			output: Encode(errors.New("ERR wrong number of arguments for 'persist' command"), false),
@@ -424,14 +426,13 @@ func TestEvalPersist(t *testing.T) {
 		},
 	}
 
-	runTests(t, tests, evalPersist)
+	runEvalTests(t, tests, evalPersist)
 }
 
-func runTests(t *testing.T, tests map[string]testCase, evalFunc func([]string) []byte) {
+func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]string) []byte) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			setupTest()
-			defer teardownTest()
 
 			if tc.setup != nil {
 				tc.setup()
