@@ -133,6 +133,13 @@ func (q *QueueInt) Iterate(n int) []int64 {
 	return vals
 }
 
+func (q *QueueInt) DeepCopy() *QueueInt {
+    return &QueueInt{
+		Length: q.Length,
+		list:   q.list.DeepCopy(),
+    }
+}
+
 type QueueIntLL struct {
 	list *list.List
 }
