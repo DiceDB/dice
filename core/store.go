@@ -97,7 +97,7 @@ func getHelper(k string, touch bool) *Obj {
 				v.LastAccessedAt = getCurrentClock()
 			}
 		}
-	}, WithStoreRLock(), WithKeypoolRLock())
+	}, WithStoreLock(), WithKeypoolLock())
 	return v
 }
 
