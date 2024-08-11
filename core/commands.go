@@ -449,6 +449,15 @@ var (
 		Info: "PERSIST removes the expiration from a key",
 		Eval: evalPersist,
 	}
+	expirateCmdMeta = DiceCmdMeta{
+		Name:  "EXPIREAT",
+		Info:  `EXPIREAT sets the expiry time of the specified key, in Unix timestamp format.`,
+		Eval:  evalEXPIREAT,
+		Arity: 2,
+		KeySpecs: KeySpecs{
+			BeginIndex: 0, // 过期时间的参数从第一个参数开始
+		},
+	}
 )
 
 func init() {
@@ -503,4 +512,5 @@ func init() {
 	diceCmds["BITOP"] = bitOpCmdMeta
 	diceCmds["KEYS"] = keysCmdMeta
 	diceCmds["PERSIST"] = persistCmdMeta
+	diceCmds["EXPIREAT"] = expirateCmdMeta
 }

@@ -38,6 +38,8 @@ var txnCommands map[string]bool
 var serverID string
 var diceCommandsCount int
 
+var expirationMap = make(map[string]int64) // Stores expiration times for keys
+
 const defaultRootPath = "$"
 
 func init() {
@@ -1665,4 +1667,41 @@ func evalPersist(args []string) []byte {
 	delExpiry(obj)
 
 	return RESP_ONE
+}
+
+// evalEXPIREAT sets the expiration time for a specified key.
+// The expiration time is set based on a Unix timestamp (seconds since the epoch).
+// Arguments:
+//
+//	args[0] - The key for which to set the expiration time.
+//	args[1] - The Unix timestamp specifying the expiration time.
+//
+// Returns:
+//   - Encoded OK response if the operation is successful.
+//   - Encoded error response if the number of arguments is incorrect or if the expiration time is invalid.
+func evalEXPIREAT(args []string) []byte {
+	if len(args) != 2 {
+		return Encode(errors.New("ERR wrong number of arguments for 'EXPIREAT' command"), false)
+	}
+
+	key := args[0]
+	expireAt, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return Encode(errors.New("ERR invalid expire time"), false)
+	}
+
+	// Get current timestamp in seconds since the epoch
+	now := time.Now().Unix()
+
+	// Calculate the expiration duration in seconds
+	expireInSeconds := expireAt - now
+	if expireInSeconds < 0 {
+		// If the expiration time is in the past, set the expiration to 0
+		expireInSeconds = 0
+	}
+
+	// Update expirationMap with the absolute expiration time
+	expirationMap[key] = expireAt
+
+	return Encode("OK", true) // 确保 Encode("OK", true) 返回有效的 RESP_OK
 }
