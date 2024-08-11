@@ -1699,8 +1699,56 @@ func evalCOPY(args []string) []byte {
         return RESP_ZERO
     }
 
-    // TODO: replace sourceObj with deep copy opbject
-    Put(destinationKey, sourceObj)
+    sourceType, sourceEncoding := ExtractTypeEncoding(sourceObj)
 
+    var value interface{}
+    if assertType(sourceType, OBJ_TYPE_STRING) != nil {
+        sourceValue := sourceObj.Value.(string)
+        byteCopy := []byte(sourceValue)
+        value = string(byteCopy)
+    }
+    if assertType(sourceType, OBJ_TYPE_JSON) != nil {
+        sourceValue := sourceObj.Value.(map[string]interface{})
+        jsonStr, err := sonic.MarshalString(sourceValue)
+        if err != nil {
+            return RESP_ZERO
+        }
+        err = sonic.UnmarshalString(jsonStr, &value)
+        if err != nil {
+            return RESP_ZERO
+        }
+    }
+    if assertType(sourceType, OBJ_TYPE_BITSET) != nil {
+        sourceValue := sourceObj.Value.(*Bloom)
+        value = sourceValue.DeepCopy()
+    }
+    if assertType(sourceType, OBJ_TYPE_BYTEARRAY) != nil {
+        sourceValue := sourceObj.Value.(*ByteArray)
+        value = sourceValue.DeepCopy()
+    }
+    if assertType(sourceType, OBJ_TYPE_BYTELIST) != nil {
+        if assertEncoding(sourceEncoding, OBJ_ENCODING_QINT) != nil {
+            sourceValue := sourceObj.Value.(*QueueInt)
+            value = sourceValue.DeepCopy()
+        }
+        if assertEncoding(sourceEncoding, OBJ_ENCODING_QREF) != nil {
+            sourceValue := sourceObj.Value.(*QueueRef)
+            value = sourceValue.DeepCopy()
+        }
+        if assertEncoding(sourceEncoding, OBJ_ENCODING_STACKINT) != nil {
+            sourceValue := sourceObj.Value.(*StackInt)
+            value = sourceValue.DeepCopy()
+        }
+        if assertEncoding(sourceEncoding, OBJ_ENCODING_STACKREF) != nil {
+            sourceValue := sourceObj.Value.(*StackRef)
+            value = sourceValue.DeepCopy()
+        }
+    }
+    exp, ok := getExpiry(sourceObj)
+	var exDurationMs int64 = -1
+    if ok {
+       exDurationMs = int64(exp)
+    }
+    Put(destinationKey, NewObj(value, exDurationMs, sourceType, sourceEncoding))
     return RESP_ONE
 }
