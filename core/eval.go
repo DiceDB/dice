@@ -1668,87 +1668,90 @@ func evalPersist(args []string) []byte {
 }
 
 func evalCOPY(args []string) []byte {
-    if len(args) < 2 {
-        return Encode(errors.New("ERR wrong number of arguments for 'copy' command"), false)
-    }
+	if len(args) < 2 {
+		return Encode(errors.New("ERR wrong number of arguments for 'copy' command"), false)
+	}
 
-    isReplace := false
+	isReplace := false
 
-    sourceKey := args[0]
-    destinationKey := args[1]
+	sourceKey := args[0]
+	destinationKey := args[1]
 
-    sourceObj := Get(sourceKey)
-    if sourceObj == nil {
-        return RESP_ZERO
-    }
+	sourceObj := Get(sourceKey)
+	if sourceObj == nil {
+		return RESP_ZERO
+	}
 
 	for i := 2; i < len(args); i++ {
-        arg := strings.ToUpper(args[i])
-        switch arg {
-            case "REPLACE":
-                isReplace = true
-        }
-    }
+		arg := strings.ToUpper(args[i])
+		switch arg {
+		case "REPLACE":
+			isReplace = true
+		}
+	}
 
-    if isReplace == true {
-        Del(destinationKey)
-    }
+	if isReplace == true {
+		Del(destinationKey)
+	}
 
-    destinationObj := Get(destinationKey)
-    if destinationObj != nil {
-        return RESP_ZERO
-    }
+	destinationObj := Get(destinationKey)
+	if destinationObj != nil {
+		return RESP_ZERO
+	}
 
-    sourceType, sourceEncoding := ExtractTypeEncoding(sourceObj)
+	sourceType, sourceEncoding := ExtractTypeEncoding(sourceObj)
 
-    var value interface{}
-    if assertType(sourceType, OBJ_TYPE_STRING) != nil {
-        sourceValue := sourceObj.Value.(string)
-        byteCopy := []byte(sourceValue)
-        value = string(byteCopy)
-    }
-    if assertType(sourceType, OBJ_TYPE_JSON) != nil {
-        sourceValue := sourceObj.Value.(map[string]interface{})
-        jsonStr, err := sonic.MarshalString(sourceValue)
-        if err != nil {
-            return RESP_ZERO
-        }
-        err = sonic.UnmarshalString(jsonStr, &value)
-        if err != nil {
-            return RESP_ZERO
-        }
-    }
-    if assertType(sourceType, OBJ_TYPE_BITSET) != nil {
-        sourceValue := sourceObj.Value.(*Bloom)
-        value = sourceValue.DeepCopy()
-    }
-    if assertType(sourceType, OBJ_TYPE_BYTEARRAY) != nil {
-        sourceValue := sourceObj.Value.(*ByteArray)
-        value = sourceValue.DeepCopy()
-    }
-    if assertType(sourceType, OBJ_TYPE_BYTELIST) != nil {
-        if assertEncoding(sourceEncoding, OBJ_ENCODING_QINT) != nil {
-            sourceValue := sourceObj.Value.(*QueueInt)
-            value = sourceValue.DeepCopy()
-        }
-        if assertEncoding(sourceEncoding, OBJ_ENCODING_QREF) != nil {
-            sourceValue := sourceObj.Value.(*QueueRef)
-            value = sourceValue.DeepCopy()
-        }
-        if assertEncoding(sourceEncoding, OBJ_ENCODING_STACKINT) != nil {
-            sourceValue := sourceObj.Value.(*StackInt)
-            value = sourceValue.DeepCopy()
-        }
-        if assertEncoding(sourceEncoding, OBJ_ENCODING_STACKREF) != nil {
-            sourceValue := sourceObj.Value.(*StackRef)
-            value = sourceValue.DeepCopy()
-        }
-    }
-    exp, ok := getExpiry(sourceObj)
+	var value interface{}
+	switch sourceType {
+	case OBJ_TYPE_STRING:
+		sourceValue := sourceObj.Value.(string)
+		byteCopy := []byte(sourceValue)
+		value = string(byteCopy)
+
+	case OBJ_TYPE_JSON:
+		sourceValue := sourceObj.Value.(map[string]interface{})
+		jsonStr, err := sonic.MarshalString(sourceValue)
+		if err != nil {
+			return RESP_ZERO
+		}
+		err = sonic.UnmarshalString(jsonStr, &value)
+		if err != nil {
+			return RESP_ZERO
+		}
+
+	case OBJ_TYPE_BITSET:
+		sourceValue := sourceObj.Value.(*Bloom)
+		value = sourceValue.DeepCopy()
+
+	case OBJ_TYPE_BYTEARRAY:
+		sourceValue := sourceObj.Value.(*ByteArray)
+		value = sourceValue.DeepCopy()
+
+	case OBJ_TYPE_BYTELIST:
+		switch sourceEncoding {
+		case OBJ_ENCODING_QINT:
+			sourceValue := sourceObj.Value.(*QueueInt)
+			value = sourceValue.DeepCopy()
+
+		case OBJ_ENCODING_QREF:
+			sourceValue := sourceObj.Value.(*QueueRef)
+			value = sourceValue.DeepCopy()
+
+		case OBJ_ENCODING_STACKINT:
+			sourceValue := sourceObj.Value.(*StackInt)
+			value = sourceValue.DeepCopy()
+
+		case OBJ_ENCODING_STACKREF:
+			sourceValue := sourceObj.Value.(*StackRef)
+			value = sourceValue.DeepCopy()
+		}
+	}
+
+	exp, ok := getExpiry(sourceObj)
 	var exDurationMs int64 = -1
-    if ok {
-       exDurationMs = int64(exp)
-    }
-    Put(destinationKey, NewObj(value, exDurationMs, sourceType, sourceEncoding))
-    return RESP_ONE
+	if ok {
+		exDurationMs = int64(exp)
+	}
+	Put(destinationKey, NewObj(value, exDurationMs, sourceType, sourceEncoding))
+	return RESP_ONE
 }

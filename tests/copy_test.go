@@ -27,8 +27,8 @@ func TestCopy(t *testing.T) {
 		},
 		{
 			name:     "COPY with REPLACE",
-			commands: []string{"SET k4 v1", "COPY k4 k5 REPLACE", "GET k4", "GET k5"},
-			expected: []interface{}{"OK", int64(1), "(nil)", "v1"},
+            commands: []string{"SET k4 v1", "SET k5 v2", "GET k5", "COPY k4 k5 REPLACE", "GET k5"},
+			expected: []interface{}{"OK", "OK", "v2", int64(1), "v1"},
 		},
 	}
 
