@@ -1,13 +1,19 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
+	"strings"
 
+	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/internal/constants"
+	"github.com/ohler55/ojg/jp"
 	"github.com/xwb1989/sqlparser"
 )
+
+var ErrNoResultsFound = errors.New("ERR No results found")
 
 type DSQLQueryResultRow struct {
 	Key   string
@@ -29,6 +35,9 @@ func ExecuteQuery(query DSQLQuery) ([]DSQLQueryResultRow, error) {
 
 				if query.Where != nil {
 					match, evalErr := evaluateWhereClause(query.Where, row)
+					if evalErr == ErrNoResultsFound {
+						continue
+					}
 					if evalErr != nil {
 						err = evalErr
 						return
@@ -36,6 +45,17 @@ func ExecuteQuery(query DSQLQuery) ([]DSQLQueryResultRow, error) {
 					if !match {
 						continue
 					}
+				}
+
+				// if the row contains JSON field then convert the json object into string representation so it can be encoded
+				// before being returned to the client
+				if getEncoding(row.Value.TypeEncoding) == OBJ_ENCODING_JSON && getType(row.Value.TypeEncoding) == OBJ_TYPE_JSON {
+					marshaledData, err := sonic.Marshal(row.Value.Value)
+					if err != nil {
+						return
+					}
+
+					row.Value.Value = string(marshaledData)
 				}
 
 				result = append(result, row)
@@ -218,9 +238,61 @@ func getExprValueAndType(expr sqlparser.Expr, row DSQLQueryResultRow) (i interfa
 			return nil, constants.EmptyStr, fmt.Errorf("unknown column: %s", expr.Name.String())
 		}
 	case *sqlparser.SQLVal:
+		// we currently treat JSON query expression as a string value so we will need to differentiate between JSON and SQL strings
+		if expr.Type == sqlparser.StrVal && strings.HasPrefix(string(expr.Val), "_") && getEncoding(row.Value.TypeEncoding) == OBJ_ENCODING_JSON && getType(row.Value.TypeEncoding) == OBJ_TYPE_JSON {
+			value, valueType, err := retrieveValueFromJSON(string(expr.Val), row.Value)
+			if err != nil {
+				return nil, "", err
+			}
+
+			return value, valueType, nil
+		}
 		return sqlValToGoValue(expr)
 	default:
 		return nil, constants.EmptyStr, fmt.Errorf("unsupported expression type: %T", expr)
+	}
+}
+
+func retrieveValueFromJSON(path string, jsonData *Obj) (interface{}, string, error) {
+	// path is in the format '$value.field1.field2'. we will remove the refrence to the value object to get the json path
+	jsonPath := strings.Split(path, ".")
+
+	if len(jsonPath) == 1 {
+		return nil, "", errors.New("ERR invalid JSONPath")
+	}
+
+	path = strings.Join(jsonPath[1:], ".")
+
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return nil, "", errors.New("ERR invalid JSONPath")
+	}
+
+	results := expr.Get(jsonData.Value)
+
+	if len(results) == 0 {
+		return nil, "", ErrNoResultsFound
+	}
+
+	// currently the only data types we support are integers, strings and floats
+	switch val := results[0].(type) {
+	case string:
+		return val, "string", nil
+	case float64:
+		// convert float64 into a string to differentiate between floats and integers
+		// When we unmarshal JSON data into an interface it sets all numbers as floats
+		// https://forum.golangbridge.org/t/type-problem-in-json-conversion/19420
+		// the only edge case is where user enters a floating point number with
+		// trailing zeros in the fractional part of a decimal number (e.g 10.0)
+		// then our code treats that as an integer rather than float
+		floatStr := strconv.FormatFloat(val, 'f', -1, 64)
+		if strings.Contains(floatStr, ".") {
+			return val, "float", nil
+		}
+
+		return int(val), "int", nil
+	default:
+		return nil, "", fmt.Errorf("unsupported JSONPath result type: %T", results[0])
 	}
 }
 
