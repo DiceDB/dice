@@ -1,7 +1,6 @@
 package tests
 
 import (
-	_ "github.com/dicedb/dice/testutils"
 	"gotest.tools/v3/assert"
 	"strconv"
 	"testing"
@@ -41,9 +40,9 @@ func TestEvalEXPIREAT(t *testing.T) {
 
 				result := fireCommand(conn, cmd)
 
-				if i == len(tc.commands)-1 { // Only check the final command result
+				if i == len(tc.commands)-1 { // Only check the result of the final command
 					if result == "nil" || result == "" {
-						assert.Assert(t, true) // Expiration successful
+						assert.Assert(t, true) // Expiration was successful
 					} else {
 						t.Fatalf("Expected nil or empty value after expiration, got: %v", result)
 					}

@@ -475,7 +475,7 @@ var (
 		Eval:  evalEXPIREAT,
 		Arity: 2,
 		KeySpecs: KeySpecs{
-			BeginIndex: 0, // 过期时间的参数从第一个参数开始
+			BeginIndex: 0, // The expiration time parameter starts with the first parameter
 		},
 	}
 	decrCmdMeta = DiceCmdMeta{

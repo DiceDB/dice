@@ -1817,20 +1817,21 @@ func evalEXPIREAT(args []string) []byte {
 	// Get the current Unix timestamp in milliseconds and add the provided seconds converted to milliseconds
 	expireAtMillis := uint64(time.Now().UnixMilli() + seconds*1000)
 
-	var obj *Obj
-	withLocks(func() {
-		ptr, ok := keypool[key]
-		if ok {
-			obj = store[ptr]
-		}
-	}, WithStoreLock(), WithKeypoolLock())
+	obj := Get(key)
 
 	if obj == nil {
-		return Encode(errors.New("ERR key does not exist"), false)
+		Del(key)
+		return Encode(0, false)
+	}
+
+	// Check if the expiration time has passed
+	if expireAtMillis <= uint64(time.Now().UnixMilli()) {
+		Del(key)
+		return Encode(0, false)
 	}
 
 	// Update the expires map with the calculated expiration time
 	expires[obj] = expireAtMillis
 
-	return Encode("OK", true)
+	return Encode(1, true)
 }
