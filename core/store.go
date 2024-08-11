@@ -97,7 +97,7 @@ func getHelper(k string, touch bool) *Obj {
 				v.LastAccessedAt = getCurrentClock()
 			}
 		}
-	}, WithStoreRLock(), WithKeypoolRLock())
+	}, WithStoreLock(), WithKeypoolLock())
 	return v
 }
 
@@ -240,6 +240,26 @@ func putHelper(k string, obj *Obj) {
 
 func Get(k string) *Obj {
 	return getHelper(k, true)
+}
+
+func GetDel(k string) *Obj {
+	var v *Obj
+	withLocks(func() {
+		ptr, ok := keypool[k]
+		if !ok {
+			return
+		}
+
+		v = store[ptr]
+		if v != nil {
+			expired := hasExpired(v)
+			deleteKey(k, ptr, v)
+			if expired {
+				v = nil
+			}
+		}
+	}, WithStoreLock(), WithKeypoolLock())
+	return v
 }
 
 // setExpiry sets the expiry time for an object.

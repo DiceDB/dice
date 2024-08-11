@@ -73,3 +73,8 @@ func (q *QueueRef) Iterate(n int) []*QueueElement {
 	}
 	return elements
 }
+
+// Returns the length of the queue
+func (q *QueueRef) Length() int64 {
+	return q.qi.Length
+}
