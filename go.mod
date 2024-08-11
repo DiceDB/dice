@@ -6,7 +6,6 @@ require gotest.tools/v3 v3.5.1
 
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
-	github.com/bytedance/sonic v1.12.1 // indirect
 	github.com/bytedance/sonic/loader v0.2.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/charmbracelet/lipgloss v0.10.0 // indirect
@@ -29,6 +28,7 @@ require (
 )
 
 require (
+	github.com/bytedance/sonic v1.12.1
 	github.com/charmbracelet/log v0.4.0
 	github.com/dicedb/go-dice v0.0.0-20240717053902-2a3e67c8bda0
 	github.com/ohler55/ojg v1.23.0

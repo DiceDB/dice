@@ -29,7 +29,7 @@ func (s *StackRef) Push(key string) bool {
 	var x unsafe.Pointer
 	var ok bool
 
-	withLocks(func() {
+	withLocks(key, func() {
 		x, ok = keypool[key]
 	}, WithKeypoolRLock())
 

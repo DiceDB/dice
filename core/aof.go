@@ -102,14 +102,13 @@ func DumpAllAOF() error {
 
 	log.Println("rewriting AOF file at", config.AOFFile)
 
-	storeMutex.RLock()
-	defer storeMutex.RUnlock()
-
-	for k, obj := range store {
-		if err = dumpKey(aof, *((*string)(k)), obj); err != nil {
-			return err
+	withLocks(DefaultLockIdentifier, func() {
+		for k, obj := range store {
+			if err := dumpKey(aof, *((*string)(k)), obj); err != nil {
+				log.Println(err)
+			}
 		}
-	}
+	}, WithStoreRLock())
 	log.Println("AOF file rewrite complete")
 	return nil
 }

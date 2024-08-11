@@ -9,7 +9,7 @@ import (
 // Evicts the first key it found while iterating the map
 // TODO: Make it efficient by doing thorough sampling
 func evictFirst() {
-	withLocks(func() {
+	withLocks(DefaultLockIdentifier, func() {
 		for keyPtr := range store {
 			delByPtr(keyPtr)
 			return
@@ -21,7 +21,7 @@ func evictFirst() {
 // The number of keys removed will be sufficient to free up at least 10% space
 func evictAllkeysRandom() {
 	evictCount := int64(config.EvictionRatio * float64(config.KeysLimit))
-	withLocks(func() {
+	withLocks(DefaultLockIdentifier, func() {
 		// Iteration of Golang dictionary can be considered as a random
 		// because it depends on the hash of the inserted key
 		for keyPtr := range store {
@@ -52,7 +52,7 @@ func getIdleTime(lastAccessedAt uint32) uint32 {
 func populateEvictionPool() {
 	sampleSize := 5
 
-	withLocks(func() {
+	withLocks(DefaultLockIdentifier, func() {
 		for k := range store {
 			ePool.Push(k, store[k].LastAccessedAt)
 			sampleSize--

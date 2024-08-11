@@ -17,7 +17,7 @@ func ExecuteQuery(query DSQLQuery) ([]DSQLQueryResultRow, error) {
 	var result []DSQLQueryResultRow
 
 	var err error
-	withLocks(func() {
+	withLocks(DefaultLockIdentifier, func() {
 		for key, ptr := range keypool {
 			if WildCardMatch(query.KeyRegex, key) {
 				row := DSQLQueryResultRow{

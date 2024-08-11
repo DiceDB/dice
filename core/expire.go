@@ -30,7 +30,7 @@ func expireSample() float32 {
 	var expiredCount int = 0
 	var keysToDelete []unsafe.Pointer
 
-	withLocks(func() {
+	withLocks(DefaultLockIdentifier, func() {
 		// Collect keys to be deleted
 		for keyPtr, obj := range store {
 			// once we iterated to 20 keys that have some expiration set

@@ -1,78 +1,90 @@
 package core
 
-// LockOption represents a function that can modify a LockStrategy
-type LockOption func(*LockStrategy)
+var (
+	LockHsh *LockHasher = NewLockHasher()
+)
 
-// LockStrategy holds the state for our locking mechanism
-type LockStrategy struct {
-	storeLock    bool
-	storeRLock   bool
-	keypoolLock  bool
-	keypoolRLock bool
-}
+const (
+	// ReadLockOperation is used to acquire a read lock
+	ReadLockOperation = LockOperationT(1)
+	// WriteLockOperation is used to acquire a read lock
+	WriteLockOperation = LockOperationT(2)
+)
+
+type (
+	LockOperationT uint8
+
+	LockRequest struct {
+		Name LockName
+		Op   LockOperationT
+	}
+)
 
 // WithStoreLock sets the storeLock flag
-func WithStoreLock() LockOption {
-	return func(ls *LockStrategy) {
-		ls.storeLock = true
+func WithStoreLock() *LockRequest {
+	return &LockRequest{
+		Name: StoreLock,
+		Op:   ReadLockOperation,
 	}
 }
 
 // WithStoreRLock sets the storeRLock flag
-func WithStoreRLock() LockOption {
-	return func(ls *LockStrategy) {
-		ls.storeRLock = true
+func WithStoreRLock() *LockRequest {
+	return &LockRequest{
+		Name: StoreLock,
+		Op:   ReadLockOperation,
 	}
 }
 
 // WithKeypoolLock sets the keypoolLock flag
-func WithKeypoolLock() LockOption {
-	return func(ls *LockStrategy) {
-		ls.keypoolLock = true
+func WithKeypoolLock() *LockRequest {
+	return &LockRequest{
+		Name: KeypoolLock,
+		Op:   WriteLockOperation,
 	}
 }
 
 // WithKeypoolRLock sets the keypoolRLock flag
-func WithKeypoolRLock() LockOption {
-	return func(ls *LockStrategy) {
-		ls.keypoolRLock = true
+func WithKeypoolRLock() *LockRequest {
+	return &LockRequest{
+		Name: KeypoolLock,
+		Op:   ReadLockOperation,
 	}
 }
 
 // withLocks takes a function and a list of LockOptions and executes the function
 // with the specified locks. It manages the locking and unlocking of the mutexes
 // based on the LockOptions provided.
-func withLocks(f func(), options ...LockOption) {
-	ls := &LockStrategy{}
-
-	for _, option := range options {
-		option(ls)
+func withLocks(id string, f func(), reqs ...*LockRequest) (err error) {
+	for _, req := range reqs {
+		var (
+			lock  *Lock
+			lockH *LockH
+		)
+		if lockH, err = LockHsh.GetStore(id); err != nil {
+			return
+		}
+		if lock, err = lockH.getLock(req.Name); err != nil {
+			return
+		}
+		switch req.Op {
+		case ReadLockOperation:
+			lock.mutex.RLock()
+			defer lock.mutex.RUnlock()
+		case WriteLockOperation:
+			lock.mutex.Lock()
+			defer lock.mutex.Unlock()
+		}
 	}
-
-	if ls.storeLock {
-		storeMutex.Lock()
-		defer storeMutex.Unlock()
-	} else if ls.storeRLock {
-		storeMutex.RLock()
-		defer storeMutex.RUnlock()
-	}
-
-	if ls.keypoolLock {
-		keypoolMutex.Lock()
-		defer keypoolMutex.Unlock()
-	} else if ls.keypoolRLock {
-		keypoolMutex.RLock()
-		defer keypoolMutex.RUnlock()
-	}
-
 	f()
+	return
 }
 
 // Helper function for operations that return a boolean
-func withLocksReturn(f func() bool, options ...LockOption) bool {
+func withLocksReturn(id string, f func() bool, reqs ...*LockRequest) bool {
 	var result bool
-	withLocks(func() {
+	withLocks(id, func() {
 		result = f()
-	}, options...)
+	}, reqs...)
 	return result
 }

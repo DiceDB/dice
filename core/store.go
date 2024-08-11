@@ -22,11 +22,6 @@ var (
 	WatchList sync.Map // Maps queries to the file descriptors of clients that are watching them.
 )
 
-var (
-	storeMutex   sync.RWMutex // Mutex to protect the store map, must be acquired before keypoolMutex if both are needed.
-	keypoolMutex sync.RWMutex // Mutex to protect the keypool map, must be acquired after storeMutex if both are needed.
-)
-
 // Channel to receive updates about keys that are being watched.
 // The Watcher goroutine will wait on this channel. When a key is updated, the
 // goroutine will send the updated value and the related operation to all the
@@ -38,7 +33,7 @@ func init() {
 }
 
 func ResetStore() {
-	withLocks(func() {
+	withLocks(DefaultLockIdentifier, func() {
 		store = make(map[unsafe.Pointer]*Obj)
 		expires = make(map[*Obj]uint64)
 		keypool = make(map[string]unsafe.Pointer)
@@ -59,7 +54,7 @@ func NewObj(value interface{}, expDurationMs int64, oType uint8, oEnc uint8) *Ob
 }
 
 func Put(k string, obj *Obj) {
-	withLocks(func() {
+	withLocks(k, func() {
 		putHelper(k, obj)
 	}, WithStoreLock(), WithKeypoolLock())
 }
@@ -67,7 +62,7 @@ func Put(k string, obj *Obj) {
 // PutAll is a bulk insert function that takes a map of
 // keys and values and inserts them into the store
 func PutAll(data map[string]*Obj) {
-	withLocks(func() {
+	withLocks(DefaultLockIdentifier, func() {
 		for k, obj := range data {
 			putHelper(k, obj)
 		}
@@ -82,7 +77,7 @@ func GetNoTouch(k string) *Obj {
 
 func getHelper(k string, touch bool) *Obj {
 	var v *Obj
-	withLocks(func() {
+	withLocks(k, func() {
 		ptr, ok := keypool[k]
 		if !ok {
 			return
@@ -105,7 +100,7 @@ func getHelper(k string, touch bool) *Obj {
 // keys and retrieves values for keys from the store
 func GetAll(keys []string) []*Obj {
 	response := make([]*Obj, 0, len(keys))
-	withLocks(func() {
+	withLocks(DefaultLockIdentifier, func() {
 		for _, k := range keys {
 			ptr, ok := keypool[k]
 			if !ok {
@@ -130,7 +125,7 @@ func GetAll(keys []string) []*Obj {
 }
 
 func Del(k string) bool {
-	return withLocksReturn(func() bool {
+	return withLocksReturn(k, func() bool {
 		ptr, ok := keypool[k]
 		if !ok {
 			return false
@@ -140,7 +135,7 @@ func Del(k string) bool {
 }
 
 func DelByPtr(ptr unsafe.Pointer) bool {
-	return withLocksReturn(func() bool {
+	return withLocksReturn(DefaultLockIdentifier, func() bool {
 		return delByPtr(ptr)
 	}, WithStoreLock(), WithKeypoolLock())
 }
@@ -150,7 +145,7 @@ func Keys(p string) ([]string, error) {
 	var keys []string
 	var err error
 
-	withLocks(func() {
+	withLocks(p, func() {
 		keys = make([]string, 0, len(keypool))
 		for k := range keypool {
 			if found, e := path.Match(p, k); e != nil {
@@ -184,7 +179,7 @@ func RemoveWatcher(query DSQLQuery, clientFd int) {
 
 // Rename function to implement RENAME functionality using existing helpers
 func Rename(sourceKey string, destKey string) bool {
-	return withLocksReturn(func() bool {
+	return withLocksReturn(sourceKey, func() bool {
 		// If source and destination are the same, do nothing and return true
 		if sourceKey == destKey {
 			return true
@@ -244,7 +239,7 @@ func Get(k string) *Obj {
 
 func GetDel(k string) *Obj {
 	var v *Obj
-	withLocks(func() {
+	withLocks(k, func() {
 		ptr, ok := keypool[k]
 		if !ok {
 			return
