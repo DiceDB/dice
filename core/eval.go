@@ -1793,110 +1793,44 @@ func evalPersist(args []string) []byte {
 	return RESP_ONE
 }
 
-// GETEX key [EX seconds | PX milliseconds | EXAT unix-time-seconds |
-// PXAT unix-time-milliseconds | PERSIST]
-// Get the value of key and optionally set its expiration.
-// GETEX is similar to GET, but is a write command with additional options.
-// The GETEX command supports a set of options that modify its behavior:
-// EX seconds -- Set the specified expire time, in seconds.
-// PX milliseconds -- Set the specified expire time, in milliseconds.
-// EXAT timestamp-seconds -- Set the specified Unix time at which the key will expire, in seconds.
-// PXAT timestamp-milliseconds -- Set the specified Unix time at which the key will expire, in milliseconds.
-// PERSIST -- Remove the time to live associated with the key.
-// The RESP value of the key is encoded and then returned
-// evalGET returns RESP_NIL if key is expired or it does not exist
-func evalGETEX(args []string) []byte {
-	if len(args) < 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'getex' command"), false)
+// evalEXPIREAT sets the expiration time for a specified key.
+// The expiration time is set based on the current time plus the provided seconds.
+// Arguments:
+//
+//	args[0] - The key for which to set the expiration time.
+//	args[1] - The number of seconds from the current time after which the key should expire.
+//
+// Returns:
+//   - Encoded OK response if the operation is successful.
+//   - Encoded error response if the number of arguments is incorrect, if the expiration time is invalid, or if the key does not exist.
+func evalEXPIREAT(args []string) []byte {
+	if len(args) != 2 {
+		return Encode(errors.New("ERR wrong number of arguments for 'EXPIREAT' command"), false)
 	}
 
-	var key string = args[0]
+	key := args[0]
+	seconds, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return Encode(errors.New("ERR invalid expire time"), false)
+	}
 
-	// Get the key from the hash table
+	// Get the current Unix timestamp in milliseconds and add the provided seconds converted to milliseconds
+	expireAtMillis := uint64(time.Now().UnixMilli() + seconds*1000)
+
 	obj := Get(key)
 
-	// if key does not exist, return RESP encoded nil
 	if obj == nil {
-		return RESP_NIL
+		return Encode(0, false)
 	}
 
-	var exDurationMs int64 = -1
-	var state exDurationState = Uninitialized
-	var persist bool = false
-	for i := 1; i < len(args); i++ {
-		arg := strings.ToUpper(args[i])
-		switch arg {
-		case "EX", "PX":
-			if state != Uninitialized {
-				return Encode(errors.New("ERR syntax error"), false)
-			}
-			i++
-			if i == len(args) {
-				return Encode(errors.New("ERR syntax error"), false)
-			}
-
-			exDuration, err := strconv.ParseInt(args[i], 10, 64)
-			if err != nil {
-				return Encode(errors.New("ERR value is not an integer or out of range"), false)
-			}
-			if exDuration <= 0 {
-				return Encode(errors.New("ERR invalid expire time in 'getex' command"), false)
-			}
-
-			// converting seconds to milliseconds
-			if arg == "EX" {
-				exDuration = exDuration * 1000
-			}
-			exDurationMs = exDuration
-			state = Initialized
-
-		case "PXAT", "EXAT":
-			if state != Uninitialized {
-				return Encode(errors.New("ERR syntax error"), false)
-			}
-			i++
-			if i == len(args) {
-				return Encode(errors.New("ERR syntax error"), false)
-			}
-			exDuration, err := strconv.ParseInt(args[i], 10, 64)
-			if err != nil {
-				return Encode(errors.New("ERR value is not an integer or out of range"), false)
-			}
-
-			if exDuration < 0 {
-				return Encode(errors.New("ERR invalid expire time in 'getex' command"), false)
-			}
-
-			if arg == "EXAT" {
-				exDuration = exDuration * 1000
-			}
-			exDurationMs = exDuration - time.Now().UnixMilli()
-			// If the expiry time is in the past, set exDurationMs to 0
-			// This will be used to signal immediate expiration
-			if exDurationMs < 0 {
-				exDurationMs = 0
-			}
-			state = Initialized
-
-		case "PERSIST":
-			if state != Uninitialized {
-				return Encode(errors.New("ERR syntax error"), false)
-			}
-			persist = true
-			state = Initialized
-		default:
-			return Encode(errors.New("ERR syntax error"), false)
-		}
+	// Check if the expiration time has passed
+	if expireAtMillis <= uint64(time.Now().UnixMilli()) {
+		Del(key)
+		return Encode(0, false)
 	}
 
-	if state == Initialized {
-		if persist {
-			delExpiry(obj)
-		} else {
-			setExpiry(obj, exDurationMs)
-		}
-	}
+	// Update the expires map with the calculated expiration time
+	expires[obj] = expireAtMillis
 
-	// return the RESP encoded value
-	return Encode(obj.Value, false)
+	return Encode(1, true)
 }

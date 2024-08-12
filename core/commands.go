@@ -469,6 +469,15 @@ var (
 		Info: "PERSIST removes the expiration from a key",
 		Eval: evalPersist,
 	}
+	expirateCmdMeta = DiceCmdMeta{
+		Name:  "EXPIREAT",
+		Info:  `EXPIREAT sets the expiry time of the specified key, in Unix timestamp format.`,
+		Eval:  evalEXPIREAT,
+		Arity: 2,
+		KeySpecs: KeySpecs{
+			BeginIndex: 0, // The expiration time parameter starts with the first parameter
+		},
+	}
 	decrCmdMeta = DiceCmdMeta{
 		Name: "DECR",
 		Info: `DECR decrements the value of the specified key in args by 1,
@@ -509,14 +518,14 @@ var (
 		Eval:  evalRename,
 		Arity: 3,
 	}
-	getexCmdMeta = DiceCmdMeta{
+	/*	getexCmdMeta = DiceCmdMeta{
 		Name: "GETEX",
-		Info: `Get the value of key and optionally set its expiration. 
+		Info: `Get the value of key and optionally set its expiration.
 		GETEX is similar to GET, but is a write command with additional options.`,
 		Eval:     evalGETEX,
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
-	}
+	}*/
 )
 
 func init() {
@@ -572,10 +581,11 @@ func init() {
 	diceCmds["KEYS"] = keysCmdMeta
 	diceCmds["MGET"] = MGetCmdMeta
 	diceCmds["PERSIST"] = persistCmdMeta
+	diceCmds["EXPIREAT"] = expirateCmdMeta
 	diceCmds["DECR"] = decrCmdMeta
 	diceCmds["EXISTS"] = existsCmdMeta
 	diceCmds["GETDEL"] = getDelCmdMeta
 	diceCmds["DECRBY"] = decrByCmdMeta
 	diceCmds["RENAME"] = renameCmdMeta
-	diceCmds["GETEX"] = getexCmdMeta
+	//diceCmds["GETEX"] = getexCmdMeta
 }
