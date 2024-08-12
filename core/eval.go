@@ -1835,7 +1835,7 @@ func evalCOPY(args []string) []byte {
 		value = string(byteCopy)
 
 	case OBJ_TYPE_JSON:
-		sourceValue := sourceObj.Value.(map[string]interface{})
+		sourceValue := sourceObj.Value
 		jsonStr, err := sonic.MarshalString(sourceValue)
 		if err != nil {
 			return RESP_ZERO
