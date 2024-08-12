@@ -1825,61 +1825,23 @@ func evalCOPY(args []string) []byte {
 		return RESP_ZERO
 	}
 
-	sourceType, sourceEncoding := ExtractTypeEncoding(sourceObj)
-
-	var value interface{}
-	switch sourceType {
-	case OBJ_TYPE_STRING:
-		sourceValue := sourceObj.Value.(string)
-		byteCopy := []byte(sourceValue)
-		value = string(byteCopy)
-
-	case OBJ_TYPE_JSON:
-		sourceValue := sourceObj.Value
-		jsonStr, err := sonic.MarshalString(sourceValue)
-		if err != nil {
-			return RESP_ZERO
-		}
-		err = sonic.UnmarshalString(jsonStr, &value)
-		if err != nil {
-			return RESP_ZERO
-		}
-
-	case OBJ_TYPE_BITSET:
-		sourceValue := sourceObj.Value.(*Bloom)
-		value = sourceValue.DeepCopy()
-
-	case OBJ_TYPE_BYTEARRAY:
-		sourceValue := sourceObj.Value.(*ByteArray)
-		value = sourceValue.DeepCopy()
-
-	case OBJ_TYPE_BYTELIST:
-		switch sourceEncoding {
-		case OBJ_ENCODING_QINT:
-			sourceValue := sourceObj.Value.(*QueueInt)
-			value = sourceValue.DeepCopy()
-
-		case OBJ_ENCODING_QREF:
-			sourceValue := sourceObj.Value.(*QueueRef)
-			value = sourceValue.DeepCopy()
-
-		case OBJ_ENCODING_STACKINT:
-			sourceValue := sourceObj.Value.(*StackInt)
-			value = sourceValue.DeepCopy()
-
-		case OBJ_ENCODING_STACKREF:
-			sourceValue := sourceObj.Value.(*StackRef)
-			value = sourceValue.DeepCopy()
-		}
-	}
+    copyObj := sourceObj.DeepCopy()
+    if copyObj == nil {
+        return RESP_ZERO
+    }
 
 	exp, ok := getExpiry(sourceObj)
 	var exDurationMs int64 = -1
 	if ok {
 		exDurationMs = int64(exp)
 	}
-	Put(destinationKey, NewObj(value, exDurationMs, sourceType, sourceEncoding))
-	return RESP_ONE
+
+	Put(destinationKey, copyObj)
+
+    if exDurationMs > 0 {
+        setExpiry(copyObj, exDurationMs)
+    }
+    return RESP_ONE
 }
 
 // GETEX key [EX seconds | PX milliseconds | EXAT unix-time-seconds |
