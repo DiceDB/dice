@@ -1820,7 +1820,6 @@ func evalEXPIREAT(args []string) []byte {
 	obj := Get(key)
 
 	if obj == nil {
-		Del(key)
 		return Encode(0, false)
 	}
 
