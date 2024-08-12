@@ -54,7 +54,7 @@ func evalPING(args []string) []byte {
 	var b []byte
 
 	if len(args) >= 2 {
-		return DiceErrors.NewErrArity(PING)
+		return DiceErrors.NewErrArity("PING")
 	}
 
 	if len(args) == 0 {
@@ -75,7 +75,7 @@ func evalAUTH(args []string, c *Client) []byte {
 	)
 
 	if len(args) < 1 || len(args) > 2 {
-		return DiceErrors.NewErrArity(AUTH)
+		return DiceErrors.NewErrArity("AUTH")
 	}
 
 	if len(args) == 1 {
@@ -114,7 +114,7 @@ func evalAUTH(args []string, c *Client) []byte {
 // If the key already exists then the value will be overwritten and expiry will be discarded
 func evalSET(args []string) []byte {
 	if len(args) <= 1 {
-		return DiceErrors.NewErrArity(SET)
+		return DiceErrors.NewErrArity("SET")
 	}
 
 	var key, value string
@@ -141,7 +141,7 @@ func evalSET(args []string) []byte {
 				return Encode(errors.New("ERR value is not an integer or out of range"), false)
 			}
 			if exDuration <= 0 {
-				return DiceErrors.NewErrExpireTime(SET)
+				return DiceErrors.NewErrExpireTime("SET")
 			}
 
 			// converting seconds to milliseconds
@@ -165,7 +165,7 @@ func evalSET(args []string) []byte {
 			}
 
 			if exDuration < 0 {
-				return DiceErrors.NewErrExpireTime(SET)
+				return DiceErrors.NewErrExpireTime("SET")
 			}
 
 			if arg == "EXAT" {
@@ -211,7 +211,7 @@ func evalSET(args []string) []byte {
 // If the key already exists then the value will be overwritten and expiry will be discarded
 func evalMSET(args []string) []byte {
 	if len(args) <= 1 || len(args)%2 != 0 {
-		return DiceErrors.NewErrArity(MSET)
+		return DiceErrors.NewErrArity("MSET")
 	}
 
 	// MSET does not have expiry support
@@ -234,7 +234,7 @@ func evalMSET(args []string) []byte {
 // evalGET returns RESP_NIL if key is expired or it does not exist
 func evalGET(args []string) []byte {
 	if len(args) != 1 {
-		return DiceErrors.NewErrArity(GET)
+		return DiceErrors.NewErrArity("GET")
 	}
 
 	var key string = args[0]
@@ -258,7 +258,7 @@ func evalGET(args []string) []byte {
 // The RESP value of the key is encoded and then returned
 func evalJSONGET(args []string) []byte {
 	if len(args) < 1 {
-		return DiceErrors.NewErrArity(JSONGET)
+		return DiceErrors.NewErrArity("JSON.GET")
 	}
 
 	key := args[0]
@@ -328,7 +328,7 @@ func evalJSONGET(args []string) []byte {
 func evalJSONSET(args []string) []byte {
 	// Check if there are enough arguments
 	if len(args) < 3 {
-		return DiceErrors.NewErrArity(JSONSET)
+		return DiceErrors.NewErrArity("JSON.SET")
 	}
 
 	key := args[0]
@@ -420,7 +420,7 @@ func evalJSONSET(args []string) []byte {
 //	RESP encoded -1 in case no expiration is set on the key
 func evalTTL(args []string) []byte {
 	if len(args) != 1 {
-		return DiceErrors.NewErrArity(TTL)
+		return DiceErrors.NewErrArity("TTL")
 	}
 
 	var key string = args[0]
@@ -466,7 +466,7 @@ func evalDEL(args []string) []byte {
 // Once the time is lapsed, the key will be deleted automatically
 func evalEXPIRE(args []string) []byte {
 	if len(args) <= 1 {
-		return DiceErrors.NewErrArity(EXPIRE)
+		return DiceErrors.NewErrArity("EXPIRE")
 	}
 
 	var key string = args[0]
@@ -490,7 +490,7 @@ func evalEXPIRE(args []string) []byte {
 
 func evalHELLO(args []string) []byte {
 	if len(args) > 1 {
-		return DiceErrors.NewErrArity(HELLO)
+		return DiceErrors.NewErrArity("HELLO")
 	}
 
 	var response []interface{}
@@ -536,7 +536,7 @@ func evalBGREWRITEAOF(args []string) []byte {
 // evalINCR returns the incremented value for the key if there are no errors.
 func evalINCR(args []string) []byte {
 	if len(args) != 1 {
-		return DiceErrors.NewErrArity(INCR)
+		return DiceErrors.NewErrArity("INCR")
 	}
 
 	var key string = args[0]
@@ -596,7 +596,7 @@ func evalLRU(args []string) []byte {
 // evalSLEEP returns RESP_OK after sleeping for mentioned seconds
 func evalSLEEP(args []string) []byte {
 	if len(args) != 1 {
-		return DiceErrors.NewErrArity(SLEEP)
+		return DiceErrors.NewErrArity("SLEEP")
 	}
 
 	durationSec, err := strconv.ParseInt(args[0], 10, 64)
@@ -1156,7 +1156,7 @@ func evalSETBIT(args []string) []byte {
 	var err error
 
 	if len(args) != 3 {
-		return DiceErrors.NewErrArity(SETBIT)
+		return DiceErrors.NewErrArity("SETBIT")
 	}
 
 	key := args[0]
@@ -1217,7 +1217,7 @@ func evalGETBIT(args []string) []byte {
 	var err error
 
 	if len(args) != 2 {
-		return DiceErrors.NewErrArity(GETBIT)
+		return DiceErrors.NewErrArity("GETBIT")
 	}
 
 	key := args[0]
@@ -1500,7 +1500,7 @@ func evalBITOP(args []string) []byte {
 // COUNT: return total count of commands in Dice.
 func evalCommand(args []string) []byte {
 	if len(args) == 0 {
-		return DiceErrors.NewErrArity(COMMAND)
+		return DiceErrors.NewErrArity("COMMAND")
 	}
 	subcommand := strings.ToUpper(args[0])
 	switch subcommand {
@@ -1517,7 +1517,7 @@ func evalCommand(args []string) []byte {
 // The pattern should be the only param in args
 func evalKeys(args []string) []byte {
 	if len(args) != 1 {
-		return DiceErrors.NewErrArity(KEYS)
+		return DiceErrors.NewErrArity("KEYS")
 	}
 
 	pattern := args[0]
@@ -1644,7 +1644,7 @@ func EvalAndRespond(cmds RedisCmds, c *Client) {
 
 func evalPersist(args []string) []byte {
 	if len(args) != 1 {
-		return DiceErrors.NewErrArity(PERSIST)
+		return DiceErrors.NewErrArity("PERSIST")
 	}
 
 	key := args[0]

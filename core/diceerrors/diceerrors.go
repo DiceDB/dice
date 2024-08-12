@@ -29,28 +29,30 @@ const (
 )
 
 type DiceError struct {
-	message        string
-	encodedMessage []byte
+	message string
 }
 
 func newDiceErr(message string) *DiceError {
 	return &DiceError{
-		message:        message,
-		encodedMessage: []byte(fmt.Sprintf("-%s\r\n", message)),
+		message: message,
 	}
+}
+
+func (d *DiceError) toEncodedMessage() []byte {
+	return []byte(fmt.Sprintf("-%s\r\n", d.message))
 }
 
 func NewErrArity(cmdName string) []byte {
 	o := newDiceErr(fmt.Sprintf(ErrArity, strings.ToLower(cmdName)))
-	return o.encodedMessage
+	return o.toEncodedMessage()
 }
 
 func NewErrObject(err string) []byte {
 	o := newDiceErr(err)
-	return o.encodedMessage
+	return o.toEncodedMessage()
 }
 
 func NewErrExpireTime(cmdName string) []byte {
 	o := newDiceErr(fmt.Sprintf(ExpiryErr, strings.ToLower(cmdName)))
-	return o.encodedMessage
+	return o.toEncodedMessage()
 }
