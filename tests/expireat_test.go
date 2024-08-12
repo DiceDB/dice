@@ -34,6 +34,24 @@ func TestEvalEXPIREAT(t *testing.T) {
 			},
 			expected: []interface{}{"nil"}, // Expect "nil" after key expiration
 		},
+		{
+			// Test EXPIREAT on a non-existent key
+			name:     "EXPIREAT non-existent key",
+			commands: []string{"EXPIREAT non_existent_key " + strconv.FormatInt(expireInSeconds, 10)},
+			expected: []interface{}{"0"}, // Expect "0" indicating the key does not exist
+		},
+		{
+			// Test EXPIREAT with a time in the past (key should be deleted immediately)
+			name:     "EXPIREAT with past time",
+			commands: []string{"SET test_key test_value", "EXPIREAT test_key 1"},
+			expected: []interface{}{"OK", "1"}, // Expect "OK" for SET, "1" indicating the key was deleted
+		},
+		{
+			// Test EXPIREAT with invalid syntax (no timeout provided)
+			name:     "EXPIREAT with invalid syntax",
+			commands: []string{"SET test_key test_value", "EXPIREAT test_key"},
+			expected: []interface{}{"OK", "ERR wrong number of arguments for 'expireat' command"}, // Expect an error message for EXPIREAT
+		},
 	}
 
 	// Iterate over each test case
@@ -41,7 +59,7 @@ func TestEvalEXPIREAT(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.commands {
 				// If this is the last command, wait 3 seconds to ensure the key has expired
-				if i == len(tc.commands)-1 {
+				if i == len(tc.commands)-1 && tc.name != "EXPIREAT non-existent key" && tc.name != "EXPIREAT with invalid syntax" {
 					time.Sleep(3 * time.Second)
 				}
 
@@ -50,10 +68,12 @@ func TestEvalEXPIREAT(t *testing.T) {
 
 				// Validate the result of the last command
 				if i == len(tc.commands)-1 {
-					if result == "nil" || result == "" {
+					if tc.name == "Check if key is nil after expiration" && (result == "nil" || result == "") {
 						assert.Assert(t, true) // Key has expired as expected
+					} else if tc.name == "EXPIREAT with past time" && result == "nil" {
+						assert.Assert(t, true) // Key should be deleted immediately for past time
 					} else {
-						t.Fatalf("Expected nil or empty value after expiration, got: %v", result)
+						assert.DeepEqual(t, tc.expected[i], result) // Validate the result for other scenarios
 					}
 				} else {
 					// Validate the result of other commands
