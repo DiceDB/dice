@@ -513,10 +513,17 @@ var (
 		Eval: evalEXISTS,
 	}
 	renameCmdMeta = DiceCmdMeta{
-		Name:     "RENAME",
-		Info:     "Renames a key and overwrites the destination",
-		Eval:     evalRename,
-		Arity:    3,
+		Name:  "RENAME",
+		Info:  "Renames a key and overwrites the destination",
+		Eval:  evalRename,
+		Arity: 3,
+	}
+	getexCmdMeta = DiceCmdMeta{
+		Name: "GETEX",
+		Info: `Get the value of key and optionally set its expiration. 
+		GETEX is similar to GET, but is a write command with additional options.`,
+		Eval:     evalGETEX,
+		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 )
@@ -580,4 +587,5 @@ func init() {
 	diceCmds["GETDEL"] = getDelCmdMeta
 	diceCmds["DECRBY"] = decrByCmdMeta
 	diceCmds["RENAME"] = renameCmdMeta
+	diceCmds["GETEX"] = getexCmdMeta
 }
