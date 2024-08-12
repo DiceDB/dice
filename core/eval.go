@@ -1816,7 +1816,7 @@ func evalCOPY(args []string) []byte {
 		}
 	}
 
-	if isReplace == true {
+	if isReplace {
 		Del(destinationKey)
 	}
 

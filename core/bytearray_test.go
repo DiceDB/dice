@@ -128,7 +128,7 @@ func TestDeepCopy(t *testing.T) {
 
 	// Verify that the copy is not nil
 	if copy == nil {
-		t.Errorf("DeepCopy() returned nil, expected a valid copy")
+		t.Fatalf("DeepCopy returned nil, expected a valid copy")
 	}
 
 	// Verify that the data slice is correctly copied

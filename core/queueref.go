@@ -83,5 +83,4 @@ func (q* QueueRef) DeepCopy() *QueueRef{
 // Returns the length of the queue
 func (q *QueueRef) Length() int64 {
 	return q.qi.Length
-
 }
