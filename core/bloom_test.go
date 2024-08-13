@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"reflect"
 	"testing"
+
+	"github.com/dicedb/dice/internal/constants"
 )
 
 func TestBloomFilter(t *testing.T) {
@@ -19,85 +21,85 @@ func TestBloomFilter(t *testing.T) {
 
 	// We're just checking if the resposne is an error or not. This test does
 	// not checks the type of error. That is kept for different test.
-	if bytes.Equal(resp, RESP_OK) {
+	if bytes.Equal(resp, RespOK) {
 		t.Errorf("BFINIT: invalid response, args: %v - expected an error, got: %s", args, string(resp))
 	}
 
 	// BFINIT bf 0.01 10000
 	args = append(args, "bf", "0.01", "10000") // Add key, error rate and capacity
 	resp = evalBFINIT(args)
-	if !bytes.Equal(resp, RESP_OK) {
-		t.Errorf("BFINIT: invalid response, args: %v - expected: %s, got error: %s", args, string(RESP_OK), string(resp))
+	if !bytes.Equal(resp, RespOK) {
+		t.Errorf("BFINIT: invalid response, args: %v - expected: %s, got error: %s", args, string(RespOK), string(resp))
 	}
 
 	// BFINIT bf1
 	args = []string{"bf1"}
 	resp = evalBFINIT(args)
-	if !bytes.Equal(resp, RESP_OK) {
-		t.Errorf("BFINIT: invalid response, args: %v - expected: %s, got error: %s", args, string(RESP_OK), string(resp))
+	if !bytes.Equal(resp, RespOK) {
+		t.Errorf("BFINIT: invalid response, args: %v - expected: %s, got error: %s", args, string(RespOK), string(resp))
 	}
 
 	// BFADD
 	args = []string{"bf"}
 	resp = evalBFADD(args)
-	if bytes.Equal(resp, RESP_MINUS_1) || bytes.Equal(resp, RESP_ZERO) || bytes.Equal(resp, RESP_ONE) {
+	if bytes.Equal(resp, RespMinusOne) || bytes.Equal(resp, RespZero) || bytes.Equal(resp, RespOne) {
 		t.Errorf("BFADD: invalid response, args: %v - expected an error, got: %s", args, string(resp))
 	}
 
 	args = []string{"bf", "hello"} // BFADD bf hello
 	resp = evalBFADD(args)
-	if !bytes.Equal(resp, RESP_ONE) {
-		t.Errorf("BFADD: invalid response, args: %v - expected: %s, got error: %s", args, string(RESP_ONE), string(resp))
+	if !bytes.Equal(resp, RespOne) {
+		t.Errorf("BFADD: invalid response, args: %v - expected: %s, got error: %s", args, string(RespOne), string(resp))
 	}
 
 	args[1] = "world" // BFADD bf world
 	resp = evalBFADD(args)
-	if !bytes.Equal(resp, RESP_ONE) {
-		t.Errorf("BFADD: invalid response, args: %v - expected: %s, got error: %s", args, string(RESP_ONE), string(resp))
+	if !bytes.Equal(resp, RespOne) {
+		t.Errorf("BFADD: invalid response, args: %v - expected: %s, got error: %s", args, string(RespOne), string(resp))
 	}
 
 	args[1] = "hello" // BFADD bf hello
 	resp = evalBFADD(args)
-	if !bytes.Equal(resp, RESP_ZERO) {
-		t.Errorf("BFADD: invalid response, args: %v - expected: %s, got error: %s", args, string(RESP_ZERO), string(resp))
+	if !bytes.Equal(resp, RespZero) {
+		t.Errorf("BFADD: invalid response, args: %v - expected: %s, got error: %s", args, string(RespZero), string(resp))
 	}
 
 	// Try adding element into an non-existing filter
 	args = []string{"bf2", "hello"} // BFADD bf2 hello
 	resp = evalBFADD(args)
-	if !bytes.Equal(resp, RESP_ONE) {
-		t.Errorf("BFADD: invalid response, args: %v - expected: %s, got error: %s", args, string(RESP_ONE), string(resp))
+	if !bytes.Equal(resp, RespOne) {
+		t.Errorf("BFADD: invalid response, args: %v - expected: %s, got error: %s", args, string(RespOne), string(resp))
 	}
 
 	// BFEXISTS
 	args = []string{"bf"}
 	resp = evalBFEXISTS(args)
-	if bytes.Equal(resp, RESP_MINUS_1) || bytes.Equal(resp, RESP_ZERO) || bytes.Equal(resp, RESP_ONE) {
+	if bytes.Equal(resp, RespMinusOne) || bytes.Equal(resp, RespZero) || bytes.Equal(resp, RespOne) {
 		t.Errorf("BFEXISTS: invalid response, args: %v - expected an error, got: %s", args, string(resp))
 	}
 
 	args = []string{"bf", "hello"} // BFEXISTS bf hello
 	resp = evalBFEXISTS(args)
-	if !bytes.Equal(resp, RESP_ONE) {
-		t.Errorf("BFEXISTS: invalid response, args: %v - expected: %s, got error: %s", args, string(RESP_ONE), string(resp))
+	if !bytes.Equal(resp, RespOne) {
+		t.Errorf("BFEXISTS: invalid response, args: %v - expected: %s, got error: %s", args, string(RespOne), string(resp))
 	}
 
 	args[1] = "hello" // BFEXISTS bf world
 	resp = evalBFEXISTS(args)
-	if !bytes.Equal(resp, RESP_ONE) {
-		t.Errorf("BFEXISTS: invalid response, args: %v - expected: %s, got error: %s", args, string(RESP_ONE), string(resp))
+	if !bytes.Equal(resp, RespOne) {
+		t.Errorf("BFEXISTS: invalid response, args: %v - expected: %s, got error: %s", args, string(RespOne), string(resp))
 	}
 
 	args[1] = "programming" // BFEXISTS bf programming
 	resp = evalBFEXISTS(args)
-	if !bytes.Equal(resp, RESP_ZERO) {
-		t.Errorf("BFEXISTS: invalid response, args: %v - expected: %s, got error: %s", args, string(RESP_ZERO), string(resp))
+	if !bytes.Equal(resp, RespZero) {
+		t.Errorf("BFEXISTS: invalid response, args: %v - expected: %s, got error: %s", args, string(RespZero), string(resp))
 	}
 
 	// Try searching for an element in a non-existing filter
 	args = []string{"bf3", "hello"} // BFEXISTS bf3 hello
 	resp = evalBFEXISTS(args)
-	if bytes.Equal(resp, RESP_MINUS_1) || bytes.Equal(resp, RESP_ZERO) || bytes.Equal(resp, RESP_ONE) {
+	if bytes.Equal(resp, RespMinusOne) || bytes.Equal(resp, RespZero) || bytes.Equal(resp, RespOne) {
 		t.Errorf("BFEXISTS: invalid response, args: %v - expected an error, got error: %s", args, string(resp))
 	}
 }
@@ -164,7 +166,7 @@ func TestBloomOpts(t *testing.T) {
 		response    *BloomOpts
 		err         error
 	}{
-		{"default values", []string{""}, true, &BloomOpts{errorRate: defaultErrorRate, capacity: defaultCapacity}, nil},
+		{"default values", []string{constants.EmptyStr}, true, &BloomOpts{errorRate: defaultErrorRate, capacity: defaultCapacity}, nil},
 		{"should return valid values - 1", []string{"0.01", "1000"}, false, &BloomOpts{errorRate: 0.01, capacity: 1000}, nil},
 		{"should return valid values - 2", []string{"0.1", "200"}, false, &BloomOpts{errorRate: 0.1, capacity: 200}, nil},
 		{"should return invalid error rate type - 1", []string{"aa", "100"}, false, nil, errInvalidErrorRateType},

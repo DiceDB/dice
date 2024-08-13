@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/internal/constants"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -100,7 +101,7 @@ func NewSession() (session *Session) {
 }
 
 func (session *Session) IsActive() (isActive bool) {
-	if config.RequirePass == "" && session.Status != SessionStatusActive {
+	if config.RequirePass == constants.EmptyStr && session.Status != SessionStatusActive {
 		if err := session.Activate(session.User); err != nil {
 			return
 		}

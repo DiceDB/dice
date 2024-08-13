@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/internal/constants"
 )
 
 func TestNewUsers(t *testing.T) {
@@ -96,7 +97,7 @@ func TestSessionIsActive(t *testing.T) {
 	if !session.LastAccessedAt.After(oldLastAccessed) {
 		t.Error("IsActive() should update LastAccessedAt")
 	}
-	config.RequirePass = ""
+	config.RequirePass = constants.EmptyStr
 }
 
 func TestSessionActivate(t *testing.T) {

@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/dicedb/dice/internal/constants"
 	"github.com/dicedb/dice/testutils"
 	"gotest.tools/v3/assert"
 )
@@ -144,12 +145,12 @@ func TestJSONOperations(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if tc.setCmd != "" {
+			if tc.setCmd != constants.EmptyStr {
 				result := fireCommand(conn, tc.setCmd)
 				assert.Equal(t, "OK", result)
 			}
 
-			if tc.getCmd != "" {
+			if tc.getCmd != constants.EmptyStr {
 				result := fireCommand(conn, tc.getCmd)
 				if testutils.IsJSONResponse(result.(string)) {
 					testutils.AssertJSONEqual(t, tc.expected, result.(string))

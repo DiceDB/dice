@@ -11,7 +11,7 @@ type PoolItem struct {
 }
 
 // TODO: When last accessed at of object changes
-// update the poolItem correponding to that
+// update the poolItem corresponding to that
 type EvictionPool struct {
 	pool   []*PoolItem
 	keyset map[unsafe.Pointer]*PoolItem

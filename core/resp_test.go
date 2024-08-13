@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/dicedb/dice/core"
+	"github.com/dicedb/dice/internal/constants"
 )
 
 func TestSimpleStringDecode(t *testing.T) {
@@ -64,7 +65,7 @@ func TestInt64(t *testing.T) {
 func TestBulkStringDecode(t *testing.T) {
 	cases := map[string]string{
 		"$5\r\nhello\r\n": "hello",
-		"$0\r\n\r\n":      "",
+		"$0\r\n\r\n":      constants.EmptyStr,
 	}
 	for k, v := range cases {
 		p := core.NewRESPParser(bytes.NewBuffer([]byte(k)))

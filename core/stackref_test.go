@@ -11,7 +11,7 @@ import (
 )
 
 func CreateAndPushKeyToStack(sr *core.StackRef, key string, value int, expDurationMs int64) {
-	obj := core.NewObj(value, expDurationMs, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT)
+	obj := core.NewObj(value, expDurationMs, core.ObjTypeString, core.ObjEncodingInt)
 	core.Put(key, obj)
 	sr.Push(key)
 }
@@ -27,7 +27,7 @@ func TestStackRef(t *testing.T) {
 		t.Error("inserting the reference of the key that does not exist should not work but it did")
 	}
 
-	core.Put("key that exists", core.NewObj(10, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put("key that exists", core.NewObj(10, -1, core.ObjTypeString, core.ObjEncodingInt))
 	if sr.Push("key that exists") != true {
 		t.Error("inserting the reference of the key that exists should work but it did not")
 	}
@@ -40,19 +40,19 @@ func TestStackRef(t *testing.T) {
 		t.Error("removing again from an empty stackref should return an empty stack error")
 	}
 
-	core.Put("key1", core.NewObj(10, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put("key1", core.NewObj(10, -1, core.ObjTypeString, core.ObjEncodingInt))
 	sr.Push("key1")
-	core.Put("key2", core.NewObj(20, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put("key2", core.NewObj(20, -1, core.ObjTypeString, core.ObjEncodingInt))
 	sr.Push("key2")
-	core.Put("key3", core.NewObj(30, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put("key3", core.NewObj(30, -1, core.ObjTypeString, core.ObjEncodingInt))
 	sr.Push("key3")
-	core.Put("key4", core.NewObj(40, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put("key4", core.NewObj(40, -1, core.ObjTypeString, core.ObjEncodingInt))
 	sr.Push("key4")
-	core.Put("key5", core.NewObj(50, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put("key5", core.NewObj(50, -1, core.ObjTypeString, core.ObjEncodingInt))
 	sr.Push("key5")
-	core.Put("key6", core.NewObj(60, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put("key6", core.NewObj(60, -1, core.ObjTypeString, core.ObjEncodingInt))
 	sr.Push("key6")
-	core.Put("key7", core.NewObj(60, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put("key7", core.NewObj(60, -1, core.ObjTypeString, core.ObjEncodingInt))
 	sr.Push("key7")
 
 	observedVals := make([]int64, 0, 6)
@@ -66,7 +66,7 @@ func TestStackRef(t *testing.T) {
 	}
 
 	sr2 := core.NewStackRef()
-	obj1 := core.NewObj(10, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT)
+	obj1 := core.NewObj(10, -1, core.ObjTypeString, core.ObjEncodingInt)
 	core.Put("key1", obj1)
 	sr2.Push("key1")
 

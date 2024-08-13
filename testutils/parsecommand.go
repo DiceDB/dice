@@ -1,6 +1,10 @@
 package testutils
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/dicedb/dice/internal/constants"
+)
 
 func ParseCommand(cmd string) []string {
 	var args []string
@@ -12,11 +16,9 @@ func ParseCommand(cmd string) []string {
 		case ' ':
 			if inQuotes {
 				current += string(char)
-			} else {
-				if len(current) > 0 {
-					args = append(args, current)
-					current = ""
-				}
+			} else if len(current) > 0 {
+				args = append(args, current)
+				current = constants.EmptyStr
 			}
 		case '"':
 			inQuotes = !inQuotes

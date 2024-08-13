@@ -48,7 +48,7 @@ var (
 		Info: `GET returns the value for the queried key in args
 		The key should be the only param in args
 		The RESP value of the key is encoded and then returned
-		GET returns RESP_NIL if key is expired or it does not exist`,
+		GET returns RespNIL if key is expired or it does not exist`,
 		Eval:     evalGET,
 		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
@@ -58,7 +58,7 @@ var (
 		Info: `GETDEL returns the value for the queried key in args
 		The key should be the only param in args And If the key exists, it will be deleted before its value is returned.
 		The RESP value of the key is encoded and then returned
-		GETDEL returns RESP_NIL if key is expired or it does not exist`,
+		GETDEL returns RespNIL if key is expired or it does not exist`,
 		Eval:     evalGETDEL,
 		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
@@ -98,7 +98,7 @@ var (
 		Name: "TTL",
 		Info: `TTL returns Time-to-Live in secs for the queried key in args
 		 The key should be the only param in args else returns with an error
-		 Returns	
+		 Returns
 		 RESP encoded time (in secs) remaining for the key to expire
 		 RESP encoded -2 stating key doesn't exist or key is expired
 		 RESP encoded -1 in case no expiration is set on the key`,
@@ -119,7 +119,7 @@ var (
 		Info: `EXPIRE sets a expiry time(in secs) on the specified key in args
 		args should contain 2 values, key and the expiry time to be set for the key
 		The expiry time should be in integer format; if not, it returns encoded error response
-		Returns RESP_ONE if expiry was set on the key successfully.
+		Returns RespOne if expiry was set on the key successfully.
 		Once the time is lapsed, the key will be deleted automatically`,
 		Eval:     evalEXPIRE,
 		Arity:    -3,
@@ -182,7 +182,7 @@ var (
 		Info: `SLEEP sets db to sleep for the specified number of seconds.
 		The sleep time should be the only param in args.
 		Returns error response if the time param in args is not of integer format.
-		SLEEP returns RESP_OK after sleeping for mentioned seconds`,
+		SLEEP returns RespOK after sleeping for mentioned seconds`,
 		Eval:  evalSLEEP,
 		Arity: 1,
 	}
@@ -244,7 +244,7 @@ var (
 	}
 	bfexistsCmdMeta = DiceCmdMeta{
 		Name:     "BFEXISTS",
-		Info:     `BFEXISTS checks existance of an element in a bloom filter.`,
+		Info:     `BFEXISTS checks existence of an element in a bloom filter.`,
 		Eval:     evalBFEXISTS,
 		Arity:    3,
 		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
@@ -456,8 +456,8 @@ var (
 	}
 	MGetCmdMeta = DiceCmdMeta{
 		Name: "MGET",
-		Info: `The MGET command returns an array of RESP values corresponding to the provided keys. 
-		For each key, if the key is expired or does not exist, the response will be RESP_NIL; 
+		Info: `The MGET command returns an array of RESP values corresponding to the provided keys.
+		For each key, if the key is expired or does not exist, the response will be RespNIL;
 		otherwise, the response will be the RESP value of the key.
 		`,
 		Eval:     evalMGET,
@@ -511,7 +511,7 @@ var (
 	}
 	getexCmdMeta = DiceCmdMeta{
 		Name: "GETEX",
-		Info: `Get the value of key and optionally set its expiration. 
+		Info: `Get the value of key and optionally set its expiration.
 		GETEX is similar to GET, but is a write command with additional options.`,
 		Eval:     evalGETEX,
 		Arity:    -2,
