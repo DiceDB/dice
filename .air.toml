@@ -19,7 +19,7 @@ tmp_dir = "tmp"
   stop_on_error = true
 
 [color]
-  app = constants.EmptyStr
+  app = ""
   build = "yellow"
   main = "magenta"
   runner = "green"
