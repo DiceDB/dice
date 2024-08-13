@@ -1,0 +1,142 @@
+run:
+  concurrency: 8
+
+  timeout: 5m
+
+  issues-exit-code: 1
+
+  tests: false
+
+  modules-download-mode: readonly
+
+  allow-parallel-runners: false
+
+  go: "" # keep this empty to use the Go version from the go.mod file.
+
+linters:
+  fast: false # set to true runs only fast linters.
+
+  disable-all: true
+
+  enable:
+    - bodyclose
+    - dogsled
+    - dupl
+    - errcheck
+    - exportloopref
+    - funlen
+    - goconst
+    - gocritic
+    - gocyclo
+    - gofmt
+    - goimports
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - revive
+    - govet
+    - ineffassign
+    - lll
+    - misspell
+    - nakedret
+    - noctx
+    - nolintlint
+    - staticcheck
+    - stylecheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - whitespace
+
+linters-settings:
+  dupl:
+    threshold: 200
+
+  funlen:
+    lines: 200
+    statements: 200
+
+  goconst:
+    min-len: 2
+    min-occurrences: 2
+
+  gocognit:
+    # minimal code complexity to report, 30 by default (but we recommend 10-20)
+    min-complexity: 10
+
+  gocyclo:
+    min-complexity: 30
+
+  lll:
+    tab-width: 2
+    line-length: 200
+
+  misspell:
+    locale: US
+
+  nolintlint:
+    allow-unused: false # report any unused nolint directives
+    require-explanation: false # don't require an explanation for nolint directives
+    require-specific: false # don't require nolint directives to be specific about which linter is being skipped
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      - dupImport # https://github.com/go-critic/go-critic/issues/845
+      - ifElseChain
+      - octalLiteral
+      - whyNoLint
+      - wrapperFunc
+      - nestingReduce
+
+  revive:
+    # see https://github.com/mgechev/revive#available-rules for details.
+    ignore-generated-header: true
+    severity: error
+    confidence: 0.8
+    rules:
+      - name: indent-error-flow
+      - name: errorf
+      - name: unexported-return
+      - name: error-naming
+      - name: error-return
+      - name: empty-lines
+      - name: empty-block
+      - name: context-as-argument
+      - name: if-return
+      - name: superfluous-else
+
+  staticcheck:
+    checks: ["all"]
+
+output:
+  print-issued-lines: false
+
+  print-linter-name: true
+
+  uniq-by-line: false
+
+  sort-results: true
+
+issues:
+  max-issues-per-linter: 0
+
+  max-same-issues: 0
+
+  new: false
+
+  fix: true
+
+  exclude-dirs:
+    - .github
+    - .hooks
+    - .vscode
+
+  exclude-files:
+    - README.md

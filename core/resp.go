@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+
+	"github.com/dicedb/dice/internal/constants"
 )
 
 func readLength(buf *bytes.Buffer) (int64, error) {
@@ -24,11 +26,11 @@ func readLength(buf *bytes.Buffer) (int64, error) {
 func readStringUntilSr(buf *bytes.Buffer) (string, error) {
 	s, err := buf.ReadString('\r')
 	if err != nil {
-		return "", err
+		return constants.EmptyStr, err
 	}
 	// increamenting to skip `\n`
 	if _, err := buf.ReadByte(); err != nil {
-		return "", err
+		return constants.EmptyStr, err
 	}
 	return s[:len(s)-1], nil
 }
@@ -37,7 +39,7 @@ func readStringUntilSr(buf *bytes.Buffer) (string, error) {
 // the string and the error
 // the function internally manipulates the buffer pointer
 // and keepts it at a point where the subsequent value can be read from.
-func readSimpleString(c io.ReadWriter, buf *bytes.Buffer) (string, error) {
+func readSimpleString(buf *bytes.Buffer) (string, error) {
 	return readStringUntilSr(buf)
 }
 
@@ -45,7 +47,7 @@ func readSimpleString(c io.ReadWriter, buf *bytes.Buffer) (string, error) {
 // the error string and the error
 // the function internally manipulates the buffer pointer
 // and keepts it at a point where the subsequent value can be read from.
-func readError(c io.ReadWriter, buf *bytes.Buffer) (string, error) {
+func readError(buf *bytes.Buffer) (string, error) {
 	return readStringUntilSr(buf)
 }
 
@@ -53,7 +55,7 @@ func readError(c io.ReadWriter, buf *bytes.Buffer) (string, error) {
 // the intger value and the error
 // the function internally manipulates the buffer pointer
 // and keepts it at a point where the subsequent value can be read from.
-func readInt64(c io.ReadWriter, buf *bytes.Buffer) (int64, error) {
+func readInt64(buf *bytes.Buffer) (int64, error) {
 	s, err := readStringUntilSr(buf)
 	if err != nil {
 		return 0, err
@@ -72,39 +74,39 @@ func readInt64(c io.ReadWriter, buf *bytes.Buffer) (int64, error) {
 // the function internally manipulates the buffer pointer
 // and keepts it at a point where the subsequent value can be read from.
 func readBulkString(c io.ReadWriter, buf *bytes.Buffer) (string, error) {
-	len, err := readLength(buf)
+	l, err := readLength(buf)
 	if err != nil {
-		return "", err
+		return constants.EmptyStr, err
 	}
 
-	//handling RESP_NIL case
-	if len == -1 {
+	// handling RespNIL case
+	if l == -1 {
 		return "(nil)", nil
 	}
 
-	var bytesRem int64 = len + 2 // 2 for \r\n
-	bytesRem = bytesRem - int64(buf.Len())
+	var bytesRem int64 = l + 2 // 2 for \r\n
+	bytesRem -= int64(buf.Len())
 	for bytesRem > 0 {
 		tbuf := make([]byte, bytesRem)
 		n, err := c.Read(tbuf)
 		if err != nil {
-			return "", nil
+			return constants.EmptyStr, nil
 		}
 		buf.Write(tbuf[:n])
-		bytesRem = bytesRem - int64(n)
+		bytesRem -= int64(n)
 	}
 
-	bulkStr := make([]byte, len)
+	bulkStr := make([]byte, l)
 	if _, err := buf.Read(bulkStr); err != nil {
-		return "", err
+		return constants.EmptyStr, err
 	}
 
 	// moving buffer pointer by 2 for \r and \n
 	if _, err := buf.ReadByte(); err != nil {
-		return "", err
+		return constants.EmptyStr, err
 	}
 	if _, err := buf.ReadByte(); err != nil {
-		return "", err
+		return constants.EmptyStr, err
 	}
 
 	// reading `len` bytes as string
@@ -115,7 +117,7 @@ func readBulkString(c io.ReadWriter, buf *bytes.Buffer) (string, error) {
 // the array, the delta, and the error
 // the function internally manipulates the buffer pointer
 // and keepts it at a point where the subsequent value can be read from.
-func readArray(c io.ReadWriter, buf *bytes.Buffer, rp *RESPParser) (interface{}, error) {
+func readArray(buf *bytes.Buffer, rp *RESPParser) (interface{}, error) {
 	count, err := readLength(buf)
 	if err != nil {
 		return nil, err
@@ -178,7 +180,7 @@ func Encode(value interface{}, isSimple bool) []byte {
 		buf := bytes.NewBuffer(b)
 		elements := value.([]*QueueElement)
 		for _, qe := range elements {
-			buf.Write([]byte("*2\r\n"))
+			buf.WriteString("*2\r\n")
 			buf.Write(Encode(qe.Key, false))
 			buf.Write(Encode(qe.Obj.Value, false))
 		}
@@ -195,7 +197,7 @@ func Encode(value interface{}, isSimple bool) []byte {
 		buf := bytes.NewBuffer(b)
 		elements := value.([]*StackElement)
 		for _, se := range elements {
-			buf.Write([]byte("*2\r\n"))
+			buf.WriteString("*2\r\n")
 			buf.Write(Encode(se.Key, false))
 			buf.Write(Encode(se.Obj.Value, false))
 		}
@@ -221,13 +223,13 @@ func Encode(value interface{}, isSimple bool) []byte {
 		var b []byte
 		buf := bytes.NewBuffer(b)
 		for _, row := range value.([]DSQLQueryResultRow) {
-			buf.Write([]byte("*2\r\n"))
+			buf.WriteString("*2\r\n")
 			buf.Write(Encode(row.Key, false))
 			buf.Write(Encode(row.Value.Value, false))
 		}
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
 	default:
 		fmt.Printf("Unsupported type: %T\n", v)
-		return RESP_NIL
+		return RespNIL
 	}
 }

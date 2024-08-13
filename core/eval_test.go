@@ -10,6 +10,7 @@ import (
 	"unsafe"
 
 	"github.com/bytedance/sonic"
+	"github.com/dicedb/dice/internal/constants"
 	"gotest.tools/v3/assert"
 )
 
@@ -89,19 +90,19 @@ func testEvalSET(t *testing.T) {
 		"nil value":                       {input: nil, output: []byte("-ERR wrong number of arguments for 'set' command\r\n")},
 		"empty array":                     {input: []string{}, output: []byte("-ERR wrong number of arguments for 'set' command\r\n")},
 		"one value":                       {input: []string{"KEY"}, output: []byte("-ERR wrong number of arguments for 'set' command\r\n")},
-		"key val pair":                    {input: []string{"KEY", "VAL"}, output: RESP_OK},
-		"key val pair and expiry key":     {input: []string{"KEY", "VAL", "PX"}, output: []byte("-ERR syntax error\r\n")},
-		"key val pair and EX no val":      {input: []string{"KEY", "VAL", "EX"}, output: []byte("-ERR syntax error\r\n")},
-		"key val pair and valid EX":       {input: []string{"KEY", "VAL", "EX", "2"}, output: RESP_OK},
-		"key val pair and invalid EX":     {input: []string{"KEY", "VAL", "EX", "invalid_expiry_val"}, output: []byte("-ERR value is not an integer or out of range\r\n")},
-		"key val pair and valid PX":       {input: []string{"KEY", "VAL", "PX", "2000"}, output: RESP_OK},
-		"key val pair and invalid PX":     {input: []string{"KEY", "VAL", "PX", "invalid_expiry_val"}, output: []byte("-ERR value is not an integer or out of range\r\n")},
-		"key val pair and both EX and PX": {input: []string{"KEY", "VAL", "EX", "2", "PX", "2000"}, output: []byte("-ERR syntax error\r\n")},
-		"key val pair and PXAT no val":    {input: []string{"KEY", "VAL", "PXAT"}, output: []byte("-ERR syntax error\r\n")},
-		"key val pair and invalid PXAT":   {input: []string{"KEY", "VAL", "PXAT", "invalid_expiry_val"}, output: []byte("-ERR value is not an integer or out of range\r\n")},
-		"key val pair and expired PXAT":   {input: []string{"KEY", "VAL", "PXAT", "2"}, output: RESP_OK},
-		"key val pair and negative PXAT":  {input: []string{"KEY", "VAL", "PXAT", "-123456"}, output: []byte("-ERR invalid expire time in 'set' command\r\n")},
-		"key val pair and valid PXAT":     {input: []string{"KEY", "VAL", "PXAT", strconv.FormatInt(time.Now().Add(2*time.Minute).UnixMilli(), 10)}, output: RESP_OK},
+		"key val pair":                    {input: []string{"KEY", "VAL"}, output: RespOK},
+		"key val pair and expiry key":     {input: []string{"KEY", "VAL", constants.Px}, output: []byte("-ERR syntax error\r\n")},
+		"key val pair and EX no val":      {input: []string{"KEY", "VAL", constants.Ex}, output: []byte("-ERR syntax error\r\n")},
+		"key val pair and valid EX":       {input: []string{"KEY", "VAL", constants.Ex, "2"}, output: RespOK},
+		"key val pair and invalid EX":     {input: []string{"KEY", "VAL", constants.Ex, "invalid_expiry_val"}, output: []byte("-ERR value is not an integer or out of range\r\n")},
+		"key val pair and valid PX":       {input: []string{"KEY", "VAL", constants.Px, "2000"}, output: RespOK},
+		"key val pair and invalid PX":     {input: []string{"KEY", "VAL", constants.Px, "invalid_expiry_val"}, output: []byte("-ERR value is not an integer or out of range\r\n")},
+		"key val pair and both EX and PX": {input: []string{"KEY", "VAL", constants.Ex, "2", constants.Px, "2000"}, output: []byte("-ERR syntax error\r\n")},
+		"key val pair and PXAT no val":    {input: []string{"KEY", "VAL", constants.Pxat}, output: []byte("-ERR syntax error\r\n")},
+		"key val pair and invalid PXAT":   {input: []string{"KEY", "VAL", constants.Pxat, "invalid_expiry_val"}, output: []byte("-ERR value is not an integer or out of range\r\n")},
+		"key val pair and expired PXAT":   {input: []string{"KEY", "VAL", constants.Pxat, "2"}, output: RespOK},
+		"key val pair and negative PXAT":  {input: []string{"KEY", "VAL", constants.Pxat, "-123456"}, output: []byte("-ERR invalid expire time in 'set' command\r\n")},
+		"key val pair and valid PXAT":     {input: []string{"KEY", "VAL", constants.Pxat, strconv.FormatInt(time.Now().Add(2*time.Minute).UnixMilli(), 10)}, output: RespOK},
 	}
 
 	runEvalTests(t, tests, evalSET)
@@ -112,9 +113,9 @@ func testEvalMSET(t *testing.T) {
 		"nil value":         {input: nil, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
 		"empty array":       {input: []string{}, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
 		"one value":         {input: []string{"KEY"}, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
-		"key val pair":      {input: []string{"KEY", "VAL"}, output: RESP_OK},
+		"key val pair":      {input: []string{"KEY", "VAL"}, output: RespOK},
 		"odd key val pair":  {input: []string{"KEY", "VAL", "KEY2"}, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
-		"even key val pair": {input: []string{"KEY", "VAL", "KEY2", "VAL2"}, output: RESP_OK},
+		"even key val pair": {input: []string{"KEY", "VAL", "KEY2", "VAL2"}, output: RespOK},
 	}
 
 	runEvalTests(t, tests, evalMSET)
@@ -135,7 +136,7 @@ func testEvalGET(t *testing.T) {
 		"key does not exist": {
 			setup:  func() {},
 			input:  []string{"NONEXISTENT_KEY"},
-			output: RESP_NIL,
+			output: RespNIL,
 		},
 		"multiple arguments": {
 			setup:  func() {},
@@ -169,7 +170,7 @@ func testEvalGET(t *testing.T) {
 				expires[obj] = uint64(time.Now().Add(-2 * time.Minute).Unix())
 			},
 			input:  []string{"EXISTING_KEY"},
-			output: RESP_NIL,
+			output: RespNIL,
 		},
 	}
 
@@ -191,7 +192,7 @@ func testEvalJSONGET(t *testing.T) {
 		"key does not exist": {
 			setup:  func() {},
 			input:  []string{"NONEXISTENT_KEY"},
-			output: RESP_NIL,
+			output: RespNIL,
 		},
 		"key exists invalid value": {
 			setup: func() {
@@ -213,7 +214,7 @@ func testEvalJSONGET(t *testing.T) {
 				value := "{\"a\":2}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := NewObj(rootData, -1, OBJ_TYPE_JSON, OBJ_ENCODING_JSON)
+				obj := NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
 				store[unsafe.Pointer(obj)] = obj
 				keypool[key] = unsafe.Pointer(obj)
 			},
@@ -234,7 +235,7 @@ func testEvalJSONGET(t *testing.T) {
 				expires[obj] = uint64(time.Now().Add(-2 * time.Minute).Unix())
 			},
 			input:  []string{"EXISTING_KEY"},
-			output: RESP_NIL,
+			output: RespNIL,
 		},
 	}
 
@@ -271,7 +272,7 @@ func testEvalJSONSET(t *testing.T) {
 			setup: func() {
 			},
 			input:  []string{"doc", "$", "{\"a\":2}"},
-			output: RESP_OK,
+			output: RespOK,
 		},
 	}
 
@@ -293,7 +294,7 @@ func testEvalTTL(t *testing.T) {
 		"key does not exist": {
 			setup:  func() {},
 			input:  []string{"NONEXISTENT_KEY"},
-			output: RESP_MINUS_2,
+			output: RespMinusTwo,
 		},
 		"multiple arguments": {
 			setup:  func() {},
@@ -312,7 +313,7 @@ func testEvalTTL(t *testing.T) {
 				keypool[key] = unsafe.Pointer(obj)
 			},
 			input:  []string{"EXISTING_KEY"},
-			output: RESP_MINUS_1,
+			output: RespMinusOne,
 		},
 		"key exists not expired": {
 			setup: func() {
@@ -329,8 +330,8 @@ func testEvalTTL(t *testing.T) {
 			input: []string{"EXISTING_KEY"},
 			validator: func(output []byte) {
 				assert.Assert(t, output != nil)
-				assert.Assert(t, !bytes.Equal(output, RESP_MINUS_1))
-				assert.Assert(t, !bytes.Equal(output, RESP_MINUS_2))
+				assert.Assert(t, !bytes.Equal(output, RespMinusOne))
+				assert.Assert(t, !bytes.Equal(output, RespMinusTwo))
 			},
 		},
 		"key exists but expired": {
@@ -346,7 +347,7 @@ func testEvalTTL(t *testing.T) {
 				expires[obj] = uint64(time.Now().Add(-2 * time.Minute).Unix())
 			},
 			input:  []string{"EXISTING_KEY"},
-			output: RESP_MINUS_2,
+			output: RespMinusTwo,
 		},
 	}
 
@@ -400,29 +401,29 @@ func TestEvalPersist(t *testing.T) {
 		},
 		"key does not exist": {
 			input:  []string{"nonexistent"},
-			output: RESP_ZERO,
+			output: RespZero,
 		},
 		"key exists but no expiration set": {
 			input: []string{"existent_no_expiry"},
 			setup: func() {
 				evalSET([]string{"existent_no_expiry", "value"})
 			},
-			output: RESP_MINUS_1,
+			output: RespMinusOne,
 		},
 		"key exists and expiration removed": {
 			input: []string{"existent_with_expiry"},
 			setup: func() {
-				evalSET([]string{"existent_with_expiry", "value", "EX", "1"})
+				evalSET([]string{"existent_with_expiry", "value", constants.Ex, "1"})
 			},
-			output: RESP_ONE,
+			output: RespOne,
 		},
 		"key exists with expiration set and not expired": {
 			input: []string{"existent_with_expiry_not_expired"},
 			setup: func() {
 				// Simulate setting a key with an expiration time that has not yet passed
-				evalSET([]string{"existent_with_expiry_not_expired", "value", "EX", "10000"}) // 10000 seconds in the future
+				evalSET([]string{"existent_with_expiry_not_expired", "value", constants.Ex, "10000"}) // 10000 seconds in the future
 			},
-			output: RESP_ONE,
+			output: RespOne,
 		},
 	}
 

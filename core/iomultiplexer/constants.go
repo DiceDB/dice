@@ -1,8 +1,8 @@
 package iomultiplexer
 
 const (
-	// OP_READ represents the read operation
-	OP_READ Operations = 1 << iota
-	// OP_WRITE represents the write operation
-	OP_WRITE
+	// OpRead represents the read operation
+	OpRead Operations = 1 << iota
+	// OpWrite represents the write operation
+	OpWrite
 )

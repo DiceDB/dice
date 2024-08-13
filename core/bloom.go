@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"strconv"
 
+	"github.com/dicedb/dice/internal/constants"
 	"github.com/twmb/murmur3"
 )
 
@@ -97,7 +98,7 @@ func newBloomFilter(opts *BloomOpts) *Bloom {
 
 	// Initialize hash functions with random seeds
 	for i := 0; i < int(k); i++ {
-		opts.hashFns[i] = murmur3.SeedNew64(rand.Uint64())
+		opts.hashFns[i] = murmur3.SeedNew64(rand.Uint64()) //nolint:gosec
 	}
 
 	// initialize the common slice for storing indexes of bits to be set
@@ -121,8 +122,8 @@ func newBloomFilter(opts *BloomOpts) *Bloom {
 }
 
 func (b *Bloom) info(name string) string {
-	info := ""
-	if name != "" {
+	info := constants.EmptyStr
+	if name != constants.EmptyStr {
 		info = "name: " + name + ", "
 	}
 	info += fmt.Sprintf("error rate: %f, ", b.opts.errorRate)
@@ -141,15 +142,15 @@ func (b *Bloom) info(name string) string {
 func (b *Bloom) add(value string) ([]byte, error) {
 	// We're sure that empty values will be handled upper functions itself.
 	// This is just a property check for the bloom struct.
-	if value == "" {
-		return RESP_MINUS_1, errEmptyValue
+	if value == constants.EmptyStr {
+		return RespMinusOne, errEmptyValue
 	}
 
 	// Update the indexes where bits are supposed to be set
 	err := b.opts.updateIndexes(value)
 	if err != nil {
 		fmt.Println("error in getting indexes for value:", value, "err:", err)
-		return RESP_MINUS_1, errUnableToHash
+		return RespMinusOne, errUnableToHash
 	}
 
 	// Set the bits and keep a count of already set ones
@@ -164,10 +165,10 @@ func (b *Bloom) add(value string) ([]byte, error) {
 
 	if count == len(b.opts.indexes) {
 		// All the bits were already set, return 0 in that case.
-		return RESP_ZERO, nil
+		return RespZero, nil
 	}
 
-	return RESP_ONE, nil
+	return RespOne, nil
 }
 
 // exists checks if the given `value` exists in the filter or not.
@@ -178,15 +179,15 @@ func (b *Bloom) add(value string) ([]byte, error) {
 func (b *Bloom) exists(value string) ([]byte, error) {
 	// We're sure that empty values will be handled upper functions itself.
 	// This is just a property check for the bloom struct.
-	if value == "" {
-		return RESP_MINUS_1, errEmptyValue
+	if value == constants.EmptyStr {
+		return RespMinusOne, errEmptyValue
 	}
 
 	// Update the indexes where bits are supposed to be set
 	err := b.opts.updateIndexes(value)
 	if err != nil {
 		fmt.Println("error in getting indexes for value:", value, "err:", err)
-		return RESP_MINUS_1, errUnableToHash
+		return RespMinusOne, errUnableToHash
 	}
 
 	// Check if all the bits at given indexes are set or not
@@ -194,12 +195,12 @@ func (b *Bloom) exists(value string) ([]byte, error) {
 	for _, v := range b.opts.indexes {
 		if !isBitSet(b.bitset, v) {
 			// Return with "0" as we found one non-set bit (which is enough to conclude)
-			return RESP_ZERO, nil
+			return RespZero, nil
 		}
 	}
 
 	// We reached here, which means the element may exist in the filter. Return "1" now.
-	return RESP_ONE, nil
+	return RespOne, nil
 }
 
 // updateIndexes updates the list with indexes where bits are supposed to be
@@ -245,7 +246,7 @@ func evalBFINIT(args []string) []byte {
 		return Encode(fmt.Errorf("%w for 'BFINIT' command", err), false)
 	}
 
-	return RESP_OK
+	return RespOK
 }
 
 // evalBFADD evaluates the BFADD command responsible for adding an element to
@@ -271,7 +272,7 @@ func evalBFADD(args []string) []byte {
 	return resp
 }
 
-// evalBFEXISTS evaluates the BFEXISTS command responsible for checking existance
+// evalBFEXISTS evaluates the BFEXISTS command responsible for checking existence
 // of an element in a bloom filter.
 func evalBFEXISTS(args []string) []byte {
 	if len(args) != 2 {
@@ -314,7 +315,7 @@ func getOrCreateBloomFilter(key string, opts *BloomOpts) (*Bloom, error) {
 
 	// If we don't have a filter yet and `opts` are provided, create one.
 	if obj == nil && opts != nil {
-		obj = NewObj(newBloomFilter(opts), -1, OBJ_TYPE_BITSET, OBJ_ENCODING_BF)
+		obj = NewObj(newBloomFilter(opts), -1, ObjTypeBitSet, ObjEncodingBF)
 		Put(key, obj)
 	}
 
@@ -323,11 +324,11 @@ func getOrCreateBloomFilter(key string, opts *BloomOpts) (*Bloom, error) {
 		return nil, errInvalidKey
 	}
 
-	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BITSET); err != nil {
+	if err := assertType(obj.TypeEncoding, ObjTypeBitSet); err != nil {
 		return nil, err
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_BF); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingBF); err != nil {
 		return nil, err
 	}
 

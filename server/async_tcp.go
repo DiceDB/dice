@@ -13,17 +13,18 @@ import (
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core"
 	"github.com/dicedb/dice/core/iomultiplexer"
+	"github.com/dicedb/dice/internal/constants"
 )
 
 var cronFrequency time.Duration = 1 * time.Second
 var lastCronExecTime time.Time = time.Now()
 
-const EngineStatus_WAITING int32 = 1 << 1
-const EngineStatus_BUSY int32 = 1 << 2
-const EngineStatus_SHUTTING_DOWN int32 = 1 << 3
-const EngineStatus_TRANSACTION int32 = 1 << 4
+const EngineStatusWAITING int32 = 1 << 1
+const EngineStatusBUSY int32 = 1 << 2
+const EngineStatusSHUTTINGDOWN int32 = 1 << 3
+const EngineStatusTRANSACTION int32 = 1 << 4
 
-var eStatus int32 = EngineStatus_WAITING
+var eStatus int32 = EngineStatusWAITING
 
 var connectedClients map[int]*core.Client
 
@@ -36,7 +37,7 @@ func setupUsers() {
 		user *core.User
 		err  error
 	)
-	log.Info("setting up default user.", "password required", !(config.RequirePass == ""))
+	log.Info("setting up default user.", "password required", config.RequirePass != constants.EmptyStr)
 	if user, err = core.UserStore.Add(core.DefaultUserName); err != nil {
 		log.Fatal(err)
 	}
@@ -88,7 +89,7 @@ func WaitForSignal(wg *sync.WaitGroup, sigs chan os.Signal) {
 	<-sigs
 
 	// if server is busy continue to wait
-	for atomic.LoadInt32(&eStatus) == EngineStatus_BUSY {
+	for atomic.LoadInt32(&eStatus) == EngineStatusBUSY { //nolint:revive
 	}
 
 	// CRITICAL TO HANDLE
@@ -97,11 +98,11 @@ func WaitForSignal(wg *sync.WaitGroup, sigs chan os.Signal) {
 
 	// immediately set the status to be SHUTTING DOWN
 	// the only place where we can set the status to be SHUTTING DOWN
-	atomic.StoreInt32(&eStatus, EngineStatus_SHUTTING_DOWN)
+	atomic.StoreInt32(&eStatus, EngineStatusSHUTTINGDOWN)
 
 	// if server is in any other state, initiate a shutdown
 	core.Shutdown()
-	os.Exit(0)
+	os.Exit(0) //nolint:gocritic
 }
 
 func FindPortAndBind() (int, error) {
@@ -110,19 +111,19 @@ func FindPortAndBind() (int, error) {
 		return 0, err
 	}
 
-	if err = syscall.SetsockoptInt(serverFD, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
+	if err := syscall.SetsockoptInt(serverFD, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
 		return 0, err
 	}
 
 	// Set the Socket operate in a non-blocking mode
-	if err = syscall.SetNonblock(serverFD, true); err != nil {
+	if err := syscall.SetNonblock(serverFD, true); err != nil {
 		return 0, err
 	}
 
 	// Bind the IP and the port
 	ip4 := net.ParseIP(config.Host)
 
-	if err = syscall.Bind(serverFD, &syscall.SockaddrInet4{
+	if err := syscall.Bind(serverFD, &syscall.SockaddrInet4{
 		Port: config.Port,
 		Addr: [4]byte{ip4[0], ip4[1], ip4[2], ip4[3]},
 	}); err != nil {
@@ -144,7 +145,7 @@ func RunAsyncTCPServer(serverFD int, wg *sync.WaitGroup) {
 	defer cancel()
 
 	defer func() {
-		atomic.StoreInt32(&eStatus, EngineStatus_SHUTTING_DOWN)
+		atomic.StoreInt32(&eStatus, EngineStatusSHUTTINGDOWN)
 	}()
 	maxClients := 20000
 
@@ -153,7 +154,7 @@ func RunAsyncTCPServer(serverFD int, wg *sync.WaitGroup) {
 
 	// Start listening
 	if err := syscall.Listen(serverFD, maxClients); err != nil {
-		log.Fatal("error while listening", err)
+		log.Fatal("error while listening", err) //nolint:gocritic
 	}
 
 	log.Info("ready to accept connections")
@@ -171,13 +172,13 @@ func RunAsyncTCPServer(serverFD int, wg *sync.WaitGroup) {
 	// Listen to read events on the Server itself
 	if err := multiplexer.Subscribe(iomultiplexer.Event{
 		Fd: serverFD,
-		Op: iomultiplexer.OP_READ,
+		Op: iomultiplexer.OpRead,
 	}); err != nil {
 		log.Fatal(err)
 	}
 
 	// loop until the server is not shutting down
-	for atomic.LoadInt32(&eStatus) != EngineStatus_SHUTTING_DOWN {
+	for atomic.LoadInt32(&eStatus) != EngineStatusSHUTTINGDOWN {
 		if time.Now().After(lastCronExecTime.Add(cronFrequency)) {
 			core.DeleteExpiredKeys()
 			lastCronExecTime = time.Now()
@@ -202,10 +203,9 @@ func RunAsyncTCPServer(serverFD int, wg *sync.WaitGroup) {
 		// if that does not happen then we can exit.
 
 		// mark engine as BUSY only when it is in the waiting state
-		if !atomic.CompareAndSwapInt32(&eStatus, EngineStatus_WAITING, EngineStatus_BUSY) {
+		if !atomic.CompareAndSwapInt32(&eStatus, EngineStatusWAITING, EngineStatusBUSY) {
 			// if swap unsuccessful then the existing status is not WAITING, but something else
-			switch eStatus {
-			case EngineStatus_SHUTTING_DOWN:
+			if eStatus == EngineStatusSHUTTINGDOWN {
 				return
 			}
 		}
@@ -228,7 +228,7 @@ func RunAsyncTCPServer(serverFD int, wg *sync.WaitGroup) {
 				// add this new TCP connection to be monitored
 				if err := multiplexer.Subscribe(iomultiplexer.Event{
 					Fd: fd,
-					Op: iomultiplexer.OP_READ,
+					Op: iomultiplexer.OpRead,
 				}); err != nil {
 					log.Fatal(err)
 				}
@@ -255,6 +255,6 @@ func RunAsyncTCPServer(serverFD int, wg *sync.WaitGroup) {
 		// mark engine as WAITING
 		// no contention as the signal handler is blocked until
 		// the engine is BUSY
-		atomic.StoreInt32(&eStatus, EngineStatus_WAITING)
+		atomic.StoreInt32(&eStatus, EngineStatusWAITING)
 	}
 }

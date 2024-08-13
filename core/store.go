@@ -27,7 +27,7 @@ var (
 	keypoolMutex sync.RWMutex // Mutex to protect the keypool map, must be acquired after storeMutex if both are needed.
 )
 
-// Channel to receive updates about keys that are being watched.
+// WatchChannel Channel to receive updates about keys that are being watched.
 // The Watcher goroutine will wait on this channel. When a key is updated, the
 // goroutine will send the updated value and the related operation to all the
 // clients that are watching the key.
@@ -46,7 +46,7 @@ func ResetStore() {
 	}, WithStoreLock(), WithKeypoolLock())
 }
 
-func NewObj(value interface{}, expDurationMs int64, oType uint8, oEnc uint8) *Obj {
+func NewObj(value interface{}, expDurationMs int64, oType, oEnc uint8) *Obj {
 	obj := &Obj{
 		Value:          value,
 		TypeEncoding:   oType | oEnc,
@@ -166,13 +166,13 @@ func Keys(p string) ([]string, error) {
 }
 
 // Function to add a new watcher to a query.
-func AddWatcher(query DSQLQuery, clientFd int) {
+func AddWatcher(query DSQLQuery, clientFd int) { //nolint:gocritic
 	clients, _ := WatchList.LoadOrStore(query, &sync.Map{})
 	clients.(*sync.Map).Store(clientFd, struct{}{})
 }
 
 // Function to remove a watcher from a query.
-func RemoveWatcher(query DSQLQuery, clientFd int) {
+func RemoveWatcher(query DSQLQuery, clientFd int) { //nolint:gocritic
 	if clients, ok := WatchList.Load(query); ok {
 		clients.(*sync.Map).Delete(clientFd)
 		// If no more clients for this query, remove the query from WatchList
@@ -183,7 +183,7 @@ func RemoveWatcher(query DSQLQuery, clientFd int) {
 }
 
 // Rename function to implement RENAME functionality using existing helpers
-func Rename(sourceKey string, destKey string) bool {
+func Rename(sourceKey, destKey string) bool {
 	return withLocksReturn(func() bool {
 		// If source and destination are the same, do nothing and return true
 		if sourceKey == destKey {
@@ -299,7 +299,7 @@ func incrementKeyCount() {
 
 // notifyWatchers sends a WatchEvent to the WatchChannel.
 // This function is called whenever a key is updated.
-func notifyWatchers(k string, operation string, obj *Obj) {
+func notifyWatchers(k, operation string, obj *Obj) {
 	WatchChannel <- WatchEvent{k, operation, obj}
 }
 

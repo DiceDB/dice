@@ -23,7 +23,7 @@ func TestQueueRef(t *testing.T) {
 		t.Error("inserting the reference of the key that does not exist should not work but it did")
 	}
 
-	core.Put("key that exists", core.NewObj(10, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put("key that exists", core.NewObj(10, -1, core.ObjTypeString, core.ObjEncodingInt))
 	if qr.Insert("key that exists") != true {
 		t.Error("inserting the reference of the key that exists should work but it did not")
 	}
@@ -36,19 +36,19 @@ func TestQueueRef(t *testing.T) {
 		t.Error("removing again from an empty queueref should return an empty queue error")
 	}
 
-	core.Put("key1", core.NewObj(10, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put("key1", core.NewObj(10, -1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key1")
-	core.Put("key2", core.NewObj(20, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put("key2", core.NewObj(20, -1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key2")
-	core.Put("key3", core.NewObj(30, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put("key3", core.NewObj(30, -1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key3")
-	core.Put("key4", core.NewObj(40, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put("key4", core.NewObj(40, -1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key4")
-	core.Put("key5", core.NewObj(50, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put("key5", core.NewObj(50, -1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key5")
-	core.Put("key6", core.NewObj(60, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put("key6", core.NewObj(60, -1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key6")
-	core.Put("key7", core.NewObj(60, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put("key7", core.NewObj(60, -1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key7")
 
 	observedVals := make([]int64, 0, 6)
@@ -66,7 +66,7 @@ func TestQueueRef(t *testing.T) {
 func TestRemoveSingleNonExpiredKeys(t *testing.T) {
 	qr := core.NewQueueRef()
 	val := 10
-	core.Put("key1", core.NewObj(val, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put("key1", core.NewObj(val, -1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key1")
 	qe, err := qr.Remove()
 	assert.Check(t, err == nil || qe.Obj.Value == val, fmt.Sprintf("removal from queue with single non expired key failed, Expected : %d, Got : %d\n", val, qe.Obj.Value))
@@ -76,11 +76,11 @@ func TestRemoveSingleNonExpiredKeys(t *testing.T) {
 func TestRemoveMultipleNonExpiredKeys(t *testing.T) {
 	qr := core.NewQueueRef()
 	val := [3]int{10, 20, 30}
-	core.Put("key1", core.NewObj(val[0], -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put("key1", core.NewObj(val[0], -1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key1")
-	core.Put("key2", core.NewObj(val[1], -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put("key2", core.NewObj(val[1], -1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key2")
-	core.Put("key3", core.NewObj(val[2], -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put("key3", core.NewObj(val[2], -1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key3")
 	for i := 0; i < len(val); i++ {
 		qe, err := qr.Remove()
@@ -92,9 +92,9 @@ func TestRemoveMultipleNonExpiredKeys(t *testing.T) {
 func TestRemoveExpiredBeforeNonExpire(t *testing.T) {
 	qr := core.NewQueueRef()
 	val := [3]int{10, 20}
-	core.Put("key1", core.NewObj(val[0], 1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put("key1", core.NewObj(val[0], 1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key1")
-	core.Put("key2", core.NewObj(val[1], -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put("key2", core.NewObj(val[1], -1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key2")
 	time.Sleep(2 * time.Millisecond)
 	qe, err := qr.Remove()
@@ -105,11 +105,11 @@ func TestRemoveExpiredBeforeNonExpire(t *testing.T) {
 func TestRemoveMultipleExpiredBeforeNonExpire(t *testing.T) {
 	qr := core.NewQueueRef()
 	val := [3]int{10, 20, 30}
-	core.Put("key1", core.NewObj(val[0], 1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put("key1", core.NewObj(val[0], 1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key1")
-	core.Put("key2", core.NewObj(val[1], 1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put("key2", core.NewObj(val[1], 1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key2")
-	core.Put("key3", core.NewObj(val[2], -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put("key3", core.NewObj(val[2], -1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key3")
 	time.Sleep(2 * time.Millisecond)
 	fmt.Printf("Queue size : %d\n", qr.Length())
@@ -121,11 +121,11 @@ func TestRemoveMultipleExpiredBeforeNonExpire(t *testing.T) {
 func TestRemoveAllExpired(t *testing.T) {
 	qr := core.NewQueueRef()
 	val := [3]int{10, 20, 30}
-	core.Put("key1", core.NewObj(val[0], 1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put("key1", core.NewObj(val[0], 1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key1")
-	core.Put("key2", core.NewObj(val[1], 1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put("key2", core.NewObj(val[1], 1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key2")
-	core.Put("key3", core.NewObj(val[2], 1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put("key3", core.NewObj(val[2], 1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key3")
 	time.Sleep(2 * time.Millisecond)
 	// remove from empty queue
@@ -191,7 +191,7 @@ func insertKey(b *testing.B, qr *core.QueueRef, i int, expired bool) {
 		expiration = -1 // No expiration
 	}
 
-	core.Put(key, core.NewObj(value, expiration, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_INT))
+	core.Put(key, core.NewObj(value, expiration, core.ObjTypeString, core.ObjEncodingInt))
 	if !qr.Insert(key) {
 		b.Fatalf("Failed to insert key: %s", key)
 	}

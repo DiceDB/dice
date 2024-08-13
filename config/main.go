@@ -1,5 +1,7 @@
 package config
 
+import "github.com/dicedb/dice/internal/constants"
+
 var (
 	Host string = "0.0.0.0"
 	Port int    = 7379
@@ -23,5 +25,5 @@ var (
 // Users and ACLs
 var (
 	// If requirepass is set to an empty string, no authentication is required
-	RequirePass string = ""
+	RequirePass string = constants.EmptyStr
 )
