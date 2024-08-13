@@ -16,7 +16,7 @@ func ParseCommand(cmd string) []string {
 		case ' ':
 			if inQuotes {
 				current += string(char)
-			} else if len(current) > 0 {
+			} else if current != constants.EmptyStr {
 				args = append(args, current)
 				current = constants.EmptyStr
 			}
@@ -28,7 +28,7 @@ func ParseCommand(cmd string) []string {
 		}
 	}
 
-	if len(current) > 0 {
+	if current != constants.EmptyStr {
 		args = append(args, current)
 	}
 
