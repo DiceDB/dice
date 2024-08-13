@@ -116,7 +116,7 @@ $ pre-commit install
 pre-commit installed at .git/hooks/pre-commit
 ```
 
-now pre-commit will run automatically on `git commit` and check the formatting based on the [.golangci.yml](https://github.com/dicedb/dice/blob/master/.golangci.yml) file!
+With the pre-commit hook configured, `golangci-lint` will automatically run every time you execute `git commit`. This ensures that your code adheres to the linting rules specified in the [.golangci.yml](https://github.com/dicedb/dice/blob/master/.golangci.yml) file before any changes are committed.
 
 ### Backward and Forward compatibility changes
 
