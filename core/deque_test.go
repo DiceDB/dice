@@ -10,8 +10,10 @@ import (
 	"gotest.tools/v3/assert"
 )
 
+var randGenerator *rand.Rand
+
 func init() {
-	rand.Seed(time.Now().UnixNano())
+	randGenerator = rand.New(rand.NewSource(time.Now().UnixNano()))
 }
 
 var runes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_!@#$%^&*()-=+[]\\;':\",.<>/?~.|")
@@ -19,7 +21,7 @@ var runes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_!@#$%^&
 func randStr(n int) string {
 	b := make([]rune, n)
 	for i := range b {
-		b[i] = runes[rand.Intn(len(runes))]
+		b[i] = runes[randGenerator.Intn(len(runes))]
 	}
 	return string(b)
 }
