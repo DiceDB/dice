@@ -42,6 +42,14 @@ func (b *byteList) newNode() *byteListNode {
 	return bn
 }
 
+func (b *byteList) newNodeWithCap(cap int) *byteListNode {
+	bn := &byteListNode{
+		buf: make([]byte, 0, cap),
+	}
+	b.size += byteListNodeSize
+	return bn
+}
+
 func (b *byteList) append(bn *byteListNode) {
 	bn.prev = b.tail
 	if b.tail != nil {
