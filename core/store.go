@@ -38,7 +38,7 @@ func ResetStore() {
 		expires = make(map[*Obj]uint64)
 		keypool = make(map[string]unsafe.Pointer)
 		WatchChannel = make(chan WatchEvent, config.KeysLimit)
-	}, WithStoreLock(), WithKeypoolLock())
+	}, WithStoreWriteLock(), WithKeypoolLock())
 }
 
 func NewObj(value interface{}, expDurationMs int64, oType uint8, oEnc uint8) *Obj {
@@ -56,7 +56,7 @@ func NewObj(value interface{}, expDurationMs int64, oType uint8, oEnc uint8) *Ob
 func Put(k string, obj *Obj) {
 	withLocks(k, func() {
 		putHelper(k, obj)
-	}, WithStoreLock(), WithKeypoolLock())
+	}, WithStoreWriteLock(), WithKeypoolLock())
 }
 
 // PutAll is a bulk insert function that takes a map of
@@ -66,7 +66,7 @@ func PutAll(data map[string]*Obj) {
 		for k, obj := range data {
 			putHelper(k, obj)
 		}
-	}, WithStoreLock(), WithKeypoolLock())
+	}, WithStoreWriteLock(), WithKeypoolLock())
 }
 
 // GetNoTouch is a function to retrieve a value from the store without updating
@@ -92,7 +92,7 @@ func getHelper(k string, touch bool) *Obj {
 				v.LastAccessedAt = getCurrentClock()
 			}
 		}
-	}, WithStoreLock(), WithKeypoolLock())
+	}, WithStoreWriteLock(), WithKeypoolLock())
 	return v
 }
 
@@ -131,13 +131,13 @@ func Del(k string) bool {
 			return false
 		}
 		return deleteKey(k, ptr, store[ptr])
-	}, WithStoreLock(), WithKeypoolLock())
+	}, WithStoreWriteLock(), WithKeypoolLock())
 }
 
 func DelByPtr(ptr unsafe.Pointer) bool {
 	return withLocksReturn(DefaultLockIdentifier, func() bool {
 		return delByPtr(ptr)
-	}, WithStoreLock(), WithKeypoolLock())
+	}, WithStoreWriteLock(), WithKeypoolLock())
 }
 
 // List all keys in the store by given pattern
@@ -212,7 +212,7 @@ func Rename(sourceKey string, destKey string) bool {
 		notifyWatchers(sourceKey, "DEL", sourceObj)
 
 		return true
-	}, WithStoreLock(), WithKeypoolLock())
+	}, WithStoreWriteLock(), WithKeypoolLock())
 }
 
 // Helper functions
@@ -253,7 +253,7 @@ func GetDel(k string) *Obj {
 				v = nil
 			}
 		}
-	}, WithStoreLock(), WithKeypoolLock())
+	}, WithStoreWriteLock(), WithKeypoolLock())
 	return v
 }
 

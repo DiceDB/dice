@@ -24,7 +24,7 @@ func TestNewLockH(t *testing.T) {
 }
 
 func TestSetup(t *testing.T) {
-	lockH := &LockH{
+	lockH := &LockStore{
 		hash:      [32]*Lock{},
 		lockCount: 0,
 	}

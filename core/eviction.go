@@ -14,7 +14,7 @@ func evictFirst() {
 			delByPtr(keyPtr)
 			return
 		}
-	}, WithStoreLock())
+	}, WithStoreWriteLock())
 }
 
 // Randomly removes keys to make space for the new data added.
@@ -31,7 +31,7 @@ func evictAllkeysRandom() {
 				break
 			}
 		}
-	}, WithStoreLock())
+	}, WithStoreWriteLock())
 }
 
 /*

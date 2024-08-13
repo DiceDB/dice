@@ -16,7 +16,7 @@ type (
 	LockHasher struct {
 		ctx         context.Context
 		concurrency uint32
-		locks       [DefaultLockConcurrency]*LockH
+		locks       [DefaultLockConcurrency]*LockStore
 	}
 )
 
@@ -31,7 +31,7 @@ func NewLockHasher() (lockHsh *LockHasher) {
 	return
 }
 
-func (lockHsh *LockHasher) GetHashKey(strKey string) (hashSlot uint32, err error) {
+func (lockHsh *LockHasher) GetHash(strKey string) (hashSlot uint32, err error) {
 	var (
 		hashFn hash.Hash32
 	)
@@ -46,11 +46,11 @@ func (lockHsh *LockHasher) GetHashKey(strKey string) (hashSlot uint32, err error
 	return
 }
 
-func (lockHsh *LockHasher) GetStore(strKey string) (lockH *LockH, err error) {
+func (lockHsh *LockHasher) GetLockStore(strKey string) (lockH *LockStore, err error) {
 	var (
 		hashSlot uint32
 	)
-	if hashSlot, err = lockHsh.GetHashKey(strKey); err != nil {
+	if hashSlot, err = lockHsh.GetHash(strKey); err != nil {
 		return
 	}
 	if lockH = lockHsh.locks[hashSlot]; lockH == nil {

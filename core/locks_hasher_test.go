@@ -33,7 +33,7 @@ func TestGetHashKey(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			hashSlot, err := lockHasher.GetHashKey(tc.input)
+			hashSlot, err := lockHasher.GetHash(tc.input)
 
 			if tc.expectError && err == nil {
 				t.Error("Expected an error, but got none")
@@ -65,7 +65,7 @@ func TestGetStore(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			lockH, err := lockHasher.GetStore(tc.input)
+			lockH, err := lockHasher.GetLockStore(tc.input)
 
 			if tc.expectError && err == nil {
 				t.Error("Expected an error, but got none")
@@ -85,8 +85,8 @@ func TestGetStore(t *testing.T) {
 func TestGetStoreDifferentKeys(t *testing.T) {
 	lockHasher := NewLockHasher()
 
-	store1, _ := lockHasher.GetStore("key1")
-	store2, _ := lockHasher.GetStore("key2")
+	store1, _ := lockHasher.GetLockStore("key1")
+	store2, _ := lockHasher.GetLockStore("key2")
 
 	if store1 == store2 {
 		t.Error("Different keys should potentially return different stores")
@@ -96,8 +96,8 @@ func TestGetStoreDifferentKeys(t *testing.T) {
 func TestGetStoreSameKey(t *testing.T) {
 	lockHasher := NewLockHasher()
 
-	store1, _ := lockHasher.GetStore("samekey")
-	store2, _ := lockHasher.GetStore("samekey")
+	store1, _ := lockHasher.GetLockStore("samekey")
+	store2, _ := lockHasher.GetLockStore("samekey")
 
 	if store1 != store2 {
 		t.Error("Same key should return the same store")

@@ -17,7 +17,7 @@ func BenchmarkGetHashKey(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = lockHasher.GetHashKey(keys[i%len(keys)])
+		_, _ = lockHasher.GetHash(keys[i%len(keys)])
 	}
 }
 
@@ -26,7 +26,7 @@ func BenchmarkGetHashKeyEmpty(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = lockHasher.GetHashKey("")
+		_, _ = lockHasher.GetHash("")
 	}
 }
 
@@ -36,7 +36,7 @@ func BenchmarkGetStore(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = lockHasher.GetStore(keys[i%len(keys)])
+		_, _ = lockHasher.GetLockStore(keys[i%len(keys)])
 	}
 }
 
@@ -45,6 +45,6 @@ func BenchmarkGetStoreEmpty(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = lockHasher.GetStore("")
+		_, _ = lockHasher.GetLockStore("")
 	}
 }

@@ -22,11 +22,11 @@ type (
 	}
 )
 
-// WithStoreLock sets the storeLock flag
-func WithStoreLock() *LockRequest {
+// WithStoreWriteLock sets the storeLock flag
+func WithStoreWriteLock() *LockRequest {
 	return &LockRequest{
 		Name: StoreLock,
-		Op:   ReadLockOperation,
+		Op:   WriteLockOperation,
 	}
 }
 
@@ -64,9 +64,9 @@ func withLocks(id string, f func(), reqs ...*LockRequest) {
 	for _, req := range reqs {
 		var (
 			lock  *Lock
-			lockH *LockH
+			lockH *LockStore
 		)
-		if lockH, err = LockHsh.GetStore(id); err != nil {
+		if lockH, err = LockHsh.GetLockStore(id); err != nil {
 			log.Println("error in fetching lockStore for id", id, err)
 			return
 		}

@@ -20,65 +20,65 @@ type (
 		refCount uint32
 	}
 
-	LockH struct {
+	LockStore struct {
 		hash      [32]*Lock
 		lockCount uint8
 	}
 )
 
-func NewLockH() (lockH *LockH) {
-	lockH = &LockH{
+func NewLockH() (lockSt *LockStore) {
+	lockSt = &LockStore{
 		hash:      [32]*Lock{},
 		lockCount: 0,
 	}
-	if err := lockH.setup(); err != nil {
+	if err := lockSt.setup(); err != nil {
 		return
 	}
 	return
 }
 
-func (lockH *LockH) setup() (err error) {
+func (lockSt *LockStore) setup() (err error) {
 	availableLocks := []LockName{
 		StoreLock,
 		KeypoolLock,
 	}
 	for _, lockName := range availableLocks {
-		if _, err = lockH.addLock(lockName); err != nil {
+		if _, err = lockSt.addLock(lockName); err != nil {
 			return
 		}
 	}
 	return
 }
 
-func (lockH *LockH) addLock(name LockName) (lock *Lock, err error) {
+func (lockSt *LockStore) addLock(name LockName) (lock *Lock, err error) {
 	lock = &Lock{
 		mutex:    &sync.RWMutex{},
 		name:     name,
 		refCount: 0,
 	}
-	if lockH.hash[uint8(lock.name)] != nil {
+	if lockSt.hash[uint8(lock.name)] != nil {
 		err = fmt.Errorf("slot already filled for %d", lock.name)
 		return
 	}
-	lockH.hash[uint8(lock.name)] = lock
-	lockH.lockCount++
+	lockSt.hash[uint8(lock.name)] = lock
+	lockSt.lockCount++
 	return
 }
 
-func (lockH *LockH) getLock(name LockName) (lock *Lock, err error) {
-	if lock = lockH.hash[uint8(name)]; lock == nil {
+func (lockSt *LockStore) getLock(name LockName) (lock *Lock, err error) {
+	if lock = lockSt.hash[uint8(name)]; lock == nil {
 		err = fmt.Errorf("lock not found for %d", name)
 		return
 	}
 	return
 }
 
-func (lockH *LockH) removeLock(name LockName) (err error) {
-	if lockH.hash[uint8(name)] == nil {
+func (lockSt *LockStore) removeLock(name LockName) (err error) {
+	if lockSt.hash[uint8(name)] == nil {
 		err = fmt.Errorf("lock not found for %d", name)
 		return
 	}
-	lockH.hash[uint8(name)] = nil
-	lockH.lockCount--
+	lockSt.hash[uint8(name)] = nil
+	lockSt.lockCount--
 	return
 }
