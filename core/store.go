@@ -58,10 +58,34 @@ func NewObj(value interface{}, expDurationMs int64, oType, oEnc uint8) *Obj {
 	return obj
 }
 
-func Put(k string, obj *Obj) {
+type PutOptions struct {
+	KeepTTL bool
+}
+
+func Put(k string, obj *Obj, opts ...PutOption) {
+	options := getDefaultOptions()
+
+	for _, optApplier := range opts {
+		optApplier(options)
+	}
+
 	withLocks(func() {
-		putHelper(k, obj)
+		putHelper(k, obj, options)
 	}, WithStoreLock(), WithKeypoolLock())
+}
+
+func getDefaultOptions() *PutOptions {
+	return &PutOptions{
+		KeepTTL: false,
+	}
+}
+
+type PutOption func(*PutOptions)
+
+func WithKeepTTL(value bool) PutOption {
+	return func(po *PutOptions) {
+		po.KeepTTL = value
+	}
 }
 
 // PutAll is a bulk insert function that takes a map of
@@ -69,7 +93,7 @@ func Put(k string, obj *Obj) {
 func PutAll(data map[string]*Obj) {
 	withLocks(func() {
 		for k, obj := range data {
-			putHelper(k, obj)
+			putHelper(k, obj, nil)
 		}
 	}, WithStoreLock(), WithKeypoolLock())
 }
@@ -204,7 +228,7 @@ func Rename(sourceKey, destKey string) bool {
 		}
 
 		// Use putHelper to handle putting the object at the destination key
-		putHelper(destKey, sourceObj)
+		putHelper(destKey, sourceObj, nil)
 
 		// Remove the source key
 		delete(store, sourcePtr)
@@ -225,13 +249,28 @@ func Rename(sourceKey, destKey string) bool {
 // putHelper is a helper function to insert a key-value pair into the store.
 // It also increments the key count in the KeyspaceStat map and notifies watchers.
 // This method is not thread-safe. It should be called within a lock.
-func putHelper(k string, obj *Obj) {
+func putHelper(k string, obj *Obj, opts *PutOptions) {
 	if len(store) >= config.KeysLimit {
 		evict()
 	}
 	obj.LastAccessedAt = getCurrentClock()
 
 	ptr := ensureKeyInPool(k)
+	currentObject, ok := store[ptr]
+	if ok {
+		// NOTE: In case there is an value present
+		// for a given key 'k', then any updates
+		// performed with the 'KEEPTTL' flag need
+		// to ensure that we save the new value
+		// with the same expiration time as before
+		// Without the flag, the expiration time
+		// stored earlier will be removed.
+		_, ok = expires[currentObject]
+		if opts != nil && opts.KeepTTL && ok {
+			expires[obj] = expires[currentObject]
+		}
+		delete(expires, currentObject)
+	}
 	store[ptr] = obj
 
 	incrementKeyCount()
