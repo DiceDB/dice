@@ -92,7 +92,7 @@ func (b *ByteArray) DeepCopy() *ByteArray {
 		return nil
 	}
 
-    copyArray := NewByteArray(int(b.Length))
+	copyArray := NewByteArray(int(b.Length))
 
 	// Copy the data from the original to the new ByteArray
 	copy(copyArray.data, b.data)

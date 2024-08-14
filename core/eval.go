@@ -79,7 +79,7 @@ func evalAUTH(args []string, c *Client) []byte {
 	}
 
 	var username = DefaultUserName
-	var password = ""
+	var password string
 
 	if len(args) == 1 {
 		password = args[0]

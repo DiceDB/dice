@@ -74,10 +74,10 @@ func (q *QueueRef) Iterate(n int) []*QueueElement {
 	return elements
 }
 
-func (q* QueueRef) DeepCopy() *QueueRef{
-    return &QueueRef{
-        qi: q.qi.DeepCopy(),
-    }
+func (q *QueueRef) DeepCopy() *QueueRef {
+	return &QueueRef{
+		qi: q.qi.DeepCopy(),
+	}
 }
 
 // Returns the length of the queue

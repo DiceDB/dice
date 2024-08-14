@@ -474,7 +474,7 @@ var (
 		Info:  `COPY command copies the value stored at the source key to the destination key.`,
 		Eval:  evalCOPY,
 		Arity: -2,
-  }
+	}
 	decrCmdMeta = DiceCmdMeta{
 		Name: "DECR",
 		Info: `DECR decrements the value of the specified key in args by 1,
