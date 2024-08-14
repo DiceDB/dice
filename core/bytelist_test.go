@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"testing"
+    "gotest.tools/v3/assert"
 )
 
 func newNode(bl *byteList, b byte) *byteListNode {
@@ -65,4 +66,38 @@ func TestByteList(t *testing.T) {
 			t.Errorf("bytelist test failed. should have been %v but found %v", tc.val, r)
 		}
 	}
+}
+
+func TestByteListDeepCopy(t *testing.T) {
+    // Create an original byteList using newByteList
+	original := newByteList(4)
+	original.size = 8
+
+	node1 := original.newNode()
+	node1.buf = append(node1.buf, []byte{1, 2, 3, 4}...)
+
+	node2 := original.newNode()
+	node2.buf = append(node2.buf, []byte{5, 6, 7, 8}...)
+
+	node1.next = node2
+	node2.prev = node1
+	original.head = node1
+	original.tail = node2
+
+	copy := original.DeepCopy()
+
+	// Verify that the copy has the same bufLen and size
+	assert.Equal(t, copy.bufLen, original.bufLen, "bufLen should be the same")
+	assert.Equal(t, copy.size, original.size, "size should be the same")
+
+	// Verify that the head node data is correctly copied
+    assert.Equal(t, copy.head.buf[0], original.head.buf[0], "head node buffer should be the same")
+
+    // Verify that changes to the copy do not affect the original
+    copy.head.buf[0] = 9
+	assert.Assert(t, original.head.buf[0] != copy.head.buf[0], "Original and copy head buffer should not be linked")
+
+    // Verify that changes to the original do not affect the copy
+	original.head.buf[1] = 8
+	assert.Assert(t, original.head.buf[1] != copy.head.buf[1], "Original and copy head buffer should not be linked")
 }

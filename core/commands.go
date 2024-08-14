@@ -469,6 +469,12 @@ var (
 		Info: "PERSIST removes the expiration from a key",
 		Eval: evalPersist,
 	}
+	copyCmdMeta = DiceCmdMeta{
+		Name:  "COPY",
+		Info:  `COPY command copies the value stored at the source key to the destination key.`,
+		Eval:  evalCOPY,
+		Arity: -2,
+  }
 	decrCmdMeta = DiceCmdMeta{
 		Name: "DECR",
 		Info: `DECR decrements the value of the specified key in args by 1,
@@ -584,6 +590,7 @@ func init() {
 	diceCmds["KEYS"] = keysCmdMeta
 	diceCmds["MGET"] = MGetCmdMeta
 	diceCmds["PERSIST"] = persistCmdMeta
+	diceCmds["COPY"] = copyCmdMeta
 	diceCmds["DECR"] = decrCmdMeta
 	diceCmds["EXISTS"] = existsCmdMeta
 	diceCmds["GETDEL"] = getDelCmdMeta

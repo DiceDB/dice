@@ -203,6 +203,38 @@ func (b *Bloom) exists(value string) ([]byte, error) {
 	return RespOne, nil
 }
 
+// function creates a deep copy of the Bloom struct
+func (b *Bloom) DeepCopy() *Bloom {
+	if b == nil {
+		return nil
+	}
+
+	// Copy the BloomOpts
+	copyOpts := &BloomOpts{
+		errorRate: b.opts.errorRate,
+		capacity:  b.opts.capacity,
+		bits:      b.opts.bits,
+		bpe:       b.opts.bpe,
+		hashFns:   make([]hash.Hash64, len(b.opts.hashFns)),
+		indexes:   make([]uint64, len(b.opts.indexes)),
+	}
+
+	// Deep copy the hash functions (assuming they are shallow copyable)
+	copy(copyOpts.hashFns, b.opts.hashFns)
+
+	// Deep copy the indexes slice
+	copy(copyOpts.indexes, b.opts.indexes)
+
+	// Deep copy the bitset
+	copyBitset := make([]byte, len(b.bitset))
+	copy(copyBitset, b.bitset)
+
+	return &Bloom{
+		opts:   copyOpts,
+		bitset: copyBitset,
+	}
+}
+
 // updateIndexes updates the list with indexes where bits are supposed to be
 // set (to 1) or read in/from the underlying array. It uses the set hash function
 // against the given `value` and caps the index with the total number of bits.

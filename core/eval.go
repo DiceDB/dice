@@ -1789,6 +1789,56 @@ func evalPersist(args []string) []byte {
 	return RespOne
 }
 
+func evalCOPY(args []string) []byte {
+	if len(args) < 2 {
+		return Encode(errors.New("ERR wrong number of arguments for 'copy' command"), false)
+	}
+
+	isReplace := false
+
+	sourceKey := args[0]
+	destinationKey := args[1]
+
+	sourceObj := Get(sourceKey)
+	if sourceObj == nil {
+		return RespZero
+	}
+
+	for i := 2; i < len(args); i++ {
+		arg := strings.ToUpper(args[i])
+		if arg == "REPLACE" {
+			isReplace = true
+		}
+	}
+
+	if isReplace {
+		Del(destinationKey)
+	}
+
+	destinationObj := Get(destinationKey)
+	if destinationObj != nil {
+		return RespZero
+	}
+
+	copyObj := sourceObj.DeepCopy()
+	if copyObj == nil {
+		return RespZero
+	}
+
+	exp, ok := getExpiry(sourceObj)
+	var exDurationMs int64 = -1
+	if ok {
+		exDurationMs = int64(exp - uint64(time.Now().UnixMilli()))
+	}
+
+	Put(destinationKey, copyObj)
+
+	if exDurationMs > 0 {
+		setExpiry(copyObj, exDurationMs)
+	}
+	return RespOne
+}
+
 // GETEX key [EX seconds | PX milliseconds | EXAT unix-time-seconds |
 // PXAT unix-time-milliseconds | PERSIST]
 // Get the value of key and optionally set its expiration.
@@ -1913,13 +1963,13 @@ func evalPTTL(args []string) []byte {
 	obj := Get(key)
 
 	if obj == nil {
-		return RESP_MINUS_2
+		return RespMinusTwo
 	}
 
 	exp, isExpirySet := getExpiry(obj)
 
 	if !isExpirySet {
-		return RESP_MINUS_1
+		return RespMinusOne
 	}
 
 	// compute the time remaining for the key to expire and

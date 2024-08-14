@@ -75,3 +75,9 @@ func (s *StackRef) Iterate(n int) []*StackElement {
 	}
 	return elements
 }
+
+func (s *StackRef) DeepCopy() *StackRef {
+    return &StackRef{
+        si: s.si.DeepCopy(),
+    }
+}
