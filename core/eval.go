@@ -1801,7 +1801,7 @@ func evalCOPY(args []string) []byte {
 
 	sourceObj := Get(sourceKey)
 	if sourceObj == nil {
-		return RESP_ZERO
+		return RespZero
 	}
 
 	for i := 2; i < len(args); i++ {
@@ -1818,12 +1818,12 @@ func evalCOPY(args []string) []byte {
 
 	destinationObj := Get(destinationKey)
 	if destinationObj != nil {
-		return RESP_ZERO
+		return RespZero
 	}
 
     copyObj := sourceObj.DeepCopy()
     if copyObj == nil {
-        return RESP_ZERO
+        return RespZero
     }
 
 	exp, ok := getExpiry(sourceObj)
@@ -1837,7 +1837,7 @@ func evalCOPY(args []string) []byte {
     if exDurationMs > 0 {
         setExpiry(copyObj, exDurationMs)
     }
-    return RESP_ONE
+    return RespOne
 }
 
 // GETEX key [EX seconds | PX milliseconds | EXAT unix-time-seconds |
@@ -1964,13 +1964,13 @@ func evalPTTL(args []string) []byte {
 	obj := Get(key)
 
 	if obj == nil {
-		return RESP_MINUS_2
+		return RespMinusTwo
 	}
 
 	exp, isExpirySet := getExpiry(obj)
 
 	if !isExpirySet {
-		return RESP_MINUS_1
+		return RespMinusOne
 	}
 
 	// compute the time remaining for the key to expire and

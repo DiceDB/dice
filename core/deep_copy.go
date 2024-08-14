@@ -21,11 +21,11 @@ func (obj *Obj) DeepCopy() *Obj {
 		// Handle types that are not DeepCopyable
 		sourceType, _ := ExtractTypeEncoding(obj)
 		switch sourceType {
-		case OBJ_TYPE_STRING:
+		case ObjTypeString:
 			sourceValue := obj.Value.(string)
 			newObj.Value = string([]byte(sourceValue))
 
-		case OBJ_TYPE_JSON:
+		case ObjTypeJSON:
 			sourceValue := obj.Value
 			jsonStr, err := sonic.MarshalString(sourceValue)
 			if err != nil {
