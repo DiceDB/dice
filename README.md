@@ -25,7 +25,7 @@ to it using DiceDB CLI and SDKs, or even Redis CLIs and SDKs.
 
 > Note: Given it is a drop-in replacement of Redis, you can also use any Redis CLI and SDK to connect to DiceDB.
 
-### Setting up DiceDB Development
+### Setting up DiceDB from source for development and contributions
 
 To run DiceDB for local development or running from source, you will need
 
