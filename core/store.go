@@ -266,7 +266,7 @@ func putHelper(k string, obj *Obj, opts ...PutOption) {
 		// Without the flag, the expiration time
 		// stored earlier will be removed.
 		_, ok = expires[currentObject]
-		if options != nil && options.KeepTTL && ok {
+		if options.KeepTTL && ok {
 			expires[obj] = expires[currentObject]
 		}
 		delete(expires, currentObject)
