@@ -1896,3 +1896,34 @@ func evalGETEX(args []string) []byte {
 	// return the RESP encoded value
 	return Encode(obj.Value, false)
 }
+
+// evalPTTL returns Time-to-Live in millisecs for the queried key in args
+// The key should be the only param in args else returns with an error
+// Returns	RESP encoded time (in secs) remaining for the key to expire
+//
+//	RESP encoded -2 stating key doesn't exist or key is expired
+//	RESP encoded -1 in case no expiration is set on the key
+func evalPTTL(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR wrong number of arguments for 'pttl' command"), false)
+	}
+
+	key := args[0]
+
+	obj := Get(key)
+
+	if obj == nil {
+		return RESP_MINUS_2
+	}
+
+	exp, isExpirySet := getExpiry(obj)
+
+	if !isExpirySet {
+		return RESP_MINUS_1
+	}
+
+	// compute the time remaining for the key to expire and
+	// return the RESP encoded form of it
+	durationMs := exp - uint64(time.Now().UnixMilli())
+	return Encode(int64(durationMs), false)
+}
