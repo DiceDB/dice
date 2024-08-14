@@ -81,15 +81,13 @@ func evalAUTH(args []string, c *Client) []byte {
 
 	if len(args) == 1 {
 		if err = c.Session.Validate(DefaultUserName, args[0]); err != nil {
-			log.Println("AUTH failed: ", err)
-			return Encode(errors.New("AUTH failed"), false)
+			return Encode(errors.New("ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?"), false)
 		}
 		return RespOK
 	}
 
 	if len(args) == 2 {
 		if err = c.Session.Validate(args[0], args[1]); err != nil {
-			log.Println("AUTH failed: ", err)
 			return Encode(errors.New("AUTH failed"), false)
 		}
 		return RespOK
