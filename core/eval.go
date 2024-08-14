@@ -1833,7 +1833,7 @@ func evalCOPY(args []string) []byte {
 	exp, ok := getExpiry(sourceObj)
 	var exDurationMs int64 = -1
 	if ok {
-		exDurationMs = int64(exp)
+		exDurationMs = int64(exp - uint64(time.Now().UnixMilli()))
 	}
 
 	Put(destinationKey, copyObj)
