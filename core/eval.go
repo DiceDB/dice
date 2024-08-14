@@ -1806,8 +1806,7 @@ func evalCOPY(args []string) []byte {
 
 	for i := 2; i < len(args); i++ {
 		arg := strings.ToUpper(args[i])
-		switch arg {
-		case "REPLACE":
+		if arg == "REPLACE" {
 			isReplace = true
 		}
 	}
@@ -1821,10 +1820,10 @@ func evalCOPY(args []string) []byte {
 		return RespZero
 	}
 
-    copyObj := sourceObj.DeepCopy()
-    if copyObj == nil {
-        return RespZero
-    }
+	copyObj := sourceObj.DeepCopy()
+	if copyObj == nil {
+		return RespZero
+	}
 
 	exp, ok := getExpiry(sourceObj)
 	var exDurationMs int64 = -1
@@ -1834,10 +1833,10 @@ func evalCOPY(args []string) []byte {
 
 	Put(destinationKey, copyObj)
 
-    if exDurationMs > 0 {
-        setExpiry(copyObj, exDurationMs)
-    }
-    return RespOne
+	if exDurationMs > 0 {
+		setExpiry(copyObj, exDurationMs)
+	}
+	return RespOne
 }
 
 // GETEX key [EX seconds | PX milliseconds | EXAT unix-time-seconds |
