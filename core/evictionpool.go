@@ -3,6 +3,8 @@ package core
 import (
 	"sort"
 	"unsafe"
+
+	"github.com/dicedb/dice/config"
 )
 
 type PoolItem struct {
@@ -18,6 +20,7 @@ type EvictionPool struct {
 }
 
 type ByIdleTime []*PoolItem
+type ByCounterAndIdleTime []*PoolItem
 
 func (a ByIdleTime) Len() int {
 	return len(a)
@@ -29,6 +32,29 @@ func (a ByIdleTime) Swap(i, j int) {
 
 func (a ByIdleTime) Less(i, j int) bool {
 	return getIdleTime(a[i].lastAccessedAt) > getIdleTime(a[j].lastAccessedAt)
+}
+
+func (a ByCounterAndIdleTime) Len() int {
+  return len(a)
+}
+
+func (a ByCounterAndIdleTime) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+
+func (a ByCounterAndIdleTime) Less(i, j int) bool {
+  counterI := getLFULogCounter(a[i].lastAccessedAt) 
+  counterJ := getLFULogCounter(a[j].lastAccessedAt) 
+
+  if counterI == counterJ {
+    // if access counters are same, sort by idle time
+    lastAccessedAtI := a[i].lastAccessedAt & 0x00FFFFFF
+    lastAccessedAtJ := a[j].lastAccessedAt & 0x00FFFFFF
+
+    return getIdleTime(lastAccessedAtI) < getIdleTime(lastAccessedAtJ)
+  }
+
+  return counterI < counterJ
 }
 
 // TODO: Make the implementation efficient to not need repeated sorting
@@ -43,7 +69,12 @@ func (pq *EvictionPool) Push(key unsafe.Pointer, lastAccessedAt uint32) {
 		pq.pool = append(pq.pool, item)
 
 		// Performance bottleneck
-		sort.Sort(ByIdleTime(pq.pool))
+    switch config.EvictionStrategy {
+    case config.ALL_KEYS_LFU:
+      sort.Sort(ByCounterAndIdleTime(pq.pool))
+    default:
+      sort.Sort(ByIdleTime(pq.pool))
+    }
 	} else if lastAccessedAt > pq.pool[0].lastAccessedAt {
 		pq.pool = pq.pool[1:]
 		pq.keyset[key] = item
