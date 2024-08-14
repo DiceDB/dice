@@ -48,10 +48,20 @@ func TestCopy(t *testing.T) {
 			expected: []interface{}{"OK", int64(1), `[1,2,3]`},
 		},
 		{
-			name:     "COPY with JSON simple JSON with REPLACE",
-			commands: []string{`JSON.SET k1 $ ` + simpleJSON, "COPY k1 k2 REPLACE", "JSON.GET k2"},
+			name:     "COPY with JSON simple JSON",
+			commands: []string{`JSON.SET k1 $ ` + simpleJSON, "COPY k1 k2", "JSON.GET k2"},
 			expected: []interface{}{"OK", int64(1), simpleJSON},
 		},
+        {
+            name: "COPY with no expiry",
+            commands: []string{"SET k1 v1", "COPY k1 k2", "TTL k1", "TTL k2"},
+            expected: []interface{}{"OK", int64(1), int64(-1), int64(-1)},
+        },
+        {
+            name: "COPY with expiry making sure copy expires",
+            commands: []string{"SET k1 v1 EX 5", "COPY k1 k2", "GET k1", "GET k2", "SLEEP 7", "GET k1", "GET k2"},
+            expected: []interface{}{"OK", int64(1), "v1", "v1", "OK", "(nil)", "(nil)"},
+        },
 	}
 
 	for _, tc := range testCases {
