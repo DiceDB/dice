@@ -71,29 +71,28 @@ func evalPING(args []string) []byte {
 // If the user is not authenticated, it returns with an encoded error message
 func evalAUTH(args []string, c *Client) []byte {
 	var (
-		b   []byte
 		err error
 	)
 
-	if len(args) < 1 || len(args) > 2 {
-		return Encode(errors.New("ERR wrong number of arguments for 'AUTH' command"), false)
+	if config.RequirePass == "" {
+		return Encode(errors.New("ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?"), false)
 	}
+
+	var username = DefaultUserName
+	var password = ""
 
 	if len(args) == 1 {
-		if err = c.Session.Validate(DefaultUserName, args[0]); err != nil {
-			return Encode(errors.New("ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?"), false)
-		}
-		return RespOK
+		password = args[0]
+	} else if len(args) == 2 {
+		username, password = args[0], args[1]
+	} else {
+		return Encode(errors.New("ERR wrong number of arguments for 'auth' command"), false)
 	}
 
-	if len(args) == 2 {
-		if err = c.Session.Validate(args[0], args[1]); err != nil {
-			return Encode(errors.New("AUTH failed"), false)
-		}
-		return RespOK
+	if err = c.Session.Validate(username, password); err != nil {
+		return Encode(err, false)
 	}
-
-	return b
+	return RespOK
 }
 
 // evalSET puts a new <key, value> pair in db as in the args

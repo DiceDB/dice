@@ -2,7 +2,6 @@ package core
 
 import (
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
@@ -61,8 +60,7 @@ func (users *Users) Get(username string) (user *User, err error) {
 	defer users.stLock.RUnlock()
 	isPresent := false
 	if user, isPresent = users.store[username]; !isPresent {
-		err = fmt.Errorf("user %s not found", username)
-		return
+		return nil, fmt.Errorf("ERR user not found")
 	}
 	return
 }
@@ -102,9 +100,7 @@ func NewSession() (session *Session) {
 
 func (session *Session) IsActive() (isActive bool) {
 	if config.RequirePass == constants.EmptyStr && session.Status != SessionStatusActive {
-		if err := session.Activate(session.User); err != nil {
-			return
-		}
+		session.Activate(session.User)
 	}
 	isActive = session.Status == SessionStatusActive
 	if isActive {
@@ -113,40 +109,33 @@ func (session *Session) IsActive() (isActive bool) {
 	return
 }
 
-func (session *Session) Activate(user *User) (err error) {
+func (session *Session) Activate(user *User) {
 	session.User = user
 	session.Status = SessionStatusActive
 	session.CreatedAt = time.Now().UTC()
 	session.LastAccessedAt = time.Now().UTC()
-	return
 }
 
-func (session *Session) Validate(username, password string) (err error) {
+func (session *Session) Validate(username, password string) error {
 	var (
+		err  error
 		user *User
 	)
 	if user, err = UserStore.Get(username); err != nil {
-		return
+		return err
 	}
 	if username == DefaultUserName && len(user.Passwords) == 0 {
-		if err = session.Activate(user); err != nil {
-			return
-		}
-		return
+		session.Activate(user)
+		return nil
 	}
 	for _, userPassword := range user.Passwords {
 		if err = bcrypt.CompareHashAndPassword([]byte(userPassword), []byte(password)); err != nil {
 			continue
 		}
-		if err = session.Activate(user); err != nil {
-			log.Println("error activating session for user", username, err)
-			continue
-		}
-		// User has been validated and the session has been activated
-		return
+		session.Activate(user)
+		return nil
 	}
-	err = fmt.Errorf("no password matched for user %s", username)
-	return
+	return fmt.Errorf("ERR invalid password")
 }
 
 func (session *Session) Expire() (err error) {
