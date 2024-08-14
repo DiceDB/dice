@@ -1896,3 +1896,54 @@ func evalGETEX(args []string) []byte {
 	// return the RESP encoded value
 	return Encode(obj.Value, false)
 }
+
+// evalEXPIREAT sets the expiration time for a specified key.
+// The expiration time is set based on the provided UNIX timestamp in seconds.
+// Arguments:
+//
+//	args[0] - The key for which to set the expiration time.
+//	args[1] - The UNIX timestamp at which the key should expire.
+//
+// Returns:
+//   - Encoded OK response if the operation is successful.
+//   - Encoded error response if the number of arguments is incorrect, if the expiration time is invalid, or if the key does not exist.
+func evalEXPIREAT(args []string) []byte {
+	if len(args) != 2 {
+		fmt.Println("Invalid number of arguments. Expected 2, got:", len(args))
+		return Encode(errors.New("ERR wrong number of arguments for 'EXPIREAT' command"), false)
+	}
+
+	key := args[0]
+	expireAtUnix, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		fmt.Println("Failed to parse expireAtUnix:", args[1], "Error:", err)
+		return Encode(errors.New("ERR value is not an integer or out of range"), false)
+	}
+
+	// Convert UNIX timestamp from seconds to milliseconds
+	expireAtMillis := uint64(expireAtUnix * 1000)
+	fmt.Println("expireAtUnix:", expireAtUnix, "Converted to milliseconds:", expireAtMillis)
+
+	obj := Get(key)
+
+	if obj == nil {
+		fmt.Println("Key not found:", key)
+		return Encode(0, false)
+	}
+
+	currentTimeMillis := uint64(time.Now().UnixMilli())
+	fmt.Println("currentTimeMillis:", currentTimeMillis)
+
+	// Check if the expiration time has passed
+	if expireAtMillis <= currentTimeMillis {
+		fmt.Println("Key has expired. Deleting key:", key)
+		Del(key)
+		return Encode(0, false)
+	}
+
+	// Update the expires map with the calculated expiration time
+	expires[obj] = expireAtMillis
+	fmt.Println("Set expire time for key:", key, "to:", expireAtMillis)
+
+	return Encode(1, true)
+}

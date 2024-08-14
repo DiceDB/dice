@@ -517,6 +517,15 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	expirateCmdMeta = DiceCmdMeta{
+		Name:  "EXPIREAT",
+		Info:  `EXPIREAT sets the expiry time of the specified key, in Unix timestamp format.`,
+		Eval:  evalEXPIREAT,
+		Arity: 2,
+		KeySpecs: KeySpecs{
+			BeginIndex: 0, // The expiration time parameter starts with the first parameter
+		},
+	}
 )
 
 func init() {
@@ -578,4 +587,5 @@ func init() {
 	diceCmds["DECRBY"] = decrByCmdMeta
 	diceCmds["RENAME"] = renameCmdMeta
 	diceCmds["GETEX"] = getexCmdMeta
+	diceCmds["EXPIREAT"] = expirateCmdMeta
 }
