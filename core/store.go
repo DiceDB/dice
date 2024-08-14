@@ -63,14 +63,8 @@ type PutOptions struct {
 }
 
 func Put(k string, obj *Obj, opts ...PutOption) {
-	options := getDefaultOptions()
-
-	for _, optApplier := range opts {
-		optApplier(options)
-	}
-
 	withLocks(func() {
-		putHelper(k, obj, options)
+		putHelper(k, obj, opts...)
 	}, WithStoreLock(), WithKeypoolLock())
 }
 
@@ -93,7 +87,7 @@ func WithKeepTTL(value bool) PutOption {
 func PutAll(data map[string]*Obj) {
 	withLocks(func() {
 		for k, obj := range data {
-			putHelper(k, obj, nil)
+			putHelper(k, obj)
 		}
 	}, WithStoreLock(), WithKeypoolLock())
 }
@@ -228,7 +222,7 @@ func Rename(sourceKey, destKey string) bool {
 		}
 
 		// Use putHelper to handle putting the object at the destination key
-		putHelper(destKey, sourceObj, nil)
+		putHelper(destKey, sourceObj)
 
 		// Remove the source key
 		delete(store, sourcePtr)
@@ -249,7 +243,13 @@ func Rename(sourceKey, destKey string) bool {
 // putHelper is a helper function to insert a key-value pair into the store.
 // It also increments the key count in the KeyspaceStat map and notifies watchers.
 // This method is not thread-safe. It should be called within a lock.
-func putHelper(k string, obj *Obj, opts *PutOptions) {
+func putHelper(k string, obj *Obj, opts ...PutOption) {
+	options := getDefaultOptions()
+
+	for _, optApplier := range opts {
+		optApplier(options)
+	}
+
 	if len(store) >= config.KeysLimit {
 		evict()
 	}
@@ -266,7 +266,7 @@ func putHelper(k string, obj *Obj, opts *PutOptions) {
 		// Without the flag, the expiration time
 		// stored earlier will be removed.
 		_, ok = expires[currentObject]
-		if opts != nil && opts.KeepTTL && ok {
+		if options != nil && options.KeepTTL && ok {
 			expires[obj] = expires[currentObject]
 		}
 		delete(expires, currentObject)
