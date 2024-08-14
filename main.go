@@ -40,7 +40,7 @@ func main() {
 	wg.Add(1)
 	go server.RunAsyncTCPServer(serverFD, &wg)
 
-	// Listento signals, but not a hardblocker to shutdown
+	// Listen to signals, but not a hardblocker to shutdown
 	go server.WaitForSignal(&wg, sigs)
 
 	// Wait for all goroutines to finish
