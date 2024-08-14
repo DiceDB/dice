@@ -25,7 +25,7 @@ to it using DiceDB CLI and SDKs, or even Redis CLIs and SDKs.
 
 > Note: Given it is a drop-in replacement of Redis, you can also use any Redis CLI and SDK to connect to DiceDB.
 
-### Setting up
+### Setting up DiceDB from source for development and contributions
 
 To run DiceDB for local development or running from source, you will need
 
@@ -33,6 +33,7 @@ To run DiceDB for local development or running from source, you will need
 2. Any of the below supported platform environment:
     1. [Linux based environment](https://en.wikipedia.org/wiki/Comparison_of_Linux_distributions)
     2. [OSX (Darwin) based environment](https://en.wikipedia.org/wiki/MacOS)
+    3. WSL under Windows
 
 ```
 $ git clone https://github.com/dicedb/dice

@@ -1,6 +1,10 @@
 package core
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/dicedb/dice/internal/constants"
+)
 
 // TestDeduceTypeEncoding tests the deduceTypeEncoding function using table-driven tests.
 func TestDeduceTypeEncoding(t *testing.T) {
@@ -13,32 +17,32 @@ func TestDeduceTypeEncoding(t *testing.T) {
 		{
 			name:     "Integer string",
 			input:    "123",
-			wantType: OBJ_TYPE_STRING,
-			wantEnc:  OBJ_ENCODING_INT,
+			wantType: ObjTypeString,
+			wantEnc:  ObjEncodingInt,
 		},
 		{
 			name:     "Short string",
 			input:    "short string",
-			wantType: OBJ_TYPE_STRING,
-			wantEnc:  OBJ_ENCODING_EMBSTR,
+			wantType: ObjTypeString,
+			wantEnc:  ObjEncodingEmbStr,
 		},
 		{
 			name:     "Long string",
 			input:    "this is a very long string that exceeds the maximum length for EMBSTR encoding",
-			wantType: OBJ_TYPE_STRING,
-			wantEnc:  OBJ_ENCODING_RAW,
+			wantType: ObjTypeString,
+			wantEnc:  ObjEncodingRaw,
 		},
 		{
 			name:     "Empty string",
-			input:    "",
-			wantType: OBJ_TYPE_STRING,
-			wantEnc:  OBJ_ENCODING_EMBSTR,
+			input:    constants.EmptyStr,
+			wantType: ObjTypeString,
+			wantEnc:  ObjEncodingEmbStr,
 		},
 		{
 			name:     "Boundary length string",
 			input:    "this string is exactly forty-four characters long",
-			wantType: OBJ_TYPE_STRING,
-			wantEnc:  OBJ_ENCODING_RAW,
+			wantType: ObjTypeString,
+			wantEnc:  ObjEncodingRaw,
 		},
 	}
 

@@ -16,6 +16,7 @@ import (
 	redis "github.com/dicedb/go-dice"
 )
 
+//nolint:unused
 func getLocalConnection() net.Conn {
 	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.Port))
 	if err != nil {
@@ -25,12 +26,15 @@ func getLocalConnection() net.Conn {
 }
 
 // deleteTestKeys is a utility to delete a list of keys before running a test
+//
+//nolint:unused
 func deleteTestKeys(keysToDelete []string) {
 	for _, key := range keysToDelete {
 		core.Del(key)
 	}
 }
 
+//nolint:unused
 func getLocalSdk() *redis.Client {
 	return redis.NewClient(&redis.Options{
 		Addr: fmt.Sprintf(":%d", config.Port),
@@ -48,6 +52,7 @@ func getLocalSdk() *redis.Client {
 	})
 }
 
+//nolint:unused
 func fireCommand(conn net.Conn, cmd string) interface{} {
 	var err error
 	args := testutils.ParseCommand(cmd)
@@ -67,10 +72,10 @@ func fireCommand(conn net.Conn, cmd string) interface{} {
 	return v
 }
 
+//nolint:unused
 func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *core.RESPParser {
-	var err error
 	args := testutils.ParseCommand(cmd)
-	_, err = conn.Write(core.Encode(args, false))
+	_, err := conn.Write(core.Encode(args, false))
 	if err != nil {
 		log.Fatalf("error %s while firing command: %s", err, cmd)
 	}
@@ -78,12 +83,13 @@ func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *core.RESPParser {
 	return core.NewRESPParser(conn)
 }
 
+//nolint:unused
 func runTestServer(wg *sync.WaitGroup) {
 	config.IOBufferLength = 16
 	config.Port = 8739
 
-	var totalRetries int = 100
-	var serverFD int = 0
+	totalRetries := 100
+	serverFD := 0
 	var err error
 
 	for i := 0; i < totalRetries; i++ {

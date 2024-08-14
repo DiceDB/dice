@@ -34,7 +34,7 @@ func UnorderedEqual(expected, actual interface{}) bool {
 }
 
 // EqualByteSlice compares two byte slices and returns true if they are equal.
-func EqualByteSlice(a []byte, b []byte) bool {
+func EqualByteSlice(a, b []byte) bool {
 	if len(a) != len(b) {
 		return false
 	}
@@ -49,7 +49,7 @@ func EqualByteSlice(a []byte, b []byte) bool {
 }
 
 // EqualInt64Slice compares two int64 slices and returns true if they are equal.
-func EqualInt64Slice(a []int64, b []int64) bool {
+func EqualInt64Slice(a, b []int64) bool {
 	if len(a) != len(b) {
 		return false
 	}

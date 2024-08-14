@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/internal/constants"
 	"gotest.tools/v3/assert"
 )
 
@@ -195,7 +196,7 @@ func TestDecodeOneVeryLargeMessage(t *testing.T) {
 func TestDecodeOneNoDataRead(t *testing.T) {
 	mockRW := &MockReadWriter{
 		ReadChunks: [][]byte{
-			[]byte(""), // Empty read chunk
+			[]byte(constants.EmptyStr), // Empty read chunk
 		},
 	}
 	parser := NewRESPParser(mockRW)

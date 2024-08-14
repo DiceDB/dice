@@ -61,7 +61,6 @@ func (b *ByteArray) IncreaseSize(increaseSizeTo int) *ByteArray {
 }
 
 func (b *ByteArray) ResizeIfNecessary() *ByteArray {
-
 	byteArrayLength := b.Length
 	decreaseLengthBy := 0
 	for i := byteArrayLength - 1; i >= 0; i-- {
@@ -104,7 +103,7 @@ func (b *ByteArray) DeepCopy() *ByteArray {
 // Using: https://en.wikipedia.org/wiki/Hamming_weight
 func popcount(x byte) byte {
 	// pairing bits and counting them in pairs
-	x = x - ((x >> 1) & 0x55)
+	x -= ((x >> 1) & 0x55)
 	// counting bits in groups of four
 	x = (x & 0x33) + ((x >> 2) & 0x33)
 	// isolates the lower four bits
@@ -113,6 +112,8 @@ func popcount(x byte) byte {
 }
 
 // reverseByte reverses the order of bits in a single byte.
+
+//nolint:unused
 func reverseByte(b byte) byte {
 	var reversed byte = 0
 	for i := 0; i < 8; i++ {

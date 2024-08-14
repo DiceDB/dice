@@ -3,6 +3,7 @@ package core
 import (
 	"testing"
 
+	"github.com/dicedb/dice/internal/constants"
 	"github.com/xwb1989/sqlparser"
 	"gotest.tools/v3/assert"
 )
@@ -37,7 +38,7 @@ func TestParseQuery(t *testing.T) {
 					Operator: "=",
 					Right:    sqlparser.NewStrVal([]byte("test")),
 				},
-				OrderBy: QueryOrder{OrderBy: "$key", Order: "asc"},
+				OrderBy: QueryOrder{OrderBy: "$key", Order: constants.Asc},
 				Limit:   5,
 			},
 			wantErr: false,
@@ -86,7 +87,7 @@ func TestParseQuery(t *testing.T) {
 		},
 		{
 			name:    "empty invalid statement",
-			sql:     "",
+			sql:     constants.EmptyStr,
 			want:    DSQLQuery{},
 			wantErr: true,
 			error:   "error parsing SQL statement: syntax error at position 1",
@@ -311,7 +312,7 @@ func TestParseOrderBy(t *testing.T) {
 		{
 			name: "order by key asc",
 			sql:  "SELECT $key FROM `test` ORDER BY $key ASC",
-			want: QueryOrder{OrderBy: "$key", Order: "asc"},
+			want: QueryOrder{OrderBy: "$key", Order: constants.Asc},
 		},
 		{
 			name: "order by value desc",

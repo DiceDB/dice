@@ -6,6 +6,7 @@ import (
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core"
+	"github.com/dicedb/dice/internal/constants"
 	"github.com/xwb1989/sqlparser"
 )
 
@@ -19,7 +20,7 @@ func generateBenchmarkData(count int) {
 	for i := 0; i < count; i++ {
 		key := fmt.Sprintf("k%d", i)
 		value := fmt.Sprintf("v%d", i)
-		data[key] = core.NewObj(value, -1, core.OBJ_TYPE_STRING, core.OBJ_ENCODING_RAW)
+		data[key] = core.NewObj(value, -1, core.ObjTypeString, core.ObjEncodingRaw)
 	}
 	core.PutAll(data)
 }
@@ -37,7 +38,7 @@ func BenchmarkExecuteQueryOrderBykey(b *testing.B) {
 			},
 			OrderBy: core.QueryOrder{
 				OrderBy: "$key",
-				Order:   "asc",
+				Order:   constants.Asc,
 			},
 		}
 		// Reset the timer to exclude the setup time from the benchmark
@@ -66,7 +67,7 @@ func BenchmarkExecuteQueryBasicOrderByValue(b *testing.B) {
 			},
 			OrderBy: core.QueryOrder{
 				OrderBy: "$value",
-				Order:   "asc",
+				Order:   constants.Asc,
 			},
 		}
 
@@ -94,7 +95,7 @@ func BenchmarkExecuteQueryLimit(b *testing.B) {
 			},
 			OrderBy: core.QueryOrder{
 				OrderBy: "$key",
-				Order:   "asc",
+				Order:   constants.Asc,
 			},
 			Limit: v / 3,
 		}
@@ -332,7 +333,7 @@ func BenchmarkExecuteQueryWithClauseOnKey(b *testing.B) {
 			},
 			OrderBy: core.QueryOrder{
 				OrderBy: "$key",
-				Order:   "asc",
+				Order:   constants.Asc,
 			},
 			Where: &sqlparser.ComparisonExpr{
 				Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_key")},
@@ -358,7 +359,7 @@ func BenchmarkExecuteQueryWithEmptyKeyRegex(b *testing.B) {
 		defer core.ResetStore()
 
 		query := core.DSQLQuery{
-			KeyRegex: "",
+			KeyRegex: constants.EmptyStr,
 			Selection: core.QuerySelection{
 				KeySelection:   true,
 				ValueSelection: true,

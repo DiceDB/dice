@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/dicedb/dice/internal/constants"
 	"github.com/xwb1989/sqlparser"
 )
 
@@ -25,7 +26,7 @@ func (e *UnsupportedDSQLStatementError) Error() string {
 	return fmt.Sprintf("unsupported DSQL statement: %T", e.Stmt)
 }
 
-func newUnsupportedSqlStatementError(stmt sqlparser.Statement) *UnsupportedDSQLStatementError {
+func newUnsupportedSQLStatementError(stmt sqlparser.Statement) *UnsupportedDSQLStatementError {
 	return &UnsupportedDSQLStatementError{Stmt: stmt}
 }
 
@@ -71,7 +72,7 @@ func ParseQuery(sql string) (DSQLQuery, error) {
 
 	selectStmt, ok := stmt.(*sqlparser.Select)
 	if !ok {
-		return DSQLQuery{}, newUnsupportedSqlStatementError(stmt)
+		return DSQLQuery{}, newUnsupportedSQLStatementError(stmt)
 	}
 
 	// Ensure no unsupported clauses are present
@@ -157,7 +158,7 @@ func parseSelectExpressions(selectStmt *sqlparser.Select) (QuerySelection, error
 func parseTableName(selectStmt *sqlparser.Select) (string, error) {
 	tableExpr, ok := selectStmt.From[0].(*sqlparser.AliasedTableExpr)
 	if !ok {
-		return "", fmt.Errorf("error parsing table name")
+		return constants.EmptyStr, fmt.Errorf("error parsing table name")
 	}
 
 	// Remove backticks from table name if present.
@@ -165,7 +166,7 @@ func parseTableName(selectStmt *sqlparser.Select) (string, error) {
 
 	// Ensure table name is not dual, which means no table name was provided.
 	if tableName == "dual" {
-		return "", fmt.Errorf("no table name provided")
+		return constants.EmptyStr, fmt.Errorf("no table name provided")
 	}
 
 	return tableName, nil
@@ -199,6 +200,8 @@ func parseLimit(selectStmt *sqlparser.Select) (int, error) {
 }
 
 // Function to parse WHERE clause
+
+//nolint:unparam
 func parseWhere(selectStmt *sqlparser.Select) (sqlparser.Expr, error) {
 	if selectStmt.Where == nil {
 		return nil, nil

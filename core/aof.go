@@ -3,6 +3,7 @@ package core
 import (
 	"bufio"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"strings"
@@ -18,8 +19,12 @@ type AOF struct {
 	path   string
 }
 
+const (
+	FileMode int = 0644
+)
+
 func NewAOF(path string) (*AOF, error) {
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, fs.FileMode(FileMode))
 	if err != nil {
 		return nil, err
 	}
@@ -41,10 +46,7 @@ func (a *AOF) Write(operation string) error {
 	if err := a.writer.Flush(); err != nil {
 		return err
 	}
-	if err := a.file.Sync(); err != nil {
-		return err
-	}
-	return nil
+	return a.file.Sync()
 }
 
 func (a *AOF) Close() error {
@@ -83,10 +85,7 @@ func (a *AOF) Load() ([]string, error) {
 func dumpKey(aof *AOF, key string, obj *Obj) (err error) {
 	cmd := fmt.Sprintf("SET %s %s", key, obj.Value)
 	tokens := strings.Split(cmd, " ")
-	if err = aof.Write(string(Encode(tokens, false))); err != nil {
-		return err
-	}
-	return nil
+	return aof.Write(string(Encode(tokens, false)))
 }
 
 // TODO: To to new and switch
@@ -106,10 +105,8 @@ func DumpAllAOF() error {
 	defer storeMutex.RUnlock()
 
 	for k, obj := range store {
-		if err = dumpKey(aof, *((*string)(k)), obj); err != nil {
-			return err
-		}
+		err = dumpKey(aof, *((*string)(k)), obj)
 	}
 	log.Println("AOF file rewrite complete")
-	return nil
+	return err
 }

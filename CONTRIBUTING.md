@@ -50,7 +50,73 @@ Please ensure your code is adequately documented. Some things to consider for do
 
 ### Code Formatting
 
-- Ensure that the code you add is properly formatted as per the `gofmt`.
+To ensure code quality and consistency in our Go project, we use [golangci-lint](https://golangci-lint.run/), a popular linter aggregator for Go. This tool combines multiple linters to catch common issues and enforce best practices in Go code.
+
+To use golangci-lint, you need to have it installed. You can install it using the following methods:
+
+- Via Homebrew (macOS):
+
+```sh
+brew install golangci/tap/golangci-lint
+```
+
+- Via Go:
+
+```sh
+go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+```
+
+- Via Binary:
+
+  You can download the latest binary release from the golangci-lint [releases page](https://github.com/golangci/golangci-lint/releases)
+
+We already have preconfigured [.golangci.yml](https://github.com/DiceDB/dice/blob/master/.golangci.yaml) file in the repository. Please follow the rules defined in the file.
+
+To run golangci-lint and check your code for issues, use the following command:
+
+```sh
+golangci-lint run
+```
+
+### Pre Commit Hook
+
+Pre-commit Hook for golangci-lint ensures that linting checks are performed automatically before changes are committed.
+
+To use pre-commit, you need to have it installed on your system. You can install it using following methods:
+
+- Via Pip:
+
+```sh
+pip install pre-commit
+```
+
+- Via Homebrew (macOS):
+
+```sh
+brew install pre-commit
+```
+
+- Via apt-get (Ubuntu/Debian):
+
+```sh
+sudo apt-get install pre-commit
+```
+
+Verify the installation:
+
+```sh
+$ pre-commit --version
+pre-commit 3.8.0
+```
+
+Install the pre commit hook:
+
+```sh
+$ pre-commit install
+pre-commit installed at .git/hooks/pre-commit
+```
+
+With the pre-commit hook configured, `golangci-lint` will automatically run every time you execute `git commit`. This ensures that your code adheres to the linting rules specified in the [.golangci.yml](https://github.com/DiceDB/dice/blob/master/.golangci.yaml) file before any changes are committed.
 
 ### Backward and Forward compatibility changes
 
