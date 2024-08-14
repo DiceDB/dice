@@ -70,7 +70,7 @@ go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
   You can download the latest binary release from the golangci-lint [releases page](https://github.com/golangci/golangci-lint/releases)
 
-We already have preconfigured [.golangci.yml](https://github.com/dicedb/dice/blob/master/.golangci.yml) file in the repository. Please follow the rules defined in the file.
+We already have preconfigured [.golangci.yml](https://github.com/DiceDB/dice/blob/master/.golangci.yaml) file in the repository. Please follow the rules defined in the file.
 
 To run golangci-lint and check your code for issues, use the following command:
 
@@ -116,7 +116,7 @@ $ pre-commit install
 pre-commit installed at .git/hooks/pre-commit
 ```
 
-With the pre-commit hook configured, `golangci-lint` will automatically run every time you execute `git commit`. This ensures that your code adheres to the linting rules specified in the [.golangci.yml](https://github.com/dicedb/dice/blob/master/.golangci.yml) file before any changes are committed.
+With the pre-commit hook configured, `golangci-lint` will automatically run every time you execute `git commit`. This ensures that your code adheres to the linting rules specified in the [.golangci.yml](https://github.com/DiceDB/dice/blob/master/.golangci.yaml) file before any changes are committed.
 
 ### Backward and Forward compatibility changes
 
