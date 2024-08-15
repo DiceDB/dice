@@ -1,6 +1,7 @@
 package core_test
 
 import (
+	"fmt"
 	"math/rand"
 	"strconv"
 	"testing"
@@ -13,7 +14,9 @@ import (
 var randGenerator *rand.Rand
 
 func init() {
-	randGenerator = rand.New(rand.NewSource(time.Now().UnixNano()))
+	randSeed := time.Now().UnixNano()
+	randGenerator = rand.New(rand.NewSource(randSeed))
+	fmt.Printf("rand seed: %v", randSeed)
 }
 
 var runes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_!@#$%^&*()-=+[]\\;':,.<>/?~.|")

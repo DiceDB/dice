@@ -1,9 +1,12 @@
 package tests
 
 import (
+	"fmt"
 	"math/rand"
+	"net"
 	"strings"
 	"testing"
+	"time"
 
 	"gotest.tools/v3/assert"
 )
@@ -25,7 +28,9 @@ func randStr(n int) string {
 }
 
 func init() {
-	randGenerator = rand.New(rand.NewSource(4))
+	randSeed := time.Now().UnixNano()
+	randGenerator = rand.New(rand.NewSource(randSeed))
+	fmt.Printf("rand seed: %v", randSeed)
 	deqNormalValues = []string{
 		randStr(10),               // 6 bit string
 		randStr(256),              // 12 bit string
@@ -99,6 +104,8 @@ func TestLPush(t *testing.T) {
 			}
 		})
 	}
+
+	cleanUp(conn)
 }
 
 func TestRPush(t *testing.T) {
@@ -135,6 +142,8 @@ func TestRPush(t *testing.T) {
 			}
 		})
 	}
+
+	cleanUp(conn)
 }
 
 func TestLPushLPop(t *testing.T) {
@@ -186,6 +195,8 @@ func TestLPushLPop(t *testing.T) {
 			}
 		})
 	}
+
+	cleanUp(conn)
 }
 
 func TestLPushRPop(t *testing.T) {
@@ -237,6 +248,8 @@ func TestLPushRPop(t *testing.T) {
 			}
 		})
 	}
+
+	cleanUp(conn)
 }
 
 func TestRPushLPop(t *testing.T) {
@@ -288,6 +301,8 @@ func TestRPushLPop(t *testing.T) {
 			}
 		})
 	}
+
+	cleanUp(conn)
 }
 
 func TestRPushRPop(t *testing.T) {
@@ -339,6 +354,8 @@ func TestRPushRPop(t *testing.T) {
 			}
 		})
 	}
+
+	cleanUp(conn)
 }
 
 func TestLRPushLRPop(t *testing.T) {
@@ -374,5 +391,16 @@ func TestLRPushLRPop(t *testing.T) {
 				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
 			}
 		})
+	}
+
+	cleanUp(conn)
+}
+
+func cleanUp(conn net.Conn) {
+	for {
+		result := fireCommand(conn, "LPOP k")
+		if result == "(nil)" {
+			break
+		}
 	}
 }

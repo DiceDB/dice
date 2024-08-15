@@ -2054,14 +2054,14 @@ func evalLPUSH(args []string) []byte {
 
 	obj := Get(args[0])
 	if obj == nil {
-		obj = NewObj(NewDeque(), -1, OBJ_TYPE_BYTELIST, OBJ_ENCODING_DEQUE)
+		obj = NewObj(NewDeque(), -1, ObjTypeByteList, ObjEncodingDeque)
 	}
 
-	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_DEQUE); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingDeque); err != nil {
 		return Encode(err, false)
 	}
 
@@ -2070,7 +2070,7 @@ func evalLPUSH(args []string) []byte {
 		obj.Value.(*Deque).LPush(args[i])
 	}
 
-	return RESP_OK
+	return RespOK
 }
 
 func evalRPUSH(args []string) []byte {
@@ -2080,14 +2080,14 @@ func evalRPUSH(args []string) []byte {
 
 	obj := Get(args[0])
 	if obj == nil {
-		obj = NewObj(NewDeque(), -1, OBJ_TYPE_BYTELIST, OBJ_ENCODING_DEQUE)
+		obj = NewObj(NewDeque(), -1, ObjTypeByteList, ObjEncodingDeque)
 	}
 
-	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_DEQUE); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingDeque); err != nil {
 		return Encode(err, false)
 	}
 
@@ -2096,7 +2096,7 @@ func evalRPUSH(args []string) []byte {
 		obj.Value.(*Deque).RPush(args[i])
 	}
 
-	return RESP_OK
+	return RespOK
 }
 
 func evalRPOP(args []string) []byte {
@@ -2106,14 +2106,14 @@ func evalRPOP(args []string) []byte {
 
 	obj := Get(args[0])
 	if obj == nil {
-		return RESP_NIL
+		return RespNIL
 	}
 
-	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_DEQUE); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingDeque); err != nil {
 		return Encode(err, false)
 	}
 
@@ -2121,7 +2121,7 @@ func evalRPOP(args []string) []byte {
 	x, err := deq.RPop()
 	if err != nil {
 		if err == ErrDequeEmpty {
-			return RESP_NIL
+			return RespNIL
 		}
 		panic(fmt.Sprintf("unknown error: %v", err))
 	}
@@ -2136,14 +2136,14 @@ func evalLPOP(args []string) []byte {
 
 	obj := Get(args[0])
 	if obj == nil {
-		return RESP_NIL
+		return RespNIL
 	}
 
-	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_DEQUE); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingDeque); err != nil {
 		return Encode(err, false)
 	}
 
@@ -2151,7 +2151,7 @@ func evalLPOP(args []string) []byte {
 	x, err := deq.LPop()
 	if err != nil {
 		if err == ErrDequeEmpty {
-			return RESP_NIL
+			return RespNIL
 		}
 		panic(fmt.Sprintf("unknown error: %v", err))
 	}
