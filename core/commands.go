@@ -535,6 +535,23 @@ var (
 		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	objectCmdMeta = DiceCmdMeta{
+		Name: "OBJECT",
+		Info: `OBJECT subcommand [arguments [arguments ...]]
+		OBJECT command is used to inspect the internals of the Redis objects.`,
+		Eval:     evalOBJECT,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 2},
+	}
+	touchCmdMeta = DiceCmdMeta{
+		Name: "TOUCH",
+		Info: `TOUCH key1 key2 ... key_N
+		Alters the last access time of a key(s).
+		A key is ignored if it does not exist.`,
+		Eval:     evalTOUCH,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -598,4 +615,6 @@ func init() {
 	diceCmds["RENAME"] = renameCmdMeta
 	diceCmds["GETEX"] = getexCmdMeta
 	diceCmds["PTTL"] = pttlCmdMeta
+	diceCmds["OBJECT"] = objectCmdMeta
+	diceCmds["TOUCH"] = touchCmdMeta
 }

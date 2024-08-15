@@ -1978,3 +1978,43 @@ func evalPTTL(args []string) []byte {
 	durationMs := exp - uint64(time.Now().UnixMilli())
 	return Encode(int64(durationMs), false)
 }
+
+func evalObjectIdleTime(key string) []byte {
+	obj := GetNoTouch(key)
+	if obj == nil {
+		return RespNIL
+	}
+
+	return Encode(int64(getIdleTime(obj.LastAccessedAt)), true)
+}
+
+func evalOBJECT(args []string) []byte {
+	if len(args) < 2 {
+		return Encode(errors.New("ERR wrong number of arguments for 'object' command"), false)
+	}
+
+	subcommand := strings.ToUpper(args[0])
+	key := args[1]
+
+	switch subcommand {
+	case "IDLETIME":
+		return evalObjectIdleTime(key)
+	default:
+		return Encode(errors.New("ERR syntax error"), false)
+	}
+}
+
+func evalTOUCH(args []string) []byte {
+	if len(args) == 0 {
+		return Encode(errors.New("ERR wrong number of arguments for 'touch' command"), false)
+	}
+
+	count := 0
+	for _, key := range args {
+		if Get(key) != nil {
+			count++
+		}
+	}
+
+	return Encode(count, false)
+}
