@@ -59,6 +59,15 @@ func updateLFULastAccessedAt(lastAccessedAt uint32) uint32 {
   return (uint32(counter) & 0xFF000000) | currentUnixTime
 }
 
+func getLastAccessedAt(lastAccessedAt uint32) uint32 {
+  switch config.EvictionStrategy {
+  case config.ALL_KEYS_LFU:
+    return updateLFULastAccessedAt(lastAccessedAt)
+  default:
+    return getCurrentClock()
+  }
+}
+
 /*
   - Similar to redis implementation of increasing access counter for a key
   - The larger the counter value, the lesser is probability of its increment in counter value

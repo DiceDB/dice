@@ -94,7 +94,7 @@ func getHelper(k string, touch bool) *Obj {
 				deleteKey(k, ptr, v)
 				v = nil
 			} else if touch {
-				v.LastAccessedAt = getCurrentClock()
+				v.LastAccessedAt = getLastAccessedAt(v.LastAccessedAt)
 			}
 		}
 	}, WithStoreLock(), WithKeypoolLock())
@@ -118,7 +118,7 @@ func GetAll(keys []string) []*Obj {
 					deleteKey(k, ptr, v)
 					response = append(response, nil)
 				} else {
-					v.LastAccessedAt = getCurrentClock()
+					v.LastAccessedAt = getLastAccessedAt(v.LastAccessedAt)
 					response = append(response, v)
 				}
 			} else {
