@@ -42,7 +42,7 @@ func (b *byteList) newNode() *byteListNode {
 	return bn
 }
 
-func (b *byteList) newNodeWithCap(cap int) *byteListNode {
+func (b *byteList) newNodeWithCapacity(cap int) *byteListNode {
 	bn := &byteListNode{
 		buf: make([]byte, 0, cap),
 	}

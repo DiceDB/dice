@@ -100,7 +100,7 @@ func GetEncodeUIntSize(x uint64) uint64 {
 	}
 }
 
-// DecodeInt decodes the varint encoded by EncodeUIntRev[InPlace]
+// DecodeUIntRev decodes the varint encoded by EncodeUIntRev[InPlace]
 func DecodeUIntRev(vint []byte) uint64 {
 	var i int
 	var v uint64 = 0

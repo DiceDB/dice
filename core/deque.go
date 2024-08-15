@@ -14,8 +14,9 @@ type DequeI interface {
 	RPush(string)
 	LPop() (string, error)
 	RPop() (string, error)
-	LPushInt(int64)
 }
+
+var _ DequeI = (*DequeBasic)(nil)
 
 type DequeBasic struct {
 	Length int64
@@ -48,7 +49,7 @@ func (q *DequeBasic) LPush(x string) {
 	q.Length++
 }
 
-// RPush pushes `x` into the right side of the Deque
+// RPush pushes `x` into the right side of the Deque.
 func (q *DequeBasic) RPush(x string) {
 	// enc + data + backlen
 	xb := EncodeDeqEntry(x)
@@ -92,27 +93,11 @@ func (q *DequeBasic) LPop() (string, error) {
 	return x, nil
 }
 
-func (q *DequeBasic) LPushInt(x int64) {
-	// enc + data + backlen
-	xb := EncodeDeqInt(x)
-
-	if cap(q.buf)-len(q.buf) < len(xb) {
-		newArr := make([]byte, len(q.buf)+len(xb), (len(q.buf)+len(xb))*2)
-		copy(newArr[len(xb):], q.buf)
-		copy(newArr, xb)
-		q.buf = newArr
-	} else {
-		q.buf = q.buf[:len(xb)+len(q.buf)]
-		copy(q.buf[len(xb):], q.buf)
-		copy(q.buf, xb)
-	}
-
-	q.Length++
-}
-
 const (
 	minDequeNodeSize = 256
 )
+
+var _ DequeI = (*Deque)(nil)
 
 type Deque struct {
 	Length  int64
@@ -144,7 +129,7 @@ func (q *Deque) LPush(x string) {
 		q.leftIdx = 0
 	} else {
 		if entrySize > minDequeNodeSize {
-			head = q.list.newNodeWithCap(entrySize)
+			head = q.list.newNodeWithCapacity(entrySize)
 		} else {
 			head = q.list.newNode()
 		}
@@ -157,10 +142,50 @@ func (q *Deque) LPush(x string) {
 	q.Length++
 }
 
-func (q *Deque) RPush(x string) {}
+func (q *Deque) RPush(x string) {
+	// enc + data + backlen
+	entrySize := int(GetEncodeDeqEntrySize(x))
+	tail := q.list.tail
+
+	if tail == nil || len(tail.buf) == cap(tail.buf) {
+		if entrySize > minDequeNodeSize {
+			tail = q.list.newNodeWithCapacity(entrySize)
+		} else {
+			tail = q.list.newNode()
+		}
+		q.list.append(tail)
+		tail.buf = tail.buf[:entrySize]
+		EncodeDeqEntryInPlace(x, tail.buf[:entrySize])
+	} else if cap(tail.buf)-len(tail.buf) < entrySize {
+		newBuf := make([]byte, len(tail.buf)+entrySize)
+		copy(newBuf, tail.buf)
+		EncodeDeqEntryInPlace(x, newBuf[len(tail.buf):])
+		tail.buf = newBuf
+	} else {
+		oriLen := len(tail.buf)
+		tail.buf = tail.buf[:oriLen+entrySize]
+		EncodeDeqEntryInPlace(x, tail.buf[oriLen:])
+	}
+
+	q.Length++
+}
 
 func (q *Deque) LPop() (string, error) {
-	return "", ErrDequeEmpty
+	if q.Length == 0 {
+		return "", ErrDequeEmpty
+	}
+
+	head := q.list.head
+	x, entryLen := DecodeDeqEntry(head.buf[q.leftIdx:])
+
+	q.leftIdx += entryLen
+	if q.leftIdx == len(head.buf) {
+		q.list.delete(head)
+		q.leftIdx = 0
+	}
+	q.Length--
+
+	return x, nil
 }
 
 func (q *Deque) RPop() (string, error) {
@@ -179,56 +204,31 @@ func (q *Deque) RPop() (string, error) {
 	x, _ := DecodeDeqEntry(tail.buf[entryStartIdx:backlenStartIdx])
 
 	tail.buf = tail.buf[:entryStartIdx]
-	if entryStartIdx == q.leftIdx {
+	if len(tail.buf) == 0 {
 		q.list.delete(tail)
-		q.leftIdx = 0
+		if q.list.tail == nil {
+			q.leftIdx = 0
+		}
 	}
 	q.Length--
 
 	return x, nil
 }
 
-func (q *Deque) LPushInt(x int64) {
-	// enc + data + backlen
-	entrySize := int(GetEncodeDeqIntSize(x))
-	// entrySize := len(x)
-	head := q.list.head
+// *************************** deque entry encode/decode ***************************
 
-	if q.leftIdx >= entrySize {
-		q.leftIdx -= entrySize
-		EncodeDeqIntInPlace(x, head.buf[q.leftIdx:])
-		// copy(head.buf[q.leftIdx:], x)
-	} else if q.leftIdx > 0 {
-		newBuf := make([]byte, entrySize, entrySize+minDequeNodeSize-q.leftIdx)
-		EncodeDeqIntInPlace(x, newBuf)
-		// copy(newBuf, x)
-		newBuf = append(newBuf, head.buf[q.leftIdx:]...)
-		head.buf = newBuf
-		q.leftIdx = 0
-	} else {
-		if entrySize > minDequeNodeSize {
-			head = q.list.newNodeWithCap(entrySize)
-		} else {
-			head = q.list.newNode()
-		}
-		q.list.prepend(head)
-		head.buf = head.buf[:cap(head.buf)]
-		q.leftIdx = len(head.buf) - entrySize
-		EncodeDeqIntInPlace(x, head.buf[q.leftIdx:])
-		// copy(head.buf[q.leftIdx:], x)
-	}
-
-	q.Length++
-}
-
-// EncodeDeqEntry encode `x` as an entry of Deque. An entry represents as enc + data + backlen
-// References: redis lpEncodeString, lpEncodeIntegerGetType.
+// EncodeDeqEntry encodes `x` into an entry of Deque. An entry will be encoded as [enc + data + backlen].
+// References: lpEncodeString, lpEncodeIntegerGetType in redis implementation.
 func EncodeDeqEntry(x string) []byte {
-	v, err := strconv.ParseInt(x, 10, 64)
-	if err != nil {
+	if len(x) >= 21 {
 		return EncodeDeqStr(x)
 	} else {
-		return EncodeDeqInt(v)
+		v, err := strconv.ParseInt(x, 10, 64)
+		if err != nil {
+			return EncodeDeqStr(x)
+		} else {
+			return EncodeDeqInt(v)
+		}
 	}
 }
 
@@ -298,12 +298,18 @@ func EncodeDeqInt(v int64) []byte {
 	return buf
 }
 
+// EncodeDeqEntryInPlace encodes `x` into an entry of Deque in place.
+// References: lpEncodeString, lpEncodeIntegerGetType in redis implementation.
 func EncodeDeqEntryInPlace(x string, buf []byte) {
-	v, err := strconv.ParseInt(x, 10, 64)
-	if err != nil {
+	if len(x) >= 21 {
 		EncodeDeqStrInPlace(x, buf)
 	} else {
-		EncodeDeqIntInPlace(v, buf)
+		v, err := strconv.ParseInt(x, 10, 64)
+		if err != nil {
+			EncodeDeqStrInPlace(x, buf)
+		} else {
+			EncodeDeqIntInPlace(v, buf)
+		}
 	}
 }
 
@@ -356,6 +362,7 @@ func EncodeDeqIntInPlace(v int64, buf []byte) {
 	buf[len(buf)-1] = byte(len(buf) - 1)
 }
 
+// GetEncodeDeqEntrySize returns the number of bytes the encoded `x` will take.
 func GetEncodeDeqEntrySize(x string) uint64 {
 	v, err := strconv.ParseInt(x, 10, 64)
 	if err != nil {
@@ -395,7 +402,11 @@ func GetEncodeDeqIntSize(v int64) uint64 {
 }
 
 // DecodeDeqEntry decode `xb` started from index 0, returns the decoded `x` and the
-// overall length of enc + data + backlen
+// overall length of [enc + data + backlen].
+// References: lpEncodeString, lpEncodeIntegerGetType in redis implementation.
+// TODO
+// 1. return the string with the underlying array of `xb` to save memory usage?
+// 2. replace strconv with more efficient/memory-saving implementation
 func DecodeDeqEntry(xb []byte) (string, int) {
 	var val int64
 	var bit int
@@ -438,8 +449,8 @@ func DecodeDeqEntry(xb []byte) (string, int) {
 	} else if xb[0]&0xF0 == 0xE0 {
 		// 12 bit string
 		strLen := (int64(xb[0]&0xF) << 8) | int64(xb[1])
-		backlenlen := dencoding.GetEncodeUIntSize(uint64(2 + strLen))
-		return string(xb[2 : 2+strLen]), 2 + int(strLen) + int(backlenlen)
+		backlenLen := dencoding.GetEncodeUIntSize(uint64(2 + strLen))
+		return string(xb[2 : 2+strLen]), 2 + int(strLen) + int(backlenLen)
 	} else if xb[0]&0xFF == 0xF0 {
 		// 32 bit string
 		strLen := int64(xb[1]) | (int64(xb[2]) << 8) | (int64(xb[3]) << 16) | (int64(xb[4]) << 24)

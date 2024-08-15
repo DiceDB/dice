@@ -85,10 +85,10 @@ func insertMany(howmany int, qi core.QueueIntI, b *testing.B) {
 	for i := 0; i < howmany; i++ {
 		qi.Insert(int64(i))
 	}
-	// obsList := qi.Iterate(howmany + 10)
-	// if len(obsList) != howmany {
-	// 	b.Errorf("queueint test failed. should have been %d but found %v", howmany, len(obsList))
-	// }
+	obsList := qi.Iterate(howmany + 10)
+	if len(obsList) != howmany {
+		b.Errorf("queueint test failed. should have been %d but found %v", howmany, len(obsList))
+	}
 }
 
 func BenchmarkInsert20(b *testing.B) {

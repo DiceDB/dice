@@ -16,7 +16,7 @@ func init() {
 	randGenerator = rand.New(rand.NewSource(time.Now().UnixNano()))
 }
 
-var runes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_!@#$%^&*()-=+[]\\;':\",.<>/?~.|")
+var runes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_!@#$%^&*()-=+[]\\;':,.<>/?~.|")
 
 func randStr(n int) string {
 	b := make([]rune, n)
@@ -81,12 +81,6 @@ func dequeLPushIntStrMany(howmany int, deq core.DequeI, b *testing.B) {
 	}
 }
 
-func dequeLPushIntMany(howmany int, deq core.DequeI, b *testing.B) {
-	for i := 0; i < howmany; i++ {
-		deq.LPushInt(int64(i))
-	}
-}
-
 func BenchmarkBasicDequeRPush20(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		dequeRPushIntStrMany(20, core.NewBasicDeque(), b)
@@ -138,11 +132,5 @@ func BenchmarkDequeLPush200(b *testing.B) {
 func BenchmarkDequeLPush2000(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		dequeLPushIntStrMany(2000, core.NewDeque(), b)
-	}
-}
-
-func BenchmarkDequeLPushInt2000(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		dequeLPushIntMany(2000, core.NewDeque(), b)
 	}
 }
