@@ -79,7 +79,7 @@ func evalAUTH(args []string, c *Client) []byte {
 	}
 
 	var username = DefaultUserName
-	var password = ""
+	var password string
 
 	if len(args) == 1 {
 		password = args[0]
@@ -118,6 +118,7 @@ func evalSET(args []string) []byte {
 	var key, value string
 	var exDurationMs int64 = -1
 	var state exDurationState = Uninitialized
+	var keepttl bool = false
 
 	key, value = args[0], args[1]
 	oType, oEnc := deduceTypeEncoding(value)
@@ -190,13 +191,16 @@ func evalSET(args []string) []byte {
 			if obj != nil {
 				return RespNIL
 			}
+		case constants.KEEPTTL, constants.Keepttl:
+			keepttl = true
 		default:
 			return Encode(errors.New("ERR syntax error"), false)
 		}
 	}
 
 	// putting the k and value in a Hash Table
-	Put(key, NewObj(value, exDurationMs, oType, oEnc))
+	Put(key, NewObj(value, exDurationMs, oType, oEnc), WithKeepTTL(keepttl))
+
 	return RespOK
 }
 

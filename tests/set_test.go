@@ -8,15 +8,17 @@ import (
 	"gotest.tools/v3/assert"
 )
 
+type TestCase struct {
+	name     string
+	commands []string
+	expected []interface{}
+}
+
 func TestSet(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 
-	testCases := []struct {
-		name     string
-		commands []string
-		expected []interface{}
-	}{
+	testCases := []TestCase{
 		{
 			name:     "Set and Get Simple Value",
 			commands: []string{"SET k v", "GET k"},
@@ -45,11 +47,7 @@ func TestSetWithOptions(t *testing.T) {
 	expiryTime := strconv.FormatInt(time.Now().Add(1*time.Minute).UnixMilli(), 10)
 	defer conn.Close()
 
-	testCases := []struct {
-		name     string
-		commands []string
-		expected []interface{}
-	}{
+	testCases := []TestCase{
 		{
 			name:     "Set with EX option",
 			commands: []string{"SET k v EX 2", "GET k", "SLEEP 3", "GET k"},
@@ -161,4 +159,29 @@ func TestSetWithExat(t *testing.T) {
 			assert.Equal(t, "ERR syntax error", fireCommand(conn, "SET k v PXAT "+Etime+" EXAT "+Etime), "Value mismatch for cmd SET k v PXAT "+Etime+" EXAT "+Etime)
 			assert.Equal(t, "(nil)", fireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
 		})
+}
+
+func TestWithKeepTTLFlag(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	for _, tcase := range []TestCase{
+		{
+			commands: []string{"SET k v EX 2", "SET k vv KEEPTTL", "GET k", "SET kk vv", "SET kk vvv KEEPTTL", "GET kk"},
+			expected: []interface{}{"OK", "OK", "vv", "OK", "OK", "vvv"},
+		},
+	} {
+		for i := 0; i < len(tcase.commands); i++ {
+			cmd := tcase.commands[i]
+			out := tcase.expected[i]
+			assert.Equal(t, out, fireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
+		}
+	}
+
+	time.Sleep(2 * time.Second)
+
+	cmd := "GET k"
+	out := "(nil)"
+
+	assert.Equal(t, out, fireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
 }

@@ -58,10 +58,28 @@ func NewObj(value interface{}, expDurationMs int64, oType, oEnc uint8) *Obj {
 	return obj
 }
 
-func Put(k string, obj *Obj) {
+type PutOptions struct {
+	KeepTTL bool
+}
+
+func Put(k string, obj *Obj, opts ...PutOption) {
 	withLocks(func() {
-		putHelper(k, obj)
+		putHelper(k, obj, opts...)
 	}, WithStoreLock(), WithKeypoolLock())
+}
+
+func getDefaultOptions() *PutOptions {
+	return &PutOptions{
+		KeepTTL: false,
+	}
+}
+
+type PutOption func(*PutOptions)
+
+func WithKeepTTL(value bool) PutOption {
+	return func(po *PutOptions) {
+		po.KeepTTL = value
+	}
 }
 
 // PutAll is a bulk insert function that takes a map of
@@ -225,13 +243,34 @@ func Rename(sourceKey, destKey string) bool {
 // putHelper is a helper function to insert a key-value pair into the store.
 // It also increments the key count in the KeyspaceStat map and notifies watchers.
 // This method is not thread-safe. It should be called within a lock.
-func putHelper(k string, obj *Obj) {
+func putHelper(k string, obj *Obj, opts ...PutOption) {
+	options := getDefaultOptions()
+
+	for _, optApplier := range opts {
+		optApplier(options)
+	}
+
 	if len(store) >= config.KeysLimit {
 		evict()
 	}
 	obj.LastAccessedAt = getCurrentClock()
 
 	ptr := ensureKeyInPool(k)
+	currentObject, ok := store[ptr]
+	if ok {
+		// NOTE: In case there is an value present
+		// for a given key 'k', then any updates
+		// performed with the 'KEEPTTL' flag need
+		// to ensure that we save the new value
+		// with the same expiration time as before
+		// Without the flag, the expiration time
+		// stored earlier will be removed.
+		_, ok = expires[currentObject]
+		if options.KeepTTL && ok {
+			expires[obj] = expires[currentObject]
+		}
+		delete(expires, currentObject)
+	}
 	store[ptr] = obj
 
 	incrementKeyCount()
