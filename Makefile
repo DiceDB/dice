@@ -5,7 +5,6 @@ DATA_SIZE ?= 32 #Object data size
 KEY_PATTERN ?= R:R #Set:Get pattern
 RATIO ?= 1:10 #Set:Get ratio
 PORT ?= 7379 #Port for dicedb
-GOLANGCI_LINT_VERSION := 1.60.1
 
 .PHONY: build test build-docker run test-one
 
