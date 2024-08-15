@@ -16,6 +16,7 @@ import (
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core/bit"
 	"github.com/dicedb/dice/internal/constants"
+	"github.com/dicedb/dice/server/utils"
 	"github.com/ohler55/ojg/jp"
 )
 
@@ -170,7 +171,7 @@ func evalSET(args []string) []byte {
 			if arg == constants.Exat {
 				exDuration *= 1000
 			}
-			exDurationMs = exDuration - time.Now().UnixMilli()
+			exDurationMs = exDuration - utils.GetCurrentTime().UnixMilli()
 			// If the expiry time is in the past, set exDurationMs to 0
 			// This will be used to signal immediate expiration
 			if exDurationMs < 0 {
@@ -466,7 +467,7 @@ func evalTTL(args []string) []byte {
 
 	// compute the time remaining for the key to expire and
 	// return the RESP encoded form of it
-	durationMs := exp - uint64(time.Now().UnixMilli())
+	durationMs := exp - uint64(utils.GetCurrentTime().UnixMilli())
 
 	return Encode(int64(durationMs/1000), false)
 }
@@ -1829,7 +1830,7 @@ func evalCOPY(args []string) []byte {
 	exp, ok := getExpiry(sourceObj)
 	var exDurationMs int64 = -1
 	if ok {
-		exDurationMs = int64(exp - uint64(time.Now().UnixMilli()))
+		exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
 	}
 
 	Put(destinationKey, copyObj)
@@ -1917,7 +1918,7 @@ func evalGETEX(args []string) []byte {
 			if arg == constants.Exat {
 				exDuration *= 1000
 			}
-			exDurationMs = exDuration - time.Now().UnixMilli()
+			exDurationMs = exDuration - utils.GetCurrentTime().UnixMilli()
 			// If the expiry time is in the past, set exDurationMs to 0
 			// This will be used to signal immediate expiration
 			if exDurationMs < 0 {
@@ -1975,7 +1976,7 @@ func evalPTTL(args []string) []byte {
 
 	// compute the time remaining for the key to expire and
 	// return the RESP encoded form of it
-	durationMs := exp - uint64(time.Now().UnixMilli())
+	durationMs := exp - uint64(utils.GetCurrentTime().UnixMilli())
 	return Encode(int64(durationMs), false)
 }
 

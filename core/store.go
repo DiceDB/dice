@@ -3,10 +3,10 @@ package core
 import (
 	"path"
 	"sync"
-	"time"
 	"unsafe"
 
 	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/server/utils"
 )
 
 type WatchEvent struct {
@@ -304,7 +304,7 @@ func GetDel(k string) *Obj {
 // setExpiry sets the expiry time for an object.
 // This method is not thread-safe. It should be called within a lock.
 func setExpiry(obj *Obj, expDurationMs int64) {
-	expires[obj] = uint64(time.Now().UnixMilli()) + uint64(expDurationMs)
+	expires[obj] = uint64(utils.GetCurrentTime().UnixMilli()) + uint64(expDurationMs)
 }
 
 // Helper function to count clients

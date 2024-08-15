@@ -7,6 +7,7 @@ import (
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/constants"
+	"github.com/dicedb/dice/server/utils"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -88,10 +89,10 @@ func (user *User) SetPassword(password string) (err error) {
 
 func NewSession() (session *Session) {
 	session = &Session{
-		ID: uint64(time.Now().UTC().Unix()),
+		ID: uint64(utils.GetCurrentTime().UTC().Unix()),
 
-		CreatedAt:      time.Now(),
-		LastAccessedAt: time.Now(),
+		CreatedAt:      utils.GetCurrentTime(),
+		LastAccessedAt: utils.GetCurrentTime(),
 
 		Status: SessionStatusPending,
 	}
@@ -104,7 +105,7 @@ func (session *Session) IsActive() (isActive bool) {
 	}
 	isActive = session.Status == SessionStatusActive
 	if isActive {
-		session.LastAccessedAt = time.Now().UTC()
+		session.LastAccessedAt = utils.GetCurrentTime().UTC()
 	}
 	return
 }
@@ -112,8 +113,8 @@ func (session *Session) IsActive() (isActive bool) {
 func (session *Session) Activate(user *User) {
 	session.User = user
 	session.Status = SessionStatusActive
-	session.CreatedAt = time.Now().UTC()
-	session.LastAccessedAt = time.Now().UTC()
+	session.CreatedAt = utils.GetCurrentTime().UTC()
+	session.LastAccessedAt = utils.GetCurrentTime().UTC()
 }
 
 func (session *Session) Validate(username, password string) error {
