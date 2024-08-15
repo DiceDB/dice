@@ -38,16 +38,17 @@ func setupTest() {
 
 func TestEval(t *testing.T) {
 	testCases := map[string]func(*testing.T){
-		"MSET":    testEvalMSET,
-		"PING":    testEvalPING,
-		"HELLO":   testEvalHELLO,
-		"SET":     testEvalSET,
-		"GET":     testEvalGET,
-		"JSONGET": testEvalJSONGET,
-		"JSONSET": testEvalJSONSET,
-		"TTL":     testEvalTTL,
-		"DEL":     testEvalDel,
-		"PERSIST": TestEvalPersist,
+		"MSET":       testEvalMSET,
+		"PING":       testEvalPING,
+		"HELLO":      testEvalHELLO,
+		"SET":        testEvalSET,
+		"GET":        testEvalGET,
+		"JSONGET":    testEvalJSONGET,
+		"JSONSET":    testEvalJSONSET,
+		"TTL":        testEvalTTL,
+		"DEL":        testEvalDel,
+		"PERSIST":    TestEvalPersist,
+		"EXPIRETIME": testEvalEXPIRETIME,
 	}
 
 	for name, testFunc := range testCases {
@@ -175,6 +176,32 @@ func testEvalGET(t *testing.T) {
 	}
 
 	runEvalTests(t, tests, evalGET)
+}
+
+func testEvalEXPIRETIME(t *testing.T) {
+	tests := map[string]evalTestCase{
+		"key does not exist": {
+			setup:  func() {},
+			input:  []string{"NONEXISTENT_KEY"},
+			output: RespMinusTwo,
+		},
+		"key exists without expary": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "mock_value"
+				obj := &Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store[unsafe.Pointer(obj)] = obj
+				keypool[key] = unsafe.Pointer(obj)
+			},
+			input:  []string{"EXISTING_KEY"},
+			output: RespMinusOne,
+		},
+	}
+
+	runEvalTests(t, tests, evalEXPIRETIME)
 }
 
 func testEvalJSONGET(t *testing.T) {
