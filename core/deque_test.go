@@ -11,34 +11,35 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-var randGenerator *rand.Rand
+var deqRandGenerator *rand.Rand
 
-func init() {
+func deqTestInit() {
 	randSeed := time.Now().UnixNano()
-	randGenerator = rand.New(rand.NewSource(randSeed))
+	deqRandGenerator = rand.New(rand.NewSource(randSeed))
 	fmt.Printf("rand seed: %v", randSeed)
 }
 
-var runes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_!@#$%^&*()-=+[]\\;':,.<>/?~.|")
+var deqRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_!@#$%^&*()-=+[]\\;':,.<>/?~.|")
 
-func randStr(n int) string {
+func deqRandStr(n int) string {
 	b := make([]rune, n)
 	for i := range b {
-		b[i] = runes[randGenerator.Intn(len(runes))]
+		b[i] = deqRunes[deqRandGenerator.Intn(len(deqRunes))]
 	}
 	return string(b)
 }
 
 func TestDeqEncodeEntryString(t *testing.T) {
+	deqTestInit()
 	testCases := []string{
-		randStr(1),                // min 6 bit string
-		randStr(10),               // 6 bit string
-		randStr((1 << 6) - 1),     // max 6 bit string
-		randStr(1 << 6),           // min 12 bit string
-		randStr(2024),             // 12 bit string
-		randStr((1 << 12) - 1),    // max 12 bit string
-		randStr(1 << 12),          // min 32 bit string
-		randStr((1 << 20) - 1000), // 32 bit string
+		deqRandStr(1),                // min 6 bit string
+		deqRandStr(10),               // 6 bit string
+		deqRandStr((1 << 6) - 1),     // max 6 bit string
+		deqRandStr(1 << 6),           // min 12 bit string
+		deqRandStr(2024),             // 12 bit string
+		deqRandStr((1 << 12) - 1),    // max 12 bit string
+		deqRandStr(1 << 12),          // min 32 bit string
+		deqRandStr((1 << 20) - 1000), // 32 bit string
 		// randStr((1 << 32) - 1),   // max 32 bit string, maybe too huge to test..
 
 		"0",                    // min 7 bit uint

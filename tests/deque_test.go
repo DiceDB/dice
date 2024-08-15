@@ -11,48 +11,48 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-var randGenerator *rand.Rand
-var runes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_!@#$%^&*()-=+[]\\;':,.<>/?~.|")
+var deqRandGenerator *rand.Rand
+var deqRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_!@#$%^&*()-=+[]\\;':,.<>/?~.|")
 
 var (
 	deqNormalValues []string
 	deqEdgeValues   []string
 )
 
-func randStr(n int) string {
+func deqRandStr(n int) string {
 	b := make([]rune, n)
 	for i := range b {
-		b[i] = runes[randGenerator.Intn(len(runes))]
+		b[i] = deqRunes[deqRandGenerator.Intn(len(deqRunes))]
 	}
 	return string(b)
 }
 
-func init() {
+func deqTestInit() {
 	randSeed := time.Now().UnixNano()
-	randGenerator = rand.New(rand.NewSource(randSeed))
+	deqRandGenerator = rand.New(rand.NewSource(randSeed))
 	fmt.Printf("rand seed: %v", randSeed)
 	deqNormalValues = []string{
-		randStr(10),               // 6 bit string
-		randStr(256),              // 12 bit string
-		randStr((1 << 13) - 1000), // 32 bit string
-		"28",                      // 7 bit uint
-		"2024",                    // + 13 bit int
-		"-2024",                   // - 13 bit int
-		"15384",                   // + 16 bit int
-		"-15384",                  // - 16 bit int
-		"4193301",                 // + 24 bit int
-		"-4193301",                // - 24 bit int
-		"1073731765",              // + 32 bit int
-		"-1073731765",             // - 32 bit int
-		"4611686018427287903",     // + 64 bit int
-		"-4611686018427287903",    // - 64 bit int
+		deqRandStr(10),               // 6 bit string
+		deqRandStr(256),              // 12 bit string
+		deqRandStr((1 << 13) - 1000), // 32 bit string
+		"28",                         // 7 bit uint
+		"2024",                       // + 13 bit int
+		"-2024",                      // - 13 bit int
+		"15384",                      // + 16 bit int
+		"-15384",                     // - 16 bit int
+		"4193301",                    // + 24 bit int
+		"-4193301",                   // - 24 bit int
+		"1073731765",                 // + 32 bit int
+		"-1073731765",                // - 32 bit int
+		"4611686018427287903",        // + 64 bit int
+		"-4611686018427287903",       // - 64 bit int
 	}
 	deqEdgeValues = []string{
-		randStr(1),             // min 6 bit string
-		randStr((1 << 6) - 1),  // max 6 bit string
-		randStr(1 << 6),        // min 12 bit string
-		randStr((1 << 12) - 1), // max 12 bit string
-		randStr(1 << 12),       // min 32 bit string
+		deqRandStr(1),             // min 6 bit string
+		deqRandStr((1 << 6) - 1),  // max 6 bit string
+		deqRandStr(1 << 6),        // min 12 bit string
+		deqRandStr((1 << 12) - 1), // max 12 bit string
+		deqRandStr(1 << 12),       // min 32 bit string
 		// randStr((1 << 32) - 1),   // max 32 bit string, maybe too huge to test..
 
 		"0",                    // min 7 bit uint
@@ -71,6 +71,7 @@ func init() {
 }
 
 func TestLPush(t *testing.T) {
+	deqTestInit()
 	conn := getLocalConnection()
 	defer conn.Close()
 
@@ -105,10 +106,11 @@ func TestLPush(t *testing.T) {
 		})
 	}
 
-	cleanUp(conn)
+	deqCleanUp(conn, "k")
 }
 
 func TestRPush(t *testing.T) {
+	deqTestInit()
 	conn := getLocalConnection()
 	defer conn.Close()
 
@@ -143,7 +145,7 @@ func TestRPush(t *testing.T) {
 		})
 	}
 
-	cleanUp(conn)
+	deqCleanUp(conn, "k")
 }
 
 func TestLPushLPop(t *testing.T) {
@@ -196,10 +198,11 @@ func TestLPushLPop(t *testing.T) {
 		})
 	}
 
-	cleanUp(conn)
+	deqCleanUp(conn, "k")
 }
 
 func TestLPushRPop(t *testing.T) {
+	deqTestInit()
 	conn := getLocalConnection()
 	defer conn.Close()
 
@@ -249,10 +252,11 @@ func TestLPushRPop(t *testing.T) {
 		})
 	}
 
-	cleanUp(conn)
+	deqCleanUp(conn, "k")
 }
 
 func TestRPushLPop(t *testing.T) {
+	deqTestInit()
 	conn := getLocalConnection()
 	defer conn.Close()
 
@@ -302,10 +306,11 @@ func TestRPushLPop(t *testing.T) {
 		})
 	}
 
-	cleanUp(conn)
+	deqCleanUp(conn, "k")
 }
 
 func TestRPushRPop(t *testing.T) {
+	deqTestInit()
 	conn := getLocalConnection()
 	defer conn.Close()
 
@@ -355,10 +360,11 @@ func TestRPushRPop(t *testing.T) {
 		})
 	}
 
-	cleanUp(conn)
+	deqCleanUp(conn, "k")
 }
 
 func TestLRPushLRPop(t *testing.T) {
+	deqTestInit()
 	conn := getLocalConnection()
 	defer conn.Close()
 
@@ -393,12 +399,12 @@ func TestLRPushLRPop(t *testing.T) {
 		})
 	}
 
-	cleanUp(conn)
+	deqCleanUp(conn, "k")
 }
 
-func cleanUp(conn net.Conn) {
+func deqCleanUp(conn net.Conn, key string) {
 	for {
-		result := fireCommand(conn, "LPOP k")
+		result := fireCommand(conn, "LPOP "+key)
 		if result == "(nil)" {
 			break
 		}
