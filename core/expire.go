@@ -1,8 +1,9 @@
 package core
 
 import (
-	"time"
 	"unsafe"
+
+	"github.com/dicedb/dice/server/utils"
 )
 
 func hasExpired(obj *Obj) bool {
@@ -10,7 +11,7 @@ func hasExpired(obj *Obj) bool {
 	if !ok {
 		return false
 	}
-	return exp <= uint64(time.Now().UnixMilli())
+	return exp <= uint64(utils.GetCurrentTime().UnixMilli())
 }
 
 func getExpiry(obj *Obj) (uint64, bool) {

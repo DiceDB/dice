@@ -8,6 +8,7 @@ import (
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core"
+	"github.com/dicedb/dice/server/utils"
 	"github.com/dicedb/dice/testutils"
 	"gotest.tools/v3/assert"
 )
@@ -90,19 +91,23 @@ func TestRemoveMultipleNonExpiredKeys(t *testing.T) {
 
 // Test for removing from queue with expired keys before non-expired
 func TestRemoveExpiredBeforeNonExpire(t *testing.T) {
+	mockTime := &utils.MockClock{CurrTime: time.Now()}
+	utils.CurrentTime = mockTime
 	qr := core.NewQueueRef()
 	val := [3]int{10, 20}
 	core.Put("key1", core.NewObj(val[0], 1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key1")
 	core.Put("key2", core.NewObj(val[1], -1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key2")
-	time.Sleep(2 * time.Millisecond)
+	mockTime.SetTime(time.Now().Add(2 * time.Millisecond))
 	qe, err := qr.Remove()
 	assert.Check(t, err == nil || qe.Obj.Value == val[1], fmt.Sprintf("test for removing expired key before non-expired failed , Expected : %d, Got : %d\n", val[1], qe.Obj.Value))
 }
 
 // Test for removing from queue with multiple expired keys before non-expired
 func TestRemoveMultipleExpiredBeforeNonExpire(t *testing.T) {
+	mockTime := &utils.MockClock{CurrTime: time.Now()}
+	utils.CurrentTime = mockTime
 	qr := core.NewQueueRef()
 	val := [3]int{10, 20, 30}
 	core.Put("key1", core.NewObj(val[0], 1, core.ObjTypeString, core.ObjEncodingInt))
@@ -111,7 +116,7 @@ func TestRemoveMultipleExpiredBeforeNonExpire(t *testing.T) {
 	qr.Insert("key2")
 	core.Put("key3", core.NewObj(val[2], -1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key3")
-	time.Sleep(2 * time.Millisecond)
+	mockTime.SetTime(time.Now().Add(2 * time.Millisecond))
 	fmt.Printf("Queue size : %d\n", qr.Length())
 	qe, err := qr.Remove()
 	assert.Check(t, err == nil || qe.Obj.Value == val[2], fmt.Sprintf("test for removing mulitple expired key before non-expired failed , Expected : %d, Got %d\n", val[2], qe.Obj.Value))
@@ -119,6 +124,8 @@ func TestRemoveMultipleExpiredBeforeNonExpire(t *testing.T) {
 
 // Test for removing from queue with all expired keys
 func TestRemoveAllExpired(t *testing.T) {
+	mockTime := &utils.MockClock{CurrTime: time.Now()}
+	utils.CurrentTime = mockTime
 	qr := core.NewQueueRef()
 	val := [3]int{10, 20, 30}
 	core.Put("key1", core.NewObj(val[0], 1, core.ObjTypeString, core.ObjEncodingInt))
@@ -127,7 +134,7 @@ func TestRemoveAllExpired(t *testing.T) {
 	qr.Insert("key2")
 	core.Put("key3", core.NewObj(val[2], 1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key3")
-	time.Sleep(2 * time.Millisecond)
+	mockTime.SetTime(time.Now().Add(2 * time.Millisecond))
 	// remove from empty queue
 	_, err := qr.Remove()
 	assert.Equal(t, err, core.ErrQueueEmpty, fmt.Sprintf("test for removing from empty queue failed Expected : %s, Got : %s\n", core.ErrQueueEmpty, err))
@@ -139,6 +146,9 @@ func BenchmarkQueueRef(b *testing.B) {
 }
 
 func benchmarkQueueRefInsertAndRemove(b *testing.B) {
+	mockTime := &utils.MockClock{CurrTime: time.Now()}
+	utils.CurrentTime = mockTime
+
 	qr := core.NewQueueRef()
 	expiredCount := b.N / 2
 	nonExpiredCount := b.N
@@ -162,7 +172,7 @@ func benchmarkQueueRefInsertAndRemove(b *testing.B) {
 
 	b.StopTimer()
 	// Allow expired keys to expire
-	time.Sleep(2 * time.Millisecond)
+	mockTime.SetTime(time.Now().Add(2 * time.Millisecond))
 	b.StartTimer()
 
 	// Remove only non-expired number of keys (expired keys will be auto-removed)
