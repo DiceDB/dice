@@ -5,5 +5,3 @@ dice-server
 venv
 __pycache__
 .idea/
-.golangci.yaml
-.pre-commit-config.yaml
