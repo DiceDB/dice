@@ -1,4 +1,4 @@
-package DiceErrors
+package diceerrors
 
 import (
 	"errors"
@@ -42,7 +42,7 @@ func NewErr(message string) error {
 func NewErrWithMessage(errMsg string) []byte {
 	// If the string already starts with "-..." then the error code
 	// is provided by the caller. Otherwise, we use "-ERR".
-	if len(errMsg) == 0 || errMsg[0] != '-' {
+	if errMsg == "" || errMsg[0] != '-' {
 		errMsg = fmt.Sprintf(ErrDefault, errMsg)
 	}
 

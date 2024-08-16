@@ -7,7 +7,7 @@ func setBit(buf []byte, b uint64) {
 		return
 	}
 
-	buf[idx] = buf[idx] | 1<<offset
+	buf[idx] |= 1 << offset
 }
 
 // isBitSet checks if the bit at index `b` is set to "1" or not in `buf`.
@@ -19,7 +19,6 @@ func isBitSet(buf []byte, b uint64) bool {
 
 	if buf[idx]&(1<<offset) == 1<<offset {
 		return true
-	} else {
-		return false
 	}
+	return false
 }

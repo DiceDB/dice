@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strconv"
 
+	"github.com/dicedb/dice/internal/constants"
 	"github.com/xwb1989/sqlparser"
 )
 
@@ -13,6 +14,7 @@ type DSQLQueryResultRow struct {
 	Value *Obj
 }
 
+//nolint:gocritic
 func ExecuteQuery(query DSQLQuery) ([]DSQLQueryResultRow, error) {
 	var result []DSQLQueryResultRow
 
@@ -49,7 +51,7 @@ func ExecuteQuery(query DSQLQuery) ([]DSQLQueryResultRow, error) {
 
 	if !query.Selection.KeySelection {
 		for i := range result {
-			result[i].Key = ""
+			result[i].Key = constants.EmptyStr
 		}
 	}
 
@@ -66,8 +68,9 @@ func ExecuteQuery(query DSQLQuery) ([]DSQLQueryResultRow, error) {
 	return result, nil
 }
 
+//nolint:gocritic
 func sortResults(query DSQLQuery, result []DSQLQueryResultRow) {
-	if query.OrderBy.OrderBy == "" {
+	if query.OrderBy.OrderBy == constants.EmptyStr {
 		return
 	}
 
@@ -117,7 +120,7 @@ func compareValues(order string, valI, valJ *Obj) bool {
 }
 
 func handleNilForOrder(order string, valI, valJ *Obj) bool {
-	if order == "asc" {
+	if order == constants.Asc {
 		return valI == nil
 	}
 	return valJ == nil
@@ -133,15 +136,15 @@ func handleUnsupportedType() bool {
 	return true
 }
 
-func compareStringValues(order string, valI, valJ string) bool {
-	if order == "asc" {
+func compareStringValues(order, valI, valJ string) bool {
+	if order == constants.Asc {
 		return valI < valJ
 	}
 	return valI > valJ
 }
 
 func compareIntValues(order string, valI, valJ uint8) bool {
-	if order == "asc" {
+	if order == constants.Asc {
 		return valI < valJ
 	}
 	return valI > valJ
@@ -176,7 +179,7 @@ func evaluateWhereClause(expr sqlparser.Expr, row DSQLQueryResultRow) (bool, err
 	}
 }
 
-func evaluateComparison(expr *sqlparser.ComparisonExpr, row DSQLQueryResultRow) (bool, error) {
+func evaluateComparison(expr *sqlparser.ComparisonExpr, row DSQLQueryResultRow) (b bool, e error) {
 	left, leftType, err := getExprValueAndType(expr.Left, row)
 	if err != nil {
 		return false, err
@@ -192,82 +195,82 @@ func evaluateComparison(expr *sqlparser.ComparisonExpr, row DSQLQueryResultRow) 
 	}
 
 	switch leftType {
-	case "string":
+	case constants.String:
 		return compareStrings(left.(string), right.(string), expr.Operator)
-	case "int":
+	case constants.Int:
 		return compareInts(left.(int), right.(int), expr.Operator)
-	case "float":
+	case constants.Float:
 		return compareFloats(left.(float64), right.(float64), expr.Operator)
 	default:
 		return false, fmt.Errorf("unsupported type for comparison: %s", leftType)
 	}
 }
 
-func getExprValueAndType(expr sqlparser.Expr, row DSQLQueryResultRow) (interface{}, string, error) {
+func getExprValueAndType(expr sqlparser.Expr, row DSQLQueryResultRow) (i interface{}, s string, e error) {
 	switch expr := expr.(type) {
 	case *sqlparser.ColName:
 		switch expr.Name.String() {
 		case TempKey:
-			return row.Key, "string", nil
+			return row.Key, constants.String, nil
 		case TempValue:
 			return getValueAndType(row.Value)
 		default:
-			return nil, "", fmt.Errorf("unknown column: %s", expr.Name.String())
+			return nil, constants.EmptyStr, fmt.Errorf("unknown column: %s", expr.Name.String())
 		}
 	case *sqlparser.SQLVal:
 		return sqlValToGoValue(expr)
 	default:
-		return nil, "", fmt.Errorf("unsupported expression type: %T", expr)
+		return nil, constants.EmptyStr, fmt.Errorf("unsupported expression type: %T", expr)
 	}
 }
 
-func getValueAndType(obj *Obj) (interface{}, string, error) {
+func getValueAndType(obj *Obj) (val interface{}, s string, e error) {
 	switch v := obj.Value.(type) {
 	case string:
-		return v, "string", nil
+		return v, constants.String, nil
 	case int:
-		return v, "int", nil
+		return v, constants.Int, nil
 	case float64:
-		return v, "float", nil
+		return v, constants.Float, nil
 	default:
-		return nil, "", fmt.Errorf("unsupported value type: %T", v)
+		return nil, constants.EmptyStr, fmt.Errorf("unsupported value type: %T", v)
 	}
 }
 
-func sqlValToGoValue(sqlVal *sqlparser.SQLVal) (interface{}, string, error) {
+func sqlValToGoValue(sqlVal *sqlparser.SQLVal) (val interface{}, s string, e error) {
 	switch sqlVal.Type {
 	case sqlparser.StrVal:
-		return string(sqlVal.Val), "string", nil
+		return string(sqlVal.Val), constants.String, nil
 	case sqlparser.IntVal:
 		i, err := strconv.Atoi(string(sqlVal.Val))
 		if err != nil {
-			return nil, "", err
+			return nil, constants.EmptyStr, err
 		}
-		return i, "int", nil
+		return i, constants.Int, nil
 	case sqlparser.FloatVal:
 		f, err := strconv.ParseFloat(string(sqlVal.Val), 64)
 		if err != nil {
-			return nil, "", err
+			return nil, constants.EmptyStr, err
 		}
-		return f, "float", nil
+		return f, constants.Float, nil
 	default:
-		return nil, "", fmt.Errorf("unsupported SQLVal type: %v", sqlVal.Type)
+		return nil, constants.EmptyStr, fmt.Errorf("unsupported SQLVal type: %v", sqlVal.Type)
 	}
 }
 
-func compareStrings(left, right string, operator string) (bool, error) {
+func compareStrings(left, right, operator string) (bool, error) {
 	switch operator {
 	case "=":
 		return left == right, nil
-	case "!=", "<>":
+	case constants.OperatorNotEquals, constants.OperatorNotEqualsTo:
 		return left != right, nil
 	case "<":
 		return left < right, nil
-	case "<=":
+	case constants.OperatorLessThanEqualsTo:
 		return left <= right, nil
 	case ">":
 		return left > right, nil
-	case ">=":
+	case constants.OperatorGreaterThanEqualsTo:
 		return left >= right, nil
 	default:
 		return false, fmt.Errorf("unsupported operator for strings: %s", operator)
@@ -278,15 +281,15 @@ func compareInts(left, right int, operator string) (bool, error) {
 	switch operator {
 	case "=":
 		return left == right, nil
-	case "!=", "<>":
+	case constants.OperatorNotEquals, constants.OperatorNotEqualsTo:
 		return left != right, nil
 	case "<":
 		return left < right, nil
-	case "<=":
+	case constants.OperatorLessThanEqualsTo:
 		return left <= right, nil
 	case ">":
 		return left > right, nil
-	case ">=":
+	case constants.OperatorGreaterThanEqualsTo:
 		return left >= right, nil
 	default:
 		return false, fmt.Errorf("unsupported operator for integers: %s", operator)
@@ -297,15 +300,15 @@ func compareFloats(left, right float64, operator string) (bool, error) {
 	switch operator {
 	case "=":
 		return left == right, nil
-	case "!=", "<>":
+	case constants.OperatorNotEquals, constants.OperatorNotEqualsTo:
 		return left != right, nil
 	case "<":
 		return left < right, nil
-	case "<=":
+	case constants.OperatorLessThanEqualsTo:
 		return left <= right, nil
 	case ">":
 		return left > right, nil
-	case ">=":
+	case constants.OperatorGreaterThanEqualsTo:
 		return left >= right, nil
 	default:
 		return false, fmt.Errorf("unsupported operator for floats: %s", operator)

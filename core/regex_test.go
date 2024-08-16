@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/dicedb/dice/core"
+	"github.com/dicedb/dice/internal/constants"
 )
 
 func TestWildCardMatch(t *testing.T) {
@@ -13,9 +14,9 @@ func TestWildCardMatch(t *testing.T) {
 		want    bool
 	}{
 		{"*", "anything", true},
-		{"*", "", true},
+		{"*", constants.EmptyStr, true},
 		{"?", "a", true},
-		{"?", "", false},
+		{"?", constants.EmptyStr, false},
 		{"a?", "ab", true},
 		{"a?", "a", false},
 		{"a*", "abc", true},

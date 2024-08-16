@@ -27,7 +27,7 @@ var (
 	keypoolMutex sync.RWMutex // Mutex to protect the keypool map, must be acquired after storeMutex if both are needed.
 )
 
-// Channel to receive updates about keys that are being watched.
+// WatchChannel Channel to receive updates about keys that are being watched.
 // The Watcher goroutine will wait on this channel. When a key is updated, the
 // goroutine will send the updated value and the related operation to all the
 // clients that are watching the key.
@@ -46,7 +46,7 @@ func ResetStore() {
 	}, WithStoreLock(), WithKeypoolLock())
 }
 
-func NewObj(value interface{}, expDurationMs int64, oType uint8, oEnc uint8) *Obj {
+func NewObj(value interface{}, expDurationMs int64, oType, oEnc uint8) *Obj {
 	obj := &Obj{
 		Value:          value,
 		TypeEncoding:   oType | oEnc,
@@ -58,10 +58,28 @@ func NewObj(value interface{}, expDurationMs int64, oType uint8, oEnc uint8) *Ob
 	return obj
 }
 
-func Put(k string, obj *Obj) {
+type PutOptions struct {
+	KeepTTL bool
+}
+
+func Put(k string, obj *Obj, opts ...PutOption) {
 	withLocks(func() {
-		putHelper(k, obj)
+		putHelper(k, obj, opts...)
 	}, WithStoreLock(), WithKeypoolLock())
+}
+
+func getDefaultOptions() *PutOptions {
+	return &PutOptions{
+		KeepTTL: false,
+	}
+}
+
+type PutOption func(*PutOptions)
+
+func WithKeepTTL(value bool) PutOption {
+	return func(po *PutOptions) {
+		po.KeepTTL = value
+	}
 }
 
 // PutAll is a bulk insert function that takes a map of
@@ -166,13 +184,13 @@ func Keys(p string) ([]string, error) {
 }
 
 // Function to add a new watcher to a query.
-func AddWatcher(query DSQLQuery, clientFd int) {
+func AddWatcher(query DSQLQuery, clientFd int) { //nolint:gocritic
 	clients, _ := WatchList.LoadOrStore(query, &sync.Map{})
 	clients.(*sync.Map).Store(clientFd, struct{}{})
 }
 
 // Function to remove a watcher from a query.
-func RemoveWatcher(query DSQLQuery, clientFd int) {
+func RemoveWatcher(query DSQLQuery, clientFd int) { //nolint:gocritic
 	if clients, ok := WatchList.Load(query); ok {
 		clients.(*sync.Map).Delete(clientFd)
 		// If no more clients for this query, remove the query from WatchList
@@ -183,7 +201,7 @@ func RemoveWatcher(query DSQLQuery, clientFd int) {
 }
 
 // Rename function to implement RENAME functionality using existing helpers
-func Rename(sourceKey string, destKey string) bool {
+func Rename(sourceKey, destKey string) bool {
 	return withLocksReturn(func() bool {
 		// If source and destination are the same, do nothing and return true
 		if sourceKey == destKey {
@@ -225,13 +243,34 @@ func Rename(sourceKey string, destKey string) bool {
 // putHelper is a helper function to insert a key-value pair into the store.
 // It also increments the key count in the KeyspaceStat map and notifies watchers.
 // This method is not thread-safe. It should be called within a lock.
-func putHelper(k string, obj *Obj) {
+func putHelper(k string, obj *Obj, opts ...PutOption) {
+	options := getDefaultOptions()
+
+	for _, optApplier := range opts {
+		optApplier(options)
+	}
+
 	if len(store) >= config.KeysLimit {
 		evict()
 	}
 	obj.LastAccessedAt = getCurrentClock()
 
 	ptr := ensureKeyInPool(k)
+	currentObject, ok := store[ptr]
+	if ok {
+		// NOTE: In case there is an value present
+		// for a given key 'k', then any updates
+		// performed with the 'KEEPTTL' flag need
+		// to ensure that we save the new value
+		// with the same expiration time as before
+		// Without the flag, the expiration time
+		// stored earlier will be removed.
+		_, ok = expires[currentObject]
+		if options.KeepTTL && ok {
+			expires[obj] = expires[currentObject]
+		}
+		delete(expires, currentObject)
+	}
 	store[ptr] = obj
 
 	incrementKeyCount()
@@ -299,7 +338,7 @@ func incrementKeyCount() {
 
 // notifyWatchers sends a WatchEvent to the WatchChannel.
 // This function is called whenever a key is updated.
-func notifyWatchers(k string, operation string, obj *Obj) {
+func notifyWatchers(k, operation string, obj *Obj) {
 	WatchChannel <- WatchEvent{k, operation, obj}
 }
 

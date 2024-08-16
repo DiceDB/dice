@@ -145,3 +145,10 @@ func (s *StackInt) Iterate(n int) []int64 {
 
 	return vals
 }
+
+func (s *StackInt) DeepCopy() *StackInt {
+	return &StackInt{
+		Length: s.Length,
+		list:   s.list.DeepCopy(),
+	}
+}

@@ -13,8 +13,8 @@ import (
 	"github.com/dicedb/dice/core"
 )
 
-func getRandomKeyValue() (string, int64) {
-	token := int64(rand.Uint64() % 5000000)
+func getRandomKeyValue() (k string, t int64) {
+	token := int64(rand.Uint64() % 5000000) //nolint:gosec
 	return "k" + strconv.FormatInt(token, 10), token
 }
 

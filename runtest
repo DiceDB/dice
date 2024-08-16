@@ -1,6 +1,6 @@
 #!/bin/sh
 TCL_VERSIONS="8.5 8.6 8.7"
-TCLSH=""
+TCLSH=constants.EmptyStr
 
 for VERSION in $TCL_VERSIONS; do
 	TCL=`which tclsh$VERSION 2>/dev/null` && TCLSH=$TCL

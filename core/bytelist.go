@@ -53,6 +53,7 @@ func (b *byteList) append(bn *byteListNode) {
 	}
 }
 
+//nolint:unused
 func (b *byteList) prepend(bn *byteListNode) {
 	bn.next = b.head
 	if b.head != nil {
@@ -82,4 +83,50 @@ func (b *byteList) delete(bn *byteListNode) {
 	}
 
 	b.size -= byteListNodeSize
+}
+
+// DeepCopy creates a deep copy of the byteList.
+func (b *byteList) DeepCopy() *byteList {
+	if b == nil {
+		return nil
+	}
+
+	// Create a new byteList instance using newByteList
+	copyList := newByteList(b.bufLen)
+	copyList.size = b.size
+
+	// Copy the nodes recursively starting from the head
+	if b.head != nil {
+		copyList.head = b.head.deepCopyNode(nil)
+	}
+
+	// Set the tail to the last node in the copied list
+	currentNode := copyList.head
+	for currentNode != nil {
+		if currentNode.next == nil {
+			copyList.tail = currentNode
+		}
+		currentNode = currentNode.next
+	}
+
+	return copyList
+}
+
+func (node *byteListNode) deepCopyNode(prevCopy *byteListNode) *byteListNode {
+	if node == nil {
+		return nil
+	}
+
+	// Create a copy of the current node
+	copyNode := &byteListNode{
+		buf:  append([]byte(nil), node.buf...),
+		prev: prevCopy,
+	}
+
+	// Recursively copy the next node
+	if node.next != nil {
+		copyNode.next = node.next.deepCopyNode(copyNode)
+	}
+
+	return copyNode
 }

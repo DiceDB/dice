@@ -3,7 +3,6 @@ package core
 import (
 	"bytes"
 	"fmt"
-	DiceErrors "github.com/dicedb/dice/core/diceerrors"
 	"log"
 	"math"
 	"strconv"
@@ -11,10 +10,13 @@ import (
 	"syscall"
 	"time"
 
+	DiceErrors "github.com/dicedb/dice/core/diceerrors"
+
 	"github.com/bytedance/sonic"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core/bit"
+	"github.com/dicedb/dice/internal/constants"
 	"github.com/ohler55/ojg/jp"
 )
 
@@ -25,15 +27,15 @@ const (
 	Initialized
 )
 
-var RESP_NIL []byte = []byte("$-1\r\n")
-var RESP_OK []byte = []byte("+OK\r\n")
-var RESP_AUTH_FAILURE []byte = []byte("+NOAUTH\r\n")
-var RESP_QUEUED []byte = []byte("+QUEUED\r\n")
-var RESP_ZERO []byte = []byte(":0\r\n")
-var RESP_ONE []byte = []byte(":1\r\n")
-var RESP_MINUS_1 []byte = []byte(":-1\r\n")
-var RESP_MINUS_2 []byte = []byte(":-2\r\n")
-var RESP_EMPTY_ARRAY []byte = []byte("*0\r\n")
+var RespNIL []byte = []byte("$-1\r\n")
+var RespOK []byte = []byte("+OK\r\n")
+var RespAuthFailure []byte = []byte("+NOAUTH\r\n")
+var RespQueued []byte = []byte("+QUEUED\r\n")
+var RespZero []byte = []byte(":0\r\n")
+var RespOne []byte = []byte(":1\r\n")
+var RespMinusOne []byte = []byte(":-1\r\n")
+var RespMinusTwo []byte = []byte(":-2\r\n")
+var RespEmptyArray []byte = []byte("*0\r\n")
 
 var txnCommands map[string]bool
 var serverID string
@@ -70,31 +72,28 @@ func evalPING(args []string) []byte {
 // If the user is not authenticated, it returns with an encoded error message
 func evalAUTH(args []string, c *Client) []byte {
 	var (
-		b   []byte
 		err error
 	)
 
-	if len(args) < 1 || len(args) > 2 {
+	if config.RequirePass == "" {
+		return DiceErrors.NewErrWithMessage("AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?")
+	}
+
+	var username = DefaultUserName
+	var password string
+
+	if len(args) == 1 {
+		password = args[0]
+	} else if len(args) == 2 {
+		username, password = args[0], args[1]
+	} else {
 		return DiceErrors.NewErrArity("AUTH")
 	}
 
-	if len(args) == 1 {
-		if err = c.Session.Validate(DefaultUserName, args[0]); err != nil {
-			log.Println("AUTH failed: ", err)
-			return DiceErrors.NewErrWithMessage(DiceErrors.AuthErr)
-		}
-		return RESP_OK
+	if err = c.Session.Validate(username, password); err != nil {
+		return Encode(err, false)
 	}
-
-	if len(args) == 2 {
-		if err = c.Session.Validate(args[0], args[1]); err != nil {
-			log.Println("AUTH failed: ", err)
-			return DiceErrors.NewErrWithMessage(DiceErrors.AuthErr)
-		}
-		return RESP_OK
-	}
-
-	return b
+	return RespOK
 }
 
 // evalSET puts a new <key, value> pair in db as in the args
@@ -120,6 +119,7 @@ func evalSET(args []string) []byte {
 	var key, value string
 	var exDurationMs int64 = -1
 	var state exDurationState = Uninitialized
+	var keepttl bool = false
 
 	key, value = args[0], args[1]
 	oType, oEnc := deduceTypeEncoding(value)
@@ -127,7 +127,7 @@ func evalSET(args []string) []byte {
 	for i := 2; i < len(args); i++ {
 		arg := strings.ToUpper(args[i])
 		switch arg {
-		case "EX", "PX":
+		case constants.Ex, constants.Px:
 			if state != Uninitialized {
 				return DiceErrors.NewErrWithMessage(DiceErrors.SyntaxErr)
 			}
@@ -146,13 +146,13 @@ func evalSET(args []string) []byte {
 			}
 
 			// converting seconds to milliseconds
-			if arg == "EX" {
-				exDuration = exDuration * 1000
+			if arg == constants.Ex {
+				exDuration *= 1000
 			}
 			exDurationMs = exDuration
 			state = Initialized
 
-		case "PXAT", "EXAT":
+		case constants.Pxat, constants.Exat:
 			if state != Uninitialized {
 				return DiceErrors.NewErrWithMessage(DiceErrors.SyntaxErr)
 			}
@@ -169,8 +169,8 @@ func evalSET(args []string) []byte {
 				return DiceErrors.NewErrExpireTime("SET")
 			}
 
-			if arg == "EXAT" {
-				exDuration = exDuration * 1000
+			if arg == constants.Exat {
+				exDuration *= 1000
 			}
 			exDurationMs = exDuration - time.Now().UnixMilli()
 			// If the expiry time is in the past, set exDurationMs to 0
@@ -180,27 +180,30 @@ func evalSET(args []string) []byte {
 			}
 			state = Initialized
 
-		case "XX":
+		case constants.XX:
 			// Get the key from the hash table
 			obj := Get(key)
 
 			// if key does not exist, return RESP encoded nil
 			if obj == nil {
-				return RESP_NIL
+				return RespNIL
 			}
-		case "NX":
+		case constants.NX:
 			obj := Get(key)
 			if obj != nil {
-				return RESP_NIL
+				return RespNIL
 			}
+		case constants.KEEPTTL, constants.Keepttl:
+			keepttl = true
 		default:
 			return DiceErrors.NewErrWithMessage(DiceErrors.SyntaxErr)
 		}
 	}
 
 	// putting the k and value in a Hash Table
-	Put(key, NewObj(value, exDurationMs, oType, oEnc))
-	return RESP_OK
+	Put(key, NewObj(value, exDurationMs, oType, oEnc), WithKeepTTL(keepttl))
+
+	return RespOK
 }
 
 // evalMSET puts multiple <key, value> pairs in db as in the args
@@ -226,13 +229,13 @@ func evalMSET(args []string) []byte {
 	}
 
 	PutAll(insertMap)
-	return RESP_OK
+	return RespOK
 }
 
 // evalGET returns the value for the queried key in args
 // The key should be the only param in args
 // The RESP value of the key is encoded and then returned
-// evalGET returns RESP_NIL if key is expired or it does not exist
+// evalGET returns RespNIL if key is expired or it does not exist
 func evalGET(args []string) []byte {
 	if len(args) != 1 {
 		return DiceErrors.NewErrArity("GET")
@@ -245,7 +248,7 @@ func evalGET(args []string) []byte {
 
 	// if key does not exist, return RESP encoded nil
 	if obj == nil {
-		return RESP_NIL
+		return RespNIL
 	}
 
 	// return the RESP encoded value
@@ -256,7 +259,7 @@ func evalGET(args []string) []byte {
 // The key should be the only param in args
 // The RESP value of the key is encoded and then returned
 // In evalGETDEL  If the key exists, it will be deleted before its value is returned.
-// evalGETDEL returns RESP_NIL if key is expired or it does not exist
+// evalGETDEL returns RespNIL if key is expired or it does not exist
 func evalGETDEL(args []string) []byte {
 	if len(args) != 1 {
 		return DiceErrors.NewErrArity("GETDEL")
@@ -269,7 +272,7 @@ func evalGETDEL(args []string) []byte {
 
 	// if key does not exist, return RESP encoded nil
 	if obj == nil {
-		return RESP_NIL
+		return RespNIL
 	}
 
 	// return the RESP encoded value
@@ -278,7 +281,7 @@ func evalGETDEL(args []string) []byte {
 
 // evalJSONGET retrieves a JSON value stored at the specified key
 // args must contain at least the key;  (path unused in this implementation)
-// Returns RESP_NIL if key is expired or it does not exist
+// Returns RespNIL if key is expired or it does not exist
 // Returns encoded error response if incorrect number of arguments
 // The RESP value of the key is encoded and then returned
 func evalJSONGET(args []string) []byte {
@@ -296,15 +299,15 @@ func evalJSONGET(args []string) []byte {
 	// Retrieve the object from the database
 	obj := Get(key)
 	if obj == nil {
-		return RESP_NIL
+		return RespNIL
 	}
 
 	// Check if the object is of JSON type
-	err := assertType(obj.TypeEncoding, OBJ_TYPE_JSON)
+	err := assertType(obj.TypeEncoding, ObjTypeJSON)
 	if err != nil {
 		return Encode(err, false)
 	}
-	err = assertEncoding(obj.TypeEncoding, OBJ_ENCODING_JSON)
+	err = assertEncoding(obj.TypeEncoding, ObjEncodingJSON)
 	if err != nil {
 		return Encode(err, false)
 	}
@@ -329,7 +332,7 @@ func evalJSONGET(args []string) []byte {
 	// Execute the JSONPath query
 	results := expr.Get(jsonData)
 	if len(results) == 0 {
-		return RESP_NIL
+		return RespNIL
 	}
 
 	// Serialize the result
@@ -349,7 +352,7 @@ func evalJSONGET(args []string) []byte {
 // args must contain at least the key, path (unused in this implementation), and JSON string
 // Returns encoded error response if incorrect number of arguments
 // Returns encoded error if the JSON string is invalid
-// Returns RESP_OK if the JSON value is successfully stored
+// Returns RespOK if the JSON value is successfully stored
 func evalJSONSET(args []string) []byte {
 	// Check if there are enough arguments
 	if len(args) < 3 {
@@ -362,21 +365,21 @@ func evalJSONSET(args []string) []byte {
 
 	for i := 3; i < len(args); i++ {
 		switch args[i] {
-		case "NX", "nx":
+		case constants.NX, constants.Nx:
 			if i != len(args)-1 {
 				return DiceErrors.NewErrWithMessage(DiceErrors.SyntaxErr)
 			}
 			obj := Get(key)
 			if obj != nil {
-				return RESP_NIL
+				return RespNIL
 			}
-		case "XX", "xx":
+		case constants.XX, constants.Xx:
 			if i != len(args)-1 {
 				return DiceErrors.NewErrWithMessage(DiceErrors.SyntaxErr)
 			}
 			obj := Get(key)
 			if obj == nil {
-				return RESP_NIL
+				return RespNIL
 			}
 
 		default:
@@ -387,7 +390,7 @@ func evalJSONSET(args []string) []byte {
 	// Parse the JSON string
 	var jsonValue interface{}
 	if err := sonic.UnmarshalString(jsonStr, &jsonValue); err != nil {
-		return DiceErrors.NewErrWithMessage(fmt.Sprintf("invalid JSON: %v", err.Error()))
+		return DiceErrors.NewErrWithFormattedMessage("invalid JSON: %v", err.Error())
 	}
 
 	// Retrieve existing object or create new one
@@ -403,11 +406,11 @@ func evalJSONSET(args []string) []byte {
 		}
 	} else {
 		// If the key exists, check if it's a JSON object
-		err := assertType(obj.TypeEncoding, OBJ_TYPE_JSON)
+		err := assertType(obj.TypeEncoding, ObjTypeJSON)
 		if err != nil {
 			return Encode(err, false)
 		}
-		err = assertEncoding(obj.TypeEncoding, OBJ_ENCODING_JSON)
+		err = assertEncoding(obj.TypeEncoding, ObjEncodingJSON)
 		if err != nil {
 			return Encode(err, false)
 		}
@@ -431,10 +434,10 @@ func evalJSONSET(args []string) []byte {
 	}
 
 	// Create a new object with the updated JSON data
-	newObj := NewObj(rootData, -1, OBJ_TYPE_JSON, OBJ_ENCODING_JSON)
+	newObj := NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
 	Put(key, newObj)
 
-	return RESP_OK
+	return RespOK
 }
 
 // evalTTL returns Time-to-Live in secs for the queried key in args
@@ -454,13 +457,13 @@ func evalTTL(args []string) []byte {
 
 	// if key does not exist, return RESP encoded -2 denoting key does not exist
 	if obj == nil {
-		return RESP_MINUS_2
+		return RespMinusTwo
 	}
 
 	// if object exist, but no expiration is set on it then send -1
 	exp, isExpirySet := getExpiry(obj)
 	if !isExpirySet {
-		return RESP_MINUS_1
+		return RespMinusOne
 	}
 
 	// compute the time remaining for the key to expire and
@@ -487,7 +490,7 @@ func evalDEL(args []string) []byte {
 // evalEXPIRE sets a expiry time(in secs) on the specified key in args
 // args should contain 2 values, key and the expiry time to be set for the key
 // The expiry time should be in integer format; if not, it returns encoded error response
-// Returns RESP_ONE if expiry was set on the key successfully.
+// Returns RespOne if expiry was set on the key successfully.
 // Once the time is lapsed, the key will be deleted automatically
 func evalEXPIRE(args []string) []byte {
 	if len(args) <= 1 {
@@ -504,13 +507,13 @@ func evalEXPIRE(args []string) []byte {
 
 	// 0 if the timeout was not set. e.g. key doesn't exist, or operation skipped due to the provided arguments
 	if obj == nil {
-		return RESP_ZERO
+		return RespZero
 	}
 
 	setExpiry(obj, exDurationSec*1000)
 
 	// 1 if the timeout was set.
-	return RESP_ONE
+	return RespOne
 }
 
 func evalHELLO(args []string) []byte {
@@ -519,11 +522,12 @@ func evalHELLO(args []string) []byte {
 	}
 
 	var response []interface{}
-	response = append(response, "proto", 2)
-	response = append(response, "id", serverID)
-	response = append(response, "mode", "standalone")
-	response = append(response, "role", "master")
-	response = append(response, "modules", []interface{}{})
+	response = append(response,
+		"proto", 2,
+		"id", serverID,
+		"mode", "standalone",
+		"role", "master",
+		"modules", []interface{}{})
 
 	return Encode(response, false)
 }
@@ -540,15 +544,14 @@ func evalBGREWRITEAOF(args []string) []byte {
 	// Check details here -https://www.sobyte.net/post/2022-10/fork-cow/
 	newChild, _, _ := syscall.Syscall(syscall.SYS_FORK, 0, 0, 0)
 	if newChild == 0 {
-		//We are inside child process now, so we'll start flushing to disk.
+		// We are inside child process now, so we'll start flushing to disk.
 		if err := DumpAllAOF(); err != nil {
 			return DiceErrors.NewErrWithMessage("AOF failed")
 		}
-		return []byte("")
-	} else {
-		//Back to main thread
-		return RESP_OK
+		return []byte(constants.EmptyStr)
 	}
+	// Back to main thread
+	return RespOK
 }
 
 // evalINCR increments the value of the specified key in args by 1,
@@ -604,16 +607,16 @@ func incrDecrCmd(args []string, incr int64) []byte {
 	var key string = args[0]
 	obj := Get(key)
 	if obj == nil {
-		obj = NewObj("0", -1, OBJ_TYPE_STRING, OBJ_ENCODING_INT)
+		obj = NewObj("0", -1, ObjTypeString, ObjEncodingInt)
 		Put(key, obj)
 	}
 
-	if err := assertType(obj.TypeEncoding, OBJ_TYPE_STRING); err != nil {
-		return Encode(err, false)
+	if err := assertType(obj.TypeEncoding, ObjTypeString); err != nil {
+		return DiceErrors.NewErrWithMessage(err.Error())
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_INT); err != nil {
-		return Encode(err, false)
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingInt); err != nil {
+		return DiceErrors.NewErrWithMessage(err.Error())
 	}
 
 	i, _ := strconv.ParseInt(obj.Value.(string), 10, 64)
@@ -623,7 +626,7 @@ func incrDecrCmd(args []string, incr int64) []byte {
 		return DiceErrors.NewErrWithMessage(DiceErrors.ValOutOfRangeErr)
 	}
 
-	i += int64(incr)
+	i += incr
 	obj.Value = strconv.FormatInt(i, 10)
 
 	return Encode(i, false)
@@ -636,14 +639,14 @@ func evalINFO(args []string) []byte {
 	buf := bytes.NewBuffer(info)
 	buf.WriteString("# Keyspace\r\n")
 	for i := range KeyspaceStat {
-		buf.WriteString(fmt.Sprintf("db%d:keys=%d,expires=0,avg_ttl=0\r\n", i, KeyspaceStat[i]["keys"]))
+		fmt.Fprintf(buf, "db%d:keys=%d,expires=0,avg_ttl=0\r\n", i, KeyspaceStat[i]["keys"])
 	}
 	return Encode(buf.String(), false)
 }
 
 // TODO: Placeholder to support monitoring
 func evalCLIENT(args []string) []byte {
-	return RESP_OK
+	return RespOK
 }
 
 // TODO: Placeholder to support monitoring
@@ -655,13 +658,13 @@ func evalLATENCY(args []string) []byte {
 // returns encoded RESP OK
 func evalLRU(args []string) []byte {
 	evictAllkeysLRU()
-	return RESP_OK
+	return RespOK
 }
 
 // evalSLEEP sets db to sleep for the specified number of seconds.
 // The sleep time should be the only param in args.
 // Returns error response if the time param in args is not of integer format.
-// evalSLEEP returns RESP_OK after sleeping for mentioned seconds
+// evalSLEEP returns RespOK after sleeping for mentioned seconds
 func evalSLEEP(args []string) []byte {
 	if len(args) != 1 {
 		return DiceErrors.NewErrArity("SLEEP")
@@ -672,7 +675,7 @@ func evalSLEEP(args []string) []byte {
 		return DiceErrors.NewErrWithMessage(DiceErrors.IntOrOutOfRangeErr)
 	}
 	time.Sleep(time.Duration(durationSec) * time.Second)
-	return RESP_OK
+	return RespOK
 }
 
 // evalMULTI marks the start of the transaction for the client.
@@ -681,7 +684,7 @@ func evalSLEEP(args []string) []byte {
 // Once EXEC is triggered it executes all the commands in queue,
 // and closes the MULTI transaction.
 func evalMULTI(args []string) []byte {
-	return RESP_OK
+	return RespOK
 }
 
 // evalQINTINS inserts the provided integer in the key identified by key
@@ -700,14 +703,14 @@ func evalQINTINS(args []string) []byte {
 
 	obj := Get(args[0])
 	if obj == nil {
-		obj = NewObj(NewQueueInt(), -1, OBJ_TYPE_BYTELIST, OBJ_ENCODING_QINT)
+		obj = NewObj(NewQueueInt(), -1, ObjTypeByteList, ObjEncodingQint)
 	}
 
-	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_QINT); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQint); err != nil {
 		return Encode(err, false)
 	}
 
@@ -716,7 +719,7 @@ func evalQINTINS(args []string) []byte {
 	q := obj.Value.(*QueueInt)
 	q.Insert(x)
 
-	return RESP_OK
+	return RespOK
 }
 
 // evalSTACKINTPUSH pushes the provided integer in the key identified by key
@@ -735,14 +738,14 @@ func evalSTACKINTPUSH(args []string) []byte {
 
 	obj := Get(args[0])
 	if obj == nil {
-		obj = NewObj(NewStackInt(), -1, OBJ_TYPE_BYTELIST, OBJ_ENCODING_STACKINT)
+		obj = NewObj(NewStackInt(), -1, ObjTypeByteList, ObjEncodingStackInt)
 	}
 
-	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_STACKINT); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackInt); err != nil {
 		return Encode(err, false)
 	}
 
@@ -751,7 +754,7 @@ func evalSTACKINTPUSH(args []string) []byte {
 	s := obj.Value.(*StackInt)
 	s.Push(x)
 
-	return RESP_OK
+	return RespOK
 }
 
 // evalQINTREM removes the element from the QINT identified by key
@@ -766,14 +769,14 @@ func evalQINTREM(args []string) []byte {
 
 	obj := Get(args[0])
 	if obj == nil {
-		return RESP_NIL
+		return RespNIL
 	}
 
-	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_QINT); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQint); err != nil {
 		return Encode(err, false)
 	}
 
@@ -781,7 +784,7 @@ func evalQINTREM(args []string) []byte {
 	x, err := q.Remove()
 
 	if err == ErrQueueEmpty {
-		return RESP_NIL
+		return RespNIL
 	}
 
 	return Encode(x, false)
@@ -799,14 +802,14 @@ func evalSTACKINTPOP(args []string) []byte {
 
 	obj := Get(args[0])
 	if obj == nil {
-		return RESP_NIL
+		return RespNIL
 	}
 
-	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_STACKINT); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackInt); err != nil {
 		return Encode(err, false)
 	}
 
@@ -814,7 +817,7 @@ func evalSTACKINTPOP(args []string) []byte {
 	x, err := s.Pop()
 
 	if err == ErrStackEmpty {
-		return RESP_NIL
+		return RespNIL
 	}
 
 	return Encode(x, false)
@@ -830,14 +833,14 @@ func evalQINTLEN(args []string) []byte {
 
 	obj := Get(args[0])
 	if obj == nil {
-		return RESP_ZERO
+		return RespZero
 	}
 
-	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_QINT); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQint); err != nil {
 		return Encode(err, false)
 	}
 
@@ -855,14 +858,14 @@ func evalSTACKINTLEN(args []string) []byte {
 
 	obj := Get(args[0])
 	if obj == nil {
-		return RESP_ZERO
+		return RespZero
 	}
 
-	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_STACKINT); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackInt); err != nil {
 		return Encode(err, false)
 	}
 
@@ -890,14 +893,14 @@ func evalQINTPEEK(args []string) []byte {
 
 	obj := Get(args[0])
 	if obj == nil {
-		return RESP_EMPTY_ARRAY
+		return RespEmptyArray
 	}
 
-	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_QINT); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQint); err != nil {
 		return Encode(err, false)
 	}
 
@@ -925,14 +928,14 @@ func evalSTACKINTPEEK(args []string) []byte {
 
 	obj := Get(args[0])
 	if obj == nil {
-		return RESP_EMPTY_ARRAY
+		return RespEmptyArray
 	}
 
-	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_STACKINT); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackInt); err != nil {
 		return Encode(err, false)
 	}
 
@@ -953,14 +956,14 @@ func evalQREFINS(args []string) []byte {
 
 	obj := Get(args[0])
 	if obj == nil {
-		obj = NewObj(NewQueueRef(), -1, OBJ_TYPE_BYTELIST, OBJ_ENCODING_QREF)
+		obj = NewObj(NewQueueRef(), -1, ObjTypeByteList, ObjEncodingQref)
 	}
 
-	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_QREF); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQref); err != nil {
 		return Encode(err, false)
 	}
 
@@ -986,14 +989,14 @@ func evalSTACKREFPUSH(args []string) []byte {
 
 	obj := Get(args[0])
 	if obj == nil {
-		obj = NewObj(NewStackRef(), -1, OBJ_TYPE_BYTELIST, OBJ_ENCODING_STACKREF)
+		obj = NewObj(NewStackRef(), -1, ObjTypeByteList, ObjEncodingStackRef)
 	}
 
-	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_STACKREF); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackRef); err != nil {
 		return Encode(err, false)
 	}
 
@@ -1018,14 +1021,14 @@ func evalQREFREM(args []string) []byte {
 
 	obj := Get(args[0])
 	if obj == nil {
-		return RESP_NIL
+		return RespNIL
 	}
 
-	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_QREF); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQref); err != nil {
 		return Encode(err, false)
 	}
 
@@ -1033,7 +1036,7 @@ func evalQREFREM(args []string) []byte {
 	x, err := q.Remove()
 
 	if err == ErrQueueEmpty {
-		return RESP_NIL
+		return RespNIL
 	}
 
 	return Encode(x, false)
@@ -1051,14 +1054,14 @@ func evalSTACKREFPOP(args []string) []byte {
 
 	obj := Get(args[0])
 	if obj == nil {
-		return RESP_NIL
+		return RespNIL
 	}
 
-	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_STACKREF); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackRef); err != nil {
 		return Encode(err, false)
 	}
 
@@ -1066,7 +1069,7 @@ func evalSTACKREFPOP(args []string) []byte {
 	x, err := s.Pop()
 
 	if err == ErrStackEmpty {
-		return RESP_NIL
+		return RespNIL
 	}
 
 	return Encode(x, false)
@@ -1082,14 +1085,14 @@ func evalQREFLEN(args []string) []byte {
 
 	obj := Get(args[0])
 	if obj == nil {
-		return RESP_ZERO
+		return RespZero
 	}
 
-	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_QREF); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQref); err != nil {
 		return Encode(err, false)
 	}
 
@@ -1107,14 +1110,14 @@ func evalSTACKREFLEN(args []string) []byte {
 
 	obj := Get(args[0])
 	if obj == nil {
-		return RESP_ZERO
+		return RespZero
 	}
 
-	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_STACKREF); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackRef); err != nil {
 		return Encode(err, false)
 	}
 
@@ -1142,14 +1145,14 @@ func evalQREFPEEK(args []string) []byte {
 
 	obj := Get(args[0])
 	if obj == nil {
-		return RESP_EMPTY_ARRAY
+		return RespEmptyArray
 	}
 
-	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_QREF); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQref); err != nil {
 		return Encode(err, false)
 	}
 
@@ -1177,14 +1180,14 @@ func evalSTACKREFPEEK(args []string) []byte {
 
 	obj := Get(args[0])
 	if obj == nil {
-		return RESP_EMPTY_ARRAY
+		return RespEmptyArray
 	}
 
-	if err := assertType(obj.TypeEncoding, OBJ_TYPE_BYTELIST); err != nil {
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, OBJ_ENCODING_STACKREF); err != nil {
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackRef); err != nil {
 		return Encode(err, false)
 	}
 
@@ -1202,10 +1205,10 @@ func evalQWATCH(args []string, c *Client) []byte {
 	}
 
 	// Parse and get the selection from the query.
-	query, error := ParseQuery( /*sql=*/ args[0])
+	query, e := ParseQuery( /*sql=*/ args[0])
 
-	if error != nil {
-		return Encode(error, false)
+	if e != nil {
+		return Encode(e, false)
 	}
 
 	AddWatcher(query, c.Fd)
@@ -1242,17 +1245,17 @@ func evalSETBIT(args []string) []byte {
 	requiredByteArraySize := offset/8 + 1
 
 	if obj == nil {
-		obj = NewObj(NewByteArray(int(requiredByteArraySize)), -1, OBJ_TYPE_BYTEARRAY, OBJ_ENCODING_BYTEARRAY)
+		obj = NewObj(NewByteArray(int(requiredByteArraySize)), -1, ObjTypeByteArray, ObjEncodingByteArray)
 		Put(args[0], obj)
 	}
 
 	// handle the case when it is string
-	if assertType(obj.TypeEncoding, OBJ_TYPE_STRING) == nil {
+	if assertType(obj.TypeEncoding, ObjTypeString) == nil {
 		return DiceErrors.NewErrWithMessage("value is not a valid byte array")
 	}
 
 	// handle the case when it is byte array
-	if assertType(obj.TypeEncoding, OBJ_TYPE_BYTEARRAY) == nil {
+	if assertType(obj.TypeEncoding, ObjTypeByteArray) == nil {
 		byteArray := obj.Value.(*ByteArray)
 		byteArrayLength := byteArray.Length
 
@@ -1302,25 +1305,24 @@ func evalGETBIT(args []string) []byte {
 	requiredByteArraySize := offset/8 + 1
 
 	// handle the case when it is string
-	if assertType(obj.TypeEncoding, OBJ_TYPE_STRING) == nil {
+	if assertType(obj.TypeEncoding, ObjTypeString) == nil {
 		return DiceErrors.NewErrWithMessage("value is not a valid byte array")
 	}
 
 	// handle the case when it is byte array
-	if assertType(obj.TypeEncoding, OBJ_TYPE_BYTEARRAY) == nil {
+	if assertType(obj.TypeEncoding, ObjTypeByteArray) == nil {
 		byteArray := obj.Value.(*ByteArray)
 		byteArrayLength := byteArray.Length
 
 		// check whether offset, length exists or not
 		if requiredByteArraySize > byteArrayLength {
 			return Encode(0, true)
-		} else {
-			value := byteArray.GetBit(int(offset))
-			if value {
-				return Encode(1, true)
-			}
-			return Encode(0, true)
 		}
+		value := byteArray.GetBit(int(offset))
+		if value {
+			return Encode(1, true)
+		}
+		return Encode(0, true)
 	}
 
 	return Encode(0, true)
@@ -1345,14 +1347,14 @@ func evalBITCOUNT(args []string) []byte {
 	value := []byte{}
 	valueLength := int64(0)
 
-	if assertType(obj.TypeEncoding, OBJ_TYPE_BYTEARRAY) == nil {
+	if assertType(obj.TypeEncoding, ObjTypeByteArray) == nil {
 		byteArray := obj.Value.(*ByteArray)
 		byteArrayObject := *byteArray
 		value = byteArrayObject.data
 		valueLength = byteArray.Length
 	}
 
-	if assertType(obj.TypeEncoding, OBJ_TYPE_STRING) == nil {
+	if assertType(obj.TypeEncoding, ObjTypeString) == nil {
 		value = []byte(valueInterface.(string))
 		valueLength = int64(len(value))
 	}
@@ -1406,27 +1408,26 @@ func evalBITCOUNT(args []string) []byte {
 			bitCount += int(popcount(value[i]))
 		}
 		return Encode(bitCount, true)
-	} else {
-		startBitRange := start / 8
-		endBitRange := end / 8
-
-		for i := startBitRange; i <= endBitRange; i++ {
-			if i == startBitRange {
-				considerBits := start % 8
-				for j := 8 - considerBits - 1; j >= 0; j-- {
-					bitCount += int(popcount(byte(int(value[i]) & (1 << j))))
-				}
-			} else if i == endBitRange {
-				considerBits := end % 8
-				for j := considerBits; j >= 0; j-- {
-					bitCount += int(popcount(byte(int(value[i]) & (1 << (8 - j - 1)))))
-				}
-			} else {
-				bitCount += int(popcount(value[i]))
-			}
-		}
-		return Encode(bitCount, true)
 	}
+	startBitRange := start / 8
+	endBitRange := end / 8
+
+	for i := startBitRange; i <= endBitRange; i++ {
+		if i == startBitRange {
+			considerBits := start % 8
+			for j := 8 - considerBits - 1; j >= 0; j-- {
+				bitCount += int(popcount(byte(int(value[i]) & (1 << j))))
+			}
+		} else if i == endBitRange {
+			considerBits := end % 8
+			for j := considerBits; j >= 0; j-- {
+				bitCount += int(popcount(byte(int(value[i]) & (1 << (8 - j - 1)))))
+			}
+		} else {
+			bitCount += int(popcount(value[i]))
+		}
+	}
+	return Encode(bitCount, true)
 }
 
 // BITOP <AND | OR | XOR | NOT> destkey key [key ...]
@@ -1439,22 +1440,22 @@ func evalBITOP(args []string) []byte {
 
 	// validation of commands
 	// if operation is not from enums, then error out
-	if !(operation == "AND" || operation == "OR" || operation == "XOR" || operation == "NOT") {
+	if !(operation == constants.AND || operation == constants.OR || operation == constants.XOR || operation == constants.NOT) {
 		return DiceErrors.NewErrWithMessage(DiceErrors.SyntaxErr)
 	}
-	// if operation is not, then keys lenght should be only 1
-	if operation == "NOT" && len(keys) != 1 {
+	// if operation is not, then keys length should be only 1
+	if operation == constants.NOT && len(keys) != 1 {
 		return DiceErrors.NewErrWithMessage("BITOP NOT must be called with a single source key.")
 	}
 
-	if operation == "NOT" {
+	if operation == constants.NOT {
 		obj := Get(keys[0])
 		if obj == nil {
 			return Encode(0, true)
 		}
 
 		var value []byte
-		if assertType(obj.TypeEncoding, OBJ_TYPE_BYTEARRAY) == nil {
+		if assertType(obj.TypeEncoding, ObjTypeByteArray) == nil {
 			byteArray := obj.Value.(*ByteArray)
 			byteArrayObject := *byteArray
 			value = byteArrayObject.data
@@ -1477,91 +1478,90 @@ func evalBITOP(args []string) []byte {
 		operationResult.ResizeIfNecessary()
 
 		// create object related to result
-		obj = NewObj(operationResult, -1, OBJ_TYPE_BYTEARRAY, OBJ_ENCODING_BYTEARRAY)
+		obj = NewObj(operationResult, -1, ObjTypeByteArray, ObjEncodingByteArray)
 
 		// store the result in destKey
 		Put(destKey, obj)
 		return Encode(len(value), true)
-	} else {
-		// if operation is AND, OR, XOR
-		values := make([][]byte, len(keys))
-
-		// get the values of all keys
-		for i, key := range keys {
-			obj := Get(key)
-			if obj == nil {
-				values[i] = make([]byte, 0)
-			} else {
-				// handle the case when it is byte array
-				if assertType(obj.TypeEncoding, OBJ_TYPE_BYTEARRAY) == nil {
-					byteArray := obj.Value.(*ByteArray)
-					byteArrayObject := *byteArray
-					values[i] = byteArrayObject.data
-				} else {
-					return DiceErrors.NewErrWithMessage("value is not a valid byte array")
-				}
-			}
-		}
-
-		// get the length of the largest value
-		maxLength := 0
-		minLength := len(values[0])
-		maxKeyIterator := 0
-		for keyIterator, value := range values {
-			if len(value) > maxLength {
-				maxLength = len(value)
-				maxKeyIterator = keyIterator
-			}
-			if len(value) < minLength {
-				minLength = len(value)
-			}
-		}
-
-		result := make([]byte, maxLength)
-		if operation == "AND" {
-			for i := 0; i < maxLength; i++ {
-				if i < minLength {
-					result[i] = values[maxKeyIterator][i]
-				} else {
-					result[i] = 0
-				}
-			}
-		}
-		if operation == "XOR" || operation == "OR" {
-			for i := 0; i < maxLength; i++ {
-				result[i] = 0x00
-			}
-		}
-
-		// perform the operation
-		for _, value := range values {
-			for i := 0; i < len(value); i++ {
-				if operation == "AND" {
-					result[i] &= value[i]
-				} else if operation == "OR" {
-					result[i] |= value[i]
-				} else if operation == "XOR" {
-					result[i] ^= value[i]
-				}
-			}
-		}
-
-		// initialize result with byteArray
-		operationResult := NewByteArray(len(result))
-		operationResult.data = result
-		operationResult.Length = int64(len(result))
-
-		// resize the byte array if necessary
-		operationResult.ResizeIfNecessary()
-
-		// create object related to result
-		operationResultObject := NewObj(operationResult, -1, OBJ_TYPE_BYTEARRAY, OBJ_ENCODING_BYTEARRAY)
-
-		// store the result in destKey
-		Put(destKey, operationResultObject)
-
-		return Encode(len(result), true)
 	}
+	// if operation is AND, OR, XOR
+	values := make([][]byte, len(keys))
+
+	// get the values of all keys
+	for i, key := range keys {
+		obj := Get(key)
+		if obj == nil {
+			values[i] = make([]byte, 0)
+		} else {
+			// handle the case when it is byte array
+			if assertType(obj.TypeEncoding, ObjTypeByteArray) == nil {
+				byteArray := obj.Value.(*ByteArray)
+				byteArrayObject := *byteArray
+				values[i] = byteArrayObject.data
+			} else {
+				return DiceErrors.NewErrWithMessage("value is not a valid byte array")
+			}
+		}
+	}
+
+	// get the length of the largest value
+	maxLength := 0
+	minLength := len(values[0])
+	maxKeyIterator := 0
+	for keyIterator, value := range values {
+		if len(value) > maxLength {
+			maxLength = len(value)
+			maxKeyIterator = keyIterator
+		}
+		if len(value) < minLength {
+			minLength = len(value)
+		}
+	}
+
+	result := make([]byte, maxLength)
+	if operation == constants.AND {
+		for i := 0; i < maxLength; i++ {
+			if i < minLength {
+				result[i] = values[maxKeyIterator][i]
+			} else {
+				result[i] = 0
+			}
+		}
+	}
+	if operation == constants.XOR || operation == constants.OR {
+		for i := 0; i < maxLength; i++ {
+			result[i] = 0x00
+		}
+	}
+
+	// perform the operation
+	for _, value := range values {
+		for i := 0; i < len(value); i++ {
+			if operation == constants.AND {
+				result[i] &= value[i]
+			} else if operation == constants.OR {
+				result[i] |= value[i]
+			} else if operation == constants.XOR {
+				result[i] ^= value[i]
+			}
+		}
+	}
+
+	// initialize result with byteArray
+	operationResult := NewByteArray(len(result))
+	operationResult.data = result
+	operationResult.Length = int64(len(result))
+
+	// resize the byte array if necessary
+	operationResult.ResizeIfNecessary()
+
+	// create object related to result
+	operationResultObject := NewObj(operationResult, -1, ObjTypeByteArray, ObjEncodingByteArray)
+
+	// store the result in destKey
+	Put(destKey, operationResultObject)
+
+	return Encode(len(result), true)
 }
 
 // evalCommand evaluates COMMAND <subcommand> command based on subcommand
@@ -1573,7 +1573,7 @@ func evalCommand(args []string) []byte {
 	subcommand := strings.ToUpper(args[0])
 	switch subcommand {
 	case "COUNT":
-		return evalCommandCount(nil)
+		return evalCommandCount()
 	case "GETKEYS":
 		return evalCommandGetKeys(args[1:])
 	default:
@@ -1598,7 +1598,7 @@ func evalKeys(args []string) []byte {
 }
 
 // evalCommandCount returns an number of commands supported by DiceDB
-func evalCommandCount(args []string) []byte {
+func evalCommandCount() []byte {
 	return Encode(diceCommandsCount, false)
 }
 
@@ -1630,16 +1630,15 @@ func evalCommandGetKeys(args []string) []byte {
 	return Encode(keys, false)
 }
 func evalRename(args []string) []byte {
-
 	if len(args) != 2 {
 		return DiceErrors.NewErrArity("RENAME")
 	}
 	sourceKey := args[0]
 	destKey := args[1]
 
-	//if Source and Destination Keys are same return RESP encoded ok
+	// if Source and Destination Keys are same return RESP encoded ok
 	if sourceKey == destKey {
-		return RESP_OK
+		return RespOK
 	}
 
 	// if Source key does not exist, return RESP encoded nil
@@ -1649,14 +1648,13 @@ func evalRename(args []string) []byte {
 	}
 
 	if ok := Rename(sourceKey, destKey); ok {
-		return RESP_OK
+		return RespOK
 	}
-	return RESP_NIL
-
+	return RespNIL
 }
 
 // The MGET command returns an array of RESP values corresponding to the provided keys.
-// For each key, if the key is expired or does not exist, the response will be RESP_NIL;
+// For each key, if the key is expired or does not exist, the response will be RespNIL;
 // otherwise, the response will be the RESP value of the key.
 // MGET is atomic, it retrieves all values at once
 func evalMGET(args []string) []byte {
@@ -1667,7 +1665,7 @@ func evalMGET(args []string) []byte {
 	response := make([]interface{}, len(args))
 	for i, obj := range values {
 		if obj == nil {
-			response[i] = RESP_NIL
+			response[i] = RespNIL
 		} else {
 			response[i] = obj.Value
 		}
@@ -1717,10 +1715,10 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 			return DiceErrors.NewErrWithMessage("DISCARD without MULTI")
 		}
 		c.TxnDiscard()
-		return RESP_OK
+		return RespOK
 	}
 	if diceCmd.Name == "ABORT" {
-		return RESP_OK
+		return RespOK
 	}
 
 	return diceCmd.Eval(cmd.Args)
@@ -1737,7 +1735,7 @@ func EvalAndRespond(cmds RedisCmds, c *Client) {
 	for _, cmd := range cmds {
 		// Check if the command has been authenticated
 		if cmd.Cmd != AuthCmd && !c.Session.IsActive() {
-			if _, err := c.Write(RESP_AUTH_FAILURE); err != nil {
+			if _, err := c.Write(RespAuthFailure); err != nil {
 				log.Println("Error writing to client:", err)
 			}
 			continue
@@ -1754,7 +1752,7 @@ func EvalAndRespond(cmds RedisCmds, c *Client) {
 		if !txnCommands[cmd.Cmd] {
 			// if the command is queuable the enqueu
 			c.TxnQueue(cmd)
-			buf.Write(RESP_QUEUED)
+			buf.Write(RespQueued)
 		} else {
 			// if txn is active and the command is non-queuable
 			// ex: EXEC, DISCARD
@@ -1779,19 +1777,69 @@ func evalPersist(args []string) []byte {
 
 	// If the key does not exist, return RESP encoded 0 to denote the key does not exist
 	if obj == nil {
-		return RESP_ZERO
+		return RespZero
 	}
 
 	// If the object exists but no expiration is set on it, return -1
 	_, isExpirySet := getExpiry(obj)
 	if !isExpirySet {
-		return RESP_MINUS_1
+		return RespMinusOne
 	}
 
 	// If the object exists, remove the expiration time
 	delExpiry(obj)
 
-	return RESP_ONE
+	return RespOne
+}
+
+func evalCOPY(args []string) []byte {
+	if len(args) < 2 {
+		return DiceErrors.NewErrArity("COPY")
+	}
+
+	isReplace := false
+
+	sourceKey := args[0]
+	destinationKey := args[1]
+
+	sourceObj := Get(sourceKey)
+	if sourceObj == nil {
+		return RespZero
+	}
+
+	for i := 2; i < len(args); i++ {
+		arg := strings.ToUpper(args[i])
+		if arg == "REPLACE" {
+			isReplace = true
+		}
+	}
+
+	if isReplace {
+		Del(destinationKey)
+	}
+
+	destinationObj := Get(destinationKey)
+	if destinationObj != nil {
+		return RespZero
+	}
+
+	copyObj := sourceObj.DeepCopy()
+	if copyObj == nil {
+		return RespZero
+	}
+
+	exp, ok := getExpiry(sourceObj)
+	var exDurationMs int64 = -1
+	if ok {
+		exDurationMs = int64(exp - uint64(time.Now().UnixMilli()))
+	}
+
+	Put(destinationKey, copyObj)
+
+	if exDurationMs > 0 {
+		setExpiry(copyObj, exDurationMs)
+	}
+	return RespOne
 }
 
 // GETEX key [EX seconds | PX milliseconds | EXAT unix-time-seconds |
@@ -1805,7 +1853,7 @@ func evalPersist(args []string) []byte {
 // PXAT timestamp-milliseconds -- Set the specified Unix time at which the key will expire, in milliseconds.
 // PERSIST -- Remove the time to live associated with the key.
 // The RESP value of the key is encoded and then returned
-// evalGET returns RESP_NIL if key is expired or it does not exist
+// evalGET returns RespNIL if key is expired or it does not exist
 func evalGETEX(args []string) []byte {
 	if len(args) < 1 {
 		return DiceErrors.NewErrArity("GETEX")
@@ -1818,7 +1866,7 @@ func evalGETEX(args []string) []byte {
 
 	// if key does not exist, return RESP encoded nil
 	if obj == nil {
-		return RESP_NIL
+		return RespNIL
 	}
 
 	var exDurationMs int64 = -1
@@ -1827,7 +1875,7 @@ func evalGETEX(args []string) []byte {
 	for i := 1; i < len(args); i++ {
 		arg := strings.ToUpper(args[i])
 		switch arg {
-		case "EX", "PX":
+		case constants.Ex, constants.Px:
 			if state != Uninitialized {
 				return DiceErrors.NewErrWithMessage(DiceErrors.SyntaxErr)
 			}
@@ -1845,13 +1893,13 @@ func evalGETEX(args []string) []byte {
 			}
 
 			// converting seconds to milliseconds
-			if arg == "EX" {
-				exDuration = exDuration * 1000
+			if arg == constants.Ex {
+				exDuration *= 1000
 			}
 			exDurationMs = exDuration
 			state = Initialized
 
-		case "PXAT", "EXAT":
+		case constants.Pxat, constants.Exat:
 			if state != Uninitialized {
 				return DiceErrors.NewErrWithMessage(DiceErrors.SyntaxErr)
 			}
@@ -1868,8 +1916,8 @@ func evalGETEX(args []string) []byte {
 				return DiceErrors.NewErrExpireTime("GETEX")
 			}
 
-			if arg == "EXAT" {
-				exDuration = exDuration * 1000
+			if arg == constants.Exat {
+				exDuration *= 1000
 			}
 			exDurationMs = exDuration - time.Now().UnixMilli()
 			// If the expiry time is in the past, set exDurationMs to 0
@@ -1900,4 +1948,75 @@ func evalGETEX(args []string) []byte {
 
 	// return the RESP encoded value
 	return Encode(obj.Value, false)
+}
+
+// evalPTTL returns Time-to-Live in millisecs for the queried key in args
+// The key should be the only param in args else returns with an error
+// Returns	RESP encoded time (in secs) remaining for the key to expire
+//
+//	RESP encoded -2 stating key doesn't exist or key is expired
+//	RESP encoded -1 in case no expiration is set on the key
+func evalPTTL(args []string) []byte {
+	if len(args) != 1 {
+		return DiceErrors.NewErrArity("PTTL")
+	}
+
+	key := args[0]
+
+	obj := Get(key)
+
+	if obj == nil {
+		return RespMinusTwo
+	}
+
+	exp, isExpirySet := getExpiry(obj)
+
+	if !isExpirySet {
+		return RespMinusOne
+	}
+
+	// compute the time remaining for the key to expire and
+	// return the RESP encoded form of it
+	durationMs := exp - uint64(time.Now().UnixMilli())
+	return Encode(int64(durationMs), false)
+}
+
+func evalObjectIdleTime(key string) []byte {
+	obj := GetNoTouch(key)
+	if obj == nil {
+		return RespNIL
+	}
+
+	return Encode(int64(getIdleTime(obj.LastAccessedAt)), true)
+}
+
+func evalOBJECT(args []string) []byte {
+	if len(args) < 2 {
+		return DiceErrors.NewErrArity("OBJECT")
+	}
+
+	subcommand := strings.ToUpper(args[0])
+	key := args[1]
+
+	switch subcommand {
+	case "IDLETIME":
+		return evalObjectIdleTime(key)
+	default:
+		return DiceErrors.NewErrWithMessage(DiceErrors.SyntaxErr)
+	}
+}
+
+func evalTOUCH(args []string) []byte {
+	if len(args) == 0 {
+		return DiceErrors.NewErrArity("TOUCH")
+	}
+
+	count := 0
+	for _, key := range args {
+		if Get(key) != nil {
+			count++
+		}
+	}
+
+	return Encode(count, false)
 }

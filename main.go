@@ -17,6 +17,8 @@ func setupFlags() {
 	flag.IntVar(&config.Port, "port", 7379, "port for the dice server")
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
 	flag.Parse()
+
+	log.Println("Password", config.RequirePass)
 }
 
 func main() {
@@ -40,7 +42,7 @@ func main() {
 	wg.Add(1)
 	go server.RunAsyncTCPServer(serverFD, &wg)
 
-	// Listento signals, but not a hardblocker to shutdown
+	// Listen to signals, but not a hardblocker to shutdown
 	go server.WaitForSignal(&wg, sigs)
 
 	// Wait for all goroutines to finish

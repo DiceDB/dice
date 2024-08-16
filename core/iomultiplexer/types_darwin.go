@@ -37,10 +37,10 @@ func newEvent(kEvent syscall.Kevent_t) Event {
 func (op Operations) toNative() int16 {
 	native := int16(0)
 
-	if op&OP_READ != 0 {
+	if op&OpRead != 0 {
 		native |= syscall.EVFILT_READ
 	}
-	if op&OP_WRITE != 0 {
+	if op&OpWrite != 0 {
 		native |= syscall.EVFILT_WRITE
 	}
 
@@ -52,10 +52,10 @@ func newOperations(filter int16) Operations {
 	op := Operations(0)
 
 	if filter&syscall.EVFILT_READ != 0 {
-		op |= OP_READ
+		op |= OpRead
 	}
 	if filter&syscall.EVFILT_WRITE != 0 {
-		op |= OP_WRITE
+		op |= OpWrite
 	}
 
 	return op

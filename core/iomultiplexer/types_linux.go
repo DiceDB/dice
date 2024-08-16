@@ -34,10 +34,10 @@ func newEvent(ePEvent syscall.EpollEvent) Event {
 func (op Operations) toNative() uint32 {
 	native := uint32(0)
 
-	if op&OP_READ != 0 {
+	if op&OpRead != 0 {
 		native |= syscall.EPOLLIN
 	}
-	if op&OP_WRITE != 0 {
+	if op&OpWrite != 0 {
 		native |= syscall.EPOLLOUT
 	}
 
@@ -49,10 +49,10 @@ func newOperations(events uint32) Operations {
 	op := Operations(0)
 
 	if events&syscall.EPOLLIN != 0 {
-		op |= OP_READ
+		op |= OpRead
 	}
 	if events&syscall.EPOLLOUT != 0 {
-		op |= OP_WRITE
+		op |= OpWrite
 	}
 
 	return op

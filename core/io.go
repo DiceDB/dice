@@ -77,15 +77,15 @@ func (rp *RESPParser) DecodeOne() (interface{}, error) {
 
 	switch b {
 	case '+':
-		return readSimpleString(rp.c, rp.buf)
+		return readSimpleString(rp.buf)
 	case '-':
-		return readError(rp.c, rp.buf)
+		return readError(rp.buf)
 	case ':':
-		return readInt64(rp.c, rp.buf)
+		return readInt64(rp.buf)
 	case '$':
 		return readBulkString(rp.c, rp.buf)
 	case '*':
-		return readArray(rp.c, rp.buf, rp)
+		return readArray(rp.buf, rp)
 	}
 
 	// this also captures the Cross Protocol Scripting attack.
