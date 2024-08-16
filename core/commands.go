@@ -81,7 +81,7 @@ var (
 		Returns OK if successful.
 		Returns encoded error message if the number of arguments is incorrect or the JSON string is invalid.`,
 		Eval:     evalJSONSET,
-		Arity:    3,
+		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	jsongetCmdMeta = DiceCmdMeta{
