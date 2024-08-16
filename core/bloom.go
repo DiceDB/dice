@@ -1,8 +1,8 @@
 package core
 
 import (
-	"errors"
 	"fmt"
+	DiceErrors "github.com/dicedb/dice/core/diceerrors"
 	"hash"
 	"math"
 	"math/rand"
@@ -22,16 +22,15 @@ var (
 )
 
 var (
-	errWrongArgs            = errors.New("ERR wrong number of arguments")
-	errInvalidErrorRateType = errors.New("ERR only float values can be provided for error rate")
-	errInvalidErrorRate     = errors.New("ERR invalid error rate value provided")
-	errInvalidCapacityType  = errors.New("ERR only integer values can be provided for capacity")
-	errInvalidCapacity      = errors.New("ERR invalid capacity value provided")
+	errInvalidErrorRateType = DiceErrors.NewErr("only float values can be provided for error rate")
+	errInvalidErrorRate     = DiceErrors.NewErr("invalid error rate value provided")
+	errInvalidCapacityType  = DiceErrors.NewErr("only integer values can be provided for capacity")
+	errInvalidCapacity      = DiceErrors.NewErr("invalid capacity value provided")
 
-	errInvalidKey = errors.New("ERR invalid key: no bloom filter found")
+	errInvalidKey = DiceErrors.NewErr("invalid key: no bloom filter found")
 
-	errEmptyValue   = errors.New("ERR empty value provided")
-	errUnableToHash = errors.New("ERR unable to hash given value")
+	errEmptyValue   = DiceErrors.NewErr("empty value provided")
+	errUnableToHash = DiceErrors.NewErr("unable to hash given value")
 )
 
 type BloomOpts struct {
@@ -227,7 +226,7 @@ func (opts *BloomOpts) updateIndexes(value string) error {
 // If no params are provided, it uses defaults.
 func evalBFINIT(args []string) []byte {
 	if len(args) != 1 && len(args) != 3 {
-		return Encode(fmt.Errorf("%w for 'BFINIT' command", errWrongArgs), false)
+		return DiceErrors.NewErrArity("BFINIT")
 	}
 
 	useDefaults := false
@@ -237,12 +236,12 @@ func evalBFINIT(args []string) []byte {
 
 	opts, err := newBloomOpts(args[1:], useDefaults)
 	if err != nil {
-		return Encode(fmt.Errorf("%w for 'BFINIT' command", err), false)
+		return DiceErrors.NewErrWithFormattedMessage("%w for 'BFINIT' command", err)
 	}
 
 	_, err = getOrCreateBloomFilter(args[0], opts)
 	if err != nil {
-		return Encode(fmt.Errorf("%w for 'BFINIT' command", err), false)
+		return DiceErrors.NewErrWithFormattedMessage("%w for 'BFINIT' command", err)
 	}
 
 	return RESP_OK
@@ -253,19 +252,19 @@ func evalBFINIT(args []string) []byte {
 // with default parameters.
 func evalBFADD(args []string) []byte {
 	if len(args) != 2 {
-		return Encode(fmt.Errorf("%w for 'BFADD' command", errWrongArgs), false)
+		return DiceErrors.NewErrArity("BFADD")
 	}
 
 	opts, _ := newBloomOpts(args[1:], true)
 
 	bloom, err := getOrCreateBloomFilter(args[0], opts)
 	if err != nil {
-		return Encode(fmt.Errorf("%w for 'BFADD' command", err), false)
+		return DiceErrors.NewErrWithFormattedMessage("%w for 'BFADD' command", err)
 	}
 
 	resp, err := bloom.add(args[1])
 	if err != nil {
-		return Encode(fmt.Errorf("%w for 'BFADD' command", err), false)
+		return DiceErrors.NewErrWithFormattedMessage("%w for 'BFADD' command", err)
 	}
 
 	return resp
@@ -275,17 +274,17 @@ func evalBFADD(args []string) []byte {
 // of an element in a bloom filter.
 func evalBFEXISTS(args []string) []byte {
 	if len(args) != 2 {
-		return Encode(fmt.Errorf("%w for 'BFEXISTS' command", errWrongArgs), false)
+		return DiceErrors.NewErrArity("BFEXISTS")
 	}
 
 	bloom, err := getOrCreateBloomFilter(args[0], nil)
 	if err != nil {
-		return Encode(fmt.Errorf("%w for 'BFEXISTS' command", err), false)
+		return DiceErrors.NewErrWithFormattedMessage("%w for 'BFEXISTS' command", err)
 	}
 
 	resp, err := bloom.exists(args[1])
 	if err != nil {
-		return Encode(fmt.Errorf("%w for 'BFEXISTS' command", err), false)
+		return DiceErrors.NewErrWithFormattedMessage("%w for 'BFEXISTS' command", err)
 	}
 
 	return resp
@@ -295,12 +294,12 @@ func evalBFEXISTS(args []string) []byte {
 // parameters and metadata of an existing bloom filter.
 func evalBFINFO(args []string) []byte {
 	if len(args) != 1 {
-		return Encode(fmt.Errorf("%w for 'BFINFO' command", errWrongArgs), false)
+		return DiceErrors.NewErrArity("BFINFO")
 	}
 
 	bloom, err := getOrCreateBloomFilter(args[0], nil)
 	if err != nil {
-		return Encode(fmt.Errorf("%w for 'BFINFO' command", err), false)
+		return DiceErrors.NewErrWithFormattedMessage("%w for 'BFINFO' command", err)
 	}
 
 	return Encode(bloom.info(args[0]), false)

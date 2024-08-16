@@ -1,6 +1,7 @@
 package DiceErrors
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -15,36 +16,24 @@ const (
 	ElementPeekErr     = "number of elements to peek should be a positive number less than %d"
 	NoKeyErr           = "no such key"
 	ErrDefault         = "ERR %s"
-	WrongTypeErr       = "WRONGTYPE Operation against a key holding the wrong kind of value"
-	SameObjectErr      = "ERR source and destination objects are the same"
-	OutOfRangeErr      = "ERR index out of range"
-	NoScriptErr        = "NOSCRIPT No matching script. Please use EVAL."
-	LoadingErr         = "LOADING Redis is loading the dataset in memory"
-	SlowEvalErr        = "BUSY Redis is busy running a script. You can only call SCRIPT KILL or SHUTDOWN NOSAVE."
-	SlowScriptErr      = "BUSY Redis is busy running a script. You can only call FUNCTION KILL or SHUTDOWN NOSAVE."
-	SlowModuleErr      = "BUSY Redis is busy running a module command."
-	MasterDownErr      = "MASTERDOWN Link with MASTER is down and replica-serve-stale-data is set to 'no'."
-	BgSaveErr          = "MISCONF Redis is configured to save RDB snapshots, but it's currently unable to persist to disk. Commands that may modify the data set are disabled, because this instance is configured to report errors during writes if RDB snapshotting fails (stop-writes-on-bgsave-error option). Please check the Redis logs for details about the RDB error."
-	RoSlaveErr         = "READONLY You can't write against a read only replica."
-	NoAuthErr          = "NOAUTH Authentication required."
-	OOMErr             = "OOM command not allowed when used memory > 'maxmemory'."
-	ExecAbortErr       = "EXECABORT Transaction discarded because of previous errors."
-	NoReplicasErr      = "NOREPLICAS Not enough good replicas to write."
-	BusyKeyErr         = "BUSYKEY Target key name already exists."
 )
 
 type DiceError struct {
-	message string
+	message error
 }
 
 func newDiceErr(message string) *DiceError {
 	return &DiceError{
-		message: message,
+		message: errors.New(message),
 	}
 }
 
 func (d *DiceError) toEncodedMessage() []byte {
-	return []byte(fmt.Sprintf("-%s\r\n", d.message))
+	return []byte(fmt.Sprintf("-%s\r\n", d.message.Error()))
+}
+
+func NewErr(message string) error {
+	return newDiceErr(message).message
 }
 
 // NewErrWithMessage If the error code is already passed in the string,
