@@ -6,14 +6,16 @@ import (
 )
 
 const (
-	ArityErr           = "ERR wrong number of arguments for '%s' command"
-	SyntaxErr          = "ERR syntax error"
-	ExpiryErr          = "ERR invalid expire time in '%s' command"
+	ArityErr           = "wrong number of arguments for '%s' command"
+	SyntaxErr          = "syntax error"
+	ExpiryErr          = "invalid expire time in '%s' command"
 	AuthErr            = "AUTH failed"
 	IntOrOutOfRangeErr = "value is not an integer or out of range"
+	ValOutOfRangeErr   = "value is out of range"
+	ElementPeekErr     = "number of elements to peek should be a positive number less than %d"
+	NoKeyErr           = "no such key"
 	ErrDefault         = "ERR %s"
 	WrongTypeErr       = "WRONGTYPE Operation against a key holding the wrong kind of value"
-	NoKeyErr           = "ERR no such key"
 	SameObjectErr      = "ERR source and destination objects are the same"
 	OutOfRangeErr      = "ERR index out of range"
 	NoScriptErr        = "NOSCRIPT No matching script. Please use EVAL."
@@ -45,30 +47,31 @@ func (d *DiceError) toEncodedMessage() []byte {
 	return []byte(fmt.Sprintf("-%s\r\n", d.message))
 }
 
-func NewErrArity(cmdName string) []byte {
-	o := newDiceErr(fmt.Sprintf(ArityErr, strings.ToLower(cmdName)))
-	return o.toEncodedMessage()
-}
-
-func NewErrObject(err string) []byte {
-	o := newDiceErr(err)
-	return o.toEncodedMessage()
-}
-
-func NewErrExpireTime(cmdName string) []byte {
-	o := newDiceErr(fmt.Sprintf(ExpiryErr, strings.ToLower(cmdName)))
-	return o.toEncodedMessage()
-}
-
 // NewErrWithMessage If the error code is already passed in the string,
 // the error code provided is used, otherwise the string "-ERR " for the generic
 // error code is automatically added. Note that 's' must NOT end with \r\n.
 func NewErrWithMessage(errMsg string) []byte {
 	// If the string already starts with "-..." then the error code
-	// is provided by the caller. Otherwise we use "-ERR".
+	// is provided by the caller. Otherwise, we use "-ERR".
 	if len(errMsg) == 0 || errMsg[0] != '-' {
 		errMsg = fmt.Sprintf(ErrDefault, errMsg)
 	}
 
 	return newDiceErr(errMsg).toEncodedMessage()
+}
+
+func NewErrWithFormattedMessage(errMsgFmt string, args ...interface{}) []byte {
+	if len(args) > 0 {
+		errMsgFmt = fmt.Sprintf(errMsgFmt, args)
+	}
+
+	return NewErrWithMessage(errMsgFmt)
+}
+
+func NewErrArity(cmdName string) []byte {
+	return NewErrWithFormattedMessage(ArityErr, strings.ToLower(cmdName))
+}
+
+func NewErrExpireTime(cmdName string) []byte {
+	return NewErrWithFormattedMessage(ExpiryErr, strings.ToLower(cmdName))
 }

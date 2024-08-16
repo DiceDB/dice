@@ -2,7 +2,6 @@ package core
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	DiceErrors "github.com/dicedb/dice/core/diceerrors"
 	"log"
@@ -130,16 +129,16 @@ func evalSET(args []string) []byte {
 		switch arg {
 		case "EX", "PX":
 			if state != Uninitialized {
-				return DiceErrors.NewErrObject(DiceErrors.SyntaxErr)
+				return DiceErrors.NewErrWithMessage(DiceErrors.SyntaxErr)
 			}
 			i++
 			if i == len(args) {
-				return DiceErrors.NewErrObject(DiceErrors.SyntaxErr)
+				return DiceErrors.NewErrWithMessage(DiceErrors.SyntaxErr)
 			}
 
 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
-				return DiceErrors.NewErrObject(DiceErrors.IntOrOutOfRangeErr)
+				return DiceErrors.NewErrWithMessage(DiceErrors.IntOrOutOfRangeErr)
 			}
 
 			if exDuration <= 0 {
@@ -155,15 +154,15 @@ func evalSET(args []string) []byte {
 
 		case "PXAT", "EXAT":
 			if state != Uninitialized {
-				return DiceErrors.NewErrObject(DiceErrors.SyntaxErr)
+				return DiceErrors.NewErrWithMessage(DiceErrors.SyntaxErr)
 			}
 			i++
 			if i == len(args) {
-				return DiceErrors.NewErrObject(DiceErrors.SyntaxErr)
+				return DiceErrors.NewErrWithMessage(DiceErrors.SyntaxErr)
 			}
 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
-				return DiceErrors.NewErrObject(DiceErrors.IntOrOutOfRangeErr)
+				return DiceErrors.NewErrWithMessage(DiceErrors.IntOrOutOfRangeErr)
 			}
 
 			if exDuration < 0 {
@@ -195,7 +194,7 @@ func evalSET(args []string) []byte {
 				return RESP_NIL
 			}
 		default:
-			return DiceErrors.NewErrObject(DiceErrors.SyntaxErr)
+			return DiceErrors.NewErrWithMessage(DiceErrors.SyntaxErr)
 		}
 	}
 
@@ -316,7 +315,7 @@ func evalJSONGET(args []string) []byte {
 	if path == defaultRootPath {
 		resultBytes, err := sonic.Marshal(jsonData)
 		if err != nil {
-			return Encode(errors.New("ERR could not serialize result"), false)
+			return DiceErrors.NewErrWithMessage("could not serialize result")
 		}
 		return Encode(string(resultBytes), false)
 	}
@@ -324,7 +323,7 @@ func evalJSONGET(args []string) []byte {
 	// Parse the JSONPath expression
 	expr, err := jp.ParseString(path)
 	if err != nil {
-		return Encode(errors.New("ERR invalid JSONPath"), false)
+		return DiceErrors.NewErrWithMessage("invalid JSONPath")
 	}
 
 	// Execute the JSONPath query
@@ -341,7 +340,7 @@ func evalJSONGET(args []string) []byte {
 		resultBytes, err = sonic.Marshal(results)
 	}
 	if err != nil {
-		return Encode(errors.New("ERR could not serialize result"), false)
+		return DiceErrors.NewErrWithMessage("could not serialize result")
 	}
 	return Encode(string(resultBytes), false)
 }
@@ -365,7 +364,7 @@ func evalJSONSET(args []string) []byte {
 		switch args[i] {
 		case "NX", "nx":
 			if i != len(args)-1 {
-				return DiceErrors.NewErrObject(DiceErrors.SyntaxErr)
+				return DiceErrors.NewErrWithMessage(DiceErrors.SyntaxErr)
 			}
 			obj := Get(key)
 			if obj != nil {
@@ -373,7 +372,7 @@ func evalJSONSET(args []string) []byte {
 			}
 		case "XX", "xx":
 			if i != len(args)-1 {
-				return DiceErrors.NewErrObject(DiceErrors.SyntaxErr)
+				return DiceErrors.NewErrWithMessage(DiceErrors.SyntaxErr)
 			}
 			obj := Get(key)
 			if obj == nil {
@@ -381,14 +380,14 @@ func evalJSONSET(args []string) []byte {
 			}
 
 		default:
-			return DiceErrors.NewErrObject(DiceErrors.SyntaxErr)
+			return DiceErrors.NewErrWithMessage(DiceErrors.SyntaxErr)
 		}
 	}
 
 	// Parse the JSON string
 	var jsonValue interface{}
 	if err := sonic.UnmarshalString(jsonStr, &jsonValue); err != nil {
-		return Encode(fmt.Errorf("ERR invalid JSON: %v", err.Error()), false)
+		return DiceErrors.NewErrWithMessage(fmt.Sprintf("invalid JSON: %v", err.Error()))
 	}
 
 	// Retrieve existing object or create new one
@@ -419,12 +418,12 @@ func evalJSONSET(args []string) []byte {
 	if path != defaultRootPath {
 		expr, err := jp.ParseString(path)
 		if err != nil {
-			return Encode(errors.New("ERR invalid JSONPath"), false)
+			return DiceErrors.NewErrWithMessage("invalid JSONPath")
 		}
 
 		err = expr.Set(rootData, jsonValue)
 		if err != nil {
-			return Encode(errors.New("ERR failed to set value"), false)
+			return DiceErrors.NewErrWithMessage("failed to set value")
 		}
 	} else {
 		// If path is root, replace the entire JSON
@@ -498,7 +497,7 @@ func evalEXPIRE(args []string) []byte {
 	var key string = args[0]
 	exDurationSec, err := strconv.ParseInt(args[1], 10, 64)
 	if err != nil {
-		return DiceErrors.NewErrObject(DiceErrors.IntOrOutOfRangeErr)
+		return DiceErrors.NewErrWithMessage(DiceErrors.IntOrOutOfRangeErr)
 	}
 
 	obj := Get(key)
@@ -543,7 +542,7 @@ func evalBGREWRITEAOF(args []string) []byte {
 	if newChild == 0 {
 		//We are inside child process now, so we'll start flushing to disk.
 		if err := DumpAllAOF(); err != nil {
-			return Encode(errors.New("ERR AOF failed"), false)
+			return DiceErrors.NewErrWithMessage("AOF failed")
 		}
 		return []byte("")
 	} else {
@@ -596,7 +595,7 @@ func evalDECRBY(args []string) []byte {
 	}
 	decrementAmount, err := strconv.ParseInt(args[1], 10, 64)
 	if err != nil {
-		return DiceErrors.NewErrObject(DiceErrors.IntOrOutOfRangeErr)
+		return DiceErrors.NewErrWithMessage(DiceErrors.IntOrOutOfRangeErr)
 	}
 	return incrDecrCmd(args, -decrementAmount)
 }
@@ -621,7 +620,7 @@ func incrDecrCmd(args []string, incr int64) []byte {
 	// check overflow
 	if (incr < 0 && i < 0 && incr < (math.MinInt64-i)) ||
 		(incr > 0 && i > 0 && incr > (math.MaxInt64-i)) {
-		return Encode(errors.New("ERR value is out of range"), false)
+		return DiceErrors.NewErrWithMessage(DiceErrors.ValOutOfRangeErr)
 	}
 
 	i += int64(incr)
@@ -670,7 +669,7 @@ func evalSLEEP(args []string) []byte {
 
 	durationSec, err := strconv.ParseInt(args[0], 10, 64)
 	if err != nil {
-		return DiceErrors.NewErrObject(DiceErrors.IntOrOutOfRangeErr)
+		return DiceErrors.NewErrWithMessage(DiceErrors.IntOrOutOfRangeErr)
 	}
 	time.Sleep(time.Duration(durationSec) * time.Second)
 	return RESP_OK
@@ -696,7 +695,7 @@ func evalQINTINS(args []string) []byte {
 
 	x, err := strconv.ParseInt(args[1], 10, 64)
 	if err != nil {
-		return Encode(errors.New("ERR only integer values can be inserted in QINT"), false)
+		return DiceErrors.NewErrWithMessage("only integer values can be inserted in QINT")
 	}
 
 	obj := Get(args[0])
@@ -731,7 +730,7 @@ func evalSTACKINTPUSH(args []string) []byte {
 
 	x, err := strconv.ParseInt(args[1], 10, 64)
 	if err != nil {
-		return DiceErrors.NewErrObject(DiceErrors.IntOrOutOfRangeErr)
+		return DiceErrors.NewErrWithMessage(DiceErrors.IntOrOutOfRangeErr)
 	}
 
 	obj := Get(args[0])
@@ -885,7 +884,7 @@ func evalQINTPEEK(args []string) []byte {
 	if len(args) == 2 {
 		num, err = strconv.ParseInt(args[1], 10, 32)
 		if err != nil || num <= 0 || num > 100 {
-			return Encode(errors.New("ERR number of elements to peek should be a positive number less than 100"), false)
+			return DiceErrors.NewErrWithFormattedMessage(DiceErrors.ElementPeekErr, 100)
 		}
 	}
 
@@ -920,7 +919,7 @@ func evalSTACKINTPEEK(args []string) []byte {
 	if len(args) == 2 {
 		num, err = strconv.ParseInt(args[1], 10, 32)
 		if err != nil || num <= 0 || num > 100 {
-			return Encode(errors.New("ERR number of elements to peek should be a positive number less than 100"), false)
+			return DiceErrors.NewErrWithFormattedMessage(DiceErrors.ElementPeekErr, 100)
 		}
 	}
 
@@ -1137,7 +1136,7 @@ func evalQREFPEEK(args []string) []byte {
 	if len(args) == 2 {
 		num, err = strconv.ParseInt(args[1], 10, 32)
 		if err != nil || num <= 0 || num > 100 {
-			return Encode(errors.New("ERR number of elements to peek should be a positive number less than 100"), false)
+			return DiceErrors.NewErrWithFormattedMessage(DiceErrors.ElementPeekErr, 100)
 		}
 	}
 
@@ -1172,7 +1171,7 @@ func evalSTACKREFPEEK(args []string) []byte {
 	if len(args) == 2 {
 		num, err = strconv.ParseInt(args[1], 10, 32)
 		if err != nil || num <= 0 || num > 100 {
-			return Encode(errors.New("ERR number of elements to peek should be a positive number less than 100"), false)
+			return DiceErrors.NewErrWithFormattedMessage(DiceErrors.ElementPeekErr, 100)
 		}
 	}
 
@@ -1249,7 +1248,7 @@ func evalSETBIT(args []string) []byte {
 
 	// handle the case when it is string
 	if assertType(obj.TypeEncoding, OBJ_TYPE_STRING) == nil {
-		return Encode(errors.New("ERR value is not a valid byte array"), false)
+		return DiceErrors.NewErrWithMessage("value is not a valid byte array")
 	}
 
 	// handle the case when it is byte array
@@ -1304,7 +1303,7 @@ func evalGETBIT(args []string) []byte {
 
 	// handle the case when it is string
 	if assertType(obj.TypeEncoding, OBJ_TYPE_STRING) == nil {
-		return Encode(errors.New("ERR value is not a valid byte array"), false)
+		return DiceErrors.NewErrWithMessage("value is not a valid byte array")
 	}
 
 	// handle the case when it is byte array
@@ -1332,7 +1331,7 @@ func evalBITCOUNT(args []string) []byte {
 
 	// if more than 4 arguments are provided, return error
 	if len(args) > 4 {
-		return DiceErrors.NewErrObject(DiceErrors.SyntaxErr)
+		return DiceErrors.NewErrWithMessage(DiceErrors.SyntaxErr)
 	}
 
 	// fetching value of the key
@@ -1367,7 +1366,7 @@ func evalBITCOUNT(args []string) []byte {
 	if len(args) > 1 {
 		start, err = strconv.ParseInt(args[1], 10, 64)
 		if err != nil {
-			return DiceErrors.NewErrObject(DiceErrors.IntOrOutOfRangeErr)
+			return DiceErrors.NewErrWithMessage(DiceErrors.IntOrOutOfRangeErr)
 		}
 		// Adjust start index if it is negative
 		if start < 0 {
@@ -1377,7 +1376,7 @@ func evalBITCOUNT(args []string) []byte {
 	if len(args) > 2 {
 		end, err = strconv.ParseInt(args[2], 10, 64)
 		if err != nil {
-			return DiceErrors.NewErrObject(DiceErrors.IntOrOutOfRangeErr)
+			return DiceErrors.NewErrWithMessage(DiceErrors.IntOrOutOfRangeErr)
 		}
 
 		// Adjust end index if it is negative
@@ -1388,7 +1387,7 @@ func evalBITCOUNT(args []string) []byte {
 	if len(args) > 3 {
 		unit = strings.ToUpper(args[3])
 		if unit != bit.BYTE && unit != bit.BIT {
-			return DiceErrors.NewErrObject(DiceErrors.SyntaxErr)
+			return DiceErrors.NewErrWithMessage(DiceErrors.SyntaxErr)
 		}
 	}
 	if start > end {
@@ -1441,11 +1440,11 @@ func evalBITOP(args []string) []byte {
 	// validation of commands
 	// if operation is not from enums, then error out
 	if !(operation == "AND" || operation == "OR" || operation == "XOR" || operation == "NOT") {
-		return DiceErrors.NewErrObject(DiceErrors.SyntaxErr)
+		return DiceErrors.NewErrWithMessage(DiceErrors.SyntaxErr)
 	}
 	// if operation is not, then keys lenght should be only 1
 	if operation == "NOT" && len(keys) != 1 {
-		return Encode(errors.New("ERR BITOP NOT must be called with a single source key."), false)
+		return DiceErrors.NewErrWithMessage("BITOP NOT must be called with a single source key.")
 	}
 
 	if operation == "NOT" {
@@ -1460,7 +1459,7 @@ func evalBITOP(args []string) []byte {
 			byteArrayObject := *byteArray
 			value = byteArrayObject.data
 		} else {
-			return Encode(errors.New("ERR value is not a valid byte array"), false)
+			return DiceErrors.NewErrWithMessage("value is not a valid byte array")
 		}
 
 		// perform the operation
@@ -1499,7 +1498,7 @@ func evalBITOP(args []string) []byte {
 					byteArrayObject := *byteArray
 					values[i] = byteArrayObject.data
 				} else {
-					return Encode(errors.New("ERR value is not a valid byte array"), false)
+					return DiceErrors.NewErrWithMessage("value is not a valid byte array")
 				}
 			}
 		}
@@ -1578,7 +1577,7 @@ func evalCommand(args []string) []byte {
 	case "GETKEYS":
 		return evalCommandGetKeys(args[1:])
 	default:
-		return Encode(fmt.Errorf("ERR unknown subcommand '%s'. Try COMMAND HELP", subcommand), false)
+		return DiceErrors.NewErrWithFormattedMessage("unknown subcommand '%s'. Try COMMAND HELP", subcommand)
 	}
 }
 
@@ -1606,18 +1605,18 @@ func evalCommandCount(args []string) []byte {
 func evalCommandGetKeys(args []string) []byte {
 	diceCmd, ok := diceCmds[strings.ToUpper(args[0])]
 	if !ok {
-		return Encode(errors.New("ERR invalid command specified"), false)
+		return DiceErrors.NewErrWithMessage("invalid command specified")
 	}
 
 	keySpecs := diceCmd.KeySpecs
 	if keySpecs.BeginIndex == 0 {
-		return Encode(errors.New("ERR the command has no key arguments"), false)
+		return DiceErrors.NewErrWithMessage("the command has no key arguments")
 	}
 
 	arity := diceCmd.Arity
 	if (arity < 0 && len(args) < -arity) ||
 		(arity >= 0 && len(args) != arity) {
-		return Encode(errors.New("ERR invalid number of arguments specified for command"), false)
+		return DiceErrors.NewErrWithMessage("invalid number of arguments specified for command")
 	}
 	keys := make([]string, 0)
 	step := max(keySpecs.Step, 1)
@@ -1646,7 +1645,7 @@ func evalRename(args []string) []byte {
 	// if Source key does not exist, return RESP encoded nil
 	sourceObj := Get(sourceKey)
 	if sourceObj == nil {
-		return Encode("ERR no such key", false)
+		return DiceErrors.NewErrWithMessage(DiceErrors.NoKeyErr)
 	}
 
 	if ok := Rename(sourceKey, destKey); ok {
@@ -1694,7 +1693,7 @@ func evalEXISTS(args []string) []byte {
 func executeCommand(cmd *RedisCmd, c *Client) []byte {
 	diceCmd, ok := diceCmds[cmd.Cmd]
 	if !ok {
-		return Encode(fmt.Errorf("ERR unknown command '%s', with args beginning with: %s", cmd.Cmd, strings.Join(cmd.Args, " ")), false)
+		return DiceErrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", cmd.Cmd, strings.Join(cmd.Args, " "))
 	}
 
 	if diceCmd.Name == "SUBSCRIBE" || diceCmd.Name == "QWATCH" {
@@ -1709,13 +1708,13 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 	}
 	if diceCmd.Name == "EXEC" {
 		if !c.isTxn {
-			return Encode(errors.New("ERR EXEC without MULTI"), false)
+			return DiceErrors.NewErrWithMessage("EXEC without MULTI")
 		}
 		return c.TxnExec()
 	}
 	if diceCmd.Name == "DISCARD" {
 		if !c.isTxn {
-			return Encode(errors.New("ERR DISCARD without MULTI"), false)
+			return DiceErrors.NewErrWithMessage("DISCARD without MULTI")
 		}
 		c.TxnDiscard()
 		return RESP_OK
@@ -1830,19 +1829,19 @@ func evalGETEX(args []string) []byte {
 		switch arg {
 		case "EX", "PX":
 			if state != Uninitialized {
-				return DiceErrors.NewErrObject(DiceErrors.SyntaxErr)
+				return DiceErrors.NewErrWithMessage(DiceErrors.SyntaxErr)
 			}
 			i++
 			if i == len(args) {
-				return DiceErrors.NewErrObject(DiceErrors.SyntaxErr)
+				return DiceErrors.NewErrWithMessage(DiceErrors.SyntaxErr)
 			}
 
 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
-				return DiceErrors.NewErrObject(DiceErrors.IntOrOutOfRangeErr)
+				return DiceErrors.NewErrWithMessage(DiceErrors.IntOrOutOfRangeErr)
 			}
 			if exDuration <= 0 {
-				return Encode(errors.New("ERR invalid expire time in 'getex' command"), false)
+				return DiceErrors.NewErrExpireTime("GETEX")
 			}
 
 			// converting seconds to milliseconds
@@ -1854,19 +1853,19 @@ func evalGETEX(args []string) []byte {
 
 		case "PXAT", "EXAT":
 			if state != Uninitialized {
-				return DiceErrors.NewErrObject(DiceErrors.SyntaxErr)
+				return DiceErrors.NewErrWithMessage(DiceErrors.SyntaxErr)
 			}
 			i++
 			if i == len(args) {
-				return DiceErrors.NewErrObject(DiceErrors.SyntaxErr)
+				return DiceErrors.NewErrWithMessage(DiceErrors.SyntaxErr)
 			}
 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
-				return DiceErrors.NewErrObject(DiceErrors.IntOrOutOfRangeErr)
+				return DiceErrors.NewErrWithMessage(DiceErrors.IntOrOutOfRangeErr)
 			}
 
 			if exDuration < 0 {
-				return Encode(errors.New("ERR invalid expire time in 'getex' command"), false)
+				return DiceErrors.NewErrExpireTime("GETEX")
 			}
 
 			if arg == "EXAT" {
@@ -1882,12 +1881,12 @@ func evalGETEX(args []string) []byte {
 
 		case "PERSIST":
 			if state != Uninitialized {
-				return DiceErrors.NewErrObject(DiceErrors.SyntaxErr)
+				return DiceErrors.NewErrWithMessage(DiceErrors.SyntaxErr)
 			}
 			persist = true
 			state = Initialized
 		default:
-			return DiceErrors.NewErrObject(DiceErrors.SyntaxErr)
+			return DiceErrors.NewErrWithMessage(DiceErrors.SyntaxErr)
 		}
 	}
 
