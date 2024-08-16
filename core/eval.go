@@ -887,6 +887,11 @@ func GetKeyForOperation(cmds RedisCmds) []string {
 	return keys
 }
 
+func ExecuteCommand(cmd *RedisCmd, c *Client, store *Store) []byte {
+	log.Info("ExecuteCommand Threaded")
+	return executeCommand(cmd, c, store)
+}
+
 func executeCommand(cmd *RedisCmd, c *Client, store *Store) []byte {
 	switch cmd.Cmd {
 	case "PING":
@@ -986,12 +991,13 @@ func executeCommandToBuffer(cmd *RedisCmd, buf *bytes.Buffer, c *Client, store *
 	buf.Write(executeCommand(cmd, c, store))
 }
 
+
 func EvalAndRespond(cmds RedisCmds, c *Client, store *Store) {
 	var response []byte
 	buf := bytes.NewBuffer(response)
 
 	for _, cmd := range cmds {
-		log.Info("Got command: ", cmd.Cmd)
+		log.Info("Got command EvalAndRespond: ", cmd.Cmd)
 
 		// if txn is not in progress, then we can simply
 		// execute the command and add the response to the buffer

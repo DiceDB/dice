@@ -6,6 +6,8 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+	"fmt"
+	"bytes"
 
 	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
@@ -125,11 +127,28 @@ func RunThreadedServer(serverFD int, wg *sync.WaitGroup) {
 				}
 				// respond(cmds, comm, storeSyncTcp)
 
-				ipool.Get().reqch <- &IORequest{conn: comm, cmds: &cmds, keys: core.GetKeyForOperation(cmds)}
+				go func() {
+					for {
+						ioresult, ok := <-ipool.Get().ioresch
+						if !ok {
+							fmt.Println("ioresch channel closed. Exiting goroutine.")
+							return
+						}
+						fmt.Println("Message to return from Threaded tcp:", ioresult.message + "<")
+				
+						var response []byte
+						buf := bytes.NewBuffer(response)
+						buf.Write([]byte(ioresult.message))
 
-				//for _, command := range cmds {
-				//	ipool.Get().reqch <- &IORequest{conn: comm, cmd: command, keys: core.GetKeyForOperation(command)}
-				//}
+						if _, err := comm.Write(buf.Bytes()); err != nil {
+							log.Info("Error writing to client")
+							log.Error(err)
+						}
+					}
+				}()
+				
+				ipool.Get().ioreqch <- &IORequest{conn: comm, cmds: &cmds, keys: core.GetKeyForOperation(cmds)}					
+				
 
 				if hasABORT {
 					cancel()
