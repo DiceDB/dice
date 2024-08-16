@@ -181,12 +181,12 @@ func testEvalJSONGET(t *testing.T) {
 		"nil value": {
 			setup:  func() {},
 			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'JSON.GET' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'json.get' command\r\n"),
 		},
 		"empty array": {
 			setup:  func() {},
 			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'JSON.GET' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'json.get' command\r\n"),
 		},
 		"key does not exist": {
 			setup:  func() {},
@@ -246,17 +246,17 @@ func testEvalJSONSET(t *testing.T) {
 		"nil value": {
 			setup:  func() {},
 			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'JSON.SET' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'json.set' command\r\n"),
 		},
 		"empty array": {
 			setup:  func() {},
 			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'JSON.SET' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'json.set' command\r\n"),
 		},
 		"insufficient args": {
 			setup:  func() {},
 			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'JSON.SET' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'json.set' command\r\n"),
 		},
 		"invalid json path": {
 			setup:  func() {},

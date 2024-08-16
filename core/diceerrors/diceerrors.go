@@ -51,7 +51,7 @@ func NewErrWithMessage(errMsg string) []byte {
 
 func NewErrWithFormattedMessage(errMsgFmt string, args ...interface{}) []byte {
 	if len(args) > 0 {
-		errMsgFmt = fmt.Sprintf(errMsgFmt, args)
+		errMsgFmt = fmt.Sprintf(errMsgFmt, args...)
 	}
 
 	return NewErrWithMessage(errMsgFmt)
