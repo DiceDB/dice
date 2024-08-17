@@ -327,7 +327,7 @@ func inferTypeAndConvert(val interface{}) (value interface{}, valueType string, 
 //
 // However, the string conversion is expensive and we are trying to avoid it. We can assume this to be a limitation of
 // using the JSON data type.
-// TODO: handle the edge case where the integer is too large to fit in an int.
+// TODO: handle the edge case where the integer is too large for float64.
 func isInteger(f float64) bool {
 	return f == float64(int(f))
 }
