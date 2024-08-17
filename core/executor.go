@@ -49,7 +49,7 @@ func ExecuteQuery(query DSQLQuery) ([]DSQLQueryResultRow, error) {
 
 				// if the row contains JSON field then convert the json object into string representation so it can be encoded
 				// before being returned to the client
-				if getEncoding(row.Value.TypeEncoding) == OBJ_ENCODING_JSON && getType(row.Value.TypeEncoding) == OBJ_TYPE_JSON {
+				if getEncoding(row.Value.TypeEncoding) == ObjEncodingJSON && getType(row.Value.TypeEncoding) == ObjTypeJSON {
 					marshaledData, err := sonic.Marshal(row.Value.Value)
 					if err != nil {
 						return
@@ -239,7 +239,8 @@ func getExprValueAndType(expr sqlparser.Expr, row DSQLQueryResultRow) (i interfa
 		}
 	case *sqlparser.SQLVal:
 		// we currently treat JSON query expression as a string value so we will need to differentiate between JSON and SQL strings
-		if expr.Type == sqlparser.StrVal && strings.HasPrefix(string(expr.Val), "_") && getEncoding(row.Value.TypeEncoding) == OBJ_ENCODING_JSON && getType(row.Value.TypeEncoding) == OBJ_TYPE_JSON {
+		// We convert the $key and $value fields to _key, _value before querying. hence fields starting with _ are considered to be stored values
+		if expr.Type == sqlparser.StrVal && strings.HasPrefix(string(expr.Val), "_") && getEncoding(row.Value.TypeEncoding) == ObjEncodingJSON && getType(row.Value.TypeEncoding) == ObjTypeJSON {
 			value, valueType, err := retrieveValueFromJSON(string(expr.Val), row.Value)
 			if err != nil {
 				return nil, "", err

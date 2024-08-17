@@ -398,7 +398,7 @@ func generateBenchmarkJSONData(b *testing.B, count int, json string) {
 			b.Fatalf("Failed to unmarshal JSON: %v", err)
 		}
 
-		data[key] = core.NewObj(jsonValue, -1, core.OBJ_TYPE_JSON, core.OBJ_ENCODING_JSON)
+		data[key] = core.NewObj(jsonValue, -1, core.ObjTypeJSON, core.ObjEncodingJSON)
 	}
 	core.PutAll(data)
 }

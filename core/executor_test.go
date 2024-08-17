@@ -406,7 +406,7 @@ func setupJSON(t *testing.T) {
 			t.Fatalf("Failed to unmarshal value: %v", err)
 		}
 
-		core.Put(data.key, core.NewObj(jsonValue, -1, core.OBJ_TYPE_JSON, core.OBJ_ENCODING_JSON))
+		core.Put(data.key, core.NewObj(jsonValue, -1, core.ObjTypeJSON, core.ObjEncodingJSON))
 	}
 }
 
