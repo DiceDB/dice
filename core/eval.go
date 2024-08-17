@@ -540,7 +540,7 @@ func evalEXPIRETIME(args []string) []byte {
 		return RespMinusOne
 	}
 
-	return Encode(int(exTimeMili/1000), true)
+	return Encode(int(exTimeMili/1000), false)
 }
 
 func evalHELLO(args []string) []byte {
