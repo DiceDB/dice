@@ -3,6 +3,7 @@ package tests
 import (
 	"context"
 	"fmt"
+	"github.com/bytedance/sonic"
 	"net"
 	"testing"
 
@@ -163,7 +164,7 @@ var JSONTestCases = []struct {
 		value:       `{"name":"Tom"}`,
 		qwatchQuery: "SELECT $key, $value FROM `match:100:user:0` WHERE '$value.name' = 'Tom'",
 		expectedUpdates: [][]interface{}{
-			{[]interface{}{"match:100:user:0", `{"name":"Tom"}`}},
+			{[]interface{}{"match:100:user:0", map[string]interface{}{"name": "Tom"}}},
 		},
 	},
 	{
@@ -171,7 +172,7 @@ var JSONTestCases = []struct {
 		value:       `{"name":"Tom","age":24}`,
 		qwatchQuery: "SELECT $key, $value FROM `match:100:user:1` WHERE '$value.age' > 20",
 		expectedUpdates: [][]interface{}{
-			{[]interface{}{"match:100:user:1", `{"name":"Tom","age":24}`}},
+			{[]interface{}{"match:100:user:1", map[string]interface{}{"name": "Tom", "age": float64(24)}}},
 		},
 	},
 	{
@@ -179,7 +180,7 @@ var JSONTestCases = []struct {
 		value:       `{"score":10.36}`,
 		qwatchQuery: "SELECT $key, $value FROM `match:100:user:2` WHERE '$value.score' = 10.36",
 		expectedUpdates: [][]interface{}{
-			{[]interface{}{"match:100:user:2", `{"score":10.36}`}},
+			{[]interface{}{"match:100:user:2", map[string]interface{}{"score": 10.36}}},
 		},
 	},
 	{
@@ -187,7 +188,15 @@ var JSONTestCases = []struct {
 		value:       `{"field1":{"field2":{"field3":{"score":10.36}}}}`,
 		qwatchQuery: "SELECT $key, $value FROM `match:100:user:3` WHERE '$value.field1.field2.field3.score' > 10.1",
 		expectedUpdates: [][]interface{}{
-			{[]interface{}{"match:100:user:3", `{"field1":{"field2":{"field3":{"score":10.36}}}}`}},
+			{[]interface{}{"match:100:user:3", map[string]interface{}{
+				"field1": map[string]interface{}{
+					"field2": map[string]interface{}{
+						"field3": map[string]interface{}{
+							"score": 10.36,
+						},
+					},
+				},
+			}}},
 		},
 	},
 }
@@ -231,7 +240,13 @@ func TestQwatchWithJSON(t *testing.T) {
 			assert.NilError(t, err)
 			update := v.([]interface{})
 
-			assert.DeepEqual(t, expectedUpdate, update)
+			assert.Equal(t, len(expectedUpdate), len(update), "Update length mismatch")
+			assert.Equal(t, expectedUpdate[0].([]interface{})[0], update[0].([]interface{})[0], "Key mismatch")
+
+			var expectedJSON, actualJSON interface{}
+			assert.NilError(t, sonic.UnmarshalString(tc.value, &expectedJSON))
+			assert.NilError(t, sonic.UnmarshalString(update[0].([]interface{})[1].(string), &actualJSON))
+			assert.DeepEqual(t, expectedJSON, actualJSON)
 		}
 	}
 }
