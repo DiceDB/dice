@@ -1686,6 +1686,17 @@ func evalEXISTS(args []string) []byte {
 
 	return Encode(count, false)
 }
+func evalRandomKey(args []string) []byte {
+	if len(args) != 0 {
+		return Encode(errors.New("ERR wrong number of arguments for RANDOMKEY command"), false)
+	}
+
+	key := RandomKey()
+	if key == "" {
+		return RespNIL
+	}
+	return Encode(key, false)
+}
 
 func executeCommand(cmd *RedisCmd, c *Client) []byte {
 	diceCmd, ok := diceCmds[cmd.Cmd]

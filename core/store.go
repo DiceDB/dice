@@ -1,6 +1,8 @@
 package core
 
 import (
+	"crypto/rand"
+	"math/big"
 	"path"
 	"sync"
 	"unsafe"
@@ -236,6 +238,37 @@ func Rename(sourceKey, destKey string) bool {
 
 		return true
 	}, WithStoreLock(), WithKeypoolLock())
+}
+
+// TODO, Key expiry should be handled for the RandomKey command
+// with the below implementations key expiry checks will be difficult(in Redis expiration is checked with maxTries of 100)
+// this should be considered on future data structure refactoring
+func RandomKey() string {
+	randomKey := ""
+	withLocks(func() {
+		if len(keypool) == 0 {
+			return
+		}
+		idxRange := len(keypool) / 2
+		if idxRange > 1024 {
+			idxRange = 1024
+		}
+
+		index, err := rand.Int(rand.Reader, big.NewInt(int64(idxRange)))
+		if err != nil {
+			return
+		}
+		RandomIndex := int(index.Int64())
+		currentIndex := 0
+		for key := range keypool {
+			if currentIndex == RandomIndex {
+				randomKey = key
+				return
+			}
+			currentIndex++
+		}
+	}, WithStoreLock(), WithKeypoolLock())
+	return randomKey
 }
 
 // Helper functions

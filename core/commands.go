@@ -552,6 +552,12 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	randomKeyCmdMeta = DiceCmdMeta{
+		Name:  "RANDOMKEY",
+		Info:  "Return a random key",
+		Eval:  evalRandomKey,
+		Arity: 1,
+	}
 )
 
 func init() {
@@ -617,4 +623,5 @@ func init() {
 	diceCmds["PTTL"] = pttlCmdMeta
 	diceCmds["OBJECT"] = objectCmdMeta
 	diceCmds["TOUCH"] = touchCmdMeta
+	diceCmds["RANDOMKEY"] = randomKeyCmdMeta
 }
