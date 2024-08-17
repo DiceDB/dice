@@ -240,7 +240,7 @@ func TestQwatchWithJSON(t *testing.T) {
 			assert.NilError(t, err)
 			update := v.([]interface{})
 
-			assert.Equal(t, len(expectedUpdate), len(update), "Update length mismatch")
+			assert.Equal(t, len(expectedUpdate), len(update), fmt.Sprintf("Expected update: %v, got %v", expectedUpdate, update))
 			assert.Equal(t, expectedUpdate[0].([]interface{})[0], update[0].([]interface{})[0], "Key mismatch")
 
 			var expectedJSON, actualJSON interface{}

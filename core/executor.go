@@ -234,7 +234,7 @@ func evaluateComparison(expr *sqlparser.ComparisonExpr, row DSQLQueryResultRow) 
 	}
 }
 
-func getExprValueAndType(expr sqlparser.Expr, row DSQLQueryResultRow) (interface{}, string, error) {
+func getExprValueAndType(expr sqlparser.Expr, row DSQLQueryResultRow) (value interface{}, valueType string, err error) {
 	switch expr := expr.(type) {
 	case *sqlparser.ColName:
 		switch expr.Name.String() {
@@ -251,7 +251,7 @@ func getExprValueAndType(expr sqlparser.Expr, row DSQLQueryResultRow) (interface
 		if isJSONField(expr, row.Value) {
 			return retrieveValueFromJSON(string(expr.Val), row.Value)
 		}
-		return sqlValToGoValue(expr, row.Value)
+		return sqlValToGoValue(expr)
 	default:
 		return nil, "", fmt.Errorf("unsupported expression type: %T", expr)
 	}
@@ -272,7 +272,7 @@ func isJSONField(expr *sqlparser.SQLVal, obj *Obj) bool {
 		strings.HasPrefix(string(expr.Val), TempPrefix)
 }
 
-func retrieveValueFromJSON(path string, jsonData *Obj) (interface{}, string, error) {
+func retrieveValueFromJSON(path string, jsonData *Obj) (value interface{}, valueType string, err error) {
 	// path is in the format '_value.field1.field2'. We need to remove _value reference from the prefix to get the json
 	//path.
 	jsonPath := strings.Split(path, ".")
@@ -296,7 +296,7 @@ func retrieveValueFromJSON(path string, jsonData *Obj) (interface{}, string, err
 
 // inferTypeAndConvert infers the type of the value and converts it to the appropriate type. currently the only data
 // types we support are strings, floats, ints, booleans and nil.
-func inferTypeAndConvert(val interface{}) (interface{}, string, error) {
+func inferTypeAndConvert(val interface{}) (value interface{}, valueType string, err error) {
 	switch v := val.(type) {
 	case string:
 		return v, constants.String, nil
@@ -347,7 +347,7 @@ func getValueAndType(obj *Obj) (val interface{}, s string, e error) {
 }
 
 // sqlValToGoValue converts SQLVal to Go value, and returns the type of the value.
-func sqlValToGoValue(sqlVal *sqlparser.SQLVal, obj *Obj) (val interface{}, s string, e error) {
+func sqlValToGoValue(sqlVal *sqlparser.SQLVal) (val interface{}, s string, e error) {
 	switch sqlVal.Type {
 	case sqlparser.StrVal:
 		return string(sqlVal.Val), constants.String, nil
