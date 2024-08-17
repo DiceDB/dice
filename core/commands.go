@@ -125,14 +125,6 @@ var (
 		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
 	}
-	expiretimeCmdMeta = DiceCmdMeta{
-		Name: "EXPIRETIME",
-		Info: `EXPIRETIME returns the absolute Unix timestamp (since January 1, 1970) in seconds 
-		at which the given key will expire`,
-		Eval:     evalEXPIRETIME,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
-	}
 	helloCmdMeta = DiceCmdMeta{
 		Name:  "HELLO",
 		Info:  `HELLO always replies with a list of current server and connection properties, such as: versions, modules loaded, client ID, replication role and so forth`,
@@ -559,6 +551,14 @@ var (
 		Eval:     evalTOUCH,
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	expiretimeCmdMeta = DiceCmdMeta{
+		Name: "EXPIRETIME",
+		Info: `EXPIRETIME returns the absolute Unix timestamp (since January 1, 1970) in seconds 
+		at which the given key will expire`,
+		Eval:     evalEXPIRETIME,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
 	}
 )
 
