@@ -29,7 +29,6 @@ const (
 
 var RespNIL []byte = []byte("$-1\r\n")
 var RespOK []byte = []byte("+OK\r\n")
-var RespAuthFailure []byte = []byte("+NOAUTH\r\n")
 var RespQueued []byte = []byte("+QUEUED\r\n")
 var RespZero []byte = []byte(":0\r\n")
 var RespOne []byte = []byte(":1\r\n")
@@ -1734,7 +1733,7 @@ func EvalAndRespond(cmds RedisCmds, c *Client) {
 	for _, cmd := range cmds {
 		// Check if the command has been authenticated
 		if cmd.Cmd != AuthCmd && !c.Session.IsActive() {
-			if _, err := c.Write(RespAuthFailure); err != nil {
+			if _, err := c.Write(Encode(errors.New("NOAUTH Authentication required."), false)); err != nil {
 				log.Println("Error writing to client:", err)
 			}
 			continue
