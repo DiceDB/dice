@@ -148,47 +148,60 @@ func BenchmarkQueueRef(b *testing.B) {
 func benchmarkQueueRefInsertAndRemove(b *testing.B) {
 	mockTime := &utils.MockClock{CurrTime: time.Now()}
 	utils.CurrentTime = mockTime
+	benchmarkCases := []struct {
+		name            string
+		nonExpiredCount int
+	}{
+		{"small", 10},
+		{"medium", 100},
+		{"large", 1000},
+		{"very large", 10000},
+	}
 
-	qr := core.NewQueueRef()
-	expiredCount := b.N / 2
-	nonExpiredCount := b.N
+	for _, benchmark := range benchmarkCases {
+		b.Run(fmt.Sprintf("Benchmark %s", benchmark.name), func(b *testing.B) {
+			qr := core.NewQueueRef()
+			expiredCount := benchmark.nonExpiredCount / 2
+			nonExpiredCount := benchmark.nonExpiredCount
 
-	config.KeysLimit = b.N * 10
-	core.ResetStore()
+			config.KeysLimit = benchmark.nonExpiredCount * 10
+			core.ResetStore()
 
-	// Insert expired keys
-	b.Run("InsertExpiredKeys", func(b *testing.B) {
-		for i := 0; i < expiredCount; i++ {
-			insertKey(b, qr, i, true)
-		}
-	})
+			// Insert expired keys
+			b.Run("InsertExpiredKeys", func(b *testing.B) {
+				for i := 0; i < expiredCount; i++ {
+					insertKey(b, qr, i, true)
+				}
+			})
 
-	// Insert non-expired keys
-	b.Run("InsertNonExpiredKeys", func(b *testing.B) {
-		for i := 0; i < nonExpiredCount; i++ {
-			insertKey(b, qr, expiredCount+i, false)
-		}
-	})
+			// Insert non-expired keys
+			b.Run("InsertNonExpiredKeys", func(b *testing.B) {
+				for i := 0; i < nonExpiredCount; i++ {
+					insertKey(b, qr, expiredCount+i, false)
+				}
+			})
 
-	b.StopTimer()
-	// Allow expired keys to expire
-	mockTime.SetTime(time.Now().Add(2 * time.Millisecond))
-	b.StartTimer()
+			b.StopTimer()
+			// Allow expired keys to expire
+			mockTime.SetTime(time.Now().Add(2 * time.Millisecond))
+			b.StartTimer()
 
-	// Remove only non-expired number of keys (expired keys will be auto-removed)
-	b.Run("RemoveNonExpiredKeys", func(b *testing.B) {
-		for i := 0; i < nonExpiredCount; i++ {
-			_, err := qr.Remove()
-			if err != nil {
-				b.Fatalf("Unexpected error during removal: %v", err)
-			}
-		}
-	})
+			// Remove only non-expired number of keys (expired keys will be auto-removed)
+			b.Run("RemoveNonExpiredKeys", func(b *testing.B) {
+				for i := 0; i < nonExpiredCount; i++ {
+					_, err := qr.Remove()
+					if err != nil {
+						b.Fatalf("Unexpected error during removal: %v", err)
+					}
+				}
+			})
 
-	b.StopTimer()
+			b.StopTimer()
 
-	// Validate that the queue is empty
-	validateQueueEmpty(b, qr)
+			// Validate that the queue is empty
+			validateQueueEmpty(b, qr)
+		})
+	}
 }
 
 func insertKey(b *testing.B, qr *core.QueueRef, i int, expired bool) {
