@@ -13,8 +13,9 @@ import (
 const (
 	CustomKey   = "$key"
 	CustomValue = "$value"
-	TempKey     = "_key"
-	TempValue   = "_value"
+	TempPrefix  = "_"
+	TempKey     = TempPrefix + "key"
+	TempValue   = TempPrefix + "value"
 )
 
 // Error definitions

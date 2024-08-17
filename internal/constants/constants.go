@@ -24,6 +24,8 @@ const (
 	String string = "string"
 	Int    string = "int"
 	Float  string = "float"
+	Bool   string = "bool"
+	Nil    string = "nil"
 
 	OperatorEquals              string = "="
 	OperatorNotEquals           string = "!="
