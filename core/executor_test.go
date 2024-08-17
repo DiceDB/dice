@@ -1,7 +1,6 @@
 package core_test
 
 import (
-	"fmt"
 	"sort"
 	"testing"
 
@@ -396,6 +395,7 @@ var JsonDataset = []keyValue{
 }
 
 func setupJSON(t *testing.T) {
+	t.Helper()
 	for _, data := range JsonDataset {
 		core.Del(data.key)
 	}
@@ -432,8 +432,11 @@ func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 results for WHERE clause")
 		assert.Equal(t, result[0].Key, "json1")
-		fmt.Println("my values:", result[0].Value.Value)
-		assert.DeepEqual(t, result[0].Value.Value, `{"name":"Tom"}`)
+
+		var expected, actual interface{}
+		assert.NilError(t, sonic.UnmarshalString(`{"name":"Tom"}`, &expected))
+		assert.NilError(t, sonic.UnmarshalString(result[0].Value.Value.(string), &actual))
+		assert.DeepEqual(t, actual, expected)
 	})
 
 	t.Run("EmptyResult", func(t *testing.T) {
@@ -475,7 +478,11 @@ func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 result for WHERE clause with floating point values")
 		assert.Equal(t, result[0].Key, "json2")
-		assert.DeepEqual(t, result[0].Value.Value, `{"name":"Bob","score":18.1}`)
+
+		var expected, actual interface{}
+		assert.NilError(t, sonic.UnmarshalString(`{"name":"Bob","score":18.1}`, &expected))
+		assert.NilError(t, sonic.UnmarshalString(result[0].Value.Value.(string), &actual))
+		assert.DeepEqual(t, actual, expected)
 	})
 
 	t.Run("WhereClauseWithInteger", func(t *testing.T) {
@@ -497,7 +504,11 @@ func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 result for WHERE clause with integer values")
 		assert.Equal(t, result[0].Key, "json3")
-		assert.DeepEqual(t, result[0].Value.Value, `{"scoreInt":20}`)
+
+		var expected, actual interface{}
+		assert.NilError(t, sonic.UnmarshalString(`{"scoreInt":20}`, &expected))
+		assert.NilError(t, sonic.UnmarshalString(result[0].Value.Value.(string), &actual))
+		assert.DeepEqual(t, actual, expected)
 	})
 
 	t.Run("NestedWhereClause", func(t *testing.T) {
@@ -519,7 +530,11 @@ func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 result for WHERE clause with nested json")
 		assert.Equal(t, result[0].Key, "json4")
-		assert.DeepEqual(t, result[0].Value.Value, `{"field1":{"field2":{"field3":{"score":2}}}}`)
+
+		var expected, actual interface{}
+		assert.NilError(t, sonic.UnmarshalString(`{"field1":{"field2":{"field3":{"score":2}}}}`, &expected))
+		assert.NilError(t, sonic.UnmarshalString(result[0].Value.Value.(string), &actual))
+		assert.DeepEqual(t, actual, expected)
 	})
 
 	t.Run("ComplexWhereClause", func(t *testing.T) {
@@ -541,7 +556,10 @@ func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 result for Complex WHERE clause expression")
 		assert.Equal(t, result[0].Key, "json5")
-		assert.DeepEqual(t, result[0].Value.Value, `{"field1":{"field2":{"field3":{"score":18}},"score2":5}}`)
-	})
 
+		var expected, actual interface{}
+		assert.NilError(t, sonic.UnmarshalString(`{"field1":{"field2":{"field3":{"score":18}},"score2":5}}`, &expected))
+		assert.NilError(t, sonic.UnmarshalString(result[0].Value.Value.(string), &actual))
+		assert.DeepEqual(t, actual, expected)
+	})
 }
