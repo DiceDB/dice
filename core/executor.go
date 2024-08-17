@@ -254,8 +254,8 @@ func getExprValueAndType(expr sqlparser.Expr, row DSQLQueryResultRow) (i interfa
 	}
 }
 
-func retrieveValueFromJSON(path string, jsonData *Obj) (interface{}, string, error) {
-	// path is in the format '$value.field1.field2'. we will remove the refrence to the value object to get the json path
+func retrieveValueFromJSON(path string, jsonData *Obj) (value interface{}, valueType string, err error) {
+	// path is in the format '$value.field1.field2'. we will remove the reference to the value object to get the json path
 	jsonPath := strings.Split(path, ".")
 
 	if len(jsonPath) == 1 {
