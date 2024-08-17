@@ -560,6 +560,17 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
 	}
+	expireatCmdMeta = DiceCmdMeta{
+		Name: "EXPIREAT",
+		Info: `EXPIREAT sets a expiry time(in unix-time-seconds) on the specified key in args
+		args should contain 2 values, key and the expiry time to be set for the key
+		The expiry time should be in integer format; if not, it returns encoded error response
+		Returns RespOne if expiry was set on the key successfully.
+		Once the time is lapsed, the key will be deleted automatically`,
+		Eval:     evalEXPIREAT,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+	}
 )
 
 func init() {
@@ -574,6 +585,7 @@ func init() {
 	diceCmds["DEL"] = delCmdMeta
 	diceCmds["EXPIRE"] = expireCmdMeta
 	diceCmds["EXPIRETIME"] = expiretimeCmdMeta
+	diceCmds["EXPIREAT"] = expireatCmdMeta
 	diceCmds["HELLO"] = helloCmdMeta
 	diceCmds["BGREWRITEAOF"] = bgrewriteaofCmdMeta
 	diceCmds["INCR"] = incrCmdMeta
