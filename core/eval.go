@@ -514,6 +514,34 @@ func evalEXPIRE(args []string) []byte {
 	return RespOne
 }
 
+// evalEXPIRETIME returns the absolute Unix timestamp (since January 1, 1970) in seconds at which the given key will expire
+// args should contain only 1 value, the key
+// Returns expiration Unix timestamp in seconds.
+// Returns -1 if the key exists but has no associated expiration time.
+// Returns -2 if the key does not exist.
+func evalEXPIRETIME(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR wrong number of arguments for 'expire' command"), false)
+	}
+
+	var key string = args[0]
+
+	obj := Get(key)
+
+	// -2 if key doesn't exist
+	if obj == nil {
+		return RespMinusTwo
+	}
+
+	exTimeMili, ok := getExpiry(obj)
+	// -1 if key doesn't have expiration time set
+	if !ok {
+		return RespMinusOne
+	}
+
+	return Encode(int(exTimeMili/1000), false)
+}
+
 func evalHELLO(args []string) []byte {
 	if len(args) > 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'hello' command"), false)

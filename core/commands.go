@@ -552,6 +552,14 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	expiretimeCmdMeta = DiceCmdMeta{
+		Name: "EXPIRETIME",
+		Info: `EXPIRETIME returns the absolute Unix timestamp (since January 1, 1970) in seconds 
+		at which the given key will expire`,
+		Eval:     evalEXPIRETIME,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+	}
 )
 
 func init() {
@@ -565,6 +573,7 @@ func init() {
 	diceCmds["TTL"] = ttlCmdMeta
 	diceCmds["DEL"] = delCmdMeta
 	diceCmds["EXPIRE"] = expireCmdMeta
+	diceCmds["EXPIRETIME"] = expiretimeCmdMeta
 	diceCmds["HELLO"] = helloCmdMeta
 	diceCmds["BGREWRITEAOF"] = bgrewriteaofCmdMeta
 	diceCmds["INCR"] = incrCmdMeta

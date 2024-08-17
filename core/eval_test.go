@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -38,16 +39,17 @@ func setupTest() {
 
 func TestEval(t *testing.T) {
 	testCases := map[string]func(*testing.T){
-		"MSET":    testEvalMSET,
-		"PING":    testEvalPING,
-		"HELLO":   testEvalHELLO,
-		"SET":     testEvalSET,
-		"GET":     testEvalGET,
-		"JSONGET": testEvalJSONGET,
-		"JSONSET": testEvalJSONSET,
-		"TTL":     testEvalTTL,
-		"DEL":     testEvalDel,
-		"PERSIST": TestEvalPersist,
+		"MSET":       testEvalMSET,
+		"PING":       testEvalPING,
+		"HELLO":      testEvalHELLO,
+		"SET":        testEvalSET,
+		"GET":        testEvalGET,
+		"JSONGET":    testEvalJSONGET,
+		"JSONSET":    testEvalJSONSET,
+		"TTL":        testEvalTTL,
+		"DEL":        testEvalDel,
+		"PERSIST":    TestEvalPersist,
+		"EXPIRETIME": testEvalEXPIRETIME,
 	}
 
 	for name, testFunc := range testCases {
@@ -175,6 +177,50 @@ func testEvalGET(t *testing.T) {
 	}
 
 	runEvalTests(t, tests, evalGET)
+}
+
+func testEvalEXPIRETIME(t *testing.T) {
+	tests := map[string]evalTestCase{
+		"wrong number of args": {
+			input:  []string{"KEY1", "KEY2"},
+			output: []byte("-ERR wrong number of arguments for 'expire' command\r\n"),
+		},
+		"key does not exist": {
+			input:  []string{"NONEXISTENT_KEY"},
+			output: RespMinusTwo,
+		},
+		"key exists without expiry": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "mock_value"
+				obj := &Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store[unsafe.Pointer(obj)] = obj
+				keypool[key] = unsafe.Pointer(obj)
+			},
+			input:  []string{"EXISTING_KEY"},
+			output: RespMinusOne,
+		},
+		"key exists with expiry": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "mock_value"
+				obj := &Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store[unsafe.Pointer(obj)] = obj
+				keypool[key] = unsafe.Pointer(obj)
+				expires[obj] = uint64(2724123456123)
+			},
+			input:  []string{"EXISTING_KEY"},
+			output: []byte(fmt.Sprintf(":%d\r\n", 2724123456)),
+		},
+	}
+
+	runEvalTests(t, tests, evalEXPIRETIME)
 }
 
 func testEvalJSONGET(t *testing.T) {
