@@ -1733,7 +1733,7 @@ func EvalAndRespond(cmds RedisCmds, c *Client) {
 	for _, cmd := range cmds {
 		// Check if the command has been authenticated
 		if cmd.Cmd != AuthCmd && !c.Session.IsActive() {
-			if _, err := c.Write(Encode(errors.New("NOAUTH Authentication required."), false)); err != nil {
+			if _, err := c.Write(Encode(errors.New("NOAUTH Authentication required"), false)); err != nil {
 				log.Println("Error writing to client:", err)
 			}
 			continue

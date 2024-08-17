@@ -136,7 +136,7 @@ func (session *Session) Validate(username, password string) error {
 		session.Activate(user)
 		return nil
 	}
-	return fmt.Errorf("WRONGPASS invalid username-password pair or user is disabled.")
+	return fmt.Errorf("WRONGPASS invalid username-password pair or user is disabled")
 }
 
 func (session *Session) Expire() (err error) {
