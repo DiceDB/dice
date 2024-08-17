@@ -584,6 +584,12 @@ var (
 		Eval:  evalRPOP,
 		Arity: 2,
 	}
+	dbSizeCmdMeta = DiceCmdMeta{
+		Name:  "DBSIZE",
+		Info:  `DBSIZE Return the number of keys in the database`,
+		Eval:  evalDBSIZE,
+		Arity: 1,
+	}
 )
 
 func init() {
@@ -654,4 +660,5 @@ func init() {
 	diceCmds["RPOP"] = rpopCmdMeta
 	diceCmds["RPUSH"] = rpushCmdMeta
 	diceCmds["LPOP"] = lpopCmdMeta
+	diceCmds["DBSIZE"] = dbSizeCmdMeta
 }
