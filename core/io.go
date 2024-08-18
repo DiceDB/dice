@@ -38,6 +38,8 @@ func NewRESPParserWithBytes(c io.ReadWriter, initBytes []byte) *RESPParser {
 
 func (rp *RESPParser) DecodeOne() (interface{}, error) {
 	// Read data until we find \r\n or hit an error/EOF
+	//revive:disable:empty-block
+	//revive:disable:empty-lines
 	for {
 		// 1. Check if the accumulated buffer (rp.buf) contains \r\n before reading
 		// more data. This ensures the function does not hang if \r\n is split
@@ -50,6 +52,7 @@ func (rp *RESPParser) DecodeOne() (interface{}, error) {
 		}
 
 		n, err := rp.c.Read(rp.tbuf)
+
 		if n > 0 {
 			rp.buf.Write(rp.tbuf[:n])
 		}
@@ -68,6 +71,7 @@ func (rp *RESPParser) DecodeOne() (interface{}, error) {
 			// This can happen if the connection is closed on the client side but not properly detected
 			return nil, net.ErrClosed
 		}
+
 	}
 
 	b, err := rp.buf.ReadByte()

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"strconv"
 	"strings"
@@ -12,7 +11,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
-
+	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core/bit"
 	"github.com/dicedb/dice/internal/constants"
@@ -51,7 +50,7 @@ func init() {
 // evalPING returns with an encoded "PONG"
 // If any message is added with the ping command,
 // the message will be returned.
-func evalPING(args []string) []byte {
+func evalPING(args []string, store *Store) []byte {
 	var b []byte
 
 	if len(args) >= 2 {
@@ -110,7 +109,7 @@ func evalAUTH(args []string, c *Client) []byte {
 // Returns encoded error response if both PX and EX flags are present
 // Returns encoded OK RESP once new entry is added
 // If the key already exists then the value will be overwritten and expiry will be discarded
-func evalSET(args []string) []byte {
+func evalSET(args []string, store *Store) []byte {
 	if len(args) <= 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'set' command"), false)
 	}
@@ -180,14 +179,14 @@ func evalSET(args []string) []byte {
 
 		case constants.XX:
 			// Get the key from the hash table
-			obj := Get(key)
+			obj := store.Get(key)
 
 			// if key does not exist, return RESP encoded nil
 			if obj == nil {
 				return RespNIL
 			}
 		case constants.NX:
-			obj := Get(key)
+			obj := store.Get(key)
 			if obj != nil {
 				return RespNIL
 			}
@@ -199,7 +198,7 @@ func evalSET(args []string) []byte {
 	}
 
 	// putting the k and value in a Hash Table
-	Put(key, NewObj(value, exDurationMs, oType, oEnc), WithKeepTTL(keepttl))
+	store.Put(key, store.NewObj(value, exDurationMs, oType, oEnc), WithKeepTTL(keepttl))
 
 	return RespOK
 }
@@ -211,7 +210,7 @@ func evalSET(args []string) []byte {
 // Returns encoded error response if at least a <key, value> pair is not part of args
 // Returns encoded OK RESP once new entries are added
 // If the key already exists then the value will be overwritten and expiry will be discarded
-func evalMSET(args []string) []byte {
+func evalMSET(args []string, store *Store) []byte {
 	if len(args) <= 1 || len(args)%2 != 0 {
 		return Encode(errors.New("ERR wrong number of arguments for 'mset' command"), false)
 	}
@@ -223,10 +222,10 @@ func evalMSET(args []string) []byte {
 	for i := 0; i < len(args); i += 2 {
 		key, value := args[i], args[i+1]
 		oType, oEnc := deduceTypeEncoding(value)
-		insertMap[key] = NewObj(value, exDurationMs, oType, oEnc)
+		insertMap[key] = store.NewObj(value, exDurationMs, oType, oEnc)
 	}
 
-	PutAll(insertMap)
+	store.PutAll(insertMap)
 	return RespOK
 }
 
@@ -234,7 +233,7 @@ func evalMSET(args []string) []byte {
 // The key should be the only param in args
 // The RESP value of the key is encoded and then returned
 // evalGET returns RespNIL if key is expired or it does not exist
-func evalGET(args []string) []byte {
+func evalGET(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'get' command"), false)
 	}
@@ -242,7 +241,7 @@ func evalGET(args []string) []byte {
 	var key string = args[0]
 
 	// Get the key from the hash table
-	obj := Get(key)
+	obj := store.Get(key)
 
 	// if key does not exist, return RESP encoded nil
 	if obj == nil {
@@ -254,13 +253,13 @@ func evalGET(args []string) []byte {
 }
 
 // evalDBSIZE returns the number of keys in the database.
-func evalDBSIZE(args []string) []byte {
+func evalDBSIZE(args []string, store *Store) []byte {
 	if len(args) > 0 {
 		return Encode(errors.New("ERR wrong number of arguments for 'DBSIZE' command"), false)
 	}
 
 	// return the RESP encoded value
-	return Encode(GetDBSize(), false)
+	return Encode(store.GetDBSize(), false)
 }
 
 // evalGETDEL returns the value for the queried key in args
@@ -268,7 +267,7 @@ func evalDBSIZE(args []string) []byte {
 // The RESP value of the key is encoded and then returned
 // In evalGETDEL  If the key exists, it will be deleted before its value is returned.
 // evalGETDEL returns RespNIL if key is expired or it does not exist
-func evalGETDEL(args []string) []byte {
+func evalGETDEL(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'getdel' command"), false)
 	}
@@ -276,7 +275,7 @@ func evalGETDEL(args []string) []byte {
 	var key = args[0]
 
 	// Get the key from the hash table
-	obj := GetDel(key)
+	obj := store.GetDel(key)
 
 	// if key does not exist, return RESP encoded nil
 	if obj == nil {
@@ -292,7 +291,7 @@ func evalGETDEL(args []string) []byte {
 // Returns RespNIL if key is expired or it does not exist
 // Returns encoded error response if incorrect number of arguments
 // The RESP value of the key's value type is encoded and then returned
-func evalJSONTYPE(args []string) []byte {
+func evalJSONTYPE(args []string, store *Store) []byte {
 	if len(args) < 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'JSON.TYPE' command"), false)
 	}
@@ -304,7 +303,7 @@ func evalJSONTYPE(args []string) []byte {
 		path = args[1]
 	}
 	// Retrieve the object from the database
-	obj := Get(key)
+	obj := store.Get(key)
 	if obj == nil {
 		return RespNIL
 	}
@@ -356,7 +355,7 @@ func evalJSONTYPE(args []string) []byte {
 // Returns RespNIL if key is expired or it does not exist
 // Returns encoded error response if incorrect number of arguments
 // The RESP value of the key is encoded and then returned
-func evalJSONGET(args []string) []byte {
+func evalJSONGET(args []string, store *Store) []byte {
 	if len(args) < 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'JSON.GET' command"), false)
 	}
@@ -369,7 +368,7 @@ func evalJSONGET(args []string) []byte {
 	}
 
 	// Retrieve the object from the database
-	obj := Get(key)
+	obj := store.Get(key)
 	if obj == nil {
 		return RespNIL
 	}
@@ -425,7 +424,7 @@ func evalJSONGET(args []string) []byte {
 // Returns encoded error response if incorrect number of arguments
 // Returns encoded error if the JSON string is invalid
 // Returns RespOK if the JSON value is successfully stored
-func evalJSONSET(args []string) []byte {
+func evalJSONSET(args []string, store *Store) []byte {
 	// Check if there are enough arguments
 	if len(args) < 3 {
 		return Encode(errors.New("ERR wrong number of arguments for 'JSON.SET' command"), false)
@@ -434,14 +433,13 @@ func evalJSONSET(args []string) []byte {
 	key := args[0]
 	path := args[1]
 	jsonStr := args[2]
-
 	for i := 3; i < len(args); i++ {
 		switch args[i] {
 		case constants.NX, constants.Nx:
 			if i != len(args)-1 {
 				return Encode(errors.New("ERR syntax error"), false)
 			}
-			obj := Get(key)
+			obj := store.Get(key)
 			if obj != nil {
 				return RespNIL
 			}
@@ -449,7 +447,7 @@ func evalJSONSET(args []string) []byte {
 			if i != len(args)-1 {
 				return Encode(errors.New("ERR syntax error"), false)
 			}
-			obj := Get(key)
+			obj := store.Get(key)
 			if obj == nil {
 				return RespNIL
 			}
@@ -466,7 +464,7 @@ func evalJSONSET(args []string) []byte {
 	}
 
 	// Retrieve existing object or create new one
-	obj := Get(key)
+	obj := store.Get(key)
 	var rootData interface{}
 
 	if obj == nil {
@@ -506,9 +504,8 @@ func evalJSONSET(args []string) []byte {
 	}
 
 	// Create a new object with the updated JSON data
-	newObj := NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-	Put(key, newObj)
-
+	newObj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+	store.Put(key, newObj)
 	return RespOK
 }
 
@@ -518,14 +515,14 @@ func evalJSONSET(args []string) []byte {
 //
 //	RESP encoded -2 stating key doesn't exist or key is expired
 //	RESP encoded -1 in case no expiration is set on the key
-func evalTTL(args []string) []byte {
+func evalTTL(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'ttl' command"), false)
 	}
 
 	var key string = args[0]
 
-	obj := Get(key)
+	obj := store.Get(key)
 
 	// if key does not exist, return RESP encoded -2 denoting key does not exist
 	if obj == nil {
@@ -533,7 +530,7 @@ func evalTTL(args []string) []byte {
 	}
 
 	// if object exist, but no expiration is set on it then send -1
-	exp, isExpirySet := getExpiry(obj)
+	exp, isExpirySet := getExpiry(obj, store)
 	if !isExpirySet {
 		return RespMinusOne
 	}
@@ -547,11 +544,11 @@ func evalTTL(args []string) []byte {
 
 // evalDEL deletes all the specified keys in args list
 // returns the count of total deleted keys after encoding
-func evalDEL(args []string) []byte {
+func evalDEL(args []string, store *Store) []byte {
 	var countDeleted int = 0
 
 	for _, key := range args {
-		if ok := Del(key); ok {
+		if ok := store.Del(key); ok {
 			countDeleted++
 		}
 	}
@@ -564,7 +561,7 @@ func evalDEL(args []string) []byte {
 // The expiry time should be in integer format; if not, it returns encoded error response
 // Returns RespOne if expiry was set on the key successfully.
 // Once the time is lapsed, the key will be deleted automatically
-func evalEXPIRE(args []string) []byte {
+func evalEXPIRE(args []string, store *Store) []byte {
 	if len(args) <= 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'expire' command"), false)
 	}
@@ -575,14 +572,14 @@ func evalEXPIRE(args []string) []byte {
 		return Encode(errors.New("ERR value is not an integer or out of range"), false)
 	}
 
-	obj := Get(key)
+	obj := store.Get(key)
 
 	// 0 if the timeout was not set. e.g. key doesn't exist, or operation skipped due to the provided arguments
 	if obj == nil {
 		return RespZero
 	}
 
-	setExpiry(obj, exDurationSec*1000)
+	store.setExpiry(obj, exDurationSec*1000)
 
 	// 1 if the timeout was set.
 	return RespOne
@@ -593,21 +590,21 @@ func evalEXPIRE(args []string) []byte {
 // Returns expiration Unix timestamp in seconds.
 // Returns -1 if the key exists but has no associated expiration time.
 // Returns -2 if the key does not exist.
-func evalEXPIRETIME(args []string) []byte {
+func evalEXPIRETIME(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'expire' command"), false)
 	}
 
 	var key string = args[0]
 
-	obj := Get(key)
+	obj := store.Get(key)
 
 	// -2 if key doesn't exist
 	if obj == nil {
 		return RespMinusTwo
 	}
 
-	exTimeMili, ok := getExpiry(obj)
+	exTimeMili, ok := getExpiry(obj, store)
 	// -1 if key doesn't have expiration time set
 	if !ok {
 		return RespMinusOne
@@ -621,7 +618,7 @@ func evalEXPIRETIME(args []string) []byte {
 // The expiry time should be in integer format; if not, it returns encoded error response
 // Returns RespOne if expiry was set on the key successfully.
 // Once the time is lapsed, the key will be deleted automatically
-func evalEXPIREAT(args []string) []byte {
+func evalEXPIREAT(args []string, store *Store) []byte {
 	if len(args) <= 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'expireat' command"), false)
 	}
@@ -632,20 +629,20 @@ func evalEXPIREAT(args []string) []byte {
 		return Encode(errors.New("ERR value is not an integer or out of range"), false)
 	}
 
-	obj := Get(key)
+	obj := store.Get(key)
 
 	// 0 if the timeout was not set. e.g. key doesn't exist, or operation skipped due to the provided arguments
 	if obj == nil {
 		return RespZero
 	}
 
-	setUnixTimeExpiry(obj, exUnixTimeSec)
+	store.setUnixTimeExpiry(obj, exUnixTimeSec)
 
 	// 1 if the timeout was set.
 	return RespOne
 }
 
-func evalHELLO(args []string) []byte {
+func evalHELLO(args []string, store *Store) []byte {
 	if len(args) > 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'hello' command"), false)
 	}
@@ -666,7 +663,7 @@ based on CoW optimization and Fork */
 // TODO: Implement Acknowledgement so that main process could know whether child has finished writing to its AOF file or not.
 // TODO: Make it safe from failure, an stable policy would be to write the new flushes to a temporary files and then rename them to the main process's AOF file
 // TODO: Add fsync() and fdatasync() to persist to AOF for above cases.
-func evalBGREWRITEAOF(args []string) []byte {
+func evalBGREWRITEAOF(args []string, store *Store) []byte {
 	// Fork a child process, this child process would inherit all the uncommitted pages from main process.
 	// This technique utilizes the CoW or copy-on-write, so while the main process is free to modify them
 	// the child would save all the pages to disk.
@@ -674,7 +671,7 @@ func evalBGREWRITEAOF(args []string) []byte {
 	newChild, _, _ := syscall.Syscall(syscall.SYS_FORK, 0, 0, 0)
 	if newChild == 0 {
 		// We are inside child process now, so we'll start flushing to disk.
-		if err := DumpAllAOF(); err != nil {
+		if err := DumpAllAOF(store); err != nil {
 			return Encode(errors.New("ERR AOF failed"), false)
 		}
 		return []byte(constants.EmptyStr)
@@ -691,11 +688,11 @@ func evalBGREWRITEAOF(args []string) []byte {
 // The value for the queried key should be of integer format,
 // if not evalINCR returns encoded error response.
 // evalINCR returns the incremented value for the key if there are no errors.
-func evalINCR(args []string) []byte {
+func evalINCR(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'incr' command"), false)
 	}
-	return incrDecrCmd(args, 1)
+	return incrDecrCmd(args, 1, store)
 }
 
 // evalDECR decrements the value of the specified key in args by 1,
@@ -706,11 +703,11 @@ func evalINCR(args []string) []byte {
 // The value for the queried key should be of integer format,
 // if not evalDECR returns encoded error response.
 // evalDECR returns the decremented value for the key if there are no errors.
-func evalDECR(args []string) []byte {
+func evalDECR(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'decr' command"), false)
 	}
-	return incrDecrCmd(args, -1)
+	return incrDecrCmd(args, -1, store)
 }
 
 // evalDECRBY decrements the value of the specified key in args by the specified decrement,
@@ -721,7 +718,7 @@ func evalDECR(args []string) []byte {
 // The value for the queried key should be of integer format,
 // if not evalDECRBY returns an encoded error response.
 // evalDECRBY returns the decremented value for the key after applying the specified decrement if there are no errors.
-func evalDECRBY(args []string) []byte {
+func evalDECRBY(args []string, store *Store) []byte {
 	if len(args) != 2 {
 		return Encode(errors.New("ERR wrong number of arguments for 'decrby' command"), false)
 	}
@@ -729,15 +726,15 @@ func evalDECRBY(args []string) []byte {
 	if err != nil {
 		return Encode(errors.New("ERR value is not an integer or out of range"), false)
 	}
-	return incrDecrCmd(args, -decrementAmount)
+	return incrDecrCmd(args, -decrementAmount, store)
 }
 
-func incrDecrCmd(args []string, incr int64) []byte {
+func incrDecrCmd(args []string, incr int64, store *Store) []byte {
 	var key string = args[0]
-	obj := Get(key)
+	obj := store.Get(key)
 	if obj == nil {
-		obj = NewObj("0", -1, ObjTypeString, ObjEncodingInt)
-		Put(key, obj)
+		obj = store.NewObj("0", -1, ObjTypeString, ObjEncodingInt)
+		store.Put(key, obj)
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeString); err != nil {
@@ -763,7 +760,7 @@ func incrDecrCmd(args []string, incr int64) []byte {
 
 // evalINFO creates a buffer with the info of total keys per db
 // Returns the encoded buffer as response
-func evalINFO(args []string) []byte {
+func evalINFO(args []string, store *Store) []byte {
 	var info []byte
 	buf := bytes.NewBuffer(info)
 	buf.WriteString("# Keyspace\r\n")
@@ -774,19 +771,19 @@ func evalINFO(args []string) []byte {
 }
 
 // TODO: Placeholder to support monitoring
-func evalCLIENT(args []string) []byte {
+func evalCLIENT(args []string, store *Store) []byte {
 	return RespOK
 }
 
 // TODO: Placeholder to support monitoring
-func evalLATENCY(args []string) []byte {
+func evalLATENCY(args []string, store *Store) []byte {
 	return Encode([]string{}, false)
 }
 
 // evalLRU deletes all the keys from the LRU
 // returns encoded RESP OK
-func evalLRU(args []string) []byte {
-	evictAllkeysLRU()
+func evalLRU(args []string, store *Store) []byte {
+	evictAllkeysLRU(store)
 	return RespOK
 }
 
@@ -794,7 +791,7 @@ func evalLRU(args []string) []byte {
 // The sleep time should be the only param in args.
 // Returns error response if the time param in args is not of integer format.
 // evalSLEEP returns RespOK after sleeping for mentioned seconds
-func evalSLEEP(args []string) []byte {
+func evalSLEEP(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'SLEEP' command"), false)
 	}
@@ -812,7 +809,7 @@ func evalSLEEP(args []string) []byte {
 // The commands will not be executed until EXEC is triggered.
 // Once EXEC is triggered it executes all the commands in queue,
 // and closes the MULTI transaction.
-func evalMULTI(args []string) []byte {
+func evalMULTI(args []string, store *Store) []byte {
 	return RespOK
 }
 
@@ -820,7 +817,7 @@ func evalMULTI(args []string) []byte {
 // first argument will be the key, that should be of type `QINT`
 // second argument will be the integer value
 // if the key does not exist, evalQINTINS will also create the integer queue
-func evalQINTINS(args []string) []byte {
+func evalQINTINS(args []string, store *Store) []byte {
 	if len(args) != 2 {
 		return Encode(errors.New("ERR invalid number of arguments for `QINTINS` command"), false)
 	}
@@ -830,9 +827,9 @@ func evalQINTINS(args []string) []byte {
 		return Encode(errors.New("ERR only integer values can be inserted in QINT"), false)
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
-		obj = NewObj(NewQueueInt(), -1, ObjTypeByteList, ObjEncodingQint)
+		obj = store.NewObj(NewQueueInt(), -1, ObjTypeByteList, ObjEncodingQint)
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
@@ -843,7 +840,7 @@ func evalQINTINS(args []string) []byte {
 		return Encode(err, false)
 	}
 
-	Put(args[0], obj)
+	store.Put(args[0], obj)
 
 	q := obj.Value.(*QueueInt)
 	q.Insert(x)
@@ -855,7 +852,7 @@ func evalQINTINS(args []string) []byte {
 // first argument will be the key, that should be of type `STACKINT`
 // second argument will be the integer value
 // if the key does not exist, evalSTACKINTPUSH will also create the integer stack
-func evalSTACKINTPUSH(args []string) []byte {
+func evalSTACKINTPUSH(args []string, store *Store) []byte {
 	if len(args) != 2 {
 		return Encode(errors.New("ERR invalid number of arguments for `STACKINTPUSH` command"), false)
 	}
@@ -865,9 +862,9 @@ func evalSTACKINTPUSH(args []string) []byte {
 		return Encode(errors.New("ERR only integer values can be inserted in STACKINT"), false)
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
-		obj = NewObj(NewStackInt(), -1, ObjTypeByteList, ObjEncodingStackInt)
+		obj = store.NewObj(NewStackInt(), -1, ObjTypeByteList, ObjEncodingStackInt)
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
@@ -878,7 +875,7 @@ func evalSTACKINTPUSH(args []string) []byte {
 		return Encode(err, false)
 	}
 
-	Put(args[0], obj)
+	store.Put(args[0], obj)
 
 	s := obj.Value.(*StackInt)
 	s.Push(x)
@@ -891,12 +888,12 @@ func evalSTACKINTPUSH(args []string) []byte {
 // if the key does not exist, evalQINTREM returns nil otherwise it
 // returns the integer value popped from the queue
 // if we remove from the empty queue, nil is returned
-func evalQINTREM(args []string) []byte {
+func evalQINTREM(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR invalid number of arguments for `QINTREM` command"), false)
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
 		return RespNIL
 	}
@@ -924,12 +921,12 @@ func evalQINTREM(args []string) []byte {
 // if the key does not exist, evalSTACKINTPOP returns nil otherwise it
 // returns the integer value popped from the stack
 // if we remove from the empty stack, nil is returned
-func evalSTACKINTPOP(args []string) []byte {
+func evalSTACKINTPOP(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR invalid number of arguments for `STACKINTPOP` command"), false)
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
 		return RespNIL
 	}
@@ -955,12 +952,12 @@ func evalSTACKINTPOP(args []string) []byte {
 // evalQINTLEN returns the length of the QINT identified by key
 // returns the integer value indicating the length of the queue
 // if the key does not exist, the response is 0
-func evalQINTLEN(args []string) []byte {
+func evalQINTLEN(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR invalid number of arguments for `QINTLEN` command"), false)
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
 		return RespZero
 	}
@@ -980,12 +977,12 @@ func evalQINTLEN(args []string) []byte {
 // evalSTACKINTLEN returns the length of the STACKINT identified by key
 // returns the integer value indicating the length of the stack
 // if the key does not exist, the response is 0
-func evalSTACKINTLEN(args []string) []byte {
+func evalSTACKINTLEN(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR invalid number of arguments for `STACKINTLEN` command"), false)
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
 		return RespZero
 	}
@@ -1005,7 +1002,7 @@ func evalSTACKINTLEN(args []string) []byte {
 // evalQINTPEEK peeks into the QINT and returns 5 elements without popping them
 // returns the array of integers as the response.
 // if the key does not exist, then we return an empty array
-func evalQINTPEEK(args []string) []byte {
+func evalQINTPEEK(args []string, store *Store) []byte {
 	var num int64 = 5
 	var err error
 
@@ -1020,7 +1017,7 @@ func evalQINTPEEK(args []string) []byte {
 		}
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
 		return RespEmptyArray
 	}
@@ -1040,7 +1037,7 @@ func evalQINTPEEK(args []string) []byte {
 // evalSTACKINTPEEK peeks into the DINT and returns 5 elements without popping them
 // returns the array of integers as the response.
 // if the key does not exist, then we return an empty array
-func evalSTACKINTPEEK(args []string) []byte {
+func evalSTACKINTPEEK(args []string, store *Store) []byte {
 	var num int64 = 5
 	var err error
 
@@ -1055,7 +1052,7 @@ func evalSTACKINTPEEK(args []string) []byte {
 		}
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
 		return RespEmptyArray
 	}
@@ -1078,14 +1075,14 @@ func evalSTACKINTPEEK(args []string) []byte {
 // if the queue does not exist, evalQREFINS will also create the queueref
 // returns 1 if the key reference was inserted
 // returns 0 otherwise
-func evalQREFINS(args []string) []byte {
+func evalQREFINS(args []string, store *Store) []byte {
 	if len(args) != 2 {
 		return Encode(errors.New("ERR invalid number of arguments for `QREFINS` command"), false)
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
-		obj = NewObj(NewQueueRef(), -1, ObjTypeByteList, ObjEncodingQref)
+		obj = store.NewObj(NewQueueRef(), -1, ObjTypeByteList, ObjEncodingQref)
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
@@ -1096,10 +1093,10 @@ func evalQREFINS(args []string) []byte {
 		return Encode(err, false)
 	}
 
-	Put(args[0], obj)
+	store.Put(args[0], obj)
 
 	q := obj.Value.(*QueueRef)
-	if q.Insert(args[1]) {
+	if q.Insert(args[1], store) {
 		return Encode(1, false)
 	}
 	return Encode(0, false)
@@ -1111,14 +1108,14 @@ func evalQREFINS(args []string) []byte {
 // if the stack does not exist, evalSTACKREFPUSH will also create the stackref
 // returns 1 if the key reference was inserted
 // returns 0 otherwise
-func evalSTACKREFPUSH(args []string) []byte {
+func evalSTACKREFPUSH(args []string, store *Store) []byte {
 	if len(args) != 2 {
 		return Encode(errors.New("ERR invalid number of arguments for `STACKREFPUSH` command"), false)
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
-		obj = NewObj(NewStackRef(), -1, ObjTypeByteList, ObjEncodingStackRef)
+		obj = store.NewObj(NewStackRef(), -1, ObjTypeByteList, ObjEncodingStackRef)
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
@@ -1129,10 +1126,10 @@ func evalSTACKREFPUSH(args []string) []byte {
 		return Encode(err, false)
 	}
 
-	Put(args[0], obj)
+	store.Put(args[0], obj)
 
 	s := obj.Value.(*StackRef)
-	if s.Push(args[1]) {
+	if s.Push(args[1], store) {
 		return Encode(1, false)
 	}
 	return Encode(0, false)
@@ -1143,12 +1140,12 @@ func evalSTACKREFPUSH(args []string) []byte {
 // if the key does not exist, evalQREFREM returns nil otherwise it
 // returns the RESP encoded value of the key reference from the queue
 // if we remove from the empty queue, nil is returned
-func evalQREFREM(args []string) []byte {
+func evalQREFREM(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR invalid number of arguments for `QREFREM` command"), false)
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
 		return RespNIL
 	}
@@ -1162,7 +1159,7 @@ func evalQREFREM(args []string) []byte {
 	}
 
 	q := obj.Value.(*QueueRef)
-	x, err := q.Remove()
+	x, err := q.Remove(store)
 
 	if err == ErrQueueEmpty {
 		return RespNIL
@@ -1176,12 +1173,12 @@ func evalQREFREM(args []string) []byte {
 // if the key does not exist, evalSTACKREFPOP returns nil otherwise it
 // returns the RESP encoded value of the key reference from the stack
 // if we remove from the empty stack, nil is returned
-func evalSTACKREFPOP(args []string) []byte {
+func evalSTACKREFPOP(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR invalid number of arguments for `STACKREFPOP` command"), false)
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
 		return RespNIL
 	}
@@ -1195,7 +1192,7 @@ func evalSTACKREFPOP(args []string) []byte {
 	}
 
 	s := obj.Value.(*StackRef)
-	x, err := s.Pop()
+	x, err := s.Pop(store)
 
 	if err == ErrStackEmpty {
 		return RespNIL
@@ -1207,12 +1204,12 @@ func evalSTACKREFPOP(args []string) []byte {
 // evalQREFLEN returns the length of the QREF identified by key
 // returns the integer value indicating the length of the queue
 // if the key does not exist, the response is 0
-func evalQREFLEN(args []string) []byte {
+func evalQREFLEN(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR invalid number of arguments for `QREFLEN` command"), false)
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
 		return RespZero
 	}
@@ -1232,12 +1229,12 @@ func evalQREFLEN(args []string) []byte {
 // evalSTACKREFLEN returns the length of the STACKREF identified by key
 // returns the integer value indicating the length of the stack
 // if the key does not exist, the response is 0
-func evalSTACKREFLEN(args []string) []byte {
+func evalSTACKREFLEN(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR invalid number of arguments for `STACKREFLEN` command"), false)
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
 		return RespZero
 	}
@@ -1257,7 +1254,7 @@ func evalSTACKREFLEN(args []string) []byte {
 // evalQREFPEEK peeks into the QREF and returns 5 elements without popping them
 // returns the array of resp encoded values as the response.
 // if the key does not exist, then we return an empty array
-func evalQREFPEEK(args []string) []byte {
+func evalQREFPEEK(args []string, store *Store) []byte {
 	var num int64 = 5
 	var err error
 
@@ -1272,7 +1269,7 @@ func evalQREFPEEK(args []string) []byte {
 		}
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
 		return RespEmptyArray
 	}
@@ -1286,13 +1283,13 @@ func evalQREFPEEK(args []string) []byte {
 	}
 
 	q := obj.Value.(*QueueRef)
-	return Encode(q.Iterate(int(num)), false)
+	return Encode(q.Iterate(int(num), store), false)
 }
 
 // evalSTACKREFPEEK peeks into the STACKREF and returns 5 elements without popping them
 // returns the array of resp encoded values as the response.
 // if the key does not exist, then we return an empty array
-func evalSTACKREFPEEK(args []string) []byte {
+func evalSTACKREFPEEK(args []string, store *Store) []byte {
 	var num int64 = 5
 	var err error
 
@@ -1307,7 +1304,7 @@ func evalSTACKREFPEEK(args []string) []byte {
 		}
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
 		return RespEmptyArray
 	}
@@ -1321,14 +1318,14 @@ func evalSTACKREFPEEK(args []string) []byte {
 	}
 
 	s := obj.Value.(*StackRef)
-	return Encode(s.Iterate(int(num)), false)
+	return Encode(s.Iterate(int(num), store), false)
 }
 
 // evalQWATCH adds the specified key to the watch list for the caller client.
 // Every time a key in the watch list is modified, the client will be sent a response
 // containing the new value of the key along with the operation that was performed on it.
 // Contains only one argument, the key to be watched.
-func evalQWATCH(args []string, c *Client) []byte {
+func evalQWATCH(args []string, c *Client, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR invalid number of arguments for `QWATCH` command (expected 1)"), false)
 	}
@@ -1340,10 +1337,10 @@ func evalQWATCH(args []string, c *Client) []byte {
 		return Encode(e, false)
 	}
 
-	AddWatcher(query, c.Fd)
+	store.AddWatcher(query, c.Fd)
 
 	// Return the result of the query.
-	result, err := ExecuteQuery(query)
+	result, err := ExecuteQuery(query, store)
 	if err != nil {
 		return Encode(err, false)
 	}
@@ -1352,7 +1349,7 @@ func evalQWATCH(args []string, c *Client) []byte {
 }
 
 // SETBIT key offset value
-func evalSETBIT(args []string) []byte {
+func evalSETBIT(args []string, store *Store) []byte {
 	var err error
 
 	if len(args) != 3 {
@@ -1370,12 +1367,12 @@ func evalSETBIT(args []string) []byte {
 		return Encode(errors.New("ERR bit is not an integer or out of range"), false)
 	}
 
-	obj := Get(key)
+	obj := store.Get(key)
 	requiredByteArraySize := offset/8 + 1
 
 	if obj == nil {
-		obj = NewObj(NewByteArray(int(requiredByteArraySize)), -1, ObjTypeByteArray, ObjEncodingByteArray)
-		Put(args[0], obj)
+		obj = store.NewObj(NewByteArray(int(requiredByteArraySize)), -1, ObjTypeByteArray, ObjEncodingByteArray)
+		store.Put(args[0], obj)
 	}
 
 	// handle the case when it is string
@@ -1413,7 +1410,7 @@ func evalSETBIT(args []string) []byte {
 }
 
 // GETBIT key offset
-func evalGETBIT(args []string) []byte {
+func evalGETBIT(args []string, store *Store) []byte {
 	var err error
 
 	if len(args) != 2 {
@@ -1426,7 +1423,7 @@ func evalGETBIT(args []string) []byte {
 		return Encode(errors.New("ERR bit offset is not an integer or out of range"), false)
 	}
 
-	obj := Get(key)
+	obj := store.Get(key)
 	if obj == nil {
 		return Encode(0, true)
 	}
@@ -1457,7 +1454,7 @@ func evalGETBIT(args []string) []byte {
 	return Encode(0, true)
 }
 
-func evalBITCOUNT(args []string) []byte {
+func evalBITCOUNT(args []string, store *Store) []byte {
 	var err error
 
 	// if more than 4 arguments are provided, return error
@@ -1467,7 +1464,7 @@ func evalBITCOUNT(args []string) []byte {
 
 	// fetching value of the key
 	var key string = args[0]
-	var obj = Get(key)
+	var obj = store.Get(key)
 	if obj == nil {
 		return Encode(0, false)
 	}
@@ -1560,7 +1557,7 @@ func evalBITCOUNT(args []string) []byte {
 }
 
 // BITOP <AND | OR | XOR | NOT> destkey key [key ...]
-func evalBITOP(args []string) []byte {
+func evalBITOP(args []string, store *Store) []byte {
 	operation, destKey := args[0], args[1]
 	operation = strings.ToUpper(operation)
 
@@ -1578,7 +1575,7 @@ func evalBITOP(args []string) []byte {
 	}
 
 	if operation == constants.NOT {
-		obj := Get(keys[0])
+		obj := store.Get(keys[0])
 		if obj == nil {
 			return Encode(0, true)
 		}
@@ -1607,10 +1604,10 @@ func evalBITOP(args []string) []byte {
 		operationResult.ResizeIfNecessary()
 
 		// create object related to result
-		obj = NewObj(operationResult, -1, ObjTypeByteArray, ObjEncodingByteArray)
+		obj = store.NewObj(operationResult, -1, ObjTypeByteArray, ObjEncodingByteArray)
 
 		// store the result in destKey
-		Put(destKey, obj)
+		store.Put(destKey, obj)
 		return Encode(len(value), true)
 	}
 	// if operation is AND, OR, XOR
@@ -1618,7 +1615,7 @@ func evalBITOP(args []string) []byte {
 
 	// get the values of all keys
 	for i, key := range keys {
-		obj := Get(key)
+		obj := store.Get(key)
 		if obj == nil {
 			values[i] = make([]byte, 0)
 		} else {
@@ -1685,17 +1682,17 @@ func evalBITOP(args []string) []byte {
 	operationResult.ResizeIfNecessary()
 
 	// create object related to result
-	operationResultObject := NewObj(operationResult, -1, ObjTypeByteArray, ObjEncodingByteArray)
+	operationResultObject := store.NewObj(operationResult, -1, ObjTypeByteArray, ObjEncodingByteArray)
 
 	// store the result in destKey
-	Put(destKey, operationResultObject)
+	store.Put(destKey, operationResultObject)
 
 	return Encode(len(result), true)
 }
 
 // evalCommand evaluates COMMAND <subcommand> command based on subcommand
 // COUNT: return total count of commands in Dice.
-func evalCommand(args []string) []byte {
+func evalCommand(args []string, store *Store) []byte {
 	if len(args) == 0 {
 		return Encode(errors.New("(error) ERR wrong number of arguments for 'command' command"), false)
 	}
@@ -1712,13 +1709,13 @@ func evalCommand(args []string) []byte {
 
 // evalKeys returns the list of keys that match the pattern
 // The pattern should be the only param in args
-func evalKeys(args []string) []byte {
+func evalKeys(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'keys' command"), false)
 	}
 
 	pattern := args[0]
-	keys, err := Keys(pattern)
+	keys, err := store.Keys(pattern)
 	if err != nil {
 		return Encode(err, false)
 	}
@@ -1758,7 +1755,7 @@ func evalCommandGetKeys(args []string) []byte {
 	}
 	return Encode(keys, false)
 }
-func evalRename(args []string) []byte {
+func evalRename(args []string, store *Store) []byte {
 	if len(args) != 2 {
 		return Encode(errors.New("ERR wrong number of arguments for 'RENAME' command"), false)
 	}
@@ -1771,12 +1768,12 @@ func evalRename(args []string) []byte {
 	}
 
 	// if Source key does not exist, return RESP encoded nil
-	sourceObj := Get(sourceKey)
+	sourceObj := store.Get(sourceKey)
 	if sourceObj == nil {
 		return Encode("ERR no such key", false)
 	}
 
-	if ok := Rename(sourceKey, destKey); ok {
+	if ok := store.Rename(sourceKey, destKey); ok {
 		return RespOK
 	}
 	return RespNIL
@@ -1786,11 +1783,11 @@ func evalRename(args []string) []byte {
 // For each key, if the key is expired or does not exist, the response will be RespNIL;
 // otherwise, the response will be the RESP value of the key.
 // MGET is atomic, it retrieves all values at once
-func evalMGET(args []string) []byte {
+func evalMGET(args []string, store *Store) []byte {
 	if len(args) < 1 {
 		return Encode(errors.New("ERR wrong number of arguments for command"), false)
 	}
-	values := GetAll(args)
+	values := store.GetAll(args)
 	response := make([]interface{}, len(args))
 	for i, obj := range values {
 		if obj == nil {
@@ -1802,14 +1799,14 @@ func evalMGET(args []string) []byte {
 	return Encode(response, false)
 }
 
-func evalEXISTS(args []string) []byte {
+func evalEXISTS(args []string, store *Store) []byte {
 	if len(args) == 0 {
 		return Encode(errors.New("ERR wrong number of arguments for 'exists' command"), false)
 	}
 
 	var count int
 	for _, key := range args {
-		if GetNoTouch(key) != nil {
+		if store.GetNoTouch(key) != nil {
 			count++
 		}
 	}
@@ -1817,18 +1814,18 @@ func evalEXISTS(args []string) []byte {
 	return Encode(count, false)
 }
 
-func executeCommand(cmd *RedisCmd, c *Client) []byte {
+func executeCommand(cmd *RedisCmd, c *Client, store *Store) []byte {
 	diceCmd, ok := diceCmds[cmd.Cmd]
 	if !ok {
 		return Encode(fmt.Errorf("ERR unknown command '%s', with args beginning with: %s", cmd.Cmd, strings.Join(cmd.Args, " ")), false)
 	}
 
 	if diceCmd.Name == "SUBSCRIBE" || diceCmd.Name == "QWATCH" {
-		return evalQWATCH(cmd.Args, c)
+		return evalQWATCH(cmd.Args, c, store)
 	}
 	if diceCmd.Name == "MULTI" {
 		c.TxnBegin()
-		return diceCmd.Eval(cmd.Args)
+		return diceCmd.Eval(cmd.Args, store)
 	}
 	if diceCmd.Name == AuthCmd {
 		return evalAUTH(cmd.Args, c)
@@ -1837,7 +1834,7 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		if !c.isTxn {
 			return Encode(errors.New("ERR EXEC without MULTI"), false)
 		}
-		return c.TxnExec()
+		return c.TxnExec(store)
 	}
 	if diceCmd.Name == "DISCARD" {
 		if !c.isTxn {
@@ -1850,14 +1847,14 @@ func executeCommand(cmd *RedisCmd, c *Client) []byte {
 		return RespOK
 	}
 
-	return diceCmd.Eval(cmd.Args)
+	return diceCmd.Eval(cmd.Args, store)
 }
 
-func executeCommandToBuffer(cmd *RedisCmd, buf *bytes.Buffer, c *Client) {
-	buf.Write(executeCommand(cmd, c))
+func executeCommandToBuffer(cmd *RedisCmd, buf *bytes.Buffer, c *Client, store *Store) {
+	buf.Write(executeCommand(cmd, c, store))
 }
 
-func EvalAndRespond(cmds RedisCmds, c *Client) {
+func EvalAndRespond(cmds RedisCmds, c *Client, store *Store) {
 	var response []byte
 	buf := bytes.NewBuffer(response)
 
@@ -1865,14 +1862,14 @@ func EvalAndRespond(cmds RedisCmds, c *Client) {
 		// Check if the command has been authenticated
 		if cmd.Cmd != AuthCmd && !c.Session.IsActive() {
 			if _, err := c.Write(Encode(errors.New("NOAUTH Authentication required"), false)); err != nil {
-				log.Println("Error writing to client:", err)
+				log.Info("Error writing to client:", err)
 			}
 			continue
 		}
 		// if txn is not in progress, then we can simply
 		// execute the command and add the response to the buffer
 		if !c.isTxn {
-			executeCommandToBuffer(cmd, buf, c)
+			executeCommandToBuffer(cmd, buf, c, store)
 			continue
 		}
 
@@ -1886,23 +1883,23 @@ func EvalAndRespond(cmds RedisCmds, c *Client) {
 			// if txn is active and the command is non-queuable
 			// ex: EXEC, DISCARD
 			// we execute the command and gather the response in buffer
-			executeCommandToBuffer(cmd, buf, c)
+			executeCommandToBuffer(cmd, buf, c, store)
 		}
 	}
 
 	if _, err := c.Write(buf.Bytes()); err != nil {
-		log.Panic(err)
+		log.Error(err)
 	}
 }
 
-func evalPersist(args []string) []byte {
+func evalPersist(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'persist' command"), false)
 	}
 
 	key := args[0]
 
-	obj := Get(key)
+	obj := store.Get(key)
 
 	// If the key does not exist, return RESP encoded 0 to denote the key does not exist
 	if obj == nil {
@@ -1910,18 +1907,18 @@ func evalPersist(args []string) []byte {
 	}
 
 	// If the object exists but no expiration is set on it, return -1
-	_, isExpirySet := getExpiry(obj)
+	_, isExpirySet := getExpiry(obj, store)
 	if !isExpirySet {
 		return RespMinusOne
 	}
 
 	// If the object exists, remove the expiration time
-	delExpiry(obj)
+	delExpiry(obj, store)
 
 	return RespOne
 }
 
-func evalCOPY(args []string) []byte {
+func evalCOPY(args []string, store *Store) []byte {
 	if len(args) < 2 {
 		return Encode(errors.New("ERR wrong number of arguments for 'copy' command"), false)
 	}
@@ -1930,8 +1927,7 @@ func evalCOPY(args []string) []byte {
 
 	sourceKey := args[0]
 	destinationKey := args[1]
-
-	sourceObj := Get(sourceKey)
+	sourceObj := store.Get(sourceKey)
 	if sourceObj == nil {
 		return RespZero
 	}
@@ -1944,10 +1940,10 @@ func evalCOPY(args []string) []byte {
 	}
 
 	if isReplace {
-		Del(destinationKey)
+		store.Del(destinationKey)
 	}
 
-	destinationObj := Get(destinationKey)
+	destinationObj := store.Get(destinationKey)
 	if destinationObj != nil {
 		return RespZero
 	}
@@ -1957,16 +1953,16 @@ func evalCOPY(args []string) []byte {
 		return RespZero
 	}
 
-	exp, ok := getExpiry(sourceObj)
+	exp, ok := getExpiry(sourceObj, store)
 	var exDurationMs int64 = -1
 	if ok {
 		exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
 	}
 
-	Put(destinationKey, copyObj)
+	store.Put(destinationKey, copyObj)
 
 	if exDurationMs > 0 {
-		setExpiry(copyObj, exDurationMs)
+		store.setExpiry(copyObj, exDurationMs)
 	}
 	return RespOne
 }
@@ -1983,7 +1979,7 @@ func evalCOPY(args []string) []byte {
 // PERSIST -- Remove the time to live associated with the key.
 // The RESP value of the key is encoded and then returned
 // evalGET returns RespNIL if key is expired or it does not exist
-func evalGETEX(args []string) []byte {
+func evalGETEX(args []string, store *Store) []byte {
 	if len(args) < 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'getex' command"), false)
 	}
@@ -1991,7 +1987,7 @@ func evalGETEX(args []string) []byte {
 	var key string = args[0]
 
 	// Get the key from the hash table
-	obj := Get(key)
+	obj := store.Get(key)
 
 	// if key does not exist, return RESP encoded nil
 	if obj == nil {
@@ -2069,9 +2065,9 @@ func evalGETEX(args []string) []byte {
 
 	if state == Initialized {
 		if persist {
-			delExpiry(obj)
+			delExpiry(obj, store)
 		} else {
-			setExpiry(obj, exDurationMs)
+			store.setExpiry(obj, exDurationMs)
 		}
 	}
 
@@ -2085,20 +2081,20 @@ func evalGETEX(args []string) []byte {
 //
 //	RESP encoded -2 stating key doesn't exist or key is expired
 //	RESP encoded -1 in case no expiration is set on the key
-func evalPTTL(args []string) []byte {
+func evalPTTL(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'pttl' command"), false)
 	}
 
 	key := args[0]
 
-	obj := Get(key)
+	obj := store.Get(key)
 
 	if obj == nil {
 		return RespMinusTwo
 	}
 
-	exp, isExpirySet := getExpiry(obj)
+	exp, isExpirySet := getExpiry(obj, store)
 
 	if !isExpirySet {
 		return RespMinusOne
@@ -2110,8 +2106,8 @@ func evalPTTL(args []string) []byte {
 	return Encode(int64(durationMs), false)
 }
 
-func evalObjectIdleTime(key string) []byte {
-	obj := GetNoTouch(key)
+func evalObjectIdleTime(key string, store *Store) []byte {
+	obj := store.GetNoTouch(key)
 	if obj == nil {
 		return RespNIL
 	}
@@ -2119,7 +2115,7 @@ func evalObjectIdleTime(key string) []byte {
 	return Encode(int64(getIdleTime(obj.LastAccessedAt)), true)
 }
 
-func evalOBJECT(args []string) []byte {
+func evalOBJECT(args []string, store *Store) []byte {
 	if len(args) < 2 {
 		return Encode(errors.New("ERR wrong number of arguments for 'object' command"), false)
 	}
@@ -2129,20 +2125,20 @@ func evalOBJECT(args []string) []byte {
 
 	switch subcommand {
 	case "IDLETIME":
-		return evalObjectIdleTime(key)
+		return evalObjectIdleTime(key, store)
 	default:
 		return Encode(errors.New("ERR syntax error"), false)
 	}
 }
 
-func evalTOUCH(args []string) []byte {
+func evalTOUCH(args []string, store *Store) []byte {
 	if len(args) == 0 {
 		return Encode(errors.New("ERR wrong number of arguments for 'touch' command"), false)
 	}
 
 	count := 0
 	for _, key := range args {
-		if Get(key) != nil {
+		if store.Get(key) != nil {
 			count++
 		}
 	}
@@ -2150,14 +2146,14 @@ func evalTOUCH(args []string) []byte {
 	return Encode(count, false)
 }
 
-func evalLPUSH(args []string) []byte {
+func evalLPUSH(args []string, store *Store) []byte {
 	if len(args) < 2 {
 		return Encode(errors.New("ERR invalid number of arguments for `LPUSH` command"), false)
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
-		obj = NewObj(NewDeque(), -1, ObjTypeByteList, ObjEncodingDeque)
+		obj = store.NewObj(NewDeque(), -1, ObjTypeByteList, ObjEncodingDeque)
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
@@ -2168,7 +2164,7 @@ func evalLPUSH(args []string) []byte {
 		return Encode(err, false)
 	}
 
-	Put(args[0], obj)
+	store.Put(args[0], obj)
 	for i := 1; i < len(args); i++ {
 		obj.Value.(*Deque).LPush(args[i])
 	}
@@ -2176,14 +2172,14 @@ func evalLPUSH(args []string) []byte {
 	return RespOK
 }
 
-func evalRPUSH(args []string) []byte {
+func evalRPUSH(args []string, store *Store) []byte {
 	if len(args) < 2 {
 		return Encode(errors.New("ERR invalid number of arguments for `RPUSH` command"), false)
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
-		obj = NewObj(NewDeque(), -1, ObjTypeByteList, ObjEncodingDeque)
+		obj = store.NewObj(NewDeque(), -1, ObjTypeByteList, ObjEncodingDeque)
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
@@ -2194,7 +2190,7 @@ func evalRPUSH(args []string) []byte {
 		return Encode(err, false)
 	}
 
-	Put(args[0], obj)
+	store.Put(args[0], obj)
 	for i := 1; i < len(args); i++ {
 		obj.Value.(*Deque).RPush(args[i])
 	}
@@ -2202,12 +2198,12 @@ func evalRPUSH(args []string) []byte {
 	return RespOK
 }
 
-func evalRPOP(args []string) []byte {
+func evalRPOP(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR invalid number of arguments for `RPOP` command"), false)
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
 		return RespNIL
 	}
@@ -2232,12 +2228,12 @@ func evalRPOP(args []string) []byte {
 	return Encode(x, false)
 }
 
-func evalLPOP(args []string) []byte {
+func evalLPOP(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR invalid number of arguments for `LPOP` command"), false)
 	}
 
-	obj := Get(args[0])
+	obj := store.Get(args[0])
 	if obj == nil {
 		return RespNIL
 	}

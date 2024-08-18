@@ -29,6 +29,8 @@ var eStatus int32 = EngineStatusWAITING
 
 var connectedClients map[int]*core.Client
 
+var asyncStore = core.NewStore()
+
 func init() {
 	connectedClients = make(map[int]*core.Client)
 }
@@ -56,12 +58,12 @@ func WatchKeys(ctx context.Context, wg *sync.WaitGroup) {
 	for {
 		select {
 		case event := <-core.WatchChannel:
-			core.WatchList.Range(func(key, value interface{}) bool {
+			asyncStore.WatchList.Range(func(key, value interface{}) bool {
 				query := key.(core.DSQLQuery)
 				clients := value.(*sync.Map)
 
 				if core.WildCardMatch(query.KeyRegex, event.Key) {
-					result, err := core.ExecuteQuery(query)
+					result, err := core.ExecuteQuery(query, asyncStore)
 					if err != nil {
 						log.Error(err)
 						return true // continue to next item
@@ -72,7 +74,7 @@ func WatchKeys(ctx context.Context, wg *sync.WaitGroup) {
 						clientFd := clientKey.(int)
 						_, err := syscall.Write(clientFd, encodedResult)
 						if err != nil {
-							core.RemoveWatcher(query, clientFd)
+							asyncStore.RemoveWatcher(query, clientFd)
 						}
 						return true
 					})
@@ -102,7 +104,7 @@ func WaitForSignal(wg *sync.WaitGroup, sigs chan os.Signal) {
 	atomic.StoreInt32(&eStatus, EngineStatusSHUTTINGDOWN)
 
 	// if server is in any other state, initiate a shutdown
-	core.Shutdown()
+	core.Shutdown(asyncStore)
 	os.Exit(0) //nolint:gocritic
 }
 
@@ -181,7 +183,7 @@ func RunAsyncTCPServer(serverFD int, wg *sync.WaitGroup) {
 	// loop until the server is not shutting down
 	for atomic.LoadInt32(&eStatus) != EngineStatusSHUTTINGDOWN {
 		if time.Now().After(lastCronExecTime.Add(cronFrequency)) {
-			core.DeleteExpiredKeys()
+			core.DeleteExpiredKeys(asyncStore)
 			lastCronExecTime = utils.GetCurrentTime()
 		}
 
@@ -245,7 +247,7 @@ func RunAsyncTCPServer(serverFD int, wg *sync.WaitGroup) {
 					delete(connectedClients, event.Fd)
 					continue
 				}
-				respond(cmds, comm)
+				respond(cmds, comm, asyncStore)
 				if hasABORT {
 					cancel()
 					return

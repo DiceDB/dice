@@ -3,9 +3,10 @@ package tests
 import (
 	"context"
 	"fmt"
-	"github.com/bytedance/sonic"
 	"net"
 	"testing"
+
+	"github.com/bytedance/sonic"
 
 	"github.com/dicedb/dice/core"
 	redis "github.com/dicedb/go-dice"
@@ -53,18 +54,15 @@ var qWatchTestCases = []qWatchTestCase{
 	}},
 }
 
-// Before each test, we need to reset the database.
-func resetQWatchStore() {
-	// iterate over all the test cases and Delete the keys
-	for _, tc := range qWatchTestCases {
-		core.Del(fmt.Sprintf("match:100:user:%d", tc.userID))
-	}
-}
-
 // TestQWATCH tests the QWATCH functionality using raw network connections.
 func TestQWATCH(t *testing.T) {
-	resetQWatchStore()
 	publisher := getLocalConnection()
+
+	// Cleanup Store for next tests
+	for _, tc := range qWatchTestCases {
+		fireCommand(publisher, fmt.Sprintf("DEL match:100:user:%d", tc.userID))
+	}
+
 	subscribers := []net.Conn{getLocalConnection(), getLocalConnection(), getLocalConnection()}
 	defer func() {
 		publisher.Close()
@@ -91,9 +89,14 @@ func TestQWATCH(t *testing.T) {
 
 // TestQWATCHWithSDK tests the QWATCH functionality using the Redis SDK.
 func TestQWATCHWithSDK(t *testing.T) {
-	resetQWatchStore()
 	ctx := context.Background()
 	publisher := getLocalSdk()
+
+	// Cleanup Store for next tests
+	for _, tc := range qWatchTestCases {
+		publisher.Del(context.Background(), fmt.Sprintf("match:100:user:%d", tc.userID))
+	}
+
 	subscribers := []*redis.Client{getLocalSdk(), getLocalSdk(), getLocalSdk()}
 	defer func() {
 		publisher.Close()
@@ -130,6 +133,7 @@ func runQWatchScenarios(t *testing.T, publisher interface{}, receivers interface
 
 		// For raw connections, parse RESP responses
 		for _, expectedUpdate := range tc.expectedUpdates {
+
 			switch r := receivers.(type) {
 			case []*core.RESPParser:
 				// For raw connections, parse RESP responses
@@ -202,8 +206,12 @@ var JSONTestCases = []struct {
 }
 
 func TestQwatchWithJSON(t *testing.T) {
-	resetJSONTestCases()
 	publisher := getLocalConnection()
+
+	// Cleanup Store for next tests
+	for _, tc := range JSONTestCases {
+		fireCommand(publisher, fmt.Sprintf("DEL %s", tc.key))
+	}
 
 	subscribers := make([]net.Conn, 0, len(JSONTestCases))
 
@@ -248,11 +256,5 @@ func TestQwatchWithJSON(t *testing.T) {
 			assert.NilError(t, sonic.UnmarshalString(update[0].([]interface{})[1].(string), &actualJSON))
 			assert.DeepEqual(t, expectedJSON, actualJSON)
 		}
-	}
-}
-
-func resetJSONTestCases() {
-	for _, testCase := range JSONTestCases {
-		core.Del(testCase.key)
 	}
 }

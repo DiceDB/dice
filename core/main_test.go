@@ -8,7 +8,8 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	core.ResetStore()
+	store := core.NewStore()
+	store.ResetStore()
 
 	exitCode := m.Run()
 

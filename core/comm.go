@@ -27,13 +27,13 @@ func (c *Client) TxnBegin() {
 	c.isTxn = true
 }
 
-func (c *Client) TxnExec() []byte {
+func (c *Client) TxnExec(store *Store) []byte {
 	var out []byte
 	buf := bytes.NewBuffer(out)
 
 	fmt.Fprintf(buf, "*%d\r\n", len(c.cqueue))
 	for _, _cmd := range c.cqueue {
-		buf.Write(executeCommand(_cmd, c))
+		buf.Write(executeCommand(_cmd, c, store))
 	}
 
 	c.cqueue = make(RedisCmds, 0)

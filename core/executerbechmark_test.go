@@ -19,23 +19,24 @@ var jsonList = map[string]string{
 	"largeJSON": `{"score":10,"id":%d,"field1":{"field2":{"field3":{"score":10.36}}},"inventory":{"mountain_bikes":[{"id":"bike:1","model":"Phoebe","price":1920,"specs":{"material":"carbon","weight":13.1},"colors":["black","silver"]},{"id":"bike:2","model":"Quaoar","price":2072,"specs":{"material":"aluminium","weight":7.9},"colors":["black","white"]},{"id":"bike:3","model":"Weywot","price":3264,"specs":{"material":"alloy","weight":13.8}}],"commuter_bikes":[{"id":"bike:4","model":"Salacia","price":1475,"specs":{"material":"aluminium","weight":16.6},"colors":["black","silver"]},{"id":"bike:5","model":"Mimas","price":3941,"specs":{"material":"alloy","weight":11.6}}]}}`,
 }
 
-func generateBenchmarkData(count int) {
+func generateBenchmarkData(count int, store *core.Store) {
 	config.KeysLimit = 2000000 // Set a high limit for benchmarking
-	core.ResetStore()
+	store.ResetStore()
 
 	data := make(map[string]*core.Obj, count)
 	for i := 0; i < count; i++ {
 		key := fmt.Sprintf("k%d", i)
 		value := fmt.Sprintf("v%d", i)
-		data[key] = core.NewObj(value, -1, core.ObjTypeString, core.ObjEncodingRaw)
+		data[key] = store.NewObj(value, -1, core.ObjTypeString, core.ObjEncodingRaw)
 	}
-	core.PutAll(data)
+	store.PutAll(data)
 }
 
 func BenchmarkExecuteQueryOrderBykey(b *testing.B) {
+	store := core.NewStore()
 	for _, v := range benchmarkDataSizes {
-		generateBenchmarkData(v)
-		defer core.ResetStore()
+		generateBenchmarkData(v, store)
+		defer store.ResetStore()
 
 		query := core.DSQLQuery{
 			KeyRegex: "k*",
@@ -53,7 +54,7 @@ func BenchmarkExecuteQueryOrderBykey(b *testing.B) {
 
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := core.ExecuteQuery(query); err != nil {
+				if _, err := core.ExecuteQuery(query, store); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -62,9 +63,10 @@ func BenchmarkExecuteQueryOrderBykey(b *testing.B) {
 }
 
 func BenchmarkExecuteQueryBasicOrderByValue(b *testing.B) {
+	store := core.NewStore()
 	for _, v := range benchmarkDataSizes {
-		generateBenchmarkData(v)
-		defer core.ResetStore()
+		generateBenchmarkData(v, store)
+		defer store.ResetStore()
 
 		query := core.DSQLQuery{
 			KeyRegex: "k*",
@@ -81,7 +83,7 @@ func BenchmarkExecuteQueryBasicOrderByValue(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := core.ExecuteQuery(query); err != nil {
+				if _, err := core.ExecuteQuery(query, store); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -90,9 +92,10 @@ func BenchmarkExecuteQueryBasicOrderByValue(b *testing.B) {
 }
 
 func BenchmarkExecuteQueryLimit(b *testing.B) {
+	store := core.NewStore()
 	for _, v := range benchmarkDataSizes {
-		generateBenchmarkData(v)
-		defer core.ResetStore()
+		generateBenchmarkData(v, store)
+		defer store.ResetStore()
 
 		query := core.DSQLQuery{
 			KeyRegex: "k*",
@@ -110,7 +113,7 @@ func BenchmarkExecuteQueryLimit(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := core.ExecuteQuery(query); err != nil {
+				if _, err := core.ExecuteQuery(query, store); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -119,9 +122,10 @@ func BenchmarkExecuteQueryLimit(b *testing.B) {
 }
 
 func BenchmarkExecuteQueryNoMatch(b *testing.B) {
+	store := core.NewStore()
 	for _, v := range benchmarkDataSizes {
-		generateBenchmarkData(v)
-		defer core.ResetStore()
+		generateBenchmarkData(v, store)
+		defer store.ResetStore()
 
 		query := core.DSQLQuery{
 			KeyRegex: "x*",
@@ -134,7 +138,7 @@ func BenchmarkExecuteQueryNoMatch(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := core.ExecuteQuery(query); err != nil {
+				if _, err := core.ExecuteQuery(query, store); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -143,9 +147,10 @@ func BenchmarkExecuteQueryNoMatch(b *testing.B) {
 }
 
 func BenchmarkExecuteQueryWithBasicWhere(b *testing.B) {
+	store := core.NewStore()
 	for _, v := range benchmarkDataSizes {
-		generateBenchmarkData(v)
-		defer core.ResetStore()
+		generateBenchmarkData(v, store)
+		defer store.ResetStore()
 
 		query := core.DSQLQuery{
 			KeyRegex: "k*",
@@ -163,7 +168,7 @@ func BenchmarkExecuteQueryWithBasicWhere(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := core.ExecuteQuery(query); err != nil {
+				if _, err := core.ExecuteQuery(query, store); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -172,9 +177,10 @@ func BenchmarkExecuteQueryWithBasicWhere(b *testing.B) {
 }
 
 func BenchmarkExecuteQueryWithComplexWhere(b *testing.B) {
+	store := core.NewStore()
 	for _, v := range benchmarkDataSizes {
-		generateBenchmarkData(v)
-		defer core.ResetStore()
+		generateBenchmarkData(v, store)
+		defer store.ResetStore()
 
 		query := core.DSQLQuery{
 			KeyRegex: "k*",
@@ -203,7 +209,7 @@ func BenchmarkExecuteQueryWithComplexWhere(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := core.ExecuteQuery(query); err != nil {
+				if _, err := core.ExecuteQuery(query, store); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -212,9 +218,10 @@ func BenchmarkExecuteQueryWithComplexWhere(b *testing.B) {
 }
 
 func BenchmarkExecuteQueryWithCompareWhereKeyandValue(b *testing.B) {
+	store := core.NewStore()
 	for _, v := range benchmarkDataSizes {
-		generateBenchmarkData(v)
-		defer core.ResetStore()
+		generateBenchmarkData(v, store)
+		defer store.ResetStore()
 
 		query := core.DSQLQuery{
 			KeyRegex: "k*",
@@ -232,7 +239,7 @@ func BenchmarkExecuteQueryWithCompareWhereKeyandValue(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := core.ExecuteQuery(query); err != nil {
+				if _, err := core.ExecuteQuery(query, store); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -241,9 +248,10 @@ func BenchmarkExecuteQueryWithCompareWhereKeyandValue(b *testing.B) {
 }
 
 func BenchmarkExecuteQueryWithBasicWhereNoMatch(b *testing.B) {
+	store := core.NewStore()
 	for _, v := range benchmarkDataSizes {
-		generateBenchmarkData(v)
-		defer core.ResetStore()
+		generateBenchmarkData(v, store)
+		defer store.ResetStore()
 
 		query := core.DSQLQuery{
 			KeyRegex: "k*",
@@ -261,7 +269,7 @@ func BenchmarkExecuteQueryWithBasicWhereNoMatch(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := core.ExecuteQuery(query); err != nil {
+				if _, err := core.ExecuteQuery(query, store); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -270,9 +278,10 @@ func BenchmarkExecuteQueryWithBasicWhereNoMatch(b *testing.B) {
 }
 
 func BenchmarkExecuteQueryWithNullValues(b *testing.B) {
+	store := core.NewStore()
 	for _, v := range benchmarkDataSizes {
-		generateBenchmarkData(v)
-		defer core.ResetStore()
+		generateBenchmarkData(v, store)
+		defer store.ResetStore()
 
 		query := core.DSQLQuery{
 			KeyRegex: "nullKey",
@@ -290,7 +299,7 @@ func BenchmarkExecuteQueryWithNullValues(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := core.ExecuteQuery(query); err != nil {
+				if _, err := core.ExecuteQuery(query, store); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -299,9 +308,10 @@ func BenchmarkExecuteQueryWithNullValues(b *testing.B) {
 }
 
 func BenchmarkExecuteQueryWithCaseSesnsitivity(b *testing.B) {
+	store := core.NewStore()
 	for _, v := range benchmarkDataSizes {
-		generateBenchmarkData(v)
-		defer core.ResetStore()
+		generateBenchmarkData(v, store)
+		defer store.ResetStore()
 
 		query := core.DSQLQuery{
 			KeyRegex: "k*",
@@ -319,7 +329,7 @@ func BenchmarkExecuteQueryWithCaseSesnsitivity(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := core.ExecuteQuery(query); err != nil {
+				if _, err := core.ExecuteQuery(query, store); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -328,9 +338,10 @@ func BenchmarkExecuteQueryWithCaseSesnsitivity(b *testing.B) {
 }
 
 func BenchmarkExecuteQueryWithClauseOnKey(b *testing.B) {
+	store := core.NewStore()
 	for _, v := range benchmarkDataSizes {
-		generateBenchmarkData(v)
-		defer core.ResetStore()
+		generateBenchmarkData(v, store)
+		defer store.ResetStore()
 
 		query := core.DSQLQuery{
 			KeyRegex: "k*",
@@ -352,7 +363,7 @@ func BenchmarkExecuteQueryWithClauseOnKey(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := core.ExecuteQuery(query); err != nil {
+				if _, err := core.ExecuteQuery(query, store); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -361,9 +372,10 @@ func BenchmarkExecuteQueryWithClauseOnKey(b *testing.B) {
 }
 
 func BenchmarkExecuteQueryWithEmptyKeyRegex(b *testing.B) {
+	store := core.NewStore()
 	for _, v := range benchmarkDataSizes {
-		generateBenchmarkData(v)
-		defer core.ResetStore()
+		generateBenchmarkData(v, store)
+		defer store.ResetStore()
 
 		query := core.DSQLQuery{
 			KeyRegex: constants.EmptyStr,
@@ -376,7 +388,7 @@ func BenchmarkExecuteQueryWithEmptyKeyRegex(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := core.ExecuteQuery(query); err != nil {
+				if _, err := core.ExecuteQuery(query, store); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -384,9 +396,9 @@ func BenchmarkExecuteQueryWithEmptyKeyRegex(b *testing.B) {
 	}
 }
 
-func generateBenchmarkJSONData(b *testing.B, count int, json string) {
+func generateBenchmarkJSONData(b *testing.B, count int, json string, store *core.Store) {
 	config.KeysLimit = 2000000 // Set a high limit for benchmarking
-	core.ResetStore()
+	store.ResetStore()
 
 	data := make(map[string]*core.Obj, count)
 	for i := 0; i < count; i++ {
@@ -398,16 +410,17 @@ func generateBenchmarkJSONData(b *testing.B, count int, json string) {
 			b.Fatalf("Failed to unmarshal JSON: %v", err)
 		}
 
-		data[key] = core.NewObj(jsonValue, -1, core.ObjTypeJSON, core.ObjEncodingJSON)
+		data[key] = store.NewObj(jsonValue, -1, core.ObjTypeJSON, core.ObjEncodingJSON)
 	}
-	core.PutAll(data)
+	store.PutAll(data)
 }
 
 func BenchmarkExecuteQueryWithJSON(b *testing.B) {
+	store := core.NewStore()
 	for _, v := range benchmarkDataSizesJSON {
 		for jsonSize, json := range jsonList {
-			generateBenchmarkJSONData(b, v, json)
-			defer core.ResetStore()
+			generateBenchmarkJSONData(b, v, json, store)
+			defer store.ResetStore()
 
 			query := core.DSQLQuery{
 				KeyRegex: "k*",
@@ -425,7 +438,7 @@ func BenchmarkExecuteQueryWithJSON(b *testing.B) {
 			b.ResetTimer()
 			b.Run(fmt.Sprintf("%s_keys_%d", jsonSize, v), func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					if _, err := core.ExecuteQuery(query); err != nil {
+					if _, err := core.ExecuteQuery(query, store); err != nil {
 						b.Fatal(err)
 					}
 				}
@@ -435,10 +448,11 @@ func BenchmarkExecuteQueryWithJSON(b *testing.B) {
 }
 
 func BenchmarkExecuteQueryWithNestedJSON(b *testing.B) {
+	store := core.NewStore()
 	for _, v := range benchmarkDataSizesJSON {
 		for jsonSize, json := range jsonList {
-			generateBenchmarkJSONData(b, v, json)
-			defer core.ResetStore()
+			generateBenchmarkJSONData(b, v, json, store)
+			defer store.ResetStore()
 
 			query := core.DSQLQuery{
 				KeyRegex: "k*",
@@ -456,7 +470,7 @@ func BenchmarkExecuteQueryWithNestedJSON(b *testing.B) {
 			b.ResetTimer()
 			b.Run(fmt.Sprintf("%s_keys_%d", jsonSize, v), func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					if _, err := core.ExecuteQuery(query); err != nil {
+					if _, err := core.ExecuteQuery(query, store); err != nil {
 						b.Fatal(err)
 					}
 				}
@@ -466,10 +480,11 @@ func BenchmarkExecuteQueryWithNestedJSON(b *testing.B) {
 }
 
 func BenchmarkExecuteQueryWithJsonInLeftAndRightExpressions(b *testing.B) {
+	store := core.NewStore()
 	for _, v := range benchmarkDataSizesJSON {
 		for jsonSize, json := range jsonList {
-			generateBenchmarkJSONData(b, v, json)
-			defer core.ResetStore()
+			generateBenchmarkJSONData(b, v, json, store)
+			defer store.ResetStore()
 
 			query := core.DSQLQuery{
 				KeyRegex: "k*",
@@ -487,7 +502,7 @@ func BenchmarkExecuteQueryWithJsonInLeftAndRightExpressions(b *testing.B) {
 			b.ResetTimer()
 			b.Run(fmt.Sprintf("%s_keys_%d", jsonSize, v), func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					if _, err := core.ExecuteQuery(query); err != nil {
+					if _, err := core.ExecuteQuery(query, store); err != nil {
 						b.Fatal(err)
 					}
 				}
@@ -498,9 +513,10 @@ func BenchmarkExecuteQueryWithJsonInLeftAndRightExpressions(b *testing.B) {
 
 func BenchmarkExecuteQueryWithJsonNoMatch(b *testing.B) {
 	for _, v := range benchmarkDataSizesJSON {
+		store := core.NewStore()
 		for jsonSize, json := range jsonList {
-			generateBenchmarkJSONData(b, v, json)
-			defer core.ResetStore()
+			generateBenchmarkJSONData(b, v, json, store)
+			defer store.ResetStore()
 
 			query := core.DSQLQuery{
 				KeyRegex: "k*",
@@ -518,7 +534,7 @@ func BenchmarkExecuteQueryWithJsonNoMatch(b *testing.B) {
 			b.ResetTimer()
 			b.Run(fmt.Sprintf("%s_keys_%d", jsonSize, v), func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					if _, err := core.ExecuteQuery(query); err != nil {
+					if _, err := core.ExecuteQuery(query, store); err != nil {
 						b.Fatal(err)
 					}
 				}
