@@ -23,6 +23,7 @@ var ObjEncodingQref uint8 = 1
 
 var ObjEncodingStackInt uint8 = 2
 var ObjEncodingStackRef uint8 = 3
+var ObjEncodingDeque uint8 = 4
 
 var ObjTypeBitSet uint8 = 2 << 4 // 00100000
 var ObjEncodingBF uint8 = 2      // 00000010

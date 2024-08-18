@@ -14,10 +14,11 @@ import (
 	"github.com/dicedb/dice/core"
 	"github.com/dicedb/dice/core/iomultiplexer"
 	"github.com/dicedb/dice/internal/constants"
+	"github.com/dicedb/dice/server/utils"
 )
 
 var cronFrequency time.Duration = 1 * time.Second
-var lastCronExecTime time.Time = time.Now()
+var lastCronExecTime time.Time = utils.GetCurrentTime()
 
 const EngineStatusWAITING int32 = 1 << 1
 const EngineStatusBUSY int32 = 1 << 2
@@ -181,7 +182,7 @@ func RunAsyncTCPServer(serverFD int, wg *sync.WaitGroup) {
 	for atomic.LoadInt32(&eStatus) != EngineStatusSHUTTINGDOWN {
 		if time.Now().After(lastCronExecTime.Add(cronFrequency)) {
 			core.DeleteExpiredKeys()
-			lastCronExecTime = time.Now()
+			lastCronExecTime = utils.GetCurrentTime()
 		}
 
 		// Say, the Engine triggered SHUTTING down when the control flow is here ->

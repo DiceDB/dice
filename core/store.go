@@ -3,10 +3,10 @@ package core
 import (
 	"path"
 	"sync"
-	"time"
 	"unsafe"
 
 	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/server/utils"
 )
 
 type WatchEvent struct {
@@ -183,6 +183,15 @@ func Keys(p string) ([]string, error) {
 	return keys, err
 }
 
+// GetDbSize returns number of keys present in the database
+func GetDBSize() uint64 {
+	var noOfKeys uint64
+	withLocks(func() {
+		noOfKeys = uint64(len(keypool))
+	}, WithKeypoolRLock())
+	return noOfKeys
+}
+
 // Function to add a new watcher to a query.
 func AddWatcher(query DSQLQuery, clientFd int) { //nolint:gocritic
 	clients, _ := WatchList.LoadOrStore(query, &sync.Map{})
@@ -304,7 +313,7 @@ func GetDel(k string) *Obj {
 // setExpiry sets the expiry time for an object.
 // This method is not thread-safe. It should be called within a lock.
 func setExpiry(obj *Obj, expDurationMs int64) {
-	expires[obj] = uint64(time.Now().UnixMilli()) + uint64(expDurationMs)
+	expires[obj] = uint64(utils.GetCurrentTime().UnixMilli()) + uint64(expDurationMs)
 }
 
 // Helper function to count clients

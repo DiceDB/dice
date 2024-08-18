@@ -16,6 +16,7 @@ import (
 	"github.com/dicedb/dice/core/bit"
 	"github.com/dicedb/dice/core/diceerrors"
 	"github.com/dicedb/dice/internal/constants"
+	"github.com/dicedb/dice/server/utils"
 	"github.com/ohler55/ojg/jp"
 )
 
@@ -28,7 +29,6 @@ const (
 
 var RespNIL []byte = []byte("$-1\r\n")
 var RespOK []byte = []byte("+OK\r\n")
-var RespAuthFailure []byte = []byte("+NOAUTH\r\n")
 var RespQueued []byte = []byte("+QUEUED\r\n")
 var RespZero []byte = []byte(":0\r\n")
 var RespOne []byte = []byte(":1\r\n")
@@ -171,7 +171,7 @@ func evalSET(args []string) []byte {
 			if arg == constants.Exat {
 				exDuration *= 1000
 			}
-			exDurationMs = exDuration - time.Now().UnixMilli()
+			exDurationMs = exDuration - utils.GetCurrentTime().UnixMilli()
 			// If the expiry time is in the past, set exDurationMs to 0
 			// This will be used to signal immediate expiration
 			if exDurationMs < 0 {
@@ -252,6 +252,16 @@ func evalGET(args []string) []byte {
 
 	// return the RESP encoded value
 	return Encode(obj.Value, false)
+}
+
+// evalDBSIZE returns the number of keys in the database.
+func evalDBSIZE(args []string) []byte {
+	if len(args) > 0 {
+		return Encode(errors.New("ERR wrong number of arguments for 'DBSIZE' command"), false)
+	}
+
+	// return the RESP encoded value
+	return Encode(GetDBSize(), false)
 }
 
 // evalGETDEL returns the value for the queried key in args
@@ -467,7 +477,7 @@ func evalTTL(args []string) []byte {
 
 	// compute the time remaining for the key to expire and
 	// return the RESP encoded form of it
-	durationMs := exp - uint64(time.Now().UnixMilli())
+	durationMs := exp - uint64(utils.GetCurrentTime().UnixMilli())
 
 	return Encode(int64(durationMs/1000), false)
 }
@@ -513,6 +523,34 @@ func evalEXPIRE(args []string) []byte {
 
 	// 1 if the timeout was set.
 	return RespOne
+}
+
+// evalEXPIRETIME returns the absolute Unix timestamp (since January 1, 1970) in seconds at which the given key will expire
+// args should contain only 1 value, the key
+// Returns expiration Unix timestamp in seconds.
+// Returns -1 if the key exists but has no associated expiration time.
+// Returns -2 if the key does not exist.
+func evalEXPIRETIME(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR wrong number of arguments for 'expire' command"), false)
+	}
+
+	var key string = args[0]
+
+	obj := Get(key)
+
+	// -2 if key doesn't exist
+	if obj == nil {
+		return RespMinusTwo
+	}
+
+	exTimeMili, ok := getExpiry(obj)
+	// -1 if key doesn't have expiration time set
+	if !ok {
+		return RespMinusOne
+	}
+
+	return Encode(int(exTimeMili/1000), false)
 }
 
 func evalHELLO(args []string) []byte {
@@ -1734,7 +1772,7 @@ func EvalAndRespond(cmds RedisCmds, c *Client) {
 	for _, cmd := range cmds {
 		// Check if the command has been authenticated
 		if cmd.Cmd != AuthCmd && !c.Session.IsActive() {
-			if _, err := c.Write(RespAuthFailure); err != nil {
+			if _, err := c.Write(Encode(errors.New("NOAUTH Authentication required"), false)); err != nil {
 				log.Println("Error writing to client:", err)
 			}
 			continue
@@ -1830,7 +1868,7 @@ func evalCOPY(args []string) []byte {
 	exp, ok := getExpiry(sourceObj)
 	var exDurationMs int64 = -1
 	if ok {
-		exDurationMs = int64(exp - uint64(time.Now().UnixMilli()))
+		exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
 	}
 
 	Put(destinationKey, copyObj)
@@ -1918,7 +1956,7 @@ func evalGETEX(args []string) []byte {
 			if arg == constants.Exat {
 				exDuration *= 1000
 			}
-			exDurationMs = exDuration - time.Now().UnixMilli()
+			exDurationMs = exDuration - utils.GetCurrentTime().UnixMilli()
 			// If the expiry time is in the past, set exDurationMs to 0
 			// This will be used to signal immediate expiration
 			if exDurationMs < 0 {
@@ -1976,7 +2014,7 @@ func evalPTTL(args []string) []byte {
 
 	// compute the time remaining for the key to expire and
 	// return the RESP encoded form of it
-	durationMs := exp - uint64(time.Now().UnixMilli())
+	durationMs := exp - uint64(utils.GetCurrentTime().UnixMilli())
 	return Encode(int64(durationMs), false)
 }
 
@@ -2018,4 +2056,116 @@ func evalTOUCH(args []string) []byte {
 	}
 
 	return Encode(count, false)
+}
+
+func evalLPUSH(args []string) []byte {
+	if len(args) < 2 {
+		return Encode(errors.New("ERR invalid number of arguments for `LPUSH` command"), false)
+	}
+
+	obj := Get(args[0])
+	if obj == nil {
+		obj = NewObj(NewDeque(), -1, ObjTypeByteList, ObjEncodingDeque)
+	}
+
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
+		return Encode(err, false)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingDeque); err != nil {
+		return Encode(err, false)
+	}
+
+	Put(args[0], obj)
+	for i := 1; i < len(args); i++ {
+		obj.Value.(*Deque).LPush(args[i])
+	}
+
+	return RespOK
+}
+
+func evalRPUSH(args []string) []byte {
+	if len(args) < 2 {
+		return Encode(errors.New("ERR invalid number of arguments for `RPUSH` command"), false)
+	}
+
+	obj := Get(args[0])
+	if obj == nil {
+		obj = NewObj(NewDeque(), -1, ObjTypeByteList, ObjEncodingDeque)
+	}
+
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
+		return Encode(err, false)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingDeque); err != nil {
+		return Encode(err, false)
+	}
+
+	Put(args[0], obj)
+	for i := 1; i < len(args); i++ {
+		obj.Value.(*Deque).RPush(args[i])
+	}
+
+	return RespOK
+}
+
+func evalRPOP(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR invalid number of arguments for `RPOP` command"), false)
+	}
+
+	obj := Get(args[0])
+	if obj == nil {
+		return RespNIL
+	}
+
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
+		return Encode(err, false)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingDeque); err != nil {
+		return Encode(err, false)
+	}
+
+	deq := obj.Value.(*Deque)
+	x, err := deq.RPop()
+	if err != nil {
+		if err == ErrDequeEmpty {
+			return RespNIL
+		}
+		panic(fmt.Sprintf("unknown error: %v", err))
+	}
+
+	return Encode(x, false)
+}
+
+func evalLPOP(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR invalid number of arguments for `LPOP` command"), false)
+	}
+
+	obj := Get(args[0])
+	if obj == nil {
+		return RespNIL
+	}
+
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
+		return Encode(err, false)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingDeque); err != nil {
+		return Encode(err, false)
+	}
+
+	deq := obj.Value.(*Deque)
+	x, err := deq.LPop()
+	if err != nil {
+		if err == ErrDequeEmpty {
+			return RespNIL
+		}
+		panic(fmt.Sprintf("unknown error: %v", err))
+	}
+
+	return Encode(x, false)
 }

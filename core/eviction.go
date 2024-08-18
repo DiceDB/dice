@@ -1,9 +1,8 @@
 package core
 
 import (
-	"time"
-
 	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/server/utils"
 )
 
 // Evicts the first key it found while iterating the map
@@ -38,7 +37,7 @@ func evictAllkeysRandom() {
  *  The approximated LRU algorithm
  */
 func getCurrentClock() uint32 {
-	return uint32(time.Now().Unix()) & 0x00FFFFFF
+	return uint32(utils.GetCurrentTime().Unix()) & 0x00FFFFFF
 }
 
 func getIdleTime(lastAccessedAt uint32) uint32 {

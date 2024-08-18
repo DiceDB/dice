@@ -4,6 +4,7 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/core"
 	"github.com/dicedb/dice/internal/constants"
 	"github.com/xwb1989/sqlparser"
@@ -382,5 +383,183 @@ func TestExecuteQueryWithEdgeCases(t *testing.T) {
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 0, "Expected no keys to be returned for empty regex")
+	})
+}
+
+var JsonDataset = []keyValue{
+	{"json1", `{"name":"Tom"}`},
+	{"json2", `{"name":"Bob","score":18.1}`},
+	{"json3", `{"scoreInt":20}`},
+	{"json4", `{"field1":{"field2":{"field3":{"score":2}}}}`},
+	{"json5", `{"field1":{"field2":{"field3":{"score":18}},"score2":5}}`},
+}
+
+func setupJSON(t *testing.T) {
+	t.Helper()
+	for _, data := range JsonDataset {
+		core.Del(data.key)
+	}
+
+	for _, data := range JsonDataset {
+		var jsonValue interface{}
+		if err := sonic.UnmarshalString(data.value, &jsonValue); err != nil {
+			t.Fatalf("Failed to unmarshal value: %v", err)
+		}
+
+		core.Put(data.key, core.NewObj(jsonValue, -1, core.ObjTypeJSON, core.ObjEncodingJSON))
+	}
+}
+
+func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
+	setupJSON(t)
+
+	t.Run("BasicWhereClauseWithJSON", func(t *testing.T) {
+		query := core.DSQLQuery{
+			KeyRegex: "json*",
+			Selection: core.QuerySelection{
+				KeySelection:   true,
+				ValueSelection: true,
+			},
+			Where: &sqlparser.ComparisonExpr{
+				Left:     sqlparser.NewStrVal([]byte("_value.name")),
+				Operator: "=",
+				Right:    sqlparser.NewStrVal([]byte("Tom")),
+			},
+		}
+
+		result, err := core.ExecuteQuery(query)
+
+		assert.NilError(t, err)
+		assert.Equal(t, len(result), 1, "Expected 1 results for WHERE clause")
+		assert.Equal(t, result[0].Key, "json1")
+
+		var expected, actual interface{}
+		assert.NilError(t, sonic.UnmarshalString(`{"name":"Tom"}`, &expected))
+		assert.NilError(t, sonic.UnmarshalString(result[0].Value.Value.(string), &actual))
+		assert.DeepEqual(t, actual, expected)
+	})
+
+	t.Run("EmptyResult", func(t *testing.T) {
+		query := core.DSQLQuery{
+			KeyRegex: "json*",
+			Selection: core.QuerySelection{
+				KeySelection:   true,
+				ValueSelection: true,
+			},
+			Where: &sqlparser.ComparisonExpr{
+				Left:     sqlparser.NewStrVal([]byte("_value.name")),
+				Operator: "=",
+				Right:    sqlparser.NewStrVal([]byte("Bill")),
+			},
+		}
+
+		result, err := core.ExecuteQuery(query)
+
+		assert.NilError(t, err)
+		assert.Equal(t, len(result), 0, "Expected empty result for non-matching WHERE clause")
+	})
+
+	t.Run("WhereClauseWithFloats", func(t *testing.T) {
+		query := core.DSQLQuery{
+			KeyRegex: "json*",
+			Selection: core.QuerySelection{
+				KeySelection:   true,
+				ValueSelection: true,
+			},
+			Where: &sqlparser.ComparisonExpr{
+				Left:     sqlparser.NewStrVal([]byte("_value.score")),
+				Operator: ">",
+				Right:    sqlparser.NewFloatVal([]byte("13.15")),
+			},
+		}
+
+		result, err := core.ExecuteQuery(query)
+
+		assert.NilError(t, err)
+		assert.Equal(t, len(result), 1, "Expected 1 result for WHERE clause with floating point values")
+		assert.Equal(t, result[0].Key, "json2")
+
+		var expected, actual interface{}
+		assert.NilError(t, sonic.UnmarshalString(`{"name":"Bob","score":18.1}`, &expected))
+		assert.NilError(t, sonic.UnmarshalString(result[0].Value.Value.(string), &actual))
+		assert.DeepEqual(t, actual, expected)
+	})
+
+	t.Run("WhereClauseWithInteger", func(t *testing.T) {
+		query := core.DSQLQuery{
+			KeyRegex: "json*",
+			Selection: core.QuerySelection{
+				KeySelection:   true,
+				ValueSelection: true,
+			},
+			Where: &sqlparser.ComparisonExpr{
+				Left:     sqlparser.NewStrVal([]byte("_value.scoreInt")),
+				Operator: ">",
+				Right:    sqlparser.NewIntVal([]byte("13")),
+			},
+		}
+
+		result, err := core.ExecuteQuery(query)
+
+		assert.NilError(t, err)
+		assert.Equal(t, len(result), 1, "Expected 1 result for WHERE clause with integer values")
+		assert.Equal(t, result[0].Key, "json3")
+
+		var expected, actual interface{}
+		assert.NilError(t, sonic.UnmarshalString(`{"scoreInt":20}`, &expected))
+		assert.NilError(t, sonic.UnmarshalString(result[0].Value.Value.(string), &actual))
+		assert.DeepEqual(t, actual, expected)
+	})
+
+	t.Run("NestedWhereClause", func(t *testing.T) {
+		query := core.DSQLQuery{
+			KeyRegex: "json*",
+			Selection: core.QuerySelection{
+				KeySelection:   true,
+				ValueSelection: true,
+			},
+			Where: &sqlparser.ComparisonExpr{
+				Left:     sqlparser.NewStrVal([]byte("_value.field1.field2.field3.score")),
+				Operator: "<",
+				Right:    sqlparser.NewIntVal([]byte("13")),
+			},
+		}
+
+		result, err := core.ExecuteQuery(query)
+
+		assert.NilError(t, err)
+		assert.Equal(t, len(result), 1, "Expected 1 result for WHERE clause with nested json")
+		assert.Equal(t, result[0].Key, "json4")
+
+		var expected, actual interface{}
+		assert.NilError(t, sonic.UnmarshalString(`{"field1":{"field2":{"field3":{"score":2}}}}`, &expected))
+		assert.NilError(t, sonic.UnmarshalString(result[0].Value.Value.(string), &actual))
+		assert.DeepEqual(t, actual, expected)
+	})
+
+	t.Run("ComplexWhereClause", func(t *testing.T) {
+		query := core.DSQLQuery{
+			KeyRegex: "json*",
+			Selection: core.QuerySelection{
+				KeySelection:   true,
+				ValueSelection: true,
+			},
+			Where: &sqlparser.ComparisonExpr{
+				Left:     sqlparser.NewStrVal([]byte("_value.field1.field2.field3.score")),
+				Operator: ">",
+				Right:    sqlparser.NewStrVal([]byte("_value.field1.score2")),
+			},
+		}
+
+		result, err := core.ExecuteQuery(query)
+
+		assert.NilError(t, err)
+		assert.Equal(t, len(result), 1, "Expected 1 result for Complex WHERE clause expression")
+		assert.Equal(t, result[0].Key, "json5")
+
+		var expected, actual interface{}
+		assert.NilError(t, sonic.UnmarshalString(`{"field1":{"field2":{"field3":{"score":18}},"score2":5}}`, &expected))
+		assert.NilError(t, sonic.UnmarshalString(result[0].Value.Value.(string), &actual))
+		assert.DeepEqual(t, actual, expected)
 	})
 }
