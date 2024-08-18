@@ -222,14 +222,12 @@ func (q *Deque) RPop() (string, error) {
 func EncodeDeqEntry(x string) []byte {
 	if len(x) >= 21 {
 		return EncodeDeqStr(x)
-	} else {
-		v, err := strconv.ParseInt(x, 10, 64)
-		if err != nil {
-			return EncodeDeqStr(x)
-		} else {
-			return EncodeDeqInt(v)
-		}
 	}
+	v, err := strconv.ParseInt(x, 10, 64)
+	if err != nil {
+		return EncodeDeqStr(x)
+	}
+	return EncodeDeqInt(v)
 }
 
 func EncodeDeqStr(x string) []byte {
@@ -367,9 +365,8 @@ func GetEncodeDeqEntrySize(x string) uint64 {
 	v, err := strconv.ParseInt(x, 10, 64)
 	if err != nil {
 		return GetEncodeDeqStrSize(x)
-	} else {
-		return GetEncodeDeqIntSize(v)
 	}
+	return GetEncodeDeqIntSize(v)
 }
 
 func GetEncodeDeqStrSize(x string) uint64 {
@@ -396,51 +393,49 @@ func GetEncodeDeqIntSize(v int64) uint64 {
 		return 5
 	} else if v >= -2147483648 && v <= 2147483647 {
 		return 6
-	} else {
-		return 10
 	}
+	return 10
 }
 
 // DecodeDeqEntry decode `xb` started from index 0, returns the decoded `x` and the
 // overall length of [enc + data + backlen].
 // References: lpEncodeString, lpEncodeIntegerGetType in redis implementation.
-// TODO
+// TODO possible optimizations:
 // 1. return the string with the underlying array of `xb` to save memory usage?
 // 2. replace strconv with more efficient/memory-saving implementation
-func DecodeDeqEntry(xb []byte) (string, int) {
+func DecodeDeqEntry(xb []byte) (x string, entryLen int) {
 	var val int64
 	var bit int
-	var len int
 	if xb[0]&0x80 == 0 {
 		// 7 bit uint
 		val = int64(xb[0] & 0x7F)
 		bit = 8
-		len = 2
+		entryLen = 2
 	} else if xb[0]&0xE0 == 0xC0 {
 		// 13 bit int
 		val = (int64(xb[0]&0x1F) << 8) | int64(xb[1])
 		bit = 13
-		len = 3
+		entryLen = 3
 	} else if xb[0]&0xFF == 0xF1 {
 		// 16 bit int
 		val = int64(xb[1]) | int64(xb[2])<<8
 		bit = 16
-		len = 4
+		entryLen = 4
 	} else if xb[0]&0xFF == 0xF2 {
 		// 24 bit int
 		val = int64(xb[1]) | int64(xb[2])<<8 | int64(xb[3])<<16
 		bit = 24
-		len = 5
+		entryLen = 5
 	} else if xb[0]&0xFF == 0xF3 {
 		// 32 bit int
 		val = int64(xb[1]) | int64(xb[2])<<8 | int64(xb[3])<<16 | int64(xb[4])<<24
 		bit = 32
-		len = 6
+		entryLen = 6
 	} else if xb[0]&0xFF == 0xF4 {
 		// 64 bit int
 		val = int64(xb[1]) | int64(xb[2])<<8 | int64(xb[3])<<16 | int64(xb[4])<<24 | int64(xb[5])<<32 | int64(xb[6])<<40 | int64(xb[7])<<48 | int64(xb[8])<<56
 		bit = 64
-		len = 10
+		entryLen = 10
 	} else if xb[0]&0xC0 == 0x80 {
 		// 6 bit string
 		strLen := xb[0] & 0x3F
@@ -464,5 +459,5 @@ func DecodeDeqEntry(xb []byte) (string, int) {
 
 	val <<= 64 - bit
 	val >>= 64 - bit
-	return strconv.FormatInt(val, 10), len
+	return strconv.FormatInt(val, 10), entryLen
 }

@@ -149,6 +149,7 @@ func TestRPush(t *testing.T) {
 }
 
 func TestLPushLPop(t *testing.T) {
+	deqTestInit()
 	conn := getLocalConnection()
 	defer conn.Close()
 

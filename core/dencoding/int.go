@@ -77,12 +77,12 @@ func EncodeUIntRevInPlace(x uint64, buf []byte) {
 	var i int
 	for i = 0; i < len(bitShifts); i++ {
 		buf[len(buf)-i-1] = getLSB(byte(x), bitShifts[i]) | 0b10000000 // marking the continuation bit
-		x = x >> bitShifts[i]
+		x >>= bitShifts[i]
 		if x == 0 {
 			break
 		}
 	}
-	buf[0] = buf[0] & 0b01111111 // marking the termination bit
+	buf[0] &= 0b01111111 // marking the termination bit
 }
 
 // GetEncodeUIntSize returns the size in byte the encoded varint will take
@@ -95,9 +95,8 @@ func GetEncodeUIntSize(x uint64) uint64 {
 		return 3
 	} else if x < 268435455 {
 		return 4
-	} else {
-		return 5
 	}
+	return 5
 }
 
 // DecodeUIntRev decodes the varint encoded by EncodeUIntRev[InPlace]
@@ -106,7 +105,7 @@ func DecodeUIntRev(vint []byte) uint64 {
 	var v uint64 = 0
 	for i = 0; i < len(vint); i++ {
 		b := getLSB(vint[len(vint)-i-1], 7)
-		v = v | uint64(b)<<(7*i)
+		v |= uint64(b) << (7 * i)
 	}
 	return v
 }
