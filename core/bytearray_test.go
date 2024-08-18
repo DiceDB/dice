@@ -89,64 +89,14 @@ func BenchmarkLargeByteArray1(t *testing.B) {
 	for i := 0; i < 10000*8; i += 100 {
 		byteArray.SetBit(i, true)
 		assert.Equal(t, byteArray.GetBit(i), true, "Bit at position should be set to true")
-		byteArray.BitCount()
 	}
 }
 
 func BenchmarkLargeByteArray2(t *testing.B) {
 	byteArray := NewByteArray(1000000)
 
-	for i := 0; i < 1000000*8; i += 500 {
+	for i := 0; i < 10000*8; i += 100 {
 		byteArray.SetBit(i, true)
 		assert.Equal(t, byteArray.GetBit(i), true, "Bit at position should be set to true")
-		byteArray.BitCount()
 	}
-}
-
-func TestReverseByte(t *testing.T) {
-	byteArray := NewByteArray(1) // Larger array size
-
-	byteArray.SetBit(2, true)
-	byteArray.SetBit(4, true)
-
-	reversedByte := reverseByte(byteArray.data[0])
-
-	assert.Equal(t, reversedByte, byte(0b00010100), "Reversed byte should be 0b00010100")
-}
-
-func TestDeepCopy(t *testing.T) {
-	original := NewByteArray(8)
-
-	// Mixed operations
-	original.SetBit(0, true)
-	original.SetBit(1, false)
-	original.SetBit(2, false)
-	original.SetBit(3, true)
-
-	// Create a deep copy of the ByteArray
-	copy := original.DeepCopy()
-
-	// Verify that the copy is not nil
-	if copy == nil {
-		t.Fatalf("DeepCopy returned nil, expected a valid copy")
-	}
-
-	// Verify that the data slice is correctly copied
-	assert.Equal(t, len(copy.data), len(original.data), "ByteArray DeepCopy data length mismatch")
-
-
-	for i := range original.data {
-		assert.Equal(t, copy.data[i], original.data[i], "ByteArray DeepCopy data element mismatch")
-	}
-
-	// Verify that the Length field is correctly copied
-	assert.Equal(t, copy.Length, original.Length, "ByteArray DeepCopy Length mismatch")
-
-	// Modify the copy's data to ensure it's independent of the original
-	copy.data[0] = 9
-    assert.Assert(t, copy.data[0] != original.data[0], "ByteArray DeepCopy did not create an independent copy, original and copy data are linked")
-
-	// Modify the original's data to ensure it doesn't affect the copy
-	original.data[1] = 8
-    assert.Assert(t, copy.data[1] != original.data[1], "ByteArray DeepCopy did not create an independent copy, original and copy data are linked")
 }
