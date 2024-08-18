@@ -267,7 +267,7 @@ func RandomKey() string {
 			}
 			currentIndex++
 		}
-	}, WithStoreLock(), WithKeypoolLock())
+	}, WithKeypoolRLock())
 	return randomKey
 }
 
