@@ -61,7 +61,6 @@ func (b *byteList) append(bn *byteListNode) {
 	}
 }
 
-//nolint:unused
 func (b *byteList) prepend(bn *byteListNode) {
 	bn.next = b.head
 	if b.head != nil {

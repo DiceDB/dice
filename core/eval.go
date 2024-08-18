@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"log"
 	"math"
@@ -257,7 +258,7 @@ func evalGET(args []string) []byte {
 // evalDBSIZE returns the number of keys in the database.
 func evalDBSIZE(args []string) []byte {
 	if len(args) > 0 {
-		return Encode(errors.New("ERR wrong number of arguments for 'DBSIZE' command"), false)
+		return diceerrors.NewErrArity("DBSIZE")
 	}
 
 	// return the RESP encoded value
@@ -532,7 +533,7 @@ func evalEXPIRE(args []string) []byte {
 // Returns -2 if the key does not exist.
 func evalEXPIRETIME(args []string) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'expire' command"), false)
+		return diceerrors.NewErrArity("EXPIRE")
 	}
 
 	var key string = args[0]
@@ -2060,7 +2061,7 @@ func evalTOUCH(args []string) []byte {
 
 func evalLPUSH(args []string) []byte {
 	if len(args) < 2 {
-		return Encode(errors.New("ERR invalid number of arguments for `LPUSH` command"), false)
+		return diceerrors.NewErrArity("LPUSH")
 	}
 
 	obj := Get(args[0])
@@ -2086,7 +2087,7 @@ func evalLPUSH(args []string) []byte {
 
 func evalRPUSH(args []string) []byte {
 	if len(args) < 2 {
-		return Encode(errors.New("ERR invalid number of arguments for `RPUSH` command"), false)
+		return diceerrors.NewErrArity("RPUSH")
 	}
 
 	obj := Get(args[0])
@@ -2112,7 +2113,7 @@ func evalRPUSH(args []string) []byte {
 
 func evalRPOP(args []string) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR invalid number of arguments for `RPOP` command"), false)
+		return diceerrors.NewErrArity("RPOP")
 	}
 
 	obj := Get(args[0])
@@ -2142,7 +2143,7 @@ func evalRPOP(args []string) []byte {
 
 func evalLPOP(args []string) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR invalid number of arguments for `LPOP` command"), false)
+		return diceerrors.NewErrArity("LPOP")
 	}
 
 	obj := Get(args[0])
