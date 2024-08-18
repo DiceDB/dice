@@ -50,6 +50,7 @@ func TestEval(t *testing.T) {
 		"DEL":        testEvalDel,
 		"PERSIST":    TestEvalPersist,
 		"EXPIRETIME": testEvalEXPIRETIME,
+		"EXPIREAT":   testEvalEXPIREAT,
 	}
 
 	for name, testFunc := range testCases {
@@ -221,6 +222,35 @@ func testEvalEXPIRETIME(t *testing.T) {
 	}
 
 	runEvalTests(t, tests, evalEXPIRETIME)
+}
+
+func testEvalEXPIREAT(t *testing.T) {
+	tests := map[string]evalTestCase{
+		"wrong number of args": {
+			input:  []string{"KEY1"},
+			output: []byte("-ERR wrong number of arguments for 'expireat' command\r\n"),
+		},
+		"key does not exist": {
+			input:  []string{"NONEXISTENT_KEY", "1723961346"},
+			output: RespZero,
+		},
+		"key exists": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "mock_value"
+				obj := &Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store[unsafe.Pointer(obj)] = obj
+				keypool[key] = unsafe.Pointer(obj)
+			},
+			input:  []string{"EXISTING_KEY", "1723961346"},
+			output: RespOne,
+		},
+	}
+
+	runEvalTests(t, tests, evalEXPIREAT)
 }
 
 func testEvalJSONGET(t *testing.T) {
