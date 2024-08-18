@@ -2075,3 +2075,115 @@ func evalTOUCH(args []string) []byte {
 
 	return Encode(count, false)
 }
+
+func evalLPUSH(args []string) []byte {
+	if len(args) < 2 {
+		return Encode(errors.New("ERR invalid number of arguments for `LPUSH` command"), false)
+	}
+
+	obj := Get(args[0])
+	if obj == nil {
+		obj = NewObj(NewDeque(), -1, ObjTypeByteList, ObjEncodingDeque)
+	}
+
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
+		return Encode(err, false)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingDeque); err != nil {
+		return Encode(err, false)
+	}
+
+	Put(args[0], obj)
+	for i := 1; i < len(args); i++ {
+		obj.Value.(*Deque).LPush(args[i])
+	}
+
+	return RespOK
+}
+
+func evalRPUSH(args []string) []byte {
+	if len(args) < 2 {
+		return Encode(errors.New("ERR invalid number of arguments for `RPUSH` command"), false)
+	}
+
+	obj := Get(args[0])
+	if obj == nil {
+		obj = NewObj(NewDeque(), -1, ObjTypeByteList, ObjEncodingDeque)
+	}
+
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
+		return Encode(err, false)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingDeque); err != nil {
+		return Encode(err, false)
+	}
+
+	Put(args[0], obj)
+	for i := 1; i < len(args); i++ {
+		obj.Value.(*Deque).RPush(args[i])
+	}
+
+	return RespOK
+}
+
+func evalRPOP(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR invalid number of arguments for `RPOP` command"), false)
+	}
+
+	obj := Get(args[0])
+	if obj == nil {
+		return RespNIL
+	}
+
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
+		return Encode(err, false)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingDeque); err != nil {
+		return Encode(err, false)
+	}
+
+	deq := obj.Value.(*Deque)
+	x, err := deq.RPop()
+	if err != nil {
+		if err == ErrDequeEmpty {
+			return RespNIL
+		}
+		panic(fmt.Sprintf("unknown error: %v", err))
+	}
+
+	return Encode(x, false)
+}
+
+func evalLPOP(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR invalid number of arguments for `LPOP` command"), false)
+	}
+
+	obj := Get(args[0])
+	if obj == nil {
+		return RespNIL
+	}
+
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
+		return Encode(err, false)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingDeque); err != nil {
+		return Encode(err, false)
+	}
+
+	deq := obj.Value.(*Deque)
+	x, err := deq.LPop()
+	if err != nil {
+		if err == ErrDequeEmpty {
+			return RespNIL
+		}
+		panic(fmt.Sprintf("unknown error: %v", err))
+	}
+
+	return Encode(x, false)
+}

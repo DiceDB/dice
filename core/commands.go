@@ -571,6 +571,30 @@ var (
 		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
 	}
+	lpushCmdMeta = DiceCmdMeta{
+		Name:  "LPUSH",
+		Info:  "LPUSH pushes values into the left side of the deque",
+		Eval:  evalLPUSH,
+		Arity: -3,
+	}
+	rpushCmdMeta = DiceCmdMeta{
+		Name:  "RPUSH",
+		Info:  "RPUSH pushes values into the right side of the deque",
+		Eval:  evalRPUSH,
+		Arity: -3,
+	}
+	lpopCmdMeta = DiceCmdMeta{
+		Name:  "LPOP",
+		Info:  "LPOP pops a value from the left side of the deque",
+		Eval:  evalLPOP,
+		Arity: 2,
+	}
+	rpopCmdMeta = DiceCmdMeta{
+		Name:  "RPOP",
+		Info:  "RPOP pops a value from the right side of the deque",
+		Eval:  evalRPOP,
+		Arity: 2,
+	}
 )
 
 func init() {
@@ -638,4 +662,8 @@ func init() {
 	diceCmds["PTTL"] = pttlCmdMeta
 	diceCmds["OBJECT"] = objectCmdMeta
 	diceCmds["TOUCH"] = touchCmdMeta
+	diceCmds["LPUSH"] = lpushCmdMeta
+	diceCmds["RPOP"] = rpopCmdMeta
+	diceCmds["RPUSH"] = rpushCmdMeta
+	diceCmds["LPOP"] = lpopCmdMeta
 }
