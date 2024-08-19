@@ -316,6 +316,13 @@ func setExpiry(obj *Obj, expDurationMs int64) {
 	expires[obj] = uint64(utils.GetCurrentTime().UnixMilli()) + uint64(expDurationMs)
 }
 
+// setUnixTimeExpiry sets the expiry time for an object.
+// This method is not thread-safe. It should be called within a lock.
+func setUnixTimeExpiry(obj *Obj, exUnixTimeSec int64) {
+	// convert unix-time-seconds to unix-time-milliseconds
+	expires[obj] = uint64(exUnixTimeSec * 1000)
+}
+
 // Helper function to count clients
 func countClients(clients *sync.Map) int {
 	count := 0

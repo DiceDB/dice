@@ -616,6 +616,35 @@ func evalEXPIRETIME(args []string) []byte {
 	return Encode(int(exTimeMili/1000), false)
 }
 
+// evalEXPIREAT sets a expiry time(in unix-time-seconds) on the specified key in args
+// args should contain 2 values, key and the expiry time to be set for the key
+// The expiry time should be in integer format; if not, it returns encoded error response
+// Returns RespOne if expiry was set on the key successfully.
+// Once the time is lapsed, the key will be deleted automatically
+func evalEXPIREAT(args []string) []byte {
+	if len(args) <= 1 {
+		return Encode(errors.New("ERR wrong number of arguments for 'expireat' command"), false)
+	}
+
+	var key string = args[0]
+	exUnixTimeSec, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return Encode(errors.New("ERR value is not an integer or out of range"), false)
+	}
+
+	obj := Get(key)
+
+	// 0 if the timeout was not set. e.g. key doesn't exist, or operation skipped due to the provided arguments
+	if obj == nil {
+		return RespZero
+	}
+
+	setUnixTimeExpiry(obj, exUnixTimeSec)
+
+	// 1 if the timeout was set.
+	return RespOne
+}
+
 func evalHELLO(args []string) []byte {
 	if len(args) > 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'hello' command"), false)

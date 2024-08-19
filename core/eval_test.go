@@ -51,6 +51,7 @@ func TestEval(t *testing.T) {
 		"DEL":        testEvalDel,
 		"PERSIST":    TestEvalPersist,
 		"EXPIRETIME": testEvalEXPIRETIME,
+		"EXPIREAT":   testEvalEXPIREAT,
 		"DBSIZE":     testEvalDbsize,
 	}
 
@@ -223,6 +224,43 @@ func testEvalEXPIRETIME(t *testing.T) {
 	}
 
 	runEvalTests(t, tests, evalEXPIRETIME)
+}
+
+func testEvalEXPIREAT(t *testing.T) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'expireat' command\r\n"),
+		},
+		"empty args": {
+			input:  []string{},
+			output: []byte("-ERR wrong number of arguments for 'expireat' command\r\n"),
+		},
+		"wrong number of args": {
+			input:  []string{"KEY1"},
+			output: []byte("-ERR wrong number of arguments for 'expireat' command\r\n"),
+		},
+		"key does not exist": {
+			input:  []string{"NONEXISTENT_KEY", strconv.FormatInt(time.Now().Add(2*time.Minute).Unix(), 10)},
+			output: RespZero,
+		},
+		"key exists": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "mock_value"
+				obj := &Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store[unsafe.Pointer(obj)] = obj
+				keypool[key] = unsafe.Pointer(obj)
+			},
+			input:  []string{"EXISTING_KEY", strconv.FormatInt(time.Now().Add(2*time.Minute).Unix(), 10)},
+			output: RespOne,
+		},
+	}
+
+	runEvalTests(t, tests, evalEXPIREAT)
 }
 
 func testEvalJSONTYPE(t *testing.T) {
