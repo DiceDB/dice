@@ -287,6 +287,61 @@ func evalGETDEL(args []string) []byte {
 	return Encode(obj.Value, false)
 }
 
+// evalJSONTYPE retrieves a JSON value type stored at the specified key
+// args must contain at least the key;  (path unused in this implementation)
+// Returns RespNIL if key is expired or it does not exist
+// Returns encoded error response if incorrect number of arguments
+// The RESP value of the key's value type is encoded and then returned
+func evalJSONTYPE(args []string) []byte {
+	if len(args) < 1 {
+		return Encode(errors.New("ERR wrong number of arguments for 'JSON.TYPE' command"), false)
+	}
+	key := args[0]
+
+	// Default path is root if not specified
+	path := defaultRootPath
+	if len(args) > 1 {
+		path = args[1]
+	}
+	// Retrieve the object from the database
+	obj := Get(key)
+	if obj == nil {
+		return RespNIL
+	}
+
+	jsonData := obj.Value
+
+	// If path is root, return "object" instantly
+	if path == defaultRootPath {
+		_, err := sonic.Marshal(jsonData)
+		if err != nil {
+			return Encode(errors.New("ERR could not serialize result"), false)
+		}
+		return Encode(utils.ObjectType, false)
+	}
+
+	// Parse the JSONPath expression
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return Encode(errors.New("ERR invalid JSONPath"), false)
+	}
+
+	results := expr.Get(jsonData)
+	if len(results) == 0 {
+		return RespNIL
+	}
+	if len(results) == 1 {
+		jsonType := utils.GetJSONFieldType(results[0])
+		return Encode(jsonType, false)
+	}
+	typeList := make([]string, 0, len(results))
+	for _, result := range results {
+		jsonType := utils.GetJSONFieldType(result)
+		typeList = append(typeList, jsonType)
+	}
+	return Encode(typeList, false)
+}
+
 // evalJSONGET retrieves a JSON value stored at the specified key
 // args must contain at least the key;  (path unused in this implementation)
 // Returns RespNIL if key is expired or it does not exist

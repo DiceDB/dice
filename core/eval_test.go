@@ -44,6 +44,7 @@ func TestEval(t *testing.T) {
 		"HELLO":      testEvalHELLO,
 		"SET":        testEvalSET,
 		"GET":        testEvalGET,
+		"JSONTYPE":   testEvalJSONTYPE,
 		"JSONGET":    testEvalJSONGET,
 		"JSONSET":    testEvalJSONSET,
 		"TTL":        testEvalTTL,
@@ -222,6 +223,126 @@ func testEvalEXPIRETIME(t *testing.T) {
 	}
 
 	runEvalTests(t, tests, evalEXPIRETIME)
+}
+
+func testEvalJSONTYPE(t *testing.T) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'JSON.TYPE' command\r\n"),
+		},
+		"empty array": {
+			setup:  func() {},
+			input:  []string{},
+			output: []byte("-ERR wrong number of arguments for 'JSON.TYPE' command\r\n"),
+		},
+		"key does not exist": {
+			setup:  func() {},
+			input:  []string{"NONEXISTENT_KEY"},
+			output: RespNIL,
+		},
+		"object type value": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"language\":[\"java\",\"go\",\"python\"]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+				store[unsafe.Pointer(obj)] = obj
+				keypool[key] = unsafe.Pointer(obj)
+			},
+
+			input:  []string{"EXISTING_KEY"},
+			output: []byte("$6\r\nobject\r\n"),
+		},
+		"array type value": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"language\":[\"java\",\"go\",\"python\"]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+				store[unsafe.Pointer(obj)] = obj
+				keypool[key] = unsafe.Pointer(obj)
+			},
+
+			input:  []string{"EXISTING_KEY", "$.language"},
+			output: []byte("$5\r\narray\r\n"),
+		},
+		"string type value": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"a\":\"test\"}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+				store[unsafe.Pointer(obj)] = obj
+				keypool[key] = unsafe.Pointer(obj)
+			},
+
+			input:  []string{"EXISTING_KEY", "$.a"},
+			output: []byte("$6\r\nstring\r\n"),
+		},
+		"boolean type value": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"flag\":true}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+				store[unsafe.Pointer(obj)] = obj
+				keypool[key] = unsafe.Pointer(obj)
+			},
+
+			input:  []string{"EXISTING_KEY", "$.flag"},
+			output: []byte("$7\r\nboolean\r\n"),
+		},
+		"number type value": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"price\":3}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+				store[unsafe.Pointer(obj)] = obj
+				keypool[key] = unsafe.Pointer(obj)
+			},
+
+			input:  []string{"EXISTING_KEY", "$.price"},
+			output: []byte("$6\r\nnumber\r\n"),
+		},
+		"null type value": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"price\":3.14}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+				store[unsafe.Pointer(obj)] = obj
+				keypool[key] = unsafe.Pointer(obj)
+			},
+
+			input:  []string{"EXISTING_KEY", "$.language"},
+			output: RespNIL,
+		},
+		"multi type value": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"name\":\"tom\",\"partner\":{\"name\":\"jerry\"}}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+				store[unsafe.Pointer(obj)] = obj
+				keypool[key] = unsafe.Pointer(obj)
+			},
+
+			input:  []string{"EXISTING_KEY", "$..name"},
+			output: []byte("*2\r\n$6\r\nstring\r\n$6\r\nstring\r\n"),
+		},
+	}
+
+	runEvalTests(t, tests, evalJSONTYPE)
 }
 
 func testEvalJSONGET(t *testing.T) {
