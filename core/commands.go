@@ -94,6 +94,16 @@ var (
 		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsontypeCmdMeta = DiceCmdMeta{
+		Name: "JSON.TYPE",
+		Info: `JSON.TYPE key [path]
+		Returns string reply for each path, specified as the value's type.
+		Returns RespNIL If the key doesn't exist.
+		Error reply: If the number of arguments is incorrect.`,
+		Eval:     evalJSONTYPE,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	ttlCmdMeta = DiceCmdMeta{
 		Name: "TTL",
 		Info: `TTL returns Time-to-Live in secs for the queried key in args
@@ -560,6 +570,43 @@ var (
 		Eval:     evalSCAN,
 		Arity:    -1,
 		KeySpecs: KeySpecs{BeginIndex: 1},
+	expiretimeCmdMeta = DiceCmdMeta{
+		Name: "EXPIRETIME",
+		Info: `EXPIRETIME returns the absolute Unix timestamp (since January 1, 1970) in seconds 
+		at which the given key will expire`,
+		Eval:     evalEXPIRETIME,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+	}
+	lpushCmdMeta = DiceCmdMeta{
+		Name:  "LPUSH",
+		Info:  "LPUSH pushes values into the left side of the deque",
+		Eval:  evalLPUSH,
+		Arity: -3,
+	}
+	rpushCmdMeta = DiceCmdMeta{
+		Name:  "RPUSH",
+		Info:  "RPUSH pushes values into the right side of the deque",
+		Eval:  evalRPUSH,
+		Arity: -3,
+	}
+	lpopCmdMeta = DiceCmdMeta{
+		Name:  "LPOP",
+		Info:  "LPOP pops a value from the left side of the deque",
+		Eval:  evalLPOP,
+		Arity: 2,
+	}
+	rpopCmdMeta = DiceCmdMeta{
+		Name:  "RPOP",
+		Info:  "RPOP pops a value from the right side of the deque",
+		Eval:  evalRPOP,
+		Arity: 2,
+	}
+	dbSizeCmdMeta = DiceCmdMeta{
+		Name:  "DBSIZE",
+		Info:  `DBSIZE Return the number of keys in the database`,
+		Eval:  evalDBSIZE,
+		Arity: 1,
 	}
 )
 
@@ -571,9 +618,11 @@ func init() {
 	diceCmds["MSET"] = msetCmdMeta
 	diceCmds["JSON.SET"] = jsonsetCmdMeta
 	diceCmds["JSON.GET"] = jsongetCmdMeta
+	diceCmds["JSON.TYPE"] = jsontypeCmdMeta
 	diceCmds["TTL"] = ttlCmdMeta
 	diceCmds["DEL"] = delCmdMeta
 	diceCmds["EXPIRE"] = expireCmdMeta
+	diceCmds["EXPIRETIME"] = expiretimeCmdMeta
 	diceCmds["HELLO"] = helloCmdMeta
 	diceCmds["BGREWRITEAOF"] = bgrewriteaofCmdMeta
 	diceCmds["INCR"] = incrCmdMeta
@@ -627,4 +676,9 @@ func init() {
 	diceCmds["OBJECT"] = objectCmdMeta
 	diceCmds["TOUCH"] = touchCmdMeta
 	diceCmds["SCAN"] = scanCmdMeta
+	diceCmds["LPUSH"] = lpushCmdMeta
+	diceCmds["RPOP"] = rpopCmdMeta
+	diceCmds["RPUSH"] = rpushCmdMeta
+	diceCmds["LPOP"] = lpopCmdMeta
+	diceCmds["DBSIZE"] = dbSizeCmdMeta
 }

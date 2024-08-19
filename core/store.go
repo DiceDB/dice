@@ -184,6 +184,15 @@ func Keys(p string) ([]string, error) {
 	return keys, err
 }
 
+// GetDbSize returns number of keys present in the database
+func GetDBSize() uint64 {
+	var noOfKeys uint64
+	withLocks(func() {
+		noOfKeys = uint64(len(keypool))
+	}, WithKeypoolRLock())
+	return noOfKeys
+}
+
 // Function to add a new watcher to a query.
 func AddWatcher(query DSQLQuery, clientFd int) { //nolint:gocritic
 	clients, _ := WatchList.LoadOrStore(query, &sync.Map{})

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core"
 	"github.com/dicedb/dice/internal/constants"
@@ -11,6 +12,12 @@ import (
 )
 
 var benchmarkDataSizes = []int{100, 1000, 10000, 100000, 1000000}
+var benchmarkDataSizesJSON = []int{100, 1000, 10000, 100000}
+
+var jsonList = map[string]string{
+	"smallJSON": `{"score":10,"id":%d,"field1":{"field2":{"field3":{"score":10.36}}}}`,
+	"largeJSON": `{"score":10,"id":%d,"field1":{"field2":{"field3":{"score":10.36}}},"inventory":{"mountain_bikes":[{"id":"bike:1","model":"Phoebe","price":1920,"specs":{"material":"carbon","weight":13.1},"colors":["black","silver"]},{"id":"bike:2","model":"Quaoar","price":2072,"specs":{"material":"aluminium","weight":7.9},"colors":["black","white"]},{"id":"bike:3","model":"Weywot","price":3264,"specs":{"material":"alloy","weight":13.8}}],"commuter_bikes":[{"id":"bike:4","model":"Salacia","price":1475,"specs":{"material":"aluminium","weight":16.6},"colors":["black","silver"]},{"id":"bike:5","model":"Mimas","price":3941,"specs":{"material":"alloy","weight":11.6}}]}}`,
+}
 
 func generateBenchmarkData(count int) {
 	config.KeysLimit = 2000000 // Set a high limit for benchmarking
@@ -374,5 +381,148 @@ func BenchmarkExecuteQueryWithEmptyKeyRegex(b *testing.B) {
 				}
 			}
 		})
+	}
+}
+
+func generateBenchmarkJSONData(b *testing.B, count int, json string) {
+	config.KeysLimit = 2000000 // Set a high limit for benchmarking
+	core.ResetStore()
+
+	data := make(map[string]*core.Obj, count)
+	for i := 0; i < count; i++ {
+		key := fmt.Sprintf("k%d", i)
+		value := fmt.Sprintf(json, i)
+
+		var jsonValue interface{}
+		if err := sonic.UnmarshalString(value, &jsonValue); err != nil {
+			b.Fatalf("Failed to unmarshal JSON: %v", err)
+		}
+
+		data[key] = core.NewObj(jsonValue, -1, core.ObjTypeJSON, core.ObjEncodingJSON)
+	}
+	core.PutAll(data)
+}
+
+func BenchmarkExecuteQueryWithJSON(b *testing.B) {
+	for _, v := range benchmarkDataSizesJSON {
+		for jsonSize, json := range jsonList {
+			generateBenchmarkJSONData(b, v, json)
+			defer core.ResetStore()
+
+			query := core.DSQLQuery{
+				KeyRegex: "k*",
+				Selection: core.QuerySelection{
+					KeySelection:   true,
+					ValueSelection: true,
+				},
+				Where: &sqlparser.ComparisonExpr{
+					Left:     sqlparser.NewStrVal([]byte("_value.id")),
+					Operator: "=",
+					Right:    sqlparser.NewIntVal([]byte("3")),
+				},
+			}
+
+			b.ResetTimer()
+			b.Run(fmt.Sprintf("%s_keys_%d", jsonSize, v), func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					if _, err := core.ExecuteQuery(query); err != nil {
+						b.Fatal(err)
+					}
+				}
+			})
+		}
+	}
+}
+
+func BenchmarkExecuteQueryWithNestedJSON(b *testing.B) {
+	for _, v := range benchmarkDataSizesJSON {
+		for jsonSize, json := range jsonList {
+			generateBenchmarkJSONData(b, v, json)
+			defer core.ResetStore()
+
+			query := core.DSQLQuery{
+				KeyRegex: "k*",
+				Selection: core.QuerySelection{
+					KeySelection:   true,
+					ValueSelection: true,
+				},
+				Where: &sqlparser.ComparisonExpr{
+					Left:     sqlparser.NewStrVal([]byte("_value.field1.field2.field3.score")),
+					Operator: ">",
+					Right:    sqlparser.NewFloatVal([]byte("10.1")),
+				},
+			}
+
+			b.ResetTimer()
+			b.Run(fmt.Sprintf("%s_keys_%d", jsonSize, v), func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					if _, err := core.ExecuteQuery(query); err != nil {
+						b.Fatal(err)
+					}
+				}
+			})
+		}
+	}
+}
+
+func BenchmarkExecuteQueryWithJsonInLeftAndRightExpressions(b *testing.B) {
+	for _, v := range benchmarkDataSizesJSON {
+		for jsonSize, json := range jsonList {
+			generateBenchmarkJSONData(b, v, json)
+			defer core.ResetStore()
+
+			query := core.DSQLQuery{
+				KeyRegex: "k*",
+				Selection: core.QuerySelection{
+					KeySelection:   true,
+					ValueSelection: true,
+				},
+				Where: &sqlparser.ComparisonExpr{
+					Left:     sqlparser.NewStrVal([]byte("_value.id")),
+					Operator: "=",
+					Right:    sqlparser.NewStrVal([]byte("_value.score")),
+				},
+			}
+
+			b.ResetTimer()
+			b.Run(fmt.Sprintf("%s_keys_%d", jsonSize, v), func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					if _, err := core.ExecuteQuery(query); err != nil {
+						b.Fatal(err)
+					}
+				}
+			})
+		}
+	}
+}
+
+func BenchmarkExecuteQueryWithJsonNoMatch(b *testing.B) {
+	for _, v := range benchmarkDataSizesJSON {
+		for jsonSize, json := range jsonList {
+			generateBenchmarkJSONData(b, v, json)
+			defer core.ResetStore()
+
+			query := core.DSQLQuery{
+				KeyRegex: "k*",
+				Selection: core.QuerySelection{
+					KeySelection:   true,
+					ValueSelection: true,
+				},
+				Where: &sqlparser.ComparisonExpr{
+					Left:     sqlparser.NewStrVal([]byte("_value.id")),
+					Operator: "=",
+					Right:    sqlparser.NewIntVal([]byte("-1")),
+				},
+			}
+
+			b.ResetTimer()
+			b.Run(fmt.Sprintf("%s_keys_%d", jsonSize, v), func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					if _, err := core.ExecuteQuery(query); err != nil {
+						b.Fatal(err)
+					}
+				}
+			})
+		}
 	}
 }

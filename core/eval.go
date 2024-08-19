@@ -29,7 +29,6 @@ const (
 
 var RespNIL []byte = []byte("$-1\r\n")
 var RespOK []byte = []byte("+OK\r\n")
-var RespAuthFailure []byte = []byte("+NOAUTH\r\n")
 var RespQueued []byte = []byte("+QUEUED\r\n")
 var RespZero []byte = []byte(":0\r\n")
 var RespOne []byte = []byte(":1\r\n")
@@ -314,6 +313,16 @@ func evalGET(args []string) []byte {
 	return Encode(obj.Value, false)
 }
 
+// evalDBSIZE returns the number of keys in the database.
+func evalDBSIZE(args []string) []byte {
+	if len(args) > 0 {
+		return Encode(errors.New("ERR wrong number of arguments for 'DBSIZE' command"), false)
+	}
+
+	// return the RESP encoded value
+	return Encode(GetDBSize(), false)
+}
+
 // evalGETDEL returns the value for the queried key in args
 // The key should be the only param in args
 // The RESP value of the key is encoded and then returned
@@ -336,6 +345,70 @@ func evalGETDEL(args []string) []byte {
 
 	// return the RESP encoded value
 	return Encode(obj.Value, false)
+}
+
+// evalJSONTYPE retrieves a JSON value type stored at the specified key
+// args must contain at least the key;  (path unused in this implementation)
+// Returns RespNIL if key is expired or it does not exist
+// Returns encoded error response if incorrect number of arguments
+// The RESP value of the key's value type is encoded and then returned
+func evalJSONTYPE(args []string) []byte {
+	if len(args) < 1 {
+		return Encode(errors.New("ERR wrong number of arguments for 'JSON.TYPE' command"), false)
+	}
+	key := args[0]
+
+	// Default path is root if not specified
+	path := defaultRootPath
+	if len(args) > 1 {
+		path = args[1]
+	}
+	// Retrieve the object from the database
+	obj := Get(key)
+	if obj == nil {
+		return RespNIL
+	}
+
+	err := assertType(obj.TypeEncoding, ObjTypeJSON)
+	if err != nil {
+		return Encode(err, false)
+	}
+	err = assertEncoding(obj.TypeEncoding, ObjEncodingJSON)
+	if err != nil {
+		return Encode(err, false)
+	}
+
+	jsonData := obj.Value
+
+	// If path is root, return "object" instantly
+	if path == defaultRootPath {
+		_, err := sonic.Marshal(jsonData)
+		if err != nil {
+			return Encode(errors.New("ERR could not serialize result"), false)
+		}
+		return Encode(constants.ObjectType, false)
+	}
+
+	// Parse the JSONPath expression
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return Encode(errors.New("ERR invalid JSONPath"), false)
+	}
+
+	results := expr.Get(jsonData)
+	if len(results) == 0 {
+		return RespNIL
+	}
+	if len(results) == 1 {
+		jsonType := utils.GetJSONFieldType(results[0])
+		return Encode(jsonType, false)
+	}
+	typeList := make([]string, 0, len(results))
+	for _, result := range results {
+		jsonType := utils.GetJSONFieldType(result)
+		typeList = append(typeList, jsonType)
+	}
+	return Encode(typeList, false)
 }
 
 // evalJSONGET retrieves a JSON value stored at the specified key
@@ -573,6 +646,34 @@ func evalEXPIRE(args []string) []byte {
 
 	// 1 if the timeout was set.
 	return RespOne
+}
+
+// evalEXPIRETIME returns the absolute Unix timestamp (since January 1, 1970) in seconds at which the given key will expire
+// args should contain only 1 value, the key
+// Returns expiration Unix timestamp in seconds.
+// Returns -1 if the key exists but has no associated expiration time.
+// Returns -2 if the key does not exist.
+func evalEXPIRETIME(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR wrong number of arguments for 'expire' command"), false)
+	}
+
+	var key string = args[0]
+
+	obj := Get(key)
+
+	// -2 if key doesn't exist
+	if obj == nil {
+		return RespMinusTwo
+	}
+
+	exTimeMili, ok := getExpiry(obj)
+	// -1 if key doesn't have expiration time set
+	if !ok {
+		return RespMinusOne
+	}
+
+	return Encode(int(exTimeMili/1000), false)
 }
 
 func evalHELLO(args []string) []byte {
@@ -1794,7 +1895,7 @@ func EvalAndRespond(cmds RedisCmds, c *Client) {
 	for _, cmd := range cmds {
 		// Check if the command has been authenticated
 		if cmd.Cmd != AuthCmd && !c.Session.IsActive() {
-			if _, err := c.Write(RespAuthFailure); err != nil {
+			if _, err := c.Write(Encode(errors.New("NOAUTH Authentication required"), false)); err != nil {
 				log.Println("Error writing to client:", err)
 			}
 			continue
@@ -2078,4 +2179,116 @@ func evalTOUCH(args []string) []byte {
 	}
 
 	return Encode(count, false)
+}
+
+func evalLPUSH(args []string) []byte {
+	if len(args) < 2 {
+		return Encode(errors.New("ERR invalid number of arguments for `LPUSH` command"), false)
+	}
+
+	obj := Get(args[0])
+	if obj == nil {
+		obj = NewObj(NewDeque(), -1, ObjTypeByteList, ObjEncodingDeque)
+	}
+
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
+		return Encode(err, false)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingDeque); err != nil {
+		return Encode(err, false)
+	}
+
+	Put(args[0], obj)
+	for i := 1; i < len(args); i++ {
+		obj.Value.(*Deque).LPush(args[i])
+	}
+
+	return RespOK
+}
+
+func evalRPUSH(args []string) []byte {
+	if len(args) < 2 {
+		return Encode(errors.New("ERR invalid number of arguments for `RPUSH` command"), false)
+	}
+
+	obj := Get(args[0])
+	if obj == nil {
+		obj = NewObj(NewDeque(), -1, ObjTypeByteList, ObjEncodingDeque)
+	}
+
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
+		return Encode(err, false)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingDeque); err != nil {
+		return Encode(err, false)
+	}
+
+	Put(args[0], obj)
+	for i := 1; i < len(args); i++ {
+		obj.Value.(*Deque).RPush(args[i])
+	}
+
+	return RespOK
+}
+
+func evalRPOP(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR invalid number of arguments for `RPOP` command"), false)
+	}
+
+	obj := Get(args[0])
+	if obj == nil {
+		return RespNIL
+	}
+
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
+		return Encode(err, false)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingDeque); err != nil {
+		return Encode(err, false)
+	}
+
+	deq := obj.Value.(*Deque)
+	x, err := deq.RPop()
+	if err != nil {
+		if err == ErrDequeEmpty {
+			return RespNIL
+		}
+		panic(fmt.Sprintf("unknown error: %v", err))
+	}
+
+	return Encode(x, false)
+}
+
+func evalLPOP(args []string) []byte {
+	if len(args) != 1 {
+		return Encode(errors.New("ERR invalid number of arguments for `LPOP` command"), false)
+	}
+
+	obj := Get(args[0])
+	if obj == nil {
+		return RespNIL
+	}
+
+	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
+		return Encode(err, false)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingDeque); err != nil {
+		return Encode(err, false)
+	}
+
+	deq := obj.Value.(*Deque)
+	x, err := deq.LPop()
+	if err != nil {
+		if err == ErrDequeEmpty {
+			return RespNIL
+		}
+		panic(fmt.Sprintf("unknown error: %v", err))
+	}
+
+	return Encode(x, false)
 }
