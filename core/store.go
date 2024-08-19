@@ -2,6 +2,7 @@ package core
 
 import (
 	"path"
+	"strings"
 	"sync"
 	"unsafe"
 
@@ -279,6 +280,111 @@ func putHelper(k string, obj *Obj, opts ...PutOption) {
 
 func Get(k string) *Obj {
 	return getHelper(k, true)
+}
+
+var (
+	keyList []string
+)
+
+// initKeyList initializes keyList with keys from keypool if it is empty or outdated.
+// This function is used to populate keyList with all keys from keypool,
+// ensuring that it matches the current state of the keypool.
+func initKeyList() {
+	// Check if keyList is empty or needs to be updated
+	if len(keyList) == 0 || len(keyList) != len(keypool) {
+		// Initialize keyList with capacity equal to the length of keypool
+		keyList = make([]string, 0, len(keypool))
+		// Populate keyList with keys from keypool
+		for k := range keypool {
+			keyList = append(keyList, k)
+		}
+	}
+}
+
+// scanKeys performs a scan operation on the keypool, returning keys that match
+// the given criteria (cursor, count, pattern, and keyType).
+// Arguments:
+// - cursor: The starting point for the scan operation.
+// - count: The number of keys to return.
+// - pattern: A glob pattern to match against keys (can be empty).
+// - keyType: The type of keys to include in the result (can be empty).
+// Returns:
+// - newCursor: The new cursor position after the scan.
+// - keys: A slice of keys that match the criteria.
+func scanKeys(cursor, count int, pattern, keyType string) (newCursor int, keys []string) {
+	// Acquire locks for thread-safe access to keypool and store
+	withLocks(func() {
+		initKeyList() // Initialize keyList if needed
+
+		endCursor := cursor + count
+		if endCursor > len(keyList) {
+			endCursor = len(keyList)
+		}
+
+		// Iterate over the range of keys to scan
+		for i := cursor; i < endCursor; i++ {
+			key := keyList[i]
+			objPtr := keypool[key]
+			obj, ok := store[objPtr]
+			if !ok || hasExpired(obj) {
+				continue // Skip if the object is not found or expired
+			}
+
+			objType := getTypeAsString(obj.TypeEncoding)
+			if keyType != "" && !strings.EqualFold(objType, keyType) {
+				continue // Skip if the keyType does not match
+			}
+
+			if pattern == "" || matchGlob(key, pattern) {
+				keys = append(keys, key) // Collect keys that match the pattern
+			}
+		}
+
+		if endCursor < len(keyList) {
+			newCursor = endCursor // Update cursor position if within bounds
+		} else {
+			newCursor = 0 // Reset cursor to 0 if end of keyList is reached
+		}
+	}, WithStoreLock(), WithKeypoolLock()) // Apply locks for thread-safe operations
+
+	return newCursor, keys
+}
+
+// getTypeAsString converts the encoding type of an object to a string representation.
+// Arguments:
+// - encoding: The type encoding of the object.
+// Returns:
+// - A string representing the type of the object.
+func getTypeAsString(encoding uint8) string {
+	typePart, _ := ExtractTypeEncoding(&Obj{TypeEncoding: encoding})
+
+	switch typePart {
+	case ObjTypeString:
+		return "string"
+	case ObjTypeByteList:
+		return "byte_list"
+	case ObjTypeBitSet:
+		return "bitset"
+	case ObjTypeJSON:
+		return "json"
+	case ObjTypeByteArray:
+		return "byte_array"
+	default:
+		return "unknown"
+	}
+}
+
+// matchGlob checks if the string s matches the glob pattern pattern.
+// Arguments:
+// - s: The string to be matched.
+// - pattern: The glob pattern to match against (can contain wildcards).
+// Returns:
+// - true if s matches the pattern; false otherwise.
+func matchGlob(s, pattern string) bool {
+	if pattern == "*" {
+		return true // Pattern '*' matches any string
+	}
+	return strings.HasPrefix(s, strings.TrimSuffix(pattern, "*")) // Match based on prefix
 }
 
 func GetDel(k string) *Obj {

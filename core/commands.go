@@ -527,7 +527,7 @@ var (
 		Name: "PTTL",
 		Info: `PTTL returns Time-to-Live in millisecs for the queried key in args
 		 The key should be the only param in args else returns with an error
-		 Returns	
+		 Returns
 		 RESP encoded time (in secs) remaining for the key to expire
 		 RESP encoded -2 stating key doesn't exist or key is expired
 		 RESP encoded -1 in case no expiration is set on the key`,
@@ -550,6 +550,15 @@ var (
 		A key is ignored if it does not exist.`,
 		Eval:     evalTOUCH,
 		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	scanCmdMeta = DiceCmdMeta{
+		Name: "SCAN",
+		Info: `SCAN cursor [MATCH pattern] [COUNT count] [TYPE type]
+		Incrementally iterate over a collection of elements.
+		Returns an array of two values: the next cursor to use in the next call, and an array of elements.`,
+		Eval:     evalSCAN,
+		Arity:    -1,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 )
@@ -617,4 +626,5 @@ func init() {
 	diceCmds["PTTL"] = pttlCmdMeta
 	diceCmds["OBJECT"] = objectCmdMeta
 	diceCmds["TOUCH"] = touchCmdMeta
+	diceCmds["SCAN"] = scanCmdMeta
 }
