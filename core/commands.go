@@ -658,6 +658,62 @@ var (
 		Eval:  evalBITPOS,
 		Arity: -2,
 	}
+	saddCmdMeta = DiceCmdMeta{
+		Name: "SADD",
+		Info: `SADD key member [member ...]
+		Adds the specified members to the set stored at key.
+		Specified members that are already a member of this set are ignored
+		Non existing keys are treated as empty sets.
+		An error is returned when the value stored at key is not a set.`,
+		Eval:     evalSADD,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	smembersCmdMeta = DiceCmdMeta{
+		Name: "SMEMBERS",
+		Info: `SMEMBERS key
+		Returns all the members of the set value stored at key.`,
+		Eval:     evalSMEMBERS,
+		Arity:    2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	sremCmdMeta = DiceCmdMeta{
+		Name: "SREM",
+		Info: `SREM key member [member ...]
+		Removes the specified members from the set stored at key.
+		Non existing keys are treated as empty sets.
+		An error is returned when the value stored at key is not a set.`,
+		Eval:     evalSREM,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	scardCmdMeta = DiceCmdMeta{
+		Name: "SCARD",
+		Info: `SCARD key
+		Returns the number of elements of the set stored at key.
+		An error is returned when the value stored at key is not a set.`,
+		Eval:     evalSCARD,
+		Arity:    2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	sdiffCmdMeta = DiceCmdMeta{
+		Name: "SDIFF",
+		Info: `SDIFF key1 [key2 ... key_N]
+		Returns the members of the set resulting from the difference between the first set and all the successive sets.
+		Non existing keys are treated as empty sets.`,
+		Eval:     evalSDIFF,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	sinterCmdMeta = DiceCmdMeta{
+		Name: "SINTER",
+		Info: `SINTER key1 [key2 ... key_N]
+		Returns the members of the set resulting from the intersection of all the given sets.
+		Non existing keys are treated as empty sets.`,
+		Eval:     evalSINTER,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
