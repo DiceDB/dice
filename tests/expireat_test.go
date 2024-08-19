@@ -14,26 +14,90 @@ func TestExpireat(t *testing.T) {
 
 	testCases := []struct {
 		name     string
-		command  []string
+		setup    string
+		commands []string
 		expected []interface{}
 		delay    []time.Duration
 	}{
 		{
-			name:     "Test EXPIREAT",
-			command:  []string{"SET key value", "EXISTS key", "EXPIREAT key " + strconv.FormatInt(time.Now().Add(1*time.Second).Unix(), 10), "EXISTS key"},
-			expected: []interface{}{"OK", int64(1), int64(1), int64(0)},
-			delay:    []time.Duration{0, 0, 0, 2 * time.Second},
+			name:  "Set with EXPIREAT command",
+			setup: "",
+			commands: []string{
+				"SET test_key test_value",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+1, 10),
+			},
+			expected: []interface{}{"OK", int64(1)},
+			delay:    []time.Duration{0, 0},
+		},
+		{
+			name:  "Check if key is nil after expiration",
+			setup: "SET test_key test_value",
+			commands: []string{
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+1, 10),
+				"GET test_key",
+			},
+			expected: []interface{}{int64(1), "(nil)"},
+			delay:    []time.Duration{0, 1100 * time.Millisecond},
+		},
+		{
+			name:  "EXPIREAT non-existent key",
+			setup: "",
+			commands: []string{
+				"EXPIREAT non_existent_key " + strconv.FormatInt(time.Now().Unix()+1, 10),
+			},
+			expected: []interface{}{int64(0)},
+			delay:    []time.Duration{0, 0},
+		},
+		{
+			name:  "EXPIREAT with past time",
+			setup: "SET test_key test_value",
+			commands: []string{
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()-1, 10),
+				"GET test_key",
+			},
+			expected: []interface{}{int64(1), "(nil)"},
+			delay:    []time.Duration{0, 0},
+		},
+		{
+			name:  "EXPIREAT with invalid syntax",
+			setup: "SET test_key test_value",
+			commands: []string{
+				"EXPIREAT test_key",
+			},
+			expected: []interface{}{"ERR wrong number of arguments for 'expireat' command"},
+			delay:    []time.Duration{0},
 		},
 	}
-	for _, tcase := range testCases {
-		t.Run(tcase.name, func(t *testing.T) {
-			for i := 0; i < len(tcase.command); i++ {
-				if tcase.delay[i] > 0 {
-					time.Sleep(tcase.delay[i])
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup
+			if tc.setup != "" {
+				fireCommand(conn, tc.setup)
+			}
+
+			// Execute commands
+			var results []interface{}
+			for i, cmd := range tc.commands {
+				// Wait if delay is specified
+				if tc.delay[i] > 0 {
+					time.Sleep(tc.delay[i])
 				}
-				cmd := tcase.command[i]
-				out := tcase.expected[i]
-				assert.Equal(t, out, fireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
+				result := fireCommand(conn, cmd)
+				results = append(results, result)
+			}
+
+			// Validate results
+			for i, expected := range tc.expected {
+				if i >= len(results) {
+					t.Fatalf("Not enough results. Expected %d, got %d", len(tc.expected), len(results))
+				}
+
+				if expected == "(nil)" {
+					assert.Assert(t, results[i] == "(nil)" || results[i] == "",
+						"Expected nil or empty result, got %v", results[i])
+				} else {
+					assert.DeepEqual(t, expected, results[i])
+				}
 			}
 		})
 	}
