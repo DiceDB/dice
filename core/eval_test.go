@@ -481,7 +481,7 @@ func testEvalDbsize(t *testing.T) {
 	tests := map[string]evalTestCase{
 		"DBSIZE command with invalid no of args": {
 			input:  []string{"INVALID_ARG"},
-			output: []byte("-ERR wrong number of arguments for 'DBSIZE' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'dbsize' command\r\n"),
 		},
 		"no key in db": {
 			input:  nil,
