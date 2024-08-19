@@ -101,7 +101,7 @@ var (
 		Returns RespNIL If the key doesn't exist.
 		Error reply: If the number of arguments is incorrect.`,
 		Eval:     evalJSONTYPE,
-		Arity:    -1,
+		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	ttlCmdMeta = DiceCmdMeta{
