@@ -94,6 +94,16 @@ var (
 		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsontypeCmdMeta = DiceCmdMeta{
+		Name: "JSON.TYPE",
+		Info: `JSON.TYPE key [path]
+		Returns string reply for each path, specified as the value's type.
+		Returns RespNIL If the key doesn't exist.
+		Error reply: If the number of arguments is incorrect.`,
+		Eval:     evalJSONTYPE,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	ttlCmdMeta = DiceCmdMeta{
 		Name: "TTL",
 		Info: `TTL returns Time-to-Live in secs for the queried key in args
@@ -611,6 +621,7 @@ func init() {
 	diceCmds["MSET"] = msetCmdMeta
 	diceCmds["JSON.SET"] = jsonsetCmdMeta
 	diceCmds["JSON.GET"] = jsongetCmdMeta
+	diceCmds["JSON.TYPE"] = jsontypeCmdMeta
 	diceCmds["TTL"] = ttlCmdMeta
 	diceCmds["DEL"] = delCmdMeta
 	diceCmds["EXPIRE"] = expireCmdMeta
