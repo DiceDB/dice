@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"gotest.tools/v3/assert"
 	"testing"
 )
 
@@ -55,9 +56,7 @@ func TestGetJsonFieldType(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := GetJSONFieldType(tt.input)
-			if result != tt.wantType {
-				t.Errorf("GetJsonFieldType(%q) = (%v), want (%v)", tt.input, result, tt.wantType)
-			}
+			assert.Equal(t, tt.wantType, result)
 		})
 	}
 }

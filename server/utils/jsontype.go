@@ -1,33 +1,26 @@
 package utils
 
-const (
-	ObjectType  string = "object"
-	ArrayType   string = "array"
-	StringType  string = "string"
-	IntegerType string = "integer"
-	NumberType  string = "number"
-	BooleanType string = "boolean"
-	NullType    string = "null"
-	UnknownType string = "unknown"
+import (
+	"github.com/dicedb/dice/internal/constants"
 )
 
 func GetJSONFieldType(v interface{}) string {
 	switch v.(type) {
 	case map[string]interface{}:
-		return ObjectType
+		return constants.ObjectType
 	case []interface{}:
-		return ArrayType
+		return constants.ArrayType
 	case string:
-		return StringType
+		return constants.StringType
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
-		return IntegerType
+		return constants.IntegerType
 	case float32, float64:
-		return NumberType
+		return constants.NumberType
 	case bool:
-		return BooleanType
+		return constants.BooleanType
 	case nil:
-		return NullType
+		return constants.NullType
 	default:
-		return UnknownType
+		return constants.UnknownType
 	}
 }

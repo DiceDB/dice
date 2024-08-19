@@ -309,6 +309,15 @@ func evalJSONTYPE(args []string) []byte {
 		return RespNIL
 	}
 
+	err := assertType(obj.TypeEncoding, ObjTypeJSON)
+	if err != nil {
+		return Encode(err, false)
+	}
+	err = assertEncoding(obj.TypeEncoding, ObjEncodingJSON)
+	if err != nil {
+		return Encode(err, false)
+	}
+
 	jsonData := obj.Value
 
 	// If path is root, return "object" instantly
@@ -317,7 +326,7 @@ func evalJSONTYPE(args []string) []byte {
 		if err != nil {
 			return Encode(errors.New("ERR could not serialize result"), false)
 		}
-		return Encode(utils.ObjectType, false)
+		return Encode(constants.ObjectType, false)
 	}
 
 	// Parse the JSONPath expression
