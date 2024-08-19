@@ -253,6 +253,16 @@ func evalGET(args []string) []byte {
 	return Encode(obj.Value, false)
 }
 
+// evalDBSIZE returns the number of keys in the database.
+func evalDBSIZE(args []string) []byte {
+	if len(args) > 0 {
+		return Encode(errors.New("ERR wrong number of arguments for 'DBSIZE' command"), false)
+	}
+
+	// return the RESP encoded value
+	return Encode(GetDBSize(), false)
+}
+
 // evalGETDEL returns the value for the queried key in args
 // The key should be the only param in args
 // The RESP value of the key is encoded and then returned

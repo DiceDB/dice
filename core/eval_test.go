@@ -51,6 +51,7 @@ func TestEval(t *testing.T) {
 		"PERSIST":    TestEvalPersist,
 		"EXPIRETIME": testEvalEXPIRETIME,
 		"EXPIREAT":   testEvalEXPIREAT,
+		"DBSIZE":     testEvalDbsize,
 	}
 
 	for name, testFunc := range testCases {
@@ -226,12 +227,20 @@ func testEvalEXPIRETIME(t *testing.T) {
 
 func testEvalEXPIREAT(t *testing.T) {
 	tests := map[string]evalTestCase{
+		"nil value": {
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'expireat' command\r\n"),
+		},
+		"empty args": {
+			input:  []string{},
+			output: []byte("-ERR wrong number of arguments for 'expireat' command\r\n"),
+		},
 		"wrong number of args": {
 			input:  []string{"KEY1"},
 			output: []byte("-ERR wrong number of arguments for 'expireat' command\r\n"),
 		},
 		"key does not exist": {
-			input:  []string{"NONEXISTENT_KEY", "1723961346"},
+			input:  []string{"NONEXISTENT_KEY", strconv.FormatInt(time.Now().Add(2*time.Minute).Unix(), 10)},
 			output: RespZero,
 		},
 		"key exists": {
@@ -245,7 +254,7 @@ func testEvalEXPIREAT(t *testing.T) {
 				store[unsafe.Pointer(obj)] = obj
 				keypool[key] = unsafe.Pointer(obj)
 			},
-			input:  []string{"EXISTING_KEY", "1723961346"},
+			input:  []string{"EXISTING_KEY", strconv.FormatInt(time.Now().Add(2*time.Minute).Unix(), 10)},
 			output: RespOne,
 		},
 	}
@@ -504,6 +513,58 @@ func TestEvalPersist(t *testing.T) {
 	}
 
 	runEvalTests(t, tests, evalPersist)
+}
+
+func testEvalDbsize(t *testing.T) {
+	tests := map[string]evalTestCase{
+		"DBSIZE command with invalid no of args": {
+			input:  []string{"INVALID_ARG"},
+			output: []byte("-ERR wrong number of arguments for 'DBSIZE' command\r\n"),
+		},
+		"no key in db": {
+			input:  nil,
+			output: []byte(":0\r\n"),
+		},
+		"one key exists in db": {
+			setup: func() {
+				key := "KEY"
+				value := "VAL"
+				obj := &Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store[unsafe.Pointer(obj)] = obj
+				keypool[key] = unsafe.Pointer(obj)
+			},
+			input:  nil,
+			output: []byte(":1\r\n"),
+		},
+		"two keys exist in db": {
+			setup: func() {
+				key1 := "KEY1"
+				value1 := "VAL1"
+				obj1 := &Obj{
+					Value:          value1,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store[unsafe.Pointer(obj1)] = obj1
+				keypool[key1] = unsafe.Pointer(obj1)
+
+				key2 := "KEY2"
+				value2 := "VAL2"
+				obj2 := &Obj{
+					Value:          value2,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store[unsafe.Pointer(obj2)] = obj2
+				keypool[key2] = unsafe.Pointer(obj2)
+			},
+			input:  nil,
+			output: []byte(":2\r\n"),
+		},
+	}
+
+	runEvalTests(t, tests, evalDBSIZE)
 }
 
 func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]string) []byte) {
