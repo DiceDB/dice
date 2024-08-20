@@ -20,32 +20,28 @@ func evalSADD(args []string) []byte {
 		var keepttl bool = false
 		// If the object does not exist, create a new set object.
 		value := make(map[string]bool)
+		// Create a new object.
+		obj = NewObj(value, exDurationMs, ObjTypeSet, ObjEncodingHT)
+		Put(key, obj, WithKeepTTL(keepttl))
+	}
 
-		// Add the value to the set.
-		for i := 1; i < len(args); i++ {
-			value[args[i]] = true
+	if assertType(obj.TypeEncoding, ObjTypeSet) != nil {
+		return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+	}
+	if assertEncoding(obj.TypeEncoding, ObjEncodingHT) != nil {
+		return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+	}
+
+	// Get the set object.
+	set := obj.Value.(map[string]bool)
+
+	for _, arg := range args[1:] {
+		if _, ok := set[arg]; !ok {
+			set[arg] = true
 			count++
 		}
-
-		// Create a new object.
-		Put(key, NewObj(value, exDurationMs, ObjTypeSet, ObjEncodingHT), WithKeepTTL(keepttl))
-	} else {
-		// If the object exists, check if it is a set object.
-		if obj.TypeEncoding != ObjTypeSet|ObjEncodingHT {
-			return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
-		}
-
-		// Get the set object.
-		set := obj.Value.(map[string]bool)
-
-		// Add the value to the set.
-		for i := 1; i < len(args); i++ {
-			if _, ok := set[args[i]]; !ok {
-				set[args[i]] = true
-				count++
-			}
-		}
 	}
+
 	return Encode(count, false)
 }
 
@@ -63,15 +59,18 @@ func evalSMEMBERS(args []string) []byte {
 	}
 
 	// If the object exists, check if it is a set object.
-	if obj.TypeEncoding != ObjTypeSet|ObjEncodingHT {
+	if assertEncoding(obj.TypeEncoding, ObjEncodingHT) != nil {
+		return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+	}
+
+	if assertType(obj.TypeEncoding, ObjTypeSet) != nil {
 		return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
 	}
 
 	// Get the set object.
 	set := obj.Value.(map[string]bool)
-
 	// Get the members of the set.
-	var members []string
+	var members = make([]string, 0, len(set))
 	for k, flag := range set {
 		if flag {
 			members = append(members, k)
@@ -94,18 +93,25 @@ func evalSREM(args []string) []byte {
 	if obj == nil {
 		return Encode(count, false)
 	}
-	if obj.TypeEncoding != ObjTypeSet|ObjEncodingHT {
+
+	// If the object exists, check if it is a set object.
+	if assertEncoding(obj.TypeEncoding, ObjEncodingHT) != nil {
+		return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+	}
+
+	if assertType(obj.TypeEncoding, ObjTypeSet) != nil {
 		return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
 	}
 
 	// Get the set object.
 	set := obj.Value.(map[string]bool)
-	for i := 1; i < len(args); i++ {
-		if set[args[i]] {
-			delete(set, args[i])
+	for _, arg := range args[1:] {
+		if set[arg] {
+			delete(set, arg)
 			count++
 		}
 	}
+
 	return Encode(count, false)
 }
 
@@ -124,7 +130,11 @@ func evalSCARD(args []string) []byte {
 	}
 
 	// If the object exists, check if it is a set object.
-	if obj.TypeEncoding != ObjTypeSet|ObjEncodingHT {
+	if assertEncoding(obj.TypeEncoding, ObjEncodingHT) != nil {
+		return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+	}
+
+	if assertType(obj.TypeEncoding, ObjTypeSet) != nil {
 		return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
 	}
 
@@ -159,9 +169,14 @@ func evalSDIFF(args []string) []byte {
 
 	var count int = 0
 	if obj != nil {
-		if obj.TypeEncoding != ObjTypeSet|ObjEncodingHT {
+		if assertEncoding(obj.TypeEncoding, ObjEncodingHT) != nil {
 			return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
 		}
+
+		if assertType(obj.TypeEncoding, ObjTypeSet) != nil {
+			return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+		}
+
 		// create a deep copy of the set object
 		srcSet = make(map[string]bool)
 		for k, flag := range obj.Value.(map[string]bool) {
@@ -172,16 +187,20 @@ func evalSDIFF(args []string) []byte {
 		}
 	}
 
-	for i := 1; i < len(args); i++ {
+	for _, arg := range args[1:] {
 		// Get the set object from the store.
-		obj := Get(args[i])
+		obj := Get(arg)
 
 		if obj == nil {
 			continue
 		}
 
 		// If the object exists, check if it is a set object.
-		if obj.TypeEncoding != ObjTypeSet|ObjEncodingHT {
+		if assertEncoding(obj.TypeEncoding, ObjEncodingHT) != nil {
+			return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+		}
+
+		if assertType(obj.TypeEncoding, ObjTypeSet) != nil {
 			return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
 		}
 
@@ -191,7 +210,7 @@ func evalSDIFF(args []string) []byte {
 			set := obj.Value.(map[string]bool)
 			for k, flag := range set {
 				if flag && srcSet[k] {
-					srcSet[k] = false
+					delete(srcSet, k)
 					count--
 				}
 			}
@@ -203,7 +222,7 @@ func evalSDIFF(args []string) []byte {
 	}
 
 	// Get the members of the set.
-	var members []string
+	var members = make([]string, 0, len(srcSet))
 	for k, flag := range srcSet {
 		if flag {
 			members = append(members, k)
@@ -218,13 +237,13 @@ func evalSINTER(args []string) []byte {
 		return Encode(errors.New("ERR wrong number of arguments for 'SINTER' command"), false)
 	}
 
-	sets := make([]map[string]bool, len(args))
+	sets := make([]map[string]bool, 0, len(args))
 
 	var empty int = 0
 
-	for i := 0; i < len(args); i++ {
+	for _, arg := range args {
 		// Get the set object from the store.
-		obj := Get(args[i])
+		obj := Get(arg)
 
 		if obj == nil {
 			empty++
@@ -232,13 +251,17 @@ func evalSINTER(args []string) []byte {
 		}
 
 		// If the object exists, check if it is a set object.
-		if obj.TypeEncoding != ObjTypeSet|ObjEncodingHT {
+		if assertEncoding(obj.TypeEncoding, ObjEncodingHT) != nil {
+			return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+		}
+
+		if assertType(obj.TypeEncoding, ObjTypeSet) != nil {
 			return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
 		}
 
 		// Get the set object.
 		set := obj.Value.(map[string]bool)
-		sets[i] = set
+		sets = append(sets, set)
 	}
 
 	if empty > 0 {
@@ -254,15 +277,11 @@ func evalSINTER(args []string) []byte {
 
 	count := 0
 	resultSet := make(map[string]bool)
-	var members []string
 
 	// init the result set with the first set
 	// store the number of elements in the first set in count
 	// we will decrement the count if we do not find the elements in the other sets
-	for k, flag := range sets[0] {
-		if !flag {
-			continue
-		}
+	for k := range sets[0] {
 		count++
 		resultSet[k] = true
 	}
@@ -271,20 +290,21 @@ func evalSINTER(args []string) []byte {
 		if count == 0 {
 			break
 		}
-		for k, flag := range resultSet {
-			if !flag {
-				continue
-			}
+		for k := range resultSet {
 			if !sets[i][k] {
 				delete(resultSet, k)
 				count--
 			}
 		}
 	}
-	for k, flag := range resultSet {
-		if flag {
-			members = append(members, k)
-		}
+
+	if count == 0 {
+		return Encode([]string{}, false)
+	}
+
+	var members = make([]string, 0, len(resultSet))
+	for k := range resultSet {
+		members = append(members, k)
 	}
 	return Encode(members, false)
 }
