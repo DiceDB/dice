@@ -71,7 +71,6 @@ func (rp *RESPParser) DecodeOne() (interface{}, error) {
 			// This can happen if the connection is closed on the client side but not properly detected
 			return nil, net.ErrClosed
 		}
-
 	}
 
 	b, err := rp.buf.ReadByte()
