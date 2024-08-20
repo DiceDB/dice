@@ -221,7 +221,7 @@ func testEvalEXPIRETIME(t *testing.T, store *Store) {
 	tests := map[string]evalTestCase{
 		"wrong number of args": {
 			input:  []string{"KEY1", "KEY2"},
-			output: []byte("-ERR wrong number of arguments for 'expire' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'expiretime' command\r\n"),
 		},
 		"key does not exist": {
 			input:  []string{"NONEXISTENT_KEY"},
