@@ -757,10 +757,10 @@ func evalDECRBY(args []string, store *Store) []byte {
 }
 
 func incrDecrCmd(args []string, incr int64, store *Store) []byte {
-	var key string = args[0]
+	key := args[0]
 	obj := store.Get(key)
 	if obj == nil {
-		obj = store.NewObj("0", -1, ObjTypeString, ObjEncodingInt)
+		obj = store.NewObj(int64(0), -1, ObjTypeString, ObjEncodingInt)
 		store.Put(key, obj)
 	}
 
@@ -780,7 +780,7 @@ func incrDecrCmd(args []string, incr int64, store *Store) []byte {
 	}
 
 	i += incr
-	obj.Value = strconv.FormatInt(i, 10)
+	obj.Value = i
 
 	return Encode(i, false)
 }
