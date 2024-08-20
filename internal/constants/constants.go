@@ -41,4 +41,6 @@ const (
 	BooleanType string = "boolean"
 	NullType    string = "null"
 	UnknownType string = "unknown"
+
+	Qwatch string = "qwatch"
 )
