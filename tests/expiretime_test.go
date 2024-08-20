@@ -1,15 +1,18 @@
 package tests
 
 import (
+	"strconv"
 	"testing"
 	"time"
 
 	"gotest.tools/v3/assert"
 )
 
-func TestExpire(t *testing.T) {
+func TestExpiretime(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
+
+	futureUnixTimestamp := time.Now().Unix() + 1
 
 	testCases := []struct {
 		name     string
@@ -19,52 +22,43 @@ func TestExpire(t *testing.T) {
 		delay    []time.Duration
 	}{
 		{
-			name:  "Set with EXPIRE command",
+			name:  "EXPIRETIME command",
+			setup: "SET test_key test_value",
+			commands: []string{
+				"EXPIREAT test_key " + strconv.FormatInt(futureUnixTimestamp, 10),
+				"EXPIRETIME test_key",
+			},
+			expected: []interface{}{int64(1), int64(futureUnixTimestamp)},
+			delay:    []time.Duration{0, 0},
+		},
+		{
+			name:  "EXPIRETIME non-existent key",
 			setup: "",
 			commands: []string{
-				"SET test_key test_value",
-				"EXPIRE test_key 1",
+				"EXPIRETIME non_existent_key",
 			},
-			expected: []interface{}{"OK", int64(1)},
-			delay:    []time.Duration{0, 0},
-		},
-		{
-			name:  "Check if key is nil after expiration",
-			setup: "SET test_key test_value",
-			commands: []string{
-				"EXPIRE test_key 1",
-				"GET test_key",
-			},
-			expected: []interface{}{int64(1), "(nil)"},
-			delay:    []time.Duration{0, 1100 * time.Millisecond},
-		},
-		{
-			name:  "EXPIRE non-existent key",
-			setup: "",
-			commands: []string{
-				"EXPIRE non_existent_key 1",
-			},
-			expected: []interface{}{int64(0)},
-			delay:    []time.Duration{0, 0},
-		},
-		{
-			name:  "EXPIRE with past time",
-			setup: "SET test_key test_value",
-			commands: []string{
-				"EXPIRE test_key -1",
-				"GET test_key",
-			},
-			expected: []interface{}{int64(1), "(nil)"},
-			delay:    []time.Duration{0, 0},
-		},
-		{
-			name:  "EXPIRE with invalid syntax",
-			setup: "SET test_key test_value",
-			commands: []string{
-				"EXPIRE test_key",
-			},
-			expected: []interface{}{"ERR wrong number of arguments for 'expire' command"},
+			expected: []interface{}{int64(-2)},
 			delay:    []time.Duration{0},
+		},
+		{
+			name:  "EXPIRETIME with past time",
+			setup: "SET test_key test_value",
+			commands: []string{
+				"EXPIREAT test_key 1724167183",
+				"EXPIRETIME test_key",
+			},
+			expected: []interface{}{int64(1), int64(-2)},
+			delay:    []time.Duration{0, 0},
+		},
+		{
+			name:  "EXPIRETIME with invalid syntax",
+			setup: "SET test_key test_value",
+			commands: []string{
+				"EXPIRETIME",
+				"EXPIRETIME key1 key2",
+			},
+			expected: []interface{}{"ERR wrong number of arguments for 'expiretime' command", "ERR wrong number of arguments for 'expiretime' command"},
+			delay:    []time.Duration{0, 0},
 		},
 	}
 	for _, tc := range testCases {
