@@ -36,6 +36,3 @@ require (
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
 	golang.org/x/crypto v0.25.0
 )
-
-// Get go-dice from local path
-replace github.com/dicedb/go-dice => ../../../go-dice
