@@ -204,6 +204,8 @@ func evalSET(args []string, store *Store) []byte {
 		storedValue, _ = strconv.ParseInt(value, 10, 64)
 	case ObjEncodingEmbStr, ObjEncodingRaw:
 		storedValue = value
+	default:
+		return Encode(fmt.Errorf("ERR unsupported encoding: %d", oEnc), false)
 	}
 
 	// putting the k and value in a Hash Table
@@ -273,7 +275,7 @@ func evalGET(args []string, store *Store) []byte {
 		return Encode(errors.New("ERR expected string but got another type"), false)
 
 	default:
-		return Encode(errors.New("ERR unsupported encoding"), false)
+		return Encode(fmt.Errorf("ERR unsupported encoding: %d", oEnc), false)
 	}
 }
 
