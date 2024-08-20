@@ -42,7 +42,7 @@ func WithKeypoolRLock() LockOption {
 // withLocks takes a function and a list of LockOptions and executes the function
 // with the specified locks. It manages the locking and unlocking of the mutexes
 // based on the LockOptions provided.
-func withLocks(f func(), options ...LockOption) {
+func withLocks(f func(), store *Store, options ...LockOption) {
 	ls := &LockStrategy{}
 
 	for _, option := range options {
@@ -50,29 +50,29 @@ func withLocks(f func(), options ...LockOption) {
 	}
 
 	if ls.storeLock {
-		storeMutex.Lock()
-		defer storeMutex.Unlock()
+		store.storeMutex.Lock()
+		defer store.storeMutex.Unlock()
 	} else if ls.storeRLock {
-		storeMutex.RLock()
-		defer storeMutex.RUnlock()
+		store.storeMutex.RLock()
+		defer store.storeMutex.RUnlock()
 	}
 
 	if ls.keypoolLock {
-		keypoolMutex.Lock()
-		defer keypoolMutex.Unlock()
+		store.keypoolMutex.Lock()
+		defer store.keypoolMutex.Unlock()
 	} else if ls.keypoolRLock {
-		keypoolMutex.RLock()
-		defer keypoolMutex.RUnlock()
+		store.keypoolMutex.RLock()
+		defer store.keypoolMutex.RUnlock()
 	}
 
 	f()
 }
 
 // Helper function for operations that return a boolean
-func withLocksReturn(f func() bool, options ...LockOption) bool {
+func withLocksReturn(f func() bool, store *Store, options ...LockOption) bool {
 	var result bool
 	withLocks(func() {
 		result = f()
-	}, options...)
+	}, store, options...)
 	return result
 }

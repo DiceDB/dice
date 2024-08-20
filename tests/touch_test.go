@@ -43,7 +43,9 @@ func TestTouch(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			deleteTestKeys([]string{"foo", "foo1"})
+			// deleteTestKeys([]string{"foo", "foo1"}, store)
+			fireCommand(conn, "DEL foo")
+			fireCommand(conn, "DEL foo1")
 			for i, cmd := range tc.commands {
 				if tc.delay[i] != 0 {
 					time.Sleep(tc.delay[i])

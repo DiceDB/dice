@@ -89,7 +89,7 @@ func dumpKey(aof *AOF, key string, obj *Obj) (err error) {
 }
 
 // TODO: To to new and switch
-func DumpAllAOF() error {
+func DumpAllAOF(store *Store) error {
 	var (
 		aof *AOF
 		err error
@@ -101,12 +101,12 @@ func DumpAllAOF() error {
 
 	log.Println("rewriting AOF file at", config.AOFFile)
 
-	storeMutex.RLock()
-	defer storeMutex.RUnlock()
+	withLocks(func() {
+		for k, obj := range store.store {
+			err = dumpKey(aof, *((*string)(k)), obj)
+		}
+	}, store, WithStoreLock())
 
-	for k, obj := range store {
-		err = dumpKey(aof, *((*string)(k)), obj)
-	}
 	log.Println("AOF file rewrite complete")
 	return err
 }

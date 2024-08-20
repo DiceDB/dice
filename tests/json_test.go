@@ -127,7 +127,7 @@ func TestJSONOperations(t *testing.T) {
 			name:     "Get All Prices",
 			setCmd:   `JSON.SET inventory $ ` + complexJSON,
 			getCmd:   `JSON.GET inventory $..price`,
-			expected: `[1475,3941,1920,2072,3264]`,
+			expected: `[1475,3941,1920,2072,3264]`, // Order of elements prone to Flakiness
 		},
 		{
 			name:     "Set Nested Value",
@@ -136,7 +136,7 @@ func TestJSONOperations(t *testing.T) {
 			expected: `2000`,
 		},
 		{
-			name:     "Set Multiple Nested Values",
+			name:     "Set Multiple Nested Values", // Todo: Flakey test. Needs work.
 			setCmd:   `JSON.SET inventory $.inventory.*[?(@.price<2000)].price 1500`,
 			getCmd:   `JSON.GET inventory $..price`,
 			expected: `[1500,3941,2000,2072,3264]`,
@@ -239,7 +239,8 @@ func TestJSONSetWithNXAndXX(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 
-	deleteTestKeys([]string{"user"})
+	// deleteTestKeys([]string{"user"}, store)
+	fireCommand(conn, "DEL user")
 
 	user1 := `{"name":"John","age":30}`
 	user2 := `{"name":"Rahul","age":28}`

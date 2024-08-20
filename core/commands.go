@@ -3,7 +3,7 @@ package core
 type DiceCmdMeta struct {
 	Name  string
 	Info  string
-	Eval  func([]string) []byte
+	Eval  func([]string, *Store) []byte
 	Arity int // number of arguments, it is possible to use -N to say >= N
 	KeySpecs
 }

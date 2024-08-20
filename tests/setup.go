@@ -28,9 +28,9 @@ func getLocalConnection() net.Conn {
 // deleteTestKeys is a utility to delete a list of keys before running a test
 //
 //nolint:unused
-func deleteTestKeys(keysToDelete []string) {
+func deleteTestKeys(keysToDelete []string, store *core.Store) {
 	for _, key := range keysToDelete {
-		core.Del(key)
+		store.Del(key)
 	}
 }
 

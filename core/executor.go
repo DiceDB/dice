@@ -22,16 +22,16 @@ type DSQLQueryResultRow struct {
 }
 
 //nolint:gocritic
-func ExecuteQuery(query DSQLQuery) ([]DSQLQueryResultRow, error) {
+func ExecuteQuery(query DSQLQuery, store *Store) ([]DSQLQueryResultRow, error) {
 	var result []DSQLQueryResultRow
 
 	var err error
 	withLocks(func() {
-		for key, ptr := range keypool {
+		for key, ptr := range store.keypool {
 			if WildCardMatch(query.KeyRegex, key) {
 				row := DSQLQueryResultRow{
 					Key:   key,
-					Value: store[ptr],
+					Value: store.store[ptr],
 				}
 
 				if query.Where != nil {
@@ -55,7 +55,7 @@ func ExecuteQuery(query DSQLQuery) ([]DSQLQueryResultRow, error) {
 				result = append(result, row)
 			}
 		}
-	}, WithStoreRLock(), WithKeypoolRLock())
+	}, store, WithStoreRLock(), WithKeypoolRLock())
 
 	if err != nil {
 		return nil, err
