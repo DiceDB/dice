@@ -1,5 +1,5 @@
 package core
 
-func Shutdown() {
-	evalBGREWRITEAOF([]string{})
+func Shutdown(store *Store) {
+	evalBGREWRITEAOF([]string{}, store)
 }

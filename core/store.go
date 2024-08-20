@@ -15,57 +15,57 @@ type WatchEvent struct {
 	Value     *Obj
 }
 
-var (
-	store     map[unsafe.Pointer]*Obj
-	expires   map[*Obj]uint64 // Does not need to be thread-safe as it is only accessed by a single thread.
-	keypool   map[string]unsafe.Pointer
-	WatchList sync.Map // Maps queries to the file descriptors of clients that are watching them.
-)
+type Store struct {
+	store        map[unsafe.Pointer]*Obj
+	expires      map[*Obj]uint64 // Does not need to be thread-safe as it is only accessed by a single thread.
+	keypool      map[string]unsafe.Pointer
+	storeMutex   sync.RWMutex
+	keypoolMutex sync.RWMutex
+	WatchList    sync.Map // Maps queries to the file descriptors of clients that are watching them.
 
-var (
-	storeMutex   sync.RWMutex // Mutex to protect the store map, must be acquired before keypoolMutex if both are needed.
-	keypoolMutex sync.RWMutex // Mutex to protect the keypool map, must be acquired after storeMutex if both are needed.
-)
+}
 
 // WatchChannel Channel to receive updates about keys that are being watched.
-// The Watcher goroutine will wait on this channel. When a key is updated, the
-// goroutine will send the updated value and the related operation to all the
-// clients that are watching the key.
 var WatchChannel chan WatchEvent
 
-func init() {
-	ResetStore()
+func NewStore() *Store {
+	WatchChannel = make(chan WatchEvent, config.KeysLimit)
+	return &Store{
+		store:   make(map[unsafe.Pointer]*Obj),
+		expires: make(map[*Obj]uint64),
+		keypool: make(map[string]unsafe.Pointer),
+	}
 }
 
-func ResetStore() {
-	withLocks(func() {
-		store = make(map[unsafe.Pointer]*Obj)
-		expires = make(map[*Obj]uint64)
-		keypool = make(map[string]unsafe.Pointer)
-		WatchChannel = make(chan WatchEvent, config.KeysLimit)
-	}, WithStoreLock(), WithKeypoolLock())
-}
-
-func NewObj(value interface{}, expDurationMs int64, oType, oEnc uint8) *Obj {
+func (store *Store) NewObj(value interface{}, expDurationMs int64, oType, oEnc uint8) *Obj {
 	obj := &Obj{
 		Value:          value,
 		TypeEncoding:   oType | oEnc,
 		LastAccessedAt: getCurrentClock(),
 	}
 	if expDurationMs >= 0 {
-		setExpiry(obj, expDurationMs)
+		store.setExpiry(obj, expDurationMs)
 	}
 	return obj
+}
+
+func (store *Store) ResetStore() {
+	withLocks(func() {
+		store.store = make(map[unsafe.Pointer]*Obj)
+		store.expires = make(map[*Obj]uint64)
+		store.keypool = make(map[string]unsafe.Pointer)
+		WatchChannel = make(chan WatchEvent, config.KeysLimit)
+	}, store, WithStoreLock(), WithKeypoolLock())
 }
 
 type PutOptions struct {
 	KeepTTL bool
 }
 
-func Put(k string, obj *Obj, opts ...PutOption) {
+func (store *Store) Put(k string, obj *Obj, opts ...PutOption) {
 	withLocks(func() {
-		putHelper(k, obj, opts...)
-	}, WithStoreLock(), WithKeypoolLock())
+		store.putHelper(k, obj, opts...)
+	}, store, WithStoreLock(), WithKeypoolLock())
 }
 
 func getDefaultOptions() *PutOptions {
@@ -82,58 +82,78 @@ func WithKeepTTL(value bool) PutOption {
 	}
 }
 
-// PutAll is a bulk insert function that takes a map of
-// keys and values and inserts them into the store
-func PutAll(data map[string]*Obj) {
+func (store *Store) PutAll(data map[string]*Obj) {
 	withLocks(func() {
 		for k, obj := range data {
-			putHelper(k, obj)
+			store.putHelper(k, obj)
 		}
-	}, WithStoreLock(), WithKeypoolLock())
+	}, store, WithStoreLock(), WithKeypoolLock())
 }
 
-// GetNoTouch is a function to retrieve a value from the store without updating
-// the last accessed time of the object.
-func GetNoTouch(k string) *Obj {
-	return getHelper(k, false)
+func (store *Store) GetNoTouch(k string) *Obj {
+	return store.getHelper(k, false)
 }
 
-func getHelper(k string, touch bool) *Obj {
+func (store *Store) putHelper(k string, obj *Obj, opts ...PutOption) {
+	options := getDefaultOptions()
+
+	for _, optApplier := range opts {
+		optApplier(options)
+	}
+
+	if len(store.store) >= config.KeysLimit {
+		store.evict()
+	}
+	obj.LastAccessedAt = getCurrentClock()
+
+	ptr := store.ensureKeyInPool(k)
+	currentObject, ok := store.store[ptr]
+	if ok {
+		if options.KeepTTL && store.expires[currentObject] > 0 {
+			store.expires[obj] = store.expires[currentObject]
+		}
+		delete(store.expires, currentObject)
+	}
+	store.store[ptr] = obj
+
+	store.incrementKeyCount()
+	notifyWatchers(k, "SET", obj)
+}
+
+func (store *Store) getHelper(k string, touch bool) *Obj {
 	var v *Obj
 	withLocks(func() {
-		ptr, ok := keypool[k]
+		ptr, ok := store.keypool[k]
 		if !ok {
 			return
 		}
 
-		v = store[ptr]
+		v = store.store[ptr]
 		if v != nil {
-			if hasExpired(v) {
-				deleteKey(k, ptr, v)
+			if hasExpired(v, store) {
+				store.deleteKey(k, ptr, v)
 				v = nil
 			} else if touch {
 				v.LastAccessedAt = getCurrentClock()
 			}
 		}
-	}, WithStoreLock(), WithKeypoolLock())
+	}, store, WithStoreLock(), WithKeypoolLock())
 	return v
 }
 
-// GetAll is a bulk retrieve function that takes array of
-// keys and retrieves values for keys from the store
-func GetAll(keys []string) []*Obj {
+func (store *Store) GetAll(keys []string) []*Obj {
 	response := make([]*Obj, 0, len(keys))
 	withLocks(func() {
 		for _, k := range keys {
-			ptr, ok := keypool[k]
+			ptr, ok := store.keypool[k]
 			if !ok {
 				response = append(response, nil)
 				continue
 			}
-			v := store[ptr]
+			v := store.store[ptr]
 			if v != nil {
-				if hasExpired(v) {
-					deleteKey(k, ptr, v)
+				if hasExpired(v, store) {
+					store.deleteKey(k, ptr, v)
 					response = append(response, nil)
 				} else {
 					v.LastAccessedAt = getCurrentClock()
@@ -143,34 +163,33 @@ func GetAll(keys []string) []*Obj {
 				response = append(response, nil)
 			}
 		}
-	}, WithStoreRLock(), WithKeypoolRLock())
+	}, store, WithStoreRLock(), WithKeypoolRLock())
 	return response
 }
 
-func Del(k string) bool {
+func (store *Store) Del(k string) bool {
 	return withLocksReturn(func() bool {
-		ptr, ok := keypool[k]
+		ptr, ok := store.keypool[k]
 		if !ok {
 			return false
 		}
-		return deleteKey(k, ptr, store[ptr])
-	}, WithStoreLock(), WithKeypoolLock())
+		return store.deleteKey(k, ptr, store.store[ptr])
+	}, store, WithStoreLock(), WithKeypoolLock())
 }
 
-func DelByPtr(ptr unsafe.Pointer) bool {
+func (store *Store) DelByPtr(ptr unsafe.Pointer) bool {
 	return withLocksReturn(func() bool {
-		return delByPtr(ptr)
-	}, WithStoreLock(), WithKeypoolLock())
+		return store.delByPtr(ptr)
+	}, store, WithStoreLock(), WithKeypoolLock())
 }
 
-// List all keys in the store by given pattern
-func Keys(p string) ([]string, error) {
+func (store *Store) Keys(p string) ([]string, error) {
 	var keys []string
 	var err error
 
 	withLocks(func() {
-		keys = make([]string, 0, len(keypool))
-		for k := range keypool {
+		keys = make([]string, 0, len(store.keypool))
+		for k := range store.keypool {
 			if found, e := path.Match(p, k); e != nil {
 				err = e
 				return
@@ -178,64 +197,65 @@ func Keys(p string) ([]string, error) {
 				keys = append(keys, k)
 			}
 		}
-	}, WithStoreRLock(), WithKeypoolRLock())
+	}, store, WithStoreRLock(), WithKeypoolRLock())
 
 	return keys, err
 }
 
 // GetDbSize returns number of keys present in the database
-func GetDBSize() uint64 {
+func (store *Store) GetDBSize() uint64 {
 	var noOfKeys uint64
 	withLocks(func() {
-		noOfKeys = uint64(len(keypool))
-	}, WithKeypoolRLock())
+		noOfKeys = uint64(len(store.keypool))
+	}, store, WithKeypoolRLock())
 	return noOfKeys
 }
 
 // Function to add a new watcher to a query.
-func AddWatcher(query DSQLQuery, clientFd int) { //nolint:gocritic
-	clients, _ := WatchList.LoadOrStore(query, &sync.Map{})
+func (store *Store) AddWatcher(query DSQLQuery, clientFd int) { //nolint:gocritic
+	clients, _ := store.WatchList.LoadOrStore(query, &sync.Map{})
 	clients.(*sync.Map).Store(clientFd, struct{}{})
 }
 
 // Function to remove a watcher from a query.
-func RemoveWatcher(query DSQLQuery, clientFd int) { //nolint:gocritic
-	if clients, ok := WatchList.Load(query); ok {
+func (store *Store) RemoveWatcher(query DSQLQuery, clientFd int) { //nolint:gocritic
+	if clients, ok := store.WatchList.Load(query); ok {
 		clients.(*sync.Map).Delete(clientFd)
 		// If no more clients for this query, remove the query from WatchList
 		if countClients(clients.(*sync.Map)) == 0 {
-			WatchList.Delete(query)
+			store.WatchList.Delete(query)
 		}
 	}
 }
 
 // Rename function to implement RENAME functionality using existing helpers
-func Rename(sourceKey, destKey string) bool {
+
+func (store *Store) Rename(sourceKey, destKey string) bool {
 	return withLocksReturn(func() bool {
 		// If source and destination are the same, do nothing and return true
 		if sourceKey == destKey {
 			return true
 		}
 
-		sourcePtr, sourceOk := keypool[sourceKey]
+		sourcePtr, sourceOk := store.keypool[sourceKey]
 		if !sourceOk {
 			return false
 		}
 
-		sourceObj := store[sourcePtr]
-		if sourceObj == nil || hasExpired(sourceObj) {
+		sourceObj := store.store[sourcePtr]
+		if sourceObj == nil || hasExpired(sourceObj, store) {
 			if sourceObj != nil {
-				deleteKey(sourceKey, sourcePtr, sourceObj)
+				store.deleteKey(sourceKey, sourcePtr, sourceObj)
 			}
 			return false
 		}
 
 		// Use putHelper to handle putting the object at the destination key
-		putHelper(destKey, sourceObj)
+		store.putHelper(destKey, sourceObj)
 
 		// Remove the source key
-		delete(store, sourcePtr)
-		delete(keypool, sourceKey)
+		delete(store.store, sourcePtr)
+		delete(store.keypool, sourceKey)
 		if KeyspaceStat[0] != nil {
 			KeyspaceStat[0]["keys"]--
 		}
@@ -244,76 +264,51 @@ func Rename(sourceKey, destKey string) bool {
 		notifyWatchers(sourceKey, "DEL", sourceObj)
 
 		return true
-	}, WithStoreLock(), WithKeypoolLock())
+	}, store, WithStoreLock(), WithKeypoolLock())
 }
 
-// Helper functions
-
-// putHelper is a helper function to insert a key-value pair into the store.
-// It also increments the key count in the KeyspaceStat map and notifies watchers.
-// This method is not thread-safe. It should be called within a lock.
-func putHelper(k string, obj *Obj, opts ...PutOption) {
-	options := getDefaultOptions()
-
-	for _, optApplier := range opts {
-		optApplier(options)
+func (store *Store) incrementKeyCount() {
+	if KeyspaceStat[0] == nil {
+		KeyspaceStat[0] = make(map[string]int)
 	}
-
-	if len(store) >= config.KeysLimit {
-		evict()
-	}
-	obj.LastAccessedAt = getCurrentClock()
-
-	ptr := ensureKeyInPool(k)
-	currentObject, ok := store[ptr]
-	if ok {
-		// NOTE: In case there is an value present
-		// for a given key 'k', then any updates
-		// performed with the 'KEEPTTL' flag need
-		// to ensure that we save the new value
-		// with the same expiration time as before
-		// Without the flag, the expiration time
-		// stored earlier will be removed.
-		_, ok = expires[currentObject]
-		if options.KeepTTL && ok {
-			expires[obj] = expires[currentObject]
-		}
-		delete(expires, currentObject)
-	}
-	store[ptr] = obj
-
-	incrementKeyCount()
-	notifyWatchers(k, "SET", obj)
+	KeyspaceStat[0]["keys"]++
 }
 
-func Get(k string) *Obj {
-	return getHelper(k, true)
+func (store *Store) Get(k string) *Obj {
+	return store.getHelper(k, true)
 }
 
-func GetDel(k string) *Obj {
+func (store *Store) GetDel(k string) *Obj {
 	var v *Obj
 	withLocks(func() {
-		ptr, ok := keypool[k]
+		ptr, ok := store.keypool[k]
 		if !ok {
 			return
 		}
 
-		v = store[ptr]
+		v = store.store[ptr]
 		if v != nil {
-			expired := hasExpired(v)
-			deleteKey(k, ptr, v)
+			expired := hasExpired(v, store)
+			store.deleteKey(k, ptr, v)
 			if expired {
 				v = nil
 			}
 		}
-	}, WithStoreLock(), WithKeypoolLock())
+	}, store, WithStoreLock(), WithKeypoolLock())
 	return v
 }
 
 // setExpiry sets the expiry time for an object.
 // This method is not thread-safe. It should be called within a lock.
-func setExpiry(obj *Obj, expDurationMs int64) {
-	expires[obj] = uint64(utils.GetCurrentTime().UnixMilli()) + uint64(expDurationMs)
+func (store *Store) setExpiry(obj *Obj, expDurationMs int64) {
+	store.expires[obj] = uint64(utils.GetCurrentTime().UnixMilli()) + uint64(expDurationMs)
+}
+
+// setUnixTimeExpiry sets the expiry time for an object.
+// This method is not thread-safe. It should be called within a lock.
+func (store *Store) setUnixTimeExpiry(obj *Obj, exUnixTimeSec int64) {
+	// convert unix-time-seconds to unix-time-milliseconds
+	store.expires[obj] = uint64(exUnixTimeSec * 1000)
 }
 
 // Helper function to count clients
@@ -326,40 +321,20 @@ func countClients(clients *sync.Map) int {
 	return count
 }
 
-// This method is not thread-safe. It should be called within a lock.
-func ensureKeyInPool(k string) unsafe.Pointer {
-	ptr, ok := keypool[k]
+func (store *Store) ensureKeyInPool(k string) unsafe.Pointer {
+	ptr, ok := store.keypool[k]
 	if !ok {
 		ptr = unsafe.Pointer(&k)
-		keypool[k] = ptr
+		store.keypool[k] = ptr
 	}
 	return ptr
 }
 
-// incrementKeyCount increments the key count in the KeyspaceStat map.
-// This method is not thread-safe. It should be called within a lock.
-func incrementKeyCount() {
-	if KeyspaceStat[0] == nil {
-		KeyspaceStat[0] = make(map[string]int)
-	}
-	KeyspaceStat[0]["keys"]++
-}
-
-// notifyWatchers sends a WatchEvent to the WatchChannel.
-// This function is called whenever a key is updated.
-func notifyWatchers(k, operation string, obj *Obj) {
-	WatchChannel <- WatchEvent{k, operation, obj}
-}
-
-// deleteKey deletes a key from the store, keypool, and expires maps. it also
-// decrements the key count in the KeyspaceStat map and notifies watchers about
-// the deletion of the key.
-// This method is not thread-safe. It should be called within a lock.
-func deleteKey(k string, ptr unsafe.Pointer, obj *Obj) bool {
+func (store *Store) deleteKey(k string, ptr unsafe.Pointer, obj *Obj) bool {
 	if obj != nil {
-		delete(store, ptr)
-		delete(expires, obj)
-		delete(keypool, k)
+		delete(store.store, ptr)
+		delete(store.expires, obj)
+		delete(store.keypool, k)
 		KeyspaceStat[0]["keys"]--
 		notifyWatchers(k, "DEL", obj)
 		return true
@@ -367,12 +342,14 @@ func deleteKey(k string, ptr unsafe.Pointer, obj *Obj) bool {
 	return false
 }
 
-// delByPtr deletes a key from the store, keypool, and expires maps using a pointer.
-// This method is not thread-safe. It should be called within a lock.
-func delByPtr(ptr unsafe.Pointer) bool {
-	if obj, ok := store[ptr]; ok {
+func (store *Store) delByPtr(ptr unsafe.Pointer) bool {
+	if obj, ok := store.store[ptr]; ok {
 		key := *((*string)(ptr))
-		return deleteKey(key, ptr, obj)
+		return store.deleteKey(key, ptr, obj)
 	}
 	return false
+}
+
+func notifyWatchers(k, operation string, obj *Obj) {
+	WatchChannel <- WatchEvent{k, operation, obj}
 }

@@ -257,7 +257,7 @@ func (opts *BloomOpts) updateIndexes(value string) error {
 // evalBFINIT evaluates the BFINIT command responsible for initializing a
 // new bloom filter and allocation it's relevant parameters based on given inputs.
 // If no params are provided, it uses defaults.
-func evalBFINIT(args []string) []byte {
+func evalBFINIT(args []string, store *Store) []byte {
 	if len(args) != 1 && len(args) != 3 {
 		return diceerrors.NewErrArity("BFINIT")
 	}
@@ -272,7 +272,7 @@ func evalBFINIT(args []string) []byte {
 		return diceerrors.NewErrWithFormattedMessage("%w for 'BFINIT' command", err)
 	}
 
-	_, err = getOrCreateBloomFilter(args[0], opts)
+	_, err = getOrCreateBloomFilter(args[0], opts, store)
 	if err != nil {
 		return diceerrors.NewErrWithFormattedMessage("%w for 'BFINIT' command", err)
 	}
@@ -283,14 +283,14 @@ func evalBFINIT(args []string) []byte {
 // evalBFADD evaluates the BFADD command responsible for adding an element to
 // a bloom filter. If the filter does not exists, it will create a new one
 // with default parameters.
-func evalBFADD(args []string) []byte {
+func evalBFADD(args []string, store *Store) []byte {
 	if len(args) != 2 {
 		return diceerrors.NewErrArity("BFADD")
 	}
 
 	opts, _ := newBloomOpts(args[1:], true)
 
-	bloom, err := getOrCreateBloomFilter(args[0], opts)
+	bloom, err := getOrCreateBloomFilter(args[0], opts, store)
 	if err != nil {
 		return diceerrors.NewErrWithFormattedMessage("%w for 'BFADD' command", err)
 	}
@@ -305,12 +305,12 @@ func evalBFADD(args []string) []byte {
 
 // evalBFEXISTS evaluates the BFEXISTS command responsible for checking existence
 // of an element in a bloom filter.
-func evalBFEXISTS(args []string) []byte {
+func evalBFEXISTS(args []string, store *Store) []byte {
 	if len(args) != 2 {
 		return diceerrors.NewErrArity("BFEXISTS")
 	}
 
-	bloom, err := getOrCreateBloomFilter(args[0], nil)
+	bloom, err := getOrCreateBloomFilter(args[0], nil, store)
 	if err != nil {
 		return diceerrors.NewErrWithFormattedMessage("%w for 'BFEXISTS' command", err)
 	}
@@ -325,12 +325,12 @@ func evalBFEXISTS(args []string) []byte {
 
 // evalBFINFO evaluates the BFINFO command responsible for returning the
 // parameters and metadata of an existing bloom filter.
-func evalBFINFO(args []string) []byte {
+func evalBFINFO(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("BFINFO")
 	}
 
-	bloom, err := getOrCreateBloomFilter(args[0], nil)
+	bloom, err := getOrCreateBloomFilter(args[0], nil, store)
 	if err != nil {
 		return diceerrors.NewErrWithFormattedMessage("%w for 'BFINFO' command", err)
 	}
@@ -341,13 +341,13 @@ func evalBFINFO(args []string) []byte {
 // getOrCreateBloomFilter attempts to fetch an existing bloom filter from
 // the kv store. If it does not exist, it tries to create one with
 // given `opts` and returns it.
-func getOrCreateBloomFilter(key string, opts *BloomOpts) (*Bloom, error) {
-	obj := Get(key)
+func getOrCreateBloomFilter(key string, opts *BloomOpts, store *Store) (*Bloom, error) {
+	obj := store.Get(key)
 
 	// If we don't have a filter yet and `opts` are provided, create one.
 	if obj == nil && opts != nil {
-		obj = NewObj(newBloomFilter(opts), -1, ObjTypeBitSet, ObjEncodingBF)
-		Put(key, obj)
+		obj = store.NewObj(newBloomFilter(opts), -1, ObjTypeBitSet, ObjEncodingBF)
+		store.Put(key, obj)
 	}
 
 	// If no `opts` are provided for filter creation, return err

@@ -7,30 +7,30 @@ import (
 
 // Evicts the first key it found while iterating the map
 // TODO: Make it efficient by doing thorough sampling
-func evictFirst() {
+func evictFirst(store *Store) {
 	withLocks(func() {
-		for keyPtr := range store {
-			delByPtr(keyPtr)
+		for keyPtr := range store.store {
+			store.delByPtr(keyPtr)
 			return
 		}
-	}, WithStoreLock())
+	}, store, WithStoreLock())
 }
 
 // Randomly removes keys to make space for the new data added.
 // The number of keys removed will be sufficient to free up at least 10% space
-func evictAllkeysRandom() {
+func evictAllkeysRandom(store *Store) {
 	evictCount := int64(config.EvictionRatio * float64(config.KeysLimit))
 	withLocks(func() {
 		// Iteration of Golang dictionary can be considered as a random
 		// because it depends on the hash of the inserted key
-		for keyPtr := range store {
-			delByPtr(keyPtr)
+		for keyPtr := range store.store {
+			store.delByPtr(keyPtr)
 			evictCount--
 			if evictCount <= 0 {
 				break
 			}
 		}
-	}, WithStoreLock())
+	}, store, WithStoreLock())
 }
 
 /*
@@ -48,42 +48,42 @@ func getIdleTime(lastAccessedAt uint32) uint32 {
 	return (0x00FFFFFF - lastAccessedAt) + c
 }
 
-func populateEvictionPool() {
+func populateEvictionPool(store *Store) {
 	sampleSize := 5
 
 	withLocks(func() {
-		for k := range store {
-			ePool.Push(k, store[k].LastAccessedAt)
+		for k := range store.store {
+			ePool.Push(k, store.store[k].LastAccessedAt)
 			sampleSize--
 			if sampleSize == 0 {
 				break
 			}
 		}
-	}, WithStoreRLock())
+	}, store, WithStoreRLock())
 }
 
 // TODO: no need to populate everytime. should populate
 // only when the number of keys to evict is less than what we have in the pool
-func evictAllkeysLRU() {
-	populateEvictionPool()
+func evictAllkeysLRU(store *Store) {
+	populateEvictionPool(store)
 	evictCount := int16(config.EvictionRatio * float64(config.KeysLimit))
 	for i := 0; i < int(evictCount) && len(ePool.pool) > 0; i++ {
 		item := ePool.Pop()
 		if item == nil {
 			return
 		}
-		DelByPtr(item.keyPtr)
+		store.DelByPtr(item.keyPtr)
 	}
 }
 
 // TODO: implement LFU
-func evict() {
+func (store *Store) evict() {
 	switch config.EvictionStrategy {
 	case "simple-first":
-		evictFirst()
+		evictFirst(store)
 	case "allkeys-random":
-		evictAllkeysRandom()
+		evictAllkeysRandom(store)
 	case "allkeys-lru":
-		evictAllkeysLRU()
+		evictAllkeysLRU(store)
 	}
 }

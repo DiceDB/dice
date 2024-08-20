@@ -2,12 +2,12 @@ package main
 
 import (
 	"flag"
-	"log"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 
+	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/server"
 )
@@ -18,7 +18,7 @@ func setupFlags() {
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
 	flag.Parse()
 
-	log.Println("Password", config.RequirePass)
+	log.Info("Password", config.RequirePass)
 }
 
 func main() {
@@ -40,6 +40,8 @@ func main() {
 
 	// Run the server, listen to incoming connections and handle them
 	wg.Add(1)
+
+	log.Info("Starting Classic Async TCP Server")
 	go server.RunAsyncTCPServer(serverFD, &wg)
 
 	// Listen to signals, but not a hardblocker to shutdown

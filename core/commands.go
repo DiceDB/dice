@@ -3,7 +3,7 @@ package core
 type DiceCmdMeta struct {
 	Name  string
 	Info  string
-	Eval  func([]string) []byte
+	Eval  func([]string, *Store) []byte
 	Arity int // number of arguments, it is possible to use -N to say >= N
 	KeySpecs
 }
@@ -92,6 +92,16 @@ var (
 		Error reply: If the number of arguments is incorrect or the stored value is not a JSON type.`,
 		Eval:     evalJSONGET,
 		Arity:    2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	jsontypeCmdMeta = DiceCmdMeta{
+		Name: "JSON.TYPE",
+		Info: `JSON.TYPE key [path]
+		Returns string reply for each path, specified as the value's type.
+		Returns RespNIL If the key doesn't exist.
+		Error reply: If the number of arguments is incorrect.`,
+		Eval:     evalJSONTYPE,
+		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	ttlCmdMeta = DiceCmdMeta{
@@ -554,10 +564,21 @@ var (
 	}
 	expiretimeCmdMeta = DiceCmdMeta{
 		Name: "EXPIRETIME",
-		Info: `EXPIRETIME returns the absolute Unix timestamp (since January 1, 1970) in seconds 
+		Info: `EXPIRETIME returns the absolute Unix timestamp (since January 1, 1970) in seconds
 		at which the given key will expire`,
 		Eval:     evalEXPIRETIME,
 		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+	}
+	expireatCmdMeta = DiceCmdMeta{
+		Name: "EXPIREAT",
+		Info: `EXPIREAT sets a expiry time(in unix-time-seconds) on the specified key in args
+		args should contain 2 values, key and the expiry time to be set for the key
+		The expiry time should be in integer format; if not, it returns encoded error response
+		Returns RespOne if expiry was set on the key successfully.
+		Once the time is lapsed, the key will be deleted automatically`,
+		Eval:     evalEXPIREAT,
+		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
 	}
 	lpushCmdMeta = DiceCmdMeta{
@@ -600,10 +621,12 @@ func init() {
 	diceCmds["MSET"] = msetCmdMeta
 	diceCmds["JSON.SET"] = jsonsetCmdMeta
 	diceCmds["JSON.GET"] = jsongetCmdMeta
+	diceCmds["JSON.TYPE"] = jsontypeCmdMeta
 	diceCmds["TTL"] = ttlCmdMeta
 	diceCmds["DEL"] = delCmdMeta
 	diceCmds["EXPIRE"] = expireCmdMeta
 	diceCmds["EXPIRETIME"] = expiretimeCmdMeta
+	diceCmds["EXPIREAT"] = expireatCmdMeta
 	diceCmds["HELLO"] = helloCmdMeta
 	diceCmds["BGREWRITEAOF"] = bgrewriteaofCmdMeta
 	diceCmds["INCR"] = incrCmdMeta
