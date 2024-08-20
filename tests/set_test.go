@@ -25,9 +25,14 @@ func TestSet(t *testing.T) {
 			expected: []interface{}{"OK", "v"},
 		},
 		{
+			name:     "Set and Get Integer Value",
+			commands: []string{"SET k 123456789", "GET k"},
+			expected: []interface{}{"OK", int64(123456789)},
+		},
+		{
 			name:     "Overwrite Existing Key",
-			commands: []string{"SET k v1", "SET k v2", "GET k"},
-			expected: []interface{}{"OK", "OK", "v2"},
+			commands: []string{"SET k v1", "SET k 5", "GET k"},
+			expected: []interface{}{"OK", "OK", int64(5)},
 		},
 	}
 
