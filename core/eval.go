@@ -197,8 +197,17 @@ func evalSET(args []string, store *Store) []byte {
 		}
 	}
 
+	// Cast the value properly based on the encoding type
+	var storedValue interface{}
+	switch oEnc {
+	case ObjEncodingInt:
+		storedValue, _ = strconv.ParseInt(value, 10, 64)
+	case ObjEncodingEmbStr, ObjEncodingRaw:
+		storedValue = value
+	}
+
 	// putting the k and value in a Hash Table
-	store.Put(key, store.NewObj(value, exDurationMs, oType, oEnc), WithKeepTTL(keepttl))
+	store.Put(key, store.NewObj(storedValue, exDurationMs, oType, oEnc), WithKeepTTL(keepttl))
 
 	return RespOK
 }
@@ -238,9 +247,8 @@ func evalGET(args []string, store *Store) []byte {
 		return Encode(errors.New("ERR wrong number of arguments for 'get' command"), false)
 	}
 
-	var key string = args[0]
+	var key = args[0]
 
-	// Get the key from the hash table
 	obj := store.Get(key)
 
 	// if key does not exist, return RESP encoded nil
@@ -248,8 +256,25 @@ func evalGET(args []string, store *Store) []byte {
 		return RespNIL
 	}
 
-	// return the RESP encoded value
-	return Encode(obj.Value, false)
+	// Decode and return the value based on its encoding
+	switch _, oEnc := ExtractTypeEncoding(obj); oEnc {
+	case ObjEncodingInt:
+		// Value is stored as an int64, so use type assertion
+		if val, ok := obj.Value.(int64); ok {
+			return Encode(val, false)
+		}
+		return Encode(errors.New("ERR expected int64 but got another type"), false)
+
+	case ObjEncodingEmbStr, ObjEncodingRaw:
+		// Value is stored as a string, use type assertion
+		if val, ok := obj.Value.(string); ok {
+			return Encode(val, false)
+		}
+		return Encode(errors.New("ERR expected string but got another type"), false)
+
+	default:
+		return Encode(errors.New("ERR unsupported encoding"), false)
+	}
 }
 
 // evalDBSIZE returns the number of keys in the database.

@@ -92,6 +92,7 @@ func testEvalSET(t *testing.T, store *Store) {
 		"empty array":                     {input: []string{}, output: []byte("-ERR wrong number of arguments for 'set' command\r\n")},
 		"one value":                       {input: []string{"KEY"}, output: []byte("-ERR wrong number of arguments for 'set' command\r\n")},
 		"key val pair":                    {input: []string{"KEY", "VAL"}, output: RespOK},
+		"key val pair with int val":       {input: []string{"KEY", "123456"}, output: RespOK},
 		"key val pair and expiry key":     {input: []string{"KEY", "VAL", constants.Px}, output: []byte("-ERR syntax error\r\n")},
 		"key val pair and EX no val":      {input: []string{"KEY", "VAL", constants.Ex}, output: []byte("-ERR syntax error\r\n")},
 		"key val pair and valid EX":       {input: []string{"KEY", "VAL", constants.Ex, "2"}, output: RespOK},
