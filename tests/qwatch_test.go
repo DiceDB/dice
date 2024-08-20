@@ -59,13 +59,14 @@ var qWatchTestCases = []qWatchTestCase{
 func TestQWATCH(t *testing.T) {
 	publisher := getLocalConnection()
 
-	// Cleanup Store for next tests
-	for _, tc := range qWatchTestCases {
-		fireCommand(publisher, fmt.Sprintf("DEL match:100:user:%d", tc.userID))
-	}
-
 	subscribers := []net.Conn{getLocalConnection(), getLocalConnection(), getLocalConnection()}
+
+	// Cleanup Store for next tests
 	defer func() {
+		for _, tc := range qWatchTestCases {
+			fireCommand(publisher, fmt.Sprintf("DEL match:100:user:%d", tc.userID))
+		}
+
 		publisher.Close()
 		for _, sub := range subscribers {
 			sub.Close()
@@ -93,13 +94,14 @@ func TestQWATCHWithSDK(t *testing.T) {
 	ctx := context.Background()
 	publisher := getLocalSdk()
 
-	// Cleanup Store for next tests
-	for _, tc := range qWatchTestCases {
-		publisher.Del(context.Background(), fmt.Sprintf("match:100:user:%d", tc.userID))
-	}
-
 	subscribers := []*redis.Client{getLocalSdk(), getLocalSdk(), getLocalSdk()}
+
+	// Cleanup Store for next tests
 	defer func() {
+		for _, tc := range qWatchTestCases {
+			publisher.Del(context.Background(), fmt.Sprintf("match:100:user:%d", tc.userID))
+		}
+
 		publisher.Close()
 		for _, sub := range subscribers {
 			sub.Close()

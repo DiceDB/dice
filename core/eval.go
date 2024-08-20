@@ -772,7 +772,7 @@ func incrDecrCmd(args []string, incr int64, store *Store) []byte {
 		return Encode(err, false)
 	}
 
-	i, _ := strconv.ParseInt(obj.Value.(string), 10, 64)
+	i, _ := obj.Value.(int64)
 	// check overflow
 	if (incr < 0 && i < 0 && incr < (math.MinInt64-i)) ||
 		(incr > 0 && i > 0 && incr > (math.MaxInt64-i)) {
