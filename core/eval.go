@@ -1367,12 +1367,13 @@ func evalQWATCH(args []string, c *Client, store *Store) []byte {
 	store.AddWatcher(query, c.Fd)
 
 	// Return the result of the query.
-	result, err := ExecuteQuery(query, store)
+	queryResult, err := ExecuteQuery(query, store)
 	if err != nil {
 		return Encode(err, false)
 	}
 
-	return Encode(result, false)
+	// TODO: We should return the list of all queries being watched by the client.
+	return Encode(CreatePushResponse(&query, &queryResult), false)
 }
 
 // SETBIT key offset value

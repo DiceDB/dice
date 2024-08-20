@@ -3,6 +3,7 @@ package tests
 import (
 	"context"
 	"fmt"
+	"github.com/dicedb/dice/internal/constants"
 	"net"
 	"testing"
 
@@ -19,38 +20,38 @@ type qWatchTestCase struct {
 	expectedUpdates [][]interface{}
 }
 
-var qWatchQuery = "SELECT $key, $value FROM `match:100:*` ORDER BY $value DESC LIMIT 3"
+var qWatchQuery = "SELECT $key, $value FROM `match:100:*` ORDER BY $value desc LIMIT 3"
 
 var qWatchTestCases = []qWatchTestCase{
 	{0, 11, [][]interface{}{
-		{[]interface{}{"match:100:user:0", "11"}},
+		{[]interface{}{"match:100:user:0", int64(11)}},
 	}},
 	{1, 33, [][]interface{}{
-		{[]interface{}{"match:100:user:1", "33"}, []interface{}{"match:100:user:0", "11"}},
+		{[]interface{}{"match:100:user:1", int64(33)}, []interface{}{"match:100:user:0", int64(11)}},
 	}},
 	{2, 22, [][]interface{}{
-		{[]interface{}{"match:100:user:1", "33"}, []interface{}{"match:100:user:2", "22"}, []interface{}{"match:100:user:0", "11"}},
+		{[]interface{}{"match:100:user:1", int64(33)}, []interface{}{"match:100:user:2", int64(22)}, []interface{}{"match:100:user:0", int64(11)}},
 	}},
 	{3, 0, [][]interface{}{
-		{[]interface{}{"match:100:user:1", "33"}, []interface{}{"match:100:user:2", "22"}, []interface{}{"match:100:user:0", "11"}},
+		{[]interface{}{"match:100:user:1", int64(33)}, []interface{}{"match:100:user:2", int64(22)}, []interface{}{"match:100:user:0", int64(11)}},
 	}},
 	{4, 44, [][]interface{}{
-		{[]interface{}{"match:100:user:4", "44"}, []interface{}{"match:100:user:1", "33"}, []interface{}{"match:100:user:2", "22"}},
+		{[]interface{}{"match:100:user:4", int64(44)}, []interface{}{"match:100:user:1", int64(33)}, []interface{}{"match:100:user:2", int64(22)}},
 	}},
 	{5, 50, [][]interface{}{
-		{[]interface{}{"match:100:user:5", "50"}, []interface{}{"match:100:user:4", "44"}, []interface{}{"match:100:user:1", "33"}},
+		{[]interface{}{"match:100:user:5", int64(50)}, []interface{}{"match:100:user:4", int64(44)}, []interface{}{"match:100:user:1", int64(33)}},
 	}},
 	{2, 40, [][]interface{}{
-		{[]interface{}{"match:100:user:5", "50"}, []interface{}{"match:100:user:4", "44"}, []interface{}{"match:100:user:2", "40"}},
+		{[]interface{}{"match:100:user:5", int64(50)}, []interface{}{"match:100:user:4", int64(44)}, []interface{}{"match:100:user:2", int64(40)}},
 	}},
 	{6, 55, [][]interface{}{
-		{[]interface{}{"match:100:user:6", "55"}, []interface{}{"match:100:user:5", "50"}, []interface{}{"match:100:user:4", "44"}},
+		{[]interface{}{"match:100:user:6", int64(55)}, []interface{}{"match:100:user:5", int64(50)}, []interface{}{"match:100:user:4", int64(44)}},
 	}},
 	{0, 60, [][]interface{}{
-		{[]interface{}{"match:100:user:0", "60"}, []interface{}{"match:100:user:6", "55"}, []interface{}{"match:100:user:5", "50"}},
+		{[]interface{}{"match:100:user:0", int64(60)}, []interface{}{"match:100:user:6", int64(55)}, []interface{}{"match:100:user:5", int64(50)}},
 	}},
 	{5, 70, [][]interface{}{
-		{[]interface{}{"match:100:user:5", "70"}, []interface{}{"match:100:user:0", "60"}, []interface{}{"match:100:user:6", "55"}},
+		{[]interface{}{"match:100:user:5", int64(70)}, []interface{}{"match:100:user:0", int64(60)}, []interface{}{"match:100:user:6", int64(55)}},
 	}},
 }
 
@@ -81,7 +82,7 @@ func TestQWATCH(t *testing.T) {
 
 		v, err := rp.DecodeOne()
 		assert.NilError(t, err)
-		assert.Equal(t, 0, len(v.([]interface{})))
+		assert.Equal(t, 3, len(v.([]interface{})))
 	}
 
 	runQWatchScenarios(t, publisher, respParsers)
@@ -114,6 +115,8 @@ func TestQWATCHWithSDK(t *testing.T) {
 		err := qwatch.WatchQuery(ctx, qWatchQuery)
 		assert.NilError(t, err)
 		channels[i] = qwatch.Channel()
+		//	Get the first message
+		<-channels[i]
 	}
 
 	runQWatchScenarios(t, publisher, channels)
@@ -141,7 +144,7 @@ func runQWatchScenarios(t *testing.T, publisher interface{}, receivers interface
 					v, err := rp.DecodeOne()
 					assert.NilError(t, err)
 					update := v.([]interface{})
-					assert.DeepEqual(t, expectedUpdate, update)
+					assert.DeepEqual(t, []interface{}{constants.Qwatch, qWatchQuery, expectedUpdate}, update)
 				}
 			case []<-chan *redis.QMessage:
 				// For raw connections, parse RESP responses
@@ -235,7 +238,7 @@ func TestQwatchWithJSON(t *testing.T) {
 
 		v, err := rp.DecodeOne()
 		assert.NilError(t, err)
-		assert.Equal(t, 0, len(v.([]interface{})))
+		assert.Equal(t, 3, len(v.([]interface{})))
 	}
 
 	for i, tc := range JSONTestCases {
@@ -246,7 +249,11 @@ func TestQwatchWithJSON(t *testing.T) {
 
 			v, err := rp.DecodeOne()
 			assert.NilError(t, err)
-			update := v.([]interface{})
+			response := v.([]interface{})
+			assert.Equal(t, 3, len(response))
+			assert.Equal(t, constants.Qwatch, response[0])
+
+			update := response[2].([]interface{})
 
 			assert.Equal(t, len(expectedUpdate), len(update), fmt.Sprintf("Expected update: %v, got %v", expectedUpdate, update))
 			assert.Equal(t, expectedUpdate[0].([]interface{})[0], update[0].([]interface{})[0], "Key mismatch")

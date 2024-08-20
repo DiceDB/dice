@@ -136,12 +136,12 @@ func compareValues(order string, valI, valJ *Obj) bool {
 			return handleMismatch()
 		}
 		return compareStringValues(order, kindI, kindJ)
-	case int:
-		kindJ, ok := valJ.Value.(int)
+	case int64:
+		kindJ, ok := valJ.Value.(int64)
 		if !ok {
 			return handleMismatch()
 		}
-		return compareIntValues(order, uint8(kindI), uint8(kindJ))
+		return compareIntValues(order, kindI, kindJ)
 	default:
 		return handleUnsupportedType()
 	}
@@ -171,7 +171,7 @@ func compareStringValues(order, valI, valJ string) bool {
 	return valI > valJ
 }
 
-func compareIntValues(order string, valI, valJ uint8) bool {
+func compareIntValues(order string, valI, valJ int64) bool {
 	if order == constants.Asc {
 		return valI < valJ
 	}
