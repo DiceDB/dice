@@ -51,6 +51,7 @@ func TestEval(t *testing.T) {
 	testEvalTTL(t, store)
 	testEvalDel(t, store)
 	testEvalPersist(t, store)
+	testEvalEXPIRE(t, store)
 	testEvalEXPIRETIME(t, store)
 	testEvalEXPIREAT(t, store)
 	testEvalDbsize(t, store)
@@ -176,6 +177,44 @@ func testEvalGET(t *testing.T, store *Store) {
 	}
 
 	runEvalTests(t, tests, evalGET, store)
+}
+
+
+func testEvalEXPIRE(t *testing.T, store *Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'expire' command\r\n"),
+		},
+		"empty args": {
+			input:  []string{},
+			output: []byte("-ERR wrong number of arguments for 'expire' command\r\n"),
+		},
+		"wrong number of args": {
+			input:  []string{"KEY1"},
+			output: []byte("-ERR wrong number of arguments for 'expire' command\r\n"),
+		},
+		"key does not exist": {
+			input:  []string{"NONEXISTENT_KEY", strconv.FormatInt(1, 10)},
+			output: RespZero,
+		},
+		"key exists": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "mock_value"
+				obj := &Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.store[unsafe.Pointer(obj)] = obj
+				store.keypool[key] = unsafe.Pointer(obj)
+			},
+			input:  []string{"EXISTING_KEY", strconv.FormatInt(1, 10)},
+			output: RespOne,
+		},
+	}
+
+	runEvalTests(t, tests, evalEXPIRE, store)
 }
 
 func testEvalEXPIRETIME(t *testing.T, store *Store) {
