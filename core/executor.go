@@ -267,14 +267,14 @@ func isJSONField(expr *sqlparser.SQLVal, obj *Obj) bool {
 	}
 
 	// We convert the $key and $value fields to _key, _value before querying. hence fields starting with _ are
-	//considered to be stored values
+	// considered to be stored values
 	return expr.Type == sqlparser.StrVal &&
 		strings.HasPrefix(string(expr.Val), TempPrefix)
 }
 
 func retrieveValueFromJSON(path string, jsonData *Obj) (value interface{}, valueType string, err error) {
 	// path is in the format '_value.field1.field2'. We need to remove _value reference from the prefix to get the json
-	//path.
+	// path.
 	jsonPath := strings.Split(path, ".")
 	if len(jsonPath) < 2 {
 		return nil, "", ErrInvalidJSONPath
