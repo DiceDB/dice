@@ -119,9 +119,16 @@ func evalSET(args []string) []byte {
 	var exDurationMs int64 = -1
 	var state exDurationState = Uninitialized
 	var keepttl bool = false
+	var computedValue interface{}
 
 	key, value = args[0], args[1]
 	oType, oEnc := deduceTypeEncoding(value)
+
+	if oEnc == ObjEncodingInt {
+		computedValue, _ = strconv.ParseInt(value, 10, 64)
+	} else {
+		computedValue = value
+	}
 
 	for i := 2; i < len(args); i++ {
 		arg := strings.ToUpper(args[i])
@@ -199,7 +206,7 @@ func evalSET(args []string) []byte {
 	}
 
 	// putting the k and value in a Hash Table
-	Put(key, NewObj(value, exDurationMs, oType, oEnc), WithKeepTTL(keepttl))
+	Put(key, NewObj(computedValue, exDurationMs, oType, oEnc), WithKeepTTL(keepttl))
 
 	return RespOK
 }
@@ -748,7 +755,14 @@ func incrDecrCmd(args []string, incr int64) []byte {
 		return Encode(err, false)
 	}
 
-	i, _ := strconv.ParseInt(obj.Value.(string), 10, 64)
+	var i int64
+	switch obj.Value.(type) {
+	case int:
+		i = int64(obj.Value.(int))
+	default:
+		return Encode(errors.New("ERR value is not an integer"), false)
+	}
+
 	// check overflow
 	if (incr < 0 && i < 0 && incr < (math.MinInt64-i)) ||
 		(incr > 0 && i > 0 && incr > (math.MaxInt64-i)) {

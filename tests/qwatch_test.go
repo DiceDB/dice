@@ -3,9 +3,10 @@ package tests
 import (
 	"context"
 	"fmt"
-	"github.com/bytedance/sonic"
 	"net"
 	"testing"
+
+	"github.com/bytedance/sonic"
 
 	"github.com/dicedb/dice/core"
 	redis "github.com/dicedb/go-dice"
@@ -22,34 +23,71 @@ var qWatchQuery = "SELECT $key, $value FROM `match:100:*` ORDER BY $value DESC L
 
 var qWatchTestCases = []qWatchTestCase{
 	{0, 11, [][]interface{}{
-		{[]interface{}{"match:100:user:0", "11"}},
+		{
+			[]interface{}{"match:100:user:0", int64(11)},
+		},
 	}},
 	{1, 33, [][]interface{}{
-		{[]interface{}{"match:100:user:1", "33"}, []interface{}{"match:100:user:0", "11"}},
+		{
+			[]interface{}{"match:100:user:1", int64(33)},
+			[]interface{}{"match:100:user:0", int64(11)},
+		},
 	}},
 	{2, 22, [][]interface{}{
-		{[]interface{}{"match:100:user:1", "33"}, []interface{}{"match:100:user:2", "22"}, []interface{}{"match:100:user:0", "11"}},
+		{
+			[]interface{}{"match:100:user:1", int64(33)},
+			[]interface{}{"match:100:user:2", int64(22)},
+			[]interface{}{"match:100:user:0", int64(11)},
+		},
 	}},
 	{3, 0, [][]interface{}{
-		{[]interface{}{"match:100:user:1", "33"}, []interface{}{"match:100:user:2", "22"}, []interface{}{"match:100:user:0", "11"}},
+		{
+			[]interface{}{"match:100:user:1", int64(33)},
+			[]interface{}{"match:100:user:2", int64(22)},
+			[]interface{}{"match:100:user:0", int64(11)},
+		},
 	}},
 	{4, 44, [][]interface{}{
-		{[]interface{}{"match:100:user:4", "44"}, []interface{}{"match:100:user:1", "33"}, []interface{}{"match:100:user:2", "22"}},
+		{
+			[]interface{}{"match:100:user:4", int64(44)},
+			[]interface{}{"match:100:user:1", int64(33)},
+			[]interface{}{"match:100:user:2", int64(22)},
+		},
 	}},
 	{5, 50, [][]interface{}{
-		{[]interface{}{"match:100:user:5", "50"}, []interface{}{"match:100:user:4", "44"}, []interface{}{"match:100:user:1", "33"}},
+		{
+			[]interface{}{"match:100:user:5", int64(50)},
+			[]interface{}{"match:100:user:4", int64(44)},
+			[]interface{}{"match:100:user:1", int64(33)},
+		},
 	}},
 	{2, 40, [][]interface{}{
-		{[]interface{}{"match:100:user:5", "50"}, []interface{}{"match:100:user:4", "44"}, []interface{}{"match:100:user:2", "40"}},
+		{
+			[]interface{}{"match:100:user:5", int64(50)},
+			[]interface{}{"match:100:user:4", int64(44)},
+			[]interface{}{"match:100:user:2", int64(40)},
+		},
 	}},
 	{6, 55, [][]interface{}{
-		{[]interface{}{"match:100:user:6", "55"}, []interface{}{"match:100:user:5", "50"}, []interface{}{"match:100:user:4", "44"}},
+		{
+			[]interface{}{"match:100:user:6", int64(55)},
+			[]interface{}{"match:100:user:5", int64(50)},
+			[]interface{}{"match:100:user:4", int64(44)},
+		},
 	}},
 	{0, 60, [][]interface{}{
-		{[]interface{}{"match:100:user:0", "60"}, []interface{}{"match:100:user:6", "55"}, []interface{}{"match:100:user:5", "50"}},
+		{
+			[]interface{}{"match:100:user:0", int64(60)},
+			[]interface{}{"match:100:user:6", int64(55)},
+			[]interface{}{"match:100:user:5", int64(50)},
+		},
 	}},
 	{5, 70, [][]interface{}{
-		{[]interface{}{"match:100:user:5", "70"}, []interface{}{"match:100:user:0", "60"}, []interface{}{"match:100:user:6", "55"}},
+		{
+			[]interface{}{"match:100:user:5", int64(70)},
+			[]interface{}{"match:100:user:0", int64(60)},
+			[]interface{}{"match:100:user:6", int64(55)},
+		},
 	}},
 }
 

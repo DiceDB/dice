@@ -17,8 +17,6 @@ func setupFlags() {
 	flag.IntVar(&config.Port, "port", 7379, "port for the dice server")
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
 	flag.Parse()
-
-	log.Println("Password", config.RequirePass)
 }
 
 func main() {
