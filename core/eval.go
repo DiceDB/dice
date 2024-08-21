@@ -288,7 +288,7 @@ func evalDBSIZE(args []string, store *Store) []byte {
 	}
 
 	// return the RESP encoded value
-	return Encode(store.GetDBSize(), false)
+	return Encode(KeyspaceStat[0]["keys"], false)
 }
 
 // evalGETDEL returns the value for the queried key in args
