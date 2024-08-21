@@ -7,10 +7,7 @@ import (
 	"strconv"
 
 	"github.com/dicedb/dice/internal/constants"
-	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
-
-type HMap = *orderedmap.OrderedMap[string, string]
 
 func readLength(buf *bytes.Buffer) (int64, error) {
 	s, err := readStringUntilSr(buf)
