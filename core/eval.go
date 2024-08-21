@@ -277,7 +277,7 @@ func evalGET(args []string, store *Store) []byte {
 		return Encode(errors.New("ERR expected string but got another type"), false)
 
 	default:
-		return Encode(fmt.Errorf("ERR unsupported encoding: %d", oEnc), false)
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 	}
 }
 
@@ -2286,4 +2286,32 @@ func evalLPOP(args []string, store *Store) []byte {
 	}
 
 	return Encode(x, false)
+}
+
+// GETSET atomically sets key to value and returns the old value stored at key.
+// Returns an error when key exists but does not hold a string value.
+// Any previous time to live associated with the key is
+// discarded on successful SET operation.
+//
+// Returns:
+// Bulk string reply: the old value stored at the key.
+// Nil reply: if the key does not exist.
+func evalGETSET(args []string, store *Store) []byte {
+	if len(args) != 2 {
+		return Encode(errors.New("ERR wrong number of arguments for 'getset' command"), false)
+	}
+
+	var key, value = args[0], args[1]
+	getResp := evalGET([]string{key}, store)
+	if strings.HasPrefix(string(getResp), "ERR") {
+		return getResp
+	}
+
+	// Previous TTL needs to be reset
+	setResp := evalSET([]string{key, value}, store)
+	if strings.HasPrefix(string(setResp), "ERR") {
+		return setResp
+	}
+
+	return getResp
 }

@@ -611,6 +611,12 @@ var (
 		Eval:  evalDBSIZE,
 		Arity: 1,
 	}
+	getSetCmdMeta = DiceCmdMeta{
+		Name:  "GETSET",
+		Info:  `GETSET returns the previous string value of a key after setting it to a new value.`,
+		Eval:  evalGETSET,
+		Arity: 2,
+	}
 )
 
 func init() {
@@ -684,4 +690,5 @@ func init() {
 	diceCmds["RPUSH"] = rpushCmdMeta
 	diceCmds["LPOP"] = lpopCmdMeta
 	diceCmds["DBSIZE"] = dbSizeCmdMeta
+	diceCmds["GETSET"] = getSetCmdMeta
 }
