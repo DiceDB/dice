@@ -267,7 +267,7 @@ func evalGET(args []string, store *Store) []byte {
 		if val, ok := obj.Value.(int64); ok {
 			return Encode(val, false)
 		}
-		return Encode(errors.New("ERR expected int64 but got another type"), false)
+		return Encode(fmt.Errorf("ERR expected int64 but got another type: %s", obj.Value), false)
 
 	case ObjEncodingEmbStr, ObjEncodingRaw:
 		// Value is stored as a string, use type assertion
@@ -762,11 +762,11 @@ func incrDecrCmd(args []string, incr int64, store *Store) []byte {
 	key := args[0]
 	obj := store.Get(key)
 	if obj == nil {
-		obj = store.NewObj(int64(0), -1, ObjTypeString, ObjEncodingInt)
+		obj = store.NewObj(int64(0), -1, ObjTypeInt, ObjEncodingInt)
 		store.Put(key, obj)
 	}
 
-	if err := assertType(obj.TypeEncoding, ObjTypeString); err != nil {
+	if err := assertType(obj.TypeEncoding, ObjTypeInt); err != nil {
 		return diceerrors.NewErrWithMessage(err.Error())
 	}
 
@@ -1792,15 +1792,15 @@ func evalRename(args []string, store *Store) []byte {
 	sourceKey := args[0]
 	destKey := args[1]
 
-	// if Source and Destination Keys are same return RESP encoded ok
-	if sourceKey == destKey {
-		return RespOK
-	}
-
 	// if Source key does not exist, return RESP encoded nil
 	sourceObj := store.Get(sourceKey)
 	if sourceObj == nil {
 		return diceerrors.NewErrWithMessage(diceerrors.NoKeyErr)
+	}
+
+	// if Source and Destination Keys are same return RESP encoded ok
+	if sourceKey == destKey {
+		return RespOK
 	}
 
 	if ok := store.Rename(sourceKey, destKey); ok {

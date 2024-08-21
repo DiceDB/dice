@@ -73,7 +73,7 @@ func TestJSONOperations(t *testing.T) {
 			name:     "Get JSON with Wrong Number of Arguments",
 			setCmd:   ``,
 			getCmd:   `JSON.GET`,
-			expected: "ERR wrong number of arguments for 'JSON.GET' command",
+			expected: "ERR wrong number of arguments for 'json.get' command",
 		},
 		{
 			name:     "Set Non-JSON Value",
@@ -179,7 +179,7 @@ func TestJSONSetWithInvalidJSON(t *testing.T) {
 		{
 			name:     "Set JSON with Wrong Number of Arguments",
 			command:  `JSON.SET`,
-			expected: "ERR wrong number of arguments for 'JSON.SET' command",
+			expected: "ERR wrong number of arguments for 'json.set' command",
 		},
 	}
 

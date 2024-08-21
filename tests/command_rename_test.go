@@ -27,6 +27,11 @@ var renameKeysTestCases = []struct {
 		expected: []interface{}{"ERR no such key"},
 	},
 	{
+		name:     "If source key doesn't exists and renaming the same key to the same key",
+		inCmd:    []string{"rename unknownKey unknownKey"},
+		expected: []interface{}{"ERR no such key"},
+	},
+	{
 		name:     "If destination Key already presents",
 		inCmd:    []string{"set destinationKey world", "set newKey hello", "rename newKey destinationKey", "get newKey", "get destinationKey"},
 		expected: []interface{}{"OK", "OK", "OK", "(nil)", "hello"},
