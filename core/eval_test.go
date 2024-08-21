@@ -645,37 +645,15 @@ func testEvalDbsize(t *testing.T, store *Store) {
 		},
 		"one key exists in db": {
 			setup: func() {
-				key := "KEY"
-				value := "VAL"
-				obj := &Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
+				evalSET([]string{"key", "val"}, store)
 			},
 			input:  nil,
 			output: []byte(":1\r\n"),
 		},
 		"two keys exist in db": {
 			setup: func() {
-				key1 := "KEY1"
-				value1 := "VAL1"
-				obj1 := &Obj{
-					Value:          value1,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
-				store.store[unsafe.Pointer(obj1)] = obj1
-				store.keypool[key1] = unsafe.Pointer(obj1)
-
-				key2 := "KEY2"
-				value2 := "VAL2"
-				obj2 := &Obj{
-					Value:          value2,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
-				store.store[unsafe.Pointer(obj2)] = obj2
-				store.keypool[key2] = unsafe.Pointer(obj2)
+				evalSET([]string{"key1", "val1"}, store)
+				evalSET([]string{"key2", "val2"}, store)
 			},
 			input:  nil,
 			output: []byte(":2\r\n"),
