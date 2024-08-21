@@ -329,7 +329,7 @@ func (store *Store) ensureKeyInPool(k string) *string {
 	return ptr
 }
 
-func (store *Store) deleteKey(k string, ptr string, obj *Obj) bool {
+func (store *Store) deleteKey(k, ptr string, obj *Obj) bool {
 	if obj != nil {
 		delete(store.store, ptr)
 		delete(store.expires, obj)
