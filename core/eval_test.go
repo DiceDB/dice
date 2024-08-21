@@ -50,6 +50,7 @@ func TestEval(t *testing.T) {
 	testEvalTTL(t, store)
 	testEvalDel(t, store)
 	testEvalPersist(t, store)
+	testEvalEXPIRE(t, store)
 	testEvalEXPIRETIME(t, store)
 	testEvalEXPIREAT(t, store)
 	testEvalDbsize(t, store)
@@ -178,11 +179,48 @@ func testEvalGET(t *testing.T, store *Store) {
 	runEvalTests(t, tests, evalGET, store)
 }
 
+func testEvalEXPIRE(t *testing.T, store *Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'expire' command\r\n"),
+		},
+		"empty args": {
+			input:  []string{},
+			output: []byte("-ERR wrong number of arguments for 'expire' command\r\n"),
+		},
+		"wrong number of args": {
+			input:  []string{"KEY1"},
+			output: []byte("-ERR wrong number of arguments for 'expire' command\r\n"),
+		},
+		"key does not exist": {
+			input:  []string{"NONEXISTENT_KEY", strconv.FormatInt(1, 10)},
+			output: RespZero,
+		},
+		"key exists": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "mock_value"
+				obj := &Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.store[key] = obj
+				store.keypool[key] = &key
+			},
+			input:  []string{"EXISTING_KEY", strconv.FormatInt(1, 10)},
+			output: RespOne,
+		},
+	}
+
+	runEvalTests(t, tests, evalEXPIRE, store)
+}
+
 func testEvalEXPIRETIME(t *testing.T, store *Store) {
 	tests := map[string]evalTestCase{
 		"wrong number of args": {
 			input:  []string{"KEY1", "KEY2"},
-			output: []byte("-ERR wrong number of arguments for 'expire' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'expiretime' command\r\n"),
 		},
 		"key does not exist": {
 			input:  []string{"NONEXISTENT_KEY"},
@@ -384,12 +422,12 @@ func testEvalJSONGET(t *testing.T, store *Store) {
 		"nil value": {
 			setup:  func() {},
 			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'JSON.GET' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'json.get' command\r\n"),
 		},
 		"empty array": {
 			setup:  func() {},
 			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'JSON.GET' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'json.get' command\r\n"),
 		},
 		"key does not exist": {
 			setup:  func() {},
@@ -449,17 +487,17 @@ func testEvalJSONSET(t *testing.T, store *Store) {
 		"nil value": {
 			setup:  func() {},
 			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'JSON.SET' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'json.set' command\r\n"),
 		},
 		"empty array": {
 			setup:  func() {},
 			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'JSON.SET' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'json.set' command\r\n"),
 		},
 		"insufficient args": {
 			setup:  func() {},
 			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'JSON.SET' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'json.set' command\r\n"),
 		},
 		"invalid json path": {
 			setup:  func() {},
@@ -636,7 +674,7 @@ func testEvalDbsize(t *testing.T, store *Store) {
 	tests := map[string]evalTestCase{
 		"DBSIZE command with invalid no of args": {
 			input:  []string{"INVALID_ARG"},
-			output: []byte("-ERR wrong number of arguments for 'DBSIZE' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'dbsize' command\r\n"),
 		},
 		"no key in db": {
 			input:  nil,
@@ -644,37 +682,15 @@ func testEvalDbsize(t *testing.T, store *Store) {
 		},
 		"one key exists in db": {
 			setup: func() {
-				key := "KEY"
-				value := "VAL"
-				obj := &Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
-				store.store[key] = obj
-				store.keypool[key] = &key
+				evalSET([]string{"key", "val"}, store)
 			},
 			input:  nil,
 			output: []byte(":1\r\n"),
 		},
 		"two keys exist in db": {
 			setup: func() {
-				key1 := "KEY1"
-				value1 := "VAL1"
-				obj1 := &Obj{
-					Value:          value1,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
-				store.store[key1] = obj1
-				store.keypool[key1] = &key1
-
-				key2 := "KEY2"
-				value2 := "VAL2"
-				obj2 := &Obj{
-					Value:          value2,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
-				store.store[key2] = obj2
-				store.keypool[key2] = &key2
+				evalSET([]string{"key1", "val1"}, store)
+				evalSET([]string{"key2", "val2"}, store)
 			},
 			input:  nil,
 			output: []byte(":2\r\n"),
