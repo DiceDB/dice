@@ -474,7 +474,7 @@ var (
 		Info:  `COPY command copies the value stored at the source key to the destination key.`,
 		Eval:  evalCOPY,
 		Arity: -2,
-  }
+	}
 	decrCmdMeta = DiceCmdMeta{
 		Name: "DECR",
 		Info: `DECR decrements the value of the specified key in args by 1,
@@ -527,12 +527,24 @@ var (
 		Name: "PTTL",
 		Info: `PTTL returns Time-to-Live in millisecs for the queried key in args
 		 The key should be the only param in args else returns with an error
-		 Returns	
+		 Returns
 		 RESP encoded time (in secs) remaining for the key to expire
 		 RESP encoded -2 stating key doesn't exist or key is expired
 		 RESP encoded -1 in case no expiration is set on the key`,
 		Eval:     evalPTTL,
 		Arity:    2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	hsetCmdMeta = DiceCmdMeta{
+		Name: "HSET",
+		Info: `HSET sets the specific fields to their respective values in the
+		hash stored at key. If any given field is already present, the previous
+		value provided will be overwritten with the new value provided
+		Returns
+		This command returns the number of keys that are being stored at given key.
+		`,
+		Eval:     evalHSET,
+		Arity:    -4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 )
@@ -598,4 +610,5 @@ func init() {
 	diceCmds["RENAME"] = renameCmdMeta
 	diceCmds["GETEX"] = getexCmdMeta
 	diceCmds["PTTL"] = pttlCmdMeta
+	diceCmds["HSET"] = hsetCmdMeta
 }
