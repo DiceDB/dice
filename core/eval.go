@@ -621,7 +621,7 @@ func evalEXPIRE(args []string, store *Store) []byte {
 // Returns -2 if the key does not exist.
 func evalEXPIRETIME(args []string, store *Store) []byte {
 	if len(args) != 1 {
-		return diceerrors.NewErrArity("EXPIRE")
+		return diceerrors.NewErrArity("EXPIRETIME")
 	}
 
 	var key string = args[0]
