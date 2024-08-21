@@ -5,14 +5,14 @@ import (
 	"sort"
 )
 
-func evalSADD(args []string) []byte {
+func evalSADD(args []string, store *Store) []byte {
 	if len(args) < 2 {
 		return Encode(errors.New("ERR wrong number of arguments for 'SADD' command"), false)
 	}
 	key := args[0]
 
 	// Get the set object from the store.
-	obj := Get(key)
+	obj := store.Get(key)
 
 	var count int = 0
 	if obj == nil {
@@ -21,8 +21,8 @@ func evalSADD(args []string) []byte {
 		// If the object does not exist, create a new set object.
 		value := make(map[string]bool)
 		// Create a new object.
-		obj = NewObj(value, exDurationMs, ObjTypeSet, ObjEncodingHT)
-		Put(key, obj, WithKeepTTL(keepttl))
+		obj = store.NewObj(value, exDurationMs, ObjTypeSet, ObjEncodingHT)
+		store.Put(key, obj, WithKeepTTL(keepttl))
 	}
 
 	if assertType(obj.TypeEncoding, ObjTypeSet) != nil {
@@ -45,14 +45,14 @@ func evalSADD(args []string) []byte {
 	return Encode(count, false)
 }
 
-func evalSMEMBERS(args []string) []byte {
+func evalSMEMBERS(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'SMEMBERS' command"), false)
 	}
 	key := args[0]
 
 	// Get the set object from the store.
-	obj := Get(key)
+	obj := store.Get(key)
 
 	if obj == nil {
 		return Encode([]string{}, false)
@@ -80,14 +80,14 @@ func evalSMEMBERS(args []string) []byte {
 	return Encode(members, false)
 }
 
-func evalSREM(args []string) []byte {
+func evalSREM(args []string, store *Store) []byte {
 	if len(args) < 2 {
 		return Encode(errors.New("ERR wrong number of arguments for 'SREM' command"), false)
 	}
 	key := args[0]
 
 	// Get the set object from the store.
-	obj := Get(key)
+	obj := store.Get(key)
 
 	var count int = 0
 	if obj == nil {
@@ -115,7 +115,7 @@ func evalSREM(args []string) []byte {
 	return Encode(count, false)
 }
 
-func evalSCARD(args []string) []byte {
+func evalSCARD(args []string, store *Store) []byte {
 	if len(args) != 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'SCARD' command"), false)
 	}
@@ -123,7 +123,7 @@ func evalSCARD(args []string) []byte {
 	key := args[0]
 
 	// Get the set object from the store.
-	obj := Get(key)
+	obj := store.Get(key)
 
 	if obj == nil {
 		return Encode(0, false)
@@ -151,13 +151,13 @@ func evalSCARD(args []string) []byte {
 	return Encode(count, false)
 }
 
-func evalSDIFF(args []string) []byte {
+func evalSDIFF(args []string, store *Store) []byte {
 	if len(args) < 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'SDIFF' command"), false)
 	}
 
 	srcKey := args[0]
-	obj := Get(srcKey)
+	obj := store.Get(srcKey)
 
 	srcSet := make(map[string]bool)
 
@@ -189,7 +189,7 @@ func evalSDIFF(args []string) []byte {
 
 	for _, arg := range args[1:] {
 		// Get the set object from the store.
-		obj := Get(arg)
+		obj := store.Get(arg)
 
 		if obj == nil {
 			continue
@@ -232,7 +232,7 @@ func evalSDIFF(args []string) []byte {
 	return Encode(members, false)
 }
 
-func evalSINTER(args []string) []byte {
+func evalSINTER(args []string, store *Store) []byte {
 	if len(args) < 2 {
 		return Encode(errors.New("ERR wrong number of arguments for 'SINTER' command"), false)
 	}
@@ -243,7 +243,7 @@ func evalSINTER(args []string) []byte {
 
 	for _, arg := range args {
 		// Get the set object from the store.
-		obj := Get(arg)
+		obj := store.Get(arg)
 
 		if obj == nil {
 			empty++

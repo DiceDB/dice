@@ -791,4 +791,10 @@ func init() {
 	diceCmds["GETSET"] = getSetCmdMeta
 	diceCmds["FLUSHDB"] = flushdbCmdMeta
 	diceCmds["BITPOS"] = bitposCmdMeta
+	diceCmds["SADD"] = saddCmdMeta
+	diceCmds["SMEMBERS"] = smembersCmdMeta
+	diceCmds["SREM"] = sremCmdMeta
+	diceCmds["SCARD"] = scardCmdMeta
+	diceCmds["SDIFF"] = sdiffCmdMeta
+	diceCmds["SINTER"] = sinterCmdMeta
 }

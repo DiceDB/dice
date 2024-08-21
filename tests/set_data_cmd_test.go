@@ -221,7 +221,8 @@ func TestSetDataCommand(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			deleteTestKeys([]string{"foo", "foo2"})
+			fireCommand(conn, "DEL foo")
+			fireCommand(conn, "DEL foo2")
 			for i, cmd := range tc.cmd {
 				if tc.delay[i] > 0 {
 					time.Sleep(tc.delay[i])
