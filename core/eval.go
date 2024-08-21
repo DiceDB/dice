@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
-	orderedmap "github.com/wk8/go-ordered-map/v2"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core/bit"
@@ -1977,12 +1976,13 @@ func evalPTTL(args []string) []byte {
 }
 
 // evalHSET sets the specified fields to their
-// respective values in the hash stored at key
+// respective values in an hashmap stored at key
 //
 // This command overwrites the values of specified
 // fields that exist in the hash.
 //
 // If key doesn't exist, a new key holding a hash is created.
+//
 // Usage: HSET key field value [field value ...]
 func evalHSET(args []string) []byte {
 	if len(args) < 3 {
@@ -1993,97 +1993,43 @@ func evalHSET(args []string) []byte {
 
 	obj := Get(key)
 
-	if obj != nil {
-		// NOTE: add the new keys to the hash map here
-		// TODO: need to perform a check whether the information
+	var hashMap HMap
+	var numKeys int64
+
+	if obj != nil { // NOTE: add the new keys to the hash map here
+		// NOTE: we need to perform a check whether the information
 		// stored with the following key is indeed an hashmap
-		// Basically, here, we need to fetch the current stored value
-		// try to contruct the previous HMap and then either replace
-		// or add new keys to the map that was already stored
-		//
-		// TODO:
-		// 1. Check the Encode for the HMap - (check the ObjType and ObjEncoding for HMap)
-		// 2. Complete the implementation of this if block - if key is already present
-		// 3. Test (Manual)
-		// 4. Write Unit Tests
-
-		// currentValue := obj.Value.(HMap)
-
 		switch currentVal := obj.Value.(type) {
 		case HMap:
-			updatedHashMap, lengthKeys, err := updateHashMap(currentVal, args)
+			updatedHashMap, lengthKeys, err := hashMapBuilder(args, currentVal)
 			if err != nil {
 				return Encode(err, false)
+			} else {
+				hashMap = updatedHashMap
+				numKeys = lengthKeys
 			}
-			hValue := string(Encode(updatedHashMap, false))
-			oType, oEnc := deduceTypeEncoding(hValue)
-			newObj := NewObj(updatedHashMap, -1, oType, oEnc)
-			Put(key, newObj)
-			return Encode(lengthKeys, false)
+			// hValue := string(Encode(updatedHashMap, false))
+			// oType, oEnc := deduceTypeEncoding(hValue)
+			// newObj := NewObj(updatedHashMap, -1, oType, oEnc)
+			// Put(key, newObj)
+			// return Encode(lengthKeys, false)
 		default:
 			return Encode(errors.New("ERR key provided does not store a hashmap"), false)
 		}
+	} else {
+		newMap, keysInMap, err := hashMapBuilder(args, nil)
+		if err != nil {
+			return Encode(err, false)
+		}
+		hashMap = newMap
+		numKeys = keysInMap
 	}
 
-	hmap, numKeys, err := hashMapConstructor(args)
-	if err != nil {
-		return Encode(err, false)
-	}
-	hValue := string(Encode(hmap, false))
+	hValue := string(Encode(hashMap, false))
 	oType, oEnc := deduceTypeEncoding(hValue)
 
-	obj = NewObj(hmap, -1, oType, oEnc)
+	obj = NewObj(hashMap, -1, oType, oEnc)
 	Put(key, obj)
 
 	return Encode(numKeys, false)
-}
-
-func hashMapConstructor(args []string) (HMap, int64, error) {
-	hmap := orderedmap.New[string, string]()
-	var numKeys int64
-
-	iter := 0
-	for iter <= len(args)-1 {
-		if iter == 0 {
-			// NOTE: this is because args[0] will be the key
-			// following this would be the key value pairs
-			// that are relevant to this function
-			iter++
-			continue
-		}
-
-		if iter < len(args)-2 { // NOTE:
-			k := args[iter]
-			v := args[iter+1]
-			hmap.Set(k, v)
-			numKeys++
-			iter += 2
-		} else {
-			return hmap, -1, errors.New("ERR key provided does not store a hashmap")
-		}
-	}
-
-	return hmap, numKeys, nil
-}
-
-func updateHashMap(currentHashMap HMap, args []string) (HMap, int64, error) {
-	iter := 1 // NOTE: args[0] => key and following
-	// this are the key value pairs
-	// provided to HSET command
-
-	var newKeysSet int64
-
-	for iter <= len(args)-1 {
-		if iter < len(args)-2 {
-			_, present := currentHashMap.Set(args[iter], args[iter+1])
-			if !present {
-				newKeysSet++
-			}
-			iter += 2
-		} else {
-			return currentHashMap, -1, errors.New("ERR input is invalid, failed to set value to hashmap")
-		}
-	}
-
-	return currentHashMap, newKeysSet, nil
 }
