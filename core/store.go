@@ -3,7 +3,6 @@ package core
 import (
 	"path"
 	"sync"
-	"unsafe"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/server/utils"
@@ -16,9 +15,9 @@ type WatchEvent struct {
 }
 
 type Store struct {
-	store        map[unsafe.Pointer]*Obj
+	store        map[string]*Obj
 	expires      map[*Obj]uint64 // Does not need to be thread-safe as it is only accessed by a single thread.
-	keypool      map[string]unsafe.Pointer
+	keypool      map[string]*string
 	storeMutex   sync.RWMutex
 	keypoolMutex sync.RWMutex
 	WatchList    sync.Map // Maps queries to the file descriptors of clients that are watching them.
@@ -31,9 +30,9 @@ var WatchChannel chan WatchEvent
 func NewStore() *Store {
 	WatchChannel = make(chan WatchEvent, config.KeysLimit)
 	return &Store{
-		store:   make(map[unsafe.Pointer]*Obj),
+		store:   make(map[string]*Obj),
 		expires: make(map[*Obj]uint64),
-		keypool: make(map[string]unsafe.Pointer),
+		keypool: make(map[string]*string),
 	}
 }
 
@@ -51,9 +50,9 @@ func (store *Store) NewObj(value interface{}, expDurationMs int64, oType, oEnc u
 
 func (store *Store) ResetStore() {
 	withLocks(func() {
-		store.store = make(map[unsafe.Pointer]*Obj)
+		store.store = make(map[string]*Obj)
 		store.expires = make(map[*Obj]uint64)
-		store.keypool = make(map[string]unsafe.Pointer)
+		store.keypool = make(map[string]*string)
 		WatchChannel = make(chan WatchEvent, config.KeysLimit)
 	}, store, WithStoreLock(), WithKeypoolLock())
 }
@@ -107,14 +106,14 @@ func (store *Store) putHelper(k string, obj *Obj, opts ...PutOption) {
 	obj.LastAccessedAt = getCurrentClock()
 
 	ptr := store.ensureKeyInPool(k)
-	currentObject, ok := store.store[ptr]
+	currentObject, ok := store.store[*ptr]
 	if ok {
 		if options.KeepTTL && store.expires[currentObject] > 0 {
 			store.expires[obj] = store.expires[currentObject]
 		}
 		delete(store.expires, currentObject)
 	}
-	store.store[ptr] = obj
+	store.store[*ptr] = obj
 
 	store.incrementKeyCount()
 	notifyWatchers(k, "SET", obj)
@@ -128,10 +127,10 @@ func (store *Store) getHelper(k string, touch bool) *Obj {
 			return
 		}
 
-		v = store.store[ptr]
+		v = store.store[*ptr]
 		if v != nil {
 			if hasExpired(v, store) {
-				store.deleteKey(k, ptr, v)
+				store.deleteKey(k, *ptr, v)
 				v = nil
 			} else if touch {
 				v.LastAccessedAt = getCurrentClock()
@@ -150,10 +149,10 @@ func (store *Store) GetAll(keys []string) []*Obj {
 				response = append(response, nil)
 				continue
 			}
-			v := store.store[ptr]
+			v := store.store[*ptr]
 			if v != nil {
 				if hasExpired(v, store) {
-					store.deleteKey(k, ptr, v)
+					store.deleteKey(k, *ptr, v)
 					response = append(response, nil)
 				} else {
 					v.LastAccessedAt = getCurrentClock()
@@ -173,11 +172,11 @@ func (store *Store) Del(k string) bool {
 		if !ok {
 			return false
 		}
-		return store.deleteKey(k, ptr, store.store[ptr])
+		return store.deleteKey(k, *ptr, store.store[*ptr])
 	}, store, WithStoreLock(), WithKeypoolLock())
 }
 
-func (store *Store) DelByPtr(ptr unsafe.Pointer) bool {
+func (store *Store) DelByPtr(ptr string) bool {
 	return withLocksReturn(func() bool {
 		return store.delByPtr(ptr)
 	}, store, WithStoreLock(), WithKeypoolLock())
@@ -242,10 +241,10 @@ func (store *Store) Rename(sourceKey, destKey string) bool {
 			return false
 		}
 
-		sourceObj := store.store[sourcePtr]
+		sourceObj := store.store[*sourcePtr]
 		if sourceObj == nil || hasExpired(sourceObj, store) {
 			if sourceObj != nil {
-				store.deleteKey(sourceKey, sourcePtr, sourceObj)
+				store.deleteKey(sourceKey, *sourcePtr, sourceObj)
 			}
 			return false
 		}
@@ -254,7 +253,7 @@ func (store *Store) Rename(sourceKey, destKey string) bool {
 		store.putHelper(destKey, sourceObj)
 
 		// Remove the source key
-		delete(store.store, sourcePtr)
+		delete(store.store, *sourcePtr)
 		delete(store.keypool, sourceKey)
 		if KeyspaceStat[0] != nil {
 			KeyspaceStat[0]["keys"]--
@@ -286,10 +285,10 @@ func (store *Store) GetDel(k string) *Obj {
 			return
 		}
 
-		v = store.store[ptr]
+		v = store.store[*ptr]
 		if v != nil {
 			expired := hasExpired(v, store)
-			store.deleteKey(k, ptr, v)
+			store.deleteKey(k, *ptr, v)
 			if expired {
 				v = nil
 			}
@@ -321,16 +320,16 @@ func countClients(clients *sync.Map) int {
 	return count
 }
 
-func (store *Store) ensureKeyInPool(k string) unsafe.Pointer {
+func (store *Store) ensureKeyInPool(k string) *string {
 	ptr, ok := store.keypool[k]
 	if !ok {
-		ptr = unsafe.Pointer(&k)
+		ptr = &k
 		store.keypool[k] = ptr
 	}
 	return ptr
 }
 
-func (store *Store) deleteKey(k string, ptr unsafe.Pointer, obj *Obj) bool {
+func (store *Store) deleteKey(k string, ptr string, obj *Obj) bool {
 	if obj != nil {
 		delete(store.store, ptr)
 		delete(store.expires, obj)
@@ -342,9 +341,9 @@ func (store *Store) deleteKey(k string, ptr unsafe.Pointer, obj *Obj) bool {
 	return false
 }
 
-func (store *Store) delByPtr(ptr unsafe.Pointer) bool {
+func (store *Store) delByPtr(ptr string) bool {
 	if obj, ok := store.store[ptr]; ok {
-		key := *((*string)(ptr))
+		key := ptr
 		return store.deleteKey(key, ptr, obj)
 	}
 	return false
