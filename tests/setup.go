@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -12,6 +14,7 @@ import (
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core"
 	"github.com/dicedb/dice/server"
+	"github.com/dicedb/dice/server/nitroserver"
 	"github.com/dicedb/dice/testutils"
 	redis "github.com/dicedb/go-dice"
 )
@@ -112,5 +115,13 @@ func runTestServer(wg *sync.WaitGroup) {
 
 	fmt.Println("starting the test server on port", config.Port)
 	wg.Add(1)
-	go server.RunAsyncTCPServer(serverFD, wg)
+
+	var nitroServerCores, nitroErr = strconv.Atoi(os.Getenv("DICE_TEST_NITRO_SERVER_CORES"))
+	if nitroErr == nil && nitroServerCores > 1 {
+		log.Info("Starting Nitro Test Server with Cores=", nitroServerCores)
+		go nitroserver.RunNitroServer(serverFD, 5, wg)
+	} else {
+		log.Info("Starting Classic Test AsyncTCPServer")
+		go server.RunAsyncTCPServer(serverFD, wg)
+	}
 }

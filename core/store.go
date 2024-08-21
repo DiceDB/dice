@@ -9,6 +9,8 @@ import (
 	"github.com/dicedb/dice/server/utils"
 )
 
+var numStores int = 0
+
 type WatchEvent struct {
 	Key       string
 	Operation string
@@ -16,13 +18,14 @@ type WatchEvent struct {
 }
 
 type Store struct {
+	storeID      int
 	store        map[unsafe.Pointer]*Obj
 	expires      map[*Obj]uint64 // Does not need to be thread-safe as it is only accessed by a single thread.
 	keypool      map[string]unsafe.Pointer
 	storeMutex   sync.RWMutex
 	keypoolMutex sync.RWMutex
 	WatchList    sync.Map // Maps queries to the file descriptors of clients that are watching them.
-
+	KeyspaceStat map[string]int
 }
 
 // WatchChannel Channel to receive updates about keys that are being watched.
@@ -30,10 +33,13 @@ var WatchChannel chan WatchEvent
 
 func NewStore() *Store {
 	WatchChannel = make(chan WatchEvent, config.KeysLimit)
+	numStores++
 	return &Store{
-		store:   make(map[unsafe.Pointer]*Obj),
-		expires: make(map[*Obj]uint64),
-		keypool: make(map[string]unsafe.Pointer),
+		storeID:      numStores,
+		store:        make(map[unsafe.Pointer]*Obj),
+		expires:      make(map[*Obj]uint64),
+		keypool:      make(map[string]unsafe.Pointer),
+		KeyspaceStat: make(map[string]int),
 	}
 }
 
@@ -116,7 +122,7 @@ func (store *Store) putHelper(k string, obj *Obj, opts ...PutOption) {
 	}
 	store.store[ptr] = obj
 
-	store.incrementKeyCount()
+	store.incrementKeyCount() // todo: investigate, error with concurrent updates with Nitro Server
 	notifyWatchers(k, "SET", obj)
 }
 
@@ -256,9 +262,7 @@ func (store *Store) Rename(sourceKey, destKey string) bool {
 		// Remove the source key
 		delete(store.store, sourcePtr)
 		delete(store.keypool, sourceKey)
-		if KeyspaceStat[0] != nil {
-			KeyspaceStat[0]["keys"]--
-		}
+		store.decrementKeyCount()
 
 		// Notify watchers about the deletion of the source key
 		notifyWatchers(sourceKey, "DEL", sourceObj)
@@ -268,10 +272,15 @@ func (store *Store) Rename(sourceKey, destKey string) bool {
 }
 
 func (store *Store) incrementKeyCount() {
-	if KeyspaceStat[0] == nil {
-		KeyspaceStat[0] = make(map[string]int)
+	if store.KeyspaceStat != nil {
+		store.KeyspaceStat["keys"]++
 	}
-	KeyspaceStat[0]["keys"]++
+}
+
+func (store *Store) decrementKeyCount() {
+	if store.KeyspaceStat != nil {
+		store.KeyspaceStat["keys"]--
+	}
 }
 
 func (store *Store) Get(k string) *Obj {
@@ -335,7 +344,7 @@ func (store *Store) deleteKey(k string, ptr unsafe.Pointer, obj *Obj) bool {
 		delete(store.store, ptr)
 		delete(store.expires, obj)
 		delete(store.keypool, k)
-		KeyspaceStat[0]["keys"]--
+		store.decrementKeyCount() // todo: investigate, Fails with concurrent updates with Nitro server
 		notifyWatchers(k, "DEL", obj)
 		return true
 	}

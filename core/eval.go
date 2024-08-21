@@ -48,6 +48,84 @@ func init() {
 	serverID = fmt.Sprintf("%s:%d", config.Host, config.Port)
 }
 
+func ExecuteCommand(cmd *RedisCmd, c *Client, store *Store) []byte {
+	diceCmd, ok := diceCmds[cmd.Cmd]
+	if !ok {
+		return diceerrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", cmd.Cmd, strings.Join(cmd.Args, " "))
+	}
+
+	if diceCmd.Name == "SUBSCRIBE" || diceCmd.Name == "QWATCH" {
+		return evalQWATCH(cmd.Args, c, store)
+	}
+	if diceCmd.Name == "MULTI" {
+		c.TxnBegin()
+		return diceCmd.Eval(cmd.Args, store)
+	}
+	if diceCmd.Name == AuthCmd {
+		return evalAUTH(cmd.Args, c)
+	}
+	if diceCmd.Name == "EXEC" {
+		if !c.isTxn {
+			return diceerrors.NewErrWithMessage("EXEC without MULTI")
+		}
+		return c.TxnExec(store)
+	}
+	if diceCmd.Name == "DISCARD" {
+		if !c.isTxn {
+			return diceerrors.NewErrWithMessage("DISCARD without MULTI")
+		}
+		c.TxnDiscard()
+		return RespOK
+	}
+	if diceCmd.Name == "ABORT" {
+		return RespOK
+	}
+
+	return diceCmd.Eval(cmd.Args, store)
+}
+
+func executeCommandToBuffer(cmd *RedisCmd, buf *bytes.Buffer, c *Client, store *Store) {
+	buf.Write(ExecuteCommand(cmd, c, store))
+}
+
+func EvalAndRespond(cmds RedisCmds, c *Client, store *Store) {
+	var response []byte
+	buf := bytes.NewBuffer(response)
+
+	for _, cmd := range cmds {
+		// Check if the command has been authenticated
+		if cmd.Cmd != AuthCmd && !c.Session.IsActive() {
+			if _, err := c.Write(Encode(errors.New("NOAUTH Authentication required"), false)); err != nil {
+				log.Info("Error writing to client:", err)
+			}
+			continue
+		}
+		// if txn is not in progress, then we can simply
+		// execute the command and add the response to the buffer
+		if !c.isTxn {
+			executeCommandToBuffer(cmd, buf, c, store)
+			continue
+		}
+
+		// if the txn is in progress, we enqueue the command
+		// and add the QUEUED response to the buffer
+		if !txnCommands[cmd.Cmd] {
+			// if the command is queuable the enqueu
+			c.TxnQueue(cmd)
+			buf.Write(RespQueued)
+		} else {
+			// if txn is active and the command is non-queuable
+			// ex: EXEC, DISCARD
+			// we execute the command and gather the response in buffer
+			executeCommandToBuffer(cmd, buf, c, store)
+		}
+	}
+
+	if _, err := c.Write(buf.Bytes()); err != nil {
+		log.Error(err)
+	}
+}
+
 // evalPING returns with an encoded "PONG"
 // If any message is added with the ping command,
 // the message will be returned.
@@ -288,7 +366,7 @@ func evalDBSIZE(args []string, store *Store) []byte {
 	}
 
 	// return the RESP encoded value
-	return Encode(KeyspaceStat[0]["keys"], false)
+	return Encode(store.KeyspaceStat["keys"], false)
 }
 
 // evalGETDEL returns the value for the queried key in args
@@ -793,9 +871,7 @@ func evalINFO(args []string, store *Store) []byte {
 	var info []byte
 	buf := bytes.NewBuffer(info)
 	buf.WriteString("# Keyspace\r\n")
-	for i := range KeyspaceStat {
-		fmt.Fprintf(buf, "db%d:keys=%d,expires=0,avg_ttl=0\r\n", i, KeyspaceStat[i]["keys"])
-	}
+	fmt.Fprintf(buf, "db%d:keys=%d,expires=0,avg_ttl=0\r\n", 0, store.KeyspaceStat["keys"])
 	return Encode(buf.String(), false)
 }
 
@@ -1842,84 +1918,6 @@ func evalEXISTS(args []string, store *Store) []byte {
 	}
 
 	return Encode(count, false)
-}
-
-func executeCommand(cmd *RedisCmd, c *Client, store *Store) []byte {
-	diceCmd, ok := diceCmds[cmd.Cmd]
-	if !ok {
-		return diceerrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", cmd.Cmd, strings.Join(cmd.Args, " "))
-	}
-
-	if diceCmd.Name == "SUBSCRIBE" || diceCmd.Name == "QWATCH" {
-		return evalQWATCH(cmd.Args, c, store)
-	}
-	if diceCmd.Name == "MULTI" {
-		c.TxnBegin()
-		return diceCmd.Eval(cmd.Args, store)
-	}
-	if diceCmd.Name == AuthCmd {
-		return evalAUTH(cmd.Args, c)
-	}
-	if diceCmd.Name == "EXEC" {
-		if !c.isTxn {
-			return diceerrors.NewErrWithMessage("EXEC without MULTI")
-		}
-		return c.TxnExec(store)
-	}
-	if diceCmd.Name == "DISCARD" {
-		if !c.isTxn {
-			return diceerrors.NewErrWithMessage("DISCARD without MULTI")
-		}
-		c.TxnDiscard()
-		return RespOK
-	}
-	if diceCmd.Name == "ABORT" {
-		return RespOK
-	}
-
-	return diceCmd.Eval(cmd.Args, store)
-}
-
-func executeCommandToBuffer(cmd *RedisCmd, buf *bytes.Buffer, c *Client, store *Store) {
-	buf.Write(executeCommand(cmd, c, store))
-}
-
-func EvalAndRespond(cmds RedisCmds, c *Client, store *Store) {
-	var response []byte
-	buf := bytes.NewBuffer(response)
-
-	for _, cmd := range cmds {
-		// Check if the command has been authenticated
-		if cmd.Cmd != AuthCmd && !c.Session.IsActive() {
-			if _, err := c.Write(Encode(errors.New("NOAUTH Authentication required"), false)); err != nil {
-				log.Info("Error writing to client:", err)
-			}
-			continue
-		}
-		// if txn is not in progress, then we can simply
-		// execute the command and add the response to the buffer
-		if !c.isTxn {
-			executeCommandToBuffer(cmd, buf, c, store)
-			continue
-		}
-
-		// if the txn is in progress, we enqueue the command
-		// and add the QUEUED response to the buffer
-		if !txnCommands[cmd.Cmd] {
-			// if the command is queuable the enqueu
-			c.TxnQueue(cmd)
-			buf.Write(RespQueued)
-		} else {
-			// if txn is active and the command is non-queuable
-			// ex: EXEC, DISCARD
-			// we execute the command and gather the response in buffer
-			executeCommandToBuffer(cmd, buf, c, store)
-		}
-	}
-
-	if _, err := c.Write(buf.Bytes()); err != nil {
-		log.Error(err)
-	}
 }
 
 func evalPersist(args []string, store *Store) []byte {

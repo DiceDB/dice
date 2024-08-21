@@ -15,6 +15,12 @@ test:
 test-one:
 	go test -v -count=1 --run $(TEST_FUNC) ./tests/...
 
+test-nitro:
+	export DICE_TEST_NITRO_SERVER_CORES=3 && go test -v -count=1 ./tests/ && unset DICE_TEST_NITRO_SERVER_CORES
+
+test-one-nitro:
+	export DICE_TEST_NITRO_SERVER_CORES=3 && go test -v -count=1 --run $(TEST_FUNC) ./tests/... && unset DICE_TEST_NITRO_SERVER_CORES
+
 unittest:
 	go test -v -count=1 ./core/...
 

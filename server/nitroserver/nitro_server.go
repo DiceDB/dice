@@ -1,21 +1,17 @@
-package server
+package nitroserver
 
 import (
 	"context"
 	"sync"
 	"sync/atomic"
 	"syscall"
-	"time"
 
 	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core"
 	"github.com/dicedb/dice/core/iomultiplexer"
-	"github.com/dicedb/dice/server/utils"
+	"github.com/dicedb/dice/server"
 )
-
-var cronFrequency time.Duration = 1 * time.Second
-var lastCronExecTime time.Time = utils.GetCurrentTime()
 
 const EngineStatusWAITING int32 = 1 << 1
 const EngineStatusBUSY int32 = 1 << 2
@@ -26,19 +22,15 @@ var eStatus int32 = EngineStatusWAITING
 
 var connectedClients map[int]*core.Client
 
-var asyncStore = core.NewStore()
-
 func init() {
 	connectedClients = make(map[int]*core.Client)
 }
 
-func RunAsyncTCPServer(serverFD int, wg *sync.WaitGroup) {
+func RunNitroServer(serverFD, cores int, wg *sync.WaitGroup) {
 	defer wg.Done()
 	defer syscall.Close(serverFD)
 
-	log.Info("starting an asynchronous TCP server on", config.Host, config.Port)
-
-	SetupUsers()
+	log.Info("Starting Dice Nitro server on", config.Host, config.Port)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -46,17 +38,17 @@ func RunAsyncTCPServer(serverFD int, wg *sync.WaitGroup) {
 	defer func() {
 		atomic.StoreInt32(&eStatus, EngineStatusSHUTTINGDOWN)
 	}()
-	maxClients := 20000
 
+	maxClients := 20000
 	wg.Add(1)
-	go WatchKeys(ctx, wg, asyncStore)
+	InitShards(ctx, wg, cores)
 
 	// Start listening
 	if err := syscall.Listen(serverFD, maxClients); err != nil {
 		log.Fatal("error while listening", err) //nolint:gocritic
 	}
 
-	log.Info("ready to accept connections")
+	log.Info("Nitro server is ready to accept connections")
 
 	// AsyncIO starts here!!
 
@@ -78,10 +70,11 @@ func RunAsyncTCPServer(serverFD int, wg *sync.WaitGroup) {
 
 	// loop until the server is not shutting down
 	for atomic.LoadInt32(&eStatus) != EngineStatusSHUTTINGDOWN {
-		if time.Now().After(lastCronExecTime.Add(cronFrequency)) {
-			core.DeleteExpiredKeys(asyncStore)
-			lastCronExecTime = utils.GetCurrentTime()
-		}
+		// Todo: Find concerns with disabling this
+		//if time.Now().After(lastCronExecTime.Add(cronFrequency)) {
+		//	core.DeleteExpiredKeys(asyncStore)
+		//	lastCronExecTime = utils.GetCurrentTime()
+		//}
 
 		// Say, the Engine triggered SHUTTING down when the control flow is here ->
 		// Current: Engine status == WAITING
@@ -136,14 +129,16 @@ func RunAsyncTCPServer(serverFD int, wg *sync.WaitGroup) {
 				if comm == nil {
 					continue
 				}
-				cmds, hasABORT, err := ReadCommands(comm)
+				cmds, hasABORT, err := server.ReadCommands(comm)
 
 				if err != nil {
 					syscall.Close(event.Fd)
 					delete(connectedClients, event.Fd)
 					continue
 				}
-				respond(cmds, comm, asyncStore)
+
+				SubmitAndListenClientOperation(comm, cmds)
+
 				if hasABORT {
 					cancel()
 					return
