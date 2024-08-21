@@ -49,7 +49,6 @@ func TestCopy(t *testing.T) {
 			expected: []interface{}{"OK", int64(1), `[1,2,3]`},
 		},
 		{
-			// Todo: Flakey test. Due to order of elements.
 			name:     "COPY with JSON simple JSON",
 			commands: []string{`JSON.SET k1 $ ` + simpleJSON, "COPY k1 k2", "JSON.GET k2"},
 			expected: []interface{}{"OK", int64(1), simpleJSON},

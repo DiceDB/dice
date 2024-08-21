@@ -1,9 +1,7 @@
 package testutils
 
 import (
-	"fmt"
 	"reflect"
-	"sort"
 	"testing"
 
 	"github.com/bytedance/sonic"
@@ -16,6 +14,26 @@ func IsJSONResponse(s string) bool {
 }
 
 func AssertJSONEqual(t *testing.T, expected, actual string) {
+	if !compareJSONs(t, expected, actual) {
+		t.Errorf("JSON not equal.\nExpected: %s\nActual: %s", expected, actual)
+	}
+}
+
+func AssertJSONEqualList(t *testing.T, expected []string, actual string) {
+	res := false
+	for _, exp := range expected {
+		if compareJSONs(t, exp, actual) {
+			res = true
+			break
+		}
+	}
+	if !res {
+		t.Errorf("JSON not equal.\nExpected one of: %s\nActual: %s", expected, actual)
+	}
+}
+
+func compareJSONs(t *testing.T, expected, actual string) bool {
+	t.Log("Comparing JSONs expected:", expected, "actual:", actual)
 	var expectedJSON, actualJSON interface{}
 
 	err := sonic.UnmarshalString(expected, &expectedJSON)
@@ -24,9 +42,7 @@ func AssertJSONEqual(t *testing.T, expected, actual string) {
 	err = sonic.UnmarshalString(actual, &actualJSON)
 	assert.NilError(t, err, "Failed to unmarshal actual JSON")
 
-	if !reflect.DeepEqual(NormalizeJSON(expectedJSON), NormalizeJSON(actualJSON)) {
-		t.Errorf("JSON not equal.\nExpected: %s\nActual: %s", expected, actual)
-	}
+	return reflect.DeepEqual(NormalizeJSON(expectedJSON), NormalizeJSON(actualJSON))
 }
 
 // Rewritten NormalizeJSON to address flakiness by sorting JSON arrays (of comparable types) to ensure consistent ordering.
@@ -43,9 +59,6 @@ func NormalizeJSON(v interface{}) interface{} {
 		for i, e := range v {
 			normalizedArray[i] = NormalizeJSON(e)
 		}
-		sort.SliceStable(normalizedArray, func(i, j int) bool {
-			return fmt.Sprintf("%v", normalizedArray[i]) < fmt.Sprintf("%v", normalizedArray[j])
-		})
 		return normalizedArray
 	default:
 		return v
