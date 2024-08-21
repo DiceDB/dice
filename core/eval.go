@@ -2147,7 +2147,7 @@ func evalPTTL(args []string, store *Store) []byte {
 // Usage: HSET key field value [field value ...]
 func evalHSET(args []string, store *Store) []byte {
 	if len(args) < 3 {
-		return Encode(errors.New("ERR wrong number of arguments for 'HSET' command"), false)
+		return Encode(errors.New("ERR wrong number of arguments for command"), false)
 	}
 
 	key := args[0]
@@ -2188,6 +2188,35 @@ func evalHSET(args []string, store *Store) []byte {
 	store.Put(key, obj)
 
 	return Encode(numKeys, false)
+}
+
+func evalHGET(args []string, store *Store) []byte {
+	if len(args) != 2 {
+		return Encode(errors.New("ERR wrong number of arguments for command"), false)
+	}
+
+	key := args[0]
+	field := args[1]
+	var value string
+
+	obj := store.Get(key)
+
+	if obj == nil {
+		return RespNIL
+	}
+
+	switch currentVal := obj.Value.(type) {
+	case HMap:
+		val, present := currentVal.Get(field)
+		if !present {
+			return RespNIL
+		}
+		value = val
+	default:
+		return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+	}
+
+	return Encode(value, false)
 }
 
 func evalObjectIdleTime(key string, store *Store) []byte {
