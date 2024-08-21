@@ -2169,11 +2169,6 @@ func evalHSET(args []string, store *Store) []byte {
 				hashMap = updatedHashMap
 				numKeys = lengthKeys
 			}
-			// hValue := string(Encode(updatedHashMap, false))
-			// oType, oEnc := deduceTypeEncoding(hValue)
-			// newObj := NewObj(updatedHashMap, -1, oType, oEnc)
-			// Put(key, newObj)
-			// return Encode(lengthKeys, false)
 		default:
 			return Encode(errors.New("ERR key provided does not store a hashmap"), false)
 		}
