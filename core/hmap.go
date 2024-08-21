@@ -10,7 +10,7 @@ type HMap = *orderedmap.OrderedMap[string, string]
 
 func hashMapBuilder(args []string, currentHashMap HMap) (HMap, int64, error) {
 	var hmap HMap
-	var numKeys int64
+	var numKeysNewlySet int64
 
 	if currentHashMap == nil {
 		hmap = orderedmap.New[string, string]()
@@ -27,7 +27,7 @@ func hashMapBuilder(args []string, currentHashMap HMap) (HMap, int64, error) {
 
 			_, present := hmap.Set(k, v)
 			if !present {
-				numKeys++
+				numKeysNewlySet++
 			}
 			iter += 2
 		} else {
@@ -35,5 +35,5 @@ func hashMapBuilder(args []string, currentHashMap HMap) (HMap, int64, error) {
 		}
 	}
 
-	return hmap, numKeys, nil
+	return hmap, numKeysNewlySet, nil
 }
