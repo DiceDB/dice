@@ -7,7 +7,10 @@ import (
 	"strconv"
 
 	"github.com/dicedb/dice/internal/constants"
+	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
+
+type HMap = *orderedmap.OrderedMap[string, string]
 
 func readLength(buf *bytes.Buffer) (int64, error) {
 	s, err := readStringUntilSr(buf)
@@ -228,6 +231,19 @@ func Encode(value interface{}, isSimple bool) []byte {
 			buf.Write(Encode(row.Value.Value, false))
 		}
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
+	case HMap:
+		var b []byte
+		buf := bytes.NewBuffer(b)
+		hashMap := value.(HMap)
+		numOfKeyValuePairs := 0
+		for pair := hashMap.Oldest(); pair != nil; pair = pair.Next() {
+			key := pair.Key
+			val := pair.Value
+			buf.Write(Encode(key, false))
+			buf.Write(Encode(val, false))
+			numOfKeyValuePairs++
+		}
+		return []byte(fmt.Sprintf("*%d\r\n%s", numOfKeyValuePairs, buf.Bytes()))
 	default:
 		fmt.Printf("Unsupported type: %T\n", v)
 		return RespNIL
