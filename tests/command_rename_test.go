@@ -31,6 +31,11 @@ var renameKeysTestCases = []struct {
 		inCmd:    []string{"set destinationKey world", "set newKey hello", "rename newKey destinationKey", "get newKey", "get destinationKey"},
 		expected: []interface{}{"OK", "OK", "OK", "(nil)", "hello"},
 	},
+	{
+		name:     "Same key for source and destination on Rename and source key doesn't exist",
+		inCmd:    []string{"rename abc abc"},
+		expected: []interface{}{"ERR no such key"},
+	},
 }
 
 func TestCommandRename(t *testing.T) {
