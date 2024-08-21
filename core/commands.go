@@ -3,7 +3,7 @@ package core
 type DiceCmdMeta struct {
 	Name  string
 	Info  string
-	Eval  func([]string) []byte
+	Eval  func([]string, *Store) []byte
 	Arity int // number of arguments, it is possible to use -N to say >= N
 	KeySpecs
 }
@@ -81,7 +81,7 @@ var (
 		Returns OK if successful.
 		Returns encoded error message if the number of arguments is incorrect or the JSON string is invalid.`,
 		Eval:     evalJSONSET,
-		Arity:    3,
+		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	jsongetCmdMeta = DiceCmdMeta{
@@ -92,6 +92,16 @@ var (
 		Error reply: If the number of arguments is incorrect or the stored value is not a JSON type.`,
 		Eval:     evalJSONGET,
 		Arity:    2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	jsontypeCmdMeta = DiceCmdMeta{
+		Name: "JSON.TYPE",
+		Info: `JSON.TYPE key [path]
+		Returns string reply for each path, specified as the value's type.
+		Returns RespNIL If the key doesn't exist.
+		Error reply: If the number of arguments is incorrect.`,
+		Eval:     evalJSONTYPE,
+		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	ttlCmdMeta = DiceCmdMeta{
@@ -547,6 +557,72 @@ var (
 		Arity:    -4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	objectCmdMeta = DiceCmdMeta{
+		Name: "OBJECT",
+		Info: `OBJECT subcommand [arguments [arguments ...]]
+		OBJECT command is used to inspect the internals of the Redis objects.`,
+		Eval:     evalOBJECT,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 2},
+	}
+	touchCmdMeta = DiceCmdMeta{
+		Name: "TOUCH",
+		Info: `TOUCH key1 key2 ... key_N
+		Alters the last access time of a key(s).
+		A key is ignored if it does not exist.`,
+		Eval:     evalTOUCH,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	expiretimeCmdMeta = DiceCmdMeta{
+		Name: "EXPIRETIME",
+		Info: `EXPIRETIME returns the absolute Unix timestamp (since January 1, 1970) in seconds
+		at which the given key will expire`,
+		Eval:     evalEXPIRETIME,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+	}
+	expireatCmdMeta = DiceCmdMeta{
+		Name: "EXPIREAT",
+		Info: `EXPIREAT sets a expiry time(in unix-time-seconds) on the specified key in args
+		args should contain 2 values, key and the expiry time to be set for the key
+		The expiry time should be in integer format; if not, it returns encoded error response
+		Returns RespOne if expiry was set on the key successfully.
+		Once the time is lapsed, the key will be deleted automatically`,
+		Eval:     evalEXPIREAT,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+	}
+	lpushCmdMeta = DiceCmdMeta{
+		Name:  "LPUSH",
+		Info:  "LPUSH pushes values into the left side of the deque",
+		Eval:  evalLPUSH,
+		Arity: -3,
+	}
+	rpushCmdMeta = DiceCmdMeta{
+		Name:  "RPUSH",
+		Info:  "RPUSH pushes values into the right side of the deque",
+		Eval:  evalRPUSH,
+		Arity: -3,
+	}
+	lpopCmdMeta = DiceCmdMeta{
+		Name:  "LPOP",
+		Info:  "LPOP pops a value from the left side of the deque",
+		Eval:  evalLPOP,
+		Arity: 2,
+	}
+	rpopCmdMeta = DiceCmdMeta{
+		Name:  "RPOP",
+		Info:  "RPOP pops a value from the right side of the deque",
+		Eval:  evalRPOP,
+		Arity: 2,
+	}
+	dbSizeCmdMeta = DiceCmdMeta{
+		Name:  "DBSIZE",
+		Info:  `DBSIZE Return the number of keys in the database`,
+		Eval:  evalDBSIZE,
+		Arity: 1,
+	}
 )
 
 func init() {
@@ -557,9 +633,12 @@ func init() {
 	diceCmds["MSET"] = msetCmdMeta
 	diceCmds["JSON.SET"] = jsonsetCmdMeta
 	diceCmds["JSON.GET"] = jsongetCmdMeta
+	diceCmds["JSON.TYPE"] = jsontypeCmdMeta
 	diceCmds["TTL"] = ttlCmdMeta
 	diceCmds["DEL"] = delCmdMeta
 	diceCmds["EXPIRE"] = expireCmdMeta
+	diceCmds["EXPIRETIME"] = expiretimeCmdMeta
+	diceCmds["EXPIREAT"] = expireatCmdMeta
 	diceCmds["HELLO"] = helloCmdMeta
 	diceCmds["BGREWRITEAOF"] = bgrewriteaofCmdMeta
 	diceCmds["INCR"] = incrCmdMeta
@@ -611,4 +690,11 @@ func init() {
 	diceCmds["GETEX"] = getexCmdMeta
 	diceCmds["PTTL"] = pttlCmdMeta
 	diceCmds["HSET"] = hsetCmdMeta
+	diceCmds["OBJECT"] = objectCmdMeta
+	diceCmds["TOUCH"] = touchCmdMeta
+	diceCmds["LPUSH"] = lpushCmdMeta
+	diceCmds["RPOP"] = rpopCmdMeta
+	diceCmds["RPUSH"] = rpushCmdMeta
+	diceCmds["LPOP"] = lpopCmdMeta
+	diceCmds["DBSIZE"] = dbSizeCmdMeta
 }

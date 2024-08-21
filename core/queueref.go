@@ -25,13 +25,13 @@ func (q *QueueRef) Size() int64 {
 
 // Insert inserts reference of the key in the QueueRef q.
 // returns false if key does not exist
-func (q *QueueRef) Insert(key string) bool {
+func (q *QueueRef) Insert(key string, store *Store) bool {
 	var x unsafe.Pointer
 	var ok bool
 
 	withLocks(func() {
-		x, ok = keypool[key]
-	}, WithKeypoolRLock())
+		x, ok = store.keypool[key]
+	}, store, WithKeypoolRLock())
 
 	if !ok {
 		return false
@@ -45,14 +45,14 @@ func (q *QueueRef) Insert(key string) bool {
 // if the expired key is popped from the queue, we continue to pop until
 // until we find one non-expired key
 // TODO: test for expired keys
-func (q *QueueRef) Remove() (*QueueElement, error) {
+func (q *QueueRef) Remove(store *Store) (*QueueElement, error) {
 	for {
 		val, err := q.qi.Remove()
 		if err != nil {
 			return nil, err
 		}
 		key := *((*string)(unsafe.Pointer(uintptr(val))))
-		obj := Get(key)
+		obj := store.Get(key)
 		if obj != nil {
 			return &QueueElement{key, obj}, nil
 		}
@@ -61,12 +61,12 @@ func (q *QueueRef) Remove() (*QueueElement, error) {
 
 // Iterate iterates through the QueueRef
 // it also filters out the keys that are expired
-func (q *QueueRef) Iterate(n int) []*QueueElement {
+func (q *QueueRef) Iterate(n int, store *Store) []*QueueElement {
 	vals := q.qi.Iterate(n)
 	elements := make([]*QueueElement, 0, len(vals))
 	for _, val := range vals {
 		key := *((*string)(unsafe.Pointer(uintptr(val))))
-		obj := Get(key)
+		obj := store.Get(key)
 		if obj != nil {
 			elements = append(elements, &QueueElement{key, obj})
 		}
@@ -74,10 +74,10 @@ func (q *QueueRef) Iterate(n int) []*QueueElement {
 	return elements
 }
 
-func (q* QueueRef) DeepCopy() *QueueRef{
-    return &QueueRef{
-        qi: q.qi.DeepCopy(),
-    }
+func (q *QueueRef) DeepCopy() *QueueRef {
+	return &QueueRef{
+		qi: q.qi.DeepCopy(),
+	}
 }
 
 // Returns the length of the queue

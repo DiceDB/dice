@@ -42,6 +42,14 @@ func (b *byteList) newNode() *byteListNode {
 	return bn
 }
 
+func (b *byteList) newNodeWithCapacity(capacity int) *byteListNode {
+	bn := &byteListNode{
+		buf: make([]byte, 0, capacity),
+	}
+	b.size += byteListNodeSize
+	return bn
+}
+
 func (b *byteList) append(bn *byteListNode) {
 	bn.prev = b.tail
 	if b.tail != nil {
@@ -53,7 +61,6 @@ func (b *byteList) append(bn *byteListNode) {
 	}
 }
 
-//nolint:unused
 func (b *byteList) prepend(bn *byteListNode) {
 	bn.next = b.head
 	if b.head != nil {

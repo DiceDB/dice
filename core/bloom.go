@@ -1,13 +1,13 @@
 package core
 
 import (
-	"errors"
 	"fmt"
 	"hash"
 	"math"
 	"math/rand"
 	"strconv"
 
+	"github.com/dicedb/dice/core/diceerrors"
 	"github.com/dicedb/dice/internal/constants"
 	"github.com/twmb/murmur3"
 )
@@ -23,16 +23,15 @@ var (
 )
 
 var (
-	errWrongArgs            = errors.New("ERR wrong number of arguments")
-	errInvalidErrorRateType = errors.New("ERR only float values can be provided for error rate")
-	errInvalidErrorRate     = errors.New("ERR invalid error rate value provided")
-	errInvalidCapacityType  = errors.New("ERR only integer values can be provided for capacity")
-	errInvalidCapacity      = errors.New("ERR invalid capacity value provided")
+	errInvalidErrorRateType = diceerrors.NewErr("only float values can be provided for error rate")
+	errInvalidErrorRate     = diceerrors.NewErr("invalid error rate value provided")
+	errInvalidCapacityType  = diceerrors.NewErr("only integer values can be provided for capacity")
+	errInvalidCapacity      = diceerrors.NewErr("invalid capacity value provided")
 
-	errInvalidKey = errors.New("ERR invalid key: no bloom filter found")
+	errInvalidKey = diceerrors.NewErr("invalid key: no bloom filter found")
 
-	errEmptyValue   = errors.New("ERR empty value provided")
-	errUnableToHash = errors.New("ERR unable to hash given value")
+	errEmptyValue   = diceerrors.NewErr("empty value provided")
+	errUnableToHash = diceerrors.NewErr("unable to hash given value")
 )
 
 type BloomOpts struct {
@@ -258,9 +257,9 @@ func (opts *BloomOpts) updateIndexes(value string) error {
 // evalBFINIT evaluates the BFINIT command responsible for initializing a
 // new bloom filter and allocation it's relevant parameters based on given inputs.
 // If no params are provided, it uses defaults.
-func evalBFINIT(args []string) []byte {
+func evalBFINIT(args []string, store *Store) []byte {
 	if len(args) != 1 && len(args) != 3 {
-		return Encode(fmt.Errorf("%w for 'BFINIT' command", errWrongArgs), false)
+		return diceerrors.NewErrArity("BFINIT")
 	}
 
 	useDefaults := false
@@ -270,12 +269,12 @@ func evalBFINIT(args []string) []byte {
 
 	opts, err := newBloomOpts(args[1:], useDefaults)
 	if err != nil {
-		return Encode(fmt.Errorf("%w for 'BFINIT' command", err), false)
+		return diceerrors.NewErrWithFormattedMessage("%w for 'BFINIT' command", err)
 	}
 
-	_, err = getOrCreateBloomFilter(args[0], opts)
+	_, err = getOrCreateBloomFilter(args[0], opts, store)
 	if err != nil {
-		return Encode(fmt.Errorf("%w for 'BFINIT' command", err), false)
+		return diceerrors.NewErrWithFormattedMessage("%w for 'BFINIT' command", err)
 	}
 
 	return RespOK
@@ -284,21 +283,21 @@ func evalBFINIT(args []string) []byte {
 // evalBFADD evaluates the BFADD command responsible for adding an element to
 // a bloom filter. If the filter does not exists, it will create a new one
 // with default parameters.
-func evalBFADD(args []string) []byte {
+func evalBFADD(args []string, store *Store) []byte {
 	if len(args) != 2 {
-		return Encode(fmt.Errorf("%w for 'BFADD' command", errWrongArgs), false)
+		return diceerrors.NewErrArity("BFADD")
 	}
 
 	opts, _ := newBloomOpts(args[1:], true)
 
-	bloom, err := getOrCreateBloomFilter(args[0], opts)
+	bloom, err := getOrCreateBloomFilter(args[0], opts, store)
 	if err != nil {
-		return Encode(fmt.Errorf("%w for 'BFADD' command", err), false)
+		return diceerrors.NewErrWithFormattedMessage("%w for 'BFADD' command", err)
 	}
 
 	resp, err := bloom.add(args[1])
 	if err != nil {
-		return Encode(fmt.Errorf("%w for 'BFADD' command", err), false)
+		return diceerrors.NewErrWithFormattedMessage("%w for 'BFADD' command", err)
 	}
 
 	return resp
@@ -306,19 +305,19 @@ func evalBFADD(args []string) []byte {
 
 // evalBFEXISTS evaluates the BFEXISTS command responsible for checking existence
 // of an element in a bloom filter.
-func evalBFEXISTS(args []string) []byte {
+func evalBFEXISTS(args []string, store *Store) []byte {
 	if len(args) != 2 {
-		return Encode(fmt.Errorf("%w for 'BFEXISTS' command", errWrongArgs), false)
+		return diceerrors.NewErrArity("BFEXISTS")
 	}
 
-	bloom, err := getOrCreateBloomFilter(args[0], nil)
+	bloom, err := getOrCreateBloomFilter(args[0], nil, store)
 	if err != nil {
-		return Encode(fmt.Errorf("%w for 'BFEXISTS' command", err), false)
+		return diceerrors.NewErrWithFormattedMessage("%w for 'BFEXISTS' command", err)
 	}
 
 	resp, err := bloom.exists(args[1])
 	if err != nil {
-		return Encode(fmt.Errorf("%w for 'BFEXISTS' command", err), false)
+		return diceerrors.NewErrWithFormattedMessage("%w for 'BFEXISTS' command", err)
 	}
 
 	return resp
@@ -326,14 +325,14 @@ func evalBFEXISTS(args []string) []byte {
 
 // evalBFINFO evaluates the BFINFO command responsible for returning the
 // parameters and metadata of an existing bloom filter.
-func evalBFINFO(args []string) []byte {
+func evalBFINFO(args []string, store *Store) []byte {
 	if len(args) != 1 {
-		return Encode(fmt.Errorf("%w for 'BFINFO' command", errWrongArgs), false)
+		return diceerrors.NewErrArity("BFINFO")
 	}
 
-	bloom, err := getOrCreateBloomFilter(args[0], nil)
+	bloom, err := getOrCreateBloomFilter(args[0], nil, store)
 	if err != nil {
-		return Encode(fmt.Errorf("%w for 'BFINFO' command", err), false)
+		return diceerrors.NewErrWithFormattedMessage("%w for 'BFINFO' command", err)
 	}
 
 	return Encode(bloom.info(args[0]), false)
@@ -342,13 +341,13 @@ func evalBFINFO(args []string) []byte {
 // getOrCreateBloomFilter attempts to fetch an existing bloom filter from
 // the kv store. If it does not exist, it tries to create one with
 // given `opts` and returns it.
-func getOrCreateBloomFilter(key string, opts *BloomOpts) (*Bloom, error) {
-	obj := Get(key)
+func getOrCreateBloomFilter(key string, opts *BloomOpts, store *Store) (*Bloom, error) {
+	obj := store.Get(key)
 
 	// If we don't have a filter yet and `opts` are provided, create one.
 	if obj == nil && opts != nil {
-		obj = NewObj(newBloomFilter(opts), -1, ObjTypeBitSet, ObjEncodingBF)
-		Put(key, obj)
+		obj = store.NewObj(newBloomFilter(opts), -1, ObjTypeBitSet, ObjEncodingBF)
+		store.Put(key, obj)
 	}
 
 	// If no `opts` are provided for filter creation, return err

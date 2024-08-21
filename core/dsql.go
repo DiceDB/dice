@@ -13,8 +13,9 @@ import (
 const (
 	CustomKey   = "$key"
 	CustomValue = "$value"
-	TempKey     = "_key"
-	TempValue   = "_value"
+	TempPrefix  = "_"
+	TempKey     = TempPrefix + "key"
+	TempValue   = TempPrefix + "value"
 )
 
 // Error definitions
@@ -47,6 +48,46 @@ type DSQLQuery struct {
 	Where     sqlparser.Expr
 	OrderBy   QueryOrder
 	Limit     int
+}
+
+func (q DSQLQuery) String() string {
+	var parts []string
+
+	// Selection
+	selectionParts := []string{}
+	if q.Selection.KeySelection {
+		selectionParts = append(selectionParts, CustomKey)
+	}
+	if q.Selection.ValueSelection {
+		selectionParts = append(selectionParts, CustomValue)
+	}
+	if len(selectionParts) > 0 {
+		parts = append(parts, fmt.Sprintf("SELECT %s", strings.Join(selectionParts, ", ")))
+	} else {
+		parts = append(parts, "SELECT *")
+	}
+
+	// KeyRegex
+	if q.KeyRegex != "" {
+		parts = append(parts, fmt.Sprintf("FROM `%s`", q.KeyRegex))
+	}
+
+	// Where
+	if q.Where != nil {
+		parts = append(parts, fmt.Sprintf("WHERE '%s'", strings.Replace(strings.Trim(sqlparser.String(q.Where), "'"), TempValue, CustomValue, -1)))
+	}
+
+	// OrderBy
+	if q.OrderBy.OrderBy != "" {
+		parts = append(parts, fmt.Sprintf("ORDER BY %s %s", q.OrderBy.OrderBy, q.OrderBy.Order))
+	}
+
+	// Limit
+	if q.Limit > 0 {
+		parts = append(parts, fmt.Sprintf("LIMIT %d", q.Limit))
+	}
+
+	return strings.Join(parts, " ")
 }
 
 // Utility functions for custom syntax handling

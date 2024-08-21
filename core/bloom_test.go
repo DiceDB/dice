@@ -5,16 +5,15 @@ import (
 	"reflect"
 	"testing"
 
-    "hash"
-    "hash/fnv"
-    "gotest.tools/v3/assert"
-
+	"hash"
+	"hash/fnv"
 
 	"github.com/dicedb/dice/internal/constants"
-
+	"gotest.tools/v3/assert"
 )
 
 func TestBloomFilter(t *testing.T) {
+	store := NewStore()
 	// This test only contains some basic checks for all the bloom filter
 	// operations like BFINIT, BFADD, BFEXISTS. It assumes that the
 	// functions called in the main function are working correctly and
@@ -23,7 +22,7 @@ func TestBloomFilter(t *testing.T) {
 
 	// BFINIT
 	args := []string{} // empty args
-	resp := evalBFINIT(args)
+	resp := evalBFINIT(args, store)
 
 	// We're just checking if the resposne is an error or not. This test does
 	// not checks the type of error. That is kept for different test.
@@ -33,102 +32,103 @@ func TestBloomFilter(t *testing.T) {
 
 	// BFINIT bf 0.01 10000
 	args = append(args, "bf", "0.01", "10000") // Add key, error rate and capacity
-	resp = evalBFINIT(args)
+	resp = evalBFINIT(args, store)
 	if !bytes.Equal(resp, RespOK) {
 		t.Errorf("BFINIT: invalid response, args: %v - expected: %s, got error: %s", args, string(RespOK), string(resp))
 	}
 
 	// BFINIT bf1
 	args = []string{"bf1"}
-	resp = evalBFINIT(args)
+	resp = evalBFINIT(args, store)
 	if !bytes.Equal(resp, RespOK) {
 		t.Errorf("BFINIT: invalid response, args: %v - expected: %s, got error: %s", args, string(RespOK), string(resp))
 	}
 
 	// BFADD
 	args = []string{"bf"}
-	resp = evalBFADD(args)
+	resp = evalBFADD(args, store)
 	if bytes.Equal(resp, RespMinusOne) || bytes.Equal(resp, RespZero) || bytes.Equal(resp, RespOne) {
 		t.Errorf("BFADD: invalid response, args: %v - expected an error, got: %s", args, string(resp))
 	}
 
 	args = []string{"bf", "hello"} // BFADD bf hello
-	resp = evalBFADD(args)
+	resp = evalBFADD(args, store)
 	if !bytes.Equal(resp, RespOne) {
 		t.Errorf("BFADD: invalid response, args: %v - expected: %s, got error: %s", args, string(RespOne), string(resp))
 	}
 
 	args[1] = "world" // BFADD bf world
-	resp = evalBFADD(args)
+	resp = evalBFADD(args, store)
 	if !bytes.Equal(resp, RespOne) {
 		t.Errorf("BFADD: invalid response, args: %v - expected: %s, got error: %s", args, string(RespOne), string(resp))
 	}
 
 	args[1] = "hello" // BFADD bf hello
-	resp = evalBFADD(args)
+	resp = evalBFADD(args, store)
 	if !bytes.Equal(resp, RespZero) {
 		t.Errorf("BFADD: invalid response, args: %v - expected: %s, got error: %s", args, string(RespZero), string(resp))
 	}
 
 	// Try adding element into an non-existing filter
 	args = []string{"bf2", "hello"} // BFADD bf2 hello
-	resp = evalBFADD(args)
+	resp = evalBFADD(args, store)
 	if !bytes.Equal(resp, RespOne) {
 		t.Errorf("BFADD: invalid response, args: %v - expected: %s, got error: %s", args, string(RespOne), string(resp))
 	}
 
 	// BFEXISTS
 	args = []string{"bf"}
-	resp = evalBFEXISTS(args)
+	resp = evalBFEXISTS(args, store)
 	if bytes.Equal(resp, RespMinusOne) || bytes.Equal(resp, RespZero) || bytes.Equal(resp, RespOne) {
 		t.Errorf("BFEXISTS: invalid response, args: %v - expected an error, got: %s", args, string(resp))
 	}
 
 	args = []string{"bf", "hello"} // BFEXISTS bf hello
-	resp = evalBFEXISTS(args)
+	resp = evalBFEXISTS(args, store)
 	if !bytes.Equal(resp, RespOne) {
 		t.Errorf("BFEXISTS: invalid response, args: %v - expected: %s, got error: %s", args, string(RespOne), string(resp))
 	}
 
 	args[1] = "hello" // BFEXISTS bf world
-	resp = evalBFEXISTS(args)
+	resp = evalBFEXISTS(args, store)
 	if !bytes.Equal(resp, RespOne) {
 		t.Errorf("BFEXISTS: invalid response, args: %v - expected: %s, got error: %s", args, string(RespOne), string(resp))
 	}
 
 	args[1] = "programming" // BFEXISTS bf programming
-	resp = evalBFEXISTS(args)
+	resp = evalBFEXISTS(args, store)
 	if !bytes.Equal(resp, RespZero) {
 		t.Errorf("BFEXISTS: invalid response, args: %v - expected: %s, got error: %s", args, string(RespZero), string(resp))
 	}
 
 	// Try searching for an element in a non-existing filter
 	args = []string{"bf3", "hello"} // BFEXISTS bf3 hello
-	resp = evalBFEXISTS(args)
+	resp = evalBFEXISTS(args, store)
 	if bytes.Equal(resp, RespMinusOne) || bytes.Equal(resp, RespZero) || bytes.Equal(resp, RespOne) {
 		t.Errorf("BFEXISTS: invalid response, args: %v - expected an error, got error: %s", args, string(resp))
 	}
 }
 
 func TestGetOrCreateBloomFilter(t *testing.T) {
+	store := NewStore()
 	// Create a key and default opts
 	key := "bf"
 	opts, _ := newBloomOpts([]string{}, true)
 
 	// Should create a new filter under the key `key`.
-	bloom, err := getOrCreateBloomFilter(key, opts)
+	bloom, err := getOrCreateBloomFilter(key, opts, store)
 	if bloom == nil || err != nil {
 		t.Errorf("nil bloom or non-nil error returned while creating new filter - key: %s, opts: %+v, err: %v", key, opts, err)
 	}
 
 	// Should get the filter (which was created above)
-	bloom, err = getOrCreateBloomFilter(key, opts)
+	bloom, err = getOrCreateBloomFilter(key, opts, store)
 	if bloom == nil || err != nil {
 		t.Errorf("nil bloom or non-nil error returned while fetching existing filter - key: %s, opts: %+v, err: %v", key, opts, err)
 	}
 
 	// Should get the filter with nil opts
-	bloom, err = getOrCreateBloomFilter(key, nil)
+	bloom, err = getOrCreateBloomFilter(key, nil, store)
 	if bloom == nil || err != nil {
 		t.Errorf("nil bloom or non-nil error returned while fetching existing filter - key: %s, opts: %+v, err: %v", key, opts, err)
 	}
@@ -136,7 +136,7 @@ func TestGetOrCreateBloomFilter(t *testing.T) {
 	// Should return an error (errInvalidKey) for fetching a bloom filter
 	// against a non existing key
 	key = "bf1"
-	_, err = getOrCreateBloomFilter(key, nil)
+	_, err = getOrCreateBloomFilter(key, nil, store)
 	if err != errInvalidKey {
 		t.Errorf("nil or wrong error while fetching non existing bloom filter - key: %s, opts: %+v, err: %v", key, opts, err)
 	}
@@ -274,8 +274,8 @@ func TestSetBit(t *testing.T) {
 }
 
 func TestBloomDeepCopy(t *testing.T) {
-    // mock data
-    originalOpts := &BloomOpts{
+	// mock data
+	originalOpts := &BloomOpts{
 		errorRate: 0.01,
 		capacity:  1000,
 		bits:      8000,
@@ -298,10 +298,10 @@ func TestBloomDeepCopy(t *testing.T) {
 	// Verify that the copy is not nil
 	assert.Assert(t, copyBloom != nil, "DeepCopy returned nil, expected a valid copy")
 
-    assert.Assert(t, original.opts.indexes[0] == copyBloom.opts.indexes[0], "Original and copy indexes values should be same")
+	assert.Assert(t, original.opts.indexes[0] == copyBloom.opts.indexes[0], "Original and copy indexes values should be same")
 	assert.Assert(t, original.bitset[0] == copyBloom.bitset[0], "Original and copy bitset values should be same")
 
-    // Verify that changes to the copy do not affect the original
+	// Verify that changes to the copy do not affect the original
 	copyBloom.opts.indexes[0] = 10
 	copyBloom.bitset[0] = 0xFF
 	assert.Assert(t, original.opts.indexes[0] != copyBloom.opts.indexes[0], "Original and copy indexes should not be linked")

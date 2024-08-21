@@ -6,6 +6,7 @@ import (
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/constants"
+	"github.com/dicedb/dice/server/utils"
 )
 
 func TestNewUsers(t *testing.T) {
@@ -80,6 +81,9 @@ func TestNewSession(t *testing.T) {
 }
 
 func TestSessionIsActive(t *testing.T) {
+	mockTime := &utils.MockClock{CurrTime: time.Now()}
+	utils.CurrentTime = mockTime
+
 	config.RequirePass = "testpassword"
 	session := NewSession()
 	if session.IsActive() {
@@ -92,7 +96,8 @@ func TestSessionIsActive(t *testing.T) {
 	}
 
 	oldLastAccessed := session.LastAccessedAt
-	time.Sleep(time.Millisecond) // Ensure some time passes
+	mockTime.SetTime(time.Now().Add(time.Duration(5 * time.Millisecond)))
+
 	session.IsActive()
 	if !session.LastAccessedAt.After(oldLastAccessed) {
 		t.Error("IsActive() should update LastAccessedAt")
@@ -105,6 +110,7 @@ func TestSessionActivate(t *testing.T) {
 	user := &User{Username: DefaultUserName}
 
 	session.Activate(user)
+
 	if session.Status != SessionStatusActive {
 		t.Errorf("Session.Activate() did not set status to Active. Got %v, want %v", session.Status, SessionStatusActive)
 	}
