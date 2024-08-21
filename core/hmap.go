@@ -21,9 +21,10 @@ func hashMapBuilder(args []string, currentHashMap HMap) (HMap, int64, error) {
 	iter := 1 // NOTE: to move past args[0] (aka key) within args
 
 	for iter <= len(args)-1 {
-		if iter < len(args)-2 {
+		if iter < len(args)-1 && iter+1 <= len(args)-1 {
 			k := args[iter]
 			v := args[iter+1]
+
 			_, present := hmap.Set(k, v)
 			if !present {
 				numKeys++
