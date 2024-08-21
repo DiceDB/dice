@@ -10,53 +10,54 @@ import (
 	"github.com/dicedb/dice/testutils"
 )
 
-func CreateAndPushKeyToStack(sr *core.StackRef, key string, value int, expDurationMs int64) {
-	obj := core.NewObj(value, expDurationMs, core.ObjTypeString, core.ObjEncodingInt)
-	core.Put(key, obj)
-	sr.Push(key)
+func CreateAndPushKeyToStack(sr *core.StackRef, key string, value int, expDurationMs int64, store *core.Store) {
+	obj := store.NewObj(value, expDurationMs, core.ObjTypeString, core.ObjEncodingInt)
+	store.Put(key, obj)
+	sr.Push(key, store)
 }
 
 func TestStackRef(t *testing.T) {
+	store := core.NewStore()
 	sr := core.NewStackRef()
 
-	if _, err := sr.Pop(); err != core.ErrStackEmpty {
+	if _, err := sr.Pop(store); err != core.ErrStackEmpty {
 		t.Error("popping from an empty stackref should return an empty stack error")
 	}
 
-	if sr.Push("does not exist") != false {
+	if sr.Push("does not exist", store) != false {
 		t.Error("inserting the reference of the key that does not exist should not work but it did")
 	}
 
-	core.Put("key that exists", core.NewObj(10, -1, core.ObjTypeString, core.ObjEncodingInt))
-	if sr.Push("key that exists") != true {
+	store.Put("key that exists", store.NewObj(10, -1, core.ObjTypeString, core.ObjEncodingInt))
+	if sr.Push("key that exists", store) != true {
 		t.Error("inserting the reference of the key that exists should work but it did not")
 	}
 
-	if qe, _ := sr.Pop(); qe.Obj.Value != 10 {
+	if qe, _ := sr.Pop(store); qe.Obj.Value != 10 {
 		t.Error("removing from the stackref should return the obj")
 	}
 
-	if _, err := sr.Pop(); err != core.ErrStackEmpty {
+	if _, err := sr.Pop(store); err != core.ErrStackEmpty {
 		t.Error("removing again from an empty stackref should return an empty stack error")
 	}
 
-	core.Put("key1", core.NewObj(10, -1, core.ObjTypeString, core.ObjEncodingInt))
-	sr.Push("key1")
-	core.Put("key2", core.NewObj(20, -1, core.ObjTypeString, core.ObjEncodingInt))
-	sr.Push("key2")
-	core.Put("key3", core.NewObj(30, -1, core.ObjTypeString, core.ObjEncodingInt))
-	sr.Push("key3")
-	core.Put("key4", core.NewObj(40, -1, core.ObjTypeString, core.ObjEncodingInt))
-	sr.Push("key4")
-	core.Put("key5", core.NewObj(50, -1, core.ObjTypeString, core.ObjEncodingInt))
-	sr.Push("key5")
-	core.Put("key6", core.NewObj(60, -1, core.ObjTypeString, core.ObjEncodingInt))
-	sr.Push("key6")
-	core.Put("key7", core.NewObj(60, -1, core.ObjTypeString, core.ObjEncodingInt))
-	sr.Push("key7")
+	store.Put("key1", store.NewObj(10, -1, core.ObjTypeString, core.ObjEncodingInt))
+	sr.Push("key1", store)
+	store.Put("key2", store.NewObj(20, -1, core.ObjTypeString, core.ObjEncodingInt))
+	sr.Push("key2", store)
+	store.Put("key3", store.NewObj(30, -1, core.ObjTypeString, core.ObjEncodingInt))
+	sr.Push("key3", store)
+	store.Put("key4", store.NewObj(40, -1, core.ObjTypeString, core.ObjEncodingInt))
+	sr.Push("key4", store)
+	store.Put("key5", store.NewObj(50, -1, core.ObjTypeString, core.ObjEncodingInt))
+	sr.Push("key5", store)
+	store.Put("key6", store.NewObj(60, -1, core.ObjTypeString, core.ObjEncodingInt))
+	sr.Push("key6", store)
+	store.Put("key7", store.NewObj(60, -1, core.ObjTypeString, core.ObjEncodingInt))
+	sr.Push("key7", store)
 
 	observedVals := make([]int64, 0, 6)
-	for _, se := range sr.Iterate(6) {
+	for _, se := range sr.Iterate(6, store) {
 		observedVals = append(observedVals, int64(se.Obj.Value.(int)))
 	}
 
@@ -66,11 +67,11 @@ func TestStackRef(t *testing.T) {
 	}
 
 	sr2 := core.NewStackRef()
-	obj1 := core.NewObj(10, -1, core.ObjTypeString, core.ObjEncodingInt)
-	core.Put("key1", obj1)
-	sr2.Push("key1")
+	obj1 := store.NewObj(10, -1, core.ObjTypeString, core.ObjEncodingInt)
+	store.Put("key1", obj1)
+	sr2.Push("key1", store)
 
-	if key, err := sr2.Pop(); err != nil || key.Obj != core.Get("key1") {
+	if key, err := sr2.Pop(store); err != nil || key.Obj != store.Get("key1") {
 		t.Error("popping non-expired key from stackref should pop element")
 
 	}
@@ -94,14 +95,14 @@ func TestStackRef(t *testing.T) {
 	}
 
 	for _, k := range keys {
-		CreateAndPushKeyToStack(sr2, k.key, k.value, k.expDurationMs)
+		CreateAndPushKeyToStack(sr2, k.key, k.value, k.expDurationMs, store)
 	}
 
 	expectedVals = []int64{100, 90, 80}
 	observedVals = make([]int64, 0, 3)
 
 	for i := 0; i < len(expectedVals); i++ {
-		key, err := sr2.Pop()
+		key, err := sr2.Pop(store)
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -116,21 +117,22 @@ func TestStackRef(t *testing.T) {
 		t.Errorf("expected %v, got %v", expectedVals, observedVals)
 	}
 
-	if key, err := sr2.Pop(); err != nil || int64(key.Obj.Value.(int)) != 60 {
+	if key, err := sr2.Pop(store); err != nil || int64(key.Obj.Value.(int)) != 60 {
 		t.Errorf("popping an expired key followed by a non-expired key should work")
 	}
 
-	if key, err := sr2.Pop(); err != nil || int64(key.Obj.Value.(int)) != 20 {
+	if key, err := sr2.Pop(store); err != nil || int64(key.Obj.Value.(int)) != 20 {
 		t.Errorf("popping multiple expired keys followed by a non-expired key should work")
 	}
 
-	if _, err := sr2.Pop(); err != core.ErrStackEmpty {
+	if _, err := sr2.Pop(store); err != core.ErrStackEmpty {
 		t.Errorf("popping all expired keys till stack becomes empty should work")
 	}
 
 }
 
 func BenchmarkRemoveLargeNumberOfExpiredKeys(b *testing.B) {
+	store := core.NewStore()
 	for _, v := range benchmarkDataSizes {
 		config.KeysLimit = 20000000 // Set a high limit for benchmarking
 		core.WatchChannel = make(chan core.WatchEvent, config.KeysLimit)
@@ -139,12 +141,12 @@ func BenchmarkRemoveLargeNumberOfExpiredKeys(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				b.StopTimer()
 				sr := core.NewStackRef()
-				CreateAndPushKeyToStack(sr, "initialKey", 0, -1)
+				CreateAndPushKeyToStack(sr, "initialKey", 0, -1, store)
 				for j := 1; j < v; j++ {
-					CreateAndPushKeyToStack(sr, strconv.Itoa(j), j, 0)
+					CreateAndPushKeyToStack(sr, strconv.Itoa(j), j, 0, store)
 				}
 				b.StartTimer()
-				if _, err := sr.Pop(); err != nil {
+				if _, err := sr.Pop(store); err != nil {
 					b.Fatal(err)
 				}
 			}

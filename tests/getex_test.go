@@ -123,7 +123,9 @@ func TestGetEx(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			deleteTestKeys([]string{"foo"})
+			// deleteTestKeys([]string{"foo"}, store)
+			fireCommand(conn, "DEL foo")
+
 			for i, cmd := range tc.commands {
 				if tc.delay[i] > 0 {
 					time.Sleep(tc.delay[i])

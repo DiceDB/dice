@@ -1,13 +1,20 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
+	"strings"
 
+	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/internal/constants"
+	"github.com/ohler55/ojg/jp"
 	"github.com/xwb1989/sqlparser"
 )
+
+var ErrNoResultsFound = errors.New("ERR No results found")
+var ErrInvalidJSONPath = errors.New("ERR invalid JSONPath")
 
 type DSQLQueryResultRow struct {
 	Key   string
@@ -15,20 +22,23 @@ type DSQLQueryResultRow struct {
 }
 
 //nolint:gocritic
-func ExecuteQuery(query DSQLQuery) ([]DSQLQueryResultRow, error) {
+func ExecuteQuery(query DSQLQuery, store *Store) ([]DSQLQueryResultRow, error) {
 	var result []DSQLQueryResultRow
 
 	var err error
 	withLocks(func() {
-		for key, ptr := range keypool {
+		for key, ptr := range store.keypool {
 			if WildCardMatch(query.KeyRegex, key) {
 				row := DSQLQueryResultRow{
 					Key:   key,
-					Value: store[ptr],
+					Value: store.store[ptr],
 				}
 
 				if query.Where != nil {
 					match, evalErr := evaluateWhereClause(query.Where, row)
+					if errors.Is(evalErr, ErrNoResultsFound) {
+						continue
+					}
 					if evalErr != nil {
 						err = evalErr
 						return
@@ -38,10 +48,14 @@ func ExecuteQuery(query DSQLQuery) ([]DSQLQueryResultRow, error) {
 					}
 				}
 
+				if err := MarshalResultIfJSON(row); err != nil {
+					return
+				}
+
 				result = append(result, row)
 			}
 		}
-	}, WithStoreRLock(), WithKeypoolRLock())
+	}, store, WithStoreRLock(), WithKeypoolRLock())
 
 	if err != nil {
 		return nil, err
@@ -66,6 +80,20 @@ func ExecuteQuery(query DSQLQuery) ([]DSQLQueryResultRow, error) {
 	}
 
 	return result, nil
+}
+
+func MarshalResultIfJSON(row DSQLQueryResultRow) error {
+	// if the row contains JSON field then convert the json object into string representation so it can be encoded
+	// before being returned to the client
+	if getEncoding(row.Value.TypeEncoding) == ObjEncodingJSON && getType(row.Value.TypeEncoding) == ObjTypeJSON {
+		marshaledData, err := sonic.MarshalString(row.Value.Value)
+		if err != nil {
+			return err
+		}
+
+		row.Value.Value = marshaledData
+	}
+	return nil
 }
 
 //nolint:gocritic
@@ -108,12 +136,12 @@ func compareValues(order string, valI, valJ *Obj) bool {
 			return handleMismatch()
 		}
 		return compareStringValues(order, kindI, kindJ)
-	case int:
-		kindJ, ok := valJ.Value.(int)
+	case int64:
+		kindJ, ok := valJ.Value.(int64)
 		if !ok {
 			return handleMismatch()
 		}
-		return compareIntValues(order, uint8(kindI), uint8(kindJ))
+		return compareIntValues(order, kindI, kindJ)
 	default:
 		return handleUnsupportedType()
 	}
@@ -143,7 +171,7 @@ func compareStringValues(order, valI, valJ string) bool {
 	return valI > valJ
 }
 
-func compareIntValues(order string, valI, valJ uint8) bool {
+func compareIntValues(order string, valI, valJ int64) bool {
 	if order == constants.Asc {
 		return valI < valJ
 	}
@@ -206,24 +234,105 @@ func evaluateComparison(expr *sqlparser.ComparisonExpr, row DSQLQueryResultRow) 
 	}
 }
 
-func getExprValueAndType(expr sqlparser.Expr, row DSQLQueryResultRow) (i interface{}, s string, e error) {
+func getExprValueAndType(expr sqlparser.Expr, row DSQLQueryResultRow) (value interface{}, valueType string, err error) {
 	switch expr := expr.(type) {
 	case *sqlparser.ColName:
 		switch expr.Name.String() {
 		case TempKey:
-			return row.Key, constants.String, nil
+			return row.Key, "string", nil
 		case TempValue:
 			return getValueAndType(row.Value)
 		default:
-			return nil, constants.EmptyStr, fmt.Errorf("unknown column: %s", expr.Name.String())
+			return nil, "", fmt.Errorf("unknown column: %s", expr.Name.String())
 		}
 	case *sqlparser.SQLVal:
+		// we currently treat JSON query expression as a string value so we will need to differentiate between JSON and
+		// SQL strings
+		if isJSONField(expr, row.Value) {
+			return retrieveValueFromJSON(string(expr.Val), row.Value)
+		}
 		return sqlValToGoValue(expr)
 	default:
-		return nil, constants.EmptyStr, fmt.Errorf("unsupported expression type: %T", expr)
+		return nil, "", fmt.Errorf("unsupported expression type: %T", expr)
 	}
 }
 
+func isJSONField(expr *sqlparser.SQLVal, obj *Obj) bool {
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingJSON); err != nil {
+		return false
+	}
+
+	if err := assertType(obj.TypeEncoding, ObjTypeJSON); err != nil {
+		return false
+	}
+
+	// We convert the $key and $value fields to _key, _value before querying. hence fields starting with _ are
+	// considered to be stored values
+	return expr.Type == sqlparser.StrVal &&
+		strings.HasPrefix(string(expr.Val), TempPrefix)
+}
+
+func retrieveValueFromJSON(path string, jsonData *Obj) (value interface{}, valueType string, err error) {
+	// path is in the format '_value.field1.field2'. We need to remove _value reference from the prefix to get the json
+	// path.
+	jsonPath := strings.Split(path, ".")
+	if len(jsonPath) < 2 {
+		return nil, "", ErrInvalidJSONPath
+	}
+
+	path = "$." + strings.Join(jsonPath[1:], ".")
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return nil, "", ErrInvalidJSONPath
+	}
+
+	results := expr.Get(jsonData.Value)
+	if len(results) == 0 {
+		return nil, "", ErrNoResultsFound
+	}
+
+	return inferTypeAndConvert(results[0])
+}
+
+// inferTypeAndConvert infers the type of the value and converts it to the appropriate type. currently the only data
+// types we support are strings, floats, ints, booleans and nil.
+func inferTypeAndConvert(val interface{}) (value interface{}, valueType string, err error) {
+	switch v := val.(type) {
+	case string:
+		return v, constants.String, nil
+	case float64:
+		if isInteger(v) {
+			return int(v), constants.Int, nil
+		}
+		return v, constants.Float, nil
+	case bool:
+		return v, constants.Bool, nil
+	case nil:
+		return nil, constants.Nil, nil
+	default:
+		return nil, constants.EmptyStr, fmt.Errorf("unsupported JSONPath result type: %T", v)
+	}
+}
+
+// isInteger checks if a float is an integer. When we unmarshal JSON data into an interface it sets all numbers as
+// floats, https://forum.golangbridge.org/t/type-problem-in-json-conversion/19420.
+// This function does not handle the edge case where user enters a floating point number with trailing zeros in the
+// fractional part of a decimal number (e.g 10.0) then our code treats that as an integer rather than float.
+// One way to solve this is as follows (credit https://github.com/YahyaHaq):
+// floatStr := strconv.FormatFloat(val, 'f', -1, 64)
+// if strings.Contains(floatStr, ".") {
+// return val, "float", nil
+// }
+// return int(val), "int", nil
+//
+// However, the string conversion is expensive and we are trying to avoid it. We can assume this to be a limitation of
+// using the JSON data type.
+// TODO: handle the edge case where the integer is too large for float64.
+func isInteger(f float64) bool {
+	return f == float64(int(f))
+}
+
+// getValueAndType returns the type-casted value and type of the object
 func getValueAndType(obj *Obj) (val interface{}, s string, e error) {
 	switch v := obj.Value.(type) {
 	case string:
@@ -237,6 +346,7 @@ func getValueAndType(obj *Obj) (val interface{}, s string, e error) {
 	}
 }
 
+// sqlValToGoValue converts SQLVal to Go value, and returns the type of the value.
 func sqlValToGoValue(sqlVal *sqlparser.SQLVal) (val interface{}, s string, e error) {
 	switch sqlVal.Type {
 	case sqlparser.StrVal:

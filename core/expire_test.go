@@ -6,10 +6,11 @@ import (
 )
 
 func TestDelExpiry(t *testing.T) {
+	store := NewStore()
 	// Initialize the test environment
-	store = make(map[unsafe.Pointer]*Obj)
-	expires = make(map[*Obj]uint64)
-	keypool = make(map[string]unsafe.Pointer)
+	store.store = make(map[unsafe.Pointer]*Obj)
+	store.expires = make(map[*Obj]uint64)
+	store.keypool = make(map[string]unsafe.Pointer)
 
 	// Define test cases
 	tests := []struct {
@@ -22,7 +23,7 @@ func TestDelExpiry(t *testing.T) {
 			name: "Object with expiration",
 			obj:  &Obj{},
 			setup: func(obj *Obj) {
-				expires[obj] = 12345 // Set some expiration time
+				store.expires[obj] = 12345 // Set some expiration time
 			},
 			expected: false,
 		},
@@ -43,10 +44,10 @@ func TestDelExpiry(t *testing.T) {
 			tc.setup(tc.obj)
 
 			// Call delExpiry
-			delExpiry(tc.obj)
+			delExpiry(tc.obj, store)
 
 			// Check if the key has been deleted from the expires map
-			_, exists := expires[tc.obj]
+			_, exists := store.expires[tc.obj]
 			if exists != tc.expected {
 				t.Errorf("%s: expected key to be deleted: %v, got: %v", tc.name, tc.expected, exists)
 			}

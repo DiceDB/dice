@@ -27,6 +27,7 @@ func AssertJSONEqual(t *testing.T, expected, actual string) {
 	}
 }
 
+// TODO: Prone to flakiness due to changing order of elements in array. Needs work.
 func NormalizeJSON(v interface{}) interface{} {
 	switch v := v.(type) {
 	case map[string]interface{}:

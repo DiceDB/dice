@@ -5,6 +5,7 @@ DATA_SIZE ?= 32 #Object data size
 KEY_PATTERN ?= R:R #Set:Get pattern
 RATIO ?= 1:10 #Set:Get ratio
 PORT ?= 7379 #Port for dicedb
+GOLANGCI_LINT_VERSION := 1.60.1
 
 .PHONY: build test build-docker run test-one
 
@@ -48,3 +49,14 @@ run-small-test:
 
 run-large-test:
 	run_benchmark THREADS=8 DATA_SIZE=4096 CLIENTS=100 REQUESTS=50000
+
+lint: check-golangci-lint
+	golangci-lint run ./...
+
+check-golangci-lint:
+	@if ! command -v golangci-lint > /dev/null || ! golangci-lint version | grep -q "$(GOLANGCI_LINT_VERSION)"; then \
+		echo "Required golangci-lint version $(GOLANGCI_LINT_VERSION) not found."; \
+		echo "Please install golangci-lint version $(GOLANGCI_LINT_VERSION) with the following command:"; \
+		echo "curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.60.1"; \
+		exit 1; \
+	fi

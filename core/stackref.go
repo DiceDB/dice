@@ -25,13 +25,13 @@ func (s *StackRef) Size() int64 {
 
 // Push pushes reference of the key in the StackRef s.
 // returns false if key does not exist
-func (s *StackRef) Push(key string) bool {
+func (s *StackRef) Push(key string, store *Store) bool {
 	var x unsafe.Pointer
 	var ok bool
 
 	withLocks(func() {
-		x, ok = keypool[key]
-	}, WithKeypoolRLock())
+		x, ok = store.keypool[key]
+	}, store, WithKeypoolRLock())
 
 	if !ok {
 		return false
@@ -46,7 +46,7 @@ func (s *StackRef) Push(key string) bool {
 // if the expired key is popped from the stack, we continue to pop until
 // until we find one non-expired key
 // TODO: test for expired keys
-func (s *StackRef) Pop() (*StackElement, error) {
+func (s *StackRef) Pop(store *Store) (*StackElement, error) {
 	for {
 		val, err := s.si.Pop()
 		if err != nil {
@@ -54,7 +54,7 @@ func (s *StackRef) Pop() (*StackElement, error) {
 		}
 
 		key := *((*string)(unsafe.Pointer(uintptr(val))))
-		obj := Get(key)
+		obj := store.Get(key)
 		if obj != nil {
 			return &StackElement{key, obj}, nil
 		}
@@ -63,12 +63,12 @@ func (s *StackRef) Pop() (*StackElement, error) {
 
 // Iterate iterates through the StackRef
 // it also filters out the keys that are expired
-func (s *StackRef) Iterate(n int) []*StackElement {
+func (s *StackRef) Iterate(n int, store *Store) []*StackElement {
 	vals := s.si.Iterate(n)
 	elements := make([]*StackElement, 0, len(vals))
 	for _, val := range vals {
 		key := *((*string)(unsafe.Pointer(uintptr(val))))
-		obj := Get(key)
+		obj := store.Get(key)
 		if obj != nil {
 			elements = append(elements, &StackElement{key, obj})
 		}

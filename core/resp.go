@@ -145,7 +145,7 @@ func Encode(value interface{}, isSimple bool) []byte {
 			return []byte(fmt.Sprintf("+%s\r\n", v))
 		}
 		return encodeString(v)
-	case int, int8, int16, int32, int64:
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 		return []byte(fmt.Sprintf(":%d\r\n", v))
 	case []string:
 		var b []byte
