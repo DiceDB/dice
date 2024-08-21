@@ -180,7 +180,6 @@ func testEvalGET(t *testing.T, store *Store) {
 	runEvalTests(t, tests, evalGET, store)
 }
 
-
 func testEvalEXPIRE(t *testing.T, store *Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
@@ -424,12 +423,12 @@ func testEvalJSONGET(t *testing.T, store *Store) {
 		"nil value": {
 			setup:  func() {},
 			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'JSON.GET' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'json.get' command\r\n"),
 		},
 		"empty array": {
 			setup:  func() {},
 			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'JSON.GET' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'json.get' command\r\n"),
 		},
 		"key does not exist": {
 			setup:  func() {},
@@ -489,17 +488,17 @@ func testEvalJSONSET(t *testing.T, store *Store) {
 		"nil value": {
 			setup:  func() {},
 			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'JSON.SET' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'json.set' command\r\n"),
 		},
 		"empty array": {
 			setup:  func() {},
 			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'JSON.SET' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'json.set' command\r\n"),
 		},
 		"insufficient args": {
 			setup:  func() {},
 			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'JSON.SET' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'json.set' command\r\n"),
 		},
 		"invalid json path": {
 			setup:  func() {},
@@ -676,7 +675,7 @@ func testEvalDbsize(t *testing.T, store *Store) {
 	tests := map[string]evalTestCase{
 		"DBSIZE command with invalid no of args": {
 			input:  []string{"INVALID_ARG"},
-			output: []byte("-ERR wrong number of arguments for 'DBSIZE' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'dbsize' command\r\n"),
 		},
 		"no key in db": {
 			input:  nil,
