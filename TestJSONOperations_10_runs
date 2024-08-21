@@ -1,0 +1,582 @@
+starting the test server on port 8739
+2024/08/21 18:39:41 INFO starting an asynchronous TCP server on 0.0.0.0=8739
+2024/08/21 18:39:41 INFO setting up default user. password required=false
+2024/08/21 18:39:41 INFO ready to accept connections
+=== RUN   TestJSONOperations
+=== RUN   TestJSONOperations/Set_and_Get_Integer
+    json.go:17: Comparing JSONs 2 2
+=== RUN   TestJSONOperations/Set_and_Get_Boolean_True
+    json.go:17: Comparing JSONs true true
+=== RUN   TestJSONOperations/Set_and_Get_Boolean_False
+    json.go:17: Comparing JSONs false false
+=== RUN   TestJSONOperations/Set_and_Get_Simple_JSON
+    json.go:17: Comparing JSONs {"name":"John","age":30} {"name":"John","age":30}
+=== RUN   TestJSONOperations/Set_and_Get_Nested_JSON
+    json.go:17: Comparing JSONs {"name":"Alice","address":{"city":"New York","zip":"10001"},"array":[1,2,3,4,5]} {"name":"Alice","address":{"city":"New York","zip":"10001"},"array":[1,2,3,4,5]}
+=== RUN   TestJSONOperations/Set_and_Get_JSON_Array
+    json.go:17: Comparing JSONs [1,2,3,4,5] [1,2,3,4,5]
+=== RUN   TestJSONOperations/Set_and_Get_JSON_with_Special_Characters
+    json.go:17: Comparing JSONs {"key":"value with spaces","emoji":"😀"} {"key":"value with spaces","emoji":"😀"}
+=== RUN   TestJSONOperations/Get_JSON_with_Wrong_Number_of_Arguments
+=== RUN   TestJSONOperations/Set_Non-JSON_Value
+=== RUN   TestJSONOperations/Set_Empty_JSON_Object
+    json.go:17: Comparing JSONs {} {}
+=== RUN   TestJSONOperations/Set_Empty_JSON_Array
+    json.go:17: Comparing JSONs [] []
+=== RUN   TestJSONOperations/Set_JSON_with_Unicode
+    json.go:17: Comparing JSONs {"unicode":"こんにちは世界"} {"unicode":"こんにちは世界"}
+=== RUN   TestJSONOperations/Set_JSON_with_Escaped_Characters
+    json.go:17: Comparing JSONs {"escaped":"\"quoted\", \\backslash\\ and /forward/slash"} {"escaped":"\"quoted\", \\backslash\\ and /forward/slash"}
+=== RUN   TestJSONOperations/Set_and_Get_Complex_JSON
+    json.go:17: Comparing JSONs {"inventory":{"mountain_bikes":[{"id":"bike:1","model":"Phoebe","price":1920,"specs":{"material":"carbon","weight":13.1},"colors":["black","silver"]},{"id":"bike:2","model":"Quaoar","price":2072,"specs":{"material":"aluminium","weight":7.9},"colors":["black","white"]},{"id":"bike:3","model":"Weywot","price":3264,"specs":{"material":"alloy","weight":13.8}}],"commuter_bikes":[{"id":"bike:4","model":"Salacia","price":1475,"specs":{"material":"aluminium","weight":16.6},"colors":["black","silver"]},{"id":"bike:5","model":"Mimas","price":3941,"specs":{"material":"alloy","weight":11.6}}]}} {"inventory":{"mountain_bikes":[{"id":"bike:1","model":"Phoebe","price":1920,"specs":{"material":"carbon","weight":13.1},"colors":["black","silver"]},{"colors":["black","white"],"id":"bike:2","model":"Quaoar","price":2072,"specs":{"material":"aluminium","weight":7.9}},{"id":"bike:3","model":"Weywot","price":3264,"specs":{"weight":13.8,"material":"alloy"}}],"commuter_bikes":[{"model":"Salacia","price":1475,"specs":{"material":"aluminium","weight":16.6},"colors":["black","silver"],"id":"bike:4"},{"id":"bike:5","model":"Mimas","price":3941,"specs":{"material":"alloy","weight":11.6}}]}}
+=== RUN   TestJSONOperations/Get_Nested_Array
+    json.go:17: Comparing JSONs ["Phoebe","Quaoar","Weywot"] ["Phoebe","Quaoar","Weywot"]
+=== RUN   TestJSONOperations/Get_Nested_Object
+    json.go:17: Comparing JSONs {"material":"carbon","weight":13.1} {"material":"carbon","weight":13.1}
+=== RUN   TestJSONOperations/Set_Nested_Value
+    json.go:17: Comparing JSONs 2000 2000
+=== RUN   TestJSONOperations/Get_All_Prices
+    json.go:26: Comparing JSONs [1475,3941,1920,2072,3264] [1920,2072,3264,1475,3941]
+    json.go:26: Comparing JSONs [1920,2072,3264,1475,3941] [1920,2072,3264,1475,3941]
+=== RUN   TestJSONOperations/Set_Multiple_Nested_Values
+    json.go:26: Comparing JSONs [1500,3941,1500,2072,3264] [1500,3941,1500,2072,3264]
+--- PASS: TestJSONOperations (0.01s)
+    --- PASS: TestJSONOperations/Set_and_Get_Integer (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Boolean_True (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Boolean_False (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Simple_JSON (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Nested_JSON (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_JSON_Array (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_JSON_with_Special_Characters (0.00s)
+    --- PASS: TestJSONOperations/Get_JSON_with_Wrong_Number_of_Arguments (0.00s)
+    --- PASS: TestJSONOperations/Set_Non-JSON_Value (0.00s)
+    --- PASS: TestJSONOperations/Set_Empty_JSON_Object (0.00s)
+    --- PASS: TestJSONOperations/Set_Empty_JSON_Array (0.00s)
+    --- PASS: TestJSONOperations/Set_JSON_with_Unicode (0.00s)
+    --- PASS: TestJSONOperations/Set_JSON_with_Escaped_Characters (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Complex_JSON (0.00s)
+    --- PASS: TestJSONOperations/Get_Nested_Array (0.00s)
+    --- PASS: TestJSONOperations/Get_Nested_Object (0.00s)
+    --- PASS: TestJSONOperations/Set_Nested_Value (0.00s)
+    --- PASS: TestJSONOperations/Get_All_Prices (0.00s)
+    --- PASS: TestJSONOperations/Set_Multiple_Nested_Values (0.00s)
+=== RUN   TestJSONOperations
+=== RUN   TestJSONOperations/Set_and_Get_Integer
+    json.go:17: Comparing JSONs 2 2
+=== RUN   TestJSONOperations/Set_and_Get_Boolean_True
+    json.go:17: Comparing JSONs true true
+=== RUN   TestJSONOperations/Set_and_Get_Boolean_False
+    json.go:17: Comparing JSONs false false
+=== RUN   TestJSONOperations/Set_and_Get_Simple_JSON
+    json.go:17: Comparing JSONs {"name":"John","age":30} {"name":"John","age":30}
+=== RUN   TestJSONOperations/Set_and_Get_Nested_JSON
+    json.go:17: Comparing JSONs {"name":"Alice","address":{"city":"New York","zip":"10001"},"array":[1,2,3,4,5]} {"name":"Alice","address":{"city":"New York","zip":"10001"},"array":[1,2,3,4,5]}
+=== RUN   TestJSONOperations/Set_and_Get_JSON_Array
+    json.go:17: Comparing JSONs [1,2,3,4,5] [1,2,3,4,5]
+=== RUN   TestJSONOperations/Set_and_Get_JSON_with_Special_Characters
+    json.go:17: Comparing JSONs {"key":"value with spaces","emoji":"😀"} {"key":"value with spaces","emoji":"😀"}
+=== RUN   TestJSONOperations/Get_JSON_with_Wrong_Number_of_Arguments
+=== RUN   TestJSONOperations/Set_Non-JSON_Value
+=== RUN   TestJSONOperations/Set_Empty_JSON_Object
+    json.go:17: Comparing JSONs {} {}
+=== RUN   TestJSONOperations/Set_Empty_JSON_Array
+    json.go:17: Comparing JSONs [] []
+=== RUN   TestJSONOperations/Set_JSON_with_Unicode
+    json.go:17: Comparing JSONs {"unicode":"こんにちは世界"} {"unicode":"こんにちは世界"}
+=== RUN   TestJSONOperations/Set_JSON_with_Escaped_Characters
+    json.go:17: Comparing JSONs {"escaped":"\"quoted\", \\backslash\\ and /forward/slash"} {"escaped":"\"quoted\", \\backslash\\ and /forward/slash"}
+=== RUN   TestJSONOperations/Set_and_Get_Complex_JSON
+    json.go:17: Comparing JSONs {"inventory":{"mountain_bikes":[{"id":"bike:1","model":"Phoebe","price":1920,"specs":{"material":"carbon","weight":13.1},"colors":["black","silver"]},{"id":"bike:2","model":"Quaoar","price":2072,"specs":{"material":"aluminium","weight":7.9},"colors":["black","white"]},{"id":"bike:3","model":"Weywot","price":3264,"specs":{"material":"alloy","weight":13.8}}],"commuter_bikes":[{"id":"bike:4","model":"Salacia","price":1475,"specs":{"material":"aluminium","weight":16.6},"colors":["black","silver"]},{"id":"bike:5","model":"Mimas","price":3941,"specs":{"material":"alloy","weight":11.6}}]}} {"inventory":{"mountain_bikes":[{"id":"bike:1","model":"Phoebe","price":1920,"specs":{"material":"carbon","weight":13.1},"colors":["black","silver"]},{"price":2072,"specs":{"material":"aluminium","weight":7.9},"colors":["black","white"],"id":"bike:2","model":"Quaoar"},{"id":"bike:3","model":"Weywot","price":3264,"specs":{"material":"alloy","weight":13.8}}],"commuter_bikes":[{"id":"bike:4","model":"Salacia","price":1475,"specs":{"material":"aluminium","weight":16.6},"colors":["black","silver"]},{"price":3941,"specs":{"material":"alloy","weight":11.6},"id":"bike:5","model":"Mimas"}]}}
+=== RUN   TestJSONOperations/Get_Nested_Array
+    json.go:17: Comparing JSONs ["Phoebe","Quaoar","Weywot"] ["Phoebe","Quaoar","Weywot"]
+=== RUN   TestJSONOperations/Get_Nested_Object
+    json.go:17: Comparing JSONs {"material":"carbon","weight":13.1} {"material":"carbon","weight":13.1}
+=== RUN   TestJSONOperations/Set_Nested_Value
+    json.go:17: Comparing JSONs 2000 2000
+=== RUN   TestJSONOperations/Get_All_Prices
+    json.go:26: Comparing JSONs [1475,3941,1920,2072,3264] [1475,3941,1920,2072,3264]
+=== RUN   TestJSONOperations/Set_Multiple_Nested_Values
+    json.go:26: Comparing JSONs [1500,3941,1500,2072,3264] [1500,3941,1500,2072,3264]
+--- PASS: TestJSONOperations (0.01s)
+    --- PASS: TestJSONOperations/Set_and_Get_Integer (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Boolean_True (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Boolean_False (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Simple_JSON (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Nested_JSON (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_JSON_Array (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_JSON_with_Special_Characters (0.00s)
+    --- PASS: TestJSONOperations/Get_JSON_with_Wrong_Number_of_Arguments (0.00s)
+    --- PASS: TestJSONOperations/Set_Non-JSON_Value (0.00s)
+    --- PASS: TestJSONOperations/Set_Empty_JSON_Object (0.00s)
+    --- PASS: TestJSONOperations/Set_Empty_JSON_Array (0.00s)
+    --- PASS: TestJSONOperations/Set_JSON_with_Unicode (0.00s)
+    --- PASS: TestJSONOperations/Set_JSON_with_Escaped_Characters (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Complex_JSON (0.00s)
+    --- PASS: TestJSONOperations/Get_Nested_Array (0.00s)
+    --- PASS: TestJSONOperations/Get_Nested_Object (0.00s)
+    --- PASS: TestJSONOperations/Set_Nested_Value (0.00s)
+    --- PASS: TestJSONOperations/Get_All_Prices (0.00s)
+    --- PASS: TestJSONOperations/Set_Multiple_Nested_Values (0.00s)
+=== RUN   TestJSONOperations
+=== RUN   TestJSONOperations/Set_and_Get_Integer
+    json.go:17: Comparing JSONs 2 2
+=== RUN   TestJSONOperations/Set_and_Get_Boolean_True
+    json.go:17: Comparing JSONs true true
+=== RUN   TestJSONOperations/Set_and_Get_Boolean_False
+    json.go:17: Comparing JSONs false false
+=== RUN   TestJSONOperations/Set_and_Get_Simple_JSON
+    json.go:17: Comparing JSONs {"name":"John","age":30} {"name":"John","age":30}
+=== RUN   TestJSONOperations/Set_and_Get_Nested_JSON
+    json.go:17: Comparing JSONs {"name":"Alice","address":{"city":"New York","zip":"10001"},"array":[1,2,3,4,5]} {"address":{"city":"New York","zip":"10001"},"array":[1,2,3,4,5],"name":"Alice"}
+=== RUN   TestJSONOperations/Set_and_Get_JSON_Array
+    json.go:17: Comparing JSONs [1,2,3,4,5] [1,2,3,4,5]
+=== RUN   TestJSONOperations/Set_and_Get_JSON_with_Special_Characters
+    json.go:17: Comparing JSONs {"key":"value with spaces","emoji":"😀"} {"key":"value with spaces","emoji":"😀"}
+=== RUN   TestJSONOperations/Get_JSON_with_Wrong_Number_of_Arguments
+=== RUN   TestJSONOperations/Set_Non-JSON_Value
+=== RUN   TestJSONOperations/Set_Empty_JSON_Object
+    json.go:17: Comparing JSONs {} {}
+=== RUN   TestJSONOperations/Set_Empty_JSON_Array
+    json.go:17: Comparing JSONs [] []
+=== RUN   TestJSONOperations/Set_JSON_with_Unicode
+    json.go:17: Comparing JSONs {"unicode":"こんにちは世界"} {"unicode":"こんにちは世界"}
+=== RUN   TestJSONOperations/Set_JSON_with_Escaped_Characters
+    json.go:17: Comparing JSONs {"escaped":"\"quoted\", \\backslash\\ and /forward/slash"} {"escaped":"\"quoted\", \\backslash\\ and /forward/slash"}
+=== RUN   TestJSONOperations/Set_and_Get_Complex_JSON
+    json.go:17: Comparing JSONs {"inventory":{"mountain_bikes":[{"id":"bike:1","model":"Phoebe","price":1920,"specs":{"material":"carbon","weight":13.1},"colors":["black","silver"]},{"id":"bike:2","model":"Quaoar","price":2072,"specs":{"material":"aluminium","weight":7.9},"colors":["black","white"]},{"id":"bike:3","model":"Weywot","price":3264,"specs":{"material":"alloy","weight":13.8}}],"commuter_bikes":[{"id":"bike:4","model":"Salacia","price":1475,"specs":{"material":"aluminium","weight":16.6},"colors":["black","silver"]},{"id":"bike:5","model":"Mimas","price":3941,"specs":{"material":"alloy","weight":11.6}}]}} {"inventory":{"mountain_bikes":[{"id":"bike:1","model":"Phoebe","price":1920,"specs":{"material":"carbon","weight":13.1},"colors":["black","silver"]},{"id":"bike:2","model":"Quaoar","price":2072,"specs":{"material":"aluminium","weight":7.9},"colors":["black","white"]},{"id":"bike:3","model":"Weywot","price":3264,"specs":{"material":"alloy","weight":13.8}}],"commuter_bikes":[{"price":1475,"specs":{"material":"aluminium","weight":16.6},"colors":["black","silver"],"id":"bike:4","model":"Salacia"},{"id":"bike:5","model":"Mimas","price":3941,"specs":{"material":"alloy","weight":11.6}}]}}
+=== RUN   TestJSONOperations/Get_Nested_Array
+    json.go:17: Comparing JSONs ["Phoebe","Quaoar","Weywot"] ["Phoebe","Quaoar","Weywot"]
+=== RUN   TestJSONOperations/Get_Nested_Object
+    json.go:17: Comparing JSONs {"material":"carbon","weight":13.1} {"material":"carbon","weight":13.1}
+=== RUN   TestJSONOperations/Set_Nested_Value
+    json.go:17: Comparing JSONs 2000 2000
+=== RUN   TestJSONOperations/Get_All_Prices
+    json.go:26: Comparing JSONs [1475,3941,1920,2072,3264] [1475,3941,1920,2072,3264]
+=== RUN   TestJSONOperations/Set_Multiple_Nested_Values
+    json.go:26: Comparing JSONs [1500,3941,1500,2072,3264] [1500,3941,1500,2072,3264]
+--- PASS: TestJSONOperations (0.01s)
+    --- PASS: TestJSONOperations/Set_and_Get_Integer (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Boolean_True (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Boolean_False (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Simple_JSON (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Nested_JSON (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_JSON_Array (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_JSON_with_Special_Characters (0.00s)
+    --- PASS: TestJSONOperations/Get_JSON_with_Wrong_Number_of_Arguments (0.00s)
+    --- PASS: TestJSONOperations/Set_Non-JSON_Value (0.00s)
+    --- PASS: TestJSONOperations/Set_Empty_JSON_Object (0.00s)
+    --- PASS: TestJSONOperations/Set_Empty_JSON_Array (0.00s)
+    --- PASS: TestJSONOperations/Set_JSON_with_Unicode (0.00s)
+    --- PASS: TestJSONOperations/Set_JSON_with_Escaped_Characters (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Complex_JSON (0.00s)
+    --- PASS: TestJSONOperations/Get_Nested_Array (0.00s)
+    --- PASS: TestJSONOperations/Get_Nested_Object (0.00s)
+    --- PASS: TestJSONOperations/Set_Nested_Value (0.00s)
+    --- PASS: TestJSONOperations/Get_All_Prices (0.00s)
+    --- PASS: TestJSONOperations/Set_Multiple_Nested_Values (0.00s)
+=== RUN   TestJSONOperations
+=== RUN   TestJSONOperations/Set_and_Get_Integer
+    json.go:17: Comparing JSONs 2 2
+=== RUN   TestJSONOperations/Set_and_Get_Boolean_True
+    json.go:17: Comparing JSONs true true
+=== RUN   TestJSONOperations/Set_and_Get_Boolean_False
+    json.go:17: Comparing JSONs false false
+=== RUN   TestJSONOperations/Set_and_Get_Simple_JSON
+    json.go:17: Comparing JSONs {"name":"John","age":30} {"name":"John","age":30}
+=== RUN   TestJSONOperations/Set_and_Get_Nested_JSON
+    json.go:17: Comparing JSONs {"name":"Alice","address":{"city":"New York","zip":"10001"},"array":[1,2,3,4,5]} {"name":"Alice","address":{"city":"New York","zip":"10001"},"array":[1,2,3,4,5]}
+=== RUN   TestJSONOperations/Set_and_Get_JSON_Array
+    json.go:17: Comparing JSONs [1,2,3,4,5] [1,2,3,4,5]
+=== RUN   TestJSONOperations/Set_and_Get_JSON_with_Special_Characters
+    json.go:17: Comparing JSONs {"key":"value with spaces","emoji":"😀"} {"key":"value with spaces","emoji":"😀"}
+=== RUN   TestJSONOperations/Get_JSON_with_Wrong_Number_of_Arguments
+=== RUN   TestJSONOperations/Set_Non-JSON_Value
+=== RUN   TestJSONOperations/Set_Empty_JSON_Object
+    json.go:17: Comparing JSONs {} {}
+=== RUN   TestJSONOperations/Set_Empty_JSON_Array
+    json.go:17: Comparing JSONs [] []
+=== RUN   TestJSONOperations/Set_JSON_with_Unicode
+    json.go:17: Comparing JSONs {"unicode":"こんにちは世界"} {"unicode":"こんにちは世界"}
+=== RUN   TestJSONOperations/Set_JSON_with_Escaped_Characters
+    json.go:17: Comparing JSONs {"escaped":"\"quoted\", \\backslash\\ and /forward/slash"} {"escaped":"\"quoted\", \\backslash\\ and /forward/slash"}
+=== RUN   TestJSONOperations/Set_and_Get_Complex_JSON
+    json.go:17: Comparing JSONs {"inventory":{"mountain_bikes":[{"id":"bike:1","model":"Phoebe","price":1920,"specs":{"material":"carbon","weight":13.1},"colors":["black","silver"]},{"id":"bike:2","model":"Quaoar","price":2072,"specs":{"material":"aluminium","weight":7.9},"colors":["black","white"]},{"id":"bike:3","model":"Weywot","price":3264,"specs":{"material":"alloy","weight":13.8}}],"commuter_bikes":[{"id":"bike:4","model":"Salacia","price":1475,"specs":{"material":"aluminium","weight":16.6},"colors":["black","silver"]},{"id":"bike:5","model":"Mimas","price":3941,"specs":{"material":"alloy","weight":11.6}}]}} {"inventory":{"commuter_bikes":[{"model":"Salacia","price":1475,"specs":{"material":"aluminium","weight":16.6},"colors":["black","silver"],"id":"bike:4"},{"id":"bike:5","model":"Mimas","price":3941,"specs":{"material":"alloy","weight":11.6}}],"mountain_bikes":[{"id":"bike:1","model":"Phoebe","price":1920,"specs":{"material":"carbon","weight":13.1},"colors":["black","silver"]},{"model":"Quaoar","price":2072,"specs":{"material":"aluminium","weight":7.9},"colors":["black","white"],"id":"bike:2"},{"id":"bike:3","model":"Weywot","price":3264,"specs":{"material":"alloy","weight":13.8}}]}}
+=== RUN   TestJSONOperations/Get_Nested_Array
+    json.go:17: Comparing JSONs ["Phoebe","Quaoar","Weywot"] ["Phoebe","Quaoar","Weywot"]
+=== RUN   TestJSONOperations/Get_Nested_Object
+    json.go:17: Comparing JSONs {"material":"carbon","weight":13.1} {"material":"carbon","weight":13.1}
+=== RUN   TestJSONOperations/Set_Nested_Value
+    json.go:17: Comparing JSONs 2000 2000
+=== RUN   TestJSONOperations/Get_All_Prices
+    json.go:26: Comparing JSONs [1475,3941,1920,2072,3264] [1475,3941,1920,2072,3264]
+=== RUN   TestJSONOperations/Set_Multiple_Nested_Values
+    json.go:26: Comparing JSONs [1500,3941,1500,2072,3264] [1500,3941,1500,2072,3264]
+--- PASS: TestJSONOperations (0.01s)
+    --- PASS: TestJSONOperations/Set_and_Get_Integer (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Boolean_True (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Boolean_False (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Simple_JSON (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Nested_JSON (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_JSON_Array (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_JSON_with_Special_Characters (0.00s)
+    --- PASS: TestJSONOperations/Get_JSON_with_Wrong_Number_of_Arguments (0.00s)
+    --- PASS: TestJSONOperations/Set_Non-JSON_Value (0.00s)
+    --- PASS: TestJSONOperations/Set_Empty_JSON_Object (0.00s)
+    --- PASS: TestJSONOperations/Set_Empty_JSON_Array (0.00s)
+    --- PASS: TestJSONOperations/Set_JSON_with_Unicode (0.00s)
+    --- PASS: TestJSONOperations/Set_JSON_with_Escaped_Characters (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Complex_JSON (0.00s)
+    --- PASS: TestJSONOperations/Get_Nested_Array (0.00s)
+    --- PASS: TestJSONOperations/Get_Nested_Object (0.00s)
+    --- PASS: TestJSONOperations/Set_Nested_Value (0.00s)
+    --- PASS: TestJSONOperations/Get_All_Prices (0.00s)
+    --- PASS: TestJSONOperations/Set_Multiple_Nested_Values (0.00s)
+=== RUN   TestJSONOperations
+=== RUN   TestJSONOperations/Set_and_Get_Integer
+    json.go:17: Comparing JSONs 2 2
+=== RUN   TestJSONOperations/Set_and_Get_Boolean_True
+    json.go:17: Comparing JSONs true true
+=== RUN   TestJSONOperations/Set_and_Get_Boolean_False
+    json.go:17: Comparing JSONs false false
+=== RUN   TestJSONOperations/Set_and_Get_Simple_JSON
+    json.go:17: Comparing JSONs {"name":"John","age":30} {"name":"John","age":30}
+=== RUN   TestJSONOperations/Set_and_Get_Nested_JSON
+    json.go:17: Comparing JSONs {"name":"Alice","address":{"city":"New York","zip":"10001"},"array":[1,2,3,4,5]} {"name":"Alice","address":{"zip":"10001","city":"New York"},"array":[1,2,3,4,5]}
+=== RUN   TestJSONOperations/Set_and_Get_JSON_Array
+    json.go:17: Comparing JSONs [1,2,3,4,5] [1,2,3,4,5]
+=== RUN   TestJSONOperations/Set_and_Get_JSON_with_Special_Characters
+    json.go:17: Comparing JSONs {"key":"value with spaces","emoji":"😀"} {"emoji":"😀","key":"value with spaces"}
+=== RUN   TestJSONOperations/Get_JSON_with_Wrong_Number_of_Arguments
+=== RUN   TestJSONOperations/Set_Non-JSON_Value
+=== RUN   TestJSONOperations/Set_Empty_JSON_Object
+    json.go:17: Comparing JSONs {} {}
+=== RUN   TestJSONOperations/Set_Empty_JSON_Array
+    json.go:17: Comparing JSONs [] []
+=== RUN   TestJSONOperations/Set_JSON_with_Unicode
+    json.go:17: Comparing JSONs {"unicode":"こんにちは世界"} {"unicode":"こんにちは世界"}
+=== RUN   TestJSONOperations/Set_JSON_with_Escaped_Characters
+    json.go:17: Comparing JSONs {"escaped":"\"quoted\", \\backslash\\ and /forward/slash"} {"escaped":"\"quoted\", \\backslash\\ and /forward/slash"}
+=== RUN   TestJSONOperations/Set_and_Get_Complex_JSON
+    json.go:17: Comparing JSONs {"inventory":{"mountain_bikes":[{"id":"bike:1","model":"Phoebe","price":1920,"specs":{"material":"carbon","weight":13.1},"colors":["black","silver"]},{"id":"bike:2","model":"Quaoar","price":2072,"specs":{"material":"aluminium","weight":7.9},"colors":["black","white"]},{"id":"bike:3","model":"Weywot","price":3264,"specs":{"material":"alloy","weight":13.8}}],"commuter_bikes":[{"id":"bike:4","model":"Salacia","price":1475,"specs":{"material":"aluminium","weight":16.6},"colors":["black","silver"]},{"id":"bike:5","model":"Mimas","price":3941,"specs":{"material":"alloy","weight":11.6}}]}} {"inventory":{"mountain_bikes":[{"specs":{"material":"carbon","weight":13.1},"colors":["black","silver"],"id":"bike:1","model":"Phoebe","price":1920},{"specs":{"material":"aluminium","weight":7.9},"colors":["black","white"],"id":"bike:2","model":"Quaoar","price":2072},{"id":"bike:3","model":"Weywot","price":3264,"specs":{"material":"alloy","weight":13.8}}],"commuter_bikes":[{"id":"bike:4","model":"Salacia","price":1475,"specs":{"material":"aluminium","weight":16.6},"colors":["black","silver"]},{"model":"Mimas","price":3941,"specs":{"material":"alloy","weight":11.6},"id":"bike:5"}]}}
+=== RUN   TestJSONOperations/Get_Nested_Array
+    json.go:17: Comparing JSONs ["Phoebe","Quaoar","Weywot"] ["Phoebe","Quaoar","Weywot"]
+=== RUN   TestJSONOperations/Get_Nested_Object
+    json.go:17: Comparing JSONs {"material":"carbon","weight":13.1} {"weight":13.1,"material":"carbon"}
+=== RUN   TestJSONOperations/Set_Nested_Value
+    json.go:17: Comparing JSONs 2000 2000
+=== RUN   TestJSONOperations/Get_All_Prices
+    json.go:26: Comparing JSONs [1475,3941,1920,2072,3264] [1920,2072,3264,1475,3941]
+    json.go:26: Comparing JSONs [1920,2072,3264,1475,3941] [1920,2072,3264,1475,3941]
+=== RUN   TestJSONOperations/Set_Multiple_Nested_Values
+    json.go:26: Comparing JSONs [1500,3941,1500,2072,3264] [1500,3941,1500,2072,3264]
+--- PASS: TestJSONOperations (0.01s)
+    --- PASS: TestJSONOperations/Set_and_Get_Integer (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Boolean_True (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Boolean_False (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Simple_JSON (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Nested_JSON (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_JSON_Array (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_JSON_with_Special_Characters (0.00s)
+    --- PASS: TestJSONOperations/Get_JSON_with_Wrong_Number_of_Arguments (0.00s)
+    --- PASS: TestJSONOperations/Set_Non-JSON_Value (0.00s)
+    --- PASS: TestJSONOperations/Set_Empty_JSON_Object (0.00s)
+    --- PASS: TestJSONOperations/Set_Empty_JSON_Array (0.00s)
+    --- PASS: TestJSONOperations/Set_JSON_with_Unicode (0.00s)
+    --- PASS: TestJSONOperations/Set_JSON_with_Escaped_Characters (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Complex_JSON (0.00s)
+    --- PASS: TestJSONOperations/Get_Nested_Array (0.00s)
+    --- PASS: TestJSONOperations/Get_Nested_Object (0.00s)
+    --- PASS: TestJSONOperations/Set_Nested_Value (0.00s)
+    --- PASS: TestJSONOperations/Get_All_Prices (0.00s)
+    --- PASS: TestJSONOperations/Set_Multiple_Nested_Values (0.00s)
+=== RUN   TestJSONOperations
+=== RUN   TestJSONOperations/Set_and_Get_Integer
+    json.go:17: Comparing JSONs 2 2
+=== RUN   TestJSONOperations/Set_and_Get_Boolean_True
+    json.go:17: Comparing JSONs true true
+=== RUN   TestJSONOperations/Set_and_Get_Boolean_False
+    json.go:17: Comparing JSONs false false
+=== RUN   TestJSONOperations/Set_and_Get_Simple_JSON
+    json.go:17: Comparing JSONs {"name":"John","age":30} {"name":"John","age":30}
+=== RUN   TestJSONOperations/Set_and_Get_Nested_JSON
+    json.go:17: Comparing JSONs {"name":"Alice","address":{"city":"New York","zip":"10001"},"array":[1,2,3,4,5]} {"array":[1,2,3,4,5],"name":"Alice","address":{"city":"New York","zip":"10001"}}
+=== RUN   TestJSONOperations/Set_and_Get_JSON_Array
+    json.go:17: Comparing JSONs [1,2,3,4,5] [1,2,3,4,5]
+=== RUN   TestJSONOperations/Set_and_Get_JSON_with_Special_Characters
+    json.go:17: Comparing JSONs {"key":"value with spaces","emoji":"😀"} {"emoji":"😀","key":"value with spaces"}
+=== RUN   TestJSONOperations/Get_JSON_with_Wrong_Number_of_Arguments
+=== RUN   TestJSONOperations/Set_Non-JSON_Value
+=== RUN   TestJSONOperations/Set_Empty_JSON_Object
+    json.go:17: Comparing JSONs {} {}
+=== RUN   TestJSONOperations/Set_Empty_JSON_Array
+    json.go:17: Comparing JSONs [] []
+=== RUN   TestJSONOperations/Set_JSON_with_Unicode
+    json.go:17: Comparing JSONs {"unicode":"こんにちは世界"} {"unicode":"こんにちは世界"}
+=== RUN   TestJSONOperations/Set_JSON_with_Escaped_Characters
+    json.go:17: Comparing JSONs {"escaped":"\"quoted\", \\backslash\\ and /forward/slash"} {"escaped":"\"quoted\", \\backslash\\ and /forward/slash"}
+=== RUN   TestJSONOperations/Set_and_Get_Complex_JSON
+    json.go:17: Comparing JSONs {"inventory":{"mountain_bikes":[{"id":"bike:1","model":"Phoebe","price":1920,"specs":{"material":"carbon","weight":13.1},"colors":["black","silver"]},{"id":"bike:2","model":"Quaoar","price":2072,"specs":{"material":"aluminium","weight":7.9},"colors":["black","white"]},{"id":"bike:3","model":"Weywot","price":3264,"specs":{"material":"alloy","weight":13.8}}],"commuter_bikes":[{"id":"bike:4","model":"Salacia","price":1475,"specs":{"material":"aluminium","weight":16.6},"colors":["black","silver"]},{"id":"bike:5","model":"Mimas","price":3941,"specs":{"material":"alloy","weight":11.6}}]}} {"inventory":{"mountain_bikes":[{"id":"bike:1","model":"Phoebe","price":1920,"specs":{"material":"carbon","weight":13.1},"colors":["black","silver"]},{"colors":["black","white"],"id":"bike:2","model":"Quaoar","price":2072,"specs":{"material":"aluminium","weight":7.9}},{"price":3264,"specs":{"weight":13.8,"material":"alloy"},"id":"bike:3","model":"Weywot"}],"commuter_bikes":[{"colors":["black","silver"],"id":"bike:4","model":"Salacia","price":1475,"specs":{"material":"aluminium","weight":16.6}},{"price":3941,"specs":{"material":"alloy","weight":11.6},"id":"bike:5","model":"Mimas"}]}}
+=== RUN   TestJSONOperations/Get_Nested_Array
+    json.go:17: Comparing JSONs ["Phoebe","Quaoar","Weywot"] ["Phoebe","Quaoar","Weywot"]
+=== RUN   TestJSONOperations/Get_Nested_Object
+    json.go:17: Comparing JSONs {"material":"carbon","weight":13.1} {"material":"carbon","weight":13.1}
+=== RUN   TestJSONOperations/Set_Nested_Value
+    json.go:17: Comparing JSONs 2000 2000
+=== RUN   TestJSONOperations/Get_All_Prices
+    json.go:26: Comparing JSONs [1475,3941,1920,2072,3264] [1920,2072,3264,1475,3941]
+    json.go:26: Comparing JSONs [1920,2072,3264,1475,3941] [1920,2072,3264,1475,3941]
+=== RUN   TestJSONOperations/Set_Multiple_Nested_Values
+    json.go:26: Comparing JSONs [1500,3941,1500,2072,3264] [1500,3941,1500,2072,3264]
+--- PASS: TestJSONOperations (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Integer (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Boolean_True (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Boolean_False (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Simple_JSON (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Nested_JSON (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_JSON_Array (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_JSON_with_Special_Characters (0.00s)
+    --- PASS: TestJSONOperations/Get_JSON_with_Wrong_Number_of_Arguments (0.00s)
+    --- PASS: TestJSONOperations/Set_Non-JSON_Value (0.00s)
+    --- PASS: TestJSONOperations/Set_Empty_JSON_Object (0.00s)
+    --- PASS: TestJSONOperations/Set_Empty_JSON_Array (0.00s)
+    --- PASS: TestJSONOperations/Set_JSON_with_Unicode (0.00s)
+    --- PASS: TestJSONOperations/Set_JSON_with_Escaped_Characters (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Complex_JSON (0.00s)
+    --- PASS: TestJSONOperations/Get_Nested_Array (0.00s)
+    --- PASS: TestJSONOperations/Get_Nested_Object (0.00s)
+    --- PASS: TestJSONOperations/Set_Nested_Value (0.00s)
+    --- PASS: TestJSONOperations/Get_All_Prices (0.00s)
+    --- PASS: TestJSONOperations/Set_Multiple_Nested_Values (0.00s)
+=== RUN   TestJSONOperations
+=== RUN   TestJSONOperations/Set_and_Get_Integer
+    json.go:17: Comparing JSONs 2 2
+=== RUN   TestJSONOperations/Set_and_Get_Boolean_True
+    json.go:17: Comparing JSONs true true
+=== RUN   TestJSONOperations/Set_and_Get_Boolean_False
+    json.go:17: Comparing JSONs false false
+=== RUN   TestJSONOperations/Set_and_Get_Simple_JSON
+    json.go:17: Comparing JSONs {"name":"John","age":30} {"name":"John","age":30}
+=== RUN   TestJSONOperations/Set_and_Get_Nested_JSON
+    json.go:17: Comparing JSONs {"name":"Alice","address":{"city":"New York","zip":"10001"},"array":[1,2,3,4,5]} {"name":"Alice","address":{"city":"New York","zip":"10001"},"array":[1,2,3,4,5]}
+=== RUN   TestJSONOperations/Set_and_Get_JSON_Array
+    json.go:17: Comparing JSONs [1,2,3,4,5] [1,2,3,4,5]
+=== RUN   TestJSONOperations/Set_and_Get_JSON_with_Special_Characters
+    json.go:17: Comparing JSONs {"key":"value with spaces","emoji":"😀"} {"key":"value with spaces","emoji":"😀"}
+=== RUN   TestJSONOperations/Get_JSON_with_Wrong_Number_of_Arguments
+=== RUN   TestJSONOperations/Set_Non-JSON_Value
+=== RUN   TestJSONOperations/Set_Empty_JSON_Object
+    json.go:17: Comparing JSONs {} {}
+=== RUN   TestJSONOperations/Set_Empty_JSON_Array
+    json.go:17: Comparing JSONs [] []
+=== RUN   TestJSONOperations/Set_JSON_with_Unicode
+    json.go:17: Comparing JSONs {"unicode":"こんにちは世界"} {"unicode":"こんにちは世界"}
+=== RUN   TestJSONOperations/Set_JSON_with_Escaped_Characters
+    json.go:17: Comparing JSONs {"escaped":"\"quoted\", \\backslash\\ and /forward/slash"} {"escaped":"\"quoted\", \\backslash\\ and /forward/slash"}
+=== RUN   TestJSONOperations/Set_and_Get_Complex_JSON
+    json.go:17: Comparing JSONs {"inventory":{"mountain_bikes":[{"id":"bike:1","model":"Phoebe","price":1920,"specs":{"material":"carbon","weight":13.1},"colors":["black","silver"]},{"id":"bike:2","model":"Quaoar","price":2072,"specs":{"material":"aluminium","weight":7.9},"colors":["black","white"]},{"id":"bike:3","model":"Weywot","price":3264,"specs":{"material":"alloy","weight":13.8}}],"commuter_bikes":[{"id":"bike:4","model":"Salacia","price":1475,"specs":{"material":"aluminium","weight":16.6},"colors":["black","silver"]},{"id":"bike:5","model":"Mimas","price":3941,"specs":{"material":"alloy","weight":11.6}}]}} {"inventory":{"mountain_bikes":[{"colors":["black","silver"],"id":"bike:1","model":"Phoebe","price":1920,"specs":{"material":"carbon","weight":13.1}},{"id":"bike:2","model":"Quaoar","price":2072,"specs":{"material":"aluminium","weight":7.9},"colors":["black","white"]},{"id":"bike:3","model":"Weywot","price":3264,"specs":{"material":"alloy","weight":13.8}}],"commuter_bikes":[{"id":"bike:4","model":"Salacia","price":1475,"specs":{"material":"aluminium","weight":16.6},"colors":["black","silver"]},{"id":"bike:5","model":"Mimas","price":3941,"specs":{"material":"alloy","weight":11.6}}]}}
+=== RUN   TestJSONOperations/Get_Nested_Array
+    json.go:17: Comparing JSONs ["Phoebe","Quaoar","Weywot"] ["Phoebe","Quaoar","Weywot"]
+=== RUN   TestJSONOperations/Get_Nested_Object
+    json.go:17: Comparing JSONs {"material":"carbon","weight":13.1} {"weight":13.1,"material":"carbon"}
+=== RUN   TestJSONOperations/Set_Nested_Value
+    json.go:17: Comparing JSONs 2000 2000
+=== RUN   TestJSONOperations/Get_All_Prices
+    json.go:26: Comparing JSONs [1475,3941,1920,2072,3264] [1920,2072,3264,1475,3941]
+    json.go:26: Comparing JSONs [1920,2072,3264,1475,3941] [1920,2072,3264,1475,3941]
+=== RUN   TestJSONOperations/Set_Multiple_Nested_Values
+    json.go:26: Comparing JSONs [1500,3941,1500,2072,3264] [1500,3941,1500,2072,3264]
+--- PASS: TestJSONOperations (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Integer (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Boolean_True (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Boolean_False (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Simple_JSON (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Nested_JSON (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_JSON_Array (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_JSON_with_Special_Characters (0.00s)
+    --- PASS: TestJSONOperations/Get_JSON_with_Wrong_Number_of_Arguments (0.00s)
+    --- PASS: TestJSONOperations/Set_Non-JSON_Value (0.00s)
+    --- PASS: TestJSONOperations/Set_Empty_JSON_Object (0.00s)
+    --- PASS: TestJSONOperations/Set_Empty_JSON_Array (0.00s)
+    --- PASS: TestJSONOperations/Set_JSON_with_Unicode (0.00s)
+    --- PASS: TestJSONOperations/Set_JSON_with_Escaped_Characters (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Complex_JSON (0.00s)
+    --- PASS: TestJSONOperations/Get_Nested_Array (0.00s)
+    --- PASS: TestJSONOperations/Get_Nested_Object (0.00s)
+    --- PASS: TestJSONOperations/Set_Nested_Value (0.00s)
+    --- PASS: TestJSONOperations/Get_All_Prices (0.00s)
+    --- PASS: TestJSONOperations/Set_Multiple_Nested_Values (0.00s)
+=== RUN   TestJSONOperations
+=== RUN   TestJSONOperations/Set_and_Get_Integer
+    json.go:17: Comparing JSONs 2 2
+=== RUN   TestJSONOperations/Set_and_Get_Boolean_True
+    json.go:17: Comparing JSONs true true
+=== RUN   TestJSONOperations/Set_and_Get_Boolean_False
+    json.go:17: Comparing JSONs false false
+=== RUN   TestJSONOperations/Set_and_Get_Simple_JSON
+    json.go:17: Comparing JSONs {"name":"John","age":30} {"age":30,"name":"John"}
+=== RUN   TestJSONOperations/Set_and_Get_Nested_JSON
+    json.go:17: Comparing JSONs {"name":"Alice","address":{"city":"New York","zip":"10001"},"array":[1,2,3,4,5]} {"name":"Alice","address":{"city":"New York","zip":"10001"},"array":[1,2,3,4,5]}
+=== RUN   TestJSONOperations/Set_and_Get_JSON_Array
+    json.go:17: Comparing JSONs [1,2,3,4,5] [1,2,3,4,5]
+=== RUN   TestJSONOperations/Set_and_Get_JSON_with_Special_Characters
+    json.go:17: Comparing JSONs {"key":"value with spaces","emoji":"😀"} {"key":"value with spaces","emoji":"😀"}
+=== RUN   TestJSONOperations/Get_JSON_with_Wrong_Number_of_Arguments
+=== RUN   TestJSONOperations/Set_Non-JSON_Value
+=== RUN   TestJSONOperations/Set_Empty_JSON_Object
+    json.go:17: Comparing JSONs {} {}
+=== RUN   TestJSONOperations/Set_Empty_JSON_Array
+    json.go:17: Comparing JSONs [] []
+=== RUN   TestJSONOperations/Set_JSON_with_Unicode
+    json.go:17: Comparing JSONs {"unicode":"こんにちは世界"} {"unicode":"こんにちは世界"}
+=== RUN   TestJSONOperations/Set_JSON_with_Escaped_Characters
+    json.go:17: Comparing JSONs {"escaped":"\"quoted\", \\backslash\\ and /forward/slash"} {"escaped":"\"quoted\", \\backslash\\ and /forward/slash"}
+=== RUN   TestJSONOperations/Set_and_Get_Complex_JSON
+    json.go:17: Comparing JSONs {"inventory":{"mountain_bikes":[{"id":"bike:1","model":"Phoebe","price":1920,"specs":{"material":"carbon","weight":13.1},"colors":["black","silver"]},{"id":"bike:2","model":"Quaoar","price":2072,"specs":{"material":"aluminium","weight":7.9},"colors":["black","white"]},{"id":"bike:3","model":"Weywot","price":3264,"specs":{"material":"alloy","weight":13.8}}],"commuter_bikes":[{"id":"bike:4","model":"Salacia","price":1475,"specs":{"material":"aluminium","weight":16.6},"colors":["black","silver"]},{"id":"bike:5","model":"Mimas","price":3941,"specs":{"material":"alloy","weight":11.6}}]}} {"inventory":{"mountain_bikes":[{"model":"Phoebe","price":1920,"specs":{"material":"carbon","weight":13.1},"colors":["black","silver"],"id":"bike:1"},{"model":"Quaoar","price":2072,"specs":{"material":"aluminium","weight":7.9},"colors":["black","white"],"id":"bike:2"},{"id":"bike:3","model":"Weywot","price":3264,"specs":{"material":"alloy","weight":13.8}}],"commuter_bikes":[{"model":"Salacia","price":1475,"specs":{"material":"aluminium","weight":16.6},"colors":["black","silver"],"id":"bike:4"},{"price":3941,"specs":{"material":"alloy","weight":11.6},"id":"bike:5","model":"Mimas"}]}}
+=== RUN   TestJSONOperations/Get_Nested_Array
+    json.go:17: Comparing JSONs ["Phoebe","Quaoar","Weywot"] ["Phoebe","Quaoar","Weywot"]
+=== RUN   TestJSONOperations/Get_Nested_Object
+    json.go:17: Comparing JSONs {"material":"carbon","weight":13.1} {"material":"carbon","weight":13.1}
+=== RUN   TestJSONOperations/Set_Nested_Value
+    json.go:17: Comparing JSONs 2000 2000
+=== RUN   TestJSONOperations/Get_All_Prices
+    json.go:26: Comparing JSONs [1475,3941,1920,2072,3264] [1475,3941,1920,2072,3264]
+=== RUN   TestJSONOperations/Set_Multiple_Nested_Values
+    json.go:26: Comparing JSONs [1500,3941,1500,2072,3264] [1500,2072,3264,1500,3941]
+    json.go:26: Comparing JSONs [1500,2072,3264,1500,3941] [1500,2072,3264,1500,3941]
+--- PASS: TestJSONOperations (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Integer (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Boolean_True (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Boolean_False (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Simple_JSON (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Nested_JSON (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_JSON_Array (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_JSON_with_Special_Characters (0.00s)
+    --- PASS: TestJSONOperations/Get_JSON_with_Wrong_Number_of_Arguments (0.00s)
+    --- PASS: TestJSONOperations/Set_Non-JSON_Value (0.00s)
+    --- PASS: TestJSONOperations/Set_Empty_JSON_Object (0.00s)
+    --- PASS: TestJSONOperations/Set_Empty_JSON_Array (0.00s)
+    --- PASS: TestJSONOperations/Set_JSON_with_Unicode (0.00s)
+    --- PASS: TestJSONOperations/Set_JSON_with_Escaped_Characters (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Complex_JSON (0.00s)
+    --- PASS: TestJSONOperations/Get_Nested_Array (0.00s)
+    --- PASS: TestJSONOperations/Get_Nested_Object (0.00s)
+    --- PASS: TestJSONOperations/Set_Nested_Value (0.00s)
+    --- PASS: TestJSONOperations/Get_All_Prices (0.00s)
+    --- PASS: TestJSONOperations/Set_Multiple_Nested_Values (0.00s)
+=== RUN   TestJSONOperations
+=== RUN   TestJSONOperations/Set_and_Get_Integer
+    json.go:17: Comparing JSONs 2 2
+=== RUN   TestJSONOperations/Set_and_Get_Boolean_True
+    json.go:17: Comparing JSONs true true
+=== RUN   TestJSONOperations/Set_and_Get_Boolean_False
+    json.go:17: Comparing JSONs false false
+=== RUN   TestJSONOperations/Set_and_Get_Simple_JSON
+    json.go:17: Comparing JSONs {"name":"John","age":30} {"name":"John","age":30}
+=== RUN   TestJSONOperations/Set_and_Get_Nested_JSON
+    json.go:17: Comparing JSONs {"name":"Alice","address":{"city":"New York","zip":"10001"},"array":[1,2,3,4,5]} {"name":"Alice","address":{"city":"New York","zip":"10001"},"array":[1,2,3,4,5]}
+=== RUN   TestJSONOperations/Set_and_Get_JSON_Array
+    json.go:17: Comparing JSONs [1,2,3,4,5] [1,2,3,4,5]
+=== RUN   TestJSONOperations/Set_and_Get_JSON_with_Special_Characters
+    json.go:17: Comparing JSONs {"key":"value with spaces","emoji":"😀"} {"key":"value with spaces","emoji":"😀"}
+=== RUN   TestJSONOperations/Get_JSON_with_Wrong_Number_of_Arguments
+=== RUN   TestJSONOperations/Set_Non-JSON_Value
+=== RUN   TestJSONOperations/Set_Empty_JSON_Object
+    json.go:17: Comparing JSONs {} {}
+=== RUN   TestJSONOperations/Set_Empty_JSON_Array
+    json.go:17: Comparing JSONs [] []
+=== RUN   TestJSONOperations/Set_JSON_with_Unicode
+    json.go:17: Comparing JSONs {"unicode":"こんにちは世界"} {"unicode":"こんにちは世界"}
+=== RUN   TestJSONOperations/Set_JSON_with_Escaped_Characters
+    json.go:17: Comparing JSONs {"escaped":"\"quoted\", \\backslash\\ and /forward/slash"} {"escaped":"\"quoted\", \\backslash\\ and /forward/slash"}
+=== RUN   TestJSONOperations/Set_and_Get_Complex_JSON
+    json.go:17: Comparing JSONs {"inventory":{"mountain_bikes":[{"id":"bike:1","model":"Phoebe","price":1920,"specs":{"material":"carbon","weight":13.1},"colors":["black","silver"]},{"id":"bike:2","model":"Quaoar","price":2072,"specs":{"material":"aluminium","weight":7.9},"colors":["black","white"]},{"id":"bike:3","model":"Weywot","price":3264,"specs":{"material":"alloy","weight":13.8}}],"commuter_bikes":[{"id":"bike:4","model":"Salacia","price":1475,"specs":{"material":"aluminium","weight":16.6},"colors":["black","silver"]},{"id":"bike:5","model":"Mimas","price":3941,"specs":{"material":"alloy","weight":11.6}}]}} {"inventory":{"mountain_bikes":[{"id":"bike:1","model":"Phoebe","price":1920,"specs":{"material":"carbon","weight":13.1},"colors":["black","silver"]},{"id":"bike:2","model":"Quaoar","price":2072,"specs":{"material":"aluminium","weight":7.9},"colors":["black","white"]},{"id":"bike:3","model":"Weywot","price":3264,"specs":{"material":"alloy","weight":13.8}}],"commuter_bikes":[{"id":"bike:4","model":"Salacia","price":1475,"specs":{"weight":16.6,"material":"aluminium"},"colors":["black","silver"]},{"id":"bike:5","model":"Mimas","price":3941,"specs":{"weight":11.6,"material":"alloy"}}]}}
+=== RUN   TestJSONOperations/Get_Nested_Array
+    json.go:17: Comparing JSONs ["Phoebe","Quaoar","Weywot"] ["Phoebe","Quaoar","Weywot"]
+=== RUN   TestJSONOperations/Get_Nested_Object
+    json.go:17: Comparing JSONs {"material":"carbon","weight":13.1} {"material":"carbon","weight":13.1}
+=== RUN   TestJSONOperations/Set_Nested_Value
+    json.go:17: Comparing JSONs 2000 2000
+=== RUN   TestJSONOperations/Get_All_Prices
+    json.go:26: Comparing JSONs [1475,3941,1920,2072,3264] [1475,3941,1920,2072,3264]
+=== RUN   TestJSONOperations/Set_Multiple_Nested_Values
+    json.go:26: Comparing JSONs [1500,3941,1500,2072,3264] [1500,2072,3264,1500,3941]
+    json.go:26: Comparing JSONs [1500,2072,3264,1500,3941] [1500,2072,3264,1500,3941]
+--- PASS: TestJSONOperations (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Integer (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Boolean_True (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Boolean_False (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Simple_JSON (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Nested_JSON (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_JSON_Array (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_JSON_with_Special_Characters (0.00s)
+    --- PASS: TestJSONOperations/Get_JSON_with_Wrong_Number_of_Arguments (0.00s)
+    --- PASS: TestJSONOperations/Set_Non-JSON_Value (0.00s)
+    --- PASS: TestJSONOperations/Set_Empty_JSON_Object (0.00s)
+    --- PASS: TestJSONOperations/Set_Empty_JSON_Array (0.00s)
+    --- PASS: TestJSONOperations/Set_JSON_with_Unicode (0.00s)
+    --- PASS: TestJSONOperations/Set_JSON_with_Escaped_Characters (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Complex_JSON (0.00s)
+    --- PASS: TestJSONOperations/Get_Nested_Array (0.00s)
+    --- PASS: TestJSONOperations/Get_Nested_Object (0.00s)
+    --- PASS: TestJSONOperations/Set_Nested_Value (0.00s)
+    --- PASS: TestJSONOperations/Get_All_Prices (0.00s)
+    --- PASS: TestJSONOperations/Set_Multiple_Nested_Values (0.00s)
+=== RUN   TestJSONOperations
+=== RUN   TestJSONOperations/Set_and_Get_Integer
+    json.go:17: Comparing JSONs 2 2
+=== RUN   TestJSONOperations/Set_and_Get_Boolean_True
+    json.go:17: Comparing JSONs true true
+=== RUN   TestJSONOperations/Set_and_Get_Boolean_False
+    json.go:17: Comparing JSONs false false
+=== RUN   TestJSONOperations/Set_and_Get_Simple_JSON
+    json.go:17: Comparing JSONs {"name":"John","age":30} {"age":30,"name":"John"}
+=== RUN   TestJSONOperations/Set_and_Get_Nested_JSON
+    json.go:17: Comparing JSONs {"name":"Alice","address":{"city":"New York","zip":"10001"},"array":[1,2,3,4,5]} {"name":"Alice","address":{"city":"New York","zip":"10001"},"array":[1,2,3,4,5]}
+=== RUN   TestJSONOperations/Set_and_Get_JSON_Array
+    json.go:17: Comparing JSONs [1,2,3,4,5] [1,2,3,4,5]
+=== RUN   TestJSONOperations/Set_and_Get_JSON_with_Special_Characters
+    json.go:17: Comparing JSONs {"key":"value with spaces","emoji":"😀"} {"key":"value with spaces","emoji":"😀"}
+=== RUN   TestJSONOperations/Get_JSON_with_Wrong_Number_of_Arguments
+=== RUN   TestJSONOperations/Set_Non-JSON_Value
+=== RUN   TestJSONOperations/Set_Empty_JSON_Object
+    json.go:17: Comparing JSONs {} {}
+=== RUN   TestJSONOperations/Set_Empty_JSON_Array
+    json.go:17: Comparing JSONs [] []
+=== RUN   TestJSONOperations/Set_JSON_with_Unicode
+    json.go:17: Comparing JSONs {"unicode":"こんにちは世界"} {"unicode":"こんにちは世界"}
+=== RUN   TestJSONOperations/Set_JSON_with_Escaped_Characters
+    json.go:17: Comparing JSONs {"escaped":"\"quoted\", \\backslash\\ and /forward/slash"} {"escaped":"\"quoted\", \\backslash\\ and /forward/slash"}
+=== RUN   TestJSONOperations/Set_and_Get_Complex_JSON
+    json.go:17: Comparing JSONs {"inventory":{"mountain_bikes":[{"id":"bike:1","model":"Phoebe","price":1920,"specs":{"material":"carbon","weight":13.1},"colors":["black","silver"]},{"id":"bike:2","model":"Quaoar","price":2072,"specs":{"material":"aluminium","weight":7.9},"colors":["black","white"]},{"id":"bike:3","model":"Weywot","price":3264,"specs":{"material":"alloy","weight":13.8}}],"commuter_bikes":[{"id":"bike:4","model":"Salacia","price":1475,"specs":{"material":"aluminium","weight":16.6},"colors":["black","silver"]},{"id":"bike:5","model":"Mimas","price":3941,"specs":{"material":"alloy","weight":11.6}}]}} {"inventory":{"mountain_bikes":[{"specs":{"material":"carbon","weight":13.1},"colors":["black","silver"],"id":"bike:1","model":"Phoebe","price":1920},{"id":"bike:2","model":"Quaoar","price":2072,"specs":{"material":"aluminium","weight":7.9},"colors":["black","white"]},{"id":"bike:3","model":"Weywot","price":3264,"specs":{"material":"alloy","weight":13.8}}],"commuter_bikes":[{"id":"bike:4","model":"Salacia","price":1475,"specs":{"material":"aluminium","weight":16.6},"colors":["black","silver"]},{"id":"bike:5","model":"Mimas","price":3941,"specs":{"material":"alloy","weight":11.6}}]}}
+=== RUN   TestJSONOperations/Get_Nested_Array
+    json.go:17: Comparing JSONs ["Phoebe","Quaoar","Weywot"] ["Phoebe","Quaoar","Weywot"]
+=== RUN   TestJSONOperations/Get_Nested_Object
+    json.go:17: Comparing JSONs {"material":"carbon","weight":13.1} {"weight":13.1,"material":"carbon"}
+=== RUN   TestJSONOperations/Set_Nested_Value
+    json.go:17: Comparing JSONs 2000 2000
+=== RUN   TestJSONOperations/Get_All_Prices
+    json.go:26: Comparing JSONs [1475,3941,1920,2072,3264] [1475,3941,1920,2072,3264]
+=== RUN   TestJSONOperations/Set_Multiple_Nested_Values
+    json.go:26: Comparing JSONs [1500,3941,1500,2072,3264] [1500,3941,1500,2072,3264]
+--- PASS: TestJSONOperations (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Integer (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Boolean_True (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Boolean_False (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Simple_JSON (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Nested_JSON (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_JSON_Array (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_JSON_with_Special_Characters (0.00s)
+    --- PASS: TestJSONOperations/Get_JSON_with_Wrong_Number_of_Arguments (0.00s)
+    --- PASS: TestJSONOperations/Set_Non-JSON_Value (0.00s)
+    --- PASS: TestJSONOperations/Set_Empty_JSON_Object (0.00s)
+    --- PASS: TestJSONOperations/Set_Empty_JSON_Array (0.00s)
+    --- PASS: TestJSONOperations/Set_JSON_with_Unicode (0.00s)
+    --- PASS: TestJSONOperations/Set_JSON_with_Escaped_Characters (0.00s)
+    --- PASS: TestJSONOperations/Set_and_Get_Complex_JSON (0.00s)
+    --- PASS: TestJSONOperations/Get_Nested_Array (0.00s)
+    --- PASS: TestJSONOperations/Get_Nested_Object (0.00s)
+    --- PASS: TestJSONOperations/Set_Nested_Value (0.00s)
+    --- PASS: TestJSONOperations/Get_All_Prices (0.00s)
+    --- PASS: TestJSONOperations/Set_Multiple_Nested_Values (0.00s)
+PASS
+ok  	github.com/dicedb/dice/tests	1.355s

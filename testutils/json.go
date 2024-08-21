@@ -45,7 +45,6 @@ func compareJSONs(t *testing.T, expected, actual string) bool {
 	return reflect.DeepEqual(NormalizeJSON(expectedJSON), NormalizeJSON(actualJSON))
 }
 
-// Rewritten NormalizeJSON to address flakiness by sorting JSON arrays (of comparable types) to ensure consistent ordering.
 func NormalizeJSON(v interface{}) interface{} {
 	switch v := v.(type) {
 	case map[string]interface{}:
