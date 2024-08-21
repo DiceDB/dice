@@ -392,3 +392,85 @@ func TestParseLimit(t *testing.T) {
 		})
 	}
 }
+
+func TestDSQLQueryString(t *testing.T) {
+	tests := []struct {
+		name     string
+		query    DSQLQuery
+		expected string
+	}{
+		{
+			name: "Key Selection Only",
+			query: DSQLQuery{
+				Selection: QuerySelection{KeySelection: true},
+			},
+			expected: "SELECT $key",
+		},
+		{
+			name: "Value Selection Only",
+			query: DSQLQuery{
+				Selection: QuerySelection{ValueSelection: true},
+			},
+			expected: "SELECT $value",
+		},
+		{
+			name: "Both Key and Value Selection",
+			query: DSQLQuery{
+				Selection: QuerySelection{KeySelection: true, ValueSelection: true},
+			},
+			expected: "SELECT $key, $value",
+		},
+		{
+			name: "With KeyRegex",
+			query: DSQLQuery{
+				Selection: QuerySelection{ValueSelection: true},
+				KeyRegex:  "user:*",
+			},
+			expected: "SELECT $value FROM `user:*`",
+		},
+		{
+			name: "With Where Clause",
+			query: DSQLQuery{
+				Selection: QuerySelection{KeySelection: true},
+				Where:     sqlparser.NewStrVal([]byte("$value > 10")),
+			},
+			expected: "SELECT $key WHERE '$value > 10'",
+		},
+		{
+			name: "With OrderBy",
+			query: DSQLQuery{
+				Selection: QuerySelection{KeySelection: true, ValueSelection: true},
+				OrderBy:   QueryOrder{OrderBy: "$key", Order: "DESC"},
+			},
+			expected: "SELECT $key, $value ORDER BY $key DESC",
+		},
+		{
+			name: "With Limit",
+			query: DSQLQuery{
+				Selection: QuerySelection{KeySelection: true, ValueSelection: true},
+				Limit:     5,
+			},
+			expected: "SELECT $key, $value LIMIT 5",
+		},
+		{
+			name: "Full Query",
+			query: DSQLQuery{
+				Selection: QuerySelection{KeySelection: true, ValueSelection: true},
+				KeyRegex:  "user:*",
+				Where:     sqlparser.NewStrVal([]byte("$value > 10")),
+				OrderBy:   QueryOrder{OrderBy: "$key", Order: "DESC"},
+				Limit:     5,
+			},
+			expected: "SELECT $key, $value FROM `user:*` WHERE '$value > 10' ORDER BY $key DESC LIMIT 5",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.query.String()
+			if result != tt.expected {
+				t.Errorf("Expected %q, but got %q", tt.expected, result)
+			}
+		})
+	}
+}

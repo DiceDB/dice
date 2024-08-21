@@ -3,7 +3,6 @@ package tests
 import (
 	"fmt"
 	"math"
-	"strconv"
 	"testing"
 
 	"github.com/dicedb/dice/internal/constants"
@@ -64,7 +63,7 @@ func TestINCR(t *testing.T) {
 					}
 				case "g":
 					result := fireCommand(conn, fmt.Sprintf("GET %s", cmd.key))
-					assert.Equal(t, strconv.FormatInt(cmd.val, 10), result)
+					assert.Equal(t, cmd.val, result)
 				}
 			}
 		})

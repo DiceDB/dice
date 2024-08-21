@@ -63,13 +63,13 @@ func WatchKeys(ctx context.Context, wg *sync.WaitGroup) {
 				clients := value.(*sync.Map)
 
 				if core.WildCardMatch(query.KeyRegex, event.Key) {
-					result, err := core.ExecuteQuery(query, asyncStore)
+					queryResult, err := core.ExecuteQuery(query, asyncStore)
 					if err != nil {
 						log.Error(err)
 						return true // continue to next item
 					}
 
-					encodedResult := core.Encode(result, false)
+					encodedResult := core.Encode(core.CreatePushResponse(&query, &queryResult), false)
 					clients.Range(func(clientKey, _ interface{}) bool {
 						clientFd := clientKey.(int)
 						_, err := syscall.Write(clientFd, encodedResult)

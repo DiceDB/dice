@@ -759,10 +759,10 @@ func evalDECRBY(args []string, store *Store) []byte {
 }
 
 func incrDecrCmd(args []string, incr int64, store *Store) []byte {
-	var key string = args[0]
+	key := args[0]
 	obj := store.Get(key)
 	if obj == nil {
-		obj = store.NewObj("0", -1, ObjTypeString, ObjEncodingInt)
+		obj = store.NewObj(int64(0), -1, ObjTypeString, ObjEncodingInt)
 		store.Put(key, obj)
 	}
 
@@ -774,7 +774,7 @@ func incrDecrCmd(args []string, incr int64, store *Store) []byte {
 		return diceerrors.NewErrWithMessage(err.Error())
 	}
 
-	i, _ := strconv.ParseInt(obj.Value.(string), 10, 64)
+	i, _ := obj.Value.(int64)
 	// check overflow
 	if (incr < 0 && i < 0 && incr < (math.MinInt64-i)) ||
 		(incr > 0 && i > 0 && incr > (math.MaxInt64-i)) {
@@ -782,7 +782,7 @@ func incrDecrCmd(args []string, incr int64, store *Store) []byte {
 	}
 
 	i += incr
-	obj.Value = strconv.FormatInt(i, 10)
+	obj.Value = i
 
 	return Encode(i, false)
 }
@@ -1369,12 +1369,13 @@ func evalQWATCH(args []string, c *Client, store *Store) []byte {
 	store.AddWatcher(query, c.Fd)
 
 	// Return the result of the query.
-	result, err := ExecuteQuery(query, store)
+	queryResult, err := ExecuteQuery(query, store)
 	if err != nil {
 		return Encode(err, false)
 	}
 
-	return Encode(result, false)
+	// TODO: We should return the list of all queries being watched by the client.
+	return Encode(CreatePushResponse(&query, &queryResult), false)
 }
 
 // SETBIT key offset value
