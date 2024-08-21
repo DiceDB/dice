@@ -1,7 +1,9 @@
 package testutils
 
 import (
+	"fmt"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/bytedance/sonic"
@@ -10,7 +12,7 @@ import (
 )
 
 func IsJSONResponse(s string) bool {
-	return (s != constants.EmptyStr && (s[0] == '{' || s[0] == '['))
+	return (s != constants.EmptyStr && (sonic.ValidString(s)))
 }
 
 func AssertJSONEqual(t *testing.T, expected, actual string) {
@@ -27,20 +29,24 @@ func AssertJSONEqual(t *testing.T, expected, actual string) {
 	}
 }
 
-// TODO: Prone to flakiness due to changing order of elements in array. Needs work.
+// Rewritten NormalizeJSON to address flakiness by sorting JSON arrays (of comparable types) to ensure consistent ordering.
 func NormalizeJSON(v interface{}) interface{} {
 	switch v := v.(type) {
 	case map[string]interface{}:
-		nm := make(map[string]interface{})
-		for k, v := range v {
-			nm[k] = NormalizeJSON(v)
+		normalizedMap := make(map[string]interface{})
+		for k, val := range v {
+			normalizedMap[k] = NormalizeJSON(val)
 		}
-		return nm
+		return normalizedMap
 	case []interface{}:
+		normalizedArray := make([]interface{}, len(v))
 		for i, e := range v {
-			v[i] = NormalizeJSON(e)
+			normalizedArray[i] = NormalizeJSON(e)
 		}
-		return v
+		sort.SliceStable(normalizedArray, func(i, j int) bool {
+			return fmt.Sprintf("%v", normalizedArray[i]) < fmt.Sprintf("%v", normalizedArray[j])
+		})
+		return normalizedArray
 	default:
 		return v
 	}
