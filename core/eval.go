@@ -1792,15 +1792,15 @@ func evalRename(args []string, store *Store) []byte {
 	sourceKey := args[0]
 	destKey := args[1]
 
-	// if Source and Destination Keys are same return RESP encoded ok
-	if sourceKey == destKey {
-		return RespOK
-	}
-
 	// if Source key does not exist, return RESP encoded nil
 	sourceObj := store.Get(sourceKey)
 	if sourceObj == nil {
 		return diceerrors.NewErrWithMessage(diceerrors.NoKeyErr)
+	}
+
+	// if Source and Destination Keys are same return RESP encoded ok
+	if sourceKey == destKey {
+		return RespOK
 	}
 
 	if ok := store.Rename(sourceKey, destKey); ok {
