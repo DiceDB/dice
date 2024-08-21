@@ -619,7 +619,7 @@ func evalEXPIRE(args []string, store *Store) []byte {
 // Returns -2 if the key does not exist.
 func evalEXPIRETIME(args []string, store *Store) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'expire' command"), false)
+		return Encode(errors.New("ERR wrong number of arguments for 'expiretime' command"), false)
 	}
 
 	var key string = args[0]
