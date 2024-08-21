@@ -539,9 +539,9 @@ var (
 		Name: "HSET",
 		Info: `HSET sets the specific fields to their respective values in the
 		hash stored at key. If any given field is already present, the previous
-		value provided will be overwritten with the new value provided
+		value will be overwritten with the new value
 		Returns
-		This command returns the number of keys that are being stored at given key.
+		This command returns the number of keys that are stored at given key.
 		`,
 		Eval:     evalHSET,
 		Arity:    -4,
