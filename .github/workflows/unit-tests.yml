@@ -1,7 +1,5 @@
-name: build-and-test
+name: unit-test
 on:
-  push:
-    branches: [master]
   pull_request:
     branches: [master]
 
@@ -19,5 +17,5 @@ jobs:
         run: go get .
       - name: Build
         run: make build
-      - name: Run unit tests with the Go CLI
+      - name: Run Unit tests
         run: make unittest
