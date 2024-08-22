@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"syscall"
 
 	"github.com/dicedb/dice/config"
 )
@@ -94,18 +95,30 @@ func DumpAllAOF(store *Store) error {
 		aof *AOF
 		err error
 	)
-	if aof, err = NewAOF(config.AOFFile); err != nil {
+	if aof, err = NewAOF(config.TempAOFFile); err != nil {
 		return err
 	}
 	defer aof.Close()
 
-	log.Println("rewriting AOF file at", config.AOFFile)
+	log.Println("rewriting AOF file at", config.TempAOFFile)
 
 	withLocks(func() {
 		for k, obj := range store.store {
 			err = dumpKey(aof, *((*string)(k)), obj)
 		}
 	}, store, WithStoreLock())
+
+	log.Println("flush temp file's data to disk")
+	if err := syscall.Fsync(int(aof.file.Fd())); err != nil {
+		fmt.Println("fsync failed")
+		return err
+	}
+
+	log.Println("rename tmp file to actual AOF file")
+	if err := os.Rename(config.TempAOFFile, config.AOFFile); err != nil {
+		fmt.Println("rename failed")
+		return err
+	}
 
 	log.Println("AOF file rewrite complete")
 	return err
