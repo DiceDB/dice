@@ -202,7 +202,7 @@ func TestQueueRefMaxConstraints(t *testing.T) {
 
 func TestQueueRefLen(t *testing.T) {
 	store := core.NewStore()
-
+	core.QueueCount = 0
 	qr, err := core.NewQueueRef()
 	if err != nil {
 		t.Fatalf("error creating queue: %v", err)
