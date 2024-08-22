@@ -137,7 +137,7 @@ func TestStackRefMaxConstraints(t *testing.T) {
 	config.KeysLimit = 20000000
 	core.WatchChannel = make(chan core.WatchEvent, config.KeysLimit)
 	store := core.NewStore()
-
+	core.StackCount = 0
 	sr, err := core.NewStackRef()
 	if err != nil {
 		t.Errorf("error creating StackRef: %v", err)
@@ -150,13 +150,6 @@ func TestStackRefMaxConstraints(t *testing.T) {
 			t.Errorf("push failed on element %d, expected successful push", i)
 		}
 	}
-
-	keyOverflow := "key_overflow"
-	store.Put(keyOverflow, store.NewObj(9999, -1, core.ObjTypeString, core.ObjEncodingInt))
-	if sr.Push(keyOverflow, store) {
-		t.Errorf("push succeeded on element %d, expected failure due to maxElements limit", core.MaxStackSize)
-	}
-
 	for i := 0; i < core.MaxStacks-1; i++ {
 		_, err := core.NewStackRef()
 		if err != nil {

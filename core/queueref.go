@@ -12,7 +12,7 @@ var (
 )
 
 var (
-	queueCount = 0
+	QueueCount = 0
 	muQueue    sync.Mutex
 )
 
@@ -28,11 +28,11 @@ type QueueElement struct {
 func NewQueueRef() (*QueueRef, error) {
 	muQueue.Lock()
 	defer muQueue.Unlock()
-	if queueCount >= MaxQueues {
+	if QueueCount >= MaxQueues {
 		return nil, errors.New("ERR maximum number of queues reached")
 	}
 
-	queueCount++
+	QueueCount++
 	return &QueueRef{
 		qi: NewQueueInt(),
 	}, nil

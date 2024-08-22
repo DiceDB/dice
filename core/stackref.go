@@ -12,7 +12,7 @@ var (
 )
 
 var (
-	stackCount = 0
+	StackCount = 0
 	muStack    sync.Mutex
 )
 
@@ -28,11 +28,11 @@ type StackElement struct {
 func NewStackRef() (*StackRef, error) {
 	muStack.Lock()
 	defer muStack.Unlock()
-	if stackCount >= MaxStacks {
+	if StackCount >= MaxStacks {
 		return nil, errors.New("ERR maximum number of stacks reached")
 	}
 
-	stackCount++
+	StackCount++
 
 	return &StackRef{
 		si: NewStackInt(),
