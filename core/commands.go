@@ -611,6 +611,12 @@ var (
 		Eval:  evalDBSIZE,
 		Arity: 1,
 	}
+	flushdbCmdMeta = DiceCmdMeta{
+		Name:  "FLUSHDB",
+		Info:  `FLUSHDB deletes all the keys of the currently selected DB`,
+		Eval:  evalFLUSHDB,
+		Arity: -1,
+	}
 )
 
 func init() {
@@ -684,4 +690,5 @@ func init() {
 	diceCmds["RPUSH"] = rpushCmdMeta
 	diceCmds["LPOP"] = lpopCmdMeta
 	diceCmds["DBSIZE"] = dbSizeCmdMeta
+	diceCmds["FLUSHDB"] = flushdbCmdMeta
 }

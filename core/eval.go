@@ -2287,3 +2287,26 @@ func evalLPOP(args []string, store *Store) []byte {
 
 	return Encode(x, false)
 }
+
+func evalFLUSHDB(args []string, store *Store) []byte {
+	log.Info(args)
+	if len(args) > 1 {
+		return diceerrors.NewErrArity("FLUSHDB")
+	}
+
+	flushType := constants.Sync
+	if len(args) == 1 {
+		flushType = strings.ToUpper(args[0])
+	}
+
+	switch flushType {
+	case constants.Sync:
+		store.ResetStore()
+	case constants.Async:
+		store.ResetStore()
+	default:
+		return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
+	}
+
+	return RespOK
+}
