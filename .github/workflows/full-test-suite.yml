@@ -1,0 +1,23 @@
+name: full-test-suite
+on:
+  push:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21.x"
+      - name: Install dependencies
+        run: go get .
+      - name: Build
+        run: make build
+      - name: Run Unit tests
+        run: make unittest
+      - name: Run Integration tests
+        run: make test

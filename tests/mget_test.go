@@ -33,7 +33,7 @@ func TestMGET(t *testing.T) {
 		{
 			name:     "MGET without any keys",
 			commands: []string{"MGET"},
-			expected: []interface{}{"ERR wrong number of arguments for command"},
+			expected: []interface{}{"ERR wrong number of arguments for 'mget' command"},
 		},
 	}
 
