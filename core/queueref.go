@@ -1,7 +1,19 @@
 package core
 
 import (
+	"errors"
+	"sync"
 	"unsafe"
+)
+
+var (
+	MaxQueueSize = 10000
+	MaxQueues    = 100
+)
+
+var (
+	queueCount = 0
+	muQueue    sync.Mutex
 )
 
 type QueueRef struct {
@@ -13,13 +25,21 @@ type QueueElement struct {
 	Obj *Obj
 }
 
-func NewQueueRef() *QueueRef {
+func NewQueueRef() (*QueueRef, error) {
+	muQueue.Lock()
+	defer muQueue.Unlock()
+	if queueCount >= MaxQueues {
+		return nil, errors.New("ERR maximum number of queues reached")
+	}
+
+	queueCount++
 	return &QueueRef{
 		qi: NewQueueInt(),
-	}
+	}, nil
 }
 
-func (q *QueueRef) Size() int64 {
+func (q *QueueRef) Size(store *Store) int64 {
+	q.QueueRefCleanup(store)
 	return q.qi.Size()
 }
 
@@ -28,7 +48,9 @@ func (q *QueueRef) Size() int64 {
 func (q *QueueRef) Insert(key string, store *Store) bool {
 	var x unsafe.Pointer
 	var ok bool
-
+	if q.qi.Length >= int64(MaxQueueSize) {
+		return false // Prevent inserting if the queue is at maximum capacity
+	}
 	withLocks(func() {
 		x, ok = store.keypool[key]
 	}, store, WithKeypoolRLock())
@@ -41,7 +63,7 @@ func (q *QueueRef) Insert(key string, store *Store) bool {
 }
 
 // Remove removes the reference from the queue q.
-// returns nil if key does not exist in the store any more
+// returns error if queue is empty
 // if the expired key is popped from the queue, we continue to pop until
 // until we find one non-expired key
 // TODO: test for expired keys
@@ -81,6 +103,32 @@ func (q *QueueRef) DeepCopy() *QueueRef {
 }
 
 // Returns the length of the queue
-func (q *QueueRef) Length() int64 {
+func (q *QueueRef) Length(store *Store) int64 {
+	q.QueueRefCleanup(store)
 	return q.qi.Length
+}
+
+// QueueRefCleanup removes expired or deleted keys from the QueueRef to maintain the accuracy of QUEUEREFLEN operations.
+// While this process ensures correctness, it can be computationally intensive, especially as
+// the queue grows. To mitigate performance overhead, constraints such as limiting the queue size
+// to 10,000 entries and the number of queues to 100 are imposed, ensuring that the cleanup
+// remains efficient without degrading system performance
+func (q *QueueRef) QueueRefCleanup(store *Store) {
+	var validElements []int64
+	for {
+		val, err := q.qi.Remove()
+		if err != nil {
+			break // Break the loop if the queue is empty
+		}
+
+		key := *((*string)(unsafe.Pointer(uintptr(val))))
+		obj := store.Get(key)
+		if obj != nil {
+			validElements = append(validElements, val)
+		}
+	}
+
+	for _, val := range validElements {
+		q.qi.Insert(val)
+	}
 }

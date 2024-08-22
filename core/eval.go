@@ -1109,8 +1109,12 @@ func evalQREFINS(args []string, store *Store) []byte {
 	}
 
 	obj := store.Get(args[0])
+	qr, err := NewQueueRef()
+	if err != nil {
+		return Encode(err, false)
+	}
 	if obj == nil {
-		obj = store.NewObj(NewQueueRef(), -1, ObjTypeByteList, ObjEncodingQref)
+		obj = store.NewObj(qr, -1, ObjTypeByteList, ObjEncodingQref)
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
@@ -1143,7 +1147,11 @@ func evalSTACKREFPUSH(args []string, store *Store) []byte {
 
 	obj := store.Get(args[0])
 	if obj == nil {
-		obj = store.NewObj(NewStackRef(), -1, ObjTypeByteList, ObjEncodingStackRef)
+		sr, err := NewStackRef()
+		if err != nil {
+			return Encode(err, false)
+		}
+		obj = store.NewObj(sr, -1, ObjTypeByteList, ObjEncodingStackRef)
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
@@ -1251,7 +1259,7 @@ func evalQREFLEN(args []string, store *Store) []byte {
 	}
 
 	q := obj.Value.(*QueueRef)
-	return Encode(q.qi.Length, false)
+	return Encode(q.Length(store), false)
 }
 
 // evalSTACKREFLEN returns the length of the STACKREF identified by key
@@ -1276,7 +1284,7 @@ func evalSTACKREFLEN(args []string, store *Store) []byte {
 	}
 
 	s := obj.Value.(*StackRef)
-	return Encode(s.si.Length, false)
+	return Encode(s.Length(store), false)
 }
 
 // evalQREFPEEK peeks into the QREF and returns 5 elements without popping them
@@ -1428,7 +1436,6 @@ func evalSETBIT(args []string, store *Store) []byte {
 		if response && !value {
 			byteArray.ResizeIfNecessary()
 		}
-
 		if response {
 			return Encode(int(1), true)
 		}
