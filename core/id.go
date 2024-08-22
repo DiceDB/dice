@@ -17,6 +17,8 @@ func ExpandID(id uint32) uint64 {
 	return uint64(cycle)<<counterBits | uint64(counter)
 }
 
+// TODO: Persisting the cycle on disk
+// and reloading it when we start the server
 func NextID() uint32 {
 	mu.Lock()
 	defer mu.Unlock()
