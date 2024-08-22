@@ -167,15 +167,13 @@ func TestRemoveAllExpired(t *testing.T) {
 func TestQueueRefMaxConstraints(t *testing.T) {
 	config.KeysLimit = 20000000
 	core.WatchChannel = make(chan core.WatchEvent, config.KeysLimit)
-	maxQueue := 100
-	maxElements := 10000
 
 	qr, err := core.NewQueueRef()
 	if err != nil {
 		t.Errorf("error creating QueueRef: %v", err)
 	}
 	store := core.NewStore()
-	for i := 0; i < maxElements; i++ {
+	for i := 0; i < core.MaxQueueSize; i++ {
 		key := fmt.Sprintf("key%d", i)
 		store.Put(key, store.NewObj(i, -1, core.ObjTypeString, core.ObjEncodingInt))
 		if !qr.Insert(key, store) {
@@ -186,10 +184,10 @@ func TestQueueRefMaxConstraints(t *testing.T) {
 	keyOverflow := "key_overflow"
 	store.Put(keyOverflow, store.NewObj(9999, -1, core.ObjTypeString, core.ObjEncodingInt))
 	if qr.Insert(keyOverflow, store) {
-		t.Errorf("insert succeeded on element %d, expected failure due to maxElements limit", maxElements)
+		t.Errorf("insert succeeded on element %d, expected failure due to maxElements limit", core.MaxQueueSize)
 	}
 
-	for i := 0; i < maxQueue-1; i++ {
+	for i := 0; i < core.MaxQueues-1; i++ {
 		_, err := core.NewQueueRef()
 		if err != nil {
 			t.Errorf("error creating QueueRef: %v", err)

@@ -8,7 +8,7 @@ import (
 
 var (
 	MaxQueueSize = 10000
-	MaxQueues    = 100
+	MaxQueues    = 1000
 )
 
 var (

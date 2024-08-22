@@ -8,7 +8,7 @@ import (
 
 var (
 	MaxStackSize = 10000
-	MaxStacks    = 100
+	MaxStacks    = 1000
 )
 
 var (
