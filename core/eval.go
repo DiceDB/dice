@@ -267,14 +267,14 @@ func evalGET(args []string, store *Store) []byte {
 		if val, ok := obj.Value.(int64); ok {
 			return Encode(val, false)
 		}
-		return Encode(fmt.Errorf("ERR expected int64 but got another type: %s", obj.Value), false)
+		return diceerrors.NewErrWithFormattedMessage("expected int64 but got another type: %s", obj.Value)
 
 	case ObjEncodingEmbStr, ObjEncodingRaw:
 		// Value is stored as a string, use type assertion
 		if val, ok := obj.Value.(string); ok {
 			return Encode(val, false)
 		}
-		return Encode(errors.New("ERR expected string but got another type"), false)
+		return diceerrors.NewErrWithMessage("expected string but got another type")
 
 	default:
 		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
@@ -2298,18 +2298,20 @@ func evalLPOP(args []string, store *Store) []byte {
 // Nil reply: if the key does not exist.
 func evalGETSET(args []string, store *Store) []byte {
 	if len(args) != 2 {
-		return Encode(errors.New("ERR wrong number of arguments for 'getset' command"), false)
+		return diceerrors.NewErrArity("GETSET")
 	}
 
 	var key, value = args[0], args[1]
 	getResp := evalGET([]string{key}, store)
-	if strings.HasPrefix(string(getResp), "ERR") {
+	// Check if it's an error resp from GET
+	if strings.HasPrefix(string(getResp), "-") {
 		return getResp
 	}
 
 	// Previous TTL needs to be reset
 	setResp := evalSET([]string{key, value}, store)
-	if strings.HasPrefix(string(setResp), "ERR") {
+	// Check if it's an error resp from SET
+	if strings.HasPrefix(string(setResp), "-") {
 		return setResp
 	}
 

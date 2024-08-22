@@ -18,9 +18,27 @@ func TestGetSet(t *testing.T) {
 		delays []time.Duration
 	}{
 		{
+			name:   "GETSET with INCR",
+			cmds:   []string{"INCR mycounter", "GETSET mycounter \"0\"", "GET mycounter"},
+			expect: []interface{}{int64(1), int64(1), int64(0)},
+			delays: []time.Duration{0, 0, 0},
+		},
+		{
+			name:   "GETSET with SET",
+			cmds:   []string{"SET mykey \"Hello\"", "GETSET mykey \"world\"", "GET mykey"},
+			expect: []interface{}{"OK", "Hello", "world"},
+			delays: []time.Duration{0, 0, 0},
+		},
+		{
 			name:   "GETSET with TTL",
 			cmds:   []string{"SET k v EX 60", "GETSET k v1", "TTL k"},
 			expect: []interface{}{"OK", "v", int64(-1)},
+			delays: []time.Duration{0, 0, 0},
+		},
+		{
+			name:   "GETSET error when key exists but does not hold a string value",
+			cmds:   []string{"LPUSH k1 \"somevalue\"", "GETSET k1 \"v1\""},
+			expect: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
 			delays: []time.Duration{0, 0, 0},
 		},
 	}
