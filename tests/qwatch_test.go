@@ -63,11 +63,11 @@ func TestQWATCH(t *testing.T) {
 	subscribers := []net.Conn{getLocalConnection(), getLocalConnection(), getLocalConnection()}
 
 	// Cleanup Store for next tests
-	defer func() {
-		for _, tc := range qWatchTestCases {
-			fireCommand(publisher, fmt.Sprintf("DEL match:100:user:%d", tc.userID))
-		}
+	for _, tc := range qWatchTestCases {
+		fireCommand(publisher, fmt.Sprintf("DEL match:100:user:%d", tc.userID))
+	}
 
+	defer func() {
 		publisher.Close()
 		for _, sub := range subscribers {
 			sub.Close()
