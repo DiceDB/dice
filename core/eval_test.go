@@ -341,7 +341,7 @@ func testEvalJSONTYPE(t *testing.T, store *Store) {
 			},
 
 			input:  []string{"EXISTING_KEY", "$.language"},
-			output: []byte("$5\r\narray\r\n"),
+			output: []byte("*1\r\n$5\r\narray\r\n"),
 		},
 		"string type value": {
 			setup: func() {
@@ -355,7 +355,7 @@ func testEvalJSONTYPE(t *testing.T, store *Store) {
 			},
 
 			input:  []string{"EXISTING_KEY", "$.a"},
-			output: []byte("$6\r\nstring\r\n"),
+			output: []byte("*1\r\n$6\r\nstring\r\n"),
 		},
 		"boolean type value": {
 			setup: func() {
@@ -369,7 +369,7 @@ func testEvalJSONTYPE(t *testing.T, store *Store) {
 			},
 
 			input:  []string{"EXISTING_KEY", "$.flag"},
-			output: []byte("$7\r\nboolean\r\n"),
+			output: []byte("*1\r\n$7\r\nboolean\r\n"),
 		},
 		"number type value": {
 			setup: func() {
@@ -383,7 +383,7 @@ func testEvalJSONTYPE(t *testing.T, store *Store) {
 			},
 
 			input:  []string{"EXISTING_KEY", "$.price"},
-			output: []byte("$6\r\nnumber\r\n"),
+			output: []byte("*1\r\n$6\r\nnumber\r\n"),
 		},
 		"null type value": {
 			setup: func() {
@@ -397,7 +397,7 @@ func testEvalJSONTYPE(t *testing.T, store *Store) {
 			},
 
 			input:  []string{"EXISTING_KEY", "$.language"},
-			output: RespNIL,
+			output: RespEmptyArray,
 		},
 		"multi type value": {
 			setup: func() {
