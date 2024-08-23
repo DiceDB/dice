@@ -14,6 +14,7 @@ var (
 	EvictionRatio    float64 = 0.40
 	EvictionStrategy string  = "allkeys-lru"
 	AOFFile          string  = "./dice-master.aof"
+	TempAOFFile      string  = "./tmp-dice-master.aof"
 )
 
 // Network

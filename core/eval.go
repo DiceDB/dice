@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"os"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -696,15 +698,41 @@ func evalBGREWRITEAOF(args []string, store *Store) []byte {
 	// This technique utilizes the CoW or copy-on-write, so while the main process is free to modify them
 	// the child would save all the pages to disk.
 	// Check details here -https://www.sobyte.net/post/2022-10/fork-cow/
-	newChild, _, _ := syscall.Syscall(syscall.SYS_FORK, 0, 0, 0)
-	if newChild == 0 {
-		// We are inside child process now, so we'll start flushing to disk.
-		if err := DumpAllAOF(store); err != nil {
-			return diceerrors.NewErrWithMessage("AOF failed")
-		}
-		return []byte(constants.EmptyStr)
+	active := !atomic.CompareAndSwapInt32(&FlushingInProgress, 0, 1)
+	if active {
+		return diceerrors.NewErrWithMessage("BGREWRITEAOF is already running, please try again later...")
 	}
-	// Back to main threadg
+
+	child, err := utils.Fork()
+	if err != nil {
+		atomic.CompareAndSwapInt32(&FlushingInProgress, 1, 0)
+		return diceerrors.NewErrWithMessage(fmt.Sprintf("failed forking AOF child process: %v", err))
+	}
+
+	if isChild := child == 0; isChild {
+		if err = DumpAllAOF(store); err != nil {
+			log.Errorf("BGREWRITEAOF Process: %w", err)
+			os.Exit(1)
+		}
+
+		os.Exit(0)
+	}
+
+	go func() {
+		defer atomic.CompareAndSwapInt32(&FlushingInProgress, 1, 0)
+
+		var ws syscall.WaitStatus
+		_, err := syscall.Wait4(int(child), &ws, 0, nil)
+		if err != nil {
+			log.Errorf("failed waiting on BGREWRITEAOF process to complete: %w", err)
+			return
+		}
+
+		if !ws.Exited() {
+			log.Errorf("BGREWRITEAOF process didnt exited gracefully")
+		}
+	}()
+
 	return RespOK
 }
 

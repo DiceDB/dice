@@ -3,13 +3,13 @@ package core
 import (
 	"bufio"
 	"fmt"
+	"github.com/dicedb/dice/config"
 	"io/fs"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
-
-	"github.com/dicedb/dice/config"
 )
 
 type AOF struct {
@@ -23,7 +23,14 @@ const (
 	FileMode int = 0644
 )
 
+var FlushingInProgress int32
+
 func NewAOF(path string) (*AOF, error) {
+	err := os.MkdirAll(filepath.Dir(path), 0750)
+	if err != nil {
+		return nil, err
+	}
+
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, fs.FileMode(FileMode))
 	if err != nil {
 		return nil, err
@@ -88,18 +95,19 @@ func dumpKey(aof *AOF, key string, obj *Obj) (err error) {
 	return aof.Write(string(Encode(tokens, false)))
 }
 
-// TODO: To to new and switch
 func DumpAllAOF(store *Store) error {
 	var (
 		aof *AOF
 		err error
 	)
-	if aof, err = NewAOF(config.AOFFile); err != nil {
+
+	if aof, err = NewAOF(config.TempAOFFile); err != nil {
 		return err
 	}
+
 	defer aof.Close()
 
-	log.Println("rewriting AOF file at", config.AOFFile)
+	log.Println("rewriting AOF file at", config.TempAOFFile)
 
 	withLocks(func() {
 		for k, obj := range store.store {
@@ -107,6 +115,18 @@ func DumpAllAOF(store *Store) error {
 		}
 	}, store, WithStoreLock())
 
+	err = aof.file.Sync()
+	if err != nil {
+		return fmt.Errorf("failed flushing AOF to disk: %w", err)
+	}
+
+	err = os.Rename(config.TempAOFFile, config.AOFFile)
+	if err != nil {
+		// TODO: consider cleanup on boot/here of zombie tmp files
+		return fmt.Errorf("failed renaming AOF file: %w", err)
+	}
+
 	log.Println("AOF file rewrite complete")
-	return err
+
+	return nil
 }
