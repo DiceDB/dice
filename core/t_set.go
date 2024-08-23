@@ -1,13 +1,14 @@
 package core
 
 import (
-	"errors"
 	"sort"
+
+	"github.com/dicedb/dice/core/diceerrors"
 )
 
 func evalSADD(args []string, store *Store) []byte {
 	if len(args) < 2 {
-		return Encode(errors.New("ERR wrong number of arguments for 'SADD' command"), false)
+		return diceerrors.NewErrArity("SADD")
 	}
 	key := args[0]
 
@@ -25,11 +26,12 @@ func evalSADD(args []string, store *Store) []byte {
 		store.Put(key, obj, WithKeepTTL(keepttl))
 	}
 
-	if assertType(obj.TypeEncoding, ObjTypeSet) != nil {
-		return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+	if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
+		return diceerrors.NewErrSetType()
 	}
-	if assertEncoding(obj.TypeEncoding, ObjEncodingHT) != nil {
-		return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingHT); err != nil {
+		return diceerrors.NewErrSetType()
 	}
 
 	// Get the set object.
@@ -47,7 +49,7 @@ func evalSADD(args []string, store *Store) []byte {
 
 func evalSMEMBERS(args []string, store *Store) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'SMEMBERS' command"), false)
+		return diceerrors.NewErrArity("SMEMBERS")
 	}
 	key := args[0]
 
@@ -59,12 +61,12 @@ func evalSMEMBERS(args []string, store *Store) []byte {
 	}
 
 	// If the object exists, check if it is a set object.
-	if assertEncoding(obj.TypeEncoding, ObjEncodingHT) != nil {
-		return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+	if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
+		return diceerrors.NewErrSetType()
 	}
 
-	if assertType(obj.TypeEncoding, ObjTypeSet) != nil {
-		return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingHT); err != nil {
+		return diceerrors.NewErrSetType()
 	}
 
 	// Get the set object.
@@ -82,7 +84,7 @@ func evalSMEMBERS(args []string, store *Store) []byte {
 
 func evalSREM(args []string, store *Store) []byte {
 	if len(args) < 2 {
-		return Encode(errors.New("ERR wrong number of arguments for 'SREM' command"), false)
+		return diceerrors.NewErrArity("SREM")
 	}
 	key := args[0]
 
@@ -95,12 +97,12 @@ func evalSREM(args []string, store *Store) []byte {
 	}
 
 	// If the object exists, check if it is a set object.
-	if assertEncoding(obj.TypeEncoding, ObjEncodingHT) != nil {
-		return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+	if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
+		return diceerrors.NewErrSetType()
 	}
 
-	if assertType(obj.TypeEncoding, ObjTypeSet) != nil {
-		return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingHT); err != nil {
+		return diceerrors.NewErrSetType()
 	}
 
 	// Get the set object.
@@ -117,7 +119,7 @@ func evalSREM(args []string, store *Store) []byte {
 
 func evalSCARD(args []string, store *Store) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'SCARD' command"), false)
+		return diceerrors.NewErrArity("SCARD")
 	}
 
 	key := args[0]
@@ -130,12 +132,12 @@ func evalSCARD(args []string, store *Store) []byte {
 	}
 
 	// If the object exists, check if it is a set object.
-	if assertEncoding(obj.TypeEncoding, ObjEncodingHT) != nil {
-		return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+	if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
+		return diceerrors.NewErrSetType()
 	}
 
-	if assertType(obj.TypeEncoding, ObjTypeSet) != nil {
-		return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingHT); err != nil {
+		return diceerrors.NewErrSetType()
 	}
 
 	// Get the set object.
@@ -153,7 +155,7 @@ func evalSCARD(args []string, store *Store) []byte {
 
 func evalSDIFF(args []string, store *Store) []byte {
 	if len(args) < 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'SDIFF' command"), false)
+		return diceerrors.NewErrArity("SDIFF")
 	}
 
 	srcKey := args[0]
@@ -169,12 +171,12 @@ func evalSDIFF(args []string, store *Store) []byte {
 
 	var count int = 0
 	if obj != nil {
-		if assertEncoding(obj.TypeEncoding, ObjEncodingHT) != nil {
-			return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+		if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
+			return diceerrors.NewErrSetType()
 		}
 
-		if assertType(obj.TypeEncoding, ObjTypeSet) != nil {
-			return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+		if err := assertEncoding(obj.TypeEncoding, ObjEncodingHT); err != nil {
+			return diceerrors.NewErrSetType()
 		}
 
 		// create a deep copy of the set object
@@ -196,12 +198,12 @@ func evalSDIFF(args []string, store *Store) []byte {
 		}
 
 		// If the object exists, check if it is a set object.
-		if assertEncoding(obj.TypeEncoding, ObjEncodingHT) != nil {
-			return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+		if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
+			return diceerrors.NewErrSetType()
 		}
 
-		if assertType(obj.TypeEncoding, ObjTypeSet) != nil {
-			return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+		if err := assertEncoding(obj.TypeEncoding, ObjEncodingHT); err != nil {
+			return diceerrors.NewErrSetType()
 		}
 
 		// only if the count is greater than 0, we need to check the other sets
@@ -234,7 +236,7 @@ func evalSDIFF(args []string, store *Store) []byte {
 
 func evalSINTER(args []string, store *Store) []byte {
 	if len(args) < 2 {
-		return Encode(errors.New("ERR wrong number of arguments for 'SINTER' command"), false)
+		return diceerrors.NewErrArity("SINTER")
 	}
 
 	sets := make([]map[string]bool, 0, len(args))
@@ -251,12 +253,12 @@ func evalSINTER(args []string, store *Store) []byte {
 		}
 
 		// If the object exists, check if it is a set object.
-		if assertEncoding(obj.TypeEncoding, ObjEncodingHT) != nil {
-			return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+		if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
+			return diceerrors.NewErrSetType()
 		}
 
-		if assertType(obj.TypeEncoding, ObjTypeSet) != nil {
-			return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
+		if err := assertEncoding(obj.TypeEncoding, ObjEncodingHT); err != nil {
+			return diceerrors.NewErrSetType()
 		}
 
 		// Get the set object.
