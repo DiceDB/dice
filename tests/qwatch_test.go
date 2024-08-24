@@ -60,7 +60,20 @@ var qWatchTestCases = []qWatchTestCase{
 func TestQWATCH(t *testing.T) {
 	publisher := getLocalConnection()
 
-	subscribers := []net.Conn{getLocalConnection(), getLocalConnection(), getLocalConnection()}
+	subscribers := []net.Conn{getLocalConnection(), getLocalConnection(), getLocalConnection()
+
+	// Cleanup Store for next tests
+	for _, tc := range qWatchTestCases {
+		fireCommand(publisher, fmt.Sprintf("DEL match:100:user:%d", tc.userID))
+	}
+
+	defer func() {
+		publisher.Close()
+		for _, sub := range subscribers {
+			sub.Close()
+		}
+	}()
+
 	respParsers := make([]*core.RESPParser, len(subscribers))
 
 	for i, subscriber := range subscribers {
@@ -101,6 +114,19 @@ func TestQWATCHWithSDK(t *testing.T) {
 
 	subscribers := []*redis.Client{getLocalSdk(), getLocalSdk(), getLocalSdk()}
 	qwatches := make([]*redis.QWatch, len(subscribers))
+
+	// Cleanup Store for next tests
+	for _, tc := range qWatchTestCases {
+		publisher.Del(context.Background(), fmt.Sprintf("match:100:user:%d", tc.userID))
+	}
+
+	defer func() {
+		publisher.Close()
+		for _, sub := range subscribers {
+			sub.Close()
+		}
+	}()
+
 	channels := make([]<-chan *redis.QMessage, len(subscribers))
 
 	for i, subscriber := range subscribers {

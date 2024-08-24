@@ -21,7 +21,19 @@ func TestJSONOperations(t *testing.T) {
 	escapedCharsJSON := `{"escaped":"\"quoted\", \\backslash\\ and /forward/slash"}`
 	complexJSON := `{"inventory":{"mountain_bikes":[{"id":"bike:1","model":"Phoebe","price":1920,"specs":{"material":"carbon","weight":13.1},"colors":["black","silver"]},{"id":"bike:2","model":"Quaoar","price":2072,"specs":{"material":"aluminium","weight":7.9},"colors":["black","white"]},{"id":"bike:3","model":"Weywot","price":3264,"specs":{"material":"alloy","weight":13.8}}],"commuter_bikes":[{"id":"bike:4","model":"Salacia","price":1475,"specs":{"material":"aluminium","weight":16.6},"colors":["black","silver"]},{"id":"bike:5","model":"Mimas","price":3941,"specs":{"material":"alloy","weight":11.6}}]}}`
 
-	testCases := []struct {
+	// Background:
+	// Ordering in JSON objects is not guaranteed
+	// Ordering in JSON arrays is guaranteed
+	// Ordering of arrays which are constructed using a key of an object is not maintained across objects
+
+	// Single ordered test cases will cover all JSON operations which have a single possible order of expected elements
+	// different JSON Key orderings are not considered as different JSONs, hence will be considered in this category
+	// What goes here:
+	// - Cases where the possible order of the result is a single permutation
+	// 		- JSON Arrays fetched without any JSONPath
+	// 		- JSON Objects (key ordering is taken care of)
+	// ref: https://github.com/DiceDB/dice/pull/365
+	singleOrderedTestCases := []struct {
 		name     string
 		setCmd   string
 		getCmd   string
@@ -73,7 +85,7 @@ func TestJSONOperations(t *testing.T) {
 			name:     "Get JSON with Wrong Number of Arguments",
 			setCmd:   ``,
 			getCmd:   `JSON.GET`,
-			expected: "ERR wrong number of arguments for 'JSON.GET' command",
+			expected: "ERR wrong number of arguments for 'json.get' command",
 		},
 		{
 			name:     "Set Non-JSON Value",
@@ -124,26 +136,41 @@ func TestJSONOperations(t *testing.T) {
 			expected: `{"material":"carbon","weight":13.1}`,
 		},
 		{
-			name:     "Get All Prices",
-			setCmd:   `JSON.SET inventory $ ` + complexJSON,
-			getCmd:   `JSON.GET inventory $..price`,
-			expected: `[1475,3941,1920,2072,3264]`, // Order of elements prone to Flakiness
-		},
-		{
 			name:     "Set Nested Value",
 			setCmd:   `JSON.SET inventory $.inventory.mountain_bikes[0].price 2000`,
 			getCmd:   `JSON.GET inventory $.inventory.mountain_bikes[0].price`,
 			expected: `2000`,
 		},
+	}
+
+	// Multiple test cases will address JSON operations where the order of elements can vary, but all orders are "valid" and to be accepted
+	// The variation in order is due to the inherent nature of JSON objects.
+	// When dealing with a resultant array that contains elements from multiple objects, the order of these elements can have several valid permutations.
+	// Which then means, the overall order of elements in the resultant array is not fixed, although each sub-array within it is guaranteed to be ordered.
+	// What goes here:
+	// - Cases where the possible order of the resultant array is multiple permutations
+	// ref: https://github.com/DiceDB/dice/pull/365
+	multipleOrderedTestCases := []struct {
+		name     string
+		setCmd   string
+		getCmd   string
+		expected []string
+	}{
 		{
-			name:     "Set Multiple Nested Values", // Todo: Flakey test. Needs work.
+			name:     "Get All Prices",
+			setCmd:   `JSON.SET inventory $ ` + complexJSON,
+			getCmd:   `JSON.GET inventory $..price`,
+			expected: []string{`[1475,3941,1920,2072,3264]`, `[1920,2072,3264,1475,3941]`}, // Ordering agnostic
+		},
+		{
+			name:     "Set Multiple Nested Values",
 			setCmd:   `JSON.SET inventory $.inventory.*[?(@.price<2000)].price 1500`,
 			getCmd:   `JSON.GET inventory $..price`,
-			expected: `[1500,3941,2000,2072,3264]`,
+			expected: []string{`[1500,3941,1500,2072,3264]`, `[1500,2072,3264,1500,3941]`}, // Ordering agnostic
 		},
 	}
 
-	for _, tc := range testCases {
+	for _, tc := range singleOrderedTestCases {
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.setCmd != constants.EmptyStr {
 				result := fireCommand(conn, tc.setCmd)
@@ -157,6 +184,20 @@ func TestJSONOperations(t *testing.T) {
 				} else {
 					assert.Equal(t, tc.expected, result)
 				}
+			}
+		})
+	}
+
+	for _, tc := range multipleOrderedTestCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.setCmd != constants.EmptyStr {
+				result := fireCommand(conn, tc.setCmd)
+				assert.Equal(t, "OK", result)
+			}
+
+			if tc.getCmd != constants.EmptyStr {
+				result := fireCommand(conn, tc.getCmd)
+				testutils.AssertJSONEqualList(t, tc.expected, result.(string))
 			}
 		})
 	}
@@ -179,7 +220,7 @@ func TestJSONSetWithInvalidJSON(t *testing.T) {
 		{
 			name:     "Set JSON with Wrong Number of Arguments",
 			command:  `JSON.SET`,
-			expected: "ERR wrong number of arguments for 'JSON.SET' command",
+			expected: "ERR wrong number of arguments for 'json.set' command",
 		},
 	}
 

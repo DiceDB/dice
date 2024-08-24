@@ -34,6 +34,8 @@ var ObjEncodingJSON uint8 = 0
 var ObjTypeByteArray uint8 = 4 << 4 // 01000000
 var ObjEncodingByteArray uint8 = 4
 
+var ObjTypeInt uint8 = 5 << 4 // 01010000
+
 func ExtractTypeEncoding(obj *Obj) (e1, e2 uint8) {
 	return obj.TypeEncoding & 0b11110000, obj.TypeEncoding & 0b00001111
 }
