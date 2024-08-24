@@ -46,18 +46,18 @@ check-golangci-lint:
 	fi
 
 run_benchmark:
-    @echo "Running memtier benchmark..."
-    memtier_benchmark \
-     --threads=$(THREADS) \
-    --data-size=$(DATA_SIZE) \
-    --key-pattern=$(KEY_PATTERN) \
-    --clients=$(CLIENTS) \
-    --requests=$(REQUESTS) \
-    --port=$(PORT)
-    @echo "Benchmark complete."
+	@echo "Running memtier benchmark..."
+	memtier_benchmark \
+		--threads=$(THREADS) \
+		--data-size=$(DATA_SIZE) \
+		--key-pattern=$(KEY_PATTERN) \
+		--clients=$(CLIENTS) \
+		--requests=$(REQUESTS) \
+		--port=$(PORT)
+	@echo "Benchmark complete."
 
 run-small-test:
-    run_benchmark THREADS=2 DATA_SIZE=512 CLIENTS=20 REQUESTS=5000
+	$(MAKE) run_benchmark THREADS=2 DATA_SIZE=512 CLIENTS=20 REQUESTS=5000
 
 run-large-test:
-    run_benchmark THREADS=8 DATA_SIZE=4096 CLIENTS=100 REQUESTS=50000
+	$(MAKE) run_benchmark THREADS=8 DATA_SIZE=4096 CLIENTS=100 REQUESTS=50000
