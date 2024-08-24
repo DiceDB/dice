@@ -606,11 +606,14 @@ func evalEXPIRE(args []string, store *Store) []byte {
 	if obj == nil {
 		return RespZero
 	}
+	isExpirySet, err2 := evaluateAndSetExpiry(args[2:], utils.AddSecondsToUnixEpoch(exDurationSec), key, store)
 
-	store.setExpiry(obj, exDurationSec*1000)
-
-	// 1 if the timeout was set.
-	return RespOne
+	if isExpirySet {
+		return RespOne
+	} else if err2 != nil {
+		return err2
+	}
+	return RespZero
 }
 
 // evalEXPIRETIME returns the absolute Unix timestamp (since January 1, 1970) in seconds at which the given key will expire
@@ -652,22 +655,86 @@ func evalEXPIREAT(args []string, store *Store) []byte {
 	}
 
 	var key string = args[0]
-	exUnixTimeSec, err := strconv.ParseInt(args[1], 10, 64)
+	exUnixTimeSec, err := strconv.ParseUint(args[1], 10, 64)
 	if err != nil {
 		return Encode(errors.New("ERR value is not an integer or out of range"), false)
 	}
 
-	obj := store.Get(key)
+	isExpirySet, err2 := evaluateAndSetExpiry(args[2:], exUnixTimeSec, key, store)
+	if isExpirySet {
+		return RespOne
+	} else if err2 != nil {
+		return err2
+	}
+	return RespZero
+}
 
-	// 0 if the timeout was not set. e.g. key doesn't exist, or operation skipped due to the provided arguments
+// NX: Set the expiration only if the key does not already have an expiration time.
+// XX: Set the expiration only if the key already has an expiration time.
+// GT: Set the expiration only if the new expiration time is greater than the current one.
+// LT: Set the expiration only if the new expiration time is less than the current one.
+// Returns Boolean True and error nil if expiry was set on the key successfully.
+// Returns Boolean False and error nil if conditions didn't met.
+// Returns Boolean False and error not-nil if invalid combination of subCommands or if subCommand is invalid
+func evaluateAndSetExpiry(subCommands []string, newExpiry uint64, key string,
+	store *Store) (shouldSetExpiry bool, err []byte) {
+	var newExpInMilli = newExpiry * 1000
+	var prevExpiry *uint64 = nil
+	var nxCmd, xxCmd, gtCmd, ltCmd bool
+
+	obj := store.Get(key)
+	//  key doesn't exist
 	if obj == nil {
-		return RespZero
+		return false, nil
+	}
+	shouldSetExpiry = true
+	//if no condition exists
+	if len(subCommands) == 0 {
+		store.setUnixTimeExpiry(obj, int64(newExpiry))
+		return shouldSetExpiry, nil
 	}
 
-	store.setUnixTimeExpiry(obj, exUnixTimeSec)
+	expireTime, ok := getExpiry(obj, store)
+	if ok {
+		prevExpiry = &expireTime
+	}
 
-	// 1 if the timeout was set.
-	return RespOne
+	for i := range subCommands {
+		subCommand := strings.ToUpper(subCommands[i])
+
+		switch subCommand {
+		case constants.NX:
+			nxCmd = true
+			if prevExpiry != nil {
+				shouldSetExpiry = false
+			}
+		case constants.XX:
+			xxCmd = true
+			if prevExpiry == nil {
+				shouldSetExpiry = false
+			}
+		case constants.GT:
+			gtCmd = true
+			if prevExpiry == nil || *prevExpiry > newExpInMilli {
+				shouldSetExpiry = false
+			}
+		case constants.LT:
+			ltCmd = true
+			if prevExpiry != nil && *prevExpiry < newExpInMilli {
+				shouldSetExpiry = false
+			}
+		default:
+			return false, diceerrors.NewErrWithMessage("Unsupported option " + subCommands[i])
+		}
+	}
+
+	if (nxCmd && (xxCmd || gtCmd || ltCmd)) || (gtCmd && ltCmd) {
+		return false, diceerrors.NewErrWithMessage("NX and XX," +
+			" GT or LT options at the same time are not compatible")
+	}
+
+	store.setUnixTimeExpiry(obj, int64(newExpiry))
+	return shouldSetExpiry, nil
 }
 
 func evalHELLO(args []string, store *Store) []byte {

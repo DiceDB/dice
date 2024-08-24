@@ -31,3 +31,7 @@ func (mc *MockClock) SetTime(t time.Time) {
 func GetCurrentTime() time.Time {
 	return CurrentTime.Now()
 }
+
+func AddSecondsToUnixEpoch(second int64) uint64 {
+	return uint64(GetCurrentTime().Unix()) + uint64(second)
+}
