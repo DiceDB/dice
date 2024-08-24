@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/dicedb/dice/config"
-	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
@@ -19,11 +18,7 @@ type AOF struct {
 	path   string
 }
 
-const (
-	FileMode int = 0644
-)
-
-var FlushingInProgress int32
+var flushingInProgress int32
 
 func NewAOF(path string) (*AOF, error) {
 	err := os.MkdirAll(filepath.Dir(path), 0750)
@@ -31,7 +26,7 @@ func NewAOF(path string) (*AOF, error) {
 		return nil, err
 	}
 
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, fs.FileMode(FileMode))
+	f, err := os.Create(path)
 	if err != nil {
 		return nil, err
 	}
@@ -50,10 +45,8 @@ func (a *AOF) Write(operation string) error {
 	if _, err := a.writer.WriteString(operation + "\n"); err != nil {
 		return err
 	}
-	if err := a.writer.Flush(); err != nil {
-		return err
-	}
-	return a.file.Sync()
+
+	return a.writer.Flush()
 }
 
 func (a *AOF) Close() error {
@@ -63,6 +56,7 @@ func (a *AOF) Close() error {
 	if err := a.writer.Flush(); err != nil {
 		return err
 	}
+
 	return a.file.Close()
 }
 
@@ -71,6 +65,7 @@ func (a *AOF) Load() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	defer f.Close()
 
 	var operations []string
@@ -105,15 +100,29 @@ func DumpAllAOF(store *Store) error {
 		return err
 	}
 
-	defer aof.Close()
+	defer func() {
+		_ = aof.Close()
+
+		if err != nil {
+			// failure occurred during the flushing process
+			// try deleting the tmp file
+			_ = os.RemoveAll(config.TempAOFFile)
+		}
+	}()
 
 	log.Println("rewriting AOF file at", config.TempAOFFile)
 
 	withLocks(func() {
 		for k, obj := range store.store {
 			err = dumpKey(aof, *((*string)(k)), obj)
+			if err != nil {
+				return
+			}
 		}
 	}, store, WithStoreLock())
+	if err != nil {
+		return err
+	}
 
 	err = aof.file.Sync()
 	if err != nil {
@@ -122,7 +131,6 @@ func DumpAllAOF(store *Store) error {
 
 	err = os.Rename(config.TempAOFFile, config.AOFFile)
 	if err != nil {
-		// TODO: consider cleanup on boot/here of zombie tmp files
 		return fmt.Errorf("failed renaming AOF file: %w", err)
 	}
 
