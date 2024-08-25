@@ -405,6 +405,13 @@ var (
 		Eval:  nil,
 		Arity: 1,
 	}
+	qUnwatchCmdMeta = DiceCmdMeta{
+		Name: "QUNWATCH",
+		Info: `Unsubscribes or QUnwatches the client from the given key's watch session.
+		It removes the key from the watch list for the caller client.`,
+		Eval:  nil,
+		Arity: 1,
+	}
 	multiCmdMeta = DiceCmdMeta{
 		Name: "MULTI",
 		Info: `MULTI marks the start of the transaction for the client.
@@ -657,6 +664,7 @@ func init() {
 	diceCmds["STACKREFPEEK"] = stackrefpeekCmdMeta
 	diceCmds["SUBSCRIBE"] = subscribeCmdMeta
 	diceCmds["QWATCH"] = qwatchCmdMeta
+	diceCmds["QUNWATCH"] = qUnwatchCmdMeta
 	diceCmds["MULTI"] = multiCmdMeta
 	diceCmds["EXEC"] = execCmdMeta
 	diceCmds["DISCARD"] = discardCmdMeta

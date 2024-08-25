@@ -1377,6 +1377,19 @@ func evalQWATCH(args []string, c *Client, store *Store) []byte {
 	return Encode(CreatePushResponse(&query, &queryResult), false)
 }
 
+// evalQUNWATCH removes the specified key from the watch list for the caller client.
+func evalQUNWATCH(args []string, c *Client, store *Store) []byte {
+	if len(args) != 1 {
+		return diceerrors.NewErrArity("QUNWATCH")
+	}
+	query, e := ParseQuery( /*sql=*/ args[0])
+	if e != nil {
+		return Encode(e, false)
+	}
+	store.RemoveWatcher(query, c.Fd)
+	return RespOK
+}
+
 // SETBIT key offset value
 func evalSETBIT(args []string, store *Store) []byte {
 	var err error
@@ -1851,6 +1864,9 @@ func executeCommand(cmd *RedisCmd, c *Client, store *Store) []byte {
 
 	if diceCmd.Name == "SUBSCRIBE" || diceCmd.Name == "QWATCH" {
 		return evalQWATCH(cmd.Args, c, store)
+	}
+	if diceCmd.Name == "UNSUBSCRIBE" || diceCmd.Name == "QUNWATCH" {
+		return evalQUNWATCH(cmd.Args, c, store)
 	}
 	if diceCmd.Name == "MULTI" {
 		c.TxnBegin()
