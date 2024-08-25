@@ -618,6 +618,12 @@ var (
 		Eval:  evalDBSIZE,
 		Arity: 1,
 	}
+	flushdbCmdMeta = DiceCmdMeta{
+		Name:  "FLUSHDB",
+		Info:  `FLUSHDB deletes all the keys of the currently selected DB`,
+		Eval:  evalFLUSHDB,
+		Arity: -1,
+  }
 	bitposCmdMeta = DiceCmdMeta{
 		Name: "BITPOS",
 		Info: `BITPOS returns the position of the first bit set to 1 or 0 in a string
@@ -720,5 +726,6 @@ func init() {
 	diceCmds["RPUSH"] = rpushCmdMeta
 	diceCmds["LPOP"] = lpopCmdMeta
 	diceCmds["DBSIZE"] = dbSizeCmdMeta
+	diceCmds["FLUSHDB"] = flushdbCmdMeta
 	diceCmds["BITPOS"] = bitposCmdMeta
 }

@@ -2302,3 +2302,25 @@ func evalLPOP(args []string, store *Store) []byte {
 
 	return Encode(x, false)
 }
+
+func evalFLUSHDB(args []string, store *Store) []byte {
+	log.Info(args)
+	if len(args) > 1 {
+		return diceerrors.NewErrArity("FLUSHDB")
+	}
+
+	flushType := constants.Sync
+	if len(args) == 1 {
+		flushType = strings.ToUpper(args[0])
+	}
+
+        // TODO: Update this method to work with shared-nothing multithreaded implementation
+	switch flushType {
+	case constants.Sync, constants.Async:
+		store.ResetStore()
+	default:
+		return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
+	}
+
+	return RespOK
+}
