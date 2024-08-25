@@ -623,13 +623,13 @@ var (
 		Info:  `GETSET returns the previous string value of a key after setting it to a new value.`,
 		Eval:  evalGETSET,
 		Arity: 2,
-  }
+	}
 	flushdbCmdMeta = DiceCmdMeta{
 		Name:  "FLUSHDB",
 		Info:  `FLUSHDB deletes all the keys of the currently selected DB`,
 		Eval:  evalFLUSHDB,
 		Arity: -1,
-  }
+	}
 	bitposCmdMeta = DiceCmdMeta{
 		Name: "BITPOS",
 		Info: `BITPOS returns the position of the first bit set to 1 or 0 in a string
