@@ -263,7 +263,6 @@ func TestConcurrentSetCommands(t *testing.T) {
 func executeCommands(conn *net.Conn, key, value *string, valReadChan chan interface{}, wGroup *sync.WaitGroup) {
 	defer wGroup.Done()
 	defer (*conn).Close()
-	fmt.Println("Goroutine started")
 	fireCommand(*conn, "SET "+*key+" "+*value)
 	var readValue = fireCommand(*conn, "GET "+*key)
 	valReadChan <- readValue
