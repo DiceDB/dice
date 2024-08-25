@@ -22,7 +22,7 @@ type Store struct {
 	storeMutex   sync.RWMutex
 	keypoolMutex sync.RWMutex
 	WatchList    sync.Map // Maps queries to the file descriptors of clients that are watching them.
-
+	keyspaceStat KeyspaceStat
 }
 
 // WatchChannel Channel to receive updates about keys that are being watched.
@@ -31,9 +31,10 @@ var WatchChannel chan WatchEvent
 func NewStore() *Store {
 	WatchChannel = make(chan WatchEvent, config.KeysLimit)
 	return &Store{
-		store:   make(map[unsafe.Pointer]*Obj),
-		expires: make(map[*Obj]uint64),
-		keypool: make(map[string]unsafe.Pointer),
+		store:        make(map[unsafe.Pointer]*Obj),
+		expires:      make(map[*Obj]uint64),
+		keypool:      make(map[string]unsafe.Pointer),
+		keyspaceStat: *CreateKeyspaceStat(),
 	}
 }
 
@@ -256,9 +257,7 @@ func (store *Store) Rename(sourceKey, destKey string) bool {
 		// Remove the source key
 		delete(store.store, sourcePtr)
 		delete(store.keypool, sourceKey)
-		if KeyspaceStat[0] != nil {
-			KeyspaceStat[0]["keys"]--
-		}
+		store.keyspaceStat.IncrStat("keys")
 
 		// Notify watchers about the deletion of the source key
 		notifyWatchers(sourceKey, "DEL", sourceObj)
@@ -268,10 +267,7 @@ func (store *Store) Rename(sourceKey, destKey string) bool {
 }
 
 func (store *Store) incrementKeyCount() {
-	if KeyspaceStat[0] == nil {
-		KeyspaceStat[0] = make(map[string]int)
-	}
-	KeyspaceStat[0]["keys"]++
+	store.keyspaceStat.IncrStat("keys")
 }
 
 func (store *Store) Get(k string) *Obj {
@@ -335,7 +331,7 @@ func (store *Store) deleteKey(k string, ptr unsafe.Pointer, obj *Obj) bool {
 		delete(store.store, ptr)
 		delete(store.expires, obj)
 		delete(store.keypool, k)
-		KeyspaceStat[0]["keys"]--
+		store.keyspaceStat.DecrKeys("keys")
 		notifyWatchers(k, "DEL", obj)
 		return true
 	}

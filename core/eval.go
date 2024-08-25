@@ -288,7 +288,7 @@ func evalDBSIZE(args []string, store *Store) []byte {
 	}
 
 	// return the RESP encoded value
-	return Encode(KeyspaceStat[0]["keys"], false)
+	return Encode(store.keyspaceStat.GetStat("keys"), false)
 }
 
 // evalGETDEL returns the value for the queried key in args
@@ -792,9 +792,7 @@ func evalINFO(args []string, store *Store) []byte {
 	var info []byte
 	buf := bytes.NewBuffer(info)
 	buf.WriteString("# Keyspace\r\n")
-	for i := range KeyspaceStat {
-		fmt.Fprintf(buf, "db%d:keys=%d,expires=0,avg_ttl=0\r\n", i, KeyspaceStat[i]["keys"])
-	}
+	fmt.Fprintf(buf, "keys=%d,expires=0,avg_ttl=0\r\n", store.keyspaceStat.GetStat("keys"))
 	return Encode(buf.String(), false)
 }
 

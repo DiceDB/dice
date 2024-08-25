@@ -26,7 +26,7 @@ func resetStore(store *Store) {
 	store.store = nil
 	store.keypool = nil
 	store.expires = nil
-	KeyspaceStat[0] = nil
+	store.keyspaceStat = *CreateKeyspaceStat()
 }
 
 func setupTest(store *Store) {
@@ -34,7 +34,7 @@ func setupTest(store *Store) {
 	store.store = make(map[unsafe.Pointer]*Obj)
 	store.keypool = make(map[string]unsafe.Pointer)
 	store.expires = make(map[*Obj]uint64)
-	KeyspaceStat[0] = make(map[string]int)
+	store.keyspaceStat = *CreateKeyspaceStat()
 }
 
 func TestEval(t *testing.T) {
@@ -622,7 +622,7 @@ func testEvalDel(t *testing.T, store *Store) {
 				}
 				store.store[unsafe.Pointer(obj)] = obj
 				store.keypool[key] = unsafe.Pointer(obj)
-				KeyspaceStat[0]["keys"]++
+				store.keyspaceStat.IncrStat("keys")
 			},
 			input:  []string{"EXISTING_KEY"},
 			output: []byte(":1\r\n"),
