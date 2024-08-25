@@ -56,7 +56,7 @@ run_benchmark:
 		--port=$(PORT)
 	@echo "Benchmark complete."
 
-run-small-test:
+run-benchmark-small:
 	$(MAKE) run_benchmark THREADS=2 DATA_SIZE=512 CLIENTS=20 REQUESTS=5000
 
 run-benchmark-large:
