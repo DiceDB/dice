@@ -31,7 +31,7 @@ func ExecuteQuery(query DSQLQuery, store *Store) ([]DSQLQueryResultRow, error) {
 			if WildCardMatch(query.KeyRegex, key) {
 				row := DSQLQueryResultRow{
 					Key:   key,
-					Value: store.store[ptr],
+					Value: store.store[*ptr],
 				}
 
 				if query.Where != nil {

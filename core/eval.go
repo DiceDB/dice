@@ -348,13 +348,15 @@ func evalJSONTYPE(args []string, store *Store) []byte {
 
 	jsonData := obj.Value
 
-	// If path is root, return "object" instantly
 	if path == defaultRootPath {
 		_, err := sonic.Marshal(jsonData)
 		if err != nil {
 			return Encode(errors.New("ERR could not serialize result"), false)
 		}
-		return Encode(constants.ObjectType, false)
+		// If path is root and len(args) == 1, return "object" instantly
+		if len(args) == 1 {
+			return Encode(constants.ObjectType, false)
+		}
 	}
 
 	// Parse the JSONPath expression
@@ -365,12 +367,9 @@ func evalJSONTYPE(args []string, store *Store) []byte {
 
 	results := expr.Get(jsonData)
 	if len(results) == 0 {
-		return RespNIL
+		return RespEmptyArray
 	}
-	if len(results) == 1 {
-		jsonType := utils.GetJSONFieldType(results[0])
-		return Encode(jsonType, false)
-	}
+
 	typeList := make([]string, 0, len(results))
 	for _, result := range results {
 		jsonType := utils.GetJSONFieldType(result)
@@ -1378,6 +1377,19 @@ func evalQWATCH(args []string, c *Client, store *Store) []byte {
 	return Encode(CreatePushResponse(&query, &queryResult), false)
 }
 
+// evalQUNWATCH removes the specified key from the watch list for the caller client.
+func evalQUNWATCH(args []string, c *Client, store *Store) []byte {
+	if len(args) != 1 {
+		return diceerrors.NewErrArity("QUNWATCH")
+	}
+	query, e := ParseQuery( /*sql=*/ args[0])
+	if e != nil {
+		return Encode(e, false)
+	}
+	store.RemoveWatcher(query, c.Fd)
+	return RespOK
+}
+
 // SETBIT key offset value
 func evalSETBIT(args []string, store *Store) []byte {
 	var err error
@@ -1852,6 +1864,9 @@ func executeCommand(cmd *RedisCmd, c *Client, store *Store) []byte {
 
 	if diceCmd.Name == "SUBSCRIBE" || diceCmd.Name == "QWATCH" {
 		return evalQWATCH(cmd.Args, c, store)
+	}
+	if diceCmd.Name == "UNSUBSCRIBE" || diceCmd.Name == "QUNWATCH" {
+		return evalQUNWATCH(cmd.Args, c, store)
 	}
 	if diceCmd.Name == "MULTI" {
 		c.TxnBegin()

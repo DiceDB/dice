@@ -2,8 +2,8 @@ package core
 
 import (
 	"bytes"
+	"gotest.tools/v3/assert"
 	"testing"
-    "gotest.tools/v3/assert"
 )
 
 func newNode(bl *byteList, b byte) *byteListNode {
@@ -69,7 +69,7 @@ func TestByteList(t *testing.T) {
 }
 
 func TestByteListDeepCopy(t *testing.T) {
-    // Create an original byteList using newByteList
+	// Create an original byteList using newByteList
 	original := newByteList(4)
 	original.size = 8
 
@@ -91,13 +91,13 @@ func TestByteListDeepCopy(t *testing.T) {
 	assert.Equal(t, copy.size, original.size, "size should be the same")
 
 	// Verify that the head node data is correctly copied
-    assert.Equal(t, copy.head.buf[0], original.head.buf[0], "head node buffer should be the same")
+	assert.Equal(t, copy.head.buf[0], original.head.buf[0], "head node buffer should be the same")
 
-    // Verify that changes to the copy do not affect the original
-    copy.head.buf[0] = 9
+	// Verify that changes to the copy do not affect the original
+	copy.head.buf[0] = 9
 	assert.Assert(t, original.head.buf[0] != copy.head.buf[0], "Original and copy head buffer should not be linked")
 
-    // Verify that changes to the original do not affect the copy
+	// Verify that changes to the original do not affect the copy
 	original.head.buf[1] = 8
 	assert.Assert(t, original.head.buf[1] != copy.head.buf[1], "Original and copy head buffer should not be linked")
 }
