@@ -1,3 +1,11 @@
+THREADS ?= 4 #number of threads
+CLIENTS ?= 50 #number of clients per thread
+REQUESTS ?= 10000 #number of requests per client
+DATA_SIZE ?= 32 #Object data size 
+KEY_PATTERN ?= R:R #Set:Get pattern
+RATIO ?= 1:10 #Set:Get ratio
+PORT ?= 7379 #Port for dicedb
+
 .PHONY: build test build-docker run test-one
 
 build:
@@ -36,3 +44,20 @@ check-golangci-lint:
 		echo "curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.60.1"; \
 		exit 1; \
 	fi
+
+run_benchmark:
+	@echo "Running memtier benchmark..."
+	memtier_benchmark \
+		--threads=$(THREADS) \
+		--data-size=$(DATA_SIZE) \
+		--key-pattern=$(KEY_PATTERN) \
+		--clients=$(CLIENTS) \
+		--requests=$(REQUESTS) \
+		--port=$(PORT)
+	@echo "Benchmark complete."
+
+run-benchmark-small:
+	$(MAKE) run_benchmark THREADS=2 DATA_SIZE=512 CLIENTS=20 REQUESTS=5000
+
+run-benchmark-large:
+	$(MAKE) run_benchmark THREADS=8 DATA_SIZE=4096 CLIENTS=100 REQUESTS=50000
