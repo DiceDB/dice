@@ -2314,6 +2314,7 @@ func evalFLUSHDB(args []string, store *Store) []byte {
 		flushType = strings.ToUpper(args[0])
 	}
 
+        // TODO: Update this method to work with shared-nothing multithreaded implementation
 	switch flushType {
 	case constants.Sync, constants.Async:
 		store.ResetStore()
