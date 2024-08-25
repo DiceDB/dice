@@ -26,7 +26,7 @@ func (s *StackRef) Size() int64 {
 // Push pushes reference of the key in the StackRef s.
 // returns false if key does not exist
 func (s *StackRef) Push(key string, store *Store) bool {
-	var x unsafe.Pointer
+	var x *string
 	var ok bool
 
 	withLocks(func() {
@@ -37,7 +37,8 @@ func (s *StackRef) Push(key string, store *Store) bool {
 		return false
 	}
 
-	s.si.Push(int64(uintptr(x)))
+	value := int64(uintptr(unsafe.Pointer(x)))
+	s.si.Push(value)
 	return true
 }
 
@@ -53,7 +54,7 @@ func (s *StackRef) Pop(store *Store) (*StackElement, error) {
 			return nil, err
 		}
 
-		key := *((*string)(unsafe.Pointer(uintptr(val))))
+		key := *(*string)(unsafe.Pointer(uintptr(val)))
 		obj := store.Get(key)
 		if obj != nil {
 			return &StackElement{key, obj}, nil
@@ -67,7 +68,7 @@ func (s *StackRef) Iterate(n int, store *Store) []*StackElement {
 	vals := s.si.Iterate(n)
 	elements := make([]*StackElement, 0, len(vals))
 	for _, val := range vals {
-		key := *((*string)(unsafe.Pointer(uintptr(val))))
+		key := *(*string)(unsafe.Pointer(uintptr(val)))
 		obj := store.Get(key)
 		if obj != nil {
 			elements = append(elements, &StackElement{key, obj})
