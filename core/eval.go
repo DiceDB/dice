@@ -410,7 +410,7 @@ func evalJSONCLEAR(args []string, store *Store) []byte {
 // The RESP value of the key's value type is encoded and then returned
 func evalJSONTYPE(args []string, store *Store) []byte {
 	if len(args) < 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'JSON.TYPE' command"), false)
+		return diceerrors.NewErrArity("JSON.TYPE")
 	}
 	key := args[0]
 

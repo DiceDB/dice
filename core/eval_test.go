@@ -422,12 +422,12 @@ func testEvalJSONTYPE(t *testing.T, store *Store) {
 		"nil value": {
 			setup:  func() {},
 			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'JSON.TYPE' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'json.type' command\r\n"),
 		},
 		"empty array": {
 			setup:  func() {},
 			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'JSON.TYPE' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'json.type' command\r\n"),
 		},
 		"key does not exist": {
 			setup:  func() {},
