@@ -59,5 +59,5 @@ run_benchmark:
 run-small-test:
 	$(MAKE) run_benchmark THREADS=2 DATA_SIZE=512 CLIENTS=20 REQUESTS=5000
 
-run-large-test:
+run-benchmark-large:
 	$(MAKE) run_benchmark THREADS=8 DATA_SIZE=4096 CLIENTS=100 REQUESTS=50000
