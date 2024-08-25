@@ -4,14 +4,13 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/bytedance/sonic"
+	"github.com/dicedb/dice/internal/constants"
+	"gotest.tools/v3/assert"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/bytedance/sonic"
-	"github.com/dicedb/dice/internal/constants"
-	"gotest.tools/v3/assert"
 )
 
 type evalTestCase struct {
@@ -723,8 +722,8 @@ func testEvalGETSET(t *testing.T, store *Store) {
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
+				store.store[key] = obj
+				store.keypool[key] = &key
 			},
 			input:  []string{"EXISTING_KEY", "WORLD"},
 			output: Encode("mock_value", false),
@@ -737,8 +736,8 @@ func testEvalGETSET(t *testing.T, store *Store) {
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
+				store.store[key] = obj
+				store.keypool[key] = &key
 			},
 			input:  []string{"EXISTING_KEY", "WORLD"},
 			output: Encode("mock_value", false),
