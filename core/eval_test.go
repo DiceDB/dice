@@ -45,6 +45,7 @@ func TestEval(t *testing.T) {
 	testEvalHELLO(t, store)
 	testEvalSET(t, store)
 	testEvalGET(t, store)
+	testEvalJSONCLEAR(t, store)
 	testEvalJSONTYPE(t, store)
 	testEvalJSONGET(t, store)
 	testEvalJSONSET(t, store)
@@ -296,6 +297,124 @@ func testEvalEXPIREAT(t *testing.T, store *Store) {
 	}
 
 	runEvalTests(t, tests, evalEXPIREAT, store)
+}
+
+func testEvalJSONCLEAR(t *testing.T, store *Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'json.clear' command\r\n"),
+		},
+		"empty array": {
+			setup:  func() {},
+			input:  []string{},
+			output: []byte("-ERR wrong number of arguments for 'json.clear' command\r\n"),
+		},
+		"key does not exist": {
+			setup:  func() {},
+			input:  []string{"NONEXISTENT_KEY"},
+			output: []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
+		},
+		"root clear": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"age\":13,\"high\":1.60,\"language\":[\"python\",\"golang\"], \"flag\":false, " +
+					"\"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+				store.store[unsafe.Pointer(obj)] = obj
+				store.keypool[key] = unsafe.Pointer(obj)
+			},
+			input:  []string{"EXISTING_KEY"},
+			output: []byte(":1\r\n"),
+		},
+		"array type clear": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"array\":[1,2,3,\"s\",null]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+				store.store[unsafe.Pointer(obj)] = obj
+				store.keypool[key] = unsafe.Pointer(obj)
+			},
+
+			input:  []string{"EXISTING_KEY"},
+			output: []byte(":1\r\n"),
+		},
+		"string type clear": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"a\":\"test\"}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+				store.store[unsafe.Pointer(obj)] = obj
+				store.keypool[key] = unsafe.Pointer(obj)
+			},
+
+			input:  []string{"EXISTING_KEY", "$.a"},
+			output: []byte(":0\r\n"),
+		},
+		"integer type clear": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"age\":13}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+				store.store[unsafe.Pointer(obj)] = obj
+				store.keypool[key] = unsafe.Pointer(obj)
+			},
+
+			input:  []string{"EXISTING_KEY", "$.age"},
+			output: []byte(":1\r\n"),
+		},
+		"number type clear": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"price\":3.14}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+				store.store[unsafe.Pointer(obj)] = obj
+				store.keypool[key] = unsafe.Pointer(obj)
+			},
+
+			input:  []string{"EXISTING_KEY", "$.price"},
+			output: []byte(":1\r\n"),
+		},
+		"boolean type clear": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"flag\":false}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+				store.store[unsafe.Pointer(obj)] = obj
+				store.keypool[key] = unsafe.Pointer(obj)
+			},
+			input:  []string{"EXISTING_KEY", "$.flag"},
+			output: []byte(":0\r\n"),
+		},
+		"multi type clear": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"age\":13,\"high\":1.60,\"name\":\"jerry\",\"language\":[\"python\",\"golang\"]," +
+					"\"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+				store.store[unsafe.Pointer(obj)] = obj
+				store.keypool[key] = unsafe.Pointer(obj)
+			},
+			input:  []string{"EXISTING_KEY", "$.*"},
+			output: []byte(":4\r\n"),
+		},
+	}
+	runEvalTests(t, tests, evalJSONCLEAR, store)
 }
 
 func testEvalJSONTYPE(t *testing.T, store *Store) {

@@ -104,6 +104,16 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsonclearCmdMeta = DiceCmdMeta{
+		Name: "JSON.CLEAR",
+		Info: `JSON.CLEAR key [path]
+		Returns an integer reply specifying the number ofmatching JSON arrays and 
+		objects cleared +number of matching JSON numerical values zeroed.
+		Error reply: If the number of arguments is incorrect the key doesn't exist.`,
+		Eval:     evalJSONCLEAR,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	ttlCmdMeta = DiceCmdMeta{
 		Name: "TTL",
 		Info: `TTL returns Time-to-Live in secs for the queried key in args
@@ -622,6 +632,7 @@ func init() {
 	diceCmds["JSON.SET"] = jsonsetCmdMeta
 	diceCmds["JSON.GET"] = jsongetCmdMeta
 	diceCmds["JSON.TYPE"] = jsontypeCmdMeta
+	diceCmds["JSON.CLEAR"] = jsonclearCmdMeta
 	diceCmds["TTL"] = ttlCmdMeta
 	diceCmds["DEL"] = delCmdMeta
 	diceCmds["EXPIRE"] = expireCmdMeta

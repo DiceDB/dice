@@ -315,6 +315,94 @@ func evalGETDEL(args []string, store *Store) []byte {
 	return Encode(obj.Value, false)
 }
 
+// evalJSONCLEAR Clear container values (arrays/objects) and set numeric values to 0,
+// Already cleared values are ignored for empty containers and zero numbers
+// args must contain at least the key;  (path unused in this implementation)
+// Returns encoded error if key is expired or it does not exist
+// Returns encoded error response if incorrect number of arguments
+// Returns an integer reply specifying the number of matching JSON arrays
+// and objects cleared + number of matching JSON numerical values zeroed.
+func evalJSONCLEAR(args []string, store *Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("JSON.CLEAR")
+	}
+	key := args[0]
+
+	// Default path is root if not specified
+	path := defaultRootPath
+	if len(args) > 1 {
+		path = args[1]
+	}
+
+	// Retrieve the object from the database
+	obj := store.Get(key)
+	if obj == nil {
+		return Encode(errors.New("ERR could not perform this operation on a key that doesn't exist"), false)
+	}
+
+	err := assertType(obj.TypeEncoding, ObjTypeJSON)
+	if err != nil {
+		return Encode(err, false)
+	}
+	err = assertEncoding(obj.TypeEncoding, ObjEncodingJSON)
+	if err != nil {
+		return Encode(err, false)
+	}
+
+	jsonData := obj.Value
+
+	_, err = sonic.Marshal(jsonData)
+	if err != nil {
+		return Encode(errors.New("ERR could not serialize result"), false)
+	}
+
+	var countClear uint64 = 0
+	if len(args) == 1 || path == defaultRootPath {
+		if jsonData != struct{}{} {
+			// If path is root and len(args) == 1, return it instantly
+			newObj := store.NewObj(struct{}{}, -1, ObjTypeJSON, ObjEncodingJSON)
+			store.Put(key, newObj)
+			countClear++
+			return Encode(countClear, false)
+		}
+	}
+
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return Encode(errors.New("ERR invalid JSONPath"), false)
+	}
+
+	_, err = expr.Modify(jsonData, func(element any) (altered any, changed bool) {
+		switch utils.GetJSONFieldType(element) {
+		case constants.IntegerType, constants.NumberType:
+			if element != constants.NumberZeroValue {
+				countClear++
+				return constants.NumberZeroValue, true
+			}
+		case constants.ArrayType:
+			if len(element.([]interface{})) != 0 {
+				countClear++
+				return []interface{}{}, true
+			}
+		case constants.ObjectType:
+			if element != struct{}{} {
+				countClear++
+				return struct{}{}, true
+			}
+		default:
+			return element, false
+		}
+		return
+	})
+	if err != nil {
+		return Encode(errors.New(err.Error()), false)
+	}
+	// Create a new object with the updated JSON data
+	newObj := store.NewObj(jsonData, -1, ObjTypeJSON, ObjEncodingJSON)
+	store.Put(key, newObj)
+	return Encode(countClear, false)
+}
+
 // evalJSONTYPE retrieves a JSON value type stored at the specified key
 // args must contain at least the key;  (path unused in this implementation)
 // Returns RespNIL if key is expired or it does not exist
