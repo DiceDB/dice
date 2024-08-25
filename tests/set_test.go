@@ -229,9 +229,9 @@ func TestConcurrentSetCommands(t *testing.T) {
 
 	// Create connections and the values to set through them.
 	for connNum := 0; connNum < numOfConnections; connNum++ {
-		value := testutils.GenerateRandomString(8, "abcdefghizklmopqrs12345")
-		connectionValues[getLocalConnectionPtr()] = value
-		expectedValues[*value] = struct{}{}
+		value := strconv.Itoa(connNum)
+		connectionValues[getLocalConnectionPtr()] = &value
+		expectedValues[value] = struct{}{}
 	}
 
 	// Execute the SET commands from the connections, and pass the output of GET to a channel
@@ -242,7 +242,6 @@ func TestConcurrentSetCommands(t *testing.T) {
 		go executeCommands(conn, &key, value, valuesReadChan, &wgroup)
 	}
 	wgroup.Wait()
-	fmt.Println("Received values from all connections")
 	close(valuesReadChan)
 
 	// Verify the values received in the channel
@@ -266,5 +265,4 @@ func executeCommands(conn *net.Conn, key, value *string, valReadChan chan interf
 	fireCommand(*conn, "SET "+*key+" "+*value)
 	var readValue = fireCommand(*conn, "GET "+*key)
 	valReadChan <- readValue
-	fmt.Println("Goroutine done")
 }
