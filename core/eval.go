@@ -2315,9 +2315,7 @@ func evalFLUSHDB(args []string, store *Store) []byte {
 	}
 
 	switch flushType {
-	case constants.Sync:
-		store.ResetStore()
-	case constants.Async:
+	case constants.Sync, constants.Async:
 		store.ResetStore()
 	default:
 		return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
