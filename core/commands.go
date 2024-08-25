@@ -618,6 +618,12 @@ var (
 		Eval:  evalDBSIZE,
 		Arity: 1,
 	}
+	getSetCmdMeta = DiceCmdMeta{
+		Name:  "GETSET",
+		Info:  `GETSET returns the previous string value of a key after setting it to a new value.`,
+		Eval:  evalGETSET,
+		Arity: 2,
+  }
 	flushdbCmdMeta = DiceCmdMeta{
 		Name:  "FLUSHDB",
 		Info:  `FLUSHDB deletes all the keys of the currently selected DB`,
@@ -726,6 +732,7 @@ func init() {
 	diceCmds["RPUSH"] = rpushCmdMeta
 	diceCmds["LPOP"] = lpopCmdMeta
 	diceCmds["DBSIZE"] = dbSizeCmdMeta
+	diceCmds["GETSET"] = getSetCmdMeta
 	diceCmds["FLUSHDB"] = flushdbCmdMeta
 	diceCmds["BITPOS"] = bitposCmdMeta
 }

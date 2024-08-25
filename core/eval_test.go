@@ -4,14 +4,13 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/bytedance/sonic"
+	"github.com/dicedb/dice/internal/constants"
+	"gotest.tools/v3/assert"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/bytedance/sonic"
-	"github.com/dicedb/dice/internal/constants"
-	"gotest.tools/v3/assert"
 )
 
 type evalTestCase struct {
@@ -54,6 +53,7 @@ func TestEval(t *testing.T) {
 	testEvalEXPIRETIME(t, store)
 	testEvalEXPIREAT(t, store)
 	testEvalDbsize(t, store)
+	testEvalGETSET(t, store)
 }
 
 func testEvalPING(t *testing.T, store *Store) {
@@ -698,6 +698,53 @@ func testEvalDbsize(t *testing.T, store *Store) {
 	}
 
 	runEvalTests(t, tests, evalDBSIZE, store)
+}
+
+func testEvalGETSET(t *testing.T, store *Store) {
+	tests := map[string]evalTestCase{
+		"GETSET with 1 arg": {
+			input:  []string{"HELLO"},
+			output: []byte("-ERR wrong number of arguments for 'getset' command\r\n"),
+		},
+		"GETSET with 3 args": {
+			input:  []string{"HELLO", "WORLD", "WORLD1"},
+			output: []byte("-ERR wrong number of arguments for 'getset' command\r\n"),
+		},
+		"GETSET key not exists": {
+			input:  []string{"HELLO", "WORLD"},
+			output: RespNIL,
+		},
+		"GETSET key exists": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "mock_value"
+				obj := &Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.store[key] = obj
+				store.keypool[key] = &key
+			},
+			input:  []string{"EXISTING_KEY", "WORLD"},
+			output: Encode("mock_value", false),
+		},
+		"GETSET key exists TTL should be reset": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "mock_value"
+				obj := &Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.store[key] = obj
+				store.keypool[key] = &key
+			},
+			input:  []string{"EXISTING_KEY", "WORLD"},
+			output: Encode("mock_value", false),
+		},
+	}
+
+	runEvalTests(t, tests, evalGETSET, store)
 }
 
 func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]string, *Store) []byte, store *Store) {
