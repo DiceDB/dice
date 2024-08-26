@@ -9,11 +9,11 @@ import (
 
 const (
 	MaxStackSize = 10000
+	MaxStacks    = 1000
 )
 
 var (
 	StackCount = 0
-	MaxStacks  = 1000
 	muStack    sync.Mutex
 )
 
