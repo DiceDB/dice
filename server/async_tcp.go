@@ -115,7 +115,6 @@ func (s *AsyncServer) FindPortAndBind() error {
 		Port: config.Port,
 		Addr: [4]byte{ip4[0], ip4[1], ip4[2], ip4[3]},
 	})
-
 }
 
 // Run starts the server, accepts connections, and handles client requests
@@ -181,7 +180,7 @@ func (s *AsyncServer) Run() error {
 
 					s.connectedClients[fd] = core.NewClient(fd)
 					if err := syscall.SetNonblock(fd, true); err != nil {
-						s.multiplexer.Close()
+						//nolint:gocritic
 						log.Fatal(err)
 					}
 
