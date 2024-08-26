@@ -224,7 +224,7 @@ func getBitPosWithBitRange(byteSlice []byte, bitToFind byte, start, end int) int
 }
 
 // ByteSliceToObj converts a byte slice to an Obj of the specified type and encoding
-func ByteSliceToObj(store *Store, oldObj *Obj, b []byte, objType uint8, encoding uint8) (*Obj, error) {
+func ByteSliceToObj(store *Store, oldObj *Obj, b []byte, objType, encoding uint8) (*Obj, error) {
 	switch objType {
 	case ObjTypeInt:
 		return ByteSliceToIntObj(store, oldObj, b)

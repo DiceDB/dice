@@ -1591,7 +1591,6 @@ func evalSETBIT(args []string, store *Store) []byte {
 	if assertType(obj.TypeEncoding, ObjTypeByteArray) == nil ||
 		assertType(obj.TypeEncoding, ObjTypeString) == nil ||
 		assertType(obj.TypeEncoding, ObjTypeInt) == nil {
-
 		var byteArray *ByteArray
 		oType, oEnc := ExtractTypeEncoding(obj)
 
