@@ -13,6 +13,18 @@ func NewByteArray(size int) *ByteArray {
 	}
 }
 
+func NewByteArrayFromObj(obj *Obj) (*ByteArray, error) {
+	b, err := getValueAsByteSlice(obj)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ByteArray{
+		data:   b,
+		Length: int64(len(b)),
+	}, nil
+}
+
 // SetBit sets the bit at the given position to the specified value
 func (b *ByteArray) SetBit(pos int, value bool) {
 	byteIndex := pos / 8

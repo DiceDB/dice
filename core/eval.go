@@ -277,6 +277,13 @@ func evalGET(args []string, store *Store) []byte {
 		}
 		return diceerrors.NewErrWithMessage("expected string but got another type")
 
+	case ObjEncodingByteArray:
+		// Value is stored as a bytearray, use type assertion
+		if val, ok := obj.Value.(*ByteArray); ok {
+			return Encode(string(val.data), false)
+		}
+		return diceerrors.NewErrWithMessage("expected byte array but got another type")
+
 	default:
 		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 	}
@@ -1581,14 +1588,26 @@ func evalSETBIT(args []string, store *Store) []byte {
 		store.Put(args[0], obj)
 	}
 
-	// handle the case when it is string
-	if assertType(obj.TypeEncoding, ObjTypeString) == nil {
-		return diceerrors.NewErrWithMessage("value is not a valid byte array")
-	}
+	if assertType(obj.TypeEncoding, ObjTypeByteArray) == nil ||
+		assertType(obj.TypeEncoding, ObjTypeString) == nil ||
+		assertType(obj.TypeEncoding, ObjTypeInt) == nil {
 
-	// handle the case when it is byte array
-	if assertType(obj.TypeEncoding, ObjTypeByteArray) == nil {
-		byteArray := obj.Value.(*ByteArray)
+		var byteArray *ByteArray
+		oType, oEnc := ExtractTypeEncoding(obj)
+
+		switch oType {
+		case ObjTypeByteArray:
+			byteArray = obj.Value.(*ByteArray)
+		case ObjTypeString, ObjTypeInt:
+			byteArray, err = NewByteArrayFromObj(obj)
+			if err != nil {
+				return diceerrors.NewErrSetType()
+			}
+		default:
+			return diceerrors.NewErrSetType()
+		}
+
+		// Perform the resizing check
 		byteArrayLength := byteArray.Length
 
 		// check whether resize required or not
@@ -1605,13 +1624,31 @@ func evalSETBIT(args []string, store *Store) []byte {
 		if response && !value {
 			byteArray.ResizeIfNecessary()
 		}
+
+		//We are returning newObject here so it is thread-safe
+		//Old will be removed by GC
+		newObj, err := ByteSliceToObj(store, obj, byteArray.data, oType, oEnc)
+		if err != nil {
+			return diceerrors.NewErrSetType()
+		}
+
+		exp, ok := getExpiry(obj, store)
+		var exDurationMs int64 = -1
+		if ok {
+			exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
+		}
+		//newObj has bydefault expiry time -1 , we need to set it
+		if exDurationMs > 0 {
+			store.setExpiry(newObj, exDurationMs)
+		}
+
+		store.Put(key, newObj)
 		if response {
 			return Encode(int(1), true)
 		}
 		return Encode(int(0), true)
 	}
-
-	return Encode(0, false)
+	return diceerrors.NewErrSetType()
 }
 
 // GETBIT key offset
