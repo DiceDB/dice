@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core"
+	"github.com/dicedb/dice/server/utils"
 	"github.com/dicedb/dice/testutils"
 )
 
@@ -18,7 +20,7 @@ func CreateAndPushKeyToStack(sr *core.StackRef, key string, value int, expDurati
 
 func TestStackRef(t *testing.T) {
 	store := core.NewStore()
-	sr := core.NewStackRef()
+	sr, _ := core.NewStackRef()
 
 	if _, err := sr.Pop(store); err != core.ErrStackEmpty {
 		t.Error("popping from an empty stackref should return an empty stack error")
@@ -66,7 +68,7 @@ func TestStackRef(t *testing.T) {
 		t.Error("iterating through the stackref should return the elements in the order they were pushed. Expected:", expectedVals, ", got: ", observedVals)
 	}
 
-	sr2 := core.NewStackRef()
+	sr2, _ := core.NewStackRef()
 	obj1 := store.NewObj(10, -1, core.ObjTypeString, core.ObjEncodingInt)
 	store.Put("key1", obj1)
 	sr2.Push("key1", store)
@@ -131,16 +133,86 @@ func TestStackRef(t *testing.T) {
 
 }
 
+func TestStackRefLen(t *testing.T) {
+	store := core.NewStore()
+
+	sr, err := core.NewStackRef()
+	if err != nil {
+		t.Fatalf("error creating stack: %v", err)
+	}
+	mockTime := &utils.MockClock{CurrTime: time.Now()}
+	utils.CurrentTime = mockTime
+
+	store.Put("key1", store.NewObj(10, -1, core.ObjTypeString, core.ObjEncodingInt))
+	sr.Push("key1", store)
+
+	store.Put("key2", store.NewObj(20, 10, core.ObjTypeString, core.ObjEncodingInt))
+	sr.Push("key2", store)
+
+	store.Put("key3", store.NewObj(30, -1, core.ObjTypeString, core.ObjEncodingInt))
+	sr.Push("key3", store)
+
+	store.Put("key4", store.NewObj(40, -1, core.ObjTypeString, core.ObjEncodingInt))
+	sr.Push("key4", store)
+
+	mockTime.SetTime(time.Now().Add(10 * time.Millisecond))
+	store.Del("key3")
+
+	store.Put("key5", store.NewObj(50, -1, core.ObjTypeString, core.ObjEncodingInt))
+	sr.Push("key5", store)
+
+	length := sr.Length(store)
+
+	expectedLength := int64(3)
+	if length != expectedLength {
+		t.Errorf("expected stack length %d, got %d", expectedLength, length)
+	}
+
+}
+func TestStackRefMaxConstraints(t *testing.T) {
+	config.KeysLimit = 20000000
+	core.WatchChannel = make(chan core.WatchEvent, config.KeysLimit)
+	store := core.NewStore()
+	core.StackCount = 0
+	sr, err := core.NewStackRef()
+	if err != nil {
+		t.Errorf("error creating StackRef: %v", err)
+	}
+
+	for i := 0; i < core.MaxStackSize; i++ {
+		key := fmt.Sprintf("key%d", i)
+		store.Put(key, store.NewObj(i, -1, core.ObjTypeString, core.ObjEncodingInt))
+		if !sr.Push(key, store) {
+			t.Errorf("push failed on element %d, expected successful push", i)
+		}
+	}
+	for i := 0; i < core.MaxStacks-1; i++ {
+		_, err := core.NewStackRef()
+		if err != nil {
+			t.Errorf("error creating StackRef: %v", err)
+		}
+	}
+
+	_, err = core.NewStackRef()
+	if err == nil {
+		t.Errorf("expected error creating StackRef, got %v", err)
+	}
+}
+
 func BenchmarkRemoveLargeNumberOfExpiredKeys(b *testing.B) {
 	store := core.NewStore()
-	for _, v := range benchmarkDataSizes {
+	for _, v := range benchmarkDataSizesStackQueue {
 		config.KeysLimit = 20000000 // Set a high limit for benchmarking
 		core.WatchChannel = make(chan core.WatchEvent, config.KeysLimit)
-
+		var sr *core.StackRef
+		var err error
+		if sr, err = core.NewStackRef(); err != nil {
+			b.Fatal(err)
+		}
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
+			core.StackCount = 0
 			for i := 0; i < b.N; i++ {
 				b.StopTimer()
-				sr := core.NewStackRef()
 				CreateAndPushKeyToStack(sr, "initialKey", 0, -1, store)
 				for j := 1; j < v; j++ {
 					CreateAndPushKeyToStack(sr, strconv.Itoa(j), j, 0, store)

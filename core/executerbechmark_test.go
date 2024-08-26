@@ -12,6 +12,7 @@ import (
 )
 
 var benchmarkDataSizes = []int{100, 1000, 10000, 100000, 1000000}
+var benchmarkDataSizesStackQueue = []int{100, 1000, 10000}
 var benchmarkDataSizesJSON = []int{100, 1000, 10000, 100000}
 
 var jsonList = map[string]string{
