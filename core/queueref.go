@@ -46,7 +46,7 @@ func (q *QueueRef) Size(store *Store) int64 {
 // Insert inserts reference of the key in the QueueRef q.
 // returns false if key does not exist
 func (q *QueueRef) Insert(key string, store *Store) bool {
-	var x unsafe.Pointer
+	var x *string
 	var ok bool
 	if q.qi.Length >= int64(MaxQueueSize) {
 		return false // Prevent inserting if the queue is at maximum capacity
@@ -58,7 +58,8 @@ func (q *QueueRef) Insert(key string, store *Store) bool {
 	if !ok {
 		return false
 	}
-	q.qi.Insert(int64(uintptr(x)))
+	value := int64(uintptr(unsafe.Pointer(x)))
+	q.qi.Insert(value)
 	return true
 }
 
@@ -73,7 +74,7 @@ func (q *QueueRef) Remove(store *Store) (*QueueElement, error) {
 		if err != nil {
 			return nil, err
 		}
-		key := *((*string)(unsafe.Pointer(uintptr(val))))
+		key := *(*string)(unsafe.Pointer(uintptr(val)))
 		obj := store.Get(key)
 		if obj != nil {
 			return &QueueElement{key, obj}, nil

@@ -13,6 +13,8 @@ const (
 	Nx      string = "nx"
 	KEEPTTL string = "KEEPTTL"
 	Keepttl string = "keepttl"
+	Sync    string = "SYNC"
+	Async   string = "ASYNC"
 
 	AND string = "AND"
 	OR  string = "OR"
