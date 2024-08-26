@@ -337,7 +337,7 @@ func evalJSONCLEAR(args []string, store *Store) []byte {
 	// Retrieve the object from the database
 	obj := store.Get(key)
 	if obj == nil {
-		return Encode(errors.New("ERR could not perform this operation on a key that doesn't exist"), false)
+		return diceerrors.NewErrWithMessage("ERR could not perform this operation on a key that doesn't exist")
 	}
 
 	err := assertType(obj.TypeEncoding, ObjTypeJSON)
@@ -353,7 +353,7 @@ func evalJSONCLEAR(args []string, store *Store) []byte {
 
 	_, err = sonic.Marshal(jsonData)
 	if err != nil {
-		return Encode(errors.New("ERR could not serialize result"), false)
+		return diceerrors.NewErrWithMessage("ERR could not serialize result")
 	}
 
 	var countClear uint64 = 0
@@ -369,7 +369,7 @@ func evalJSONCLEAR(args []string, store *Store) []byte {
 
 	expr, err := jp.ParseString(path)
 	if err != nil {
-		return Encode(errors.New("ERR invalid JSONPath"), false)
+		return diceerrors.NewErrWithMessage("ERR invalid JSONPath")
 	}
 
 	_, err = expr.Modify(jsonData, func(element any) (altered any, changed bool) {
@@ -395,7 +395,7 @@ func evalJSONCLEAR(args []string, store *Store) []byte {
 		return
 	})
 	if err != nil {
-		return Encode(errors.New(err.Error()), false)
+		return diceerrors.NewErrWithMessage(err.Error())
 	}
 	// Create a new object with the updated JSON data
 	newObj := store.NewObj(jsonData, -1, ObjTypeJSON, ObjEncodingJSON)
@@ -439,7 +439,7 @@ func evalJSONTYPE(args []string, store *Store) []byte {
 	if path == defaultRootPath {
 		_, err := sonic.Marshal(jsonData)
 		if err != nil {
-			return Encode(errors.New("ERR could not serialize result"), false)
+			return diceerrors.NewErrWithMessage("ERR could not serialize result")
 		}
 		// If path is root and len(args) == 1, return "object" instantly
 		if len(args) == 1 {
@@ -450,7 +450,7 @@ func evalJSONTYPE(args []string, store *Store) []byte {
 	// Parse the JSONPath expression
 	expr, err := jp.ParseString(path)
 	if err != nil {
-		return Encode(errors.New("ERR invalid JSONPath"), false)
+		return diceerrors.NewErrWithMessage("ERR invalid JSONPath")
 	}
 
 	results := expr.Get(jsonData)
