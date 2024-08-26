@@ -1625,8 +1625,8 @@ func evalSETBIT(args []string, store *Store) []byte {
 			byteArray.ResizeIfNecessary()
 		}
 
-		//We are returning newObject here so it is thread-safe
-		//Old will be removed by GC
+		// We are returning newObject here so it is thread-safe
+		// Old will be removed by GC
 		newObj, err := ByteSliceToObj(store, obj, byteArray.data, oType, oEnc)
 		if err != nil {
 			return diceerrors.NewErrSetType()
@@ -1637,7 +1637,7 @@ func evalSETBIT(args []string, store *Store) []byte {
 		if ok {
 			exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
 		}
-		//newObj has bydefault expiry time -1 , we need to set it
+		// newObj has bydefault expiry time -1 , we need to set it
 		if exDurationMs > 0 {
 			store.setExpiry(newObj, exDurationMs)
 		}
