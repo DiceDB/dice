@@ -353,7 +353,7 @@ func evalJSONCLEAR(args []string, store *Store) []byte {
 
 	_, err = sonic.Marshal(jsonData)
 	if err != nil {
-		return diceerrors.NewErrWithMessage("ERR could not serialize result")
+		return diceerrors.NewErrWithMessage("could not serialize result")
 	}
 
 	var countClear uint64 = 0
@@ -369,7 +369,7 @@ func evalJSONCLEAR(args []string, store *Store) []byte {
 
 	expr, err := jp.ParseString(path)
 	if err != nil {
-		return diceerrors.NewErrWithMessage("ERR invalid JSONPath")
+		return diceerrors.NewErrWithMessage("invalid JSONPath")
 	}
 
 	_, err = expr.Modify(jsonData, func(element any) (altered any, changed bool) {
@@ -439,7 +439,7 @@ func evalJSONTYPE(args []string, store *Store) []byte {
 	if path == defaultRootPath {
 		_, err := sonic.Marshal(jsonData)
 		if err != nil {
-			return diceerrors.NewErrWithMessage("ERR could not serialize result")
+			return diceerrors.NewErrWithMessage("could not serialize result")
 		}
 		// If path is root and len(args) == 1, return "object" instantly
 		if len(args) == 1 {
@@ -450,7 +450,7 @@ func evalJSONTYPE(args []string, store *Store) []byte {
 	// Parse the JSONPath expression
 	expr, err := jp.ParseString(path)
 	if err != nil {
-		return diceerrors.NewErrWithMessage("ERR invalid JSONPath")
+		return diceerrors.NewErrWithMessage("invalid JSONPath")
 	}
 
 	results := expr.Get(jsonData)
