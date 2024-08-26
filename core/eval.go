@@ -342,7 +342,7 @@ func evalJSONCLEAR(args []string, store *Store) []byte {
 
 	err := assertType(obj.TypeEncoding, ObjTypeJSON)
 	if err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
 	}
 	err = assertEncoding(obj.TypeEncoding, ObjEncodingJSON)
 	if err != nil {
