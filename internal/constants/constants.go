@@ -35,14 +35,15 @@ const (
 	OperatorLessThanEqualsTo    string = "<="
 	OperatorGreaterThanEqualsTo string = ">="
 
-	ObjectType  string = "object"
-	ArrayType   string = "array"
-	StringType  string = "string"
-	IntegerType string = "integer"
-	NumberType  string = "number"
-	BooleanType string = "boolean"
-	NullType    string = "null"
-	UnknownType string = "unknown"
+	ObjectType      string = "object"
+	ArrayType       string = "array"
+	StringType      string = "string"
+	IntegerType     string = "integer"
+	NumberType      string = "number"
+	BooleanType     string = "boolean"
+	NullType        string = "null"
+	UnknownType     string = "unknown"
+	NumberZeroValue int    = 0
 
 	Qwatch string = "qwatch"
 )

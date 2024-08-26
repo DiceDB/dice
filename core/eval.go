@@ -316,6 +316,94 @@ func evalGETDEL(args []string, store *Store) []byte {
 	return Encode(obj.Value, false)
 }
 
+// evalJSONCLEAR Clear container values (arrays/objects) and set numeric values to 0,
+// Already cleared values are ignored for empty containers and zero numbers
+// args must contain at least the key;  (path unused in this implementation)
+// Returns encoded error if key is expired or it does not exist
+// Returns encoded error response if incorrect number of arguments
+// Returns an integer reply specifying the number of matching JSON arrays
+// and objects cleared + number of matching JSON numerical values zeroed.
+func evalJSONCLEAR(args []string, store *Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("JSON.CLEAR")
+	}
+	key := args[0]
+
+	// Default path is root if not specified
+	path := defaultRootPath
+	if len(args) > 1 {
+		path = args[1]
+	}
+
+	// Retrieve the object from the database
+	obj := store.Get(key)
+	if obj == nil {
+		return diceerrors.NewErrWithMessage("could not perform this operation on a key that doesn't exist")
+	}
+
+	err := assertType(obj.TypeEncoding, ObjTypeJSON)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
+	}
+	err = assertEncoding(obj.TypeEncoding, ObjEncodingJSON)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
+	}
+
+	jsonData := obj.Value
+
+	_, err = sonic.Marshal(jsonData)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
+	}
+
+	var countClear uint64 = 0
+	if len(args) == 1 || path == defaultRootPath {
+		if jsonData != struct{}{} {
+			// If path is root and len(args) == 1, return it instantly
+			newObj := store.NewObj(struct{}{}, -1, ObjTypeJSON, ObjEncodingJSON)
+			store.Put(key, newObj)
+			countClear++
+			return Encode(countClear, false)
+		}
+	}
+
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("invalid JSONPath")
+	}
+
+	_, err = expr.Modify(jsonData, func(element any) (altered any, changed bool) {
+		switch utils.GetJSONFieldType(element) {
+		case constants.IntegerType, constants.NumberType:
+			if element != constants.NumberZeroValue {
+				countClear++
+				return constants.NumberZeroValue, true
+			}
+		case constants.ArrayType:
+			if len(element.([]interface{})) != 0 {
+				countClear++
+				return []interface{}{}, true
+			}
+		case constants.ObjectType:
+			if element != struct{}{} {
+				countClear++
+				return struct{}{}, true
+			}
+		default:
+			return element, false
+		}
+		return
+	})
+	if err != nil {
+		return diceerrors.NewErrWithMessage(err.Error())
+	}
+	// Create a new object with the updated JSON data
+	newObj := store.NewObj(jsonData, -1, ObjTypeJSON, ObjEncodingJSON)
+	store.Put(key, newObj)
+	return Encode(countClear, false)
+}
+
 // evalJSONTYPE retrieves a JSON value type stored at the specified key
 // args must contain at least the key;  (path unused in this implementation)
 // Returns RespNIL if key is expired or it does not exist
@@ -323,7 +411,7 @@ func evalGETDEL(args []string, store *Store) []byte {
 // The RESP value of the key's value type is encoded and then returned
 func evalJSONTYPE(args []string, store *Store) []byte {
 	if len(args) < 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'JSON.TYPE' command"), false)
+		return diceerrors.NewErrArity("JSON.TYPE")
 	}
 	key := args[0]
 
@@ -352,7 +440,7 @@ func evalJSONTYPE(args []string, store *Store) []byte {
 	if path == defaultRootPath {
 		_, err := sonic.Marshal(jsonData)
 		if err != nil {
-			return Encode(errors.New("ERR could not serialize result"), false)
+			return diceerrors.NewErrWithMessage("could not serialize result")
 		}
 		// If path is root and len(args) == 1, return "object" instantly
 		if len(args) == 1 {
@@ -363,7 +451,7 @@ func evalJSONTYPE(args []string, store *Store) []byte {
 	// Parse the JSONPath expression
 	expr, err := jp.ParseString(path)
 	if err != nil {
-		return Encode(errors.New("ERR invalid JSONPath"), false)
+		return diceerrors.NewErrWithMessage("invalid JSONPath")
 	}
 
 	results := expr.Get(jsonData)
@@ -2345,7 +2433,7 @@ func evalFLUSHDB(args []string, store *Store) []byte {
 		flushType = strings.ToUpper(args[0])
 	}
 
-        // TODO: Update this method to work with shared-nothing multithreaded implementation
+	// TODO: Update this method to work with shared-nothing multithreaded implementation
 	switch flushType {
 	case constants.Sync, constants.Async:
 		store.ResetStore()
