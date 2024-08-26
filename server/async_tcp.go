@@ -110,14 +110,12 @@ func (s *AsyncServer) FindPortAndBind() error {
 	}
 
 	ip4 := net.ParseIP(config.Host)
-	if err := syscall.Bind(serverFD, &syscall.SockaddrInet4{
+
+	return syscall.Bind(serverFD, &syscall.SockaddrInet4{
 		Port: config.Port,
 		Addr: [4]byte{ip4[0], ip4[1], ip4[2], ip4[3]},
-	}); err != nil {
-		return err
-	}
+	})
 
-	return nil
 }
 
 // Run starts the server, accepts connections, and handles client requests
@@ -152,8 +150,10 @@ func (s *AsyncServer) Run() error {
 
 	for {
 		select {
-		case <-s.ctx.Done(): // Check if context is canceled
-			return s.initiateShutdown()
+		case <-s.ctx.Done():
+			// Check if context is canceled
+			s.initiateShutdown()
+			return nil
 
 		default:
 			if time.Now().After(s.lastCronExecTime.Add(s.cronFrequency)) {
@@ -163,8 +163,10 @@ func (s *AsyncServer) Run() error {
 
 			events, err := s.multiplexer.Poll(-1)
 			if err != nil {
+				// Check for context cancellation on error
 				if s.ctx.Err() != nil {
-					return s.initiateShutdown() // Check for context cancellation on error
+					s.initiateShutdown()
+					return nil
 				}
 				continue
 			}
@@ -179,6 +181,7 @@ func (s *AsyncServer) Run() error {
 
 					s.connectedClients[fd] = core.NewClient(fd)
 					if err := syscall.SetNonblock(fd, true); err != nil {
+						s.multiplexer.Close()
 						log.Fatal(err)
 					}
 
@@ -218,8 +221,7 @@ func (s *AsyncServer) WaitForSignal(sigs chan os.Signal) {
 }
 
 // initiateShutdown gracefully shuts down the server
-func (s *AsyncServer) initiateShutdown() error {
+func (s *AsyncServer) initiateShutdown() {
 	log.Info("initiating shutdown")
 	core.Shutdown(s.store)
-	return nil
 }
