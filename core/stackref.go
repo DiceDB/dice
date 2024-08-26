@@ -4,7 +4,6 @@ import (
 	"sync"
 	"unsafe"
 
-	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core/diceerrors"
 )
 
@@ -14,6 +13,7 @@ const (
 
 var (
 	StackCount = 0
+	MaxStacks  = 1000
 	muStack    sync.Mutex
 )
 
@@ -27,7 +27,7 @@ type StackElement struct {
 }
 
 func NewStackRef() (*StackRef, error) {
-	if StackCount >= config.MaxStacks {
+	if StackCount >= MaxStacks {
 		return nil, diceerrors.NewErr("ERR maximum number of stacks reached")
 	}
 

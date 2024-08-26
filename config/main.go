@@ -28,4 +28,3 @@ var (
 	RequirePass string = constants.EmptyStr
 )
 
-var MaxStacks = 1000
