@@ -267,17 +267,17 @@ func evalGET(args []string, store *Store) []byte {
 		if val, ok := obj.Value.(int64); ok {
 			return Encode(val, false)
 		}
-		return Encode(fmt.Errorf("ERR expected int64 but got another type: %s", obj.Value), false)
+		return diceerrors.NewErrWithFormattedMessage("expected int64 but got another type: %s", obj.Value)
 
 	case ObjEncodingEmbStr, ObjEncodingRaw:
 		// Value is stored as a string, use type assertion
 		if val, ok := obj.Value.(string); ok {
 			return Encode(val, false)
 		}
-		return Encode(errors.New("ERR expected string but got another type"), false)
+		return diceerrors.NewErrWithMessage("expected string but got another type")
 
 	default:
-		return Encode(fmt.Errorf("ERR unsupported encoding: %d", oEnc), false)
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 	}
 }
 
@@ -1465,6 +1465,19 @@ func evalQWATCH(args []string, c *Client, store *Store) []byte {
 	return Encode(CreatePushResponse(&query, &queryResult), false)
 }
 
+// evalQUNWATCH removes the specified key from the watch list for the caller client.
+func evalQUNWATCH(args []string, c *Client, store *Store) []byte {
+	if len(args) != 1 {
+		return diceerrors.NewErrArity("QUNWATCH")
+	}
+	query, e := ParseQuery( /*sql=*/ args[0])
+	if e != nil {
+		return Encode(e, false)
+	}
+	store.RemoveWatcher(query, c.Fd)
+	return RespOK
+}
+
 // SETBIT key offset value
 func evalSETBIT(args []string, store *Store) []byte {
 	var err error
@@ -1940,6 +1953,9 @@ func executeCommand(cmd *RedisCmd, c *Client, store *Store) []byte {
 	if diceCmd.Name == "SUBSCRIBE" || diceCmd.Name == "QWATCH" {
 		return evalQWATCH(cmd.Args, c, store)
 	}
+	if diceCmd.Name == "UNSUBSCRIBE" || diceCmd.Name == "QUNWATCH" {
+		return evalQUNWATCH(cmd.Args, c, store)
+	}
 	if diceCmd.Name == "MULTI" {
 		c.TxnBegin()
 		return diceCmd.Eval(cmd.Args, store)
@@ -2373,4 +2389,56 @@ func evalLPOP(args []string, store *Store) []byte {
 	}
 
 	return Encode(x, false)
+}
+
+// GETSET atomically sets key to value and returns the old value stored at key.
+// Returns an error when key exists but does not hold a string value.
+// Any previous time to live associated with the key is
+// discarded on successful SET operation.
+//
+// Returns:
+// Bulk string reply: the old value stored at the key.
+// Nil reply: if the key does not exist.
+func evalGETSET(args []string, store *Store) []byte {
+	if len(args) != 2 {
+		return diceerrors.NewErrArity("GETSET")
+	}
+
+	var key, value = args[0], args[1]
+	getResp := evalGET([]string{key}, store)
+	// Check if it's an error resp from GET
+	if strings.HasPrefix(string(getResp), "-") {
+		return getResp
+	}
+
+	// Previous TTL needs to be reset
+	setResp := evalSET([]string{key, value}, store)
+	// Check if it's an error resp from SET
+	if strings.HasPrefix(string(setResp), "-") {
+		return setResp
+	}
+
+	return getResp
+}
+
+func evalFLUSHDB(args []string, store *Store) []byte {
+	log.Info(args)
+	if len(args) > 1 {
+		return diceerrors.NewErrArity("FLUSHDB")
+	}
+
+	flushType := constants.Sync
+	if len(args) == 1 {
+		flushType = strings.ToUpper(args[0])
+	}
+
+        // TODO: Update this method to work with shared-nothing multithreaded implementation
+	switch flushType {
+	case constants.Sync, constants.Async:
+		store.ResetStore()
+	default:
+		return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
+	}
+
+	return RespOK
 }

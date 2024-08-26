@@ -2,11 +2,10 @@ package core
 
 import (
 	"sort"
-	"unsafe"
 )
 
 type PoolItem struct {
-	keyPtr         unsafe.Pointer
+	keyPtr         string
 	lastAccessedAt uint32
 }
 
@@ -14,7 +13,7 @@ type PoolItem struct {
 // update the poolItem corresponding to that
 type EvictionPool struct {
 	pool   []*PoolItem
-	keyset map[unsafe.Pointer]*PoolItem
+	keyset map[string]*PoolItem
 }
 
 type ByIdleTime []*PoolItem
@@ -32,7 +31,7 @@ func (a ByIdleTime) Less(i, j int) bool {
 }
 
 // TODO: Make the implementation efficient to not need repeated sorting
-func (pq *EvictionPool) Push(key unsafe.Pointer, lastAccessedAt uint32) {
+func (pq *EvictionPool) Push(key string, lastAccessedAt uint32) {
 	_, ok := pq.keyset[key]
 	if ok {
 		return
@@ -64,7 +63,7 @@ func (pq *EvictionPool) Pop() *PoolItem {
 func newEvictionPool(size int) *EvictionPool {
 	return &EvictionPool{
 		pool:   make([]*PoolItem, size),
-		keyset: make(map[unsafe.Pointer]*PoolItem),
+		keyset: make(map[string]*PoolItem),
 	}
 }
 
