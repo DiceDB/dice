@@ -323,8 +323,8 @@ func testEvalJSONCLEAR(t *testing.T, store *Store) {
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
+				store.store[key] = obj
+				store.keypool[key] = &key
 			},
 			input:  []string{"EXISTING_KEY"},
 			output: []byte(":1\r\n"),
@@ -336,8 +336,8 @@ func testEvalJSONCLEAR(t *testing.T, store *Store) {
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
+				store.store[key] = obj
+				store.keypool[key] = &key
 			},
 
 			input:  []string{"EXISTING_KEY"},
@@ -350,8 +350,8 @@ func testEvalJSONCLEAR(t *testing.T, store *Store) {
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
+				store.store[key] = obj
+				store.keypool[key] = &key
 			},
 
 			input:  []string{"EXISTING_KEY", "$.a"},
@@ -364,8 +364,8 @@ func testEvalJSONCLEAR(t *testing.T, store *Store) {
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
+				store.store[key] = obj
+				store.keypool[key] = &key
 			},
 
 			input:  []string{"EXISTING_KEY", "$.age"},
@@ -378,8 +378,8 @@ func testEvalJSONCLEAR(t *testing.T, store *Store) {
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
+				store.store[key] = obj
+				store.keypool[key] = &key
 			},
 
 			input:  []string{"EXISTING_KEY", "$.price"},
@@ -392,8 +392,8 @@ func testEvalJSONCLEAR(t *testing.T, store *Store) {
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
+				store.store[key] = obj
+				store.keypool[key] = &key
 			},
 			input:  []string{"EXISTING_KEY", "$.flag"},
 			output: []byte(":0\r\n"),
@@ -406,8 +406,8 @@ func testEvalJSONCLEAR(t *testing.T, store *Store) {
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
+				store.store[key] = obj
+				store.keypool[key] = &key
 			},
 			input:  []string{"EXISTING_KEY", "$.*"},
 			output: []byte(":4\r\n"),

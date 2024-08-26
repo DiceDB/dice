@@ -337,7 +337,7 @@ func evalJSONCLEAR(args []string, store *Store) []byte {
 	// Retrieve the object from the database
 	obj := store.Get(key)
 	if obj == nil {
-		return diceerrors.NewErrWithMessage("ERR could not perform this operation on a key that doesn't exist")
+		return diceerrors.NewErrWithMessage("could not perform this operation on a key that doesn't exist")
 	}
 
 	err := assertType(obj.TypeEncoding, ObjTypeJSON)
@@ -2432,7 +2432,7 @@ func evalFLUSHDB(args []string, store *Store) []byte {
 		flushType = strings.ToUpper(args[0])
 	}
 
-        // TODO: Update this method to work with shared-nothing multithreaded implementation
+	// TODO: Update this method to work with shared-nothing multithreaded implementation
 	switch flushType {
 	case constants.Sync, constants.Async:
 		store.ResetStore()
