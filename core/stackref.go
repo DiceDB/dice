@@ -23,13 +23,13 @@ type StackElement struct {
 }
 
 func NewStackRef() (*StackRef, error) {
-	muStack.Lock()
-	defer muStack.Unlock()
 	if StackCount >= config.MaxStacks {
 		return nil, diceerrors.NewErr("ERR maximum number of stacks reached")
 	}
 
+	muStack.Lock()
 	StackCount++
+	muStack.Unlock()
 
 	return &StackRef{
 		si: NewStackInt(),

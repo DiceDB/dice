@@ -23,13 +23,12 @@ type QueueElement struct {
 }
 
 func NewQueueRef() (*QueueRef, error) {
-	muQueue.Lock()
-	defer muQueue.Unlock()
 	if QueueCount >= config.MaxQueues {
 		return nil, diceerrors.NewErr("ERR maximum number of queues reached")
 	}
-
+	muQueue.Lock()
 	QueueCount++
+	muQueue.Unlock()
 	return &QueueRef{
 		qi: NewQueueInt(),
 	}, nil
