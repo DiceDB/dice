@@ -353,7 +353,7 @@ func evalJSONCLEAR(args []string, store *Store) []byte {
 
 	_, err = sonic.Marshal(jsonData)
 	if err != nil {
-		return diceerrors.NewErrWithMessage("could not serialize result")
+		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
 	}
 
 	var countClear uint64 = 0
