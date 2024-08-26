@@ -282,7 +282,7 @@ func evalGET(args []string, store *Store) []byte {
 		if val, ok := obj.Value.(*ByteArray); ok {
 			return Encode(string(val.data), false)
 		}
-		return diceerrors.NewErrWithMessage("expected byte array but got another type")
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 
 	default:
 		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
