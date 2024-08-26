@@ -8,6 +8,10 @@ import (
 	"github.com/dicedb/dice/core/diceerrors"
 )
 
+const (
+	MaxStackSize = 10000
+)
+
 var (
 	StackCount = 0
 	muStack    sync.Mutex
@@ -53,7 +57,7 @@ func (s *StackRef) Push(key string, store *Store) bool {
 	var x *string
 	var ok bool
 
-	if s.si.Length >= int64(config.MaxStackSize) {
+	if s.si.Length >= int64(MaxStackSize) {
 		return false // Prevent pushing if the stack is at maximum capacity
 	}
 

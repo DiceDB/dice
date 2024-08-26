@@ -862,11 +862,11 @@ func evalQINTINS(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQint); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	store.Put(args[0], obj)
@@ -897,11 +897,11 @@ func evalSTACKINTPUSH(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackInt); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	store.Put(args[0], obj)
@@ -928,11 +928,11 @@ func evalQINTREM(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQint); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	q := obj.Value.(*QueueInt)
@@ -961,11 +961,11 @@ func evalSTACKINTPOP(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackInt); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	s := obj.Value.(*StackInt)
@@ -992,11 +992,11 @@ func evalQINTLEN(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQint); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	q := obj.Value.(*QueueInt)
@@ -1017,11 +1017,11 @@ func evalSTACKINTLEN(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackInt); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	s := obj.Value.(*StackInt)
@@ -1052,11 +1052,11 @@ func evalQINTPEEK(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQint); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	q := obj.Value.(*QueueInt)
@@ -1087,11 +1087,11 @@ func evalSTACKINTPEEK(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackInt); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	s := obj.Value.(*StackInt)
@@ -1119,11 +1119,11 @@ func evalQREFINS(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQref); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	store.Put(args[0], obj)
@@ -1150,17 +1150,17 @@ func evalSTACKREFPUSH(args []string, store *Store) []byte {
 	if obj == nil {
 		sr, err := NewStackRef()
 		if err != nil {
-			return Encode(err, false)
+			return diceerrors.NewErrWithMessage(("ERR maximum number of stacks reached"))
 		}
 		obj = store.NewObj(sr, -1, ObjTypeByteList, ObjEncodingStackRef)
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackRef); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	store.Put(args[0], obj)
@@ -1188,11 +1188,11 @@ func evalQREFREM(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQref); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	q := obj.Value.(*QueueRef)
@@ -1221,11 +1221,11 @@ func evalSTACKREFPOP(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackRef); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	s := obj.Value.(*StackRef)
@@ -1252,11 +1252,11 @@ func evalQREFLEN(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQref); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	q := obj.Value.(*QueueRef)
@@ -1277,11 +1277,11 @@ func evalSTACKREFLEN(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackRef); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	s := obj.Value.(*StackRef)
@@ -1312,11 +1312,11 @@ func evalQREFPEEK(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQref); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	q := obj.Value.(*QueueRef)
@@ -1347,11 +1347,11 @@ func evalSTACKREFPEEK(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackRef); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrSetType()
 	}
 
 	s := obj.Value.(*StackRef)
@@ -2352,7 +2352,7 @@ func evalFLUSHDB(args []string, store *Store) []byte {
 		flushType = strings.ToUpper(args[0])
 	}
 
-        // TODO: Update this method to work with shared-nothing multithreaded implementation
+	// TODO: Update this method to work with shared-nothing multithreaded implementation
 	switch flushType {
 	case constants.Sync, constants.Async:
 		store.ResetStore()

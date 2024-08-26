@@ -4,8 +4,12 @@ import (
 	"sync"
 	"unsafe"
 
-	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core/diceerrors"
+)
+
+const (
+	MaxQueueSize = 10000
+	MaxQueues    = 1000
 )
 
 var (
@@ -23,7 +27,7 @@ type QueueElement struct {
 }
 
 func NewQueueRef() (*QueueRef, error) {
-	if QueueCount >= config.MaxQueues {
+	if QueueCount >= MaxQueues {
 		return nil, diceerrors.NewErr("ERR maximum number of queues reached")
 	}
 	muQueue.Lock()
@@ -44,7 +48,7 @@ func (q *QueueRef) Size(store *Store) int64 {
 func (q *QueueRef) Insert(key string, store *Store) bool {
 	var x *string
 	var ok bool
-	if q.qi.Length >= int64(config.MaxQueueSize) {
+	if q.qi.Length >= int64(MaxQueueSize) {
 		return false // Prevent inserting if the queue is at maximum capacity
 	}
 	withLocks(func() {

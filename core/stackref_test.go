@@ -179,7 +179,7 @@ func TestStackRefMaxConstraints(t *testing.T) {
 		t.Errorf("error creating StackRef: %v", err)
 	}
 
-	for i := 0; i < config.MaxStackSize; i++ {
+	for i := 0; i < core.MaxStackSize; i++ {
 		key := fmt.Sprintf("key%d", i)
 		store.Put(key, store.NewObj(i, -1, core.ObjTypeString, core.ObjEncodingInt))
 		if !sr.Push(key, store) {
