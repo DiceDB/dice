@@ -88,29 +88,40 @@ func runTestServer(wg *sync.WaitGroup) {
 	config.IOBufferLength = 16
 	config.Port = 8739
 
-	totalRetries := 100
-	serverFD := 0
+	const totalRetries = 100
 	var err error
 
+	// Initialize the AsyncServer
+	testServer := server.NewAsyncServer(wg)
+
+	// Try to bind to a port with a maximum of `totalRetries` retries.
 	for i := 0; i < totalRetries; i++ {
-		serverFD, err = server.FindPortAndBind()
-		if err == nil {
+		if err = testServer.FindPortAndBind(); err == nil {
 			break
 		}
 
 		if err.Error() == "address already in use" {
-			log.Infof("port %d already in use, trying another port", config.Port)
-			config.Port += 1
+			log.Infof("Port %d already in use, trying port %d", config.Port, config.Port+1)
+			config.Port++
 		} else {
-			panic(err)
+			log.Fatalf("Failed to bind port: %v", err)
+			return
 		}
 	}
-	if serverFD == 0 {
-		log.Fatalf("Tried %d times, could not find any port. Cannot start DiceDB. Please try after some time.", totalRetries)
+
+	if err != nil {
+		log.Fatalf("Failed to bind to a port after %d retries: %v", totalRetries, err)
 		return
 	}
 
-	fmt.Println("starting the test server on port", config.Port)
+	// Inform the user that the server is starting
+	fmt.Println("Starting the test server on port", config.Port)
+
+	// Start the server in a goroutine
 	wg.Add(1)
-	go server.RunAsyncTCPServer(serverFD, wg)
+	go func() {
+		if err := testServer.Run(); err != nil {
+			log.Fatalf("Test server encountered an error: %v", err)
+		}
+	}()
 }

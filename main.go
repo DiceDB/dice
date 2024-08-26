@@ -25,28 +25,35 @@ func main() {
 	setupFlags()
 
 	// Handle SIGTERM and SIGINT
-	var sigs chan os.Signal = make(chan os.Signal, 1)
+	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
-	// Find a port and bind
-	// If port not available, raise FATAL error
-	serverFD, err := server.FindPortAndBind()
-	if err != nil {
-		log.Fatal(err)
+	// Create a wait group to manage goroutines
+	var wg sync.WaitGroup
+
+	// Initialize the AsyncServer
+	asyncServer := server.NewAsyncServer(&wg)
+
+	// Find a port and bind it
+	if err := asyncServer.FindPortAndBind(); err != nil {
+		log.Fatal("Error finding and binding port:", err)
 		return
 	}
 
-	var wg sync.WaitGroup
-
-	// Run the server, listen to incoming connections and handle them
+	// Start the server in a goroutine
 	wg.Add(1)
+	go func() {
+		if err := asyncServer.Run(); err != nil {
+			log.Fatal("Error running the server:", err)
+		}
+	}()
 
-	log.Info("Starting Classic Async TCP Server")
-	go server.RunAsyncTCPServer(serverFD, &wg)
-
-	// Listen to signals, but not a hardblocker to shutdown
-	go server.WaitForSignal(&wg, sigs)
-
-	// Wait for all goroutines to finish
+	// Start signal handling to listen for shutdown signals in a separate goroutine
+	wg.Add(1)
+	go asyncServer.WaitForSignal(sigs)
+	
+	// Wait for all goroutines to complete
 	wg.Wait()
+
+	log.Info("Server has shut down gracefully")
 }
