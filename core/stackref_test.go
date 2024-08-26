@@ -204,9 +204,10 @@ func BenchmarkRemoveLargeNumberOfExpiredKeys(b *testing.B) {
 	for _, v := range benchmarkDataSizesStackQueue {
 		config.KeysLimit = 20000000 // Set a high limit for benchmarking
 		core.WatchChannel = make(chan core.WatchEvent, config.KeysLimit)
-		core.StackCount = 0
-		core.MaxStacks = 2000000 // Set a high limit for benchmarking
+		// core.MaxStacks = 2000000 // Set a high limit for benchmarking
+
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
+			core.StackCount = 0
 			for i := 0; i < b.N; i++ {
 				b.StopTimer()
 				var sr *core.StackRef
