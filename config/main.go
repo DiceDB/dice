@@ -27,3 +27,13 @@ var (
 	// If requirepass is set to an empty string, no authentication is required
 	RequirePass string = constants.EmptyStr
 )
+
+var (
+	MaxQueueSize = 10000
+	MaxQueues    = 1000
+)
+
+var (
+	MaxStackSize = 10000
+	MaxStacks    = 1000
+)

@@ -179,14 +179,14 @@ func TestStackRefMaxConstraints(t *testing.T) {
 		t.Errorf("error creating StackRef: %v", err)
 	}
 
-	for i := 0; i < core.MaxStackSize; i++ {
+	for i := 0; i < config.MaxStackSize; i++ {
 		key := fmt.Sprintf("key%d", i)
 		store.Put(key, store.NewObj(i, -1, core.ObjTypeString, core.ObjEncodingInt))
 		if !sr.Push(key, store) {
 			t.Errorf("push failed on element %d, expected successful push", i)
 		}
 	}
-	for i := 0; i < core.MaxStacks-1; i++ {
+	for i := 0; i < config.MaxStacks-1; i++ {
 		_, err := core.NewStackRef()
 		if err != nil {
 			t.Errorf("error creating StackRef: %v", err)
@@ -205,7 +205,7 @@ func BenchmarkRemoveLargeNumberOfExpiredKeys(b *testing.B) {
 		config.KeysLimit = 20000000 // Set a high limit for benchmarking
 		core.WatchChannel = make(chan core.WatchEvent, config.KeysLimit)
 		core.StackCount = 0
-		core.MaxStacks = 2000000 // Set a high limit for benchmarking
+		config.MaxStacks = 2000000 // Set a high limit for benchmarking
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				b.StopTimer()

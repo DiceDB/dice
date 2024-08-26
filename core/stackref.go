@@ -4,11 +4,8 @@ import (
 	"errors"
 	"sync"
 	"unsafe"
-)
 
-var (
-	MaxStackSize = 10000
-	MaxStacks    = 1000
+	"github.com/dicedb/dice/config"
 )
 
 var (
@@ -28,7 +25,7 @@ type StackElement struct {
 func NewStackRef() (*StackRef, error) {
 	muStack.Lock()
 	defer muStack.Unlock()
-	if StackCount >= MaxStacks {
+	if StackCount >= config.MaxStacks {
 		return nil, errors.New("ERR maximum number of stacks reached")
 	}
 
@@ -56,7 +53,7 @@ func (s *StackRef) Push(key string, store *Store) bool {
 	var x *string
 	var ok bool
 
-	if s.si.Length >= int64(MaxStackSize) {
+	if s.si.Length >= int64(config.MaxStackSize) {
 		return false // Prevent pushing if the stack is at maximum capacity
 	}
 
