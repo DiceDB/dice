@@ -11,6 +11,8 @@ const (
 	NX      string = "NX"
 	Xx      string = "xx"
 	Nx      string = "nx"
+	GT      string = "GT"
+	LT      string = "LT"
 	KEEPTTL string = "KEEPTTL"
 	Keepttl string = "keepttl"
 	Sync    string = "SYNC"
