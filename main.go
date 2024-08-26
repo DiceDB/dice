@@ -32,10 +32,10 @@ func main() {
 	var wg sync.WaitGroup
 
 	// Initialize the AsyncServer
-	asyncServer := server.NewAsyncServer(&wg)
+	async_server := server.NewAsyncServer(&wg)
 
 	// Find a port and bind it
-	if err := asyncServer.FindPortAndBind(); err != nil {
+	if err := async_server.FindPortAndBind(); err != nil {
 		log.Fatal("Error finding and binding port:", err)
 		return
 	}
@@ -43,15 +43,14 @@ func main() {
 	// Start the server in a goroutine
 	wg.Add(1)
 	go func() {
-		if err := asyncServer.Run(); err != nil {
+		if err := async_server.Run(); err != nil {
 			log.Fatal("Error running the server:", err)
 		}
 	}()
 
 	// Start signal handling to listen for shutdown signals in a separate goroutine
-	wg.Add(1)
-	go asyncServer.WaitForSignal(sigs)
-	
+	go async_server.WaitForSignal(sigs)
+
 	// Wait for all goroutines to complete
 	wg.Wait()
 

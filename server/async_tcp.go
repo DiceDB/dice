@@ -25,7 +25,6 @@ type AsyncServer struct {
 	multiplexer      iomultiplexer.IOMultiplexer
 	connectedClients map[int]*core.Client
 	store            *core.Store
-	shutdownChan     chan struct{}
 	lastCronExecTime time.Time
 	cronFrequency    time.Duration
 }
@@ -41,7 +40,6 @@ func NewAsyncServer(wg *sync.WaitGroup) *AsyncServer {
 		maxClients:       20000,
 		connectedClients: make(map[int]*core.Client),
 		store:            core.NewStore(),
-		shutdownChan:     make(chan struct{}),
 		lastCronExecTime: utils.GetCurrentTime(),
 		cronFrequency:    1 * time.Second,
 	}
@@ -154,8 +152,9 @@ func (s *AsyncServer) Run() error {
 
 	for {
 		select {
-		case <-s.shutdownChan:
+		case <-s.ctx.Done(): // Check if context is canceled
 			return s.initiateShutdown()
+
 		default:
 			if time.Now().After(s.lastCronExecTime.Add(s.cronFrequency)) {
 				core.DeleteExpiredKeys(s.store)
@@ -164,6 +163,9 @@ func (s *AsyncServer) Run() error {
 
 			events, err := s.multiplexer.Poll(-1)
 			if err != nil {
+				if s.ctx.Err() != nil {
+					return s.initiateShutdown() // Check for context cancellation on error
+				}
 				continue
 			}
 
@@ -212,13 +214,12 @@ func (s *AsyncServer) Run() error {
 func (s *AsyncServer) WaitForSignal(sigs chan os.Signal) {
 	defer s.wg.Done()
 	<-sigs
-	s.shutdownChan <- struct{}{}
+	s.cancel()
 }
 
 // initiateShutdown gracefully shuts down the server
 func (s *AsyncServer) initiateShutdown() error {
 	log.Info("initiating shutdown")
 	core.Shutdown(s.store)
-	s.cancel()
 	return nil
 }
