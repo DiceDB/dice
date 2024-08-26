@@ -1,11 +1,11 @@
 package core
 
 import (
-	"errors"
 	"sync"
 	"unsafe"
 
 	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/core/diceerrors"
 )
 
 var (
@@ -26,7 +26,7 @@ func NewStackRef() (*StackRef, error) {
 	muStack.Lock()
 	defer muStack.Unlock()
 	if StackCount >= config.MaxStacks {
-		return nil, errors.New("ERR maximum number of stacks reached")
+		return nil, diceerrors.NewErr("ERR maximum number of stacks reached")
 	}
 
 	StackCount++

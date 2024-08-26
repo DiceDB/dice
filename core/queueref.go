@@ -1,11 +1,11 @@
 package core
 
 import (
-	"errors"
 	"sync"
 	"unsafe"
 
 	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/core/diceerrors"
 )
 
 var (
@@ -26,7 +26,7 @@ func NewQueueRef() (*QueueRef, error) {
 	muQueue.Lock()
 	defer muQueue.Unlock()
 	if QueueCount >= config.MaxQueues {
-		return nil, errors.New("ERR maximum number of queues reached")
+		return nil, diceerrors.NewErr("ERR maximum number of queues reached")
 	}
 
 	QueueCount++
