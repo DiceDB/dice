@@ -47,7 +47,6 @@ func main() {
 		cancel()
 	}()
 
-	// Start the server in a goroutine
 	err := asyncServer.Run(ctx)
 
 	// May not be need, just to show we can handle different situations if necessary
