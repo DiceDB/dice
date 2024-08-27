@@ -94,7 +94,7 @@ func (s *AsyncServer) WatchKeys(ctx context.Context) {
 func (s *AsyncServer) FindPortAndBind() (err error) {
 	serverFD, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, 0)
 	if err != nil {
-		return
+		return err
 	}
 	s.serverFD = serverFD
 
@@ -107,12 +107,12 @@ func (s *AsyncServer) FindPortAndBind() (err error) {
 		}
 	}()
 
-	if err = syscall.SetsockoptInt(serverFD, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
-		return
+	if err := syscall.SetsockoptInt(serverFD, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
+		return err
 	}
 
-	if err = syscall.SetNonblock(serverFD, true); err != nil {
-		return
+	if err := syscall.SetNonblock(serverFD, true); err != nil {
+		return err
 	}
 
 	ip4 := net.ParseIP(config.Host)
@@ -273,7 +273,7 @@ func (s *AsyncServer) InitiateShutdown() {
 	log.Info("initiating shutdown")
 
 	// Close all client connections
-	for fd, _ := range s.connectedClients {
+	for fd := range s.connectedClients {
 		// Close the client socket
 		if err := syscall.Close(fd); err != nil {
 			log.Warn("failed to close client connection", "error", err)

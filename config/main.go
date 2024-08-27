@@ -1,8 +1,9 @@
 package config
 
 import (
-	"github.com/dicedb/dice/internal/constants"
 	"time"
+
+	"github.com/dicedb/dice/internal/constants"
 )
 
 var (
