@@ -8,18 +8,27 @@ import (
 	"github.com/dicedb/dice/server/utils"
 )
 
+type WatchEvent struct {
+	Key       string
+	Operation string
+	Value     *Obj
+}
+
 type Store struct {
 	store        map[string]*Obj
 	expires      map[*Obj]uint64 // Does not need to be thread-safe as it is only accessed by a single thread.
 	keypool      map[string]*string
 	storeMutex   sync.RWMutex
 	keypoolMutex sync.RWMutex
+	WatchList    sync.Map // Maps queries to the file descriptors of clients that are watching them.
+
 }
 
-func NewStore() *Store {
-	WatchChan = make(chan WatchEvent, config.KeysLimit)
-	WatchSubscriptionChan = make(chan WatchSubscription)
+// WatchChannel Channel to receive updates about keys that are being watched.
+var WatchChannel chan WatchEvent
 
+func NewStore() *Store {
+	WatchChannel = make(chan WatchEvent, config.KeysLimit)
 	return &Store{
 		store:   make(map[string]*Obj),
 		expires: make(map[*Obj]uint64),
@@ -44,8 +53,7 @@ func (store *Store) ResetStore() {
 		store.store = make(map[string]*Obj)
 		store.expires = make(map[*Obj]uint64)
 		store.keypool = make(map[string]*string)
-		WatchChan = make(chan WatchEvent, config.KeysLimit)
-		WatchSubscriptionChan = make(chan WatchSubscription)
+		WatchChannel = make(chan WatchEvent, config.KeysLimit)
 	}, store, WithStoreLock(), WithKeypoolLock())
 }
 
@@ -202,6 +210,23 @@ func (store *Store) GetDBSize() uint64 {
 	return noOfKeys
 }
 
+// Function to add a new watcher to a query.
+func (store *Store) AddWatcher(query DSQLQuery, clientFd int) { //nolint:gocritic
+	clients, _ := store.WatchList.LoadOrStore(query, &sync.Map{})
+	clients.(*sync.Map).Store(clientFd, struct{}{})
+}
+
+// Function to remove a watcher from a query.
+func (store *Store) RemoveWatcher(query DSQLQuery, clientFd int) { //nolint:gocritic
+	if clients, ok := store.WatchList.Load(query); ok {
+		clients.(*sync.Map).Delete(clientFd)
+		// If no more clients for this query, remove the query from WatchList
+		if countClients(clients.(*sync.Map)) == 0 {
+			store.WatchList.Delete(query)
+		}
+	}
+}
+
 // Rename function to implement RENAME functionality using existing helpers
 
 func (store *Store) Rename(sourceKey, destKey string) bool {
@@ -285,6 +310,16 @@ func (store *Store) setUnixTimeExpiry(obj *Obj, exUnixTimeSec int64) {
 	store.expires[obj] = uint64(exUnixTimeSec * 1000)
 }
 
+// Helper function to count clients
+func countClients(clients *sync.Map) int {
+	count := 0
+	clients.Range(func(_, _ interface{}) bool {
+		count++
+		return true
+	})
+	return count
+}
+
 func (store *Store) ensureKeyInPool(k string) *string {
 	ptr, ok := store.keypool[k]
 	if !ok {
@@ -315,5 +350,5 @@ func (store *Store) delByPtr(ptr string) bool {
 }
 
 func notifyWatchers(k, operation string, obj *Obj) {
-	WatchChan <- WatchEvent{k, operation, obj}
+	WatchChannel <- WatchEvent{k, operation, obj}
 }

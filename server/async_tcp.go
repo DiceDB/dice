@@ -27,20 +27,16 @@ type AsyncServer struct {
 	multiplexerPollTimeout time.Duration
 	connectedClients       map[int]*core.Client
 	store                  *core.Store
-	queryWatcher           *core.QueryWatcher
 	lastCronExecTime       time.Time
 	cronFrequency          time.Duration
-	WatchList              sync.Map // Maps queries to the file descriptors of clients that are watching them.
 }
 
 // NewAsyncServer initializes a new AsyncServer
 func NewAsyncServer() *AsyncServer {
-	store := core.NewStore()
 	return &AsyncServer{
 		maxClients:             config.ServerMaxClients,
 		connectedClients:       make(map[int]*core.Client),
-		store:                  store,
-		queryWatcher:           core.NewQueryWatcher(store),
+		store:                  core.NewStore(),
 		multiplexerPollTimeout: config.ServerMultiplexerPollTimeout,
 		lastCronExecTime:       utils.GetCurrentTime(),
 		cronFrequency:          config.ServerCronFrequency,
@@ -58,6 +54,40 @@ func (s *AsyncServer) SetupUsers() error {
 	}
 	log.Info("default user set up", "password required", config.RequirePass != constants.EmptyStr)
 	return nil
+}
+
+// WatchKeys watches for changes in keys and notifies clients
+func (s *AsyncServer) WatchKeys(ctx context.Context) {
+	for {
+		select {
+		case event := <-core.WatchChannel:
+			s.store.WatchList.Range(func(key, value interface{}) bool {
+				query := key.(core.DSQLQuery)
+				clients := value.(*sync.Map)
+
+				if core.WildCardMatch(query.KeyRegex, event.Key) {
+					queryResult, err := core.ExecuteQuery(query, s.store)
+					if err != nil {
+						log.Error(err)
+						return true
+					}
+
+					encodedResult := core.Encode(core.CreatePushResponse(&query, &queryResult), false)
+					clients.Range(func(clientKey, _ interface{}) bool {
+						clientFd := clientKey.(int)
+						_, err := syscall.Write(clientFd, encodedResult)
+						if err != nil {
+							s.store.RemoveWatcher(query, clientFd)
+						}
+						return true
+					})
+				}
+				return true
+			})
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 
 // FindPortAndBind binds the server to the given host and port
@@ -105,18 +135,18 @@ func (s *AsyncServer) Run(ctx context.Context) error {
 		}
 	}(s.serverFD)
 
+	watchCtx, cancelWatch := context.WithCancel(ctx)
+	defer cancelWatch()
+
 	if err := s.SetupUsers(); err != nil {
 		return err
 	}
 
-	watchCtx, cancelWatch := context.WithCancel(ctx)
-	defer cancelWatch()
 	var wg sync.WaitGroup
-
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		s.queryWatcher.Run(watchCtx)
+		s.WatchKeys(watchCtx)
 	}()
 
 	if err := syscall.Listen(s.serverFD, s.maxClients); err != nil {
