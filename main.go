@@ -37,7 +37,6 @@ func main() {
 	// Find a port and bind it
 	if err := asyncServer.FindPortAndBind(); err != nil {
 		log.Fatal("Error finding and binding port:", err)
-		return
 	}
 
 	go func() {
@@ -53,7 +52,7 @@ func main() {
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			log.Info("Server was canceled")
-		} else if errors.Is(err, server.AbortedErr) {
+		} else if errors.Is(err, server.ErrAborted) {
 			log.Info("Server received abort command")
 		} else {
 			log.Error("Server error", "error", err)

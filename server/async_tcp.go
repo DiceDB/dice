@@ -17,7 +17,8 @@ import (
 	"github.com/dicedb/dice/server/utils"
 )
 
-var AbortedErr = errors.New("server received ABORT command")
+var ErrAborted = errors.New("server received ABORT command")
+var ErrInvalidIPAddress = errors.New("invalid IP address")
 
 type AsyncServer struct {
 	serverFD               int
@@ -32,7 +33,6 @@ type AsyncServer struct {
 
 // NewAsyncServer initializes a new AsyncServer
 func NewAsyncServer() *AsyncServer {
-
 	return &AsyncServer{
 		maxClients:             20000,
 		connectedClients:       make(map[int]*core.Client),
@@ -107,6 +107,9 @@ func (s *AsyncServer) FindPortAndBind() error {
 	}
 
 	ip4 := net.ParseIP(config.Host)
+	if ip4 == nil {
+		return ErrInvalidIPAddress
+	}
 
 	return syscall.Bind(serverFD, &syscall.SockaddrInet4{
 		Port: config.Port,
@@ -193,7 +196,7 @@ func (s *AsyncServer) eventLoop(ctx context.Context) error {
 					}
 				} else {
 					if err := s.handleClientEvent(event); err != nil {
-						if errors.Is(err, AbortedErr) {
+						if errors.Is(err, ErrAborted) {
 							log.Info("Received abort command, initiating graceful shutdown")
 							return err
 						}
@@ -241,7 +244,7 @@ func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
 
 	respond(commands, comm, s.store)
 	if hasAbort {
-		return AbortedErr
+		return ErrAborted
 	}
 
 	return nil
