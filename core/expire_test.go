@@ -2,15 +2,14 @@ package core
 
 import (
 	"testing"
-	"unsafe"
 )
 
 func TestDelExpiry(t *testing.T) {
 	store := NewStore()
 	// Initialize the test environment
-	store.store = make(map[unsafe.Pointer]*Obj)
+	store.store = make(map[string]*Obj)
 	store.expires = make(map[*Obj]uint64)
-	store.keypool = make(map[string]unsafe.Pointer)
+	store.keypool = make(map[string]*string)
 
 	// Define test cases
 	tests := []struct {

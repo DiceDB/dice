@@ -15,7 +15,8 @@ const (
 	ValOutOfRangeErr   = "value is out of range"
 	ElementPeekErr     = "number of elements to peek should be a positive number less than %d"
 	NoKeyErr           = "no such key"
-	ErrDefault         = "ERR %s"
+	ErrDefault         = "-ERR %s"
+	WrongTypeErr       = "-WRONGTYPE Operation against a key holding the wrong kind of value"
 )
 
 type DiceError struct {
@@ -29,7 +30,7 @@ func newDiceErr(message string) *DiceError {
 }
 
 func (d *DiceError) toEncodedMessage() []byte {
-	return []byte(fmt.Sprintf("-%s\r\n", d.message.Error()))
+	return []byte(fmt.Sprintf("%s\r\n", d.message.Error()))
 }
 
 func NewErr(message string) error {
@@ -63,4 +64,8 @@ func NewErrArity(cmdName string) []byte {
 
 func NewErrExpireTime(cmdName string) []byte {
 	return NewErrWithFormattedMessage(ExpiryErr, strings.ToLower(cmdName))
+}
+
+func NewErrSetType() []byte {
+	return []byte(fmt.Sprintf("%s\r\n", WrongTypeErr))
 }
