@@ -228,16 +228,14 @@ func Encode(value interface{}, isSimple bool) []byte {
 			buf.Write(Encode(row.Value.Value, false))
 		}
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
-	case HMap:
+	case HashMap:
 		var b []byte
 		buf := bytes.NewBuffer(b)
-		hashMap := value.(HMap)
+		hashMap := value.(HashMap)
 		numOfKeyValuePairs := 0
-		for pair := hashMap.Oldest(); pair != nil; pair = pair.Next() {
-			key := pair.Key
-			val := pair.Value
+		for key, value := range hashMap {
 			buf.Write(Encode(key, false))
-			buf.Write(Encode(val, false))
+			buf.Write(Encode(value, false))
 			numOfKeyValuePairs++
 		}
 		return []byte(fmt.Sprintf("*%d\r\n%s", numOfKeyValuePairs, buf.Bytes()))
