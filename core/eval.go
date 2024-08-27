@@ -777,7 +777,7 @@ func evaluateAndSetExpiry(subCommands []string, newExpiry uint64, key string,
 		return false, nil
 	}
 	shouldSetExpiry = true
-	//if no condition exists
+	// if no condition exists
 	if len(subCommands) == 0 {
 		store.setUnixTimeExpiry(obj, int64(newExpiry))
 		return shouldSetExpiry, nil

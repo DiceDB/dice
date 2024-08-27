@@ -27,4 +27,3 @@ var (
 	// If requirepass is set to an empty string, no authentication is required
 	RequirePass string = constants.EmptyStr
 )
-

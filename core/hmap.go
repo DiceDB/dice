@@ -57,6 +57,7 @@ func hashMapBuilder(keyValuePairs []string, currentHashMap HashMap) (HashMap, in
 	return hmap, numKeysNewlySet, nil
 }
 
+//nolint:unused
 func getValueFromHashMap(key, field string, store *Store) ([]byte, error) {
 	var value string
 
@@ -77,6 +78,5 @@ func getValueFromHashMap(key, field string, store *Store) ([]byte, error) {
 		return nil, errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")
 	}
 
-	// return Encode(value, false), nil
 	return []byte(value), nil
 }
