@@ -557,17 +557,6 @@ var (
 		Arity:    -4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
-	hgetCmdMeta = DiceCmdMeta{
-		Name: "HGET",
-		Info: `HGET returns the value associated with the given field in the hash
-		stored at 'key'.
-		Returns
-		If a valid field is found, HSET returns the value(string)
-		If no valid field is to be found, HSET returns (nil).`,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
-		Eval:     evalHGET,
-	}
 	objectCmdMeta = DiceCmdMeta{
 		Name: "OBJECT",
 		Info: `OBJECT subcommand [arguments [arguments ...]]
@@ -708,5 +697,4 @@ func init() {
 	diceCmds["RPUSH"] = rpushCmdMeta
 	diceCmds["LPOP"] = lpopCmdMeta
 	diceCmds["DBSIZE"] = dbSizeCmdMeta
-	diceCmds["HGET"] = hgetCmdMeta
 }
