@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
 	"os/signal"
@@ -30,9 +31,10 @@ func main() {
 
 	// Create a wait group to manage goroutines
 	var wg sync.WaitGroup
+	ctx, cancel := context.WithCancel(context.Background())
 
 	// Initialize the AsyncServer
-	asyncServer := server.NewAsyncServer(&wg)
+	asyncServer := server.NewAsyncServer()
 
 	// Find a port and bind it
 	if err := asyncServer.FindPortAndBind(); err != nil {
@@ -43,13 +45,14 @@ func main() {
 	// Start the server in a goroutine
 	wg.Add(1)
 	go func() {
-		if err := asyncServer.Run(); err != nil {
+		defer wg.Done()
+		if err := asyncServer.Run(ctx, &wg); err != nil {
 			log.Fatal("Error running the server:", err)
 		}
 	}()
 
 	// Start signal handling to listen for shutdown signals in a separate goroutine
-	go asyncServer.WaitForSignal(sigs)
+	go asyncServer.WaitForSignal(cancel, sigs)
 
 	// Wait for all goroutines to complete
 	wg.Wait()

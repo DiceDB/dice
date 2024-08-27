@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net"
@@ -92,7 +93,7 @@ func runTestServer(wg *sync.WaitGroup) {
 	var err error
 
 	// Initialize the AsyncServer
-	testServer := server.NewAsyncServer(wg)
+	testServer := server.NewAsyncServer()
 
 	// Try to bind to a port with a maximum of `totalRetries` retries.
 	for i := 0; i < totalRetries; i++ {
@@ -120,7 +121,8 @@ func runTestServer(wg *sync.WaitGroup) {
 	// Start the server in a goroutine
 	wg.Add(1)
 	go func() {
-		if err := testServer.Run(); err != nil {
+		defer wg.Done()
+		if err := testServer.Run(context.Background(), wg); err != nil {
 			log.Fatalf("Test server encountered an error: %v", err)
 		}
 	}()

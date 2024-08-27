@@ -18,9 +18,6 @@ import (
 
 type AsyncServer struct {
 	serverFD         int
-	ctx              context.Context
-	cancel           context.CancelFunc
-	wg               *sync.WaitGroup
 	maxClients       int
 	multiplexer      iomultiplexer.IOMultiplexer
 	connectedClients map[int]*core.Client
@@ -30,13 +27,9 @@ type AsyncServer struct {
 }
 
 // NewAsyncServer initializes a new AsyncServer
-func NewAsyncServer(wg *sync.WaitGroup) *AsyncServer {
-	ctx, cancel := context.WithCancel(context.Background())
+func NewAsyncServer() *AsyncServer {
 
 	return &AsyncServer{
-		ctx:              ctx,
-		cancel:           cancel,
-		wg:               wg,
 		maxClients:       20000,
 		connectedClients: make(map[int]*core.Client),
 		store:            core.NewStore(),
@@ -59,8 +52,7 @@ func (s *AsyncServer) SetupUsers() error {
 }
 
 // WatchKeys watches for changes in keys and notifies clients
-func (s *AsyncServer) WatchKeys() {
-	defer s.wg.Done()
+func (s *AsyncServer) WatchKeys(ctx context.Context) {
 	for {
 		select {
 		case event := <-core.WatchChannel:
@@ -87,7 +79,7 @@ func (s *AsyncServer) WatchKeys() {
 				}
 				return true
 			})
-		case <-s.ctx.Done():
+		case <-ctx.Done():
 			return
 		}
 	}
@@ -118,16 +110,23 @@ func (s *AsyncServer) FindPortAndBind() error {
 }
 
 // Run starts the server, accepts connections, and handles client requests
-func (s *AsyncServer) Run() error {
-	defer s.wg.Done()
+func (s *AsyncServer) Run(parentCtx context.Context, wg *sync.WaitGroup) error {
 	defer syscall.Close(s.serverFD)
+
+	ctx, cancel := context.WithCancel(parentCtx)
+	defer cancel()
+
+	const pollTimeout = 100 * time.Millisecond
 
 	if err := s.SetupUsers(); err != nil {
 		return err
 	}
 
-	s.wg.Add(1)
-	go s.WatchKeys()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		s.WatchKeys(ctx)
+	}()
 
 	if err := syscall.Listen(s.serverFD, s.maxClients); err != nil {
 		return err
@@ -149,7 +148,7 @@ func (s *AsyncServer) Run() error {
 
 	for {
 		select {
-		case <-s.ctx.Done():
+		case <-ctx.Done():
 			// Check if context is canceled
 			s.initiateShutdown()
 			return nil
@@ -160,10 +159,10 @@ func (s *AsyncServer) Run() error {
 				s.lastCronExecTime = utils.GetCurrentTime()
 			}
 
-			events, err := s.multiplexer.Poll(-1)
+			events, err := s.multiplexer.Poll(pollTimeout)
 			if err != nil {
 				// Check for context cancellation on error
-				if s.ctx.Err() != nil {
+				if ctx.Err() != nil {
 					s.initiateShutdown()
 					return nil
 				}
@@ -203,7 +202,7 @@ func (s *AsyncServer) Run() error {
 					}
 					respond(cmds, comm, s.store)
 					if hasAbort {
-						s.cancel()
+						// context will be cancelled using defer.
 						return nil
 					}
 				}
@@ -213,10 +212,9 @@ func (s *AsyncServer) Run() error {
 }
 
 // WaitForSignal listens for OS signals and triggers shutdown
-func (s *AsyncServer) WaitForSignal(sigs chan os.Signal) {
-	defer s.wg.Done()
+func (s *AsyncServer) WaitForSignal(cancel context.CancelFunc, sigs chan os.Signal) {
 	<-sigs
-	s.cancel()
+	cancel()
 }
 
 // initiateShutdown gracefully shuts down the server
