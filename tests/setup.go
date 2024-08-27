@@ -121,8 +121,8 @@ func runTestServer(wg *sync.WaitGroup) {
 	// Start the server in a goroutine
 	wg.Add(1)
 	go func() {
-		defer wg.Done()
-		if err := testServer.Run(context.Background(), wg); err != nil {
+		ctx := context.Context(context.Background())
+		if err := testServer.Run(ctx); err != nil {
 			log.Fatalf("Test server encountered an error: %v", err)
 		}
 	}()

@@ -2,15 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
-	"os"
-	"os/signal"
-	"sync"
-	"syscall"
-
 	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/server"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 func setupFlags() {
@@ -25,13 +24,12 @@ func setupFlags() {
 func main() {
 	setupFlags()
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	// Handle SIGTERM and SIGINT
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
-
-	// Create a wait group to manage goroutines
-	var wg sync.WaitGroup
-	ctx, cancel := context.WithCancel(context.Background())
 
 	// Initialize the AsyncServer
 	asyncServer := server.NewAsyncServer()
@@ -42,20 +40,30 @@ func main() {
 		return
 	}
 
-	// Start the server in a goroutine
-	wg.Add(1)
 	go func() {
-		defer wg.Done()
-		if err := asyncServer.Run(ctx, &wg); err != nil {
-			log.Fatal("Error running the server:", err)
-		}
+		<-sigs
+		log.Info("Shutdown signal received")
+		cancel()
 	}()
 
-	// Start signal handling to listen for shutdown signals in a separate goroutine
-	go asyncServer.WaitForSignal(cancel, sigs)
+	// Start the server in a goroutine
+	err := asyncServer.Run(ctx)
 
-	// Wait for all goroutines to complete
-	wg.Wait()
+	// May not be need, just to show we can handle different situations if necessary
+	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			log.Info("Server was canceled")
+		} else if errors.Is(err, server.AbortedErr) {
+			log.Info("Server received abort command")
+		} else {
+			log.Error("Server error", "error", err)
+		}
+	} else {
+		log.Info("Server stopped without error")
+	}
+
+	// Perform graceful shutdown
+	asyncServer.InitiateShutdown()
 
 	log.Info("Server has shut down gracefully")
 }

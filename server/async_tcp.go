@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"net"
 	"os"
 	"sync"
@@ -16,25 +17,29 @@ import (
 	"github.com/dicedb/dice/server/utils"
 )
 
+var AbortedErr = errors.New("server received ABORT command")
+
 type AsyncServer struct {
-	serverFD         int
-	maxClients       int
-	multiplexer      iomultiplexer.IOMultiplexer
-	connectedClients map[int]*core.Client
-	store            *core.Store
-	lastCronExecTime time.Time
-	cronFrequency    time.Duration
+	serverFD               int
+	maxClients             int
+	multiplexer            iomultiplexer.IOMultiplexer
+	multiplexerPollTimeout time.Duration
+	connectedClients       map[int]*core.Client
+	store                  *core.Store
+	lastCronExecTime       time.Time
+	cronFrequency          time.Duration
 }
 
 // NewAsyncServer initializes a new AsyncServer
 func NewAsyncServer() *AsyncServer {
 
 	return &AsyncServer{
-		maxClients:       20000,
-		connectedClients: make(map[int]*core.Client),
-		store:            core.NewStore(),
-		lastCronExecTime: utils.GetCurrentTime(),
-		cronFrequency:    1 * time.Second,
+		maxClients:             20000,
+		connectedClients:       make(map[int]*core.Client),
+		store:                  core.NewStore(),
+		multiplexerPollTimeout: 100 * time.Millisecond,
+		lastCronExecTime:       utils.GetCurrentTime(),
+		cronFrequency:          1 * time.Second,
 	}
 }
 
@@ -110,22 +115,21 @@ func (s *AsyncServer) FindPortAndBind() error {
 }
 
 // Run starts the server, accepts connections, and handles client requests
-func (s *AsyncServer) Run(parentCtx context.Context, wg *sync.WaitGroup) error {
+func (s *AsyncServer) Run(ctx context.Context) error {
 	defer syscall.Close(s.serverFD)
 
-	ctx, cancel := context.WithCancel(parentCtx)
-	defer cancel()
-
-	const pollTimeout = 100 * time.Millisecond
+	watchCtx, cancelWatch := context.WithCancel(ctx)
+	defer cancelWatch()
 
 	if err := s.SetupUsers(); err != nil {
 		return err
 	}
 
+	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		s.WatchKeys(ctx)
+		s.WatchKeys(watchCtx)
 	}()
 
 	if err := syscall.Listen(s.serverFD, s.maxClients); err != nil {
@@ -137,7 +141,13 @@ func (s *AsyncServer) Run(parentCtx context.Context, wg *sync.WaitGroup) error {
 	if err != nil {
 		return err
 	}
-	defer s.multiplexer.Close()
+
+	defer func(multiplexer iomultiplexer.IOMultiplexer) {
+		err := multiplexer.Close()
+		if err != nil {
+			log.Warn("failed to close multiplexer", "error", err)
+		}
+	}(s.multiplexer)
 
 	if err := s.multiplexer.Subscribe(iomultiplexer.Event{
 		Fd: s.serverFD,
@@ -146,69 +156,95 @@ func (s *AsyncServer) Run(parentCtx context.Context, wg *sync.WaitGroup) error {
 		return err
 	}
 
+	err = s.eventLoop(ctx)
+
+	cancelWatch()
+	wg.Wait()
+
+	return err
+}
+
+// eventLoop listens for events and handles client requests. It also runs a cron job to delete expired keys
+func (s *AsyncServer) eventLoop(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			// Check if context is canceled
-			s.initiateShutdown()
-			return nil
-
+			// TODO: Remove this log
+			log.Info("received context cancellation, stopping event loop")
+			return ctx.Err()
 		default:
 			if time.Now().After(s.lastCronExecTime.Add(s.cronFrequency)) {
 				core.DeleteExpiredKeys(s.store)
 				s.lastCronExecTime = utils.GetCurrentTime()
 			}
 
-			events, err := s.multiplexer.Poll(pollTimeout)
+			events, err := s.multiplexer.Poll(s.multiplexerPollTimeout)
 			if err != nil {
-				// Check for context cancellation on error
-				if ctx.Err() != nil {
-					s.initiateShutdown()
-					return nil
+				if errors.Is(err, syscall.EINTR) {
+					continue
 				}
-				continue
+				return err
 			}
 
 			for _, event := range events {
 				if event.Fd == s.serverFD {
-					fd, _, err := syscall.Accept(s.serverFD)
-					if err != nil {
+					if err := s.acceptConnection(); err != nil {
 						log.Warn(err)
-						continue
-					}
-
-					s.connectedClients[fd] = core.NewClient(fd)
-					if err := syscall.SetNonblock(fd, true); err != nil {
-						//nolint:gocritic
-						log.Fatal(err)
-					}
-
-					if err := s.multiplexer.Subscribe(iomultiplexer.Event{
-						Fd: fd,
-						Op: iomultiplexer.OpRead,
-					}); err != nil {
-						log.Fatal(err)
 					}
 				} else {
-					comm := s.connectedClients[event.Fd]
-					if comm == nil {
-						continue
-					}
-					cmds, hasAbort, err := readCommands(comm)
-					if err != nil {
-						syscall.Close(event.Fd)
-						delete(s.connectedClients, event.Fd)
-						continue
-					}
-					respond(cmds, comm, s.store)
-					if hasAbort {
-						// context will be cancelled using defer.
-						return nil
+					if err := s.handleClientEvent(event); err != nil {
+						if errors.Is(err, AbortedErr) {
+							log.Info("Received abort command, initiating graceful shutdown")
+							return err
+						}
+						log.Warn(err)
 					}
 				}
 			}
 		}
 	}
+}
+
+// acceptConnection accepts a new client connection and subscribes to read events on the connection.
+func (s *AsyncServer) acceptConnection() error {
+	fd, _, err := syscall.Accept(s.serverFD)
+	if err != nil {
+		return err
+	}
+
+	s.connectedClients[fd] = core.NewClient(fd)
+	if err := syscall.SetNonblock(fd, true); err != nil {
+		return err
+	}
+
+	return s.multiplexer.Subscribe(iomultiplexer.Event{
+		Fd: fd,
+		Op: iomultiplexer.OpRead,
+	})
+}
+
+// handleClientEvent reads commands from the client connection and responds to the client. It also handles disconnections.
+func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
+	comm := s.connectedClients[event.Fd]
+	if comm == nil {
+		return nil
+	}
+
+	commands, hasAbort, err := readCommands(comm)
+	if err != nil {
+		if err := syscall.Close(event.Fd); err != nil {
+			log.Printf("error closing client connection: %v", err)
+		}
+		delete(s.connectedClients, event.Fd)
+		return err
+	}
+
+	respond(commands, comm, s.store)
+	if hasAbort {
+		return AbortedErr
+	}
+
+	return nil
 }
 
 // WaitForSignal listens for OS signals and triggers shutdown
@@ -217,8 +253,19 @@ func (s *AsyncServer) WaitForSignal(cancel context.CancelFunc, sigs chan os.Sign
 	cancel()
 }
 
-// initiateShutdown gracefully shuts down the server
-func (s *AsyncServer) initiateShutdown() {
+// InitiateShutdown gracefully shuts down the server
+func (s *AsyncServer) InitiateShutdown() {
 	log.Info("initiating shutdown")
+
+	// Close all client connections
+	for fd, _ := range s.connectedClients {
+		// Close the client socket
+		if err := syscall.Close(fd); err != nil {
+			log.Warn("failed to close client connection", "error", err)
+		}
+
+		delete(s.connectedClients, fd)
+	}
+
 	core.Shutdown(s.store)
 }
