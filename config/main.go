@@ -1,6 +1,10 @@
 package config
 
-import "github.com/dicedb/dice/internal/constants"
+import (
+	"time"
+
+	"github.com/dicedb/dice/internal/constants"
+)
 
 var (
 	Host string = "0.0.0.0"
@@ -22,8 +26,14 @@ var (
 	IOBufferLengthMAX int = 50 * 1024
 )
 
+var (
+	ServerCronFrequency          = 1 * time.Second
+	ServerMultiplexerPollTimeout = 100 * time.Millisecond
+	ServerMaxClients             = 20000
+)
+
 // Users and ACLs
 var (
-	// If requirepass is set to an empty string, no authentication is required
+	// if RequirePass is set to an empty string, no authentication is required
 	RequirePass string = constants.EmptyStr
 )
