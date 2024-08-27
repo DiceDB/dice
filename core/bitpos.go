@@ -176,7 +176,7 @@ func getBitPos(byteSlice []byte, bitToFind byte, start, end int, rangeType strin
 	return result
 }
 
-//nolint: gocritic
+// nolint: gocritic
 func adjustBitPosSearchRange(start, end, byteLen int) (int, int) {
 	if start < 0 {
 		start += byteLen
