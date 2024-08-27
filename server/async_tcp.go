@@ -30,7 +30,6 @@ type AsyncServer struct {
 	queryWatcher           *core.QueryWatcher
 	lastCronExecTime       time.Time
 	cronFrequency          time.Duration
-	WatchList              sync.Map // Maps queries to the file descriptors of clients that are watching them.
 }
 
 // NewAsyncServer initializes a new AsyncServer
