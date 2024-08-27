@@ -34,12 +34,12 @@ type AsyncServer struct {
 // NewAsyncServer initializes a new AsyncServer
 func NewAsyncServer() *AsyncServer {
 	return &AsyncServer{
-		maxClients:             20000,
+		maxClients:             config.ServerMaxClients,
 		connectedClients:       make(map[int]*core.Client),
 		store:                  core.NewStore(),
-		multiplexerPollTimeout: 100 * time.Millisecond,
+		multiplexerPollTimeout: config.ServerMultiplexerPollTimeout,
 		lastCronExecTime:       utils.GetCurrentTime(),
-		cronFrequency:          1 * time.Second,
+		cronFrequency:          config.ServerCronFrequency,
 	}
 }
 
