@@ -91,19 +91,28 @@ func (s *AsyncServer) WatchKeys(ctx context.Context) {
 }
 
 // FindPortAndBind binds the server to the given host and port
-func (s *AsyncServer) FindPortAndBind() error {
+func (s *AsyncServer) FindPortAndBind() (err error) {
 	serverFD, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, 0)
 	if err != nil {
-		return err
+		return
 	}
 	s.serverFD = serverFD
 
-	if err := syscall.SetsockoptInt(serverFD, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
-		return err
+	// Close the socket on exit if an error occurs
+	defer func() {
+		if err != nil {
+			if err := syscall.Close(serverFD); err != nil {
+				log.Warn("failed to close server socket", "error", err)
+			}
+		}
+	}()
+
+	if err = syscall.SetsockoptInt(serverFD, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
+		return
 	}
 
-	if err := syscall.SetNonblock(serverFD, true); err != nil {
-		return err
+	if err = syscall.SetNonblock(serverFD, true); err != nil {
+		return
 	}
 
 	ip4 := net.ParseIP(config.Host)
@@ -119,7 +128,12 @@ func (s *AsyncServer) FindPortAndBind() error {
 
 // Run starts the server, accepts connections, and handles client requests
 func (s *AsyncServer) Run(ctx context.Context) error {
-	defer syscall.Close(s.serverFD)
+	defer func(fd int) {
+		err := syscall.Close(fd)
+		if err != nil {
+			log.Warn("failed to close server socket", "error", err)
+		}
+	}(s.serverFD)
 
 	watchCtx, cancelWatch := context.WithCancel(ctx)
 	defer cancelWatch()
@@ -172,8 +186,6 @@ func (s *AsyncServer) eventLoop(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			// TODO: Remove this log
-			log.Info("received context cancellation, stopping event loop")
 			return ctx.Err()
 		default:
 			if time.Now().After(s.lastCronExecTime.Add(s.cronFrequency)) {
