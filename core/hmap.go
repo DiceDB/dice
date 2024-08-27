@@ -1,7 +1,9 @@
 package core
 
 import (
-	"errors"
+	"fmt"
+
+	"github.com/dicedb/dice/core/diceerrors"
 )
 
 type HashMap map[string]string
@@ -41,7 +43,7 @@ func hashMapBuilder(keyValuePairs []string, currentHashMap HashMap) (HashMap, in
 
 	for iter <= argLength-1 {
 		if iter >= argLength-1 || iter+1 > argLength-1 {
-			return hmap, -1, errors.New("mismatch in number of fields and values provided to HSET")
+			return hmap, -1, diceerrors.NewErr(fmt.Sprintf(diceerrors.ArityErr, "HSET"))
 		}
 
 		k := keyValuePairs[iter]
@@ -75,7 +77,7 @@ func getValueFromHashMap(key, field string, store *Store) ([]byte, error) {
 		}
 		value = *val
 	default:
-		return nil, errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")
+		return nil, diceerrors.NewErr(diceerrors.WrongTypeErr)
 	}
 
 	return []byte(value), nil

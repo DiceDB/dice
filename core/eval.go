@@ -2325,7 +2325,7 @@ func evalPTTL(args []string, store *Store) []byte {
 // Usage: HSET key field value [field value ...]
 func evalHSET(args []string, store *Store) []byte {
 	if len(args) < 3 {
-		return diceerrors.NewErrWithMessage("wrong number of arguments for command")
+		return diceerrors.NewErrArity("HSET")
 	}
 
 	key := args[0]
@@ -2340,7 +2340,7 @@ func evalHSET(args []string, store *Store) []byte {
 		case HashMap:
 			hashMap = currentVal
 		default:
-			return diceerrors.NewErrWithMessage("key already exists")
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 		}
 	}
 
