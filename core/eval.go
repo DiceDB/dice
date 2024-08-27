@@ -1066,11 +1066,6 @@ func evalSTACKINTPUSH(args []string, store *Store) []byte {
 		obj = store.NewObj(NewStackInt(), -1, ObjTypeByteList, ObjEncodingStackInt)
 	}
 
-	// if object is a set type, return error
-	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
-		return diceerrors.NewErrSetType()
-	}
-
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
 		return diceerrors.NewErrSetType()
 	}
@@ -1135,11 +1130,6 @@ func evalSTACKINTPOP(args []string, store *Store) []byte {
 		return RespNIL
 	}
 
-	// if object is a set type, return error
-	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
-		return diceerrors.NewErrSetType()
-	}
-
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
 		return diceerrors.NewErrSetType()
 	}
@@ -1194,11 +1184,6 @@ func evalSTACKINTLEN(args []string, store *Store) []byte {
 	obj := store.Get(args[0])
 	if obj == nil {
 		return RespZero
-	}
-
-	// if object is a set type, return error
-	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
-		return diceerrors.NewErrSetType()
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
@@ -1271,11 +1256,6 @@ func evalSTACKINTPEEK(args []string, store *Store) []byte {
 		return RespEmptyArray
 	}
 
-	// if object is a set type, return error
-	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
-		return diceerrors.NewErrSetType()
-	}
-
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
 		return diceerrors.NewErrSetType()
 	}
@@ -1345,11 +1325,6 @@ func evalSTACKREFPUSH(args []string, store *Store) []byte {
 		obj = store.NewObj(sr, -1, ObjTypeByteList, ObjEncodingStackRef)
 	}
 
-	// if object is a set type, return error
-	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
-		return diceerrors.NewErrSetType()
-	}
-
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
 		return diceerrors.NewErrSetType()
 	}
@@ -1415,11 +1390,6 @@ func evalSTACKREFPOP(args []string, store *Store) []byte {
 		return RespNIL
 	}
 
-	// if object is a set type, return error
-	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
-		return diceerrors.NewErrSetType()
-	}
-
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
 		return diceerrors.NewErrSetType()
 	}
@@ -1474,11 +1444,6 @@ func evalSTACKREFLEN(args []string, store *Store) []byte {
 	obj := store.Get(args[0])
 	if obj == nil {
 		return RespZero
-	}
-
-	// if object is a set type, return error
-	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
-		return diceerrors.NewErrSetType()
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
@@ -1549,11 +1514,6 @@ func evalSTACKREFPEEK(args []string, store *Store) []byte {
 	obj := store.Get(args[0])
 	if obj == nil {
 		return RespEmptyArray
-	}
-
-	// if object is a set type, return error
-	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
-		return diceerrors.NewErrSetType()
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
