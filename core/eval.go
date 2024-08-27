@@ -2147,38 +2147,29 @@ func evalPTTL(args []string, store *Store) []byte {
 // Usage: HSET key field value [field value ...]
 func evalHSET(args []string, store *Store) []byte {
 	if len(args) < 3 {
-		return Encode(errors.New("ERR wrong number of arguments for command"), false)
+		return diceerrors.NewErrWithMessage("wrong number of arguments for command")
 	}
 
 	key := args[0]
 
 	obj := store.Get(key)
 
-	var hashMap HMap
+	var hashMap HashMap
 	var numKeys int64
 
-	if obj != nil { // NOTE: add the new keys to the hash map here
-		// NOTE: we need to perform a check whether the information
-		// stored with the following key is indeed an hashmap
+	if obj != nil {
 		switch currentVal := obj.Value.(type) {
-		case HMap:
-			updatedHashMap, lengthKeys, err := hashMapBuilder(args, currentVal)
-			if err != nil {
-				return Encode(err, false)
-			} else {
-				hashMap = updatedHashMap
-				numKeys = lengthKeys
-			}
+		case HashMap:
+			hashMap = currentVal
 		default:
-			return Encode(errors.New("ERR key provided does not store a hashmap"), false)
+			return diceerrors.NewErrWithMessage("key already exists")
 		}
-	} else {
-		newMap, keysInMap, err := hashMapBuilder(args, nil)
-		if err != nil {
-			return Encode(err, false)
-		}
-		hashMap = newMap
-		numKeys = keysInMap
+	}
+
+	keyValuePairs := args[1:]
+	hashMap, numKeys, err := hashMapBuilder(keyValuePairs, hashMap)
+	if err != nil {
+		return diceerrors.NewErrWithMessage(err.Error())
 	}
 
 	hValue := string(Encode(hashMap, false))
@@ -2188,35 +2179,6 @@ func evalHSET(args []string, store *Store) []byte {
 	store.Put(key, obj)
 
 	return Encode(numKeys, false)
-}
-
-func evalHGET(args []string, store *Store) []byte {
-	if len(args) != 2 {
-		return Encode(errors.New("ERR wrong number of arguments for command"), false)
-	}
-
-	key := args[0]
-	field := args[1]
-	var value string
-
-	obj := store.Get(key)
-
-	if obj == nil {
-		return RespNIL
-	}
-
-	switch currentVal := obj.Value.(type) {
-	case HMap:
-		val, present := currentVal.Get(field)
-		if !present {
-			return RespNIL
-		}
-		value = val
-	default:
-		return Encode(errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"), false)
-	}
-
-	return Encode(value, false)
 }
 
 func evalObjectIdleTime(key string, store *Store) []byte {
