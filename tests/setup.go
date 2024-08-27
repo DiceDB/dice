@@ -2,6 +2,7 @@ package tests
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -121,8 +122,12 @@ func runTestServer(wg *sync.WaitGroup) {
 	// Start the server in a goroutine
 	wg.Add(1)
 	go func() {
-		ctx := context.Context(context.Background())
+		defer wg.Done()
+		ctx := context.Background()
 		if err := testServer.Run(ctx); err != nil {
+			if errors.Is(err, server.AbortedErr) {
+				return
+			}
 			log.Fatalf("Test server encountered an error: %v", err)
 		}
 	}()
