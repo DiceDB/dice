@@ -906,17 +906,17 @@ func testEvalHSET(t *testing.T, store *Store) {
 		"wrong number of args passed": {
 			setup:  func() {},
 			input:  nil,
-			output: []byte("-ERR wrong number of arguments for command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'hset' command\r\n"),
 		},
 		"only key passed": {
 			setup:  func() {},
 			input:  []string{"key"},
-			output: []byte("-ERR wrong number of arguments for command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'hset' command\r\n"),
 		},
 		"only key and field_name passed": {
 			setup:  func() {},
 			input:  []string{"KEY", "field_name"},
-			output: []byte("-ERR wrong number of arguments for command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'hset' command\r\n"),
 		},
 		"key, field and value passed": {
 			setup:  func() {},

@@ -29,11 +29,11 @@ func TestHSET(t *testing.T) {
 		},
 		{
 			commands: []string{"HSET key_new field value", "HSET key_new field new_value", "HSET key_new"},
-			expected: []interface{}{ONE, ZERO, "ERR wrong number of arguments for command"},
+			expected: []interface{}{ONE, ZERO, "ERR wrong number of arguments for 'hset' command"},
 		},
 		{
 			commands: []string{"SET k v", "HSET k f v"},
-			expected: []interface{}{"OK", "ERR key already exists"},
+			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
 		},
 	}
 
