@@ -1600,10 +1600,10 @@ func evalSETBIT(args []string, store *Store) []byte {
 		case ObjTypeString, ObjTypeInt:
 			byteArray, err = NewByteArrayFromObj(obj)
 			if err != nil {
-				return diceerrors.NewErrSetType()
+				return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 			}
 		default:
-			return diceerrors.NewErrSetType()
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 		}
 
 		// Perform the resizing check
@@ -1628,7 +1628,7 @@ func evalSETBIT(args []string, store *Store) []byte {
 		// Old will be removed by GC
 		newObj, err := ByteSliceToObj(store, obj, byteArray.data, oType, oEnc)
 		if err != nil {
-			return diceerrors.NewErrSetType()
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 		}
 
 		exp, ok := getExpiry(obj, store)
@@ -1647,7 +1647,7 @@ func evalSETBIT(args []string, store *Store) []byte {
 		}
 		return Encode(int(0), true)
 	}
-	return diceerrors.NewErrSetType()
+	return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 }
 
 // GETBIT key offset
