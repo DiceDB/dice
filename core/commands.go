@@ -562,6 +562,18 @@ var (
 		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hsetCmdMeta = DiceCmdMeta{
+		Name: "HSET",
+		Info: `HSET sets the specific fields to their respective values in the
+		hash stored at key. If any given field is already present, the previous
+		value will be overwritten with the new value
+		Returns
+		This command returns the number of keys that are stored at given key.
+		`,
+		Eval:     evalHSET,
+		Arity:    -4,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	objectCmdMeta = DiceCmdMeta{
 		Name: "OBJECT",
 		Info: `OBJECT subcommand [arguments [arguments ...]]
@@ -800,6 +812,7 @@ func init() {
 	diceCmds["RENAME"] = renameCmdMeta
 	diceCmds["GETEX"] = getexCmdMeta
 	diceCmds["PTTL"] = pttlCmdMeta
+	diceCmds["HSET"] = hsetCmdMeta
 	diceCmds["OBJECT"] = objectCmdMeta
 	diceCmds["TOUCH"] = touchCmdMeta
 	diceCmds["LPUSH"] = lpushCmdMeta

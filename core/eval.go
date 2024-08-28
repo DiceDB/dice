@@ -2398,6 +2398,49 @@ func evalPTTL(args []string, store *Store) []byte {
 	return Encode(int64(durationMs), false)
 }
 
+// evalHSET sets the specified fields to their
+// respective values in an hashmap stored at key
+//
+// This command overwrites the values of specified
+// fields that exist in the hash.
+//
+// If key doesn't exist, a new key holding a hash is created.
+//
+// Usage: HSET key field value [field value ...]
+func evalHSET(args []string, store *Store) []byte {
+	if len(args) < 3 {
+		return diceerrors.NewErrArity("HSET")
+	}
+
+	key := args[0]
+
+	obj := store.Get(key)
+
+	var hashMap HashMap
+	var numKeys int64
+
+	if obj != nil {
+		switch currentVal := obj.Value.(type) {
+		case HashMap:
+			hashMap = currentVal
+		default:
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+		}
+	}
+
+	keyValuePairs := args[1:]
+	hashMap, numKeys, err := hashMapBuilder(keyValuePairs, hashMap)
+	if err != nil {
+		return diceerrors.NewErrWithMessage(err.Error())
+	}
+
+	obj = store.NewObj(hashMap, -1, ObjTypeHashMap, ObjEncodingHashMap)
+
+	store.Put(key, obj)
+
+	return Encode(numKeys, false)
+}
+
 func evalObjectIdleTime(key string, store *Store) []byte {
 	obj := store.GetNoTouch(key)
 	if obj == nil {
