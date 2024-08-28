@@ -171,7 +171,7 @@ func TestStackRefLen(t *testing.T) {
 }
 func TestStackRefMaxConstraints(t *testing.T) {
 	config.KeysLimit = 20000000
-	core.WatchChannel = make(chan core.WatchEvent, config.KeysLimit)
+	core.WatchChan = make(chan core.WatchEvent, config.KeysLimit)
 	store := core.NewStore()
 	core.StackCount = 0
 	sr, err := core.NewStackRef()
@@ -203,7 +203,7 @@ func BenchmarkRemoveLargeNumberOfExpiredKeys(b *testing.B) {
 	store := core.NewStore()
 	for _, v := range benchmarkDataSizesStackQueue {
 		config.KeysLimit = 20000000 // Set a high limit for benchmarking
-		core.WatchChannel = make(chan core.WatchEvent, config.KeysLimit)
+		core.WatchChan = make(chan core.WatchEvent, config.KeysLimit)
 		var sr *core.StackRef
 		var err error
 		if sr, err = core.NewStackRef(); err != nil {
