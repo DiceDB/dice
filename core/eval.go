@@ -2377,10 +2377,8 @@ func evalHSET(args []string, store *Store) []byte {
 		return diceerrors.NewErrWithMessage(err.Error())
 	}
 
-	hValue := string(Encode(hashMap, false))
-	oType, oEnc := deduceTypeEncoding(hValue)
+	obj = store.NewObj(hashMap, -1, ObjTypeHashMap, ObjEncodingHashMap)
 
-	obj = store.NewObj(hashMap, -1, oType, oEnc)
 	store.Put(key, obj)
 
 	return Encode(numKeys, false)

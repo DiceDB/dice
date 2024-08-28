@@ -228,15 +228,6 @@ func Encode(value interface{}, isSimple bool) []byte {
 			buf.Write(Encode(row.Value.Value, false))
 		}
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
-	case HashMap:
-		var b []byte
-		buf := bytes.NewBuffer(b)
-		hashMap := value.(HashMap)
-		for key, value := range hashMap {
-			buf.Write(Encode(key, false))
-			buf.Write(Encode(value, false))
-		}
-		return []byte(fmt.Sprintf("*%d\r\n%s", len(hashMap), buf.Bytes()))
 	case map[string]bool:
 		return RespNIL
 	default:
