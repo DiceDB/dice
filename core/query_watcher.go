@@ -29,15 +29,15 @@ var WatchSubscriptionChan chan WatchSubscription
 
 // QueryWatcher watches for changes in keys and notifies clients
 type QueryWatcher struct {
-	WatchList sync.Map
-	store     *Store
+	WatchList    sync.Map
+	shardManager *ShardManager
 }
 
 // NewQueryWatcher initializes a new QueryWatcher
-func NewQueryWatcher(store *Store) *QueryWatcher {
+func NewQueryWatcher(shardManager *ShardManager) *QueryWatcher {
 	return &QueryWatcher{
-		WatchList: sync.Map{},
-		store:     store,
+		WatchList:    sync.Map{},
+		shardManager: shardManager,
 	}
 }
 
@@ -86,7 +86,8 @@ func (w *QueryWatcher) watchKeys(ctx context.Context) {
 				clients := value.(*sync.Map)
 
 				if WildCardMatch(query.KeyRegex, event.Key) {
-					queryResult, err := ExecuteQuery(&query, w.store)
+					// TODO: Implement proper query execution on the shard.
+					queryResult, err := ExecuteQuery(&query, w.shardManager.Shards[0].store)
 					if err != nil {
 						log.Error(err)
 						return true

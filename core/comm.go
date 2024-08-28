@@ -1,8 +1,6 @@
 package core
 
 import (
-	"bytes"
-	"fmt"
 	"io"
 	"syscall"
 )
@@ -10,8 +8,8 @@ import (
 type Client struct {
 	io.ReadWriter
 	Fd      int
-	cqueue  RedisCmds
-	isTxn   bool
+	Cqueue  RedisCmds
+	IsTxn   bool
 	Session *Session
 }
 
@@ -24,37 +22,22 @@ func (c Client) Read(b []byte) (int, error) {
 }
 
 func (c *Client) TxnBegin() {
-	c.isTxn = true
-}
-
-func (c *Client) TxnExec(store *Store) []byte {
-	var out []byte
-	buf := bytes.NewBuffer(out)
-
-	fmt.Fprintf(buf, "*%d\r\n", len(c.cqueue))
-	for _, _cmd := range c.cqueue {
-		buf.Write(executeCommand(_cmd, c, store))
-	}
-
-	c.cqueue = make(RedisCmds, 0)
-	c.isTxn = false
-
-	return buf.Bytes()
+	c.IsTxn = true
 }
 
 func (c *Client) TxnDiscard() {
-	c.cqueue = make(RedisCmds, 0)
-	c.isTxn = false
+	c.Cqueue = make(RedisCmds, 0)
+	c.IsTxn = false
 }
 
 func (c *Client) TxnQueue(cmd *RedisCmd) {
-	c.cqueue = append(c.cqueue, cmd)
+	c.Cqueue = append(c.Cqueue, cmd)
 }
 
 func NewClient(fd int) *Client {
 	return &Client{
 		Fd:      fd,
-		cqueue:  make(RedisCmds, 0),
+		Cqueue:  make(RedisCmds, 0),
 		Session: NewSession(),
 	}
 }
