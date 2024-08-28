@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/bytedance/sonic"
-	"github.com/dicedb/dice/internal/constants"
-	"gotest.tools/v3/assert"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/bytedance/sonic"
+	"github.com/dicedb/dice/internal/constants"
+	"gotest.tools/v3/assert"
 )
 
 type evalTestCase struct {
@@ -55,6 +56,7 @@ func TestEval(t *testing.T) {
 	testEvalEXPIREAT(t, store)
 	testEvalDbsize(t, store)
 	testEvalGETSET(t, store)
+	testEvalHSET(t, store)
 }
 
 func testEvalPING(t *testing.T, store *Store) {
@@ -890,4 +892,96 @@ func BenchmarkEvalMSET(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"}, store)
 	}
+}
+
+func BenchmarkEvalHSET(b *testing.B) {
+	store := NewStore()
+	for i := 0; i < b.N; i++ {
+		evalHSET([]string{"KEY", fmt.Sprintf("FIELD_%d", i), fmt.Sprintf("VALUE_%d", i)}, store)
+	}
+}
+
+func testEvalHSET(t *testing.T, store *Store) {
+	tests := map[string]evalTestCase{
+		"wrong number of args passed": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'hset' command\r\n"),
+		},
+		"only key passed": {
+			setup:  func() {},
+			input:  []string{"key"},
+			output: []byte("-ERR wrong number of arguments for 'hset' command\r\n"),
+		},
+		"only key and field_name passed": {
+			setup:  func() {},
+			input:  []string{"KEY", "field_name"},
+			output: []byte("-ERR wrong number of arguments for 'hset' command\r\n"),
+		},
+		"key, field and value passed": {
+			setup:  func() {},
+			input:  []string{"KEY1", "field_name", "value"},
+			output: Encode(int64(1), false),
+		},
+		"key, field and value updated": {
+			setup:  func() {},
+			input:  []string{"KEY1", "field_name", "value_new"},
+			output: Encode(int64(1), false),
+		},
+		"new set of key, field and value added": {
+			setup:  func() {},
+			input:  []string{"KEY2", "field_name_new", "value_new_new"},
+			output: Encode(int64(1), false),
+		},
+		"apply with duplicate key, field and value names": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field := "mock_field_name"
+				newMap := make(HashMap)
+				newMap[field] = "mock_field_value"
+
+				obj := &Obj{
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.store[key] = obj
+				store.keypool[key] = &key
+			},
+			input:  []string{"KEY_MOCK", "mock_field_name", "mock_field_value"},
+			output: Encode(int64(0), false),
+		},
+		"same key -> update value, add new field and value": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field := "mock_field_name"
+				mock_value := "mock_field_value"
+				newMap := make(HashMap)
+				newMap[field] = mock_value
+
+				obj := &Obj{
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.store[key] = obj
+				store.keypool[key] = &key
+
+				// Check if the map is saved correctly in the store
+				res, err := getValueFromHashMap(key, field, store)
+				assert.NilError(t, err)
+				assert.Equal(t, string(res), mock_value)
+			},
+			input: []string{
+				"KEY_MOCK",
+				"mock_field_name",
+				"mock_field_value_new",
+				"mock_field_name_new",
+				"mock_value_new",
+			},
+			output: Encode(int64(1), false),
+		},
+	}
+
+	runEvalTests(t, tests, evalHSET, store)
 }
