@@ -37,7 +37,8 @@ var ObjEncodingByteArray uint8 = 4
 var ObjTypeInt uint8 = 5 << 4 // 01010000
 
 var ObjTypeSet uint8 = 6 << 4 // 01010000
-var ObjEncodingHT uint8 = 0   // 00000000
+var ObjEncodingSetInt uint8 = 11
+var ObjEncodingSetStr uint8 = 12
 
 func ExtractTypeEncoding(obj *Obj) (e1, e2 uint8) {
 	return obj.TypeEncoding & 0b11110000, obj.TypeEncoding & 0b00001111
