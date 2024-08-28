@@ -888,10 +888,11 @@ func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]s
 }
 
 func BenchmarkEvalMSET(b *testing.B) {
-	store := NewStore()
-	for i := 0; i < b.N; i++ {
-		evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"}, store)
-	}
+    b.ResetTimer()
+    for i := 0; i < b.N; i++ {
+        store := NewStore()
+        evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"}, store)
+    }
 }
 
 func BenchmarkEvalHSET(b *testing.B) {
