@@ -11,7 +11,6 @@ import (
 type WatchEvent struct {
 	Key       string
 	Operation string
-	Value     *Obj
 }
 
 // WatchSubscription Event to watch/unwatch a query
@@ -43,19 +42,25 @@ func NewQueryWatcher(store *Store) *QueryWatcher {
 
 func (w *QueryWatcher) Run(ctx context.Context) {
 	wg := sync.WaitGroup{}
-	wg.Add(1)
 
+	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		w.Watch(ctx)
+		w.listenForSubscriptions(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		w.watchKeys(ctx)
 	}()
 
 	<-ctx.Done()
 	wg.Wait()
 }
 
-// Watch watches for changes in keys and notifies clients
-func (w *QueryWatcher) Watch(ctx context.Context) {
+// listenForSubscriptions listens for query subscriptions and unsubscribes
+func (w *QueryWatcher) listenForSubscriptions(ctx context.Context) {
 	for {
 		select {
 		case event := <-WatchSubscriptionChan:
@@ -64,6 +69,16 @@ func (w *QueryWatcher) Watch(ctx context.Context) {
 			} else {
 				w.RemoveWatcher(event.query, event.clientFd)
 			}
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+// watchKeys watches for changes in keys and notifies clients
+func (w *QueryWatcher) watchKeys(ctx context.Context) {
+	for {
+		select {
 		case event := <-WatchChan:
 			w.WatchList.Range(func(key, value interface{}) bool {
 				query := key.(DSQLQuery)

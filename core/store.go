@@ -108,7 +108,7 @@ func (store *Store) putHelper(k string, obj *Obj, opts ...PutOption) {
 	store.store[*ptr] = obj
 
 	store.incrementKeyCount()
-	notifyWatchers(k, "SET", obj)
+	notifyWatchers(k, "SET")
 }
 
 func (store *Store) getHelper(k string, touch bool) *Obj {
@@ -235,7 +235,7 @@ func (store *Store) Rename(sourceKey, destKey string) bool {
 		}
 
 		// Notify watchers about the deletion of the source key
-		notifyWatchers(sourceKey, "DEL", sourceObj)
+		notifyWatchers(sourceKey, "DEL")
 
 		return true
 	}, store, WithStoreLock(), WithKeypoolLock())
@@ -300,7 +300,7 @@ func (store *Store) deleteKey(k, ptr string, obj *Obj) bool {
 		delete(store.expires, obj)
 		delete(store.keypool, k)
 		KeyspaceStat[0]["keys"]--
-		notifyWatchers(k, "DEL", obj)
+		notifyWatchers(k, "DEL")
 		return true
 	}
 	return false
@@ -314,6 +314,6 @@ func (store *Store) delByPtr(ptr string) bool {
 	return false
 }
 
-func notifyWatchers(k, operation string, obj *Obj) {
-	WatchChan <- WatchEvent{k, operation, obj}
+func notifyWatchers(k, operation string) {
+	WatchChan <- WatchEvent{k, operation}
 }
