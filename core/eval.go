@@ -319,6 +319,11 @@ func evalGETDEL(args []string, store *Store) []byte {
 		return RespNIL
 	}
 
+	// If the object exists, check if it is a set object.
+	if err := assertType(obj.TypeEncoding, ObjTypeSet); err == nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
 	// return the RESP encoded value
 	return Encode(obj.Value, false)
 }
@@ -784,7 +789,7 @@ func evaluateAndSetExpiry(subCommands []string, newExpiry uint64, key string,
 		return false, nil
 	}
 	shouldSetExpiry = true
-	//if no condition exists
+	// if no condition exists
 	if len(subCommands) == 0 {
 		store.setUnixTimeExpiry(obj, int64(newExpiry))
 		return shouldSetExpiry, nil
@@ -928,6 +933,11 @@ func incrDecrCmd(args []string, incr int64, store *Store) []byte {
 		store.Put(key, obj)
 	}
 
+	// If the object exists, check if it is a set object.
+	if err := assertType(obj.TypeEncoding, ObjTypeSet); err == nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
 	if err := assertType(obj.TypeEncoding, ObjTypeInt); err != nil {
 		return diceerrors.NewErrWithMessage(err.Error())
 	}
@@ -1024,11 +1034,11 @@ func evalQINTINS(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQint); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	store.Put(args[0], obj)
@@ -1059,11 +1069,11 @@ func evalSTACKINTPUSH(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackInt); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	store.Put(args[0], obj)
@@ -1090,11 +1100,11 @@ func evalQINTREM(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQint); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	q := obj.Value.(*QueueInt)
@@ -1123,11 +1133,11 @@ func evalSTACKINTPOP(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackInt); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	s := obj.Value.(*StackInt)
@@ -1154,11 +1164,11 @@ func evalQINTLEN(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQint); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	q := obj.Value.(*QueueInt)
@@ -1179,11 +1189,11 @@ func evalSTACKINTLEN(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackInt); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	s := obj.Value.(*StackInt)
@@ -1214,11 +1224,11 @@ func evalQINTPEEK(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQint); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	q := obj.Value.(*QueueInt)
@@ -1249,11 +1259,11 @@ func evalSTACKINTPEEK(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackInt); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	s := obj.Value.(*StackInt)
@@ -1281,11 +1291,11 @@ func evalQREFINS(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQref); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	store.Put(args[0], obj)
@@ -1318,11 +1328,11 @@ func evalSTACKREFPUSH(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackRef); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	store.Put(args[0], obj)
@@ -1350,11 +1360,11 @@ func evalQREFREM(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQref); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	q := obj.Value.(*QueueRef)
@@ -1383,11 +1393,11 @@ func evalSTACKREFPOP(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackRef); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	s := obj.Value.(*StackRef)
@@ -1414,11 +1424,11 @@ func evalQREFLEN(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQref); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	q := obj.Value.(*QueueRef)
@@ -1439,11 +1449,11 @@ func evalSTACKREFLEN(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackRef); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	s := obj.Value.(*StackRef)
@@ -1474,11 +1484,11 @@ func evalQREFPEEK(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQref); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	q := obj.Value.(*QueueRef)
@@ -1509,11 +1519,11 @@ func evalSTACKREFPEEK(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackRef); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	s := obj.Value.(*StackRef)
@@ -1668,6 +1678,10 @@ func evalGETBIT(args []string, store *Store) []byte {
 	if obj == nil {
 		return Encode(0, true)
 	}
+	// if object is a set type, return error
+	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
 
 	requiredByteArraySize := offset/8 + 1
 
@@ -1708,6 +1722,11 @@ func evalBITCOUNT(args []string, store *Store) []byte {
 	var obj = store.Get(key)
 	if obj == nil {
 		return Encode(0, false)
+	}
+
+	// Check for the type of the object
+	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	var valueInterface = obj.Value
@@ -2238,6 +2257,11 @@ func evalGETEX(args []string, store *Store) []byte {
 		return RespNIL
 	}
 
+	// check if the object is set type if yes then return error
+	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
 	var exDurationMs int64 = -1
 	var state exDurationState = Uninitialized
 	var persist bool = false
@@ -2400,6 +2424,11 @@ func evalLPUSH(args []string, store *Store) []byte {
 		obj = store.NewObj(NewDeque(), -1, ObjTypeByteList, ObjEncodingDeque)
 	}
 
+	// if object is a set type, return error
+	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
 		return Encode(err, false)
 	}
@@ -2426,6 +2455,11 @@ func evalRPUSH(args []string, store *Store) []byte {
 		obj = store.NewObj(NewDeque(), -1, ObjTypeByteList, ObjEncodingDeque)
 	}
 
+	// if object is a set type, return error
+	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
 		return Encode(err, false)
 	}
@@ -2450,6 +2484,11 @@ func evalRPOP(args []string, store *Store) []byte {
 	obj := store.Get(args[0])
 	if obj == nil {
 		return RespNIL
+	}
+
+	// if object is a set type, return error
+	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
@@ -2480,6 +2519,11 @@ func evalLPOP(args []string, store *Store) []byte {
 	obj := store.Get(args[0])
 	if obj == nil {
 		return RespNIL
+	}
+
+	// if object is a set type, return error
+	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
@@ -2570,16 +2614,16 @@ func evalSADD(args []string, store *Store) []byte {
 		// If the object does not exist, create a new set object.
 		value := make(map[string]bool)
 		// Create a new object.
-		obj = store.NewObj(value, exDurationMs, ObjTypeSet, ObjEncodingHT)
+		obj = store.NewObj(value, exDurationMs, ObjTypeSet, ObjEncodingSetStr)
 		store.Put(key, obj, WithKeepTTL(keepttl))
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, ObjEncodingHT); err != nil {
-		return diceerrors.NewErrSetType()
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingSetStr); err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	// Get the set object.
@@ -2610,11 +2654,11 @@ func evalSMEMBERS(args []string, store *Store) []byte {
 
 	// If the object exists, check if it is a set object.
 	if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, ObjEncodingHT); err != nil {
-		return diceerrors.NewErrSetType()
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingSetStr); err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	// Get the set object.
@@ -2646,11 +2690,11 @@ func evalSREM(args []string, store *Store) []byte {
 
 	// If the object exists, check if it is a set object.
 	if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, ObjEncodingHT); err != nil {
-		return diceerrors.NewErrSetType()
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingSetStr); err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	// Get the set object.
@@ -2681,11 +2725,11 @@ func evalSCARD(args []string, store *Store) []byte {
 
 	// If the object exists, check if it is a set object.
 	if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
-		return diceerrors.NewErrSetType()
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, ObjEncodingHT); err != nil {
-		return diceerrors.NewErrSetType()
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingSetStr); err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	// Get the set object.
@@ -2720,11 +2764,11 @@ func evalSDIFF(args []string, store *Store) []byte {
 	var count int = 0
 	if obj != nil {
 		if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
-			return diceerrors.NewErrSetType()
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 		}
 
-		if err := assertEncoding(obj.TypeEncoding, ObjEncodingHT); err != nil {
-			return diceerrors.NewErrSetType()
+		if err := assertEncoding(obj.TypeEncoding, ObjEncodingSetStr); err != nil {
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 		}
 
 		// create a deep copy of the set object
@@ -2747,11 +2791,11 @@ func evalSDIFF(args []string, store *Store) []byte {
 
 		// If the object exists, check if it is a set object.
 		if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
-			return diceerrors.NewErrSetType()
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 		}
 
-		if err := assertEncoding(obj.TypeEncoding, ObjEncodingHT); err != nil {
-			return diceerrors.NewErrSetType()
+		if err := assertEncoding(obj.TypeEncoding, ObjEncodingSetStr); err != nil {
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 		}
 
 		// only if the count is greater than 0, we need to check the other sets
@@ -2802,11 +2846,11 @@ func evalSINTER(args []string, store *Store) []byte {
 
 		// If the object exists, check if it is a set object.
 		if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
-			return diceerrors.NewErrSetType()
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 		}
 
-		if err := assertEncoding(obj.TypeEncoding, ObjEncodingHT); err != nil {
-			return diceerrors.NewErrSetType()
+		if err := assertEncoding(obj.TypeEncoding, ObjEncodingSetStr); err != nil {
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 		}
 
 		// Get the set object.

@@ -1,10 +1,11 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"flag"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 
 	"github.com/charmbracelet/log"
@@ -24,29 +25,45 @@ func setupFlags() {
 func main() {
 	setupFlags()
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	// Handle SIGTERM and SIGINT
-	var sigs chan os.Signal = make(chan os.Signal, 1)
+	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
-	// Find a port and bind
-	// If port not available, raise FATAL error
-	serverFD, err := server.FindPortAndBind()
-	if err != nil {
-		log.Fatal(err)
-		return
+	// Initialize the AsyncServer
+	asyncServer := server.NewAsyncServer()
+
+	// Find a port and bind it
+	if err := asyncServer.FindPortAndBind(); err != nil {
+		//nolint: gocritic
+		log.Fatal("Error finding and binding port:", err)
 	}
 
-	var wg sync.WaitGroup
+	go func() {
+		<-sigs
+		log.Info("Shutdown signal received")
+		cancel()
+	}()
 
-	// Run the server, listen to incoming connections and handle them
-	wg.Add(1)
+	err := asyncServer.Run(ctx)
 
-	log.Info("Starting Classic Async TCP Server")
-	go server.RunAsyncTCPServer(serverFD, &wg)
+	// May not be need, just to show we can handle different situations if necessary
+	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			log.Info("Server was canceled")
+		} else if errors.Is(err, server.ErrAborted) {
+			log.Info("Server received abort command")
+		} else {
+			log.Error("Server error", "error", err)
+		}
+	} else {
+		log.Info("Server stopped without error")
+	}
 
-	// Listen to signals, but not a hardblocker to shutdown
-	go server.WaitForSignal(&wg, sigs)
+	// Perform graceful shutdown
+	asyncServer.InitiateShutdown()
 
-	// Wait for all goroutines to finish
-	wg.Wait()
+	log.Info("Server has shut down gracefully")
 }
