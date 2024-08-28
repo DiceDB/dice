@@ -65,7 +65,3 @@ func NewErrArity(cmdName string) []byte {
 func NewErrExpireTime(cmdName string) []byte {
 	return NewErrWithFormattedMessage(ExpiryErr, strings.ToLower(cmdName))
 }
-
-func NewErrSetType() []byte {
-	return []byte(fmt.Sprintf("%s\r\n", WrongTypeErr))
-}

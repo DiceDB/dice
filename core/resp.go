@@ -237,6 +237,8 @@ func Encode(value interface{}, isSimple bool) []byte {
 			buf.Write(Encode(value, false))
 		}
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(hashMap), buf.Bytes()))
+	case map[string]bool:
+		return RespNIL
 	default:
 		fmt.Printf("Unsupported type: %T\n", v)
 		return RespNIL
