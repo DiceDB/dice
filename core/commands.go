@@ -579,6 +579,15 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	scanCmdMeta = DiceCmdMeta{
+		Name: "SCAN",
+		Info: `SCAN cursor [MATCH pattern] [COUNT count] [TYPE type]
+		Incrementally iterate over a collection of elements.
+		Returns an array of two values: the next cursor to use in the next call, and an array of elements.`,
+		Eval:     evalSCAN,
+		Arity:    -1,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	expiretimeCmdMeta = DiceCmdMeta{
 		Name: "EXPIRETIME",
 		Info: `EXPIRETIME returns the absolute Unix timestamp (since January 1, 1970) in seconds
@@ -794,6 +803,7 @@ func init() {
 	diceCmds["PTTL"] = pttlCmdMeta
 	diceCmds["OBJECT"] = objectCmdMeta
 	diceCmds["TOUCH"] = touchCmdMeta
+	diceCmds["SCAN"] = scanCmdMeta
 	diceCmds["LPUSH"] = lpushCmdMeta
 	diceCmds["RPOP"] = rpopCmdMeta
 	diceCmds["RPUSH"] = rpushCmdMeta

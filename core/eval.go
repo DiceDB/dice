@@ -43,6 +43,8 @@ var diceCommandsCount int
 
 const defaultRootPath = "$"
 
+const COUNT = "COUNT"
+
 func init() {
 	diceCommandsCount = len(diceCmds)
 	txnCommands = map[string]bool{"EXEC": true, "DISCARD": true}
@@ -241,6 +243,64 @@ func evalMSET(args []string, store *Store) []byte {
 
 	store.PutAll(insertMap)
 	return RespOK
+}
+
+// evalSCAN processes the SCAN command with the given arguments.
+// It scans the database for keys based on the provided cursor, pattern, count, and key type.
+// Arguments:
+// - args: The command arguments, where args[0] is the cursor and optional args provide MATCH, COUNT, and TYPE options.
+// Returns:
+// - Encoded RESP value with:
+//   - The new cursor position as a string
+//   - A slice of keys that match the criteria
+//
+// If there are any errors in the arguments, an error message is returned.
+func evalSCAN(args []string, store *Store) []byte {
+	// Check if there is at least one argument (cursor)
+	if len(args) < 1 {
+		return Encode(errors.New("ERR wrong number of arguments for 'scan' command"), false)
+	}
+
+	// Parse the cursor from the first argument
+	cursor, err := strconv.Atoi(args[0])
+	if err != nil {
+		return Encode(errors.New("ERR invalid cursor"), false)
+	}
+
+	var pattern string
+	var count int = 10 // Default count
+	var keyType string
+
+	// Parse the optional arguments: MATCH, COUNT, and TYPE
+	for i := 1; i < len(args); i += 2 {
+		if i+1 >= len(args) {
+			return Encode(errors.New("ERR syntax error"), false)
+		}
+		switch strings.ToUpper(args[i]) {
+		case "MATCH":
+			pattern = args[i+1]
+		case COUNT:
+			count, err = strconv.Atoi(args[i+1])
+			if err != nil || count <= 0 {
+				return Encode(errors.New("ERR invalid COUNT"), false)
+			}
+		case "TYPE":
+			keyType = strings.ToLower(args[i+1])
+		default:
+			return Encode(errors.New("ERR syntax error"), false)
+		}
+	}
+
+	// Perform the scan operation with the parsed arguments
+	newCursor, keys := store.scanKeys(cursor, count, pattern, keyType)
+
+	// Prepare the response as a slice containing the new cursor and the list of keys
+	response := make([]interface{}, 2)
+	response[0] = strconv.Itoa(newCursor) // Convert new cursor to string
+	response[1] = keys                    // Keys is expected to be a slice of strings
+
+	// Encode the response in RESP format and return
+	return Encode(response, false)
 }
 
 // evalGET returns the value for the queried key in args
@@ -1925,7 +1985,7 @@ func evalCommand(args []string, store *Store) []byte {
 	}
 	subcommand := strings.ToUpper(args[0])
 	switch subcommand {
-	case "COUNT":
+	case COUNT:
 		return evalCommandCount()
 	case "GETKEYS":
 		return evalCommandGetKeys(args[1:])
