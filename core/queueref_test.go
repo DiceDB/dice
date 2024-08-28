@@ -166,7 +166,7 @@ func TestRemoveAllExpired(t *testing.T) {
 
 func TestQueueRefMaxConstraints(t *testing.T) {
 	config.KeysLimit = 20000000
-	core.WatchChannel = make(chan core.WatchEvent, config.KeysLimit)
+	core.WatchChan = make(chan core.WatchEvent, config.KeysLimit)
 	core.QueueCount = 0 // reset counter
 	qr, err := core.NewQueueRef()
 	if err != nil {

@@ -1596,10 +1596,14 @@ func evalQWATCH(args []string, c *Client, store *Store) []byte {
 		return Encode(e, false)
 	}
 
-	store.AddWatcher(query, c.Fd)
+	WatchSubscriptionChan <- WatchSubscription{
+		subscribe: true,
+		query:     query,
+		clientFd:  c.Fd,
+	}
 
 	// Return the result of the query.
-	queryResult, err := ExecuteQuery(query, store)
+	queryResult, err := ExecuteQuery(&query, store)
 	if err != nil {
 		return Encode(err, false)
 	}
@@ -1609,7 +1613,7 @@ func evalQWATCH(args []string, c *Client, store *Store) []byte {
 }
 
 // evalQUNWATCH removes the specified key from the watch list for the caller client.
-func evalQUNWATCH(args []string, c *Client, store *Store) []byte {
+func evalQUNWATCH(args []string, c *Client) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("QUNWATCH")
 	}
@@ -1617,7 +1621,13 @@ func evalQUNWATCH(args []string, c *Client, store *Store) []byte {
 	if e != nil {
 		return Encode(e, false)
 	}
-	store.RemoveWatcher(query, c.Fd)
+
+	WatchSubscriptionChan <- WatchSubscription{
+		subscribe: false,
+		query:     query,
+		clientFd:  c.Fd,
+	}
+
 	return RespOK
 }
 
@@ -2108,7 +2118,7 @@ func executeCommand(cmd *RedisCmd, c *Client, store *Store) []byte {
 		return evalQWATCH(cmd.Args, c, store)
 	}
 	if diceCmd.Name == "UNSUBSCRIBE" || diceCmd.Name == "QUNWATCH" {
-		return evalQUNWATCH(cmd.Args, c, store)
+		return evalQUNWATCH(cmd.Args, c)
 	}
 	if diceCmd.Name == "MULTI" {
 		c.TxnBegin()

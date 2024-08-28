@@ -18,7 +18,7 @@ func TestQWatchUnwatch(t *testing.T) {
 	publisher := getLocalConnection()
 	subscribers := []net.Conn{getLocalConnection(), getLocalConnection(), getLocalConnection()}
 
-	// Cleanup Store to remove any existing keys from other qwatch tests
+	// Cleanup store to remove any existing keys from other qwatch tests
 	// The cleanup is done both on the start and finish just to keep the order of tests run agnostic
 	for _, tc := range qWatchTestCases {
 		fireCommand(publisher, fmt.Sprintf("DEL match:100:user:%d", tc.userID))
@@ -75,7 +75,7 @@ func TestQWatchUnwatch(t *testing.T) {
 	expectedUpdate = []interface{}{[]interface{}{"match:100:user:0", int64(80)}, []interface{}{"match:100:user:5", int64(75)}, []interface{}{"match:100:user:1", int64(62)}}
 	assert.DeepEqual(t, []interface{}{constants.Qwatch, qWatchQuery, expectedUpdate}, resp)
 
-	// Cleanup Store for next tests
+	// Cleanup store for next tests
 	for _, tc := range qWatchTestCases {
 		fireCommand(publisher, fmt.Sprintf("DEL match:100:user:%d", tc.userID))
 	}
