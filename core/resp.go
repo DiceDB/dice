@@ -232,13 +232,11 @@ func Encode(value interface{}, isSimple bool) []byte {
 		var b []byte
 		buf := bytes.NewBuffer(b)
 		hashMap := value.(HashMap)
-		numOfKeyValuePairs := 0
 		for key, value := range hashMap {
 			buf.Write(Encode(key, false))
 			buf.Write(Encode(value, false))
-			numOfKeyValuePairs++
 		}
-		return []byte(fmt.Sprintf("*%d\r\n%s", numOfKeyValuePairs, buf.Bytes()))
+		return []byte(fmt.Sprintf("*%d\r\n%s", len(hashMap), buf.Bytes()))
 	default:
 		fmt.Printf("Unsupported type: %T\n", v)
 		return RespNIL
