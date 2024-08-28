@@ -42,9 +42,8 @@ func main() {
 	}
 
 	go func() {
-		<-sigs
 		log.Info("Shutdown signal received")
-		cancel()
+		asyncServer.WaitForSignal(cancel, sigs)
 	}()
 
 	err := asyncServer.Run(ctx)
@@ -61,9 +60,6 @@ func main() {
 	} else {
 		log.Info("Server stopped without error")
 	}
-
-	// Perform graceful shutdown
-	asyncServer.InitiateShutdown()
 
 	log.Info("Server has shut down gracefully")
 }

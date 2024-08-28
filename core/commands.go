@@ -422,7 +422,7 @@ var (
 		Eval:  nil,
 		Arity: 1,
 	}
-	multiCmdMeta = DiceCmdMeta{
+	MultiCmdMeta = DiceCmdMeta{
 		Name: "MULTI",
 		Info: `MULTI marks the start of the transaction for the client.
 		All subsequent commands fired will be queued for atomic execution.
@@ -432,13 +432,13 @@ var (
 		Eval:  evalMULTI,
 		Arity: 1,
 	}
-	execCmdMeta = DiceCmdMeta{
+	ExecCmdMeta = DiceCmdMeta{
 		Name:  "EXEC",
 		Info:  `EXEC executes commands in a transaction, which is initiated by MULTI`,
 		Eval:  nil,
 		Arity: 1,
 	}
-	discardCmdMeta = DiceCmdMeta{
+	DiscardCmdMeta = DiceCmdMeta{
 		Name:  "DISCARD",
 		Info:  `DISCARD discards all the commands in a transaction, which is initiated by MULTI`,
 		Eval:  nil,
@@ -784,9 +784,9 @@ func init() {
 	diceCmds["SUBSCRIBE"] = subscribeCmdMeta
 	diceCmds["QWATCH"] = qwatchCmdMeta
 	diceCmds["QUNWATCH"] = qUnwatchCmdMeta
-	diceCmds["MULTI"] = multiCmdMeta
-	diceCmds["EXEC"] = execCmdMeta
-	diceCmds["DISCARD"] = discardCmdMeta
+	diceCmds["MULTI"] = MultiCmdMeta
+	diceCmds["EXEC"] = ExecCmdMeta
+	diceCmds["DISCARD"] = DiscardCmdMeta
 	diceCmds["ABORT"] = abortCmdMeta
 	diceCmds["COMMAND"] = commandCmdMeta
 	diceCmds["SETBIT"] = setBitCmdMeta

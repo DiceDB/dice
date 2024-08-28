@@ -40,7 +40,3 @@ func readCommands(c io.ReadWriter) (core.RedisCmds, bool, error) {
 	}
 	return cmds, hasABORT, err
 }
-
-func respond(cmds core.RedisCmds, c *core.Client, store *core.Store) {
-	core.EvalAndRespond(cmds, c, store)
-}
