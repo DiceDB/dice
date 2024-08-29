@@ -214,7 +214,7 @@ var JSONTestCases = []struct {
 func TestQwatchWithJSON(t *testing.T) {
 	publisher := getLocalConnection()
 
-	// Cleanup Store for next tests
+	// Cleanup store for next tests
 	for _, tc := range JSONTestCases {
 		fireCommand(publisher, fmt.Sprintf("DEL %s", tc.key))
 	}

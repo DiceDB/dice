@@ -105,7 +105,7 @@ func DumpAllAOF(store *Store) error {
 
 	withLocks(func() {
 		for k, obj := range store.store {
-			err = dumpKey(aof, *((*string)(k)), obj)
+			err = dumpKey(aof, k, obj)
 			if err != nil {
 				return
 			}
