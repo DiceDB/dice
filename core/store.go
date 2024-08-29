@@ -2,6 +2,7 @@ package core
 
 import (
 	"path"
+	"strings"
 	"sync"
 
 	"github.com/dicedb/dice/config"
@@ -275,6 +276,119 @@ func (store *Store) incrementKeyCount() {
 
 func (store *Store) Get(k string) *Obj {
 	return store.getHelper(k, true)
+}
+
+// CloneKeypool creates and returns a deep copy of the store's keypool.
+// The keypool is a map that associates string keys with pointers to objects.
+// The function locks the keypool for reading to ensure thread-safe access while copying.
+//
+// Returns:
+// - clone: A new map containing the same keys and pointers as the original keypool.
+func (store *Store) CloneKeypool() map[string]*string {
+	// Lock the keypool for reading to ensure thread safety while copying.
+	store.keypoolMutex.RLock()
+	defer store.keypoolMutex.RUnlock()
+
+	clone := make(map[string]*string, len(store.keypool))
+
+	for k, v := range store.keypool {
+		clone[k] = v
+	}
+
+	return clone
+}
+
+// scanKeys performs a scan operation on the keypool, retrieving keys that match specified criteria.
+// The scan operation is controlled by a cursor and can be limited by a count, pattern, and key type.
+// The function takes a snapshot of the keypool to ensure that the scan is performed on a consistent view of the data.
+//
+// Arguments:
+// - cursor: An integer representing the current scan position within the keypool.
+// - count: The maximum number of keys to return in this scan operation.
+// - pattern: A string representing a glob pattern to filter keys (optional).
+// - keyType: A string representing the type of keys to include in the results (optional).
+//
+// Returns:
+// - newCursor: The updated cursor position after the scan, or 0 if the end is reached.
+// - keys: A slice of strings containing the keys that match the scan criteria.
+func (store *Store) scanKeys(cursor, count int, pattern, keyType string) (newCursor int, keys []string) {
+	snapshot := store.CloneKeypool()
+
+	keyList := make([]string, 0, len(snapshot))
+	for k := range snapshot {
+		keyList = append(keyList, k)
+	}
+
+	endCursor := cursor + count
+	if endCursor > len(keyList) {
+		endCursor = len(keyList)
+	}
+
+	for i := cursor; i < endCursor; i++ {
+		key := keyList[i]
+
+		objPtr := snapshot[key]
+
+		obj, ok := store.store[*objPtr]
+		if !ok || hasExpired(obj, store) {
+			continue
+		}
+
+		objType := getTypeAsString(obj.TypeEncoding)
+
+		if keyType != "" && !strings.EqualFold(objType, keyType) {
+			continue
+		}
+
+		if pattern == "" || matchGlob(key, pattern) {
+			keys = append(keys, key)
+		}
+	}
+
+	if endCursor < len(keyList) && len(keys) >= count {
+		newCursor = endCursor
+	} else {
+		newCursor = 0
+	}
+
+	return newCursor, keys
+}
+
+// getTypeAsString converts the encoding type of an object to a string representation.
+// Arguments:
+// - encoding: The type encoding of the object.
+// Returns:
+// - A string representing the type of the object.
+func getTypeAsString(encoding uint8) string {
+	typePart, _ := ExtractTypeEncoding(&Obj{TypeEncoding: encoding})
+
+	switch typePart {
+	case ObjTypeString:
+		return "string"
+	case ObjTypeByteList:
+		return "byte_list"
+	case ObjTypeBitSet:
+		return "bitset"
+	case ObjTypeJSON:
+		return "json"
+	case ObjTypeByteArray:
+		return "byte_array"
+	default:
+		return "unknown"
+	}
+}
+
+// matchGlob checks if the string s matches the glob pattern pattern.
+// Arguments:
+// - s: The string to be matched.
+// - pattern: The glob pattern to match against (can contain wildcards).
+// Returns:
+// - true if s matches the pattern; false otherwise.
+func matchGlob(s, pattern string) bool {
+	if pattern == "*" {
+		return true // Pattern '*' matches any string
+	}
+	return strings.HasPrefix(s, strings.TrimSuffix(pattern, "*")) // Match based on prefix
 }
 
 func (store *Store) GetDel(k string) *Obj {

@@ -722,6 +722,14 @@ var (
 		Non existing keys are treated as empty sets.`,
 		Eval:     evalSINTER,
 		Arity:    -2,
+	}
+	scanCmdMeta = DiceCmdMeta{
+		Name: "SCAN",
+		Info: `SCAN cursor [MATCH pattern] [COUNT count] [TYPE type]
+		Incrementally iterate over a collection of elements.
+		Returns an array of two values: the next cursor to use in the next call, and an array of elements.`,
+		Eval:     evalSCAN,
+		Arity:    -1,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 )
@@ -808,4 +816,5 @@ func init() {
 	diceCmds["SCARD"] = scardCmdMeta
 	diceCmds["SDIFF"] = sdiffCmdMeta
 	diceCmds["SINTER"] = sinterCmdMeta
+	diceCmds["SCAN"] = scanCmdMeta
 }
