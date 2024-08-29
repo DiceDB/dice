@@ -851,6 +851,9 @@ func evalHELLO(args []string, store *Store) []byte {
 based on CoW optimization and Fork */
 // TODO: Implement Acknowledgement so that main process could know whether child has finished writing to its AOF file or not.
 func evalBGREWRITEAOF(args []string, store *Store) []byte {
+	if len(args) > 0 {
+		return diceerrors.NewErrArity("BGREWRITEAOF")
+	}
 	// Fork a child process, this child process would inherit all the uncommitted pages from main process.
 	// This technique utilizes the CoW or copy-on-write, so while the main process is free to modify them
 	// the child would save all the pages to disk.

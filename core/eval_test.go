@@ -57,6 +57,7 @@ func TestEval(t *testing.T) {
 	testEvalDbsize(t, store)
 	testEvalGETSET(t, store)
 	testEvalHSET(t, store)
+	testEvalBGREWRITEAOF(t, store)
 }
 
 func testEvalPING(t *testing.T, store *Store) {
@@ -866,6 +867,23 @@ func testEvalGETSET(t *testing.T, store *Store) {
 	}
 
 	runEvalTests(t, tests, evalGETSET, store)
+}
+
+func testEvalBGREWRITEAOF(t *testing.T, store *Store) {
+	tests := map[string]evalTestCase{
+		"wrong number of args passed": {
+			setup:  func() {},
+			input:  []string{"KEY"},
+			output: []byte("-ERR wrong number of arguments for 'bgrewriteaof' command\r\n"),
+		},
+		"BGREWRITEAOF correct syntax": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("+OK\r\n"),
+		},
+	}
+
+	runEvalTests(t, tests, evalBGREWRITEAOF, store)
 }
 
 func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]string, *Store) []byte, store *Store) {
