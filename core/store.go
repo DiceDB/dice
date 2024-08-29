@@ -278,70 +278,78 @@ func (store *Store) Get(k string) *Obj {
 	return store.getHelper(k, true)
 }
 
-var (
-	keyList []string
-)
+// CloneKeypool creates and returns a deep copy of the store's keypool.
+// The keypool is a map that associates string keys with pointers to objects.
+// The function locks the keypool for reading to ensure thread-safe access while copying.
+//
+// Returns:
+// - clone: A new map containing the same keys and pointers as the original keypool.
+func (store *Store) CloneKeypool() map[string]*string {
+	// Lock the keypool for reading to ensure thread safety while copying.
+	store.keypoolMutex.RLock()
+	defer store.keypoolMutex.RUnlock()
 
-// initKeyList initializes keyList with keys from keypool if it is empty or outdated.
-// This function is used to populate keyList with all keys from keypool,
-// ensuring that it matches the current state of the keypool.
-func (store *Store) initKeyList() {
-	// Check if keyList is empty or needs to be updated
-	if len(keyList) == 0 || len(keyList) != len(store.keypool) {
-		// Initialize keyList with capacity equal to the length of keypool
-		keyList = make([]string, 0, len(store.keypool))
-		// Populate keyList with keys from keypool
-		for k := range store.keypool {
-			keyList = append(keyList, k)
-		}
+	clone := make(map[string]*string, len(store.keypool))
+
+	for k, v := range store.keypool {
+		clone[k] = v
 	}
+
+	return clone
 }
 
-// scanKeys performs a scan operation on the keypool, returning keys that match
-// the given criteria (cursor, count, pattern, and keyType).
+// scanKeys performs a scan operation on the keypool, retrieving keys that match specified criteria.
+// The scan operation is controlled by a cursor and can be limited by a count, pattern, and key type.
+// The function takes a snapshot of the keypool to ensure that the scan is performed on a consistent view of the data.
+//
 // Arguments:
-// - cursor: The starting point for the scan operation.
-// - count: The number of keys to return.
-// - pattern: A glob pattern to match against keys (can be empty).
-// - keyType: The type of keys to include in the result (can be empty).
+// - cursor: An integer representing the current scan position within the keypool.
+// - count: The maximum number of keys to return in this scan operation.
+// - pattern: A string representing a glob pattern to filter keys (optional).
+// - keyType: A string representing the type of keys to include in the results (optional).
+//
 // Returns:
-// - newCursor: The new cursor position after the scan.
-// - keys: A slice of keys that match the criteria.
+// - newCursor: The updated cursor position after the scan, or 0 if the end is reached.
+// - keys: A slice of strings containing the keys that match the scan criteria.
 func (store *Store) scanKeys(cursor, count int, pattern, keyType string) (newCursor int, keys []string) {
-	// Acquire locks for thread-safe access to keypool and store
-	withLocks(func() {
-		store.initKeyList() // Initialize keyList if needed
+	snapshot := store.CloneKeypool()
 
-		endCursor := cursor + count
-		if endCursor > len(keyList) {
-			endCursor = len(keyList)
+	keyList := make([]string, 0, len(snapshot))
+	for k := range snapshot {
+		keyList = append(keyList, k)
+	}
+
+	endCursor := cursor + count
+	if endCursor > len(keyList) {
+		endCursor = len(keyList)
+	}
+
+	for i := cursor; i < endCursor; i++ {
+		key := keyList[i]
+
+		objPtr := snapshot[key]
+
+		obj, ok := store.store[*objPtr]
+		if !ok || hasExpired(obj, store) {
+			continue
 		}
 
-		// Iterate over the range of keys to scan
-		for i := cursor; i < endCursor; i++ {
-			key := keyList[i]
-			objPtr := *store.keypool[key]
-			obj, ok := store.store[objPtr]
-			if !ok || hasExpired(obj, store) {
-				continue // Skip if the object is not found or expired
-			}
+		objType := getTypeAsString(obj.TypeEncoding)
 
-			objType := getTypeAsString(obj.TypeEncoding)
-			if keyType != "" && !strings.EqualFold(objType, keyType) {
-				continue // Skip if the keyType does not match
-			}
-
-			if pattern == "" || matchGlob(key, pattern) {
-				keys = append(keys, key) // Collect keys that match the pattern
-			}
+		if keyType != "" && !strings.EqualFold(objType, keyType) {
+			continue
 		}
 
-		if endCursor < len(keyList) {
-			newCursor = endCursor // Update cursor position if within bounds
-		} else {
-			newCursor = 0 // Reset cursor to 0 if end of keyList is reached
+		if pattern == "" || matchGlob(key, pattern) {
+			keys = append(keys, key)
 		}
-	}, store, WithStoreLock(), WithKeypoolLock()) // Apply locks for thread-safe operations
+	}
+
+	if endCursor < len(keyList) && len(keys) >= count {
+		newCursor = endCursor
+	} else {
+		newCursor = 0
+	}
 
 	return newCursor, keys
 }
