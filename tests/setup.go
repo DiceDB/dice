@@ -25,11 +25,6 @@ func getLocalConnection() net.Conn {
 	return conn
 }
 
-func getLocalConnectionPtr() *net.Conn {
-	conn := getLocalConnection()
-	return &conn
-}
-
 // deleteTestKeys is a utility to delete a list of keys before running a test
 //
 //nolint:unused

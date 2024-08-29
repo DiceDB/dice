@@ -223,14 +223,14 @@ All the values read should be among the values that were attempted to set in the
 */
 func TestConcurrentSetCommands(t *testing.T) {
 	numOfConnections := 4
-	connectionValues := make(map[*net.Conn]*string)
+	connectionValues := make(map[net.Conn]*string)
 	expectedValues := make(map[string]struct{})
-	valuesReadChan := make(chan interface{}, numOfConnections)
+	valuesReadChan := make(chan string, numOfConnections)
 
 	// Create connections and the values to set through them.
 	for connNum := 0; connNum < numOfConnections; connNum++ {
 		value := strconv.Itoa(connNum)
-		connectionValues[getLocalConnectionPtr()] = &value
+		connectionValues[getLocalConnection()] = &value
 		expectedValues[value] = struct{}{}
 	}
 
@@ -247,8 +247,8 @@ func TestConcurrentSetCommands(t *testing.T) {
 	// Verify the values received in the channel
 	assert.Equal(t, numOfConnections, len(valuesReadChan))
 	for valueRead := range valuesReadChan {
-		if valueRead != nil {
-			valueReadStr := valueRead.(string)
+		if valueRead != "" {
+			valueReadStr := valueRead
 			_, ok := expectedValues[valueReadStr]
 			if !ok {
 				fmt.Println("Value read is not in expected values' map")
@@ -259,10 +259,11 @@ func TestConcurrentSetCommands(t *testing.T) {
 	}
 }
 
-func executeCommands(conn *net.Conn, key, value *string, valReadChan chan interface{}, wGroup *sync.WaitGroup) {
+func executeCommands(conn net.Conn, key, value *string, valReadChan chan string, wGroup *sync.WaitGroup) {
 	defer wGroup.Done()
-	defer (*conn).Close()
-	fireCommand(*conn, "SET "+*key+" "+*value)
-	var readValue = fireCommand(*conn, "GET "+*key)
-	valReadChan <- readValue
+	defer (conn).Close()
+	fireCommand(conn, "SET "+*key+" "+*value)
+	var readValue = fireCommand(conn, "GET "+*key)
+	readValueStr, _ := readValue.(string)
+	valReadChan <- readValueStr
 }
