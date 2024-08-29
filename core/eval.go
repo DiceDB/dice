@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/axiomhq/hyperloglog"
 	"github.com/bytedance/sonic"
 	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
@@ -2921,4 +2922,52 @@ func evalSINTER(args []string, store *Store) []byte {
 		members = append(members, k)
 	}
 	return Encode(members, false)
+}
+
+func evalPFADD(args []string, store *Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("PFADD")
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		hll := hyperloglog.New()
+		for _, arg := range args[1:] {
+			hll.Insert([]byte(arg))
+		}
+
+		obj = store.NewObj(hll, -1, ObjTypeString, ObjEncodingRaw)
+
+		store.Put(key, obj)
+	} else {
+		currentVal := obj.Value.(*hyperloglog.Sketch)
+		for _, arg := range args[1:] {
+			currentVal.Insert([]byte(arg))
+		}
+	}
+
+	return Encode(1, false)
+}
+
+func evalPFCOUNT(args []string, store *Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("PFCOUNT")
+	}
+
+	var unionHll = hyperloglog.New()
+
+	for _, arg := range args {
+		obj := store.Get(arg)
+		if obj != nil {
+			currKeyHll := obj.Value.(*hyperloglog.Sketch)
+			err := unionHll.Merge(currKeyHll)
+			if err != nil {
+				// TODO: How to handle this (Check Redis implmentation)
+				continue
+			}
+		}
+	}
+
+	return Encode(unionHll.Estimate(), false)
 }
