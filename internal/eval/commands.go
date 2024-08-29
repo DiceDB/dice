@@ -701,6 +701,7 @@ func init() {
 	DiceCmds["PFADD"] = pfAddCmdMeta
 	DiceCmds["PFCOUNT"] = pfCountCmdMeta
 	DiceCmds["HGET"] = hgetCmdMeta
+	DiceCmds["SCAN"] = scanCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}
