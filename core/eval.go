@@ -689,8 +689,6 @@ func evalHELLO(args []string, store *Store) []byte {
 /* Description - Spawn a background thread to persist the data via AOF technique. Current implementation is
 based on CoW optimization and Fork */
 // TODO: Implement Acknowledgement so that main process could know whether child has finished writing to its AOF file or not.
-// TODO: Make it safe from failure, an stable policy would be to write the new flushes to a temporary files and then rename them to the main process's AOF file
-// TODO: Add fsync() and fdatasync() to persist to AOF for above cases.
 func evalBGREWRITEAOF(args []string, store *Store) []byte {
 	// Fork a child process, this child process would inherit all the uncommitted pages from main process.
 	// This technique utilizes the CoW or copy-on-write, so while the main process is free to modify them

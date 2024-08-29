@@ -4,11 +4,9 @@ import (
 	"bufio"
 	"fmt"
 	"io/fs"
-	"log"
 	"os"
 	"strings"
 	"sync"
-	"syscall"
 
 	"github.com/dicedb/dice/config"
 )
@@ -44,10 +42,7 @@ func (a *AOF) Write(operation string) error {
 	if _, err := a.writer.WriteString(operation + "\n"); err != nil {
 		return err
 	}
-	if err := a.writer.Flush(); err != nil {
-		return err
-	}
-	return a.file.Sync()
+	return a.writer.Flush()
 }
 
 func (a *AOF) Close() error {
@@ -98,28 +93,34 @@ func DumpAllAOF(store *Store) error {
 	if aof, err = NewAOF(config.TempAOFFile); err != nil {
 		return err
 	}
-	defer aof.Close()
+	defer func() {
+		err = aof.Close()
 
-	log.Println("rewriting AOF file at", config.TempAOFFile)
+		if err != nil {
+			// failure occurred during the flushing process
+			// try deleting the tmp file
+			_ = os.RemoveAll(config.TempAOFFile)
+		}
+	}()
 
 	withLocks(func() {
 		for k, obj := range store.store {
 			err = dumpKey(aof, *((*string)(k)), obj)
+			if err != nil {
+				return
+			}
 		}
 	}, store, WithStoreLock())
 
-	log.Println("flush temp file's data to disk")
-	if err := syscall.Fsync(int(aof.file.Fd())); err != nil {
-		fmt.Println("fsync failed")
-		return err
+	err = aof.file.Sync()
+	if err != nil {
+		return fmt.Errorf("failed flushing AOF to disk: %w", err)
 	}
 
-	log.Println("rename tmp file to actual AOF file")
-	if err := os.Rename(config.TempAOFFile, config.AOFFile); err != nil {
-		fmt.Println("rename failed")
-		return err
+	err = os.Rename(config.TempAOFFile, config.AOFFile)
+	if err != nil {
+		return fmt.Errorf("failed renaming AOF file: %w", err)
 	}
 
-	log.Println("AOF file rewrite complete")
 	return err
 }
