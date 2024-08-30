@@ -49,6 +49,8 @@ func init() {
 	serverID = fmt.Sprintf("%s:%d", config.Host, config.Port)
 }
 
+const COUNT = "COUNT"
+
 // evalPING returns with an encoded "PONG"
 // If any message is added with the ping command,
 // the message will be returned.
@@ -277,7 +279,7 @@ func evalSCAN(args []string, store *Store) []byte {
 		switch strings.ToUpper(args[i]) {
 		case "MATCH":
 			pattern = args[i+1]
-		case "COUNT":
+		case COUNT:
 			count, err = strconv.Atoi(args[i+1])
 			if err != nil || count <= 0 {
 				return diceerrors.NewErrWithMessage("ERR invalid COUNT")
@@ -292,8 +294,8 @@ func evalSCAN(args []string, store *Store) []byte {
 	newCursor, keys := store.scanKeys(cursor, count, pattern, keyType)
 
 	response := make([]interface{}, 2)
-	response[0] = strconv.Itoa(newCursor) 
-	response[1] = keys                   
+	response[0] = strconv.Itoa(newCursor)
+	response[1] = keys
 
 	return Encode(response, false)
 }
@@ -1980,7 +1982,7 @@ func evalCommand(args []string, store *Store) []byte {
 	}
 	subcommand := strings.ToUpper(args[0])
 	switch subcommand {
-	case "COUNT":
+	case COUNT:
 		return evalCommandCount()
 	case "GETKEYS":
 		return evalCommandGetKeys(args[1:])

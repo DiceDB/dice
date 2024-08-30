@@ -720,8 +720,8 @@ var (
 		Info: `SINTER key1 [key2 ... key_N]
 		Returns the members of the set resulting from the intersection of all the given sets.
 		Non existing keys are treated as empty sets.`,
-		Eval:     evalSINTER,
-		Arity:    -2,
+		Eval:  evalSINTER,
+		Arity: -2,
 	}
 	scanCmdMeta = DiceCmdMeta{
 		Name: "SCAN",
