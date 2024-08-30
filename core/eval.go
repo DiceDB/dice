@@ -2924,6 +2924,12 @@ func evalSINTER(args []string, store *Store) []byte {
 	return Encode(members, false)
 }
 
+// PFADD Adds all the element arguments to the HyperLogLog data structure stored at the variable
+// name specified as first argument.
+//
+// Returns:
+// If the approximated cardinality estimated by the HyperLogLog changed after executing the command,
+// returns 1, otherwise 0 is returned.
 func evalPFADD(args []string, store *Store) []byte {
 	if len(args) < 1 {
 		return diceerrors.NewErrArity("PFADD")
@@ -2931,6 +2937,8 @@ func evalPFADD(args []string, store *Store) []byte {
 
 	key := args[0]
 	obj := store.Get(key)
+
+	// If key doesn't exist prior initial cardinality changes hence return 1
 	if obj == nil {
 		hll := hyperloglog.New()
 		for _, arg := range args[1:] {
@@ -2940,14 +2948,20 @@ func evalPFADD(args []string, store *Store) []byte {
 		obj = store.NewObj(hll, -1, ObjTypeString, ObjEncodingRaw)
 
 		store.Put(key, obj)
-	} else {
-		currentVal := obj.Value.(*hyperloglog.Sketch)
-		for _, arg := range args[1:] {
-			currentVal.Insert([]byte(arg))
-		}
+		return Encode(1, false)
 	}
 
-	return Encode(1, false)
+	existingHll := obj.Value.(*hyperloglog.Sketch)
+	initialCardinality := existingHll.Estimate()
+	for _, arg := range args[1:] {
+		existingHll.Insert([]byte(arg))
+	}
+
+	if newCardinality := existingHll.Estimate(); initialCardinality != newCardinality {
+		return Encode(1, false)
+	}
+
+	return Encode(0, false)
 }
 
 func evalPFCOUNT(args []string, store *Store) []byte {
@@ -2963,8 +2977,7 @@ func evalPFCOUNT(args []string, store *Store) []byte {
 			currKeyHll := obj.Value.(*hyperloglog.Sketch)
 			err := unionHll.Merge(currKeyHll)
 			if err != nil {
-				// TODO: How to handle this (Check Redis implmentation)
-				continue
+				return diceerrors.NewErrWithMessage(diceerrors.InvalidHllErr)
 			}
 		}
 	}
