@@ -52,7 +52,7 @@ func (q *QueueRef) Insert(key string, store *Store) bool {
 		return false // Prevent inserting if the queue is at maximum capacity
 	}
 	withLocks(func() {
-		x, ok = store.keypool[key]
+		x, ok = store.keypool.Get(key)
 	}, store, WithKeypoolRLock())
 
 	if !ok {
