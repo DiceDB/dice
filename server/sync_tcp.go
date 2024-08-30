@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/dicedb/dice/core"
-	"github.com/dicedb/dice/server/utils"
 )
 
 func toArrayString(ai []interface{}) []string {
@@ -29,7 +28,7 @@ func readCommands(c io.ReadWriter) (core.RedisCmds, bool, error) {
 		tokens := toArrayString(value.([]interface{}))
 		cmd := strings.ToUpper(tokens[0])
 		cmds = append(cmds, &core.RedisCmd{
-			ID:   utils.GenerateCmdID(),
+			ID:   core.NextID(),
 			Cmd:  cmd,
 			Args: tokens[1:],
 		})
