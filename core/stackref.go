@@ -62,7 +62,7 @@ func (s *StackRef) Push(key string, store *Store) bool {
 	}
 
 	withLocks(func() {
-		x, ok = store.keypool[key]
+		x, ok = store.keypool.Get(key)
 	}, store, WithKeypoolRLock())
 
 	if !ok {
