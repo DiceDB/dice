@@ -66,7 +66,6 @@ func (manager *ShardManager) Run(ctx context.Context) {
 		// OS signal received, trigger shutdown
 	}
 
-	cancelShard()                  // Cancel the context, signaling all Shards to stop.
 	close(manager.globalErrorChan) // Close the error channel after all Shards stop
 	wg.Wait()                      // Wait for all shard goroutines to exit.
 }

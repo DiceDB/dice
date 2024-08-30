@@ -99,12 +99,6 @@ func (s *AsyncServer) FindPortAndBind() (err error) {
 
 // Run starts the server, accepts connections, and handles client requests
 func (s *AsyncServer) Run(ctx context.Context) error {
-	defer func(fd int) {
-		if err := syscall.Close(fd); err != nil {
-			log.Warn("failed to close server socket", "error", err)
-		}
-	}(s.serverFD)
-
 	if err := s.SetupUsers(); err != nil {
 		return err
 	}
@@ -158,9 +152,6 @@ func (s *AsyncServer) Run(ctx context.Context) error {
 	defer cancelEventLoop()
 	err = s.eventLoop(eventLoopCtx)
 
-	cancelWatch()
-	cancelShardManager()
-	cancelEventLoop()
 	wg.Wait()
 
 	return err
@@ -245,6 +236,7 @@ func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
 // WaitForSignal listens for OS signals and triggers shutdown
 func (s *AsyncServer) WaitForSignal(cancel context.CancelFunc, sigs chan os.Signal) {
 	<-sigs
+	log.Info("Shutdown signal received")
 	cancel()
 	s.InitiateShutdown()
 }
@@ -262,6 +254,13 @@ func (s *AsyncServer) InitiateShutdown() {
 
 		delete(s.connectedClients, fd)
 	}
+
+	closeServerOnce := &sync.Once{} // Ensures server socket is closed only once
+	closeServerOnce.Do(func() {
+		if err := syscall.Close(s.serverFD); err != nil {
+			log.Warn("failed to close server socket", "error", err)
+		}
+	})
 }
 
 func (s *AsyncServer) executeCommandToBuffer(cmd *core.RedisCmd, buf *bytes.Buffer, c *core.Client) {

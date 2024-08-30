@@ -42,7 +42,6 @@ func main() {
 	}
 
 	go func() {
-		log.Info("Shutdown signal received")
 		asyncServer.WaitForSignal(cancel, sigs)
 	}()
 
