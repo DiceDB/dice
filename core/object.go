@@ -43,9 +43,6 @@ var ObjEncodingSetStr uint8 = 12
 var ObjEncodingHashMap uint8 = 0
 var ObjTypeHashMap uint8 = 0
 
-var ObjEncodingHyperLogLog uint8 = 7 << 4
-var ObjTypeHyperLogLog uint8 = 13
-
 func ExtractTypeEncoding(obj *Obj) (e1, e2 uint8) {
 	return obj.TypeEncoding & 0b11110000, obj.TypeEncoding & 0b00001111
 }
