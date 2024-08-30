@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/internal/constants"
 	"github.com/dicedb/dice/server/utils"
 )
 
@@ -364,7 +365,7 @@ func getTypeAsString(encoding uint8) string {
 
 	switch typePart {
 	case ObjTypeString:
-		return "string"
+		return constants.String
 	case ObjTypeByteList:
 		return "byte_list"
 	case ObjTypeBitSet:
