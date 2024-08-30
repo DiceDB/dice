@@ -2,9 +2,10 @@ package core
 
 import (
 	"context"
-	"github.com/charmbracelet/log"
 	"sync"
 	"syscall"
+
+	"go.uber.org/zap"
 )
 
 // WatchEvent Event to notify clients about changes in query results due to key updates
@@ -77,6 +78,10 @@ func (w *QueryWatcher) listenForSubscriptions(ctx context.Context) {
 
 // watchKeys watches for changes in keys and notifies clients
 func (w *QueryWatcher) watchKeys(ctx context.Context) {
+
+	logger, _ := zap.NewProduction()
+	defer logger.Sync() // flushes buffer, if any
+	sugar := logger.Sugar()
 	for {
 		select {
 		case event := <-WatchChan:
@@ -87,7 +92,7 @@ func (w *QueryWatcher) watchKeys(ctx context.Context) {
 				if WildCardMatch(query.KeyRegex, event.Key) {
 					queryResult, err := ExecuteQuery(&query, w.store)
 					if err != nil {
-						log.Error(err)
+						sugar.Error(err)
 						return true
 					}
 

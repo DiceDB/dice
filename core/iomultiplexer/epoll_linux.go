@@ -44,6 +44,16 @@ func (ep *Epoll) Subscribe(event Event) error {
 	return nil
 }
 
+//Unsubscribes to the given event
+func (ep *Epoll) Unsubscribe(event Event) error {
+	nativeEvent := event.toNative()
+	err := syscall.EpollCtl(ep.fd, syscall.EPOLL_CTL_DEL, event.Fd, &nativeEvent)
+    if err != nil {
+        return err
+    }
+    return nil
+}
+
 // Poll polls for all the subscribed events simultaneously
 // and returns all the events that were triggered
 // It blocks until at least one event is triggered or the timeout is reached
