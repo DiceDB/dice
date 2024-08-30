@@ -9,10 +9,10 @@ import (
 // TODO: Make it efficient by doing thorough sampling
 func evictFirst(store *Store) {
 	withLocks(func() {
-		for keyPtr := range store.store {
-			store.delByPtr(keyPtr)
-			return
-		}
+		store.store.Iter(func(k string, obj *Obj) (stop bool) {
+			store.delByPtr(k)
+			return true
+		})
 	}, store, WithStoreLock())
 }
 
@@ -23,13 +23,14 @@ func evictAllkeysRandom(store *Store) {
 	withLocks(func() {
 		// Iteration of Golang dictionary can be considered as a random
 		// because it depends on the hash of the inserted key
-		for keyPtr := range store.store {
-			store.delByPtr(keyPtr)
+		store.store.Iter(func(k string, obj *Obj) (stop bool) {
+			store.delByPtr(k)
 			evictCount--
 			if evictCount <= 0 {
-				break
+				return true
 			}
-		}
+			return false
+		})
 	}, store, WithStoreLock())
 }
 
@@ -52,13 +53,14 @@ func populateEvictionPool(store *Store) {
 	sampleSize := 5
 
 	withLocks(func() {
-		for k := range store.store {
-			ePool.Push(k, store.store[k].LastAccessedAt)
+		store.store.Iter(func(k string, obj *Obj) (stop bool) {
+			ePool.Push(k, obj.LastAccessedAt)
 			sampleSize--
 			if sampleSize == 0 {
-				break
+				return true
 			}
-		}
+			return false
+		})
 	}, store, WithStoreRLock())
 }
 

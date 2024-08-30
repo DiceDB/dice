@@ -27,24 +27,25 @@ func ExecuteQuery(query *DSQLQuery, store *Store) ([]DSQLQueryResultRow, error) 
 
 	var err error
 	withLocks(func() {
-		for key, ptr := range store.keypool {
+		store.keypool.Iter(func(key string, ptr *string) (stop bool) {
 			if WildCardMatch(query.KeyRegex, key) {
+				obj, _ := store.store.Get(*ptr)
 				row := DSQLQueryResultRow{
 					Key:   key,
-					Value: store.store[*ptr],
+					Value: obj,
 				}
 
 				if query.Where != nil {
 					match, evalErr := evaluateWhereClause(query.Where, row)
 					if errors.Is(evalErr, ErrNoResultsFound) {
-						continue
+						return false
 					}
 					if evalErr != nil {
 						err = evalErr
 						return
 					}
 					if !match {
-						continue
+						return false
 					}
 				}
 
@@ -54,7 +55,8 @@ func ExecuteQuery(query *DSQLQuery, store *Store) ([]DSQLQueryResultRow, error) 
 
 				result = append(result, row)
 			}
-		}
+			return false
+		})
 	}, store, WithStoreRLock(), WithKeypoolRLock())
 
 	if err != nil {
