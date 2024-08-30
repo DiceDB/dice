@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/axiomhq/hyperloglog"
 	"strconv"
 	"strings"
 	"testing"
@@ -57,6 +58,8 @@ func TestEval(t *testing.T) {
 	testEvalDbsize(t, store)
 	testEvalGETSET(t, store)
 	testEvalHSET(t, store)
+	testEvalPFADD(t, store)
+	testEvalPFCOUNT(t, store)
 }
 
 func testEvalPING(t *testing.T, store *Store) {
@@ -866,6 +869,48 @@ func testEvalGETSET(t *testing.T, store *Store) {
 	}
 
 	runEvalTests(t, tests, evalGETSET, store)
+}
+
+func testEvalPFADD(t *testing.T, store *Store) {
+	tests := map[string]evalTestCase{
+		"nil value":           {input: nil, output: []byte("-ERR wrong number of arguments for 'pfadd' command\r\n")},
+		"empty array":         {input: []string{}, output: []byte("-ERR wrong number of arguments for 'pfadd' command\r\n")},
+		"one value":           {input: []string{"KEY"}, output: []byte(":1\r\n")},
+		"key val pair":        {input: []string{"KEY", "VAL"}, output: []byte(":1\r\n")},
+		"key multiple values": {input: []string{"KEY", "VAL", "VAL1", "VAL2"}, output: []byte(":1\r\n")},
+	}
+
+	runEvalTests(t, tests, evalPFADD, store)
+}
+
+func testEvalPFCOUNT(t *testing.T, store *Store) {
+	tests := map[string]evalTestCase{
+		"PFCOUNT with empty arg": {
+			input:  []string{},
+			output: []byte("-ERR wrong number of arguments for 'pfcount' command\r\n"),
+		},
+		"PFCOUNT key not exists": {
+			input:  []string{"HELLO"},
+			output: Encode(0, false),
+		},
+		"PFCOUNT key exists": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := hyperloglog.New()
+				value.Insert([]byte("VALUE"))
+				obj := &Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.store[key] = obj
+				store.keypool[key] = &key
+			},
+			input:  []string{"EXISTING_KEY"},
+			output: Encode(1, false),
+		},
+	}
+
+	runEvalTests(t, tests, evalPFCOUNT, store)
 }
 
 func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]string, *Store) []byte, store *Store) {
