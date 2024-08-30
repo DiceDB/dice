@@ -8,12 +8,13 @@ import (
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/constants"
 	"github.com/dicedb/dice/server/utils"
+	"github.com/dolthub/swiss"
 )
 
 type Store struct {
-	store        map[string]*Obj
-	expires      map[*Obj]uint64 // Does not need to be thread-safe as it is only accessed by a single thread.
-	keypool      map[string]*string
+	store        *swiss.Map[string, *Obj]
+	expires      *swiss.Map[*Obj, uint64] // Does not need to be thread-safe as it is only accessed by a single thread.
+	keypool      *swiss.Map[string, *string]
 	storeMutex   sync.RWMutex
 	keypoolMutex sync.RWMutex
 }
@@ -23,9 +24,9 @@ func NewStore() *Store {
 	WatchSubscriptionChan = make(chan WatchSubscription)
 
 	return &Store{
-		store:   make(map[string]*Obj),
-		expires: make(map[*Obj]uint64),
-		keypool: make(map[string]*string),
+		store:   swiss.NewMap[string, *Obj](42),
+		expires: swiss.NewMap[*Obj, uint64](42),
+		keypool: swiss.NewMap[string, *string](42),
 	}
 }
 

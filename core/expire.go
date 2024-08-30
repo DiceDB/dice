@@ -5,7 +5,7 @@ import (
 )
 
 func hasExpired(obj *Obj, store *Store) bool {
-	exp, ok := store.expires[obj]
+	exp, ok := store.expires.Get(obj)
 	if !ok {
 		return false
 	}
@@ -13,12 +13,12 @@ func hasExpired(obj *Obj, store *Store) bool {
 }
 
 func getExpiry(obj *Obj, store *Store) (uint64, bool) {
-	exp, ok := store.expires[obj]
+	exp, ok := store.expires.Get(obj)
 	return exp, ok
 }
 
 func delExpiry(obj *Obj, store *Store) {
-	delete(store.expires, obj)
+	store.expires.Delete(obj)
 }
 
 // TODO: Optimize
@@ -31,18 +31,19 @@ func expireSample(store *Store) float32 {
 
 	withLocks(func() {
 		// Collect keys to be deleted
-		for keyPtr, obj := range store.store {
+		store.store.Iter(func(keyPtr string, obj *Obj) (stop bool) {
 			// once we iterated to 20 keys that have some expiration set
 			// we break the loop
 			if limit == 0 {
-				break
+				return true
 			}
 			limit--
 			if hasExpired(obj, store) {
 				keysToDelete = append(keysToDelete, keyPtr)
 				expiredCount++
 			}
-		}
+			return false
+		})
 	}, store, WithStoreRLock())
 
 	// Delete the keys outside the read lock
