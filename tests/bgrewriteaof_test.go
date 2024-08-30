@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -33,12 +32,12 @@ func TestBgrewriteaof(t *testing.T) {
 		// ensure that file is written
 		time.Sleep(time.Second*2)
 		
-		fileContent, err := ioutil.ReadFile("dice-master.aof")
+		fileContent, err := os.ReadFile("dice-master.aof")
 		if err != nil {
 			t.Fatalf("Failed to read the file: %v", err)
 		}
 
-		expectedFileContent, err := ioutil.ReadFile("../testutils/bgrewriteaof-expected-data.aof")
+		expectedFileContent, err := os.ReadFile("../testutils/bgrewriteaof-expected-data.aof")
 		if err != nil {
 			t.Fatalf("Failed to read the file: %v", err)
 		}

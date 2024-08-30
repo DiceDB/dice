@@ -879,7 +879,7 @@ func testEvalBGREWRITEAOF(t *testing.T, store *Store) {
 		"BGREWRITEAOF correct syntax": {
 			setup:  func() {},
 			input:  nil,
-			output: []byte("+OK\r\n"),
+			output: RespOK,
 		},
 	}
 
