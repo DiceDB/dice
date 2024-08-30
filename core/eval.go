@@ -321,6 +321,64 @@ func evalGETDEL(args []string, store *Store) []byte {
 	return Encode(obj.Value, false)
 }
 
+// evalJSONDEL delete a value that the given json path include in.
+// Returns RespZero if key is expired or it does not exist
+// Returns encoded error response if incorrect number of arguments
+// Returns an integer reply specified as the number of paths deleted (0 or more)
+func evalJSONDEL(args []string, store *Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("JSON.DEL")
+	}
+	key := args[0]
+
+	// Default path is root if not specified
+	path := defaultRootPath
+	if len(args) > 1 {
+		path = args[1]
+	}
+
+	// Retrieve the object from the database
+	obj := store.Get(key)
+	if obj == nil {
+		return RespZero
+	}
+
+	err := assertType(obj.TypeEncoding, ObjTypeJSON)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
+	}
+	err = assertEncoding(obj.TypeEncoding, ObjEncodingJSON)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
+	}
+
+	jsonData := obj.Value
+
+	_, err = sonic.Marshal(jsonData)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
+	}
+
+	if len(args) == 1 || path == defaultRootPath {
+		store.Del(key)
+		return RespOne
+	}
+
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("invalid JSONPath")
+	}
+	results := expr.Get(jsonData)
+	err = expr.Del(jsonData)
+	if err != nil {
+		return diceerrors.NewErrWithMessage(err.Error())
+	}
+	// Create a new object with the updated JSON data
+	newObj := store.NewObj(jsonData, -1, ObjTypeJSON, ObjEncodingJSON)
+	store.Put(key, newObj)
+	return Encode(len(results), false)
+}
+
 // evalJSONCLEAR Clear container values (arrays/objects) and set numeric values to 0,
 // Already cleared values are ignored for empty containers and zero numbers
 // args must contain at least the key;  (path unused in this implementation)
