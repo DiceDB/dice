@@ -18,7 +18,7 @@ func TestHyperLogLogCommands(t *testing.T) {
 	}{
 		{
 			name:     "PFADD with one key-value pair",
-			commands: []string{"PFADD k1 v1", "PFCOUNT k1"},
+			commands: []string{"PFADD hll0 v1", "PFCOUNT hll0"},
 			expected: []interface{}{int64(1), int64(1)},
 		},
 		{
