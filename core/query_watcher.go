@@ -2,9 +2,10 @@ package core
 
 import (
 	"context"
-	"github.com/charmbracelet/log"
 	"sync"
 	"syscall"
+
+	"github.com/charmbracelet/log"
 )
 
 // WatchEvent Event to notify clients about changes in query results due to key updates
