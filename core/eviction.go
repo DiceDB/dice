@@ -9,9 +9,10 @@ import (
 // TODO: Make it efficient by doing thorough sampling
 func evictFirst(store *Store) {
 	withLocks(func() {
-		store.store.All(func(k string, obj *Obj) (stop bool) {
+		store.store.All(func(k string, obj *Obj) bool {
 			store.delByPtr(k)
-			return true
+			// stop after iterating over the first element
+			return false
 		})
 	}, store, WithStoreLock())
 }
@@ -23,10 +24,11 @@ func evictAllkeysRandom(store *Store) {
 	withLocks(func() {
 		// Iteration of Golang dictionary can be considered as a random
 		// because it depends on the hash of the inserted key
-		store.store.All(func(k string, obj *Obj) (stop bool) {
+		store.store.All(func(k string, obj *Obj) bool {
 			store.delByPtr(k)
 			evictCount--
-			return evictCount <= 0
+			// continue if evictCount > 0
+			return evictCount > 0
 		})
 	}, store, WithStoreLock())
 }
@@ -49,11 +51,18 @@ func getIdleTime(lastAccessedAt uint32) uint32 {
 func populateEvictionPool(store *Store) {
 	sampleSize := 5
 
+	// TODO: if we already have obj, why do we need to
+	// look up in store.store again?
 	withLocks(func() {
-		store.store.All(func(k string, obj *Obj) (stop bool) {
-			ePool.Push(k, obj.LastAccessedAt)
-			sampleSize--
-			return sampleSize == 0
+		store.store.All(func(k string, obj *Obj) bool {
+			v, ok := store.store.Get(k)
+			if ok {
+				ePool.Push(k, v.LastAccessedAt)
+				sampleSize--
+			}
+			// continue if sample size > 0
+			// stop as soon as it hits 0
+			return sampleSize > 0
 		})
 	}, store, WithStoreRLock())
 }

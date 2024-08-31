@@ -102,10 +102,10 @@ func DumpAllAOF(store *Store) error {
 	log.Println("rewriting AOF file at", config.AOFFile)
 
 	withLocks(func() {
-		store.store.All(func(k string, obj *Obj) (stop bool) {
+		store.store.All(func(k string, obj *Obj) bool {
 			err = dumpKey(aof, k, obj)
-			stop = err != nil
-			return stop
+			// continue if no error
+			return err == nil
 		})
 	}, store, WithStoreLock())
 
