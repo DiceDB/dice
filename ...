@@ -1,5 +1,0 @@
-mode: set
-github.com/dicedb/dice/main.go:15.19,19.2 3 0
-github.com/dicedb/dice/main.go:21.13,31.16 5 0
-github.com/dicedb/dice/main.go:31.16,34.3 2 0
-github.com/dicedb/dice/main.go:36.2,46.11 5 0
