@@ -1,0 +1,27 @@
+keys one
+keys two
+
+ey
+SET blah "myvalue"
+GET blah
+keys "1725132330"
+keys one
+keys two
+
+ey
+keys one
+keys two
+
+ey
+
+GET blah
+GET one
+
+GET one
+
+GET blahsuffix
+select 0
+set a zoo-0
+select 6
+set a zoo-6
+GET a

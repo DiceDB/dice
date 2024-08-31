@@ -20,6 +20,10 @@ run:
 test:
 	go test -v -count=1 ./tests/
 
+tcltest:
+	go run main.go
+	./runtest --host 127.0.0.1 --port 7379 --tags -needs:debug --tags -cluster:skip
+
 test-one:
 	go test -v -count=1 --run $(TEST_FUNC) ./tests/...
 
