@@ -178,6 +178,7 @@ func BGREWRITEAOF(store *Store) (func(), error) {
 
 	if nothingToRewrite {
 		// return early if there's no work to do
+		atomic.CompareAndSwapInt32(&flushingInProgress, 1, 0)
 		return func() {}, nil
 	}
 
@@ -253,6 +254,9 @@ func BGREWRITEAOF(store *Store) (func(), error) {
 		}, store, WithStoreLock())
 		if err != nil {
 			log.Error(err)
+
+			// try deleting tmp aof in case of failure
+			_ = os.RemoveAll(config.TempAOFFile)
 		}
 	}
 
