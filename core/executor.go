@@ -21,7 +21,6 @@ type DSQLQueryResultRow struct {
 	Value *Obj
 }
 
-//nolint:gocritic
 func ExecuteQuery(query *DSQLQuery, store *Store) ([]DSQLQueryResultRow, error) {
 	var result []DSQLQueryResultRow
 
@@ -98,7 +97,6 @@ func MarshalResultIfJSON(row DSQLQueryResultRow) error {
 	return nil
 }
 
-//nolint:gocritic
 func sortResults(query *DSQLQuery, result []DSQLQueryResultRow) {
 	if query.OrderBy.OrderBy == constants.EmptyStr {
 		return

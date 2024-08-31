@@ -41,6 +41,13 @@ $ cd dice
 $ go run main.go
 ```
 
+4. Install GoLangCI
+
+```
+$ sudo su
+$ curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /bin v1.60.1
+```
+
 ### Live Development Server
 
 DiceDB provides a hot-reloading development environment, which allows you to instantly view your code changes in a live server. This functionality is supported by [Air](https://github.com/air-verse/air)

@@ -26,10 +26,7 @@ func evictAllkeysRandom(store *Store) {
 		store.store.All(func(k string, obj *Obj) (stop bool) {
 			store.delByPtr(k)
 			evictCount--
-			if evictCount <= 0 {
-				return true
-			}
-			return false
+			return evictCount <= 0
 		})
 	}, store, WithStoreLock())
 }
@@ -56,10 +53,7 @@ func populateEvictionPool(store *Store) {
 		store.store.All(func(k string, obj *Obj) (stop bool) {
 			ePool.Push(k, obj.LastAccessedAt)
 			sampleSize--
-			if sampleSize == 0 {
-				return true
-			}
-			return false
+			return sampleSize == 0
 		})
 	}, store, WithStoreRLock())
 }
