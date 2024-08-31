@@ -22,7 +22,7 @@ type DSQLQueryResultRow struct {
 }
 
 //nolint:gocritic
-func ExecuteQuery(query DSQLQuery, store *Store) ([]DSQLQueryResultRow, error) {
+func ExecuteQuery(query *DSQLQuery, store *Store) ([]DSQLQueryResultRow, error) {
 	var result []DSQLQueryResultRow
 
 	var err error
@@ -31,7 +31,7 @@ func ExecuteQuery(query DSQLQuery, store *Store) ([]DSQLQueryResultRow, error) {
 			if WildCardMatch(query.KeyRegex, key) {
 				row := DSQLQueryResultRow{
 					Key:   key,
-					Value: store.store[ptr],
+					Value: store.store[*ptr],
 				}
 
 				if query.Where != nil {
@@ -97,7 +97,7 @@ func MarshalResultIfJSON(row DSQLQueryResultRow) error {
 }
 
 //nolint:gocritic
-func sortResults(query DSQLQuery, result []DSQLQueryResultRow) {
+func sortResults(query *DSQLQuery, result []DSQLQueryResultRow) {
 	if query.OrderBy.OrderBy == constants.EmptyStr {
 		return
 	}

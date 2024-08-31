@@ -1,8 +1,6 @@
 package core
 
 import (
-	"unsafe"
-
 	"github.com/dicedb/dice/server/utils"
 )
 
@@ -29,7 +27,7 @@ func delExpiry(obj *Obj, store *Store) {
 func expireSample(store *Store) float32 {
 	var limit int = 20
 	var expiredCount int = 0
-	var keysToDelete []unsafe.Pointer
+	var keysToDelete []string
 
 	withLocks(func() {
 		// Collect keys to be deleted

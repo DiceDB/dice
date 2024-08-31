@@ -33,7 +33,6 @@ func AssertJSONEqualList(t *testing.T, expected []string, actual string) {
 }
 
 func compareJSONs(t *testing.T, expected, actual string) bool {
-	t.Log("Comparing JSONs expected:", expected, "actual:", actual)
 	var expectedJSON, actualJSON interface{}
 
 	err := sonic.UnmarshalString(expected, &expectedJSON)

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/dicedb/dice/config"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
@@ -18,15 +19,18 @@ type AOF struct {
 	path   string
 }
 
-var flushingInProgress int32
+var (
+	FileMode           int = 0644
+	flushingInProgress int32
+)
 
 func NewAOF(path string) (*AOF, error) {
-	err := os.MkdirAll(filepath.Dir(path), 0750)
+	err := os.Mkdir(filepath.Dir(path), os.FileMode(FileMode))
 	if err != nil {
 		return nil, err
 	}
 
-	f, err := os.Create(path)
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, fs.FileMode(FileMode))
 	if err != nil {
 		return nil, err
 	}
@@ -38,15 +42,47 @@ func NewAOF(path string) (*AOF, error) {
 	}, nil
 }
 
+func NewTmpAOF() (*AOF, error) {
+	err := os.Mkdir(filepath.Dir(config.TempAOFFile), os.FileMode(FileMode))
+	if err != nil {
+		return nil, err
+	}
+
+	// this differs from NewAOF function since we want to
+	// truncate an existing tmp file in case it was not properly cleaned
+	f, err := os.Create(config.TempAOFFile)
+	if err != nil {
+		return nil, err
+	}
+
+	return &AOF{
+		file:   f,
+		writer: bufio.NewWriter(f),
+		path:   config.TempAOFFile,
+	}, nil
+}
+
 func (a *AOF) Write(operation string) error {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
 
+	if err := a.writeWithoutPersist(operation); err != nil {
+		return err
+	}
+
+	if err := a.writer.Flush(); err != nil {
+		return err
+	}
+
+	return a.file.Sync()
+}
+
+func (a *AOF) writeWithoutPersist(operation string) error {
 	if _, err := a.writer.WriteString(operation + "\n"); err != nil {
 		return err
 	}
 
-	return a.writer.Flush()
+	return nil
 }
 
 func (a *AOF) Close() error {
@@ -87,21 +123,23 @@ func (a *AOF) Load() ([]string, error) {
 func dumpKey(aof *AOF, key string, obj *Obj) (err error) {
 	cmd := fmt.Sprintf("SET %s %s", key, obj.Value)
 	tokens := strings.Split(cmd, " ")
-	return aof.Write(string(Encode(tokens, false)))
+	return aof.writeWithoutPersist(string(Encode(tokens, false)))
 }
 
+// DumpAllAOF rewrites all store mutations to a tmp AOF file
+// NOTE: this function is called from the spawned child process
 func DumpAllAOF(store *Store) error {
 	var (
 		aof *AOF
 		err error
 	)
 
-	if aof, err = NewAOF(config.TempAOFFile); err != nil {
+	if aof, err = NewTmpAOF(); err != nil {
 		return err
 	}
 
 	defer func() {
-		_ = aof.Close()
+		_ = aof.file.Close()
 
 		if err != nil {
 			// failure occurred during the flushing process
@@ -112,26 +150,21 @@ func DumpAllAOF(store *Store) error {
 
 	log.Println("rewriting AOF file at", config.TempAOFFile)
 
-	withLocks(func() {
-		for k, obj := range store.store {
-			err = dumpKey(aof, *((*string)(k)), obj)
-			if err != nil {
-				return
-			}
+	for k, obj := range store.store {
+		err = dumpKey(aof, k, obj)
+		if err != nil {
+			return err
 		}
-	}, store, WithStoreLock())
+	}
+
+	err = aof.writer.Flush()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed flushing AOF bufio to file: %w", err)
 	}
 
 	err = aof.file.Sync()
 	if err != nil {
 		return fmt.Errorf("failed flushing AOF to disk: %w", err)
-	}
-
-	err = os.Rename(config.TempAOFFile, config.AOFFile)
-	if err != nil {
-		return fmt.Errorf("failed renaming AOF file: %w", err)
 	}
 
 	log.Println("AOF file rewrite complete")

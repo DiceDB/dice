@@ -67,6 +67,143 @@ func TestExpireat(t *testing.T) {
 			expected: []interface{}{"ERR wrong number of arguments for 'expireat' command"},
 			delay:    []time.Duration{0},
 		},
+		{
+			name:  "Test(XX): Set the expiration only if the key has no expiration time",
+			setup: "",
+			commands: []string{
+				"SET test_key test_value",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10) + " NX",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+1, 10) + " NX",
+			},
+			expected: []interface{}{"OK", int64(1), int64(0)},
+			delay:    []time.Duration{0, 0, 0},
+		},
+
+		{
+			name:  "Test(XX): Set the expiration only if the key already has an expiration time",
+			setup: "",
+			commands: []string{
+				"SET test_key test_value",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10) + " XX",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10),
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10) + " XX",
+			},
+			expected: []interface{}{"OK", int64(0), int64(1), int64(1)},
+			delay:    []time.Duration{0, 0, 0, 0},
+		},
+
+		{
+			name:  "TEST(GT): Set the expiration only if the new expiration time is greater than the current one",
+			setup: "",
+			commands: []string{
+				"SET test_key test_value",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10) + " GT",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10),
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+20, 10) + " GT",
+			},
+			expected: []interface{}{"OK", int64(0), int64(1), int64(1)},
+			delay:    []time.Duration{0, 0, 0, 0},
+		},
+
+		{
+			name:  "TEST(LT): Set the expiration only if the new expiration time is less than the current one",
+			setup: "",
+			commands: []string{
+				"SET test_key test_value",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10) + " LT",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+20, 10) + " LT",
+			},
+			expected: []interface{}{"OK", int64(1), int64(0)},
+			delay:    []time.Duration{0, 0, 0},
+		},
+
+		{
+			name:  "TEST(LT): Set the expiration only if the new expiration time is less than the current one",
+			setup: "",
+			commands: []string{
+				"SET test_key test_value",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10) + " LT",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+20, 10) + " LT",
+			},
+			expected: []interface{}{"OK", int64(1), int64(0)},
+			delay:    []time.Duration{0, 0, 0},
+		},
+
+		{
+			name:  "TEST(NX + LT/GT)",
+			setup: "",
+			commands: []string{
+				"SET test_key test_value",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+20, 10) + " NX",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+20, 10) + " NX" + " LT",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+20, 10) + " NX" + " GT",
+				"GET test_key",
+			},
+			expected: []interface{}{"OK", int64(1),
+				"ERR NX and XX, GT or LT options at the same time are not compatible",
+				"ERR NX and XX, GT or LT options at the same time are not compatible",
+				"test_value"},
+			delay: []time.Duration{0, 0, 0, 0, 0},
+		},
+		{
+			name:  "TEST(XX + LT/GT)",
+			setup: "",
+			commands: []string{
+				"SET test_key test_value",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+20, 10),
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+5, 10) + " XX" + " LT",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10) + " XX" + " GT",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+20, 10) + " XX" + " GT",
+				"GET test_key",
+			},
+			expected: []interface{}{"OK", int64(1), int64(1), int64(1), int64(1), "test_value"},
+			delay:    []time.Duration{0, 0, 0, 0, 0, 0},
+		},
+		{
+			name:  "Test if value is nil after expiration",
+			setup: "",
+			commands: []string{
+				"SET test_key test_value",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+20, 10),
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+2, 10) + " XX" + " LT",
+				"GET test_key",
+			},
+			expected: []interface{}{"OK", int64(1), int64(1), "(nil)"},
+			delay:    []time.Duration{0, 0, 0, 2 * time.Second},
+		},
+		{
+			name:  "Test if value is nil after expiration",
+			setup: "",
+			commands: []string{
+				"SET test_key test_value",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+2, 10) + " NX",
+				"GET test_key",
+			},
+			expected: []interface{}{"OK", int64(1), "(nil)"},
+			delay:    []time.Duration{0, 0, 2 * time.Second},
+		},
+		{
+			name:  "Invalid Command Test",
+			setup: "",
+			commands: []string{
+				"SET test_key test_value",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+1, 10) + " XX" + " " + "rr",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+1, 10) + " XX" + " " + "NX",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+1, 10) + " GT" + " " + "lt",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+1, 10) + " GT" + " " + "lt" + " " + "xx",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+1, 10) + " GT" + " " + "lt" + " " + "nx",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+1, 10) + " nx" + " " + "xx" + " " + "gt",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+1, 10) + " nx" + " " + "xx" + " " + "lt",
+			},
+			expected: []interface{}{"OK", "ERR Unsupported option rr",
+				"ERR NX and XX, GT or LT options at the same time are not compatible",
+				"ERR NX and XX, GT or LT options at the same time are not compatible",
+				"ERR NX and XX, GT or LT options at the same time are not compatible",
+				"ERR NX and XX, GT or LT options at the same time are not compatible",
+				"ERR NX and XX, GT or LT options at the same time are not compatible",
+				"ERR NX and XX, GT or LT options at the same time are not compatible"},
+			delay: []time.Duration{0, 0, 0, 0, 0, 0, 0, 0},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -85,7 +222,6 @@ func TestExpireat(t *testing.T) {
 				result := fireCommand(conn, cmd)
 				results = append(results, result)
 			}
-
 			// Validate results
 			for i, expected := range tc.expected {
 				if i >= len(results) {

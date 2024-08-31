@@ -11,8 +11,12 @@ const (
 	NX      string = "NX"
 	Xx      string = "xx"
 	Nx      string = "nx"
+	GT      string = "GT"
+	LT      string = "LT"
 	KEEPTTL string = "KEEPTTL"
 	Keepttl string = "keepttl"
+	Sync    string = "SYNC"
+	Async   string = "ASYNC"
 
 	AND string = "AND"
 	OR  string = "OR"
@@ -33,14 +37,15 @@ const (
 	OperatorLessThanEqualsTo    string = "<="
 	OperatorGreaterThanEqualsTo string = ">="
 
-	ObjectType  string = "object"
-	ArrayType   string = "array"
-	StringType  string = "string"
-	IntegerType string = "integer"
-	NumberType  string = "number"
-	BooleanType string = "boolean"
-	NullType    string = "null"
-	UnknownType string = "unknown"
+	ObjectType      string = "object"
+	ArrayType       string = "array"
+	StringType      string = "string"
+	IntegerType     string = "integer"
+	NumberType      string = "number"
+	BooleanType     string = "boolean"
+	NullType        string = "null"
+	UnknownType     string = "unknown"
+	NumberZeroValue int    = 0
 
 	Qwatch string = "qwatch"
 )

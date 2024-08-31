@@ -217,8 +217,7 @@ func Encode(value interface{}, isSimple bool) []byte {
 		we := value.(WatchEvent)
 		buf.Write(Encode(fmt.Sprintf("key:%s", we.Key), false))
 		buf.Write(Encode(fmt.Sprintf("op:%s", we.Operation), false))
-		buf.Write(Encode(we.Value.Value, false))
-		return []byte(fmt.Sprintf("*3\r\n%s", buf.Bytes()))
+		return []byte(fmt.Sprintf("*2\r\n%s", buf.Bytes()))
 	case []DSQLQueryResultRow:
 		var b []byte
 		buf := bytes.NewBuffer(b)
@@ -228,6 +227,8 @@ func Encode(value interface{}, isSimple bool) []byte {
 			buf.Write(Encode(row.Value.Value, false))
 		}
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
+	case map[string]bool:
+		return RespNIL
 	default:
 		fmt.Printf("Unsupported type: %T\n", v)
 		return RespNIL
