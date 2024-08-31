@@ -574,6 +574,14 @@ var (
 		Arity:    -4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hgetAllCmdMeta = DiceCmdMeta{
+		Name: "HGETALL",
+		Info: `Returns all fields and values of the hash stored at key. In the returned value,
+        every field name is followed by its value, so the length of the reply is twice the size of the hash.`,
+		Eval:     evalHGETALL,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	objectCmdMeta = DiceCmdMeta{
 		Name: "OBJECT",
 		Info: `OBJECT subcommand [arguments [arguments ...]]
@@ -821,4 +829,5 @@ func init() {
 	diceCmds["SCARD"] = scardCmdMeta
 	diceCmds["SDIFF"] = sdiffCmdMeta
 	diceCmds["SINTER"] = sinterCmdMeta
+	diceCmds["HGETALL"] = hgetAllCmdMeta
 }

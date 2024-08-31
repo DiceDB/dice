@@ -2394,6 +2394,34 @@ func evalHSET(args []string, store *Store) []byte {
 	return Encode(numKeys, false)
 }
 
+func evalHGETALL(args []string, store *Store) []byte {
+	if len(args) != 1 {
+		return diceerrors.NewErrArity("HGETALL")
+	}
+
+	key := args[0]
+
+	obj := store.Get(key)
+
+	var hashMap HashMap
+	var results []string
+
+	if obj != nil {
+		switch currentVal := obj.Value.(type) {
+		case HashMap:
+			hashMap = currentVal
+		default:
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+		}
+	}
+
+	for hmKey, hmValue := range hashMap {
+		results = append(results, hmKey, hmValue)
+	}
+
+	return Encode(results, false)
+}
+
 func evalObjectIdleTime(key string, store *Store) []byte {
 	obj := store.GetNoTouch(key)
 	if obj == nil {
