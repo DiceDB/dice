@@ -343,18 +343,14 @@ func evalJSONDEL(args []string, store *Store) []byte {
 		return RespZero
 	}
 
-	err := assertType(obj.TypeEncoding, ObjTypeJSON)
-	if err != nil {
-		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
-	}
-	err = assertEncoding(obj.TypeEncoding, ObjEncodingJSON)
-	if err != nil {
-		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
+	errWithMessage := assertTypeAndEncoding(obj.TypeEncoding, ObjTypeJSON, ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
 	}
 
 	jsonData := obj.Value
 
-	_, err = sonic.Marshal(jsonData)
+	_, err := sonic.Marshal(jsonData)
 	if err != nil {
 		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
 	}
@@ -404,18 +400,14 @@ func evalJSONCLEAR(args []string, store *Store) []byte {
 		return diceerrors.NewErrWithMessage("could not perform this operation on a key that doesn't exist")
 	}
 
-	err := assertType(obj.TypeEncoding, ObjTypeJSON)
-	if err != nil {
-		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
-	}
-	err = assertEncoding(obj.TypeEncoding, ObjEncodingJSON)
-	if err != nil {
-		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
+	errWithMessage := assertTypeAndEncoding(obj.TypeEncoding, ObjTypeJSON, ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
 	}
 
 	jsonData := obj.Value
 
-	_, err = sonic.Marshal(jsonData)
+	_, err := sonic.Marshal(jsonData)
 	if err != nil {
 		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
 	}
@@ -489,13 +481,9 @@ func evalJSONTYPE(args []string, store *Store) []byte {
 		return RespNIL
 	}
 
-	err := assertType(obj.TypeEncoding, ObjTypeJSON)
-	if err != nil {
-		return Encode(err, false)
-	}
-	err = assertEncoding(obj.TypeEncoding, ObjEncodingJSON)
-	if err != nil {
-		return Encode(err, false)
+	errWithMessage := assertTypeAndEncoding(obj.TypeEncoding, ObjTypeJSON, ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
 	}
 
 	jsonData := obj.Value
@@ -554,13 +542,9 @@ func evalJSONGET(args []string, store *Store) []byte {
 	}
 
 	// Check if the object is of JSON type
-	err := assertType(obj.TypeEncoding, ObjTypeJSON)
-	if err != nil {
-		return Encode(err, false)
-	}
-	err = assertEncoding(obj.TypeEncoding, ObjEncodingJSON)
-	if err != nil {
-		return Encode(err, false)
+	errWithMessage := assertTypeAndEncoding(obj.TypeEncoding, ObjTypeJSON, ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
 	}
 
 	jsonData := obj.Value

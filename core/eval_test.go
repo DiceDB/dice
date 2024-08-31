@@ -628,7 +628,7 @@ func testEvalJSONGET(t *testing.T, store *Store) {
 				store.keypool[key] = &key
 			},
 			input:  []string{"EXISTING_KEY"},
-			output: []byte("-the operation is not permitted on this type\r\n"),
+			output: []byte("-ERR Existing key has wrong Dice type\r\n"),
 		},
 		"key exists value": {
 			setup: func() {
