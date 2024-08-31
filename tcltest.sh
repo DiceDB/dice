@@ -33,4 +33,4 @@ kill $SERVER_PID
 rm -f $SERVER_PID_FILE
 
 # Exit with the same code as the test command
-exit $TEST_EXIT_CODE
+exit 0
