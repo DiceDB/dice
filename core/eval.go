@@ -849,12 +849,12 @@ func evalHELLO(args []string, store *Store) []byte {
 // Spawn a background thread to persist the data via AOF technique. Current implementation is
 // based on CoW optimization and Fork
 func evalBGREWRITEAOF(args []string, store *Store) []byte {
-	waitForChild, err := BGREWRITEAOF(store)
+	waitAndFinalize, err := BGREWRITEAOF(store)
 	if err != nil {
 		return diceerrors.NewErrWithMessage(err.Error())
 	}
 
-	go waitForChild()
+	go waitAndFinalize()
 
 	return RespOK
 }

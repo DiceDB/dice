@@ -15,7 +15,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall"
-	"time"
 )
 
 type AOF struct {
@@ -48,7 +47,7 @@ func NewAOF(path string) (*AOF, error) {
 	}, nil
 }
 
-func NewTmpAOF() (*AOF, error) {
+func newTmpAOF() (*AOF, error) {
 	err := os.MkdirAll(filepath.Dir(config.TempAOFFile), os.FileMode(FileMode))
 	if err != nil {
 		return nil, err
@@ -134,10 +133,11 @@ func BGREWRITEAOF(store *Store) (func(), error) {
 	}
 
 	var (
-		aofSize  int64
-		err      error
-		childPID uintptr
-		isChild  bool
+		aofSize          int64
+		err              error
+		childPID         uintptr
+		isChild          bool
+		nothingToRewrite bool
 	)
 
 	withLocks(func() {
@@ -151,10 +151,15 @@ func BGREWRITEAOF(store *Store) (func(), error) {
 				return
 			}
 
+			nothingToRewrite = true
 			return
+		} else {
+			aofSize = info.Size()
+			if aofSize == 0 {
+				nothingToRewrite = true
+				return
+			}
 		}
-
-		aofSize = info.Size()
 
 		// Why forking inside withLocks()?
 		//
@@ -171,11 +176,15 @@ func BGREWRITEAOF(store *Store) (func(), error) {
 		return nil, err
 	}
 
+	if nothingToRewrite {
+		// return early if there's no work to do
+		return func() {}, nil
+	}
+
 	//x, y := utils.PID()
 	//fmt.Printf("PARENT: my pid: %d x: %d, y: %d\n", os.Getpid(), x, y)
 
 	if isChild {
-		time.Sleep(10 * time.Second)
 		if err = DumpAllAOF(store); err != nil {
 			log.Errorf("BGREWRITEAOF Process: %v", err)
 			os.Exit(1)
@@ -184,7 +193,7 @@ func BGREWRITEAOF(store *Store) (func(), error) {
 		os.Exit(0)
 	}
 
-	return func() {
+	waitAndFinalize := func() {
 		defer atomic.CompareAndSwapInt32(&flushingInProgress, 1, 0)
 
 		var ws syscall.WaitStatus
@@ -234,18 +243,20 @@ func BGREWRITEAOF(store *Store) (func(), error) {
 			//
 			// because we want to make sure there is no ongoing write operation to the existing AOF file during a store mutation.
 			// this is why we guard this operation with the store lock.
-			err = os.Rename(config.TempAOFFile, config.AOFFile)
-			if err != nil {
-				log.Errorf("failed renaming AOF file: %w", err)
+			err2 = os.Rename(config.TempAOFFile, config.AOFFile)
+			if err2 != nil {
+				err = fmt.Errorf("failed renaming AOF file: %w", err2)
 				return
 			}
 
 			log.Infof("AOF renamed successfully from \"%s\" to \"%s\"", config.TempAOFFile, config.AOFFile)
 		}, store, WithStoreLock())
 		if err != nil {
-
+			log.Error(err)
 		}
-	}, nil
+	}
+
+	return waitAndFinalize, nil
 }
 
 // DumpAllAOF rewrites all store mutations to a tmp AOF file
@@ -256,7 +267,7 @@ func DumpAllAOF(store *Store) error {
 		err error
 	)
 
-	if aof, err = NewTmpAOF(); err != nil {
+	if aof, err = newTmpAOF(); err != nil {
 		return err
 	}
 
