@@ -2,10 +2,12 @@ package core
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/server/utils"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -13,6 +15,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall"
+	"time"
 )
 
 type AOF struct {
@@ -28,7 +31,7 @@ var (
 )
 
 func NewAOF(path string) (*AOF, error) {
-	err := os.Mkdir(filepath.Dir(path), os.FileMode(FileMode))
+	err := os.MkdirAll(filepath.Dir(path), os.FileMode(FileMode))
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +49,7 @@ func NewAOF(path string) (*AOF, error) {
 }
 
 func NewTmpAOF() (*AOF, error) {
-	err := os.Mkdir(filepath.Dir(config.TempAOFFile), os.FileMode(FileMode))
+	err := os.MkdirAll(filepath.Dir(config.TempAOFFile), os.FileMode(FileMode))
 	if err != nil {
 		return nil, err
 	}
@@ -130,15 +133,51 @@ func BGREWRITEAOF(store *Store) (func(), error) {
 		return nil, fmt.Errorf("BGREWRITEAOF is already running, please try again later...")
 	}
 
-	child, err := utils.Fork()
+	var (
+		aofSize  int64
+		err      error
+		childPID uintptr
+		isChild  bool
+	)
+
+	withLocks(func() {
+		// get the size of the current AOF file, it will be used
+		// in order to concat the new rewritten AOF file with any additions
+		// made to the existing AOF file during the rewrite process.
+		info, err2 := os.Stat(config.AOFFile)
+		if err2 != nil {
+			if !errors.Is(err, os.ErrNotExist) {
+				err = fmt.Errorf("failed getting aof file size: %v", err2)
+				return
+			}
+
+			return
+		}
+
+		aofSize = info.Size()
+
+		// Why forking inside withLocks()?
+		//
+		// if we would have fork outside this function the aof file size could grow more
+		// by other store writes, leading to wrong concat of the additions.
+		childPID, isChild, err2 = utils.Fork()
+		if err2 != nil {
+			err = fmt.Errorf("failed forking AOF child process: %v", err2)
+			return
+		}
+	}, store, WithStoreLock())
 	if err != nil {
 		atomic.CompareAndSwapInt32(&flushingInProgress, 1, 0)
-		return nil, fmt.Errorf("failed forking AOF child process: %v", err)
+		return nil, err
 	}
 
-	if isChild := child == 0; isChild {
+	//x, y := utils.PID()
+	//fmt.Printf("PARENT: my pid: %d x: %d, y: %d\n", os.Getpid(), x, y)
+
+	if isChild {
+		time.Sleep(10 * time.Second)
 		if err = DumpAllAOF(store); err != nil {
-			log.Error("BGREWRITEAOF Process: %w", err)
+			log.Errorf("BGREWRITEAOF Process: %v", err)
 			os.Exit(1)
 		}
 
@@ -149,9 +188,9 @@ func BGREWRITEAOF(store *Store) (func(), error) {
 		defer atomic.CompareAndSwapInt32(&flushingInProgress, 1, 0)
 
 		var ws syscall.WaitStatus
-		_, err := syscall.Wait4(int(child), &ws, 0, nil)
+		_, err := syscall.Wait4(int(childPID), &ws, 0, nil)
 		if err != nil {
-			log.Errorf("failed waiting on BGREWRITEAOF process to complete: %w", err)
+			log.Errorf("failed waiting on BGREWRITEAOF process to complete: %v", err)
 			return
 		}
 
@@ -161,7 +200,36 @@ func BGREWRITEAOF(store *Store) (func(), error) {
 		}
 
 		withLocks(func() {
-			// Why do we make the server rename the tmp aof file and
+			currentAOF, err2 := os.Open(config.AOFFile)
+			if err2 != nil {
+				err = fmt.Errorf("failed opening aof file: %v", err2)
+				return
+			}
+
+			defer currentAOF.Close()
+
+			_, err2 = currentAOF.Seek(aofSize, 0)
+			if err2 != nil {
+				err = fmt.Errorf("failed seeking aof file: %v", err2)
+				return
+			}
+
+			tmpAOF, err2 := os.OpenFile(config.AOFFile, os.O_APPEND|os.O_WRONLY, 0755)
+			if err2 != nil {
+				err = fmt.Errorf("failed opening tmp aof file: %v", err2)
+				return
+			}
+
+			defer tmpAOF.Close()
+
+			// concat any new additions to the current aof file to the new rewritten aof file
+			_, err2 = io.Copy(tmpAOF, currentAOF)
+			if err2 != nil {
+				err = fmt.Errorf("failed concating current aof file to tmp aof: %v", err2)
+				return
+			}
+
+			// Why do we make the server concat and rename the tmp aof file and
 			// not the child process?
 			//
 			// because we want to make sure there is no ongoing write operation to the existing AOF file during a store mutation.
@@ -169,8 +237,14 @@ func BGREWRITEAOF(store *Store) (func(), error) {
 			err = os.Rename(config.TempAOFFile, config.AOFFile)
 			if err != nil {
 				log.Errorf("failed renaming AOF file: %w", err)
+				return
 			}
+
+			log.Infof("AOF renamed successfully from \"%s\" to \"%s\"", config.TempAOFFile, config.AOFFile)
 		}, store, WithStoreLock())
+		if err != nil {
+
+		}
 	}, nil
 }
 
@@ -196,7 +270,7 @@ func DumpAllAOF(store *Store) error {
 		}
 	}()
 
-	log.Info("rewriting AOF file at", config.TempAOFFile)
+	log.Infof("rewriting AOF file at %s", config.TempAOFFile)
 
 	for k, obj := range store.store {
 		err = dumpKey(aof, k, obj)
