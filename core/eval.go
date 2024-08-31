@@ -2369,12 +2369,12 @@ func evalHSET(args []string, store *Store) []byte {
 
 	obj := store.Get(key)
 
-	var hashMap HashMap
+	var hashMap *HashMap
 	var numKeys int64
 
 	if obj != nil {
 		switch currentVal := obj.Value.(type) {
-		case HashMap:
+		case *HashMap:
 			hashMap = currentVal
 		default:
 			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)

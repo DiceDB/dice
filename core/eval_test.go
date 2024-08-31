@@ -938,8 +938,8 @@ func testEvalHSET(t *testing.T, store *Store) {
 			setup: func() {
 				key := "KEY_MOCK"
 				field := "mock_field_name"
-				newMap := make(HashMap)
-				newMap[field] = "mock_field_value"
+				newMap := swiss.New[string, string](0)
+				newMap.Put(field, "mock_field_value")
 
 				obj := &Obj{
 					Value:          newMap,
@@ -957,8 +957,8 @@ func testEvalHSET(t *testing.T, store *Store) {
 				key := "KEY_MOCK"
 				field := "mock_field_name"
 				mock_value := "mock_field_value"
-				newMap := make(HashMap)
-				newMap[field] = mock_value
+				newMap := swiss.New[string, string](0)
+				newMap.Put(field, mock_value)
 
 				obj := &Obj{
 					Value:          newMap,

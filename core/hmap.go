@@ -3,37 +3,43 @@ package core
 import (
 	"fmt"
 
+	"github.com/cockroachdb/swiss"
 	"github.com/dicedb/dice/core/diceerrors"
 )
 
-type HashMap map[string]string
+type HashMap struct {
+	Map *swiss.Map[string, string]
+}
 
-func (h HashMap) Get(k string) (*string, bool) {
-	value, ok := h[k]
+func (h *HashMap) Get(k string) (string, bool) {
+	value, ok := h.Map.Get(k)
 	if !ok {
-		return nil, false
+		return "", false
 	}
-	return &value, true
+	return value, true
 }
 
-func (h HashMap) Set(k, v string) (*string, bool) {
-	value, ok := h[k]
-	if ok {
-		oldValue := value
-		h[k] = v
-		return &oldValue, true
+func (h *HashMap) Set(k, v string) (string, bool) {
+	value, present := h.Get(k)
+	var returnStr string = ""
+
+	if present {
+		returnStr = value
 	}
 
-	h[k] = v
-	return nil, false
+	h.Map.Put(k, v)
+
+	return returnStr, present
 }
 
-func hashMapBuilder(keyValuePairs []string, currentHashMap HashMap) (HashMap, int64, error) {
-	var hmap HashMap
+func hashMapBuilder(keyValuePairs []string, currentHashMap *HashMap) (*HashMap, int64, error) {
+	var hmap *HashMap
 	var numKeysNewlySet int64
 
 	if currentHashMap == nil {
-		hmap = make(HashMap)
+		hmap = &HashMap{
+			Map: swiss.New[string, string](0),
+		}
 	} else {
 		hmap = currentHashMap
 	}
@@ -70,12 +76,12 @@ func getValueFromHashMap(key, field string, store *Store) ([]byte, error) {
 	}
 
 	switch currentVal := obj.Value.(type) {
-	case HashMap:
+	case *HashMap:
 		val, present := currentVal.Get(field)
 		if !present {
 			return RespNIL, nil
 		}
-		value = *val
+		value = val
 	default:
 		return nil, diceerrors.NewErr(diceerrors.WrongTypeErr)
 	}
