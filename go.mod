@@ -11,10 +11,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.10.0 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
-	github.com/cockroachdb/swiss v0.0.0-20240612210725-f4de07ae6964 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
-	github.com/dolthub/maphash v0.1.0 // indirect
-	github.com/dolthub/swiss v0.2.1 // indirect
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
@@ -33,6 +30,7 @@ require (
 require (
 	github.com/bytedance/sonic v1.12.1
 	github.com/charmbracelet/log v0.4.0
+	github.com/cockroachdb/swiss v0.0.0-20240612210725-f4de07ae6964
 	github.com/dicedb/go-dice v0.0.0-20240820180649-d97f15fca831
 	github.com/ohler55/ojg v1.23.0
 	github.com/twmb/murmur3 v1.1.8
