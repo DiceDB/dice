@@ -23,3 +23,5 @@ jobs:
         run: make unittest
       - name: Run Integration tests
         run: make test
+      - name: Run Benchmarks
+        run: go test -bench=. -count=10000
