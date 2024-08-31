@@ -4,9 +4,9 @@ import (
 	"path"
 	"sync"
 
+	"github.com/cockroachdb/swiss"
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/server/utils"
-	"github.com/dolthub/swiss"
 )
 
 type Store struct {
@@ -22,9 +22,9 @@ func NewStore() *Store {
 	WatchSubscriptionChan = make(chan WatchSubscription)
 
 	return &Store{
-		store:   swiss.NewMap[string, *Obj](42),
-		expires: swiss.NewMap[*Obj, uint64](42),
-		keypool: swiss.NewMap[string, *string](42),
+		store:   swiss.New[string, *Obj](10240),
+		expires: swiss.New[*Obj, uint64](10240),
+		keypool: swiss.New[string, *string](10240),
 	}
 }
 
@@ -42,9 +42,9 @@ func (store *Store) NewObj(value interface{}, expDurationMs int64, oType, oEnc u
 
 func (store *Store) ResetStore() {
 	withLocks(func() {
-		store.store = swiss.NewMap[string, *Obj](42)
-		store.expires = swiss.NewMap[*Obj, uint64](42)
-		store.keypool = swiss.NewMap[string, *string](42)
+		store.store.Clear()
+		store.expires.Clear()
+		store.keypool.Clear()
 		WatchChan = make(chan WatchEvent, config.KeysLimit)
 		WatchSubscriptionChan = make(chan WatchSubscription)
 	}, store, WithStoreLock(), WithKeypoolLock())
@@ -93,7 +93,7 @@ func (store *Store) putHelper(k string, obj *Obj, opts ...PutOption) {
 		optApplier(options)
 	}
 
-	if store.store.Count() >= config.KeysLimit {
+	if store.store.Len() >= config.KeysLimit {
 		store.evict()
 	}
 	obj.LastAccessedAt = getCurrentClock()
@@ -183,9 +183,9 @@ func (store *Store) Keys(p string) ([]string, error) {
 	var err error
 
 	withLocks(func() {
-		keys = make([]string, 0, store.keypool.Count())
+		keys = make([]string, 0, store.keypool.Len())
 
-		store.keypool.Iter(func(k string, _ *string) (stop bool) {
+		store.keypool.All(func(k string, _ *string) (stop bool) {
 			if found, e := path.Match(p, k); e != nil {
 				err = e
 				return true
@@ -203,7 +203,7 @@ func (store *Store) Keys(p string) ([]string, error) {
 func (store *Store) GetDBSize() uint64 {
 	var noOfKeys uint64
 	withLocks(func() {
-		noOfKeys = uint64(store.keypool.Count())
+		noOfKeys = uint64(store.keypool.Len())
 	}, store, WithKeypoolRLock())
 	return noOfKeys
 }
