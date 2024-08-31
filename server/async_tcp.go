@@ -97,6 +97,42 @@ func (s *AsyncServer) FindPortAndBind() (err error) {
 	})
 }
 
+// ClosePort ensures the server socket is closed properly.
+func (s *AsyncServer) ClosePort() {
+	if s.serverFD != 0 {
+		if err := syscall.Close(s.serverFD); err != nil {
+			log.Warn("failed to close server socket", "error", err)
+		} else {
+			log.Info("Server socket closed successfully")
+		}
+		s.serverFD = 0
+	}
+}
+
+// WaitForSignal listens for OS signals and triggers shutdown
+func (s *AsyncServer) WaitForSignal(cancel context.CancelFunc, sigs chan os.Signal) {
+	sig := <-sigs
+	log.Info("Signal received, initiating shutdown", "signal", sig)
+	cancel()
+	s.InitiateShutdown()
+}
+
+// InitiateShutdown gracefully shuts down the server
+func (s *AsyncServer) InitiateShutdown() {
+	// Close the server socket first
+	s.ClosePort()
+
+	// Close all client connections
+	for fd := range s.connectedClients {
+		if err := syscall.Close(fd); err != nil {
+			log.Warn("failed to close client connection", "error", err)
+		}
+		delete(s.connectedClients, fd)
+	}
+
+	log.Info("Server has shut down gracefully with all clients disconnected")
+}
+
 // Run starts the server, accepts connections, and handles client requests
 func (s *AsyncServer) Run(ctx context.Context) error {
 	if err := s.SetupUsers(); err != nil {
@@ -134,12 +170,11 @@ func (s *AsyncServer) Run(ctx context.Context) error {
 		return err
 	}
 
-	defer func(multiplexer iomultiplexer.IOMultiplexer) {
-		err := multiplexer.Close()
-		if err != nil {
+	defer func() {
+		if err := s.multiplexer.Close(); err != nil {
 			log.Warn("failed to close multiplexer", "error", err)
 		}
-	}(s.multiplexer)
+	}()
 
 	if err := s.multiplexer.Subscribe(iomultiplexer.Event{
 		Fd: s.serverFD,
@@ -150,7 +185,17 @@ func (s *AsyncServer) Run(ctx context.Context) error {
 
 	eventLoopCtx, cancelEventLoop := context.WithCancel(ctx)
 	defer cancelEventLoop()
-	err = s.eventLoop(eventLoopCtx)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err = s.eventLoop(eventLoopCtx)
+		if err != nil {
+			cancelEventLoop()
+			cancelShardManager()
+			cancelWatch()
+		}
+	}()
 
 	wg.Wait()
 
@@ -231,36 +276,6 @@ func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
 	}
 
 	return nil
-}
-
-// WaitForSignal listens for OS signals and triggers shutdown
-func (s *AsyncServer) WaitForSignal(cancel context.CancelFunc, sigs chan os.Signal) {
-	<-sigs
-	log.Info("Shutdown signal received")
-	cancel()
-	s.InitiateShutdown()
-}
-
-// InitiateShutdown gracefully shuts down the server
-func (s *AsyncServer) InitiateShutdown() {
-	log.Info("initiating shutdown")
-
-	// Close all client connections
-	for fd := range s.connectedClients {
-		// Close the client socket
-		if err := syscall.Close(fd); err != nil {
-			log.Warn("failed to close client connection", "error", err)
-		}
-
-		delete(s.connectedClients, fd)
-	}
-
-	closeServerOnce := &sync.Once{} // Ensures server socket is closed only once
-	closeServerOnce.Do(func() {
-		if err := syscall.Close(s.serverFD); err != nil {
-			log.Warn("failed to close server socket", "error", err)
-		}
-	})
 }
 
 func (s *AsyncServer) executeCommandToBuffer(cmd *core.RedisCmd, buf *bytes.Buffer, c *core.Client) {
