@@ -27,7 +27,7 @@ func ExecuteQuery(query *DSQLQuery, store *Store) ([]DSQLQueryResultRow, error) 
 
 	var err error
 	withLocks(func() {
-		store.keypool.Iter(func(key string, ptr *string) (stop bool) {
+		store.keypool.All(func(key string, ptr *string) (stop bool) {
 			if WildCardMatch(query.KeyRegex, key) {
 				obj, _ := store.store.Get(*ptr)
 				row := DSQLQueryResultRow{
