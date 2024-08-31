@@ -3,13 +3,16 @@ package core
 import (
 	"bufio"
 	"fmt"
+	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/server/utils"
 	"io/fs"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"syscall"
 )
 
 type AOF struct {
@@ -117,13 +120,58 @@ func (a *AOF) Load() ([]string, error) {
 	return operations, nil
 }
 
-// TODO: Support Expiration
-// TODO: Support non-kv data structures
-// TODO: Support sync write
-func dumpKey(aof *AOF, key string, obj *Obj) (err error) {
-	cmd := fmt.Sprintf("SET %s %s", key, obj.Value)
-	tokens := strings.Split(cmd, " ")
-	return aof.writeWithoutPersist(string(Encode(tokens, false)))
+func BGREWRITEAOF(store *Store) (func(), error) {
+	// Fork a child process, this child process would inherit all the uncommitted pages from main process.
+	// This technique utilizes the CoW or copy-on-write, so while the main process is free to modify them
+	// the child would save all the pages to disk.
+	// Check details here -https://www.sobyte.net/post/2022-10/fork-cow/
+	active := !atomic.CompareAndSwapInt32(&flushingInProgress, 0, 1)
+	if active {
+		return nil, fmt.Errorf("BGREWRITEAOF is already running, please try again later...")
+	}
+
+	child, err := utils.Fork()
+	if err != nil {
+		atomic.CompareAndSwapInt32(&flushingInProgress, 1, 0)
+		return nil, fmt.Errorf("failed forking AOF child process: %v", err)
+	}
+
+	if isChild := child == 0; isChild {
+		if err = DumpAllAOF(store); err != nil {
+			log.Error("BGREWRITEAOF Process: %w", err)
+			os.Exit(1)
+		}
+
+		os.Exit(0)
+	}
+
+	return func() {
+		defer atomic.CompareAndSwapInt32(&flushingInProgress, 1, 0)
+
+		var ws syscall.WaitStatus
+		_, err := syscall.Wait4(int(child), &ws, 0, nil)
+		if err != nil {
+			log.Errorf("failed waiting on BGREWRITEAOF process to complete: %w", err)
+			return
+		}
+
+		if !ws.Exited() {
+			log.Errorf("BGREWRITEAOF process didnt exited gracefully")
+			return
+		}
+
+		withLocks(func() {
+			// Why do we make the server rename the tmp aof file and
+			// not the child process?
+			//
+			// because we want to make sure there is no ongoing write operation to the existing AOF file during a store mutation.
+			// this is why we guard this operation with the store lock.
+			err = os.Rename(config.TempAOFFile, config.AOFFile)
+			if err != nil {
+				log.Errorf("failed renaming AOF file: %w", err)
+			}
+		}, store, WithStoreLock())
+	}, nil
 }
 
 // DumpAllAOF rewrites all store mutations to a tmp AOF file
@@ -148,7 +196,7 @@ func DumpAllAOF(store *Store) error {
 		}
 	}()
 
-	log.Println("rewriting AOF file at", config.TempAOFFile)
+	log.Info("rewriting AOF file at", config.TempAOFFile)
 
 	for k, obj := range store.store {
 		err = dumpKey(aof, k, obj)
@@ -167,7 +215,16 @@ func DumpAllAOF(store *Store) error {
 		return fmt.Errorf("failed flushing AOF to disk: %w", err)
 	}
 
-	log.Println("AOF file rewrite complete")
+	log.Info("AOF file rewrite complete")
 
 	return nil
+}
+
+// TODO: Support Expiration
+// TODO: Support non-kv data structures
+// TODO: Support sync write
+func dumpKey(aof *AOF, key string, obj *Obj) (err error) {
+	cmd := fmt.Sprintf("SET %s %s", key, obj.Value)
+	tokens := strings.Split(cmd, " ")
+	return aof.writeWithoutPersist(string(Encode(tokens, false)))
 }

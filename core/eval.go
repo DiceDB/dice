@@ -5,12 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
-	"sync/atomic"
-	"syscall"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -852,57 +849,12 @@ func evalHELLO(args []string, store *Store) []byte {
 // Spawn a background thread to persist the data via AOF technique. Current implementation is
 // based on CoW optimization and Fork
 func evalBGREWRITEAOF(args []string, store *Store) []byte {
-	// Fork a child process, this child process would inherit all the uncommitted pages from main process.
-	// This technique utilizes the CoW or copy-on-write, so while the main process is free to modify them
-	// the child would save all the pages to disk.
-	// Check details here -https://www.sobyte.net/post/2022-10/fork-cow/
-	active := !atomic.CompareAndSwapInt32(&flushingInProgress, 0, 1)
-	if active {
-		return diceerrors.NewErrWithMessage("BGREWRITEAOF is already running, please try again later...")
-	}
-
-	child, err := utils.Fork()
+	waitForChild, err := BGREWRITEAOF(store)
 	if err != nil {
-		atomic.CompareAndSwapInt32(&flushingInProgress, 1, 0)
-		return diceerrors.NewErrWithMessage(fmt.Sprintf("failed forking AOF child process: %v", err))
+		return diceerrors.NewErrWithMessage(err.Error())
 	}
 
-	if isChild := child == 0; isChild {
-		if err = DumpAllAOF(store); err != nil {
-			log.Errorf("BGREWRITEAOF Process: %w", err)
-			os.Exit(1)
-		}
-
-		os.Exit(0)
-	}
-
-	go func() {
-		defer atomic.CompareAndSwapInt32(&flushingInProgress, 1, 0)
-
-		var ws syscall.WaitStatus
-		_, err := syscall.Wait4(int(child), &ws, 0, nil)
-		if err != nil {
-			log.Errorf("failed waiting on BGREWRITEAOF process to complete: %w", err)
-			return
-		}
-
-		if !ws.Exited() {
-			log.Errorf("BGREWRITEAOF process didnt exited gracefully")
-			return
-		}
-
-		withLocks(func() {
-			// Why do we make the server rename the tmp aof file and
-			// not the child process?
-			//
-			// because we want to make sure there is no ongoing write operation to the existing AOF file during a store mutation.
-			// this is why we guard this operation with the store lock.
-			err = os.Rename(config.TempAOFFile, config.AOFFile)
-			if err != nil {
-				log.Errorf("failed renaming AOF file: %w", err)
-			}
-		}, store, WithStoreLock())
-	}()
+	go waitForChild()
 
 	return RespOK
 }
