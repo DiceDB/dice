@@ -133,32 +133,32 @@ func BGREWRITEAOF(store *Store) (func(), error) {
 	}
 
 	var (
-		aofSize          int64
-		err              error
-		childPID         uintptr
-		isChild          bool
-		nothingToRewrite bool
+		aofSize  int64
+		err      error
+		childPID uintptr
+		isChild  bool
 	)
 
 	withLocks(func() {
 		// get the size of the current AOF file, it will be used
 		// in order to concat the new rewritten AOF file with any additions
 		// made to the existing AOF file during the rewrite process.
-		info, err2 := os.Stat(config.AOFFile)
+		aof, err2 := os.Open(config.AOFFile)
 		if err2 != nil {
-			if !errors.Is(err, os.ErrNotExist) {
+			if !errors.Is(err2, os.ErrNotExist) {
 				err = fmt.Errorf("failed getting aof file size: %v", err2)
 				return
 			}
 
-			nothingToRewrite = true
-			return
+			aofSize = 0
 		} else {
-			aofSize = info.Size()
-			if aofSize == 0 {
-				nothingToRewrite = true
+			info, err2 := aof.Stat()
+			if err2 != nil {
+				err = fmt.Errorf("failed getting current AOF file stats: %v", err2)
 				return
 			}
+
+			aofSize = info.Size()
 		}
 
 		// Why forking inside withLocks()?
@@ -174,12 +174,6 @@ func BGREWRITEAOF(store *Store) (func(), error) {
 	if err != nil {
 		atomic.CompareAndSwapInt32(&flushingInProgress, 1, 0)
 		return nil, err
-	}
-
-	if nothingToRewrite {
-		// return early if there's no work to do
-		atomic.CompareAndSwapInt32(&flushingInProgress, 1, 0)
-		return func() {}, nil
 	}
 
 	//x, y := utils.PID()
@@ -212,31 +206,33 @@ func BGREWRITEAOF(store *Store) (func(), error) {
 		withLocks(func() {
 			currentAOF, err2 := os.Open(config.AOFFile)
 			if err2 != nil {
-				err = fmt.Errorf("failed opening aof file: %v", err2)
-				return
-			}
+				if !errors.Is(err2, os.ErrNotExist) {
+					err = fmt.Errorf("failed opening aof file: %v", err2)
+					return
+				}
+			} else {
+				defer currentAOF.Close()
 
-			defer currentAOF.Close()
+				_, err2 = currentAOF.Seek(aofSize, 0)
+				if err2 != nil {
+					err = fmt.Errorf("failed seeking aof file: %v", err2)
+					return
+				}
 
-			_, err2 = currentAOF.Seek(aofSize, 0)
-			if err2 != nil {
-				err = fmt.Errorf("failed seeking aof file: %v", err2)
-				return
-			}
+				tmpAOF, err2 := os.OpenFile(config.AOFFile, os.O_APPEND|os.O_WRONLY, 0755)
+				if err2 != nil {
+					err = fmt.Errorf("failed opening tmp aof file: %v", err2)
+					return
+				}
 
-			tmpAOF, err2 := os.OpenFile(config.AOFFile, os.O_APPEND|os.O_WRONLY, 0755)
-			if err2 != nil {
-				err = fmt.Errorf("failed opening tmp aof file: %v", err2)
-				return
-			}
+				defer tmpAOF.Close()
 
-			defer tmpAOF.Close()
-
-			// concat any new additions to the current aof file to the new rewritten aof file
-			_, err2 = io.Copy(tmpAOF, currentAOF)
-			if err2 != nil {
-				err = fmt.Errorf("failed concating current aof file to tmp aof: %v", err2)
-				return
+				// concat any new additions to the current aof file to the new rewritten aof file
+				_, err2 = io.Copy(tmpAOF, currentAOF)
+				if err2 != nil {
+					err = fmt.Errorf("failed concating current aof file to tmp aof: %v", err2)
+					return
+				}
 			}
 
 			// Why do we make the server concat and rename the tmp aof file and
