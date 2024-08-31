@@ -31,18 +31,15 @@ func expireSample(store *Store) float32 {
 
 	withLocks(func() {
 		// Collect keys to be deleted
-		store.store.All(func(keyPtr string, obj *Obj) (stop bool) {
-			// once we iterated to 20 keys that have some expiration set
-			// we break the loop
-			if limit == 0 {
-				return true
-			}
+		store.store.All(func(keyPtr string, obj *Obj) bool {
 			limit--
 			if hasExpired(obj, store) {
 				keysToDelete = append(keysToDelete, keyPtr)
 				expiredCount++
 			}
-			return false
+			// once we iterated to 20 keys that have some expiration set
+			// we break the loop
+			return limit >= 0
 		})
 	}, store, WithStoreRLock())
 

@@ -101,10 +101,12 @@ func (store *Store) putHelper(k string, obj *Obj, opts ...PutOption) {
 	ptr := store.ensureKeyInPool(k)
 	currentObject, ok := store.store.Get(*ptr)
 	if ok {
-		v, _ := store.expires.Get(currentObject)
-		if options.KeepTTL && v > 0 {
-			v1, _ := store.expires.Get(currentObject)
-			store.expires.Put(obj, v1)
+		v, ok1 := store.expires.Get(currentObject)
+		if ok1 && options.KeepTTL && v > 0 {
+			v1, ok2 := store.expires.Get(currentObject)
+			if ok2 {
+				store.expires.Put(obj, v1)
+			}
 		}
 		store.expires.Delete(currentObject)
 	}
@@ -167,8 +169,11 @@ func (store *Store) Del(k string) bool {
 		if !ok {
 			return false
 		}
-		v, _ := store.store.Get(*ptr)
-		return store.deleteKey(k, *ptr, v)
+		v, ok := store.store.Get(*ptr)
+		if ok {
+			return store.deleteKey(k, *ptr, v)
+		}
+		return false
 	}, store, WithStoreLock(), WithKeypoolLock())
 }
 
@@ -185,14 +190,16 @@ func (store *Store) Keys(p string) ([]string, error) {
 	withLocks(func() {
 		keys = make([]string, 0, store.keypool.Len())
 
-		store.keypool.All(func(k string, _ *string) (stop bool) {
+		store.keypool.All(func(k string, _ *string) bool {
 			if found, e := path.Match(p, k); e != nil {
 				err = e
-				return true
+				// stop iteration if any error
+				return false
 			} else if found {
 				keys = append(keys, k)
 			}
-			return false
+			// continue the iteration
+			return true
 		})
 	}, store, WithStoreRLock(), WithKeypoolRLock())
 
