@@ -11,6 +11,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/dicedb/dice/core/auth"
+	"github.com/dicedb/dice/core/comm"
+
 	"github.com/bytedance/sonic"
 	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
@@ -37,7 +40,7 @@ var RespMinusOne []byte = []byte(":-1\r\n")
 var RespMinusTwo []byte = []byte(":-2\r\n")
 var RespEmptyArray []byte = []byte("*0\r\n")
 
-var txnCommands map[string]bool
+var TxnCommands map[string]bool
 var serverID string
 var diceCommandsCount int
 
@@ -45,7 +48,7 @@ const defaultRootPath = "$"
 
 func init() {
 	diceCommandsCount = len(diceCmds)
-	txnCommands = map[string]bool{"EXEC": true, "DISCARD": true}
+	TxnCommands = map[string]bool{"EXEC": true, "DISCARD": true}
 	serverID = fmt.Sprintf("%s:%d", config.Host, config.Port)
 }
 
@@ -72,7 +75,7 @@ func evalPING(args []string, store *Store) []byte {
 
 // evalAUTH returns with an encoded "OK" if the user is authenticated
 // If the user is not authenticated, it returns with an encoded error message
-func evalAUTH(args []string, c *Client) []byte {
+func evalAUTH(args []string, c *comm.Client) []byte {
 	var (
 		err error
 	)
@@ -81,7 +84,7 @@ func evalAUTH(args []string, c *Client) []byte {
 		return diceerrors.NewErrWithMessage("AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?")
 	}
 
-	var username = DefaultUserName
+	var username = auth.DefaultUserName
 	var password string
 
 	if len(args) == 1 {
@@ -1632,8 +1635,8 @@ func evalSTACKREFPEEK(args []string, store *Store) []byte {
 // evalQWATCH adds the specified key to the watch list for the caller client.
 // Every time a key in the watch list is modified, the client will be sent a response
 // containing the new value of the key along with the operation that was performed on it.
-// Contains only one argument, the key to be watched.
-func evalQWATCH(args []string, c *Client, store *Store) []byte {
+// Contains only one argument, the query to be watched.
+func evalQWATCH(args []string, clientFd int, store *Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("QWATCH")
 	}
@@ -1648,7 +1651,7 @@ func evalQWATCH(args []string, c *Client, store *Store) []byte {
 	WatchSubscriptionChan <- WatchSubscription{
 		subscribe: true,
 		query:     query,
-		clientFd:  c.Fd,
+		clientFd:  clientFd,
 	}
 
 	// Return the result of the query.
@@ -1662,7 +1665,7 @@ func evalQWATCH(args []string, c *Client, store *Store) []byte {
 }
 
 // evalQUNWATCH removes the specified key from the watch list for the caller client.
-func evalQUNWATCH(args []string, c *Client) []byte {
+func evalQUNWATCH(args []string, clientFd int) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("QUNWATCH")
 	}
@@ -1674,7 +1677,7 @@ func evalQUNWATCH(args []string, c *Client) []byte {
 	WatchSubscriptionChan <- WatchSubscription{
 		subscribe: false,
 		query:     query,
-		clientFd:  c.Fd,
+		clientFd:  clientFd,
 	}
 
 	return RespOK
@@ -2181,87 +2184,6 @@ func evalEXISTS(args []string, store *Store) []byte {
 	}
 
 	return Encode(count, false)
-}
-
-func executeCommand(cmd *RedisCmd, c *Client, store *Store) []byte {
-	diceCmd, ok := diceCmds[cmd.Cmd]
-	if !ok {
-		return diceerrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", cmd.Cmd, strings.Join(cmd.Args, " "))
-	}
-
-	if diceCmd.Name == "SUBSCRIBE" || diceCmd.Name == "QWATCH" {
-		return evalQWATCH(cmd.Args, c, store)
-	}
-	if diceCmd.Name == "UNSUBSCRIBE" || diceCmd.Name == "QUNWATCH" {
-		return evalQUNWATCH(cmd.Args, c)
-	}
-	if diceCmd.Name == "MULTI" {
-		c.TxnBegin()
-		return diceCmd.Eval(cmd.Args, store)
-	}
-	if diceCmd.Name == AuthCmd {
-		return evalAUTH(cmd.Args, c)
-	}
-	if diceCmd.Name == "EXEC" {
-		if !c.isTxn {
-			return diceerrors.NewErrWithMessage("EXEC without MULTI")
-		}
-		return c.TxnExec(store)
-	}
-	if diceCmd.Name == "DISCARD" {
-		if !c.isTxn {
-			return diceerrors.NewErrWithMessage("DISCARD without MULTI")
-		}
-		c.TxnDiscard()
-		return RespOK
-	}
-	if diceCmd.Name == "ABORT" {
-		return RespOK
-	}
-
-	return diceCmd.Eval(cmd.Args, store)
-}
-
-func executeCommandToBuffer(cmd *RedisCmd, buf *bytes.Buffer, c *Client, store *Store) {
-	buf.Write(executeCommand(cmd, c, store))
-}
-
-func EvalAndRespond(cmds RedisCmds, c *Client, store *Store) {
-	var response []byte
-	buf := bytes.NewBuffer(response)
-
-	for _, cmd := range cmds {
-		// Check if the command has been authenticated
-		if cmd.Cmd != AuthCmd && !c.Session.IsActive() {
-			if _, err := c.Write(Encode(errors.New("NOAUTH Authentication required"), false)); err != nil {
-				log.Info("Error writing to client:", err)
-			}
-			continue
-		}
-		// if txn is not in progress, then we can simply
-		// execute the command and add the response to the buffer
-		if !c.isTxn {
-			executeCommandToBuffer(cmd, buf, c, store)
-			continue
-		}
-
-		// if the txn is in progress, we enqueue the command
-		// and add the QUEUED response to the buffer
-		if !txnCommands[cmd.Cmd] {
-			// if the command is queuable the enqueu
-			c.TxnQueue(cmd)
-			buf.Write(RespQueued)
-		} else {
-			// if txn is active and the command is non-queuable
-			// ex: EXEC, DISCARD
-			// we execute the command and gather the response in buffer
-			executeCommandToBuffer(cmd, buf, c, store)
-		}
-	}
-
-	if _, err := c.Write(buf.Bytes()); err != nil {
-		log.Error(err)
-	}
 }
 
 func evalPersist(args []string, store *Store) []byte {
