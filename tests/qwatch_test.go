@@ -25,6 +25,31 @@ type qWatchSDKSubscriber struct {
 }
 
 var qWatchQuery = "SELECT $key, $value FROM `match:100:*` ORDER BY $value desc LIMIT 3"
+var qwatchWithWhereQuery = "SELECT $key, $value FROM `match:101:*` WHERE $value > 10 ORDER BY $value desc LIMIT 3"
+
+var qWatchTestCasesWithWhere = []qWatchTestCase{
+	{0, 11, [][]interface{}{
+		{[]interface{}{"match:101:user:0", int64(11)}},
+	}},
+	{1, 33, [][]interface{}{
+		{[]interface{}{"match:101:user:1", int64(33)}, []interface{}{"match:101:user:0", int64(11)}},
+	}},
+	{2, 22, [][]interface{}{
+		{[]interface{}{"match:101:user:1", int64(33)}, []interface{}{"match:101:user:2", int64(22)}, []interface{}{"match:101:user:0", int64(11)}},
+	}},
+	{3, 36, [][]interface{}{
+		{[]interface{}{"match:101:user:3", int64(36)}, []interface{}{"match:101:user:1", int64(33)}, []interface{}{"match:101:user:2", int64(22)}},
+	}},
+	{4, 44, [][]interface{}{
+		{[]interface{}{"match:101:user:4", int64(44)}, []interface{}{"match:101:user:3", int64(36)}, []interface{}{"match:101:user:1", int64(33)}},
+	}},
+	{5, 50, [][]interface{}{
+		{[]interface{}{"match:101:user:5", int64(50)}, []interface{}{"match:101:user:4", int64(44)}, []interface{}{"match:101:user:3", int64(36)}},
+	}},
+	{2, 10, [][]interface{}{
+		{[]interface{}{"match:101:user:5", int64(50)}, []interface{}{"match:101:user:4", int64(44)}, []interface{}{"match:101:user:3", int64(36)}},
+	}},
+}
 
 var qWatchTestCases = []qWatchTestCase{
 	{0, 11, [][]interface{}{
@@ -489,5 +514,68 @@ func verifyJSONOrderByUpdates(t *testing.T, rp *clientio.RESPParser, tc struct {
 func cleanupJSONOrderByKeys(publisher net.Conn) {
 	for i := 1; i <= 4; i++ {
 		fireCommand(publisher, fmt.Sprintf("DEL player:%d", i))
+	}
+}
+
+func TestQWatchWithWhere(t *testing.T) {
+	publisher := getLocalConnection()
+	subscribers := []net.Conn{getLocalConnection(), getLocalConnection(), getLocalConnection()}
+
+	// Cleanup Store for next tests
+	for _, tc := range qWatchTestCasesWithWhere {
+		fireCommand(publisher, fmt.Sprintf("DEL match:101:user:%d", tc.userID))
+	}
+
+	defer func() {
+		publisher.Close()
+		for _, sub := range subscribers {
+			sub.Close()
+		}
+	}()
+
+	respParsers := make([]*core.RESPParser, len(subscribers))
+
+	// Subscribe to the QWATCH query
+	for i, subscriber := range subscribers {
+		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("QWATCH \"%s\"", qwatchWithWhereQuery))
+		assert.Assert(t, rp != nil)
+		respParsers[i] = rp
+
+		v, err := rp.DecodeOne()
+		assert.NilError(t, err)
+		assert.Equal(t, 3, len(v.([]interface{})))
+	}
+
+	for _, tc := range qWatchTestCasesWithWhere {
+		// Publish updates based on the publisher type
+		fireCommand(publisher, fmt.Sprintf("SET match:101:user:%d %d", tc.userID, tc.score))
+
+		// For raw connections, parse RESP responses
+		for _, expectedUpdate := range tc.expectedUpdates {
+			// For raw connections, parse RESP responses
+			for _, rp := range respParsers {
+				v, err := rp.DecodeOne()
+				assert.NilError(t, err)
+				update := v.([]interface{})
+				assert.DeepEqual(t, expectedUpdate, update[len(update)-1])
+			}
+		}
+	}
+}
+
+func BenchmarkQwatchCommandSingleQuery(b *testing.B) {
+	conn := getLocalConnection()
+	defer conn.Close()
+	var query = "SELECT $key, $value FROM `benchmark:*` ORDER BY $value desc LIMIT 3"
+
+	subscriber_conn := getLocalConnection()
+	respParser := fireCommandAndGetRESPParser(subscriber_conn, fmt.Sprintf("QWATCH \"%s\"", query))
+
+	b.ResetTimer()
+
+	for n := 0; n < 1000; n++ {
+		fireCommand(conn, fmt.Sprintf("SET benchmark:%d %d", n, n))
+		// Read the last response
+		respParser.DecodeOne()
 	}
 }
