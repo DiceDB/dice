@@ -86,7 +86,7 @@ func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *core.RESPParser {
 }
 
 //nolint:unused
-func runTestServer(wg *sync.WaitGroup) {
+func runTestServer(ctx context.Context, wg *sync.WaitGroup) {
 	config.IOBufferLength = 16
 	config.Port = 8739
 
@@ -123,9 +123,8 @@ func runTestServer(wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		ctx := context.Background()
 		if err := testServer.Run(ctx); err != nil {
-			if errors.Is(err, server.ErrAborted) {
+			if errors.Is(err, context.Canceled) {
 				return
 			}
 			log.Fatalf("Test server encountered an error: %v", err)
