@@ -322,8 +322,8 @@ func testEvalJSONDEL(t *testing.T, store *Store) {
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store[key] = obj
-				store.keypool[key] = &key
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
 			},
 			input:  []string{"EXISTING_KEY"},
 			output: RespOne,
@@ -336,8 +336,8 @@ func testEvalJSONDEL(t *testing.T, store *Store) {
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store[key] = obj
-				store.keypool[key] = &key
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
 			},
 
 			input:  []string{"EXISTING_KEY", "$..language"},
@@ -351,8 +351,8 @@ func testEvalJSONDEL(t *testing.T, store *Store) {
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store[key] = obj
-				store.keypool[key] = &key
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
 			},
 
 			input:  []string{"EXISTING_KEY", "$.*"},
@@ -950,11 +950,11 @@ func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]s
 }
 
 func BenchmarkEvalMSET(b *testing.B) {
-    b.ResetTimer()
-    for i := 0; i < b.N; i++ {
-        store := NewStore()
-        evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"}, store)
-    }
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		store := NewStore()
+		evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"}, store)
+	}
 }
 
 func BenchmarkEvalHSET(b *testing.B) {
