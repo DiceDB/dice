@@ -15,34 +15,34 @@ import (
 type ShardID int8
 
 type StoreOp struct {
-	SeqID     int16     // sequence id of the operation within a single request (optional, may be used for ordering)
-	RequestID int32     // The request ID that this StoreOp belongs to
-	Cmd       *RedisCmd // The atomic Store command (e.g., GET, SET)
-	ShardID   int       // The ID of the shard on which the Store command will be executed
-	WorkerID  string    // The ID of the worker that sent this Store operation
-	Client    *Client   // The file descriptor of the client that sent this Store operation. TODO: This can potentially replace the WorkerID in the future
+	SeqID     int16     // SeqID is the sequence id of the operation within a single request (optional, may be used for ordering)
+	RequestID int32     // RequestID identifies the request that this StoreOp belongs to
+	Cmd       *RedisCmd // Cmd is the atomic Store command (e.g., GET, SET)
+	ShardID   int       // ShardID of the shard on which the Store command will be executed
+	WorkerID  string    // WorkerID is the ID of the worker that sent this Store operation
+	Client    *Client   // Client that sent this Store operation. TODO: This can potentially replace the WorkerID in the future
 }
 
 // StoreResponse represents the response of a Store operation.
 type StoreResponse struct {
-	requestID int32  // The request ID that this StoreResponse belongs to
-	Result    []byte // The Result of the Store operation, for now the type is set to []byte, but this can change in the future.
+	requestID int32  // requestID that this StoreResponse belongs to
+	Result    []byte // Result of the Store operation, for now the type is set to []byte, but this can change in the future.
 }
 
 type ShardError struct {
-	shardID ShardID // The ID of the shard that encountered the error
-	err     error   // The error that occurred
+	shardID ShardID // shardID is the ID of the shard that encountered the error
+	err     error   // err is the error that occurred
 }
 
 type ShardThread struct {
-	id               ShardID                        // unique identifier for the shard.
-	store            *Store                         // the store that the shard is responsible for.
-	ReqChan          chan *StoreOp                  // channel for receiving requests.
-	workerMap        map[string]chan *StoreResponse // map of worker id to its unique response channel (sync.Map for thread safety).
-	mu               sync.RWMutex                   // mutex for thread safety.
-	errorChan        chan *ShardError               // channel for sending system-level errors.
-	lastCronExecTime time.Time                      // the last time the shard executed cron tasks.
-	cronFrequency    time.Duration                  // the frequency at which the shard executes cron tasks.
+	id               ShardID                        // id is the unique identifier for the shard.
+	store            *Store                         // store that the shard is responsible for.
+	ReqChan          chan *StoreOp                  // ReqChan is this shard's channel for receiving requests.
+	workerMap        map[string]chan *StoreResponse // workerMap maps workerID to its unique response channel
+	mu               sync.RWMutex                   // mu is the workerMap's mutex for thread safety.
+	errorChan        chan *ShardError               // errorChan is the channel for sending system-level errors.
+	lastCronExecTime time.Time                      // lastCronExecTime is the last time the shard executed cron tasks.
+	cronFrequency    time.Duration                  // cronFrequency is the frequency at which the shard executes cron tasks.
 }
 
 // NewShardThread creates a new ShardThread instance with the given shard id and error channel.

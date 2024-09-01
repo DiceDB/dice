@@ -279,7 +279,7 @@ func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
 }
 
 func (s *AsyncServer) executeCommandToBuffer(cmd *core.RedisCmd, buf *bytes.Buffer, c *core.Client) {
-	s.shardManager.Shards[0].ReqChan <- &core.StoreOp{
+	s.shardManager.GetShard(0).ReqChan <- &core.StoreOp{
 		Cmd:      cmd,
 		WorkerID: "server",
 		ShardID:  0,

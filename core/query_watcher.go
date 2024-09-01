@@ -87,7 +87,7 @@ func (w *QueryWatcher) watchKeys(ctx context.Context) {
 
 				if WildCardMatch(query.KeyRegex, event.Key) {
 					// TODO: Implement proper query execution on the shard.
-					queryResult, err := ExecuteQuery(&query, w.shardManager.Shards[0].store)
+					queryResult, err := ExecuteQuery(&query, w.shardManager.GetShard(0).store)
 					if err != nil {
 						log.Error(err)
 						return true
