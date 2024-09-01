@@ -47,7 +47,7 @@ func main() {
 	}()
 
 	go func() {
-		wsServer := server.NewWSServer()
+		wsServer := server.NewWSServer(asyncServer.Store)
 		err := wsServer.Run(ctx)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {

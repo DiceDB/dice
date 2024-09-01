@@ -37,6 +37,7 @@ func readCommands(c io.ReadWriter) (core.RedisCmds, bool, error) {
 			hasABORT = true
 		}
 	}
+
 	return cmds, hasABORT, err
 }
 

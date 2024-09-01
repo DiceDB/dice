@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"io"
 	"syscall"
+
+	"github.com/gorilla/websocket"
 )
 
 type Client struct {
 	io.ReadWriter
 	Fd      int
+	WSConn  *websocket.Conn
 	cqueue  RedisCmds
 	isTxn   bool
 	Session *Session
@@ -20,7 +23,12 @@ func (c Client) Write(b []byte) (int, error) {
 }
 
 func (c Client) Read(b []byte) (int, error) {
-	return syscall.Read(c.Fd, b)
+	if c.Fd >= 0 {
+		return syscall.Read(c.Fd, b)
+	}
+	_, p, err := c.WSConn.ReadMessage()
+	copy(b, p)
+	return len(b), err
 }
 
 func (c *Client) TxnBegin() {
@@ -51,9 +59,10 @@ func (c *Client) TxnQueue(cmd *RedisCmd) {
 	c.cqueue = append(c.cqueue, cmd)
 }
 
-func NewClient(fd int) *Client {
+func NewClient(fd int, wsConn *websocket.Conn) *Client {
 	return &Client{
 		Fd:      fd,
+		WSConn:  wsConn,
 		cqueue:  make(RedisCmds, 0),
 		Session: NewSession(),
 	}

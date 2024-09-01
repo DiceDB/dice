@@ -7,27 +7,33 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/core"
 	"github.com/gorilla/websocket"
 )
 
 type WSServer struct {
-	Server *http.Server
+	server           *http.Server
+	connectedClients map[int]*core.Client
+	Store            *core.Store
 }
 
 // NewWSServer initializes a new WSServer
-func NewWSServer() *WSServer {
+func NewWSServer(store *core.Store) *WSServer {
 	mux := http.NewServeMux()
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", config.WSPort),
 		Handler: mux,
 	}
-	mux.HandleFunc("/", WSHandler)
+	wsSrv := &WSServer{
+		server:           srv,
+		connectedClients: make(map[int]*core.Client),
+		Store:            store,
+	}
+	mux.HandleFunc("/", wsSrv.WSHandler)
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok"))
 	})
-	return &WSServer{
-		Server: srv,
-	}
+	return wsSrv
 }
 
 // Run starts the WSServer, accepts connections, and handles client requests
@@ -38,9 +44,9 @@ func (s *WSServer) Run(ctx context.Context) error {
 	log.Infof("WS server listening on port %d\n", config.WSPort)
 	go func() {
 		<-ctx.Done()
-		s.Server.Shutdown(ctx)
+		s.server.Shutdown(ctx)
 	}()
-	return s.Server.ListenAndServe()
+	return s.server.ListenAndServe()
 }
 
 var upgrader = websocket.Upgrader{
@@ -49,7 +55,7 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-func WSHandler(w http.ResponseWriter, r *http.Request) {
+func (s *WSServer) WSHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Error(err)
@@ -57,15 +63,24 @@ func WSHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
+	client := core.NewClient(-1, conn)
 	for {
-		_, message, err := conn.ReadMessage()
-
+		commands, hasAbort, err := readCommands(conn.UnderlyingConn())
 		if err != nil {
 			log.Error(err)
-			break
+			continue
+		}
+		fmt.Println(commands, hasAbort, err)
+
+		// TODO: handle abort
+		if hasAbort {
+			log.Warn("abort invoked over WS", hasAbort)
 		}
 
-		err = conn.WriteMessage(websocket.TextMessage, message)
+		// respond(commands, client, s.Store)
+		log.Info(commands, client)
+
+		err = conn.WriteMessage(websocket.TextMessage, []byte("ok"))
 		if err != nil {
 			log.Error(err)
 			break

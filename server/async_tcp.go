@@ -25,7 +25,7 @@ type AsyncServer struct {
 	multiplexer            iomultiplexer.IOMultiplexer
 	multiplexerPollTimeout time.Duration
 	connectedClients       map[int]*core.Client
-	store                  *core.Store
+	Store                  *core.Store
 	queryWatcher           *core.QueryWatcher
 	lastCronExecTime       time.Time
 	cronFrequency          time.Duration
@@ -37,7 +37,7 @@ func NewAsyncServer() *AsyncServer {
 	return &AsyncServer{
 		maxClients:             config.ServerMaxClients,
 		connectedClients:       make(map[int]*core.Client),
-		store:                  store,
+		Store:                  store,
 		queryWatcher:           core.NewQueryWatcher(store),
 		multiplexerPollTimeout: config.ServerMultiplexerPollTimeout,
 		lastCronExecTime:       utils.GetCurrentTime(),
@@ -156,7 +156,7 @@ func (s *AsyncServer) eventLoop(ctx context.Context) error {
 			return ctx.Err()
 		default:
 			if time.Now().After(s.lastCronExecTime.Add(s.cronFrequency)) {
-				core.DeleteExpiredKeys(s.store)
+				core.DeleteExpiredKeys(s.Store)
 				s.lastCronExecTime = utils.GetCurrentTime()
 			}
 
@@ -194,7 +194,7 @@ func (s *AsyncServer) acceptConnection() error {
 		return err
 	}
 
-	s.connectedClients[fd] = core.NewClient(fd)
+	s.connectedClients[fd] = core.NewClient(fd, nil)
 	if err := syscall.SetNonblock(fd, true); err != nil {
 		return err
 	}
@@ -221,7 +221,7 @@ func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
 		return err
 	}
 
-	respond(commands, comm, s.store)
+	respond(commands, comm, s.Store)
 	if hasAbort {
 		return ErrAborted
 	}
@@ -249,5 +249,5 @@ func (s *AsyncServer) InitiateShutdown() {
 		delete(s.connectedClients, fd)
 	}
 
-	core.Shutdown(s.store)
+	core.Shutdown(s.Store)
 }
