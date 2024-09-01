@@ -26,7 +26,6 @@ func main() {
 	setupFlags()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	// Handle SIGTERM and SIGINT
 	sigs := make(chan os.Signal, 1)
@@ -41,13 +40,16 @@ func main() {
 		log.Fatal("Error finding and binding port:", err)
 	}
 
+	// Goroutine to handle shutdown signals
 	go func() {
+		log.Info("Waiting for shutdown signal")
 		asyncServer.WaitForSignal(cancel, sigs)
 	}()
 
+	// Run the server
 	err := asyncServer.Run(ctx)
 
-	// May not be need, just to show we can handle different situations if necessary
+	// Handling different server errors
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			log.Info("Server was canceled")
@@ -60,5 +62,6 @@ func main() {
 		log.Info("Server stopped without error")
 	}
 
+	asyncServer.InitiateShutdown()
 	log.Info("Server has shut down gracefully")
 }
