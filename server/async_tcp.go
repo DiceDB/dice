@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"os"
 	"sync"
 	"syscall"
 	"time"
@@ -115,18 +114,12 @@ func (s *AsyncServer) ClosePort() {
 	}
 }
 
-// WaitForSignal listens for OS signals and triggers shutdown
-func (s *AsyncServer) WaitForSignal(cancel context.CancelFunc, sigs chan os.Signal) {
-	sig := <-sigs
-	log.Info("Signal received, initiating shutdown", "signal", sig)
-	cancel()
-	s.InitiateShutdown()
-}
-
 // InitiateShutdown gracefully shuts down the server
 func (s *AsyncServer) InitiateShutdown() {
 	// Close the server socket first
 	s.ClosePort()
+
+	s.shardManager.UnregisterWorker("server")
 
 	// Close all client connections
 	for fd := range s.connectedClients {
@@ -135,7 +128,6 @@ func (s *AsyncServer) InitiateShutdown() {
 		}
 		delete(s.connectedClients, fd)
 	}
-
 	log.Info("cleaned up all client connections")
 }
 
@@ -197,10 +189,10 @@ func (s *AsyncServer) Run(ctx context.Context) error {
 		defer wg.Done()
 		err = s.eventLoop(eventLoopCtx)
 		if err != nil {
-			s.shardManager.UnregisterWorker("server")
-			cancelEventLoop()
-			cancelShardManager()
 			cancelWatch()
+			cancelShardManager()
+			cancelEventLoop()
+			s.InitiateShutdown()
 		}
 	}()
 
