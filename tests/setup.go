@@ -124,7 +124,7 @@ func runTestServer(ctx context.Context, wg *sync.WaitGroup) {
 	go func() {
 		defer wg.Done()
 		if err := testServer.Run(ctx); err != nil {
-			if errors.Is(err, context.Canceled) {
+			if errors.Is(err, server.ErrAborted) {
 				return
 			}
 			log.Fatalf("Test server encountered an error: %v", err)

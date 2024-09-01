@@ -11,12 +11,11 @@ import (
 func TestMain(m *testing.M) {
 	var wg sync.WaitGroup
 
-	ctx, cancel := context.WithCancel(context.Background())
 	// Run the test server
 	// This is a synchronous method, because internally it
 	// checks for available port and then forks a goroutine
 	// to start the server
-	runTestServer(ctx, &wg)
+	runTestServer(context.Background(), &wg)
 
 	// Wait for the server to start
 	time.Sleep(1 * time.Second)
@@ -30,7 +29,10 @@ func TestMain(m *testing.M) {
 	// Run the test suite
 	exitCode := m.Run()
 
-	cancel()
+	result := fireCommand(conn, "ABORT")
+	if result != "OK" {
+		panic("Failed to abort the server")
+	}
 
 	wg.Wait()
 	os.Exit(exitCode)

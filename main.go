@@ -6,6 +6,7 @@ import (
 	"flag"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"github.com/charmbracelet/log"
@@ -40,8 +41,12 @@ func main() {
 		log.Fatal("Error finding and binding port:", err)
 	}
 
+	wg := sync.WaitGroup{}
 	// Goroutine to handle shutdown signals
+
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		<-sigs
 		asyncServer.InitiateShutdown()
 		cancel()
@@ -64,5 +69,6 @@ func main() {
 	}
 
 	close(sigs)
+	wg.Wait()
 	log.Info("Server has shut down gracefully")
 }
