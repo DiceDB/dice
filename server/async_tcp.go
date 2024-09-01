@@ -130,7 +130,7 @@ func (s *AsyncServer) InitiateShutdown() {
 		delete(s.connectedClients, fd)
 	}
 
-	log.Info("Server has shut down gracefully with all clients disconnected")
+	log.Info("cleaned up all client connections")
 }
 
 // Run starts the server, accepts connections, and handles client requests
