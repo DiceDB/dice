@@ -33,8 +33,8 @@ func (c *Client) TxnDiscard() {
 	c.IsTxn = false
 }
 
-func (c *Client) TxnQueue(cmd *cmd.RedisCmd) {
-	c.Cqueue = append(c.Cqueue, cmd)
+func (c *Client) TxnQueue(redisCmd *cmd.RedisCmd) {
+	c.Cqueue = append(c.Cqueue, redisCmd)
 }
 
 func NewClient(fd int) *Client {

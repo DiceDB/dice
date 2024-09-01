@@ -66,16 +66,16 @@ func (s *AsyncServer) SetupUsers() error {
 }
 
 // FindPortAndBind binds the server to the given host and port
-func (s *AsyncServer) FindPortAndBind() (err error) {
-	serverFD, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, 0)
+func (s *AsyncServer) FindPortAndBind() (socketErr error) {
+	serverFD, socketErr := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, 0)
 
-	if err != nil {
-		return err
+	if socketErr != nil {
+		return socketErr
 	}
 
 	// Close the socket on exit if an error occurs
 	defer func() {
-		if err != nil {
+		if socketErr != nil {
 			if err := syscall.Close(serverFD); err != nil {
 				log.Warn("failed to close server socket", "error", err)
 			}

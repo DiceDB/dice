@@ -1,36 +1,52 @@
 package server
 
 import (
+	"fmt"
+	"github.com/dicedb/dice/core/cmd"
 	"io"
 	"strings"
-
-	"github.com/dicedb/dice/core/cmd"
 
 	"github.com/dicedb/dice/core"
 )
 
-func toArrayString(ai []interface{}) []string {
+func toArrayString(ai []interface{}) ([]string, error) {
 	as := make([]string, len(ai))
-	for i := range ai {
-		as[i] = ai[i].(string)
+	for i, v := range ai {
+		s, ok := v.(string)
+		if !ok {
+			return nil, fmt.Errorf("element at index %d is not a string", i)
+		}
+		as[i] = s
 	}
-	return as
+	return as, nil
 }
 
 func readCommands(c io.ReadWriter) (cmd.RedisCmds, bool, error) {
-	var hasABORT bool = false
+	var hasABORT = false
 	rp := core.NewRESPParser(c)
 	values, err := rp.DecodeMultiple()
 	if err != nil {
 		return nil, false, err
 	}
 
-	var cmds []*cmd.RedisCmd = make([]*cmd.RedisCmd, 0)
+	var cmds = make([]*cmd.RedisCmd, 0)
 	for _, value := range values {
-		tokens := toArrayString(value.([]interface{}))
+		arrayValue, ok := value.([]interface{})
+		if !ok {
+			return nil, false, fmt.Errorf("expected array, got %T", value)
+		}
+
+		tokens, err := toArrayString(arrayValue)
+		if err != nil {
+			return nil, false, err
+		}
+
+		if len(tokens) == 0 {
+			return nil, false, fmt.Errorf("empty command")
+		}
+
 		command := strings.ToUpper(tokens[0])
 		cmds = append(cmds, &cmd.RedisCmd{
-			ID:   core.NextID(),
 			Cmd:  command,
 			Args: tokens[1:],
 		})
@@ -39,5 +55,5 @@ func readCommands(c io.ReadWriter) (cmd.RedisCmds, bool, error) {
 			hasABORT = true
 		}
 	}
-	return cmds, hasABORT, err
+	return cmds, hasABORT, nil
 }
