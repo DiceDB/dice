@@ -17,6 +17,7 @@ const (
 	NoKeyErr           = "no such key"
 	ErrDefault         = "-ERR %s"
 	WrongTypeErr       = "-WRONGTYPE Operation against a key holding the wrong kind of value"
+	WorkerNotFoundErr  = "worker with ID %s not found"
 )
 
 type DiceError struct {

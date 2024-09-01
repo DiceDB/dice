@@ -1,4 +1,4 @@
-package core
+package cmd
 
 type RedisCmd struct {
 	ID   uint32
