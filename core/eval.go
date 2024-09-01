@@ -11,6 +11,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/dicedb/dice/core/auth"
+	"github.com/dicedb/dice/core/comm"
+
 	"github.com/bytedance/sonic"
 	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
@@ -70,7 +73,7 @@ func evalPING(args []string, store *Store) []byte {
 
 // evalAUTH returns with an encoded "OK" if the user is authenticated
 // If the user is not authenticated, it returns with an encoded error message
-func evalAUTH(args []string, c *Client) []byte {
+func evalAUTH(args []string, c *comm.Client) []byte {
 	var (
 		err error
 	)
@@ -79,7 +82,7 @@ func evalAUTH(args []string, c *Client) []byte {
 		return diceerrors.NewErrWithMessage("AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?")
 	}
 
-	var username = DefaultUserName
+	var username = auth.DefaultUserName
 	var password string
 
 	if len(args) == 1 {

@@ -4,6 +4,8 @@ import (
 	"io"
 	"strings"
 
+	"github.com/dicedb/dice/core/cmd"
+
 	"github.com/dicedb/dice/core"
 )
 
@@ -15,7 +17,7 @@ func toArrayString(ai []interface{}) []string {
 	return as
 }
 
-func readCommands(c io.ReadWriter) (core.RedisCmds, bool, error) {
+func readCommands(c io.ReadWriter) (cmd.RedisCmds, bool, error) {
 	var hasABORT bool = false
 	rp := core.NewRESPParser(c)
 	values, err := rp.DecodeMultiple()
@@ -23,17 +25,17 @@ func readCommands(c io.ReadWriter) (core.RedisCmds, bool, error) {
 		return nil, false, err
 	}
 
-	var cmds []*core.RedisCmd = make([]*core.RedisCmd, 0)
+	var cmds []*cmd.RedisCmd = make([]*cmd.RedisCmd, 0)
 	for _, value := range values {
 		tokens := toArrayString(value.([]interface{}))
-		cmd := strings.ToUpper(tokens[0])
-		cmds = append(cmds, &core.RedisCmd{
+		command := strings.ToUpper(tokens[0])
+		cmds = append(cmds, &cmd.RedisCmd{
 			ID:   core.NextID(),
-			Cmd:  cmd,
+			Cmd:  command,
 			Args: tokens[1:],
 		})
 
-		if cmd == "ABORT" {
+		if command == "ABORT" {
 			hasABORT = true
 		}
 	}

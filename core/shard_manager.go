@@ -7,6 +7,8 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+
+	"github.com/dicedb/dice/core/ops"
 )
 
 type ShardManager struct {
@@ -14,15 +16,15 @@ type ShardManager struct {
 	// instantiated during ShardManager creation, and never modified after wards. Therefore, it can be accessed
 	// concurrently without synchronization.
 	shards          []*ShardThread
-	shardReqMap     map[ShardID]chan *StoreOp // shardReqMap is a map of shard id to its respective request channel
-	globalErrorChan chan *ShardError          // globalErrorChan is the common global error channel for all Shards
-	sigChan         chan os.Signal            // sigChan is the signal channel for the shard manager
+	shardReqMap     map[ShardID]chan *ops.StoreOp // shardReqMap is a map of shard id to its respective request channel
+	globalErrorChan chan *ShardError              // globalErrorChan is the common global error channel for all Shards
+	sigChan         chan os.Signal                // sigChan is the signal channel for the shard manager
 }
 
 // NewShardManager creates a new ShardManager instance with the given number of Shards and a parent context.
 func NewShardManager(shardCount int8) *ShardManager {
 	shards := make([]*ShardThread, shardCount)
-	shardReqMap := make(map[ShardID]chan *StoreOp)
+	shardReqMap := make(map[ShardID]chan *ops.StoreOp)
 	globalErrorChan := make(chan *ShardError)
 
 	for i := int8(0); i < shardCount; i++ {
@@ -102,7 +104,7 @@ func (manager *ShardManager) GetShard(id ShardID) *ShardThread {
 }
 
 // RegisterWorker registers a worker with all Shards present in the ShardManager.
-func (manager *ShardManager) RegisterWorker(workerID string, workerChan chan *StoreResponse) {
+func (manager *ShardManager) RegisterWorker(workerID string, workerChan chan *ops.StoreResponse) {
 	for _, shard := range manager.shards {
 		shard.registerWorker(workerID, workerChan)
 	}

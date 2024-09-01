@@ -36,7 +36,6 @@ func main() {
 
 	// Find a port and bind it
 	if err := asyncServer.FindPortAndBind(); err != nil {
-		//nolint: gocritic
 		log.Fatal("Error finding and binding port:", err)
 	}
 

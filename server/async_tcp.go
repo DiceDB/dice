@@ -11,6 +11,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/dicedb/dice/core/auth"
+	"github.com/dicedb/dice/core/cmd"
+	"github.com/dicedb/dice/core/comm"
+	"github.com/dicedb/dice/core/ops"
+
 	"github.com/dicedb/dice/core/diceerrors"
 
 	"github.com/charmbracelet/log"
@@ -28,10 +33,10 @@ type AsyncServer struct {
 	maxClients             int
 	multiplexer            iomultiplexer.IOMultiplexer
 	multiplexerPollTimeout time.Duration
-	connectedClients       map[int]*core.Client
+	connectedClients       map[int]*comm.Client
 	queryWatcher           *core.QueryWatcher
 	shardManager           *core.ShardManager
-	ioChan                 chan *core.StoreResponse
+	ioChan                 chan *ops.StoreResponse
 }
 
 // NewAsyncServer initializes a new AsyncServer
@@ -39,17 +44,17 @@ func NewAsyncServer() *AsyncServer {
 	shardManager := core.NewShardManager(1)
 	return &AsyncServer{
 		maxClients:             config.ServerMaxClients,
-		connectedClients:       make(map[int]*core.Client),
+		connectedClients:       make(map[int]*comm.Client),
 		shardManager:           shardManager,
 		queryWatcher:           core.NewQueryWatcher(shardManager),
 		multiplexerPollTimeout: config.ServerMultiplexerPollTimeout,
-		ioChan:                 make(chan *core.StoreResponse, 1000),
+		ioChan:                 make(chan *ops.StoreResponse, 1000),
 	}
 }
 
 // SetupUsers initializes the default user for the server
 func (s *AsyncServer) SetupUsers() error {
-	user, err := core.UserStore.Add(core.DefaultUserName)
+	user, err := auth.UserStore.Add(auth.DefaultUserName)
 	if err != nil {
 		return err
 	}
@@ -244,7 +249,7 @@ func (s *AsyncServer) acceptConnection() error {
 		return err
 	}
 
-	s.connectedClients[fd] = core.NewClient(fd)
+	s.connectedClients[fd] = comm.NewClient(fd)
 	if err := syscall.SetNonblock(fd, true); err != nil {
 		return err
 	}
@@ -257,12 +262,12 @@ func (s *AsyncServer) acceptConnection() error {
 
 // handleClientEvent reads commands from the client connection and responds to the client. It also handles disconnections.
 func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
-	comm := s.connectedClients[event.Fd]
-	if comm == nil {
+	client := s.connectedClients[event.Fd]
+	if client == nil {
 		return nil
 	}
 
-	commands, hasAbort, err := readCommands(comm)
+	commands, hasAbort, err := readCommands(client)
 	if err != nil {
 		if err := syscall.Close(event.Fd); err != nil {
 			log.Printf("error closing client connection: %v", err)
@@ -271,7 +276,7 @@ func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
 		return err
 	}
 
-	s.EvalAndRespond(commands, comm)
+	s.EvalAndRespond(commands, client)
 	if hasAbort {
 		return ErrAborted
 	}
@@ -279,9 +284,9 @@ func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
 	return nil
 }
 
-func (s *AsyncServer) executeCommandToBuffer(cmd *core.RedisCmd, buf *bytes.Buffer, c *core.Client) {
-	s.shardManager.GetShard(0).ReqChan <- &core.StoreOp{
-		Cmd:      cmd,
+func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.RedisCmd, buf *bytes.Buffer, c *comm.Client) {
+	s.shardManager.GetShard(0).ReqChan <- &ops.StoreOp{
+		Cmd:      redisCmd,
 		WorkerID: "server",
 		ShardID:  0,
 		Client:   c,
@@ -291,51 +296,51 @@ func (s *AsyncServer) executeCommandToBuffer(cmd *core.RedisCmd, buf *bytes.Buff
 	buf.Write(response.Result)
 }
 
-func (s *AsyncServer) EvalAndRespond(cmds core.RedisCmds, c *core.Client) {
+func (s *AsyncServer) EvalAndRespond(cmds cmd.RedisCmds, c *comm.Client) {
 	var response []byte
 	buf := bytes.NewBuffer(response)
 
-	for _, cmd := range cmds {
-		if !s.isAuthenticated(cmd, c, buf) {
+	for _, redisCmd := range cmds {
+		if !s.isAuthenticated(redisCmd, c, buf) {
 			continue
 		}
 
 		if c.IsTxn {
-			s.handleTransactionCommand(cmd, c, buf)
+			s.handleTransactionCommand(redisCmd, c, buf)
 		} else {
-			s.handleNonTransactionCommand(cmd, c, buf)
+			s.handleNonTransactionCommand(redisCmd, c, buf)
 		}
 	}
 
 	s.writeResponse(c, buf)
 }
 
-func (s *AsyncServer) isAuthenticated(cmd *core.RedisCmd, c *core.Client, buf *bytes.Buffer) bool {
-	if cmd.Cmd != core.AuthCmd && !c.Session.IsActive() {
+func (s *AsyncServer) isAuthenticated(redisCmd *cmd.RedisCmd, c *comm.Client, buf *bytes.Buffer) bool {
+	if redisCmd.Cmd != auth.AuthCmd && !c.Session.IsActive() {
 		buf.Write(core.Encode(errors.New("NOAUTH Authentication required"), false))
 		return false
 	}
 	return true
 }
 
-func (s *AsyncServer) handleTransactionCommand(cmd *core.RedisCmd, c *core.Client, buf *bytes.Buffer) {
-	if core.TxnCommands[cmd.Cmd] {
-		switch cmd.Cmd {
+func (s *AsyncServer) handleTransactionCommand(redisCmd *cmd.RedisCmd, c *comm.Client, buf *bytes.Buffer) {
+	if core.TxnCommands[redisCmd.Cmd] {
+		switch redisCmd.Cmd {
 		case core.ExecCmdMeta.Name:
 			s.executeTransaction(c, buf)
 		case core.DiscardCmdMeta.Name:
 			s.discardTransaction(c, buf)
 		default:
-			log.Errorf("Unhandled transaction command: %s", cmd.Cmd)
+			log.Errorf("Unhandled transaction command: %s", redisCmd.Cmd)
 		}
 	} else {
-		c.TxnQueue(cmd)
+		c.TxnQueue(redisCmd)
 		buf.Write(core.RespQueued)
 	}
 }
 
-func (s *AsyncServer) handleNonTransactionCommand(cmd *core.RedisCmd, c *core.Client, buf *bytes.Buffer) {
-	switch cmd.Cmd {
+func (s *AsyncServer) handleNonTransactionCommand(redisCmd *cmd.RedisCmd, c *comm.Client, buf *bytes.Buffer) {
+	switch redisCmd.Cmd {
 	case core.MultiCmdMeta.Name:
 		c.TxnBegin()
 		buf.Write(core.RespOK)
@@ -344,11 +349,11 @@ func (s *AsyncServer) handleNonTransactionCommand(cmd *core.RedisCmd, c *core.Cl
 	case core.DiscardCmdMeta.Name:
 		buf.Write(diceerrors.NewErrWithMessage("DISCARD without MULTI"))
 	default:
-		s.executeCommandToBuffer(cmd, buf, c)
+		s.executeCommandToBuffer(redisCmd, buf, c)
 	}
 }
 
-func (s *AsyncServer) executeTransaction(c *core.Client, buf *bytes.Buffer) {
+func (s *AsyncServer) executeTransaction(c *comm.Client, buf *bytes.Buffer) {
 	_, err := fmt.Fprintf(buf, "*%d\r\n", len(c.Cqueue))
 	if err != nil {
 		log.Errorf("Error writing to buffer: %v", err)
@@ -359,16 +364,16 @@ func (s *AsyncServer) executeTransaction(c *core.Client, buf *bytes.Buffer) {
 		s.executeCommandToBuffer(cmd, buf, c)
 	}
 
-	c.Cqueue = make(core.RedisCmds, 0)
+	c.Cqueue = make(cmd.RedisCmds, 0)
 	c.IsTxn = false
 }
 
-func (s *AsyncServer) discardTransaction(c *core.Client, buf *bytes.Buffer) {
+func (s *AsyncServer) discardTransaction(c *comm.Client, buf *bytes.Buffer) {
 	c.TxnDiscard()
 	buf.Write(core.RespOK)
 }
 
-func (s *AsyncServer) writeResponse(c *core.Client, buf *bytes.Buffer) {
+func (s *AsyncServer) writeResponse(c *comm.Client, buf *bytes.Buffer) {
 	if _, err := c.Write(buf.Bytes()); err != nil {
 		log.Error(err)
 	}

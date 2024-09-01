@@ -1,16 +1,19 @@
-package core
+package comm
 
 import (
 	"io"
 	"syscall"
+
+	"github.com/dicedb/dice/core/auth"
+	"github.com/dicedb/dice/core/cmd"
 )
 
 type Client struct {
 	io.ReadWriter
 	Fd      int
-	Cqueue  RedisCmds
+	Cqueue  cmd.RedisCmds
 	IsTxn   bool
-	Session *Session
+	Session *auth.Session
 }
 
 func (c Client) Write(b []byte) (int, error) {
@@ -26,18 +29,18 @@ func (c *Client) TxnBegin() {
 }
 
 func (c *Client) TxnDiscard() {
-	c.Cqueue = make(RedisCmds, 0)
+	c.Cqueue = make(cmd.RedisCmds, 0)
 	c.IsTxn = false
 }
 
-func (c *Client) TxnQueue(cmd *RedisCmd) {
+func (c *Client) TxnQueue(cmd *cmd.RedisCmd) {
 	c.Cqueue = append(c.Cqueue, cmd)
 }
 
 func NewClient(fd int) *Client {
 	return &Client{
 		Fd:      fd,
-		Cqueue:  make(RedisCmds, 0),
-		Session: NewSession(),
+		Cqueue:  make(cmd.RedisCmds, 0),
+		Session: auth.NewSession(),
 	}
 }
