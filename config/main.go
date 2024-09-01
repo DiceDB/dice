@@ -7,8 +7,9 @@ import (
 )
 
 var (
-	Host string = "0.0.0.0"
-	Port int    = 7379
+	Host   string = "0.0.0.0"
+	Port   int    = 7379
+	WSPort int    = 8379
 )
 
 var KeysLimit int = 10000 // default buffer size.

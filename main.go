@@ -16,10 +16,9 @@ import (
 func setupFlags() {
 	flag.StringVar(&config.Host, "host", "0.0.0.0", "host for the dice server")
 	flag.IntVar(&config.Port, "port", 7379, "port for the dice server")
+	flag.IntVar(&config.WSPort, "wsport", 8379, "websocket port for the dice server")
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
 	flag.Parse()
-
-	log.Info("Password", config.RequirePass)
 }
 
 func main() {
@@ -47,6 +46,23 @@ func main() {
 		cancel()
 	}()
 
+	go func() {
+		wsServer := server.NewWSServer()
+		err := wsServer.Run(ctx)
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				log.Info("Server was canceled")
+			} else if errors.Is(err, server.ErrAborted) {
+				log.Info("Server received abort command")
+			} else {
+				log.Error("Server error", "error", err)
+			}
+		} else {
+			log.Info("Server stopped without error")
+		}
+	}()
+
+	log.Infof("RESP server listening on port %d\n", config.Port)
 	err := asyncServer.Run(ctx)
 
 	// May not be need, just to show we can handle different situations if necessary

@@ -13,7 +13,6 @@ import (
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core"
 	"github.com/dicedb/dice/core/iomultiplexer"
-	"github.com/dicedb/dice/internal/constants"
 	"github.com/dicedb/dice/server/utils"
 )
 
@@ -55,7 +54,6 @@ func (s *AsyncServer) SetupUsers() error {
 	if err := user.SetPassword(config.RequirePass); err != nil {
 		return err
 	}
-	log.Info("default user set up", "password required", config.RequirePass != constants.EmptyStr)
 	return nil
 }
 
