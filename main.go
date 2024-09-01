@@ -26,6 +26,7 @@ func main() {
 	setupFlags()
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	// Handle SIGTERM and SIGINT
 	sigs := make(chan os.Signal, 1)
