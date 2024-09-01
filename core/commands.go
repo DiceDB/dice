@@ -114,6 +114,16 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsondelCmdMeta = DiceCmdMeta{
+		Name: "JSON.DEL",
+		Info: `JSON.DEL key [path]
+		Returns an integer reply specified as the number of paths deleted (0 or more).
+		Returns RespZero if the key doesn't exist or key is expired.
+		Error reply: If the number of arguments is incorrect.`,
+		Eval:     evalJSONDEL,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	ttlCmdMeta = DiceCmdMeta{
 		Name: "TTL",
 		Info: `TTL returns Time-to-Live in secs for the queried key in args
@@ -748,6 +758,7 @@ func init() {
 	diceCmds["JSON.GET"] = jsongetCmdMeta
 	diceCmds["JSON.TYPE"] = jsontypeCmdMeta
 	diceCmds["JSON.CLEAR"] = jsonclearCmdMeta
+	diceCmds["JSON.DEL"] = jsondelCmdMeta
 	diceCmds["TTL"] = ttlCmdMeta
 	diceCmds["DEL"] = delCmdMeta
 	diceCmds["EXPIRE"] = expireCmdMeta

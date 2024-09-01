@@ -45,6 +45,7 @@ func TestEval(t *testing.T) {
 	testEvalHELLO(t, store)
 	testEvalSET(t, store)
 	testEvalGET(t, store)
+	testEvalJSONDEL(t, store)
 	testEvalJSONCLEAR(t, store)
 	testEvalJSONTYPE(t, store)
 	testEvalJSONGET(t, store)
@@ -299,6 +300,66 @@ func testEvalEXPIREAT(t *testing.T, store *Store) {
 	}
 
 	runEvalTests(t, tests, evalEXPIREAT, store)
+}
+
+func testEvalJSONDEL(t *testing.T, store *Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'json.del' command\r\n"),
+		},
+		"key does not exist": {
+			setup:  func() {},
+			input:  []string{"NONEXISTENT_KEY"},
+			output: RespZero,
+		},
+		"root path del": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"age\":13,\"high\":1.60,\"pet\":null,\"language\":[\"python\",\"golang\"], " +
+					"\"flag\":false, \"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+				store.store[key] = obj
+				store.keypool[key] = &key
+			},
+			input:  []string{"EXISTING_KEY"},
+			output: RespOne,
+		},
+		"part path del": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"age\":13,\"high\":1.60,\"pet\":null,\"language\":[\"python\",\"golang\"], " +
+					"\"flag\":false, \"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+				store.store[key] = obj
+				store.keypool[key] = &key
+			},
+
+			input:  []string{"EXISTING_KEY", "$..language"},
+			output: []byte(":2\r\n"),
+		},
+		"wildcard path del": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"age\":13,\"high\":1.60,\"pet\":null,\"language\":[\"python\",\"golang\"], " +
+					"\"flag\":false, \"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+				store.store[key] = obj
+				store.keypool[key] = &key
+			},
+
+			input:  []string{"EXISTING_KEY", "$.*"},
+			output: []byte(":6\r\n"),
+		},
+	}
+	runEvalTests(t, tests, evalJSONDEL, store)
 }
 
 func testEvalJSONCLEAR(t *testing.T, store *Store) {
@@ -568,7 +629,7 @@ func testEvalJSONGET(t *testing.T, store *Store) {
 				store.keypool.Put(key, &key)
 			},
 			input:  []string{"EXISTING_KEY"},
-			output: []byte("-the operation is not permitted on this type\r\n"),
+			output: []byte("-ERR Existing key has wrong Dice type\r\n"),
 		},
 		"key exists value": {
 			setup: func() {
