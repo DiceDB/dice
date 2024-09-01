@@ -36,7 +36,7 @@ type AsyncServer struct {
 	connectedClients       map[int]*comm.Client
 	queryWatcher           *core.QueryWatcher
 	shardManager           *core.ShardManager
-	ioChan                 chan *ops.StoreResponse
+	ioChan                 chan *ops.StoreResponse // The server acts like a worker today, this behavior will change once IOThreads are introduced and each client gets its own worker.
 }
 
 // NewAsyncServer initializes a new AsyncServer
