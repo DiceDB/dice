@@ -107,3 +107,9 @@ func (manager *ShardManager) RegisterWorker(workerID string, workerChan chan *St
 		shard.registerWorker(workerID, workerChan)
 	}
 }
+
+func (manager *ShardManager) UnregisterWorker(workerID string) {
+	for _, shard := range manager.shards {
+		shard.unregisterWorker(workerID)
+	}
+}

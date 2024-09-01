@@ -39,7 +39,7 @@ type ShardThread struct {
 	store            *Store                         // store that the shard is responsible for.
 	ReqChan          chan *StoreOp                  // ReqChan is this shard's channel for receiving requests.
 	workerMap        map[string]chan *StoreResponse // workerMap maps workerID to its unique response channel
-	mu               sync.RWMutex                   // mu is the workerMap's mutex for thread safety.
+	workerMutex      sync.RWMutex                   // workerMutex is the workerMap's mutex for thread safety.
 	errorChan        chan *ShardError               // errorChan is the channel for sending system-level errors.
 	lastCronExecTime time.Time                      // lastCronExecTime is the last time the shard executed cron tasks.
 	cronFrequency    time.Duration                  // cronFrequency is the frequency at which the shard executes cron tasks.
@@ -83,19 +83,26 @@ func (shard *ShardThread) runCronTasks() {
 }
 
 func (shard *ShardThread) registerWorker(workerID string, workerChan chan *StoreResponse) {
-	shard.mu.Lock()
+	shard.workerMutex.Lock()
 	shard.workerMap[workerID] = workerChan
-	shard.mu.Unlock()
+	shard.workerMutex.Unlock()
+}
+
+func (shard *ShardThread) unregisterWorker(workerID string) {
+	shard.workerMutex.Lock()
+	delete(shard.workerMap, workerID)
+	shard.workerMutex.Unlock()
 }
 
 // processRequest processes a Store operation for the shard.
 func (shard *ShardThread) processRequest(op *StoreOp) {
 	response := shard.executeCommand(op)
 
-	// Send the Result to the worker if worker exists.
-	shard.mu.RLock()
-	defer shard.mu.RUnlock()
-	if workerChan, ok := shard.workerMap[op.WorkerID]; ok {
+	shard.workerMutex.RLock()
+	workerChan, ok := shard.workerMap[op.WorkerID]
+	shard.workerMutex.RUnlock()
+
+	if ok {
 		workerChan <- &StoreResponse{
 			requestID: op.RequestID,
 			Result:    response,
@@ -113,20 +120,18 @@ func (shard *ShardThread) executeCommand(op *StoreOp) []byte {
 
 	// The following commands could be handled at the server level, however, we can randomly let any shard handle them
 	// to reduce load on main server.
-	if diceCmd.Name == "SUBSCRIBE" || diceCmd.Name == "QWATCH" {
+	switch diceCmd.Name {
+	case "SUBSCRIBE", "QWATCH":
 		return evalQWATCH(op.Cmd.Args, op.Client.Fd, shard.store)
-	}
-	if diceCmd.Name == "UNSUBSCRIBE" || diceCmd.Name == "QUNWATCH" {
+	case "UNSUBSCRIBE", "QUNWATCH":
 		return evalQUNWATCH(op.Cmd.Args, op.Client.Fd)
-	}
-	if diceCmd.Name == AuthCmd {
+	case AuthCmd:
 		return evalAUTH(op.Cmd.Args, op.Client)
-	}
-	if diceCmd.Name == "ABORT" {
+	case "ABORT":
 		return RespOK
+	default:
+		return diceCmd.Eval(op.Cmd.Args, shard.store)
 	}
-
-	return diceCmd.Eval(op.Cmd.Args, shard.store)
 }
 
 // cleanup handles cleanup logic when the shard stops.

@@ -191,6 +191,7 @@ func (s *AsyncServer) Run(ctx context.Context) error {
 		defer wg.Done()
 		err = s.eventLoop(eventLoopCtx)
 		if err != nil {
+			s.shardManager.UnregisterWorker("server")
 			cancelEventLoop()
 			cancelShardManager()
 			cancelWatch()
