@@ -68,15 +68,10 @@ func (s *AsyncServer) SetupUsers() error {
 // FindPortAndBind binds the server to the given host and port
 func (s *AsyncServer) FindPortAndBind() (err error) {
 	serverFD, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, 0)
+
 	if err != nil {
 		return err
 	}
-
-	if err := syscall.SetsockoptInt(serverFD, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
-		return err
-	}
-
-	s.serverFD = serverFD
 
 	// Close the socket on exit if an error occurs
 	defer func() {
@@ -86,6 +81,12 @@ func (s *AsyncServer) FindPortAndBind() (err error) {
 			}
 		}
 	}()
+
+	if err := syscall.SetsockoptInt(serverFD, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
+		return err
+	}
+
+	s.serverFD = serverFD
 
 	if err := syscall.SetNonblock(serverFD, true); err != nil {
 		return err
