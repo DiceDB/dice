@@ -8,7 +8,7 @@ import (
 )
 
 func TestAbortCommand(t *testing.T) {
-	// Ensure the port is released by checking if it's available
+	
 	if !CheckPortAvailibility("localhost:YOUR_PORT") {
 		t.Fatalf("Server port was not released after shutdown")
 	} else {
