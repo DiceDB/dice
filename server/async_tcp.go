@@ -1,20 +1,27 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"net"
-	"os"
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/dicedb/dice/core/auth"
+	"github.com/dicedb/dice/core/cmd"
+	"github.com/dicedb/dice/core/comm"
+	"github.com/dicedb/dice/core/ops"
+
+	"github.com/dicedb/dice/core/diceerrors"
 
 	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core"
 	"github.com/dicedb/dice/core/iomultiplexer"
 	"github.com/dicedb/dice/internal/constants"
-	"github.com/dicedb/dice/server/utils"
 )
 
 var ErrAborted = errors.New("server received ABORT command")
@@ -25,30 +32,28 @@ type AsyncServer struct {
 	maxClients             int
 	multiplexer            iomultiplexer.IOMultiplexer
 	multiplexerPollTimeout time.Duration
-	connectedClients       map[int]*core.Client
-	store                  *core.Store
+	connectedClients       map[int]*comm.Client
 	queryWatcher           *core.QueryWatcher
-	lastCronExecTime       time.Time
-	cronFrequency          time.Duration
+	shardManager           *core.ShardManager
+	ioChan                 chan *ops.StoreResponse // The server acts like a worker today, this behavior will change once IOThreads are introduced and each client gets its own worker.
 }
 
 // NewAsyncServer initializes a new AsyncServer
 func NewAsyncServer() *AsyncServer {
-	store := core.NewStore()
+	shardManager := core.NewShardManager(1)
 	return &AsyncServer{
 		maxClients:             config.ServerMaxClients,
-		connectedClients:       make(map[int]*core.Client),
-		store:                  store,
-		queryWatcher:           core.NewQueryWatcher(store),
+		connectedClients:       make(map[int]*comm.Client),
+		shardManager:           shardManager,
+		queryWatcher:           core.NewQueryWatcher(shardManager),
 		multiplexerPollTimeout: config.ServerMultiplexerPollTimeout,
-		lastCronExecTime:       utils.GetCurrentTime(),
-		cronFrequency:          config.ServerCronFrequency,
+		ioChan:                 make(chan *ops.StoreResponse, 1000),
 	}
 }
 
 // SetupUsers initializes the default user for the server
 func (s *AsyncServer) SetupUsers() error {
-	user, err := core.UserStore.Add(core.DefaultUserName)
+	user, err := auth.UserStore.Add(auth.DefaultUserName)
 	if err != nil {
 		return err
 	}
@@ -60,16 +65,16 @@ func (s *AsyncServer) SetupUsers() error {
 }
 
 // FindPortAndBind binds the server to the given host and port
-func (s *AsyncServer) FindPortAndBind() (err error) {
-	serverFD, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, 0)
-	if err != nil {
-		return err
+func (s *AsyncServer) FindPortAndBind() (socketErr error) {
+	serverFD, socketErr := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, 0)
+
+	if socketErr != nil {
+		return socketErr
 	}
-	s.serverFD = serverFD
 
 	// Close the socket on exit if an error occurs
 	defer func() {
-		if err != nil {
+		if socketErr != nil {
 			if err := syscall.Close(serverFD); err != nil {
 				log.Warn("failed to close server socket", "error", err)
 			}
@@ -79,6 +84,8 @@ func (s *AsyncServer) FindPortAndBind() (err error) {
 	if err := syscall.SetsockoptInt(serverFD, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
 		return err
 	}
+
+	s.serverFD = serverFD
 
 	if err := syscall.SetNonblock(serverFD, true); err != nil {
 		return err
@@ -95,15 +102,37 @@ func (s *AsyncServer) FindPortAndBind() (err error) {
 	})
 }
 
+// ClosePort ensures the server socket is closed properly.
+func (s *AsyncServer) ClosePort() {
+	if s.serverFD != 0 {
+		if err := syscall.Close(s.serverFD); err != nil {
+			log.Warn("failed to close server socket", "error", err)
+		} else {
+			log.Info("Server socket closed successfully")
+		}
+		s.serverFD = 0
+	}
+}
+
+// InitiateShutdown gracefully shuts down the server
+func (s *AsyncServer) InitiateShutdown() {
+	// Close the server socket first
+	s.ClosePort()
+
+	s.shardManager.UnregisterWorker("server")
+
+	// Close all client connections
+	for fd := range s.connectedClients {
+		if err := syscall.Close(fd); err != nil {
+			log.Warn("failed to close client connection", "error", err)
+		}
+		delete(s.connectedClients, fd)
+	}
+	log.Info("cleaned up all client connections")
+}
+
 // Run starts the server, accepts connections, and handles client requests
 func (s *AsyncServer) Run(ctx context.Context) error {
-	defer func(fd int) {
-		err := syscall.Close(fd)
-		if err != nil {
-			log.Warn("failed to close server socket", "error", err)
-		}
-	}(s.serverFD)
-
 	if err := s.SetupUsers(); err != nil {
 		return err
 	}
@@ -118,6 +147,17 @@ func (s *AsyncServer) Run(ctx context.Context) error {
 		s.queryWatcher.Run(watchCtx)
 	}()
 
+	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
+	defer cancelShardManager()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		s.shardManager.Run(shardManagerCtx)
+	}()
+
+	s.shardManager.RegisterWorker("server", s.ioChan)
+
 	if err := syscall.Listen(s.serverFD, s.maxClients); err != nil {
 		return err
 	}
@@ -128,12 +168,11 @@ func (s *AsyncServer) Run(ctx context.Context) error {
 		return err
 	}
 
-	defer func(multiplexer iomultiplexer.IOMultiplexer) {
-		err := multiplexer.Close()
-		if err != nil {
+	defer func() {
+		if err := s.multiplexer.Close(); err != nil {
 			log.Warn("failed to close multiplexer", "error", err)
 		}
-	}(s.multiplexer)
+	}()
 
 	if err := s.multiplexer.Subscribe(iomultiplexer.Event{
 		Fd: s.serverFD,
@@ -142,9 +181,21 @@ func (s *AsyncServer) Run(ctx context.Context) error {
 		return err
 	}
 
-	err = s.eventLoop(ctx)
+	eventLoopCtx, cancelEventLoop := context.WithCancel(ctx)
+	defer cancelEventLoop()
 
-	cancelWatch()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err = s.eventLoop(eventLoopCtx)
+		if err != nil {
+			cancelWatch()
+			cancelShardManager()
+			cancelEventLoop()
+			s.InitiateShutdown()
+		}
+	}()
+
 	wg.Wait()
 
 	return err
@@ -157,11 +208,6 @@ func (s *AsyncServer) eventLoop(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			if time.Now().After(s.lastCronExecTime.Add(s.cronFrequency)) {
-				core.DeleteExpiredKeys(s.store)
-				s.lastCronExecTime = utils.GetCurrentTime()
-			}
-
 			events, err := s.multiplexer.Poll(s.multiplexerPollTimeout)
 			if err != nil {
 				if errors.Is(err, syscall.EINTR) {
@@ -196,7 +242,7 @@ func (s *AsyncServer) acceptConnection() error {
 		return err
 	}
 
-	s.connectedClients[fd] = core.NewClient(fd)
+	s.connectedClients[fd] = comm.NewClient(fd)
 	if err := syscall.SetNonblock(fd, true); err != nil {
 		return err
 	}
@@ -209,12 +255,12 @@ func (s *AsyncServer) acceptConnection() error {
 
 // handleClientEvent reads commands from the client connection and responds to the client. It also handles disconnections.
 func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
-	comm := s.connectedClients[event.Fd]
-	if comm == nil {
+	client := s.connectedClients[event.Fd]
+	if client == nil {
 		return nil
 	}
 
-	commands, hasAbort, err := readCommands(comm)
+	commands, hasAbort, err := readCommands(client)
 	if err != nil {
 		if err := syscall.Close(event.Fd); err != nil {
 			log.Printf("error closing client connection: %v", err)
@@ -223,7 +269,7 @@ func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
 		return err
 	}
 
-	respond(commands, comm, s.store)
+	s.EvalAndRespond(commands, client)
 	if hasAbort {
 		return ErrAborted
 	}
@@ -231,25 +277,97 @@ func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
 	return nil
 }
 
-// WaitForSignal listens for OS signals and triggers shutdown
-func (s *AsyncServer) WaitForSignal(cancel context.CancelFunc, sigs chan os.Signal) {
-	<-sigs
-	cancel()
-}
-
-// InitiateShutdown gracefully shuts down the server
-func (s *AsyncServer) InitiateShutdown() {
-	log.Info("initiating shutdown")
-
-	// Close all client connections
-	for fd := range s.connectedClients {
-		// Close the client socket
-		if err := syscall.Close(fd); err != nil {
-			log.Warn("failed to close client connection", "error", err)
-		}
-
-		delete(s.connectedClients, fd)
+func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.RedisCmd, buf *bytes.Buffer, c *comm.Client) {
+	s.shardManager.GetShard(0).ReqChan <- &ops.StoreOp{
+		Cmd:      redisCmd,
+		WorkerID: "server",
+		ShardID:  0,
+		Client:   c,
 	}
 
-	core.Shutdown(s.store)
+	response := <-s.ioChan
+	buf.Write(response.Result)
+}
+
+func (s *AsyncServer) EvalAndRespond(cmds cmd.RedisCmds, c *comm.Client) {
+	var response []byte
+	buf := bytes.NewBuffer(response)
+
+	for _, redisCmd := range cmds {
+		if !s.isAuthenticated(redisCmd, c, buf) {
+			continue
+		}
+
+		if c.IsTxn {
+			s.handleTransactionCommand(redisCmd, c, buf)
+		} else {
+			s.handleNonTransactionCommand(redisCmd, c, buf)
+		}
+	}
+
+	s.writeResponse(c, buf)
+}
+
+func (s *AsyncServer) isAuthenticated(redisCmd *cmd.RedisCmd, c *comm.Client, buf *bytes.Buffer) bool {
+	if redisCmd.Cmd != auth.AuthCmd && !c.Session.IsActive() {
+		buf.Write(core.Encode(errors.New("NOAUTH Authentication required"), false))
+		return false
+	}
+	return true
+}
+
+func (s *AsyncServer) handleTransactionCommand(redisCmd *cmd.RedisCmd, c *comm.Client, buf *bytes.Buffer) {
+	if core.TxnCommands[redisCmd.Cmd] {
+		switch redisCmd.Cmd {
+		case core.ExecCmdMeta.Name:
+			s.executeTransaction(c, buf)
+		case core.DiscardCmdMeta.Name:
+			s.discardTransaction(c, buf)
+		default:
+			log.Errorf("Unhandled transaction command: %s", redisCmd.Cmd)
+		}
+	} else {
+		c.TxnQueue(redisCmd)
+		buf.Write(core.RespQueued)
+	}
+}
+
+func (s *AsyncServer) handleNonTransactionCommand(redisCmd *cmd.RedisCmd, c *comm.Client, buf *bytes.Buffer) {
+	switch redisCmd.Cmd {
+	case core.MultiCmdMeta.Name:
+		c.TxnBegin()
+		buf.Write(core.RespOK)
+	case core.ExecCmdMeta.Name:
+		buf.Write(diceerrors.NewErrWithMessage("EXEC without MULTI"))
+	case core.DiscardCmdMeta.Name:
+		buf.Write(diceerrors.NewErrWithMessage("DISCARD without MULTI"))
+	default:
+		s.executeCommandToBuffer(redisCmd, buf, c)
+	}
+}
+
+func (s *AsyncServer) executeTransaction(c *comm.Client, buf *bytes.Buffer) {
+	_, err := fmt.Fprintf(buf, "*%d\r\n", len(c.Cqueue))
+	if err != nil {
+		log.Errorf("Error writing to buffer: %v", err)
+		return
+	}
+
+	for _, cmd := range c.Cqueue {
+		s.executeCommandToBuffer(cmd, buf, c)
+	}
+
+	c.Cqueue = make(cmd.RedisCmds, 0)
+	c.IsTxn = false
+}
+
+func (s *AsyncServer) discardTransaction(c *comm.Client, buf *bytes.Buffer) {
+	c.TxnDiscard()
+	buf.Write(core.RespOK)
+}
+
+func (s *AsyncServer) writeResponse(c *comm.Client, buf *bytes.Buffer) {
+	if _, err := c.Write(buf.Bytes()); err != nil {
+		log.Error(err)
+	}
 }
