@@ -104,6 +104,26 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsonclearCmdMeta = DiceCmdMeta{
+		Name: "JSON.CLEAR",
+		Info: `JSON.CLEAR key [path]
+		Returns an integer reply specifying the number ofmatching JSON arrays and 
+		objects cleared +number of matching JSON numerical values zeroed.
+		Error reply: If the number of arguments is incorrect the key doesn't exist.`,
+		Eval:     evalJSONCLEAR,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	jsondelCmdMeta = DiceCmdMeta{
+		Name: "JSON.DEL",
+		Info: `JSON.DEL key [path]
+		Returns an integer reply specified as the number of paths deleted (0 or more).
+		Returns RespZero if the key doesn't exist or key is expired.
+		Error reply: If the number of arguments is incorrect.`,
+		Eval:     evalJSONDEL,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	ttlCmdMeta = DiceCmdMeta{
 		Name: "TTL",
 		Info: `TTL returns Time-to-Live in secs for the queried key in args
@@ -405,7 +425,14 @@ var (
 		Eval:  nil,
 		Arity: 1,
 	}
-	multiCmdMeta = DiceCmdMeta{
+	qUnwatchCmdMeta = DiceCmdMeta{
+		Name: "QUNWATCH",
+		Info: `Unsubscribes or QUnwatches the client from the given key's watch session.
+		It removes the key from the watch list for the caller client.`,
+		Eval:  nil,
+		Arity: 1,
+	}
+	MultiCmdMeta = DiceCmdMeta{
 		Name: "MULTI",
 		Info: `MULTI marks the start of the transaction for the client.
 		All subsequent commands fired will be queued for atomic execution.
@@ -415,13 +442,13 @@ var (
 		Eval:  evalMULTI,
 		Arity: 1,
 	}
-	execCmdMeta = DiceCmdMeta{
+	ExecCmdMeta = DiceCmdMeta{
 		Name:  "EXEC",
 		Info:  `EXEC executes commands in a transaction, which is initiated by MULTI`,
 		Eval:  nil,
 		Arity: 1,
 	}
-	discardCmdMeta = DiceCmdMeta{
+	DiscardCmdMeta = DiceCmdMeta{
 		Name:  "DISCARD",
 		Info:  `DISCARD discards all the commands in a transaction, which is initiated by MULTI`,
 		Eval:  nil,
@@ -537,12 +564,24 @@ var (
 		Name: "PTTL",
 		Info: `PTTL returns Time-to-Live in millisecs for the queried key in args
 		 The key should be the only param in args else returns with an error
-		 Returns	
+		 Returns
 		 RESP encoded time (in secs) remaining for the key to expire
 		 RESP encoded -2 stating key doesn't exist or key is expired
 		 RESP encoded -1 in case no expiration is set on the key`,
 		Eval:     evalPTTL,
 		Arity:    2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	hsetCmdMeta = DiceCmdMeta{
+		Name: "HSET",
+		Info: `HSET sets the specific fields to their respective values in the
+		hash stored at key. If any given field is already present, the previous
+		value will be overwritten with the new value
+		Returns
+		This command returns the number of keys that are stored at given key.
+		`,
+		Eval:     evalHSET,
+		Arity:    -4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	objectCmdMeta = DiceCmdMeta{
@@ -564,7 +603,7 @@ var (
 	}
 	expiretimeCmdMeta = DiceCmdMeta{
 		Name: "EXPIRETIME",
-		Info: `EXPIRETIME returns the absolute Unix timestamp (since January 1, 1970) in seconds 
+		Info: `EXPIRETIME returns the absolute Unix timestamp (since January 1, 1970) in seconds
 		at which the given key will expire`,
 		Eval:     evalEXPIRETIME,
 		Arity:    -2,
@@ -611,6 +650,102 @@ var (
 		Eval:  evalDBSIZE,
 		Arity: 1,
 	}
+	getSetCmdMeta = DiceCmdMeta{
+		Name:  "GETSET",
+		Info:  `GETSET returns the previous string value of a key after setting it to a new value.`,
+		Eval:  evalGETSET,
+		Arity: 2,
+	}
+	flushdbCmdMeta = DiceCmdMeta{
+		Name:  "FLUSHDB",
+		Info:  `FLUSHDB deletes all the keys of the currently selected DB`,
+		Eval:  evalFLUSHDB,
+		Arity: -1,
+	}
+	bitposCmdMeta = DiceCmdMeta{
+		Name: "BITPOS",
+		Info: `BITPOS returns the position of the first bit set to 1 or 0 in a string
+		 The position is returned, thinking of the string as an array of bits from left to right, 
+		 where the first byte's most significant bit is at position 0, the second byte's most significant 
+		 bit is at position 8, and so forth.
+		 By default, all the bytes contained in the string are examined. It is possible to look for bits only in a 
+		 specified interval passing the additional arguments start and end (it is possible to just pass start, 
+		 the operation will assume that the end is the last byte of the string).
+		 By default, the range is interpreted as a range of bytes and not a range of bits, so start=0 and end=2 means 
+		 to look at the first three bytes.
+		 You can use the optional BIT modifier to specify that the range should be interpreted as a range of bits. So 
+		 start=0 and end=2 means to look at the first three bits.
+		 Note that bit positions are returned always as absolute values starting from bit zero even when start and end 
+		 are used to specify a range.
+		 The start and end can contain negative values in order to index bytes starting from the end of the string, 
+		 where -1 is the last byte, -2 is the penultimate, and so forth. When BIT is specified, -1 is the last bit, -2 
+		 is the penultimate, and so forth.
+		 Returns	
+		 RESP encoded integer indicating the position of the first bit set to 1 or 0 according to the request.
+		 RESP encoded integer if we look for clear bits and the string only contains bits set to 1, the function returns
+	     the first bit not part of the string on the right.
+		 RESP encoded -1 in case the bit argument is 1 and the string is empty or composed of just zero bytes.
+		 RESP encoded -1 if we look for set bits and the string is empty or composed of just zero bytes, -1 is returned.
+		 RESP encoded -1 if a clear bit isn't found in the specified range.`,
+		Eval:  evalBITPOS,
+		Arity: -2,
+	}
+	saddCmdMeta = DiceCmdMeta{
+		Name: "SADD",
+		Info: `SADD key member [member ...]
+		Adds the specified members to the set stored at key.
+		Specified members that are already a member of this set are ignored
+		Non existing keys are treated as empty sets.
+		An error is returned when the value stored at key is not a set.`,
+		Eval:     evalSADD,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	smembersCmdMeta = DiceCmdMeta{
+		Name: "SMEMBERS",
+		Info: `SMEMBERS key
+		Returns all the members of the set value stored at key.`,
+		Eval:     evalSMEMBERS,
+		Arity:    2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	sremCmdMeta = DiceCmdMeta{
+		Name: "SREM",
+		Info: `SREM key member [member ...]
+		Removes the specified members from the set stored at key.
+		Non existing keys are treated as empty sets.
+		An error is returned when the value stored at key is not a set.`,
+		Eval:     evalSREM,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	scardCmdMeta = DiceCmdMeta{
+		Name: "SCARD",
+		Info: `SCARD key
+		Returns the number of elements of the set stored at key.
+		An error is returned when the value stored at key is not a set.`,
+		Eval:     evalSCARD,
+		Arity:    2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	sdiffCmdMeta = DiceCmdMeta{
+		Name: "SDIFF",
+		Info: `SDIFF key1 [key2 ... key_N]
+		Returns the members of the set resulting from the difference between the first set and all the successive sets.
+		Non existing keys are treated as empty sets.`,
+		Eval:     evalSDIFF,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	sinterCmdMeta = DiceCmdMeta{
+		Name: "SINTER",
+		Info: `SINTER key1 [key2 ... key_N]
+		Returns the members of the set resulting from the intersection of all the given sets.
+		Non existing keys are treated as empty sets.`,
+		Eval:     evalSINTER,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -622,6 +757,8 @@ func init() {
 	diceCmds["JSON.SET"] = jsonsetCmdMeta
 	diceCmds["JSON.GET"] = jsongetCmdMeta
 	diceCmds["JSON.TYPE"] = jsontypeCmdMeta
+	diceCmds["JSON.CLEAR"] = jsonclearCmdMeta
+	diceCmds["JSON.DEL"] = jsondelCmdMeta
 	diceCmds["TTL"] = ttlCmdMeta
 	diceCmds["DEL"] = delCmdMeta
 	diceCmds["EXPIRE"] = expireCmdMeta
@@ -657,9 +794,10 @@ func init() {
 	diceCmds["STACKREFPEEK"] = stackrefpeekCmdMeta
 	diceCmds["SUBSCRIBE"] = subscribeCmdMeta
 	diceCmds["QWATCH"] = qwatchCmdMeta
-	diceCmds["MULTI"] = multiCmdMeta
-	diceCmds["EXEC"] = execCmdMeta
-	diceCmds["DISCARD"] = discardCmdMeta
+	diceCmds["QUNWATCH"] = qUnwatchCmdMeta
+	diceCmds["MULTI"] = MultiCmdMeta
+	diceCmds["EXEC"] = ExecCmdMeta
+	diceCmds["DISCARD"] = DiscardCmdMeta
 	diceCmds["ABORT"] = abortCmdMeta
 	diceCmds["COMMAND"] = commandCmdMeta
 	diceCmds["SETBIT"] = setBitCmdMeta
@@ -677,6 +815,7 @@ func init() {
 	diceCmds["RENAME"] = renameCmdMeta
 	diceCmds["GETEX"] = getexCmdMeta
 	diceCmds["PTTL"] = pttlCmdMeta
+	diceCmds["HSET"] = hsetCmdMeta
 	diceCmds["OBJECT"] = objectCmdMeta
 	diceCmds["TOUCH"] = touchCmdMeta
 	diceCmds["LPUSH"] = lpushCmdMeta
@@ -684,4 +823,13 @@ func init() {
 	diceCmds["RPUSH"] = rpushCmdMeta
 	diceCmds["LPOP"] = lpopCmdMeta
 	diceCmds["DBSIZE"] = dbSizeCmdMeta
+	diceCmds["GETSET"] = getSetCmdMeta
+	diceCmds["FLUSHDB"] = flushdbCmdMeta
+	diceCmds["BITPOS"] = bitposCmdMeta
+	diceCmds["SADD"] = saddCmdMeta
+	diceCmds["SMEMBERS"] = smembersCmdMeta
+	diceCmds["SREM"] = sremCmdMeta
+	diceCmds["SCARD"] = scardCmdMeta
+	diceCmds["SDIFF"] = sdiffCmdMeta
+	diceCmds["SINTER"] = sinterCmdMeta
 }

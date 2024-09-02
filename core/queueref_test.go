@@ -14,7 +14,10 @@ import (
 )
 
 func TestQueueRef(t *testing.T) {
-	qr := core.NewQueueRef()
+	qr, err := core.NewQueueRef()
+	if err != nil {
+		t.Fatal(err)
+	}
 	store := core.NewStore()
 
 	if _, err := qr.Remove(store); err != core.ErrQueueEmpty {
@@ -66,7 +69,10 @@ func TestQueueRef(t *testing.T) {
 
 // Test for removing from queue with single non-expired keys
 func TestRemoveSingleNonExpiredKeys(t *testing.T) {
-	qr := core.NewQueueRef()
+	qr, err := core.NewQueueRef()
+	if err != nil {
+		t.Fatal(err)
+	}
 	store := core.NewStore()
 	val := 10
 	store.Put("key1", store.NewObj(val, -1, core.ObjTypeString, core.ObjEncodingInt))
@@ -77,7 +83,10 @@ func TestRemoveSingleNonExpiredKeys(t *testing.T) {
 
 // Test for removing from queue with multiple non-expired keys
 func TestRemoveMultipleNonExpiredKeys(t *testing.T) {
-	qr := core.NewQueueRef()
+	qr, err := core.NewQueueRef()
+	if err != nil {
+		t.Fatal(err)
+	}
 	store := core.NewStore()
 	val := [3]int{10, 20, 30}
 	store.Put("key1", store.NewObj(val[0], -1, core.ObjTypeString, core.ObjEncodingInt))
@@ -97,7 +106,10 @@ func TestRemoveExpiredBeforeNonExpire(t *testing.T) {
 	store := core.NewStore()
 	mockTime := &utils.MockClock{CurrTime: time.Now()}
 	utils.CurrentTime = mockTime
-	qr := core.NewQueueRef()
+	qr, err := core.NewQueueRef()
+	if err != nil {
+		t.Fatal(err)
+	}
 	val := [3]int{10, 20}
 	store.Put("key1", store.NewObj(val[0], 1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key1", store)
@@ -113,7 +125,10 @@ func TestRemoveMultipleExpiredBeforeNonExpire(t *testing.T) {
 	store := core.NewStore()
 	mockTime := &utils.MockClock{CurrTime: time.Now()}
 	utils.CurrentTime = mockTime
-	qr := core.NewQueueRef()
+	qr, err := core.NewQueueRef()
+	if err != nil {
+		t.Fatal(err)
+	}
 	val := [3]int{10, 20, 30}
 	store.Put("key1", store.NewObj(val[0], 1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key1", store)
@@ -122,7 +137,7 @@ func TestRemoveMultipleExpiredBeforeNonExpire(t *testing.T) {
 	store.Put("key3", store.NewObj(val[2], -1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key3", store)
 	mockTime.SetTime(time.Now().Add(2 * time.Millisecond))
-	fmt.Printf("Queue size : %d\n", qr.Length())
+	fmt.Printf("Queue size : %d\n", qr.Length(store))
 	qe, err := qr.Remove(store)
 	assert.Check(t, err == nil || qe.Obj.Value == val[2], fmt.Sprintf("test for removing mulitple expired key before non-expired failed , Expected : %d, Got %d\n", val[2], qe.Obj.Value))
 }
@@ -132,7 +147,10 @@ func TestRemoveAllExpired(t *testing.T) {
 	store := core.NewStore()
 	mockTime := &utils.MockClock{CurrTime: time.Now()}
 	utils.CurrentTime = mockTime
-	qr := core.NewQueueRef()
+	qr, err := core.NewQueueRef()
+	if err != nil {
+		t.Fatal(err)
+	}
 	val := [3]int{10, 20, 30}
 	store.Put("key1", store.NewObj(val[0], 1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key1", store)
@@ -142,8 +160,80 @@ func TestRemoveAllExpired(t *testing.T) {
 	qr.Insert("key3", store)
 	mockTime.SetTime(time.Now().Add(2 * time.Millisecond))
 	// remove from empty queue
-	_, err := qr.Remove(store)
+	_, err = qr.Remove(store)
 	assert.Equal(t, err, core.ErrQueueEmpty, fmt.Sprintf("test for removing from empty queue failed Expected : %s, Got : %s\n", core.ErrQueueEmpty, err))
+}
+
+func TestQueueRefMaxConstraints(t *testing.T) {
+	config.KeysLimit = 20000000
+	core.WatchChan = make(chan core.WatchEvent, config.KeysLimit)
+	core.QueueCount = 0 // reset counter
+	qr, err := core.NewQueueRef()
+	if err != nil {
+		t.Errorf("error creating QueueRef: %v", err)
+	}
+	store := core.NewStore()
+	for i := 0; i < core.MaxQueueSize; i++ {
+		key := fmt.Sprintf("key%d", i)
+		store.Put(key, store.NewObj(i, -1, core.ObjTypeString, core.ObjEncodingInt))
+		if !qr.Insert(key, store) {
+			t.Errorf("insert failed on element %d, expected successful insert", i)
+		}
+	}
+
+	keyOverflow := "key_overflow"
+	store.Put(keyOverflow, store.NewObj(9999, -1, core.ObjTypeString, core.ObjEncodingInt))
+	if qr.Insert(keyOverflow, store) {
+		t.Errorf("insert succeeded on element %d, expected failure due to maxElements limit", core.MaxQueueSize)
+	}
+
+	for i := 0; i < core.MaxQueues-1; i++ {
+		_, err := core.NewQueueRef()
+		if err != nil {
+			t.Errorf("error creating QueueRef: %v", err)
+		}
+	}
+
+	_, err = core.NewQueueRef()
+	if err == nil {
+		t.Errorf("expected error creating QueueRef, got %v", err)
+	}
+}
+
+func TestQueueRefLen(t *testing.T) {
+	store := core.NewStore()
+	core.QueueCount = 0
+	qr, err := core.NewQueueRef()
+	if err != nil {
+		t.Fatalf("error creating queue: %v", err)
+	}
+	mockTime := &utils.MockClock{CurrTime: time.Now()}
+	utils.CurrentTime = mockTime
+
+	store.Put("key1", store.NewObj(10, -1, core.ObjTypeString, core.ObjEncodingInt))
+	qr.Insert("key1", store)
+
+	store.Put("key2", store.NewObj(20, 10, core.ObjTypeString, core.ObjEncodingInt))
+	qr.Insert("key2", store)
+
+	store.Put("key3", store.NewObj(30, -1, core.ObjTypeString, core.ObjEncodingInt))
+	qr.Insert("key3", store)
+
+	store.Put("key4", store.NewObj(40, -1, core.ObjTypeString, core.ObjEncodingInt))
+	qr.Insert("key4", store)
+
+	mockTime.SetTime(time.Now().Add(10 * time.Millisecond))
+	store.Del("key3")
+
+	store.Put("key5", store.NewObj(50, -1, core.ObjTypeString, core.ObjEncodingInt))
+	qr.Insert("key5", store)
+
+	length := qr.Length(store)
+
+	expectedLength := int64(3)
+	if length != expectedLength {
+		t.Errorf("expected queue length %d, got %d", expectedLength, length)
+	}
 }
 
 // Benchmark queueref by inserting expired, non-expired and expired keys in order and removing them
@@ -162,12 +252,14 @@ func benchmarkQueueRefInsertAndRemove(b *testing.B) {
 		{"small", 10},
 		{"medium", 100},
 		{"large", 1000},
-		{"very large", 10000},
 	}
 
 	for _, benchmark := range benchmarkCases {
 		b.Run(fmt.Sprintf("Benchmark %s", benchmark.name), func(b *testing.B) {
-			qr := core.NewQueueRef()
+			qr, err := core.NewQueueRef()
+			if err != nil {
+				b.Fatal(err)
+			}
 			expiredCount := benchmark.nonExpiredCount / 2
 			nonExpiredCount := benchmark.nonExpiredCount
 			config.KeysLimit = benchmark.nonExpiredCount * 10
@@ -227,6 +319,6 @@ func insertKey(b *testing.B, qr *core.QueueRef, i int, expired bool, store *core
 func validateQueueEmpty(b *testing.B, qr *core.QueueRef, store *core.Store) {
 	_, err := qr.Remove(store)
 	if err != core.ErrQueueEmpty {
-		b.Fatalf("Queue not empty after benchmark. Got error: %v, Queue size: %d", err, qr.Length())
+		b.Fatalf("Queue not empty after benchmark. Got error: %v, Queue size: %d", err, qr.Length(store))
 	}
 }

@@ -3,6 +3,7 @@ package tests
 import (
 	"testing"
 
+	"github.com/dicedb/dice/testutils"
 	"gotest.tools/v3/assert"
 )
 
@@ -48,7 +49,6 @@ func TestCopy(t *testing.T) {
 			expected: []interface{}{"OK", int64(1), `[1,2,3]`},
 		},
 		{
-			// Todo: Flakey test. Due to order of elements.
 			name:     "COPY with JSON simple JSON",
 			commands: []string{`JSON.SET k1 $ ` + simpleJSON, "COPY k1 k2", "JSON.GET k2"},
 			expected: []interface{}{"OK", int64(1), simpleJSON},
@@ -76,7 +76,17 @@ func TestCopy(t *testing.T) {
 			fireCommand(conn, "DEL k2")
 			for i, cmd := range tc.commands {
 				result := fireCommand(conn, cmd)
-				assert.Equal(t, tc.expected[i], result, "Value mismatch for cmd %s", cmd)
+				resStr, resOk := result.(string)
+				expStr, expOk := tc.expected[i].(string)
+
+				// If both are valid JSON strings, then compare the JSON values.
+				// else compare the values as is.
+				// This is to handle cases where the expected value is a json string with a different key order.
+				if resOk && expOk && testutils.IsJSONResponse(resStr) && testutils.IsJSONResponse(expStr) {
+					testutils.AssertJSONEqual(t, expStr, resStr)
+				} else {
+					assert.Equal(t, tc.expected[i], result, "Value mismatch for cmd %s", cmd)
+				}
 			}
 		})
 	}

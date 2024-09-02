@@ -17,7 +17,7 @@ func TestDeduceTypeEncoding(t *testing.T) {
 		{
 			name:     "Integer string",
 			input:    "123",
-			wantType: ObjTypeString,
+			wantType: ObjTypeInt,
 			wantEnc:  ObjEncodingInt,
 		},
 		{

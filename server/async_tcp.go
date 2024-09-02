@@ -1,263 +1,373 @@
 package server
 
 import (
+	"bytes"
 	"context"
+	"errors"
+	"fmt"
 	"net"
-	"os"
 	"sync"
-	"sync/atomic"
 	"syscall"
 	"time"
+
+	"github.com/dicedb/dice/core/auth"
+	"github.com/dicedb/dice/core/cmd"
+	"github.com/dicedb/dice/core/comm"
+	"github.com/dicedb/dice/core/ops"
+
+	"github.com/dicedb/dice/core/diceerrors"
 
 	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core"
 	"github.com/dicedb/dice/core/iomultiplexer"
 	"github.com/dicedb/dice/internal/constants"
-	"github.com/dicedb/dice/server/utils"
 )
 
-var cronFrequency time.Duration = 1 * time.Second
-var lastCronExecTime time.Time = utils.GetCurrentTime()
+var ErrAborted = errors.New("server received ABORT command")
+var ErrInvalidIPAddress = errors.New("invalid IP address")
 
-const EngineStatusWAITING int32 = 1 << 1
-const EngineStatusBUSY int32 = 1 << 2
-const EngineStatusSHUTTINGDOWN int32 = 1 << 3
-const EngineStatusTRANSACTION int32 = 1 << 4
-
-var eStatus int32 = EngineStatusWAITING
-
-var connectedClients map[int]*core.Client
-
-var asyncStore = core.NewStore()
-
-func init() {
-	connectedClients = make(map[int]*core.Client)
+type AsyncServer struct {
+	serverFD               int
+	maxClients             int
+	multiplexer            iomultiplexer.IOMultiplexer
+	multiplexerPollTimeout time.Duration
+	connectedClients       map[int]*comm.Client
+	queryWatcher           *core.QueryWatcher
+	shardManager           *core.ShardManager
+	ioChan                 chan *ops.StoreResponse // The server acts like a worker today, this behavior will change once IOThreads are introduced and each client gets its own worker.
 }
 
-func setupUsers() {
-	var (
-		user *core.User
-		err  error
-	)
-	log.Info("setting up default user.", "password required", config.RequirePass != constants.EmptyStr)
-	if user, err = core.UserStore.Add(core.DefaultUserName); err != nil {
-		log.Fatal(err)
-	}
-	if err = user.SetPassword(config.RequirePass); err != nil {
-		log.Fatal(err)
+// NewAsyncServer initializes a new AsyncServer
+func NewAsyncServer() *AsyncServer {
+	shardManager := core.NewShardManager(1)
+	return &AsyncServer{
+		maxClients:             config.ServerMaxClients,
+		connectedClients:       make(map[int]*comm.Client),
+		shardManager:           shardManager,
+		queryWatcher:           core.NewQueryWatcher(shardManager),
+		multiplexerPollTimeout: config.ServerMultiplexerPollTimeout,
+		ioChan:                 make(chan *ops.StoreResponse, 1000),
 	}
 }
 
-// Waits on `core.WatchChannel` to receive updates about keys. Sends the update
-// to all the clients that are watching the key.
-// The message sent to the client will contain the new value and the operation
-// that was performed on the key.
-func WatchKeys(ctx context.Context, wg *sync.WaitGroup) {
-	defer wg.Done()
-	for {
-		select {
-		case event := <-core.WatchChannel:
-			asyncStore.WatchList.Range(func(key, value interface{}) bool {
-				query := key.(core.DSQLQuery)
-				clients := value.(*sync.Map)
-
-				if core.WildCardMatch(query.KeyRegex, event.Key) {
-					queryResult, err := core.ExecuteQuery(query, asyncStore)
-					if err != nil {
-						log.Error(err)
-						return true // continue to next item
-					}
-
-					encodedResult := core.Encode(core.CreatePushResponse(&query, &queryResult), false)
-					clients.Range(func(clientKey, _ interface{}) bool {
-						clientFd := clientKey.(int)
-						_, err := syscall.Write(clientFd, encodedResult)
-						if err != nil {
-							asyncStore.RemoveWatcher(query, clientFd)
-						}
-						return true
-					})
-				}
-				return true
-			})
-		case <-ctx.Done():
-			return
-		}
-	}
-}
-
-func WaitForSignal(wg *sync.WaitGroup, sigs chan os.Signal) {
-	defer wg.Done()
-	<-sigs
-
-	// if server is busy continue to wait
-	for atomic.LoadInt32(&eStatus) == EngineStatusBUSY { //nolint:revive
-	}
-
-	// CRITICAL TO HANDLE
-	// We do not want server to ever go back to BUSY state
-	// when control flow is here ->
-
-	// immediately set the status to be SHUTTING DOWN
-	// the only place where we can set the status to be SHUTTING DOWN
-	atomic.StoreInt32(&eStatus, EngineStatusSHUTTINGDOWN)
-
-	// if server is in any other state, initiate a shutdown
-	core.Shutdown(asyncStore)
-	os.Exit(0) //nolint:gocritic
-}
-
-func FindPortAndBind() (int, error) {
-	serverFD, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, 0)
+// SetupUsers initializes the default user for the server
+func (s *AsyncServer) SetupUsers() error {
+	user, err := auth.UserStore.Add(auth.DefaultUserName)
 	if err != nil {
-		return 0, err
+		return err
 	}
+	if err := user.SetPassword(config.RequirePass); err != nil {
+		return err
+	}
+	log.Info("default user set up", "password required", config.RequirePass != constants.EmptyStr)
+	return nil
+}
+
+// FindPortAndBind binds the server to the given host and port
+func (s *AsyncServer) FindPortAndBind() (socketErr error) {
+	serverFD, socketErr := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, 0)
+
+	if socketErr != nil {
+		return socketErr
+	}
+
+	// Close the socket on exit if an error occurs
+	defer func() {
+		if socketErr != nil {
+			if err := syscall.Close(serverFD); err != nil {
+				log.Warn("failed to close server socket", "error", err)
+			}
+		}
+	}()
 
 	if err := syscall.SetsockoptInt(serverFD, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
-		return 0, err
+		return err
 	}
 
-	// Set the Socket operate in a non-blocking mode
+	s.serverFD = serverFD
+
 	if err := syscall.SetNonblock(serverFD, true); err != nil {
-		return 0, err
+		return err
 	}
 
-	// Bind the IP and the port
 	ip4 := net.ParseIP(config.Host)
+	if ip4 == nil {
+		return ErrInvalidIPAddress
+	}
 
-	if err := syscall.Bind(serverFD, &syscall.SockaddrInet4{
+	return syscall.Bind(serverFD, &syscall.SockaddrInet4{
 		Port: config.Port,
 		Addr: [4]byte{ip4[0], ip4[1], ip4[2], ip4[3]},
-	}); err != nil {
-		return 0, err
-	}
-
-	return serverFD, nil
+	})
 }
 
-func RunAsyncTCPServer(serverFD int, wg *sync.WaitGroup) {
-	defer wg.Done()
-	defer syscall.Close(serverFD)
+// ClosePort ensures the server socket is closed properly.
+func (s *AsyncServer) ClosePort() {
+	if s.serverFD != 0 {
+		if err := syscall.Close(s.serverFD); err != nil {
+			log.Warn("failed to close server socket", "error", err)
+		} else {
+			log.Info("Server socket closed successfully")
+		}
+		s.serverFD = 0
+	}
+}
 
-	log.Info("starting an asynchronous TCP server on", config.Host, config.Port)
+// InitiateShutdown gracefully shuts down the server
+func (s *AsyncServer) InitiateShutdown() {
+	// Close the server socket first
+	s.ClosePort()
 
-	setupUsers()
+	s.shardManager.UnregisterWorker("server")
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	// Close all client connections
+	for fd := range s.connectedClients {
+		if err := syscall.Close(fd); err != nil {
+			log.Warn("failed to close client connection", "error", err)
+		}
+		delete(s.connectedClients, fd)
+	}
+	log.Info("cleaned up all client connections")
+}
 
-	defer func() {
-		atomic.StoreInt32(&eStatus, EngineStatusSHUTTINGDOWN)
-	}()
-	maxClients := 20000
+// Run starts the server, accepts connections, and handles client requests
+func (s *AsyncServer) Run(ctx context.Context) error {
+	if err := s.SetupUsers(); err != nil {
+		return err
+	}
+
+	watchCtx, cancelWatch := context.WithCancel(ctx)
+	defer cancelWatch()
+	var wg sync.WaitGroup
 
 	wg.Add(1)
-	go WatchKeys(ctx, wg)
+	go func() {
+		defer wg.Done()
+		s.queryWatcher.Run(watchCtx)
+	}()
 
-	// Start listening
-	if err := syscall.Listen(serverFD, maxClients); err != nil {
-		log.Fatal("error while listening", err) //nolint:gocritic
+	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
+	defer cancelShardManager()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		s.shardManager.Run(shardManagerCtx)
+	}()
+
+	s.shardManager.RegisterWorker("server", s.ioChan)
+
+	if err := syscall.Listen(s.serverFD, s.maxClients); err != nil {
+		return err
 	}
 
-	log.Info("ready to accept connections")
-
-	// AsyncIO starts here!!
-
-	// creating multiplexer instance
-	var multiplexer iomultiplexer.IOMultiplexer
-	multiplexer, err := iomultiplexer.New(maxClients)
+	var err error
+	s.multiplexer, err = iomultiplexer.New(s.maxClients)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	defer multiplexer.Close()
 
-	// Listen to read events on the Server itself
-	if err := multiplexer.Subscribe(iomultiplexer.Event{
-		Fd: serverFD,
+	defer func() {
+		if err := s.multiplexer.Close(); err != nil {
+			log.Warn("failed to close multiplexer", "error", err)
+		}
+	}()
+
+	if err := s.multiplexer.Subscribe(iomultiplexer.Event{
+		Fd: s.serverFD,
 		Op: iomultiplexer.OpRead,
 	}); err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	// loop until the server is not shutting down
-	for atomic.LoadInt32(&eStatus) != EngineStatusSHUTTINGDOWN {
-		if time.Now().After(lastCronExecTime.Add(cronFrequency)) {
-			core.DeleteExpiredKeys(asyncStore)
-			lastCronExecTime = utils.GetCurrentTime()
-		}
+	eventLoopCtx, cancelEventLoop := context.WithCancel(ctx)
+	defer cancelEventLoop()
 
-		// Say, the Engine triggered SHUTTING down when the control flow is here ->
-		// Current: Engine status == WAITING
-		// Update: Engine status = SHUTTING_DOWN
-		// Then we have to exit (handled in Signal Handler)
-
-		// poll for events that are ready for IO
-		events, err := multiplexer.Poll(-1)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err = s.eventLoop(eventLoopCtx)
 		if err != nil {
+			cancelWatch()
+			cancelShardManager()
+			cancelEventLoop()
+			s.InitiateShutdown()
+		}
+	}()
+
+	wg.Wait()
+
+	return err
+}
+
+// eventLoop listens for events and handles client requests. It also runs a cron job to delete expired keys
+func (s *AsyncServer) eventLoop(ctx context.Context) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			events, err := s.multiplexer.Poll(s.multiplexerPollTimeout)
+			if err != nil {
+				if errors.Is(err, syscall.EINTR) {
+					continue
+				}
+				return err
+			}
+
+			for _, event := range events {
+				if event.Fd == s.serverFD {
+					if err := s.acceptConnection(); err != nil {
+						log.Warn(err)
+					}
+				} else {
+					if err := s.handleClientEvent(event); err != nil {
+						if errors.Is(err, ErrAborted) {
+							log.Info("Received abort command, initiating graceful shutdown")
+							return err
+						}
+						log.Warn(err)
+					}
+				}
+			}
+		}
+	}
+}
+
+// acceptConnection accepts a new client connection and subscribes to read events on the connection.
+func (s *AsyncServer) acceptConnection() error {
+	fd, _, err := syscall.Accept(s.serverFD)
+	if err != nil {
+		return err
+	}
+
+	s.connectedClients[fd] = comm.NewClient(fd)
+	if err := syscall.SetNonblock(fd, true); err != nil {
+		return err
+	}
+
+	return s.multiplexer.Subscribe(iomultiplexer.Event{
+		Fd: fd,
+		Op: iomultiplexer.OpRead,
+	})
+}
+
+// handleClientEvent reads commands from the client connection and responds to the client. It also handles disconnections.
+func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
+	client := s.connectedClients[event.Fd]
+	if client == nil {
+		return nil
+	}
+
+	commands, hasAbort, err := readCommands(client)
+	if err != nil {
+		if err := syscall.Close(event.Fd); err != nil {
+			log.Printf("error closing client connection: %v", err)
+		}
+		delete(s.connectedClients, event.Fd)
+		return err
+	}
+
+	s.EvalAndRespond(commands, client)
+	if hasAbort {
+		return ErrAborted
+	}
+
+	return nil
+}
+
+func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.RedisCmd, buf *bytes.Buffer, c *comm.Client) {
+	s.shardManager.GetShard(0).ReqChan <- &ops.StoreOp{
+		Cmd:      redisCmd,
+		WorkerID: "server",
+		ShardID:  0,
+		Client:   c,
+	}
+
+	response := <-s.ioChan
+	buf.Write(response.Result)
+}
+
+func (s *AsyncServer) EvalAndRespond(cmds cmd.RedisCmds, c *comm.Client) {
+	var response []byte
+	buf := bytes.NewBuffer(response)
+
+	for _, redisCmd := range cmds {
+		if !s.isAuthenticated(redisCmd, c, buf) {
 			continue
 		}
 
-		// Here, we do not want server to go back from SHUTTING DOWN
-		// to BUSY
-		// If the engine status == SHUTTING_DOWN over here ->
-		// We have to exit
-		// hence the only legal transitiion is from WAITING to BUSY
-		// if that does not happen then we can exit.
-
-		// mark engine as BUSY only when it is in the waiting state
-		if !atomic.CompareAndSwapInt32(&eStatus, EngineStatusWAITING, EngineStatusBUSY) {
-			// if swap unsuccessful then the existing status is not WAITING, but something else
-			if eStatus == EngineStatusSHUTTINGDOWN {
-				return
-			}
+		if c.IsTxn {
+			s.handleTransactionCommand(redisCmd, c, buf)
+		} else {
+			s.handleNonTransactionCommand(redisCmd, c, buf)
 		}
+	}
 
-		for _, event := range events {
-			// if the socket server itself is ready for an IO
-			if event.Fd == serverFD {
-				// accept the incoming connection from a client
-				fd, _, err := syscall.Accept(serverFD)
-				if err != nil {
-					log.Warn(err)
-					continue
-				}
+	s.writeResponse(c, buf)
+}
 
-				connectedClients[fd] = core.NewClient(fd)
-				if err := syscall.SetNonblock(fd, true); err != nil {
-					log.Fatal(err)
-				}
+func (s *AsyncServer) isAuthenticated(redisCmd *cmd.RedisCmd, c *comm.Client, buf *bytes.Buffer) bool {
+	if redisCmd.Cmd != auth.AuthCmd && !c.Session.IsActive() {
+		buf.Write(core.Encode(errors.New("NOAUTH Authentication required"), false))
+		return false
+	}
+	return true
+}
 
-				// add this new TCP connection to be monitored
-				if err := multiplexer.Subscribe(iomultiplexer.Event{
-					Fd: fd,
-					Op: iomultiplexer.OpRead,
-				}); err != nil {
-					log.Fatal(err)
-				}
-			} else {
-				comm := connectedClients[event.Fd]
-				if comm == nil {
-					continue
-				}
-				cmds, hasABORT, err := readCommands(comm)
-
-				if err != nil {
-					syscall.Close(event.Fd)
-					delete(connectedClients, event.Fd)
-					continue
-				}
-				respond(cmds, comm, asyncStore)
-				if hasABORT {
-					cancel()
-					return
-				}
-			}
+func (s *AsyncServer) handleTransactionCommand(redisCmd *cmd.RedisCmd, c *comm.Client, buf *bytes.Buffer) {
+	if core.TxnCommands[redisCmd.Cmd] {
+		switch redisCmd.Cmd {
+		case core.ExecCmdMeta.Name:
+			s.executeTransaction(c, buf)
+		case core.DiscardCmdMeta.Name:
+			s.discardTransaction(c, buf)
+		default:
+			log.Errorf("Unhandled transaction command: %s", redisCmd.Cmd)
 		}
+	} else {
+		c.TxnQueue(redisCmd)
+		buf.Write(core.RespQueued)
+	}
+}
 
-		// mark engine as WAITING
-		// no contention as the signal handler is blocked until
-		// the engine is BUSY
-		atomic.StoreInt32(&eStatus, EngineStatusWAITING)
+func (s *AsyncServer) handleNonTransactionCommand(redisCmd *cmd.RedisCmd, c *comm.Client, buf *bytes.Buffer) {
+	switch redisCmd.Cmd {
+	case core.MultiCmdMeta.Name:
+		c.TxnBegin()
+		buf.Write(core.RespOK)
+	case core.ExecCmdMeta.Name:
+		buf.Write(diceerrors.NewErrWithMessage("EXEC without MULTI"))
+	case core.DiscardCmdMeta.Name:
+		buf.Write(diceerrors.NewErrWithMessage("DISCARD without MULTI"))
+	default:
+		s.executeCommandToBuffer(redisCmd, buf, c)
+	}
+}
+
+func (s *AsyncServer) executeTransaction(c *comm.Client, buf *bytes.Buffer) {
+	_, err := fmt.Fprintf(buf, "*%d\r\n", len(c.Cqueue))
+	if err != nil {
+		log.Errorf("Error writing to buffer: %v", err)
+		return
+	}
+
+	for _, cmd := range c.Cqueue {
+		s.executeCommandToBuffer(cmd, buf, c)
+	}
+
+	c.Cqueue = make(cmd.RedisCmds, 0)
+	c.IsTxn = false
+}
+
+func (s *AsyncServer) discardTransaction(c *comm.Client, buf *bytes.Buffer) {
+	c.TxnDiscard()
+	buf.Write(core.RespOK)
+}
+
+func (s *AsyncServer) writeResponse(c *comm.Client, buf *bytes.Buffer) {
+	if _, err := c.Write(buf.Bytes()); err != nil {
+		log.Error(err)
 	}
 }

@@ -1,13 +1,11 @@
 package core
 
 import (
-	"unsafe"
-
 	"github.com/dicedb/dice/server/utils"
 )
 
 func hasExpired(obj *Obj, store *Store) bool {
-	exp, ok := store.expires[obj]
+	exp, ok := store.expires.Get(obj)
 	if !ok {
 		return false
 	}
@@ -15,12 +13,12 @@ func hasExpired(obj *Obj, store *Store) bool {
 }
 
 func getExpiry(obj *Obj, store *Store) (uint64, bool) {
-	exp, ok := store.expires[obj]
+	exp, ok := store.expires.Get(obj)
 	return exp, ok
 }
 
 func delExpiry(obj *Obj, store *Store) {
-	delete(store.expires, obj)
+	store.expires.Delete(obj)
 }
 
 // TODO: Optimize
@@ -29,22 +27,20 @@ func delExpiry(obj *Obj, store *Store) {
 func expireSample(store *Store) float32 {
 	var limit int = 20
 	var expiredCount int = 0
-	var keysToDelete []unsafe.Pointer
+	var keysToDelete []string
 
 	withLocks(func() {
 		// Collect keys to be deleted
-		for keyPtr, obj := range store.store {
-			// once we iterated to 20 keys that have some expiration set
-			// we break the loop
-			if limit == 0 {
-				break
-			}
+		store.store.All(func(keyPtr string, obj *Obj) bool {
 			limit--
 			if hasExpired(obj, store) {
 				keysToDelete = append(keysToDelete, keyPtr)
 				expiredCount++
 			}
-		}
+			// once we iterated to 20 keys that have some expiration set
+			// we break the loop
+			return limit >= 0
+		})
 	}, store, WithStoreRLock())
 
 	// Delete the keys outside the read lock

@@ -10,10 +10,29 @@ import (
 )
 
 func IsJSONResponse(s string) bool {
-	return (s != constants.EmptyStr && (s[0] == '{' || s[0] == '['))
+	return (s != constants.EmptyStr && (sonic.ValidString(s)))
 }
 
 func AssertJSONEqual(t *testing.T, expected, actual string) {
+	if !compareJSONs(t, expected, actual) {
+		t.Errorf("JSON not equal.\nExpected: %s\nActual: %s", expected, actual)
+	}
+}
+
+func AssertJSONEqualList(t *testing.T, expected []string, actual string) {
+	res := false
+	for _, exp := range expected {
+		if compareJSONs(t, exp, actual) {
+			res = true
+			break
+		}
+	}
+	if !res {
+		t.Errorf("JSON not equal.\nExpected one of: %s\nActual: %s", expected, actual)
+	}
+}
+
+func compareJSONs(t *testing.T, expected, actual string) bool {
 	var expectedJSON, actualJSON interface{}
 
 	err := sonic.UnmarshalString(expected, &expectedJSON)
@@ -22,25 +41,23 @@ func AssertJSONEqual(t *testing.T, expected, actual string) {
 	err = sonic.UnmarshalString(actual, &actualJSON)
 	assert.NilError(t, err, "Failed to unmarshal actual JSON")
 
-	if !reflect.DeepEqual(NormalizeJSON(expectedJSON), NormalizeJSON(actualJSON)) {
-		t.Errorf("JSON not equal.\nExpected: %s\nActual: %s", expected, actual)
-	}
+	return reflect.DeepEqual(NormalizeJSON(expectedJSON), NormalizeJSON(actualJSON))
 }
 
-// TODO: Prone to flakiness due to changing order of elements in array. Needs work.
 func NormalizeJSON(v interface{}) interface{} {
 	switch v := v.(type) {
 	case map[string]interface{}:
-		nm := make(map[string]interface{})
-		for k, v := range v {
-			nm[k] = NormalizeJSON(v)
+		normalizedMap := make(map[string]interface{})
+		for k, val := range v {
+			normalizedMap[k] = NormalizeJSON(val)
 		}
-		return nm
+		return normalizedMap
 	case []interface{}:
+		normalizedArray := make([]interface{}, len(v))
 		for i, e := range v {
-			v[i] = NormalizeJSON(e)
+			normalizedArray[i] = NormalizeJSON(e)
 		}
-		return v
+		return normalizedArray
 	default:
 		return v
 	}

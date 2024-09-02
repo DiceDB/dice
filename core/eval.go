@@ -5,15 +5,20 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
+	"github.com/dicedb/dice/core/auth"
+	"github.com/dicedb/dice/core/comm"
+
 	"github.com/bytedance/sonic"
 	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core/bit"
+	"github.com/dicedb/dice/core/diceerrors"
 	"github.com/dicedb/dice/internal/constants"
 	"github.com/dicedb/dice/server/utils"
 	"github.com/ohler55/ojg/jp"
@@ -35,7 +40,7 @@ var RespMinusOne []byte = []byte(":-1\r\n")
 var RespMinusTwo []byte = []byte(":-2\r\n")
 var RespEmptyArray []byte = []byte("*0\r\n")
 
-var txnCommands map[string]bool
+var TxnCommands map[string]bool
 var serverID string
 var diceCommandsCount int
 
@@ -43,7 +48,7 @@ const defaultRootPath = "$"
 
 func init() {
 	diceCommandsCount = len(diceCmds)
-	txnCommands = map[string]bool{"EXEC": true, "DISCARD": true}
+	TxnCommands = map[string]bool{"EXEC": true, "DISCARD": true}
 	serverID = fmt.Sprintf("%s:%d", config.Host, config.Port)
 }
 
@@ -54,7 +59,7 @@ func evalPING(args []string, store *Store) []byte {
 	var b []byte
 
 	if len(args) >= 2 {
-		return Encode(errors.New("ERR wrong number of arguments for 'ping' command"), false)
+		return diceerrors.NewErrArity("PING")
 	}
 
 	if len(args) == 0 {
@@ -68,16 +73,16 @@ func evalPING(args []string, store *Store) []byte {
 
 // evalAUTH returns with an encoded "OK" if the user is authenticated
 // If the user is not authenticated, it returns with an encoded error message
-func evalAUTH(args []string, c *Client) []byte {
+func evalAUTH(args []string, c *comm.Client) []byte {
 	var (
 		err error
 	)
 
 	if config.RequirePass == "" {
-		return Encode(errors.New("ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?"), false)
+		return diceerrors.NewErrWithMessage("AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?")
 	}
 
-	var username = DefaultUserName
+	var username = auth.DefaultUserName
 	var password string
 
 	if len(args) == 1 {
@@ -85,7 +90,7 @@ func evalAUTH(args []string, c *Client) []byte {
 	} else if len(args) == 2 {
 		username, password = args[0], args[1]
 	} else {
-		return Encode(errors.New("ERR wrong number of arguments for 'auth' command"), false)
+		return diceerrors.NewErrArity("AUTH")
 	}
 
 	if err = c.Session.Validate(username, password); err != nil {
@@ -111,7 +116,7 @@ func evalAUTH(args []string, c *Client) []byte {
 // If the key already exists then the value will be overwritten and expiry will be discarded
 func evalSET(args []string, store *Store) []byte {
 	if len(args) <= 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'set' command"), false)
+		return diceerrors.NewErrArity("SET")
 	}
 
 	var key, value string
@@ -127,19 +132,20 @@ func evalSET(args []string, store *Store) []byte {
 		switch arg {
 		case constants.Ex, constants.Px:
 			if state != Uninitialized {
-				return Encode(errors.New("ERR syntax error"), false)
+				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 			}
 			i++
 			if i == len(args) {
-				return Encode(errors.New("ERR syntax error"), false)
+				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 			}
 
 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
-				return Encode(errors.New("ERR value is not an integer or out of range"), false)
+				return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
 			}
+
 			if exDuration <= 0 {
-				return Encode(errors.New("ERR invalid expire time in 'set' command"), false)
+				return diceerrors.NewErrExpireTime("SET")
 			}
 
 			// converting seconds to milliseconds
@@ -151,19 +157,19 @@ func evalSET(args []string, store *Store) []byte {
 
 		case constants.Pxat, constants.Exat:
 			if state != Uninitialized {
-				return Encode(errors.New("ERR syntax error"), false)
+				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 			}
 			i++
 			if i == len(args) {
-				return Encode(errors.New("ERR syntax error"), false)
+				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 			}
 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
-				return Encode(errors.New("ERR value is not an integer or out of range"), false)
+				return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
 			}
 
 			if exDuration < 0 {
-				return Encode(errors.New("ERR invalid expire time in 'set' command"), false)
+				return diceerrors.NewErrExpireTime("SET")
 			}
 
 			if arg == constants.Exat {
@@ -193,7 +199,7 @@ func evalSET(args []string, store *Store) []byte {
 		case constants.KEEPTTL, constants.Keepttl:
 			keepttl = true
 		default:
-			return Encode(errors.New("ERR syntax error"), false)
+			return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 		}
 	}
 
@@ -223,7 +229,7 @@ func evalSET(args []string, store *Store) []byte {
 // If the key already exists then the value will be overwritten and expiry will be discarded
 func evalMSET(args []string, store *Store) []byte {
 	if len(args) <= 1 || len(args)%2 != 0 {
-		return Encode(errors.New("ERR wrong number of arguments for 'mset' command"), false)
+		return diceerrors.NewErrArity("MSET")
 	}
 
 	// MSET does not have expiry support
@@ -246,7 +252,7 @@ func evalMSET(args []string, store *Store) []byte {
 // evalGET returns RespNIL if key is expired or it does not exist
 func evalGET(args []string, store *Store) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'get' command"), false)
+		return diceerrors.NewErrArity("GET")
 	}
 
 	var key = args[0]
@@ -265,28 +271,35 @@ func evalGET(args []string, store *Store) []byte {
 		if val, ok := obj.Value.(int64); ok {
 			return Encode(val, false)
 		}
-		return Encode(errors.New("ERR expected int64 but got another type"), false)
+		return diceerrors.NewErrWithFormattedMessage("expected int64 but got another type: %s", obj.Value)
 
 	case ObjEncodingEmbStr, ObjEncodingRaw:
 		// Value is stored as a string, use type assertion
 		if val, ok := obj.Value.(string); ok {
 			return Encode(val, false)
 		}
-		return Encode(errors.New("ERR expected string but got another type"), false)
+		return diceerrors.NewErrWithMessage("expected string but got another type")
+
+	case ObjEncodingByteArray:
+		// Value is stored as a bytearray, use type assertion
+		if val, ok := obj.Value.(*ByteArray); ok {
+			return Encode(string(val.data), false)
+		}
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 
 	default:
-		return Encode(fmt.Errorf("ERR unsupported encoding: %d", oEnc), false)
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 	}
 }
 
 // evalDBSIZE returns the number of keys in the database.
 func evalDBSIZE(args []string, store *Store) []byte {
 	if len(args) > 0 {
-		return Encode(errors.New("ERR wrong number of arguments for 'DBSIZE' command"), false)
+		return diceerrors.NewErrArity("DBSIZE")
 	}
 
 	// return the RESP encoded value
-	return Encode(store.GetDBSize(), false)
+	return Encode(KeyspaceStat[0]["keys"], false)
 }
 
 // evalGETDEL returns the value for the queried key in args
@@ -296,7 +309,7 @@ func evalDBSIZE(args []string, store *Store) []byte {
 // evalGETDEL returns RespNIL if key is expired or it does not exist
 func evalGETDEL(args []string, store *Store) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'getdel' command"), false)
+		return diceerrors.NewErrArity("GETDEL")
 	}
 
 	var key = args[0]
@@ -309,8 +322,151 @@ func evalGETDEL(args []string, store *Store) []byte {
 		return RespNIL
 	}
 
+	// If the object exists, check if it is a set object.
+	if err := assertType(obj.TypeEncoding, ObjTypeSet); err == nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
 	// return the RESP encoded value
 	return Encode(obj.Value, false)
+}
+
+// evalJSONDEL delete a value that the given json path include in.
+// Returns RespZero if key is expired or it does not exist
+// Returns encoded error response if incorrect number of arguments
+// Returns an integer reply specified as the number of paths deleted (0 or more)
+func evalJSONDEL(args []string, store *Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("JSON.DEL")
+	}
+	key := args[0]
+
+	// Default path is root if not specified
+	path := defaultRootPath
+	if len(args) > 1 {
+		path = args[1]
+	}
+
+	// Retrieve the object from the database
+	obj := store.Get(key)
+	if obj == nil {
+		return RespZero
+	}
+
+	errWithMessage := assertTypeAndEncoding(obj.TypeEncoding, ObjTypeJSON, ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
+	}
+
+	jsonData := obj.Value
+
+	_, err := sonic.Marshal(jsonData)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
+	}
+
+	if len(args) == 1 || path == defaultRootPath {
+		store.Del(key)
+		return RespOne
+	}
+
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("invalid JSONPath")
+	}
+	results := expr.Get(jsonData)
+	err = expr.Del(jsonData)
+	if err != nil {
+		return diceerrors.NewErrWithMessage(err.Error())
+	}
+	// Create a new object with the updated JSON data
+	newObj := store.NewObj(jsonData, -1, ObjTypeJSON, ObjEncodingJSON)
+	store.Put(key, newObj)
+	return Encode(len(results), false)
+}
+
+// evalJSONCLEAR Clear container values (arrays/objects) and set numeric values to 0,
+// Already cleared values are ignored for empty containers and zero numbers
+// args must contain at least the key;  (path unused in this implementation)
+// Returns encoded error if key is expired or it does not exist
+// Returns encoded error response if incorrect number of arguments
+// Returns an integer reply specifying the number of matching JSON arrays
+// and objects cleared + number of matching JSON numerical values zeroed.
+func evalJSONCLEAR(args []string, store *Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("JSON.CLEAR")
+	}
+	key := args[0]
+
+	// Default path is root if not specified
+	path := defaultRootPath
+	if len(args) > 1 {
+		path = args[1]
+	}
+
+	// Retrieve the object from the database
+	obj := store.Get(key)
+	if obj == nil {
+		return diceerrors.NewErrWithMessage("could not perform this operation on a key that doesn't exist")
+	}
+
+	errWithMessage := assertTypeAndEncoding(obj.TypeEncoding, ObjTypeJSON, ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
+	}
+
+	jsonData := obj.Value
+
+	_, err := sonic.Marshal(jsonData)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
+	}
+
+	var countClear uint64 = 0
+	if len(args) == 1 || path == defaultRootPath {
+		if jsonData != struct{}{} {
+			// If path is root and len(args) == 1, return it instantly
+			newObj := store.NewObj(struct{}{}, -1, ObjTypeJSON, ObjEncodingJSON)
+			store.Put(key, newObj)
+			countClear++
+			return Encode(countClear, false)
+		}
+	}
+
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("invalid JSONPath")
+	}
+
+	_, err = expr.Modify(jsonData, func(element any) (altered any, changed bool) {
+		switch utils.GetJSONFieldType(element) {
+		case constants.IntegerType, constants.NumberType:
+			if element != constants.NumberZeroValue {
+				countClear++
+				return constants.NumberZeroValue, true
+			}
+		case constants.ArrayType:
+			if len(element.([]interface{})) != 0 {
+				countClear++
+				return []interface{}{}, true
+			}
+		case constants.ObjectType:
+			if element != struct{}{} {
+				countClear++
+				return struct{}{}, true
+			}
+		default:
+			return element, false
+		}
+		return
+	})
+	if err != nil {
+		return diceerrors.NewErrWithMessage(err.Error())
+	}
+	// Create a new object with the updated JSON data
+	newObj := store.NewObj(jsonData, -1, ObjTypeJSON, ObjEncodingJSON)
+	store.Put(key, newObj)
+	return Encode(countClear, false)
 }
 
 // evalJSONTYPE retrieves a JSON value type stored at the specified key
@@ -320,7 +476,7 @@ func evalGETDEL(args []string, store *Store) []byte {
 // The RESP value of the key's value type is encoded and then returned
 func evalJSONTYPE(args []string, store *Store) []byte {
 	if len(args) < 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'JSON.TYPE' command"), false)
+		return diceerrors.NewErrArity("JSON.TYPE")
 	}
 	key := args[0]
 
@@ -335,40 +491,35 @@ func evalJSONTYPE(args []string, store *Store) []byte {
 		return RespNIL
 	}
 
-	err := assertType(obj.TypeEncoding, ObjTypeJSON)
-	if err != nil {
-		return Encode(err, false)
-	}
-	err = assertEncoding(obj.TypeEncoding, ObjEncodingJSON)
-	if err != nil {
-		return Encode(err, false)
+	errWithMessage := assertTypeAndEncoding(obj.TypeEncoding, ObjTypeJSON, ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
 	}
 
 	jsonData := obj.Value
 
-	// If path is root, return "object" instantly
 	if path == defaultRootPath {
 		_, err := sonic.Marshal(jsonData)
 		if err != nil {
-			return Encode(errors.New("ERR could not serialize result"), false)
+			return diceerrors.NewErrWithMessage("could not serialize result")
 		}
-		return Encode(constants.ObjectType, false)
+		// If path is root and len(args) == 1, return "object" instantly
+		if len(args) == 1 {
+			return Encode(constants.ObjectType, false)
+		}
 	}
 
 	// Parse the JSONPath expression
 	expr, err := jp.ParseString(path)
 	if err != nil {
-		return Encode(errors.New("ERR invalid JSONPath"), false)
+		return diceerrors.NewErrWithMessage("invalid JSONPath")
 	}
 
 	results := expr.Get(jsonData)
 	if len(results) == 0 {
-		return RespNIL
+		return RespEmptyArray
 	}
-	if len(results) == 1 {
-		jsonType := utils.GetJSONFieldType(results[0])
-		return Encode(jsonType, false)
-	}
+
 	typeList := make([]string, 0, len(results))
 	for _, result := range results {
 		jsonType := utils.GetJSONFieldType(result)
@@ -384,7 +535,7 @@ func evalJSONTYPE(args []string, store *Store) []byte {
 // The RESP value of the key is encoded and then returned
 func evalJSONGET(args []string, store *Store) []byte {
 	if len(args) < 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'JSON.GET' command"), false)
+		return diceerrors.NewErrArity("JSON.GET")
 	}
 
 	key := args[0]
@@ -401,13 +552,9 @@ func evalJSONGET(args []string, store *Store) []byte {
 	}
 
 	// Check if the object is of JSON type
-	err := assertType(obj.TypeEncoding, ObjTypeJSON)
-	if err != nil {
-		return Encode(err, false)
-	}
-	err = assertEncoding(obj.TypeEncoding, ObjEncodingJSON)
-	if err != nil {
-		return Encode(err, false)
+	errWithMessage := assertTypeAndEncoding(obj.TypeEncoding, ObjTypeJSON, ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
 	}
 
 	jsonData := obj.Value
@@ -416,7 +563,7 @@ func evalJSONGET(args []string, store *Store) []byte {
 	if path == defaultRootPath {
 		resultBytes, err := sonic.Marshal(jsonData)
 		if err != nil {
-			return Encode(errors.New("ERR could not serialize result"), false)
+			return diceerrors.NewErrWithMessage("could not serialize result")
 		}
 		return Encode(string(resultBytes), false)
 	}
@@ -424,7 +571,7 @@ func evalJSONGET(args []string, store *Store) []byte {
 	// Parse the JSONPath expression
 	expr, err := jp.ParseString(path)
 	if err != nil {
-		return Encode(errors.New("ERR invalid JSONPath"), false)
+		return diceerrors.NewErrWithMessage("invalid JSONPath")
 	}
 
 	// Execute the JSONPath query
@@ -441,7 +588,7 @@ func evalJSONGET(args []string, store *Store) []byte {
 		resultBytes, err = sonic.Marshal(results)
 	}
 	if err != nil {
-		return Encode(errors.New("ERR could not serialize result"), false)
+		return diceerrors.NewErrWithMessage("could not serialize result")
 	}
 	return Encode(string(resultBytes), false)
 }
@@ -454,7 +601,7 @@ func evalJSONGET(args []string, store *Store) []byte {
 func evalJSONSET(args []string, store *Store) []byte {
 	// Check if there are enough arguments
 	if len(args) < 3 {
-		return Encode(errors.New("ERR wrong number of arguments for 'JSON.SET' command"), false)
+		return diceerrors.NewErrArity("JSON.SET")
 	}
 
 	key := args[0]
@@ -464,7 +611,7 @@ func evalJSONSET(args []string, store *Store) []byte {
 		switch args[i] {
 		case constants.NX, constants.Nx:
 			if i != len(args)-1 {
-				return Encode(errors.New("ERR syntax error"), false)
+				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 			}
 			obj := store.Get(key)
 			if obj != nil {
@@ -472,7 +619,7 @@ func evalJSONSET(args []string, store *Store) []byte {
 			}
 		case constants.XX, constants.Xx:
 			if i != len(args)-1 {
-				return Encode(errors.New("ERR syntax error"), false)
+				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 			}
 			obj := store.Get(key)
 			if obj == nil {
@@ -480,14 +627,14 @@ func evalJSONSET(args []string, store *Store) []byte {
 			}
 
 		default:
-			return Encode(errors.New("ERR syntax error"), false)
+			return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 		}
 	}
 
 	// Parse the JSON string
 	var jsonValue interface{}
 	if err := sonic.UnmarshalString(jsonStr, &jsonValue); err != nil {
-		return Encode(fmt.Errorf("ERR invalid JSON: %v", err.Error()), false)
+		return diceerrors.NewErrWithFormattedMessage("invalid JSON: %v", err.Error())
 	}
 
 	// Retrieve existing object or create new one
@@ -518,12 +665,12 @@ func evalJSONSET(args []string, store *Store) []byte {
 	if path != defaultRootPath {
 		expr, err := jp.ParseString(path)
 		if err != nil {
-			return Encode(errors.New("ERR invalid JSONPath"), false)
+			return diceerrors.NewErrWithMessage("invalid JSONPath")
 		}
 
 		err = expr.Set(rootData, jsonValue)
 		if err != nil {
-			return Encode(errors.New("ERR failed to set value"), false)
+			return diceerrors.NewErrWithMessage("failed to set value")
 		}
 	} else {
 		// If path is root, replace the entire JSON
@@ -544,7 +691,7 @@ func evalJSONSET(args []string, store *Store) []byte {
 //	RESP encoded -1 in case no expiration is set on the key
 func evalTTL(args []string, store *Store) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'ttl' command"), false)
+		return diceerrors.NewErrArity("TTL")
 	}
 
 	var key string = args[0]
@@ -590,13 +737,13 @@ func evalDEL(args []string, store *Store) []byte {
 // Once the time is lapsed, the key will be deleted automatically
 func evalEXPIRE(args []string, store *Store) []byte {
 	if len(args) <= 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'expire' command"), false)
+		return diceerrors.NewErrArity("EXPIRE")
 	}
 
 	var key string = args[0]
 	exDurationSec, err := strconv.ParseInt(args[1], 10, 64)
 	if err != nil {
-		return Encode(errors.New("ERR value is not an integer or out of range"), false)
+		return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
 	}
 
 	obj := store.Get(key)
@@ -605,11 +752,14 @@ func evalEXPIRE(args []string, store *Store) []byte {
 	if obj == nil {
 		return RespZero
 	}
+	isExpirySet, err2 := evaluateAndSetExpiry(args[2:], utils.AddSecondsToUnixEpoch(exDurationSec), key, store)
 
-	store.setExpiry(obj, exDurationSec*1000)
-
-	// 1 if the timeout was set.
-	return RespOne
+	if isExpirySet {
+		return RespOne
+	} else if err2 != nil {
+		return err2
+	}
+	return RespZero
 }
 
 // evalEXPIRETIME returns the absolute Unix timestamp (since January 1, 1970) in seconds at which the given key will expire
@@ -619,7 +769,7 @@ func evalEXPIRE(args []string, store *Store) []byte {
 // Returns -2 if the key does not exist.
 func evalEXPIRETIME(args []string, store *Store) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'expire' command"), false)
+		return diceerrors.NewErrArity("EXPIRETIME")
 	}
 
 	var key string = args[0]
@@ -651,27 +801,91 @@ func evalEXPIREAT(args []string, store *Store) []byte {
 	}
 
 	var key string = args[0]
-	exUnixTimeSec, err := strconv.ParseInt(args[1], 10, 64)
+	exUnixTimeSec, err := strconv.ParseUint(args[1], 10, 64)
 	if err != nil {
 		return Encode(errors.New("ERR value is not an integer or out of range"), false)
 	}
 
-	obj := store.Get(key)
+	isExpirySet, err2 := evaluateAndSetExpiry(args[2:], exUnixTimeSec, key, store)
+	if isExpirySet {
+		return RespOne
+	} else if err2 != nil {
+		return err2
+	}
+	return RespZero
+}
 
-	// 0 if the timeout was not set. e.g. key doesn't exist, or operation skipped due to the provided arguments
+// NX: Set the expiration only if the key does not already have an expiration time.
+// XX: Set the expiration only if the key already has an expiration time.
+// GT: Set the expiration only if the new expiration time is greater than the current one.
+// LT: Set the expiration only if the new expiration time is less than the current one.
+// Returns Boolean True and error nil if expiry was set on the key successfully.
+// Returns Boolean False and error nil if conditions didn't met.
+// Returns Boolean False and error not-nil if invalid combination of subCommands or if subCommand is invalid
+func evaluateAndSetExpiry(subCommands []string, newExpiry uint64, key string,
+	store *Store) (shouldSetExpiry bool, err []byte) {
+	var newExpInMilli = newExpiry * 1000
+	var prevExpiry *uint64 = nil
+	var nxCmd, xxCmd, gtCmd, ltCmd bool
+
+	obj := store.Get(key)
+	//  key doesn't exist
 	if obj == nil {
-		return RespZero
+		return false, nil
+	}
+	shouldSetExpiry = true
+	// if no condition exists
+	if len(subCommands) == 0 {
+		store.setUnixTimeExpiry(obj, int64(newExpiry))
+		return shouldSetExpiry, nil
 	}
 
-	store.setUnixTimeExpiry(obj, exUnixTimeSec)
+	expireTime, ok := getExpiry(obj, store)
+	if ok {
+		prevExpiry = &expireTime
+	}
 
-	// 1 if the timeout was set.
-	return RespOne
+	for i := range subCommands {
+		subCommand := strings.ToUpper(subCommands[i])
+
+		switch subCommand {
+		case constants.NX:
+			nxCmd = true
+			if prevExpiry != nil {
+				shouldSetExpiry = false
+			}
+		case constants.XX:
+			xxCmd = true
+			if prevExpiry == nil {
+				shouldSetExpiry = false
+			}
+		case constants.GT:
+			gtCmd = true
+			if prevExpiry == nil || *prevExpiry > newExpInMilli {
+				shouldSetExpiry = false
+			}
+		case constants.LT:
+			ltCmd = true
+			if prevExpiry != nil && *prevExpiry < newExpInMilli {
+				shouldSetExpiry = false
+			}
+		default:
+			return false, diceerrors.NewErrWithMessage("Unsupported option " + subCommands[i])
+		}
+	}
+
+	if (nxCmd && (xxCmd || gtCmd || ltCmd)) || (gtCmd && ltCmd) {
+		return false, diceerrors.NewErrWithMessage("NX and XX," +
+			" GT or LT options at the same time are not compatible")
+	}
+
+	store.setUnixTimeExpiry(obj, int64(newExpiry))
+	return shouldSetExpiry, nil
 }
 
 func evalHELLO(args []string, store *Store) []byte {
 	if len(args) > 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'hello' command"), false)
+		return diceerrors.NewErrArity("HELLO")
 	}
 
 	var response []interface{}
@@ -699,11 +913,11 @@ func evalBGREWRITEAOF(args []string, store *Store) []byte {
 	if newChild == 0 {
 		// We are inside child process now, so we'll start flushing to disk.
 		if err := DumpAllAOF(store); err != nil {
-			return Encode(errors.New("ERR AOF failed"), false)
+			return diceerrors.NewErrWithMessage("AOF failed")
 		}
 		return []byte(constants.EmptyStr)
 	}
-	// Back to main thread
+	// Back to main threadg
 	return RespOK
 }
 
@@ -717,7 +931,7 @@ func evalBGREWRITEAOF(args []string, store *Store) []byte {
 // evalINCR returns the incremented value for the key if there are no errors.
 func evalINCR(args []string, store *Store) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'incr' command"), false)
+		return diceerrors.NewErrArity("INCR")
 	}
 	return incrDecrCmd(args, 1, store)
 }
@@ -732,7 +946,7 @@ func evalINCR(args []string, store *Store) []byte {
 // evalDECR returns the decremented value for the key if there are no errors.
 func evalDECR(args []string, store *Store) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'decr' command"), false)
+		return diceerrors.NewErrArity("DECR")
 	}
 	return incrDecrCmd(args, -1, store)
 }
@@ -747,11 +961,11 @@ func evalDECR(args []string, store *Store) []byte {
 // evalDECRBY returns the decremented value for the key after applying the specified decrement if there are no errors.
 func evalDECRBY(args []string, store *Store) []byte {
 	if len(args) != 2 {
-		return Encode(errors.New("ERR wrong number of arguments for 'decrby' command"), false)
+		return diceerrors.NewErrArity("DECRBY")
 	}
 	decrementAmount, err := strconv.ParseInt(args[1], 10, 64)
 	if err != nil {
-		return Encode(errors.New("ERR value is not an integer or out of range"), false)
+		return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
 	}
 	return incrDecrCmd(args, -decrementAmount, store)
 }
@@ -760,23 +974,28 @@ func incrDecrCmd(args []string, incr int64, store *Store) []byte {
 	key := args[0]
 	obj := store.Get(key)
 	if obj == nil {
-		obj = store.NewObj(int64(0), -1, ObjTypeString, ObjEncodingInt)
+		obj = store.NewObj(int64(0), -1, ObjTypeInt, ObjEncodingInt)
 		store.Put(key, obj)
 	}
 
-	if err := assertType(obj.TypeEncoding, ObjTypeString); err != nil {
-		return Encode(err, false)
+	// If the object exists, check if it is a set object.
+	if err := assertType(obj.TypeEncoding, ObjTypeSet); err == nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
+	if err := assertType(obj.TypeEncoding, ObjTypeInt); err != nil {
+		return diceerrors.NewErrWithMessage(err.Error())
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingInt); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithMessage(err.Error())
 	}
 
 	i, _ := obj.Value.(int64)
 	// check overflow
 	if (incr < 0 && i < 0 && incr < (math.MinInt64-i)) ||
 		(incr > 0 && i > 0 && incr > (math.MaxInt64-i)) {
-		return Encode(errors.New("ERR value is out of range"), false)
+		return diceerrors.NewErrWithMessage(diceerrors.ValOutOfRangeErr)
 	}
 
 	i += incr
@@ -820,12 +1039,12 @@ func evalLRU(args []string, store *Store) []byte {
 // evalSLEEP returns RespOK after sleeping for mentioned seconds
 func evalSLEEP(args []string, store *Store) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'SLEEP' command"), false)
+		return diceerrors.NewErrArity("SLEEP")
 	}
 
 	durationSec, err := strconv.ParseInt(args[0], 10, 64)
 	if err != nil {
-		return Encode(errors.New("ERR value is not an integer or out of range"), false)
+		return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
 	}
 	time.Sleep(time.Duration(durationSec) * time.Second)
 	return RespOK
@@ -846,12 +1065,12 @@ func evalMULTI(args []string, store *Store) []byte {
 // if the key does not exist, evalQINTINS will also create the integer queue
 func evalQINTINS(args []string, store *Store) []byte {
 	if len(args) != 2 {
-		return Encode(errors.New("ERR invalid number of arguments for `QINTINS` command"), false)
+		return diceerrors.NewErrArity("QINTINS")
 	}
 
 	x, err := strconv.ParseInt(args[1], 10, 64)
 	if err != nil {
-		return Encode(errors.New("ERR only integer values can be inserted in QINT"), false)
+		return diceerrors.NewErrWithMessage("only integer values can be inserted in QINT")
 	}
 
 	obj := store.Get(args[0])
@@ -860,11 +1079,11 @@ func evalQINTINS(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQint); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	store.Put(args[0], obj)
@@ -881,12 +1100,12 @@ func evalQINTINS(args []string, store *Store) []byte {
 // if the key does not exist, evalSTACKINTPUSH will also create the integer stack
 func evalSTACKINTPUSH(args []string, store *Store) []byte {
 	if len(args) != 2 {
-		return Encode(errors.New("ERR invalid number of arguments for `STACKINTPUSH` command"), false)
+		return diceerrors.NewErrArity("STACKINTPUSH")
 	}
 
 	x, err := strconv.ParseInt(args[1], 10, 64)
 	if err != nil {
-		return Encode(errors.New("ERR only integer values can be inserted in STACKINT"), false)
+		return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
 	}
 
 	obj := store.Get(args[0])
@@ -895,11 +1114,11 @@ func evalSTACKINTPUSH(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackInt); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	store.Put(args[0], obj)
@@ -917,7 +1136,7 @@ func evalSTACKINTPUSH(args []string, store *Store) []byte {
 // if we remove from the empty queue, nil is returned
 func evalQINTREM(args []string, store *Store) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR invalid number of arguments for `QINTREM` command"), false)
+		return diceerrors.NewErrArity("QINTREM")
 	}
 
 	obj := store.Get(args[0])
@@ -926,11 +1145,11 @@ func evalQINTREM(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQint); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	q := obj.Value.(*QueueInt)
@@ -950,7 +1169,7 @@ func evalQINTREM(args []string, store *Store) []byte {
 // if we remove from the empty stack, nil is returned
 func evalSTACKINTPOP(args []string, store *Store) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR invalid number of arguments for `STACKINTPOP` command"), false)
+		return diceerrors.NewErrArity("STACKINTPOP")
 	}
 
 	obj := store.Get(args[0])
@@ -959,11 +1178,11 @@ func evalSTACKINTPOP(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackInt); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	s := obj.Value.(*StackInt)
@@ -981,7 +1200,7 @@ func evalSTACKINTPOP(args []string, store *Store) []byte {
 // if the key does not exist, the response is 0
 func evalQINTLEN(args []string, store *Store) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR invalid number of arguments for `QINTLEN` command"), false)
+		return diceerrors.NewErrArity("QINTLEN")
 	}
 
 	obj := store.Get(args[0])
@@ -990,11 +1209,11 @@ func evalQINTLEN(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQint); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	q := obj.Value.(*QueueInt)
@@ -1006,7 +1225,7 @@ func evalQINTLEN(args []string, store *Store) []byte {
 // if the key does not exist, the response is 0
 func evalSTACKINTLEN(args []string, store *Store) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR invalid number of arguments for `STACKINTLEN` command"), false)
+		return diceerrors.NewErrArity("STACKINTLEN")
 	}
 
 	obj := store.Get(args[0])
@@ -1015,11 +1234,11 @@ func evalSTACKINTLEN(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackInt); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	s := obj.Value.(*StackInt)
@@ -1034,13 +1253,13 @@ func evalQINTPEEK(args []string, store *Store) []byte {
 	var err error
 
 	if len(args) > 2 {
-		return Encode(errors.New("ERR invalid number of arguments for `QINTPEEK` command"), false)
+		return diceerrors.NewErrArity("QINTPEEK")
 	}
 
 	if len(args) == 2 {
 		num, err = strconv.ParseInt(args[1], 10, 32)
 		if err != nil || num <= 0 || num > 100 {
-			return Encode(errors.New("ERR number of elements to peek should be a positive number less than 100"), false)
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.ElementPeekErr, 100)
 		}
 	}
 
@@ -1050,11 +1269,11 @@ func evalQINTPEEK(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQint); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	q := obj.Value.(*QueueInt)
@@ -1069,13 +1288,13 @@ func evalSTACKINTPEEK(args []string, store *Store) []byte {
 	var err error
 
 	if len(args) > 2 {
-		return Encode(errors.New("ERR invalid number of arguments for `STACKINTPEEK` command"), false)
+		return diceerrors.NewErrArity("STACKINTPEEK")
 	}
 
 	if len(args) == 2 {
 		num, err = strconv.ParseInt(args[1], 10, 32)
 		if err != nil || num <= 0 || num > 100 {
-			return Encode(errors.New("ERR number of elements to peek should be a positive number less than 100"), false)
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.ElementPeekErr, 100)
 		}
 	}
 
@@ -1085,11 +1304,11 @@ func evalSTACKINTPEEK(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackInt); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	s := obj.Value.(*StackInt)
@@ -1104,20 +1323,24 @@ func evalSTACKINTPEEK(args []string, store *Store) []byte {
 // returns 0 otherwise
 func evalQREFINS(args []string, store *Store) []byte {
 	if len(args) != 2 {
-		return Encode(errors.New("ERR invalid number of arguments for `QREFINS` command"), false)
+		return diceerrors.NewErrArity("QREFINS")
 	}
 
 	obj := store.Get(args[0])
+	qr, err := NewQueueRef()
+	if err != nil {
+		return Encode(err, false)
+	}
 	if obj == nil {
-		obj = store.NewObj(NewQueueRef(), -1, ObjTypeByteList, ObjEncodingQref)
+		obj = store.NewObj(qr, -1, ObjTypeByteList, ObjEncodingQref)
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQref); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	store.Put(args[0], obj)
@@ -1137,20 +1360,24 @@ func evalQREFINS(args []string, store *Store) []byte {
 // returns 0 otherwise
 func evalSTACKREFPUSH(args []string, store *Store) []byte {
 	if len(args) != 2 {
-		return Encode(errors.New("ERR invalid number of arguments for `STACKREFPUSH` command"), false)
+		return diceerrors.NewErrArity("STACKREFPUSH")
 	}
 
 	obj := store.Get(args[0])
 	if obj == nil {
-		obj = store.NewObj(NewStackRef(), -1, ObjTypeByteList, ObjEncodingStackRef)
+		sr, err := NewStackRef()
+		if err != nil {
+			return diceerrors.NewErrWithMessage(("ERR maximum number of stacks reached"))
+		}
+		obj = store.NewObj(sr, -1, ObjTypeByteList, ObjEncodingStackRef)
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackRef); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	store.Put(args[0], obj)
@@ -1169,7 +1396,7 @@ func evalSTACKREFPUSH(args []string, store *Store) []byte {
 // if we remove from the empty queue, nil is returned
 func evalQREFREM(args []string, store *Store) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR invalid number of arguments for `QREFREM` command"), false)
+		return diceerrors.NewErrArity("QREFREM")
 	}
 
 	obj := store.Get(args[0])
@@ -1178,11 +1405,11 @@ func evalQREFREM(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQref); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	q := obj.Value.(*QueueRef)
@@ -1202,7 +1429,7 @@ func evalQREFREM(args []string, store *Store) []byte {
 // if we remove from the empty stack, nil is returned
 func evalSTACKREFPOP(args []string, store *Store) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR invalid number of arguments for `STACKREFPOP` command"), false)
+		return diceerrors.NewErrArity("STACKREFPOP")
 	}
 
 	obj := store.Get(args[0])
@@ -1211,11 +1438,11 @@ func evalSTACKREFPOP(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackRef); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	s := obj.Value.(*StackRef)
@@ -1233,7 +1460,7 @@ func evalSTACKREFPOP(args []string, store *Store) []byte {
 // if the key does not exist, the response is 0
 func evalQREFLEN(args []string, store *Store) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR invalid number of arguments for `QREFLEN` command"), false)
+		return diceerrors.NewErrArity("QREFLEN")
 	}
 
 	obj := store.Get(args[0])
@@ -1242,15 +1469,15 @@ func evalQREFLEN(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQref); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	q := obj.Value.(*QueueRef)
-	return Encode(q.qi.Length, false)
+	return Encode(q.Length(store), false)
 }
 
 // evalSTACKREFLEN returns the length of the STACKREF identified by key
@@ -1258,7 +1485,7 @@ func evalQREFLEN(args []string, store *Store) []byte {
 // if the key does not exist, the response is 0
 func evalSTACKREFLEN(args []string, store *Store) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR invalid number of arguments for `STACKREFLEN` command"), false)
+		return diceerrors.NewErrArity("STACKREFLEN")
 	}
 
 	obj := store.Get(args[0])
@@ -1267,15 +1494,15 @@ func evalSTACKREFLEN(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackRef); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	s := obj.Value.(*StackRef)
-	return Encode(s.si.Length, false)
+	return Encode(s.Length(store), false)
 }
 
 // evalQREFPEEK peeks into the QREF and returns 5 elements without popping them
@@ -1286,13 +1513,13 @@ func evalQREFPEEK(args []string, store *Store) []byte {
 	var err error
 
 	if len(args) == 0 {
-		return Encode(errors.New("ERR invalid number of arguments for `QREFPEEK` command"), false)
+		return diceerrors.NewErrArity("QREFPEEK")
 	}
 
 	if len(args) == 2 {
 		num, err = strconv.ParseInt(args[1], 10, 32)
 		if err != nil || num <= 0 || num > 100 {
-			return Encode(errors.New("ERR number of elements to peek should be a positive number less than 100"), false)
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.ElementPeekErr, 100)
 		}
 	}
 
@@ -1302,11 +1529,11 @@ func evalQREFPEEK(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingQref); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	q := obj.Value.(*QueueRef)
@@ -1321,13 +1548,13 @@ func evalSTACKREFPEEK(args []string, store *Store) []byte {
 	var err error
 
 	if len(args) == 0 {
-		return Encode(errors.New("ERR invalid number of arguments for `STACKREFPEEK` command"), false)
+		return diceerrors.NewErrArity("STACKREFPEEK")
 	}
 
 	if len(args) == 2 {
 		num, err = strconv.ParseInt(args[1], 10, 32)
 		if err != nil || num <= 0 || num > 100 {
-			return Encode(errors.New("ERR number of elements to peek should be a positive number less than 100"), false)
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.ElementPeekErr, 100)
 		}
 	}
 
@@ -1337,11 +1564,11 @@ func evalSTACKREFPEEK(args []string, store *Store) []byte {
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertEncoding(obj.TypeEncoding, ObjEncodingStackRef); err != nil {
-		return Encode(err, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	s := obj.Value.(*StackRef)
@@ -1351,10 +1578,10 @@ func evalSTACKREFPEEK(args []string, store *Store) []byte {
 // evalQWATCH adds the specified key to the watch list for the caller client.
 // Every time a key in the watch list is modified, the client will be sent a response
 // containing the new value of the key along with the operation that was performed on it.
-// Contains only one argument, the key to be watched.
-func evalQWATCH(args []string, c *Client, store *Store) []byte {
+// Contains only one argument, the query to be watched.
+func evalQWATCH(args []string, clientFd int, store *Store) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR invalid number of arguments for `QWATCH` command (expected 1)"), false)
+		return diceerrors.NewErrArity("QWATCH")
 	}
 
 	// Parse and get the selection from the query.
@@ -1364,10 +1591,14 @@ func evalQWATCH(args []string, c *Client, store *Store) []byte {
 		return Encode(e, false)
 	}
 
-	store.AddWatcher(query, c.Fd)
+	WatchSubscriptionChan <- WatchSubscription{
+		subscribe: true,
+		query:     query,
+		clientFd:  clientFd,
+	}
 
 	// Return the result of the query.
-	queryResult, err := ExecuteQuery(query, store)
+	queryResult, err := ExecuteQuery(&query, store)
 	if err != nil {
 		return Encode(err, false)
 	}
@@ -1376,23 +1607,42 @@ func evalQWATCH(args []string, c *Client, store *Store) []byte {
 	return Encode(CreatePushResponse(&query, &queryResult), false)
 }
 
+// evalQUNWATCH removes the specified key from the watch list for the caller client.
+func evalQUNWATCH(args []string, clientFd int) []byte {
+	if len(args) != 1 {
+		return diceerrors.NewErrArity("QUNWATCH")
+	}
+	query, e := ParseQuery( /*sql=*/ args[0])
+	if e != nil {
+		return Encode(e, false)
+	}
+
+	WatchSubscriptionChan <- WatchSubscription{
+		subscribe: false,
+		query:     query,
+		clientFd:  clientFd,
+	}
+
+	return RespOK
+}
+
 // SETBIT key offset value
 func evalSETBIT(args []string, store *Store) []byte {
 	var err error
 
 	if len(args) != 3 {
-		return Encode(errors.New("ERR wrong number of arguments for 'setbit' command"), false)
+		return diceerrors.NewErrArity("SETBIT")
 	}
 
 	key := args[0]
 	offset, err := strconv.ParseInt(args[1], 10, 64)
 	if err != nil {
-		return Encode(errors.New("ERR bit offset is not an integer or out of range"), false)
+		return diceerrors.NewErrWithMessage("bit offset is not an integer or out of range")
 	}
 
 	value, err := strconv.ParseBool(args[2])
 	if err != nil {
-		return Encode(errors.New("ERR bit is not an integer or out of range"), false)
+		return diceerrors.NewErrWithMessage("bit is not an integer or out of range")
 	}
 
 	obj := store.Get(key)
@@ -1403,14 +1653,25 @@ func evalSETBIT(args []string, store *Store) []byte {
 		store.Put(args[0], obj)
 	}
 
-	// handle the case when it is string
-	if assertType(obj.TypeEncoding, ObjTypeString) == nil {
-		return Encode(errors.New("ERR value is not a valid byte array"), false)
-	}
+	if assertType(obj.TypeEncoding, ObjTypeByteArray) == nil ||
+		assertType(obj.TypeEncoding, ObjTypeString) == nil ||
+		assertType(obj.TypeEncoding, ObjTypeInt) == nil {
+		var byteArray *ByteArray
+		oType, oEnc := ExtractTypeEncoding(obj)
 
-	// handle the case when it is byte array
-	if assertType(obj.TypeEncoding, ObjTypeByteArray) == nil {
-		byteArray := obj.Value.(*ByteArray)
+		switch oType {
+		case ObjTypeByteArray:
+			byteArray = obj.Value.(*ByteArray)
+		case ObjTypeString, ObjTypeInt:
+			byteArray, err = NewByteArrayFromObj(obj)
+			if err != nil {
+				return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+			}
+		default:
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+		}
+
+		// Perform the resizing check
 		byteArrayLength := byteArray.Length
 
 		// check whether resize required or not
@@ -1428,13 +1689,30 @@ func evalSETBIT(args []string, store *Store) []byte {
 			byteArray.ResizeIfNecessary()
 		}
 
+		// We are returning newObject here so it is thread-safe
+		// Old will be removed by GC
+		newObj, err := ByteSliceToObj(store, obj, byteArray.data, oType, oEnc)
+		if err != nil {
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+		}
+
+		exp, ok := getExpiry(obj, store)
+		var exDurationMs int64 = -1
+		if ok {
+			exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
+		}
+		// newObj has bydefault expiry time -1 , we need to set it
+		if exDurationMs > 0 {
+			store.setExpiry(newObj, exDurationMs)
+		}
+
+		store.Put(key, newObj)
 		if response {
 			return Encode(int(1), true)
 		}
 		return Encode(int(0), true)
 	}
-
-	return Encode(0, false)
+	return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 }
 
 // GETBIT key offset
@@ -1442,25 +1720,29 @@ func evalGETBIT(args []string, store *Store) []byte {
 	var err error
 
 	if len(args) != 2 {
-		return Encode(errors.New("ERR wrong number of arguments for 'setbit' command"), false)
+		return diceerrors.NewErrArity("GETBIT")
 	}
 
 	key := args[0]
 	offset, err := strconv.ParseInt(args[1], 10, 64)
 	if err != nil {
-		return Encode(errors.New("ERR bit offset is not an integer or out of range"), false)
+		return diceerrors.NewErrWithMessage("bit offset is not an integer or out of range")
 	}
 
 	obj := store.Get(key)
 	if obj == nil {
 		return Encode(0, true)
 	}
+	// if object is a set type, return error
+	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
 
 	requiredByteArraySize := offset/8 + 1
 
 	// handle the case when it is string
 	if assertType(obj.TypeEncoding, ObjTypeString) == nil {
-		return Encode(errors.New("ERR value is not a valid byte array"), false)
+		return diceerrors.NewErrWithMessage("value is not a valid byte array")
 	}
 
 	// handle the case when it is byte array
@@ -1487,7 +1769,7 @@ func evalBITCOUNT(args []string, store *Store) []byte {
 
 	// if more than 4 arguments are provided, return error
 	if len(args) > 4 {
-		return Encode(errors.New("ERR syntax error"), false)
+		return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 	}
 
 	// fetching value of the key
@@ -1495,6 +1777,11 @@ func evalBITCOUNT(args []string, store *Store) []byte {
 	var obj = store.Get(key)
 	if obj == nil {
 		return Encode(0, false)
+	}
+
+	// Check for the type of the object
+	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	var valueInterface = obj.Value
@@ -1522,7 +1809,7 @@ func evalBITCOUNT(args []string, store *Store) []byte {
 	if len(args) > 1 {
 		start, err = strconv.ParseInt(args[1], 10, 64)
 		if err != nil {
-			return Encode(errors.New("ERR value is not an integer or out of range"), false)
+			return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
 		}
 		// Adjust start index if it is negative
 		if start < 0 {
@@ -1532,7 +1819,7 @@ func evalBITCOUNT(args []string, store *Store) []byte {
 	if len(args) > 2 {
 		end, err = strconv.ParseInt(args[2], 10, 64)
 		if err != nil {
-			return Encode(errors.New("ERR value is not an integer or out of range"), false)
+			return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
 		}
 
 		// Adjust end index if it is negative
@@ -1543,7 +1830,7 @@ func evalBITCOUNT(args []string, store *Store) []byte {
 	if len(args) > 3 {
 		unit = strings.ToUpper(args[3])
 		if unit != bit.BYTE && unit != bit.BIT {
-			return Encode(errors.New("ERR syntax error"), false)
+			return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 		}
 	}
 	if start > end {
@@ -1595,11 +1882,11 @@ func evalBITOP(args []string, store *Store) []byte {
 	// validation of commands
 	// if operation is not from enums, then error out
 	if !(operation == constants.AND || operation == constants.OR || operation == constants.XOR || operation == constants.NOT) {
-		return Encode(errors.New("ERR syntax error"), false)
+		return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 	}
 	// if operation is not, then keys length should be only 1
 	if operation == constants.NOT && len(keys) != 1 {
-		return Encode(errors.New("ERR BITOP NOT must be called with a single source key"), false)
+		return diceerrors.NewErrWithMessage("BITOP NOT must be called with a single source key.")
 	}
 
 	if operation == constants.NOT {
@@ -1614,7 +1901,7 @@ func evalBITOP(args []string, store *Store) []byte {
 			byteArrayObject := *byteArray
 			value = byteArrayObject.data
 		} else {
-			return Encode(errors.New("ERR value is not a valid byte array"), false)
+			return diceerrors.NewErrWithMessage("value is not a valid byte array")
 		}
 
 		// perform the operation
@@ -1653,7 +1940,7 @@ func evalBITOP(args []string, store *Store) []byte {
 				byteArrayObject := *byteArray
 				values[i] = byteArrayObject.data
 			} else {
-				return Encode(errors.New("ERR value is not a valid byte array"), false)
+				return diceerrors.NewErrWithMessage("value is not a valid byte array")
 			}
 		}
 	}
@@ -1722,7 +2009,7 @@ func evalBITOP(args []string, store *Store) []byte {
 // COUNT: return total count of commands in Dice.
 func evalCommand(args []string, store *Store) []byte {
 	if len(args) == 0 {
-		return Encode(errors.New("(error) ERR wrong number of arguments for 'command' command"), false)
+		return diceerrors.NewErrArity("COMMAND")
 	}
 	subcommand := strings.ToUpper(args[0])
 	switch subcommand {
@@ -1733,7 +2020,8 @@ func evalCommand(args []string, store *Store) []byte {
 	case "LIST":
 		return evalCommandList()
 	default:
-		return Encode(fmt.Errorf("ERR unknown subcommand '%s'. Try COMMAND HELP.", subcommand), false)
+		return diceerrors.NewErrWithFormattedMessage("unknown subcommand '%s'. Try COMMAND HELP.", subcommand)
+
 	}
 }
 
@@ -1749,7 +2037,7 @@ func evalCommandList() []byte {
 // The pattern should be the only param in args
 func evalKeys(args []string, store *Store) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'keys' command"), false)
+		return diceerrors.NewErrArity("KEYS")
 	}
 
 	pattern := args[0]
@@ -1769,18 +2057,18 @@ func evalCommandCount() []byte {
 func evalCommandGetKeys(args []string) []byte {
 	diceCmd, ok := diceCmds[strings.ToUpper(args[0])]
 	if !ok {
-		return Encode(errors.New("ERR invalid command specified"), false)
+		return diceerrors.NewErrWithMessage("invalid command specified")
 	}
 
 	keySpecs := diceCmd.KeySpecs
 	if keySpecs.BeginIndex == 0 {
-		return Encode(errors.New("ERR the command has no key arguments"), false)
+		return diceerrors.NewErrWithMessage("the command has no key arguments")
 	}
 
 	arity := diceCmd.Arity
 	if (arity < 0 && len(args) < -arity) ||
 		(arity >= 0 && len(args) != arity) {
-		return Encode(errors.New("ERR invalid number of arguments specified for command"), false)
+		return diceerrors.NewErrWithMessage("invalid number of arguments specified for command")
 	}
 	keys := make([]string, 0)
 	step := max(keySpecs.Step, 1)
@@ -1795,20 +2083,20 @@ func evalCommandGetKeys(args []string) []byte {
 }
 func evalRename(args []string, store *Store) []byte {
 	if len(args) != 2 {
-		return Encode(errors.New("ERR wrong number of arguments for 'RENAME' command"), false)
+		return diceerrors.NewErrArity("RENAME")
 	}
 	sourceKey := args[0]
 	destKey := args[1]
 
-	// if Source and Destination Keys are same return RESP encoded ok
-	if sourceKey == destKey {
-		return RespOK
-	}
-
 	// if Source key does not exist, return RESP encoded nil
 	sourceObj := store.Get(sourceKey)
 	if sourceObj == nil {
-		return Encode("ERR no such key", false)
+		return diceerrors.NewErrWithMessage(diceerrors.NoKeyErr)
+	}
+
+	// if Source and Destination Keys are same return RESP encoded ok
+	if sourceKey == destKey {
+		return RespOK
 	}
 
 	if ok := store.Rename(sourceKey, destKey); ok {
@@ -1823,7 +2111,7 @@ func evalRename(args []string, store *Store) []byte {
 // MGET is atomic, it retrieves all values at once
 func evalMGET(args []string, store *Store) []byte {
 	if len(args) < 1 {
-		return Encode(errors.New("ERR wrong number of arguments for command"), false)
+		return diceerrors.NewErrArity("MGET")
 	}
 	values := store.GetAll(args)
 	response := make([]interface{}, len(args))
@@ -1839,7 +2127,7 @@ func evalMGET(args []string, store *Store) []byte {
 
 func evalEXISTS(args []string, store *Store) []byte {
 	if len(args) == 0 {
-		return Encode(errors.New("ERR wrong number of arguments for 'exists' command"), false)
+		return diceerrors.NewErrArity("EXISTS")
 	}
 
 	var count int
@@ -1852,87 +2140,9 @@ func evalEXISTS(args []string, store *Store) []byte {
 	return Encode(count, false)
 }
 
-func executeCommand(cmd *RedisCmd, c *Client, store *Store) []byte {
-	diceCmd, ok := diceCmds[cmd.Cmd]
-	if !ok {
-		return Encode(fmt.Errorf("ERR unknown command '%s', with args beginning with: %s", cmd.Cmd, strings.Join(cmd.Args, " ")), false)
-	}
-
-	if diceCmd.Name == "SUBSCRIBE" || diceCmd.Name == "QWATCH" {
-		return evalQWATCH(cmd.Args, c, store)
-	}
-	if diceCmd.Name == "MULTI" {
-		c.TxnBegin()
-		return diceCmd.Eval(cmd.Args, store)
-	}
-	if diceCmd.Name == AuthCmd {
-		return evalAUTH(cmd.Args, c)
-	}
-	if diceCmd.Name == "EXEC" {
-		if !c.isTxn {
-			return Encode(errors.New("ERR EXEC without MULTI"), false)
-		}
-		return c.TxnExec(store)
-	}
-	if diceCmd.Name == "DISCARD" {
-		if !c.isTxn {
-			return Encode(errors.New("ERR DISCARD without MULTI"), false)
-		}
-		c.TxnDiscard()
-		return RespOK
-	}
-	if diceCmd.Name == "ABORT" {
-		return RespOK
-	}
-
-	return diceCmd.Eval(cmd.Args, store)
-}
-
-func executeCommandToBuffer(cmd *RedisCmd, buf *bytes.Buffer, c *Client, store *Store) {
-	buf.Write(executeCommand(cmd, c, store))
-}
-
-func EvalAndRespond(cmds RedisCmds, c *Client, store *Store) {
-	var response []byte
-	buf := bytes.NewBuffer(response)
-
-	for _, cmd := range cmds {
-		// Check if the command has been authenticated
-		if cmd.Cmd != AuthCmd && !c.Session.IsActive() {
-			if _, err := c.Write(Encode(errors.New("NOAUTH Authentication required"), false)); err != nil {
-				log.Info("Error writing to client:", err)
-			}
-			continue
-		}
-		// if txn is not in progress, then we can simply
-		// execute the command and add the response to the buffer
-		if !c.isTxn {
-			executeCommandToBuffer(cmd, buf, c, store)
-			continue
-		}
-
-		// if the txn is in progress, we enqueue the command
-		// and add the QUEUED response to the buffer
-		if !txnCommands[cmd.Cmd] {
-			// if the command is queuable the enqueu
-			c.TxnQueue(cmd)
-			buf.Write(RespQueued)
-		} else {
-			// if txn is active and the command is non-queuable
-			// ex: EXEC, DISCARD
-			// we execute the command and gather the response in buffer
-			executeCommandToBuffer(cmd, buf, c, store)
-		}
-	}
-
-	if _, err := c.Write(buf.Bytes()); err != nil {
-		log.Error(err)
-	}
-}
-
 func evalPersist(args []string, store *Store) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'persist' command"), false)
+		return diceerrors.NewErrArity("PERSIST")
 	}
 
 	key := args[0]
@@ -1958,7 +2168,7 @@ func evalPersist(args []string, store *Store) []byte {
 
 func evalCOPY(args []string, store *Store) []byte {
 	if len(args) < 2 {
-		return Encode(errors.New("ERR wrong number of arguments for 'copy' command"), false)
+		return diceerrors.NewErrArity("COPY")
 	}
 
 	isReplace := false
@@ -2019,7 +2229,7 @@ func evalCOPY(args []string, store *Store) []byte {
 // evalGET returns RespNIL if key is expired or it does not exist
 func evalGETEX(args []string, store *Store) []byte {
 	if len(args) < 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'getex' command"), false)
+		return diceerrors.NewErrArity("GETEX")
 	}
 
 	var key string = args[0]
@@ -2032,6 +2242,11 @@ func evalGETEX(args []string, store *Store) []byte {
 		return RespNIL
 	}
 
+	// check if the object is set type if yes then return error
+	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
 	var exDurationMs int64 = -1
 	var state exDurationState = Uninitialized
 	var persist bool = false
@@ -2040,19 +2255,19 @@ func evalGETEX(args []string, store *Store) []byte {
 		switch arg {
 		case constants.Ex, constants.Px:
 			if state != Uninitialized {
-				return Encode(errors.New("ERR syntax error"), false)
+				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 			}
 			i++
 			if i == len(args) {
-				return Encode(errors.New("ERR syntax error"), false)
+				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 			}
 
 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
-				return Encode(errors.New("ERR value is not an integer or out of range"), false)
+				return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
 			}
 			if exDuration <= 0 {
-				return Encode(errors.New("ERR invalid expire time in 'getex' command"), false)
+				return diceerrors.NewErrExpireTime("GETEX")
 			}
 
 			// converting seconds to milliseconds
@@ -2064,19 +2279,19 @@ func evalGETEX(args []string, store *Store) []byte {
 
 		case constants.Pxat, constants.Exat:
 			if state != Uninitialized {
-				return Encode(errors.New("ERR syntax error"), false)
+				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 			}
 			i++
 			if i == len(args) {
-				return Encode(errors.New("ERR syntax error"), false)
+				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 			}
 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
-				return Encode(errors.New("ERR value is not an integer or out of range"), false)
+				return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
 			}
 
 			if exDuration < 0 {
-				return Encode(errors.New("ERR invalid expire time in 'getex' command"), false)
+				return diceerrors.NewErrExpireTime("GETEX")
 			}
 
 			if arg == constants.Exat {
@@ -2092,12 +2307,12 @@ func evalGETEX(args []string, store *Store) []byte {
 
 		case "PERSIST":
 			if state != Uninitialized {
-				return Encode(errors.New("ERR syntax error"), false)
+				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 			}
 			persist = true
 			state = Initialized
 		default:
-			return Encode(errors.New("ERR syntax error"), false)
+			return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 		}
 	}
 
@@ -2121,7 +2336,7 @@ func evalGETEX(args []string, store *Store) []byte {
 //	RESP encoded -1 in case no expiration is set on the key
 func evalPTTL(args []string, store *Store) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR wrong number of arguments for 'pttl' command"), false)
+		return diceerrors.NewErrArity("PTTL")
 	}
 
 	key := args[0]
@@ -2144,6 +2359,49 @@ func evalPTTL(args []string, store *Store) []byte {
 	return Encode(int64(durationMs), false)
 }
 
+// evalHSET sets the specified fields to their
+// respective values in an hashmap stored at key
+//
+// This command overwrites the values of specified
+// fields that exist in the hash.
+//
+// If key doesn't exist, a new key holding a hash is created.
+//
+// Usage: HSET key field value [field value ...]
+func evalHSET(args []string, store *Store) []byte {
+	if len(args) < 3 {
+		return diceerrors.NewErrArity("HSET")
+	}
+
+	key := args[0]
+
+	obj := store.Get(key)
+
+	var hashMap HashMap
+	var numKeys int64
+
+	if obj != nil {
+		switch currentVal := obj.Value.(type) {
+		case HashMap:
+			hashMap = currentVal
+		default:
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+		}
+	}
+
+	keyValuePairs := args[1:]
+	hashMap, numKeys, err := hashMapBuilder(keyValuePairs, hashMap)
+	if err != nil {
+		return diceerrors.NewErrWithMessage(err.Error())
+	}
+
+	obj = store.NewObj(hashMap, -1, ObjTypeHashMap, ObjEncodingHashMap)
+
+	store.Put(key, obj)
+
+	return Encode(numKeys, false)
+}
+
 func evalObjectIdleTime(key string, store *Store) []byte {
 	obj := store.GetNoTouch(key)
 	if obj == nil {
@@ -2155,7 +2413,7 @@ func evalObjectIdleTime(key string, store *Store) []byte {
 
 func evalOBJECT(args []string, store *Store) []byte {
 	if len(args) < 2 {
-		return Encode(errors.New("ERR wrong number of arguments for 'object' command"), false)
+		return diceerrors.NewErrArity("OBJECT")
 	}
 
 	subcommand := strings.ToUpper(args[0])
@@ -2165,13 +2423,13 @@ func evalOBJECT(args []string, store *Store) []byte {
 	case "IDLETIME":
 		return evalObjectIdleTime(key, store)
 	default:
-		return Encode(errors.New("ERR syntax error"), false)
+		return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 	}
 }
 
 func evalTOUCH(args []string, store *Store) []byte {
 	if len(args) == 0 {
-		return Encode(errors.New("ERR wrong number of arguments for 'touch' command"), false)
+		return diceerrors.NewErrArity("TOUCH")
 	}
 
 	count := 0
@@ -2186,12 +2444,17 @@ func evalTOUCH(args []string, store *Store) []byte {
 
 func evalLPUSH(args []string, store *Store) []byte {
 	if len(args) < 2 {
-		return Encode(errors.New("ERR invalid number of arguments for `LPUSH` command"), false)
+		return diceerrors.NewErrArity("LPUSH")
 	}
 
 	obj := store.Get(args[0])
 	if obj == nil {
 		obj = store.NewObj(NewDeque(), -1, ObjTypeByteList, ObjEncodingDeque)
+	}
+
+	// if object is a set type, return error
+	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
@@ -2212,12 +2475,17 @@ func evalLPUSH(args []string, store *Store) []byte {
 
 func evalRPUSH(args []string, store *Store) []byte {
 	if len(args) < 2 {
-		return Encode(errors.New("ERR invalid number of arguments for `RPUSH` command"), false)
+		return diceerrors.NewErrArity("RPUSH")
 	}
 
 	obj := store.Get(args[0])
 	if obj == nil {
 		obj = store.NewObj(NewDeque(), -1, ObjTypeByteList, ObjEncodingDeque)
+	}
+
+	// if object is a set type, return error
+	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
@@ -2238,12 +2506,17 @@ func evalRPUSH(args []string, store *Store) []byte {
 
 func evalRPOP(args []string, store *Store) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR invalid number of arguments for `RPOP` command"), false)
+		return diceerrors.NewErrArity("RPOP")
 	}
 
 	obj := store.Get(args[0])
 	if obj == nil {
 		return RespNIL
+	}
+
+	// if object is a set type, return error
+	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
@@ -2268,12 +2541,17 @@ func evalRPOP(args []string, store *Store) []byte {
 
 func evalLPOP(args []string, store *Store) []byte {
 	if len(args) != 1 {
-		return Encode(errors.New("ERR invalid number of arguments for `LPOP` command"), false)
+		return diceerrors.NewErrArity("LPOP")
 	}
 
 	obj := store.Get(args[0])
 	if obj == nil {
 		return RespNIL
+	}
+
+	// if object is a set type, return error
+	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
@@ -2294,4 +2572,361 @@ func evalLPOP(args []string, store *Store) []byte {
 	}
 
 	return Encode(x, false)
+}
+
+// GETSET atomically sets key to value and returns the old value stored at key.
+// Returns an error when key exists but does not hold a string value.
+// Any previous time to live associated with the key is
+// discarded on successful SET operation.
+//
+// Returns:
+// Bulk string reply: the old value stored at the key.
+// Nil reply: if the key does not exist.
+func evalGETSET(args []string, store *Store) []byte {
+	if len(args) != 2 {
+		return diceerrors.NewErrArity("GETSET")
+	}
+
+	var key, value = args[0], args[1]
+	getResp := evalGET([]string{key}, store)
+	// Check if it's an error resp from GET
+	if strings.HasPrefix(string(getResp), "-") {
+		return getResp
+	}
+
+	// Previous TTL needs to be reset
+	setResp := evalSET([]string{key, value}, store)
+	// Check if it's an error resp from SET
+	if strings.HasPrefix(string(setResp), "-") {
+		return setResp
+	}
+
+	return getResp
+}
+
+func evalFLUSHDB(args []string, store *Store) []byte {
+	log.Info(args)
+	if len(args) > 1 {
+		return diceerrors.NewErrArity("FLUSHDB")
+	}
+
+	flushType := constants.Sync
+	if len(args) == 1 {
+		flushType = strings.ToUpper(args[0])
+	}
+
+	// TODO: Update this method to work with shared-nothing multithreaded implementation
+	switch flushType {
+	case constants.Sync, constants.Async:
+		store.ResetStore()
+	default:
+		return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
+	}
+
+	return RespOK
+}
+
+func evalSADD(args []string, store *Store) []byte {
+	if len(args) < 2 {
+		return diceerrors.NewErrArity("SADD")
+	}
+	key := args[0]
+
+	// Get the set object from the store.
+	obj := store.Get(key)
+
+	var count int = 0
+	if obj == nil {
+		var exDurationMs int64 = -1
+		var keepttl bool = false
+		// If the object does not exist, create a new set object.
+		value := make(map[string]bool)
+		// Create a new object.
+		obj = store.NewObj(value, exDurationMs, ObjTypeSet, ObjEncodingSetStr)
+		store.Put(key, obj, WithKeepTTL(keepttl))
+	}
+
+	if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingSetStr); err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
+	// Get the set object.
+	set := obj.Value.(map[string]bool)
+
+	for _, arg := range args[1:] {
+		if _, ok := set[arg]; !ok {
+			set[arg] = true
+			count++
+		}
+	}
+
+	return Encode(count, false)
+}
+
+func evalSMEMBERS(args []string, store *Store) []byte {
+	if len(args) != 1 {
+		return diceerrors.NewErrArity("SMEMBERS")
+	}
+	key := args[0]
+
+	// Get the set object from the store.
+	obj := store.Get(key)
+
+	if obj == nil {
+		return Encode([]string{}, false)
+	}
+
+	// If the object exists, check if it is a set object.
+	if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingSetStr); err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
+	// Get the set object.
+	set := obj.Value.(map[string]bool)
+	// Get the members of the set.
+	var members = make([]string, 0, len(set))
+	for k, flag := range set {
+		if flag {
+			members = append(members, k)
+		}
+	}
+
+	return Encode(members, false)
+}
+
+func evalSREM(args []string, store *Store) []byte {
+	if len(args) < 2 {
+		return diceerrors.NewErrArity("SREM")
+	}
+	key := args[0]
+
+	// Get the set object from the store.
+	obj := store.Get(key)
+
+	var count int = 0
+	if obj == nil {
+		return Encode(count, false)
+	}
+
+	// If the object exists, check if it is a set object.
+	if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingSetStr); err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
+	// Get the set object.
+	set := obj.Value.(map[string]bool)
+	for _, arg := range args[1:] {
+		if set[arg] {
+			delete(set, arg)
+			count++
+		}
+	}
+
+	return Encode(count, false)
+}
+
+func evalSCARD(args []string, store *Store) []byte {
+	if len(args) != 1 {
+		return diceerrors.NewErrArity("SCARD")
+	}
+
+	key := args[0]
+
+	// Get the set object from the store.
+	obj := store.Get(key)
+
+	if obj == nil {
+		return Encode(0, false)
+	}
+
+	// If the object exists, check if it is a set object.
+	if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingSetStr); err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
+	// Get the set object.
+	set := obj.Value.(map[string]bool)
+	var count int = 0
+	for k, flag := range set {
+		if !flag {
+			delete(set, k)
+		} else {
+			count++
+		}
+	}
+	return Encode(count, false)
+}
+
+func evalSDIFF(args []string, store *Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("SDIFF")
+	}
+
+	srcKey := args[0]
+	obj := store.Get(srcKey)
+
+	srcSet := make(map[string]bool)
+
+	// Get the set object from the store.
+	// store the count as the number of elements in the first set
+	// we decrement the count as we find the elements in the other sets
+	// if the count is 0, we skip further sets but still get them from
+	// the store to check if they are set objects and update their last accessed time
+
+	var count int = 0
+	if obj != nil {
+		if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+		}
+
+		if err := assertEncoding(obj.TypeEncoding, ObjEncodingSetStr); err != nil {
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+		}
+
+		// create a deep copy of the set object
+		srcSet = make(map[string]bool)
+		for k, flag := range obj.Value.(map[string]bool) {
+			if flag {
+				srcSet[k] = flag
+				count++
+			}
+		}
+	}
+
+	for _, arg := range args[1:] {
+		// Get the set object from the store.
+		obj := store.Get(arg)
+
+		if obj == nil {
+			continue
+		}
+
+		// If the object exists, check if it is a set object.
+		if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+		}
+
+		if err := assertEncoding(obj.TypeEncoding, ObjEncodingSetStr); err != nil {
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+		}
+
+		// only if the count is greater than 0, we need to check the other sets
+		if count > 0 {
+			// Get the set object.
+			set := obj.Value.(map[string]bool)
+			for k, flag := range set {
+				if flag && srcSet[k] {
+					delete(srcSet, k)
+					count--
+				}
+			}
+		}
+	}
+
+	if count == 0 {
+		return Encode([]string{}, false)
+	}
+
+	// Get the members of the set.
+	var members = make([]string, 0, len(srcSet))
+	for k, flag := range srcSet {
+		if flag {
+			members = append(members, k)
+		}
+	}
+
+	return Encode(members, false)
+}
+
+func evalSINTER(args []string, store *Store) []byte {
+	if len(args) < 2 {
+		return diceerrors.NewErrArity("SINTER")
+	}
+
+	sets := make([]map[string]bool, 0, len(args))
+
+	var empty int = 0
+
+	for _, arg := range args {
+		// Get the set object from the store.
+		obj := store.Get(arg)
+
+		if obj == nil {
+			empty++
+			continue
+		}
+
+		// If the object exists, check if it is a set object.
+		if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+		}
+
+		if err := assertEncoding(obj.TypeEncoding, ObjEncodingSetStr); err != nil {
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+		}
+
+		// Get the set object.
+		set := obj.Value.(map[string]bool)
+		sets = append(sets, set)
+	}
+
+	if empty > 0 {
+		return Encode([]string{}, false)
+	}
+
+	// sort the sets by the number of elements in the set
+	// we will iterate over the smallest set
+	// and check if the element is present in all the other sets
+	sort.Slice(sets, func(i, j int) bool {
+		return len(sets[i]) < len(sets[j])
+	})
+
+	count := 0
+	resultSet := make(map[string]bool)
+
+	// init the result set with the first set
+	// store the number of elements in the first set in count
+	// we will decrement the count if we do not find the elements in the other sets
+	for k := range sets[0] {
+		count++
+		resultSet[k] = true
+	}
+
+	for i := 1; i < len(sets); i++ {
+		if count == 0 {
+			break
+		}
+		for k := range resultSet {
+			if !sets[i][k] {
+				delete(resultSet, k)
+				count--
+			}
+		}
+	}
+
+	if count == 0 {
+		return Encode([]string{}, false)
+	}
+
+	var members = make([]string, 0, len(resultSet))
+	for k := range resultSet {
+		members = append(members, k)
+	}
+	return Encode(members, false)
 }

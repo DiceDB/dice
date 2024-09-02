@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"unsafe"
 
 	"github.com/bytedance/sonic"
+	"github.com/cockroachdb/swiss"
 	"github.com/dicedb/dice/internal/constants"
 	"gotest.tools/v3/assert"
 )
@@ -31,9 +31,9 @@ func resetStore(store *Store) {
 
 func setupTest(store *Store) {
 	resetStore(store)
-	store.store = make(map[unsafe.Pointer]*Obj)
-	store.keypool = make(map[string]unsafe.Pointer)
-	store.expires = make(map[*Obj]uint64)
+	store.store = swiss.New[string, *Obj](10240)
+	store.keypool = swiss.New[string, *string](10240)
+	store.expires = swiss.New[*Obj, uint64](10240)
 	KeyspaceStat[0] = make(map[string]int)
 }
 
@@ -45,15 +45,20 @@ func TestEval(t *testing.T) {
 	testEvalHELLO(t, store)
 	testEvalSET(t, store)
 	testEvalGET(t, store)
+	testEvalJSONDEL(t, store)
+	testEvalJSONCLEAR(t, store)
 	testEvalJSONTYPE(t, store)
 	testEvalJSONGET(t, store)
 	testEvalJSONSET(t, store)
 	testEvalTTL(t, store)
 	testEvalDel(t, store)
 	testEvalPersist(t, store)
+	testEvalEXPIRE(t, store)
 	testEvalEXPIRETIME(t, store)
 	testEvalEXPIREAT(t, store)
 	testEvalDbsize(t, store)
+	testEvalGETSET(t, store)
+	testEvalHSET(t, store)
 }
 
 func testEvalPING(t *testing.T, store *Store) {
@@ -153,8 +158,8 @@ func testEvalGET(t *testing.T, store *Store) {
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
 			},
 			input:  []string{"EXISTING_KEY"},
 			output: Encode("mock_value", false),
@@ -167,9 +172,9 @@ func testEvalGET(t *testing.T, store *Store) {
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
-				store.expires[obj] = uint64(time.Now().Add(-2 * time.Minute).Unix())
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
+				store.expires.Put(obj, uint64(time.Now().Add(-2*time.Minute).Unix()))
 			},
 			input:  []string{"EXISTING_KEY"},
 			output: RespNIL,
@@ -179,11 +184,48 @@ func testEvalGET(t *testing.T, store *Store) {
 	runEvalTests(t, tests, evalGET, store)
 }
 
+func testEvalEXPIRE(t *testing.T, store *Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'expire' command\r\n"),
+		},
+		"empty args": {
+			input:  []string{},
+			output: []byte("-ERR wrong number of arguments for 'expire' command\r\n"),
+		},
+		"wrong number of args": {
+			input:  []string{"KEY1"},
+			output: []byte("-ERR wrong number of arguments for 'expire' command\r\n"),
+		},
+		"key does not exist": {
+			input:  []string{"NONEXISTENT_KEY", strconv.FormatInt(1, 10)},
+			output: RespZero,
+		},
+		"key exists": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "mock_value"
+				obj := &Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
+			},
+			input:  []string{"EXISTING_KEY", strconv.FormatInt(1, 10)},
+			output: RespOne,
+		},
+	}
+
+	runEvalTests(t, tests, evalEXPIRE, store)
+}
+
 func testEvalEXPIRETIME(t *testing.T, store *Store) {
 	tests := map[string]evalTestCase{
 		"wrong number of args": {
 			input:  []string{"KEY1", "KEY2"},
-			output: []byte("-ERR wrong number of arguments for 'expire' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'expiretime' command\r\n"),
 		},
 		"key does not exist": {
 			input:  []string{"NONEXISTENT_KEY"},
@@ -197,8 +239,8 @@ func testEvalEXPIRETIME(t *testing.T, store *Store) {
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
 			},
 			input:  []string{"EXISTING_KEY"},
 			output: RespMinusOne,
@@ -211,9 +253,9 @@ func testEvalEXPIRETIME(t *testing.T, store *Store) {
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
-				store.expires[obj] = uint64(2724123456123)
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
+				store.expires.Put(obj, uint64(2724123456123))
 			},
 			input:  []string{"EXISTING_KEY"},
 			output: []byte(fmt.Sprintf(":%d\r\n", 2724123456)),
@@ -249,8 +291,8 @@ func testEvalEXPIREAT(t *testing.T, store *Store) {
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
 			},
 			input:  []string{"EXISTING_KEY", strconv.FormatInt(time.Now().Add(2*time.Minute).Unix(), 10)},
 			output: RespOne,
@@ -260,17 +302,195 @@ func testEvalEXPIREAT(t *testing.T, store *Store) {
 	runEvalTests(t, tests, evalEXPIREAT, store)
 }
 
+func testEvalJSONDEL(t *testing.T, store *Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'json.del' command\r\n"),
+		},
+		"key does not exist": {
+			setup:  func() {},
+			input:  []string{"NONEXISTENT_KEY"},
+			output: RespZero,
+		},
+		"root path del": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"age\":13,\"high\":1.60,\"pet\":null,\"language\":[\"python\",\"golang\"], " +
+					"\"flag\":false, \"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
+			},
+			input:  []string{"EXISTING_KEY"},
+			output: RespOne,
+		},
+		"part path del": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"age\":13,\"high\":1.60,\"pet\":null,\"language\":[\"python\",\"golang\"], " +
+					"\"flag\":false, \"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
+			},
+
+			input:  []string{"EXISTING_KEY", "$..language"},
+			output: []byte(":2\r\n"),
+		},
+		"wildcard path del": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"age\":13,\"high\":1.60,\"pet\":null,\"language\":[\"python\",\"golang\"], " +
+					"\"flag\":false, \"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
+			},
+
+			input:  []string{"EXISTING_KEY", "$.*"},
+			output: []byte(":6\r\n"),
+		},
+	}
+	runEvalTests(t, tests, evalJSONDEL, store)
+}
+
+func testEvalJSONCLEAR(t *testing.T, store *Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'json.clear' command\r\n"),
+		},
+		"empty array": {
+			setup:  func() {},
+			input:  []string{},
+			output: []byte("-ERR wrong number of arguments for 'json.clear' command\r\n"),
+		},
+		"key does not exist": {
+			setup:  func() {},
+			input:  []string{"NONEXISTENT_KEY"},
+			output: []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
+		},
+		"root clear": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"age\":13,\"high\":1.60,\"language\":[\"python\",\"golang\"], \"flag\":false, " +
+					"\"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
+			},
+			input:  []string{"EXISTING_KEY"},
+			output: []byte(":1\r\n"),
+		},
+		"array type clear": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"array\":[1,2,3,\"s\",null]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
+			},
+
+			input:  []string{"EXISTING_KEY"},
+			output: []byte(":1\r\n"),
+		},
+		"string type clear": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"a\":\"test\"}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
+			},
+
+			input:  []string{"EXISTING_KEY", "$.a"},
+			output: []byte(":0\r\n"),
+		},
+		"integer type clear": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"age\":13}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
+			},
+
+			input:  []string{"EXISTING_KEY", "$.age"},
+			output: []byte(":1\r\n"),
+		},
+		"number type clear": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"price\":3.14}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
+			},
+
+			input:  []string{"EXISTING_KEY", "$.price"},
+			output: []byte(":1\r\n"),
+		},
+		"boolean type clear": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"flag\":false}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
+			},
+			input:  []string{"EXISTING_KEY", "$.flag"},
+			output: []byte(":0\r\n"),
+		},
+		"multi type clear": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"age\":13,\"high\":1.60,\"name\":\"jerry\",\"language\":[\"python\",\"golang\"]," +
+					"\"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
+			},
+			input:  []string{"EXISTING_KEY", "$.*"},
+			output: []byte(":4\r\n"),
+		},
+	}
+	runEvalTests(t, tests, evalJSONCLEAR, store)
+}
+
 func testEvalJSONTYPE(t *testing.T, store *Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
 			setup:  func() {},
 			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'JSON.TYPE' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'json.type' command\r\n"),
 		},
 		"empty array": {
 			setup:  func() {},
 			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'JSON.TYPE' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'json.type' command\r\n"),
 		},
 		"key does not exist": {
 			setup:  func() {},
@@ -284,8 +504,8 @@ func testEvalJSONTYPE(t *testing.T, store *Store) {
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
 			},
 
 			input:  []string{"EXISTING_KEY"},
@@ -298,12 +518,12 @@ func testEvalJSONTYPE(t *testing.T, store *Store) {
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
 			},
 
 			input:  []string{"EXISTING_KEY", "$.language"},
-			output: []byte("$5\r\narray\r\n"),
+			output: []byte("*1\r\n$5\r\narray\r\n"),
 		},
 		"string type value": {
 			setup: func() {
@@ -312,12 +532,12 @@ func testEvalJSONTYPE(t *testing.T, store *Store) {
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
 			},
 
 			input:  []string{"EXISTING_KEY", "$.a"},
-			output: []byte("$6\r\nstring\r\n"),
+			output: []byte("*1\r\n$6\r\nstring\r\n"),
 		},
 		"boolean type value": {
 			setup: func() {
@@ -326,12 +546,12 @@ func testEvalJSONTYPE(t *testing.T, store *Store) {
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
 			},
 
 			input:  []string{"EXISTING_KEY", "$.flag"},
-			output: []byte("$7\r\nboolean\r\n"),
+			output: []byte("*1\r\n$7\r\nboolean\r\n"),
 		},
 		"number type value": {
 			setup: func() {
@@ -340,12 +560,12 @@ func testEvalJSONTYPE(t *testing.T, store *Store) {
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
 			},
 
 			input:  []string{"EXISTING_KEY", "$.price"},
-			output: []byte("$6\r\nnumber\r\n"),
+			output: []byte("*1\r\n$6\r\nnumber\r\n"),
 		},
 		"null type value": {
 			setup: func() {
@@ -354,12 +574,12 @@ func testEvalJSONTYPE(t *testing.T, store *Store) {
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
 			},
 
 			input:  []string{"EXISTING_KEY", "$.language"},
-			output: RespNIL,
+			output: RespEmptyArray,
 		},
 		"multi type value": {
 			setup: func() {
@@ -368,8 +588,8 @@ func testEvalJSONTYPE(t *testing.T, store *Store) {
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
 			},
 
 			input:  []string{"EXISTING_KEY", "$..name"},
@@ -385,12 +605,12 @@ func testEvalJSONGET(t *testing.T, store *Store) {
 		"nil value": {
 			setup:  func() {},
 			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'JSON.GET' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'json.get' command\r\n"),
 		},
 		"empty array": {
 			setup:  func() {},
 			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'JSON.GET' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'json.get' command\r\n"),
 		},
 		"key does not exist": {
 			setup:  func() {},
@@ -405,11 +625,11 @@ func testEvalJSONGET(t *testing.T, store *Store) {
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
 			},
 			input:  []string{"EXISTING_KEY"},
-			output: []byte("-the operation is not permitted on this type\r\n"),
+			output: []byte("-ERR Existing key has wrong Dice type\r\n"),
 		},
 		"key exists value": {
 			setup: func() {
@@ -418,8 +638,8 @@ func testEvalJSONGET(t *testing.T, store *Store) {
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
 			},
 
 			input:  []string{"EXISTING_KEY"},
@@ -433,9 +653,9 @@ func testEvalJSONGET(t *testing.T, store *Store) {
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
-				store.expires[obj] = uint64(time.Now().Add(-2 * time.Minute).Unix())
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
+				store.expires.Put(obj, uint64(time.Now().Add(-2*time.Minute).Unix()))
 			},
 			input:  []string{"EXISTING_KEY"},
 			output: RespNIL,
@@ -450,17 +670,17 @@ func testEvalJSONSET(t *testing.T, store *Store) {
 		"nil value": {
 			setup:  func() {},
 			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'JSON.SET' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'json.set' command\r\n"),
 		},
 		"empty array": {
 			setup:  func() {},
 			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'JSON.SET' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'json.set' command\r\n"),
 		},
 		"insufficient args": {
 			setup:  func() {},
 			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'JSON.SET' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'json.set' command\r\n"),
 		},
 		"invalid json path": {
 			setup:  func() {},
@@ -512,8 +732,8 @@ func testEvalTTL(t *testing.T, store *Store) {
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
 			},
 			input:  []string{"EXISTING_KEY"},
 			output: RespMinusOne,
@@ -526,9 +746,9 @@ func testEvalTTL(t *testing.T, store *Store) {
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
-				store.expires[obj] = uint64(time.Now().Add(2 * time.Minute).UnixMilli())
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
+				store.expires.Put(obj, uint64(time.Now().Add(2*time.Minute).UnixMilli()))
 			},
 			input: []string{"EXISTING_KEY"},
 			validator: func(output []byte) {
@@ -545,9 +765,9 @@ func testEvalTTL(t *testing.T, store *Store) {
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
-				store.expires[obj] = uint64(time.Now().Add(-2 * time.Minute).Unix())
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
+				store.expires.Put(obj, uint64(time.Now().Add(-2*time.Minute).Unix()))
 			},
 			input:  []string{"EXISTING_KEY"},
 			output: RespMinusTwo,
@@ -582,8 +802,8 @@ func testEvalDel(t *testing.T, store *Store) {
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
 				KeyspaceStat[0]["keys"]++
 			},
 			input:  []string{"EXISTING_KEY"},
@@ -637,7 +857,7 @@ func testEvalDbsize(t *testing.T, store *Store) {
 	tests := map[string]evalTestCase{
 		"DBSIZE command with invalid no of args": {
 			input:  []string{"INVALID_ARG"},
-			output: []byte("-ERR wrong number of arguments for 'DBSIZE' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'dbsize' command\r\n"),
 		},
 		"no key in db": {
 			input:  nil,
@@ -645,37 +865,15 @@ func testEvalDbsize(t *testing.T, store *Store) {
 		},
 		"one key exists in db": {
 			setup: func() {
-				key := "KEY"
-				value := "VAL"
-				obj := &Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
-				store.store[unsafe.Pointer(obj)] = obj
-				store.keypool[key] = unsafe.Pointer(obj)
+				evalSET([]string{"key", "val"}, store)
 			},
 			input:  nil,
 			output: []byte(":1\r\n"),
 		},
 		"two keys exist in db": {
 			setup: func() {
-				key1 := "KEY1"
-				value1 := "VAL1"
-				obj1 := &Obj{
-					Value:          value1,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
-				store.store[unsafe.Pointer(obj1)] = obj1
-				store.keypool[key1] = unsafe.Pointer(obj1)
-
-				key2 := "KEY2"
-				value2 := "VAL2"
-				obj2 := &Obj{
-					Value:          value2,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
-				store.store[unsafe.Pointer(obj2)] = obj2
-				store.keypool[key2] = unsafe.Pointer(obj2)
+				evalSET([]string{"key1", "val1"}, store)
+				evalSET([]string{"key2", "val2"}, store)
 			},
 			input:  nil,
 			output: []byte(":2\r\n"),
@@ -683,6 +881,53 @@ func testEvalDbsize(t *testing.T, store *Store) {
 	}
 
 	runEvalTests(t, tests, evalDBSIZE, store)
+}
+
+func testEvalGETSET(t *testing.T, store *Store) {
+	tests := map[string]evalTestCase{
+		"GETSET with 1 arg": {
+			input:  []string{"HELLO"},
+			output: []byte("-ERR wrong number of arguments for 'getset' command\r\n"),
+		},
+		"GETSET with 3 args": {
+			input:  []string{"HELLO", "WORLD", "WORLD1"},
+			output: []byte("-ERR wrong number of arguments for 'getset' command\r\n"),
+		},
+		"GETSET key not exists": {
+			input:  []string{"HELLO", "WORLD"},
+			output: RespNIL,
+		},
+		"GETSET key exists": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "mock_value"
+				obj := &Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
+			},
+			input:  []string{"EXISTING_KEY", "WORLD"},
+			output: Encode("mock_value", false),
+		},
+		"GETSET key exists TTL should be reset": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "mock_value"
+				obj := &Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
+			},
+			input:  []string{"EXISTING_KEY", "WORLD"},
+			output: Encode("mock_value", false),
+		},
+	}
+
+	runEvalTests(t, tests, evalGETSET, store)
 }
 
 func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]string, *Store) []byte, store *Store) {
@@ -705,8 +950,101 @@ func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]s
 }
 
 func BenchmarkEvalMSET(b *testing.B) {
-	store := NewStore()
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
+		store := NewStore()
 		evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"}, store)
 	}
+}
+
+func BenchmarkEvalHSET(b *testing.B) {
+	store := NewStore()
+	for i := 0; i < b.N; i++ {
+		evalHSET([]string{"KEY", fmt.Sprintf("FIELD_%d", i), fmt.Sprintf("VALUE_%d", i)}, store)
+	}
+}
+
+func testEvalHSET(t *testing.T, store *Store) {
+	tests := map[string]evalTestCase{
+		"wrong number of args passed": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'hset' command\r\n"),
+		},
+		"only key passed": {
+			setup:  func() {},
+			input:  []string{"key"},
+			output: []byte("-ERR wrong number of arguments for 'hset' command\r\n"),
+		},
+		"only key and field_name passed": {
+			setup:  func() {},
+			input:  []string{"KEY", "field_name"},
+			output: []byte("-ERR wrong number of arguments for 'hset' command\r\n"),
+		},
+		"key, field and value passed": {
+			setup:  func() {},
+			input:  []string{"KEY1", "field_name", "value"},
+			output: Encode(int64(1), false),
+		},
+		"key, field and value updated": {
+			setup:  func() {},
+			input:  []string{"KEY1", "field_name", "value_new"},
+			output: Encode(int64(1), false),
+		},
+		"new set of key, field and value added": {
+			setup:  func() {},
+			input:  []string{"KEY2", "field_name_new", "value_new_new"},
+			output: Encode(int64(1), false),
+		},
+		"apply with duplicate key, field and value names": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field := "mock_field_name"
+				newMap := make(HashMap)
+				newMap[field] = "mock_field_value"
+
+				obj := &Obj{
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
+			},
+			input:  []string{"KEY_MOCK", "mock_field_name", "mock_field_value"},
+			output: Encode(int64(0), false),
+		},
+		"same key -> update value, add new field and value": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field := "mock_field_name"
+				mock_value := "mock_field_value"
+				newMap := make(HashMap)
+				newMap[field] = mock_value
+
+				obj := &Obj{
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
+
+				// Check if the map is saved correctly in the store
+				res, err := getValueFromHashMap(key, field, store)
+				assert.NilError(t, err)
+				assert.Equal(t, string(res), mock_value)
+			},
+			input: []string{
+				"KEY_MOCK",
+				"mock_field_name",
+				"mock_field_value_new",
+				"mock_field_name_new",
+				"mock_value_new",
+			},
+			output: Encode(int64(1), false),
+		},
+	}
+
+	runEvalTests(t, tests, evalHSET, store)
 }

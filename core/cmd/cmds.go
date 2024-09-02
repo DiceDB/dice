@@ -1,6 +1,7 @@
-package core
+package cmd
 
 type RedisCmd struct {
+	ID   uint32
 	Cmd  string
 	Args []string
 }

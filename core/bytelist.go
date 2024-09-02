@@ -61,7 +61,6 @@ func (b *byteList) append(bn *byteListNode) {
 	}
 }
 
-
 func (b *byteList) prepend(bn *byteListNode) {
 	bn.next = b.head
 	if b.head != nil {
