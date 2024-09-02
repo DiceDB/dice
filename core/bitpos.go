@@ -2,7 +2,6 @@ package core
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -59,51 +58,6 @@ func parseBitToFind(arg string) (byte, error) {
 	}
 
 	return byte(bitToFindInt), nil
-}
-
-func getValueAsByteSlice(obj *Obj) ([]byte, error) {
-	oType, oEnc := ExtractTypeEncoding(obj)
-	switch oType {
-	case ObjTypeInt:
-		return []byte(strconv.FormatInt(obj.Value.(int64), 10)), nil
-	case ObjTypeString:
-		return getStringValueAsByteSlice(obj, oEnc)
-	// TODO: Have this case as SETBIT stores values encoded as byte arrays. Need to investigate this further.
-	case ObjTypeByteArray:
-		return getByteArrayValueAsByteSlice(obj)
-	default:
-		return nil, fmt.Errorf("ERR unsopported type")
-	}
-}
-
-func getStringValueAsByteSlice(obj *Obj, oEnc uint8) ([]byte, error) {
-	switch oEnc {
-	case ObjEncodingInt:
-		intVal, ok := obj.Value.(int64)
-		if !ok {
-			return nil, errors.New("expected integer value but got another type")
-		}
-
-		return []byte(strconv.FormatInt(intVal, 10)), nil
-	case ObjEncodingEmbStr, ObjEncodingRaw:
-		strVal, ok := obj.Value.(string)
-		if !ok {
-			return nil, errors.New("expected string value but got another type")
-		}
-
-		return []byte(strVal), nil
-	default:
-		return nil, fmt.Errorf("unsupported encoding type: %d", oEnc)
-	}
-}
-
-func getByteArrayValueAsByteSlice(obj *Obj) ([]byte, error) {
-	byteArray, ok := obj.Value.(*ByteArray)
-	if !ok {
-		return nil, errors.New("expected byte array value but got another type")
-	}
-
-	return byteArray.data, nil
 }
 
 func parseOptionalParams(args []string, byteLen int) (start, end int, rangeType string, endRangeProvided bool, err error) {
@@ -176,7 +130,7 @@ func getBitPos(byteSlice []byte, bitToFind byte, start, end int, rangeType strin
 	return result
 }
 
-// nolint: gocritic
+//nolint: gocritic
 func adjustBitPosSearchRange(start, end, byteLen int) (int, int) {
 	if start < 0 {
 		start += byteLen

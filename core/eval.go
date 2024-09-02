@@ -15,7 +15,9 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/core/auth"
 	"github.com/dicedb/dice/core/bit"
+	"github.com/dicedb/dice/core/comm"
 	"github.com/dicedb/dice/core/diceerrors"
 	"github.com/dicedb/dice/internal/constants"
 	"github.com/dicedb/dice/server/utils"
@@ -38,7 +40,7 @@ var RespMinusOne []byte = []byte(":-1\r\n")
 var RespMinusTwo []byte = []byte(":-2\r\n")
 var RespEmptyArray []byte = []byte("*0\r\n")
 
-var txnCommands map[string]bool
+var TxnCommands map[string]bool
 var serverID string
 var diceCommandsCount int
 
@@ -46,7 +48,7 @@ const defaultRootPath = "$"
 
 func init() {
 	diceCommandsCount = len(diceCmds)
-	txnCommands = map[string]bool{"EXEC": true, "DISCARD": true}
+	TxnCommands = map[string]bool{"EXEC": true, "DISCARD": true}
 	serverID = fmt.Sprintf("%s:%d", config.Host, config.Port)
 }
 
@@ -71,7 +73,7 @@ func evalPING(args []string, store *Store) []byte {
 
 // evalAUTH returns with an encoded "OK" if the user is authenticated
 // If the user is not authenticated, it returns with an encoded error message
-func evalAUTH(args []string, c *Client) []byte {
+func evalAUTH(args []string, c *comm.Client) []byte {
 	var (
 		err error
 	)
@@ -80,7 +82,7 @@ func evalAUTH(args []string, c *Client) []byte {
 		return diceerrors.NewErrWithMessage("AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?")
 	}
 
-	var username = DefaultUserName
+	var username = auth.DefaultUserName
 	var password string
 
 	if len(args) == 1 {
@@ -278,6 +280,13 @@ func evalGET(args []string, store *Store) []byte {
 		}
 		return diceerrors.NewErrWithMessage("expected string but got another type")
 
+	case ObjEncodingByteArray:
+		// Value is stored as a bytearray, use type assertion
+		if val, ok := obj.Value.(*ByteArray); ok {
+			return Encode(string(val.data), false)
+		}
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+
 	default:
 		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 	}
@@ -322,6 +331,60 @@ func evalGETDEL(args []string, store *Store) []byte {
 	return Encode(obj.Value, false)
 }
 
+// evalJSONDEL delete a value that the given json path include in.
+// Returns RespZero if key is expired or it does not exist
+// Returns encoded error response if incorrect number of arguments
+// Returns an integer reply specified as the number of paths deleted (0 or more)
+func evalJSONDEL(args []string, store *Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("JSON.DEL")
+	}
+	key := args[0]
+
+	// Default path is root if not specified
+	path := defaultRootPath
+	if len(args) > 1 {
+		path = args[1]
+	}
+
+	// Retrieve the object from the database
+	obj := store.Get(key)
+	if obj == nil {
+		return RespZero
+	}
+
+	errWithMessage := assertTypeAndEncoding(obj.TypeEncoding, ObjTypeJSON, ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
+	}
+
+	jsonData := obj.Value
+
+	_, err := sonic.Marshal(jsonData)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
+	}
+
+	if len(args) == 1 || path == defaultRootPath {
+		store.Del(key)
+		return RespOne
+	}
+
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("invalid JSONPath")
+	}
+	results := expr.Get(jsonData)
+	err = expr.Del(jsonData)
+	if err != nil {
+		return diceerrors.NewErrWithMessage(err.Error())
+	}
+	// Create a new object with the updated JSON data
+	newObj := store.NewObj(jsonData, -1, ObjTypeJSON, ObjEncodingJSON)
+	store.Put(key, newObj)
+	return Encode(len(results), false)
+}
+
 // evalJSONCLEAR Clear container values (arrays/objects) and set numeric values to 0,
 // Already cleared values are ignored for empty containers and zero numbers
 // args must contain at least the key;  (path unused in this implementation)
@@ -347,18 +410,14 @@ func evalJSONCLEAR(args []string, store *Store) []byte {
 		return diceerrors.NewErrWithMessage("could not perform this operation on a key that doesn't exist")
 	}
 
-	err := assertType(obj.TypeEncoding, ObjTypeJSON)
-	if err != nil {
-		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
-	}
-	err = assertEncoding(obj.TypeEncoding, ObjEncodingJSON)
-	if err != nil {
-		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
+	errWithMessage := assertTypeAndEncoding(obj.TypeEncoding, ObjTypeJSON, ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
 	}
 
 	jsonData := obj.Value
 
-	_, err = sonic.Marshal(jsonData)
+	_, err := sonic.Marshal(jsonData)
 	if err != nil {
 		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
 	}
@@ -432,13 +491,9 @@ func evalJSONTYPE(args []string, store *Store) []byte {
 		return RespNIL
 	}
 
-	err := assertType(obj.TypeEncoding, ObjTypeJSON)
-	if err != nil {
-		return Encode(err, false)
-	}
-	err = assertEncoding(obj.TypeEncoding, ObjEncodingJSON)
-	if err != nil {
-		return Encode(err, false)
+	errWithMessage := assertTypeAndEncoding(obj.TypeEncoding, ObjTypeJSON, ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
 	}
 
 	jsonData := obj.Value
@@ -497,13 +552,9 @@ func evalJSONGET(args []string, store *Store) []byte {
 	}
 
 	// Check if the object is of JSON type
-	err := assertType(obj.TypeEncoding, ObjTypeJSON)
-	if err != nil {
-		return Encode(err, false)
-	}
-	err = assertEncoding(obj.TypeEncoding, ObjEncodingJSON)
-	if err != nil {
-		return Encode(err, false)
+	errWithMessage := assertTypeAndEncoding(obj.TypeEncoding, ObjTypeJSON, ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
 	}
 
 	jsonData := obj.Value
@@ -1527,8 +1578,8 @@ func evalSTACKREFPEEK(args []string, store *Store) []byte {
 // evalQWATCH adds the specified key to the watch list for the caller client.
 // Every time a key in the watch list is modified, the client will be sent a response
 // containing the new value of the key along with the operation that was performed on it.
-// Contains only one argument, the key to be watched.
-func evalQWATCH(args []string, c *Client, store *Store) []byte {
+// Contains only one argument, the query to be watched.
+func evalQWATCH(args []string, clientFd int, store *Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("QWATCH")
 	}
@@ -1543,7 +1594,7 @@ func evalQWATCH(args []string, c *Client, store *Store) []byte {
 	WatchSubscriptionChan <- WatchSubscription{
 		subscribe: true,
 		query:     query,
-		clientFd:  c.Fd,
+		clientFd:  clientFd,
 	}
 
 	// Return the result of the query.
@@ -1557,7 +1608,7 @@ func evalQWATCH(args []string, c *Client, store *Store) []byte {
 }
 
 // evalQUNWATCH removes the specified key from the watch list for the caller client.
-func evalQUNWATCH(args []string, c *Client) []byte {
+func evalQUNWATCH(args []string, clientFd int) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("QUNWATCH")
 	}
@@ -1569,7 +1620,7 @@ func evalQUNWATCH(args []string, c *Client) []byte {
 	WatchSubscriptionChan <- WatchSubscription{
 		subscribe: false,
 		query:     query,
-		clientFd:  c.Fd,
+		clientFd:  clientFd,
 	}
 
 	return RespOK
@@ -1602,17 +1653,25 @@ func evalSETBIT(args []string, store *Store) []byte {
 		store.Put(args[0], obj)
 	}
 
-	// handle the case when it is string
-	if assertType(obj.TypeEncoding, ObjTypeString) == nil {
-		return diceerrors.NewErrWithMessage("value is not a valid byte array")
-	}
-	// handle the case when it is set
-	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-	// handle the case when it is byte array
-	if assertType(obj.TypeEncoding, ObjTypeByteArray) == nil {
-		byteArray := obj.Value.(*ByteArray)
+	if assertType(obj.TypeEncoding, ObjTypeByteArray) == nil ||
+		assertType(obj.TypeEncoding, ObjTypeString) == nil ||
+		assertType(obj.TypeEncoding, ObjTypeInt) == nil {
+		var byteArray *ByteArray
+		oType, oEnc := ExtractTypeEncoding(obj)
+
+		switch oType {
+		case ObjTypeByteArray:
+			byteArray = obj.Value.(*ByteArray)
+		case ObjTypeString, ObjTypeInt:
+			byteArray, err = NewByteArrayFromObj(obj)
+			if err != nil {
+				return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+			}
+		default:
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+		}
+
+		// Perform the resizing check
 		byteArrayLength := byteArray.Length
 
 		// check whether resize required or not
@@ -1629,13 +1688,31 @@ func evalSETBIT(args []string, store *Store) []byte {
 		if response && !value {
 			byteArray.ResizeIfNecessary()
 		}
+
+		// We are returning newObject here so it is thread-safe
+		// Old will be removed by GC
+		newObj, err := ByteSliceToObj(store, obj, byteArray.data, oType, oEnc)
+		if err != nil {
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+		}
+
+		exp, ok := getExpiry(obj, store)
+		var exDurationMs int64 = -1
+		if ok {
+			exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
+		}
+		// newObj has bydefault expiry time -1 , we need to set it
+		if exDurationMs > 0 {
+			store.setExpiry(newObj, exDurationMs)
+		}
+
+		store.Put(key, newObj)
 		if response {
 			return Encode(int(1), true)
 		}
 		return Encode(int(0), true)
 	}
-
-	return Encode(0, false)
+	return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 }
 
 // GETBIT key offset
@@ -2050,87 +2127,6 @@ func evalEXISTS(args []string, store *Store) []byte {
 	}
 
 	return Encode(count, false)
-}
-
-func executeCommand(cmd *RedisCmd, c *Client, store *Store) []byte {
-	diceCmd, ok := diceCmds[cmd.Cmd]
-	if !ok {
-		return diceerrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", cmd.Cmd, strings.Join(cmd.Args, " "))
-	}
-
-	if diceCmd.Name == "SUBSCRIBE" || diceCmd.Name == "QWATCH" {
-		return evalQWATCH(cmd.Args, c, store)
-	}
-	if diceCmd.Name == "UNSUBSCRIBE" || diceCmd.Name == "QUNWATCH" {
-		return evalQUNWATCH(cmd.Args, c)
-	}
-	if diceCmd.Name == "MULTI" {
-		c.TxnBegin()
-		return diceCmd.Eval(cmd.Args, store)
-	}
-	if diceCmd.Name == AuthCmd {
-		return evalAUTH(cmd.Args, c)
-	}
-	if diceCmd.Name == "EXEC" {
-		if !c.isTxn {
-			return diceerrors.NewErrWithMessage("EXEC without MULTI")
-		}
-		return c.TxnExec(store)
-	}
-	if diceCmd.Name == "DISCARD" {
-		if !c.isTxn {
-			return diceerrors.NewErrWithMessage("DISCARD without MULTI")
-		}
-		c.TxnDiscard()
-		return RespOK
-	}
-	if diceCmd.Name == "ABORT" {
-		return RespOK
-	}
-
-	return diceCmd.Eval(cmd.Args, store)
-}
-
-func executeCommandToBuffer(cmd *RedisCmd, buf *bytes.Buffer, c *Client, store *Store) {
-	buf.Write(executeCommand(cmd, c, store))
-}
-
-func EvalAndRespond(cmds RedisCmds, c *Client, store *Store) {
-	var response []byte
-	buf := bytes.NewBuffer(response)
-
-	for _, cmd := range cmds {
-		// Check if the command has been authenticated
-		if cmd.Cmd != AuthCmd && !c.Session.IsActive() {
-			if _, err := c.Write(Encode(errors.New("NOAUTH Authentication required"), false)); err != nil {
-				log.Info("Error writing to client:", err)
-			}
-			continue
-		}
-		// if txn is not in progress, then we can simply
-		// execute the command and add the response to the buffer
-		if !c.isTxn {
-			executeCommandToBuffer(cmd, buf, c, store)
-			continue
-		}
-
-		// if the txn is in progress, we enqueue the command
-		// and add the QUEUED response to the buffer
-		if !txnCommands[cmd.Cmd] {
-			// if the command is queuable the enqueu
-			c.TxnQueue(cmd)
-			buf.Write(RespQueued)
-		} else {
-			// if txn is active and the command is non-queuable
-			// ex: EXEC, DISCARD
-			// we execute the command and gather the response in buffer
-			executeCommandToBuffer(cmd, buf, c, store)
-		}
-	}
-
-	if _, err := c.Write(buf.Bytes()); err != nil {
-		log.Error(err)
-	}
 }
 
 func evalPersist(args []string, store *Store) []byte {

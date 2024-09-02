@@ -114,6 +114,16 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsondelCmdMeta = DiceCmdMeta{
+		Name: "JSON.DEL",
+		Info: `JSON.DEL key [path]
+		Returns an integer reply specified as the number of paths deleted (0 or more).
+		Returns RespZero if the key doesn't exist or key is expired.
+		Error reply: If the number of arguments is incorrect.`,
+		Eval:     evalJSONDEL,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	ttlCmdMeta = DiceCmdMeta{
 		Name: "TTL",
 		Info: `TTL returns Time-to-Live in secs for the queried key in args
@@ -422,7 +432,7 @@ var (
 		Eval:  nil,
 		Arity: 1,
 	}
-	multiCmdMeta = DiceCmdMeta{
+	MultiCmdMeta = DiceCmdMeta{
 		Name: "MULTI",
 		Info: `MULTI marks the start of the transaction for the client.
 		All subsequent commands fired will be queued for atomic execution.
@@ -432,13 +442,13 @@ var (
 		Eval:  evalMULTI,
 		Arity: 1,
 	}
-	execCmdMeta = DiceCmdMeta{
+	ExecCmdMeta = DiceCmdMeta{
 		Name:  "EXEC",
 		Info:  `EXEC executes commands in a transaction, which is initiated by MULTI`,
 		Eval:  nil,
 		Arity: 1,
 	}
-	discardCmdMeta = DiceCmdMeta{
+	DiscardCmdMeta = DiceCmdMeta{
 		Name:  "DISCARD",
 		Info:  `DISCARD discards all the commands in a transaction, which is initiated by MULTI`,
 		Eval:  nil,
@@ -764,6 +774,7 @@ func init() {
 	diceCmds["JSON.GET"] = jsongetCmdMeta
 	diceCmds["JSON.TYPE"] = jsontypeCmdMeta
 	diceCmds["JSON.CLEAR"] = jsonclearCmdMeta
+	diceCmds["JSON.DEL"] = jsondelCmdMeta
 	diceCmds["TTL"] = ttlCmdMeta
 	diceCmds["DEL"] = delCmdMeta
 	diceCmds["EXPIRE"] = expireCmdMeta
@@ -800,9 +811,9 @@ func init() {
 	diceCmds["SUBSCRIBE"] = subscribeCmdMeta
 	diceCmds["QWATCH"] = qwatchCmdMeta
 	diceCmds["QUNWATCH"] = qUnwatchCmdMeta
-	diceCmds["MULTI"] = multiCmdMeta
-	diceCmds["EXEC"] = execCmdMeta
-	diceCmds["DISCARD"] = discardCmdMeta
+	diceCmds["MULTI"] = MultiCmdMeta
+	diceCmds["EXEC"] = ExecCmdMeta
+	diceCmds["DISCARD"] = DiscardCmdMeta
 	diceCmds["ABORT"] = abortCmdMeta
 	diceCmds["COMMAND"] = commandCmdMeta
 	diceCmds["SETBIT"] = setBitCmdMeta

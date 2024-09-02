@@ -32,6 +32,7 @@ require (
 	github.com/axiomhq/hyperloglog v0.2.0
 	github.com/bytedance/sonic v1.12.1
 	github.com/charmbracelet/log v0.4.0
+	github.com/cockroachdb/swiss v0.0.0-20240612210725-f4de07ae6964
 	github.com/dicedb/go-dice v0.0.0-20240820180649-d97f15fca831
 	github.com/ohler55/ojg v1.23.0
 	github.com/twmb/murmur3 v1.1.8

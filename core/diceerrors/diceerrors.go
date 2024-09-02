@@ -18,6 +18,7 @@ const (
 	ErrDefault         = "-ERR %s"
 	WrongTypeErr       = "-WRONGTYPE Operation against a key holding the wrong kind of value"
 	InvalidHllErr      = "-INVALIDOBJ Corrupted HLL object detected"
+	WorkerNotFoundErr  = "worker with ID %s not found"
 )
 
 type DiceError struct {

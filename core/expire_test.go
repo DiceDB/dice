@@ -2,14 +2,16 @@ package core
 
 import (
 	"testing"
+
+	"github.com/cockroachdb/swiss"
 )
 
 func TestDelExpiry(t *testing.T) {
 	store := NewStore()
 	// Initialize the test environment
-	store.store = make(map[string]*Obj)
-	store.expires = make(map[*Obj]uint64)
-	store.keypool = make(map[string]*string)
+	store.store = swiss.New[string, *Obj](10240)
+	store.keypool = swiss.New[string, *string](10240)
+	store.expires = swiss.New[*Obj, uint64](10240)
 
 	// Define test cases
 	tests := []struct {
@@ -22,7 +24,7 @@ func TestDelExpiry(t *testing.T) {
 			name: "Object with expiration",
 			obj:  &Obj{},
 			setup: func(obj *Obj) {
-				store.expires[obj] = 12345 // Set some expiration time
+				store.expires.Put(obj, 12345) // Set some expiration time
 			},
 			expected: false,
 		},
@@ -46,7 +48,7 @@ func TestDelExpiry(t *testing.T) {
 			delExpiry(tc.obj, store)
 
 			// Check if the key has been deleted from the expires map
-			_, exists := store.expires[tc.obj]
+			_, exists := store.expires.Get(tc.obj)
 			if exists != tc.expected {
 				t.Errorf("%s: expected key to be deleted: %v, got: %v", tc.name, tc.expected, exists)
 			}
