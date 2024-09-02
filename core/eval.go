@@ -2017,9 +2017,19 @@ func evalCommand(args []string, store *Store) []byte {
 		return evalCommandCount()
 	case "GETKEYS":
 		return evalCommandGetKeys(args[1:])
+	case "LIST":
+		return evalCommandList()
 	default:
-		return diceerrors.NewErrWithFormattedMessage("unknown subcommand '%s'. Try COMMAND HELP", subcommand)
+		return diceerrors.NewErrWithFormattedMessage("unknown subcommand '%s'. Try COMMAND HELP.", subcommand)
 	}
+}
+
+func evalCommandList() []byte {
+	cmds := make([]string, 0, diceCommandsCount)
+	for k := range diceCmds {
+		cmds = append(cmds, k)
+	}
+	return Encode(cmds, false)
 }
 
 // evalKeys returns the list of keys that match the pattern
