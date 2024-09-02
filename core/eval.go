@@ -2021,7 +2021,6 @@ func evalCommand(args []string, store *Store) []byte {
 		return evalCommandList()
 	default:
 		return diceerrors.NewErrWithFormattedMessage("unknown subcommand '%s'. Try COMMAND HELP.", subcommand)
-
 	}
 }
 
