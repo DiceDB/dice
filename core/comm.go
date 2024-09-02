@@ -5,14 +5,12 @@ import (
 	"fmt"
 	"io"
 	"syscall"
-	"time"
 )
 
 type Client struct {
 	io.ReadWriter
 	Fd      int
 	cqueue  RedisCmds
-	LastActiveTime time.Time
 	isTxn   bool
 	Session *Session
 }

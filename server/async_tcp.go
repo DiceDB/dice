@@ -152,7 +152,6 @@ func (s *AsyncServer) Run(ctx context.Context) error {
 
 // eventLoop listens for events and handles client requests. It also runs a cron job to delete expired keys
 func (s *AsyncServer) eventLoop(ctx context.Context) error {
-	idleTimeout := 5 * time.Minute // Define the idle timeout duration
 
 	for {
 		select {
@@ -163,27 +162,6 @@ func (s *AsyncServer) eventLoop(ctx context.Context) error {
 				core.DeleteExpiredKeys(s.store)
 				s.lastCronExecTime = utils.GetCurrentTime()
 			}
-
-			//check for idle
-			for fd, client := range s.connectedClients {
-                if time.Since(client.LastActiveTime) > idleTimeout {
-                    log.Info("disconnecting idle client", "client_fd", fd)
-                    
-                    // Unsubscribe the client and close the connection
-                    if err := syscall.Close(fd); err != nil {
-                        log.Warn("failed to close client connection", "client_fd", fd, "error", err)
-                    }
-                    delete(s.connectedClients, fd)
-                    if err := s.multiplexer.Unsubscribe(iomultiplexer.Event{
-						Fd: fd,
-						Op: iomultiplexer.OpRead,
-					});
-					err != nil {
-                        log.Warn("failed to unsubscribe client", "client_fd", fd, "error", err)
-                    }
-                }
-            }
-
 			events, err := s.multiplexer.Poll(s.multiplexerPollTimeout)
 			if err != nil {
 				if errors.Is(err, syscall.EINTR) {

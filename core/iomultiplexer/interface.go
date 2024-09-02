@@ -9,8 +9,6 @@ type IOMultiplexer interface {
 	// When the event is triggered, the Poll method will return it
 	Subscribe(event Event) error
 
-	Unsubscribe(event Event) error
-
 	// Poll polls for all the subscribed events simultaneously
 	// and returns all the events that were triggered
 	// It blocks until at least one event is triggered or the timeout is reached
