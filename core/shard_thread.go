@@ -9,6 +9,7 @@ import (
 
 	"github.com/dicedb/dice/core/auth"
 	"github.com/dicedb/dice/core/ops"
+	"github.com/dicedb/dice/internal/constants"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core/diceerrors"
@@ -103,6 +104,11 @@ func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 func (shard *ShardThread) executeCommand(op *ops.StoreOp) []byte {
 	diceCmd, ok := diceCmds[op.Cmd.Cmd]
 	if !ok {
+		// Temporary workaround for redis tcl commands
+		if _, exists := constants.IgnoreCommands[strings.ToUpper(args[0])]; exists {
+			return RespOK
+		}
+
 		return diceerrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", op.Cmd.Cmd, strings.Join(op.Cmd.Args, " "))
 	}
 
