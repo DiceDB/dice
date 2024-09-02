@@ -964,8 +964,8 @@ func testEvalPFCOUNT(t *testing.T, store *Store) {
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store[key] = obj
-				store.keypool[key] = &key
+				store.store.Put(key, obj)
+				store.keypool.Put(key, &key)
 			},
 			input:  []string{"EXISTING_KEY"},
 			output: Encode(1, false),
