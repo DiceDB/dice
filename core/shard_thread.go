@@ -105,7 +105,7 @@ func (shard *ShardThread) executeCommand(op *ops.StoreOp) []byte {
 	diceCmd, ok := diceCmds[op.Cmd.Cmd]
 	if !ok {
 		// Temporary workaround for redis tcl commands
-		if _, exists := constants.IgnoreCommands[strings.ToUpper(args[0])]; exists {
+		if _, exists := constants.IgnoreCommands[op.Cmd.Cmd]; exists {
 			return RespOK
 		}
 
