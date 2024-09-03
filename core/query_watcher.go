@@ -152,6 +152,8 @@ func (w *QueryWatcher) AddWatcher(query DSQLQuery, clientFd int) { //nolint:gocr
 	clients, _ := w.WatchList.LoadOrStore(query, &sync.Map{})
 	clients.(*sync.Map).Store(clientFd, struct{}{})
 	w.queryCacheMu.Lock()
+	// TODO: This cache needs to be hydrated with data from all the shards. Currently, it will only consider keys that
+	//  are added after the query is added to the watchlist.
 	w.queryCaches.Put(query.String(), newQueryCache())
 	w.queryCacheMu.Unlock()
 }
@@ -183,4 +185,22 @@ func (w *QueryWatcher) clientCount(clients *sync.Map) int {
 		return true
 	})
 	return count
+}
+
+// RunQuery takes a DSQLQuery object, and executes the query on its respective cache.
+func (w *QueryWatcher) RunQuery(query DSQLQuery) (*[]DSQLQueryResultRow, error) {
+	w.queryCacheMu.RLock()
+	defer w.queryCacheMu.RUnlock()
+
+	store, ok := w.queryCaches.Get(query.String())
+	if !ok {
+		return nil, fmt.Errorf("query was not found in the cache: %s", query)
+	}
+
+	queryResult, err := ExecuteQuery(&query, store)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+	return &queryResult, nil
 }

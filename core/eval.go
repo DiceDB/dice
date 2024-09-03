@@ -1599,13 +1599,11 @@ func evalQWATCH(args []string, clientFd int, store *Store) []byte {
 	}
 
 	// Return the result of the query.
-	queryResult, err := ExecuteQuery(&query, store.store)
-	if err != nil {
-		return Encode(err, false)
-	}
-
+	// TODO: we can't just run the query directly on the shard, since it would end up considering all the keys in the shard.
+	//  We need to ensure we consult the query watcher's query specific shard. The QueryWatcher exposes a RunQuery API
+	//  for this, however, at this stage we don't have a way to call this API so we return an empty response.
 	// TODO: We should return the list of all queries being watched by the client.
-	return Encode(CreatePushResponse(&query, &queryResult), false)
+	return Encode(CreatePushResponse(&query, &[]DSQLQueryResultRow{}), false)
 }
 
 // evalQUNWATCH removes the specified key from the watch list for the caller client.

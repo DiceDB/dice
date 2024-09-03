@@ -222,7 +222,7 @@ func evaluateComparison(expr *sqlparser.ComparisonExpr, row DSQLQueryResultRow) 
 
 	// Check if types are compatible
 	if leftType != rightType {
-		return false, fmt.Errorf("incompatible types in comparison: %s and %s", leftType, rightType)
+		return false, fmt.Errorf("incompatible types in comparison: %s (%s) and %s (%s)", left, leftType, right, rightType)
 	}
 
 	switch leftType {

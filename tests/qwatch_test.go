@@ -243,6 +243,7 @@ func TestQwatchWithJSON(t *testing.T) {
 
 		v, err := rp.DecodeOne()
 		assert.NilError(t, err)
+		fmt.Printf("Received: %v\n", v)
 		assert.Equal(t, 3, len(v.([]interface{})), fmt.Sprintf("Expected 3 elements, got %v", v))
 	}
 
