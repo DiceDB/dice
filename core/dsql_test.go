@@ -453,7 +453,7 @@ func TestDSQLQueryString(t *testing.T) {
 			expected: "SELECT $key, $value LIMIT 5",
 		},
 		{
-			name: "Full query",
+			name: "Full Query",
 			query: DSQLQuery{
 				Selection: QuerySelection{KeySelection: true, ValueSelection: true},
 				KeyRegex:  "user:*",
