@@ -188,7 +188,7 @@ func (w *QueryWatcher) clientCount(clients *sync.Map) int {
 }
 
 // RunQuery takes a DSQLQuery object, and executes the query on its respective cache.
-func (w *QueryWatcher) RunQuery(query DSQLQuery) (*[]DSQLQueryResultRow, error) {
+func (w *QueryWatcher) RunQuery(query *DSQLQuery) (*[]DSQLQueryResultRow, error) {
 	w.queryCacheMu.RLock()
 	defer w.queryCacheMu.RUnlock()
 
@@ -197,7 +197,7 @@ func (w *QueryWatcher) RunQuery(query DSQLQuery) (*[]DSQLQueryResultRow, error) 
 		return nil, fmt.Errorf("query was not found in the cache: %s", query)
 	}
 
-	queryResult, err := ExecuteQuery(&query, store)
+	queryResult, err := ExecuteQuery(query, store)
 	if err != nil {
 		log.Error(err)
 		return nil, err
