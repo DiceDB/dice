@@ -20,7 +20,7 @@ run:
 test:
 	go test -v -count=1 ./tests/
 
-tcltest:
+tcl-test:
 	./tcltest
 
 test-one:
