@@ -12,3 +12,10 @@ repos:
     - id: go-fmt
     - id: golangci-lint
     - id: go-mod-tidy
+
+# - repo: local
+#   hooks:
+#   - id: run-shell-script
+#     name: Run Redis TCL tests using redis cli
+#     entry: tcltest.sh
+#     language: script
