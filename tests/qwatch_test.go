@@ -67,7 +67,7 @@ func TestQWATCH(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 		publisher.Close()
 		for _, sub := range subscribers {
-			fireCommand(sub, fmt.Sprintf("UNQWATCH \"%s\"", qWatchQuery))
+			fireCommand(sub, fmt.Sprintf("QUNWATCH \"%s\"", qWatchQuery))
 			time.Sleep(100 * time.Millisecond)
 			sub.Close()
 		}
@@ -103,6 +103,7 @@ func TestQWATCHWithSDK(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 		publisher.Close()
 		for _, sub := range subscribers {
+			// TODO: Implement QUNWATCH in the SDK
 			sub.Close()
 		}
 	}()
@@ -271,6 +272,6 @@ func TestQwatchWithJSON(t *testing.T) {
 
 	//	 unsubscribe from all qwatch queries
 	for i, tc := range JSONTestCases {
-		fireCommand(subscribers[i], fmt.Sprintf("UNQWATCH \"%s\"", tc.qwatchQuery))
+		fireCommand(subscribers[i], fmt.Sprintf("QUNWATCH \"%s\"", tc.qwatchQuery))
 	}
 }
