@@ -20,6 +20,9 @@ run:
 test:
 	go test -v -count=1 ./tests/
 
+tcl-test:
+	./tcltest
+
 test-one:
 	go test -v -count=1 --run $(TEST_FUNC) ./tests/...
 
