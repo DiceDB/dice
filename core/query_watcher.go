@@ -41,7 +41,6 @@ var WatchSubscriptionChan chan WatchSubscription
 // QueryWatcher watches for changes in keys and notifies clients
 type QueryWatcher struct {
 	WatchList    sync.Map
-	shardManager *ShardManager
 	queryCaches  *swiss.Map[string, queryCache]
 	queryCacheMu sync.RWMutex
 }
