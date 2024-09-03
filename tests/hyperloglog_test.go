@@ -38,6 +38,13 @@ func TestHyperLogLogCommands(t *testing.T) {
 				"PFADD some-other-hll 1 2 3", "PFCOUNT hll2 some-other-hll"},
 			expected: []interface{}{int64(1), int64(0), int64(3), int64(1), int64(6)},
 		},
+		{
+			name: "PFADD with non-existing key",
+			commands: []string{
+				"PFADD hll3 foo bar zap", "PFADD hll3 zap zap zap", "PFCOUNT hll3",
+				"PFCOUNT hll3 non-exist-hll", "PFADD some-new-hll abc", "PFCOUNT hll3 non-exist-hll some-new-hll"},
+			expected: []interface{}{int64(1), int64(0), int64(3), int64(3), int64(1), int64(4)},
+		},
 	}
 
 	for _, tc := range testCases {
