@@ -11,14 +11,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/cockroachdb/swiss"
-	"github.com/dicedb/dice/core/auth"
-	"github.com/dicedb/dice/core/comm"
-
+	"github.com/axiomhq/hyperloglog"
 	"github.com/bytedance/sonic"
 	"github.com/charmbracelet/log"
+	"github.com/cockroachdb/swiss"
 	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/core/auth"
 	"github.com/dicedb/dice/core/bit"
+	"github.com/dicedb/dice/core/comm"
 	"github.com/dicedb/dice/core/diceerrors"
 	"github.com/dicedb/dice/internal/constants"
 	"github.com/dicedb/dice/server/utils"
@@ -3001,4 +3001,65 @@ func evalSINTER(args []string, store *Store) []byte {
 		return false
 	})
 	return Encode(members, false)
+}
+
+// PFADD Adds all the element arguments to the HyperLogLog data structure stored at the variable
+// name specified as first argument.
+//
+// Returns:
+// If the approximated cardinality estimated by the HyperLogLog changed after executing the command,
+// returns 1, otherwise 0 is returned.
+func evalPFADD(args []string, store *Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("PFADD")
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	// If key doesn't exist prior initial cardinality changes hence return 1
+	if obj == nil {
+		hll := hyperloglog.New()
+		for _, arg := range args[1:] {
+			hll.Insert([]byte(arg))
+		}
+
+		obj = store.NewObj(hll, -1, ObjTypeString, ObjEncodingRaw)
+
+		store.Put(key, obj)
+		return Encode(1, false)
+	}
+
+	existingHll := obj.Value.(*hyperloglog.Sketch)
+	initialCardinality := existingHll.Estimate()
+	for _, arg := range args[1:] {
+		existingHll.Insert([]byte(arg))
+	}
+
+	if newCardinality := existingHll.Estimate(); initialCardinality != newCardinality {
+		return Encode(1, false)
+	}
+
+	return Encode(0, false)
+}
+
+func evalPFCOUNT(args []string, store *Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("PFCOUNT")
+	}
+
+	var unionHll = hyperloglog.New()
+
+	for _, arg := range args {
+		obj := store.Get(arg)
+		if obj != nil {
+			currKeyHll := obj.Value.(*hyperloglog.Sketch)
+			err := unionHll.Merge(currKeyHll)
+			if err != nil {
+				return diceerrors.NewErrWithMessage(diceerrors.InvalidHllErr)
+			}
+		}
+	}
+
+	return Encode(unionHll.Estimate(), false)
 }
