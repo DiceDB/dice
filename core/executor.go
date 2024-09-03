@@ -28,6 +28,14 @@ func ExecuteQuery(query *DSQLQuery, store *swiss.Map[string, *Obj]) ([]DSQLQuery
 
 	var err error
 	store.All(func(key string, value *Obj) bool {
+		// TODO: We can remove this check once we have scatter-gather algorithm for multi-threaded execution implemented.
+		//  This is only required for two cases:
+		//  1. When we are running unit tests and passing the complete store to the function.
+		//  2. When we are running an ad-hoc query from evalQWATCH and passing the complete store to the function.
+		if !WildCardMatch(query.KeyRegex, key) {
+			return true
+		}
+
 		row := DSQLQueryResultRow{
 			Key:   key,
 			Value: value,
@@ -222,7 +230,7 @@ func evaluateComparison(expr *sqlparser.ComparisonExpr, row DSQLQueryResultRow) 
 
 	// Check if types are compatible
 	if leftType != rightType {
-		return false, fmt.Errorf("incompatible types in comparison: %s (%s) and %s (%s)", left, leftType, right, rightType)
+		return false, fmt.Errorf("incompatible types in comparison: %s and %s", leftType, rightType)
 	}
 
 	switch leftType {

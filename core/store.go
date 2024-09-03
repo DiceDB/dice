@@ -332,3 +332,7 @@ func (store *Store) delByPtr(ptr string) bool {
 func notifyWatchers(k, operation string, obj *Obj) {
 	WatchChan <- WatchEvent{k, operation, obj}
 }
+
+func (store *Store) GetStore() *swiss.Map[string, *Obj] {
+	return store.store
+}
