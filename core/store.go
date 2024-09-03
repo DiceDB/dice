@@ -22,6 +22,7 @@ type Store struct {
 func NewStore() *Store {
 	WatchChan = make(chan WatchEvent, config.KeysLimit)
 	WatchSubscriptionChan = make(chan WatchSubscription)
+	AdhocQueryChan = make(chan AdhocQuery, 1000)
 
 	return &Store{
 		store:   swiss.New[string, *Obj](10240),
@@ -335,4 +336,17 @@ func notifyWatchers(k, operation string, obj *Obj) {
 
 func (store *Store) GetStore() *swiss.Map[string, *Obj] {
 	return store.store
+}
+
+func (store *Store) CacheKeysForQuery(query *DSQLQuery, cacheChannel chan *[]KeyValue) {
+	shardCache := make([]KeyValue, 0)
+	withLocks(func() {
+		store.store.All(func(k string, v *Obj) bool {
+			if WildCardMatch(query.KeyRegex, k) {
+				shardCache = append(shardCache, KeyValue{k, v})
+			}
+			return true
+		})
+	}, store, WithStoreRLock())
+	cacheChannel <- &shardCache
 }

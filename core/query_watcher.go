@@ -18,6 +18,11 @@ func newQueryCache() queryCache {
 	return swiss.New[string, *Obj](0)
 }
 
+type KeyValue struct {
+	Key   string
+	Value *Obj
+}
+
 // WatchEvent Event to notify clients about changes in query results due to key updates
 type WatchEvent struct {
 	Key       string
@@ -30,6 +35,17 @@ type WatchSubscription struct {
 	subscribe bool      // true for subscribe, false for unsubscribe
 	query     DSQLQuery // query to watch
 	clientFd  int       // client file descriptor
+	cacheChan chan *[]KeyValue
+}
+
+type AdhocQueryResult struct {
+	result *[]DSQLQueryResultRow
+	err    error
+}
+
+type AdhocQuery struct {
+	query        DSQLQuery
+	responseChan chan AdhocQueryResult
 }
 
 // WatchChan Channel to receive updates about keys that are being watched
@@ -37,6 +53,9 @@ var WatchChan chan WatchEvent
 
 // WatchSubscriptionChan Channel to receive updates about query subscriptions
 var WatchSubscriptionChan chan WatchSubscription
+
+// AdhocQueryChan Channel to receive adhoc queries
+var AdhocQueryChan chan AdhocQuery
 
 // QueryWatcher watches for changes in keys and notifies clients
 type QueryWatcher struct {
@@ -68,6 +87,12 @@ func (w *QueryWatcher) Run(ctx context.Context) {
 		w.watchKeys(ctx)
 	}()
 
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		w.ServeAdhocQueries(ctx)
+	}()
+
 	<-ctx.Done()
 	wg.Wait()
 }
@@ -78,7 +103,7 @@ func (w *QueryWatcher) listenForSubscriptions(ctx context.Context) {
 		select {
 		case event := <-WatchSubscriptionChan:
 			if event.subscribe {
-				w.AddWatcher(event.query, event.clientFd)
+				w.AddWatcher(event.query, event.clientFd, event.cacheChan)
 			} else {
 				w.RemoveWatcher(event.query, event.clientFd)
 			}
@@ -147,14 +172,34 @@ func (w *QueryWatcher) watchKeys(ctx context.Context) {
 	}
 }
 
+func (w *QueryWatcher) ServeAdhocQueries(ctx context.Context) {
+	for {
+		select {
+		case query := <-AdhocQueryChan:
+			result, err := w.RunQuery(&query.query)
+			query.responseChan <- AdhocQueryResult{result: result, err: err}
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
 // AddWatcher adds a client as a watcher to a query.
-func (w *QueryWatcher) AddWatcher(query DSQLQuery, clientFd int) { //nolint:gocritic
+func (w *QueryWatcher) AddWatcher(query DSQLQuery, clientFd int, cacheChan chan *[]KeyValue) { //nolint:gocritic
 	clients, _ := w.WatchList.LoadOrStore(query, &sync.Map{})
 	clients.(*sync.Map).Store(clientFd, struct{}{})
 	w.queryCacheMu.Lock()
-	// TODO: This cache needs to be hydrated with data from all the shards. Currently, it will only consider keys that
-	//  are added after the query is added to the watchlist.
-	w.queryCaches.Put(query.String(), newQueryCache())
+
+	cache := newQueryCache()
+	// Hydrate the cache with data from all shards.
+	// TODO: We need to ensure we receive cache data from all shards once we have multithreading in place.
+	//  For now we only expect one update.
+	kvs := <-cacheChan
+	for _, kv := range *kvs {
+		((*swiss.Map[string, *Obj])(cache)).Put(kv.Key, kv.Value)
+	}
+
+	w.queryCaches.Put(query.String(), cache)
 	w.queryCacheMu.Unlock()
 }
 

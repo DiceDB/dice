@@ -1592,21 +1592,31 @@ func evalQWATCH(args []string, clientFd int, store *Store) []byte {
 		return Encode(e, false)
 	}
 
+	// use an unbuffered channel to ensure that we only proceed to query execution once the query watcher has built the cache
+	cacheChannel := make(chan *[]KeyValue)
 	WatchSubscriptionChan <- WatchSubscription{
 		subscribe: true,
 		query:     query,
 		clientFd:  clientFd,
+		cacheChan: cacheChannel,
 	}
 
+	store.CacheKeysForQuery(&query, cacheChannel)
+
 	// Return the result of the query.
-	// TODO: Use the RunQuery API from the QueryExecutor so that only the cache is used to execute queries.
-	queryResult, err := ExecuteQuery(&query, store.GetStore())
-	if err != nil {
-		return Encode(err, false)
+	responseChan := make(chan AdhocQueryResult, 1)
+	AdhocQueryChan <- AdhocQuery{
+		query:        query,
+		responseChan: responseChan,
+	}
+
+	queryResult := <-responseChan
+	if queryResult.err != nil {
+		return Encode(queryResult.err, false)
 	}
 
 	// TODO: We should return the list of all queries being watched by the client.
-	return Encode(CreatePushResponse(&query, &queryResult), false)
+	return Encode(CreatePushResponse(&query, queryResult.result), false)
 }
 
 // evalQUNWATCH removes the specified key from the watch list for the caller client.
