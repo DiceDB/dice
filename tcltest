@@ -1,6 +1,8 @@
 #!/bin/bash
 
 # Define variables
+export TCL_TESTS=true
+
 SERVER_CMD="air"
 TEST_CMD="./runtest --host 127.0.0.1 --port 7379 --tags -needs:debug --tags -cluster:skip"
 SERVER_PORT=7379

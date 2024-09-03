@@ -3,6 +3,8 @@ package core
 import (
 	"context"
 	"fmt"
+	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -105,8 +107,17 @@ func (shard *ShardThread) executeCommand(op *ops.StoreOp) []byte {
 	diceCmd, ok := diceCmds[op.Cmd.Cmd]
 	if !ok {
 		// Temporary workaround for redis tcl commands
-		if _, exists := constants.IgnoreCommands[op.Cmd.Cmd]; exists {
-			return RespOK
+		// To run the tcl tests need to set env variable
+		runTclTests, err := strconv.ParseBool(os.Getenv("TCL_TESTS"))
+		if err != nil {
+			runTclTests = false
+		}
+
+		// if env variable is set, then only ignore unknown commands
+		if runTclTests {
+			if _, exists := constants.IgnoreCommands[op.Cmd.Cmd]; exists {
+				return RespOK
+			}
 		}
 
 		return diceerrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", op.Cmd.Cmd, strings.Join(op.Cmd.Args, " "))

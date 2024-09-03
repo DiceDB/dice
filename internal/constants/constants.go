@@ -71,4 +71,5 @@ var IgnoreCommands = map[string]string{
 	"DEBUG":     "ignore for tcl test",
 	"REPLICAOF": "ignore for tcl test",
 	"SAVE":      "ignore for tcl test",
+	"CONFIG":    "ignore for tcl test",
 }
