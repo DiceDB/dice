@@ -2020,9 +2020,58 @@ func evalCommand(args []string, store *Store) []byte {
 		return evalCommandGetKeys(args[1:])
 	case "LIST":
 		return evalCommandList()
+	case "INFO":
+		return evalCommandInfo(args[1:])
 	default:
 		return diceerrors.NewErrWithFormattedMessage("unknown subcommand '%s'. Try COMMAND HELP.", subcommand)
 	}
+}
+
+func evalCommandInfo(args []string) []byte {
+	if len(args) == 0 {
+		return Encode(errors.New("ERR wrong number of arguments for 'info' command"), false)
+	}
+	var result []interface{}
+	for _, cmd := range args {
+		if cmdMeta, exists := diceCmds[strings.ToUpper(cmd)]; exists {
+			info := []interface{}{
+				cmdMeta.Name,                               // Command name
+				cmdMeta.Arity,                              // Arity
+				[]interface{}{"readonly"},                  // Flags (example: "readonly", "write", etc.)
+				int64(cmdMeta.KeySpecs.BeginIndex),         // First key index
+				int64(cmdMeta.KeySpecs.LastKey),            // Last key index (if applicable)
+				int64(cmdMeta.KeySpecs.Step),               // Key step
+				[]interface{}{"@read", "@string", "@fast"}, // Categories
+				[]interface{}{},                            // Subcommand information (empty array here)
+				[]interface{}{ // Command introspection metadata
+					[]interface{}{
+						"flags",
+						[]interface{}{"RO", "access"},
+						"begin_search",
+						[]interface{}{
+							"type", "index",
+							"spec",
+							[]interface{}{"index", int64(1)},
+						},
+						"find_keys",
+						[]interface{}{
+							"type", "range",
+							"spec",
+							[]interface{}{
+								"lastkey", int64(0),
+								"keystep", int64(1),
+								"limit", int64(0),
+							},
+						},
+					},
+				},
+			}
+			result = append(result, info)
+		} else {
+			result = append(result, nil) // Command not found, add nil
+		}
+	}
+	return Encode(result, false)
 }
 
 func evalCommandList() []byte {
