@@ -2027,6 +2027,7 @@ func evalCommand(args []string, store *Store) []byte {
 	}
 }
 
+// evalCommandInfo - returns detailed information about the specified commands in the args
 func evalCommandInfo(args []string) []byte {
 	if len(args) == 0 {
 		return Encode(errors.New("ERR wrong number of arguments for 'info' command"), false)
