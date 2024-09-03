@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cockroachdb/swiss"
+
 	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/internal/constants"
 	"github.com/ohler55/ojg/jp"
@@ -21,53 +23,43 @@ type DSQLQueryResultRow struct {
 	Value *Obj
 }
 
-func ExecuteQuery(query *DSQLQuery, store *Store) ([]DSQLQueryResultRow, error) {
+func ExecuteQuery(query *DSQLQuery, store *swiss.Map[string, *Obj]) ([]DSQLQueryResultRow, error) {
 	var result []DSQLQueryResultRow
 
 	var err error
-	withLocks(func() {
-		store.keypool.All(func(key string, ptr *string) bool {
-			if WildCardMatch(query.KeyRegex, key) {
-				obj, ok := store.store.Get(*ptr)
-				if !ok {
-					// if element not present, skip everything
-					// and continue with the next iteration
-					return true
-				}
-				row := DSQLQueryResultRow{
-					Key:   key,
-					Value: obj,
-				}
+	store.All(func(key string, value *Obj) bool {
+		row := DSQLQueryResultRow{
+			Key:   key,
+			Value: value,
+		}
 
-				if query.Where != nil {
-					match, evalErr := evaluateWhereClause(query.Where, row)
-					if errors.Is(evalErr, ErrNoResultsFound) {
-						// if no result found error
-						// and continue with the next iteration
-						return true
-					}
-					if evalErr != nil {
-						err = evalErr
-						// stop iteration if any other error
-						return false
-					}
-					if !match {
-						// if did not match, continue the iteration
-						return true
-					}
-				}
-
-				if err := MarshalResultIfJSON(row); err != nil {
-					// if error, skip the result and continue the iteration
-					return true
-				}
-
-				result = append(result, row)
+		if query.Where != nil {
+			match, evalErr := evaluateWhereClause(query.Where, row)
+			if errors.Is(evalErr, ErrNoResultsFound) {
+				// if no result found error
+				// and continue with the next iteration
+				return true
 			}
-			// continue the iteration
+			if evalErr != nil {
+				err = evalErr
+				// stop iteration if any other error
+				return false
+			}
+			if !match {
+				// if did not match, continue the iteration
+				return true
+			}
+		}
+
+		if err := MarshalResultIfJSON(row); err != nil {
+			// if error, skip the result and continue the iteration
 			return true
-		})
-	}, store, WithStoreRLock(), WithKeypoolRLock())
+		}
+
+		result = append(result, row)
+
+		return true
+	})
 
 	if err != nil {
 		return nil, err

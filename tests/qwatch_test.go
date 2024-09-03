@@ -3,16 +3,14 @@ package tests
 import (
 	"context"
 	"fmt"
-	"net"
-	"testing"
-
-	"github.com/dicedb/dice/internal/constants"
-
 	"github.com/bytedance/sonic"
-
 	"github.com/dicedb/dice/core"
+	"github.com/dicedb/dice/internal/constants"
 	redis "github.com/dicedb/go-dice"
 	"gotest.tools/v3/assert"
+	"net"
+	"testing"
+	"time"
 )
 
 type qWatchTestCase struct {
@@ -62,14 +60,15 @@ func TestQWATCH(t *testing.T) {
 
 	subscribers := []net.Conn{getLocalConnection(), getLocalConnection(), getLocalConnection()}
 
-	// Cleanup Store for next tests
-	for _, tc := range qWatchTestCases {
-		fireCommand(publisher, fmt.Sprintf("DEL match:100:user:%d", tc.userID))
-	}
-
 	defer func() {
+		for _, tc := range qWatchTestCases {
+			fireCommand(publisher, fmt.Sprintf("DEL match:100:user:%d", tc.userID))
+		}
+		time.Sleep(100 * time.Millisecond)
 		publisher.Close()
 		for _, sub := range subscribers {
+			fireCommand(sub, fmt.Sprintf("UNQWATCH \"%s\"", qWatchQuery))
+			time.Sleep(100 * time.Millisecond)
 			sub.Close()
 		}
 	}()
@@ -97,12 +96,11 @@ func TestQWATCHWithSDK(t *testing.T) {
 
 	subscribers := []*redis.Client{getLocalSdk(), getLocalSdk(), getLocalSdk()}
 
-	// Cleanup Store for next tests
-	for _, tc := range qWatchTestCases {
-		publisher.Del(context.Background(), fmt.Sprintf("match:100:user:%d", tc.userID))
-	}
-
 	defer func() {
+		for _, tc := range qWatchTestCases {
+			publisher.Del(context.Background(), fmt.Sprintf("match:100:user:%d", tc.userID))
+		}
+		time.Sleep(100 * time.Millisecond)
 		publisher.Close()
 		for _, sub := range subscribers {
 			sub.Close()
@@ -111,7 +109,7 @@ func TestQWATCHWithSDK(t *testing.T) {
 
 	channels := make([]<-chan *redis.QMessage, len(subscribers))
 
-	// Subscribe to the QWATCH query
+	// subscribe to the QWATCH query
 	for i, subscriber := range subscribers {
 		qwatch := subscriber.QWatch(ctx)
 		assert.Assert(t, qwatch != nil)
@@ -153,7 +151,7 @@ func runQWatchScenarios(t *testing.T, publisher interface{}, receivers interface
 				// For raw connections, parse RESP responses
 				for _, ch := range r {
 					v := <-ch
-					assert.Equal(t, len(v.Updates), len(expectedUpdate))
+					assert.Equal(t, len(v.Updates), len(expectedUpdate), v.Updates)
 					for i, update := range v.Updates {
 						assert.DeepEqual(t, expectedUpdate[i], []interface{}{update.Key, update.Value})
 					}
@@ -170,35 +168,35 @@ var JSONTestCases = []struct {
 	expectedUpdates [][]interface{}
 }{
 	{
-		key:         "match:100:user:0",
+		key:         "match:200:user:0",
 		value:       `{"name":"Tom"}`,
-		qwatchQuery: "SELECT $key, $value FROM `match:100:user:0` WHERE '$value.name' = 'Tom'",
+		qwatchQuery: "SELECT $key, $value FROM `match:200:user:0` WHERE '$value.name' = 'Tom'",
 		expectedUpdates: [][]interface{}{
-			{[]interface{}{"match:100:user:0", map[string]interface{}{"name": "Tom"}}},
+			{[]interface{}{"match:200:user:0", map[string]interface{}{"name": "Tom"}}},
 		},
 	},
 	{
-		key:         "match:100:user:1",
+		key:         "match:200:user:1",
 		value:       `{"name":"Tom","age":24}`,
-		qwatchQuery: "SELECT $key, $value FROM `match:100:user:1` WHERE '$value.age' > 20",
+		qwatchQuery: "SELECT $key, $value FROM `match:200:user:1` WHERE '$value.age' > 20",
 		expectedUpdates: [][]interface{}{
-			{[]interface{}{"match:100:user:1", map[string]interface{}{"name": "Tom", "age": float64(24)}}},
+			{[]interface{}{"match:200:user:1", map[string]interface{}{"name": "Tom", "age": float64(24)}}},
 		},
 	},
 	{
-		key:         "match:100:user:2",
+		key:         "match:200:user:2",
 		value:       `{"score":10.36}`,
-		qwatchQuery: "SELECT $key, $value FROM `match:100:user:2` WHERE '$value.score' = 10.36",
+		qwatchQuery: "SELECT $key, $value FROM `match:200:user:2` WHERE '$value.score' = 10.36",
 		expectedUpdates: [][]interface{}{
-			{[]interface{}{"match:100:user:2", map[string]interface{}{"score": 10.36}}},
+			{[]interface{}{"match:200:user:2", map[string]interface{}{"score": 10.36}}},
 		},
 	},
 	{
-		key:         "match:100:user:3",
+		key:         "match:200:user:3",
 		value:       `{"field1":{"field2":{"field3":{"score":10.36}}}}`,
-		qwatchQuery: "SELECT $key, $value FROM `match:100:user:3` WHERE '$value.field1.field2.field3.score' > 10.1",
+		qwatchQuery: "SELECT $key, $value FROM `match:200:user:3` WHERE '$value.field1.field2.field3.score' > 10.1",
 		expectedUpdates: [][]interface{}{
-			{[]interface{}{"match:100:user:3", map[string]interface{}{
+			{[]interface{}{"match:200:user:3", map[string]interface{}{
 				"field1": map[string]interface{}{
 					"field2": map[string]interface{}{
 						"field3": map[string]interface{}{
@@ -226,6 +224,9 @@ func TestQwatchWithJSON(t *testing.T) {
 	}
 
 	defer func() {
+		for _, tc := range JSONTestCases {
+			fireCommand(publisher, fmt.Sprintf("DEL %s", tc.key))
+		}
 		publisher.Close()
 		for _, sub := range subscribers {
 			sub.Close()
@@ -241,7 +242,7 @@ func TestQwatchWithJSON(t *testing.T) {
 
 		v, err := rp.DecodeOne()
 		assert.NilError(t, err)
-		assert.Equal(t, 3, len(v.([]interface{})))
+		assert.Equal(t, 3, len(v.([]interface{})), fmt.Sprintf("Expected 3 elements, got %v", v))
 	}
 
 	for i, tc := range JSONTestCases {
@@ -266,5 +267,10 @@ func TestQwatchWithJSON(t *testing.T) {
 			assert.NilError(t, sonic.UnmarshalString(update[0].([]interface{})[1].(string), &actualJSON))
 			assert.DeepEqual(t, expectedJSON, actualJSON)
 		}
+	}
+
+	//	 unsubscribe from all qwatch queries
+	for i, tc := range JSONTestCases {
+		fireCommand(subscribers[i], fmt.Sprintf("UNQWATCH \"%s\"", tc.qwatchQuery))
 	}
 }

@@ -1599,7 +1599,7 @@ func evalQWATCH(args []string, clientFd int, store *Store) []byte {
 	}
 
 	// Return the result of the query.
-	queryResult, err := ExecuteQuery(&query, store)
+	queryResult, err := ExecuteQuery(&query, store.store)
 	if err != nil {
 		return Encode(err, false)
 	}
