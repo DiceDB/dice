@@ -12,9 +12,9 @@ import (
 	"github.com/charmbracelet/log"
 )
 
-type queryCache *swiss.Map[string, *Obj]
+type cacheStore *swiss.Map[string, *Obj]
 
-func newQueryCache() queryCache {
+func newCacheStore() cacheStore {
 	return swiss.New[string, *Obj](0)
 }
 
@@ -60,15 +60,15 @@ var AdhocQueryChan chan AdhocQuery
 // QueryWatcher watches for changes in keys and notifies clients
 type QueryWatcher struct {
 	WatchList    sync.Map
-	queryCaches  *swiss.Map[string, queryCache]
+	queryCache   *swiss.Map[string, cacheStore]
 	queryCacheMu sync.RWMutex
 }
 
 // NewQueryWatcher initializes a new QueryWatcher
 func NewQueryWatcher() *QueryWatcher {
 	return &QueryWatcher{
-		WatchList:   sync.Map{},                       // WatchList is a map of queries to their respective clients, type: map[DSQLQuery]*sync.Map[int]struct{}
-		queryCaches: swiss.New[string, queryCache](0), // queryCaches is a map of queries to their respective data caches
+		WatchList:  sync.Map{},                       // WatchList is a map of queries to their respective clients, type: map[DSQLQuery]*sync.Map[int]struct{}
+		queryCache: swiss.New[string, cacheStore](0), // cacheStore is a map of queries to their respective data caches
 	}
 }
 
@@ -129,9 +129,9 @@ func (w *QueryWatcher) watchKeys(ctx context.Context) {
 				// Add this key to the query store
 				// TODO: We can implement more finegrained locking here which locks only the particular query's store.
 				w.queryCacheMu.Lock()
-				store, ok := w.queryCaches.Get(query.String())
+				store, ok := w.queryCache.Get(query.String())
 				if !ok {
-					log.Warnf("Query not found in queryCaches: %s", query)
+					log.Warnf("Query not found in cacheStore: %s", query)
 					w.queryCacheMu.Unlock()
 					return true
 				}
@@ -192,7 +192,7 @@ func (w *QueryWatcher) AddWatcher(query DSQLQuery, clientFd int, cacheChan chan 
 	clients.(*sync.Map).Store(clientFd, struct{}{})
 	w.queryCacheMu.Lock()
 
-	cache := newQueryCache()
+	cache := newCacheStore()
 	// Hydrate the cache with data from all shards.
 	// TODO: We need to ensure we receive cache data from all shards once we have multithreading in place.
 	//  For now we only expect one update.
@@ -201,7 +201,7 @@ func (w *QueryWatcher) AddWatcher(query DSQLQuery, clientFd int, cacheChan chan 
 		((*swiss.Map[string, *Obj])(cache)).Put(kv.Key, kv.Value)
 	}
 
-	w.queryCaches.Put(query.String(), cache)
+	w.queryCache.Put(query.String(), cache)
 	w.queryCacheMu.Unlock()
 }
 
@@ -216,7 +216,7 @@ func (w *QueryWatcher) RemoveWatcher(query DSQLQuery, clientFd int) { //nolint:g
 
 			// Remove this Query's cached data.
 			w.queryCacheMu.Lock()
-			w.queryCaches.Delete(query.String())
+			w.queryCache.Delete(query.String())
 			w.queryCacheMu.Unlock()
 
 			log.Info(fmt.Printf("no longer watching query: %s", query))
@@ -239,7 +239,7 @@ func (w *QueryWatcher) RunQuery(query *DSQLQuery) (*[]DSQLQueryResultRow, error)
 	w.queryCacheMu.RLock()
 	defer w.queryCacheMu.RUnlock()
 
-	store, ok := w.queryCaches.Get(query.String())
+	store, ok := w.queryCache.Get(query.String())
 	if !ok {
 		return nil, fmt.Errorf("query was not found in the cache: %s", query)
 	}
