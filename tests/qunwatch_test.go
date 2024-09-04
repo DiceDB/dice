@@ -16,6 +16,7 @@ import (
 
 func TestQWatchUnwatch(t *testing.T) {
 	publisher := getLocalConnection()
+
 	subscribers := []net.Conn{getLocalConnection(), getLocalConnection(), getLocalConnection()}
 
 	// Cleanup store to remove any existing keys from other qwatch tests
