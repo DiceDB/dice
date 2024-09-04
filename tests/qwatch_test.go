@@ -19,6 +19,11 @@ type qWatchTestCase struct {
 	expectedUpdates [][]interface{}
 }
 
+type qWatchSDKSubscriber struct {
+	client *redis.Client
+	qwatch *redis.QWatch
+}
+
 var qWatchQuery = "SELECT $key, $value FROM `match:100:*` ORDER BY $value desc LIMIT 3"
 
 var qWatchTestCases = []qWatchTestCase{
@@ -93,10 +98,10 @@ func setupQWATCHTest(t *testing.T) (net.Conn, []net.Conn, func()) {
 	return publisher, subscribers, cleanup
 }
 
-func setupQWATCHTestWithSDK(t *testing.T) (*redis.Client, []*redis.Client, func()) {
+func setupQWATCHTestWithSDK(t *testing.T) (*redis.Client, []qWatchSDKSubscriber, func()) {
 	t.Helper()
 	publisher := getLocalSdk()
-	subscribers := []*redis.Client{getLocalSdk(), getLocalSdk(), getLocalSdk()}
+	subscribers := []qWatchSDKSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
 
 	cleanup := func() {
 		cleanupKeysWithSDK(publisher)
@@ -104,7 +109,10 @@ func setupQWATCHTestWithSDK(t *testing.T) (*redis.Client, []*redis.Client, func(
 			t.Errorf("Error closing publisher connection: %v", err)
 		}
 		for _, sub := range subscribers {
-			if err := sub.Close(); err != nil {
+			if err := sub.qwatch.UnwatchQuery(context.Background(), qWatchQuery); err != nil {
+				t.Errorf("Error unwatching query: %v", err)
+			}
+			if err := sub.client.Close(); err != nil {
 				t.Errorf("Error closing subscriber connection: %v", err)
 			}
 		}
@@ -133,12 +141,13 @@ func subscribeToQWATCH(t *testing.T, subscribers []net.Conn) []*core.RESPParser 
 	return respParsers
 }
 
-func subscribeToQWATCHWithSDK(t *testing.T, subscribers []*redis.Client) []<-chan *redis.QMessage {
+func subscribeToQWATCHWithSDK(t *testing.T, subscribers []qWatchSDKSubscriber) []<-chan *redis.QMessage {
 	t.Helper()
 	ctx := context.Background()
 	channels := make([]<-chan *redis.QMessage, len(subscribers))
 	for i, subscriber := range subscribers {
-		qwatch := subscriber.QWatch(ctx)
+		qwatch := subscriber.client.QWatch(ctx)
+		subscribers[i].qwatch = qwatch
 		assert.Assert(t, qwatch != nil)
 		err := qwatch.WatchQuery(ctx, qWatchQuery)
 		assert.NilError(t, err)
