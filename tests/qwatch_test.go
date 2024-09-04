@@ -448,33 +448,42 @@ func verifyJSONOrderByUpdates(t *testing.T, rp *core.RESPParser, tc struct {
 }) {
 	expectedUpdates := tc.expectedUpdates[0]
 
+	// Decode the response
 	v, err := rp.DecodeOne()
-	assert.NilError(t, err)
+	assert.NilError(t, err, "Failed to decode response")
+
+	// Cast the response to []interface{}
 	response, ok := v.([]interface{})
-	if !ok {
-		t.Errorf("Type assertion to []interface{} failed for value: %v", v)
-		return
-	}
-	assert.Equal(t, 3, len(response))
-	assert.Equal(t, constants.Qwatch, response[0])
+	assert.Assert(t, ok, "Response is not of type []interface{}: %v", v)
 
-	update, ok := response[2].([]interface{})
-	if !ok {
-		t.Errorf("Type assertion to []interface{} failed for value: %v", response[2])
-		return
-	}
-	assert.Equal(t, len(expectedUpdates), len(update), fmt.Sprintf("Expected update: %v, got %v", expectedUpdates, update))
+	// Verify response structure
+	assert.Equal(t, 3, len(response), "Expected response to have 3 elements")
+	assert.Equal(t, constants.Qwatch, response[0], "First element should be Qwatch constant")
 
-	for i, row := range update {
-		row := row.([]interface{})
-		expectedUpdate := expectedUpdates[i].([]interface{})
-		assert.Equal(t, row[0], expectedUpdate[0])
+	// Extract updates from the response
+	updates, ok := response[2].([]interface{})
+	assert.Assert(t, ok, "Updates are not of type []interface{}: %v", response[2])
 
+	// Verify number of updates
+	assert.Equal(t, len(expectedUpdates), len(updates),
+		"Number of updates mismatch. Expected: %d, Got: %d", len(expectedUpdates), len(updates))
+
+	// Verify each update
+	for i, expectedRow := range expectedUpdates {
+		actualRow, ok := updates[i].([]interface{})
+		assert.Assert(t, ok, "Update row is not of type []interface{}: %v", updates[i])
+
+		// Verify key
+		assert.Equal(t, expectedRow.([]interface{})[0], actualRow[0],
+			"Key mismatch at index %d", i)
+
+		// Verify JSON value
 		var actualJSON interface{}
-		assert.NilError(t, sonic.UnmarshalString(row[1].(string), &actualJSON))
-		assert.DeepEqual(t, expectedUpdate[1], actualJSON)
-	}
+		err := sonic.UnmarshalString(actualRow[1].(string), &actualJSON)
+		assert.NilError(t, err, "Failed to unmarshal JSON at index %d", i)
 
+		assert.DeepEqual(t, expectedRow.([]interface{})[1], actualJSON)
+	}
 }
 
 func cleanupJSONOrderByKeys(publisher net.Conn) {

@@ -137,9 +137,9 @@ func sortResults(query *DSQLQuery, result []DSQLQueryResultRow) {
 
 func getOrderByValue(orderBy string, row DSQLQueryResultRow) (interface{}, string, error) {
 	switch orderBy {
-	case CustomKey:
+	case TempKey:
 		return row.Key, constants.String, nil
-	case CustomValue:
+	case TempValue:
 		return getValueAndType(&row.Value)
 	default:
 		// Handle JSON field
@@ -155,7 +155,12 @@ func compareOrderByValues(valI, valJ interface{}, valueType, order string) (bool
 	case constants.String:
 		return compareStringValues(order, valI.(string), valJ.(string)), nil
 	case constants.Int:
-		return compareIntValues(order, valI.(int), valJ.(int)), nil
+		switch valI.(type) {
+		case int:
+			return compareIntValues(order, valI.(int), valJ.(int)), nil
+		default:
+			return compareInt64Values(order, valI.(int64), valJ.(int64)), nil
+		}
 	case constants.Float:
 		return compareFloatValues(order, valI.(float64), valJ.(float64)), nil
 	case constants.Bool:

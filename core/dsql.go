@@ -50,6 +50,15 @@ type DSQLQuery struct {
 	Limit     int
 }
 
+// replacePlaceholders replaces temporary placeholders with custom ones
+func replacePlaceholders(s string) string {
+	replacer := strings.NewReplacer(
+		TempKey, CustomKey,
+		TempValue, CustomValue,
+	)
+	return replacer.Replace(s)
+}
+
 func (q DSQLQuery) String() string {
 	var parts []string
 
@@ -74,12 +83,16 @@ func (q DSQLQuery) String() string {
 
 	// Where
 	if q.Where != nil {
-		parts = append(parts, fmt.Sprintf("WHERE '%s'", strings.Replace(strings.Trim(sqlparser.String(q.Where), "'"), TempValue, CustomValue, -1)))
+		whereClause := sqlparser.String(q.Where)
+		whereClause = strings.Trim(whereClause, "'")
+		whereClause = replacePlaceholders(whereClause)
+		parts = append(parts, fmt.Sprintf("WHERE '%s'", whereClause))
 	}
 
 	// OrderBy
 	if q.OrderBy.OrderBy != "" {
-		parts = append(parts, fmt.Sprintf("ORDER BY %s %s", q.OrderBy.OrderBy, q.OrderBy.Order))
+		orderByClause := replacePlaceholders(q.OrderBy.OrderBy)
+		parts = append(parts, fmt.Sprintf("ORDER BY %s %s", orderByClause, q.OrderBy.Order))
 	}
 
 	// Limit

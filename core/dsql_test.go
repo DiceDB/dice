@@ -22,7 +22,7 @@ func TestParseQuery(t *testing.T) {
 			want: DSQLQuery{
 				Selection: QuerySelection{KeySelection: true, ValueSelection: true},
 				KeyRegex:  "match:100:*",
-				OrderBy:   QueryOrder{OrderBy: "$value", Order: "desc"},
+				OrderBy:   QueryOrder{OrderBy: "_value", Order: "desc"},
 				Limit:     10,
 			},
 			wantErr: false,
@@ -38,7 +38,7 @@ func TestParseQuery(t *testing.T) {
 					Operator: "=",
 					Right:    sqlparser.NewStrVal([]byte("test")),
 				},
-				OrderBy: QueryOrder{OrderBy: "$key", Order: constants.Asc},
+				OrderBy: QueryOrder{OrderBy: "_key", Order: constants.Asc},
 				Limit:   5,
 			},
 			wantErr: false,
@@ -128,7 +128,7 @@ func TestParseQuery(t *testing.T) {
 			want: DSQLQuery{
 				Selection: QuerySelection{KeySelection: true, ValueSelection: true},
 				KeyRegex:  "test:*",
-				OrderBy:   QueryOrder{OrderBy: "$key", Order: "asc"},
+				OrderBy:   QueryOrder{OrderBy: "_key", Order: "asc"},
 			},
 			wantErr: false,
 		},
@@ -312,12 +312,12 @@ func TestParseOrderBy(t *testing.T) {
 		{
 			name: "order by key asc",
 			sql:  "SELECT $key FROM `test` ORDER BY $key ASC",
-			want: QueryOrder{OrderBy: "$key", Order: constants.Asc},
+			want: QueryOrder{OrderBy: "_key", Order: constants.Asc},
 		},
 		{
 			name: "order by value desc",
 			sql:  "SELECT $value FROM `test` ORDER BY $value DESC",
-			want: QueryOrder{OrderBy: "$value", Order: "desc"},
+			want: QueryOrder{OrderBy: "_value", Order: "desc"},
 		},
 		{
 			name:    "invalid order by field",
@@ -440,7 +440,7 @@ func TestDSQLQueryString(t *testing.T) {
 			name: "With OrderBy",
 			query: DSQLQuery{
 				Selection: QuerySelection{KeySelection: true, ValueSelection: true},
-				OrderBy:   QueryOrder{OrderBy: "$key", Order: "DESC"},
+				OrderBy:   QueryOrder{OrderBy: "_key", Order: "DESC"},
 			},
 			expected: "SELECT $key, $value ORDER BY $key DESC",
 		},
@@ -458,7 +458,7 @@ func TestDSQLQueryString(t *testing.T) {
 				Selection: QuerySelection{KeySelection: true, ValueSelection: true},
 				KeyRegex:  "user:*",
 				Where:     sqlparser.NewStrVal([]byte("$value > 10")),
-				OrderBy:   QueryOrder{OrderBy: "$key", Order: "DESC"},
+				OrderBy:   QueryOrder{OrderBy: "_key", Order: "DESC"},
 				Limit:     5,
 			},
 			expected: "SELECT $key, $value FROM `user:*` WHERE '$value > 10' ORDER BY $key DESC LIMIT 5",
