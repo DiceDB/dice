@@ -172,6 +172,8 @@ func (w *QueryWatcher) watchKeys(ctx context.Context) {
 	}
 }
 
+// ServeAdhocQueries listens for adhoc queries, executes them, and sends the result back to the client on the provided
+// response channel.
 func (w *QueryWatcher) ServeAdhocQueries(ctx context.Context) {
 	for {
 		select {
@@ -207,17 +209,17 @@ func (w *QueryWatcher) AddWatcher(query DSQLQuery, clientFd int, cacheChan chan 
 func (w *QueryWatcher) RemoveWatcher(query DSQLQuery, clientFd int) { //nolint:gocritic
 	if clients, ok := w.WatchList.Load(query); ok {
 		clients.(*sync.Map).Delete(clientFd)
-		log.Info(fmt.Printf("Removed client %d from query %s", clientFd, query))
+		log.Info(fmt.Printf("client '%d' no longer watching query: %s", clientFd, query))
 		// If no more clients for this query, remove the query from WatchList
 		if w.clientCount(clients.(*sync.Map)) == 0 {
 			w.WatchList.Delete(query)
 
-			//	Remove this Query's cached data.
+			// Remove this Query's cached data.
 			w.queryCacheMu.Lock()
 			w.queryCaches.Delete(query.String())
 			w.queryCacheMu.Unlock()
 
-			log.Info(fmt.Printf("Removed query %s from WatchList", query))
+			log.Info(fmt.Printf("no longer watching query: %s", query))
 		}
 	}
 }
