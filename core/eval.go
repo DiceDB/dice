@@ -1604,7 +1604,7 @@ func evalQWATCH(args []string, clientFd int, store *Store) []byte {
 	store.CacheKeysForQuery(&query, cacheChannel)
 
 	// Return the result of the query.
-	responseChan := make(chan AdhocQueryResult, 1)
+	responseChan := make(chan AdhocQueryResult)
 	AdhocQueryChan <- AdhocQuery{
 		query:        query,
 		responseChan: responseChan,
