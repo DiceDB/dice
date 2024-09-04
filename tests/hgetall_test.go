@@ -9,6 +9,7 @@ import (
 func TestHGETALL(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
+	defer fireCommand(conn, "FLUSHDB SYNC")
 
 	testCases := []TestCase{
 		{

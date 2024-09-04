@@ -2392,12 +2392,10 @@ func evalHSET(args []string, store *Store) []byte {
 	var numKeys int64
 
 	if obj != nil {
-		switch currentVal := obj.Value.(type) {
-		case HashMap:
-			hashMap = currentVal
-		default:
+		if err := assertTypeAndEncoding(obj.TypeEncoding, ObjTypeHashMap, ObjEncodingHashMap); err != nil {
 			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 		}
+		hashMap = obj.Value.(HashMap)
 	}
 
 	keyValuePairs := args[1:]
@@ -2426,12 +2424,10 @@ func evalHGETALL(args []string, store *Store) []byte {
 	var results []string
 
 	if obj != nil {
-		switch currentVal := obj.Value.(type) {
-		case HashMap:
-			hashMap = currentVal
-		default:
+		if err := assertTypeAndEncoding(obj.TypeEncoding, ObjTypeHashMap, ObjEncodingHashMap); err != nil {
 			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 		}
+		hashMap = obj.Value.(HashMap)
 	}
 
 	for hmKey, hmValue := range hashMap {
