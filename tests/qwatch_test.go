@@ -533,7 +533,7 @@ func TestQWatchWithWhere(t *testing.T) {
 		}
 	}()
 
-	respParsers := make([]*core.RESPParser, len(subscribers))
+	respParsers := make([]*clientio.RESPParser, len(subscribers))
 
 	// Subscribe to the QWATCH query
 	for i, subscriber := range subscribers {
@@ -563,19 +563,19 @@ func TestQWatchWithWhere(t *testing.T) {
 	}
 }
 
-func BenchmarkQwatchCommandSingleQuery(b *testing.B) {
-	conn := getLocalConnection()
-	defer conn.Close()
-	var query = "SELECT $key, $value FROM `benchmark:*` ORDER BY $value desc LIMIT 3"
+// func BenchmarkQwatchCommandSingleQuery(b *testing.B) {
+// 	conn := getLocalConnection()
+// 	defer conn.Close()
+// 	var query = "SELECT $key, $value FROM `benchmark:*` ORDER BY $value desc LIMIT 3"
 
-	subscriber_conn := getLocalConnection()
-	respParser := fireCommandAndGetRESPParser(subscriber_conn, fmt.Sprintf("QWATCH \"%s\"", query))
+// 	subscriber_conn := getLocalConnection()
+// 	respParser := fireCommandAndGetRESPParser(subscriber_conn, fmt.Sprintf("QWATCH \"%s\"", query))
 
-	b.ResetTimer()
+// 	b.ResetTimer()
 
-	for n := 0; n < 1000; n++ {
-		fireCommand(conn, fmt.Sprintf("SET benchmark:%d %d", n, n))
-		// Read the last response
-		respParser.DecodeOne()
-	}
-}
+// 	for n := 0; n < 1000; n++ {
+// 		fireCommand(conn, fmt.Sprintf("SET benchmark:%d %d", n, n))
+// 		// Read the last response
+// 		respParser.DecodeOne()
+// 	}
+// }
