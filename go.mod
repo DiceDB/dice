@@ -11,6 +11,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.10.0 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
+	github.com/dgryski/go-metro v0.0.0-20180109044635-280f6062b5bc // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
@@ -28,6 +29,7 @@ require (
 )
 
 require (
+	github.com/axiomhq/hyperloglog v0.2.0
 	github.com/bytedance/sonic v1.12.1
 	github.com/charmbracelet/log v0.4.0
 	github.com/cockroachdb/swiss v0.0.0-20240612210725-f4de07ae6964

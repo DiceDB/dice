@@ -48,4 +48,7 @@ const (
 	NumberZeroValue int    = 0
 
 	Qwatch string = "qwatch"
+
+	Set string = "set"
+	Del string = "del"
 )

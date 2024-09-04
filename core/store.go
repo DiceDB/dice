@@ -4,6 +4,8 @@ import (
 	"path"
 	"sync"
 
+	"github.com/dicedb/dice/internal/constants"
+
 	"github.com/cockroachdb/swiss"
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/server/utils"
@@ -20,6 +22,7 @@ type Store struct {
 func NewStore() *Store {
 	WatchChan = make(chan WatchEvent, config.KeysLimit)
 	WatchSubscriptionChan = make(chan WatchSubscription)
+	AdhocQueryChan = make(chan AdhocQuery, 1000)
 
 	return &Store{
 		store:   swiss.New[string, *Obj](10240),
@@ -113,7 +116,7 @@ func (store *Store) putHelper(k string, obj *Obj, opts ...PutOption) {
 	store.store.Put(*ptr, obj)
 
 	store.incrementKeyCount()
-	notifyWatchers(k, "SET")
+	notifyWatchers(k, constants.Set, obj)
 }
 
 func (store *Store) getHelper(k string, touch bool) *Obj {
@@ -248,7 +251,7 @@ func (store *Store) Rename(sourceKey, destKey string) bool {
 		}
 
 		// Notify watchers about the deletion of the source key
-		notifyWatchers(sourceKey, "DEL")
+		notifyWatchers(sourceKey, constants.Del, nil)
 
 		return true
 	}, store, WithStoreLock(), WithKeypoolLock())
@@ -313,7 +316,7 @@ func (store *Store) deleteKey(k, ptr string, obj *Obj) bool {
 		store.expires.Delete(obj)
 		store.keypool.Delete(k)
 		KeyspaceStat[0]["keys"]--
-		notifyWatchers(k, "DEL")
+		notifyWatchers(k, constants.Del, nil)
 		return true
 	}
 	return false
@@ -327,6 +330,23 @@ func (store *Store) delByPtr(ptr string) bool {
 	return false
 }
 
-func notifyWatchers(k, operation string) {
-	WatchChan <- WatchEvent{k, operation}
+func notifyWatchers(k, operation string, obj *Obj) {
+	WatchChan <- WatchEvent{k, operation, obj}
+}
+
+func (store *Store) GetStore() *swiss.Map[string, *Obj] {
+	return store.store
+}
+
+func (store *Store) CacheKeysForQuery(query *DSQLQuery, cacheChannel chan *[]KeyValue) {
+	shardCache := make([]KeyValue, 0)
+	withLocks(func() {
+		store.store.All(func(k string, v *Obj) bool {
+			if WildCardMatch(query.KeyRegex, k) {
+				shardCache = append(shardCache, KeyValue{k, v})
+			}
+			return true
+		})
+	}, store, WithStoreRLock())
+	cacheChannel <- &shardCache
 }

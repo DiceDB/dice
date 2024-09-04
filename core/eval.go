@@ -11,10 +11,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/axiomhq/hyperloglog"
 	"github.com/bytedance/sonic"
 	"github.com/charmbracelet/log"
+	"github.com/cockroachdb/swiss"
 	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/core/auth"
 	"github.com/dicedb/dice/core/bit"
+	"github.com/dicedb/dice/core/comm"
 	"github.com/dicedb/dice/core/diceerrors"
 	"github.com/dicedb/dice/internal/constants"
 	"github.com/dicedb/dice/server/utils"
@@ -37,7 +41,7 @@ var RespMinusOne []byte = []byte(":-1\r\n")
 var RespMinusTwo []byte = []byte(":-2\r\n")
 var RespEmptyArray []byte = []byte("*0\r\n")
 
-var txnCommands map[string]bool
+var TxnCommands map[string]bool
 var serverID string
 var diceCommandsCount int
 
@@ -45,7 +49,7 @@ const defaultRootPath = "$"
 
 func init() {
 	diceCommandsCount = len(diceCmds)
-	txnCommands = map[string]bool{"EXEC": true, "DISCARD": true}
+	TxnCommands = map[string]bool{"EXEC": true, "DISCARD": true}
 	serverID = fmt.Sprintf("%s:%d", config.Host, config.Port)
 }
 
@@ -70,7 +74,7 @@ func evalPING(args []string, store *Store) []byte {
 
 // evalAUTH returns with an encoded "OK" if the user is authenticated
 // If the user is not authenticated, it returns with an encoded error message
-func evalAUTH(args []string, c *Client) []byte {
+func evalAUTH(args []string, c *comm.Client) []byte {
 	var (
 		err error
 	)
@@ -79,7 +83,7 @@ func evalAUTH(args []string, c *Client) []byte {
 		return diceerrors.NewErrWithMessage("AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?")
 	}
 
-	var username = DefaultUserName
+	var username = auth.DefaultUserName
 	var password string
 
 	if len(args) == 1 {
@@ -1575,8 +1579,8 @@ func evalSTACKREFPEEK(args []string, store *Store) []byte {
 // evalQWATCH adds the specified key to the watch list for the caller client.
 // Every time a key in the watch list is modified, the client will be sent a response
 // containing the new value of the key along with the operation that was performed on it.
-// Contains only one argument, the key to be watched.
-func evalQWATCH(args []string, c *Client, store *Store) []byte {
+// Contains only one argument, the query to be watched.
+func evalQWATCH(args []string, clientFd int, store *Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("QWATCH")
 	}
@@ -1588,24 +1592,35 @@ func evalQWATCH(args []string, c *Client, store *Store) []byte {
 		return Encode(e, false)
 	}
 
+	// use an unbuffered channel to ensure that we only proceed to query execution once the query watcher has built the cache
+	cacheChannel := make(chan *[]KeyValue)
 	WatchSubscriptionChan <- WatchSubscription{
-		subscribe: true,
-		query:     query,
-		clientFd:  c.Fd,
+		Subscribe: true,
+		Query:     query,
+		ClientFD:  clientFd,
+		CacheChan: cacheChannel,
 	}
 
+	store.CacheKeysForQuery(&query, cacheChannel)
+
 	// Return the result of the query.
-	queryResult, err := ExecuteQuery(&query, store)
-	if err != nil {
-		return Encode(err, false)
+	responseChan := make(chan AdhocQueryResult)
+	AdhocQueryChan <- AdhocQuery{
+		Query:        query,
+		ResponseChan: responseChan,
+	}
+
+	queryResult := <-responseChan
+	if queryResult.Err != nil {
+		return Encode(queryResult.Err, false)
 	}
 
 	// TODO: We should return the list of all queries being watched by the client.
-	return Encode(CreatePushResponse(&query, &queryResult), false)
+	return Encode(CreatePushResponse(&query, queryResult.Result), false)
 }
 
 // evalQUNWATCH removes the specified key from the watch list for the caller client.
-func evalQUNWATCH(args []string, c *Client) []byte {
+func evalQUNWATCH(args []string, clientFd int) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("QUNWATCH")
 	}
@@ -1615,9 +1630,9 @@ func evalQUNWATCH(args []string, c *Client) []byte {
 	}
 
 	WatchSubscriptionChan <- WatchSubscription{
-		subscribe: false,
-		query:     query,
-		clientFd:  c.Fd,
+		Subscribe: false,
+		Query:     query,
+		ClientFD:  clientFd,
 	}
 
 	return RespOK
@@ -2014,9 +2029,19 @@ func evalCommand(args []string, store *Store) []byte {
 		return evalCommandCount()
 	case "GETKEYS":
 		return evalCommandGetKeys(args[1:])
+	case "LIST":
+		return evalCommandList()
 	default:
-		return diceerrors.NewErrWithFormattedMessage("unknown subcommand '%s'. Try COMMAND HELP", subcommand)
+		return diceerrors.NewErrWithFormattedMessage("unknown subcommand '%s'. Try COMMAND HELP.", subcommand)
 	}
+}
+
+func evalCommandList() []byte {
+	cmds := make([]string, 0, diceCommandsCount)
+	for k := range diceCmds {
+		cmds = append(cmds, k)
+	}
+	return Encode(cmds, false)
 }
 
 // evalKeys returns the list of keys that match the pattern
@@ -2124,87 +2149,6 @@ func evalEXISTS(args []string, store *Store) []byte {
 	}
 
 	return Encode(count, false)
-}
-
-func executeCommand(cmd *RedisCmd, c *Client, store *Store) []byte {
-	diceCmd, ok := diceCmds[cmd.Cmd]
-	if !ok {
-		return diceerrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", cmd.Cmd, strings.Join(cmd.Args, " "))
-	}
-
-	if diceCmd.Name == "SUBSCRIBE" || diceCmd.Name == "QWATCH" {
-		return evalQWATCH(cmd.Args, c, store)
-	}
-	if diceCmd.Name == "UNSUBSCRIBE" || diceCmd.Name == "QUNWATCH" {
-		return evalQUNWATCH(cmd.Args, c)
-	}
-	if diceCmd.Name == "MULTI" {
-		c.TxnBegin()
-		return diceCmd.Eval(cmd.Args, store)
-	}
-	if diceCmd.Name == AuthCmd {
-		return evalAUTH(cmd.Args, c)
-	}
-	if diceCmd.Name == "EXEC" {
-		if !c.isTxn {
-			return diceerrors.NewErrWithMessage("EXEC without MULTI")
-		}
-		return c.TxnExec(store)
-	}
-	if diceCmd.Name == "DISCARD" {
-		if !c.isTxn {
-			return diceerrors.NewErrWithMessage("DISCARD without MULTI")
-		}
-		c.TxnDiscard()
-		return RespOK
-	}
-	if diceCmd.Name == "ABORT" {
-		return RespOK
-	}
-
-	return diceCmd.Eval(cmd.Args, store)
-}
-
-func executeCommandToBuffer(cmd *RedisCmd, buf *bytes.Buffer, c *Client, store *Store) {
-	buf.Write(executeCommand(cmd, c, store))
-}
-
-func EvalAndRespond(cmds RedisCmds, c *Client, store *Store) {
-	var response []byte
-	buf := bytes.NewBuffer(response)
-
-	for _, cmd := range cmds {
-		// Check if the command has been authenticated
-		if cmd.Cmd != AuthCmd && !c.Session.IsActive() {
-			if _, err := c.Write(Encode(errors.New("NOAUTH Authentication required"), false)); err != nil {
-				log.Info("Error writing to client:", err)
-			}
-			continue
-		}
-		// if txn is not in progress, then we can simply
-		// execute the command and add the response to the buffer
-		if !c.isTxn {
-			executeCommandToBuffer(cmd, buf, c, store)
-			continue
-		}
-
-		// if the txn is in progress, we enqueue the command
-		// and add the QUEUED response to the buffer
-		if !txnCommands[cmd.Cmd] {
-			// if the command is queuable the enqueu
-			c.TxnQueue(cmd)
-			buf.Write(RespQueued)
-		} else {
-			// if txn is active and the command is non-queuable
-			// ex: EXEC, DISCARD
-			// we execute the command and gather the response in buffer
-			executeCommandToBuffer(cmd, buf, c, store)
-		}
-	}
-
-	if _, err := c.Write(buf.Bytes()); err != nil {
-		log.Error(err)
-	}
 }
 
 func evalPersist(args []string, store *Store) []byte {
@@ -2729,13 +2673,14 @@ func evalSADD(args []string, store *Store) []byte {
 
 	// Get the set object from the store.
 	obj := store.Get(key)
+	lengthOfItems := len(args[1:])
 
 	var count int = 0
 	if obj == nil {
 		var exDurationMs int64 = -1
 		var keepttl bool = false
 		// If the object does not exist, create a new set object.
-		value := make(map[string]bool)
+		value := swiss.New[string, struct{}](lengthOfItems)
 		// Create a new object.
 		obj = store.NewObj(value, exDurationMs, ObjTypeSet, ObjEncodingSetStr)
 		store.Put(key, obj, WithKeepTTL(keepttl))
@@ -2750,11 +2695,11 @@ func evalSADD(args []string, store *Store) []byte {
 	}
 
 	// Get the set object.
-	set := obj.Value.(map[string]bool)
+	set := obj.Value.(*swiss.Map[string, struct{}])
 
 	for _, arg := range args[1:] {
-		if _, ok := set[arg]; !ok {
-			set[arg] = true
+		if _, ok := set.Get(arg); !ok {
+			set.Put(arg, struct{}{})
 			count++
 		}
 	}
@@ -2785,14 +2730,16 @@ func evalSMEMBERS(args []string, store *Store) []byte {
 	}
 
 	// Get the set object.
-	set := obj.Value.(map[string]bool)
+	set := obj.Value.(*swiss.Map[string, struct{}])
 	// Get the members of the set.
-	var members = make([]string, 0, len(set))
-	for k, flag := range set {
-		if flag {
+	var members = make([]string, 0, set.Len())
+	set.All(func(k string, _ struct{}) bool {
+		if _, ok := set.Get(k); ok {
 			members = append(members, k)
+			return true
 		}
-	}
+		return false
+	})
 
 	return Encode(members, false)
 }
@@ -2821,10 +2768,11 @@ func evalSREM(args []string, store *Store) []byte {
 	}
 
 	// Get the set object.
-	set := obj.Value.(map[string]bool)
+	set := obj.Value.(*swiss.Map[string, struct{}])
+
 	for _, arg := range args[1:] {
-		if set[arg] {
-			delete(set, arg)
+		if _, ok := set.Get(arg); ok {
+			set.Delete(arg)
 			count++
 		}
 	}
@@ -2856,15 +2804,7 @@ func evalSCARD(args []string, store *Store) []byte {
 	}
 
 	// Get the set object.
-	set := obj.Value.(map[string]bool)
-	var count int = 0
-	for k, flag := range set {
-		if !flag {
-			delete(set, k)
-		} else {
-			count++
-		}
-	}
+	count := obj.Value.(*swiss.Map[string, struct{}]).Len()
 	return Encode(count, false)
 }
 
@@ -2876,33 +2816,36 @@ func evalSDIFF(args []string, store *Store) []byte {
 	srcKey := args[0]
 	obj := store.Get(srcKey)
 
-	srcSet := make(map[string]bool)
+	// if the source key does not exist, return an empty response
+	if obj == nil {
+		return Encode([]string{}, false)
+	}
+
+	if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
+	if err := assertEncoding(obj.TypeEncoding, ObjEncodingSetStr); err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
 
 	// Get the set object from the store.
 	// store the count as the number of elements in the first set
+	srcSet := obj.Value.(*swiss.Map[string, struct{}])
+	count := srcSet.Len()
+
+	tmpSet := swiss.New[string, struct{}](count)
+	srcSet.All(func(k string, _ struct{}) bool {
+		if _, ok := srcSet.Get(k); ok {
+			tmpSet.Put(k, struct{}{})
+			return true
+		}
+		return false
+	})
+
 	// we decrement the count as we find the elements in the other sets
 	// if the count is 0, we skip further sets but still get them from
 	// the store to check if they are set objects and update their last accessed time
-
-	var count int = 0
-	if obj != nil {
-		if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
-			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-		}
-
-		if err := assertEncoding(obj.TypeEncoding, ObjEncodingSetStr); err != nil {
-			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-		}
-
-		// create a deep copy of the set object
-		srcSet = make(map[string]bool)
-		for k, flag := range obj.Value.(map[string]bool) {
-			if flag {
-				srcSet[k] = flag
-				count++
-			}
-		}
-	}
 
 	for _, arg := range args[1:] {
 		// Get the set object from the store.
@@ -2924,13 +2867,15 @@ func evalSDIFF(args []string, store *Store) []byte {
 		// only if the count is greater than 0, we need to check the other sets
 		if count > 0 {
 			// Get the set object.
-			set := obj.Value.(map[string]bool)
-			for k, flag := range set {
-				if flag && srcSet[k] {
-					delete(srcSet, k)
+			set := obj.Value.(*swiss.Map[string, struct{}])
+
+			set.All(func(k string, _ struct{}) bool {
+				if _, ok := tmpSet.Get(k); ok {
+					tmpSet.Delete(k)
 					count--
 				}
-			}
+				return true
+			})
 		}
 	}
 
@@ -2939,12 +2884,14 @@ func evalSDIFF(args []string, store *Store) []byte {
 	}
 
 	// Get the members of the set.
-	var members = make([]string, 0, len(srcSet))
-	for k, flag := range srcSet {
-		if flag {
+	var members = make([]string, 0, tmpSet.Len())
+	tmpSet.All(func(k string, _ struct{}) bool {
+		if _, ok := tmpSet.Get(k); ok {
 			members = append(members, k)
+			return true
 		}
-	}
+		return false
+	})
 
 	return Encode(members, false)
 }
@@ -2954,7 +2901,7 @@ func evalSINTER(args []string, store *Store) []byte {
 		return diceerrors.NewErrArity("SINTER")
 	}
 
-	sets := make([]map[string]bool, 0, len(args))
+	sets := make([]*swiss.Map[string, struct{}], 0, len(args))
 
 	var empty int = 0
 
@@ -2977,7 +2924,7 @@ func evalSINTER(args []string, store *Store) []byte {
 		}
 
 		// Get the set object.
-		set := obj.Value.(map[string]bool)
+		set := obj.Value.(*swiss.Map[string, struct{}])
 		sets = append(sets, set)
 	}
 
@@ -2989,39 +2936,112 @@ func evalSINTER(args []string, store *Store) []byte {
 	// we will iterate over the smallest set
 	// and check if the element is present in all the other sets
 	sort.Slice(sets, func(i, j int) bool {
-		return len(sets[i]) < len(sets[j])
+		return sets[i].Len() < sets[j].Len()
 	})
 
 	count := 0
-	resultSet := make(map[string]bool)
+	resultSet := swiss.New[string, struct{}](sets[0].Len())
 
 	// init the result set with the first set
 	// store the number of elements in the first set in count
 	// we will decrement the count if we do not find the elements in the other sets
-	for k := range sets[0] {
-		count++
-		resultSet[k] = true
-	}
+	sets[0].All(func(k string, _ struct{}) bool {
+		if _, ok := sets[0].Get(k); ok {
+			resultSet.Put(k, struct{}{})
+			count++
+			return true
+		}
+		return false
+	})
 
 	for i := 1; i < len(sets); i++ {
 		if count == 0 {
 			break
 		}
-		for k := range resultSet {
-			if !sets[i][k] {
-				delete(resultSet, k)
-				count--
+		resultSet.All(func(k string, _ struct{}) bool {
+			if _, ok := resultSet.Get(k); ok {
+				if _, ok := sets[i].Get(k); !ok {
+					resultSet.Delete(k)
+					count--
+				}
+				return true
 			}
-		}
+			return false
+		})
 	}
 
 	if count == 0 {
 		return Encode([]string{}, false)
 	}
 
-	var members = make([]string, 0, len(resultSet))
-	for k := range resultSet {
-		members = append(members, k)
-	}
+	var members = make([]string, 0, resultSet.Len())
+	resultSet.All(func(k string, _ struct{}) bool {
+		if _, ok := resultSet.Get(k); ok {
+			members = append(members, k)
+			return true
+		}
+		return false
+	})
 	return Encode(members, false)
+}
+
+// PFADD Adds all the element arguments to the HyperLogLog data structure stored at the variable
+// name specified as first argument.
+//
+// Returns:
+// If the approximated cardinality estimated by the HyperLogLog changed after executing the command,
+// returns 1, otherwise 0 is returned.
+func evalPFADD(args []string, store *Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("PFADD")
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	// If key doesn't exist prior initial cardinality changes hence return 1
+	if obj == nil {
+		hll := hyperloglog.New()
+		for _, arg := range args[1:] {
+			hll.Insert([]byte(arg))
+		}
+
+		obj = store.NewObj(hll, -1, ObjTypeString, ObjEncodingRaw)
+
+		store.Put(key, obj)
+		return Encode(1, false)
+	}
+
+	existingHll := obj.Value.(*hyperloglog.Sketch)
+	initialCardinality := existingHll.Estimate()
+	for _, arg := range args[1:] {
+		existingHll.Insert([]byte(arg))
+	}
+
+	if newCardinality := existingHll.Estimate(); initialCardinality != newCardinality {
+		return Encode(1, false)
+	}
+
+	return Encode(0, false)
+}
+
+func evalPFCOUNT(args []string, store *Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("PFCOUNT")
+	}
+
+	var unionHll = hyperloglog.New()
+
+	for _, arg := range args {
+		obj := store.Get(arg)
+		if obj != nil {
+			currKeyHll := obj.Value.(*hyperloglog.Sketch)
+			err := unionHll.Merge(currKeyHll)
+			if err != nil {
+				return diceerrors.NewErrWithMessage(diceerrors.InvalidHllErr)
+			}
+		}
+	}
+
+	return Encode(unionHll.Estimate(), false)
 }

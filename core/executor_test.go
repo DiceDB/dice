@@ -53,7 +53,7 @@ func TestExecuteQueryOrderBykey(t *testing.T) {
 		},
 	}
 
-	result, err := core.ExecuteQuery(&query, store)
+	result, err := core.ExecuteQuery(&query, store.GetStore())
 
 	assert.NilError(t, err)
 	assert.Equal(t, len(result), len(dataset))
@@ -88,7 +88,7 @@ func TestExecuteQueryBasicOrderByValue(t *testing.T) {
 		},
 	}
 
-	result, err := core.ExecuteQuery(&query, store)
+	result, err := core.ExecuteQuery(&query, store.GetStore())
 
 	assert.NilError(t, err)
 	assert.Equal(t, len(result), len(dataset))
@@ -124,7 +124,7 @@ func TestExecuteQueryLimit(t *testing.T) {
 		Limit: 3,
 	}
 
-	result, err := core.ExecuteQuery(&query, store)
+	result, err := core.ExecuteQuery(&query, store.GetStore())
 
 	assert.NilError(t, err)
 	assert.Assert(t, cmp.Len(result, 3)) // Checks if limit is respected
@@ -155,7 +155,7 @@ func TestExecuteQueryNoMatch(t *testing.T) {
 		},
 	}
 
-	result, err := core.ExecuteQuery(&query, store)
+	result, err := core.ExecuteQuery(&query, store.GetStore())
 
 	assert.NilError(t, err)
 	assert.Assert(t, cmp.Len(result, 0)) // No keys match "x*"
@@ -178,7 +178,7 @@ func TestExecuteQueryWithWhere(t *testing.T) {
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store)
+		result, err := core.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 result for WHERE clause")
@@ -200,7 +200,7 @@ func TestExecuteQueryWithWhere(t *testing.T) {
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store)
+		result, err := core.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 0, "Expected empty result for non-matching WHERE clause")
@@ -231,7 +231,7 @@ func TestExecuteQueryWithWhere(t *testing.T) {
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store)
+		result, err := core.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 2, "Expected 2 results for complex WHERE clause")
@@ -252,7 +252,7 @@ func TestExecuteQueryWithWhere(t *testing.T) {
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store)
+		result, err := core.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 result for comparison between key and value")
@@ -279,7 +279,7 @@ func TestExecuteQueryWithIncompatibleTypes(t *testing.T) {
 			},
 		}
 
-		_, err := core.ExecuteQuery(&query, store)
+		_, err := core.ExecuteQuery(&query, store.GetStore())
 
 		assert.Error(t, err, "incompatible types in comparison: string and int")
 	})
@@ -303,7 +303,7 @@ func TestExecuteQueryWithIncompatibleTypes(t *testing.T) {
 			},
 		}
 
-		_, err := core.ExecuteQuery(&query, store)
+		_, err := core.ExecuteQuery(&query, store.GetStore())
 
 		assert.Error(t, err, "unsupported value type: <nil>")
 	})
@@ -327,7 +327,7 @@ func TestExecuteQueryWithEdgeCases(t *testing.T) {
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store)
+		result, err := core.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 0, "Expected 0 results due to case sensitivity")
@@ -351,7 +351,7 @@ func TestExecuteQueryWithEdgeCases(t *testing.T) {
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store)
+		result, err := core.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 2, "Expected 2 results for WHERE clause on key")
@@ -372,7 +372,7 @@ func TestExecuteQueryWithEdgeCases(t *testing.T) {
 			},
 		}
 
-		_, err := core.ExecuteQuery(&query, store)
+		_, err := core.ExecuteQuery(&query, store.GetStore())
 
 		assert.ErrorContains(t, err, "unsupported operator")
 	})
@@ -385,7 +385,7 @@ func TestExecuteQueryWithEdgeCases(t *testing.T) {
 				ValueSelection: true,
 			},
 		}
-		result, err := core.ExecuteQuery(&query, store)
+		result, err := core.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 0, "Expected no keys to be returned for empty regex")
@@ -434,7 +434,7 @@ func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store)
+		result, err := core.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 results for WHERE clause")
@@ -460,7 +460,7 @@ func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store)
+		result, err := core.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 0, "Expected empty result for non-matching WHERE clause")
@@ -480,7 +480,7 @@ func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store)
+		result, err := core.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 result for WHERE clause with floating point values")
@@ -506,7 +506,7 @@ func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store)
+		result, err := core.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 result for WHERE clause with integer values")
@@ -532,7 +532,7 @@ func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store)
+		result, err := core.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 result for WHERE clause with nested json")
@@ -558,7 +558,7 @@ func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store)
+		result, err := core.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 result for Complex WHERE clause expression")

@@ -27,7 +27,7 @@ var (
 )
 
 var (
-	ServerCronFrequency          = 1 * time.Second
+	ShardCronFrequency           = 1 * time.Second
 	ServerMultiplexerPollTimeout = 100 * time.Millisecond
 	ServerMaxClients             = 20000
 )
