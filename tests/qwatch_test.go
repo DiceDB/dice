@@ -383,7 +383,7 @@ func setupJSONOrderByTest(t *testing.T) (net.Conn, net.Conn, func()) {
 }
 
 func subscribeToJSONOrderByQuery(t *testing.T, subscriber net.Conn) *core.RESPParser {
-	query := "SELECT $key, $value FROM `user:*` ORDER BY $value.score DESC LIMIT 3"
+	query := "SELECT $key, $value FROM `player:*` ORDER BY $value.score DESC LIMIT 3"
 	rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("QWATCH \"%s\"", query))
 	assert.Assert(t, rp != nil)
 
@@ -401,36 +401,36 @@ func runJSONOrderByScenarios(t *testing.T, publisher net.Conn, respParser *core.
 		expectedUpdates [][]interface{}
 	}{
 		{
-			key:   "user:1",
+			key:   "player:1",
 			value: `{"name":"Alice","score":100}`,
 			expectedUpdates: [][]interface{}{
-				{[]interface{}{"user:1", map[string]interface{}{"name": "Alice", "score": float64(100)}}},
+				{[]interface{}{"player:1", map[string]interface{}{"name": "Alice", "score": float64(100)}}},
 			},
 		},
 		{
-			key:   "user:2",
+			key:   "player:2",
 			value: `{"name":"Bob","score":80}`,
 			expectedUpdates: [][]interface{}{
-				{[]interface{}{"user:1", map[string]interface{}{"name": "Alice", "score": float64(100)}},
-					[]interface{}{"user:2", map[string]interface{}{"name": "Bob", "score": float64(80)}}},
+				{[]interface{}{"player:1", map[string]interface{}{"name": "Alice", "score": float64(100)}},
+					[]interface{}{"player:2", map[string]interface{}{"name": "Bob", "score": float64(80)}}},
 			},
 		},
 		{
-			key:   "user:3",
+			key:   "player:3",
 			value: `{"name":"Charlie","score":90}`,
 			expectedUpdates: [][]interface{}{
-				{[]interface{}{"user:1", map[string]interface{}{"name": "Alice", "score": float64(100)}},
-					[]interface{}{"user:3", map[string]interface{}{"name": "Charlie", "score": float64(90)}},
-					[]interface{}{"user:2", map[string]interface{}{"name": "Bob", "score": float64(80)}}},
+				{[]interface{}{"player:1", map[string]interface{}{"name": "Alice", "score": float64(100)}},
+					[]interface{}{"player:3", map[string]interface{}{"name": "Charlie", "score": float64(90)}},
+					[]interface{}{"player:2", map[string]interface{}{"name": "Bob", "score": float64(80)}}},
 			},
 		},
 		{
-			key:   "user:4",
+			key:   "player:4",
 			value: `{"name":"David","score":95}`,
 			expectedUpdates: [][]interface{}{
-				{[]interface{}{"user:1", map[string]interface{}{"name": "Alice", "score": float64(100)}},
-					[]interface{}{"user:4", map[string]interface{}{"name": "David", "score": float64(95)}},
-					[]interface{}{"user:3", map[string]interface{}{"name": "Charlie", "score": float64(90)}}},
+				{[]interface{}{"player:1", map[string]interface{}{"name": "Alice", "score": float64(100)}},
+					[]interface{}{"player:4", map[string]interface{}{"name": "David", "score": float64(95)}},
+					[]interface{}{"player:3", map[string]interface{}{"name": "Charlie", "score": float64(90)}}},
 			},
 		},
 	}
@@ -488,6 +488,6 @@ func verifyJSONOrderByUpdates(t *testing.T, rp *core.RESPParser, tc struct {
 
 func cleanupJSONOrderByKeys(publisher net.Conn) {
 	for i := 1; i <= 4; i++ {
-		fireCommand(publisher, fmt.Sprintf("DEL user:%d", i))
+		fireCommand(publisher, fmt.Sprintf("DEL player:%d", i))
 	}
 }
