@@ -40,12 +40,11 @@ type AsyncServer struct {
 
 // NewAsyncServer initializes a new AsyncServer
 func NewAsyncServer() *AsyncServer {
-	shardManager := core.NewShardManager(1)
 	return &AsyncServer{
 		maxClients:             config.ServerMaxClients,
 		connectedClients:       make(map[int]*comm.Client),
-		shardManager:           shardManager,
-		queryWatcher:           core.NewQueryWatcher(shardManager),
+		shardManager:           core.NewShardManager(1),
+		queryWatcher:           core.NewQueryWatcher(),
 		multiplexerPollTimeout: config.ServerMultiplexerPollTimeout,
 		ioChan:                 make(chan *ops.StoreResponse, 1000),
 	}
