@@ -135,7 +135,7 @@ func sortResults(query *DSQLQuery, result []DSQLQueryResultRow) {
 	})
 }
 
-func getOrderByValue(orderBy string, row DSQLQueryResultRow) (interface{}, string, error) {
+func getOrderByValue(orderBy string, row DSQLQueryResultRow) (value interface{}, valueType string, err error) {
 	switch orderBy {
 	case TempKey:
 		return row.Key, constants.String, nil

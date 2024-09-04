@@ -48,7 +48,7 @@ func TestExecuteQueryOrderBykey(t *testing.T) {
 			ValueSelection: true,
 		},
 		OrderBy: core.QueryOrder{
-			OrderBy: "$key",
+			OrderBy: "_key",
 			Order:   constants.Asc,
 		},
 	}
@@ -83,7 +83,7 @@ func TestExecuteQueryBasicOrderByValue(t *testing.T) {
 			ValueSelection: true,
 		},
 		OrderBy: core.QueryOrder{
-			OrderBy: "$value",
+			OrderBy: "_value",
 			Order:   constants.Asc,
 		},
 	}
@@ -118,7 +118,7 @@ func TestExecuteQueryLimit(t *testing.T) {
 			ValueSelection: true,
 		},
 		OrderBy: core.QueryOrder{
-			OrderBy: "$key",
+			OrderBy: "_key",
 			Order:   constants.Asc,
 		},
 		Limit: 3,
@@ -214,7 +214,7 @@ func TestExecuteQueryWithWhere(t *testing.T) {
 				ValueSelection: true,
 			},
 			OrderBy: core.QueryOrder{
-				OrderBy: "$value",
+				OrderBy: "_value",
 				Order:   "desc",
 			},
 			Where: &sqlparser.AndExpr{
@@ -341,7 +341,7 @@ func TestExecuteQueryWithEdgeCases(t *testing.T) {
 				ValueSelection: true,
 			},
 			OrderBy: core.QueryOrder{
-				OrderBy: "$key",
+				OrderBy: "_key",
 				Order:   constants.Asc,
 			},
 			Where: &sqlparser.ComparisonExpr{
