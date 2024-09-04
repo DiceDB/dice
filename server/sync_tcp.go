@@ -2,9 +2,10 @@ package server
 
 import (
 	"fmt"
-	"github.com/dicedb/dice/core/cmd"
 	"io"
 	"strings"
+
+	"github.com/dicedb/dice/core/cmd"
 
 	"github.com/dicedb/dice/core"
 )
