@@ -158,8 +158,10 @@ func compareOrderByValues(valI, valJ interface{}, valueType, order string) (bool
 		switch valI.(type) {
 		case int:
 			return compareIntValues(order, valI.(int), valJ.(int)), nil
-		default:
+		case int64:
 			return compareInt64Values(order, valI.(int64), valJ.(int64)), nil
+		default:
+			return false, fmt.Errorf("unsupported type for order by comparison: %T", valI)
 		}
 	case constants.Float:
 		return compareFloatValues(order, valI.(float64), valJ.(float64)), nil
