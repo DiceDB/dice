@@ -357,3 +357,128 @@ func cleanupJSONKeys(publisher net.Conn) {
 		fireCommand(publisher, fmt.Sprintf("DEL %s", tc.key))
 	}
 }
+func TestQwatchWithJSONOrderBy(t *testing.T) {
+	publisher, subscriber, cleanup := setupJSONOrderByTest(t)
+	defer cleanup()
+
+	respParser := subscribeToJSONOrderByQuery(t, subscriber)
+	runJSONOrderByScenarios(t, publisher, respParser)
+}
+
+func setupJSONOrderByTest(t *testing.T) (net.Conn, net.Conn, func()) {
+	publisher := getLocalConnection()
+	subscriber := getLocalConnection()
+
+	cleanup := func() {
+		cleanupJSONOrderByKeys(publisher)
+		if err := publisher.Close(); err != nil {
+			t.Errorf("Error closing publisher connection: %v", err)
+		}
+		if err := subscriber.Close(); err != nil {
+			t.Errorf("Error closing subscriber connection: %v", err)
+		}
+	}
+
+	return publisher, subscriber, cleanup
+}
+
+func subscribeToJSONOrderByQuery(t *testing.T, subscriber net.Conn) *core.RESPParser {
+	query := "SELECT $key, $value FROM `user:*` ORDER BY $value.score DESC LIMIT 3"
+	rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("QWATCH \"%s\"", query))
+	assert.Assert(t, rp != nil)
+
+	v, err := rp.DecodeOne()
+	assert.NilError(t, err)
+	assert.Equal(t, 3, len(v.([]interface{})), fmt.Sprintf("Expected 3 elements, got %v", v))
+
+	return rp
+}
+
+func runJSONOrderByScenarios(t *testing.T, publisher net.Conn, respParser *core.RESPParser) {
+	scenarios := []struct {
+		key             string
+		value           string
+		expectedUpdates [][]interface{}
+	}{
+		{
+			key:   "user:1",
+			value: `{"name":"Alice","score":100}`,
+			expectedUpdates: [][]interface{}{
+				{[]interface{}{"user:1", map[string]interface{}{"name": "Alice", "score": float64(100)}}},
+			},
+		},
+		{
+			key:   "user:2",
+			value: `{"name":"Bob","score":80}`,
+			expectedUpdates: [][]interface{}{
+				{[]interface{}{"user:1", map[string]interface{}{"name": "Alice", "score": float64(100)}},
+					[]interface{}{"user:2", map[string]interface{}{"name": "Bob", "score": float64(80)}}},
+			},
+		},
+		{
+			key:   "user:3",
+			value: `{"name":"Charlie","score":90}`,
+			expectedUpdates: [][]interface{}{
+				{[]interface{}{"user:1", map[string]interface{}{"name": "Alice", "score": float64(100)}},
+					[]interface{}{"user:3", map[string]interface{}{"name": "Charlie", "score": float64(90)}},
+					[]interface{}{"user:2", map[string]interface{}{"name": "Bob", "score": float64(80)}}},
+			},
+		},
+		{
+			key:   "user:4",
+			value: `{"name":"David","score":95}`,
+			expectedUpdates: [][]interface{}{
+				{[]interface{}{"user:1", map[string]interface{}{"name": "Alice", "score": float64(100)}},
+					[]interface{}{"user:4", map[string]interface{}{"name": "David", "score": float64(95)}},
+					[]interface{}{"user:3", map[string]interface{}{"name": "Charlie", "score": float64(90)}}},
+			},
+		},
+	}
+
+	for _, sc := range scenarios {
+		fireCommand(publisher, fmt.Sprintf("JSON.SET %s $ %s", sc.key, sc.value))
+		verifyJSONOrderByUpdates(t, respParser, sc)
+	}
+}
+
+func verifyJSONOrderByUpdates(t *testing.T, rp *core.RESPParser, tc struct {
+	key             string
+	value           string
+	expectedUpdates [][]interface{}
+}) {
+	expectedUpdates := tc.expectedUpdates[0]
+
+	v, err := rp.DecodeOne()
+	assert.NilError(t, err)
+	response, ok := v.([]interface{})
+	if !ok {
+		t.Errorf("Type assertion to []interface{} failed for value: %v", v)
+		return
+	}
+	assert.Equal(t, 3, len(response))
+	assert.Equal(t, constants.Qwatch, response[0])
+
+	update, ok := response[2].([]interface{})
+	if !ok {
+		t.Errorf("Type assertion to []interface{} failed for value: %v", response[2])
+		return
+	}
+	assert.Equal(t, len(expectedUpdates), len(update), fmt.Sprintf("Expected update: %v, got %v", expectedUpdates, update))
+
+	for i, row := range update {
+		row := row.([]interface{})
+		expectedUpdate := expectedUpdates[i].([]interface{})
+		assert.Equal(t, row[0], expectedUpdate[0])
+
+		var actualJSON interface{}
+		assert.NilError(t, sonic.UnmarshalString(row[1].(string), &actualJSON))
+		assert.DeepEqual(t, expectedUpdate[1], actualJSON)
+	}
+
+}
+
+func cleanupJSONOrderByKeys(publisher net.Conn) {
+	for i := 1; i <= 4; i++ {
+		fireCommand(publisher, fmt.Sprintf("DEL user:%d", i))
+	}
+}

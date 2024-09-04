@@ -217,9 +217,9 @@ func parseTableName(selectStmt *sqlparser.Select) (string, error) {
 func parseOrderBy(selectStmt *sqlparser.Select) (QueryOrder, error) {
 	orderBy := QueryOrder{}
 	if len(selectStmt.OrderBy) > 0 {
-		orderBy.OrderBy = revertCustomSyntax(sqlparser.String(selectStmt.OrderBy[0].Expr))
+		orderBy.OrderBy = sqlparser.String(selectStmt.OrderBy[0].Expr)
 		// Order by expr should either be $key or $value
-		if orderBy.OrderBy != CustomKey && orderBy.OrderBy != CustomValue {
+		if orderBy.OrderBy != TempKey && orderBy.OrderBy != TempValue && !strings.HasPrefix(orderBy.OrderBy, TempValue) {
 			return QueryOrder{}, fmt.Errorf("only $key and $value are supported in ORDER BY clause")
 		}
 		orderBy.Order = selectStmt.OrderBy[0].Direction
