@@ -5,4 +5,3 @@ dice-server
 venv
 __pycache__
 .idea/
-.rediscli_history_test

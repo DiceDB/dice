@@ -49,27 +49,3 @@ const (
 
 	Qwatch string = "qwatch"
 )
-
-// Temporary set for ignoring these commands while tcl tests.
-// Once these commands are implemented we can remove them from the set one by one.
-var IgnoreCommands = map[string]string{
-	"SELECT":    "ignore for tcl test",
-	"FUNCTION":  "ignore for tcl test",
-	"FLUSHALL":  "ignore for tcl test",
-	"RPUSH":     "ignore for tcl test",
-	"HGET":      "ignore for tcl test",
-	"LRANGE":    "ignore for tcl test",
-	"ACL":       "ignore for tcl test",
-	"FLUSHDB":   "ignore for tcl test",
-	"SCAN":      "ignore for tcl test",
-	"SCARD":     "ignore for tcl test",
-	"SLAVEOF":   "ignore for tcl test",
-	"BLPOP":     "ignore for tcl test",
-	"ZADD":      "ignore for tcl test",
-	"BZPOPMIN":  "ignore for tcl test",
-	"BZPOPMAX":  "ignore for tcl test",
-	"DEBUG":     "ignore for tcl test",
-	"REPLICAOF": "ignore for tcl test",
-	"SAVE":      "ignore for tcl test",
-	"CONFIG":    "ignore for tcl test",
-}

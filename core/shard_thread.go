@@ -3,15 +3,12 @@ package core
 import (
 	"context"
 	"fmt"
-	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/dicedb/dice/core/auth"
 	"github.com/dicedb/dice/core/ops"
-	"github.com/dicedb/dice/internal/constants"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core/diceerrors"
@@ -106,20 +103,6 @@ func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 func (shard *ShardThread) executeCommand(op *ops.StoreOp) []byte {
 	diceCmd, ok := diceCmds[op.Cmd.Cmd]
 	if !ok {
-		// Temporary workaround for redis tcl commands
-		// To run the tcl tests need to set env variable
-		runTclTests, err := strconv.ParseBool(os.Getenv("TCL_TESTS"))
-		if err != nil {
-			runTclTests = false
-		}
-
-		// if env variable is set, then only ignore unknown commands
-		if runTclTests {
-			if _, exists := constants.IgnoreCommands[op.Cmd.Cmd]; exists {
-				return RespOK
-			}
-		}
-
 		return diceerrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", op.Cmd.Cmd, strings.Join(op.Cmd.Args, " "))
 	}
 
