@@ -109,7 +109,7 @@ func (w *QueryWatcher) listenForSubscriptions(ctx context.Context) {
 		select {
 		case event := <-WatchSubscriptionChan:
 			if event.Subscribe {
-				w.addWatcher(event.Query, event.ClientFD, event.CacheChan)
+				w.addWatcher(&event.Query, event.ClientFD, event.CacheChan)
 			} else {
 				w.removeWatcher(&event.Query, event.ClientFD)
 			}
@@ -201,8 +201,8 @@ func (w *QueryWatcher) serveAdhocQueries(ctx context.Context) {
 }
 
 // addWatcher adds a client as a watcher to a query.
-func (w *QueryWatcher) addWatcher(query DSQLQuery, clientFD int, cacheChan chan *[]KeyValue) {
-	clients, _ := w.WatchList.LoadOrStore(query, &sync.Map{})
+func (w *QueryWatcher) addWatcher(query *DSQLQuery, clientFD int, cacheChan chan *[]KeyValue) {
+	clients, _ := w.WatchList.LoadOrStore(*query, &sync.Map{})
 	clients.(*sync.Map).Store(clientFD, struct{}{})
 
 	w.QueryCacheMu.Lock()
