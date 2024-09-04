@@ -9,7 +9,7 @@ import (
 func TestHGETALL(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
-	defer fireCommand(conn, "FLUSHDB SYNC")
+	defer fireCommand(conn, "DEL key_hGetAll key_hGetAll02")
 
 	testCases := []TestCase{
 		{
