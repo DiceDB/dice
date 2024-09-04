@@ -109,12 +109,7 @@ func replaceCustomSyntax(sql string) string {
 	return replacer.Replace(sql)
 }
 
-func revertCustomSyntax(name string) string {
-	replacer := strings.NewReplacer(TempKey, CustomKey, TempValue, CustomValue)
-	return replacer.Replace(name)
-}
-
-// Main parsing function
+// ParseQuery takes a SQL query string and returns a DSQLQuery struct
 func ParseQuery(sql string) (DSQLQuery, error) {
 	// Replace custom syntax before parsing
 	sql = replaceCustomSyntax(sql)
