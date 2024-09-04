@@ -1,111 +1,116 @@
+// Package core provides core functionality for the DiceDB query watching system.
 package core
 
 import (
 	"context"
 	"fmt"
+	"github.com/dicedb/dice/internal/constants"
 	"sync"
 	"syscall"
 
-	"github.com/cockroachdb/swiss"
-	"github.com/dicedb/dice/internal/constants"
-
 	"github.com/charmbracelet/log"
+	"github.com/cockroachdb/swiss"
 )
 
-type cacheStore *swiss.Map[string, *Obj]
+type (
+	cacheStore *swiss.Map[string, *Obj]
+
+	KeyValue struct {
+		Key   string
+		Value *Obj
+	}
+
+	// WatchEvent represents a change in a watched key.
+	WatchEvent struct {
+		Key       string
+		Operation string
+		Value     *Obj
+	}
+
+	// WatchSubscription represents a subscription to watch a query.
+	WatchSubscription struct {
+		Subscribe bool             // true for subscribe, false for unsubscribe
+		Query     DSQLQuery        // query to watch
+		ClientFD  int              // client file descriptor
+		CacheChan chan *[]KeyValue // channel to receive cache data for this query
+	}
+
+	// AdhocQueryResult represents the result of an adhoc query.
+	AdhocQueryResult struct {
+		Result *[]DSQLQueryResultRow
+		Err    error
+	}
+
+	// AdhocQuery represents an adhoc query request.
+	AdhocQuery struct {
+		Query        DSQLQuery
+		ResponseChan chan AdhocQueryResult
+	}
+
+	// QueryWatcher watches for changes in keys and notifies clients.
+	QueryWatcher struct {
+		WatchList    sync.Map                       // WatchList is a map of queries to their respective clients, type: map[DSQLQuery]*sync.Map[int]struct{}
+		QueryCache   *swiss.Map[string, cacheStore] // QueryCache is a map of queries to their respective data caches
+		QueryCacheMu sync.RWMutex
+	}
+)
+
+var (
+	// WatchChan is the channel to receive updates about keys that are being watched.
+	WatchChan chan WatchEvent
+
+	// WatchSubscriptionChan is the channel to receive updates about query subscriptions.
+	WatchSubscriptionChan chan WatchSubscription
+
+	// AdhocQueryChan is the channel to receive adhoc queries.
+	AdhocQueryChan chan AdhocQuery
+)
+
+// NewQueryWatcher initializes a new QueryWatcher.
+func NewQueryWatcher() *QueryWatcher {
+	return &QueryWatcher{
+		WatchList:  sync.Map{},
+		QueryCache: swiss.New[string, cacheStore](0),
+	}
+}
 
 func newCacheStore() cacheStore {
 	return swiss.New[string, *Obj](0)
 }
 
-type KeyValue struct {
-	Key   string
-	Value *Obj
-}
-
-// WatchEvent Event to notify clients about changes in query results due to key updates
-type WatchEvent struct {
-	Key       string
-	Operation string
-	Value     *Obj
-}
-
-// WatchSubscription Event to watch/unwatch a query
-type WatchSubscription struct {
-	subscribe bool      // true for subscribe, false for unsubscribe
-	query     DSQLQuery // query to watch
-	clientFd  int       // client file descriptor
-	cacheChan chan *[]KeyValue
-}
-
-type AdhocQueryResult struct {
-	result *[]DSQLQueryResultRow
-	err    error
-}
-
-type AdhocQuery struct {
-	query        DSQLQuery
-	responseChan chan AdhocQueryResult
-}
-
-// WatchChan Channel to receive updates about keys that are being watched
-var WatchChan chan WatchEvent
-
-// WatchSubscriptionChan Channel to receive updates about query subscriptions
-var WatchSubscriptionChan chan WatchSubscription
-
-// AdhocQueryChan Channel to receive adhoc queries
-var AdhocQueryChan chan AdhocQuery
-
-// QueryWatcher watches for changes in keys and notifies clients
-type QueryWatcher struct {
-	WatchList    sync.Map
-	queryCache   *swiss.Map[string, cacheStore]
-	queryCacheMu sync.RWMutex
-}
-
-// NewQueryWatcher initializes a new QueryWatcher
-func NewQueryWatcher() *QueryWatcher {
-	return &QueryWatcher{
-		WatchList:  sync.Map{},                       // WatchList is a map of queries to their respective clients, type: map[DSQLQuery]*sync.Map[int]struct{}
-		queryCache: swiss.New[string, cacheStore](0), // cacheStore is a map of queries to their respective data caches
-	}
-}
-
+// Run starts the QueryWatcher's main loops.
 func (w *QueryWatcher) Run(ctx context.Context) {
-	wg := sync.WaitGroup{}
+	var wg sync.WaitGroup
 
-	wg.Add(1)
+	wg.Add(3)
 	go func() {
 		defer wg.Done()
 		w.listenForSubscriptions(ctx)
 	}()
 
-	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		w.watchKeys(ctx)
 	}()
 
-	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		w.ServeAdhocQueries(ctx)
+		w.serveAdhocQueries(ctx)
 	}()
 
 	<-ctx.Done()
 	wg.Wait()
 }
 
-// listenForSubscriptions listens for query subscriptions and unsubscribes
+// listenForSubscriptions listens for query subscriptions and unsubscriptions.
 func (w *QueryWatcher) listenForSubscriptions(ctx context.Context) {
 	for {
 		select {
 		case event := <-WatchSubscriptionChan:
-			if event.subscribe {
-				w.AddWatcher(event.query, event.clientFd, event.cacheChan)
+			if event.Subscribe {
+				w.addWatcher(event.Query, event.ClientFD, event.CacheChan)
 			} else {
-				w.RemoveWatcher(event.query, event.clientFd)
+				w.removeWatcher(event.Query, event.ClientFD)
 			}
 		case <-ctx.Done():
 			return
@@ -113,84 +118,94 @@ func (w *QueryWatcher) listenForSubscriptions(ctx context.Context) {
 	}
 }
 
-// watchKeys watches for changes in keys and notifies clients
+// watchKeys watches for changes in keys and notifies clients.
 func (w *QueryWatcher) watchKeys(ctx context.Context) {
 	for {
 		select {
 		case event := <-WatchChan:
-			w.WatchList.Range(func(key, value interface{}) bool {
-				query := key.(DSQLQuery)
-				clients := value.(*sync.Map)
-
-				if !WildCardMatch(query.KeyRegex, event.Key) {
-					return true
-				}
-
-				// Add this key to the query store
-				// TODO: We can implement more finegrained locking here which locks only the particular query's store.
-				w.queryCacheMu.Lock()
-				store, ok := w.queryCache.Get(query.String())
-				if !ok {
-					log.Warnf("Query not found in cacheStore: %s", query)
-					w.queryCacheMu.Unlock()
-					return true
-				}
-				switch event.Operation {
-				case constants.Set:
-					((*swiss.Map[string, *Obj])(store)).Put(event.Key, event.Value)
-				case constants.Del:
-					((*swiss.Map[string, *Obj])(store)).Delete(event.Key)
-				default:
-					log.Warnf("Unknown operation: %s", event.Operation)
-				}
-				w.queryCacheMu.Unlock()
-
-				// Execute the query
-				w.queryCacheMu.RLock()
-				queryResult, err := ExecuteQuery(&query, store)
-				w.queryCacheMu.RUnlock()
-				if err != nil {
-					log.Error(err)
-					return true
-				}
-
-				encodedResult := Encode(CreatePushResponse(&query, &queryResult), false)
-				clients.Range(func(clientKey, _ interface{}) bool {
-					clientFd := clientKey.(int)
-					_, err := syscall.Write(clientFd, encodedResult)
-					if err != nil {
-						w.RemoveWatcher(query, clientFd)
-					}
-					return true
-				})
-
-				return true
-			})
+			w.processWatchEvent(event)
 		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-// ServeAdhocQueries listens for adhoc queries, executes them, and sends the result back to the client on the provided
-// response channel.
-func (w *QueryWatcher) ServeAdhocQueries(ctx context.Context) {
+// processWatchEvent processes a single watch event.
+func (w *QueryWatcher) processWatchEvent(event WatchEvent) {
+	w.WatchList.Range(func(key, value interface{}) bool {
+		query := key.(DSQLQuery)
+		clients := value.(*sync.Map)
+
+		if !WildCardMatch(query.KeyRegex, event.Key) {
+			return true
+		}
+
+		w.updateQueryCache(query, event)
+		queryResult, err := w.runQuery(&query)
+		if err != nil {
+			log.Error(err)
+			return true
+		}
+
+		w.notifyClients(query, clients, queryResult)
+		return true
+	})
+}
+
+// updateQueryCache updates the query cache based on the watch event.
+func (w *QueryWatcher) updateQueryCache(query DSQLQuery, event WatchEvent) {
+	w.QueryCacheMu.Lock()
+	defer w.QueryCacheMu.Unlock()
+
+	store, ok := w.QueryCache.Get(query.String())
+	if !ok {
+		log.Warnf("Query not found in cacheStore: %s", query)
+		return
+	}
+
+	switch event.Operation {
+	case constants.Set:
+		((*swiss.Map[string, *Obj])(store)).Put(event.Key, event.Value)
+	case constants.Del:
+		((*swiss.Map[string, *Obj])(store)).Delete(event.Key)
+	default:
+		log.Warnf("Unknown operation: %s", event.Operation)
+	}
+}
+
+// notifyClients notifies all clients watching a query about the new result.
+func (w *QueryWatcher) notifyClients(query DSQLQuery, clients *sync.Map, queryResult *[]DSQLQueryResultRow) {
+	encodedResult := Encode(CreatePushResponse(&query, queryResult), false)
+	clients.Range(func(clientKey, _ interface{}) bool {
+		clientFD := clientKey.(int)
+		_, err := syscall.Write(clientFD, encodedResult)
+		if err != nil {
+			w.removeWatcher(query, clientFD)
+		}
+		return true
+	})
+}
+
+// serveAdhocQueries listens for adhoc queries, executes them, and sends the result back to the client.
+func (w *QueryWatcher) serveAdhocQueries(ctx context.Context) {
 	for {
 		select {
 		case query := <-AdhocQueryChan:
-			result, err := w.RunQuery(&query.query)
-			query.responseChan <- AdhocQueryResult{result: result, err: err}
+			result, err := w.runQuery(&query.Query)
+			query.ResponseChan <- AdhocQueryResult{Result: result, Err: err}
 		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-// AddWatcher adds a client as a watcher to a query.
-func (w *QueryWatcher) AddWatcher(query DSQLQuery, clientFd int, cacheChan chan *[]KeyValue) { //nolint:gocritic
+// addWatcher adds a client as a watcher to a query.
+func (w *QueryWatcher) addWatcher(query DSQLQuery, clientFD int, cacheChan chan *[]KeyValue) {
 	clients, _ := w.WatchList.LoadOrStore(query, &sync.Map{})
-	clients.(*sync.Map).Store(clientFd, struct{}{})
-	w.queryCacheMu.Lock()
+	clients.(*sync.Map).Store(clientFD, struct{}{})
+
+	w.QueryCacheMu.Lock()
+	defer w.QueryCacheMu.Unlock()
 
 	cache := newCacheStore()
 	// Hydrate the cache with data from all shards.
@@ -201,30 +216,30 @@ func (w *QueryWatcher) AddWatcher(query DSQLQuery, clientFd int, cacheChan chan 
 		((*swiss.Map[string, *Obj])(cache)).Put(kv.Key, kv.Value)
 	}
 
-	w.queryCache.Put(query.String(), cache)
-	w.queryCacheMu.Unlock()
+	w.QueryCache.Put(query.String(), cache)
 }
 
-// RemoveWatcher removes a client from the watchlist for a query.
-func (w *QueryWatcher) RemoveWatcher(query DSQLQuery, clientFd int) { //nolint:gocritic
+// removeWatcher removes a client from the watchlist for a query.
+func (w *QueryWatcher) removeWatcher(query DSQLQuery, clientFD int) {
 	if clients, ok := w.WatchList.Load(query); ok {
-		clients.(*sync.Map).Delete(clientFd)
-		log.Info(fmt.Printf("client '%d' no longer watching query: %s", clientFd, query))
+		clients.(*sync.Map).Delete(clientFD)
+		log.Info(fmt.Sprintf("client '%d' no longer watching query: %s", clientFD, query))
+
 		// If no more clients for this query, remove the query from WatchList
 		if w.clientCount(clients.(*sync.Map)) == 0 {
 			w.WatchList.Delete(query)
 
 			// Remove this Query's cached data.
-			w.queryCacheMu.Lock()
-			w.queryCache.Delete(query.String())
-			w.queryCacheMu.Unlock()
+			w.QueryCacheMu.Lock()
+			w.QueryCache.Delete(query.String())
+			w.QueryCacheMu.Unlock()
 
-			log.Info(fmt.Printf("no longer watching query: %s", query))
+			log.Info(fmt.Sprintf("no longer watching query: %s", query))
 		}
 	}
 }
 
-// Helper function to count clients
+// clientCount returns the number of clients watching a query.
 func (w *QueryWatcher) clientCount(clients *sync.Map) int {
 	count := 0
 	clients.Range(func(_, _ interface{}) bool {
@@ -234,20 +249,16 @@ func (w *QueryWatcher) clientCount(clients *sync.Map) int {
 	return count
 }
 
-// RunQuery takes a DSQLQuery object, and executes the query on its respective cache.
-func (w *QueryWatcher) RunQuery(query *DSQLQuery) (*[]DSQLQueryResultRow, error) {
-	w.queryCacheMu.RLock()
-	defer w.queryCacheMu.RUnlock()
+// runQuery executes a query on its respective cache.
+func (w *QueryWatcher) runQuery(query *DSQLQuery) (*[]DSQLQueryResultRow, error) {
+	w.QueryCacheMu.RLock()
+	defer w.QueryCacheMu.RUnlock()
 
-	store, ok := w.queryCache.Get(query.String())
+	store, ok := w.QueryCache.Get(query.String())
 	if !ok {
 		return nil, fmt.Errorf("query was not found in the cache: %s", query)
 	}
 
-	queryResult, err := ExecuteQuery(query, store)
-	if err != nil {
-		log.Error(err)
-		return nil, err
-	}
-	return &queryResult, nil
+	result, err := ExecuteQuery(query, store)
+	return &result, err
 }
