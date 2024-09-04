@@ -20,7 +20,7 @@ var ErrInvalidJSONPath = errors.New("ERR invalid JSONPath")
 
 type DSQLQueryResultRow struct {
 	Key   string
-	Value *Obj
+	Value Obj
 }
 
 func ExecuteQuery(query *DSQLQuery, store *swiss.Map[string, *Obj]) ([]DSQLQueryResultRow, error) {
@@ -36,7 +36,7 @@ func ExecuteQuery(query *DSQLQuery, store *swiss.Map[string, *Obj]) ([]DSQLQuery
 
 		row := DSQLQueryResultRow{
 			Key:   key,
-			Value: value,
+			Value: *value,
 		}
 
 		if query.Where != nil {
@@ -57,7 +57,7 @@ func ExecuteQuery(query *DSQLQuery, store *swiss.Map[string, *Obj]) ([]DSQLQuery
 			}
 		}
 
-		if err := MarshalResultIfJSON(row); err != nil {
+		if err := MarshalResultIfJSON(&row); err != nil {
 			// if error, skip the result and continue the iteration
 			return true
 		}
@@ -81,7 +81,7 @@ func ExecuteQuery(query *DSQLQuery, store *swiss.Map[string, *Obj]) ([]DSQLQuery
 
 	if !query.Selection.ValueSelection {
 		for i := range result {
-			result[i].Value = nil
+			result[i].Value = Obj{}
 		}
 	}
 
@@ -92,7 +92,7 @@ func ExecuteQuery(query *DSQLQuery, store *swiss.Map[string, *Obj]) ([]DSQLQuery
 	return result, nil
 }
 
-func MarshalResultIfJSON(row DSQLQueryResultRow) error {
+func MarshalResultIfJSON(row *DSQLQueryResultRow) error {
 	// if the row contains JSON field then convert the json object into string representation so it can be encoded
 	// before being returned to the client
 	if getEncoding(row.Value.TypeEncoding) == ObjEncodingJSON && getType(row.Value.TypeEncoding) == ObjTypeJSON {
@@ -121,7 +121,7 @@ func sortResults(query *DSQLQuery, result []DSQLQueryResultRow) {
 		})
 	case CustomValue:
 		sort.Slice(result, func(i, j int) bool {
-			return compareValues(query.OrderBy.Order, result[i].Value, result[j].Value)
+			return compareValues(query.OrderBy.Order, &result[i].Value, &result[j].Value)
 		})
 	}
 }
@@ -250,15 +250,15 @@ func getExprValueAndType(expr sqlparser.Expr, row DSQLQueryResultRow) (value int
 		case TempKey:
 			return row.Key, "string", nil
 		case TempValue:
-			return getValueAndType(row.Value)
+			return getValueAndType(&row.Value)
 		default:
 			return nil, "", fmt.Errorf("unknown column: %s", expr.Name.String())
 		}
 	case *sqlparser.SQLVal:
 		// we currently treat JSON query expression as a string value so we will need to differentiate between JSON and
 		// SQL strings
-		if isJSONField(expr, row.Value) {
-			return retrieveValueFromJSON(string(expr.Val), row.Value)
+		if isJSONField(expr, &row.Value) {
+			return retrieveValueFromJSON(string(expr.Val), &row.Value)
 		}
 		return sqlValToGoValue(expr)
 	default:
