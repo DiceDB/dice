@@ -4,9 +4,10 @@ package core
 import (
 	"context"
 	"fmt"
-	"github.com/dicedb/dice/internal/constants"
 	"sync"
 	"syscall"
+
+	"github.com/dicedb/dice/internal/constants"
 
 	"github.com/charmbracelet/log"
 	"github.com/cockroachdb/swiss"
@@ -110,7 +111,7 @@ func (w *QueryWatcher) listenForSubscriptions(ctx context.Context) {
 			if event.Subscribe {
 				w.addWatcher(event.Query, event.ClientFD, event.CacheChan)
 			} else {
-				w.removeWatcher(event.Query, event.ClientFD)
+				w.removeWatcher(&event.Query, event.ClientFD)
 			}
 		case <-ctx.Done():
 			return
@@ -140,20 +141,20 @@ func (w *QueryWatcher) processWatchEvent(event WatchEvent) {
 			return true
 		}
 
-		w.updateQueryCache(query, event)
+		w.updateQueryCache(&query, event)
 		queryResult, err := w.runQuery(&query)
 		if err != nil {
 			log.Error(err)
 			return true
 		}
 
-		w.notifyClients(query, clients, queryResult)
+		w.notifyClients(&query, clients, queryResult)
 		return true
 	})
 }
 
 // updateQueryCache updates the query cache based on the watch event.
-func (w *QueryWatcher) updateQueryCache(query DSQLQuery, event WatchEvent) {
+func (w *QueryWatcher) updateQueryCache(query *DSQLQuery, event WatchEvent) {
 	w.QueryCacheMu.Lock()
 	defer w.QueryCacheMu.Unlock()
 
@@ -174,8 +175,8 @@ func (w *QueryWatcher) updateQueryCache(query DSQLQuery, event WatchEvent) {
 }
 
 // notifyClients notifies all clients watching a query about the new result.
-func (w *QueryWatcher) notifyClients(query DSQLQuery, clients *sync.Map, queryResult *[]DSQLQueryResultRow) {
-	encodedResult := Encode(CreatePushResponse(&query, queryResult), false)
+func (w *QueryWatcher) notifyClients(query *DSQLQuery, clients *sync.Map, queryResult *[]DSQLQueryResultRow) {
+	encodedResult := Encode(CreatePushResponse(query, queryResult), false)
 	clients.Range(func(clientKey, _ interface{}) bool {
 		clientFD := clientKey.(int)
 		_, err := syscall.Write(clientFD, encodedResult)
@@ -220,14 +221,14 @@ func (w *QueryWatcher) addWatcher(query DSQLQuery, clientFD int, cacheChan chan 
 }
 
 // removeWatcher removes a client from the watchlist for a query.
-func (w *QueryWatcher) removeWatcher(query DSQLQuery, clientFD int) {
-	if clients, ok := w.WatchList.Load(query); ok {
+func (w *QueryWatcher) removeWatcher(query *DSQLQuery, clientFD int) {
+	if clients, ok := w.WatchList.Load(*query); ok {
 		clients.(*sync.Map).Delete(clientFD)
 		log.Info(fmt.Sprintf("client '%d' no longer watching query: %s", clientFD, query))
 
 		// If no more clients for this query, remove the query from WatchList
 		if w.clientCount(clients.(*sync.Map)) == 0 {
-			w.WatchList.Delete(query)
+			w.WatchList.Delete(*query)
 
 			// Remove this Query's cached data.
 			w.QueryCacheMu.Lock()
