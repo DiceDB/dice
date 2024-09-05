@@ -224,8 +224,16 @@ func parseTableName(selectStmt *sqlparser.Select) (string, error) {
 // Function to parse ORDER BY clause
 func parseOrderBy(selectStmt *sqlparser.Select) (QueryOrder, error) {
 	orderBy := QueryOrder{}
+	if len(selectStmt.OrderBy) > 1 {
+		return QueryOrder{}, fmt.Errorf("only one ORDER BY clause is supported")
+	}
 	if len(selectStmt.OrderBy) > 0 {
-		orderBy.OrderBy = sqlparser.String(selectStmt.OrderBy[0].Expr)
+		// trim backticks or quotes from order by expr
+		orderBy.OrderBy = strings.Trim(sqlparser.String(selectStmt.OrderBy[0].Expr), "`")
+		if (orderBy.OrderBy[0] == '\'' && orderBy.OrderBy[len(orderBy.OrderBy)-1] == '\'') ||
+			(orderBy.OrderBy[0] == '`' && orderBy.OrderBy[len(orderBy.OrderBy)-1] == '`') {
+			orderBy.OrderBy = orderBy.OrderBy[1 : len(orderBy.OrderBy)-1]
+		}
 		// Order by expr should either be $key or $value
 		if orderBy.OrderBy != TempKey && orderBy.OrderBy != TempValue && !strings.HasPrefix(orderBy.OrderBy, TempValue) {
 			return QueryOrder{}, fmt.Errorf("only $key and $value are supported in ORDER BY clause")

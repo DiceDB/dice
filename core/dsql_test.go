@@ -315,9 +315,44 @@ func TestParseOrderBy(t *testing.T) {
 			want: QueryOrder{OrderBy: "_key", Order: constants.Asc},
 		},
 		{
+			name: "order by key desc",
+			sql:  "SELECT $key FROM `test` ORDER BY $key DESC",
+			want: QueryOrder{OrderBy: "_key", Order: "desc"},
+		},
+		{
+			name: "order by value asc",
+			sql:  "SELECT $value FROM `test` ORDER BY $value ASC",
+			want: QueryOrder{OrderBy: "_value", Order: "asc"},
+		},
+		{
 			name: "order by value desc",
 			sql:  "SELECT $value FROM `test` ORDER BY $value DESC",
 			want: QueryOrder{OrderBy: "_value", Order: "desc"},
+		},
+		{
+			name: "order by json path asc",
+			sql:  "SELECT $value FROM `test` ORDER BY $value.name ASC",
+			want: QueryOrder{OrderBy: "_value.name", Order: "asc"},
+		},
+		{
+			name: "order by nested json path desc",
+			sql:  "SELECT $value FROM `test` ORDER BY $value.address.city DESC",
+			want: QueryOrder{OrderBy: "_value.address.city", Order: "desc"},
+		},
+		{
+			name: "order by json path with array index",
+			sql:  "SELECT $value FROM `test` ORDER BY `$value.items[0].price`",
+			want: QueryOrder{OrderBy: "_value.items[0].price", Order: "asc"},
+		},
+		{
+			name: "order by complex json path",
+			sql:  "SELECT $value FROM `test` ORDER BY `$value.users[*].contacts[0].email`",
+			want: QueryOrder{OrderBy: "_value.users[*].contacts[0].email", Order: "asc"},
+		},
+		{
+			name: "no order by clause",
+			sql:  "SELECT $key FROM `test`",
+			want: QueryOrder{},
 		},
 		{
 			name:    "invalid order by field",
@@ -328,6 +363,11 @@ func TestParseOrderBy(t *testing.T) {
 			name: "no order by clause",
 			sql:  "SELECT $key FROM `test`",
 			want: QueryOrder{},
+		},
+		{
+			name:    "multiple order by clauses",
+			sql:     "SELECT $key FROM `test` ORDER BY $key ASC, $value DESC",
+			wantErr: true,
 		},
 	}
 
