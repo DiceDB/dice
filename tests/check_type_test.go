@@ -49,13 +49,6 @@ func TestErrorsForSetData(t *testing.T) {
 			delay:       []time.Duration{0, 0},
 		},
 		{
-			name:        "STACKINT{OP} a key holding a set",
-			cmd:         []string{"SADD foo bar", "STACKINTPUSH foo 1", "STACKINTPOP foo", "STACKINTLEN foo", "STACKINTPEEK foo", "STACKREFPUSH foo 1", "STACKREFPOP foo", "STACKREFLEN foo", "STACKREFPEEK foo"},
-			expected:    []interface{}{int64(1), setErrorMsg, setErrorMsg, setErrorMsg, setErrorMsg, setErrorMsg, setErrorMsg, setErrorMsg, setErrorMsg},
-			assert_type: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
-			delay:       []time.Duration{0, 0, 0, 0, 0, 0, 0, 0, 0},
-		},
-		{
 			name:        "BIT operations on a key holding a set",
 			cmd:         []string{"SADD foo bar", "GETBIT foo 1", "BITCOUNT foo"},
 			expected:    []interface{}{int64(1), setErrorMsg, setErrorMsg},

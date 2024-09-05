@@ -168,40 +168,6 @@ func Encode(value interface{}, isSimple bool) []byte {
 			buf.Write(Encode(elem, false))
 		}
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
-	case *QueueElement:
-		var b []byte
-		buf := bytes.NewBuffer(b)
-		qe := value.(*QueueElement)
-		buf.Write(Encode(qe.Key, false))
-		buf.Write(Encode(qe.Obj.Value, false))
-		return []byte(fmt.Sprintf("*2\r\n%s", buf.Bytes()))
-	case []*QueueElement:
-		var b []byte
-		buf := bytes.NewBuffer(b)
-		elements := value.([]*QueueElement)
-		for _, qe := range elements {
-			buf.WriteString("*2\r\n")
-			buf.Write(Encode(qe.Key, false))
-			buf.Write(Encode(qe.Obj.Value, false))
-		}
-		return []byte(fmt.Sprintf("*%d\r\n%s", len(elements), buf.Bytes()))
-	case *StackElement:
-		var b []byte
-		buf := bytes.NewBuffer(b)
-		se := value.(*StackElement)
-		buf.Write(Encode(se.Key, false))
-		buf.Write(Encode(se.Obj.Value, false))
-		return []byte(fmt.Sprintf("*2\r\n%s", buf.Bytes()))
-	case []*StackElement:
-		var b []byte
-		buf := bytes.NewBuffer(b)
-		elements := value.([]*StackElement)
-		for _, se := range elements {
-			buf.WriteString("*2\r\n")
-			buf.Write(Encode(se.Key, false))
-			buf.Write(Encode(se.Obj.Value, false))
-		}
-		return []byte(fmt.Sprintf("*%d\r\n%s", len(elements), buf.Bytes()))
 	case []int64:
 		var b []byte
 		buf := bytes.NewBuffer(b)

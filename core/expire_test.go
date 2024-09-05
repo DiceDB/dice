@@ -10,7 +10,6 @@ func TestDelExpiry(t *testing.T) {
 	store := NewStore(nil)
 	// Initialize the test environment
 	store.store = swiss.New[string, *Obj](10240)
-	store.keypool = swiss.New[string, *string](10240)
 	store.expires = swiss.New[*Obj, uint64](10240)
 
 	// Define test cases
