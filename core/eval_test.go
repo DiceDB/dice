@@ -1049,6 +1049,7 @@ func testEvalHSET(t *testing.T, store *Store) {
 				newMap[field] = "mock_field_value"
 
 				obj := &Obj{
+					TypeEncoding:   ObjTypeHashMap | ObjEncodingHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -1068,6 +1069,7 @@ func testEvalHSET(t *testing.T, store *Store) {
 				newMap[field] = mock_value
 
 				obj := &Obj{
+					TypeEncoding:   ObjTypeHashMap | ObjEncodingHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
