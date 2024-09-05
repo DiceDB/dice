@@ -13,7 +13,7 @@ import (
 )
 
 func TestBloomFilter(t *testing.T) {
-	store := NewStore()
+	store := NewStore(nil)
 	// This test only contains some basic checks for all the bloom filter
 	// operations like BFINIT, BFADD, BFEXISTS. It assumes that the
 	// functions called in the main function are working correctly and
@@ -110,7 +110,7 @@ func TestBloomFilter(t *testing.T) {
 }
 
 func TestGetOrCreateBloomFilter(t *testing.T) {
-	store := NewStore()
+	store := NewStore(nil)
 	// Create a key and default opts
 	key := "bf"
 	opts, _ := newBloomOpts([]string{}, true)

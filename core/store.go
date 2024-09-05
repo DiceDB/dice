@@ -19,17 +19,15 @@ type Store struct {
 	keypool      *swiss.Map[string, *string]
 	storeMutex   sync.RWMutex
 	keypoolMutex sync.RWMutex
+	watchChan    chan WatchEvent
 }
 
-func NewStore() *Store {
-	WatchChan = make(chan WatchEvent, config.KeysLimit)
-	WatchSubscriptionChan = make(chan WatchSubscription)
-	AdhocQueryChan = make(chan AdhocQuery, 1000)
-
+func NewStore(watchChan chan WatchEvent) *Store {
 	return &Store{
-		store:   swiss.New[string, *Obj](10240),
-		expires: swiss.New[*Obj, uint64](10240),
-		keypool: swiss.New[string, *string](10240),
+		store:     swiss.New[string, *Obj](10240),
+		expires:   swiss.New[*Obj, uint64](10240),
+		keypool:   swiss.New[string, *string](10240),
+		watchChan: watchChan,
 	}
 }
 
@@ -50,7 +48,7 @@ func (store *Store) ResetStore() {
 		store.store.Clear()
 		store.expires.Clear()
 		store.keypool.Clear()
-		WatchChan = make(chan WatchEvent, config.KeysLimit)
+		store.watchChan = make(chan WatchEvent, config.KeysLimit)
 		WatchSubscriptionChan = make(chan WatchSubscription)
 	}, store, WithStoreLock(), WithKeypoolLock())
 }
@@ -118,7 +116,10 @@ func (store *Store) putHelper(k string, obj *Obj, opts ...PutOption) {
 	store.store.Put(*ptr, obj)
 
 	store.incrementKeyCount()
-	notifyWatchers(k, constants.Set, obj)
+
+	if store.watchChan != nil {
+		store.notifyWatchers(k, constants.Set, obj)
+	}
 }
 
 func (store *Store) getHelper(k string, touch bool) *Obj {
@@ -253,7 +254,9 @@ func (store *Store) Rename(sourceKey, destKey string) bool {
 		}
 
 		// Notify watchers about the deletion of the source key
-		notifyWatchers(sourceKey, constants.Del, nil)
+		if store.watchChan != nil {
+			store.notifyWatchers(sourceKey, constants.Del, nil)
+		}
 
 		return true
 	}, store, WithStoreLock(), WithKeypoolLock())
@@ -431,9 +434,14 @@ func (store *Store) deleteKey(k, ptr string, obj *Obj) bool {
 		store.expires.Delete(obj)
 		store.keypool.Delete(k)
 		KeyspaceStat[0]["keys"]--
-		notifyWatchers(k, constants.Del, nil)
+
+		if store.watchChan != nil {
+			store.notifyWatchers(k, constants.Del, nil)
+		}
+
 		return true
 	}
+
 	return false
 }
 
@@ -445,8 +453,8 @@ func (store *Store) delByPtr(ptr string) bool {
 	return false
 }
 
-func notifyWatchers(k, operation string, obj *Obj) {
-	WatchChan <- WatchEvent{k, operation, obj}
+func (store *Store) notifyWatchers(k, operation string, obj *Obj) {
+	store.watchChan <- WatchEvent{k, operation, obj}
 }
 
 func (store *Store) GetStore() *swiss.Map[string, *Obj] {

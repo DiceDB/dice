@@ -57,9 +57,6 @@ type (
 )
 
 var (
-	// WatchChan is the channel to receive updates about keys that are being watched.
-	WatchChan chan WatchEvent
-
 	// WatchSubscriptionChan is the channel to receive updates about query subscriptions.
 	WatchSubscriptionChan chan WatchSubscription
 
@@ -69,6 +66,9 @@ var (
 
 // NewQueryWatcher initializes a new QueryWatcher.
 func NewQueryWatcher() *QueryWatcher {
+	WatchSubscriptionChan = make(chan WatchSubscription)
+	AdhocQueryChan = make(chan AdhocQuery, 1000)
+
 	return &QueryWatcher{
 		WatchList:  sync.Map{},
 		QueryCache: swiss.New[string, cacheStore](0),
@@ -80,7 +80,7 @@ func newCacheStore() cacheStore {
 }
 
 // Run starts the QueryWatcher's main loops.
-func (w *QueryWatcher) Run(ctx context.Context) {
+func (w *QueryWatcher) Run(ctx context.Context, watchChan <-chan WatchEvent) {
 	var wg sync.WaitGroup
 
 	wg.Add(3)
@@ -91,7 +91,7 @@ func (w *QueryWatcher) Run(ctx context.Context) {
 
 	go func() {
 		defer wg.Done()
-		w.watchKeys(ctx)
+		w.watchKeys(ctx, watchChan)
 	}()
 
 	go func() {
@@ -120,10 +120,10 @@ func (w *QueryWatcher) listenForSubscriptions(ctx context.Context) {
 }
 
 // watchKeys watches for changes in keys and notifies clients.
-func (w *QueryWatcher) watchKeys(ctx context.Context) {
+func (w *QueryWatcher) watchKeys(ctx context.Context, watchChan <-chan WatchEvent) {
 	for {
 		select {
-		case event := <-WatchChan:
+		case event := <-watchChan:
 			w.processWatchEvent(event)
 		case <-ctx.Done():
 			return
