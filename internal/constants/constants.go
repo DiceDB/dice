@@ -26,7 +26,7 @@ const (
 	Asc string = "asc"
 
 	String string = "string"
-	Int    string = "int"
+	Int64  string = "int64"
 	Float  string = "float"
 	Bool   string = "bool"
 	Nil    string = "nil"

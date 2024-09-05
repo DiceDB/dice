@@ -154,15 +154,8 @@ func compareOrderByValues(valI, valJ interface{}, valueType, order string) (bool
 	switch valueType {
 	case constants.String:
 		return compareStringValues(order, valI.(string), valJ.(string)), nil
-	case constants.Int:
-		switch v := valI.(type) {
-		case int:
-			return compareIntValues(order, v, valJ.(int)), nil
-		case int64:
-			return compareInt64Values(order, v, valJ.(int64)), nil
-		default:
-			return false, fmt.Errorf("unsupported type for order by comparison: %T", valI)
-		}
+	case constants.Int64:
+		return compareInt64Values(order, valI.(int64), valJ.(int64)), nil
 	case constants.Float:
 		return compareFloatValues(order, valI.(float64), valJ.(float64)), nil
 	case constants.Bool:
@@ -254,8 +247,8 @@ func evaluateComparison(expr *sqlparser.ComparisonExpr, row DSQLQueryResultRow) 
 	switch leftType {
 	case constants.String:
 		return compareStrings(left.(string), right.(string), expr.Operator)
-	case constants.Int:
-		return compareInts(left.(int), right.(int), expr.Operator)
+	case constants.Int64:
+		return compareInt64s(left.(int64), right.(int64), expr.Operator)
 	case constants.Float:
 		return compareFloats(left.(float64), right.(float64), expr.Operator)
 	default:
@@ -330,8 +323,8 @@ func inferTypeAndConvert(val interface{}) (value interface{}, valueType string, 
 	case string:
 		return v, constants.String, nil
 	case float64:
-		if isInteger(v) {
-			return int(v), constants.Int, nil
+		if isInt64(v) {
+			return int64(v), constants.Int64, nil
 		}
 		return v, constants.Float, nil
 	case bool:
@@ -343,7 +336,7 @@ func inferTypeAndConvert(val interface{}) (value interface{}, valueType string, 
 	}
 }
 
-// isInteger checks if a float is an integer. When we unmarshal JSON data into an interface it sets all numbers as
+// isInt64 checks if a float is an integer. When we unmarshal JSON data into an interface it sets all numbers as
 // floats, https://forum.golangbridge.org/t/type-problem-in-json-conversion/19420.
 // This function does not handle the edge case where user enters a floating point number with trailing zeros in the
 // fractional part of a decimal number (e.g 10.0) then our code treats that as an integer rather than float.
@@ -357,8 +350,8 @@ func inferTypeAndConvert(val interface{}) (value interface{}, valueType string, 
 // However, the string conversion is expensive and we are trying to avoid it. We can assume this to be a limitation of
 // using the JSON data type.
 // TODO: handle the edge case where the integer is too large for float64.
-func isInteger(f float64) bool {
-	return f == float64(int(f))
+func isInt64(f float64) bool {
+	return f == float64(int64(f))
 }
 
 // getValueAndType returns the type-casted value and type of the object
@@ -367,7 +360,7 @@ func getValueAndType(obj *Obj) (val interface{}, s string, e error) {
 	case string:
 		return v, constants.String, nil
 	case int64:
-		return v, constants.Int, nil
+		return v, constants.Int64, nil
 	case float64:
 		return v, constants.Float, nil
 	default:
@@ -381,11 +374,11 @@ func sqlValToGoValue(sqlVal *sqlparser.SQLVal) (val interface{}, s string, e err
 	case sqlparser.StrVal:
 		return string(sqlVal.Val), constants.String, nil
 	case sqlparser.IntVal:
-		i, err := strconv.Atoi(string(sqlVal.Val))
+		i, err := strconv.ParseInt(string(sqlVal.Val), 10, 64)
 		if err != nil {
 			return nil, constants.EmptyStr, err
 		}
-		return i, constants.Int, nil
+		return i, constants.Int64, nil
 	case sqlparser.FloatVal:
 		f, err := strconv.ParseFloat(string(sqlVal.Val), 64)
 		if err != nil {
@@ -417,6 +410,25 @@ func compareStrings(left, right, operator string) (bool, error) {
 }
 
 func compareInts(left, right int, operator string) (bool, error) {
+	switch operator {
+	case "=":
+		return left == right, nil
+	case constants.OperatorNotEquals, constants.OperatorNotEqualsTo:
+		return left != right, nil
+	case "<":
+		return left < right, nil
+	case constants.OperatorLessThanEqualsTo:
+		return left <= right, nil
+	case ">":
+		return left > right, nil
+	case constants.OperatorGreaterThanEqualsTo:
+		return left >= right, nil
+	default:
+		return false, fmt.Errorf("unsupported operator for integers: %s", operator)
+	}
+}
+
+func compareInt64s(left, right int64, operator string) (bool, error) {
 	switch operator {
 	case "=":
 		return left == right, nil

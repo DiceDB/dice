@@ -283,7 +283,7 @@ func TestExecuteQueryWithIncompatibleTypes(t *testing.T) {
 
 		_, err := core.ExecuteQuery(&query, store.GetStore())
 
-		assert.Error(t, err, "incompatible types in comparison: string and int")
+		assert.Error(t, err, "incompatible types in comparison: string and int64")
 	})
 
 	t.Run("NullValue", func(t *testing.T) {
