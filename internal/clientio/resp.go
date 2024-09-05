@@ -209,7 +209,7 @@ func Encode(value interface{}, isSimple bool) []byte {
 		var b []byte
 		buf := bytes.NewBuffer(b)
 		for _, b := range value.([]DiceCmdMeta) {
-			buf.Write([]byte(fmt.Sprintf("*3\r\n")))
+			buf.WriteString("*3\r\n")
 			buf.Write(encodeString(b.Name))
 			buf.Write(Encode(b.Arity, isSimple))
 			buf.Write(Encode(b.KeySpecs, isSimple))
