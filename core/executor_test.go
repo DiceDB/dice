@@ -17,14 +17,16 @@ type keyValue struct {
 	value string
 }
 
-var dataset = []keyValue{
-	{"k2", "v4"},
-	{"k4", "v2"},
-	{"k3", "v3"},
-	{"k5", "v1"},
-	{"k1", "v5"},
-	{"k", "k"},
-}
+var (
+	dataset = []keyValue{
+		{"k2", "v4"},
+		{"k4", "v2"},
+		{"k3", "v3"},
+		{"k5", "v1"},
+		{"k1", "v5"},
+		{"k", "k"},
+	}
+)
 
 func setup(store *core.Store) {
 	// delete all keys
@@ -392,7 +394,7 @@ func TestExecuteQueryWithEdgeCases(t *testing.T) {
 	})
 }
 
-var JsonDataset = []keyValue{
+var jsonWhereClauseDataset = []keyValue{
 	{"json1", `{"name":"Tom"}`},
 	{"json2", `{"name":"Bob","score":18.1}`},
 	{"json3", `{"scoreInt":20}`},
@@ -400,13 +402,13 @@ var JsonDataset = []keyValue{
 	{"json5", `{"field1":{"field2":{"field3":{"score":18}},"score2":5}}`},
 }
 
-func setupJSON(t *testing.T, store *core.Store) {
+func setupJSON(t *testing.T, store *core.Store, dataset []keyValue) {
 	t.Helper()
-	for _, data := range JsonDataset {
+	for _, data := range dataset {
 		store.Del(data.key)
 	}
 
-	for _, data := range JsonDataset {
+	for _, data := range dataset {
 		var jsonValue interface{}
 		if err := sonic.UnmarshalString(data.value, &jsonValue); err != nil {
 			t.Fatalf("Failed to unmarshal value: %v", err)
@@ -418,7 +420,7 @@ func setupJSON(t *testing.T, store *core.Store) {
 
 func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
 	store := core.NewStore()
-	setupJSON(t, store)
+	setupJSON(t, store, jsonWhereClauseDataset)
 
 	t.Run("BasicWhereClauseWithJSON", func(t *testing.T) {
 		query := core.DSQLQuery{
@@ -568,5 +570,157 @@ func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
 		assert.NilError(t, sonic.UnmarshalString(`{"field1":{"field2":{"field3":{"score":18}},"score2":5}}`, &expected))
 		assert.NilError(t, sonic.UnmarshalString(result[0].Value.Value.(string), &actual))
 		assert.DeepEqual(t, actual, expected)
+	})
+}
+
+var jsonOrderDataset = []keyValue{
+	{"json3", `{"name":"Alice", "age":35, "scoreInt":20, "nested":{"field":{"value":15}}}`},
+	{"json2", `{"name":"Bob", "age":25, "score":18.1, "nested":{"field":{"value":40}}}`},
+	{"json1", `{"name":"Tom", "age":30, "nested":{"field":{"value":20}}}`},
+	{"json5", `{"name":"Charlie", "age":50, "nested":{"field":{"value":19}}}`},
+	{"json4", `{"name":"Eve", "age":32, "nested":{"field":{"value":60}}}`},
+}
+
+func TestExecuteQueryWithJsonOrderBy(t *testing.T) {
+	store := core.NewStore()
+	setupJSON(t, store, jsonOrderDataset)
+
+	t.Run("OrderBySimpleJSONField", func(t *testing.T) {
+		query := core.DSQLQuery{
+			KeyRegex: "json*",
+			Selection: core.QuerySelection{
+				KeySelection:   true,
+				ValueSelection: true,
+			},
+			OrderBy: core.QueryOrder{
+				OrderBy: "_value.name",
+				Order:   "asc",
+			},
+		}
+
+		result, err := core.ExecuteQuery(&query, store.GetStore())
+
+		assert.NilError(t, err)
+		assert.Equal(t, 5, len(result), "Expected 5 results")
+		assert.Equal(t, "json3", result[0].Key) // Alice
+		assert.Equal(t, "json2", result[1].Key) // Bob
+		assert.Equal(t, "json5", result[2].Key) // Charlie
+		assert.Equal(t, "json4", result[3].Key) // Eve
+		assert.Equal(t, "json1", result[4].Key) // Tom
+	})
+
+	t.Run("OrderByNumericJSONField", func(t *testing.T) {
+		query := core.DSQLQuery{
+			KeyRegex: "json*",
+			Selection: core.QuerySelection{
+				KeySelection:   true,
+				ValueSelection: true,
+			},
+			OrderBy: core.QueryOrder{
+				OrderBy: "_value.age",
+				Order:   "desc",
+			},
+		}
+
+		result, err := core.ExecuteQuery(&query, store.GetStore())
+
+		assert.NilError(t, err)
+		assert.Equal(t, 5, len(result))
+		assert.Equal(t, "json5", result[0].Key) // Charlie, age 50
+		assert.Equal(t, "json3", result[1].Key) // Alice, age 35
+		assert.Equal(t, "json4", result[2].Key) // Eve, age 32
+		assert.Equal(t, "json1", result[3].Key) // Tom, age 30
+		assert.Equal(t, "json2", result[4].Key) // Bob, age 25
+	})
+
+	t.Run("OrderByNestedJSONField", func(t *testing.T) {
+		query := core.DSQLQuery{
+			KeyRegex: "json*",
+			Selection: core.QuerySelection{
+				KeySelection:   true,
+				ValueSelection: true,
+			},
+			OrderBy: core.QueryOrder{
+				OrderBy: "_value.nested.field.value",
+				Order:   "asc",
+			},
+		}
+
+		result, err := core.ExecuteQuery(&query, store.GetStore())
+
+		assert.NilError(t, err)
+		assert.Equal(t, 5, len(result))
+		assert.Equal(t, "json3", result[0].Key) // Alice, nested.field.value: 15
+		assert.Equal(t, "json5", result[1].Key) // Charlie, nested.field.value: 19
+		assert.Equal(t, "json1", result[2].Key) // Tom, nested.field.value: 20
+		assert.Equal(t, "json2", result[3].Key) // Bob, nested.field.value: 40
+		assert.Equal(t, "json4", result[4].Key) // Eve, nested.field.value: 60
+	})
+
+	t.Run("OrderByMixedTypes", func(t *testing.T) {
+		query := core.DSQLQuery{
+			KeyRegex: "json*",
+			Selection: core.QuerySelection{
+				KeySelection:   true,
+				ValueSelection: true,
+			},
+			OrderBy: core.QueryOrder{
+				OrderBy: "_value.score",
+				Order:   "desc",
+			},
+		}
+
+		result, err := core.ExecuteQuery(&query, store.GetStore())
+
+		assert.NilError(t, err)
+		// No ordering guarantees for mixed types.
+		assert.Equal(t, 5, len(result))
+	})
+
+	t.Run("OrderByWithWhereClause", func(t *testing.T) {
+		query := core.DSQLQuery{
+			KeyRegex: "json*",
+			Selection: core.QuerySelection{
+				KeySelection:   true,
+				ValueSelection: true,
+			},
+			Where: &sqlparser.ComparisonExpr{
+				Left:     sqlparser.NewStrVal([]byte("_value.age")),
+				Operator: ">",
+				Right:    sqlparser.NewIntVal([]byte("30")),
+			},
+			OrderBy: core.QueryOrder{
+				OrderBy: "_value.name",
+				Order:   "desc",
+			},
+		}
+
+		result, err := core.ExecuteQuery(&query, store.GetStore())
+
+		assert.NilError(t, err)
+		assert.Equal(t, 3, len(result), "Expected 3 results (age > 30, ordered by name)")
+		assert.Equal(t, "json4", result[0].Key) // Eve, age 32
+		assert.Equal(t, "json5", result[1].Key) // Charlie, age 50
+		assert.Equal(t, "json3", result[2].Key) // Alice, age 35
+	})
+
+	t.Run("OrderByNonExistentField", func(t *testing.T) {
+		query := core.DSQLQuery{
+			KeyRegex: "json*",
+			Selection: core.QuerySelection{
+				KeySelection:   true,
+				ValueSelection: true,
+			},
+			OrderBy: core.QueryOrder{
+				OrderBy: "_value.nonexistent",
+				Order:   "asc",
+			},
+		}
+
+		result, err := core.ExecuteQuery(&query, store.GetStore())
+
+		assert.NilError(t, err)
+		// No ordering guarantees for non-existent field references.
+		assert.Equal(t, 5, len(result), "Expected 5 results")
 	})
 }
