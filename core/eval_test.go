@@ -39,7 +39,7 @@ func setupTest(store *Store) {
 }
 
 func TestEval(t *testing.T) {
-	store := NewStore()
+	store := NewStore(nil)
 
 	testEvalMSET(t, store)
 	testEvalPING(t, store)
@@ -997,13 +997,13 @@ func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]s
 func BenchmarkEvalMSET(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		store := NewStore()
+		store := NewStore(nil)
 		evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"}, store)
 	}
 }
 
 func BenchmarkEvalHSET(b *testing.B) {
-	store := NewStore()
+	store := NewStore(nil)
 	for i := 0; i < b.N; i++ {
 		evalHSET([]string{"KEY", fmt.Sprintf("FIELD_%d", i), fmt.Sprintf("VALUE_%d", i)}, store)
 	}
