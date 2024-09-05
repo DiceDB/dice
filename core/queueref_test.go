@@ -18,7 +18,7 @@ func TestQueueRef(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	store := core.NewStore()
+	store := core.NewStore(nil)
 
 	if _, err := qr.Remove(store); err != core.ErrQueueEmpty {
 		t.Error("removing from an empty queueref should return an empty queue error")
@@ -73,7 +73,7 @@ func TestRemoveSingleNonExpiredKeys(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	store := core.NewStore()
+	store := core.NewStore(nil)
 	val := 10
 	store.Put("key1", store.NewObj(val, -1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key1", store)
@@ -87,7 +87,7 @@ func TestRemoveMultipleNonExpiredKeys(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	store := core.NewStore()
+	store := core.NewStore(nil)
 	val := [3]int{10, 20, 30}
 	store.Put("key1", store.NewObj(val[0], -1, core.ObjTypeString, core.ObjEncodingInt))
 	qr.Insert("key1", store)
@@ -103,7 +103,7 @@ func TestRemoveMultipleNonExpiredKeys(t *testing.T) {
 
 // Test for removing from queue with expired keys before non-expired
 func TestRemoveExpiredBeforeNonExpire(t *testing.T) {
-	store := core.NewStore()
+	store := core.NewStore(nil)
 	mockTime := &utils.MockClock{CurrTime: time.Now()}
 	utils.CurrentTime = mockTime
 	qr, err := core.NewQueueRef()
@@ -122,7 +122,7 @@ func TestRemoveExpiredBeforeNonExpire(t *testing.T) {
 
 // Test for removing from queue with multiple expired keys before non-expired
 func TestRemoveMultipleExpiredBeforeNonExpire(t *testing.T) {
-	store := core.NewStore()
+	store := core.NewStore(nil)
 	mockTime := &utils.MockClock{CurrTime: time.Now()}
 	utils.CurrentTime = mockTime
 	qr, err := core.NewQueueRef()
@@ -144,7 +144,7 @@ func TestRemoveMultipleExpiredBeforeNonExpire(t *testing.T) {
 
 // Test for removing from queue with all expired keys
 func TestRemoveAllExpired(t *testing.T) {
-	store := core.NewStore()
+	store := core.NewStore(nil)
 	mockTime := &utils.MockClock{CurrTime: time.Now()}
 	utils.CurrentTime = mockTime
 	qr, err := core.NewQueueRef()
@@ -166,13 +166,12 @@ func TestRemoveAllExpired(t *testing.T) {
 
 func TestQueueRefMaxConstraints(t *testing.T) {
 	config.KeysLimit = 20000000
-	core.WatchChan = make(chan core.WatchEvent, config.KeysLimit)
 	core.QueueCount = 0 // reset counter
 	qr, err := core.NewQueueRef()
 	if err != nil {
 		t.Errorf("error creating QueueRef: %v", err)
 	}
-	store := core.NewStore()
+	store := core.NewStore(nil)
 	for i := 0; i < core.MaxQueueSize; i++ {
 		key := fmt.Sprintf("key%d", i)
 		store.Put(key, store.NewObj(i, -1, core.ObjTypeString, core.ObjEncodingInt))
@@ -201,7 +200,7 @@ func TestQueueRefMaxConstraints(t *testing.T) {
 }
 
 func TestQueueRefLen(t *testing.T) {
-	store := core.NewStore()
+	store := core.NewStore(nil)
 	core.QueueCount = 0
 	qr, err := core.NewQueueRef()
 	if err != nil {
@@ -242,7 +241,7 @@ func BenchmarkQueueRef(b *testing.B) {
 }
 
 func benchmarkQueueRefInsertAndRemove(b *testing.B) {
-	store := core.NewStore()
+	store := core.NewStore(nil)
 	mockTime := &utils.MockClock{CurrTime: time.Now()}
 	utils.CurrentTime = mockTime
 	benchmarkCases := []struct {

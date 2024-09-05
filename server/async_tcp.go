@@ -36,17 +36,20 @@ type AsyncServer struct {
 	queryWatcher           *core.QueryWatcher
 	shardManager           *core.ShardManager
 	ioChan                 chan *ops.StoreResponse // The server acts like a worker today, this behavior will change once IOThreads are introduced and each client gets its own worker.
+	watchChan              chan core.WatchEvent    // This is needed to co-ordinate between the store and the query watcher
 }
 
 // NewAsyncServer initializes a new AsyncServer
 func NewAsyncServer() *AsyncServer {
+	watchChan := make(chan core.WatchEvent, config.KeysLimit)
 	return &AsyncServer{
 		maxClients:             config.ServerMaxClients,
 		connectedClients:       make(map[int]*comm.Client),
-		shardManager:           core.NewShardManager(1),
+		shardManager:           core.NewShardManager(1, watchChan),
 		queryWatcher:           core.NewQueryWatcher(),
 		multiplexerPollTimeout: config.ServerMultiplexerPollTimeout,
 		ioChan:                 make(chan *ops.StoreResponse, 1000),
+		watchChan:              watchChan,
 	}
 }
 
@@ -143,7 +146,7 @@ func (s *AsyncServer) Run(ctx context.Context) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		s.queryWatcher.Run(watchCtx)
+		s.queryWatcher.Run(watchCtx, s.watchChan)
 	}()
 
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
