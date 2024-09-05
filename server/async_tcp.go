@@ -21,7 +21,6 @@ import (
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core"
 	"github.com/dicedb/dice/core/iomultiplexer"
-	"github.com/dicedb/dice/internal/constants"
 )
 
 var ErrAborted = errors.New("server received ABORT command")
@@ -59,11 +58,7 @@ func (s *AsyncServer) SetupUsers() error {
 	if err != nil {
 		return err
 	}
-	if err := user.SetPassword(config.RequirePass); err != nil {
-		return err
-	}
-	log.Info("default user set up", "password required", config.RequirePass != constants.EmptyStr)
-	return nil
+	return user.SetPassword(config.RequirePass)
 }
 
 // FindPortAndBind binds the server to the given host and port
@@ -98,6 +93,7 @@ func (s *AsyncServer) FindPortAndBind() (socketErr error) {
 		return ErrInvalidIPAddress
 	}
 
+	log.Infof("DiceDB running on port %d", config.Port)
 	return syscall.Bind(serverFD, &syscall.SockaddrInet4{
 		Port: config.Port,
 		Addr: [4]byte{ip4[0], ip4[1], ip4[2], ip4[3]},
