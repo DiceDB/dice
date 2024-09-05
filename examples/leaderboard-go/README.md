@@ -1,4 +1,4 @@
-# Real-time Leaderboard Demo with DiceDB
+# Real-time Leaderboard using DiceDB
 
 This demo showcases a real-time leaderboard application using DiceDB.
 Writing realtime applications with DiceDB is as simple as writing a SQL query.
@@ -13,15 +13,27 @@ The application consists of two main components:
 The backend randomly generates player scores and updates them in DiceDB using a background thread.
 It then uses `QWATCH` to monitor changes and broadcasts updates to connected WebSocket clients.
 
-## Setup
-
-1. Build and run the services using Docker Compose
+## Setup Using Docker
 
 ```
 docker-compose up --build
 ```
 
-2. Open a web browser and navigate to `http://localhost:8000` to view the leaderboard
+## Setup on local machine
+
+1. Setup and run DiceDB ([refer](https://github.com/dicedb/dice))
+2. Execute the following commands
+
+```
+$ cd examples/leaderboard.go
+$ go run main.go
+```
+
+## See the leaderboard
+
+Open a web browser and navigate to `http://localhost:8000` to view the leaderboard
+
+![DiceDB Leaderboard](https://github.com/user-attachments/assets/327792c7-d788-47d4-a767-ef2c478d75cb)
 
 ## Project Structure
 
@@ -30,7 +42,7 @@ docker-compose up --build
 - `Dockerfile`: Defines the Docker image for the application
 - `docker-compose.yaml`: Compose setup which launches a DiceDB instance and the Go backend
 
-## How It Works
+## How it works
 
 1. The Go backend connects to DiceDB and starts updating random player scores every few milli-seconds
 2. A `QWATCH` query is set up to monitor changes in player scores above a threshold
