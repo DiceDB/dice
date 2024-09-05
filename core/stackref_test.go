@@ -19,7 +19,7 @@ func CreateAndPushKeyToStack(sr *core.StackRef, key string, value int, expDurati
 }
 
 func TestStackRef(t *testing.T) {
-	store := core.NewStore()
+	store := core.NewStore(nil)
 	sr, _ := core.NewStackRef()
 
 	if _, err := sr.Pop(store); err != core.ErrStackEmpty {
@@ -134,7 +134,7 @@ func TestStackRef(t *testing.T) {
 }
 
 func TestStackRefLen(t *testing.T) {
-	store := core.NewStore()
+	store := core.NewStore(nil)
 
 	sr, err := core.NewStackRef()
 	if err != nil {
@@ -171,8 +171,7 @@ func TestStackRefLen(t *testing.T) {
 }
 func TestStackRefMaxConstraints(t *testing.T) {
 	config.KeysLimit = 20000000
-	core.WatchChan = make(chan core.WatchEvent, config.KeysLimit)
-	store := core.NewStore()
+	store := core.NewStore(nil)
 	core.StackCount = 0
 	sr, err := core.NewStackRef()
 	if err != nil {
@@ -200,10 +199,9 @@ func TestStackRefMaxConstraints(t *testing.T) {
 }
 
 func BenchmarkRemoveLargeNumberOfExpiredKeys(b *testing.B) {
-	store := core.NewStore()
+	store := core.NewStore(nil)
 	for _, v := range benchmarkDataSizesStackQueue {
 		config.KeysLimit = 20000000 // Set a high limit for benchmarking
-		core.WatchChan = make(chan core.WatchEvent, config.KeysLimit)
 		var sr *core.StackRef
 		var err error
 		if sr, err = core.NewStackRef(); err != nil {

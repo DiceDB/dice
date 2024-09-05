@@ -7,7 +7,7 @@ import (
 )
 
 func TestDelExpiry(t *testing.T) {
-	store := NewStore()
+	store := NewStore(nil)
 	// Initialize the test environment
 	store.store = swiss.New[string, *Obj](10240)
 	store.keypool = swiss.New[string, *string](10240)

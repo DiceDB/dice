@@ -40,7 +40,7 @@ func setup(store *core.Store) {
 }
 
 func TestExecuteQueryOrderBykey(t *testing.T) {
-	store := core.NewStore()
+	store := core.NewStore(nil)
 	setup(store)
 
 	query := core.DSQLQuery{
@@ -75,7 +75,7 @@ func TestExecuteQueryOrderBykey(t *testing.T) {
 }
 
 func TestExecuteQueryBasicOrderByValue(t *testing.T) {
-	store := core.NewStore()
+	store := core.NewStore(nil)
 	setup(store)
 
 	query := core.DSQLQuery{
@@ -110,7 +110,7 @@ func TestExecuteQueryBasicOrderByValue(t *testing.T) {
 }
 
 func TestExecuteQueryLimit(t *testing.T) {
-	store := core.NewStore()
+	store := core.NewStore(nil)
 	setup(store)
 
 	query := core.DSQLQuery{
@@ -146,7 +146,7 @@ func TestExecuteQueryLimit(t *testing.T) {
 }
 
 func TestExecuteQueryNoMatch(t *testing.T) {
-	store := core.NewStore()
+	store := core.NewStore(nil)
 	setup(store)
 
 	query := core.DSQLQuery{
@@ -164,7 +164,7 @@ func TestExecuteQueryNoMatch(t *testing.T) {
 }
 
 func TestExecuteQueryWithWhere(t *testing.T) {
-	store := core.NewStore()
+	store := core.NewStore(nil)
 	setup(store)
 	t.Run("BasicWhereClause", func(t *testing.T) {
 		query := core.DSQLQuery{
@@ -264,7 +264,7 @@ func TestExecuteQueryWithWhere(t *testing.T) {
 }
 
 func TestExecuteQueryWithIncompatibleTypes(t *testing.T) {
-	store := core.NewStore()
+	store := core.NewStore(nil)
 	setup(store)
 
 	t.Run("ComparingStrWithInt", func(t *testing.T) {
@@ -312,7 +312,7 @@ func TestExecuteQueryWithIncompatibleTypes(t *testing.T) {
 }
 
 func TestExecuteQueryWithEdgeCases(t *testing.T) {
-	store := core.NewStore()
+	store := core.NewStore(nil)
 	setup(store)
 
 	t.Run("CaseSensitivity", func(t *testing.T) {
