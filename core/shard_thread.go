@@ -7,11 +7,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core/auth"
 	"github.com/dicedb/dice/core/ops"
-
-	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/core/diceerrors"
+	"github.com/dicedb/dice/internal/diceerrors"
+	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dice/server/utils"
 )
 
@@ -24,7 +24,7 @@ type ShardError struct {
 
 type ShardThread struct {
 	id               ShardID                            // id is the unique identifier for the shard.
-	store            *Store                             // store that the shard is responsible for.
+	store            *dstore.Store                      // store that the shard is responsible for.
 	ReqChan          chan *ops.StoreOp                  // ReqChan is this shard's channel for receiving requests.
 	workerMap        map[string]chan *ops.StoreResponse // workerMap maps workerID to its unique response channel
 	workerMutex      sync.RWMutex                       // workerMutex is the workerMap's mutex for thread safety.
@@ -34,10 +34,10 @@ type ShardThread struct {
 }
 
 // NewShardThread creates a new ShardThread instance with the given shard id and error channel.
-func NewShardThread(id ShardID, errorChan chan *ShardError, watchChan chan WatchEvent) *ShardThread {
+func NewShardThread(id ShardID, errorChan chan *ShardError, watchChan chan dstore.WatchEvent) *ShardThread {
 	return &ShardThread{
 		id:               id,
-		store:            NewStore(watchChan),
+		store:            dstore.NewStore(watchChan),
 		ReqChan:          make(chan *ops.StoreOp, 1000),
 		workerMap:        make(map[string]chan *ops.StoreResponse),
 		errorChan:        errorChan,
@@ -66,7 +66,7 @@ func (shard *ShardThread) Start(ctx context.Context) {
 
 // runCronTasks runs the cron tasks for the shard. This includes deleting expired keys.
 func (shard *ShardThread) runCronTasks() {
-	DeleteExpiredKeys(shard.store)
+	dstore.DeleteExpiredKeys(shard.store)
 	shard.lastCronExecTime = utils.GetCurrentTime()
 }
 

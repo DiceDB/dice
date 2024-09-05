@@ -1,4 +1,4 @@
-package core
+package store
 
 import (
 	"sort"
@@ -27,7 +27,7 @@ func (a ByIdleTime) Swap(i, j int) {
 }
 
 func (a ByIdleTime) Less(i, j int) bool {
-	return getIdleTime(a[i].lastAccessedAt) > getIdleTime(a[j].lastAccessedAt)
+	return GetIdleTime(a[i].lastAccessedAt) > GetIdleTime(a[j].lastAccessedAt)
 }
 
 // TODO: Make the implementation efficient to not need repeated sorting

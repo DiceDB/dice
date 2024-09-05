@@ -2,18 +2,18 @@ package core
 
 import (
 	"bytes"
+	"hash"
+	"hash/fnv"
 	"reflect"
 	"testing"
 
-	"hash"
-	"hash/fnv"
-
 	"github.com/dicedb/dice/internal/constants"
+	dstore "github.com/dicedb/dice/internal/store"
 	"gotest.tools/v3/assert"
 )
 
 func TestBloomFilter(t *testing.T) {
-	store := NewStore(nil)
+	store := dstore.NewStore(nil)
 	// This test only contains some basic checks for all the bloom filter
 	// operations like BFINIT, BFADD, BFEXISTS. It assumes that the
 	// functions called in the main function are working correctly and
@@ -110,7 +110,7 @@ func TestBloomFilter(t *testing.T) {
 }
 
 func TestGetOrCreateBloomFilter(t *testing.T) {
-	store := NewStore(nil)
+	store := dstore.NewStore(nil)
 	// Create a key and default opts
 	key := "bf"
 	opts, _ := newBloomOpts([]string{}, true)

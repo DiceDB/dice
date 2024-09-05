@@ -7,8 +7,9 @@ import (
 	"math/rand"
 	"strconv"
 
-	"github.com/dicedb/dice/core/diceerrors"
 	"github.com/dicedb/dice/internal/constants"
+	"github.com/dicedb/dice/internal/diceerrors"
+	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/twmb/murmur3"
 )
 
@@ -257,7 +258,7 @@ func (opts *BloomOpts) updateIndexes(value string) error {
 // evalBFINIT evaluates the BFINIT command responsible for initializing a
 // new bloom filter and allocation it's relevant parameters based on given inputs.
 // If no params are provided, it uses defaults.
-func evalBFINIT(args []string, store *Store) []byte {
+func evalBFINIT(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 && len(args) != 3 {
 		return diceerrors.NewErrArity("BFINIT")
 	}
@@ -283,7 +284,7 @@ func evalBFINIT(args []string, store *Store) []byte {
 // evalBFADD evaluates the BFADD command responsible for adding an element to
 // a bloom filter. If the filter does not exists, it will create a new one
 // with default parameters.
-func evalBFADD(args []string, store *Store) []byte {
+func evalBFADD(args []string, store *dstore.Store) []byte {
 	if len(args) != 2 {
 		return diceerrors.NewErrArity("BFADD")
 	}
@@ -305,7 +306,7 @@ func evalBFADD(args []string, store *Store) []byte {
 
 // evalBFEXISTS evaluates the BFEXISTS command responsible for checking existence
 // of an element in a bloom filter.
-func evalBFEXISTS(args []string, store *Store) []byte {
+func evalBFEXISTS(args []string, store *dstore.Store) []byte {
 	if len(args) != 2 {
 		return diceerrors.NewErrArity("BFEXISTS")
 	}
@@ -325,7 +326,7 @@ func evalBFEXISTS(args []string, store *Store) []byte {
 
 // evalBFINFO evaluates the BFINFO command responsible for returning the
 // parameters and metadata of an existing bloom filter.
-func evalBFINFO(args []string, store *Store) []byte {
+func evalBFINFO(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("BFINFO")
 	}
@@ -341,12 +342,12 @@ func evalBFINFO(args []string, store *Store) []byte {
 // getOrCreateBloomFilter attempts to fetch an existing bloom filter from
 // the kv store. If it does not exist, it tries to create one with
 // given `opts` and returns it.
-func getOrCreateBloomFilter(key string, opts *BloomOpts, store *Store) (*Bloom, error) {
+func getOrCreateBloomFilter(key string, opts *BloomOpts, store *dstore.Store) (*Bloom, error) {
 	obj := store.Get(key)
 
 	// If we don't have a filter yet and `opts` are provided, create one.
 	if obj == nil && opts != nil {
-		obj = store.NewObj(newBloomFilter(opts), -1, ObjTypeBitSet, ObjEncodingBF)
+		obj = store.NewObj(newBloomFilter(opts), -1, dstore.ObjTypeBitSet, dstore.ObjEncodingBF)
 		store.Put(key, obj)
 	}
 
@@ -355,11 +356,11 @@ func getOrCreateBloomFilter(key string, opts *BloomOpts, store *Store) (*Bloom, 
 		return nil, errInvalidKey
 	}
 
-	if err := assertType(obj.TypeEncoding, ObjTypeBitSet); err != nil {
+	if err := dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeBitSet); err != nil {
 		return nil, err
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, ObjEncodingBF); err != nil {
+	if err := dstore.AssertEncoding(obj.TypeEncoding, dstore.ObjEncodingBF); err != nil {
 		return nil, err
 	}
 

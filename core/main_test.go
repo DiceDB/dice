@@ -4,11 +4,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/dicedb/dice/core"
+	dstore "github.com/dicedb/dice/internal/store"
 )
 
 func TestMain(m *testing.M) {
-	store := core.NewStore(nil)
+	store := dstore.NewStore(nil)
 	store.ResetStore()
 
 	exitCode := m.Run()

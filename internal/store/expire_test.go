@@ -1,4 +1,4 @@
-package core
+package store
 
 import (
 	"testing"
@@ -43,8 +43,8 @@ func TestDelExpiry(t *testing.T) {
 			// Set up the test case
 			tc.setup(tc.obj)
 
-			// Call delExpiry
-			delExpiry(tc.obj, store)
+			// Call DelExpiry
+			DelExpiry(tc.obj, store)
 
 			// Check if the key has been deleted from the expires map
 			_, exists := store.expires.Get(tc.obj)

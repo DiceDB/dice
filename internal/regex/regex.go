@@ -1,4 +1,4 @@
-package core
+package regex
 
 // WildCardMatch checks if the key matches the pattern using * and ? as wildcards using two pointer approach
 func WildCardMatch(pattern, key string) bool {

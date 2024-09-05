@@ -7,33 +7,27 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/dicedb/dice/internal/constants"
-
 	"github.com/charmbracelet/log"
 	"github.com/cockroachdb/swiss"
+	"github.com/dicedb/dice/internal/constants"
+	"github.com/dicedb/dice/internal/regex"
+	dstore "github.com/dicedb/dice/internal/store"
 )
 
 type (
-	cacheStore *swiss.Map[string, *Obj]
+	cacheStore *swiss.Map[string, *dstore.Obj]
 
 	KeyValue struct {
 		Key   string
-		Value *Obj
-	}
-
-	// WatchEvent represents a change in a watched key.
-	WatchEvent struct {
-		Key       string
-		Operation string
-		Value     *Obj
+		Value *dstore.Obj
 	}
 
 	// WatchSubscription represents a subscription to watch a query.
 	WatchSubscription struct {
-		Subscribe bool             // true for subscribe, false for unsubscribe
-		Query     DSQLQuery        // query to watch
-		ClientFD  int              // client file descriptor
-		CacheChan chan *[]KeyValue // channel to receive cache data for this query
+		Subscribe bool                    // true for subscribe, false for unsubscribe
+		Query     DSQLQuery               // query to watch
+		ClientFD  int                     // client file descriptor
+		CacheChan chan *[]dstore.KeyValue // channel to receive cache data for this query
 	}
 
 	// AdhocQueryResult represents the result of an adhoc query.
@@ -76,11 +70,11 @@ func NewQueryWatcher() *QueryWatcher {
 }
 
 func newCacheStore() cacheStore {
-	return swiss.New[string, *Obj](0)
+	return swiss.New[string, *dstore.Obj](0)
 }
 
 // Run starts the QueryWatcher's main loops.
-func (w *QueryWatcher) Run(ctx context.Context, watchChan <-chan WatchEvent) {
+func (w *QueryWatcher) Run(ctx context.Context, watchChan <-chan dstore.WatchEvent) {
 	var wg sync.WaitGroup
 
 	wg.Add(3)
@@ -120,7 +114,7 @@ func (w *QueryWatcher) listenForSubscriptions(ctx context.Context) {
 }
 
 // watchKeys watches for changes in keys and notifies clients.
-func (w *QueryWatcher) watchKeys(ctx context.Context, watchChan <-chan WatchEvent) {
+func (w *QueryWatcher) watchKeys(ctx context.Context, watchChan <-chan dstore.WatchEvent) {
 	for {
 		select {
 		case event := <-watchChan:
@@ -132,12 +126,12 @@ func (w *QueryWatcher) watchKeys(ctx context.Context, watchChan <-chan WatchEven
 }
 
 // processWatchEvent processes a single watch event.
-func (w *QueryWatcher) processWatchEvent(event WatchEvent) {
+func (w *QueryWatcher) processWatchEvent(event dstore.WatchEvent) {
 	w.WatchList.Range(func(key, value interface{}) bool {
 		query := key.(DSQLQuery)
 		clients := value.(*sync.Map)
 
-		if !WildCardMatch(query.KeyRegex, event.Key) {
+		if !regex.WildCardMatch(query.KeyRegex, event.Key) {
 			return true
 		}
 
@@ -154,7 +148,7 @@ func (w *QueryWatcher) processWatchEvent(event WatchEvent) {
 }
 
 // updateQueryCache updates the query cache based on the watch event.
-func (w *QueryWatcher) updateQueryCache(query *DSQLQuery, event WatchEvent) {
+func (w *QueryWatcher) updateQueryCache(query *DSQLQuery, event dstore.WatchEvent) {
 	w.QueryCacheMu.Lock()
 	defer w.QueryCacheMu.Unlock()
 
@@ -166,9 +160,9 @@ func (w *QueryWatcher) updateQueryCache(query *DSQLQuery, event WatchEvent) {
 
 	switch event.Operation {
 	case constants.Set:
-		((*swiss.Map[string, *Obj])(store)).Put(event.Key, event.Value)
+		((*swiss.Map[string, *dstore.Obj])(store)).Put(event.Key, event.Value)
 	case constants.Del:
-		((*swiss.Map[string, *Obj])(store)).Delete(event.Key)
+		((*swiss.Map[string, *dstore.Obj])(store)).Delete(event.Key)
 	default:
 		log.Warnf("Unknown operation: %s", event.Operation)
 	}
@@ -201,7 +195,7 @@ func (w *QueryWatcher) serveAdhocQueries(ctx context.Context) {
 }
 
 // addWatcher adds a client as a watcher to a query.
-func (w *QueryWatcher) addWatcher(query *DSQLQuery, clientFD int, cacheChan chan *[]KeyValue) {
+func (w *QueryWatcher) addWatcher(query *DSQLQuery, clientFD int, cacheChan chan *[]dstore.KeyValue) {
 	clients, _ := w.WatchList.LoadOrStore(*query, &sync.Map{})
 	clients.(*sync.Map).Store(clientFD, struct{}{})
 
@@ -214,7 +208,7 @@ func (w *QueryWatcher) addWatcher(query *DSQLQuery, clientFD int, cacheChan chan
 	//  For now we only expect one update.
 	kvs := <-cacheChan
 	for _, kv := range *kvs {
-		((*swiss.Map[string, *Obj])(cache)).Put(kv.Key, kv.Value)
+		((*swiss.Map[string, *dstore.Obj])(cache)).Put(kv.Key, kv.Value)
 	}
 
 	w.QueryCache.Put(query.String(), cache)
