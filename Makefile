@@ -30,7 +30,7 @@ unittest-one:
 	go test -v -count=1 --run $(TEST_FUNC) ./core/...
 
 build-docker:
-	docker build --tag dicedb/dicedb:latest --tag dicedb/dicedb:0.0.1 .
+	docker build --tag dicedb/dicedb:latest --tag dicedb/dicedb:0.0.2 .
 
 GOLANGCI_LINT_VERSION := 1.60.1
 
