@@ -1,4 +1,4 @@
-module leaderboard-demo
+module leaderboard-go
 
 go 1.21.0
 
