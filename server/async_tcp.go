@@ -228,8 +228,12 @@ func (s *AsyncServer) eventLoop(ctx context.Context) error {
 						if errors.Is(err, ErrAborted) {
 							log.Info("Received abort command, initiating graceful shutdown")
 							return err
+						} else if errors.Is(err, syscall.ECONNRESET) || errors.Is(err, net.ErrClosed) {
+							// Both are normal scenarios when client disconnections happen, hence just info log
+							log.Info("Connection closed by client or reset", "fd", event.Fd)
+						} else {
+							log.Warn(err)
 						}
-						log.Warn(err)
 					}
 				}
 			}
