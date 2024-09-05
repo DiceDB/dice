@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/dicedb/go-dice"
 	"log"
 	"math/rand"
 	"net/http"
 	"os"
 	"sync"
 	"time"
+
+	redis "github.com/dicedb/go-dice"
 
 	"github.com/gorilla/websocket"
 )
@@ -19,7 +20,7 @@ var (
 	dice    *redis.Client
 	upgrade = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
-			return true // Allow all connections for simplicity
+			return true
 		},
 	}
 )
@@ -32,159 +33,119 @@ type LeaderboardEntry struct {
 
 func main() {
 	time.Sleep(2 * time.Second)
-	// Initialize Redis client
+
+	dhost := "localhost"
+	if val := os.Getenv("DICEDB_HOST"); val != "" {
+		dhost = val
+	}
+
+	dport := "7379"
+	if val := os.Getenv("DICEDB_PORT"); val != "" {
+		dport = val
+	}
+
 	dice = redis.NewClient(&redis.Options{
-		Addr:        fmt.Sprintf("%s:%s", os.Getenv("DICEDB_HOST"), os.Getenv("DICEDB_PORT")),
+		Addr:        fmt.Sprintf("%s:%s", dhost, dport),
 		DialTimeout: 10 * time.Second,
 		MaxRetries:  10,
 	})
 
-	// Start the leaderboard update goroutine
-	go updateLeaderboard()
-
-	// Start the QWATCH listener goroutine
+	go updateScores()
 	go watchLeaderboard()
 
-	// Serve static files for the frontend.
-	fs := http.FileServer(http.Dir("."))
-	http.Handle("/", fs)
-
-	// Set up WebSocket endpoint
+	// Serve static files for the frontend
+	http.Handle("/", http.FileServer(http.Dir(".")))
 	http.HandleFunc("/ws", handleWebSocket)
 
-	// Start the HTTP server
-	log.Println("Server starting on :8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Println("leaderboard running on http://localhost:8000, please open it in your favourite browser.")
+	log.Fatal(http.ListenAndServe(":8000", nil))
 }
 
-// updateLeaderboard generates random leaderboard entries and updates them in Redis.
-func updateLeaderboard() {
+func updateScores() {
 	ctx := context.Background()
 	for {
 		entry := LeaderboardEntry{
-			PlayerID:  fmt.Sprintf("player_%d", rand.Intn(100)),
-			Score:     rand.Intn(10000),
+			PlayerID:  fmt.Sprintf("player:%d", rand.Intn(10)),
+			Score:     rand.Intn(100),
 			Timestamp: time.Now(),
 		}
-
-		jsonData, err := json.Marshal(entry)
-		if err != nil {
-			log.Printf("Error marshaling JSON: %v", err)
-			continue
-		}
-
-		err = dice.JSONSet(ctx, entry.PlayerID, "$", jsonData).Err()
-		if err != nil {
-			log.Printf("Error setting data in Redis: %v", err)
-		}
-
-		// Expire keys after 10 seconds to prevent leaderboard from becoming static after a while.
-		err = dice.ExpireAt(ctx, entry.PlayerID, time.Now().Add(10*time.Second)).Err()
-		if err != nil {
-			log.Printf("Error setting expiration in Redis: %v", err)
-		}
-
-		time.Sleep(2 * time.Second)
+		lentry, _ := json.Marshal(entry)
+		dice.JSONSet(ctx, entry.PlayerID, "$", lentry).Err()
+		time.Sleep(20 * time.Millisecond)
 	}
 }
 
-// watchLeaderboard watches the leaderboard for updates and sends them to all connected WebSocket clients.
 func watchLeaderboard() {
 	ctx := context.Background()
 	qwatch := dice.QWatch(ctx)
-	err := qwatch.WatchQuery(ctx, "SELECT $key, $value FROM `player_*` WHERE '$value.score' > 1000 ORDER BY $value.score DESC LIMIT 5")
-	if err != nil {
-		log.Fatalf("Error watching query: %v", err)
-	}
+	qwatch.WatchQuery(ctx, "SELECT $key, $value FROM `player:*` WHERE '$value.score' > 10 ORDER BY $value.score DESC LIMIT 5;")
 	defer qwatch.Close()
 
 	ch := qwatch.Channel()
 	for {
 		select {
 		case msg := <-ch:
-			updates, err := formatToJSON(msg.Updates)
-			if err != nil {
-				log.Printf("Error formatting updates: %v", err)
-				continue
-			}
-			// Broadcast the formatted result to all connected WebSocket clients
-			broadcastToClients(updates)
+			entries := toEntries(msg.Updates)
+			broadcast(entries)
 		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-////////////////////////
-// Helper functions
-////////////////////////
-
-func formatToJSON(updates []redis.KV) (string, error) {
+func toEntries(updates []redis.KV) []LeaderboardEntry {
 	var entries []LeaderboardEntry
 	for _, update := range updates {
 		var entry LeaderboardEntry
-		err := json.Unmarshal([]byte(update.Value.(string)), &entry)
-		if err != nil {
-			return "", fmt.Errorf("error unmarshaling entry: %v", err)
-		}
+		json.Unmarshal([]byte(update.Value.(string)), &entry)
 		entries = append(entries, entry)
 	}
-	jsonData, err := json.Marshal(entries)
-	if err != nil {
-		return "", fmt.Errorf("error marshaling entries: %v", err)
+	return entries
+}
+
+func broadcast(entries []LeaderboardEntry) {
+	cMux.Lock()
+	defer cMux.Unlock()
+
+	message, _ := json.Marshal(entries)
+	for client := range clients {
+		client.WriteMessage(websocket.TextMessage, []byte(message))
 	}
-	return string(jsonData), nil
 }
 
 var (
-	clients    = make(map[*websocket.Conn]bool)
-	clientsMux = &sync.Mutex{}
+	clients = make(map[*websocket.Conn]bool)
+	cMux    = &sync.Mutex{}
 )
 
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrade.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("Error upgrading to WebSocket: %v", err)
+		log.Printf("error upgrading to WebSocket: %v", err)
 		return
 	}
 	defer func(conn *websocket.Conn) {
 		err := conn.Close()
 		if err != nil {
-			log.Printf("Error closing WebSocket connection: %v", err)
+			log.Printf("error closing WebSocket connection: %v", err)
 		}
 	}(conn)
 
-	clientsMux.Lock()
+	cMux.Lock()
 	clients[conn] = true
-	clientsMux.Unlock()
+	cMux.Unlock()
 
-	// Keep the connection open
 	for {
 		_, _, err := conn.ReadMessage()
 		if err != nil {
-			log.Printf("Error reading WebSocket message: %v", err)
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				log.Printf("error: %v", err)
+			}
 			break
 		}
 	}
 
-	clientsMux.Lock()
+	cMux.Lock()
 	delete(clients, conn)
-	clientsMux.Unlock()
-}
-
-func broadcastToClients(message string) {
-	clientsMux.Lock()
-	defer clientsMux.Unlock()
-
-	for client := range clients {
-		err := client.WriteMessage(websocket.TextMessage, []byte(message))
-		if err != nil {
-			log.Printf("Error sending message to client: %v", err)
-			err := client.Close()
-			if err != nil {
-				log.Printf("Error closing WebSocket connection: %v", err)
-			}
-			delete(clients, client)
-		}
-	}
+	cMux.Unlock()
 }
