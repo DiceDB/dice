@@ -1,0 +1,20 @@
+services:
+  dicedb:
+    build:
+      context: ../..  # This points to the root of the DiceDB project
+      dockerfile: Dockerfile
+    platform: linux/amd64
+    ports:
+      - "7379:7379"
+
+  leaderboard-demo:
+    build:
+      context: .  # This is now the current directory (leaderboard folder)
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+        - dicedb
+    environment:
+      - DICEDB_HOST=dicedb
+      - DICEDB_PORT=7379
