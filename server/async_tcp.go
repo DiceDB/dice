@@ -58,10 +58,7 @@ func (s *AsyncServer) SetupUsers() error {
 	if err != nil {
 		return err
 	}
-	if err := user.SetPassword(config.RequirePass); err != nil {
-		return err
-	}
-	return nil
+	return user.SetPassword(config.RequirePass)
 }
 
 // FindPortAndBind binds the server to the given host and port
