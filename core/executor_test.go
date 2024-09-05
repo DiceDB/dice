@@ -419,7 +419,7 @@ func setupJSON(t *testing.T, store *core.Store, dataset []keyValue) {
 }
 
 func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
-	store := core.NewStore()
+	store := core.NewStore(nil)
 	setupJSON(t, store, jsonWhereClauseDataset)
 
 	t.Run("BasicWhereClauseWithJSON", func(t *testing.T) {
@@ -582,7 +582,7 @@ var jsonOrderDataset = []keyValue{
 }
 
 func TestExecuteQueryWithJsonOrderBy(t *testing.T) {
-	store := core.NewStore()
+	store := core.NewStore(nil)
 	setupJSON(t, store, jsonOrderDataset)
 
 	t.Run("OrderBySimpleJSONField", func(t *testing.T) {
