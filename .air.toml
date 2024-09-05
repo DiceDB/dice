@@ -2,15 +2,15 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-  bin = "./dice-server"
-  cmd = "go build -o ./dice-server"
+  bin = "./dicedb"
+  cmd = "go build -o ./dicedb"
   delay = 1000
   exclude_dir = ["assets", "tmp", "vendor"]
   exclude_file = []
   exclude_regex = []
   exclude_unchanged = false
   follow_symlink = false
-  full_bin = "GO_ENV=development ./dice-server"
+  full_bin = "GO_ENV=development ./dicedb"
   include_dir = []
   include_ext = ["go", "tpl", "tmpl", "yaml", "env"]
   kill_delay = "0s"

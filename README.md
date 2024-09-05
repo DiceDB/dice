@@ -17,7 +17,7 @@ DiceDB is a drop-in replacement of Redis with SQL-based real-time reactivity bak
 The easiest way to get started with DiceDB is using [Docker](https://www.docker.com/) by running the following command.
 
 ```
-$ docker run dicedb/dice-server
+$ docker run dicedb/dicedb
 ```
 
 The above command will start the DiceDB server running locally on the port `7379` and you can connect

@@ -2,6 +2,7 @@ bin/dice
 *.aof
 .vscode/
 dice-server
+dicedb
 venv
 __pycache__
 .idea/
