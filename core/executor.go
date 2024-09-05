@@ -57,11 +57,6 @@ func ExecuteQuery(query *DSQLQuery, store *swiss.Map[string, *Obj]) ([]DSQLQuery
 			}
 		}
 
-		if err := MarshalResultIfJSON(&row); err != nil {
-			// if error, skip the result and continue the iteration
-			return true
-		}
-
 		result = append(result, row)
 
 		return true
@@ -72,6 +67,12 @@ func ExecuteQuery(query *DSQLQuery, store *swiss.Map[string, *Obj]) ([]DSQLQuery
 	}
 
 	sortResults(query, result)
+
+	for i := range result {
+		if err := MarshalResultIfJSON(&result[i]); err != nil {
+			return nil, err
+		}
+	}
 
 	if !query.Selection.KeySelection {
 		for i := range result {
@@ -111,66 +112,64 @@ func sortResults(query *DSQLQuery, result []DSQLQueryResultRow) {
 		return
 	}
 
-	switch query.OrderBy.OrderBy {
-	case CustomKey:
-		sort.Slice(result, func(i, j int) bool {
-			if query.OrderBy.Order == "desc" {
-				return result[i].Key > result[j].Key
-			}
-			return result[i].Key < result[j].Key
-		})
-	case CustomValue:
-		sort.Slice(result, func(i, j int) bool {
-			return compareValues(query.OrderBy.Order, &result[i].Value, &result[j].Value)
-		})
-	}
+	sort.Slice(result, func(i, j int) bool {
+		valI, typeI, err := getOrderByValue(query.OrderBy.OrderBy, result[i])
+		if err != nil {
+			return false
+		}
+		valJ, typeJ, err := getOrderByValue(query.OrderBy.OrderBy, result[j])
+		if err != nil {
+			return false
+		}
+
+		if typeI != typeJ {
+			return false
+		}
+
+		comparison, err := compareOrderByValues(valI, valJ, typeI, query.OrderBy.Order)
+		if err != nil {
+			return false
+		}
+
+		return comparison
+	})
 }
 
-func compareValues(order string, valI, valJ *Obj) bool {
-	if valI == nil || valJ == nil {
-		return handleNilForOrder(order, valI, valJ)
-	}
-
-	typeI, encodingI := ExtractTypeEncoding(valI)
-	typeJ, encodingJ := ExtractTypeEncoding(valJ)
-
-	if typeI != typeJ || encodingI != encodingJ {
-		return handleMismatch()
-	}
-
-	switch kindI := valI.Value.(type) {
-	case string:
-		kindJ, ok := valJ.Value.(string)
-		if !ok {
-			return handleMismatch()
-		}
-		return compareStringValues(order, kindI, kindJ)
-	case int64:
-		kindJ, ok := valJ.Value.(int64)
-		if !ok {
-			return handleMismatch()
-		}
-		return compareIntValues(order, kindI, kindJ)
+func getOrderByValue(orderBy string, row DSQLQueryResultRow) (value interface{}, valueType string, err error) {
+	switch orderBy {
+	case TempKey:
+		return row.Key, constants.String, nil
+	case TempValue:
+		return getValueAndType(&row.Value)
 	default:
-		return handleUnsupportedType()
+		// Handle JSON field
+		if isJSONField(&sqlparser.SQLVal{Val: []byte(orderBy)}, &row.Value) {
+			return retrieveValueFromJSON(orderBy, &row.Value)
+		}
 	}
+	return nil, "", fmt.Errorf("invalid ORDER BY clause: %s", orderBy)
 }
 
-func handleNilForOrder(order string, valI, valJ *Obj) bool {
-	if order == constants.Asc {
-		return valI == nil
+func compareOrderByValues(valI, valJ interface{}, valueType, order string) (bool, error) {
+	switch valueType {
+	case constants.String:
+		return compareStringValues(order, valI.(string), valJ.(string)), nil
+	case constants.Int:
+		switch v := valI.(type) {
+		case int:
+			return compareIntValues(order, v, valJ.(int)), nil
+		case int64:
+			return compareInt64Values(order, v, valJ.(int64)), nil
+		default:
+			return false, fmt.Errorf("unsupported type for order by comparison: %T", valI)
+		}
+	case constants.Float:
+		return compareFloatValues(order, valI.(float64), valJ.(float64)), nil
+	case constants.Bool:
+		return compareBoolValues(order, valI.(bool), valJ.(bool)), nil
+	default:
+		return false, fmt.Errorf("unsupported type for comparison: %s", valueType)
 	}
-	return valJ == nil
-}
-
-func handleMismatch() bool {
-	// undefined behavior
-	return true
-}
-
-func handleUnsupportedType() bool {
-	// undefined behavior
-	return true
 }
 
 func compareStringValues(order, valI, valJ string) bool {
@@ -180,11 +179,32 @@ func compareStringValues(order, valI, valJ string) bool {
 	return valI > valJ
 }
 
-func compareIntValues(order string, valI, valJ int64) bool {
+func compareInt64Values(order string, valI, valJ int64) bool {
 	if order == constants.Asc {
 		return valI < valJ
 	}
 	return valI > valJ
+}
+
+func compareIntValues(order string, valI, valJ int) bool {
+	if order == constants.Asc {
+		return valI < valJ
+	}
+	return valI > valJ
+}
+
+func compareFloatValues(order string, valI, valJ float64) bool {
+	if order == constants.Asc {
+		return valI < valJ
+	}
+	return valI > valJ
+}
+
+func compareBoolValues(order string, valI, valJ bool) bool {
+	if order == constants.Asc {
+		return !valI && valJ
+	}
+	return valI && !valJ
 }
 
 func evaluateWhereClause(expr sqlparser.Expr, row DSQLQueryResultRow) (bool, error) {
@@ -346,7 +366,7 @@ func getValueAndType(obj *Obj) (val interface{}, s string, e error) {
 	switch v := obj.Value.(type) {
 	case string:
 		return v, constants.String, nil
-	case int:
+	case int64:
 		return v, constants.Int, nil
 	case float64:
 		return v, constants.Float, nil

@@ -357,3 +357,137 @@ func cleanupJSONKeys(publisher net.Conn) {
 		fireCommand(publisher, fmt.Sprintf("DEL %s", tc.key))
 	}
 }
+func TestQwatchWithJSONOrderBy(t *testing.T) {
+	publisher, subscriber, cleanup := setupJSONOrderByTest(t)
+	defer cleanup()
+
+	respParser := subscribeToJSONOrderByQuery(t, subscriber)
+	runJSONOrderByScenarios(t, publisher, respParser)
+}
+
+func setupJSONOrderByTest(t *testing.T) (net.Conn, net.Conn, func()) {
+	publisher := getLocalConnection()
+	subscriber := getLocalConnection()
+
+	cleanup := func() {
+		cleanupJSONOrderByKeys(publisher)
+		if err := publisher.Close(); err != nil {
+			t.Errorf("Error closing publisher connection: %v", err)
+		}
+		if err := subscriber.Close(); err != nil {
+			t.Errorf("Error closing subscriber connection: %v", err)
+		}
+	}
+
+	return publisher, subscriber, cleanup
+}
+
+func subscribeToJSONOrderByQuery(t *testing.T, subscriber net.Conn) *core.RESPParser {
+	query := "SELECT $key, $value FROM `player:*` ORDER BY $value.score DESC LIMIT 3"
+	rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("QWATCH \"%s\"", query))
+	assert.Assert(t, rp != nil)
+
+	v, err := rp.DecodeOne()
+	assert.NilError(t, err)
+	assert.Equal(t, 3, len(v.([]interface{})), fmt.Sprintf("Expected 3 elements, got %v", v))
+
+	return rp
+}
+
+func runJSONOrderByScenarios(t *testing.T, publisher net.Conn, respParser *core.RESPParser) {
+	scenarios := []struct {
+		key             string
+		value           string
+		expectedUpdates [][]interface{}
+	}{
+		{
+			key:   "player:1",
+			value: `{"name":"Alice","score":100}`,
+			expectedUpdates: [][]interface{}{
+				{[]interface{}{"player:1", map[string]interface{}{"name": "Alice", "score": float64(100)}}},
+			},
+		},
+		{
+			key:   "player:2",
+			value: `{"name":"Bob","score":80}`,
+			expectedUpdates: [][]interface{}{
+				{[]interface{}{"player:1", map[string]interface{}{"name": "Alice", "score": float64(100)}},
+					[]interface{}{"player:2", map[string]interface{}{"name": "Bob", "score": float64(80)}}},
+			},
+		},
+		{
+			key:   "player:3",
+			value: `{"name":"Charlie","score":90}`,
+			expectedUpdates: [][]interface{}{
+				{[]interface{}{"player:1", map[string]interface{}{"name": "Alice", "score": float64(100)}},
+					[]interface{}{"player:3", map[string]interface{}{"name": "Charlie", "score": float64(90)}},
+					[]interface{}{"player:2", map[string]interface{}{"name": "Bob", "score": float64(80)}}},
+			},
+		},
+		{
+			key:   "player:4",
+			value: `{"name":"David","score":95}`,
+			expectedUpdates: [][]interface{}{
+				{[]interface{}{"player:1", map[string]interface{}{"name": "Alice", "score": float64(100)}},
+					[]interface{}{"player:4", map[string]interface{}{"name": "David", "score": float64(95)}},
+					[]interface{}{"player:3", map[string]interface{}{"name": "Charlie", "score": float64(90)}}},
+			},
+		},
+	}
+
+	for _, sc := range scenarios {
+		fireCommand(publisher, fmt.Sprintf("JSON.SET %s $ %s", sc.key, sc.value))
+		verifyJSONOrderByUpdates(t, respParser, sc)
+	}
+}
+
+func verifyJSONOrderByUpdates(t *testing.T, rp *core.RESPParser, tc struct {
+	key             string
+	value           string
+	expectedUpdates [][]interface{}
+}) {
+	expectedUpdates := tc.expectedUpdates[0]
+
+	// Decode the response
+	v, err := rp.DecodeOne()
+	assert.NilError(t, err, "Failed to decode response")
+
+	// Cast the response to []interface{}
+	response, ok := v.([]interface{})
+	assert.Assert(t, ok, "Response is not of type []interface{}: %v", v)
+
+	// Verify response structure
+	assert.Equal(t, 3, len(response), "Expected response to have 3 elements")
+	assert.Equal(t, constants.Qwatch, response[0], "First element should be Qwatch constant")
+
+	// Extract updates from the response
+	updates, ok := response[2].([]interface{})
+	assert.Assert(t, ok, "Updates are not of type []interface{}: %v", response[2])
+
+	// Verify number of updates
+	assert.Equal(t, len(expectedUpdates), len(updates),
+		"Number of updates mismatch. Expected: %d, Got: %d", len(expectedUpdates), len(updates))
+
+	// Verify each update
+	for i, expectedRow := range expectedUpdates {
+		actualRow, ok := updates[i].([]interface{})
+		assert.Assert(t, ok, "Update row is not of type []interface{}: %v", updates[i])
+
+		// Verify key
+		assert.Equal(t, expectedRow.([]interface{})[0], actualRow[0],
+			"Key mismatch at index %d", i)
+
+		// Verify JSON value
+		var actualJSON interface{}
+		err := sonic.UnmarshalString(actualRow[1].(string), &actualJSON)
+		assert.NilError(t, err, "Failed to unmarshal JSON at index %d", i)
+
+		assert.DeepEqual(t, expectedRow.([]interface{})[1], actualJSON)
+	}
+}
+
+func cleanupJSONOrderByKeys(publisher net.Conn) {
+	for i := 1; i <= 4; i++ {
+		fireCommand(publisher, fmt.Sprintf("DEL player:%d", i))
+	}
+}
