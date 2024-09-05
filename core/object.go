@@ -19,10 +19,8 @@ var ObjEncodingEmbStr uint8 = 8
 
 var ObjTypeByteList uint8 = 1 << 4
 var ObjEncodingQint uint8 = 0
-var ObjEncodingQref uint8 = 1
 
 var ObjEncodingStackInt uint8 = 2
-var ObjEncodingStackRef uint8 = 3
 var ObjEncodingDeque uint8 = 4
 
 var ObjTypeBitSet uint8 = 2 << 4 // 00100000

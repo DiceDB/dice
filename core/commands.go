@@ -216,45 +216,6 @@ var (
 		Eval:  evalSLEEP,
 		Arity: 1,
 	}
-	qintinsCmdMeta = DiceCmdMeta{
-		Name: "QINTINS",
-		Info: `QINTINS inserts the provided integer in the key identified by key
-		first argument will be the key, that should be of type "QINT"
-		second argument will be the integer value
-		if the key does not exist, QINTINS will also create the integer queue`,
-		Eval:     evalQINTINS,
-		Arity:    3,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
-	}
-	qintremCmdMeta = DiceCmdMeta{
-		Name: "QINTREM",
-		Info: `QINTREM removes the element from the QINT identified by key
-		first argument will be the key, that should be of type "QINT"
-		if the key does not exist, QINTREM returns nil otherwise it
-		returns the integer value popped from the queue
-		if we remove from the empty queue, nil is returned`,
-		Eval:     evalQINTREM,
-		Arity:    3,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
-	}
-	qintlenCmdMeta = DiceCmdMeta{
-		Name: "QINTLEN",
-		Info: `QINTLEN returns the length of the QINT identified by key
-		returns the integer value indicating the length of the queue
-		if the key does not exist, the response is 0`,
-		Eval:     evalQINTLEN,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
-	}
-	qintpeekCmdMeta = DiceCmdMeta{
-		Name: "QINTPEEK",
-		Info: `QINTPEEK peeks into the QINT and returns 5 elements without popping them
-		returns the array of integers as the response.
-		if the key does not exist, then we return an empty array`,
-		Eval:     evalQINTPEEK,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
-	}
 	bfinitCmdMeta = DiceCmdMeta{
 		Name: "BFINIT",
 		Info: `BFINIT command initializes a new bloom filter and allocation it's relevant parameters based on given inputs.
@@ -284,127 +245,6 @@ var (
 		Info:  `BFINFO returns the parameters and metadata of an existing bloom filter.`,
 		Eval:  evalBFINFO,
 		Arity: 2,
-	}
-	qrefinsCmdMeta = DiceCmdMeta{
-		Name: "QREFINS",
-		Info: `QREFINS inserts the reference of the provided key identified by key
-		first argument will be the key, that should be of type "QREF"
-		second argument will be the key that needs to be added to the queueref
-		if the queue does not exist, QREFINS will also create the queueref
-		returns 1 if the key reference was inserted
-		returns 0 otherwise`,
-		Eval:     evalQREFINS,
-		Arity:    3,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
-	}
-	qrefremCmdMeta = DiceCmdMeta{
-		Name: "QREFREM",
-		Info: `QREFREM removes the element from the QREF identified by key
-		first argument will be the key, that should be of type "QREF"
-		if the key does not exist, QREFREM returns nil otherwise it
-		returns the RESP encoded value of the key reference from the queue
-		if we remove from the empty queue, nil is returned`,
-		Eval:     evalQREFREM,
-		Arity:    3,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
-	}
-	qreflenCmdMeta = DiceCmdMeta{
-		Name: "QREFLEN",
-		Info: `QREFLEN returns the length of the QREF identified by key
-		returns the integer value indicating the length of the queue
-		if the key does not exist, the response is 0`,
-		Eval:     evalQREFLEN,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
-	}
-	qrefpeekCmdMeta = DiceCmdMeta{
-		Name: "QREFPEEK",
-		Info: `QREFPEEK peeks into the QREF and returns 5 elements without popping them
-		returns the array of resp encoded values as the response.
-		if the key does not exist, then we return an empty array`,
-		Eval:     evalQREFPEEK,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
-	}
-	stackintpushCmdMeta = DiceCmdMeta{
-		Name: "STACKINTPUSH",
-		Info: `STACKINTPUSH pushes the provided integer in the key identified by key
-		first argument will be the key, that should be of type "STACKINT"
-		second argument will be the integer value
-		if the key does not exist, STACKINTPUSH will also create the integer stack`,
-		Eval:     evalSTACKINTPUSH,
-		Arity:    3,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
-	}
-	stackintpopCmdMeta = DiceCmdMeta{
-		Name: "STACKINTPOP",
-		Info: `STACKINTPOP pops the element from the STACKINT identified by key
-		first argument will be the key, that should be of type "STACKINT"
-		if the key does not exist, STACKINTPOP returns nil otherwise it
-		returns the integer value popped from the stack
-		if we remove from the empty stack, nil is returned`,
-		Eval:     evalSTACKINTPOP,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
-	}
-	stackintlenCmdMeta = DiceCmdMeta{
-		Name: "STACKINTLEN",
-		Info: `STACKINTLEN returns the length of the STACKINT identified by key
-		returns the integer value indicating the length of the stack
-		if the key does not exist, the response is 0`,
-		Eval:     evalSTACKINTLEN,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
-	}
-	stackintpeekCmdMeta = DiceCmdMeta{
-		Name: "STACKINTPEEK",
-		Info: `STACKINTPEEK peeks into the DINT and returns 5 elements without popping them
-		returns the array of integers as the response.
-		if the key does not exist, then we return an empty array`,
-		Eval:     evalSTACKINTPEEK,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
-	}
-	stackrefpushCmdMeta = DiceCmdMeta{
-		Name: "STACKREFPUSH",
-		Info: `STACKREFPUSH inserts the reference of the provided key identified by key
-		first argument will be the key, that should be of type "STACKREF"
-		second argument will be the key that needs to be added to the stackref
-		if the stack does not exist, STACKREFPUSH will also create the stackref
-		returns 1 if the key reference was inserted
-		returns 0 otherwise`,
-		Eval:     evalSTACKREFPUSH,
-		Arity:    3,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
-	}
-	stackrefpopCmdMeta = DiceCmdMeta{
-		Name: "STACKREFPOP",
-		Info: `STACKREFPOP removes the element from the DREF identified by key
-		first argument will be the key, that should be of type "STACKREF"
-		if the key does not exist, STACKREFPOP returns nil otherwise it
-		returns the RESP encoded value of the key reference from the stack
-		if we remove from the empty stack, nil is returned`,
-		Eval:     evalSTACKREFPOP,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
-	}
-	stackreflenCmdMeta = DiceCmdMeta{
-		Name: "STACKREFLEN",
-		Info: `STACKREFLEN returns the length of the STACKREF identified by key
-		returns the integer value indicating the length of the stack
-		if the key does not exist, the response is 0`,
-		Eval:     evalSTACKREFLEN,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
-	}
-	stackrefpeekCmdMeta = DiceCmdMeta{
-		Name: "STACKREFPEEK",
-		Info: `STACKREFPEEK peeks into the STACKREF and returns 5 elements without popping them
-		returns the array of resp encoded values as the response.
-		if the key does not exist, then we return an empty array`,
-		Eval:     evalSTACKREFPEEK,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
 	}
 	// TODO: Remove this override once we support QWATCH in dice-cli.
 	subscribeCmdMeta = DiceCmdMeta{
@@ -788,26 +628,10 @@ func init() {
 	diceCmds["LATENCY"] = latencyCmdMeta
 	diceCmds["LRU"] = lruCmdMeta
 	diceCmds["SLEEP"] = sleepCmdMeta
-	diceCmds["QINTINS"] = qintinsCmdMeta
-	diceCmds["QINTREM"] = qintremCmdMeta
-	diceCmds["QINTLEN"] = qintlenCmdMeta
-	diceCmds["QINTPEEK"] = qintpeekCmdMeta
 	diceCmds["BFINIT"] = bfinitCmdMeta
 	diceCmds["BFADD"] = bfaddCmdMeta
 	diceCmds["BFEXISTS"] = bfexistsCmdMeta
 	diceCmds["BFINFO"] = bfinfoCmdMeta
-	diceCmds["QREFINS"] = qrefinsCmdMeta
-	diceCmds["QREFREM"] = qrefremCmdMeta
-	diceCmds["QREFLEN"] = qreflenCmdMeta
-	diceCmds["QREFPEEK"] = qrefpeekCmdMeta
-	diceCmds["STACKINTPUSH"] = stackintpushCmdMeta
-	diceCmds["STACKINTPOP"] = stackintpopCmdMeta
-	diceCmds["STACKINTLEN"] = stackintlenCmdMeta
-	diceCmds["STACKINTPEEK"] = stackintpeekCmdMeta
-	diceCmds["STACKREFPUSH"] = stackrefpushCmdMeta
-	diceCmds["STACKREFPOP"] = stackrefpopCmdMeta
-	diceCmds["STACKREFLEN"] = stackreflenCmdMeta
-	diceCmds["STACKREFPEEK"] = stackrefpeekCmdMeta
 	diceCmds["SUBSCRIBE"] = subscribeCmdMeta
 	diceCmds["QWATCH"] = qwatchCmdMeta
 	diceCmds["QUNWATCH"] = qUnwatchCmdMeta

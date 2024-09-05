@@ -5,10 +5,8 @@ type LockOption func(*LockStrategy)
 
 // LockStrategy holds the state for our locking mechanism
 type LockStrategy struct {
-	storeLock    bool
-	storeRLock   bool
-	keypoolLock  bool
-	keypoolRLock bool
+	storeLock  bool
+	storeRLock bool
 }
 
 // WithStoreLock sets the storeLock flag
@@ -22,20 +20,6 @@ func WithStoreLock() LockOption {
 func WithStoreRLock() LockOption {
 	return func(ls *LockStrategy) {
 		ls.storeRLock = true
-	}
-}
-
-// WithKeypoolLock sets the keypoolLock flag
-func WithKeypoolLock() LockOption {
-	return func(ls *LockStrategy) {
-		ls.keypoolLock = true
-	}
-}
-
-// WithKeypoolRLock sets the keypoolRLock flag
-func WithKeypoolRLock() LockOption {
-	return func(ls *LockStrategy) {
-		ls.keypoolRLock = true
 	}
 }
 
@@ -55,14 +39,6 @@ func withLocks(f func(), store *Store, options ...LockOption) {
 	} else if ls.storeRLock {
 		store.storeMutex.RLock()
 		defer store.storeMutex.RUnlock()
-	}
-
-	if ls.keypoolLock {
-		store.keypoolMutex.Lock()
-		defer store.keypoolMutex.Unlock()
-	} else if ls.keypoolRLock {
-		store.keypoolMutex.RLock()
-		defer store.keypoolMutex.RUnlock()
 	}
 
 	f()
