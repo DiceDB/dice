@@ -14,19 +14,16 @@ import (
 )
 
 type Store struct {
-	store        *swiss.Map[string, *Obj]
-	expires      *swiss.Map[*Obj, uint64] // Does not need to be thread-safe as it is only accessed by a single thread.
-	keypool      *swiss.Map[string, *string]
-	storeMutex   sync.RWMutex
-	keypoolMutex sync.RWMutex
-	watchChan    chan WatchEvent
+	store      *swiss.Map[string, *Obj]
+	expires    *swiss.Map[*Obj, uint64] // Does not need to be thread-safe as it is only accessed by a single thread.
+	storeMutex sync.RWMutex
+	watchChan  chan WatchEvent
 }
 
 func NewStore(watchChan chan WatchEvent) *Store {
 	return &Store{
 		store:     swiss.New[string, *Obj](10240),
 		expires:   swiss.New[*Obj, uint64](10240),
-		keypool:   swiss.New[string, *string](10240),
 		watchChan: watchChan,
 	}
 }
@@ -47,10 +44,9 @@ func (store *Store) ResetStore() {
 	withLocks(func() {
 		store.store.Clear()
 		store.expires.Clear()
-		store.keypool.Clear()
 		store.watchChan = make(chan WatchEvent, config.KeysLimit)
 		WatchSubscriptionChan = make(chan WatchSubscription)
-	}, store, WithStoreLock(), WithKeypoolLock())
+	}, store, WithStoreLock())
 }
 
 type PutOptions struct {
@@ -60,7 +56,7 @@ type PutOptions struct {
 func (store *Store) Put(k string, obj *Obj, opts ...PutOption) {
 	withLocks(func() {
 		store.putHelper(k, obj, opts...)
-	}, store, WithStoreLock(), WithKeypoolLock())
+	}, store, WithStoreLock())
 }
 
 func getDefaultOptions() *PutOptions {
@@ -82,7 +78,7 @@ func (store *Store) PutAll(data map[string]*Obj) {
 		for k, obj := range data {
 			store.putHelper(k, obj)
 		}
-	}, store, WithStoreLock(), WithKeypoolLock())
+	}, store, WithStoreLock())
 }
 
 func (store *Store) GetNoTouch(k string) *Obj {
@@ -100,9 +96,7 @@ func (store *Store) putHelper(k string, obj *Obj, opts ...PutOption) {
 		store.evict()
 	}
 	obj.LastAccessedAt = getCurrentClock()
-
-	ptr := store.ensureKeyInPool(k)
-	currentObject, ok := store.store.Get(*ptr)
+	currentObject, ok := store.store.Get(k)
 	if ok {
 		v, ok1 := store.expires.Get(currentObject)
 		if ok1 && options.KeepTTL && v > 0 {
@@ -113,7 +107,7 @@ func (store *Store) putHelper(k string, obj *Obj, opts ...PutOption) {
 		}
 		store.expires.Delete(currentObject)
 	}
-	store.store.Put(*ptr, obj)
+	store.store.Put(k, obj)
 
 	store.incrementKeyCount()
 
@@ -125,21 +119,16 @@ func (store *Store) putHelper(k string, obj *Obj, opts ...PutOption) {
 func (store *Store) getHelper(k string, touch bool) *Obj {
 	var v *Obj
 	withLocks(func() {
-		ptr, ok := store.keypool.Get(k)
-		if !ok {
-			return
-		}
-
-		v, _ = store.store.Get(*ptr)
+		v, _ = store.store.Get(k)
 		if v != nil {
 			if hasExpired(v, store) {
-				store.deleteKey(k, *ptr, v)
+				store.deleteKey(k, v)
 				v = nil
 			} else if touch {
 				v.LastAccessedAt = getCurrentClock()
 			}
 		}
-	}, store, WithStoreLock(), WithKeypoolLock())
+	}, store, WithStoreLock())
 	return v
 }
 
@@ -147,15 +136,10 @@ func (store *Store) GetAll(keys []string) []*Obj {
 	response := make([]*Obj, 0, len(keys))
 	withLocks(func() {
 		for _, k := range keys {
-			ptr, ok := store.keypool.Get(k)
-			if !ok {
-				response = append(response, nil)
-				continue
-			}
-			v, _ := store.store.Get(*ptr)
+			v, _ := store.store.Get(k)
 			if v != nil {
 				if hasExpired(v, store) {
-					store.deleteKey(k, *ptr, v)
+					store.deleteKey(k, v)
 					response = append(response, nil)
 				} else {
 					v.LastAccessedAt = getCurrentClock()
@@ -165,28 +149,24 @@ func (store *Store) GetAll(keys []string) []*Obj {
 				response = append(response, nil)
 			}
 		}
-	}, store, WithStoreRLock(), WithKeypoolRLock())
+	}, store, WithStoreRLock())
 	return response
 }
 
 func (store *Store) Del(k string) bool {
 	return withLocksReturn(func() bool {
-		ptr, ok := store.keypool.Get(k)
-		if !ok {
-			return false
-		}
-		v, ok := store.store.Get(*ptr)
+		v, ok := store.store.Get(k)
 		if ok {
-			return store.deleteKey(k, *ptr, v)
+			return store.deleteKey(k, v)
 		}
 		return false
-	}, store, WithStoreLock(), WithKeypoolLock())
+	}, store, WithStoreLock())
 }
 
 func (store *Store) DelByPtr(ptr string) bool {
 	return withLocksReturn(func() bool {
 		return store.delByPtr(ptr)
-	}, store, WithStoreLock(), WithKeypoolLock())
+	}, store, WithStoreLock())
 }
 
 func (store *Store) Keys(p string) ([]string, error) {
@@ -194,9 +174,9 @@ func (store *Store) Keys(p string) ([]string, error) {
 	var err error
 
 	withLocks(func() {
-		keys = make([]string, 0, store.keypool.Len())
+		keys = make([]string, 0, store.store.Len())
 
-		store.keypool.All(func(k string, _ *string) bool {
+		store.store.All(func(k string, _ *Obj) bool {
 			if found, e := path.Match(p, k); e != nil {
 				err = e
 				// stop iteration if any error
@@ -207,7 +187,7 @@ func (store *Store) Keys(p string) ([]string, error) {
 			// continue the iteration
 			return true
 		})
-	}, store, WithStoreRLock(), WithKeypoolRLock())
+	}, store, WithStoreRLock())
 
 	return keys, err
 }
@@ -216,8 +196,8 @@ func (store *Store) Keys(p string) ([]string, error) {
 func (store *Store) GetDBSize() uint64 {
 	var noOfKeys uint64
 	withLocks(func() {
-		noOfKeys = uint64(store.keypool.Len())
-	}, store, WithKeypoolRLock())
+		noOfKeys = uint64(store.store.Len())
+	}, store, WithStoreRLock())
 	return noOfKeys
 }
 
@@ -230,15 +210,10 @@ func (store *Store) Rename(sourceKey, destKey string) bool {
 			return true
 		}
 
-		sourcePtr, sourceOk := store.keypool.Get(sourceKey)
-		if !sourceOk {
-			return false
-		}
-
-		sourceObj, _ := store.store.Get(*sourcePtr)
+		sourceObj, _ := store.store.Get(sourceKey)
 		if sourceObj == nil || hasExpired(sourceObj, store) {
 			if sourceObj != nil {
-				store.deleteKey(sourceKey, *sourcePtr, sourceObj)
+				store.deleteKey(sourceKey, sourceObj)
 			}
 			return false
 		}
@@ -247,8 +222,7 @@ func (store *Store) Rename(sourceKey, destKey string) bool {
 		store.putHelper(destKey, sourceObj)
 
 		// Remove the source key
-		store.store.Delete(*sourcePtr)
-		store.keypool.Delete(sourceKey)
+		store.store.Delete(sourceKey)
 		if KeyspaceStat[0] != nil {
 			KeyspaceStat[0]["keys"]--
 		}
@@ -259,7 +233,7 @@ func (store *Store) Rename(sourceKey, destKey string) bool {
 		}
 
 		return true
-	}, store, WithStoreLock(), WithKeypoolLock())
+	}, store, WithStoreLock())
 }
 
 func (store *Store) incrementKeyCount() {
@@ -389,20 +363,15 @@ func matchGlob(s, pattern string) bool {
 func (store *Store) GetDel(k string) *Obj {
 	var v *Obj
 	withLocks(func() {
-		ptr, ok := store.keypool.Get(k)
-		if !ok {
-			return
-		}
-
-		v, _ = store.store.Get(*ptr)
+		v, _ = store.store.Get(k)
 		if v != nil {
 			expired := hasExpired(v, store)
-			store.deleteKey(k, *ptr, v)
+			store.deleteKey(k, v)
 			if expired {
 				v = nil
 			}
 		}
-	}, store, WithStoreLock(), WithKeypoolLock())
+	}, store, WithStoreLock())
 	return v
 }
 
@@ -419,20 +388,10 @@ func (store *Store) setUnixTimeExpiry(obj *Obj, exUnixTimeSec int64) {
 	store.expires.Put(obj, uint64(exUnixTimeSec*1000))
 }
 
-func (store *Store) ensureKeyInPool(k string) *string {
-	ptr, ok := store.keypool.Get(k)
-	if !ok {
-		ptr = &k
-		store.keypool.Put(k, ptr)
-	}
-	return ptr
-}
-
-func (store *Store) deleteKey(k, ptr string, obj *Obj) bool {
+func (store *Store) deleteKey(k string, obj *Obj) bool {
 	if obj != nil {
-		store.store.Delete(ptr)
+		store.store.Delete(k)
 		store.expires.Delete(obj)
-		store.keypool.Delete(k)
 		KeyspaceStat[0]["keys"]--
 
 		if store.watchChan != nil {
@@ -448,7 +407,7 @@ func (store *Store) deleteKey(k, ptr string, obj *Obj) bool {
 func (store *Store) delByPtr(ptr string) bool {
 	if obj, ok := store.store.Get(ptr); ok {
 		key := ptr
-		return store.deleteKey(key, ptr, obj)
+		return store.deleteKey(key, obj)
 	}
 	return false
 }

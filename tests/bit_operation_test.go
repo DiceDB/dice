@@ -37,10 +37,6 @@ func TestBitOp(t *testing.T) {
 			Out:    []interface{}{"OK", int64(1), int64(0), int64(0), "kar"},
 		},
 		{
-			InCmds: []string{"SET stack 1343", "STACKREFPUSH st1 stack", "SETBIT st1 2 1"},
-			Out:    []interface{}{"OK", int64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
-		},
-		{
 			InCmds: []string{"BITOP NOT unitTestKeyNOT unitTestKeyA "},
 			Out:    []interface{}{int64(2)},
 		},
