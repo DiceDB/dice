@@ -205,6 +205,26 @@ func Encode(value interface{}, isSimple bool) []byte {
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
 	case map[string]bool:
 		return RespNIL
+	case []DiceCmdMeta:
+		var b []byte
+		buf := bytes.NewBuffer(b)
+		for _, b := range value.([]DiceCmdMeta) {
+			buf.Write([]byte(fmt.Sprintf("*3\r\n")))
+			buf.Write(encodeString(b.Name))
+			buf.Write(Encode(b.Arity, isSimple))
+			buf.Write(Encode(b.KeySpecs, isSimple))
+		}
+		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
+	case KeySpecs:
+		var b []byte
+		buf := bytes.NewBuffer(b)
+		buf.Write(encodeString("BeginIndex"))
+		buf.Write(Encode(v.BeginIndex, isSimple))
+		buf.Write(encodeString("LastKey"))
+		buf.Write(Encode(v.LastKey, isSimple))
+		buf.Write(encodeString("Step"))
+		buf.Write(Encode(v.Step, isSimple))
+		return []byte(fmt.Sprintf("*6\r\n%s", buf.Bytes()))
 	default:
 		fmt.Printf("Unsupported type: %T\n", v)
 		return RespNIL
