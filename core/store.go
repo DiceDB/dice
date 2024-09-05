@@ -208,7 +208,7 @@ func (store *Store) Rename(sourceKey, destKey string) bool {
 			return true
 		}
 
-		sourceObj, _ := store.store.Get(*&sourceKey)
+		sourceObj, _ := store.store.Get(sourceKey)
 		if sourceObj == nil || hasExpired(sourceObj, store) {
 			if sourceObj != nil {
 				store.deleteKey(sourceKey, sourceObj)
