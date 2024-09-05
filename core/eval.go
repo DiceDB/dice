@@ -14,7 +14,6 @@ import (
 	"github.com/axiomhq/hyperloglog"
 	"github.com/bytedance/sonic"
 	"github.com/charmbracelet/log"
-	"github.com/cockroachdb/swiss"
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core/auth"
 	"github.com/dicedb/dice/core/bit"
@@ -2160,7 +2159,7 @@ func evalSADD(args []string, store *Store) []byte {
 		var exDurationMs int64 = -1
 		var keepttl bool = false
 		// If the object does not exist, create a new set object.
-		value := swiss.New[string, struct{}](lengthOfItems)
+		value := make(map[string]struct{}, lengthOfItems)
 		// Create a new object.
 		obj = store.NewObj(value, exDurationMs, ObjTypeSet, ObjEncodingSetStr)
 		store.Put(key, obj, WithKeepTTL(keepttl))
@@ -2175,11 +2174,11 @@ func evalSADD(args []string, store *Store) []byte {
 	}
 
 	// Get the set object.
-	set := obj.Value.(*swiss.Map[string, struct{}])
+	set := obj.Value.(map[string]struct{})
 
 	for _, arg := range args[1:] {
-		if _, ok := set.Get(arg); !ok {
-			set.Put(arg, struct{}{})
+		if _, ok := set[arg]; !ok {
+			set[arg] = struct{}{}
 			count++
 		}
 	}
@@ -2210,16 +2209,12 @@ func evalSMEMBERS(args []string, store *Store) []byte {
 	}
 
 	// Get the set object.
-	set := obj.Value.(*swiss.Map[string, struct{}])
+	set := obj.Value.(map[string]struct{})
 	// Get the members of the set.
-	var members = make([]string, 0, set.Len())
-	set.All(func(k string, _ struct{}) bool {
-		if _, ok := set.Get(k); ok {
-			members = append(members, k)
-			return true
-		}
-		return false
-	})
+	var members = make([]string, 0, len(set))
+	for k := range set {
+		members = append(members, k)
+	}
 
 	return Encode(members, false)
 }
@@ -2248,11 +2243,11 @@ func evalSREM(args []string, store *Store) []byte {
 	}
 
 	// Get the set object.
-	set := obj.Value.(*swiss.Map[string, struct{}])
+	set := obj.Value.(map[string]struct{})
 
 	for _, arg := range args[1:] {
-		if _, ok := set.Get(arg); ok {
-			set.Delete(arg)
+		if _, ok := set[arg]; ok {
+			delete(set, arg)
 			count++
 		}
 	}
@@ -2284,7 +2279,7 @@ func evalSCARD(args []string, store *Store) []byte {
 	}
 
 	// Get the set object.
-	count := obj.Value.(*swiss.Map[string, struct{}]).Len()
+	count := len(obj.Value.(map[string]struct{}))
 	return Encode(count, false)
 }
 
@@ -2311,17 +2306,13 @@ func evalSDIFF(args []string, store *Store) []byte {
 
 	// Get the set object from the store.
 	// store the count as the number of elements in the first set
-	srcSet := obj.Value.(*swiss.Map[string, struct{}])
-	count := srcSet.Len()
+	srcSet := obj.Value.(map[string]struct{})
+	count := len(srcSet)
 
-	tmpSet := swiss.New[string, struct{}](count)
-	srcSet.All(func(k string, _ struct{}) bool {
-		if _, ok := srcSet.Get(k); ok {
-			tmpSet.Put(k, struct{}{})
-			return true
-		}
-		return false
-	})
+	tmpSet := make(map[string]struct{}, count)
+	for k := range srcSet {
+		tmpSet[k] = struct{}{}
+	}
 
 	// we decrement the count as we find the elements in the other sets
 	// if the count is 0, we skip further sets but still get them from
@@ -2347,15 +2338,14 @@ func evalSDIFF(args []string, store *Store) []byte {
 		// only if the count is greater than 0, we need to check the other sets
 		if count > 0 {
 			// Get the set object.
-			set := obj.Value.(*swiss.Map[string, struct{}])
+			set := obj.Value.(map[string]struct{})
 
-			set.All(func(k string, _ struct{}) bool {
-				if _, ok := tmpSet.Get(k); ok {
-					tmpSet.Delete(k)
+			for k := range set {
+				if _, ok := tmpSet[k]; ok {
+					delete(tmpSet, k)
 					count--
 				}
-				return true
-			})
+			}
 		}
 	}
 
@@ -2364,15 +2354,10 @@ func evalSDIFF(args []string, store *Store) []byte {
 	}
 
 	// Get the members of the set.
-	var members = make([]string, 0, tmpSet.Len())
-	tmpSet.All(func(k string, _ struct{}) bool {
-		if _, ok := tmpSet.Get(k); ok {
-			members = append(members, k)
-			return true
-		}
-		return false
-	})
-
+	var members = make([]string, 0, len(tmpSet))
+	for k := range tmpSet {
+		members = append(members, k)
+	}
 	return Encode(members, false)
 }
 
@@ -2381,7 +2366,7 @@ func evalSINTER(args []string, store *Store) []byte {
 		return diceerrors.NewErrArity("SINTER")
 	}
 
-	sets := make([]*swiss.Map[string, struct{}], 0, len(args))
+	sets := make([]map[string]struct{}, 0, len(args))
 
 	var empty int = 0
 
@@ -2404,7 +2389,7 @@ func evalSINTER(args []string, store *Store) []byte {
 		}
 
 		// Get the set object.
-		set := obj.Value.(*swiss.Map[string, struct{}])
+		set := obj.Value.(map[string]struct{})
 		sets = append(sets, set)
 	}
 
@@ -2416,52 +2401,40 @@ func evalSINTER(args []string, store *Store) []byte {
 	// we will iterate over the smallest set
 	// and check if the element is present in all the other sets
 	sort.Slice(sets, func(i, j int) bool {
-		return sets[i].Len() < sets[j].Len()
+		return len(sets[i]) < len(sets[j])
 	})
 
 	count := 0
-	resultSet := swiss.New[string, struct{}](sets[0].Len())
+	resultSet := make(map[string]struct{}, len(sets[0]))
 
 	// init the result set with the first set
 	// store the number of elements in the first set in count
 	// we will decrement the count if we do not find the elements in the other sets
-	sets[0].All(func(k string, _ struct{}) bool {
-		if _, ok := sets[0].Get(k); ok {
-			resultSet.Put(k, struct{}{})
-			count++
-			return true
-		}
-		return false
-	})
+	for k := range sets[0] {
+		resultSet[k] = struct{}{}
+		count++
+	}
 
 	for i := 1; i < len(sets); i++ {
 		if count == 0 {
 			break
 		}
-		resultSet.All(func(k string, _ struct{}) bool {
-			if _, ok := resultSet.Get(k); ok {
-				if _, ok := sets[i].Get(k); !ok {
-					resultSet.Delete(k)
-					count--
-				}
-				return true
+		for k := range resultSet {
+			if _, ok := sets[i][k]; !ok {
+				delete(resultSet, k)
+				count--
 			}
-			return false
-		})
+		}
 	}
 
 	if count == 0 {
 		return Encode([]string{}, false)
 	}
 
-	var members = make([]string, 0, resultSet.Len())
-	resultSet.All(func(k string, _ struct{}) bool {
-		if _, ok := resultSet.Get(k); ok {
-			members = append(members, k)
-			return true
-		}
-		return false
-	})
+	var members = make([]string, 0, len(resultSet))
+	for k := range resultSet {
+		members = append(members, k)
+	}
 	return Encode(members, false)
 }
 
