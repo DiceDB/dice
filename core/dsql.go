@@ -50,6 +50,15 @@ type DSQLQuery struct {
 	Limit     int
 }
 
+// replacePlaceholders replaces temporary placeholders with custom ones
+func replacePlaceholders(s string) string {
+	replacer := strings.NewReplacer(
+		TempKey, CustomKey,
+		TempValue, CustomValue,
+	)
+	return replacer.Replace(s)
+}
+
 func (q DSQLQuery) String() string {
 	var parts []string
 
@@ -74,12 +83,16 @@ func (q DSQLQuery) String() string {
 
 	// Where
 	if q.Where != nil {
-		parts = append(parts, fmt.Sprintf("WHERE '%s'", strings.Replace(strings.Trim(sqlparser.String(q.Where), "'"), TempValue, CustomValue, -1)))
+		whereClause := sqlparser.String(q.Where)
+		whereClause = strings.Trim(whereClause, "'")
+		whereClause = replacePlaceholders(whereClause)
+		parts = append(parts, fmt.Sprintf("WHERE '%s'", whereClause))
 	}
 
 	// OrderBy
 	if q.OrderBy.OrderBy != "" {
-		parts = append(parts, fmt.Sprintf("ORDER BY %s %s", q.OrderBy.OrderBy, q.OrderBy.Order))
+		orderByClause := replacePlaceholders(q.OrderBy.OrderBy)
+		parts = append(parts, fmt.Sprintf("ORDER BY %s %s", orderByClause, q.OrderBy.Order))
 	}
 
 	// Limit
@@ -96,12 +109,7 @@ func replaceCustomSyntax(sql string) string {
 	return replacer.Replace(sql)
 }
 
-func revertCustomSyntax(name string) string {
-	replacer := strings.NewReplacer(TempKey, CustomKey, TempValue, CustomValue)
-	return replacer.Replace(name)
-}
-
-// Main parsing function
+// ParseQuery takes a SQL query string and returns a DSQLQuery struct
 func ParseQuery(sql string) (DSQLQuery, error) {
 	// Replace custom syntax before parsing
 	sql = replaceCustomSyntax(sql)
@@ -216,10 +224,18 @@ func parseTableName(selectStmt *sqlparser.Select) (string, error) {
 // Function to parse ORDER BY clause
 func parseOrderBy(selectStmt *sqlparser.Select) (QueryOrder, error) {
 	orderBy := QueryOrder{}
+	if len(selectStmt.OrderBy) > 1 {
+		return QueryOrder{}, fmt.Errorf("only one ORDER BY clause is supported")
+	}
 	if len(selectStmt.OrderBy) > 0 {
-		orderBy.OrderBy = revertCustomSyntax(sqlparser.String(selectStmt.OrderBy[0].Expr))
+		// trim backticks or quotes from order by expr
+		orderBy.OrderBy = strings.Trim(sqlparser.String(selectStmt.OrderBy[0].Expr), "`")
+		if (orderBy.OrderBy[0] == '\'' && orderBy.OrderBy[len(orderBy.OrderBy)-1] == '\'') ||
+			(orderBy.OrderBy[0] == '`' && orderBy.OrderBy[len(orderBy.OrderBy)-1] == '`') {
+			orderBy.OrderBy = orderBy.OrderBy[1 : len(orderBy.OrderBy)-1]
+		}
 		// Order by expr should either be $key or $value
-		if orderBy.OrderBy != CustomKey && orderBy.OrderBy != CustomValue {
+		if orderBy.OrderBy != TempKey && orderBy.OrderBy != TempValue && !strings.HasPrefix(orderBy.OrderBy, TempValue) {
 			return QueryOrder{}, fmt.Errorf("only $key and $value are supported in ORDER BY clause")
 		}
 		orderBy.Order = selectStmt.OrderBy[0].Direction
