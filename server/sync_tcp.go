@@ -5,9 +5,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/dicedb/dice/core/cmd"
-
 	"github.com/dicedb/dice/core"
+	"github.com/dicedb/dice/core/cmd"
 )
 
 func toArrayString(ai []interface{}) ([]string, error) {

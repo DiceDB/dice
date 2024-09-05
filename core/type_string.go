@@ -1,15 +1,19 @@
 package core
 
-import "strconv"
+import (
+	"strconv"
+
+	dstore "github.com/dicedb/dice/internal/store"
+)
 
 // Similar to
 // tryObjectEncoding function in Redis
 func deduceTypeEncoding(v string) (o, e uint8) {
 	if _, err := strconv.ParseInt(v, 10, 64); err == nil {
-		return ObjTypeInt, ObjEncodingInt
+		return dstore.ObjTypeInt, dstore.ObjEncodingInt
 	}
 	if len(v) <= 44 {
-		return ObjTypeString, ObjEncodingEmbStr
+		return dstore.ObjTypeString, dstore.ObjEncodingEmbStr
 	}
-	return ObjTypeString, ObjEncodingRaw
+	return dstore.ObjTypeString, dstore.ObjEncodingRaw
 }

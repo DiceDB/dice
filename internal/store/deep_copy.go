@@ -1,4 +1,4 @@
-package core
+package store
 
 import (
 	"github.com/bytedance/sonic"

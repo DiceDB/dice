@@ -1,7 +1,8 @@
-package core
+package store
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io/fs"
 	"log"
@@ -79,13 +80,26 @@ func (a *AOF) Load() ([]string, error) {
 	return operations, nil
 }
 
+func encodeString(v string) []byte {
+	return []byte(fmt.Sprintf("$%d\r\n%s\r\n", len(v), v))
+}
+
+func encode(strs []string) []byte {
+	var b []byte
+	buf := bytes.NewBuffer(b)
+	for _, b := range strs {
+		buf.Write(encodeString(b))
+	}
+	return []byte(fmt.Sprintf("*%d\r\n%s", len(strs), buf.Bytes()))
+}
+
 // TODO: Support Expiration
 // TODO: Support non-kv data structures
 // TODO: Support sync write
 func dumpKey(aof *AOF, key string, obj *Obj) (err error) {
 	cmd := fmt.Sprintf("SET %s %s", key, obj.Value)
 	tokens := strings.Split(cmd, " ")
-	return aof.Write(string(Encode(tokens, false)))
+	return aof.Write(string(encode(tokens)))
 }
 
 // TODO: To to new and switch

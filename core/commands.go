@@ -1,9 +1,11 @@
 package core
 
+import dstore "github.com/dicedb/dice/internal/store"
+
 type DiceCmdMeta struct {
 	Name  string
 	Info  string
-	Eval  func([]string, *Store) []byte
+	Eval  func([]string, *dstore.Store) []byte
 	Arity int // number of arguments, it is possible to use -N to say >= N
 	KeySpecs
 }

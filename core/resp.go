@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/dicedb/dice/internal/constants"
+	dstore "github.com/dicedb/dice/internal/store"
 )
 
 func readLength(buf *bytes.Buffer) (int64, error) {
@@ -154,10 +155,10 @@ func Encode(value interface{}, isSimple bool) []byte {
 			buf.Write(encodeString(b))
 		}
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
-	case []*Obj:
+	case []*dstore.Obj:
 		var b []byte
 		buf := bytes.NewBuffer(b)
-		for _, b := range value.([]*Obj) {
+		for _, b := range value.([]*dstore.Obj) {
 			buf.Write(Encode(b.Value, false))
 		}
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
@@ -177,10 +178,10 @@ func Encode(value interface{}, isSimple bool) []byte {
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
 	case error:
 		return []byte(fmt.Sprintf("-%s\r\n", v))
-	case WatchEvent:
+	case dstore.WatchEvent:
 		var b []byte
 		buf := bytes.NewBuffer(b)
-		we := value.(WatchEvent)
+		we := value.(dstore.WatchEvent)
 		buf.Write(Encode(fmt.Sprintf("key:%s", we.Key), false))
 		buf.Write(Encode(fmt.Sprintf("op:%s", we.Operation), false))
 		return []byte(fmt.Sprintf("*2\r\n%s", buf.Bytes()))

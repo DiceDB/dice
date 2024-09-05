@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core"
+	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dice/server"
 	"github.com/dicedb/dice/testutils"
 	redis "github.com/dicedb/go-dice"
@@ -30,7 +30,7 @@ func getLocalConnection() net.Conn {
 // deleteTestKeys is a utility to delete a list of keys before running a test
 //
 //nolint:unused
-func deleteTestKeys(keysToDelete []string, store *core.Store) {
+func deleteTestKeys(keysToDelete []string, store *dstore.Store) {
 	for _, key := range keysToDelete {
 		store.Del(key)
 	}

@@ -3,7 +3,8 @@ package core
 import (
 	"fmt"
 
-	"github.com/dicedb/dice/core/diceerrors"
+	"github.com/dicedb/dice/internal/diceerrors"
+	dstore "github.com/dicedb/dice/internal/store"
 )
 
 type HashMap map[string]string
@@ -60,7 +61,7 @@ func hashMapBuilder(keyValuePairs []string, currentHashMap HashMap) (HashMap, in
 }
 
 //nolint:unused
-func getValueFromHashMap(key, field string, store *Store) ([]byte, error) {
+func getValueFromHashMap(key, field string, store *dstore.Store) ([]byte, error) {
 	var value string
 
 	obj := store.Get(key)

@@ -10,10 +10,9 @@ import (
 	"time"
 
 	"github.com/axiomhq/hyperloglog"
-
 	"github.com/bytedance/sonic"
-	"github.com/cockroachdb/swiss"
 	"github.com/dicedb/dice/internal/constants"
+	dstore "github.com/dicedb/dice/internal/store"
 	"gotest.tools/v3/assert"
 )
 
@@ -24,21 +23,16 @@ type evalTestCase struct {
 	validator func(output []byte)
 }
 
-func resetStore(store *Store) {
-	store.store = nil
-	store.expires = nil
-	KeyspaceStat[0] = nil
-}
+func setupTest(store *dstore.Store) *dstore.Store {
+	dstore.ResetStore(store)
+	//store = dstore.NewStore(nil)
+	dstore.KeyspaceStat[0] = make(map[string]int)
 
-func setupTest(store *Store) {
-	resetStore(store)
-	store.store = swiss.New[string, *Obj](10240)
-	store.expires = swiss.New[*Obj, uint64](10240)
-	KeyspaceStat[0] = make(map[string]int)
+	return store
 }
 
 func TestEval(t *testing.T) {
-	store := NewStore(nil)
+	store := dstore.NewStore(nil)
 
 	testEvalMSET(t, store)
 	testEvalPING(t, store)
@@ -63,7 +57,7 @@ func TestEval(t *testing.T) {
 	testEvalPFCOUNT(t, store)
 }
 
-func testEvalPING(t *testing.T, store *Store) {
+func testEvalPING(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value":            {input: nil, output: []byte("+PONG\r\n")},
 		"empty args":           {input: []string{}, output: []byte("+PONG\r\n")},
@@ -74,7 +68,7 @@ func testEvalPING(t *testing.T, store *Store) {
 	runEvalTests(t, tests, evalPING, store)
 }
 
-func testEvalHELLO(t *testing.T, store *Store) {
+func testEvalHELLO(t *testing.T, store *dstore.Store) {
 	response := []interface{}{
 		"proto", 2,
 		"id", serverID,
@@ -93,7 +87,7 @@ func testEvalHELLO(t *testing.T, store *Store) {
 	runEvalTests(t, tests, evalHELLO, store)
 }
 
-func testEvalSET(t *testing.T, store *Store) {
+func testEvalSET(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value":                       {input: nil, output: []byte("-ERR wrong number of arguments for 'set' command\r\n")},
 		"empty array":                     {input: []string{}, output: []byte("-ERR wrong number of arguments for 'set' command\r\n")},
@@ -117,7 +111,7 @@ func testEvalSET(t *testing.T, store *Store) {
 	runEvalTests(t, tests, evalSET, store)
 }
 
-func testEvalMSET(t *testing.T, store *Store) {
+func testEvalMSET(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value":         {input: nil, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
 		"empty array":       {input: []string{}, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
@@ -130,7 +124,7 @@ func testEvalMSET(t *testing.T, store *Store) {
 	runEvalTests(t, tests, evalMSET, store)
 }
 
-func testEvalGET(t *testing.T, store *Store) {
+func testEvalGET(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
 			setup:  func() {},
@@ -156,11 +150,11 @@ func testEvalGET(t *testing.T, store *Store) {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
-				obj := &Obj{
+				obj := &dstore.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store.Put(key, obj)
+				store.Put(key, obj)
 			},
 			input:  []string{"EXISTING_KEY"},
 			output: Encode("mock_value", false),
@@ -169,13 +163,13 @@ func testEvalGET(t *testing.T, store *Store) {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
-				obj := &Obj{
+				obj := &dstore.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store.Put(key, obj)
+				store.Put(key, obj)
 
-				store.expires.Put(obj, uint64(time.Now().Add(-2*time.Minute).Unix()))
+				store.SetExpiry(obj, int64(-2*time.Millisecond))
 			},
 			input:  []string{"EXISTING_KEY"},
 			output: RespNIL,
@@ -185,7 +179,7 @@ func testEvalGET(t *testing.T, store *Store) {
 	runEvalTests(t, tests, evalGET, store)
 }
 
-func testEvalEXPIRE(t *testing.T, store *Store) {
+func testEvalEXPIRE(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
 			input:  nil,
@@ -207,11 +201,11 @@ func testEvalEXPIRE(t *testing.T, store *Store) {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
-				obj := &Obj{
+				obj := &dstore.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store.Put(key, obj)
+				store.Put(key, obj)
 
 			},
 			input:  []string{"EXISTING_KEY", strconv.FormatInt(1, 10)},
@@ -222,7 +216,7 @@ func testEvalEXPIRE(t *testing.T, store *Store) {
 	runEvalTests(t, tests, evalEXPIRE, store)
 }
 
-func testEvalEXPIRETIME(t *testing.T, store *Store) {
+func testEvalEXPIRETIME(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"wrong number of args": {
 			input:  []string{"KEY1", "KEY2"},
@@ -236,11 +230,11 @@ func testEvalEXPIRETIME(t *testing.T, store *Store) {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
-				obj := &Obj{
+				obj := &dstore.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store.Put(key, obj)
+				store.Put(key, obj)
 
 			},
 			input:  []string{"EXISTING_KEY"},
@@ -250,23 +244,23 @@ func testEvalEXPIRETIME(t *testing.T, store *Store) {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
-				obj := &Obj{
+				obj := &dstore.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store.Put(key, obj)
+				store.Put(key, obj)
 
-				store.expires.Put(obj, uint64(2724123456123))
+				store.SetUnixTimeExpiry(obj, 2724123456123)
 			},
 			input:  []string{"EXISTING_KEY"},
-			output: []byte(fmt.Sprintf(":%d\r\n", 2724123456)),
+			output: []byte(fmt.Sprintf(":%d\r\n", 2724123456123)),
 		},
 	}
 
 	runEvalTests(t, tests, evalEXPIRETIME, store)
 }
 
-func testEvalEXPIREAT(t *testing.T, store *Store) {
+func testEvalEXPIREAT(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
 			input:  nil,
@@ -288,11 +282,11 @@ func testEvalEXPIREAT(t *testing.T, store *Store) {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
-				obj := &Obj{
+				obj := &dstore.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store.Put(key, obj)
+				store.Put(key, obj)
 
 			},
 			input:  []string{"EXISTING_KEY", strconv.FormatInt(time.Now().Add(2*time.Minute).Unix(), 10)},
@@ -303,7 +297,7 @@ func testEvalEXPIREAT(t *testing.T, store *Store) {
 	runEvalTests(t, tests, evalEXPIREAT, store)
 }
 
-func testEvalJSONDEL(t *testing.T, store *Store) {
+func testEvalJSONDEL(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
 			setup:  func() {},
@@ -322,8 +316,8 @@ func testEvalJSONDEL(t *testing.T, store *Store) {
 					"\"flag\":false, \"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store.Put(key, obj)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
 
 			},
 			input:  []string{"EXISTING_KEY"},
@@ -336,8 +330,8 @@ func testEvalJSONDEL(t *testing.T, store *Store) {
 					"\"flag\":false, \"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store.Put(key, obj)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
 
 			},
 
@@ -351,8 +345,8 @@ func testEvalJSONDEL(t *testing.T, store *Store) {
 					"\"flag\":false, \"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store.Put(key, obj)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
 
 			},
 
@@ -363,7 +357,7 @@ func testEvalJSONDEL(t *testing.T, store *Store) {
 	runEvalTests(t, tests, evalJSONDEL, store)
 }
 
-func testEvalJSONCLEAR(t *testing.T, store *Store) {
+func testEvalJSONCLEAR(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
 			setup:  func() {},
@@ -387,8 +381,8 @@ func testEvalJSONCLEAR(t *testing.T, store *Store) {
 					"\"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store.Put(key, obj)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
 
 			},
 			input:  []string{"EXISTING_KEY"},
@@ -400,8 +394,8 @@ func testEvalJSONCLEAR(t *testing.T, store *Store) {
 				value := "{\"array\":[1,2,3,\"s\",null]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store.Put(key, obj)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
 
 			},
 
@@ -414,8 +408,8 @@ func testEvalJSONCLEAR(t *testing.T, store *Store) {
 				value := "{\"a\":\"test\"}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store.Put(key, obj)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
 
 			},
 
@@ -428,8 +422,8 @@ func testEvalJSONCLEAR(t *testing.T, store *Store) {
 				value := "{\"age\":13}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store.Put(key, obj)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
 
 			},
 
@@ -442,8 +436,8 @@ func testEvalJSONCLEAR(t *testing.T, store *Store) {
 				value := "{\"price\":3.14}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store.Put(key, obj)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
 
 			},
 
@@ -456,8 +450,8 @@ func testEvalJSONCLEAR(t *testing.T, store *Store) {
 				value := "{\"flag\":false}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store.Put(key, obj)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
 
 			},
 			input:  []string{"EXISTING_KEY", "$.flag"},
@@ -470,8 +464,8 @@ func testEvalJSONCLEAR(t *testing.T, store *Store) {
 					"\"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store.Put(key, obj)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
 
 			},
 			input:  []string{"EXISTING_KEY", "$.*"},
@@ -481,7 +475,7 @@ func testEvalJSONCLEAR(t *testing.T, store *Store) {
 	runEvalTests(t, tests, evalJSONCLEAR, store)
 }
 
-func testEvalJSONTYPE(t *testing.T, store *Store) {
+func testEvalJSONTYPE(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
 			setup:  func() {},
@@ -504,8 +498,8 @@ func testEvalJSONTYPE(t *testing.T, store *Store) {
 				value := "{\"language\":[\"java\",\"go\",\"python\"]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store.Put(key, obj)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
 
 			},
 
@@ -518,8 +512,8 @@ func testEvalJSONTYPE(t *testing.T, store *Store) {
 				value := "{\"language\":[\"java\",\"go\",\"python\"]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store.Put(key, obj)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
 
 			},
 
@@ -532,8 +526,8 @@ func testEvalJSONTYPE(t *testing.T, store *Store) {
 				value := "{\"a\":\"test\"}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store.Put(key, obj)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
 
 			},
 
@@ -546,8 +540,8 @@ func testEvalJSONTYPE(t *testing.T, store *Store) {
 				value := "{\"flag\":true}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store.Put(key, obj)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
 
 			},
 
@@ -560,8 +554,8 @@ func testEvalJSONTYPE(t *testing.T, store *Store) {
 				value := "{\"price\":3}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store.Put(key, obj)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
 
 			},
 
@@ -574,8 +568,8 @@ func testEvalJSONTYPE(t *testing.T, store *Store) {
 				value := "{\"price\":3.14}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store.Put(key, obj)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
 
 			},
 
@@ -588,8 +582,8 @@ func testEvalJSONTYPE(t *testing.T, store *Store) {
 				value := "{\"name\":\"tom\",\"partner\":{\"name\":\"jerry\"}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store.Put(key, obj)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
 
 			},
 
@@ -601,7 +595,7 @@ func testEvalJSONTYPE(t *testing.T, store *Store) {
 	runEvalTests(t, tests, evalJSONTYPE, store)
 }
 
-func testEvalJSONGET(t *testing.T, store *Store) {
+func testEvalJSONGET(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
 			setup:  func() {},
@@ -622,11 +616,11 @@ func testEvalJSONGET(t *testing.T, store *Store) {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "{\"a\":2}"
-				obj := &Obj{
+				obj := &dstore.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store.Put(key, obj)
+				store.Put(key, obj)
 
 			},
 			input:  []string{"EXISTING_KEY"},
@@ -638,8 +632,8 @@ func testEvalJSONGET(t *testing.T, store *Store) {
 				value := "{\"a\":2}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
-				store.store.Put(key, obj)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
 
 			},
 
@@ -650,13 +644,13 @@ func testEvalJSONGET(t *testing.T, store *Store) {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
-				obj := &Obj{
+				obj := &dstore.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store.Put(key, obj)
+				store.Put(key, obj)
 
-				store.expires.Put(obj, uint64(time.Now().Add(-2*time.Minute).Unix()))
+				store.SetExpiry(obj, int64(-2*time.Millisecond))
 			},
 			input:  []string{"EXISTING_KEY"},
 			output: RespNIL,
@@ -666,7 +660,7 @@ func testEvalJSONGET(t *testing.T, store *Store) {
 	runEvalTests(t, tests, evalJSONGET, store)
 }
 
-func testEvalJSONSET(t *testing.T, store *Store) {
+func testEvalJSONSET(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
 			setup:  func() {},
@@ -703,7 +697,7 @@ func testEvalJSONSET(t *testing.T, store *Store) {
 	runEvalTests(t, tests, evalJSONSET, store)
 }
 
-func testEvalTTL(t *testing.T, store *Store) {
+func testEvalTTL(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
 			setup:  func() {},
@@ -729,11 +723,11 @@ func testEvalTTL(t *testing.T, store *Store) {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
-				obj := &Obj{
+				obj := &dstore.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store.Put(key, obj)
+				store.Put(key, obj)
 
 			},
 			input:  []string{"EXISTING_KEY"},
@@ -743,13 +737,13 @@ func testEvalTTL(t *testing.T, store *Store) {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
-				obj := &Obj{
+				obj := &dstore.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store.Put(key, obj)
+				store.Put(key, obj)
 
-				store.expires.Put(obj, uint64(time.Now().Add(2*time.Minute).UnixMilli()))
+				store.SetExpiry(obj, int64(2*time.Millisecond))
 			},
 			input: []string{"EXISTING_KEY"},
 			validator: func(output []byte) {
@@ -762,13 +756,13 @@ func testEvalTTL(t *testing.T, store *Store) {
 			setup: func() {
 				key := "EXISTING_EXPIRED_KEY"
 				value := "mock_value"
-				obj := &Obj{
+				obj := &dstore.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store.Put(key, obj)
+				store.Put(key, obj)
 
-				store.expires.Put(obj, uint64(time.Now().Add(-2*time.Minute).Unix()))
+				store.SetExpiry(obj, int64(-2*time.Millisecond))
 			},
 			input:  []string{"EXISTING_KEY"},
 			output: RespMinusTwo,
@@ -778,7 +772,7 @@ func testEvalTTL(t *testing.T, store *Store) {
 	runEvalTests(t, tests, evalTTL, store)
 }
 
-func testEvalDel(t *testing.T, store *Store) {
+func testEvalDel(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
 			setup:  func() {},
@@ -799,13 +793,13 @@ func testEvalDel(t *testing.T, store *Store) {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
-				obj := &Obj{
+				obj := &dstore.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store.Put(key, obj)
+				store.Put(key, obj)
 
-				KeyspaceStat[0]["keys"]++
+				dstore.KeyspaceStat[0]["keys"]++
 			},
 			input:  []string{"EXISTING_KEY"},
 			output: []byte(":1\r\n"),
@@ -816,7 +810,7 @@ func testEvalDel(t *testing.T, store *Store) {
 }
 
 // TestEvalPersist tests the evalPersist function using table-driven tests.
-func testEvalPersist(t *testing.T, store *Store) {
+func testEvalPersist(t *testing.T, store *dstore.Store) {
 	// Define test cases
 	tests := map[string]evalTestCase{
 		"wrong number of arguments": {
@@ -854,7 +848,7 @@ func testEvalPersist(t *testing.T, store *Store) {
 	runEvalTests(t, tests, evalPersist, store)
 }
 
-func testEvalDbsize(t *testing.T, store *Store) {
+func testEvalDbsize(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"DBSIZE command with invalid no of args": {
 			input:  []string{"INVALID_ARG"},
@@ -884,7 +878,7 @@ func testEvalDbsize(t *testing.T, store *Store) {
 	runEvalTests(t, tests, evalDBSIZE, store)
 }
 
-func testEvalGETSET(t *testing.T, store *Store) {
+func testEvalGETSET(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"GETSET with 1 arg": {
 			input:  []string{"HELLO"},
@@ -902,11 +896,11 @@ func testEvalGETSET(t *testing.T, store *Store) {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
-				obj := &Obj{
+				obj := &dstore.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store.Put(key, obj)
+				store.Put(key, obj)
 
 			},
 			input:  []string{"EXISTING_KEY", "WORLD"},
@@ -916,11 +910,11 @@ func testEvalGETSET(t *testing.T, store *Store) {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
-				obj := &Obj{
+				obj := &dstore.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store.Put(key, obj)
+				store.Put(key, obj)
 
 			},
 			input:  []string{"EXISTING_KEY", "WORLD"},
@@ -931,7 +925,7 @@ func testEvalGETSET(t *testing.T, store *Store) {
 	runEvalTests(t, tests, evalGETSET, store)
 }
 
-func testEvalPFADD(t *testing.T, store *Store) {
+func testEvalPFADD(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value":           {input: nil, output: []byte("-ERR wrong number of arguments for 'pfadd' command\r\n")},
 		"empty array":         {input: []string{}, output: []byte("-ERR wrong number of arguments for 'pfadd' command\r\n")},
@@ -943,7 +937,7 @@ func testEvalPFADD(t *testing.T, store *Store) {
 	runEvalTests(t, tests, evalPFADD, store)
 }
 
-func testEvalPFCOUNT(t *testing.T, store *Store) {
+func testEvalPFCOUNT(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"PFCOUNT with empty arg": {
 			input:  []string{},
@@ -958,11 +952,11 @@ func testEvalPFCOUNT(t *testing.T, store *Store) {
 				key := "EXISTING_KEY"
 				value := hyperloglog.New()
 				value.Insert([]byte("VALUE"))
-				obj := &Obj{
+				obj := &dstore.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
-				store.store.Put(key, obj)
+				store.Put(key, obj)
 
 			},
 			input:  []string{"EXISTING_KEY"},
@@ -973,10 +967,10 @@ func testEvalPFCOUNT(t *testing.T, store *Store) {
 	runEvalTests(t, tests, evalPFCOUNT, store)
 }
 
-func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]string, *Store) []byte, store *Store) {
+func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]string, *dstore.Store) []byte, store *dstore.Store) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			setupTest(store)
+			store = setupTest(store)
 
 			if tc.setup != nil {
 				tc.setup()
@@ -995,19 +989,19 @@ func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]s
 func BenchmarkEvalMSET(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		store := NewStore(nil)
+		store := dstore.NewStore(nil)
 		evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"}, store)
 	}
 }
 
 func BenchmarkEvalHSET(b *testing.B) {
-	store := NewStore(nil)
+	store := dstore.NewStore(nil)
 	for i := 0; i < b.N; i++ {
 		evalHSET([]string{"KEY", fmt.Sprintf("FIELD_%d", i), fmt.Sprintf("VALUE_%d", i)}, store)
 	}
 }
 
-func testEvalHSET(t *testing.T, store *Store) {
+func testEvalHSET(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"wrong number of args passed": {
 			setup:  func() {},
@@ -1046,13 +1040,13 @@ func testEvalHSET(t *testing.T, store *Store) {
 				newMap := make(HashMap)
 				newMap[field] = "mock_field_value"
 
-				obj := &Obj{
-					TypeEncoding:   ObjTypeHashMap | ObjEncodingHashMap,
+				obj := &dstore.Obj{
+					TypeEncoding:   dstore.ObjTypeHashMap | dstore.ObjEncodingHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
 
-				store.store.Put(key, obj)
+				store.Put(key, obj)
 
 			},
 			input:  []string{"KEY_MOCK", "mock_field_name", "mock_field_value"},
@@ -1066,13 +1060,13 @@ func testEvalHSET(t *testing.T, store *Store) {
 				newMap := make(HashMap)
 				newMap[field] = mock_value
 
-				obj := &Obj{
-					TypeEncoding:   ObjTypeHashMap | ObjEncodingHashMap,
+				obj := &dstore.Obj{
+					TypeEncoding:   dstore.ObjTypeHashMap | dstore.ObjEncodingHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
 
-				store.store.Put(key, obj)
+				store.Put(key, obj)
 
 				// Check if the map is saved correctly in the store
 				res, err := getValueFromHashMap(key, field, store)
