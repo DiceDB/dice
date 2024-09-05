@@ -16,7 +16,7 @@ It then uses `QWATCH` to monitor changes and broadcasts updates to connected Web
 ## Setup Using Docker
 
 ```
-docker-compose up --build
+docker-compose up
 ```
 
 ## Setup on local machine
