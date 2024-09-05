@@ -179,13 +179,6 @@ func compareInt64Values(order string, valI, valJ int64) bool {
 	return valI > valJ
 }
 
-func compareIntValues(order string, valI, valJ int) bool {
-	if order == constants.Asc {
-		return valI < valJ
-	}
-	return valI > valJ
-}
-
 func compareFloatValues(order string, valI, valJ float64) bool {
 	if order == constants.Asc {
 		return valI < valJ
@@ -406,25 +399,6 @@ func compareStrings(left, right, operator string) (bool, error) {
 		return left >= right, nil
 	default:
 		return false, fmt.Errorf("unsupported operator for strings: %s", operator)
-	}
-}
-
-func compareInts(left, right int, operator string) (bool, error) {
-	switch operator {
-	case "=":
-		return left == right, nil
-	case constants.OperatorNotEquals, constants.OperatorNotEqualsTo:
-		return left != right, nil
-	case "<":
-		return left < right, nil
-	case constants.OperatorLessThanEqualsTo:
-		return left <= right, nil
-	case ">":
-		return left > right, nil
-	case constants.OperatorGreaterThanEqualsTo:
-		return left >= right, nil
-	default:
-		return false, fmt.Errorf("unsupported operator for integers: %s", operator)
 	}
 }
 
