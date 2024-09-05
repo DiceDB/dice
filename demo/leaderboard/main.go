@@ -45,7 +45,7 @@ func main() {
 	// Start the QWATCH listener goroutine
 	go watchLeaderboard()
 
-	// Serve static files
+	// Serve static files for the frontend.
 	fs := http.FileServer(http.Dir("."))
 	http.Handle("/", fs)
 
@@ -57,6 +57,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
+// updateLeaderboard generates random leaderboard entries and updates them in Redis.
 func updateLeaderboard() {
 	ctx := context.Background()
 	for {
@@ -87,6 +88,7 @@ func updateLeaderboard() {
 	}
 }
 
+// watchLeaderboard watches the leaderboard for updates and sends them to all connected WebSocket clients.
 func watchLeaderboard() {
 	ctx := context.Background()
 	qwatch := dice.QWatch(ctx)
@@ -112,6 +114,10 @@ func watchLeaderboard() {
 		}
 	}
 }
+
+////////////////////////
+// Helper functions
+////////////////////////
 
 func formatToJSON(updates []redis.KV) (string, error) {
 	var entries []LeaderboardEntry
