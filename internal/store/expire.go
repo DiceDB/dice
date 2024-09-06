@@ -1,7 +1,7 @@
 package store
 
 import (
-	"github.com/dicedb/dice/server/utils"
+	"github.com/dicedb/dice/internal/server/utils"
 )
 
 func hasExpired(obj *Obj, store *Store) bool {
