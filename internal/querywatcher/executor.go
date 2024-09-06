@@ -352,8 +352,6 @@ func getValueAndType(obj *dstore.Obj) (val interface{}, s string, e error) {
 		return v, constants.Int64, nil
 	case float64:
 		return v, constants.Float, nil
-	case int64:
-		return int(v), constants.Int, nil
 	default:
 		return nil, constants.EmptyStr, fmt.Errorf("unsupported value type: %T", v)
 	}
