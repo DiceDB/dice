@@ -4,11 +4,12 @@ import (
 	"path"
 	"sync"
 
+	"github.com/dicedb/dice/internal/server/utils"
+
 	"github.com/cockroachdb/swiss"
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/constants"
 	"github.com/dicedb/dice/internal/regex"
-	"github.com/dicedb/dice/server/utils"
 )
 
 // WatchEvent represents a change in a watched key.

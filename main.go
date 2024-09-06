@@ -9,9 +9,10 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/dicedb/dice/internal/server"
+
 	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/server"
 )
 
 func setupFlags() {
