@@ -14,6 +14,7 @@ import (
 )
 
 type qWatchTestCase struct {
+	key             string
 	userID          int
 	score           int
 	expectedUpdates [][]interface{}
@@ -24,37 +25,37 @@ type qWatchSDKSubscriber struct {
 	qwatch *redis.QWatch
 }
 
-var qWatchQuery = "SELECT $key, $value FROM `match:100:*` ORDER BY $value desc LIMIT 3"
+var qWatchQuery = "SELECT $key, $value FROM `match:10?:*` ORDER BY $value desc LIMIT 3"
 
 var qWatchTestCases = []qWatchTestCase{
-	{0, 11, [][]interface{}{
+	{"match:100:user", 0, 11, [][]interface{}{
 		{[]interface{}{"match:100:user:0", int64(11)}},
 	}},
-	{1, 33, [][]interface{}{
+	{"match:100:user", 1, 33, [][]interface{}{
 		{[]interface{}{"match:100:user:1", int64(33)}, []interface{}{"match:100:user:0", int64(11)}},
 	}},
-	{2, 22, [][]interface{}{
-		{[]interface{}{"match:100:user:1", int64(33)}, []interface{}{"match:100:user:2", int64(22)}, []interface{}{"match:100:user:0", int64(11)}},
+	{"match:101:user", 2, 22, [][]interface{}{
+		{[]interface{}{"match:100:user:1", int64(33)}, []interface{}{"match:101:user:2", int64(22)}, []interface{}{"match:100:user:0", int64(11)}},
 	}},
-	{3, 0, [][]interface{}{
-		{[]interface{}{"match:100:user:1", int64(33)}, []interface{}{"match:100:user:2", int64(22)}, []interface{}{"match:100:user:0", int64(11)}},
+	{"match:102:user", 3, 0, [][]interface{}{
+		{[]interface{}{"match:100:user:1", int64(33)}, []interface{}{"match:101:user:2", int64(22)}, []interface{}{"match:100:user:0", int64(11)}},
 	}},
-	{4, 44, [][]interface{}{
-		{[]interface{}{"match:100:user:4", int64(44)}, []interface{}{"match:100:user:1", int64(33)}, []interface{}{"match:100:user:2", int64(22)}},
+	{"match:100:user", 4, 44, [][]interface{}{
+		{[]interface{}{"match:100:user:4", int64(44)}, []interface{}{"match:100:user:1", int64(33)}, []interface{}{"match:101:user:2", int64(22)}},
 	}},
-	{5, 50, [][]interface{}{
+	{"match:100:user", 5, 50, [][]interface{}{
 		{[]interface{}{"match:100:user:5", int64(50)}, []interface{}{"match:100:user:4", int64(44)}, []interface{}{"match:100:user:1", int64(33)}},
 	}},
-	{2, 40, [][]interface{}{
-		{[]interface{}{"match:100:user:5", int64(50)}, []interface{}{"match:100:user:4", int64(44)}, []interface{}{"match:100:user:2", int64(40)}},
+	{"match:101:user", 2, 40, [][]interface{}{
+		{[]interface{}{"match:100:user:5", int64(50)}, []interface{}{"match:100:user:4", int64(44)}, []interface{}{"match:101:user:2", int64(40)}},
 	}},
-	{6, 55, [][]interface{}{
+	{"match:100:user", 6, 55, [][]interface{}{
 		{[]interface{}{"match:100:user:6", int64(55)}, []interface{}{"match:100:user:5", int64(50)}, []interface{}{"match:100:user:4", int64(44)}},
 	}},
-	{0, 60, [][]interface{}{
+	{"match:100:user", 0, 60, [][]interface{}{
 		{[]interface{}{"match:100:user:0", int64(60)}, []interface{}{"match:100:user:6", int64(55)}, []interface{}{"match:100:user:5", int64(50)}},
 	}},
-	{5, 70, [][]interface{}{
+	{"match:100:user", 5, 70, [][]interface{}{
 		{[]interface{}{"match:100:user:5", int64(70)}, []interface{}{"match:100:user:0", int64(60)}, []interface{}{"match:100:user:6", int64(55)}},
 	}},
 }
@@ -166,7 +167,7 @@ func runQWatchScenarios(t *testing.T, publisher interface{}, receivers interface
 }
 
 func publishUpdate(t *testing.T, publisher interface{}, tc qWatchTestCase) {
-	key := fmt.Sprintf("match:100:user:%d", tc.userID)
+	key := fmt.Sprintf("%s:%d", tc.key, tc.userID)
 	switch p := publisher.(type) {
 	case net.Conn:
 		fireCommand(p, fmt.Sprintf("SET %s %d", key, tc.score))
@@ -340,14 +341,14 @@ func verifyJSONUpdates(t *testing.T, rp *core.RESPParser, tc JSONTestCase) {
 
 func cleanupKeys(publisher net.Conn) {
 	for _, tc := range qWatchTestCases {
-		fireCommand(publisher, fmt.Sprintf("DEL match:100:user:%d", tc.userID))
+		fireCommand(publisher, fmt.Sprintf("DEL %s:%d", tc.key, tc.userID))
 	}
 	time.Sleep(100 * time.Millisecond)
 }
 
 func cleanupKeysWithSDK(publisher *redis.Client) {
 	for _, tc := range qWatchTestCases {
-		publisher.Del(context.Background(), fmt.Sprintf("match:100:user:%d", tc.userID))
+		publisher.Del(context.Background(), fmt.Sprintf("%s:%d", tc.key, tc.userID))
 	}
 	time.Sleep(100 * time.Millisecond)
 }
