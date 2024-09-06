@@ -46,6 +46,17 @@ func TestBitOpsString(t *testing.T) {
 			assert_type: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
 		},
 		{
+			name:        "Getbit of a key containing an integer",
+			cmds:        []string{"SET foo 10", "GETBIT foo 0", "GETBIT foo 1", "GETBIT foo 2", "GETBIT foo 3", "GETBIT foo 4", "GETBIT foo 5", "GETBIT foo 6", "GETBIT foo 7"},
+			expected:    []interface{}{"OK", int64(0), int64(0), int64(1), int64(1), int64(0), int64(0), int64(0), int64(1)},
+			assert_type: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
+		}, {
+			name:        "Getbit of a key containing an integer 2nd byte",
+			cmds:        []string{"SET foo 10", "GETBIT foo 8", "GETBIT foo 9", "GETBIT foo 10", "GETBIT foo 11", "GETBIT foo 12", "GETBIT foo 13", "GETBIT foo 14", "GETBIT foo 15"},
+			expected:    []interface{}{"OK", int64(0), int64(0), int64(1), int64(1), int64(0), int64(0), int64(0), int64(0)},
+			assert_type: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
+		},
+		{
 			name:        "Getbit of a key with an offset greater than the length of the string in bits",
 			cmds:        []string{"SET foo foobar", "GETBIT foo 100", "GETBIT foo 48", "GETBIT foo 47"},
 			expected:    []interface{}{"OK", int64(0), int64(0), int64(0)},
@@ -55,6 +66,12 @@ func TestBitOpsString(t *testing.T) {
 			name:        "Bitcount of a key containing a string",
 			cmds:        []string{"SET foo foobar", "BITCOUNT foo 0 -1", "BITCOUNT foo", "BITCOUNT foo 0 0", "BITCOUNT foo 1 1", "BITCOUNT foo 1 1 Byte", "BITCOUNT foo 5 30 BIT"},
 			expected:    []interface{}{"OK", int64(26), int64(26), int64(4), int64(6), int64(6), int64(17)},
+			assert_type: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal"},
+		},
+		{
+			name:        "Bitcount of a key containing an integer",
+			cmds:        []string{"SET foo 10", "BITCOUNT foo 0 -1", "BITCOUNT foo", "BITCOUNT foo 0 0", "BITCOUNT foo 1 1", "BITCOUNT foo 1 1 Byte", "BITCOUNT foo 5 30 BIT"},
+			expected:    []interface{}{"OK", int64(5), int64(5), int64(3), int64(2), int64(2), int64(3)},
 			assert_type: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal"},
 		},
 		{
@@ -82,6 +99,12 @@ func TestBitOpsString(t *testing.T) {
 			assert_type: []string{"equal", "equal", "equal", "equal", "equal"},
 		},
 		{
+			name:        "Bitop not of a key containing an integer",
+			cmds:        []string{"SET foo 10", "BITOP NOT baz foo", "GET baz", "BITOP NOT bazz baz", "GET bazz"},
+			expected:    []interface{}{"OK", int64(2), "\xce\xcf", int64(2), int64(10)},
+			assert_type: []string{"equal", "equal", "equal", "equal", "equal"},
+		},
+		{
 			name:        "Get a string created with setbit",
 			cmds:        []string{"SETBIT foo 1 1", "SETBIT foo 3 1", "GET foo"},
 			expected:    []interface{}{int64(0), int64(0), "P"},
@@ -91,6 +114,12 @@ func TestBitOpsString(t *testing.T) {
 			name:        "Bitop and of keys containing a string and get the destkey",
 			cmds:        []string{"SET foo foobar", "SET baz abcdef", "BITOP AND bazz foo baz", "GET bazz"},
 			expected:    []interface{}{"OK", "OK", int64(6), "`bc`ab"},
+			assert_type: []string{"equal", "equal", "equal", "equal"},
+		},
+		{
+			name:        "BITOP AND of keys containing integers and get the destkey",
+			cmds:        []string{"SET foo 10", "SET baz 5", "BITOP AND bazz foo baz", "GET bazz"},
+			expected:    []interface{}{"OK", "OK", int64(2), "1\x00"},
 			assert_type: []string{"equal", "equal", "equal", "equal"},
 		},
 		{
@@ -104,6 +133,12 @@ func TestBitOpsString(t *testing.T) {
 			cmds:        []string{"MSET foo foobar baz abcdef", "BITOP OR bazz foo baz", "GET bazz"},
 			expected:    []interface{}{"OK", int64(6), "goofev"},
 			assert_type: []string{"equal", "equal", "equal"},
+		},
+		{
+			name:        "BITOP OR of keys containing integers and get the destkey",
+			cmds:        []string{"SET foo 10", "SET baz 5", "BITOP OR bazz foo baz", "GET bazz"},
+			expected:    []interface{}{"OK", "OK", int64(2), "50"},
+			assert_type: []string{"equal", "equal", "equal", "equal"},
 		},
 		{
 			name:        "BITOP OR of keys containing strings and a bytearray and get the destkey",
@@ -122,6 +157,12 @@ func TestBitOpsString(t *testing.T) {
 			cmds:        []string{"MSET foo foobar baz abcdef", "SETBIT bazz 8 1", "BITOP XOR bazzz foo baz bazz", "GET bazzz", "SETBIT bazz 8 0", "SETBIT bazz 49 1", "BITOP XOR bazzz foo baz bazz", "GET bazzz", "Setbit bazz 49 0", "bitop xor bazzz foo baz bazz", "get bazzz"},
 			expected:    []interface{}{"OK", int64(0), int64(6), "\a\x8d\x0c\x06\x04\x14", int64(1), int64(0), int64(7), "\a\r\x0c\x06\x04\x14@", int64(1), int64(7), "\a\r\x0c\x06\x04\x14\x00"},
 			assert_type: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
+		},
+		{
+			name:        "BITOP XOR of keys containing integers and get the destkey",
+			cmds:        []string{"SET foo 10", "SET baz 5", "BITOP XOR bazz foo baz", "GET bazz"},
+			expected:    []interface{}{"OK", "OK", int64(2), "\x040"},
+			assert_type: []string{"equal", "equal", "equal", "equal"},
 		},
 	}
 

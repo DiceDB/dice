@@ -1140,45 +1140,27 @@ func evalSETBIT(args []string, store *dstore.Store) []byte {
 		store.Put(args[0], obj)
 	}
 
-	switch oType, _ := ExtractTypeEncoding(obj); oType {
-	case ObjTypeSet:
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	case ObjTypeString:
-		byteIndex := offset >> 3
-		length := int64(len(obj.Value.(string)))
-		byteArray := NewByteArray(int(length))
-		byteArray.data = []byte(obj.Value.(string))
+	if assertType(obj.TypeEncoding, ObjTypeByteArray) == nil ||
+		assertType(obj.TypeEncoding, ObjTypeString) == nil ||
+		assertType(obj.TypeEncoding, ObjTypeInt) == nil {
+		var byteArray *ByteArray
+		oType, oEnc := ExtractTypeEncoding(obj)
 
-		if byteIndex >= length {
-			// resize the string as per the offset
-			byteArray = byteArray.IncreaseSize(int(requiredByteArraySize))
-		}
-
-		response := byteArray.GetBit(int(offset))
-		byteArray.SetBit(int(offset), value)
-
-		// create a new string from the byte array only if any changes are made
-		if (response != value) || byteIndex >= length {
-			// get the old encoding and expiry of the string
-			oEnc := getType(obj.TypeEncoding)
-			exp, isExpirySet := getExpiry(obj, store)
-
-			if !isExpirySet {
-				store.Put(key, store.NewObj(string(byteArray.data), -1, ObjTypeString, oEnc))
-			} else {
-				durationMs := exp - uint64(utils.GetCurrentTime().UnixMilli())
-				store.Put(key, store.NewObj(string(byteArray.data), int64(durationMs), ObjTypeString, oEnc))
+		switch oType {
+		case ObjTypeByteArray:
+			byteArray = obj.Value.(*ByteArray)
+		case ObjTypeString, ObjTypeInt:
+			byteArray, err = NewByteArrayFromObj(obj)
+			if err != nil {
+				return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 			}
+		default:
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 		}
 
-		if response {
-			return Encode(int(1), true)
-		}
-		return Encode(int(0), true)
-	case ObjTypeByteArray:
-		// handle the case when it is byte array
-		byteArray := obj.Value.(*ByteArray)
+		// Perform the resizing check
 		byteArrayLength := byteArray.Length
+
 		// check whether resize required or not
 		if requiredByteArraySize > byteArrayLength {
 			// resize as per the offset
@@ -1188,13 +1170,30 @@ func evalSETBIT(args []string, store *dstore.Store) []byte {
 		resp := byteArray.GetBit(int(offset))
 		byteArray.SetBit(int(offset), value)
 
+		// We are returning newObject here so it is thread-safe
+		// Old will be removed by GC
+		newObj, err := ByteSliceToObj(store, obj, byteArray.data, oType, oEnc)
+		if err != nil {
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+		}
+
+		exp, ok := getExpiry(obj, store)
+		var exDurationMs int64 = -1
+		if ok {
+			exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
+		}
+		// newObj has bydefault expiry time -1 , we need to set it
+		if exDurationMs > 0 {
+			store.setExpiry(newObj, exDurationMs)
+		}
+
+		store.Put(key, newObj)
 		if response {
 			return Encode(int(1), true)
 		}
 		return Encode(int(0), true)
-	default:
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
+	return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 }
 
 // GETBIT key offset
@@ -1220,19 +1219,6 @@ func evalGETBIT(args []string, store *dstore.Store) []byte {
 	switch oType, _ := ExtractTypeEncoding(obj); oType {
 	case ObjTypeSet:
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	case ObjTypeString:
-		// get a pointer to the string
-		byteIndex := offset >> 3
-		length := int64(len(obj.Value.(string)))
-
-		if byteIndex >= length {
-			return Encode(0, true)
-		}
-		byteAtIndex := obj.Value.(string)[byteIndex]
-
-		bitAtOffset := byteAtIndex >> (7 - offset&7) & 1
-
-		return Encode(int(bitAtOffset), true)
 	case ObjTypeByteArray:
 		byteArray := obj.Value.(*ByteArray)
 		byteArrayLength := byteArray.Length
@@ -1244,6 +1230,19 @@ func evalGETBIT(args []string, store *dstore.Store) []byte {
 		value := byteArray.GetBit(int(offset))
 		if value {
 			return clientio.Encode(1, true)
+		}
+		return Encode(0, true)
+	case ObjTypeString, ObjTypeInt:
+		byteArray, err := NewByteArrayFromObj(obj)
+		if err != nil {
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+		}
+		if requiredByteArraySize > byteArray.Length {
+			return Encode(0, true)
+		}
+		value := byteArray.GetBit(int(offset))
+		if value {
+			return Encode(1, true)
 		}
 		return Encode(0, true)
 	default:
@@ -1284,6 +1283,11 @@ func evalBITCOUNT(args []string, store *dstore.Store) []byte {
 
 	if dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeString) == nil {
 		value = []byte(valueInterface.(string))
+		valueLength = int64(len(value))
+	}
+
+	if assertType(obj.TypeEncoding, ObjTypeInt) == nil {
+		value = []byte(strconv.FormatInt(valueInterface.(int64), 10))
 		valueLength = int64(len(value))
 	}
 
@@ -1338,8 +1342,7 @@ func evalBITCOUNT(args []string, store *dstore.Store) []byte {
 		return clientio.Encode(bitCount, true)
 	}
 	startBitRange := start / 8
-	endBitRange := end / 8
-
+	endBitRange := min(end/8, valueLength-1)
 	for i := startBitRange; i <= endBitRange; i++ {
 		if i == startBitRange {
 			considerBits := start % 8
@@ -1371,12 +1374,11 @@ func evalBITOP(args []string, store *dstore.Store) []byte {
 	if !(operation == AND || operation == OR || operation == XOR || operation == NOT) {
 		return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 	}
-	// if operation is not, then keys length should be only 1
-	if operation == NOT && len(keys) != 1 {
-		return diceerrors.NewErrWithMessage("BITOP NOT must be called with a single source key.")
-	}
 
 	if operation == NOT {
+		if len(keys) != 1 {
+			return diceerrors.NewErrWithMessage("BITOP NOT must be called with a single source key.")
+		}
 		key := keys[0]
 		obj := store.Get(key)
 		if obj == nil {
@@ -1410,15 +1412,25 @@ func evalBITOP(args []string, store *dstore.Store) []byte {
 			// store the result in destKey
 			store.Put(destKey, obj)
 			return Encode(len(value), true)
-		case ObjTypeString:
-			value = []byte(obj.Value.(string))
+		case ObjTypeString, ObjTypeInt:
+			if oType == ObjTypeString {
+				value = []byte(obj.Value.(string))
+			} else {
+				value = []byte(strconv.FormatInt(obj.Value.(int64), 10))
+			}
 			// perform the operation
 			result := make([]byte, len(value))
 			for i := 0; i < len(value); i++ {
 				result[i] = ^value[i]
 			}
-			rawString := string(result)
-			store.Put(destKey, store.NewObj(rawString, -1, ObjTypeString, ObjEncodingEmbStr))
+			resOType, resOEnc := deduceTypeEncoding(string(result))
+			var storedValue interface{}
+			if resOType == ObjTypeInt {
+				storedValue, _ = strconv.ParseInt(string(result), 10, 64)
+			} else {
+				storedValue = string(result)
+			}
+			store.Put(destKey, store.NewObj(storedValue, -1, resOType, resOEnc))
 			return Encode(len(value), true)
 		default:
 			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
@@ -1434,14 +1446,18 @@ func evalBITOP(args []string, store *dstore.Store) []byte {
 			values[i] = make([]byte, 0)
 		} else {
 			// handle the case when it is byte array
-			if dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeByteArray) == nil {
+			switch oType, _ := ExtractTypeEncoding(obj); oType {
+			case ObjTypeByteArray:
 				byteArray := obj.Value.(*ByteArray)
 				byteArrayObject := *byteArray
 				values[i] = byteArrayObject.data
-			} else if assertType(obj.TypeEncoding, ObjTypeString) == nil {
+			case ObjTypeString:
 				value := obj.Value.(string)
 				values[i] = []byte(value)
-			} else {
+			case ObjTypeInt:
+				value := strconv.FormatInt(obj.Value.(int64), 10)
+				values[i] = []byte(value)
+			default:
 				return diceerrors.NewErrWithMessage("value is not a valid byte array")
 			}
 		}
@@ -1455,18 +1471,15 @@ func evalBITOP(args []string, store *dstore.Store) []byte {
 			maxLength = len(value)
 			maxKeyIterator = keyIterator
 		}
-		if len(value) < minLength {
-			minLength = len(value)
-		}
+		minLength = min(minLength, len(value))
 	}
 
 	result := make([]byte, maxLength)
 	if operation == AND {
 		for i := 0; i < maxLength; i++ {
+			result[i] = 0
 			if i < minLength {
 				result[i] = values[maxKeyIterator][i]
-			} else {
-				result[i] = 0
 			}
 		}
 	} else {
