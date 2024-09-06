@@ -1140,16 +1140,16 @@ func evalSETBIT(args []string, store *dstore.Store) []byte {
 		store.Put(args[0], obj)
 	}
 
-	if assertType(obj.TypeEncoding, ObjTypeByteArray) == nil ||
-		assertType(obj.TypeEncoding, ObjTypeString) == nil ||
-		assertType(obj.TypeEncoding, ObjTypeInt) == nil {
+	if dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeByteArray) == nil ||
+		dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeString) == nil ||
+		dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeInt) == nil {
 		var byteArray *ByteArray
-		oType, oEnc := ExtractTypeEncoding(obj)
+		oType, oEnc := dstore.ExtractTypeEncoding(obj)
 
 		switch oType {
-		case ObjTypeByteArray:
+		case dstore.ObjTypeByteArray:
 			byteArray = obj.Value.(*ByteArray)
-		case ObjTypeString, ObjTypeInt:
+		case dstore.ObjTypeString, dstore.ObjTypeInt:
 			byteArray, err = NewByteArrayFromObj(obj)
 			if err != nil {
 				return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
@@ -1177,14 +1177,14 @@ func evalSETBIT(args []string, store *dstore.Store) []byte {
 			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 		}
 
-		exp, ok := getExpiry(obj, store)
+		exp, ok := dstore.GetExpiry(obj, store)
 		var exDurationMs int64 = -1
 		if ok {
 			exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
 		}
 		// newObj has bydefault expiry time -1 , we need to set it
 		if exDurationMs > 0 {
-			store.setExpiry(newObj, exDurationMs)
+			store.SetExpiry(newObj, exDurationMs)
 		}
 
 		store.Put(key, newObj)
@@ -1216,10 +1216,10 @@ func evalGETBIT(args []string, store *dstore.Store) []byte {
 	}
 
 	requiredByteArraySize := offset>>3 + 1
-	switch oType, _ := ExtractTypeEncoding(obj); oType {
-	case ObjTypeSet:
+	switch oType, _ := dstore.ExtractTypeEncoding(obj); oType {
+	case dstore.ObjTypeSet:
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	case ObjTypeByteArray:
+	case dstore.ObjTypeByteArray:
 		byteArray := obj.Value.(*ByteArray)
 		byteArrayLength := byteArray.Length
 
@@ -1232,7 +1232,7 @@ func evalGETBIT(args []string, store *dstore.Store) []byte {
 			return clientio.Encode(1, true)
 		}
 		return Encode(0, true)
-	case ObjTypeString, ObjTypeInt:
+	case dstore.ObjTypeString, dstore.ObjTypeInt:
 		byteArray, err := NewByteArrayFromObj(obj)
 		if err != nil {
 			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
@@ -1286,7 +1286,7 @@ func evalBITCOUNT(args []string, store *dstore.Store) []byte {
 		valueLength = int64(len(value))
 	}
 
-	if assertType(obj.TypeEncoding, ObjTypeInt) == nil {
+	if dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeInt) == nil {
 		value = []byte(strconv.FormatInt(valueInterface.(int64), 10))
 		valueLength = int64(len(value))
 	}
@@ -1387,8 +1387,8 @@ func evalBITOP(args []string, store *dstore.Store) []byte {
 
 		var value []byte
 
-		switch oType, _ := ExtractTypeEncoding(obj); oType {
-		case ObjTypeByteArray:
+		switch oType, _ := dstore.ExtractTypeEncoding(obj); oType {
+		case dstore.ObjTypeByteArray:
 			byteArray := obj.Value.(*ByteArray)
 			byteArrayObject := *byteArray
 			value = byteArrayObject.data
@@ -1398,22 +1398,22 @@ func evalBITOP(args []string, store *dstore.Store) []byte {
 				result[i] = ^value[i]
 			}
 
-		// initialize result with byteArray
-		operationResult := NewByteArray(len(result))
-		operationResult.data = result
-		operationResult.Length = int64(len(result))
+			// initialize result with byteArray
+			operationResult := NewByteArray(len(result))
+			operationResult.data = result
+			operationResult.Length = int64(len(result))
 
-		// resize the byte array if necessary
-		operationResult.ResizeIfNecessary()
+			// resize the byte array if necessary
+			operationResult.ResizeIfNecessary()
 
-		// create object related to result
-		obj = store.NewObj(operationResult, -1, dstore.ObjTypeByteArray, dstore.ObjEncodingByteArray)
+			// create object related to result
+			obj = store.NewObj(operationResult, -1, dstore.ObjTypeByteArray, dstore.ObjEncodingByteArray)
 
 			// store the result in destKey
 			store.Put(destKey, obj)
 			return Encode(len(value), true)
-		case ObjTypeString, ObjTypeInt:
-			if oType == ObjTypeString {
+		case dstore.ObjTypeString, dstore.ObjTypeInt:
+			if oType == dstore.ObjTypeString {
 				value = []byte(obj.Value.(string))
 			} else {
 				value = []byte(strconv.FormatInt(obj.Value.(int64), 10))
@@ -1425,7 +1425,7 @@ func evalBITOP(args []string, store *dstore.Store) []byte {
 			}
 			resOType, resOEnc := deduceTypeEncoding(string(result))
 			var storedValue interface{}
-			if resOType == ObjTypeInt {
+			if resOType == dstore.ObjTypeInt {
 				storedValue, _ = strconv.ParseInt(string(result), 10, 64)
 			} else {
 				storedValue = string(result)
@@ -1446,15 +1446,15 @@ func evalBITOP(args []string, store *dstore.Store) []byte {
 			values[i] = make([]byte, 0)
 		} else {
 			// handle the case when it is byte array
-			switch oType, _ := ExtractTypeEncoding(obj); oType {
-			case ObjTypeByteArray:
+			switch oType, _ := dstore.ExtractTypeEncoding(obj); oType {
+			case dstore.ObjTypeByteArray:
 				byteArray := obj.Value.(*ByteArray)
 				byteArrayObject := *byteArray
 				values[i] = byteArrayObject.data
-			case ObjTypeString:
+			case dstore.ObjTypeString:
 				value := obj.Value.(string)
 				values[i] = []byte(value)
-			case ObjTypeInt:
+			case dstore.ObjTypeInt:
 				value := strconv.FormatInt(obj.Value.(int64), 10)
 				values[i] = []byte(value)
 			default:
