@@ -1,4 +1,4 @@
-package core
+package store
 
 var KeyspaceStat [4]map[string]int
 

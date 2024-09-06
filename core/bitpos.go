@@ -5,12 +5,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dicedb/dice/core/diceerrors"
-
 	"github.com/dicedb/dice/core/bit"
+	"github.com/dicedb/dice/internal/diceerrors"
+	dstore "github.com/dicedb/dice/internal/store"
 )
 
-func evalBITPOS(args []string, store *Store) []byte {
+func evalBITPOS(args []string, store *dstore.Store) []byte {
 	if len(args) < 2 || len(args) > 5 {
 		return diceerrors.NewErrArity("BITPOS")
 	}
@@ -130,7 +130,7 @@ func getBitPos(byteSlice []byte, bitToFind byte, start, end int, rangeType strin
 	return result
 }
 
-//nolint: gocritic
+// nolint: gocritic
 func adjustBitPosSearchRange(start, end, byteLen int) (int, int) {
 	if start < 0 {
 		start += byteLen

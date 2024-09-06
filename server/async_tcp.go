@@ -10,17 +10,16 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/dicedb/dice/core/auth"
-	"github.com/dicedb/dice/core/cmd"
-	"github.com/dicedb/dice/core/comm"
-	"github.com/dicedb/dice/core/ops"
-
-	"github.com/dicedb/dice/core/diceerrors"
-
 	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core"
+	"github.com/dicedb/dice/core/auth"
+	"github.com/dicedb/dice/core/cmd"
+	"github.com/dicedb/dice/core/comm"
 	"github.com/dicedb/dice/core/iomultiplexer"
+	"github.com/dicedb/dice/core/ops"
+	"github.com/dicedb/dice/internal/diceerrors"
+	dstore "github.com/dicedb/dice/internal/store"
 )
 
 var ErrAborted = errors.New("server received ABORT command")
@@ -35,12 +34,12 @@ type AsyncServer struct {
 	queryWatcher           *core.QueryWatcher
 	shardManager           *core.ShardManager
 	ioChan                 chan *ops.StoreResponse // The server acts like a worker today, this behavior will change once IOThreads are introduced and each client gets its own worker.
-	watchChan              chan core.WatchEvent    // This is needed to co-ordinate between the store and the query watcher
+	watchChan              chan dstore.WatchEvent  // This is needed to co-ordinate between the store and the query watcher.
 }
 
 // NewAsyncServer initializes a new AsyncServer
 func NewAsyncServer() *AsyncServer {
-	watchChan := make(chan core.WatchEvent, config.KeysLimit)
+	watchChan := make(chan dstore.WatchEvent, config.KeysLimit)
 	return &AsyncServer{
 		maxClients:             config.ServerMaxClients,
 		connectedClients:       make(map[int]*comm.Client),

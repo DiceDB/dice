@@ -1,15 +1,32 @@
-package core
+package store
 
 import (
 	"path"
 	"sync"
 
-	"github.com/dicedb/dice/internal/constants"
-
 	"github.com/cockroachdb/swiss"
 	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/internal/constants"
+	"github.com/dicedb/dice/internal/regex"
 	"github.com/dicedb/dice/server/utils"
 )
+
+// WatchEvent represents a change in a watched key.
+type WatchEvent struct {
+	Key       string
+	Operation string
+	Value     *Obj
+}
+
+type DSQLQueryResultRow struct {
+	Key   string
+	Value Obj
+}
+
+type KeyValue struct {
+	Key   string
+	Value *Obj
+}
 
 type Store struct {
 	store      *swiss.Map[string, *Obj]
@@ -26,6 +43,13 @@ func NewStore(watchChan chan WatchEvent) *Store {
 	}
 }
 
+func ResetStore(store *Store) *Store {
+	store.store = swiss.New[string, *Obj](10240)
+	store.expires = swiss.New[*Obj, uint64](10240)
+
+	return store
+}
+
 func (store *Store) NewObj(value interface{}, expDurationMs int64, oType, oEnc uint8) *Obj {
 	obj := &Obj{
 		Value:          value,
@@ -33,7 +57,7 @@ func (store *Store) NewObj(value interface{}, expDurationMs int64, oType, oEnc u
 		LastAccessedAt: getCurrentClock(),
 	}
 	if expDurationMs >= 0 {
-		store.setExpiry(obj, expDurationMs)
+		store.SetExpiry(obj, expDurationMs)
 	}
 	return obj
 }
@@ -43,7 +67,6 @@ func (store *Store) ResetStore() {
 		store.store.Clear()
 		store.expires.Clear()
 		store.watchChan = make(chan WatchEvent, config.KeysLimit)
-		WatchSubscriptionChan = make(chan WatchSubscription)
 	}, store, WithStoreLock())
 }
 
@@ -260,15 +283,15 @@ func (store *Store) GetDel(k string) *Obj {
 	return v
 }
 
-// setExpiry sets the expiry time for an object.
+// SetExpiry sets the expiry time for an object.
 // This method is not thread-safe. It should be called within a lock.
-func (store *Store) setExpiry(obj *Obj, expDurationMs int64) {
+func (store *Store) SetExpiry(obj *Obj, expDurationMs int64) {
 	store.expires.Put(obj, uint64(utils.GetCurrentTime().UnixMilli())+uint64(expDurationMs))
 }
 
-// setUnixTimeExpiry sets the expiry time for an object.
+// SetUnixTimeExpiry sets the expiry time for an object.
 // This method is not thread-safe. It should be called within a lock.
-func (store *Store) setUnixTimeExpiry(obj *Obj, exUnixTimeSec int64) {
+func (store *Store) SetUnixTimeExpiry(obj *Obj, exUnixTimeSec int64) {
 	// convert unix-time-seconds to unix-time-milliseconds
 	store.expires.Put(obj, uint64(exUnixTimeSec*1000))
 }
@@ -305,11 +328,11 @@ func (store *Store) GetStore() *swiss.Map[string, *Obj] {
 	return store.store
 }
 
-func (store *Store) CacheKeysForQuery(query *DSQLQuery, cacheChannel chan *[]KeyValue) {
+func (store *Store) CacheKeysForQuery(keyRegex string, cacheChannel chan *[]KeyValue) {
 	shardCache := make([]KeyValue, 0)
 	withLocks(func() {
 		store.store.All(func(k string, v *Obj) bool {
-			if WildCardMatch(query.KeyRegex, k) {
+			if regex.WildCardMatch(keyRegex, k) {
 				shardCache = append(shardCache, KeyValue{k, v})
 			}
 			return true

@@ -18,8 +18,9 @@ import (
 	"github.com/dicedb/dice/core/auth"
 	"github.com/dicedb/dice/core/bit"
 	"github.com/dicedb/dice/core/comm"
-	"github.com/dicedb/dice/core/diceerrors"
 	"github.com/dicedb/dice/internal/constants"
+	"github.com/dicedb/dice/internal/diceerrors"
+	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dice/server/utils"
 	"github.com/ohler55/ojg/jp"
 )
@@ -55,7 +56,7 @@ func init() {
 // evalPING returns with an encoded "PONG"
 // If any message is added with the ping command,
 // the message will be returned.
-func evalPING(args []string, store *Store) []byte {
+func evalPING(args []string, store *dstore.Store) []byte {
 	var b []byte
 
 	if len(args) >= 2 {
@@ -114,7 +115,7 @@ func evalAUTH(args []string, c *comm.Client) []byte {
 // Returns encoded error response if both PX and EX flags are present
 // Returns encoded OK RESP once new entry is added
 // If the key already exists then the value will be overwritten and expiry will be discarded
-func evalSET(args []string, store *Store) []byte {
+func evalSET(args []string, store *dstore.Store) []byte {
 	if len(args) <= 1 {
 		return diceerrors.NewErrArity("SET")
 	}
@@ -206,16 +207,16 @@ func evalSET(args []string, store *Store) []byte {
 	// Cast the value properly based on the encoding type
 	var storedValue interface{}
 	switch oEnc {
-	case ObjEncodingInt:
+	case dstore.ObjEncodingInt:
 		storedValue, _ = strconv.ParseInt(value, 10, 64)
-	case ObjEncodingEmbStr, ObjEncodingRaw:
+	case dstore.ObjEncodingEmbStr, dstore.ObjEncodingRaw:
 		storedValue = value
 	default:
 		return Encode(fmt.Errorf("ERR unsupported encoding: %d", oEnc), false)
 	}
 
 	// putting the k and value in a Hash Table
-	store.Put(key, store.NewObj(storedValue, exDurationMs, oType, oEnc), WithKeepTTL(keepttl))
+	store.Put(key, store.NewObj(storedValue, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
 
 	return RespOK
 }
@@ -227,7 +228,7 @@ func evalSET(args []string, store *Store) []byte {
 // Returns encoded error response if at least a <key, value> pair is not part of args
 // Returns encoded OK RESP once new entries are added
 // If the key already exists then the value will be overwritten and expiry will be discarded
-func evalMSET(args []string, store *Store) []byte {
+func evalMSET(args []string, store *dstore.Store) []byte {
 	if len(args) <= 1 || len(args)%2 != 0 {
 		return diceerrors.NewErrArity("MSET")
 	}
@@ -235,7 +236,7 @@ func evalMSET(args []string, store *Store) []byte {
 	// MSET does not have expiry support
 	var exDurationMs int64 = -1
 
-	insertMap := make(map[string]*Obj, len(args)/2)
+	insertMap := make(map[string]*dstore.Obj, len(args)/2)
 	for i := 0; i < len(args); i += 2 {
 		key, value := args[i], args[i+1]
 		oType, oEnc := deduceTypeEncoding(value)
@@ -250,7 +251,7 @@ func evalMSET(args []string, store *Store) []byte {
 // The key should be the only param in args
 // The RESP value of the key is encoded and then returned
 // evalGET returns RespNIL if key is expired or it does not exist
-func evalGET(args []string, store *Store) []byte {
+func evalGET(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("GET")
 	}
@@ -265,22 +266,22 @@ func evalGET(args []string, store *Store) []byte {
 	}
 
 	// Decode and return the value based on its encoding
-	switch _, oEnc := ExtractTypeEncoding(obj); oEnc {
-	case ObjEncodingInt:
+	switch _, oEnc := dstore.ExtractTypeEncoding(obj); oEnc {
+	case dstore.ObjEncodingInt:
 		// Value is stored as an int64, so use type assertion
 		if val, ok := obj.Value.(int64); ok {
 			return Encode(val, false)
 		}
 		return diceerrors.NewErrWithFormattedMessage("expected int64 but got another type: %s", obj.Value)
 
-	case ObjEncodingEmbStr, ObjEncodingRaw:
+	case dstore.ObjEncodingEmbStr, dstore.ObjEncodingRaw:
 		// Value is stored as a string, use type assertion
 		if val, ok := obj.Value.(string); ok {
 			return Encode(val, false)
 		}
 		return diceerrors.NewErrWithMessage("expected string but got another type")
 
-	case ObjEncodingByteArray:
+	case dstore.ObjEncodingByteArray:
 		// Value is stored as a bytearray, use type assertion
 		if val, ok := obj.Value.(*ByteArray); ok {
 			return Encode(string(val.data), false)
@@ -293,13 +294,13 @@ func evalGET(args []string, store *Store) []byte {
 }
 
 // evalDBSIZE returns the number of keys in the database.
-func evalDBSIZE(args []string, store *Store) []byte {
+func evalDBSIZE(args []string, store *dstore.Store) []byte {
 	if len(args) > 0 {
 		return diceerrors.NewErrArity("DBSIZE")
 	}
 
 	// return the RESP encoded value
-	return Encode(KeyspaceStat[0]["keys"], false)
+	return Encode(dstore.KeyspaceStat[0]["keys"], false)
 }
 
 // evalGETDEL returns the value for the queried key in args
@@ -307,7 +308,7 @@ func evalDBSIZE(args []string, store *Store) []byte {
 // The RESP value of the key is encoded and then returned
 // In evalGETDEL  If the key exists, it will be deleted before its value is returned.
 // evalGETDEL returns RespNIL if key is expired or it does not exist
-func evalGETDEL(args []string, store *Store) []byte {
+func evalGETDEL(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("GETDEL")
 	}
@@ -323,7 +324,7 @@ func evalGETDEL(args []string, store *Store) []byte {
 	}
 
 	// If the object exists, check if it is a set object.
-	if err := assertType(obj.TypeEncoding, ObjTypeSet); err == nil {
+	if err := dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeSet); err == nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
@@ -335,7 +336,7 @@ func evalGETDEL(args []string, store *Store) []byte {
 // Returns RespZero if key is expired or it does not exist
 // Returns encoded error response if incorrect number of arguments
 // Returns an integer reply specified as the number of paths deleted (0 or more)
-func evalJSONDEL(args []string, store *Store) []byte {
+func evalJSONDEL(args []string, store *dstore.Store) []byte {
 	if len(args) < 1 {
 		return diceerrors.NewErrArity("JSON.DEL")
 	}
@@ -353,7 +354,7 @@ func evalJSONDEL(args []string, store *Store) []byte {
 		return RespZero
 	}
 
-	errWithMessage := assertTypeAndEncoding(obj.TypeEncoding, ObjTypeJSON, ObjEncodingJSON)
+	errWithMessage := dstore.AssertTypeAndEncoding(obj.TypeEncoding, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
 	if errWithMessage != nil {
 		return errWithMessage
 	}
@@ -380,7 +381,7 @@ func evalJSONDEL(args []string, store *Store) []byte {
 		return diceerrors.NewErrWithMessage(err.Error())
 	}
 	// Create a new object with the updated JSON data
-	newObj := store.NewObj(jsonData, -1, ObjTypeJSON, ObjEncodingJSON)
+	newObj := store.NewObj(jsonData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
 	store.Put(key, newObj)
 	return Encode(len(results), false)
 }
@@ -392,7 +393,7 @@ func evalJSONDEL(args []string, store *Store) []byte {
 // Returns encoded error response if incorrect number of arguments
 // Returns an integer reply specifying the number of matching JSON arrays
 // and objects cleared + number of matching JSON numerical values zeroed.
-func evalJSONCLEAR(args []string, store *Store) []byte {
+func evalJSONCLEAR(args []string, store *dstore.Store) []byte {
 	if len(args) < 1 {
 		return diceerrors.NewErrArity("JSON.CLEAR")
 	}
@@ -410,7 +411,7 @@ func evalJSONCLEAR(args []string, store *Store) []byte {
 		return diceerrors.NewErrWithMessage("could not perform this operation on a key that doesn't exist")
 	}
 
-	errWithMessage := assertTypeAndEncoding(obj.TypeEncoding, ObjTypeJSON, ObjEncodingJSON)
+	errWithMessage := dstore.AssertTypeAndEncoding(obj.TypeEncoding, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
 	if errWithMessage != nil {
 		return errWithMessage
 	}
@@ -426,7 +427,7 @@ func evalJSONCLEAR(args []string, store *Store) []byte {
 	if len(args) == 1 || path == defaultRootPath {
 		if jsonData != struct{}{} {
 			// If path is root and len(args) == 1, return it instantly
-			newObj := store.NewObj(struct{}{}, -1, ObjTypeJSON, ObjEncodingJSON)
+			newObj := store.NewObj(struct{}{}, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
 			store.Put(key, newObj)
 			countClear++
 			return Encode(countClear, false)
@@ -464,7 +465,7 @@ func evalJSONCLEAR(args []string, store *Store) []byte {
 		return diceerrors.NewErrWithMessage(err.Error())
 	}
 	// Create a new object with the updated JSON data
-	newObj := store.NewObj(jsonData, -1, ObjTypeJSON, ObjEncodingJSON)
+	newObj := store.NewObj(jsonData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
 	store.Put(key, newObj)
 	return Encode(countClear, false)
 }
@@ -474,7 +475,7 @@ func evalJSONCLEAR(args []string, store *Store) []byte {
 // Returns RespNIL if key is expired or it does not exist
 // Returns encoded error response if incorrect number of arguments
 // The RESP value of the key's value type is encoded and then returned
-func evalJSONTYPE(args []string, store *Store) []byte {
+func evalJSONTYPE(args []string, store *dstore.Store) []byte {
 	if len(args) < 1 {
 		return diceerrors.NewErrArity("JSON.TYPE")
 	}
@@ -491,7 +492,7 @@ func evalJSONTYPE(args []string, store *Store) []byte {
 		return RespNIL
 	}
 
-	errWithMessage := assertTypeAndEncoding(obj.TypeEncoding, ObjTypeJSON, ObjEncodingJSON)
+	errWithMessage := dstore.AssertTypeAndEncoding(obj.TypeEncoding, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
 	if errWithMessage != nil {
 		return errWithMessage
 	}
@@ -533,7 +534,7 @@ func evalJSONTYPE(args []string, store *Store) []byte {
 // Returns RespNIL if key is expired or it does not exist
 // Returns encoded error response if incorrect number of arguments
 // The RESP value of the key is encoded and then returned
-func evalJSONGET(args []string, store *Store) []byte {
+func evalJSONGET(args []string, store *dstore.Store) []byte {
 	if len(args) < 1 {
 		return diceerrors.NewErrArity("JSON.GET")
 	}
@@ -552,7 +553,7 @@ func evalJSONGET(args []string, store *Store) []byte {
 	}
 
 	// Check if the object is of JSON type
-	errWithMessage := assertTypeAndEncoding(obj.TypeEncoding, ObjTypeJSON, ObjEncodingJSON)
+	errWithMessage := dstore.AssertTypeAndEncoding(obj.TypeEncoding, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
 	if errWithMessage != nil {
 		return errWithMessage
 	}
@@ -598,7 +599,7 @@ func evalJSONGET(args []string, store *Store) []byte {
 // Returns encoded error response if incorrect number of arguments
 // Returns encoded error if the JSON string is invalid
 // Returns RespOK if the JSON value is successfully stored
-func evalJSONSET(args []string, store *Store) []byte {
+func evalJSONSET(args []string, store *dstore.Store) []byte {
 	// Check if there are enough arguments
 	if len(args) < 3 {
 		return diceerrors.NewErrArity("JSON.SET")
@@ -650,11 +651,11 @@ func evalJSONSET(args []string, store *Store) []byte {
 		}
 	} else {
 		// If the key exists, check if it's a JSON object
-		err := assertType(obj.TypeEncoding, ObjTypeJSON)
+		err := dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeJSON)
 		if err != nil {
 			return Encode(err, false)
 		}
-		err = assertEncoding(obj.TypeEncoding, ObjEncodingJSON)
+		err = dstore.AssertEncoding(obj.TypeEncoding, dstore.ObjEncodingJSON)
 		if err != nil {
 			return Encode(err, false)
 		}
@@ -678,7 +679,7 @@ func evalJSONSET(args []string, store *Store) []byte {
 	}
 
 	// Create a new object with the updated JSON data
-	newObj := store.NewObj(rootData, -1, ObjTypeJSON, ObjEncodingJSON)
+	newObj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
 	store.Put(key, newObj)
 	return RespOK
 }
@@ -689,7 +690,7 @@ func evalJSONSET(args []string, store *Store) []byte {
 //
 //	RESP encoded -2 stating key doesn't exist or key is expired
 //	RESP encoded -1 in case no expiration is set on the key
-func evalTTL(args []string, store *Store) []byte {
+func evalTTL(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("TTL")
 	}
@@ -704,7 +705,7 @@ func evalTTL(args []string, store *Store) []byte {
 	}
 
 	// if object exist, but no expiration is set on it then send -1
-	exp, isExpirySet := getExpiry(obj, store)
+	exp, isExpirySet := dstore.GetExpiry(obj, store)
 	if !isExpirySet {
 		return RespMinusOne
 	}
@@ -718,7 +719,7 @@ func evalTTL(args []string, store *Store) []byte {
 
 // evalDEL deletes all the specified keys in args list
 // returns the count of total deleted keys after encoding
-func evalDEL(args []string, store *Store) []byte {
+func evalDEL(args []string, store *dstore.Store) []byte {
 	var countDeleted int = 0
 
 	for _, key := range args {
@@ -735,7 +736,7 @@ func evalDEL(args []string, store *Store) []byte {
 // The expiry time should be in integer format; if not, it returns encoded error response
 // Returns RespOne if expiry was set on the key successfully.
 // Once the time is lapsed, the key will be deleted automatically
-func evalEXPIRE(args []string, store *Store) []byte {
+func evalEXPIRE(args []string, store *dstore.Store) []byte {
 	if len(args) <= 1 {
 		return diceerrors.NewErrArity("EXPIRE")
 	}
@@ -767,7 +768,7 @@ func evalEXPIRE(args []string, store *Store) []byte {
 // Returns expiration Unix timestamp in seconds.
 // Returns -1 if the key exists but has no associated expiration time.
 // Returns -2 if the key does not exist.
-func evalEXPIRETIME(args []string, store *Store) []byte {
+func evalEXPIRETIME(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("EXPIRETIME")
 	}
@@ -781,7 +782,7 @@ func evalEXPIRETIME(args []string, store *Store) []byte {
 		return RespMinusTwo
 	}
 
-	exTimeMili, ok := getExpiry(obj, store)
+	exTimeMili, ok := dstore.GetExpiry(obj, store)
 	// -1 if key doesn't have expiration time set
 	if !ok {
 		return RespMinusOne
@@ -795,7 +796,7 @@ func evalEXPIRETIME(args []string, store *Store) []byte {
 // The expiry time should be in integer format; if not, it returns encoded error response
 // Returns RespOne if expiry was set on the key successfully.
 // Once the time is lapsed, the key will be deleted automatically
-func evalEXPIREAT(args []string, store *Store) []byte {
+func evalEXPIREAT(args []string, store *dstore.Store) []byte {
 	if len(args) <= 1 {
 		return Encode(errors.New("ERR wrong number of arguments for 'expireat' command"), false)
 	}
@@ -823,7 +824,7 @@ func evalEXPIREAT(args []string, store *Store) []byte {
 // Returns Boolean False and error nil if conditions didn't met.
 // Returns Boolean False and error not-nil if invalid combination of subCommands or if subCommand is invalid
 func evaluateAndSetExpiry(subCommands []string, newExpiry uint64, key string,
-	store *Store) (shouldSetExpiry bool, err []byte) {
+	store *dstore.Store) (shouldSetExpiry bool, err []byte) {
 	var newExpInMilli = newExpiry * 1000
 	var prevExpiry *uint64 = nil
 	var nxCmd, xxCmd, gtCmd, ltCmd bool
@@ -836,11 +837,11 @@ func evaluateAndSetExpiry(subCommands []string, newExpiry uint64, key string,
 	shouldSetExpiry = true
 	// if no condition exists
 	if len(subCommands) == 0 {
-		store.setUnixTimeExpiry(obj, int64(newExpiry))
+		store.SetUnixTimeExpiry(obj, int64(newExpiry))
 		return shouldSetExpiry, nil
 	}
 
-	expireTime, ok := getExpiry(obj, store)
+	expireTime, ok := dstore.GetExpiry(obj, store)
 	if ok {
 		prevExpiry = &expireTime
 	}
@@ -879,11 +880,11 @@ func evaluateAndSetExpiry(subCommands []string, newExpiry uint64, key string,
 			" GT or LT options at the same time are not compatible")
 	}
 
-	store.setUnixTimeExpiry(obj, int64(newExpiry))
+	store.SetUnixTimeExpiry(obj, int64(newExpiry))
 	return shouldSetExpiry, nil
 }
 
-func evalHELLO(args []string, store *Store) []byte {
+func evalHELLO(args []string, store *dstore.Store) []byte {
 	if len(args) > 1 {
 		return diceerrors.NewErrArity("HELLO")
 	}
@@ -904,7 +905,7 @@ based on CoW optimization and Fork */
 // TODO: Implement Acknowledgement so that main process could know whether child has finished writing to its AOF file or not.
 // TODO: Make it safe from failure, an stable policy would be to write the new flushes to a temporary files and then rename them to the main process's AOF file
 // TODO: Add fsync() and fdatasync() to persist to AOF for above cases.
-func evalBGREWRITEAOF(args []string, store *Store) []byte {
+func evalBGREWRITEAOF(args []string, store *dstore.Store) []byte {
 	// Fork a child process, this child process would inherit all the uncommitted pages from main process.
 	// This technique utilizes the CoW or copy-on-write, so while the main process is free to modify them
 	// the child would save all the pages to disk.
@@ -912,7 +913,7 @@ func evalBGREWRITEAOF(args []string, store *Store) []byte {
 	newChild, _, _ := syscall.Syscall(syscall.SYS_FORK, 0, 0, 0)
 	if newChild == 0 {
 		// We are inside child process now, so we'll start flushing to disk.
-		if err := DumpAllAOF(store); err != nil {
+		if err := dstore.DumpAllAOF(store); err != nil {
 			return diceerrors.NewErrWithMessage("AOF failed")
 		}
 		return []byte(constants.EmptyStr)
@@ -929,7 +930,7 @@ func evalBGREWRITEAOF(args []string, store *Store) []byte {
 // The value for the queried key should be of integer format,
 // if not evalINCR returns encoded error response.
 // evalINCR returns the incremented value for the key if there are no errors.
-func evalINCR(args []string, store *Store) []byte {
+func evalINCR(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("INCR")
 	}
@@ -944,7 +945,7 @@ func evalINCR(args []string, store *Store) []byte {
 // The value for the queried key should be of integer format,
 // if not evalDECR returns encoded error response.
 // evalDECR returns the decremented value for the key if there are no errors.
-func evalDECR(args []string, store *Store) []byte {
+func evalDECR(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("DECR")
 	}
@@ -959,7 +960,7 @@ func evalDECR(args []string, store *Store) []byte {
 // The value for the queried key should be of integer format,
 // if not evalDECRBY returns an encoded error response.
 // evalDECRBY returns the decremented value for the key after applying the specified decrement if there are no errors.
-func evalDECRBY(args []string, store *Store) []byte {
+func evalDECRBY(args []string, store *dstore.Store) []byte {
 	if len(args) != 2 {
 		return diceerrors.NewErrArity("DECRBY")
 	}
@@ -970,24 +971,24 @@ func evalDECRBY(args []string, store *Store) []byte {
 	return incrDecrCmd(args, -decrementAmount, store)
 }
 
-func incrDecrCmd(args []string, incr int64, store *Store) []byte {
+func incrDecrCmd(args []string, incr int64, store *dstore.Store) []byte {
 	key := args[0]
 	obj := store.Get(key)
 	if obj == nil {
-		obj = store.NewObj(int64(0), -1, ObjTypeInt, ObjEncodingInt)
+		obj = store.NewObj(int64(0), -1, dstore.ObjTypeInt, dstore.ObjEncodingInt)
 		store.Put(key, obj)
 	}
 
 	// If the object exists, check if it is a set object.
-	if err := assertType(obj.TypeEncoding, ObjTypeSet); err == nil {
+	if err := dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeSet); err == nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
-	if err := assertType(obj.TypeEncoding, ObjTypeInt); err != nil {
+	if err := dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeInt); err != nil {
 		return diceerrors.NewErrWithMessage(err.Error())
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, ObjEncodingInt); err != nil {
+	if err := dstore.AssertEncoding(obj.TypeEncoding, dstore.ObjEncodingInt); err != nil {
 		return diceerrors.NewErrWithMessage(err.Error())
 	}
 
@@ -1006,30 +1007,30 @@ func incrDecrCmd(args []string, incr int64, store *Store) []byte {
 
 // evalINFO creates a buffer with the info of total keys per db
 // Returns the encoded buffer as response
-func evalINFO(args []string, store *Store) []byte {
+func evalINFO(args []string, store *dstore.Store) []byte {
 	var info []byte
 	buf := bytes.NewBuffer(info)
 	buf.WriteString("# Keyspace\r\n")
-	for i := range KeyspaceStat {
-		fmt.Fprintf(buf, "db%d:keys=%d,expires=0,avg_ttl=0\r\n", i, KeyspaceStat[i]["keys"])
+	for i := range dstore.KeyspaceStat {
+		fmt.Fprintf(buf, "db%d:keys=%d,expires=0,avg_ttl=0\r\n", i, dstore.KeyspaceStat[i]["keys"])
 	}
 	return Encode(buf.String(), false)
 }
 
 // TODO: Placeholder to support monitoring
-func evalCLIENT(args []string, store *Store) []byte {
+func evalCLIENT(args []string, store *dstore.Store) []byte {
 	return RespOK
 }
 
 // TODO: Placeholder to support monitoring
-func evalLATENCY(args []string, store *Store) []byte {
+func evalLATENCY(args []string, store *dstore.Store) []byte {
 	return Encode([]string{}, false)
 }
 
 // evalLRU deletes all the keys from the LRU
 // returns encoded RESP OK
-func evalLRU(args []string, store *Store) []byte {
-	evictAllkeysLRU(store)
+func evalLRU(args []string, store *dstore.Store) []byte {
+	dstore.EvictAllkeysLRU(store)
 	return RespOK
 }
 
@@ -1037,7 +1038,7 @@ func evalLRU(args []string, store *Store) []byte {
 // The sleep time should be the only param in args.
 // Returns error response if the time param in args is not of integer format.
 // evalSLEEP returns RespOK after sleeping for mentioned seconds
-func evalSLEEP(args []string, store *Store) []byte {
+func evalSLEEP(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("SLEEP")
 	}
@@ -1055,7 +1056,7 @@ func evalSLEEP(args []string, store *Store) []byte {
 // The commands will not be executed until EXEC is triggered.
 // Once EXEC is triggered it executes all the commands in queue,
 // and closes the MULTI transaction.
-func evalMULTI(args []string, store *Store) []byte {
+func evalMULTI(args []string, store *dstore.Store) []byte {
 	return RespOK
 }
 
@@ -1063,7 +1064,7 @@ func evalMULTI(args []string, store *Store) []byte {
 // Every time a key in the watch list is modified, the client will be sent a response
 // containing the new value of the key along with the operation that was performed on it.
 // Contains only one argument, the query to be watched.
-func evalQWATCH(args []string, clientFd int, store *Store) []byte {
+func evalQWATCH(args []string, clientFd int, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("QWATCH")
 	}
@@ -1076,7 +1077,7 @@ func evalQWATCH(args []string, clientFd int, store *Store) []byte {
 	}
 
 	// use an unbuffered channel to ensure that we only proceed to query execution once the query watcher has built the cache
-	cacheChannel := make(chan *[]KeyValue)
+	cacheChannel := make(chan *[]dstore.KeyValue)
 	WatchSubscriptionChan <- WatchSubscription{
 		Subscribe: true,
 		Query:     query,
@@ -1084,7 +1085,7 @@ func evalQWATCH(args []string, clientFd int, store *Store) []byte {
 		CacheChan: cacheChannel,
 	}
 
-	store.CacheKeysForQuery(&query, cacheChannel)
+	store.CacheKeysForQuery(query.KeyRegex, cacheChannel)
 
 	// Return the result of the query.
 	responseChan := make(chan AdhocQueryResult)
@@ -1122,7 +1123,7 @@ func evalQUNWATCH(args []string, clientFd int) []byte {
 }
 
 // SETBIT key offset value
-func evalSETBIT(args []string, store *Store) []byte {
+func evalSETBIT(args []string, store *dstore.Store) []byte {
 	var err error
 
 	if len(args) != 3 {
@@ -1144,20 +1145,20 @@ func evalSETBIT(args []string, store *Store) []byte {
 	requiredByteArraySize := offset/8 + 1
 
 	if obj == nil {
-		obj = store.NewObj(NewByteArray(int(requiredByteArraySize)), -1, ObjTypeByteArray, ObjEncodingByteArray)
+		obj = store.NewObj(NewByteArray(int(requiredByteArraySize)), -1, dstore.ObjTypeByteArray, dstore.ObjEncodingByteArray)
 		store.Put(args[0], obj)
 	}
 
-	if assertType(obj.TypeEncoding, ObjTypeByteArray) == nil ||
-		assertType(obj.TypeEncoding, ObjTypeString) == nil ||
-		assertType(obj.TypeEncoding, ObjTypeInt) == nil {
+	if dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeByteArray) == nil ||
+		dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeString) == nil ||
+		dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeInt) == nil {
 		var byteArray *ByteArray
-		oType, oEnc := ExtractTypeEncoding(obj)
+		oType, oEnc := dstore.ExtractTypeEncoding(obj)
 
 		switch oType {
-		case ObjTypeByteArray:
+		case dstore.ObjTypeByteArray:
 			byteArray = obj.Value.(*ByteArray)
-		case ObjTypeString, ObjTypeInt:
+		case dstore.ObjTypeString, dstore.ObjTypeInt:
 			byteArray, err = NewByteArrayFromObj(obj)
 			if err != nil {
 				return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
@@ -1191,14 +1192,14 @@ func evalSETBIT(args []string, store *Store) []byte {
 			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 		}
 
-		exp, ok := getExpiry(obj, store)
+		exp, ok := dstore.GetExpiry(obj, store)
 		var exDurationMs int64 = -1
 		if ok {
 			exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
 		}
 		// newObj has bydefault expiry time -1 , we need to set it
 		if exDurationMs > 0 {
-			store.setExpiry(newObj, exDurationMs)
+			store.SetExpiry(newObj, exDurationMs)
 		}
 
 		store.Put(key, newObj)
@@ -1211,7 +1212,7 @@ func evalSETBIT(args []string, store *Store) []byte {
 }
 
 // GETBIT key offset
-func evalGETBIT(args []string, store *Store) []byte {
+func evalGETBIT(args []string, store *dstore.Store) []byte {
 	var err error
 
 	if len(args) != 2 {
@@ -1229,19 +1230,19 @@ func evalGETBIT(args []string, store *Store) []byte {
 		return Encode(0, true)
 	}
 	// if object is a set type, return error
-	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
+	if dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeSet) == nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	requiredByteArraySize := offset/8 + 1
 
 	// handle the case when it is string
-	if assertType(obj.TypeEncoding, ObjTypeString) == nil {
+	if dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeString) == nil {
 		return diceerrors.NewErrWithMessage("value is not a valid byte array")
 	}
 
 	// handle the case when it is byte array
-	if assertType(obj.TypeEncoding, ObjTypeByteArray) == nil {
+	if dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeByteArray) == nil {
 		byteArray := obj.Value.(*ByteArray)
 		byteArrayLength := byteArray.Length
 
@@ -1259,7 +1260,7 @@ func evalGETBIT(args []string, store *Store) []byte {
 	return Encode(0, true)
 }
 
-func evalBITCOUNT(args []string, store *Store) []byte {
+func evalBITCOUNT(args []string, store *dstore.Store) []byte {
 	var err error
 
 	// if more than 4 arguments are provided, return error
@@ -1275,7 +1276,7 @@ func evalBITCOUNT(args []string, store *Store) []byte {
 	}
 
 	// Check for the type of the object
-	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
+	if dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeSet) == nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
@@ -1283,14 +1284,14 @@ func evalBITCOUNT(args []string, store *Store) []byte {
 	value := []byte{}
 	valueLength := int64(0)
 
-	if assertType(obj.TypeEncoding, ObjTypeByteArray) == nil {
+	if dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeByteArray) == nil {
 		byteArray := obj.Value.(*ByteArray)
 		byteArrayObject := *byteArray
 		value = byteArrayObject.data
 		valueLength = byteArray.Length
 	}
 
-	if assertType(obj.TypeEncoding, ObjTypeString) == nil {
+	if dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeString) == nil {
 		value = []byte(valueInterface.(string))
 		valueLength = int64(len(value))
 	}
@@ -1367,7 +1368,7 @@ func evalBITCOUNT(args []string, store *Store) []byte {
 }
 
 // BITOP <AND | OR | XOR | NOT> destkey key [key ...]
-func evalBITOP(args []string, store *Store) []byte {
+func evalBITOP(args []string, store *dstore.Store) []byte {
 	operation, destKey := args[0], args[1]
 	operation = strings.ToUpper(operation)
 
@@ -1391,7 +1392,7 @@ func evalBITOP(args []string, store *Store) []byte {
 		}
 
 		var value []byte
-		if assertType(obj.TypeEncoding, ObjTypeByteArray) == nil {
+		if dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeByteArray) == nil {
 			byteArray := obj.Value.(*ByteArray)
 			byteArrayObject := *byteArray
 			value = byteArrayObject.data
@@ -1414,7 +1415,7 @@ func evalBITOP(args []string, store *Store) []byte {
 		operationResult.ResizeIfNecessary()
 
 		// create object related to result
-		obj = store.NewObj(operationResult, -1, ObjTypeByteArray, ObjEncodingByteArray)
+		obj = store.NewObj(operationResult, -1, dstore.ObjTypeByteArray, dstore.ObjEncodingByteArray)
 
 		// store the result in destKey
 		store.Put(destKey, obj)
@@ -1430,7 +1431,7 @@ func evalBITOP(args []string, store *Store) []byte {
 			values[i] = make([]byte, 0)
 		} else {
 			// handle the case when it is byte array
-			if assertType(obj.TypeEncoding, ObjTypeByteArray) == nil {
+			if dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeByteArray) == nil {
 				byteArray := obj.Value.(*ByteArray)
 				byteArrayObject := *byteArray
 				values[i] = byteArrayObject.data
@@ -1492,7 +1493,7 @@ func evalBITOP(args []string, store *Store) []byte {
 	operationResult.ResizeIfNecessary()
 
 	// create object related to result
-	operationResultObject := store.NewObj(operationResult, -1, ObjTypeByteArray, ObjEncodingByteArray)
+	operationResultObject := store.NewObj(operationResult, -1, dstore.ObjTypeByteArray, dstore.ObjEncodingByteArray)
 
 	// store the result in destKey
 	store.Put(destKey, operationResultObject)
@@ -1502,7 +1503,7 @@ func evalBITOP(args []string, store *Store) []byte {
 
 // evalCommand evaluates COMMAND <subcommand> command based on subcommand
 // COUNT: return total count of commands in Dice.
-func evalCommand(args []string, store *Store) []byte {
+func evalCommand(args []string, store *dstore.Store) []byte {
 	if len(args) == 0 {
 		return diceerrors.NewErrArity("COMMAND")
 	}
@@ -1529,7 +1530,7 @@ func evalCommandList() []byte {
 
 // evalKeys returns the list of keys that match the pattern
 // The pattern should be the only param in args
-func evalKeys(args []string, store *Store) []byte {
+func evalKeys(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("KEYS")
 	}
@@ -1575,7 +1576,7 @@ func evalCommandGetKeys(args []string) []byte {
 	}
 	return Encode(keys, false)
 }
-func evalRename(args []string, store *Store) []byte {
+func evalRename(args []string, store *dstore.Store) []byte {
 	if len(args) != 2 {
 		return diceerrors.NewErrArity("RENAME")
 	}
@@ -1603,7 +1604,7 @@ func evalRename(args []string, store *Store) []byte {
 // For each key, if the key is expired or does not exist, the response will be RespNIL;
 // otherwise, the response will be the RESP value of the key.
 // MGET is atomic, it retrieves all values at once
-func evalMGET(args []string, store *Store) []byte {
+func evalMGET(args []string, store *dstore.Store) []byte {
 	if len(args) < 1 {
 		return diceerrors.NewErrArity("MGET")
 	}
@@ -1619,7 +1620,7 @@ func evalMGET(args []string, store *Store) []byte {
 	return Encode(response, false)
 }
 
-func evalEXISTS(args []string, store *Store) []byte {
+func evalEXISTS(args []string, store *dstore.Store) []byte {
 	if len(args) == 0 {
 		return diceerrors.NewErrArity("EXISTS")
 	}
@@ -1634,7 +1635,7 @@ func evalEXISTS(args []string, store *Store) []byte {
 	return Encode(count, false)
 }
 
-func evalPersist(args []string, store *Store) []byte {
+func evalPersist(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("PERSIST")
 	}
@@ -1649,18 +1650,18 @@ func evalPersist(args []string, store *Store) []byte {
 	}
 
 	// If the object exists but no expiration is set on it, return -1
-	_, isExpirySet := getExpiry(obj, store)
+	_, isExpirySet := dstore.GetExpiry(obj, store)
 	if !isExpirySet {
 		return RespMinusOne
 	}
 
 	// If the object exists, remove the expiration time
-	delExpiry(obj, store)
+	dstore.DelExpiry(obj, store)
 
 	return RespOne
 }
 
-func evalCOPY(args []string, store *Store) []byte {
+func evalCOPY(args []string, store *dstore.Store) []byte {
 	if len(args) < 2 {
 		return diceerrors.NewErrArity("COPY")
 	}
@@ -1695,7 +1696,7 @@ func evalCOPY(args []string, store *Store) []byte {
 		return RespZero
 	}
 
-	exp, ok := getExpiry(sourceObj, store)
+	exp, ok := dstore.GetExpiry(sourceObj, store)
 	var exDurationMs int64 = -1
 	if ok {
 		exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
@@ -1704,7 +1705,7 @@ func evalCOPY(args []string, store *Store) []byte {
 	store.Put(destinationKey, copyObj)
 
 	if exDurationMs > 0 {
-		store.setExpiry(copyObj, exDurationMs)
+		store.SetExpiry(copyObj, exDurationMs)
 	}
 	return RespOne
 }
@@ -1721,7 +1722,7 @@ func evalCOPY(args []string, store *Store) []byte {
 // PERSIST -- Remove the time to live associated with the key.
 // The RESP value of the key is encoded and then returned
 // evalGET returns RespNIL if key is expired or it does not exist
-func evalGETEX(args []string, store *Store) []byte {
+func evalGETEX(args []string, store *dstore.Store) []byte {
 	if len(args) < 1 {
 		return diceerrors.NewErrArity("GETEX")
 	}
@@ -1737,7 +1738,7 @@ func evalGETEX(args []string, store *Store) []byte {
 	}
 
 	// check if the object is set type if yes then return error
-	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
+	if dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeSet) == nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
@@ -1812,9 +1813,9 @@ func evalGETEX(args []string, store *Store) []byte {
 
 	if state == Initialized {
 		if persist {
-			delExpiry(obj, store)
+			dstore.DelExpiry(obj, store)
 		} else {
-			store.setExpiry(obj, exDurationMs)
+			store.SetExpiry(obj, exDurationMs)
 		}
 	}
 
@@ -1828,7 +1829,7 @@ func evalGETEX(args []string, store *Store) []byte {
 //
 //	RESP encoded -2 stating key doesn't exist or key is expired
 //	RESP encoded -1 in case no expiration is set on the key
-func evalPTTL(args []string, store *Store) []byte {
+func evalPTTL(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("PTTL")
 	}
@@ -1841,7 +1842,7 @@ func evalPTTL(args []string, store *Store) []byte {
 		return RespMinusTwo
 	}
 
-	exp, isExpirySet := getExpiry(obj, store)
+	exp, isExpirySet := dstore.GetExpiry(obj, store)
 
 	if !isExpirySet {
 		return RespMinusOne
@@ -1862,7 +1863,7 @@ func evalPTTL(args []string, store *Store) []byte {
 // If key doesn't exist, a new key holding a hash is created.
 //
 // Usage: HSET key field value [field value ...]
-func evalHSET(args []string, store *Store) []byte {
+func evalHSET(args []string, store *dstore.Store) []byte {
 	if len(args) < 3 {
 		return diceerrors.NewErrArity("HSET")
 	}
@@ -1875,7 +1876,7 @@ func evalHSET(args []string, store *Store) []byte {
 	var numKeys int64
 
 	if obj != nil {
-		if err := assertTypeAndEncoding(obj.TypeEncoding, ObjTypeHashMap, ObjEncodingHashMap); err != nil {
+		if err := dstore.AssertTypeAndEncoding(obj.TypeEncoding, dstore.ObjTypeHashMap, dstore.ObjEncodingHashMap); err != nil {
 			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 		}
 		hashMap = obj.Value.(HashMap)
@@ -1887,14 +1888,14 @@ func evalHSET(args []string, store *Store) []byte {
 		return diceerrors.NewErrWithMessage(err.Error())
 	}
 
-	obj = store.NewObj(hashMap, -1, ObjTypeHashMap, ObjEncodingHashMap)
+	obj = store.NewObj(hashMap, -1, dstore.ObjTypeHashMap, dstore.ObjEncodingHashMap)
 
 	store.Put(key, obj)
 
 	return Encode(numKeys, false)
 }
 
-func evalHGETALL(args []string, store *Store) []byte {
+func evalHGETALL(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("HGETALL")
 	}
@@ -1907,7 +1908,7 @@ func evalHGETALL(args []string, store *Store) []byte {
 	var results []string
 
 	if obj != nil {
-		if err := assertTypeAndEncoding(obj.TypeEncoding, ObjTypeHashMap, ObjEncodingHashMap); err != nil {
+		if err := dstore.AssertTypeAndEncoding(obj.TypeEncoding, dstore.ObjTypeHashMap, dstore.ObjEncodingHashMap); err != nil {
 			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 		}
 		hashMap = obj.Value.(HashMap)
@@ -1920,16 +1921,16 @@ func evalHGETALL(args []string, store *Store) []byte {
 	return Encode(results, false)
 }
 
-func evalObjectIdleTime(key string, store *Store) []byte {
+func evalObjectIdleTime(key string, store *dstore.Store) []byte {
 	obj := store.GetNoTouch(key)
 	if obj == nil {
 		return RespNIL
 	}
 
-	return Encode(int64(getIdleTime(obj.LastAccessedAt)), true)
+	return Encode(int64(dstore.GetIdleTime(obj.LastAccessedAt)), true)
 }
 
-func evalOBJECT(args []string, store *Store) []byte {
+func evalOBJECT(args []string, store *dstore.Store) []byte {
 	if len(args) < 2 {
 		return diceerrors.NewErrArity("OBJECT")
 	}
@@ -1945,7 +1946,7 @@ func evalOBJECT(args []string, store *Store) []byte {
 	}
 }
 
-func evalTOUCH(args []string, store *Store) []byte {
+func evalTOUCH(args []string, store *dstore.Store) []byte {
 	if len(args) == 0 {
 		return diceerrors.NewErrArity("TOUCH")
 	}
@@ -1960,26 +1961,26 @@ func evalTOUCH(args []string, store *Store) []byte {
 	return Encode(count, false)
 }
 
-func evalLPUSH(args []string, store *Store) []byte {
+func evalLPUSH(args []string, store *dstore.Store) []byte {
 	if len(args) < 2 {
 		return diceerrors.NewErrArity("LPUSH")
 	}
 
 	obj := store.Get(args[0])
 	if obj == nil {
-		obj = store.NewObj(NewDeque(), -1, ObjTypeByteList, ObjEncodingDeque)
+		obj = store.NewObj(NewDeque(), -1, dstore.ObjTypeByteList, dstore.ObjEncodingDeque)
 	}
 
 	// if object is a set type, return error
-	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
+	if dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeSet) == nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
-	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
+	if err := dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeByteList); err != nil {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, ObjEncodingDeque); err != nil {
+	if err := dstore.AssertEncoding(obj.TypeEncoding, dstore.ObjEncodingDeque); err != nil {
 		return Encode(err, false)
 	}
 
@@ -1991,26 +1992,26 @@ func evalLPUSH(args []string, store *Store) []byte {
 	return RespOK
 }
 
-func evalRPUSH(args []string, store *Store) []byte {
+func evalRPUSH(args []string, store *dstore.Store) []byte {
 	if len(args) < 2 {
 		return diceerrors.NewErrArity("RPUSH")
 	}
 
 	obj := store.Get(args[0])
 	if obj == nil {
-		obj = store.NewObj(NewDeque(), -1, ObjTypeByteList, ObjEncodingDeque)
+		obj = store.NewObj(NewDeque(), -1, dstore.ObjTypeByteList, dstore.ObjEncodingDeque)
 	}
 
 	// if object is a set type, return error
-	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
+	if dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeSet) == nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
-	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
+	if err := dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeByteList); err != nil {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, ObjEncodingDeque); err != nil {
+	if err := dstore.AssertEncoding(obj.TypeEncoding, dstore.ObjEncodingDeque); err != nil {
 		return Encode(err, false)
 	}
 
@@ -2022,7 +2023,7 @@ func evalRPUSH(args []string, store *Store) []byte {
 	return RespOK
 }
 
-func evalRPOP(args []string, store *Store) []byte {
+func evalRPOP(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("RPOP")
 	}
@@ -2033,15 +2034,15 @@ func evalRPOP(args []string, store *Store) []byte {
 	}
 
 	// if object is a set type, return error
-	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
+	if dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeSet) == nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
-	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
+	if err := dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeByteList); err != nil {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, ObjEncodingDeque); err != nil {
+	if err := dstore.AssertEncoding(obj.TypeEncoding, dstore.ObjEncodingDeque); err != nil {
 		return Encode(err, false)
 	}
 
@@ -2057,7 +2058,7 @@ func evalRPOP(args []string, store *Store) []byte {
 	return Encode(x, false)
 }
 
-func evalLPOP(args []string, store *Store) []byte {
+func evalLPOP(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("LPOP")
 	}
@@ -2068,15 +2069,15 @@ func evalLPOP(args []string, store *Store) []byte {
 	}
 
 	// if object is a set type, return error
-	if assertType(obj.TypeEncoding, ObjTypeSet) == nil {
+	if dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeSet) == nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
-	if err := assertType(obj.TypeEncoding, ObjTypeByteList); err != nil {
+	if err := dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeByteList); err != nil {
 		return Encode(err, false)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, ObjEncodingDeque); err != nil {
+	if err := dstore.AssertEncoding(obj.TypeEncoding, dstore.ObjEncodingDeque); err != nil {
 		return Encode(err, false)
 	}
 
@@ -2100,7 +2101,7 @@ func evalLPOP(args []string, store *Store) []byte {
 // Returns:
 // Bulk string reply: the old value stored at the key.
 // Nil reply: if the key does not exist.
-func evalGETSET(args []string, store *Store) []byte {
+func evalGETSET(args []string, store *dstore.Store) []byte {
 	if len(args) != 2 {
 		return diceerrors.NewErrArity("GETSET")
 	}
@@ -2122,7 +2123,7 @@ func evalGETSET(args []string, store *Store) []byte {
 	return getResp
 }
 
-func evalFLUSHDB(args []string, store *Store) []byte {
+func evalFLUSHDB(args []string, store *dstore.Store) []byte {
 	log.Info(args)
 	if len(args) > 1 {
 		return diceerrors.NewErrArity("FLUSHDB")
@@ -2144,7 +2145,7 @@ func evalFLUSHDB(args []string, store *Store) []byte {
 	return RespOK
 }
 
-func evalSADD(args []string, store *Store) []byte {
+func evalSADD(args []string, store *dstore.Store) []byte {
 	if len(args) < 2 {
 		return diceerrors.NewErrArity("SADD")
 	}
@@ -2161,15 +2162,15 @@ func evalSADD(args []string, store *Store) []byte {
 		// If the object does not exist, create a new set object.
 		value := make(map[string]struct{}, lengthOfItems)
 		// Create a new object.
-		obj = store.NewObj(value, exDurationMs, ObjTypeSet, ObjEncodingSetStr)
-		store.Put(key, obj, WithKeepTTL(keepttl))
+		obj = store.NewObj(value, exDurationMs, dstore.ObjTypeSet, dstore.ObjEncodingSetStr)
+		store.Put(key, obj, dstore.WithKeepTTL(keepttl))
 	}
 
-	if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
+	if err := dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeSet); err != nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, ObjEncodingSetStr); err != nil {
+	if err := dstore.AssertEncoding(obj.TypeEncoding, dstore.ObjEncodingSetStr); err != nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
@@ -2186,7 +2187,7 @@ func evalSADD(args []string, store *Store) []byte {
 	return Encode(count, false)
 }
 
-func evalSMEMBERS(args []string, store *Store) []byte {
+func evalSMEMBERS(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("SMEMBERS")
 	}
@@ -2200,11 +2201,11 @@ func evalSMEMBERS(args []string, store *Store) []byte {
 	}
 
 	// If the object exists, check if it is a set object.
-	if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
+	if err := dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeSet); err != nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, ObjEncodingSetStr); err != nil {
+	if err := dstore.AssertEncoding(obj.TypeEncoding, dstore.ObjEncodingSetStr); err != nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
@@ -2219,7 +2220,7 @@ func evalSMEMBERS(args []string, store *Store) []byte {
 	return Encode(members, false)
 }
 
-func evalSREM(args []string, store *Store) []byte {
+func evalSREM(args []string, store *dstore.Store) []byte {
 	if len(args) < 2 {
 		return diceerrors.NewErrArity("SREM")
 	}
@@ -2234,11 +2235,11 @@ func evalSREM(args []string, store *Store) []byte {
 	}
 
 	// If the object exists, check if it is a set object.
-	if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
+	if err := dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeSet); err != nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, ObjEncodingSetStr); err != nil {
+	if err := dstore.AssertEncoding(obj.TypeEncoding, dstore.ObjEncodingSetStr); err != nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
@@ -2255,7 +2256,7 @@ func evalSREM(args []string, store *Store) []byte {
 	return Encode(count, false)
 }
 
-func evalSCARD(args []string, store *Store) []byte {
+func evalSCARD(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("SCARD")
 	}
@@ -2270,11 +2271,11 @@ func evalSCARD(args []string, store *Store) []byte {
 	}
 
 	// If the object exists, check if it is a set object.
-	if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
+	if err := dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeSet); err != nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, ObjEncodingSetStr); err != nil {
+	if err := dstore.AssertEncoding(obj.TypeEncoding, dstore.ObjEncodingSetStr); err != nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
@@ -2283,7 +2284,7 @@ func evalSCARD(args []string, store *Store) []byte {
 	return Encode(count, false)
 }
 
-func evalSDIFF(args []string, store *Store) []byte {
+func evalSDIFF(args []string, store *dstore.Store) []byte {
 	if len(args) < 1 {
 		return diceerrors.NewErrArity("SDIFF")
 	}
@@ -2296,11 +2297,11 @@ func evalSDIFF(args []string, store *Store) []byte {
 		return Encode([]string{}, false)
 	}
 
-	if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
+	if err := dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeSet); err != nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
-	if err := assertEncoding(obj.TypeEncoding, ObjEncodingSetStr); err != nil {
+	if err := dstore.AssertEncoding(obj.TypeEncoding, dstore.ObjEncodingSetStr); err != nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
@@ -2327,11 +2328,11 @@ func evalSDIFF(args []string, store *Store) []byte {
 		}
 
 		// If the object exists, check if it is a set object.
-		if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
+		if err := dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeSet); err != nil {
 			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 		}
 
-		if err := assertEncoding(obj.TypeEncoding, ObjEncodingSetStr); err != nil {
+		if err := dstore.AssertEncoding(obj.TypeEncoding, dstore.ObjEncodingSetStr); err != nil {
 			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 		}
 
@@ -2361,7 +2362,7 @@ func evalSDIFF(args []string, store *Store) []byte {
 	return Encode(members, false)
 }
 
-func evalSINTER(args []string, store *Store) []byte {
+func evalSINTER(args []string, store *dstore.Store) []byte {
 	if len(args) < 2 {
 		return diceerrors.NewErrArity("SINTER")
 	}
@@ -2380,11 +2381,11 @@ func evalSINTER(args []string, store *Store) []byte {
 		}
 
 		// If the object exists, check if it is a set object.
-		if err := assertType(obj.TypeEncoding, ObjTypeSet); err != nil {
+		if err := dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeSet); err != nil {
 			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 		}
 
-		if err := assertEncoding(obj.TypeEncoding, ObjEncodingSetStr); err != nil {
+		if err := dstore.AssertEncoding(obj.TypeEncoding, dstore.ObjEncodingSetStr); err != nil {
 			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 		}
 
@@ -2444,7 +2445,7 @@ func evalSINTER(args []string, store *Store) []byte {
 // Returns:
 // If the approximated cardinality estimated by the HyperLogLog changed after executing the command,
 // returns 1, otherwise 0 is returned.
-func evalPFADD(args []string, store *Store) []byte {
+func evalPFADD(args []string, store *dstore.Store) []byte {
 	if len(args) < 1 {
 		return diceerrors.NewErrArity("PFADD")
 	}
@@ -2459,7 +2460,7 @@ func evalPFADD(args []string, store *Store) []byte {
 			hll.Insert([]byte(arg))
 		}
 
-		obj = store.NewObj(hll, -1, ObjTypeString, ObjEncodingRaw)
+		obj = store.NewObj(hll, -1, dstore.ObjTypeString, dstore.ObjEncodingRaw)
 
 		store.Put(key, obj)
 		return Encode(1, false)
@@ -2478,7 +2479,7 @@ func evalPFADD(args []string, store *Store) []byte {
 	return Encode(0, false)
 }
 
-func evalPFCOUNT(args []string, store *Store) []byte {
+func evalPFCOUNT(args []string, store *dstore.Store) []byte {
 	if len(args) < 1 {
 		return diceerrors.NewErrArity("PFCOUNT")
 	}

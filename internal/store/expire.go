@@ -1,4 +1,4 @@
-package core
+package store
 
 import (
 	"github.com/dicedb/dice/server/utils"
@@ -12,12 +12,12 @@ func hasExpired(obj *Obj, store *Store) bool {
 	return exp <= uint64(utils.GetCurrentTime().UnixMilli())
 }
 
-func getExpiry(obj *Obj, store *Store) (uint64, bool) {
+func GetExpiry(obj *Obj, store *Store) (uint64, bool) {
 	exp, ok := store.expires.Get(obj)
 	return exp, ok
 }
 
-func delExpiry(obj *Obj, store *Store) {
+func DelExpiry(obj *Obj, store *Store) {
 	store.expires.Delete(obj)
 }
 
@@ -25,8 +25,8 @@ func delExpiry(obj *Obj, store *Store) {
 //   - Sampling
 //   - Unnecessary iteration
 func expireSample(store *Store) float32 {
-	var limit int = 20
-	var expiredCount int = 0
+	var limit = 20
+	var expiredCount = 0
 	var keysToDelete []string
 
 	withLocks(func() {

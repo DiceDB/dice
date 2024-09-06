@@ -1,9 +1,8 @@
-package core_test
+package regex
 
 import (
 	"testing"
 
-	"github.com/dicedb/dice/core"
 	"github.com/dicedb/dice/internal/constants"
 )
 
@@ -44,7 +43,7 @@ func TestWildCardMatch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.pattern+"_"+tt.key, func(t *testing.T) {
-			if got := core.WildCardMatch(tt.pattern, tt.key); got != tt.want {
+			if got := WildCardMatch(tt.pattern, tt.key); got != tt.want {
 				t.Errorf("WildcardMatch(%q, %q) = %v, want %v", tt.pattern, tt.key, got, tt.want)
 			}
 		})
@@ -71,7 +70,7 @@ func BenchmarkWildCardMatch(b *testing.B) {
 	for _, tc := range testCases {
 		b.Run(tc.pattern, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				core.WildCardMatch(tc.pattern, tc.key)
+				WildCardMatch(tc.pattern, tc.key)
 			}
 		})
 	}

@@ -1,4 +1,4 @@
-package core
+package store
 
 import (
 	"github.com/dicedb/dice/config"
@@ -40,7 +40,7 @@ func getCurrentClock() uint32 {
 	return uint32(utils.GetCurrentTime().Unix()) & 0x00FFFFFF
 }
 
-func getIdleTime(lastAccessedAt uint32) uint32 {
+func GetIdleTime(lastAccessedAt uint32) uint32 {
 	c := getCurrentClock()
 	if c >= lastAccessedAt {
 		return c - lastAccessedAt
@@ -69,7 +69,7 @@ func populateEvictionPool(store *Store) {
 
 // TODO: no need to populate everytime. should populate
 // only when the number of keys to evict is less than what we have in the pool
-func evictAllkeysLRU(store *Store) {
+func EvictAllkeysLRU(store *Store) {
 	populateEvictionPool(store)
 	evictCount := int16(config.EvictionRatio * float64(config.KeysLimit))
 	for i := 0; i < int(evictCount) && len(ePool.pool) > 0; i++ {
@@ -89,6 +89,6 @@ func (store *Store) evict() {
 	case "allkeys-random":
 		evictAllkeysRandom(store)
 	case "allkeys-lru":
-		evictAllkeysLRU(store)
+		EvictAllkeysLRU(store)
 	}
 }

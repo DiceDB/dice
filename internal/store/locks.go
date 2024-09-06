@@ -1,4 +1,4 @@
-package core
+package store
 
 // LockOption represents a function that can modify a LockStrategy
 type LockOption func(*LockStrategy)

@@ -1,12 +1,12 @@
-package core_test
+package core
 
 import (
 	"sort"
 	"testing"
 
 	"github.com/bytedance/sonic"
-	"github.com/dicedb/dice/core"
 	"github.com/dicedb/dice/internal/constants"
+	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/xwb1989/sqlparser"
 	"gotest.tools/v3/assert"
 	"gotest.tools/v3/assert/cmp"
@@ -28,34 +28,34 @@ var (
 	}
 )
 
-func setup(store *core.Store) {
+func setup(store *dstore.Store) {
 	// delete all keys
 	for _, data := range dataset {
 		store.Del(data.key)
 	}
 
 	for _, data := range dataset {
-		store.Put(data.key, &core.Obj{Value: data.value})
+		store.Put(data.key, &dstore.Obj{Value: data.value})
 	}
 }
 
 func TestExecuteQueryOrderBykey(t *testing.T) {
-	store := core.NewStore(nil)
+	store := dstore.NewStore(nil)
 	setup(store)
 
-	query := core.DSQLQuery{
+	query := DSQLQuery{
 		KeyRegex: "k*",
-		Selection: core.QuerySelection{
+		Selection: QuerySelection{
 			KeySelection:   true,
 			ValueSelection: true,
 		},
-		OrderBy: core.QueryOrder{
+		OrderBy: QueryOrder{
 			OrderBy: "_key",
 			Order:   constants.Asc,
 		},
 	}
 
-	result, err := core.ExecuteQuery(&query, store.GetStore())
+	result, err := ExecuteQuery(&query, store.GetStore())
 
 	assert.NilError(t, err)
 	assert.Equal(t, len(result), len(dataset))
@@ -75,22 +75,22 @@ func TestExecuteQueryOrderBykey(t *testing.T) {
 }
 
 func TestExecuteQueryBasicOrderByValue(t *testing.T) {
-	store := core.NewStore(nil)
+	store := dstore.NewStore(nil)
 	setup(store)
 
-	query := core.DSQLQuery{
+	query := DSQLQuery{
 		KeyRegex: "k*",
-		Selection: core.QuerySelection{
+		Selection: QuerySelection{
 			KeySelection:   true,
 			ValueSelection: true,
 		},
-		OrderBy: core.QueryOrder{
+		OrderBy: QueryOrder{
 			OrderBy: "_value",
 			Order:   constants.Asc,
 		},
 	}
 
-	result, err := core.ExecuteQuery(&query, store.GetStore())
+	result, err := ExecuteQuery(&query, store.GetStore())
 
 	assert.NilError(t, err)
 	assert.Equal(t, len(result), len(dataset))
@@ -110,23 +110,23 @@ func TestExecuteQueryBasicOrderByValue(t *testing.T) {
 }
 
 func TestExecuteQueryLimit(t *testing.T) {
-	store := core.NewStore(nil)
+	store := dstore.NewStore(nil)
 	setup(store)
 
-	query := core.DSQLQuery{
+	query := DSQLQuery{
 		KeyRegex: "k*",
-		Selection: core.QuerySelection{
+		Selection: QuerySelection{
 			KeySelection:   false,
 			ValueSelection: true,
 		},
-		OrderBy: core.QueryOrder{
+		OrderBy: QueryOrder{
 			OrderBy: "_key",
 			Order:   constants.Asc,
 		},
 		Limit: 3,
 	}
 
-	result, err := core.ExecuteQuery(&query, store.GetStore())
+	result, err := ExecuteQuery(&query, store.GetStore())
 
 	assert.NilError(t, err)
 	assert.Assert(t, cmp.Len(result, 3)) // Checks if limit is respected
@@ -146,30 +146,30 @@ func TestExecuteQueryLimit(t *testing.T) {
 }
 
 func TestExecuteQueryNoMatch(t *testing.T) {
-	store := core.NewStore(nil)
+	store := dstore.NewStore(nil)
 	setup(store)
 
-	query := core.DSQLQuery{
+	query := DSQLQuery{
 		KeyRegex: "x*",
-		Selection: core.QuerySelection{
+		Selection: QuerySelection{
 			KeySelection:   true,
 			ValueSelection: true,
 		},
 	}
 
-	result, err := core.ExecuteQuery(&query, store.GetStore())
+	result, err := ExecuteQuery(&query, store.GetStore())
 
 	assert.NilError(t, err)
 	assert.Assert(t, cmp.Len(result, 0)) // No keys match "x*"
 }
 
 func TestExecuteQueryWithWhere(t *testing.T) {
-	store := core.NewStore(nil)
+	store := dstore.NewStore(nil)
 	setup(store)
 	t.Run("BasicWhereClause", func(t *testing.T) {
-		query := core.DSQLQuery{
+		query := DSQLQuery{
 			KeyRegex: "k*",
-			Selection: core.QuerySelection{
+			Selection: QuerySelection{
 				KeySelection:   true,
 				ValueSelection: true,
 			},
@@ -180,7 +180,7 @@ func TestExecuteQueryWithWhere(t *testing.T) {
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store.GetStore())
+		result, err := ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 result for WHERE clause")
@@ -189,9 +189,9 @@ func TestExecuteQueryWithWhere(t *testing.T) {
 	})
 
 	t.Run("EmptyResult", func(t *testing.T) {
-		query := core.DSQLQuery{
+		query := DSQLQuery{
 			KeyRegex: "k*",
-			Selection: core.QuerySelection{
+			Selection: QuerySelection{
 				KeySelection:   true,
 				ValueSelection: true,
 			},
@@ -202,20 +202,20 @@ func TestExecuteQueryWithWhere(t *testing.T) {
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store.GetStore())
+		result, err := ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 0, "Expected empty result for non-matching WHERE clause")
 	})
 
 	t.Run("ComplexWhereClause", func(t *testing.T) {
-		query := core.DSQLQuery{
+		query := DSQLQuery{
 			KeyRegex: "k*",
-			Selection: core.QuerySelection{
+			Selection: QuerySelection{
 				KeySelection:   true,
 				ValueSelection: true,
 			},
-			OrderBy: core.QueryOrder{
+			OrderBy: QueryOrder{
 				OrderBy: "_value",
 				Order:   "desc",
 			},
@@ -233,7 +233,7 @@ func TestExecuteQueryWithWhere(t *testing.T) {
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store.GetStore())
+		result, err := ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 2, "Expected 2 results for complex WHERE clause")
@@ -241,9 +241,9 @@ func TestExecuteQueryWithWhere(t *testing.T) {
 	})
 
 	t.Run("ComparingKeyWithValue", func(t *testing.T) {
-		query := core.DSQLQuery{
+		query := DSQLQuery{
 			KeyRegex: "k*",
-			Selection: core.QuerySelection{
+			Selection: QuerySelection{
 				KeySelection:   true,
 				ValueSelection: true,
 			},
@@ -254,7 +254,7 @@ func TestExecuteQueryWithWhere(t *testing.T) {
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store.GetStore())
+		result, err := ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 result for comparison between key and value")
@@ -264,13 +264,13 @@ func TestExecuteQueryWithWhere(t *testing.T) {
 }
 
 func TestExecuteQueryWithIncompatibleTypes(t *testing.T) {
-	store := core.NewStore(nil)
+	store := dstore.NewStore(nil)
 	setup(store)
 
 	t.Run("ComparingStrWithInt", func(t *testing.T) {
-		query := core.DSQLQuery{
+		query := DSQLQuery{
 			KeyRegex: "k*",
-			Selection: core.QuerySelection{
+			Selection: QuerySelection{
 				KeySelection:   true,
 				ValueSelection: true,
 			},
@@ -281,7 +281,7 @@ func TestExecuteQueryWithIncompatibleTypes(t *testing.T) {
 			},
 		}
 
-		_, err := core.ExecuteQuery(&query, store.GetStore())
+		_, err := ExecuteQuery(&query, store.GetStore())
 
 		assert.Error(t, err, "incompatible types in comparison: string and int64")
 	})
@@ -289,12 +289,12 @@ func TestExecuteQueryWithIncompatibleTypes(t *testing.T) {
 	t.Run("NullValue", func(t *testing.T) {
 		// We don't support NULL values in Dice, however, we should include a
 		// test for it to ensure the executor handles it correctly.
-		store.Put("nullKey", &core.Obj{Value: nil})
+		store.Put("nullKey", &dstore.Obj{Value: nil})
 		defer store.Del("nullKey")
 
-		query := core.DSQLQuery{
+		query := DSQLQuery{
 			KeyRegex: "nullKey",
-			Selection: core.QuerySelection{
+			Selection: QuerySelection{
 				KeySelection:   true,
 				ValueSelection: true,
 			},
@@ -305,20 +305,20 @@ func TestExecuteQueryWithIncompatibleTypes(t *testing.T) {
 			},
 		}
 
-		_, err := core.ExecuteQuery(&query, store.GetStore())
+		_, err := ExecuteQuery(&query, store.GetStore())
 
 		assert.Error(t, err, "unsupported value type: <nil>")
 	})
 }
 
 func TestExecuteQueryWithEdgeCases(t *testing.T) {
-	store := core.NewStore(nil)
+	store := dstore.NewStore(nil)
 	setup(store)
 
 	t.Run("CaseSensitivity", func(t *testing.T) {
-		query := core.DSQLQuery{
+		query := DSQLQuery{
 			KeyRegex: "k*",
-			Selection: core.QuerySelection{
+			Selection: QuerySelection{
 				KeySelection:   true,
 				ValueSelection: true,
 			},
@@ -329,20 +329,20 @@ func TestExecuteQueryWithEdgeCases(t *testing.T) {
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store.GetStore())
+		result, err := ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 0, "Expected 0 results due to case sensitivity")
 	})
 
 	t.Run("WhereClauseOnKey", func(t *testing.T) {
-		query := core.DSQLQuery{
+		query := DSQLQuery{
 			KeyRegex: "k*",
-			Selection: core.QuerySelection{
+			Selection: QuerySelection{
 				KeySelection:   true,
 				ValueSelection: true,
 			},
-			OrderBy: core.QueryOrder{
+			OrderBy: QueryOrder{
 				OrderBy: "_key",
 				Order:   constants.Asc,
 			},
@@ -353,7 +353,7 @@ func TestExecuteQueryWithEdgeCases(t *testing.T) {
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store.GetStore())
+		result, err := ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 2, "Expected 2 results for WHERE clause on key")
@@ -361,9 +361,9 @@ func TestExecuteQueryWithEdgeCases(t *testing.T) {
 	})
 
 	t.Run("UnsupportedOperator", func(t *testing.T) {
-		query := core.DSQLQuery{
+		query := DSQLQuery{
 			KeyRegex: "k*",
-			Selection: core.QuerySelection{
+			Selection: QuerySelection{
 				KeySelection:   true,
 				ValueSelection: true,
 			},
@@ -374,20 +374,20 @@ func TestExecuteQueryWithEdgeCases(t *testing.T) {
 			},
 		}
 
-		_, err := core.ExecuteQuery(&query, store.GetStore())
+		_, err := ExecuteQuery(&query, store.GetStore())
 
 		assert.ErrorContains(t, err, "unsupported operator")
 	})
 
 	t.Run("EmptyKeyRegex", func(t *testing.T) {
-		query := core.DSQLQuery{
+		query := DSQLQuery{
 			KeyRegex: constants.EmptyStr,
-			Selection: core.QuerySelection{
+			Selection: QuerySelection{
 				KeySelection:   true,
 				ValueSelection: true,
 			},
 		}
-		result, err := core.ExecuteQuery(&query, store.GetStore())
+		result, err := ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 0, "Expected no keys to be returned for empty regex")
@@ -402,7 +402,7 @@ var jsonWhereClauseDataset = []keyValue{
 	{"json5", `{"field1":{"field2":{"field3":{"score":18}},"score2":5}}`},
 }
 
-func setupJSON(t *testing.T, store *core.Store, dataset []keyValue) {
+func setupJSON(t *testing.T, store *dstore.Store, dataset []keyValue) {
 	t.Helper()
 	for _, data := range dataset {
 		store.Del(data.key)
@@ -414,18 +414,18 @@ func setupJSON(t *testing.T, store *core.Store, dataset []keyValue) {
 			t.Fatalf("Failed to unmarshal value: %v", err)
 		}
 
-		store.Put(data.key, store.NewObj(jsonValue, -1, core.ObjTypeJSON, core.ObjEncodingJSON))
+		store.Put(data.key, store.NewObj(jsonValue, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON))
 	}
 }
 
 func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
-	store := core.NewStore(nil)
+	store := dstore.NewStore(nil)
 	setupJSON(t, store, jsonWhereClauseDataset)
 
 	t.Run("BasicWhereClauseWithJSON", func(t *testing.T) {
-		query := core.DSQLQuery{
+		query := DSQLQuery{
 			KeyRegex: "json*",
-			Selection: core.QuerySelection{
+			Selection: QuerySelection{
 				KeySelection:   true,
 				ValueSelection: true,
 			},
@@ -436,7 +436,7 @@ func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store.GetStore())
+		result, err := ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 results for WHERE clause")
@@ -449,9 +449,9 @@ func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
 	})
 
 	t.Run("EmptyResult", func(t *testing.T) {
-		query := core.DSQLQuery{
+		query := DSQLQuery{
 			KeyRegex: "json*",
-			Selection: core.QuerySelection{
+			Selection: QuerySelection{
 				KeySelection:   true,
 				ValueSelection: true,
 			},
@@ -462,16 +462,16 @@ func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store.GetStore())
+		result, err := ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 0, "Expected empty result for non-matching WHERE clause")
 	})
 
 	t.Run("WhereClauseWithFloats", func(t *testing.T) {
-		query := core.DSQLQuery{
+		query := DSQLQuery{
 			KeyRegex: "json*",
-			Selection: core.QuerySelection{
+			Selection: QuerySelection{
 				KeySelection:   true,
 				ValueSelection: true,
 			},
@@ -482,7 +482,7 @@ func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store.GetStore())
+		result, err := ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 result for WHERE clause with floating point values")
@@ -495,9 +495,9 @@ func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
 	})
 
 	t.Run("WhereClauseWithInteger", func(t *testing.T) {
-		query := core.DSQLQuery{
+		query := DSQLQuery{
 			KeyRegex: "json*",
-			Selection: core.QuerySelection{
+			Selection: QuerySelection{
 				KeySelection:   true,
 				ValueSelection: true,
 			},
@@ -508,7 +508,7 @@ func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store.GetStore())
+		result, err := ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 result for WHERE clause with integer values")
@@ -521,9 +521,9 @@ func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
 	})
 
 	t.Run("NestedWhereClause", func(t *testing.T) {
-		query := core.DSQLQuery{
+		query := DSQLQuery{
 			KeyRegex: "json*",
-			Selection: core.QuerySelection{
+			Selection: QuerySelection{
 				KeySelection:   true,
 				ValueSelection: true,
 			},
@@ -534,7 +534,7 @@ func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store.GetStore())
+		result, err := ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 result for WHERE clause with nested json")
@@ -547,9 +547,9 @@ func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
 	})
 
 	t.Run("ComplexWhereClause", func(t *testing.T) {
-		query := core.DSQLQuery{
+		query := DSQLQuery{
 			KeyRegex: "json*",
-			Selection: core.QuerySelection{
+			Selection: QuerySelection{
 				KeySelection:   true,
 				ValueSelection: true,
 			},
@@ -560,7 +560,7 @@ func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store.GetStore())
+		result, err := ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 result for Complex WHERE clause expression")
@@ -582,23 +582,23 @@ var jsonOrderDataset = []keyValue{
 }
 
 func TestExecuteQueryWithJsonOrderBy(t *testing.T) {
-	store := core.NewStore(nil)
+	store := dstore.NewStore(nil)
 	setupJSON(t, store, jsonOrderDataset)
 
 	t.Run("OrderBySimpleJSONField", func(t *testing.T) {
-		query := core.DSQLQuery{
+		query := DSQLQuery{
 			KeyRegex: "json*",
-			Selection: core.QuerySelection{
+			Selection: QuerySelection{
 				KeySelection:   true,
 				ValueSelection: true,
 			},
-			OrderBy: core.QueryOrder{
+			OrderBy: QueryOrder{
 				OrderBy: "_value.name",
 				Order:   "asc",
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store.GetStore())
+		result, err := ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, 5, len(result), "Expected 5 results")
@@ -620,19 +620,19 @@ func TestExecuteQueryWithJsonOrderBy(t *testing.T) {
 	})
 
 	t.Run("OrderByNumericJSONField", func(t *testing.T) {
-		query := core.DSQLQuery{
+		query := DSQLQuery{
 			KeyRegex: "json*",
-			Selection: core.QuerySelection{
+			Selection: QuerySelection{
 				KeySelection:   true,
 				ValueSelection: true,
 			},
-			OrderBy: core.QueryOrder{
+			OrderBy: QueryOrder{
 				OrderBy: "_value.age",
 				Order:   "desc",
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store.GetStore())
+		result, err := ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, 5, len(result))
@@ -654,19 +654,19 @@ func TestExecuteQueryWithJsonOrderBy(t *testing.T) {
 	})
 
 	t.Run("OrderByNestedJSONField", func(t *testing.T) {
-		query := core.DSQLQuery{
+		query := DSQLQuery{
 			KeyRegex: "json*",
-			Selection: core.QuerySelection{
+			Selection: QuerySelection{
 				KeySelection:   true,
 				ValueSelection: true,
 			},
-			OrderBy: core.QueryOrder{
+			OrderBy: QueryOrder{
 				OrderBy: "_value.nested.field.value",
 				Order:   "asc",
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store.GetStore())
+		result, err := ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, 5, len(result))
@@ -687,19 +687,19 @@ func TestExecuteQueryWithJsonOrderBy(t *testing.T) {
 	})
 
 	t.Run("OrderByMixedTypes", func(t *testing.T) {
-		query := core.DSQLQuery{
+		query := DSQLQuery{
 			KeyRegex: "json*",
-			Selection: core.QuerySelection{
+			Selection: QuerySelection{
 				KeySelection:   true,
 				ValueSelection: true,
 			},
-			OrderBy: core.QueryOrder{
+			OrderBy: QueryOrder{
 				OrderBy: "_value.score",
 				Order:   "desc",
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store.GetStore())
+		result, err := ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		// No ordering guarantees for mixed types.
@@ -707,9 +707,9 @@ func TestExecuteQueryWithJsonOrderBy(t *testing.T) {
 	})
 
 	t.Run("OrderByWithWhereClause", func(t *testing.T) {
-		query := core.DSQLQuery{
+		query := DSQLQuery{
 			KeyRegex: "json*",
-			Selection: core.QuerySelection{
+			Selection: QuerySelection{
 				KeySelection:   true,
 				ValueSelection: true,
 			},
@@ -718,13 +718,13 @@ func TestExecuteQueryWithJsonOrderBy(t *testing.T) {
 				Operator: ">",
 				Right:    sqlparser.NewIntVal([]byte("30")),
 			},
-			OrderBy: core.QueryOrder{
+			OrderBy: QueryOrder{
 				OrderBy: "_value.name",
 				Order:   "desc",
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store.GetStore())
+		result, err := ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, 3, len(result), "Expected 3 results (age > 30, ordered by name)")
@@ -739,19 +739,19 @@ func TestExecuteQueryWithJsonOrderBy(t *testing.T) {
 	})
 
 	t.Run("OrderByNonExistentField", func(t *testing.T) {
-		query := core.DSQLQuery{
+		query := DSQLQuery{
 			KeyRegex: "json*",
-			Selection: core.QuerySelection{
+			Selection: QuerySelection{
 				KeySelection:   true,
 				ValueSelection: true,
 			},
-			OrderBy: core.QueryOrder{
+			OrderBy: QueryOrder{
 				OrderBy: "_value.nonexistent",
 				Order:   "asc",
 			},
 		}
 
-		result, err := core.ExecuteQuery(&query, store.GetStore())
+		result, err := ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		// No ordering guarantees for non-existent field references.
