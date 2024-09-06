@@ -1188,10 +1188,10 @@ func evalSETBIT(args []string, store *dstore.Store) []byte {
 		}
 
 		store.Put(key, newObj)
-		if response {
-			return Encode(int(1), true)
+		if resp {
+			return clientio.Encode(int(1), true)
 		}
-		return Encode(int(0), true)
+		return clientio.Encode(int(0), true)
 	}
 	return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 }
@@ -1231,22 +1231,22 @@ func evalGETBIT(args []string, store *dstore.Store) []byte {
 		if value {
 			return clientio.Encode(1, true)
 		}
-		return Encode(0, true)
+		return clientio.Encode(0, true)
 	case dstore.ObjTypeString, dstore.ObjTypeInt:
 		byteArray, err := NewByteArrayFromObj(obj)
 		if err != nil {
 			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 		}
 		if requiredByteArraySize > byteArray.Length {
-			return Encode(0, true)
+			return clientio.Encode(0, true)
 		}
 		value := byteArray.GetBit(int(offset))
 		if value {
-			return Encode(1, true)
+			return clientio.Encode(1, true)
 		}
-		return Encode(0, true)
+		return clientio.Encode(0, true)
 	default:
-		return Encode(0, true)
+		return clientio.Encode(0, true)
 	}
 }
 
@@ -1411,7 +1411,7 @@ func evalBITOP(args []string, store *dstore.Store) []byte {
 
 			// store the result in destKey
 			store.Put(destKey, obj)
-			return Encode(len(value), true)
+			return clientio.Encode(len(value), true)
 		case dstore.ObjTypeString, dstore.ObjTypeInt:
 			if oType == dstore.ObjTypeString {
 				value = []byte(obj.Value.(string))
@@ -1431,7 +1431,7 @@ func evalBITOP(args []string, store *dstore.Store) []byte {
 				storedValue = string(result)
 			}
 			store.Put(destKey, store.NewObj(storedValue, -1, resOType, resOEnc))
-			return Encode(len(value), true)
+			return clientio.Encode(len(value), true)
 		default:
 			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 		}
