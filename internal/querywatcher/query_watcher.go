@@ -2,7 +2,7 @@ package querywatcher
 
 import (
 	"context"
-	"crypto/md5"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"sync"
@@ -130,7 +130,7 @@ func (w *QWatchManager) processWatchEvent(event dstore.WatchEvent) {
 	*/
 	w.WatchList.Range(func(fingerPrint, value interface{}) bool {
 		/*
-			Fetch all the queries that match the fingerprint. If the fingerprint is not found in the cache, then it is likely that the query has been deleted. In that case, we can skip the rest of the logic.
+			Fetch all the queries that match the fingerprint. If the fingerprint is not found in the cache, then it is likely that the query has been deleted. In that case, we can skip the rest of the logic
 		*/
 		queries, ok := w.FingerPrintCache.Get(fingerPrint.(string))
 		if !ok {
@@ -215,7 +215,7 @@ func (w *QWatchManager) serveAdhocQueries(ctx context.Context) {
 
 // generateQueryFingerprint used to creating a common fingerprint for similar queries
 func generateQueryFingerprint(query *DSQLQuery) string {
-	hash := md5.Sum([]byte(query.KeyRegex))
+	hash := sha256.Sum256([]byte(query.KeyRegex))
 	fingerprint := hex.EncodeToString(hash[:])
 	return "f_" + fingerprint
 }
@@ -306,6 +306,5 @@ func (w *QWatchManager) deleteQueryFingerprint(clientFD int, queryFingerprint st
 	if queries, ok := w.FingerPrintCache.Get(queryFingerprint); ok {
 		delete(queries, clientFD)
 		w.FingerPrintCache.Put(queryFingerprint, queries)
-
 	}
 }
