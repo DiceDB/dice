@@ -21,6 +21,7 @@ import (
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/core"
 	"github.com/dicedb/dice/core/iomultiplexer"
+	"github.com/dicedb/dice/internal/constants"
 )
 
 var ErrAborted = errors.New("server received ABORT command")
@@ -32,7 +33,7 @@ type AsyncServer struct {
 	multiplexer            iomultiplexer.IOMultiplexer
 	multiplexerPollTimeout time.Duration
 	connectedClients       map[int]*comm.Client
-	queryWatcher           *core.QueryWatcher
+	queryWatcher           *core.QWatchManager
 	shardManager           *core.ShardManager
 	ioChan                 chan *ops.StoreResponse // The server acts like a worker today, this behavior will change once IOThreads are introduced and each client gets its own worker.
 	watchChan              chan core.WatchEvent    // This is needed to co-ordinate between the store and the query watcher
@@ -42,10 +43,11 @@ type AsyncServer struct {
 func NewAsyncServer() *AsyncServer {
 	watchChan := make(chan core.WatchEvent, config.KeysLimit)
 	return &AsyncServer{
-		maxClients:             config.ServerMaxClients,
-		connectedClients:       make(map[int]*comm.Client),
-		shardManager:           core.NewShardManager(1, watchChan),
-		queryWatcher:           core.NewQueryWatcher(),
+		maxClients:       config.ServerMaxClients,
+		connectedClients: make(map[int]*comm.Client),
+		shardManager:     core.NewShardManager(1, watchChan),
+		//TODO(Pratik): Move QWatchManager to Worker level when exists
+		queryWatcher:           core.NewQWatchManager(),
 		multiplexerPollTimeout: config.ServerMultiplexerPollTimeout,
 		ioChan:                 make(chan *ops.StoreResponse, 1000),
 		watchChan:              watchChan,
@@ -58,7 +60,11 @@ func (s *AsyncServer) SetupUsers() error {
 	if err != nil {
 		return err
 	}
-	return user.SetPassword(config.RequirePass)
+	if err := user.SetPassword(config.RequirePass); err != nil {
+		return err
+	}
+	log.Info("default user set up", "password required", config.RequirePass != constants.EmptyStr)
+	return nil
 }
 
 // FindPortAndBind binds the server to the given host and port
@@ -93,7 +99,6 @@ func (s *AsyncServer) FindPortAndBind() (socketErr error) {
 		return ErrInvalidIPAddress
 	}
 
-	log.Infof("DiceDB running on port %d", config.Port)
 	return syscall.Bind(serverFD, &syscall.SockaddrInet4{
 		Port: config.Port,
 		Addr: [4]byte{ip4[0], ip4[1], ip4[2], ip4[3]},
@@ -224,12 +229,8 @@ func (s *AsyncServer) eventLoop(ctx context.Context) error {
 						if errors.Is(err, ErrAborted) {
 							log.Info("Received abort command, initiating graceful shutdown")
 							return err
-						} else if errors.Is(err, syscall.ECONNRESET) || errors.Is(err, net.ErrClosed) {
-							// Both are normal scenarios when client disconnections happen, hence just info log
-							log.Info("Connection closed by client or reset", "fd", event.Fd)
-						} else {
-							log.Warn(err)
 						}
+						log.Warn(err)
 					}
 				}
 			}
