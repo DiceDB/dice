@@ -22,7 +22,7 @@ func TestQWatchUnwatch(t *testing.T) {
 	// Cleanup store to remove any existing keys from other qwatch tests
 	// The cleanup is done both on the start and finish just to keep the order of tests run agnostic
 	for _, tc := range qWatchTestCases {
-		fireCommand(publisher, fmt.Sprintf("DEL match:100:user:%d", tc.userID))
+		fireCommand(publisher, fmt.Sprintf("DEL %s:%d", tc.key, tc.userID))
 	}
 	defer func() {
 		publisher.Close()
@@ -78,6 +78,6 @@ func TestQWatchUnwatch(t *testing.T) {
 
 	// Cleanup store for next tests
 	for _, tc := range qWatchTestCases {
-		fireCommand(publisher, fmt.Sprintf("DEL match:100:user:%d", tc.userID))
+		fireCommand(publisher, fmt.Sprintf("DEL %s:%d", tc.key, tc.userID))
 	}
 }
