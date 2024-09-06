@@ -9,11 +9,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dicedb/dice/internal/clientio"
+
+	"github.com/dicedb/dice/internal/server"
+
 	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/core"
 	dstore "github.com/dicedb/dice/internal/store"
-	"github.com/dicedb/dice/server"
 	"github.com/dicedb/dice/testutils"
 	redis "github.com/dicedb/go-dice"
 )
@@ -58,12 +60,12 @@ func getLocalSdk() *redis.Client {
 func fireCommand(conn net.Conn, cmd string) interface{} {
 	var err error
 	args := testutils.ParseCommand(cmd)
-	_, err = conn.Write(core.Encode(args, false))
+	_, err = conn.Write(clientio.Encode(args, false))
 	if err != nil {
 		log.Fatalf("error %s while firing command: %s", err, cmd)
 	}
 
-	rp := core.NewRESPParser(conn)
+	rp := clientio.NewRESPParser(conn)
 	v, err := rp.DecodeOne()
 	if err != nil {
 		if err == io.EOF {
@@ -75,14 +77,14 @@ func fireCommand(conn net.Conn, cmd string) interface{} {
 }
 
 //nolint:unused
-func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *core.RESPParser {
+func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *clientio.RESPParser {
 	args := testutils.ParseCommand(cmd)
-	_, err := conn.Write(core.Encode(args, false))
+	_, err := conn.Write(clientio.Encode(args, false))
 	if err != nil {
 		log.Fatalf("error %s while firing command: %s", err, cmd)
 	}
 
-	return core.NewRESPParser(conn)
+	return clientio.NewRESPParser(conn)
 }
 
 //nolint:unused

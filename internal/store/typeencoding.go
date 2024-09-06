@@ -3,7 +3,7 @@ package store
 import (
 	"errors"
 
-	"github.com/dicedb/dice/internal/diceerrors"
+	diceerrors "github.com/dicedb/dice/internal/errors"
 )
 
 func GetType(te uint8) uint8 {

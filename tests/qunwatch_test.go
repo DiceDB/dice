@@ -2,10 +2,10 @@ package tests
 
 import (
 	"fmt"
+	"github.com/dicedb/dice/internal/clientio"
 	"net"
 	"testing"
 
-	"github.com/dicedb/dice/core"
 	"github.com/dicedb/dice/internal/constants"
 	"gotest.tools/v3/assert"
 )
@@ -31,7 +31,7 @@ func TestQWatchUnwatch(t *testing.T) {
 	}()
 
 	// Subscribe to the watch query
-	respParsers := make([]*core.RESPParser, len(subscribers))
+	respParsers := make([]*clientio.RESPParser, len(subscribers))
 
 	for i, sub := range subscribers {
 		rp := fireCommandAndGetRESPParser(sub, "QWATCH \""+qWatchQuery+"\"")

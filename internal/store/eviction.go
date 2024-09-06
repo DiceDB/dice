@@ -2,7 +2,7 @@ package store
 
 import (
 	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/server/utils"
+	"github.com/dicedb/dice/internal/server/utils"
 )
 
 // Evicts the first key it found while iterating the map

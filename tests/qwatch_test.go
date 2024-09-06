@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/bytedance/sonic"
-	"github.com/dicedb/dice/core"
+	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/constants"
 	redis "github.com/dicedb/go-dice"
 	"gotest.tools/v3/assert"
@@ -121,9 +121,9 @@ func setupQWATCHTestWithSDK(t *testing.T) (*redis.Client, []qWatchSDKSubscriber,
 	return publisher, subscribers, cleanup
 }
 
-func subscribeToQWATCH(t *testing.T, subscribers []net.Conn) []*core.RESPParser {
+func subscribeToQWATCH(t *testing.T, subscribers []net.Conn) []*clientio.RESPParser {
 	t.Helper()
-	respParsers := make([]*core.RESPParser, len(subscribers))
+	respParsers := make([]*clientio.RESPParser, len(subscribers))
 	for i, subscriber := range subscribers {
 		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("QWATCH \"%s\"", qWatchQuery))
 		assert.Assert(t, rp != nil)
@@ -179,7 +179,7 @@ func publishUpdate(t *testing.T, publisher interface{}, tc qWatchTestCase) {
 func verifyUpdates(t *testing.T, receivers interface{}, expectedUpdates [][]interface{}) {
 	for _, expectedUpdate := range expectedUpdates {
 		switch r := receivers.(type) {
-		case []*core.RESPParser:
+		case []*clientio.RESPParser:
 			verifyRESPUpdates(t, r, expectedUpdate)
 		case []<-chan *redis.QMessage:
 			verifySDKUpdates(t, r, expectedUpdate)
@@ -187,7 +187,7 @@ func verifyUpdates(t *testing.T, receivers interface{}, expectedUpdates [][]inte
 	}
 }
 
-func verifyRESPUpdates(t *testing.T, respParsers []*core.RESPParser, expectedUpdate []interface{}) {
+func verifyRESPUpdates(t *testing.T, respParsers []*clientio.RESPParser, expectedUpdate []interface{}) {
 	for _, rp := range respParsers {
 		v, err := rp.DecodeOne()
 		assert.NilError(t, err)
@@ -290,8 +290,8 @@ func setupJSONTest(t *testing.T) (net.Conn, []net.Conn, func()) {
 	return publisher, subscribers, cleanup
 }
 
-func subscribeToJSONQueries(t *testing.T, subscribers []net.Conn) []*core.RESPParser {
-	respParsers := make([]*core.RESPParser, len(subscribers))
+func subscribeToJSONQueries(t *testing.T, subscribers []net.Conn) []*clientio.RESPParser {
+	respParsers := make([]*clientio.RESPParser, len(subscribers))
 	for i, testCase := range JSONTestCases {
 		rp := fireCommandAndGetRESPParser(subscribers[i], fmt.Sprintf("QWATCH \"%s\"", testCase.qwatchQuery))
 		assert.Assert(t, rp != nil)
@@ -304,14 +304,14 @@ func subscribeToJSONQueries(t *testing.T, subscribers []net.Conn) []*core.RESPPa
 	return respParsers
 }
 
-func runJSONScenarios(t *testing.T, publisher net.Conn, respParsers []*core.RESPParser) {
+func runJSONScenarios(t *testing.T, publisher net.Conn, respParsers []*clientio.RESPParser) {
 	for i, tc := range JSONTestCases {
 		fireCommand(publisher, fmt.Sprintf("JSON.SET %s $ %s", tc.key, tc.value))
 		verifyJSONUpdates(t, respParsers[i], tc)
 	}
 }
 
-func verifyJSONUpdates(t *testing.T, rp *core.RESPParser, tc JSONTestCase) {
+func verifyJSONUpdates(t *testing.T, rp *clientio.RESPParser, tc JSONTestCase) {
 	for _, expectedUpdate := range tc.expectedUpdates {
 		v, err := rp.DecodeOne()
 		assert.NilError(t, err)
@@ -382,7 +382,7 @@ func setupJSONOrderByTest(t *testing.T) (net.Conn, net.Conn, func()) {
 	return publisher, subscriber, cleanup
 }
 
-func subscribeToJSONOrderByQuery(t *testing.T, subscriber net.Conn) *core.RESPParser {
+func subscribeToJSONOrderByQuery(t *testing.T, subscriber net.Conn) *clientio.RESPParser {
 	query := "SELECT $key, $value FROM `player:*` ORDER BY $value.score DESC LIMIT 3"
 	rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("QWATCH \"%s\"", query))
 	assert.Assert(t, rp != nil)
@@ -394,7 +394,7 @@ func subscribeToJSONOrderByQuery(t *testing.T, subscriber net.Conn) *core.RESPPa
 	return rp
 }
 
-func runJSONOrderByScenarios(t *testing.T, publisher net.Conn, respParser *core.RESPParser) {
+func runJSONOrderByScenarios(t *testing.T, publisher net.Conn, respParser *clientio.RESPParser) {
 	scenarios := []struct {
 		key             string
 		value           string
@@ -441,7 +441,7 @@ func runJSONOrderByScenarios(t *testing.T, publisher net.Conn, respParser *core.
 	}
 }
 
-func verifyJSONOrderByUpdates(t *testing.T, rp *core.RESPParser, tc struct {
+func verifyJSONOrderByUpdates(t *testing.T, rp *clientio.RESPParser, tc struct {
 	key             string
 	value           string
 	expectedUpdates [][]interface{}
