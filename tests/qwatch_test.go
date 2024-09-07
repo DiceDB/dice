@@ -3,14 +3,15 @@ package tests
 import (
 	"context"
 	"fmt"
-	"github.com/bytedance/sonic"
-	"github.com/dicedb/dice/internal/clientio"
-	"github.com/dicedb/dice/internal/constants"
-	redis "github.com/dicedb/go-dice"
-	"gotest.tools/v3/assert"
 	"net"
 	"testing"
 	"time"
+
+	"github.com/bytedance/sonic"
+	"github.com/dicedb/dice/internal/clientio"
+	"github.com/dicedb/dice/internal/querywatcher"
+	redis "github.com/dicedb/go-dice"
+	"gotest.tools/v3/assert"
 )
 
 type qWatchTestCase struct {
@@ -196,7 +197,7 @@ func verifyRESPUpdates(t *testing.T, respParsers []*clientio.RESPParser, expecte
 			t.Errorf("Type assertion to []interface{} failed for value: %v", v)
 			return
 		}
-		assert.DeepEqual(t, []interface{}{constants.Qwatch, qWatchQuery, expectedUpdate}, update)
+		assert.DeepEqual(t, []interface{}{querywatcher.Qwatch, qWatchQuery, expectedUpdate}, update)
 	}
 }
 
@@ -321,7 +322,7 @@ func verifyJSONUpdates(t *testing.T, rp *clientio.RESPParser, tc JSONTestCase) {
 			return
 		}
 		assert.Equal(t, 3, len(response))
-		assert.Equal(t, constants.Qwatch, response[0])
+		assert.Equal(t, querywatcher.Qwatch, response[0])
 
 		update, ok := response[2].([]interface{})
 		if !ok {
@@ -458,7 +459,7 @@ func verifyJSONOrderByUpdates(t *testing.T, rp *clientio.RESPParser, tc struct {
 
 	// Verify response structure
 	assert.Equal(t, 3, len(response), "Expected response to have 3 elements")
-	assert.Equal(t, constants.Qwatch, response[0], "First element should be Qwatch constant")
+	assert.Equal(t, querywatcher.Qwatch, response[0], "First element should be Qwatch constant")
 
 	// Extract updates from the response
 	updates, ok := response[2].([]interface{})

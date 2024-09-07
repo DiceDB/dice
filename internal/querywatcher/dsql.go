@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dicedb/dice/internal/constants"
+	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/xwb1989/sqlparser"
 )
 
@@ -207,7 +207,7 @@ func parseSelectExpressions(selectStmt *sqlparser.Select) (QuerySelection, error
 func parseTableName(selectStmt *sqlparser.Select) (string, error) {
 	tableExpr, ok := selectStmt.From[0].(*sqlparser.AliasedTableExpr)
 	if !ok {
-		return constants.EmptyStr, fmt.Errorf("error parsing table name")
+		return utils.EmptyStr, fmt.Errorf("error parsing table name")
 	}
 
 	// Remove backticks from table name if present.
@@ -215,7 +215,7 @@ func parseTableName(selectStmt *sqlparser.Select) (string, error) {
 
 	// Ensure table name is not dual, which means no table name was provided.
 	if tableName == "dual" {
-		return constants.EmptyStr, fmt.Errorf("no table name provided")
+		return utils.EmptyStr, fmt.Errorf("no table name provided")
 	}
 
 	return tableName, nil

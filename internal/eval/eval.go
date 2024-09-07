@@ -18,7 +18,6 @@ import (
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/comm"
-	"github.com/dicedb/dice/internal/constants"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/querywatcher"
 	"github.com/dicedb/dice/internal/server/utils"
@@ -27,11 +26,6 @@ import (
 )
 
 type exDurationState int
-
-const (
-	BYTE = "BYTE"
-	BIT  = "BIT"
-)
 
 const (
 	Uninitialized exDurationState = iota
@@ -128,7 +122,7 @@ func evalSET(args []string, store *dstore.Store) []byte {
 	for i := 2; i < len(args); i++ {
 		arg := strings.ToUpper(args[i])
 		switch arg {
-		case constants.Ex, constants.Px:
+		case Ex, Px:
 			if state != Uninitialized {
 				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 			}
@@ -147,13 +141,13 @@ func evalSET(args []string, store *dstore.Store) []byte {
 			}
 
 			// converting seconds to milliseconds
-			if arg == constants.Ex {
+			if arg == Ex {
 				exDuration *= 1000
 			}
 			exDurationMs = exDuration
 			state = Initialized
 
-		case constants.Pxat, constants.Exat:
+		case Pxat, Exat:
 			if state != Uninitialized {
 				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 			}
@@ -170,7 +164,7 @@ func evalSET(args []string, store *dstore.Store) []byte {
 				return diceerrors.NewErrExpireTime("SET")
 			}
 
-			if arg == constants.Exat {
+			if arg == Exat {
 				exDuration *= 1000
 			}
 			exDurationMs = exDuration - utils.GetCurrentTime().UnixMilli()
@@ -181,7 +175,7 @@ func evalSET(args []string, store *dstore.Store) []byte {
 			}
 			state = Initialized
 
-		case constants.XX:
+		case XX:
 			// Get the key from the hash table
 			obj := store.Get(key)
 
@@ -189,12 +183,12 @@ func evalSET(args []string, store *dstore.Store) []byte {
 			if obj == nil {
 				return clientio.RespNIL
 			}
-		case constants.NX:
+		case NX:
 			obj := store.Get(key)
 			if obj != nil {
 				return clientio.RespNIL
 			}
-		case constants.KEEPTTL, constants.Keepttl:
+		case KEEPTTL, Keepttl:
 			keepttl = true
 		default:
 			return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
@@ -438,17 +432,17 @@ func evalJSONCLEAR(args []string, store *dstore.Store) []byte {
 
 	_, err = expr.Modify(jsonData, func(element any) (altered any, changed bool) {
 		switch utils.GetJSONFieldType(element) {
-		case constants.IntegerType, constants.NumberType:
-			if element != constants.NumberZeroValue {
+		case utils.IntegerType, utils.NumberType:
+			if element != utils.NumberZeroValue {
 				countClear++
-				return constants.NumberZeroValue, true
+				return utils.NumberZeroValue, true
 			}
-		case constants.ArrayType:
+		case utils.ArrayType:
 			if len(element.([]interface{})) != 0 {
 				countClear++
 				return []interface{}{}, true
 			}
-		case constants.ObjectType:
+		case utils.ObjectType:
 			if element != struct{}{} {
 				countClear++
 				return struct{}{}, true
@@ -503,7 +497,7 @@ func evalJSONTYPE(args []string, store *dstore.Store) []byte {
 		}
 		// If path is root and len(args) == 1, return "object" instantly
 		if len(args) == 1 {
-			return clientio.Encode(constants.ObjectType, false)
+			return clientio.Encode(utils.ObjectType, false)
 		}
 	}
 
@@ -607,7 +601,7 @@ func evalJSONSET(args []string, store *dstore.Store) []byte {
 	jsonStr := args[2]
 	for i := 3; i < len(args); i++ {
 		switch args[i] {
-		case constants.NX, constants.Nx:
+		case NX, Nx:
 			if i != len(args)-1 {
 				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 			}
@@ -615,7 +609,7 @@ func evalJSONSET(args []string, store *dstore.Store) []byte {
 			if obj != nil {
 				return clientio.RespNIL
 			}
-		case constants.XX, constants.Xx:
+		case XX, Xx:
 			if i != len(args)-1 {
 				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 			}
@@ -847,22 +841,22 @@ func evaluateAndSetExpiry(subCommands []string, newExpiry uint64, key string,
 		subCommand := strings.ToUpper(subCommands[i])
 
 		switch subCommand {
-		case constants.NX:
+		case NX:
 			nxCmd = true
 			if prevExpiry != nil {
 				shouldSetExpiry = false
 			}
-		case constants.XX:
+		case XX:
 			xxCmd = true
 			if prevExpiry == nil {
 				shouldSetExpiry = false
 			}
-		case constants.GT:
+		case GT:
 			gtCmd = true
 			if prevExpiry == nil || *prevExpiry > newExpInMilli {
 				shouldSetExpiry = false
 			}
-		case constants.LT:
+		case LT:
 			ltCmd = true
 			if prevExpiry != nil && *prevExpiry < newExpInMilli {
 				shouldSetExpiry = false
@@ -913,7 +907,7 @@ func EvalBGREWRITEAOF(args []string, store *dstore.Store) []byte {
 		if err := dstore.DumpAllAOF(store); err != nil {
 			return diceerrors.NewErrWithMessage("AOF failed")
 		}
-		return []byte(constants.EmptyStr)
+		return []byte(utils.EmptyStr)
 	}
 	// Back to main threadg
 	return clientio.RespOK
@@ -1374,15 +1368,15 @@ func evalBITOP(args []string, store *dstore.Store) []byte {
 
 	// validation of commands
 	// if operation is not from enums, then error out
-	if !(operation == constants.AND || operation == constants.OR || operation == constants.XOR || operation == constants.NOT) {
+	if !(operation == AND || operation == OR || operation == XOR || operation == NOT) {
 		return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 	}
 	// if operation is not, then keys length should be only 1
-	if operation == constants.NOT && len(keys) != 1 {
+	if operation == NOT && len(keys) != 1 {
 		return diceerrors.NewErrWithMessage("BITOP NOT must be called with a single source key.")
 	}
 
-	if operation == constants.NOT {
+	if operation == NOT {
 		obj := store.Get(keys[0])
 		if obj == nil {
 			return clientio.Encode(0, true)
@@ -1453,7 +1447,7 @@ func evalBITOP(args []string, store *dstore.Store) []byte {
 	}
 
 	result := make([]byte, maxLength)
-	if operation == constants.AND {
+	if operation == AND {
 		for i := 0; i < maxLength; i++ {
 			if i < minLength {
 				result[i] = values[maxKeyIterator][i]
@@ -1462,7 +1456,7 @@ func evalBITOP(args []string, store *dstore.Store) []byte {
 			}
 		}
 	}
-	if operation == constants.XOR || operation == constants.OR {
+	if operation == XOR || operation == OR {
 		for i := 0; i < maxLength; i++ {
 			result[i] = 0x00
 		}
@@ -1471,11 +1465,11 @@ func evalBITOP(args []string, store *dstore.Store) []byte {
 	// perform the operation
 	for _, value := range values {
 		for i := 0; i < len(value); i++ {
-			if operation == constants.AND {
+			if operation == AND {
 				result[i] &= value[i]
-			} else if operation == constants.OR {
+			} else if operation == OR {
 				result[i] |= value[i]
-			} else if operation == constants.XOR {
+			} else if operation == XOR {
 				result[i] ^= value[i]
 			}
 		}
@@ -1745,7 +1739,7 @@ func evalGETEX(args []string, store *dstore.Store) []byte {
 	for i := 1; i < len(args); i++ {
 		arg := strings.ToUpper(args[i])
 		switch arg {
-		case constants.Ex, constants.Px:
+		case Ex, Px:
 			if state != Uninitialized {
 				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 			}
@@ -1763,13 +1757,13 @@ func evalGETEX(args []string, store *dstore.Store) []byte {
 			}
 
 			// converting seconds to milliseconds
-			if arg == constants.Ex {
+			if arg == Ex {
 				exDuration *= 1000
 			}
 			exDurationMs = exDuration
 			state = Initialized
 
-		case constants.Pxat, constants.Exat:
+		case Pxat, Exat:
 			if state != Uninitialized {
 				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 			}
@@ -1786,7 +1780,7 @@ func evalGETEX(args []string, store *dstore.Store) []byte {
 				return diceerrors.NewErrExpireTime("GETEX")
 			}
 
-			if arg == constants.Exat {
+			if arg == Exat {
 				exDuration *= 1000
 			}
 			exDurationMs = exDuration - utils.GetCurrentTime().UnixMilli()
@@ -2126,14 +2120,14 @@ func evalFLUSHDB(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("FLUSHDB")
 	}
 
-	flushType := constants.Sync
+	flushType := Sync
 	if len(args) == 1 {
 		flushType = strings.ToUpper(args[0])
 	}
 
 	// TODO: Update this method to work with shared-nothing multithreaded implementation
 	switch flushType {
-	case constants.Sync, constants.Async:
+	case Sync, Async:
 		store.ResetStore()
 	default:
 		return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)

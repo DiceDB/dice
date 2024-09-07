@@ -8,8 +8,8 @@ import (
 	"strconv"
 
 	"github.com/dicedb/dice/internal/clientio"
-	"github.com/dicedb/dice/internal/constants"
 	diceerrors "github.com/dicedb/dice/internal/errors"
+	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/twmb/murmur3"
 )
@@ -123,8 +123,8 @@ func newBloomFilter(opts *BloomOpts) *Bloom {
 }
 
 func (b *Bloom) info(name string) string {
-	info := constants.EmptyStr
-	if name != constants.EmptyStr {
+	info := utils.EmptyStr
+	if name != utils.EmptyStr {
 		info = "name: " + name + ", "
 	}
 	info += fmt.Sprintf("error rate: %f, ", b.opts.errorRate)
@@ -143,7 +143,7 @@ func (b *Bloom) info(name string) string {
 func (b *Bloom) add(value string) ([]byte, error) {
 	// We're sure that empty values will be handled upper functions itself.
 	// This is just a property check for the bloom struct.
-	if value == constants.EmptyStr {
+	if value == utils.EmptyStr {
 		return clientio.RespMinusOne, errEmptyValue
 	}
 
@@ -180,7 +180,7 @@ func (b *Bloom) add(value string) ([]byte, error) {
 func (b *Bloom) exists(value string) ([]byte, error) {
 	// We're sure that empty values will be handled upper functions itself.
 	// This is just a property check for the bloom struct.
-	if value == constants.EmptyStr {
+	if value == utils.EmptyStr {
 		return clientio.RespMinusOne, errEmptyValue
 	}
 
