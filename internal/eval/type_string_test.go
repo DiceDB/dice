@@ -3,7 +3,7 @@ package eval
 import (
 	"testing"
 
-	"github.com/dicedb/dice/internal/constants"
+	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/store"
 )
 
@@ -35,7 +35,7 @@ func TestDeduceTypeEncoding(t *testing.T) {
 		},
 		{
 			name:     "Empty string",
-			input:    constants.EmptyStr,
+			input:    utils.EmptyStr,
 			wantType: store.ObjTypeString,
 			wantEnc:  store.ObjEncodingEmbStr,
 		},

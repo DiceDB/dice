@@ -5,7 +5,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/dicedb/dice/internal/constants"
+	"github.com/dicedb/dice/internal/server/utils"
 	"gotest.tools/v3/assert"
 )
 
@@ -30,14 +30,14 @@ func TestDECR(t *testing.T) {
 				val         int64
 				expectedErr string
 			}{
-				{"s", "key1", 3, constants.EmptyStr},
-				{"d", "key1", 2, constants.EmptyStr},
-				{"d", "key1", 1, constants.EmptyStr},
-				{"d", "key2", -1, constants.EmptyStr},
-				{"g", "key1", 1, constants.EmptyStr},
-				{"g", "key2", -1, constants.EmptyStr},
-				{"s", "key3", math.MinInt64 + 1, constants.EmptyStr},
-				{"d", "key3", math.MinInt64, constants.EmptyStr},
+				{"s", "key1", 3, utils.EmptyStr},
+				{"d", "key1", 2, utils.EmptyStr},
+				{"d", "key1", 1, utils.EmptyStr},
+				{"d", "key2", -1, utils.EmptyStr},
+				{"g", "key1", 1, utils.EmptyStr},
+				{"g", "key2", -1, utils.EmptyStr},
+				{"s", "key3", math.MinInt64 + 1, utils.EmptyStr},
+				{"d", "key3", math.MinInt64, utils.EmptyStr},
 				{"d", "key3", math.MinInt64, "ERR value is out of range"},
 			},
 		},
@@ -100,10 +100,10 @@ func TestDECRBY(t *testing.T) {
 				{"key3", math.MinInt64 + 1},
 			},
 			decrByCommands: []DecrByCommand{
-				{"key1", int64(2), 1, constants.EmptyStr},
-				{"key1", int64(1), 0, constants.EmptyStr},
-				{"key4", int64(1), -1, constants.EmptyStr},
-				{"key3", int64(1), math.MinInt64, constants.EmptyStr},
+				{"key1", int64(2), 1, utils.EmptyStr},
+				{"key1", int64(1), 0, utils.EmptyStr},
+				{"key4", int64(1), -1, utils.EmptyStr},
+				{"key3", int64(1), math.MinInt64, utils.EmptyStr},
 				{"key3", int64(math.MinInt64), 0, "ERR value is out of range"},
 				{"key5", "abc", 0, "ERR value is not an integer or out of range"},
 			},

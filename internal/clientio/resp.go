@@ -6,7 +6,7 @@ import (
 	"io"
 	"strconv"
 
-	"github.com/dicedb/dice/internal/constants"
+	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
@@ -36,11 +36,11 @@ func readLength(buf *bytes.Buffer) (int64, error) {
 func readStringUntilSr(buf *bytes.Buffer) (string, error) {
 	s, err := buf.ReadString('\r')
 	if err != nil {
-		return constants.EmptyStr, err
+		return utils.EmptyStr, err
 	}
 	// increamenting to skip `\n`
 	if _, err := buf.ReadByte(); err != nil {
-		return constants.EmptyStr, err
+		return utils.EmptyStr, err
 	}
 	return s[:len(s)-1], nil
 }
@@ -86,7 +86,7 @@ func readInt64(buf *bytes.Buffer) (int64, error) {
 func readBulkString(c io.ReadWriter, buf *bytes.Buffer) (string, error) {
 	l, err := readLength(buf)
 	if err != nil {
-		return constants.EmptyStr, err
+		return utils.EmptyStr, err
 	}
 
 	// handling RespNIL case
@@ -100,7 +100,7 @@ func readBulkString(c io.ReadWriter, buf *bytes.Buffer) (string, error) {
 		tbuf := make([]byte, bytesRem)
 		n, err := c.Read(tbuf)
 		if err != nil {
-			return constants.EmptyStr, nil
+			return utils.EmptyStr, nil
 		}
 		buf.Write(tbuf[:n])
 		bytesRem -= int64(n)
@@ -108,15 +108,15 @@ func readBulkString(c io.ReadWriter, buf *bytes.Buffer) (string, error) {
 
 	bulkStr := make([]byte, l)
 	if _, err := buf.Read(bulkStr); err != nil {
-		return constants.EmptyStr, err
+		return utils.EmptyStr, err
 	}
 
 	// moving buffer pointer by 2 for \r and \n
 	if _, err := buf.ReadByte(); err != nil {
-		return constants.EmptyStr, err
+		return utils.EmptyStr, err
 	}
 	if _, err := buf.ReadByte(); err != nil {
-		return constants.EmptyStr, err
+		return utils.EmptyStr, err
 	}
 
 	// reading `len` bytes as string

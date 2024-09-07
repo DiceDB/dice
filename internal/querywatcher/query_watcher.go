@@ -9,7 +9,6 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/cockroachdb/swiss"
 	"github.com/dicedb/dice/internal/clientio"
-	"github.com/dicedb/dice/internal/constants"
 	"github.com/dicedb/dice/internal/regex"
 	dstore "github.com/dicedb/dice/internal/store"
 )
@@ -154,9 +153,9 @@ func (w *QueryWatcher) updateQueryCache(query *DSQLQuery, event dstore.WatchEven
 	}
 
 	switch event.Operation {
-	case constants.Set:
+	case dstore.Set:
 		((*swiss.Map[string, *dstore.Obj])(store)).Put(event.Key, event.Value)
-	case constants.Del:
+	case dstore.Del:
 		((*swiss.Map[string, *dstore.Obj])(store)).Delete(event.Key)
 	default:
 		log.Warnf("Unknown operation: %s", event.Operation)

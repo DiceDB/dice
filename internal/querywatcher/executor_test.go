@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
-	"github.com/dicedb/dice/internal/constants"
+	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/xwb1989/sqlparser"
 	"gotest.tools/v3/assert"
@@ -51,7 +51,7 @@ func TestExecuteQueryOrderBykey(t *testing.T) {
 		},
 		OrderBy: QueryOrder{
 			OrderBy: "_key",
-			Order:   constants.Asc,
+			Order:   Asc,
 		},
 	}
 
@@ -86,7 +86,7 @@ func TestExecuteQueryBasicOrderByValue(t *testing.T) {
 		},
 		OrderBy: QueryOrder{
 			OrderBy: "_value",
-			Order:   constants.Asc,
+			Order:   Asc,
 		},
 	}
 
@@ -121,7 +121,7 @@ func TestExecuteQueryLimit(t *testing.T) {
 		},
 		OrderBy: QueryOrder{
 			OrderBy: "_key",
-			Order:   constants.Asc,
+			Order:   Asc,
 		},
 		Limit: 3,
 	}
@@ -140,7 +140,7 @@ func TestExecuteQueryLimit(t *testing.T) {
 	})
 
 	for i, data := range sortedDataset[:3] {
-		assert.Equal(t, result[i].Key, constants.EmptyStr)
+		assert.Equal(t, result[i].Key, utils.EmptyStr)
 		assert.DeepEqual(t, result[i].Value.Value, data.value)
 	}
 }
@@ -344,7 +344,7 @@ func TestExecuteQueryWithEdgeCases(t *testing.T) {
 			},
 			OrderBy: QueryOrder{
 				OrderBy: "_key",
-				Order:   constants.Asc,
+				Order:   Asc,
 			},
 			Where: &sqlparser.ComparisonExpr{
 				Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_key")},
@@ -381,7 +381,7 @@ func TestExecuteQueryWithEdgeCases(t *testing.T) {
 
 	t.Run("EmptyKeyRegex", func(t *testing.T) {
 		query := DSQLQuery{
-			KeyRegex: constants.EmptyStr,
+			KeyRegex: utils.EmptyStr,
 			Selection: QuerySelection{
 				KeySelection:   true,
 				ValueSelection: true,

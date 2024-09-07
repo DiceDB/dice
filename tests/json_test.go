@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dicedb/dice/internal/constants"
+	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/testutils"
 	"gotest.tools/v3/assert"
 )
@@ -172,12 +172,12 @@ func TestJSONOperations(t *testing.T) {
 
 	for _, tc := range singleOrderedTestCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if tc.setCmd != constants.EmptyStr {
+			if tc.setCmd != utils.EmptyStr {
 				result := fireCommand(conn, tc.setCmd)
 				assert.Equal(t, "OK", result)
 			}
 
-			if tc.getCmd != constants.EmptyStr {
+			if tc.getCmd != utils.EmptyStr {
 				result := fireCommand(conn, tc.getCmd)
 				if testutils.IsJSONResponse(result.(string)) {
 					testutils.AssertJSONEqual(t, tc.expected, result.(string))
@@ -190,12 +190,12 @@ func TestJSONOperations(t *testing.T) {
 
 	for _, tc := range multipleOrderedTestCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if tc.setCmd != constants.EmptyStr {
+			if tc.setCmd != utils.EmptyStr {
 				result := fireCommand(conn, tc.setCmd)
 				assert.Equal(t, "OK", result)
 			}
 
-			if tc.getCmd != constants.EmptyStr {
+			if tc.getCmd != utils.EmptyStr {
 				result := fireCommand(conn, tc.getCmd)
 				testutils.AssertJSONEqualList(t, tc.expected, result.(string))
 			}

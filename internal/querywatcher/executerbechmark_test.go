@@ -6,7 +6,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/internal/constants"
+	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/xwb1989/sqlparser"
 )
@@ -47,7 +47,7 @@ func BenchmarkExecuteQueryOrderBykey(b *testing.B) {
 			},
 			OrderBy: QueryOrder{
 				OrderBy: "$key",
-				Order:   constants.Asc,
+				Order:   Asc,
 			},
 		}
 		// Reset the timer to exclude the setup time from the benchmark
@@ -77,7 +77,7 @@ func BenchmarkExecuteQueryBasicOrderByValue(b *testing.B) {
 			},
 			OrderBy: QueryOrder{
 				OrderBy: "$value",
-				Order:   constants.Asc,
+				Order:   Asc,
 			},
 		}
 
@@ -106,7 +106,7 @@ func BenchmarkExecuteQueryLimit(b *testing.B) {
 			},
 			OrderBy: QueryOrder{
 				OrderBy: "$key",
-				Order:   constants.Asc,
+				Order:   Asc,
 			},
 			Limit: v / 3,
 		}
@@ -352,7 +352,7 @@ func BenchmarkExecuteQueryWithClauseOnKey(b *testing.B) {
 			},
 			OrderBy: QueryOrder{
 				OrderBy: "$key",
-				Order:   constants.Asc,
+				Order:   Asc,
 			},
 			Where: &sqlparser.ComparisonExpr{
 				Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_key")},
@@ -379,7 +379,7 @@ func BenchmarkExecuteQueryWithEmptyKeyRegex(b *testing.B) {
 		defer store.ResetStore()
 
 		query := DSQLQuery{
-			KeyRegex: constants.EmptyStr,
+			KeyRegex: utils.EmptyStr,
 			Selection: QuerySelection{
 				KeySelection:   true,
 				ValueSelection: true,
