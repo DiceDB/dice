@@ -16,7 +16,7 @@ func GetEncoding(te uint8) uint8 {
 
 func AssertType(te, t uint8) error {
 	if GetType(te) != t {
-		return errors.New("the operation is not permitted on this type")
+		return errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")
 	}
 	return nil
 }
