@@ -47,10 +47,7 @@ func (a ByCounterAndIdleTime) Less(i, j int) bool {
 
 	if counterI == counterJ {
 		// if access counters are same, sort by idle time
-		lastAccessedAtI := a[i].lastAccessedAt & 0x00FFFFFF
-		lastAccessedAtJ := a[j].lastAccessedAt & 0x00FFFFFF
-
-		return GetIdleTime(lastAccessedAtI) < GetIdleTime(lastAccessedAtJ)
+		return GetIdleTime(lastAccessedAtI) > GetIdleTime(lastAccessedAtJ)
 	}
 
 	return counterI < counterJ

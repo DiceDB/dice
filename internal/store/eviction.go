@@ -81,6 +81,7 @@ func incrLogCounter(counter uint8) uint8 {
 
 func GetIdleTime(lastAccessedAt uint32) uint32 {
 	c := getCurrentClock()
+	lastAccessedAt = lastAccessedAt & 0x00FFFFFF
 	if c >= lastAccessedAt {
 		return c - lastAccessedAt
 	}
