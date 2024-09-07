@@ -7,7 +7,7 @@ DiceDB is an in-memory real-time database with SQL-based reactivity. It is hyper
 
 ## How is it different from Redis?
 
-Although DiceDB is a drop-in replacement of Redis, which means minimal learning curve and switching does not require any code change, it still differs in two key aspects and they are
+Although DiceDB is a drop-in replacement of Redis, which means almost no learning curve and switching does not require any code change, it still differs in two key aspects and they are
 
 1. DiceDB is multi-threaded and follows [shared-nothing architecture](https://en.wikipedia.org/wiki/Shared-nothing_architecture).
 2. DiceDB supports a new command called `QWATCH` that lets clients listen to a SQL query and get notified in real-time whenever something changes.
