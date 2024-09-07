@@ -23,7 +23,8 @@ const (
 // Will evict EvictionRatio of keys whenever eviction runs
 var (
 	EvictionRatio    float64 = 0.40
-	EvictionStrategy string  = ALL_KEYS_LFU
+	EvictionStrategy string  = ALL_KEYS_LRU
+	LFU_LOG_FACTOR   uint8   = 10
 	AOFFile          string  = "./dice-master.aof"
 )
 

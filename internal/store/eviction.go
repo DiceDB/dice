@@ -1,15 +1,10 @@
 package store
 
 import (
-	"fmt"
 	"math/rand"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/server/utils"
-)
-
-const (
-	LFU_LOG_FACTOR = 10
 )
 
 // Evicts the first key it found while iterating the map
@@ -78,7 +73,7 @@ func incrLogCounter(counter uint8) uint8 {
 		return 255
 	}
 	randomFactor := rand.Float64()
-	approxFactor := 1.0 / float64(counter*LFU_LOG_FACTOR+1)
+	approxFactor := 1.0 / float64(counter*config.LFU_LOG_FACTOR+1)
 	if approxFactor > randomFactor {
 		counter++
 	}
@@ -114,7 +109,7 @@ func populateEvictionPool(store *Store) {
 
 // TODO: no need to populate everytime. should populate
 // only when the number of keys to evict is less than what we have in the pool
-func EvictAllkeysLRU(store *Store) {
+func EvictAllkeysLRUOrLFU(store *Store) {
 	populateEvictionPool(store)
 	evictCount := int16(config.EvictionRatio * float64(config.KeysLimit))
 	for i := 0; i < int(evictCount) && len(ePool.pool) > 0; i++ {
@@ -126,22 +121,6 @@ func EvictAllkeysLRU(store *Store) {
 	}
 }
 
-func evictAllkeysLFU(store *Store) {
-	fmt.Println("evictAllKeysLFU called")
-	populateEvictionPool(store)
-	fmt.Println("populated eviction pool", len(ePool.pool))
-	evictCount := int16(config.EvictionRatio * float64(config.KeysLimit))
-	fmt.Println("evict count", evictCount)
-	for i := 0; i < int(evictCount) && len(ePool.pool) > 0; i++ {
-		item := ePool.Pop()
-		if item == nil {
-			return
-		}
-		store.DelByPtr(item.keyPtr)
-	}
-}
-
-// TODO: implement LFU
 func (store *Store) evict() {
 	switch config.EvictionStrategy {
 	case config.SIMPLE_FIRST:
@@ -149,8 +128,8 @@ func (store *Store) evict() {
 	case config.ALL_KEYS_RANDOM:
 		evictAllkeysRandom(store)
 	case config.ALL_KEYS_LRU:
-		EvictAllkeysLRU(store)
+		EvictAllkeysLRUOrLFU(store)
 	case config.ALL_KEYS_LFU:
-		evictAllkeysLFU(store)
+		EvictAllkeysLRUOrLFU(store)
 	}
 }
