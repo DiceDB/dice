@@ -68,7 +68,7 @@ func (pq *EvictionPool) Push(key string, lastAccessedAt uint32) {
 		pq.pool = append(pq.pool, item)
 
 		// Performance bottleneck
-		if config.EvictionStrategy == config.ALL_KEYS_LFU {
+		if config.EvictionStrategy == config.AllKeysLFU {
 			sort.Sort(ByCounterAndIdleTime(pq.pool))
 		} else {
 			sort.Sort(ByIdleTime(pq.pool))

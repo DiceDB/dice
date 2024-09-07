@@ -14,16 +14,16 @@ var (
 var KeysLimit int = 10000 // default buffer size.
 
 const (
-	SIMPLE_FIRST    = "simple-first"
-	ALL_KEYS_RANDOM = "allkeys-random"
-	ALL_KEYS_LRU    = "allkeys-lru"
-	ALL_KEYS_LFU    = "allkeys-lfu"
+	SimpleFirst   = "simple-first"
+	AllKeysRandom = "allkeys-random"
+	AllKeysLRU    = "allkeys-lru"
+	AllKeysLFU    = "allkeys-lfu"
 )
 
 // Will evict EvictionRatio of keys whenever eviction runs
 var (
 	EvictionRatio    float64 = 0.40
-	EvictionStrategy string  = ALL_KEYS_LRU
+	EvictionStrategy string  = AllKeysLRU
 	LFU_LOG_FACTOR   uint8   = 10
 	AOFFile          string  = "./dice-master.aof"
 )

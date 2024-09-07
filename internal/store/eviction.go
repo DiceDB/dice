@@ -55,11 +55,10 @@ func updateLFULastAccessedAt(lastAccessedAt uint32) uint32 {
 }
 
 func getLastAccessedAt(lastAccessedAt uint32) uint32 {
-	if config.EvictionStrategy == config.ALL_KEYS_LFU {
+	if config.EvictionStrategy == config.AllKeysLFU {
 		return updateLFULastAccessedAt(lastAccessedAt)
-	} else {
-		return getCurrentClock()
 	}
+	return getCurrentClock()
 }
 
 /*
@@ -72,8 +71,8 @@ func incrLogCounter(counter uint8) uint8 {
 	if counter == 255 {
 		return 255
 	}
-	randomFactor := rand.Float64()
-	approxFactor := 1.0 / float64(counter*config.LFU_LOG_FACTOR+1)
+	randomFactor := rand.Float32() //nolint:gosec
+	approxFactor := 1.0 / float32(counter*config.LFU_LOG_FACTOR+1)
 	if approxFactor > randomFactor {
 		counter++
 	}
@@ -123,13 +122,13 @@ func EvictAllkeysLRUOrLFU(store *Store) {
 
 func (store *Store) evict() {
 	switch config.EvictionStrategy {
-	case config.SIMPLE_FIRST:
+	case config.SimpleFirst:
 		evictFirst(store)
-	case config.ALL_KEYS_RANDOM:
+	case config.AllKeysRandom:
 		evictAllkeysRandom(store)
-	case config.ALL_KEYS_LRU:
+	case config.AllKeysLRU:
 		EvictAllkeysLRUOrLFU(store)
-	case config.ALL_KEYS_LFU:
+	case config.AllKeysLFU:
 		EvictAllkeysLRUOrLFU(store)
 	}
 }
