@@ -1,15 +1,15 @@
 package store
 
 import (
-  "math/rand"
-  "fmt"
+	"fmt"
+	"math/rand"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/server/utils"
 )
 
 const (
-  LFU_LOG_FACTOR = 10
+	LFU_LOG_FACTOR = 10
 )
 
 // Evicts the first key it found while iterating the map
@@ -48,41 +48,41 @@ func getCurrentClock() uint32 {
 }
 
 func getLFULogCounter(lastAccessedAt uint32) uint8 {
-  return uint8(lastAccessedAt & 0xFF000000)
+	return uint8(lastAccessedAt & 0xFF000000)
 }
 
 func updateLFULastAccessedAt(lastAccessedAt uint32) uint32 {
-  currentUnixTime := getCurrentClock()
-  counter := getLFULogCounter(lastAccessedAt)
+	currentUnixTime := getCurrentClock()
+	counter := getLFULogCounter(lastAccessedAt)
 
-  counter = incrLogCounter(counter)
-  return (uint32(counter) & 0xFF000000) | currentUnixTime
+	counter = incrLogCounter(counter)
+	return (uint32(counter) & 0xFF000000) | currentUnixTime
 }
 
 func getLastAccessedAt(lastAccessedAt uint32) uint32 {
-  if config.EvictionStrategy == config.ALL_KEYS_LFU {
-    return updateLFULastAccessedAt(lastAccessedAt)
-  } else {
-    return getCurrentClock()
-  }
+	if config.EvictionStrategy == config.ALL_KEYS_LFU {
+		return updateLFULastAccessedAt(lastAccessedAt)
+	} else {
+		return getCurrentClock()
+	}
 }
 
 /*
   - Similar to redis implementation of increasing access counter for a key
   - The larger the counter value, the lesser is probability of its increment in counter value
-  - This counter is 8 bit number that will represent an approximate access counter of a key and will 
+  - This counter is 8 bit number that will represent an approximate access counter of a key and will
     piggyback first 8 bits of `LastAccessedAt` field of Dice Object
 */
 func incrLogCounter(counter uint8) uint8 {
-  if (counter == 255) {
-    return 255
-  }
-  randomFactor := rand.Float64()
-  approxFactor := 1.0 / float64(counter * LFU_LOG_FACTOR + 1) 
-  if (approxFactor > randomFactor) {
-    counter++
-  }
-  return counter
+	if counter == 255 {
+		return 255
+	}
+	randomFactor := rand.Float64()
+	approxFactor := 1.0 / float64(counter*LFU_LOG_FACTOR+1)
+	if approxFactor > randomFactor {
+		counter++
+	}
+	return counter
 }
 
 func GetIdleTime(lastAccessedAt uint32) uint32 {
@@ -127,18 +127,18 @@ func EvictAllkeysLRU(store *Store) {
 }
 
 func evictAllkeysLFU(store *Store) {
-  fmt.Println("evictAllKeysLFU called")
-  populateEvictionPool(store)
-  fmt.Println("populated eviction pool", len(ePool.pool))
+	fmt.Println("evictAllKeysLFU called")
+	populateEvictionPool(store)
+	fmt.Println("populated eviction pool", len(ePool.pool))
 	evictCount := int16(config.EvictionRatio * float64(config.KeysLimit))
-  fmt.Println("evict count", evictCount)
-  for i := 0; i < int(evictCount) && len(ePool.pool) > 0; i++ {
+	fmt.Println("evict count", evictCount)
+	for i := 0; i < int(evictCount) && len(ePool.pool) > 0; i++ {
 		item := ePool.Pop()
 		if item == nil {
 			return
 		}
 		store.DelByPtr(item.keyPtr)
-  }
+	}
 }
 
 // TODO: implement LFU
@@ -146,11 +146,11 @@ func (store *Store) evict() {
 	switch config.EvictionStrategy {
 	case config.SIMPLE_FIRST:
 		evictFirst(store)
-  case config.ALL_KEYS_RANDOM:
+	case config.ALL_KEYS_RANDOM:
 		evictAllkeysRandom(store)
-  case config.ALL_KEYS_LRU:
+	case config.ALL_KEYS_LRU:
 		EvictAllkeysLRU(store)
-  case config.ALL_KEYS_LFU:
-    evictAllkeysLFU(store)
+	case config.ALL_KEYS_LFU:
+		evictAllkeysLFU(store)
 	}
 }

@@ -164,7 +164,7 @@ func (store *Store) GetAll(keys []string) []*Obj {
 					store.deleteKey(k, v)
 					response = append(response, nil)
 				} else {
-          v.LastAccessedAt = getLastAccessedAt(v.LastAccessedAt)
+					v.LastAccessedAt = getLastAccessedAt(v.LastAccessedAt)
 					response = append(response, v)
 				}
 			} else {

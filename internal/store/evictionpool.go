@@ -34,7 +34,7 @@ func (a ByIdleTime) Less(i, j int) bool {
 }
 
 func (a ByCounterAndIdleTime) Len() int {
-  return len(a)
+	return len(a)
 }
 
 func (a ByCounterAndIdleTime) Swap(i, j int) {
@@ -42,18 +42,18 @@ func (a ByCounterAndIdleTime) Swap(i, j int) {
 }
 
 func (a ByCounterAndIdleTime) Less(i, j int) bool {
-  counterI := getLFULogCounter(a[i].lastAccessedAt) 
-  counterJ := getLFULogCounter(a[j].lastAccessedAt) 
+	counterI := getLFULogCounter(a[i].lastAccessedAt)
+	counterJ := getLFULogCounter(a[j].lastAccessedAt)
 
-  if counterI == counterJ {
-    // if access counters are same, sort by idle time
-    lastAccessedAtI := a[i].lastAccessedAt & 0x00FFFFFF
-    lastAccessedAtJ := a[j].lastAccessedAt & 0x00FFFFFF
+	if counterI == counterJ {
+		// if access counters are same, sort by idle time
+		lastAccessedAtI := a[i].lastAccessedAt & 0x00FFFFFF
+		lastAccessedAtJ := a[j].lastAccessedAt & 0x00FFFFFF
 
-    return GetIdleTime(lastAccessedAtI) < GetIdleTime(lastAccessedAtJ)
-  }
+		return GetIdleTime(lastAccessedAtI) < GetIdleTime(lastAccessedAtJ)
+	}
 
-  return counterI < counterJ
+	return counterI < counterJ
 }
 
 // TODO: Make the implementation efficient to not need repeated sorting
@@ -68,11 +68,11 @@ func (pq *EvictionPool) Push(key string, lastAccessedAt uint32) {
 		pq.pool = append(pq.pool, item)
 
 		// Performance bottleneck
-    if config.EvictionStrategy == config.ALL_KEYS_LFU {
-      sort.Sort(ByCounterAndIdleTime(pq.pool))
-    } else {
-      sort.Sort(ByIdleTime(pq.pool))
-    }
+		if config.EvictionStrategy == config.ALL_KEYS_LFU {
+			sort.Sort(ByCounterAndIdleTime(pq.pool))
+		} else {
+			sort.Sort(ByIdleTime(pq.pool))
+		}
 	} else if lastAccessedAt > pq.pool[0].lastAccessedAt {
 		pq.pool = pq.pool[1:]
 		pq.keyset[key] = item
