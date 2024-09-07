@@ -4,10 +4,10 @@ COPY go.mod go.sum ./
 RUN go mod download -x
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux \
-    go build -ldflags "-s -w" -o /dicedb/dice-server
+    go build -ldflags "-s -w" -o /dicedb/dicedb
 
 FROM gcr.io/distroless/static-debian12:nonroot
 WORKDIR /app
-COPY --from=builder /dicedb/dice-server ./
+COPY --from=builder /dicedb/dicedb ./
 EXPOSE  7379
-CMD ["/app/dice-server"]
+CMD ["/app/dicedb"]

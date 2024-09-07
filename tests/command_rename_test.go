@@ -27,6 +27,11 @@ var renameKeysTestCases = []struct {
 		expected: []interface{}{"ERR no such key"},
 	},
 	{
+		name:     "If source key doesn't exists and renaming the same key to the same key",
+		inCmd:    []string{"rename unknownKey unknownKey"},
+		expected: []interface{}{"ERR no such key"},
+	},
+	{
 		name:     "If destination Key already presents",
 		inCmd:    []string{"set destinationKey world", "set newKey hello", "rename newKey destinationKey", "get newKey", "get destinationKey"},
 		expected: []interface{}{"OK", "OK", "OK", "(nil)", "hello"},
@@ -39,7 +44,10 @@ func TestCommandRename(t *testing.T) {
 
 	for _, tc := range renameKeysTestCases {
 		t.Run(tc.name, func(t *testing.T) {
-			deleteTestKeys([]string{"k", "k1", "k2"})
+			// deleteTestKeys([]string{"k", "k1", "k2"}, store)
+			fireCommand(conn, "DEL k1")
+			fireCommand(conn, "DEL k2")
+			fireCommand(conn, "DEL 3")
 			for i, cmd := range tc.inCmd {
 				result := fireCommand(conn, cmd)
 				assert.Equal(t, tc.expected[i], result)

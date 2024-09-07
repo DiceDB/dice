@@ -3,6 +3,7 @@ package tests
 import (
 	"testing"
 
+	"github.com/dicedb/dice/testutils"
 	"gotest.tools/v3/assert"
 )
 
@@ -52,24 +53,40 @@ func TestCopy(t *testing.T) {
 			commands: []string{`JSON.SET k1 $ ` + simpleJSON, "COPY k1 k2", "JSON.GET k2"},
 			expected: []interface{}{"OK", int64(1), simpleJSON},
 		},
-        {
-            name: "COPY with no expiry",
-            commands: []string{"SET k1 v1", "COPY k1 k2", "TTL k1", "TTL k2"},
-            expected: []interface{}{"OK", int64(1), int64(-1), int64(-1)},
-        },
-        {
-            name: "COPY with expiry making sure copy expires",
-            commands: []string{"SET k1 v1 EX 5", "COPY k1 k2", "GET k1", "GET k2", "SLEEP 7", "GET k1", "GET k2"},
-            expected: []interface{}{"OK", int64(1), "v1", "v1", "OK", "(nil)", "(nil)"},
-        },
+		{
+			name:     "COPY with no expiry",
+			commands: []string{"SET k1 v1", "COPY k1 k2", "TTL k1", "TTL k2"},
+			expected: []interface{}{"OK", int64(1), int64(-1), int64(-1)},
+		},
+		{
+			name:     "COPY with expiry making sure copy expires",
+			commands: []string{"SET k1 v1 EX 5", "COPY k1 k2", "GET k1", "GET k2", "SLEEP 7", "GET k1", "GET k2"},
+			expected: []interface{}{"OK", int64(1), "v1", "v1", "OK", "(nil)", "(nil)"},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			deleteTestKeys([]string{"k1", "k2"})
+			// Doesn't seem to work for integration tests where command is not
+			// cleaning up keys local store but for store in the server.
+			// deleteTestKeys([]string{"k1", "k2"}, store)
+
+			// Using this instead to clean up state before tests
+			fireCommand(conn, "DEL k1")
+			fireCommand(conn, "DEL k2")
 			for i, cmd := range tc.commands {
 				result := fireCommand(conn, cmd)
-				assert.Equal(t, tc.expected[i], result, "Value mismatch for cmd %s", cmd)
+				resStr, resOk := result.(string)
+				expStr, expOk := tc.expected[i].(string)
+
+				// If both are valid JSON strings, then compare the JSON values.
+				// else compare the values as is.
+				// This is to handle cases where the expected value is a json string with a different key order.
+				if resOk && expOk && testutils.IsJSONResponse(resStr) && testutils.IsJSONResponse(expStr) {
+					testutils.AssertJSONEqual(t, expStr, resStr)
+				} else {
+					assert.Equal(t, tc.expected[i], result, "Value mismatch for cmd %s", cmd)
+				}
 			}
 		})
 	}

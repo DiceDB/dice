@@ -1,15 +1,18 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"flag"
-	"log"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 
+	"github.com/dicedb/dice/internal/server"
+
+	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/server"
 )
 
 func setupFlags() {
@@ -17,34 +20,54 @@ func setupFlags() {
 	flag.IntVar(&config.Port, "port", 7379, "port for the dice server")
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
 	flag.Parse()
-
-	log.Println("Password", config.RequirePass)
 }
 
 func main() {
 	setupFlags()
 
+	ctx, cancel := context.WithCancel(context.Background())
+
 	// Handle SIGTERM and SIGINT
-	var sigs chan os.Signal = make(chan os.Signal, 1)
+	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
-	// Find a port and bind
-	// If port not available, raise FATAL error
-	serverFD, err := server.FindPortAndBind()
-	if err != nil {
-		log.Fatal(err)
-		return
+	// Initialize the AsyncServer
+	asyncServer := server.NewAsyncServer()
+
+	// Find a port and bind it
+	if err := asyncServer.FindPortAndBind(); err != nil {
+		cancel()
+		log.Fatal("Error finding and binding port:", err)
 	}
 
-	var wg sync.WaitGroup
+	wg := sync.WaitGroup{}
+	// Goroutine to handle shutdown signals
 
-	// Run the server, listen to incoming connections and handle them
 	wg.Add(1)
-	go server.RunAsyncTCPServer(serverFD, &wg)
+	go func() {
+		defer wg.Done()
+		<-sigs
+		asyncServer.InitiateShutdown()
+		cancel()
+	}()
 
-	// Listen to signals, but not a hardblocker to shutdown
-	go server.WaitForSignal(&wg, sigs)
+	// Run the server
+	err := asyncServer.Run(ctx)
 
-	// Wait for all goroutines to finish
+	// Handling different server errors
+	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			log.Info("Server was canceled")
+		} else if errors.Is(err, server.ErrAborted) {
+			log.Info("Server received abort command")
+		} else {
+			log.Error("Server error", "error", err)
+		}
+	} else {
+		log.Info("Server stopped without error")
+	}
+
+	close(sigs)
 	wg.Wait()
+	log.Info("Server has shut down gracefully")
 }

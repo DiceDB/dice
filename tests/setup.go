@@ -1,17 +1,21 @@
 package tests
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"sync"
 	"time"
 
-	"github.com/charmbracelet/log"
+	"github.com/dicedb/dice/internal/clientio"
 
+	"github.com/dicedb/dice/internal/server"
+
+	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/core"
-	"github.com/dicedb/dice/server"
+	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dice/testutils"
 	redis "github.com/dicedb/go-dice"
 )
@@ -28,9 +32,9 @@ func getLocalConnection() net.Conn {
 // deleteTestKeys is a utility to delete a list of keys before running a test
 //
 //nolint:unused
-func deleteTestKeys(keysToDelete []string) {
+func deleteTestKeys(keysToDelete []string, store *dstore.Store) {
 	for _, key := range keysToDelete {
-		core.Del(key)
+		store.Del(key)
 	}
 }
 
@@ -56,12 +60,12 @@ func getLocalSdk() *redis.Client {
 func fireCommand(conn net.Conn, cmd string) interface{} {
 	var err error
 	args := testutils.ParseCommand(cmd)
-	_, err = conn.Write(core.Encode(args, false))
+	_, err = conn.Write(clientio.Encode(args, false))
 	if err != nil {
 		log.Fatalf("error %s while firing command: %s", err, cmd)
 	}
 
-	rp := core.NewRESPParser(conn)
+	rp := clientio.NewRESPParser(conn)
 	v, err := rp.DecodeOne()
 	if err != nil {
 		if err == io.EOF {
@@ -73,44 +77,59 @@ func fireCommand(conn net.Conn, cmd string) interface{} {
 }
 
 //nolint:unused
-func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *core.RESPParser {
+func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *clientio.RESPParser {
 	args := testutils.ParseCommand(cmd)
-	_, err := conn.Write(core.Encode(args, false))
+	_, err := conn.Write(clientio.Encode(args, false))
 	if err != nil {
 		log.Fatalf("error %s while firing command: %s", err, cmd)
 	}
 
-	return core.NewRESPParser(conn)
+	return clientio.NewRESPParser(conn)
 }
 
 //nolint:unused
-func runTestServer(wg *sync.WaitGroup) {
+func runTestServer(ctx context.Context, wg *sync.WaitGroup) {
 	config.IOBufferLength = 16
 	config.Port = 8739
 
-	totalRetries := 100
-	serverFD := 0
+	const totalRetries = 100
 	var err error
 
+	// Initialize the AsyncServer
+	testServer := server.NewAsyncServer()
+
+	// Try to bind to a port with a maximum of `totalRetries` retries.
 	for i := 0; i < totalRetries; i++ {
-		serverFD, err = server.FindPortAndBind()
-		if err == nil {
+		if err = testServer.FindPortAndBind(); err == nil {
 			break
 		}
 
 		if err.Error() == "address already in use" {
-			log.Infof("port %d already in use, trying another port", config.Port)
-			config.Port += 1
+			log.Infof("Port %d already in use, trying port %d", config.Port, config.Port+1)
+			config.Port++
 		} else {
-			panic(err)
+			log.Fatalf("Failed to bind port: %v", err)
+			return
 		}
 	}
-	if serverFD == 0 {
-		log.Fatalf("Tried %d times, could not find any port. Cannot start DiceDB. Please try after some time.", totalRetries)
+
+	if err != nil {
+		log.Fatalf("Failed to bind to a port after %d retries: %v", totalRetries, err)
 		return
 	}
 
-	fmt.Println("starting the test server on port", config.Port)
+	// Inform the user that the server is starting
+	fmt.Println("Starting the test server on port", config.Port)
+
+	// Start the server in a goroutine
 	wg.Add(1)
-	go server.RunAsyncTCPServer(serverFD, wg)
+	go func() {
+		defer wg.Done()
+		if err := testServer.Run(ctx); err != nil {
+			if errors.Is(err, server.ErrAborted) {
+				return
+			}
+			log.Fatalf("Test server encountered an error: %v", err)
+		}
+	}()
 }

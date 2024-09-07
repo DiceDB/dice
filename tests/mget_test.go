@@ -33,13 +33,16 @@ func TestMGET(t *testing.T) {
 		{
 			name:     "MGET without any keys",
 			commands: []string{"MGET"},
-			expected: []interface{}{"ERR wrong number of arguments for command"},
+			expected: []interface{}{"ERR wrong number of arguments for 'mget' command"},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			deleteTestKeys([]string{"k1", "k2"})
+			// deleteTestKeys([]string{"k1", "k2"}, store)
+			fireCommand(conn, "DEL k1")
+			fireCommand(conn, "DEL k2")
+
 			for i, cmd := range tc.commands {
 				result := fireCommand(conn, cmd)
 				if slice, ok := tc.expected[i].([]interface{}); ok {

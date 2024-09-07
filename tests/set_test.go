@@ -8,30 +8,39 @@ import (
 	"gotest.tools/v3/assert"
 )
 
+type TestCase struct {
+	name     string
+	commands []string
+	expected []interface{}
+}
+
 func TestSet(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 
-	testCases := []struct {
-		name     string
-		commands []string
-		expected []interface{}
-	}{
+	testCases := []TestCase{
 		{
 			name:     "Set and Get Simple Value",
 			commands: []string{"SET k v", "GET k"},
 			expected: []interface{}{"OK", "v"},
 		},
 		{
+			name:     "Set and Get Integer Value",
+			commands: []string{"SET k 123456789", "GET k"},
+			expected: []interface{}{"OK", int64(123456789)},
+		},
+		{
 			name:     "Overwrite Existing Key",
-			commands: []string{"SET k v1", "SET k v2", "GET k"},
-			expected: []interface{}{"OK", "OK", "v2"},
+			commands: []string{"SET k v1", "SET k 5", "GET k"},
+			expected: []interface{}{"OK", "OK", int64(5)},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			deleteTestKeys([]string{"k"})
+			// deleteTestKeys([]string{"k"}, store)
+			fireCommand(conn, "DEL k")
+
 			for i, cmd := range tc.commands {
 				result := fireCommand(conn, cmd)
 				assert.DeepEqual(t, tc.expected[i], result)
@@ -45,11 +54,7 @@ func TestSetWithOptions(t *testing.T) {
 	expiryTime := strconv.FormatInt(time.Now().Add(1*time.Minute).UnixMilli(), 10)
 	defer conn.Close()
 
-	testCases := []struct {
-		name     string
-		commands []string
-		expected []interface{}
-	}{
+	testCases := []TestCase{
 		{
 			name:     "Set with EX option",
 			commands: []string{"SET k v EX 2", "GET k", "SLEEP 3", "GET k"},
@@ -119,7 +124,10 @@ func TestSetWithOptions(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			deleteTestKeys([]string{"k", "k1", "k2"})
+			// deleteTestKeys([]string{"k", "k1", "k2"}, store)
+			fireCommand(conn, "DEL k")
+			fireCommand(conn, "DEL k1")
+			fireCommand(conn, "DEL k2")
 			for i, cmd := range tc.commands {
 				result := fireCommand(conn, cmd)
 				assert.Equal(t, tc.expected[i], result)
@@ -136,7 +144,8 @@ func TestSetWithExat(t *testing.T) {
 
 	t.Run("SET with EXAT",
 		func(t *testing.T) {
-			deleteTestKeys([]string{"k"})
+			// deleteTestKeys([]string{"k"}, store)
+			fireCommand(conn, "DEL k")
 			assert.Equal(t, "OK", fireCommand(conn, "SET k v EXAT "+Etime), "Value mismatch for cmd SET k v EXAT "+Etime)
 			assert.Equal(t, "v", fireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
 			assert.Assert(t, fireCommand(conn, "TTL k").(int64) <= 5, "Value mismatch for cmd TTL k")
@@ -149,7 +158,8 @@ func TestSetWithExat(t *testing.T) {
 
 	t.Run("SET with invalid EXAT expires key immediately",
 		func(t *testing.T) {
-			deleteTestKeys([]string{"k"})
+			// deleteTestKeys([]string{"k"}, store)
+			fireCommand(conn, "DEL k")
 			assert.Equal(t, "OK", fireCommand(conn, "SET k v EXAT "+BadTime), "Value mismatch for cmd SET k v EXAT "+BadTime)
 			assert.Equal(t, "(nil)", fireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
 			assert.Equal(t, int64(-2), fireCommand(conn, "TTL k"), "Value mismatch for cmd TTL k")
@@ -157,8 +167,34 @@ func TestSetWithExat(t *testing.T) {
 
 	t.Run("SET with EXAT and PXAT returns syntax error",
 		func(t *testing.T) {
-			deleteTestKeys([]string{"k"})
+			// deleteTestKeys([]string{"k"}, store)
+			fireCommand(conn, "DEL k")
 			assert.Equal(t, "ERR syntax error", fireCommand(conn, "SET k v PXAT "+Etime+" EXAT "+Etime), "Value mismatch for cmd SET k v PXAT "+Etime+" EXAT "+Etime)
 			assert.Equal(t, "(nil)", fireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
 		})
+}
+
+func TestWithKeepTTLFlag(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	for _, tcase := range []TestCase{
+		{
+			commands: []string{"SET k v EX 2", "SET k vv KEEPTTL", "GET k", "SET kk vv", "SET kk vvv KEEPTTL", "GET kk"},
+			expected: []interface{}{"OK", "OK", "vv", "OK", "OK", "vvv"},
+		},
+	} {
+		for i := 0; i < len(tcase.commands); i++ {
+			cmd := tcase.commands[i]
+			out := tcase.expected[i]
+			assert.Equal(t, out, fireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
+		}
+	}
+
+	time.Sleep(2 * time.Second)
+
+	cmd := "GET k"
+	out := "(nil)"
+
+	assert.Equal(t, out, fireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
 }
