@@ -72,7 +72,7 @@ func incrLogCounter(counter uint8) uint8 {
 		return 255
 	}
 	randomFactor := rand.Float32() //nolint:gosec
-	approxFactor := 1.0 / float32(counter*config.LFU_LOG_FACTOR+1)
+	approxFactor := 1.0 / float32(counter*config.LFULogFactor+1)
 	if approxFactor > randomFactor {
 		counter++
 	}

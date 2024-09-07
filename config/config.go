@@ -24,7 +24,7 @@ const (
 var (
 	EvictionRatio    float64 = 0.40
 	EvictionStrategy string  = AllKeysLRU
-	LFU_LOG_FACTOR   uint8   = 10
+	LFULogFactor     uint8   = 10
 	AOFFile          string  = "./dice-master.aof"
 )
 
