@@ -43,7 +43,7 @@ func getCurrentClock() uint32 {
 }
 
 func getLFULogCounter(lastAccessedAt uint32) uint8 {
-	return uint8(lastAccessedAt & 0xFF000000)
+	return uint8((lastAccessedAt & 0xFF000000) >> 24)
 }
 
 func updateLFULastAccessedAt(lastAccessedAt uint32) uint32 {
@@ -51,7 +51,7 @@ func updateLFULastAccessedAt(lastAccessedAt uint32) uint32 {
 	counter := getLFULogCounter(lastAccessedAt)
 
 	counter = incrLogCounter(counter)
-	return (uint32(counter) & 0xFF000000) | currentUnixTime
+	return (uint32(counter) << 24) | currentUnixTime
 }
 
 func getLastAccessedAt(lastAccessedAt uint32) uint32 {
