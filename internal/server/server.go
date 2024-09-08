@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/dicedb/dice/internal/constants"
 	"io"
 	"net"
 	"strings"
@@ -63,11 +62,7 @@ func (s *AsyncServer) SetupUsers() error {
 	if err != nil {
 		return err
 	}
-	if err := user.SetPassword(config.RequirePass); err != nil {
-		return err
-	}
-	log.Info("default user set up", "password required", config.RequirePass != constants.EmptyStr)
-	return nil
+	return user.SetPassword(config.RequirePass)
 }
 
 // FindPortAndBind binds the server to the given host and port
@@ -239,7 +234,6 @@ func (s *AsyncServer) eventLoop(ctx context.Context) error {
 						} else {
 							log.Warn(err)
 						}
-						log.Warn(err)
 					}
 				}
 			}
