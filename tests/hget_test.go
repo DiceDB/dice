@@ -10,7 +10,7 @@ import (
 func TestHGET(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
-	defer fireCommand(conn, "DEL key_hGet key_hGet02")
+	defer fireCommand(conn, "DEL key_hGet key")
 
 	testCases := []TestCase{
 		{
