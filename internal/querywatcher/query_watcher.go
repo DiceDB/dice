@@ -2,8 +2,6 @@ package querywatcher
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"sync"
 	"syscall"
@@ -39,12 +37,11 @@ type (
 		ResponseChan chan AdhocQueryResult
 	}
 
-	// QWatchManager watches for changes in keys and notifies clients.
-	QWatchManager struct {
-		WatchList        sync.Map                               // WatchList is a map of fingerprints to their respective clients, type: map[string]*sync.Map[int]struct{}
-		QueryCache       *swiss.Map[string, cacheStore]         // QueryCache is a map of fingerprints to their respective data caches
-		FingerPrintCache *swiss.Map[string, map[int]*DSQLQuery] // FingerPrintCache is a map of fingerprint to the respective query with the ClientFD
-		QueryCacheMu     sync.RWMutex
+	// QueryManager watches for changes in keys and notifies clients.
+	QueryManager struct {
+		WatchList    sync.Map                       // WatchList is a map of query string to their respective clients, type: map[string]*sync.Map[int]struct{}
+		QueryCache   *swiss.Map[string, cacheStore] // QueryCache is a map of fingerprints to their respective data caches
+		QueryCacheMu sync.RWMutex
 	}
 )
 
@@ -56,14 +53,13 @@ var (
 	AdhocQueryChan chan AdhocQuery
 )
 
-// NewQWatchManager initializes a new QWatchManager.
-func NewQWatchManager() *QWatchManager {
+// NewQWatchManager initializes a new QueryManager.
+func NewQWatchManager() *QueryManager {
 	WatchSubscriptionChan = make(chan WatchSubscription)
 	AdhocQueryChan = make(chan AdhocQuery, 1000)
-	return &QWatchManager{
-		WatchList:        sync.Map{},
-		QueryCache:       swiss.New[string, cacheStore](0),
-		FingerPrintCache: swiss.New[string, map[int]*DSQLQuery](0),
+	return &QueryManager{
+		WatchList:  sync.Map{},
+		QueryCache: swiss.New[string, cacheStore](0),
 	}
 }
 
@@ -71,8 +67,8 @@ func newCacheStore() cacheStore {
 	return swiss.New[string, *dstore.Obj](0)
 }
 
-// Run starts the QWatchManager's main loops.
-func (w *QWatchManager) Run(ctx context.Context, watchChan <-chan dstore.WatchEvent) {
+// Run starts the QueryManager's main loops.
+func (w *QueryManager) Run(ctx context.Context, watchChan <-chan dstore.WatchEvent) {
 	var wg sync.WaitGroup
 
 	wg.Add(3)
@@ -96,7 +92,7 @@ func (w *QWatchManager) Run(ctx context.Context, watchChan <-chan dstore.WatchEv
 }
 
 // listenForSubscriptions listens for query subscriptions and unsubscriptions.
-func (w *QWatchManager) listenForSubscriptions(ctx context.Context) {
+func (w *QueryManager) listenForSubscriptions(ctx context.Context) {
 	for {
 		select {
 		case event := <-WatchSubscriptionChan:
@@ -112,7 +108,7 @@ func (w *QWatchManager) listenForSubscriptions(ctx context.Context) {
 }
 
 // watchKeys watches for changes in keys and notifies clients.
-func (w *QWatchManager) watchKeys(ctx context.Context, watchChan <-chan dstore.WatchEvent) {
+func (w *QueryManager) watchKeys(ctx context.Context, watchChan <-chan dstore.WatchEvent) {
 	for {
 		select {
 		case event := <-watchChan:
@@ -124,49 +120,39 @@ func (w *QWatchManager) watchKeys(ctx context.Context, watchChan <-chan dstore.W
 }
 
 // processWatchEvent processes a single watch event.
-func (w *QWatchManager) processWatchEvent(event dstore.WatchEvent) {
-	/*
-		Iterate over the watchlist to go through all fingerprints and the corresponding client connections to those fingerprints
-	*/
-	w.WatchList.Range(func(fingerPrint, value interface{}) bool {
-		/*
-			Fetch all the queries that match the fingerprint. If the fingerprint is not found in the cache, then it is likely that the query has been deleted. In that case, we can skip the rest of the logic
-		*/
-		queries, ok := w.FingerPrintCache.Get(fingerPrint.(string))
-		if !ok {
-			log.Warnf("Fingerprint not found in cacheStore: %s", fingerPrint)
+func (w *QueryManager) processWatchEvent(event dstore.WatchEvent) {
+	// Iterate over the watchlist to go through the query string
+	// and the corresponding client connections to that query string
+	w.WatchList.Range(func(key, value interface{}) bool {
+		queryString := key.(string)
+		clients := value.(*sync.Map)
+
+		query, err := ParseQuery(queryString)
+		if err != nil {
+			log.Error(fmt.Sprintf("Error parsing query: %s", queryString))
 			return true
 		}
 
-		clients := value.(*sync.Map)
-		/*
-			For all the clients that are watching this fingerprint, we need to find the queries they had requested to run, and then send them responses based on the queries they had fired.
-		*/
-		clients.Range(func(clientKey, _ interface{}) bool {
-			clientFd := clientKey.(int)
-
-			query := queries[clientFd]
-			if !regex.WildCardMatch(query.KeyRegex, event.Key) {
-				return true
-			}
-
-			w.updateQueryCache(fingerPrint.(string), event)
-			queryResult, err := w.runQuery(query)
-			if err != nil {
-				log.Error(err)
-				return true
-			}
-
-			w.notifyClient(query, clientFd, queryResult)
+		// Check if the key matches the regex
+		if !regex.WildCardMatch(query.KeyRegex, event.Key) {
 			return true
-		})
+		}
 
+		w.updateQueryCache(query.Fingerprint, event)
+
+		queryResult, err := w.runQuery(&query)
+		if err != nil {
+			log.Error(err)
+			return true
+		}
+
+		w.notifyClients(&query, clients, queryResult)
 		return true
 	})
 }
 
 // updateQueryCache updates the query cache based on the watch event.
-func (w *QWatchManager) updateQueryCache(queryFingerprint string, event dstore.WatchEvent) {
+func (w *QueryManager) updateQueryCache(queryFingerprint string, event dstore.WatchEvent) {
 	w.QueryCacheMu.Lock()
 	defer w.QueryCacheMu.Unlock()
 
@@ -187,24 +173,28 @@ func (w *QWatchManager) updateQueryCache(queryFingerprint string, event dstore.W
 }
 
 // notifyClient notifies all clients watching a query about the new result.
-func (w *QWatchManager) notifyClient(query *DSQLQuery, clientFD int, queryResult *[]dstore.DSQLQueryResultRow) {
+func (w *QueryManager) notifyClients(query *DSQLQuery, clients *sync.Map, queryResult *[]dstore.DSQLQueryResultRow) {
 	encodedResult := clientio.Encode(CreatePushResponse(query, queryResult), false)
 	// Send the result to the client
-	_, err := syscall.Write(clientFD, encodedResult)
-	if err != nil {
-		w.removeWatcher(query, clientFD)
-	}
+	clients.Range(func(clientKey, _ interface{}) bool {
+		clientFD := clientKey.(int)
+		_, err := syscall.Write(clientFD, encodedResult)
+		if err != nil {
+			w.removeWatcher(query, clientFD)
+		}
+		return true
+	})
 }
 
 // serveAdhocQueries listens for adhoc queries, executes them, and sends the result back to the client.
-func (w *QWatchManager) serveAdhocQueries(ctx context.Context) {
+func (w *QueryManager) serveAdhocQueries(ctx context.Context) {
 	for {
 		select {
 		case query := <-AdhocQueryChan:
 			result, err := w.runQuery(&query.Query)
 			query.ResponseChan <- AdhocQueryResult{
 				Result:      result,
-				Fingerprint: generateQueryFingerprint(&query.Query),
+				Fingerprint: query.Query.Fingerprint,
 				Err:         err,
 			}
 		case <-ctx.Done():
@@ -213,29 +203,11 @@ func (w *QWatchManager) serveAdhocQueries(ctx context.Context) {
 	}
 }
 
-// generateQueryFingerprint used to creating a common fingerprint for similar queries
-func generateQueryFingerprint(query *DSQLQuery) string {
-	hash := sha256.Sum256([]byte(query.KeyRegex))
-	fingerprint := hex.EncodeToString(hash[:])
-	return "f_" + fingerprint
-}
-
 // addWatcher adds a client as a watcher to a query.
-func (w *QWatchManager) addWatcher(query *DSQLQuery, clientFD int, cacheChan chan *[]dstore.KeyValue) {
-	queryFingerprint := generateQueryFingerprint(query)
-	queriesMap, ok := w.FingerPrintCache.Get(queryFingerprint)
-	if ok {
-		// Fingerprint exists, update the existing map with the new query
-		queriesMap[clientFD] = query
-		w.FingerPrintCache.Put(queryFingerprint, queriesMap)
-	} else {
-		// Fingerprint doesn't exist, create a new map with the query
-		newMap := make(map[int]*DSQLQuery)
-		newMap[clientFD] = query
-		w.FingerPrintCache.Put(queryFingerprint, newMap)
-	}
+func (w *QueryManager) addWatcher(query *DSQLQuery, clientFD int, cacheChan chan *[]dstore.KeyValue) {
+	queryString := query.String()
 
-	clients, _ := w.WatchList.LoadOrStore(queryFingerprint, &sync.Map{})
+	clients, _ := w.WatchList.LoadOrStore(queryString, &sync.Map{})
 	clients.(*sync.Map).Store(clientFD, struct{}{})
 
 	w.QueryCacheMu.Lock()
@@ -250,35 +222,32 @@ func (w *QWatchManager) addWatcher(query *DSQLQuery, clientFD int, cacheChan cha
 		((*swiss.Map[string, *dstore.Obj])(cache)).Put(kv.Key, kv.Value)
 	}
 
-	w.QueryCache.Put(queryFingerprint, cache)
+	w.QueryCache.Put(query.Fingerprint, cache)
 }
 
 // removeWatcher removes a client from the watchlist for a query.
-func (w *QWatchManager) removeWatcher(query *DSQLQuery, clientFD int) {
-	queryFingerprint := generateQueryFingerprint(query)
-	if clients, ok := w.WatchList.Load(queryFingerprint); ok {
+func (w *QueryManager) removeWatcher(query *DSQLQuery, clientFD int) {
+	queryString := query.String()
+	if clients, ok := w.WatchList.Load(queryString); ok {
 		clients.(*sync.Map).Delete(clientFD)
-		log.Info(fmt.Sprintf("client '%d' no longer watching fingerprint: %s", clientFD, queryFingerprint))
-
-		w.deleteQueryFingerprint(clientFD, queryFingerprint)
+		log.Info(fmt.Sprintf("client '%d' no longer watching query: %s", clientFD, queryString))
 
 		// If no more clients for this query, remove the query from WatchList
 		if w.clientCount(clients.(*sync.Map)) == 0 {
-			w.WatchList.Delete(queryFingerprint)
+			w.WatchList.Delete(queryString)
 
 			// Remove this Query's cached data.
 			w.QueryCacheMu.Lock()
-			w.QueryCache.Delete(queryFingerprint)
-			w.FingerPrintCache.Delete(queryFingerprint)
+			w.QueryCache.Delete(query.Fingerprint)
 			w.QueryCacheMu.Unlock()
 
-			log.Info(fmt.Sprintf("no longer watching query: %s", query))
+			log.Info(fmt.Sprintf("no longer watching query: %s", queryString))
 		}
 	}
 }
 
 // clientCount returns the number of clients watching a query.
-func (w *QWatchManager) clientCount(clients *sync.Map) int {
+func (w *QueryManager) clientCount(clients *sync.Map) int {
 	count := 0
 	clients.Range(func(_, _ interface{}) bool {
 		count++
@@ -288,23 +257,15 @@ func (w *QWatchManager) clientCount(clients *sync.Map) int {
 }
 
 // runQuery executes a query on its respective cache.
-func (w *QWatchManager) runQuery(query *DSQLQuery) (*[]dstore.DSQLQueryResultRow, error) {
+func (w *QueryManager) runQuery(query *DSQLQuery) (*[]dstore.DSQLQueryResultRow, error) {
 	w.QueryCacheMu.RLock()
 	defer w.QueryCacheMu.RUnlock()
 
-	queryFingerprint := generateQueryFingerprint(query)
-	store, ok := w.QueryCache.Get(queryFingerprint)
+	store, ok := w.QueryCache.Get(query.Fingerprint)
 	if !ok {
 		return nil, fmt.Errorf("regex was not found in the cache: %s", query.KeyRegex)
 	}
 
 	result, err := ExecuteQuery(query, store)
 	return &result, err
-}
-
-func (w *QWatchManager) deleteQueryFingerprint(clientFD int, queryFingerprint string) {
-	if queries, ok := w.FingerPrintCache.Get(queryFingerprint); ok {
-		delete(queries, clientFD)
-		w.FingerPrintCache.Put(queryFingerprint, queries)
-	}
 }
