@@ -53,8 +53,8 @@ var (
 	AdhocQueryChan chan AdhocQuery
 )
 
-// NewQWatchManager initializes a new QueryManager.
-func NewQWatchManager() *QueryManager {
+// NewQueryManager initializes a new QueryManager.
+func NewQueryManager() *QueryManager {
 	WatchSubscriptionChan = make(chan WatchSubscription)
 	AdhocQueryChan = make(chan AdhocQuery, 1000)
 	return &QueryManager{
