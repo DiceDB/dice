@@ -7,28 +7,37 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func TestHGETALL(t *testing.T) {
+func TestHGET(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
-	defer fireCommand(conn, "DEL key_hGetAll key_hGetAll02")
+	defer fireCommand(conn, "DEL key_hGet key_hGet02")
 
 	testCases := []TestCase{
 		{
-			commands: []string{"HSET key_hGetAll field value", "HSET key_hGetAll field2 value_new", "HGETALL key_hGetAll"},
-			expected: []interface{}{ONE, ONE, []string{"field", "value", "field2", "value_new"}},
+			commands: []string{"HGET", "HGET KEY", "HGET KEY FIELD ANOTHER_FIELD"},
+			expected: []interface{}{"ERR wrong number of arguments for 'hget' command",
+				"ERR wrong number of arguments for 'hget' command",
+				"ERR wrong number of arguments for 'hget' command"},
 		},
 		{
-			commands: []string{"HGETALL key_hGetAll01"},
-			expected: []interface{}{[]interface{}{}},
+			commands: []string{"HSET key_hGet field value", "HSET key_hGet field newvalue"},
+			expected: []interface{}{ONE, ZERO},
 		},
 		{
-			commands: []string{"SET key_hGetAll02 field", "HGETALL key_hGetAll02"},
+			commands: []string{"HGET wrong_key_hGet field"},
+			expected: []interface{}{"(nil)"},
+		},
+		{
+			commands: []string{"HGET key_hGet wrong_field"},
+			expected: []interface{}{"(nil)"},
+		},
+		{
+			commands: []string{"HGET key_hGet field"},
+			expected: []interface{}{"newvalue"},
+		},
+		{
+			commands: []string{"SET key value", "HGET key field"},
 			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
-		},
-		{
-			commands: []string{"HGETALL key_hGetAll03 x", "HGETALL"},
-			expected: []interface{}{"ERR wrong number of arguments for 'hgetall' command",
-				"ERR wrong number of arguments for 'hgetall' command"},
 		},
 	}
 

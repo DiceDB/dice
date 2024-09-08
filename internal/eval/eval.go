@@ -1912,6 +1912,21 @@ func evalHGETALL(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(results, false)
 }
 
+func evalHGET(args []string, store *dstore.Store) []byte {
+	if len(args) != 2 {
+		return diceerrors.NewErrArity("HGET")
+	}
+
+	key := args[0]
+	hmKey := args[1]
+
+	val, errWithMessage := getValueFromHashMap(key, hmKey, store)
+	if errWithMessage != nil {
+		return errWithMessage
+	}
+	return val
+}
+
 func evalObjectIdleTime(key string, store *dstore.Store) []byte {
 	obj := store.GetNoTouch(key)
 	if obj == nil {
