@@ -50,7 +50,7 @@ func NewAsyncServer() *AsyncServer {
 		maxClients:             config.ServerMaxClients,
 		connectedClients:       make(map[int]*comm.Client),
 		shardManager:           shard.NewShardManager(1, watchChan),
-		queryWatcher:           querywatcher.NewQWatchManager(),
+		queryWatcher:           querywatcher.NewQueryManager(),
 		multiplexerPollTimeout: config.ServerMultiplexerPollTimeout,
 		ioChan:                 make(chan *ops.StoreResponse, 1000),
 		watchChan:              watchChan,
