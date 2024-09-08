@@ -2,6 +2,7 @@ package querywatcher
 
 import (
 	"fmt"
+	hash "github.com/dgryski/go-farm"
 	"strconv"
 	"strings"
 
@@ -43,11 +44,12 @@ type QueryOrder struct {
 }
 
 type DSQLQuery struct {
-	Selection QuerySelection
-	KeyRegex  string
-	Where     sqlparser.Expr
-	OrderBy   QueryOrder
-	Limit     int
+	Selection   QuerySelection
+	KeyRegex    string
+	Where       sqlparser.Expr
+	OrderBy     QueryOrder
+	Limit       int
+	Fingerprint string
 }
 
 // replacePlaceholders replaces temporary placeholders with custom ones
@@ -58,6 +60,8 @@ func replacePlaceholders(s string) string {
 	)
 	return replacer.Replace(s)
 }
+
+// parseSelectExpressions parses the SELECT expressions in the query
 
 func (q DSQLQuery) String() string {
 	var parts []string
@@ -84,9 +88,8 @@ func (q DSQLQuery) String() string {
 	// Where
 	if q.Where != nil {
 		whereClause := sqlparser.String(q.Where)
-		whereClause = strings.Trim(whereClause, "'")
 		whereClause = replacePlaceholders(whereClause)
-		parts = append(parts, fmt.Sprintf("WHERE '%s'", whereClause))
+		parts = append(parts, fmt.Sprintf("WHERE %s", whereClause))
 	}
 
 	// OrderBy
@@ -155,11 +158,12 @@ func ParseQuery(sql string) (DSQLQuery, error) {
 	}
 
 	return DSQLQuery{
-		Selection: querySelection,
-		KeyRegex:  tableName,
-		Where:     where,
-		OrderBy:   orderBy,
-		Limit:     limit,
+		Selection:   querySelection,
+		KeyRegex:    tableName,
+		Where:       where,
+		OrderBy:     orderBy,
+		Limit:       limit,
+		Fingerprint: generateFingerprint(tableName),
 	}, nil
 }
 
@@ -264,4 +268,9 @@ func parseWhere(selectStmt *sqlparser.Select) (sqlparser.Expr, error) {
 		return nil, nil
 	}
 	return selectStmt.Where.Expr, nil
+}
+
+func generateFingerprint(keyRegex string) string {
+	// Generate a unique fingerprint for the query
+	return fmt.Sprintf("f_%d", hash.Hash64([]byte(keyRegex)))
 }
