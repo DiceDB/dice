@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/dicedb/dice/internal/clientio"
-	"github.com/dicedb/dice/internal/constants"
+	"github.com/dicedb/dice/internal/server/utils"
 )
 
 func TestSimpleStringDecode(t *testing.T) {
@@ -65,7 +65,7 @@ func TestInt64(t *testing.T) {
 func TestBulkStringDecode(t *testing.T) {
 	cases := map[string]string{
 		"$5\r\nhello\r\n": "hello",
-		"$0\r\n\r\n":      constants.EmptyStr,
+		"$0\r\n\r\n":      utils.EmptyStr,
 	}
 	for k, v := range cases {
 		p := clientio.NewRESPParser(bytes.NewBuffer([]byte(k)))

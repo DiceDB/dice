@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/dicedb/dice/internal/clientio"
-	"github.com/dicedb/dice/internal/constants"
+	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
 	"gotest.tools/v3/assert"
 )
@@ -173,7 +173,7 @@ func TestBloomOpts(t *testing.T) {
 		response    *BloomOpts
 		err         error
 	}{
-		{"default values", []string{constants.EmptyStr}, true, &BloomOpts{errorRate: defaultErrorRate, capacity: defaultCapacity}, nil},
+		{"default values", []string{utils.EmptyStr}, true, &BloomOpts{errorRate: defaultErrorRate, capacity: defaultCapacity}, nil},
 		{"should return valid values - 1", []string{"0.01", "1000"}, false, &BloomOpts{errorRate: 0.01, capacity: 1000}, nil},
 		{"should return valid values - 2", []string{"0.1", "200"}, false, &BloomOpts{errorRate: 0.1, capacity: 200}, nil},
 		{"should return invalid error rate type - 1", []string{"aa", "100"}, false, nil, errInvalidErrorRateType},

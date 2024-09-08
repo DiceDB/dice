@@ -8,7 +8,6 @@ import (
 
 	"github.com/cockroachdb/swiss"
 	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/internal/constants"
 	"github.com/dicedb/dice/internal/regex"
 )
 
@@ -134,7 +133,7 @@ func (store *Store) putHelper(k string, obj *Obj, opts ...PutOption) {
 	store.incrementKeyCount()
 
 	if store.watchChan != nil {
-		store.notifyWatchers(k, constants.Set, obj)
+		store.notifyWatchers(k, Set, obj)
 	}
 }
 
@@ -251,7 +250,7 @@ func (store *Store) Rename(sourceKey, destKey string) bool {
 
 		// Notify watchers about the deletion of the source key
 		if store.watchChan != nil {
-			store.notifyWatchers(sourceKey, constants.Del, nil)
+			store.notifyWatchers(sourceKey, Del, nil)
 		}
 
 		return true
@@ -304,7 +303,7 @@ func (store *Store) deleteKey(k string, obj *Obj) bool {
 		KeyspaceStat[0]["keys"]--
 
 		if store.watchChan != nil {
-			store.notifyWatchers(k, constants.Del, nil)
+			store.notifyWatchers(k, Del, nil)
 		}
 
 		return true

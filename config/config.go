@@ -3,7 +3,7 @@ package config
 import (
 	"time"
 
-	"github.com/dicedb/dice/internal/constants"
+	"github.com/dicedb/dice/internal/server/utils"
 )
 
 var (
@@ -35,5 +35,5 @@ var (
 // Users and ACLs
 var (
 	// if RequirePass is set to an empty string, no authentication is required
-	RequirePass string = constants.EmptyStr
+	RequirePass string = utils.EmptyStr
 )

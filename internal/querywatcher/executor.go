@@ -9,8 +9,8 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/cockroachdb/swiss"
-	"github.com/dicedb/dice/internal/constants"
 	"github.com/dicedb/dice/internal/regex"
+	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/ohler55/ojg/jp"
 	"github.com/xwb1989/sqlparser"
@@ -72,7 +72,7 @@ func ExecuteQuery(query *DSQLQuery, store *swiss.Map[string, *dstore.Obj]) ([]ds
 
 	if !query.Selection.KeySelection {
 		for i := range result {
-			result[i].Key = constants.EmptyStr
+			result[i].Key = utils.EmptyStr
 		}
 	}
 
@@ -104,7 +104,7 @@ func MarshalResultIfJSON(row *dstore.DSQLQueryResultRow) error {
 }
 
 func sortResults(query *DSQLQuery, result []dstore.DSQLQueryResultRow) {
-	if query.OrderBy.OrderBy == constants.EmptyStr {
+	if query.OrderBy.OrderBy == utils.EmptyStr {
 		return
 	}
 
@@ -134,7 +134,7 @@ func sortResults(query *DSQLQuery, result []dstore.DSQLQueryResultRow) {
 func getOrderByValue(orderBy string, row dstore.DSQLQueryResultRow) (value interface{}, valueType string, err error) {
 	switch orderBy {
 	case TempKey:
-		return row.Key, constants.String, nil
+		return row.Key, String, nil
 	case TempValue:
 		return getValueAndType(&row.Value)
 	default:
@@ -148,13 +148,13 @@ func getOrderByValue(orderBy string, row dstore.DSQLQueryResultRow) (value inter
 
 func compareOrderByValues(valI, valJ interface{}, valueType, order string) (bool, error) {
 	switch valueType {
-	case constants.String:
+	case String:
 		return compareStringValues(order, valI.(string), valJ.(string)), nil
-	case constants.Int64:
+	case Int64:
 		return compareInt64Values(order, valI.(int64), valJ.(int64)), nil
-	case constants.Float:
+	case Float:
 		return compareFloatValues(order, valI.(float64), valJ.(float64)), nil
-	case constants.Bool:
+	case Bool:
 		return compareBoolValues(order, valI.(bool), valJ.(bool)), nil
 	default:
 		return false, fmt.Errorf("unsupported type for comparison: %s", valueType)
@@ -162,28 +162,28 @@ func compareOrderByValues(valI, valJ interface{}, valueType, order string) (bool
 }
 
 func compareStringValues(order, valI, valJ string) bool {
-	if order == constants.Asc {
+	if order == Asc {
 		return valI < valJ
 	}
 	return valI > valJ
 }
 
 func compareInt64Values(order string, valI, valJ int64) bool {
-	if order == constants.Asc {
+	if order == Asc {
 		return valI < valJ
 	}
 	return valI > valJ
 }
 
 func compareFloatValues(order string, valI, valJ float64) bool {
-	if order == constants.Asc {
+	if order == Asc {
 		return valI < valJ
 	}
 	return valI > valJ
 }
 
 func compareBoolValues(order string, valI, valJ bool) bool {
-	if order == constants.Asc {
+	if order == Asc {
 		return !valI && valJ
 	}
 	return valI && !valJ
@@ -234,11 +234,11 @@ func evaluateComparison(expr *sqlparser.ComparisonExpr, row dstore.DSQLQueryResu
 	}
 
 	switch leftType {
-	case constants.String:
+	case String:
 		return compareStrings(left.(string), right.(string), expr.Operator)
-	case constants.Int64:
+	case Int64:
 		return compareInt64s(left.(int64), right.(int64), expr.Operator)
-	case constants.Float:
+	case Float:
 		return compareFloats(left.(float64), right.(float64), expr.Operator)
 	default:
 		return false, fmt.Errorf("unsupported type for comparison: %s", leftType)
@@ -310,18 +310,18 @@ func retrieveValueFromJSON(path string, jsonData *dstore.Obj) (value interface{}
 func inferTypeAndConvert(val interface{}) (value interface{}, valueType string, err error) {
 	switch v := val.(type) {
 	case string:
-		return v, constants.String, nil
+		return v, String, nil
 	case float64:
 		if isInt64(v) {
-			return int64(v), constants.Int64, nil
+			return int64(v), Int64, nil
 		}
-		return v, constants.Float, nil
+		return v, Float, nil
 	case bool:
-		return v, constants.Bool, nil
+		return v, Bool, nil
 	case nil:
-		return nil, constants.Nil, nil
+		return nil, Nil, nil
 	default:
-		return nil, constants.EmptyStr, fmt.Errorf("unsupported JSONPath result type: %T", v)
+		return nil, utils.EmptyStr, fmt.Errorf("unsupported JSONPath result type: %T", v)
 	}
 }
 
@@ -347,13 +347,13 @@ func isInt64(f float64) bool {
 func getValueAndType(obj *dstore.Obj) (val interface{}, s string, e error) {
 	switch v := obj.Value.(type) {
 	case string:
-		return v, constants.String, nil
+		return v, String, nil
 	case int64:
-		return v, constants.Int64, nil
+		return v, Int64, nil
 	case float64:
-		return v, constants.Float, nil
+		return v, Float, nil
 	default:
-		return nil, constants.EmptyStr, fmt.Errorf("unsupported value type: %T", v)
+		return nil, utils.EmptyStr, fmt.Errorf("unsupported value type: %T", v)
 	}
 }
 
@@ -361,21 +361,21 @@ func getValueAndType(obj *dstore.Obj) (val interface{}, s string, e error) {
 func sqlValToGoValue(sqlVal *sqlparser.SQLVal) (val interface{}, s string, e error) {
 	switch sqlVal.Type {
 	case sqlparser.StrVal:
-		return string(sqlVal.Val), constants.String, nil
+		return string(sqlVal.Val), String, nil
 	case sqlparser.IntVal:
 		i, err := strconv.ParseInt(string(sqlVal.Val), 10, 64)
 		if err != nil {
-			return nil, constants.EmptyStr, err
+			return nil, utils.EmptyStr, err
 		}
-		return i, constants.Int64, nil
+		return i, Int64, nil
 	case sqlparser.FloatVal:
 		f, err := strconv.ParseFloat(string(sqlVal.Val), 64)
 		if err != nil {
-			return nil, constants.EmptyStr, err
+			return nil, utils.EmptyStr, err
 		}
-		return f, constants.Float, nil
+		return f, Float, nil
 	default:
-		return nil, constants.EmptyStr, fmt.Errorf("unsupported SQLVal type: %v", sqlVal.Type)
+		return nil, utils.EmptyStr, fmt.Errorf("unsupported SQLVal type: %v", sqlVal.Type)
 	}
 }
 
@@ -383,15 +383,15 @@ func compareStrings(left, right, operator string) (bool, error) {
 	switch operator {
 	case "=":
 		return left == right, nil
-	case constants.OperatorNotEquals, constants.OperatorNotEqualsTo:
+	case OperatorNotEquals, OperatorNotEqualsTo:
 		return left != right, nil
 	case "<":
 		return left < right, nil
-	case constants.OperatorLessThanEqualsTo:
+	case OperatorLessThanEqualsTo:
 		return left <= right, nil
 	case ">":
 		return left > right, nil
-	case constants.OperatorGreaterThanEqualsTo:
+	case OperatorGreaterThanEqualsTo:
 		return left >= right, nil
 	default:
 		return false, fmt.Errorf("unsupported operator for strings: %s", operator)
@@ -402,15 +402,15 @@ func compareInt64s(left, right int64, operator string) (bool, error) {
 	switch operator {
 	case "=":
 		return left == right, nil
-	case constants.OperatorNotEquals, constants.OperatorNotEqualsTo:
+	case OperatorNotEquals, OperatorNotEqualsTo:
 		return left != right, nil
 	case "<":
 		return left < right, nil
-	case constants.OperatorLessThanEqualsTo:
+	case OperatorLessThanEqualsTo:
 		return left <= right, nil
 	case ">":
 		return left > right, nil
-	case constants.OperatorGreaterThanEqualsTo:
+	case OperatorGreaterThanEqualsTo:
 		return left >= right, nil
 	default:
 		return false, fmt.Errorf("unsupported operator for integers: %s", operator)
@@ -421,15 +421,15 @@ func compareFloats(left, right float64, operator string) (bool, error) {
 	switch operator {
 	case "=":
 		return left == right, nil
-	case constants.OperatorNotEquals, constants.OperatorNotEqualsTo:
+	case OperatorNotEquals, OperatorNotEqualsTo:
 		return left != right, nil
 	case "<":
 		return left < right, nil
-	case constants.OperatorLessThanEqualsTo:
+	case OperatorLessThanEqualsTo:
 		return left <= right, nil
 	case ">":
 		return left > right, nil
-	case constants.OperatorGreaterThanEqualsTo:
+	case OperatorGreaterThanEqualsTo:
 		return left >= right, nil
 	default:
 		return false, fmt.Errorf("unsupported operator for floats: %s", operator)

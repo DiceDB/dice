@@ -2,11 +2,12 @@ package tests
 
 import (
 	"fmt"
-	"github.com/dicedb/dice/internal/clientio"
 	"net"
 	"testing"
 
-	"github.com/dicedb/dice/internal/constants"
+	"github.com/dicedb/dice/internal/clientio"
+	"github.com/dicedb/dice/internal/querywatcher"
+
 	"gotest.tools/v3/assert"
 )
 
@@ -61,19 +62,19 @@ func TestQWatchUnwatch(t *testing.T) {
 	resp, err := respParsers[2].DecodeOne()
 	assert.NilError(t, err)
 	expectedUpdate := []interface{}{[]interface{}{"match:100:user:5", int64(70)}, []interface{}{"match:100:user:1", int64(62)}, []interface{}{"match:100:user:0", int64(60)}}
-	assert.DeepEqual(t, []interface{}{constants.Qwatch, qWatchQuery, expectedUpdate}, resp)
+	assert.DeepEqual(t, []interface{}{querywatcher.Qwatch, qWatchQuery, expectedUpdate}, resp)
 
 	fireCommand(publisher, "SET match:100:user:5 75")
 	resp, err = respParsers[2].DecodeOne()
 	assert.NilError(t, err)
 	expectedUpdate = []interface{}{[]interface{}{"match:100:user:5", int64(75)}, []interface{}{"match:100:user:1", int64(62)}, []interface{}{"match:100:user:0", int64(60)}}
-	assert.DeepEqual(t, []interface{}{constants.Qwatch, qWatchQuery, expectedUpdate}, resp)
+	assert.DeepEqual(t, []interface{}{querywatcher.Qwatch, qWatchQuery, expectedUpdate}, resp)
 
 	fireCommand(publisher, "SET match:100:user:0 80")
 	resp, err = respParsers[2].DecodeOne()
 	assert.NilError(t, err)
 	expectedUpdate = []interface{}{[]interface{}{"match:100:user:0", int64(80)}, []interface{}{"match:100:user:5", int64(75)}, []interface{}{"match:100:user:1", int64(62)}}
-	assert.DeepEqual(t, []interface{}{constants.Qwatch, qWatchQuery, expectedUpdate}, resp)
+	assert.DeepEqual(t, []interface{}{querywatcher.Qwatch, qWatchQuery, expectedUpdate}, resp)
 
 	// Cleanup store for next tests
 	for _, tc := range qWatchTestCases {

@@ -3,7 +3,7 @@ package querywatcher
 import (
 	"testing"
 
-	"github.com/dicedb/dice/internal/constants"
+	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/xwb1989/sqlparser"
 	"gotest.tools/v3/assert"
 )
@@ -38,7 +38,7 @@ func TestParseQuery(t *testing.T) {
 					Operator: "=",
 					Right:    sqlparser.NewStrVal([]byte("test")),
 				},
-				OrderBy: QueryOrder{OrderBy: "_key", Order: constants.Asc},
+				OrderBy: QueryOrder{OrderBy: "_key", Order: Asc},
 				Limit:   5,
 			},
 			wantErr: false,
@@ -87,7 +87,7 @@ func TestParseQuery(t *testing.T) {
 		},
 		{
 			name:    "empty invalid statement",
-			sql:     constants.EmptyStr,
+			sql:     utils.EmptyStr,
 			want:    DSQLQuery{},
 			wantErr: true,
 			error:   "error parsing SQL statement: syntax error at position 1",
@@ -312,7 +312,7 @@ func TestParseOrderBy(t *testing.T) {
 		{
 			name: "order by key asc",
 			sql:  "SELECT $key FROM `test` ORDER BY $key ASC",
-			want: QueryOrder{OrderBy: "_key", Order: constants.Asc},
+			want: QueryOrder{OrderBy: "_key", Order: Asc},
 		},
 		{
 			name: "order by key desc",
