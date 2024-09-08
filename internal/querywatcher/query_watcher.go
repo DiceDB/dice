@@ -129,7 +129,7 @@ func (w *QueryManager) processWatchEvent(event dstore.WatchEvent) {
 
 		query, err := ParseQuery(queryString)
 		if err != nil {
-			log.Error(fmt.Sprintf("Error parsing query: %s", queryString))
+			log.Error(fmt.Sprintf("error parsing query: %s", queryString))
 			return true
 		}
 
