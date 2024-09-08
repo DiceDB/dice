@@ -686,3 +686,26 @@ func init() {
 	DiceCmds["PFADD"] = pfAddCmdMeta
 	DiceCmds["PFCOUNT"] = pfCountCmdMeta
 }
+
+func convertKeySpecsToSlice(keySpecs KeySpecs) []interface{} {
+	return []interface{}{
+		"BeginIndex", keySpecs.BeginIndex,
+		"LastKey", keySpecs.LastKey,
+		"Step", keySpecs.Step,
+	}
+}
+
+// Function to convert DiceCmdMeta to []interface{}
+func convertCmdMetaToSlice(cmdMeta DiceCmdMeta) []interface{} {
+	keySpecsSlice := convertKeySpecsToSlice(cmdMeta.KeySpecs)
+	return []interface{}{cmdMeta.Name, cmdMeta.Arity, keySpecsSlice}
+}
+
+// Function to convert map[string]DiceCmdMeta{} to []interface{}
+func convertDiceCmdsMapToSlice() []interface{} {
+	var result []interface{}
+	for _, cmdMeta := range DiceCmds {
+		result = append(result, convertCmdMetaToSlice(cmdMeta))
+	}
+	return result
+}

@@ -1518,11 +1518,8 @@ func evalCommand(args []string, store *dstore.Store) []byte {
 }
 
 func evalCommandDefault() []byte {
-	cmds := make([]DiceCmdMeta, 0, diceCommandsCount)
-	for k := range diceCmds {
-		cmds = append(cmds, diceCmds[k])
-	}
-	return Encode(cmds, false)
+	cmds := convertDiceCmdsMapToSlice()
+	return clientio.Encode(cmds, false)
 }
 
 func evalCommandList() []byte {
