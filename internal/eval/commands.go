@@ -426,6 +426,13 @@ var (
 		Arity:    -4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hgetCmdMeta = DiceCmdMeta{
+		Name:     "HGET",
+		Info:     `Returns the value associated with field in the hash stored at key.`,
+		Eval:     evalHGET,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	hgetAllCmdMeta = DiceCmdMeta{
 		Name: "HGETALL",
 		Info: `Returns all fields and values of the hash stored at key. In the returned value,
@@ -693,6 +700,7 @@ func init() {
 	DiceCmds["HGETALL"] = hgetAllCmdMeta
 	DiceCmds["PFADD"] = pfAddCmdMeta
 	DiceCmds["PFCOUNT"] = pfCountCmdMeta
+	DiceCmds["HGET"] = hgetCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

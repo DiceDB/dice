@@ -1,6 +1,5 @@
 package utils
 
-
 func GetJSONFieldType(v interface{}) string {
 	switch v.(type) {
 	case map[string]interface{}:
