@@ -18,7 +18,7 @@ type keyValue struct {
 }
 
 var (
-	dataset = []keyValue{
+	simpleKVDataset = []keyValue{
 		{"k2", "v4"},
 		{"k4", "v2"},
 		{"k3", "v3"},
@@ -28,7 +28,7 @@ var (
 	}
 )
 
-func setup(store *dstore.Store) {
+func setup(store *dstore.Store, dataset []keyValue) {
 	// delete all keys
 	for _, data := range dataset {
 		store.Del(data.key)
@@ -41,7 +41,7 @@ func setup(store *dstore.Store) {
 
 func TestExecuteQueryOrderBykey(t *testing.T) {
 	store := dstore.NewStore(nil)
-	setup(store)
+	setup(store, simpleKVDataset)
 
 	query := DSQLQuery{
 		KeyRegex: "k*",
@@ -58,10 +58,10 @@ func TestExecuteQueryOrderBykey(t *testing.T) {
 	result, err := ExecuteQuery(&query, store.GetStore())
 
 	assert.NilError(t, err)
-	assert.Equal(t, len(result), len(dataset))
+	assert.Equal(t, len(result), len(simpleKVDataset))
 
-	sortedDataset := make([]keyValue, len(dataset))
-	copy(sortedDataset, dataset)
+	sortedDataset := make([]keyValue, len(simpleKVDataset))
+	copy(sortedDataset, simpleKVDataset)
 
 	// Sort the new dataset by the "key" field
 	sort.Slice(sortedDataset, func(i, j int) bool {
@@ -76,7 +76,7 @@ func TestExecuteQueryOrderBykey(t *testing.T) {
 
 func TestExecuteQueryBasicOrderByValue(t *testing.T) {
 	store := dstore.NewStore(nil)
-	setup(store)
+	setup(store, simpleKVDataset)
 
 	query := DSQLQuery{
 		KeyRegex: "k*",
@@ -93,10 +93,10 @@ func TestExecuteQueryBasicOrderByValue(t *testing.T) {
 	result, err := ExecuteQuery(&query, store.GetStore())
 
 	assert.NilError(t, err)
-	assert.Equal(t, len(result), len(dataset))
+	assert.Equal(t, len(result), len(simpleKVDataset))
 
-	sortedDataset := make([]keyValue, len(dataset))
-	copy(sortedDataset, dataset)
+	sortedDataset := make([]keyValue, len(simpleKVDataset))
+	copy(sortedDataset, simpleKVDataset)
 
 	// Sort the new dataset by the "value" field
 	sort.Slice(sortedDataset, func(i, j int) bool {
@@ -111,7 +111,7 @@ func TestExecuteQueryBasicOrderByValue(t *testing.T) {
 
 func TestExecuteQueryLimit(t *testing.T) {
 	store := dstore.NewStore(nil)
-	setup(store)
+	setup(store, simpleKVDataset)
 
 	query := DSQLQuery{
 		KeyRegex: "k*",
@@ -131,8 +131,8 @@ func TestExecuteQueryLimit(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Assert(t, cmp.Len(result, 3)) // Checks if limit is respected
 
-	sortedDataset := make([]keyValue, len(dataset))
-	copy(sortedDataset, dataset)
+	sortedDataset := make([]keyValue, len(simpleKVDataset))
+	copy(sortedDataset, simpleKVDataset)
 
 	// Sort the new dataset by the "key" field
 	sort.Slice(sortedDataset, func(i, j int) bool {
@@ -147,7 +147,7 @@ func TestExecuteQueryLimit(t *testing.T) {
 
 func TestExecuteQueryNoMatch(t *testing.T) {
 	store := dstore.NewStore(nil)
-	setup(store)
+	setup(store, simpleKVDataset)
 
 	query := DSQLQuery{
 		KeyRegex: "x*",
@@ -165,7 +165,7 @@ func TestExecuteQueryNoMatch(t *testing.T) {
 
 func TestExecuteQueryWithWhere(t *testing.T) {
 	store := dstore.NewStore(nil)
-	setup(store)
+	setup(store, simpleKVDataset)
 	t.Run("BasicWhereClause", func(t *testing.T) {
 		query := DSQLQuery{
 			KeyRegex: "k*",
@@ -265,7 +265,7 @@ func TestExecuteQueryWithWhere(t *testing.T) {
 
 func TestExecuteQueryWithIncompatibleTypes(t *testing.T) {
 	store := dstore.NewStore(nil)
-	setup(store)
+	setup(store, simpleKVDataset)
 
 	t.Run("ComparingStrWithInt", func(t *testing.T) {
 		query := DSQLQuery{
@@ -313,7 +313,7 @@ func TestExecuteQueryWithIncompatibleTypes(t *testing.T) {
 
 func TestExecuteQueryWithEdgeCases(t *testing.T) {
 	store := dstore.NewStore(nil)
-	setup(store)
+	setup(store, simpleKVDataset)
 
 	t.Run("CaseSensitivity", func(t *testing.T) {
 		query := DSQLQuery{
@@ -766,4 +766,420 @@ func validateJSONStringRepresentationsAreEqual(t *testing.T, expectedJSONString,
 	assert.NilError(t, sonic.UnmarshalString(expectedJSONString, &expectedValue))
 	assert.NilError(t, sonic.UnmarshalString(actualJSONString, &actualValue))
 	assert.DeepEqual(t, actualValue, expectedValue)
+}
+
+// Dataset will be used for LIKE comparisons
+var stringComparisonDataset = []keyValue{
+	{"user:1", "Alice Smith"},
+	{"user:2", "Bob Johnson"},
+	{"user:3", "Charlie Brown"},
+	{"user:4", "David Lee"},
+	{"user:5", "Eve Wilson"},
+	{"product:1", "Red Apple"},
+	{"product:2", "Green Banana"},
+	{"product:3", "Yellow Lemon"},
+	{"product:4", "Orange Orange"},
+	{"product:5", "Purple Grape"},
+	{"email:1", "alice@example.com"},
+	{"email:2", "bob@test.org"},
+	{"email:3", "charlie@gmail.com"},
+	{"email:4", "david@company.net"},
+	{"email:5", "eve@domain.io"},
+	{"desc:1", "This is a short description"},
+	{"desc:2", "A slightly longer description with more words"},
+	{"desc:3", "Description containing numbers 123 and symbols !@#"},
+	{"desc:4", "UPPERCASE DESCRIPTION"},
+	{"desc:5", "mixed CASE DeScRiPtIoN"},
+	{"tag:1", "important"},
+	{"tag:2", "urgent"},
+	{"tag:3", "low-priority"},
+	{"tag:4", "follow-up"},
+	{"tag:5", "archived"},
+}
+
+func TestExecuteQueryWithLikeStringComparisons(t *testing.T) {
+	store := dstore.NewStore(nil)
+	setup(store, stringComparisonDataset)
+
+	testCases := []struct {
+		name       string
+		query      DSQLQuery
+		expectLen  int
+		expectKeys []string
+	}{
+		{
+			name: "NamesStartingWithA",
+			query: DSQLQuery{
+				KeyRegex: "user:*",
+				Selection: QuerySelection{
+					KeySelection:   true,
+					ValueSelection: true,
+				},
+				Where: &sqlparser.ComparisonExpr{
+					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
+					Operator: "LIKE",
+					Right:    sqlparser.NewStrVal([]byte("A*")),
+				},
+			},
+			expectLen:  1,
+			expectKeys: []string{"user:1"},
+		},
+		{
+			name: "EmailsWithGmailDomain",
+			query: DSQLQuery{
+				KeyRegex: "email:*",
+				Selection: QuerySelection{
+					KeySelection:   true,
+					ValueSelection: true,
+				},
+				Where: &sqlparser.ComparisonExpr{
+					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
+					Operator: "LIKE",
+					Right:    sqlparser.NewStrVal([]byte("*@gmail.com")),
+				},
+			},
+			expectLen:  1,
+			expectKeys: []string{"email:3"},
+		},
+		{
+			name: "DescriptionsContainingWord",
+			query: DSQLQuery{
+				KeyRegex: "desc:*",
+				Selection: QuerySelection{
+					KeySelection:   true,
+					ValueSelection: true,
+				},
+				Where: &sqlparser.ComparisonExpr{
+					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
+					Operator: "LIKE",
+					Right:    sqlparser.NewStrVal([]byte("*description*")),
+				},
+				OrderBy: QueryOrder{
+					OrderBy: "_key",
+					Order:   Asc,
+				},
+			},
+			expectLen:  2,
+			expectKeys: []string{"desc:1", "desc:2"},
+		},
+		{
+			name: "CaseInsensitiveMatching",
+			query: DSQLQuery{
+				KeyRegex: "desc:*",
+				Selection: QuerySelection{
+					KeySelection:   true,
+					ValueSelection: true,
+				},
+				Where: &sqlparser.ComparisonExpr{
+					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
+					Operator: "LIKE",
+					Right:    sqlparser.NewStrVal([]byte("*UPPERCASE*")),
+				},
+			},
+			expectLen:  1,
+			expectKeys: []string{"desc:4"},
+		},
+		{
+			name: "MatchingSpecialCharacters",
+			query: DSQLQuery{
+				KeyRegex: "desc:*",
+				Selection: QuerySelection{
+					KeySelection:   true,
+					ValueSelection: true,
+				},
+				Where: &sqlparser.ComparisonExpr{
+					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
+					Operator: "LIKE",
+					Right:    sqlparser.NewStrVal([]byte("*!@#*")),
+				},
+			},
+			expectLen:  1,
+			expectKeys: []string{"desc:3"},
+		},
+		{
+			name: "MatchingNumbers",
+			query: DSQLQuery{
+				KeyRegex: "desc:*",
+				Selection: QuerySelection{
+					KeySelection:   true,
+					ValueSelection: true,
+				},
+				Where: &sqlparser.ComparisonExpr{
+					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
+					Operator: "LIKE",
+					Right:    sqlparser.NewStrVal([]byte("*123*")),
+				},
+			},
+			expectLen:  1,
+			expectKeys: []string{"desc:3"},
+		},
+		{
+			name: "ProductsContainingColor",
+			query: DSQLQuery{
+				KeyRegex: "product:*",
+				Selection: QuerySelection{
+					KeySelection:   true,
+					ValueSelection: true,
+				},
+				Where: &sqlparser.ComparisonExpr{
+					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
+					Operator: "LIKE",
+					Right:    sqlparser.NewStrVal([]byte("*Red*")),
+				},
+			},
+			expectLen:  1,
+			expectKeys: []string{"product:1"},
+		},
+		{
+			name: "TagsEndingWithPriority",
+			query: DSQLQuery{
+				KeyRegex: "tag:*",
+				Selection: QuerySelection{
+					KeySelection:   true,
+					ValueSelection: true,
+				},
+				Where: &sqlparser.ComparisonExpr{
+					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
+					Operator: "LIKE",
+					Right:    sqlparser.NewStrVal([]byte("*priority")),
+				},
+			},
+			expectLen:  1,
+			expectKeys: []string{"tag:3"},
+		},
+		{
+			name: "NamesWith5Characters",
+			query: DSQLQuery{
+				KeyRegex: "user:*",
+				Selection: QuerySelection{
+					KeySelection:   true,
+					ValueSelection: true,
+				},
+				Where: &sqlparser.ComparisonExpr{
+					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
+					Operator: "LIKE",
+					Right:    sqlparser.NewStrVal([]byte("???????????")),
+				},
+				OrderBy: QueryOrder{
+					OrderBy: "_key",
+					Order:   Asc,
+				},
+			},
+			expectLen:  2,
+			expectKeys: []string{"user:1", "user:2"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := ExecuteQuery(&tc.query, store.GetStore())
+
+			assert.NilError(t, err)
+			assert.Equal(t, len(result), tc.expectLen, "Expected %d results, got %d", tc.expectLen, len(result))
+
+			resultKeys := make([]string, len(result))
+			for i, r := range result {
+				resultKeys[i] = r.Key
+			}
+
+			assert.DeepEqual(t, resultKeys, tc.expectKeys)
+		})
+	}
+}
+
+func TestExecuteQueryWithStringNotLikeComparisons(t *testing.T) {
+	store := dstore.NewStore(nil)
+	setup(store, stringComparisonDataset)
+
+	testCases := []struct {
+		name       string
+		query      DSQLQuery
+		expectLen  int
+		expectKeys []string
+	}{
+		{
+			name: "NamesNotStartingWithA",
+			query: DSQLQuery{
+				KeyRegex: "user:*",
+				Selection: QuerySelection{
+					KeySelection:   true,
+					ValueSelection: true,
+				},
+				Where: &sqlparser.ComparisonExpr{
+					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
+					Operator: "NOT LIKE",
+					Right:    sqlparser.NewStrVal([]byte("A*")),
+				},
+				OrderBy: QueryOrder{
+					OrderBy: "_key",
+					Order:   Asc,
+				},
+			},
+			expectLen:  4,
+			expectKeys: []string{"user:2", "user:3", "user:4", "user:5"},
+		},
+		{
+			name: "EmailsNotWithGmailDomain",
+			query: DSQLQuery{
+				KeyRegex: "email:*",
+				Selection: QuerySelection{
+					KeySelection:   true,
+					ValueSelection: true,
+				},
+				Where: &sqlparser.ComparisonExpr{
+					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
+					Operator: "NOT LIKE",
+					Right:    sqlparser.NewStrVal([]byte("*@gmail.com")),
+				},
+				OrderBy: QueryOrder{
+					OrderBy: "_key",
+					Order:   Asc,
+				},
+			},
+			expectLen:  4,
+			expectKeys: []string{"email:1", "email:2", "email:4", "email:5"},
+		},
+		{
+			name: "DescriptionsNotContainingWord",
+			query: DSQLQuery{
+				KeyRegex: "desc:*",
+				Selection: QuerySelection{
+					KeySelection:   true,
+					ValueSelection: true,
+				},
+				Where: &sqlparser.ComparisonExpr{
+					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
+					Operator: "NOT LIKE",
+					Right:    sqlparser.NewStrVal([]byte("*description*")),
+				},
+				OrderBy: QueryOrder{
+					OrderBy: "_key",
+					Order:   Asc,
+				},
+			},
+			expectLen:  3,
+			expectKeys: []string{"desc:3", "desc:4", "desc:5"},
+		},
+		{
+			name: "NotCaseInsensitiveMatching",
+			query: DSQLQuery{
+				KeyRegex: "desc:*",
+				Selection: QuerySelection{
+					KeySelection:   true,
+					ValueSelection: true,
+				},
+				Where: &sqlparser.ComparisonExpr{
+					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
+					Operator: "NOT LIKE",
+					Right:    sqlparser.NewStrVal([]byte("*UPPERCASE*")),
+				},
+				OrderBy: QueryOrder{
+					OrderBy: "_key",
+					Order:   Asc,
+				},
+			},
+			expectLen:  4,
+			expectKeys: []string{"desc:1", "desc:2", "desc:3", "desc:5"},
+		},
+		{
+			name: "NotMatchingSpecialCharacters",
+			query: DSQLQuery{
+				KeyRegex: "desc:*",
+				Selection: QuerySelection{
+					KeySelection:   true,
+					ValueSelection: true,
+				},
+				Where: &sqlparser.ComparisonExpr{
+					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
+					Operator: "NOT LIKE",
+					Right:    sqlparser.NewStrVal([]byte("*!@#*")),
+				},
+				OrderBy: QueryOrder{
+					OrderBy: "_key",
+					Order:   Asc,
+				},
+			},
+			expectLen:  4,
+			expectKeys: []string{"desc:1", "desc:2", "desc:4", "desc:5"},
+		},
+		{
+			name: "ProductsNotContainingColor",
+			query: DSQLQuery{
+				KeyRegex: "product:*",
+				Selection: QuerySelection{
+					KeySelection:   true,
+					ValueSelection: true,
+				},
+				Where: &sqlparser.ComparisonExpr{
+					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
+					Operator: "NOT LIKE",
+					Right:    sqlparser.NewStrVal([]byte("*Red*")),
+				},
+				OrderBy: QueryOrder{
+					OrderBy: "_key",
+					Order:   Asc,
+				},
+			},
+			expectLen:  4,
+			expectKeys: []string{"product:2", "product:3", "product:4", "product:5"},
+		},
+		{
+			name: "TagsNotEndingWithPriority",
+			query: DSQLQuery{
+				KeyRegex: "tag:*",
+				Selection: QuerySelection{
+					KeySelection:   true,
+					ValueSelection: true,
+				},
+				Where: &sqlparser.ComparisonExpr{
+					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
+					Operator: "NOT LIKE",
+					Right:    sqlparser.NewStrVal([]byte("*priority")),
+				},
+				OrderBy: QueryOrder{
+					OrderBy: "_key",
+					Order:   Asc,
+				},
+			},
+			expectLen:  4,
+			expectKeys: []string{"tag:1", "tag:2", "tag:4", "tag:5"},
+		},
+		{
+			name: "NamesNotWith5Characters",
+			query: DSQLQuery{
+				KeyRegex: "user:*",
+				Selection: QuerySelection{
+					KeySelection:   true,
+					ValueSelection: true,
+				},
+				Where: &sqlparser.ComparisonExpr{
+					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
+					Operator: "NOT LIKE",
+					Right:    sqlparser.NewStrVal([]byte("???????????")),
+				},
+				OrderBy: QueryOrder{
+					OrderBy: "_key",
+					Order:   Asc,
+				},
+			},
+			expectLen:  3,
+			expectKeys: []string{"user:3", "user:4", "user:5"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := ExecuteQuery(&tc.query, store.GetStore())
+
+			assert.NilError(t, err)
+			assert.Equal(t, len(result), tc.expectLen, "Expected %d results, got %d", tc.expectLen, len(result))
+
+			resultKeys := make([]string, len(result))
+			for i, r := range result {
+				resultKeys[i] = r.Key
+			}
+
+			assert.DeepEqual(t, resultKeys, tc.expectKeys)
+		})
+	}
 }
