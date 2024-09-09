@@ -619,6 +619,14 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	pfMergeCmdMeta = DiceCmdMeta{
+		Name: "PFMERGE",
+		Info: `PFMERGE destkey [sourcekey [sourcekey ...]]
+		Merges one or more HyperLogLog values into a single key.`,
+		Eval:     evalPFMERGE,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -693,6 +701,7 @@ func init() {
 	DiceCmds["PFADD"] = pfAddCmdMeta
 	DiceCmds["PFCOUNT"] = pfCountCmdMeta
 	DiceCmds["HGET"] = hgetCmdMeta
+	DiceCmds["PFMERGE"] = pfMergeCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

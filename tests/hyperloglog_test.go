@@ -45,6 +45,38 @@ func TestHyperLogLogCommands(t *testing.T) {
 				"PFCOUNT hll3 non-exist-hll", "PFADD some-new-hll abc", "PFCOUNT hll3 non-exist-hll some-new-hll"},
 			expected: []interface{}{int64(1), int64(0), int64(3), int64(3), int64(1), int64(4)},
 		},
+		{
+			name: "PFMERGE with srcKey non-existing",
+			commands: []string{
+				"PFMERGE NON_EXISTING_SRC_KEY", "PFCOUNT NON_EXISTING_SRC_KEY"},
+			expected: []interface{}{"OK", int64(0)},
+		},
+		{
+			name: "PFMERGE with srcKey non-existing",
+			commands: []string{
+				"PFMERGE NON_EXISTING_SRC_KEY", "PFCOUNT NON_EXISTING_SRC_KEY"},
+			expected: []interface{}{"OK", int64(0)},
+		},
+		{
+			name: "PFMERGE with destKey non-existing",
+			commands: []string{
+				"PFMERGE EXISTING_SRC_KEY NON_EXISTING_DEST_KEY", "PFCOUNT EXISTING_SRC_KEY"},
+			expected: []interface{}{"OK", int64(0)},
+		},
+		{
+			name: "PFMERGE with destKey existing",
+			commands: []string{
+				"PFADD DEST_KEY_1 foo bar zap a", "PFADD DEST_KEY_2 a b c foo", "PFMERGE SRC_KEY_1 DEST_KEY_1 DEST_KEY_2",
+				"PFCOUNT SRC_KEY_1"},
+			expected: []interface{}{int64(1), int64(1), "OK", int64(6)},
+		},
+		{
+			name: "PFMERGE with only one destKey existing",
+			commands: []string{
+				"PFADD DEST_KEY_3 foo bar zap a", "PFMERGE SRC_KEY_2 DEST_KEY_3 NON_EXISTING_DEST_KEY",
+				"PFCOUNT SRC_KEY_2"},
+			expected: []interface{}{int64(1), "OK", int64(4)},
+		},
 	}
 
 	for _, tc := range testCases {
