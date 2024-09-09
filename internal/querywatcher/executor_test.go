@@ -369,7 +369,7 @@ func TestExecuteQueryWithEdgeCases(t *testing.T) {
 			},
 			Where: &sqlparser.ComparisonExpr{
 				Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-				Operator: "LIKE",
+				Operator: "regexp",
 				Right:    sqlparser.NewStrVal([]byte("%3")),
 			},
 		}
