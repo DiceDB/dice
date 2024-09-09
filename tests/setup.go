@@ -95,8 +95,8 @@ func runTestServer(ctx context.Context, wg *sync.WaitGroup) {
 	const totalRetries = 100
 	var err error
 
-	// Initialize the AsyncServer
-	testServer := server.NewAsyncServer()
+	// Initialize the AsyncTestServer
+	testServer := server.NewAsyncTestServer()
 
 	// Try to bind to a port with a maximum of `totalRetries` retries.
 	for i := 0; i < totalRetries; i++ {

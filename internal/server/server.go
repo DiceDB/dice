@@ -56,6 +56,20 @@ func NewAsyncServer() *AsyncServer {
 	}
 }
 
+// NewAsyncTestServer initializes a new TestAsyncServer which reads test config
+func NewAsyncTestServer() *AsyncServer {
+	watchChan := make(chan dstore.WatchEvent, config.KeysLimit)
+	return &AsyncServer{
+		maxClients:             config.Test_ServerMaxClients,
+		connectedClients:       make(map[int]*comm.Client),
+		shardManager:           shard.NewShardManager(1, watchChan),
+		queryWatcher:           querywatcher.NewQueryManager(),
+		multiplexerPollTimeout: config.Test_ServerMultiplexerPollTimeout,
+		ioChan:                 make(chan *ops.StoreResponse, 1000),
+		watchChan:              watchChan,
+	}
+}
+
 // SetupUsers initializes the default user for the server
 func (s *AsyncServer) SetupUsers() error {
 	user, err := auth.UserStore.Add(auth.DefaultUserName)
