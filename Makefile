@@ -18,7 +18,7 @@ run:
 	go run main.go
 
 test:
-	go test -v -timeout 240s -count=1 ./tests/
+	go test -v -count=1 ./tests/
 
 test-one:
 	go test -v -count=1 --run $(TEST_FUNC) ./tests/...
