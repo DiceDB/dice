@@ -380,7 +380,7 @@ func sqlValToGoValue(sqlVal *sqlparser.SQLVal) (val interface{}, s string, e err
 }
 
 func compareStrings(left, right, operator string) (bool, error) {
-	switch operator {
+	switch strings.ToLower(operator) {
 	case sqlparser.EqualStr:
 		return left == right, nil
 	case sqlparser.NotEqualStr:
@@ -393,6 +393,10 @@ func compareStrings(left, right, operator string) (bool, error) {
 		return left > right, nil
 	case sqlparser.GreaterEqualStr:
 		return left >= right, nil
+	case sqlparser.LikeStr:
+		return regex.WildCardMatch(right, left), nil
+	case sqlparser.NotLikeStr:
+		return !regex.WildCardMatch(right, left), nil
 	default:
 		return false, fmt.Errorf("unsupported operator for strings: %s", operator)
 	}
