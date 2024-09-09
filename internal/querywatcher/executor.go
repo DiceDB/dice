@@ -381,17 +381,17 @@ func sqlValToGoValue(sqlVal *sqlparser.SQLVal) (val interface{}, s string, e err
 
 func compareStrings(left, right, operator string) (bool, error) {
 	switch operator {
-	case "=":
+	case sqlparser.EqualStr:
 		return left == right, nil
-	case OperatorNotEquals, OperatorNotEqualsTo:
+	case sqlparser.NotEqualStr:
 		return left != right, nil
-	case "<":
+	case sqlparser.LessThanStr:
 		return left < right, nil
-	case OperatorLessThanEqualsTo:
+	case sqlparser.LessEqualStr:
 		return left <= right, nil
-	case ">":
+	case sqlparser.GreaterThanStr:
 		return left > right, nil
-	case OperatorGreaterThanEqualsTo:
+	case sqlparser.GreaterEqualStr:
 		return left >= right, nil
 	default:
 		return false, fmt.Errorf("unsupported operator for strings: %s", operator)
@@ -400,17 +400,17 @@ func compareStrings(left, right, operator string) (bool, error) {
 
 func compareInt64s(left, right int64, operator string) (bool, error) {
 	switch operator {
-	case "=":
+	case sqlparser.EqualStr:
 		return left == right, nil
-	case OperatorNotEquals, OperatorNotEqualsTo:
+	case sqlparser.NotEqualStr:
 		return left != right, nil
-	case "<":
+	case sqlparser.LessThanStr:
 		return left < right, nil
-	case OperatorLessThanEqualsTo:
+	case sqlparser.LessEqualStr:
 		return left <= right, nil
-	case ">":
+	case sqlparser.GreaterThanStr:
 		return left > right, nil
-	case OperatorGreaterThanEqualsTo:
+	case sqlparser.GreaterEqualStr:
 		return left >= right, nil
 	default:
 		return false, fmt.Errorf("unsupported operator for integers: %s", operator)
@@ -419,17 +419,17 @@ func compareInt64s(left, right int64, operator string) (bool, error) {
 
 func compareFloats(left, right float64, operator string) (bool, error) {
 	switch operator {
-	case "=":
+	case sqlparser.EqualStr:
 		return left == right, nil
-	case OperatorNotEquals, OperatorNotEqualsTo:
+	case sqlparser.NotEqualStr:
 		return left != right, nil
-	case "<":
+	case sqlparser.LessThanStr:
 		return left < right, nil
-	case OperatorLessThanEqualsTo:
+	case sqlparser.LessEqualStr:
 		return left <= right, nil
-	case ">":
+	case sqlparser.GreaterThanStr:
 		return left > right, nil
-	case OperatorGreaterThanEqualsTo:
+	case sqlparser.GreaterEqualStr:
 		return left >= right, nil
 	default:
 		return false, fmt.Errorf("unsupported operator for floats: %s", operator)

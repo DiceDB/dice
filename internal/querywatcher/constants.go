@@ -9,11 +9,5 @@ const (
 	Bool   string = "bool"
 	Nil    string = "nil"
 
-	OperatorEquals              string = "="
-	OperatorNotEquals           string = "!="
-	OperatorNotEqualsTo         string = "<>"
-	OperatorLessThanEqualsTo    string = "<="
-	OperatorGreaterThanEqualsTo string = ">="
-
 	Qwatch string = "qwatch"
 )
