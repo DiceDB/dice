@@ -12,8 +12,8 @@ import (
 type DSQLQuery struct {
 	Selection QuerySelection
 	KeyRegex  string
-	Where     parser.IScalar_exprContext
-	OrderBy   QueryOrder
+	Where     parser.IExprContext
+	OrderBy   []QueryOrder
 	Limit     int
 }
 
@@ -23,7 +23,7 @@ type QuerySelection struct {
 }
 
 type QueryOrder struct {
-	OrderBy string
+	OrderBy parser.IExprContext
 	Order   string
 }
 
@@ -87,17 +87,15 @@ func Parse(sql string) (query DSQLQuery, err error) {
 	return listener.Query, nil
 }
 
-func (l *CustomListener) EnterSelect_core(ctx *parser.Select_coreContext) {
-	for _, child := range ctx.GetChildren() {
-		switch child.(type) {
-		case *antlr.TerminalNodeImpl:
-			token := child.(*antlr.TerminalNodeImpl).GetSymbol()
-			if token.GetTokenType() == parser.DSQLLexerKEY_TOKEN {
-				l.Query.Selection.KeySelection = true
-			} else if token.GetTokenType() == parser.DSQLLexerVALUE_TOKEN {
-				l.Query.Selection.ValueSelection = true
-			}
-		}
+func (l *CustomListener) EnterSelect_core(ctx *parser.Select_stmtContext) {
+	result := ctx.Select_clause().Result_column()
+	if result.STAR() != nil {
+		l.Query.Selection.KeySelection = true
+		l.Query.Selection.ValueSelection = true
+	} else if result.KEY() != nil {
+		l.Query.Selection.KeySelection = true
+	} else if result.VALUE() != nil {
+		l.Query.Selection.ValueSelection = true
 	}
 }
 
@@ -108,21 +106,24 @@ func (l *CustomListener) EnterFrom_clause(ctx *parser.From_clauseContext) {
 }
 
 func (l *CustomListener) EnterWhere_clause(ctx *parser.Where_clauseContext) {
-	if expr := ctx.Scalar_expr(); expr != nil {
+	if expr := ctx.Expr(); expr != nil {
 		l.Query.Where = expr
 	}
 }
 
-func (l *CustomListener) EnterOrdering_term(ctx *parser.Ordering_termContext) {
-	if expr := ctx.IDENTIFIER(); expr != nil {
-		l.Query.OrderBy.OrderBy = expr.GetText()
-	}
-	if ctx.K_ASC() != nil {
-		l.Query.OrderBy.Order = "ASC"
-	} else if ctx.K_DESC() != nil {
-		l.Query.OrderBy.Order = "DESC"
-	} else {
-		l.Query.OrderBy.Order = "ASC"
+func (l *CustomListener) EnterOrdering_term(ctx *parser.Order_by_clauseContext) {
+	for _, orderingTerm := range ctx.AllOrdering_term() {
+		queryOrder := QueryOrder{}
+		if expr := orderingTerm.Expr(); expr != nil {
+			queryOrder.OrderBy = expr
+		}
+		queryOrder.Order = "ASC"
+		if orderingTerm.K_ASC() != nil {
+			queryOrder.Order = "ASC"
+		} else if orderingTerm.K_DESC() != nil {
+			queryOrder.Order = "DESC"
+		}
+		l.Query.OrderBy = append(l.Query.OrderBy, queryOrder)
 	}
 }
 
