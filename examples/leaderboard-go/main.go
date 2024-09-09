@@ -71,7 +71,6 @@ func updateScores() {
 		}
 		lentry, _ := json.Marshal(entry)
 		dice.JSONSet(ctx, entry.PlayerID, "$", lentry).Err()
-		time.Sleep(20 * time.Millisecond)
 	}
 }
 
