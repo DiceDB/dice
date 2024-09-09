@@ -5,12 +5,12 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
-	"github.com/dicedb/dice/internal/constants"
+	"github.com/dicedb/dice/internal/server/utils"
 	"gotest.tools/v3/assert"
 )
 
 func IsJSONResponse(s string) bool {
-	return (s != constants.EmptyStr && (sonic.ValidString(s)))
+	return (s != utils.EmptyStr && (sonic.ValidString(s)))
 }
 
 func AssertJSONEqual(t *testing.T, expected, actual string) {

@@ -9,11 +9,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/charmbracelet/log"
+	"github.com/dicedb/dice/internal/clientio"
 
+	"github.com/dicedb/dice/internal/server"
+
+	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/core"
-	"github.com/dicedb/dice/server"
+	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dice/testutils"
 	redis "github.com/dicedb/go-dice"
 )
@@ -30,7 +32,7 @@ func getLocalConnection() net.Conn {
 // deleteTestKeys is a utility to delete a list of keys before running a test
 //
 //nolint:unused
-func deleteTestKeys(keysToDelete []string, store *core.Store) {
+func deleteTestKeys(keysToDelete []string, store *dstore.Store) {
 	for _, key := range keysToDelete {
 		store.Del(key)
 	}
@@ -58,12 +60,12 @@ func getLocalSdk() *redis.Client {
 func fireCommand(conn net.Conn, cmd string) interface{} {
 	var err error
 	args := testutils.ParseCommand(cmd)
-	_, err = conn.Write(core.Encode(args, false))
+	_, err = conn.Write(clientio.Encode(args, false))
 	if err != nil {
 		log.Fatalf("error %s while firing command: %s", err, cmd)
 	}
 
-	rp := core.NewRESPParser(conn)
+	rp := clientio.NewRESPParser(conn)
 	v, err := rp.DecodeOne()
 	if err != nil {
 		if err == io.EOF {
@@ -75,18 +77,18 @@ func fireCommand(conn net.Conn, cmd string) interface{} {
 }
 
 //nolint:unused
-func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *core.RESPParser {
+func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *clientio.RESPParser {
 	args := testutils.ParseCommand(cmd)
-	_, err := conn.Write(core.Encode(args, false))
+	_, err := conn.Write(clientio.Encode(args, false))
 	if err != nil {
 		log.Fatalf("error %s while firing command: %s", err, cmd)
 	}
 
-	return core.NewRESPParser(conn)
+	return clientio.NewRESPParser(conn)
 }
 
 //nolint:unused
-func runTestServer(wg *sync.WaitGroup) {
+func runTestServer(ctx context.Context, wg *sync.WaitGroup) {
 	config.IOBufferLength = 16
 	config.Port = 8739
 
@@ -123,7 +125,6 @@ func runTestServer(wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		ctx := context.Background()
 		if err := testServer.Run(ctx); err != nil {
 			if errors.Is(err, server.ErrAborted) {
 				return

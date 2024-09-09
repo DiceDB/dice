@@ -9,7 +9,7 @@ PORT ?= 7379 #Port for dicedb
 .PHONY: build test build-docker run test-one
 
 build:
-	CGO_ENABLED=0 GOOS=linux go build -o ./dice-server
+	CGO_ENABLED=0 GOOS=linux go build -o ./dicedb
 
 format:
 	go fmt ./...
@@ -24,13 +24,13 @@ test-one:
 	go test -v -count=1 --run $(TEST_FUNC) ./tests/...
 
 unittest:
-	go test -v -count=1 ./core/...
+	go test -count=1 ./internal/...
 
 unittest-one:
-	go test -v -count=1 --run $(TEST_FUNC) ./core/...
+	go test -v -count=1 --run $(TEST_FUNC) ./internal/...
 
 build-docker:
-	docker build --tag dicedb/dice-server:latest --tag dicedb/dice-server:0.0.1 .
+	docker build --tag dicedb/dicedb:latest --tag dicedb/dicedb:0.0.2 .
 
 GOLANGCI_LINT_VERSION := 1.60.1
 

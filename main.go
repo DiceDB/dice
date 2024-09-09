@@ -6,11 +6,13 @@ import (
 	"flag"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
+
+	"github.com/dicedb/dice/internal/server"
 
 	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/server"
 )
 
 func setupFlags() {
@@ -18,15 +20,12 @@ func setupFlags() {
 	flag.IntVar(&config.Port, "port", 7379, "port for the dice server")
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
 	flag.Parse()
-
-	log.Info("Password", config.RequirePass)
 }
 
 func main() {
 	setupFlags()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	// Handle SIGTERM and SIGINT
 	sigs := make(chan os.Signal, 1)
@@ -37,19 +36,25 @@ func main() {
 
 	// Find a port and bind it
 	if err := asyncServer.FindPortAndBind(); err != nil {
-		//nolint: gocritic
+		cancel()
 		log.Fatal("Error finding and binding port:", err)
 	}
 
+	wg := sync.WaitGroup{}
+	// Goroutine to handle shutdown signals
+
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		<-sigs
-		log.Info("Shutdown signal received")
+		asyncServer.InitiateShutdown()
 		cancel()
 	}()
 
+	// Run the server
 	err := asyncServer.Run(ctx)
 
-	// May not be need, just to show we can handle different situations if necessary
+	// Handling different server errors
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			log.Info("Server was canceled")
@@ -62,8 +67,7 @@ func main() {
 		log.Info("Server stopped without error")
 	}
 
-	// Perform graceful shutdown
-	asyncServer.InitiateShutdown()
-
+	close(sigs)
+	wg.Wait()
 	log.Info("Server has shut down gracefully")
 }

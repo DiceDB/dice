@@ -5,7 +5,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/dicedb/dice/internal/constants"
+	"github.com/dicedb/dice/internal/server/utils"
 	"gotest.tools/v3/assert"
 )
 
@@ -30,14 +30,14 @@ func TestINCR(t *testing.T) {
 				val         int64
 				expectedErr string
 			}{
-				{"s", "key1", 0, constants.EmptyStr},
-				{"i", "key1", 1, constants.EmptyStr},
-				{"i", "key1", 2, constants.EmptyStr},
-				{"i", "key2", 1, constants.EmptyStr},
-				{"g", "key1", 2, constants.EmptyStr},
-				{"g", "key2", 1, constants.EmptyStr},
-				{"s", "key3", math.MaxInt64 - 1, constants.EmptyStr},
-				{"i", "key3", math.MaxInt64, constants.EmptyStr},
+				{"s", "key1", 0, utils.EmptyStr},
+				{"i", "key1", 1, utils.EmptyStr},
+				{"i", "key1", 2, utils.EmptyStr},
+				{"i", "key2", 1, utils.EmptyStr},
+				{"g", "key1", 2, utils.EmptyStr},
+				{"g", "key2", 1, utils.EmptyStr},
+				{"s", "key3", math.MaxInt64 - 1, utils.EmptyStr},
+				{"i", "key3", math.MaxInt64, utils.EmptyStr},
 				{"i", "key3", math.MaxInt64, "ERR value is out of range"},
 			},
 		},

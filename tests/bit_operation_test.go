@@ -25,6 +25,18 @@ func TestBitOp(t *testing.T) {
 			Out:    []interface{}{int64(0), int64(0), int64(0)},
 		},
 		{
+			InCmds: []string{"SET foo bar", "SETBIT foo 2 1", "SETBIT foo 4 1", "SETBIT foo 7 1", "GET foo"},
+			Out:    []interface{}{"OK", int64(1), int64(0), int64(0), "kar"},
+		},
+		{
+			InCmds: []string{"SET mykey12 1343", "SETBIT mykey12 2 1", "SETBIT mykey12 4 1", "SETBIT mykey12 7 1", "GET mykey12"},
+			Out:    []interface{}{"OK", int64(1), int64(0), int64(1), int64(9343)},
+		},
+		{
+			InCmds: []string{"SET foo12 bar", "SETBIT foo12 2 1", "SETBIT foo12 4 1", "SETBIT foo12 7 1", "GET foo12"},
+			Out:    []interface{}{"OK", int64(1), int64(0), int64(0), "kar"},
+		},
+		{
 			InCmds: []string{"BITOP NOT unitTestKeyNOT unitTestKeyA "},
 			Out:    []interface{}{int64(2)},
 		},

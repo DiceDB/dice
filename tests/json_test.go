@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dicedb/dice/internal/constants"
+	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/testutils"
 	"gotest.tools/v3/assert"
 )
@@ -91,7 +91,7 @@ func TestJSONOperations(t *testing.T) {
 			name:     "Set Non-JSON Value",
 			setCmd:   `SET nonJson "not a json"`,
 			getCmd:   `JSON.GET nonJson`,
-			expected: "the operation is not permitted on this type",
+			expected: "ERR Existing key has wrong Dice type",
 		},
 		{
 			name:     "Set Empty JSON Object",
@@ -172,12 +172,12 @@ func TestJSONOperations(t *testing.T) {
 
 	for _, tc := range singleOrderedTestCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if tc.setCmd != constants.EmptyStr {
+			if tc.setCmd != utils.EmptyStr {
 				result := fireCommand(conn, tc.setCmd)
 				assert.Equal(t, "OK", result)
 			}
 
-			if tc.getCmd != constants.EmptyStr {
+			if tc.getCmd != utils.EmptyStr {
 				result := fireCommand(conn, tc.getCmd)
 				if testutils.IsJSONResponse(result.(string)) {
 					testutils.AssertJSONEqual(t, tc.expected, result.(string))
@@ -190,12 +190,12 @@ func TestJSONOperations(t *testing.T) {
 
 	for _, tc := range multipleOrderedTestCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if tc.setCmd != constants.EmptyStr {
+			if tc.setCmd != utils.EmptyStr {
 				result := fireCommand(conn, tc.setCmd)
 				assert.Equal(t, "OK", result)
 			}
 
-			if tc.getCmd != constants.EmptyStr {
+			if tc.getCmd != utils.EmptyStr {
 				result := fireCommand(conn, tc.getCmd)
 				testutils.AssertJSONEqualList(t, tc.expected, result.(string))
 			}
@@ -328,5 +328,149 @@ func TestJSONSetWithNXAndXX(t *testing.T) {
 				assert.Equal(t, out, result)
 			}
 		}
+	}
+}
+
+func TestJSONClearOperations(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	// deleteTestKeys([]string{"user"}, store)
+	fireCommand(conn, "DEL user")
+
+	stringClearTestJson := `{"flag":true,"name":"Tom"}`
+	booleanClearTestJson := `{"flag":true,"name":"Tom"}`
+	arrayClearTestJson := `{"names":["Rahul","Tom"],"bosses":{"names":["Jerry","Rocky"]}}`
+	integerClearTestJson := `{"age":28,"name":"Tom"}`
+	floatClearTestJson := `{"price":3.14,"name":"sugar"}`
+	nullClearTestJson := `{"name":null,"age":28}`
+	multiClearTestJson := `{"age":13,"high":1.60,"flag":true,"name":"jerry","pet":null,"language":["python","golang"],"partner":{"name":"tom","language":["rust"]}}`
+
+	testCases := []struct {
+		name     string
+		commands []string
+		expected []interface{}
+	}{
+		{
+			name:     "clear root path",
+			commands: []string{"JSON.SET user $ " + multiClearTestJson, "JSON.CLEAR user $", "JSON.GET user $"},
+			expected: []interface{}{"OK", int64(1), "{}"},
+		},
+		{
+			name:     "clear string type",
+			commands: []string{"JSON.SET user $ " + stringClearTestJson, "JSON.CLEAR user $.name", "JSON.GET user $.name"},
+			expected: []interface{}{"OK", int64(0), `"Tom"`},
+		},
+		{
+			name:     "clear bool type",
+			commands: []string{"JSON.SET user $ " + booleanClearTestJson, "JSON.CLEAR user $.flag", "JSON.GET user $.flag"},
+			expected: []interface{}{"OK", int64(0), "true"},
+		},
+		{
+			name:     "clear null type",
+			commands: []string{"JSON.SET user $ " + nullClearTestJson, "JSON.CLEAR user $.pet", "JSON.GET user $.name"},
+			expected: []interface{}{"OK", int64(0), "null"},
+		},
+		{
+			name:     "clear array type",
+			commands: []string{"JSON.SET user $ " + arrayClearTestJson, "JSON.CLEAR user $..names", "JSON.GET user $..names"},
+			expected: []interface{}{"OK", int64(2), "[[],[]]"},
+		},
+		{
+			name:     "clear integer type",
+			commands: []string{"JSON.SET user $ " + integerClearTestJson, "JSON.CLEAR user $.age", "JSON.GET user $.age"},
+			expected: []interface{}{"OK", int64(1), "0"},
+		},
+		{
+			name:     "clear float type",
+			commands: []string{"JSON.SET user $ " + floatClearTestJson, "JSON.CLEAR user $.price", "JSON.GET user $.price"},
+			expected: []interface{}{"OK", int64(1), "0"},
+		},
+	}
+
+	for _, tcase := range testCases {
+		t.Run(tcase.name, func(t *testing.T) {
+			for i := 0; i < len(tcase.commands); i++ {
+				cmd := tcase.commands[i]
+				out := tcase.expected[i]
+				result := fireCommand(conn, cmd)
+				assert.Equal(t, out, result)
+
+			}
+		})
+	}
+}
+
+func TestJSONDelOperations(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	fireCommand(conn, "DEL user")
+
+	stringDelTestJson := `{"flag":true,"name":"Tom"}`
+	booleanDelTestJson := `{"flag":true,"name":"Tom"}`
+	arrayDelTestJson := `{"names":["Rahul","Tom"],"bosses":{"names":["Jerry","Rocky"],"hobby":"swim"}}`
+	integerDelTestJson := `{"age":28,"name":"Tom"}`
+	floatDelTestJson := `{"price":3.14,"name":"sugar"}`
+	nullDelTestJson := `{"name":null,"age":28}`
+	multiDelTestJson := `{"age":13,"high":1.60,"flag":true,"name":"jerry","pet":null,"language":["python","golang"],"partner":{"name":"tom","language":["rust"]}}`
+
+	testCases := []struct {
+		name     string
+		commands []string
+		expected []interface{}
+	}{
+		{
+			name:     "del root path",
+			commands: []string{"JSON.SET user $ " + multiDelTestJson, "JSON.DEL user $", "JSON.GET user $"},
+			expected: []interface{}{"OK", int64(1), "(nil)"},
+		},
+		{
+			name:     "del string type",
+			commands: []string{"JSON.SET user $ " + stringDelTestJson, "JSON.DEL user $.name", "JSON.GET user $"},
+			expected: []interface{}{"OK", int64(1), `{"flag":true}`},
+		},
+		{
+			name:     "del bool type",
+			commands: []string{"JSON.SET user $ " + booleanDelTestJson, "JSON.DEL user $.flag", "JSON.GET user $"},
+			expected: []interface{}{"OK", int64(1), `{"name":"Tom"}`},
+		},
+		{
+			name:     "del null type",
+			commands: []string{"JSON.SET user $ " + nullDelTestJson, "JSON.DEL user $.name", "JSON.GET user $"},
+			expected: []interface{}{"OK", int64(1), `{"age":28}`},
+		},
+		{
+			name:     "del array type",
+			commands: []string{"JSON.SET user $ " + arrayDelTestJson, "JSON.DEL user $..names", "JSON.GET user $"},
+			expected: []interface{}{"OK", int64(2), `{"bosses":{"hobby":"swim"}}`},
+		},
+		{
+			name:     "del integer type",
+			commands: []string{"JSON.SET user $ " + integerDelTestJson, "JSON.DEL user $.age", "JSON.GET user $"},
+			expected: []interface{}{"OK", int64(1), `{"name":"Tom"}`},
+		},
+		{
+			name:     "del float type",
+			commands: []string{"JSON.SET user $ " + floatDelTestJson, "JSON.DEL user $.price", "JSON.GET user $"},
+			expected: []interface{}{"OK", int64(1), `{"name":"sugar"}`},
+		},
+	}
+
+	for _, tcase := range testCases {
+		t.Run(tcase.name, func(t *testing.T) {
+			for i := 0; i < len(tcase.commands); i++ {
+				cmd := tcase.commands[i]
+				out := tcase.expected[i]
+				result := fireCommand(conn, cmd)
+				jsonResult, isString := result.(string)
+				if isString && testutils.IsJSONResponse(jsonResult) {
+					testutils.AssertJSONEqual(t, out.(string), jsonResult)
+				} else {
+					assert.Equal(t, out, result)
+				}
+
+			}
+		})
 	}
 }

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+   <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Leaderboard with DiceDB</title>
+      <style>
+         body {
+         font-family: monospace;
+         }
+         table, th, td {
+         border: 1px solid black;
+         border-collapse: collapse;
+         text-align: left;
+         }
+         #status {
+         margin-bottom: 20px;
+         font-weight: bold;
+         }
+      </style>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/reconnecting-websocket/1.0.0/reconnecting-websocket.min.js"></script>
+   </head>
+   <body>
+      <h1>Leaderboard with DiceDB</h1>
+      <p id="status">Connecting...</p>
+      <table id="leaderboard">
+         <thead>
+            <tr>
+               <th>Rank</th>
+               <th>Player ID</th>
+               <th>Score</th>
+               <th>Last Updated</th>
+            </tr>
+         </thead>
+         <tbody id="lbody" />
+         </tbody>
+      </table>
+      <script>
+         const lbody = document.getElementById('lbody');
+         const statusElement = document.getElementById('status');
+         
+         function updateLeaderboard(entries) {
+             lbody.innerHTML = '';
+             entries.forEach((entry, index) => {
+                 const row = lbody.insertRow();
+                 row.insertCell(0).textContent = index + 1;  // Derive rank from position
+                 row.insertCell(1).textContent = entry.player_id;
+                 row.insertCell(2).textContent = entry.score;
+                 row.insertCell(3).textContent = new Date(entry.timestamp).toLocaleString();
+             });
+         }
+         
+         function updateStatus(message, isError = false) {
+             statusElement.textContent = message;
+             statusElement.style.color = isError ? 'red' : 'green';
+         }
+         const socket = new ReconnectingWebSocket('ws://localhost:8000/ws');
+         
+         socket.onopen = function(e) {
+             console.log('Connected to WebSocket server');
+             updateStatus('Connected');
+         };
+         
+         socket.onmessage = function(event) {
+             updateLeaderboard(JSON.parse(event.data));
+         };
+         
+         socket.onclose = function(event) {
+             updateStatus('Disconnected', true);
+         };
+         
+         socket.onerror = function(error) {
+             updateStatus('Connection error', true);
+         };
+         
+         socket.addEventListener('reconnect', function(event) {
+             updateStatus('Reconnecting...', true);
+         });
+         
+         socket.addEventListener('reconnectSuccess', function(event) {
+             updateStatus('Reconnected');
+         });
+      </script>
+   </body>
+</html>
