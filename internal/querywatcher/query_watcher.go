@@ -2,9 +2,11 @@ package querywatcher
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/charmbracelet/log"
 	"github.com/cockroachdb/swiss"
@@ -172,18 +174,48 @@ func (w *QueryManager) updateQueryCache(queryFingerprint string, event dstore.Wa
 	}
 }
 
-// notifyClient notifies all clients watching a query about the new result.
 func (w *QueryManager) notifyClients(query *DSQLQuery, clients *sync.Map, queryResult *[]dstore.DSQLQueryResultRow) {
 	encodedResult := clientio.Encode(CreatePushResponse(query, queryResult), false)
-	// Send the result to the client
+
 	clients.Range(func(clientKey, _ interface{}) bool {
 		clientFD := clientKey.(int)
-		_, err := syscall.Write(clientFD, encodedResult)
-		if err != nil {
-			w.removeWatcher(query, clientFD)
-		}
+		// We use a retry mechanism here as the client's socket may be temporarily unavailable for writes due to the
+		// high number of writes that are possible in qwatch. Without this mechanism, the client may be removed from the
+		// watchlist prematurely.
+		// TODO:
+		//  1. Replace with thread pool to prevent launching an unbounded number of goroutines.
+		//  2. Each client's writes should be sent in a serialized manner, maybe a per-client queue should be maintained
+		//   here. A single queue-per-client is also helpful when the client file descriptor is closed and the queue can
+		//   just be destroyed.
+		go w.sendWithRetry(query, clientFD, encodedResult)
 		return true
 	})
+}
+
+// sendWithRetry writes data to a client file descriptor with retries. It writes with an exponential backoff.
+func (w *QueryManager) sendWithRetry(query *DSQLQuery, clientFD int, data []byte) {
+	maxRetries := 20
+	retryDelay := 20 * time.Millisecond
+
+	for i := 0; i < maxRetries; i++ {
+		_, err := syscall.Write(clientFD, data)
+		if err == nil {
+			return
+		}
+
+		if errors.Is(err, syscall.EAGAIN) || errors.Is(err, syscall.EWOULDBLOCK) {
+			time.Sleep(retryDelay)
+			retryDelay *= 2 // exponential backoff
+			continue
+		}
+
+		log.Error(fmt.Sprintf("error writing to client %d: %v", clientFD, err))
+		w.removeWatcher(query, clientFD)
+		return
+	}
+
+	log.Error(fmt.Sprintf("failed to write to client %d after %d retries", clientFD, maxRetries))
+	w.removeWatcher(query, clientFD)
 }
 
 // serveAdhocQueries listens for adhoc queries, executes them, and sends the result back to the client.
