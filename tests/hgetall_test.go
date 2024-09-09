@@ -1,9 +1,10 @@
 package tests
 
 import (
-	"gotest.tools/v3/assert"
 	"reflect"
 	"testing"
+
+	"gotest.tools/v3/assert"
 )
 
 func TestHGETALL(t *testing.T) {

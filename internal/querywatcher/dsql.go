@@ -2,9 +2,10 @@ package querywatcher
 
 import (
 	"fmt"
-	hash "github.com/dgryski/go-farm"
 	"strconv"
 	"strings"
+
+	hash "github.com/dgryski/go-farm"
 
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/xwb1989/sqlparser"

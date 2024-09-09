@@ -55,6 +55,7 @@ func TestEval(t *testing.T) {
 	testEvalHSET(t, store)
 	testEvalPFADD(t, store)
 	testEvalPFCOUNT(t, store)
+	testEvalHGET(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -967,6 +968,64 @@ func testEvalPFCOUNT(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalPFCOUNT, store)
 }
 
+func testEvalHGET(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"wrong number of args passed": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'hget' command\r\n"),
+		},
+		"only key passed": {
+			setup:  func() {},
+			input:  []string{"KEY"},
+			output: []byte("-ERR wrong number of arguments for 'hget' command\r\n"),
+		},
+		"key doesn't exists": {
+			setup:  func() {},
+			input:  []string{"KEY", "field_name"},
+			output: clientio.RespNIL,
+		},
+		"key exists but field_name doesn't exists": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field := "mock_field_name"
+				newMap := make(HashMap)
+				newMap[field] = "mock_field_value"
+
+				obj := &dstore.Obj{
+					TypeEncoding:   dstore.ObjTypeHashMap | dstore.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input:  []string{"KEY_MOCK", "non_existent_key"},
+			output: clientio.RespNIL,
+		},
+		"both key and field_name exists": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field := "mock_field_name"
+				newMap := make(HashMap)
+				newMap[field] = "mock_field_value"
+
+				obj := &dstore.Obj{
+					TypeEncoding:   dstore.ObjTypeHashMap | dstore.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input:  []string{"KEY_MOCK", "mock_field_name"},
+			output: clientio.Encode("mock_field_value", false),
+		},
+	}
+
+	runEvalTests(t, tests, evalHGET, store)
+}
+
 func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]string, *dstore.Store) []byte, store *dstore.Store) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -1070,8 +1129,9 @@ func testEvalHSET(t *testing.T, store *dstore.Store) {
 
 				// Check if the map is saved correctly in the store
 				res, err := getValueFromHashMap(key, field, store)
-				assert.NilError(t, err)
-				assert.Equal(t, string(res), mock_value)
+
+				assert.Assert(t, err == nil)
+				assert.DeepEqual(t, res, clientio.Encode(mock_value, false))
 			},
 			input: []string{
 				"KEY_MOCK",

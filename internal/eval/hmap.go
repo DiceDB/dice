@@ -61,8 +61,7 @@ func hashMapBuilder(keyValuePairs []string, currentHashMap HashMap) (HashMap, in
 	return hmap, numKeysNewlySet, nil
 }
 
-//nolint:unused
-func getValueFromHashMap(key, field string, store *dstore.Store) ([]byte, error) {
+func getValueFromHashMap(key, field string, store *dstore.Store) (val, err []byte) {
 	var value string
 
 	obj := store.Get(key)
@@ -79,8 +78,8 @@ func getValueFromHashMap(key, field string, store *dstore.Store) ([]byte, error)
 		}
 		value = *val
 	default:
-		return nil, diceerrors.NewErr(diceerrors.WrongTypeErr)
+		return nil, diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
-	return []byte(value), nil
+	return clientio.Encode(value, false), nil
 }

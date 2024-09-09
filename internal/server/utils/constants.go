@@ -2,7 +2,7 @@ package utils
 
 const (
 	EmptyStr = ""
-	
+
 	ObjectType      string = "object"
 	ArrayType       string = "array"
 	StringType      string = "string"
