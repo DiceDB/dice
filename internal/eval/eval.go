@@ -1576,7 +1576,7 @@ func evalBITOP(args []string, store *dstore.Store) []byte {
 // COUNT: return total count of commands in Dice.
 func evalCommand(args []string, store *dstore.Store) []byte {
 	if len(args) == 0 {
-		return diceerrors.NewErrArity("COMMAND")
+		return evalCommandDefault()
 	}
 	subcommand := strings.ToUpper(args[0])
 	switch subcommand {
@@ -1589,6 +1589,11 @@ func evalCommand(args []string, store *dstore.Store) []byte {
 	default:
 		return diceerrors.NewErrWithFormattedMessage("unknown subcommand '%s'. Try COMMAND HELP.", subcommand)
 	}
+}
+
+func evalCommandDefault() []byte {
+	cmds := convertDiceCmdsMapToSlice()
+	return clientio.Encode(cmds, false)
 }
 
 func evalCommandList() []byte {
