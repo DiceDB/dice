@@ -2,6 +2,8 @@ package store
 
 import (
 	"github.com/dicedb/dice/internal/object"
+	"github.com/dicedb/dice/internal/sql"
+	"github.com/xwb1989/sqlparser"
 	"path"
 	"sync"
 
@@ -53,7 +55,7 @@ func (store *Store) NewObj(value interface{}, expDurationMs int64, oType, oEnc u
 }
 
 func (store *Store) ResetStore() {
-	WithLocks(func() {
+	withLocks(func() {
 		store.store.Clear()
 		store.expires.Clear()
 		store.watchChan = make(chan WatchEvent, config.KeysLimit)
@@ -65,7 +67,7 @@ type PutOptions struct {
 }
 
 func (store *Store) Put(k string, obj *object.Obj, opts ...PutOption) {
-	WithLocks(func() {
+	withLocks(func() {
 		store.putHelper(k, obj, opts...)
 	}, store, WithStoreLock())
 }
@@ -85,7 +87,7 @@ func WithKeepTTL(value bool) PutOption {
 }
 
 func (store *Store) PutAll(data map[string]*object.Obj) {
-	WithLocks(func() {
+	withLocks(func() {
 		for k, obj := range data {
 			store.putHelper(k, obj)
 		}
@@ -129,7 +131,7 @@ func (store *Store) putHelper(k string, obj *object.Obj, opts ...PutOption) {
 
 func (store *Store) getHelper(k string, touch bool) *object.Obj {
 	var v *object.Obj
-	WithLocks(func() {
+	withLocks(func() {
 		v, _ = store.store.Get(k)
 		if v != nil {
 			if hasExpired(v, store) {
@@ -145,7 +147,7 @@ func (store *Store) getHelper(k string, touch bool) *object.Obj {
 
 func (store *Store) GetAll(keys []string) []*object.Obj {
 	response := make([]*object.Obj, 0, len(keys))
-	WithLocks(func() {
+	withLocks(func() {
 		for _, k := range keys {
 			v, _ := store.store.Get(k)
 			if v != nil {
@@ -184,7 +186,7 @@ func (store *Store) Keys(p string) ([]string, error) {
 	var keys []string
 	var err error
 
-	WithLocks(func() {
+	withLocks(func() {
 		keys = make([]string, 0, store.store.Len())
 
 		store.store.All(func(k string, _ *object.Obj) bool {
@@ -206,7 +208,7 @@ func (store *Store) Keys(p string) ([]string, error) {
 // GetDbSize returns number of keys present in the database
 func (store *Store) GetDBSize() uint64 {
 	var noOfKeys uint64
-	WithLocks(func() {
+	withLocks(func() {
 		noOfKeys = uint64(store.store.Len())
 	}, store, WithStoreRLock())
 	return noOfKeys
@@ -260,7 +262,7 @@ func (store *Store) Get(k string) *object.Obj {
 
 func (store *Store) GetDel(k string) *object.Obj {
 	var v *object.Obj
-	WithLocks(func() {
+	withLocks(func() {
 		v, _ = store.store.Get(k)
 		if v != nil {
 			expired := hasExpired(v, store)
@@ -316,4 +318,30 @@ func (store *Store) notifyWatchers(k, operation string, obj *object.Obj) {
 
 func (store *Store) GetStore() *swiss.Map[string, *object.Obj] {
 	return store.store
+}
+
+func (store *Store) CacheKeysForQuery(whereClause sqlparser.Expr, cacheChannel chan *[]struct {
+	Key   string
+	Value *object.Obj
+}) {
+	shardCache := make([]struct {
+		Key   string
+		Value *object.Obj
+	}, 0)
+	withLocks(func() {
+		store.store.All(func(k string, v *object.Obj) bool {
+			matches, err := sql.EvaluateWhereClause(whereClause, sql.QueryResultRow{Key: k, Value: *v})
+			if err != nil || !matches {
+				return true
+			}
+
+			shardCache = append(shardCache, struct {
+				Key   string
+				Value *object.Obj
+			}{Key: k, Value: v})
+
+			return true
+		})
+	}, store, WithStoreRLock())
+	cacheChannel <- &shardCache
 }

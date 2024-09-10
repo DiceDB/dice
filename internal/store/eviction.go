@@ -9,7 +9,7 @@ import (
 // Evicts the first key it found while iterating the map
 // TODO: Make it efficient by doing thorough sampling
 func evictFirst(store *Store) {
-	WithLocks(func() {
+	withLocks(func() {
 		store.store.All(func(k string, obj *object.Obj) bool {
 			store.delByPtr(k)
 			// stop after iterating over the first element
@@ -22,7 +22,7 @@ func evictFirst(store *Store) {
 // The number of keys removed will be sufficient to free up at least 10% space
 func evictAllkeysRandom(store *Store) {
 	evictCount := int64(config.EvictionRatio * float64(config.KeysLimit))
-	WithLocks(func() {
+	withLocks(func() {
 		// Iteration of Golang dictionary can be considered as a random
 		// because it depends on the hash of the inserted key
 		store.store.All(func(k string, obj *object.Obj) bool {
@@ -54,7 +54,7 @@ func populateEvictionPool(store *Store) {
 
 	// TODO: if we already have obj, why do we need to
 	// look up in store.store again?
-	WithLocks(func() {
+	withLocks(func() {
 		store.store.All(func(k string, obj *object.Obj) bool {
 			v, ok := store.store.Get(k)
 			if ok {

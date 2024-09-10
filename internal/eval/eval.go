@@ -1073,7 +1073,10 @@ func EvalQWATCH(args []string, clientFd int, store *dstore.Store) []byte {
 	}
 
 	// use an unbuffered channel to ensure that we only proceed to query execution once the query watcher has built the cache
-	cacheChannel := make(chan *dstore.Store)
+	cacheChannel := make(chan *[]struct {
+		Key   string
+		Value *object.Obj
+	})
 	querywatcher.WatchSubscriptionChan <- querywatcher.WatchSubscription{
 		Subscribe: true,
 		Query:     query,
@@ -1081,7 +1084,7 @@ func EvalQWATCH(args []string, clientFd int, store *dstore.Store) []byte {
 		CacheChan: cacheChannel,
 	}
 
-	cacheChannel <- store
+	store.CacheKeysForQuery(query.Where, cacheChannel)
 
 	// Return the result of the query.
 	responseChan := make(chan querywatcher.AdhocQueryResult)

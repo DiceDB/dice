@@ -22,10 +22,13 @@ type (
 
 	// WatchSubscription represents a subscription to watch a query.
 	WatchSubscription struct {
-		Subscribe bool               // true for subscribe, false for unsubscribe
-		Query     sql.DSQLQuery      // query to watch
-		ClientFD  int                // client file descriptor
-		CacheChan chan *dstore.Store // channel to receive cache data for this query
+		Subscribe bool          // true for subscribe, false for unsubscribe
+		Query     sql.DSQLQuery // query to watch
+		ClientFD  int           // client file descriptor
+		CacheChan chan *[]struct {
+			Key   string
+			Value *object.Obj
+		} // channel to receive cache data for this query
 	}
 
 	// AdhocQueryResult represents the result of an adhoc query.
@@ -241,7 +244,10 @@ func (w *QueryManager) serveAdhocQueries(ctx context.Context) {
 }
 
 // addWatcher adds a client as a watcher to a query.
-func (w *QueryManager) addWatcher(query *sql.DSQLQuery, clientFD int, cacheChan chan *dstore.Store) {
+func (w *QueryManager) addWatcher(query *sql.DSQLQuery, clientFD int, cacheChan chan *[]struct {
+	Key   string
+	Value *object.Obj
+}) {
 	queryString := query.String()
 
 	clients, _ := w.WatchList.LoadOrStore(queryString, &sync.Map{})
@@ -253,18 +259,11 @@ func (w *QueryManager) addWatcher(query *sql.DSQLQuery, clientFD int, cacheChan 
 	cache := newCacheStore()
 	// Hydrate the cache with data from all shards.
 	// TODO: We need to ensure we receive cache data from all shards once we have multithreading in place.
-	//  For now we only expect one store instance to be received.
-	store := <-cacheChan
-	dstore.WithLocks(func() {
-		store.GetStore().All(func(k string, v *object.Obj) bool {
-			matches, err := sql.EvaluateWhereClause(query.Where, sql.QueryResultRow{Key: k, Value: *v})
-			if err != nil || !matches {
-				return true
-			}
-			((*swiss.Map[string, *object.Obj])(cache)).Put(k, v)
-			return true
-		})
-	}, store, dstore.WithStoreRLock())
+	//  For now we only expect one update.
+	kvs := <-cacheChan
+	for _, kv := range *kvs {
+		((*swiss.Map[string, *object.Obj])(cache)).Put(kv.Key, kv.Value)
+	}
 
 	w.QueryCache.Put(query.Fingerprint, cache)
 }

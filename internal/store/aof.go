@@ -116,7 +116,7 @@ func DumpAllAOF(store *Store) error {
 
 	log.Println("rewriting AOF file at", config.AOFFile)
 
-	WithLocks(func() {
+	withLocks(func() {
 		store.store.All(func(k string, obj *object.Obj) bool {
 			err = dumpKey(aof, k, obj)
 			// continue if no error

@@ -1,8 +1,9 @@
-package sql
+package sql_test
 
 import (
 	"fmt"
 	"github.com/dicedb/dice/internal/object"
+	"github.com/dicedb/dice/internal/sql"
 	"testing"
 
 	"github.com/bytedance/sonic"
@@ -39,7 +40,7 @@ func BenchmarkExecuteQueryOrderBykey(b *testing.B) {
 		defer store.ResetStore()
 
 		queryStr := "SELECT $key, $value WHERE $key like 'k*' ORDER BY $key ASC"
-		query, err := ParseQuery(queryStr)
+		query, err := sql.ParseQuery(queryStr)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -49,7 +50,7 @@ func BenchmarkExecuteQueryOrderBykey(b *testing.B) {
 
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := ExecuteQuery(&query, store.GetStore()); err != nil {
+				if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -64,7 +65,7 @@ func BenchmarkExecuteQueryBasicOrderByValue(b *testing.B) {
 		defer store.ResetStore()
 
 		queryStr := "SELECT $key, $value WHERE $key like 'k*' ORDER BY $value ASC"
-		query, err := ParseQuery(queryStr)
+		query, err := sql.ParseQuery(queryStr)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -72,7 +73,7 @@ func BenchmarkExecuteQueryBasicOrderByValue(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := ExecuteQuery(&query, store.GetStore()); err != nil {
+				if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -87,7 +88,7 @@ func BenchmarkExecuteQueryLimit(b *testing.B) {
 		defer store.ResetStore()
 
 		queryStr := fmt.Sprintf("SELECT $key, $value WHERE $key like 'k*' ORDER BY $key ASC LIMIT %d", v/3)
-		query, err := ParseQuery(queryStr)
+		query, err := sql.ParseQuery(queryStr)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -95,7 +96,7 @@ func BenchmarkExecuteQueryLimit(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := ExecuteQuery(&query, store.GetStore()); err != nil {
+				if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -110,7 +111,7 @@ func BenchmarkExecuteQueryNoMatch(b *testing.B) {
 		defer store.ResetStore()
 
 		queryStr := "SELECT $key, $value WHERE $key like 'x*' ORDER BY $key ASC"
-		query, err := ParseQuery(queryStr)
+		query, err := sql.ParseQuery(queryStr)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -118,7 +119,7 @@ func BenchmarkExecuteQueryNoMatch(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := ExecuteQuery(&query, store.GetStore()); err != nil {
+				if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -133,7 +134,7 @@ func BenchmarkExecuteQueryWithBasicWhere(b *testing.B) {
 		defer store.ResetStore()
 
 		queryStr := "SELECT $key, $value WHERE $value = 'v3' AND $key like 'k*'"
-		query, err := ParseQuery(queryStr)
+		query, err := sql.ParseQuery(queryStr)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -141,7 +142,7 @@ func BenchmarkExecuteQueryWithBasicWhere(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := ExecuteQuery(&query, store.GetStore()); err != nil {
+				if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -156,7 +157,7 @@ func BenchmarkExecuteQueryWithComplexWhere(b *testing.B) {
 		defer store.ResetStore()
 
 		queryStr := "SELECT $key, $value WHERE $value > 'v2' AND $value < 'v100' AND $key like 'k*' ORDER BY $value DESC"
-		query, err := ParseQuery(queryStr)
+		query, err := sql.ParseQuery(queryStr)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -164,7 +165,7 @@ func BenchmarkExecuteQueryWithComplexWhere(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := ExecuteQuery(&query, store.GetStore()); err != nil {
+				if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -179,7 +180,7 @@ func BenchmarkExecuteQueryWithCompareWhereKeyandValue(b *testing.B) {
 		defer store.ResetStore()
 
 		queryStr := "SELECT $key, $value WHERE $key = $value AND $key like 'k*'"
-		query, err := ParseQuery(queryStr)
+		query, err := sql.ParseQuery(queryStr)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -187,7 +188,7 @@ func BenchmarkExecuteQueryWithCompareWhereKeyandValue(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := ExecuteQuery(&query, store.GetStore()); err != nil {
+				if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -202,7 +203,7 @@ func BenchmarkExecuteQueryWithBasicWhereNoMatch(b *testing.B) {
 		defer store.ResetStore()
 
 		queryStr := "SELECT $key, $value WHERE $value = 'nonexistent' AND $key like 'k*'"
-		query, err := ParseQuery(queryStr)
+		query, err := sql.ParseQuery(queryStr)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -210,7 +211,7 @@ func BenchmarkExecuteQueryWithBasicWhereNoMatch(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := ExecuteQuery(&query, store.GetStore()); err != nil {
+				if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -225,14 +226,14 @@ func BenchmarkExecuteQueryWithCaseSesnsitivity(b *testing.B) {
 		defer store.ResetStore()
 
 		queryStr := "SELECT $key, $value WHERE $value = 'V9' AND $key like 'k*'"
-		query, err := ParseQuery(queryStr)
+		query, err := sql.ParseQuery(queryStr)
 		if err != nil {
 			b.Fatal(err)
 		}
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := ExecuteQuery(&query, store.GetStore()); err != nil {
+				if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -247,7 +248,7 @@ func BenchmarkExecuteQueryWithClauseOnKey(b *testing.B) {
 		defer store.ResetStore()
 
 		queryStr := "SELECT $key, $value WHERE $key > 'k3' AND $key like 'k*' ORDER BY $key ASC"
-		query, err := ParseQuery(queryStr)
+		query, err := sql.ParseQuery(queryStr)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -255,7 +256,7 @@ func BenchmarkExecuteQueryWithClauseOnKey(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := ExecuteQuery(&query, store.GetStore()); err != nil {
+				if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -270,7 +271,7 @@ func BenchmarkExecuteQueryWithAllMatchingKeyRegex(b *testing.B) {
 		defer store.ResetStore()
 
 		queryStr := "SELECT $key, $value WHERE $key like '*' ORDER BY $key ASC"
-		query, err := ParseQuery(queryStr)
+		query, err := sql.ParseQuery(queryStr)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -278,7 +279,7 @@ func BenchmarkExecuteQueryWithAllMatchingKeyRegex(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := ExecuteQuery(&query, store.GetStore()); err != nil {
+				if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -313,7 +314,7 @@ func BenchmarkExecuteQueryWithJSON(b *testing.B) {
 			defer store.ResetStore()
 
 			queryStr := "SELECT $key, $value WHERE $key like 'k*' AND '$value.id' = 3 ORDER BY $key ASC"
-			query, err := ParseQuery(queryStr)
+			query, err := sql.ParseQuery(queryStr)
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -321,7 +322,7 @@ func BenchmarkExecuteQueryWithJSON(b *testing.B) {
 			b.ResetTimer()
 			b.Run(fmt.Sprintf("%s_keys_%d", jsonSize, v), func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					if _, err := ExecuteQuery(&query, store.GetStore()); err != nil {
+					if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
 						b.Fatal(err)
 					}
 				}
@@ -338,7 +339,7 @@ func BenchmarkExecuteQueryWithNestedJSON(b *testing.B) {
 			defer store.ResetStore()
 
 			queryStr := "SELECT $key, $value WHERE $key like 'k*' AND '$value.field1.field2.field3.score' > 10.1 ORDER BY $key ASC"
-			query, err := ParseQuery(queryStr)
+			query, err := sql.ParseQuery(queryStr)
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -346,7 +347,7 @@ func BenchmarkExecuteQueryWithNestedJSON(b *testing.B) {
 			b.ResetTimer()
 			b.Run(fmt.Sprintf("%s_keys_%d", jsonSize, v), func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					if _, err := ExecuteQuery(&query, store.GetStore()); err != nil {
+					if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
 						b.Fatal(err)
 					}
 				}
@@ -363,7 +364,7 @@ func BenchmarkExecuteQueryWithJsonInLeftAndRightExpressions(b *testing.B) {
 			defer store.ResetStore()
 
 			queryStr := "SELECT $key, $value WHERE '$value.id' = '$value.score' AND $key like 'k*' ORDER BY $key ASC"
-			query, err := ParseQuery(queryStr)
+			query, err := sql.ParseQuery(queryStr)
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -371,7 +372,7 @@ func BenchmarkExecuteQueryWithJsonInLeftAndRightExpressions(b *testing.B) {
 			b.ResetTimer()
 			b.Run(fmt.Sprintf("%s_keys_%d", jsonSize, v), func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					if _, err := ExecuteQuery(&query, store.GetStore()); err != nil {
+					if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
 						b.Fatal(err)
 					}
 				}
@@ -388,7 +389,7 @@ func BenchmarkExecuteQueryWithJsonNoMatch(b *testing.B) {
 			defer store.ResetStore()
 
 			queryStr := "SELECT $key, $value WHERE '$value.id' = 3 AND $key like 'k*' ORDER BY $key ASC"
-			query, err := ParseQuery(queryStr)
+			query, err := sql.ParseQuery(queryStr)
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -396,7 +397,7 @@ func BenchmarkExecuteQueryWithJsonNoMatch(b *testing.B) {
 			b.ResetTimer()
 			b.Run(fmt.Sprintf("%s_keys_%d", jsonSize, v), func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					if _, err := ExecuteQuery(&query, store.GetStore()); err != nil {
+					if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
 						b.Fatal(err)
 					}
 				}

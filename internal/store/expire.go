@@ -30,7 +30,7 @@ func expireSample(store *Store) float32 {
 	var expiredCount = 0
 	var keysToDelete []string
 
-	WithLocks(func() {
+	withLocks(func() {
 		// Collect keys to be deleted
 		store.store.All(func(keyPtr string, obj *object.Obj) bool {
 			limit--
