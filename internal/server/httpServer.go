@@ -5,6 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"sync"
+	"time"
+
 	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
@@ -13,11 +17,9 @@ import (
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
-	"net/http"
-	"sync"
 )
 
-type HttpServer struct {
+type HTTPServer struct {
 	queryWatcher *querywatcher.QueryManager
 	shardManager *shard.ShardManager
 	ioChan       chan *ops.StoreResponse
@@ -25,16 +27,17 @@ type HttpServer struct {
 	httpServer   *http.Server
 }
 
-// NewHttpServer
+// NewHTTPServer
 // TODO: This isn't ideal as we create a separate instance of ShardManager, which we want to be 1, which all servers share
-func NewHttpServer(shardManager *shard.ShardManager, watchChan chan dstore.WatchEvent) *HttpServer {
+func NewHTTPServer(shardManager *shard.ShardManager, watchChan chan dstore.WatchEvent) *HTTPServer {
 	mux := http.NewServeMux()
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", config.HTTPPort),
-		Handler: mux,
+		Addr:              fmt.Sprintf(":%d", config.HTTPPort),
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 
-	httpServer := &HttpServer{
+	httpServer := &HTTPServer{
 		shardManager: shardManager,
 		queryWatcher: querywatcher.NewQueryManager(),
 		ioChan:       make(chan *ops.StoreResponse, 1000),
@@ -42,7 +45,7 @@ func NewHttpServer(shardManager *shard.ShardManager, watchChan chan dstore.Watch
 		httpServer:   srv,
 	}
 
-	mux.HandleFunc("/", httpServer.DiceHttpHandler)
+	mux.HandleFunc("/", httpServer.DiceHTTPHandler)
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("ok"))
 		if err != nil {
@@ -53,12 +56,12 @@ func NewHttpServer(shardManager *shard.ShardManager, watchChan chan dstore.Watch
 	return httpServer
 }
 
-func (s *HttpServer) Run(ctx context.Context) error {
+func (s *HTTPServer) Run(ctx context.Context) error {
 	var wg sync.WaitGroup
 	var err error
 
-	_, cancelHttp := context.WithCancel(ctx)
-	defer cancelHttp()
+	_, cancelHTTP := context.WithCancel(ctx)
+	defer cancelHTTP()
 
 	s.shardManager.RegisterWorker("httpServer", s.ioChan)
 
@@ -84,7 +87,7 @@ func (s *HttpServer) Run(ctx context.Context) error {
 	return err
 }
 
-func (s *HttpServer) DiceHttpHandler(writer http.ResponseWriter, request *http.Request) {
+func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.Request) {
 	// convert to REDIS cmd
 	redisCmd, err := utils.ParseHTTPRequest(request)
 	if err != nil {
@@ -97,7 +100,7 @@ func (s *HttpServer) DiceHttpHandler(writer http.ResponseWriter, request *http.R
 		Cmd:      redisCmd,
 		WorkerID: "httpServer",
 		ShardID:  0,
-		HttpOp:   true,
+		HTTPOp:   true,
 	}
 
 	// Wait for response
@@ -111,12 +114,12 @@ func (s *HttpServer) DiceHttpHandler(writer http.ResponseWriter, request *http.R
 	}
 
 	// Write response
-	responseJson, err := json.Marshal(val)
+	responseJSON, err := json.Marshal(val)
 	if err != nil {
-		log.Errorf("Error marshalling response: %v", err)
+		log.Errorf("Error marshaling response: %v", err)
 		return
 	}
-	_, err = writer.Write(responseJson)
+	_, err = writer.Write(responseJSON)
 	if err != nil {
 		log.Errorf("Error writing response: %v", err)
 		return

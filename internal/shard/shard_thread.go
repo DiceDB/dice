@@ -111,7 +111,7 @@ func (shard *ShardThread) executeCommand(op *ops.StoreOp) []byte {
 	}
 
 	// Till the time we refactor to handle QWATCH differently using HTTP Streaming/SSE
-	if op.HttpOp {
+	if op.HTTPOp {
 		return diceCmd.Eval(op.Cmd.Args, shard.store)
 	}
 

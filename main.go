@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"flag"
-	"github.com/dicedb/dice/internal/shard"
-	dstore "github.com/dicedb/dice/internal/store"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+
+	"github.com/dicedb/dice/internal/shard"
+	dstore "github.com/dicedb/dice/internal/store"
 
 	"github.com/dicedb/dice/internal/server"
 
@@ -40,7 +41,7 @@ func main() {
 
 	// Initialize the AsyncServer
 	asyncServer := server.NewAsyncServer(shardManager, watchChan)
-	httpServer := server.NewHttpServer(shardManager, watchChan)
+	httpServer := server.NewHTTPServer(shardManager, watchChan)
 
 	// Initialize the HTTP server
 
@@ -119,7 +120,9 @@ func main() {
 
 	for err := range serverErrCh {
 		if err != nil && errors.Is(err, server.ErrAborted) {
-			cancel() // Cancel the context if there's an error
+			// if either the AsyncServer or the HTTPServer received an abort command,
+			// cancel the context, helping gracefully exiting all servers
+			cancel()
 		}
 	}
 

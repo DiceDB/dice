@@ -12,7 +12,7 @@ type StoreOp struct {
 	ShardID   int           // ShardID of the shard on which the Store command will be executed
 	WorkerID  string        // WorkerID is the ID of the worker that sent this Store operation
 	Client    *comm.Client  // Client that sent this Store operation. TODO: This can potentially replace the WorkerID in the future
-	HttpOp    bool 			// HttpOp is true if this Store operation is a HTTP operation
+	HTTPOp    bool          // HTTPOp is true if this Store operation is a HTTP operation
 }
 
 // StoreResponse represents the response of a Store operation.

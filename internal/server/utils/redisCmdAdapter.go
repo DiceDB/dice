@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dicedb/dice/internal/cmd"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/dicedb/dice/internal/cmd"
 )
 
 func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
