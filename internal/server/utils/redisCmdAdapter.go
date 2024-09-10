@@ -19,22 +19,8 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 	prefix = strings.ToUpper(prefix)
 	var args []string
 
-	// Step 1: Check if query parameters are present
-	query := r.URL.Query()
-	if len(query) > 0 {
-		// Parse from query parameters
-		for key, values := range query {
-			if len(values) == 1 && values[0] == "" {
-				// Treat key as a flag (e.g., "nx")
-				args = append(args, key)
-			} else {
-				for _, value := range values {
-					args = append(args, value) // Add values directly
-				}
-			}
-		}
-	} else if r.Body != nil {
-		// Step 2: Parse from JSON body if present
+	// Step 1: Handle JSON body if present
+	if r.Body != nil {
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			return nil, err
@@ -46,24 +32,38 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 				return nil, err
 			}
 
-			// Convert JSON body to arguments
-			// Convert JSON body to arguments in the natural order
+			// Define keys to exclude and process their values first
+			// Update as we support more commands
+			priorityKeys := []string{"key", "field", "path", "value"}
+			for _, key := range priorityKeys {
+				if val, exists := jsonBody[key]; exists {
+					args = append(args, fmt.Sprintf("%v", val))
+					delete(jsonBody, key)
+				}
+			}
+
+			// Process remaining keys
 			for k, v := range jsonBody {
-				switch val := v.(type) {
-				case map[string]interface{}, []interface{}:
-					jsonValue, err := json.Marshal(val)
-					if err != nil {
-						return nil, err
+				// Handle unary operations like 'nx' where value is "true"
+				if valStr, ok := v.(string); ok && valStr == "true" {
+					args = append(args, k)
+				} else {
+					switch val := v.(type) {
+					case map[string]interface{}, []interface{}:
+						jsonValue, err := json.Marshal(val)
+						if err != nil {
+							return nil, err
+						}
+						args = append(args, string(jsonValue))
+					default:
+						args = append(args, fmt.Sprintf("%v", val))
 					}
-					args = append(args, k, string(jsonValue))
-				default:
-					args = append(args, k, fmt.Sprintf("%v", val))
 				}
 			}
 		}
 	}
 
-	// Step 3: Return the constructed Redis command
+	// Step 2: Return the constructed Redis command
 	return &cmd.RedisCmd{
 		Cmd:  prefix,
 		Args: args,
