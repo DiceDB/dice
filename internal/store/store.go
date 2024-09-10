@@ -1,11 +1,12 @@
 package store
 
 import (
+	"path"
+	"sync"
+
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/sql"
 	"github.com/xwb1989/sqlparser"
-	"path"
-	"sync"
 
 	"github.com/dicedb/dice/internal/server/utils"
 

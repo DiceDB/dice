@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/dicedb/dice/internal/object"
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/dicedb/dice/internal/object"
 
 	"github.com/dicedb/dice/internal/sql"
 

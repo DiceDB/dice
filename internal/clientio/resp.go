@@ -3,9 +3,10 @@ package clientio
 import (
 	"bytes"
 	"fmt"
-	"github.com/dicedb/dice/internal/object"
 	"io"
 	"strconv"
+
+	"github.com/dicedb/dice/internal/object"
 
 	"github.com/dicedb/dice/internal/sql"
 

@@ -2,11 +2,12 @@ package eval
 
 import (
 	"fmt"
-	"github.com/dicedb/dice/internal/object"
 	"hash"
 	"math"
 	"math/rand"
 	"strconv"
+
+	"github.com/dicedb/dice/internal/object"
 
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"

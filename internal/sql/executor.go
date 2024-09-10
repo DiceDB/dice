@@ -3,10 +3,11 @@ package sql
 import (
 	"errors"
 	"fmt"
-	"github.com/dicedb/dice/internal/object"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/dicedb/dice/internal/object"
 
 	"github.com/bytedance/sonic"
 	"github.com/cockroachdb/swiss"

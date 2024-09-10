@@ -3,8 +3,9 @@ package eval
 import (
 	"errors"
 	"fmt"
-	"github.com/dicedb/dice/internal/object"
 	"strconv"
+
+	"github.com/dicedb/dice/internal/object"
 
 	dstore "github.com/dicedb/dice/internal/store"
 )

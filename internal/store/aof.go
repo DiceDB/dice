@@ -4,12 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"github.com/dicedb/dice/internal/object"
 	"io/fs"
 	"log"
 	"os"
 	"strings"
 	"sync"
+
+	"github.com/dicedb/dice/internal/object"
 
 	"github.com/dicedb/dice/config"
 )
