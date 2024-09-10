@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/dicedb/dice/internal/sql"
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/dicedb/dice/internal/sql"
 
 	"github.com/charmbracelet/log"
 	"github.com/cockroachdb/swiss"
@@ -136,9 +137,8 @@ func (w *QueryManager) processWatchEvent(event dstore.WatchEvent) {
 		}
 
 		// Check if the key matches the regex
-		matches := true
 		if query.Where != nil {
-			matches, err = sql.EvaluateWhereClause(query.Where, dstore.DSQLQueryResultRow{Key: event.Key, Value: *event.Value})
+			matches, err := sql.EvaluateWhereClause(query.Where, dstore.DSQLQueryResultRow{Key: event.Key, Value: *event.Value})
 			if err != nil || !matches {
 				return true
 			}
@@ -306,7 +306,7 @@ func (w *QueryManager) runQuery(query *sql.DSQLQuery) (*[]dstore.DSQLQueryResult
 
 	store, ok := w.QueryCache.Get(query.Fingerprint)
 	if !ok {
-		return nil, fmt.Errorf("fignerprint was not found in the cache: %s", query.Fingerprint)
+		return nil, fmt.Errorf("fingerprint was not found in the cache: %s", query.Fingerprint)
 	}
 
 	result, err := sql.ExecuteQuery(query, store)

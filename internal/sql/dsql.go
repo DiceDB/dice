@@ -44,10 +44,10 @@ type QueryOrder struct {
 }
 
 type DSQLQuery struct {
-	Selection QuerySelection
-	Where     sqlparser.Expr
-	OrderBy   QueryOrder
-	Limit     int
+	Selection   QuerySelection
+	Where       sqlparser.Expr
+	OrderBy     QueryOrder
+	Limit       int
 	Fingerprint string
 }
 
