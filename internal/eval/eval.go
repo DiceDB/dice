@@ -330,13 +330,13 @@ func evalGETDEL(args []string, store *dstore.Store) []byte {
 // If the JSONPath points to the root of the JSON document, the entire key is deleted from the store.
 // Returns an integer reply specified as the number of paths deleted (0 or more)
 func evalJSONFORGET(args []string, store *dstore.Store) []byte {
-	if len(args) < 1 {
+    if len(args) < 1 {
         return diceerrors.NewErrArity("JSON.FORGET")
     }
     
     key := args[0]
 
-	// Default path is root if not specified
+    // Default path is root if not specified
     path := defaultRootPath
     if len(args) > 1 {
         path = args[1]
