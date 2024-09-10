@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"testing"
 	"time"
 
 	"github.com/dicedb/dice/config"
@@ -127,5 +128,10 @@ func (shard *ShardThread) executeCommand(op *ops.StoreOp) []byte {
 // cleanup handles cleanup logic when the shard stops.
 func (shard *ShardThread) cleanup() {
 	close(shard.ReqChan)
+	if testing.Testing() {
+		// Avoiding AOF dump in case of testing env
+		return
+	}
+
 	eval.EvalBGREWRITEAOF([]string{}, shard.store)
 }
