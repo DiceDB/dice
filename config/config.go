@@ -38,4 +38,4 @@ var (
 	RequirePass string = utils.EmptyStr
 )
 
-var TestEnvEnabled = false
+var WriteAOFOnCleanup = false

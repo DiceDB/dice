@@ -91,7 +91,7 @@ func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *clientio.RESPParser
 func runTestServer(ctx context.Context, wg *sync.WaitGroup) {
 	config.IOBufferLength = 16
 	config.Port = 8739
-	config.TestEnvEnabled = true
+	config.WriteAOFOnCleanup = true
 
 	const totalRetries = 100
 	var err error

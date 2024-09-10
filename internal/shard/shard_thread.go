@@ -129,7 +129,7 @@ func (shard *ShardThread) executeCommand(op *ops.StoreOp) []byte {
 // cleanup handles cleanup logic when the shard stops.
 func (shard *ShardThread) cleanup() {
 	close(shard.ReqChan)
-	if config.TestEnvEnabled {
+	if config.WriteAOFOnCleanup {
 		// Avoiding AOF dump for test enabled environments as
 		// the tests were taking longer due to background tasks which exceeded the WaitDelay,
 		// thus causing the test process to be forcibly terminated.
