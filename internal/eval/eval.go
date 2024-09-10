@@ -324,62 +324,26 @@ func evalGETDEL(args []string, store *dstore.Store) []byte {
 }
 
 // evaLJSONFORGET removes the field specified by the given JSONPath from the JSON document stored under the provided key.
+// calls the evalJSONDEL() with the arguments passed 
 // Returns response.RespZero if key is expired or it does not exist
 // Returns encoded error response if incorrect number of arguments
 // If the JSONPath points to the root of the JSON document, the entire key is deleted from the store.
-// If the deletion results in an empty JSON document, the key is removed from the store.
 // Returns an integer reply specified as the number of paths deleted (0 or more)
 func evalJSONFORGET(args []string, store *dstore.Store) []byte {
 	if len(args) < 1 {
-		return diceerrors.NewErrArity("JSON.FORGET")
-	}
-	key := args[0]
+        return diceerrors.NewErrArity("JSON.FORGET")
+    }
+    
+    key := args[0]
 
 	// Default path is root if not specified
-	path := defaultRootPath
-	if len(args) > 1 {
-		path = args[1]
-	}
-
-	// Retrieve the object from the database
-	obj := store.Get(key)
-	if obj == nil {
-		return clientio.RespZero
-	}
-
-	errWithMessage := dstore.AssertTypeAndEncoding(obj.TypeEncoding, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
-	if errWithMessage != nil {
-		return errWithMessage
-	}
-
-	jsonData := obj.Value
-
-	if len(args) == 1 || path == defaultRootPath {
-		store.Del(key)
-		return clientio.RespOne
-	}
-
-	expr, err := jp.ParseString(path)
-	if err != nil {
-		return diceerrors.NewErrWithMessage("invalid JSONPath: " + err.Error())
-	}
-
-	results := expr.Get(jsonData)
-
-	if len(results) == 0 {
-		return clientio.RespZero
-	}
-
-	err = expr.Del(jsonData)
-	if err != nil {
-		return diceerrors.NewErrWithMessage("failed to delete JSON path: " + err.Error())
-	}
-
-	// Updating with the new value
-	newObj := store.NewObj(jsonData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
-	store.Put(key, newObj)
-
-	return clientio.Encode(len(results), false)
+    path := defaultRootPath
+    if len(args) > 1 {
+        path = args[1]
+    }
+    
+    delArgs := []string{key, path}
+    return evalJSONDEL(delArgs, store)
 }
 	
 
