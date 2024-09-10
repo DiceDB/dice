@@ -871,7 +871,9 @@ func evaluateAndSetExpiry(subCommands []string, newExpiry uint64, key string,
 			" GT or LT options at the same time are not compatible")
 	}
 
-	store.SetUnixTimeExpiry(obj, int64(newExpiry))
+	if shouldSetExpiry {
+		store.SetUnixTimeExpiry(obj, int64(newExpiry))
+	}
 	return shouldSetExpiry, nil
 }
 
