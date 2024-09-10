@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/dicedb/dice/internal/object"
 	"strconv"
 	"strings"
 	"testing"
@@ -151,7 +152,7 @@ func testEvalGET(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
-				obj := &dstore.Obj{
+				obj := &object.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -164,7 +165,7 @@ func testEvalGET(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
-				obj := &dstore.Obj{
+				obj := &object.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -202,7 +203,7 @@ func testEvalEXPIRE(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
-				obj := &dstore.Obj{
+				obj := &object.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -231,7 +232,7 @@ func testEvalEXPIRETIME(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
-				obj := &dstore.Obj{
+				obj := &object.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -245,7 +246,7 @@ func testEvalEXPIRETIME(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
-				obj := &dstore.Obj{
+				obj := &object.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -283,7 +284,7 @@ func testEvalEXPIREAT(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
-				obj := &dstore.Obj{
+				obj := &object.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -317,7 +318,7 @@ func testEvalJSONDEL(t *testing.T, store *dstore.Store) {
 					"\"flag\":false, \"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 
 			},
@@ -331,7 +332,7 @@ func testEvalJSONDEL(t *testing.T, store *dstore.Store) {
 					"\"flag\":false, \"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 
 			},
@@ -346,7 +347,7 @@ func testEvalJSONDEL(t *testing.T, store *dstore.Store) {
 					"\"flag\":false, \"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 
 			},
@@ -382,7 +383,7 @@ func testEvalJSONCLEAR(t *testing.T, store *dstore.Store) {
 					"\"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 
 			},
@@ -395,7 +396,7 @@ func testEvalJSONCLEAR(t *testing.T, store *dstore.Store) {
 				value := "{\"array\":[1,2,3,\"s\",null]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 
 			},
@@ -409,7 +410,7 @@ func testEvalJSONCLEAR(t *testing.T, store *dstore.Store) {
 				value := "{\"a\":\"test\"}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 
 			},
@@ -423,7 +424,7 @@ func testEvalJSONCLEAR(t *testing.T, store *dstore.Store) {
 				value := "{\"age\":13}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 
 			},
@@ -437,7 +438,7 @@ func testEvalJSONCLEAR(t *testing.T, store *dstore.Store) {
 				value := "{\"price\":3.14}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 
 			},
@@ -451,7 +452,7 @@ func testEvalJSONCLEAR(t *testing.T, store *dstore.Store) {
 				value := "{\"flag\":false}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 
 			},
@@ -465,7 +466,7 @@ func testEvalJSONCLEAR(t *testing.T, store *dstore.Store) {
 					"\"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 
 			},
@@ -499,7 +500,7 @@ func testEvalJSONTYPE(t *testing.T, store *dstore.Store) {
 				value := "{\"language\":[\"java\",\"go\",\"python\"]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 
 			},
@@ -513,7 +514,7 @@ func testEvalJSONTYPE(t *testing.T, store *dstore.Store) {
 				value := "{\"language\":[\"java\",\"go\",\"python\"]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 
 			},
@@ -527,7 +528,7 @@ func testEvalJSONTYPE(t *testing.T, store *dstore.Store) {
 				value := "{\"a\":\"test\"}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 
 			},
@@ -541,7 +542,7 @@ func testEvalJSONTYPE(t *testing.T, store *dstore.Store) {
 				value := "{\"flag\":true}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 
 			},
@@ -555,7 +556,7 @@ func testEvalJSONTYPE(t *testing.T, store *dstore.Store) {
 				value := "{\"price\":3}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 
 			},
@@ -569,7 +570,7 @@ func testEvalJSONTYPE(t *testing.T, store *dstore.Store) {
 				value := "{\"price\":3.14}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 
 			},
@@ -583,7 +584,7 @@ func testEvalJSONTYPE(t *testing.T, store *dstore.Store) {
 				value := "{\"name\":\"tom\",\"partner\":{\"name\":\"jerry\"}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 
 			},
@@ -617,7 +618,7 @@ func testEvalJSONGET(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "{\"a\":2}"
-				obj := &dstore.Obj{
+				obj := &object.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -633,7 +634,7 @@ func testEvalJSONGET(t *testing.T, store *dstore.Store) {
 				value := "{\"a\":2}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 
 			},
@@ -645,7 +646,7 @@ func testEvalJSONGET(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
-				obj := &dstore.Obj{
+				obj := &object.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -724,7 +725,7 @@ func testEvalTTL(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
-				obj := &dstore.Obj{
+				obj := &object.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -738,7 +739,7 @@ func testEvalTTL(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
-				obj := &dstore.Obj{
+				obj := &object.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -757,7 +758,7 @@ func testEvalTTL(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "EXISTING_EXPIRED_KEY"
 				value := "mock_value"
-				obj := &dstore.Obj{
+				obj := &object.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -794,7 +795,7 @@ func testEvalDel(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
-				obj := &dstore.Obj{
+				obj := &object.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -897,7 +898,7 @@ func testEvalGETSET(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
-				obj := &dstore.Obj{
+				obj := &object.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -911,7 +912,7 @@ func testEvalGETSET(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
-				obj := &dstore.Obj{
+				obj := &object.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -953,7 +954,7 @@ func testEvalPFCOUNT(t *testing.T, store *dstore.Store) {
 				key := "EXISTING_KEY"
 				value := hyperloglog.New()
 				value.Insert([]byte("VALUE"))
-				obj := &dstore.Obj{
+				obj := &object.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -992,8 +993,8 @@ func testEvalHGET(t *testing.T, store *dstore.Store) {
 				newMap := make(HashMap)
 				newMap[field] = "mock_field_value"
 
-				obj := &dstore.Obj{
-					TypeEncoding:   dstore.ObjTypeHashMap | dstore.ObjEncodingHashMap,
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -1010,8 +1011,8 @@ func testEvalHGET(t *testing.T, store *dstore.Store) {
 				newMap := make(HashMap)
 				newMap[field] = "mock_field_value"
 
-				obj := &dstore.Obj{
-					TypeEncoding:   dstore.ObjTypeHashMap | dstore.ObjEncodingHashMap,
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -1099,8 +1100,8 @@ func testEvalHSET(t *testing.T, store *dstore.Store) {
 				newMap := make(HashMap)
 				newMap[field] = "mock_field_value"
 
-				obj := &dstore.Obj{
-					TypeEncoding:   dstore.ObjTypeHashMap | dstore.ObjEncodingHashMap,
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -1119,8 +1120,8 @@ func testEvalHSET(t *testing.T, store *dstore.Store) {
 				newMap := make(HashMap)
 				newMap[field] = mock_value
 
-				obj := &dstore.Obj{
-					TypeEncoding:   dstore.ObjTypeHashMap | dstore.ObjEncodingHashMap,
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}

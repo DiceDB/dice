@@ -1,10 +1,10 @@
 package eval
 
 import (
+	"github.com/dicedb/dice/internal/object"
 	"testing"
 
 	"github.com/dicedb/dice/internal/server/utils"
-	"github.com/dicedb/dice/internal/store"
 )
 
 // TestDeduceTypeEncoding tests the deduceTypeEncoding function using table-driven tests.
@@ -18,32 +18,32 @@ func TestDeduceTypeEncoding(t *testing.T) {
 		{
 			name:     "Integer string",
 			input:    "123",
-			wantType: store.ObjTypeInt,
-			wantEnc:  store.ObjEncodingInt,
+			wantType: object.ObjTypeInt,
+			wantEnc:  object.ObjEncodingInt,
 		},
 		{
 			name:     "Short string",
 			input:    "short string",
-			wantType: store.ObjTypeString,
-			wantEnc:  store.ObjEncodingEmbStr,
+			wantType: object.ObjTypeString,
+			wantEnc:  object.ObjEncodingEmbStr,
 		},
 		{
 			name:     "Long string",
 			input:    "this is a very long string that exceeds the maximum length for EMBSTR encoding",
-			wantType: store.ObjTypeString,
-			wantEnc:  store.ObjEncodingRaw,
+			wantType: object.ObjTypeString,
+			wantEnc:  object.ObjEncodingRaw,
 		},
 		{
 			name:     "Empty string",
 			input:    utils.EmptyStr,
-			wantType: store.ObjTypeString,
-			wantEnc:  store.ObjEncodingEmbStr,
+			wantType: object.ObjTypeString,
+			wantEnc:  object.ObjEncodingEmbStr,
 		},
 		{
 			name:     "Boundary length string",
 			input:    "this string is exactly forty-four characters long",
-			wantType: store.ObjTypeString,
-			wantEnc:  store.ObjEncodingRaw,
+			wantType: object.ObjTypeString,
+			wantEnc:  object.ObjEncodingRaw,
 		},
 	}
 

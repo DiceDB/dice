@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/dicedb/dice/internal/object"
+
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
@@ -21,7 +23,7 @@ func NewByteArray(size int) *ByteArray {
 	}
 }
 
-func NewByteArrayFromObj(obj *dstore.Obj) (*ByteArray, error) {
+func NewByteArrayFromObj(obj *object.Obj) (*ByteArray, error) {
 	b, err := getValueAsByteSlice(obj)
 	if err != nil {
 		return nil, err
@@ -33,31 +35,31 @@ func NewByteArrayFromObj(obj *dstore.Obj) (*ByteArray, error) {
 	}, nil
 }
 
-func getValueAsByteSlice(obj *dstore.Obj) ([]byte, error) {
-	oType, oEnc := dstore.ExtractTypeEncoding(obj)
+func getValueAsByteSlice(obj *object.Obj) ([]byte, error) {
+	oType, oEnc := object.ExtractTypeEncoding(obj)
 	switch oType {
-	case dstore.ObjTypeInt:
+	case object.ObjTypeInt:
 		return []byte(strconv.FormatInt(obj.Value.(int64), 10)), nil
-	case dstore.ObjTypeString:
+	case object.ObjTypeString:
 		return getStringValueAsByteSlice(obj, oEnc)
 	// TODO: Have this case as SETBIT stores values encoded as byte arrays. Need to investigate this further.
-	case dstore.ObjTypeByteArray:
+	case object.ObjTypeByteArray:
 		return getByteArrayValueAsByteSlice(obj)
 	default:
 		return nil, fmt.Errorf("ERR unsopported type")
 	}
 }
 
-func getStringValueAsByteSlice(obj *dstore.Obj, oEnc uint8) ([]byte, error) {
+func getStringValueAsByteSlice(obj *object.Obj, oEnc uint8) ([]byte, error) {
 	switch oEnc {
-	case dstore.ObjEncodingInt:
+	case object.ObjEncodingInt:
 		intVal, ok := obj.Value.(int64)
 		if !ok {
 			return nil, errors.New("expected integer value but got another type")
 		}
 
 		return []byte(strconv.FormatInt(intVal, 10)), nil
-	case dstore.ObjEncodingEmbStr, dstore.ObjEncodingRaw:
+	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
 		strVal, ok := obj.Value.(string)
 		if !ok {
 			return nil, errors.New("expected string value but got another type")
@@ -69,7 +71,7 @@ func getStringValueAsByteSlice(obj *dstore.Obj, oEnc uint8) ([]byte, error) {
 	}
 }
 
-func getByteArrayValueAsByteSlice(obj *dstore.Obj) ([]byte, error) {
+func getByteArrayValueAsByteSlice(obj *object.Obj) ([]byte, error) {
 	byteArray, ok := obj.Value.(*ByteArray)
 	if !ok {
 		return nil, errors.New("expected byte array value but got another type")
@@ -79,13 +81,13 @@ func getByteArrayValueAsByteSlice(obj *dstore.Obj) ([]byte, error) {
 }
 
 // ByteSliceToObj converts a byte slice to an Obj of the specified type and encoding
-func ByteSliceToObj(store *dstore.Store, oldObj *dstore.Obj, b []byte, objType, encoding uint8) (*dstore.Obj, error) {
+func ByteSliceToObj(store *dstore.Store, oldObj *object.Obj, b []byte, objType, encoding uint8) (*object.Obj, error) {
 	switch objType {
-	case dstore.ObjTypeInt:
+	case object.ObjTypeInt:
 		return ByteSliceToIntObj(store, oldObj, b)
-	case dstore.ObjTypeString:
+	case object.ObjTypeString:
 		return ByteSliceToStringObj(store, oldObj, b, encoding)
-	case dstore.ObjTypeByteArray:
+	case object.ObjTypeByteArray:
 		return ByteSliceToByteArrayObj(store, oldObj, b)
 	default:
 		return nil, fmt.Errorf("unsupported object type")
@@ -93,33 +95,33 @@ func ByteSliceToObj(store *dstore.Store, oldObj *dstore.Obj, b []byte, objType, 
 }
 
 // ByteSliceToIntObj converts a byte slice to an Obj with an integer value
-func ByteSliceToIntObj(store *dstore.Store, oldObj *dstore.Obj, b []byte) (*dstore.Obj, error) {
+func ByteSliceToIntObj(store *dstore.Store, oldObj *object.Obj, b []byte) (*object.Obj, error) {
 	intVal, err := strconv.ParseInt(string(b), 10, 64)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse byte slice to int: %v", err)
 	}
-	return store.NewObj(intVal, -1, dstore.ObjTypeInt, dstore.ObjEncodingInt), nil
+	return store.NewObj(intVal, -1, object.ObjTypeInt, object.ObjEncodingInt), nil
 }
 
 // ByteSliceToStringObj converts a byte slice to an Obj with a string value
-func ByteSliceToStringObj(store *dstore.Store, oldObj *dstore.Obj, b []byte, encoding uint8) (*dstore.Obj, error) {
+func ByteSliceToStringObj(store *dstore.Store, oldObj *object.Obj, b []byte, encoding uint8) (*object.Obj, error) {
 	switch encoding {
-	case dstore.ObjEncodingInt:
+	case object.ObjEncodingInt:
 		return ByteSliceToIntObj(store, oldObj, b)
-	case dstore.ObjEncodingEmbStr, dstore.ObjEncodingRaw:
-		return store.NewObj(string(b), -1, dstore.ObjTypeString, dstore.ObjEncodingEmbStr), nil
+	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
+		return store.NewObj(string(b), -1, object.ObjTypeString, object.ObjEncodingEmbStr), nil
 	default:
 		return nil, fmt.Errorf("unsupported encoding type")
 	}
 }
 
 // ByteSliceToByteArrayObj converts a byte slice to an Obj with a ByteArray value
-func ByteSliceToByteArrayObj(store *dstore.Store, oldObj *dstore.Obj, b []byte) (*dstore.Obj, error) {
+func ByteSliceToByteArrayObj(store *dstore.Store, oldObj *object.Obj, b []byte) (*object.Obj, error) {
 	byteValue := &ByteArray{
 		data:   b,
 		Length: int64(len(b)),
 	}
-	return store.NewObj(byteValue, -1, dstore.ObjTypeByteArray, dstore.ObjEncodingByteArray), nil
+	return store.NewObj(byteValue, -1, object.ObjTypeByteArray, object.ObjEncodingByteArray), nil
 }
 
 // SetBit sets the bit at the given position to the specified value

@@ -2,6 +2,7 @@ package store
 
 import (
 	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/server/utils"
 )
 
@@ -9,7 +10,7 @@ import (
 // TODO: Make it efficient by doing thorough sampling
 func evictFirst(store *Store) {
 	withLocks(func() {
-		store.store.All(func(k string, obj *Obj) bool {
+		store.store.All(func(k string, obj *object.Obj) bool {
 			store.delByPtr(k)
 			// stop after iterating over the first element
 			return false
@@ -24,7 +25,7 @@ func evictAllkeysRandom(store *Store) {
 	withLocks(func() {
 		// Iteration of Golang dictionary can be considered as a random
 		// because it depends on the hash of the inserted key
-		store.store.All(func(k string, obj *Obj) bool {
+		store.store.All(func(k string, obj *object.Obj) bool {
 			store.delByPtr(k)
 			evictCount--
 			// continue if evictCount > 0
@@ -54,7 +55,7 @@ func populateEvictionPool(store *Store) {
 	// TODO: if we already have obj, why do we need to
 	// look up in store.store again?
 	withLocks(func() {
-		store.store.All(func(k string, obj *Obj) bool {
+		store.store.All(func(k string, obj *object.Obj) bool {
 			v, ok := store.store.Get(k)
 			if ok {
 				ePool.Push(k, v.LastAccessedAt)
