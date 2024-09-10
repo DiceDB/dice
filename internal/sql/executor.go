@@ -3,6 +3,7 @@ package sql
 import (
 	"errors"
 	"fmt"
+	"github.com/dicedb/dice/internal/object"
 	"sort"
 	"strconv"
 	"strings"
@@ -11,7 +12,6 @@ import (
 	"github.com/cockroachdb/swiss"
 	"github.com/dicedb/dice/internal/regex"
 	"github.com/dicedb/dice/internal/server/utils"
-	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/ohler55/ojg/jp"
 	"github.com/xwb1989/sqlparser"
 )
@@ -21,14 +21,14 @@ var ErrInvalidJSONPath = errors.New("ERR invalid JSONPath")
 
 type QueryResultRow struct {
 	Key   string
-	Value dstore.Obj
+	Value object.Obj
 }
 
-func ExecuteQuery(query *DSQLQuery, store *swiss.Map[string, *dstore.Obj]) ([]QueryResultRow, error) {
+func ExecuteQuery(query *DSQLQuery, store *swiss.Map[string, *object.Obj]) ([]QueryResultRow, error) {
 	var result []QueryResultRow
 
 	var err error
-	store.All(func(key string, value *dstore.Obj) bool {
+	store.All(func(key string, value *object.Obj) bool {
 		row := QueryResultRow{
 			Key:   key,
 			Value: *value,
@@ -77,7 +77,7 @@ func ExecuteQuery(query *DSQLQuery, store *swiss.Map[string, *dstore.Obj]) ([]Qu
 
 	if !query.Selection.ValueSelection {
 		for i := range result {
-			result[i].Value = dstore.Obj{}
+			result[i].Value = object.Obj{}
 		}
 	}
 
@@ -91,7 +91,7 @@ func ExecuteQuery(query *DSQLQuery, store *swiss.Map[string, *dstore.Obj]) ([]Qu
 func MarshalResultIfJSON(row *QueryResultRow) error {
 	// if the row contains JSON field then convert the json object into string representation so it can be encoded
 	// before being returned to the client
-	if dstore.GetEncoding(row.Value.TypeEncoding) == dstore.ObjEncodingJSON && dstore.GetType(row.Value.TypeEncoding) == dstore.ObjTypeJSON {
+	if object.GetEncoding(row.Value.TypeEncoding) == object.ObjEncodingJSON && object.GetType(row.Value.TypeEncoding) == object.ObjTypeJSON {
 		marshaledData, err := sonic.MarshalString(row.Value.Value)
 		if err != nil {
 			return err
@@ -271,12 +271,12 @@ func getExprValueAndType(expr sqlparser.Expr, row QueryResultRow) (value interfa
 	}
 }
 
-func isJSONField(expr *sqlparser.SQLVal, obj *dstore.Obj) bool {
-	if err := dstore.AssertEncoding(obj.TypeEncoding, dstore.ObjEncodingJSON); err != nil {
+func isJSONField(expr *sqlparser.SQLVal, obj *object.Obj) bool {
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingJSON); err != nil {
 		return false
 	}
 
-	if err := dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeJSON); err != nil {
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeJSON); err != nil {
 		return false
 	}
 
@@ -286,7 +286,7 @@ func isJSONField(expr *sqlparser.SQLVal, obj *dstore.Obj) bool {
 		strings.HasPrefix(string(expr.Val), TempPrefix)
 }
 
-func retrieveValueFromJSON(path string, jsonData *dstore.Obj) (value interface{}, valueType string, err error) {
+func retrieveValueFromJSON(path string, jsonData *object.Obj) (value interface{}, valueType string, err error) {
 	// path is in the format '_value.field1.field2'. We need to remove _value reference from the prefix to get the json
 	// path.
 	jsonPath := strings.Split(path, ".")
@@ -347,7 +347,7 @@ func isInt64(f float64) bool {
 }
 
 // getValueAndType returns the type-casted value and type of the object
-func getValueAndType(obj *dstore.Obj) (val interface{}, s string, e error) {
+func getValueAndType(obj *object.Obj) (val interface{}, s string, e error) {
 	switch v := obj.Value.(type) {
 	case string:
 		return v, String, nil

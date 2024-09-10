@@ -2,6 +2,7 @@ package sql
 
 import (
 	"fmt"
+	"github.com/dicedb/dice/internal/object"
 	"testing"
 
 	"github.com/bytedance/sonic"
@@ -22,11 +23,11 @@ func generateBenchmarkData(count int, store *dstore.Store) {
 	config.KeysLimit = 2000000 // Set a high limit for benchmarking
 	store.ResetStore()
 
-	data := make(map[string]*dstore.Obj, count)
+	data := make(map[string]*object.Obj, count)
 	for i := 0; i < count; i++ {
 		key := fmt.Sprintf("k%d", i)
 		value := fmt.Sprintf("v%d", i)
-		data[key] = store.NewObj(value, -1, dstore.ObjTypeString, dstore.ObjEncodingRaw)
+		data[key] = store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
 	}
 	store.PutAll(data)
 }
@@ -289,7 +290,7 @@ func generateBenchmarkJSONData(b *testing.B, count int, json string, store *dsto
 	config.KeysLimit = 2000000 // Set a high limit for benchmarking
 	store.ResetStore()
 
-	data := make(map[string]*dstore.Obj, count)
+	data := make(map[string]*object.Obj, count)
 	for i := 0; i < count; i++ {
 		key := fmt.Sprintf("k%d", i)
 		value := fmt.Sprintf(json, i)
@@ -299,7 +300,7 @@ func generateBenchmarkJSONData(b *testing.B, count int, json string, store *dsto
 			b.Fatalf("Failed to unmarshal JSON: %v", err)
 		}
 
-		data[key] = store.NewObj(jsonValue, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+		data[key] = store.NewObj(jsonValue, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 	}
 	store.PutAll(data)
 }

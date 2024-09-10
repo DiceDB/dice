@@ -1,6 +1,7 @@
 package sql
 
 import (
+	"github.com/dicedb/dice/internal/object"
 	"sort"
 	"testing"
 
@@ -35,7 +36,7 @@ func setup(store *dstore.Store, dataset []keyValue) {
 	}
 
 	for _, data := range dataset {
-		store.Put(data.key, &dstore.Obj{Value: data.value})
+		store.Put(data.key, &object.Obj{Value: data.value})
 	}
 }
 
@@ -204,7 +205,7 @@ func TestExecuteQueryWithIncompatibleTypes(t *testing.T) {
 	t.Run("NullValue", func(t *testing.T) {
 		// We don't support NULL values in Dice, however, we should include a
 		// test for it to ensure the executor handles it correctly.
-		store.Put("nullKey", &dstore.Obj{Value: nil})
+		store.Put("nullKey", &object.Obj{Value: nil})
 		defer store.Del("nullKey")
 
 		queryStr := "SELECT $key, $value WHERE $value = NULL AND $key like 'k*'"
@@ -293,7 +294,7 @@ func setupJSON(t *testing.T, store *dstore.Store, dataset []keyValue) {
 			t.Fatalf("Failed to unmarshal value: %v", err)
 		}
 
-		store.Put(data.key, store.NewObj(jsonValue, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON))
+		store.Put(data.key, store.NewObj(jsonValue, -1, object.ObjTypeJSON, object.ObjEncodingJSON))
 	}
 }
 

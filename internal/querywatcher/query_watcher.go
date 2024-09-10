@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/dicedb/dice/internal/object"
 	"sync"
 	"syscall"
 	"time"
@@ -17,7 +18,7 @@ import (
 )
 
 type (
-	cacheStore *swiss.Map[string, *dstore.Obj]
+	cacheStore *swiss.Map[string, *object.Obj]
 
 	// WatchSubscription represents a subscription to watch a query.
 	WatchSubscription struct {
@@ -67,7 +68,7 @@ func NewQueryManager() *QueryManager {
 }
 
 func newCacheStore() cacheStore {
-	return swiss.New[string, *dstore.Obj](0)
+	return swiss.New[string, *object.Obj](0)
 }
 
 // Run starts the QueryManager's main loops.
@@ -170,9 +171,9 @@ func (w *QueryManager) updateQueryCache(queryFingerprint string, event dstore.Wa
 
 	switch event.Operation {
 	case dstore.Set:
-		((*swiss.Map[string, *dstore.Obj])(store)).Put(event.Key, event.Value)
+		((*swiss.Map[string, *object.Obj])(store)).Put(event.Key, event.Value)
 	case dstore.Del:
-		((*swiss.Map[string, *dstore.Obj])(store)).Delete(event.Key)
+		((*swiss.Map[string, *object.Obj])(store)).Delete(event.Key)
 	default:
 		log.Warnf("Unknown operation: %s", event.Operation)
 	}
@@ -255,12 +256,12 @@ func (w *QueryManager) addWatcher(query *sql.DSQLQuery, clientFD int, cacheChan 
 	//  For now we only expect one store instance to be received.
 	store := <-cacheChan
 	dstore.WithLocks(func() {
-		store.GetStore().All(func(k string, v *dstore.Obj) bool {
+		store.GetStore().All(func(k string, v *object.Obj) bool {
 			matches, err := sql.EvaluateWhereClause(query.Where, sql.QueryResultRow{Key: k, Value: *v})
 			if err != nil || !matches {
 				return true
 			}
-			((*swiss.Map[string, *dstore.Obj])(cache)).Put(k, v)
+			((*swiss.Map[string, *object.Obj])(cache)).Put(k, v)
 			return true
 		})
 	}, store, dstore.WithStoreRLock())

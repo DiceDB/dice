@@ -1,4 +1,4 @@
-package store
+package object
 
 type Obj struct {
 	TypeEncoding uint8

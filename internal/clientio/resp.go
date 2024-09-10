@@ -3,6 +3,7 @@ package clientio
 import (
 	"bytes"
 	"fmt"
+	"github.com/dicedb/dice/internal/object"
 	"io"
 	"strconv"
 
@@ -166,10 +167,10 @@ func Encode(value interface{}, isSimple bool) []byte {
 			buf.Write(encodeString(b))
 		}
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
-	case []*dstore.Obj:
+	case []*object.Obj:
 		var b []byte
 		buf := bytes.NewBuffer(b)
-		for _, b := range value.([]*dstore.Obj) {
+		for _, b := range value.([]*object.Obj) {
 			buf.Write(Encode(b.Value, false))
 		}
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))

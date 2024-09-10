@@ -1,10 +1,11 @@
 package store
 
 import (
+	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/server/utils"
 )
 
-func hasExpired(obj *Obj, store *Store) bool {
+func hasExpired(obj *object.Obj, store *Store) bool {
 	exp, ok := store.expires.Get(obj)
 	if !ok {
 		return false
@@ -12,12 +13,12 @@ func hasExpired(obj *Obj, store *Store) bool {
 	return exp <= uint64(utils.GetCurrentTime().UnixMilli())
 }
 
-func GetExpiry(obj *Obj, store *Store) (uint64, bool) {
+func GetExpiry(obj *object.Obj, store *Store) (uint64, bool) {
 	exp, ok := store.expires.Get(obj)
 	return exp, ok
 }
 
-func DelExpiry(obj *Obj, store *Store) {
+func DelExpiry(obj *object.Obj, store *Store) {
 	store.expires.Delete(obj)
 }
 
@@ -31,7 +32,7 @@ func expireSample(store *Store) float32 {
 
 	WithLocks(func() {
 		// Collect keys to be deleted
-		store.store.All(func(keyPtr string, obj *Obj) bool {
+		store.store.All(func(keyPtr string, obj *object.Obj) bool {
 			limit--
 			if hasExpired(obj, store) {
 				keysToDelete = append(keysToDelete, keyPtr)
