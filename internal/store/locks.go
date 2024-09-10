@@ -23,10 +23,10 @@ func WithStoreRLock() LockOption {
 	}
 }
 
-// withLocks takes a function and a list of LockOptions and executes the function
+// WithLocks takes a function and a list of LockOptions and executes the function
 // with the specified locks. It manages the locking and unlocking of the mutexes
 // based on the LockOptions provided.
-func withLocks(f func(), store *Store, options ...LockOption) {
+func WithLocks(f func(), store *Store, options ...LockOption) {
 	ls := &LockStrategy{}
 
 	for _, option := range options {
@@ -47,7 +47,7 @@ func withLocks(f func(), store *Store, options ...LockOption) {
 // Helper function for operations that return a boolean
 func withLocksReturn(f func() bool, store *Store, options ...LockOption) bool {
 	var result bool
-	withLocks(func() {
+	WithLocks(func() {
 		result = f()
 	}, store, options...)
 	return result

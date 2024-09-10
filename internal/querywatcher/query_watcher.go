@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/dicedb/dice/internal/sql"
 	"sync"
 	"syscall"
 	"time"
@@ -11,7 +12,6 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/cockroachdb/swiss"
 	"github.com/dicedb/dice/internal/clientio"
-	"github.com/dicedb/dice/internal/regex"
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
@@ -20,10 +20,10 @@ type (
 
 	// WatchSubscription represents a subscription to watch a query.
 	WatchSubscription struct {
-		Subscribe bool                    // true for subscribe, false for unsubscribe
-		Query     DSQLQuery               // query to watch
-		ClientFD  int                     // client file descriptor
-		CacheChan chan *[]dstore.KeyValue // channel to receive cache data for this query
+		Subscribe bool               // true for subscribe, false for unsubscribe
+		Query     sql.DSQLQuery      // query to watch
+		ClientFD  int                // client file descriptor
+		CacheChan chan *dstore.Store // channel to receive cache data for this query
 	}
 
 	// AdhocQueryResult represents the result of an adhoc query.
@@ -35,7 +35,7 @@ type (
 
 	// AdhocQuery represents an adhoc query request.
 	AdhocQuery struct {
-		Query        DSQLQuery
+		Query        sql.DSQLQuery
 		ResponseChan chan AdhocQueryResult
 	}
 
@@ -129,15 +129,19 @@ func (w *QueryManager) processWatchEvent(event dstore.WatchEvent) {
 		queryString := key.(string)
 		clients := value.(*sync.Map)
 
-		query, err := ParseQuery(queryString)
+		query, err := sql.ParseQuery(queryString)
 		if err != nil {
 			log.Error(fmt.Sprintf("error parsing query: %s", queryString))
 			return true
 		}
 
 		// Check if the key matches the regex
-		if !regex.WildCardMatch(query.KeyRegex, event.Key) {
-			return true
+		matches := true
+		if query.Where != nil {
+			matches, err = sql.EvaluateWhereClause(query.Where, dstore.DSQLQueryResultRow{Key: event.Key, Value: *event.Value})
+			if err != nil || !matches {
+				return true
+			}
 		}
 
 		w.updateQueryCache(query.Fingerprint, event)
@@ -174,8 +178,8 @@ func (w *QueryManager) updateQueryCache(queryFingerprint string, event dstore.Wa
 	}
 }
 
-func (w *QueryManager) notifyClients(query *DSQLQuery, clients *sync.Map, queryResult *[]dstore.DSQLQueryResultRow) {
-	encodedResult := clientio.Encode(CreatePushResponse(query, queryResult), false)
+func (w *QueryManager) notifyClients(query *sql.DSQLQuery, clients *sync.Map, queryResult *[]dstore.DSQLQueryResultRow) {
+	encodedResult := clientio.Encode(clientio.CreatePushResponse(query, queryResult), false)
 
 	clients.Range(func(clientKey, _ interface{}) bool {
 		clientFD := clientKey.(int)
@@ -193,7 +197,7 @@ func (w *QueryManager) notifyClients(query *DSQLQuery, clients *sync.Map, queryR
 }
 
 // sendWithRetry writes data to a client file descriptor with retries. It writes with an exponential backoff.
-func (w *QueryManager) sendWithRetry(query *DSQLQuery, clientFD int, data []byte) {
+func (w *QueryManager) sendWithRetry(query *sql.DSQLQuery, clientFD int, data []byte) {
 	maxRetries := 20
 	retryDelay := 20 * time.Millisecond
 
@@ -236,7 +240,7 @@ func (w *QueryManager) serveAdhocQueries(ctx context.Context) {
 }
 
 // addWatcher adds a client as a watcher to a query.
-func (w *QueryManager) addWatcher(query *DSQLQuery, clientFD int, cacheChan chan *[]dstore.KeyValue) {
+func (w *QueryManager) addWatcher(query *sql.DSQLQuery, clientFD int, cacheChan chan *dstore.Store) {
 	queryString := query.String()
 
 	clients, _ := w.WatchList.LoadOrStore(queryString, &sync.Map{})
@@ -248,17 +252,24 @@ func (w *QueryManager) addWatcher(query *DSQLQuery, clientFD int, cacheChan chan
 	cache := newCacheStore()
 	// Hydrate the cache with data from all shards.
 	// TODO: We need to ensure we receive cache data from all shards once we have multithreading in place.
-	//  For now we only expect one update.
-	kvs := <-cacheChan
-	for _, kv := range *kvs {
-		((*swiss.Map[string, *dstore.Obj])(cache)).Put(kv.Key, kv.Value)
-	}
+	//  For now we only expect one store instance to be received.
+	store := <-cacheChan
+	dstore.WithLocks(func() {
+		store.GetStore().All(func(k string, v *dstore.Obj) bool {
+			matches, err := sql.EvaluateWhereClause(query.Where, dstore.DSQLQueryResultRow{Key: k, Value: *v})
+			if err != nil || !matches {
+				return true
+			}
+			((*swiss.Map[string, *dstore.Obj])(cache)).Put(k, v)
+			return true
+		})
+	}, store, dstore.WithStoreRLock())
 
 	w.QueryCache.Put(query.Fingerprint, cache)
 }
 
 // removeWatcher removes a client from the watchlist for a query.
-func (w *QueryManager) removeWatcher(query *DSQLQuery, clientFD int) {
+func (w *QueryManager) removeWatcher(query *sql.DSQLQuery, clientFD int) {
 	queryString := query.String()
 	if clients, ok := w.WatchList.Load(queryString); ok {
 		clients.(*sync.Map).Delete(clientFD)
@@ -289,15 +300,15 @@ func (w *QueryManager) clientCount(clients *sync.Map) int {
 }
 
 // runQuery executes a query on its respective cache.
-func (w *QueryManager) runQuery(query *DSQLQuery) (*[]dstore.DSQLQueryResultRow, error) {
+func (w *QueryManager) runQuery(query *sql.DSQLQuery) (*[]dstore.DSQLQueryResultRow, error) {
 	w.QueryCacheMu.RLock()
 	defer w.QueryCacheMu.RUnlock()
 
 	store, ok := w.QueryCache.Get(query.Fingerprint)
 	if !ok {
-		return nil, fmt.Errorf("regex was not found in the cache: %s", query.KeyRegex)
+		return nil, fmt.Errorf("fignerprint was not found in the cache: %s", query.Fingerprint)
 	}
 
-	result, err := ExecuteQuery(query, store)
+	result, err := sql.ExecuteQuery(query, store)
 	return &result, err
 }

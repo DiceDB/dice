@@ -1,4 +1,4 @@
-package querywatcher
+package sql
 
 import (
 	"fmt"
@@ -6,9 +6,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
-	"github.com/xwb1989/sqlparser"
 )
 
 var benchmarkDataSizes = []int{100, 1000, 10000, 100000, 1000000}
@@ -39,17 +37,12 @@ func BenchmarkExecuteQueryOrderBykey(b *testing.B) {
 		generateBenchmarkData(v, store)
 		defer store.ResetStore()
 
-		query := DSQLQuery{
-			KeyRegex: "k*",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			OrderBy: QueryOrder{
-				OrderBy: "$key",
-				Order:   Asc,
-			},
+		queryStr := "SELECT $key, $value WHERE $key like 'k*' ORDER BY $key ASC"
+		query, err := ParseQuery(queryStr)
+		if err != nil {
+			b.Fatal(err)
 		}
+
 		// Reset the timer to exclude the setup time from the benchmark
 		b.ResetTimer()
 
@@ -69,16 +62,10 @@ func BenchmarkExecuteQueryBasicOrderByValue(b *testing.B) {
 		generateBenchmarkData(v, store)
 		defer store.ResetStore()
 
-		query := DSQLQuery{
-			KeyRegex: "k*",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			OrderBy: QueryOrder{
-				OrderBy: "$value",
-				Order:   Asc,
-			},
+		queryStr := "SELECT $key, $value WHERE $key like 'k*' ORDER BY $value ASC"
+		query, err := ParseQuery(queryStr)
+		if err != nil {
+			b.Fatal(err)
 		}
 
 		b.ResetTimer()
@@ -98,17 +85,10 @@ func BenchmarkExecuteQueryLimit(b *testing.B) {
 		generateBenchmarkData(v, store)
 		defer store.ResetStore()
 
-		query := DSQLQuery{
-			KeyRegex: "k*",
-			Selection: QuerySelection{
-				KeySelection:   false,
-				ValueSelection: true,
-			},
-			OrderBy: QueryOrder{
-				OrderBy: "$key",
-				Order:   Asc,
-			},
-			Limit: v / 3,
+		queryStr := fmt.Sprintf("SELECT $key, $value WHERE $key like 'k*' ORDER BY $key ASC LIMIT %d", v/3)
+		query, err := ParseQuery(queryStr)
+		if err != nil {
+			b.Fatal(err)
 		}
 
 		b.ResetTimer()
@@ -128,12 +108,10 @@ func BenchmarkExecuteQueryNoMatch(b *testing.B) {
 		generateBenchmarkData(v, store)
 		defer store.ResetStore()
 
-		query := DSQLQuery{
-			KeyRegex: "x*",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
+		queryStr := "SELECT $key, $value WHERE $key like 'x*' ORDER BY $key ASC"
+		query, err := ParseQuery(queryStr)
+		if err != nil {
+			b.Fatal(err)
 		}
 
 		b.ResetTimer()
@@ -153,17 +131,10 @@ func BenchmarkExecuteQueryWithBasicWhere(b *testing.B) {
 		generateBenchmarkData(v, store)
 		defer store.ResetStore()
 
-		query := DSQLQuery{
-			KeyRegex: "k*",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			Where: &sqlparser.ComparisonExpr{
-				Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-				Operator: "=",
-				Right:    sqlparser.NewStrVal([]byte("v3")),
-			},
+		queryStr := "SELECT $key, $value WHERE $value = 'v3' AND $key like 'k*'"
+		query, err := ParseQuery(queryStr)
+		if err != nil {
+			b.Fatal(err)
 		}
 
 		b.ResetTimer()
@@ -183,28 +154,10 @@ func BenchmarkExecuteQueryWithComplexWhere(b *testing.B) {
 		generateBenchmarkData(v, store)
 		defer store.ResetStore()
 
-		query := DSQLQuery{
-			KeyRegex: "k*",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			OrderBy: QueryOrder{
-				OrderBy: "$value",
-				Order:   "desc",
-			},
-			Where: &sqlparser.AndExpr{
-				Left: &sqlparser.ComparisonExpr{
-					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-					Operator: ">",
-					Right:    sqlparser.NewStrVal([]byte("v2")),
-				},
-				Right: &sqlparser.ComparisonExpr{
-					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-					Operator: "<",
-					Right:    sqlparser.NewStrVal([]byte("v100")),
-				},
-			},
+		queryStr := "SELECT $key, $value WHERE $value > 'v2' AND $value < 'v100' AND $key like 'k*' ORDER BY $value DESC"
+		query, err := ParseQuery(queryStr)
+		if err != nil {
+			b.Fatal(err)
 		}
 
 		b.ResetTimer()
@@ -224,17 +177,10 @@ func BenchmarkExecuteQueryWithCompareWhereKeyandValue(b *testing.B) {
 		generateBenchmarkData(v, store)
 		defer store.ResetStore()
 
-		query := DSQLQuery{
-			KeyRegex: "k*",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			Where: &sqlparser.ComparisonExpr{
-				Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_key")},
-				Operator: "=",
-				Right:    &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-			},
+		queryStr := "SELECT $key, $value WHERE $key = $value AND $key like 'k*'"
+		query, err := ParseQuery(queryStr)
+		if err != nil {
+			b.Fatal(err)
 		}
 
 		b.ResetTimer()
@@ -254,47 +200,10 @@ func BenchmarkExecuteQueryWithBasicWhereNoMatch(b *testing.B) {
 		generateBenchmarkData(v, store)
 		defer store.ResetStore()
 
-		query := DSQLQuery{
-			KeyRegex: "k*",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			Where: &sqlparser.ComparisonExpr{
-				Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-				Operator: "=",
-				Right:    sqlparser.NewStrVal([]byte("nonexistent")),
-			},
-		}
-
-		b.ResetTimer()
-		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				if _, err := ExecuteQuery(&query, store.GetStore()); err != nil {
-					b.Fatal(err)
-				}
-			}
-		})
-	}
-}
-
-func BenchmarkExecuteQueryWithNullValues(b *testing.B) {
-	store := dstore.NewStore(nil)
-	for _, v := range benchmarkDataSizes {
-		generateBenchmarkData(v, store)
-		defer store.ResetStore()
-
-		query := DSQLQuery{
-			KeyRegex: "nullKey",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			Where: &sqlparser.ComparisonExpr{
-				Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-				Operator: "=",
-				Right:    &sqlparser.NullVal{},
-			},
+		queryStr := "SELECT $key, $value WHERE $value = 'nonexistent' AND $key like 'k*'"
+		query, err := ParseQuery(queryStr)
+		if err != nil {
+			b.Fatal(err)
 		}
 
 		b.ResetTimer()
@@ -314,19 +223,11 @@ func BenchmarkExecuteQueryWithCaseSesnsitivity(b *testing.B) {
 		generateBenchmarkData(v, store)
 		defer store.ResetStore()
 
-		query := DSQLQuery{
-			KeyRegex: "k*",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			Where: &sqlparser.ComparisonExpr{
-				Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-				Operator: "=",
-				Right:    sqlparser.NewStrVal([]byte("V9")), // Uppercase V3
-			},
+		queryStr := "SELECT $key, $value WHERE $value = 'V9' AND $key like 'k*'"
+		query, err := ParseQuery(queryStr)
+		if err != nil {
+			b.Fatal(err)
 		}
-
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -344,21 +245,10 @@ func BenchmarkExecuteQueryWithClauseOnKey(b *testing.B) {
 		generateBenchmarkData(v, store)
 		defer store.ResetStore()
 
-		query := DSQLQuery{
-			KeyRegex: "k*",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			OrderBy: QueryOrder{
-				OrderBy: "$key",
-				Order:   Asc,
-			},
-			Where: &sqlparser.ComparisonExpr{
-				Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_key")},
-				Operator: ">",
-				Right:    sqlparser.NewStrVal([]byte("k3")),
-			},
+		queryStr := "SELECT $key, $value WHERE $key > 'k3' AND $key like 'k*' ORDER BY $key ASC"
+		query, err := ParseQuery(queryStr)
+		if err != nil {
+			b.Fatal(err)
 		}
 
 		b.ResetTimer()
@@ -372,18 +262,16 @@ func BenchmarkExecuteQueryWithClauseOnKey(b *testing.B) {
 	}
 }
 
-func BenchmarkExecuteQueryWithEmptyKeyRegex(b *testing.B) {
+func BenchmarkExecuteQueryWithAllMatchingKeyRegex(b *testing.B) {
 	store := dstore.NewStore(nil)
 	for _, v := range benchmarkDataSizes {
 		generateBenchmarkData(v, store)
 		defer store.ResetStore()
 
-		query := DSQLQuery{
-			KeyRegex: utils.EmptyStr,
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
+		queryStr := "SELECT $key, $value WHERE $key like '*' ORDER BY $key ASC"
+		query, err := ParseQuery(queryStr)
+		if err != nil {
+			b.Fatal(err)
 		}
 
 		b.ResetTimer()
@@ -423,17 +311,10 @@ func BenchmarkExecuteQueryWithJSON(b *testing.B) {
 			generateBenchmarkJSONData(b, v, json, store)
 			defer store.ResetStore()
 
-			query := DSQLQuery{
-				KeyRegex: "k*",
-				Selection: QuerySelection{
-					KeySelection:   true,
-					ValueSelection: true,
-				},
-				Where: &sqlparser.ComparisonExpr{
-					Left:     sqlparser.NewStrVal([]byte("_value.id")),
-					Operator: "=",
-					Right:    sqlparser.NewIntVal([]byte("3")),
-				},
+			queryStr := "SELECT $key, $value WHERE $key like 'k*' AND '$value.id' = 3 ORDER BY $key ASC"
+			query, err := ParseQuery(queryStr)
+			if err != nil {
+				b.Fatal(err)
 			}
 
 			b.ResetTimer()
@@ -455,17 +336,10 @@ func BenchmarkExecuteQueryWithNestedJSON(b *testing.B) {
 			generateBenchmarkJSONData(b, v, json, store)
 			defer store.ResetStore()
 
-			query := DSQLQuery{
-				KeyRegex: "k*",
-				Selection: QuerySelection{
-					KeySelection:   true,
-					ValueSelection: true,
-				},
-				Where: &sqlparser.ComparisonExpr{
-					Left:     sqlparser.NewStrVal([]byte("_value.field1.field2.field3.score")),
-					Operator: ">",
-					Right:    sqlparser.NewFloatVal([]byte("10.1")),
-				},
+			queryStr := "SELECT $key, $value WHERE $key like 'k*' AND '$value.field1.field2.field3.score' > 10.1 ORDER BY $key ASC"
+			query, err := ParseQuery(queryStr)
+			if err != nil {
+				b.Fatal(err)
 			}
 
 			b.ResetTimer()
@@ -487,17 +361,10 @@ func BenchmarkExecuteQueryWithJsonInLeftAndRightExpressions(b *testing.B) {
 			generateBenchmarkJSONData(b, v, json, store)
 			defer store.ResetStore()
 
-			query := DSQLQuery{
-				KeyRegex: "k*",
-				Selection: QuerySelection{
-					KeySelection:   true,
-					ValueSelection: true,
-				},
-				Where: &sqlparser.ComparisonExpr{
-					Left:     sqlparser.NewStrVal([]byte("_value.id")),
-					Operator: "=",
-					Right:    sqlparser.NewStrVal([]byte("_value.score")),
-				},
+			queryStr := "SELECT $key, $value WHERE '$value.id' = '$value.score' AND $key like 'k*' ORDER BY $key ASC"
+			query, err := ParseQuery(queryStr)
+			if err != nil {
+				b.Fatal(err)
 			}
 
 			b.ResetTimer()
@@ -519,17 +386,10 @@ func BenchmarkExecuteQueryWithJsonNoMatch(b *testing.B) {
 			generateBenchmarkJSONData(b, v, json, store)
 			defer store.ResetStore()
 
-			query := DSQLQuery{
-				KeyRegex: "k*",
-				Selection: QuerySelection{
-					KeySelection:   true,
-					ValueSelection: true,
-				},
-				Where: &sqlparser.ComparisonExpr{
-					Left:     sqlparser.NewStrVal([]byte("_value.id")),
-					Operator: "=",
-					Right:    sqlparser.NewIntVal([]byte("-1")),
-				},
+			queryStr := "SELECT $key, $value WHERE '$value.id' = 3 AND $key like 'k*' ORDER BY $key ASC"
+			query, err := ParseQuery(queryStr)
+			if err != nil {
+				b.Fatal(err)
 			}
 
 			b.ResetTimer()

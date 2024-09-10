@@ -1,4 +1,4 @@
-package querywatcher
+package sql
 
 import (
 	"fmt"
@@ -7,7 +7,6 @@ import (
 
 	hash "github.com/dgryski/go-farm"
 
-	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/xwb1989/sqlparser"
 )
 
@@ -45,11 +44,10 @@ type QueryOrder struct {
 }
 
 type DSQLQuery struct {
-	Selection   QuerySelection
-	KeyRegex    string
-	Where       sqlparser.Expr
-	OrderBy     QueryOrder
-	Limit       int
+	Selection QuerySelection
+	Where     sqlparser.Expr
+	OrderBy   QueryOrder
+	Limit     int
 	Fingerprint string
 }
 
@@ -68,7 +66,7 @@ func (q DSQLQuery) String() string {
 	var parts []string
 
 	// Selection
-	selectionParts := []string{}
+	var selectionParts []string
 	if q.Selection.KeySelection {
 		selectionParts = append(selectionParts, CustomKey)
 	}
@@ -79,11 +77,6 @@ func (q DSQLQuery) String() string {
 		parts = append(parts, fmt.Sprintf("SELECT %s", strings.Join(selectionParts, ", ")))
 	} else {
 		parts = append(parts, "SELECT *")
-	}
-
-	// KeyRegex
-	if q.KeyRegex != "" {
-		parts = append(parts, fmt.Sprintf("FROM `%s`", q.KeyRegex))
 	}
 
 	// Where
@@ -110,6 +103,8 @@ func (q DSQLQuery) String() string {
 // Utility functions for custom syntax handling
 func replaceCustomSyntax(sql string) string {
 	replacer := strings.NewReplacer(CustomKey, TempKey, CustomValue, TempValue)
+
+	// Add implicit `FROM dual` if no table name is provided
 	return replacer.Replace(sql)
 }
 
@@ -138,8 +133,7 @@ func ParseQuery(sql string) (DSQLQuery, error) {
 		return DSQLQuery{}, err
 	}
 
-	tableName, err := parseTableName(selectStmt)
-	if err != nil {
+	if err := parseTableName(selectStmt); err != nil {
 		return DSQLQuery{}, err
 	}
 
@@ -160,11 +154,10 @@ func ParseQuery(sql string) (DSQLQuery, error) {
 
 	return DSQLQuery{
 		Selection:   querySelection,
-		KeyRegex:    tableName,
 		Where:       where,
 		OrderBy:     orderBy,
 		Limit:       limit,
-		Fingerprint: generateFingerprint(tableName),
+		Fingerprint: generateFingerprint(where),
 	}, nil
 }
 
@@ -209,21 +202,21 @@ func parseSelectExpressions(selectStmt *sqlparser.Select) (QuerySelection, error
 }
 
 // Function to parse table name
-func parseTableName(selectStmt *sqlparser.Select) (string, error) {
+func parseTableName(selectStmt *sqlparser.Select) error {
 	tableExpr, ok := selectStmt.From[0].(*sqlparser.AliasedTableExpr)
 	if !ok {
-		return utils.EmptyStr, fmt.Errorf("error parsing table name")
+		return fmt.Errorf("error parsing table name")
 	}
 
 	// Remove backticks from table name if present.
 	tableName := strings.Trim(sqlparser.String(tableExpr.Expr), "`")
 
 	// Ensure table name is not dual, which means no table name was provided.
-	if tableName == "dual" {
-		return utils.EmptyStr, fmt.Errorf("no table name provided")
+	if tableName != "dual" {
+		return fmt.Errorf("FROM clause is not supported")
 	}
 
-	return tableName, nil
+	return nil
 }
 
 // Function to parse ORDER BY clause
@@ -271,7 +264,8 @@ func parseWhere(selectStmt *sqlparser.Select) (sqlparser.Expr, error) {
 	return selectStmt.Where.Expr, nil
 }
 
-func generateFingerprint(keyRegex string) string {
+func generateFingerprint(where sqlparser.Expr) string {
 	// Generate a unique fingerprint for the query
-	return fmt.Sprintf("f_%d", hash.Hash64([]byte(keyRegex)))
+	// TODO: Add logic to ensure that logically equivalent WHERE clause expressions generate the same fingerprint.
+	return fmt.Sprintf("f_%d", hash.Hash64([]byte(sqlparser.String(where))))
 }

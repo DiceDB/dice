@@ -1,4 +1,4 @@
-package querywatcher
+package sql
 
 import (
 	"errors"
@@ -24,19 +24,13 @@ func ExecuteQuery(query *DSQLQuery, store *swiss.Map[string, *dstore.Obj]) ([]ds
 
 	var err error
 	store.All(func(key string, value *dstore.Obj) bool {
-		// TODO: We can remove this check once we have scatter-gather algorithm for multi-threaded execution implemented.
-		//  This is only required when we are running unit tests and passing the complete store to the function.
-		if !regex.WildCardMatch(query.KeyRegex, key) {
-			return true
-		}
-
 		row := dstore.DSQLQueryResultRow{
 			Key:   key,
 			Value: *value,
 		}
 
 		if query.Where != nil {
-			match, evalErr := evaluateWhereClause(query.Where, row)
+			match, evalErr := EvaluateWhereClause(query.Where, row)
 			if errors.Is(evalErr, ErrNoResultsFound) {
 				// if no result found error
 				// and continue with the next iteration
@@ -189,26 +183,28 @@ func compareBoolValues(order string, valI, valJ bool) bool {
 	return valI && !valJ
 }
 
-func evaluateWhereClause(expr sqlparser.Expr, row dstore.DSQLQueryResultRow) (bool, error) {
+func EvaluateWhereClause(expr sqlparser.Expr, row dstore.DSQLQueryResultRow) (bool, error) {
 	switch expr := expr.(type) {
+	case *sqlparser.ParenExpr:
+		return EvaluateWhereClause(expr.Expr, row)
 	case *sqlparser.ComparisonExpr:
 		return evaluateComparison(expr, row)
 	case *sqlparser.AndExpr:
-		left, err := evaluateWhereClause(expr.Left, row)
+		left, err := EvaluateWhereClause(expr.Left, row)
 		if err != nil {
 			return false, err
 		}
-		right, err := evaluateWhereClause(expr.Right, row)
+		right, err := EvaluateWhereClause(expr.Right, row)
 		if err != nil {
 			return false, err
 		}
 		return left && right, nil
 	case *sqlparser.OrExpr:
-		left, err := evaluateWhereClause(expr.Left, row)
+		left, err := EvaluateWhereClause(expr.Left, row)
 		if err != nil {
 			return false, err
 		}
-		right, err := evaluateWhereClause(expr.Right, row)
+		right, err := EvaluateWhereClause(expr.Right, row)
 		if err != nil {
 			return false, err
 		}
@@ -263,6 +259,8 @@ func getExprValueAndType(expr sqlparser.Expr, row dstore.DSQLQueryResultRow) (va
 			return retrieveValueFromJSON(string(expr.Val), &row.Value)
 		}
 		return sqlValToGoValue(expr)
+	case *sqlparser.NullVal:
+		return nil, Nil, nil
 	default:
 		return nil, "", fmt.Errorf("unsupported expression type: %T", expr)
 	}

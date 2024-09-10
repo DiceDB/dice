@@ -8,7 +8,6 @@ import (
 
 	"github.com/cockroachdb/swiss"
 	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/internal/regex"
 )
 
 // WatchEvent represents a change in a watched key.
@@ -63,7 +62,7 @@ func (store *Store) NewObj(value interface{}, expDurationMs int64, oType, oEnc u
 }
 
 func (store *Store) ResetStore() {
-	withLocks(func() {
+	WithLocks(func() {
 		store.store.Clear()
 		store.expires.Clear()
 		store.watchChan = make(chan WatchEvent, config.KeysLimit)
@@ -75,7 +74,7 @@ type PutOptions struct {
 }
 
 func (store *Store) Put(k string, obj *Obj, opts ...PutOption) {
-	withLocks(func() {
+	WithLocks(func() {
 		store.putHelper(k, obj, opts...)
 	}, store, WithStoreLock())
 }
@@ -95,7 +94,7 @@ func WithKeepTTL(value bool) PutOption {
 }
 
 func (store *Store) PutAll(data map[string]*Obj) {
-	withLocks(func() {
+	WithLocks(func() {
 		for k, obj := range data {
 			store.putHelper(k, obj)
 		}
@@ -139,7 +138,7 @@ func (store *Store) putHelper(k string, obj *Obj, opts ...PutOption) {
 
 func (store *Store) getHelper(k string, touch bool) *Obj {
 	var v *Obj
-	withLocks(func() {
+	WithLocks(func() {
 		v, _ = store.store.Get(k)
 		if v != nil {
 			if hasExpired(v, store) {
@@ -155,7 +154,7 @@ func (store *Store) getHelper(k string, touch bool) *Obj {
 
 func (store *Store) GetAll(keys []string) []*Obj {
 	response := make([]*Obj, 0, len(keys))
-	withLocks(func() {
+	WithLocks(func() {
 		for _, k := range keys {
 			v, _ := store.store.Get(k)
 			if v != nil {
@@ -194,7 +193,7 @@ func (store *Store) Keys(p string) ([]string, error) {
 	var keys []string
 	var err error
 
-	withLocks(func() {
+	WithLocks(func() {
 		keys = make([]string, 0, store.store.Len())
 
 		store.store.All(func(k string, _ *Obj) bool {
@@ -216,7 +215,7 @@ func (store *Store) Keys(p string) ([]string, error) {
 // GetDbSize returns number of keys present in the database
 func (store *Store) GetDBSize() uint64 {
 	var noOfKeys uint64
-	withLocks(func() {
+	WithLocks(func() {
 		noOfKeys = uint64(store.store.Len())
 	}, store, WithStoreRLock())
 	return noOfKeys
@@ -250,7 +249,7 @@ func (store *Store) Rename(sourceKey, destKey string) bool {
 
 		// Notify watchers about the deletion of the source key
 		if store.watchChan != nil {
-			store.notifyWatchers(sourceKey, Del, nil)
+			store.notifyWatchers(sourceKey, Del, sourceObj)
 		}
 
 		return true
@@ -270,7 +269,7 @@ func (store *Store) Get(k string) *Obj {
 
 func (store *Store) GetDel(k string) *Obj {
 	var v *Obj
-	withLocks(func() {
+	WithLocks(func() {
 		v, _ = store.store.Get(k)
 		if v != nil {
 			expired := hasExpired(v, store)
@@ -303,7 +302,7 @@ func (store *Store) deleteKey(k string, obj *Obj) bool {
 		KeyspaceStat[0]["keys"]--
 
 		if store.watchChan != nil {
-			store.notifyWatchers(k, Del, nil)
+			store.notifyWatchers(k, Del, obj)
 		}
 
 		return true
@@ -326,17 +325,4 @@ func (store *Store) notifyWatchers(k, operation string, obj *Obj) {
 
 func (store *Store) GetStore() *swiss.Map[string, *Obj] {
 	return store.store
-}
-
-func (store *Store) CacheKeysForQuery(keyRegex string, cacheChannel chan *[]KeyValue) {
-	shardCache := make([]KeyValue, 0)
-	withLocks(func() {
-		store.store.All(func(k string, v *Obj) bool {
-			if regex.WildCardMatch(keyRegex, k) {
-				shardCache = append(shardCache, KeyValue{k, v})
-			}
-			return true
-		})
-	}, store, WithStoreRLock())
-	cacheChannel <- &shardCache
 }

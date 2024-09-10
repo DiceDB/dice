@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/dicedb/dice/internal/sql"
 	"math"
 	"sort"
 	"strconv"
@@ -1063,14 +1064,14 @@ func EvalQWATCH(args []string, clientFd int, store *dstore.Store) []byte {
 	}
 
 	// Parse and get the selection from the query.
-	query, e := querywatcher.ParseQuery( /*sql=*/ args[0])
+	query, e := sql.ParseQuery( /*sql=*/ args[0])
 
 	if e != nil {
 		return clientio.Encode(e, false)
 	}
 
 	// use an unbuffered channel to ensure that we only proceed to query execution once the query watcher has built the cache
-	cacheChannel := make(chan *[]dstore.KeyValue)
+	cacheChannel := make(chan *dstore.Store)
 	querywatcher.WatchSubscriptionChan <- querywatcher.WatchSubscription{
 		Subscribe: true,
 		Query:     query,
@@ -1078,7 +1079,7 @@ func EvalQWATCH(args []string, clientFd int, store *dstore.Store) []byte {
 		CacheChan: cacheChannel,
 	}
 
-	store.CacheKeysForQuery(query.KeyRegex, cacheChannel)
+	cacheChannel <- store
 
 	// Return the result of the query.
 	responseChan := make(chan querywatcher.AdhocQueryResult)
@@ -1093,7 +1094,7 @@ func EvalQWATCH(args []string, clientFd int, store *dstore.Store) []byte {
 	}
 
 	// TODO: We should return the list of all queries being watched by the client.
-	return clientio.Encode(querywatcher.CreatePushResponse(&query, queryResult.Result), false)
+	return clientio.Encode(clientio.CreatePushResponse(&query, queryResult.Result), false)
 }
 
 // EvalQUNWATCH removes the specified key from the watch list for the caller client.
@@ -1101,7 +1102,7 @@ func EvalQUNWATCH(args []string, clientFd int) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("QUNWATCH")
 	}
-	query, e := querywatcher.ParseQuery( /*sql=*/ args[0])
+	query, e := sql.ParseQuery( /*sql=*/ args[0])
 	if e != nil {
 		return clientio.Encode(e, false)
 	}
