@@ -190,6 +190,10 @@ func (store *Store) DelByPtr(ptr string) bool {
 	}, store, WithStoreLock())
 }
 
+func (store *Store) DelByPtrUnsafe(ptr string) bool {
+	return store.delByPtr(ptr)
+}
+
 func (store *Store) Keys(p string) ([]string, error) {
 	var keys []string
 	var err error

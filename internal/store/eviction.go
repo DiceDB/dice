@@ -53,18 +53,17 @@ func populateEvictionPool(store *Store) {
 
 	// TODO: if we already have obj, why do we need to
 	// look up in store.store again?
-	withLocks(func() {
-		store.store.All(func(k string, obj *Obj) bool {
-			v, ok := store.store.Get(k)
-			if ok {
-				ePool.Push(k, v.LastAccessedAt)
-				sampleSize--
-			}
-			// continue if sample size > 0
-			// stop as soon as it hits 0
-			return sampleSize > 0
-		})
-	}, store, WithStoreRLock())
+
+	store.store.All(func(k string, obj *Obj) bool {
+		v, ok := store.store.Get(k)
+		if ok {
+			ePool.Push(k, v.LastAccessedAt)
+			sampleSize--
+		}
+		// continue if sample size > 0
+		// stop as soon as it hits 0
+		return sampleSize > 0
+	})
 }
 
 // TODO: no need to populate everytime. should populate
@@ -77,7 +76,7 @@ func EvictAllkeysLRU(store *Store) {
 		if item == nil {
 			return
 		}
-		store.DelByPtr(item.keyPtr)
+		store.DelByPtrUnsafe(item.keyPtr)
 	}
 }
 
