@@ -866,7 +866,11 @@ func evaluateAndSetExpiry(subCommands []string, newExpiry uint64, key string,
 		}
 	}
 
-	if (nxCmd && (xxCmd || gtCmd || ltCmd)) || (gtCmd && ltCmd) {
+	if !nxCmd && gtCmd && ltCmd {
+		return false, diceerrors.NewErrWithMessage("GT and LT options at the same time are not compatible")
+	}
+
+	if nxCmd && (xxCmd || gtCmd || ltCmd) {
 		return false, diceerrors.NewErrWithMessage("NX and XX," +
 			" GT or LT options at the same time are not compatible")
 	}
