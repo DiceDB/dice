@@ -126,6 +126,16 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsonforgetCmdMeta = DiceCmdMeta{
+		Name: "JSON.FORGET",
+		Info: `JSON.FORGET key [path]
+		Returns an integer reply specified as the number of paths deleted (0 or more).
+		Returns RespZero if the key doesn't exist or key is expired.
+		Error reply: If the number of arguments is incorrect.`,
+		Eval:     evalJSONFORGET,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	ttlCmdMeta = DiceCmdMeta{
 		Name: "TTL",
 		Info: `TTL returns Time-to-Live in secs for the queried key in args
@@ -632,6 +642,7 @@ func init() {
 	DiceCmds["JSON.TYPE"] = jsontypeCmdMeta
 	DiceCmds["JSON.CLEAR"] = jsonclearCmdMeta
 	DiceCmds["JSON.DEL"] = jsondelCmdMeta
+	DiceCmds["JSON.FORGET"] = jsonforgetCmdMeta
 	DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
 	DiceCmds["EXPIRE"] = expireCmdMeta
