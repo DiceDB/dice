@@ -6,6 +6,8 @@ import (
 	"io"
 	"strconv"
 
+	"github.com/dicedb/dice/internal/sql"
+
 	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
 )
@@ -194,10 +196,10 @@ func Encode(value interface{}, isSimple bool) []byte {
 		buf.Write(Encode(fmt.Sprintf("key:%s", we.Key), false))
 		buf.Write(Encode(fmt.Sprintf("op:%s", we.Operation), false))
 		return []byte(fmt.Sprintf("*2\r\n%s", buf.Bytes()))
-	case []dstore.DSQLQueryResultRow:
+	case []sql.QueryResultRow:
 		var b []byte
 		buf := bytes.NewBuffer(b)
-		for _, row := range value.([]dstore.DSQLQueryResultRow) {
+		for _, row := range value.([]sql.QueryResultRow) {
 			buf.WriteString("*2\r\n")
 			buf.Write(Encode(row.Key, false))
 			buf.Write(Encode(row.Value.Value, false))

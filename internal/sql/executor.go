@@ -19,12 +19,17 @@ import (
 var ErrNoResultsFound = errors.New("ERR No results found")
 var ErrInvalidJSONPath = errors.New("ERR invalid JSONPath")
 
-func ExecuteQuery(query *DSQLQuery, store *swiss.Map[string, *dstore.Obj]) ([]dstore.DSQLQueryResultRow, error) {
-	var result []dstore.DSQLQueryResultRow
+type QueryResultRow struct {
+	Key   string
+	Value dstore.Obj
+}
+
+func ExecuteQuery(query *DSQLQuery, store *swiss.Map[string, *dstore.Obj]) ([]QueryResultRow, error) {
+	var result []QueryResultRow
 
 	var err error
 	store.All(func(key string, value *dstore.Obj) bool {
-		row := dstore.DSQLQueryResultRow{
+		row := QueryResultRow{
 			Key:   key,
 			Value: *value,
 		}
@@ -83,7 +88,7 @@ func ExecuteQuery(query *DSQLQuery, store *swiss.Map[string, *dstore.Obj]) ([]ds
 	return result, nil
 }
 
-func MarshalResultIfJSON(row *dstore.DSQLQueryResultRow) error {
+func MarshalResultIfJSON(row *QueryResultRow) error {
 	// if the row contains JSON field then convert the json object into string representation so it can be encoded
 	// before being returned to the client
 	if dstore.GetEncoding(row.Value.TypeEncoding) == dstore.ObjEncodingJSON && dstore.GetType(row.Value.TypeEncoding) == dstore.ObjTypeJSON {
@@ -97,7 +102,7 @@ func MarshalResultIfJSON(row *dstore.DSQLQueryResultRow) error {
 	return nil
 }
 
-func sortResults(query *DSQLQuery, result []dstore.DSQLQueryResultRow) {
+func sortResults(query *DSQLQuery, result []QueryResultRow) {
 	if query.OrderBy.OrderBy == utils.EmptyStr {
 		return
 	}
@@ -125,7 +130,7 @@ func sortResults(query *DSQLQuery, result []dstore.DSQLQueryResultRow) {
 	})
 }
 
-func getOrderByValue(orderBy string, row dstore.DSQLQueryResultRow) (value interface{}, valueType string, err error) {
+func getOrderByValue(orderBy string, row QueryResultRow) (value interface{}, valueType string, err error) {
 	switch orderBy {
 	case TempKey:
 		return row.Key, String, nil
@@ -183,7 +188,7 @@ func compareBoolValues(order string, valI, valJ bool) bool {
 	return valI && !valJ
 }
 
-func EvaluateWhereClause(expr sqlparser.Expr, row dstore.DSQLQueryResultRow) (bool, error) {
+func EvaluateWhereClause(expr sqlparser.Expr, row QueryResultRow) (bool, error) {
 	switch expr := expr.(type) {
 	case *sqlparser.ParenExpr:
 		return EvaluateWhereClause(expr.Expr, row)
@@ -214,7 +219,7 @@ func EvaluateWhereClause(expr sqlparser.Expr, row dstore.DSQLQueryResultRow) (bo
 	}
 }
 
-func evaluateComparison(expr *sqlparser.ComparisonExpr, row dstore.DSQLQueryResultRow) (b bool, e error) {
+func evaluateComparison(expr *sqlparser.ComparisonExpr, row QueryResultRow) (b bool, e error) {
 	left, leftType, err := getExprValueAndType(expr.Left, row)
 	if err != nil {
 		return false, err
@@ -241,7 +246,7 @@ func evaluateComparison(expr *sqlparser.ComparisonExpr, row dstore.DSQLQueryResu
 	}
 }
 
-func getExprValueAndType(expr sqlparser.Expr, row dstore.DSQLQueryResultRow) (value interface{}, valueType string, err error) {
+func getExprValueAndType(expr sqlparser.Expr, row QueryResultRow) (value interface{}, valueType string, err error) {
 	switch expr := expr.(type) {
 	case *sqlparser.ColName:
 		switch expr.Name.String() {

@@ -17,16 +17,6 @@ type WatchEvent struct {
 	Value     *Obj
 }
 
-type DSQLQueryResultRow struct {
-	Key   string
-	Value Obj
-}
-
-type KeyValue struct {
-	Key   string
-	Value *Obj
-}
-
 type Store struct {
 	store      *swiss.Map[string, *Obj]
 	expires    *swiss.Map[*Obj, uint64] // Does not need to be thread-safe as it is only accessed by a single thread.

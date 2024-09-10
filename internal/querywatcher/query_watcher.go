@@ -29,7 +29,7 @@ type (
 
 	// AdhocQueryResult represents the result of an adhoc query.
 	AdhocQueryResult struct {
-		Result      *[]dstore.DSQLQueryResultRow
+		Result      *[]sql.QueryResultRow
 		Fingerprint string
 		Err         error
 	}
@@ -138,7 +138,7 @@ func (w *QueryManager) processWatchEvent(event dstore.WatchEvent) {
 
 		// Check if the key matches the regex
 		if query.Where != nil {
-			matches, err := sql.EvaluateWhereClause(query.Where, dstore.DSQLQueryResultRow{Key: event.Key, Value: *event.Value})
+			matches, err := sql.EvaluateWhereClause(query.Where, sql.QueryResultRow{Key: event.Key, Value: *event.Value})
 			if err != nil || !matches {
 				return true
 			}
@@ -178,7 +178,7 @@ func (w *QueryManager) updateQueryCache(queryFingerprint string, event dstore.Wa
 	}
 }
 
-func (w *QueryManager) notifyClients(query *sql.DSQLQuery, clients *sync.Map, queryResult *[]dstore.DSQLQueryResultRow) {
+func (w *QueryManager) notifyClients(query *sql.DSQLQuery, clients *sync.Map, queryResult *[]sql.QueryResultRow) {
 	encodedResult := clientio.Encode(clientio.CreatePushResponse(query, queryResult), false)
 
 	clients.Range(func(clientKey, _ interface{}) bool {
@@ -256,7 +256,7 @@ func (w *QueryManager) addWatcher(query *sql.DSQLQuery, clientFD int, cacheChan 
 	store := <-cacheChan
 	dstore.WithLocks(func() {
 		store.GetStore().All(func(k string, v *dstore.Obj) bool {
-			matches, err := sql.EvaluateWhereClause(query.Where, dstore.DSQLQueryResultRow{Key: k, Value: *v})
+			matches, err := sql.EvaluateWhereClause(query.Where, sql.QueryResultRow{Key: k, Value: *v})
 			if err != nil || !matches {
 				return true
 			}
@@ -300,7 +300,7 @@ func (w *QueryManager) clientCount(clients *sync.Map) int {
 }
 
 // runQuery executes a query on its respective cache.
-func (w *QueryManager) runQuery(query *sql.DSQLQuery) (*[]dstore.DSQLQueryResultRow, error) {
+func (w *QueryManager) runQuery(query *sql.DSQLQuery) (*[]sql.QueryResultRow, error) {
 	w.QueryCacheMu.RLock()
 	defer w.QueryCacheMu.RUnlock()
 
