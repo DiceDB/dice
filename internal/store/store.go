@@ -269,26 +269,6 @@ func (store *Store) Get(k string) *Obj {
 	return store.getHelper(k, true)
 }
 
-// CloneKeypool creates and returns a deep copy of the store's keypool.
-// The keypool is a map that associates string keys with pointers to objects.
-// The function locks the keypool for reading to ensure thread-safe access while copying.
-//
-// Returns:
-// - clone: A new map containing the same keys and pointers as the original keypool.
-func (store *Store) CloneKeypool() map[string]*string {
-	// Lock the keypool for reading to ensure thread safety while copying.
-	store.keypoolMutex.RLock()
-	defer store.keypoolMutex.RUnlock()
-
-	clone := make(map[string]*string, len(store.keypool))
-
-	for k, v := range store.keypool {
-		clone[k] = v
-	}
-
-	return clone
-}
-
 // scanKeys performs a scan operation on the keypool, retrieving keys that match specified criteria.
 // The scan operation is controlled by a cursor and can be limited by a count, pattern, and key type.
 // The function takes a snapshot of the keypool to ensure that the scan is performed on a consistent view of the data.
@@ -302,44 +282,40 @@ func (store *Store) CloneKeypool() map[string]*string {
 // Returns:
 // - newCursor: The updated cursor position after the scan, or 0 if the end is reached.
 // - keys: A slice of strings containing the keys that match the scan criteria.
-func (store *Store) scanKeys(cursor, count int, pattern, keyType string) (newCursor int, keys []string) {
-	snapshot := store.CloneKeypool()
+func (store *Store) ScanKeys(cursor, count int, pattern, keyType string) (newCursor int, keys []string) {
+	store.storeMutex.RLock()
+	defer store.storeMutex.RUnlock()
 
-	keyList := make([]string, 0, len(snapshot))
-	for k := range snapshot {
-		keyList = append(keyList, k)
-	}
+	keys = make([]string, 0, count)
+	currentIndex := 0
+	processed := 0
 
-	endCursor := cursor + count
-	if endCursor > len(keyList) {
-		endCursor = len(keyList)
-	}
-
-	for i := cursor; i < endCursor; i++ {
-		key := keyList[i]
-
-		objPtr := snapshot[key]
-
-		obj, ok := store.store[*objPtr]
-		if !ok || hasExpired(obj, store) {
-			continue
+	store.store.All(func(k string, v *Obj) bool {
+		if currentIndex < cursor {
+			currentIndex++
+			return true
 		}
 
-		objType := getTypeAsString(obj.TypeEncoding)
+		if (pattern == "" || matchGlob(k, pattern)) &&
+			(keyType == "" || strings.EqualFold(getTypeAsString(v.TypeEncoding), keyType)) &&
+			!hasExpired(v, store) {
 
-		if keyType != "" && !strings.EqualFold(objType, keyType) {
-			continue
+			keys = append(keys, k)
+			processed++
 		}
 
-		if pattern == "" || matchGlob(key, pattern) {
-			keys = append(keys, key)
+		if processed >= count {
+			return false
 		}
-	}
 
-	if endCursor < len(keyList) && len(keys) >= count {
-		newCursor = endCursor
-	} else {
+		currentIndex++
+		return true
+	})
+
+	if processed <= count || currentIndex >= store.store.Len() {
 		newCursor = 0
+	} else {
+		newCursor = cursor + processed
 	}
 
 	return newCursor, keys
@@ -355,7 +331,7 @@ func getTypeAsString(encoding uint8) string {
 
 	switch typePart {
 	case ObjTypeString:
-		return constants.String
+		return "string"
 	case ObjTypeByteList:
 		return "byte_list"
 	case ObjTypeBitSet:

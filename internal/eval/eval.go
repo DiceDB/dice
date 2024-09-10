@@ -256,10 +256,7 @@ func evalSCAN(args []string, store *dstore.Store) []byte {
 	}
 
 	cursor, err := strconv.Atoi(args[0])
-	if err != nil {
-		return diceerrors.NewErrWithMessage("ERR invalid cursor")
-	}
-	if cursor < 0 {
+	if err != nil || cursor < 0 {
 		return diceerrors.NewErrWithMessage("ERR invalid cursor")
 	}
 
@@ -274,7 +271,7 @@ func evalSCAN(args []string, store *dstore.Store) []byte {
 		switch strings.ToUpper(args[i]) {
 		case "MATCH":
 			pattern = args[i+1]
-		case COUNT:
+		case "COUNT":
 			count, err = strconv.Atoi(args[i+1])
 			if err != nil || count <= 0 {
 				return diceerrors.NewErrWithMessage("ERR invalid COUNT")
@@ -288,11 +285,12 @@ func evalSCAN(args []string, store *dstore.Store) []byte {
 
 	newCursor, keys := store.ScanKeys(cursor, count, pattern, keyType)
 
-	response := make([]interface{}, 2)
-	response[0] = strconv.Itoa(newCursor)
-	response[1] = keys
+	response := []interface{}{
+		strconv.Itoa(newCursor),
+		keys,
+	}
 
-	return Encode(response, false)
+	return clientio.Encode(response, false)
 }
 
 // evalGET returns the value for the queried key in args
