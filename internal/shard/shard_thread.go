@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/charmbracelet/log"
+
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/clientio"
@@ -127,5 +129,13 @@ func (shard *ShardThread) executeCommand(op *ops.StoreOp) []byte {
 // cleanup handles cleanup logic when the shard stops.
 func (shard *ShardThread) cleanup() {
 	close(shard.ReqChan)
+	if config.TestEnvEnabled {
+		// Avoiding AOF dump for test enabled environments as
+		// the tests were taking longer due to background tasks which exceeded the WaitDelay,
+		// thus causing the test process to be forcibly terminated.
+		log.Info("Skipping AOF dump as test env enabled.")
+		return
+	}
+
 	eval.EvalBGREWRITEAOF([]string{}, shard.store)
 }
