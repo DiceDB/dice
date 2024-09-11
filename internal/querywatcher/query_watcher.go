@@ -143,7 +143,7 @@ func (w *QueryManager) processWatchEvent(event dstore.WatchEvent) {
 
 		// Check if the key matches the regex
 		if query.Where != nil {
-			matches, err := sql.EvaluateWhereClause(query.Where, sql.QueryResultRow{Key: event.Key, Value: *event.Value})
+			matches, err := sql.EvaluateWhereClause(query.Where, sql.QueryResultRow{Key: event.Key, Value: event.Value})
 			if err != nil || !matches {
 				return true
 			}
@@ -175,7 +175,7 @@ func (w *QueryManager) updateQueryCache(queryFingerprint string, event dstore.Wa
 
 	switch event.Operation {
 	case dstore.Set:
-		((*swiss.Map[string, *object.Obj])(store)).Put(event.Key, event.Value)
+		((*swiss.Map[string, *object.Obj])(store)).Put(event.Key, &event.Value)
 	case dstore.Del:
 		((*swiss.Map[string, *object.Obj])(store)).Delete(event.Key)
 	default:

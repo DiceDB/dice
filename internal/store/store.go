@@ -17,7 +17,7 @@ import (
 type WatchEvent struct {
 	Key       string
 	Operation string
-	Value     *object.Obj
+	Value     object.Obj
 }
 
 type Store struct {
@@ -287,7 +287,7 @@ func (store *Store) delByPtr(ptr string) bool {
 }
 
 func (store *Store) notifyWatchers(k, operation string, obj *object.Obj) {
-	store.watchChan <- WatchEvent{k, operation, obj}
+	store.watchChan <- WatchEvent{k, operation, *obj}
 }
 
 func (store *Store) GetStore() *swiss.Map[string, *object.Obj] {
