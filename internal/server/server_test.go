@@ -18,12 +18,12 @@ import (
 )
 
 func TestAbortCommand(t *testing.T) {
-	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	t.Cleanup(cancel)
 
+	var wg sync.WaitGroup
 	runTestServer(ctx, &wg)
 
 	time.Sleep(2 * time.Second)
@@ -88,8 +88,8 @@ func TestServerRestartAfterAbort(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Server should be running after restart: %v", err)
 	}
-	
-	// Send ABORT command to shutdown server
+
+	// Send ABORT command to shut down server
 	result := fireCommand(conn, "ABORT")
 	if result != "OK" {
 		t.Fatalf("Unexpected response to ABORT command: %v", result)
@@ -116,14 +116,16 @@ func TestServerRestartAfterAbort(t *testing.T) {
 	if result != "OK" {
 		t.Fatalf("Unexpected response to ABORT command: %v", result)
 	}
-
 	conn.Close()
+
 	wg.Wait()
 }
 
 //nolint:unused
 func runTestServer(ctx context.Context, wg *sync.WaitGroup) {
+	config.IOBufferLength = 16
 	config.Port = 8739
+	config.WriteAOFOnCleanup = true
 
 	const totalRetries = 10
 	var err error
