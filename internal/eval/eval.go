@@ -1639,7 +1639,7 @@ func evalCommandCount() []byte {
 // This is useful in analying long commands / scripts
 func evalCommandGetKeys(args []string) []byte {
 	if len(args) == 0 {
-		return diceerrors.NewErrWithMessage("wrong number of arguments for 'command getkeys'")
+		return diceerrors.NewErrArity("COMMAND GETKEYS")
 	}
 	diceCmd, ok := DiceCmds[strings.ToUpper(args[0])]
 	if !ok {
