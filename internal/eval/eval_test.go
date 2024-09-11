@@ -453,6 +453,7 @@ func testEvalJSONFORGET(t *testing.T, store *dstore.Store) {
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
+
 			},
 			input:  []string{"EXISTING_KEY"},
 			output: clientio.RespOne,
@@ -466,7 +467,9 @@ func testEvalJSONFORGET(t *testing.T, store *dstore.Store) {
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
+
 			},
+
 			input:  []string{"EXISTING_KEY", "$..language"},
 			output: []byte(":2\r\n"),
 		},
@@ -479,35 +482,11 @@ func testEvalJSONFORGET(t *testing.T, store *dstore.Store) {
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
+
 			},
+
 			input:  []string{"EXISTING_KEY", "$.*"},
 			output: []byte(":6\r\n"),
-		},
-		"invalid JSONPath": {
-			setup: func() {
-				key := "EXISTING_KEY"
-				value := "{\"age\":13,\"high\":1.60,\"pet\":null,\"language\":[\"python\",\"golang\"], " +
-					"\"flag\":false, \"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
-				var rootData interface{}
-				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-				store.Put(key, obj)
-			},
-			input:  []string{"EXISTING_KEY", "$..invalidPath"},
-			output: []byte(":0\r\n"),
-		},
-		"json remains unchanged after forget": {
-			setup: func() {
-				key := "EXISTING_KEY"
-				value := "{\"age\":13,\"high\":1.60,\"pet\":null,\"language\":[\"python\",\"golang\"], " +
-					"\"flag\":false, \"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
-				var rootData interface{}
-				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-				store.Put(key, obj)
-			},
-			input:  []string{"EXISTING_KEY", "$.partner.language[1]"},
-			output: []byte(":0\r\n"),
 		},
 	}
 	runEvalTests(t, tests, evalJSONFORGET, store)

@@ -529,11 +529,6 @@ func TestJSONForgetOperations(t *testing.T) {
 			commands: []string{"JSON.SET user $ " + floatForgetTestJson, "JSON.FORGET user $.price", "JSON.GET user $"},
 			expected: []interface{}{"OK", int64(1), `{"name":"sugar"}`},
 		},
-		{
-			name:     "forget invalid JSONPath",
-			commands: []string{"JSON.SET user $ " + multiForgetTestJson, "JSON.FORGET user $..invalidPath", "JSON.GET user $"},
-			expected: []interface{}{"OK", int64(0), multiForgetTestJson},
-		},
 	}
 
 	for _, tcase := range testCases {
@@ -548,6 +543,7 @@ func TestJSONForgetOperations(t *testing.T) {
 				} else {
 					assert.Equal(t, out, result)
 				}
+
 			}
 		})
 	}

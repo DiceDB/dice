@@ -338,10 +338,8 @@ func evalJSONFORGET(args []string, store *dstore.Store) []byte {
         return diceerrors.NewErrArity("JSON.FORGET")
     }
     
-
     return evalJSONDEL(args, store)
 }
-	
 
 // evalJSONARRLEN return the length of the JSON array at path in key
 // Returns an array of integer replies, an integer for each matching value,
