@@ -118,10 +118,11 @@ func (store *Store) putHelper(k string, obj *object.Obj, opts ...PutOption) {
 	store.incrementKeyCount()
 
 	if store.watchChan != nil {
-		go store.notifyWatchers(k, Set, *obj)
+		go store.notifyQueryManager(k, Set, *obj)
 	}
 }
 
+// getHelper is a helper function to get the object from the store. It also updates the last accessed time if touch is true.
 func (store *Store) getHelper(k string, touch bool) *object.Obj {
 	var v *object.Obj
 	v, _ = store.store.Get(k)
@@ -219,7 +220,7 @@ func (store *Store) Rename(sourceKey, destKey string) bool {
 
 	// Notify watchers about the deletion of the source key
 	if store.watchChan != nil {
-		go store.notifyWatchers(sourceKey, Del, *sourceObj)
+		go store.notifyQueryManager(sourceKey, Del, *sourceObj)
 	}
 
 	return true
@@ -269,7 +270,7 @@ func (store *Store) deleteKey(k string, obj *object.Obj) bool {
 		KeyspaceStat[0]["keys"]--
 
 		if store.watchChan != nil {
-			go store.notifyWatchers(k, Del, *obj)
+			go store.notifyQueryManager(k, Del, *obj)
 		}
 
 		return true
@@ -286,7 +287,8 @@ func (store *Store) delByPtr(ptr string) bool {
 	return false
 }
 
-func (store *Store) notifyWatchers(k, operation string, obj object.Obj) {
+// notifyQueryManager notifies the query manager about a key change, so that it can update the query cache if needed.
+func (store *Store) notifyQueryManager(k, operation string, obj object.Obj) {
 	store.watchChan <- WatchEvent{k, operation, obj}
 }
 
@@ -294,6 +296,8 @@ func (store *Store) GetStore() *swiss.Map[string, *object.Obj] {
 	return store.store
 }
 
+// CacheKeysForQuery scans the store for keys that match the given where clause and sends them to the cache channel.
+// This allows the query manager to cache the existing keys that match the query.
 func (store *Store) CacheKeysForQuery(whereClause sqlparser.Expr, cacheChannel chan *[]struct {
 	Key   string
 	Value *object.Obj
