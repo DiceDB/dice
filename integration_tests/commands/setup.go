@@ -1,4 +1,4 @@
-package commands
+package tests
 
 import (
 	"context"
@@ -8,8 +8,6 @@ import (
 	"net"
 	"sync"
 	"time"
-
-	"github.com/dicedb/dice/internal/shard"
 
 	"github.com/dicedb/dice/internal/clientio"
 
@@ -22,13 +20,9 @@ import (
 	redis "github.com/dicedb/go-dice"
 )
 
-type TestServerOptions struct {
-	Port int
-}
-
 //nolint:unused
 func getLocalConnection() net.Conn {
-	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.DiceConfig.Server.Port))
+	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.Port))
 	if err != nil {
 		panic(err)
 	}
@@ -47,7 +41,7 @@ func deleteTestKeys(keysToDelete []string, store *dstore.Store) {
 //nolint:unused
 func getLocalSdk() *redis.Client {
 	return redis.NewClient(&redis.Options{
-		Addr: fmt.Sprintf(":%d", config.DiceConfig.Server.Port),
+		Addr: fmt.Sprintf(":%d", config.Port),
 
 		DialTimeout:           10 * time.Second,
 		ReadTimeout:           30 * time.Second,
@@ -62,6 +56,7 @@ func getLocalSdk() *redis.Client {
 	})
 }
 
+//nolint:unused
 func FireCommand(conn net.Conn, cmd string) interface{} {
 	var err error
 	args := testutils.ParseCommand(cmd)
@@ -92,21 +87,17 @@ func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *clientio.RESPParser
 	return clientio.NewRESPParser(conn)
 }
 
-func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOptions) {
-	config.DiceConfig.Network.IOBufferLength = 16
-	config.DiceConfig.Server.WriteAOFOnCleanup = false
-	if opt.Port != 0 {
-		config.DiceConfig.Server.Port = opt.Port
-	} else {
-		config.DiceConfig.Server.Port = 8739
-	}
+//nolint:unused
+func RunTestServer(ctx context.Context, wg *sync.WaitGroup) {
+	config.IOBufferLength = 16
+	config.Port = 8739
+	config.WriteAOFOnCleanup = true
 
 	const totalRetries = 100
 	var err error
-	watchChan := make(chan dstore.WatchEvent, config.DiceConfig.Server.KeysLimit)
-	shardManager := shard.NewShardManager(1, watchChan)
+
 	// Initialize the AsyncServer
-	testServer := server.NewAsyncServer(shardManager, watchChan)
+	testServer := server.NewAsyncServer()
 
 	// Try to bind to a port with a maximum of `totalRetries` retries.
 	for i := 0; i < totalRetries; i++ {
@@ -115,8 +106,8 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 		}
 
 		if err.Error() == "address already in use" {
-			log.Infof("Port %d already in use, trying port %d", config.DiceConfig.Server.Port, config.DiceConfig.Server.Port+1)
-			config.DiceConfig.Server.Port++
+			log.Infof("Port %d already in use, trying port %d", config.Port, config.Port+1)
+			config.Port++
 		} else {
 			log.Fatalf("Failed to bind port: %v", err)
 			return
@@ -129,14 +120,7 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	}
 
 	// Inform the user that the server is starting
-	fmt.Println("Starting the test server on port", config.DiceConfig.Server.Port)
-
-	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		shardManager.Run(shardManagerCtx)
-	}()
+	fmt.Println("Starting the test server on port", config.Port)
 
 	// Start the server in a goroutine
 	wg.Add(1)
@@ -144,7 +128,6 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 		defer wg.Done()
 		if err := testServer.Run(ctx); err != nil {
 			if errors.Is(err, server.ErrAborted) {
-				cancelShardManager()
 				return
 			}
 			log.Fatalf("Test server encountered an error: %v", err)
