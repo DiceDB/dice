@@ -118,7 +118,7 @@ func (store *Store) putHelper(k string, obj *object.Obj, opts ...PutOption) {
 	store.incrementKeyCount()
 
 	if store.watchChan != nil {
-		store.notifyWatchers(k, Set, obj)
+		go store.notifyWatchers(k, Set, *obj)
 	}
 }
 
@@ -219,7 +219,7 @@ func (store *Store) Rename(sourceKey, destKey string) bool {
 
 	// Notify watchers about the deletion of the source key
 	if store.watchChan != nil {
-		store.notifyWatchers(sourceKey, Del, sourceObj)
+		go store.notifyWatchers(sourceKey, Del, *sourceObj)
 	}
 
 	return true
@@ -269,7 +269,7 @@ func (store *Store) deleteKey(k string, obj *object.Obj) bool {
 		KeyspaceStat[0]["keys"]--
 
 		if store.watchChan != nil {
-			store.notifyWatchers(k, Del, obj)
+			go store.notifyWatchers(k, Del, *obj)
 		}
 
 		return true
@@ -286,8 +286,8 @@ func (store *Store) delByPtr(ptr string) bool {
 	return false
 }
 
-func (store *Store) notifyWatchers(k, operation string, obj *object.Obj) {
-	store.watchChan <- WatchEvent{k, operation, *obj}
+func (store *Store) notifyWatchers(k, operation string, obj object.Obj) {
+	store.watchChan <- WatchEvent{k, operation, obj}
 }
 
 func (store *Store) GetStore() *swiss.Map[string, *object.Obj] {
