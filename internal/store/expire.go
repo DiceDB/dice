@@ -50,7 +50,7 @@ func expireSample(store *Store) float32 {
 	return float32(expiredCount) / float32(20.0)
 }
 
-// Deletes all the expired keys - the active way
+// DeleteExpiredKeys deletes all the expired keys - the active way
 // Sampling approach: https://redis.io/commands/expire/
 func DeleteExpiredKeys(store *Store) {
 	for {
