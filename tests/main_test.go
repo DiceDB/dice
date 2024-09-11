@@ -21,7 +21,7 @@ func TestMain(m *testing.M) {
 	RunTestServer(context.Background(), &wg, opts)
 
 	// Wait for the server to start
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 
 	conn := getLocalConnection()
 	if conn == nil {
