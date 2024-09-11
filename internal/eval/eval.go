@@ -327,6 +327,63 @@ func evalGETDEL(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(obj.Value, false)
 }
 
+// evalJSONARRLEN return the length of the JSON array at path in key
+// Returns an array of integer replies, an integer for each matching value,
+// each is the array's length, or nil, if the matching value is not an array.
+// Returns encoded error if the key doesn't exist or key is expired or the matching value is not an array.
+// Returns encoded error response if incorrect number of arguments
+func evalJSONARRLEN(args []string, store *dstore.Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("JSON.ARRLEN")
+	}
+	key := args[0]
+
+	// Retrieve the object from the database
+	obj := store.Get(key)
+	if obj == nil {
+		return diceerrors.NewErrWithMessage("Path '.' does not exist or not an array")
+	}
+
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
+	}
+
+	jsonData := obj.Value
+
+	_, err := sonic.Marshal(jsonData)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
+	}
+
+	if len(args) == 1 {
+		if utils.GetJSONFieldType(jsonData) == utils.ArrayType {
+			return clientio.Encode(len(jsonData.([]interface{})), false)
+		}
+		return diceerrors.NewErrWithMessage("Path '.' does not exist or not an array")
+	}
+
+	path := args[1]
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("invalid JSONPath")
+	}
+
+	results := expr.Get(jsonData)
+
+	arrlenList := make([]interface{}, 0, len(results))
+	for _, result := range results {
+		switch utils.GetJSONFieldType(result) {
+		case utils.ArrayType:
+			arrlenList = append(arrlenList, len(result.([]interface{})))
+		default:
+			arrlenList = append(arrlenList, nil)
+		}
+	}
+
+	return clientio.Encode(arrlenList, false)
+}
+
 // evalJSONDEL delete a value that the given json path include in.
 // Returns response.RespZero if key is expired or it does not exist
 // Returns encoded error response if incorrect number of arguments

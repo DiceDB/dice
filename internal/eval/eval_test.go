@@ -40,6 +40,7 @@ func TestEval(t *testing.T) {
 	testEvalHELLO(t, store)
 	testEvalSET(t, store)
 	testEvalGET(t, store)
+	testEvalJSONARRLEN(t, store)
 	testEvalJSONDEL(t, store)
 	testEvalJSONCLEAR(t, store)
 	testEvalJSONTYPE(t, store)
@@ -297,6 +298,77 @@ func testEvalEXPIREAT(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalEXPIREAT, store)
+}
+
+func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'json.arrlen' command\r\n"),
+		},
+		"key does not exist": {
+			setup:  func() {},
+			input:  []string{"NONEXISTENT_KEY"},
+			output: []byte("-ERR Path '.' does not exist or not an array\r\n"),
+		},
+		"root not array arrlen": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"age\":13,\"name\":\"a\"}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+
+			},
+			input:  []string{"EXISTING_KEY"},
+			output: []byte("-ERR Path '.' does not exist or not an array\r\n"),
+		},
+		"root array arrlen": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "[1,2,3]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+
+			},
+			input:  []string{"EXISTING_KEY"},
+			output: []byte(":3\r\n"),
+		},
+		"wildcase no array arrlen": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"age\":13,\"high\":1.60,\"pet\":null,\"flag\":false, \"partner\":{\"name\":\"tom\"}}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+
+			},
+
+			input:  []string{"EXISTING_KEY", "$.*"},
+			output: []byte("*5\r\n$-1\r\n$-1\r\n$-1\r\n$-1\r\n$-1\r\n"),
+		},
+		"subpath array arrlen": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"age\":13,\"high\":1.60,\"pet\":null,\"language\":[\"python\",\"golang\"], " +
+					"\"flag\":false, \"partner\":{\"name\":\"tom\"}}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+
+			},
+
+			input:  []string{"EXISTING_KEY", "$.language"},
+			output: []byte("*1\r\n:2\r\n"),
+		},
+	}
+	runEvalTests(t, tests, evalJSONARRLEN, store)
 }
 
 func testEvalJSONDEL(t *testing.T, store *dstore.Store) {
