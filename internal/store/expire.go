@@ -30,19 +30,17 @@ func expireSample(store *Store) float32 {
 	var expiredCount = 0
 	var keysToDelete []string
 
-	withLocks(func() {
-		// Collect keys to be deleted
-		store.store.All(func(keyPtr string, obj *object.Obj) bool {
-			limit--
-			if hasExpired(obj, store) {
-				keysToDelete = append(keysToDelete, keyPtr)
-				expiredCount++
-			}
-			// once we iterated to 20 keys that have some expiration set
-			// we break the loop
-			return limit >= 0
-		})
-	}, store, WithStoreRLock())
+	// Collect keys to be deleted
+	store.store.All(func(keyPtr string, obj *object.Obj) bool {
+		limit--
+		if hasExpired(obj, store) {
+			keysToDelete = append(keysToDelete, keyPtr)
+			expiredCount++
+		}
+		// once we iterated to 20 keys that have some expiration set
+		// we break the loop
+		return limit >= 0
+	})
 
 	// Delete the keys outside the read lock
 	for _, keyPtr := range keysToDelete {
