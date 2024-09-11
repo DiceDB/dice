@@ -12,6 +12,10 @@ import (
 	"github.com/dicedb/dice/config"
 )
 
+var options = tests.TestServerOptions{
+	Port: 8740,
+}
+
 func TestAbortCommand(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -19,7 +23,7 @@ func TestAbortCommand(t *testing.T) {
 	t.Cleanup(cancel)
 
 	var wg sync.WaitGroup
-	tests.RunTestServer(ctx, &wg)
+	tests.RunTestServer(ctx, &wg, options)
 
 	time.Sleep(2 * time.Second)
 
@@ -75,7 +79,7 @@ func TestServerRestartAfterAbort(t *testing.T) {
 
 	// start test server.
 	var wg sync.WaitGroup
-	tests.RunTestServer(ctx, &wg)
+	tests.RunTestServer(ctx, &wg, options)
 
 	time.Sleep(1 * time.Second)
 
@@ -95,7 +99,7 @@ func TestServerRestartAfterAbort(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	// restart server
-	tests.RunTestServer(ctx, &wg)
+	tests.RunTestServer(ctx, &wg, options)
 
 	// wait for the server to start up
 	time.Sleep(2 * time.Second)
