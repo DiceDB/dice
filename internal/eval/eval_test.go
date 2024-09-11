@@ -451,7 +451,7 @@ func testEvalJSONFORGET(t *testing.T, store *dstore.Store) {
 					"\"flag\":false, \"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
 			input:  []string{"EXISTING_KEY"},
@@ -464,7 +464,7 @@ func testEvalJSONFORGET(t *testing.T, store *dstore.Store) {
 					"\"flag\":false, \"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
 			input:  []string{"EXISTING_KEY", "$..language"},
@@ -477,7 +477,7 @@ func testEvalJSONFORGET(t *testing.T, store *dstore.Store) {
 					"\"flag\":false, \"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
 			input:  []string{"EXISTING_KEY", "$.*"},
@@ -490,7 +490,7 @@ func testEvalJSONFORGET(t *testing.T, store *dstore.Store) {
 					"\"flag\":false, \"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
 			input:  []string{"EXISTING_KEY", "$..invalidPath"},
@@ -503,7 +503,7 @@ func testEvalJSONFORGET(t *testing.T, store *dstore.Store) {
 					"\"flag\":false, \"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
 			input:  []string{"EXISTING_KEY", "$.partner.language[1]"},

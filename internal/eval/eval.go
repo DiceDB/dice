@@ -338,16 +338,8 @@ func evalJSONFORGET(args []string, store *dstore.Store) []byte {
         return diceerrors.NewErrArity("JSON.FORGET")
     }
     
-    key := args[0]
 
-    // Default path is root if not specified
-    path := defaultRootPath
-    if len(args) > 1 {
-        path = args[1]
-    }
-    
-    delArgs := []string{key, path}
-    return evalJSONDEL(delArgs, store)
+    return evalJSONDEL(args, store)
 }
 	
 
