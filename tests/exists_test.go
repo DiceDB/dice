@@ -45,10 +45,10 @@ func TestExists(t *testing.T) {
 	for _, tcase := range testCases {
 		t.Run(tcase.name, func(t *testing.T) {
 			// deleteTestKeys([]string{"key", "key2", "key3", "key4"}, store)
-			fireCommand(conn, "DEL key")
-			fireCommand(conn, "DEL key2")
-			fireCommand(conn, "DEL key3")
-			fireCommand(conn, "DEL key4")
+			FireCommand(conn, "DEL key")
+			FireCommand(conn, "DEL key2")
+			FireCommand(conn, "DEL key3")
+			FireCommand(conn, "DEL key4")
 
 			for i := 0; i < len(tcase.command); i++ {
 				if tcase.delay[i] > 0 {
@@ -56,7 +56,7 @@ func TestExists(t *testing.T) {
 				}
 				cmd := tcase.command[i]
 				out := tcase.expected[i]
-				assert.Equal(t, out, fireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
+				assert.Equal(t, out, FireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
 			}
 		})
 	}

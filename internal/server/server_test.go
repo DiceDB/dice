@@ -2,19 +2,14 @@ package server_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"io"
+	"github.com/dicedb/dice/tests"
 	"net"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/internal/clientio"
-	"github.com/dicedb/dice/internal/server"
-	"github.com/dicedb/dice/testutils"
 )
 
 func TestAbortCommand(t *testing.T) {
@@ -24,7 +19,7 @@ func TestAbortCommand(t *testing.T) {
 	t.Cleanup(cancel)
 
 	var wg sync.WaitGroup
-	runTestServer(ctx, &wg)
+	tests.RunTestServer(ctx, &wg)
 
 	time.Sleep(2 * time.Second)
 
@@ -46,7 +41,7 @@ func TestAbortCommand(t *testing.T) {
 		defer conn.Close()
 
 		// Send ABORT command
-		result := fireCommand(conn, "ABORT")
+		result := tests.FireCommand(conn, "ABORT")
 		if result != "OK" {
 			t.Fatalf("Unexpected response to ABORT command: %v", result)
 		}
@@ -80,7 +75,7 @@ func TestServerRestartAfterAbort(t *testing.T) {
 
 	// start test server.
 	var wg sync.WaitGroup
-	runTestServer(ctx, &wg)
+	tests.RunTestServer(ctx, &wg)
 
 	time.Sleep(1 * time.Second)
 
@@ -90,7 +85,7 @@ func TestServerRestartAfterAbort(t *testing.T) {
 	}
 
 	// Send ABORT command to shut down server
-	result := fireCommand(conn, "ABORT")
+	result := tests.FireCommand(conn, "ABORT")
 	if result != "OK" {
 		t.Fatalf("Unexpected response to ABORT command: %v", result)
 	}
@@ -100,7 +95,7 @@ func TestServerRestartAfterAbort(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	// restart server
-	runTestServer(ctx, &wg)
+	tests.RunTestServer(ctx, &wg)
 
 	// wait for the server to start up
 	time.Sleep(2 * time.Second)
@@ -112,79 +107,11 @@ func TestServerRestartAfterAbort(t *testing.T) {
 	}
 
 	// Clean up
-	result = fireCommand(conn, "ABORT")
+	result = tests.FireCommand(conn, "ABORT")
 	if result != "OK" {
 		t.Fatalf("Unexpected response to ABORT command: %v", result)
 	}
 	conn.Close()
 
 	wg.Wait()
-}
-
-//nolint:unused
-func runTestServer(ctx context.Context, wg *sync.WaitGroup) {
-	config.IOBufferLength = 16
-	config.Port = 8739
-	config.WriteAOFOnCleanup = true
-
-	const totalRetries = 10
-	var err error
-
-	// Initialize the AsyncServer
-	testServer := server.NewAsyncServer()
-
-	// Try to bind to a port with a maximum of totalRetries retries.
-	for i := 0; i < totalRetries; i++ {
-		if err = testServer.FindPortAndBind(); err == nil {
-			break
-		}
-
-		if err.Error() == "address already in use" {
-			log.Infof("Port %d already in use, trying port %d", config.Port, config.Port+1)
-			config.Port++
-		} else {
-			log.Fatalf("Failed to bind port: %v", err)
-			return
-		}
-	}
-
-	if err != nil {
-		log.Fatalf("Failed to bind to a port after %d retries: %v", totalRetries, err)
-		return
-	}
-
-	// Inform the user that the server is starting
-	fmt.Println("Starting the test server on port", config.Port)
-
-	// Start the server in a goroutine
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err := testServer.Run(ctx); err != nil {
-			if errors.Is(err, server.ErrAborted) {
-				return
-			}
-			log.Fatalf("Test server encountered an error: %v", err)
-		}
-	}()
-}
-
-//nolint:unused
-func fireCommand(conn net.Conn, cmd string) interface{} {
-	var err error
-	args := testutils.ParseCommand(cmd)
-	_, err = conn.Write(clientio.Encode(args, false))
-	if err != nil {
-		log.Fatalf("error %s while firing command: %s", err, cmd)
-	}
-
-	rp := clientio.NewRESPParser(conn)
-	v, err := rp.DecodeOne()
-	if err != nil {
-		if err == io.EOF {
-			return nil
-		}
-		log.Fatalf("error %s while firing command: %s", err, cmd)
-	}
-	return v
 }

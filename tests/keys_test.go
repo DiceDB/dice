@@ -50,7 +50,7 @@ func TestKeys(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.commands {
-				result := fireCommand(conn, cmd)
+				result := FireCommand(conn, cmd)
 
 				// because the order of keys is not guaranteed, we need to check if the result is an array
 				if slice, ok := tc.expected[i].([]interface{}); ok {

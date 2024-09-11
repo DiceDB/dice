@@ -211,7 +211,7 @@ func TestExpireat(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup
 			if tc.setup != "" {
-				fireCommand(conn, tc.setup)
+				FireCommand(conn, tc.setup)
 			}
 
 			// Execute commands
@@ -221,7 +221,7 @@ func TestExpireat(t *testing.T) {
 				if tc.delay[i] > 0 {
 					time.Sleep(tc.delay[i])
 				}
-				result := fireCommand(conn, cmd)
+				result := FireCommand(conn, cmd)
 				results = append(results, result)
 			}
 			// Validate results

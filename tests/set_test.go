@@ -39,10 +39,10 @@ func TestSet(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// deleteTestKeys([]string{"k"}, store)
-			fireCommand(conn, "DEL k")
+			FireCommand(conn, "DEL k")
 
 			for i, cmd := range tc.commands {
-				result := fireCommand(conn, cmd)
+				result := FireCommand(conn, cmd)
 				assert.DeepEqual(t, tc.expected[i], result)
 			}
 		})
@@ -125,11 +125,11 @@ func TestSetWithOptions(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// deleteTestKeys([]string{"k", "k1", "k2"}, store)
-			fireCommand(conn, "DEL k")
-			fireCommand(conn, "DEL k1")
-			fireCommand(conn, "DEL k2")
+			FireCommand(conn, "DEL k")
+			FireCommand(conn, "DEL k1")
+			FireCommand(conn, "DEL k2")
 			for i, cmd := range tc.commands {
-				result := fireCommand(conn, cmd)
+				result := FireCommand(conn, cmd)
 				assert.Equal(t, tc.expected[i], result)
 			}
 		})
@@ -145,32 +145,32 @@ func TestSetWithExat(t *testing.T) {
 	t.Run("SET with EXAT",
 		func(t *testing.T) {
 			// deleteTestKeys([]string{"k"}, store)
-			fireCommand(conn, "DEL k")
-			assert.Equal(t, "OK", fireCommand(conn, "SET k v EXAT "+Etime), "Value mismatch for cmd SET k v EXAT "+Etime)
-			assert.Equal(t, "v", fireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
-			assert.Assert(t, fireCommand(conn, "TTL k").(int64) <= 5, "Value mismatch for cmd TTL k")
+			FireCommand(conn, "DEL k")
+			assert.Equal(t, "OK", FireCommand(conn, "SET k v EXAT "+Etime), "Value mismatch for cmd SET k v EXAT "+Etime)
+			assert.Equal(t, "v", FireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
+			assert.Assert(t, FireCommand(conn, "TTL k").(int64) <= 5, "Value mismatch for cmd TTL k")
 			time.Sleep(3 * time.Second)
-			assert.Assert(t, fireCommand(conn, "TTL k").(int64) <= 3, "Value mismatch for cmd TTL k")
+			assert.Assert(t, FireCommand(conn, "TTL k").(int64) <= 3, "Value mismatch for cmd TTL k")
 			time.Sleep(3 * time.Second)
-			assert.Equal(t, "(nil)", fireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
-			assert.Equal(t, int64(-2), fireCommand(conn, "TTL k"), "Value mismatch for cmd TTL k")
+			assert.Equal(t, "(nil)", FireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
+			assert.Equal(t, int64(-2), FireCommand(conn, "TTL k"), "Value mismatch for cmd TTL k")
 		})
 
 	t.Run("SET with invalid EXAT expires key immediately",
 		func(t *testing.T) {
 			// deleteTestKeys([]string{"k"}, store)
-			fireCommand(conn, "DEL k")
-			assert.Equal(t, "OK", fireCommand(conn, "SET k v EXAT "+BadTime), "Value mismatch for cmd SET k v EXAT "+BadTime)
-			assert.Equal(t, "(nil)", fireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
-			assert.Equal(t, int64(-2), fireCommand(conn, "TTL k"), "Value mismatch for cmd TTL k")
+			FireCommand(conn, "DEL k")
+			assert.Equal(t, "OK", FireCommand(conn, "SET k v EXAT "+BadTime), "Value mismatch for cmd SET k v EXAT "+BadTime)
+			assert.Equal(t, "(nil)", FireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
+			assert.Equal(t, int64(-2), FireCommand(conn, "TTL k"), "Value mismatch for cmd TTL k")
 		})
 
 	t.Run("SET with EXAT and PXAT returns syntax error",
 		func(t *testing.T) {
 			// deleteTestKeys([]string{"k"}, store)
-			fireCommand(conn, "DEL k")
-			assert.Equal(t, "ERR syntax error", fireCommand(conn, "SET k v PXAT "+Etime+" EXAT "+Etime), "Value mismatch for cmd SET k v PXAT "+Etime+" EXAT "+Etime)
-			assert.Equal(t, "(nil)", fireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
+			FireCommand(conn, "DEL k")
+			assert.Equal(t, "ERR syntax error", FireCommand(conn, "SET k v PXAT "+Etime+" EXAT "+Etime), "Value mismatch for cmd SET k v PXAT "+Etime+" EXAT "+Etime)
+			assert.Equal(t, "(nil)", FireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
 		})
 }
 
@@ -187,7 +187,7 @@ func TestWithKeepTTLFlag(t *testing.T) {
 		for i := 0; i < len(tcase.commands); i++ {
 			cmd := tcase.commands[i]
 			out := tcase.expected[i]
-			assert.Equal(t, out, fireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
+			assert.Equal(t, out, FireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
 		}
 	}
 
@@ -196,5 +196,5 @@ func TestWithKeepTTLFlag(t *testing.T) {
 	cmd := "GET k"
 	out := "(nil)"
 
-	assert.Equal(t, out, fireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
+	assert.Equal(t, out, FireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
 }

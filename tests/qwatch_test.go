@@ -89,7 +89,7 @@ func setupQWATCHTest(t *testing.T) (net.Conn, []net.Conn, func()) {
 			t.Errorf("Error closing publisher connection: %v", err)
 		}
 		for _, sub := range subscribers {
-			fireCommand(sub, fmt.Sprintf("QUNWATCH \"%s\"", qWatchQuery))
+			FireCommand(sub, fmt.Sprintf("QUNWATCH \"%s\"", qWatchQuery))
 			time.Sleep(100 * time.Millisecond)
 			if err := sub.Close(); err != nil {
 				t.Errorf("Error closing subscriber connection: %v", err)
@@ -171,7 +171,7 @@ func publishUpdate(t *testing.T, publisher interface{}, tc qWatchTestCase) {
 	key := fmt.Sprintf("%s:%d", tc.key, tc.userID)
 	switch p := publisher.(type) {
 	case net.Conn:
-		fireCommand(p, fmt.Sprintf("SET %s %d", key, tc.score))
+		FireCommand(p, fmt.Sprintf("SET %s %d", key, tc.score))
 	case *redis.Client:
 		err := p.Set(context.Background(), key, tc.score, 0).Err()
 		assert.NilError(t, err)
@@ -308,7 +308,7 @@ func subscribeToJSONQueries(t *testing.T, subscribers []net.Conn) []*clientio.RE
 
 func runJSONScenarios(t *testing.T, publisher net.Conn, respParsers []*clientio.RESPParser) {
 	for i, tc := range JSONTestCases {
-		fireCommand(publisher, fmt.Sprintf("JSON.SET %s $ %s", tc.key, tc.value))
+		FireCommand(publisher, fmt.Sprintf("JSON.SET %s $ %s", tc.key, tc.value))
 		verifyJSONUpdates(t, respParsers[i], tc)
 	}
 }
@@ -342,7 +342,7 @@ func verifyJSONUpdates(t *testing.T, rp *clientio.RESPParser, tc JSONTestCase) {
 
 func cleanupKeys(publisher net.Conn) {
 	for _, tc := range qWatchTestCases {
-		fireCommand(publisher, fmt.Sprintf("DEL %s:%d", tc.key, tc.userID))
+		FireCommand(publisher, fmt.Sprintf("DEL %s:%d", tc.key, tc.userID))
 	}
 	time.Sleep(100 * time.Millisecond)
 }
@@ -356,7 +356,7 @@ func cleanupKeysWithSDK(publisher *redis.Client) {
 
 func cleanupJSONKeys(publisher net.Conn) {
 	for _, tc := range JSONTestCases {
-		fireCommand(publisher, fmt.Sprintf("DEL %s", tc.key))
+		FireCommand(publisher, fmt.Sprintf("DEL %s", tc.key))
 	}
 }
 func TestQwatchWithJSONOrderBy(t *testing.T) {
@@ -438,7 +438,7 @@ func runJSONOrderByScenarios(t *testing.T, publisher net.Conn, respParser *clien
 	}
 
 	for _, sc := range scenarios {
-		fireCommand(publisher, fmt.Sprintf("JSON.SET %s $ %s", sc.key, sc.value))
+		FireCommand(publisher, fmt.Sprintf("JSON.SET %s $ %s", sc.key, sc.value))
 		verifyJSONOrderByUpdates(t, respParser, sc)
 	}
 }
@@ -490,6 +490,6 @@ func verifyJSONOrderByUpdates(t *testing.T, rp *clientio.RESPParser, tc struct {
 
 func cleanupJSONOrderByKeys(publisher net.Conn) {
 	for i := 1; i <= 4; i++ {
-		fireCommand(publisher, fmt.Sprintf("DEL player:%d", i))
+		FireCommand(publisher, fmt.Sprintf("DEL player:%d", i))
 	}
 }

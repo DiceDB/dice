@@ -74,7 +74,7 @@ func TestBitOp(t *testing.T) {
 		for i := 0; i < len(tcase.InCmds); i++ {
 			cmd := tcase.InCmds[i]
 			out := tcase.Out[i]
-			assert.Equal(t, out, fireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
+			assert.Equal(t, out, FireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
 		}
 	}
 }
@@ -139,7 +139,7 @@ func TestBitCount(t *testing.T) {
 		for i := 0; i < len(tcase.InCmds); i++ {
 			cmd := tcase.InCmds[i]
 			out := tcase.Out[i]
-			assert.Equal(t, out, fireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
+			assert.Equal(t, out, FireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
 		}
 	}
 }
@@ -474,10 +474,10 @@ func TestBitPos(t *testing.T) {
 			}
 
 			if setCmd != "" {
-				fireCommand(conn, setCmd)
+				FireCommand(conn, setCmd)
 			}
 
-			result := fireCommand(conn, tc.inCmd)
+			result := FireCommand(conn, tc.inCmd)
 			assert.Equal(t, tc.out, result, "Mismatch for cmd %s\n", tc.inCmd)
 		})
 	}
@@ -485,7 +485,7 @@ func TestBitPos(t *testing.T) {
 
 func generateSetBitCommand(connection net.Conn, bitPosition int) int64 {
 	command := fmt.Sprintf("SETBIT unitTestKeyA %d 1", bitPosition)
-	responseValue := fireCommand(connection, command)
+	responseValue := FireCommand(connection, command)
 	if responseValue == nil {
 		return -1
 	}
@@ -504,7 +504,7 @@ func BenchmarkSetBitCommand(b *testing.B) {
 
 func generateGetBitCommand(connection net.Conn, bitPosition int) int64 {
 	command := fmt.Sprintf("GETBIT unitTestKeyA %d", bitPosition)
-	responseValue := fireCommand(connection, command)
+	responseValue := FireCommand(connection, command)
 	if responseValue == nil {
 		return -1
 	}

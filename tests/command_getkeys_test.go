@@ -30,7 +30,7 @@ func TestCommandGetKeys(t *testing.T) {
 
 	for _, tc := range getKeysTestCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := fireCommand(conn, "COMMAND GETKEYS "+tc.inCmd)
+			result := FireCommand(conn, "COMMAND GETKEYS "+tc.inCmd)
 			assert.DeepEqual(t, tc.expected, result)
 		})
 	}
@@ -43,7 +43,7 @@ func BenchmarkGetKeysMatch(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		for _, tc := range getKeysTestCases {
-			fireCommand(conn, "COMMAND GETKEYS "+tc.inCmd)
+			FireCommand(conn, "COMMAND GETKEYS "+tc.inCmd)
 		}
 	}
 }
