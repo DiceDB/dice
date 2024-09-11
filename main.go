@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"github.com/dicedb/dice/internal/server/resp"
+	"github.com/dicedb/dice/internal/worker"
 	"os"
 	"os/signal"
 	"sync"
@@ -41,27 +43,24 @@ func main() {
 
 	watchChan := make(chan dstore.WatchEvent, config.DiceConfig.Server.KeysLimit)
 	shardManager := shard.NewShardManager(1, watchChan)
+	workerManager := worker.NewWorkerManager(config.DiceConfig.Server.MaxClients, shardManager)
 
-	// Initialize the AsyncServer
-	asyncServer := server.NewAsyncServer(shardManager, watchChan)
-	httpServer := server.NewHTTPServer(shardManager, watchChan)
-
-	// Initialize the HTTP server
-
-	// Find a port and bind it
-	if err := asyncServer.FindPortAndBind(); err != nil {
-		cancel()
-		log.Fatal("Error finding and binding port:", err)
+	// Initialize the RESP Server
+	respServer, err := resp.NewServer(shardManager, workerManager)
+	if err != nil {
+		log.Fatal("Error initializing server:", err)
 	}
 
-	wg := sync.WaitGroup{}
-	// Goroutine to handle shutdown signals
+	// Initialize the HTTP server
+	httpServer := server.NewHTTPServer(shardManager, watchChan)
 
+	wg := sync.WaitGroup{}
+
+	// Goroutine to handle shutdown signals
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		<-sigs
-		asyncServer.InitiateShutdown()
 		cancel()
 	}()
 
@@ -77,7 +76,7 @@ func main() {
 	go func() {
 		defer serverWg.Done()
 		// Run the server
-		err := asyncServer.Run(ctx)
+		err := respServer.Run(ctx)
 
 		// Handling different server errors
 		if err != nil {

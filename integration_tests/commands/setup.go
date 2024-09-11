@@ -4,6 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/dicedb/dice/internal/clientio/iohandler/netconn"
+	respparser "github.com/dicedb/dice/internal/clientio/requestparser/resp"
+	"github.com/dicedb/dice/internal/server/resp"
+	"github.com/dicedb/dice/internal/worker"
 	"io"
 	"net"
 	"sync"
@@ -65,19 +69,30 @@ func getLocalSdk() *redis.Client {
 func FireCommand(conn net.Conn, cmd string) interface{} {
 	var err error
 	args := testutils.ParseCommand(cmd)
-	_, err = conn.Write(clientio.Encode(args, false))
+	c := clientio.Encode(args, false)
+	_, err = conn.Write(c)
 	if err != nil {
 		log.Fatalf("error %s while firing command: %s", err, cmd)
 	}
 
-	rp := clientio.NewRESPParser(conn)
-	v, err := rp.DecodeOne()
+	ctx := context.Background()
+	ioh := netconn.NewIOHandlerWithConn(conn)
+	b, err := ioh.ReadRequest(ctx)
+	if err != nil {
+		log.Fatalf("error %s while firing command: %s", err, cmd)
+	}
+
+	p := respparser.NewParser()
+	p.SetData(b)
+
+	v, err := p.ParseOne()
 	if err != nil {
 		if err == io.EOF {
 			return nil
 		}
 		log.Fatalf("error %s while firing command: %s", err, cmd)
 	}
+
 	return v
 }
 
@@ -105,23 +120,10 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	var err error
 	watchChan := make(chan dstore.WatchEvent, config.DiceConfig.Server.KeysLimit)
 	shardManager := shard.NewShardManager(1, watchChan)
+	workerManager := worker.NewWorkerManager(20000, shardManager)
 	// Initialize the AsyncServer
-	testServer := server.NewAsyncServer(shardManager, watchChan)
-
-	// Try to bind to a port with a maximum of `totalRetries` retries.
-	for i := 0; i < totalRetries; i++ {
-		if err = testServer.FindPortAndBind(); err == nil {
-			break
-		}
-
-		if err.Error() == "address already in use" {
-			log.Infof("Port %d already in use, trying port %d", config.DiceConfig.Server.Port, config.DiceConfig.Server.Port+1)
-			config.DiceConfig.Server.Port++
-		} else {
-			log.Fatalf("Failed to bind port: %v", err)
-			return
-		}
-	}
+	//testServer := server.NewAsyncServer(shardManager, watchChan)
+	testServer, err := resp.NewServer(shardManager, workerManager)
 
 	if err != nil {
 		log.Fatalf("Failed to bind to a port after %d retries: %v", totalRetries, err)
@@ -150,4 +152,5 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 			log.Fatalf("Test server encountered an error: %v", err)
 		}
 	}()
+
 }
