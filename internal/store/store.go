@@ -2,7 +2,6 @@ package store
 
 import (
 	"path"
-	"sync"
 
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/sql"
@@ -18,14 +17,13 @@ import (
 type WatchEvent struct {
 	Key       string
 	Operation string
-	Value     *object.Obj
+	Value     object.Obj
 }
 
 type Store struct {
-	store      *swiss.Map[string, *object.Obj]
-	expires    *swiss.Map[*object.Obj, uint64] // Does not need to be thread-safe as it is only accessed by a single thread.
-	storeMutex sync.RWMutex
-	watchChan  chan WatchEvent
+	store     *swiss.Map[string, *object.Obj]
+	expires   *swiss.Map[*object.Obj, uint64] // Does not need to be thread-safe as it is only accessed by a single thread.
+	watchChan chan WatchEvent
 }
 
 func NewStore(watchChan chan WatchEvent) *Store {
@@ -56,11 +54,9 @@ func (store *Store) NewObj(value interface{}, expDurationMs int64, oType, oEnc u
 }
 
 func (store *Store) ResetStore() {
-	withLocks(func() {
-		store.store.Clear()
-		store.expires.Clear()
-		store.watchChan = make(chan WatchEvent, config.KeysLimit)
-	}, store, WithStoreLock())
+	store.store.Clear()
+	store.expires.Clear()
+	store.watchChan = make(chan WatchEvent, config.KeysLimit)
 }
 
 type PutOptions struct {
@@ -68,9 +64,7 @@ type PutOptions struct {
 }
 
 func (store *Store) Put(k string, obj *object.Obj, opts ...PutOption) {
-	withLocks(func() {
-		store.putHelper(k, obj, opts...)
-	}, store, WithStoreLock())
+	store.putHelper(k, obj, opts...)
 }
 
 func getDefaultOptions() *PutOptions {
@@ -88,11 +82,9 @@ func WithKeepTTL(value bool) PutOption {
 }
 
 func (store *Store) PutAll(data map[string]*object.Obj) {
-	withLocks(func() {
-		for k, obj := range data {
-			store.putHelper(k, obj)
-		}
-	}, store, WithStoreLock())
+	for k, obj := range data {
+		store.putHelper(k, obj)
+	}
 }
 
 func (store *Store) GetNoTouch(k string) *object.Obj {
@@ -126,128 +118,112 @@ func (store *Store) putHelper(k string, obj *object.Obj, opts ...PutOption) {
 	store.incrementKeyCount()
 
 	if store.watchChan != nil {
-		store.notifyWatchers(k, Set, obj)
+		go store.notifyQueryManager(k, Set, *obj)
 	}
 }
 
+// getHelper is a helper function to get the object from the store. It also updates the last accessed time if touch is true.
 func (store *Store) getHelper(k string, touch bool) *object.Obj {
 	var v *object.Obj
-	withLocks(func() {
-		v, _ = store.store.Get(k)
-		if v != nil {
-			if hasExpired(v, store) {
-				store.deleteKey(k, v)
-				v = nil
-			} else if touch {
-				v.LastAccessedAt = getCurrentClock()
-			}
+	v, _ = store.store.Get(k)
+	if v != nil {
+		if hasExpired(v, store) {
+			store.deleteKey(k, v)
+			v = nil
+		} else if touch {
+			v.LastAccessedAt = getCurrentClock()
 		}
-	}, store, WithStoreLock())
+	}
 	return v
 }
 
 func (store *Store) GetAll(keys []string) []*object.Obj {
 	response := make([]*object.Obj, 0, len(keys))
-	withLocks(func() {
-		for _, k := range keys {
-			v, _ := store.store.Get(k)
-			if v != nil {
-				if hasExpired(v, store) {
-					store.deleteKey(k, v)
-					response = append(response, nil)
-				} else {
-					v.LastAccessedAt = getCurrentClock()
-					response = append(response, v)
-				}
-			} else {
+	for _, k := range keys {
+		v, _ := store.store.Get(k)
+		if v != nil {
+			if hasExpired(v, store) {
+				store.deleteKey(k, v)
 				response = append(response, nil)
+			} else {
+				v.LastAccessedAt = getCurrentClock()
+				response = append(response, v)
 			}
+		} else {
+			response = append(response, nil)
 		}
-	}, store, WithStoreRLock())
+	}
 	return response
 }
 
 func (store *Store) Del(k string) bool {
-	return withLocksReturn(func() bool {
-		v, ok := store.store.Get(k)
-		if ok {
-			return store.deleteKey(k, v)
-		}
-		return false
-	}, store, WithStoreLock())
+	v, ok := store.store.Get(k)
+	if ok {
+		return store.deleteKey(k, v)
+	}
+	return false
 }
 
 func (store *Store) DelByPtr(ptr string) bool {
-	return withLocksReturn(func() bool {
-		return store.delByPtr(ptr)
-	}, store, WithStoreLock())
+	return store.delByPtr(ptr)
 }
 
 func (store *Store) Keys(p string) ([]string, error) {
 	var keys []string
 	var err error
 
-	withLocks(func() {
-		keys = make([]string, 0, store.store.Len())
+	keys = make([]string, 0, store.store.Len())
 
-		store.store.All(func(k string, _ *object.Obj) bool {
-			if found, e := path.Match(p, k); e != nil {
-				err = e
-				// stop iteration if any error
-				return false
-			} else if found {
-				keys = append(keys, k)
-			}
-			// continue the iteration
-			return true
-		})
-	}, store, WithStoreRLock())
+	store.store.All(func(k string, _ *object.Obj) bool {
+		if found, e := path.Match(p, k); e != nil {
+			err = e
+			// stop iteration if any error
+			return false
+		} else if found {
+			keys = append(keys, k)
+		}
+		// continue the iteration
+		return true
+	})
 
 	return keys, err
 }
 
-// GetDbSize returns number of keys present in the database
+// GetDBSize returns number of keys present in the database
 func (store *Store) GetDBSize() uint64 {
-	var noOfKeys uint64
-	withLocks(func() {
-		noOfKeys = uint64(store.store.Len())
-	}, store, WithStoreRLock())
-	return noOfKeys
+	return uint64(store.store.Len())
 }
 
 // Rename function to implement RENAME functionality using existing helpers
-
 func (store *Store) Rename(sourceKey, destKey string) bool {
-	return withLocksReturn(func() bool {
-		// If source and destination are the same, do nothing and return true
-		if sourceKey == destKey {
-			return true
-		}
-
-		sourceObj, _ := store.store.Get(sourceKey)
-		if sourceObj == nil || hasExpired(sourceObj, store) {
-			if sourceObj != nil {
-				store.deleteKey(sourceKey, sourceObj)
-			}
-			return false
-		}
-
-		// Use putHelper to handle putting the object at the destination key
-		store.putHelper(destKey, sourceObj)
-
-		// Remove the source key
-		store.store.Delete(sourceKey)
-		if KeyspaceStat[0] != nil {
-			KeyspaceStat[0]["keys"]--
-		}
-
-		// Notify watchers about the deletion of the source key
-		if store.watchChan != nil {
-			store.notifyWatchers(sourceKey, Del, sourceObj)
-		}
-
+	// If source and destination are the same, do nothing and return true
+	if sourceKey == destKey {
 		return true
-	}, store, WithStoreLock())
+	}
+
+	sourceObj, _ := store.store.Get(sourceKey)
+	if sourceObj == nil || hasExpired(sourceObj, store) {
+		if sourceObj != nil {
+			store.deleteKey(sourceKey, sourceObj)
+		}
+		return false
+	}
+
+	// Use putHelper to handle putting the object at the destination key
+	store.putHelper(destKey, sourceObj)
+
+	// Remove the source key
+	store.store.Delete(sourceKey)
+	if KeyspaceStat[0] != nil {
+		KeyspaceStat[0]["keys"]--
+	}
+
+	// Notify watchers about the deletion of the source key
+	if store.watchChan != nil {
+		go store.notifyQueryManager(sourceKey, Del, *sourceObj)
+	}
+
+	return true
 }
 
 func (store *Store) incrementKeyCount() {
@@ -263,16 +239,14 @@ func (store *Store) Get(k string) *object.Obj {
 
 func (store *Store) GetDel(k string) *object.Obj {
 	var v *object.Obj
-	withLocks(func() {
-		v, _ = store.store.Get(k)
-		if v != nil {
-			expired := hasExpired(v, store)
-			store.deleteKey(k, v)
-			if expired {
-				v = nil
-			}
+	v, _ = store.store.Get(k)
+	if v != nil {
+		expired := hasExpired(v, store)
+		store.deleteKey(k, v)
+		if expired {
+			v = nil
 		}
-	}, store, WithStoreLock())
+	}
 	return v
 }
 
@@ -296,7 +270,7 @@ func (store *Store) deleteKey(k string, obj *object.Obj) bool {
 		KeyspaceStat[0]["keys"]--
 
 		if store.watchChan != nil {
-			store.notifyWatchers(k, Del, obj)
+			go store.notifyQueryManager(k, Del, *obj)
 		}
 
 		return true
@@ -313,7 +287,8 @@ func (store *Store) delByPtr(ptr string) bool {
 	return false
 }
 
-func (store *Store) notifyWatchers(k, operation string, obj *object.Obj) {
+// notifyQueryManager notifies the query manager about a key change, so that it can update the query cache if needed.
+func (store *Store) notifyQueryManager(k, operation string, obj object.Obj) {
 	store.watchChan <- WatchEvent{k, operation, obj}
 }
 
@@ -321,6 +296,8 @@ func (store *Store) GetStore() *swiss.Map[string, *object.Obj] {
 	return store.store
 }
 
+// CacheKeysForQuery scans the store for keys that match the given where clause and sends them to the cache channel.
+// This allows the query manager to cache the existing keys that match the query.
 func (store *Store) CacheKeysForQuery(whereClause sqlparser.Expr, cacheChannel chan *[]struct {
 	Key   string
 	Value *object.Obj
@@ -329,20 +306,18 @@ func (store *Store) CacheKeysForQuery(whereClause sqlparser.Expr, cacheChannel c
 		Key   string
 		Value *object.Obj
 	}, 0)
-	withLocks(func() {
-		store.store.All(func(k string, v *object.Obj) bool {
-			matches, err := sql.EvaluateWhereClause(whereClause, sql.QueryResultRow{Key: k, Value: *v})
-			if err != nil || !matches {
-				return true
-			}
-
-			shardCache = append(shardCache, struct {
-				Key   string
-				Value *object.Obj
-			}{Key: k, Value: v})
-
+	store.store.All(func(k string, v *object.Obj) bool {
+		matches, err := sql.EvaluateWhereClause(whereClause, sql.QueryResultRow{Key: k, Value: *v})
+		if err != nil || !matches {
 			return true
-		})
-	}, store, WithStoreRLock())
+		}
+
+		shardCache = append(shardCache, struct {
+			Key   string
+			Value *object.Obj
+		}{Key: k, Value: v})
+
+		return true
+	})
 	cacheChannel <- &shardCache
 }
