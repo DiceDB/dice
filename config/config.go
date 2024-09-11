@@ -19,6 +19,7 @@ const (
 
 	DefaultHost           string = "0.0.0.0"
 	DefaultPort           int    = 7379
+	DefaultHost           string = "0.0.0.0"
 	DefaultConfigName     string = "dice.toml"
 	DefaultConfigFilePath string = "./"
 

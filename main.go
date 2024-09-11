@@ -25,6 +25,7 @@ import (
 func init() {
 	flag.StringVar(&config.Host, "host", "0.0.0.0", "host for the dicedb server")
 	flag.IntVar(&config.Port, "port", 7379, "port for the dicedb server")
+	flag.StringVar(&config.Address, "address", "0.0.0.0:7379", "address for the dice server")
 	flag.BoolVar(&config.EnableHTTP, "enable-http", true, "run server in HTTP mode as well")
 	flag.BoolVar(&config.EnableMultiThreading, "enable-multithreading", false, "run server in multithreading mode")
 	flag.IntVar(&config.HTTPPort, "http-port", 8082, "HTTP port for the dicedb server")
