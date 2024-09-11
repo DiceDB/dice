@@ -2,7 +2,6 @@ package store
 
 import (
 	"path"
-	"sync"
 
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/sql"
@@ -22,10 +21,9 @@ type WatchEvent struct {
 }
 
 type Store struct {
-	store      *swiss.Map[string, *object.Obj]
-	expires    *swiss.Map[*object.Obj, uint64] // Does not need to be thread-safe as it is only accessed by a single thread.
-	storeMutex sync.RWMutex
-	watchChan  chan WatchEvent
+	store     *swiss.Map[string, *object.Obj]
+	expires   *swiss.Map[*object.Obj, uint64] // Does not need to be thread-safe as it is only accessed by a single thread.
+	watchChan chan WatchEvent
 }
 
 func NewStore(watchChan chan WatchEvent) *Store {
@@ -190,15 +188,12 @@ func (store *Store) Keys(p string) ([]string, error) {
 	return keys, err
 }
 
-// GetDbSize returns number of keys present in the database
+// GetDBSize returns number of keys present in the database
 func (store *Store) GetDBSize() uint64 {
-	var noOfKeys uint64
-	noOfKeys = uint64(store.store.Len())
-	return noOfKeys
+	return uint64(store.store.Len())
 }
 
 // Rename function to implement RENAME functionality using existing helpers
-
 func (store *Store) Rename(sourceKey, destKey string) bool {
 	// If source and destination are the same, do nothing and return true
 	if sourceKey == destKey {
