@@ -12,7 +12,7 @@ import (
 	"github.com/dicedb/dice/config"
 )
 
-var options = tests.TestServerOptions{
+var testServerOptions = tests.TestServerOptions{
 	Port: 8740,
 }
 
@@ -23,7 +23,7 @@ func TestAbortCommand(t *testing.T) {
 	t.Cleanup(cancel)
 
 	var wg sync.WaitGroup
-	tests.RunTestServer(ctx, &wg, options)
+	tests.RunTestServer(ctx, &wg, testServerOptions)
 
 	time.Sleep(2 * time.Second)
 
@@ -79,7 +79,7 @@ func TestServerRestartAfterAbort(t *testing.T) {
 
 	// start test server.
 	var wg sync.WaitGroup
-	tests.RunTestServer(ctx, &wg, options)
+	tests.RunTestServer(ctx, &wg, testServerOptions)
 
 	time.Sleep(1 * time.Second)
 
@@ -98,24 +98,32 @@ func TestServerRestartAfterAbort(t *testing.T) {
 	// wait for the server to shutdown
 	time.Sleep(2 * time.Second)
 
+	wg.Wait()
+
 	// restart server
-	tests.RunTestServer(ctx, &wg, options)
+	ctx2, cancel2 := context.WithCancel(context.Background())
+	t.Cleanup(cancel2)
+
+	// start test server.
+	// use different waitgroups and contexts to avoid race conditions.;
+	var wg2 sync.WaitGroup
+	tests.RunTestServer(ctx2, &wg2, testServerOptions)
 
 	// wait for the server to start up
 	time.Sleep(2 * time.Second)
 
 	// Check if the server is running
-	conn, err = net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", config.Port))
+	conn2, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", config.Port))
 	if err != nil {
 		t.Fatalf("Server should be running after restart: %v", err)
 	}
 
 	// Clean up
-	result = tests.FireCommand(conn, "ABORT")
+	result = tests.FireCommand(conn2, "ABORT")
 	if result != "OK" {
 		t.Fatalf("Unexpected response to ABORT command: %v", result)
 	}
-	conn.Close()
+	conn2.Close()
 
-	wg.Wait()
+	wg2.Wait()
 }
