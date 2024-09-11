@@ -96,6 +96,23 @@ var (
 		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	
+	jsontoggleCmdMeta = DiceCmdMeta{
+		Name: "JSON.TOGGLE",
+		Info: `JSON.TOGGLE key [path]
+		Toggles Boolean values between true and false at the path.Return
+		If the path is enhanced syntax:
+    	1.Array of integers (0 - false, 1 - true) that represent the resulting Boolean value at each path.
+	    2.If a value is a not a Boolean value, its corresponding return value is null.
+		3.NONEXISTENT if the document key does not exist.
+		If the path is restricted syntax:
+    	1.String ("true"/"false") that represents the resulting Boolean value.
+    	2.NONEXISTENT if the document key does not exist.
+    	3.WRONGTYPE error if the value at the path is not a Boolean value.`,
+		Eval:     evalJSONTOGGLE,
+		Arity:    2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	jsontypeCmdMeta = DiceCmdMeta{
 		Name: "JSON.TYPE",
 		Info: `JSON.TYPE key [path]
@@ -638,6 +655,7 @@ func init() {
 	DiceCmds["GET"] = getCmdMeta
 	DiceCmds["MSET"] = msetCmdMeta
 	DiceCmds["JSON.SET"] = jsonsetCmdMeta
+	DiceCmds["JSON.TOGGLE"]=jsontoggleCmdMeta
 	DiceCmds["JSON.GET"] = jsongetCmdMeta
 	DiceCmds["JSON.TYPE"] = jsontypeCmdMeta
 	DiceCmds["JSON.CLEAR"] = jsonclearCmdMeta

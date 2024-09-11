@@ -581,11 +581,7 @@ func evalJSONTYPE(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(typeList, false)
 }
 
-// evalJSONGET retrieves a JSON value stored at the specified key
-// args must contain at least the key;  (path unused in this implementation)
-// Returns response.RespNIL if key is expired or it does not exist
-// Returns encoded error response if incorrect number of arguments
-// The RESP value of the key is encoded and then returned
+
 func evalJSONGET(args []string, store *dstore.Store) []byte {
 	if len(args) < 1 {
 		return diceerrors.NewErrArity("JSON.GET")
@@ -644,6 +640,74 @@ func evalJSONGET(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrWithMessage("could not serialize result")
 	}
 	return clientio.Encode(string(resultBytes), false)
+}
+
+// evalJSONTOGGLE toggles a boolean value stored at the specified key and path.
+// args must contain at least the key and path (where the boolean is located).
+// If the key does not exist or is expired, it returns response.RespNIL.
+// If the field at the specified path is not a boolean, it returns an encoded error response.
+// If the boolean is `true`, it toggles to `false` (returns :0), and if `false`, it toggles to `true` (returns :1).
+// Returns an encoded error response if the incorrect number of arguments is provided.
+func evalJSONTOGGLE(args []string, store *dstore.Store) []byte {
+    if len(args) < 2 {
+        return diceerrors.NewErrArity("JSON.TOGGLE")
+    }
+
+    key := args[0]
+    path := args[1]
+
+    // Retrieve the object from the database
+    obj := store.Get(key)
+    if obj == nil {
+        return clientio.RespNIL
+    }
+
+    // Check if the object is of JSON type
+    errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+    if errWithMessage != nil {
+        return errWithMessage
+    }
+
+    jsonData := obj.Value
+
+    // Parse the JSONPath expression
+    expr, err := jp.ParseString(path)
+    if err != nil {
+        return diceerrors.NewErrWithMessage("invalid JSONPath")
+    }
+
+    // Execute the JSONPath query
+    results := expr.Get(jsonData)
+    if len(results) == 0 {
+        return clientio.Encode([]interface{}{}, false)  // Return empty array if no matches
+    }
+
+    toggledValues := make([]interface{}, len(results))
+    for i, result := range results {
+        switch v := result.(type) {
+        case bool:
+            toggledValues[i] = int64(map[bool]int{false: 1, true: 0}[v])
+            newValue := !v
+            err := expr.Set(jsonData, newValue)
+            if err != nil {
+                return diceerrors.NewErrWithMessage("failed to set toggled value")
+            }  // Update the value in the JSON
+        case nil, float64, string, []interface{}, map[string]interface{}:
+            toggledValues[i] = nil
+        default:
+            toggledValues[i] = nil
+        }
+    }
+
+	newobj:= &object.Obj{
+		Value:          jsonData,
+		TypeEncoding: 	object.ObjTypeJSON,
+	}
+    // Update the object in the store
+    store.Put(key,newobj)
+
+    // Encode and return the result
+    return clientio.Encode(toggledValues, false)
 }
 
 // evalJSONSET stores a JSON value at the specified key
