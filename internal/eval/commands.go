@@ -126,6 +126,16 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsonarrlenCmdMeta = DiceCmdMeta{
+		Name: "JSON.ARRLEN",
+		Info: `JSON.ARRLEN key [path]
+		Returns an array of integer replies.
+		Returns error response if the key doesn't exist or key is expired or the matching value is not an array.
+		Error reply: If the number of arguments is incorrect.`,
+		Eval:     evalJSONARRLEN,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	ttlCmdMeta = DiceCmdMeta{
 		Name: "TTL",
 		Info: `TTL returns Time-to-Live in secs for the queried key in args
@@ -632,6 +642,7 @@ func init() {
 	DiceCmds["JSON.TYPE"] = jsontypeCmdMeta
 	DiceCmds["JSON.CLEAR"] = jsonclearCmdMeta
 	DiceCmds["JSON.DEL"] = jsondelCmdMeta
+	DiceCmds["JSON.ARRLEN"] = jsonarrlenCmdMeta
 	DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
 	DiceCmds["EXPIRE"] = expireCmdMeta

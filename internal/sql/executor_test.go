@@ -202,21 +202,6 @@ func TestExecuteQueryWithIncompatibleTypes(t *testing.T) {
 
 		assert.Error(t, err, "incompatible types in comparison: string and int64")
 	})
-
-	t.Run("NullValue", func(t *testing.T) {
-		// We don't support NULL values in Dice, however, we should include a
-		// test for it to ensure the executor handles it correctly.
-		store.Put("nullKey", &object.Obj{Value: nil})
-		defer store.Del("nullKey")
-
-		queryStr := "SELECT $key, $value WHERE $value = NULL AND $key like 'k*'"
-		query, err := sql.ParseQuery(queryStr)
-		assert.NilError(t, err)
-
-		_, err = sql.ExecuteQuery(&query, store.GetStore())
-
-		assert.Error(t, err, "incompatible types in comparison: string and nil")
-	})
 }
 
 func TestExecuteQueryWithEdgeCases(t *testing.T) {

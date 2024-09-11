@@ -57,17 +57,17 @@ func main() {
 	// Handling different server errors
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
-			log.Info("Server was canceled")
+			log.Debug("Server was canceled")
 		} else if errors.Is(err, server.ErrAborted) {
-			log.Info("Server received abort command")
+			log.Debug("Server received abort command")
 		} else {
 			log.Error("Server error", "error", err)
 		}
 	} else {
-		log.Info("Server stopped without error")
+		log.Debug("Server stopped without error")
 	}
 
 	close(sigs)
 	wg.Wait()
-	log.Info("Server has shut down gracefully")
+	log.Debug("Server has shut down gracefully")
 }
