@@ -1634,7 +1634,13 @@ func evalCommandCount() []byte {
 	return clientio.Encode(diceCommandsCount, false)
 }
 
+// evalCommandGetKeys helps identify which arguments in a redis command
+// are intrepreted as keys.
+// This is useful in analying long commands / scripts
 func evalCommandGetKeys(args []string) []byte {
+	if len(args) == 0 {
+		return diceerrors.NewErrWithMessage("wrong number of arguments for 'command getkeys'")
+	}
 	diceCmd, ok := DiceCmds[strings.ToUpper(args[0])]
 	if !ok {
 		return diceerrors.NewErrWithMessage("invalid command specified")
@@ -1661,6 +1667,7 @@ func evalCommandGetKeys(args []string) []byte {
 	}
 	return clientio.Encode(keys, false)
 }
+
 func evalRename(args []string, store *dstore.Store) []byte {
 	if len(args) != 2 {
 		return diceerrors.NewErrArity("RENAME")
