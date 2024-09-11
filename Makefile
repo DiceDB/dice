@@ -18,7 +18,8 @@ run:
 	go run main.go
 
 test:
-	go test -v -race -count=1 ./tests/
+	go test -v -race -count=1 ./tests/ ./internal/...
+
 
 test-one:
 	go test -v -race -count=1 --run $(TEST_FUNC) ./tests/...
