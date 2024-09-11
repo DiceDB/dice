@@ -97,6 +97,8 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	config.WriteAOFOnCleanup = true
 	if opt.Port != 0 {
 		config.Port = opt.Port
+	} else {
+		config.Port = 8739
 	}
 
 	const totalRetries = 100
