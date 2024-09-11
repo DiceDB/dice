@@ -7,8 +7,9 @@ import (
 )
 
 var (
-	Host string = "0.0.0.0"
-	Port int    = 7379
+	Host    string = "0.0.0.0"
+	Port    int    = 7379
+	Address string = "unix:///tmp/dice.sock"
 )
 
 var KeysLimit int = 10000 // default buffer size.

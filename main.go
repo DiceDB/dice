@@ -16,8 +16,8 @@ import (
 )
 
 func setupFlags() {
-	flag.StringVar(&config.Host, "host", "0.0.0.0", "host for the dice server")
-	flag.IntVar(&config.Port, "port", 7379, "port for the dice server")
+	flag.StringVar(&config.Address, "address", "0.0.0.0:7379", "address for the dice server")
+	// flag.IntVar(&config.Port, "port", 7379, "port for the dice server")
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
 	flag.Parse()
 }
@@ -35,9 +35,9 @@ func main() {
 	asyncServer := server.NewAsyncServer()
 
 	// Find a port and bind it
-	if err := asyncServer.FindPortAndBind(); err != nil {
+	if err := asyncServer.Bind(); err != nil {
 		cancel()
-		log.Fatal("Error finding and binding port:", err)
+		log.Fatal("Error finding and binding port:", "error", err)
 	}
 
 	wg := sync.WaitGroup{}

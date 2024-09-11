@@ -47,6 +47,16 @@ $ cd dice
 $ go run main.go
 ```
 
+DiceDB supports both TCP and Unix sockets. To run DiceDB with custom address, you can use the following commands
+
+```sh
+$ go run main.go -address unix:///tmp/dice.sock
+$ go run main.go -address dice://0.0.0.0:7379
+$ go run main.go -address dice://0.0.0.0  # Starts on 7379 port by default
+$ go run main.go -address :7379  # Starts on local interface
+$ go run main.go -address tcp://:7379 # Also accepts TCP
+```
+
 4. Install GoLangCI
 
 ```
