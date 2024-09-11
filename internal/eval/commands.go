@@ -134,7 +134,7 @@ var (
 		Returns RespZero if the key doesn't exist or key is expired.
 		Error reply: If the number of arguments is incorrect.`,
 		Eval:     evalJSONFORGET,
-    Arity:    -2,
+                Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	jsonarrlenCmdMeta = DiceCmdMeta{
