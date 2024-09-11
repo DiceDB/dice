@@ -4,54 +4,47 @@ import (
 	"path"
 	"sync"
 
+	"github.com/dicedb/dice/internal/object"
+	"github.com/dicedb/dice/internal/sql"
+	"github.com/xwb1989/sqlparser"
+
 	"github.com/dicedb/dice/internal/server/utils"
 
 	"github.com/cockroachdb/swiss"
 	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/internal/regex"
 )
 
 // WatchEvent represents a change in a watched key.
 type WatchEvent struct {
 	Key       string
 	Operation string
-	Value     *Obj
-}
-
-type DSQLQueryResultRow struct {
-	Key   string
-	Value Obj
-}
-
-type KeyValue struct {
-	Key   string
-	Value *Obj
+	Value     *object.Obj
 }
 
 type Store struct {
-	store      *swiss.Map[string, *Obj]
-	expires    *swiss.Map[*Obj, uint64] // Does not need to be thread-safe as it is only accessed by a single thread.
+	store      *swiss.Map[string, *object.Obj]
+	expires    *swiss.Map[*object.Obj, uint64] // Does not need to be thread-safe as it is only accessed by a single thread.
 	storeMutex sync.RWMutex
 	watchChan  chan WatchEvent
 }
 
 func NewStore(watchChan chan WatchEvent) *Store {
 	return &Store{
-		store:     swiss.New[string, *Obj](10240),
-		expires:   swiss.New[*Obj, uint64](10240),
+		store:     swiss.New[string, *object.Obj](10240),
+		expires:   swiss.New[*object.Obj, uint64](10240),
 		watchChan: watchChan,
 	}
 }
 
 func ResetStore(store *Store) *Store {
-	store.store = swiss.New[string, *Obj](10240)
-	store.expires = swiss.New[*Obj, uint64](10240)
+	store.store = swiss.New[string, *object.Obj](10240)
+	store.expires = swiss.New[*object.Obj, uint64](10240)
 
 	return store
 }
 
-func (store *Store) NewObj(value interface{}, expDurationMs int64, oType, oEnc uint8) *Obj {
-	obj := &Obj{
+func (store *Store) NewObj(value interface{}, expDurationMs int64, oType, oEnc uint8) *object.Obj {
+	obj := &object.Obj{
 		Value:          value,
 		TypeEncoding:   oType | oEnc,
 		LastAccessedAt: getCurrentClock(),
@@ -74,7 +67,7 @@ type PutOptions struct {
 	KeepTTL bool
 }
 
-func (store *Store) Put(k string, obj *Obj, opts ...PutOption) {
+func (store *Store) Put(k string, obj *object.Obj, opts ...PutOption) {
 	withLocks(func() {
 		store.putHelper(k, obj, opts...)
 	}, store, WithStoreLock())
@@ -94,7 +87,7 @@ func WithKeepTTL(value bool) PutOption {
 	}
 }
 
-func (store *Store) PutAll(data map[string]*Obj) {
+func (store *Store) PutAll(data map[string]*object.Obj) {
 	withLocks(func() {
 		for k, obj := range data {
 			store.putHelper(k, obj)
@@ -102,11 +95,11 @@ func (store *Store) PutAll(data map[string]*Obj) {
 	}, store, WithStoreLock())
 }
 
-func (store *Store) GetNoTouch(k string) *Obj {
+func (store *Store) GetNoTouch(k string) *object.Obj {
 	return store.getHelper(k, false)
 }
 
-func (store *Store) putHelper(k string, obj *Obj, opts ...PutOption) {
+func (store *Store) putHelper(k string, obj *object.Obj, opts ...PutOption) {
 	options := getDefaultOptions()
 
 	for _, optApplier := range opts {
@@ -137,8 +130,8 @@ func (store *Store) putHelper(k string, obj *Obj, opts ...PutOption) {
 	}
 }
 
-func (store *Store) getHelper(k string, touch bool) *Obj {
-	var v *Obj
+func (store *Store) getHelper(k string, touch bool) *object.Obj {
+	var v *object.Obj
 	withLocks(func() {
 		v, _ = store.store.Get(k)
 		if v != nil {
@@ -153,8 +146,8 @@ func (store *Store) getHelper(k string, touch bool) *Obj {
 	return v
 }
 
-func (store *Store) GetAll(keys []string) []*Obj {
-	response := make([]*Obj, 0, len(keys))
+func (store *Store) GetAll(keys []string) []*object.Obj {
+	response := make([]*object.Obj, 0, len(keys))
 	withLocks(func() {
 		for _, k := range keys {
 			v, _ := store.store.Get(k)
@@ -197,7 +190,7 @@ func (store *Store) Keys(p string) ([]string, error) {
 	withLocks(func() {
 		keys = make([]string, 0, store.store.Len())
 
-		store.store.All(func(k string, _ *Obj) bool {
+		store.store.All(func(k string, _ *object.Obj) bool {
 			if found, e := path.Match(p, k); e != nil {
 				err = e
 				// stop iteration if any error
@@ -250,7 +243,7 @@ func (store *Store) Rename(sourceKey, destKey string) bool {
 
 		// Notify watchers about the deletion of the source key
 		if store.watchChan != nil {
-			store.notifyWatchers(sourceKey, Del, nil)
+			store.notifyWatchers(sourceKey, Del, sourceObj)
 		}
 
 		return true
@@ -264,12 +257,12 @@ func (store *Store) incrementKeyCount() {
 	KeyspaceStat[0]["keys"]++
 }
 
-func (store *Store) Get(k string) *Obj {
+func (store *Store) Get(k string) *object.Obj {
 	return store.getHelper(k, true)
 }
 
-func (store *Store) GetDel(k string) *Obj {
-	var v *Obj
+func (store *Store) GetDel(k string) *object.Obj {
+	var v *object.Obj
 	withLocks(func() {
 		v, _ = store.store.Get(k)
 		if v != nil {
@@ -285,25 +278,25 @@ func (store *Store) GetDel(k string) *Obj {
 
 // SetExpiry sets the expiry time for an object.
 // This method is not thread-safe. It should be called within a lock.
-func (store *Store) SetExpiry(obj *Obj, expDurationMs int64) {
+func (store *Store) SetExpiry(obj *object.Obj, expDurationMs int64) {
 	store.expires.Put(obj, uint64(utils.GetCurrentTime().UnixMilli())+uint64(expDurationMs))
 }
 
 // SetUnixTimeExpiry sets the expiry time for an object.
 // This method is not thread-safe. It should be called within a lock.
-func (store *Store) SetUnixTimeExpiry(obj *Obj, exUnixTimeSec int64) {
+func (store *Store) SetUnixTimeExpiry(obj *object.Obj, exUnixTimeSec int64) {
 	// convert unix-time-seconds to unix-time-milliseconds
 	store.expires.Put(obj, uint64(exUnixTimeSec*1000))
 }
 
-func (store *Store) deleteKey(k string, obj *Obj) bool {
+func (store *Store) deleteKey(k string, obj *object.Obj) bool {
 	if obj != nil {
 		store.store.Delete(k)
 		store.expires.Delete(obj)
 		KeyspaceStat[0]["keys"]--
 
 		if store.watchChan != nil {
-			store.notifyWatchers(k, Del, nil)
+			store.notifyWatchers(k, Del, obj)
 		}
 
 		return true
@@ -320,21 +313,34 @@ func (store *Store) delByPtr(ptr string) bool {
 	return false
 }
 
-func (store *Store) notifyWatchers(k, operation string, obj *Obj) {
+func (store *Store) notifyWatchers(k, operation string, obj *object.Obj) {
 	store.watchChan <- WatchEvent{k, operation, obj}
 }
 
-func (store *Store) GetStore() *swiss.Map[string, *Obj] {
+func (store *Store) GetStore() *swiss.Map[string, *object.Obj] {
 	return store.store
 }
 
-func (store *Store) CacheKeysForQuery(keyRegex string, cacheChannel chan *[]KeyValue) {
-	shardCache := make([]KeyValue, 0)
+func (store *Store) CacheKeysForQuery(whereClause sqlparser.Expr, cacheChannel chan *[]struct {
+	Key   string
+	Value *object.Obj
+}) {
+	shardCache := make([]struct {
+		Key   string
+		Value *object.Obj
+	}, 0)
 	withLocks(func() {
-		store.store.All(func(k string, v *Obj) bool {
-			if regex.WildCardMatch(keyRegex, k) {
-				shardCache = append(shardCache, KeyValue{k, v})
+		store.store.All(func(k string, v *object.Obj) bool {
+			matches, err := sql.EvaluateWhereClause(whereClause, sql.QueryResultRow{Key: k, Value: *v})
+			if err != nil || !matches {
+				return true
 			}
+
+			shardCache = append(shardCache, struct {
+				Key   string
+				Value *object.Obj
+			}{Key: k, Value: v})
+
 			return true
 		})
 	}, store, WithStoreRLock())

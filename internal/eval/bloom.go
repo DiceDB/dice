@@ -7,6 +7,8 @@ import (
 	"math/rand"
 	"strconv"
 
+	"github.com/dicedb/dice/internal/object"
+
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/server/utils"
@@ -348,7 +350,7 @@ func getOrCreateBloomFilter(key string, opts *BloomOpts, store *dstore.Store) (*
 
 	// If we don't have a filter yet and `opts` are provided, create one.
 	if obj == nil && opts != nil {
-		obj = store.NewObj(newBloomFilter(opts), -1, dstore.ObjTypeBitSet, dstore.ObjEncodingBF)
+		obj = store.NewObj(newBloomFilter(opts), -1, object.ObjTypeBitSet, object.ObjEncodingBF)
 		store.Put(key, obj)
 	}
 
@@ -357,11 +359,11 @@ func getOrCreateBloomFilter(key string, opts *BloomOpts, store *dstore.Store) (*
 		return nil, errInvalidKey
 	}
 
-	if err := dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeBitSet); err != nil {
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeBitSet); err != nil {
 		return nil, err
 	}
 
-	if err := dstore.AssertEncoding(obj.TypeEncoding, dstore.ObjEncodingBF); err != nil {
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingBF); err != nil {
 		return nil, err
 	}
 

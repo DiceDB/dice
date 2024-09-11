@@ -126,6 +126,7 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+
 	jsonforgetCmdMeta = DiceCmdMeta{
 		Name: "JSON.FORGET",
 		Info: `JSON.FORGET key [path]
@@ -133,6 +134,16 @@ var (
 		Returns RespZero if the key doesn't exist or key is expired.
 		Error reply: If the number of arguments is incorrect.`,
 		Eval:     evalJSONFORGET,
+    Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	jsonarrlenCmdMeta = DiceCmdMeta{
+		Name: "JSON.ARRLEN",
+		Info: `JSON.ARRLEN key [path]
+		Returns an array of integer replies.
+		Returns error response if the key doesn't exist or key is expired or the matching value is not an array.
+		Error reply: If the number of arguments is incorrect.`,
+		Eval:     evalJSONARRLEN,
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
@@ -643,6 +654,7 @@ func init() {
 	DiceCmds["JSON.CLEAR"] = jsonclearCmdMeta
 	DiceCmds["JSON.DEL"] = jsondelCmdMeta
 	DiceCmds["JSON.FORGET"] = jsonforgetCmdMeta
+	DiceCmds["JSON.ARRLEN"] = jsonarrlenCmdMeta
 	DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
 	DiceCmds["EXPIRE"] = expireCmdMeta

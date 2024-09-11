@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/dicedb/dice/internal/object"
+
 	"github.com/dicedb/dice/config"
 )
 
@@ -96,7 +98,7 @@ func encode(strs []string) []byte {
 // TODO: Support Expiration
 // TODO: Support non-kv data structures
 // TODO: Support sync write
-func dumpKey(aof *AOF, key string, obj *Obj) (err error) {
+func dumpKey(aof *AOF, key string, obj *object.Obj) (err error) {
 	cmd := fmt.Sprintf("SET %s %s", key, obj.Value)
 	tokens := strings.Split(cmd, " ")
 	return aof.Write(string(encode(tokens)))
@@ -116,7 +118,7 @@ func DumpAllAOF(store *Store) error {
 	log.Println("rewriting AOF file at", config.AOFFile)
 
 	withLocks(func() {
-		store.store.All(func(k string, obj *Obj) bool {
+		store.store.All(func(k string, obj *object.Obj) bool {
 			err = dumpKey(aof, k, obj)
 			// continue if no error
 			return err == nil

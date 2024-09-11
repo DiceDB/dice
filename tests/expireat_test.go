@@ -68,7 +68,7 @@ func TestExpireat(t *testing.T) {
 			delay:    []time.Duration{0},
 		},
 		{
-			name:  "Test(XX): Set the expiration only if the key has no expiration time",
+			name:  "Test(NX): Set the expiration only if the key has no expiration time",
 			setup: "",
 			commands: []string{
 				"SET test_key test_value",
@@ -85,11 +85,12 @@ func TestExpireat(t *testing.T) {
 			commands: []string{
 				"SET test_key test_value",
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10) + " XX",
+				"TTL test_key",
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10),
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10) + " XX",
 			},
-			expected: []interface{}{"OK", int64(0), int64(1), int64(1)},
-			delay:    []time.Duration{0, 0, 0, 0},
+			expected: []interface{}{"OK", int64(0), int64(-1), int64(1), int64(1)},
+			delay:    []time.Duration{0, 0, 0, 0, 0},
 		},
 
 		{
@@ -98,11 +99,12 @@ func TestExpireat(t *testing.T) {
 			commands: []string{
 				"SET test_key test_value",
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10) + " GT",
+				"TTL test_key",
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10),
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+20, 10) + " GT",
 			},
-			expected: []interface{}{"OK", int64(0), int64(1), int64(1)},
-			delay:    []time.Duration{0, 0, 0, 0},
+			expected: []interface{}{"OK", int64(0), int64(-1), int64(1), int64(1)},
+			delay:    []time.Duration{0, 0, 0, 0, 0},
 		},
 
 		{
