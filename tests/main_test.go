@@ -15,7 +15,10 @@ func TestMain(m *testing.M) {
 	// This is a synchronous method, because internally it
 	// checks for available port and then forks a goroutine
 	// to start the server
-	RunTestServer(context.Background(), &wg)
+	opts := TestServerOptions{
+		Port: 8739,
+	}
+	RunTestServer(context.Background(), &wg, opts)
 
 	// Wait for the server to start
 	time.Sleep(1 * time.Second)
