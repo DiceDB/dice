@@ -77,7 +77,10 @@ func updateScores() {
 func watchLeaderboard() {
 	ctx := context.Background()
 	qwatch := dice.QWatch(ctx)
-	qwatch.WatchQuery(ctx, "SELECT $key, $value FROM `player:*` WHERE '$value.score' > 10 ORDER BY $value.score DESC LIMIT 5;")
+	qwatch.WatchQuery(ctx, `SELECT $key, $value
+									WHERE $key LIKE 'player:*' AND '$value.score' > 10
+									ORDER BY $value.score DESC
+									LIMIT 5;`)
 	defer qwatch.Close()
 
 	ch := qwatch.Channel()
