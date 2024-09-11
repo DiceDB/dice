@@ -1635,7 +1635,7 @@ func evalCommandCount() []byte {
 }
 
 // evalCommandGetKeys helps identify which arguments in a redis command
-// are intrepreted as keys.
+// are interpreted as keys.
 // This is useful in analying long commands / scripts
 func evalCommandGetKeys(args []string) []byte {
 	if len(args) == 0 {
