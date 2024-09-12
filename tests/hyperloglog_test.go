@@ -77,6 +77,12 @@ func TestHyperLogLogCommands(t *testing.T) {
 				"PFCOUNT SRC_KEY_2"},
 			expected: []interface{}{int64(1), "OK", int64(4)},
 		},
+		{
+			name: "PFMERGE with invalid object",
+			commands: []string{
+				"PFADD INVALID_HLL a b c", "SET INVALID_HLL \"1\"", "PFMERGE INVALID_HLL"},
+			expected: []interface{}{int64(1), "OK", "WRONGTYPE Key is not a valid HyperLogLog string value."},
+		},
 	}
 
 	for _, tc := range testCases {

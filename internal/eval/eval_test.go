@@ -1103,6 +1103,19 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value":   {input: nil, output: []byte("-ERR wrong number of arguments for 'pfmerge' command\r\n")},
 		"empty array": {input: []string{}, output: []byte("-ERR wrong number of arguments for 'pfmerge' command\r\n")},
+		"PFMERGE invalid hll object": {
+			setup: func() {
+				key := "INVALID_OBJ_DEST_KEY"
+				value := "123"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"INVALID_OBJ_DEST_KEY"},
+			output: []byte("-WRONGTYPE Key is not a valid HyperLogLog string value.\r\n"),
+		},
 		"PFMERGE destKey doesn't exist": {
 			input:  []string{"NON_EXISTING_DEST_KEY"},
 			output: clientio.RespOK,

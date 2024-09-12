@@ -2617,7 +2617,11 @@ func evalPFMERGE(args []string, store *dstore.Store) []byte {
 	if obj == nil {
 		mergedHll = hyperloglog.New()
 	} else {
-		mergedHll = obj.Value.(*hyperloglog.Sketch)
+		var ok bool
+		mergedHll, ok = obj.Value.(*hyperloglog.Sketch)
+		if !ok {
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeHllErr)
+		}
 	}
 
 	for _, arg := range args {
