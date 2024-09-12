@@ -659,7 +659,7 @@ func evalJSONTOGGLE(args []string, store *dstore.Store) []byte {
     // Retrieve the object from the database
     obj := store.Get(key)
     if obj == nil {
-        return clientio.RespNIL
+        return []byte("-ERR could not perform this operation on a key that doesn't exist\r\n")
     }
 
     // Check if the object is of JSON type
@@ -682,7 +682,9 @@ func evalJSONTOGGLE(args []string, store *dstore.Store) []byte {
         return clientio.Encode([]interface{}{}, false)  // Return empty array if no matches
     }
 
-    for _, result := range results {
+	toggleResults := make([]interface{}, len(results))
+
+    for i, result := range results {
         switch v := result.(type) {
         case bool:
             newValue := !v
@@ -700,16 +702,16 @@ func evalJSONTOGGLE(args []string, store *dstore.Store) []byte {
 
             // Return simple integer toggle result (1 for true, 0 for false)
             if newValue {
-                return []byte(":1\r\n")
+                toggleResults[i] = 1
             } else {
-                return []byte(":0\r\n")
+                toggleResults[i] = 0
             }
         default:
-            return []byte("-ERR Value at path is not a boolean\r\n")
+            toggleResults[i] = nil
         }
     }
 
-    return clientio.RespNIL
+    return clientio.Encode(toggleResults, false)
 }
 
 

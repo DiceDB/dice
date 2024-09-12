@@ -789,7 +789,7 @@ func testEvalJSONTOGGLE(t *testing.T, store *dstore.Store) {
         "key does not exist": {
             setup: func() {},
             input: []string{"NONEXISTENT_KEY", ".active"},
-            output: clientio.RespNIL,
+            output: []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
         },
         "key exists but field is not boolean": {
             setup: func() {
@@ -801,7 +801,7 @@ func testEvalJSONTOGGLE(t *testing.T, store *dstore.Store) {
                 store.Put(key, obj)
             },
             input: []string{"EXISTING_KEY", ".active"},
-            output: []byte("-ERR Value at path is not a boolean\r\n"),
+            output: clientio.Encode([]interface{}{nil}, false),
         },
         "key exists, toggling boolean true to false": {
             setup: func() {
@@ -818,7 +818,7 @@ func testEvalJSONTOGGLE(t *testing.T, store *dstore.Store) {
                 fmt.Printf("Debug: Object stored: %+v\n", obj)
             },
             input: []string{"EXISTING_KEY", ".active"},
-            output: []byte(":0\r\n"), // Boolean true toggled to false (0)
+            output: clientio.Encode([]interface{}{0}, false),
         },
         "key exists, toggling boolean false to true": {
             setup: func() {
@@ -830,7 +830,7 @@ func testEvalJSONTOGGLE(t *testing.T, store *dstore.Store) {
                 store.Put(key, obj)
             },
             input: []string{"EXISTING_KEY", ".active"},
-            output: []byte(":1\r\n"), // Boolean false toggled to true (1)
+            output: clientio.Encode([]interface{}{1}, false), 
         },
         "key exists but expired": {
             setup: func() {
@@ -844,12 +844,13 @@ func testEvalJSONTOGGLE(t *testing.T, store *dstore.Store) {
                 store.SetExpiry(obj, int64(-2*time.Millisecond))
             },
             input: []string{"EXISTING_KEY", ".active"},
-            output: clientio.RespNIL,
+            output: []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"), 
         },
     }
     
     runEvalTests(t, tests, evalJSONTOGGLE, store)
 }
+
 
 func testEvalTTL(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
