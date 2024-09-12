@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/internal/object"
+	"github.com/bytedance/sonic"
 
 	"github.com/axiomhq/hyperloglog"
 	"github.com/bytedance/sonic"
