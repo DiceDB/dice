@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/dicedb/dice/internal/object"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/dicedb/dice/internal/object"
 	"github.com/axiomhq/hyperloglog"
 	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/internal/clientio"
@@ -1218,4 +1218,45 @@ func testEvalHSET(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalHSET, store)
+}
+
+func BenchmarkEvalPFCOUNT(b *testing.B){
+	store := *dstore.NewStore(nil)
+
+	hll1 := hyperloglog.New()
+	hll1.Insert([]byte("Item1"))
+	hll1.Insert([]byte("Item2"))
+	obj1 := &object.Obj{
+		Value:          hll1,
+		LastAccessedAt: uint32(time.Now().Unix()),
+	}
+	store.Put("KEY1", obj1)
+
+	hll2 := hyperloglog.New()
+	hll2.Insert([]byte("Item3"))
+	hll2.Insert([]byte("Item4"))
+	obj2 := &object.Obj{
+		Value:          hll2,
+		LastAccessedAt: uint32(time.Now().Unix()),
+	}
+	store.Put("KEY2", obj2)
+
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{"SingleKey", []string{"key1"}},
+		{"TwoKeys", []string{"key1", "key2"}},
+		{"NonExistentKey", []string{"key1", "key2", "nonexistent"}},
+	}
+
+	b.ResetTimer()
+
+	for _, tt := range tests{
+		b.Run(tt.name, func(b *testing.B) {
+			for i := 0; i<b.N; i++{
+				evalPFCOUNT(tt.args, &store)
+			}
+		})
+	}
 }
