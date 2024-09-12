@@ -21,7 +21,7 @@ func TestQWatchUnwatch(t *testing.T) {
 	// Cleanup store to remove any existing keys from other qwatch tests
 	// The cleanup is done both on the start and finish just to keep the order of tests run agnostic
 	for _, tc := range qWatchTestCases {
-		fireCommand(publisher, fmt.Sprintf("DEL %s:%d", tc.key, tc.userID))
+		FireCommand(publisher, fmt.Sprintf("DEL %s:%d", tc.key, tc.userID))
 	}
 	defer func() {
 		publisher.Close()
@@ -57,19 +57,19 @@ func TestQWatchUnwatch(t *testing.T) {
 	// qwatch scenarios on the third subscriber should continue to run as expected
 	// AND
 	// continue from the qwatch scenarios that ran previously
-	fireCommand(publisher, "SET match:100:user:1 62")
+	FireCommand(publisher, "SET match:100:user:1 62")
 	resp, err := respParsers[2].DecodeOne()
 	assert.NilError(t, err)
 	expectedUpdate := []interface{}{[]interface{}{"match:100:user:5", int64(70)}, []interface{}{"match:100:user:1", int64(62)}, []interface{}{"match:100:user:0", int64(60)}}
 	assert.DeepEqual(t, []interface{}{sql.Qwatch, qWatchQuery, expectedUpdate}, resp)
 
-	fireCommand(publisher, "SET match:100:user:5 75")
+	FireCommand(publisher, "SET match:100:user:5 75")
 	resp, err = respParsers[2].DecodeOne()
 	assert.NilError(t, err)
 	expectedUpdate = []interface{}{[]interface{}{"match:100:user:5", int64(75)}, []interface{}{"match:100:user:1", int64(62)}, []interface{}{"match:100:user:0", int64(60)}}
 	assert.DeepEqual(t, []interface{}{sql.Qwatch, qWatchQuery, expectedUpdate}, resp)
 
-	fireCommand(publisher, "SET match:100:user:0 80")
+	FireCommand(publisher, "SET match:100:user:0 80")
 	resp, err = respParsers[2].DecodeOne()
 	assert.NilError(t, err)
 	expectedUpdate = []interface{}{[]interface{}{"match:100:user:0", int64(80)}, []interface{}{"match:100:user:5", int64(75)}, []interface{}{"match:100:user:1", int64(62)}}
@@ -77,6 +77,6 @@ func TestQWatchUnwatch(t *testing.T) {
 
 	// Cleanup store for next tests
 	for _, tc := range qWatchTestCases {
-		fireCommand(publisher, fmt.Sprintf("DEL %s:%d", tc.key, tc.userID))
+		FireCommand(publisher, fmt.Sprintf("DEL %s:%d", tc.key, tc.userID))
 	}
 }

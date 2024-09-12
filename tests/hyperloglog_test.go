@@ -45,12 +45,56 @@ func TestHyperLogLogCommands(t *testing.T) {
 				"PFCOUNT hll3 non-exist-hll", "PFADD some-new-hll abc", "PFCOUNT hll3 non-exist-hll some-new-hll"},
 			expected: []interface{}{int64(1), int64(0), int64(3), int64(3), int64(1), int64(4)},
 		},
+		{
+			name: "PFMERGE with srcKey non-existing",
+			commands: []string{
+				"PFMERGE NON_EXISTING_SRC_KEY", "PFCOUNT NON_EXISTING_SRC_KEY"},
+			expected: []interface{}{"OK", int64(0)},
+		},
+		{
+			name: "PFMERGE with srcKey non-existing",
+			commands: []string{
+				"PFMERGE NON_EXISTING_SRC_KEY", "PFCOUNT NON_EXISTING_SRC_KEY"},
+			expected: []interface{}{"OK", int64(0)},
+		},
+		{
+			name: "PFMERGE with destKey non-existing",
+			commands: []string{
+				"PFMERGE EXISTING_SRC_KEY NON_EXISTING_DEST_KEY", "PFCOUNT EXISTING_SRC_KEY"},
+			expected: []interface{}{"OK", int64(0)},
+		},
+		{
+			name: "PFMERGE with destKey existing",
+			commands: []string{
+				"PFADD DEST_KEY_1 foo bar zap a", "PFADD DEST_KEY_2 a b c foo", "PFMERGE SRC_KEY_1 DEST_KEY_1 DEST_KEY_2",
+				"PFCOUNT SRC_KEY_1"},
+			expected: []interface{}{int64(1), int64(1), "OK", int64(6)},
+		},
+		{
+			name: "PFMERGE with only one destKey existing",
+			commands: []string{
+				"PFADD DEST_KEY_3 foo bar zap a", "PFMERGE SRC_KEY_2 DEST_KEY_3 NON_EXISTING_DEST_KEY",
+				"PFCOUNT SRC_KEY_2"},
+			expected: []interface{}{int64(1), "OK", int64(4)},
+		},
+		{
+			name: "PFMERGE with invalid object",
+			commands: []string{
+				"PFADD INVALID_HLL a b c", "SET INVALID_HLL \"1\"", "PFMERGE INVALID_HLL"},
+			expected: []interface{}{int64(1), "OK", "WRONGTYPE Key is not a valid HyperLogLog string value."},
+		},
+		{
+			name: "PFMERGE with invalid src object",
+			commands: []string{
+				"PFADD INVALID_SRC_HLL a b c", "SET INVALID_SRC_HLL \"1\"", "PFMERGE HLL INVALID_SRC_HLL"},
+			expected: []interface{}{int64(1), "OK", "WRONGTYPE Key is not a valid HyperLogLog string value."},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.commands {
-				result := fireCommand(conn, cmd)
+				result := FireCommand(conn, cmd)
 				assert.DeepEqual(t, tc.expected[i], result)
 			}
 		})

@@ -221,13 +221,13 @@ func TestSetDataCommand(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			fireCommand(conn, "DEL foo")
-			fireCommand(conn, "DEL foo2")
+			FireCommand(conn, "DEL foo")
+			FireCommand(conn, "DEL foo2")
 			for i, cmd := range tc.cmd {
 				if tc.delay[i] > 0 {
 					time.Sleep(tc.delay[i])
 				}
-				result := fireCommand(conn, cmd)
+				result := FireCommand(conn, cmd)
 				if tc.assert_type[i] == "equal" {
 					CustomDeepEqual(t, result, tc.expected[i])
 				} else if tc.assert_type[i] == "assert" {

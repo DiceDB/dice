@@ -327,6 +327,20 @@ func evalGETDEL(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(obj.Value, false)
 }
 
+// evaLJSONFORGET removes the field specified by the given JSONPath from the JSON document stored under the provided key.
+// calls the evalJSONDEL() with the arguments passed
+// Returns response.RespZero if key is expired or it does not exist
+// Returns encoded error response if incorrect number of arguments
+// If the JSONPath points to the root of the JSON document, the entire key is deleted from the store.
+// Returns an integer reply specified as the number of paths deleted (0 or more)
+func evalJSONFORGET(args []string, store *dstore.Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("JSON.FORGET")
+	}
+
+	return evalJSONDEL(args, store)
+}
+
 // evalJSONARRLEN return the length of the JSON array at path in key
 // Returns an array of integer replies, an integer for each matching value,
 // each is the array's length, or nil, if the matching value is not an array.
@@ -1705,7 +1719,13 @@ func evalCommandCount() []byte {
 	return clientio.Encode(diceCommandsCount, false)
 }
 
+// evalCommandGetKeys helps identify which arguments in a redis command
+// are interpreted as keys.
+// This is useful in analying long commands / scripts
 func evalCommandGetKeys(args []string) []byte {
+	if len(args) == 0 {
+		return diceerrors.NewErrArity("COMMAND|GETKEYS")
+	}
 	diceCmd, ok := DiceCmds[strings.ToUpper(args[0])]
 	if !ok {
 		return diceerrors.NewErrWithMessage("invalid command specified")
@@ -1732,6 +1752,7 @@ func evalCommandGetKeys(args []string) []byte {
 	}
 	return clientio.Encode(keys, false)
 }
+
 func evalRename(args []string, store *dstore.Store) []byte {
 	if len(args) != 2 {
 		return diceerrors.NewErrArity("RENAME")
@@ -2637,7 +2658,10 @@ func evalPFADD(args []string, store *dstore.Store) []byte {
 		return clientio.Encode(1, false)
 	}
 
-	existingHll := obj.Value.(*hyperloglog.Sketch)
+	existingHll, ok := obj.Value.(*hyperloglog.Sketch)
+	if !ok {
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeHllErr)
+	}
 	initialCardinality := existingHll.Estimate()
 	for _, arg := range args[1:] {
 		existingHll.Insert([]byte(arg))
@@ -2660,7 +2684,10 @@ func evalPFCOUNT(args []string, store *dstore.Store) []byte {
 	for _, arg := range args {
 		obj := store.Get(arg)
 		if obj != nil {
-			currKeyHll := obj.Value.(*hyperloglog.Sketch)
+			currKeyHll, ok := obj.Value.(*hyperloglog.Sketch)
+			if !ok {
+				return diceerrors.NewErrWithMessage(diceerrors.WrongTypeHllErr)
+			}
 			err := unionHll.Merge(currKeyHll)
 			if err != nil {
 				return diceerrors.NewErrWithMessage(diceerrors.InvalidHllErr)
@@ -2669,4 +2696,46 @@ func evalPFCOUNT(args []string, store *dstore.Store) []byte {
 	}
 
 	return clientio.Encode(unionHll.Estimate(), false)
+}
+
+func evalPFMERGE(args []string, store *dstore.Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("PFMERGE")
+	}
+
+	var mergedHll *hyperloglog.Sketch
+	destKey := args[0]
+	obj := store.Get(destKey)
+
+	// If destKey doesn't exist, create a new HLL, else fetch the existing
+	if obj == nil {
+		mergedHll = hyperloglog.New()
+	} else {
+		var ok bool
+		mergedHll, ok = obj.Value.(*hyperloglog.Sketch)
+		if !ok {
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeHllErr)
+		}
+	}
+
+	for _, arg := range args {
+		obj := store.Get(arg)
+		if obj != nil {
+			currKeyHll, ok := obj.Value.(*hyperloglog.Sketch)
+			if !ok {
+				return diceerrors.NewErrWithMessage(diceerrors.WrongTypeHllErr)
+			}
+
+			err := mergedHll.Merge(currKeyHll)
+			if err != nil {
+				return diceerrors.NewErrWithMessage(diceerrors.InvalidHllErr)
+			}
+		}
+	}
+
+	// Save the mergedHll
+	obj = store.NewObj(mergedHll, -1, object.ObjTypeString, object.ObjEncodingRaw)
+	store.Put(destKey, obj)
+
+	return clientio.RespOK
 }

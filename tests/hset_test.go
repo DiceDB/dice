@@ -39,7 +39,7 @@ func TestHSET(t *testing.T) {
 
 	for _, tc := range testCases {
 		for i, cmd := range tc.commands {
-			result := fireCommand(conn, cmd)
+			result := FireCommand(conn, cmd)
 			assert.DeepEqual(t, tc.expected[i], result)
 		}
 	}
