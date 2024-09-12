@@ -474,3 +474,75 @@ func TestJSONDelOperations(t *testing.T) {
 		})
 	}
 }
+
+func TestJSONARRAPPENDOperations(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	simpleJSON := `{"name":"John","age":30}`
+	intJSON := `{"array":[1,2,3,4,5]}`
+	intJSON1 := `{"array":[1,2,3,4,5,6]}`
+	intJSON2 := `{"array":[1,2,3,4,5,6,7,8]}`
+    strJSON := `{"array":["a","b"]}`
+    strJSON1 := `{"array":["a","b","c"]}`
+    nestedArrJSON := `{"array":[[1,2,3],[1,2]]}`
+    nestedArrJSON1 := `{"array":[[1,2,3],[1,2],[1]]}`
+    jsonArrJSON := `{"array":[{"name":"John"}]}`
+    jsonArrJSON1 := `{"array":[{"name":"John"}, {"age":25}]}`
+
+	testCases := []struct {
+		name     string
+		commands []string
+		expected []interface{}
+	}{
+		{
+			name:     "arr append to non array fields",
+			commands: []string{"JSON.SET user $ " + simpleJSON, "JSON.ARRAPPEND user $.name 'Tom'"},
+            expected: []interface{}{"OK", "(nil)"},
+		},
+		{
+			name:     "arr append single element to an array field",
+			commands: []string{"JSON.SET user $ " + intJSON, "JSON.ARRAPPEND user $.array 6", "JSON.GET user"},
+			expected: []interface{}{"OK", int64(6), intJSON1},
+		},
+		{
+			name:     "arr append multiple elements to an array field",
+			commands: []string{"JSON.SET user $ " + intJSON, "JSON.ARRAPPEND user $.array 6 7 8", "JSON.GET user"},
+			expected: []interface{}{"OK", int64(8), intJSON2},
+		},
+		{
+			name:     "arr append string value",
+			commands: []string{"JSON.SET user $ " + strJSON, "JSON.ARRAPPEND user $.array c", "JSON.GET user"},
+			expected: []interface{}{"OK", int64(3), strJSON1},
+		},
+		{
+			name:     "arr append nested array value",
+			commands: []string{"JSON.SET user $ " + nestedArrJSON, "JSON.ARRAPPEND user $.array [1]", "JSON.GET user"},
+			expected: []interface{}{"OK", int64(3), nestedArrJSON1},
+		},
+		{
+			name:     "arr append with json value",
+            commands: []string{"JSON.SET user $ " + jsonArrJSON, `JSON.ARRAPPEND user $.array {"age":25}`, "JSON.GET user"},
+			expected: []interface{}{"OK", int64(2), jsonArrJSON1},
+		},
+    }
+
+    for _, tcase := range testCases {
+		fireCommand(conn, "DEL user")
+		t.Run(tcase.name, func(t *testing.T) {
+			for i := 0; i < len(tcase.commands); i++ {
+				cmd := tcase.commands[i]
+				out := tcase.expected[i]
+				result := fireCommand(conn, cmd)
+				jsonResult, isString := result.(string)
+				if isString && testutils.IsJSONResponse(jsonResult) {
+					testutils.AssertJSONEqual(t, out.(string), jsonResult)
+				} else {
+                    assert.Equal(t, out, result)
+				}
+
+			}
+		})
+	}
+	fireCommand(conn, "DEL user")
+}
