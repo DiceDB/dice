@@ -1275,7 +1275,7 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 
 			},
 			input:  []string{"EXISTING_KEY"},
-			output: []byte("*1\r\n$-1\r\n"),
+			output: []byte("-WRONGTYPE wrong type of path value - expected string but found integer\r\n"),
 		},
 		"root array strlen": {
 			setup: func() {
@@ -1288,7 +1288,7 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 
 			},
 			input:  []string{"EXISTING_KEY"},
-			output: []byte("*1\r\n:5\r\n"),
+			output: []byte(":5\r\n"),
 		},
 		"subpath string strlen": {
 			setup: func() {

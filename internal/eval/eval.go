@@ -2679,11 +2679,25 @@ func evalJSONSTRLEN(args []string, store *dstore.Store) []byte {
 	}
 
 	key := args[0]
-	path := defaultRootPath
 
-	if len(args) > 1 {
-		path = args[1]
+	if len(args) < 2 {
+		// no recursive
+		// making consistent with arrlen
+		// to-do parsing
+		obj := store.Get(key)
+
+		if obj == nil {
+			return clientio.RespNIL
+		}
+		jsonData := obj.Value
+
+		if utils.GetJSONFieldType(jsonData) != utils.StringType {
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.JSONPathValueTypeErr)
+		}
+		return clientio.Encode(len(jsonData.(string)), false)
 	}
+
+	path := args[1]
 
 	obj := store.Get(key)
 
@@ -2698,7 +2712,6 @@ func evalJSONSTRLEN(args []string, store *dstore.Store) []byte {
 	}
 
 	jsonData := obj.Value
-
 	if path == defaultRootPath {
 		defaultStringResult := make([]interface{}, 0, 1)
 		if utils.GetJSONFieldType(jsonData) == utils.StringType {
@@ -2717,11 +2730,8 @@ func evalJSONSTRLEN(args []string, store *dstore.Store) []byte {
 	}
 	// Execute the JSONPath query
 	results := expr.Get(jsonData)
-
 	if len(results) == 0 {
-		defaultStringResult := make([]interface{}, 0, 1)
-		defaultStringResult = append(defaultStringResult, clientio.RespNIL)
-		return clientio.Encode(defaultStringResult, false)
+		return clientio.Encode([]interface{}{}, false)
 	}
 	strLenResults := make([]interface{}, 0, len(results))
 	for _, result := range results {
