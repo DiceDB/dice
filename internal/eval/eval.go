@@ -2572,7 +2572,7 @@ func evalPFADD(args []string, store *dstore.Store) []byte {
 
 	existingHll, ok := obj.Value.(*hyperloglog.Sketch)
 	if !ok {
-		return diceerrors.NewErrWithMessage("*WRONGTYPE*")
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeHllErr)
 	}
 	initialCardinality := existingHll.Estimate()
 	for _, arg := range args[1:] {
@@ -2598,7 +2598,7 @@ func evalPFCOUNT(args []string, store *dstore.Store) []byte {
 		if obj != nil {
 			currKeyHll, ok := obj.Value.(*hyperloglog.Sketch)
 			if !ok {
-				return diceerrors.NewErrWithMessage("*WRONGTYPE*")
+				return diceerrors.NewErrWithMessage(diceerrors.WrongTypeHllErr)
 			}
 			err := unionHll.Merge(currKeyHll)
 			if err != nil {
