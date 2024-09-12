@@ -164,3 +164,6 @@ Contributors can join the [Discord Server](https://discord.gg/6r8uXWtXh7) for qu
 $ sudo netstat -atlpn | grep :7379
 $ sudo kill -9 <process_id>
 ```
+
+## Stargazers over time
+[![Stargazers over time](https://starchart.cc/DiceDB/dice.svg?variant=adaptive)](https://starchart.cc/DiceDB/dice)
