@@ -100,7 +100,7 @@ func TestLPush(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.cmds {
-				result := fireCommand(conn, cmd)
+				result := FireCommand(conn, cmd)
 				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
 			}
 		})
@@ -139,7 +139,7 @@ func TestRPush(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.cmds {
-				result := fireCommand(conn, cmd)
+				result := FireCommand(conn, cmd)
 				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
 			}
 		})
@@ -193,7 +193,7 @@ func TestLPushLPop(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.cmds {
-				result := fireCommand(conn, cmd)
+				result := FireCommand(conn, cmd)
 				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
 			}
 		})
@@ -247,7 +247,7 @@ func TestLPushRPop(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.cmds {
-				result := fireCommand(conn, cmd)
+				result := FireCommand(conn, cmd)
 				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
 			}
 		})
@@ -301,7 +301,7 @@ func TestRPushLPop(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.cmds {
-				result := fireCommand(conn, cmd)
+				result := FireCommand(conn, cmd)
 				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
 			}
 		})
@@ -355,7 +355,7 @@ func TestRPushRPop(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.cmds {
-				result := fireCommand(conn, cmd)
+				result := FireCommand(conn, cmd)
 				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
 			}
 		})
@@ -394,7 +394,7 @@ func TestLRPushLRPop(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.cmds {
-				result := fireCommand(conn, cmd)
+				result := FireCommand(conn, cmd)
 				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
 			}
 		})
@@ -405,7 +405,7 @@ func TestLRPushLRPop(t *testing.T) {
 
 func deqCleanUp(conn net.Conn, key string) {
 	for {
-		result := fireCommand(conn, "LPOP "+key)
+		result := FireCommand(conn, "LPOP "+key)
 		if result == "(nil)" {
 			break
 		}

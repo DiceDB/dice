@@ -15,10 +15,13 @@ func TestMain(m *testing.M) {
 	// This is a synchronous method, because internally it
 	// checks for available port and then forks a goroutine
 	// to start the server
-	runTestServer(context.Background(), &wg)
+	opts := TestServerOptions{
+		Port: 8739,
+	}
+	RunTestServer(context.Background(), &wg, opts)
 
 	// Wait for the server to start
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 
 	conn := getLocalConnection()
 	if conn == nil {
@@ -29,7 +32,7 @@ func TestMain(m *testing.M) {
 	// Run the test suite
 	exitCode := m.Run()
 
-	result := fireCommand(conn, "ABORT")
+	result := FireCommand(conn, "ABORT")
 	if result != "OK" {
 		panic("Failed to abort the server")
 	}

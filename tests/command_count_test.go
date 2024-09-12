@@ -20,7 +20,7 @@ func TestCommandCount(t *testing.T) {
 }
 
 func getCommandCount(connection net.Conn) int64 {
-	responseValue := fireCommand(connection, "COMMAND COUNT")
+	responseValue := FireCommand(connection, "COMMAND COUNT")
 	if responseValue == nil {
 		return -1
 	}

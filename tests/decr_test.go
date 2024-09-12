@@ -48,9 +48,9 @@ func TestDECR(t *testing.T) {
 			for _, cmd := range tc.commands {
 				switch cmd.op {
 				case "s":
-					fireCommand(conn, fmt.Sprintf("SET %s %d", cmd.key, cmd.val))
+					FireCommand(conn, fmt.Sprintf("SET %s %d", cmd.key, cmd.val))
 				case "d":
-					result := fireCommand(conn, fmt.Sprintf("DECR %s", cmd.key))
+					result := FireCommand(conn, fmt.Sprintf("DECR %s", cmd.key))
 					switch v := result.(type) {
 					case string:
 						assert.Equal(t, cmd.expectedErr, v)
@@ -58,7 +58,7 @@ func TestDECR(t *testing.T) {
 						assert.Equal(t, cmd.val, v)
 					}
 				case "g":
-					result := fireCommand(conn, fmt.Sprintf("GET %s", cmd.key))
+					result := FireCommand(conn, fmt.Sprintf("GET %s", cmd.key))
 					assert.Equal(t, cmd.val, result)
 				}
 			}
@@ -117,16 +117,16 @@ func TestDECRBY(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			for _, cmd := range tc.setCommands {
-				fireCommand(conn, fmt.Sprintf("SET %s %d", cmd.key, cmd.val))
+				FireCommand(conn, fmt.Sprintf("SET %s %d", cmd.key, cmd.val))
 			}
 
 			for _, cmd := range tc.decrByCommands {
 				var result any
 				switch v := cmd.decrValue.(type) {
 				case int64:
-					result = fireCommand(conn, fmt.Sprintf("DECRBY %s %d", cmd.key, v))
+					result = FireCommand(conn, fmt.Sprintf("DECRBY %s %d", cmd.key, v))
 				case string:
-					result = fireCommand(conn, fmt.Sprintf("DECRBY %s %s", cmd.key, v))
+					result = FireCommand(conn, fmt.Sprintf("DECRBY %s %s", cmd.key, v))
 				}
 				switch v := result.(type) {
 				case string:
@@ -137,7 +137,7 @@ func TestDECRBY(t *testing.T) {
 			}
 
 			for _, cmd := range tc.getCommands {
-				result := fireCommand(conn, fmt.Sprintf("GET %s", cmd.key))
+				result := FireCommand(conn, fmt.Sprintf("GET %s", cmd.key))
 				assert.Equal(t, cmd.expectedVal, result)
 			}
 		})

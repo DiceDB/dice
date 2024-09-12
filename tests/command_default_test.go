@@ -26,7 +26,7 @@ func TestCommandDefault(t *testing.T) {
 }
 
 func getCommandDefault(connection net.Conn) []interface{} {
-	responseValue := fireCommand(connection, "COMMAND")
+	responseValue := FireCommand(connection, "COMMAND")
 	if responseValue == nil {
 		return nil
 	}

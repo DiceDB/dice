@@ -22,6 +22,7 @@ var getKeysTestCases = []struct {
 	{"Invalid Get command", "get", "ERR invalid number of arguments specified for command"},
 	{"Abort command", "abort", "ERR the command has no key arguments"},
 	{"Invalid command", "NotValidCommand", "ERR invalid command specified"},
+	{"Wrong number of arguments", "", "ERR wrong number of arguments for 'command|getkeys' command"},
 }
 
 func TestCommandGetKeys(t *testing.T) {
@@ -30,7 +31,7 @@ func TestCommandGetKeys(t *testing.T) {
 
 	for _, tc := range getKeysTestCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := fireCommand(conn, "COMMAND GETKEYS "+tc.inCmd)
+			result := FireCommand(conn, "COMMAND GETKEYS "+tc.inCmd)
 			assert.DeepEqual(t, tc.expected, result)
 		})
 	}
@@ -43,7 +44,7 @@ func BenchmarkGetKeysMatch(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		for _, tc := range getKeysTestCases {
-			fireCommand(conn, "COMMAND GETKEYS "+tc.inCmd)
+			FireCommand(conn, "COMMAND GETKEYS "+tc.inCmd)
 		}
 	}
 }

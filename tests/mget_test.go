@@ -40,11 +40,11 @@ func TestMGET(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// deleteTestKeys([]string{"k1", "k2"}, store)
-			fireCommand(conn, "DEL k1")
-			fireCommand(conn, "DEL k2")
+			FireCommand(conn, "DEL k1")
+			FireCommand(conn, "DEL k2")
 
 			for i, cmd := range tc.commands {
-				result := fireCommand(conn, cmd)
+				result := FireCommand(conn, cmd)
 				if slice, ok := tc.expected[i].([]interface{}); ok {
 					assert.Assert(t, testutils.UnorderedEqual(slice, result))
 				} else {
