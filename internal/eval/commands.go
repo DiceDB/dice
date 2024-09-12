@@ -648,6 +648,14 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsonStrlenCmdMeta = DiceCmdMeta{
+		Name: "JSON.STRLEN",
+		Info: `JSON.STRLEN key [path]
+		Report the length of the JSON String at path in key`,
+		Eval:     evalJSONSTRLEN,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -724,7 +732,6 @@ func init() {
 	DiceCmds["PFADD"] = pfAddCmdMeta
 	DiceCmds["PFCOUNT"] = pfCountCmdMeta
 	DiceCmds["HGET"] = hgetCmdMeta
-	DiceCmds["PFMERGE"] = pfMergeCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

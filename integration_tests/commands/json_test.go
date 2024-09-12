@@ -548,3 +548,83 @@ func TestJSONForgetOperations(t *testing.T) {
 		})
 	}
 }
+
+func arraysArePermutations(a, b []interface{}) bool {
+	// If lengths are different, they cannot be permutations
+	if len(a) != len(b) {
+		return false
+	}
+
+	// Count occurrences of each element in array 'a'
+	countA := make(map[interface{}]int)
+	for _, elem := range a {
+		countA[elem]++
+	}
+
+	// Subtract occurrences based on array 'b'
+	for _, elem := range b {
+		countA[elem]--
+		if countA[elem] < 0 {
+			return false
+		}
+	}
+
+	// Check if all counts are zero
+	for _, count := range countA {
+		if count != 0 {
+			return false
+		}
+	}
+
+	return true
+}
+func TestJsonStrlen(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+	a := `["hehhhe","hello"]`
+	b := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"language":["rust"]}}`
+	c := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"name":12,"language":["rust"]}}`
+
+	testCases := []struct {
+		name        string
+		commands    []string
+		expected    []interface{}
+		assert_type []string
+	}{
+		
+		{
+			name:        "JSON.STRLEN with root path",
+			commands:    []string{"json.set a $ " + a, "json.strlen a $"},
+			expected:    []interface{}{"OK", []interface{}{"(nil)"}},
+			assert_type: []string{"equal", "deep_equal"},
+		},
+		{
+			name:        "JSON.STRLEN nested",
+			commands:    []string{"JSON.SET doc $ " + b, "JSON.STRLEN doc $..name"},
+			expected:    []interface{}{"OK", []interface{}{int64(3), int64(5)}},
+			assert_type: []string{"equal", "deep_equal"},
+		},
+		{
+			name:        "JSON.STRLEN nested with nil",
+			commands:    []string{"JSON.SET doc $ " + c, "JSON.STRLEN doc $..name"},
+			expected:    []interface{}{"OK", []interface{}{int64(3), int64(5), "(nil)"}},
+			assert_type: []string{"equal", "deep_equal"},
+		},
+	}
+	for _, tcase := range testCases {
+		fireCommand(conn, "DEL a")
+		fireCommand(conn, "DEL doc")
+		t.Run(tcase.name, func(t *testing.T) {
+			for i := 0; i < len(tcase.commands); i++ {
+				cmd := tcase.commands[i]
+				out := tcase.expected[i]
+				result := fireCommand(conn, cmd)
+				if tcase.assert_type[i] == "equal" {
+					assert.Equal(t, out, result)
+				} else if tcase.assert_type[i] == "deep_equal" {
+					assert.Assert(t, arraysArePermutations(out.([]interface{}), result.([]interface{})))
+				}
+			}
+		})
+	}
+}

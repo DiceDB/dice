@@ -2672,3 +2672,65 @@ func evalPFMERGE(args []string, store *dstore.Store) []byte {
 
 	return clientio.RespOK
 }
+
+func evalJSONSTRLEN(args []string, store *dstore.Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("JSON.STRLEN")
+	}
+
+	key := args[0]
+	path := defaultRootPath
+
+	if len(args) > 1 {
+		path = args[1]
+	}
+
+	obj := store.Get(key)
+
+	if obj == nil {
+		return clientio.RespNIL
+	}
+
+	// Check if the object is of JSON type
+	errWithMessage := dstore.AssertTypeAndEncoding(obj.TypeEncoding, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
+	}
+
+	jsonData := obj.Value
+
+	if path == defaultRootPath {
+		defaultStringResult := make([]interface{}, 0, 1)
+		if utils.GetJSONFieldType(jsonData) == utils.StringType {
+			defaultStringResult = append(defaultStringResult, int64(len(jsonData.(string))))
+		} else {
+			defaultStringResult = append(defaultStringResult, clientio.RespNIL)
+		}
+
+		return clientio.Encode(defaultStringResult, false)
+	}
+
+	// Parse the JSONPath expression
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("invalid JSONPath")
+	}
+	// Execute the JSONPath query
+	results := expr.Get(jsonData)
+
+	if len(results) == 0 {
+		defaultStringResult := make([]interface{}, 0, 1)
+		defaultStringResult = append(defaultStringResult, clientio.RespNIL)
+		return clientio.Encode(defaultStringResult, false)
+	}
+	strLenResults := make([]interface{}, 0, len(results))
+	for _, result := range results {
+		switch utils.GetJSONFieldType(result) {
+		case utils.StringType:
+			strLenResults = append(strLenResults, int64(len(result.(string))))
+		default:
+			strLenResults = append(strLenResults, clientio.RespNIL)
+		}
+	}
+	return clientio.Encode(strLenResults, false)
+}
