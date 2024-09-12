@@ -11,7 +11,6 @@ require (
 	github.com/charmbracelet/lipgloss v0.10.0 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
-	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 // indirect
 	github.com/dgryski/go-metro v0.0.0-20180109044635-280f6062b5bc // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
@@ -34,6 +33,7 @@ require (
 	github.com/bytedance/sonic v1.12.1
 	github.com/charmbracelet/log v0.4.0
 	github.com/cockroachdb/swiss v0.0.0-20240612210725-f4de07ae6964
+	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13
 	github.com/dicedb/go-dice v0.0.0-20240820180649-d97f15fca831
 	github.com/ohler55/ojg v1.23.0
 	github.com/twmb/murmur3 v1.1.8

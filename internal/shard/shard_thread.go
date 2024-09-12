@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"testing"
 	"time"
+
+	"github.com/charmbracelet/log"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/auth"
@@ -128,8 +129,11 @@ func (shard *ShardThread) executeCommand(op *ops.StoreOp) []byte {
 // cleanup handles cleanup logic when the shard stops.
 func (shard *ShardThread) cleanup() {
 	close(shard.ReqChan)
-	if testing.Testing() {
-		// Avoiding AOF dump in case of testing env
+	if config.WriteAOFOnCleanup {
+		// Avoiding AOF dump for test enabled environments as
+		// the tests were taking longer due to background tasks which exceeded the WaitDelay,
+		// thus causing the test process to be forcibly terminated.
+		log.Info("Skipping AOF dump as test env enabled.")
 		return
 	}
 

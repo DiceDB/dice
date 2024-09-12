@@ -1,4 +1,4 @@
-package querywatcher
+package sql
 
 import (
 	"errors"
@@ -7,11 +7,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/dicedb/dice/internal/object"
+
 	"github.com/bytedance/sonic"
 	"github.com/cockroachdb/swiss"
 	"github.com/dicedb/dice/internal/regex"
 	"github.com/dicedb/dice/internal/server/utils"
-	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/ohler55/ojg/jp"
 	"github.com/xwb1989/sqlparser"
 )
@@ -19,24 +20,23 @@ import (
 var ErrNoResultsFound = errors.New("ERR No results found")
 var ErrInvalidJSONPath = errors.New("ERR invalid JSONPath")
 
-func ExecuteQuery(query *DSQLQuery, store *swiss.Map[string, *dstore.Obj]) ([]dstore.DSQLQueryResultRow, error) {
-	var result []dstore.DSQLQueryResultRow
+type QueryResultRow struct {
+	Key   string
+	Value object.Obj
+}
+
+func ExecuteQuery(query *DSQLQuery, store *swiss.Map[string, *object.Obj]) ([]QueryResultRow, error) {
+	var result []QueryResultRow
 
 	var err error
-	store.All(func(key string, value *dstore.Obj) bool {
-		// TODO: We can remove this check once we have scatter-gather algorithm for multi-threaded execution implemented.
-		//  This is only required when we are running unit tests and passing the complete store to the function.
-		if !regex.WildCardMatch(query.KeyRegex, key) {
-			return true
-		}
-
-		row := dstore.DSQLQueryResultRow{
+	store.All(func(key string, value *object.Obj) bool {
+		row := QueryResultRow{
 			Key:   key,
 			Value: *value,
 		}
 
 		if query.Where != nil {
-			match, evalErr := evaluateWhereClause(query.Where, row)
+			match, evalErr := EvaluateWhereClause(query.Where, row)
 			if errors.Is(evalErr, ErrNoResultsFound) {
 				// if no result found error
 				// and continue with the next iteration
@@ -78,7 +78,7 @@ func ExecuteQuery(query *DSQLQuery, store *swiss.Map[string, *dstore.Obj]) ([]ds
 
 	if !query.Selection.ValueSelection {
 		for i := range result {
-			result[i].Value = dstore.Obj{}
+			result[i].Value = object.Obj{}
 		}
 	}
 
@@ -89,10 +89,10 @@ func ExecuteQuery(query *DSQLQuery, store *swiss.Map[string, *dstore.Obj]) ([]ds
 	return result, nil
 }
 
-func MarshalResultIfJSON(row *dstore.DSQLQueryResultRow) error {
+func MarshalResultIfJSON(row *QueryResultRow) error {
 	// if the row contains JSON field then convert the json object into string representation so it can be encoded
 	// before being returned to the client
-	if dstore.GetEncoding(row.Value.TypeEncoding) == dstore.ObjEncodingJSON && dstore.GetType(row.Value.TypeEncoding) == dstore.ObjTypeJSON {
+	if object.GetEncoding(row.Value.TypeEncoding) == object.ObjEncodingJSON && object.GetType(row.Value.TypeEncoding) == object.ObjTypeJSON {
 		marshaledData, err := sonic.MarshalString(row.Value.Value)
 		if err != nil {
 			return err
@@ -103,7 +103,7 @@ func MarshalResultIfJSON(row *dstore.DSQLQueryResultRow) error {
 	return nil
 }
 
-func sortResults(query *DSQLQuery, result []dstore.DSQLQueryResultRow) {
+func sortResults(query *DSQLQuery, result []QueryResultRow) {
 	if query.OrderBy.OrderBy == utils.EmptyStr {
 		return
 	}
@@ -131,7 +131,7 @@ func sortResults(query *DSQLQuery, result []dstore.DSQLQueryResultRow) {
 	})
 }
 
-func getOrderByValue(orderBy string, row dstore.DSQLQueryResultRow) (value interface{}, valueType string, err error) {
+func getOrderByValue(orderBy string, row QueryResultRow) (value interface{}, valueType string, err error) {
 	switch orderBy {
 	case TempKey:
 		return row.Key, String, nil
@@ -189,26 +189,28 @@ func compareBoolValues(order string, valI, valJ bool) bool {
 	return valI && !valJ
 }
 
-func evaluateWhereClause(expr sqlparser.Expr, row dstore.DSQLQueryResultRow) (bool, error) {
+func EvaluateWhereClause(expr sqlparser.Expr, row QueryResultRow) (bool, error) {
 	switch expr := expr.(type) {
+	case *sqlparser.ParenExpr:
+		return EvaluateWhereClause(expr.Expr, row)
 	case *sqlparser.ComparisonExpr:
 		return evaluateComparison(expr, row)
 	case *sqlparser.AndExpr:
-		left, err := evaluateWhereClause(expr.Left, row)
+		left, err := EvaluateWhereClause(expr.Left, row)
 		if err != nil {
 			return false, err
 		}
-		right, err := evaluateWhereClause(expr.Right, row)
+		right, err := EvaluateWhereClause(expr.Right, row)
 		if err != nil {
 			return false, err
 		}
 		return left && right, nil
 	case *sqlparser.OrExpr:
-		left, err := evaluateWhereClause(expr.Left, row)
+		left, err := EvaluateWhereClause(expr.Left, row)
 		if err != nil {
 			return false, err
 		}
-		right, err := evaluateWhereClause(expr.Right, row)
+		right, err := EvaluateWhereClause(expr.Right, row)
 		if err != nil {
 			return false, err
 		}
@@ -218,7 +220,7 @@ func evaluateWhereClause(expr sqlparser.Expr, row dstore.DSQLQueryResultRow) (bo
 	}
 }
 
-func evaluateComparison(expr *sqlparser.ComparisonExpr, row dstore.DSQLQueryResultRow) (b bool, e error) {
+func evaluateComparison(expr *sqlparser.ComparisonExpr, row QueryResultRow) (b bool, e error) {
 	left, leftType, err := getExprValueAndType(expr.Left, row)
 	if err != nil {
 		return false, err
@@ -245,7 +247,7 @@ func evaluateComparison(expr *sqlparser.ComparisonExpr, row dstore.DSQLQueryResu
 	}
 }
 
-func getExprValueAndType(expr sqlparser.Expr, row dstore.DSQLQueryResultRow) (value interface{}, valueType string, err error) {
+func getExprValueAndType(expr sqlparser.Expr, row QueryResultRow) (value interface{}, valueType string, err error) {
 	switch expr := expr.(type) {
 	case *sqlparser.ColName:
 		switch expr.Name.String() {
@@ -263,17 +265,19 @@ func getExprValueAndType(expr sqlparser.Expr, row dstore.DSQLQueryResultRow) (va
 			return retrieveValueFromJSON(string(expr.Val), &row.Value)
 		}
 		return sqlValToGoValue(expr)
+	case *sqlparser.NullVal:
+		return nil, Nil, nil
 	default:
 		return nil, "", fmt.Errorf("unsupported expression type: %T", expr)
 	}
 }
 
-func isJSONField(expr *sqlparser.SQLVal, obj *dstore.Obj) bool {
-	if err := dstore.AssertEncoding(obj.TypeEncoding, dstore.ObjEncodingJSON); err != nil {
+func isJSONField(expr *sqlparser.SQLVal, obj *object.Obj) bool {
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingJSON); err != nil {
 		return false
 	}
 
-	if err := dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeJSON); err != nil {
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeJSON); err != nil {
 		return false
 	}
 
@@ -283,7 +287,7 @@ func isJSONField(expr *sqlparser.SQLVal, obj *dstore.Obj) bool {
 		strings.HasPrefix(string(expr.Val), TempPrefix)
 }
 
-func retrieveValueFromJSON(path string, jsonData *dstore.Obj) (value interface{}, valueType string, err error) {
+func retrieveValueFromJSON(path string, jsonData *object.Obj) (value interface{}, valueType string, err error) {
 	// path is in the format '_value.field1.field2'. We need to remove _value reference from the prefix to get the json
 	// path.
 	jsonPath := strings.Split(path, ".")
@@ -344,7 +348,7 @@ func isInt64(f float64) bool {
 }
 
 // getValueAndType returns the type-casted value and type of the object
-func getValueAndType(obj *dstore.Obj) (val interface{}, s string, e error) {
+func getValueAndType(obj *object.Obj) (val interface{}, s string, e error) {
 	switch v := obj.Value.(type) {
 	case string:
 		return v, String, nil

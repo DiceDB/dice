@@ -1,6 +1,8 @@
-package querywatcher
+package sql_test
 
 import (
+	"github.com/dicedb/dice/internal/object"
+	"github.com/dicedb/dice/internal/sql"
 	"sort"
 	"testing"
 
@@ -35,7 +37,7 @@ func setup(store *dstore.Store, dataset []keyValue) {
 	}
 
 	for _, data := range dataset {
-		store.Put(data.key, &dstore.Obj{Value: data.value})
+		store.Put(data.key, &object.Obj{Value: data.value})
 	}
 }
 
@@ -43,19 +45,11 @@ func TestExecuteQueryOrderBykey(t *testing.T) {
 	store := dstore.NewStore(nil)
 	setup(store, simpleKVDataset)
 
-	query := DSQLQuery{
-		KeyRegex: "k*",
-		Selection: QuerySelection{
-			KeySelection:   true,
-			ValueSelection: true,
-		},
-		OrderBy: QueryOrder{
-			OrderBy: "_key",
-			Order:   Asc,
-		},
-	}
+	queryString := "SELECT $key, $value WHERE $key like 'k*' ORDER BY $key ASC"
+	query, err := sql.ParseQuery(queryString)
+	assert.NilError(t, err)
 
-	result, err := ExecuteQuery(&query, store.GetStore())
+	result, err := sql.ExecuteQuery(&query, store.GetStore())
 
 	assert.NilError(t, err)
 	assert.Equal(t, len(result), len(simpleKVDataset))
@@ -78,19 +72,11 @@ func TestExecuteQueryBasicOrderByValue(t *testing.T) {
 	store := dstore.NewStore(nil)
 	setup(store, simpleKVDataset)
 
-	query := DSQLQuery{
-		KeyRegex: "k*",
-		Selection: QuerySelection{
-			KeySelection:   true,
-			ValueSelection: true,
-		},
-		OrderBy: QueryOrder{
-			OrderBy: "_value",
-			Order:   Asc,
-		},
-	}
+	queryStr := "SELECT $key, $value WHERE $key like 'k*' ORDER BY $value ASC"
+	query, err := sql.ParseQuery(queryStr)
+	assert.NilError(t, err)
 
-	result, err := ExecuteQuery(&query, store.GetStore())
+	result, err := sql.ExecuteQuery(&query, store.GetStore())
 
 	assert.NilError(t, err)
 	assert.Equal(t, len(result), len(simpleKVDataset))
@@ -113,20 +99,11 @@ func TestExecuteQueryLimit(t *testing.T) {
 	store := dstore.NewStore(nil)
 	setup(store, simpleKVDataset)
 
-	query := DSQLQuery{
-		KeyRegex: "k*",
-		Selection: QuerySelection{
-			KeySelection:   false,
-			ValueSelection: true,
-		},
-		OrderBy: QueryOrder{
-			OrderBy: "_key",
-			Order:   Asc,
-		},
-		Limit: 3,
-	}
+	queryStr := "SELECT $value WHERE $key like 'k*' ORDER BY $key ASC LIMIT 3"
+	query, err := sql.ParseQuery(queryStr)
+	assert.NilError(t, err)
 
-	result, err := ExecuteQuery(&query, store.GetStore())
+	result, err := sql.ExecuteQuery(&query, store.GetStore())
 
 	assert.NilError(t, err)
 	assert.Assert(t, cmp.Len(result, 3)) // Checks if limit is respected
@@ -149,15 +126,11 @@ func TestExecuteQueryNoMatch(t *testing.T) {
 	store := dstore.NewStore(nil)
 	setup(store, simpleKVDataset)
 
-	query := DSQLQuery{
-		KeyRegex: "x*",
-		Selection: QuerySelection{
-			KeySelection:   true,
-			ValueSelection: true,
-		},
-	}
+	queryStr := "SELECT $key, $value WHERE $key like 'x*'"
+	query, err := sql.ParseQuery(queryStr)
+	assert.NilError(t, err)
 
-	result, err := ExecuteQuery(&query, store.GetStore())
+	result, err := sql.ExecuteQuery(&query, store.GetStore())
 
 	assert.NilError(t, err)
 	assert.Assert(t, cmp.Len(result, 0)) // No keys match "x*"
@@ -167,20 +140,11 @@ func TestExecuteQueryWithWhere(t *testing.T) {
 	store := dstore.NewStore(nil)
 	setup(store, simpleKVDataset)
 	t.Run("BasicWhereClause", func(t *testing.T) {
-		query := DSQLQuery{
-			KeyRegex: "k*",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			Where: &sqlparser.ComparisonExpr{
-				Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-				Operator: "=",
-				Right:    sqlparser.NewStrVal([]byte("v3")),
-			},
-		}
+		queryStr := "SELECT $key, $value WHERE $value = 'v3' AND $key like 'k*'"
+		query, err := sql.ParseQuery(queryStr)
+		assert.NilError(t, err)
 
-		result, err := ExecuteQuery(&query, store.GetStore())
+		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 result for WHERE clause")
@@ -189,51 +153,22 @@ func TestExecuteQueryWithWhere(t *testing.T) {
 	})
 
 	t.Run("EmptyResult", func(t *testing.T) {
-		query := DSQLQuery{
-			KeyRegex: "k*",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			Where: &sqlparser.ComparisonExpr{
-				Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-				Operator: "=",
-				Right:    sqlparser.NewStrVal([]byte("nonexistent")),
-			},
-		}
+		queryStr := "SELECT $key, $value WHERE $value = 'nonexistent' AND $key like 'k*'"
+		query, err := sql.ParseQuery(queryStr)
+		assert.NilError(t, err)
 
-		result, err := ExecuteQuery(&query, store.GetStore())
+		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 0, "Expected empty result for non-matching WHERE clause")
 	})
 
 	t.Run("ComplexWhereClause", func(t *testing.T) {
-		query := DSQLQuery{
-			KeyRegex: "k*",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			OrderBy: QueryOrder{
-				OrderBy: "_value",
-				Order:   "desc",
-			},
-			Where: &sqlparser.AndExpr{
-				Left: &sqlparser.ComparisonExpr{
-					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-					Operator: ">",
-					Right:    sqlparser.NewStrVal([]byte("v2")),
-				},
-				Right: &sqlparser.ComparisonExpr{
-					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-					Operator: "<",
-					Right:    sqlparser.NewStrVal([]byte("v5")),
-				},
-			},
-		}
+		queryStr := "SELECT $key, $value WHERE $value > 'v2' AND $value < 'v5' AND $key like 'k*' ORDER BY $key ASC"
+		query, err := sql.ParseQuery(queryStr)
+		assert.NilError(t, err)
 
-		result, err := ExecuteQuery(&query, store.GetStore())
+		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 2, "Expected 2 results for complex WHERE clause")
@@ -241,20 +176,11 @@ func TestExecuteQueryWithWhere(t *testing.T) {
 	})
 
 	t.Run("ComparingKeyWithValue", func(t *testing.T) {
-		query := DSQLQuery{
-			KeyRegex: "k*",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			Where: &sqlparser.ComparisonExpr{
-				Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_key")},
-				Operator: "=",
-				Right:    &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-			},
-		}
+		queryStr := "SELECT $key, $value WHERE $key = $value"
+		query, err := sql.ParseQuery(queryStr)
+		assert.NilError(t, err)
 
-		result, err := ExecuteQuery(&query, store.GetStore())
+		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 result for comparison between key and value")
@@ -268,46 +194,13 @@ func TestExecuteQueryWithIncompatibleTypes(t *testing.T) {
 	setup(store, simpleKVDataset)
 
 	t.Run("ComparingStrWithInt", func(t *testing.T) {
-		query := DSQLQuery{
-			KeyRegex: "k*",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			Where: &sqlparser.ComparisonExpr{
-				Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-				Operator: "=",
-				Right:    sqlparser.NewIntVal([]byte("42")),
-			},
-		}
+		queryStr := "SELECT $key, $value WHERE $value = 42 AND $key like 'k*'"
+		query, err := sql.ParseQuery(queryStr)
+		assert.NilError(t, err)
 
-		_, err := ExecuteQuery(&query, store.GetStore())
+		_, err = sql.ExecuteQuery(&query, store.GetStore())
 
 		assert.Error(t, err, "incompatible types in comparison: string and int64")
-	})
-
-	t.Run("NullValue", func(t *testing.T) {
-		// We don't support NULL values in Dice, however, we should include a
-		// test for it to ensure the executor handles it correctly.
-		store.Put("nullKey", &dstore.Obj{Value: nil})
-		defer store.Del("nullKey")
-
-		query := DSQLQuery{
-			KeyRegex: "nullKey",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			Where: &sqlparser.ComparisonExpr{
-				Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-				Operator: "=",
-				Right:    &sqlparser.NullVal{},
-			},
-		}
-
-		_, err := ExecuteQuery(&query, store.GetStore())
-
-		assert.Error(t, err, "unsupported value type: <nil>")
 	})
 }
 
@@ -316,9 +209,8 @@ func TestExecuteQueryWithEdgeCases(t *testing.T) {
 	setup(store, simpleKVDataset)
 
 	t.Run("CaseSensitivity", func(t *testing.T) {
-		query := DSQLQuery{
-			KeyRegex: "k*",
-			Selection: QuerySelection{
+		query := sql.DSQLQuery{
+			Selection: sql.QuerySelection{
 				KeySelection:   true,
 				ValueSelection: true,
 			},
@@ -329,31 +221,17 @@ func TestExecuteQueryWithEdgeCases(t *testing.T) {
 			},
 		}
 
-		result, err := ExecuteQuery(&query, store.GetStore())
+		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 0, "Expected 0 results due to case sensitivity")
 	})
 
 	t.Run("WhereClauseOnKey", func(t *testing.T) {
-		query := DSQLQuery{
-			KeyRegex: "k*",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			OrderBy: QueryOrder{
-				OrderBy: "_key",
-				Order:   Asc,
-			},
-			Where: &sqlparser.ComparisonExpr{
-				Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_key")},
-				Operator: ">",
-				Right:    sqlparser.NewStrVal([]byte("k3")),
-			},
-		}
+		queryStr := "SELECT $key, $value WHERE $key > 'k3' AND $key like 'k*' ORDER BY $key ASC"
+		query, err := sql.ParseQuery(queryStr)
 
-		result, err := ExecuteQuery(&query, store.GetStore())
+		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 2, "Expected 2 results for WHERE clause on key")
@@ -361,33 +239,21 @@ func TestExecuteQueryWithEdgeCases(t *testing.T) {
 	})
 
 	t.Run("UnsupportedOperator", func(t *testing.T) {
-		query := DSQLQuery{
-			KeyRegex: "k*",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			Where: &sqlparser.ComparisonExpr{
-				Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-				Operator: "regexp",
-				Right:    sqlparser.NewStrVal([]byte("%3")),
-			},
-		}
+		queryStr := "SELECT $key, $value WHERE $value regexp '%3' AND $key like 'k*'"
+		query, err := sql.ParseQuery(queryStr)
+		assert.NilError(t, err)
 
-		_, err := ExecuteQuery(&query, store.GetStore())
+		_, err = sql.ExecuteQuery(&query, store.GetStore())
 
 		assert.ErrorContains(t, err, "unsupported operator")
 	})
 
 	t.Run("EmptyKeyRegex", func(t *testing.T) {
-		query := DSQLQuery{
-			KeyRegex: utils.EmptyStr,
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-		}
-		result, err := ExecuteQuery(&query, store.GetStore())
+		queryStr := "SELECT $key, $value WHERE $key like ''"
+		query, err := sql.ParseQuery(queryStr)
+		assert.NilError(t, err)
+
+		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 0, "Expected no keys to be returned for empty regex")
@@ -414,7 +280,7 @@ func setupJSON(t *testing.T, store *dstore.Store, dataset []keyValue) {
 			t.Fatalf("Failed to unmarshal value: %v", err)
 		}
 
-		store.Put(data.key, store.NewObj(jsonValue, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON))
+		store.Put(data.key, store.NewObj(jsonValue, -1, object.ObjTypeJSON, object.ObjEncodingJSON))
 	}
 }
 
@@ -423,20 +289,11 @@ func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
 	setupJSON(t, store, jsonWhereClauseDataset)
 
 	t.Run("BasicWhereClauseWithJSON", func(t *testing.T) {
-		query := DSQLQuery{
-			KeyRegex: "json*",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			Where: &sqlparser.ComparisonExpr{
-				Left:     sqlparser.NewStrVal([]byte("_value.name")),
-				Operator: "=",
-				Right:    sqlparser.NewStrVal([]byte("Tom")),
-			},
-		}
+		queryStr := "SELECT $key, $value WHERE '$value.name' = 'Tom' AND $key like 'json*'"
+		query, err := sql.ParseQuery(queryStr)
+		assert.NilError(t, err)
 
-		result, err := ExecuteQuery(&query, store.GetStore())
+		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 results for WHERE clause")
@@ -449,40 +306,22 @@ func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
 	})
 
 	t.Run("EmptyResult", func(t *testing.T) {
-		query := DSQLQuery{
-			KeyRegex: "json*",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			Where: &sqlparser.ComparisonExpr{
-				Left:     sqlparser.NewStrVal([]byte("_value.name")),
-				Operator: "=",
-				Right:    sqlparser.NewStrVal([]byte("Bill")),
-			},
-		}
+		queryStr := "SELECT $key, $value WHERE '$value.name' = 'Bill' AND $key like 'json*'"
+		query, err := sql.ParseQuery(queryStr)
+		assert.NilError(t, err)
 
-		result, err := ExecuteQuery(&query, store.GetStore())
+		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 0, "Expected empty result for non-matching WHERE clause")
 	})
 
 	t.Run("WhereClauseWithFloats", func(t *testing.T) {
-		query := DSQLQuery{
-			KeyRegex: "json*",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			Where: &sqlparser.ComparisonExpr{
-				Left:     sqlparser.NewStrVal([]byte("_value.score")),
-				Operator: ">",
-				Right:    sqlparser.NewFloatVal([]byte("13.15")),
-			},
-		}
+		queryStr := "SELECT $key, $value WHERE '$value.score' > 13.15 AND $key like 'json*'"
+		query, err := sql.ParseQuery(queryStr)
+		assert.NilError(t, err)
 
-		result, err := ExecuteQuery(&query, store.GetStore())
+		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 result for WHERE clause with floating point values")
@@ -495,20 +334,11 @@ func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
 	})
 
 	t.Run("WhereClauseWithInteger", func(t *testing.T) {
-		query := DSQLQuery{
-			KeyRegex: "json*",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			Where: &sqlparser.ComparisonExpr{
-				Left:     sqlparser.NewStrVal([]byte("_value.scoreInt")),
-				Operator: ">",
-				Right:    sqlparser.NewIntVal([]byte("13")),
-			},
-		}
+		queryStr := "SELECT $key, $value WHERE '$value.scoreInt' > 13 AND $key like 'json*'"
+		query, err := sql.ParseQuery(queryStr)
+		assert.NilError(t, err)
 
-		result, err := ExecuteQuery(&query, store.GetStore())
+		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 result for WHERE clause with integer values")
@@ -521,20 +351,11 @@ func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
 	})
 
 	t.Run("NestedWhereClause", func(t *testing.T) {
-		query := DSQLQuery{
-			KeyRegex: "json*",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			Where: &sqlparser.ComparisonExpr{
-				Left:     sqlparser.NewStrVal([]byte("_value.field1.field2.field3.score")),
-				Operator: "<",
-				Right:    sqlparser.NewIntVal([]byte("13")),
-			},
-		}
+		queryStr := "SELECT $key, $value WHERE '$value.field1.field2.field3.score' < 13 AND $key like 'json*'"
+		query, err := sql.ParseQuery(queryStr)
+		assert.NilError(t, err)
 
-		result, err := ExecuteQuery(&query, store.GetStore())
+		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 result for WHERE clause with nested json")
@@ -547,20 +368,11 @@ func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
 	})
 
 	t.Run("ComplexWhereClause", func(t *testing.T) {
-		query := DSQLQuery{
-			KeyRegex: "json*",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			Where: &sqlparser.ComparisonExpr{
-				Left:     sqlparser.NewStrVal([]byte("_value.field1.field2.field3.score")),
-				Operator: ">",
-				Right:    sqlparser.NewStrVal([]byte("_value.field1.score2")),
-			},
-		}
+		queryStr := "SELECT $key, $value WHERE '$value.field1.field2.field3.score' > '$value.field1.score2' AND $key like 'json*'"
+		query, err := sql.ParseQuery(queryStr)
+		assert.NilError(t, err)
 
-		result, err := ExecuteQuery(&query, store.GetStore())
+		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 result for Complex WHERE clause expression")
@@ -586,19 +398,11 @@ func TestExecuteQueryWithJsonOrderBy(t *testing.T) {
 	setupJSON(t, store, jsonOrderDataset)
 
 	t.Run("OrderBySimpleJSONField", func(t *testing.T) {
-		query := DSQLQuery{
-			KeyRegex: "json*",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			OrderBy: QueryOrder{
-				OrderBy: "_value.name",
-				Order:   "asc",
-			},
-		}
+		queryStr := "SELECT $key, $value WHERE $key like 'json*' ORDER BY $value.name ASC"
+		query, err := sql.ParseQuery(queryStr)
+		assert.NilError(t, err)
 
-		result, err := ExecuteQuery(&query, store.GetStore())
+		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, 5, len(result), "Expected 5 results")
@@ -620,19 +424,11 @@ func TestExecuteQueryWithJsonOrderBy(t *testing.T) {
 	})
 
 	t.Run("OrderByNumericJSONField", func(t *testing.T) {
-		query := DSQLQuery{
-			KeyRegex: "json*",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			OrderBy: QueryOrder{
-				OrderBy: "_value.age",
-				Order:   "desc",
-			},
-		}
+		queryStr := "SELECT $key, $value WHERE $key like 'json*' ORDER BY $value.age DESC"
+		query, err := sql.ParseQuery(queryStr)
+		assert.NilError(t, err)
 
-		result, err := ExecuteQuery(&query, store.GetStore())
+		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, 5, len(result))
@@ -654,19 +450,11 @@ func TestExecuteQueryWithJsonOrderBy(t *testing.T) {
 	})
 
 	t.Run("OrderByNestedJSONField", func(t *testing.T) {
-		query := DSQLQuery{
-			KeyRegex: "json*",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			OrderBy: QueryOrder{
-				OrderBy: "_value.nested.field.value",
-				Order:   "asc",
-			},
-		}
+		queryStr := "SELECT $key, $value WHERE $key like 'json*' ORDER BY '$value.nested.field.value' ASC"
+		query, err := sql.ParseQuery(queryStr)
+		assert.NilError(t, err)
 
-		result, err := ExecuteQuery(&query, store.GetStore())
+		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, 5, len(result))
@@ -687,19 +475,11 @@ func TestExecuteQueryWithJsonOrderBy(t *testing.T) {
 	})
 
 	t.Run("OrderByMixedTypes", func(t *testing.T) {
-		query := DSQLQuery{
-			KeyRegex: "json*",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			OrderBy: QueryOrder{
-				OrderBy: "_value.score",
-				Order:   "desc",
-			},
-		}
+		queryStr := "SELECT $key, $value WHERE $key like 'json*' ORDER BY $value.score DESC"
+		query, err := sql.ParseQuery(queryStr)
+		assert.NilError(t, err)
 
-		result, err := ExecuteQuery(&query, store.GetStore())
+		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		// No ordering guarantees for mixed types.
@@ -707,24 +487,11 @@ func TestExecuteQueryWithJsonOrderBy(t *testing.T) {
 	})
 
 	t.Run("OrderByWithWhereClause", func(t *testing.T) {
-		query := DSQLQuery{
-			KeyRegex: "json*",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			Where: &sqlparser.ComparisonExpr{
-				Left:     sqlparser.NewStrVal([]byte("_value.age")),
-				Operator: ">",
-				Right:    sqlparser.NewIntVal([]byte("30")),
-			},
-			OrderBy: QueryOrder{
-				OrderBy: "_value.name",
-				Order:   "desc",
-			},
-		}
+		queryStr := "SELECT $key, $value WHERE $key like 'json*' AND '$value.age' > 30 ORDER BY $value.name DESC"
+		query, err := sql.ParseQuery(queryStr)
+		assert.NilError(t, err)
 
-		result, err := ExecuteQuery(&query, store.GetStore())
+		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		assert.Equal(t, 3, len(result), "Expected 3 results (age > 30, ordered by name)")
@@ -739,19 +506,11 @@ func TestExecuteQueryWithJsonOrderBy(t *testing.T) {
 	})
 
 	t.Run("OrderByNonExistentField", func(t *testing.T) {
-		query := DSQLQuery{
-			KeyRegex: "json*",
-			Selection: QuerySelection{
-				KeySelection:   true,
-				ValueSelection: true,
-			},
-			OrderBy: QueryOrder{
-				OrderBy: "_value.nonexistent",
-				Order:   "asc",
-			},
-		}
+		queryStr := "SELECT $key, $value WHERE $key like 'json*' ORDER BY $value.nonexistent ASC"
+		query, err := sql.ParseQuery(queryStr)
+		assert.NilError(t, err)
 
-		result, err := ExecuteQuery(&query, store.GetStore())
+		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
 		assert.NilError(t, err)
 		// No ordering guarantees for non-existent field references.
@@ -803,168 +562,61 @@ func TestExecuteQueryWithLikeStringComparisons(t *testing.T) {
 
 	testCases := []struct {
 		name       string
-		query      DSQLQuery
+		query      string
 		expectLen  int
 		expectKeys []string
 	}{
 		{
-			name: "NamesStartingWithA",
-			query: DSQLQuery{
-				KeyRegex: "user:*",
-				Selection: QuerySelection{
-					KeySelection:   true,
-					ValueSelection: true,
-				},
-				Where: &sqlparser.ComparisonExpr{
-					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-					Operator: "LIKE",
-					Right:    sqlparser.NewStrVal([]byte("A*")),
-				},
-			},
+			name:       "NamesStartingWithA",
+			query:      "SELECT $key, $value WHERE $value LIKE 'A*' AND $key LIKE 'user:*'",
 			expectLen:  1,
 			expectKeys: []string{"user:1"},
 		},
 		{
-			name: "EmailsWithGmailDomain",
-			query: DSQLQuery{
-				KeyRegex: "email:*",
-				Selection: QuerySelection{
-					KeySelection:   true,
-					ValueSelection: true,
-				},
-				Where: &sqlparser.ComparisonExpr{
-					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-					Operator: "LIKE",
-					Right:    sqlparser.NewStrVal([]byte("*@gmail.com")),
-				},
-			},
+			name:       "EmailsWithGmailDomain",
+			query:      "SELECT $key, $value WHERE $value LIKE '*@gmail.com' AND $key LIKE 'email:*'",
 			expectLen:  1,
 			expectKeys: []string{"email:3"},
 		},
 		{
-			name: "DescriptionsContainingWord",
-			query: DSQLQuery{
-				KeyRegex: "desc:*",
-				Selection: QuerySelection{
-					KeySelection:   true,
-					ValueSelection: true,
-				},
-				Where: &sqlparser.ComparisonExpr{
-					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-					Operator: "LIKE",
-					Right:    sqlparser.NewStrVal([]byte("*description*")),
-				},
-				OrderBy: QueryOrder{
-					OrderBy: "_key",
-					Order:   Asc,
-				},
-			},
+			name:       "DescriptionsContainingWord",
+			query:      "SELECT $key, $value WHERE $value LIKE '*description*' AND $key LIKE 'desc:*' ORDER BY $key ASC",
 			expectLen:  2,
 			expectKeys: []string{"desc:1", "desc:2"},
 		},
 		{
-			name: "CaseInsensitiveMatching",
-			query: DSQLQuery{
-				KeyRegex: "desc:*",
-				Selection: QuerySelection{
-					KeySelection:   true,
-					ValueSelection: true,
-				},
-				Where: &sqlparser.ComparisonExpr{
-					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-					Operator: "LIKE",
-					Right:    sqlparser.NewStrVal([]byte("*UPPERCASE*")),
-				},
-			},
+			name:       "CaseInsensitiveMatching",
+			query:      "SELECT $key, $value WHERE $value LIKE '*UPPERCASE*' AND $key LIKE 'desc:*'",
 			expectLen:  1,
 			expectKeys: []string{"desc:4"},
 		},
 		{
-			name: "MatchingSpecialCharacters",
-			query: DSQLQuery{
-				KeyRegex: "desc:*",
-				Selection: QuerySelection{
-					KeySelection:   true,
-					ValueSelection: true,
-				},
-				Where: &sqlparser.ComparisonExpr{
-					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-					Operator: "LIKE",
-					Right:    sqlparser.NewStrVal([]byte("*!@#*")),
-				},
-			},
+			name:       "MatchingSpecialCharacters",
+			query:      "SELECT $key, $value WHERE $value LIKE '*!@#*' AND $key LIKE 'desc:*'",
 			expectLen:  1,
 			expectKeys: []string{"desc:3"},
 		},
 		{
-			name: "MatchingNumbers",
-			query: DSQLQuery{
-				KeyRegex: "desc:*",
-				Selection: QuerySelection{
-					KeySelection:   true,
-					ValueSelection: true,
-				},
-				Where: &sqlparser.ComparisonExpr{
-					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-					Operator: "LIKE",
-					Right:    sqlparser.NewStrVal([]byte("*123*")),
-				},
-			},
+			name:       "MatchingNumbers",
+			query:      "SELECT $key, $value WHERE $value LIKE '*123*' AND $key LIKE 'desc:*'",
 			expectLen:  1,
 			expectKeys: []string{"desc:3"},
 		},
 		{
-			name: "ProductsContainingColor",
-			query: DSQLQuery{
-				KeyRegex: "product:*",
-				Selection: QuerySelection{
-					KeySelection:   true,
-					ValueSelection: true,
-				},
-				Where: &sqlparser.ComparisonExpr{
-					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-					Operator: "LIKE",
-					Right:    sqlparser.NewStrVal([]byte("*Red*")),
-				},
-			},
+			name:       "ProductsContainingColor",
+			query:      "SELECT $key, $value WHERE $value LIKE '*Red*' AND $key LIKE 'product:*'",
 			expectLen:  1,
 			expectKeys: []string{"product:1"},
 		},
 		{
-			name: "TagsEndingWithPriority",
-			query: DSQLQuery{
-				KeyRegex: "tag:*",
-				Selection: QuerySelection{
-					KeySelection:   true,
-					ValueSelection: true,
-				},
-				Where: &sqlparser.ComparisonExpr{
-					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-					Operator: "LIKE",
-					Right:    sqlparser.NewStrVal([]byte("*priority")),
-				},
-			},
+			name:       "TagsEndingWithPriority",
+			query:      "SELECT $key, $value WHERE $value LIKE '*priority' AND $key LIKE 'tag:*'",
 			expectLen:  1,
 			expectKeys: []string{"tag:3"},
 		},
 		{
-			name: "NamesWith5Characters",
-			query: DSQLQuery{
-				KeyRegex: "user:*",
-				Selection: QuerySelection{
-					KeySelection:   true,
-					ValueSelection: true,
-				},
-				Where: &sqlparser.ComparisonExpr{
-					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-					Operator: "LIKE",
-					Right:    sqlparser.NewStrVal([]byte("???????????")),
-				},
-				OrderBy: QueryOrder{
-					OrderBy: "_key",
-					Order:   Asc,
-				},
-			},
+			name:       "NamesWith5Characters",
+			query:      "SELECT $key, $value WHERE $value LIKE '???????????' AND $key LIKE 'user:*' ORDER BY $key ASC",
 			expectLen:  2,
 			expectKeys: []string{"user:1", "user:2"},
 		},
@@ -972,7 +624,9 @@ func TestExecuteQueryWithLikeStringComparisons(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := ExecuteQuery(&tc.query, store.GetStore())
+			query, err := sql.ParseQuery(tc.query)
+			assert.NilError(t, err)
+			result, err := sql.ExecuteQuery(&query, store.GetStore())
 
 			assert.NilError(t, err)
 			assert.Equal(t, len(result), tc.expectLen, "Expected %d results, got %d", tc.expectLen, len(result))
@@ -993,175 +647,55 @@ func TestExecuteQueryWithStringNotLikeComparisons(t *testing.T) {
 
 	testCases := []struct {
 		name       string
-		query      DSQLQuery
+		query      string
 		expectLen  int
 		expectKeys []string
 	}{
 		{
-			name: "NamesNotStartingWithA",
-			query: DSQLQuery{
-				KeyRegex: "user:*",
-				Selection: QuerySelection{
-					KeySelection:   true,
-					ValueSelection: true,
-				},
-				Where: &sqlparser.ComparisonExpr{
-					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-					Operator: "NOT LIKE",
-					Right:    sqlparser.NewStrVal([]byte("A*")),
-				},
-				OrderBy: QueryOrder{
-					OrderBy: "_key",
-					Order:   Asc,
-				},
-			},
+			name:       "NamesNotStartingWithA",
+			query:      "SELECT $key, $value WHERE $value NOT LIKE 'A*' AND $key LIKE 'user:*' ORDER BY $key ASC",
 			expectLen:  4,
 			expectKeys: []string{"user:2", "user:3", "user:4", "user:5"},
 		},
 		{
-			name: "EmailsNotWithGmailDomain",
-			query: DSQLQuery{
-				KeyRegex: "email:*",
-				Selection: QuerySelection{
-					KeySelection:   true,
-					ValueSelection: true,
-				},
-				Where: &sqlparser.ComparisonExpr{
-					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-					Operator: "NOT LIKE",
-					Right:    sqlparser.NewStrVal([]byte("*@gmail.com")),
-				},
-				OrderBy: QueryOrder{
-					OrderBy: "_key",
-					Order:   Asc,
-				},
-			},
+			name:       "EmailsNotWithGmailDomain",
+			query:      "SELECT $key, $value WHERE $value NOT LIKE '*@gmail.com' AND $key LIKE 'email:*' ORDER BY $key ASC",
 			expectLen:  4,
 			expectKeys: []string{"email:1", "email:2", "email:4", "email:5"},
 		},
 		{
-			name: "DescriptionsNotContainingWord",
-			query: DSQLQuery{
-				KeyRegex: "desc:*",
-				Selection: QuerySelection{
-					KeySelection:   true,
-					ValueSelection: true,
-				},
-				Where: &sqlparser.ComparisonExpr{
-					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-					Operator: "NOT LIKE",
-					Right:    sqlparser.NewStrVal([]byte("*description*")),
-				},
-				OrderBy: QueryOrder{
-					OrderBy: "_key",
-					Order:   Asc,
-				},
-			},
+			name:       "DescriptionsNotContainingWord",
+			query:      "SELECT $key, $value WHERE $value NOT LIKE '*description*' AND $key LIKE 'desc:*' ORDER BY $key ASC",
 			expectLen:  3,
 			expectKeys: []string{"desc:3", "desc:4", "desc:5"},
 		},
 		{
-			name: "NotCaseInsensitiveMatching",
-			query: DSQLQuery{
-				KeyRegex: "desc:*",
-				Selection: QuerySelection{
-					KeySelection:   true,
-					ValueSelection: true,
-				},
-				Where: &sqlparser.ComparisonExpr{
-					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-					Operator: "NOT LIKE",
-					Right:    sqlparser.NewStrVal([]byte("*UPPERCASE*")),
-				},
-				OrderBy: QueryOrder{
-					OrderBy: "_key",
-					Order:   Asc,
-				},
-			},
+			name:       "NotCaseInsensitiveMatching",
+			query:      "SELECT $key, $value WHERE $value NOT LIKE '*UPPERCASE*' AND $key LIKE 'desc:*' ORDER BY $key ASC",
 			expectLen:  4,
 			expectKeys: []string{"desc:1", "desc:2", "desc:3", "desc:5"},
 		},
 		{
-			name: "NotMatchingSpecialCharacters",
-			query: DSQLQuery{
-				KeyRegex: "desc:*",
-				Selection: QuerySelection{
-					KeySelection:   true,
-					ValueSelection: true,
-				},
-				Where: &sqlparser.ComparisonExpr{
-					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-					Operator: "NOT LIKE",
-					Right:    sqlparser.NewStrVal([]byte("*!@#*")),
-				},
-				OrderBy: QueryOrder{
-					OrderBy: "_key",
-					Order:   Asc,
-				},
-			},
+			name:       "NotMatchingSpecialCharacters",
+			query:      "SELECT $key, $value WHERE $value NOT LIKE '*!@#*' AND $key LIKE 'desc:*' ORDER BY $key ASC",
 			expectLen:  4,
 			expectKeys: []string{"desc:1", "desc:2", "desc:4", "desc:5"},
 		},
 		{
-			name: "ProductsNotContainingColor",
-			query: DSQLQuery{
-				KeyRegex: "product:*",
-				Selection: QuerySelection{
-					KeySelection:   true,
-					ValueSelection: true,
-				},
-				Where: &sqlparser.ComparisonExpr{
-					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-					Operator: "NOT LIKE",
-					Right:    sqlparser.NewStrVal([]byte("*Red*")),
-				},
-				OrderBy: QueryOrder{
-					OrderBy: "_key",
-					Order:   Asc,
-				},
-			},
+			name:       "ProductsNotContainingColor",
+			query:      "SELECT $key, $value WHERE $value NOT LIKE '*Red*' AND $key LIKE 'product:*' ORDER BY $key ASC",
 			expectLen:  4,
 			expectKeys: []string{"product:2", "product:3", "product:4", "product:5"},
 		},
 		{
-			name: "TagsNotEndingWithPriority",
-			query: DSQLQuery{
-				KeyRegex: "tag:*",
-				Selection: QuerySelection{
-					KeySelection:   true,
-					ValueSelection: true,
-				},
-				Where: &sqlparser.ComparisonExpr{
-					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-					Operator: "NOT LIKE",
-					Right:    sqlparser.NewStrVal([]byte("*priority")),
-				},
-				OrderBy: QueryOrder{
-					OrderBy: "_key",
-					Order:   Asc,
-				},
-			},
+			name:       "TagsNotEndingWithPriority",
+			query:      "SELECT $key, $value WHERE $value NOT LIKE '*priority' AND $key LIKE 'tag:*' ORDER BY $key ASC",
 			expectLen:  4,
 			expectKeys: []string{"tag:1", "tag:2", "tag:4", "tag:5"},
 		},
 		{
-			name: "NamesNotWith5Characters",
-			query: DSQLQuery{
-				KeyRegex: "user:*",
-				Selection: QuerySelection{
-					KeySelection:   true,
-					ValueSelection: true,
-				},
-				Where: &sqlparser.ComparisonExpr{
-					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-					Operator: "NOT LIKE",
-					Right:    sqlparser.NewStrVal([]byte("???????????")),
-				},
-				OrderBy: QueryOrder{
-					OrderBy: "_key",
-					Order:   Asc,
-				},
-			},
+			name:       "NamesNotWith5Characters",
+			query:      "SELECT $key, $value WHERE $value NOT LIKE '???????????' AND $key LIKE 'user:*' ORDER BY $key ASC",
 			expectLen:  3,
 			expectKeys: []string{"user:3", "user:4", "user:5"},
 		},
@@ -1169,7 +703,9 @@ func TestExecuteQueryWithStringNotLikeComparisons(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := ExecuteQuery(&tc.query, store.GetStore())
+			query, err := sql.ParseQuery(tc.query)
+			assert.NilError(t, err)
+			result, err := sql.ExecuteQuery(&query, store.GetStore())
 
 			assert.NilError(t, err)
 			assert.Equal(t, len(result), tc.expectLen, "Expected %d results, got %d", tc.expectLen, len(result))

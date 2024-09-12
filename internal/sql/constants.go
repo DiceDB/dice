@@ -1,4 +1,4 @@
-package querywatcher
+package sql
 
 const (
 	Asc string = "asc"

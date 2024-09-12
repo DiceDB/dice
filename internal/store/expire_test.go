@@ -1,6 +1,7 @@
 package store
 
 import (
+	"github.com/dicedb/dice/internal/object"
 	"testing"
 
 	"github.com/cockroachdb/swiss"
@@ -9,28 +10,28 @@ import (
 func TestDelExpiry(t *testing.T) {
 	store := NewStore(nil)
 	// Initialize the test environment
-	store.store = swiss.New[string, *Obj](10240)
-	store.expires = swiss.New[*Obj, uint64](10240)
+	store.store = swiss.New[string, *object.Obj](10240)
+	store.expires = swiss.New[*object.Obj, uint64](10240)
 
 	// Define test cases
 	tests := []struct {
 		name     string
-		obj      *Obj
-		setup    func(*Obj)
+		obj      *object.Obj
+		setup    func(*object.Obj)
 		expected bool // false if we expect the key to be deleted
 	}{
 		{
 			name: "Object with expiration",
-			obj:  &Obj{},
-			setup: func(obj *Obj) {
+			obj:  &object.Obj{},
+			setup: func(obj *object.Obj) {
 				store.expires.Put(obj, 12345) // Set some expiration time
 			},
 			expected: false,
 		},
 		{
 			name: "Object without expiration",
-			obj:  &Obj{},
-			setup: func(obj *Obj) {
+			obj:  &object.Obj{},
+			setup: func(obj *object.Obj) {
 				// No setup needed as the object should not have an expiration
 			},
 			expected: false,
