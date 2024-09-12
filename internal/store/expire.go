@@ -1,10 +1,11 @@
 package store
 
 import (
+	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/server/utils"
 )
 
-func hasExpired(obj *Obj, store *Store) bool {
+func hasExpired(obj *object.Obj, store *Store) bool {
 	exp, ok := store.expires.Get(obj)
 	if !ok {
 		return false
@@ -12,12 +13,12 @@ func hasExpired(obj *Obj, store *Store) bool {
 	return exp <= uint64(utils.GetCurrentTime().UnixMilli())
 }
 
-func GetExpiry(obj *Obj, store *Store) (uint64, bool) {
+func GetExpiry(obj *object.Obj, store *Store) (uint64, bool) {
 	exp, ok := store.expires.Get(obj)
 	return exp, ok
 }
 
-func DelExpiry(obj *Obj, store *Store) {
+func DelExpiry(obj *object.Obj, store *Store) {
 	store.expires.Delete(obj)
 }
 
@@ -29,19 +30,17 @@ func expireSample(store *Store) float32 {
 	var expiredCount = 0
 	var keysToDelete []string
 
-	withLocks(func() {
-		// Collect keys to be deleted
-		store.store.All(func(keyPtr string, obj *Obj) bool {
-			limit--
-			if hasExpired(obj, store) {
-				keysToDelete = append(keysToDelete, keyPtr)
-				expiredCount++
-			}
-			// once we iterated to 20 keys that have some expiration set
-			// we break the loop
-			return limit >= 0
-		})
-	}, store, WithStoreRLock())
+	// Collect keys to be deleted
+	store.store.All(func(keyPtr string, obj *object.Obj) bool {
+		limit--
+		if hasExpired(obj, store) {
+			keysToDelete = append(keysToDelete, keyPtr)
+			expiredCount++
+		}
+		// once we iterated to 20 keys that have some expiration set
+		// we break the loop
+		return limit >= 0
+	})
 
 	// Delete the keys outside the read lock
 	for _, keyPtr := range keysToDelete {
@@ -51,7 +50,7 @@ func expireSample(store *Store) float32 {
 	return float32(expiredCount) / float32(20.0)
 }
 
-// Deletes all the expired keys - the active way
+// DeleteExpiredKeys deletes all the expired keys - the active way
 // Sampling approach: https://redis.io/commands/expire/
 func DeleteExpiredKeys(store *Store) {
 	for {

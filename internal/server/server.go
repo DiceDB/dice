@@ -111,7 +111,7 @@ func (s *AsyncServer) FindPortAndBind() (socketErr error) {
 		return ErrInvalidIPAddress
 	}
 
-	log.Infof("DiceDB running on port %d", config.Port)
+	log.Infof("DiceDB %s running on port %d", "0.0.3", config.Port)
 	return syscall.Bind(serverFD, &syscall.SockaddrInet4{
 		Port: config.Port,
 		Addr: [4]byte{ip4[0], ip4[1], ip4[2], ip4[3]},
@@ -124,7 +124,7 @@ func (s *AsyncServer) ClosePort() {
 		if err := syscall.Close(s.serverFD); err != nil {
 			log.Warn("failed to close server socket", "error", err)
 		} else {
-			log.Info("Server socket closed successfully")
+			log.Debug("Server socket closed successfully")
 		}
 		s.serverFD = 0
 	}
@@ -144,7 +144,6 @@ func (s *AsyncServer) InitiateShutdown() {
 		}
 		delete(s.connectedClients, fd)
 	}
-	log.Info("cleaned up all client connections")
 }
 
 // Run starts the server, accepts connections, and handles client requests
@@ -244,12 +243,9 @@ func (s *AsyncServer) eventLoop(ctx context.Context) error {
 				} else {
 					if err := s.handleClientEvent(event); err != nil {
 						if errors.Is(err, ErrAborted) {
-							log.Info("Received abort command, initiating graceful shutdown")
+							log.Debug("Received abort command, initiating graceful shutdown")
 							return err
-						} else if errors.Is(err, syscall.ECONNRESET) || errors.Is(err, net.ErrClosed) {
-							// Both are normal scenarios when client disconnections happen, hence just info log
-							log.Info("Connection closed by client or reset", "fd", event.Fd)
-						} else {
+						} else if !errors.Is(err, syscall.ECONNRESET) && !errors.Is(err, net.ErrClosed) {
 							log.Warn(err)
 						}
 					}

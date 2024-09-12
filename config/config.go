@@ -37,3 +37,5 @@ var (
 	// if RequirePass is set to an empty string, no authentication is required
 	RequirePass string = utils.EmptyStr
 )
+
+var WriteAOFOnCleanup = false
