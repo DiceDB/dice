@@ -43,6 +43,7 @@ func TestEval(t *testing.T) {
 	testEvalGET(t, store)
 	testEvalJSONARRLEN(t, store)
 	testEvalJSONDEL(t, store)
+	testEvalJSONFORGET(t, store)
 	testEvalJSONCLEAR(t, store)
 	testEvalJSONTYPE(t, store)
 	testEvalJSONGET(t, store)
@@ -431,6 +432,67 @@ func testEvalJSONDEL(t *testing.T, store *dstore.Store) {
 	}
 	runEvalTests(t, tests, evalJSONDEL, store)
 }
+
+func testEvalJSONFORGET(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'json.forget' command\r\n"),
+		},
+		"key does not exist": {
+			setup:  func() {},
+			input:  []string{"NONEXISTENT_KEY"},
+			output: clientio.RespZero,
+		},
+		"root path forget": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"age\":13,\"high\":1.60,\"pet\":null,\"language\":[\"python\",\"golang\"], " +
+					"\"flag\":false, \"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+
+			},
+			input:  []string{"EXISTING_KEY"},
+			output: clientio.RespOne,
+		},
+		"part path forget": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"age\":13,\"high\":1.60,\"pet\":null,\"language\":[\"python\",\"golang\"], " +
+					"\"flag\":false, \"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+
+			},
+
+			input:  []string{"EXISTING_KEY", "$..language"},
+			output: []byte(":2\r\n"),
+		},
+		"wildcard path forget": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"age\":13,\"high\":1.60,\"pet\":null,\"language\":[\"python\",\"golang\"], " +
+					"\"flag\":false, \"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+
+			},
+
+			input:  []string{"EXISTING_KEY", "$.*"},
+			output: []byte(":6\r\n"),
+		},
+	}
+	runEvalTests(t, tests, evalJSONFORGET, store)
+}
+
 
 func testEvalJSONCLEAR(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{

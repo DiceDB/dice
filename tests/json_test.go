@@ -474,3 +474,77 @@ func TestJSONDelOperations(t *testing.T) {
 		})
 	}
 }
+
+func TestJSONForgetOperations(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	fireCommand(conn, "FORGET user")
+
+	stringForgetTestJson := `{"flag":true,"name":"Tom"}`
+	booleanForgetTestJson := `{"flag":true,"name":"Tom"}`
+	arrayForgetTestJson := `{"names":["Rahul","Tom"],"bosses":{"names":["Jerry","Rocky"],"hobby":"swim"}}`
+	integerForgetTestJson := `{"age":28,"name":"Tom"}`
+	floatForgetTestJson := `{"price":3.14,"name":"sugar"}`
+	nullForgetTestJson := `{"name":null,"age":28}`
+	multiForgetTestJson := `{"age":13,"high":1.60,"flag":true,"name":"jerry","pet":null,"language":["python","golang"],"partner":{"name":"tom","language":["rust"]}}`
+
+	testCases := []struct {
+		name     string
+		commands []string
+		expected []interface{}
+	}{
+		{
+			name:     "forget root path",
+			commands: []string{"JSON.SET user $ " + multiForgetTestJson, "JSON.FORGET user $", "JSON.GET user $"},
+			expected: []interface{}{"OK", int64(1), "(nil)"},
+		},
+		{
+			name:     "forget string type",
+			commands: []string{"JSON.SET user $ " + stringForgetTestJson, "JSON.FORGET user $.name", "JSON.GET user $"},
+			expected: []interface{}{"OK", int64(1), `{"flag":true}`},
+		},
+		{
+			name:     "forget bool type",
+			commands: []string{"JSON.SET user $ " + booleanForgetTestJson, "JSON.FORGET user $.flag", "JSON.GET user $"},
+			expected: []interface{}{"OK", int64(1), `{"name":"Tom"}`},
+		},
+		{
+			name:     "forget null type",
+			commands: []string{"JSON.SET user $ " + nullForgetTestJson, "JSON.FORGET user $.name", "JSON.GET user $"},
+			expected: []interface{}{"OK", int64(1), `{"age":28}`},
+		},
+		{
+			name:     "forget array type",
+			commands: []string{"JSON.SET user $ " + arrayForgetTestJson, "JSON.FORGET user $..names", "JSON.GET user $"},
+			expected: []interface{}{"OK", int64(2), `{"bosses":{"hobby":"swim"}}`},
+		},
+		{
+			name:     "forget integer type",
+			commands: []string{"JSON.SET user $ " + integerForgetTestJson, "JSON.FORGET user $.age", "JSON.GET user $"},
+			expected: []interface{}{"OK", int64(1), `{"name":"Tom"}`},
+		},
+		{
+			name:     "forget float type",
+			commands: []string{"JSON.SET user $ " + floatForgetTestJson, "JSON.FORGET user $.price", "JSON.GET user $"},
+			expected: []interface{}{"OK", int64(1), `{"name":"sugar"}`},
+		},
+	}
+
+	for _, tcase := range testCases {
+		t.Run(tcase.name, func(t *testing.T) {
+			for i := 0; i < len(tcase.commands); i++ {
+				cmd := tcase.commands[i]
+				out := tcase.expected[i]
+				result := fireCommand(conn, cmd)
+				jsonResult, isString := result.(string)
+				if isString && testutils.IsJSONResponse(jsonResult) {
+					testutils.AssertJSONEqual(t, out.(string), jsonResult)
+				} else {
+					assert.Equal(t, out, result)
+				}
+
+			}
+		})
+	}
+}
