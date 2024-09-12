@@ -137,17 +137,14 @@ func ParseQuery(sql string) (DSQLQuery, error) {
 		return DSQLQuery{}, err
 	}
 
+	where := parseWhere(selectStmt)
+
 	orderBy, err := parseOrderBy(selectStmt)
 	if err != nil {
 		return DSQLQuery{}, err
 	}
 
 	limit, err := parseLimit(selectStmt)
-	if err != nil {
-		return DSQLQuery{}, err
-	}
-
-	where, err := parseWhere(selectStmt)
 	if err != nil {
 		return DSQLQuery{}, err
 	}
@@ -222,23 +219,40 @@ func parseTableName(selectStmt *sqlparser.Select) error {
 // Function to parse ORDER BY clause
 func parseOrderBy(selectStmt *sqlparser.Select) (QueryOrder, error) {
 	orderBy := QueryOrder{}
+
+	// Support only one ORDER BY clause
 	if len(selectStmt.OrderBy) > 1 {
 		return QueryOrder{}, fmt.Errorf("only one ORDER BY clause is supported")
 	}
-	if len(selectStmt.OrderBy) > 0 {
-		// trim backticks or quotes from order by expr
-		orderBy.OrderBy = strings.Trim(sqlparser.String(selectStmt.OrderBy[0].Expr), "`")
-		if (orderBy.OrderBy[0] == '\'' && orderBy.OrderBy[len(orderBy.OrderBy)-1] == '\'') ||
-			(orderBy.OrderBy[0] == '`' && orderBy.OrderBy[len(orderBy.OrderBy)-1] == '`') {
-			orderBy.OrderBy = orderBy.OrderBy[1 : len(orderBy.OrderBy)-1]
-		}
-		// Order by expr should either be $key or $value
-		if orderBy.OrderBy != TempKey && orderBy.OrderBy != TempValue && !strings.HasPrefix(orderBy.OrderBy, TempValue) {
-			return QueryOrder{}, fmt.Errorf("only $key and $value are supported in ORDER BY clause")
-		}
-		orderBy.Order = selectStmt.OrderBy[0].Direction
+
+	if len(selectStmt.OrderBy) == 0 {
+		// No ORDER BY clause, return empty order
+		return orderBy, nil
 	}
+
+	// Extract the ORDER BY expression
+	orderExpr := strings.Trim(sqlparser.String(selectStmt.OrderBy[0].Expr), "`")
+	orderExpr = trimQuotesOrBackticks(orderExpr)
+
+	// Validate that ORDER BY is either $key or $value
+	if orderExpr != TempKey && orderExpr != TempValue && !strings.HasPrefix(orderExpr, TempValue) {
+		return QueryOrder{}, fmt.Errorf("only $key and $value expressions are supported in ORDER BY clause")
+	}
+
+	// Assign values to QueryOrder
+	orderBy.OrderBy = orderExpr
+	orderBy.Order = selectStmt.OrderBy[0].Direction
+
 	return orderBy, nil
+}
+
+// Helper function to trim both single and double quotes/backticks
+func trimQuotesOrBackticks(input string) string {
+	if len(input) > 1 && ((input[0] == '\'' && input[len(input)-1] == '\'') ||
+		(input[0] == '`' && input[len(input)-1] == '`')) {
+		return input[1 : len(input)-1]
+	}
+	return input
 }
 
 // Function to parse LIMIT clause
@@ -255,13 +269,11 @@ func parseLimit(selectStmt *sqlparser.Select) (int, error) {
 }
 
 // Function to parse WHERE clause
-
-//nolint:unparam
-func parseWhere(selectStmt *sqlparser.Select) (sqlparser.Expr, error) {
+func parseWhere(selectStmt *sqlparser.Select) sqlparser.Expr {
 	if selectStmt.Where == nil {
-		return nil, nil
+		return nil
 	}
-	return selectStmt.Where.Expr, nil
+	return selectStmt.Where.Expr
 }
 
 func generateFingerprint(where sqlparser.Expr) string {
