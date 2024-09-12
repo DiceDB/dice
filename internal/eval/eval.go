@@ -328,17 +328,17 @@ func evalGETDEL(args []string, store *dstore.Store) []byte {
 }
 
 // evaLJSONFORGET removes the field specified by the given JSONPath from the JSON document stored under the provided key.
-// calls the evalJSONDEL() with the arguments passed 
+// calls the evalJSONDEL() with the arguments passed
 // Returns response.RespZero if key is expired or it does not exist
 // Returns encoded error response if incorrect number of arguments
 // If the JSONPath points to the root of the JSON document, the entire key is deleted from the store.
 // Returns an integer reply specified as the number of paths deleted (0 or more)
 func evalJSONFORGET(args []string, store *dstore.Store) []byte {
-    if len(args) < 1 {
-        return diceerrors.NewErrArity("JSON.FORGET")
-    }
-    
-    return evalJSONDEL(args, store)
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("JSON.FORGET")
+	}
+
+	return evalJSONDEL(args, store)
 }
 
 // evalJSONARRLEN return the length of the JSON array at path in key
@@ -397,7 +397,6 @@ func evalJSONARRLEN(args []string, store *dstore.Store) []byte {
 
 	return clientio.Encode(arrlenList, false)
 }
-
 
 // evalJSONDEL delete a value that the given json path include in.
 // Returns response.RespZero if key is expired or it does not exist
@@ -2630,4 +2629,46 @@ func evalPFCOUNT(args []string, store *dstore.Store) []byte {
 	}
 
 	return clientio.Encode(unionHll.Estimate(), false)
+}
+
+func evalPFMERGE(args []string, store *dstore.Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("PFMERGE")
+	}
+
+	var mergedHll *hyperloglog.Sketch
+	destKey := args[0]
+	obj := store.Get(destKey)
+
+	// If destKey doesn't exist, create a new HLL, else fetch the existing
+	if obj == nil {
+		mergedHll = hyperloglog.New()
+	} else {
+		var ok bool
+		mergedHll, ok = obj.Value.(*hyperloglog.Sketch)
+		if !ok {
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeHllErr)
+		}
+	}
+
+	for _, arg := range args {
+		obj := store.Get(arg)
+		if obj != nil {
+			currKeyHll, ok := obj.Value.(*hyperloglog.Sketch)
+			if !ok {
+				return diceerrors.NewErrWithMessage(diceerrors.WrongTypeHllErr)
+			}
+
+			err := mergedHll.Merge(currKeyHll)
+			if err != nil {
+				return diceerrors.NewErrWithMessage(diceerrors.InvalidHllErr)
+			}
+		}
+	}
+
+	// Save the mergedHll
+	obj = store.NewObj(mergedHll, -1, object.ObjTypeString, object.ObjEncodingRaw)
+	store.Put(destKey, obj)
+
+	return clientio.RespOK
 }
