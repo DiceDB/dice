@@ -1,7 +1,7 @@
 THREADS ?= 4 #number of threads
 CLIENTS ?= 50 #number of clients per thread
 REQUESTS ?= 10000 #number of requests per client
-DATA_SIZE ?= 32 #Object data size 
+DATA_SIZE ?= 32 #Object data size
 KEY_PATTERN ?= R:R #Set:Get pattern
 RATIO ?= 1:10 #Set:Get ratio
 PORT ?= 7379 #Port for dicedb
@@ -18,7 +18,10 @@ run:
 	go run main.go
 
 test:
-	go test -v -race -count=1 ./tests/
+	go test -v -race -count=1 -tags isolation ./tests/
+
+test-max-conn:
+	TEST_FUNC=TestMaxConnAccept make test-one
 
 test-one:
 	go test -v -race -count=1 --run $(TEST_FUNC) ./tests/...

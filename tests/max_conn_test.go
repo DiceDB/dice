@@ -1,3 +1,6 @@
+//go:build !isolation
+// +build !isolation
+
 package tests
 
 import (
