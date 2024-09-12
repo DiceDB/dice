@@ -675,6 +675,12 @@ func evalJSONSET(args []string, store *dstore.Store) []byte {
 	return clientio.RespOK
 }
 
+// evalJSONARRAPPEND appends the value(s) provided in the args to the given array path
+// in the JSON object saved at key in arguments.
+// Args must contain atleast a key, path and value.
+// If the key does not exist or is expired, it returns response.RespNIL.
+// If the object at given path is not an array, it returns response.RespNIL.
+// Returns the new length of the array at path.
 func evalJSONARRAPPEND(args []string, store *dstore.Store) []byte {
     if len(args) < 3 {
         return diceerrors.NewErrArity("JSON.ARRAPPEND")
