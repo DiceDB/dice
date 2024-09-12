@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/dicedb/dice/internal/object"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dicedb/dice/internal/object"
 
 	"github.com/axiomhq/hyperloglog"
 	"github.com/bytedance/sonic"
@@ -1006,6 +1007,17 @@ func testEvalPFADD(t *testing.T, store *dstore.Store) {
 		"one value":           {input: []string{"KEY"}, output: []byte(":1\r\n")},
 		"key val pair":        {input: []string{"KEY", "VAL"}, output: []byte(":1\r\n")},
 		"key multiple values": {input: []string{"KEY", "VAL", "VAL1", "VAL2"}, output: []byte(":1\r\n")},
+		"Incorrect type provided": {
+			setup: func() {
+				key, value := "EXISTING_KEY", "VALUE"
+				oType, oEnc := deduceTypeEncoding(value)
+				var exDurationMs int64 = -1
+				var keepttl bool = false
+
+				store.Put(key, store.NewObj(value, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
+			},
+			input:  []string{"EXISTING_KEY", "1"},
+			output: []byte("-WRONGTYPE Key is not a valid HyperLogLog string value.\r\n")},
 	}
 
 	runEvalTests(t, tests, evalPFADD, store)
@@ -1109,6 +1121,7 @@ func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]s
 			}
 
 			output := evalFunc(tc.input, store)
+
 			if tc.validator != nil {
 				tc.validator(output)
 			} else {

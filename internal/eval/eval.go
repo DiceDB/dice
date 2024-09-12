@@ -2570,7 +2570,10 @@ func evalPFADD(args []string, store *dstore.Store) []byte {
 		return clientio.Encode(1, false)
 	}
 
-	existingHll := obj.Value.(*hyperloglog.Sketch)
+	existingHll, ok := obj.Value.(*hyperloglog.Sketch)
+	if !ok {
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeHllErr)
+	}
 	initialCardinality := existingHll.Estimate()
 	for _, arg := range args[1:] {
 		existingHll.Insert([]byte(arg))
@@ -2593,7 +2596,10 @@ func evalPFCOUNT(args []string, store *dstore.Store) []byte {
 	for _, arg := range args {
 		obj := store.Get(arg)
 		if obj != nil {
-			currKeyHll := obj.Value.(*hyperloglog.Sketch)
+			currKeyHll, ok := obj.Value.(*hyperloglog.Sketch)
+			if !ok {
+				return diceerrors.NewErrWithMessage(diceerrors.WrongTypeHllErr)
+			}
 			err := unionHll.Merge(currKeyHll)
 			if err != nil {
 				return diceerrors.NewErrWithMessage(diceerrors.InvalidHllErr)
