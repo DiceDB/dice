@@ -126,6 +126,14 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+    jsonarrappendCmdMeta = DiceCmdMeta{
+        Name: "JSON.ARRAPPEND",
+        Info: `JSON.ARRAPPEND key [path] value [value ...]
+        Returns an array of integer replies for each path, the array's new size,
+        or nil, if the matching JSON value is not an array.`,
+        Eval: evalJSONARRAPPEND,
+        Arity: -3,
+    }
 	ttlCmdMeta = DiceCmdMeta{
 		Name: "TTL",
 		Info: `TTL returns Time-to-Live in secs for the queried key in args
@@ -632,7 +640,8 @@ func init() {
 	DiceCmds["JSON.TYPE"] = jsontypeCmdMeta
 	DiceCmds["JSON.CLEAR"] = jsonclearCmdMeta
 	DiceCmds["JSON.DEL"] = jsondelCmdMeta
-	DiceCmds["TTL"] = ttlCmdMeta
+	DiceCmds["JSON.ARRAPPEND"] = jsonarrappendCmdMeta
+    DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
 	DiceCmds["EXPIRE"] = expireCmdMeta
 	DiceCmds["EXPIRETIME"] = expiretimeCmdMeta
