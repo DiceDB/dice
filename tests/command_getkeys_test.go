@@ -22,7 +22,7 @@ var getKeysTestCases = []struct {
 	{"Invalid Get command", "get", "ERR invalid number of arguments specified for command"},
 	{"Abort command", "abort", "ERR the command has no key arguments"},
 	{"Invalid command", "NotValidCommand", "ERR invalid command specified"},
-	{"Wrong number of arguments", "", "ERR wrong number of arguments for 'command getkeys' command"},
+	{"Wrong number of arguments", "", "ERR wrong number of arguments for 'command|getkeys' command"},
 }
 
 func TestCommandGetKeys(t *testing.T) {
