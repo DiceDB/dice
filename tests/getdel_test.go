@@ -50,7 +50,7 @@ func TestGetDel(t *testing.T) {
 				if tc.delays[i] > 0 {
 					time.Sleep(tc.delays[i])
 				}
-				result := fireCommand(conn, cmd)
+				result := FireCommand(conn, cmd)
 				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s, expected this %s, "+
 					"got this %s", cmd, tc.expect[i], result)
 			}

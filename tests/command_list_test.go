@@ -20,7 +20,7 @@ func TestCommandList(t *testing.T) {
 }
 
 func getCommandList(connection net.Conn) []string {
-	responseValue := fireCommand(connection, "COMMAND LIST")
+	responseValue := FireCommand(connection, "COMMAND LIST")
 	if responseValue == nil {
 		return nil
 	}

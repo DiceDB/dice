@@ -173,12 +173,12 @@ func TestJSONOperations(t *testing.T) {
 	for _, tc := range singleOrderedTestCases {
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.setCmd != utils.EmptyStr {
-				result := fireCommand(conn, tc.setCmd)
+				result := FireCommand(conn, tc.setCmd)
 				assert.Equal(t, "OK", result)
 			}
 
 			if tc.getCmd != utils.EmptyStr {
-				result := fireCommand(conn, tc.getCmd)
+				result := FireCommand(conn, tc.getCmd)
 				if testutils.IsJSONResponse(result.(string)) {
 					testutils.AssertJSONEqual(t, tc.expected, result.(string))
 				} else {
@@ -191,12 +191,12 @@ func TestJSONOperations(t *testing.T) {
 	for _, tc := range multipleOrderedTestCases {
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.setCmd != utils.EmptyStr {
-				result := fireCommand(conn, tc.setCmd)
+				result := FireCommand(conn, tc.setCmd)
 				assert.Equal(t, "OK", result)
 			}
 
 			if tc.getCmd != utils.EmptyStr {
-				result := fireCommand(conn, tc.getCmd)
+				result := FireCommand(conn, tc.getCmd)
 				testutils.AssertJSONEqualList(t, tc.expected, result.(string))
 			}
 		})
@@ -226,7 +226,7 @@ func TestJSONSetWithInvalidJSON(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := fireCommand(conn, tc.command)
+			result := FireCommand(conn, tc.command)
 			assert.Check(t, strings.HasPrefix(result.(string), tc.expected), fmt.Sprintf("Expected: %s, Got: %s", tc.expected, result))
 		})
 	}
@@ -238,7 +238,7 @@ func TestUnsupportedJSONPathPatterns(t *testing.T) {
 	complexJSON := `{"inventory":{"mountain_bikes":[{"id":"bike:1","model":"Phoebe","price":1920,"specs":{"material":"carbon","weight":13.1},"colors":["black","silver"]},{"id":"bike:2","model":"Quaoar","price":2072,"specs":{"material":"aluminium","weight":7.9},"colors":["black","white"]},{"id":"bike:3","model":"Weywot","price":3264,"specs":{"material":"alloy","weight":13.8}}],"commuter_bikes":[{"id":"bike:4","model":"Salacia","price":1475,"specs":{"material":"aluminium","weight":16.6},"colors":["black","silver"]},{"id":"bike:5","model":"Mimas","price":3941,"specs":{"material":"alloy","weight":11.6}}]}}`
 
 	setupCmd := `JSON.SET bikes:inventory $ ` + complexJSON
-	result := fireCommand(conn, setupCmd)
+	result := FireCommand(conn, setupCmd)
 	assert.Equal(t, "OK", result)
 
 	testCases := []struct {
@@ -270,7 +270,7 @@ func TestUnsupportedJSONPathPatterns(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := fireCommand(conn, tc.command)
+			result := FireCommand(conn, tc.command)
 			assert.Equal(t, tc.expected, result)
 		})
 	}
@@ -281,7 +281,7 @@ func TestJSONSetWithNXAndXX(t *testing.T) {
 	defer conn.Close()
 
 	// deleteTestKeys([]string{"user"}, store)
-	fireCommand(conn, "DEL user")
+	FireCommand(conn, "DEL user")
 
 	user1 := `{"name":"John","age":30}`
 	user2 := `{"name":"Rahul","age":28}`
@@ -320,7 +320,7 @@ func TestJSONSetWithNXAndXX(t *testing.T) {
 		for i := 0; i < len(tcase.commands); i++ {
 			cmd := tcase.commands[i]
 			out := tcase.expected[i]
-			result := fireCommand(conn, cmd)
+			result := FireCommand(conn, cmd)
 			jsonResult, isString := result.(string)
 			if isString && testutils.IsJSONResponse(jsonResult) {
 				testutils.AssertJSONEqual(t, out.(string), jsonResult)
@@ -336,7 +336,7 @@ func TestJSONClearOperations(t *testing.T) {
 	defer conn.Close()
 
 	// deleteTestKeys([]string{"user"}, store)
-	fireCommand(conn, "DEL user")
+	FireCommand(conn, "DEL user")
 
 	stringClearTestJson := `{"flag":true,"name":"Tom"}`
 	booleanClearTestJson := `{"flag":true,"name":"Tom"}`
@@ -393,7 +393,7 @@ func TestJSONClearOperations(t *testing.T) {
 			for i := 0; i < len(tcase.commands); i++ {
 				cmd := tcase.commands[i]
 				out := tcase.expected[i]
-				result := fireCommand(conn, cmd)
+				result := FireCommand(conn, cmd)
 				assert.Equal(t, out, result)
 
 			}
@@ -405,7 +405,7 @@ func TestJSONDelOperations(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 
-	fireCommand(conn, "DEL user")
+	FireCommand(conn, "DEL user")
 
 	stringDelTestJson := `{"flag":true,"name":"Tom"}`
 	booleanDelTestJson := `{"flag":true,"name":"Tom"}`
@@ -462,7 +462,7 @@ func TestJSONDelOperations(t *testing.T) {
 			for i := 0; i < len(tcase.commands); i++ {
 				cmd := tcase.commands[i]
 				out := tcase.expected[i]
-				result := fireCommand(conn, cmd)
+				result := FireCommand(conn, cmd)
 				jsonResult, isString := result.(string)
 				if isString && testutils.IsJSONResponse(jsonResult) {
 					testutils.AssertJSONEqual(t, out.(string), jsonResult)

@@ -20,6 +20,10 @@ import (
 	redis "github.com/dicedb/go-dice"
 )
 
+type TestServerOptions struct {
+	Port int
+}
+
 //nolint:unused
 func getLocalConnection() net.Conn {
 	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.Port))
@@ -57,7 +61,7 @@ func getLocalSdk() *redis.Client {
 }
 
 //nolint:unused
-func fireCommand(conn net.Conn, cmd string) interface{} {
+func FireCommand(conn net.Conn, cmd string) interface{} {
 	var err error
 	args := testutils.ParseCommand(cmd)
 	_, err = conn.Write(clientio.Encode(args, false))
@@ -88,10 +92,14 @@ func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *clientio.RESPParser
 }
 
 //nolint:unused
-func runTestServer(ctx context.Context, wg *sync.WaitGroup) {
+func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOptions) {
 	config.IOBufferLength = 16
-	config.Port = 8739
 	config.WriteAOFOnCleanup = true
+	if opt.Port != 0 {
+		config.Port = opt.Port
+	} else {
+		config.Port = 8739
+	}
 
 	const totalRetries = 100
 	var err error

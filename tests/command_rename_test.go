@@ -45,11 +45,11 @@ func TestCommandRename(t *testing.T) {
 	for _, tc := range renameKeysTestCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// deleteTestKeys([]string{"k", "k1", "k2"}, store)
-			fireCommand(conn, "DEL k1")
-			fireCommand(conn, "DEL k2")
-			fireCommand(conn, "DEL 3")
+			FireCommand(conn, "DEL k1")
+			FireCommand(conn, "DEL k2")
+			FireCommand(conn, "DEL 3")
 			for i, cmd := range tc.inCmd {
-				result := fireCommand(conn, cmd)
+				result := FireCommand(conn, cmd)
 				assert.Equal(t, tc.expected[i], result)
 			}
 		})

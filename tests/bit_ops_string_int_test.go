@@ -169,12 +169,12 @@ func TestBitOpsString(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Delete the key before running the test
-			fireCommand(conn, "DEL foo")
-			fireCommand(conn, "DEL baz")
-			fireCommand(conn, "DEL bazz")
-			fireCommand(conn, "DEL bazzz")
+			FireCommand(conn, "DEL foo")
+			FireCommand(conn, "DEL baz")
+			FireCommand(conn, "DEL bazz")
+			FireCommand(conn, "DEL bazzz")
 			for i := 0; i < len(tc.cmds); i++ {
-				res := fireCommand(conn, tc.cmds[i])
+				res := FireCommand(conn, tc.cmds[i])
 				switch tc.assert_type[i] {
 				case "equal":
 					assert.Equal(t, res, tc.expected[i])

@@ -46,15 +46,15 @@ func TestINCR(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// deleteTestKeys([]string{"key1", "key2"}, store)
-			fireCommand(conn, "DEL key1")
-			fireCommand(conn, "DEL key2")
+			FireCommand(conn, "DEL key1")
+			FireCommand(conn, "DEL key2")
 
 			for _, cmd := range tc.commands {
 				switch cmd.op {
 				case "s":
-					fireCommand(conn, fmt.Sprintf("SET %s %d", cmd.key, cmd.val))
+					FireCommand(conn, fmt.Sprintf("SET %s %d", cmd.key, cmd.val))
 				case "i":
-					result := fireCommand(conn, fmt.Sprintf("INCR %s", cmd.key))
+					result := FireCommand(conn, fmt.Sprintf("INCR %s", cmd.key))
 					switch v := result.(type) {
 					case string:
 						assert.Equal(t, cmd.expectedErr, v)
@@ -62,7 +62,7 @@ func TestINCR(t *testing.T) {
 						assert.Equal(t, cmd.val, v)
 					}
 				case "g":
-					result := fireCommand(conn, fmt.Sprintf("GET %s", cmd.key))
+					result := FireCommand(conn, fmt.Sprintf("GET %s", cmd.key))
 					assert.Equal(t, cmd.val, result)
 				}
 			}

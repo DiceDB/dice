@@ -10,7 +10,7 @@ import (
 func TestHGETALL(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
-	defer fireCommand(conn, "DEL key_hGetAll key_hGetAll02")
+	defer FireCommand(conn, "DEL key_hGetAll key_hGetAll02")
 
 	testCases := []TestCase{
 		{
@@ -35,7 +35,7 @@ func TestHGETALL(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.commands {
-				result := fireCommand(conn, cmd)
+				result := FireCommand(conn, cmd)
 				expectedResults, ok := tc.expected[i].([]string)
 				results, ok2 := result.([]interface{})
 
