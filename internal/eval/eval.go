@@ -585,6 +585,50 @@ func evalJSONGET(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(string(resultBytes), false)
 }
 
+func evalJSONRESP(args []string, store *dstore.Store) []byte {
+	if len(args) < 1 || len(args) > 2 {
+		return diceerrors.NewErrArity("JSON.RESP")
+	}
+
+	key := args[0]
+	path := defaultRootPath
+	if len(args) == 2 {
+		path = args[1]
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return clientio.RespNIL
+	}
+
+	// Check if the object is of JSON type
+	errWithMessage := dstore.AssertTypeAndEncoding(obj.TypeEncoding, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
+	}
+
+	jsonData := obj.Value
+	if path == defaultRootPath {
+		respSerializedJson := clientio.Encode(jsonData, false)
+		return respSerializedJson
+	}
+
+	// Parse the JSONPath expression
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("invalid JSONPath")
+	}
+
+	// Execute the JSONPath query
+	results := expr.Get(jsonData)
+	if len(results) == 0 {
+		return clientio.RespNIL
+	}
+
+	respSerializedJson := clientio.Encode(results, false)
+	return respSerializedJson
+}
+
 // evalJSONSET stores a JSON value at the specified key
 // args must contain at least the key, path (unused in this implementation), and JSON string
 // Returns encoded error response if incorrect number of arguments
@@ -901,7 +945,7 @@ func EvalBGREWRITEAOF(args []string, store *dstore.Store) []byte {
 	// This technique utilizes the CoW or copy-on-write, so while the main process is free to modify them
 	// the child would save all the pages to disk.
 	// Check details here -https://www.sobyte.net/post/2022-10/fork-cow/
-	newChild, _, _ := syscall.Syscall(syscall.SYS_FORK, 0, 0, 0)
+	newChild, _, _ := syscall.Syscall(syscall.SYS_CLONE, 0, 0, 0)
 	if newChild == 0 {
 		// We are inside child process now, so we'll start flushing to disk.
 		if err := dstore.DumpAllAOF(store); err != nil {

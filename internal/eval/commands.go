@@ -96,6 +96,16 @@ var (
 		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsonrespCmdMeta = DiceCmdMeta{
+		Name: "JSON.RESP",
+		Info: `JSON.RESP key [path]
+		Returns the RESP (Redis Serialization Protocol) form of the JSON value stored corresponding to a key.
+		Null reply: If the key doesn't exist or has expired.
+		Error reply: If the number of arguments is incorrect or the stored value is not a JSON type.`,
+		Eval:     evalJSONRESP,
+		Arity:    -1,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	jsontypeCmdMeta = DiceCmdMeta{
 		Name: "JSON.TYPE",
 		Info: `JSON.TYPE key [path]
@@ -629,6 +639,7 @@ func init() {
 	DiceCmds["MSET"] = msetCmdMeta
 	DiceCmds["JSON.SET"] = jsonsetCmdMeta
 	DiceCmds["JSON.GET"] = jsongetCmdMeta
+	DiceCmds["JSON.RESP"] = jsonrespCmdMeta
 	DiceCmds["JSON.TYPE"] = jsontypeCmdMeta
 	DiceCmds["JSON.CLEAR"] = jsonclearCmdMeta
 	DiceCmds["JSON.DEL"] = jsondelCmdMeta

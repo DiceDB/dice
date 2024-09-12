@@ -44,6 +44,7 @@ func TestEval(t *testing.T) {
 	testEvalJSONTYPE(t, store)
 	testEvalJSONGET(t, store)
 	testEvalJSONSET(t, store)
+	testEvalJSONRESP(t, store)
 	testEvalTTL(t, store)
 	testEvalDel(t, store)
 	testEvalPersist(t, store)
@@ -659,6 +660,163 @@ func testEvalJSONGET(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalJSONGET, store)
+}
+
+func testEvalJSONRESP(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"less than minimum required arguments": {
+			setup:  func() {},
+			input:  []string{},
+			output: []byte("-ERR wrong number of arguments for 'json.resp' command\r\n"),
+		},
+		"more than max allowed arguments": {
+			setup:  func() {},
+			input:  []string{"item1", "$", "3"},
+			output: []byte("-ERR wrong number of arguments for 'json.resp' command\r\n"),
+		},
+		"key doesn't exit": {
+			setup:  func() {},
+			input:  []string{"item1"},
+			output: clientio.RespNIL,
+		},
+		"key exists with invalid value": {
+			setup: func() {
+				key := "item1"
+				value := "{\"a\":2}"
+				obj := &dstore.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"item1"},
+			output: []byte("-ERR Existing key has wrong Dice type\r\n"),
+		},
+		"key exists but expired": {
+			setup: func() {
+				key := "item1"
+				value := "{\"name\":\"earbuds\"}"
+				obj := &dstore.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+				store.SetExpiry(obj, int64(-2*time.Millisecond))
+			},
+			input:  []string{"item1"},
+			output: clientio.RespNIL,
+		},
+		"key without default root path": {
+			setup: func() {
+				key := "item1"
+				value := "{\"name\":\"earbuds\"}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"item1"},
+			output: []byte("*2\r\n$4\r\nname\r\n$7\r\nearbuds\r\n"),
+		},
+		"key with default root path": {
+			setup: func() {
+				key := "item1"
+				value := "{\"name\":\"earbuds\"}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"item1", "$"},
+			output: []byte("*2\r\n$4\r\nname\r\n$7\r\nearbuds\r\n"),
+		},
+		"key with malformed path": {
+			setup: func() {
+				key := "item1"
+				value := "{\"name\":\"earbuds\"}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"item1", "$name"},
+			output: []byte("-ERR invalid JSONPath\r\n"),
+		},
+		"key with non existant path": {
+			setup: func() {
+				key := "item1"
+				value := "{\"name\":\"earbuds\"}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"item1", "$.name.*"},
+			output: clientio.RespNIL,
+		},
+		"key with recursive descent query": {
+			setup: func() {
+				key := "item1"
+				value := "{\"name\":\"Wireless earbuds\",\"description\":\"Wireless Bluetooth in-ear headphones\",\"connection\":{\"wireless\":true,\"type\":\"Bluetooth\"},\"price\":64.99,\"stock\":17,\"colors\":[\"black\",\"white\"], \"max_level\":[80, 100, 120]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"item1", "$..wireless"},
+			output: []byte("*1\r\n+true\r\n"),
+		},
+		"key with nested wildcard path returns array of values": {
+			setup: func() {
+				key := "item1"
+				value := "{\"name\":\"Wireless earbuds\",\"description\":\"Wireless Bluetooth in-ear headphones\",\"connection\":{\"wireless\":true,\"type\":\"Bluetooth\"},\"price\":64.99,\"stock\":17,\"colors\":[\"black\",\"white\"], \"max_level\":[80, 100, 120]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"item1", "$.connection.*"},
+			output: []byte("*2\r\n+true\r\n$9\r\nBluetooth\r\n"),
+		},
+		"key with array filter condition returns matching elements": {
+			setup: func() {
+				key := "item1"
+				value := "{\"name\":\"Wireless earbuds\",\"description\":\"Wireless Bluetooth in-ear headphones\",\"connection\":{\"wireless\":true,\"type\":\"Bluetooth\"},\"price\":64.99,\"stock\":17,\"colors\":[\"black\",\"white\"], \"max_level\":[80, 100, 120]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"item1", "$.max_level[?(@ >= 100)]"},
+			output: []byte("*2\r\n:100\r\n:120\r\n"),
+		},
+		"key with array filter condition returns nil for no matches": {
+			setup: func() {
+				key := "item1"
+				value := "{\"name\":\"Wireless earbuds\",\"description\":\"Wireless Bluetooth in-ear headphones\",\"connection\":{\"wireless\":true,\"type\":\"Bluetooth\"},\"price\":64.99,\"stock\":17,\"colors\":[\"black\",\"white\"], \"max_level\":[80, 100, 120]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"item1", "$.max_level[?(@ > 200)]"},
+			output: clientio.RespNIL,
+		},
+		"key with float value returns full precision RESP encoding": {
+			setup: func() {
+				key := "item1"
+				value := "{\"name\":\"Wireless earbuds\",\"description\":\"Wireless Bluetooth in-ear headphones\",\"connection\":{\"wireless\":true,\"type\":\"Bluetooth\"},\"price\":64.99,\"stock\":17,\"colors\":[\"black\",\"white\"], \"max_level\":[80, 100, 120]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"item1", "$.price"},
+			output: []byte("*1\r\n,64.989999999999995\r\n"),
+		},
+	}
+
+	runEvalTests(t, tests, evalJSONRESP, store)
 }
 
 func testEvalJSONSET(t *testing.T, store *dstore.Store) {

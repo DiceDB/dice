@@ -132,13 +132,14 @@ func readArray(buf *bytes.Buffer, rp *RESPParser) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	// fmt.Print("---> ", count)
 	elems := make([]interface{}, count)
 	for i := range elems {
 		elem, err := rp.DecodeOne()
 		if err != nil {
 			return nil, err
 		}
+		// fmt.Print("))))) =>", elem)
 		elems[i] = elem
 	}
 	return elems, nil
@@ -157,6 +158,22 @@ func Encode(value interface{}, isSimple bool) []byte {
 		return encodeString(v)
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 		return []byte(fmt.Sprintf(":%d\r\n", v))
+	case bool:
+		return map[bool][]byte{true: Encode("true", true), false: Encode("false", true)}[v]
+	case float32, float64:
+		fv := v.(float64)
+		if float64(int64(fv)) == fv {
+			return Encode(int64(fv), false)
+		}
+		return []byte(fmt.Sprintf(",%s\r\n", fmt.Sprintf("%.15f", v)))
+	case map[string]interface{}:
+		var b []byte
+		buf := bytes.NewBuffer(b)
+		for key, val := range v {
+			buf.Write(encodeString(key))
+			buf.Write(Encode(val, false))
+		}
+		return []byte(fmt.Sprintf("*%d\r\n%s", len(v)*2, buf.Bytes()))
 	case []string:
 		var b []byte
 		buf := bytes.NewBuffer(b)
