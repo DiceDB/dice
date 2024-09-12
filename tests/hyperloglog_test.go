@@ -83,6 +83,12 @@ func TestHyperLogLogCommands(t *testing.T) {
 				"PFADD INVALID_HLL a b c", "SET INVALID_HLL \"1\"", "PFMERGE INVALID_HLL"},
 			expected: []interface{}{int64(1), "OK", "WRONGTYPE Key is not a valid HyperLogLog string value."},
 		},
+		{
+			name: "PFMERGE with invalid src object",
+			commands: []string{
+				"PFADD INVALID_SRC_HLL a b c", "SET INVALID_SRC_HLL \"1\"", "PFMERGE HLL INVALID_SRC_HLL"},
+			expected: []interface{}{int64(1), "OK", "WRONGTYPE Key is not a valid HyperLogLog string value."},
+		},
 	}
 
 	for _, tc := range testCases {
