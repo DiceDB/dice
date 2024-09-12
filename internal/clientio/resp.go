@@ -132,14 +132,12 @@ func readArray(buf *bytes.Buffer, rp *RESPParser) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	// fmt.Print("---> ", count)
 	elems := make([]interface{}, count)
 	for i := range elems {
 		elem, err := rp.DecodeOne()
 		if err != nil {
 			return nil, err
 		}
-		// fmt.Print("))))) =>", elem)
 		elems[i] = elem
 	}
 	return elems, nil
