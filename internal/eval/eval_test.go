@@ -775,78 +775,81 @@ func testEvalJSONSET(t *testing.T, store *dstore.Store) {
 }
 
 func testEvalJSONTOGGLE(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"nil value": {
-			setup:  func() {},
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'json.toggle' command\r\n"),
-		},
-		"empty array": {
-			setup:  func() {},
-			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'json.toggle' command\r\n"),
-		},
-		"key does not exist": {
-			setup:  func() {},
-			input:  []string{"NONEXISTENT_KEY", ".active"},
-			output: clientio.RespNIL,
-		},
-		"key exists but field is not boolean": {
-			setup: func() {
-				key := "EXISTING_KEY"
-				value := "{\"active\":\"not_boolean\"}"
-				var rootData interface{}
-				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-				store.Put(key, obj)
-			},
-			input:  []string{"EXISTING_KEY", ".active"},
-			output: []byte("-ERR Value at path is not a boolean\r\n"),
-		},
-		"key exists, toggling boolean true to false": {
-			setup: func() {
-				key := "EXISTING_KEY"
-				value := "{\"active\":true}"
-				var rootData interface{}
-				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-				store.Put(key, obj)
-			},
-			input:  []string{"EXISTING_KEY", ".active"},
-			output: []byte(":0\r\n"), // Boolean true toggled to false (0)
-		},
-		"key exists, toggling boolean false to true": {
-			setup: func() {
-				key := "EXISTING_KEY"
-				value := "{\"active\":false}"
-				var rootData interface{}
-				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-				store.Put(key, obj)
-			},
-			input:  []string{"EXISTING_KEY", ".active"},
-			output: []byte(":1\r\n"), // Boolean false toggled to true (1)
-		},
-		"key exists but expired": {
-			setup: func() {
-				key := "EXISTING_KEY"
-				value := "{\"active\":true}"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
-				store.Put(key, obj)
-
-				store.SetExpiry(obj, int64(-2*time.Millisecond))
-			},
-			input:  []string{"EXISTING_KEY", ".active"},
-			output: clientio.RespNIL,
-		},
-	}
-
-	runEvalTests(t, tests, evalJSONTOGGLE, store)
+    tests := map[string]evalTestCase{
+        "nil value": {
+            setup: func() {},
+            input: nil,
+            output: []byte("-ERR wrong number of arguments for 'json.toggle' command\r\n"),
+        },
+        "empty array": {
+            setup: func() {},
+            input: []string{},
+            output: []byte("-ERR wrong number of arguments for 'json.toggle' command\r\n"),
+        },
+        "key does not exist": {
+            setup: func() {},
+            input: []string{"NONEXISTENT_KEY", ".active"},
+            output: clientio.RespNIL,
+        },
+        "key exists but field is not boolean": {
+            setup: func() {
+                key := "EXISTING_KEY"
+                value := "{\"active\":\"not_boolean\"}"
+                var rootData interface{}
+                _ = sonic.Unmarshal([]byte(value), &rootData)
+                obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+                store.Put(key, obj)
+            },
+            input: []string{"EXISTING_KEY", ".active"},
+            output: []byte("-ERR Value at path is not a boolean\r\n"),
+        },
+        "key exists, toggling boolean true to false": {
+            setup: func() {
+                key := "EXISTING_KEY"
+                value := "{\"active\":true}"
+                var rootData interface{}
+                err := sonic.Unmarshal([]byte(value), &rootData)
+                if err != nil {
+                    fmt.Printf("Debug: Error unmarshaling JSON: %v\n", err)
+                }
+                fmt.Printf("Debug: rootData after unmarshal: %+v\n", rootData)
+                obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+                store.Put(key, obj)
+                fmt.Printf("Debug: Object stored: %+v\n", obj)
+            },
+            input: []string{"EXISTING_KEY", ".active"},
+            output: []byte(":0\r\n"), // Boolean true toggled to false (0)
+        },
+        "key exists, toggling boolean false to true": {
+            setup: func() {
+                key := "EXISTING_KEY"
+                value := "{\"active\":false}"
+                var rootData interface{}
+                _ = sonic.Unmarshal([]byte(value), &rootData)
+                obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+                store.Put(key, obj)
+            },
+            input: []string{"EXISTING_KEY", ".active"},
+            output: []byte(":1\r\n"), // Boolean false toggled to true (1)
+        },
+        "key exists but expired": {
+            setup: func() {
+                key := "EXISTING_KEY"
+                value := "{\"active\":true}"
+                obj := &object.Obj{
+                    Value:          value,
+                    LastAccessedAt: uint32(time.Now().Unix()),
+                }
+                store.Put(key, obj)
+                store.SetExpiry(obj, int64(-2*time.Millisecond))
+            },
+            input: []string{"EXISTING_KEY", ".active"},
+            output: clientio.RespNIL,
+        },
+    }
+    
+    runEvalTests(t, tests, evalJSONTOGGLE, store)
 }
-
 
 func testEvalTTL(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
@@ -1190,6 +1193,7 @@ func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]s
 				tc.validator(output)
 			} else {
 				assert.Equal(t, string(tc.output), string(output))
+	
 			}
 		})
 	}

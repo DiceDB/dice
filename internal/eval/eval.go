@@ -682,33 +682,36 @@ func evalJSONTOGGLE(args []string, store *dstore.Store) []byte {
         return clientio.Encode([]interface{}{}, false)  // Return empty array if no matches
     }
 
-    toggledValues := make([]interface{}, len(results))
-    for i, result := range results {
+    for _, result := range results {
         switch v := result.(type) {
         case bool:
-            toggledValues[i] = int64(map[bool]int{false: 1, true: 0}[v])
             newValue := !v
             err := expr.Set(jsonData, newValue)
             if err != nil {
                 return diceerrors.NewErrWithMessage("failed to set toggled value")
-            }  // Update the value in the JSON
-        case nil, float64, string, []interface{}, map[string]interface{}:
-            toggledValues[i] = nil
+            }
+
+            // Update the value in the store
+            newObj := &object.Obj{
+                Value:          jsonData,
+                TypeEncoding:   object.ObjTypeJSON,
+            }
+            store.Put(key, newObj)
+
+            // Return simple integer toggle result (1 for true, 0 for false)
+            if newValue {
+                return []byte(":1\r\n")
+            } else {
+                return []byte(":0\r\n")
+            }
         default:
-            toggledValues[i] = nil
+            return []byte("-ERR Value at path is not a boolean\r\n")
         }
     }
 
-	newobj:= &object.Obj{
-		Value:          jsonData,
-		TypeEncoding: 	object.ObjTypeJSON,
-	}
-    // Update the object in the store
-    store.Put(key,newobj)
-
-    // Encode and return the result
-    return clientio.Encode(toggledValues, false)
+    return clientio.RespNIL
 }
+
 
 // evalJSONSET stores a JSON value at the specified key
 // args must contain at least the key, path (unused in this implementation), and JSON string
