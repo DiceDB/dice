@@ -1122,8 +1122,6 @@ func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]s
 
 			output := evalFunc(tc.input, store)
 
-			fmt.Println(string(output))
-
 			if tc.validator != nil {
 				tc.validator(output)
 			} else {
