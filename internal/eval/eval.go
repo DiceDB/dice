@@ -2692,7 +2692,7 @@ func evalJSONSTRLEN(args []string, store *dstore.Store) []byte {
 	}
 
 	// Check if the object is of JSON type
-	errWithMessage := dstore.AssertTypeAndEncoding(obj.TypeEncoding, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
 	if errWithMessage != nil {
 		return errWithMessage
 	}

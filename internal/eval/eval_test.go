@@ -5,11 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/bytedance/sonic"
-	"github.com/dicedb/dice/internal/object"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dicedb/dice/internal/object"
 
 	"github.com/axiomhq/hyperloglog"
 	"github.com/dicedb/dice/internal/clientio"
@@ -1269,7 +1270,7 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 				value := "{\"age\":13,\"name\":\"a\"}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 
 			},
@@ -1282,7 +1283,7 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 				value := `"hello"`
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 
 			},
@@ -1295,7 +1296,7 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 				value := `{"partner":{"name":"tom","language":["rust"]}}`
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 
 			},
@@ -1309,7 +1310,7 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 				value := `{"partner":{"name":21,"language":["rust"]}}`
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 
 			},
