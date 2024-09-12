@@ -945,7 +945,7 @@ func EvalBGREWRITEAOF(args []string, store *dstore.Store) []byte {
 	// This technique utilizes the CoW or copy-on-write, so while the main process is free to modify them
 	// the child would save all the pages to disk.
 	// Check details here -https://www.sobyte.net/post/2022-10/fork-cow/
-	newChild, _, _ := syscall.Syscall(syscall.SYS_CLONE, 0, 0, 0)
+	newChild, _, _ := syscall.Syscall(syscall.FORK, 0, 0, 0)
 	if newChild == 0 {
 		// We are inside child process now, so we'll start flushing to disk.
 		if err := dstore.DumpAllAOF(store); err != nil {
