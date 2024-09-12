@@ -19,7 +19,7 @@ func getConnection() (net.Conn, error) {
 }
 
 func TestMaxConnAccept(t *testing.T) {
-	var maxConnLimit = config.Test_ServerMaxClients + 1
+	var maxConnLimit = config.TestServerMaxClients + 1
 	connections := make([]net.Conn, maxConnLimit)
 	for i := 0; i < maxConnLimit; i++ {
 		conn, err := getConnection()

@@ -328,17 +328,17 @@ func evalGETDEL(args []string, store *dstore.Store) []byte {
 }
 
 // evaLJSONFORGET removes the field specified by the given JSONPath from the JSON document stored under the provided key.
-// calls the evalJSONDEL() with the arguments passed 
+// calls the evalJSONDEL() with the arguments passed
 // Returns response.RespZero if key is expired or it does not exist
 // Returns encoded error response if incorrect number of arguments
 // If the JSONPath points to the root of the JSON document, the entire key is deleted from the store.
 // Returns an integer reply specified as the number of paths deleted (0 or more)
 func evalJSONFORGET(args []string, store *dstore.Store) []byte {
-    if len(args) < 1 {
-        return diceerrors.NewErrArity("JSON.FORGET")
-    }
-    
-    return evalJSONDEL(args, store)
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("JSON.FORGET")
+	}
+
+	return evalJSONDEL(args, store)
 }
 
 // evalJSONARRLEN return the length of the JSON array at path in key
@@ -397,7 +397,6 @@ func evalJSONARRLEN(args []string, store *dstore.Store) []byte {
 
 	return clientio.Encode(arrlenList, false)
 }
-
 
 // evalJSONDEL delete a value that the given json path include in.
 // Returns response.RespZero if key is expired or it does not exist

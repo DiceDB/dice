@@ -60,11 +60,11 @@ func NewAsyncServer() *AsyncServer {
 func NewAsyncTestServer() *AsyncServer {
 	watchChan := make(chan dstore.WatchEvent, config.KeysLimit)
 	return &AsyncServer{
-		maxClients:             config.Test_ServerMaxClients,
+		maxClients:             config.TestServerMaxClients,
 		connectedClients:       make(map[int]*comm.Client),
 		shardManager:           shard.NewShardManager(1, watchChan),
 		queryWatcher:           querywatcher.NewQueryManager(),
-		multiplexerPollTimeout: config.Test_ServerMultiplexerPollTimeout,
+		multiplexerPollTimeout: config.TestServerMultiplexerPollTimeout,
 		ioChan:                 make(chan *ops.StoreResponse, 1000),
 		watchChan:              watchChan,
 	}
@@ -257,7 +257,6 @@ func (s *AsyncServer) eventLoop(ctx context.Context) error {
 
 // acceptConnection accepts a new client connection and subscribes to read events on the connection.
 func (s *AsyncServer) acceptConnection() error {
-
 	if len(s.connectedClients) > s.maxClients {
 		return errors.New("connection refused. Reached the max-connection limit")
 	}
