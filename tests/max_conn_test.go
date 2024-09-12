@@ -23,9 +23,11 @@ func TestMaxConnAccept(t *testing.T) {
 	connections := make([]net.Conn, maxConnLimit)
 	for i := 0; i < maxConnLimit; i++ {
 		conn, err := getConnection()
-		if err != nil {
-			connections = append(connections, conn)
+		if err == nil {
+			connections[i] = conn
 			defer connections[i].Close()
+		} else {
+			t.Fatalf("unexpected error  while getting connection: %v", err)
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
