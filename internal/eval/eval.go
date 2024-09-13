@@ -811,11 +811,11 @@ func evalEXPIRE(args []string, store *dstore.Store) []byte {
 	var key string = args[0]
 	exDurationSec, err := strconv.ParseInt(args[1], 10, 64)
 	if exDurationSec < 0 || exDurationSec > maxExDuration {
-		diceerrors.NewErrExpireTime("EXPIRE")
+		return diceerrors.NewErrExpireTime("EXPIRE")
 	}
 
 	if err != nil {
-		diceerrors.NewErrExpireTime("EXPIRE")
+		return diceerrors.NewErrExpireTime("EXPIRE")
 	}
 
 	obj := store.Get(key)
@@ -875,7 +875,7 @@ func evalEXPIREAT(args []string, store *dstore.Store) []byte {
 	var key string = args[0]
 	exUnixTimeSec, err := strconv.ParseInt(args[1], 10, 64)
 	if exUnixTimeSec < 0 || exUnixTimeSec > maxExDuration {
-		diceerrors.NewErrExpireTime("EXPIREAT")
+		return diceerrors.NewErrExpireTime("EXPIREAT")
 	}
 
 	if err != nil {
@@ -1904,7 +1904,7 @@ func evalGETEX(args []string, store *dstore.Store) []byte {
 				return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
 			}
 
-			if exDuration < 0 {
+			if exDuration < 0 || exDuration > maxExDuration {
 				return diceerrors.NewErrExpireTime("GETEX")
 			}
 
