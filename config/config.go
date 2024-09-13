@@ -39,3 +39,11 @@ var (
 )
 
 var WriteAOFOnCleanup = false
+
+// HTTP
+var (
+	HTTPPort   int  = 8082
+	EnableHTTP bool = true
+)
+
+// TLS

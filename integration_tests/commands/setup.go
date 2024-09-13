@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dicedb/dice/internal/shard"
+
 	"github.com/dicedb/dice/internal/clientio"
 
 	"github.com/dicedb/dice/internal/server"
@@ -101,9 +103,10 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 
 	const totalRetries = 100
 	var err error
-
+	watchChan := make(chan dstore.WatchEvent, config.KeysLimit)
+	shardManager := shard.NewShardManager(1, watchChan)
 	// Initialize the AsyncServer
-	testServer := server.NewAsyncServer()
+	testServer := server.NewAsyncServer(shardManager, watchChan)
 
 	// Try to bind to a port with a maximum of `totalRetries` retries.
 	for i := 0; i < totalRetries; i++ {
@@ -128,12 +131,20 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	// Inform the user that the server is starting
 	fmt.Println("Starting the test server on port", config.Port)
 
+	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		shardManager.Run(shardManagerCtx)
+	}()
+
 	// Start the server in a goroutine
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		if err := testServer.Run(ctx); err != nil {
 			if errors.Is(err, server.ErrAborted) {
+				cancelShardManager()
 				return
 			}
 			log.Fatalf("Test server encountered an error: %v", err)
