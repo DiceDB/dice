@@ -27,8 +27,6 @@ type HTTPServer struct {
 	httpServer   *http.Server
 }
 
-// NewHTTPServer
-// TODO: This isn't ideal as we create a separate instance of ShardManager, which we want to be 1, which all servers share
 func NewHTTPServer(shardManager *shard.ShardManager, watchChan chan dstore.WatchEvent) *HTTPServer {
 	mux := http.NewServeMux()
 	srv := &http.Server{

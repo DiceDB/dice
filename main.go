@@ -62,13 +62,10 @@ func main() {
 		cancel()
 	}()
 
-	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
-	defer cancelShardManager()
-
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		shardManager.Run(shardManagerCtx)
+		shardManager.Run(ctx)
 	}()
 
 	serverErrCh := make(chan error, 2)

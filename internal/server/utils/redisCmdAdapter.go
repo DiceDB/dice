@@ -11,13 +11,20 @@ import (
 	"github.com/dicedb/dice/internal/cmd"
 )
 
+const (
+	Key   = "key"
+	Field = "field"
+	Path  = "path"
+	Value = "value"
+)
+
 func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
-	prefix := strings.TrimPrefix(r.URL.Path, "/")
-	if prefix == "" {
+	command := strings.TrimPrefix(r.URL.Path, "/")
+	if command == "" {
 		return nil, errors.New("invalid command")
 	}
 
-	prefix = strings.ToUpper(prefix)
+	command = strings.ToUpper(command)
 	var args []string
 
 	// Step 1: Handle JSON body if present
@@ -35,7 +42,12 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 
 			// Define keys to exclude and process their values first
 			// Update as we support more commands
-			priorityKeys := []string{"key", "field", "path", "value"}
+			var priorityKeys = [4]string{
+				Key,
+				Field,
+				Path,
+				Value,
+			}
 			for _, key := range priorityKeys {
 				if val, exists := jsonBody[key]; exists {
 					args = append(args, fmt.Sprintf("%v", val))
@@ -43,22 +55,26 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 				}
 			}
 
-			// Process remaining keys
-			for k, v := range jsonBody {
-				// Handle unary operations like 'nx' where value is "true"
-				if valStr, ok := v.(string); ok && valStr == "true" {
-					args = append(args, k)
-				} else {
-					switch val := v.(type) {
-					case map[string]interface{}, []interface{}:
-						jsonValue, err := json.Marshal(val)
-						if err != nil {
-							return nil, err
-						}
-						args = append(args, string(jsonValue))
-					default:
-						args = append(args, fmt.Sprintf("%v", val))
+			// Process remaining keys in the JSON body
+			for key, val := range jsonBody {
+				switch v := val.(type) {
+				case string:
+					// Handle unary operations like 'nx' where value is "true"
+					if v == "true" {
+						args = append(args, key)
+					} else {
+						args = append(args, v)
 					}
+				case map[string]interface{}, []interface{}:
+					// Marshal nested JSON structures back into a string
+					jsonValue, err := json.Marshal(v)
+					if err != nil {
+						return nil, err
+					}
+					args = append(args, string(jsonValue))
+				default:
+					// Append other types as strings
+					args = append(args, fmt.Sprintf("%v", v))
 				}
 			}
 		}
@@ -66,7 +82,7 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 
 	// Step 2: Return the constructed Redis command
 	return &cmd.RedisCmd{
-		Cmd:  prefix,
+		Cmd:  command,
 		Args: args,
 	}, nil
 }
