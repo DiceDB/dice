@@ -41,7 +41,7 @@ var serverID string
 var diceCommandsCount int
 
 const defaultRootPath = "$"
-const maxExDuration = 10000000000000000
+const maxExDuration = 9223372036854775
 
 func init() {
 	diceCommandsCount = len(DiceCmds)
@@ -810,8 +810,12 @@ func evalEXPIRE(args []string, store *dstore.Store) []byte {
 
 	var key string = args[0]
 	exDurationSec, err := strconv.ParseInt(args[1], 10, 64)
+	if exDurationSec < 0 || exDurationSec > maxExDuration {
+		return diceerrors.NewErrWithMessage(diceerrors.InvalidExpireTime)
+	}
+
 	if err != nil {
-		return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
+		return diceerrors.NewErrWithMessage(diceerrors.InvalidExpireTime)
 	}
 
 	obj := store.Get(key)
@@ -870,6 +874,10 @@ func evalEXPIREAT(args []string, store *dstore.Store) []byte {
 
 	var key string = args[0]
 	exUnixTimeSec, err := strconv.ParseUint(args[1], 10, 64)
+	if exUnixTimeSec < 0 || exUnixTimeSec > maxExDuration {
+		return diceerrors.NewErrWithMessage(diceerrors.InvalidExpireTime)
+	}
+
 	if err != nil {
 		return clientio.Encode(errors.New("ERR value is not an integer or out of range"), false)
 	}
