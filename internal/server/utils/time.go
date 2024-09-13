@@ -32,6 +32,6 @@ func GetCurrentTime() time.Time {
 	return CurrentTime.Now()
 }
 
-func AddSecondsToUnixEpoch(second int64) uint64 {
-	return uint64(GetCurrentTime().Unix()) + uint64(second)
+func AddSecondsToUnixEpoch(second int64) int64 {
+	return int64(GetCurrentTime().Unix()) + int64(second)
 }

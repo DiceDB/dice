@@ -811,11 +811,11 @@ func evalEXPIRE(args []string, store *dstore.Store) []byte {
 	var key string = args[0]
 	exDurationSec, err := strconv.ParseInt(args[1], 10, 64)
 	if exDurationSec < 0 || exDurationSec > maxExDuration {
-		return diceerrors.NewErrWithMessage(diceerrors.InvalidExpireTime)
+		diceerrors.NewErrExpireTime("EXPIRE")
 	}
 
 	if err != nil {
-		return diceerrors.NewErrWithMessage(diceerrors.InvalidExpireTime)
+		diceerrors.NewErrExpireTime("EXPIRE")
 	}
 
 	obj := store.Get(key)
@@ -873,9 +873,9 @@ func evalEXPIREAT(args []string, store *dstore.Store) []byte {
 	}
 
 	var key string = args[0]
-	exUnixTimeSec, err := strconv.ParseUint(args[1], 10, 64)
+	exUnixTimeSec, err := strconv.ParseInt(args[1], 10, 64)
 	if exUnixTimeSec < 0 || exUnixTimeSec > maxExDuration {
-		return diceerrors.NewErrWithMessage(diceerrors.InvalidExpireTime)
+		diceerrors.NewErrExpireTime("EXPIREAT")
 	}
 
 	if err != nil {
@@ -898,7 +898,7 @@ func evalEXPIREAT(args []string, store *dstore.Store) []byte {
 // Returns Boolean True and error nil if expiry was set on the key successfully.
 // Returns Boolean False and error nil if conditions didn't met.
 // Returns Boolean False and error not-nil if invalid combination of subCommands or if subCommand is invalid
-func evaluateAndSetExpiry(subCommands []string, newExpiry uint64, key string,
+func evaluateAndSetExpiry(subCommands []string, newExpiry int64, key string,
 	store *dstore.Store) (shouldSetExpiry bool, err []byte) {
 	var newExpInMilli = newExpiry * 1000
 	var prevExpiry *uint64 = nil
@@ -912,7 +912,7 @@ func evaluateAndSetExpiry(subCommands []string, newExpiry uint64, key string,
 	shouldSetExpiry = true
 	// if no condition exists
 	if len(subCommands) == 0 {
-		store.SetUnixTimeExpiry(obj, int64(newExpiry))
+		store.SetUnixTimeExpiry(obj, newExpiry)
 		return shouldSetExpiry, nil
 	}
 
@@ -937,12 +937,12 @@ func evaluateAndSetExpiry(subCommands []string, newExpiry uint64, key string,
 			}
 		case GT:
 			gtCmd = true
-			if prevExpiry == nil || *prevExpiry > newExpInMilli {
+			if prevExpiry == nil || *prevExpiry > uint64(newExpInMilli) {
 				shouldSetExpiry = false
 			}
 		case LT:
 			ltCmd = true
-			if prevExpiry != nil && *prevExpiry < newExpInMilli {
+			if prevExpiry != nil && *prevExpiry < uint64(newExpInMilli) {
 				shouldSetExpiry = false
 			}
 		default:
@@ -1880,7 +1880,7 @@ func evalGETEX(args []string, store *dstore.Store) []byte {
 			if err != nil {
 				return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
 			}
-			if exDuration <= 0 {
+			if exDuration < 0 || exDuration > maxExDuration {
 				return diceerrors.NewErrExpireTime("GETEX")
 			}
 
