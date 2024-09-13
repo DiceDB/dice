@@ -102,7 +102,11 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 
 	if unimplementedCommands[redisCmd.Cmd] {
 		log.Errorf("Command %s is not implemented", redisCmd.Cmd)
-		writer.Write([]byte("Command is not implemented with HTTP"))
+		_, err := writer.Write([]byte("Command is not implemented with HTTP"))
+		if err != nil {
+			log.Errorf("Error writing response: %v", err)
+			return
+		}
 		return
 	}
 
