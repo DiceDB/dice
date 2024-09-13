@@ -36,12 +36,16 @@ const (
 	Initialized
 )
 
-var TxnCommands map[string]bool
-var serverID string
-var diceCommandsCount int
+var (
+	TxnCommands       map[string]bool
+	serverID          string
+	diceCommandsCount int
+)
 
-const defaultRootPath = "$"
-const maxExDuration = 10000000000000000
+const (
+	defaultRootPath = "$"
+	maxExDuration   = 10000000000000000
+)
 
 func init() {
 	diceCommandsCount = len(DiceCmds)
@@ -71,15 +75,13 @@ func evalPING(args []string, store *dstore.Store) []byte {
 // EvalAUTH returns with an encoded "OK" if the user is authenticated
 // If the user is not authenticated, it returns with an encoded error message
 func EvalAUTH(args []string, c *comm.Client) []byte {
-	var (
-		err error
-	)
+	var err error
 
 	if config.RequirePass == "" {
 		return diceerrors.NewErrWithMessage("AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?")
 	}
 
-	var username = auth.DefaultUserName
+	username := auth.DefaultUserName
 	var password string
 
 	if len(args) == 1 {
@@ -252,7 +254,7 @@ func evalGET(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("GET")
 	}
 
-	var key = args[0]
+	key := args[0]
 
 	obj := store.Get(key)
 
@@ -309,7 +311,7 @@ func evalGETDEL(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("GETDEL")
 	}
 
-	var key = args[0]
+	key := args[0]
 
 	// Get the key from the hash table
 	obj := store.GetDel(key)
@@ -891,8 +893,9 @@ func evalEXPIREAT(args []string, store *dstore.Store) []byte {
 // Returns Boolean False and error nil if conditions didn't met.
 // Returns Boolean False and error not-nil if invalid combination of subCommands or if subCommand is invalid
 func evaluateAndSetExpiry(subCommands []string, newExpiry uint64, key string,
-	store *dstore.Store) (shouldSetExpiry bool, err []byte) {
-	var newExpInMilli = newExpiry * 1000
+	store *dstore.Store,
+) (shouldSetExpiry bool, err []byte) {
+	newExpInMilli := newExpiry * 1000
 	var prevExpiry *uint64 = nil
 	var nxCmd, xxCmd, gtCmd, ltCmd bool
 
@@ -1345,7 +1348,7 @@ func evalBITCOUNT(args []string, store *dstore.Store) []byte {
 
 	// fetching value of the key
 	var key string = args[0]
-	var obj = store.Get(key)
+	obj := store.Get(key)
 	if obj == nil {
 		return clientio.Encode(0, false)
 	}
@@ -1355,7 +1358,7 @@ func evalBITCOUNT(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
-	var valueInterface = obj.Value
+	valueInterface := obj.Value
 	value := []byte{}
 	valueLength := int64(0)
 
@@ -1379,7 +1382,7 @@ func evalBITCOUNT(args []string, store *dstore.Store) []byte {
 	// defining constants of the function
 	start := int64(0)
 	end := valueLength - 1
-	var unit = BYTE
+	unit := BYTE
 
 	// checking which arguments are present and according validating arguments
 	if len(args) > 1 {
@@ -2232,7 +2235,7 @@ func evalGETSET(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("GETSET")
 	}
 
-	var key, value = args[0], args[1]
+	key, value := args[0], args[1]
 	getResp := evalGET([]string{key}, store)
 	// Check if it's an error resp from GET
 	if strings.HasPrefix(string(getResp), "-") {
@@ -2338,7 +2341,7 @@ func evalSMEMBERS(args []string, store *dstore.Store) []byte {
 	// Get the set object.
 	set := obj.Value.(map[string]struct{})
 	// Get the members of the set.
-	var members = make([]string, 0, len(set))
+	members := make([]string, 0, len(set))
 	for k := range set {
 		members = append(members, k)
 	}
@@ -2481,7 +2484,7 @@ func evalSDIFF(args []string, store *dstore.Store) []byte {
 	}
 
 	// Get the members of the set.
-	var members = make([]string, 0, len(tmpSet))
+	members := make([]string, 0, len(tmpSet))
 	for k := range tmpSet {
 		members = append(members, k)
 	}
@@ -2558,7 +2561,7 @@ func evalSINTER(args []string, store *dstore.Store) []byte {
 		return clientio.Encode([]string{}, false)
 	}
 
-	var members = make([]string, 0, len(resultSet))
+	members := make([]string, 0, len(resultSet))
 	for k := range resultSet {
 		members = append(members, k)
 	}
@@ -2613,7 +2616,7 @@ func evalPFCOUNT(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("PFCOUNT")
 	}
 
-	var unionHll = hyperloglog.New()
+	unionHll := hyperloglog.New()
 
 	for _, arg := range args {
 		obj := store.Get(arg)
@@ -2765,4 +2768,15 @@ func evalHLEN(args []string, store *dstore.Store) []byte {
 
 	hashMap := obj.Value.(HashMap)
 	return clientio.Encode(len(hashMap), false)
+}
+
+func evalSELECT(args []string, store *dstore.Store) []byte {
+	var b []byte
+
+	if len(args) != 1 {
+		return diceerrors.NewErrArity("SELECT")
+	}
+
+	b = clientio.RespOK
+	return b
 }
