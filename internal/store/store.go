@@ -118,7 +118,7 @@ func (store *Store) putHelper(k string, obj *object.Obj, opts ...PutOption) {
 	store.incrementKeyCount()
 
 	if store.watchChan != nil {
-		go store.notifyQueryManager(k, Set, *obj)
+		store.notifyQueryManager(k, Set, *obj)
 	}
 }
 
@@ -220,7 +220,7 @@ func (store *Store) Rename(sourceKey, destKey string) bool {
 
 	// Notify watchers about the deletion of the source key
 	if store.watchChan != nil {
-		go store.notifyQueryManager(sourceKey, Del, *sourceObj)
+		store.notifyQueryManager(sourceKey, Del, *sourceObj)
 	}
 
 	return true
@@ -270,7 +270,7 @@ func (store *Store) deleteKey(k string, obj *object.Obj) bool {
 		KeyspaceStat[0]["keys"]--
 
 		if store.watchChan != nil {
-			go store.notifyQueryManager(k, Del, *obj)
+			store.notifyQueryManager(k, Del, *obj)
 		}
 
 		return true
