@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dicedb/dice/internal/object"
+
 	"github.com/axiomhq/hyperloglog"
 	"github.com/dicedb/dice/internal/clientio"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -63,6 +65,7 @@ func TestEval(t *testing.T) {
 	testEvalPFCOUNT(t, store)
 	testEvalHGET(t, store)
 	testEvalPFMERGE(t, store)
+	testEvalJSONSTRLEN(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -1333,7 +1336,75 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 
 	runEvalTests(t, tests, evalPFMERGE, store)
 }
+func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'json.strlen' command\r\n"),
+		},
+		"key does not exist": {
+			setup:  func() {},
+			input:  []string{"NONEXISTENT_KEY"},
+			output: []byte("$-1\r\n"),
+		},
+		"root not string strlen": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"age\":13,\"name\":\"a\"}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
 
+			},
+			input:  []string{"EXISTING_KEY"},
+			output: []byte("-WRONGTYPE wrong type of path value - expected string but found integer\r\n"),
+		},
+		"root array strlen": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := `"hello"`
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+
+			},
+			input:  []string{"EXISTING_KEY"},
+			output: []byte(":5\r\n"),
+		},
+		"subpath string strlen": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := `{"partner":{"name":"tom","language":["rust"]}}`
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+
+			},
+
+			input:  []string{"EXISTING_KEY", "$..name"},
+			output: []byte("*1\r\n:3\r\n"),
+		},
+		"subpath not string strlen": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := `{"partner":{"name":21,"language":["rust"]}}`
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+
+			},
+
+			input:  []string{"EXISTING_KEY", "$..name"},
+			output: []byte("*1\r\n$-1\r\n"),
+		},
+	}
+	runEvalTests(t, tests, evalJSONSTRLEN, store)
+}
 func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]string, *dstore.Store) []byte, store *dstore.Store) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
