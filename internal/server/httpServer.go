@@ -19,6 +19,13 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
+var unimplementedCommands map[string]bool = map[string]bool{
+	"QWATCH":    true,
+	"QUNWATCH":  true,
+	"SUBSCRIBE": true,
+	"ABORT":     true,
+}
+
 type HTTPServer struct {
 	queryWatcher *querywatcher.QueryManager
 	shardManager *shard.ShardManager
@@ -90,6 +97,12 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 	redisCmd, err := utils.ParseHTTPRequest(request)
 	if err != nil {
 		log.Errorf("Error parsing HTTP request: %v", err)
+		return
+	}
+
+	if unimplementedCommands[redisCmd.Cmd] {
+		log.Errorf("Command %s is not implemented", redisCmd.Cmd)
+		writer.Write([]byte("Command is not implemented with HTTP"))
 		return
 	}
 
