@@ -960,7 +960,7 @@ func evaluateAndSetExpiry(subCommands []string, newExpiry int64, key string,
 	}
 
 	if shouldSetExpiry {
-		store.SetUnixTimeExpiry(obj, int64(newExpiry))
+		store.SetUnixTimeExpiry(obj, newExpiry)
 	}
 	return shouldSetExpiry, nil
 }

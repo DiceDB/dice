@@ -33,5 +33,5 @@ func GetCurrentTime() time.Time {
 }
 
 func AddSecondsToUnixEpoch(second int64) int64 {
-	return int64(GetCurrentTime().Unix()) + int64(second)
+	return GetCurrentTime().Unix() + second
 }
