@@ -43,12 +43,11 @@ type AsyncServer struct {
 }
 
 // NewAsyncServer initializes a new AsyncServer
-func NewAsyncServer() *AsyncServer {
-	watchChan := make(chan dstore.WatchEvent, config.KeysLimit)
+func NewAsyncServer(shardManager *shard.ShardManager, watchChan chan dstore.WatchEvent) *AsyncServer {
 	return &AsyncServer{
 		maxClients:             config.ServerMaxClients,
 		connectedClients:       make(map[int]*comm.Client),
-		shardManager:           shard.NewShardManager(1, watchChan),
+		shardManager:           shardManager,
 		queryWatcher:           querywatcher.NewQueryManager(),
 		multiplexerPollTimeout: config.ServerMultiplexerPollTimeout,
 		ioChan:                 make(chan *ops.StoreResponse, 1000),
@@ -148,15 +147,6 @@ func (s *AsyncServer) Run(ctx context.Context) error {
 		s.queryWatcher.Run(watchCtx, s.watchChan)
 	}()
 
-	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
-	defer cancelShardManager()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		s.shardManager.Run(shardManagerCtx)
-	}()
-
 	s.shardManager.RegisterWorker("server", s.ioChan)
 
 	if err := syscall.Listen(s.serverFD, s.maxClients); err != nil {
@@ -191,7 +181,6 @@ func (s *AsyncServer) Run(ctx context.Context) error {
 		err = s.eventLoop(eventLoopCtx)
 		if err != nil {
 			cancelWatch()
-			cancelShardManager()
 			cancelEventLoop()
 			s.InitiateShutdown()
 		}

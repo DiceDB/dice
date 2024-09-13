@@ -141,7 +141,7 @@ func evalSET(args []string, store *dstore.Store) []byte {
 				return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
 			}
 
-			if exDuration <= 0 {
+			if exDuration <= 0 || exDuration >= maxExDuration {
 				return diceerrors.NewErrExpireTime("SET")
 			}
 
