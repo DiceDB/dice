@@ -1484,3 +1484,10 @@ func testEvalSELECT(t *testing.T, store *dstore.Store) {
 	}
 	runEvalTests(t, tests, evalSELECT, store)
 }
+
+func BenchmarkEvalSELECT(b *testing.B) {
+	store := dstore.NewStore(nil)
+	for i := 0; i < b.N; i++ {
+		evalSELECT([]string{"1"}, store)
+	}
+}
