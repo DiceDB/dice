@@ -7,7 +7,6 @@ import (
 
 
 	"github.com/bytedance/sonic"
-	"github.com/dicedb/dice/internal/object"
 
 	"strconv"
 	"strings"
