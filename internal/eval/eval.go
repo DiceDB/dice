@@ -41,6 +41,7 @@ var serverID string
 var diceCommandsCount int
 
 const defaultRootPath = "$"
+const maxExDuration = 10000000000000000
 
 func init() {
 	diceCommandsCount = len(DiceCmds)
@@ -1871,7 +1872,7 @@ func evalGETEX(args []string, store *dstore.Store) []byte {
 			if err != nil {
 				return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
 			}
-			if exDuration <= 0 {
+			if exDuration <= 0 || exDuration >= maxExDuration {
 				return diceerrors.NewErrExpireTime("GETEX")
 			}
 
