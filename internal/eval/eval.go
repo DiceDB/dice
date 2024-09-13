@@ -1880,7 +1880,7 @@ func evalGETEX(args []string, store *dstore.Store) []byte {
 			if err != nil {
 				return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
 			}
-			if exDuration < 0 || exDuration > maxExDuration {
+			if exDuration <= 0 {
 				return diceerrors.NewErrExpireTime("GETEX")
 			}
 
