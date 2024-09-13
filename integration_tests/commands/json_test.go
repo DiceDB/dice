@@ -591,7 +591,7 @@ func TestJsonStrlen(t *testing.T) {
 		expected    []interface{}
 		assert_type []string
 	}{
-		
+
 		{
 			name:        "JSON.STRLEN with root path",
 			commands:    []string{"json.set a $ " + a, "json.strlen a $"},
@@ -612,13 +612,13 @@ func TestJsonStrlen(t *testing.T) {
 		},
 	}
 	for _, tcase := range testCases {
-		fireCommand(conn, "DEL a")
-		fireCommand(conn, "DEL doc")
+		FireCommand(conn, "DEL a")
+		FireCommand(conn, "DEL doc")
 		t.Run(tcase.name, func(t *testing.T) {
 			for i := 0; i < len(tcase.commands); i++ {
 				cmd := tcase.commands[i]
 				out := tcase.expected[i]
-				result := fireCommand(conn, cmd)
+				result := FireCommand(conn, cmd)
 				if tcase.assert_type[i] == "equal" {
 					assert.Equal(t, out, result)
 				} else if tcase.assert_type[i] == "deep_equal" {
