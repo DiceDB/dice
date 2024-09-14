@@ -55,7 +55,7 @@ func TestExpireat(t *testing.T) {
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()-1, 10),
 				"GET test_key",
 			},
-			expected: []interface{}{int64(1), "(nil)"},
+			expected: []interface{}{int64(1), "ERR invalid expire time in 'expire' command"},
 			delay:    []time.Duration{0, 0},
 		},
 		{
