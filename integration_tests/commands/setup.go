@@ -24,7 +24,8 @@ import (
 )
 
 type TestServerOptions struct {
-	Port int
+	Port   int
+	Logger *slog.Logger
 }
 
 //nolint:unused
@@ -122,7 +123,7 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	watchChan := make(chan dstore.WatchEvent, config.DiceConfig.Server.KeysLimit)
 	shardManager := shard.NewShardManager(1, watchChan)
 	// Initialize the AsyncServer
-	testServer := server.NewAsyncServer(shardManager, watchChan)
+	testServer := server.NewAsyncServer(shardManager, watchChan, opt.Logger)
 
 	// Try to bind to a port with a maximum of `totalRetries` retries.
 	for i := 0; i < totalRetries; i++ {

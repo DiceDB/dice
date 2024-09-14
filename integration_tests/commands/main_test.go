@@ -24,7 +24,8 @@ func TestMain(m *testing.M) {
 	// checks for available port and then forks a goroutine
 	// to start the server
 	opts := TestServerOptions{
-		Port: 8739,
+		Port:   8739,
+		Logger: logger,
 	}
 	RunTestServer(context.Background(), &wg, opts)
 

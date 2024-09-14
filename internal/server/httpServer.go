@@ -32,9 +32,14 @@ type HTTPServer struct {
 	ioChan       chan *ops.StoreResponse
 	watchChan    chan dstore.WatchEvent
 	httpServer   *http.Server
+	logger       *slog.Logger
 }
 
-func NewHTTPServer(shardManager *shard.ShardManager, watchChan chan dstore.WatchEvent) *HTTPServer {
+func NewHTTPServer(
+	shardManager *shard.ShardManager,
+	watchChan chan dstore.WatchEvent,
+	logger *slog.Logger,
+) *HTTPServer {
 	mux := http.NewServeMux()
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", config.HTTPPort),
@@ -44,10 +49,11 @@ func NewHTTPServer(shardManager *shard.ShardManager, watchChan chan dstore.Watch
 
 	httpServer := &HTTPServer{
 		shardManager: shardManager,
-		queryWatcher: querywatcher.NewQueryManager(),
+		queryWatcher: querywatcher.NewQueryManager(logger),
 		ioChan:       make(chan *ops.StoreResponse, 1000),
 		watchChan:    watchChan,
 		httpServer:   srv,
+		logger:       logger,
 	}
 
 	mux.HandleFunc("/", httpServer.DiceHTTPHandler)
@@ -76,7 +82,7 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 		<-ctx.Done()
 		err = s.httpServer.Shutdown(httpCtx)
 		if err != nil {
-			slog.Error("HTTP Server Shutdown Failed", slog.Any("error", err))
+			s.logger.Error("HTTP Server Shutdown Failed", slog.Any("error", err))
 			return
 		}
 	}()
@@ -84,7 +90,7 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		slog.Info("HTTP Server running", slog.String("addr", s.httpServer.Addr))
+		s.logger.Info("HTTP Server running", slog.String("addr", s.httpServer.Addr))
 		err = s.httpServer.ListenAndServe()
 	}()
 
@@ -96,15 +102,15 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 	// convert to REDIS cmd
 	redisCmd, err := utils.ParseHTTPRequest(request)
 	if err != nil {
-		slog.Error("Error parsing HTTP request", slog.Any("error", err))
+		s.logger.Error("Error parsing HTTP request", slog.Any("error", err))
 		return
 	}
 
 	if unimplementedCommands[redisCmd.Cmd] {
-		slog.Error("Command %s is not implemented", slog.String("cmd", redisCmd.Cmd))
+		s.logger.Error("Command %s is not implemented", slog.String("cmd", redisCmd.Cmd))
 		_, err := writer.Write([]byte("Command is not implemented with HTTP"))
 		if err != nil {
-			slog.Error("Error writing response", slog.Any("error", err))
+			s.logger.Error("Error writing response", slog.Any("error", err))
 			return
 		}
 		return
@@ -124,19 +130,19 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 	rp := clientio.NewRESPParser(bytes.NewBuffer(resp.Result))
 	val, err := rp.DecodeOne()
 	if err != nil {
-		slog.Error("Error decoding response", slog.Any("error", err))
+		s.logger.Error("Error decoding response", slog.Any("error", err))
 		return
 	}
 
 	// Write response
 	responseJSON, err := json.Marshal(val)
 	if err != nil {
-		slog.Error("Error marshaling response", slog.Any("error", err))
+		s.logger.Error("Error marshaling response", slog.Any("error", err))
 		return
 	}
 	_, err = writer.Write(responseJSON)
 	if err != nil {
-		slog.Error("Error writing response", slog.Any("error", err))
+		s.logger.Error("Error writing response", slog.Any("error", err))
 		return
 	}
 }

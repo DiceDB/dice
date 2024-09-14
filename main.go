@@ -71,14 +71,14 @@ func main() {
 
 	// Initialize the AsyncServer
 	asyncServer := server.NewAsyncServer(shardManager, watchChan, logger)
-	httpServer := server.NewHTTPServer(shardManager, watchChan)
+	httpServer := server.NewHTTPServer(shardManager, watchChan, logger)
 
 	// Initialize the HTTP server
 
 	// Find a port and bind it
 	if err := asyncServer.FindPortAndBind(); err != nil {
 		cancel()
-		slog.Error("Error finding and binding port",
+		logger.Error("Error finding and binding port",
 			slog.Any("error", err),
 		)
 		os.Exit(1)
@@ -112,18 +112,18 @@ func main() {
 		// Handling different server errors
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
-				slog.Debug("Server was canceled")
+				logger.Debug("Server was canceled")
 			} else if errors.Is(err, server.ErrAborted) {
-				slog.Debug("Server received abort command")
+				logger.Debug("Server received abort command")
 			} else {
-				slog.Error(
+				logger.Error(
 					"Server error",
 					slog.Any("error", err),
 				)
 			}
 			serverErrCh <- err
 		} else {
-			slog.Debug("Server stopped without error")
+			logger.Debug("Server stopped without error")
 		}
 	}()
 
@@ -134,15 +134,15 @@ func main() {
 		err := httpServer.Run(ctx)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
-				slog.Debug("HTTP Server was canceled")
+				logger.Debug("HTTP Server was canceled")
 			} else if errors.Is(err, server.ErrAborted) {
-				slog.Debug("HTTP received abort command")
+				logger.Debug("HTTP received abort command")
 			} else {
-				slog.Error("HTTP Server error", slog.Any("error", err))
+				logger.Error("HTTP Server error", slog.Any("error", err))
 			}
 			serverErrCh <- err
 		} else {
-			slog.Debug("HTTP Server stopped without error")
+			logger.Debug("HTTP Server stopped without error")
 		}
 	}()
 
@@ -163,5 +163,5 @@ func main() {
 	cancel()
 
 	wg.Wait()
-	slog.Debug("Server has shut down gracefully")
+	logger.Debug("Server has shut down gracefully")
 }

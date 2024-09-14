@@ -49,7 +49,7 @@ func NewAsyncServer(shardManager *shard.ShardManager, watchChan chan dstore.Watc
 		maxClients:             config.DiceConfig.Server.MaxClients,
 		connectedClients:       make(map[int]*comm.Client),
 		shardManager:           shardManager,
-		queryWatcher:           querywatcher.NewQueryManager(),
+		queryWatcher:           querywatcher.NewQueryManager(logger),
 		multiplexerPollTimeout: config.DiceConfig.Server.MultiplexerPollTimeout,
 		ioChan:                 make(chan *ops.StoreResponse, 1000),
 		watchChan:              watchChan,
