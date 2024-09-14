@@ -78,18 +78,27 @@ To run the live DiceDB server for local development:
 ```sh
 $ git clone https://github.com/dicedb/dice
 $ cd dice
+$ air
+```
 
+### Local Setup with Custom Config
+
+By default, DiceDB will look for the configuration file at `/etc/dice/config.toml`. (Linux, Darwin, and WSL)
+
+```sh
 $ # set up configuration file # (optional but recommended)
 $ sudo mkdir -p /etc/dice
 $ sudo chown root:$USER /etc/dice
 $ sudo chmod 775 /etc/dice # or 777 if you are the only user
+$ git clone https://github.com/DiceDB/dice.git
+$ cd dice
 $ go run main.go -init-config
 
 ```
 
 > [!NOTE]
 
-> #### Windows Users:
+> #### For Windows Users:
 > If you're using Windows, it is recommended to use Windows Subsystem for Linux (WSL) or WSL 2 to run the above commands seamlessly in a Linux-like environment.
 > 
 > Alternatively, you can:

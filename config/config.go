@@ -255,7 +255,7 @@ func getConfigPath() string {
 	case "windows":
 		ConfigFileLocation = filepath.Join("C:", "ProgramData", "dice", DefaultConfigName)
 	case "darwin", "linux":
-		ConfigFileLocation = filepath.Join("/", "etc", "dice", DefaultConfigName)
+		ConfigFileLocation = filepath.Join(string(filepath.Separator), "etc", "dice", DefaultConfigName)
 	default:
 		// Default to current directory if OS is unknown
 		ConfigFileLocation = filepath.Join(".", DefaultConfigName)
