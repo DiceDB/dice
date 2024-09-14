@@ -656,6 +656,13 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hlenCmdMeta = DiceCmdMeta{
+		Name: "HLEN",
+		Info: `HLEN key
+		Returns the number of fields contained in the hash stored at key.`,
+		Eval:  evalHLEN,
+		Arity: 2,
+	}
 )
 
 func init() {
@@ -734,6 +741,7 @@ func init() {
 	DiceCmds["HGET"] = hgetCmdMeta
 	DiceCmds["PFMERGE"] = pfMergeCmdMeta
 	DiceCmds["JSON.STRLEN"] = jsonStrlenCmdMeta
+	DiceCmds["HLEN"] = hlenCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

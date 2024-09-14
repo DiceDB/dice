@@ -17,8 +17,10 @@ format:
 run:
 	go run main.go
 
+# Changing the parallel package count to 1 due to a possible race condition which causes the tests to get stuck.
+# TODO: Fix the tests to run in parallel, and remove the -p=1 flag.
 test:
-	go test -v -race -count=1 ./integration_tests/...
+	go test -v -race -count=1 -p=1 ./integration_tests/...
 
 test-one:
 	go test -v -race -count=1 --run $(TEST_FUNC) ./integration_tests/...
