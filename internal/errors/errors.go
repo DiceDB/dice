@@ -7,18 +7,21 @@ import (
 )
 
 const (
-	ArityErr           = "wrong number of arguments for '%s' command"
-	SyntaxErr          = "syntax error"
-	ExpiryErr          = "invalid expire time in '%s' command"
-	AuthErr            = "AUTH failed"
-	IntOrOutOfRangeErr = "value is not an integer or out of range"
-	ValOutOfRangeErr   = "value is out of range"
-	ElementPeekErr     = "number of elements to peek should be a positive number less than %d"
-	NoKeyErr           = "no such key"
-	ErrDefault         = "-ERR %s"
-	WrongTypeErr       = "-WRONGTYPE Operation against a key holding the wrong kind of value"
-	InvalidHllErr      = "-INVALIDOBJ Corrupted HLL object detected"
-	WorkerNotFoundErr  = "worker with ID %s not found"
+	ArityErr             = "wrong number of arguments for '%s' command"
+	SyntaxErr            = "syntax error"
+	ExpiryErr            = "invalid expire time in '%s' command"
+	AuthErr              = "AUTH failed"
+	IntOrOutOfRangeErr   = "value is not an integer or out of range"
+	ValOutOfRangeErr     = "value is out of range"
+	ElementPeekErr       = "number of elements to peek should be a positive number less than %d"
+	NoKeyErr             = "no such key"
+	ErrDefault           = "-ERR %s"
+	WrongTypeErr         = "-WRONGTYPE Operation against a key holding the wrong kind of value"
+	WrongTypeHllErr      = "-WRONGTYPE Key is not a valid HyperLogLog string value."
+	InvalidHllErr        = "-INVALIDOBJ Corrupted HLL object detected"
+	WorkerNotFoundErr    = "worker with ID %s not found"
+	JSONPathNotExistErr  = "-ERR Path '%s' does not exist"
+	JSONPathValueTypeErr = "-WRONGTYPE wrong type of path value - expected string but found integer"
 )
 
 type DiceError struct {
