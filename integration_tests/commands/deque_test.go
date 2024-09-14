@@ -416,16 +416,16 @@ func TestLLEN(t *testing.T) {
 		{
 			name: "L/RPush L/RPop",
 			cmds: []string{
-				"RPUSH k v1000 1000", "LLEN k", "LPUSH k v2000 2000", "LLEN k",
+				"RPUSH k v1000 1000", "LPUSH k v2000 2000", "LLEN k",
 				"RPOP k", "LLEN k", "RPOP k", "LPOP k", "LLEN k",
 				"LPUSH k v6", "LLEN k",
 				"RPOP k", "LLEN k", "LPOP k", "LPOP k", "RPOP k", "LLEN k",
 			},
 			expect: []any{
-				"OK", "OK", "4",
-				"1000", "3", "v1000", "2000", "1",
-				"OK", "2",
-				"v2000", "0", "v6", "(nil)", "(nil)", "0",
+				"OK", "OK", int64(4),
+				"1000", int64(3), "v1000", "2000", int64(1),
+				"OK", int64(2),
+				"v2000", int64(1), "v6", "(nil)", "(nil)", int64(0),
 			},
 		},
 	}
