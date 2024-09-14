@@ -1,6 +1,7 @@
 package store
 
 import (
+	"github.com/ohler55/ojg/jp"
 	"path"
 
 	"github.com/dicedb/dice/internal/object"
@@ -307,7 +308,7 @@ func (store *Store) CacheKeysForQuery(whereClause sqlparser.Expr, cacheChannel c
 		Value *object.Obj
 	}, 0)
 	store.store.All(func(k string, v *object.Obj) bool {
-		matches, err := sql.EvaluateWhereClause(whereClause, sql.QueryResultRow{Key: k, Value: *v})
+		matches, err := sql.EvaluateWhereClause(whereClause, sql.QueryResultRow{Key: k, Value: *v}, make(map[string]jp.Expr))
 		if err != nil || !matches {
 			return true
 		}
