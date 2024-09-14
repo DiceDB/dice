@@ -97,7 +97,6 @@ $ go run main.go -init-config
 ```
 
 > [!NOTE]
-
 > #### For Windows Users:
 > If you're using Windows, it is recommended to use Windows Subsystem for Linux (WSL) or WSL 2 to run the above commands seamlessly in a Linux-like environment.
 > 
