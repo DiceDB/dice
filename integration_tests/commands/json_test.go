@@ -606,15 +606,13 @@ func TestJSONForgetOperations(t *testing.T) {
 		})
 	}
 }
-
-func arraysArePermutations(a, b []interface{}) bool {
-	// If lengths are different, they cannot be permutations
+func arraysArePermutations[T comparable](a, b []T) bool {
 	if len(a) != len(b) {
 		return false
 	}
 
 	// Count occurrences of each element in array 'a'
-	countA := make(map[interface{}]int)
+	countA := make(map[T]int)
 	for _, elem := range a {
 		countA[elem]++
 	}
@@ -841,27 +839,49 @@ func TestJsonARRAPPEND(t *testing.T) {
 		})
 	}
 }
-
+func convertToArray(input string) []string {
+	input = strings.Trim(input, `"[`)
+	input = strings.Trim(input, `]"`)
+	elements := strings.Split(input, ",")
+	for i, element := range elements {
+		elements[i] = strings.TrimSpace(element)
+	}
+	return elements
+}
 func TestJSONNumIncrBy(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 	invalidArgMessage := "ERR wrong number of arguments for 'json.numincrby' command"
-	a := `{"a":"b","b":[{"a":2},{"a":5},{"a":"c"}]}`
-	testCases := []TestCase{
+	a := `{"a":"b","b":[{"a":2.2},{"a":5},{"a":"c"}]}`
+	testCases := []struct {
+		name        string
+		commands    []string
+		expected    []interface{}
+		assert_type []string
+	}{
 		{
-			name:     "Invalid number of arguments",
-			commands: []string{"JSON.NUMINCRBY ", "JSON.NUMINCRBY foo", "JSON.NUMINCRBY foo $"},
-			expected: []interface{}{invalidArgMessage, invalidArgMessage, invalidArgMessage},
+			name:        "Invalid number of arguments",
+			commands:    []string{"JSON.NUMINCRBY ", "JSON.NUMINCRBY foo", "JSON.NUMINCRBY foo $"},
+			expected:    []interface{}{invalidArgMessage, invalidArgMessage, invalidArgMessage},
+			assert_type: []string{"equal", "equal", "equal"},
 		},
 		{
-			name:     "Non-existant key",
-			commands: []string{"JSON.NUMINCRBY foo $ 1"},
-			expected: []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
+			name:        "Non-existant key",
+			commands:    []string{"JSON.NUMINCRBY foo $ 1"},
+			expected:    []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
+			assert_type: []string{"equal"},
 		},
 		{
-			name:     "incrby at non root path",
-			commands: []string{"JSON.SET foo $ " + a, "JSON.NUMINCRBY foo $..a 2"},
-			expected: []interface{}{"OK", `"[null,4,7,null]"`},
+			name:        "incrby at non root path",
+			commands:    []string{"JSON.SET foo $ " + a, "JSON.NUMINCRBY foo $..a 2", "JSON.NUMINCRBY foo $.a 2", "JSON.NUMINCRBY foo $..a -2"},
+			expected:    []interface{}{"OK", `"[null,4.2,7,null]"`, `"[null]"`, `"[null,2.2,5,null]"`},
+			assert_type: []string{"equal", "perm_equal", "perm_equal", "perm_equal"},
+		},
+		{
+			name:        "incrby at root path",
+			commands:    []string{"JSON.SET foo $ 1", "JSON.NUMINCRBY foo $ 1", "JSON.GET foo $", "JSON.NUMINCRBY foo $ -1", "JSON.GET foo $"},
+			expected:    []interface{}{"OK", `"[2]"`, "2", `"[1]"`, "1"},
+			assert_type: []string{"equal", "equal", "equal", "equal", "equal"},
 		},
 	}
 
@@ -872,7 +892,11 @@ func TestJSONNumIncrBy(t *testing.T) {
 				cmd := tc.commands[i]
 				out := tc.expected[i]
 				result := FireCommand(conn, cmd)
-				assert.Equal(t, out, result)
+				if tc.assert_type[i] == "equal" {
+					assert.Equal(t, out, result)
+				} else if tc.assert_type[i] == "perm_equal" {
+					assert.Assert(t, arraysArePermutations(convertToArray(out.(string)), convertToArray(result.(string))))
+				}
 			}
 		})
 	}
