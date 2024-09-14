@@ -3180,8 +3180,6 @@ func evalJSONNUMINCRBY(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("JSON.NUMINCRBY")
 	}
 	key := args[0]
-	// path := args[1]
-	// value := args[2]
 	obj := store.Get(key)
 
 	if obj == nil {
