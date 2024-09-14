@@ -55,7 +55,7 @@ func TestExpire(t *testing.T) {
 				"EXPIRE test_key -1",
 				"GET test_key",
 			},
-			expected: []interface{}{int64(1), "(nil)"},
+			expected: []interface{}{"ERR invalid expire time in 'expire' command", "test_value"},
 			delay:    []time.Duration{0, 0},
 		},
 		{

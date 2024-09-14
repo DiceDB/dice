@@ -220,6 +220,35 @@ func testEvalEXPIRE(t *testing.T, store *dstore.Store) {
 			input:  []string{"EXISTING_KEY", strconv.FormatInt(1, 10)},
 			output: clientio.RespOne,
 		},
+		"invalid expiry time exists - very large integer": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "mock_value"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+
+			},
+			input:  []string{"EXISTING_KEY", strconv.FormatInt(9223372036854776, 10)},
+			output: []byte("-ERR invalid expire time in 'expire' command\r\n"),
+		},
+
+		"invalid expiry time exists - negative integer": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "mock_value"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+
+			},
+			input:  []string{"EXISTING_KEY", strconv.FormatInt(-1, 10)},
+			output: []byte("-ERR invalid expire time in 'expire' command\r\n"),
+		},
 	}
 
 	runEvalTests(t, tests, evalEXPIRE, store)
@@ -298,6 +327,34 @@ func testEvalEXPIREAT(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"EXISTING_KEY", strconv.FormatInt(time.Now().Add(2*time.Minute).Unix(), 10)},
 			output: clientio.RespOne,
+		},
+		"invalid expire time - very large integer": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "mock_value"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+
+			},
+			input:  []string{"EXISTING_KEY", strconv.FormatInt(9223372036854776, 10)},
+			output: []byte("-ERR invalid expire time in 'expireat' command\r\n"),
+		},
+		"invalid expire time - negative integer": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "mock_value"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+
+			},
+			input:  []string{"EXISTING_KEY", strconv.FormatInt(-1, 10)},
+			output: []byte("-ERR invalid expire time in 'expireat' command\r\n"),
 		},
 	}
 
