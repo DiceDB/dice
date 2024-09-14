@@ -64,6 +64,7 @@ func TestEval(t *testing.T) {
 	testEvalJSONSTRLEN(t, store)
 	testEvalHLEN(t, store)
 	testEvalSELECT(t, store)
+	testEvalLLEN(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -1346,6 +1347,40 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 		},
 	}
 	runEvalTests(t, tests, evalJSONSTRLEN, store)
+}
+
+func testEvalLLEN(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'llen' command\r\n"),
+		},
+		"empty args": {
+			input:  []string{},
+			output: []byte("-ERR wrong number of arguments for 'llen' command\r\n"),
+		},
+		"wrong number of args": {
+			input:  []string{"KEY1", "KEY2"},
+			output: []byte("-ERR wrong number of arguments for 'llen' command\r\n"),
+		},
+		"key does not exist": {
+			input:  []string{"NONEXISTENT_KEY"},
+			output: clientio.RespZero,
+		},
+		"key exists": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "mock_value"
+				obj := store.NewObj(NewDeque(), -1, object.ObjTypeByteList, object.ObjEncodingDeque)
+				obj.Value.(*Deque).LPush(value)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY"},
+			output: clientio.RespOne,
+		},
+	}
+
+	runEvalTests(t, tests, evalLLEN, store)
 }
 
 func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]string, *dstore.Store) []byte, store *dstore.Store) {

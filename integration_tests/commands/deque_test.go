@@ -403,6 +403,45 @@ func TestLRPushLRPop(t *testing.T) {
 	deqCleanUp(conn, "k")
 }
 
+func TestLLEN(t *testing.T) {
+	deqTestInit()
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	testCases := []struct {
+		name   string
+		cmds   []string
+		expect []any
+	}{
+		{
+			name: "L/RPush L/RPop",
+			cmds: []string{
+				"RPUSH k v1000 1000", "LLEN k", "LPUSH k v2000 2000", "LLEN k",
+				"RPOP k", "LLEN k", "RPOP k", "LPOP k", "LLEN k",
+				"LPUSH k v6", "LLEN k",
+				"RPOP k", "LLEN k", "LPOP k", "LPOP k", "RPOP k", "LLEN k",
+			},
+			expect: []any{
+				"OK", "OK", "4",
+				"1000", "3", "v1000", "2000", "1",
+				"OK", "2",
+				"v2000", "0", "v6", "(nil)", "(nil)", "0",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for i, cmd := range tc.cmds {
+				result := FireCommand(conn, cmd)
+				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
+			}
+		})
+	}
+
+	deqCleanUp(conn, "k")
+}
+
 func deqCleanUp(conn net.Conn, key string) {
 	for {
 		result := FireCommand(conn, "LPOP "+key)

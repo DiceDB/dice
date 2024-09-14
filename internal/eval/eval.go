@@ -2227,6 +2227,33 @@ func evalLPOP(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(x, false)
 }
 
+func evalLLEN(args []string, store *dstore.Store) []byte {
+	if len(args) != 1 {
+		return diceerrors.NewErrArity("LLEN")
+	}
+
+	obj := store.Get(args[0])
+	if obj == nil {
+		return clientio.Encode(0, false)
+	}
+
+	// if object is a set type, return error
+	if object.AssertType(obj.TypeEncoding, object.ObjTypeSet) == nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeByteList); err != nil {
+		return clientio.Encode(err, false)
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingDeque); err != nil {
+		return clientio.Encode(err, false)
+	}
+
+	deq := obj.Value.(*Deque)
+	return clientio.Encode(deq.Length, false)
+}
+
 // GETSET atomically sets key to value and returns the old value stored at key.
 // Returns an error when key exists but does not hold a string value.
 // Any previous time to live associated with the key is
