@@ -663,6 +663,12 @@ var (
 		Eval:  evalHLEN,
 		Arity: 2,
 	}
+	selectCmdMeta = DiceCmdMeta{
+		Name:  "SELECT",
+		Info:  `Select the logical database having the specified zero-based numeric index. New connections always use the database 0`,
+		Eval:  evalSELECT,
+		Arity: 1,
+	}
 )
 
 func init() {
@@ -742,6 +748,7 @@ func init() {
 	DiceCmds["PFMERGE"] = pfMergeCmdMeta
 	DiceCmds["JSON.STRLEN"] = jsonStrlenCmdMeta
 	DiceCmds["HLEN"] = hlenCmdMeta
+	DiceCmds["SELECT"] = selectCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}
