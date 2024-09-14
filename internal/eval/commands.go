@@ -522,6 +522,15 @@ var (
 		Eval:  evalRPOP,
 		Arity: 2,
 	}
+	llenCmdMeta = DiceCmdMeta{
+		Name: "LLEN",
+		Info: `LLEN key
+		Returns the length of the list stored at key. If key does not exist,
+		it is interpreted as an empty list and 0 is returned.
+		An error is returned when the value stored at key is not a list.`,
+		Eval:  evalLLEN,
+		Arity: 1,
+	}
 	dbSizeCmdMeta = DiceCmdMeta{
 		Name:  "DBSIZE",
 		Info:  `DBSIZE Return the number of keys in the database`,
@@ -648,6 +657,27 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsonStrlenCmdMeta = DiceCmdMeta{
+		Name: "JSON.STRLEN",
+		Info: `JSON.STRLEN key [path]
+		Report the length of the JSON String at path in key`,
+		Eval:     evalJSONSTRLEN,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	hlenCmdMeta = DiceCmdMeta{
+		Name: "HLEN",
+		Info: `HLEN key
+		Returns the number of fields contained in the hash stored at key.`,
+		Eval:  evalHLEN,
+		Arity: 2,
+	}
+	selectCmdMeta = DiceCmdMeta{
+		Name:  "SELECT",
+		Info:  `Select the logical database having the specified zero-based numeric index. New connections always use the database 0`,
+		Eval:  evalSELECT,
+		Arity: 1,
+	}
 )
 
 func init() {
@@ -710,6 +740,7 @@ func init() {
 	DiceCmds["RPOP"] = rpopCmdMeta
 	DiceCmds["RPUSH"] = rpushCmdMeta
 	DiceCmds["LPOP"] = lpopCmdMeta
+	DiceCmds["LLEN"] = llenCmdMeta
 	DiceCmds["DBSIZE"] = dbSizeCmdMeta
 	DiceCmds["GETSET"] = getSetCmdMeta
 	DiceCmds["FLUSHDB"] = flushdbCmdMeta
@@ -725,6 +756,9 @@ func init() {
 	DiceCmds["PFCOUNT"] = pfCountCmdMeta
 	DiceCmds["HGET"] = hgetCmdMeta
 	DiceCmds["PFMERGE"] = pfMergeCmdMeta
+	DiceCmds["JSON.STRLEN"] = jsonStrlenCmdMeta
+	DiceCmds["HLEN"] = hlenCmdMeta
+	DiceCmds["SELECT"] = selectCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

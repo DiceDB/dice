@@ -43,22 +43,20 @@ type AsyncServer struct {
 }
 
 // NewAsyncServer initializes a new AsyncServer
-func NewAsyncServer() *AsyncServer {
-	watchChan := make(chan dstore.WatchEvent, config.KeysLimit)
+func NewAsyncServer(shardManager *shard.ShardManager, watchChan chan dstore.WatchEvent) *AsyncServer {
 	return &AsyncServer{
-		maxClients:             config.ServerMaxClients,
+		maxClients:             config.DiceConfig.Server.MaxClients,
 		connectedClients:       make(map[int]*comm.Client),
-		shardManager:           shard.NewShardManager(1, watchChan),
+		shardManager:           shardManager,
 		queryWatcher:           querywatcher.NewQueryManager(),
-		multiplexerPollTimeout: config.ServerMultiplexerPollTimeout,
+		multiplexerPollTimeout: config.DiceConfig.Server.MultiplexerPollTimeout,
 		ioChan:                 make(chan *ops.StoreResponse, 1000),
 		watchChan:              watchChan,
 	}
 }
 
 // NewAsyncTestServer initializes a new TestAsyncServer which reads test config
-func NewAsyncTestServer() *AsyncServer {
-	watchChan := make(chan dstore.WatchEvent, config.KeysLimit)
+func NewAsyncTestServer(shardManager *shard.ShardManager, watchChan chan dstore.WatchEvent) *AsyncServer {
 	return &AsyncServer{
 		maxClients:             config.TestServerMaxClients,
 		connectedClients:       make(map[int]*comm.Client),
@@ -76,7 +74,7 @@ func (s *AsyncServer) SetupUsers() error {
 	if err != nil {
 		return err
 	}
-	return user.SetPassword(config.RequirePass)
+	return user.SetPassword(config.DiceConfig.Auth.Password)
 }
 
 // FindPortAndBind binds the server to the given host and port
@@ -106,14 +104,14 @@ func (s *AsyncServer) FindPortAndBind() (socketErr error) {
 		return err
 	}
 
-	ip4 := net.ParseIP(config.Host)
+	ip4 := net.ParseIP(config.DiceConfig.Server.Addr)
 	if ip4 == nil {
 		return ErrInvalidIPAddress
 	}
 
-	log.Infof("DiceDB %s running on port %d", "0.0.3", config.Port)
+	log.Infof("DiceDB %s running on port %d", "0.0.3", config.DiceConfig.Server.Port)
 	return syscall.Bind(serverFD, &syscall.SockaddrInet4{
-		Port: config.Port,
+		Port: config.DiceConfig.Server.Port,
 		Addr: [4]byte{ip4[0], ip4[1], ip4[2], ip4[3]},
 	})
 }
@@ -162,15 +160,6 @@ func (s *AsyncServer) Run(ctx context.Context) error {
 		s.queryWatcher.Run(watchCtx, s.watchChan)
 	}()
 
-	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
-	defer cancelShardManager()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		s.shardManager.Run(shardManagerCtx)
-	}()
-
 	s.shardManager.RegisterWorker("server", s.ioChan)
 
 	if err := syscall.Listen(s.serverFD, s.maxClients); err != nil {
@@ -205,7 +194,6 @@ func (s *AsyncServer) Run(ctx context.Context) error {
 		err = s.eventLoop(eventLoopCtx)
 		if err != nil {
 			cancelWatch()
-			cancelShardManager()
 			cancelEventLoop()
 			s.InitiateShutdown()
 		}

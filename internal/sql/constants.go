@@ -1,7 +1,8 @@
 package sql
 
 const (
-	Asc string = "asc"
+	Asc  string = "asc"
+	Desc string = "desc"
 
 	String string = "string"
 	Int64  string = "int64"
