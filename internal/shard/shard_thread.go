@@ -110,7 +110,12 @@ func (shard *ShardThread) executeCommand(op *ops.StoreOp) []byte {
 		return diceerrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", op.Cmd.Cmd, strings.Join(op.Cmd.Args, " "))
 	}
 
-	// The following commands could be handled at the server level, however, we can randomly let any shard handle them
+	// Till the time we refactor to handle QWATCH differently using HTTP Streaming/SSE
+	if op.HTTPOp {
+		return diceCmd.Eval(op.Cmd.Args, shard.store)
+	}
+
+	// The following commands could be handled at the shard level, however, we can randomly let any shard handle them
 	// to reduce load on main server.
 	switch diceCmd.Name {
 	case "SUBSCRIBE", "QWATCH":

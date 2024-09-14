@@ -140,7 +140,7 @@ func evalSET(args []string, store *dstore.Store) []byte {
 			if err != nil {
 				return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
 			}
-			
+
 			if exDuration <= 0 || exDuration >= maxExDuration {
 				return diceerrors.NewErrExpireTime("SET")
 			}
@@ -2813,4 +2813,25 @@ func evalJSONSTRLEN(args []string, store *dstore.Store) []byte {
 		}
 	}
 	return clientio.Encode(strLenResults, false)
+}
+
+func evalHLEN(args []string, store *dstore.Store) []byte {
+	if len(args) != 1 {
+		return diceerrors.NewErrArity("HLEN")
+	}
+
+	key := args[0]
+
+	obj := store.Get(key)
+
+	if obj == nil {
+		return clientio.RespZero
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
+	hashMap := obj.Value.(HashMap)
+	return clientio.Encode(len(hashMap), false)
 }
