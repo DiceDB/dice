@@ -119,28 +119,27 @@ var defaultConfig = Config{
 var DiceConfig *Config = &defaultConfig
 
 func SetupConfig() {
+	if InitConfigCmd {
+		ConfigFileLocation = getConfigPath()
+		createConfigFile(ConfigFileLocation)
+		return
+	}
+
+	// Check if both -o and -c flags are set
 	if areBothFlagsSet() {
 		log.Error("Both -o and -c flags are set. Please use only one flag.")
 		return
 	}
 
-	if ConfigFileLocation == utils.EmptyStr {
-		ConfigFileLocation = getConfigPath()
-	}
-
-	if InitConfigCmd {
-		createConfigFile(ConfigFileLocation)
-		return
-	}
-
-	log.Infof("config file location: %s", ConfigFileLocation)
-	setUpViperConfig(ConfigFileLocation)
-
-	if !isValidDirPath() || !isConfigFilePresent() {
-		log.Info("Using default configurations.")
-		return
-	} else if isValidDirPath() && CustomConfigFilePath != utils.EmptyStr {
+	// Check if -o flag is set
+	if CustomConfigFilePath != utils.EmptyStr && isValidDirPath() {
 		createConfigFile(filepath.Join(CustomConfigFilePath, DefaultConfigName))
+		return
+	}
+
+	// Check if -c flag is set
+	if ConfigFileLocation != utils.EmptyStr || isConfigFilePresent() {
+		setUpViperConfig(ConfigFileLocation)
 		return
 	}
 }
