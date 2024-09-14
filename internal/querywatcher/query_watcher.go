@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ohler55/ojg/jp"
 	"sync"
 	"syscall"
 	"time"
@@ -143,7 +144,7 @@ func (w *QueryManager) processWatchEvent(event dstore.WatchEvent) {
 
 		// Check if the key matches the regex
 		if query.Where != nil {
-			matches, err := sql.EvaluateWhereClause(query.Where, sql.QueryResultRow{Key: event.Key, Value: event.Value})
+			matches, err := sql.EvaluateWhereClause(query.Where, sql.QueryResultRow{Key: event.Key, Value: event.Value}, make(map[string]jp.Expr))
 			if err != nil || !matches {
 				return true
 			}
@@ -274,7 +275,7 @@ func (w *QueryManager) removeWatcher(query *sql.DSQLQuery, clientFD int) {
 	queryString := query.String()
 	if clients, ok := w.WatchList.Load(queryString); ok {
 		clients.(*sync.Map).Delete(clientFD)
-		log.Info(fmt.Sprintf("client '%d' no longer watching query: %s", clientFD, queryString))
+		log.Debugf("client '%d' no longer watching query: %s", clientFD, queryString)
 
 		// If no more clients for this query, remove the query from WatchList
 		if w.clientCount(clients.(*sync.Map)) == 0 {
@@ -285,7 +286,7 @@ func (w *QueryManager) removeWatcher(query *sql.DSQLQuery, clientFD int) {
 			w.QueryCache.Delete(query.Fingerprint)
 			w.QueryCacheMu.Unlock()
 
-			log.Info(fmt.Sprintf("no longer watching query: %s", queryString))
+			log.Debugf("no longer watching query: %s", queryString)
 		}
 	}
 }
