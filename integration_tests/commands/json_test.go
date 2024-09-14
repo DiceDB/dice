@@ -841,3 +841,39 @@ func TestJsonARRAPPEND(t *testing.T) {
 		})
 	}
 }
+
+func TestJSONNumIncrBy(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+	invalidArgMessage := "ERR wrong number of arguments for 'json.numincrby' command"
+	a := `{"a":"b","b":[{"a":2},{"a":5},{"a":"c"}]}`
+	testCases := []TestCase{
+		{
+			name:     "Invalid number of arguments",
+			commands: []string{"JSON.NUMINCRBY ", "JSON.NUMINCRBY foo", "JSON.NUMINCRBY foo $"},
+			expected: []interface{}{invalidArgMessage, invalidArgMessage, invalidArgMessage},
+		},
+		{
+			name:     "Non-existant key",
+			commands: []string{"JSON.NUMINCRBY foo $ 1"},
+			expected: []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
+		},
+		{
+			name:     "incrby at non root path",
+			commands: []string{"JSON.SET foo $ " + a, "JSON.NUMINCRBY foo $..a 2"},
+			expected: []interface{}{"OK", `"[null,4,7,null]"`},
+		},
+	}
+
+	for _, tc := range testCases {
+		FireCommand(conn, "DEL foo")
+		t.Run(tc.name, func(t *testing.T) {
+			for i := 0; i < len(tc.commands); i++ {
+				cmd := tc.commands[i]
+				out := tc.expected[i]
+				result := FireCommand(conn, cmd)
+				assert.Equal(t, out, result)
+			}
+		})
+	}
+}

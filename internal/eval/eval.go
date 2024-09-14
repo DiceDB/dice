@@ -3174,3 +3174,92 @@ func evalSELECT(args []string, store *dstore.Store) []byte {
 
 	return clientio.RespOK
 }
+func evalJSONNUMINCRBY(args []string, store *dstore.Store) []byte {
+	if len(args) < 3 {
+		return diceerrors.NewErrArity("JSON.NUMINCRBY")
+	}
+	key := args[0]
+	// path := args[1]
+	// value := args[2]
+	obj := store.Get(key)
+
+	if obj == nil {
+		return diceerrors.NewErrWithFormattedMessage("-ERR could not perform this operation on a key that doesn't exist")
+	}
+
+	// Check if the object is of JSON type
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
+	}
+
+	path := args[1]
+
+	jsonData := obj.Value
+	// Parse the JSONPath expression
+	expr, err := jp.ParseString(path)
+
+	if err != nil {
+		return diceerrors.NewErrWithMessage("invalid JSONPath")
+	}
+	incr, err := strconv.ParseInt(args[2], 10, 64)
+
+	if err != nil {
+		// to-do have to manually find the index of unsupported character
+		return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
+	}
+
+	// Execute the JSONPath query
+	results := expr.Get(jsonData)
+	if len(results) == 0 {
+		respString := "[]"
+		return clientio.Encode(respString, false)
+	}
+	fmt.Println(results)
+	resultArray := make([]string, 0, len(results))
+
+	for i, res := range results {
+		switch utils.GetJSONFieldType(res) {
+		case utils.NumberType:
+			oldVal := int64(res.(float64))
+
+			if (incr < 0 && oldVal < 0 && incr < (math.MinInt64-oldVal)) ||
+				(incr > 0 && oldVal > 0 && incr > (math.MaxInt64-oldVal)) {
+				return diceerrors.NewErrWithMessage(diceerrors.ValOutOfRangeErr)
+			}
+
+			newVal := oldVal + incr
+			fmt.Println(i, newVal)
+			err = expr.Set(jsonData, newVal)
+
+			if err != nil {
+				fmt.Println(err)
+				return diceerrors.NewErrWithMessage("failed to increment value")
+			}
+
+			newObj := &object.Obj{
+				Value:        jsonData,
+				TypeEncoding: object.ObjTypeJSON,
+			}
+			exp, ok := dstore.GetExpiry(obj, store)
+
+			var exDurationMs int64 = -1
+			if ok {
+				exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
+			}
+			// newObj has bydefault expiry time -1 , we need to set it
+			if exDurationMs > 0 {
+				store.SetExpiry(newObj, exDurationMs)
+			}
+
+			store.Put(key, newObj)
+
+			resultArray = append(resultArray, fmt.Sprintf("%d", newVal))
+		default:
+			fmt.Println(utils.GetJSONFieldType(res))
+			resultArray = append(resultArray, "null")
+		}
+	}
+	resultString := `"[` + strings.Join(resultArray, ",") + `]"`
+	return clientio.Encode(resultString, false)
+}
