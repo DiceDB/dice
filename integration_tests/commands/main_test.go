@@ -2,13 +2,21 @@ package commands
 
 import (
 	"context"
+	"log/slog"
 	"os"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/rs/zerolog"
+	slogzerolog "github.com/samber/slog-zerolog/v2"
 )
 
 func TestMain(m *testing.M) {
+	zerologLogger := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr})
+	logger := slog.New(slogzerolog.Option{Logger: &zerologLogger}.NewZerologHandler())
+	slog.SetDefault(logger)
+
 	var wg sync.WaitGroup
 
 	// Run the test server

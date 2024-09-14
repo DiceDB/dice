@@ -15,6 +15,8 @@ import (
 	"github.com/dicedb/dice/internal/server"
 
 	"github.com/dicedb/dice/config"
+	"github.com/rs/zerolog"
+	slogzerolog "github.com/samber/slog-zerolog/v2"
 	"log/slog"
 )
 
@@ -33,6 +35,11 @@ func init() {
 }
 
 func main() {
+	zerologLogger := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr})
+	logger := slog.New(slogzerolog.Option{Logger: &zerologLogger}.NewZerologHandler())
+
+	slog.SetDefault(logger)
+
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// Handle SIGTERM and SIGINT
