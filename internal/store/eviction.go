@@ -19,7 +19,7 @@ func evictFirst(store *Store) {
 // Randomly removes keys to make space for the new data added.
 // The number of keys removed will be sufficient to free up at least 10% space
 func evictAllkeysRandom(store *Store) {
-	evictCount := int64(config.EvictionRatio * float64(config.KeysLimit))
+	evictCount := int64(config.DiceConfig.Server.EvictionRatio * float64(config.DiceConfig.Server.KeysLimit))
 	// Iteration of Golang dictionary can be considered as a random
 	// because it depends on the hash of the inserted key
 	store.store.All(func(k string, obj *object.Obj) bool {
@@ -66,7 +66,7 @@ func populateEvictionPool(store *Store) {
 // only when the number of keys to evict is less than what we have in the pool
 func EvictAllkeysLRU(store *Store) {
 	populateEvictionPool(store)
-	evictCount := int16(config.EvictionRatio * float64(config.KeysLimit))
+	evictCount := int16(config.DiceConfig.Server.EvictionRatio * float64(config.DiceConfig.Server.KeysLimit))
 	for i := 0; i < int(evictCount) && len(ePool.pool) > 0; i++ {
 		item := ePool.Pop()
 		if item == nil {
@@ -78,7 +78,7 @@ func EvictAllkeysLRU(store *Store) {
 
 // TODO: implement LFU
 func (store *Store) evict() {
-	switch config.EvictionStrategy {
+	switch config.DiceConfig.Server.EvictionPolicy {
 	case "simple-first":
 		evictFirst(store)
 	case "allkeys-random":

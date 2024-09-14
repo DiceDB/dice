@@ -28,7 +28,8 @@ type TestServerOptions struct {
 
 //nolint:unused
 func getLocalConnection() net.Conn {
-	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.Port))
+	config.ResetConfig()
+	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.DiceConfig.Server.Port))
 	if err != nil {
 		panic(err)
 	}
@@ -47,7 +48,7 @@ func deleteTestKeys(keysToDelete []string, store *dstore.Store) {
 //nolint:unused
 func getLocalSdk() *redis.Client {
 	return redis.NewClient(&redis.Options{
-		Addr: fmt.Sprintf(":%d", config.Port),
+		Addr: fmt.Sprintf(":%d", config.DiceConfig.Server.Port),
 
 		DialTimeout:           10 * time.Second,
 		ReadTimeout:           30 * time.Second,
@@ -93,17 +94,17 @@ func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *clientio.RESPParser
 }
 
 func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOptions) {
-	config.IOBufferLength = 16
-	config.WriteAOFOnCleanup = true
+	config.DiceConfig.Network.IOBufferLength = 16
+	config.DiceConfig.Server.WriteAOFOnCleanup = true
 	if opt.Port != 0 {
-		config.Port = opt.Port
+		config.DiceConfig.Server.Port = opt.Port
 	} else {
-		config.Port = 8739
+		config.DiceConfig.Server.Port = 8739
 	}
 
 	const totalRetries = 100
 	var err error
-	watchChan := make(chan dstore.WatchEvent, config.KeysLimit)
+	watchChan := make(chan dstore.WatchEvent, config.DiceConfig.Server.KeysLimit)
 	shardManager := shard.NewShardManager(1, watchChan)
 	// Initialize the AsyncServer
 	testServer := server.NewAsyncServer(shardManager, watchChan)
@@ -115,8 +116,8 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 		}
 
 		if err.Error() == "address already in use" {
-			log.Infof("Port %d already in use, trying port %d", config.Port, config.Port+1)
-			config.Port++
+			log.Infof("Port %d already in use, trying port %d", config.DiceConfig.Server.Port, config.DiceConfig.Server.Port+1)
+			config.DiceConfig.Server.Port++
 		} else {
 			log.Fatalf("Failed to bind port: %v", err)
 			return
@@ -129,7 +130,7 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	}
 
 	// Inform the user that the server is starting
-	fmt.Println("Starting the test server on port", config.Port)
+	fmt.Println("Starting the test server on port", config.DiceConfig.Server.Port)
 
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
 	wg.Add(1)

@@ -1,11 +1,11 @@
 package auth
 
 import (
-	"github.com/dicedb/dice/internal/server/utils"
 	"testing"
 	"time"
 
 	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/internal/server/utils"
 )
 
 func TestNewUsers(t *testing.T) {
@@ -83,7 +83,7 @@ func TestSessionIsActive(t *testing.T) {
 	mockTime := &utils.MockClock{CurrTime: time.Now()}
 	utils.CurrentTime = mockTime
 
-	config.RequirePass = "testpassword"
+	config.DiceConfig.Auth.Password = "testpassword"
 	session := NewSession()
 	if session.IsActive() {
 		t.Error("New session should not be active")
@@ -101,7 +101,7 @@ func TestSessionIsActive(t *testing.T) {
 	if !session.LastAccessedAt.After(oldLastAccessed) {
 		t.Error("IsActive() should update LastAccessedAt")
 	}
-	config.RequirePass = utils.EmptyStr
+	config.DiceConfig.Auth.Password = utils.EmptyStr
 }
 
 func TestSessionActivate(t *testing.T) {

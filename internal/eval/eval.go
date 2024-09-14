@@ -48,7 +48,7 @@ const maxExDuration = 9223372036854775
 func init() {
 	diceCommandsCount = len(DiceCmds)
 	TxnCommands = map[string]bool{"EXEC": true, "DISCARD": true}
-	serverID = fmt.Sprintf("%s:%d", config.Host, config.Port)
+	serverID = fmt.Sprintf("%s:%d", config.DiceConfig.Server.Addr, config.DiceConfig.Server.Port)
 }
 
 // evalPING returns with an encoded "PONG"
@@ -75,7 +75,7 @@ func evalPING(args []string, store *dstore.Store) []byte {
 func EvalAUTH(args []string, c *comm.Client) []byte {
 	var err error
 
-	if config.RequirePass == "" {
+	if config.DiceConfig.Auth.Password == "" {
 		return diceerrors.NewErrWithMessage("AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?")
 	}
 
