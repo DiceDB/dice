@@ -243,6 +243,59 @@ func evalMSET(args []string, store *dstore.Store) []byte {
 	return clientio.RespOK
 }
 
+// evalSCAN processes the SCAN command with the given arguments.
+// It scans the database for keys based on the provided cursor, pattern, count, and key type.
+// Arguments:
+// - args: The command arguments, where args[0] is the cursor and optional args provide MATCH, COUNT, and TYPE options.
+// Returns:
+// - Encoded RESP value with:
+//   - The new cursor position as a string
+//   - A slice of keys that match the criteria
+//
+// If there are any errors in the arguments, an error message is returned.
+func evalSCAN(args []string, store *dstore.Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrWithMessage("ERR wrong number of arguments for 'scan' command")
+	}
+
+	cursor, err := strconv.Atoi(args[0])
+	if err != nil || cursor < 0 {
+		return diceerrors.NewErrWithMessage("ERR invalid cursor")
+	}
+
+	var pattern string
+	var count int = 10
+	var keyType string
+
+	for i := 1; i < len(args); i += 2 {
+		if i+1 >= len(args) {
+			return diceerrors.NewErrWithMessage("ERR syntax error")
+		}
+		switch strings.ToUpper(args[i]) {
+		case "MATCH":
+			pattern = args[i+1]
+		case "COUNT":
+			count, err = strconv.Atoi(args[i+1])
+			if err != nil || count <= 0 {
+				return diceerrors.NewErrWithMessage("ERR invalid COUNT")
+			}
+		case "TYPE":
+			keyType = strings.ToLower(args[i+1])
+		default:
+			return diceerrors.NewErrWithMessage("ERR syntax error")
+		}
+	}
+
+	newCursor, keys := store.ScanKeys(cursor, count, pattern, keyType)
+
+	response := []interface{}{
+		strconv.Itoa(newCursor),
+		keys,
+	}
+
+	return clientio.Encode(response, false)
+}
+
 // evalGET returns the value for the queried key in args
 // The key should be the only param in args
 // The RESP value of the key is encoded and then returned

@@ -2,6 +2,7 @@ package store
 
 import (
 	"path"
+	"strings"
 
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/sql"
@@ -261,6 +262,92 @@ func (store *Store) SetExpiry(obj *object.Obj, expDurationMs int64) {
 func (store *Store) SetUnixTimeExpiry(obj *object.Obj, exUnixTimeSec int64) {
 	// convert unix-time-seconds to unix-time-milliseconds
 	store.expires.Put(obj, uint64(exUnixTimeSec*1000))
+}
+
+// scanKeys performs a scan operation on the keypool, retrieving keys that match specified criteria.
+// The scan operation is controlled by a cursor and can be limited by a count, pattern, and key type.
+// The function takes a snapshot of the keypool to ensure that the scan is performed on a consistent view of the data.
+//
+// Arguments:
+// - cursor: An integer representing the current scan position within the keypool.
+// - count: The maximum number of keys to return in this scan operation.
+// - pattern: A string representing a glob pattern to filter keys (optional).
+// - keyType: A string representing the type of keys to include in the results (optional).
+//
+// Returns:
+// - newCursor: The updated cursor position after the scan, or 0 if the end is reached.
+// - keys: A slice of strings containing the keys that match the scan criteria.
+func (store *Store) ScanKeys(cursor, count int, pattern, keyType string) (newCursor int, keys []string) {
+	keys = make([]string, 0, count)
+	currentIndex := 0
+	processed := 0
+
+	store.store.All(func(k string, v *object.Obj) bool {
+		if currentIndex < cursor {
+			currentIndex++
+			return true
+		}
+
+		if (pattern == "" || matchGlob(k, pattern)) &&
+			(keyType == "" || strings.EqualFold(getTypeAsString(v.TypeEncoding), keyType)) &&
+			!hasExpired(v, store) {
+
+			keys = append(keys, k)
+			processed++
+		}
+
+		if processed >= count {
+			return false
+		}
+
+		currentIndex++
+		return true
+	})
+
+	if processed < count || currentIndex >= store.store.Len() {
+		newCursor = 0
+	} else {
+		newCursor = cursor + processed
+	}
+
+	return newCursor, keys
+}
+
+// getTypeAsString converts the encoding type of an object to a string representation.
+// Arguments:
+// - encoding: The type encoding of the object.
+// Returns:
+// - A string representing the type of the object.
+func getTypeAsString(encoding uint8) string {
+	typePart, _ := object.ExtractTypeEncoding(&object.Obj{TypeEncoding: encoding})
+
+	switch typePart {
+	case object.ObjTypeString:
+		return "string"
+	case object.ObjTypeByteList:
+		return "byte_list"
+	case object.ObjTypeBitSet:
+		return "bitset"
+	case object.ObjTypeJSON:
+		return "json"
+	case object.ObjTypeByteArray:
+		return "byte_array"
+	default:
+		return "unknown"
+	}
+}
+
+// matchGlob checks if the string s matches the glob pattern pattern.
+// Arguments:
+// - s: The string to be matched.
+// - pattern: The glob pattern to match against (can contain wildcards).
+// Returns:
+// - true if s matches the pattern; false otherwise.
+func matchGlob(s, pattern string) bool {
+	if pattern == "*" {
+		return true // Pattern '*' matches any string
+	}
+	return strings.HasPrefix(s, strings.TrimSuffix(pattern, "*")) // Match based on prefix
 }
 
 func (store *Store) deleteKey(k string, obj *object.Obj) bool {

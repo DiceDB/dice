@@ -656,6 +656,15 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	scanCmdMeta = DiceCmdMeta{
+		Name: "SCAN",
+		Info: `SCAN cursor [MATCH pattern] [COUNT count] [TYPE type]
+		Incrementally iterate over a collection of elements.
+		Returns an array of two values: the next cursor to use in the next call, and an array of elements.`,
+		Eval:     evalSCAN,
+		Arity:    -1,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -734,6 +743,7 @@ func init() {
 	DiceCmds["HGET"] = hgetCmdMeta
 	DiceCmds["PFMERGE"] = pfMergeCmdMeta
 	DiceCmds["JSON.STRLEN"] = jsonStrlenCmdMeta
+	DiceCmds["SCAN"] = scanCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}
