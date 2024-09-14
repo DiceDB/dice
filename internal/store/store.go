@@ -1,8 +1,9 @@
 package store
 
 import (
-	"github.com/ohler55/ojg/jp"
 	"path"
+
+	"github.com/ohler55/ojg/jp"
 
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/sql"
@@ -57,7 +58,7 @@ func (store *Store) NewObj(value interface{}, expDurationMs int64, oType, oEnc u
 func (store *Store) ResetStore() {
 	store.store.Clear()
 	store.expires.Clear()
-	store.watchChan = make(chan WatchEvent, config.KeysLimit)
+	store.watchChan = make(chan WatchEvent, config.DiceConfig.Server.KeysLimit)
 }
 
 type PutOptions struct {
@@ -99,7 +100,7 @@ func (store *Store) putHelper(k string, obj *object.Obj, opts ...PutOption) {
 		optApplier(options)
 	}
 
-	if store.store.Len() >= config.KeysLimit {
+	if store.store.Len() >= config.DiceConfig.Server.KeysLimit {
 		store.evict()
 	}
 	obj.LastAccessedAt = getCurrentClock()
