@@ -124,19 +124,23 @@ func SetupConfig() {
 		return
 	}
 
-	ConfigFileLocation = getConfigPath()
+	if ConfigFileLocation == utils.EmptyStr {
+		ConfigFileLocation = getConfigPath()
+	}
 
 	if InitConfigCmd {
 		createConfigFile(ConfigFileLocation)
 		return
 	}
 
-	log.Infof("config file path: %s", ConfigFileLocation)
+	log.Infof("config file location: %s", ConfigFileLocation)
 	setUpViperConfig(ConfigFileLocation)
 
-	if isValidDirPath() || !isConfigFilePresent() {
-		DiceConfig = &defaultConfig
+	if !isValidDirPath() || !isConfigFilePresent() {
 		log.Info("Using default configurations.")
+		return
+	} else if isValidDirPath() && CustomConfigFilePath != utils.EmptyStr {
+		createConfigFile(filepath.Join(CustomConfigFilePath, DefaultConfigName))
 		return
 	}
 }
@@ -240,7 +244,6 @@ func setUpViperConfig(configFilePath string) {
 	}
 
 	log.Info("configurations loaded successfully.")
-	log.Info(DiceConfig.Server.Port)
 }
 
 // This function checks if the config file is present or not at ConfigFileLocation

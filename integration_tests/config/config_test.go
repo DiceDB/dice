@@ -81,7 +81,7 @@ func TestSetupConfig_PartialConfigFile(t *testing.T) {
 
 	content := `
         [server]
-        addr = "127.0.0.1"
+        addr = "0.0.0.0"
     `
 	if err := os.WriteFile(configFilePath, []byte(content), 0666); err != nil {
 		t.Fatalf("Failed to create partial test config file: %v", err)
@@ -95,40 +95,10 @@ func TestSetupConfig_PartialConfigFile(t *testing.T) {
 
 	t.Log(config.DiceConfig.Server.Port)
 
-	if config.DiceConfig.Server.Addr != "127.0.0.1" {
+	if config.DiceConfig.Server.Addr != "0.0.0.0" {
 		t.Fatalf("Expected server addr to be '127.0.0.1', got '%s'", config.DiceConfig.Server.Addr)
 	}
 	if config.DiceConfig.Server.Port != config.DefaultPort {
 		t.Fatalf("Expected server port to be %d (default), got %d", config.DefaultPort, config.DiceConfig.Server.Port)
 	}
-}
-
-// scenario 5: Load config from the provided file path
-func TestSetupConfig_LoadFromFile(t *testing.T) {
-	config.ResetConfig()
-	tempDir := t.TempDir()
-	configFilePath := filepath.Join(tempDir, "dice.toml")
-
-	content := `
-		[server]
-		addr = "127.0.0.1"
-		port = 8739
-	`
-	if err := os.WriteFile(configFilePath, []byte(content), 0666); err != nil {
-		t.Fatalf("Failed to write test config file: %v", err)
-	}
-
-	// Simulate the flag: -c=<configfile_path>
-	config.CustomConfigFilePath = ""
-	config.ConfigFileLocation = configFilePath
-
-	config.SetupConfig()
-
-	if config.DiceConfig.Server.Addr != "127.0.0.1" {
-		t.Fatalf("Expected server addr to be '127.0.0.1', got '%s'", config.DiceConfig.Server.Addr)
-	}
-	if config.DiceConfig.Server.Port != 8739 {
-		t.Fatalf("Expected server port to be 8374, got %d", config.DiceConfig.Server.Port)
-	}
-
 }

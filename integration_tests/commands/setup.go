@@ -28,7 +28,6 @@ type TestServerOptions struct {
 
 //nolint:unused
 func getLocalConnection() net.Conn {
-	config.ResetConfig()
 	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.DiceConfig.Server.Port))
 	if err != nil {
 		panic(err)
