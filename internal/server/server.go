@@ -60,7 +60,7 @@ func NewAsyncTestServer(shardManager *shard.ShardManager, watchChan chan dstore.
 	return &AsyncServer{
 		maxClients:             config.TestServerMaxClients,
 		connectedClients:       make(map[int]*comm.Client),
-		shardManager:           shard.NewShardManager(1, watchChan),
+		shardManager:           shardManager,
 		queryWatcher:           querywatcher.NewQueryManager(),
 		multiplexerPollTimeout: config.TestServerMultiplexerPollTimeout,
 		ioChan:                 make(chan *ops.StoreResponse, 1000),

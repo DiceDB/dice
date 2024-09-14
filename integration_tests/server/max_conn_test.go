@@ -15,18 +15,20 @@ import (
 )
 
 func getConnection() (net.Conn, error) {
-	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.Port))
+	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", maxConnTestOptions.Port))
 	if err != nil {
 		return nil, err
 	}
 	return conn, nil
 }
 
+var maxConnTestOptions = commands.TestServerOptions{
+	Port: 8741,
+}
+
 func TestMaxConnection(t *testing.T) {
 	var wg sync.WaitGroup
-	commands.RunTestServer(context.Background(), &wg, commands.TestServerOptions{
-		Port: 8741,
-	})
+	commands.RunTestServer(context.Background(), &wg, maxConnTestOptions)
 
 	time.Sleep(2 * time.Second)
 
@@ -39,7 +41,7 @@ func TestMaxConnection(t *testing.T) {
 		} else {
 			t.Fatalf("unexpected error while getting connection %d: %v", i, err)
 		}
-		time.Sleep(1000 * time.Millisecond)
+		time.Sleep(500 * time.Millisecond)
 	}
 	assert.Equal(t, maxConnLimit, len(connections), "should have reached the max connection limit")
 
