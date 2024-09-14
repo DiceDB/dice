@@ -5,11 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"sync"
 	"time"
 
-	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/ops"
@@ -76,7 +76,7 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 		<-ctx.Done()
 		err = s.httpServer.Shutdown(httpCtx)
 		if err != nil {
-			log.Errorf("HTTP Server Shutdown Failed: %v", err)
+			slog.Error("HTTP Server Shutdown Failed", slog.Any("error", err))
 			return
 		}
 	}()
@@ -84,7 +84,7 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		log.Infof("HTTP Server running on Port%s", s.httpServer.Addr)
+		slog.Info("HTTP Server running", slog.String("addr", s.httpServer.Addr))
 		err = s.httpServer.ListenAndServe()
 	}()
 
@@ -96,15 +96,15 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 	// convert to REDIS cmd
 	redisCmd, err := utils.ParseHTTPRequest(request)
 	if err != nil {
-		log.Errorf("Error parsing HTTP request: %v", err)
+		slog.Error("Error parsing HTTP request", slog.Any("error", err))
 		return
 	}
 
 	if unimplementedCommands[redisCmd.Cmd] {
-		log.Errorf("Command %s is not implemented", redisCmd.Cmd)
+		slog.Error("Command %s is not implemented", slog.String("cmd", redisCmd.Cmd))
 		_, err := writer.Write([]byte("Command is not implemented with HTTP"))
 		if err != nil {
-			log.Errorf("Error writing response: %v", err)
+			slog.Error("Error writing response", slog.Any("error", err))
 			return
 		}
 		return
@@ -124,19 +124,19 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 	rp := clientio.NewRESPParser(bytes.NewBuffer(resp.Result))
 	val, err := rp.DecodeOne()
 	if err != nil {
-		log.Errorf("Error decoding response: %v", err)
+		slog.Error("Error decoding response", slog.Any("error", err))
 		return
 	}
 
 	// Write response
 	responseJSON, err := json.Marshal(val)
 	if err != nil {
-		log.Errorf("Error marshaling response: %v", err)
+		slog.Error("Error marshaling response", slog.Any("error", err))
 		return
 	}
 	_, err = writer.Write(responseJSON)
 	if err != nil {
-		log.Errorf("Error writing response: %v", err)
+		slog.Error("Error writing response", slog.Any("error", err))
 		return
 	}
 }

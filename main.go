@@ -14,8 +14,8 @@ import (
 
 	"github.com/dicedb/dice/internal/server"
 
-	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
+	"log/slog"
 )
 
 func init() {
@@ -51,7 +51,10 @@ func main() {
 	// Find a port and bind it
 	if err := asyncServer.FindPortAndBind(); err != nil {
 		cancel()
-		log.Fatal("Error finding and binding port:", err)
+		slog.Error("Error finding and binding port",
+			slog.Any("error", err),
+		)
+		os.Exit(1)
 	}
 
 	wg := sync.WaitGroup{}
@@ -82,15 +85,18 @@ func main() {
 		// Handling different server errors
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
-				log.Debug("Server was canceled")
+				slog.Debug("Server was canceled")
 			} else if errors.Is(err, server.ErrAborted) {
-				log.Debug("Server received abort command")
+				slog.Debug("Server received abort command")
 			} else {
-				log.Error("Server error", "error", err)
+				slog.Error(
+					"Server error",
+					slog.Any("error", err),
+				)
 			}
 			serverErrCh <- err
 		} else {
-			log.Debug("Server stopped without error")
+			slog.Debug("Server stopped without error")
 		}
 	}()
 
@@ -101,15 +107,15 @@ func main() {
 		err := httpServer.Run(ctx)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
-				log.Debug("HTTP Server was canceled")
+				slog.Debug("HTTP Server was canceled")
 			} else if errors.Is(err, server.ErrAborted) {
-				log.Debug("HTTP received abort command")
+				slog.Debug("HTTP received abort command")
 			} else {
-				log.Error("HTTP Server error", "error", err)
+				slog.Error("HTTP Server error", slog.Any("error", err))
 			}
 			serverErrCh <- err
 		} else {
-			log.Debug("HTTP Server stopped without error")
+			slog.Debug("HTTP Server stopped without error")
 		}
 	}()
 
@@ -130,5 +136,5 @@ func main() {
 	cancel()
 
 	wg.Wait()
-	log.Debug("Server has shut down gracefully")
+	slog.Debug("Server has shut down gracefully")
 }

@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/charmbracelet/log"
+	"log/slog"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/auth"
@@ -135,7 +135,7 @@ func (shard *ShardThread) executeCommand(op *ops.StoreOp) []byte {
 func (shard *ShardThread) cleanup() {
 	close(shard.ReqChan)
 	if !config.DiceConfig.Server.WriteAOFOnCleanup {
-		log.Debug("Skipping AOF dump.")
+		slog.Info("Skipping AOF dump.")
 		return
 	}
 
