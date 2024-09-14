@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/bytedance/sonic"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/bytedance/sonic"
 
 	"github.com/dicedb/dice/internal/object"
 
@@ -61,6 +62,7 @@ func TestEval(t *testing.T) {
 	testEvalHGET(t, store)
 	testEvalPFMERGE(t, store)
 	testEvalJSONSTRLEN(t, store)
+	testEvalHLEN(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -1441,4 +1443,61 @@ func testEvalHSET(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalHSET, store)
+}
+
+func testEvalHLEN(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"wrong number of args": {
+			input:  []string{},
+			output: []byte("-ERR wrong number of arguments for 'hlen' command\r\n"),
+		},
+		"key does not exist": {
+			input:  []string{"nonexistent_key"},
+			output: clientio.RespZero,
+		},
+		"key exists but not a hash": {
+			setup: func() {
+				evalSET([]string{"string_key", "string_value"}, store)
+			},
+			input:  []string{"string_key"},
+			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+		},
+		"empty hash": {
+			setup:  func() {},
+			input:  []string{"empty_hash"},
+			output: clientio.RespZero,
+		},
+		"hash with elements": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3"}, store)
+			},
+			input:  []string{"hash_key"},
+			output: clientio.Encode(int64(3), false),
+		},
+	}
+
+	runEvalTests(t, tests, evalHLEN, store)
+}
+
+func BenchmarkEvalHLEN(b *testing.B) {
+	sizes := []int{0, 10, 100, 1000, 10000, 100000}
+	store := dstore.NewStore(nil)
+
+	for _, size := range sizes {
+		b.Run(fmt.Sprintf("HashSize_%d", size), func(b *testing.B) {
+			key := fmt.Sprintf("benchmark_hash_%d", size)
+
+			args := []string{key}
+			for i := 0; i < size; i++ {
+				args = append(args, fmt.Sprintf("field%d", i), fmt.Sprintf("value%d", i))
+			}
+			evalHSET(args, store)
+
+			b.ResetTimer()
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				evalHLEN([]string{key}, store)
+			}
+		})
+	}
 }
