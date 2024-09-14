@@ -58,6 +58,7 @@ type Config struct {
 		PersistenceEnabled     bool          `mapstructure:"persistenceenabled"`
 		WriteAOFOnCleanup      bool          `mapstructure:"writeaofoncleanup"`
 		LFULogFactor           int           `mapstructure:"lfulogfactor"`
+		LogLevel               string        `mapstructure:"loglevel"`
 	} `mapstructure:"server"`
 	Auth struct {
 		UserName string `mapstructure:"username"`
@@ -88,6 +89,7 @@ var defaultConfig = Config{
 		PersistenceEnabled     bool          `mapstructure:"persistenceenabled"`
 		WriteAOFOnCleanup      bool          `mapstructure:"writeaofoncleanup"`
 		LFULogFactor           int           `mapstructure:"lfulogfactor"`
+		LogLevel               string        `mapstructure:"loglevel"`
 	}{
 		Addr:                   DefaultHost,
 		Port:                   DefaultPort,
@@ -105,6 +107,8 @@ var defaultConfig = Config{
 		PersistenceEnabled:     true,
 		WriteAOFOnCleanup:      true,
 		LFULogFactor:           10,
+		WriteAOFOnCleanup:      false,
+		LogLevel:               "info",
 	},
 	Auth: struct {
 		UserName string `mapstructure:"username"`

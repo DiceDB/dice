@@ -34,9 +34,29 @@ func init() {
 	config.SetupConfig()
 }
 
+func getLogLevel() slog.Leveler {
+	var level slog.Leveler
+	switch config.DiceConfig.Server.LogLevel {
+	case "debug":
+		level = slog.LevelDebug
+	case "info":
+		level = slog.LevelInfo
+	case "warn":
+		level = slog.LevelWarn
+	case "error":
+		level = slog.LevelError
+	default:
+		level = slog.LevelInfo
+	}
+	return level
+}
+
 func main() {
 	zerologLogger := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr})
-	logger := slog.New(slogzerolog.Option{Logger: &zerologLogger}.NewZerologHandler())
+	logger := slog.New(slogzerolog.Option{
+		Logger: &zerologLogger, NoTimestamp: true,
+		Level: getLogLevel(),
+	}.NewZerologHandler())
 
 	slog.SetDefault(logger)
 
@@ -50,7 +70,7 @@ func main() {
 	shardManager := shard.NewShardManager(1, watchChan)
 
 	// Initialize the AsyncServer
-	asyncServer := server.NewAsyncServer(shardManager, watchChan)
+	asyncServer := server.NewAsyncServer(shardManager, watchChan, logger)
 	httpServer := server.NewHTTPServer(shardManager, watchChan)
 
 	// Initialize the HTTP server

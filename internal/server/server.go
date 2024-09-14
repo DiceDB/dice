@@ -40,10 +40,11 @@ type AsyncServer struct {
 	shardManager           *shard.ShardManager
 	ioChan                 chan *ops.StoreResponse // The server acts like a worker today, this behavior will change once IOThreads are introduced and each client gets its own worker.
 	watchChan              chan dstore.WatchEvent  // This is needed to co-ordinate between the store and the query watcher.
+	logger                 *slog.Logger            // logger is the logger for the server
 }
 
 // NewAsyncServer initializes a new AsyncServer
-func NewAsyncServer(shardManager *shard.ShardManager, watchChan chan dstore.WatchEvent) *AsyncServer {
+func NewAsyncServer(shardManager *shard.ShardManager, watchChan chan dstore.WatchEvent, logger *slog.Logger) *AsyncServer {
 	return &AsyncServer{
 		maxClients:             config.DiceConfig.Server.MaxClients,
 		connectedClients:       make(map[int]*comm.Client),
@@ -52,6 +53,7 @@ func NewAsyncServer(shardManager *shard.ShardManager, watchChan chan dstore.Watc
 		multiplexerPollTimeout: config.DiceConfig.Server.MultiplexerPollTimeout,
 		ioChan:                 make(chan *ops.StoreResponse, 1000),
 		watchChan:              watchChan,
+		logger:                 logger,
 	}
 }
 
@@ -76,7 +78,7 @@ func (s *AsyncServer) FindPortAndBind() (socketErr error) {
 	defer func() {
 		if socketErr != nil {
 			if err := syscall.Close(serverFD); err != nil {
-				slog.Warn("failed to close server socket", slog.Any("error", err))
+				s.logger.Warn("failed to close server socket", slog.Any("error", err))
 			}
 		}
 	}()
@@ -96,7 +98,7 @@ func (s *AsyncServer) FindPortAndBind() (socketErr error) {
 		return ErrInvalidIPAddress
 	}
 
-	slog.Info(
+	s.logger.Info(
 		"DiceDB is running",
 		slog.String("version", "0.0.4"),
 		slog.Int("port", config.DiceConfig.Server.Port),
@@ -111,9 +113,9 @@ func (s *AsyncServer) FindPortAndBind() (socketErr error) {
 func (s *AsyncServer) ClosePort() {
 	if s.serverFD != 0 {
 		if err := syscall.Close(s.serverFD); err != nil {
-			slog.Warn("failed to close server socket", slog.Any("error", err))
+			s.logger.Warn("failed to close server socket", slog.Any("error", err))
 		} else {
-			slog.Debug("Server socket closed successfully")
+			s.logger.Debug("Server socket closed successfully")
 		}
 		s.serverFD = 0
 	}
@@ -129,7 +131,7 @@ func (s *AsyncServer) InitiateShutdown() {
 	// Close all client connections
 	for fd := range s.connectedClients {
 		if err := syscall.Close(fd); err != nil {
-			slog.Warn("failed to close client connection", slog.Any("error", err))
+			s.logger.Warn("failed to close client connection", slog.Any("error", err))
 		}
 		delete(s.connectedClients, fd)
 	}
@@ -165,7 +167,7 @@ func (s *AsyncServer) Run(ctx context.Context) error {
 
 	defer func() {
 		if err := s.multiplexer.Close(); err != nil {
-			slog.Warn("failed to close multiplexer", slog.Any("error", err))
+			s.logger.Warn("failed to close multiplexer", slog.Any("error", err))
 		}
 	}()
 
@@ -213,15 +215,15 @@ func (s *AsyncServer) eventLoop(ctx context.Context) error {
 			for _, event := range events {
 				if event.Fd == s.serverFD {
 					if err := s.acceptConnection(); err != nil {
-						slog.Warn(err.Error())
+						s.logger.Warn(err.Error())
 					}
 				} else {
 					if err := s.handleClientEvent(event); err != nil {
 						if errors.Is(err, ErrAborted) {
-							slog.Debug("Received abort command, initiating graceful shutdown")
+							s.logger.Debug("Received abort command, initiating graceful shutdown")
 							return err
 						} else if !errors.Is(err, syscall.ECONNRESET) && !errors.Is(err, net.ErrClosed) {
-							slog.Warn(err.Error())
+							s.logger.Warn(err.Error())
 						}
 					}
 				}
@@ -258,7 +260,7 @@ func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
 	commands, hasAbort, err := readCommands(client)
 	if err != nil {
 		if err := syscall.Close(event.Fd); err != nil {
-			slog.Error("error closing client connection", slog.Any("error", err))
+			s.logger.Error("error closing client connection", slog.Any("error", err))
 		}
 		delete(s.connectedClients, event.Fd)
 		return err
@@ -368,7 +370,7 @@ func (s *AsyncServer) handleTransactionCommand(redisCmd *cmd.RedisCmd, c *comm.C
 		case eval.DiscardCmdMeta.Name:
 			s.discardTransaction(c, buf)
 		default:
-			slog.Error(
+			s.logger.Error(
 				"Unhandled transaction command",
 				slog.String("command", redisCmd.Cmd),
 			)
@@ -396,7 +398,7 @@ func (s *AsyncServer) handleNonTransactionCommand(redisCmd *cmd.RedisCmd, c *com
 func (s *AsyncServer) executeTransaction(c *comm.Client, buf *bytes.Buffer) {
 	_, err := fmt.Fprintf(buf, "*%d\r\n", len(c.Cqueue))
 	if err != nil {
-		slog.Error("Error writing to buffer", slog.Any("error", err))
+		s.logger.Error("Error writing to buffer", slog.Any("error", err))
 		return
 	}
 
@@ -415,6 +417,6 @@ func (s *AsyncServer) discardTransaction(c *comm.Client, buf *bytes.Buffer) {
 
 func (s *AsyncServer) writeResponse(c *comm.Client, buf *bytes.Buffer) {
 	if _, err := c.Write(buf.Bytes()); err != nil {
-		slog.Error(err.Error())
+		s.logger.Error(err.Error())
 	}
 }
