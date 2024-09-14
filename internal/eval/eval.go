@@ -2771,12 +2771,9 @@ func evalHLEN(args []string, store *dstore.Store) []byte {
 }
 
 func evalSELECT(args []string, store *dstore.Store) []byte {
-	var b []byte
-
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("SELECT")
 	}
 
-	b = clientio.RespOK
-	return b
+	return clientio.RespOK
 }
