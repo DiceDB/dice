@@ -52,10 +52,10 @@ func TestExpireat(t *testing.T) {
 			name:  "EXPIREAT with past time",
 			setup: "SET test_key test_value",
 			commands: []string{
-				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()-1, 10),
+				"EXPIREAT test_key " + strconv.FormatInt(-1, 10),
 				"GET test_key",
 			},
-			expected: []interface{}{int64(1), "ERR invalid expire time in 'expire' command"},
+			expected: []interface{}{"ERR invalid expire time in 'expireat' command", "test_value"},
 			delay:    []time.Duration{0, 0},
 		},
 		{
