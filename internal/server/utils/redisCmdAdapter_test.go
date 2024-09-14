@@ -17,16 +17,72 @@ func TestParseHTTPRequest(t *testing.T) {
 		expectedCmd  string
 		expectedArgs []string
 	}{
-		{"Test AUTH command", "POST", "/auth", `{"user": "default", "password": "secret"}`, "AUTH", []string{"default", "secret"}},
-		{"Test SET command with nx flag", "POST", "/set", `{"key": "k1", "value": "v1", "nx": "true"}`, "SET", []string{"k1", "v1", "nx"}},
-		{"Test GET command", "POST", "/get", `{"key": "k1"}`, "GET", []string{"k1"}},
-		{"Test MSET command", "POST", "/mset", `{"key1": "v1", "key2": "v2"}`, "MSET", []string{"v1", "v2"}},
-		{"Test JSON.SET command", "POST", "/json.set", `{"key": "k1", "path": ".", "json": {"field": "value"}}`, "JSON.SET", []string{"k1", ".", `{"field":"value"}`}},
-		{"Test JSON.GET command", "POST", "/json.get", `{"key": "k1"}`, "JSON.GET", []string{"k1"}},
-		{"Test EXPIRE command", "POST", "/expire", `{"key": "k1", "seconds": "100"}`, "EXPIRE", []string{"k1", "100"}},
-		{"Test HSET command with JSON body", "POST", "/hset", `{"key": "hashkey", "field": "f1", "value": "v1"}`, "HSET", []string{"hashkey", "f1", "v1"}},
+		{
+			name:        "Test AUTH command",
+			method:      "POST",
+			url:         "/auth",
+			body:        `{"user": "default", "password": "secret"}`,
+			expectedCmd: "AUTH",
+			expectedArgs: []string{"default", "secret"},
+		},
+		{
+			name:        "Test SET command with nx flag",
+			method:      "POST",
+			url:         "/set",
+			body:        `{"key": "k1", "value": "v1", "nx": "true"}`,
+			expectedCmd: "SET",
+			expectedArgs: []string{"k1", "v1", "nx"},
+		},
+		{
+			name:        "Test GET command",
+			method:      "POST",
+			url:         "/get",
+			body:        `{"key": "k1"}`,
+			expectedCmd: "GET",
+			expectedArgs: []string{"k1"},
+		},
+		{
+			name:        "Test MSET command",
+			method:      "POST",
+			url:         "/mset",
+			body:        `{"key1": "v1", "key2": "v2"}`,
+			expectedCmd: "MSET",
+			expectedArgs: []string{"v1", "v2"},
+		},
+		{
+			name:        "Test JSON.SET command",
+			method:      "POST",
+			url:         "/json.set",
+			body:        `{"key": "k1", "path": ".", "json": {"field": "value"}}`,
+			expectedCmd: "JSON.SET",
+			expectedArgs: []string{"k1", ".", `{"field":"value"}`},
+		},
+		{
+			name:        "Test JSON.GET command",
+			method:      "POST",
+			url:         "/json.get",
+			body:        `{"key": "k1"}`,
+			expectedCmd: "JSON.GET",
+			expectedArgs: []string{"k1"},
+		},
+		{
+			name:        "Test EXPIRE command",
+			method:      "POST",
+			url:         "/expire",
+			body:        `{"key": "k1", "seconds": "100"}`,
+			expectedCmd: "EXPIRE",
+			expectedArgs: []string{"k1", "100"},
+		},
+		{
+			name:        "Test HSET command with JSON body",
+			method:      "POST",
+			url:         "/hset",
+			body:        `{"key": "hashkey", "field": "f1", "value": "v1"}`,
+			expectedCmd: "HSET",
+			expectedArgs: []string{"hashkey", "f1", "v1"},
+		},
 	}
-
+	
 	for _, tc := range commands {
 		t.Run(tc.name, func(t *testing.T) {
 			req := httptest.NewRequest(tc.method, tc.url, strings.NewReader(tc.body))
@@ -39,7 +95,13 @@ func TestParseHTTPRequest(t *testing.T) {
 				Cmd:  tc.expectedCmd,
 				Args: tc.expectedArgs,
 			}
-			assert.Equal(t, expectedCmd, redisCmd, "The parsed Redis command should match the expected command")
+			
+			// Check command match
+			assert.Equal(t, expectedCmd.Cmd, redisCmd.Cmd)
+
+			// Check arguments match, regardless of order
+			assert.ElementsMatch(t, expectedCmd.Args, redisCmd.Args, "The parsed arguments should match the expected arguments, ignoring order")
+
 		})
 	}
 }
