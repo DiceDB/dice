@@ -671,13 +671,11 @@ func evalJSONTOGGLE(args []string, store *dstore.Store) []byte {
     key := args[0]
     path := args[1]
 
-    // Retrieve the object from the database
     obj := store.Get(key)
     if obj == nil {
         return []byte("-ERR could not perform this operation on a key that doesn't exist\r\n")
     }
 
-    // Check if the object is of JSON type
     errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
     if errWithMessage != nil {
         return errWithMessage
@@ -685,16 +683,14 @@ func evalJSONTOGGLE(args []string, store *dstore.Store) []byte {
 
     jsonData := obj.Value
 
-    // Parse the JSONPath expression
     expr, err := jp.ParseString(path)
     if err != nil {
         return diceerrors.NewErrWithMessage("invalid JSONPath")
     }
 
-    // Execute the JSONPath query
     results := expr.Get(jsonData)
     if len(results) == 0 {
-        return clientio.Encode([]interface{}{}, false)  // Return empty array if no matches
+        return clientio.Encode([]interface{}{}, false) 
     }
 
 	toggleResults := make([]interface{}, len(results))
@@ -708,14 +704,9 @@ func evalJSONTOGGLE(args []string, store *dstore.Store) []byte {
                 return diceerrors.NewErrWithMessage("failed to set toggled value")
             }
 
-            // Update the value in the store
-            newObj := &object.Obj{
-                Value:          jsonData,
-                TypeEncoding:   object.ObjTypeJSON,
-            }
-            store.Put(key, newObj)
+			newobj:=store.NewObj(jsonData,-1,object.ObjTypeJSON,object.ObjEncodingJSON)
+            store.Put(key, newobj)
 
-            // Return simple integer toggle result (1 for true, 0 for false)
             if newValue {
                 toggleResults[i] = 1
             } else {
@@ -728,7 +719,6 @@ func evalJSONTOGGLE(args []string, store *dstore.Store) []byte {
 
     return clientio.Encode(toggleResults, false)
 }
-
 
 // evalJSONSET stores a JSON value at the specified key
 // args must contain at least the key, path (unused in this implementation), and JSON string
