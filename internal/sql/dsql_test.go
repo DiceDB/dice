@@ -85,7 +85,7 @@ func TestParseQuery(t *testing.T) {
 			sql:     "SELECT $key WHERE $key like `match:100:*` ORDER BY invalid_key LIMIT 5",
 			want:    DSQLQuery{},
 			wantErr: true,
-			error:   "only $key and $value are supported in ORDER BY clause",
+			error:   "only $key and $value expressions are supported in ORDER BY clause",
 		},
 		{
 			name:    "invalid multiple fields",

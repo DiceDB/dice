@@ -43,6 +43,7 @@ var serverID string
 var diceCommandsCount int
 
 const defaultRootPath = "$"
+const maxExDuration = 10000000000000000
 
 func init() {
 	diceCommandsCount = len(DiceCmds)
@@ -142,7 +143,7 @@ func evalSET(args []string, store *dstore.Store) []byte {
 				return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
 			}
 
-			if exDuration <= 0 {
+			if exDuration <= 0 || exDuration >= maxExDuration {
 				return diceerrors.NewErrExpireTime("SET")
 			}
 
@@ -474,6 +475,20 @@ func calculateMemory(value interface{}) int {
 	default:
 		return -1
 	}
+}
+
+// evaLJSONFORGET removes the field specified by the given JSONPath from the JSON document stored under the provided key.
+// calls the evalJSONDEL() with the arguments passed
+// Returns response.RespZero if key is expired or it does not exist
+// Returns encoded error response if incorrect number of arguments
+// If the JSONPath points to the root of the JSON document, the entire key is deleted from the store.
+// Returns an integer reply specified as the number of paths deleted (0 or more)
+func evalJSONFORGET(args []string, store *dstore.Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("JSON.FORGET")
+	}
+
+	return evalJSONDEL(args, store)
 }
 
 // evalJSONARRLEN return the length of the JSON array at path in key
@@ -1076,7 +1091,11 @@ func evaluateAndSetExpiry(subCommands []string, newExpiry uint64, key string,
 		}
 	}
 
-	if (nxCmd && (xxCmd || gtCmd || ltCmd)) || (gtCmd && ltCmd) {
+	if !nxCmd && gtCmd && ltCmd {
+		return false, diceerrors.NewErrWithMessage("GT and LT options at the same time are not compatible")
+	}
+
+	if nxCmd && (xxCmd || gtCmd || ltCmd) {
 		return false, diceerrors.NewErrWithMessage("NX and XX," +
 			" GT or LT options at the same time are not compatible")
 	}
@@ -1783,7 +1802,13 @@ func evalCommandCount() []byte {
 	return clientio.Encode(diceCommandsCount, false)
 }
 
+// evalCommandGetKeys helps identify which arguments in a redis command
+// are interpreted as keys.
+// This is useful in analying long commands / scripts
 func evalCommandGetKeys(args []string) []byte {
+	if len(args) == 0 {
+		return diceerrors.NewErrArity("COMMAND|GETKEYS")
+	}
 	diceCmd, ok := DiceCmds[strings.ToUpper(args[0])]
 	if !ok {
 		return diceerrors.NewErrWithMessage("invalid command specified")
@@ -1810,6 +1835,7 @@ func evalCommandGetKeys(args []string) []byte {
 	}
 	return clientio.Encode(keys, false)
 }
+
 func evalRename(args []string, store *dstore.Store) []byte {
 	if len(args) != 2 {
 		return diceerrors.NewErrArity("RENAME")
@@ -2715,7 +2741,10 @@ func evalPFADD(args []string, store *dstore.Store) []byte {
 		return clientio.Encode(1, false)
 	}
 
-	existingHll := obj.Value.(*hyperloglog.Sketch)
+	existingHll, ok := obj.Value.(*hyperloglog.Sketch)
+	if !ok {
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeHllErr)
+	}
 	initialCardinality := existingHll.Estimate()
 	for _, arg := range args[1:] {
 		existingHll.Insert([]byte(arg))
@@ -2738,7 +2767,10 @@ func evalPFCOUNT(args []string, store *dstore.Store) []byte {
 	for _, arg := range args {
 		obj := store.Get(arg)
 		if obj != nil {
-			currKeyHll := obj.Value.(*hyperloglog.Sketch)
+			currKeyHll, ok := obj.Value.(*hyperloglog.Sketch)
+			if !ok {
+				return diceerrors.NewErrWithMessage(diceerrors.WrongTypeHllErr)
+			}
 			err := unionHll.Merge(currKeyHll)
 			if err != nil {
 				return diceerrors.NewErrWithMessage(diceerrors.InvalidHllErr)
@@ -2747,4 +2779,118 @@ func evalPFCOUNT(args []string, store *dstore.Store) []byte {
 	}
 
 	return clientio.Encode(unionHll.Estimate(), false)
+}
+
+func evalPFMERGE(args []string, store *dstore.Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("PFMERGE")
+	}
+
+	var mergedHll *hyperloglog.Sketch
+	destKey := args[0]
+	obj := store.Get(destKey)
+
+	// If destKey doesn't exist, create a new HLL, else fetch the existing
+	if obj == nil {
+		mergedHll = hyperloglog.New()
+	} else {
+		var ok bool
+		mergedHll, ok = obj.Value.(*hyperloglog.Sketch)
+		if !ok {
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeHllErr)
+		}
+	}
+
+	for _, arg := range args {
+		obj := store.Get(arg)
+		if obj != nil {
+			currKeyHll, ok := obj.Value.(*hyperloglog.Sketch)
+			if !ok {
+				return diceerrors.NewErrWithMessage(diceerrors.WrongTypeHllErr)
+			}
+
+			err := mergedHll.Merge(currKeyHll)
+			if err != nil {
+				return diceerrors.NewErrWithMessage(diceerrors.InvalidHllErr)
+			}
+		}
+	}
+
+	// Save the mergedHll
+	obj = store.NewObj(mergedHll, -1, object.ObjTypeString, object.ObjEncodingRaw)
+	store.Put(destKey, obj)
+
+	return clientio.RespOK
+}
+
+func evalJSONSTRLEN(args []string, store *dstore.Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("JSON.STRLEN")
+	}
+
+	key := args[0]
+
+	if len(args) < 2 {
+		// no recursive
+		// making consistent with arrlen
+		// to-do parsing
+		obj := store.Get(key)
+
+		if obj == nil {
+			return clientio.RespNIL
+		}
+		jsonData := obj.Value
+
+		if utils.GetJSONFieldType(jsonData) != utils.StringType {
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.JSONPathValueTypeErr)
+		}
+		return clientio.Encode(len(jsonData.(string)), false)
+	}
+
+	path := args[1]
+
+	obj := store.Get(key)
+
+	if obj == nil {
+		return clientio.RespNIL
+	}
+
+	// Check if the object is of JSON type
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
+	}
+
+	jsonData := obj.Value
+	if path == defaultRootPath {
+		defaultStringResult := make([]interface{}, 0, 1)
+		if utils.GetJSONFieldType(jsonData) == utils.StringType {
+			defaultStringResult = append(defaultStringResult, int64(len(jsonData.(string))))
+		} else {
+			defaultStringResult = append(defaultStringResult, clientio.RespNIL)
+		}
+
+		return clientio.Encode(defaultStringResult, false)
+	}
+
+	// Parse the JSONPath expression
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("invalid JSONPath")
+	}
+	// Execute the JSONPath query
+	results := expr.Get(jsonData)
+	if len(results) == 0 {
+		return clientio.Encode([]interface{}{}, false)
+	}
+	strLenResults := make([]interface{}, 0, len(results))
+	for _, result := range results {
+		switch utils.GetJSONFieldType(result) {
+		case utils.StringType:
+			strLenResults = append(strLenResults, int64(len(result.(string))))
+		default:
+			strLenResults = append(strLenResults, clientio.RespNIL)
+		}
+	}
+	return clientio.Encode(strLenResults, false)
 }
