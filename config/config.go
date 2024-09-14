@@ -59,6 +59,7 @@ type Config struct {
 		WriteAOFOnCleanup      bool          `mapstructure:"writeaofoncleanup"`
 		LFULogFactor           int           `mapstructure:"lfulogfactor"`
 		LogLevel               string        `mapstructure:"loglevel"`
+		PrettyPrintLogs        bool          `mapstructure:"prettyprintlogs"`
 	} `mapstructure:"server"`
 	Auth struct {
 		UserName string `mapstructure:"username"`
@@ -90,6 +91,7 @@ var defaultConfig = Config{
 		WriteAOFOnCleanup      bool          `mapstructure:"writeaofoncleanup"`
 		LFULogFactor           int           `mapstructure:"lfulogfactor"`
 		LogLevel               string        `mapstructure:"loglevel"`
+		PrettyPrintLogs        bool          `mapstructure:"prettyprintlogs"`
 	}{
 		Addr:                   DefaultHost,
 		Port:                   DefaultPort,
@@ -109,6 +111,7 @@ var defaultConfig = Config{
 		LFULogFactor:           10,
 		WriteAOFOnCleanup:      false,
 		LogLevel:               "info",
+		PrettyPrintLogs:        false,
 	},
 	Auth: struct {
 		UserName string `mapstructure:"username"`

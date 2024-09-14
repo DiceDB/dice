@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"io"
 	"os"
 	"os/signal"
 	"sync"
@@ -14,10 +15,11 @@ import (
 
 	"github.com/dicedb/dice/internal/server"
 
+	"log/slog"
+
 	"github.com/dicedb/dice/config"
 	"github.com/rs/zerolog"
 	slogzerolog "github.com/samber/slog-zerolog/v2"
-	"log/slog"
 )
 
 func init() {
@@ -52,7 +54,11 @@ func getLogLevel() slog.Leveler {
 }
 
 func main() {
-	zerologLogger := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr})
+	var writer io.Writer = os.Stderr
+	if config.DiceConfig.Server.PrettyPrintLogs {
+		writer = zerolog.ConsoleWriter{Out: os.Stderr}
+	}
+	zerologLogger := zerolog.New(writer)
 	logger := slog.New(slogzerolog.Option{
 		Logger: &zerologLogger, NoTimestamp: true,
 		Level: getLogLevel(),
