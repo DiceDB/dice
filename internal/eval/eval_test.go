@@ -4,15 +4,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/bytedance/sonic"
+	"github.com/dicedb/dice/internal/object"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/dicedb/dice/internal/object"
-
 	"github.com/axiomhq/hyperloglog"
-	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/internal/clientio"
 	dstore "github.com/dicedb/dice/internal/store"
 	"gotest.tools/v3/assert"
@@ -27,7 +26,6 @@ type evalTestCase struct {
 
 func setupTest(store *dstore.Store) *dstore.Store {
 	dstore.ResetStore(store)
-	//store = dstore.NewStore(nil)
 	dstore.KeyspaceStat[0] = make(map[string]int)
 
 	return store
@@ -60,6 +58,7 @@ func TestEval(t *testing.T) {
 	testEvalPFADD(t, store)
 	testEvalPFCOUNT(t, store)
 	testEvalHGET(t, store)
+	testEvalPFMERGE(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -492,7 +491,6 @@ func testEvalJSONFORGET(t *testing.T, store *dstore.Store) {
 	}
 	runEvalTests(t, tests, evalJSONFORGET, store)
 }
-
 
 func testEvalJSONCLEAR(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
@@ -1171,6 +1169,86 @@ func testEvalHGET(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalHGET, store)
+}
+
+func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value":   {input: nil, output: []byte("-ERR wrong number of arguments for 'pfmerge' command\r\n")},
+		"empty array": {input: []string{}, output: []byte("-ERR wrong number of arguments for 'pfmerge' command\r\n")},
+		"PFMERGE invalid hll object": {
+			setup: func() {
+				key := "INVALID_OBJ_DEST_KEY"
+				value := "123"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"INVALID_OBJ_DEST_KEY"},
+			output: []byte("-WRONGTYPE Key is not a valid HyperLogLog string value.\r\n"),
+		},
+		"PFMERGE destKey doesn't exist": {
+			input:  []string{"NON_EXISTING_DEST_KEY"},
+			output: clientio.RespOK,
+		},
+		"PFMERGE destKey exist": {
+			input:  []string{"NON_EXISTING_DEST_KEY"},
+			output: clientio.RespOK,
+		},
+		"PFMERGE destKey exist srcKey doesn't exists": {
+			setup: func() {
+				key := "EXISTING_DEST_KEY"
+				value := hyperloglog.New()
+				value.Insert([]byte("VALUE"))
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_DEST_KEY", "NON_EXISTING_SRC_KEY"},
+			output: clientio.RespOK,
+		},
+		"PFMERGE destKey exist srcKey exists": {
+			setup: func() {
+				key := "EXISTING_DEST_KEY"
+				value := hyperloglog.New()
+				value.Insert([]byte("VALUE"))
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_DEST_KEY", "NON_EXISTING_SRC_KEY"},
+			output: clientio.RespOK,
+		},
+		"PFMERGE destKey exist multiple srcKey exist": {
+			setup: func() {
+				key := "EXISTING_DEST_KEY"
+				value := hyperloglog.New()
+				value.Insert([]byte("VALUE"))
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+				srcKey := "EXISTING_SRC_KEY"
+				srcValue := hyperloglog.New()
+				value.Insert([]byte("SRC_VALUE"))
+				srcKeyObj := &object.Obj{
+					Value:          srcValue,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(srcKey, srcKeyObj)
+			},
+			input:  []string{"EXISTING_DEST_KEY", "EXISTING_SRC_KEY"},
+			output: clientio.RespOK,
+		},
+	}
+
+	runEvalTests(t, tests, evalPFMERGE, store)
 }
 
 func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]string, *dstore.Store) []byte, store *dstore.Store) {

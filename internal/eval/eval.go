@@ -2630,3 +2630,45 @@ func evalPFCOUNT(args []string, store *dstore.Store) []byte {
 
 	return clientio.Encode(unionHll.Estimate(), false)
 }
+
+func evalPFMERGE(args []string, store *dstore.Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("PFMERGE")
+	}
+
+	var mergedHll *hyperloglog.Sketch
+	destKey := args[0]
+	obj := store.Get(destKey)
+
+	// If destKey doesn't exist, create a new HLL, else fetch the existing
+	if obj == nil {
+		mergedHll = hyperloglog.New()
+	} else {
+		var ok bool
+		mergedHll, ok = obj.Value.(*hyperloglog.Sketch)
+		if !ok {
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeHllErr)
+		}
+	}
+
+	for _, arg := range args {
+		obj := store.Get(arg)
+		if obj != nil {
+			currKeyHll, ok := obj.Value.(*hyperloglog.Sketch)
+			if !ok {
+				return diceerrors.NewErrWithMessage(diceerrors.WrongTypeHllErr)
+			}
+
+			err := mergedHll.Merge(currKeyHll)
+			if err != nil {
+				return diceerrors.NewErrWithMessage(diceerrors.InvalidHllErr)
+			}
+		}
+	}
+
+	// Save the mergedHll
+	obj = store.NewObj(mergedHll, -1, object.ObjTypeString, object.ObjEncodingRaw)
+	store.Put(destKey, obj)
+
+	return clientio.RespOK
+}

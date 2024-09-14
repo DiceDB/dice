@@ -18,13 +18,13 @@ run:
 	go run main.go
 
 test:
-	go test -v -race -count=1 -tags isolation ./tests/
+	go test -v -race -count=1 -tags isolation ./integration_tests/...
 
 test-max-conn:
 	TEST_FUNC=TestMaxConnAccept make test-one
 
 test-one:
-	go test -v -race -count=1 --run $(TEST_FUNC) ./tests/...
+	go test -v -race -count=1 --run $(TEST_FUNC) ./integration_tests/...
 
 unittest:
 	go test -race -count=1 ./internal/...

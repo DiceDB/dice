@@ -8,7 +8,7 @@ import (
 
 var (
 	TestHost string = "0.0.0.0"
-	TestPort int    = 7379
+	TestPort int    = 8739
 )
 
 var TestKeysLimit int = 10000 // default buffer size.
