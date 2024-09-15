@@ -677,8 +677,6 @@ func TestJsonObjLen(t *testing.T) {
 				cmd := tcase.commands[i]
 				out := tcase.expected[i]
 				result := FireCommand(conn, cmd)
-				fmt.Println("RESSSSS",result)
-				fmt.Println("OUTTT",out)
 				assert.DeepEqual(t,out,result)
 			}
 		})
