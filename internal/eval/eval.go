@@ -812,7 +812,7 @@ func evalJSONARRAPPEND(args []string, store *dstore.Store) []byte {
 
 	expr, err := jp.ParseString(path)
 	if err != nil {
-		return diceerrors.NewErrWithMessage("ERR Path '<path>' does not exist or not an array")
+		return diceerrors.NewErrWithMessage(fmt.Sprintf("ERR Path '%s' does not exist or not an array", path))
 	}
 
 	// Parse the input values as JSON
@@ -821,7 +821,7 @@ func evalJSONARRAPPEND(args []string, store *dstore.Store) []byte {
 		var parsedValue interface{}
 		err := sonic.UnmarshalString(v, &parsedValue)
 		if err != nil {
-			return diceerrors.NewErrWithMessage(fmt.Sprintf("ERR invalid JSON value: %s", v))
+			return diceerrors.NewErrWithMessage(err.Error())
 		}
 		parsedValues[i] = parsedValue
 	}
