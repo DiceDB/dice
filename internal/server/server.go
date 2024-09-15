@@ -277,7 +277,18 @@ func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.RedisCmd, buf *bytes.
 	}
 
 	resp := <-s.ioChan
-	buf.Write(resp.Result)
+
+	switch redisCmd.Cmd {
+	// gatherPING expects input from responses returned by all the shards
+	// For now we have only single shards hence we are passing a single
+	// eval response. In future we need to wait till reponse from all shards
+	// then append it in the array and pass it in the Gather function
+	case "PING":
+		buf.Write(eval.GatherPING(resp.EvalResponse))
+
+	default:
+		buf.Write(resp.EvalResponse.Result.([]byte))
+	}
 }
 
 func readCommands(c io.ReadWriter) (cmd.RedisCmds, bool, error) {

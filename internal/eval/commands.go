@@ -10,6 +10,17 @@ type DiceCmdMeta struct {
 	KeySpecs
 }
 
+// NewDiceCmdMeta struct maintains information about refactored eval commands
+// Eventually we will get rid of DiceCmdMeta once migrated to the new struct
+// NewDiceCmdMeta doesn't have strict Eval function implementation because
+// each command doesn't requires store and also each cannot return a byte array
+type NewDiceCmdMeta struct {
+	Name  string
+	Info  string
+	Arity int // number of arguments, it is possible to use -N to say >= N
+	KeySpecs
+}
+
 type KeySpecs struct {
 	BeginIndex int
 	Step       int
@@ -17,14 +28,17 @@ type KeySpecs struct {
 }
 
 var (
-	DiceCmds = map[string]DiceCmdMeta{}
+	DiceCmds    = map[string]DiceCmdMeta{}
+	NewDiceCmds = map[string]NewDiceCmdMeta{}
 
-	pingCmdMeta = DiceCmdMeta{
+	// PING command moved to the refactored eval implementation
+	// hence it is using NewDiceCmdMeta struct
+	pingCmdMeta = NewDiceCmdMeta{
 		Name:  "PING",
 		Info:  `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
-		Eval:  evalPING,
 		Arity: -1,
 	}
+
 	authCmdMeta = DiceCmdMeta{
 		Name: "AUTH",
 		Info: `AUTH returns with an encoded "OK" if the user is authenticated.
@@ -672,7 +686,6 @@ var (
 )
 
 func init() {
-	DiceCmds["PING"] = pingCmdMeta
 	DiceCmds["AUTH"] = authCmdMeta
 	DiceCmds["SET"] = setCmdMeta
 	DiceCmds["GET"] = getCmdMeta
@@ -749,6 +762,9 @@ func init() {
 	DiceCmds["JSON.STRLEN"] = jsonStrlenCmdMeta
 	DiceCmds["HLEN"] = hlenCmdMeta
 	DiceCmds["SELECT"] = selectCmdMeta
+
+	// Refactored implementation
+	NewDiceCmds["PING"] = pingCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

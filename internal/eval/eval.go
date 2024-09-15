@@ -48,26 +48,7 @@ const maxExDuration = 9223372036854775
 func init() {
 	diceCommandsCount = len(DiceCmds)
 	TxnCommands = map[string]bool{"EXEC": true, "DISCARD": true}
-	serverID = fmt.Sprintf("%s:%d", config.DiceConfig.Server.Addr, config.DiceConfig.Server.Port)
-}
-
-// evalPING returns with an encoded "PONG"
-// If any message is added with the ping command,
-// the message will be returned.
-func evalPING(args []string, store *dstore.Store) []byte {
-	var b []byte
-
-	if len(args) >= 2 {
-		return diceerrors.NewErrArity("PING")
-	}
-
-	if len(args) == 0 {
-		b = clientio.Encode("PONG", true)
-	} else {
-		b = clientio.Encode(args[0], false)
-	}
-
-	return b
+	serverID = fmt.Sprintf("%s:%d", config.Host, config.Port)
 }
 
 // EvalAUTH returns with an encoded "OK" if the user is authenticated

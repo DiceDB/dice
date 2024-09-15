@@ -14,6 +14,7 @@ import (
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/eval"
+
 	"github.com/dicedb/dice/internal/ops"
 	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -35,6 +36,7 @@ type ShardThread struct {
 	errorChan        chan *ShardError                   // errorChan is the channel for sending system-level errors.
 	lastCronExecTime time.Time                          // lastCronExecTime is the last time the shard executed cron tasks.
 	cronFrequency    time.Duration                      // cronFrequency is the frequency at which the shard executes cron tasks.
+
 }
 
 // NewShardThread creates a new ShardThread instance with the given shard id and error channel.
@@ -96,38 +98,56 @@ func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 
 	if ok {
 		workerChan <- &ops.StoreResponse{
-			RequestID: op.RequestID,
-			Result:    resp,
+			RequestID:    op.RequestID,
+			EvalResponse: resp,
 		}
 	} else {
 		shard.errorChan <- &ShardError{shardID: shard.id, err: fmt.Errorf(diceerrors.WorkerNotFoundErr, op.WorkerID)}
 	}
 }
 
-func (shard *ShardThread) executeCommand(op *ops.StoreOp) []byte {
+func (shard *ShardThread) executeCommand(op *ops.StoreOp) eval.EvalScatterResponse {
+
+	// Temporary logic till we move all commands to new eval logic.
+	// eval.NewDiceCmds map contains refactored eval commands
+	// For any command we will first check in the exisiting map
+	// if command is NA then we will check in the new map
+	var name string
 	diceCmd, ok := eval.DiceCmds[op.Cmd.Cmd]
+	name = diceCmd.Name
 	if !ok {
-		return diceerrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", op.Cmd.Cmd, strings.Join(op.Cmd.Args, " "))
+		newdiceCmd, ok := eval.NewDiceCmds[op.Cmd.Cmd]
+		if !ok {
+
+			return eval.EvalScatterResponse{Result: nil, Error: fmt.Errorf("unknown command '%s', with args beginning with: %s", op.Cmd.Cmd, strings.Join(op.Cmd.Args, " "))}
+		}
+		name = newdiceCmd.Name
 	}
 
 	// Till the time we refactor to handle QWATCH differently using HTTP Streaming/SSE
 	if op.HTTPOp {
-		return diceCmd.Eval(op.Cmd.Args, shard.store)
+		return eval.EvalScatterResponse{Result: diceCmd.Eval(op.Cmd.Args, shard.store), Error: nil}
 	}
 
 	// The following commands could be handled at the shard level, however, we can randomly let any shard handle them
 	// to reduce load on main server.
-	switch diceCmd.Name {
+	switch name {
+	// new implementation for ping command after rewriting eval
+	case "PING":
+		return eval.ScatterPING(op.Cmd.Args)
+
+	// Old implementation kept as it is, but we will be moving
+	// to the new implmentation as PING soon for all commands
 	case "SUBSCRIBE", "QWATCH":
-		return eval.EvalQWATCH(op.Cmd.Args, op.Client.Fd, shard.store)
+		return eval.EvalScatterResponse{Result: eval.EvalQWATCH(op.Cmd.Args, op.Client.Fd, shard.store), Error: nil}
 	case "UNSUBSCRIBE", "QUNWATCH":
-		return eval.EvalQUNWATCH(op.Cmd.Args, op.Client.Fd)
+		return eval.EvalScatterResponse{Result: eval.EvalQUNWATCH(op.Cmd.Args, op.Client.Fd), Error: nil}
 	case auth.AuthCmd:
-		return eval.EvalAUTH(op.Cmd.Args, op.Client)
+		return eval.EvalScatterResponse{Result: eval.EvalAUTH(op.Cmd.Args, op.Client), Error: nil}
 	case "ABORT":
-		return clientio.RespOK
+		return eval.EvalScatterResponse{Result: clientio.RespOK, Error: nil}
 	default:
-		return diceCmd.Eval(op.Cmd.Args, shard.store)
+		return eval.EvalScatterResponse{Result: diceCmd.Eval(op.Cmd.Args, shard.store), Error: nil}
 	}
 }
 

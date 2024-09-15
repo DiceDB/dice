@@ -71,3 +71,7 @@ func NewErrArity(cmdName string) []byte {
 func NewErrExpireTime(cmdName string) []byte {
 	return NewErrWithFormattedMessage(ExpiryErr, strings.ToLower(cmdName))
 }
+
+func NewEvalError(msg string) error {
+	return fmt.Errorf("%s", msg)
+}

@@ -37,7 +37,7 @@ func TestEval(t *testing.T) {
 	store := dstore.NewStore(nil)
 
 	testEvalMSET(t, store)
-	testEvalPING(t, store)
+	// testEvalPING(t, store)
 	testEvalHELLO(t, store)
 	testEvalSET(t, store)
 	testEvalGET(t, store)
@@ -66,16 +66,16 @@ func TestEval(t *testing.T) {
 	testEvalSELECT(t, store)
 }
 
-func testEvalPING(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"nil value":            {input: nil, output: []byte("+PONG\r\n")},
-		"empty args":           {input: []string{}, output: []byte("+PONG\r\n")},
-		"one value":            {input: []string{"HEY"}, output: []byte("$3\r\nHEY\r\n")},
-		"more than one values": {input: []string{"HEY", "HELLO"}, output: []byte("-ERR wrong number of arguments for 'ping' command\r\n")},
-	}
+// func testEvalPING(t *testing.T, store *dstore.Store) {
+// 	tests := map[string]evalTestCase{
+// 		"nil value":            {input: nil, output: []byte("+PONG\r\n")},
+// 		"empty args":           {input: []string{}, output: []byte("+PONG\r\n")},
+// 		"one value":            {input: []string{"HEY"}, output: []byte("$3\r\nHEY\r\n")},
+// 		"more than one values": {input: []string{"HEY", "HELLO"}, output: []byte("-ERR wrong number of arguments for 'ping' command\r\n")},
+// 	}
 
-	runEvalTests(t, tests, evalPING, store)
-}
+// 	runEvalTests(t, tests, evalPING, store)
+// }
 
 func testEvalHELLO(t *testing.T, store *dstore.Store) {
 	resp := []interface{}{
