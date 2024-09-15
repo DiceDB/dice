@@ -1,7 +1,6 @@
 package store
 
 import (
-	"fmt"
 	"math/rand"
 
 	"github.com/dicedb/dice/config"
@@ -22,7 +21,7 @@ func evictFirst(store *Store) {
 // Randomly removes keys to make space for the new data added.
 // The number of keys removed will be sufficient to free up at least 10% space
 func evictAllkeysRandom(store *Store) {
-	evictCount := int64(config.EvictionRatio * float64(config.KeysLimit))
+	evictCount := int64(config.DiceConfig.Server.EvictionRatio * float64(config.DiceConfig.Server.KeysLimit))
 	// Iteration of Golang dictionary can be considered as a random
 	// because it depends on the hash of the inserted key
 	store.store.All(func(k string, obj *object.Obj) bool {
@@ -57,7 +56,7 @@ func GetLastAccessedAt(lastAccessedAt uint32) uint32 {
 }
 
 func UpdateLastAccessedAt(lastAccessedAt uint32) uint32 {
-	if config.EvictionStrategy == config.AllKeysLFU {
+	if config.DiceConfig.Server.EvictionPolicy == config.AllKeysLFU {
 		return UpdateLFULastAccessedAt(lastAccessedAt)
 	}
 	return getCurrentClock()
@@ -74,7 +73,7 @@ func incrLogCounter(counter uint8) uint8 {
 		return 255
 	}
 	randomFactor := rand.Float32() //nolint:gosec
-	approxFactor := 1.0 / float32(counter*config.LFULogFactor+1)
+	approxFactor := 1.0 / float32(counter*uint8(config.DiceConfig.Server.LFULogFactor)+1)
 	if approxFactor > randomFactor {
 		counter++
 	}
@@ -110,15 +109,7 @@ func populateEvictionPool(store *Store) {
 // only when the number of keys to evict is less than what we have in the pool
 func EvictAllkeysLRUOrLFU(store *Store) {
 	populateEvictionPool(store)
-	evictCount := int16(config.EvictionRatio * float64(config.KeysLimit))
-
-	fmt.Println("*********EVICTION POOL********************")
-	for i := 0; i < len(EPool.pool); i++ {
-		ldt := EPool.pool[i].lastAccessedAt
-		fmt.Printf("KEY: %s, COUNTER: %d, TIME: %d\n", EPool.pool[i].keyPtr, GetLFULogCounter(ldt), GetLastAccessedAt(ldt))
-	}
-
-	fmt.Println("*****************************")
+	evictCount := int16(config.DiceConfig.Server.EvictionRatio * float64(config.DiceConfig.Server.KeysLimit))
 
 	for i := 0; i < int(evictCount) && len(EPool.pool) > 0; i++ {
 		item := EPool.Pop()
@@ -130,7 +121,7 @@ func EvictAllkeysLRUOrLFU(store *Store) {
 }
 
 func (store *Store) evict() {
-	switch config.EvictionStrategy {
+	switch config.DiceConfig.Server.EvictionPolicy {
 	case config.SimpleFirst:
 		evictFirst(store)
 	case config.AllKeysRandom:

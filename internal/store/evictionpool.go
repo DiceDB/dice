@@ -65,26 +65,27 @@ func (pq *EvictionPool) Push(key string, lastAccessedAt uint32) {
 		pq.pool = append(pq.pool, item)
 
 		// Performance bottleneck
-		if config.EvictionStrategy == config.AllKeysLFU {
+		if config.DiceConfig.Server.EvictionPolicy == config.AllKeysLFU {
 			sort.Sort(ByCounterAndIdleTime(pq.pool))
 		} else {
 			sort.Sort(ByIdleTime(pq.pool))
 		}
 	} else {
-		shift := false
-		if config.EvictionStrategy == config.AllKeysLFU {
-			logCounter := GetLFULogCounter(lastAccessedAt)
-			poolLogCounter := GetLFULogCounter(pq.pool[0].lastAccessedAt)
-			if logCounter < poolLogCounter {
-				shift = true
-			} else if logCounter == poolLogCounter && GetLastAccessedAt(lastAccessedAt) > GetLastAccessedAt(pq.pool[0].lastAccessedAt) {
-				shift = true
+		shouldShift := func() bool {
+			if config.DiceConfig.Server.EvictionPolicy == config.AllKeysLFU {
+				logCounter, poolLogCounter := GetLFULogCounter(lastAccessedAt), GetLFULogCounter(pq.pool[0].lastAccessedAt)
+				if logCounter < poolLogCounter {
+					return true
+				}
+				if logCounter == poolLogCounter {
+					return GetLastAccessedAt(lastAccessedAt) > GetLastAccessedAt(pq.pool[0].lastAccessedAt)
+				}
+				return false
 			}
-		} else if lastAccessedAt > pq.pool[0].lastAccessedAt {
-			shift = true
-		}
+			return lastAccessedAt > pq.pool[0].lastAccessedAt
+		}()
 
-		if shift {
+		if shouldShift {
 			pq.pool = pq.pool[1:]
 			pq.keyset[key] = item
 			pq.pool = append(pq.pool, item)

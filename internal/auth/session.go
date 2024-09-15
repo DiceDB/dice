@@ -100,7 +100,7 @@ func NewSession() (session *Session) {
 }
 
 func (session *Session) IsActive() (isActive bool) {
-	if config.RequirePass == utils.EmptyStr && session.Status != SessionStatusActive {
+	if config.DiceConfig.Auth.Password == utils.EmptyStr && session.Status != SessionStatusActive {
 		session.Activate(session.User)
 	}
 	isActive = session.Status == SessionStatusActive
