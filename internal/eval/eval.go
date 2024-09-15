@@ -713,7 +713,7 @@ func evalJSONARRAPPEND(args []string, store *dstore.Store) []byte {
 		var parsedValue interface{}
 		err := sonic.UnmarshalString(v, &parsedValue)
 		if err != nil {
-			return diceerrors.NewErrWithMessage(fmt.Sprintf("ERR invalid JSON value: %s", err))
+			return diceerrors.NewErrWithMessage(fmt.Sprintf("ERR invalid JSON value: %s", v))
 		}
 		parsedValues[i] = parsedValue
 	}
