@@ -901,7 +901,7 @@ func testEvalJSONTOGGLE(t *testing.T, store *dstore.Store) {
                
             },
             input:  []string{"EXISTING_KEY", ".active"},
-            output: clientio.Encode([]interface{}{0}, false), // boolean true toggles to false (0)
+            output: clientio.Encode([]interface{}{0}, false),
         },
         "key exists, toggling boolean false to true": {
             setup: func() {
@@ -944,8 +944,19 @@ func testEvalJSONTOGGLE(t *testing.T, store *dstore.Store) {
             input:  []string{"NESTED_KEY", "$..isSimple"},
             output: clientio.Encode([]interface{}{0, 1}, false), 
         },
+		"deeply nested JSON structure with multiple matching fields": {
+    		setup: func() {
+        		key := "DEEP_NESTED_KEY"
+        		value := `{"field": true, "nested": {"field": false, "nested": {"field": true}}}`
+        		var rootData interface{}
+        		_= sonic.Unmarshal([]byte(value), &rootData)
+        		obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+        		store.Put(key, obj)
+    		},
+    		input:  []string{"DEEP_NESTED_KEY", "$..field"},
+    		output: clientio.Encode([]interface{}{0, 1, 0}, false),
+		},
     }
-    
     runEvalTests(t, tests, evalJSONTOGGLE, store)
 }
 

@@ -722,14 +722,15 @@ func evalJSONTOGGLE(args []string, store *dstore.Store) []byte {
     modified := false
 
     _, err = expr.Modify(jsonData, func(value interface{}) (interface{}, bool) {
-        if boolValue, ok := value.(bool); ok {
-            newValue := !boolValue
-            toggleResults = append(toggleResults, boolToInt(newValue))
-            modified = true
-            return newValue, true
+		boolValue, ok := value.(bool)
+        if !ok {
+            toggleResults = append(toggleResults, nil)
+            return value, false
         }
-        toggleResults = append(toggleResults, nil)
-        return value, false
+        newValue := !boolValue
+        toggleResults = append(toggleResults, boolToInt(newValue))
+        modified = true
+        return newValue, true
     })
 
     if err != nil {
@@ -737,22 +738,11 @@ func evalJSONTOGGLE(args []string, store *dstore.Store) []byte {
     }
 
     if modified {
-        newObj := &object.Obj{
-            Value:        jsonData,
-            TypeEncoding: object.ObjTypeJSON,
-        }
-        exp, ok := dstore.GetExpiry(obj, store)
-        var exDurationMs int64 = -1
-        if ok {
-            exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
-        }
-        if exDurationMs > 0 {
-            store.SetExpiry(newObj, exDurationMs)
-        }
-        store.Put(key, newObj)
-    }
+		obj.Value = jsonData
+		store.Put(key, obj)
+	}
 
-    toggleResults = reverseResults(toggleResults)
+    toggleResults = ReverseSlice(toggleResults)
     return clientio.Encode(toggleResults, false)
 }
 
@@ -763,10 +753,11 @@ func boolToInt(b bool) int {
     return 0
 }
 
-func reverseResults(results []interface{}) []interface{} {
-    reversed := make([]interface{}, len(results))
-    for i, v := range results {
-        reversed[len(results)-1-i] = v
+// ReverseSlice takes a slice of any type and returns a new slice with the elements reversed.
+func ReverseSlice[T any](slice []T) []T {
+    reversed := make([]T, len(slice))
+    for i, v := range slice {
+        reversed[len(slice)-1-i] = v
     }
     return reversed
 }

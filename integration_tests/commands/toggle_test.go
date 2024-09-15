@@ -12,6 +12,7 @@ func TestEvalJSONTOGGLE(t *testing.T) {
     defer conn.Close()
 
 	simpleJSON :=`{"name":true,"age":false}`
+	complexJson :=`{"field":true,"nested":{"field":false,"nested":{"field":true}}}`
 
     testCases := []struct {
         name     string
@@ -37,6 +38,19 @@ func TestEvalJSONTOGGLE(t *testing.T) {
             name:     "JSON.TOGGLE with invalid command format",
             commands: []string{"JSON.TOGGLE testKey"},
             expected: []interface{}{"ERR wrong number of arguments for 'json.toggle' command"},
+        },
+		{
+            name:     "deeply nested JSON structure with multiple matching fields",
+            commands: []string{
+                `JSON.SET user $ `+ complexJson,
+				"JSON.GET user",
+				"JSON.TOGGLE user $..field",
+				"JSON.GET user",
+            },
+            expected: []interface{}{"OK",
+			"{\"field\":true,\"nested\":{\"field\":false,\"nested\":{\"field\":true}}}",
+			[]any{int64(0), int64(1), int64(0)},
+			"{\"field\":false,\"nested\":{\"field\":true,\"nested\":{\"field\":false}}}"},
         },
     }
 
