@@ -311,7 +311,7 @@ func evalGETDEL(args []string, store *dstore.Store) []byte {
 
 	key := args[0]
 
-	//Getting the key based on previous touch value
+	// getting the key based on previous touch value
 	obj := store.GetNoTouch(key)
 
 	//Check if obj is nil
