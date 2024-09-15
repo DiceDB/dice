@@ -22,6 +22,7 @@ const (
 	WorkerNotFoundErr    = "worker with ID %s not found"
 	JSONPathNotExistErr  = "-ERR Path '%s' does not exist"
 	JSONPathValueTypeErr = "-WRONGTYPE wrong type of path value - expected string but found integer"
+	InvalidExpireTime    = "-ERR invalid expire time"
 )
 
 type DiceError struct {

@@ -46,7 +46,7 @@ func NewShardThread(id ShardID, errorChan chan *ShardError, watchChan chan dstor
 		workerMap:        make(map[string]chan *ops.StoreResponse),
 		errorChan:        errorChan,
 		lastCronExecTime: utils.GetCurrentTime(),
-		cronFrequency:    config.ShardCronFrequency,
+		cronFrequency:    config.DiceConfig.Server.ShardCronFrequency,
 	}
 }
 
@@ -134,7 +134,7 @@ func (shard *ShardThread) executeCommand(op *ops.StoreOp) []byte {
 // cleanup handles cleanup logic when the shard stops.
 func (shard *ShardThread) cleanup() {
 	close(shard.ReqChan)
-	if config.WriteAOFOnCleanup {
+	if config.DiceConfig.Server.WriteAOFOnCleanup {
 		// Avoiding AOF dump for test enabled environments as
 		// the tests were taking longer due to background tasks which exceeded the WaitDelay,
 		// thus causing the test process to be forcibly terminated.
