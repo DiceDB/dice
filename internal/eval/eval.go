@@ -612,17 +612,25 @@ func evalJSONGET(args []string, store *dstore.Store) []byte {
 	if len(args) > 1 {
 		path = args[1]
 	}
+	result, err := jsonGETHelper(store, path, key)
+	if err != nil {
+		return err
+	}
+	return clientio.Encode(result, false)
+}
 
+// helper function used by evalJSONGET and evalJSONMGET to prepare the results
+func jsonGETHelper(store *dstore.Store, path, key string) (result interface{}, err2 []byte) {
 	// Retrieve the object from the database
 	obj := store.Get(key)
 	if obj == nil {
-		return clientio.RespNIL
+		return result, nil
 	}
 
 	// Check if the object is of JSON type
 	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
 	if errWithMessage != nil {
-		return errWithMessage
+		return result, errWithMessage
 	}
 
 	jsonData := obj.Value
@@ -631,21 +639,21 @@ func evalJSONGET(args []string, store *dstore.Store) []byte {
 	if path == defaultRootPath {
 		resultBytes, err := sonic.Marshal(jsonData)
 		if err != nil {
-			return diceerrors.NewErrWithMessage("could not serialize result")
+			return result, diceerrors.NewErrWithMessage("could not serialize result")
 		}
-		return clientio.Encode(string(resultBytes), false)
+		return string(resultBytes), nil
 	}
 
 	// Parse the JSONPath expression
 	expr, err := jp.ParseString(path)
 	if err != nil {
-		return diceerrors.NewErrWithMessage("invalid JSONPath")
+		return result, diceerrors.NewErrWithMessage("invalid JSONPath")
 	}
 
 	// Execute the JSONPath query
 	results := expr.Get(jsonData)
 	if len(results) == 0 {
-		return clientio.RespNIL
+		return result, nil
 	}
 
 	// Serialize the result
@@ -656,9 +664,34 @@ func evalJSONGET(args []string, store *dstore.Store) []byte {
 		resultBytes, err = sonic.Marshal(results)
 	}
 	if err != nil {
-		return diceerrors.NewErrWithMessage("could not serialize result")
+		return nil, diceerrors.NewErrWithMessage("could not serialize result")
 	}
-	return clientio.Encode(string(resultBytes), false)
+	return string(resultBytes), nil
+}
+
+// evalJSONMGET retrieves a JSON value stored for the multiple key
+// args must contain at least the key and a path;
+// Returns encoded error response if incorrect number of arguments
+// The RESP value of the key is encoded and then returned
+func evalJSONMGET(args []string, store *dstore.Store) []byte {
+	if len(args) < 2 {
+		return diceerrors.NewErrArity("JSON.MGET")
+	}
+
+	var results []interface{}
+
+	// Default path is root if not specified
+	argsLen := len(args)
+	path := args[argsLen-1]
+
+	for i := 0; i < (argsLen - 1); i++ {
+		key := args[i]
+		result, _ := jsonGETHelper(store, path, key)
+		results = append(results, result)
+	}
+
+	var interfaceObj interface{} = results
+	return clientio.Encode(interfaceObj, false)
 }
 
 // evalJSONSET stores a JSON value at the specified key

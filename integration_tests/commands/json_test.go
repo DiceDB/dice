@@ -628,3 +628,62 @@ func TestJsonStrlen(t *testing.T) {
 		})
 	}
 }
+func TestJsonMGET(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+	defer FireCommand(conn, "DEL x y z p q r t u v")
+
+	x := `["hehhhe","hello"]`
+	y := `{"name":"jerry","partner":{"name":"jerry","language":["rust"]},"partner2":{"language":["rust"]}}`
+	z := `{"name":"tom","partner":{"name":"tom","language":["rust"]},"partner2":{"age":12,"language":["rust"]}}`
+
+	testCases := []struct {
+		name     string
+		commands []string
+		expected []interface{}
+	}{
+
+		{
+			name:     "JSON.MGET with root path",
+			commands: []string{"json.set xx $ " + x, "json.set yy $ " + y, "json.set zz $ " + z, "json.mget xx yy zz $"},
+			expected: []interface{}{"OK", "OK", "OK", []interface{}{x, y, z}},
+		},
+		{
+			name:     "JSON.MGET withpath",
+			commands: []string{"json.set p $ " + x, "json.set q $ " + y, "json.set r $ " + z, "json.mget p q r $.name"},
+			expected: []interface{}{"OK", "OK", "OK", []interface{}{"(nil)", "\"jerry\"", "\"tom\""}},
+		},
+		{
+			name:     "JSON.MSET withpath part2",
+			commands: []string{"json.set t $ " + x, "json.set u $ " + y, "json.set v $ " + z, "json.mget t u v $.partner2.age"},
+			expected: []interface{}{"OK", "OK", "OK", []interface{}{"(nil)", "(nil)", "12"}},
+		},
+		{
+			name:     "JSON.MGET error",
+			commands: []string{"json.mget t"},
+			expected: []interface{}{"ERR wrong number of arguments for 'json.mget' command"},
+		},
+	}
+	for _, tcase := range testCases {
+		t.Run(tcase.name, func(t *testing.T) {
+			for i := 0; i < len(tcase.commands); i++ {
+				cmd := tcase.commands[i]
+				out := tcase.expected[i]
+				result := FireCommand(conn, cmd)
+				expectedResults, ok := out.([]interface{})
+				results, ok2 := result.([]interface{})
+				if ok && ok2 {
+					for i := 0; i < len(results); i++ {
+						if testutils.IsJSONResponse(expectedResults[i].(string)) {
+							testutils.AssertJSONEqual(t, expectedResults[i].(string), results[i].(string))
+						} else {
+							assert.Equal(t, expectedResults[i], results[i])
+						}
+					}
+				} else {
+					assert.Equal(t, out, result)
+				}
+			}
+		})
+	}
+}
