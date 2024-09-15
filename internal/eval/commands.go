@@ -147,6 +147,14 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsonnummultbyCmdMeta = DiceCmdMeta{
+        Name: "JSON.NUMMULTBY",
+        Info: `JSON.NUMMULTBY key path value
+        Multipy the number value stored at the specified path by a value.`,
+        Eval:     evalJSONNUMMULTBY,
+        Arity:    3,
+        KeySpecs: KeySpecs{BeginIndex: 1},
+    }
 	ttlCmdMeta = DiceCmdMeta{
 		Name: "TTL",
 		Info: `TTL returns Time-to-Live in secs for the queried key in args
@@ -693,6 +701,7 @@ func init() {
 	DiceCmds["JSON.DEL"] = jsondelCmdMeta
 	DiceCmds["JSON.FORGET"] = jsonforgetCmdMeta
 	DiceCmds["JSON.ARRLEN"] = jsonarrlenCmdMeta
+	DiceCmds["JSON.NUMMULTBY"] = jsonnummultbyCmdMeta
 	DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
 	DiceCmds["EXPIRE"] = expireCmdMeta
