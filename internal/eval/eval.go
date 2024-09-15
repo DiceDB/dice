@@ -413,21 +413,29 @@ func evalJSONDebugMemory(args []string, store *dstore.Store) []byte {
 
 		// handle error cases
 		if len(results) == 0 {
-			// handle out of bound index path for array json type
+
+			// this block will return '[]' for out of bound index for an array json type
+			// this will maintain consistency with redis
 			isArray := utils.IsArray(obj.Value)
 			if isArray {
 				arr, ok := obj.Value.([]any)
 				if !ok {
 					return diceerrors.NewErrWithMessage("invalid array json")
 				}
+
+				// extract index from arg
 				reg := regexp.MustCompile(`^\$(\.|)\[(\d+|\*)\]`)
 				matches := reg.FindStringSubmatch(path)
 
 				if len(matches) == 3 {
+
+					// convert index to int
 					index, err := strconv.Atoi(matches[2])
 					if err != nil {
 						return diceerrors.NewErrWithMessage("unable to extract index")
 					}
+
+					// if index is out of bound return empty array
 					if index >= len(arr) {
 						return clientio.RespEmptyArray
 					}
