@@ -3,7 +3,7 @@ package config
 import (
 	"time"
 
-	"github.com/dicedb/dice/internal/constants"
+	"github.com/dicedb/dice/internal/server/utils"
 )
 
 var (
@@ -23,7 +23,7 @@ const (
 // Will evict EvictionRatio of keys whenever eviction runs
 var (
 	EvictionRatio    float64 = 0.40
-	EvictionStrategy string  = AllKeysLRU
+	EvictionStrategy string  = AllKeysLFU
 	LFULogFactor     uint8   = 10
 	AOFFile          string  = "./dice-master.aof"
 )
@@ -43,5 +43,7 @@ var (
 // Users and ACLs
 var (
 	// if RequirePass is set to an empty string, no authentication is required
-	RequirePass string = constants.EmptyStr
+	RequirePass string = utils.EmptyStr
 )
+
+var WriteAOFOnCleanup = false

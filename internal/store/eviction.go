@@ -1,38 +1,36 @@
 package store
 
 import (
+	"fmt"
 	"math/rand"
 
 	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/server/utils"
 )
 
 // Evicts the first key it found while iterating the map
 // TODO: Make it efficient by doing thorough sampling
 func evictFirst(store *Store) {
-	withLocks(func() {
-		store.store.All(func(k string, obj *Obj) bool {
-			store.delByPtr(k)
-			// stop after iterating over the first element
-			return false
-		})
-	}, store, WithStoreLock())
+	store.store.All(func(k string, obj *object.Obj) bool {
+		store.delByPtr(k)
+		// stop after iterating over the first element
+		return false
+	})
 }
 
 // Randomly removes keys to make space for the new data added.
 // The number of keys removed will be sufficient to free up at least 10% space
 func evictAllkeysRandom(store *Store) {
 	evictCount := int64(config.EvictionRatio * float64(config.KeysLimit))
-	withLocks(func() {
-		// Iteration of Golang dictionary can be considered as a random
-		// because it depends on the hash of the inserted key
-		store.store.All(func(k string, obj *Obj) bool {
-			store.delByPtr(k)
-			evictCount--
-			// continue if evictCount > 0
-			return evictCount > 0
-		})
-	}, store, WithStoreLock())
+	// Iteration of Golang dictionary can be considered as a random
+	// because it depends on the hash of the inserted key
+	store.store.All(func(k string, obj *object.Obj) bool {
+		store.delByPtr(k)
+		evictCount--
+		// continue if evictCount > 0
+		return evictCount > 0
+	})
 }
 
 /*
@@ -42,21 +40,25 @@ func getCurrentClock() uint32 {
 	return uint32(utils.GetCurrentTime().Unix()) & 0x00FFFFFF
 }
 
-func getLFULogCounter(lastAccessedAt uint32) uint8 {
+func GetLFULogCounter(lastAccessedAt uint32) uint8 {
 	return uint8((lastAccessedAt & 0xFF000000) >> 24)
 }
 
-func updateLFULastAccessedAt(lastAccessedAt uint32) uint32 {
+func UpdateLFULastAccessedAt(lastAccessedAt uint32) uint32 {
 	currentUnixTime := getCurrentClock()
-	counter := getLFULogCounter(lastAccessedAt)
+	counter := GetLFULogCounter(lastAccessedAt)
 
 	counter = incrLogCounter(counter)
 	return (uint32(counter) << 24) | currentUnixTime
 }
 
-func getLastAccessedAt(lastAccessedAt uint32) uint32 {
+func GetLastAccessedAt(lastAccessedAt uint32) uint32 {
+	return lastAccessedAt & 0x00FFFFFF
+}
+
+func UpdateLastAccessedAt(lastAccessedAt uint32) uint32 {
 	if config.EvictionStrategy == config.AllKeysLFU {
-		return updateLFULastAccessedAt(lastAccessedAt)
+		return UpdateLFULastAccessedAt(lastAccessedAt)
 	}
 	return getCurrentClock()
 }
@@ -90,21 +92,18 @@ func GetIdleTime(lastAccessedAt uint32) uint32 {
 
 func populateEvictionPool(store *Store) {
 	sampleSize := 5
-
 	// TODO: if we already have obj, why do we need to
 	// look up in store.store again?
-	withLocks(func() {
-		store.store.All(func(k string, obj *Obj) bool {
-			v, ok := store.store.Get(k)
-			if ok {
-				ePool.Push(k, v.LastAccessedAt)
-				sampleSize--
-			}
-			// continue if sample size > 0
-			// stop as soon as it hits 0
-			return sampleSize > 0
-		})
-	}, store, WithStoreRLock())
+	store.store.All(func(k string, obj *object.Obj) bool {
+		v, ok := store.store.Get(k)
+		if ok {
+			EPool.Push(k, v.LastAccessedAt)
+			sampleSize--
+		}
+		// continue if sample size > 0
+		// stop as soon as it hits 0
+		return sampleSize > 0
+	})
 }
 
 // TODO: no need to populate everytime. should populate
@@ -112,8 +111,17 @@ func populateEvictionPool(store *Store) {
 func EvictAllkeysLRUOrLFU(store *Store) {
 	populateEvictionPool(store)
 	evictCount := int16(config.EvictionRatio * float64(config.KeysLimit))
-	for i := 0; i < int(evictCount) && len(ePool.pool) > 0; i++ {
-		item := ePool.Pop()
+
+	fmt.Println("*********EVICTION POOL********************")
+	for i := 0; i < len(EPool.pool); i++ {
+		ldt := EPool.pool[i].lastAccessedAt
+		fmt.Printf("KEY: %s, COUNTER: %d, TIME: %d\n", EPool.pool[i].keyPtr, GetLFULogCounter(ldt), GetLastAccessedAt(ldt))
+	}
+
+	fmt.Println("*****************************")
+
+	for i := 0; i < int(evictCount) && len(EPool.pool) > 0; i++ {
+		item := EPool.Pop()
 		if item == nil {
 			return
 		}

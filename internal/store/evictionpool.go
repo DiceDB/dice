@@ -42,8 +42,8 @@ func (a ByCounterAndIdleTime) Swap(i, j int) {
 }
 
 func (a ByCounterAndIdleTime) Less(i, j int) bool {
-	counterI := getLFULogCounter(a[i].lastAccessedAt)
-	counterJ := getLFULogCounter(a[j].lastAccessedAt)
+	counterI := GetLFULogCounter(a[i].lastAccessedAt)
+	counterJ := GetLFULogCounter(a[j].lastAccessedAt)
 
 	if counterI == counterJ {
 		// if access counters are same, sort by idle time
@@ -70,10 +70,25 @@ func (pq *EvictionPool) Push(key string, lastAccessedAt uint32) {
 		} else {
 			sort.Sort(ByIdleTime(pq.pool))
 		}
-	} else if lastAccessedAt > pq.pool[0].lastAccessedAt {
-		pq.pool = pq.pool[1:]
-		pq.keyset[key] = item
-		pq.pool = append(pq.pool, item)
+	} else {
+		shift := false
+		if config.EvictionStrategy == config.AllKeysLFU {
+			logCounter := GetLFULogCounter(lastAccessedAt)
+			poolLogCounter := GetLFULogCounter(pq.pool[0].lastAccessedAt)
+			if logCounter < poolLogCounter {
+				shift = true
+			} else if logCounter == poolLogCounter && GetLastAccessedAt(lastAccessedAt) > GetLastAccessedAt(pq.pool[0].lastAccessedAt) {
+				shift = true
+			}
+		} else if lastAccessedAt > pq.pool[0].lastAccessedAt {
+			shift = true
+		}
+
+		if shift {
+			pq.pool = pq.pool[1:]
+			pq.keyset[key] = item
+			pq.pool = append(pq.pool, item)
+		}
 	}
 }
 
@@ -87,7 +102,7 @@ func (pq *EvictionPool) Pop() *PoolItem {
 	return item
 }
 
-func newEvictionPool(size int) *EvictionPool {
+func NewEvictionPool(size int) *EvictionPool {
 	return &EvictionPool{
 		pool:   make([]*PoolItem, size),
 		keyset: make(map[string]*PoolItem),
@@ -95,4 +110,4 @@ func newEvictionPool(size int) *EvictionPool {
 }
 
 var ePoolSizeMax int = 16
-var ePool *EvictionPool = newEvictionPool(0)
+var EPool *EvictionPool = NewEvictionPool(0)

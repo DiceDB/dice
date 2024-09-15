@@ -68,7 +68,7 @@ func TestExpire(t *testing.T) {
 			delay:    []time.Duration{0},
 		},
 		{
-			name:  "Test(XX): Set the expiration only if the key has no expiration time",
+			name:  "Test(NX): Set the expiration only if the key has no expiration time",
 			setup: "",
 			commands: []string{
 				"SET test_key test_value",
@@ -85,11 +85,12 @@ func TestExpire(t *testing.T) {
 			commands: []string{
 				"SET test_key test_value",
 				"EXPIRE test_key " + strconv.FormatInt(10, 10) + " XX",
+				"TTL test_key",
 				"EXPIRE test_key " + strconv.FormatInt(10, 10),
 				"EXPIRE test_key " + strconv.FormatInt(10, 10) + " XX",
 			},
-			expected: []interface{}{"OK", int64(0), int64(1), int64(1)},
-			delay:    []time.Duration{0, 0, 0, 0},
+			expected: []interface{}{"OK", int64(0), int64(-1), int64(1), int64(1)},
+			delay:    []time.Duration{0, 0, 0, 0, 0},
 		},
 
 		{
@@ -98,11 +99,12 @@ func TestExpire(t *testing.T) {
 			commands: []string{
 				"SET test_key test_value",
 				"EXPIRE test_key " + strconv.FormatInt(10, 10) + " GT",
+				"TTL test_key",
 				"EXPIRE test_key " + strconv.FormatInt(10, 10),
 				"EXPIRE test_key " + strconv.FormatInt(20, 10) + " GT",
 			},
-			expected: []interface{}{"OK", int64(0), int64(1), int64(1)},
-			delay:    []time.Duration{0, 0, 0, 0},
+			expected: []interface{}{"OK", int64(0), int64(-1), int64(1), int64(1)},
+			delay:    []time.Duration{0, 0, 0, 0, 0},
 		},
 
 		{
@@ -197,8 +199,8 @@ func TestExpire(t *testing.T) {
 			},
 			expected: []interface{}{"OK", "ERR Unsupported option rr",
 				"ERR NX and XX, GT or LT options at the same time are not compatible",
-				"ERR NX and XX, GT or LT options at the same time are not compatible",
-				"ERR NX and XX, GT or LT options at the same time are not compatible",
+				"ERR GT and LT options at the same time are not compatible",
+				"ERR GT and LT options at the same time are not compatible",
 				"ERR NX and XX, GT or LT options at the same time are not compatible",
 				"ERR NX and XX, GT or LT options at the same time are not compatible",
 				"ERR NX and XX, GT or LT options at the same time are not compatible"},

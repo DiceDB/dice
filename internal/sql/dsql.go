@@ -1,11 +1,12 @@
-package querywatcher
+package sql
 
 import (
 	"fmt"
 	"strconv"
 	"strings"
 
-	"github.com/dicedb/dice/internal/constants"
+	hash "github.com/dgryski/go-farm"
+
 	"github.com/xwb1989/sqlparser"
 )
 
@@ -43,11 +44,11 @@ type QueryOrder struct {
 }
 
 type DSQLQuery struct {
-	Selection QuerySelection
-	KeyRegex  string
-	Where     sqlparser.Expr
-	OrderBy   QueryOrder
-	Limit     int
+	Selection   QuerySelection
+	Where       sqlparser.Expr
+	OrderBy     QueryOrder
+	Limit       int
+	Fingerprint string
 }
 
 // replacePlaceholders replaces temporary placeholders with custom ones
@@ -59,11 +60,13 @@ func replacePlaceholders(s string) string {
 	return replacer.Replace(s)
 }
 
+// parseSelectExpressions parses the SELECT expressions in the query
+
 func (q DSQLQuery) String() string {
 	var parts []string
 
 	// Selection
-	selectionParts := []string{}
+	var selectionParts []string
 	if q.Selection.KeySelection {
 		selectionParts = append(selectionParts, CustomKey)
 	}
@@ -76,17 +79,11 @@ func (q DSQLQuery) String() string {
 		parts = append(parts, "SELECT *")
 	}
 
-	// KeyRegex
-	if q.KeyRegex != "" {
-		parts = append(parts, fmt.Sprintf("FROM `%s`", q.KeyRegex))
-	}
-
 	// Where
 	if q.Where != nil {
 		whereClause := sqlparser.String(q.Where)
-		whereClause = strings.Trim(whereClause, "'")
 		whereClause = replacePlaceholders(whereClause)
-		parts = append(parts, fmt.Sprintf("WHERE '%s'", whereClause))
+		parts = append(parts, fmt.Sprintf("WHERE %s", whereClause))
 	}
 
 	// OrderBy
@@ -106,6 +103,8 @@ func (q DSQLQuery) String() string {
 // Utility functions for custom syntax handling
 func replaceCustomSyntax(sql string) string {
 	replacer := strings.NewReplacer(CustomKey, TempKey, CustomValue, TempValue)
+
+	// Add implicit `FROM dual` if no table name is provided
 	return replacer.Replace(sql)
 }
 
@@ -134,10 +133,11 @@ func ParseQuery(sql string) (DSQLQuery, error) {
 		return DSQLQuery{}, err
 	}
 
-	tableName, err := parseTableName(selectStmt)
-	if err != nil {
+	if err := parseTableName(selectStmt); err != nil {
 		return DSQLQuery{}, err
 	}
+
+	where := parseWhere(selectStmt)
 
 	orderBy, err := parseOrderBy(selectStmt)
 	if err != nil {
@@ -149,17 +149,12 @@ func ParseQuery(sql string) (DSQLQuery, error) {
 		return DSQLQuery{}, err
 	}
 
-	where, err := parseWhere(selectStmt)
-	if err != nil {
-		return DSQLQuery{}, err
-	}
-
 	return DSQLQuery{
-		Selection: querySelection,
-		KeyRegex:  tableName,
-		Where:     where,
-		OrderBy:   orderBy,
-		Limit:     limit,
+		Selection:   querySelection,
+		Where:       where,
+		OrderBy:     orderBy,
+		Limit:       limit,
+		Fingerprint: generateFingerprint(where),
 	}, nil
 }
 
@@ -204,43 +199,60 @@ func parseSelectExpressions(selectStmt *sqlparser.Select) (QuerySelection, error
 }
 
 // Function to parse table name
-func parseTableName(selectStmt *sqlparser.Select) (string, error) {
+func parseTableName(selectStmt *sqlparser.Select) error {
 	tableExpr, ok := selectStmt.From[0].(*sqlparser.AliasedTableExpr)
 	if !ok {
-		return constants.EmptyStr, fmt.Errorf("error parsing table name")
+		return fmt.Errorf("error parsing table name")
 	}
 
 	// Remove backticks from table name if present.
 	tableName := strings.Trim(sqlparser.String(tableExpr.Expr), "`")
 
 	// Ensure table name is not dual, which means no table name was provided.
-	if tableName == "dual" {
-		return constants.EmptyStr, fmt.Errorf("no table name provided")
+	if tableName != "dual" {
+		return fmt.Errorf("FROM clause is not supported")
 	}
 
-	return tableName, nil
+	return nil
 }
 
 // Function to parse ORDER BY clause
 func parseOrderBy(selectStmt *sqlparser.Select) (QueryOrder, error) {
 	orderBy := QueryOrder{}
+
+	// Support only one ORDER BY clause
 	if len(selectStmt.OrderBy) > 1 {
 		return QueryOrder{}, fmt.Errorf("only one ORDER BY clause is supported")
 	}
-	if len(selectStmt.OrderBy) > 0 {
-		// trim backticks or quotes from order by expr
-		orderBy.OrderBy = strings.Trim(sqlparser.String(selectStmt.OrderBy[0].Expr), "`")
-		if (orderBy.OrderBy[0] == '\'' && orderBy.OrderBy[len(orderBy.OrderBy)-1] == '\'') ||
-			(orderBy.OrderBy[0] == '`' && orderBy.OrderBy[len(orderBy.OrderBy)-1] == '`') {
-			orderBy.OrderBy = orderBy.OrderBy[1 : len(orderBy.OrderBy)-1]
-		}
-		// Order by expr should either be $key or $value
-		if orderBy.OrderBy != TempKey && orderBy.OrderBy != TempValue && !strings.HasPrefix(orderBy.OrderBy, TempValue) {
-			return QueryOrder{}, fmt.Errorf("only $key and $value are supported in ORDER BY clause")
-		}
-		orderBy.Order = selectStmt.OrderBy[0].Direction
+
+	if len(selectStmt.OrderBy) == 0 {
+		// No ORDER BY clause, return empty order
+		return orderBy, nil
 	}
+
+	// Extract the ORDER BY expression
+	orderExpr := strings.Trim(sqlparser.String(selectStmt.OrderBy[0].Expr), "`")
+	orderExpr = trimQuotesOrBackticks(orderExpr)
+
+	// Validate that ORDER BY is either $key or $value
+	if orderExpr != TempKey && orderExpr != TempValue && !strings.HasPrefix(orderExpr, TempValue) {
+		return QueryOrder{}, fmt.Errorf("only $key and $value expressions are supported in ORDER BY clause")
+	}
+
+	// Assign values to QueryOrder
+	orderBy.OrderBy = orderExpr
+	orderBy.Order = selectStmt.OrderBy[0].Direction
+
 	return orderBy, nil
+}
+
+// Helper function to trim both single and double quotes/backticks
+func trimQuotesOrBackticks(input string) string {
+	if len(input) > 1 && ((input[0] == '\'' && input[len(input)-1] == '\'') ||
+		(input[0] == '`' && input[len(input)-1] == '`')) {
+		return input[1 : len(input)-1]
+	}
+	return input
 }
 
 // Function to parse LIMIT clause
@@ -257,11 +269,15 @@ func parseLimit(selectStmt *sqlparser.Select) (int, error) {
 }
 
 // Function to parse WHERE clause
-
-//nolint:unparam
-func parseWhere(selectStmt *sqlparser.Select) (sqlparser.Expr, error) {
+func parseWhere(selectStmt *sqlparser.Select) sqlparser.Expr {
 	if selectStmt.Where == nil {
-		return nil, nil
+		return nil
 	}
-	return selectStmt.Where.Expr, nil
+	return selectStmt.Where.Expr
+}
+
+func generateFingerprint(where sqlparser.Expr) string {
+	// Generate a unique fingerprint for the query
+	// TODO: Add logic to ensure that logically equivalent WHERE clause expressions generate the same fingerprint.
+	return fmt.Sprintf("f_%d", hash.Hash64([]byte(sqlparser.String(where))))
 }

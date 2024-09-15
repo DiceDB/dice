@@ -7,9 +7,11 @@ import (
 	"math/rand"
 	"strconv"
 
+	"github.com/dicedb/dice/internal/object"
+
 	"github.com/dicedb/dice/internal/clientio"
-	"github.com/dicedb/dice/internal/constants"
 	diceerrors "github.com/dicedb/dice/internal/errors"
+	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/twmb/murmur3"
 )
@@ -123,8 +125,8 @@ func newBloomFilter(opts *BloomOpts) *Bloom {
 }
 
 func (b *Bloom) info(name string) string {
-	info := constants.EmptyStr
-	if name != constants.EmptyStr {
+	info := utils.EmptyStr
+	if name != utils.EmptyStr {
 		info = "name: " + name + ", "
 	}
 	info += fmt.Sprintf("error rate: %f, ", b.opts.errorRate)
@@ -143,7 +145,7 @@ func (b *Bloom) info(name string) string {
 func (b *Bloom) add(value string) ([]byte, error) {
 	// We're sure that empty values will be handled upper functions itself.
 	// This is just a property check for the bloom struct.
-	if value == constants.EmptyStr {
+	if value == utils.EmptyStr {
 		return clientio.RespMinusOne, errEmptyValue
 	}
 
@@ -180,7 +182,7 @@ func (b *Bloom) add(value string) ([]byte, error) {
 func (b *Bloom) exists(value string) ([]byte, error) {
 	// We're sure that empty values will be handled upper functions itself.
 	// This is just a property check for the bloom struct.
-	if value == constants.EmptyStr {
+	if value == utils.EmptyStr {
 		return clientio.RespMinusOne, errEmptyValue
 	}
 
@@ -348,7 +350,7 @@ func getOrCreateBloomFilter(key string, opts *BloomOpts, store *dstore.Store) (*
 
 	// If we don't have a filter yet and `opts` are provided, create one.
 	if obj == nil && opts != nil {
-		obj = store.NewObj(newBloomFilter(opts), -1, dstore.ObjTypeBitSet, dstore.ObjEncodingBF)
+		obj = store.NewObj(newBloomFilter(opts), -1, object.ObjTypeBitSet, object.ObjEncodingBF)
 		store.Put(key, obj)
 	}
 
@@ -357,11 +359,11 @@ func getOrCreateBloomFilter(key string, opts *BloomOpts, store *dstore.Store) (*
 		return nil, errInvalidKey
 	}
 
-	if err := dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeBitSet); err != nil {
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeBitSet); err != nil {
 		return nil, err
 	}
 
-	if err := dstore.AssertEncoding(obj.TypeEncoding, dstore.ObjEncodingBF); err != nil {
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingBF); err != nil {
 		return nil, err
 	}
 

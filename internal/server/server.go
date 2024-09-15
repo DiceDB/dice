@@ -36,7 +36,7 @@ type AsyncServer struct {
 	multiplexer            iomultiplexer.IOMultiplexer
 	multiplexerPollTimeout time.Duration
 	connectedClients       map[int]*comm.Client
-	queryWatcher           *querywatcher.QueryWatcher
+	queryWatcher           *querywatcher.QueryManager
 	shardManager           *shard.ShardManager
 	ioChan                 chan *ops.StoreResponse // The server acts like a worker today, this behavior will change once IOThreads are introduced and each client gets its own worker.
 	watchChan              chan dstore.WatchEvent  // This is needed to co-ordinate between the store and the query watcher.
@@ -49,7 +49,7 @@ func NewAsyncServer() *AsyncServer {
 		maxClients:             config.ServerMaxClients,
 		connectedClients:       make(map[int]*comm.Client),
 		shardManager:           shard.NewShardManager(1, watchChan),
-		queryWatcher:           querywatcher.NewQueryWatcher(),
+		queryWatcher:           querywatcher.NewQueryManager(),
 		multiplexerPollTimeout: config.ServerMultiplexerPollTimeout,
 		ioChan:                 make(chan *ops.StoreResponse, 1000),
 		watchChan:              watchChan,

@@ -1,4 +1,4 @@
-package querywatcher
+package sql
 
 import (
 	"errors"
@@ -7,11 +7,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/dicedb/dice/internal/object"
+
 	"github.com/bytedance/sonic"
 	"github.com/cockroachdb/swiss"
-	"github.com/dicedb/dice/internal/constants"
 	"github.com/dicedb/dice/internal/regex"
-	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/ohler55/ojg/jp"
 	"github.com/xwb1989/sqlparser"
 )
@@ -19,24 +20,23 @@ import (
 var ErrNoResultsFound = errors.New("ERR No results found")
 var ErrInvalidJSONPath = errors.New("ERR invalid JSONPath")
 
-func ExecuteQuery(query *DSQLQuery, store *swiss.Map[string, *dstore.Obj]) ([]dstore.DSQLQueryResultRow, error) {
-	var result []dstore.DSQLQueryResultRow
+type QueryResultRow struct {
+	Key   string
+	Value object.Obj
+}
+
+func ExecuteQuery(query *DSQLQuery, store *swiss.Map[string, *object.Obj]) ([]QueryResultRow, error) {
+	var result []QueryResultRow
 
 	var err error
-	store.All(func(key string, value *dstore.Obj) bool {
-		// TODO: We can remove this check once we have scatter-gather algorithm for multi-threaded execution implemented.
-		//  This is only required when we are running unit tests and passing the complete store to the function.
-		if !regex.WildCardMatch(query.KeyRegex, key) {
-			return true
-		}
-
-		row := dstore.DSQLQueryResultRow{
+	store.All(func(key string, value *object.Obj) bool {
+		row := QueryResultRow{
 			Key:   key,
 			Value: *value,
 		}
 
 		if query.Where != nil {
-			match, evalErr := evaluateWhereClause(query.Where, row)
+			match, evalErr := EvaluateWhereClause(query.Where, row)
 			if errors.Is(evalErr, ErrNoResultsFound) {
 				// if no result found error
 				// and continue with the next iteration
@@ -72,13 +72,13 @@ func ExecuteQuery(query *DSQLQuery, store *swiss.Map[string, *dstore.Obj]) ([]ds
 
 	if !query.Selection.KeySelection {
 		for i := range result {
-			result[i].Key = constants.EmptyStr
+			result[i].Key = utils.EmptyStr
 		}
 	}
 
 	if !query.Selection.ValueSelection {
 		for i := range result {
-			result[i].Value = dstore.Obj{}
+			result[i].Value = object.Obj{}
 		}
 	}
 
@@ -89,10 +89,10 @@ func ExecuteQuery(query *DSQLQuery, store *swiss.Map[string, *dstore.Obj]) ([]ds
 	return result, nil
 }
 
-func MarshalResultIfJSON(row *dstore.DSQLQueryResultRow) error {
+func MarshalResultIfJSON(row *QueryResultRow) error {
 	// if the row contains JSON field then convert the json object into string representation so it can be encoded
 	// before being returned to the client
-	if dstore.GetEncoding(row.Value.TypeEncoding) == dstore.ObjEncodingJSON && dstore.GetType(row.Value.TypeEncoding) == dstore.ObjTypeJSON {
+	if object.GetEncoding(row.Value.TypeEncoding) == object.ObjEncodingJSON && object.GetType(row.Value.TypeEncoding) == object.ObjTypeJSON {
 		marshaledData, err := sonic.MarshalString(row.Value.Value)
 		if err != nil {
 			return err
@@ -103,8 +103,8 @@ func MarshalResultIfJSON(row *dstore.DSQLQueryResultRow) error {
 	return nil
 }
 
-func sortResults(query *DSQLQuery, result []dstore.DSQLQueryResultRow) {
-	if query.OrderBy.OrderBy == constants.EmptyStr {
+func sortResults(query *DSQLQuery, result []QueryResultRow) {
+	if query.OrderBy.OrderBy == utils.EmptyStr {
 		return
 	}
 
@@ -131,10 +131,10 @@ func sortResults(query *DSQLQuery, result []dstore.DSQLQueryResultRow) {
 	})
 }
 
-func getOrderByValue(orderBy string, row dstore.DSQLQueryResultRow) (value interface{}, valueType string, err error) {
+func getOrderByValue(orderBy string, row QueryResultRow) (value interface{}, valueType string, err error) {
 	switch orderBy {
 	case TempKey:
-		return row.Key, constants.String, nil
+		return row.Key, String, nil
 	case TempValue:
 		return getValueAndType(&row.Value)
 	default:
@@ -148,13 +148,13 @@ func getOrderByValue(orderBy string, row dstore.DSQLQueryResultRow) (value inter
 
 func compareOrderByValues(valI, valJ interface{}, valueType, order string) (bool, error) {
 	switch valueType {
-	case constants.String:
+	case String:
 		return compareStringValues(order, valI.(string), valJ.(string)), nil
-	case constants.Int64:
+	case Int64:
 		return compareInt64Values(order, valI.(int64), valJ.(int64)), nil
-	case constants.Float:
+	case Float:
 		return compareFloatValues(order, valI.(float64), valJ.(float64)), nil
-	case constants.Bool:
+	case Bool:
 		return compareBoolValues(order, valI.(bool), valJ.(bool)), nil
 	default:
 		return false, fmt.Errorf("unsupported type for comparison: %s", valueType)
@@ -162,53 +162,55 @@ func compareOrderByValues(valI, valJ interface{}, valueType, order string) (bool
 }
 
 func compareStringValues(order, valI, valJ string) bool {
-	if order == constants.Asc {
+	if order == Asc {
 		return valI < valJ
 	}
 	return valI > valJ
 }
 
 func compareInt64Values(order string, valI, valJ int64) bool {
-	if order == constants.Asc {
+	if order == Asc {
 		return valI < valJ
 	}
 	return valI > valJ
 }
 
 func compareFloatValues(order string, valI, valJ float64) bool {
-	if order == constants.Asc {
+	if order == Asc {
 		return valI < valJ
 	}
 	return valI > valJ
 }
 
 func compareBoolValues(order string, valI, valJ bool) bool {
-	if order == constants.Asc {
+	if order == Asc {
 		return !valI && valJ
 	}
 	return valI && !valJ
 }
 
-func evaluateWhereClause(expr sqlparser.Expr, row dstore.DSQLQueryResultRow) (bool, error) {
+func EvaluateWhereClause(expr sqlparser.Expr, row QueryResultRow) (bool, error) {
 	switch expr := expr.(type) {
+	case *sqlparser.ParenExpr:
+		return EvaluateWhereClause(expr.Expr, row)
 	case *sqlparser.ComparisonExpr:
 		return evaluateComparison(expr, row)
 	case *sqlparser.AndExpr:
-		left, err := evaluateWhereClause(expr.Left, row)
+		left, err := EvaluateWhereClause(expr.Left, row)
 		if err != nil {
 			return false, err
 		}
-		right, err := evaluateWhereClause(expr.Right, row)
+		right, err := EvaluateWhereClause(expr.Right, row)
 		if err != nil {
 			return false, err
 		}
 		return left && right, nil
 	case *sqlparser.OrExpr:
-		left, err := evaluateWhereClause(expr.Left, row)
+		left, err := EvaluateWhereClause(expr.Left, row)
 		if err != nil {
 			return false, err
 		}
-		right, err := evaluateWhereClause(expr.Right, row)
+		right, err := EvaluateWhereClause(expr.Right, row)
 		if err != nil {
 			return false, err
 		}
@@ -218,7 +220,7 @@ func evaluateWhereClause(expr sqlparser.Expr, row dstore.DSQLQueryResultRow) (bo
 	}
 }
 
-func evaluateComparison(expr *sqlparser.ComparisonExpr, row dstore.DSQLQueryResultRow) (b bool, e error) {
+func evaluateComparison(expr *sqlparser.ComparisonExpr, row QueryResultRow) (b bool, e error) {
 	left, leftType, err := getExprValueAndType(expr.Left, row)
 	if err != nil {
 		return false, err
@@ -234,18 +236,18 @@ func evaluateComparison(expr *sqlparser.ComparisonExpr, row dstore.DSQLQueryResu
 	}
 
 	switch leftType {
-	case constants.String:
+	case String:
 		return compareStrings(left.(string), right.(string), expr.Operator)
-	case constants.Int64:
+	case Int64:
 		return compareInt64s(left.(int64), right.(int64), expr.Operator)
-	case constants.Float:
+	case Float:
 		return compareFloats(left.(float64), right.(float64), expr.Operator)
 	default:
 		return false, fmt.Errorf("unsupported type for comparison: %s", leftType)
 	}
 }
 
-func getExprValueAndType(expr sqlparser.Expr, row dstore.DSQLQueryResultRow) (value interface{}, valueType string, err error) {
+func getExprValueAndType(expr sqlparser.Expr, row QueryResultRow) (value interface{}, valueType string, err error) {
 	switch expr := expr.(type) {
 	case *sqlparser.ColName:
 		switch expr.Name.String() {
@@ -263,17 +265,19 @@ func getExprValueAndType(expr sqlparser.Expr, row dstore.DSQLQueryResultRow) (va
 			return retrieveValueFromJSON(string(expr.Val), &row.Value)
 		}
 		return sqlValToGoValue(expr)
+	case *sqlparser.NullVal:
+		return nil, Nil, nil
 	default:
 		return nil, "", fmt.Errorf("unsupported expression type: %T", expr)
 	}
 }
 
-func isJSONField(expr *sqlparser.SQLVal, obj *dstore.Obj) bool {
-	if err := dstore.AssertEncoding(obj.TypeEncoding, dstore.ObjEncodingJSON); err != nil {
+func isJSONField(expr *sqlparser.SQLVal, obj *object.Obj) bool {
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingJSON); err != nil {
 		return false
 	}
 
-	if err := dstore.AssertType(obj.TypeEncoding, dstore.ObjTypeJSON); err != nil {
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeJSON); err != nil {
 		return false
 	}
 
@@ -283,7 +287,7 @@ func isJSONField(expr *sqlparser.SQLVal, obj *dstore.Obj) bool {
 		strings.HasPrefix(string(expr.Val), TempPrefix)
 }
 
-func retrieveValueFromJSON(path string, jsonData *dstore.Obj) (value interface{}, valueType string, err error) {
+func retrieveValueFromJSON(path string, jsonData *object.Obj) (value interface{}, valueType string, err error) {
 	// path is in the format '_value.field1.field2'. We need to remove _value reference from the prefix to get the json
 	// path.
 	jsonPath := strings.Split(path, ".")
@@ -310,18 +314,18 @@ func retrieveValueFromJSON(path string, jsonData *dstore.Obj) (value interface{}
 func inferTypeAndConvert(val interface{}) (value interface{}, valueType string, err error) {
 	switch v := val.(type) {
 	case string:
-		return v, constants.String, nil
+		return v, String, nil
 	case float64:
 		if isInt64(v) {
-			return int64(v), constants.Int64, nil
+			return int64(v), Int64, nil
 		}
-		return v, constants.Float, nil
+		return v, Float, nil
 	case bool:
-		return v, constants.Bool, nil
+		return v, Bool, nil
 	case nil:
-		return nil, constants.Nil, nil
+		return nil, Nil, nil
 	default:
-		return nil, constants.EmptyStr, fmt.Errorf("unsupported JSONPath result type: %T", v)
+		return nil, utils.EmptyStr, fmt.Errorf("unsupported JSONPath result type: %T", v)
 	}
 }
 
@@ -344,16 +348,16 @@ func isInt64(f float64) bool {
 }
 
 // getValueAndType returns the type-casted value and type of the object
-func getValueAndType(obj *dstore.Obj) (val interface{}, s string, e error) {
+func getValueAndType(obj *object.Obj) (val interface{}, s string, e error) {
 	switch v := obj.Value.(type) {
 	case string:
-		return v, constants.String, nil
+		return v, String, nil
 	case int64:
-		return v, constants.Int64, nil
+		return v, Int64, nil
 	case float64:
-		return v, constants.Float, nil
+		return v, Float, nil
 	default:
-		return nil, constants.EmptyStr, fmt.Errorf("unsupported value type: %T", v)
+		return nil, utils.EmptyStr, fmt.Errorf("unsupported value type: %T", v)
 	}
 }
 
@@ -361,38 +365,42 @@ func getValueAndType(obj *dstore.Obj) (val interface{}, s string, e error) {
 func sqlValToGoValue(sqlVal *sqlparser.SQLVal) (val interface{}, s string, e error) {
 	switch sqlVal.Type {
 	case sqlparser.StrVal:
-		return string(sqlVal.Val), constants.String, nil
+		return string(sqlVal.Val), String, nil
 	case sqlparser.IntVal:
 		i, err := strconv.ParseInt(string(sqlVal.Val), 10, 64)
 		if err != nil {
-			return nil, constants.EmptyStr, err
+			return nil, utils.EmptyStr, err
 		}
-		return i, constants.Int64, nil
+		return i, Int64, nil
 	case sqlparser.FloatVal:
 		f, err := strconv.ParseFloat(string(sqlVal.Val), 64)
 		if err != nil {
-			return nil, constants.EmptyStr, err
+			return nil, utils.EmptyStr, err
 		}
-		return f, constants.Float, nil
+		return f, Float, nil
 	default:
-		return nil, constants.EmptyStr, fmt.Errorf("unsupported SQLVal type: %v", sqlVal.Type)
+		return nil, utils.EmptyStr, fmt.Errorf("unsupported SQLVal type: %v", sqlVal.Type)
 	}
 }
 
 func compareStrings(left, right, operator string) (bool, error) {
-	switch operator {
-	case "=":
+	switch strings.ToLower(operator) {
+	case sqlparser.EqualStr:
 		return left == right, nil
-	case constants.OperatorNotEquals, constants.OperatorNotEqualsTo:
+	case sqlparser.NotEqualStr:
 		return left != right, nil
-	case "<":
+	case sqlparser.LessThanStr:
 		return left < right, nil
-	case constants.OperatorLessThanEqualsTo:
+	case sqlparser.LessEqualStr:
 		return left <= right, nil
-	case ">":
+	case sqlparser.GreaterThanStr:
 		return left > right, nil
-	case constants.OperatorGreaterThanEqualsTo:
+	case sqlparser.GreaterEqualStr:
 		return left >= right, nil
+	case sqlparser.LikeStr:
+		return regex.WildCardMatch(right, left), nil
+	case sqlparser.NotLikeStr:
+		return !regex.WildCardMatch(right, left), nil
 	default:
 		return false, fmt.Errorf("unsupported operator for strings: %s", operator)
 	}
@@ -400,17 +408,17 @@ func compareStrings(left, right, operator string) (bool, error) {
 
 func compareInt64s(left, right int64, operator string) (bool, error) {
 	switch operator {
-	case "=":
+	case sqlparser.EqualStr:
 		return left == right, nil
-	case constants.OperatorNotEquals, constants.OperatorNotEqualsTo:
+	case sqlparser.NotEqualStr:
 		return left != right, nil
-	case "<":
+	case sqlparser.LessThanStr:
 		return left < right, nil
-	case constants.OperatorLessThanEqualsTo:
+	case sqlparser.LessEqualStr:
 		return left <= right, nil
-	case ">":
+	case sqlparser.GreaterThanStr:
 		return left > right, nil
-	case constants.OperatorGreaterThanEqualsTo:
+	case sqlparser.GreaterEqualStr:
 		return left >= right, nil
 	default:
 		return false, fmt.Errorf("unsupported operator for integers: %s", operator)
@@ -419,17 +427,17 @@ func compareInt64s(left, right int64, operator string) (bool, error) {
 
 func compareFloats(left, right float64, operator string) (bool, error) {
 	switch operator {
-	case "=":
+	case sqlparser.EqualStr:
 		return left == right, nil
-	case constants.OperatorNotEquals, constants.OperatorNotEqualsTo:
+	case sqlparser.NotEqualStr:
 		return left != right, nil
-	case "<":
+	case sqlparser.LessThanStr:
 		return left < right, nil
-	case constants.OperatorLessThanEqualsTo:
+	case sqlparser.LessEqualStr:
 		return left <= right, nil
-	case ">":
+	case sqlparser.GreaterThanStr:
 		return left > right, nil
-	case constants.OperatorGreaterThanEqualsTo:
+	case sqlparser.GreaterEqualStr:
 		return left >= right, nil
 	default:
 		return false, fmt.Errorf("unsupported operator for floats: %s", operator)

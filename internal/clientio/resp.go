@@ -6,7 +6,11 @@ import (
 	"io"
 	"strconv"
 
-	"github.com/dicedb/dice/internal/constants"
+	"github.com/dicedb/dice/internal/object"
+
+	"github.com/dicedb/dice/internal/sql"
+
+	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
@@ -36,11 +40,11 @@ func readLength(buf *bytes.Buffer) (int64, error) {
 func readStringUntilSr(buf *bytes.Buffer) (string, error) {
 	s, err := buf.ReadString('\r')
 	if err != nil {
-		return constants.EmptyStr, err
+		return utils.EmptyStr, err
 	}
 	// increamenting to skip `\n`
 	if _, err := buf.ReadByte(); err != nil {
-		return constants.EmptyStr, err
+		return utils.EmptyStr, err
 	}
 	return s[:len(s)-1], nil
 }
@@ -86,7 +90,7 @@ func readInt64(buf *bytes.Buffer) (int64, error) {
 func readBulkString(c io.ReadWriter, buf *bytes.Buffer) (string, error) {
 	l, err := readLength(buf)
 	if err != nil {
-		return constants.EmptyStr, err
+		return utils.EmptyStr, err
 	}
 
 	// handling RespNIL case
@@ -100,7 +104,7 @@ func readBulkString(c io.ReadWriter, buf *bytes.Buffer) (string, error) {
 		tbuf := make([]byte, bytesRem)
 		n, err := c.Read(tbuf)
 		if err != nil {
-			return constants.EmptyStr, nil
+			return utils.EmptyStr, nil
 		}
 		buf.Write(tbuf[:n])
 		bytesRem -= int64(n)
@@ -108,15 +112,15 @@ func readBulkString(c io.ReadWriter, buf *bytes.Buffer) (string, error) {
 
 	bulkStr := make([]byte, l)
 	if _, err := buf.Read(bulkStr); err != nil {
-		return constants.EmptyStr, err
+		return utils.EmptyStr, err
 	}
 
 	// moving buffer pointer by 2 for \r and \n
 	if _, err := buf.ReadByte(); err != nil {
-		return constants.EmptyStr, err
+		return utils.EmptyStr, err
 	}
 	if _, err := buf.ReadByte(); err != nil {
-		return constants.EmptyStr, err
+		return utils.EmptyStr, err
 	}
 
 	// reading `len` bytes as string
@@ -164,10 +168,10 @@ func Encode(value interface{}, isSimple bool) []byte {
 			buf.Write(encodeString(b))
 		}
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
-	case []*dstore.Obj:
+	case []*object.Obj:
 		var b []byte
 		buf := bytes.NewBuffer(b)
-		for _, b := range value.([]*dstore.Obj) {
+		for _, b := range value.([]*object.Obj) {
 			buf.Write(Encode(b.Value, false))
 		}
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
@@ -194,10 +198,10 @@ func Encode(value interface{}, isSimple bool) []byte {
 		buf.Write(Encode(fmt.Sprintf("key:%s", we.Key), false))
 		buf.Write(Encode(fmt.Sprintf("op:%s", we.Operation), false))
 		return []byte(fmt.Sprintf("*2\r\n%s", buf.Bytes()))
-	case []dstore.DSQLQueryResultRow:
+	case []sql.QueryResultRow:
 		var b []byte
 		buf := bytes.NewBuffer(b)
-		for _, row := range value.([]dstore.DSQLQueryResultRow) {
+		for _, row := range value.([]sql.QueryResultRow) {
 			buf.WriteString("*2\r\n")
 			buf.Write(Encode(row.Key, false))
 			buf.Write(Encode(row.Value.Value, false))

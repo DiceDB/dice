@@ -3,17 +3,19 @@ package tests
 import (
 	"context"
 	"fmt"
-	"github.com/bytedance/sonic"
-	"github.com/dicedb/dice/internal/clientio"
-	"github.com/dicedb/dice/internal/constants"
-	redis "github.com/dicedb/go-dice"
-	"gotest.tools/v3/assert"
+	"github.com/dicedb/dice/internal/sql"
 	"net"
 	"testing"
 	"time"
+
+	"github.com/bytedance/sonic"
+	"github.com/dicedb/dice/internal/clientio"
+	redis "github.com/dicedb/go-dice"
+	"gotest.tools/v3/assert"
 )
 
 type qWatchTestCase struct {
+	key             string
 	userID          int
 	score           int
 	expectedUpdates [][]interface{}
@@ -24,37 +26,37 @@ type qWatchSDKSubscriber struct {
 	qwatch *redis.QWatch
 }
 
-var qWatchQuery = "SELECT $key, $value FROM `match:100:*` ORDER BY $value desc LIMIT 3"
+var qWatchQuery = "SELECT $key, $value WHERE $key like 'match:10?:*' ORDER BY $value desc LIMIT 3"
 
 var qWatchTestCases = []qWatchTestCase{
-	{0, 11, [][]interface{}{
+	{"match:100:user", 0, 11, [][]interface{}{
 		{[]interface{}{"match:100:user:0", int64(11)}},
 	}},
-	{1, 33, [][]interface{}{
+	{"match:100:user", 1, 33, [][]interface{}{
 		{[]interface{}{"match:100:user:1", int64(33)}, []interface{}{"match:100:user:0", int64(11)}},
 	}},
-	{2, 22, [][]interface{}{
-		{[]interface{}{"match:100:user:1", int64(33)}, []interface{}{"match:100:user:2", int64(22)}, []interface{}{"match:100:user:0", int64(11)}},
+	{"match:101:user", 2, 22, [][]interface{}{
+		{[]interface{}{"match:100:user:1", int64(33)}, []interface{}{"match:101:user:2", int64(22)}, []interface{}{"match:100:user:0", int64(11)}},
 	}},
-	{3, 0, [][]interface{}{
-		{[]interface{}{"match:100:user:1", int64(33)}, []interface{}{"match:100:user:2", int64(22)}, []interface{}{"match:100:user:0", int64(11)}},
+	{"match:102:user", 3, 0, [][]interface{}{
+		{[]interface{}{"match:100:user:1", int64(33)}, []interface{}{"match:101:user:2", int64(22)}, []interface{}{"match:100:user:0", int64(11)}},
 	}},
-	{4, 44, [][]interface{}{
-		{[]interface{}{"match:100:user:4", int64(44)}, []interface{}{"match:100:user:1", int64(33)}, []interface{}{"match:100:user:2", int64(22)}},
+	{"match:100:user", 4, 44, [][]interface{}{
+		{[]interface{}{"match:100:user:4", int64(44)}, []interface{}{"match:100:user:1", int64(33)}, []interface{}{"match:101:user:2", int64(22)}},
 	}},
-	{5, 50, [][]interface{}{
+	{"match:100:user", 5, 50, [][]interface{}{
 		{[]interface{}{"match:100:user:5", int64(50)}, []interface{}{"match:100:user:4", int64(44)}, []interface{}{"match:100:user:1", int64(33)}},
 	}},
-	{2, 40, [][]interface{}{
-		{[]interface{}{"match:100:user:5", int64(50)}, []interface{}{"match:100:user:4", int64(44)}, []interface{}{"match:100:user:2", int64(40)}},
+	{"match:101:user", 2, 40, [][]interface{}{
+		{[]interface{}{"match:100:user:5", int64(50)}, []interface{}{"match:100:user:4", int64(44)}, []interface{}{"match:101:user:2", int64(40)}},
 	}},
-	{6, 55, [][]interface{}{
+	{"match:100:user", 6, 55, [][]interface{}{
 		{[]interface{}{"match:100:user:6", int64(55)}, []interface{}{"match:100:user:5", int64(50)}, []interface{}{"match:100:user:4", int64(44)}},
 	}},
-	{0, 60, [][]interface{}{
+	{"match:100:user", 0, 60, [][]interface{}{
 		{[]interface{}{"match:100:user:0", int64(60)}, []interface{}{"match:100:user:6", int64(55)}, []interface{}{"match:100:user:5", int64(50)}},
 	}},
-	{5, 70, [][]interface{}{
+	{"match:100:user", 5, 70, [][]interface{}{
 		{[]interface{}{"match:100:user:5", int64(70)}, []interface{}{"match:100:user:0", int64(60)}, []interface{}{"match:100:user:6", int64(55)}},
 	}},
 }
@@ -166,7 +168,7 @@ func runQWatchScenarios(t *testing.T, publisher interface{}, receivers interface
 }
 
 func publishUpdate(t *testing.T, publisher interface{}, tc qWatchTestCase) {
-	key := fmt.Sprintf("match:100:user:%d", tc.userID)
+	key := fmt.Sprintf("%s:%d", tc.key, tc.userID)
 	switch p := publisher.(type) {
 	case net.Conn:
 		fireCommand(p, fmt.Sprintf("SET %s %d", key, tc.score))
@@ -196,7 +198,7 @@ func verifyRESPUpdates(t *testing.T, respParsers []*clientio.RESPParser, expecte
 			t.Errorf("Type assertion to []interface{} failed for value: %v", v)
 			return
 		}
-		assert.DeepEqual(t, []interface{}{constants.Qwatch, qWatchQuery, expectedUpdate}, update)
+		assert.DeepEqual(t, []interface{}{sql.Qwatch, qWatchQuery, expectedUpdate}, update)
 	}
 }
 
@@ -221,7 +223,7 @@ var JSONTestCases = []JSONTestCase{
 	{
 		key:         "match:200:user:0",
 		value:       `{"name":"Tom"}`,
-		qwatchQuery: "SELECT $key, $value FROM `match:200:user:0` WHERE '$value.name' = 'Tom'",
+		qwatchQuery: "SELECT $key, $value WHERE $key like 'match:200:user:0' AND '$value.name' = 'Tom'",
 		expectedUpdates: [][]interface{}{
 			{[]interface{}{"match:200:user:0", map[string]interface{}{"name": "Tom"}}},
 		},
@@ -229,7 +231,7 @@ var JSONTestCases = []JSONTestCase{
 	{
 		key:         "match:200:user:1",
 		value:       `{"name":"Tom","age":24}`,
-		qwatchQuery: "SELECT $key, $value FROM `match:200:user:1` WHERE '$value.age' > 20",
+		qwatchQuery: "SELECT $key, $value WHERE $key like 'match:200:user:1' AND '$value.age' > 20",
 		expectedUpdates: [][]interface{}{
 			{[]interface{}{"match:200:user:1", map[string]interface{}{"name": "Tom", "age": float64(24)}}},
 		},
@@ -237,7 +239,7 @@ var JSONTestCases = []JSONTestCase{
 	{
 		key:         "match:200:user:2",
 		value:       `{"score":10.36}`,
-		qwatchQuery: "SELECT $key, $value FROM `match:200:user:2` WHERE '$value.score' = 10.36",
+		qwatchQuery: "SELECT $key, $value WHERE $key like 'match:200:user:2' AND '$value.score' = 10.36",
 		expectedUpdates: [][]interface{}{
 			{[]interface{}{"match:200:user:2", map[string]interface{}{"score": 10.36}}},
 		},
@@ -245,7 +247,7 @@ var JSONTestCases = []JSONTestCase{
 	{
 		key:         "match:200:user:3",
 		value:       `{"field1":{"field2":{"field3":{"score":10.36}}}}`,
-		qwatchQuery: "SELECT $key, $value FROM `match:200:user:3` WHERE '$value.field1.field2.field3.score' > 10.1",
+		qwatchQuery: "SELECT $key, $value WHERE $key like 'match:200:user:3' AND '$value.field1.field2.field3.score' > 10.1",
 		expectedUpdates: [][]interface{}{
 			{[]interface{}{"match:200:user:3", map[string]interface{}{
 				"field1": map[string]interface{}{
@@ -321,7 +323,7 @@ func verifyJSONUpdates(t *testing.T, rp *clientio.RESPParser, tc JSONTestCase) {
 			return
 		}
 		assert.Equal(t, 3, len(response))
-		assert.Equal(t, constants.Qwatch, response[0])
+		assert.Equal(t, sql.Qwatch, response[0])
 
 		update, ok := response[2].([]interface{})
 		if !ok {
@@ -340,14 +342,14 @@ func verifyJSONUpdates(t *testing.T, rp *clientio.RESPParser, tc JSONTestCase) {
 
 func cleanupKeys(publisher net.Conn) {
 	for _, tc := range qWatchTestCases {
-		fireCommand(publisher, fmt.Sprintf("DEL match:100:user:%d", tc.userID))
+		fireCommand(publisher, fmt.Sprintf("DEL %s:%d", tc.key, tc.userID))
 	}
 	time.Sleep(100 * time.Millisecond)
 }
 
 func cleanupKeysWithSDK(publisher *redis.Client) {
 	for _, tc := range qWatchTestCases {
-		publisher.Del(context.Background(), fmt.Sprintf("match:100:user:%d", tc.userID))
+		publisher.Del(context.Background(), fmt.Sprintf("%s:%d", tc.key, tc.userID))
 	}
 	time.Sleep(100 * time.Millisecond)
 }
@@ -383,7 +385,7 @@ func setupJSONOrderByTest(t *testing.T) (net.Conn, net.Conn, func()) {
 }
 
 func subscribeToJSONOrderByQuery(t *testing.T, subscriber net.Conn) *clientio.RESPParser {
-	query := "SELECT $key, $value FROM `player:*` ORDER BY $value.score DESC LIMIT 3"
+	query := "SELECT $key, $value WHERE $key like 'player:*' ORDER BY $value.score DESC LIMIT 3"
 	rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("QWATCH \"%s\"", query))
 	assert.Assert(t, rp != nil)
 
@@ -458,7 +460,7 @@ func verifyJSONOrderByUpdates(t *testing.T, rp *clientio.RESPParser, tc struct {
 
 	// Verify response structure
 	assert.Equal(t, 3, len(response), "Expected response to have 3 elements")
-	assert.Equal(t, constants.Qwatch, response[0], "First element should be Qwatch constant")
+	assert.Equal(t, sql.Qwatch, response[0], "First element should be Qwatch constant")
 
 	// Extract updates from the response
 	updates, ok := response[2].([]interface{})

@@ -126,6 +126,16 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsonarrlenCmdMeta = DiceCmdMeta{
+		Name: "JSON.ARRLEN",
+		Info: `JSON.ARRLEN key [path]
+		Returns an array of integer replies.
+		Returns error response if the key doesn't exist or key is expired or the matching value is not an array.
+		Error reply: If the number of arguments is incorrect.`,
+		Eval:     evalJSONARRLEN,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	ttlCmdMeta = DiceCmdMeta{
 		Name: "TTL",
 		Info: `TTL returns Time-to-Live in secs for the queried key in args
@@ -426,6 +436,13 @@ var (
 		Arity:    -4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hgetCmdMeta = DiceCmdMeta{
+		Name:     "HGET",
+		Info:     `Returns the value associated with field in the hash stored at key.`,
+		Eval:     evalHGET,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	hgetAllCmdMeta = DiceCmdMeta{
 		Name: "HGETALL",
 		Info: `Returns all fields and values of the hash stored at key. In the returned value,
@@ -625,6 +642,7 @@ func init() {
 	DiceCmds["JSON.TYPE"] = jsontypeCmdMeta
 	DiceCmds["JSON.CLEAR"] = jsonclearCmdMeta
 	DiceCmds["JSON.DEL"] = jsondelCmdMeta
+	DiceCmds["JSON.ARRLEN"] = jsonarrlenCmdMeta
 	DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
 	DiceCmds["EXPIRE"] = expireCmdMeta
@@ -685,4 +703,19 @@ func init() {
 	DiceCmds["HGETALL"] = hgetAllCmdMeta
 	DiceCmds["PFADD"] = pfAddCmdMeta
 	DiceCmds["PFCOUNT"] = pfCountCmdMeta
+	DiceCmds["HGET"] = hgetCmdMeta
+}
+
+// Function to convert DiceCmdMeta to []interface{}
+func convertCmdMetaToSlice(cmdMeta DiceCmdMeta) []interface{} {
+	return []interface{}{cmdMeta.Name, cmdMeta.Arity, cmdMeta.KeySpecs.BeginIndex, cmdMeta.KeySpecs.LastKey, cmdMeta.KeySpecs.Step}
+}
+
+// Function to convert map[string]DiceCmdMeta{} to []interface{}
+func convertDiceCmdsMapToSlice() []interface{} {
+	var result []interface{}
+	for _, cmdMeta := range DiceCmds {
+		result = append(result, convertCmdMetaToSlice(cmdMeta))
+	}
+	return result
 }

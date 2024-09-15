@@ -3,7 +3,7 @@ package regex
 import (
 	"testing"
 
-	"github.com/dicedb/dice/internal/constants"
+	"github.com/dicedb/dice/internal/server/utils"
 )
 
 func TestWildCardMatch(t *testing.T) {
@@ -13,9 +13,9 @@ func TestWildCardMatch(t *testing.T) {
 		want    bool
 	}{
 		{"*", "anything", true},
-		{"*", constants.EmptyStr, true},
+		{"*", utils.EmptyStr, true},
 		{"?", "a", true},
-		{"?", constants.EmptyStr, false},
+		{"?", utils.EmptyStr, false},
 		{"a?", "ab", true},
 		{"a?", "a", false},
 		{"a*", "abc", true},
