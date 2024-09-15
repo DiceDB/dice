@@ -711,7 +711,7 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
             },
             input: []string{"array", "$.a", "6"},
-            output: clientio.RespNIL,
+            output: []byte("*1\r\n$-1\r\n"),
         },
         "arr append single element to an array field": {
             setup: func() {
@@ -772,6 +772,18 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
             },
             input: []string{"array", "$.a", "{\"c\": 3}"},
             output: []byte("*1\r\n:2\r\n"),
+        },
+        "arr append to append on multiple fields": {
+            setup: func() {
+				key := "array"
+                value := "{\"a\":[1,2],\"b\":{\"a\":[10]}}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$..a", "6"},
+            output: []byte("*2\r\n:2\r\n:3\r\n"),
         },
     }
     runEvalTests(t, tests, evalJSONARRAPPEND, store)
