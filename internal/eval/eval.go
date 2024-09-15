@@ -311,21 +311,53 @@ func evalGETDEL(args []string, store *dstore.Store) []byte {
 
 	key := args[0]
 
-	// Get the key from the hash table
-	obj := store.GetDel(key)
+	// getting the key based on previous touch value
+	obj := store.GetNoTouch(key)
 
 	// if key does not exist, return RESP encoded nil
 	if obj == nil {
 		return clientio.RespNIL
 	}
 
-	// If the object exists, check if it is a set object.
+	// If the object exists, check if it is a Set object.
 	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err == nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
-	// return the RESP encoded value
-	return clientio.Encode(obj.Value, false)
+	// If the object exists, check if it is a JSON object.
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeJSON); err == nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
+	// Get the key from the hash table
+	objVal := store.GetDel(key)
+
+	// Decode and return the value based on its encoding
+	switch _, oEnc := object.ExtractTypeEncoding(objVal); oEnc {
+	case object.ObjEncodingInt:
+		// Value is stored as an int64, so use type assertion
+		if val, ok := objVal.Value.(int64); ok {
+			return clientio.Encode(val, false)
+		}
+		return diceerrors.NewErrWithFormattedMessage("expected int64 but got another type: %s", objVal.Value)
+
+	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
+		// Value is stored as a string, use type assertion
+		if val, ok := objVal.Value.(string); ok {
+			return clientio.Encode(val, false)
+		}
+		return diceerrors.NewErrWithMessage("expected string but got another type")
+
+	case object.ObjEncodingByteArray:
+		// Value is stored as a bytearray, use type assertion
+		if val, ok := objVal.Value.(*ByteArray); ok {
+			return clientio.Encode(string(val.data), false)
+		}
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+
+	default:
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+	}
 }
 
 // evaLJSONFORGET removes the field specified by the given JSONPath from the JSON document stored under the provided key.
@@ -2225,6 +2257,24 @@ func evalLPOP(args []string, store *dstore.Store) []byte {
 	}
 
 	return clientio.Encode(x, false)
+}
+
+func evalLLEN(args []string, store *dstore.Store) []byte {
+	if len(args) != 1 {
+		return diceerrors.NewErrArity("LLEN")
+	}
+
+	obj := store.Get(args[0])
+	if obj == nil {
+		return clientio.Encode(0, false)
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeByteList, object.ObjEncodingDeque); err != nil {
+		return err
+	}
+
+	deq := obj.Value.(*Deque)
+	return clientio.Encode(deq.Length, false)
 }
 
 // GETSET atomically sets key to value and returns the old value stored at key.

@@ -59,6 +59,11 @@ func TestEval(t *testing.T) {
 	testEvalPFADD(t, store)
 	testEvalPFCOUNT(t, store)
 	testEvalHGET(t, store)
+	testEvalPFMERGE(t, store)
+	testEvalJSONSTRLEN(t, store)
+	testEvalHLEN(t, store)
+	testEvalSELECT(t, store)
+	testEvalLLEN(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -1109,6 +1114,189 @@ func testEvalHGET(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalHGET, store)
+}
+
+func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value":   {input: nil, output: []byte("-ERR wrong number of arguments for 'pfmerge' command\r\n")},
+		"empty array": {input: []string{}, output: []byte("-ERR wrong number of arguments for 'pfmerge' command\r\n")},
+		"PFMERGE invalid hll object": {
+			setup: func() {
+				key := "INVALID_OBJ_DEST_KEY"
+				value := "123"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"INVALID_OBJ_DEST_KEY"},
+			output: []byte("-WRONGTYPE Key is not a valid HyperLogLog string value.\r\n"),
+		},
+		"PFMERGE destKey doesn't exist": {
+			input:  []string{"NON_EXISTING_DEST_KEY"},
+			output: clientio.RespOK,
+		},
+		"PFMERGE destKey exist": {
+			input:  []string{"NON_EXISTING_DEST_KEY"},
+			output: clientio.RespOK,
+		},
+		"PFMERGE destKey exist srcKey doesn't exists": {
+			setup: func() {
+				key := "EXISTING_DEST_KEY"
+				value := hyperloglog.New()
+				value.Insert([]byte("VALUE"))
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_DEST_KEY", "NON_EXISTING_SRC_KEY"},
+			output: clientio.RespOK,
+		},
+		"PFMERGE destKey exist srcKey exists": {
+			setup: func() {
+				key := "EXISTING_DEST_KEY"
+				value := hyperloglog.New()
+				value.Insert([]byte("VALUE"))
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_DEST_KEY", "NON_EXISTING_SRC_KEY"},
+			output: clientio.RespOK,
+		},
+		"PFMERGE destKey exist multiple srcKey exist": {
+			setup: func() {
+				key := "EXISTING_DEST_KEY"
+				value := hyperloglog.New()
+				value.Insert([]byte("VALUE"))
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+				srcKey := "EXISTING_SRC_KEY"
+				srcValue := hyperloglog.New()
+				value.Insert([]byte("SRC_VALUE"))
+				srcKeyObj := &object.Obj{
+					Value:          srcValue,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(srcKey, srcKeyObj)
+			},
+			input:  []string{"EXISTING_DEST_KEY", "EXISTING_SRC_KEY"},
+			output: clientio.RespOK,
+		},
+	}
+
+	runEvalTests(t, tests, evalPFMERGE, store)
+}
+
+func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'json.strlen' command\r\n"),
+		},
+		"key does not exist": {
+			setup:  func() {},
+			input:  []string{"NONEXISTENT_KEY"},
+			output: []byte("$-1\r\n"),
+		},
+		"root not string strlen": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"age\":13,\"name\":\"a\"}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY"},
+			output: []byte("-WRONGTYPE wrong type of path value - expected string but found integer\r\n"),
+		},
+		"root array strlen": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := `"hello"`
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY"},
+			output: []byte(":5\r\n"),
+		},
+		"subpath string strlen": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := `{"partner":{"name":"tom","language":["rust"]}}`
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+
+			input:  []string{"EXISTING_KEY", "$..name"},
+			output: []byte("*1\r\n:3\r\n"),
+		},
+		"subpath not string strlen": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := `{"partner":{"name":21,"language":["rust"]}}`
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+
+			input:  []string{"EXISTING_KEY", "$..name"},
+			output: []byte("*1\r\n$-1\r\n"),
+		},
+	}
+	runEvalTests(t, tests, evalJSONSTRLEN, store)
+}
+
+func testEvalLLEN(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'llen' command\r\n"),
+		},
+		"empty args": {
+			input:  []string{},
+			output: []byte("-ERR wrong number of arguments for 'llen' command\r\n"),
+		},
+		"wrong number of args": {
+			input:  []string{"KEY1", "KEY2"},
+			output: []byte("-ERR wrong number of arguments for 'llen' command\r\n"),
+		},
+		"key does not exist": {
+			input:  []string{"NONEXISTENT_KEY"},
+			output: clientio.RespZero,
+		},
+		"key exists": {
+			setup: func() {
+				evalLPUSH([]string{"EXISTING_KEY", "mock_value"}, store)
+			},
+			input:  []string{"EXISTING_KEY"},
+			output: clientio.RespOne,
+		},
+		"key with different type": {
+			setup: func() {
+				evalSET([]string{"EXISTING_KEY", "mock_value"}, store)
+			},
+			input:  []string{"EXISTING_KEY"},
+			output: []byte("-ERR Existing key has wrong Dice type\r\n"),
+		},
+	}
+
+	runEvalTests(t, tests, evalLLEN, store)
 }
 
 func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]string, *dstore.Store) []byte, store *dstore.Store) {
