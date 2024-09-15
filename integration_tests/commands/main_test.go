@@ -14,7 +14,10 @@ import (
 
 func TestMain(m *testing.M) {
 	zerologLogger := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr})
-	logger := slog.New(slogzerolog.Option{Logger: &zerologLogger, NoTimestamp: true}.NewZerologHandler())
+	logger := slog.New(slogzerolog.Option{
+		Logger:      &zerologLogger,
+		NoTimestamp: true, // Do not print timestamp in tests, it makes it easier to compare logs if needed
+	}.NewZerologHandler())
 	slog.SetDefault(logger)
 
 	var wg sync.WaitGroup

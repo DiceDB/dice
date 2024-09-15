@@ -60,8 +60,8 @@ func main() {
 	}
 	zerologLogger := zerolog.New(writer)
 	logger := slog.New(slogzerolog.Option{
-		Logger: &zerologLogger, NoTimestamp: true,
-		Level: getLogLevel(),
+		Logger: &zerologLogger,
+		Level:  getLogLevel(),
 	}.NewZerologHandler())
 
 	slog.SetDefault(logger)
