@@ -314,7 +314,7 @@ func evalGETDEL(args []string, store *dstore.Store) []byte {
 	// getting the key based on previous touch value
 	obj := store.GetNoTouch(key)
 
-	//Check if obj is nil
+	// if key does not exist, return RESP encoded nil
 	if obj == nil {
 		return clientio.RespNIL
 	}
