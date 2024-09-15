@@ -1378,6 +1378,13 @@ func testEvalLLEN(t *testing.T, store *dstore.Store) {
 			input:  []string{"EXISTING_KEY"},
 			output: clientio.RespOne,
 		},
+		"key with different type": {
+			setup: func() {
+				evalSET([]string{"EXISTING_KEY", "mock_value"}, store)
+			},
+			input:  []string{"EXISTING_KEY"},
+			output: []byte("-ERR Existing key has wrong Dice type\r\n"),
+		},
 	}
 
 	runEvalTests(t, tests, evalLLEN, store)
