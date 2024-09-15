@@ -752,6 +752,12 @@ func evalJSONSET(args []string, store *dstore.Store) []byte {
 	return clientio.RespOK
 }
 
+// evalJSONINGEST stores a value at a dynamically generated key
+// The key is created using a provided key prefix combined with a unique identifier
+// args must contains key_prefix and json value
+// Returns encoded error response if incorrect number of arguments
+// Returns encoded error if the JSON string is invalid
+// Returns response.RespOK if the JSON value is successfully stored
 func evalJSONINGEST(args []string, store *dstore.Store) []byte {
 	if len(args) < 2 {
 		return diceerrors.NewErrArity("JSON.INGEST")
