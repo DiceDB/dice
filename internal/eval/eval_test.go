@@ -746,7 +746,7 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
 				store.Put(key, obj)
             },
-            input: []string{"array", "$.b", "d"},
+            input: []string{"array", "$.b", `"d"`},
             output: []byte("*1\r\n:3\r\n"),
         },
         "arr append nested array value": {
@@ -784,6 +784,18 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
             },
             input: []string{"array", "$..a", "6"},
             output: []byte("*2\r\n:2\r\n:3\r\n"),
+        },
+        "arr append to append on root node": {
+            setup: func() {
+				key := "array"
+                value := "[1,2,3]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$", "6"},
+            output: []byte("*1\r\n:4\r\n"),
         },
     }
     runEvalTests(t, tests, evalJSONARRAPPEND, store)
