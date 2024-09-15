@@ -53,7 +53,7 @@ func getLogLevel() slog.Leveler {
 	return level
 }
 
-func main() {
+func getLogger() *slog.Logger {
 	var writer io.Writer = os.Stderr
 	if config.DiceConfig.Server.PrettyPrintLogs {
 		writer = zerolog.ConsoleWriter{Out: os.Stderr}
@@ -64,6 +64,11 @@ func main() {
 		Level:  getLogLevel(),
 	}.NewZerologHandler())
 
+	return logger
+}
+
+func main() {
+	logger := getLogger()
 	slog.SetDefault(logger)
 
 	ctx, cancel := context.WithCancel(context.Background())
