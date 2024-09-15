@@ -514,6 +514,36 @@ func testEvalJSONOBJLEN(t *testing.T, store *dstore.Store) {
 }
 
 
+func BenchmarkEvalJSONOBJLEN(b *testing.B) {
+	sizes := []int{0, 10, 100, 1000, 10000} // Various sizes of JSON objects
+	store := dstore.NewStore(nil)
+
+	for _, size := range sizes {
+		b.Run(fmt.Sprintf("JSONObjectSize_%d", size), func(b *testing.B) {
+			key := fmt.Sprintf("benchmark_json_obj_%d", size)
+
+			// Create a large JSON object with the given size
+			jsonObj := make(map[string]interface{})
+			for i := 0; i < size; i++ {
+				jsonObj[fmt.Sprintf("key%d", i)] = fmt.Sprintf("value%d", i)
+			}
+
+			newObj := store.NewObj(jsonObj, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+			store.Put(key, newObj)
+
+			b.ResetTimer()
+			b.ReportAllocs()
+
+			// Benchmark the evalJSONOBJLEN function
+			for i := 0; i < b.N; i++ {
+				evalJSONOBJLEN([]string{key, "$"}, store)
+			}
+		})
+	}
+}
+
+
+
 func testEvalJSONDEL(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
