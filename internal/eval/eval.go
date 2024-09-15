@@ -689,39 +689,38 @@ func evalJSONARRAPPEND(args []string, store *dstore.Store) []byte {
     var key string = args[0]
     var path string = args[1]
 
-	obj := store.Get(key)
-	if obj == nil {
-		return diceerrors.NewErrWithMessage("could not perform this operation on a key that doesn't exist")
-	}
-
-	errWithMessage := dstore.AssertTypeAndEncoding(obj.TypeEncoding, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
-	if errWithMessage != nil {
-		return errWithMessage
-	}
-
-	jsonData := obj.Value
-	_, err := sonic.Marshal(jsonData)
-	if err != nil {
-		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
-	}
-
-	expr, err := jp.ParseString(path)
-	if err != nil {
-		return diceerrors.NewErrWithMessage("invalid JSONPath")
-	}
-
-    output := make([]int64, 0)
-	results := expr.Get(jsonData)
-    if(len(results) == 0){
-        return clientio.Encode(output, false)
+    obj := store.Get(key)
+    if obj == nil {
+        return diceerrors.NewErrWithMessage("could not perform this operation on a key that doesn't exist")
     }
 
-    for _, result := range results {
-        pathArrData, ok := result.([]interface{})
+    errWithMessage := dstore.AssertTypeAndEncoding(obj.TypeEncoding, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+    if errWithMessage != nil {
+        return errWithMessage
+    }
+
+    jsonData := obj.Value
+    _, err := sonic.Marshal(jsonData)
+    if err != nil {
+        return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
+    }
+
+    expr, err := jp.ParseString(path)
+    if err != nil {
+        return diceerrors.NewErrWithMessage("invalid JSONPath")
+    }
+
+    resultsArray := make([]interface{}, 0)
+    results := expr.Get(jsonData)
+    if(len(results) == 0){
+        return clientio.Encode(resultsArray, false)
+    }
+
+    if path == defaultRootPath {
+        pathArrData, ok := jsonData.([]interface{})
         if(!ok) {
             return clientio.RespNIL
         }
-
         for _, arg := range args[2:] {
             var value interface{}
             var conversionErr error
@@ -751,7 +750,7 @@ func evalJSONARRAPPEND(args []string, store *dstore.Store) []byte {
                     }
                 default:
                     return diceerrors.NewErrWithMessage("failed to convert existing value in array to a valid json field type")
-                }
+            }
             } else {
                 // If array is empty, default interface from sonic.UnmarshalString
                 var defaultObject interface{}
@@ -767,15 +766,69 @@ func evalJSONARRAPPEND(args []string, store *dstore.Store) []byte {
 
             pathArrData = append(pathArrData, value)
         }
-        err = expr.Set(jsonData, pathArrData)
-        if err != nil {
-            return diceerrors.NewErrWithMessage("failed to set value")
-        }
-        output = append(output, int64(len(copiedPathArrData)))
+        obj.Value = pathArrData
+        resultsArray = append(resultsArray, int64(len(pathArrData)))
+    } else {
+        expr.MustModify(jsonData, func(data any) (interface{}, bool) {
+            pathArrData, ok := data.([]interface{})
+            if(!ok) {
+                resultsArray = append(resultsArray, clientio.RespNIL)
+                return data, false
+            }
+
+            for _, arg := range args[2:] {
+                var value interface{}
+                var conversionErr error
+
+                // Determine type of element in the existing array (if any) to match type
+                if len(pathArrData) > 0 {
+                    switch utils.GetJSONFieldType(pathArrData[0]) {
+                    case utils.StringType:
+                        value = arg
+                    case utils.NumberType:
+                        value, conversionErr = strconv.ParseFloat(arg, 64)
+                    case utils.IntegerType:
+                        var intVal int64
+                        intVal, conversionErr = strconv.ParseInt(arg, 10, 64)
+                        value = intVal
+                    case utils.ArrayType:
+                        var arrObject []interface{}
+                        conversionErr = sonic.Unmarshal([]byte(arg), &arrObject)
+                        if conversionErr == nil {
+                            value = arrObject
+                        }
+                    case utils.ObjectType:
+                        var jsonObject map[string]interface{}
+                        conversionErr = sonic.Unmarshal([]byte(arg), &jsonObject)
+                        if conversionErr == nil {
+                            value = jsonObject
+                        }
+                    default:
+                        resultsArray = append(resultsArray, diceerrors.NewErrWithMessage("failed to convert existing value in array to a valid json field type"))
+                        return data, false
+                }
+                } else {
+                    // If array is empty, default interface from sonic.UnmarshalString
+                    var defaultObject interface{}
+                    conversionErr = sonic.UnmarshalString(arg, &defaultObject)
+                    if conversionErr == nil {
+                        value = defaultObject
+                    }
+                }
+
+                if conversionErr != nil {
+                    resultsArray = append(resultsArray, diceerrors.NewErrWithMessage("failed to convert value to match existing array type"))
+                    return data, false
+                }
+
+                pathArrData = append(pathArrData, value)
+            }
+            resultsArray = append(resultsArray, int64(len(pathArrData)))
+            return pathArrData, true
+        })
     }
 
-
-    return clientio.Encode(output, false)
+    return clientio.Encode(resultsArray, false)
 }
 
 // evalTTL returns Time-to-Live in secs for the queried key in args
