@@ -35,10 +35,11 @@ type ShardThread struct {
 	errorChan        chan *ShardError                   // errorChan is the channel for sending system-level errors.
 	lastCronExecTime time.Time                          // lastCronExecTime is the last time the shard executed cron tasks.
 	cronFrequency    time.Duration                      // cronFrequency is the frequency at which the shard executes cron tasks.
+	logger           *slog.Logger                       // logger is the logger for the shard.
 }
 
 // NewShardThread creates a new ShardThread instance with the given shard id and error channel.
-func NewShardThread(id ShardID, errorChan chan *ShardError, watchChan chan dstore.WatchEvent) *ShardThread {
+func NewShardThread(id ShardID, errorChan chan *ShardError, watchChan chan dstore.WatchEvent, logger *slog.Logger) *ShardThread {
 	return &ShardThread{
 		id:               id,
 		store:            dstore.NewStore(watchChan),
@@ -47,6 +48,7 @@ func NewShardThread(id ShardID, errorChan chan *ShardError, watchChan chan dstor
 		errorChan:        errorChan,
 		lastCronExecTime: utils.GetCurrentTime(),
 		cronFrequency:    config.DiceConfig.Server.ShardCronFrequency,
+		logger:           logger,
 	}
 }
 
