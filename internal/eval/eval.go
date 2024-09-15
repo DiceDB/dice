@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/internal/object"
+	"github.com/google/uuid"
 
 	"github.com/dicedb/dice/internal/sql"
 
@@ -749,6 +750,29 @@ func evalJSONSET(args []string, store *dstore.Store) []byte {
 	newObj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 	store.Put(key, newObj)
 	return clientio.RespOK
+}
+
+func evalJSONINGEST(args []string, store *dstore.Store) []byte {
+	if len(args) < 2 {
+		return diceerrors.NewErrArity("JSON.INGEST")
+	}
+
+	keyPrefix := args[0]
+	jsonStr := args[1]
+
+	uniqueID := uuid.New()
+	generatedKey := keyPrefix + uniqueID.String()
+
+	var jsonValue interface{}
+	if err := sonic.UnmarshalString(jsonStr, &jsonValue); err != nil {
+		return diceerrors.NewErrWithFormattedMessage("invalid JSON: %v", err.Error())
+	}
+
+	newObj := store.NewObj(jsonValue, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+	store.Put(generatedKey, newObj)
+
+	return clientio.RespOK
+
 }
 
 // evalTTL returns Time-to-Live in secs for the queried key in args
