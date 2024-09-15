@@ -458,7 +458,7 @@ func testEvalJSONOBJLEN(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:  []string{"EXISTING_KEY"},
-			output: []byte("-ERR Path '.' does not exist or not a json\r\n"),
+			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
 		},
 		"root object objlen": {
 			setup: func() {
