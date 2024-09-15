@@ -2237,13 +2237,8 @@ func evalLLEN(args []string, store *dstore.Store) []byte {
 		return clientio.Encode(0, false)
 	}
 
-	// if object is a set type, return error
-	if object.AssertType(obj.TypeEncoding, object.ObjTypeSet) == nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
 	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeByteList, object.ObjEncodingDeque); err != nil {
-		return clientio.Encode(err, false)
+		return err
 	}
 
 	deq := obj.Value.(*Deque)
