@@ -872,6 +872,12 @@ func TestJSONNumIncrBy(t *testing.T) {
 			assert_type: []string{"equal"},
 		},
 		{
+			name:        "Invalid value of increment",
+			commands:    []string{"JSON.SET foo $ 1", "JSON.GET foo $", "JSON.NUMINCRBY foo $ @", "JSON.NUMINCRBY foo $ 122@"},
+			expected:    []interface{}{"OK", "1", "ERR expected value at line 1 column 1", "ERR trailing characters at line 1 column 4"},
+			assert_type: []string{"equal", "equal", "equal", "equal"},
+		},
+		{
 			name:        "incrby at non root path",
 			commands:    []string{"JSON.SET foo $ " + a, "JSON.NUMINCRBY foo $..a 2", "JSON.NUMINCRBY foo $.a 2", "JSON.NUMINCRBY foo $..a -2"},
 			expected:    []interface{}{"OK", `"[null,4.2,7,null]"`, `"[null]"`, `"[null,2.2,5,null]"`},

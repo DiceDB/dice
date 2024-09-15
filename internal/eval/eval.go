@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 	"unsafe"
+	"unicode"
 
 	"github.com/dicedb/dice/internal/object"
 
@@ -3205,6 +3206,15 @@ func evalJSONNUMINCRBY(args []string, store *dstore.Store) []byte {
 
 	if err != nil {
 		// to-do have to manually find the index of unsupported character
+		for i, r := range args[2] {
+			// Check if it's not a digit
+			if !unicode.IsDigit(r) {
+				if i == 0 {
+					return diceerrors.NewErrWithFormattedMessage("-ERR expected value at line 1 column %d", i+1)
+				}
+				return diceerrors.NewErrWithFormattedMessage("-ERR trailing characters at line 1 column %d", i+1)
+			}
+		}
 		return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
 	}
 	results := expr.Get(jsonData)
