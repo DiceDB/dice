@@ -3176,6 +3176,16 @@ func evalSELECT(args []string, store *dstore.Store) []byte {
 	return clientio.RespOK
 }
 
+func formatFloat(f float64, b bool) string {
+	formatted := strconv.FormatFloat(f, 'f', -1, 64)
+	if b {
+		parts := strings.Split(formatted, ".")
+		if len(parts) == 1 {
+			formatted += ".0"
+		}
+	}
+	return formatted
+}
 func evalJSONNUMINCRBY(args []string, store *dstore.Store) []byte {
 	if len(args) < 3 {
 		return diceerrors.NewErrArity("JSON.NUMINCRBY")
@@ -3202,20 +3212,32 @@ func evalJSONNUMINCRBY(args []string, store *dstore.Store) []byte {
 	if err != nil {
 		return diceerrors.NewErrWithMessage("invalid JSONPath")
 	}
-	incr, err := strconv.ParseInt(args[2], 10, 64)
 
-	if err != nil {
-		// to-do have to manually find the index of unsupported character
-		for i, r := range args[2] {
-			// Check if it's not a digit
-			if !unicode.IsDigit(r) {
-				if i == 0 {
-					return diceerrors.NewErrWithFormattedMessage("-ERR expected value at line 1 column %d", i+1)
-				}
-				return diceerrors.NewErrWithFormattedMessage("-ERR trailing characters at line 1 column %d", i+1)
+	isIncrFloat := false
+
+	for i, r := range args[2] {
+		if !unicode.IsDigit(r) && r != '.' && r != '-' {
+			if i == 0 {
+				return diceerrors.NewErrWithFormattedMessage("-ERR expected value at line 1 column %d", i+1)
 			}
+			return diceerrors.NewErrWithFormattedMessage("-ERR trailing characters at line 1 column %d", i+1)
 		}
-		return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
+		if r == '.' {
+			isIncrFloat = true
+		}
+	}
+	var incrFloat float64
+	var incrInt int64
+	if isIncrFloat {
+		incrFloat, err = strconv.ParseFloat(args[2], 64)
+		if err != nil {
+			return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
+		}
+	} else {
+		incrInt, err = strconv.ParseInt(args[2], 10, 64)
+		if err != nil {
+			return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
+		}
 	}
 	results := expr.Get(jsonData)
 
@@ -3230,12 +3252,22 @@ func evalJSONNUMINCRBY(args []string, store *dstore.Store) []byte {
 		switch utils.GetJSONFieldType(jsonData) {
 		case utils.NumberType:
 			oldVal := jsonData.(float64)
-			jsonData = (oldVal + float64(incr))
-			resultArray = append(resultArray, strconv.FormatFloat(jsonData.(float64), 'f', -1, 64))
+			if isIncrFloat {
+				jsonData = oldVal + incrFloat
+			} else {
+				jsonData = oldVal + float64(incrInt)
+			}
+			resultArray = append(resultArray, formatFloat(jsonData.(float64), isIncrFloat))
 		case utils.IntegerType:
-			oldVal := jsonData.(int64)
-			jsonData = oldVal + incr
-			resultArray = append(resultArray, fmt.Sprintf("%d", jsonData))
+			if isIncrFloat {
+				oldVal := jsonData.(float64)
+				jsonData = oldVal + incrFloat
+				resultArray = append(resultArray, formatFloat(jsonData.(float64), isIncrFloat))
+			} else {
+				oldVal := jsonData.(int64)
+				jsonData = oldVal + incrInt
+				resultArray = append(resultArray, fmt.Sprintf("%d", jsonData))
+			}
 		default:
 			resultArray = append(resultArray, "null")
 		}
@@ -3246,14 +3278,26 @@ func evalJSONNUMINCRBY(args []string, store *dstore.Store) []byte {
 			switch utils.GetJSONFieldType(value) {
 			case utils.NumberType:
 				oldVal := value.(float64)
-				newVal := (oldVal + float64(incr))
-				resultArray = append(resultArray, strconv.FormatFloat(float64(newVal), 'f', -1, 64))
+				var newVal float64
+				if isIncrFloat {
+					newVal = oldVal + incrFloat
+				} else {
+					newVal = oldVal + float64(incrInt)
+				}
+				resultArray = append(resultArray, formatFloat(newVal, isIncrFloat))
 				return newVal, true
 			case utils.IntegerType:
-				oldVal := value.(int64)
-				newVal := oldVal + incr
-				resultArray = append(resultArray, fmt.Sprintf("%d", newVal))
-				return newVal, true
+				if isIncrFloat {
+					oldVal := value.(float64)
+					newVal := oldVal + incrFloat
+					resultArray = append(resultArray, formatFloat(newVal, isIncrFloat))
+					return newVal, true
+				} else {
+					oldVal := value.(int64)
+					newVal := oldVal + incrInt
+					resultArray = append(resultArray, fmt.Sprintf("%d", newVal))
+					return newVal, true
+				}
 			default:
 				resultArray = append(resultArray, "null")
 				return value, false
@@ -3261,7 +3305,7 @@ func evalJSONNUMINCRBY(args []string, store *dstore.Store) []byte {
 		})
 	}
 
-	resultString := `"[` + strings.Join(resultArray, ",") + `]"`
+	resultString := `[` + strings.Join(resultArray, ",") + `]`
 
 	newObj := &object.Obj{
 		Value:        jsonData,

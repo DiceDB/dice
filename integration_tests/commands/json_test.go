@@ -880,13 +880,13 @@ func TestJSONNumIncrBy(t *testing.T) {
 		{
 			name:        "incrby at non root path",
 			commands:    []string{"JSON.SET foo $ " + a, "JSON.NUMINCRBY foo $..a 2", "JSON.NUMINCRBY foo $.a 2", "JSON.NUMINCRBY foo $..a -2"},
-			expected:    []interface{}{"OK", `"[null,4.2,7,null]"`, `"[null]"`, `"[null,2.2,5,null]"`},
+			expected:    []interface{}{"OK", "[null,4.2,7,null]", "[null]", "[null,2.2,5,null]"},
 			assert_type: []string{"equal", "perm_equal", "perm_equal", "perm_equal"},
 		},
 		{
 			name:        "incrby at root path",
 			commands:    []string{"JSON.SET foo $ 1", "JSON.NUMINCRBY foo $ 1", "JSON.GET foo $", "JSON.NUMINCRBY foo $ -1", "JSON.GET foo $"},
-			expected:    []interface{}{"OK", `"[2]"`, "2", `"[1]"`, "1"},
+			expected:    []interface{}{"OK", "[2]", "2", "[1]", "1"},
 			assert_type: []string{"equal", "equal", "equal", "equal", "equal"},
 		},
 	}
