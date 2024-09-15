@@ -670,6 +670,7 @@ func evalJSONTOGGLE(args []string, store *dstore.Store) []byte {
 
     key := args[0]
     path := args[1]
+	
 
     obj := store.Get(key)
     if obj == nil {
@@ -689,8 +690,8 @@ func evalJSONTOGGLE(args []string, store *dstore.Store) []byte {
     }
 
     results := expr.Get(jsonData)
-    if len(results) == 0 {
-        return clientio.Encode([]interface{}{}, false) 
+   if len(results) == 0 {
+        return clientio.Encode([]interface{}{}, false)
     }
 
 	toggleResults := make([]interface{}, len(results))
@@ -704,7 +705,7 @@ func evalJSONTOGGLE(args []string, store *dstore.Store) []byte {
                 return diceerrors.NewErrWithMessage("failed to set toggled value")
             }
 
-			newobj:=store.NewObj(jsonData,-1,object.ObjTypeJSON,object.ObjEncodingJSON)
+			newobj:=store.NewObj(jsonData,10,object.ObjTypeJSON,object.ObjEncodingJSON)
             store.Put(key, newobj)
 
             if newValue {
