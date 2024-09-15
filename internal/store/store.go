@@ -3,6 +3,8 @@ package store
 import (
 	"path"
 
+	"github.com/ohler55/ojg/jp"
+
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/sql"
 	"github.com/xwb1989/sqlparser"
@@ -56,7 +58,7 @@ func (store *Store) NewObj(value interface{}, expDurationMs int64, oType, oEnc u
 func (store *Store) ResetStore() {
 	store.store.Clear()
 	store.expires.Clear()
-	store.watchChan = make(chan WatchEvent, config.KeysLimit)
+	store.watchChan = make(chan WatchEvent, config.DiceConfig.Server.KeysLimit)
 }
 
 type PutOptions struct {
@@ -98,7 +100,7 @@ func (store *Store) putHelper(k string, obj *object.Obj, opts ...PutOption) {
 		optApplier(options)
 	}
 
-	if store.store.Len() >= config.KeysLimit {
+	if store.store.Len() >= config.DiceConfig.Server.KeysLimit {
 		store.evict()
 	}
 	obj.LastAccessedAt = getCurrentClock()
@@ -307,7 +309,7 @@ func (store *Store) CacheKeysForQuery(whereClause sqlparser.Expr, cacheChannel c
 		Value *object.Obj
 	}, 0)
 	store.store.All(func(k string, v *object.Obj) bool {
-		matches, err := sql.EvaluateWhereClause(whereClause, sql.QueryResultRow{Key: k, Value: *v})
+		matches, err := sql.EvaluateWhereClause(whereClause, sql.QueryResultRow{Key: k, Value: *v}, make(map[string]jp.Expr))
 		if err != nil || !matches {
 			return true
 		}

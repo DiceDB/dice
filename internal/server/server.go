@@ -45,11 +45,11 @@ type AsyncServer struct {
 // NewAsyncServer initializes a new AsyncServer
 func NewAsyncServer(shardManager *shard.ShardManager, watchChan chan dstore.WatchEvent) *AsyncServer {
 	return &AsyncServer{
-		maxClients:             config.ServerMaxClients,
+		maxClients:             config.DiceConfig.Server.MaxClients,
 		connectedClients:       make(map[int]*comm.Client),
 		shardManager:           shardManager,
 		queryWatcher:           querywatcher.NewQueryManager(),
-		multiplexerPollTimeout: config.ServerMultiplexerPollTimeout,
+		multiplexerPollTimeout: config.DiceConfig.Server.MultiplexerPollTimeout,
 		ioChan:                 make(chan *ops.StoreResponse, 1000),
 		watchChan:              watchChan,
 	}
@@ -61,7 +61,7 @@ func (s *AsyncServer) SetupUsers() error {
 	if err != nil {
 		return err
 	}
-	return user.SetPassword(config.RequirePass)
+	return user.SetPassword(config.DiceConfig.Auth.Password)
 }
 
 // FindPortAndBind binds the server to the given host and port
@@ -91,14 +91,14 @@ func (s *AsyncServer) FindPortAndBind() (socketErr error) {
 		return err
 	}
 
-	ip4 := net.ParseIP(config.Host)
+	ip4 := net.ParseIP(config.DiceConfig.Server.Addr)
 	if ip4 == nil {
 		return ErrInvalidIPAddress
 	}
 
-	log.Infof("DiceDB %s running on port %d", "0.0.3", config.Port)
+	log.Infof("DiceDB %s running on port %d", "0.0.3", config.DiceConfig.Server.Port)
 	return syscall.Bind(serverFD, &syscall.SockaddrInet4{
-		Port: config.Port,
+		Port: config.DiceConfig.Server.Port,
 		Addr: [4]byte{ip4[0], ip4[1], ip4[2], ip4[3]},
 	})
 }
