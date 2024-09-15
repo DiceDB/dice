@@ -966,6 +966,18 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
             input: []string{"array", "$", "6"},
             output: []byte("*1\r\n:4\r\n"),
         },
+        "arr append to an array with different type": {
+            setup: func() {
+				key := "array"
+				value := "{\"a\":[1,2]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$.a", `"blue"`},
+            output: []byte("*1\r\n:3\r\n"),
+        },
     }
     runEvalTests(t, tests, evalJSONARRAPPEND, store)
 }
