@@ -79,7 +79,7 @@ func evalPING(args []string, store *dstore.Store) []byte {
 	return b
 }
 
-// evalECHO returns the argument passed by the user 
+// evalECHO returns the argument passed by the user
 func evalECHO(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("ECHO")
@@ -3759,4 +3759,23 @@ func evalTYPE(args []string, store *dstore.Store) []byte {
 	}
 
 	return clientio.Encode(typeStr, false)
+}
+func evalSETEX(args []string, store *dstore.Store) []byte {
+	if len(args) != 3 {
+		return diceerrors.NewErrArity("SETEX")
+	}
+
+	var key, value string
+	key, value = args[0], args[2]
+
+	exDuration, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
+	}
+	if exDuration <= 0 || exDuration >= maxExDuration {
+		return diceerrors.NewErrExpireTime("SETEX")
+	}
+	newArgs := []string{key, value, Ex, strconv.FormatInt(exDuration, 10)}
+
+	return evalSET(newArgs, store)
 }

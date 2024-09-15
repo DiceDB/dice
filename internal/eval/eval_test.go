@@ -79,6 +79,7 @@ func TestEval(t *testing.T) {
 	testEvalJSONNUMINCRBY(t, store)
 	testEvalTYPE(t, store)
 	testEvalCOMMAND(t, store)
+	testEvalSETEX(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -1070,84 +1071,84 @@ func testEvalJSONSET(t *testing.T, store *dstore.Store) {
 }
 
 func testEvalJSONNUMMULTBY(t *testing.T, store *dstore.Store) {
-    tests := map[string]evalTestCase{
-        "nil value": {
-            setup:  func() {},
-            input:  nil,
-            output: []byte("-ERR wrong number of arguments for 'json.nummultby' command\r\n"),
-        },
-        "empty array": {
-            setup:  func() {},
-            input:  []string{},
-            output: []byte("-ERR wrong number of arguments for 'json.nummultby' command\r\n"),
-        },
-        "insufficient args": {
-            setup:  func() {},
-            input:  []string{"doc"},
-            output: []byte("-ERR wrong number of arguments for 'json.nummultby' command\r\n"),
-        },
-	"non-numeric multiplier on existing key": {
-		setup: func() {
-			key := "doc"
-			value := "{\"a\":10,\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
-			var rootData interface{}
-			_ = sonic.Unmarshal([]byte(value), &rootData)
-			obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-			store.Put(key, obj)
+	tests := map[string]evalTestCase{
+		"nil value": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'json.nummultby' command\r\n"),
 		},
-		input: []string{"doc", "$.a", "qwe"},
-		output: []byte("-ERR expected value at line 1 column 1\r\n"),
-	},
-        "nummultby on non integer root fields": {
-            setup: func() {
-                key := "doc"
-                value := "{\"a\": \"b\",\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
-                var rootData interface{}
-                _ = sonic.Unmarshal([]byte(value), &rootData)
-                obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-                store.Put(key, obj)
-            },
-            input:  []string{"doc", "$.a", "2"},
-            output: []byte("$6\r\n[null]\r\n"),
-        },
-        "nummultby on recursive fields": {
-            setup: func() {
-                key := "doc"
-                value := "{\"a\": \"b\",\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
-                var rootData interface{}
-                _ = sonic.Unmarshal([]byte(value), &rootData)
-                obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-                store.Put(key, obj)
-            },
-            input:  []string{"doc", "$..a", "2"},
-            output: []byte("$16\r\n[4,10,null,null]\r\n"),
-        },
-        "nummultby on integer root fields": {
-            setup: func() {
-                key := "doc"
-                value := "{\"a\":10,\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
-                var rootData interface{}
-                _ = sonic.Unmarshal([]byte(value), &rootData)
-                obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-                store.Put(key, obj)
-            },
-            input:  []string{"doc", "$.a", "2"},
-            output: []byte("$4\r\n[20]\r\n"),
-        },
-	"nummultby on non-existent key": {
-		setup: func() {
-			key := "doc"
-			value := "{\"a\":10,\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
-			var rootData interface{}
-			_ = sonic.Unmarshal([]byte(value), &rootData)
-			obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-			store.Put(key, obj)
+		"empty array": {
+			setup:  func() {},
+			input:  []string{},
+			output: []byte("-ERR wrong number of arguments for 'json.nummultby' command\r\n"),
 		},
-		input: []string{"doc", "$..fe", "2"},
-		output: []byte("$2\r\n[]\r\n"),
-	},
-    }
-    runEvalTests(t, tests, evalJSONNUMMULTBY, store)
+		"insufficient args": {
+			setup:  func() {},
+			input:  []string{"doc"},
+			output: []byte("-ERR wrong number of arguments for 'json.nummultby' command\r\n"),
+		},
+		"non-numeric multiplier on existing key": {
+			setup: func() {
+				key := "doc"
+				value := "{\"a\":10,\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"doc", "$.a", "qwe"},
+			output: []byte("-ERR expected value at line 1 column 1\r\n"),
+		},
+		"nummultby on non integer root fields": {
+			setup: func() {
+				key := "doc"
+				value := "{\"a\": \"b\",\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"doc", "$.a", "2"},
+			output: []byte("$6\r\n[null]\r\n"),
+		},
+		"nummultby on recursive fields": {
+			setup: func() {
+				key := "doc"
+				value := "{\"a\": \"b\",\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"doc", "$..a", "2"},
+			output: []byte("$16\r\n[4,10,null,null]\r\n"),
+		},
+		"nummultby on integer root fields": {
+			setup: func() {
+				key := "doc"
+				value := "{\"a\":10,\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"doc", "$.a", "2"},
+			output: []byte("$4\r\n[20]\r\n"),
+		},
+		"nummultby on non-existent key": {
+			setup: func() {
+				key := "doc"
+				value := "{\"a\":10,\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"doc", "$..fe", "2"},
+			output: []byte("$2\r\n[]\r\n"),
+		},
+	}
+	runEvalTests(t, tests, evalJSONNUMMULTBY, store)
 }
 
 func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
@@ -2767,4 +2768,92 @@ func TestMSETConsistency(t *testing.T) {
 
 	assert.Equal(t, "VAL", store.Get("KEY").Value)
 	assert.Equal(t, "VAL2", store.Get("KEY2").Value)
+}
+
+func testEvalSETEX(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value":                              {input: nil, output: []byte("-ERR wrong number of arguments for 'setex' command\r\n")},
+		"empty array":                            {input: []string{}, output: []byte("-ERR wrong number of arguments for 'setex' command\r\n")},
+		"one value":                              {input: []string{"KEY"}, output: []byte("-ERR wrong number of arguments for 'setex' command\r\n")},
+		"key val pair":                           {input: []string{"KEY", "VAL"}, output: []byte("-ERR wrong number of arguments for 'setex' command\r\n")},
+		"key exp pair":                           {input: []string{"KEY", "123456"}, output: []byte("-ERR wrong number of arguments for 'setex' command\r\n")},
+		"key exp value pair":                     {input: []string{"KEY", "123", "VAL"}, output: clientio.RespOK},
+		"key exp value pair with extra args":     {input: []string{"KEY", "123", "VAL", " "}, output: []byte("-ERR wrong number of arguments for 'setex' command\r\n")},
+		"key exp value pair with invalid exp":    {input: []string{"KEY", "0", "VAL"}, output: []byte("-ERR invalid expire time in 'setex' command\r\n")},
+		"key exp value pair with exp > maxexp":   {input: []string{"KEY", "9223372036854776", "VAL"}, output: []byte("-ERR invalid expire time in 'setex' command\r\n")},
+		"key exp value pair with exp > maxint64": {input: []string{"KEY", "92233720368547760000000", "VAL"}, output: []byte("-ERR value is not an integer or out of range\r\n")},
+		"key exp value pair with negative exp":   {input: []string{"KEY", "-23", "VAL"}, output: []byte("-ERR invalid expire time in 'setex' command\r\n")},
+		"key exp value pair with not-int exp":    {input: []string{"KEY", "12a", "VAL"}, output: []byte("-ERR value is not an integer or out of range\r\n")},
+
+		"integration test - set and get": {
+			setup: func() {},
+			input: []string{"TEST_KEY", "5", "TEST_VALUE"},
+			validator: func(output []byte) {
+				assert.Equal(t, string(clientio.RespOK), string(output))
+
+				// Check if the key was set correctly
+				getValue := evalGET([]string{"TEST_KEY"}, store)
+				assert.Equal(t, string(clientio.Encode("TEST_VALUE", false)), string(getValue))
+
+				// Check if the TTL is set correctly (should be 5 seconds or less)
+				ttlValue := evalTTL([]string{"TEST_KEY"}, store)
+				ttlStr := string(ttlValue)
+				ttlStr = strings.TrimSpace(ttlStr)
+				ttlStr = strings.TrimPrefix(ttlStr, ":")
+				ttl, err := strconv.Atoi(ttlStr)
+				if err != nil {
+					t.Errorf("Failed to parse TTL: %v", err)
+					return
+				}
+				assert.Assert(t, ttl > 0 && ttl <= 5)
+
+				// Wait for the key to expire
+				time.Sleep(6 * time.Second)
+
+				// Check if the key has been deleted after expiry
+				expiredValue := evalGET([]string{"TEST_KEY"}, store)
+				assert.Equal(t, string(clientio.RespNIL), string(expiredValue))
+			},
+		},
+		"integration test - update existing key": {
+			setup: func() {
+				evalSET([]string{"EXISTING_KEY", "OLD_VALUE"}, store)
+			},
+			input: []string{"EXISTING_KEY", "10", "NEW_VALUE"},
+			validator: func(output []byte) {
+				assert.Equal(t, string(clientio.RespOK), string(output))
+
+				// Check if the key was updated correctly
+				getValue := evalGET([]string{"EXISTING_KEY"}, store)
+				assert.Equal(t, string(clientio.Encode("NEW_VALUE", false)), string(getValue))
+
+				// Check if the TTL is set correctly
+				ttlValue := evalTTL([]string{"EXISTING_KEY"}, store)
+				ttlStr := string(ttlValue)
+				ttlStr = strings.TrimSpace(ttlStr)
+				ttlStr = strings.TrimPrefix(ttlStr, ":")
+				ttl, err := strconv.Atoi(ttlStr)
+				if err != nil {
+					t.Errorf("Failed to parse TTL: %v", err)
+					return
+				}
+				assert.Assert(t, ttl > 0 && ttl <= 10)
+			},
+		},
+	}
+
+	runEvalTests(t, tests, evalSETEX, store)
+}
+
+func BenchmarkEvalSETEX(b *testing.B) {
+	store := dstore.NewStore(nil)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		key := fmt.Sprintf("key_%d", i)
+		value := fmt.Sprintf("value_%d", i)
+		expiry := "10" // 10 seconds expiry
+
+		evalSETEX([]string{key, expiry, value}, store)
+	}
 }

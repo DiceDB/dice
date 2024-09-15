@@ -26,10 +26,10 @@ var (
 		Arity: -1,
 	}
 	echoCmdMeta = DiceCmdMeta{
-		Name:     "ECHO",
-		Info:     `ECHO returns the string given as argument.`,
-		Eval:     evalECHO,
-		Arity:    1,
+		Name:  "ECHO",
+		Info:  `ECHO returns the string given as argument.`,
+		Eval:  evalECHO,
+		Arity: 1,
 	}
 	authCmdMeta = DiceCmdMeta{
 		Name: "AUTH",
@@ -781,6 +781,18 @@ var (
 		Arity:    1,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	setexCmdMeta = DiceCmdMeta{
+		Name: "SETEX",
+		Info: `SETEX puts a new <key, value> pair in along with expity
+		args must contain key and value and expiry.
+		Returns encoded error response if <key,exp,value> is not part of args
+		Returns encoded error response if expiry time value in not integer
+		Returns encoded OK RESP once new entry is added
+		If the key already exists then the value and expiry will be overwritten`,
+		Eval:     evalSETEX,
+		Arity:    3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -873,6 +885,7 @@ func init() {
 	DiceCmds["SELECT"] = selectCmdMeta
 	DiceCmds["JSON.NUMINCRBY"] = jsonnumincrbyCmdMeta
 	DiceCmds["TYPE"] = typeCmdMeta
+	DiceCmds["SETEX"] = setexCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}
