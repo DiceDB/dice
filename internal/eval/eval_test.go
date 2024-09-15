@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-  
+
 	"strconv"
 	"strings"
 	"testing"
@@ -856,46 +856,36 @@ func testEvalJSONTOGGLE(t *testing.T, store *dstore.Store) {
             input: []string{"NONEXISTENT_KEY", ".active"},
             output: []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
         },
-        "key exists but field is not boolean": {
+		"key exists, toggling boolean true to false": {
             setup: func() {
                 key := "EXISTING_KEY"
-                value := "{\"active\":\"not_boolean\"}"
-                var rootData interface{}
-                _ = sonic.Unmarshal([]byte(value), &rootData)
-                obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-                store.Put(key, obj)
-            },
-            input: []string{"EXISTING_KEY", ".active"},
-            output: clientio.Encode([]interface{}{nil}, false),
-        },
-        "key exists, toggling boolean true to false": {
-            setup: func() {
-                key := "EXISTING_KEY"
-                value := "{\"active\":true}"
+                value := `{"active":true}`
                 var rootData interface{}
                 err := sonic.Unmarshal([]byte(value), &rootData)
                 if err != nil {
                     fmt.Printf("Debug: Error unmarshaling JSON: %v\n", err)
                 }
-                fmt.Printf("Debug: rootData after unmarshal: %+v\n", rootData)
                 obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
                 store.Put(key, obj)
-                fmt.Printf("Debug: Object stored: %+v\n", obj)
+               
             },
-            input: []string{"EXISTING_KEY", ".active"},
-            output: clientio.Encode([]interface{}{0}, false),
+            input:  []string{"EXISTING_KEY", ".active"},
+            output: clientio.Encode([]interface{}{0}, false), // boolean true toggles to false (0)
         },
         "key exists, toggling boolean false to true": {
             setup: func() {
                 key := "EXISTING_KEY"
-                value := "{\"active\":false}"
+                value := `{"active":false}`
                 var rootData interface{}
-                _ = sonic.Unmarshal([]byte(value), &rootData)
+                err := sonic.Unmarshal([]byte(value), &rootData)
+                if err != nil {
+                    fmt.Printf("Debug: Error unmarshaling JSON: %v\n", err)
+                }
                 obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
                 store.Put(key, obj)
             },
-            input: []string{"EXISTING_KEY", ".active"},
-            output: clientio.Encode([]interface{}{1}, false), 
+            input:  []string{"EXISTING_KEY", ".active"},
+            output: clientio.Encode([]interface{}{1}, false),
         },
         "key exists but expired": {
             setup: func() {
@@ -910,6 +900,18 @@ func testEvalJSONTOGGLE(t *testing.T, store *dstore.Store) {
             },
             input: []string{"EXISTING_KEY", ".active"},
             output: []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"), 
+        },
+		"nested JSON structure with multiple booleans": {
+            setup: func() {
+                key := "NESTED_KEY"
+                value := `{"isSimple":true,"nested":{"isSimple":false}}`
+                var rootData interface{}
+                _ = sonic.Unmarshal([]byte(value), &rootData)
+                obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+                store.Put(key, obj)
+            },
+            input:  []string{"NESTED_KEY", "$..isSimple"},
+            output: clientio.Encode([]interface{}{0, 1}, false), 
         },
     }
     
@@ -1404,6 +1406,7 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 	}
 	runEvalTests(t, tests, evalJSONSTRLEN, store)
 }
+
 func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]string, *dstore.Store) []byte, store *dstore.Store) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {

@@ -667,14 +667,12 @@ func evalJSONTOGGLE(args []string, store *dstore.Store) []byte {
     if len(args) < 2 {
         return diceerrors.NewErrArity("JSON.TOGGLE")
     }
-
     key := args[0]
     path := args[1]
-	
 
     obj := store.Get(key)
     if obj == nil {
-        return []byte("-ERR could not perform this operation on a key that doesn't exist\r\n")
+        return diceerrors.NewErrWithFormattedMessage("-ERR could not perform this operation on a key that doesn't exist")
     }
 
     errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
@@ -683,42 +681,62 @@ func evalJSONTOGGLE(args []string, store *dstore.Store) []byte {
     }
 
     jsonData := obj.Value
-
     expr, err := jp.ParseString(path)
     if err != nil {
         return diceerrors.NewErrWithMessage("invalid JSONPath")
     }
 
-    results := expr.Get(jsonData)
-   if len(results) == 0 {
-        return clientio.Encode([]interface{}{}, false)
-    }
+    toggleResults := []interface{}{}
+    modified := false
 
-	toggleResults := make([]interface{}, len(results))
-
-    for i, result := range results {
-        switch v := result.(type) {
-        case bool:
-            newValue := !v
-            err := expr.Set(jsonData, newValue)
-            if err != nil {
-                return diceerrors.NewErrWithMessage("failed to set toggled value")
-            }
-
-			newobj:=store.NewObj(jsonData,10,object.ObjTypeJSON,object.ObjEncodingJSON)
-            store.Put(key, newobj)
-
-            if newValue {
-                toggleResults[i] = 1
-            } else {
-                toggleResults[i] = 0
-            }
-        default:
-            toggleResults[i] = nil
+    _, err = expr.Modify(jsonData, func(value interface{}) (interface{}, bool) {
+        if boolValue, ok := value.(bool); ok {
+            newValue := !boolValue
+            toggleResults = append(toggleResults, boolToInt(newValue))
+            modified = true
+            return newValue, true
         }
+        toggleResults = append(toggleResults, nil)
+        return value, false
+    })
+
+    if err != nil {
+        return diceerrors.NewErrWithMessage("failed to toggle values")
     }
 
+    if modified {
+        newObj := &object.Obj{
+            Value:        jsonData,
+            TypeEncoding: object.ObjTypeJSON,
+        }
+        exp, ok := dstore.GetExpiry(obj, store)
+        var exDurationMs int64 = -1
+        if ok {
+            exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
+        }
+        if exDurationMs > 0 {
+            store.SetExpiry(newObj, exDurationMs)
+        }
+        store.Put(key, newObj)
+    }
+
+    toggleResults = reverseResults(toggleResults)
     return clientio.Encode(toggleResults, false)
+}
+
+func boolToInt(b bool) int {
+    if b {
+        return 1
+    }
+    return 0
+}
+
+func reverseResults(results []interface{}) []interface{} {
+    reversed := make([]interface{}, len(results))
+    for i, v := range results {
+        reversed[len(results)-1-i] = v
+    }
+    return reversed
 }
 
 // evalJSONSET stores a JSON value at the specified key
