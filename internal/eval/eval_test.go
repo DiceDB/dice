@@ -122,8 +122,29 @@ func testEvalSET(t *testing.T, store *dstore.Store) {
 func testEvalGETEX(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 
-		"key val pair and valid EX":   {input: []string{"KEY", "VAL", Ex, "2"}, output: clientio.RespOK},
-		"key val pair and invalid EX": {input: []string{"KEY", "VAL", Ex, "invalid_expiry_val"}, output: []byte("-ERR invalid expire time in 'getex' command\r\n")},
+		"key val pair and valid EX": {
+			setup: func() {
+				key := "foo"
+				value := "bar"
+				obj := &object.Obj{
+					Value: value,
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"foo", Ex, "10"},
+			output: clientio.Encode("bar", false),
+		},
+		"key val pair and invalid EX": {
+			setup: func() {
+				key := "foo"
+				value := "bar"
+				obj := &object.Obj{
+					Value: value,
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"foo", Ex, "10000000000000000"},
+			output: []byte("-ERR invalid expire time in 'getex' command\r\n")},
 	}
 
 	runEvalTests(t, tests, evalGETEX, store)
