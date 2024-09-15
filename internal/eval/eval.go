@@ -399,6 +399,71 @@ func evalJSONARRLEN(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(arrlenList, false)
 }
 
+
+// evalJSONOBJLEN return the number of keys in the JSON object at path in key
+// Returns an array of integer replies, an integer for each matching value,
+// each is the json objects length, or nil, if the matching value is not a json.
+// Returns encoded error if the key doesn't exist or key is expired or the matching value is not an array.
+// Returns encoded error response if incorrect number of arguments
+func evalJSONOBJLEN(args []string, store *dstore.Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("JSON.OBJLEN")
+	}
+
+	key := args[0]
+
+	// Retrieve the object from the database
+	obj := store.Get(key)
+	if obj == nil {
+		return diceerrors.NewErrWithMessage("Path '.' does not exist or not a json")
+	}
+
+	// check if the value is json
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
+	}
+
+	// get the value & check for marsheling error
+	jsonData := obj.Value
+	_,err := sonic.Marshal(jsonData)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
+	}
+
+
+	if len(args) == 1 {
+		if utils.GetJSONFieldType(jsonData) == utils.ObjectType {
+			return clientio.Encode(len(jsonData.(map[string]interface{})), false)
+		}
+		return diceerrors.NewErrWithMessage("Path '.' does not exist or not a json")
+	}
+
+	path := args[1]
+
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("invalid JSONPath")
+	}
+
+	results := expr.Get(jsonData)
+
+	objectLen := make([]interface{},0,len(results))
+
+	for _,result := range results{
+		switch utils.GetJSONFieldType(result) {
+		case utils.ObjectType:
+			objectLen = append(objectLen,len(result.(map[string]interface{})))
+		default:
+			objectLen = append(objectLen, nil)
+		}
+	}
+
+	return clientio.Encode(objectLen,false)
+}
+
+
+
 // evalJSONDEL delete a value that the given json path include in.
 // Returns response.RespZero if key is expired or it does not exist
 // Returns encoded error response if incorrect number of arguments

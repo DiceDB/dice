@@ -147,6 +147,14 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsonobjlenCmdMeta = DiceCmdMeta{
+		Name: "JSON.OBJLEN",
+		Info: `JSON.OBJLEN key [path]
+		Report the number of keys in the JSON object at path in key`,
+		Eval: evalJSONOBJLEN,
+		Arity: -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	ttlCmdMeta = DiceCmdMeta{
 		Name: "TTL",
 		Info: `TTL returns Time-to-Live in secs for the queried key in args
@@ -693,6 +701,7 @@ func init() {
 	DiceCmds["JSON.DEL"] = jsondelCmdMeta
 	DiceCmds["JSON.FORGET"] = jsonforgetCmdMeta
 	DiceCmds["JSON.ARRLEN"] = jsonarrlenCmdMeta
+	DiceCmds["JSON.OBJLEN"] = jsonobjlenCmdMeta
 	DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
 	DiceCmds["EXPIRE"] = expireCmdMeta

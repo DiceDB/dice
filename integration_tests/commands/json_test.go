@@ -628,3 +628,59 @@ func TestJsonStrlen(t *testing.T) {
 		})
 	}
 }
+
+func TestJsonObjLen(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	a := `{"name":"jerry","partner":{"name":"tom","language":["rust"]}}`
+	b := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"name":"spike","language":["go","rust"]}}`
+	c := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"name":12,"language":["rust"]}}`
+	d := `["this","is","an","array"]`
+
+	testCases := []struct {
+		name     string
+		commands []string
+		expected []interface{}
+	}{
+		{
+			name:     "JSON.OBJLEN with root path",
+			commands: []string{"json.set obj $ " + a, "json.objlen obj $"},
+			expected: []interface{}{"OK", []interface{}{int64(2)}},
+		},
+		{
+			name:     "JSON.OBJLEN with nested path",
+			commands: []string{"json.set obj $ " + b, "json.objlen obj $.partner"},
+			expected: []interface{}{"OK", []interface{}{int64(2)}},
+		},
+		{
+			name:     "JSON.OBJLEN with non-object path",
+			commands: []string{"json.set obj $ " + d, "json.objlen obj $"},
+			expected: []interface{}{"OK", []interface{}{"(nil)"}},
+		},
+		{
+			name:     "JSON.OBJLEN with invalid path",
+			commands: []string{"json.set obj $ " + c, "json.objlen obj $.partner2.name"},
+			expected: []interface{}{"OK", []interface{}{"(nil)"}},
+		},
+		{
+			name:     "JSON.OBJLEN nested objects",
+			commands: []string{"json.set obj $ " + b, "json.objlen obj $..language"},
+			expected: []interface{}{"OK", []interface{}{"(nil)", "(nil)"}},
+		},
+	}
+
+	for _, tcase := range testCases {
+		FireCommand(conn, "DEL obj")
+		t.Run(tcase.name, func(t *testing.T) {
+			for i := 0; i < len(tcase.commands); i++ {
+				cmd := tcase.commands[i]
+				out := tcase.expected[i]
+				result := FireCommand(conn, cmd)
+				fmt.Println("RESSSSS",result)
+				fmt.Println("OUTTT",out)
+				assert.DeepEqual(t,out,result)
+			}
+		})
+	}
+}
