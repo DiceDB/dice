@@ -20,14 +20,6 @@ const (
 	DefaultConfigFilePath string = "./"
 )
 
-var (
-	Host string = DefaultHost
-	Port int    = DefaultPort
-
-	EnableHTTP bool = true
-	HTTPPort   int  = 8082
-)
-
 const (
 	SimpleFirst   = "simple-first"
 	AllKeysRandom = "allkeys-random"
@@ -35,20 +27,12 @@ const (
 	AllKeysLFU    = "allkeys-lfu"
 )
 
-// Network
 var (
-	IOBufferLength    int = 512
-	IOBufferLengthMAX int = 50 * 1024
-)
+	Host string = DefaultHost
+	Port int    = DefaultPort
 
-var (
-	ShardCronFrequency           = 1 * time.Second
-	ServerMultiplexerPollTimeout = 100 * time.Millisecond
-	ServerMaxClients             = 20000
-)
-
-// Users and ACLs
-var (
+	EnableHTTP bool = true
+	HTTPPort   int  = 8082
 	// if RequirePass is set to an empty string, no authentication is required
 	RequirePass string = utils.EmptyStr
 

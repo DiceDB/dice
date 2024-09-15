@@ -89,7 +89,7 @@ func GetIdleTime(lastAccessedAt uint32) uint32 {
 	return (0x00FFFFFF - lastAccessedAt) + c
 }
 
-func populateEvictionPool(store *Store) {
+func PopulateEvictionPool(store *Store) {
 	sampleSize := 5
 	// TODO: if we already have obj, why do we need to
 	// look up in store.store again?
@@ -108,7 +108,7 @@ func populateEvictionPool(store *Store) {
 // TODO: no need to populate everytime. should populate
 // only when the number of keys to evict is less than what we have in the pool
 func EvictAllkeysLRUOrLFU(store *Store) {
-	populateEvictionPool(store)
+	PopulateEvictionPool(store)
 	evictCount := int16(config.DiceConfig.Server.EvictionRatio * float64(config.DiceConfig.Server.KeysLimit))
 
 	for i := 0; i < int(evictCount) && len(EPool.pool) > 0; i++ {
