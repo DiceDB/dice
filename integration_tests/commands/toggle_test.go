@@ -31,7 +31,7 @@ func TestEvalJSONTOGGLE(t *testing.T) {
         {
 			name:     "JSON.TOGGLE with invalid path",
 			commands: []string{`JSON.SET testkey $ ` + simpleJSON, "JSON.TOGGLE user $.invalidPath"},
-			expected: []interface{}{"OK", "ERR could not perform this operation on a key that doesn't exist"},
+			expected: []interface{}{"WRONGTYPE Operation against a key holding the wrong kind of value", "ERR could not perform this operation on a key that doesn't exist"},
 		},
         {
             name:     "JSON.TOGGLE with invalid command format",
