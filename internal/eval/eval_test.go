@@ -1369,11 +1369,7 @@ func testEvalLLEN(t *testing.T, store *dstore.Store) {
 		},
 		"key exists": {
 			setup: func() {
-				key := "EXISTING_KEY"
-				value := "mock_value"
-				obj := store.NewObj(NewDeque(), -1, object.ObjTypeByteList, object.ObjEncodingDeque)
-				obj.Value.(*Deque).LPush(value)
-				store.Put(key, obj)
+				evalLPUSH([]string{"EXISTING_KEY", "mock_value"}, store)
 			},
 			input:  []string{"EXISTING_KEY"},
 			output: clientio.RespOne,
