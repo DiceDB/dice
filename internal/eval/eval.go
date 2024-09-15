@@ -3186,6 +3186,38 @@ func formatFloat(f float64, b bool) string {
 	}
 	return formatted
 }
+
+// takes original value, increment values (float or int), a flag representing if increment is float
+// returns new value, string representation, a boolean representing if the value was modified
+func incrementValue(value any, isIncrFloat bool, incrFloat float64, incrInt int64) (newVal interface{}, stringRepresentation string, isModified bool) {
+	switch utils.GetJSONFieldType(value) {
+	case utils.NumberType:
+		oldVal := value.(float64)
+		var newVal float64
+		if isIncrFloat {
+			newVal = oldVal + incrFloat
+		} else {
+			newVal = oldVal + float64(incrInt)
+		}
+		resultString := formatFloat(newVal, isIncrFloat)
+		return newVal, resultString, true
+	case utils.IntegerType:
+		if isIncrFloat {
+			oldVal := float64(value.(int64))
+			newVal := oldVal + incrFloat
+			resultString := formatFloat(newVal, isIncrFloat)
+			return newVal, resultString, true
+		} else {
+			oldVal := value.(int64)
+			newVal := oldVal + incrInt
+			resultString := fmt.Sprintf("%d", newVal)
+			return newVal, resultString, true
+		}
+	default:
+		return value, "null", false
+	}
+}
+
 func evalJSONNUMINCRBY(args []string, store *dstore.Store) []byte {
 	if len(args) < 3 {
 		return diceerrors.NewErrArity("JSON.NUMINCRBY")
@@ -3249,60 +3281,22 @@ func evalJSONNUMINCRBY(args []string, store *dstore.Store) []byte {
 	resultArray := make([]string, 0, len(results))
 
 	if path == defaultRootPath {
-		switch utils.GetJSONFieldType(jsonData) {
-		case utils.NumberType:
-			oldVal := jsonData.(float64)
-			if isIncrFloat {
-				jsonData = oldVal + incrFloat
-			} else {
-				jsonData = oldVal + float64(incrInt)
-			}
-			resultArray = append(resultArray, formatFloat(jsonData.(float64), isIncrFloat))
-		case utils.IntegerType:
-			if isIncrFloat {
-				oldVal := jsonData.(float64)
-				jsonData = oldVal + incrFloat
-				resultArray = append(resultArray, formatFloat(jsonData.(float64), isIncrFloat))
-			} else {
-				oldVal := jsonData.(int64)
-				jsonData = oldVal + incrInt
-				resultArray = append(resultArray, fmt.Sprintf("%d", jsonData))
-			}
-		default:
-			resultArray = append(resultArray, "null")
+		newValue, resultString, isModified := incrementValue(jsonData, isIncrFloat, incrFloat, incrInt)
+		if isModified {
+			jsonData = newValue
 		}
+		resultArray = append(resultArray, resultString)
 	} else {
 		// Execute the JSONPath query
 
-		expr.MustModify(jsonData, func(value any) (interface{}, bool) {
-			switch utils.GetJSONFieldType(value) {
-			case utils.NumberType:
-				oldVal := value.(float64)
-				var newVal float64
-				if isIncrFloat {
-					newVal = oldVal + incrFloat
-				} else {
-					newVal = oldVal + float64(incrInt)
-				}
-				resultArray = append(resultArray, formatFloat(newVal, isIncrFloat))
-				return newVal, true
-			case utils.IntegerType:
-				if isIncrFloat {
-					oldVal := value.(float64)
-					newVal := oldVal + incrFloat
-					resultArray = append(resultArray, formatFloat(newVal, isIncrFloat))
-					return newVal, true
-				} else {
-					oldVal := value.(int64)
-					newVal := oldVal + incrInt
-					resultArray = append(resultArray, fmt.Sprintf("%d", newVal))
-					return newVal, true
-				}
-			default:
-				resultArray = append(resultArray, "null")
-				return value, false
-			}
+		_, err := expr.Modify(jsonData, func(value any) (interface{}, bool) {
+			newValue, resultString, isModified := incrementValue(value, isIncrFloat, incrFloat, incrInt)
+			resultArray = append(resultArray, resultString)
+			return newValue, isModified
 		})
+		if err != nil {
+			return diceerrors.NewErrWithMessage("invalid JSONPath")
+		}
 	}
 
 	resultString := `[` + strings.Join(resultArray, ",") + `]`
