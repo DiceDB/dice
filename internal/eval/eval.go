@@ -339,9 +339,9 @@ func evalJSONDebug(args []string, store *dstore.Store) []byte {
 	}
 	subcommand := strings.ToUpper(args[0])
 	switch subcommand {
-	case "HELP":
+	case Help:
 		return evalJSONDebugHelp()
-	case "MEMORY":
+	case Memory:
 		return evalJSONDebugMemory(args[1:], store)
 	default:
 		return diceerrors.NewErrWithFormattedMessage("unknown subcommand - try `JSON.DEBUG HELP`")
@@ -362,7 +362,7 @@ func evalJSONDebugHelp() []byte {
 // It returns value's memory usage in bytes
 func evalJSONDebugMemory(args []string, store *dstore.Store) []byte {
 	if len(args) < 1 {
-		return diceerrors.NewErrArity("JSON.DEBUG")
+		return diceerrors.NewErrArity("json.debug")
 	}
 	key := args[0]
 
@@ -388,13 +388,13 @@ func evalJSONDebugMemory(args []string, store *dstore.Store) []byte {
 		jsonData := obj.Value
 
 		// memory used by json data
-		size := calculateMemory(jsonData)
+		size := calculateSizeInBytes(jsonData)
 		if size == -1 {
 			return diceerrors.NewErrWithMessage("unknown type")
 		}
 
 		// add memory used by storage object
-		size += int(unsafe.Sizeof(obj)) + calculateMemory(obj.LastAccessedAt) + calculateMemory(obj.TypeEncoding)
+		size += int(unsafe.Sizeof(obj)) + calculateSizeInBytes(obj.LastAccessedAt) + calculateSizeInBytes(obj.TypeEncoding)
 
 		return clientio.Encode(size, false)
 	}
@@ -416,7 +416,10 @@ func evalJSONDebugMemory(args []string, store *dstore.Store) []byte {
 			// handle out of bound index path for array json type
 			isArray := utils.IsArray(obj.Value)
 			if isArray {
-				arr := obj.Value.([]any)
+				arr, ok := obj.Value.([]any)
+				if !ok {
+					return diceerrors.NewErrWithMessage("invalid array json")
+				}
 				reg := regexp.MustCompile(`^\$(\.|)\[(\d+|\*)\]`)
 				matches := reg.FindStringSubmatch(path)
 
@@ -439,14 +442,14 @@ func evalJSONDebugMemory(args []string, store *dstore.Store) []byte {
 	// get memory used by each path
 	sizeList := make([]interface{}, 0, len(results))
 	for _, result := range results {
-		size := calculateMemory(result)
+		size := calculateSizeInBytes(result)
 		sizeList = append(sizeList, size)
 	}
 
 	return clientio.Encode(sizeList, false)
 }
 
-func calculateMemory(value interface{}) int {
+func calculateSizeInBytes(value interface{}) int {
 	switch convertedValue := value.(type) {
 
 	case string:
@@ -459,7 +462,7 @@ func calculateMemory(value interface{}) int {
 	case map[string]interface{}:
 		size := int(unsafe.Sizeof(value))
 		for k, v := range convertedValue {
-			size += int(unsafe.Sizeof(k)) + len(k) + calculateMemory(v)
+			size += int(unsafe.Sizeof(k)) + len(k) + calculateSizeInBytes(v)
 		}
 		return size
 
@@ -467,7 +470,7 @@ func calculateMemory(value interface{}) int {
 	case []interface{}:
 		size := int(unsafe.Sizeof(value))
 		for _, elem := range convertedValue {
-			size += calculateMemory(elem)
+			size += calculateSizeInBytes(elem)
 		}
 		return size
 

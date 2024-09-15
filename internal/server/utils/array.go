@@ -1,6 +1,8 @@
 package utils
 
+import "reflect"
+
 func IsArray(data any) bool {
-	_, ok := data.([]any)
-	return ok
+	kind := reflect.TypeOf(data).Kind()
+	return kind == reflect.Array || kind == reflect.Slice
 }
