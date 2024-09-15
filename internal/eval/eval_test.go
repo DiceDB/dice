@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/bytedance/sonic"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/bytedance/sonic"
 
 	"github.com/dicedb/dice/internal/object"
 
@@ -61,6 +62,7 @@ func TestEval(t *testing.T) {
 	testEvalHGET(t, store)
 	testEvalPFMERGE(t, store)
 	testEvalJSONSTRLEN(t, store)
+	testEvalGETEX(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -115,6 +117,16 @@ func testEvalSET(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalSET, store)
+}
+
+func testEvalGETEX(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+
+		"key val pair and valid EX":   {input: []string{"KEY", "VAL", Ex, "2"}, output: clientio.RespOK},
+		"key val pair and invalid EX": {input: []string{"KEY", "VAL", Ex, "invalid_expiry_val"}, output: []byte("-ERR invalid expire time in 'getex' command\r\n")},
+	}
+
+	runEvalTests(t, tests, evalGETEX, store)
 }
 
 func testEvalMSET(t *testing.T, store *dstore.Store) {
