@@ -132,19 +132,19 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 		}
 
 		if err.Error() == "address already in use" {
-			slog.Info("Port already in use, trying port",
+			opt.Logger.Info("Port already in use, trying port",
 				slog.Int("port", config.DiceConfig.Server.Port),
 				slog.Int("new_port", config.DiceConfig.Server.Port+1),
 			)
 			config.DiceConfig.Server.Port++
 		} else {
-			slog.Error("Failed to bind port", slog.Any("error", err))
+			opt.Logger.Error("Failed to bind port", slog.Any("error", err))
 			return
 		}
 	}
 
 	if err != nil {
-		slog.Error("Failed to bind to a port after retries",
+		opt.Logger.Error("Failed to bind to a port after retries",
 			slog.Any("error", err),
 			slog.Int("retry_count", totalRetries),
 		)
@@ -171,7 +171,7 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 				cancelShardManager()
 				return
 			}
-			slog.Error("Test server encountered an error", slog.Any("error", err))
+			opt.Logger.Error("Test server encountered an error", slog.Any("error", err))
 			os.Exit(1)
 		}
 	}()
