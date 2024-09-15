@@ -850,7 +850,7 @@ func incrMultValue(value any, multiplier interface{}, operation jsonOperation) (
             case IncrBy:
                 newVal = oldVal + v
             case MultBy:
-                newVal = oldVal + v
+                newVal = oldVal * v
             }
             resultString := strconv.FormatInt(newVal, 10)
             return newVal, resultString, true
