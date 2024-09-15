@@ -42,6 +42,8 @@ var (
 	diceCommandsCount int
 )
 
+var COUNT string = "COUNT"
+
 const defaultRootPath = "$"
 const maxExDuration = 9223372036854775
 
@@ -274,7 +276,7 @@ func evalSCAN(args []string, store *dstore.Store) []byte {
 		switch strings.ToUpper(args[i]) {
 		case "MATCH":
 			pattern = args[i+1]
-		case "COUNT":
+		case COUNT:
 			count, err = strconv.Atoi(args[i+1])
 			if err != nil || count <= 0 {
 				return diceerrors.NewErrWithMessage("ERR invalid COUNT")
@@ -1669,7 +1671,7 @@ func evalCommand(args []string, store *dstore.Store) []byte {
 	}
 	subcommand := strings.ToUpper(args[0])
 	switch subcommand {
-	case "COUNT":
+	case COUNT:
 		return evalCommandCount()
 	case "GETKEYS":
 		return evalCommandGetKeys(args[1:])

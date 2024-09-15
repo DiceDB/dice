@@ -293,7 +293,6 @@ func (store *Store) ScanKeys(cursor, count int, pattern, keyType string) (newCur
 		if (pattern == "" || matchGlob(k, pattern)) &&
 			(keyType == "" || strings.EqualFold(getTypeAsString(v.TypeEncoding), keyType)) &&
 			!hasExpired(v, store) {
-
 			keys = append(keys, k)
 			processed++
 		}
