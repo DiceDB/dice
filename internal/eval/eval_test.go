@@ -515,7 +515,7 @@ func testEvalJSONOBJLEN(t *testing.T, store *dstore.Store) {
 
 
 func BenchmarkEvalJSONOBJLEN(b *testing.B) {
-	sizes := []int{0, 10, 100, 1000, 10000} // Various sizes of JSON objects
+	sizes := []int{0, 10, 100, 1000, 10000, 100000} // Various sizes of JSON objects
 	store := dstore.NewStore(nil)
 
 	for _, size := range sizes {
@@ -528,19 +528,21 @@ func BenchmarkEvalJSONOBJLEN(b *testing.B) {
 				jsonObj[fmt.Sprintf("key%d", i)] = fmt.Sprintf("value%d", i)
 			}
 
-			newObj := store.NewObj(jsonObj, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-			store.Put(key, newObj)
+			// Set the JSON object in the store
+			args := []string{key, "$", fmt.Sprintf("%v", jsonObj)}
+			evalJSONSET(args, store)
 
 			b.ResetTimer()
 			b.ReportAllocs()
 
 			// Benchmark the evalJSONOBJLEN function
 			for i := 0; i < b.N; i++ {
-				evalJSONOBJLEN([]string{key, "$"}, store)
+				_ = evalJSONOBJLEN([]string{key, "$"}, store)
 			}
 		})
 	}
 }
+
 
 
 
