@@ -759,7 +759,6 @@ func evalJSONSET(args []string, store *dstore.Store) []byte {
 // Returns encoded error if the JSON string is invalid
 // Returns response.RespOK if the JSON value is successfully stored
 func evalJSONINGEST(args []string, store *dstore.Store) []byte {
-
 	if len(args) < 2 {
 		return diceerrors.NewErrArity("JSON.INGEST")
 	}
