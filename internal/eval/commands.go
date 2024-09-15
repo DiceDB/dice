@@ -133,6 +133,7 @@ var (
         or nil, if the matching JSON value is not an array.`,
 		Eval:  evalJSONARRAPPEND,
 		Arity: -3,
+	}
 	jsonforgetCmdMeta = DiceCmdMeta{
 		Name: "JSON.FORGET",
 		Info: `JSON.FORGET key [path]

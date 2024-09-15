@@ -876,7 +876,7 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 				value := "{\"a\":2}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
             },
             input: []string{"array", "$.a", "6"},
@@ -888,7 +888,7 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 				value := "{\"a\":[1,2]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
             },
             input: []string{"array", "$.a", "6"},
@@ -900,7 +900,7 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 				value := "{\"a\":[1,2]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
             },
             input: []string{"array", "$.a", "6", "7", "8"},
@@ -912,7 +912,7 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 				value := "{\"b\":[\"b\",\"c\"]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
             },
             input: []string{"array", "$.b", `"d"`},
@@ -924,7 +924,7 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 				value := "{\"a\":[[1,2]]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
             },
             input: []string{"array", "$.a", "[1,2,3]"},
@@ -936,7 +936,7 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
                 value := "{\"a\":[{\"b\": 1}]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
             },
             input: []string{"array", "$.a", "{\"c\": 3}"},
@@ -948,7 +948,7 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
                 value := "{\"a\":[1,2],\"b\":{\"a\":[10]}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
             },
             input: []string{"array", "$..a", "6"},
@@ -960,7 +960,7 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
                 value := "[1,2,3]"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
             },
             input: []string{"array", "$", "6"},

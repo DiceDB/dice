@@ -803,7 +803,7 @@ func evalJSONARRAPPEND(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrWithMessage("ERR key does not exist")
 	}
 
-	errWithMessage := dstore.AssertTypeAndEncoding(obj.TypeEncoding, dstore.ObjTypeJSON, dstore.ObjEncodingJSON)
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
 	if errWithMessage != nil {
 		return errWithMessage
 	}
