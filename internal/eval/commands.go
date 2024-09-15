@@ -133,6 +133,25 @@ var (
         or nil, if the matching JSON value is not an array.`,
 		Eval:  evalJSONARRAPPEND,
 		Arity: -3,
+	jsonforgetCmdMeta = DiceCmdMeta{
+		Name: "JSON.FORGET",
+		Info: `JSON.FORGET key [path]
+		Returns an integer reply specified as the number of paths deleted (0 or more).
+		Returns RespZero if the key doesn't exist or key is expired.
+		Error reply: If the number of arguments is incorrect.`,
+		Eval:     evalJSONFORGET,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	jsonarrlenCmdMeta = DiceCmdMeta{
+		Name: "JSON.ARRLEN",
+		Info: `JSON.ARRLEN key [path]
+		Returns an array of integer replies.
+		Returns error response if the key doesn't exist or key is expired or the matching value is not an array.
+		Error reply: If the number of arguments is incorrect.`,
+		Eval:     evalJSONARRLEN,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	ttlCmdMeta = DiceCmdMeta{
 		Name: "TTL",
@@ -509,6 +528,15 @@ var (
 		Eval:  evalRPOP,
 		Arity: 2,
 	}
+	llenCmdMeta = DiceCmdMeta{
+		Name: "LLEN",
+		Info: `LLEN key
+		Returns the length of the list stored at key. If key does not exist,
+		it is interpreted as an empty list and 0 is returned.
+		An error is returned when the value stored at key is not a list.`,
+		Eval:  evalLLEN,
+		Arity: 1,
+	}
 	dbSizeCmdMeta = DiceCmdMeta{
 		Name:  "DBSIZE",
 		Info:  `DBSIZE Return the number of keys in the database`,
@@ -627,6 +655,35 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	pfMergeCmdMeta = DiceCmdMeta{
+		Name: "PFMERGE",
+		Info: `PFMERGE destkey [sourcekey [sourcekey ...]]
+		Merges one or more HyperLogLog values into a single key.`,
+		Eval:     evalPFMERGE,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	jsonStrlenCmdMeta = DiceCmdMeta{
+		Name: "JSON.STRLEN",
+		Info: `JSON.STRLEN key [path]
+		Report the length of the JSON String at path in key`,
+		Eval:     evalJSONSTRLEN,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	hlenCmdMeta = DiceCmdMeta{
+		Name: "HLEN",
+		Info: `HLEN key
+		Returns the number of fields contained in the hash stored at key.`,
+		Eval:  evalHLEN,
+		Arity: 2,
+	}
+	selectCmdMeta = DiceCmdMeta{
+		Name:  "SELECT",
+		Info:  `Select the logical database having the specified zero-based numeric index. New connections always use the database 0`,
+		Eval:  evalSELECT,
+		Arity: 1,
+	}
 )
 
 func init() {
@@ -641,6 +698,8 @@ func init() {
 	DiceCmds["JSON.CLEAR"] = jsonclearCmdMeta
 	DiceCmds["JSON.DEL"] = jsondelCmdMeta
 	DiceCmds["JSON.ARRAPPEND"] = jsonarrappendCmdMeta
+	DiceCmds["JSON.FORGET"] = jsonforgetCmdMeta
+	DiceCmds["JSON.ARRLEN"] = jsonarrlenCmdMeta
 	DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
 	DiceCmds["EXPIRE"] = expireCmdMeta
@@ -688,6 +747,7 @@ func init() {
 	DiceCmds["RPOP"] = rpopCmdMeta
 	DiceCmds["RPUSH"] = rpushCmdMeta
 	DiceCmds["LPOP"] = lpopCmdMeta
+	DiceCmds["LLEN"] = llenCmdMeta
 	DiceCmds["DBSIZE"] = dbSizeCmdMeta
 	DiceCmds["GETSET"] = getSetCmdMeta
 	DiceCmds["FLUSHDB"] = flushdbCmdMeta
@@ -702,6 +762,10 @@ func init() {
 	DiceCmds["PFADD"] = pfAddCmdMeta
 	DiceCmds["PFCOUNT"] = pfCountCmdMeta
 	DiceCmds["HGET"] = hgetCmdMeta
+	DiceCmds["PFMERGE"] = pfMergeCmdMeta
+	DiceCmds["JSON.STRLEN"] = jsonStrlenCmdMeta
+	DiceCmds["HLEN"] = hlenCmdMeta
+	DiceCmds["SELECT"] = selectCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

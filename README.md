@@ -81,6 +81,45 @@ $ cd dice
 $ air
 ```
 
+### Local Setup with Custom Config
+
+By default, DiceDB will look for the configuration file at `/etc/dice/config.toml`. (Linux, Darwin, and WSL)
+
+```sh
+$ # set up configuration file # (optional but recommended)
+$ sudo mkdir -p /etc/dice
+$ sudo chown root:$USER /etc/dice
+$ sudo chmod 775 /etc/dice # or 777 if you are the only user
+$ git clone https://github.com/DiceDB/dice.git
+$ cd dice
+$ go run main.go -init-config
+
+```
+
+#### For Windows Users:
+If you're using Windows, it is recommended to use Windows Subsystem for Linux (WSL) or WSL 2 to run the above commands seamlessly in a Linux-like environment. 
+
+Alternatively, you can:
+
+Create a directory at `C:\ProgramData\dice` and run the following command to generate the configuration file:
+```bash
+go run main.go -init-config
+```
+For a smoother experience, we highly recommend using WSL.
+
+#### Additional Configuration Options:
+
+If you'd like to use a different location, you can specify a custom configuration file path with the `-c flag`:
+
+```bash
+go run main.go -c /path/to/config.toml
+```
+If you'd like to output the configuration file to a specific location, you can specify a custom output path with the `-o flag`:
+
+```bash
+go run main.go -o /path/of/output/dir
+```
+
 ## Setting up CLI
 
 The best way to connect to DiceDB is using DiceDB CLI and you can install it by running the following command.

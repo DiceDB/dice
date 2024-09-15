@@ -3,7 +3,7 @@ package eval
 import (
 	"strconv"
 
-	dstore "github.com/dicedb/dice/internal/store"
+	dstore "github.com/dicedb/dice/internal/object"
 )
 
 // Similar to
