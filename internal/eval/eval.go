@@ -434,7 +434,6 @@ func evalJSONDebugMemory(args []string, store *dstore.Store) []byte {
 	// handle nested paths
 	var results []any = []any{}
 	if path != defaultRootPath {
-
 		// check if path is valid
 		expr, err := jp.ParseString(path)
 		if err != nil {
@@ -445,7 +444,6 @@ func evalJSONDebugMemory(args []string, store *dstore.Store) []byte {
 
 		// handle error cases
 		if len(results) == 0 {
-
 			// this block will return '[]' for out of bound index for an array json type
 			// this will maintain consistency with redis
 			isArray := utils.IsArray(obj.Value)
@@ -456,13 +454,12 @@ func evalJSONDebugMemory(args []string, store *dstore.Store) []byte {
 				}
 
 				// extract index from arg
-				reg := regexp.MustCompile(`^\$(\.|)\[(\d+|\*)\]`)
+				reg := regexp.MustCompile(`^\$\.?\[(\d+|\*)\]`)
 				matches := reg.FindStringSubmatch(path)
 
-				if len(matches) == 3 {
-
+				if len(matches) == 2 {
 					// convert index to int
-					index, err := strconv.Atoi(matches[2])
+					index, err := strconv.Atoi(matches[1])
 					if err != nil {
 						return diceerrors.NewErrWithMessage("unable to extract index")
 					}
@@ -491,7 +488,6 @@ func evalJSONDebugMemory(args []string, store *dstore.Store) []byte {
 
 func calculateSizeInBytes(value interface{}) int {
 	switch convertedValue := value.(type) {
-
 	case string:
 		return int(unsafe.Sizeof(value)) + len(convertedValue)
 
