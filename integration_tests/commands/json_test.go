@@ -687,3 +687,60 @@ func TestJsonMGET(t *testing.T) {
 		})
 	}
 }
+
+func TestJsonARRAPPEND(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+	a := `[1,2]`
+    b := `{"name":"jerry","partner":{"name":"tom","score":[10]},"partner2":{"score":[10,20]}}`
+	c := `{"name":["jerry"],"partner":{"name":"tom","score":[10]},"partner2":{"name":12,"score":"rust"}}`
+
+	testCases := []struct {
+		name        string
+		commands    []string
+		expected    []interface{}
+		assert_type []string
+	}{
+
+		{
+			name:        "JSON.ARRAPPEND with root path",
+			commands:    []string{"json.set a $ " + a, `json.arrappend a $ 3`},
+			expected:    []interface{}{"OK", []interface{}{int64(3)}},
+			assert_type: []string{"equal", "deep_equal"},
+		},
+		{
+			name:        "JSON.ARRAPPEND nested",
+			commands:    []string{"JSON.SET doc $ " + b, `JSON.ARRAPPEND doc $..score 10`},
+			expected:    []interface{}{"OK", []interface{}{int64(2), int64(3)}},
+			assert_type: []string{"equal", "deep_equal"},
+		},
+		{
+			name:        "JSON.ARRAPPEND nested with nil",
+			commands:    []string{"JSON.SET doc $ " + c,`JSON.ARRAPPEND doc $..score 10`},
+			expected:    []interface{}{"OK", []interface{}{int64(2), "(nil)"}},
+			assert_type: []string{"equal", "deep_equal"},
+		},
+		{
+			name:        "JSON.ARRAPPEND with different datatypes",
+			commands:    []string{"JSON.SET doc $ " + c, "JSON.ARRAPPEND doc $.name 1"},
+			expected:    []interface{}{"OK", []interface{}{int64(2)}},
+			assert_type: []string{"equal", "deep_equal"},
+		},
+	}
+	for _, tcase := range testCases {
+		FireCommand(conn, "DEL a")
+		FireCommand(conn, "DEL doc")
+		t.Run(tcase.name, func(t *testing.T) {
+			for i := 0; i < len(tcase.commands); i++ {
+				cmd := tcase.commands[i]
+				out := tcase.expected[i]
+				result := FireCommand(conn, cmd)
+				if tcase.assert_type[i] == "equal" {
+					assert.Equal(t, out, result)
+				} else if tcase.assert_type[i] == "deep_equal" {
+					assert.Assert(t, arraysArePermutations(out.([]interface{}), result.([]interface{})))
+				}
+			}
+		})
+	}
+}

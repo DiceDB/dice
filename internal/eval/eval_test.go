@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+
 	"strconv"
 	"strings"
 	"testing"
@@ -41,6 +42,7 @@ func TestEval(t *testing.T) {
 	testEvalHELLO(t, store)
 	testEvalSET(t, store)
 	testEvalGET(t, store)
+	testEvalDebug(t, store)
 	testEvalJSONARRLEN(t, store)
 	testEvalJSONDEL(t, store)
 	testEvalJSONFORGET(t, store)
@@ -48,6 +50,8 @@ func TestEval(t *testing.T) {
 	testEvalJSONTYPE(t, store)
 	testEvalJSONGET(t, store)
 	testEvalJSONSET(t, store)
+	testEvalJSONTOGGLE(t,store)
+	testEvalJSONARRAPPEND(t, store)
 	testEvalTTL(t, store)
 	testEvalDel(t, store)
 	testEvalPersist(t, store)
@@ -65,6 +69,7 @@ func TestEval(t *testing.T) {
 	testEvalHLEN(t, store)
 	testEvalSELECT(t, store)
 	testEvalLLEN(t, store)
+	testEvalGETEX(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -120,6 +125,37 @@ func testEvalSET(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalSET, store)
+}
+
+func testEvalGETEX(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+
+		"key val pair and valid EX": {
+			setup: func() {
+				key := "foo"
+				value := "bar"
+				obj := &object.Obj{
+					Value: value,
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"foo", Ex, "10"},
+			output: clientio.Encode("bar", false),
+		},
+		"key val pair and invalid EX": {
+			setup: func() {
+				key := "foo"
+				value := "bar"
+				obj := &object.Obj{
+					Value: value,
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"foo", Ex, "10000000000000000"},
+			output: []byte("-ERR invalid expire time in 'getex' command\r\n")},
+	}
+
+	runEvalTests(t, tests, evalGETEX, store)
 }
 
 func testEvalMSET(t *testing.T, store *dstore.Store) {
@@ -830,6 +866,7 @@ func testEvalJSONGET(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalJSONGET, store)
 }
 
+
 func testEvalJSONSET(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
@@ -866,6 +903,211 @@ func testEvalJSONSET(t *testing.T, store *dstore.Store) {
 
 	runEvalTests(t, tests, evalJSONSET, store)
 }
+
+func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
+    tests := map[string]evalTestCase{
+        "arr append to non array fields": {
+            setup: func() {
+				key := "array"
+				value := "{\"a\":2}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$.a", "6"},
+            output: []byte("*1\r\n$-1\r\n"),
+        },
+        "arr append single element to an array field": {
+            setup: func() {
+				key := "array"
+				value := "{\"a\":[1,2]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$.a", "6"},
+            output: []byte("*1\r\n:3\r\n"),
+        },
+        "arr append multiple elements to an array field": {
+            setup: func() {
+				key := "array"
+				value := "{\"a\":[1,2]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$.a", "6", "7", "8"},
+            output: []byte("*1\r\n:5\r\n"),
+        },
+        "arr append string value": {
+            setup: func() {
+				key := "array"
+				value := "{\"b\":[\"b\",\"c\"]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$.b", `"d"`},
+            output: []byte("*1\r\n:3\r\n"),
+        },
+        "arr append nested array value": {
+            setup: func() {
+				key := "array"
+				value := "{\"a\":[[1,2]]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$.a", "[1,2,3]"},
+            output: []byte("*1\r\n:2\r\n"),
+        },
+        "arr append with json value": {
+            setup: func() {
+				key := "array"
+                value := "{\"a\":[{\"b\": 1}]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$.a", "{\"c\": 3}"},
+            output: []byte("*1\r\n:2\r\n"),
+        },
+        "arr append to append on multiple fields": {
+            setup: func() {
+				key := "array"
+                value := "{\"a\":[1,2],\"b\":{\"a\":[10]}}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$..a", "6"},
+            output: []byte("*2\r\n:2\r\n:3\r\n"),
+        },
+        "arr append to append on root node": {
+            setup: func() {
+				key := "array"
+                value := "[1,2,3]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$", "6"},
+            output: []byte("*1\r\n:4\r\n"),
+        },
+        "arr append to an array with different type": {
+            setup: func() {
+				key := "array"
+				value := "{\"a\":[1,2]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$.a", `"blue"`},
+            output: []byte("*1\r\n:3\r\n"),
+        },
+    }
+    runEvalTests(t, tests, evalJSONARRAPPEND, store)
+}
+
+func testEvalJSONTOGGLE(t *testing.T, store *dstore.Store) {
+    tests := map[string]evalTestCase{
+        "nil value": {
+            setup: func() {},
+            input: nil,
+            output: []byte("-ERR wrong number of arguments for 'json.toggle' command\r\n"),
+        },
+        "empty array": {
+            setup: func() {},
+            input: []string{},
+            output: []byte("-ERR wrong number of arguments for 'json.toggle' command\r\n"),
+        },
+        "key does not exist": {
+            setup: func() {},
+            input: []string{"NONEXISTENT_KEY", ".active"},
+            output: []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
+        },
+		"key exists, toggling boolean true to false": {
+            setup: func() {
+                key := "EXISTING_KEY"
+                value := `{"active":true}`
+                var rootData interface{}
+                err := sonic.Unmarshal([]byte(value), &rootData)
+                if err != nil {
+                    fmt.Printf("Debug: Error unmarshaling JSON: %v\n", err)
+                }
+                obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+                store.Put(key, obj)
+
+            },
+            input:  []string{"EXISTING_KEY", ".active"},
+            output: clientio.Encode([]interface{}{0}, false),
+        },
+        "key exists, toggling boolean false to true": {
+            setup: func() {
+                key := "EXISTING_KEY"
+                value := `{"active":false}`
+                var rootData interface{}
+                err := sonic.Unmarshal([]byte(value), &rootData)
+                if err != nil {
+                    fmt.Printf("Debug: Error unmarshaling JSON: %v\n", err)
+                }
+                obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+                store.Put(key, obj)
+            },
+            input:  []string{"EXISTING_KEY", ".active"},
+            output: clientio.Encode([]interface{}{1}, false),
+        },
+        "key exists but expired": {
+            setup: func() {
+                key := "EXISTING_KEY"
+                value := "{\"active\":true}"
+                obj := &object.Obj{
+                    Value:          value,
+                    LastAccessedAt: uint32(time.Now().Unix()),
+                }
+                store.Put(key, obj)
+                store.SetExpiry(obj, int64(-2*time.Millisecond))
+            },
+            input: []string{"EXISTING_KEY", ".active"},
+            output: []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
+        },
+		"nested JSON structure with multiple booleans": {
+            setup: func() {
+                key := "NESTED_KEY"
+                value := `{"isSimple":true,"nested":{"isSimple":false}}`
+                var rootData interface{}
+                _ = sonic.Unmarshal([]byte(value), &rootData)
+                obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+                store.Put(key, obj)
+            },
+            input:  []string{"NESTED_KEY", "$..isSimple"},
+            output: clientio.Encode([]interface{}{0, 1}, false),
+        },
+		"deeply nested JSON structure with multiple matching fields": {
+    		setup: func() {
+        		key := "DEEP_NESTED_KEY"
+        		value := `{"field": true, "nested": {"field": false, "nested": {"field": true}}}`
+        		var rootData interface{}
+        		_= sonic.Unmarshal([]byte(value), &rootData)
+        		obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+        		store.Put(key, obj)
+    		},
+    		input:  []string{"DEEP_NESTED_KEY", "$..field"},
+    		output: clientio.Encode([]interface{}{0, 1, 0}, false),
+		},
+    }
+    runEvalTests(t, tests, evalJSONTOGGLE, store)
+}
+
 
 func testEvalTTL(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
@@ -1349,6 +1591,7 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalJSONSTRLEN, store)
 }
 
+
 func testEvalLLEN(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
@@ -1401,6 +1644,7 @@ func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]s
 				tc.validator(output)
 			} else {
 				assert.Equal(t, string(tc.output), string(output))
+
 			}
 		})
 	}
@@ -1505,6 +1749,250 @@ func testEvalHSET(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalHSET, store)
+}
+
+func testEvalDebug(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+
+		// invalid subcommand tests
+		"no subcommand passed": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'json.debug' command\r\n"),
+		},
+
+		"wrong subcommand passed": {
+			setup:  func() {},
+			input:  []string{"WRONG_SUBCOMMAND"},
+			output: []byte("-ERR unknown subcommand - try `JSON.DEBUG HELP`\r\n"),
+		},
+
+		// help subcommand tests
+		"help no args": {
+			setup:  func() {},
+			input:  []string{"HELP"},
+			output: []byte("*2\r\n$42\r\nMEMORY <key> [path] - reports memory usage\r\n$34\r\nHELP                - this message\r\n"),
+		},
+
+		"help with args": {
+			setup:  func() {},
+			input:  []string{"HELP", "EXTRA_ARG"},
+			output: []byte("*2\r\n$42\r\nMEMORY <key> [path] - reports memory usage\r\n$34\r\nHELP                - this message\r\n"),
+		},
+
+		// memory subcommand tests
+		"memory without args": {
+			setup:  func() {},
+			input:  []string{"MEMORY"},
+			output: []byte("-ERR wrong number of arguments for 'json.debug' command\r\n"),
+		},
+
+		"memory nonexistant key": {
+			setup:  func() {},
+			input:  []string{"MEMORY", "NONEXISTANT_KEY"},
+			output: clientio.RespZero,
+		},
+
+		// memory subcommand tests for existing key
+		"no path": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"a\": 1}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MEMORY", "EXISTING_KEY"},
+			output: []byte(":89\r\n"),
+		},
+
+		"root path": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"a\": 1}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MEMORY", "EXISTING_KEY", "$"},
+			output: []byte(":89\r\n"),
+		},
+
+		"invalid path": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"a\": 1}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MEMORY", "EXISTING_KEY", "INVALID_PATH"},
+			output: []byte("-ERR Path '$.INVALID_PATH' does not exist\r\n"),
+		},
+
+		"valid path": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"a\": 1, \"b\": 2}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MEMORY", "EXISTING_KEY", "$.a"},
+			output: []byte("*1\r\n:16\r\n"),
+		},
+
+		// only the first path is picked whether it's valid or not for an object json
+		// memory can be fetched only for one path in a command for an object json
+		"multiple paths for object json": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"a\": 1, \"b\": \"dice\"}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MEMORY", "EXISTING_KEY", "$.a", "$.b"},
+			output: []byte("*1\r\n:16\r\n"),
+		},
+
+		"single index path for array json": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "[\"roll\", \"the\", \"dices\"]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MEMORY", "EXISTING_KEY", "$[1]"},
+			output: []byte("*1\r\n:19\r\n"),
+		},
+
+		"multiple index paths for array json": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "[\"roll\", \"the\", \"dices\"]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MEMORY", "EXISTING_KEY", "$[1,2]"},
+			output: []byte("*2\r\n:19\r\n:21\r\n"),
+		},
+
+		"index path out of range for array json": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "[\"roll\", \"the\", \"dices\"]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MEMORY", "EXISTING_KEY", "$[4]"},
+			output: clientio.RespEmptyArray,
+		},
+
+		"multiple valid and invalid index paths": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "[\"roll\", \"the\", \"dices\"]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MEMORY", "EXISTING_KEY", "$[1,2,4]"},
+			output: []byte("*2\r\n:19\r\n:21\r\n"),
+		},
+
+		"negative index path": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "[\"roll\", \"the\", \"dices\"]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MEMORY", "EXISTING_KEY", "$[-1]"},
+			output: []byte("*1\r\n:21\r\n"),
+		},
+
+		"multiple negative indexe paths": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "[\"roll\", \"the\", \"dices\"]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MEMORY", "EXISTING_KEY", "$[-1,-2]"},
+			output: []byte("*2\r\n:21\r\n:19\r\n"),
+		},
+
+		"negative index path out of bound": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "[\"roll\", \"the\", \"dices\"]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MEMORY", "EXISTING_KEY", "$[-4]"},
+			output: []byte("-ERR Path '$.$[-4]' does not exist\r\n"),
+		},
+
+		"all paths with asterix for array json": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "[\"roll\", \"the\", \"dices\"]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MEMORY", "EXISTING_KEY", "$[*]"},
+			output: []byte("*3\r\n:20\r\n:19\r\n:21\r\n"),
+		},
+
+		"all paths with semicolon for array json": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "[\"roll\", \"the\", \"dices\"]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MEMORY", "EXISTING_KEY", "$[:]"},
+			output: []byte("*3\r\n:20\r\n:19\r\n:21\r\n"),
+		},
+
+		"array json with mixed types": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "[2, 3.5, true, null, \"dice\", {}, [], {\"a\": 1, \"b\": 2}, [7, 8, 0]]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MEMORY", "EXISTING_KEY", "$[:]"},
+			output: []byte("*9\r\n:16\r\n:16\r\n:16\r\n:16\r\n:20\r\n:16\r\n:16\r\n:82\r\n:64\r\n"),
+		},
+	}
+
+	runEvalTests(t, tests, evalJSONDebug, store)
 }
 
 func testEvalHLEN(t *testing.T, store *dstore.Store) {
