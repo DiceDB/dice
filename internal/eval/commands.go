@@ -150,9 +150,20 @@ var (
 	jsonnummultbyCmdMeta = DiceCmdMeta{
 		Name: "JSON.NUMMULTBY",
 		Info: `JSON.NUMMULTBY key path value
-        Multiply the number value stored at the specified path by a value.`,
+    Multiply the number value stored at the specified path by a value.`,
 		Eval:     evalJSONNUMMULTBY,
 		Arity:    3,
+    KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+
+	jsondebugCmdMeta = DiceCmdMeta{
+		Name: "JSON.DEBUG",
+		Info: `evaluates JSON.DEBUG subcommand based on subcommand
+		JSON.DEBUG MEMORY returns memory usage by key in bytes
+		JSON.DEBUG HELP displays help message
+		`,
+		Eval:     evalJSONDebug,
+		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	ttlCmdMeta = DiceCmdMeta{
@@ -702,6 +713,7 @@ func init() {
 	DiceCmds["JSON.FORGET"] = jsonforgetCmdMeta
 	DiceCmds["JSON.ARRLEN"] = jsonarrlenCmdMeta
 	DiceCmds["JSON.NUMMULTBY"] = jsonnummultbyCmdMeta
+	DiceCmds["JSON.DEBUG"] = jsondebugCmdMeta
 	DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
 	DiceCmds["EXPIRE"] = expireCmdMeta

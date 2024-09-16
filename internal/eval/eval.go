@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
+	"unsafe"
 
 	"github.com/dicedb/dice/internal/object"
 
@@ -364,6 +366,160 @@ func evalGETDEL(args []string, store *dstore.Store) []byte {
 
 	default:
 		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+	}
+}
+
+// evalJSONDEBUG reports value's memmory usage in bytes
+// Returns arity error if subcommand is missing
+// Supports only two subcommand as of now - HELP and MEMORY
+func evalJSONDebug(args []string, store *dstore.Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("JSON.DEBUG")
+	}
+	subcommand := strings.ToUpper(args[0])
+	switch subcommand {
+	case Help:
+		return evalJSONDebugHelp()
+	case Memory:
+		return evalJSONDebugMemory(args[1:], store)
+	default:
+		return diceerrors.NewErrWithFormattedMessage("unknown subcommand - try `JSON.DEBUG HELP`")
+	}
+}
+
+// evalJSONDebugHelp implements HELP subcommand for evalJSONDebug
+// It returns help text
+// It ignore any other args
+func evalJSONDebugHelp() []byte {
+	memoryText := "MEMORY <key> [path] - reports memory usage"
+	helpText := "HELP                - this message"
+	message := []string{memoryText, helpText}
+	return clientio.Encode(message, false)
+}
+
+// evalJSONDebugMemory implements MEMORY subcommand for evalJSONDebug
+// It returns value's memory usage in bytes
+func evalJSONDebugMemory(args []string, store *dstore.Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("json.debug")
+	}
+	key := args[0]
+
+	// default path is root if not specified
+	path := defaultRootPath
+	if len(args) > 1 {
+		path = args[1] // any more args are ignored for this command altogether
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return clientio.RespZero
+	}
+
+	// check if the object is a valid JSON
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
+	}
+
+	// handle root path
+	if path == defaultRootPath {
+		jsonData := obj.Value
+
+		// memory used by json data
+		size := calculateSizeInBytes(jsonData)
+		if size == -1 {
+			return diceerrors.NewErrWithMessage("unknown type")
+		}
+
+		// add memory used by storage object
+		size += int(unsafe.Sizeof(obj)) + calculateSizeInBytes(obj.LastAccessedAt) + calculateSizeInBytes(obj.TypeEncoding)
+
+		return clientio.Encode(size, false)
+	}
+
+	// handle nested paths
+	var results []any = []any{}
+	if path != defaultRootPath {
+		// check if path is valid
+		expr, err := jp.ParseString(path)
+		if err != nil {
+			return diceerrors.NewErrWithMessage("invalid JSON path")
+		}
+
+		results = expr.Get(obj.Value)
+
+		// handle error cases
+		if len(results) == 0 {
+			// this block will return '[]' for out of bound index for an array json type
+			// this will maintain consistency with redis
+			isArray := utils.IsArray(obj.Value)
+			if isArray {
+				arr, ok := obj.Value.([]any)
+				if !ok {
+					return diceerrors.NewErrWithMessage("invalid array json")
+				}
+
+				// extract index from arg
+				reg := regexp.MustCompile(`^\$\.?\[(\d+|\*)\]`)
+				matches := reg.FindStringSubmatch(path)
+
+				if len(matches) == 2 {
+					// convert index to int
+					index, err := strconv.Atoi(matches[1])
+					if err != nil {
+						return diceerrors.NewErrWithMessage("unable to extract index")
+					}
+
+					// if index is out of bound return empty array
+					if index >= len(arr) {
+						return clientio.RespEmptyArray
+					}
+				}
+			}
+
+			// for rest json types, throw error
+			return diceerrors.NewErrWithFormattedMessage("Path '$.%v' does not exist", path)
+		}
+	}
+
+	// get memory used by each path
+	sizeList := make([]interface{}, 0, len(results))
+	for _, result := range results {
+		size := calculateSizeInBytes(result)
+		sizeList = append(sizeList, size)
+	}
+
+	return clientio.Encode(sizeList, false)
+}
+
+func calculateSizeInBytes(value interface{}) int {
+	switch convertedValue := value.(type) {
+	case string:
+		return int(unsafe.Sizeof(value)) + len(convertedValue)
+
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool, nil:
+		return int(unsafe.Sizeof(value))
+
+	// object
+	case map[string]interface{}:
+		size := int(unsafe.Sizeof(value))
+		for k, v := range convertedValue {
+			size += int(unsafe.Sizeof(k)) + len(k) + calculateSizeInBytes(v)
+		}
+		return size
+
+	// array
+	case []interface{}:
+		size := int(unsafe.Sizeof(value))
+		for _, elem := range convertedValue {
+			size += calculateSizeInBytes(elem)
+		}
+		return size
+
+	// unknown type
+	default:
+		return -1
 	}
 }
 
@@ -2078,7 +2234,7 @@ func evalGETEX(args []string, store *dstore.Store) []byte {
 			if err != nil {
 				return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
 			}
-			if exDuration <= 0 {
+			if exDuration <= 0 || exDuration > maxExDuration {
 				return diceerrors.NewErrExpireTime("GETEX")
 			}
 
