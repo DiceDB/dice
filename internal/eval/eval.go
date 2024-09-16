@@ -791,19 +791,22 @@ func evalJSONSET(args []string, store *dstore.Store) []byte {
 }
 
 // Parses and returns the input string as an int64 or float64
-func parseFloatInt(input string) (interface{}, error) {
+func parseFloatInt(input string) (result interface{}, err error) {
     // Try to parse as an integer
-    if intValue, err := strconv.ParseInt(input, 10, 64); err == nil {
-        return intValue, nil
+    if intValue, parseErr := strconv.ParseInt(input, 10, 64); parseErr == nil {
+        result = intValue
+		return
     }
 
     // Try to parse as a float
-    if floatValue, err := strconv.ParseFloat(input, 64); err == nil {
-        return floatValue, nil
+    if floatValue, parseErr := strconv.ParseFloat(input, 64); parseErr == nil {
+        result = floatValue
+		return
     }
 
     // If neither parsing succeeds, return an error
-    return nil, errors.New("invalid input: not a valid int or float")
+    err = errors.New("invalid input: not a valid int or float")
+	return
 }
 
 // Returns the new value after incrementing or multiplying the existing value
