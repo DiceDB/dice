@@ -147,6 +147,7 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+
 	jsonobjlenCmdMeta = DiceCmdMeta{
 		Name: "JSON.OBJLEN",
 		Info: `JSON.OBJLEN key [path]
@@ -155,6 +156,16 @@ var (
 		Error reply: If the number of arguments is incorrect.`,
 		Eval: evalJSONOBJLEN,
 		Arity: -2,
+    KeySpecs: KeySpecs{BeginIndex: 1},
+  }
+	jsondebugCmdMeta = DiceCmdMeta{
+		Name: "JSON.DEBUG",
+		Info: `evaluates JSON.DEBUG subcommand based on subcommand
+		JSON.DEBUG MEMORY returns memory usage by key in bytes
+		JSON.DEBUG HELP displays help message
+		`,
+		Eval:     evalJSONDebug,
+		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	ttlCmdMeta = DiceCmdMeta{
@@ -704,6 +715,7 @@ func init() {
 	DiceCmds["JSON.FORGET"] = jsonforgetCmdMeta
 	DiceCmds["JSON.ARRLEN"] = jsonarrlenCmdMeta
 	DiceCmds["JSON.OBJLEN"] = jsonobjlenCmdMeta
+	DiceCmds["JSON.DEBUG"] = jsondebugCmdMeta
 	DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
 	DiceCmds["EXPIRE"] = expireCmdMeta
