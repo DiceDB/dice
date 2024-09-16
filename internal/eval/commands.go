@@ -126,7 +126,14 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
-
+	jsonarrappendCmdMeta = DiceCmdMeta{
+		Name: "JSON.ARRAPPEND",
+		Info: `JSON.ARRAPPEND key [path] value [value ...]
+        Returns an array of integer replies for each path, the array's new size,
+        or nil, if the matching JSON value is not an array.`,
+		Eval:  evalJSONARRAPPEND,
+		Arity: -3,
+	}
 	jsonforgetCmdMeta = DiceCmdMeta{
 		Name: "JSON.FORGET",
 		Info: `JSON.FORGET key [path]
@@ -701,6 +708,7 @@ func init() {
 	DiceCmds["JSON.TYPE"] = jsontypeCmdMeta
 	DiceCmds["JSON.CLEAR"] = jsonclearCmdMeta
 	DiceCmds["JSON.DEL"] = jsondelCmdMeta
+	DiceCmds["JSON.ARRAPPEND"] = jsonarrappendCmdMeta
 	DiceCmds["JSON.FORGET"] = jsonforgetCmdMeta
 	DiceCmds["JSON.ARRLEN"] = jsonarrlenCmdMeta
 	DiceCmds["JSON.DEBUG"] = jsondebugCmdMeta

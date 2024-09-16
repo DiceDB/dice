@@ -49,6 +49,7 @@ func TestEval(t *testing.T) {
 	testEvalJSONTYPE(t, store)
 	testEvalJSONGET(t, store)
 	testEvalJSONSET(t, store)
+	testEvalJSONARRAPPEND(t, store)
 	testEvalTTL(t, store)
 	testEvalDel(t, store)
 	testEvalPersist(t, store)
@@ -898,6 +899,120 @@ func testEvalJSONSET(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalJSONSET, store)
+}
+
+func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
+    tests := map[string]evalTestCase{
+        "arr append to non array fields": {
+            setup: func() {
+				key := "array"
+				value := "{\"a\":2}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$.a", "6"},
+            output: []byte("*1\r\n$-1\r\n"),
+        },
+        "arr append single element to an array field": {
+            setup: func() {
+				key := "array"
+				value := "{\"a\":[1,2]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$.a", "6"},
+            output: []byte("*1\r\n:3\r\n"),
+        },
+        "arr append multiple elements to an array field": {
+            setup: func() {
+				key := "array"
+				value := "{\"a\":[1,2]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$.a", "6", "7", "8"},
+            output: []byte("*1\r\n:5\r\n"),
+        },
+        "arr append string value": {
+            setup: func() {
+				key := "array"
+				value := "{\"b\":[\"b\",\"c\"]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$.b", `"d"`},
+            output: []byte("*1\r\n:3\r\n"),
+        },
+        "arr append nested array value": {
+            setup: func() {
+				key := "array"
+				value := "{\"a\":[[1,2]]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$.a", "[1,2,3]"},
+            output: []byte("*1\r\n:2\r\n"),
+        },
+        "arr append with json value": {
+            setup: func() {
+				key := "array"
+                value := "{\"a\":[{\"b\": 1}]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$.a", "{\"c\": 3}"},
+            output: []byte("*1\r\n:2\r\n"),
+        },
+        "arr append to append on multiple fields": {
+            setup: func() {
+				key := "array"
+                value := "{\"a\":[1,2],\"b\":{\"a\":[10]}}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$..a", "6"},
+            output: []byte("*2\r\n:2\r\n:3\r\n"),
+        },
+        "arr append to append on root node": {
+            setup: func() {
+				key := "array"
+                value := "[1,2,3]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$", "6"},
+            output: []byte("*1\r\n:4\r\n"),
+        },
+        "arr append to an array with different type": {
+            setup: func() {
+				key := "array"
+				value := "{\"a\":[1,2]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$.a", `"blue"`},
+            output: []byte("*1\r\n:3\r\n"),
+        },
+    }
+    runEvalTests(t, tests, evalJSONARRAPPEND, store)
 }
 
 func testEvalTTL(t *testing.T, store *dstore.Store) {
