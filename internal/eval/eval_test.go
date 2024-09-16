@@ -13,7 +13,6 @@ import (
 	"github.com/bytedance/sonic"
 
 	"github.com/axiomhq/hyperloglog"
-	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/internal/clientio"
 	dstore "github.com/dicedb/dice/internal/store"
 	"gotest.tools/v3/assert"
@@ -1438,20 +1437,24 @@ func BenchmarkEvalPFCOUNT(b *testing.B) {
         store.Put(key, obj)
     }
 
-    // Create small HLLs (2 items each)
-    createAndInsertHLL("SMALL1", []string{"Item1", "Item2"})
-    createAndInsertHLL("SMALL2", []string{"Item3", "Item4"})
+    // Create small HLLs (10000 items each)
+	smallItems := make([]string, 10000)
+    for i := 0; i < 100; i++ {
+        smallItems[i] = fmt.Sprintf("SmallItem%d", i)
+    }
+    createAndInsertHLL("SMALL1", smallItems)
+    createAndInsertHLL("SMALL2", smallItems)
 
-    // Create medium HLLs (100 items each)
-    mediumItems := make([]string, 100)
+    // Create medium HLLs (1000000 items each)
+    mediumItems := make([]string, 1000000)
     for i := 0; i < 100; i++ {
         mediumItems[i] = fmt.Sprintf("MediumItem%d", i)
     }
     createAndInsertHLL("MEDIUM1", mediumItems)
     createAndInsertHLL("MEDIUM2", mediumItems)
 
-    // Create large HLLs (10000 items each)
-    largeItems := make([]string, 10000)
+    // Create large HLLs (1000000000 items each)
+    largeItems := make([]string, 1000000000)
     for i := 0; i < 10000; i++ {
         largeItems[i] = fmt.Sprintf("LargeItem%d", i)
     }
@@ -1486,6 +1489,7 @@ func BenchmarkEvalPFCOUNT(b *testing.B) {
         })
     }
 }
+
 func testEvalHLEN(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"wrong number of args": {
@@ -1557,45 +1561,4 @@ func testEvalSELECT(t *testing.T, store *dstore.Store) {
 		},
 	}
 	runEvalTests(t, tests, evalSELECT, store)
-}
-
-func BenchmarkEvalPFCOUNT(b *testing.B){
-	store := *dstore.NewStore(nil)
-
-	hll1 := hyperloglog.New()
-	hll1.Insert([]byte("Item1"))
-	hll1.Insert([]byte("Item2"))
-	obj1 := &object.Obj{
-		Value:          hll1,
-		LastAccessedAt: uint32(time.Now().Unix()),
-	}
-	store.Put("KEY1", obj1)
-
-	hll2 := hyperloglog.New()
-	hll2.Insert([]byte("Item3"))
-	hll2.Insert([]byte("Item4"))
-	obj2 := &object.Obj{
-		Value:          hll2,
-		LastAccessedAt: uint32(time.Now().Unix()),
-	}
-	store.Put("KEY2", obj2)
-
-	tests := []struct {
-		name string
-		args []string
-	}{
-		{"SingleKey", []string{"key1"}},
-		{"TwoKeys", []string{"key1", "key2"}},
-		{"NonExistentKey", []string{"key1", "key2", "nonexistent"}},
-	}
-
-	b.ResetTimer()
-
-	for _, tt := range tests{
-		b.Run(tt.name, func(b *testing.B) {
-			for i := 0; i<b.N; i++{
-				evalPFCOUNT(tt.args, &store)
-			}
-		})
-	}
 }
