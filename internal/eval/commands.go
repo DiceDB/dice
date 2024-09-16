@@ -96,7 +96,7 @@ var (
 		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
-	
+
 	jsontoggleCmdMeta = DiceCmdMeta{
 		Name: "JSON.TOGGLE",
 		Info: `JSON.TOGGLE key [path]
@@ -721,7 +721,7 @@ func init() {
 	DiceCmds["GET"] = getCmdMeta
 	DiceCmds["MSET"] = msetCmdMeta
 	DiceCmds["JSON.SET"] = jsonsetCmdMeta
-	DiceCmds["JSON.TOGGLE"]=jsontoggleCmdMeta
+	DiceCmds["JSON.TOGGLE"] = jsontoggleCmdMeta
 	DiceCmds["JSON.GET"] = jsongetCmdMeta
 	DiceCmds["JSON.TYPE"] = jsontypeCmdMeta
 	DiceCmds["JSON.CLEAR"] = jsonclearCmdMeta
