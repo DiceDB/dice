@@ -150,10 +150,10 @@ var (
 	jsonnummultbyCmdMeta = DiceCmdMeta{
 		Name: "JSON.NUMMULTBY",
 		Info: `JSON.NUMMULTBY key path value
-    Multiply the number value stored at the specified path by a value.`,
+		Multiply the number value stored at the specified path by a value.`,
 		Eval:     evalJSONNUMMULTBY,
 		Arity:    3,
-    KeySpecs: KeySpecs{BeginIndex: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 
 	jsondebugCmdMeta = DiceCmdMeta{
