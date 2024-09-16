@@ -784,7 +784,11 @@ func evalJSONTYPE(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(typeList, false)
 }
 
-
+// evalJSONGET retrieves a JSON value stored at the specified key
+// args must contain at least the key;  (path unused in this implementation)
+// Returns response.RespNIL if key is expired or it does not exist
+// Returns encoded error response if incorrect number of arguments
+// The RESP value of the key is encoded and then returned
 func evalJSONGET(args []string, store *dstore.Store) []byte {
 	if len(args) < 1 {
 		return diceerrors.NewErrArity("JSON.GET")
@@ -852,70 +856,70 @@ func evalJSONGET(args []string, store *dstore.Store) []byte {
 // If the boolean is `true`, it toggles to `false` (returns :0), and if `false`, it toggles to `true` (returns :1).
 // Returns an encoded error response if the incorrect number of arguments is provided.
 func evalJSONTOGGLE(args []string, store *dstore.Store) []byte {
-    if len(args) < 2 {
-        return diceerrors.NewErrArity("JSON.TOGGLE")
-    }
-    key := args[0]
-    path := args[1]
+	if len(args) < 2 {
+		return diceerrors.NewErrArity("JSON.TOGGLE")
+	}
+	key := args[0]
+	path := args[1]
 
-    obj := store.Get(key)
-    if obj == nil {
-        return diceerrors.NewErrWithFormattedMessage("-ERR could not perform this operation on a key that doesn't exist")
-    }
+	obj := store.Get(key)
+	if obj == nil {
+		return diceerrors.NewErrWithFormattedMessage("-ERR could not perform this operation on a key that doesn't exist")
+	}
 
-    errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
-    if errWithMessage != nil {
-        return errWithMessage
-    }
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
+	}
 
-    jsonData := obj.Value
-    expr, err := jp.ParseString(path)
-    if err != nil {
-        return diceerrors.NewErrWithMessage("invalid JSONPath")
-    }
+	jsonData := obj.Value
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("invalid JSONPath")
+	}
 
-    toggleResults := []interface{}{}
-    modified := false
+	toggleResults := []interface{}{}
+	modified := false
 
-    _, err = expr.Modify(jsonData, func(value interface{}) (interface{}, bool) {
+	_, err = expr.Modify(jsonData, func(value interface{}) (interface{}, bool) {
 		boolValue, ok := value.(bool)
-        if !ok {
-            toggleResults = append(toggleResults, nil)
-            return value, false
-        }
-        newValue := !boolValue
-        toggleResults = append(toggleResults, boolToInt(newValue))
-        modified = true
-        return newValue, true
-    })
+		if !ok {
+			toggleResults = append(toggleResults, nil)
+			return value, false
+		}
+		newValue := !boolValue
+		toggleResults = append(toggleResults, boolToInt(newValue))
+		modified = true
+		return newValue, true
+	})
 
-    if err != nil {
-        return diceerrors.NewErrWithMessage("failed to toggle values")
-    }
+	if err != nil {
+		return diceerrors.NewErrWithMessage("failed to toggle values")
+	}
 
-    if modified {
+	if modified {
 		obj.Value = jsonData
 		store.Put(key, obj)
 	}
 
-    toggleResults = ReverseSlice(toggleResults)
-    return clientio.Encode(toggleResults, false)
+	toggleResults = ReverseSlice(toggleResults)
+	return clientio.Encode(toggleResults, false)
 }
 
 func boolToInt(b bool) int {
-    if b {
-        return 1
-    }
-    return 0
+	if b {
+		return 1
+	}
+	return 0
 }
 
 // ReverseSlice takes a slice of any type and returns a new slice with the elements reversed.
 func ReverseSlice[T any](slice []T) []T {
-    reversed := make([]T, len(slice))
-    for i, v := range slice {
-        reversed[len(slice)-1-i] = v
-    }
-    return reversed
+	reversed := make([]T, len(slice))
+	for i, v := range slice {
+		reversed[len(slice)-1-i] = v
+	}
+	return reversed
 }
 
 // evalJSONSET stores a JSON value at the specified key
