@@ -147,6 +147,16 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsondebugCmdMeta = DiceCmdMeta{
+		Name: "JSON.DEBUG",
+		Info: `evaluates JSON.DEBUG subcommand based on subcommand
+		JSON.DEBUG MEMORY returns memory usage by key in bytes
+		JSON.DEBUG HELP displays help message
+		`,
+		Eval:     evalJSONDebug,
+		Arity:    2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	ttlCmdMeta = DiceCmdMeta{
 		Name: "TTL",
 		Info: `TTL returns Time-to-Live in secs for the queried key in args
@@ -693,6 +703,7 @@ func init() {
 	DiceCmds["JSON.DEL"] = jsondelCmdMeta
 	DiceCmds["JSON.FORGET"] = jsonforgetCmdMeta
 	DiceCmds["JSON.ARRLEN"] = jsonarrlenCmdMeta
+	DiceCmds["JSON.DEBUG"] = jsondebugCmdMeta
 	DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
 	DiceCmds["EXPIRE"] = expireCmdMeta
