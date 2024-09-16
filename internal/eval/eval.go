@@ -587,6 +587,118 @@ func evalJSONARRLEN(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(arrlenList, false)
 }
 
+func evalJSONARRPOP(args []string, store *dstore.Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("json.arrpop")
+	}
+	key := args[0]
+
+	var path string = defaultRootPath
+	if len(args) >= 2 {
+		path = args[1]
+	}
+
+	var index string
+	if len(args) >= 3 {
+		index = args[2]
+	}
+
+	// Retrieve the object from the database
+	obj := store.Get(key)
+	if obj == nil {
+		return diceerrors.NewErrWithMessage("could not perform this operation on a key that doesn't exist")
+	}
+
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
+	}
+
+	jsonData := obj.Value
+	_, err := sonic.Marshal(jsonData)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
+	}
+
+	if path == defaultRootPath {
+		arr, ok := jsonData.([]any)
+		// if value can not be converted to array, it is of another type
+		// return nill in this case similar to redis
+		// also, return nil if array is empty
+		if !ok || len(arr) == 0 {
+			return clientio.RespNIL
+		}
+		popElem := popElementAndUpdateArray(arr, index, key, store)
+		return clientio.Encode(popElem, false)
+	}
+
+	// if path is not root then extract value at path
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("invalid JSONPath")
+	}
+	results := expr.Get(jsonData)
+
+	// process value at each path
+	popArr := make([]any, 0, len(results))
+	for _, result := range results {
+		arr, ok := result.([]any)
+		// if value can not be converted to array, it is of another type
+		// return nill in this case similar to redis
+		// also, return nil if array is empty
+		if !ok || len(arr) == 0 {
+			popElem := clientio.RespNIL
+			popArr = append(popArr, popElem)
+			continue
+		}
+		popElem := popElementAndUpdateArray(arr, index, key, store)
+		popArr = append(popArr, popElem)
+	}
+	return clientio.Encode(popArr, false)
+}
+
+func popElementAndUpdateArray(arr []any, index, key string, store *dstore.Store) any {
+	if len(arr) == 0 {
+		return nil
+	}
+
+	var idx int
+	// if index is empty, pop last element
+	if index == "" {
+		idx = len(arr) - 1
+	} else {
+		var err error
+		idx, err = strconv.Atoi(index)
+		if err != nil {
+			return diceerrors.NewErrWithMessage("cannot convert index to int")
+		}
+
+		// if index is positive and out of bound, limit it to the last index
+		if idx > len(arr) {
+			idx = len(arr) - 1
+		}
+
+		// if index is negative, change it to equivalent positive index
+		if idx < 0 {
+			// if index is out of bound then limit it to the first index
+			if idx < -len(arr) {
+				idx = 0
+			} else {
+				idx = len(arr) + idx
+			}
+		}
+	}
+
+	popElem := arr[idx]
+	arr = append(arr[:idx], arr[idx+1:]...)
+
+	// save the remaining array
+	newObj := store.NewObj(arr, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+	store.Put(key, newObj)
+
+	return popElem
+}
+
 // evalJSONDEL delete a value that the given json path include in.
 // Returns response.RespZero if key is expired or it does not exist
 // Returns encoded error response if incorrect number of arguments

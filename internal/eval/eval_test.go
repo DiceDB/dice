@@ -42,6 +42,7 @@ func TestEval(t *testing.T) {
 	testEvalSET(t, store)
 	testEvalGET(t, store)
 	testEvalDebug(t, store)
+	testEvalJSONARRPOP(t, store)
 	testEvalJSONARRLEN(t, store)
 	testEvalJSONDEL(t, store)
 	testEvalJSONFORGET(t, store)
@@ -1823,4 +1824,117 @@ func testEvalSELECT(t *testing.T, store *dstore.Store) {
 		},
 	}
 	runEvalTests(t, tests, evalSELECT, store)
+}
+
+func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"wrong number of args passed": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'json.arrpop' command\r\n"),
+		},
+		"key does not exist": {
+			setup:  func() {},
+			input:  []string{"NOTEXISTANT_KEY"},
+			output: []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
+		},
+		"empty array at root path": {
+			setup: func() {
+				key := "MOCK_KEY"
+				value := "[]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY"},
+			output: clientio.RespNIL,
+		},
+		"empty array at nested path": {
+			setup: func() {
+				key := "MOCK_KEY"
+				value := "{\"a\": 1, \"b\": []}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY", "$.b"},
+			output: []byte("*1\r\n$-1\r\n"),
+		},
+		"all paths with asterix": {
+			setup: func() {
+				key := "MOCK_KEY"
+				value := "{\"a\": 1, \"b\": []}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY", "$.*"},
+			output: []byte("*2\r\n$-1\r\n$-1\r\n"),
+		},
+		"array root path no index": {
+			setup: func() {
+				key := "MOCK_KEY"
+				value := "[0, 1, 2, 3, 4, 5]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY"},
+			output: []byte(":5\r\n"),
+		},
+		"array root path valid positive index": {
+			setup: func() {
+				key := "MOCK_KEY"
+				value := "[0, 1, 2, 3, 4, 5]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY", "$", "2"},
+			output: []byte(":2\r\n"),
+		},
+		"array root path out of bound positive index": {
+			setup: func() {
+				key := "MOCK_KEY"
+				value := "[0, 1, 2, 3, 4, 5]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY", "$", "10"},
+			output: []byte(":5\r\n"),
+		},
+		"array root path valid negative index": {
+			setup: func() {
+				key := "MOCK_KEY"
+				value := "[0, 1, 2, 3, 4, 5]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY", "$", "-2"},
+			output: []byte(":4\r\n"),
+		},
+		"array root path out of bound negative index": {
+			setup: func() {
+				key := "MOCK_KEY"
+				value := "[0, 1, 2, 3, 4, 5]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY", "$", "-10"},
+			output: []byte(":0\r\n"),
+		},
+	}
+
+	runEvalTests(t, tests, evalJSONARRPOP, store)
 }
