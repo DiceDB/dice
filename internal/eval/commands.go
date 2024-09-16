@@ -150,7 +150,9 @@ var (
 	jsonobjlenCmdMeta = DiceCmdMeta{
 		Name: "JSON.OBJLEN",
 		Info: `JSON.OBJLEN key [path]
-		Report the number of keys in the JSON object at path in key`,
+		Report the number of keys in the JSON object at path in key
+		Returns error response if the key doesn't exist or key is expired or the matching value is not an array. 
+		Error reply: If the number of arguments is incorrect.`,
 		Eval: evalJSONOBJLEN,
 		Arity: -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
