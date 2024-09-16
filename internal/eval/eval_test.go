@@ -463,7 +463,6 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalJSONARRLEN, store)
 }
 
-
 func testEvalJSONOBJLEN(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
@@ -479,7 +478,7 @@ func testEvalJSONOBJLEN(t *testing.T, store *dstore.Store) {
 		"key does not exist": {
 			setup:  func() {},
 			input:  []string{"NONEXISTENT_KEY"},
-			output: []byte("-ERR Path '.' does not exist or not a json\r\n"),
+			output: clientio.RespNIL,
 		},
 		"root not object": {
 			setup: func() {
@@ -546,7 +545,6 @@ func testEvalJSONOBJLEN(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalJSONOBJLEN, store)
 }
 
-
 func BenchmarkEvalJSONOBJLEN(b *testing.B) {
 	sizes := []int{0, 10, 100, 1000, 10000, 100000} // Various sizes of JSON objects
 	store := dstore.NewStore(nil)
@@ -575,9 +573,6 @@ func BenchmarkEvalJSONOBJLEN(b *testing.B) {
 		})
 	}
 }
-
-
-
 
 func testEvalJSONDEL(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{

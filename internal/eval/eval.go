@@ -603,7 +603,7 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) []byte {
 	// Retrieve the object from the database
 	obj := store.Get(key)
 	if obj == nil {
-		return diceerrors.NewErrWithMessage("Path '.' does not exist or not a json")
+		return clientio.RespNIL
 	}
 
 	// check if the object is json
@@ -651,8 +651,6 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) []byte {
 
 	return clientio.Encode(objectLen,false)
 }
-
-
 
 // evalJSONDEL delete a value that the given json path include in.
 // Returns response.RespZero if key is expired or it does not exist

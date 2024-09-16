@@ -659,7 +659,7 @@ func TestJsonObjLen(t *testing.T) {
 			expected: []interface{}{"OK", []interface{}{"(nil)"}},
 		},
 		{
-			name:     "JSON.OBJLEN with invalid path",
+			name:     "JSON.OBJLEN with nested non-object path",
 			commands: []string{"json.set obj $ " + c, "json.objlen obj $.partner2.name"},
 			expected: []interface{}{"OK", []interface{}{"(nil)"}},
 		},
@@ -668,6 +668,32 @@ func TestJsonObjLen(t *testing.T) {
 			commands: []string{"json.set obj $ " + b, "json.objlen obj $..language"},
 			expected: []interface{}{"OK", []interface{}{"(nil)", "(nil)"}},
 		},
+		{
+			name:     "JSON.OBJLEN invalid json path",
+			commands: []string{"json.set obj $ " + b, "json.objlen obj $..language*something"},
+			expected: []interface{}{"OK", "ERR invalid JSONPath"},
+		},
+		{
+			name:     "JSON.OBJLEN with non-existant key",
+			commands: []string{"json.set obj $ " + b, "json.objlen non_existing_key $"},
+			expected: []interface{}{"OK", "(nil)"},
+		},
+		{
+			name:     "JSON.OBJLEN with empty path",
+			commands: []string{"json.set obj $ " + a, "json.objlen obj"},
+			expected: []interface{}{"OK", int64(2)},
+		},
+		{
+			name:     "JSON.OBJLEN invalid json path",
+			commands: []string{"json.set obj $ " + c, "json.objlen obj $[1"},
+			expected: []interface{}{"OK", "ERR invalid JSONPath"},
+		},
+		{
+			name:     "JSON.OBJLEN invalid json path",
+			commands: []string{"json.set obj $ " + c, "json.objlen"},
+			expected: []interface{}{"OK", "ERR wrong number of arguments for 'json.objlen' command"},
+		},
+		
 	}
 
 	for _, tcase := range testCases {
