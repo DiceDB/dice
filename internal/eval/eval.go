@@ -2988,3 +2988,75 @@ func evalSELECT(args []string, store *dstore.Store) []byte {
 
 	return clientio.RespOK
 }
+
+// evalJSONOBJKEYS retrieves the keys of a JSON object stored at path specified.
+// It takes two arguments: the key where the JSON document is stored, and an optional JSON path. 
+// It returns a list of keys from the object at the specified path or an error if the path is invalid.
+func evalJSONOBJKEYS(args []string, store *dstore.Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("JSON.OBJKEYS")
+	}
+
+	key := args[0]
+	// Default path is root if not specified
+	path := defaultRootPath
+	if len(args) > 1 {
+		path = args[1]
+	}
+
+	// Retrieve the object from the database
+	// TODO: Check if we should throw error here
+	obj := store.Get(key)
+	if obj == nil {
+		return clientio.RespNIL
+	}
+
+	// Check if the object is of JSON type
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
+	}
+
+	jsonData := obj.Value
+	keysList := make([]interface{},0,1)
+	// If path is root, return all keys of the entire JSON
+	if path == defaultRootPath {
+		keys := make([]string,0)
+		for key := range jsonData.(map[string]interface{}) {
+			keys = append(keys, key)
+		}
+		keysList = append(keysList, keys)
+		return clientio.Encode(keysList, false)
+	}
+
+	// Parse the JSONPath expression
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("invalid JSONPath")
+	}
+
+	// Execute the JSONPath query
+	results := expr.Get(jsonData)
+	fmt.Printf("Results datatype is %T\n", results)
+	if len(results) == 0 {
+		return clientio.RespNIL
+	}
+
+	keysList = make([]interface{},0,len(results))
+
+	for _, result := range results {
+		// fmt.Printf("Result without map interface is %s\n", result.([]interface{}))
+		switch utils.GetJSONFieldType(result) {
+			case utils.ObjectType:
+				keys := make([]string, 0)
+				for key := range result.(map[string]interface{}) {
+					keys = append(keys, key)
+				}
+				keysList = append(keysList, keys)
+			default:
+				keysList = append(keysList, nil)
+		}
+	}
+
+	return clientio.Encode(keysList, false)
+}

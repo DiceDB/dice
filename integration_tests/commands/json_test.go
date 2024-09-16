@@ -1,9 +1,13 @@
 package commands
 
 import (
+	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"testing"
+
+	// "sort"
 
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/testutils"
@@ -179,6 +183,8 @@ func TestJSONOperations(t *testing.T) {
 
 			if tc.getCmd != utils.EmptyStr {
 				result := FireCommand(conn, tc.getCmd)
+				fmt.Printf("Result datatype is %T and result is %s\n", result, result)
+				fmt.Printf("Expected datatype is %T and result is %s\n", tc.expected, tc.expected)
 				if testutils.IsJSONResponse(result.(string)) {
 					testutils.AssertJSONEqual(t, tc.expected, result.(string))
 				} else {
@@ -628,3 +634,84 @@ func TestJsonStrlen(t *testing.T) {
 		})
 	}
 }
+
+
+func comparePermutations(a, b []interface{}) ([]byte, []byte) {
+
+	for i, v := range a {
+		if val, ok := v.([]interface{}); ok {
+			sort.Slice(val, func(i, j int) bool {
+                return val[i].(string) < val[j].(string)
+            })
+			a[i] = val
+		}
+	}
+
+	for i, v := range b {
+		if val, ok := v.([]interface{}); ok {
+			sort.Slice(val, func(i, j int) bool {
+                return val[i].(string) < val[j].(string)
+            })
+			b[i] = val
+		}
+	}
+
+	dataA, _ := json.Marshal(a)
+	dataB, _ := json.Marshal(b)
+	return dataA, dataB
+}
+
+func TestJsonObjKeys(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+	//  No space between words please 
+	a := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"language":["rust"]}}`
+	// b := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"name":12,"language":["rust"]}}`
+	// c := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"name":12,"language":["rust"], "extra_key": "value"}}`
+	d := `{"a":[3],"nested":{"a":{"b":2,"c":1}}}`
+
+
+	testCases := []struct {
+		name        	string
+		set_command 	string
+		test_command 	string
+		expected        []interface{}
+		assert_type 	[]string
+	}{
+		{
+			name:        	"JSON.OBJKEYS root object",
+			set_command: 	"json.set doc1 $ " + a,
+			test_command: 	"json.objkeys doc1 $",
+			expected: 		[]interface{}{
+								[]interface{}{"name", "partner", "partner2"},
+							},
+			assert_type: []string{"equal", "deep_equal"},
+		},
+		{
+			name:        	"JSON.OBJKEYS dotted object",
+			set_command: 	"json.set doc1 $ " + d,
+			test_command: 	"json.objkeys doc1 $..a",
+			expected: 		[]interface{}{
+								[]interface{}{"b", "c"}, 
+								"(nil)",
+							},
+			assert_type: []string{"equal", "deep_equal"},
+		},
+	}
+
+	for _, tcase := range testCases {
+		FireCommand(conn, "DEL doc")
+		FireCommand(conn, "DEL doc1")
+		FireCommand(conn, "DEL doc2")
+		t.Run(tcase.name, func(t *testing.T) {
+			FireCommand(conn, tcase.set_command)
+			expected := tcase.expected
+			out := FireCommand(conn, tcase.test_command)
+			dataA, dataB := comparePermutations(out.([]interface{}), expected)
+			testutils.AssertJSONEqual(t, string(dataB), string(dataA))
+		})
+	}
+
+}
+
+
