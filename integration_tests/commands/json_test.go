@@ -2,10 +2,11 @@ package commands
 
 import (
 	"fmt"
-	"github.com/bytedance/sonic"
 	"net"
 	"strings"
 	"testing"
+
+	"github.com/bytedance/sonic"
 
 	"github.com/dicedb/dice/testutils"
 	"gotest.tools/v3/assert"
@@ -852,48 +853,62 @@ func TestJSONNumIncrBy(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 	invalidArgMessage := "ERR wrong number of arguments for 'json.numincrby' command"
-	a := `{"a":"b","b":[{"a":2.2},{"a":5},{"a":"c"}]}`
 	testCases := []struct {
 		name        string
+		setupData   string
 		commands    []string
 		expected    []interface{}
 		assert_type []string
+		cleanUp     []string
 	}{
 		{
 			name:        "Invalid number of arguments",
+			setupData:   "",
 			commands:    []string{"JSON.NUMINCRBY ", "JSON.NUMINCRBY foo", "JSON.NUMINCRBY foo $"},
 			expected:    []interface{}{invalidArgMessage, invalidArgMessage, invalidArgMessage},
 			assert_type: []string{"equal", "equal", "equal"},
+			cleanUp:     []string{},
 		},
 		{
 			name:        "Non-existant key",
+			setupData:   "",
 			commands:    []string{"JSON.NUMINCRBY foo $ 1"},
 			expected:    []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
 			assert_type: []string{"equal"},
+			cleanUp:     []string{},
 		},
 		{
 			name:        "Invalid value of increment",
-			commands:    []string{"JSON.SET foo $ 1", "JSON.GET foo $", "JSON.NUMINCRBY foo $ @", "JSON.NUMINCRBY foo $ 122@"},
-			expected:    []interface{}{"OK", "1", "ERR expected value at line 1 column 1", "ERR trailing characters at line 1 column 4"},
-			assert_type: []string{"equal", "equal", "equal", "equal"},
+			setupData:   "JSON.SET foo $ 1",
+			commands:    []string{"JSON.GET foo $", "JSON.NUMINCRBY foo $ @", "JSON.NUMINCRBY foo $ 122@"},
+			expected:    []interface{}{"1", "ERR expected value at line 1 column 1", "ERR trailing characters at line 1 column 4"},
+			assert_type: []string{"equal", "equal", "equal"},
+			cleanUp:     []string{"DEL foo"},
 		},
 		{
 			name:        "incrby at non root path",
-			commands:    []string{"JSON.SET foo $ " + a, "JSON.NUMINCRBY foo $..a 2", "JSON.NUMINCRBY foo $.a 2", "JSON.NUMINCRBY foo $..a -2"},
-			expected:    []interface{}{"OK", "[null,4.2,7,null]", "[null]", "[null,2.2,5,null]"},
-			assert_type: []string{"equal", "perm_equal", "perm_equal", "perm_equal"},
+			setupData:   fmt.Sprintf("JSON.SET %s $ %s", "foo", `{"a":"b","b":[{"a":2.2},{"a":5},{"a":"c"}]}`),
+			commands:    []string{"JSON.NUMINCRBY foo $..a 2", "JSON.NUMINCRBY foo $.a 2", "JSON.NUMINCRBY foo $..a -2"},
+			expected:    []interface{}{"[null,4.2,7,null]", "[null]", "[null,2.2,5,null]"},
+			assert_type: []string{"perm_equal", "perm_equal", "perm_equal"},
+			cleanUp:     []string{"DEL foo"},
 		},
 		{
 			name:        "incrby at root path",
-			commands:    []string{"JSON.SET foo $ 1", "JSON.NUMINCRBY foo $ 1", "JSON.GET foo $", "JSON.NUMINCRBY foo $ -1", "JSON.GET foo $"},
-			expected:    []interface{}{"OK", "[2]", "2", "[1]", "1"},
-			assert_type: []string{"equal", "equal", "equal", "equal", "equal"},
+			setupData:   "JSON.SET foo $ 1",
+			commands:    []string{"JSON.NUMINCRBY foo $ 1", "JSON.GET foo $", "JSON.NUMINCRBY foo $ -1", "JSON.GET foo $"},
+			expected:    []interface{}{"[2]", "2", "[1]", "1"},
+			assert_type: []string{"equal", "equal", "equal", "equal"},
+			cleanUp:     []string{"DEL foo"},
 		},
 	}
 
 	for _, tc := range testCases {
 		FireCommand(conn, "DEL foo")
 		t.Run(tc.name, func(t *testing.T) {
+			if tc.setupData != "" {
+				assert.Equal(t, FireCommand(conn, tc.setupData), "OK")
+			}
 			for i := 0; i < len(tc.commands); i++ {
 				cmd := tc.commands[i]
 				out := tc.expected[i]
@@ -903,6 +918,9 @@ func TestJSONNumIncrBy(t *testing.T) {
 				} else if tc.assert_type[i] == "perm_equal" {
 					assert.Assert(t, arraysArePermutations(convertToArray(out.(string)), convertToArray(result.(string))))
 				}
+			}
+			for i := 0; i < len(tc.cleanUp); i++ {
+				FireCommand(conn, tc.cleanUp[i])
 			}
 		})
 	}
