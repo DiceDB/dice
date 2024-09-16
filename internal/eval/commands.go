@@ -96,7 +96,16 @@ var (
 		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
-
+	jsonMGetCmdMeta = DiceCmdMeta{
+		Name: "JSON.MGET",
+		Info: `JSON.MGET key..key [path]
+		Returns the encoded RESP value of the key, if present
+		Null reply: If the key doesn't exist or has expired.
+		Error reply: If the number of arguments is incorrect or the stored value is not a JSON type.`,
+		Eval:     evalJSONMGET,
+		Arity:    2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	jsontoggleCmdMeta = DiceCmdMeta{
 		Name: "JSON.TOGGLE",
 		Info: `JSON.TOGGLE key [path]
@@ -794,6 +803,7 @@ func init() {
 	DiceCmds["HGET"] = hgetCmdMeta
 	DiceCmds["PFMERGE"] = pfMergeCmdMeta
 	DiceCmds["JSON.STRLEN"] = jsonStrlenCmdMeta
+	DiceCmds["JSON.MGET"] = jsonMGetCmdMeta
 	DiceCmds["HLEN"] = hlenCmdMeta
 	DiceCmds["SELECT"] = selectCmdMeta
 }
