@@ -899,7 +899,6 @@ func evalJSONTOGGLE(args []string, store *dstore.Store) []byte {
 
 	if modified {
 		obj.Value = jsonData
-		store.Put(key, obj)
 	}
 
 	toggleResults = ReverseSlice(toggleResults)
