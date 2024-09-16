@@ -810,7 +810,7 @@ func parseFloatInt(input string) (result interface{}, err error) {
 }
 
 // Returns the new value after incrementing or multiplying the existing value
-func incrMultValue(value any, multiplier interface{}, operation jsonOperation) (interface{}, string, bool) {
+func incrMultValue(value any, multiplier interface{}, operation jsonOperation) (newVal interface{}, resultString string, isModified bool) {
     switch utils.GetJSONFieldType(value) {
     case utils.NumberType:
         oldVal := value.(float64)
