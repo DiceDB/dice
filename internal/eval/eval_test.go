@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+
 	"strconv"
 	"strings"
 	"testing"
@@ -50,6 +51,8 @@ func TestEval(t *testing.T) {
 	testEvalJSONGET(t, store)
 	testEvalJSONSET(t, store)
 	testEvalJSONNUMMULTBY(t, store)
+	testEvalJSONTOGGLE(t,store)
+	testEvalJSONARRAPPEND(t, store)
 	testEvalTTL(t, store)
 	testEvalDel(t, store)
 	testEvalPersist(t, store)
@@ -864,6 +867,7 @@ func testEvalJSONGET(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalJSONGET, store)
 }
 
+
 func testEvalJSONSET(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
@@ -951,11 +955,215 @@ func testEvalJSONNUMMULTBY(t *testing.T, store *dstore.Store) {
                 obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
                 store.Put(key, obj)
             },
-            input:  []string{"doc", "$.a", "2"},
+             input:  []string{"doc", "$.a", "2"},
             output: []byte("$4\r\n[20]\r\n"),
         },
     }
     runEvalTests(t, tests, evalJSONNUMMULTBY, store)
+}
+
+func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
+    tests := map[string]evalTestCase{
+        "arr append to non array fields": {
+            setup: func() {
+				key := "array"
+				value := "{\"a\":2}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$.a", "6"},
+            output: []byte("*1\r\n$-1\r\n"),
+        },
+        "arr append single element to an array field": {
+            setup: func() {
+				key := "array"
+				value := "{\"a\":[1,2]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$.a", "6"},
+            output: []byte("*1\r\n:3\r\n"),
+        },
+        "arr append multiple elements to an array field": {
+            setup: func() {
+				key := "array"
+				value := "{\"a\":[1,2]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$.a", "6", "7", "8"},
+            output: []byte("*1\r\n:5\r\n"),
+        },
+        "arr append string value": {
+            setup: func() {
+				key := "array"
+				value := "{\"b\":[\"b\",\"c\"]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$.b", `"d"`},
+            output: []byte("*1\r\n:3\r\n"),
+        },
+        "arr append nested array value": {
+            setup: func() {
+				key := "array"
+				value := "{\"a\":[[1,2]]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$.a", "[1,2,3]"},
+            output: []byte("*1\r\n:2\r\n"),
+        },
+        "arr append with json value": {
+            setup: func() {
+				key := "array"
+                value := "{\"a\":[{\"b\": 1}]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$.a", "{\"c\": 3}"},
+            output: []byte("*1\r\n:2\r\n"),
+        },
+        "arr append to append on multiple fields": {
+            setup: func() {
+				key := "array"
+                value := "{\"a\":[1,2],\"b\":{\"a\":[10]}}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$..a", "6"},
+            output: []byte("*2\r\n:2\r\n:3\r\n"),
+        },
+        "arr append to append on root node": {
+            setup: func() {
+				key := "array"
+                value := "[1,2,3]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$", "6"},
+            output: []byte("*1\r\n:4\r\n"),
+        },
+        "arr append to an array with different type": {
+            setup: func() {
+				key := "array"
+				value := "{\"a\":[1,2]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+            },
+            input: []string{"array", "$.a", `"blue"`},
+            output: []byte("*1\r\n:3\r\n"),
+        },
+    }
+    runEvalTests(t, tests, evalJSONARRAPPEND, store)
+}
+
+func testEvalJSONTOGGLE(t *testing.T, store *dstore.Store) {
+    tests := map[string]evalTestCase{
+        "nil value": {
+            setup: func() {},
+            input: nil,
+            output: []byte("-ERR wrong number of arguments for 'json.toggle' command\r\n"),
+        },
+        "empty array": {
+            setup: func() {},
+            input: []string{},
+            output: []byte("-ERR wrong number of arguments for 'json.toggle' command\r\n"),
+        },
+        "key does not exist": {
+            setup: func() {},
+            input: []string{"NONEXISTENT_KEY", ".active"},
+            output: []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
+        },
+		"key exists, toggling boolean true to false": {
+            setup: func() {
+                key := "EXISTING_KEY"
+                value := `{"active":true}`
+                var rootData interface{}
+                err := sonic.Unmarshal([]byte(value), &rootData)
+                if err != nil {
+                    fmt.Printf("Debug: Error unmarshaling JSON: %v\n", err)
+                }
+                obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+                store.Put(key, obj)
+
+            },
+            input:  []string{"EXISTING_KEY", ".active"},
+            output: clientio.Encode([]interface{}{0}, false),
+        },
+        "key exists, toggling boolean false to true": {
+            setup: func() {
+                key := "EXISTING_KEY"
+                value := `{"active":false}`
+                var rootData interface{}
+                err := sonic.Unmarshal([]byte(value), &rootData)
+                if err != nil {
+                    fmt.Printf("Debug: Error unmarshaling JSON: %v\n", err)
+                }
+                obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+                store.Put(key, obj)
+            },
+            input:  []string{"EXISTING_KEY", ".active"},
+            output: clientio.Encode([]interface{}{1}, false),
+        },
+        "key exists but expired": {
+            setup: func() {
+                key := "EXISTING_KEY"
+                value := "{\"active\":true}"
+                obj := &object.Obj{
+                    Value:          value,
+                    LastAccessedAt: uint32(time.Now().Unix()),
+                }
+                store.Put(key, obj)
+                store.SetExpiry(obj, int64(-2*time.Millisecond))
+            },
+            input: []string{"EXISTING_KEY", ".active"},
+            output: []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
+        },
+		"nested JSON structure with multiple booleans": {
+            setup: func() {
+                key := "NESTED_KEY"
+                value := `{"isSimple":true,"nested":{"isSimple":false}}`
+                var rootData interface{}
+                _ = sonic.Unmarshal([]byte(value), &rootData)
+                obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+                store.Put(key, obj)
+            },
+            input:  []string{"NESTED_KEY", "$..isSimple"},
+            output: clientio.Encode([]interface{}{0, 1}, false),
+        },
+		"deeply nested JSON structure with multiple matching fields": {
+    		setup: func() {
+        		key := "DEEP_NESTED_KEY"
+        		value := `{"field": true, "nested": {"field": false, "nested": {"field": true}}}`
+        		var rootData interface{}
+        		_= sonic.Unmarshal([]byte(value), &rootData)
+        		obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+        		store.Put(key, obj)
+    		},
+    		input:  []string{"DEEP_NESTED_KEY", "$..field"},
+    		output: clientio.Encode([]interface{}{0, 1, 0}, false),
+		},
+    }
+    runEvalTests(t, tests, evalJSONTOGGLE, store)
 }
 
 func testEvalTTL(t *testing.T, store *dstore.Store) {
@@ -1440,6 +1648,7 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalJSONSTRLEN, store)
 }
 
+
 func testEvalLLEN(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
@@ -1492,6 +1701,7 @@ func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]s
 				tc.validator(output)
 			} else {
 				assert.Equal(t, string(tc.output), string(output))
+
 			}
 		})
 	}

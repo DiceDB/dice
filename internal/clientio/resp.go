@@ -210,7 +210,6 @@ func Encode(value interface{}, isSimple bool) []byte {
 	case map[string]bool:
 		return RespNIL
 	default:
-		fmt.Printf("Unsupported type: %T\n", v)
 		return RespNIL
 	}
 }
