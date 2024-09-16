@@ -24,19 +24,22 @@ func setupFlags() {
 	flag.BoolVar(&config.EnableHTTP, "enable-http", true, "run server in HTTP mode as well")
 	flag.IntVar(&config.HTTPPort, "http-port", 8082, "HTTP port for the dice server")
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
+	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the config file")
+	flag.StringVar(&config.ConfigFileLocation, "c", config.ConfigFileLocation, "file path of the config file")
+	flag.BoolVar(&config.InitConfigCmd, "init-config", false, "initialize a new config file")
 	flag.Parse()
 }
 
 func main() {
 	setupFlags()
-
+	config.SetupConfig()
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// Handle SIGTERM and SIGINT
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
-	watchChan := make(chan dstore.WatchEvent, config.KeysLimit)
+	watchChan := make(chan dstore.WatchEvent, config.DiceConfig.Server.KeysLimit)
 	shardManager := shard.NewShardManager(1, watchChan)
 
 	// Initialize the AsyncServer
