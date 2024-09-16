@@ -22,6 +22,18 @@ func TestJSONOperations(t *testing.T) {
 	escapedCharsJSON := `{"escaped":"\"quoted\", \\backslash\\ and /forward/slash"}`
 	complexJSON := `{"inventory":{"mountain_bikes":[{"id":"bike:1","model":"Phoebe","price":1920,"specs":{"material":"carbon","weight":13.1},"colors":["black","silver"]},{"id":"bike:2","model":"Quaoar","price":2072,"specs":{"material":"aluminium","weight":7.9},"colors":["black","white"]},{"id":"bike:3","model":"Weywot","price":3264,"specs":{"material":"alloy","weight":13.8}}],"commuter_bikes":[{"id":"bike:4","model":"Salacia","price":1475,"specs":{"material":"aluminium","weight":16.6},"colors":["black","silver"]},{"id":"bike:5","model":"Mimas","price":3941,"specs":{"material":"alloy","weight":11.6}}]}}`
 
+	// Background:
+	// Ordering in JSON objects is not guaranteed
+	// Ordering in JSON arrays is guaranteed
+	// Ordering of arrays which are constructed using a key of an object is not maintained across objects
+
+	// Single ordered test cases will cover all JSON operations which have a single possible order of expected elements
+	// different JSON Key orderings are not considered as different JSONs, hence will be considered in this category
+	// What goes here:
+	// - Cases where the possible order of the result is a single permutation
+	// 		- JSON Arrays fetched without any JSONPath
+	// 		- JSON Objects (key ordering is taken care of)
+	// ref: https://github.com/DiceDB/dice/pull/365
 	singleOrderedTestCases := []struct {
 		name     string
 		setCmd   string
@@ -69,6 +81,18 @@ func TestJSONOperations(t *testing.T) {
 			setCmd:   `JSON.SET special $ ` + specialCharsJSON,
 			getCmd:   `JSON.GET special`,
 			expected: specialCharsJSON,
+		},
+		{
+			name:     "Get JSON with Wrong Number of Arguments",
+			setCmd:   ``,
+			getCmd:   `JSON.GET`,
+			expected: "ERR wrong number of arguments for 'json.get' command",
+		},
+		{
+			name:     "Set Non-JSON Value",
+			setCmd:   `SET nonJson "not a json"`,
+			getCmd:   `JSON.GET nonJson`,
+			expected: "ERR Existing key has wrong Dice type",
 		},
 		{
 			name:     "Set Empty JSON Object",
@@ -120,6 +144,13 @@ func TestJSONOperations(t *testing.T) {
 		},
 	}
 
+	// Multiple test cases will address JSON operations where the order of elements can vary, but all orders are "valid" and to be accepted
+	// The variation in order is due to the inherent nature of JSON objects.
+	// When dealing with a resultant array that contains elements from multiple objects, the order of these elements can have several valid permutations.
+	// Which then means, the overall order of elements in the resultant array is not fixed, although each sub-array within it is guaranteed to be ordered.
+	// What goes here:
+	// - Cases where the possible order of the resultant array is multiple permutations
+	// ref: https://github.com/DiceDB/dice/pull/365
 	multipleOrderedTestCases := []struct {
 		name     string
 		setCmd   string
@@ -130,13 +161,13 @@ func TestJSONOperations(t *testing.T) {
 			name:     "Get All Prices",
 			setCmd:   `JSON.SET inventory $ ` + complexJSON,
 			getCmd:   `JSON.GET inventory $..price`,
-			expected: []string{`[1475,3941,1920,2072,3264]`, `[1920,2072,3264,1475,3941]`},
+			expected: []string{`[1475,3941,1920,2072,3264]`, `[1920,2072,3264,1475,3941]`}, // Ordering agnostic
 		},
 		{
 			name:     "Set Multiple Nested Values",
 			setCmd:   `JSON.SET inventory $.inventory.*[?(@.price<2000)].price 1500`,
 			getCmd:   `JSON.GET inventory $..price`,
-			expected: []string{`[1500,3941,1500,2072,3264]`, `[1500,2072,3264,1500,3941]`},
+			expected: []string{`[1500,3941,1500,2072,3264]`, `[1500,2072,3264,1500,3941]`}, // Ordering agnostic
 		},
 	}
 
@@ -326,7 +357,7 @@ func TestJSONClearOperations(t *testing.T) {
 		{
 			name: "Clear root path",
 			commands: []string{
-				`JSON.SET user $ {"age":13,"name":"jerry","languages":["python","golang"]}`,
+				`JSON.SET user $ {"age":13,"high":1.60,"flag":true,"name":"jerry","pet":null,"language":["python","golang"],"partner":{"name":"tom","language":["rust"]}}`,
 				"JSON.CLEAR user $",
 				"JSON.GET user $",
 			},
@@ -349,6 +380,38 @@ func TestJSONClearOperations(t *testing.T) {
 				"JSON.GET user $.names",
 			},
 			expected: []interface{}{"OK", int64(1), "[]"},
+		},
+		{
+			name: "clear bool type",
+			commands: []string{
+				`JSON.SET user $  {"flag":true,"name":"Tom"}`,
+				"JSON.CLEAR user $.flag",
+				"JSON.GET user $.flag"},
+			expected: []interface{}{"OK", int64(0), "true"},
+		},
+		{
+			name: "clear null type",
+			commands: []string{
+				`JSON.SET user $ {"name":null,"age":28}`,
+				"JSON.CLEAR user $.pet",
+				"JSON.GET user $.name"},
+			expected: []interface{}{"OK", int64(0), "null"},
+		},
+		{
+			name: "clear integer type",
+			commands: []string{
+				`JSON.SET user $ {"age":28,"name":"Tom"}`,
+				"JSON.CLEAR user $.age",
+				"JSON.GET user $.age"},
+			expected: []interface{}{"OK", int64(1), "0"},
+		},
+		{
+			name: "clear float type",
+			commands: []string{
+				`JSON.SET user $ {"price":3.14,"name":"sugar"}`,
+				"JSON.CLEAR user $.price",
+				"JSON.GET user $.price"},
+			expected: []interface{}{"OK", int64(1), "0"},
 		},
 	}
 
@@ -376,7 +439,7 @@ func TestJSONDelOperations(t *testing.T) {
 		{
 			name: "Delete root path",
 			commands: []string{
-				`JSON.SET user $ {"age":13,"name":"jerry","languages":["python","golang"]}`,
+				`JSON.SET user $ {"age":13,"high":1.60,"flag":true,"name":"jerry","pet":null,"language":["python","golang"],"partner":{"name":"tom","language":["rust"]}}`,
 				"JSON.DEL user $",
 				"JSON.GET user $",
 			},
@@ -390,6 +453,54 @@ func TestJSONDelOperations(t *testing.T) {
 				"JSON.GET user $",
 			},
 			expected: []interface{}{"OK", int64(1), `{"name":"Tom","address":{"zip":"10001"}}`},
+		},
+		{
+			name: "del string type",
+			commands: []string{
+				`JSON.SET user $ {"flag":true,"name":"Tom"}`,
+				"JSON.DEL user $.name",
+				"JSON.GET user $"},
+			expected: []interface{}{"OK", int64(1), `{"flag":true}`},
+		},
+		{
+			name: "del bool type",
+			commands: []string{
+				`JSON.SET user $ {"flag":true,"name":"Tom"}`,
+				"JSON.DEL user $.flag",
+				"JSON.GET user $"},
+			expected: []interface{}{"OK", int64(1), `{"name":"Tom"}`},
+		},
+		{
+			name: "del null type",
+			commands: []string{
+				`JSON.SET user $ {"name":null,"age":28}`,
+				"JSON.DEL user $.name",
+				"JSON.GET user $"},
+			expected: []interface{}{"OK", int64(1), `{"age":28}`},
+		},
+		{
+			name: "del array type",
+			commands: []string{
+				`JSON.SET user $ {"names":["Rahul","Tom"],"bosses":{"names":["Jerry","Rocky"],"hobby":"swim"}}`,
+				"JSON.DEL user $..names",
+				"JSON.GET user $"},
+			expected: []interface{}{"OK", int64(2), `{"bosses":{"hobby":"swim"}}`},
+		},
+		{
+			name: "del integer type",
+			commands: []string{
+				`JSON.SET user $ {"age":28,"name":"Tom"}`,
+				"JSON.DEL user $.age",
+				"JSON.GET user $"},
+			expected: []interface{}{"OK", int64(1), `{"name":"Tom"}`},
+		},
+		{
+			name: "del float type",
+			commands: []string{
+				`JSON.SET user $ {"price":3.14,"name":"sugar"}`,
+				"JSON.DEL user $.price",
+				"JSON.GET user $"},
+			expected: []interface{}{"OK", int64(1), `{"name":"sugar"}`},
 		},
 	}
 
@@ -422,7 +533,7 @@ func TestJSONForgetOperations(t *testing.T) {
 		{
 			name: "Forget root path",
 			commands: []string{
-				`JSON.SET user $ {"age":13,"name":"jerry","languages":["python","golang"]}`,
+				`JSON.SET user $ {"age":13,"high":1.60,"flag":true,"name":"jerry","pet":null,"language":["python","golang"],"partner":{"name":"tom","language":["rust"]}}`,
 				"JSON.FORGET user $",
 				"JSON.GET user $",
 			},
@@ -436,6 +547,48 @@ func TestJSONForgetOperations(t *testing.T) {
 				"JSON.GET user $",
 			},
 			expected: []interface{}{"OK", int64(1), `{"name":"Tom","address":{"zip":"10001"}}`},
+		},
+		{
+			name: "forget string type",
+			commands: []string{`JSON.SET user $ {"flag":true,"name":"Tom"}`,
+				"JSON.FORGET user $.name",
+				"JSON.GET user $"},
+			expected: []interface{}{"OK", int64(1), `{"flag":true}`},
+		},
+		{
+			name: "forget bool type",
+			commands: []string{`JSON.SET user $ {"flag":true,"name":"Tom"}`,
+				"JSON.FORGET user $.flag",
+				"JSON.GET user $"},
+			expected: []interface{}{"OK", int64(1), `{"name":"Tom"}`},
+		},
+		{
+			name: "forget null type",
+			commands: []string{`JSON.SET user $ {"name":null,"age":28}`,
+				"JSON.FORGET user $.name",
+				"JSON.GET user $"},
+			expected: []interface{}{"OK", int64(1), `{"age":28}`},
+		},
+		{
+			name: "forget array type",
+			commands: []string{`JSON.SET user $ {"names":["Rahul","Tom"],"bosses":{"names":["Jerry","Rocky"],"hobby":"swim"}}`,
+				"JSON.FORGET user $..names",
+				"JSON.GET user $"},
+			expected: []interface{}{"OK", int64(2), `{"bosses":{"hobby":"swim"}}`},
+		},
+		{
+			name: "forget integer type",
+			commands: []string{`JSON.SET user $ {"age":28,"name":"Tom"}`,
+				"JSON.FORGET user $.age",
+				"JSON.GET user $"},
+			expected: []interface{}{"OK", int64(1), `{"name":"Tom"}`},
+		},
+		{
+			name: "forget float type",
+			commands: []string{`JSON.SET user $ {"price":3.14,"name":"sugar"}`,
+				"JSON.FORGET user $.price",
+				"JSON.GET user $"},
+			expected: []interface{}{"OK", int64(1), `{"name":"sugar"}`},
 		},
 	}
 
@@ -483,6 +636,7 @@ func arraysArePermutations(a, b []interface{}) bool {
 
 	return true
 }
+
 func TestJsonStrlen(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
