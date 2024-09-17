@@ -626,9 +626,8 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) []byte {
 		if utils.GetJSONFieldType(jsonData) == utils.ObjectType {
 			if castedData, ok := jsonData.(map[string]interface{}); ok {
 				return clientio.Encode(len(castedData), false)
-			}else{
-				return clientio.RespNIL
-			}			
+			}	
+			return clientio.RespNIL		
 		}
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
