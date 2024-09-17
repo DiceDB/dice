@@ -12,11 +12,11 @@ import (
 
 	"github.com/bytedance/sonic"
 
-	"github.com/dicedb/dice/internal/object"
-
 	"github.com/axiomhq/hyperloglog"
 	"github.com/dicedb/dice/internal/clientio"
+	"github.com/dicedb/dice/internal/object"
 	dstore "github.com/dicedb/dice/internal/store"
+	testifyAssert "github.com/stretchr/testify/assert"
 	"gotest.tools/v3/assert"
 )
 
@@ -71,6 +71,7 @@ func TestEval(t *testing.T) {
 	testEvalSELECT(t, store)
 	testEvalLLEN(t, store)
 	testEvalGETEX(t, store)
+	testEvalJSONNUMINCRBY(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -1684,6 +1685,117 @@ func testEvalLLEN(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalLLEN, store)
+}
+
+func testEvalJSONNUMINCRBY(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"incr on numeric field": {
+			setup: func() {
+				key := "number"
+				value := "{\"a\": 2}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"number", "$.a", "3"},
+			output: []byte("$3\r\n[5]\r\n"),
+		},
+
+		"incr on float field": {
+			setup: func() {
+				key := "number"
+				value := "{\"a\": 2.5}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"number", "$.a", "1.5"},
+			output: []byte("$5\r\n[4.0]\r\n"),
+		},
+
+		"incr on multiple fields": {
+			setup: func() {
+				key := "number"
+				value := "{\"a\": 2, \"b\": 10, \"c\": [15, {\"d\": 20}]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"number", "$..*", "5"},
+			output: []byte("$22\r\n[25,20,null,7,15,null]\r\n"),
+			validator: func(output []byte) {
+				outPutString := string(output)
+				startIndex := strings.Index(outPutString, "[")
+				endIndex := strings.Index(outPutString, "]")
+				arrayString := outPutString[startIndex+1 : endIndex]
+				arr := strings.Split(arrayString, ",")
+				testifyAssert.ElementsMatch(t, arr, []string{"25", "20", "7", "15", "null", "null"})
+			},
+		},
+
+		"incr on array element": {
+			setup: func() {
+				key := "number"
+				value := "{\"a\": [1, 2, 3]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"number", "$.a[1]", "5"},
+			output: []byte("$3\r\n[7]\r\n"),
+		},
+		"incr on non-existent field": {
+			setup: func() {
+				key := "number"
+				value := "{\"a\": 2}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"number", "$.b", "3"},
+			output: []byte("$2\r\n[]\r\n"),
+		},
+		"incr with mixed fields": {
+			setup: func() {
+				key := "number"
+				value := "{\"a\": 5, \"b\": \"not a number\", \"c\": [1, 2]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"number", "$..*", "2"},
+			output: []byte("$17\r\n[3,4,null,7,null]\r\n"),
+			validator: func(output []byte) {
+				outPutString := string(output)
+				startIndex := strings.Index(outPutString, "[")
+				endIndex := strings.Index(outPutString, "]")
+				arrayString := outPutString[startIndex+1 : endIndex]
+				arr := strings.Split(arrayString, ",")
+				testifyAssert.ElementsMatch(t, arr, []string{"3", "4", "7", "null", "null"})
+			},
+		},
+
+		"incr on nested fields": {
+			setup: func() {
+				key := "number"
+				value := "{\"a\": {\"b\": {\"c\": 10}}}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"number", "$..c", "5"},
+			output: []byte("$4\r\n[15]\r\n"),
+		},
+	}
+
+	runEvalTests(t, tests, evalJSONNUMINCRBY, store)
 }
 
 func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]string, *dstore.Store) []byte, store *dstore.Store) {

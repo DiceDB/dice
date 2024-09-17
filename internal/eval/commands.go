@@ -730,6 +730,13 @@ var (
 		Eval:  evalSELECT,
 		Arity: 1,
 	}
+	jsonnumincrbyCmdMeta = DiceCmdMeta{
+		Name:     "JSON.NUMINCRBY",
+		Info:     `Increment the number value stored at path by number.`,
+		Eval:     evalJSONNUMINCRBY,
+		Arity:    3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -816,6 +823,7 @@ func init() {
 	DiceCmds["JSON.MGET"] = jsonMGetCmdMeta
 	DiceCmds["HLEN"] = hlenCmdMeta
 	DiceCmds["SELECT"] = selectCmdMeta
+	DiceCmds["JSON.NUMINCRBY"] = jsonnumincrbyCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

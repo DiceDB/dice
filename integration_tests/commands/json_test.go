@@ -2,10 +2,11 @@ package commands
 
 import (
 	"fmt"
-	"github.com/bytedance/sonic"
 	"net"
 	"strings"
 	"testing"
+
+	"github.com/bytedance/sonic"
 
 	"github.com/dicedb/dice/testutils"
 	"gotest.tools/v3/assert"
@@ -909,6 +910,102 @@ func TestJsonNummultby(t *testing.T) {
 				} else if tcase.assert_type[i] == "deep_equal" {
 					assert.Assert(t, arraysArePermutations(deStringify(out.(string)), deStringify(result.(string))))
 				}
+			}
+		})
+	}
+}
+
+func convertToArray(input string) []string {
+	input = strings.Trim(input, `"[`)
+	input = strings.Trim(input, `]"`)
+	elements := strings.Split(input, ",")
+	for i, element := range elements {
+		elements[i] = strings.TrimSpace(element)
+	}
+	return elements
+}
+func TestJSONNumIncrBy(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+	invalidArgMessage := "ERR wrong number of arguments for 'json.numincrby' command"
+	testCases := []struct {
+		name        string
+		setupData   string
+		commands    []string
+		expected    []interface{}
+		assert_type []string
+		cleanUp     []string
+	}{
+		{
+			name:        "Invalid number of arguments",
+			setupData:   "",
+			commands:    []string{"JSON.NUMINCRBY ", "JSON.NUMINCRBY foo", "JSON.NUMINCRBY foo $"},
+			expected:    []interface{}{invalidArgMessage, invalidArgMessage, invalidArgMessage},
+			assert_type: []string{"equal", "equal", "equal"},
+			cleanUp:     []string{},
+		},
+		{
+			name:        "Non-existant key",
+			setupData:   "",
+			commands:    []string{"JSON.NUMINCRBY foo $ 1"},
+			expected:    []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
+			assert_type: []string{"equal"},
+			cleanUp:     []string{},
+		},
+		{
+			name:        "Invalid value of increment",
+			setupData:   "JSON.SET foo $ 1",
+			commands:    []string{"JSON.GET foo $", "JSON.NUMINCRBY foo $ @", "JSON.NUMINCRBY foo $ 122@"},
+			expected:    []interface{}{"1", "ERR expected value at line 1 column 1", "ERR trailing characters at line 1 column 4"},
+			assert_type: []string{"equal", "equal", "equal"},
+			cleanUp:     []string{"DEL foo"},
+		},
+		{
+			name:        "incrby at non root path",
+			setupData:   fmt.Sprintf("JSON.SET %s $ %s", "foo", `{"a":"b","b":[{"a":2.2},{"a":5},{"a":"c"}]}`),
+			commands:    []string{"JSON.NUMINCRBY foo $..a 2", "JSON.NUMINCRBY foo $.a 2", "JSON.GET foo", "JSON.NUMINCRBY foo $..a -2", "JSON.GET foo"},
+			expected:    []interface{}{"[null,4.2,7,null]", "[null]", "{\"a\":\"b\",\"b\":[{\"a\":4.2},{\"a\":7},{\"a\":\"c\"}]}", "[null,2.2,5,null]", "{\"a\":\"b\",\"b\":[{\"a\":2.2},{\"a\":5},{\"a\":\"c\"}]}"},
+			assert_type: []string{"perm_equal", "perm_equal", "equal", "perm_equal", "equal"},
+			cleanUp:     []string{"DEL foo"},
+		},
+		{
+			name:        "incrby at root path",
+			setupData:   "JSON.SET foo $ 1",
+			commands:    []string{"JSON.NUMINCRBY foo $ 1", "JSON.GET foo $", "JSON.NUMINCRBY foo $ -1", "JSON.GET foo $"},
+			expected:    []interface{}{"[2]", "2", "[1]", "1"},
+			assert_type: []string{"equal", "equal", "equal", "equal"},
+			cleanUp:     []string{"DEL foo"},
+		},
+		{
+			name:        "incrby at root path",
+			setupData:   "JSON.SET foo $ 1",
+			commands:    []string{"expire foo 10", "JSON.NUMINCRBY foo $ 1", "ttl foo", "JSON.GET foo $", "JSON.NUMINCRBY foo $ -1", "JSON.GET foo $"},
+			expected:    []interface{}{int64(1), "[2]", int64(10), "2", "[1]", "1"},
+			assert_type: []string{"equal", "equal", "range", "equal", "equal", "equal"},
+			cleanUp:     []string{"DEL foo"},
+		},
+	}
+
+	for _, tc := range testCases {
+		FireCommand(conn, "DEL foo")
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.setupData != "" {
+				assert.Equal(t, FireCommand(conn, tc.setupData), "OK")
+			}
+			for i := 0; i < len(tc.commands); i++ {
+				cmd := tc.commands[i]
+				out := tc.expected[i]
+				result := FireCommand(conn, cmd)
+				if tc.assert_type[i] == "equal" {
+					assert.Equal(t, out, result)
+				} else if tc.assert_type[i] == "perm_equal" {
+					assert.Assert(t, arraysArePermutations(convertToArray(out.(string)), convertToArray(result.(string))))
+				} else if tc.assert_type[i] == "range" {
+					assert.Assert(t, result.(int64) <= tc.expected[i].(int64) && result.(int64) > 0, "Expected %v to be within 0 to %v", result, tc.expected[i])
+				}
+			}
+			for i := 0; i < len(tc.cleanUp); i++ {
+				FireCommand(conn, tc.cleanUp[i])
 			}
 		})
 	}
