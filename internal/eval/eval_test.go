@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/ohler55/ojg/jp"
 
 	"github.com/dicedb/dice/internal/object"
 
@@ -1933,6 +1935,53 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"MOCK_KEY", "$", "-10"},
 			output: []byte(":0\r\n"),
+		},
+		"array at root path updated correctly": {
+			setup: func() {
+				key := "MOCK_KEY"
+				value := "[0, 1, 2, 3, 4, 5]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY", "$", "2"},
+			output: []byte(":0\r\n"),
+			validator: func(ouput []byte) {
+				key := "MOCK_KEY"
+				obj := store.Get(key)
+				want := []interface{}{float64(0), float64(1), float64(3), float64(4), float64(5)}
+				equal := reflect.DeepEqual(obj.Value, want)
+				assert.Equal(t, equal, true)
+			},
+		},
+		"nested array updated correctly": {
+			setup: func() {
+				key := "MOCK_KEY"
+				value := "{\"a\": 2, \"b\": [0, 1, 2, 3, 4, 5]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY", "$.b", "2"},
+			output: []byte("*1\r\n:2\r\n"),
+			validator: func(ouput []byte) {
+				key := "MOCK_KEY"
+				path := "$.b"
+				obj := store.Get(key)
+
+				expr, err := jp.ParseString(path)
+				assert.NilError(t, err, "error parsing path")
+
+				results := expr.Get(obj.Value)
+				assert.Equal(t, len(results), 1)
+
+				want := []interface{}{float64(0), float64(1), float64(3), float64(4), float64(5)}
+
+				equal := reflect.DeepEqual(results[0], want)
+				assert.Equal(t, equal, true)
+			},
 		},
 	}
 

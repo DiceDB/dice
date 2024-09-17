@@ -628,7 +628,15 @@ func evalJSONARRPOP(args []string, store *dstore.Store) []byte {
 		if !ok || len(arr) == 0 {
 			return clientio.RespNIL
 		}
-		popElem := popElementAndUpdateArray(arr, index, key, store)
+		popElem, arr, err := popElementAndUpdateArray(arr, index)
+		if err != nil {
+			return diceerrors.NewErrWithFormattedMessage("error popping element: %v", err)
+		}
+
+		// save the remaining array
+		newObj := store.NewObj(arr, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+		store.Put(key, newObj)
+
 		return clientio.Encode(popElem, false)
 	}
 
@@ -651,15 +659,28 @@ func evalJSONARRPOP(args []string, store *dstore.Store) []byte {
 			popArr = append(popArr, popElem)
 			continue
 		}
-		popElem := popElementAndUpdateArray(arr, index, key, store)
+
+		popElem, arr, err := popElementAndUpdateArray(arr, index)
+		if err != nil {
+			return diceerrors.NewErrWithFormattedMessage("error popping element: %v", err)
+		}
+
+		// update array in place in the json object
+		err = expr.Set(jsonData, arr)
+		if err != nil {
+			return diceerrors.NewErrWithFormattedMessage("error saving updated json: %v", err)
+		}
+
 		popArr = append(popArr, popElem)
 	}
 	return clientio.Encode(popArr, false)
 }
 
-func popElementAndUpdateArray(arr []any, index, key string, store *dstore.Store) any {
+// popElementAndUpdateArray removes an element at the given index
+// Returns popped element, remaining array and error
+func popElementAndUpdateArray(arr []any, index string) (any, []any, error) {
 	if len(arr) == 0 {
-		return nil
+		return nil, nil, nil
 	}
 
 	var idx int
@@ -670,33 +691,36 @@ func popElementAndUpdateArray(arr []any, index, key string, store *dstore.Store)
 		var err error
 		idx, err = strconv.Atoi(index)
 		if err != nil {
-			return diceerrors.NewErrWithMessage("cannot convert index to int")
+			return nil, nil, err
 		}
-
-		// if index is positive and out of bound, limit it to the last index
-		if idx > len(arr) {
-			idx = len(arr) - 1
-		}
-
-		// if index is negative, change it to equivalent positive index
-		if idx < 0 {
-			// if index is out of bound then limit it to the first index
-			if idx < -len(arr) {
-				idx = 0
-			} else {
-				idx = len(arr) + idx
-			}
-		}
+		// convert index to a valid index
+		idx = adjustIndex(idx, arr)
 	}
 
 	popElem := arr[idx]
 	arr = append(arr[:idx], arr[idx+1:]...)
 
-	// save the remaining array
-	newObj := store.NewObj(arr, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-	store.Put(key, newObj)
+	return popElem, arr, nil
+}
 
-	return popElem
+// adjustIndex will bound the array between 0 and len(arr) - 1
+// It also handles negative indexes
+func adjustIndex(idx int, arr []any) int {
+	// if index is positive and out of bound, limit it to the last index
+	if idx > len(arr) {
+		idx = len(arr) - 1
+	}
+
+	// if index is negative, change it to equivalent positive index
+	if idx < 0 {
+		// if index is out of bound then limit it to the first index
+		if idx < -len(arr) {
+			idx = 0
+		} else {
+			idx = len(arr) + idx
+		}
+	}
+	return idx
 }
 
 // evalJSONDEL delete a value that the given json path include in.
