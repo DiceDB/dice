@@ -68,6 +68,7 @@ func TestEval(t *testing.T) {
 	testEvalHGET(t, store)
 	testEvalPFMERGE(t, store)
 	testEvalJSONSTRLEN(t, store)
+	testEvalJSONOBJLEN(t,store)
 	testEvalHLEN(t, store)
 	testEvalSELECT(t, store)
 	testEvalLLEN(t, store)
@@ -466,6 +467,153 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 		},
 	}
 	runEvalTests(t, tests, evalJSONARRLEN, store)
+}
+
+func testEvalJSONOBJLEN(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'json.objlen' command\r\n"),
+		},
+		"empty args": {
+			setup:  func() {},
+			input:  []string{},
+			output: []byte("-ERR wrong number of arguments for 'json.objlen' command\r\n"),
+		},
+		"key does not exist": {
+			setup:  func() {},
+			input:  []string{"NONEXISTENT_KEY"},
+			output: clientio.RespNIL,
+		},
+		"root not object": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "[1,2,3]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY"},
+			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+		},
+		"root object objlen": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"name\":\"John\",\"age\":30,\"city\":\"New York\"}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY"},
+			output: []byte(":3\r\n"),
+		},
+		"wildcard no object objlen": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"name\":\"John\",\"age\":30,\"pets\":null,\"languages\":[\"python\",\"golang\"],\"flag\":false}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$.*"},
+			output: []byte("*5\r\n$-1\r\n$-1\r\n$-1\r\n$-1\r\n$-1\r\n"),
+		},
+		"subpath object objlen": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"person\":{\"name\":\"John\",\"age\":30},\"languages\":[\"python\",\"golang\"]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$.person"},
+			output: []byte("*1\r\n:2\r\n"),
+		},
+		"invalid JSONPath": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"name\":\"John\",\"age\":30}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$invalid_path"},
+			output: []byte("-ERR parse error at 2 in $invalid_path\r\n"),
+		},
+		"incomapitable type(int) objlen": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"person\":{\"name\":\"John\",\"age\":30},\"languages\":[\"python\",\"golang\"]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$.person.age"},
+			output: []byte("*1\r\n$-1\r\n"),
+		},
+		"incomapitable type(string) objlen": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"person\":{\"name\":\"John\",\"age\":30},\"languages\":[\"python\",\"golang\"]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$.person.name"},
+			output: []byte("*1\r\n$-1\r\n"),
+		},
+		"incomapitable type(array) objlen": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"person\":{\"name\":\"John\",\"age\":30},\"languages\":[\"python\",\"golang\"]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$.languages"},
+			output: []byte("*1\r\n$-1\r\n"),
+		},
+	}
+
+	runEvalTests(t, tests, evalJSONOBJLEN, store)
+}
+
+func BenchmarkEvalJSONOBJLEN(b *testing.B) {
+	sizes := []int{0, 10, 100, 1000, 10000, 100000} // Various sizes of JSON objects
+	store := dstore.NewStore(nil)
+
+	for _, size := range sizes {
+		b.Run(fmt.Sprintf("JSONObjectSize_%d", size), func(b *testing.B) {
+			key := fmt.Sprintf("benchmark_json_obj_%d", size)
+
+			// Create a large JSON object with the given size
+			jsonObj := make(map[string]interface{})
+			for i := 0; i < size; i++ {
+				jsonObj[fmt.Sprintf("key%d", i)] = fmt.Sprintf("value%d", i)
+			}
+
+			// Set the JSON object in the store
+			args := []string{key, "$", fmt.Sprintf("%v", jsonObj)}
+			evalJSONSET(args, store)
+
+			b.ResetTimer()
+			b.ReportAllocs()
+
+			// Benchmark the evalJSONOBJLEN function
+			for i := 0; i < b.N; i++ {
+				_ = evalJSONOBJLEN([]string{key, "$"}, store)
+			}
+		})
+	}
 }
 
 func testEvalJSONDEL(t *testing.T, store *dstore.Store) {

@@ -840,6 +840,91 @@ func TestJsonARRAPPEND(t *testing.T) {
 		})
 	}
 }
+
+func TestJsonObjLen(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	a := `{"name":"jerry","partner":{"name":"tom","language":["rust"]}}`
+	b := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"name":"spike","language":["go","rust"]}}`
+	c := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"name":12,"language":["rust"]}}`
+	d := `["this","is","an","array"]`
+
+	defer func() {
+		resp := FireCommand(conn, "DEL obj")
+		assert.Equal(t, int64(1), resp)
+	}()
+
+	testCases := []struct {
+		name     string
+		commands []string
+		expected []interface{}
+	}{
+		{
+			name:     "JSON.OBJLEN with root path",
+			commands: []string{"json.set obj $ " + a, "json.objlen obj $"},
+			expected: []interface{}{"OK", []interface{}{int64(2)}},
+		},
+		{
+			name:     "JSON.OBJLEN with nested path",
+			commands: []string{"json.set obj $ " + b, "json.objlen obj $.partner"},
+			expected: []interface{}{"OK", []interface{}{int64(2)}},
+		},
+		{
+			name:     "JSON.OBJLEN with non-object path",
+			commands: []string{"json.set obj $ " + d, "json.objlen obj $"},
+			expected: []interface{}{"OK", []interface{}{"(nil)"}},
+		},
+		{
+			name:     "JSON.OBJLEN with nested non-object path",
+			commands: []string{"json.set obj $ " + c, "json.objlen obj $.partner2.name"},
+			expected: []interface{}{"OK", []interface{}{"(nil)"}},
+		},
+		{
+			name:     "JSON.OBJLEN nested objects",
+			commands: []string{"json.set obj $ " + b, "json.objlen obj $..language"},
+			expected: []interface{}{"OK", []interface{}{"(nil)", "(nil)"}},
+		},
+		{
+			name:     "JSON.OBJLEN invalid json path",
+			commands: []string{"json.set obj $ " + b, "json.objlen obj $..language*something"},
+			expected: []interface{}{"OK", "ERR parse error at 13 in $..language*something"},
+		},
+		{
+			name:     "JSON.OBJLEN with non-existant key",
+			commands: []string{"json.set obj $ " + b, "json.objlen non_existing_key $"},
+			expected: []interface{}{"OK", "(nil)"},
+		},
+		{
+			name:     "JSON.OBJLEN with empty path",
+			commands: []string{"json.set obj $ " + a, "json.objlen obj"},
+			expected: []interface{}{"OK", int64(2)},
+		},
+		{
+			name:     "JSON.OBJLEN invalid json path",
+			commands: []string{"json.set obj $ " + c, "json.objlen obj $[1"},
+			expected: []interface{}{"OK", "ERR expected a number at 4 in $[1"},
+		},
+		{
+			name:     "JSON.OBJLEN invalid json path",
+			commands: []string{"json.set obj $ " + c, "json.objlen"},
+			expected: []interface{}{"OK", "ERR wrong number of arguments for 'json.objlen' command"},
+		},
+	}
+
+	for _, tcase := range testCases {
+		FireCommand(conn, "DEL obj")
+		t.Run(tcase.name, func(t *testing.T) {
+			for i := 0; i < len(tcase.commands); i++ {
+				cmd := tcase.commands[i]
+				out := tcase.expected[i]
+				result := FireCommand(conn, cmd)
+				assert.DeepEqual(t, out, result)
+			}
+		})
+	}
+}
+
 func convertToArray(input string) []string {
 	input = strings.Trim(input, `"[`)
 	input = strings.Trim(input, `]"`)

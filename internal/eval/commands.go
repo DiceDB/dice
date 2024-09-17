@@ -180,6 +180,17 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+
+	jsonobjlenCmdMeta = DiceCmdMeta{
+		Name: "JSON.OBJLEN",
+		Info: `JSON.OBJLEN key [path]
+		Report the number of keys in the JSON object at path in key
+		Returns error response if the key doesn't exist or key is expired or the matching value is not an array. 
+		Error reply: If the number of arguments is incorrect.`,
+		Eval: evalJSONOBJLEN,
+		Arity: -2,
+    KeySpecs: KeySpecs{BeginIndex: 1},
+  }
 	jsondebugCmdMeta = DiceCmdMeta{
 		Name: "JSON.DEBUG",
 		Info: `evaluates JSON.DEBUG subcommand based on subcommand
@@ -756,6 +767,7 @@ func init() {
 	DiceCmds["JSON.ARRAPPEND"] = jsonarrappendCmdMeta
 	DiceCmds["JSON.FORGET"] = jsonforgetCmdMeta
 	DiceCmds["JSON.ARRLEN"] = jsonarrlenCmdMeta
+	DiceCmds["JSON.OBJLEN"] = jsonobjlenCmdMeta
 	DiceCmds["JSON.DEBUG"] = jsondebugCmdMeta
 	DiceCmds["JSON.ARRPOP"] = jsonarrpopCmdMeta
 	DiceCmds["TTL"] = ttlCmdMeta
