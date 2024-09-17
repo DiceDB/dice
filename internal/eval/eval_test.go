@@ -2201,7 +2201,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:  []string{"MOCK_KEY"},
-			output: clientio.RespNIL,
+			output: []byte("-ERR Path '$' does not exist or not an array\r\n"),
 		},
 		"empty array at nested path": {
 			setup: func() {
