@@ -3,10 +3,11 @@
 package eval
 
 import (
+	"syscall"
+
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	dstore "github.com/dicedb/dice/internal/store"
-	"syscall"
 )
 
 /* Description - Spawn a background thread to persist the data via AOF technique. Current implementation is
@@ -19,7 +20,11 @@ func EvalBGREWRITEAOF(args []string, store *dstore.Store) []byte {
 	// This technique utilizes the CoW or copy-on-write, so while the main process is free to modify them
 	// the child would save all the pages to disk.
 	// Check details here -https://www.sobyte.net/post/2022-10/fork-cow/
-	pid, _, _ := syscall.RawSyscall(syscall.SYS_FORK, 0, 0, 0)
+	pid, _, err := syscall.RawSyscall(syscall.SYS_FORK, 0, 0, 0)
+
+	if err != 0 {
+		return diceerrors.NewErrWithMessage("Fork failed")
+	}
 
 	if pid == 0 {
 		// We are inside child process now, so we'll start flushing to disk.
@@ -27,9 +32,6 @@ func EvalBGREWRITEAOF(args []string, store *dstore.Store) []byte {
 			return diceerrors.NewErrWithMessage("AOF failed")
 		}
 		syscall.Exit(0)
-	} else if pid < 0 {
-		// Fork failed
-		return diceerrors.NewErrWithMessage("Fork failed")
 	}
 
 	// Back to main thread

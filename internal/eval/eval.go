@@ -723,7 +723,6 @@ func adjustIndex(idx int, arr []any) int {
 	return idx
 }
 
-
 // evalJSONOBJLEN return the number of keys in the JSON object at path in key.
 // Returns an array of integer replies, an integer for each matching value,
 // which is the json objects length, or nil, if the matching value is not a json.
@@ -750,12 +749,10 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) []byte {
 
 	// get the value & check for marsheling error
 	jsonData := obj.Value
-	_,err := sonic.Marshal(jsonData)
+	_, err := sonic.Marshal(jsonData)
 	if err != nil {
 		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
 	}
-
-
 	if len(args) == 1 {
 		// check if the value is of json type
 		if utils.GetJSONFieldType(jsonData) == utils.ObjectType {
@@ -777,9 +774,9 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) []byte {
 	// get all values for matching paths
 	results := expr.Get(jsonData)
 
-	objectLen := make([]interface{},0,len(results))
+	objectLen := make([]interface{}, 0, len(results))
 
-	for _,result := range results{
+	for _, result := range results {
 		switch utils.GetJSONFieldType(result) {
 		case utils.ObjectType:
 			if castedResult, ok := result.(map[string]interface{}); ok {
@@ -791,7 +788,7 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) []byte {
 			objectLen = append(objectLen, nil)
 		}
 	}
-	return clientio.Encode(objectLen,false)
+	return clientio.Encode(objectLen, false)
 }
 
 // evalJSONDEL delete a value that the given json path include in.
