@@ -18,28 +18,26 @@ const (
 	DefaultPort           int    = 7379
 	DefaultConfigName     string = "dice.toml"
 	DefaultConfigFilePath string = "./"
-)
 
-const (
-	SimpleFirst   = "simple-first"
-	AllKeysRandom = "allkeys-random"
-	AllKeysLRU    = "allkeys-lru"
-	AllKeysLFU    = "allkeys-lfu"
+	EvictSimpleFirst   = "simple-first"
+	EvictAllKeysRandom = "allkeys-random"
+	EvictAllKeysLRU    = "allkeys-lru"
+	EvictAllKeysLFU    = "allkeys-lfu"
 )
 
 var (
-	Host string = DefaultHost
-	Port int    = DefaultPort
+	Host = DefaultHost
+	Port = DefaultPort
 
-	EnableHTTP bool = true
-	HTTPPort   int  = 8082
+	EnableHTTP = true
+	HTTPPort   = 8082
 	// if RequirePass is set to an empty string, no authentication is required
-	RequirePass string = utils.EmptyStr
+	RequirePass = utils.EmptyStr
 
-	CustomConfigFilePath string = utils.EmptyStr
-	ConfigFileLocation   string = utils.EmptyStr
+	CustomConfigFilePath = utils.EmptyStr
+	ConfigFileLocation   = utils.EmptyStr
 
-	InitConfigCmd bool = false
+	InitConfigCmd = false
 )
 
 type Config struct {
@@ -100,7 +98,7 @@ var defaultConfig = Config{
 		MultiplexerPollTimeout: 100 * time.Millisecond,
 		MaxClients:             20000,
 		MaxMemory:              0,
-		EvictionPolicy:         AllKeysLFU,
+		EvictionPolicy:         EvictAllKeysLFU,
 		EvictionRatio:          0.40,
 		KeysLimit:              10000,
 		AOFFile:                "./dice-master.aof",

@@ -56,7 +56,7 @@ func GetLastAccessedAt(lastAccessedAt uint32) uint32 {
 }
 
 func UpdateLastAccessedAt(lastAccessedAt uint32) uint32 {
-	if config.DiceConfig.Server.EvictionPolicy == config.AllKeysLFU {
+	if config.DiceConfig.Server.EvictionPolicy == config.EvictAllKeysLFU {
 		return UpdateLFULastAccessedAt(lastAccessedAt)
 	}
 	return getCurrentClock()
@@ -122,13 +122,13 @@ func EvictAllkeysLRUOrLFU(store *Store) {
 
 func (store *Store) evict() {
 	switch config.DiceConfig.Server.EvictionPolicy {
-	case config.SimpleFirst:
+	case config.EvictSimpleFirst:
 		evictFirst(store)
-	case config.AllKeysRandom:
+	case config.EvictAllKeysRandom:
 		evictAllkeysRandom(store)
-	case config.AllKeysLRU:
+	case config.EvictAllKeysLRU:
 		EvictAllkeysLRUOrLFU(store)
-	case config.AllKeysLFU:
+	case config.EvictAllKeysLFU:
 		EvictAllkeysLRUOrLFU(store)
 	}
 }
