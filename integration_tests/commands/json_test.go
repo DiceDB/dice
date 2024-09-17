@@ -9,6 +9,7 @@ import (
 	"github.com/bytedance/sonic"
 
 	"github.com/dicedb/dice/testutils"
+	testifyAssert "github.com/stretchr/testify/assert"
 	"gotest.tools/v3/assert"
 )
 
@@ -607,6 +608,7 @@ func TestJSONForgetOperations(t *testing.T) {
 		})
 	}
 }
+
 func arraysArePermutations[T comparable](a, b []T) bool {
 	if len(a) != len(b) {
 		return false
@@ -934,6 +936,7 @@ func convertToArray(input string) []string {
 	}
 	return elements
 }
+
 func TestJSONNumIncrBy(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
@@ -1010,6 +1013,7 @@ func TestJSONNumIncrBy(t *testing.T) {
 				case "equal":
 					assert.Equal(t, out, result)
 				case "perm_equal":
+					testifyAssert.JSONEq(t, out.(string), result.(string))
 					assert.Assert(t, arraysArePermutations(convertToArray(out.(string)), convertToArray(result.(string))))
 				case "range":
 					assert.Assert(t, result.(int64) <= tc.expected[i].(int64) && result.(int64) > 0, "Expected %v to be within 0 to %v", result, tc.expected[i])
