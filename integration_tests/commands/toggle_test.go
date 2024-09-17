@@ -22,7 +22,7 @@ func compareJSON(t *testing.T, expected, actual string) {
 	assert.DeepEqual(t, expectedMap, actualMap)
 }
 
-func TestEvalJSONTOGGLE(t *testing.T) {
+func TestJSONToggle(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 
@@ -47,7 +47,7 @@ func TestEvalJSONTOGGLE(t *testing.T) {
 		{
 			name:     "JSON.TOGGLE with invalid path",
 			commands: []string{`JSON.SET testkey $ ` + simpleJSON, "JSON.TOGGLE user $.invalidPath"},
-			expected: []interface{}{"WRONGTYPE Operation against a key holding the wrong kind of value", "ERR could not perform this operation on a key that doesn't exist"},
+			expected: []interface{}{"OK", "ERR could not perform this operation on a key that doesn't exist"},
 		},
 		{
 			name:     "JSON.TOGGLE with invalid command format",
@@ -72,29 +72,28 @@ func TestEvalJSONTOGGLE(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-        t.Run(tc.name, func(t *testing.T) {
-            FireCommand(conn, "DEL user")
-            for i, cmd := range tc.commands {
-                result := FireCommand(conn, cmd)
-                switch expected := tc.expected[i].(type) {
-                case string:
-                    if isJSONString(expected) {
-                        compareJSON(t, expected, result.(string))
-                    } else {
-                        assert.Equal(t, expected, result)
-                    }
-                case []interface{}:
-                    assert.Assert(t, testutils.UnorderedEqual(expected, result))
-                default:
-                    assert.DeepEqual(t, expected, result)
-                }
-            }
-        })
-    }
+		t.Run(tc.name, func(t *testing.T) {
+			FireCommand(conn, "DEL user")
+			for i, cmd := range tc.commands {
+				result := FireCommand(conn, cmd)
+				switch expected := tc.expected[i].(type) {
+				case string:
+					if isJSONString(expected) {
+						compareJSON(t, expected, result.(string))
+					} else {
+						assert.Equal(t, expected, result)
+					}
+				case []interface{}:
+					assert.Assert(t, testutils.UnorderedEqual(expected, result))
+				default:
+					assert.DeepEqual(t, expected, result)
+				}
+			}
+		})
+	}
 }
 
 func isJSONString(s string) bool {
-    var js json.RawMessage
-    return json.Unmarshal([]byte(s), &js) == nil
+	var js json.RawMessage
+	return json.Unmarshal([]byte(s), &js) == nil
 }
-
