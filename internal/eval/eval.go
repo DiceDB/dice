@@ -9,7 +9,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 	"unicode"
 	"unsafe"
@@ -1561,28 +1560,6 @@ func evalHELLO(args []string, store *dstore.Store) []byte {
 		"modules", []interface{}{})
 
 	return clientio.Encode(resp, false)
-}
-
-/* Description - Spawn a background thread to persist the data via AOF technique. Current implementation is
-based on CoW optimization and Fork */
-// TODO: Implement Acknowledgement so that main process could know whether child has finished writing to its AOF file or not.
-// TODO: Make it safe from failure, an stable policy would be to write the new flushes to a temporary files and then rename them to the main process's AOF file
-// TODO: Add fsync() and fdatasync() to persist to AOF for above cases.
-func EvalBGREWRITEAOF(args []string, store *dstore.Store) []byte {
-	// Fork a child process, this child process would inherit all the uncommitted pages from main process.
-	// This technique utilizes the CoW or copy-on-write, so while the main process is free to modify them
-	// the child would save all the pages to disk.
-	// Check details here -https://www.sobyte.net/post/2022-10/fork-cow/
-	newChild, _, _ := syscall.Syscall(syscall.SYS_FORK, 0, 0, 0)
-	if newChild == 0 {
-		// We are inside child process now, so we'll start flushing to disk.
-		if err := dstore.DumpAllAOF(store); err != nil {
-			return diceerrors.NewErrWithMessage("AOF failed")
-		}
-		return []byte(utils.EmptyStr)
-	}
-	// Back to main threadg
-	return clientio.RespOK
 }
 
 // evalINCR increments the value of the specified key in args by 1,
