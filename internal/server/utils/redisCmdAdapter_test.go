@@ -86,9 +86,9 @@ func TestParseHTTPRequest(t *testing.T) {
 			name:         "Test JSON.INGEST command",
 			method:       "POST",
 			url:          "/json.ingest?key_prefix=gmtr_",
-			body:         `{"json": {"field": "value"}}`,
+			body:         `{"json": {"field": "value"},"path": "$..field"}`,
 			expectedCmd:  "JSON.INGEST",
-			expectedArgs: []string{"gmtr_", `{"field":"value"}`},
+			expectedArgs: []string{"gmtr_", "$..field", `{"field":"value"}`},
 		},
 	}
 
