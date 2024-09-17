@@ -103,7 +103,7 @@ var defaultConfig = Config{
 		KeysLimit:              10000,
 		AOFFile:                "./dice-master.aof",
 		PersistenceEnabled:     true,
-		WriteAOFOnCleanup:      false,
+		WriteAOFOnCleanup:      true,
 		LFULogFactor:           10,
 	},
 	Auth: struct {
