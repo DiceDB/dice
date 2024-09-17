@@ -93,8 +93,7 @@ func testEvalHELLO(t *testing.T, store *dstore.Store) {
 		"id", serverID,
 		"mode", "standalone",
 		"role", "master",
-		"modules",
-		[]interface{}{},
+		"modules", []interface{}{},
 	}
 
 	tests := map[string]evalTestCase{
@@ -1500,8 +1499,7 @@ func testEvalPFADD(t *testing.T, store *dstore.Store) {
 				store.Put(key, store.NewObj(value, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
 			},
 			input:  []string{"EXISTING_KEY", "1"},
-			output: []byte("-WRONGTYPE Key is not a valid HyperLogLog string value.\r\n"),
-		},
+			output: []byte("-WRONGTYPE Key is not a valid HyperLogLog string value.\r\n")},
 	}
 
 	runEvalTests(t, tests, evalPFADD, store)
@@ -1903,7 +1901,6 @@ func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]s
 				tc.validator(output)
 			} else {
 				assert.Equal(t, string(tc.output), string(output))
-
 			}
 		})
 	}
@@ -2008,6 +2005,75 @@ func testEvalHSET(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalHSET, store)
+}
+
+func BenchmarkEvalPFCOUNT(b *testing.B) {
+    store := *dstore.NewStore(nil)
+
+    // Helper function to create and insert HLL objects
+    createAndInsertHLL := func(key string, items []string) {
+        hll := hyperloglog.New()
+        for _, item := range items {
+            hll.Insert([]byte(item))
+        }
+        obj := &object.Obj{
+            Value:          hll,
+            LastAccessedAt: uint32(time.Now().Unix()),
+        }
+        store.Put(key, obj)
+    }
+
+    // Create small HLLs (10000 items each)
+	smallItems := make([]string, 10000)
+    for i := 0; i < 100; i++ {
+        smallItems[i] = fmt.Sprintf("SmallItem%d", i)
+    }
+    createAndInsertHLL("SMALL1", smallItems)
+    createAndInsertHLL("SMALL2", smallItems)
+
+    // Create medium HLLs (1000000 items each)
+    mediumItems := make([]string, 1000000)
+    for i := 0; i < 100; i++ {
+        mediumItems[i] = fmt.Sprintf("MediumItem%d", i)
+    }
+    createAndInsertHLL("MEDIUM1", mediumItems)
+    createAndInsertHLL("MEDIUM2", mediumItems)
+
+    // Create large HLLs (1000000000 items each)
+    largeItems := make([]string, 1000000000)
+    for i := 0; i < 10000; i++ {
+        largeItems[i] = fmt.Sprintf("LargeItem%d", i)
+    }
+    createAndInsertHLL("LARGE1", largeItems)
+    createAndInsertHLL("LARGE2", largeItems)
+
+    tests := []struct {
+        name string
+        args []string
+    }{
+        {"SingleSmallKey", []string{"SMALL1"}},
+        {"TwoSmallKeys", []string{"SMALL1", "SMALL2"}},
+        {"SingleMediumKey", []string{"MEDIUM1"}},
+        {"TwoMediumKeys", []string{"MEDIUM1", "MEDIUM2"}},
+        {"SingleLargeKey", []string{"LARGE1"}},
+        {"TwoLargeKeys", []string{"LARGE1", "LARGE2"}},
+        {"MixedSizes", []string{"SMALL1", "MEDIUM1", "LARGE1"}},
+        {"ManySmallKeys", []string{"SMALL1", "SMALL2", "SMALL1", "SMALL2", "SMALL1"}},
+        {"ManyMediumKeys", []string{"MEDIUM1", "MEDIUM2", "MEDIUM1", "MEDIUM2", "MEDIUM1"}},
+        {"ManyLargeKeys", []string{"LARGE1", "LARGE2", "LARGE1", "LARGE2", "LARGE1"}},
+        {"NonExistentKey", []string{"SMALL1", "NONEXISTENT", "LARGE1"}},
+        {"AllKeys", []string{"SMALL1", "SMALL2", "MEDIUM1", "MEDIUM2", "LARGE1", "LARGE2"}},
+    }
+
+    b.ResetTimer()
+
+    for _, tt := range tests {
+        b.Run(tt.name, func(b *testing.B) {
+            for i := 0; i < b.N; i++ {
+                evalPFCOUNT(tt.args, &store)
+            }
+        })
+    }
 }
 
 func testEvalDebug(t *testing.T, store *dstore.Store) {
