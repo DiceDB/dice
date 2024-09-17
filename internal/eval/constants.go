@@ -25,4 +25,7 @@ const (
 	Async   string = "ASYNC"
 	Help    string = "HELP"
 	Memory  string = "MEMORY"
+	Null    string = "null"
+	null    string = "null"
+	NULL    string = "null"
 )
