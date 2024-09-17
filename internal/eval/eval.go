@@ -37,6 +37,7 @@ type exDurationState int
 const (
 	Uninitialized exDurationState = iota
 	Initialized
+	ObjTypeMask = 0b11110000
 )
 
 var (
@@ -3302,4 +3303,35 @@ func evalJSONNUMINCRBY(args []string, store *dstore.Store) []byte {
 
 	obj.Value = jsonData
 	return clientio.Encode(resultString, false)
+}
+
+func evalTYPE(args []string, store *dstore.Store) []byte {
+	if len(args) != 1 {
+		return diceerrors.NewErrArity("TYPE")
+	}
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		return clientio.Encode("none", false)
+	}
+
+	var typeStr string
+	switch obj.TypeEncoding & ObjTypeMask {
+	case object.ObjTypeString:
+		typeStr = "string"
+	case object.ObjTypeByteList:
+		typeStr = "list"
+	case object.ObjTypeSet:
+		typeStr = "set"
+	case object.ObjTypeHashMap:
+		typeStr = "hash"
+	case object.ObjTypeZSet:
+		typeStr = "zset"
+	case object.ObjTypeStream:
+		typeStr = "stream"
+	default:
+		typeStr = "none"
+	}
+
+	return clientio.Encode(typeStr, false)
 }

@@ -14,6 +14,7 @@ import (
 
 	"github.com/axiomhq/hyperloglog"
 	"github.com/dicedb/dice/internal/clientio"
+	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	dstore "github.com/dicedb/dice/internal/store"
 	testifyAssert "github.com/stretchr/testify/assert"
@@ -50,7 +51,7 @@ func TestEval(t *testing.T) {
 	testEvalJSONTYPE(t, store)
 	testEvalJSONGET(t, store)
 	testEvalJSONSET(t, store)
-	testEvalJSONTOGGLE(t,store)
+	testEvalJSONTOGGLE(t, store)
 	testEvalJSONARRAPPEND(t, store)
 	testEvalTTL(t, store)
 	testEvalDel(t, store)
@@ -71,6 +72,7 @@ func TestEval(t *testing.T) {
 	testEvalLLEN(t, store)
 	testEvalGETEX(t, store)
 	testEvalJSONNUMINCRBY(t, store)
+	testEvalTYPE(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -867,7 +869,6 @@ func testEvalJSONGET(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalJSONGET, store)
 }
 
-
 func testEvalJSONSET(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
@@ -906,209 +907,208 @@ func testEvalJSONSET(t *testing.T, store *dstore.Store) {
 }
 
 func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
-    tests := map[string]evalTestCase{
-        "arr append to non array fields": {
-            setup: func() {
+	tests := map[string]evalTestCase{
+		"arr append to non array fields": {
+			setup: func() {
 				key := "array"
 				value := "{\"a\":2}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
-            },
-            input: []string{"array", "$.a", "6"},
-            output: []byte("*1\r\n$-1\r\n"),
-        },
-        "arr append single element to an array field": {
-            setup: func() {
+			},
+			input:  []string{"array", "$.a", "6"},
+			output: []byte("*1\r\n$-1\r\n"),
+		},
+		"arr append single element to an array field": {
+			setup: func() {
 				key := "array"
 				value := "{\"a\":[1,2]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
-            },
-            input: []string{"array", "$.a", "6"},
-            output: []byte("*1\r\n:3\r\n"),
-        },
-        "arr append multiple elements to an array field": {
-            setup: func() {
+			},
+			input:  []string{"array", "$.a", "6"},
+			output: []byte("*1\r\n:3\r\n"),
+		},
+		"arr append multiple elements to an array field": {
+			setup: func() {
 				key := "array"
 				value := "{\"a\":[1,2]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
-            },
-            input: []string{"array", "$.a", "6", "7", "8"},
-            output: []byte("*1\r\n:5\r\n"),
-        },
-        "arr append string value": {
-            setup: func() {
+			},
+			input:  []string{"array", "$.a", "6", "7", "8"},
+			output: []byte("*1\r\n:5\r\n"),
+		},
+		"arr append string value": {
+			setup: func() {
 				key := "array"
 				value := "{\"b\":[\"b\",\"c\"]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
-            },
-            input: []string{"array", "$.b", `"d"`},
-            output: []byte("*1\r\n:3\r\n"),
-        },
-        "arr append nested array value": {
-            setup: func() {
+			},
+			input:  []string{"array", "$.b", `"d"`},
+			output: []byte("*1\r\n:3\r\n"),
+		},
+		"arr append nested array value": {
+			setup: func() {
 				key := "array"
 				value := "{\"a\":[[1,2]]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
-            },
-            input: []string{"array", "$.a", "[1,2,3]"},
-            output: []byte("*1\r\n:2\r\n"),
-        },
-        "arr append with json value": {
-            setup: func() {
+			},
+			input:  []string{"array", "$.a", "[1,2,3]"},
+			output: []byte("*1\r\n:2\r\n"),
+		},
+		"arr append with json value": {
+			setup: func() {
 				key := "array"
-                value := "{\"a\":[{\"b\": 1}]}"
+				value := "{\"a\":[{\"b\": 1}]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
-            },
-            input: []string{"array", "$.a", "{\"c\": 3}"},
-            output: []byte("*1\r\n:2\r\n"),
-        },
-        "arr append to append on multiple fields": {
-            setup: func() {
+			},
+			input:  []string{"array", "$.a", "{\"c\": 3}"},
+			output: []byte("*1\r\n:2\r\n"),
+		},
+		"arr append to append on multiple fields": {
+			setup: func() {
 				key := "array"
-                value := "{\"a\":[1,2],\"b\":{\"a\":[10]}}"
+				value := "{\"a\":[1,2],\"b\":{\"a\":[10]}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
-            },
-            input: []string{"array", "$..a", "6"},
-            output: []byte("*2\r\n:2\r\n:3\r\n"),
-        },
-        "arr append to append on root node": {
-            setup: func() {
+			},
+			input:  []string{"array", "$..a", "6"},
+			output: []byte("*2\r\n:2\r\n:3\r\n"),
+		},
+		"arr append to append on root node": {
+			setup: func() {
 				key := "array"
-                value := "[1,2,3]"
+				value := "[1,2,3]"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
-            },
-            input: []string{"array", "$", "6"},
-            output: []byte("*1\r\n:4\r\n"),
-        },
-        "arr append to an array with different type": {
-            setup: func() {
+			},
+			input:  []string{"array", "$", "6"},
+			output: []byte("*1\r\n:4\r\n"),
+		},
+		"arr append to an array with different type": {
+			setup: func() {
 				key := "array"
 				value := "{\"a\":[1,2]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
-            },
-            input: []string{"array", "$.a", `"blue"`},
-            output: []byte("*1\r\n:3\r\n"),
-        },
-    }
-    runEvalTests(t, tests, evalJSONARRAPPEND, store)
+			},
+			input:  []string{"array", "$.a", `"blue"`},
+			output: []byte("*1\r\n:3\r\n"),
+		},
+	}
+	runEvalTests(t, tests, evalJSONARRAPPEND, store)
 }
 
 func testEvalJSONTOGGLE(t *testing.T, store *dstore.Store) {
-    tests := map[string]evalTestCase{
-        "nil value": {
-            setup: func() {},
-            input: nil,
-            output: []byte("-ERR wrong number of arguments for 'json.toggle' command\r\n"),
-        },
-        "empty array": {
-            setup: func() {},
-            input: []string{},
-            output: []byte("-ERR wrong number of arguments for 'json.toggle' command\r\n"),
-        },
-        "key does not exist": {
-            setup: func() {},
-            input: []string{"NONEXISTENT_KEY", ".active"},
-            output: []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
-        },
-		"key exists, toggling boolean true to false": {
-            setup: func() {
-                key := "EXISTING_KEY"
-                value := `{"active":true}`
-                var rootData interface{}
-                err := sonic.Unmarshal([]byte(value), &rootData)
-                if err != nil {
-                    fmt.Printf("Debug: Error unmarshaling JSON: %v\n", err)
-                }
-                obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-                store.Put(key, obj)
-
-            },
-            input:  []string{"EXISTING_KEY", ".active"},
-            output: clientio.Encode([]interface{}{0}, false),
-        },
-        "key exists, toggling boolean false to true": {
-            setup: func() {
-                key := "EXISTING_KEY"
-                value := `{"active":false}`
-                var rootData interface{}
-                err := sonic.Unmarshal([]byte(value), &rootData)
-                if err != nil {
-                    fmt.Printf("Debug: Error unmarshaling JSON: %v\n", err)
-                }
-                obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-                store.Put(key, obj)
-            },
-            input:  []string{"EXISTING_KEY", ".active"},
-            output: clientio.Encode([]interface{}{1}, false),
-        },
-        "key exists but expired": {
-            setup: func() {
-                key := "EXISTING_KEY"
-                value := "{\"active\":true}"
-                obj := &object.Obj{
-                    Value:          value,
-                    LastAccessedAt: uint32(time.Now().Unix()),
-                }
-                store.Put(key, obj)
-                store.SetExpiry(obj, int64(-2*time.Millisecond))
-            },
-            input: []string{"EXISTING_KEY", ".active"},
-            output: []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
-        },
-		"nested JSON structure with multiple booleans": {
-            setup: func() {
-                key := "NESTED_KEY"
-                value := `{"isSimple":true,"nested":{"isSimple":false}}`
-                var rootData interface{}
-                _ = sonic.Unmarshal([]byte(value), &rootData)
-                obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-                store.Put(key, obj)
-            },
-            input:  []string{"NESTED_KEY", "$..isSimple"},
-            output: clientio.Encode([]interface{}{0, 1}, false),
-        },
-		"deeply nested JSON structure with multiple matching fields": {
-    		setup: func() {
-        		key := "DEEP_NESTED_KEY"
-        		value := `{"field": true, "nested": {"field": false, "nested": {"field": true}}}`
-        		var rootData interface{}
-        		_= sonic.Unmarshal([]byte(value), &rootData)
-        		obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-        		store.Put(key, obj)
-    		},
-    		input:  []string{"DEEP_NESTED_KEY", "$..field"},
-    		output: clientio.Encode([]interface{}{0, 1, 0}, false),
+	tests := map[string]evalTestCase{
+		"nil value": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'json.toggle' command\r\n"),
 		},
-    }
-    runEvalTests(t, tests, evalJSONTOGGLE, store)
-}
+		"empty array": {
+			setup:  func() {},
+			input:  []string{},
+			output: []byte("-ERR wrong number of arguments for 'json.toggle' command\r\n"),
+		},
+		"key does not exist": {
+			setup:  func() {},
+			input:  []string{"NONEXISTENT_KEY", ".active"},
+			output: []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
+		},
+		"key exists, toggling boolean true to false": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := `{"active":true}`
+				var rootData interface{}
+				err := sonic.Unmarshal([]byte(value), &rootData)
+				if err != nil {
+					fmt.Printf("Debug: Error unmarshaling JSON: %v\n", err)
+				}
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
 
+			},
+			input:  []string{"EXISTING_KEY", ".active"},
+			output: clientio.Encode([]interface{}{0}, false),
+		},
+		"key exists, toggling boolean false to true": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := `{"active":false}`
+				var rootData interface{}
+				err := sonic.Unmarshal([]byte(value), &rootData)
+				if err != nil {
+					fmt.Printf("Debug: Error unmarshaling JSON: %v\n", err)
+				}
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", ".active"},
+			output: clientio.Encode([]interface{}{1}, false),
+		},
+		"key exists but expired": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"active\":true}"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+				store.SetExpiry(obj, int64(-2*time.Millisecond))
+			},
+			input:  []string{"EXISTING_KEY", ".active"},
+			output: []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
+		},
+		"nested JSON structure with multiple booleans": {
+			setup: func() {
+				key := "NESTED_KEY"
+				value := `{"isSimple":true,"nested":{"isSimple":false}}`
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"NESTED_KEY", "$..isSimple"},
+			output: clientio.Encode([]interface{}{0, 1}, false),
+		},
+		"deeply nested JSON structure with multiple matching fields": {
+			setup: func() {
+				key := "DEEP_NESTED_KEY"
+				value := `{"field": true, "nested": {"field": false, "nested": {"field": true}}}`
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"DEEP_NESTED_KEY", "$..field"},
+			output: clientio.Encode([]interface{}{0, 1, 0}, false),
+		},
+	}
+	runEvalTests(t, tests, evalJSONTOGGLE, store)
+}
 
 func testEvalTTL(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
@@ -1591,7 +1591,6 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 	}
 	runEvalTests(t, tests, evalJSONSTRLEN, store)
 }
-
 
 func testEvalLLEN(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
@@ -2178,4 +2177,103 @@ func testEvalSELECT(t *testing.T, store *dstore.Store) {
 		},
 	}
 	runEvalTests(t, tests, evalSELECT, store)
+}
+
+func testEvalTYPE(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"TYPE : incorrect number of arguments": {
+			setup:  func() {},
+			input:  []string{},
+			output: diceerrors.NewErrArity("TYPE"),
+		},
+		"TYPE : key does not exist": {
+			setup:  func() {},
+			input:  []string{"nonexistent_key"},
+			output: clientio.Encode("none", false),
+		},
+		"TYPE : key exists and is of type String": {
+			setup: func() {
+				store.Put("string_key", store.NewObj("value", -1, object.ObjTypeString, object.ObjEncodingRaw))
+			},
+			input:  []string{"string_key"},
+			output: clientio.Encode("string", false),
+		},
+		"TYPE : key exists and is of type List": {
+			setup: func() {
+				store.Put("list_key", store.NewObj([]byte("value"), -1, object.ObjTypeByteList, object.ObjEncodingRaw))
+			},
+			input:  []string{"list_key"},
+			output: clientio.Encode("list", false),
+		},
+		"TYPE : key exists and is of type Set": {
+			setup: func() {
+				store.Put("set_key", store.NewObj([]byte("value"), -1, object.ObjTypeSet, object.ObjEncodingRaw))
+			},
+			input:  []string{"set_key"},
+			output: clientio.Encode("set", false),
+		},
+		"TYPE : key exists and is of type Hash": {
+			setup: func() {
+				store.Put("hash_key", store.NewObj([]byte("value"), -1, object.ObjTypeHashMap, object.ObjEncodingRaw))
+			},
+			input:  []string{"hash_key"},
+			output: clientio.Encode("hash", false),
+		},
+		"TYPE : key exists and is of type ZSet": {
+			setup: func() {
+				store.Put("zset_key", store.NewObj([]byte("value"), -1, object.ObjTypeZSet, object.ObjEncodingRaw))
+			},
+			input:  []string{"zset_key"},
+			output: clientio.Encode("zset", false),
+		},
+		"TYPE : key exists and is of type Stream": {
+			setup: func() {
+				store.Put("stream_key", store.NewObj([]byte("value"), -1, object.ObjTypeStream, object.ObjEncodingRaw))
+			},
+			input:  []string{"stream_key"},
+			output: clientio.Encode("stream", false),
+		},
+	}
+	runEvalTests(t, tests, evalTYPE, store)
+}
+
+func BenchmarkEvalTYPE(b *testing.B) {
+	store := dstore.NewStore(nil)
+
+	// Define different types of objects to benchmark
+	objectTypes := map[string]func(){
+		"String": func() {
+			store.Put("string_key", store.NewObj("value", -1, object.ObjTypeString, object.ObjEncodingRaw))
+		},
+		"List": func() {
+			store.Put("list_key", store.NewObj([]byte("value"), -1, object.ObjTypeByteList, object.ObjEncodingRaw))
+		},
+		"Set": func() {
+			store.Put("set_key", store.NewObj([]byte("value"), -1, object.ObjTypeSet, object.ObjEncodingRaw))
+		},
+		"Hash": func() {
+			store.Put("hash_key", store.NewObj([]byte("value"), -1, object.ObjTypeHashMap, object.ObjEncodingRaw))
+		},
+		"ZSet": func() {
+			store.Put("zset_key", store.NewObj([]byte("value"), -1, object.ObjTypeZSet, object.ObjEncodingRaw))
+		},
+		"Stream": func() {
+			store.Put("stream_key", store.NewObj([]byte("value"), -1, object.ObjTypeStream, object.ObjEncodingRaw))
+		},
+	}
+
+	for objType, setupFunc := range objectTypes {
+		b.Run(fmt.Sprintf("ObjectType_%s", objType), func(b *testing.B) {
+			// Setup the object in the store
+			setupFunc()
+
+			b.ResetTimer()
+			b.ReportAllocs()
+
+			// Benchmark the evalTYPE function
+			for i := 0; i < b.N; i++ {
+				_ = evalTYPE([]string{fmt.Sprintf("%s_key", strings.ToLower(objType))}, store)
+			}
+		})
+	}
 }
