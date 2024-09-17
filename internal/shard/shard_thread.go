@@ -94,8 +94,13 @@ func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 	workerChan, ok := shard.workerMap[op.WorkerID]
 	shard.workerMutex.RUnlock()
 
-	if ok {
+	if ok && op.ResponseChan == nil {
 		workerChan <- &ops.StoreResponse{
+			RequestID: op.RequestID,
+			Result:    resp,
+		}
+	} else if ok && op.ResponseChan != nil { // Send the response directly to ResponseChan if available
+		op.ResponseChan <- &ops.StoreResponse{
 			RequestID: op.RequestID,
 			Result:    resp,
 		}
@@ -111,14 +116,18 @@ func (shard *ShardThread) executeCommand(op *ops.StoreOp) []byte {
 	}
 
 	// Till the time we refactor to handle QWATCH differently using HTTP Streaming/SSE
-	if op.HTTPOp {
-		return diceCmd.Eval(op.Cmd.Args, shard.store)
-	}
+	//if op.HTTPOp {
+	//	return diceCmd.Eval(op.Cmd.Args, shard.store)
+	//}
 
 	// The following commands could be handled at the shard level, however, we can randomly let any shard handle them
 	// to reduce load on main server.
 	switch diceCmd.Name {
 	case "SUBSCRIBE", "QWATCH":
+		if op.HTTPOp {
+			return eval.EvalQWATCHHttp(op.Cmd.Args, op.WorkerID, shard.workerMap[op.WorkerID], shard.store)
+		}
+
 		return eval.EvalQWATCH(op.Cmd.Args, op.Client.Fd, shard.store)
 	case "UNSUBSCRIBE", "QUNWATCH":
 		return eval.EvalQUNWATCH(op.Cmd.Args, op.Client.Fd)

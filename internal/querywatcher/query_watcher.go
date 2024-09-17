@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/dicedb/dice/internal/ops"
 	"sync"
 	"syscall"
 	"time"
@@ -32,6 +33,7 @@ type (
 			Key   string
 			Value *object.Obj
 		} // channel to receive cache data for this query
+		ResponseChan chan *ops.StoreResponse
 	}
 
 	// AdhocQueryResult represents the result of an adhoc query.
@@ -107,7 +109,7 @@ func (w *QueryManager) listenForSubscriptions(ctx context.Context) {
 		select {
 		case event := <-WatchSubscriptionChan:
 			if event.Subscribe {
-				w.addWatcher(&event.Query, event.ClientFD, event.CacheChan)
+				w.addWatcher(&event.Query, event.ClientFD, event.ResponseChan, event.CacheChan)
 			} else {
 				w.removeWatcher(&event.Query, event.ClientFD)
 			}
@@ -188,18 +190,34 @@ func (w *QueryManager) updateQueryCache(queryFingerprint string, event dstore.Wa
 func (w *QueryManager) notifyClients(query *sql.DSQLQuery, clients *sync.Map, queryResult *[]sql.QueryResultRow) {
 	encodedResult := clientio.Encode(clientio.CreatePushResponse(query, queryResult), false)
 
-	clients.Range(func(clientKey, _ interface{}) bool {
-		clientFD := clientKey.(int)
-		// We use a retry mechanism here as the client's socket may be temporarily unavailable for writes due to the
-		// high number of writes that are possible in qwatch. Without this mechanism, the client may be removed from the
-		// watchlist prematurely.
-		// TODO:
-		//  1. Replace with thread pool to prevent launching an unbounded number of goroutines.
-		//  2. Each client's writes should be sent in a serialized manner, maybe a per-client queue should be maintained
-		//   here. A single queue-per-client is also helpful when the client file descriptor is closed and the queue can
-		//   just be destroyed.
-		go w.sendWithRetry(query, clientFD, encodedResult)
+	clients.Range(func(clientKey, clientVal interface{}) bool {
+		if clientVal == nil {
+			return true // skip invalid clients
+		}
+
+		if responseChan, ok := clientKey.(chan *ops.StoreResponse); ok {
+			// This is an HTTP client, send the response via ResponseChan
+			responseChan <- &ops.StoreResponse{
+				RequestID: 214245,
+				Result:    encodedResult,
+			}
+		} else if clientFD, ok := clientKey.(int); ok {
+			// This is a regular client, use clientFD to send the response
+			go w.sendWithRetry(query, clientFD, encodedResult)
+		}
 		return true
+		//clientFD := clientKey.(int)
+		//
+		//// We use a retry mechanism here as the client's socket may be temporarily unavailable for writes due to the
+		//// high number of writes that are possible in qwatch. Without this mechanism, the client may be removed from the
+		//// watchlist prematurely.
+		//// TODO:
+		////  1. Replace with thread pool to prevent launching an unbounded number of goroutines.
+		////  2. Each client's writes should be sent in a serialized manner, maybe a per-client queue should be maintained
+		////   here. A single queue-per-client is also helpful when the client file descriptor is closed and the queue can
+		////   just be destroyed.
+		//go w.sendWithRetry(query, clientFD, encodedResult)
+		//return true
 	})
 }
 
@@ -247,14 +265,18 @@ func (w *QueryManager) serveAdhocQueries(ctx context.Context) {
 }
 
 // addWatcher adds a client as a watcher to a query.
-func (w *QueryManager) addWatcher(query *sql.DSQLQuery, clientFD int, cacheChan chan *[]struct {
+func (w *QueryManager) addWatcher(query *sql.DSQLQuery, clientFD int, responseChan chan *ops.StoreResponse, cacheChan chan *[]struct {
 	Key   string
 	Value *object.Obj
 }) {
 	queryString := query.String()
 
 	clients, _ := w.WatchList.LoadOrStore(queryString, &sync.Map{})
-	clients.(*sync.Map).Store(clientFD, struct{}{})
+	if responseChan != nil {
+		clients.(*sync.Map).Store(responseChan, struct{}{})
+	} else {
+		clients.(*sync.Map).Store(clientFD, struct{}{})
+	}
 
 	w.QueryCacheMu.Lock()
 	defer w.QueryCacheMu.Unlock()

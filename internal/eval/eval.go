@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/dicedb/dice/internal/ops"
 	"math"
 	"regexp"
 	"sort"
@@ -1761,6 +1762,51 @@ func EvalQWATCH(args []string, clientFd int, store *dstore.Store) []byte {
 		Query:     query,
 		ClientFD:  clientFd,
 		CacheChan: cacheChannel,
+	}
+
+	store.CacheKeysForQuery(query.Where, cacheChannel)
+
+	// Return the result of the query.
+	responseChan := make(chan querywatcher.AdhocQueryResult)
+	querywatcher.AdhocQueryChan <- querywatcher.AdhocQuery{
+		Query:        query,
+		ResponseChan: responseChan,
+	}
+
+	queryResult := <-responseChan
+	if queryResult.Err != nil {
+		return clientio.Encode(queryResult.Err, false)
+	}
+
+	// TODO: We should return the list of all queries being watched by the client.
+	return clientio.Encode(clientio.CreatePushResponse(&query, queryResult.Result), false)
+}
+
+// EvalQWATCH adds the specified key to the watch list for the caller client.
+// Every time a key in the watch list is modified, the client will be sent a response
+// containing the new value of the key along with the operation that was performed on it.
+// Contains only one argument, the query to be watched.
+func EvalQWATCHHttp(args []string, workerId string, ioChan chan *ops.StoreResponse, store *dstore.Store) []byte {
+	if len(args) != 1 {
+		return diceerrors.NewErrArity("QWATCH")
+	}
+
+	// Parse and get the selection from the query.
+	query, e := sql.ParseQuery( /*sql=*/ args[0])
+
+	if e != nil {
+		return clientio.Encode(e, false)
+	}
+
+	cacheChannel := make(chan *[]struct {
+		Key   string
+		Value *object.Obj
+	})
+	querywatcher.WatchSubscriptionChan <- querywatcher.WatchSubscription{
+		Subscribe:    true,
+		Query:        query,
+		CacheChan:    cacheChannel,
+		ResponseChan: ioChan,
 	}
 
 	store.CacheKeysForQuery(query.Where, cacheChannel)
