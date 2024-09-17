@@ -3018,6 +3018,7 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) []byte {
 	}
 
 	jsonData := obj.Value
+	fmt.Printf("jsonData datatype is %T and jsonData is %s\n", jsonData, jsonData)
 	keysList := make([]interface{},0,1)
 	// If path is root, return all keys of the entire JSON
 	if path == defaultRootPath {
@@ -3037,7 +3038,7 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) []byte {
 
 	// Execute the JSONPath query
 	results := expr.Get(jsonData)
-	fmt.Printf("Results datatype is %T\n", results)
+	fmt.Printf("Results datatype is %T and results is %s\n", results, results)
 	if len(results) == 0 {
 		return clientio.RespNIL
 	}
