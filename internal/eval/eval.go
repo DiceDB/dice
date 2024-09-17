@@ -624,10 +624,10 @@ func evalJSONARRPOP(args []string, store *dstore.Store) []byte {
 	if path == defaultRootPath {
 		arr, ok := jsonData.([]any)
 		// if value can not be converted to array, it is of another type
-		// return nill in this case similar to redis
+		// returns nil in this case similar to redis
 		// also, return nil if array is empty
 		if !ok || len(arr) == 0 {
-			return clientio.RespNIL
+			return diceerrors.NewErrWithMessage("Path '$' does not exist or not an array")
 		}
 		popElem, arr, err := popElementAndUpdateArray(arr, index)
 		if err != nil {
@@ -653,7 +653,7 @@ func evalJSONARRPOP(args []string, store *dstore.Store) []byte {
 	for _, result := range results {
 		arr, ok := result.([]any)
 		// if value can not be converted to array, it is of another type
-		// return nill in this case similar to redis
+		// returns nil in this case similar to redis
 		// also, return nil if array is empty
 		if !ok || len(arr) == 0 {
 			popElem := clientio.RespNIL
