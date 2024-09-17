@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"testing"
+	"time"
 
 	"github.com/dicedb/dice/internal/server/utils"
 	"gotest.tools/v3/assert"
@@ -18,7 +19,7 @@ func TestINCR(t *testing.T) {
 		commands []struct {
 			op          string
 			key         string
-			val         int64
+			val         interface{}
 			expectedErr string
 		}
 	}{
@@ -27,32 +28,122 @@ func TestINCR(t *testing.T) {
 			commands: []struct {
 				op          string
 				key         string
-				val         int64
+				val         interface{}
 				expectedErr string
 			}{
-				{"s", "key1", 0, utils.EmptyStr},
-				{"i", "key1", 1, utils.EmptyStr},
-				{"i", "key1", 2, utils.EmptyStr},
-				{"i", "key2", 1, utils.EmptyStr},
-				{"g", "key1", 2, utils.EmptyStr},
-				{"g", "key2", 1, utils.EmptyStr},
-				{"s", "key3", math.MaxInt64 - 1, utils.EmptyStr},
-				{"i", "key3", math.MaxInt64, utils.EmptyStr},
-				{"i", "key3", math.MaxInt64, "ERR value is out of range"},
+				{"s", "key1", int64(0), utils.EmptyStr},
+				{"i", "key1", int64(1), utils.EmptyStr},
+				{"i", "key1", int64(2), utils.EmptyStr},
+				{"i", "key2", int64(1), utils.EmptyStr},
+				{"g", "key1", int64(2), utils.EmptyStr},
+				{"g", "key2", int64(1), utils.EmptyStr},
+			},
+		},
+		{
+			name: "Increment to and from max int64",
+			commands: []struct {
+				op          string
+				key         string
+				val         interface{}
+				expectedErr string
+			}{
+				{"s", "max_int", int64(math.MaxInt64 - 1), utils.EmptyStr},
+				{"i", "max_int", int64(math.MaxInt64), utils.EmptyStr},
+				{"i", "max_int", nil, "ERR value is out of range"},
+				{"s", "max_int", int64(math.MaxInt64), utils.EmptyStr},
+				{"i", "max_int", nil, "ERR value is out of range"},
+			},
+		},
+		{
+			name: "Increment from min int64",
+			commands: []struct {
+				op          string
+				key         string
+				val         interface{}
+				expectedErr string
+			}{
+				{"s", "min_int", int64(math.MinInt64), utils.EmptyStr},
+				{"i", "min_int", int64(math.MinInt64 + 1), utils.EmptyStr},
+				{"i", "min_int", int64(math.MinInt64 + 2), utils.EmptyStr},
+			},
+		},
+		{
+			name: "Increment non-integer values",
+			commands: []struct {
+				op          string
+				key         string
+				val         interface{}
+				expectedErr string
+			}{
+				{"s", "float_key", "3.14", utils.EmptyStr},
+				{"i", "float_key", nil, "ERR WRONGTYPE Operation against a key holding the wrong kind of value"},
+				{"s", "string_key", "hello", utils.EmptyStr},
+				{"i", "string_key", nil, "ERR WRONGTYPE Operation against a key holding the wrong kind of value"},
+				{"s", "bool_key", "true", utils.EmptyStr},
+				{"i", "bool_key", nil, "ERR WRONGTYPE Operation against a key holding the wrong kind of value"},
+			},
+		},
+		{
+			name: "Increment non-existent key",
+			commands: []struct {
+				op          string
+				key         string
+				val         interface{}
+				expectedErr string
+			}{
+				{"i", "non_existent", int64(1), utils.EmptyStr},
+				{"g", "non_existent", int64(1), utils.EmptyStr},
+				{"i", "non_existent", int64(2), utils.EmptyStr},
+			},
+		},
+		{
+			name: "Increment string representing integers",
+			commands: []struct {
+				op          string
+				key         string
+				val         interface{}
+				expectedErr string
+			}{
+				{"s", "str_int1", "42", utils.EmptyStr},
+				{"i", "str_int1", int64(43), utils.EmptyStr},
+				{"s", "str_int2", "-10", utils.EmptyStr},
+				{"i", "str_int2", int64(-9), utils.EmptyStr},
+				{"s", "str_int3", "0", utils.EmptyStr},
+				{"i", "str_int3", int64(1), utils.EmptyStr},
+			},
+		},
+		{
+			name: "Increment with expiry",
+			commands: []struct {
+				op          string
+				key         string
+				val         interface{}
+				expectedErr string
+			}{
+				{"se", "expiry_key", int64(0), utils.EmptyStr}, 
+				{"i", "expiry_key", int64(1), utils.EmptyStr},
+				{"i", "expiry_key", int64(2), utils.EmptyStr},
+				{"w", "expiry_key", nil, utils.EmptyStr}, 
+				{"i", "expiry_key", int64(1), utils.EmptyStr}, 
 			},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// deleteTestKeys([]string{"key1", "key2"}, store)
-			FireCommand(conn, "DEL key1")
-			FireCommand(conn, "DEL key2")
+			// Clean up keys before each test case
+			keys := []string{"key1", "key2", "max_int", "min_int", "float_key", "string_key", "bool_key", 
+							 "non_existent", "str_int1", "str_int2", "str_int3", "expiry_key"}
+			for _, key := range keys {
+				FireCommand(conn, fmt.Sprintf("DEL %s", key))
+			}
 
 			for _, cmd := range tc.commands {
 				switch cmd.op {
 				case "s":
-					FireCommand(conn, fmt.Sprintf("SET %s %d", cmd.key, cmd.val))
+					FireCommand(conn, fmt.Sprintf("SET %s %v", cmd.key, cmd.val))
+				case "se":
+					FireCommand(conn, fmt.Sprintf("SET %s %v EX 1", cmd.key, cmd.val)) 
 				case "i":
 					result := FireCommand(conn, fmt.Sprintf("INCR %s", cmd.key))
 					switch v := result.(type) {
@@ -64,6 +155,8 @@ func TestINCR(t *testing.T) {
 				case "g":
 					result := FireCommand(conn, fmt.Sprintf("GET %s", cmd.key))
 					assert.Equal(t, cmd.val, result)
+				case "w":
+					time.Sleep(1100 * time.Millisecond) 
 				}
 			}
 		})
