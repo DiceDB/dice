@@ -679,7 +679,7 @@ func evalJSONARRPOP(args []string, store *dstore.Store) []byte {
 
 // popElementAndUpdateArray removes an element at the given index
 // Returns popped element, remaining array and error
-func popElementAndUpdateArray(arr []any, index string) (any, []any, error) {
+func popElementAndUpdateArray(arr []any, index string) (popElem any, updatedArray []any, err error) {
 	if len(arr) == 0 {
 		return nil, nil, nil
 	}
@@ -698,7 +698,7 @@ func popElementAndUpdateArray(arr []any, index string) (any, []any, error) {
 		idx = adjustIndex(idx, arr)
 	}
 
-	popElem := arr[idx]
+	popElem = arr[idx]
 	arr = append(arr[:idx], arr[idx+1:]...)
 
 	return popElem, arr, nil
