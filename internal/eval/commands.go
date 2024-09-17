@@ -190,6 +190,17 @@ var (
 		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsonarrpopCmdMeta = DiceCmdMeta{
+		Name: "JSON.ARRPOP",
+		Info: `JSON.ARRPOP key [path [index]]
+		Removes and returns an element from the index in the array and updates the array in memory.
+		Returns error if key doesn't exist.
+		Return nil if array is empty or there is no array at the path.
+		It supports negative index and is out of bound safe.
+		`,
+		Eval:  evalJSONARRPOP,
+		Arity: -2,
+	}
 	ttlCmdMeta = DiceCmdMeta{
 		Name: "TTL",
 		Info: `TTL returns Time-to-Live in secs for the queried key in args
@@ -746,6 +757,7 @@ func init() {
 	DiceCmds["JSON.FORGET"] = jsonforgetCmdMeta
 	DiceCmds["JSON.ARRLEN"] = jsonarrlenCmdMeta
 	DiceCmds["JSON.DEBUG"] = jsondebugCmdMeta
+	DiceCmds["JSON.ARRPOP"] = jsonarrpopCmdMeta
 	DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
 	DiceCmds["EXPIRE"] = expireCmdMeta
