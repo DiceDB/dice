@@ -1693,7 +1693,7 @@ func evalLATENCY(args []string, store *dstore.Store) []byte {
 // evalLRU deletes all the keys from the LRU
 // returns encoded RESP OK
 func evalLRU(args []string, store *dstore.Store) []byte {
-	dstore.EvictAllkeysLRU(store)
+	dstore.EvictAllkeysLRUOrLFU(store)
 	return clientio.RespOK
 }
 
