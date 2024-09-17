@@ -32,7 +32,7 @@ func NewRESPParserWithBytes(c io.ReadWriter, initBytes []byte) *RESPParser {
 		// we want.
 		// note: the size 512 is arbitrarily chosen, and we can put
 		// a decent thought into deciding the optimal value (in case it affects the perf)
-		tbuf: make([]byte, config.IOBufferLength),
+		tbuf: make([]byte, config.DiceConfig.Network.IOBufferLength),
 	}
 }
 
