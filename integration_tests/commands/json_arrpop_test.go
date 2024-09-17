@@ -10,6 +10,7 @@ import (
 func TestJSONARRPOP(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
+	FireCommand(conn, "DEL key")
 
 	arrayAtRoot := `[0,1,2,3]`
 	nestedArray := `{"a":2,"b":[0,1,2,3]}`
@@ -39,7 +40,6 @@ func TestJSONARRPOP(t *testing.T) {
 
 	for _, tcase := range testCases {
 		t.Run(tcase.name, func(t *testing.T) {
-			FireCommand(conn, "json.del key")
 			for i := 0; i < len(tcase.commands); i++ {
 				cmd := tcase.commands[i]
 				out := tcase.expected[i]
