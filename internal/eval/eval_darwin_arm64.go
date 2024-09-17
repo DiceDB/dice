@@ -1,14 +1,12 @@
-//go:build arm64
+//go:build darwin && arm64
 
 package eval
 
 import (
-	"syscall"
-
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
+	"syscall"
 )
 
 /* Description - Spawn a background thread to persist the data via AOF technique. Current implementation is
@@ -21,15 +19,19 @@ func EvalBGREWRITEAOF(args []string, store *dstore.Store) []byte {
 	// This technique utilizes the CoW or copy-on-write, so while the main process is free to modify them
 	// the child would save all the pages to disk.
 	// Check details here -https://www.sobyte.net/post/2022-10/fork-cow/
-	childThreadID, _, _ := syscall.Syscall(syscall.SYS_GETTID, 0, 0, 0)
-	newChild, _, _ := syscall.Syscall(syscall.SYS_CLONE, syscall.CLONE_PARENT_SETTID|syscall.CLONE_CHILD_CLEARTID|uintptr(syscall.SIGCHLD), 0, childThreadID)
-	if newChild == 0 {
+	pid, _, _ := syscall.RawSyscall(syscall.SYS_FORK, 0, 0, 0)
+
+	if pid == 0 {
 		// We are inside child process now, so we'll start flushing to disk.
 		if err := dstore.DumpAllAOF(store); err != nil {
 			return diceerrors.NewErrWithMessage("AOF failed")
 		}
-		return []byte(utils.EmptyStr)
+		syscall.Exit(0)
+	} else if pid < 0 {
+		// Fork failed
+		return diceerrors.NewErrWithMessage("Fork failed")
 	}
-	// Back to main threadg
+
+	// Back to main thread
 	return clientio.RespOK
 }
