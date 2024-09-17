@@ -671,7 +671,7 @@ func TestJsonObjLen(t *testing.T) {
 		{
 			name:     "JSON.OBJLEN invalid json path",
 			commands: []string{"json.set obj $ " + b, "json.objlen obj $..language*something"},
-			expected: []interface{}{"OK", "ERR invalid JSONPath"},
+			expected: []interface{}{"OK", "ERR parse error at 13 in $..language*something"},
 		},
 		{
 			name:     "JSON.OBJLEN with non-existant key",
@@ -686,7 +686,7 @@ func TestJsonObjLen(t *testing.T) {
 		{
 			name:     "JSON.OBJLEN invalid json path",
 			commands: []string{"json.set obj $ " + c, "json.objlen obj $[1"},
-			expected: []interface{}{"OK", "ERR invalid JSONPath"},
+			expected: []interface{}{"OK", "ERR expected a number at 4 in $[1"},
 		},
 		{
 			name:     "JSON.OBJLEN invalid json path",

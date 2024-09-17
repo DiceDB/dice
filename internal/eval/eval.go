@@ -623,7 +623,11 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) []byte {
 	if len(args) == 1 {
 		// check if the value is of json type
 		if utils.GetJSONFieldType(jsonData) == utils.ObjectType {
-			return clientio.Encode(len(jsonData.(map[string]interface{})), false)
+			if castedData, ok := jsonData.(map[string]interface{}); ok {
+				return clientio.Encode(len(castedData), false)
+			}else{
+				return clientio.RespNIL
+			}			
 		}
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
@@ -632,7 +636,7 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) []byte {
 
 	expr, err := jp.ParseString(path)
 	if err != nil {
-		return diceerrors.NewErrWithMessage("invalid JSONPath")
+		return diceerrors.NewErrWithMessage(err.Error())
 	}
 
 	// get all values for matching paths
@@ -643,12 +647,15 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) []byte {
 	for _,result := range results{
 		switch utils.GetJSONFieldType(result) {
 		case utils.ObjectType:
-			objectLen = append(objectLen,len(result.(map[string]interface{})))
+			if castedResult, ok := result.(map[string]interface{}); ok {
+				objectLen = append(objectLen, len(castedResult)) 
+			} else {
+				objectLen = append(objectLen, nil)
+			}
 		default:
 			objectLen = append(objectLen, nil)
 		}
 	}
-
 	return clientio.Encode(objectLen,false)
 }
 
