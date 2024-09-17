@@ -11,8 +11,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	"unsafe"
 	"unicode"
+	"unsafe"
 
 	"github.com/dicedb/dice/internal/object"
 
@@ -3214,7 +3214,7 @@ func incrementValue(value any, isIncrFloat bool, incrFloat float64, incrInt int6
 			return newVal, resultString, true
 		}
 	default:
-		return value, "null", false
+		return value, null, false
 	}
 }
 
@@ -3288,7 +3288,6 @@ func evalJSONNUMINCRBY(args []string, store *dstore.Store) []byte {
 		resultArray = append(resultArray, resultString)
 	} else {
 		// Execute the JSONPath query
-
 		_, err := expr.Modify(jsonData, func(value any) (interface{}, bool) {
 			newValue, resultString, isModified := incrementValue(value, isIncrFloat, incrFloat, incrInt)
 			resultArray = append(resultArray, resultString)
@@ -3301,21 +3300,6 @@ func evalJSONNUMINCRBY(args []string, store *dstore.Store) []byte {
 
 	resultString := `[` + strings.Join(resultArray, ",") + `]`
 
-	newObj := &object.Obj{
-		Value:        jsonData,
-		TypeEncoding: object.ObjTypeJSON,
-	}
-	exp, ok := dstore.GetExpiry(obj, store)
-
-	var exDurationMs int64 = -1
-	if ok {
-		exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
-	}
-	// newObj has bydefault expiry time -1 , we need to set it
-	if exDurationMs > 0 {
-		store.SetExpiry(newObj, exDurationMs)
-	}
-
-	store.Put(key, newObj)
+	obj.Value = jsonData
 	return clientio.Encode(resultString, false)
 }

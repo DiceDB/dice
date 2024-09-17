@@ -888,9 +888,9 @@ func TestJSONNumIncrBy(t *testing.T) {
 		{
 			name:        "incrby at non root path",
 			setupData:   fmt.Sprintf("JSON.SET %s $ %s", "foo", `{"a":"b","b":[{"a":2.2},{"a":5},{"a":"c"}]}`),
-			commands:    []string{"JSON.NUMINCRBY foo $..a 2", "JSON.NUMINCRBY foo $.a 2", "JSON.NUMINCRBY foo $..a -2"},
-			expected:    []interface{}{"[null,4.2,7,null]", "[null]", "[null,2.2,5,null]"},
-			assert_type: []string{"perm_equal", "perm_equal", "perm_equal"},
+			commands:    []string{"JSON.NUMINCRBY foo $..a 2", "JSON.NUMINCRBY foo $.a 2", "JSON.GET foo", "JSON.NUMINCRBY foo $..a -2", "JSON.GET foo"},
+			expected:    []interface{}{"[null,4.2,7,null]", "[null]", "{\"a\":\"b\",\"b\":[{\"a\":4.2},{\"a\":7},{\"a\":\"c\"}]}", "[null,2.2,5,null]", "{\"a\":\"b\",\"b\":[{\"a\":2.2},{\"a\":5},{\"a\":\"c\"}]}"},
+			assert_type: []string{"perm_equal", "perm_equal", "equal", "perm_equal", "equal"},
 			cleanUp:     []string{"DEL foo"},
 		},
 		{
@@ -899,6 +899,14 @@ func TestJSONNumIncrBy(t *testing.T) {
 			commands:    []string{"JSON.NUMINCRBY foo $ 1", "JSON.GET foo $", "JSON.NUMINCRBY foo $ -1", "JSON.GET foo $"},
 			expected:    []interface{}{"[2]", "2", "[1]", "1"},
 			assert_type: []string{"equal", "equal", "equal", "equal"},
+			cleanUp:     []string{"DEL foo"},
+		},
+		{
+			name:        "incrby at root path",
+			setupData:   "JSON.SET foo $ 1",
+			commands:    []string{"expire foo 10", "JSON.NUMINCRBY foo $ 1", "ttl foo", "JSON.GET foo $", "JSON.NUMINCRBY foo $ -1", "JSON.GET foo $"},
+			expected:    []interface{}{int64(1), "[2]", int64(10), "2", "[1]", "1"},
+			assert_type: []string{"equal", "equal", "range", "equal", "equal", "equal"},
 			cleanUp:     []string{"DEL foo"},
 		},
 	}
@@ -917,6 +925,8 @@ func TestJSONNumIncrBy(t *testing.T) {
 					assert.Equal(t, out, result)
 				} else if tc.assert_type[i] == "perm_equal" {
 					assert.Assert(t, arraysArePermutations(convertToArray(out.(string)), convertToArray(result.(string))))
+				} else if tc.assert_type[i] == "range" {
+					assert.Assert(t, result.(int64) <= tc.expected[i].(int64) && result.(int64) > 0, "Expected %v to be within 0 to %v", result, tc.expected[i])
 				}
 			}
 			for i := 0; i < len(tc.cleanUp); i++ {
