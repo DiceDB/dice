@@ -975,7 +975,7 @@ func TestJSONNumIncrBy(t *testing.T) {
 			setupData:   fmt.Sprintf("JSON.SET %s $ %s", "foo", `{"a":"b","b":[{"a":2.2},{"a":5},{"a":"c"}]}`),
 			commands:    []string{"JSON.NUMINCRBY foo $..a 2", "JSON.NUMINCRBY foo $.a 2", "JSON.GET foo", "JSON.NUMINCRBY foo $..a -2", "JSON.GET foo"},
 			expected:    []interface{}{"[null,4.2,7,null]", "[null]", "{\"a\":\"b\",\"b\":[{\"a\":4.2},{\"a\":7},{\"a\":\"c\"}]}", "[null,2.2,5,null]", "{\"a\":\"b\",\"b\":[{\"a\":2.2},{\"a\":5},{\"a\":\"c\"}]}"},
-			assert_type: []string{"perm_equal", "perm_equal", "equal", "perm_equal", "equal"},
+			assert_type: []string{"perm_equal", "perm_equal", "json_equal", "perm_equal", "json_equal"},
 			cleanUp:     []string{"DEL foo"},
 		},
 		{
@@ -1006,12 +1006,15 @@ func TestJSONNumIncrBy(t *testing.T) {
 				cmd := tc.commands[i]
 				out := tc.expected[i]
 				result := FireCommand(conn, cmd)
-				if tc.assert_type[i] == "equal" {
+				switch tc.assert_type[i] {
+				case "equal":
 					assert.Equal(t, out, result)
-				} else if tc.assert_type[i] == "perm_equal" {
+				case "perm_equal":
 					assert.Assert(t, arraysArePermutations(convertToArray(out.(string)), convertToArray(result.(string))))
-				} else if tc.assert_type[i] == "range" {
+				case "range":
 					assert.Assert(t, result.(int64) <= tc.expected[i].(int64) && result.(int64) > 0, "Expected %v to be within 0 to %v", result, tc.expected[i])
+				case "json_equal":
+					testutils.AssertJSONEqual(t, out.(string), result.(string))
 				}
 			}
 			for i := 0; i < len(tc.cleanUp); i++ {

@@ -588,6 +588,142 @@ func evalJSONARRLEN(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(arrlenList, false)
 }
 
+func evalJSONARRPOP(args []string, store *dstore.Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("json.arrpop")
+	}
+	key := args[0]
+
+	var path string = defaultRootPath
+	if len(args) >= 2 {
+		path = args[1]
+	}
+
+	var index string
+	if len(args) >= 3 {
+		index = args[2]
+	}
+
+	// Retrieve the object from the database
+	obj := store.Get(key)
+	if obj == nil {
+		return diceerrors.NewErrWithMessage("could not perform this operation on a key that doesn't exist")
+	}
+
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
+	}
+
+	jsonData := obj.Value
+	_, err := sonic.Marshal(jsonData)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
+	}
+
+	if path == defaultRootPath {
+		arr, ok := jsonData.([]any)
+		// if value can not be converted to array, it is of another type
+		// returns nil in this case similar to redis
+		// also, return nil if array is empty
+		if !ok || len(arr) == 0 {
+			return diceerrors.NewErrWithMessage("Path '$' does not exist or not an array")
+		}
+		popElem, arr, err := popElementAndUpdateArray(arr, index)
+		if err != nil {
+			return diceerrors.NewErrWithFormattedMessage("error popping element: %v", err)
+		}
+
+		// save the remaining array
+		newObj := store.NewObj(arr, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+		store.Put(key, newObj)
+
+		return clientio.Encode(popElem, false)
+	}
+
+	// if path is not root then extract value at path
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("invalid JSONPath")
+	}
+	results := expr.Get(jsonData)
+
+	// process value at each path
+	popArr := make([]any, 0, len(results))
+	for _, result := range results {
+		arr, ok := result.([]any)
+		// if value can not be converted to array, it is of another type
+		// returns nil in this case similar to redis
+		// also, return nil if array is empty
+		if !ok || len(arr) == 0 {
+			popElem := clientio.RespNIL
+			popArr = append(popArr, popElem)
+			continue
+		}
+
+		popElem, arr, err := popElementAndUpdateArray(arr, index)
+		if err != nil {
+			return diceerrors.NewErrWithFormattedMessage("error popping element: %v", err)
+		}
+
+		// update array in place in the json object
+		err = expr.Set(jsonData, arr)
+		if err != nil {
+			return diceerrors.NewErrWithFormattedMessage("error saving updated json: %v", err)
+		}
+
+		popArr = append(popArr, popElem)
+	}
+	return clientio.Encode(popArr, false)
+}
+
+// popElementAndUpdateArray removes an element at the given index
+// Returns popped element, remaining array and error
+func popElementAndUpdateArray(arr []any, index string) (popElem any, updatedArray []any, err error) {
+	if len(arr) == 0 {
+		return nil, nil, nil
+	}
+
+	var idx int
+	// if index is empty, pop last element
+	if index == "" {
+		idx = len(arr) - 1
+	} else {
+		var err error
+		idx, err = strconv.Atoi(index)
+		if err != nil {
+			return nil, nil, err
+		}
+		// convert index to a valid index
+		idx = adjustIndex(idx, arr)
+	}
+
+	popElem = arr[idx]
+	arr = append(arr[:idx], arr[idx+1:]...)
+
+	return popElem, arr, nil
+}
+
+// adjustIndex will bound the array between 0 and len(arr) - 1
+// It also handles negative indexes
+func adjustIndex(idx int, arr []any) int {
+	// if index is positive and out of bound, limit it to the last index
+	if idx > len(arr) {
+		idx = len(arr) - 1
+	}
+
+	// if index is negative, change it to equivalent positive index
+	if idx < 0 {
+		// if index is out of bound then limit it to the first index
+		if idx < -len(arr) {
+			idx = 0
+		} else {
+			idx = len(arr) + idx
+		}
+	}
+	return idx
+}
+
 
 // evalJSONOBJLEN return the number of keys in the JSON object at path in key.
 // Returns an array of integer replies, an integer for each matching value,
@@ -626,8 +762,8 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) []byte {
 		if utils.GetJSONFieldType(jsonData) == utils.ObjectType {
 			if castedData, ok := jsonData.(map[string]interface{}); ok {
 				return clientio.Encode(len(castedData), false)
-			}	
-			return clientio.RespNIL		
+			}
+			return clientio.RespNIL
 		}
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
@@ -648,7 +784,7 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) []byte {
 		switch utils.GetJSONFieldType(result) {
 		case utils.ObjectType:
 			if castedResult, ok := result.(map[string]interface{}); ok {
-				objectLen = append(objectLen, len(castedResult)) 
+				objectLen = append(objectLen, len(castedResult))
 			} else {
 				objectLen = append(objectLen, nil)
 			}
