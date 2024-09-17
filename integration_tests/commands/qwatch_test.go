@@ -3,13 +3,13 @@ package commands
 import (
 	"context"
 	"fmt"
-	"github.com/dicedb/dice/internal/sql"
 	"net"
 	"testing"
 	"time"
 
 	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/internal/clientio"
+	"github.com/dicedb/dice/internal/sql"
 	redis "github.com/dicedb/go-dice"
 	"gotest.tools/v3/assert"
 )
@@ -282,11 +282,13 @@ func setupJSONTest(t *testing.T) (net.Conn, []net.Conn, func()) {
 		if err := publisher.Close(); err != nil {
 			t.Errorf("Error closing publisher connection: %v", err)
 		}
-		for _, sub := range subscribers {
+		for i, sub := range subscribers {
+			FireCommand(sub, fmt.Sprintf("QUNWATCH \"%s\"", JSONTestCases[i].qwatchQuery))
 			if err := sub.Close(); err != nil {
 				t.Errorf("Error closing subscriber connection: %v", err)
 			}
 		}
+		time.Sleep(100 * time.Millisecond)
 	}
 
 	return publisher, subscribers, cleanup
@@ -360,14 +362,15 @@ func cleanupJSONKeys(publisher net.Conn) {
 	}
 }
 func TestQwatchWithJSONOrderBy(t *testing.T) {
-	publisher, subscriber, cleanup := setupJSONOrderByTest(t)
+	publisher, subscriber, cleanup, watchquery := setupJSONOrderByTest(t)
 	defer cleanup()
 
-	respParser := subscribeToJSONOrderByQuery(t, subscriber)
+	respParser := subscribeToJSONOrderByQuery(t, subscriber, watchquery)
 	runJSONOrderByScenarios(t, publisher, respParser)
 }
 
-func setupJSONOrderByTest(t *testing.T) (net.Conn, net.Conn, func()) {
+func setupJSONOrderByTest(t *testing.T) (net.Conn, net.Conn, func(), string) {
+	watchquery := "SELECT $key, $value WHERE $key like 'player:*' ORDER BY $value.score DESC LIMIT 3"
 	publisher := getLocalConnection()
 	subscriber := getLocalConnection()
 
@@ -376,17 +379,18 @@ func setupJSONOrderByTest(t *testing.T) (net.Conn, net.Conn, func()) {
 		if err := publisher.Close(); err != nil {
 			t.Errorf("Error closing publisher connection: %v", err)
 		}
+		FireCommand(subscriber, fmt.Sprintf("QUNWATCH \"%s\"", watchquery))
+		time.Sleep(100 * time.Millisecond)
 		if err := subscriber.Close(); err != nil {
 			t.Errorf("Error closing subscriber connection: %v", err)
 		}
 	}
 
-	return publisher, subscriber, cleanup
+	return publisher, subscriber, cleanup, watchquery
 }
 
-func subscribeToJSONOrderByQuery(t *testing.T, subscriber net.Conn) *clientio.RESPParser {
-	query := "SELECT $key, $value WHERE $key like 'player:*' ORDER BY $value.score DESC LIMIT 3"
-	rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("QWATCH \"%s\"", query))
+func subscribeToJSONOrderByQuery(t *testing.T, subscriber net.Conn, watchquery string) *clientio.RESPParser {
+	rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("QWATCH \"%s\"", watchquery))
 	assert.Assert(t, rp != nil)
 
 	v, err := rp.DecodeOne()

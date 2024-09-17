@@ -96,6 +96,32 @@ var (
 		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsonMGetCmdMeta = DiceCmdMeta{
+		Name: "JSON.MGET",
+		Info: `JSON.MGET key..key [path]
+		Returns the encoded RESP value of the key, if present
+		Null reply: If the key doesn't exist or has expired.
+		Error reply: If the number of arguments is incorrect or the stored value is not a JSON type.`,
+		Eval:     evalJSONMGET,
+		Arity:    2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	jsontoggleCmdMeta = DiceCmdMeta{
+		Name: "JSON.TOGGLE",
+		Info: `JSON.TOGGLE key [path]
+		Toggles Boolean values between true and false at the path.Return
+		If the path is enhanced syntax:
+    	1.Array of integers (0 - false, 1 - true) that represent the resulting Boolean value at each path.
+	    2.If a value is a not a Boolean value, its corresponding return value is null.
+		3.NONEXISTENT if the document key does not exist.
+		If the path is restricted syntax:
+    	1.String ("true"/"false") that represents the resulting Boolean value.
+    	2.NONEXISTENT if the document key does not exist.
+    	3.WRONGTYPE error if the value at the path is not a Boolean value.`,
+		Eval:     evalJSONTOGGLE,
+		Arity:    2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	jsontypeCmdMeta = DiceCmdMeta{
 		Name: "JSON.TYPE",
 		Info: `JSON.TYPE key [path]
@@ -126,7 +152,14 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
-
+	jsonarrappendCmdMeta = DiceCmdMeta{
+		Name: "JSON.ARRAPPEND",
+		Info: `JSON.ARRAPPEND key [path] value [value ...]
+        Returns an array of integer replies for each path, the array's new size,
+        or nil, if the matching JSON value is not an array.`,
+		Eval:  evalJSONARRAPPEND,
+		Arity: -3,
+	}
 	jsonforgetCmdMeta = DiceCmdMeta{
 		Name: "JSON.FORGET",
 		Info: `JSON.FORGET key [path]
@@ -145,6 +178,16 @@ var (
 		Error reply: If the number of arguments is incorrect.`,
 		Eval:     evalJSONARRLEN,
 		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	jsondebugCmdMeta = DiceCmdMeta{
+		Name: "JSON.DEBUG",
+		Info: `evaluates JSON.DEBUG subcommand based on subcommand
+		JSON.DEBUG MEMORY returns memory usage by key in bytes
+		JSON.DEBUG HELP displays help message
+		`,
+		Eval:     evalJSONDebug,
+		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	jsoningestCmdMeta = DiceCmdMeta{
@@ -533,6 +576,15 @@ var (
 		Eval:  evalRPOP,
 		Arity: 2,
 	}
+	llenCmdMeta = DiceCmdMeta{
+		Name: "LLEN",
+		Info: `LLEN key
+		Returns the length of the list stored at key. If key does not exist,
+		it is interpreted as an empty list and 0 is returned.
+		An error is returned when the value stored at key is not a list.`,
+		Eval:  evalLLEN,
+		Arity: 1,
+	}
 	dbSizeCmdMeta = DiceCmdMeta{
 		Name:  "DBSIZE",
 		Info:  `DBSIZE Return the number of keys in the database`,
@@ -680,6 +732,13 @@ var (
 		Eval:  evalSELECT,
 		Arity: 1,
 	}
+	jsonnumincrbyCmdMeta = DiceCmdMeta{
+		Name:     "JSON.NUMINCRBY",
+		Info:     `Increment the number value stored at path by number.`,
+		Eval:     evalJSONNUMINCRBY,
+		Arity:    3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -689,12 +748,15 @@ func init() {
 	DiceCmds["GET"] = getCmdMeta
 	DiceCmds["MSET"] = msetCmdMeta
 	DiceCmds["JSON.SET"] = jsonsetCmdMeta
+	DiceCmds["JSON.TOGGLE"] = jsontoggleCmdMeta
 	DiceCmds["JSON.GET"] = jsongetCmdMeta
 	DiceCmds["JSON.TYPE"] = jsontypeCmdMeta
 	DiceCmds["JSON.CLEAR"] = jsonclearCmdMeta
 	DiceCmds["JSON.DEL"] = jsondelCmdMeta
+	DiceCmds["JSON.ARRAPPEND"] = jsonarrappendCmdMeta
 	DiceCmds["JSON.FORGET"] = jsonforgetCmdMeta
 	DiceCmds["JSON.ARRLEN"] = jsonarrlenCmdMeta
+	DiceCmds["JSON.DEBUG"] = jsondebugCmdMeta
 	DiceCmds["JSON.INGEST"] = jsoningestCmdMeta
 	DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
@@ -743,6 +805,7 @@ func init() {
 	DiceCmds["RPOP"] = rpopCmdMeta
 	DiceCmds["RPUSH"] = rpushCmdMeta
 	DiceCmds["LPOP"] = lpopCmdMeta
+	DiceCmds["LLEN"] = llenCmdMeta
 	DiceCmds["DBSIZE"] = dbSizeCmdMeta
 	DiceCmds["GETSET"] = getSetCmdMeta
 	DiceCmds["FLUSHDB"] = flushdbCmdMeta
@@ -759,8 +822,10 @@ func init() {
 	DiceCmds["HGET"] = hgetCmdMeta
 	DiceCmds["PFMERGE"] = pfMergeCmdMeta
 	DiceCmds["JSON.STRLEN"] = jsonStrlenCmdMeta
+	DiceCmds["JSON.MGET"] = jsonMGetCmdMeta
 	DiceCmds["HLEN"] = hlenCmdMeta
 	DiceCmds["SELECT"] = selectCmdMeta
+	DiceCmds["JSON.NUMINCRBY"] = jsonnumincrbyCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}
