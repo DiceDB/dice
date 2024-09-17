@@ -850,6 +850,11 @@ func TestJsonObjLen(t *testing.T) {
 	c := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"name":12,"language":["rust"]}}`
 	d := `["this","is","an","array"]`
 
+	defer func() {
+		resp := FireCommand(conn, "DEL obj")
+		assert.Equal(t, int64(1), resp)
+	}()
+
 	testCases := []struct {
 		name     string
 		commands []string
@@ -905,7 +910,6 @@ func TestJsonObjLen(t *testing.T) {
 			commands: []string{"json.set obj $ " + c, "json.objlen"},
 			expected: []interface{}{"OK", "ERR wrong number of arguments for 'json.objlen' command"},
 		},
-		
 	}
 
 	for _, tcase := range testCases {
@@ -915,10 +919,10 @@ func TestJsonObjLen(t *testing.T) {
 				cmd := tcase.commands[i]
 				out := tcase.expected[i]
 				result := FireCommand(conn, cmd)
-				assert.DeepEqual(t,out,result)
-      }
-    })
-  }
+				assert.DeepEqual(t, out, result)
+			}
+		})
+	}
 }
 
 func convertToArray(input string) []string {
