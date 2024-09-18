@@ -8,16 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rs/zerolog"
-	slogzerolog "github.com/samber/slog-zerolog/v2"
+	"github.com/dicedb/dice/internal/logger"
 )
 
 func TestMain(m *testing.M) {
-	zerologLogger := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr})
-	logger := slog.New(slogzerolog.Option{
-		Logger:      &zerologLogger,
-		NoTimestamp: true, // Do not print timestamp in tests, it makes it easier to compare logs if needed
-	}.NewZerologHandler())
+	logger := logger.New(logger.Opts{WithTimestamp: false})
 	slog.SetDefault(logger)
 
 	var wg sync.WaitGroup

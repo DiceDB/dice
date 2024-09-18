@@ -109,7 +109,6 @@ var defaultConfig = Config{
 		PersistenceEnabled:     true,
 		WriteAOFOnCleanup:      true,
 		LFULogFactor:           10,
-		WriteAOFOnCleanup:      false,
 		LogLevel:               "info",
 		PrettyPrintLogs:        false,
 	},

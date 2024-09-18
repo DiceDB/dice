@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"flag"
-	"io"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 
+	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
 
@@ -18,8 +18,6 @@ import (
 	"log/slog"
 
 	"github.com/dicedb/dice/config"
-	"github.com/rs/zerolog"
-	slogzerolog "github.com/samber/slog-zerolog/v2"
 )
 
 func init() {
@@ -36,39 +34,8 @@ func init() {
 	config.SetupConfig()
 }
 
-func getLogLevel() slog.Leveler {
-	var level slog.Leveler
-	switch config.DiceConfig.Server.LogLevel {
-	case "debug":
-		level = slog.LevelDebug
-	case "info":
-		level = slog.LevelInfo
-	case "warn":
-		level = slog.LevelWarn
-	case "error":
-		level = slog.LevelError
-	default:
-		level = slog.LevelInfo
-	}
-	return level
-}
-
-func getLogger() *slog.Logger {
-	var writer io.Writer = os.Stderr
-	if config.DiceConfig.Server.PrettyPrintLogs {
-		writer = zerolog.ConsoleWriter{Out: os.Stderr}
-	}
-	zerologLogger := zerolog.New(writer)
-	logger := slog.New(slogzerolog.Option{
-		Logger: &zerologLogger,
-		Level:  getLogLevel(),
-	}.NewZerologHandler())
-
-	return logger
-}
-
 func main() {
-	logger := getLogger()
+	logger := logger.New(logger.Opts{WithTimestamp: true})
 	slog.SetDefault(logger)
 
 	ctx, cancel := context.WithCancel(context.Background())
