@@ -1265,10 +1265,11 @@ func evalJSONARRAPPEND(args []string, store *dstore.Store) []byte {
 
 // evalJSONINGEST stores a value at a dynamically generated key
 // The key is created using a provided key prefix combined with a unique identifier
-// args must contains key_prefix and json value
+// args must contains key_prefix and path and json value
+// It will call to evalJSONSET internally.
 // Returns encoded error response if incorrect number of arguments
 // Returns encoded error if the JSON string is invalid
-// Returns response.RespOK if the JSON value is successfully stored
+// Returns unique identifier if the JSON value is successfully stored
 func evalJSONINGEST(args []string, store *dstore.Store) []byte {
 	if len(args) < 3 {
 		return diceerrors.NewErrArity("JSON.INGEST")
@@ -1283,7 +1284,11 @@ func evalJSONINGEST(args []string, store *dstore.Store) []byte {
 	setArgs = append(setArgs, uniqueKey)
 	setArgs = append(setArgs, args[1:]...)
 
-	return evalJSONSET(setArgs, store)
+	result := evalJSONSET(setArgs, store)
+	if bytes.Equal(result, clientio.RespOK) {
+		return clientio.Encode(uniqueID.String(), true)
+	}
+	return result
 }
 
 // evalTTL returns Time-to-Live in secs for the queried key in args
