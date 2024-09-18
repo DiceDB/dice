@@ -25,4 +25,7 @@ const (
 	Async   string = "ASYNC"
 	Help    string = "HELP"
 	Memory  string = "MEMORY"
+	Count   string = "COUNT"
+	GetKeys string = "GETKEYS"
+	List    string = "LIST"
 )
