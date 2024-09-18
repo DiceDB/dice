@@ -46,7 +46,6 @@ var (
 
 const defaultRootPath = "$"
 const maxExDuration = 9223372036854775
-const ObjTypeMask = 0b11110000
 
 func init() {
 	diceCommandsCount = len(DiceCmds)
@@ -3497,8 +3496,8 @@ func evalTYPE(args []string, store *dstore.Store) []byte {
 	}
 
 	var typeStr string
-	switch obj.TypeEncoding & ObjTypeMask {
-	case object.ObjTypeString:
+	switch oType, _ := object.ExtractTypeEncoding(obj); oType {
+	case object.ObjTypeString, object.ObjTypeInt, object.ObjTypeByteArray:
 		typeStr = "string"
 	case object.ObjTypeByteList:
 		typeStr = "list"

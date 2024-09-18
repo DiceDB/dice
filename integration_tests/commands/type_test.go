@@ -3,7 +3,6 @@ package commands
 import (
 	"testing"
 
-	dstore "github.com/dicedb/dice/internal/store"
 	"gotest.tools/v3/assert"
 )
 
@@ -15,8 +14,12 @@ func TestType(t *testing.T) {
 		name     string
 		commands []string
 		expected []interface{}
-		setup    func(store *dstore.Store)
 	}{
+		{
+			name:     "TYPE with invalid number of arguments",
+			commands: []string{"TYPE"},
+			expected: []interface{}{"ERR wrong number of arguments for 'type' command"},
+		},
 		{
 			name:     "TYPE for non-existent key",
 			commands: []string{"TYPE k1"},
@@ -41,6 +44,16 @@ func TestType(t *testing.T) {
 			name:     "TYPE for key with Hash value",
 			commands: []string{"HSET k1 field1 v1", "TYPE k1"},
 			expected: []interface{}{int64(1), "hash"},
+		},
+		{
+			name:     "TYPE for key with value created from SETBIT command",
+			commands: []string{"SETBIT k1 1 1", "TYPE k1"},
+			expected: []interface{}{int64(0), "string"},
+		},
+		{
+			name:     "TYPE for key with value created from SETOP command",
+			commands: []string{"SET key1 \"foobar\"", "SET key2 \"abcdef\"", "BITOP AND dest key1 key2", "TYPE dest"},
+			expected: []interface{}{"OK", "OK", int64(6), "string"},
 		},
 	}
 
