@@ -2,14 +2,13 @@ package commands
 
 import (
 	"fmt"
-	testifyAssert "github.com/stretchr/testify/assert"
 	"net"
 	"strings"
 	"testing"
 
 	"github.com/bytedance/sonic"
-
 	"github.com/dicedb/dice/testutils"
+	testifyAssert "github.com/stretchr/testify/assert"
 	"gotest.tools/v3/assert"
 )
 
@@ -184,7 +183,7 @@ func TestJSONOperations(t *testing.T) {
 				if tc.getCmd != "" {
 					result := FireCommand(conn, tc.getCmd)
 					if testutils.IsJSONResponse(result.(string)) {
-						testutils.AssertJSONEqual(t, tc.expected, result.(string))
+						testifyAssert.JSONEq(t, tc.expected, result.(string))
 					} else {
 						assert.Equal(t, tc.expected, result)
 					}
@@ -335,7 +334,7 @@ func TestJSONSetWithNXAndXX(t *testing.T) {
 				result := FireCommand(conn, cmd)
 				jsonResult, isString := result.(string)
 				if isString && testutils.IsJSONResponse(jsonResult) {
-					testutils.AssertJSONEqual(t, tc.expected[i].(string), jsonResult)
+					testifyAssert.JSONEq(t, tc.expected[i].(string), jsonResult)
 				} else {
 					assert.Equal(t, tc.expected[i], result)
 				}
@@ -512,7 +511,7 @@ func TestJSONDelOperations(t *testing.T) {
 				result := FireCommand(conn, cmd)
 				stringResult, ok := result.(string)
 				if ok && testutils.IsJSONResponse(stringResult) {
-					testutils.AssertJSONEqual(t, tc.expected[i].(string), stringResult)
+					testifyAssert.JSONEq(t, tc.expected[i].(string), stringResult)
 				} else {
 					assert.Equal(t, tc.expected[i], result)
 				}
@@ -600,7 +599,7 @@ func TestJSONForgetOperations(t *testing.T) {
 				result := FireCommand(conn, cmd)
 				stringResult, ok := result.(string)
 				if ok && testutils.IsJSONResponse(stringResult) {
-					testutils.AssertJSONEqual(t, tc.expected[i].(string), stringResult)
+					testifyAssert.JSONEq(t, tc.expected[i].(string), stringResult)
 				} else {
 					assert.Equal(t, tc.expected[i], result)
 				}
@@ -734,7 +733,7 @@ func TestJSONMGET(t *testing.T) {
 				assert.Equal(t, len(tc.expected), len(results))
 				for i := range results {
 					if testutils.IsJSONResponse(tc.expected[i].(string)) {
-						testutils.AssertJSONEqual(t, tc.expected[i].(string), results[i].(string))
+						testifyAssert.JSONEq(t, tc.expected[i].(string), results[i].(string))
 					} else {
 						assert.Equal(t, tc.expected[i], results[i])
 					}
