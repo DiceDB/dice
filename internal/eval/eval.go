@@ -3600,7 +3600,6 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) []byte {
 	keysList = make([]interface{},0,len(results))
 
 	for _, result := range results {
-		// fmt.Printf("Result without map interface is %s\n", result.([]interface{}))
 		switch utils.GetJSONFieldType(result) {
 			case utils.ObjectType:
 				keys := make([]string, 0)
