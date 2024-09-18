@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/dicedb/dice/testutils"
+	testifyAssert "github.com/stretchr/testify/assert"
 	"gotest.tools/v3/assert"
 )
 
@@ -48,7 +49,7 @@ func TestJSONARRPOP(t *testing.T) {
 				jsonResult, isString := result.(string)
 
 				if isString && testutils.IsJSONResponse(jsonResult) {
-					testutils.AssertJSONEqual(t, out.(string), jsonResult)
+					testifyAssert.JSONEq(t, out.(string), jsonResult)
 					continue
 				}
 

@@ -76,6 +76,7 @@ func TestEval(t *testing.T) {
 	testEvalGETEX(t, store)
 	testEvalJSONNUMINCRBY(t, store)
 	testEvalTYPE(t, store)
+	testEvalCOMMAND(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -2639,4 +2640,36 @@ func BenchmarkEvalTYPE(b *testing.B) {
 			}
 		})
 	}
+  
+func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"command help": {
+			input: []string{"HELP"},
+			output: []byte("*11\r\n" +
+				"$64\r\n" +
+				"COMMAND <subcommand> [<arg> [value] [opt] ...]. Subcommands are:\r\n" +
+				"$15\r\n" +
+				"(no subcommand)\r\n" +
+				"$43\r\n" +
+				"    Return details about all Dice commands.\r\n" +
+				"$5\r\n" +
+				"COUNT\r\n" +
+				"$60\r\n" +
+				"    Return the total number of commands in this Dice server.\r\n" +
+				"$4\r\n" +
+				"LIST\r\n" +
+				"$55\r\n" +
+				"     Return a list of all commands in this Dice server.\r\n" +
+				"$22\r\n" +
+				"GETKEYS <full-command>\r\n" +
+				"$46\r\n" +
+				"     Return the keys from a full Dice command.\r\n" +
+				"$4\r\n" +
+				"HELP\r\n" +
+				"$21\r\n" +
+				"     Print this help.\r\n"),
+		},
+	}
+
+	runEvalTests(t, tests, evalCommand, store)
 }

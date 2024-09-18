@@ -14,6 +14,7 @@ import (
 	"unsafe"
 
 	"github.com/dicedb/dice/internal/object"
+	"github.com/rs/xid"
 
 	"github.com/dicedb/dice/internal/sql"
 
@@ -1329,6 +1330,34 @@ func evalJSONARRAPPEND(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(resultsArray, false)
 }
 
+// evalJSONINGEST stores a value at a dynamically generated key
+// The key is created using a provided key prefix combined with a unique identifier
+// args must contains key_prefix and path and json value
+// It will call to evalJSONSET internally.
+// Returns encoded error response if incorrect number of arguments
+// Returns encoded error if the JSON string is invalid
+// Returns unique identifier if the JSON value is successfully stored
+func evalJSONINGEST(args []string, store *dstore.Store) []byte {
+	if len(args) < 3 {
+		return diceerrors.NewErrArity("JSON.INGEST")
+	}
+
+	keyPrefix := args[0]
+
+	uniqueID := xid.New()
+	uniqueKey := keyPrefix + uniqueID.String()
+
+	var setArgs []string
+	setArgs = append(setArgs, uniqueKey)
+	setArgs = append(setArgs, args[1:]...)
+
+	result := evalJSONSET(setArgs, store)
+	if bytes.Equal(result, clientio.RespOK) {
+		return clientio.Encode(uniqueID.String(), true)
+	}
+	return result
+}
+
 // evalTTL returns Time-to-Live in secs for the queried key in args
 // The key should be the only param in args else returns with an error
 // Returns	RESP encoded time (in secs) remaining for the key to expire
@@ -2172,15 +2201,46 @@ func evalCommand(args []string, store *dstore.Store) []byte {
 	}
 	subcommand := strings.ToUpper(args[0])
 	switch subcommand {
-	case "COUNT":
+	case Count:
 		return evalCommandCount()
-	case "GETKEYS":
+	case GetKeys:
 		return evalCommandGetKeys(args[1:])
-	case "LIST":
+	case List:
 		return evalCommandList()
+	case Help:
+		return evalCommandHelp()
 	default:
 		return diceerrors.NewErrWithFormattedMessage("unknown subcommand '%s'. Try COMMAND HELP.", subcommand)
 	}
+}
+
+// evalCommandHelp prints help message
+func evalCommandHelp() []byte {
+	format := "COMMAND <subcommand> [<arg> [value] [opt] ...]. Subcommands are:"
+	noTitle := "(no subcommand)"
+	noMessage := "    Return details about all Dice commands."
+	countTitle := "COUNT"
+	countMessage := "    Return the total number of commands in this Dice server."
+	listTitle := "LIST"
+	listMessage := "     Return a list of all commands in this Dice server."
+	getKeysTitle := "GETKEYS <full-command>"
+	getKeysMessage := "     Return the keys from a full Dice command."
+	helpTitle := "HELP"
+	helpMessage := "     Print this help."
+	message := []string{
+		format,
+		noTitle,
+		noMessage,
+		countTitle,
+		countMessage,
+		listTitle,
+		listMessage,
+		getKeysTitle,
+		getKeysMessage,
+		helpTitle,
+		helpMessage,
+	}
+	return clientio.Encode(message, false)
 }
 
 func evalCommandDefault() []byte {
