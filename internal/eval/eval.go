@@ -14,6 +14,7 @@ import (
 	"unsafe"
 
 	"github.com/dicedb/dice/internal/object"
+	"github.com/rs/xid"
 
 	"github.com/dicedb/dice/internal/sql"
 
@@ -1327,6 +1328,34 @@ func evalJSONARRAPPEND(args []string, store *dstore.Store) []byte {
 	obj.Value = jsonData
 
 	return clientio.Encode(resultsArray, false)
+}
+
+// evalJSONINGEST stores a value at a dynamically generated key
+// The key is created using a provided key prefix combined with a unique identifier
+// args must contains key_prefix and path and json value
+// It will call to evalJSONSET internally.
+// Returns encoded error response if incorrect number of arguments
+// Returns encoded error if the JSON string is invalid
+// Returns unique identifier if the JSON value is successfully stored
+func evalJSONINGEST(args []string, store *dstore.Store) []byte {
+	if len(args) < 3 {
+		return diceerrors.NewErrArity("JSON.INGEST")
+	}
+
+	keyPrefix := args[0]
+
+	uniqueID := xid.New()
+	uniqueKey := keyPrefix + uniqueID.String()
+
+	var setArgs []string
+	setArgs = append(setArgs, uniqueKey)
+	setArgs = append(setArgs, args[1:]...)
+
+	result := evalJSONSET(setArgs, store)
+	if bytes.Equal(result, clientio.RespOK) {
+		return clientio.Encode(uniqueID.String(), true)
+	}
+	return result
 }
 
 // evalTTL returns Time-to-Live in secs for the queried key in args

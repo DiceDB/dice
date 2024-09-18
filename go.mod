@@ -57,6 +57,7 @@ require (
 	github.com/dicedb/go-dice v0.0.0-20240820180649-d97f15fca831
 	github.com/ohler55/ojg v1.24.0
 	github.com/pelletier/go-toml/v2 v2.2.3
+	github.com/rs/xid v1.6.0
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.9.0
 	github.com/twmb/murmur3 v1.1.8

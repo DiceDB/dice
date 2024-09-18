@@ -1,11 +1,12 @@
 package utils
 
 import (
-	"github.com/dicedb/dice/internal/cmd"
-	"github.com/stretchr/testify/assert"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/dicedb/dice/internal/cmd"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestParseHTTPRequest(t *testing.T) {
@@ -80,6 +81,14 @@ func TestParseHTTPRequest(t *testing.T) {
 			body:         `{"key": "hashkey", "field": "f1", "value": "v1"}`,
 			expectedCmd:  "HSET",
 			expectedArgs: []string{"hashkey", "f1", "v1"},
+		},
+		{
+			name:         "Test JSON.INGEST command",
+			method:       "POST",
+			url:          "/json.ingest?key_prefix=gmtr_",
+			body:         `{"json": {"field": "value"},"path": "$..field"}`,
+			expectedCmd:  "JSON.INGEST",
+			expectedArgs: []string{"gmtr_", "$..field", `{"field":"value"}`},
 		},
 	}
 
