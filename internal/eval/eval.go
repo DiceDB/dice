@@ -2178,6 +2178,8 @@ func evalCommand(args []string, store *dstore.Store) []byte {
 		return evalCommandGetKeys(args[1:])
 	case "LIST":
 		return evalCommandList()
+	case "INFO":
+		return evalCommandInfo(args[1:])
 	default:
 		return diceerrors.NewErrWithFormattedMessage("unknown subcommand '%s'. Try COMMAND HELP.", subcommand)
 	}
@@ -2249,6 +2251,29 @@ func evalCommandGetKeys(args []string) []byte {
 		keys = append(keys, args[i])
 	}
 	return clientio.Encode(keys, false)
+}
+
+func evalCommandInfo(args []string) []byte {
+	if len(args) == 0 {
+		return evalCommandDefault()
+	}
+
+	cmdMetaMap := make(map[string]interface{})
+	for _, cmdMeta := range DiceCmds {
+		cmdMetaMap[cmdMeta.Name] = convertCmdMetaToSlice(cmdMeta)
+	}
+
+	var result []interface{}
+	for _, arg := range args {
+		arg = strings.ToUpper(arg)
+		if cmdMeta, found := cmdMetaMap[arg]; found {
+			result = append(result, cmdMeta)
+		} else {
+			result = append(result, nil)
+		}
+	}
+
+	return clientio.Encode(result, false)
 }
 
 func evalRename(args []string, store *dstore.Store) []byte {
