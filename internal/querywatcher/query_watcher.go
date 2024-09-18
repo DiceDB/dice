@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/dicedb/dice/internal/ops"
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/dicedb/dice/internal/ops"
 
 	"github.com/ohler55/ojg/jp"
 
@@ -33,7 +34,8 @@ type (
 			Key   string
 			Value *object.Obj
 		} // channel to receive cache data for this query
-		ResponseChan chan *ops.StoreResponse
+		HTTPQwatchResponseChan    chan *ops.StoreResponse // channel to send qwatch response to http server
+		HTTPQwatchClientRequestID uint32                  // Helps identify qwatch client on httpserver side
 	}
 
 	// AdhocQueryResult represents the result of an adhoc query.
@@ -109,7 +111,8 @@ func (w *QueryManager) listenForSubscriptions(ctx context.Context) {
 		select {
 		case event := <-WatchSubscriptionChan:
 			if event.Subscribe {
-				w.addWatcher(&event.Query, event.ClientFD, event.ResponseChan, event.CacheChan)
+				w.addWatcher(&event.Query, event.ClientFD, event.HTTPQwatchResponseChan, event.HTTPQwatchClientRequestID,
+					event.CacheChan)
 			} else {
 				w.removeWatcher(&event.Query, event.ClientFD)
 			}
@@ -191,33 +194,32 @@ func (w *QueryManager) notifyClients(query *sql.DSQLQuery, clients *sync.Map, qu
 	encodedResult := clientio.Encode(clientio.CreatePushResponse(query, queryResult), false)
 
 	clients.Range(func(clientKey, clientVal interface{}) bool {
-		if clientVal == nil {
-			return true // skip invalid clients
+		// Identify the type of client and respond accordingly
+		switch key := clientKey.(type) {
+		case chan *ops.StoreResponse:
+			for clientRequestID := range clientVal.(map[uint32]struct{}) {
+				// This is an HTTP client, send the response via ResponseChan
+				key <- &ops.StoreResponse{
+					RequestID: clientRequestID,
+					Result:    encodedResult,
+				}
+			}
+		case int:
+			// We use a retry mechanism here as the client's socket may be temporarily unavailable for writes due to the
+			// high number of writes that are possible in qwatch. Without this mechanism, the client may be removed from the
+			// watchlist prematurely.
+			// TODO:
+			//  1. Replace with thread pool to prevent launching an unbounded number of goroutines.
+			//  2. Each client's writes should be sent in a serialized manner, maybe a per-client queue should be maintained
+			//   here. A single queue-per-client is also helpful when the client file descriptor is closed and the queue can
+			//   just be destroyed.
+			// This is a regular client, use clientFD to send the response
+			go w.sendWithRetry(query, key, encodedResult)
+		default:
+			log.Warnf("Invalid Client, response channel invalid.")
 		}
 
-		if responseChan, ok := clientKey.(chan *ops.StoreResponse); ok {
-			// This is an HTTP client, send the response via ResponseChan
-			responseChan <- &ops.StoreResponse{
-				RequestID: 214245,
-				Result:    encodedResult,
-			}
-		} else if clientFD, ok := clientKey.(int); ok {
-			// This is a regular client, use clientFD to send the response
-			go w.sendWithRetry(query, clientFD, encodedResult)
-		}
 		return true
-		//clientFD := clientKey.(int)
-		//
-		//// We use a retry mechanism here as the client's socket may be temporarily unavailable for writes due to the
-		//// high number of writes that are possible in qwatch. Without this mechanism, the client may be removed from the
-		//// watchlist prematurely.
-		//// TODO:
-		////  1. Replace with thread pool to prevent launching an unbounded number of goroutines.
-		////  2. Each client's writes should be sent in a serialized manner, maybe a per-client queue should be maintained
-		////   here. A single queue-per-client is also helpful when the client file descriptor is closed and the queue can
-		////   just be destroyed.
-		//go w.sendWithRetry(query, clientFD, encodedResult)
-		//return true
 	})
 }
 
@@ -265,15 +267,26 @@ func (w *QueryManager) serveAdhocQueries(ctx context.Context) {
 }
 
 // addWatcher adds a client as a watcher to a query.
-func (w *QueryManager) addWatcher(query *sql.DSQLQuery, clientFD int, responseChan chan *ops.StoreResponse, cacheChan chan *[]struct {
-	Key   string
-	Value *object.Obj
-}) {
+func (w *QueryManager) addWatcher(query *sql.DSQLQuery, clientFD int, httpQwatchResponseChan chan *ops.StoreResponse,
+	httpClientRequestID uint32, cacheChan chan *[]struct {
+		Key   string
+		Value *object.Obj
+	}) {
 	queryString := query.String()
 
 	clients, _ := w.WatchList.LoadOrStore(queryString, &sync.Map{})
-	if responseChan != nil {
-		clients.(*sync.Map).Store(responseChan, struct{}{})
+	if httpQwatchResponseChan != nil {
+		// If QwatchRespChan exists load request IDs associated with it
+		innerMap, ok := clients.(*sync.Map).Load(httpQwatchResponseChan)
+		var clientRequestIds map[uint32]struct{}
+
+		if ok {
+			clientRequestIds = innerMap.(map[uint32]struct{})
+		} else {
+			clientRequestIds = make(map[uint32]struct{})
+		}
+		clientRequestIds[httpClientRequestID] = struct{}{}
+		clients.(*sync.Map).Store(httpQwatchResponseChan, clientRequestIds)
 	} else {
 		clients.(*sync.Map).Store(clientFD, struct{}{})
 	}

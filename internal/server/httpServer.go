@@ -5,12 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/dicedb/dice/internal/clientio"
-	"github.com/dicedb/dice/internal/cmd"
-	"github.com/dicedb/dice/internal/server/utils"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/dicedb/dice/internal/clientio"
+	"github.com/dicedb/dice/internal/cmd"
+	"github.com/dicedb/dice/internal/id"
+	"github.com/dicedb/dice/internal/server/utils"
 
 	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
@@ -32,6 +34,12 @@ type HTTPServer struct {
 	ioChan       chan *ops.StoreResponse
 	watchChan    chan dstore.WatchEvent
 	httpServer   *http.Server
+}
+
+type HTTPQwatchResponse struct {
+	Cmd   string `json:"cmd"`
+	Query string `json:"query"`
+	Data  []any  `json:"data"`
 }
 
 func NewHTTPServer(shardManager *shard.ShardManager, watchChan chan dstore.WatchEvent) *HTTPServer {
@@ -159,20 +167,24 @@ func (s *HTTPServer) handleQWATCH(writer http.ResponseWriter, redisCmd *cmd.Redi
 	}
 
 	// Create a dedicated response channel for this request
-	//responseChan := make(chan *ops.StoreResponse)
+	qwatchResponseChan := make(chan *ops.StoreResponse)
+	uniqueID := id.NextID()
+	clientRequestID := make(map[http.ResponseWriter]uint32)
+	clientRequestID[writer] = uniqueID
 
-	// Currently reusing the s.ioChan
+	// Currently reusing the qwatchResponseChan
 	s.shardManager.GetShard(0).ReqChan <- &ops.StoreOp{
-		Cmd:          redisCmd,
-		WorkerID:     "httpServer",
-		ShardID:      0,
-		HTTPOp:       true,
-		ResponseChan: s.ioChan,
+		Cmd:              redisCmd,
+		WorkerID:         "httpServer",
+		ShardID:          0,
+		HTTPOp:           true,
+		HTTPResponseChan: qwatchResponseChan,
+		RequestID:        uniqueID,
 	}
 
 	for {
 		select {
-		case resp := <-s.ioChan:
+		case resp := <-qwatchResponseChan:
 			if resp == nil || resp.Result == nil {
 				log.Errorf("Error from shard")
 				http.Error(writer, "Error processing request", http.StatusInternalServerError)
@@ -186,14 +198,29 @@ func (s *HTTPServer) handleQWATCH(writer http.ResponseWriter, redisCmd *cmd.Redi
 				return
 			}
 
-			// Write response
-			responseJSON, err := json.Marshal(val)
+			var responseJSON []byte
+			// Convert the decoded response to the HTTPQwatchResponse struct
+			// Else just encode and send
+			switch v := val.(type) {
+			case []interface{}:
+				if len(v) >= 3 {
+					qwatchResp := HTTPQwatchResponse{
+						Cmd:   v[0].(string),
+						Query: v[1].(string),
+						Data:  v[2].([]interface{}),
+					}
+					responseJSON, err = json.Marshal(qwatchResp)
+				}
+			default:
+				responseJSON, err = json.Marshal(val)
+			}
+
 			if err != nil {
-				log.Errorf("Error marshaling response: %v", err)
+				log.Errorf("Error marshaling QueryData to JSON: %v", err)
 				return
 			}
+
 			// Format the response as SSE event
-			//data := fmt.Sprintf("{\"data\": \"%s\"", resp.Result)
 			_, err = writer.Write(responseJSON)
 			if err != nil {
 				log.Errorf("Error writing SSE data: %v", err)
@@ -203,8 +230,8 @@ func (s *HTTPServer) handleQWATCH(writer http.ResponseWriter, redisCmd *cmd.Redi
 
 		case <-request.Context().Done():
 			// Client disconnected or request finished
+			// TODO: We need to create a way to remove watcher once client disconnected
 			log.Infof("Client disconnected")
-			close(s.ioChan)
 			return
 		}
 	}
