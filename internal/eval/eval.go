@@ -21,7 +21,6 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/comm"
 	diceerrors "github.com/dicedb/dice/internal/errors"
@@ -81,7 +80,7 @@ func EvalAUTH(args []string, c *comm.Client) []byte {
 		return diceerrors.NewErrWithMessage("AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?")
 	}
 
-	username := auth.DefaultUserName
+	username := config.DiceConfig.Auth.UserName
 	var password string
 
 	if len(args) == 1 {
