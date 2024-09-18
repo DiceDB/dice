@@ -94,7 +94,7 @@ func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *clientio.RESPParser
 
 func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOptions) {
 	config.DiceConfig.Network.IOBufferLength = 16
-	config.DiceConfig.Server.WriteAOFOnCleanup = true
+	config.DiceConfig.Server.WriteAOFOnCleanup = false
 	if opt.Port != 0 {
 		config.DiceConfig.Server.Port = opt.Port
 	} else {
