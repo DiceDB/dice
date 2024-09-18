@@ -2640,7 +2640,8 @@ func BenchmarkEvalTYPE(b *testing.B) {
 			}
 		})
 	}
-  
+}
+
 func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"command help": {
