@@ -69,6 +69,7 @@ func TestEval(t *testing.T) {
 	testEvalHGET(t, store)
 	testEvalPFMERGE(t, store)
 	testEvalJSONSTRLEN(t, store)
+	testEvalJSONOBJLEN(t,store)
 	testEvalHLEN(t, store)
 	testEvalSELECT(t, store)
 	testEvalLLEN(t, store)
@@ -94,8 +95,7 @@ func testEvalHELLO(t *testing.T, store *dstore.Store) {
 		"id", serverID,
 		"mode", "standalone",
 		"role", "master",
-		"modules",
-		[]interface{}{},
+		"modules", []interface{}{},
 	}
 
 	tests := map[string]evalTestCase{
@@ -468,6 +468,153 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 		},
 	}
 	runEvalTests(t, tests, evalJSONARRLEN, store)
+}
+
+func testEvalJSONOBJLEN(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'json.objlen' command\r\n"),
+		},
+		"empty args": {
+			setup:  func() {},
+			input:  []string{},
+			output: []byte("-ERR wrong number of arguments for 'json.objlen' command\r\n"),
+		},
+		"key does not exist": {
+			setup:  func() {},
+			input:  []string{"NONEXISTENT_KEY"},
+			output: clientio.RespNIL,
+		},
+		"root not object": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "[1,2,3]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY"},
+			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+		},
+		"root object objlen": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"name\":\"John\",\"age\":30,\"city\":\"New York\"}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY"},
+			output: []byte(":3\r\n"),
+		},
+		"wildcard no object objlen": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"name\":\"John\",\"age\":30,\"pets\":null,\"languages\":[\"python\",\"golang\"],\"flag\":false}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$.*"},
+			output: []byte("*5\r\n$-1\r\n$-1\r\n$-1\r\n$-1\r\n$-1\r\n"),
+		},
+		"subpath object objlen": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"person\":{\"name\":\"John\",\"age\":30},\"languages\":[\"python\",\"golang\"]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$.person"},
+			output: []byte("*1\r\n:2\r\n"),
+		},
+		"invalid JSONPath": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"name\":\"John\",\"age\":30}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$invalid_path"},
+			output: []byte("-ERR parse error at 2 in $invalid_path\r\n"),
+		},
+		"incomapitable type(int) objlen": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"person\":{\"name\":\"John\",\"age\":30},\"languages\":[\"python\",\"golang\"]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$.person.age"},
+			output: []byte("*1\r\n$-1\r\n"),
+		},
+		"incomapitable type(string) objlen": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"person\":{\"name\":\"John\",\"age\":30},\"languages\":[\"python\",\"golang\"]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$.person.name"},
+			output: []byte("*1\r\n$-1\r\n"),
+		},
+		"incomapitable type(array) objlen": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"person\":{\"name\":\"John\",\"age\":30},\"languages\":[\"python\",\"golang\"]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$.languages"},
+			output: []byte("*1\r\n$-1\r\n"),
+		},
+	}
+
+	runEvalTests(t, tests, evalJSONOBJLEN, store)
+}
+
+func BenchmarkEvalJSONOBJLEN(b *testing.B) {
+	sizes := []int{0, 10, 100, 1000, 10000, 100000} // Various sizes of JSON objects
+	store := dstore.NewStore(nil)
+
+	for _, size := range sizes {
+		b.Run(fmt.Sprintf("JSONObjectSize_%d", size), func(b *testing.B) {
+			key := fmt.Sprintf("benchmark_json_obj_%d", size)
+
+			// Create a large JSON object with the given size
+			jsonObj := make(map[string]interface{})
+			for i := 0; i < size; i++ {
+				jsonObj[fmt.Sprintf("key%d", i)] = fmt.Sprintf("value%d", i)
+			}
+
+			// Set the JSON object in the store
+			args := []string{key, "$", fmt.Sprintf("%v", jsonObj)}
+			evalJSONSET(args, store)
+
+			b.ResetTimer()
+			b.ReportAllocs()
+
+			// Benchmark the evalJSONOBJLEN function
+			for i := 0; i < b.N; i++ {
+				_ = evalJSONOBJLEN([]string{key, "$"}, store)
+			}
+		})
+	}
 }
 
 func testEvalJSONDEL(t *testing.T, store *dstore.Store) {
@@ -1354,8 +1501,7 @@ func testEvalPFADD(t *testing.T, store *dstore.Store) {
 				store.Put(key, store.NewObj(value, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
 			},
 			input:  []string{"EXISTING_KEY", "1"},
-			output: []byte("-WRONGTYPE Key is not a valid HyperLogLog string value.\r\n"),
-		},
+			output: []byte("-WRONGTYPE Key is not a valid HyperLogLog string value.\r\n")},
 	}
 
 	runEvalTests(t, tests, evalPFADD, store)
@@ -1757,7 +1903,6 @@ func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]s
 				tc.validator(output)
 			} else {
 				assert.Equal(t, string(tc.output), string(output))
-
 			}
 		})
 	}
@@ -1862,6 +2007,75 @@ func testEvalHSET(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalHSET, store)
+}
+
+func BenchmarkEvalPFCOUNT(b *testing.B) {
+    store := *dstore.NewStore(nil)
+
+    // Helper function to create and insert HLL objects
+    createAndInsertHLL := func(key string, items []string) {
+        hll := hyperloglog.New()
+        for _, item := range items {
+            hll.Insert([]byte(item))
+        }
+        obj := &object.Obj{
+            Value:          hll,
+            LastAccessedAt: uint32(time.Now().Unix()),
+        }
+        store.Put(key, obj)
+    }
+
+    // Create small HLLs (10000 items each)
+	smallItems := make([]string, 10000)
+    for i := 0; i < 100; i++ {
+        smallItems[i] = fmt.Sprintf("SmallItem%d", i)
+    }
+    createAndInsertHLL("SMALL1", smallItems)
+    createAndInsertHLL("SMALL2", smallItems)
+
+    // Create medium HLLs (1000000 items each)
+    mediumItems := make([]string, 1000000)
+    for i := 0; i < 100; i++ {
+        mediumItems[i] = fmt.Sprintf("MediumItem%d", i)
+    }
+    createAndInsertHLL("MEDIUM1", mediumItems)
+    createAndInsertHLL("MEDIUM2", mediumItems)
+
+    // Create large HLLs (1000000000 items each)
+    largeItems := make([]string, 1000000000)
+    for i := 0; i < 10000; i++ {
+        largeItems[i] = fmt.Sprintf("LargeItem%d", i)
+    }
+    createAndInsertHLL("LARGE1", largeItems)
+    createAndInsertHLL("LARGE2", largeItems)
+
+    tests := []struct {
+        name string
+        args []string
+    }{
+        {"SingleSmallKey", []string{"SMALL1"}},
+        {"TwoSmallKeys", []string{"SMALL1", "SMALL2"}},
+        {"SingleMediumKey", []string{"MEDIUM1"}},
+        {"TwoMediumKeys", []string{"MEDIUM1", "MEDIUM2"}},
+        {"SingleLargeKey", []string{"LARGE1"}},
+        {"TwoLargeKeys", []string{"LARGE1", "LARGE2"}},
+        {"MixedSizes", []string{"SMALL1", "MEDIUM1", "LARGE1"}},
+        {"ManySmallKeys", []string{"SMALL1", "SMALL2", "SMALL1", "SMALL2", "SMALL1"}},
+        {"ManyMediumKeys", []string{"MEDIUM1", "MEDIUM2", "MEDIUM1", "MEDIUM2", "MEDIUM1"}},
+        {"ManyLargeKeys", []string{"LARGE1", "LARGE2", "LARGE1", "LARGE2", "LARGE1"}},
+        {"NonExistentKey", []string{"SMALL1", "NONEXISTENT", "LARGE1"}},
+        {"AllKeys", []string{"SMALL1", "SMALL2", "MEDIUM1", "MEDIUM2", "LARGE1", "LARGE2"}},
+    }
+
+    b.ResetTimer()
+
+    for _, tt := range tests {
+        b.Run(tt.name, func(b *testing.B) {
+            for i := 0; i < b.N; i++ {
+                evalPFCOUNT(tt.args, &store)
+            }
+        })
+    }
 }
 
 func testEvalDebug(t *testing.T, store *dstore.Store) {
