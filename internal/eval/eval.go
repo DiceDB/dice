@@ -3033,7 +3033,7 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) []byte {
 	// Parse the JSONPath expression
 	expr, err := jp.ParseString(path)
 	if err != nil {
-		return diceerrors.NewErrWithMessage("invalid JSONPath")
+		return diceerrors.NewErrWithMessage(err.Error())
 	}
 
 	// Execute the JSONPath query
@@ -3055,7 +3055,7 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) []byte {
 				}
 				keysList = append(keysList, keys)
 			default:
-				keysList = append(keysList, nil)
+				keysList = append(keysList, clientio.RespNIL)
 		}
 	}
 

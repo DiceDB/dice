@@ -1,9 +1,8 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
-	"sort"
+
 	"strings"
 	"testing"
 
@@ -636,29 +635,52 @@ func TestJsonStrlen(t *testing.T) {
 }
 
 
-func comparePermutations(a, b []interface{}) ([]byte, []byte) {
+func comparePermutations(result, expected []interface{}) bool {
 
-	for i, v := range a {
-		if val, ok := v.([]interface{}); ok {
-			sort.Slice(val, func(i, j int) bool {
-                return val[i].(string) < val[j].(string)
-            })
-			a[i] = val
+	// Get the length of a , and expected - they must be equal
+	if len(result) != len(expected) {
+		return false
+	}
+	interfaceLength := len(result)
+	permutationFound := make([]bool, interfaceLength)
+
+
+
+	for i, v := range result {
+		test_slice, ok1 := v.([]interface{})
+
+		for j, exp := range expected {
+			if permutationFound[j] {
+				continue
+			}
+			exp_slice, ok2 := exp.([]interface{})
+
+			if ok1 != ok2 {
+				continue
+			}
+
+			// Both are either valid interfaces or string
+			if ok1 {
+				if testutils.UnorderedEqual(test_slice, exp_slice) {
+					permutationFound[j] = true
+				}
+			} else {
+				if expected[i] == result[i]  {
+					permutationFound[j] = true
+				}
+			}
+			
 		}
+
+		
 	}
 
-	for i, v := range b {
-		if val, ok := v.([]interface{}); ok {
-			sort.Slice(val, func(i, j int) bool {
-                return val[i].(string) < val[j].(string)
-            })
-			b[i] = val
+	for _, ex := range permutationFound {
+		if !ex {
+			return false
 		}
 	}
-
-	dataA, _ := json.Marshal(a)
-	dataB, _ := json.Marshal(b)
-	return dataA, dataB
+	return true
 }
 
 func TestJsonObjKeys(t *testing.T) {
@@ -666,8 +688,8 @@ func TestJsonObjKeys(t *testing.T) {
 	defer conn.Close()
 	//  No space between words please 
 	a := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"language":["rust"]}}`
-	// b := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"name":12,"language":["rust"]}}`
-	// c := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"name":12,"language":["rust"], "extra_key": "value"}}`
+	b := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"name":12,"language":["rust"]}}`
+	c := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"name":12,"language":["rust"],"extra_key":"value"}}`
 	d := `{"a":[3],"nested":{"a":{"b":2,"c":1}}}`
 
 
@@ -676,26 +698,85 @@ func TestJsonObjKeys(t *testing.T) {
 		set_command 	string
 		test_command 	string
 		expected        []interface{}
-		assert_type 	[]string
 	}{
 		{
 			name:        	"JSON.OBJKEYS root object",
-			set_command: 	"json.set doc1 $ " + a,
-			test_command: 	"json.objkeys doc1 $",
+			set_command: 	"json.set doc $ " + a,
+			test_command: 	"json.objkeys doc $",
 			expected: 		[]interface{}{
 								[]interface{}{"name", "partner", "partner2"},
 							},
-			assert_type: []string{"equal", "deep_equal"},
 		},
 		{
-			name:        	"JSON.OBJKEYS dotted object",
-			set_command: 	"json.set doc1 $ " + d,
-			test_command: 	"json.objkeys doc1 $..a",
+			name:     		"JSON.OBJKEYS with nested path",
+			set_command: 	"json.set doc $ " + b,
+			test_command: 	"json.objkeys doc $.partner",
+			expected: 		[]interface{}{
+								[]interface{}{"name", "language"},
+							},
+		},
+		{
+			name:     		"JSON.OBJKEYS with non-object path",
+			set_command: 	"json.set doc $ " + c,
+			test_command: 	"json.objkeys doc $.name",
+			expected: 		[]interface{}{
+								"(nil)",
+							},
+		},
+		{
+			name:     		"JSON.OBJKEYS with nested non-object path",
+			set_command: 	"json.set doc $ " + b,
+			test_command: 	"json.objkeys doc $.partner.language",
+			expected: 		[]interface{}{
+								"(nil)",
+							},
+		},
+		{
+			name:     		"JSON.OBJKEYS with invalid json path - 1",
+			set_command: 	"json.set doc $ " + b,
+			test_command: 	"json.objkeys doc $..invalidpath*somethingrandomadded",
+			expected: 		[]interface{}{ "ERR parse error at 16 in $..invalidpath*somethingrandomadded" },
+		},
+		{
+			name:     		"JSON.OBJKEYS with invalid json path - 2",
+			set_command: 	"json.set doc $ " + c,
+			test_command: 	"json.objkeys doc $[1",
+			expected: 		[]interface{}{ "ERR expected a number at 4 in $[1" },
+		},
+		{
+			name:     		"JSON.OBJKEYS with invalid json path - 3",
+			set_command: 	"json.set doc $ " + c,
+			test_command: 	"json.objkeys doc $[random",
+			expected: 		[]interface{}{ "ERR parse error at 3 in $[random" },
+		},
+		{
+			name:     		"JSON.OBJKEYS with only command",
+			set_command: 	"json.set doc $ " + c,
+			test_command: 	"json.objkeys",
+			expected: 		[]interface{}{ "ERR wrong number of arguments for 'json.objkeys' command" },
+		},
+		{
+			name:     		"JSON.OBJKEYS with non-existing key",
+			set_command: 	"json.set doc $ " + c,
+			test_command: 	"json.objkeys thisdoesnotexist $",
+			expected: 		[]interface{}{ "(nil)" },
+		},
+		{
+			name:     		"JSON.OBJKEYS with empty path",
+			set_command: 	"json.set doc $ " + c,
+			test_command: 	"json.objkeys doc",
+			expected: 		[]interface{}{ 
+								[]interface{}{"name", "partner", "partner2"},
+							},
+		},
+		{
+			name:        	"JSON.OBJKEYS with multiple json path",
+			set_command: 	"json.set doc $ " + d,
+			test_command: 	"json.objkeys doc $..a",
 			expected: 		[]interface{}{
 								[]interface{}{"b", "c"}, 
 								"(nil)",
 							},
-			assert_type: []string{"equal", "deep_equal"},
 		},
 	}
 
@@ -707,8 +788,14 @@ func TestJsonObjKeys(t *testing.T) {
 			FireCommand(conn, tcase.set_command)
 			expected := tcase.expected
 			out := FireCommand(conn, tcase.test_command)
-			dataA, dataB := comparePermutations(out.([]interface{}), expected)
-			testutils.AssertJSONEqual(t, string(dataB), string(dataA))
+
+			_, isString := out.(string)
+			if isString {
+				out_interface := []interface{}{out}
+				assert.DeepEqual(t, out_interface, expected)
+			} else {
+				assert.Assert(t, comparePermutations(out.([]interface{}), expected))
+			}
 		})
 	}
 
