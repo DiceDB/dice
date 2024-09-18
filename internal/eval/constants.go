@@ -28,4 +28,7 @@ const (
 	Count   string = "COUNT"
 	GetKeys string = "GETKEYS"
 	List    string = "LIST"
+	Null    string = "null"
+	null    string = "null"
+	NULL    string = "null"
 )

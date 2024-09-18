@@ -161,6 +161,8 @@ func Encode(value interface{}, isSimple bool) []byte {
 		return encodeString(v)
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 		return []byte(fmt.Sprintf(":%d\r\n", v))
+	case float32, float64:
+		return []byte(fmt.Sprintf(":%v\r\n", v))
 	case []string:
 		var b []byte
 		buf := bytes.NewBuffer(b)
@@ -210,7 +212,6 @@ func Encode(value interface{}, isSimple bool) []byte {
 	case map[string]bool:
 		return RespNIL
 	default:
-		fmt.Printf("Unsupported type: %T\n", v)
 		return RespNIL
 	}
 }
