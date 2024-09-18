@@ -2224,7 +2224,7 @@ func evalCommandHelp() []byte {
 	listTitle := "LIST"
 	listMessage := "     Return a list of all commands in this Dice server."
 	getKeysTitle := "GETKEYS <full-command>"
-	getKeysMessage := "     Return the keys from a full Dice command.\r\n"
+	getKeysMessage := "     Return the keys from a full Dice command."
 	helpTitle := "HELP"
 	helpMessage := "     Print this help."
 	message := []string{
