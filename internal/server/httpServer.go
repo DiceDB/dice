@@ -65,7 +65,7 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 	var wg sync.WaitGroup
 	var err error
 
-	_, cancelHTTP := context.WithCancel(ctx)
+	httpCtx, cancelHTTP := context.WithCancel(ctx)
 	defer cancelHTTP()
 
 	s.shardManager.RegisterWorker("httpServer", s.ioChan)
@@ -74,7 +74,7 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 	go func() {
 		defer wg.Done()
 		<-ctx.Done()
-		err = s.httpServer.Shutdown(ctx)
+		err = s.httpServer.Shutdown(httpCtx)
 		if err != nil {
 			log.Errorf("HTTP Server Shutdown Failed: %v", err)
 			return

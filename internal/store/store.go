@@ -133,7 +133,7 @@ func (store *Store) getHelper(k string, touch bool) *object.Obj {
 			store.deleteKey(k, v)
 			v = nil
 		} else if touch {
-			v.LastAccessedAt = getCurrentClock()
+			v.LastAccessedAt = UpdateLastAccessedAt(v.LastAccessedAt)
 		}
 	}
 	return v
@@ -148,7 +148,7 @@ func (store *Store) GetAll(keys []string) []*object.Obj {
 				store.deleteKey(k, v)
 				response = append(response, nil)
 			} else {
-				v.LastAccessedAt = getCurrentClock()
+				v.LastAccessedAt = UpdateLastAccessedAt(v.LastAccessedAt)
 				response = append(response, v)
 			}
 		} else {

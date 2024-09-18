@@ -2,11 +2,12 @@ package commands
 
 import (
 	"fmt"
-	"github.com/dicedb/dice/internal/sql"
 	"net"
 	"testing"
 
 	"github.com/dicedb/dice/internal/clientio"
+	"github.com/dicedb/dice/internal/sql"
+
 	"gotest.tools/v3/assert"
 )
 
@@ -79,4 +80,6 @@ func TestQWatchUnwatch(t *testing.T) {
 	for _, tc := range qWatchTestCases {
 		FireCommand(publisher, fmt.Sprintf("DEL %s:%d", tc.key, tc.userID))
 	}
+	// Unwatch the query on the third subscriber
+	fireCommandAndGetRESPParser(subscribers[2], "QUNWATCH \""+qWatchQuery+"\"")
 }
