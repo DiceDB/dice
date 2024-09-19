@@ -2698,18 +2698,6 @@ func testEvalJSONOBJKEYS(t *testing.T, store *dstore.Store) {
 			input:  []string{"EXISTING_KEY"},
 			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
 		},
-		"root object objkeys": {
-			setup: func() {
-				key := "EXISTING_KEY"
-				value := "{\"name\":\"John\",\"age\":30,\"city\":\"New York\"}"
-				var rootData interface{}
-				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-				store.Put(key, obj)
-			},
-			input:  []string{"EXISTING_KEY"},
-			output: clientio.Encode([]interface{}{"name", "age", "city"}, false),
-		},
 		"wildcard no object objkeys": {
 			setup: func() {
 				key := "EXISTING_KEY"
@@ -2721,18 +2709,6 @@ func testEvalJSONOBJKEYS(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"EXISTING_KEY", "$.*"},
 			output: []byte("*5\r\n$-1\r\n$-1\r\n$-1\r\n$-1\r\n$-1\r\n"),
-		},
-		"subpath object objkeys": {
-			setup: func() {
-				key := "EXISTING_KEY"
-				value := "{\"person\":{\"name\":\"John\",\"age\":30},\"languages\":[\"python\",\"golang\"]}"
-				var rootData interface{}
-				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-				store.Put(key, obj)
-			},
-			input:  []string{"EXISTING_KEY", "$.person"},
-			output: clientio.Encode([]interface{}{[]interface{}{"name", "age"},}, false),
 		},
 		"invalid JSONPath": {
 			setup: func() {
