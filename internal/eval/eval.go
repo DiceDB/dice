@@ -72,6 +72,16 @@ func evalPING(args []string, store *dstore.Store) []byte {
 	return b
 }
 
+func evalECHO(args []string, store *dstore.Store) []byte {
+
+	if len(args) != 1 {
+		return diceerrors.NewErrArity("ECHO")
+	}
+
+	b := clientio.Encode(args[0], false)
+	return b
+}
+
 // EvalAUTH returns with an encoded "OK" if the user is authenticated
 // If the user is not authenticated, it returns with an encoded error message
 func EvalAUTH(args []string, c *comm.Client) []byte {
