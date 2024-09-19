@@ -18,7 +18,7 @@ import (
 	"github.com/dicedb/dice/config"
 )
 
-func setupFlags() {
+func init() {
 	flag.StringVar(&config.Host, "host", "0.0.0.0", "host for the dice server")
 	flag.IntVar(&config.Port, "port", 7379, "port for the dice server")
 	flag.BoolVar(&config.EnableHTTP, "enable-http", true, "run server in HTTP mode as well")
@@ -28,11 +28,11 @@ func setupFlags() {
 	flag.StringVar(&config.ConfigFileLocation, "c", config.ConfigFileLocation, "file path of the config file")
 	flag.BoolVar(&config.InitConfigCmd, "init-config", false, "initialize a new config file")
 	flag.Parse()
+
+	config.SetupConfig()
 }
 
 func main() {
-	setupFlags()
-	config.SetupConfig()
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// Handle SIGTERM and SIGINT

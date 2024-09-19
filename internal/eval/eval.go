@@ -22,7 +22,6 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/comm"
 	diceerrors "github.com/dicedb/dice/internal/errors"
@@ -82,7 +81,7 @@ func EvalAUTH(args []string, c *comm.Client) []byte {
 		return diceerrors.NewErrWithMessage("AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?")
 	}
 
-	username := auth.DefaultUserName
+	username := config.DiceConfig.Auth.UserName
 	var password string
 
 	if len(args) == 1 {
@@ -239,7 +238,16 @@ func evalMSET(args []string, store *dstore.Store) []byte {
 	for i := 0; i < len(args); i += 2 {
 		key, value := args[i], args[i+1]
 		oType, oEnc := deduceTypeEncoding(value)
-		insertMap[key] = store.NewObj(value, exDurationMs, oType, oEnc)
+		var storedValue interface{}
+		switch oEnc {
+		case object.ObjEncodingInt:
+			storedValue, _ = strconv.ParseInt(value, 10, 64)
+		case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
+			storedValue = value
+		default:
+			return clientio.Encode(fmt.Errorf("ERR unsupported encoding: %d", oEnc), false)
+		}
+		insertMap[key] = store.NewObj(storedValue, exDurationMs, oType, oEnc)
 	}
 
 	store.PutAll(insertMap)
@@ -3543,4 +3551,31 @@ func evalJSONNUMINCRBY(args []string, store *dstore.Store) []byte {
 
 	obj.Value = jsonData
 	return clientio.Encode(resultString, false)
+}
+
+func evalTYPE(args []string, store *dstore.Store) []byte {
+	if len(args) != 1 {
+		return diceerrors.NewErrArity("TYPE")
+	}
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		return clientio.Encode("none", false)
+	}
+
+	var typeStr string
+	switch oType, _ := object.ExtractTypeEncoding(obj); oType {
+	case object.ObjTypeString, object.ObjTypeInt, object.ObjTypeByteArray:
+		typeStr = "string"
+	case object.ObjTypeByteList:
+		typeStr = "list"
+	case object.ObjTypeSet:
+		typeStr = "set"
+	case object.ObjTypeHashMap:
+		typeStr = "hash"
+	default:
+		typeStr = "non-supported type"
+	}
+
+	return clientio.Encode(typeStr, false)
 }
