@@ -3574,15 +3574,22 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) []byte {
 	}
 
 	jsonData := obj.Value
+	_,err := sonic.Marshal(jsonData)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
+	}
 	keysList := make([]interface{},0,1)
 	// If path is root, return all keys of the entire JSON
 	if path == defaultRootPath {
-		keys := make([]string,0)
-		for key := range jsonData.(map[string]interface{}) {
-			keys = append(keys, key)
+		if utils.GetJSONFieldType(jsonData) == utils.ObjectType {
+			keys := make([]string,0)
+			for key := range jsonData.(map[string]interface{}) {
+				keys = append(keys, key)
+			}
+			keysList = append(keysList, keys)
+			return clientio.Encode(keysList, false)
 		}
-		keysList = append(keysList, keys)
-		return clientio.Encode(keysList, false)
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	// Parse the JSONPath expression
