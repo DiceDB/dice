@@ -1,6 +1,6 @@
 services:
   dicedb:
-    image: dicedb/dicedb:0.0.2
+    image: dicedb/dicedb:latest
     ports:
       - "7379:7379"
 
@@ -11,7 +11,7 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-        - dicedb
+      - dicedb
     environment:
       - DICEDB_HOST=dicedb
       - DICEDB_PORT=7379
