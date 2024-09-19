@@ -3586,16 +3586,15 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) []byte {
 	if err != nil {
 		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
 	}
-	keysList := make([]interface{},0,1)
+
 	// If path is root, return all keys of the entire JSON
-	if path == defaultRootPath {
+	if len(args) == 1 {
 		if utils.GetJSONFieldType(jsonData) == utils.ObjectType {
 			keys := make([]string,0)
 			for key := range jsonData.(map[string]interface{}) {
 				keys = append(keys, key)
 			}
-			keysList = append(keysList, keys)
-			return clientio.Encode(keysList, false)
+			return clientio.Encode(keys, false)
 		}
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
@@ -3612,7 +3611,7 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) []byte {
 		return clientio.RespNIL
 	}
 
-	keysList = make([]interface{},0,len(results))
+	keysList := make([]interface{},0,len(results))
 
 	for _, result := range results {
 		switch utils.GetJSONFieldType(result) {

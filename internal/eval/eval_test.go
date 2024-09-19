@@ -2708,7 +2708,7 @@ func testEvalJSONOBJKEYS(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:  []string{"EXISTING_KEY"},
-			output: clientio.Encode([]interface{}{[]interface{}{"name", "age", "city"},}, false),
+			output: clientio.Encode([]interface{}{"name", "age", "city"}, false),
 		},
 		"wildcard no object objkeys": {
 			setup: func() {
@@ -2788,7 +2788,7 @@ func testEvalJSONOBJKEYS(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalJSONOBJKEYS(b *testing.B) {
-	sizes := []int{0, 10, 100, 1000, 10000, 100000, 1000000} // Various sizes of JSON objects
+	sizes := []int{0, 10, 100, 1000, 10000, 100000} // Various sizes of JSON objects
 	store := dstore.NewStore(nil)
 
 	for _, size := range sizes {

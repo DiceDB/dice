@@ -1028,7 +1028,7 @@ func TestJSONNumIncrBy(t *testing.T) {
 
 func comparePermutations(result, expected []interface{}) bool {
 
-	// Get the length of a , and expected - they must be equal
+	// Get the length of result , and expected - they must be equal
 	if len(result) != len(expected) {
 		return false
 	}
@@ -1056,7 +1056,7 @@ func comparePermutations(result, expected []interface{}) bool {
 					permutationFound[j] = true
 				}
 			} else {
-				if expected[i] == result[i]  {
+				if exp == result[i]  {
 					permutationFound[j] = true
 				}
 			}
@@ -1157,7 +1157,7 @@ func TestJsonObjKeys(t *testing.T) {
 			set_command: 	"json.set doc $ " + c,
 			test_command: 	"json.objkeys doc",
 			expected: 		[]interface{}{ 
-								[]interface{}{"name", "partner", "partner2"},
+								"name", "partner", "partner2",
 							},
 		},
 		{
@@ -1173,8 +1173,6 @@ func TestJsonObjKeys(t *testing.T) {
 
 	for _, tcase := range testCases {
 		FireCommand(conn, "DEL doc")
-		FireCommand(conn, "DEL doc1")
-		FireCommand(conn, "DEL doc2")
 		t.Run(tcase.name, func(t *testing.T) {
 			FireCommand(conn, tcase.set_command)
 			expected := tcase.expected
