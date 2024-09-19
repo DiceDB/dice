@@ -1,4 +1,4 @@
-package tests
+package commands
 
 import (
 	"context"
@@ -8,6 +8,8 @@ import (
 	"net"
 	"sync"
 	"time"
+
+	"github.com/dicedb/dice/internal/shard"
 
 	"github.com/dicedb/dice/internal/clientio"
 
@@ -26,7 +28,7 @@ type TestServerOptions struct {
 
 //nolint:unused
 func getLocalConnection() net.Conn {
-	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.Port))
+	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.DiceConfig.Server.Port))
 	if err != nil {
 		panic(err)
 	}
@@ -45,7 +47,7 @@ func deleteTestKeys(keysToDelete []string, store *dstore.Store) {
 //nolint:unused
 func getLocalSdk() *redis.Client {
 	return redis.NewClient(&redis.Options{
-		Addr: fmt.Sprintf(":%d", config.Port),
+		Addr: fmt.Sprintf(":%d", config.DiceConfig.Server.Port),
 
 		DialTimeout:           10 * time.Second,
 		ReadTimeout:           30 * time.Second,
@@ -60,7 +62,6 @@ func getLocalSdk() *redis.Client {
 	})
 }
 
-//nolint:unused
 func FireCommand(conn net.Conn, cmd string) interface{} {
 	var err error
 	args := testutils.ParseCommand(cmd)
@@ -91,21 +92,21 @@ func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *clientio.RESPParser
 	return clientio.NewRESPParser(conn)
 }
 
-//nolint:unused
 func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOptions) {
-	config.IOBufferLength = 16
-	config.WriteAOFOnCleanup = true
+	config.DiceConfig.Network.IOBufferLength = 16
+	config.DiceConfig.Server.WriteAOFOnCleanup = false
 	if opt.Port != 0 {
-		config.Port = opt.Port
+		config.DiceConfig.Server.Port = opt.Port
 	} else {
-		config.Port = 8739
+		config.DiceConfig.Server.Port = 8739
 	}
 
 	const totalRetries = 100
 	var err error
-
+	watchChan := make(chan dstore.WatchEvent, config.DiceConfig.Server.KeysLimit)
+	shardManager := shard.NewShardManager(1, watchChan)
 	// Initialize the AsyncServer
-	testServer := server.NewAsyncServer()
+	testServer := server.NewAsyncServer(shardManager, watchChan)
 
 	// Try to bind to a port with a maximum of `totalRetries` retries.
 	for i := 0; i < totalRetries; i++ {
@@ -114,8 +115,8 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 		}
 
 		if err.Error() == "address already in use" {
-			log.Infof("Port %d already in use, trying port %d", config.Port, config.Port+1)
-			config.Port++
+			log.Infof("Port %d already in use, trying port %d", config.DiceConfig.Server.Port, config.DiceConfig.Server.Port+1)
+			config.DiceConfig.Server.Port++
 		} else {
 			log.Fatalf("Failed to bind port: %v", err)
 			return
@@ -126,33 +127,6 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 		log.Fatalf("Failed to bind to a port after %d retries: %v", totalRetries, err)
 		return
 	}
-
-	// Inform the user that the server is starting
-	fmt.Println("Starting the test server on port", config.Port)
-
-	// Start the server in a goroutine
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err := testServer.Run(ctx); err != nil {
-			if errors.Is(err, server.ErrAborted) {
-				return
-			}
-			log.Fatalf("Test server encountered an error: %v", err)
-		}
-	}()
-}
-
-func RunHttpServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOptions) {
-	config.DiceConfig.Network.IOBufferLength = 16
-	config.DiceConfig.Server.WriteAOFOnCleanup = false
-
-	watchChan := make(chan dstore.WatchEvent, config.DiceConfig.Server.KeysLimit)
-	shardManager := shard.NewShardManager(1, watchChan)
-	config.HTTPPort = opt.Port
-
-	// Initialize the AsyncServer
-	testServer := server.NewHTTPServer(shardManager, watchChan)
 
 	// Inform the user that the server is starting
 	fmt.Println("Starting the test server on port", config.DiceConfig.Server.Port)
@@ -173,10 +147,9 @@ func RunHttpServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 				cancelShardManager()
 				return
 			}
-			log.Fatalf("Http test server encountered an error: %v", err)
+			log.Fatalf("Test server encountered an error: %v", err)
 		}
 	}()
-
 }
 
 func RunHttpServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOptions) {
