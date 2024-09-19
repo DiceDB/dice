@@ -14,7 +14,7 @@ import (
 func ExecuteCommand(cmd *cmd.RedisCmd, client *comm.Client, store *dstore.Store, http bool) EvalResponse {
 
 	// Temporary logic till we move all commands to new eval logic.
-	// NewDiceCmds map contains refactored eval commands
+	// MigratedDiceCmds map contains refactored eval commands
 	// For any command we will first check in the exisiting map
 	// if command is NA then we will check in the new map
 	var name string
@@ -22,7 +22,7 @@ func ExecuteCommand(cmd *cmd.RedisCmd, client *comm.Client, store *dstore.Store,
 	diceCmd, ok := DiceCmds[cmd.Cmd]
 	name = diceCmd.Name
 	if !ok {
-		newdiceCmd, ok = NewDiceCmds[cmd.Cmd]
+		newdiceCmd, ok = MigratedDiceCmds[cmd.Cmd]
 		if !ok {
 
 			return EvalResponse{Result: nil, Error: fmt.Errorf("unknown command '%s', with args beginning with: %s", cmd.Cmd, strings.Join(cmd.Args, " "))}

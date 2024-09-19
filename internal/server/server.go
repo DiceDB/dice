@@ -270,33 +270,11 @@ func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
 
 func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.RedisCmd, buf *bytes.Buffer, c *comm.Client) {
 	// breaking down single command to multiple command
+	cmdsBkp := s.cmdsBreakup(redisCmd, c)
 
-	// scatter - send to
-	s.shardManager.GetShard(0).ReqChan <- &ops.StoreOp{
-		Cmd:      redisCmd,
-		WorkerID: "server",
-		ShardID:  0,
-		Client:   c,
-	}
+	s.scatter(cmdsBkp, c)
 
-	resp := <-s.ioChan
-
-	switch redisCmd.Cmd {
-	// gatherPING expects input from responses returned by all the shards
-	// For now we have only single shards hence we are passing a single
-	// eval response. In future we need to wait till reponse from all shards
-	// then append it in the array and pass it in the Gather function
-	case "PING", "SET":
-		cmd, _ := eval.NewDiceCmds[redisCmd.Cmd]
-		if cmd.IsMultiShardCommand {
-			buf.Write(cmd.Gather(resp.EvalResponse))
-		} else {
-			encodeResponse(resp.EvalResponse)
-		}
-
-	default:
-		buf.Write(resp.EvalResponse.Result.([]byte))
-	}
+	s.gather(redisCmd, buf, len(cmdsBkp))
 }
 
 func encodeResponse(resp eval.EvalResponse) []byte {

@@ -19,9 +19,7 @@ type NewDiceCmdMeta struct {
 	Info  string
 	Arity int // number of arguments, it is possible to use -N to say >= N
 	KeySpecs
-	Eval                func([]string, *dstore.Store) EvalResponse
-	Gather              func(responses ...EvalResponse) []byte
-	IsMultiShardCommand bool
+	Eval func([]string, *dstore.Store) EvalResponse
 }
 
 type KeySpecs struct {
@@ -33,25 +31,22 @@ type KeySpecs struct {
 var (
 	DiceCmds = map[string]DiceCmdMeta{}
 
-	NewDiceCmds = map[string]NewDiceCmdMeta{}
+	MigratedDiceCmds = map[string]NewDiceCmdMeta{}
 
 	// PING command moved to the refactored eval implementation
 	// hence it is using NewDiceCmdMeta struct
 	pingCmdMeta = NewDiceCmdMeta{
-		Name:                "PING",
-		Info:                `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
-		Arity:               -1,
-		IsMultiShardCommand: true,
-		Eval:                EvalPING,
-		Gather:              GatherPING,
+		Name:  "PING",
+		Info:  `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
+		Arity: -1,
+		Eval:  EvalPING,
 	}
 
 	setCmdMeta = NewDiceCmdMeta{
-		Name:                "PING",
-		Info:                `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
-		Arity:               -1,
-		Eval:                EvalSET,
-		IsMultiShardCommand: false,
+		Name:  "PING",
+		Info:  `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
+		Arity: -1,
+		Eval:  EvalSET,
 	}
 
 	authCmdMeta = DiceCmdMeta{
@@ -771,8 +766,8 @@ func init() {
 	DiceCmds["SELECT"] = selectCmdMeta
 
 	// Refactored implementation
-	NewDiceCmds["PING"] = pingCmdMeta
-	NewDiceCmds["SET"] = setCmdMeta
+	MigratedDiceCmds["PING"] = pingCmdMeta
+	MigratedDiceCmds["SET"] = setCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

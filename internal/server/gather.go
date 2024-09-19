@@ -1,4 +1,4 @@
-package eval
+package server
 
 // Gather file is used by Worker to collect and process
 // responses from each shard in the form of scatterResponse.
@@ -11,13 +11,14 @@ import (
 	"fmt"
 
 	diceerrors "github.com/dicedb/dice/internal/errors"
+	"github.com/dicedb/dice/internal/eval"
 )
 
 // GatherPING gathers responses from each shard thread
 // If error is returned by any shard then dice returns error
 // If no error is returned by any shard then dice returns
 // response to client from first shard response
-func GatherPING(responses ...EvalResponse) []byte {
+func gatherPING(responses ...eval.EvalResponse) []byte {
 	for idx := range responses {
 		if responses[idx].Error != nil {
 			return diceerrors.NewErrArity("PING")

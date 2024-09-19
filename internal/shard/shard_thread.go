@@ -111,7 +111,7 @@ func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 func (shard *ShardThread) executeCommand(op *ops.StoreOp) eval.EvalResponse {
 
 	// Temporary logic till we move all commands to new eval logic.
-	// eval.NewDiceCmds map contains refactored eval commands
+	// eval.MigratedDiceCmds map contains refactored eval commands
 	// For any command we will first check in the exisiting map
 	// if command is NA then we will check in the new map
 	var name string
@@ -119,7 +119,7 @@ func (shard *ShardThread) executeCommand(op *ops.StoreOp) eval.EvalResponse {
 	diceCmd, ok := eval.DiceCmds[op.Cmd.Cmd]
 	name = diceCmd.Name
 	if !ok {
-		newdiceCmd, ok = eval.NewDiceCmds[op.Cmd.Cmd]
+		newdiceCmd, ok = eval.MigratedDiceCmds[op.Cmd.Cmd]
 		if !ok {
 
 			return eval.EvalResponse{Result: nil, Error: fmt.Errorf("unknown command '%s', with args beginning with: %s", op.Cmd.Cmd, strings.Join(op.Cmd.Args, " "))}
