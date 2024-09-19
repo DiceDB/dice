@@ -1435,6 +1435,15 @@ func testEvalDbsize(t *testing.T, store *dstore.Store) {
 			input:  nil,
 			output: []byte(":2\r\n"),
 		},
+		"override keys in db": {
+			setup: func() {
+				evalSET([]string{"key1", "val1"}, store)
+				evalSET([]string{"key2", "val2"}, store)
+				evalSET([]string{"key2", "overrideval2"}, store)
+			},
+			input:  nil,
+			output: []byte(":2\r\n"),
+		},
 	}
 
 	runEvalTests(t, tests, evalDBSIZE, store)

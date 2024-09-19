@@ -307,7 +307,7 @@ func evalDBSIZE(args []string, store *dstore.Store) []byte {
 	}
 
 	// return the RESP encoded value
-	return clientio.Encode(dstore.KeyspaceStat[0]["keys"], false)
+	return clientio.Encode(store.GetDBSize(), false)
 }
 
 // evalGETDEL returns the value for the queried key in args
