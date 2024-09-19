@@ -793,7 +793,8 @@ func insertElementAndUpdateArray(arr []any, index int, elements []interface{}) (
 	after := arr[idx:]
 
 	elements = append(elements, after...)
-	updatedArray = append(before, elements...)
+	before = append(before, elements...)
+	updatedArray = append(updatedArray, before...)
 	return updatedArray, nil
 }
 
