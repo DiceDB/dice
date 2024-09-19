@@ -239,7 +239,16 @@ func evalMSET(args []string, store *dstore.Store) []byte {
 	for i := 0; i < len(args); i += 2 {
 		key, value := args[i], args[i+1]
 		oType, oEnc := deduceTypeEncoding(value)
-		insertMap[key] = store.NewObj(value, exDurationMs, oType, oEnc)
+		var storedValue interface{}
+		switch oEnc {
+		case object.ObjEncodingInt:
+			storedValue, _ = strconv.ParseInt(value, 10, 64)
+		case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
+			storedValue = value
+		default:
+			return clientio.Encode(fmt.Errorf("ERR unsupported encoding: %d", oEnc), false)
+		}
+		insertMap[key] = store.NewObj(storedValue, exDurationMs, oType, oEnc)
 	}
 
 	store.PutAll(insertMap)

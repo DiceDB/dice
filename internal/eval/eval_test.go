@@ -2674,3 +2674,10 @@ func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
 
 	runEvalTests(t, tests, evalCommand, store)
 }
+func TestMSETConsistency(t *testing.T) {
+	store := dstore.NewStore(nil)
+	evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"}, store)
+
+	assert.Equal(t, "VAL", store.Get("KEY").Value)
+	assert.Equal(t, "VAL2", store.Get("KEY2").Value)
+}
