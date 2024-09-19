@@ -460,7 +460,6 @@ func evalJSONARRINSERT(args []string, store *dstore.Store) []byte {
 
 	jsonData = newData
 	obj.Value = jsonData
-
 	return clientio.Encode(resultsArray, false)
 
 }
