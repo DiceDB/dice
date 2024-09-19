@@ -13,6 +13,7 @@ import (
 
 const (
 	Key   = "key"
+	KeyPrefix = "key_prefix"
 	Field = "field"
 	Path  = "path"
 	Value = "value"
@@ -27,6 +28,13 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 	command = strings.ToUpper(command)
 	var args []string
 
+	// Extract query parameters
+	queryParams := r.URL.Query()
+	keyPrefix := queryParams.Get(KeyPrefix)
+
+	if keyPrefix != "" && command == "JSON.INGEST" {
+		args = append(args, keyPrefix)
+	}
 	// Step 1: Handle JSON body if present
 	if r.Body != nil {
 		body, err := io.ReadAll(r.Body)

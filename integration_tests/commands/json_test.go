@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
-
 	"github.com/dicedb/dice/testutils"
+	testifyAssert "github.com/stretchr/testify/assert"
 	"gotest.tools/v3/assert"
 )
 
@@ -183,7 +183,7 @@ func TestJSONOperations(t *testing.T) {
 				if tc.getCmd != "" {
 					result := FireCommand(conn, tc.getCmd)
 					if testutils.IsJSONResponse(result.(string)) {
-						testutils.AssertJSONEqual(t, tc.expected, result.(string))
+						testifyAssert.JSONEq(t, tc.expected, result.(string))
 					} else {
 						assert.Equal(t, tc.expected, result)
 					}
@@ -334,7 +334,7 @@ func TestJSONSetWithNXAndXX(t *testing.T) {
 				result := FireCommand(conn, cmd)
 				jsonResult, isString := result.(string)
 				if isString && testutils.IsJSONResponse(jsonResult) {
-					testutils.AssertJSONEqual(t, tc.expected[i].(string), jsonResult)
+					testifyAssert.JSONEq(t, tc.expected[i].(string), jsonResult)
 				} else {
 					assert.Equal(t, tc.expected[i], result)
 				}
@@ -511,7 +511,7 @@ func TestJSONDelOperations(t *testing.T) {
 				result := FireCommand(conn, cmd)
 				stringResult, ok := result.(string)
 				if ok && testutils.IsJSONResponse(stringResult) {
-					testutils.AssertJSONEqual(t, tc.expected[i].(string), stringResult)
+					testifyAssert.JSONEq(t, tc.expected[i].(string), stringResult)
 				} else {
 					assert.Equal(t, tc.expected[i], result)
 				}
@@ -599,7 +599,7 @@ func TestJSONForgetOperations(t *testing.T) {
 				result := FireCommand(conn, cmd)
 				stringResult, ok := result.(string)
 				if ok && testutils.IsJSONResponse(stringResult) {
-					testutils.AssertJSONEqual(t, tc.expected[i].(string), stringResult)
+					testifyAssert.JSONEq(t, tc.expected[i].(string), stringResult)
 				} else {
 					assert.Equal(t, tc.expected[i], result)
 				}
@@ -734,7 +734,7 @@ func TestJSONMGET(t *testing.T) {
 				assert.Equal(t, len(tc.expected), len(results))
 				for i := range results {
 					if testutils.IsJSONResponse(tc.expected[i].(string)) {
-						testutils.AssertJSONEqual(t, tc.expected[i].(string), results[i].(string))
+						testifyAssert.JSONEq(t, tc.expected[i].(string), results[i].(string))
 					} else {
 						assert.Equal(t, tc.expected[i], results[i])
 					}
@@ -915,6 +915,90 @@ func TestJsonNummultby(t *testing.T) {
 	}
 }
 
+func TestJsonObjLen(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	a := `{"name":"jerry","partner":{"name":"tom","language":["rust"]}}`
+	b := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"name":"spike","language":["go","rust"]}}`
+	c := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"name":12,"language":["rust"]}}`
+	d := `["this","is","an","array"]`
+
+	defer func() {
+		resp := FireCommand(conn, "DEL obj")
+		assert.Equal(t, int64(1), resp)
+	}()
+
+	testCases := []struct {
+		name     string
+		commands []string
+		expected []interface{}
+	}{
+		{
+			name:     "JSON.OBJLEN with root path",
+			commands: []string{"json.set obj $ " + a, "json.objlen obj $"},
+			expected: []interface{}{"OK", []interface{}{int64(2)}},
+		},
+		{
+			name:     "JSON.OBJLEN with nested path",
+			commands: []string{"json.set obj $ " + b, "json.objlen obj $.partner"},
+			expected: []interface{}{"OK", []interface{}{int64(2)}},
+		},
+		{
+			name:     "JSON.OBJLEN with non-object path",
+			commands: []string{"json.set obj $ " + d, "json.objlen obj $"},
+			expected: []interface{}{"OK", []interface{}{"(nil)"}},
+		},
+		{
+			name:     "JSON.OBJLEN with nested non-object path",
+			commands: []string{"json.set obj $ " + c, "json.objlen obj $.partner2.name"},
+			expected: []interface{}{"OK", []interface{}{"(nil)"}},
+		},
+		{
+			name:     "JSON.OBJLEN nested objects",
+			commands: []string{"json.set obj $ " + b, "json.objlen obj $..language"},
+			expected: []interface{}{"OK", []interface{}{"(nil)", "(nil)"}},
+		},
+		{
+			name:     "JSON.OBJLEN invalid json path",
+			commands: []string{"json.set obj $ " + b, "json.objlen obj $..language*something"},
+			expected: []interface{}{"OK", "ERR parse error at 13 in $..language*something"},
+		},
+		{
+			name:     "JSON.OBJLEN with non-existant key",
+			commands: []string{"json.set obj $ " + b, "json.objlen non_existing_key $"},
+			expected: []interface{}{"OK", "(nil)"},
+		},
+		{
+			name:     "JSON.OBJLEN with empty path",
+			commands: []string{"json.set obj $ " + a, "json.objlen obj"},
+			expected: []interface{}{"OK", int64(2)},
+		},
+		{
+			name:     "JSON.OBJLEN invalid json path",
+			commands: []string{"json.set obj $ " + c, "json.objlen obj $[1"},
+			expected: []interface{}{"OK", "ERR expected a number at 4 in $[1"},
+		},
+		{
+			name:     "JSON.OBJLEN invalid json path",
+			commands: []string{"json.set obj $ " + c, "json.objlen"},
+			expected: []interface{}{"OK", "ERR wrong number of arguments for 'json.objlen' command"},
+		},
+	}
+
+	for _, tcase := range testCases {
+		FireCommand(conn, "DEL obj")
+		t.Run(tcase.name, func(t *testing.T) {
+			for i := 0; i < len(tcase.commands); i++ {
+				cmd := tcase.commands[i]
+				out := tcase.expected[i]
+				result := FireCommand(conn, cmd)
+				assert.DeepEqual(t, out, result)
+			}
+		})
+	}
+}
+
 func convertToArray(input string) []string {
 	input = strings.Trim(input, `"[`)
 	input = strings.Trim(input, `]"`)
@@ -924,6 +1008,7 @@ func convertToArray(input string) []string {
 	}
 	return elements
 }
+
 func TestJSONNumIncrBy(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
@@ -965,7 +1050,7 @@ func TestJSONNumIncrBy(t *testing.T) {
 			setupData:   fmt.Sprintf("JSON.SET %s $ %s", "foo", `{"a":"b","b":[{"a":2.2},{"a":5},{"a":"c"}]}`),
 			commands:    []string{"JSON.NUMINCRBY foo $..a 2", "JSON.NUMINCRBY foo $.a 2", "JSON.GET foo", "JSON.NUMINCRBY foo $..a -2", "JSON.GET foo"},
 			expected:    []interface{}{"[null,4.2,7,null]", "[null]", "{\"a\":\"b\",\"b\":[{\"a\":4.2},{\"a\":7},{\"a\":\"c\"}]}", "[null,2.2,5,null]", "{\"a\":\"b\",\"b\":[{\"a\":2.2},{\"a\":5},{\"a\":\"c\"}]}"},
-			assert_type: []string{"perm_equal", "perm_equal", "equal", "perm_equal", "equal"},
+			assert_type: []string{"perm_equal", "perm_equal", "json_equal", "perm_equal", "json_equal"},
 			cleanUp:     []string{"DEL foo"},
 		},
 		{
@@ -996,12 +1081,15 @@ func TestJSONNumIncrBy(t *testing.T) {
 				cmd := tc.commands[i]
 				out := tc.expected[i]
 				result := FireCommand(conn, cmd)
-				if tc.assert_type[i] == "equal" {
+				switch tc.assert_type[i] {
+				case "equal":
 					assert.Equal(t, out, result)
-				} else if tc.assert_type[i] == "perm_equal" {
+				case "perm_equal":
 					assert.Assert(t, arraysArePermutations(convertToArray(out.(string)), convertToArray(result.(string))))
-				} else if tc.assert_type[i] == "range" {
+				case "range":
 					assert.Assert(t, result.(int64) <= tc.expected[i].(int64) && result.(int64) > 0, "Expected %v to be within 0 to %v", result, tc.expected[i])
+				case "json_equal":
+					testifyAssert.JSONEq(t, out.(string), result.(string))
 				}
 			}
 			for i := 0; i < len(tc.cleanUp); i++ {

@@ -9,12 +9,12 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 	"unicode"
 	"unsafe"
 
 	"github.com/dicedb/dice/internal/object"
+	"github.com/rs/xid"
 
 	"github.com/dicedb/dice/internal/sql"
 
@@ -246,7 +246,16 @@ func evalMSET(args []string, store *dstore.Store) []byte {
 	for i := 0; i < len(args); i += 2 {
 		key, value := args[i], args[i+1]
 		oType, oEnc := deduceTypeEncoding(value)
-		insertMap[key] = store.NewObj(value, exDurationMs, oType, oEnc)
+		var storedValue interface{}
+		switch oEnc {
+		case object.ObjEncodingInt:
+			storedValue, _ = strconv.ParseInt(value, 10, 64)
+		case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
+			storedValue = value
+		default:
+			return clientio.Encode(fmt.Errorf("ERR unsupported encoding: %d", oEnc), false)
+		}
+		insertMap[key] = store.NewObj(storedValue, exDurationMs, oType, oEnc)
 	}
 
 	store.PutAll(insertMap)
@@ -729,6 +738,74 @@ func adjustIndex(idx int, arr []any) int {
 		}
 	}
 	return idx
+}
+
+// evalJSONOBJLEN return the number of keys in the JSON object at path in key.
+// Returns an array of integer replies, an integer for each matching value,
+// which is the json objects length, or nil, if the matching value is not a json.
+// Returns encoded error if the key doesn't exist or key is expired or the matching value is not an array.
+// Returns encoded error response if incorrect number of arguments
+func evalJSONOBJLEN(args []string, store *dstore.Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("JSON.OBJLEN")
+	}
+
+	key := args[0]
+
+	// Retrieve the object from the database
+	obj := store.Get(key)
+	if obj == nil {
+		return clientio.RespNIL
+	}
+
+	// check if the object is json
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
+	}
+
+	// get the value & check for marsheling error
+	jsonData := obj.Value
+	_, err := sonic.Marshal(jsonData)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
+	}
+	if len(args) == 1 {
+		// check if the value is of json type
+		if utils.GetJSONFieldType(jsonData) == utils.ObjectType {
+			if castedData, ok := jsonData.(map[string]interface{}); ok {
+				return clientio.Encode(len(castedData), false)
+			}
+			return clientio.RespNIL
+		}
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
+	path := args[1]
+
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return diceerrors.NewErrWithMessage(err.Error())
+	}
+
+	// get all values for matching paths
+	results := expr.Get(jsonData)
+
+	objectLen := make([]interface{}, 0, len(results))
+
+	for _, result := range results {
+		switch utils.GetJSONFieldType(result) {
+		case utils.ObjectType:
+			if castedResult, ok := result.(map[string]interface{}); ok {
+				objectLen = append(objectLen, len(castedResult))
+			} else {
+				objectLen = append(objectLen, nil)
+			}
+		default:
+			objectLen = append(objectLen, nil)
+		}
+	}
+	return clientio.Encode(objectLen, false)
 }
 
 // evalJSONDEL delete a value that the given json path include in.
@@ -1425,6 +1502,34 @@ func evalJSONARRAPPEND(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(resultsArray, false)
 }
 
+// evalJSONINGEST stores a value at a dynamically generated key
+// The key is created using a provided key prefix combined with a unique identifier
+// args must contains key_prefix and path and json value
+// It will call to evalJSONSET internally.
+// Returns encoded error response if incorrect number of arguments
+// Returns encoded error if the JSON string is invalid
+// Returns unique identifier if the JSON value is successfully stored
+func evalJSONINGEST(args []string, store *dstore.Store) []byte {
+	if len(args) < 3 {
+		return diceerrors.NewErrArity("JSON.INGEST")
+	}
+
+	keyPrefix := args[0]
+
+	uniqueID := xid.New()
+	uniqueKey := keyPrefix + uniqueID.String()
+
+	var setArgs []string
+	setArgs = append(setArgs, uniqueKey)
+	setArgs = append(setArgs, args[1:]...)
+
+	result := evalJSONSET(setArgs, store)
+	if bytes.Equal(result, clientio.RespOK) {
+		return clientio.Encode(uniqueID.String(), true)
+	}
+	return result
+}
+
 // evalTTL returns Time-to-Live in secs for the queried key in args
 // The key should be the only param in args else returns with an error
 // Returns	RESP encoded time (in secs) remaining for the key to expire
@@ -1655,28 +1760,6 @@ func evalHELLO(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(resp, false)
 }
 
-/* Description - Spawn a background thread to persist the data via AOF technique. Current implementation is
-based on CoW optimization and Fork */
-// TODO: Implement Acknowledgement so that main process could know whether child has finished writing to its AOF file or not.
-// TODO: Make it safe from failure, an stable policy would be to write the new flushes to a temporary files and then rename them to the main process's AOF file
-// TODO: Add fsync() and fdatasync() to persist to AOF for above cases.
-func EvalBGREWRITEAOF(args []string, store *dstore.Store) []byte {
-	// Fork a child process, this child process would inherit all the uncommitted pages from main process.
-	// This technique utilizes the CoW or copy-on-write, so while the main process is free to modify them
-	// the child would save all the pages to disk.
-	// Check details here -https://www.sobyte.net/post/2022-10/fork-cow/
-	newChild, _, _ := syscall.Syscall(syscall.SYS_FORK, 0, 0, 0)
-	if newChild == 0 {
-		// We are inside child process now, so we'll start flushing to disk.
-		if err := dstore.DumpAllAOF(store); err != nil {
-			return diceerrors.NewErrWithMessage("AOF failed")
-		}
-		return []byte(utils.EmptyStr)
-	}
-	// Back to main threadg
-	return clientio.RespOK
-}
-
 // evalINCR increments the value of the specified key in args by 1,
 // if the key exists and the value is integer format.
 // The key should be the only param in args.
@@ -1785,7 +1868,7 @@ func evalLATENCY(args []string, store *dstore.Store) []byte {
 // evalLRU deletes all the keys from the LRU
 // returns encoded RESP OK
 func evalLRU(args []string, store *dstore.Store) []byte {
-	dstore.EvictAllkeysLRU(store)
+	dstore.EvictAllkeysLRUOrLFU(store)
 	return clientio.RespOK
 }
 
@@ -2290,15 +2373,46 @@ func evalCommand(args []string, store *dstore.Store) []byte {
 	}
 	subcommand := strings.ToUpper(args[0])
 	switch subcommand {
-	case "COUNT":
+	case Count:
 		return evalCommandCount()
-	case "GETKEYS":
+	case GetKeys:
 		return evalCommandGetKeys(args[1:])
-	case "LIST":
+	case List:
 		return evalCommandList()
+	case Help:
+		return evalCommandHelp()
 	default:
 		return diceerrors.NewErrWithFormattedMessage("unknown subcommand '%s'. Try COMMAND HELP.", subcommand)
 	}
+}
+
+// evalCommandHelp prints help message
+func evalCommandHelp() []byte {
+	format := "COMMAND <subcommand> [<arg> [value] [opt] ...]. Subcommands are:"
+	noTitle := "(no subcommand)"
+	noMessage := "    Return details about all Dice commands."
+	countTitle := "COUNT"
+	countMessage := "    Return the total number of commands in this Dice server."
+	listTitle := "LIST"
+	listMessage := "     Return a list of all commands in this Dice server."
+	getKeysTitle := "GETKEYS <full-command>"
+	getKeysMessage := "     Return the keys from a full Dice command."
+	helpTitle := "HELP"
+	helpMessage := "     Print this help."
+	message := []string{
+		format,
+		noTitle,
+		noMessage,
+		countTitle,
+		countMessage,
+		listTitle,
+		listMessage,
+		getKeysTitle,
+		getKeysMessage,
+		helpTitle,
+		helpMessage,
+	}
+	return clientio.Encode(message, false)
 }
 
 func evalCommandDefault() []byte {
