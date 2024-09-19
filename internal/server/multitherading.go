@@ -60,7 +60,7 @@ func (s *AsyncServer) scatter(cmds []cmd.RedisCmd, c *comm.Client) {
 		}
 	} else {
 		// multishard command
-		// Condition for command that requires all shards
+		// Condition for command that requires all shards such as PING
 		if len(cmds) == s.shardManager.GetShardCount() {
 			for i := 0; i < len(cmds); i++ {
 				s.shardManager.GetShard(shard.ShardID(i)).ReqChan <- &ops.StoreOp{
