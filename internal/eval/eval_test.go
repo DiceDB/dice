@@ -15,6 +15,7 @@ import (
 
 	"github.com/axiomhq/hyperloglog"
 	"github.com/dicedb/dice/internal/clientio"
+	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	dstore "github.com/dicedb/dice/internal/store"
 	testifyAssert "github.com/stretchr/testify/assert"
@@ -74,6 +75,7 @@ func TestEval(t *testing.T) {
 	testEvalLLEN(t, store)
 	testEvalGETEX(t, store)
 	testEvalJSONNUMINCRBY(t, store)
+	testEvalTYPE(t, store)
 	testEvalCOMMAND(t, store)
 }
 
@@ -2552,6 +2554,85 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalJSONARRPOP, store)
+}
+
+func testEvalTYPE(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"TYPE : incorrect number of arguments": {
+			setup:  func() {},
+			input:  []string{},
+			output: diceerrors.NewErrArity("TYPE"),
+		},
+		"TYPE : key does not exist": {
+			setup:  func() {},
+			input:  []string{"nonexistent_key"},
+			output: clientio.Encode("none", false),
+		},
+		"TYPE : key exists and is of type String": {
+			setup: func() {
+				store.Put("string_key", store.NewObj("value", -1, object.ObjTypeString, object.ObjEncodingRaw))
+			},
+			input:  []string{"string_key"},
+			output: clientio.Encode("string", false),
+		},
+		"TYPE : key exists and is of type List": {
+			setup: func() {
+				store.Put("list_key", store.NewObj([]byte("value"), -1, object.ObjTypeByteList, object.ObjEncodingRaw))
+			},
+			input:  []string{"list_key"},
+			output: clientio.Encode("list", false),
+		},
+		"TYPE : key exists and is of type Set": {
+			setup: func() {
+				store.Put("set_key", store.NewObj([]byte("value"), -1, object.ObjTypeSet, object.ObjEncodingRaw))
+			},
+			input:  []string{"set_key"},
+			output: clientio.Encode("set", false),
+		},
+		"TYPE : key exists and is of type Hash": {
+			setup: func() {
+				store.Put("hash_key", store.NewObj([]byte("value"), -1, object.ObjTypeHashMap, object.ObjEncodingRaw))
+			},
+			input:  []string{"hash_key"},
+			output: clientio.Encode("hash", false),
+		},
+	}
+	runEvalTests(t, tests, evalTYPE, store)
+}
+
+func BenchmarkEvalTYPE(b *testing.B) {
+	store := dstore.NewStore(nil)
+
+	// Define different types of objects to benchmark
+	objectTypes := map[string]func(){
+		"String": func() {
+			store.Put("string_key", store.NewObj("value", -1, object.ObjTypeString, object.ObjEncodingRaw))
+		},
+		"List": func() {
+			store.Put("list_key", store.NewObj([]byte("value"), -1, object.ObjTypeByteList, object.ObjEncodingRaw))
+		},
+		"Set": func() {
+			store.Put("set_key", store.NewObj([]byte("value"), -1, object.ObjTypeSet, object.ObjEncodingRaw))
+		},
+		"Hash": func() {
+			store.Put("hash_key", store.NewObj([]byte("value"), -1, object.ObjTypeHashMap, object.ObjEncodingRaw))
+		},
+	}
+
+	for objType, setupFunc := range objectTypes {
+		b.Run(fmt.Sprintf("ObjectType_%s", objType), func(b *testing.B) {
+			// Setup the object in the store
+			setupFunc()
+
+			b.ResetTimer()
+			b.ReportAllocs()
+
+			// Benchmark the evalTYPE function
+			for i := 0; i < b.N; i++ {
+				_ = evalTYPE([]string{fmt.Sprintf("%s_key", strings.ToLower(objType))}, store)
+			}
+		})
+	}
 }
 
 func testEvalCOMMAND(t *testing.T, store *dstore.Store) {

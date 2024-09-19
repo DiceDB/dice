@@ -27,12 +27,7 @@ func TestLFUEviction(t *testing.T) {
 		{
 			name: "Test LFU - eviction pool should have least recent key if all access keys are same",
 			keys: []string{"k1", "k2", "k3", "k4"},
-			obj: []*object.Obj{
-				&object.Obj{},
-				&object.Obj{},
-				&object.Obj{},
-				&object.Obj{},
-			},
+			obj:  []*object.Obj{{}, {}, {}, {}},
 			setup: func(k string, obj *object.Obj) {
 				store.Put(k, obj)
 			},
@@ -45,12 +40,7 @@ func TestLFUEviction(t *testing.T) {
 		{
 			name: "Test LFU - eviction pool should have least frequently used key",
 			keys: []string{"k1", "k2", "k3", "k4"},
-			obj: []*object.Obj{
-				&object.Obj{},
-				&object.Obj{},
-				&object.Obj{},
-				&object.Obj{},
-			},
+			obj:  []*object.Obj{{}, {}, {}, {}},
 			setup: func(k string, obj *object.Obj) {
 				store.Put(k, obj)
 			},
