@@ -57,7 +57,7 @@ func NewAsyncServer(shardManager *shard.ShardManager, watchChan chan dstore.Watc
 
 // SetupUsers initializes the default user for the server
 func (s *AsyncServer) SetupUsers() error {
-	user, err := auth.UserStore.Add(auth.DefaultUserName)
+	user, err := auth.UserStore.Add(config.DiceConfig.Auth.UserName)
 	if err != nil {
 		return err
 	}
