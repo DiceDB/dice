@@ -373,7 +373,7 @@ func evalGETDEL(args []string, store *dstore.Store) []byte {
 }
 
 // evalJSONARRINSERT insert the json values into the array at path before the index (shifts to the right)
-// returns an array of integer replies for each path, the array's new size, or nil,
+// returns an array of integer replies for each path, the array's new size, or nil.
 func evalJSONARRINSERT(args []string, store *dstore.Store) []byte {
 	if len(args) < 4 {
 		return diceerrors.NewErrArity("JSON.ARRINSERT")
@@ -789,11 +789,11 @@ func insertElementAndUpdateArray(arr []any, index int, elements []interface{}) (
 	} else {
 		return nil, errors.New("index out of bounds")
 	}
-
 	before := arr[:idx]
 	after := arr[idx:]
-	updatedArray = append(before, append(elements, after...)...)
 
+	elements = append(elements, after...)
+	updatedArray = append(before, elements...)
 	return updatedArray, nil
 }
 
