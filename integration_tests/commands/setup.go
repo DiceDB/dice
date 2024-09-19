@@ -178,3 +178,39 @@ func RunHttpServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	}()
 
 }
+
+func RunHttpServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOptions) {
+	config.DiceConfig.Network.IOBufferLength = 16
+	config.DiceConfig.Server.WriteAOFOnCleanup = false
+
+	watchChan := make(chan dstore.WatchEvent, config.DiceConfig.Server.KeysLimit)
+	shardManager := shard.NewShardManager(1, watchChan)
+	config.HTTPPort = opt.Port
+
+	// Initialize the AsyncServer
+	testServer := server.NewHTTPServer(shardManager, watchChan)
+
+	// Inform the user that the server is starting
+	fmt.Println("Starting the test server on port", config.DiceConfig.Server.Port)
+
+	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		shardManager.Run(shardManagerCtx)
+	}()
+
+	// Start the server in a goroutine
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := testServer.Run(ctx); err != nil {
+			if errors.Is(err, server.ErrAborted) {
+				cancelShardManager()
+				return
+			}
+			log.Fatalf("Http test server encountered an error: %v", err)
+		}
+	}()
+
+}
