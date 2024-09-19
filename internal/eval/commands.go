@@ -43,8 +43,13 @@ var (
 	}
 
 	setCmdMeta = NewDiceCmdMeta{
-		Name:  "PING",
-		Info:  `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
+		Name: "SET",
+		Info: `SET puts a new <key, value> pair in db as in the args
+		args must contain key and value.
+		args can also contain multiple options -
+		Returns encoded error response if expiry tme value in not integer
+		Returns encoded OK RESP once new entry is added
+		If the key already exists then the value will be overwritten and expiry will be discarded`,
 		Arity: -1,
 		Eval:  EvalSET,
 	}
