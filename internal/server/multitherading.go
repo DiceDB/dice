@@ -39,11 +39,17 @@ func init() {
 }
 
 func (s *AsyncServer) cmdsBreakup(redisCmd *cmd.RedisCmd, c *comm.Client) []cmd.RedisCmd {
+
+	// check if command supports multisharding
 	val, ok := MultithreadingCmds[redisCmd.Cmd]
+	// If not then just return the command as it is
+	// no need to do futher breakup
 	if !ok {
 		return []cmd.RedisCmd{*redisCmd}
 	}
 
+	// If yes then send the command to the respective breakup function
+	// Which can return array of broken down commands
 	return val.Breakup(s.shardManager, redisCmd, c)
 }
 
@@ -71,6 +77,8 @@ func (s *AsyncServer) scatter(cmds []cmd.RedisCmd, c *comm.Client) {
 				}
 			}
 		} else {
+			// Otherwise check for the shard based on the key using hash
+			// and send it to the particular shard
 			for i := 0; i < len(cmds); i++ {
 				key := cmds[i].Args[0]
 				id := getShard(key, uint32(s.shardManager.GetShardCount()))
@@ -97,10 +105,15 @@ func (s *AsyncServer) gather(redisCmd *cmd.RedisCmd, buf *bytes.Buffer, numShard
 		}
 	}
 
+	// Check if command supports multisharding
 	val, ok := MultithreadingCmds[redisCmd.Cmd]
+
+	// If single shard then jsut get the reponse, encode it before sending to client
+	// Encoding function is not yet implemented
 	if !ok {
 		buf.Write(evalResp[0].Result.([]byte))
 	} else {
+		// If multishard command, then send it to the respective Gather function
 		buf.Write(val.Gather(evalResp...))
 	}
 
