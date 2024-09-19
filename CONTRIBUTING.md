@@ -1,18 +1,13 @@
+DiceDB welcomes your contributions! Whether you're fixing bugs, adding new features, or improving the documentation, your help is valuable. 
+
+To maintain the project's quality and consistency, please follow these guidelines:
+
+- Keep the code consistent: Use the same coding style and conventions throughout the project. 
+- Keep the git repository consistent: Follow proper git practices to avoid conflicts and ensure a clean history. 
+
 # Contribution Guidelines
 
 Before you begin to contribute, make sure you have reviewed [Dev Environment Setup](https://github.com/dicedb/dice/blob/master/README.md) sections and that you have created your own fork of the source code.
-
-## Create a design document
-
-If your change is relatively minor, you can skip this step. If you are adding new major feature, we suggest that you add a design document and solicit comments from the community before submitting any code.
-
-## Create an issue for the change
-
-Create an issue [here](https://github.com/dicedb/dice/issues) for the change you would like to make. Provide information on why the change is needed and how you plan to address it. Use the conversations on the issue as a way to validate assumptions and the right way to proceed.
-
-If you have a design document, please refer to the design documents in your Issue. You may even want to create multiple issues depending on the extent of your change.
-
-Once you are clear about what you want to do, proceed with the next steps listed below.
 
 ## Create a branch for your change
 
@@ -29,11 +24,11 @@ $ git merge upstream/master
 $ git checkout -b <your issue branch>
 ```
 
-Make the necessary changes. If the changes you plan to make are too big, make sure you break it down into smaller tasks.
+Make the necessary changes. If the changes you plan to make are too big, make sure you break them down into smaller tasks.
 
 ## Making the changes
 
-Follow the best-practices when you are making changes.
+Follow the best practices when you are making changes.
 
 ### Code documentation
 
@@ -41,12 +36,6 @@ Please ensure your code is adequately documented. Some things to consider for do
 
 - Always include struct, module, and package level docs. We are looking for information about what functionality is provided, what state is maintained, whether there are concurrency/thread-safety concerns and any exceptional behavior that the class might exhibit.
 - Document public methods and their parameters.
-
-### Logging
-
-- Ensure there is adequate logging for positive paths as well as exceptional paths. As a corollary to this, ensure logs are not noisy.
-- Do not use fmt.Println to log messages. Use the `logrus` logger.
-- Use logging levels correctly: set level to `debug` for verbose logs useful for only for debugging.
 
 ### Code Formatting
 
@@ -77,46 +66,6 @@ To run golangci-lint and check your code for issues, use the following command:
 ```sh
 golangci-lint run
 ```
-
-### Pre Commit Hook
-
-Pre-commit Hook for golangci-lint ensures that linting checks are performed automatically before changes are committed.
-
-To use pre-commit, you need to have it installed on your system. You can install it using following methods:
-
-- Via Pip:
-
-```sh
-pip install pre-commit
-```
-
-- Via Homebrew (macOS):
-
-```sh
-brew install pre-commit
-```
-
-- Via apt-get (Ubuntu/Debian):
-
-```sh
-sudo apt-get install pre-commit
-```
-
-Verify the installation:
-
-```sh
-$ pre-commit --version
-pre-commit 3.8.0
-```
-
-Install the pre commit hook:
-
-```sh
-$ pre-commit install
-pre-commit installed at .git/hooks/pre-commit
-```
-
-With the pre-commit hook configured, `golangci-lint` will automatically run every time you execute `git commit`. This ensures that your code adheres to the linting rules specified in the [.golangci.yml](https://github.com/DiceDB/dice/blob/master/.golangci.yaml) file before any changes are committed.
 
 ### Backward and Forward compatibility changes
 
@@ -165,10 +114,6 @@ git push origin <your issue branch>
 
 - When you have addressed all comments and have an approved PR, one of the committers can merge your PR.
 - After your change is merged, check to see if any documentation needs to be updated. If so, create a PR for documentation.
-
-## Update Documentation
-
-Usually for new features, functionalities, API changes, documentation update is required to keep users up to date and keep track of our development.
 
 ## Timeline for working on Issues
 
