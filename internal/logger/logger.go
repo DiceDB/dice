@@ -14,8 +14,6 @@ func getLogLevel() slog.Leveler {
 	switch config.DiceConfig.Server.LogLevel {
 	case "debug":
 		level = slog.LevelDebug
-	case "info":
-		level = slog.LevelInfo
 	case "warn":
 		level = slog.LevelWarn
 	case "error":

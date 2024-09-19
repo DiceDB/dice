@@ -31,8 +31,6 @@ func (h *ZerologHandler) Handle(ctx context.Context, record slog.Record) error {
 			event = event.Float64(attr.Key, attr.Value.Float64())
 		case slog.KindBool:
 			event = event.Bool(attr.Key, attr.Value.Bool())
-		case slog.KindAny:
-			event = event.Interface(attr.Key, attr.Value.Any())
 		default:
 			// Log unknown types generically
 			event = event.Interface(attr.Key, attr.Value.Any())
@@ -49,8 +47,6 @@ func mapLevel(level slog.Level) zerolog.Level {
 	switch {
 	case level == slog.LevelDebug:
 		return zerolog.DebugLevel
-	case level == slog.LevelInfo:
-		return zerolog.InfoLevel
 	case level == slog.LevelWarn:
 		return zerolog.WarnLevel
 	case level == slog.LevelError:
