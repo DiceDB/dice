@@ -23,7 +23,7 @@ var unimplementedCommands map[string]bool = map[string]bool{
 	"QWATCH":    true,
 	"QUNWATCH":  true,
 	"SUBSCRIBE": true,
-	"ABORT":     true,
+	"ABORT":     false,
 }
 
 type HTTPServer struct {
