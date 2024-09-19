@@ -111,7 +111,8 @@ func (shard *ShardThread) executeCommand(op *ops.StoreOp) []byte {
 	}
 
 	// Till the time we refactor to handle QWATCH differently using HTTP Streaming/SSE
-	if op.HTTPOp {
+	// The 'ABORT' command does not need any evaluation
+	if op.HTTPOp && diceCmd.Name != "ABORT" {
 		return diceCmd.Eval(op.Cmd.Args, shard.store)
 	}
 
