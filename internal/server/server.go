@@ -279,13 +279,6 @@ func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.RedisCmd, buf *bytes.
 	s.gather(redisCmd, buf, len(cmdsBkp))
 }
 
-func encodeResponse(resp eval.EvalResponse) []byte {
-	if resp.Error != nil {
-		return diceerrors.NewErrWithFormattedMessage(resp.Error.Error())
-	}
-	return []byte(fmt.Sprintf("+%s\r\n", resp.Result))
-}
-
 func readCommands(c io.ReadWriter) (cmd.RedisCmds, bool, error) {
 	var hasABORT = false
 	rp := clientio.NewRESPParser(c)
