@@ -90,7 +90,9 @@ func (shard *ShardThread) unregisterWorker(workerID string) {
 
 // processRequest processes a Store operation for the shard.
 func (shard *ShardThread) processRequest(op *ops.StoreOp) {
-	resp := shard.executeCommand(op)
+	resp := eval.ExecuteCommand(op.Cmd, op.Client, shard.store, op.HTTPOp)
+
+	// resp := shard.executeCommand(op)
 
 	shard.workerMutex.RLock()
 	workerChan, ok := shard.workerMap[op.WorkerID]
@@ -106,48 +108,49 @@ func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 	}
 }
 
-func (shard *ShardThread) executeCommand(op *ops.StoreOp) eval.EvalScatterResponse {
+func (shard *ShardThread) executeCommand(op *ops.StoreOp) eval.EvalResponse {
 
 	// Temporary logic till we move all commands to new eval logic.
 	// eval.NewDiceCmds map contains refactored eval commands
 	// For any command we will first check in the exisiting map
 	// if command is NA then we will check in the new map
 	var name string
+	var newdiceCmd eval.NewDiceCmdMeta
 	diceCmd, ok := eval.DiceCmds[op.Cmd.Cmd]
 	name = diceCmd.Name
 	if !ok {
-		newdiceCmd, ok := eval.NewDiceCmds[op.Cmd.Cmd]
+		newdiceCmd, ok = eval.NewDiceCmds[op.Cmd.Cmd]
 		if !ok {
 
-			return eval.EvalScatterResponse{Result: nil, Error: fmt.Errorf("unknown command '%s', with args beginning with: %s", op.Cmd.Cmd, strings.Join(op.Cmd.Args, " "))}
+			return eval.EvalResponse{Result: nil, Error: fmt.Errorf("unknown command '%s', with args beginning with: %s", op.Cmd.Cmd, strings.Join(op.Cmd.Args, " "))}
 		}
 		name = newdiceCmd.Name
 	}
 
 	// Till the time we refactor to handle QWATCH differently using HTTP Streaming/SSE
 	if op.HTTPOp {
-		return eval.EvalScatterResponse{Result: diceCmd.Eval(op.Cmd.Args, shard.store), Error: nil}
+		return eval.EvalResponse{Result: diceCmd.Eval(op.Cmd.Args, shard.store), Error: nil}
 	}
 
 	// The following commands could be handled at the shard level, however, we can randomly let any shard handle them
 	// to reduce load on main server.
 	switch name {
 	// new implementation for ping command after rewriting eval
-	case "PING":
-		return eval.ScatterPING(op.Cmd.Args)
+	case "PING", "SET":
+		return newdiceCmd.Eval(op.Cmd.Args, shard.store)
 
 	// Old implementation kept as it is, but we will be moving
 	// to the new implmentation as PING soon for all commands
 	case "SUBSCRIBE", "QWATCH":
-		return eval.EvalScatterResponse{Result: eval.EvalQWATCH(op.Cmd.Args, op.Client.Fd, shard.store), Error: nil}
+		return eval.EvalResponse{Result: eval.EvalQWATCH(op.Cmd.Args, op.Client.Fd, shard.store), Error: nil}
 	case "UNSUBSCRIBE", "QUNWATCH":
-		return eval.EvalScatterResponse{Result: eval.EvalQUNWATCH(op.Cmd.Args, op.Client.Fd), Error: nil}
+		return eval.EvalResponse{Result: eval.EvalQUNWATCH(op.Cmd.Args, op.Client.Fd), Error: nil}
 	case auth.AuthCmd:
-		return eval.EvalScatterResponse{Result: eval.EvalAUTH(op.Cmd.Args, op.Client), Error: nil}
+		return eval.EvalResponse{Result: eval.EvalAUTH(op.Cmd.Args, op.Client), Error: nil}
 	case "ABORT":
-		return eval.EvalScatterResponse{Result: clientio.RespOK, Error: nil}
+		return eval.EvalResponse{Result: clientio.RespOK, Error: nil}
 	default:
-		return eval.EvalScatterResponse{Result: diceCmd.Eval(op.Cmd.Args, shard.store), Error: nil}
+		return eval.EvalResponse{Result: diceCmd.Eval(op.Cmd.Args, shard.store), Error: nil}
 	}
 }
 

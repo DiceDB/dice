@@ -17,7 +17,7 @@ import (
 // If error is returned by any shard then dice returns error
 // If no error is returned by any shard then dice returns
 // response to client from first shard response
-func GatherPING(responses ...EvalScatterResponse) []byte {
+func GatherPING(responses ...EvalResponse) []byte {
 	for idx := range responses {
 		if responses[idx].Error != nil {
 			return diceerrors.NewErrArity("PING")

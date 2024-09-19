@@ -19,6 +19,9 @@ type NewDiceCmdMeta struct {
 	Info  string
 	Arity int // number of arguments, it is possible to use -N to say >= N
 	KeySpecs
+	Eval                func([]string, *dstore.Store) EvalResponse
+	Gather              func(responses ...EvalResponse) []byte
+	IsMultiShardCommand bool
 }
 
 type KeySpecs struct {
@@ -28,25 +31,31 @@ type KeySpecs struct {
 }
 
 var (
-	DiceCmds    = map[string]DiceCmdMeta{}
+	DiceCmds = map[string]DiceCmdMeta{}
+
 	NewDiceCmds = map[string]NewDiceCmdMeta{}
 
 	// PING command moved to the refactored eval implementation
 	// hence it is using NewDiceCmdMeta struct
 	pingCmdMeta = NewDiceCmdMeta{
-		Name:  "PING",
-		Info:  `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
-		Arity: -1,
+		Name:                "PING",
+		Info:                `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
+		Arity:               -1,
+		IsMultiShardCommand: true,
+		Eval:                EvalPING,
+		Gather:              GatherPING,
+	}
+
+	setCmdMeta = NewDiceCmdMeta{
+		Name:                "PING",
+		Info:                `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
+		Arity:               -1,
+		Eval:                EvalSET,
+		IsMultiShardCommand: false,
 	}
 
 	authCmdMeta = DiceCmdMeta{
 		Name: "AUTH",
-		Info: `AUTH returns with an encoded "OK" if the user is authenticated.
-		If the user is not authenticated, it returns with an encoded error message`,
-		Eval: nil,
-	}
-	setCmdMeta = DiceCmdMeta{
-		Name: "SET",
 		Info: `SET puts a new <key, value> pair in db as in the args
 		args must contain key and value.
 		args can also contain multiple options -
@@ -55,7 +64,6 @@ var (
 		Returns encoded error response if expiry tme value in not integer
 		Returns encoded OK RESP once new entry is added
 		If the key already exists then the value will be overwritten and expiry will be discarded`,
-		Eval:     evalSET,
 		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
@@ -687,7 +695,6 @@ var (
 
 func init() {
 	DiceCmds["AUTH"] = authCmdMeta
-	DiceCmds["SET"] = setCmdMeta
 	DiceCmds["GET"] = getCmdMeta
 	DiceCmds["MSET"] = msetCmdMeta
 	DiceCmds["JSON.SET"] = jsonsetCmdMeta
@@ -765,6 +772,7 @@ func init() {
 
 	// Refactored implementation
 	NewDiceCmds["PING"] = pingCmdMeta
+	NewDiceCmds["SET"] = setCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

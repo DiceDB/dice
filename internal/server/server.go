@@ -269,6 +269,9 @@ func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
 }
 
 func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.RedisCmd, buf *bytes.Buffer, c *comm.Client) {
+	// breaking down single command to multiple command
+
+	// scatter - send to
 	s.shardManager.GetShard(0).ReqChan <- &ops.StoreOp{
 		Cmd:      redisCmd,
 		WorkerID: "server",
@@ -283,12 +286,24 @@ func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.RedisCmd, buf *bytes.
 	// For now we have only single shards hence we are passing a single
 	// eval response. In future we need to wait till reponse from all shards
 	// then append it in the array and pass it in the Gather function
-	case "PING":
-		buf.Write(eval.GatherPING(resp.EvalResponse))
+	case "PING", "SET":
+		cmd, _ := eval.NewDiceCmds[redisCmd.Cmd]
+		if cmd.IsMultiShardCommand {
+			buf.Write(cmd.Gather(resp.EvalResponse))
+		} else {
+			encodeResponse(resp.EvalResponse)
+		}
 
 	default:
 		buf.Write(resp.EvalResponse.Result.([]byte))
 	}
+}
+
+func encodeResponse(resp eval.EvalResponse) []byte {
+	if resp.Error != nil {
+		return diceerrors.NewErrWithFormattedMessage(resp.Error.Error())
+	}
+	return []byte(fmt.Sprintf("+%s\r\n", resp.Result))
 }
 
 func readCommands(c io.ReadWriter) (cmd.RedisCmds, bool, error) {

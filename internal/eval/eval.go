@@ -92,111 +92,111 @@ func EvalAUTH(args []string, c *comm.Client) []byte {
 // Returns encoded error response if both PX and EX flags are present
 // Returns encoded OK RESP once new entry is added
 // If the key already exists then the value will be overwritten and expiry will be discarded
-func evalSET(args []string, store *dstore.Store) []byte {
-	if len(args) <= 1 {
-		return diceerrors.NewErrArity("SET")
-	}
+// func evalSET(args []string, store *dstore.Store) []byte {
+// 	if len(args) <= 1 {
+// 		return diceerrors.NewErrArity("SET")
+// 	}
 
-	var key, value string
-	var exDurationMs int64 = -1
-	var state exDurationState = Uninitialized
-	var keepttl bool = false
+// 	var key, value string
+// 	var exDurationMs int64 = -1
+// 	var state exDurationState = Uninitialized
+// 	var keepttl bool = false
 
-	key, value = args[0], args[1]
-	oType, oEnc := deduceTypeEncoding(value)
+// 	key, value = args[0], args[1]
+// 	oType, oEnc := deduceTypeEncoding(value)
 
-	for i := 2; i < len(args); i++ {
-		arg := strings.ToUpper(args[i])
-		switch arg {
-		case Ex, Px:
-			if state != Uninitialized {
-				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
-			}
-			i++
-			if i == len(args) {
-				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
-			}
+// 	for i := 2; i < len(args); i++ {
+// 		arg := strings.ToUpper(args[i])
+// 		switch arg {
+// 		case Ex, Px:
+// 			if state != Uninitialized {
+// 				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
+// 			}
+// 			i++
+// 			if i == len(args) {
+// 				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
+// 			}
 
-			exDuration, err := strconv.ParseInt(args[i], 10, 64)
-			if err != nil {
-				return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
-			}
+// 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
+// 			if err != nil {
+// 				return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
+// 			}
 
-			if exDuration <= 0 || exDuration >= maxExDuration {
-				return diceerrors.NewErrExpireTime("SET")
-			}
+// 			if exDuration <= 0 || exDuration >= maxExDuration {
+// 				return diceerrors.NewErrExpireTime("SET")
+// 			}
 
-			// converting seconds to milliseconds
-			if arg == Ex {
-				exDuration *= 1000
-			}
-			exDurationMs = exDuration
-			state = Initialized
+// 			// converting seconds to milliseconds
+// 			if arg == Ex {
+// 				exDuration *= 1000
+// 			}
+// 			exDurationMs = exDuration
+// 			state = Initialized
 
-		case Pxat, Exat:
-			if state != Uninitialized {
-				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
-			}
-			i++
-			if i == len(args) {
-				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
-			}
-			exDuration, err := strconv.ParseInt(args[i], 10, 64)
-			if err != nil {
-				return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
-			}
+// 		case Pxat, Exat:
+// 			if state != Uninitialized {
+// 				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
+// 			}
+// 			i++
+// 			if i == len(args) {
+// 				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
+// 			}
+// 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
+// 			if err != nil {
+// 				return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
+// 			}
 
-			if exDuration < 0 {
-				return diceerrors.NewErrExpireTime("SET")
-			}
+// 			if exDuration < 0 {
+// 				return diceerrors.NewErrExpireTime("SET")
+// 			}
 
-			if arg == Exat {
-				exDuration *= 1000
-			}
-			exDurationMs = exDuration - utils.GetCurrentTime().UnixMilli()
-			// If the expiry time is in the past, set exDurationMs to 0
-			// This will be used to signal immediate expiration
-			if exDurationMs < 0 {
-				exDurationMs = 0
-			}
-			state = Initialized
+// 			if arg == Exat {
+// 				exDuration *= 1000
+// 			}
+// 			exDurationMs = exDuration - utils.GetCurrentTime().UnixMilli()
+// 			// If the expiry time is in the past, set exDurationMs to 0
+// 			// This will be used to signal immediate expiration
+// 			if exDurationMs < 0 {
+// 				exDurationMs = 0
+// 			}
+// 			state = Initialized
 
-		case XX:
-			// Get the key from the hash table
-			obj := store.Get(key)
+// 		case XX:
+// 			// Get the key from the hash table
+// 			obj := store.Get(key)
 
-			// if key does not exist, return RESP encoded nil
-			if obj == nil {
-				return clientio.RespNIL
-			}
-		case NX:
-			obj := store.Get(key)
-			if obj != nil {
-				return clientio.RespNIL
-			}
-		case KEEPTTL, Keepttl:
-			keepttl = true
-		default:
-			return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
-		}
-	}
+// 			// if key does not exist, return RESP encoded nil
+// 			if obj == nil {
+// 				return clientio.RespNIL
+// 			}
+// 		case NX:
+// 			obj := store.Get(key)
+// 			if obj != nil {
+// 				return clientio.RespNIL
+// 			}
+// 		case KEEPTTL, Keepttl:
+// 			keepttl = true
+// 		default:
+// 			return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
+// 		}
+// 	}
 
-	// Cast the value properly based on the encoding type
-	var storedValue interface{}
-	switch oEnc {
-	case object.ObjEncodingInt:
-		storedValue, _ = strconv.ParseInt(value, 10, 64)
-	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
-		storedValue = value
-	default:
-		return clientio.Encode(fmt.Errorf("ERR unsupported encoding: %d", oEnc), false)
-	}
+// 	// Cast the value properly based on the encoding type
+// 	var storedValue interface{}
+// 	switch oEnc {
+// 	case object.ObjEncodingInt:
+// 		storedValue, _ = strconv.ParseInt(value, 10, 64)
+// 	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
+// 		storedValue = value
+// 	default:
+// 		return clientio.Encode(fmt.Errorf("ERR unsupported encoding: %d", oEnc), false)
+// 	}
 
-	// putting the k and value in a Hash Table
-	store.Put(key, store.NewObj(storedValue, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
+// 	// putting the k and value in a Hash Table
+// 	store.Put(key, store.NewObj(storedValue, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
 
-	return clientio.RespOK
-}
+// 	return clientio.RespOK
+// }
 
 // evalMSET puts multiple <key, value> pairs in db as in the args
 // MSET is atomic, so all given keys are set at once.
@@ -2221,19 +2221,19 @@ func evalGETSET(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("GETSET")
 	}
 
-	key, value := args[0], args[1]
+	key, _ := args[0], args[1]
 	getResp := evalGET([]string{key}, store)
 	// Check if it's an error resp from GET
 	if strings.HasPrefix(string(getResp), "-") {
 		return getResp
 	}
 
-	// Previous TTL needs to be reset
-	setResp := evalSET([]string{key, value}, store)
-	// Check if it's an error resp from SET
-	if strings.HasPrefix(string(setResp), "-") {
-		return setResp
-	}
+	// // Previous TTL needs to be reset
+	// setResp := evalSET([]string{key, value}, store)
+	// // Check if it's an error resp from SET
+	// if strings.HasPrefix(string(setResp), "-") {
+	// 	return setResp
+	// }
 
 	return getResp
 }

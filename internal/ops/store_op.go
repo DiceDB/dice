@@ -22,5 +22,5 @@ type StoreOp struct {
 // combination of interface and error
 type StoreResponse struct {
 	RequestID    int32 // RequestID that this StoreResponse belongs to
-	EvalResponse eval.EvalScatterResponse
+	EvalResponse eval.EvalResponse
 }
