@@ -55,7 +55,7 @@ func (s *AsyncServer) scatter(cmds []cmd.RedisCmd, c *comm.Client) {
 		s.shardManager.GetShard(shard.ShardID(id)).ReqChan <- &ops.StoreOp{
 			Cmd:      &cmds[0],
 			WorkerID: "server",
-			ShardID:  0,
+			ShardID:  int(id),
 			Client:   c,
 		}
 	} else {
@@ -66,7 +66,7 @@ func (s *AsyncServer) scatter(cmds []cmd.RedisCmd, c *comm.Client) {
 				s.shardManager.GetShard(shard.ShardID(i)).ReqChan <- &ops.StoreOp{
 					Cmd:      &cmds[i],
 					WorkerID: "server",
-					ShardID:  0,
+					ShardID:  i,
 					Client:   c,
 				}
 			}
@@ -77,7 +77,7 @@ func (s *AsyncServer) scatter(cmds []cmd.RedisCmd, c *comm.Client) {
 				s.shardManager.GetShard(shard.ShardID(id)).ReqChan <- &ops.StoreOp{
 					Cmd:      &cmds[i],
 					WorkerID: "server",
-					ShardID:  0,
+					ShardID:  int(id),
 					Client:   c,
 				}
 			}
