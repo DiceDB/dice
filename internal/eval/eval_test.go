@@ -2663,6 +2663,34 @@ func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
 				"$21\r\n" +
 				"     Print this help.\r\n"),
 		},
+		"command info valid command SET": {
+			input:  []string{"INFO", "SET"},
+			output: []byte("*1\r\n*5\r\n$3\r\nSET\r\n:-3\r\n:1\r\n:0\r\n:0\r\n"),
+		},
+		"command info valid command GET": {
+			input:  []string{"INFO", "GET"},
+			output: []byte("*1\r\n*5\r\n$3\r\nGET\r\n:2\r\n:1\r\n:0\r\n:0\r\n"),
+		},
+		"command info valid command PING": {
+			input:  []string{"INFO", "PING"},
+			output: []byte("*1\r\n*5\r\n$4\r\nPING\r\n:-1\r\n:0\r\n:0\r\n:0\r\n"),
+		},
+		"command info multiple valid commands": {
+			input:  []string{"INFO", "SET", "GET"},
+			output: []byte("*2\r\n*5\r\n$3\r\nSET\r\n:-3\r\n:1\r\n:0\r\n:0\r\n*5\r\n$3\r\nGET\r\n:2\r\n:1\r\n:0\r\n:0\r\n"),
+		},
+		"command info invalid command": {
+			input:  []string{"INFO", "INVALID_CMD"},
+			output: []byte("*1\r\n$-1\r\n"),
+		},
+		"command info mixture of valid and invalid commands": {
+			input:  []string{"INFO", "SET", "INVALID_CMD"},
+			output: []byte("*2\r\n*5\r\n$3\r\nSET\r\n:-3\r\n:1\r\n:0\r\n:0\r\n$-1\r\n"),
+		},
+		"command unknown": {
+			input:  []string{"UNKNOWN"},
+			output: []byte("-ERR unknown subcommand 'UNKNOWN'. Try COMMAND HELP.\r\n"),
+		},
 	}
 
 	runEvalTests(t, tests, evalCommand, store)

@@ -2337,7 +2337,7 @@ func evalCommandInfo(args []string) []byte {
 		if cmdMeta, found := cmdMetaMap[arg]; found {
 			result = append(result, cmdMeta)
 		} else {
-			result = append(result, nil)
+			result = append(result, clientio.RespNIL)
 		}
 	}
 
