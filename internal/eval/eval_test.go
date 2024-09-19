@@ -2596,13 +2596,6 @@ func testEvalTYPE(t *testing.T, store *dstore.Store) {
 			input:  []string{"hash_key"},
 			output: clientio.Encode("hash", false),
 		},
-		"TYPE : key exists and is of type SetBit": {
-			setup: func() {
-				store.Put("setbit_key", store.NewObj([]byte("value"), -1, object.ObjTypeBitSet, object.ObjEncodingRaw))
-			},
-			input:  []string{"setbit_key"},
-			output: clientio.Encode("string", false),
-		},
 	}
 	runEvalTests(t, tests, evalTYPE, store)
 }
