@@ -9,9 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/id"
+
+	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/server/utils"
 
 	"github.com/charmbracelet/log"
@@ -28,6 +29,8 @@ var unimplementedCommands = map[string]bool{
 	"ABORT":     true,
 }
 
+const QWATCH = "QWATCH"
+
 type HTTPServer struct {
 	queryWatcher *querywatcher.QueryManager
 	shardManager *shard.ShardManager
@@ -40,6 +43,11 @@ type HTTPQwatchResponse struct {
 	Cmd   string `json:"cmd"`
 	Query string `json:"query"`
 	Data  []any  `json:"data"`
+}
+
+type HTTPQwatchWriter struct {
+	Writer http.ResponseWriter
+	Query  string
 }
 
 func NewHTTPServer(shardManager *shard.ShardManager, watchChan chan dstore.WatchEvent) *HTTPServer {
@@ -59,6 +67,7 @@ func NewHTTPServer(shardManager *shard.ShardManager, watchChan chan dstore.Watch
 	}
 
 	mux.HandleFunc("/", httpServer.DiceHTTPHandler)
+	mux.HandleFunc("/qwatch", httpServer.DiceHTTPQwatchHandler)
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("ok"))
 		if err != nil {
@@ -118,8 +127,7 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 		return
 	}
 
-	if redisCmd.Cmd == "QWATCH" {
-		s.handleQWATCH(writer, redisCmd, request)
+	if redisCmd.Cmd == QWATCH {
 		return
 	}
 
@@ -133,106 +141,91 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 
 	// Wait for response
 	resp := <-s.ioChan
-
-	rp := clientio.NewRESPParser(bytes.NewBuffer(resp.Result))
-	val, err := rp.DecodeOne()
-	if err != nil {
-		log.Errorf("Error decoding response: %v", err)
-		return
-	}
-
-	// Write response
-	responseJSON, err := json.Marshal(val)
-	if err != nil {
-		log.Errorf("Error marshaling response: %v", err)
-		return
-	}
-	_, err = writer.Write(responseJSON)
-	if err != nil {
-		log.Errorf("Error writing response: %v", err)
-		return
-	}
+	s.writeResponse(writer, resp.Result)
 }
 
-func (s *HTTPServer) handleQWATCH(writer http.ResponseWriter, redisCmd *cmd.RedisCmd, request *http.Request) {
+func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *http.Request) {
+	// convert to REDIS cmd
+	redisCmd, err := utils.ParseHTTPRequest(request)
+	if err != nil {
+		log.Errorf("Error parsing HTTP request: %v", err)
+		return
+	}
+
+	if redisCmd.Cmd != QWATCH || len(redisCmd.Args) < 1 {
+		http.Error(writer, "Invalid params", http.StatusBadRequest)
+		return
+	}
+
 	// Set SSE headers
 	writer.Header().Set("Content-Type", "text/event-stream")
 	writer.Header().Set("Cache-Control", "no-cache")
 	writer.Header().Set("Connection", "keep-alive")
 	writer.WriteHeader(http.StatusOK)
+	uniqueID := id.NextID()
+	clientRequestID := make(map[uint32]HTTPQwatchWriter)
+	var clientWriter HTTPQwatchWriter
+	clientWriter.Writer = writer
+	clientWriter.Query = redisCmd.Args[0]
+	clientRequestID[uniqueID] = clientWriter
+
+	// Prepare the store operation
+	storeOp := &ops.StoreOp{
+		Cmd:                  redisCmd,
+		WorkerID:             "httpServer",
+		ShardID:              0,
+		HTTPOp:               true,
+		HTTPClientRespWriter: clientWriter.Writer,
+		RequestID:            uniqueID,
+	}
+
+	s.shardManager.GetShard(0).ReqChan <- storeOp
+
+	// Wait for response
+	resp := <-s.ioChan
+	s.writeResponse(writer, resp.Result)
 	flusher, ok := writer.(http.Flusher)
 	if !ok {
 		http.Error(writer, "Streaming unsupported", http.StatusInternalServerError)
 		return
 	}
 
-	// Create a dedicated response channel for this request
-	qwatchResponseChan := make(chan *ops.StoreResponse)
-	uniqueID := id.NextID()
-	clientRequestID := make(map[http.ResponseWriter]uint32)
-	clientRequestID[writer] = uniqueID
+	flusher.Flush() // Flush the response to send it to the client
+	doneChan := request.Context().Done()
+	for range doneChan {
+		// Client disconnected or request finished
+		log.Infof("Client disconnected")
+		unWatchCmd := &cmd.RedisCmd{
+			Cmd:  "QUNWATCH",
+			Args: []string{clientWriter.Query},
+		}
+		storeOp.Cmd = unWatchCmd
+		s.shardManager.GetShard(0).ReqChan <- storeOp
+		resp := <-s.ioChan
+		s.writeResponse(writer, resp.Result)
+		return
+	}
+}
 
-	// Currently reusing the qwatchResponseChan
-	s.shardManager.GetShard(0).ReqChan <- &ops.StoreOp{
-		Cmd:              redisCmd,
-		WorkerID:         "httpServer",
-		ShardID:          0,
-		HTTPOp:           true,
-		HTTPResponseChan: qwatchResponseChan,
-		RequestID:        uniqueID,
+func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result []byte) {
+	rp := clientio.NewRESPParser(bytes.NewBuffer(result))
+	val, err := rp.DecodeOne()
+	if err != nil {
+		log.Error("Error decoding response", "error", err)
+		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
+		return
 	}
 
-	for {
-		select {
-		case resp := <-qwatchResponseChan:
-			if resp == nil || resp.Result == nil {
-				log.Errorf("Error from shard")
-				http.Error(writer, "Error processing request", http.StatusInternalServerError)
-				return
-			}
+	responseJSON, err := json.Marshal(val)
+	if err != nil {
+		log.Error("Error marshaling response", "error", err)
+		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
 
-			rp := clientio.NewRESPParser(bytes.NewBuffer(resp.Result))
-			val, err := rp.DecodeOne()
-			if err != nil {
-				log.Errorf("Error decoding response: %v", err)
-				return
-			}
-
-			var responseJSON []byte
-			// Convert the decoded response to the HTTPQwatchResponse struct
-			// Else just encode and send
-			switch v := val.(type) {
-			case []interface{}:
-				if len(v) >= 3 {
-					qwatchResp := HTTPQwatchResponse{
-						Cmd:   v[0].(string),
-						Query: v[1].(string),
-						Data:  v[2].([]interface{}),
-					}
-					responseJSON, err = json.Marshal(qwatchResp)
-				}
-			default:
-				responseJSON, err = json.Marshal(val)
-			}
-
-			if err != nil {
-				log.Errorf("Error marshaling QueryData to JSON: %v", err)
-				return
-			}
-
-			// Format the response as SSE event
-			_, err = writer.Write(responseJSON)
-			if err != nil {
-				log.Errorf("Error writing SSE data: %v", err)
-				return
-			}
-			flusher.Flush() // Flush the response to send it to the client
-
-		case <-request.Context().Done():
-			// Client disconnected or request finished
-			// TODO: We need to create a way to remove watcher once client disconnected
-			log.Infof("Client disconnected")
-			return
-		}
+	writer.Header().Set("Content-Type", "application/json")
+	_, err = writer.Write(responseJSON)
+	if err != nil {
+		log.Error("Error writing response", "error", err)
 	}
 }

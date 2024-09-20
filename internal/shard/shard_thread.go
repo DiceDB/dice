@@ -99,16 +99,9 @@ func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 		return
 	}
 
-	if op.HTTPOp {
-		op.HTTPResponseChan <- &ops.StoreResponse{
-			RequestID: op.RequestID,
-			Result:    resp,
-		}
-	} else {
-		workerChan <- &ops.StoreResponse{
-			RequestID: op.RequestID,
-			Result:    resp,
-		}
+	workerChan <- &ops.StoreResponse{
+		RequestID: op.RequestID,
+		Result:    resp,
 	}
 }
 
@@ -118,22 +111,13 @@ func (shard *ShardThread) executeCommand(op *ops.StoreOp) []byte {
 		return diceerrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", op.Cmd.Cmd, strings.Join(op.Cmd.Args, " "))
 	}
 
-	// Till the time we refactor to handle QWATCH differently using HTTP Streaming/SSE
-	// if op.HTTPOp {
-	//	return diceCmd.Eval(op.Cmd.Args, shard.store)
-	//}
-
 	// The following commands could be handled at the shard level, however, we can randomly let any shard handle them
 	// to reduce load on main server.
 	switch diceCmd.Name {
 	case "SUBSCRIBE", "QWATCH":
-		if op.HTTPOp {
-			return eval.EvalQWATCH(op.Cmd.Args, -1, op.RequestID, op.HTTPResponseChan, shard.store)
-		} else {
-			return eval.EvalQWATCH(op.Cmd.Args, op.Client.Fd, 0, nil, shard.store)
-		}
+		return eval.EvalQWATCH(op, shard.store)
 	case "UNSUBSCRIBE", "QUNWATCH":
-		return eval.EvalQUNWATCH(op.Cmd.Args, op.Client.Fd)
+		return eval.EvalQUNWATCH(op)
 	case auth.AuthCmd:
 		return eval.EvalAUTH(op.Cmd.Args, op.Client)
 	case "ABORT":
