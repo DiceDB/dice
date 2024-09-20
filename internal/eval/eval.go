@@ -3569,10 +3569,9 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) []byte {
 	}
 
 	// Retrieve the object from the database
-	// TODO: Check if we should throw error here
 	obj := store.Get(key)
 	if obj == nil {
-		return clientio.RespNIL
+		return diceerrors.NewErrWithMessage("could not perform this operation on a key that doesn't exist")
 	}
 
 	// Check if the object is of JSON type
@@ -3608,7 +3607,7 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) []byte {
 	// Execute the JSONPath query
 	results := expr.Get(jsonData)
 	if len(results) == 0 {
-		return clientio.RespNIL
+		return clientio.RespEmptyArray
 	}
 
 	keysList := make([]interface{},0,len(results))

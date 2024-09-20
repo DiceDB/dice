@@ -2684,7 +2684,7 @@ func testEvalJSONOBJKEYS(t *testing.T, store *dstore.Store) {
 		"key does not exist": {
 			setup:  func() {},
 			input:  []string{"NONEXISTENT_KEY"},
-			output: clientio.RespNIL,
+			output:  []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
 		},
 		"root not object": {
 			setup: func() {

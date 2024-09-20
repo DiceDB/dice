@@ -1150,7 +1150,7 @@ func TestJsonObjKeys(t *testing.T) {
 			name:     		"JSON.OBJKEYS with non-existing key",
 			set_command: 	"json.set doc $ " + c,
 			test_command: 	"json.objkeys thisdoesnotexist $",
-			expected: 		[]interface{}{ "(nil)" },
+			expected: 		[]interface{}{ "ERR could not perform this operation on a key that doesn't exist" },
 		},
 		{
 			name:     		"JSON.OBJKEYS with empty path",
