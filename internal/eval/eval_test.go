@@ -23,11 +23,11 @@ import (
 )
 
 type evalTestCase struct {
+	name              string
 	setup             func()
 	input             []string
 	output            []byte
 	validator         func(output []byte)
-	isErrorScenario   bool
 	migratedOutput    EvalResponse
 	MigratedValidater func(resp EvalResponse)
 }
@@ -102,113 +102,109 @@ func testEvalHELLO(t *testing.T, store *dstore.Store) {
 
 func testEvalSET(t *testing.T, store *dstore.Store) {
 
-	tests := []struct {
-		name     string
-		args     []string
-		expected EvalResponse
-	}{
+	tests := []evalTestCase{
 		{
-			name:     "nil value",
-			args:     nil,
-			expected: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'set' command\r\n")},
+			name:           "nil value",
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'set' command\r\n")},
 		},
 		{
-			name:     "empty array",
-			args:     []string{},
-			expected: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'set' command\r\n")},
+			name:           "empty array",
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'set' command\r\n")},
 		},
 		{
-			name:     "one value",
-			args:     []string{"KEY"},
-			expected: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'set' command\r\n")},
+			name:           "one value",
+			input:          []string{"KEY"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'set' command\r\n")},
 		},
 		{
-			name:     "key val pair",
-			args:     []string{"KEY", "VAL"},
-			expected: EvalResponse{Result: clientio.RespOK, Error: nil},
+			name:           "key val pair",
+			input:          []string{"KEY", "VAL"},
+			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
 		},
 		{
-			name:     "key val pair with int val",
-			args:     []string{"KEY", "123456"},
-			expected: EvalResponse{Result: clientio.RespOK, Error: nil},
+			name:           "key val pair with int val",
+			input:          []string{"KEY", "123456"},
+			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
 		},
 		{
-			name:     "key val pair and expiry key",
-			args:     []string{"KEY", "VAL", Px},
-			expected: EvalResponse{Result: nil, Error: errors.New("-ERR syntax error\r\n")},
+			name:           "key val pair and expiry key",
+			input:          []string{"KEY", "VAL", Px},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR syntax error\r\n")},
 		},
 		{
-			name:     "key val pair and EX no val",
-			args:     []string{"KEY", "VAL", Ex},
-			expected: EvalResponse{Result: nil, Error: errors.New("-ERR syntax error\r\n")},
+			name:           "key val pair and EX no val",
+			input:          []string{"KEY", "VAL", Ex},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR syntax error\r\n")},
 		},
 		{
-			name:     "key val pair and valid EX",
-			args:     []string{"KEY", "VAL", Ex, "2"},
-			expected: EvalResponse{Result: clientio.RespOK, Error: nil},
+			name:           "key val pair and valid EX",
+			input:          []string{"KEY", "VAL", Ex, "2"},
+			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
 		},
 		{
-			name:     "key val pair and invalid EX",
-			args:     []string{"KEY", "VAL", Ex, "invalid_expiry_val"},
-			expected: EvalResponse{Result: nil, Error: errors.New("-ERR value is not an integer or out of range\r\n")},
+			name:           "key val pair and invalid EX",
+			input:          []string{"KEY", "VAL", Ex, "invalid_expiry_val"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR value is not an integer or out of range\r\n")},
 		},
 		{
-			name:     "key val pair and valid PX",
-			args:     []string{"KEY", "VAL", Px, "2000"},
-			expected: EvalResponse{Result: clientio.RespOK, Error: nil},
+			name:           "key val pair and valid PX",
+			input:          []string{"KEY", "VAL", Px, "2000"},
+			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
 		},
 		{
-			name:     "key val pair and invalid PX",
-			args:     []string{"KEY", "VAL", Px, "invalid_expiry_val"},
-			expected: EvalResponse{Result: nil, Error: errors.New("-ERR value is not an integer or out of range\r\n")},
+			name:           "key val pair and invalid PX",
+			input:          []string{"KEY", "VAL", Px, "invalid_expiry_val"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR value is not an integer or out of range\r\n")},
 		},
 		{
-			name:     "key val pair and both EX and PX",
-			args:     []string{"KEY", "VAL", Ex, "2", Px, "2000"},
-			expected: EvalResponse{Result: nil, Error: errors.New("-ERR syntax error\r\n")},
+			name:           "key val pair and both EX and PX",
+			input:          []string{"KEY", "VAL", Ex, "2", Px, "2000"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR syntax error\r\n")},
 		},
 		{
-			name:     "key val pair and PXAT no val",
-			args:     []string{"KEY", "VAL", Pxat},
-			expected: EvalResponse{Result: nil, Error: errors.New("-ERR syntax error\r\n")},
+			name:           "key val pair and PXAT no val",
+			input:          []string{"KEY", "VAL", Pxat},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR syntax error\r\n")},
 		},
 		{
-			name:     "key val pair and invalid PXAT",
-			args:     []string{"KEY", "VAL", Pxat, "invalid_expiry_val"},
-			expected: EvalResponse{Result: nil, Error: errors.New("-ERR value is not an integer or out of range\r\n")},
+			name:           "key val pair and invalid PXAT",
+			input:          []string{"KEY", "VAL", Pxat, "invalid_expiry_val"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR value is not an integer or out of range\r\n")},
 		},
 		{
-			name:     "key val pair and expired PXAT",
-			args:     []string{"KEY", "VAL", Pxat, "2"},
-			expected: EvalResponse{Result: clientio.RespOK, Error: nil},
+			name:           "key val pair and expired PXAT",
+			input:          []string{"KEY", "VAL", Pxat, "2"},
+			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
 		},
 		{
-			name:     "key val pair and negative PXAT",
-			args:     []string{"KEY", "VAL", Pxat, "-123456"},
-			expected: EvalResponse{Result: nil, Error: errors.New("-ERR invalid expire time in 'set' command\r\n")},
+			name:           "key val pair and negative PXAT",
+			input:          []string{"KEY", "VAL", Pxat, "-123456"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR invalid expire time in 'set' command\r\n")},
 		},
 		{
-			name:     "key val pair and valid PXAT",
-			args:     []string{"KEY", "VAL", Pxat, strconv.FormatInt(time.Now().Add(2*time.Minute).UnixMilli(), 10)},
-			expected: EvalResponse{Result: clientio.RespOK, Error: nil},
+			name:           "key val pair and valid PXAT",
+			input:          []string{"KEY", "VAL", Pxat, strconv.FormatInt(time.Now().Add(2*time.Minute).UnixMilli(), 10)},
+			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			response := evalSET(tt.args, store)
+			response := evalSET(tt.input, store)
 
 			// Handle comparison for byte slices
-			if b, ok := response.Result.([]byte); ok && tt.expected.Result != nil {
-				if expectedBytes, ok := tt.expected.Result.([]byte); ok {
+			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
+				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
 					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else {
-				assert.Equal(t, tt.expected.Result, response.Result)
+				assert.Equal(t, tt.migratedOutput.Result, response.Result)
 			}
 
-			if tt.expected.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.expected.Error.Error())
+			if tt.migratedOutput.Error != nil {
+				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
 				testifyAssert.NoError(t, response.Error)
 			}
@@ -261,31 +257,26 @@ func testEvalMSET(t *testing.T, store *dstore.Store) {
 }
 
 func testEvalGET(t *testing.T, store *dstore.Store) {
-	tests := []struct {
-		name     string
-		args     []string
-		setup    func()
-		expected EvalResponse
-	}{
+	tests := []evalTestCase{
 		{
-			name:     "nil value",
-			args:     nil,
-			expected: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'get' command\r\n")},
+			name:           "nil value",
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'get' command\r\n")},
 		},
 		{
-			name:     "empty array",
-			args:     []string{},
-			expected: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'get' command\r\n")},
+			name:           "empty array",
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'get' command\r\n")},
 		},
 		{
-			name:     "key does not exist",
-			args:     []string{"NONEXISTENT_KEY"},
-			expected: EvalResponse{Result: clientio.RespNIL, Error: nil},
+			name:           "key does not exist",
+			input:          []string{"NONEXISTENT_KEY"},
+			migratedOutput: EvalResponse{Result: clientio.RespNIL, Error: nil},
 		},
 		{
-			name:     "multiple arguments",
-			args:     []string{"KEY1", "KEY2"},
-			expected: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'get' command\r\n")},
+			name:           "multiple arguments",
+			input:          []string{"KEY1", "KEY2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'get' command\r\n")},
 		},
 		{
 			name: "key exists",
@@ -298,8 +289,8 @@ func testEvalGET(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			args:     []string{"EXISTING_KEY"},
-			expected: EvalResponse{Result: fmt.Sprintf("$%d\r\n%s\r\n", len("mock_value"), "mock_value"), Error: nil},
+			input:          []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{Result: fmt.Sprintf("$%d\r\n%s\r\n", len("mock_value"), "mock_value"), Error: nil},
 		},
 		{
 			name: "key exists but expired",
@@ -313,26 +304,26 @@ func testEvalGET(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 				store.SetExpiry(obj, int64(-2*time.Millisecond))
 			},
-			args:     []string{"EXISTING_KEY"},
-			expected: EvalResponse{Result: clientio.RespNIL, Error: nil},
+			input:          []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{Result: clientio.RespNIL, Error: nil},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			response := evalGET(tt.args, store)
+			response := evalGET(tt.input, store)
 
 			// Handle comparison for byte slices
-			if b, ok := response.Result.([]byte); ok && tt.expected.Result != nil {
-				if expectedBytes, ok := tt.expected.Result.([]byte); ok {
+			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
+				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
 					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else {
-				assert.Equal(t, tt.expected.Result, response.Result)
+				assert.Equal(t, tt.migratedOutput.Result, response.Result)
 			}
 
-			if tt.expected.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.expected.Error.Error())
+			if tt.migratedOutput.Error != nil {
+				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
 				testifyAssert.NoError(t, response.Error)
 			}
@@ -341,26 +332,21 @@ func testEvalGET(t *testing.T, store *dstore.Store) {
 }
 
 func testEvalGETSET(t *testing.T, store *dstore.Store) {
-	tests := []struct {
-		name     string
-		args     []string
-		setup    func()
-		expected EvalResponse
-	}{
+	tests := []evalTestCase{
 		{
-			name:     "GETSET with 1 arg",
-			args:     []string{"HELLO"},
-			expected: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'getset' command\r\n")},
+			name:           "GETSET with 1 arg",
+			input:          []string{"HELLO"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'getset' command\r\n")},
 		},
 		{
-			name:     "GETSET with 3 args",
-			args:     []string{"HELLO", "WORLD", "WORLD1"},
-			expected: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'getset' command\r\n")},
+			name:           "GETSET with 3 args",
+			input:          []string{"HELLO", "WORLD", "WORLD1"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'getset' command\r\n")},
 		},
 		{
-			name:     "GETSET key not exists",
-			args:     []string{"HELLO", "WORLD"},
-			expected: EvalResponse{Result: clientio.RespNIL, Error: nil},
+			name:           "GETSET key not exists",
+			input:          []string{"HELLO", "WORLD"},
+			migratedOutput: EvalResponse{Result: clientio.RespNIL, Error: nil},
 		},
 		{
 			name: "GETSET key exists",
@@ -373,8 +359,8 @@ func testEvalGETSET(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			args:     []string{"EXISTING_KEY", "WORLD"},
-			expected: EvalResponse{Result: fmt.Sprintf("$%d\r\n%s\r\n", len("mock_value"), "mock_value"), Error: nil},
+			input:          []string{"EXISTING_KEY", "WORLD"},
+			migratedOutput: EvalResponse{Result: fmt.Sprintf("$%d\r\n%s\r\n", len("mock_value"), "mock_value"), Error: nil},
 		},
 		{
 			name: "GETSET key exists TTL should be reset",
@@ -387,26 +373,26 @@ func testEvalGETSET(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			args:     []string{"EXISTING_KEY", "WORLD"},
-			expected: EvalResponse{Result: fmt.Sprintf("$%d\r\n%s\r\n", len("mock_value"), "mock_value"), Error: nil},
+			input:          []string{"EXISTING_KEY", "WORLD"},
+			migratedOutput: EvalResponse{Result: fmt.Sprintf("$%d\r\n%s\r\n", len("mock_value"), "mock_value"), Error: nil},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			response := evalGETSET(tt.args, store)
+			response := evalGETSET(tt.input, store)
 
 			// Handle comparison for byte slices
-			if b, ok := response.Result.([]byte); ok && tt.expected.Result != nil {
-				if expectedBytes, ok := tt.expected.Result.([]byte); ok {
+			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
+				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
 					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else {
-				assert.Equal(t, tt.expected.Result, response.Result)
+				assert.Equal(t, tt.migratedOutput.Result, response.Result)
 			}
 
-			if tt.expected.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.expected.Error.Error())
+			if tt.migratedOutput.Error != nil {
+				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
 				testifyAssert.NoError(t, response.Error)
 			}
