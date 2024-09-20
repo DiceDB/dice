@@ -78,8 +78,7 @@ func evalECHO(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("ECHO")
 	}
 
-	b := clientio.Encode(args[0], false)
-	return b
+	return clientio.Encode(args[0], false)
 }
 
 // EvalAUTH returns with an encoded "OK" if the user is authenticated

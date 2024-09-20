@@ -30,7 +30,6 @@ var (
 		Info:     `ECHO returns the string given as argument.`,
 		Eval:     evalECHO,
 		Arity:    1,
-		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	authCmdMeta = DiceCmdMeta{
 		Name: "AUTH",
