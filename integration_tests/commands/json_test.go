@@ -879,9 +879,15 @@ func TestJsonNummultby(t *testing.T) {
 			assert_type: []string{"equal"},
 		},
 		{
-			name:        "Invalid value of multiplier",
-			commands:    []string{"JSON.SET docu $ " + a, "JSON.NUMMULTBY docu $ x"},
-			expected:    []interface{}{"OK", "ERR value is not an integer or out of range"},
+			name:        "Invalid value of multiplier on non-existent key",
+			commands:    []string{"JSON.SET docu $ " + a, "JSON.NUMMULTBY docu $.fe x"},
+			expected:    []interface{}{"OK", "[]"},
+			assert_type: []string{"equal", "equal"},
+		},
+		{
+			name:        "Invalid value of multiplier on existent key",
+			commands:    []string{"JSON.SET docu $ " + a, "JSON.NUMMULTBY docu $.a x"},
+			expected:    []interface{}{"OK", "ERR expected value at line 1 column 1"},
 			assert_type: []string{"equal", "equal"},
 		},
 		{

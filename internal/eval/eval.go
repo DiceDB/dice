@@ -1369,17 +1369,26 @@ func evalJSONNUMMULTBY(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrWithMessage("invalid JSONPath")
 	}
 
-	// Parse the mulplier value
-	multiplier, err := parseFloatInt(args[2])
-	if err != nil {
-		return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
-	}
-
 	// Get json matching expression
 	jsonData := obj.Value
 	results := expr.Get(jsonData)
 	if len(results) == 0 {
-		return clientio.Encode([]string{}, false)
+		return clientio.Encode("[]", false)
+	}
+
+	for i, r := range args[2] {
+		if !unicode.IsDigit(r) && r != '.' && r != '-' {
+			if i == 0 {
+				return diceerrors.NewErrWithFormattedMessage("-ERR expected value at line 1 column %d", i+1)
+			}
+			return diceerrors.NewErrWithFormattedMessage("-ERR trailing characters at line 1 column %d", i+1)
+		}
+	}
+
+	// Parse the mulplier value
+	multiplier, err := parseFloatInt(args[2])
+	if err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
 	}
 
 	// Update matching values using Modify
