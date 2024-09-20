@@ -3579,7 +3579,7 @@ func rdbSerialize(obj *object.Obj) ([]byte, error) {
     var buf bytes.Buffer
     buf.WriteByte(0x09)
 
-    var err error
+    
     switch object.GetType(obj.TypeEncoding) {
     case object.ObjTypeString:
         str, ok := obj.Value.(string)
@@ -3587,7 +3587,7 @@ func rdbSerialize(obj *object.Obj) ([]byte, error) {
             return nil, errors.New("invalid string value")
         }
         buf.WriteByte(0x00) 
-        if err = writeString(&buf, str); err != nil {
+        if err := writeString(&buf, str); err != nil {
             return nil, err
         }
 
@@ -3597,7 +3597,7 @@ func rdbSerialize(obj *object.Obj) ([]byte, error) {
             return nil, errors.New("invalid integer value")
         }
         buf.WriteByte(0xC0)
-        if err = writeInt(&buf, intVal); err != nil {
+        if err := writeInt(&buf, intVal); err != nil {
             return nil, err
         }
 
