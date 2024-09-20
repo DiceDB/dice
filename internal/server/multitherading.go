@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/comm"
@@ -56,8 +57,12 @@ func (s *AsyncServer) cmdsBreakup(redisCmd *cmd.RedisCmd, c *comm.Client) []cmd.
 func (s *AsyncServer) scatter(cmds []cmd.RedisCmd, c *comm.Client) {
 	// single sharded command
 	if len(cmds) == 1 {
-		key := cmds[0].Args[0]
-		id := getShard(key, uint32(s.shardManager.GetShardCount()))
+		var id uint32
+		if len(cmds[0].Args) > 0 {
+			key := cmds[0].Args[0]
+			id = getShard(key, uint32(s.shardManager.GetShardCount()))
+		}
+		fmt.Println("Sending to the shard: ", id)
 		s.shardManager.GetShard(shard.ShardID(id)).ReqChan <- &ops.StoreOp{
 			Cmd:      &cmds[0],
 			WorkerID: "server",
@@ -80,8 +85,11 @@ func (s *AsyncServer) scatter(cmds []cmd.RedisCmd, c *comm.Client) {
 			// Otherwise check for the shard based on the key using hash
 			// and send it to the particular shard
 			for i := 0; i < len(cmds); i++ {
-				key := cmds[i].Args[0]
-				id := getShard(key, uint32(s.shardManager.GetShardCount()))
+				var id uint32
+				if len(cmds[0].Args) > 0 {
+					key := cmds[0].Args[0]
+					id = getShard(key, uint32(s.shardManager.GetShardCount()))
+				}
 				s.shardManager.GetShard(shard.ShardID(id)).ReqChan <- &ops.StoreOp{
 					Cmd:      &cmds[i],
 					WorkerID: "server",
@@ -100,6 +108,7 @@ func (s *AsyncServer) gather(redisCmd *cmd.RedisCmd, buf *bytes.Buffer, numShard
 	for i := 0; i < numShards; i++ {
 		select {
 		case resp := <-s.ioChan:
+			fmt.Println("Getting response from Shard:", i)
 			evalResp = append(evalResp, *&resp.EvalResponse)
 			// should another case for time.Sleep(n) to max wait for response
 		}
@@ -116,5 +125,4 @@ func (s *AsyncServer) gather(redisCmd *cmd.RedisCmd, buf *bytes.Buffer, numShard
 		// If multishard command, then send it to the respective Gather function
 		buf.Write(val.Gather(evalResp...))
 	}
-
 }

@@ -271,8 +271,9 @@ func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
 func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.RedisCmd, buf *bytes.Buffer, c *comm.Client) {
 	// breaking down single command to multiple command
 	// Len(cmdsBkp) also let worker know about number of shards to wait
-	cmdsBkp := s.cmdsBreakup(redisCmd, c)
 
+	cmdsBkp := s.cmdsBreakup(redisCmd, c)
+	fmt.Println(cmdsBkp)
 	// Worker/Server does the scatter and send it to the respective shardThread request channel
 	s.scatter(cmdsBkp, c)
 
