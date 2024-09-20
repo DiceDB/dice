@@ -30,7 +30,7 @@ var (
 
 	pingCmdMeta = ShardingMeta{
 		Cmd:     "PING",
-		Breakup: scatterPING,
+		Breakup: breakupPING,
 		Gather:  gatherPING,
 	}
 )
