@@ -293,7 +293,6 @@ func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.RedisCmd, buf *bytes.
 	s.scatter(cmdsBkp, c)
 
 	// Worker/Server does the job of gathering the responses from all shards
-	// s.gather(redisCmd, buf, len(cmdsBkp), val.CmdType)
 	s.gather(redisCmd, buf, len(cmdsBkp), val.CmdType)
 }
 

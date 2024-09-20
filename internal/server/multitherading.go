@@ -44,17 +44,15 @@ func (s *AsyncServer) scatter(cmds []cmd.RedisCmd, c *comm.Client) {
 			Client:   c,
 		}
 	}
-
 }
 
 func (s *AsyncServer) gather(redisCmd *cmd.RedisCmd, buf *bytes.Buffer, numShards int, c CmdType) {
 	// Loop to wait for messages from numberof shards
 	var evalResp []eval.EvalResponse
 	for i := 0; i < numShards; i++ {
-		select {
-		case resp := <-s.ioChan:
-			evalResp = append(evalResp, *&resp.EvalResponse)
-			// should another case for time.Sleep(n) to max wait for response
+		resp, ok := <-s.ioChan
+		if ok {
+			evalResp = append(evalResp, resp.EvalResponse)
 		}
 	}
 

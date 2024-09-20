@@ -67,5 +67,4 @@ func init() {
 	WorkerCmdsMeta["SET"] = setCmdMeta
 	WorkerCmdsMeta["GET"] = getCmdMeta
 	WorkerCmdsMeta["GETSET"] = getsetCmdMeta
-
 }

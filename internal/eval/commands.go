@@ -868,7 +868,7 @@ func init() {
 }
 
 // Function to convert DiceCmdMeta to []interface{}
-func convertCmdMetaToSlice(cmdMeta DiceCmdMeta) []interface{} {
+func convertCmdMetaToSlice(cmdMeta *DiceCmdMeta) []interface{} {
 	return []interface{}{cmdMeta.Name, cmdMeta.Arity, cmdMeta.KeySpecs.BeginIndex, cmdMeta.KeySpecs.LastKey, cmdMeta.KeySpecs.Step}
 }
 
@@ -876,7 +876,7 @@ func convertCmdMetaToSlice(cmdMeta DiceCmdMeta) []interface{} {
 func convertDiceCmdsMapToSlice() []interface{} {
 	var result []interface{}
 	for _, cmdMeta := range DiceCmds {
-		result = append(result, convertCmdMetaToSlice(cmdMeta))
+		result = append(result, convertCmdMetaToSlice(&cmdMeta))
 	}
 	return result
 }
