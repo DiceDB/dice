@@ -72,8 +72,8 @@ func evalPING(args []string, store *dstore.Store) []byte {
 	return b
 }
 
+// evalECHO returns the argument passed by the user 
 func evalECHO(args []string, store *dstore.Store) []byte {
-
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("ECHO")
 	}
