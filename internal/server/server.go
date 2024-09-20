@@ -269,15 +269,35 @@ func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
 }
 
 func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.RedisCmd, buf *bytes.Buffer, c *comm.Client) {
-	s.shardManager.GetShard(0).ReqChan <- &ops.StoreOp{
-		Cmd:      redisCmd,
-		WorkerID: "server",
-		ShardID:  0,
-		Client:   c,
+	// breaking down single command to multiple command
+	// Len(cmdsBkp) also let worker know about number of shards to wait
+	cmdsBkp := []cmd.RedisCmd{}
+
+	val, ok := WorkerCmdsMeta[redisCmd.Cmd]
+	if !ok {
+		cmdsBkp = append(cmdsBkp, *redisCmd)
+	} else {
+		switch val.CmdType {
+		case Global:
+			buf.Write(val.RespNoShards(redisCmd.Args))
+			return
+
+		case SingleShard, Custom:
+			cmdsBkp = append(cmdsBkp, *redisCmd)
+
+		case Multishard:
+			cmdsBkp = s.cmdsBreakup(redisCmd, c)
+		}
 	}
 
-	resp := <-s.ioChan
-	buf.Write(resp.Result)
+	// cmdsBkp := s.cmdsBreakup(redisCmd, c)
+
+	// Worker/Server does the scatter and send it to the respective shardThread request channel
+	s.scatter(cmdsBkp, c)
+
+	// Worker/Server does the job of gathering the responses from all shards
+	// s.gather(redisCmd, buf, len(cmdsBkp), val.CmdType)
+	s.gather(redisCmd, buf, len(cmdsBkp), val.CmdType)
 }
 
 func readCommands(c io.ReadWriter) (cmd.RedisCmds, bool, error) {

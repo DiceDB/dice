@@ -3,15 +3,12 @@ package shard
 import (
 	"context"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/charmbracelet/log"
 
 	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/internal/auth"
-	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/eval"
 	"github.com/dicedb/dice/internal/ops"
@@ -88,7 +85,7 @@ func (shard *ShardThread) unregisterWorker(workerID string) {
 
 // processRequest processes a Store operation for the shard.
 func (shard *ShardThread) processRequest(op *ops.StoreOp) {
-	resp := shard.executeCommand(op)
+	resp := eval.ExecuteCommand(op.Cmd, op.Client, shard.store, op.HTTPOp)
 
 	shard.workerMutex.RLock()
 	workerChan, ok := shard.workerMap[op.WorkerID]
@@ -96,38 +93,11 @@ func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 
 	if ok {
 		workerChan <- &ops.StoreResponse{
-			RequestID: op.RequestID,
-			Result:    resp,
+			RequestID:    op.RequestID,
+			EvalResponse: resp,
 		}
 	} else {
 		shard.errorChan <- &ShardError{shardID: shard.id, err: fmt.Errorf(diceerrors.WorkerNotFoundErr, op.WorkerID)}
-	}
-}
-
-func (shard *ShardThread) executeCommand(op *ops.StoreOp) []byte {
-	diceCmd, ok := eval.DiceCmds[op.Cmd.Cmd]
-	if !ok {
-		return diceerrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", op.Cmd.Cmd, strings.Join(op.Cmd.Args, " "))
-	}
-
-	// Till the time we refactor to handle QWATCH differently using HTTP Streaming/SSE
-	if op.HTTPOp {
-		return diceCmd.Eval(op.Cmd.Args, shard.store)
-	}
-
-	// The following commands could be handled at the shard level, however, we can randomly let any shard handle them
-	// to reduce load on main server.
-	switch diceCmd.Name {
-	case "SUBSCRIBE", "QWATCH":
-		return eval.EvalQWATCH(op.Cmd.Args, op.Client.Fd, shard.store)
-	case "UNSUBSCRIBE", "QUNWATCH":
-		return eval.EvalQUNWATCH(op.Cmd.Args, op.Client.Fd)
-	case auth.AuthCmd:
-		return eval.EvalAUTH(op.Cmd.Args, op.Client)
-	case "ABORT":
-		return clientio.RespOK
-	default:
-		return diceCmd.Eval(op.Cmd.Args, shard.store)
 	}
 }
 

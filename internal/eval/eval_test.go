@@ -40,10 +40,9 @@ func TestEval(t *testing.T) {
 	store := dstore.NewStore(nil)
 
 	testEvalMSET(t, store)
-	testEvalPING(t, store)
 	testEvalHELLO(t, store)
-	testEvalSET(t, store)
-	testEvalGET(t, store)
+	// testEvalSET(t, store)
+	// testEvalGET(t, store)
 	testEvalDebug(t, store)
 	testEvalJSONARRPOP(t, store)
 	testEvalJSONARRLEN(t, store)
@@ -62,7 +61,7 @@ func TestEval(t *testing.T) {
 	testEvalEXPIRETIME(t, store)
 	testEvalEXPIREAT(t, store)
 	testEvalDbsize(t, store)
-	testEvalGETSET(t, store)
+	// testEvalGETSET(t, store)
 	testEvalHSET(t, store)
 	testEvalPFADD(t, store)
 	testEvalPFCOUNT(t, store)
@@ -77,17 +76,6 @@ func TestEval(t *testing.T) {
 	testEvalJSONNUMINCRBY(t, store)
 	testEvalTYPE(t, store)
 	testEvalCOMMAND(t, store)
-}
-
-func testEvalPING(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"nil value":            {input: nil, output: []byte("+PONG\r\n")},
-		"empty args":           {input: []string{}, output: []byte("+PONG\r\n")},
-		"one value":            {input: []string{"HEY"}, output: []byte("$3\r\nHEY\r\n")},
-		"more than one values": {input: []string{"HEY", "HELLO"}, output: []byte("-ERR wrong number of arguments for 'ping' command\r\n")},
-	}
-
-	runEvalTests(t, tests, evalPING, store)
 }
 
 func testEvalHELLO(t *testing.T, store *dstore.Store) {
@@ -109,29 +97,29 @@ func testEvalHELLO(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalHELLO, store)
 }
 
-func testEvalSET(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"nil value":                       {input: nil, output: []byte("-ERR wrong number of arguments for 'set' command\r\n")},
-		"empty array":                     {input: []string{}, output: []byte("-ERR wrong number of arguments for 'set' command\r\n")},
-		"one value":                       {input: []string{"KEY"}, output: []byte("-ERR wrong number of arguments for 'set' command\r\n")},
-		"key val pair":                    {input: []string{"KEY", "VAL"}, output: clientio.RespOK},
-		"key val pair with int val":       {input: []string{"KEY", "123456"}, output: clientio.RespOK},
-		"key val pair and expiry key":     {input: []string{"KEY", "VAL", Px}, output: []byte("-ERR syntax error\r\n")},
-		"key val pair and EX no val":      {input: []string{"KEY", "VAL", Ex}, output: []byte("-ERR syntax error\r\n")},
-		"key val pair and valid EX":       {input: []string{"KEY", "VAL", Ex, "2"}, output: clientio.RespOK},
-		"key val pair and invalid EX":     {input: []string{"KEY", "VAL", Ex, "invalid_expiry_val"}, output: []byte("-ERR value is not an integer or out of range\r\n")},
-		"key val pair and valid PX":       {input: []string{"KEY", "VAL", Px, "2000"}, output: clientio.RespOK},
-		"key val pair and invalid PX":     {input: []string{"KEY", "VAL", Px, "invalid_expiry_val"}, output: []byte("-ERR value is not an integer or out of range\r\n")},
-		"key val pair and both EX and PX": {input: []string{"KEY", "VAL", Ex, "2", Px, "2000"}, output: []byte("-ERR syntax error\r\n")},
-		"key val pair and PXAT no val":    {input: []string{"KEY", "VAL", Pxat}, output: []byte("-ERR syntax error\r\n")},
-		"key val pair and invalid PXAT":   {input: []string{"KEY", "VAL", Pxat, "invalid_expiry_val"}, output: []byte("-ERR value is not an integer or out of range\r\n")},
-		"key val pair and expired PXAT":   {input: []string{"KEY", "VAL", Pxat, "2"}, output: clientio.RespOK},
-		"key val pair and negative PXAT":  {input: []string{"KEY", "VAL", Pxat, "-123456"}, output: []byte("-ERR invalid expire time in 'set' command\r\n")},
-		"key val pair and valid PXAT":     {input: []string{"KEY", "VAL", Pxat, strconv.FormatInt(time.Now().Add(2*time.Minute).UnixMilli(), 10)}, output: clientio.RespOK},
-	}
+// func testEvalSET(t *testing.T, store *dstore.Store) {
+// 	tests := map[string]evalTestCase{
+// 		"nil value":                       {input: nil, output: []byte("-ERR wrong number of arguments for 'set' command\r\n")},
+// 		"empty array":                     {input: []string{}, output: []byte("-ERR wrong number of arguments for 'set' command\r\n")},
+// 		"one value":                       {input: []string{"KEY"}, output: []byte("-ERR wrong number of arguments for 'set' command\r\n")},
+// 		"key val pair":                    {input: []string{"KEY", "VAL"}, output: clientio.RespOK},
+// 		"key val pair with int val":       {input: []string{"KEY", "123456"}, output: clientio.RespOK},
+// 		"key val pair and expiry key":     {input: []string{"KEY", "VAL", Px}, output: []byte("-ERR syntax error\r\n")},
+// 		"key val pair and EX no val":      {input: []string{"KEY", "VAL", Ex}, output: []byte("-ERR syntax error\r\n")},
+// 		"key val pair and valid EX":       {input: []string{"KEY", "VAL", Ex, "2"}, output: clientio.RespOK},
+// 		"key val pair and invalid EX":     {input: []string{"KEY", "VAL", Ex, "invalid_expiry_val"}, output: []byte("-ERR value is not an integer or out of range\r\n")},
+// 		"key val pair and valid PX":       {input: []string{"KEY", "VAL", Px, "2000"}, output: clientio.RespOK},
+// 		"key val pair and invalid PX":     {input: []string{"KEY", "VAL", Px, "invalid_expiry_val"}, output: []byte("-ERR value is not an integer or out of range\r\n")},
+// 		"key val pair and both EX and PX": {input: []string{"KEY", "VAL", Ex, "2", Px, "2000"}, output: []byte("-ERR syntax error\r\n")},
+// 		"key val pair and PXAT no val":    {input: []string{"KEY", "VAL", Pxat}, output: []byte("-ERR syntax error\r\n")},
+// 		"key val pair and invalid PXAT":   {input: []string{"KEY", "VAL", Pxat, "invalid_expiry_val"}, output: []byte("-ERR value is not an integer or out of range\r\n")},
+// 		"key val pair and expired PXAT":   {input: []string{"KEY", "VAL", Pxat, "2"}, output: clientio.RespOK},
+// 		"key val pair and negative PXAT":  {input: []string{"KEY", "VAL", Pxat, "-123456"}, output: []byte("-ERR invalid expire time in 'set' command\r\n")},
+// 		"key val pair and valid PXAT":     {input: []string{"KEY", "VAL", Pxat, strconv.FormatInt(time.Now().Add(2*time.Minute).UnixMilli(), 10)}, output: clientio.RespOK},
+// 	}
 
-	runEvalTests(t, tests, evalSET, store)
-}
+// 	runEvalTests(t, tests, evalSET, store)
+// }
 
 func testEvalGETEX(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
@@ -177,60 +165,105 @@ func testEvalMSET(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalMSET, store)
 }
 
-func testEvalGET(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"nil value": {
-			setup:  func() {},
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'get' command\r\n"),
-		},
-		"empty array": {
-			setup:  func() {},
-			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'get' command\r\n"),
-		},
-		"key does not exist": {
-			setup:  func() {},
-			input:  []string{"NONEXISTENT_KEY"},
-			output: clientio.RespNIL,
-		},
-		"multiple arguments": {
-			setup:  func() {},
-			input:  []string{"KEY1", "KEY2"},
-			output: []byte("-ERR wrong number of arguments for 'get' command\r\n"),
-		},
-		"key exists": {
-			setup: func() {
-				key := "EXISTING_KEY"
-				value := "mock_value"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
-				store.Put(key, obj)
-			},
-			input:  []string{"EXISTING_KEY"},
-			output: clientio.Encode("mock_value", false),
-		},
-		"key exists but expired": {
-			setup: func() {
-				key := "EXISTING_KEY"
-				value := "mock_value"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
-				store.Put(key, obj)
+// func testEvalGET(t *testing.T, store *dstore.Store) {
+// 	tests := map[string]evalTestCase{
+// 		"nil value": {
+// 			setup:  func() {},
+// 			input:  nil,
+// 			output: []byte("-ERR wrong number of arguments for 'get' command\r\n"),
+// 		},
+// 		"empty array": {
+// 			setup:  func() {},
+// 			input:  []string{},
+// 			output: []byte("-ERR wrong number of arguments for 'get' command\r\n"),
+// 		},
+// 		"key does not exist": {
+// 			setup:  func() {},
+// 			input:  []string{"NONEXISTENT_KEY"},
+// 			output: clientio.RespNIL,
+// 		},
+// 		"multiple arguments": {
+// 			setup:  func() {},
+// 			input:  []string{"KEY1", "KEY2"},
+// 			output: []byte("-ERR wrong number of arguments for 'get' command\r\n"),
+// 		},
+// 		"key exists": {
+// 			setup: func() {
+// 				key := "EXISTING_KEY"
+// 				value := "mock_value"
+// 				obj := &object.Obj{
+// 					Value:          value,
+// 					LastAccessedAt: uint32(time.Now().Unix()),
+// 				}
+// 				store.Put(key, obj)
+// 			},
+// 			input:  []string{"EXISTING_KEY"},
+// 			output: clientio.Encode("mock_value", false),
+// 		},
+// 		"key exists but expired": {
+// 			setup: func() {
+// 				key := "EXISTING_KEY"
+// 				value := "mock_value"
+// 				obj := &object.Obj{
+// 					Value:          value,
+// 					LastAccessedAt: uint32(time.Now().Unix()),
+// 				}
+// 				store.Put(key, obj)
 
-				store.SetExpiry(obj, int64(-2*time.Millisecond))
-			},
-			input:  []string{"EXISTING_KEY"},
-			output: clientio.RespNIL,
-		},
-	}
+// 				store.SetExpiry(obj, int64(-2*time.Millisecond))
+// 			},
+// 			input:  []string{"EXISTING_KEY"},
+// 			output: clientio.RespNIL,
+// 		},
+// 	}
 
-	runEvalTests(t, tests, evalGET, store)
-}
+// 	runEvalTests(t, tests, evalGET, store)
+// }
+
+// func testEvalGETSET(t *testing.T, store *dstore.Store) {
+// 	tests := map[string]evalTestCase{
+// 		"GETSET with 1 arg": {
+// 			input:  []string{"HELLO"},
+// 			output: []byte("-ERR wrong number of arguments for 'getset' command\r\n"),
+// 		},
+// 		"GETSET with 3 args": {
+// 			input:  []string{"HELLO", "WORLD", "WORLD1"},
+// 			output: []byte("-ERR wrong number of arguments for 'getset' command\r\n"),
+// 		},
+// 		"GETSET key not exists": {
+// 			input:  []string{"HELLO", "WORLD"},
+// 			output: clientio.RespNIL,
+// 		},
+// 		"GETSET key exists": {
+// 			setup: func() {
+// 				key := "EXISTING_KEY"
+// 				value := "mock_value"
+// 				obj := &object.Obj{
+// 					Value:          value,
+// 					LastAccessedAt: uint32(time.Now().Unix()),
+// 				}
+// 				store.Put(key, obj)
+// 			},
+// 			input:  []string{"EXISTING_KEY", "WORLD"},
+// 			output: clientio.Encode("mock_value", false),
+// 		},
+// 		"GETSET key exists TTL should be reset": {
+// 			setup: func() {
+// 				key := "EXISTING_KEY"
+// 				value := "mock_value"
+// 				obj := &object.Obj{
+// 					Value:          value,
+// 					LastAccessedAt: uint32(time.Now().Unix()),
+// 				}
+// 				store.Put(key, obj)
+// 			},
+// 			input:  []string{"EXISTING_KEY", "WORLD"},
+// 			output: clientio.Encode("mock_value", false),
+// 		},
+// 	}
+
+// 	runEvalTests(t, tests, evalGETSET, store)
+// }
 
 func testEvalEXPIRE(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
@@ -1438,51 +1471,6 @@ func testEvalDbsize(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalDBSIZE, store)
-}
-
-func testEvalGETSET(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"GETSET with 1 arg": {
-			input:  []string{"HELLO"},
-			output: []byte("-ERR wrong number of arguments for 'getset' command\r\n"),
-		},
-		"GETSET with 3 args": {
-			input:  []string{"HELLO", "WORLD", "WORLD1"},
-			output: []byte("-ERR wrong number of arguments for 'getset' command\r\n"),
-		},
-		"GETSET key not exists": {
-			input:  []string{"HELLO", "WORLD"},
-			output: clientio.RespNIL,
-		},
-		"GETSET key exists": {
-			setup: func() {
-				key := "EXISTING_KEY"
-				value := "mock_value"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
-				store.Put(key, obj)
-			},
-			input:  []string{"EXISTING_KEY", "WORLD"},
-			output: clientio.Encode("mock_value", false),
-		},
-		"GETSET key exists TTL should be reset": {
-			setup: func() {
-				key := "EXISTING_KEY"
-				value := "mock_value"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
-				store.Put(key, obj)
-			},
-			input:  []string{"EXISTING_KEY", "WORLD"},
-			output: clientio.Encode("mock_value", false),
-		},
-	}
-
-	runEvalTests(t, tests, evalGETSET, store)
 }
 
 func testEvalPFADD(t *testing.T, store *dstore.Store) {

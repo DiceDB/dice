@@ -40,7 +40,7 @@ func main() {
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
 	watchChan := make(chan dstore.WatchEvent, config.DiceConfig.Server.KeysLimit)
-	shardManager := shard.NewShardManager(1, watchChan)
+	shardManager := shard.NewShardManager(10, watchChan)
 
 	// Initialize the AsyncServer
 	asyncServer := server.NewAsyncServer(shardManager, watchChan)

@@ -8,6 +8,8 @@ type DiceCmdMeta struct {
 	Eval  func([]string, *dstore.Store) []byte
 	Arity int // number of arguments, it is possible to use -N to say >= N
 	KeySpecs
+	IsMigrated bool
+	NewEval    func([]string, *dstore.Store) EvalResponse
 }
 
 type KeySpecs struct {
@@ -20,16 +22,10 @@ var (
 	DiceCmds = map[string]DiceCmdMeta{}
 
 	pingCmdMeta = DiceCmdMeta{
-		Name:  "PING",
-		Info:  `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
-		Eval:  evalPING,
-		Arity: -1,
-	}
-	authCmdMeta = DiceCmdMeta{
-		Name: "AUTH",
-		Info: `AUTH returns with an encoded "OK" if the user is authenticated.
-		If the user is not authenticated, it returns with an encoded error message`,
-		Eval: nil,
+		Name:       "PING",
+		Info:       `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
+		Arity:      -1,
+		IsMigrated: true,
 	}
 	setCmdMeta = DiceCmdMeta{
 		Name: "SET",
@@ -41,9 +37,10 @@ var (
 		Returns encoded error response if expiry tme value in not integer
 		Returns encoded OK RESP once new entry is added
 		If the key already exists then the value will be overwritten and expiry will be discarded`,
-		Eval:     evalSET,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalSET,
 	}
 	getCmdMeta = DiceCmdMeta{
 		Name: "GET",
@@ -51,9 +48,25 @@ var (
 		The key should be the only param in args
 		The RESP value of the key is encoded and then returned
 		GET returns RespNIL if key is expired or it does not exist`,
-		Eval:     evalGET,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalGET,
+	}
+
+	getSetCmdMeta = DiceCmdMeta{
+		Name:       "GETSET",
+		Info:       `GETSET returns the previous string value of a key after setting it to a new value.`,
+		Arity:      2,
+		IsMigrated: true,
+		NewEval:    evalGETSET,
+	}
+
+	authCmdMeta = DiceCmdMeta{
+		Name: "AUTH",
+		Info: `AUTH returns with an encoded "OK" if the user is authenticated.
+		If the user is not authenticated, it returns with an encoded error message`,
+		Eval: nil,
 	}
 	getDelCmdMeta = DiceCmdMeta{
 		Name: "GETDEL",
@@ -612,12 +625,6 @@ var (
 		Info:  `DBSIZE Return the number of keys in the database`,
 		Eval:  evalDBSIZE,
 		Arity: 1,
-	}
-	getSetCmdMeta = DiceCmdMeta{
-		Name:  "GETSET",
-		Info:  `GETSET returns the previous string value of a key after setting it to a new value.`,
-		Eval:  evalGETSET,
-		Arity: 2,
 	}
 	flushdbCmdMeta = DiceCmdMeta{
 		Name:  "FLUSHDB",
