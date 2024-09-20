@@ -1072,18 +1072,18 @@ func testEvalJSONNUMMULTBY(t *testing.T, store *dstore.Store) {
             input:  []string{"doc"},
             output: []byte("-ERR wrong number of arguments for 'json.nummultby' command\r\n"),
         },
-		"non-numeric multiplier on existing key": {
-			setup: func() {
-				key := "doc"
-				value := "{\"a\":10,\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
-				var rootData interface{}
-				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-				store.Put(key, obj)
-			},
-			input: []string{"doc", "$.a", "qwe"},
-			output: []byte("-ERR expected value at line 1 column 1\r\n"),
+	"non-numeric multiplier on existing key": {
+		setup: func() {
+			key := "doc"
+			value := "{\"a\":10,\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
+			var rootData interface{}
+			_ = sonic.Unmarshal([]byte(value), &rootData)
+			obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+			store.Put(key, obj)
 		},
+		input: []string{"doc", "$.a", "qwe"},
+		output: []byte("-ERR expected value at line 1 column 1\r\n"),
+	},
         "nummultby on non integer root fields": {
             setup: func() {
                 key := "doc"
@@ -1120,18 +1120,18 @@ func testEvalJSONNUMMULTBY(t *testing.T, store *dstore.Store) {
             input:  []string{"doc", "$.a", "2"},
             output: []byte("$4\r\n[20]\r\n"),
         },
-		"nummultby on non-existent key": {
-			setup: func() {
-				key := "doc"
-				value := "{\"a\":10,\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
-				var rootData interface{}
-				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-				store.Put(key, obj)
-			},
-			input: []string{"doc", "$..fe", "2"},
-			output: []byte("$2\r\n[]\r\n"),
+	"nummultby on non-existent key": {
+		setup: func() {
+			key := "doc"
+			value := "{\"a\":10,\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
+			var rootData interface{}
+			_ = sonic.Unmarshal([]byte(value), &rootData)
+			obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+			store.Put(key, obj)
 		},
+		input: []string{"doc", "$..fe", "2"},
+		output: []byte("$2\r\n[]\r\n"),
+	},
     }
     runEvalTests(t, tests, evalJSONNUMMULTBY, store)
 }
