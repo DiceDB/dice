@@ -289,9 +289,6 @@ func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.RedisCmd, buf *bytes.
 			cmdsBkp = s.cmdsBreakup(redisCmd, c)
 		}
 	}
-
-	// cmdsBkp := s.cmdsBreakup(redisCmd, c)
-
 	// Worker/Server does the scatter and send it to the respective shardThread request channel
 	s.scatter(cmdsBkp, c)
 

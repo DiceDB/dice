@@ -18,7 +18,6 @@ func getShard(key string, n uint32) uint32 {
 
 func (s *AsyncServer) cmdsBreakup(redisCmd *cmd.RedisCmd, c *comm.Client) []cmd.RedisCmd {
 	val, ok := WorkerCmdsMeta[redisCmd.Cmd]
-
 	if !ok {
 		return []cmd.RedisCmd{*redisCmd}
 	}
@@ -30,37 +29,22 @@ func (s *AsyncServer) cmdsBreakup(redisCmd *cmd.RedisCmd, c *comm.Client) []cmd.
 }
 
 func (s *AsyncServer) scatter(cmds []cmd.RedisCmd, c *comm.Client) {
-	// single sharded command
-	if len(cmds) == 1 {
+	// Otherwise check for the shard based on the key using hash
+	// and send it to the particular shard
+	for i := 0; i < len(cmds); i++ {
 		var id uint32
 		if len(cmds[0].Args) > 0 {
 			key := cmds[0].Args[0]
 			id = getShard(key, uint32(s.shardManager.GetShardCount()))
 		}
 		s.shardManager.GetShard(shard.ShardID(id)).ReqChan <- &ops.StoreOp{
-			Cmd:      &cmds[0],
+			Cmd:      &cmds[i],
 			WorkerID: "server",
 			ShardID:  int(id),
 			Client:   c,
 		}
-	} else {
-		// Otherwise check for the shard based on the key using hash
-		// and send it to the particular shard
-		for i := 0; i < len(cmds); i++ {
-			var id uint32
-			if len(cmds[0].Args) > 0 {
-				key := cmds[0].Args[0]
-				id = getShard(key, uint32(s.shardManager.GetShardCount()))
-			}
-			s.shardManager.GetShard(shard.ShardID(id)).ReqChan <- &ops.StoreOp{
-				Cmd:      &cmds[i],
-				WorkerID: "server",
-				ShardID:  int(id),
-				Client:   c,
-			}
-		}
-
 	}
+
 }
 
 func (s *AsyncServer) gather(redisCmd *cmd.RedisCmd, buf *bytes.Buffer, numShards int, c CmdType) {
@@ -77,6 +61,10 @@ func (s *AsyncServer) gather(redisCmd *cmd.RedisCmd, buf *bytes.Buffer, numShard
 	// Check if command supports multisharding
 	val, ok := WorkerCmdsMeta[redisCmd.Cmd]
 	if !ok {
+		if evalResp[0].Error != nil {
+			buf.Write([]byte(evalResp[0].Error.Error()))
+			return
+		}
 		buf.Write(evalResp[0].Result.([]byte))
 		return
 	}
