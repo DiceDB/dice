@@ -1,6 +1,7 @@
 package eval
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -29,7 +30,7 @@ import (
 // If the key already exists then the value will be overwritten and expiry will be discarded
 func evalSET(args []string, store *dstore.Store) EvalResponse {
 	if len(args) <= 1 {
-		return EvalResponse{Result: nil, Error: fmt.Errorf("SET")}
+		return EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrArity("SET")))}
 	}
 
 	var key, value string
@@ -45,20 +46,20 @@ func evalSET(args []string, store *dstore.Store) EvalResponse {
 		switch arg {
 		case Ex, Px:
 			if state != Uninitialized {
-				return EvalResponse{Result: nil, Error: fmt.Errorf(diceerrors.SyntaxErr)}
+				return EvalResponse{Result: nil, Error: errors.New(diceerrors.SyntaxErr)}
 			}
 			i++
 			if i == len(args) {
-				return EvalResponse{Result: nil, Error: fmt.Errorf(diceerrors.SyntaxErr)}
+				return EvalResponse{Result: nil, Error: errors.New(diceerrors.SyntaxErr)}
 			}
 
 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
-				return EvalResponse{Result: nil, Error: fmt.Errorf(diceerrors.IntOrOutOfRangeErr)}
+				return EvalResponse{Result: nil, Error: errors.New(diceerrors.IntOrOutOfRangeErr)}
 			}
 
 			if exDuration <= 0 || exDuration >= maxExDuration {
-				return EvalResponse{Result: nil, Error: fmt.Errorf("EXPIRE SET")}
+				return EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrExpireTime("SET")))}
 			}
 
 			// converting seconds to milliseconds
@@ -70,19 +71,19 @@ func evalSET(args []string, store *dstore.Store) EvalResponse {
 
 		case Pxat, Exat:
 			if state != Uninitialized {
-				return EvalResponse{Result: nil, Error: fmt.Errorf(diceerrors.SyntaxErr)}
+				return EvalResponse{Result: nil, Error: errors.New(diceerrors.SyntaxErr)}
 			}
 			i++
 			if i == len(args) {
-				return EvalResponse{Result: nil, Error: fmt.Errorf(diceerrors.SyntaxErr)}
+				return EvalResponse{Result: nil, Error: errors.New(diceerrors.SyntaxErr)}
 			}
 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
-				return EvalResponse{Result: nil, Error: fmt.Errorf(diceerrors.IntOrOutOfRangeErr)}
+				return EvalResponse{Result: nil, Error: errors.New(diceerrors.IntOrOutOfRangeErr)}
 			}
 
 			if exDuration < 0 {
-				return EvalResponse{Result: nil, Error: fmt.Errorf("SET")}
+				return EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrExpireTime("SET")))}
 			}
 
 			if arg == Exat {
@@ -112,7 +113,7 @@ func evalSET(args []string, store *dstore.Store) EvalResponse {
 		case KEEPTTL, Keepttl:
 			keepttl = true
 		default:
-			return EvalResponse{Result: nil, Error: fmt.Errorf(diceerrors.SyntaxErr)}
+			return EvalResponse{Result: nil, Error: errors.New(diceerrors.SyntaxErr)}
 		}
 	}
 
@@ -138,7 +139,7 @@ func evalSET(args []string, store *dstore.Store) EvalResponse {
 // evalGET returns response.RespNIL if key is expired or it does not exist
 func evalGET(args []string, store *dstore.Store) EvalResponse {
 	if len(args) != 1 {
-		return EvalResponse{Result: nil, Error: fmt.Errorf(string(diceerrors.NewErrArity("GET")))}
+		return EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrArity("GET")))}
 	}
 
 	key := args[0]
@@ -158,7 +159,7 @@ func evalGET(args []string, store *dstore.Store) EvalResponse {
 			return EvalResponse{Result: clientio.Encode(val, false), Error: nil}
 		}
 		return EvalResponse{Result: nil,
-			Error: fmt.Errorf(string(diceerrors.NewErrWithFormattedMessage("expected int64 but got another type: %s", obj.Value)))}
+			Error: errors.New(string(diceerrors.NewErrWithFormattedMessage("expected int64 but got another type: %s", obj.Value)))}
 
 	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
 		// Value is stored as a string, use type assertion
@@ -166,7 +167,7 @@ func evalGET(args []string, store *dstore.Store) EvalResponse {
 			return EvalResponse{Result: clientio.Encode(val, false), Error: nil}
 		}
 		return EvalResponse{Result: nil,
-			Error: fmt.Errorf(string(diceerrors.NewErrWithMessage("expected string but got another type")))}
+			Error: errors.New(string(diceerrors.NewErrWithMessage("expected string but got another type")))}
 
 	case object.ObjEncodingByteArray:
 		// Value is stored as a bytearray, use type assertion
@@ -175,11 +176,11 @@ func evalGET(args []string, store *dstore.Store) EvalResponse {
 		}
 
 		return EvalResponse{Result: nil,
-			Error: fmt.Errorf(string(diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)))}
+			Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)))}
 
 	default:
 		return EvalResponse{Result: nil,
-			Error: fmt.Errorf(string(diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)))}
+			Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)))}
 	}
 }
 
@@ -193,7 +194,7 @@ func evalGET(args []string, store *dstore.Store) EvalResponse {
 // Nil reply: if the key does not exist.
 func evalGETSET(args []string, store *dstore.Store) EvalResponse {
 	if len(args) != 2 {
-		return EvalResponse{Result: nil, Error: fmt.Errorf(string(diceerrors.NewErrArity("GETSET")))}
+		return EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrArity("GETSET")))}
 	}
 
 	key, value := args[0], args[1]
