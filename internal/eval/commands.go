@@ -761,6 +761,14 @@ var (
 		Arity:    3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsonrespCmdMeta = DiceCmdMeta{
+		Name: "JSON.RESP",
+		Info: `JSON.RESP key [path]
+		Return the JSON in key in Redis serialization protocol specification form`,
+		Eval:     evalJSONRESP,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -782,6 +790,7 @@ func init() {
 	DiceCmds["JSON.DEBUG"] = jsondebugCmdMeta
 	DiceCmds["JSON.ARRPOP"] = jsonarrpopCmdMeta
 	DiceCmds["JSON.INGEST"] = jsoningestCmdMeta
+	DiceCmds["JSON.RESP"] = jsonrespCmdMeta
 	DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
 	DiceCmds["EXPIRE"] = expireCmdMeta
