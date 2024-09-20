@@ -2356,6 +2356,11 @@ func evalCommandList() []byte {
 	cmds := make([]string, 0, diceCommandsCount)
 	for k := range DiceCmds {
 		cmds = append(cmds, k)
+		if k == Command {
+			for _, sc := range CommandSubCommands {
+				cmds = append(cmds, fmt.Sprint(Command,"|",sc))
+			}
+		}
 	}
 	return clientio.Encode(cmds, false)
 }

@@ -34,6 +34,7 @@ type KeySpecs struct {
 
 var (
 	DiceCmds = map[string]DiceCmdMeta{}
+	CommandSubCommands []string
 
 	echoCmdMeta = DiceCmdMeta{
 		Name:  "ECHO",
@@ -940,6 +941,8 @@ func init() {
 	DiceCmds["TYPE"] = typeCmdMeta
 	DiceCmds["GETRANGE"] = getRangeCmdMeta
 	DiceCmds["SETEX"] = setexCmdMeta
+
+	CommandSubCommands = []string{Count, GetKeys, List, Help}
 }
 
 // Function to convert DiceCmdMeta to []interface{}
