@@ -44,32 +44,19 @@ func (s *AsyncServer) scatter(cmds []cmd.RedisCmd, c *comm.Client) {
 			Client:   c,
 		}
 	} else {
-		// multishard command
-		// Condition for command that requires all shards such as PING
-		if len(cmds) == s.shardManager.GetShardCount() {
-			for i := 0; i < len(cmds); i++ {
-				s.shardManager.GetShard(shard.ShardID(i)).ReqChan <- &ops.StoreOp{
-					Cmd:      &cmds[i],
-					WorkerID: "server",
-					ShardID:  i,
-					Client:   c,
-				}
+		// Otherwise check for the shard based on the key using hash
+		// and send it to the particular shard
+		for i := 0; i < len(cmds); i++ {
+			var id uint32
+			if len(cmds[0].Args) > 0 {
+				key := cmds[0].Args[0]
+				id = getShard(key, uint32(s.shardManager.GetShardCount()))
 			}
-		} else {
-			// Otherwise check for the shard based on the key using hash
-			// and send it to the particular shard
-			for i := 0; i < len(cmds); i++ {
-				var id uint32
-				if len(cmds[0].Args) > 0 {
-					key := cmds[0].Args[0]
-					id = getShard(key, uint32(s.shardManager.GetShardCount()))
-				}
-				s.shardManager.GetShard(shard.ShardID(id)).ReqChan <- &ops.StoreOp{
-					Cmd:      &cmds[i],
-					WorkerID: "server",
-					ShardID:  int(id),
-					Client:   c,
-				}
+			s.shardManager.GetShard(shard.ShardID(id)).ReqChan <- &ops.StoreOp{
+				Cmd:      &cmds[i],
+				WorkerID: "server",
+				ShardID:  int(id),
+				Client:   c,
 			}
 		}
 
