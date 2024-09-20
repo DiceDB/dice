@@ -35,8 +35,8 @@ func init() {
 }
 
 func main() {
-	logger := logger.New(logger.Opts{WithTimestamp: true})
-	slog.SetDefault(logger)
+	logr := logger.New(logger.Opts{WithTimestamp: true})
+	slog.SetDefault(logr)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -45,18 +45,18 @@ func main() {
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
 	watchChan := make(chan dstore.WatchEvent, config.DiceConfig.Server.KeysLimit)
-	shardManager := shard.NewShardManager(1, watchChan, logger)
+	shardManager := shard.NewShardManager(1, watchChan, logr)
 
 	// Initialize the AsyncServer
-	asyncServer := server.NewAsyncServer(shardManager, watchChan, logger)
-	httpServer := server.NewHTTPServer(shardManager, watchChan, logger)
+	asyncServer := server.NewAsyncServer(shardManager, watchChan, logr)
+	httpServer := server.NewHTTPServer(shardManager, watchChan, logr)
 
 	// Initialize the HTTP server
 
 	// Find a port and bind it
 	if err := asyncServer.FindPortAndBind(); err != nil {
 		cancel()
-		logger.Error("Error finding and binding port",
+		logr.Error("Error finding and binding port",
 			slog.Any("error", err),
 		)
 		os.Exit(1)
@@ -90,18 +90,18 @@ func main() {
 		// Handling different server errors
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
-				logger.Debug("Server was canceled")
+				logr.Debug("Server was canceled")
 			} else if errors.Is(err, server.ErrAborted) {
-				logger.Debug("Server received abort command")
+				logr.Debug("Server received abort command")
 			} else {
-				logger.Error(
+				logr.Error(
 					"Server error",
 					slog.Any("error", err),
 				)
 			}
 			serverErrCh <- err
 		} else {
-			logger.Debug("Server stopped without error")
+			logr.Debug("Server stopped without error")
 		}
 	}()
 
@@ -112,15 +112,15 @@ func main() {
 		err := httpServer.Run(ctx)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
-				logger.Debug("HTTP Server was canceled")
+				logr.Debug("HTTP Server was canceled")
 			} else if errors.Is(err, server.ErrAborted) {
-				logger.Debug("HTTP received abort command")
+				logr.Debug("HTTP received abort command")
 			} else {
-				logger.Error("HTTP Server error", slog.Any("error", err))
+				logr.Error("HTTP Server error", slog.Any("error", err))
 			}
 			serverErrCh <- err
 		} else {
-			logger.Debug("HTTP Server stopped without error")
+			logr.Debug("HTTP Server stopped without error")
 		}
 	}()
 
@@ -141,5 +141,5 @@ func main() {
 	cancel()
 
 	wg.Wait()
-	logger.Debug("Server has shut down gracefully")
+	logr.Debug("Server has shut down gracefully")
 }

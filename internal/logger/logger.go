@@ -33,11 +33,11 @@ func New(opts Opts) *slog.Logger {
 	if config.DiceConfig.Server.PrettyPrintLogs {
 		writer = zerolog.ConsoleWriter{Out: os.Stderr}
 	}
-	zerologLogger := zerolog.New(writer)
+	zerologLogger := zerolog.New(writer).Level(mapLevel(getLogLevel().Level()))
 	if opts.WithTimestamp {
 		zerologLogger = zerologLogger.With().Timestamp().Logger()
 	}
-	logger := slog.New(newZerologHandler(zerologLogger))
+	logger := slog.New(newZerologHandler(&zerologLogger))
 
 	return logger
 }

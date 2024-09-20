@@ -9,15 +9,19 @@ import (
 
 // ZerologHandler is a custom handler that adapts slog to zerolog
 type ZerologHandler struct {
-	logger zerolog.Logger
+	logger *zerolog.Logger
 }
 
 // newZerologHandler creates a new ZerologHandler
-func newZerologHandler(logger zerolog.Logger) *ZerologHandler {
-	return &ZerologHandler{logger: logger}
+func newZerologHandler(logger *zerolog.Logger) *ZerologHandler {
+	return &ZerologHandler{
+		logger: logger,
+	}
 }
 
 // Handle implements the slog.Handler interface
+//
+//nolint:gocritic // The slog.Record struct triggers hugeParam but we don't control the interface (it's a standard library one)
 func (h *ZerologHandler) Handle(ctx context.Context, record slog.Record) error {
 	event := h.logger.WithLevel(mapLevel(record.Level))
 
@@ -63,15 +67,15 @@ func (h *ZerologHandler) Enabled(ctx context.Context, level slog.Level) bool {
 
 // WithAttrs adds attributes to the log event
 func (h *ZerologHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	logger := h.logger
+	logger := *h.logger
 	for _, attr := range attrs {
 		logger = logger.With().Interface(attr.Key, attr.Value).Logger()
 	}
-	return newZerologHandler(logger)
+	return newZerologHandler(&logger)
 }
 
 // WithGroup returns the handler for a group of logs
 func (h *ZerologHandler) WithGroup(name string) slog.Handler {
 	logger := h.logger.With().Str("group", name).Logger()
-	return newZerologHandler(logger)
+	return newZerologHandler(&logger)
 }

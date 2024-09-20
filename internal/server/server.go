@@ -12,6 +12,8 @@ import (
 	"syscall"
 	"time"
 
+	"log/slog"
+
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/clientio"
@@ -24,7 +26,6 @@ import (
 	"github.com/dicedb/dice/internal/querywatcher"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
-	"log/slog"
 )
 
 var ErrAborted = errors.New("server received ABORT command")
