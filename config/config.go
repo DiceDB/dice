@@ -72,7 +72,7 @@ type Config struct {
 }
 
 // Default configurations for internal use
-var defaultConfig = Config{
+var baseConfig = Config{
 	Server: struct {
 		Addr                   string        `mapstructure:"addr"`
 		Port                   int           `mapstructure:"port"`
@@ -126,6 +126,24 @@ var defaultConfig = Config{
 		IOBufferLength:    512,
 		IOBufferLengthMAX: 50 * 1024,
 	},
+}
+
+var defaultConfig Config
+
+func init() {
+	config := baseConfig
+	env := os.Getenv("DICE_ENV")
+	switch env {
+	case "dev":
+		config.Server.LogLevel = "debug"
+		config.Server.PrettyPrintLogs = true
+	default:
+	}
+	logLevel := os.Getenv("DICE_LOG_LEVEL")
+	if logLevel != "" {
+		config.Server.LogLevel = logLevel
+	}
+	defaultConfig = config
 }
 
 // DiceConfig is the global configuration object for dice
