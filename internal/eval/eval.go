@@ -3597,9 +3597,7 @@ func rdbSerialize(obj *object.Obj) ([]byte, error) {
             return nil, errors.New("invalid integer value")
         }
         buf.WriteByte(0xC0)
-        if err := writeInt(&buf, intVal); err != nil {
-            return nil, err
-        }
+        writeInt(&buf, intVal)
 
     default:
         return nil, errors.New("unsupported object type")
@@ -3619,11 +3617,10 @@ func writeString(buf *bytes.Buffer, str string) error {
     return nil
 }
 
-func writeInt(buf *bytes.Buffer, intVal int64) error {
+func writeInt(buf *bytes.Buffer, intVal int64){
     tempBuf := make([]byte, 8)
     binary.BigEndian.PutUint64(tempBuf, uint64(intVal))
     buf.Write(tempBuf)
-    return nil
 }
 
 func appendChecksum(data []byte) []byte {
