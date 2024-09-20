@@ -57,7 +57,7 @@ func NewAsyncServer(shardManager *shard.ShardManager, watchChan chan dstore.Watc
 
 // SetupUsers initializes the default user for the server
 func (s *AsyncServer) SetupUsers() error {
-	user, err := auth.UserStore.Add(auth.DefaultUserName)
+	user, err := auth.UserStore.Add(config.DiceConfig.Auth.UserName)
 	if err != nil {
 		return err
 	}
@@ -96,7 +96,7 @@ func (s *AsyncServer) FindPortAndBind() (socketErr error) {
 		return ErrInvalidIPAddress
 	}
 
-	log.Infof("DiceDB %s running on port %d", "0.0.3", config.DiceConfig.Server.Port)
+	log.Infof("DiceDB %s running on port %d", "0.0.4", config.DiceConfig.Server.Port)
 	return syscall.Bind(serverFD, &syscall.SockaddrInet4{
 		Port: config.DiceConfig.Server.Port,
 		Addr: [4]byte{ip4[0], ip4[1], ip4[2], ip4[3]},

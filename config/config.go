@@ -149,6 +149,9 @@ func SetupConfig() {
 		setUpViperConfig(ConfigFileLocation)
 		return
 	}
+
+	// If no flags are set, use default configurations with prioritizing command line flags
+	mergeFlagsWithConfig()
 }
 
 func createConfigFile(configFilePath string) {
@@ -237,6 +240,12 @@ func setUpViperConfig(configFilePath string) {
 	}
 
 	// override default configurations with command line flags
+	mergeFlagsWithConfig()
+
+	log.Info("configurations loaded successfully.")
+}
+
+func mergeFlagsWithConfig() {
 	if RequirePass != utils.EmptyStr {
 		DiceConfig.Auth.Password = RequirePass
 	}
@@ -248,8 +257,6 @@ func setUpViperConfig(configFilePath string) {
 	if Port != DefaultPort {
 		DiceConfig.Server.Port = Port
 	}
-
-	log.Info("configurations loaded successfully.")
 }
 
 // This function checks if the config file is present or not at ConfigFileLocation
