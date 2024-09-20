@@ -102,88 +102,37 @@ func testEvalHELLO(t *testing.T, store *dstore.Store) {
 
 func testEvalSET(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
-		"nil value": {
-			input:          nil,
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrArity("SET")))},
-		},
-		"empty array": {
-			input:          []string{},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrArity("SET")))},
-		},
-		"one value": {
-			input:          []string{"KEY"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrArity("SET")))},
-		},
-		"key val pair": {
-			input:          []string{"KEY", "VAL"},
-			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
-		},
-		"key val pair with int val": {
-			input:          []string{"KEY", "123456"},
-			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
-		},
-		"key val pair and expiry key": {
-			input:          []string{"KEY", "VAL", Px},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)))},
-		},
-		"key val pair and EX no val": {
-			input:          []string{"KEY", "VAL", Ex},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)))},
-		},
-		"key val pair and valid EX": {
-			input:          []string{"KEY", "VAL", Ex, "2"},
-			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
-		},
-		"key val pair and invalid EX": {
-			input:          []string{"KEY", "VAL", Ex, "invalid_expiry_val"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)))},
-		},
-		"key val pair and valid PX": {
-			input:          []string{"KEY", "VAL", Px, "2000"},
-			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
-		},
-		"key val pair and invalid PX": {
-			input:          []string{"KEY", "VAL", Px, "invalid_expiry_val"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)))},
-		},
-		"key val pair and both EX and PX": {
-			input:          []string{"KEY", "VAL", Ex, "2", Px, "2000"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)))},
-		},
-		"key val pair and PXAT no val": {
-			input:          []string{"KEY", "VAL", Pxat},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)))},
-		},
-		"key val pair and invalid PXAT": {
-			input:          []string{"KEY", "VAL", Pxat, "invalid_expiry_val"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)))},
-		},
-		"key val pair and expired PXAT": {
-			input:          []string{"KEY", "VAL", Pxat, "2"},
-			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
-		},
-		"key val pair and negative PXAT": {
-			input:          []string{"KEY", "VAL", Pxat, "-123456"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrExpireTime("SET")))},
-		},
-		"key val pair and valid PXAT": {
-			input:          []string{"KEY", "VAL", Pxat, strconv.FormatInt(time.Now().Add(2*time.Minute).UnixMilli(), 10)},
-			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
-		},
+		"nil value":                       {input: nil, output: []byte("-ERR wrong number of arguments for 'set' command\r\n")},
+		"empty array":                     {input: []string{}, output: []byte("-ERR wrong number of arguments for 'set' command\r\n")},
+		"one value":                       {input: []string{"KEY"}, output: []byte("-ERR wrong number of arguments for 'set' command\r\n")},
+		"key val pair":                    {input: []string{"KEY", "VAL"}, output: clientio.RespOK},
+		"key val pair with int val":       {input: []string{"KEY", "123456"}, output: clientio.RespOK},
+		"key val pair and expiry key":     {input: []string{"KEY", "VAL", Px}, output: []byte("-ERR syntax error\r\n")},
+		"key val pair and EX no val":      {input: []string{"KEY", "VAL", Ex}, output: []byte("-ERR syntax error\r\n")},
+		"key val pair and valid EX":       {input: []string{"KEY", "VAL", Ex, "2"}, output: clientio.RespOK},
+		"key val pair and invalid EX":     {input: []string{"KEY", "VAL", Ex, "invalid_expiry_val"}, output: []byte("-ERR value is not an integer or out of range\r\n")},
+		"key val pair and valid PX":       {input: []string{"KEY", "VAL", Px, "2000"}, output: clientio.RespOK},
+		"key val pair and invalid PX":     {input: []string{"KEY", "VAL", Px, "invalid_expiry_val"}, output: []byte("-ERR value is not an integer or out of range\r\n")},
+		"key val pair and both EX and PX": {input: []string{"KEY", "VAL", Ex, "2", Px, "2000"}, output: []byte("-ERR syntax error\r\n")},
+		"key val pair and PXAT no val":    {input: []string{"KEY", "VAL", Pxat}, output: []byte("-ERR syntax error\r\n")},
+		"key val pair and invalid PXAT":   {input: []string{"KEY", "VAL", Pxat, "invalid_expiry_val"}, output: []byte("-ERR value is not an integer or out of range\r\n")},
+		"key val pair and expired PXAT":   {input: []string{"KEY", "VAL", Pxat, "2"}, output: clientio.RespOK},
+		"key val pair and negative PXAT":  {input: []string{"KEY", "VAL", Pxat, "-123456"}, output: []byte("-ERR invalid expire time in 'set' command\r\n")},
+		"key val pair and valid PXAT":     {input: []string{"KEY", "VAL", Pxat, strconv.FormatInt(time.Now().Add(2*time.Minute).UnixMilli(), 10)}, output: clientio.RespOK},
 	}
+
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// Optionally run setup
 			if tc.setup != nil {
 				tc.setup()
 			}
 
-			// Call the function under test with input and compare the migrated output
-			result := evalSET(tc.input, store) // Replace with actual function call
-
-			// Compare the Result field
-			assert.Equal(t, tc.migratedOutput, result, "Mismatch in EvalResponse for test case: %s", name)
-
+			output := evalSET(tc.input, store)
+			if tc.isErrorScenario {
+				assert.Equal(t, output.Error.Error(), tc.output)
+			} else {
+				assert.Equal(t, output.Result, tc.output)
+			}
 		})
 	}
 }
