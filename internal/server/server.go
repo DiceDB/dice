@@ -96,7 +96,7 @@ func (s *AsyncServer) FindPortAndBind() (socketErr error) {
 		return ErrInvalidIPAddress
 	}
 
-	log.Infof("DiceDB %s running on port %d", "0.0.3", config.DiceConfig.Server.Port)
+	log.Infof("DiceDB %s running on port %d", "0.0.4", config.DiceConfig.Server.Port)
 	return syscall.Bind(serverFD, &syscall.SockaddrInet4{
 		Port: config.DiceConfig.Server.Port,
 		Addr: [4]byte{ip4[0], ip4[1], ip4[2], ip4[3]},
