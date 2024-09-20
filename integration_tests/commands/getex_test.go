@@ -119,6 +119,13 @@ func TestGetEx(t *testing.T) {
 			assert_type: []string{"equal", "equal", "assert", "equal", "assert"},
 			delay:       []time.Duration{0, 0, 0, 0, 0},
 		},
+		{
+			name:        "GetEx with key holding JSON type",
+			commands:    []string{"JSON.SET KEY $ \"1\"", "GETEX KEY"},
+			expected:    []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			assert_type: []string{"equal", "equal"},
+			delay:       []time.Duration{0, 0},
+		},
 	}
 
 	for _, tc := range testCases {

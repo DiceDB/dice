@@ -40,6 +40,7 @@ func TestEval(t *testing.T) {
 	testEvalHELLO(t, store)
 	testEvalSET(t, store)
 	testEvalGET(t, store)
+	testEvalGETEX(t, store)
 	testEvalJSONARRLEN(t, store)
 	testEvalJSONDEL(t, store)
 	testEvalJSONFORGET(t, store)
@@ -183,6 +184,29 @@ func testEvalGET(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalGET, store)
+}
+
+func testEvalGETEX(t *testing.T, store *dstore.Store) {
+
+	tests := map[string]evalTestCase{
+		"key holding json type": {
+			setup: func() {
+				evalJSONSET([]string{"JSONKEY", "$", "1"}, store)
+
+			},
+			input:  []string{"JSONKEY"},
+			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+		},
+		"key holding set type": {
+			setup: func() {
+				evalSADD([]string{"SETKEY", "FRUITS", "APPLE", "MANGO", "BANANA"}, store)
+
+			},
+			input:  []string{"SETKEY"},
+			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+		},
+	}
+	runEvalTests(t, tests, evalGETEX, store)
 }
 
 func testEvalEXPIRE(t *testing.T, store *dstore.Store) {
