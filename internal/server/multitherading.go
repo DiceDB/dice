@@ -2,7 +2,6 @@ package server
 
 import (
 	"bytes"
-	"fmt"
 
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/comm"
@@ -59,15 +58,9 @@ func (s *AsyncServer) gather(redisCmd *cmd.RedisCmd, buf *bytes.Buffer, numShard
 		}
 	}
 
-	fmt.Println(evalResp)
-
 	// Check if command supports multisharding
 	val, ok := WorkerCmdsMeta[redisCmd.Cmd]
 	if !ok {
-		if evalResp[0].Error != nil {
-			buf.Write([]byte(evalResp[0].Error.Error()))
-			return
-		}
 		buf.Write(evalResp[0].Result.([]byte))
 		return
 	}

@@ -1,20 +1,20 @@
 package eval
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/comm"
+	diceerrors "github.com/dicedb/dice/internal/errors"
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
 func ExecuteCommand(cmd *cmd.RedisCmd, client *comm.Client, store *dstore.Store, http bool) EvalResponse {
 	diceCmd, ok := DiceCmds[cmd.Cmd]
 	if !ok {
-		return EvalResponse{Result: nil, Error: fmt.Errorf("unknown command '%s', with args beginning with: %s", cmd.Cmd, strings.Join(cmd.Args, " "))}
+		return EvalResponse{Result: diceerrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", cmd.Cmd, strings.Join(cmd.Args, " ")), Error: nil}
 	}
 
 	// Till the time we refactor to handle QWATCH differently using HTTP Streaming/SSE
