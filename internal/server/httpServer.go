@@ -128,16 +128,13 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 	redisCmd, err := utils.ParseHTTPRequest(request)
 	if err != nil {
 		log.Errorf("Error parsing HTTP request: %v", err)
+		http.Error(writer, "Error parsing HTTP request", http.StatusBadRequest)
 		return
 	}
 
 	if unimplementedCommands[redisCmd.Cmd] {
 		log.Errorf("Command %s is not implemented", redisCmd.Cmd)
-		_, err := writer.Write([]byte("Command is not implemented with HTTP"))
-		if err != nil {
-			log.Errorf("Error writing response: %v", err)
-			return
-		}
+		http.Error(writer, "Command is not implemented with HTTP", http.StatusBadRequest)
 		return
 	}
 
@@ -159,11 +156,13 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 	redisCmd, err := utils.ParseHTTPRequest(request)
 	if err != nil {
 		log.Errorf("Error parsing HTTP request: %v", err)
+		http.Error(writer, "Error parsing HTTP request", http.StatusBadRequest)
 		return
 	}
 
-	if redisCmd.Cmd != QWATCH || len(redisCmd.Args) < 1 {
-		http.Error(writer, "Invalid request", http.StatusBadRequest)
+	if len(redisCmd.Args) < 1 {
+		log.Errorf("Invalid request for QWATCH")
+		http.Error(writer, "Invalid request for QWATCH", http.StatusBadRequest)
 		return
 	}
 
