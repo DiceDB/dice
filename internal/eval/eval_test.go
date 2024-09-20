@@ -82,6 +82,7 @@ func TestEval(t *testing.T) {
 	testEvalCOMMAND(t, store)
 	testEvalGETRANGE(t, store)
 	testEvalPING(t, store)
+	testEvalFLUSHDB(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -1709,6 +1710,24 @@ func testEvalDbsize(t *testing.T, store *dstore.Store) {
 			input:  nil,
 			output: []byte(":2\r\n"),
 		},
+		"repeating keys shall result in same dbsize": {
+			setup: func() {
+				evalSET([]string{"key1", "val1"}, store)
+				evalSET([]string{"key2", "val2"}, store)
+				evalSET([]string{"key2", "val2"}, store)
+			},
+			input:  nil,
+			output: []byte(":2\r\n"),
+		},
+		"deleted keys shall be reflected in dbsize": {
+			setup: func() {
+				evalSET([]string{"key1", "val1"}, store)
+				evalSET([]string{"key2", "val2"}, store)
+				evalDEL([]string{"key2"}, store)
+			},
+			input:  nil,
+			output: []byte(":1\r\n"),
+		},
 	}
 
 	runEvalTests(t, tests, evalDBSIZE, store)
@@ -3067,4 +3086,25 @@ func TestMSETConsistency(t *testing.T) {
 
 	assert.Equal(t, "VAL", store.Get("KEY").Value)
 	assert.Equal(t, "VAL2", store.Get("KEY2").Value)
+}
+
+func testEvalFLUSHDB(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"one key exists in db": {
+			setup: func() {
+				evalSET([]string{"key", "val"}, store)
+			},
+			input:  nil,
+			output: clientio.RespOK,
+		},
+		"two keys exist in db": {
+			setup: func() {
+				evalSET([]string{"key1", "val1"}, store)
+				evalSET([]string{"key2", "val2"}, store)
+			},
+			input:  nil,
+			output: clientio.RespOK,
+		},
+	}
+	runEvalTests(t, tests, evalFLUSHDB, store)
 }
