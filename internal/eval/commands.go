@@ -761,11 +761,19 @@ var (
 		Arity:    3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	dumpkeyCMmdMeta=DiceCmdMeta{
+		Name:	 "DUMP",
+		Info:	`Serialize the value stored at key in a Redis-specific format and return it to the user.
+				The returned value can be synthesized back into a Redis key using the RESTORE command.`,
+		Eval:   evalDUMP,
+		Arity: 	1,
+	}
 )
 
 func init() {
 	DiceCmds["PING"] = pingCmdMeta
 	DiceCmds["AUTH"] = authCmdMeta
+	DiceCmds["DUMP"]=dumpkeyCMmdMeta
 	DiceCmds["SET"] = setCmdMeta
 	DiceCmds["GET"] = getCmdMeta
 	DiceCmds["MSET"] = msetCmdMeta

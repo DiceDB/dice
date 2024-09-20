@@ -2,8 +2,11 @@ package eval
 
 import (
 	"bytes"
+	"encoding/base64"
+	"encoding/binary"
 	"errors"
 	"fmt"
+	"hash/crc64"
 	"math"
 	"regexp"
 	"sort"
@@ -3553,3 +3556,81 @@ func evalJSONNUMINCRBY(args []string, store *dstore.Store) []byte {
 	obj.Value = jsonData
 	return clientio.Encode(resultString, false)
 }
+
+func evalDUMP(args []string, store *dstore.Store) []byte {
+    if len(args) < 1 {
+        return diceerrors.NewErrArity("DUMP")
+    }
+    key := args[0]
+    obj := store.Get(key)
+    if obj == nil {
+        return diceerrors.NewErrWithFormattedMessage("-ERR could not perform this operation on a key that doesn't exist")
+    }
+	
+    serializedValue, err := rdbSerialize(obj)
+    if err != nil {
+        return diceerrors.NewErrWithMessage("serialization failed")
+    }
+	encodedResult := base64.StdEncoding.EncodeToString(serializedValue)
+    return clientio.Encode(encodedResult, false)
+}
+
+func rdbSerialize(obj *object.Obj) ([]byte, error) {
+    var buf bytes.Buffer
+    buf.WriteByte(0x09)
+
+    var err error
+    switch object.GetType(obj.TypeEncoding) {
+    case object.ObjTypeString:
+        str, ok := obj.Value.(string)
+        if !ok {
+            return nil, errors.New("invalid string value")
+        }
+        buf.WriteByte(0x00) 
+        if err = writeString(&buf, str); err != nil {
+            return nil, err
+        }
+
+    case object.ObjTypeInt:
+        intVal, ok := obj.Value.(int64)
+        if !ok {
+            return nil, errors.New("invalid integer value")
+        }
+        buf.WriteByte(0xC0)
+        if err = writeInt(&buf, intVal); err != nil {
+            return nil, err
+        }
+
+    default:
+        return nil, errors.New("unsupported object type")
+    }
+
+    buf.WriteByte(0xFF) // End marker
+
+    return appendChecksum(buf.Bytes()), nil
+}
+
+func writeString(buf *bytes.Buffer, str string) error {
+    strLen := uint32(len(str))
+    if err := binary.Write(buf, binary.BigEndian, strLen); err != nil {
+        return err
+    }
+    buf.WriteString(str)
+    return nil
+}
+
+func writeInt(buf *bytes.Buffer, intVal int64) error {
+    tempBuf := make([]byte, 8)
+    binary.BigEndian.PutUint64(tempBuf, uint64(intVal))
+    buf.Write(tempBuf)
+    return nil
+}
+
+func appendChecksum(data []byte) []byte {
+    checksum := crc64.Checksum(data, crc64.MakeTable(crc64.ECMA))
+    checksumBuf := make([]byte, 8)
+    binary.BigEndian.PutUint64(checksumBuf, checksum)
+    return append(data, checksumBuf...)
+}
+
+

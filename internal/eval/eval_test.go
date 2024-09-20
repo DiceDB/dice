@@ -2,6 +2,7 @@ package eval
 
 import (
 	"bytes"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"reflect"
@@ -74,6 +75,7 @@ func TestEval(t *testing.T) {
 	testEvalLLEN(t, store)
 	testEvalGETEX(t, store)
 	testEvalJSONNUMINCRBY(t, store)
+	testEvalDUMP(t,store)
 	testEvalCOMMAND(t, store)
 }
 
@@ -1901,6 +1903,8 @@ func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]s
 			if tc.validator != nil {
 				tc.validator(output)
 			} else {
+				fmt.Println(tc.output)
+				fmt.Println(output)
 				assert.Equal(t, string(tc.output), string(output))
 			}
 		})
@@ -2592,4 +2596,69 @@ func TestMSETConsistency(t *testing.T) {
 
 	assert.Equal(t, "VAL", store.Get("KEY").Value)
 	assert.Equal(t, "VAL2", store.Get("KEY2").Value)
+}
+
+func testEvalDUMP(t *testing.T, store *dstore.Store) {
+    tests := map[string]evalTestCase{
+        "nil value": {
+            setup:  func() {},
+            input:  nil,
+            output: []byte("-ERR wrong number of arguments for 'dump' command\r\n"),
+        },
+        "empty array": {
+            setup:  func() {},
+            input:  []string{},
+            output: []byte("-ERR wrong number of arguments for 'dump' command\r\n"),
+        },
+        "key does not exist": {
+            setup:  func() {},
+            input:  []string{"NONEXISTENT_KEY"},
+            output: []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
+        },"dump string value": {
+    		setup: func() {
+        	key := "user"
+        	value := "hello"
+        	obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
+        	store.Put(key, obj)
+    		},
+    		input:  []string{"user"},
+    		output: clientio.Encode(
+                base64.StdEncoding.EncodeToString([]byte{
+                    0x09, 0x00, 0x00,0x00, 0x00, 0x05, 0x68, 0x65, 0x6c, 0x6c, 0x6f,
+                    0xFF, // End marker
+                    // CRC64 checksum here:
+                    0x00 ,0x47 ,0x97 ,0x93 ,0xBE ,0x36 ,0x45,0xC7,
+            }), false),
+		},
+        "dump integer value": {
+            setup: func() {
+                key := "INTEGER_KEY"
+                value := int64(10)
+                obj := store.NewObj(value, -1, object.ObjTypeInt, object.ObjEncodingInt)
+                store.Put(key, obj)
+            },
+            input:  []string{"INTEGER_KEY"},
+            output: clientio.Encode(base64.StdEncoding.EncodeToString([]byte{
+				0x09,       
+				0xC0,      
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A,
+				0xFF,       
+				0x12, 0x77, 0xDE, 0x29, 0x53, 0xDB, 0x44, 0xC2,
+			}), false),
+        },
+        "dump expired key": {
+            setup: func() {
+                key := "EXPIRED_KEY"
+                value := "This will expire"
+                obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
+                store.Put(key, obj)
+				var exDurationMs int64 = -1
+                store.SetExpiry(obj, exDurationMs)
+            },
+            input:  []string{"EXPIRED_KEY"},
+            output: []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
+        },
+    }
+
+    runEvalTests(t, tests, evalDUMP, store)
 }
