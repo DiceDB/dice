@@ -5,14 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"hash/crc32"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/dicedb/dice/internal/cmd"
-	"github.com/dicedb/dice/internal/id"
-
 	"github.com/dicedb/dice/internal/clientio"
+	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/server/utils"
 
 	"github.com/charmbracelet/log"
@@ -50,11 +50,23 @@ type HTTPQwatchWriter struct {
 	Query  string
 }
 
+// CaseInsensitiveMux wraps ServeMux and forces REST paths to lowecase
+type CaseInsensitiveMux struct {
+	mux *http.ServeMux
+}
+
+func (cim *CaseInsensitiveMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Convert the path to lowercase before passing to the underlying mux.
+	r.URL.Path = strings.ToLower(r.URL.Path)
+	cim.mux.ServeHTTP(w, r)
+}
+
 func NewHTTPServer(shardManager *shard.ShardManager, watchChan chan dstore.WatchEvent) *HTTPServer {
 	mux := http.NewServeMux()
+	caseInsensitiveMux := &CaseInsensitiveMux{mux: mux}
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", config.HTTPPort),
-		Handler:           mux,
+		Handler:           caseInsensitiveMux,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
@@ -127,10 +139,6 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 		return
 	}
 
-	if redisCmd.Cmd == QWATCH {
-		return
-	}
-
 	// send request to Shard Manager
 	s.shardManager.GetShard(0).ReqChan <- &ops.StoreOp{
 		Cmd:      redisCmd,
@@ -153,7 +161,14 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 	}
 
 	if redisCmd.Cmd != QWATCH || len(redisCmd.Args) < 1 {
-		http.Error(writer, "Invalid params", http.StatusBadRequest)
+		http.Error(writer, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	// Check if the connection supports flushing
+	flusher, ok := writer.(http.Flusher)
+	if !ok {
+		http.Error(writer, "Streaming unsupported", http.StatusInternalServerError)
 		return
 	}
 
@@ -162,12 +177,13 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 	writer.Header().Set("Cache-Control", "no-cache")
 	writer.Header().Set("Connection", "keep-alive")
 	writer.WriteHeader(http.StatusOK)
-	uniqueID := id.NextID()
+	// We're a generating a unique client id, to keep track in core of requests from registered clients
+	clientID := generateUniqueInt32(request)
 	clientRequestID := make(map[uint32]HTTPQwatchWriter)
 	var clientWriter HTTPQwatchWriter
 	clientWriter.Writer = writer
 	clientWriter.Query = redisCmd.Args[0]
-	clientRequestID[uniqueID] = clientWriter
+	clientRequestID[clientID] = clientWriter
 
 	// Prepare the store operation
 	storeOp := &ops.StoreOp{
@@ -176,23 +192,20 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 		ShardID:              0,
 		HTTPOp:               true,
 		HTTPClientRespWriter: clientWriter.Writer,
-		RequestID:            uniqueID,
+		RequestID:            clientID,
 	}
 
+	log.Infof("Registered client with id %d for watching query %s", clientID, clientWriter.Query)
 	s.shardManager.GetShard(0).ReqChan <- storeOp
 
-	// Wait for response
+	// Wait for 1st sync response from server for QWATCH and flush it to client
 	resp := <-s.ioChan
 	s.writeResponse(writer, resp.Result)
-	flusher, ok := writer.(http.Flusher)
-	if !ok {
-		http.Error(writer, "Streaming unsupported", http.StatusInternalServerError)
-		return
-	}
-
-	flusher.Flush() // Flush the response to send it to the client
+	flusher.Flush()
+	// Keep listening for context cancellation (client disconnect) and continuous responses
 	doneChan := request.Context().Done()
-	for range doneChan {
+	for {
+		<-doneChan
 		// Client disconnected or request finished
 		log.Infof("Client disconnected")
 		unWatchCmd := &cmd.RedisCmd{
@@ -228,4 +241,15 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result []byte) {
 	if err != nil {
 		log.Error("Error writing response", "error", err)
 	}
+}
+
+func generateUniqueInt32(r *http.Request) uint32 {
+	var sb strings.Builder
+	sb.WriteString(r.RemoteAddr)
+	sb.WriteString(r.UserAgent())
+	sb.WriteString(r.Method)
+	sb.WriteString(r.URL.Path)
+
+	// Hash the string using CRC32 and cast it to an int32
+	return crc32.ChecksumIEEE([]byte(sb.String()))
 }
