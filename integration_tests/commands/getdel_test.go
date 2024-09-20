@@ -1,9 +1,10 @@
 package commands
 
 import (
-	"gotest.tools/v3/assert"
 	"testing"
 	"time"
+
+	"gotest.tools/v3/assert"
 )
 
 func TestGetDel(t *testing.T) {
@@ -42,9 +43,28 @@ func TestGetDel(t *testing.T) {
 				"ERR wrong number of arguments for 'getdel' command"},
 			delays: []time.Duration{0, 0},
 		},
+		{
+			name:   "Getdel with value created from Setbit",
+			cmds:   []string{"SETBIT k 1 1", "GET k", "GETDEL k", "GET k"},
+			expect: []interface{}{int64(0), "@", "@", "(nil)"},
+			delays: []time.Duration{0, 0, 0, 0},
+		},
+		{
+			name:   "GetDel with Set object should return wrong type error",
+			cmds:   []string{"SADD myset member1", "GETDEL myset"},
+			expect: []interface{}{int64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			delays: []time.Duration{0, 0},
+		},
+		{
+			name:   "GetDel with JSON object should return wrong type error",
+			cmds:   []string{"JSON.SET k $ 1", "GETDEL k", "JSON.GET k"},
+			expect: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value", "1"},
+			delays: []time.Duration{0, 0, 0},
+		},
 	}
 
 	for _, tc := range testCases {
+		FireCommand(conn, "del k")
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.cmds {
 				if tc.delays[i] > 0 {

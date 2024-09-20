@@ -46,7 +46,7 @@ func NewShardThread(id ShardID, errorChan chan *ShardError, watchChan chan dstor
 		workerMap:        make(map[string]chan *ops.StoreResponse),
 		errorChan:        errorChan,
 		lastCronExecTime: utils.GetCurrentTime(),
-		cronFrequency:    config.ShardCronFrequency,
+		cronFrequency:    config.DiceConfig.Server.ShardCronFrequency,
 	}
 }
 
@@ -110,7 +110,12 @@ func (shard *ShardThread) executeCommand(op *ops.StoreOp) []byte {
 		return diceerrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", op.Cmd.Cmd, strings.Join(op.Cmd.Args, " "))
 	}
 
-	// The following commands could be handled at the server level, however, we can randomly let any shard handle them
+	// Till the time we refactor to handle QWATCH differently using HTTP Streaming/SSE
+	if op.HTTPOp {
+		return diceCmd.Eval(op.Cmd.Args, shard.store)
+	}
+
+	// The following commands could be handled at the shard level, however, we can randomly let any shard handle them
 	// to reduce load on main server.
 	switch diceCmd.Name {
 	case "SUBSCRIBE", "QWATCH":
@@ -129,11 +134,8 @@ func (shard *ShardThread) executeCommand(op *ops.StoreOp) []byte {
 // cleanup handles cleanup logic when the shard stops.
 func (shard *ShardThread) cleanup() {
 	close(shard.ReqChan)
-	if config.WriteAOFOnCleanup {
-		// Avoiding AOF dump for test enabled environments as
-		// the tests were taking longer due to background tasks which exceeded the WaitDelay,
-		// thus causing the test process to be forcibly terminated.
-		log.Info("Skipping AOF dump as test env enabled.")
+	if !config.DiceConfig.Server.WriteAOFOnCleanup {
+		log.Debug("Skipping AOF dump.")
 		return
 	}
 

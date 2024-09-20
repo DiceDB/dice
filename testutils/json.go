@@ -13,12 +13,6 @@ func IsJSONResponse(s string) bool {
 	return (s != utils.EmptyStr && (sonic.ValidString(s)))
 }
 
-func AssertJSONEqual(t *testing.T, expected, actual string) {
-	if !compareJSONs(t, expected, actual) {
-		t.Errorf("JSON not equal.\nExpected: %s\nActual: %s", expected, actual)
-	}
-}
-
 func AssertJSONEqualList(t *testing.T, expected []string, actual string) {
 	res := false
 	for _, exp := range expected {

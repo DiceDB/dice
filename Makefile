@@ -17,8 +17,10 @@ format:
 run:
 	go run main.go
 
+# Changing the parallel package count to 1 due to a possible race condition which causes the tests to get stuck.
+# TODO: Fix the tests to run in parallel, and remove the -p=1 flag.
 test:
-	go test -v -race -count=1 ./integration_tests/...
+	go test -v -race -count=1 -p=1 ./integration_tests/...
 
 test-one:
 	go test -v -race -count=1 --run $(TEST_FUNC) ./integration_tests/...
@@ -30,7 +32,10 @@ unittest-one:
 	go test -v -race -count=1 --run $(TEST_FUNC) ./internal/...
 
 build-docker:
-	docker build --tag dicedb/dicedb:latest --tag dicedb/dicedb:0.0.2 .
+	docker build --tag dicedb/dicedb:latest --tag dicedb/dicedb:0.0.4 .
+
+push-docker:
+	docker push dicedb/dicedb:0.0.4
 
 GOLANGCI_LINT_VERSION := 1.60.1
 

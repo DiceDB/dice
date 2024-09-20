@@ -17,11 +17,12 @@ const (
 	NoKeyErr             = "no such key"
 	ErrDefault           = "-ERR %s"
 	WrongTypeErr         = "-WRONGTYPE Operation against a key holding the wrong kind of value"
-	WrongTypeHllErr    = "-WRONGTYPE Key is not a valid HyperLogLog string value."
+	WrongTypeHllErr      = "-WRONGTYPE Key is not a valid HyperLogLog string value."
 	InvalidHllErr        = "-INVALIDOBJ Corrupted HLL object detected"
 	WorkerNotFoundErr    = "worker with ID %s not found"
 	JSONPathNotExistErr  = "-ERR Path '%s' does not exist"
 	JSONPathValueTypeErr = "-WRONGTYPE wrong type of path value - expected string but found integer"
+	InvalidExpireTime    = "-ERR invalid expire time"
 )
 
 type DiceError struct {
