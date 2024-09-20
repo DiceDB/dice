@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"hash/crc32"
 	"net/http"
@@ -104,7 +105,8 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 		defer wg.Done()
 		<-ctx.Done()
 		err = s.httpServer.Shutdown(httpCtx)
-		if err != nil {
+		// TODO: Check for clean connection close in case a QWATCH client still subscribed
+		if err != nil && !errors.Is(err, context.Canceled) {
 			log.Errorf("HTTP Server Shutdown Failed: %v", err)
 			return
 		}
