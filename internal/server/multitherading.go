@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/comm"
@@ -33,8 +34,8 @@ func (s *AsyncServer) scatter(cmds []cmd.RedisCmd, c *comm.Client) {
 	// and send it to the particular shard
 	for i := 0; i < len(cmds); i++ {
 		var id uint32
-		if len(cmds[0].Args) > 0 {
-			key := cmds[0].Args[0]
+		if len(cmds[i].Args) > 0 {
+			key := cmds[i].Args[i]
 			id = getShard(key, uint32(s.shardManager.GetShardCount()))
 		}
 		s.shardManager.GetShard(shard.ShardID(id)).ReqChan <- &ops.StoreOp{
@@ -57,6 +58,8 @@ func (s *AsyncServer) gather(redisCmd *cmd.RedisCmd, buf *bytes.Buffer, numShard
 			// should another case for time.Sleep(n) to max wait for response
 		}
 	}
+
+	fmt.Println(evalResp)
 
 	// Check if command supports multisharding
 	val, ok := WorkerCmdsMeta[redisCmd.Cmd]

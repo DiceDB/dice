@@ -46,16 +46,16 @@ func evalSET(args []string, store *dstore.Store) EvalResponse {
 		switch arg {
 		case Ex, Px:
 			if state != Uninitialized {
-				return EvalResponse{Result: nil, Error: errors.New(diceerrors.SyntaxErr)}
+				return EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)))}
 			}
 			i++
 			if i == len(args) {
-				return EvalResponse{Result: nil, Error: errors.New(diceerrors.SyntaxErr)}
+				return EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)))}
 			}
 
 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
-				return EvalResponse{Result: nil, Error: errors.New(diceerrors.IntOrOutOfRangeErr)}
+				return EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)))}
 			}
 
 			if exDuration <= 0 || exDuration >= maxExDuration {
@@ -71,15 +71,15 @@ func evalSET(args []string, store *dstore.Store) EvalResponse {
 
 		case Pxat, Exat:
 			if state != Uninitialized {
-				return EvalResponse{Result: nil, Error: errors.New(diceerrors.SyntaxErr)}
+				return EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)))}
 			}
 			i++
 			if i == len(args) {
-				return EvalResponse{Result: nil, Error: errors.New(diceerrors.SyntaxErr)}
+				return EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)))}
 			}
 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
-				return EvalResponse{Result: nil, Error: errors.New(diceerrors.IntOrOutOfRangeErr)}
+				return EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)))}
 			}
 
 			if exDuration < 0 {
@@ -113,7 +113,7 @@ func evalSET(args []string, store *dstore.Store) EvalResponse {
 		case KEEPTTL, Keepttl:
 			keepttl = true
 		default:
-			return EvalResponse{Result: nil, Error: errors.New(diceerrors.SyntaxErr)}
+			return EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)))}
 		}
 	}
 
@@ -130,6 +130,7 @@ func evalSET(args []string, store *dstore.Store) EvalResponse {
 
 	// putting the k and value in a Hash Table
 	store.Put(key, store.NewObj(storedValue, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
+
 	return EvalResponse{Result: clientio.RespOK, Error: nil}
 }
 

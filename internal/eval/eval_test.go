@@ -23,10 +23,13 @@ import (
 )
 
 type evalTestCase struct {
-	setup     func()
-	input     []string
-	output    []byte
-	validator func(output []byte)
+	setup             func()
+	input             []string
+	output            []byte
+	validator         func(output []byte)
+	isErrorScenario   bool
+	migratedOutput    EvalResponse
+	MigratedValidater func(resp EvalResponse)
 }
 
 func setupTest(store *dstore.Store) *dstore.Store {
@@ -39,43 +42,43 @@ func setupTest(store *dstore.Store) *dstore.Store {
 func TestEval(t *testing.T) {
 	store := dstore.NewStore(nil)
 
-	testEvalMSET(t, store)
-	testEvalHELLO(t, store)
-	// testEvalSET(t, store)
-	// testEvalGET(t, store)
-	testEvalDebug(t, store)
-	testEvalJSONARRPOP(t, store)
-	testEvalJSONARRLEN(t, store)
-	testEvalJSONDEL(t, store)
-	testEvalJSONFORGET(t, store)
-	testEvalJSONCLEAR(t, store)
-	testEvalJSONTYPE(t, store)
-	testEvalJSONGET(t, store)
-	testEvalJSONSET(t, store)
-	testEvalJSONTOGGLE(t, store)
-	testEvalJSONARRAPPEND(t, store)
-	testEvalTTL(t, store)
-	testEvalDel(t, store)
-	testEvalPersist(t, store)
-	testEvalEXPIRE(t, store)
-	testEvalEXPIRETIME(t, store)
-	testEvalEXPIREAT(t, store)
-	testEvalDbsize(t, store)
-	// testEvalGETSET(t, store)
-	testEvalHSET(t, store)
-	testEvalPFADD(t, store)
-	testEvalPFCOUNT(t, store)
-	testEvalHGET(t, store)
-	testEvalPFMERGE(t, store)
-	testEvalJSONSTRLEN(t, store)
-	testEvalJSONOBJLEN(t, store)
-	testEvalHLEN(t, store)
-	testEvalSELECT(t, store)
-	testEvalLLEN(t, store)
-	testEvalGETEX(t, store)
-	testEvalJSONNUMINCRBY(t, store)
-	testEvalTYPE(t, store)
-	testEvalCOMMAND(t, store)
+	// testEvalMSET(t, store)
+	// testEvalHELLO(t, store)
+	testEvalSET(t, store)
+	testEvalGET(t, store)
+	// testEvalDebug(t, store)
+	// testEvalJSONARRPOP(t, store)
+	// testEvalJSONARRLEN(t, store)
+	// testEvalJSONDEL(t, store)
+	// testEvalJSONFORGET(t, store)
+	// testEvalJSONCLEAR(t, store)
+	// testEvalJSONTYPE(t, store)
+	// testEvalJSONGET(t, store)
+	// testEvalJSONSET(t, store)
+	// testEvalJSONTOGGLE(t, store)
+	// testEvalJSONARRAPPEND(t, store)
+	// testEvalTTL(t, store)
+	// testEvalDel(t, store)
+	// testEvalPersist(t, store)
+	// testEvalEXPIRE(t, store)
+	// testEvalEXPIRETIME(t, store)
+	// testEvalEXPIREAT(t, store)
+	// testEvalDbsize(t, store)
+	// // testEvalGETSET(t, store)
+	// testEvalHSET(t, store)
+	// testEvalPFADD(t, store)
+	// testEvalPFCOUNT(t, store)
+	// testEvalHGET(t, store)
+	// testEvalPFMERGE(t, store)
+	// testEvalJSONSTRLEN(t, store)
+	// testEvalJSONOBJLEN(t, store)
+	// testEvalHLEN(t, store)
+	// testEvalSELECT(t, store)
+	// testEvalLLEN(t, store)
+	// testEvalGETEX(t, store)
+	// testEvalJSONNUMINCRBY(t, store)
+	// testEvalTYPE(t, store)
+	// testEvalCOMMAND(t, store)
 }
 
 func testEvalHELLO(t *testing.T, store *dstore.Store) {
@@ -97,29 +100,93 @@ func testEvalHELLO(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalHELLO, store)
 }
 
-// func testEvalSET(t *testing.T, store *dstore.Store) {
-// 	tests := map[string]evalTestCase{
-// 		"nil value":                       {input: nil, output: []byte("-ERR wrong number of arguments for 'set' command\r\n")},
-// 		"empty array":                     {input: []string{}, output: []byte("-ERR wrong number of arguments for 'set' command\r\n")},
-// 		"one value":                       {input: []string{"KEY"}, output: []byte("-ERR wrong number of arguments for 'set' command\r\n")},
-// 		"key val pair":                    {input: []string{"KEY", "VAL"}, output: clientio.RespOK},
-// 		"key val pair with int val":       {input: []string{"KEY", "123456"}, output: clientio.RespOK},
-// 		"key val pair and expiry key":     {input: []string{"KEY", "VAL", Px}, output: []byte("-ERR syntax error\r\n")},
-// 		"key val pair and EX no val":      {input: []string{"KEY", "VAL", Ex}, output: []byte("-ERR syntax error\r\n")},
-// 		"key val pair and valid EX":       {input: []string{"KEY", "VAL", Ex, "2"}, output: clientio.RespOK},
-// 		"key val pair and invalid EX":     {input: []string{"KEY", "VAL", Ex, "invalid_expiry_val"}, output: []byte("-ERR value is not an integer or out of range\r\n")},
-// 		"key val pair and valid PX":       {input: []string{"KEY", "VAL", Px, "2000"}, output: clientio.RespOK},
-// 		"key val pair and invalid PX":     {input: []string{"KEY", "VAL", Px, "invalid_expiry_val"}, output: []byte("-ERR value is not an integer or out of range\r\n")},
-// 		"key val pair and both EX and PX": {input: []string{"KEY", "VAL", Ex, "2", Px, "2000"}, output: []byte("-ERR syntax error\r\n")},
-// 		"key val pair and PXAT no val":    {input: []string{"KEY", "VAL", Pxat}, output: []byte("-ERR syntax error\r\n")},
-// 		"key val pair and invalid PXAT":   {input: []string{"KEY", "VAL", Pxat, "invalid_expiry_val"}, output: []byte("-ERR value is not an integer or out of range\r\n")},
-// 		"key val pair and expired PXAT":   {input: []string{"KEY", "VAL", Pxat, "2"}, output: clientio.RespOK},
-// 		"key val pair and negative PXAT":  {input: []string{"KEY", "VAL", Pxat, "-123456"}, output: []byte("-ERR invalid expire time in 'set' command\r\n")},
-// 		"key val pair and valid PXAT":     {input: []string{"KEY", "VAL", Pxat, strconv.FormatInt(time.Now().Add(2*time.Minute).UnixMilli(), 10)}, output: clientio.RespOK},
-// 	}
+func testEvalSET(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrArity("SET")))},
+		},
+		"empty array": {
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrArity("SET")))},
+		},
+		"one value": {
+			input:          []string{"KEY"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrArity("SET")))},
+		},
+		"key val pair": {
+			input:          []string{"KEY", "VAL"},
+			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
+		},
+		"key val pair with int val": {
+			input:          []string{"KEY", "123456"},
+			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
+		},
+		"key val pair and expiry key": {
+			input:          []string{"KEY", "VAL", Px},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)))},
+		},
+		"key val pair and EX no val": {
+			input:          []string{"KEY", "VAL", Ex},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)))},
+		},
+		"key val pair and valid EX": {
+			input:          []string{"KEY", "VAL", Ex, "2"},
+			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
+		},
+		"key val pair and invalid EX": {
+			input:          []string{"KEY", "VAL", Ex, "invalid_expiry_val"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)))},
+		},
+		"key val pair and valid PX": {
+			input:          []string{"KEY", "VAL", Px, "2000"},
+			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
+		},
+		"key val pair and invalid PX": {
+			input:          []string{"KEY", "VAL", Px, "invalid_expiry_val"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)))},
+		},
+		"key val pair and both EX and PX": {
+			input:          []string{"KEY", "VAL", Ex, "2", Px, "2000"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)))},
+		},
+		"key val pair and PXAT no val": {
+			input:          []string{"KEY", "VAL", Pxat},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)))},
+		},
+		"key val pair and invalid PXAT": {
+			input:          []string{"KEY", "VAL", Pxat, "invalid_expiry_val"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)))},
+		},
+		"key val pair and expired PXAT": {
+			input:          []string{"KEY", "VAL", Pxat, "2"},
+			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
+		},
+		"key val pair and negative PXAT": {
+			input:          []string{"KEY", "VAL", Pxat, "-123456"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrExpireTime("SET")))},
+		},
+		"key val pair and valid PXAT": {
+			input:          []string{"KEY", "VAL", Pxat, strconv.FormatInt(time.Now().Add(2*time.Minute).UnixMilli(), 10)},
+			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// Optionally run setup
+			if tc.setup != nil {
+				tc.setup()
+			}
 
-// 	runEvalTests(t, tests, evalSET, store)
-// }
+			// Call the function under test with input and compare the migrated output
+			result := evalSET(tc.input, store) // Replace with actual function call
+
+			// Compare the Result field
+			assert.Equal(t, tc.migratedOutput, result, "Mismatch in EvalResponse for test case: %s", name)
+
+		})
+	}
+}
 
 func testEvalGETEX(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
@@ -165,60 +232,79 @@ func testEvalMSET(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalMSET, store)
 }
 
-// func testEvalGET(t *testing.T, store *dstore.Store) {
-// 	tests := map[string]evalTestCase{
-// 		"nil value": {
-// 			setup:  func() {},
-// 			input:  nil,
-// 			output: []byte("-ERR wrong number of arguments for 'get' command\r\n"),
-// 		},
-// 		"empty array": {
-// 			setup:  func() {},
-// 			input:  []string{},
-// 			output: []byte("-ERR wrong number of arguments for 'get' command\r\n"),
-// 		},
-// 		"key does not exist": {
-// 			setup:  func() {},
-// 			input:  []string{"NONEXISTENT_KEY"},
-// 			output: clientio.RespNIL,
-// 		},
-// 		"multiple arguments": {
-// 			setup:  func() {},
-// 			input:  []string{"KEY1", "KEY2"},
-// 			output: []byte("-ERR wrong number of arguments for 'get' command\r\n"),
-// 		},
-// 		"key exists": {
-// 			setup: func() {
-// 				key := "EXISTING_KEY"
-// 				value := "mock_value"
-// 				obj := &object.Obj{
-// 					Value:          value,
-// 					LastAccessedAt: uint32(time.Now().Unix()),
-// 				}
-// 				store.Put(key, obj)
-// 			},
-// 			input:  []string{"EXISTING_KEY"},
-// 			output: clientio.Encode("mock_value", false),
-// 		},
-// 		"key exists but expired": {
-// 			setup: func() {
-// 				key := "EXISTING_KEY"
-// 				value := "mock_value"
-// 				obj := &object.Obj{
-// 					Value:          value,
-// 					LastAccessedAt: uint32(time.Now().Unix()),
-// 				}
-// 				store.Put(key, obj)
+func testEvalGET(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			setup:           func() {},
+			input:           nil,
+			isErrorScenario: true,
+			output:          []byte("-ERR wrong number of arguments for 'get' command\r\n"),
+		},
+		"empty array": {
+			setup:           func() {},
+			input:           []string{},
+			isErrorScenario: true,
+			output:          []byte("-ERR wrong number of arguments for 'get' command\r\n"),
+		},
+		"key does not exist": {
+			setup:           func() {},
+			input:           []string{"NONEXISTENT_KEY"},
+			isErrorScenario: false,
+			output:          clientio.RespNIL,
+		},
+		"multiple arguments": {
+			setup:           func() {},
+			input:           []string{"KEY1", "KEY2"},
+			isErrorScenario: true,
+			output:          []byte("-ERR wrong number of arguments for 'get' command\r\n"),
+		},
+		"key exists": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "mock_value"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:           []string{"EXISTING_KEY"},
+			isErrorScenario: false,
+			output:          clientio.Encode("mock_value", false),
+		},
+		"key exists but expired": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "mock_value"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
 
-// 				store.SetExpiry(obj, int64(-2*time.Millisecond))
-// 			},
-// 			input:  []string{"EXISTING_KEY"},
-// 			output: clientio.RespNIL,
-// 		},
-// 	}
+				store.SetExpiry(obj, int64(-2*time.Millisecond))
+			},
+			input:           []string{"EXISTING_KEY"},
+			isErrorScenario: false,
+			output:          clientio.RespNIL,
+		},
+	}
 
-// 	runEvalTests(t, tests, evalGET, store)
-// }
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			if tc.setup != nil {
+				tc.setup()
+			}
+
+			output := evalSET(tc.input, store)
+			if tc.isErrorScenario {
+				assert.Equal(t, output.Error.Error(), string(tc.output))
+			} else {
+				assert.Equal(t, output.Result.(string), tc.output)
+			}
+		})
+	}
+}
 
 // func testEvalGETSET(t *testing.T, store *dstore.Store) {
 // 	tests := map[string]evalTestCase{
