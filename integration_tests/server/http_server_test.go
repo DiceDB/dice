@@ -24,7 +24,7 @@ func TestHttpServer(t *testing.T) {
 	t.Cleanup(cancel)
 
 	var wg sync.WaitGroup
-	commands.RunHttpServer(ctx, &wg, testHttpOptions)
+	commands.RunHTTPServer(ctx, &wg, testHttpOptions)
 
 	time.Sleep(2 * time.Second)
 
@@ -83,7 +83,7 @@ func TestHttpServer_HandlesSupportedCommands(t *testing.T) {
 	t.Cleanup(cancel)
 
 	var wg sync.WaitGroup
-	commands.RunHttpServer(ctx, &wg, testHttpOptions)
+	commands.RunHTTPServer(ctx, &wg, testHttpOptions)
 
 	time.Sleep(2 * time.Second)
 

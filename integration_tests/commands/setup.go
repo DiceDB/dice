@@ -152,19 +152,17 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	}()
 }
 
-func RunHttpServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOptions) {
+func RunHTTPServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOptions) {
 	config.DiceConfig.Network.IOBufferLength = 16
 	config.DiceConfig.Server.WriteAOFOnCleanup = false
 
 	watchChan := make(chan dstore.WatchEvent, config.DiceConfig.Server.KeysLimit)
 	shardManager := shard.NewShardManager(1, watchChan)
 	config.HTTPPort = opt.Port
-
 	// Initialize the AsyncServer
 	testServer := server.NewHTTPServer(shardManager, watchChan)
-
 	// Inform the user that the server is starting
-	fmt.Println("Starting the test server on port", config.DiceConfig.Server.Port)
+	fmt.Println("Starting the test server on port", config.HTTPPort)
 
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
 	wg.Add(1)
@@ -185,5 +183,4 @@ func RunHttpServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 			log.Fatalf("Http test server encountered an error: %v", err)
 		}
 	}()
-
 }

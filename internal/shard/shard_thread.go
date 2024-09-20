@@ -19,6 +19,8 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
+const ABORT string = "ABORT"
+
 type ShardID int8
 
 type ShardError struct {
@@ -112,7 +114,7 @@ func (shard *ShardThread) executeCommand(op *ops.StoreOp) []byte {
 
 	// Till the time we refactor to handle QWATCH differently using HTTP Streaming/SSE
 	// The 'ABORT' command does not need any evaluation
-	if op.HTTPOp && diceCmd.Name != "ABORT" {
+	if op.HTTPOp && diceCmd.Name != ABORT {
 		return diceCmd.Eval(op.Cmd.Args, shard.store)
 	}
 
@@ -125,7 +127,7 @@ func (shard *ShardThread) executeCommand(op *ops.StoreOp) []byte {
 		return eval.EvalQUNWATCH(op.Cmd.Args, op.Client.Fd)
 	case auth.AuthCmd:
 		return eval.EvalAUTH(op.Cmd.Args, op.Client)
-	case "ABORT":
+	case ABORT:
 		return clientio.RespOK
 	default:
 		return diceCmd.Eval(op.Cmd.Args, shard.store)
