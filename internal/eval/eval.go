@@ -3548,3 +3548,59 @@ func evalTYPE(args []string, store *dstore.Store) []byte {
 
 	return clientio.Encode(typeStr, false)
 }
+
+func evalGETRANGE(args []string, store *dstore.Store) []byte {
+	if len(args) != 3 {
+		return diceerrors.NewErrArity("GETRANGE")
+	}
+	key := args[0]
+	obj := store.Get(key)
+	start, err := strconv.Atoi(args[1])
+	if err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
+	}
+	end, err := strconv.Atoi(args[2])
+	if err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
+	}
+
+	if obj == nil {
+		return clientio.Encode("", false)
+	}
+
+	var str string
+	switch _, oEnc := object.ExtractTypeEncoding(obj); oEnc {
+	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
+		if val, ok := obj.Value.(string); ok {
+			str = val
+		} else {
+			return diceerrors.NewErrWithMessage("expected string but got another type")
+		}
+	case object.ObjEncodingInt:
+		str = strconv.FormatInt(obj.Value.(int64), 10)
+	default:
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
+	if start < 0 {
+		start = len(str) + start
+	}
+
+	if end < 0 {
+		end = len(str) + end
+	}
+
+	if len(str) == 0 || start >= len(str) || end < 0 || start > end {
+		return clientio.Encode("", false)
+	}
+
+	if start < 0 {
+		start = 0
+	}
+
+	if end >= len(str) {
+		end = len(str) - 1
+	}
+
+	return clientio.Encode(str[start:end+1], false)
+}
