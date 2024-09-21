@@ -42,24 +42,25 @@ var (
 
 type Config struct {
 	Server struct {
-		Addr                   string        `mapstructure:"addr"`
-		Port                   int           `mapstructure:"port"`
-		KeepAlive              int32         `mapstructure:"keepalive"`
-		Timeout                int32         `mapstructure:"timeout"`
-		MaxConn                int32         `mapstructure:"max-conn"`
-		ShardCronFrequency     time.Duration `mapstructure:"shardcronfrequency"`
-		MultiplexerPollTimeout time.Duration `mapstructure:"servermultiplexerpolltimeout"`
-		MaxClients             int           `mapstructure:"maxclients"`
-		MaxMemory              int64         `mapstructure:"maxmemory"`
-		EvictionPolicy         string        `mapstructure:"evictionpolicy"`
-		EvictionRatio          float64       `mapstructure:"evictionratio"`
-		KeysLimit              int           `mapstructure:"keyslimit"`
-		AOFFile                string        `mapstructure:"aoffile"`
-		PersistenceEnabled     bool          `mapstructure:"persistenceenabled"`
-		WriteAOFOnCleanup      bool          `mapstructure:"writeaofoncleanup"`
-		LFULogFactor           int           `mapstructure:"lfulogfactor"`
-		LogLevel               string        `mapstructure:"loglevel"`
-		PrettyPrintLogs        bool          `mapstructure:"prettyprintlogs"`
+		Addr                   string             `mapstructure:"addr"`
+		Port                   int                `mapstructure:"port"`
+		KeepAlive              int32              `mapstructure:"keepalive"`
+		Timeout                int32              `mapstructure:"timeout"`
+		MaxConn                int32              `mapstructure:"max-conn"`
+		ShardCronFrequency     time.Duration      `mapstructure:"shardcronfrequency"`
+		MultiplexerPollTimeout time.Duration      `mapstructure:"servermultiplexerpolltimeout"`
+		MaxClients             int                `mapstructure:"maxclients"`
+		MaxMemory              int64              `mapstructure:"maxmemory"`
+		EvictionPolicy         string             `mapstructure:"evictionpolicy"`
+		EvictionRatio          float64            `mapstructure:"evictionratio"`
+		KeysLimit              int                `mapstructure:"keyslimit"`
+		AOFFile                string             `mapstructure:"aoffile"`
+		PersistenceEnabled     bool               `mapstructure:"persistenceenabled"`
+		WriteAOFOnCleanup      bool               `mapstructure:"writeaofoncleanup"`
+		LFULogFactor           int                `mapstructure:"lfulogfactor"`
+		LogLevel               string             `mapstructure:"loglevel"`
+		PrettyPrintLogs        bool               `mapstructure:"prettyprintlogs"`
+		SnapshotInterval       []SnapshotInterval `mapstructure:"snapshotinterval"`
 	} `mapstructure:"server"`
 	Auth struct {
 		UserName string `mapstructure:"username"`
@@ -71,27 +72,33 @@ type Config struct {
 	} `mapstructure:"network"`
 }
 
+type SnapshotInterval struct {
+	Interval    time.Duration
+	KeysChanged int
+}
+
 // Default configurations for internal use
 var baseConfig = Config{
 	Server: struct {
-		Addr                   string        `mapstructure:"addr"`
-		Port                   int           `mapstructure:"port"`
-		KeepAlive              int32         `mapstructure:"keepalive"`
-		Timeout                int32         `mapstructure:"timeout"`
-		MaxConn                int32         `mapstructure:"max-conn"`
-		ShardCronFrequency     time.Duration `mapstructure:"shardcronfrequency"`
-		MultiplexerPollTimeout time.Duration `mapstructure:"servermultiplexerpolltimeout"`
-		MaxClients             int           `mapstructure:"maxclients"`
-		MaxMemory              int64         `mapstructure:"maxmemory"`
-		EvictionPolicy         string        `mapstructure:"evictionpolicy"`
-		EvictionRatio          float64       `mapstructure:"evictionratio"`
-		KeysLimit              int           `mapstructure:"keyslimit"`
-		AOFFile                string        `mapstructure:"aoffile"`
-		PersistenceEnabled     bool          `mapstructure:"persistenceenabled"`
-		WriteAOFOnCleanup      bool          `mapstructure:"writeaofoncleanup"`
-		LFULogFactor           int           `mapstructure:"lfulogfactor"`
-		LogLevel               string        `mapstructure:"loglevel"`
-		PrettyPrintLogs        bool          `mapstructure:"prettyprintlogs"`
+		Addr                   string             `mapstructure:"addr"`
+		Port                   int                `mapstructure:"port"`
+		KeepAlive              int32              `mapstructure:"keepalive"`
+		Timeout                int32              `mapstructure:"timeout"`
+		MaxConn                int32              `mapstructure:"max-conn"`
+		ShardCronFrequency     time.Duration      `mapstructure:"shardcronfrequency"`
+		MultiplexerPollTimeout time.Duration      `mapstructure:"servermultiplexerpolltimeout"`
+		MaxClients             int                `mapstructure:"maxclients"`
+		MaxMemory              int64              `mapstructure:"maxmemory"`
+		EvictionPolicy         string             `mapstructure:"evictionpolicy"`
+		EvictionRatio          float64            `mapstructure:"evictionratio"`
+		KeysLimit              int                `mapstructure:"keyslimit"`
+		AOFFile                string             `mapstructure:"aoffile"`
+		PersistenceEnabled     bool               `mapstructure:"persistenceenabled"`
+		WriteAOFOnCleanup      bool               `mapstructure:"writeaofoncleanup"`
+		LFULogFactor           int                `mapstructure:"lfulogfactor"`
+		LogLevel               string             `mapstructure:"loglevel"`
+		PrettyPrintLogs        bool               `mapstructure:"prettyprintlogs"`
+		SnapshotInterval       []SnapshotInterval `mapstructure:"snapshotinterval"`
 	}{
 		Addr:                   DefaultHost,
 		Port:                   DefaultPort,
@@ -110,7 +117,12 @@ var baseConfig = Config{
 		WriteAOFOnCleanup:      true,
 		LFULogFactor:           10,
 		LogLevel:               "info",
-		PrettyPrintLogs:        false,
+		PrettyPrintLogs:        true,
+		SnapshotInterval: []SnapshotInterval{
+			{Interval: 15 * time.Minute, KeysChanged: 1},
+			{Interval: 5 * time.Minute, KeysChanged: 10},
+			{Interval: 1 * time.Minute, KeysChanged: 10000},
+		},
 	},
 	Auth: struct {
 		UserName string `mapstructure:"username"`
@@ -169,7 +181,7 @@ func SetupConfig() {
 	}
 
 	// Check if -c flag is set
-	if ConfigFileLocation != utils.EmptyStr || isConfigFilePresent() {
+	if ConfigFileLocation != utils.EmptyStr && isConfigFilePresent() {
 		setUpViperConfig(ConfigFileLocation)
 		return
 	}
@@ -191,7 +203,7 @@ func createConfigFile(configFilePath string) {
 	}
 
 	setUpViperConfig(configFilePath)
-	slog.Info("config file created at %s with default configurations", slog.Any("path", configFilePath))
+	slog.Info("config file created with default configurations at", slog.Any("path", configFilePath))
 }
 
 func writeConfigFile(configFilePath string) error {
@@ -200,7 +212,7 @@ func writeConfigFile(configFilePath string) error {
 		return err
 	}
 
-	slog.Info("creating default config file at %s", slog.Any("path", configFilePath))
+	slog.Info("creating default config file at", slog.Any("path", configFilePath))
 	file, err := os.Create(configFilePath)
 	if err != nil {
 		return err
@@ -251,6 +263,7 @@ func setUpViperConfig(configFilePath string) {
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			slog.Warn("config file not found. Using default configurations.")
+			mergeFlagsWithConfig()
 			return
 		}
 		slog.Error("Error reading config file", slog.Any("error", err))
@@ -259,6 +272,7 @@ func setUpViperConfig(configFilePath string) {
 	if err := viper.Unmarshal(&DiceConfig); err != nil {
 		slog.Error("Error unmarshalling config file", slog.Any("error", err))
 		slog.Warn("starting DiceDB with default configurations.")
+		mergeFlagsWithConfig()
 		return
 	}
 
