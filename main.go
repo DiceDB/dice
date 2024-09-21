@@ -6,15 +6,18 @@ import (
 	"flag"
 	"os"
 	"os/signal"
+	"runtime"
 	"sync"
 	"syscall"
 
+	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
 
 	"github.com/dicedb/dice/internal/server"
 
-	"github.com/charmbracelet/log"
+	"log/slog"
+
 	"github.com/dicedb/dice/config"
 )
 
@@ -33,6 +36,9 @@ func init() {
 }
 
 func main() {
+	logr := logger.New(logger.Opts{WithTimestamp: true})
+	slog.SetDefault(logr)
+
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// Handle SIGTERM and SIGINT
@@ -40,18 +46,34 @@ func main() {
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
 	watchChan := make(chan dstore.WatchEvent, config.DiceConfig.Server.KeysLimit)
-	shardManager := shard.NewShardManager(1, watchChan)
+
+	// Get the number of available CPU cores on the machine using runtime.NumCPU().
+	// This determines the total number of logical processors that can be utilized
+	// for parallel execution. Setting the maximum number of CPUs to the available
+	// core count ensures the application can make full use of all available hardware.
+	numCores := runtime.NumCPU()
+
+	// The runtime.GOMAXPROCS(numCores) call limits the number of operating system
+	// threads that can execute Go code simultaneously to the number of CPU cores.
+	// This enables Go to run more efficiently, maximizing CPU utilization and
+	// improving concurrency performance across multiple goroutines.
+	runtime.GOMAXPROCS(numCores)
+
+	shardManager := shard.NewShardManager(int8(numCores), watchChan, logr)
 
 	// Initialize the AsyncServer
-	asyncServer := server.NewAsyncServer(shardManager, watchChan)
-	httpServer := server.NewHTTPServer(shardManager, watchChan)
+	asyncServer := server.NewAsyncServer(shardManager, watchChan, logr)
+	httpServer := server.NewHTTPServer(shardManager, watchChan, logr)
 
 	// Initialize the HTTP server
 
 	// Find a port and bind it
 	if err := asyncServer.FindPortAndBind(); err != nil {
 		cancel()
-		log.Fatal("Error finding and binding port:", err)
+		logr.Error("Error finding and binding port",
+			slog.Any("error", err),
+		)
+		os.Exit(1)
 	}
 
 	wg := sync.WaitGroup{}
@@ -82,15 +104,18 @@ func main() {
 		// Handling different server errors
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
-				log.Debug("Server was canceled")
+				logr.Debug("Server was canceled")
 			} else if errors.Is(err, server.ErrAborted) {
-				log.Debug("Server received abort command")
+				logr.Debug("Server received abort command")
 			} else {
-				log.Error("Server error", "error", err)
+				logr.Error(
+					"Server error",
+					slog.Any("error", err),
+				)
 			}
 			serverErrCh <- err
 		} else {
-			log.Debug("Server stopped without error")
+			logr.Debug("Server stopped without error")
 		}
 	}()
 
@@ -101,15 +126,15 @@ func main() {
 		err := httpServer.Run(ctx)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
-				log.Debug("HTTP Server was canceled")
+				logr.Debug("HTTP Server was canceled")
 			} else if errors.Is(err, server.ErrAborted) {
-				log.Debug("HTTP received abort command")
+				logr.Debug("HTTP received abort command")
 			} else {
-				log.Error("HTTP Server error", "error", err)
+				logr.Error("HTTP Server error", slog.Any("error", err))
 			}
 			serverErrCh <- err
 		} else {
-			log.Debug("HTTP Server stopped without error")
+			logr.Debug("HTTP Server stopped without error")
 		}
 	}()
 
@@ -130,5 +155,5 @@ func main() {
 	cancel()
 
 	wg.Wait()
-	log.Debug("Server has shut down gracefully")
+	logr.Debug("Server has shut down gracefully")
 }

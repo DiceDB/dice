@@ -8,6 +8,22 @@ type DiceCmdMeta struct {
 	Eval  func([]string, *dstore.Store) []byte
 	Arity int // number of arguments, it is possible to use -N to say >= N
 	KeySpecs
+
+	// IsMigrated indicates whether a command has been migrated to a new evaluation
+	// mechanism. If true, the command uses the newer evaluation logic represented by
+	// the NewEval function. This allows backward compatibility for commands that have
+	// not yet been migrated, ensuring they continue to use the older Eval function.
+	// As part of the transition process, commands can be flagged with IsMigrated to
+	// signal that they are using the updated execution path.
+	IsMigrated bool
+
+	// NewEval is the newer evaluation function for commands. It follows an updated
+	// execution model that returns an EvalResponse struct, offering more structured
+	// and detailed results, including metadata such as errors and additional info,
+	// instead of just raw bytes. Commands that have been migrated to this new model
+	// will utilize this function for evaluation, allowing for better handling of
+	// complex command execution scenarios and improved response consistency.
+	NewEval func([]string, *dstore.Store) EvalResponse
 }
 
 type KeySpecs struct {
@@ -19,18 +35,20 @@ type KeySpecs struct {
 var (
 	DiceCmds = map[string]DiceCmdMeta{}
 
+	echoCmdMeta = DiceCmdMeta{
+		Name:  "ECHO",
+		Info:  `ECHO returns the string given as argument.`,
+		Eval:  evalECHO,
+		Arity: 1,
+	}
+
 	pingCmdMeta = DiceCmdMeta{
-		Name:  "PING",
-		Info:  `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
-		Eval:  evalPING,
-		Arity: -1,
+		Name:       "PING",
+		Info:       `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
+		Arity:      -1,
+		IsMigrated: true,
 	}
-	authCmdMeta = DiceCmdMeta{
-		Name: "AUTH",
-		Info: `AUTH returns with an encoded "OK" if the user is authenticated.
-		If the user is not authenticated, it returns with an encoded error message`,
-		Eval: nil,
-	}
+
 	setCmdMeta = DiceCmdMeta{
 		Name: "SET",
 		Info: `SET puts a new <key, value> pair in db as in the args
@@ -41,9 +59,10 @@ var (
 		Returns encoded error response if expiry tme value in not integer
 		Returns encoded OK RESP once new entry is added
 		If the key already exists then the value will be overwritten and expiry will be discarded`,
-		Eval:     evalSET,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalSET,
 	}
 	getCmdMeta = DiceCmdMeta{
 		Name: "GET",
@@ -51,9 +70,25 @@ var (
 		The key should be the only param in args
 		The RESP value of the key is encoded and then returned
 		GET returns RespNIL if key is expired or it does not exist`,
-		Eval:     evalGET,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalGET,
+	}
+
+	getSetCmdMeta = DiceCmdMeta{
+		Name:       "GETSET",
+		Info:       `GETSET returns the previous string value of a key after setting it to a new value.`,
+		Arity:      2,
+		IsMigrated: true,
+		NewEval:    evalGETSET,
+	}
+
+	authCmdMeta = DiceCmdMeta{
+		Name: "AUTH",
+		Info: `AUTH returns with an encoded "OK" if the user is authenticated.
+		If the user is not authenticated, it returns with an encoded error message`,
+		Eval: nil,
 	}
 	getDelCmdMeta = DiceCmdMeta{
 		Name: "GETDEL",
@@ -180,7 +215,14 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
-
+	jsonnummultbyCmdMeta = DiceCmdMeta{
+		Name: "JSON.NUMMULTBY",
+		Info: `JSON.NUMMULTBY key path value
+		Multiply the number value stored at the specified path by a value.`,
+		Eval:     evalJSONNUMMULTBY,
+		Arity:    3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	jsonobjlenCmdMeta = DiceCmdMeta{
 		Name: "JSON.OBJLEN",
 		Info: `JSON.OBJLEN key [path]
@@ -226,11 +268,11 @@ var (
 	ttlCmdMeta = DiceCmdMeta{
 		Name: "TTL",
 		Info: `TTL returns Time-to-Live in secs for the queried key in args
-		 The key should be the only param in args else returns with an error
-		 Returns
-		 RESP encoded time (in secs) remaining for the key to expire
-		 RESP encoded -2 stating key doesn't exist or key is expired
-		 RESP encoded -1 in case no expiration is set on the key`,
+		The key should be the only param in args else returns with an error
+		Returns
+		RESP encoded time (in secs) remaining for the key to expire
+		RESP encoded -2 stating key doesn't exist or key is expired
+		RESP encoded -1 in case no expiration is set on the key`,
 		Eval:     evalTTL,
 		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
@@ -502,11 +544,11 @@ var (
 	pttlCmdMeta = DiceCmdMeta{
 		Name: "PTTL",
 		Info: `PTTL returns Time-to-Live in millisecs for the queried key in args
-		 The key should be the only param in args else returns with an error
-		 Returns
-		 RESP encoded time (in secs) remaining for the key to expire
-		 RESP encoded -2 stating key doesn't exist or key is expired
-		 RESP encoded -1 in case no expiration is set on the key`,
+		The key should be the only param in args else returns with an error
+		Returns
+		RESP encoded time (in secs) remaining for the key to expire
+		RESP encoded -2 stating key doesn't exist or key is expired
+		RESP encoded -1 in case no expiration is set on the key`,
 		Eval:     evalPTTL,
 		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
@@ -612,12 +654,6 @@ var (
 		Info:  `DBSIZE Return the number of keys in the database`,
 		Eval:  evalDBSIZE,
 		Arity: 1,
-	}
-	getSetCmdMeta = DiceCmdMeta{
-		Name:  "GETSET",
-		Info:  `GETSET returns the previous string value of a key after setting it to a new value.`,
-		Eval:  evalGETSET,
-		Arity: 2,
 	}
 	flushdbCmdMeta = DiceCmdMeta{
 		Name:  "FLUSHDB",
@@ -787,6 +823,7 @@ var (
 
 func init() {
 	DiceCmds["PING"] = pingCmdMeta
+	DiceCmds["ECHO"] = echoCmdMeta
 	DiceCmds["AUTH"] = authCmdMeta
 	DiceCmds["DUMP"]=dumpkeyCMmdMeta
 	DiceCmds["RESTORE"]=restorekeyCmdMeta
@@ -802,6 +839,7 @@ func init() {
 	DiceCmds["JSON.ARRAPPEND"] = jsonarrappendCmdMeta
 	DiceCmds["JSON.FORGET"] = jsonforgetCmdMeta
 	DiceCmds["JSON.ARRLEN"] = jsonarrlenCmdMeta
+	DiceCmds["JSON.NUMMULTBY"] = jsonnummultbyCmdMeta
 	DiceCmds["JSON.OBJLEN"] = jsonobjlenCmdMeta
 	DiceCmds["JSON.DEBUG"] = jsondebugCmdMeta
 	DiceCmds["JSON.ARRPOP"] = jsonarrpopCmdMeta
@@ -878,7 +916,7 @@ func init() {
 }
 
 // Function to convert DiceCmdMeta to []interface{}
-func convertCmdMetaToSlice(cmdMeta DiceCmdMeta) []interface{} {
+func convertCmdMetaToSlice(cmdMeta *DiceCmdMeta) []interface{} {
 	return []interface{}{cmdMeta.Name, cmdMeta.Arity, cmdMeta.KeySpecs.BeginIndex, cmdMeta.KeySpecs.LastKey, cmdMeta.KeySpecs.Step}
 }
 
@@ -886,7 +924,7 @@ func convertCmdMetaToSlice(cmdMeta DiceCmdMeta) []interface{} {
 func convertDiceCmdsMapToSlice() []interface{} {
 	var result []interface{}
 	for _, cmdMeta := range DiceCmds {
-		result = append(result, convertCmdMetaToSlice(cmdMeta))
+		result = append(result, convertCmdMetaToSlice(&cmdMeta))
 	}
 	return result
 }
