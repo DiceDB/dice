@@ -3025,10 +3025,9 @@ func testEvalGETRANGE(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalGETRANGE(b *testing.B) {
-	store := dstore.NewStore(nil) // Initialize your store
+	store := dstore.NewStore(nil)
 	store.Put("BENCHMARK_KEY", store.NewObj("Hello World", maxExDuration, object.ObjTypeString, object.ObjEncodingRaw))
 
-	// Define the inputs for the benchmark
 	inputs := []struct {
 		start string
 		end   string

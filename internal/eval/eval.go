@@ -3549,6 +3549,11 @@ func evalTYPE(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(typeStr, false)
 }
 
+// evalGETRANGE returns the substring of the string value stored at key, determined by the offsets start and end
+// The offsets are zero-based and can be negative values to index from the end of the string
+//
+// If the start offset is larger than the end offset, or if the start or end offset is greater than the length of the string,
+// an empty string is returned
 func evalGETRANGE(args []string, store *dstore.Store) []byte {
 	if len(args) != 3 {
 		return diceerrors.NewErrArity("GETRANGE")
