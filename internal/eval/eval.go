@@ -2216,6 +2216,8 @@ func evalCommand(args []string, store *dstore.Store) []byte {
 		return evalCommandList()
 	case Help:
 		return evalCommandHelp()
+	case Docs:
+		return evalCommandDocs()
 	default:
 		return diceerrors.NewErrWithFormattedMessage("unknown subcommand '%s'. Try COMMAND HELP.", subcommand)
 	}
@@ -2230,6 +2232,8 @@ func evalCommandHelp() []byte {
 	countMessage := "    Return the total number of commands in this Dice server."
 	listTitle := "LIST"
 	listMessage := "     Return a list of all commands in this Dice server."
+	docsTitle := "DOCS"
+	docsMessage := "     Return documentary information about all commands in this Dice server."
 	getKeysTitle := "GETKEYS <full-command>"
 	getKeysMessage := "     Return the keys from a full Dice command."
 	helpTitle := "HELP"
@@ -2242,12 +2246,30 @@ func evalCommandHelp() []byte {
 		countMessage,
 		listTitle,
 		listMessage,
+		docsTitle,
+		docsMessage,
 		getKeysTitle,
 		getKeysMessage,
 		helpTitle,
 		helpMessage,
 	}
 	return clientio.Encode(message, false)
+}
+
+func evalCommandDocs() []byte {
+	cmds := make([]interface{}, 0, diceCommandsCount)
+	for k, v := range DiceCmds {
+		info := v.Info
+		info = strings.ReplaceAll(v.Info, "\n", " ")
+		info = strings.ReplaceAll(info, "\t", "")
+
+		summary := []string{"Summary", info}
+
+		cmds = append(cmds, k)
+		cmds = append(cmds, summary)
+	}
+
+	return clientio.Encode(cmds, false)
 }
 
 func evalCommandDefault() []byte {

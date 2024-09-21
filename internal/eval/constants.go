@@ -26,6 +26,7 @@ const (
 	Help    string = "HELP"
 	Memory  string = "MEMORY"
 	Count   string = "COUNT"
+	Docs    string = "DOCS"
 	GetKeys string = "GETKEYS"
 	List    string = "LIST"
 	Null    string = "null"
