@@ -3699,3 +3699,69 @@ func evalTYPE(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(typeStr, false)
 }
 
+
+// evalGETRANGE returns the substring of the string value stored at key, determined by the offsets start and end
+// The offsets are zero-based and can be negative values to index from the end of the string
+//
+// If the start offset is larger than the end offset, or if the start or end offset is greater than the length of the string,
+// an empty string is returned
+func evalGETRANGE(args []string, store *dstore.Store) []byte {
+	if len(args) != 3 {
+		return diceerrors.NewErrArity("GETRANGE")
+	}
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		return clientio.Encode("", false)
+	}
+
+	start, err := strconv.Atoi(args[1])
+	if err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
+	}
+	end, err := strconv.Atoi(args[2])
+	if err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
+	}
+
+	var str string
+	switch _, oEnc := object.ExtractTypeEncoding(obj); oEnc {
+	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
+		if val, ok := obj.Value.(string); ok {
+			str = val
+		} else {
+			return diceerrors.NewErrWithMessage("expected string but got another type")
+		}
+	case object.ObjEncodingInt:
+		str = strconv.FormatInt(obj.Value.(int64), 10)
+	default:
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
+	if str == "" {
+		return clientio.Encode("", false)
+	}
+
+	if start < 0 {
+		start = len(str) + start
+	}
+
+	if end < 0 {
+		end = len(str) + end
+	}
+
+	if start >= len(str) || end < 0 || start > end {
+		return clientio.Encode("", false)
+	}
+
+	if start < 0 {
+		start = 0
+	}
+
+	if end >= len(str) {
+		end = len(str) - 1
+	}
+
+	return clientio.Encode(str[start:end+1], false)
+}
+
