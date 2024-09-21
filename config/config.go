@@ -29,8 +29,9 @@ var (
 	Host = DefaultHost
 	Port = DefaultPort
 
-	EnableHTTP = true
-	HTTPPort   = 8082
+	EnableMultiThreading = true
+	EnableHTTP           = true
+	HTTPPort             = 8082
 	// if RequirePass is set to an empty string, no authentication is required
 	RequirePass = utils.EmptyStr
 
@@ -60,6 +61,7 @@ type Config struct {
 		LFULogFactor           int           `mapstructure:"lfulogfactor"`
 		LogLevel               string        `mapstructure:"loglevel"`
 		PrettyPrintLogs        bool          `mapstructure:"prettyprintlogs"`
+		EnableMultiThreading   bool          `mapstructure:"enablemultithreading"`
 	} `mapstructure:"server"`
 	Auth struct {
 		UserName string `mapstructure:"username"`
@@ -92,6 +94,7 @@ var baseConfig = Config{
 		LFULogFactor           int           `mapstructure:"lfulogfactor"`
 		LogLevel               string        `mapstructure:"loglevel"`
 		PrettyPrintLogs        bool          `mapstructure:"prettyprintlogs"`
+		EnableMultiThreading   bool          `mapstructure:"enablemultithreading"`
 	}{
 		Addr:                   DefaultHost,
 		Port:                   DefaultPort,
@@ -111,6 +114,7 @@ var baseConfig = Config{
 		LFULogFactor:           10,
 		LogLevel:               "info",
 		PrettyPrintLogs:        false,
+		EnableMultiThreading:   true,
 	},
 	Auth: struct {
 		UserName string `mapstructure:"username"`
