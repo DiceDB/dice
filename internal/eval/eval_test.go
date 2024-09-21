@@ -54,6 +54,7 @@ func TestEval(t *testing.T) {
 	testEvalJSONTYPE(t, store)
 	testEvalJSONGET(t, store)
 	testEvalJSONSET(t, store)
+	testEvalJSONNUMMULTBY(t, store)
 	testEvalJSONTOGGLE(t, store)
 	testEvalJSONARRAPPEND(t, store)
 	testEvalTTL(t, store)
@@ -1066,6 +1067,87 @@ func testEvalJSONSET(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalJSONSET, store)
+}
+
+func testEvalJSONNUMMULTBY(t *testing.T, store *dstore.Store) {
+    tests := map[string]evalTestCase{
+        "nil value": {
+            setup:  func() {},
+            input:  nil,
+            output: []byte("-ERR wrong number of arguments for 'json.nummultby' command\r\n"),
+        },
+        "empty array": {
+            setup:  func() {},
+            input:  []string{},
+            output: []byte("-ERR wrong number of arguments for 'json.nummultby' command\r\n"),
+        },
+        "insufficient args": {
+            setup:  func() {},
+            input:  []string{"doc"},
+            output: []byte("-ERR wrong number of arguments for 'json.nummultby' command\r\n"),
+        },
+	"non-numeric multiplier on existing key": {
+		setup: func() {
+			key := "doc"
+			value := "{\"a\":10,\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
+			var rootData interface{}
+			_ = sonic.Unmarshal([]byte(value), &rootData)
+			obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+			store.Put(key, obj)
+		},
+		input: []string{"doc", "$.a", "qwe"},
+		output: []byte("-ERR expected value at line 1 column 1\r\n"),
+	},
+        "nummultby on non integer root fields": {
+            setup: func() {
+                key := "doc"
+                value := "{\"a\": \"b\",\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
+                var rootData interface{}
+                _ = sonic.Unmarshal([]byte(value), &rootData)
+                obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+                store.Put(key, obj)
+            },
+            input:  []string{"doc", "$.a", "2"},
+            output: []byte("$6\r\n[null]\r\n"),
+        },
+        "nummultby on recursive fields": {
+            setup: func() {
+                key := "doc"
+                value := "{\"a\": \"b\",\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
+                var rootData interface{}
+                _ = sonic.Unmarshal([]byte(value), &rootData)
+                obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+                store.Put(key, obj)
+            },
+            input:  []string{"doc", "$..a", "2"},
+            output: []byte("$16\r\n[4,10,null,null]\r\n"),
+        },
+        "nummultby on integer root fields": {
+            setup: func() {
+                key := "doc"
+                value := "{\"a\":10,\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
+                var rootData interface{}
+                _ = sonic.Unmarshal([]byte(value), &rootData)
+                obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+                store.Put(key, obj)
+            },
+            input:  []string{"doc", "$.a", "2"},
+            output: []byte("$4\r\n[20]\r\n"),
+        },
+	"nummultby on non-existent key": {
+		setup: func() {
+			key := "doc"
+			value := "{\"a\":10,\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
+			var rootData interface{}
+			_ = sonic.Unmarshal([]byte(value), &rootData)
+			obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+			store.Put(key, obj)
+		},
+		input: []string{"doc", "$..fe", "2"},
+		output: []byte("$2\r\n[]\r\n"),
+	},
+    }
+    runEvalTests(t, tests, evalJSONNUMMULTBY, store)
 }
 
 func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
