@@ -774,6 +774,13 @@ var (
 				The returned value can be synthesized back into a Redis key using the RESTORE command.`,
 		Eval: evalRestore,
 		Arity:	2,
+	}
+	typeCmdMeta = DiceCmdMeta{
+		Name:     "TYPE",
+		Info:     `Returns the string representation of the type of the value stored at key. The different types that can be returned are: string, list, set, zset, hash and stream.`,
+		Eval:     evalTYPE,
+		Arity:    1,
+
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 )
@@ -867,6 +874,7 @@ func init() {
 	DiceCmds["HLEN"] = hlenCmdMeta
 	DiceCmds["SELECT"] = selectCmdMeta
 	DiceCmds["JSON.NUMINCRBY"] = jsonnumincrbyCmdMeta
+	DiceCmds["TYPE"] = typeCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

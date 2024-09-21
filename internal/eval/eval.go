@@ -25,7 +25,6 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/comm"
 	diceerrors "github.com/dicedb/dice/internal/errors"
@@ -85,7 +84,7 @@ func EvalAUTH(args []string, c *comm.Client) []byte {
 		return diceerrors.NewErrWithMessage("AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?")
 	}
 
-	username := auth.DefaultUserName
+	username := config.DiceConfig.Auth.UserName
 	var password string
 
 	if len(args) == 1 {
@@ -3557,6 +3556,7 @@ func evalJSONNUMINCRBY(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(resultString, false)
 }
 
+
 func evalDUMP(args []string, store *dstore.Store) []byte {
     if len(args) < 1 {
         return diceerrors.NewErrArity("DUMP")
@@ -3678,7 +3678,7 @@ func writeString(buf *bytes.Buffer, str string) error {
     return nil
 }
 
-func writeInt(buf *bytes.Buffer, intVal int64) {
+func writeInt(buf *bytes.Buffer, intVal int64){
     tempBuf := make([]byte, 8)
     binary.BigEndian.PutUint64(tempBuf, uint64(intVal))
     buf.Write(tempBuf)
@@ -3692,5 +3692,30 @@ func appendChecksum(data []byte) []byte {
 }
 
 
+func evalTYPE(args []string, store *dstore.Store) []byte {
+	if len(args) != 1 {
+		return diceerrors.NewErrArity("TYPE")
+	}
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		return clientio.Encode("none", false)
+	}
 
+	var typeStr string
+	switch oType, _ := object.ExtractTypeEncoding(obj); oType {
+	case object.ObjTypeString, object.ObjTypeInt, object.ObjTypeByteArray:
+		typeStr = "string"
+	case object.ObjTypeByteList:
+		typeStr = "list"
+	case object.ObjTypeSet:
+		typeStr = "set"
+	case object.ObjTypeHashMap:
+		typeStr = "hash"
+	default:
+		typeStr = "non-supported type"
+	}
+
+	return clientio.Encode(typeStr, false)
+}
 
