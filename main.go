@@ -6,6 +6,7 @@ import (
 	"flag"
 	"os"
 	"os/signal"
+	"runtime"
 	"sync"
 	"syscall"
 
@@ -45,7 +46,20 @@ func main() {
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
 	watchChan := make(chan dstore.WatchEvent, config.DiceConfig.Server.KeysLimit)
-	shardManager := shard.NewShardManager(1, watchChan, logr)
+
+	// Get the number of available CPU cores on the machine using runtime.NumCPU().
+	// This determines the total number of logical processors that can be utilized
+	// for parallel execution. Setting the maximum number of CPUs to the available
+	// core count ensures the application can make full use of all available hardware.
+	numCores := runtime.NumCPU()
+
+	// The runtime.GOMAXPROCS(numCores) call limits the number of operating system
+	// threads that can execute Go code simultaneously to the number of CPU cores.
+	// This enables Go to run more efficiently, maximizing CPU utilization and
+	// improving concurrency performance across multiple goroutines.
+	runtime.GOMAXPROCS(numCores)
+
+	shardManager := shard.NewShardManager(int8(numCores), watchChan, logr)
 
 	// Initialize the AsyncServer
 	asyncServer := server.NewAsyncServer(shardManager, watchChan, logr)
