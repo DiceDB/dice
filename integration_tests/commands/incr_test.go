@@ -49,9 +49,9 @@ func TestINCR(t *testing.T) {
 			}{
 				{"s", "max_int", int64(math.MaxInt64 - 1), utils.EmptyStr},
 				{"i", "max_int", int64(math.MaxInt64), utils.EmptyStr},
-				{"i", "max_int", nil, "ERR value is out of range"},
+				{"i", "max_int", nil, "ERR increment or decrement would overflow"},
 				{"s", "max_int", int64(math.MaxInt64), utils.EmptyStr},
-				{"i", "max_int", nil, "ERR value is out of range"},
+				{"i", "max_int", nil, "ERR increment or decrement would overflow"},
 			},
 		},
 		{
@@ -76,11 +76,11 @@ func TestINCR(t *testing.T) {
 				expectedErr string
 			}{
 				{"s", "float_key", "3.14", utils.EmptyStr},
-				{"i", "float_key", nil, "ERR WRONGTYPE Operation against a key holding the wrong kind of value"},
+				{"i", "float_key", nil, "ERR value is not an integer or out of range"},
 				{"s", "string_key", "hello", utils.EmptyStr},
-				{"i", "string_key", nil, "ERR WRONGTYPE Operation against a key holding the wrong kind of value"},
+				{"i", "string_key", nil, "ERR value is not an integer or out of range"},
 				{"s", "bool_key", "true", utils.EmptyStr},
-				{"i", "bool_key", nil, "ERR WRONGTYPE Operation against a key holding the wrong kind of value"},
+				{"i", "bool_key", nil, "ERR value is not an integer or out of range"},
 			},
 		},
 		{
@@ -120,11 +120,11 @@ func TestINCR(t *testing.T) {
 				val         interface{}
 				expectedErr string
 			}{
-				{"se", "expiry_key", int64(0), utils.EmptyStr}, 
+				{"se", "expiry_key", int64(0), utils.EmptyStr},
 				{"i", "expiry_key", int64(1), utils.EmptyStr},
 				{"i", "expiry_key", int64(2), utils.EmptyStr},
-				{"w", "expiry_key", nil, utils.EmptyStr}, 
-				{"i", "expiry_key", int64(1), utils.EmptyStr}, 
+				{"w", "expiry_key", nil, utils.EmptyStr},
+				{"i", "expiry_key", int64(1), utils.EmptyStr},
 			},
 		},
 	}
@@ -132,8 +132,8 @@ func TestINCR(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Clean up keys before each test case
-			keys := []string{"key1", "key2", "max_int", "min_int", "float_key", "string_key", "bool_key", 
-							 "non_existent", "str_int1", "str_int2", "str_int3", "expiry_key"}
+			keys := []string{"key1", "key2", "max_int", "min_int", "float_key", "string_key", "bool_key",
+				"non_existent", "str_int1", "str_int2", "str_int3", "expiry_key"}
 			for _, key := range keys {
 				FireCommand(conn, fmt.Sprintf("DEL %s", key))
 			}
@@ -143,7 +143,7 @@ func TestINCR(t *testing.T) {
 				case "s":
 					FireCommand(conn, fmt.Sprintf("SET %s %v", cmd.key, cmd.val))
 				case "se":
-					FireCommand(conn, fmt.Sprintf("SET %s %v EX 1", cmd.key, cmd.val)) 
+					FireCommand(conn, fmt.Sprintf("SET %s %v EX 1", cmd.key, cmd.val))
 				case "i":
 					result := FireCommand(conn, fmt.Sprintf("INCR %s", cmd.key))
 					switch v := result.(type) {
@@ -156,7 +156,7 @@ func TestINCR(t *testing.T) {
 					result := FireCommand(conn, fmt.Sprintf("GET %s", cmd.key))
 					assert.Equal(t, cmd.val, result)
 				case "w":
-					time.Sleep(1100 * time.Millisecond) 
+					time.Sleep(1100 * time.Millisecond)
 				}
 			}
 		})
