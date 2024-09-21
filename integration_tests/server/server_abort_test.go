@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net"
 	"sync"
 	"testing"
@@ -14,7 +15,8 @@ import (
 )
 
 var testServerOptions = commands.TestServerOptions{
-	Port: 8740,
+	Port:   8740,
+	Logger: slog.Default(),
 }
 
 func TestAbortCommand(t *testing.T) {

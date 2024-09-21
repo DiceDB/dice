@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sync"
 	"syscall"
 	"time"
@@ -14,7 +15,6 @@ import (
 
 	"github.com/dicedb/dice/internal/sql"
 
-	"github.com/charmbracelet/log"
 	"github.com/cockroachdb/swiss"
 	"github.com/dicedb/dice/internal/clientio"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -52,6 +52,7 @@ type (
 		WatchList    sync.Map                       // WatchList is a map of query string to their respective clients, type: map[string]*sync.Map[int]struct{}
 		QueryCache   *swiss.Map[string, cacheStore] // QueryCache is a map of fingerprints to their respective data caches
 		QueryCacheMu sync.RWMutex
+		logger       *slog.Logger
 	}
 )
 
@@ -64,12 +65,13 @@ var (
 )
 
 // NewQueryManager initializes a new QueryManager.
-func NewQueryManager() *QueryManager {
+func NewQueryManager(logger *slog.Logger) *QueryManager {
 	WatchSubscriptionChan = make(chan WatchSubscription)
 	AdhocQueryChan = make(chan AdhocQuery, 1000)
 	return &QueryManager{
 		WatchList:  sync.Map{},
 		QueryCache: swiss.New[string, cacheStore](0),
+		logger:     logger,
 	}
 }
 
@@ -139,7 +141,10 @@ func (w *QueryManager) processWatchEvent(event dstore.WatchEvent) {
 
 		query, err := sql.ParseQuery(queryString)
 		if err != nil {
-			log.Error(fmt.Sprintf("error parsing query: %s", queryString))
+			w.logger.Error(
+				"error parsing query",
+				slog.String("query", queryString),
+			)
 			return true
 		}
 
@@ -155,7 +160,7 @@ func (w *QueryManager) processWatchEvent(event dstore.WatchEvent) {
 
 		queryResult, err := w.runQuery(&query)
 		if err != nil {
-			log.Error(err)
+			w.logger.Error(err.Error())
 			return true
 		}
 
@@ -171,7 +176,7 @@ func (w *QueryManager) updateQueryCache(queryFingerprint string, event dstore.Wa
 
 	store, ok := w.QueryCache.Get(queryFingerprint)
 	if !ok {
-		log.Warnf("Fingerprint not found in cacheStore: %s", queryFingerprint)
+		w.logger.Warn("Fingerprint not found in cacheStore", slog.String("fingerprint", queryFingerprint))
 		return
 	}
 
@@ -181,7 +186,7 @@ func (w *QueryManager) updateQueryCache(queryFingerprint string, event dstore.Wa
 	case dstore.Del:
 		((*swiss.Map[string, *object.Obj])(store)).Delete(event.Key)
 	default:
-		log.Warnf("Unknown operation: %s", event.Operation)
+		w.logger.Warn("Unknown operation", slog.String("operation", event.Operation))
 	}
 }
 
@@ -220,12 +225,20 @@ func (w *QueryManager) sendWithRetry(query *sql.DSQLQuery, clientFD int, data []
 			continue
 		}
 
-		log.Error(fmt.Sprintf("error writing to client %d: %v", clientFD, err))
+		w.logger.Error(
+			"error writing to client",
+			slog.Int("client", clientFD),
+			slog.Any("error", err),
+		)
 		w.removeWatcher(query, clientFD)
 		return
 	}
 
-	log.Error(fmt.Sprintf("failed to write to client %d after %d retries", clientFD, maxRetries))
+	w.logger.Error(
+		"failed to write to client after retries",
+		slog.Int("fd", clientFD),
+		slog.Int("retries", maxRetries),
+	)
 	w.removeWatcher(query, clientFD)
 }
 
@@ -276,7 +289,7 @@ func (w *QueryManager) removeWatcher(query *sql.DSQLQuery, clientFD int) {
 	queryString := query.String()
 	if clients, ok := w.WatchList.Load(queryString); ok {
 		clients.(*sync.Map).Delete(clientFD)
-		log.Debugf("client '%d' no longer watching query: %s", clientFD, queryString)
+		w.logger.Debug("client no longer watching query", slog.Int("client", clientFD), slog.String("query", queryString))
 
 		// If no more clients for this query, remove the query from WatchList
 		if w.clientCount(clients.(*sync.Map)) == 0 {
@@ -287,7 +300,7 @@ func (w *QueryManager) removeWatcher(query *sql.DSQLQuery, clientFD int) {
 			w.QueryCache.Delete(query.Fingerprint)
 			w.QueryCacheMu.Unlock()
 
-			log.Debugf("no longer watching query: %s", queryString)
+			w.logger.Debug("no longer watching query", slog.String("query", queryString))
 		}
 	}
 }

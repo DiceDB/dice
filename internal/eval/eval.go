@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math"
 	"regexp"
 	"sort"
@@ -20,7 +21,6 @@ import (
 
 	"github.com/axiomhq/hyperloglog"
 	"github.com/bytedance/sonic"
-	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/comm"
@@ -42,6 +42,13 @@ var (
 	TxnCommands       map[string]bool
 	serverID          string
 	diceCommandsCount int
+)
+
+type jsonOperation string
+
+const (
+	IncrBy = "INCRBY"
+	MultBy = "MULTBY"
 )
 
 const defaultRootPath = "$"
@@ -70,6 +77,15 @@ func evalPING(args []string, store *dstore.Store) []byte {
 	}
 
 	return b
+}
+
+// evalECHO returns the argument passed by the user 
+func evalECHO(args []string, store *dstore.Store) []byte {
+	if len(args) != 1 {
+		return diceerrors.NewErrArity("ECHO")
+	}
+
+	return clientio.Encode(args[0], false)
 }
 
 // EvalAUTH returns with an encoded "OK" if the user is authenticated
@@ -1257,6 +1273,173 @@ func evalJSONSET(args []string, store *dstore.Store) []byte {
 	return clientio.RespOK
 }
 
+// Parses and returns the input string as an int64 or float64
+func parseFloatInt(input string) (result interface{}, err error) {
+	// Try to parse as an integer
+	if intValue, parseErr := strconv.ParseInt(input, 10, 64); parseErr == nil {
+		result = intValue
+		return
+	}
+
+	// Try to parse as a float
+	if floatValue, parseErr := strconv.ParseFloat(input, 64); parseErr == nil {
+		result = floatValue
+		return
+	}
+
+	// If neither parsing succeeds, return an error
+	err = errors.New("invalid input: not a valid int or float")
+	return
+}
+
+// Returns the new value after incrementing or multiplying the existing value
+func incrMultValue(value any, multiplier interface{}, operation jsonOperation) (newVal interface{}, resultString string, isModified bool) {
+	switch utils.GetJSONFieldType(value) {
+	case utils.NumberType:
+		oldVal := value.(float64)
+		var newVal float64
+		if v, ok := multiplier.(float64); ok {
+			switch operation {
+			case IncrBy:
+				newVal = oldVal + v
+			case MultBy:
+				newVal = oldVal * v
+			}
+		} else {
+			v, _ := multiplier.(int64)
+			switch operation {
+			case IncrBy:
+				newVal = oldVal + float64(v)
+			case MultBy:
+				newVal = oldVal * float64(v)
+			}
+		}
+		resultString := strconv.FormatFloat(newVal, 'f', -1, 64)
+		return newVal, resultString, true
+	case utils.IntegerType:
+		if v, ok := multiplier.(float64); ok {
+			oldVal := float64(value.(int64))
+			var newVal float64
+			switch operation {
+			case IncrBy:
+				newVal = oldVal + v
+			case MultBy:
+				newVal = oldVal * v
+			}
+			resultString := strconv.FormatFloat(newVal, 'f', -1, 64)
+			return newVal, resultString, true
+		} else {
+			v, _ := multiplier.(int64)
+			oldVal := value.(int64)
+			var newVal int64
+			switch operation {
+			case IncrBy:
+				newVal = oldVal + v
+			case MultBy:
+				newVal = oldVal * v
+			}
+			resultString := strconv.FormatInt(newVal, 10)
+			return newVal, resultString, true
+		}
+	default:
+		return value, "null", false
+	}
+}
+
+// evalJSONNUMMULTBY multiplies the JSON fields matching the specified JSON path at the specified key
+// args must contain key, JSON path and the multiplier value
+// Returns encoded error response if incorrect number of arguments
+// Returns encoded error if the JSON path or key is invalid
+// Returns bulk string reply specified as a stringified updated values for each path
+// Returns null if matching field is non numerical
+func evalJSONNUMMULTBY(args []string, store *dstore.Store) []byte {
+	if len(args) < 3 {
+		return diceerrors.NewErrArity("JSON.NUMMULTBY")
+	}
+	key := args[0]
+
+	// Retrieve the object from the database
+	obj := store.Get(key)
+	if obj == nil {
+		return diceerrors.NewErrWithFormattedMessage("could not perform this operation on a key that doesn't exist")
+	}
+
+	// Check if the object is of JSON type
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
+	}
+	path := args[1]
+	// Parse the JSONPath expression
+	expr, err := jp.ParseString(path)
+
+	if err != nil {
+		return diceerrors.NewErrWithMessage("invalid JSONPath")
+	}
+
+	// Get json matching expression
+	jsonData := obj.Value
+	results := expr.Get(jsonData)
+	if len(results) == 0 {
+		return clientio.Encode("[]", false)
+	}
+
+	for i, r := range args[2] {
+		if !unicode.IsDigit(r) && r != '.' && r != '-' {
+			if i == 0 {
+				return diceerrors.NewErrWithFormattedMessage("-ERR expected value at line 1 column %d", i+1)
+			}
+			return diceerrors.NewErrWithFormattedMessage("-ERR trailing characters at line 1 column %d", i+1)
+		}
+	}
+
+	// Parse the mulplier value
+	multiplier, err := parseFloatInt(args[2])
+	if err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
+	}
+
+	// Update matching values using Modify
+	resultArray := make([]string, 0, len(results))
+	if path == defaultRootPath {
+		newValue, resultString, modified := incrMultValue(jsonData, multiplier, MultBy)
+		if modified {
+			jsonData = newValue
+		}
+		resultArray = append(resultArray, resultString)
+	} else {
+		_, err := expr.Modify(jsonData, func(value any) (interface{}, bool) {
+			newValue, resultString, modified := incrMultValue(value, multiplier, MultBy)
+			resultArray = append(resultArray, resultString)
+			return newValue, modified
+		})
+		if err != nil {
+			return diceerrors.NewErrWithMessage("invalid JSONPath")
+		}
+	}
+
+	// Stringified updated values
+	resultString := `[` + strings.Join(resultArray, ",") + `]`
+
+	newObj := &object.Obj{
+		Value:        jsonData,
+		TypeEncoding: object.ObjTypeJSON,
+	}
+	exp, ok := dstore.GetExpiry(obj, store)
+
+	var exDurationMs int64 = -1
+	if ok {
+		exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
+	}
+	// newObj has default expiry time of -1 , we need to set it
+	if exDurationMs > 0 {
+		store.SetExpiry(newObj, exDurationMs)
+	}
+
+	store.Put(key, newObj)
+	return clientio.Encode(resultString, false)
+}
+
 // evalJSONARRAPPEND appends the value(s) provided in the args to the given array path
 // in the JSON object saved at key in arguments.
 // Args must contain atleast a key, path and value.
@@ -1276,12 +1459,10 @@ func evalJSONARRAPPEND(args []string, store *dstore.Store) []byte {
 	if obj == nil {
 		return diceerrors.NewErrWithMessage("ERR key does not exist")
 	}
-
 	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
 	if errWithMessage != nil {
 		return errWithMessage
 	}
-
 	jsonData := obj.Value
 
 	expr, err := jp.ParseString(path)
@@ -2900,7 +3081,7 @@ func evalGETSET(args []string, store *dstore.Store) []byte {
 }
 
 func evalFLUSHDB(args []string, store *dstore.Store) []byte {
-	log.Info(args)
+	slog.Info("FLUSHDB called", slog.Any("args", args))
 	if len(args) > 1 {
 		return diceerrors.NewErrArity("FLUSHDB")
 	}

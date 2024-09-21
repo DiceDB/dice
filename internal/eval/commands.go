@@ -25,6 +25,12 @@ var (
 		Eval:  evalPING,
 		Arity: -1,
 	}
+	echoCmdMeta = DiceCmdMeta{
+		Name:     "ECHO",
+		Info:     `ECHO returns the string given as argument.`,
+		Eval:     evalECHO,
+		Arity:    1,
+	}
 	authCmdMeta = DiceCmdMeta{
 		Name: "AUTH",
 		Info: `AUTH returns with an encoded "OK" if the user is authenticated.
@@ -180,7 +186,14 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
-
+	jsonnummultbyCmdMeta = DiceCmdMeta{
+		Name: "JSON.NUMMULTBY",
+		Info: `JSON.NUMMULTBY key path value
+		Multiply the number value stored at the specified path by a value.`,
+		Eval:     evalJSONNUMMULTBY,
+		Arity:    3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	jsonobjlenCmdMeta = DiceCmdMeta{
 		Name: "JSON.OBJLEN",
 		Info: `JSON.OBJLEN key [path]
@@ -226,11 +239,11 @@ var (
 	ttlCmdMeta = DiceCmdMeta{
 		Name: "TTL",
 		Info: `TTL returns Time-to-Live in secs for the queried key in args
-		 The key should be the only param in args else returns with an error
-		 Returns
-		 RESP encoded time (in secs) remaining for the key to expire
-		 RESP encoded -2 stating key doesn't exist or key is expired
-		 RESP encoded -1 in case no expiration is set on the key`,
+		The key should be the only param in args else returns with an error
+		Returns
+		RESP encoded time (in secs) remaining for the key to expire
+		RESP encoded -2 stating key doesn't exist or key is expired
+		RESP encoded -1 in case no expiration is set on the key`,
 		Eval:     evalTTL,
 		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
@@ -502,11 +515,11 @@ var (
 	pttlCmdMeta = DiceCmdMeta{
 		Name: "PTTL",
 		Info: `PTTL returns Time-to-Live in millisecs for the queried key in args
-		 The key should be the only param in args else returns with an error
-		 Returns
-		 RESP encoded time (in secs) remaining for the key to expire
-		 RESP encoded -2 stating key doesn't exist or key is expired
-		 RESP encoded -1 in case no expiration is set on the key`,
+		The key should be the only param in args else returns with an error
+		Returns
+		RESP encoded time (in secs) remaining for the key to expire
+		RESP encoded -2 stating key doesn't exist or key is expired
+		RESP encoded -1 in case no expiration is set on the key`,
 		Eval:     evalPTTL,
 		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
@@ -772,6 +785,7 @@ var (
 
 func init() {
 	DiceCmds["PING"] = pingCmdMeta
+	DiceCmds["ECHO"] = echoCmdMeta
 	DiceCmds["AUTH"] = authCmdMeta
 	DiceCmds["SET"] = setCmdMeta
 	DiceCmds["GET"] = getCmdMeta
@@ -785,6 +799,7 @@ func init() {
 	DiceCmds["JSON.ARRAPPEND"] = jsonarrappendCmdMeta
 	DiceCmds["JSON.FORGET"] = jsonforgetCmdMeta
 	DiceCmds["JSON.ARRLEN"] = jsonarrlenCmdMeta
+	DiceCmds["JSON.NUMMULTBY"] = jsonnummultbyCmdMeta
 	DiceCmds["JSON.OBJLEN"] = jsonobjlenCmdMeta
 	DiceCmds["JSON.DEBUG"] = jsondebugCmdMeta
 	DiceCmds["JSON.ARRPOP"] = jsonarrpopCmdMeta
