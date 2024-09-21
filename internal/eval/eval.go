@@ -3560,6 +3560,10 @@ func evalGETRANGE(args []string, store *dstore.Store) []byte {
 	}
 	key := args[0]
 	obj := store.Get(key)
+	if obj == nil {
+		return clientio.Encode("", false)
+	}
+
 	start, err := strconv.Atoi(args[1])
 	if err != nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
@@ -3567,10 +3571,6 @@ func evalGETRANGE(args []string, store *dstore.Store) []byte {
 	end, err := strconv.Atoi(args[2])
 	if err != nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
-	}
-
-	if obj == nil {
-		return clientio.Encode("", false)
 	}
 
 	var str string
@@ -3587,6 +3587,10 @@ func evalGETRANGE(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
+	if str == "" {
+		return clientio.Encode("", false)
+	}
+
 	if start < 0 {
 		start = len(str) + start
 	}
@@ -3595,7 +3599,7 @@ func evalGETRANGE(args []string, store *dstore.Store) []byte {
 		end = len(str) + end
 	}
 
-	if str == "" || start >= len(str) || end < 0 || start > end {
+	if start >= len(str) || end < 0 || start > end {
 		return clientio.Encode("", false)
 	}
 
