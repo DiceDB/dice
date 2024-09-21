@@ -12,11 +12,11 @@ import (
 )
 
 const (
-	Key   = "key"
+	Key       = "key"
 	KeyPrefix = "key_prefix"
-	Field = "field"
-	Path  = "path"
-	Value = "value"
+	Field     = "field"
+	Path      = "path"
+	Value     = "value"
 )
 
 func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {

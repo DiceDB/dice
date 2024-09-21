@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math"
 	"regexp"
 	"sort"
@@ -20,7 +21,6 @@ import (
 
 	"github.com/axiomhq/hyperloglog"
 	"github.com/bytedance/sonic"
-	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/comm"
@@ -2900,7 +2900,7 @@ func evalGETSET(args []string, store *dstore.Store) []byte {
 }
 
 func evalFLUSHDB(args []string, store *dstore.Store) []byte {
-	log.Info(args)
+	slog.Info("FLUSHDB called", slog.Any("args", args))
 	if len(args) > 1 {
 		return diceerrors.NewErrArity("FLUSHDB")
 	}
