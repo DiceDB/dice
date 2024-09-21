@@ -271,9 +271,7 @@ func TestINCRBY(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 
-			FireCommand(conn, "DEL key")
-			FireCommand(conn, "DEL unsetKey")
-			FireCommand(conn, "DEL stringkey")
+			defer FireCommand(conn, "DEL key unsetKey stringkey")
 
 			for _, cmd := range tc.setCommands {
 				FireCommand(conn, fmt.Sprintf("SET %s %d", cmd.key, cmd.val))
