@@ -3024,6 +3024,32 @@ func testEvalGETRANGE(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalGETRANGE, store)
 }
 
+func BenchmarkEvalGETRANGE(b *testing.B) {
+	store := dstore.NewStore(nil) // Initialize your store
+	store.Put("BENCHMARK_KEY", store.NewObj("Hello World", maxExDuration, object.ObjTypeString, object.ObjEncodingRaw))
+
+	// Define the inputs for the benchmark
+	inputs := []struct {
+		start string
+		end   string
+	}{
+		{"0", "3"},
+		{"0", "-1"},
+		{"-4", "-1"},
+		{"5", "3"},
+		{"5", "5000"},
+		{"-5000", "10000"},
+	}
+
+	for _, input := range inputs {
+		b.Run(fmt.Sprintf("GETRANGE start=%s end=%s", input.start, input.end), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_ = evalGETRANGE([]string{"BENCHMARK_KEY", input.start, input.end}, store)
+			}
+		})
+	}
+}
+
 func TestMSETConsistency(t *testing.T) {
 	store := dstore.NewStore(nil)
 	evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"}, store)
