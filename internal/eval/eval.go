@@ -3590,7 +3590,7 @@ func evalGETRANGE(args []string, store *dstore.Store) []byte {
 		end = len(str) + end
 	}
 
-	if len(str) == 0 || start >= len(str) || end < 0 || start > end {
+	if str == "" || start >= len(str) || end < 0 || start > end {
 		return clientio.Encode("", false)
 	}
 
