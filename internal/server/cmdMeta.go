@@ -7,41 +7,50 @@ import (
 	"github.com/dicedb/dice/internal/shard"
 )
 
-// Define a custom type for the enum
+// CmdType defines the type of Redis command based on how it interacts with shards.
+// It uses an integer value to represent different command types.
 type CmdType int
 
-// Declare enum values using iota
+// Enum values for CmdType using iota for auto-increment.
+// Global commands don't interact with shards, SingleShard commands interact with one shard,
+// Multishard commands interact with multiple shards, and Custom commands require a direct client connection.
 const (
-	Global      CmdType = iota // Global commands don't need to touch shards
-	SingleShard                // Single shard commands work with only one shard
-	Multishard                 // Multishard commands work with multiple shards and needs scatter, gather logic
-	Custom                     // Custom flows needs to directly connect to the client
+	Global      CmdType = iota // Global commands don't need to interact with shards.
+	SingleShard                // Single-shard commands interact with only one shard.
+	Multishard                 // Multishard commands interact with multiple shards using scatter-gather logic.
+	Custom                     // Custom commands involve direct client communication.
 )
 
+// CmdsMeta stores metadata about Redis commands, including how they are processed across shards.
+// CmdType indicates how the command should be handled, while Breakup and Gather provide logic
+// for breaking up multishard commands and gathering their responses.
 type CmdsMeta struct {
-	Cmd          string
-	Breakup      func(mgr *shard.ShardManager, redisCmd *cmd.RedisCmd, c *comm.Client) []cmd.RedisCmd
-	Gather       func(responses ...eval.EvalResponse) []byte
-	RespNoShards func(args []string) []byte
-	CmdType
+	Cmd          string                                                                               // Command name.
+	Breakup      func(mgr *shard.ShardManager, redisCmd *cmd.RedisCmd, c *comm.Client) []cmd.RedisCmd // Function to break up multishard commands.
+	Gather       func(responses ...eval.EvalResponse) []byte                                          // Function to gather responses from shards.
+	RespNoShards func(args []string) []byte                                                           // Function for commands that don't interact with shards.
+	CmdType                                                                                           // Enum indicating the command type.
 }
 
+// WorkerCmdsMeta is a map that associates command names with their corresponding metadata.
 var (
 	WorkerCmdsMeta = map[string]CmdsMeta{}
 
-	// Global commands which doesn't need to touch shards
+	// Metadata for global commands that don't interact with shards.
+	// INFO and PING are examples of global commands.
 	infoCmdMeta = CmdsMeta{
 		Cmd:          "INFO",
 		CmdType:      Global,
-		RespNoShards: respINFO,
+		RespNoShards: eval.RespINFO,
 	}
 	pingCmdMeta = CmdsMeta{
 		Cmd:          "PING",
 		CmdType:      Global,
-		RespNoShards: respPING,
+		RespNoShards: eval.RespPING,
 	}
 
-	// Single shard commands which doesn't need breakup and gather logic
+	// Metadata for single-shard commands that only interact with one shard.
+	// These commands don't require breakup and gather logic.
 	setCmdMeta = CmdsMeta{
 		Cmd:     "SET",
 		CmdType: SingleShard,
@@ -55,16 +64,22 @@ var (
 		CmdType: SingleShard,
 	}
 
-	// Multishard commands which needs breakup and gather logic functions
+	// Metadata for multishard commands would go here.
+	// These commands require both breakup and gather logic.
 
-	// Custom commands like Qwatch needs custom logic
+	// Metadata for custom commands requiring specific client-side logic would go here.
 )
 
+// init initializes the WorkerCmdsMeta map by associating each command name with its corresponding metadata.
 func init() {
+	// Global commands.
 	WorkerCmdsMeta["INFO"] = infoCmdMeta
 	WorkerCmdsMeta["PING"] = pingCmdMeta
 
+	// Single-shard commands.
 	WorkerCmdsMeta["SET"] = setCmdMeta
 	WorkerCmdsMeta["GET"] = getCmdMeta
 	WorkerCmdsMeta["GETSET"] = getsetCmdMeta
+
+	// Additional commands (multishard, custom) can be added here as needed.
 }

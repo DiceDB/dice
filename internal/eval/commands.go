@@ -8,8 +8,22 @@ type DiceCmdMeta struct {
 	Eval  func([]string, *dstore.Store) []byte
 	Arity int // number of arguments, it is possible to use -N to say >= N
 	KeySpecs
+
+	// IsMigrated indicates whether a command has been migrated to a new evaluation
+	// mechanism. If true, the command uses the newer evaluation logic represented by
+	// the NewEval function. This allows backward compatibility for commands that have
+	// not yet been migrated, ensuring they continue to use the older Eval function.
+	// As part of the transition process, commands can be flagged with IsMigrated to
+	// signal that they are using the updated execution path.
 	IsMigrated bool
-	NewEval    func([]string, *dstore.Store) EvalResponse
+
+	// NewEval is the newer evaluation function for commands. It follows an updated
+	// execution model that returns an EvalResponse struct, offering more structured
+	// and detailed results, including metadata such as errors and additional info,
+	// instead of just raw bytes. Commands that have been migrated to this new model
+	// will utilize this function for evaluation, allowing for better handling of
+	// complex command execution scenarios and improved response consistency.
+	NewEval func([]string, *dstore.Store) EvalResponse
 }
 
 type KeySpecs struct {
@@ -27,6 +41,14 @@ var (
 		Eval:  evalECHO,
 		Arity: 1,
 	}
+
+	pingCmdMeta = DiceCmdMeta{
+		Name:       "PING",
+		Info:       `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
+		Arity:      -1,
+		IsMigrated: true,
+	}
+
 	setCmdMeta = DiceCmdMeta{
 		Name: "SET",
 		Info: `SET puts a new <key, value> pair in db as in the args
@@ -785,6 +807,7 @@ var (
 )
 
 func init() {
+	DiceCmds["PING"] = pingCmdMeta
 	DiceCmds["ECHO"] = echoCmdMeta
 	DiceCmds["AUTH"] = authCmdMeta
 	DiceCmds["SET"] = setCmdMeta

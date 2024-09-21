@@ -11,11 +11,16 @@ import (
 	"github.com/twmb/murmur3"
 )
 
+// getShard calculates the shard ID for a given key using Murmur3 hashing.
+// It returns the shard ID by computing the hash modulo the number of shards (n).
 func getShard(key string, n uint32) uint32 {
 	hash := murmur3.Sum32([]byte(key))
 	return hash % n
 }
 
+// cmdsBreakup breaks down a Redis command into smaller commands if multisharding is supported.
+// It uses the metadata to check if the command supports multisharding and calls the respective breakup function.
+// If multisharding is not supported, it returns the original command in a slice.
 func (s *AsyncServer) cmdsBreakup(redisCmd *cmd.RedisCmd, c *comm.Client) []cmd.RedisCmd {
 	val, ok := WorkerCmdsMeta[redisCmd.Cmd]
 	if !ok {
@@ -28,6 +33,8 @@ func (s *AsyncServer) cmdsBreakup(redisCmd *cmd.RedisCmd, c *comm.Client) []cmd.
 	return val.Breakup(s.shardManager, redisCmd, c)
 }
 
+// scatter distributes the Redis commands to the respective shards based on the key.
+// For each command, it calculates the shard ID and sends the command to the shard's request channel for processing.
 func (s *AsyncServer) scatter(cmds []cmd.RedisCmd, c *comm.Client) {
 	// Otherwise check for the shard based on the key using hash
 	// and send it to the particular shard
@@ -46,6 +53,8 @@ func (s *AsyncServer) scatter(cmds []cmd.RedisCmd, c *comm.Client) {
 	}
 }
 
+// gather collects the responses from multiple shards and writes the results into the provided buffer.
+// It first waits for responses from all the shards and then processes the result based on the command type (SingleShard, Custom, or Multishard).
 func (s *AsyncServer) gather(redisCmd *cmd.RedisCmd, buf *bytes.Buffer, numShards int, c CmdType) {
 	// Loop to wait for messages from numberof shards
 	var evalResp []eval.EvalResponse
