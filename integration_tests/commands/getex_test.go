@@ -128,7 +128,7 @@ func TestGetEx(t *testing.T) {
 		},
 		{
 			name:     "GetEx with key holding JSON type with multiple set commands",
-			commands: []string{"JSON.SET KEY $ \"{\"a\":2}\"", "GETEX KEY", "JSON.SET KEY $.a \"3\"", "GETEX KEY"},
+			commands: []string{"JSON.SET MJSONKEY $ \"{\"a\":2}\"", "GETEX MJSONKEY", "JSON.SET MJSONKEY $.a \"3\"", "GETEX MJSONKEY"},
 			expected: []interface{}{"OK",
 				"WRONGTYPE Operation against a key holding the wrong kind of value",
 				"OK",
@@ -138,9 +138,9 @@ func TestGetEx(t *testing.T) {
 		},
 		{
 			name:        "GetEx with key holding SET type",
-			commands:    []string{"SADD KEY 1 2 3", "GETEX KEY"},
-			expected:    []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
-			assert_type: []string{"equal", "equal"},
+			commands:    []string{"SADD SKEY 1 2 3", "GETEX SKEY"},
+			expected:    []interface{}{int64(3), "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			assert_type: []string{"equal", "equal", "equal"},
 			delay:       []time.Duration{0, 0},
 		},
 	}
