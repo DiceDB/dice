@@ -3554,7 +3554,7 @@ func evalRestore(args []string, store *dstore.Store) []byte {
 
 	key := args[0]
 	ttlStr:=args[1]
-	ttl, err := strconv.ParseInt(ttlStr, 10, 64)
+	ttl, _ := strconv.ParseInt(ttlStr, 10, 64)
 	
 	encodedValue := args[2]
 	serializedData, err := base64.StdEncoding.DecodeString(encodedValue)
