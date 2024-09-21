@@ -23,13 +23,12 @@ import (
 )
 
 type evalTestCase struct {
-	name              string
-	setup             func()
-	input             []string
-	output            []byte
-	validator         func(output []byte)
-	migratedOutput    EvalResponse
-	MigratedValidater func(resp EvalResponse)
+	name           string
+	setup          func()
+	input          []string
+	output         []byte
+	validator      func(output []byte)
+	migratedOutput EvalResponse
 }
 
 func setupTest(store *dstore.Store) *dstore.Store {
