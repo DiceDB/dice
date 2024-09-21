@@ -2,13 +2,19 @@ package commands
 
 import (
 	"context"
+	"log/slog"
 	"os"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/dicedb/dice/internal/logger"
 )
 
 func TestMain(m *testing.M) {
+	logger := logger.New(logger.Opts{WithTimestamp: false})
+	slog.SetDefault(logger)
+
 	var wg sync.WaitGroup
 
 	// Run the test server
@@ -16,7 +22,8 @@ func TestMain(m *testing.M) {
 	// checks for available port and then forks a goroutine
 	// to start the server
 	opts := TestServerOptions{
-		Port: 8739,
+		Port:   8739,
+		Logger: logger,
 	}
 	RunTestServer(context.Background(), &wg, opts)
 
