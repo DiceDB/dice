@@ -811,6 +811,7 @@ var (
 				The returned value can be synthesized back into a Redis key using the RESTORE command.`,
 		Eval: evalRestore,
 		Arity:	2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	typeCmdMeta = DiceCmdMeta{
 		Name:     "TYPE",
