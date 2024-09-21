@@ -8,7 +8,7 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func TestDump(t *testing.T) {
+func TestDumpRestore(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 
@@ -18,7 +18,7 @@ func TestDump(t *testing.T) {
 		expected []interface{}
 	}{
 		{
-			name: "DUMP string value",
+			name: "DUMP and RESTORE string value",
 			commands: []string{
 				"SET mykey hello",
 				"DUMP mykey",
@@ -49,19 +49,12 @@ func TestDump(t *testing.T) {
 			},
 		},
 		{
-			name: "DUMP non-existent key",
-			commands: []string{
-				"DUMP nonexistentkey",
-			},
-			expected: []interface{}{
-				"ERR could not perform this operation on a key that doesn't exist",
-			},
-		},
-		{
-			name: "DUMP integer value",
+			name: "DUMP and RESTORE integer value",
 			commands: []string{
 				"SET intkey 42",
 				"DUMP intkey",
+				"DEL intkey",
+				"RESTORE intkey 2 CcAAAAAAAAAAKv9S/ymRDY3rXg==",
 			},
 			expected: []interface{}{
 				"OK",
@@ -78,6 +71,17 @@ func TestDump(t *testing.T) {
 						decoded[0] == 0x09 &&
 						decoded[1] == 0xC0
 				},
+				int64(1),
+				"OK",
+			},
+		},
+		{
+			name: "DUMP non-existent key",
+			commands: []string{
+				"DUMP nonexistentkey",
+			},
+			expected: []interface{}{
+				"ERR could not perform this operation on a key that doesn't exist",
 			},
 		},
 	}
@@ -89,13 +93,14 @@ func TestDump(t *testing.T) {
 				var result interface{}
 				result = FireCommand(conn, cmd)
 				expected := tc.expected[i]
+
 				switch exp := expected.(type) {
 				case string:
 					assert.DeepEqual(t, exp, result)
 				case []interface{}:
 					assert.Assert(t, testutils.UnorderedEqual(exp, result))
 				case func(interface{}) bool:
-					assert.Assert(t, exp(result),cmd)
+					assert.Assert(t, exp(result), cmd)
 				default:
 					assert.DeepEqual(t, expected, result)
 				}
