@@ -820,6 +820,13 @@ var (
 
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	getRangeCmdMeta = DiceCmdMeta{
+		Name:     "GETRANGE",
+		Info:     `Returns a substring of the string stored at a key.`,
+		Eval:     evalGETRANGE,
+		Arity:    4,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -914,6 +921,7 @@ func init() {
 	DiceCmds["SELECT"] = selectCmdMeta
 	DiceCmds["JSON.NUMINCRBY"] = jsonnumincrbyCmdMeta
 	DiceCmds["TYPE"] = typeCmdMeta
+	DiceCmds["GETRANGE"] = getRangeCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

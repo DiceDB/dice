@@ -82,6 +82,7 @@ func TestEval(t *testing.T) {
 	testEvalDUMP(t,store)
 	testEvalTYPE(t, store)
 	testEvalCOMMAND(t, store)
+	testEvalGETRANGE(t, store)
 }
 
 func testEvalECHO(t *testing.T, store *dstore.Store) {
@@ -2887,6 +2888,171 @@ func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
 
 	runEvalTests(t, tests, evalCommand, store)
 }
+func testEvalGETRANGE(t *testing.T, store *dstore.Store) {
+	setupForStringValue := func() {
+		store.Put("STRING_KEY", store.NewObj("Hello World", maxExDuration, object.ObjTypeString, object.ObjEncodingRaw))
+	}
+	setupForIntegerValue := func() {
+		store.Put("INTEGER_KEY", store.NewObj("1234", maxExDuration, object.ObjTypeString, object.ObjEncodingRaw))
+	}
+	tests := map[string]evalTestCase{
+		"GETRANGE against non-existing key": {
+			setup:  func() {},
+			input:  []string{"NON_EXISTING_KEY", "0", "-1"},
+			output: clientio.Encode("", false),
+		},
+		"GETRANGE against wrong key type": {
+			setup: func() {
+				evalLPUSH([]string{"LKEY1", "list"}, store)
+			},
+			input:  []string{"LKEY1", "0", "-1"},
+			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+		},
+		"GETRANGE against string value: 0, 3": {
+			setup:  setupForStringValue,
+			input:  []string{"STRING_KEY", "0", "3"},
+			output: clientio.Encode("Hell", false),
+		},
+		"GETRANGE against string value: 0, -1": {
+			setup:  setupForStringValue,
+			input:  []string{"STRING_KEY", "0", "-1"},
+			output: clientio.Encode("Hello World", false),
+		},
+		"GETRANGE against string value: -4, -1": {
+			setup:  setupForStringValue,
+			input:  []string{"STRING_KEY", "-4", "-1"},
+			output: clientio.Encode("orld", false),
+		},
+		"GETRANGE against string value: 5, 3": {
+			setup:  setupForStringValue,
+			input:  []string{"STRING_KEY", "5", "3"},
+			output: clientio.Encode("", false),
+		},
+		"GETRANGE against string value: 5, 5000": {
+			setup:  setupForStringValue,
+			input:  []string{"STRING_KEY", "5", "5000"},
+			output: clientio.Encode(" World", false),
+		},
+		"GETRANGE against string value: -5000, 10000": {
+			setup:  setupForStringValue,
+			input:  []string{"STRING_KEY", "-5000", "10000"},
+			output: clientio.Encode("Hello World", false),
+		},
+		"GETRANGE against string value: 0, -100": {
+			setup:  setupForStringValue,
+			input:  []string{"STRING_KEY", "0", "-100"},
+			output: clientio.Encode("", false),
+		},
+		"GETRANGE against string value: 1, -100": {
+			setup:  setupForStringValue,
+			input:  []string{"STRING_KEY", "1", "-100"},
+			output: clientio.Encode("", false),
+		},
+		"GETRANGE against string value: -1, -100": {
+			setup:  setupForStringValue,
+			input:  []string{"STRING_KEY", "-1", "-100"},
+			output: clientio.Encode("", false),
+		},
+		"GETRANGE against string value: -100, -100": {
+			setup:  setupForStringValue,
+			input:  []string{"STRING_KEY", "-100", "-100"},
+			output: clientio.Encode("", false),
+		},
+		"GETRANGE against string value: -100, -101": {
+			setup:  setupForStringValue,
+			input:  []string{"STRING_KEY", "-100", "-101"},
+			output: clientio.Encode("", false),
+		},
+		"GETRANGE against integer value: 0, 2": {
+			setup:  setupForIntegerValue,
+			input:  []string{"INTEGER_KEY", "0", "2"},
+			output: clientio.Encode("123", false),
+		},
+		"GETRANGE against integer value: 0, -1": {
+			setup:  setupForIntegerValue,
+			input:  []string{"INTEGER_KEY", "0", "-1"},
+			output: clientio.Encode("1234", false),
+		},
+		"GETRANGE against integer value: -3, -1": {
+			setup:  setupForIntegerValue,
+			input:  []string{"INTEGER_KEY", "-3", "-1"},
+			output: clientio.Encode("234", false),
+		},
+		"GETRANGE against integer value: 5, 3": {
+			setup:  setupForIntegerValue,
+			input:  []string{"INTEGER_KEY", "5", "3"},
+			output: clientio.Encode("", false),
+		},
+		"GETRANGE against integer value: 3, 5000": {
+			setup:  setupForIntegerValue,
+			input:  []string{"INTEGER_KEY", "3", "5000"},
+			output: clientio.Encode("4", false),
+		},
+
+		"GETRANGE against integer value: -5000, 10000": {
+			setup:  setupForIntegerValue,
+			input:  []string{"INTEGER_KEY", "-5000", "10000"},
+			output: clientio.Encode("1234", false),
+		},
+		"GETRANGE against integer value: 0, -100": {
+			setup:  setupForIntegerValue,
+			input:  []string{"INTEGER_KEY", "0", "-100"},
+			output: clientio.Encode("", false),
+		},
+		"GETRANGE against integer value: 1, -100": {
+			setup:  setupForIntegerValue,
+			input:  []string{"INTEGER_KEY", "1", "-100"},
+			output: clientio.Encode("", false),
+		},
+		"GETRANGE against integer value: -1, -100": {
+			setup:  setupForIntegerValue,
+			input:  []string{"INTEGER_KEY", "-1", "-100"},
+			output: clientio.Encode("", false),
+		},
+		"GETRANGE against integer value: -100, -99": {
+			setup:  setupForIntegerValue,
+			input:  []string{"INTEGER_KEY", "-100", "-99"},
+			output: clientio.Encode("", false),
+		},
+		"GETRANGE against integer value: -100, -100": {
+			setup:  setupForIntegerValue,
+			input:  []string{"INTEGER_KEY", "-100", "-100"},
+			output: clientio.Encode("", false),
+		},
+		"GETRANGE against integer value: -100, -101": {
+			setup:  setupForIntegerValue,
+			input:  []string{"INTEGER_KEY", "-100", "-101"},
+			output: clientio.Encode("", false),
+		},
+	}
+	runEvalTests(t, tests, evalGETRANGE, store)
+}
+
+func BenchmarkEvalGETRANGE(b *testing.B) {
+	store := dstore.NewStore(nil)
+	store.Put("BENCHMARK_KEY", store.NewObj("Hello World", maxExDuration, object.ObjTypeString, object.ObjEncodingRaw))
+
+	inputs := []struct {
+		start string
+		end   string
+	}{
+		{"0", "3"},
+		{"0", "-1"},
+		{"-4", "-1"},
+		{"5", "3"},
+		{"5", "5000"},
+		{"-5000", "10000"},
+	}
+
+	for _, input := range inputs {
+		b.Run(fmt.Sprintf("GETRANGE start=%s end=%s", input.start, input.end), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_ = evalGETRANGE([]string{"BENCHMARK_KEY", input.start, input.end}, store)
+			}
+		})
+	}
+}
+
 func TestMSETConsistency(t *testing.T) {
 	store := dstore.NewStore(nil)
 	evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"}, store)
