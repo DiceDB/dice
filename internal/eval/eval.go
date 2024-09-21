@@ -3548,12 +3548,15 @@ func evalDUMP(args []string, store *dstore.Store) []byte {
 }
 
 func evalRestore(args []string, store *dstore.Store) []byte {
-	if len(args) < 2 {
+	if len(args) < 3 {
 		return diceerrors.NewErrArity("RESTORE")
 	}
-	key := args[0]
-	encodedValue := args[1]
 
+	key := args[0]
+	ttlStr:=args[1]
+	ttl, err := strconv.ParseInt(ttlStr, 10, 64)
+	
+	encodedValue := args[2]
 	serializedData, err := base64.StdEncoding.DecodeString(encodedValue)
 	if err != nil {
 		return diceerrors.NewErrWithMessage("failed to decode base64 value")
@@ -3564,22 +3567,28 @@ func evalRestore(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrWithMessage("deserialization failed: " + err.Error())
 	}
 
-	store.Put(key, obj)
-	return []byte("OK")
+	newobj:=store.NewObj(obj.Value,ttl,obj.TypeEncoding,obj.TypeEncoding)
+	var keepttl=true
+
+	if(ttl>0){
+		store.Put(key, newobj, dstore.WithKeepTTL(keepttl))
+	}else{
+		store.Put(key,obj)
+	}
+	
+	return clientio.RespOK
 }
 
 func rdbDeserialize(data []byte) (*object.Obj, error) {
-	if len(data) < 2 {
+	if len(data) < 3 {
 		return nil, errors.New("insufficient data for deserialization")
 	}
-
-	objType := data[0] // Object type is the first byte in this format
-
+	objType := data[1] 
 	switch objType {
-	case 0x09: // String type (changed from 0x00 to 0x09 to match the test case)
-		return readString(data[1:])
+	case 0x00:
+		return readString(data[2:])
 	case 0xC0: // Integer type
-		return readInt(data[1:])
+		return readInt(data[2:])
 	default:
 		return nil, errors.New("unsupported object type")
 	}
@@ -3662,7 +3671,6 @@ func appendChecksum(data []byte) []byte {
     binary.BigEndian.PutUint64(checksumBuf, checksum)
     return append(data, checksumBuf...)
 }
-
 
 func evalTYPE(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {

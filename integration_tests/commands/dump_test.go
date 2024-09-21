@@ -2,14 +2,11 @@ package commands
 
 import (
 	"encoding/base64"
-	"fmt"
-
 	"testing"
 
 	"github.com/dicedb/dice/testutils"
 	"gotest.tools/v3/assert"
 )
-
 
 func TestDump(t *testing.T) {
 	conn := getLocalConnection()
@@ -26,7 +23,7 @@ func TestDump(t *testing.T) {
 				"SET mykey hello",
 				"DUMP mykey",
 				"DEL mykey",
-				"RESTORE mykey abc",
+				"RESTORE mykey 2 CQAAAAAFaGVsbG//AEeXk742Rcc=",
 				"GET mykey",
 			},
 			expected: []interface{}{
@@ -48,7 +45,7 @@ func TestDump(t *testing.T) {
 				},
 				int64(1),
 				"OK",
-				"OK",
+				"hello",
 			},
 		},
 		{
@@ -91,10 +88,7 @@ func TestDump(t *testing.T) {
 			for i, cmd := range tc.commands {
 				var result interface{}
 				result = FireCommand(conn, cmd)
-				fmt.Println(cmd)
 				expected := tc.expected[i]
-				fmt.Println(tc.expected)
-				fmt.Println(result)
 				switch exp := expected.(type) {
 				case string:
 					assert.DeepEqual(t, exp, result)

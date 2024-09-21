@@ -803,6 +803,7 @@ var (
 				The returned value can be synthesized back into a Redis key using the RESTORE command.`,
 		Eval:   evalDUMP,
 		Arity: 	1,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	restorekeyCmdMeta=DiceCmdMeta{
 		Name:	"RESTORE",
