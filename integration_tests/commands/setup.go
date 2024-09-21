@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
+	"os"
 	"sync"
 	"time"
 
@@ -15,7 +17,6 @@ import (
 
 	"github.com/dicedb/dice/internal/server"
 
-	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dice/testutils"
@@ -23,7 +24,8 @@ import (
 )
 
 type TestServerOptions struct {
-	Port int
+	Port   int
+	Logger *slog.Logger
 }
 
 //nolint:unused
@@ -67,7 +69,12 @@ func FireCommand(conn net.Conn, cmd string) interface{} {
 	args := testutils.ParseCommand(cmd)
 	_, err = conn.Write(clientio.Encode(args, false))
 	if err != nil {
-		log.Fatalf("error %s while firing command: %s", err, cmd)
+		slog.Error(
+			"error while firing command",
+			slog.Any("error", err),
+			slog.String("command", cmd),
+		)
+		os.Exit(1)
 	}
 
 	rp := clientio.NewRESPParser(conn)
@@ -76,7 +83,12 @@ func FireCommand(conn net.Conn, cmd string) interface{} {
 		if err == io.EOF {
 			return nil
 		}
-		log.Fatalf("error %s while firing command: %s", err, cmd)
+		slog.Error(
+			"error while firing command",
+			slog.Any("error", err),
+			slog.String("command", cmd),
+		)
+		os.Exit(1)
 	}
 	return v
 }
@@ -86,7 +98,12 @@ func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *clientio.RESPParser
 	args := testutils.ParseCommand(cmd)
 	_, err := conn.Write(clientio.Encode(args, false))
 	if err != nil {
-		log.Fatalf("error %s while firing command: %s", err, cmd)
+		slog.Error(
+			"error while firing command",
+			slog.Any("error", err),
+			slog.String("command", cmd),
+		)
+		os.Exit(1)
 	}
 
 	return clientio.NewRESPParser(conn)
@@ -104,9 +121,9 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	const totalRetries = 100
 	var err error
 	watchChan := make(chan dstore.WatchEvent, config.DiceConfig.Server.KeysLimit)
-	shardManager := shard.NewShardManager(1, watchChan)
+	shardManager := shard.NewShardManager(1, watchChan, opt.Logger)
 	// Initialize the AsyncServer
-	testServer := server.NewAsyncServer(shardManager, watchChan)
+	testServer := server.NewAsyncServer(shardManager, watchChan, opt.Logger)
 
 	// Try to bind to a port with a maximum of `totalRetries` retries.
 	for i := 0; i < totalRetries; i++ {
@@ -115,16 +132,23 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 		}
 
 		if err.Error() == "address already in use" {
-			log.Infof("Port %d already in use, trying port %d", config.DiceConfig.Server.Port, config.DiceConfig.Server.Port+1)
+			opt.Logger.Info("Port already in use, trying port",
+				slog.Int("port", config.DiceConfig.Server.Port),
+				slog.Int("new_port", config.DiceConfig.Server.Port+1),
+			)
 			config.DiceConfig.Server.Port++
 		} else {
-			log.Fatalf("Failed to bind port: %v", err)
+			opt.Logger.Error("Failed to bind port", slog.Any("error", err))
 			return
 		}
 	}
 
 	if err != nil {
-		log.Fatalf("Failed to bind to a port after %d retries: %v", totalRetries, err)
+		opt.Logger.Error("Failed to bind to a port after retries",
+			slog.Any("error", err),
+			slog.Int("retry_count", totalRetries),
+		)
+		os.Exit(1)
 		return
 	}
 
@@ -147,7 +171,8 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 				cancelShardManager()
 				return
 			}
-			log.Fatalf("Test server encountered an error: %v", err)
+			opt.Logger.Error("Test server encountered an error", slog.Any("error", err))
+			os.Exit(1)
 		}
 	}()
 }

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"hash/crc32"
+	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
@@ -16,7 +17,6 @@ import (
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/server/utils"
 
-	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/ops"
 	"github.com/dicedb/dice/internal/querywatcher"
@@ -38,6 +38,7 @@ type HTTPServer struct {
 	ioChan       chan *ops.StoreResponse
 	watchChan    chan dstore.WatchEvent
 	httpServer   *http.Server
+	logger       *slog.Logger
 }
 
 type HTTPQwatchResponse struct {
@@ -62,7 +63,11 @@ func (cim *CaseInsensitiveMux) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	cim.mux.ServeHTTP(w, r)
 }
 
-func NewHTTPServer(shardManager *shard.ShardManager, watchChan chan dstore.WatchEvent) *HTTPServer {
+func NewHTTPServer(
+	shardManager *shard.ShardManager,
+	watchChan chan dstore.WatchEvent,
+	logger *slog.Logger,
+) *HTTPServer {
 	mux := http.NewServeMux()
 	caseInsensitiveMux := &CaseInsensitiveMux{mux: mux}
 	srv := &http.Server{
@@ -73,10 +78,11 @@ func NewHTTPServer(shardManager *shard.ShardManager, watchChan chan dstore.Watch
 
 	httpServer := &HTTPServer{
 		shardManager: shardManager,
-		queryWatcher: querywatcher.NewQueryManager(),
+		queryWatcher: querywatcher.NewQueryManager(logger),
 		ioChan:       make(chan *ops.StoreResponse, 1000),
 		watchChan:    watchChan,
 		httpServer:   srv,
+		logger:       logger,
 	}
 
 	mux.HandleFunc("/", httpServer.DiceHTTPHandler)
@@ -107,7 +113,7 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 		err = s.httpServer.Shutdown(httpCtx)
 		// TODO: Check for clean connection close in case a QWATCH client still subscribed
 		if err != nil && !errors.Is(err, context.Canceled) {
-			log.Errorf("HTTP Server Shutdown Failed: %v", err)
+			s.logger.Error("HTTP Server Shutdown Failed", slog.Any("error", err))
 			return
 		}
 	}()
@@ -115,7 +121,7 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		log.Infof("HTTP Server running on Port%s", s.httpServer.Addr)
+		s.logger.Info("HTTP Server running", slog.String("addr", s.httpServer.Addr))
 		err = s.httpServer.ListenAndServe()
 	}()
 
@@ -127,14 +133,19 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 	// convert to REDIS cmd
 	redisCmd, err := utils.ParseHTTPRequest(request)
 	if err != nil {
-		log.Errorf("Error parsing HTTP request: %v", err)
 		http.Error(writer, "Error parsing HTTP request", http.StatusBadRequest)
+		s.logger.Error("Error parsing HTTP request", slog.Any("error", err))
 		return
 	}
 
 	if unimplementedCommands[redisCmd.Cmd] {
-		log.Errorf("Command %s is not implemented", redisCmd.Cmd)
 		http.Error(writer, "Command is not implemented with HTTP", http.StatusBadRequest)
+		s.logger.Error("Command %s is not implemented", slog.String("cmd", redisCmd.Cmd))
+		_, err := writer.Write([]byte("Command is not implemented with HTTP"))
+		if err != nil {
+			s.logger.Error("Error writing response", slog.Any("error", err))
+			return
+		}
 		return
 	}
 
@@ -148,20 +159,20 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 
 	// Wait for response
 	resp := <-s.ioChan
-	s.writeResponse(writer, resp.Result)
+	s.writeResponse(writer, resp.EvalResponse.Result.([]byte))
 }
 
 func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *http.Request) {
 	// convert to REDIS cmd
 	redisCmd, err := utils.ParseHTTPRequest(request)
 	if err != nil {
-		log.Errorf("Error parsing HTTP request: %v", err)
+		s.logger.Error("Error parsing HTTP request", slog.Any("err", err))
 		http.Error(writer, "Error parsing HTTP request", http.StatusBadRequest)
 		return
 	}
 
 	if len(redisCmd.Args) < 1 {
-		log.Errorf("Invalid request for QWATCH")
+		s.logger.Error("Invalid request for QWATCH")
 		http.Error(writer, "Invalid request for QWATCH", http.StatusBadRequest)
 		return
 	}
@@ -196,19 +207,20 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 		RequestID:            clientID,
 	}
 
-	log.Infof("Registered client with id %d for watching query %s", clientID, clientWriter.Query)
+	s.logger.Info("Registered client for watching query", slog.Any("clientID", clientID),
+		slog.Any("query", clientWriter.Query))
 	s.shardManager.GetShard(0).ReqChan <- storeOp
 
 	// Wait for 1st sync response from server for QWATCH and flush it to client
 	resp := <-s.ioChan
-	s.writeResponse(writer, resp.Result)
+	s.writeResponse(writer, resp.EvalResponse.Result.([]byte))
 	flusher.Flush()
 	// Keep listening for context cancellation (client disconnect) and continuous responses
 	doneChan := request.Context().Done()
 	for {
 		<-doneChan
 		// Client disconnected or request finished
-		log.Infof("Client disconnected")
+		s.logger.Info("Client disconnected")
 		unWatchCmd := &cmd.RedisCmd{
 			Cmd:  "QUNWATCH",
 			Args: []string{clientWriter.Query},
@@ -216,7 +228,7 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 		storeOp.Cmd = unWatchCmd
 		s.shardManager.GetShard(0).ReqChan <- storeOp
 		resp := <-s.ioChan
-		s.writeResponse(writer, resp.Result)
+		s.writeResponse(writer, resp.EvalResponse.Result.([]byte))
 		return
 	}
 }
@@ -225,14 +237,14 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result []byte) {
 	rp := clientio.NewRESPParser(bytes.NewBuffer(result))
 	val, err := rp.DecodeOne()
 	if err != nil {
-		log.Error("Error decoding response", "error", err)
+		s.logger.Error("Error decoding response", "error", err)
 		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
 	responseJSON, err := json.Marshal(val)
 	if err != nil {
-		log.Error("Error marshaling response", "error", err)
+		s.logger.Error("Error marshaling response", "error", err)
 		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -240,7 +252,7 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result []byte) {
 	writer.Header().Set("Content-Type", "application/json")
 	_, err = writer.Write(responseJSON)
 	if err != nil {
-		log.Error("Error writing response", "error", err)
+		s.logger.Error("Error writing response", "error", err)
 	}
 }
 

@@ -1,13 +1,13 @@
 package config
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/spf13/viper"
@@ -58,6 +58,8 @@ type Config struct {
 		PersistenceEnabled     bool          `mapstructure:"persistenceenabled"`
 		WriteAOFOnCleanup      bool          `mapstructure:"writeaofoncleanup"`
 		LFULogFactor           int           `mapstructure:"lfulogfactor"`
+		LogLevel               string        `mapstructure:"loglevel"`
+		PrettyPrintLogs        bool          `mapstructure:"prettyprintlogs"`
 	} `mapstructure:"server"`
 	Auth struct {
 		UserName string `mapstructure:"username"`
@@ -70,7 +72,7 @@ type Config struct {
 }
 
 // Default configurations for internal use
-var defaultConfig = Config{
+var baseConfig = Config{
 	Server: struct {
 		Addr                   string        `mapstructure:"addr"`
 		Port                   int           `mapstructure:"port"`
@@ -88,6 +90,8 @@ var defaultConfig = Config{
 		PersistenceEnabled     bool          `mapstructure:"persistenceenabled"`
 		WriteAOFOnCleanup      bool          `mapstructure:"writeaofoncleanup"`
 		LFULogFactor           int           `mapstructure:"lfulogfactor"`
+		LogLevel               string        `mapstructure:"loglevel"`
+		PrettyPrintLogs        bool          `mapstructure:"prettyprintlogs"`
 	}{
 		Addr:                   DefaultHost,
 		Port:                   DefaultPort,
@@ -105,6 +109,8 @@ var defaultConfig = Config{
 		PersistenceEnabled:     true,
 		WriteAOFOnCleanup:      true,
 		LFULogFactor:           10,
+		LogLevel:               "info",
+		PrettyPrintLogs:        false,
 	},
 	Auth: struct {
 		UserName string `mapstructure:"username"`
@@ -122,6 +128,24 @@ var defaultConfig = Config{
 	},
 }
 
+var defaultConfig Config
+
+func init() {
+	config := baseConfig
+	env := os.Getenv("DICE_ENV")
+	switch env {
+	case "dev":
+		config.Server.LogLevel = "debug"
+		config.Server.PrettyPrintLogs = true
+	default:
+	}
+	logLevel := os.Getenv("DICE_LOG_LEVEL")
+	if logLevel != "" {
+		config.Server.LogLevel = logLevel
+	}
+	defaultConfig = config
+}
+
 // DiceConfig is the global configuration object for dice
 var DiceConfig *Config = &defaultConfig
 
@@ -134,7 +158,7 @@ func SetupConfig() {
 
 	// Check if both -o and -c flags are set
 	if areBothFlagsSet() {
-		log.Error("Both -o and -c flags are set. Please use only one flag.")
+		slog.Error("Both -o and -c flags are set. Please use only one flag.")
 		return
 	}
 
@@ -149,23 +173,25 @@ func SetupConfig() {
 		setUpViperConfig(ConfigFileLocation)
 		return
 	}
+
+	// If no flags are set, use default configurations with prioritizing command line flags
+	mergeFlagsWithConfig()
 }
 
 func createConfigFile(configFilePath string) {
 	if _, err := os.Stat(configFilePath); err == nil {
-		log.Warnf("config file already exists at %s", configFilePath)
+		slog.Warn("config file already exists", slog.String("path", configFilePath))
 		setUpViperConfig(configFilePath)
 		return
 	}
 
 	if err := writeConfigFile(configFilePath); err != nil {
-		log.Error(err)
-		log.Warn("starting DiceDB with default configurations.")
+		slog.Warn("starting DiceDB with default configurations.", slog.Any("error", err))
 		return
 	}
 
 	setUpViperConfig(configFilePath)
-	log.Infof("config file created at %s with default configurations", configFilePath)
+	slog.Info("config file created at %s with default configurations", slog.Any("path", configFilePath))
 }
 
 func writeConfigFile(configFilePath string) error {
@@ -174,7 +200,7 @@ func writeConfigFile(configFilePath string) error {
 		return err
 	}
 
-	log.Infof("creating default config file at %s", configFilePath)
+	slog.Info("creating default config file at %s", slog.Any("path", configFilePath))
 	file, err := os.Create(configFilePath)
 	if err != nil {
 		return err
@@ -224,19 +250,25 @@ func setUpViperConfig(configFilePath string) {
 	viper.SetConfigType("toml")
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			log.Warn("config file not found. Using default configurations.")
+			slog.Warn("config file not found. Using default configurations.")
 			return
 		}
-		log.Errorf("Error reading config file: %v", err.Error())
+		slog.Error("Error reading config file", slog.Any("error", err))
 	}
 
 	if err := viper.Unmarshal(&DiceConfig); err != nil {
-		log.Errorf("Error unmarshalling config file: %v", err.Error())
-		log.Warn("starting DiceDB with default configurations.")
+		slog.Error("Error unmarshalling config file", slog.Any("error", err))
+		slog.Warn("starting DiceDB with default configurations.")
 		return
 	}
 
 	// override default configurations with command line flags
+	mergeFlagsWithConfig()
+
+	slog.Info("configurations loaded successfully.")
+}
+
+func mergeFlagsWithConfig() {
 	if RequirePass != utils.EmptyStr {
 		DiceConfig.Auth.Password = RequirePass
 	}
@@ -248,8 +280,6 @@ func setUpViperConfig(configFilePath string) {
 	if Port != DefaultPort {
 		DiceConfig.Server.Port = Port
 	}
-
-	log.Info("configurations loaded successfully.")
 }
 
 // This function checks if the config file is present or not at ConfigFileLocation
