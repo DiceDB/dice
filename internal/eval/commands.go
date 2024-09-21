@@ -25,6 +25,12 @@ var (
 		Eval:  evalPING,
 		Arity: -1,
 	}
+	echoCmdMeta = DiceCmdMeta{
+		Name:     "ECHO",
+		Info:     `ECHO returns the string given as argument.`,
+		Eval:     evalECHO,
+		Arity:    1,
+	}
 	authCmdMeta = DiceCmdMeta{
 		Name: "AUTH",
 		Info: `AUTH returns with an encoded "OK" if the user is authenticated.
@@ -772,6 +778,7 @@ var (
 
 func init() {
 	DiceCmds["PING"] = pingCmdMeta
+	DiceCmds["ECHO"] = echoCmdMeta
 	DiceCmds["AUTH"] = authCmdMeta
 	DiceCmds["SET"] = setCmdMeta
 	DiceCmds["GET"] = getCmdMeta

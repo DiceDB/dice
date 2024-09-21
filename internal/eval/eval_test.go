@@ -41,6 +41,7 @@ func TestEval(t *testing.T) {
 
 	testEvalMSET(t, store)
 	testEvalPING(t, store)
+	testEvalECHO(t, store)
 	testEvalHELLO(t, store)
 	testEvalSET(t, store)
 	testEvalGET(t, store)
@@ -88,6 +89,17 @@ func testEvalPING(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalPING, store)
+}
+
+func testEvalECHO(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value":            {input: nil, output: []byte("-ERR wrong number of arguments for 'echo' command\r\n")},
+		"empty args":           {input: []string{}, output: []byte("-ERR wrong number of arguments for 'echo' command\r\n")},
+		"one value":            {input: []string{"HEY"}, output: []byte("$3\r\nHEY\r\n")},
+		"more than one values": {input: []string{"HEY", "HELLO"}, output: []byte("-ERR wrong number of arguments for 'echo' command\r\n")},
+	}
+
+	runEvalTests(t, tests, evalECHO, store)
 }
 
 func testEvalHELLO(t *testing.T, store *dstore.Store) {
