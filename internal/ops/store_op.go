@@ -3,6 +3,7 @@ package ops
 import (
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/comm"
+	"github.com/dicedb/dice/internal/eval"
 )
 
 type StoreOp struct {
@@ -17,6 +18,6 @@ type StoreOp struct {
 
 // StoreResponse represents the response of a Store operation.
 type StoreResponse struct {
-	RequestID int32  // RequestID that this StoreResponse belongs to
-	Result    []byte // Result of the Store operation, for now the type is set to []byte, but this can change in the future.
+	RequestID    int32             // RequestID that this StoreResponse belongs to
+	EvalResponse eval.EvalResponse // Result of the Store operation, for now the type is set to []byte, but this can change in the future.
 }
