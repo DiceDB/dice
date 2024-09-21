@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/dicedb/dice/internal/server/utils"
 	"reflect"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dicedb/dice/internal/server/utils"
 
 	"github.com/bytedance/sonic"
 	"github.com/ohler55/ojg/jp"
@@ -73,6 +74,7 @@ func TestEval(t *testing.T) {
 	testEvalPFCOUNT(t, store)
 	testEvalHGET(t, store)
 	testEvalHSTRLEN(t, store)
+	testEvalHDEL(t, store)
 	testEvalPFMERGE(t, store)
 	testEvalJSONSTRLEN(t, store)
 	testEvalJSONOBJLEN(t, store)
@@ -1920,6 +1922,42 @@ func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalHSTRLEN, store)
+}
+
+func testEvalHDEL(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"HDEL with wrong number of args": {
+			input:  []string{"key"},
+			output: []byte("-ERR wrong number of arguments for 'hdel' command\r\n"),
+		},
+		"HDEL with key does not exist": {
+			input:  []string{"nonexistent", "field"},
+			output: clientio.RespZero,
+		},
+		"HDEL with key exists but not a hash": {
+			setup: func() {
+				evalSET([]string{"string_key", "string_value"}, store)
+			},
+			input:  []string{"string_key", "field"},
+			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+		},
+		"HDEL with delete existing fields": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
+			},
+			input:  []string{"hash_key", "field1", "field2", "nonexistent"},
+			output: clientio.Encode(int64(2), false),
+		},
+		"HDEL with delete non-existing fields": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1"}, store)
+			},
+			input:  []string{"hash_key", "nonexistent1", "nonexistent2"},
+			output: clientio.RespZero,
+		},
+	}
+
+	runEvalTests(t, tests, evalHDEL, store)
 }
 
 func testEvalPFMERGE(t *testing.T, store *dstore.Store) {

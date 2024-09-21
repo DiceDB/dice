@@ -600,6 +600,18 @@ var (
 		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hdelCmdMeta = DiceCmdMeta{
+		Name: "HDEL",
+		Info: `HDEL removes the specified fields from the hash stored at key.
+		Specified fields that do not exist within this hash are ignored.
+		Deletes the hash if no fields remain.
+		If key does not exist, it is treated as an empty hash and this command returns 0.
+		Returns
+		The number of fields that were removed from the hash, not including specified but non-existing fields.`,
+		Eval:     evalHDEL,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	objectCmdMeta = DiceCmdMeta{
 		Name: "OBJECT",
 		Info: `OBJECT subcommand [arguments [arguments ...]]
@@ -940,6 +952,7 @@ func init() {
 	DiceCmds["TYPE"] = typeCmdMeta
 	DiceCmds["GETRANGE"] = getRangeCmdMeta
 	DiceCmds["SETEX"] = setexCmdMeta
+	DiceCmds["HDEL"] = hdelCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}
