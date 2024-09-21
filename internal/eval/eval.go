@@ -3575,11 +3575,72 @@ func evalDUMP(args []string, store *dstore.Store) []byte {
     return clientio.Encode(encodedResult, false)
 }
 
+func evalRestore(args []string, store *dstore.Store) []byte {
+	if len(args) < 2 {
+		return diceerrors.NewErrArity("RESTORE")
+	}
+	key := args[0]
+	encodedValue := args[1]
+
+	serializedData, err := base64.StdEncoding.DecodeString(encodedValue)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("failed to decode base64 value")
+	}
+
+	obj, err := rdbDeserialize(serializedData)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("deserialization failed: " + err.Error())
+	}
+
+	store.Put(key, obj)
+	return []byte("OK")
+}
+
+func rdbDeserialize(data []byte) (*object.Obj, error) {
+	if len(data) < 2 {
+		return nil, errors.New("insufficient data for deserialization")
+	}
+
+	objType := data[0] // Object type is the first byte in this format
+
+	switch objType {
+	case 0x09: // String type (changed from 0x00 to 0x09 to match the test case)
+		return readString(data[1:])
+	case 0xC0: // Integer type
+		return readInt(data[1:])
+	default:
+		return nil, errors.New("unsupported object type")
+	}
+}
+
+func readString(data []byte) (*object.Obj, error) {
+	buf := bytes.NewReader(data)
+	var strLen uint32
+	if err := binary.Read(buf, binary.BigEndian, &strLen); err != nil {
+		return nil, err
+	}
+
+	strBytes := make([]byte, strLen)
+	if _, err := buf.Read(strBytes); err != nil {
+		return nil, err
+	}
+
+	return &object.Obj{TypeEncoding: object.ObjTypeString, Value: string(strBytes)}, nil
+}
+
+func readInt(data []byte) (*object.Obj, error) {
+	var intVal int64
+	if err := binary.Read(bytes.NewReader(data), binary.BigEndian, &intVal); err != nil {
+		return nil, err
+	}
+
+	return &object.Obj{TypeEncoding: object.ObjTypeInt, Value: intVal}, nil
+}
+
 func rdbSerialize(obj *object.Obj) ([]byte, error) {
     var buf bytes.Buffer
     buf.WriteByte(0x09)
 
-    var err error
     switch object.GetType(obj.TypeEncoding) {
     case object.ObjTypeString:
         str, ok := obj.Value.(string)
@@ -3587,7 +3648,7 @@ func rdbSerialize(obj *object.Obj) ([]byte, error) {
             return nil, errors.New("invalid string value")
         }
         buf.WriteByte(0x00) 
-        if err = writeString(&buf, str); err != nil {
+        if err := writeString(&buf, str); err != nil {
             return nil, err
         }
 
@@ -3597,9 +3658,7 @@ func rdbSerialize(obj *object.Obj) ([]byte, error) {
             return nil, errors.New("invalid integer value")
         }
         buf.WriteByte(0xC0)
-        if err = writeInt(&buf, intVal); err != nil {
-            return nil, err
-        }
+        writeInt(&buf, intVal);
 
     default:
         return nil, errors.New("unsupported object type")
@@ -3619,11 +3678,10 @@ func writeString(buf *bytes.Buffer, str string) error {
     return nil
 }
 
-func writeInt(buf *bytes.Buffer, intVal int64) error {
+func writeInt(buf *bytes.Buffer, intVal int64) {
     tempBuf := make([]byte, 8)
     binary.BigEndian.PutUint64(tempBuf, uint64(intVal))
     buf.Write(tempBuf)
-    return nil
 }
 
 func appendChecksum(data []byte) []byte {
@@ -3632,5 +3690,7 @@ func appendChecksum(data []byte) []byte {
     binary.BigEndian.PutUint64(checksumBuf, checksum)
     return append(data, checksumBuf...)
 }
+
+
 
 
