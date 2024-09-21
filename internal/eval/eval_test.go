@@ -2785,7 +2785,7 @@ func testEvalSETEX(t *testing.T, store *dstore.Store) {
 		"key exp value pair with negative exp":   {input: []string{"KEY", "-23", "VAL"}, output: []byte("-ERR invalid expire time in 'setex' command\r\n")},
 		"key exp value pair with not-int exp":    {input: []string{"KEY", "12a", "VAL"}, output: []byte("-ERR value is not an integer or out of range\r\n")},
 
-		"integration test - set and get": {
+		"set and get": {
 			setup: func() {},
 			input: []string{"TEST_KEY", "5", "TEST_VALUE"},
 			validator: func(output []byte) {
@@ -2815,7 +2815,7 @@ func testEvalSETEX(t *testing.T, store *dstore.Store) {
 				assert.Equal(t, string(clientio.RespNIL), string(expiredValue))
 			},
 		},
-		"integration test - update existing key": {
+		"update existing key": {
 			setup: func() {
 				evalSET([]string{"EXISTING_KEY", "OLD_VALUE"}, store)
 			},
