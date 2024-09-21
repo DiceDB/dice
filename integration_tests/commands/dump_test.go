@@ -26,7 +26,7 @@ func TestDump(t *testing.T) {
 				"SET mykey hello",
 				"DUMP mykey",
 				"DEL mykey",
-				"RESTORE mykey CQAAAAAFaGVsbG//AEeXk742Rcc=",
+				"RESTORE mykey abc",
 				"GET mykey",
 			},
 			expected: []interface{}{
