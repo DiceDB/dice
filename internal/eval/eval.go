@@ -3760,6 +3760,13 @@ func evalTYPE(args []string, store *dstore.Store) []byte {
 
 	return clientio.Encode(typeStr, false)
 }
+
+// evalSETEX puts a new <key, value> pair in db as in the args
+// args must contain only  key , expiry and value
+// Returns encoded error response if <key,exp,value> is not part of args
+// Returns encoded error response if expiry time value in not integer
+// Returns encoded OK RESP once new entry is added
+// If the key already exists then the value and expiry will be overwritten
 func evalSETEX(args []string, store *dstore.Store) []byte {
 	if len(args) != 3 {
 		return diceerrors.NewErrArity("SETEX")
