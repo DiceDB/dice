@@ -2716,9 +2716,8 @@ func evalHSTRLEN(args []string, store *dstore.Store) []byte {
 	var hashMap HashMap
 
 	if obj != nil {
-		// Return 0, if key doesn't exist or if object isn't a HashMap.
 		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-			return clientio.Encode(0, false)
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 		}
 		hashMap = obj.Value.(HashMap)
 	}
