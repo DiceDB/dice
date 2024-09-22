@@ -25,7 +25,7 @@ func init() {
 	flag.StringVar(&config.Host, "host", "0.0.0.0", "host for the dice server")
 	flag.IntVar(&config.Port, "port", 7379, "port for the dice server")
 	flag.BoolVar(&config.EnableHTTP, "enable-http", true, "run server in HTTP mode as well")
-	flag.BoolVar(&config.EnableMultiThreading, "enable-multithreading", true, "run server in multithreading mode")
+	flag.BoolVar(&config.EnableMultiThreading, "enable-multithreading", false, "run server in multithreading mode")
 	flag.IntVar(&config.HTTPPort, "http-port", 8082, "HTTP port for the dice server")
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
 	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the config file")
@@ -55,17 +55,17 @@ func main() {
 	// If not enabled multithreading, server will run on a single core.
 	var numCores int
 	if config.EnableMultiThreading {
-		logr.Debug("Running server in multi-threaded mode")
+		logr.Info("Running server in multi-threaded mode")
 		numCores = runtime.NumCPU()
 	} else {
-		logr.Debug("Running server in single-threaded mode")
+		logr.Info("Running server in single-threaded mode")
 		numCores = 1
 	}
 
 	// The runtime.GOMAXPROCS(numCores) call limits the number of operating system
 	// threads that can execute Go code simultaneously to the number of CPU cores.
 	// This enables Go to run more efficiently, maximizing CPU utilization and
-	// improving concurrency performance across multiple goroutines.
+	// improving concurrency performance across multiple goroutineags.
 	runtime.GOMAXPROCS(numCores)
 
 	shardManager := shard.NewShardManager(int8(numCores), watchChan, logr)
