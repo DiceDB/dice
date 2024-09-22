@@ -36,8 +36,12 @@ func (h *ZerologHandler) Handle(ctx context.Context, record slog.Record) error {
 		case slog.KindBool:
 			event = event.Bool(attr.Key, attr.Value.Bool())
 		default:
-			// Log unknown types generically
-			event = event.Interface(attr.Key, attr.Value.Any())
+			switch v := attr.Value.Any().(type) {
+			case error:
+				event = event.Err(v)
+			default:
+				event = event.Interface(attr.Key, attr.Value.Any())
+			}
 		}
 		return true
 	})
