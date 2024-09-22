@@ -1424,11 +1424,11 @@ func evalEXPIRE(args []string, store *dstore.Store) []byte {
 
 	var key string = args[0]
 	exDurationSec, err := strconv.ParseInt(args[1], 10, 64)
-	if exDurationSec < 0 || exDurationSec > maxExDuration {
-		return diceerrors.NewErrExpireTime("EXPIRE")
+	if err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
 	}
 
-	if err != nil {
+	if exDurationSec < 0 || exDurationSec > maxExDuration {
 		return diceerrors.NewErrExpireTime("EXPIRE")
 	}
 

@@ -473,6 +473,34 @@ func testEvalEXPIRE(t *testing.T, store *dstore.Store) {
 			input:  []string{"EXISTING_KEY", strconv.FormatInt(-1, 10)},
 			output: []byte("-ERR invalid expire time in 'expire' command\r\n"),
 		},
+		"invalid expiry time exists - empty string": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "mock_value"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+
+			},
+			input:  []string{"EXISTING_KEY", ""},
+			output: []byte("-ERR value is not an integer or out of range\r\n"),
+		},
+		"invalid expiry time exists - with float number": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "mock_value"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+
+			},
+			input:  []string{"EXISTING_KEY", "0.456"},
+			output: []byte("-ERR value is not an integer or out of range\r\n"),
+		},
 	}
 
 	runEvalTests(t, tests, evalEXPIRE, store)
