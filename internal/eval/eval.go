@@ -1722,7 +1722,9 @@ func incrByFloatCmd(args []string, incr float64, store *dstore.Store) []byte {
 
 	// If the key does not exists store set the key equal to the increment and return early
 	if obj == nil {
-		obj = store.NewObj(formatFloat(incr, false), -1, object.ObjTypeString, object.ObjEncodingEmbStr)
+		strValue := formatFloat(incr, false)
+		oType, oEnc := deduceTypeEncoding(strValue)
+		obj = store.NewObj(strValue, -1, oType, oEnc)
 		store.Put(key, obj)
 		return clientio.Encode(obj.Value, false)
 	}
@@ -1742,17 +1744,14 @@ func incrByFloatCmd(args []string, incr float64, store *dstore.Store) []byte {
 	if math.IsInf(value, 0) {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.ValOutOfRangeErr)
 	}
-	obj.Value = formatFloat(value, false)
+	strValue := formatFloat(value, true)
 
-	// Update obj type if it was int
-	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeInt); err == nil {
-		obj.TypeEncoding = object.ObjTypeString | object.ObjEncodingEmbStr
-	}
+	oType, oEnc := deduceTypeEncoding(strValue)
 
-	// Update obj encoding if it was ObjEncodingRaw
-	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingRaw); err == nil {
-		obj.TypeEncoding = object.ObjTypeString | object.ObjEncodingEmbStr
-	}
+	// Remove the trailing decimal for interger values
+	// to maintain consistency with redis
+	obj.Value = strings.TrimSuffix(strValue, ".0")
+	obj.TypeEncoding = oType | oEnc
 
 	return clientio.Encode(obj.Value, false)
 }
