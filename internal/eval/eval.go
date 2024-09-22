@@ -79,7 +79,7 @@ func evalPING(args []string, store *dstore.Store) []byte {
 	return b
 }
 
-// evalECHO returns the argument passed by the user 
+// evalECHO returns the argument passed by the user
 func evalECHO(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("ECHO")
@@ -2120,8 +2120,16 @@ func evalGETBIT(args []string, store *dstore.Store) []byte {
 func evalBITCOUNT(args []string, store *dstore.Store) []byte {
 	var err error
 
-	// if more than 4 arguments are provided, return error
-	if len(args) > 4 {
+	/*
+		Validate the length of the arguments.
+		The command expects exactly 1, 3, or 4 arguments to be valid.
+		Any other number of arguments (0, 2, or more than 4) is considered a syntax error
+		> BITCOUNT foo          => (1 arg, valid)
+		> BITCOUNT foo 2        => (2 args, invalid)
+		> BITCOUNT foo 2 4      => (3 args, valid)
+		> BITCOUNT foo 2 4 BIT  => (4 args, valid)
+	*/
+	if len(args) == 0 || len(args) == 2 || len(args) > 4 {
 		return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 	}
 
