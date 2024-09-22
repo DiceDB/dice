@@ -75,7 +75,7 @@ func (s *AsyncServer) gather(redisCmd *cmd.RedisCmd, buf *bytes.Buffer, numShard
 	switch c {
 	case SingleShard, Custom:
 		if evalResp[0].Error != nil {
-			buf.WriteString(evalResp[0].Error.Error())
+			buf.Write([]byte(evalResp[0].Error.Error()))
 			return
 		}
 		buf.Write(evalResp[0].Result.([]byte))
