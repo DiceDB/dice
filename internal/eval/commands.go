@@ -578,6 +578,15 @@ var (
 		Arity:    -4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hsetnxCmdMeta = DiceCmdMeta{
+		Name: "HSETNX",
+		Info: `Sets field in the hash stored at key to value, only if field does not yet exist. 
+		If key does not exist, a new key holding a hash is created. If field already exists, 
+		this operation has no effect.`,
+		Eval:     evalHSETNX,
+		Arity:    4,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	hgetCmdMeta = DiceCmdMeta{
 		Name:     "HGET",
 		Info:     `Returns the value associated with field in the hash stored at key.`,
@@ -921,6 +930,7 @@ func init() {
 	DiceCmds["GETEX"] = getexCmdMeta
 	DiceCmds["PTTL"] = pttlCmdMeta
 	DiceCmds["HSET"] = hsetCmdMeta
+	DiceCmds["HSETNX"] = hsetnxCmdMeta
 	DiceCmds["OBJECT"] = objectCmdMeta
 	DiceCmds["TOUCH"] = touchCmdMeta
 	DiceCmds["LPUSH"] = lpushCmdMeta
