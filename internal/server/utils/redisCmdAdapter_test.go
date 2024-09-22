@@ -46,9 +46,9 @@ func TestParseHTTPRequest(t *testing.T) {
 			name:         "Test MSET command",
 			method:       "POST",
 			url:          "/mset",
-			body:         `{"key1": "v1", "key2": "v2"}`,
+			body:         `{"key": "key1", "value": "v1", "key": "key2", "value": "v2"}`,
 			expectedCmd:  "MSET",
-			expectedArgs: []string{"v1", "v2"},
+			expectedArgs: []string{"key1", "v1", "key2", "v2"},
 		},
 		{
 			name:         "Test JSON.SET command",

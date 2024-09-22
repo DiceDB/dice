@@ -1,0 +1,43 @@
+package http
+
+import (
+	"context"
+	"github.com/dicedb/dice/internal/logger"
+	"log/slog"
+	"os"
+	"sync"
+	"testing"
+	"time"
+)
+
+func TestMain(m *testing.M) {
+	logger := logger.New(logger.Opts{WithTimestamp: false})
+	slog.SetDefault(logger)
+	var wg sync.WaitGroup
+
+	// Run the test server
+	// This is a synchronous method, because internally it
+	// checks for available port and then forks a goroutine
+	// to start the server
+	opts := TestServerOptions{
+		Port:   8083,
+		Logger: logger,
+	}
+	RunHTTPServer(context.Background(), &wg, opts)
+
+	// Wait for the server to start
+	time.Sleep(2 * time.Second)
+
+	executor := NewHTTPCommandExecutor()
+
+	// Run the test suite
+	exitCode := m.Run()
+
+	executor.FireCommand(HTTPCommand{
+		Command: "ABORT",
+		Body:    map[string]interface{}{},
+	})
+
+	wg.Wait()
+	os.Exit(exitCode)
+}

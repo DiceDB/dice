@@ -68,7 +68,8 @@ func (manager *ShardManager) Run(ctx context.Context) {
 	}
 
 	close(manager.globalErrorChan) // Close the error channel after all Shards stop
-	wg.Wait()                      // Wait for all shard goroutines to exit.
+	wg.Wait()
+	log.Println("Hello")// Wait for all shard goroutines to exit.
 }
 
 // start initializes and starts the shard threads.

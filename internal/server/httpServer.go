@@ -23,7 +23,7 @@ var unimplementedCommands map[string]bool = map[string]bool{
 	"QWATCH":    true,
 	"QUNWATCH":  true,
 	"SUBSCRIBE": true,
-	"ABORT":     true,
+	"ABORT":     false,
 }
 
 type HTTPServer struct {
@@ -33,6 +33,7 @@ type HTTPServer struct {
 	watchChan    chan dstore.WatchEvent
 	httpServer   *http.Server
 	logger       *slog.Logger
+	shutdownChan chan struct{}
 }
 
 func NewHTTPServer(
@@ -54,6 +55,7 @@ func NewHTTPServer(
 		watchChan:    watchChan,
 		httpServer:   srv,
 		logger:       logger,
+		shutdownChan: make(chan struct{}),
 	}
 
 	mux.HandleFunc("/", httpServer.DiceHTTPHandler)
@@ -79,10 +81,17 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		<-ctx.Done()
-		err = s.httpServer.Shutdown(httpCtx)
-		if err != nil {
+		select {
+		case <-ctx.Done():
+		case <-s.shutdownChan:
+			err = ErrAborted
+			s.logger.Debug("Shutting down HTTP Server")
+		}
+
+		shutdownErr := s.httpServer.Shutdown(httpCtx)
+		if shutdownErr != nil {
 			s.logger.Error("HTTP Server Shutdown Failed", slog.Any("error", err))
+			err = shutdownErr
 			return
 		}
 	}()
@@ -103,6 +112,13 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 	redisCmd, err := utils.ParseHTTPRequest(request)
 	if err != nil {
 		s.logger.Error("Error parsing HTTP request", slog.Any("error", err))
+		return
+	}
+
+	if redisCmd.Cmd == "ABORT" {
+		s.logger.Debug("ABORT command received")
+		s.logger.Debug("Shutting down HTTP Server")
+		close(s.shutdownChan)
 		return
 	}
 
@@ -127,7 +143,13 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 	// Wait for response
 	resp := <-s.ioChan
 
-	rp := clientio.NewRESPParser(bytes.NewBuffer(resp.EvalResponse.Result.([]byte)))
+	var rp *clientio.RESPParser
+	if resp.EvalResponse.Error != nil {
+		rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(resp.EvalResponse.Error.Error())))
+	} else {
+		rp = clientio.NewRESPParser(bytes.NewBuffer(resp.EvalResponse.Result.([]byte)))
+	}
+
 	val, err := rp.DecodeOne()
 	if err != nil {
 		s.logger.Error("Error decoding response", slog.Any("error", err))
