@@ -37,6 +37,7 @@ func (h *ZerologHandler) Handle(ctx context.Context, record slog.Record) error {
 			event = event.Bool(attr.Key, attr.Value.Bool())
 		default:
 			switch v := attr.Value.Any().(type) {
+			// error is a special case since zerlog has a dedicated method for it but it's not part of the slog.Kind
 			case error:
 				event = event.Err(v)
 			default:
