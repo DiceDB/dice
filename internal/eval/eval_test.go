@@ -82,6 +82,7 @@ func TestEval(t *testing.T) {
 	testEvalCOMMAND(t, store)
 	testEvalGETRANGE(t, store)
 	testEvalPING(t, store)
+	testEvalINCRBYFLOAT(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -3067,4 +3068,157 @@ func TestMSETConsistency(t *testing.T) {
 
 	assert.Equal(t, "VAL", store.Get("KEY").Value)
 	assert.Equal(t, "VAL2", store.Get("KEY2").Value)
+}
+
+func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"INCRBYFLOAT on a non existing key": {
+			input:  []string{"float", "0.1"},
+			output: clientio.Encode("0.1", false),
+		},
+		"INCRBYFLOAT on an existing key": {
+			setup: func() {
+				key := "key"
+				value := "2.1"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "0.1"},
+			output: clientio.Encode("2.2", false),
+		},
+		"INCRBYFLOAT on a key with integer value": {
+			setup: func() {
+				key := "key"
+				value := "2"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "0.1"},
+			output: clientio.Encode("2.1", false),
+		},
+		"INCRBYFLOAT by a negative increment": {
+			setup: func() {
+				key := "key"
+				value := "2"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "-0.1"},
+			output: clientio.Encode("1.9", false),
+		},
+		"INCRBYFLOAT by a scientific notation increment": {
+			setup: func() {
+				key := "key"
+				value := "1"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "1e-2"},
+			output: clientio.Encode("1.01", false),
+		},
+		"INCRBYFLOAT on a key holding a scientific notation value": {
+			setup: func() {
+				key := "key"
+				value := "1e2"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "1e-1"},
+			output: clientio.Encode("100.1", false),
+		},
+		"INCRBYFLOAT by an negative increment of the same value": {
+			setup: func() {
+				key := "key"
+				value := "0.1"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "-0.1"},
+			output: clientio.Encode("0", false),
+		},
+		"INCRBYFLOAT on a key with spaces": {
+			setup: func() {
+				key := "key"
+				value := "   2   "
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "0.1"},
+			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+		},
+		"INCRBYFLOAT on a key with non numeric value": {
+			setup: func() {
+				key := "key"
+				value := "string"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "0.1"},
+			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+		},
+		"INCRBYFLOAT by a non numeric increment": {
+			setup: func() {
+				key := "key"
+				value := "2.0"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "a"},
+			output: []byte("-ERR value is not an integer or a float\r\n"),
+		},
+	}
+
+	runEvalTests(t, tests, evalINCRBYFLOAT, store)
+}
+
+func BenchmarkEvalINCRBYFLOAT(b *testing.B) {
+	store := dstore.NewStore(nil)
+	store.Put("key1", store.NewObj("1", maxExDuration, object.ObjTypeString, object.ObjEncodingEmbStr))
+	store.Put("key2", store.NewObj("1.2", maxExDuration, object.ObjTypeString, object.ObjEncodingEmbStr))
+
+	inputs := []struct {
+		key  string
+		incr string
+	}{
+		{"key1", "0.1"},
+		{"key1", "-0.1"},
+		{"key2", "1000000.1"},
+		{"key2", "-1000000.1"},
+		{"key3", "-10.1234"},
+	}
+
+	for _, input := range inputs {
+		b.Run(fmt.Sprintf("INCRBYFLOAT %s %s", input.key, input.incr), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_ = evalGETRANGE([]string{"INCRBYFLOAT", input.key, input.incr}, store)
+			}
+		})
+	}
 }

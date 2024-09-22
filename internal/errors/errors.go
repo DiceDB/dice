@@ -12,6 +12,7 @@ const (
 	ExpiryErr            = "invalid expire time in '%s' command"
 	AuthErr              = "AUTH failed"
 	IntOrOutOfRangeErr   = "value is not an integer or out of range"
+	IntOrFloatErr        = "value is not an integer or a float"
 	ValOutOfRangeErr     = "value is out of range"
 	ElementPeekErr       = "number of elements to peek should be a positive number less than %d"
 	NoKeyErr             = "no such key"

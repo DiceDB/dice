@@ -323,6 +323,19 @@ var (
 		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
 	}
+	incrByFloatCmdMeta = DiceCmdMeta{
+		Name: "INCRBYFLOAT",
+		Info: `INCRBYFLOAT increments the value of the key in args by the specified increment,
+		if the key exists and the value is a number.
+		The key should be the first parameter in args, and the increment should be the second parameter.
+		If the key does not exist, new key is created with value 0,
+		the value of the new key is then incremented by the specified increment.
+		If the value at the key is a string, it should be parsable to float64,
+		if not INCRBYFLOAT returns an  error response.
+		INCRBYFLOAT returns the incremented value for the key after applying the specified increment if there are no errors.`,
+		Eval:  evalINCRBYFLOAT,
+		Arity: 2,
+	}
 	infoCmdMeta = DiceCmdMeta{
 		Name: "INFO",
 		Info: `INFO creates a buffer with the info of total keys per db
@@ -843,6 +856,7 @@ func init() {
 	DiceCmds["HELLO"] = helloCmdMeta
 	DiceCmds["BGREWRITEAOF"] = bgrewriteaofCmdMeta
 	DiceCmds["INCR"] = incrCmdMeta
+	DiceCmds["INCRBYFLOAT"] = incrByFloatCmdMeta
 	DiceCmds["INFO"] = infoCmdMeta
 	DiceCmds["CLIENT"] = clientCmdMeta
 	DiceCmds["LATENCY"] = latencyCmdMeta
