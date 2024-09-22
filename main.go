@@ -23,6 +23,8 @@ func init() {
 	flag.IntVar(&config.Port, "port", 7379, "port for the dice server")
 	flag.BoolVar(&config.EnableHTTP, "enable-http", true, "run server in HTTP mode as well")
 	flag.IntVar(&config.HTTPPort, "http-port", 8082, "HTTP port for the dice server")
+	flag.BoolVar(&config.EnableWebsocket, "enable-websocket", true, "run server in Websocket mode as well")
+	flag.IntVar(&config.WebsocketPort, "websocket-port", 8379, "Websocket port for the dice server")
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
 	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the config file")
 	flag.StringVar(&config.ConfigFileLocation, "c", config.ConfigFileLocation, "file path of the config file")
@@ -44,9 +46,10 @@ func main() {
 
 	// Initialize the AsyncServer
 	asyncServer := server.NewAsyncServer(shardManager, watchChan)
-	httpServer := server.NewHTTPServer(shardManager, watchChan)
-
 	// Initialize the HTTP server
+	httpServer := server.NewHTTPServer(shardManager, watchChan)
+	// Initialize the Websocket server
+	websocketServer := server.NewWebSocketServer(shardManager, watchChan)
 
 	// Find a port and bind it
 	if err := asyncServer.FindPortAndBind(); err != nil {
@@ -110,6 +113,25 @@ func main() {
 			serverErrCh <- err
 		} else {
 			log.Debug("HTTP Server stopped without error")
+		}
+	}()
+
+	serverWg.Add(1)
+	go func() {
+		defer serverWg.Done()
+		// Run the Websocket server
+		err := websocketServer.Run(ctx)
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				log.Debug("Websocket Server was canceled")
+			} else if errors.Is(err, server.ErrAborted) {
+				log.Debug("Websocket received abort command")
+			} else {
+				log.Error("Websocket Server error", "error", err)
+			}
+			serverErrCh <- err
+		} else {
+			log.Debug("Websocket Server stopped without error")
 		}
 	}()
 

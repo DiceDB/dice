@@ -12,11 +12,12 @@ import (
 )
 
 const (
-	Key   = "key"
+	Command   = "command"
+	Key       = "key"
 	KeyPrefix = "key_prefix"
-	Field = "field"
-	Path  = "path"
-	Value = "value"
+	Field     = "field"
+	Path      = "path"
+	Value     = "value"
 )
 
 func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
@@ -89,6 +90,71 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 	}
 
 	// Step 2: Return the constructed Redis command
+	return &cmd.RedisCmd{
+		Cmd:  command,
+		Args: args,
+	}, nil
+}
+
+func ParseWebsocketMessage(msg []byte) (*cmd.RedisCmd, error) {
+	var command string
+	var args []string
+
+	// parse to json
+	var jsonBody map[string]interface{}
+	if err := json.Unmarshal(msg, &jsonBody); err != nil {
+		return nil, fmt.Errorf("error parsing message: %v", err)
+	}
+
+	// extract command
+	if comStr, exists := jsonBody[Command]; exists {
+		var ok bool
+		command, ok = comStr.(string)
+		if !ok {
+			return nil, fmt.Errorf("error typecasting command to string")
+		}
+	} else {
+		return nil, fmt.Errorf("error extracting command")
+	}
+	delete(jsonBody, Command)
+
+	// extract priority keys
+	var priorityKeys = [4]string{
+		Key,
+		Field,
+		Path,
+		Value,
+	}
+	for _, key := range priorityKeys {
+		if val, exists := jsonBody[key]; exists {
+			args = append(args, fmt.Sprintf("%v", val))
+			delete(jsonBody, key)
+		}
+	}
+
+	// process remaining keys
+	for key, val := range jsonBody {
+		switch v := val.(type) {
+		case string:
+			// Handle unary operations like 'nx' where value is "true"
+			if v == "true" {
+				args = append(args, key)
+			} else {
+				args = append(args, v)
+			}
+		case map[string]interface{}, []interface{}:
+			// Marshal nested JSON structures back into a string
+			jsonValue, err := json.Marshal(v)
+			if err != nil {
+				return nil, err
+			}
+			args = append(args, string(jsonValue))
+		default:
+			// Append other types as strings
+			args = append(args, fmt.Sprintf("%v", v))
+		}
+	}
+
 	return &cmd.RedisCmd{
 		Cmd:  command,
 		Args: args,

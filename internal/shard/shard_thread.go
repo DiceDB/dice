@@ -115,6 +115,11 @@ func (shard *ShardThread) executeCommand(op *ops.StoreOp) []byte {
 		return diceCmd.Eval(op.Cmd.Args, shard.store)
 	}
 
+	// Till the time we refactor to handle QWATCH differently
+	if op.WebsocketOp {
+		return diceCmd.Eval(op.Cmd.Args, shard.store)
+	}
+
 	// The following commands could be handled at the shard level, however, we can randomly let any shard handle them
 	// to reduce load on main server.
 	switch diceCmd.Name {
