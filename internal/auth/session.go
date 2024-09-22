@@ -2,10 +2,10 @@ package auth
 
 import (
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
-	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/internal/server/utils"
 
 	"github.com/dicedb/dice/config"
@@ -81,7 +81,7 @@ func (user *User) SetPassword(password string) (err error) {
 		hashedPassword []byte
 	)
 	if password == utils.EmptyStr {
-		log.Warn("WARNING: DiceDB is running without authentication. Consider setting a password.")
+		slog.Warn("DiceDB is running without authentication. Consider setting a password.")
 	}
 
 	if hashedPassword, err = bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost); err != nil {

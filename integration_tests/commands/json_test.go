@@ -609,6 +609,7 @@ func TestJSONForgetOperations(t *testing.T) {
 }
 
 func arraysArePermutations[T comparable](a, b []T) bool {
+	// If lengths are different, they cannot be permutations
 	if len(a) != len(b) {
 		return false
 	}
@@ -836,6 +837,84 @@ func TestJsonARRAPPEND(t *testing.T) {
 					assert.Equal(t, out, result)
 				} else if tcase.assertType[i] == "deep_equal" {
 					assert.Assert(t, arraysArePermutations(out.([]interface{}), result.([]interface{})))
+				}
+			}
+		})
+	}
+}
+
+func deStringify(input string) []string {
+	input = strings.Replace(input, "[", "", -1)
+	input = strings.Replace(input, "]", "", -1)
+	arrayString := strings.Split(input, ",")
+	for i, v := range arrayString {
+		arrayString[i] = strings.TrimSpace(v)
+	}
+	return arrayString
+}
+
+func TestJsonNummultby(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	a := `{"a":"b","b":[{"a":2},{"a":5},{"a":"c"}]}`
+	invalidArgMessage := "ERR wrong number of arguments for 'json.nummultby' command"
+
+	testCases := []struct {
+		name        string
+		commands    []string
+		expected    []interface{}
+		assert_type []string
+	}{
+		{
+			name:        "Invalid number of arguments",
+			commands:    []string{"JSON.NUMMULTBY ", "JSON.NUMMULTBY docu", "JSON.NUMMULTBY docu $"},
+			expected:    []interface{}{invalidArgMessage, invalidArgMessage, invalidArgMessage},
+			assert_type: []string{"equal", "equal", "equal"},
+		},
+		{
+			name:        "MultBy at non-existent key",
+			commands:    []string{"JSON.NUMMULTBY docu $ 1"},
+			expected:    []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
+			assert_type: []string{"equal"},
+		},
+		{
+			name:        "Invalid value of multiplier on non-existent key",
+			commands:    []string{"JSON.SET docu $ " + a, "JSON.NUMMULTBY docu $.fe x"},
+			expected:    []interface{}{"OK", "[]"},
+			assert_type: []string{"equal", "equal"},
+		},
+		{
+			name:        "Invalid value of multiplier on existent key",
+			commands:    []string{"JSON.SET docu $ " + a, "JSON.NUMMULTBY docu $.a x"},
+			expected:    []interface{}{"OK", "ERR expected value at line 1 column 1"},
+			assert_type: []string{"equal", "equal"},
+		},
+		{
+			name:        "MultBy at recursive path",
+			commands:    []string{"JSON.SET docu $ " + a, "JSON.NUMMULTBY docu $..a 2"},
+			expected:    []interface{}{"OK", "[4,10,null,null]"},
+			assert_type: []string{"equal", "deep_equal"},
+		},
+		{
+			name:        "MultBy at root path",
+			commands:    []string{"JSON.SET docu $ "+ a, "JSON.NUMMULTBY docu $.a 2"},
+			expected:    []interface{}{"OK", "[null]"},
+			assert_type: []string{"equal", "deep_equal"},
+		},
+	}
+
+	for _, tcase := range testCases {
+		FireCommand(conn, "DEL docu")
+		t.Run(tcase.name, func(t *testing.T) {
+			for i := 0; i < len(tcase.commands); i++ {
+				cmd := tcase.commands[i]
+				out := tcase.expected[i]
+				result := FireCommand(conn, cmd)
+				if tcase.assert_type[i] == "equal" {
+					assert.Equal(t, out, result)
+				} else if tcase.assert_type[i] == "deep_equal" {
+					assert.Assert(t, arraysArePermutations(deStringify(out.(string)), deStringify(result.(string))))
 				}
 			}
 		})
