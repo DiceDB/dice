@@ -58,7 +58,7 @@ func main() {
 		logr.Debug("Running server in multi-threaded mode")
 		numCores = runtime.NumCPU()
 	} else {
-		logr.Debugg("Running server in single-threaded mode")
+		logr.Debug("Running server in single-threaded mode")
 		numCores = 1
 	}
 
