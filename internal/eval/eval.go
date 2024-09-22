@@ -2819,6 +2819,43 @@ func evalHSET(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(numKeys, false)
 }
 
+func evalHINCRBY(args []string, store *dstore.Store) []byte {
+	if len(args) < 3 {
+		return diceerrors.NewErrArity("HINCRBY")
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+	var hashmap HashMap
+
+	if obj != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+		}
+		hashmap = obj.Value.(HashMap)
+	}
+
+	if hashmap == nil {
+		hashmap = make(HashMap)
+	}
+
+	field := args[1]
+	increment, err := strconv.ParseInt(args[2], 10, 64)
+	if err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
+	}
+
+	numkey, err := hashmap.incrementValue(field, increment)
+	if err != nil {
+		return diceerrors.NewErrWithMessage(err.Error())
+	}
+
+	obj = store.NewObj(hashmap, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
+	store.Put(key, obj)
+
+	return clientio.Encode(numkey, false)
+}
+
 func evalHGETALL(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("HGETALL")

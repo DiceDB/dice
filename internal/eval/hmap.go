@@ -2,6 +2,7 @@ package eval
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
@@ -82,4 +83,22 @@ func getValueFromHashMap(key, field string, store *dstore.Store) (val, err []byt
 	}
 
 	return clientio.Encode(value, false), nil
+}
+
+func (h HashMap) incrementValue(field string, increment int64) (int64, error) {
+	val, ok := h[field]
+	if !ok {
+		h[field] = fmt.Sprintf("%v", increment)
+		return increment, nil
+	}
+
+	i, err := strconv.ParseInt(val, 10, 64)
+	if err != nil {
+		return -1, diceerrors.NewErr(diceerrors.HashValueNotIntegerErr)
+	}
+
+	total := i + increment
+	h[field] = fmt.Sprintf("%v", total)
+
+	return total, nil
 }
