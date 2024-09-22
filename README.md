@@ -78,8 +78,10 @@ To run the live DiceDB server for local development:
 ```sh
 $ git clone https://github.com/dicedb/dice
 $ cd dice
-$ air
+$ DICE_ENV=dev air
 ```
+
+> The `DICE_ENV` environment variable is used set the environment, by default it is treated as production. `dev` is used to get pretty printed logs and lower log level.
 
 ### Local Setup with Custom Config
 
