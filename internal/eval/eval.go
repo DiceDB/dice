@@ -1632,8 +1632,7 @@ func evalINCR(args []string, store *dstore.Store) []byte {
 // evalINCRBYFLOAT increments the value of the  key in args by the specified increment,
 // if the key exists and the value is a number.
 // The key should be the first parameter in args, and the increment should be the second parameter.
-// If the key does not exist, new key is created with value 0,
-// the value of the new key is then incremented by the specified increment.
+// If the key does not exist, a new key is created with increment's value.
 // If the value at the key is a string, it should be parsable to float64,
 // if not evalINCRBYFLOAT returns an  error response.
 // evalINCRBYFLOAT returns the incremented value for the key after applying the specified increment if there are no errors.
