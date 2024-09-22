@@ -72,7 +72,7 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 				case string:
 					// Handle unary operations like 'nx' where value is "true"
 					args = append(args, key)
-					if strings.ToLower(v) != True {
+					if !strings.EqualFold(v, True) {
 						args = append(args, v)
 					}
 				case map[string]interface{}, []interface{}:
@@ -86,7 +86,7 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 					args = append(args, key)
 					// Append other types as strings
 					value := fmt.Sprintf("%v", v)
-					if strings.ToLower(value) != True {
+					if !strings.EqualFold(value, True) {
 						args = append(args, value)
 					}
 				}

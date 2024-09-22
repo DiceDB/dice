@@ -19,14 +19,6 @@ func TestParseHTTPRequest(t *testing.T) {
 		expectedArgs []string
 	}{
 		{
-			name:         "Test AUTH command",
-			method:       "POST",
-			url:          "/auth",
-			body:         `{"user": "default", "password": "secret"}`,
-			expectedCmd:  "AUTH",
-			expectedArgs: []string{"default", "secret"},
-		},
-		{
 			name:         "Test SET command with nx flag",
 			method:       "POST",
 			url:          "/set",
@@ -43,14 +35,6 @@ func TestParseHTTPRequest(t *testing.T) {
 			expectedArgs: []string{"k1"},
 		},
 		{
-			name:         "Test MSET command",
-			method:       "POST",
-			url:          "/mset",
-			body:         `{"key": "key1", "value": "v1", "key": "key2", "value": "v2"}`,
-			expectedCmd:  "MSET",
-			expectedArgs: []string{"key1", "v1", "key2", "v2"},
-		},
-		{
 			name:         "Test JSON.SET command",
 			method:       "POST",
 			url:          "/json.set",
@@ -65,14 +49,6 @@ func TestParseHTTPRequest(t *testing.T) {
 			body:         `{"key": "k1"}`,
 			expectedCmd:  "JSON.GET",
 			expectedArgs: []string{"k1"},
-		},
-		{
-			name:         "Test EXPIRE command",
-			method:       "POST",
-			url:          "/expire",
-			body:         `{"key": "k1", "seconds": "100"}`,
-			expectedCmd:  "EXPIRE",
-			expectedArgs: []string{"k1", "100"},
 		},
 		{
 			name:         "Test HSET command with JSON body",

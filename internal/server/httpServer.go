@@ -19,11 +19,13 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
+const Abort = "ABORT"
+
 var unimplementedCommands map[string]bool = map[string]bool{
 	"QWATCH":    true,
 	"QUNWATCH":  true,
 	"SUBSCRIBE": true,
-	"ABORT":     false,
+	Abort:       false,
 }
 
 type HTTPServer struct {
@@ -115,7 +117,7 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 		return
 	}
 
-	if redisCmd.Cmd == "ABORT" {
+	if redisCmd.Cmd == Abort {
 		s.logger.Debug("ABORT command received")
 		s.logger.Debug("Shutting down HTTP Server")
 		close(s.shutdownChan)

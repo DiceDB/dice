@@ -8,6 +8,12 @@ import (
 	"gotest.tools/v3/assert"
 )
 
+type TestCase struct {
+	name     string
+	commands []HTTPCommand
+	expected []interface{}
+}
+
 func TestSet(t *testing.T) {
 	exec := NewHTTPCommandExecutor()
 

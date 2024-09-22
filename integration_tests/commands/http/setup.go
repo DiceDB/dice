@@ -19,17 +19,6 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
-type HTTPCommand struct {
-	Command string
-	Body    map[string]interface{}
-}
-
-type TestCase struct {
-	name     string
-	commands []HTTPCommand
-	expected []interface{}
-}
-
 type TestServerOptions struct {
 	Port   int
 	Logger *slog.Logger
@@ -54,6 +43,11 @@ func NewHTTPCommandExecutor() *HTTPCommandExecutor {
 	}
 }
 
+type HTTPCommand struct {
+	Command string
+	Body    map[string]interface{}
+}
+
 func (e *HTTPCommandExecutor) FireCommand(cmd HTTPCommand) interface{} {
 	command := strings.ToUpper(cmd.Command)
 	body, err := json.Marshal(cmd.Body)
@@ -63,7 +57,14 @@ func (e *HTTPCommandExecutor) FireCommand(cmd HTTPCommand) interface{} {
 		return fmt.Sprintf("ERR failed to marshal command body: %v", err)
 	}
 
-	resp, err := e.httpClient.Post(e.baseURL+"/"+command, "application/json", bytes.NewBuffer(body))
+	ctx := context.Background()
+	req, err := http.NewRequestWithContext(ctx, "POST", e.baseURL+"/"+command, bytes.NewBuffer(body))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := e.httpClient.Do(req)
 
 	if err != nil {
 		return err.Error()
