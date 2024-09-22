@@ -581,6 +581,13 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hstrLenCmdMeta = DiceCmdMeta{
+		Name:     "HSTRLEN",
+		Info:     `Returns the length of value associated with field in the hash stored at key.`,
+		Eval:     evalHSTRLEN,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	objectCmdMeta = DiceCmdMeta{
 		Name: "OBJECT",
 		Info: `OBJECT subcommand [arguments [arguments ...]]
@@ -897,6 +904,7 @@ func init() {
 	DiceCmds["PFADD"] = pfAddCmdMeta
 	DiceCmds["PFCOUNT"] = pfCountCmdMeta
 	DiceCmds["HGET"] = hgetCmdMeta
+	DiceCmds["HSTRLEN"] = hstrLenCmdMeta
 	DiceCmds["PFMERGE"] = pfMergeCmdMeta
 	DiceCmds["JSON.STRLEN"] = jsonStrlenCmdMeta
 	DiceCmds["JSON.MGET"] = jsonMGetCmdMeta
