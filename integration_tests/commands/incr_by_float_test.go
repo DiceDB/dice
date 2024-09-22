@@ -77,8 +77,8 @@ func TestINCRBYFLOAT(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		FireCommand(conn, "DEL foo")
 		t.Run(tc.name, func(t *testing.T) {
+			defer FireCommand(conn, "DEL foo")
 			if tc.setupData != "" {
 				assert.Equal(t, FireCommand(conn, tc.setupData), "OK")
 			}
