@@ -3193,6 +3193,19 @@ func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 			input:  []string{"key", "a"},
 			output: []byte("-ERR value is not an integer or a float\r\n"),
 		},
+		"INCRBYFLOAT by a number that would turn float64 to Inf": {
+			setup: func() {
+				key := "key"
+				value := "1e308"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "1e308"},
+			output: []byte("-ERR value is out of range\r\n"),
+		},
 	}
 
 	runEvalTests(t, tests, evalINCRBYFLOAT, store)

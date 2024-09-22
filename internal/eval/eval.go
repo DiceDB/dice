@@ -1739,8 +1739,11 @@ func incrByFloatCmd(args []string, incr float64, store *dstore.Store) []byte {
 	if err != nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
-
-	obj.Value = formatFloat(value+incr, false)
+	value += incr
+	if math.IsInf(value, 0) {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.ValOutOfRangeErr)
+	}
+	obj.Value = formatFloat(value, false)
 
 	// Update obj type if it was int
 	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeInt); err == nil {
