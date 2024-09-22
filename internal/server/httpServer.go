@@ -127,7 +127,7 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 	// Wait for response
 	resp := <-s.ioChan
 
-	rp := clientio.NewRESPParser(bytes.NewBuffer(resp.Result))
+	rp := clientio.NewRESPParser(bytes.NewBuffer(resp.EvalResponse.Result.([]byte)))
 	val, err := rp.DecodeOne()
 	if err != nil {
 		s.logger.Error("Error decoding response", slog.Any("error", err))

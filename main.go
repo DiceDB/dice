@@ -6,6 +6,7 @@ import (
 	"flag"
 	"os"
 	"os/signal"
+	"runtime"
 	"sync"
 	"syscall"
 
@@ -24,6 +25,7 @@ func init() {
 	flag.StringVar(&config.Host, "host", "0.0.0.0", "host for the dice server")
 	flag.IntVar(&config.Port, "port", 7379, "port for the dice server")
 	flag.BoolVar(&config.EnableHTTP, "enable-http", true, "run server in HTTP mode as well")
+	flag.BoolVar(&config.EnableMultiThreading, "enable-multithreading", false, "run server in multithreading mode")
 	flag.IntVar(&config.HTTPPort, "http-port", 8082, "HTTP port for the dice server")
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
 	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the config file")
@@ -45,7 +47,28 @@ func main() {
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
 	watchChan := make(chan dstore.WatchEvent, config.DiceConfig.Server.KeysLimit)
-	shardManager := shard.NewShardManager(1, watchChan, logr)
+
+	// Get the number of available CPU cores on the machine using runtime.NumCPU().
+	// This determines the total number of logical processors that can be utilized
+	// for parallel execution. Setting the maximum number of CPUs to the available
+	// core count ensures the application can make full use of all available hardware.
+	// If not enabled multithreading, server will run on a single core.
+	var numCores int
+	if config.EnableMultiThreading {
+		logr.Debug("Running server in multi-threaded mode")
+		numCores = runtime.NumCPU()
+	} else {
+		logr.Debug("Running server in single-threaded mode")
+		numCores = 1
+	}
+
+	// The runtime.GOMAXPROCS(numCores) call limits the number of operating system
+	// threads that can execute Go code simultaneously to the number of CPU cores.
+	// This enables Go to run more efficiently, maximizing CPU utilization and
+	// improving concurrency performance across multiple goroutines.
+	runtime.GOMAXPROCS(numCores)
+
+	shardManager := shard.NewShardManager(int8(numCores), watchChan, logr)
 
 	// Initialize the AsyncServer
 	asyncServer := server.NewAsyncServer(shardManager, watchChan, logr)
