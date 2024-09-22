@@ -55,17 +55,17 @@ func main() {
 	// If not enabled multithreading, server will run on a single core.
 	var numCores int
 	if config.EnableMultiThreading {
-		logr.Info("Running server in multi-threaded mode")
+		logr.Debug("Running server in multi-threaded mode")
 		numCores = runtime.NumCPU()
 	} else {
-		logr.Info("Running server in single-threaded mode")
+		logr.Debugg("Running server in single-threaded mode")
 		numCores = 1
 	}
 
 	// The runtime.GOMAXPROCS(numCores) call limits the number of operating system
 	// threads that can execute Go code simultaneously to the number of CPU cores.
 	// This enables Go to run more efficiently, maximizing CPU utilization and
-	// improving concurrency performance across multiple goroutineags.
+	// improving concurrency performance across multiple goroutines.
 	runtime.GOMAXPROCS(numCores)
 
 	shardManager := shard.NewShardManager(int8(numCores), watchChan, logr)
