@@ -123,6 +123,22 @@ func TestParseHTTPRequest(t *testing.T) {
 			expectedArgs: []string{"k1"},
 		},
 		{
+			name:         "Test LPUSH command",
+			method:       "POST",
+			url:          "/lpush",
+			body:         `{"key": "k1", "value": "v1"}`,
+			expectedCmd:  "LPUSH",
+			expectedArgs: []string{"k1", "v1"},
+		},
+		{
+			name:         "Test LPUSH command with multiple items",
+			method:       "POST",
+			url:          "/lpush",
+			body:         `{"key": "k1", "values": ["v1", "v2", "v3"]}`,
+			expectedCmd:  "LPUSH",
+			expectedArgs: []string{"k1", "v1", "v2", "v3"},
+		},
+		{
 			name:         "Test HSET command with JSON body",
 			method:       "POST",
 			url:          "/hset",

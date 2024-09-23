@@ -18,6 +18,7 @@ const (
 	Field     = "field"
 	Path      = "path"
 	Value     = "value"
+	Values    = "values"
 	User      = "user"
 	Password  = "password"
 	Seconds   = "seconds"
@@ -56,12 +57,13 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 
 			// Define keys to exclude and process their values first
 			// Update as we support more commands
-			var priorityKeys = [9]string{
+			var priorityKeys = [10]string{
 				Key,
 				Keys,
 				Field,
 				Path,
 				Value,
+				Values,
 				Seconds,
 				User,
 				Password,
@@ -70,6 +72,13 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 			for _, key := range priorityKeys {
 				if val, exists := jsonBody[key]; exists {
 					if key == Keys {
+						for _, v := range val.([]interface{}) {
+							args = append(args, fmt.Sprintf("%v", v))
+						}
+						delete(jsonBody, key)
+						continue
+					}
+					if key == Values {
 						for _, v := range val.([]interface{}) {
 							args = append(args, fmt.Sprintf("%v", v))
 						}
