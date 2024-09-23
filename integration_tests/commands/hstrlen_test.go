@@ -20,15 +20,15 @@ func TestHSTRLEN(t *testing.T) {
 		},
 		{
 			commands: []string{"HSET key_hStrLen1 field value", "HSTRLEN wrong_key_hStrLen field"},
-			expected: []interface{}{ONE, ZERO},
+			expected: []interface{}{int64(1), int64(0)},
 		},
 		{
 			commands: []string{"HSET key_hStrLen2 field value", "HSTRLEN key_hStrLen2 wrong_field"},
-			expected: []interface{}{ONE, ZERO},
+			expected: []interface{}{int64(1), int64(0)},
 		},
 		{
 			commands: []string{"HSET key_hStrLen3 field HelloWorld", "HSTRLEN key_hStrLen3 field"},
-			expected: []interface{}{ONE, int64(10)},
+			expected: []interface{}{int64(1), int64(10)},
 		},
 		{
 			commands: []string{"SET key value", "HSTRLEN key field"},
