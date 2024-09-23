@@ -47,6 +47,7 @@ var (
 		Info:       `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
 		Arity:      -1,
 		IsMigrated: true,
+		Eval:       evalPING,
 	}
 
 	setCmdMeta = DiceCmdMeta{
@@ -227,7 +228,7 @@ var (
 		Name: "JSON.OBJLEN",
 		Info: `JSON.OBJLEN key [path]
 		Report the number of keys in the JSON object at path in key
-		Returns error response if the key doesn't exist or key is expired or the matching value is not an array. 
+		Returns error response if the key doesn't exist or key is expired or the matching value is not an array.
 		Error reply: If the number of arguments is incorrect.`,
 		Eval:     evalJSONOBJLEN,
 		Arity:    -2,

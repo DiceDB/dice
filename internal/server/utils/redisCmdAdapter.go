@@ -18,6 +18,8 @@ const (
 	Field     = "field"
 	Path      = "path"
 	Value     = "value"
+	KeyValues = "key_values"
+	True      = "true"
 )
 
 func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
@@ -51,11 +53,12 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 
 			// Define keys to exclude and process their values first
 			// Update as we support more commands
-			var priorityKeys = [4]string{
+			var priorityKeys = [5]string{
 				Key,
 				Field,
 				Path,
 				Value,
+				KeyValues,
 			}
 			for _, key := range priorityKeys {
 				if val, exists := jsonBody[key]; exists {
@@ -69,9 +72,8 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 				switch v := val.(type) {
 				case string:
 					// Handle unary operations like 'nx' where value is "true"
-					if v == "true" {
-						args = append(args, key)
-					} else {
+					args = append(args, key)
+					if !strings.EqualFold(v, True) {
 						args = append(args, v)
 					}
 				case map[string]interface{}, []interface{}:
@@ -82,8 +84,12 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 					}
 					args = append(args, string(jsonValue))
 				default:
+					args = append(args, key)
 					// Append other types as strings
-					args = append(args, fmt.Sprintf("%v", v))
+					value := fmt.Sprintf("%v", v)
+					if !strings.EqualFold(value, True) {
+						args = append(args, value)
+					}
 				}
 			}
 		}
