@@ -245,7 +245,7 @@ func evalSETEX(args []string, store *dstore.Store) EvalResponse {
 			Error:  errors.New(string(diceerrors.NewErrExpireTime("SETEX"))),
 		}
 	}
-	newArgs := []string{key, value, Ex, strconv.FormatInt(exDuration, 10)}
+	newArgs := []string{key, value, Ex, args[1]}
 
 	return evalSET(newArgs, store)
 }
