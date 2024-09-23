@@ -34,7 +34,7 @@ func ParseAstExpression(expr sqlparser.Expr) Expression {
 	case *sqlparser.AndExpr:
 		leftExpr := ParseAstExpression(expr.Left)
 		rightExpr := ParseAstExpression(expr.Right)
-		return combineAnd(leftExpr, rightExpr)
+		return CombineAnd(leftExpr, rightExpr)
 	case *sqlparser.OrExpr:
 		leftExpr := ParseAstExpression(expr.Left)
 		rightExpr := ParseAstExpression(expr.Right)
@@ -48,11 +48,13 @@ func ParseAstExpression(expr sqlparser.Expr) Expression {
 	}
 }
 
-func combineAnd(a, b Expression) Expression {
-	var result [][]string
+func CombineAnd(a, b Expression) Expression {
+	result := [][]string{}
 	for _, termA := range a {
 		for _, termB := range b {
-			result = append(result, append(termA, termB...))
+			combined := append(termA, termB...)
+			uniqueCombined := removeDuplicates(combined)
+			result = append(result, uniqueCombined)
 		}
 	}
 	return Expression(result)
@@ -61,4 +63,17 @@ func combineAnd(a, b Expression) Expression {
 func combineOr(a, b Expression) Expression {
 	result := append(a, b...)
 	return Expression(result)
+}
+
+// helper
+func removeDuplicates(input []string) []string {
+	seen := make(map[string]struct{})
+	var result []string
+	for _, v := range input {
+		if _, exists := seen[v]; !exists {
+			seen[v] = struct{}{}
+			result = append(result, v)
+		}
+	}
+	return result
 }

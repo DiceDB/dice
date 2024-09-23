@@ -8,6 +8,95 @@ import (
 	"gotest.tools/v3/assert"
 )
 
+func TestCombineAnd(t *testing.T) {
+	tests := []struct {
+		name     string
+		a        sql.Expression
+		b        sql.Expression
+		expected sql.Expression
+	}{
+		{
+			name:     "Simple combine with no duplicates",
+			a:        sql.Expression([][]string{{"_value > 10"}}),
+			b:        sql.Expression([][]string{{"_key LIKE 'test:*'"}}),
+			expected: sql.Expression([][]string{{"_value > 10", "_key LIKE 'test:*'"}}),
+		},
+		{
+			name:     "Combine with duplicate values",
+			a:        sql.Expression([][]string{{"_value > 10"}}),
+			b:        sql.Expression([][]string{{"_value > 10"}}),
+			expected: sql.Expression([][]string{{"_value > 10"}}),
+		},
+		{
+			name:     "Multiple AND terms, no duplicates",
+			a:        sql.Expression([][]string{{"_value > 10"}}),
+			b:        sql.Expression([][]string{{"_key LIKE 'test:*'", "_value < 5"}}),
+			expected: sql.Expression([][]string{{"_value > 10", "_key LIKE 'test:*'", "_value < 5"}}),
+		},
+		{
+			name: "Multiple terms in both expressions with duplicates",
+			a:    sql.Expression([][]string{{"_value > 10", "_key LIKE 'test:*'"}}),
+			b:    sql.Expression([][]string{{"_key LIKE 'test:*'", "_value < 5"}}),
+			expected: sql.Expression([][]string{
+				{"_value > 10", "_key LIKE 'test:*'", "_value < 5"},
+			}),
+		},
+		{
+			name: "Terms in different order, no duplicates",
+			a:    sql.Expression([][]string{{"_key LIKE 'test:*'", "_value > 10"}}),
+			b:    sql.Expression([][]string{{"_value < 5"}}),
+			expected: sql.Expression([][]string{
+				{"_key LIKE 'test:*'", "_value > 10", "_value < 5"},
+			}),
+		},
+		{
+			name: "Terms in different order with duplicates",
+			a:    sql.Expression([][]string{{"_value > 10", "_key LIKE 'test:*'"}}),
+			b:    sql.Expression([][]string{{"_key LIKE 'test:*'", "_value < 5"}}),
+			expected: sql.Expression([][]string{
+				{"_value > 10", "_key LIKE 'test:*'", "_value < 5"},
+			}),
+		},
+		{
+			name: "Partial duplicates across expressions",
+			a:    sql.Expression([][]string{{"_value > 10", "_key LIKE 'test:*'"}}),
+			b:    sql.Expression([][]string{{"_key LIKE 'test:*'", "_key = 'abc'"}}),
+			expected: sql.Expression([][]string{
+				{"_value > 10", "_key LIKE 'test:*'", "_key = 'abc'"},
+			}),
+		},
+		{
+			name: "Nested AND groups",
+			a:    sql.Expression([][]string{{"_key LIKE 'test:*'", "_value > 10"}}),
+			b:    sql.Expression([][]string{{"_key LIKE 'test:*'", "_value < 5"}, {"_value = 7"}}),
+			expected: sql.Expression([][]string{
+				{"_key LIKE 'test:*'", "_value > 10", "_value < 5"},
+				{"_key LIKE 'test:*'", "_value > 10", "_value = 7"},
+			}),
+		},
+		{
+			name: "Same terms but in different AND groups",
+			a:    sql.Expression([][]string{{"_key LIKE 'test:*'"}}),
+			b:    sql.Expression([][]string{{"_key LIKE 'test:*'", "_value < 5"}, {"_key LIKE 'test:*'"}}),
+			expected: sql.Expression([][]string{
+				{"_key LIKE 'test:*'", "_value < 5"},
+				{"_key LIKE 'test:*'"},
+			}),
+		},
+		{
+			name:     "Empty expression",
+			a:        sql.Expression([][]string{}),
+			b:        sql.Expression([][]string{}),
+			expected: sql.Expression([][]string{}),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.DeepEqual(t, tt.expected, sql.CombineAnd(tt.a, tt.b))
+		})
+	}
+}
+
 func TestParseAstExpression(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -55,6 +144,14 @@ func TestParseAstExpression(t *testing.T) {
 			expression: "like_key'match:1:*'",
 		},
 		{
+			name: "pskd",
+			similarEq: []string{
+				"_key like 'match:1:*' AND _key like 'match:1:*'",
+				"_key like 'match:1:*'",
+			},
+			expression: "like_key'match:1:*'",
+		},
+		{
 			name: "dcdjfhcdipp",
 			similarEq: []string{
 				"(_key LIKE 'test:*') AND (_value > 10 OR _value < 5)",
@@ -68,6 +165,24 @@ func TestParseAstExpression(t *testing.T) {
 			},
 			expression: "<_value5 AND like_key'test:*' OR >_value10 AND like_key'test:*'",
 		},
+		// {
+		// 	name: "fjvh",
+		// 	similarEq: []string{
+		// 		// "(_key LIKE 'test:*') OR (_value > 10 AND _value < 5)", // "<_value5 AND >_value10 OR like_key'test:*'"
+		// 		// "(_value > 10 AND _value < 5) OR (_key LIKE 'test:*')", // "<_value5 AND >_value10 OR like_key'test:*'"
+		// 		// "(_value < 5 AND _value > 10) OR (_key LIKE 'test:*')", // "<_value5 AND >_value10 OR like_key'test:*'"
+		// 		// "(_key LIKE 'test:*' OR _value > 10) AND (_key LIKE 'test:*' OR _value < 5)",
+		// 		// {
+		// 		// 	  	"<_value5 AND >_value10 OR",
+		// 		// 	+ 	" <_value5 AND like_key'test:*' OR >_value10 AND like_key'test:*'",
+		// 		// 	+ 	" OR like_key'test:*' AND",
+		// 		// 	  	" like_key'test:*'",
+		// 		// 	  }
+
+		// 		// "((_key LIKE 'test:*') OR (_value > 10)) AND ((_key LIKE 'test:*') OR (_value < 5))",
+		// 	},
+		// 	expression: "<_value5 AND >_value10 OR like_key'test:*'",
+		// },
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
