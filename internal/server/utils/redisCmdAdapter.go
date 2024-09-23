@@ -106,7 +106,7 @@ func ParseWebsocketMessage(msg []byte) (*cmd.RedisCmd, error) {
 	var command string
 	var args []string
 
-	// parse to json
+	// parse msg to json
 	var jsonBody map[string]interface{}
 	if err := json.Unmarshal(msg, &jsonBody); err != nil {
 		return nil, fmt.Errorf("error parsing message: %v", err)
@@ -119,17 +119,19 @@ func ParseWebsocketMessage(msg []byte) (*cmd.RedisCmd, error) {
 		if !ok {
 			return nil, fmt.Errorf("error typecasting command to string")
 		}
+		command = strings.ToUpper(command)
 	} else {
 		return nil, fmt.Errorf("error extracting command")
 	}
 	delete(jsonBody, Command)
 
 	// extract priority keys
-	var priorityKeys = [4]string{
+	var priorityKeys = [5]string{
 		Key,
 		Field,
 		Path,
 		Value,
+		KeyValues,
 	}
 	for _, key := range priorityKeys {
 		if val, exists := jsonBody[key]; exists {
@@ -143,9 +145,8 @@ func ParseWebsocketMessage(msg []byte) (*cmd.RedisCmd, error) {
 		switch v := val.(type) {
 		case string:
 			// Handle unary operations like 'nx' where value is "true"
-			if v == "true" {
-				args = append(args, key)
-			} else {
+			args = append(args, key)
+			if !strings.EqualFold(v, True) {
 				args = append(args, v)
 			}
 		case map[string]interface{}, []interface{}:
@@ -156,8 +157,12 @@ func ParseWebsocketMessage(msg []byte) (*cmd.RedisCmd, error) {
 			}
 			args = append(args, string(jsonValue))
 		default:
+			args = append(args, key)
 			// Append other types as strings
-			args = append(args, fmt.Sprintf("%v", v))
+			value := fmt.Sprintf("%v", v)
+			if !strings.EqualFold(value, True) {
+				args = append(args, value)
+			}
 		}
 	}
 

@@ -20,6 +20,13 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+var unimplementedCommandsWebsocket map[string]bool = map[string]bool{
+	"QWATCH":    true,
+	"QUNWATCH":  true,
+	"SUBSCRIBE": true,
+	Abort:       false,
+}
+
 type WebsocketServer struct {
 	querywatcher    *querywatcher.QueryManager
 	shardManager    *shard.ShardManager
@@ -28,13 +35,7 @@ type WebsocketServer struct {
 	websocketServer *http.Server
 	upgrader        websocket.Upgrader
 	logger          *slog.Logger
-}
-
-var unimplementedCommandsWebsocket map[string]bool = map[string]bool{
-	"QWATCH":    true,
-	"QUNWATCH":  true,
-	"SUBSCRIBE": true,
-	"ABORT":     true,
+	shutdownChan    chan struct{}
 }
 
 func NewWebSocketServer(shardManager *shard.ShardManager, watchChan chan dstore.WatchEvent, logger *slog.Logger) *WebsocketServer {
@@ -81,7 +82,13 @@ func (s *WebsocketServer) Run(ctx context.Context) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		<-ctx.Done()
+		select {
+		case <-ctx.Done():
+		case <-s.shutdownChan:
+			err = ErrAborted
+			s.logger.Debug("Shutting down HTTP Server")
+		}
+
 		err = s.websocketServer.Shutdown(websocketCtx)
 		if err != nil {
 			s.logger.Error("Websocket Server shutdown failed:", slog.Any("error", err))
@@ -92,7 +99,7 @@ func (s *WebsocketServer) Run(ctx context.Context) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		s.logger.Info("Websocket Server running on", slog.String("port", s.websocketServer.Addr[1:]))
+		s.logger.Info("Websocket Server running", slog.String("port", s.websocketServer.Addr[1:]))
 		err = s.websocketServer.ListenAndServe()
 	}()
 
@@ -101,6 +108,7 @@ func (s *WebsocketServer) Run(ctx context.Context) error {
 }
 
 func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Request) {
+	// upgrade http connection to websocket
 	conn, err := s.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		s.logger.Error("Websocket upgrade failed", slog.Any("error", err))
@@ -119,6 +127,13 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		redisCmd, err := utils.ParseWebsocketMessage(msg)
 		if err != nil {
 			s.logger.Error("Error parsing Websocket request", slog.Any("error", err))
+		}
+
+		if redisCmd.Cmd == Abort {
+			s.logger.Debug("ABORT command received")
+			s.logger.Debug("Shutting down Websocket Server")
+			close(s.shutdownChan)
+			return
 		}
 
 		if unimplementedCommandsWebsocket[redisCmd.Cmd] {
@@ -142,7 +157,13 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		// Wait for response
 		resp := <-s.ioChan
 
-		rp := clientio.NewRESPParser(bytes.NewBuffer(resp.EvalResponse.Result.([]byte)))
+		var rp *clientio.RESPParser
+		if resp.EvalResponse.Error != nil {
+			rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(resp.EvalResponse.Error.Error())))
+		} else {
+			rp = clientio.NewRESPParser(bytes.NewBuffer(resp.EvalResponse.Result.([]byte)))
+		}
+
 		val, err := rp.DecodeOne()
 		if err != nil {
 			s.logger.Error("Error decoding response", slog.Any("error", err))
