@@ -79,6 +79,7 @@ func TestEval(t *testing.T) {
 	testEvalJSONNUMINCRBY(t, store)
 	testEvalTYPE(t, store)
 	testEvalCOMMAND(t, store)
+	testEvalHINCRBY(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -2767,4 +2768,88 @@ func TestMSETConsistency(t *testing.T) {
 
 	assert.Equal(t, "VAL", store.Get("KEY").Value)
 	assert.Equal(t, "VAL2", store.Get("KEY2").Value)
+}
+
+func BenchmarkEvalHINCRBY(b *testing.B) {
+	store := dstore.NewStore(nil)
+
+	// creating new fields
+	for i := 0; i < b.N; i++ {
+		evalHINCRBY([]string{"KEY", fmt.Sprintf("FIELD_%d", i), fmt.Sprintf("%d", i)}, store)
+	}
+
+	// updating the existing fields
+	for i := 0; i < b.N; i++ {
+		evalHINCRBY([]string{"KEY", fmt.Sprintf("FIELD_%d", i), fmt.Sprintf("%d", i*10)}, store)
+	}
+}
+
+func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"invalid number of args passed": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'hincrby' command\r\n"),
+		},
+		"only key is passed in args": {
+			setup:  func() {},
+			input:  []string{"key"},
+			output: []byte("-ERR wrong number of arguments for 'hincrby' command\r\n"),
+		},
+		"only key and field is passed in args": {
+			setup:  func() {},
+			input:  []string{"key field"},
+			output: []byte("-ERR wrong number of arguments for 'hincrby' command\r\n"),
+		},
+		"key, field and increment passed in args": {
+			setup:  func() {},
+			input:  []string{"key", "field", "10"},
+			output: clientio.Encode(int64(10), false),
+		},
+		"update the already existing field in the key": {
+			setup: func() {
+				key := "key"
+				field := "field"
+				h := make(HashMap)
+				h[field] = "10"
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          h,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "field", "10"},
+			output: clientio.Encode(int64(20), false),
+		},
+		"increment value is not int64": {
+			setup:  func() {},
+			input:  []string{"key", "field", "hello"},
+			output: []byte("-ERR value is not an integer or out of range\r\n"),
+		},
+		"increment value is greater than the bound of int64": {
+			setup:  func() {},
+			input:  []string{"key", "field", "99999999999999999999999999999999999999999999999999999"},
+			output: []byte("-ERR value is not an integer or out of range\r\n"),
+		},
+		"update the existing field whose datatype is not int64": {
+			setup: func() {
+				key := "new_key"
+				field := "new_field"
+				newMap := make(HashMap)
+				newMap[field] = "new_value"
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input:  []string{"new_key", "new_field", "10"},
+			output: []byte("-ERR hash value is not an integer\r\n"),
+		},
+	}
+
+	runEvalTests(t, tests, evalHINCRBY, store)
 }
