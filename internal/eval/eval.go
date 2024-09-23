@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"math/rand"
 	"regexp"
 	"sort"
 	"strconv"
@@ -3711,4 +3712,107 @@ func evalGETRANGE(args []string, store *dstore.Store) []byte {
 	}
 
 	return clientio.Encode(str[start:end+1], false)
+}
+
+// evalHRANDFIELD returns random fields from a hash stored at key.
+// If only the key is provided, one random field is returned.
+// If count is provided, it returns that many unique random fields. A negative count allows repeated selections.
+// The "WITHVALUES" option returns both fields and values.
+// Returns nil if the key doesn't exist or the hash is empty.
+// Errors: arity error, type error for non-hash, syntax error for "WITHVALUES", or count format error.
+
+func evalHRANDFIELD(args []string, store *dstore.Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("HRANDFIELD")
+	}
+
+	key := args[0]
+
+	obj := store.Get(key)
+
+	var hashMap HashMap
+	var results []string
+
+	if obj != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+		}
+		hashMap = obj.Value.(HashMap)
+	} else {
+		// To change this
+		return clientio.RespNIL
+	}
+
+	if len(args) == 1 {
+		keys := make([]string, 0, len(hashMap))
+		for k := range hashMap {
+			keys = append(keys, k)
+		}
+
+		if len(keys) == 0 {
+			return clientio.Encode([]string{}, false)
+		}
+
+		randomIndex := rand.Intn(len(keys))
+		randomField := keys[randomIndex]
+
+		return clientio.Encode(randomField, false)
+	}
+
+	//Check if count is provided
+	if len(args) > 1 && len(args) < 4 {
+		countArg := args[1]
+		withValues := false
+		count, err := strconv.Atoi(countArg)
+		if err != nil {
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
+		}
+
+		if len(args) == 3 {
+			withValues = (strings.ToUpper(args[2]) == "WITHVALUES")
+			if !withValues {
+				return diceerrors.NewErrWithFormattedMessage(diceerrors.SyntaxErr)
+			}
+		}
+
+		if count > 0 {
+			if count > len(hashMap) {
+				count = len(hashMap)
+			}
+
+			keys := make([]string, 0, len(hashMap))
+			for k := range hashMap {
+				keys = append(keys, k)
+			}
+
+			//Shuffle keys
+			rand.Shuffle(len(keys), func(i, j int) {
+				keys[i], keys[j] = keys[j], keys[i]
+			})
+
+			for i := 0; i < count; i++ {
+				results = append(results, keys[i])
+				if withValues {
+					results = append(results, hashMap[keys[i]])
+				}
+			}
+		} else if count < 0 {
+			for i := 0; i < -count; i++ {
+				keys := make([]string, 0, len(hashMap))
+				for k := range hashMap {
+					keys = append(keys, k)
+				}
+
+				// Randomly select a key
+				randomIndex := rand.Intn(len(keys))
+				results = append(results, keys[randomIndex])
+				if withValues {
+					results = append(results, hashMap[keys[randomIndex]])
+				}
+			}
+		}
+		return clientio.Encode(results, false)
+	} else {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.SyntaxErr)
+	}
 }

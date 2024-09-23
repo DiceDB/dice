@@ -837,6 +837,13 @@ var (
 		IsMigrated: true,
 		NewEval:    evalSETEX,
 	}
+	hrandfieldCmdMeta = DiceCmdMeta{
+		Name:     "HRANDFIELD",
+		Info:     `Returns one or more random fields from a hash.`,
+		Eval:     evalHRANDFIELD,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -932,6 +939,7 @@ func init() {
 	DiceCmds["TYPE"] = typeCmdMeta
 	DiceCmds["GETRANGE"] = getRangeCmdMeta
 	DiceCmds["SETEX"] = setexCmdMeta
+	DiceCmds["HRANDFIELD"] = hrandfieldCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}
