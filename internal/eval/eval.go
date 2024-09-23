@@ -1677,18 +1677,18 @@ func incrDecrCmd(args []string, incr int64, store *dstore.Store) []byte {
 	}
 
 	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeInt); err != nil {
-		return diceerrors.NewErrWithMessage(err.Error())
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
 	}
 
 	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingInt); err != nil {
-		return diceerrors.NewErrWithMessage(err.Error())
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
 	}
 
 	i, _ := obj.Value.(int64)
 	// check overflow
 	if (incr < 0 && i < 0 && incr < (math.MinInt64-i)) ||
 		(incr > 0 && i > 0 && incr > (math.MaxInt64-i)) {
-		return diceerrors.NewErrWithMessage(diceerrors.ValOutOfRangeErr)
+		return diceerrors.NewErrWithMessage(diceerrors.IncrDecrOverflowErr)
 	}
 
 	i += incr

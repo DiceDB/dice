@@ -49,9 +49,9 @@ func TestINCR(t *testing.T) {
 			}{
 				{"s", "max_int", int64(math.MaxInt64 - 1), utils.EmptyStr},
 				{"i", "max_int", int64(math.MaxInt64), utils.EmptyStr},
-				{"i", "max_int", nil, "ERR value is out of range"},
+				{"i", "max_int", nil, "ERR increment or decrement would overflow"},
 				{"s", "max_int", int64(math.MaxInt64), utils.EmptyStr},
-				{"i", "max_int", nil, "ERR value is out of range"},
+				{"i", "max_int", nil, "ERR increment or decrement would overflow"},
 			},
 		},
 		{
@@ -76,11 +76,11 @@ func TestINCR(t *testing.T) {
 				expectedErr string
 			}{
 				{"s", "float_key", "3.14", utils.EmptyStr},
-				{"i", "float_key", nil, "ERR WRONGTYPE Operation against a key holding the wrong kind of value"},
+				{"i", "float_key", nil, "ERR value is not an integer or out of range"},
 				{"s", "string_key", "hello", utils.EmptyStr},
-				{"i", "string_key", nil, "ERR WRONGTYPE Operation against a key holding the wrong kind of value"},
+				{"i", "string_key", nil, "ERR value is not an integer or out of range"},
 				{"s", "bool_key", "true", utils.EmptyStr},
-				{"i", "bool_key", nil, "ERR WRONGTYPE Operation against a key holding the wrong kind of value"},
+				{"i", "bool_key", nil, "ERR value is not an integer or out of range"},
 			},
 		},
 		{

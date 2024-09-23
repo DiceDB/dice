@@ -38,7 +38,7 @@ func TestDECR(t *testing.T) {
 				{"g", "key2", -1, utils.EmptyStr},
 				{"s", "key3", math.MinInt64 + 1, utils.EmptyStr},
 				{"d", "key3", math.MinInt64, utils.EmptyStr},
-				{"d", "key3", math.MinInt64, "ERR value is out of range"},
+				{"d", "key3", math.MinInt64, "ERR increment or decrement would overflow"},
 			},
 		},
 	}
@@ -104,7 +104,7 @@ func TestDECRBY(t *testing.T) {
 				{"key1", int64(1), 0, utils.EmptyStr},
 				{"key4", int64(1), -1, utils.EmptyStr},
 				{"key3", int64(1), math.MinInt64, utils.EmptyStr},
-				{"key3", int64(math.MinInt64), 0, "ERR value is out of range"},
+				{"key3", int64(math.MinInt64), 0, "ERR increment or decrement would overflow"},
 				{"key5", "abc", 0, "ERR value is not an integer or out of range"},
 			},
 			getCommands: []GetCommand{
