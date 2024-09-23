@@ -75,12 +75,14 @@ func (s *AsyncServer) gather(redisCmd *cmd.RedisCmd, buf *bytes.Buffer, numShard
 	switch c {
 	case SingleShard, Custom:
 		if evalResp[0].Error != nil {
-			buf.Write([]byte(evalResp[0].Error.Error()))
+			buf.WriteString(evalResp[0].Error.Error())
 			return
 		}
 		buf.Write(evalResp[0].Result.([]byte))
 
 	case Multishard:
 		buf.Write(val.Gather(evalResp...))
+	default:
+		buf.WriteString("ERR Invalid command type")
 	}
 }

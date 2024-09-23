@@ -1629,6 +1629,25 @@ func evalINCR(args []string, store *dstore.Store) []byte {
 	return incrDecrCmd(args, 1, store)
 }
 
+// evalINCRBYFLOAT increments the value of the  key in args by the specified increment,
+// if the key exists and the value is a number.
+// The key should be the first parameter in args, and the increment should be the second parameter.
+// If the key does not exist, a new key is created with increment's value.
+// If the value at the key is a string, it should be parsable to float64,
+// if not evalINCRBYFLOAT returns an  error response.
+// evalINCRBYFLOAT returns the incremented value for the key after applying the specified increment if there are no errors.
+func evalINCRBYFLOAT(args []string, store *dstore.Store) []byte {
+	if len(args) != 2 {
+		return diceerrors.NewErrArity("INCRBYFLOAT")
+	}
+	incr, err := strconv.ParseFloat(strings.TrimSpace(args[1]), 64)
+
+	if err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.IntOrFloatErr)
+	}
+	return incrByFloatCmd(args, incr, store)
+}
+
 // evalDECR decrements the value of the specified key in args by 1,
 // if the key exists and the value is integer format.
 // The key should be the only param in args.
@@ -1677,24 +1696,81 @@ func incrDecrCmd(args []string, incr int64, store *dstore.Store) []byte {
 	}
 
 	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeInt); err != nil {
-		return diceerrors.NewErrWithMessage(err.Error())
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
 	}
 
 	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingInt); err != nil {
-		return diceerrors.NewErrWithMessage(err.Error())
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
 	}
 
 	i, _ := obj.Value.(int64)
 	// check overflow
 	if (incr < 0 && i < 0 && incr < (math.MinInt64-i)) ||
 		(incr > 0 && i > 0 && incr > (math.MaxInt64-i)) {
-		return diceerrors.NewErrWithMessage(diceerrors.ValOutOfRangeErr)
+		return diceerrors.NewErrWithMessage(diceerrors.IncrDecrOverflowErr)
 	}
 
 	i += incr
 	obj.Value = i
 
 	return clientio.Encode(i, false)
+}
+
+func incrByFloatCmd(args []string, incr float64, store *dstore.Store) []byte {
+	key := args[0]
+	obj := store.Get(key)
+
+	// If the key does not exists store set the key equal to the increment and return early
+	if obj == nil {
+		strValue := formatFloat(incr, false)
+		oType, oEnc := deduceTypeEncoding(strValue)
+		obj = store.NewObj(strValue, -1, oType, oEnc)
+		store.Put(key, obj)
+		return clientio.Encode(obj.Value, false)
+	}
+
+	// Return with error if the obj type is not string or Int
+	errString := object.AssertType(obj.TypeEncoding, object.ObjTypeString)
+	errInt := object.AssertType(obj.TypeEncoding, object.ObjTypeInt)
+	if errString != nil && errInt != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
+	value, err := floatValue(obj.Value)
+	if err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+	value += incr
+	if math.IsInf(value, 0) {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.ValOutOfRangeErr)
+	}
+	strValue := formatFloat(value, true)
+
+	oType, oEnc := deduceTypeEncoding(strValue)
+
+	// Remove the trailing decimal for interger values
+	// to maintain consistency with redis
+	obj.Value = strings.TrimSuffix(strValue, ".0")
+	obj.TypeEncoding = oType | oEnc
+
+	return clientio.Encode(obj.Value, false)
+}
+
+// floatValue returns the float64 value for an interface which
+// contains either a string or an int.
+func floatValue(value interface{}) (float64, error) {
+	switch raw := value.(type) {
+	case string:
+		parsed, err := strconv.ParseFloat(raw, 64)
+		if err != nil {
+			return 0, err
+		}
+		return parsed, nil
+	case int64:
+		return float64(raw), nil
+	}
+
+	return 0, fmt.Errorf(diceerrors.IntOrFloatErr)
 }
 
 // evalINFO creates a buffer with the info of total keys per db
@@ -2498,8 +2574,9 @@ func evalGETEX(args []string, store *dstore.Store) []byte {
 		return clientio.RespNIL
 	}
 
-	// check if the object is set type if yes then return error
-	if object.AssertType(obj.TypeEncoding, object.ObjTypeSet) == nil {
+	// check if the object is set type or json type if yes then return error
+	if object.AssertType(obj.TypeEncoding, object.ObjTypeSet) == nil ||
+		object.AssertType(obj.TypeEncoding, object.ObjTypeJSON) == nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
@@ -3446,6 +3523,9 @@ func evalSELECT(args []string, store *dstore.Store) []byte {
 	return clientio.RespOK
 }
 
+// formatFloat formats float64 as string.
+// Optionally appends a decimal (.0) for whole numbers,
+// if b is true.
 func formatFloat(f float64, b bool) string {
 	formatted := strconv.FormatFloat(f, 'f', -1, 64)
 	if b {
