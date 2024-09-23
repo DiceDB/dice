@@ -133,7 +133,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 	if redisCmd.Cmd == Abort {
 		s.logger.Debug("ABORT command received")
 		s.logger.Debug("Shutting down Websocket Server")
-		// close(s.shutdownChan)
+		close(s.shutdownChan)
 		return
 	}
 
