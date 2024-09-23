@@ -2774,6 +2774,39 @@ func evalHGET(args []string, store *dstore.Store) []byte {
 	return val
 }
 
+// evalHSTRLEN returns the length of value associated with field in the hash stored at key.
+//
+// This command returns 0, if the specified field doesn't exist in the key
+//
+// If key doesn't exist, it returns 0.
+//
+// Usage: HSTRLEN key field value
+func evalHSTRLEN(args []string, store *dstore.Store) []byte {
+	if len(args) != 2 {
+		return diceerrors.NewErrArity("HSTRLEN")
+	}
+
+	key := args[0]
+	hmKey := args[1]
+	obj := store.Get(key)
+
+	var hashMap HashMap
+
+	if obj != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+		}
+		hashMap = obj.Value.(HashMap)
+	}
+
+	val, ok := hashMap.Get(hmKey)
+	// Return 0, if specified field doesn't exist in the HashMap.
+	if ok {
+		return clientio.Encode(len(*val), false)
+	}
+	return clientio.Encode(0, false)
+}
+
 func evalObjectIdleTime(key string, store *dstore.Store) []byte {
 	obj := store.GetNoTouch(key)
 	if obj == nil {
