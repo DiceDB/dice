@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dicedb/dice/integration_tests/commands"
+	commands "github.com/dicedb/dice/integration_tests/commands/async"
 
 	"github.com/dicedb/dice/config"
 )

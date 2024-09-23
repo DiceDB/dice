@@ -19,6 +19,10 @@ func ExecuteCommand(c *cmd.RedisCmd, client *comm.Client, store *dstore.Store, h
 
 	// Till the time we refactor to handle QWATCH differently using HTTP Streaming/SSE
 	if http {
+		if diceCmd.IsMigrated {
+			return diceCmd.NewEval(c.Args, store)
+		}
+
 		return EvalResponse{Result: diceCmd.Eval(c.Args, store), Error: nil}
 	}
 
