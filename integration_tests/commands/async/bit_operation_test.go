@@ -145,18 +145,6 @@ func TestBitCount(t *testing.T) {
 			InCmds: []string{"BITCOUNT mykey 0"},
 			Out:    []interface{}{"ERR syntax error"},
 		},
-		{
-			InCmds: []string{"BITCOUNT"},
-			Out:    []interface{}{"ERR syntax error"},
-		},
-		{
-			InCmds: []string{"BITCOUNT mykey"},
-			Out:    []interface{}{int64(1)},
-		},
-		{
-			InCmds: []string{"BITCOUNT mykey 0"},
-			Out:    []interface{}{"ERR syntax error"},
-		},
 	}
 
 	for _, tcase := range testcases {
