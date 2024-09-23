@@ -45,6 +45,16 @@ func TestParseAstExpression(t *testing.T) {
 			expression: "like_key'match:1:*'",
 		},
 		{
+			name: "aa",
+			similarEq: []string{
+				"_key like 'match:1:*'",
+				"(_key like 'match:1:*')",
+				"((_key like 'match:1:*'))",
+				"(((_key like 'match:1:*')))",
+			},
+			expression: "like_key'match:1:*'",
+		},
+		{
 			name: "dcdjfhcdipp",
 			similarEq: []string{
 				"(_key LIKE 'test:*') AND (_value > 10 OR _value < 5)",
@@ -109,6 +119,16 @@ func TestGenerateFingerprint(t *testing.T) {
 			name: "aa",
 			similarEq: []string{
 				"_key like 'match:1:*'",
+			},
+			fingerprint: "f_5313097907453016110",
+		},
+		{
+			name: "aa",
+			similarEq: []string{
+				"_key like 'match:1:*'",
+				"(_key like 'match:1:*')",
+				"((_key like 'match:1:*'))",
+				"(((_key like 'match:1:*')))",
 			},
 			fingerprint: "f_5313097907453016110",
 		},
