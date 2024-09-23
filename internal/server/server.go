@@ -12,7 +12,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/charmbracelet/log"
+	"log/slog"
+
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/clientio"
@@ -40,18 +41,20 @@ type AsyncServer struct {
 	shardManager           *shard.ShardManager
 	ioChan                 chan *ops.StoreResponse // The server acts like a worker today, this behavior will change once IOThreads are introduced and each client gets its own worker.
 	watchChan              chan dstore.WatchEvent  // This is needed to co-ordinate between the store and the query watcher.
+	logger                 *slog.Logger            // logger is the logger for the server
 }
 
 // NewAsyncServer initializes a new AsyncServer
-func NewAsyncServer(shardManager *shard.ShardManager, watchChan chan dstore.WatchEvent) *AsyncServer {
+func NewAsyncServer(shardManager *shard.ShardManager, watchChan chan dstore.WatchEvent, logger *slog.Logger) *AsyncServer {
 	return &AsyncServer{
 		maxClients:             config.DiceConfig.Server.MaxClients,
 		connectedClients:       make(map[int]*comm.Client),
 		shardManager:           shardManager,
-		queryWatcher:           querywatcher.NewQueryManager(),
+		queryWatcher:           querywatcher.NewQueryManager(logger),
 		multiplexerPollTimeout: config.DiceConfig.Server.MultiplexerPollTimeout,
 		ioChan:                 make(chan *ops.StoreResponse, 1000),
 		watchChan:              watchChan,
+		logger:                 logger,
 	}
 }
 
@@ -76,7 +79,7 @@ func (s *AsyncServer) FindPortAndBind() (socketErr error) {
 	defer func() {
 		if socketErr != nil {
 			if err := syscall.Close(serverFD); err != nil {
-				log.Warn("failed to close server socket", "error", err)
+				s.logger.Warn("failed to close server socket", slog.Any("error", err))
 			}
 		}
 	}()
@@ -96,20 +99,27 @@ func (s *AsyncServer) FindPortAndBind() (socketErr error) {
 		return ErrInvalidIPAddress
 	}
 
-	log.Infof("DiceDB %s running on port %d", "0.0.3", config.DiceConfig.Server.Port)
-	return syscall.Bind(serverFD, &syscall.SockaddrInet4{
+	if err := syscall.Bind(serverFD, &syscall.SockaddrInet4{
 		Port: config.DiceConfig.Server.Port,
 		Addr: [4]byte{ip4[0], ip4[1], ip4[2], ip4[3]},
-	})
+	}); err != nil {
+		return err
+	}
+	s.logger.Info(
+		"DiceDB is running",
+		slog.String("version", "0.0.4"),
+		slog.Int("port", config.DiceConfig.Server.Port),
+	)
+	return nil
 }
 
 // ClosePort ensures the server socket is closed properly.
 func (s *AsyncServer) ClosePort() {
 	if s.serverFD != 0 {
 		if err := syscall.Close(s.serverFD); err != nil {
-			log.Warn("failed to close server socket", "error", err)
+			s.logger.Warn("failed to close server socket", slog.Any("error", err))
 		} else {
-			log.Debug("Server socket closed successfully")
+			s.logger.Debug("Server socket closed successfully")
 		}
 		s.serverFD = 0
 	}
@@ -125,7 +135,7 @@ func (s *AsyncServer) InitiateShutdown() {
 	// Close all client connections
 	for fd := range s.connectedClients {
 		if err := syscall.Close(fd); err != nil {
-			log.Warn("failed to close client connection", "error", err)
+			s.logger.Warn("failed to close client connection", slog.Any("error", err))
 		}
 		delete(s.connectedClients, fd)
 	}
@@ -161,7 +171,7 @@ func (s *AsyncServer) Run(ctx context.Context) error {
 
 	defer func() {
 		if err := s.multiplexer.Close(); err != nil {
-			log.Warn("failed to close multiplexer", "error", err)
+			s.logger.Warn("failed to close multiplexer", slog.Any("error", err))
 		}
 	}()
 
@@ -209,15 +219,15 @@ func (s *AsyncServer) eventLoop(ctx context.Context) error {
 			for _, event := range events {
 				if event.Fd == s.serverFD {
 					if err := s.acceptConnection(); err != nil {
-						log.Warn(err)
+						s.logger.Warn(err.Error())
 					}
 				} else {
 					if err := s.handleClientEvent(event); err != nil {
 						if errors.Is(err, ErrAborted) {
-							log.Debug("Received abort command, initiating graceful shutdown")
+							s.logger.Debug("Received abort command, initiating graceful shutdown")
 							return err
 						} else if !errors.Is(err, syscall.ECONNRESET) && !errors.Is(err, net.ErrClosed) {
-							log.Warn(err)
+							s.logger.Warn(err.Error())
 						}
 					}
 				}
@@ -254,7 +264,7 @@ func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
 	commands, hasAbort, err := readCommands(client)
 	if err != nil {
 		if err := syscall.Close(event.Fd); err != nil {
-			log.Printf("error closing client connection: %v", err)
+			s.logger.Error("error closing client connection", slog.Any("error", err))
 		}
 		delete(s.connectedClients, event.Fd)
 		return err
@@ -268,16 +278,43 @@ func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
 	return nil
 }
 
+// executeCommandToBuffer handles the execution of a Redis command and writes the result into a buffer.
+// It first checks if the command supports multisharding or is a single-shard command.
+// If necessary, it breaks down the command into multiple parts and scatters them to the appropriate shards.
+// Finally, it gathers responses from the shards and writes the result to the buffer.
 func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.RedisCmd, buf *bytes.Buffer, c *comm.Client) {
-	s.shardManager.GetShard(0).ReqChan <- &ops.StoreOp{
-		Cmd:      redisCmd,
-		WorkerID: "server",
-		ShardID:  0,
-		Client:   c,
+	// Break down the single command into multiple commands if multisharding is supported.
+	// The length of commandBreakup helps determine how many shards to wait for responses.
+	commandBreakup := []cmd.RedisCmd{}
+
+	// Retrieve metadata for the command to determine if multisharding is supported.
+	val, ok := WorkerCmdsMeta[redisCmd.Cmd]
+	if !ok {
+		// If no metadata exists, treat it as a single command.
+		commandBreakup = append(commandBreakup, *redisCmd)
+	} else {
+		// Depending on the command type, decide how to handle it.
+		switch val.CmdType {
+		case Global:
+			// If it's a global command, process it immediately without involving any shards.
+			buf.Write(val.RespNoShards(redisCmd.Args))
+			return
+
+		case SingleShard, Custom:
+			// For single-shard or custom commands, process them without breaking up.
+			commandBreakup = append(commandBreakup, *redisCmd)
+
+		case Multishard:
+			// If the command supports multisharding, break it down into multiple commands.
+			commandBreakup = s.cmdsBreakup(redisCmd, c)
+		}
 	}
 
-	resp := <-s.ioChan
-	buf.Write(resp.Result)
+	// Scatter the broken-down commands to the appropriate shards.
+	s.scatter(commandBreakup, c)
+
+	// Gather the responses from the shards and write them to the buffer.
+	s.gather(redisCmd, buf, len(commandBreakup), val.CmdType)
 }
 
 func readCommands(c io.ReadWriter) (cmd.RedisCmds, bool, error) {
@@ -364,7 +401,10 @@ func (s *AsyncServer) handleTransactionCommand(redisCmd *cmd.RedisCmd, c *comm.C
 		case eval.DiscardCmdMeta.Name:
 			s.discardTransaction(c, buf)
 		default:
-			log.Errorf("Unhandled transaction command: %s", redisCmd.Cmd)
+			s.logger.Error(
+				"Unhandled transaction command",
+				slog.String("command", redisCmd.Cmd),
+			)
 		}
 	} else {
 		c.TxnQueue(redisCmd)
@@ -389,7 +429,7 @@ func (s *AsyncServer) handleNonTransactionCommand(redisCmd *cmd.RedisCmd, c *com
 func (s *AsyncServer) executeTransaction(c *comm.Client, buf *bytes.Buffer) {
 	_, err := fmt.Fprintf(buf, "*%d\r\n", len(c.Cqueue))
 	if err != nil {
-		log.Errorf("Error writing to buffer: %v", err)
+		s.logger.Error("Error writing to buffer", slog.Any("error", err))
 		return
 	}
 
@@ -408,6 +448,6 @@ func (s *AsyncServer) discardTransaction(c *comm.Client, buf *bytes.Buffer) {
 
 func (s *AsyncServer) writeResponse(c *comm.Client, buf *bytes.Buffer) {
 	if _, err := c.Write(buf.Bytes()); err != nil {
-		log.Error(err)
+		s.logger.Error(err.Error())
 	}
 }
