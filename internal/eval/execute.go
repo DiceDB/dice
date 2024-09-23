@@ -11,22 +11,18 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
-func ExecuteCommand(c *cmd.RedisCmd, client *comm.Client, store *dstore.Store, http bool, websocket bool) EvalResponse {
+func ExecuteCommand(c *cmd.RedisCmd, client *comm.Client, store *dstore.Store, http, websocket bool) EvalResponse {
 	diceCmd, ok := DiceCmds[c.Cmd]
 	if !ok {
 		return EvalResponse{Result: diceerrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", c.Cmd, strings.Join(c.Args, " ")), Error: nil}
 	}
 
 	// Till the time we refactor to handle QWATCH differently using HTTP Streaming/SSE
-	if http {
+	if http || websocket {
 		if diceCmd.IsMigrated {
 			return diceCmd.NewEval(c.Args, store)
 		}
 
-		return EvalResponse{Result: diceCmd.Eval(c.Args, store), Error: nil}
-	}
-
-	if websocket {
 		return EvalResponse{Result: diceCmd.Eval(c.Args, store), Error: nil}
 	}
 
