@@ -3263,6 +3263,7 @@ func testEvalDUMP(t *testing.T, store *dstore.Store) {
     }
 
     runEvalTests(t, tests, evalDUMP, store)
+}
 
 func testEvalSETEX(t *testing.T, store *dstore.Store) {
 	mockTime := &utils.MockClock{CurrTime: time.Now()}
