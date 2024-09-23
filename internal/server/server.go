@@ -99,15 +99,18 @@ func (s *AsyncServer) FindPortAndBind() (socketErr error) {
 		return ErrInvalidIPAddress
 	}
 
+	if err := syscall.Bind(serverFD, &syscall.SockaddrInet4{
+		Port: config.DiceConfig.Server.Port,
+		Addr: [4]byte{ip4[0], ip4[1], ip4[2], ip4[3]},
+	}); err != nil {
+		return err
+	}
 	s.logger.Info(
 		"DiceDB is running",
 		slog.String("version", "0.0.4"),
 		slog.Int("port", config.DiceConfig.Server.Port),
 	)
-	return syscall.Bind(serverFD, &syscall.SockaddrInet4{
-		Port: config.DiceConfig.Server.Port,
-		Addr: [4]byte{ip4[0], ip4[1], ip4[2], ip4[3]},
-	})
+	return nil
 }
 
 // ClosePort ensures the server socket is closed properly.

@@ -47,6 +47,7 @@ var (
 		Info:       `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
 		Arity:      -1,
 		IsMigrated: true,
+		Eval:       evalPING,
 	}
 
 	setCmdMeta = DiceCmdMeta{
@@ -227,7 +228,7 @@ var (
 		Name: "JSON.OBJLEN",
 		Info: `JSON.OBJLEN key [path]
 		Report the number of keys in the JSON object at path in key
-		Returns error response if the key doesn't exist or key is expired or the matching value is not an array. 
+		Returns error response if the key doesn't exist or key is expired or the matching value is not an array.
 		Error reply: If the number of arguments is incorrect.`,
 		Eval:     evalJSONOBJLEN,
 		Arity:    -2,
@@ -804,6 +805,13 @@ var (
 		Arity:    1,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	getRangeCmdMeta = DiceCmdMeta{
+		Name:     "GETRANGE",
+		Info:     `Returns a substring of the string stored at a key.`,
+		Eval:     evalGETRANGE,
+		Arity:    4,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -896,6 +904,7 @@ func init() {
 	DiceCmds["SELECT"] = selectCmdMeta
 	DiceCmds["JSON.NUMINCRBY"] = jsonnumincrbyCmdMeta
 	DiceCmds["TYPE"] = typeCmdMeta
+	DiceCmds["GETRANGE"] = getRangeCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

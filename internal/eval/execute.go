@@ -19,6 +19,15 @@ func ExecuteCommand(c *cmd.RedisCmd, client *comm.Client, store *dstore.Store, h
 		return EvalResponse{Result: diceerrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", c.Cmd, strings.Join(c.Args, " ")), Error: nil}
 	}
 
+	// Till the time we refactor to handle QWATCH differently using HTTP Streaming/SSE
+	if httpOp {
+		if diceCmd.IsMigrated {
+			return diceCmd.NewEval(c.Args, store)
+		}
+
+		return EvalResponse{Result: diceCmd.Eval(c.Args, store), Error: nil}
+	}
+
 	// Temporary logic till we move all commands to new eval logic.
 	// MigratedDiceCmds map contains refactored eval commands
 	// For any command we will first check in the exisiting map

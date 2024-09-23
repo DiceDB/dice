@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"hash/crc32"
 	"log/slog"
@@ -24,13 +23,14 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
+const Abort = "ABORT"
+const QWATCH = "QWATCH"
+
 var unimplementedCommands = map[string]bool{
 	"QUNWATCH":  true,
 	"SUBSCRIBE": true,
-	"ABORT":     true,
+	Abort:       false,
 }
-
-const QWATCH = "QWATCH"
 
 type HTTPServer struct {
 	queryWatcher *querywatcher.QueryManager
@@ -39,6 +39,7 @@ type HTTPServer struct {
 	watchChan    chan dstore.WatchEvent
 	httpServer   *http.Server
 	logger       *slog.Logger
+	shutdownChan chan struct{}
 }
 
 type HTTPQwatchResponse struct {
@@ -83,6 +84,7 @@ func NewHTTPServer(
 		watchChan:    watchChan,
 		httpServer:   srv,
 		logger:       logger,
+		shutdownChan: make(chan struct{}),
 	}
 
 	mux.HandleFunc("/", httpServer.DiceHTTPHandler)
@@ -109,11 +111,17 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		<-ctx.Done()
-		err = s.httpServer.Shutdown(httpCtx)
-		// TODO: Check for clean connection close in case a QWATCH client still subscribed
-		if err != nil && !errors.Is(err, context.Canceled) {
+		select {
+		case <-ctx.Done():
+		case <-s.shutdownChan:
+			err = ErrAborted
+			s.logger.Debug("Shutting down HTTP Server")
+		}
+
+		shutdownErr := s.httpServer.Shutdown(httpCtx)
+		if shutdownErr != nil {
 			s.logger.Error("HTTP Server Shutdown Failed", slog.Any("error", err))
+			err = shutdownErr
 			return
 		}
 	}()
@@ -135,6 +143,13 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 	if err != nil {
 		http.Error(writer, "Error parsing HTTP request", http.StatusBadRequest)
 		s.logger.Error("Error parsing HTTP request", slog.Any("error", err))
+		return
+	}
+
+	if redisCmd.Cmd == Abort {
+		s.logger.Debug("ABORT command received")
+		s.logger.Debug("Shutting down HTTP Server")
+		close(s.shutdownChan)
 		return
 	}
 
@@ -166,8 +181,8 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 	// convert to REDIS cmd
 	redisCmd, err := utils.ParseHTTPRequest(request)
 	if err != nil {
-		s.logger.Error("Error parsing HTTP request", slog.Any("err", err))
 		http.Error(writer, "Error parsing HTTP request", http.StatusBadRequest)
+		s.logger.Error("Error parsing HTTP request", slog.Any("error", err))
 		return
 	}
 
