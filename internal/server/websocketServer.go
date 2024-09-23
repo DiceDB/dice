@@ -58,6 +58,7 @@ func NewWebSocketServer(shardManager *shard.ShardManager, watchChan chan dstore.
 		websocketServer: srv,
 		upgrader:        upgrader,
 		logger:          logger,
+		shutdownChan:    make(chan struct{}),
 	}
 
 	mux.HandleFunc("/", websocketServer.WebsocketHandler)
@@ -115,71 +116,70 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 	}
 	defer conn.Close()
 
-	for {
-		// read incoming message
-		_, msg, err := conn.ReadMessage()
-		if err != nil {
-			s.logger.Error("Websocket read failed", slog.Any("error", err))
-			break
-		}
+	// read incoming message
+	_, msg, err := conn.ReadMessage()
+	if err != nil {
+		s.logger.Error("Websocket read failed", slog.Any("error", err))
+		return
+	}
 
-		// parse message to dice command
-		redisCmd, err := utils.ParseWebsocketMessage(msg)
-		if err != nil {
-			s.logger.Error("Error parsing Websocket request", slog.Any("error", err))
-		}
+	// parse message to dice command
+	redisCmd, err := utils.ParseWebsocketMessage(msg)
+	if err != nil {
+		s.logger.Error("Error parsing Websocket request", slog.Any("error", err))
+		return
+	}
 
-		if redisCmd.Cmd == Abort {
-			s.logger.Debug("ABORT command received")
-			s.logger.Debug("Shutting down Websocket Server")
-			close(s.shutdownChan)
+	if redisCmd.Cmd == Abort {
+		s.logger.Debug("ABORT command received")
+		s.logger.Debug("Shutting down Websocket Server")
+		// close(s.shutdownChan)
+		return
+	}
+
+	if unimplementedCommandsWebsocket[redisCmd.Cmd] {
+		s.logger.Error("Command is not implemented", slog.String("Command", redisCmd.Cmd))
+		_, err := w.Write([]byte("Command is not implemented with Websocket"))
+		if err != nil {
+			s.logger.Error("Error writing response", slog.Any("error", err))
 			return
 		}
+		return
+	}
 
-		if unimplementedCommandsWebsocket[redisCmd.Cmd] {
-			s.logger.Error("Command is not implemented", slog.String("Command", redisCmd.Cmd))
-			_, err := w.Write([]byte("Command is not implemented with Websocket"))
-			if err != nil {
-				s.logger.Error("Error writing response", slog.Any("error", err))
-				return
-			}
-			return
-		}
+	// send request to Shard Manager
+	s.shardManager.GetShard(0).ReqChan <- &ops.StoreOp{
+		Cmd:         redisCmd,
+		WorkerID:    "wsServer",
+		ShardID:     0,
+		WebsocketOp: true,
+	}
 
-		// send request to Shard Manager
-		s.shardManager.GetShard(0).ReqChan <- &ops.StoreOp{
-			Cmd:         redisCmd,
-			WorkerID:    "wsServer",
-			ShardID:     0,
-			WebsocketOp: true,
-		}
+	// Wait for response
+	resp := <-s.ioChan
 
-		// Wait for response
-		resp := <-s.ioChan
+	var rp *clientio.RESPParser
+	if resp.EvalResponse.Error != nil {
+		rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(resp.EvalResponse.Error.Error())))
+	} else {
+		rp = clientio.NewRESPParser(bytes.NewBuffer(resp.EvalResponse.Result.([]byte)))
+	}
 
-		var rp *clientio.RESPParser
-		if resp.EvalResponse.Error != nil {
-			rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(resp.EvalResponse.Error.Error())))
-		} else {
-			rp = clientio.NewRESPParser(bytes.NewBuffer(resp.EvalResponse.Result.([]byte)))
-		}
+	val, err := rp.DecodeOne()
+	if err != nil {
+		s.logger.Error("Error decoding response", slog.Any("error", err))
+		return
+	}
 
-		val, err := rp.DecodeOne()
-		if err != nil {
-			s.logger.Error("Error decoding response", slog.Any("error", err))
-			return
-		}
-
-		// Write response
-		responseJSON, err := json.Marshal(val)
-		if err != nil {
-			s.logger.Error("Error marshaling response", slog.Any("error", err))
-			return
-		}
-		err = conn.WriteMessage(websocket.TextMessage, responseJSON)
-		if err != nil {
-			s.logger.Error("Error writing response: %v", slog.Any("error", err))
-			return
-		}
+	// Write response
+	responseJSON, err := json.Marshal(val)
+	if err != nil {
+		s.logger.Error("Error marshaling response", slog.Any("error", err))
+		return
+	}
+	err = conn.WriteMessage(websocket.TextMessage, responseJSON)
+	if err != nil {
+		s.logger.Error("Error writing response: %v", slog.Any("error", err))
+		return
 	}
 }
