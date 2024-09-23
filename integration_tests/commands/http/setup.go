@@ -38,7 +38,7 @@ func NewHTTPCommandExecutor() *HTTPCommandExecutor {
 	return &HTTPCommandExecutor{
 		baseURL: "http://localhost:8083",
 		httpClient: &http.Client{
-			Timeout: time.Second * 100,
+			Timeout: time.Second * 10,
 		},
 	}
 }
