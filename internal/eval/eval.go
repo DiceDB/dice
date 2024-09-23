@@ -1696,18 +1696,18 @@ func incrDecrCmd(args []string, incr int64, store *dstore.Store) []byte {
 	}
 
 	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeInt); err != nil {
-		return diceerrors.NewErrWithMessage(err.Error())
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
 	}
 
 	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingInt); err != nil {
-		return diceerrors.NewErrWithMessage(err.Error())
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
 	}
 
 	i, _ := obj.Value.(int64)
 	// check overflow
 	if (incr < 0 && i < 0 && incr < (math.MinInt64-i)) ||
 		(incr > 0 && i > 0 && incr > (math.MaxInt64-i)) {
-		return diceerrors.NewErrWithMessage(diceerrors.ValOutOfRangeErr)
+		return diceerrors.NewErrWithMessage(diceerrors.IncrDecrOverflowErr)
 	}
 
 	i += incr
@@ -2574,8 +2574,9 @@ func evalGETEX(args []string, store *dstore.Store) []byte {
 		return clientio.RespNIL
 	}
 
-	// check if the object is set type if yes then return error
-	if object.AssertType(obj.TypeEncoding, object.ObjTypeSet) == nil {
+	// check if the object is set type or json type if yes then return error
+	if object.AssertType(obj.TypeEncoding, object.ObjTypeSet) == nil ||
+		object.AssertType(obj.TypeEncoding, object.ObjTypeJSON) == nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 

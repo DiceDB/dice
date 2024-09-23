@@ -14,6 +14,7 @@ const (
 	IntOrOutOfRangeErr   = "value is not an integer or out of range"
 	IntOrFloatErr        = "value is not an integer or a float"
 	ValOutOfRangeErr     = "value is out of range"
+	IncrDecrOverflowErr  = "increment or decrement would overflow"
 	ElementPeekErr       = "number of elements to peek should be a positive number less than %d"
 	NoKeyErr             = "no such key"
 	ErrDefault           = "-ERR %s"
