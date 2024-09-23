@@ -2498,8 +2498,9 @@ func evalGETEX(args []string, store *dstore.Store) []byte {
 		return clientio.RespNIL
 	}
 
-	// check if the object is set type if yes then return error
-	if object.AssertType(obj.TypeEncoding, object.ObjTypeSet) == nil {
+	// check if the object is set type or json type if yes then return error
+	if object.AssertType(obj.TypeEncoding, object.ObjTypeSet) == nil ||
+		object.AssertType(obj.TypeEncoding, object.ObjTypeJSON) == nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 

@@ -46,6 +46,7 @@ func TestEval(t *testing.T) {
 	testEvalHELLO(t, store)
 	testEvalSET(t, store)
 	testEvalGET(t, store)
+	testEvalGETEX(t, store)
 	testEvalDebug(t, store)
 	testEvalJSONARRPOP(t, store)
 	testEvalJSONARRLEN(t, store)
@@ -263,6 +264,22 @@ func testEvalGETEX(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"foo", Ex, "10000000000000000"},
 			output: []byte("-ERR invalid expire time in 'getex' command\r\n")},
+		"key holding json type": {
+			setup: func() {
+				evalJSONSET([]string{"JSONKEY", "$", "1"}, store)
+
+			},
+			input:  []string{"JSONKEY"},
+			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+		},
+		"key holding set type": {
+			setup: func() {
+				evalSADD([]string{"SETKEY", "FRUITS", "APPLE", "MANGO", "BANANA"}, store)
+
+			},
+			input:  []string{"SETKEY"},
+			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+		},
 	}
 
 	runEvalTests(t, tests, evalGETEX, store)
