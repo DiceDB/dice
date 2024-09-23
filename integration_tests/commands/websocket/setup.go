@@ -122,9 +122,6 @@ func RunWebsocketServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerO
 			if errors.Is(srverr, server.ErrAborted) {
 				return
 			}
-			// if srverr.Error() != "Websocket Server closed" {
-			// 	log.Fatalf("Websocket test server encountered an error: %v", srverr)
-			// }
 			log.Printf("Websocket test server encountered an error: %v", srverr)
 		}
 	}()
