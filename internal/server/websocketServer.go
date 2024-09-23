@@ -87,11 +87,11 @@ func (s *WebsocketServer) Run(ctx context.Context) error {
 		case <-ctx.Done():
 		case <-s.shutdownChan:
 			err = ErrAborted
-			s.logger.Debug("Shutting down HTTP Server")
+			s.logger.Debug("Shutting down Websocket Server")
 		}
 
-		err = s.websocketServer.Shutdown(websocketCtx)
-		if err != nil {
+		shutdownErr := s.websocketServer.Shutdown(websocketCtx)
+		if shutdownErr != nil {
 			s.logger.Error("Websocket Server shutdown failed:", slog.Any("error", err))
 			return
 		}
