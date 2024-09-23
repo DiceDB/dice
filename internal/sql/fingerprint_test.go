@@ -8,6 +8,77 @@ import (
 	"gotest.tools/v3/assert"
 )
 
+func TestCombineOr(t *testing.T) {
+	tests := []struct {
+		name     string
+		a        sql.Expression
+		b        sql.Expression
+		expected sql.Expression
+	}{
+		{
+			name: "Simple OR combination with non-overlapping terms",
+			a:    sql.Expression([][]string{{"_key LIKE 'test:*'"}}),
+			b:    sql.Expression([][]string{{"_value > 10"}}),
+			expected: sql.Expression([][]string{
+				{"_key LIKE 'test:*'"}, {"_value > 10"},
+			}),
+		},
+		{
+			name:     "OR combination with duplicate values",
+			a:        sql.Expression([][]string{{"_key LIKE 'test:*'"}}),
+			b:        sql.Expression([][]string{{"_key LIKE 'test:*'"}}),
+			expected: sql.Expression([][]string{{"_key LIKE 'test:*'"}}),
+		},
+		{
+			name:     "Combining empty and non-empty expression",
+			a:        sql.Expression([][]string{}),
+			b:        sql.Expression([][]string{{"_value < 5"}}),
+			expected: sql.Expression([][]string{{"_value < 5"}}),
+		},
+		{
+			name:     "Combining non-empty and empty expression",
+			a:        sql.Expression([][]string{{"_key LIKE 'test:*'"}}),
+			b:        sql.Expression([][]string{}),
+			expected: sql.Expression([][]string{{"_key LIKE 'test:*'"}}),
+		},
+		{
+			name:     "Combining two empty expressions",
+			a:        sql.Expression([][]string{}),
+			b:        sql.Expression([][]string{}),
+			expected: sql.Expression([][]string{}),
+		},
+		{
+			name: "Complex OR combination with multiple AND terms",
+			a:    sql.Expression([][]string{{"_key LIKE 'test:*'", "_value > 10"}}),
+			b:    sql.Expression([][]string{{"_key LIKE 'example:*'", "_value < 5"}}),
+			expected: sql.Expression([][]string{
+				{"_key LIKE 'test:*'", "_value > 10"}, {"_key LIKE 'example:*'", "_value < 5"},
+			}),
+		},
+		{
+			name: "Combining overlapping AND terms",
+			a:    sql.Expression([][]string{{"_key LIKE 'test:*'", "_value > 10"}}),
+			b:    sql.Expression([][]string{{"_value > 10", "_key LIKE 'test:*'"}}),
+			expected: sql.Expression([][]string{
+				{"_key LIKE 'test:*'", "_value > 10"},
+			}),
+		},
+		{
+			name: "Combining overlapping AND terms in reverse order",
+			a:    sql.Expression([][]string{{"_value > 10", "_key LIKE 'test:*'"}}),
+			b:    sql.Expression([][]string{{"_key LIKE 'test:*'", "_value > 10"}}),
+			expected: sql.Expression([][]string{
+				{"_key LIKE 'test:*'", "_value > 10"},
+			}),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.DeepEqual(t, tt.expected, sql.CombineOr(tt.a, tt.b))
+		})
+	}
+}
+
 func TestCombineAnd(t *testing.T) {
 	tests := []struct {
 		name     string

@@ -38,7 +38,7 @@ func ParseAstExpression(expr sqlparser.Expr) Expression {
 	case *sqlparser.OrExpr:
 		leftExpr := ParseAstExpression(expr.Left)
 		rightExpr := ParseAstExpression(expr.Right)
-		return combineOr(leftExpr, rightExpr)
+		return CombineOr(leftExpr, rightExpr)
 	case *sqlparser.ParenExpr:
 		return ParseAstExpression(expr.Expr)
 	case *sqlparser.ComparisonExpr:
@@ -49,7 +49,7 @@ func ParseAstExpression(expr sqlparser.Expr) Expression {
 }
 
 func CombineAnd(a, b Expression) Expression {
-	result := [][]string{}
+	result := make(Expression, 0, len(a)+len(b))
 	for _, termA := range a {
 		for _, termB := range b {
 			combined := append(termA, termB...)
@@ -60,9 +60,32 @@ func CombineAnd(a, b Expression) Expression {
 	return Expression(result)
 }
 
-func combineOr(a, b Expression) Expression {
-	result := append(a, b...)
-	return Expression(result)
+func CombineOr(a, b Expression) Expression {
+	result := make(Expression, 0, len(a)+len(b))
+	uniqueTerms := make(map[string]bool)
+
+	// Helper function to add unique terms
+	addUnique := func(terms []string) {
+		// Sort the terms for consistent ordering
+		sort.Strings(terms)
+		key := strings.Join(terms, ",")
+		if !uniqueTerms[key] {
+			result = append(result, terms)
+			uniqueTerms[key] = true
+		}
+	}
+
+	// Add unique terms from a
+	for _, terms := range a {
+		addUnique(append([]string(nil), terms...))
+	}
+
+	// Add unique terms from b
+	for _, terms := range b {
+		addUnique(append([]string(nil), terms...))
+	}
+
+	return result
 }
 
 // helper
