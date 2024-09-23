@@ -90,3 +90,74 @@ func TestParseHTTPRequest(t *testing.T) {
 		})
 	}
 }
+
+func TestParseWebsocketMessage(t *testing.T) {
+	commands := []struct {
+		name         string
+		message      string
+		expectedCmd  string
+		expectedArgs []string
+	}{
+		{
+			name:         "Test SET command with nx flag",
+			message:      `{"command": "set","key": "k1", "value": "v1", "nx": "true"}`,
+			expectedCmd:  "SET",
+			expectedArgs: []string{"k1", "v1", "nx"},
+		},
+		{
+			name:         "Test GET command",
+			message:      `{"command": "get","key": "k1"}`,
+			expectedCmd:  "GET",
+			expectedArgs: []string{"k1"},
+		},
+		{
+			name:         "Test JSON.SET command",
+			message:      `{"command":"json.set","key": "k1", "path": ".", "json": {"field": "value"}}`,
+			expectedCmd:  "JSON.SET",
+			expectedArgs: []string{"k1", ".", `{"field":"value"}`},
+		},
+		{
+			name:         "Test JSON.GET command",
+			message:      `{"command":"json.get","key": "k1"}`,
+			expectedCmd:  "JSON.GET",
+			expectedArgs: []string{"k1"},
+		},
+		{
+			name:         "Test HSET command with JSON body",
+			message:      `{"command":"hset","key": "hashkey", "field": "f1", "value": "v1"}`,
+			expectedCmd:  "HSET",
+			expectedArgs: []string{"hashkey", "f1", "v1"},
+		},
+		{
+			name:         "Test JSON.INGEST command with key prefix",
+			message:      `{"command":"json.ingest","key_prefix":"gmtr_","json": {"field": "value"},"path": "$..field"}`,
+			expectedCmd:  "JSON.INGEST",
+			expectedArgs: []string{"gmtr_", "$..field", `{"field":"value"}`},
+		},
+		{
+			name:         "Test JSON.INGEST command without key prefix",
+			message:      `{"command":"json.ingest","json": {"field": "value"},"path": "$..field"}`,
+			expectedCmd:  "JSON.INGEST",
+			expectedArgs: []string{"", "$..field", `{"field":"value"}`},
+		},
+	}
+
+	for _, tc := range commands {
+		t.Run(tc.name, func(t *testing.T) {
+			// parse websocket message
+			redisCmd, err := ParseWebsocketMessage([]byte(tc.message))
+			assert.NoError(t, err)
+
+			expectedCmd := &cmd.RedisCmd{
+				Cmd:  tc.expectedCmd,
+				Args: tc.expectedArgs,
+			}
+
+			// Check command match
+			assert.Equal(t, expectedCmd.Cmd, redisCmd.Cmd)
+
+			// Check arguments match, regardless of order
+			assert.ElementsMatch(t, expectedCmd.Args, redisCmd.Args, "The parsed arguments should match the expected arguments, ignoring order")
+		})
+	}
+}

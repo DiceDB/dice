@@ -126,7 +126,8 @@ func ParseWebsocketMessage(msg []byte) (*cmd.RedisCmd, error) {
 	delete(jsonBody, Command)
 
 	// extract priority keys
-	var priorityKeys = [5]string{
+	var priorityKeys = [6]string{
+		KeyPrefix,
 		Key,
 		Field,
 		Path,
@@ -137,6 +138,9 @@ func ParseWebsocketMessage(msg []byte) (*cmd.RedisCmd, error) {
 		if val, exists := jsonBody[key]; exists {
 			args = append(args, fmt.Sprintf("%v", val))
 			delete(jsonBody, key)
+		} else if command == "JSON.INGEST" && key == KeyPrefix {
+			// add empty key prefix
+			args = append(args, "")
 		}
 	}
 
