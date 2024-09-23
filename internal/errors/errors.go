@@ -13,6 +13,7 @@ const (
 	AuthErr              = "AUTH failed"
 	IntOrOutOfRangeErr   = "value is not an integer or out of range"
 	ValOutOfRangeErr     = "value is out of range"
+	IncrDecrOverflowErr  = "increment or decrement would overflow"
 	ElementPeekErr       = "number of elements to peek should be a positive number less than %d"
 	NoKeyErr             = "no such key"
 	ErrDefault           = "-ERR %s"
