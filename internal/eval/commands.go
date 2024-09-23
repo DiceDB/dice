@@ -812,6 +812,19 @@ var (
 		Arity:    4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	setexCmdMeta = DiceCmdMeta{
+		Name: "SETEX",
+		Info: `SETEX puts a new <key, value> pair in along with expity
+		args must contain key and value and expiry.
+		Returns encoded error response if <key,exp,value> is not part of args
+		Returns encoded error response if expiry time value in not integer
+		Returns encoded OK RESP once new entry is added
+		If the key already exists then the value and expiry will be overwritten`,
+		Arity:      3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalSETEX,
+	}
 )
 
 func init() {
@@ -905,6 +918,7 @@ func init() {
 	DiceCmds["JSON.NUMINCRBY"] = jsonnumincrbyCmdMeta
 	DiceCmds["TYPE"] = typeCmdMeta
 	DiceCmds["GETRANGE"] = getRangeCmdMeta
+	DiceCmds["SETEX"] = setexCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}
