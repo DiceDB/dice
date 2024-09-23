@@ -6,11 +6,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/dicedb/dice/internal/comm"
 
 	"github.com/ohler55/ojg/jp"
 
@@ -35,8 +38,8 @@ type (
 			Key   string
 			Value *object.Obj
 		} // channel to receive cache data for this query
-		HTTPQwatchClientWriter    http.ResponseWriter
-		HTTPQwatchClientRequestID uint32 // Helps identify qwatch client on httpserver side
+		QwatchClient       io.ReadWriter // Generic reader writer
+		ClientIdentifierID uint32        // Helps identify qwatch client on httpserver side
 	}
 
 	// AdhocQueryResult represents the result of an adhoc query.
@@ -65,6 +68,11 @@ type (
 		Query string `json:"query"`
 		Data  []any  `json:"data"`
 	}
+
+	ClientIdentifier struct {
+		ClientIdentifierID int
+		IsHTTPClient       bool
+	}
 )
 
 var (
@@ -74,6 +82,13 @@ var (
 	// AdhocQueryChan is the channel to receive adhoc queries.
 	AdhocQueryChan chan AdhocQuery
 )
+
+func NewClientIdentifier(clientIdentifierID int, isHTTPClient bool) ClientIdentifier {
+	return ClientIdentifier{
+		ClientIdentifierID: clientIdentifierID,
+		IsHTTPClient:       isHTTPClient,
+	}
+}
 
 // NewQueryManager initializes a new QueryManager.
 func NewQueryManager(logger *slog.Logger) *QueryManager {
@@ -120,10 +135,10 @@ func (w *QueryManager) listenForSubscriptions(ctx context.Context) {
 		select {
 		case event := <-WatchSubscriptionChan:
 			if event.Subscribe {
-				w.addWatcher(&event.Query, event.ClientFD, event.HTTPQwatchClientWriter, event.HTTPQwatchClientRequestID,
+				w.addWatcher(&event.Query, event.ClientFD, event.QwatchClient, event.ClientIdentifierID,
 					event.CacheChan)
 			} else {
-				w.removeWatcher(&event.Query, event.ClientFD, event.HTTPQwatchClientWriter)
+				w.removeWatcher(&event.Query, event.ClientFD, event.QwatchClient, event.ClientIdentifierID)
 			}
 		case <-ctx.Done():
 			return
@@ -207,9 +222,9 @@ func (w *QueryManager) notifyClients(query *sql.DSQLQuery, clients *sync.Map, qu
 
 	clients.Range(func(clientKey, clientVal interface{}) bool {
 		// Identify the type of client and respond accordingly
-		// Client response channel can be currently of type response writer and
-		switch clientResponseChannel := clientKey.(type) {
-		case http.ResponseWriter:
+		switch clientIdentifier := clientKey.(ClientIdentifier); {
+		case clientIdentifier.IsHTTPClient:
+			clientResponseChannel := clientVal.(io.Writer)
 			rp := clientio.NewRESPParser(bytes.NewBuffer(encodedResult))
 			val, err := rp.DecodeOne()
 			if err != nil {
@@ -245,14 +260,14 @@ func (w *QueryManager) notifyClients(query *sql.DSQLQuery, clients *sync.Map, qu
 				w.logger.Error("Error writing SSE data: %v", slog.Any("error", err))
 				return true
 			}
-			flusher, ok := clientResponseChannel.(http.Flusher)
+			flusher, ok := clientResponseChannel.(*comm.HTTPResponseClientReadWriter).ResponseWriter.(http.Flusher)
 			if !ok {
-				http.Error(clientResponseChannel, "Streaming unsupported", http.StatusInternalServerError)
+				http.Error(clientResponseChannel.(*comm.HTTPResponseClientReadWriter), "Streaming unsupported", http.StatusInternalServerError)
 				return true
 			}
 
 			flusher.Flush() // Flush the response to send it to the client
-		case int:
+		case !clientIdentifier.IsHTTPClient:
 			// We use a retry mechanism here as the client's socket may be temporarily unavailable for writes due to the
 			// high number of writes that are possible in qwatch. Without this mechanism, the client may be removed from the
 			// watchlist prematurely.
@@ -261,8 +276,9 @@ func (w *QueryManager) notifyClients(query *sql.DSQLQuery, clients *sync.Map, qu
 			//  2. Each client's writes should be sent in a serialized manner, maybe a per-client queue should be maintained
 			//   here. A single queue-per-client is also helpful when the client file descriptor is closed and the queue can
 			//   just be destroyed.
+			clientFD := clientIdentifier.ClientIdentifierID
 			// This is a regular client, use clientFD to send the response
-			go w.sendWithRetry(query, clientResponseChannel, encodedResult)
+			go w.sendWithRetry(query, clientFD, encodedResult)
 		default:
 			w.logger.Warn("Invalid Client, response channel invalid.")
 		}
@@ -293,7 +309,7 @@ func (w *QueryManager) sendWithRetry(query *sql.DSQLQuery, clientFD int, data []
 			slog.Int("client", clientFD),
 			slog.Any("error", err),
 		)
-		w.removeWatcher(query, clientFD, nil)
+		w.removeWatcher(query, clientFD, nil, 0)
 		return
 	}
 }
@@ -316,18 +332,22 @@ func (w *QueryManager) serveAdhocQueries(ctx context.Context) {
 }
 
 // addWatcher adds a client as a watcher to a query.
-func (w *QueryManager) addWatcher(query *sql.DSQLQuery, clientFD int, httpClientRespWriter http.ResponseWriter,
-	httpClientRequestID uint32, cacheChan chan *[]struct {
+func (w *QueryManager) addWatcher(query *sql.DSQLQuery, clientFD int, clientRespWriter io.ReadWriter,
+	clientIdentifierID uint32, cacheChan chan *[]struct {
 		Key   string
 		Value *object.Obj
 	}) {
 	queryString := query.String()
 
 	clients, _ := w.WatchList.LoadOrStore(queryString, &sync.Map{})
-	if httpClientRespWriter != nil {
-		clients.(*sync.Map).Store(httpClientRespWriter, httpClientRequestID)
+	if clientRespWriter != nil {
+		clients.(*sync.Map).Store(NewClientIdentifier(int(clientIdentifierID), true), clientRespWriter)
+		httpClientWriter, _ := clients.(*sync.Map).Load(clientIdentifierID)
+		w.logger.Debug("HTTP client watching query",
+			slog.Any("httpClientWriter", httpClientWriter),
+			slog.Any("queryString", queryString))
 	} else {
-		clients.(*sync.Map).Store(clientFD, struct{}{})
+		clients.(*sync.Map).Store(NewClientIdentifier(clientFD, false), struct{}{})
 	}
 
 	w.QueryCacheMu.Lock()
@@ -346,18 +366,17 @@ func (w *QueryManager) addWatcher(query *sql.DSQLQuery, clientFD int, httpClient
 }
 
 // removeWatcher removes a client from the watchlist for a query.
-func (w *QueryManager) removeWatcher(query *sql.DSQLQuery, clientFD int,
-	httpClientRespWriter http.ResponseWriter) {
+func (w *QueryManager) removeWatcher(query *sql.DSQLQuery, clientFD int, clientRespWriter io.ReadWriter,
+	clientIdentifierID uint32) {
 	queryString := query.String()
 	if clients, ok := w.WatchList.Load(queryString); ok {
-		if httpClientRespWriter != nil {
-			httpClientRequestID, _ := clients.(*sync.Map).Load(httpClientRespWriter)
-			clients.(*sync.Map).Delete(httpClientRespWriter)
-			w.logger.Debug("HTTP client with no longer watching query",
-				slog.Any("httpClientRequestID", httpClientRequestID),
+		if clientRespWriter != nil {
+			clients.(*sync.Map).Delete(NewClientIdentifier(int(clientIdentifierID), true))
+			w.logger.Debug("HTTP client no longer watching query",
+				slog.Any("clientIdentifierId", clientIdentifierID),
 				slog.Any("queryString", queryString))
 		} else {
-			clients.(*sync.Map).Delete(clientFD)
+			clients.(*sync.Map).Delete(NewClientIdentifier(int(clientIdentifierID), false))
 			w.logger.Debug("client no longer watching query", slog.Int("client", clientFD),
 				slog.String("query", queryString))
 		}

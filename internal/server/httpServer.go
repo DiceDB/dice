@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dicedb/dice/internal/comm"
+
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/server/utils"
@@ -205,24 +207,24 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 	writer.Header().Set("Connection", "keep-alive")
 	writer.WriteHeader(http.StatusOK)
 	// We're a generating a unique client id, to keep track in core of requests from registered clients
-	clientID := generateUniqueInt32(request)
+	clientIdentifierID := generateUniqueInt32(request)
 	clientRequestID := make(map[uint32]HTTPQwatchWriter)
 	var clientWriter HTTPQwatchWriter
 	clientWriter.Writer = writer
 	clientWriter.Query = redisCmd.Args[0]
-	clientRequestID[clientID] = clientWriter
+	clientRequestID[clientIdentifierID] = clientWriter
+	clientRW := comm.NewHTTPClient(&comm.HTTPResponseClientReadWriter{ResponseWriter: writer}, clientIdentifierID)
 
 	// Prepare the store operation
 	storeOp := &ops.StoreOp{
-		Cmd:                  redisCmd,
-		WorkerID:             "httpServer",
-		ShardID:              0,
-		HTTPOp:               true,
-		HTTPClientRespWriter: clientWriter.Writer,
-		RequestID:            clientID,
+		Cmd:      redisCmd,
+		WorkerID: "httpServer",
+		ShardID:  0,
+		Client:   clientRW,
+		HTTPOp:   true,
 	}
 
-	s.logger.Info("Registered client for watching query", slog.Any("clientID", clientID),
+	s.logger.Info("Registered client for watching query", slog.Any("clientID", clientIdentifierID),
 		slog.Any("query", clientWriter.Query))
 	s.shardManager.GetShard(0).ReqChan <- storeOp
 

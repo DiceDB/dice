@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
-	"net/http"
 	"regexp"
 	"sort"
 	"strconv"
@@ -1757,8 +1756,7 @@ func evalMULTI(args []string, store *dstore.Store) []byte {
 // Every time a key in the watch list is modified, the client will be sent a response
 // containing the new value of the key along with the operation that was performed on it.
 // Contains only one argument, the query to be watched.
-func EvalQWATCH(args []string, clientFd int, httpOp bool, httpClientWriter http.ResponseWriter,
-	requestID uint32, store *dstore.Store) []byte {
+func EvalQWATCH(args []string, httpOp bool, client *comm.Client, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("QWATCH")
 	}
@@ -1779,17 +1777,17 @@ func EvalQWATCH(args []string, clientFd int, httpOp bool, httpClientWriter http.
 
 	if httpOp {
 		watchSubscription = querywatcher.WatchSubscription{
-			Subscribe:                 true,
-			Query:                     query,
-			CacheChan:                 cacheChannel,
-			HTTPQwatchClientWriter:    httpClientWriter,
-			HTTPQwatchClientRequestID: requestID,
+			Subscribe:          true,
+			Query:              query,
+			CacheChan:          cacheChannel,
+			QwatchClient:       client.ReadWriter,
+			ClientIdentifierID: client.ClientIdentifierID,
 		}
 	} else {
 		watchSubscription = querywatcher.WatchSubscription{
 			Subscribe: true,
 			Query:     query,
-			ClientFD:  clientFd,
+			ClientFD:  client.Fd,
 			CacheChan: cacheChannel,
 		}
 	}
@@ -1814,7 +1812,7 @@ func EvalQWATCH(args []string, clientFd int, httpOp bool, httpClientWriter http.
 }
 
 // EvalQUNWATCH removes the specified key from the watch list for the caller client.
-func EvalQUNWATCH(args []string, clientFd int, httpOp bool, httpClientWriter http.ResponseWriter) []byte {
+func EvalQUNWATCH(args []string, httpOp bool, client *comm.Client) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("QUNWATCH")
 	}
@@ -1825,15 +1823,16 @@ func EvalQUNWATCH(args []string, clientFd int, httpOp bool, httpClientWriter htt
 
 	if httpOp {
 		querywatcher.WatchSubscriptionChan <- querywatcher.WatchSubscription{
-			Subscribe:              false,
-			Query:                  query,
-			HTTPQwatchClientWriter: httpClientWriter,
+			Subscribe:          false,
+			Query:              query,
+			QwatchClient:       client,
+			ClientIdentifierID: client.ClientIdentifierID,
 		}
 	} else {
 		querywatcher.WatchSubscriptionChan <- querywatcher.WatchSubscription{
 			Subscribe: false,
 			Query:     query,
-			ClientFD:  clientFd,
+			ClientFD:  client.Fd,
 		}
 	}
 

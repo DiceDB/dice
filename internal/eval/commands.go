@@ -43,10 +43,11 @@ var (
 	}
 
 	pingCmdMeta = DiceCmdMeta{
-		Name:       "PING",
-		Info:       `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
-		Arity:      -1,
-		IsMigrated: true,
+		Name:  "PING",
+		Info:  `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
+		Arity: -1,
+		// TODO: Move this to true once compatible with HTTP server
+		IsMigrated: false,
 		Eval:       evalPING,
 	}
 
