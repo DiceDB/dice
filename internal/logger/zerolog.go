@@ -40,11 +40,11 @@ func (h *ZerologHandler) Enabled(ctx context.Context, level slog.Level) bool {
 
 // WithAttrs adds attributes to the log event
 func (h *ZerologHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	context := h.logger.With()
+	ctx := h.logger.With()
 	for _, attr := range attrs {
-		context = addAttrToZerolog(attr, context)
+		ctx = addAttrToZerolog(attr, ctx)
 	}
-	logger := context.Logger()
+	logger := ctx.Logger()
 	return newZerologHandler(&logger)
 }
 

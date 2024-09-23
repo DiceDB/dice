@@ -28,7 +28,11 @@ func EvalBGREWRITEAOF(args []string, store *dstore.Store) []byte {
 	if config.EnableMultiThreading {
 		return nil
 	}
-	originalPID := syscall.Getpid() // Get the original PID (Process ID) - This is needed to check if we are in child process or not. The document approach is to check the return value of fork (it's 0 for child and non-zero for parent) but this is more reliable. For more details check - https://github.com/DiceDB/dice/issues/683
+
+	// Get the original PID (Process ID) - This is needed to check if we are in child process or not.
+	// The document approach is to check the return value of fork (it's 0 for child and non-zero for parent) but this is more reliable.
+	// For more details check - https://github.com/DiceDB/dice/issues/683
+	originalPID := syscall.Getpid()
 	_, _, err := syscall.RawSyscall(syscall.SYS_FORK, 0, 0, 0)
 
 	if err != 0 {
