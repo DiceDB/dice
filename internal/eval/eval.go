@@ -2929,6 +2929,36 @@ func evalHGETALL(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(results, false)
 }
 
+func evalHMGET(args []string, store *dstore.Store) []byte {
+	if len(args) < 2 {
+		return diceerrors.NewErrArity("HMGET")
+	}
+	key := args[0]
+
+	obj := store.Get(key)
+
+	var hashMap HashMap
+	results := make([]interface{}, len(args[1:]))
+
+	if obj != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+		}
+		hashMap = obj.Value.(HashMap)
+	}
+
+	for i, hmKey := range args[1:] {
+		hmValue, ok := hashMap.Get(hmKey)
+		if ok {
+			results[i] = *hmValue
+		} else {
+			results[i] = clientio.RespNIL
+		}
+	}
+
+	return clientio.Encode(results, false)
+}
+
 func evalHGET(args []string, store *dstore.Store) []byte {
 	if len(args) != 2 {
 		return diceerrors.NewErrArity("HGET")

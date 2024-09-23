@@ -250,8 +250,8 @@ var (
 		Retrieves the keys of a JSON object stored at path specified.
 		Null reply: If the key doesn't exist or has expired.
 		Error reply: If the number of arguments is incorrect or the stored value is not a JSON type.`,
-		Eval:     evalJSONOBJKEYS,
-		Arity:    2,
+		Eval:  evalJSONOBJKEYS,
+		Arity: 2,
 	}
 	jsonarrpopCmdMeta = DiceCmdMeta{
 		Name: "JSON.ARRPOP",
@@ -621,6 +621,13 @@ var (
 		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hmgetCmdMeta = DiceCmdMeta{
+		Name:     "HMGET",
+		Info:     `Returns the values associated with the specified fields in the hash stored at key.`,
+		Eval:     evalHMGET,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	hdelCmdMeta = DiceCmdMeta{
 		Name: "HDEL",
 		Info: `HDEL removes the specified fields from the hash stored at key.
@@ -976,6 +983,7 @@ func init() {
 	DiceCmds["SDIFF"] = sdiffCmdMeta
 	DiceCmds["SINTER"] = sinterCmdMeta
 	DiceCmds["HGETALL"] = hgetAllCmdMeta
+	DiceCmds["HMGET"] = hmgetCmdMeta
 	DiceCmds["PFADD"] = pfAddCmdMeta
 	DiceCmds["PFCOUNT"] = pfCountCmdMeta
 	DiceCmds["HGET"] = hgetCmdMeta
