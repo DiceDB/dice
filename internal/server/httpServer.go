@@ -26,12 +26,9 @@ import (
 )
 
 const Abort = "ABORT"
-const QWATCH = "QWATCH"
 
 var unimplementedCommands = map[string]bool{
-	"QUNWATCH":  true,
-	"SUBSCRIBE": true,
-	Abort:       false,
+	"QUNWATCH": true,
 }
 
 type HTTPServer struct {
@@ -176,7 +173,8 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 
 	// Wait for response
 	resp := <-s.ioChan
-	s.writeResponse(writer, resp.EvalResponse.Result.([]byte))
+
+	s.writeResponse(writer, resp)
 }
 
 func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *http.Request) {
@@ -230,7 +228,7 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 
 	// Wait for 1st sync response from server for QWATCH and flush it to client
 	resp := <-s.ioChan
-	s.writeResponse(writer, resp.EvalResponse.Result.([]byte))
+	s.writeResponse(writer, resp)
 	flusher.Flush()
 	// Keep listening for context cancellation (client disconnect) and continuous responses
 	doneChan := request.Context().Done()
@@ -245,13 +243,19 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 		storeOp.Cmd = unWatchCmd
 		s.shardManager.GetShard(0).ReqChan <- storeOp
 		resp := <-s.ioChan
-		s.writeResponse(writer, resp.EvalResponse.Result.([]byte))
+		s.writeResponse(writer, resp)
 		return
 	}
 }
 
-func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result []byte) {
-	rp := clientio.NewRESPParser(bytes.NewBuffer(result))
+func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.StoreResponse) {
+	var rp *clientio.RESPParser
+	if result.EvalResponse.Error != nil {
+		rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(result.EvalResponse.Error.Error())))
+	} else {
+		rp = clientio.NewRESPParser(bytes.NewBuffer(result.EvalResponse.Result.([]byte)))
+	}
+
 	val, err := rp.DecodeOne()
 	if err != nil {
 		s.logger.Error("Error decoding response", "error", err)

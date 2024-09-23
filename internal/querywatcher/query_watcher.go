@@ -38,7 +38,7 @@ type (
 			Key   string
 			Value *object.Obj
 		} // channel to receive cache data for this query
-		QwatchClient       io.ReadWriter // Generic reader writer
+		QwatchClient       io.ReadWriter // Generic reader writer for HTTP/Websockets etc.
 		ClientIdentifierID uint32        // Helps identify qwatch client on httpserver side
 	}
 
@@ -134,11 +134,17 @@ func (w *QueryManager) listenForSubscriptions(ctx context.Context) {
 	for {
 		select {
 		case event := <-WatchSubscriptionChan:
-			if event.Subscribe {
-				w.addWatcher(&event.Query, event.ClientFD, event.QwatchClient, event.ClientIdentifierID,
-					event.CacheChan)
+			var client ClientIdentifier
+			if event.QwatchClient != nil {
+				client = NewClientIdentifier(int(event.ClientIdentifierID), true)
 			} else {
-				w.removeWatcher(&event.Query, event.ClientFD, event.QwatchClient, event.ClientIdentifierID)
+				client = NewClientIdentifier(int(event.ClientIdentifierID), false)
+			}
+
+			if event.Subscribe {
+				w.addWatcher(&event.Query, client, event.QwatchClient, event.CacheChan)
+			} else {
+				w.removeWatcher(&event.Query, client, event.QwatchClient)
 			}
 		case <-ctx.Done():
 			return
@@ -309,7 +315,7 @@ func (w *QueryManager) sendWithRetry(query *sql.DSQLQuery, clientFD int, data []
 			slog.Int("client", clientFD),
 			slog.Any("error", err),
 		)
-		w.removeWatcher(query, clientFD, nil, 0)
+		w.removeWatcher(query, NewClientIdentifier(clientFD, false), nil)
 		return
 	}
 }
@@ -332,8 +338,8 @@ func (w *QueryManager) serveAdhocQueries(ctx context.Context) {
 }
 
 // addWatcher adds a client as a watcher to a query.
-func (w *QueryManager) addWatcher(query *sql.DSQLQuery, clientFD int, clientRespWriter io.ReadWriter,
-	clientIdentifierID uint32, cacheChan chan *[]struct {
+func (w *QueryManager) addWatcher(query *sql.DSQLQuery, clientIdentifier ClientIdentifier, clientRespWriter io.ReadWriter,
+	cacheChan chan *[]struct {
 		Key   string
 		Value *object.Obj
 	}) {
@@ -341,13 +347,9 @@ func (w *QueryManager) addWatcher(query *sql.DSQLQuery, clientFD int, clientResp
 
 	clients, _ := w.WatchList.LoadOrStore(queryString, &sync.Map{})
 	if clientRespWriter != nil {
-		clients.(*sync.Map).Store(NewClientIdentifier(int(clientIdentifierID), true), clientRespWriter)
-		httpClientWriter, _ := clients.(*sync.Map).Load(clientIdentifierID)
-		w.logger.Debug("HTTP client watching query",
-			slog.Any("httpClientWriter", httpClientWriter),
-			slog.Any("queryString", queryString))
+		clients.(*sync.Map).Store(clientIdentifier, clientRespWriter)
 	} else {
-		clients.(*sync.Map).Store(NewClientIdentifier(clientFD, false), struct{}{})
+		clients.(*sync.Map).Store(clientIdentifier, struct{}{})
 	}
 
 	w.QueryCacheMu.Lock()
@@ -366,18 +368,19 @@ func (w *QueryManager) addWatcher(query *sql.DSQLQuery, clientFD int, clientResp
 }
 
 // removeWatcher removes a client from the watchlist for a query.
-func (w *QueryManager) removeWatcher(query *sql.DSQLQuery, clientFD int, clientRespWriter io.ReadWriter,
-	clientIdentifierID uint32) {
+func (w *QueryManager) removeWatcher(query *sql.DSQLQuery, clientIdentifier ClientIdentifier,
+	clientRespWriter io.ReadWriter) {
 	queryString := query.String()
 	if clients, ok := w.WatchList.Load(queryString); ok {
 		if clientRespWriter != nil {
-			clients.(*sync.Map).Delete(NewClientIdentifier(int(clientIdentifierID), true))
+			clients.(*sync.Map).Delete(clientIdentifier)
 			w.logger.Debug("HTTP client no longer watching query",
-				slog.Any("clientIdentifierId", clientIdentifierID),
+				slog.Any("clientIdentifierId", clientIdentifier.ClientIdentifierID),
 				slog.Any("queryString", queryString))
 		} else {
-			clients.(*sync.Map).Delete(NewClientIdentifier(int(clientIdentifierID), false))
-			w.logger.Debug("client no longer watching query", slog.Int("client", clientFD),
+			clients.(*sync.Map).Delete(clientIdentifier)
+			w.logger.Debug("client no longer watching query",
+				slog.Int("client", clientIdentifier.ClientIdentifierID),
 				slog.String("query", queryString))
 		}
 
