@@ -61,6 +61,7 @@ type (
 		QueryCache   *swiss.Map[string, cacheStore] // QueryCache is a map of fingerprints to their respective data caches
 		QueryCacheMu sync.RWMutex
 		logger       *slog.Logger
+		responseMu   sync.Mutex
 	}
 
 	HTTPQwatchResponse struct {
@@ -259,6 +260,10 @@ func (w *QueryManager) notifyClients(query *sql.DSQLQuery, clients *sync.Map, qu
 				w.logger.Error("Error marshaling QueryData to JSON: %v", slog.Any("error", err))
 				return true
 			}
+
+			// Lock the mutex before writing
+			w.responseMu.Lock()
+			defer w.responseMu.Unlock()
 
 			// Format the response as SSE event
 			_, err = clientResponseChannel.Write(responseJSON)
