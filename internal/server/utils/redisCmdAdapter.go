@@ -35,7 +35,7 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 	queryParams := r.URL.Query()
 	keyPrefix := queryParams.Get(KeyPrefix)
 
-	if keyPrefix != "" && command == "JSON.INGEST" {
+	if keyPrefix != "" && command == JSONIngest {
 		args = append(args, keyPrefix)
 	}
 	// Step 1: Handle JSON body if present
@@ -138,7 +138,7 @@ func ParseWebsocketMessage(msg []byte) (*cmd.RedisCmd, error) {
 		if val, exists := jsonBody[key]; exists {
 			args = append(args, fmt.Sprintf("%v", val))
 			delete(jsonBody, key)
-		} else if command == "JSON.INGEST" && key == KeyPrefix {
+		} else if command == JSONIngest && key == KeyPrefix {
 			// add empty key prefix
 			args = append(args, "")
 		}
