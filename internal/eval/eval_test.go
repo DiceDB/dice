@@ -23,10 +23,12 @@ import (
 )
 
 type evalTestCase struct {
-	setup     func()
-	input     []string
-	output    []byte
-	validator func(output []byte)
+	name           string
+	setup          func()
+	input          []string
+	output         []byte
+	validator      func(output []byte)
+	migratedOutput EvalResponse
 }
 
 func setupTest(store *dstore.Store) *dstore.Store {
@@ -40,11 +42,11 @@ func TestEval(t *testing.T) {
 	store := dstore.NewStore(nil)
 
 	testEvalMSET(t, store)
-	testEvalPING(t, store)
 	testEvalECHO(t, store)
 	testEvalHELLO(t, store)
 	testEvalSET(t, store)
 	testEvalGET(t, store)
+	testEvalGETEX(t, store)
 	testEvalDebug(t, store)
 	testEvalJSONARRPOP(t, store)
 	testEvalJSONARRLEN(t, store)
@@ -79,6 +81,8 @@ func TestEval(t *testing.T) {
 	testEvalJSONNUMINCRBY(t, store)
 	testEvalTYPE(t, store)
 	testEvalCOMMAND(t, store)
+	testEvalGETRANGE(t, store)
+	testEvalPING(t, store)
 	testEvalSETEX(t, store)
 }
 
@@ -124,27 +128,115 @@ func testEvalHELLO(t *testing.T, store *dstore.Store) {
 }
 
 func testEvalSET(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"nil value":                       {input: nil, output: []byte("-ERR wrong number of arguments for 'set' command\r\n")},
-		"empty array":                     {input: []string{}, output: []byte("-ERR wrong number of arguments for 'set' command\r\n")},
-		"one value":                       {input: []string{"KEY"}, output: []byte("-ERR wrong number of arguments for 'set' command\r\n")},
-		"key val pair":                    {input: []string{"KEY", "VAL"}, output: clientio.RespOK},
-		"key val pair with int val":       {input: []string{"KEY", "123456"}, output: clientio.RespOK},
-		"key val pair and expiry key":     {input: []string{"KEY", "VAL", Px}, output: []byte("-ERR syntax error\r\n")},
-		"key val pair and EX no val":      {input: []string{"KEY", "VAL", Ex}, output: []byte("-ERR syntax error\r\n")},
-		"key val pair and valid EX":       {input: []string{"KEY", "VAL", Ex, "2"}, output: clientio.RespOK},
-		"key val pair and invalid EX":     {input: []string{"KEY", "VAL", Ex, "invalid_expiry_val"}, output: []byte("-ERR value is not an integer or out of range\r\n")},
-		"key val pair and valid PX":       {input: []string{"KEY", "VAL", Px, "2000"}, output: clientio.RespOK},
-		"key val pair and invalid PX":     {input: []string{"KEY", "VAL", Px, "invalid_expiry_val"}, output: []byte("-ERR value is not an integer or out of range\r\n")},
-		"key val pair and both EX and PX": {input: []string{"KEY", "VAL", Ex, "2", Px, "2000"}, output: []byte("-ERR syntax error\r\n")},
-		"key val pair and PXAT no val":    {input: []string{"KEY", "VAL", Pxat}, output: []byte("-ERR syntax error\r\n")},
-		"key val pair and invalid PXAT":   {input: []string{"KEY", "VAL", Pxat, "invalid_expiry_val"}, output: []byte("-ERR value is not an integer or out of range\r\n")},
-		"key val pair and expired PXAT":   {input: []string{"KEY", "VAL", Pxat, "2"}, output: clientio.RespOK},
-		"key val pair and negative PXAT":  {input: []string{"KEY", "VAL", Pxat, "-123456"}, output: []byte("-ERR invalid expire time in 'set' command\r\n")},
-		"key val pair and valid PXAT":     {input: []string{"KEY", "VAL", Pxat, strconv.FormatInt(time.Now().Add(2*time.Minute).UnixMilli(), 10)}, output: clientio.RespOK},
+
+	tests := []evalTestCase{
+		{
+			name:           "nil value",
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'set' command\r\n")},
+		},
+		{
+			name:           "empty array",
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'set' command\r\n")},
+		},
+		{
+			name:           "one value",
+			input:          []string{"KEY"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'set' command\r\n")},
+		},
+		{
+			name:           "key val pair",
+			input:          []string{"KEY", "VAL"},
+			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
+		},
+		{
+			name:           "key val pair with int val",
+			input:          []string{"KEY", "123456"},
+			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
+		},
+		{
+			name:           "key val pair and expiry key",
+			input:          []string{"KEY", "VAL", Px},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR syntax error\r\n")},
+		},
+		{
+			name:           "key val pair and EX no val",
+			input:          []string{"KEY", "VAL", Ex},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR syntax error\r\n")},
+		},
+		{
+			name:           "key val pair and valid EX",
+			input:          []string{"KEY", "VAL", Ex, "2"},
+			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
+		},
+		{
+			name:           "key val pair and invalid EX",
+			input:          []string{"KEY", "VAL", Ex, "invalid_expiry_val"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR value is not an integer or out of range\r\n")},
+		},
+		{
+			name:           "key val pair and valid PX",
+			input:          []string{"KEY", "VAL", Px, "2000"},
+			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
+		},
+		{
+			name:           "key val pair and invalid PX",
+			input:          []string{"KEY", "VAL", Px, "invalid_expiry_val"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR value is not an integer or out of range\r\n")},
+		},
+		{
+			name:           "key val pair and both EX and PX",
+			input:          []string{"KEY", "VAL", Ex, "2", Px, "2000"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR syntax error\r\n")},
+		},
+		{
+			name:           "key val pair and PXAT no val",
+			input:          []string{"KEY", "VAL", Pxat},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR syntax error\r\n")},
+		},
+		{
+			name:           "key val pair and invalid PXAT",
+			input:          []string{"KEY", "VAL", Pxat, "invalid_expiry_val"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR value is not an integer or out of range\r\n")},
+		},
+		{
+			name:           "key val pair and expired PXAT",
+			input:          []string{"KEY", "VAL", Pxat, "2"},
+			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
+		},
+		{
+			name:           "key val pair and negative PXAT",
+			input:          []string{"KEY", "VAL", Pxat, "-123456"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR invalid expire time in 'set' command\r\n")},
+		},
+		{
+			name:           "key val pair and valid PXAT",
+			input:          []string{"KEY", "VAL", Pxat, strconv.FormatInt(time.Now().Add(2*time.Minute).UnixMilli(), 10)},
+			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
+		},
 	}
 
-	runEvalTests(t, tests, evalSET, store)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			response := evalSET(tt.input, store)
+
+			// Handle comparison for byte slices
+			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
+				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
+					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+				}
+			} else {
+				assert.Equal(t, tt.migratedOutput.Result, response.Result)
+			}
+
+			if tt.migratedOutput.Error != nil {
+				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+			} else {
+				testifyAssert.NoError(t, response.Error)
+			}
+		})
+	}
 }
 
 func testEvalGETEX(t *testing.T, store *dstore.Store) {
@@ -173,6 +265,22 @@ func testEvalGETEX(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"foo", Ex, "10000000000000000"},
 			output: []byte("-ERR invalid expire time in 'getex' command\r\n")},
+		"key holding json type": {
+			setup: func() {
+				evalJSONSET([]string{"JSONKEY", "$", "1"}, store)
+
+			},
+			input:  []string{"JSONKEY"},
+			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+		},
+		"key holding set type": {
+			setup: func() {
+				evalSADD([]string{"SETKEY", "FRUITS", "APPLE", "MANGO", "BANANA"}, store)
+
+			},
+			input:  []string{"SETKEY"},
+			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+		},
 	}
 
 	runEvalTests(t, tests, evalGETEX, store)
@@ -192,28 +300,29 @@ func testEvalMSET(t *testing.T, store *dstore.Store) {
 }
 
 func testEvalGET(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"nil value": {
-			setup:  func() {},
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'get' command\r\n"),
+	tests := []evalTestCase{
+		{
+			name:           "nil value",
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'get' command\r\n")},
 		},
-		"empty array": {
-			setup:  func() {},
-			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'get' command\r\n"),
+		{
+			name:           "empty array",
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'get' command\r\n")},
 		},
-		"key does not exist": {
-			setup:  func() {},
-			input:  []string{"NONEXISTENT_KEY"},
-			output: clientio.RespNIL,
+		{
+			name:           "key does not exist",
+			input:          []string{"NONEXISTENT_KEY"},
+			migratedOutput: EvalResponse{Result: clientio.RespNIL, Error: nil},
 		},
-		"multiple arguments": {
-			setup:  func() {},
-			input:  []string{"KEY1", "KEY2"},
-			output: []byte("-ERR wrong number of arguments for 'get' command\r\n"),
+		{
+			name:           "multiple arguments",
+			input:          []string{"KEY1", "KEY2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'get' command\r\n")},
 		},
-		"key exists": {
+		{
+			name: "key exists",
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
@@ -223,10 +332,11 @@ func testEvalGET(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input:  []string{"EXISTING_KEY"},
-			output: clientio.Encode("mock_value", false),
+			input:          []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{Result: fmt.Sprintf("$%d\r\n%s\r\n", len("mock_value"), "mock_value"), Error: nil},
 		},
-		"key exists but expired": {
+		{
+			name: "key exists but expired",
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
@@ -235,15 +345,102 @@ func testEvalGET(t *testing.T, store *dstore.Store) {
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
 				store.Put(key, obj)
-
 				store.SetExpiry(obj, int64(-2*time.Millisecond))
 			},
-			input:  []string{"EXISTING_KEY"},
-			output: clientio.RespNIL,
+			input:          []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{Result: clientio.RespNIL, Error: nil},
 		},
 	}
 
-	runEvalTests(t, tests, evalGET, store)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			response := evalGET(tt.input, store)
+
+			// Handle comparison for byte slices
+			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
+				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
+					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+				}
+			} else {
+				assert.Equal(t, tt.migratedOutput.Result, response.Result)
+			}
+
+			if tt.migratedOutput.Error != nil {
+				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+			} else {
+				testifyAssert.NoError(t, response.Error)
+			}
+		})
+	}
+}
+
+func testEvalGETSET(t *testing.T, store *dstore.Store) {
+	tests := []evalTestCase{
+		{
+			name:           "GETSET with 1 arg",
+			input:          []string{"HELLO"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'getset' command\r\n")},
+		},
+		{
+			name:           "GETSET with 3 args",
+			input:          []string{"HELLO", "WORLD", "WORLD1"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'getset' command\r\n")},
+		},
+		{
+			name:           "GETSET key not exists",
+			input:          []string{"HELLO", "WORLD"},
+			migratedOutput: EvalResponse{Result: clientio.RespNIL, Error: nil},
+		},
+		{
+			name: "GETSET key exists",
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "mock_value"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:          []string{"EXISTING_KEY", "WORLD"},
+			migratedOutput: EvalResponse{Result: fmt.Sprintf("$%d\r\n%s\r\n", len("mock_value"), "mock_value"), Error: nil},
+		},
+		{
+			name: "GETSET key exists TTL should be reset",
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "mock_value"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:          []string{"EXISTING_KEY", "WORLD"},
+			migratedOutput: EvalResponse{Result: fmt.Sprintf("$%d\r\n%s\r\n", len("mock_value"), "mock_value"), Error: nil},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			response := evalGETSET(tt.input, store)
+
+			// Handle comparison for byte slices
+			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
+				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
+					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+				}
+			} else {
+				assert.Equal(t, tt.migratedOutput.Result, response.Result)
+			}
+
+			if tt.migratedOutput.Error != nil {
+				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+			} else {
+				testifyAssert.NoError(t, response.Error)
+			}
+		})
+	}
 }
 
 func testEvalEXPIRE(t *testing.T, store *dstore.Store) {
@@ -1535,51 +1732,6 @@ func testEvalDbsize(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalDBSIZE, store)
 }
 
-func testEvalGETSET(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"GETSET with 1 arg": {
-			input:  []string{"HELLO"},
-			output: []byte("-ERR wrong number of arguments for 'getset' command\r\n"),
-		},
-		"GETSET with 3 args": {
-			input:  []string{"HELLO", "WORLD", "WORLD1"},
-			output: []byte("-ERR wrong number of arguments for 'getset' command\r\n"),
-		},
-		"GETSET key not exists": {
-			input:  []string{"HELLO", "WORLD"},
-			output: clientio.RespNIL,
-		},
-		"GETSET key exists": {
-			setup: func() {
-				key := "EXISTING_KEY"
-				value := "mock_value"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
-				store.Put(key, obj)
-			},
-			input:  []string{"EXISTING_KEY", "WORLD"},
-			output: clientio.Encode("mock_value", false),
-		},
-		"GETSET key exists TTL should be reset": {
-			setup: func() {
-				key := "EXISTING_KEY"
-				value := "mock_value"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
-				store.Put(key, obj)
-			},
-			input:  []string{"EXISTING_KEY", "WORLD"},
-			output: clientio.Encode("mock_value", false),
-		},
-	}
-
-	runEvalTests(t, tests, evalGETSET, store)
-}
-
 func testEvalPFADD(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value":           {input: nil, output: []byte("-ERR wrong number of arguments for 'pfadd' command\r\n")},
@@ -2762,6 +2914,171 @@ func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
 
 	runEvalTests(t, tests, evalCommand, store)
 }
+func testEvalGETRANGE(t *testing.T, store *dstore.Store) {
+	setupForStringValue := func() {
+		store.Put("STRING_KEY", store.NewObj("Hello World", maxExDuration, object.ObjTypeString, object.ObjEncodingRaw))
+	}
+	setupForIntegerValue := func() {
+		store.Put("INTEGER_KEY", store.NewObj("1234", maxExDuration, object.ObjTypeString, object.ObjEncodingRaw))
+	}
+	tests := map[string]evalTestCase{
+		"GETRANGE against non-existing key": {
+			setup:  func() {},
+			input:  []string{"NON_EXISTING_KEY", "0", "-1"},
+			output: clientio.Encode("", false),
+		},
+		"GETRANGE against wrong key type": {
+			setup: func() {
+				evalLPUSH([]string{"LKEY1", "list"}, store)
+			},
+			input:  []string{"LKEY1", "0", "-1"},
+			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+		},
+		"GETRANGE against string value: 0, 3": {
+			setup:  setupForStringValue,
+			input:  []string{"STRING_KEY", "0", "3"},
+			output: clientio.Encode("Hell", false),
+		},
+		"GETRANGE against string value: 0, -1": {
+			setup:  setupForStringValue,
+			input:  []string{"STRING_KEY", "0", "-1"},
+			output: clientio.Encode("Hello World", false),
+		},
+		"GETRANGE against string value: -4, -1": {
+			setup:  setupForStringValue,
+			input:  []string{"STRING_KEY", "-4", "-1"},
+			output: clientio.Encode("orld", false),
+		},
+		"GETRANGE against string value: 5, 3": {
+			setup:  setupForStringValue,
+			input:  []string{"STRING_KEY", "5", "3"},
+			output: clientio.Encode("", false),
+		},
+		"GETRANGE against string value: 5, 5000": {
+			setup:  setupForStringValue,
+			input:  []string{"STRING_KEY", "5", "5000"},
+			output: clientio.Encode(" World", false),
+		},
+		"GETRANGE against string value: -5000, 10000": {
+			setup:  setupForStringValue,
+			input:  []string{"STRING_KEY", "-5000", "10000"},
+			output: clientio.Encode("Hello World", false),
+		},
+		"GETRANGE against string value: 0, -100": {
+			setup:  setupForStringValue,
+			input:  []string{"STRING_KEY", "0", "-100"},
+			output: clientio.Encode("", false),
+		},
+		"GETRANGE against string value: 1, -100": {
+			setup:  setupForStringValue,
+			input:  []string{"STRING_KEY", "1", "-100"},
+			output: clientio.Encode("", false),
+		},
+		"GETRANGE against string value: -1, -100": {
+			setup:  setupForStringValue,
+			input:  []string{"STRING_KEY", "-1", "-100"},
+			output: clientio.Encode("", false),
+		},
+		"GETRANGE against string value: -100, -100": {
+			setup:  setupForStringValue,
+			input:  []string{"STRING_KEY", "-100", "-100"},
+			output: clientio.Encode("", false),
+		},
+		"GETRANGE against string value: -100, -101": {
+			setup:  setupForStringValue,
+			input:  []string{"STRING_KEY", "-100", "-101"},
+			output: clientio.Encode("", false),
+		},
+		"GETRANGE against integer value: 0, 2": {
+			setup:  setupForIntegerValue,
+			input:  []string{"INTEGER_KEY", "0", "2"},
+			output: clientio.Encode("123", false),
+		},
+		"GETRANGE against integer value: 0, -1": {
+			setup:  setupForIntegerValue,
+			input:  []string{"INTEGER_KEY", "0", "-1"},
+			output: clientio.Encode("1234", false),
+		},
+		"GETRANGE against integer value: -3, -1": {
+			setup:  setupForIntegerValue,
+			input:  []string{"INTEGER_KEY", "-3", "-1"},
+			output: clientio.Encode("234", false),
+		},
+		"GETRANGE against integer value: 5, 3": {
+			setup:  setupForIntegerValue,
+			input:  []string{"INTEGER_KEY", "5", "3"},
+			output: clientio.Encode("", false),
+		},
+		"GETRANGE against integer value: 3, 5000": {
+			setup:  setupForIntegerValue,
+			input:  []string{"INTEGER_KEY", "3", "5000"},
+			output: clientio.Encode("4", false),
+		},
+
+		"GETRANGE against integer value: -5000, 10000": {
+			setup:  setupForIntegerValue,
+			input:  []string{"INTEGER_KEY", "-5000", "10000"},
+			output: clientio.Encode("1234", false),
+		},
+		"GETRANGE against integer value: 0, -100": {
+			setup:  setupForIntegerValue,
+			input:  []string{"INTEGER_KEY", "0", "-100"},
+			output: clientio.Encode("", false),
+		},
+		"GETRANGE against integer value: 1, -100": {
+			setup:  setupForIntegerValue,
+			input:  []string{"INTEGER_KEY", "1", "-100"},
+			output: clientio.Encode("", false),
+		},
+		"GETRANGE against integer value: -1, -100": {
+			setup:  setupForIntegerValue,
+			input:  []string{"INTEGER_KEY", "-1", "-100"},
+			output: clientio.Encode("", false),
+		},
+		"GETRANGE against integer value: -100, -99": {
+			setup:  setupForIntegerValue,
+			input:  []string{"INTEGER_KEY", "-100", "-99"},
+			output: clientio.Encode("", false),
+		},
+		"GETRANGE against integer value: -100, -100": {
+			setup:  setupForIntegerValue,
+			input:  []string{"INTEGER_KEY", "-100", "-100"},
+			output: clientio.Encode("", false),
+		},
+		"GETRANGE against integer value: -100, -101": {
+			setup:  setupForIntegerValue,
+			input:  []string{"INTEGER_KEY", "-100", "-101"},
+			output: clientio.Encode("", false),
+		},
+	}
+	runEvalTests(t, tests, evalGETRANGE, store)
+}
+
+func BenchmarkEvalGETRANGE(b *testing.B) {
+	store := dstore.NewStore(nil)
+	store.Put("BENCHMARK_KEY", store.NewObj("Hello World", maxExDuration, object.ObjTypeString, object.ObjEncodingRaw))
+
+	inputs := []struct {
+		start string
+		end   string
+	}{
+		{"0", "3"},
+		{"0", "-1"},
+		{"-4", "-1"},
+		{"5", "3"},
+		{"5", "5000"},
+		{"-5000", "10000"},
+	}
+
+	for _, input := range inputs {
+		b.Run(fmt.Sprintf("GETRANGE start=%s end=%s", input.start, input.end), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_ = evalGETRANGE([]string{"BENCHMARK_KEY", input.start, input.end}, store)
+			}
+		})
+	}
+}
+
 func TestMSETConsistency(t *testing.T) {
 	store := dstore.NewStore(nil)
 	evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"}, store)
