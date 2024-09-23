@@ -86,9 +86,9 @@ func TestParseHTTPRequest(t *testing.T) {
 			name:         "Test PING command",
 			method:       "POST",
 			url:          "/ping",
-			body:         ``,
+			body:         "",
 			expectedCmd:  "PING",
-			expectedArgs: []string{""},
+			expectedArgs: nil,
 		},
 		{
 			name:         "Test JSON.SET command",

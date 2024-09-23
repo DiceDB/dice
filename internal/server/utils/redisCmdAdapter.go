@@ -18,8 +18,8 @@ const (
 	Field     = "field"
 	Path      = "path"
 	Value     = "value"
-	User	= "user"
-	Password	= "password"
+	User      = "user"
+	Password  = "password"
 	Seconds   = "seconds"
 	KeyValues = "key_values"
 	True      = "true"
@@ -80,8 +80,7 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 					if key == KeyValues {
 						// Handle KeyValues separately
 						for k, v := range val.(map[string]interface{}) {
-							args = append(args, k)
-							args = append(args, fmt.Sprintf("%v", v))
+							args = append(args, k, fmt.Sprintf("%v", v))
 						}
 						delete(jsonBody, key)
 						continue
