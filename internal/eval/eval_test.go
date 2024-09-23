@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/dicedb/dice/internal/server/utils"
 	"reflect"
 	"strconv"
 	"strings"
@@ -83,6 +84,7 @@ func TestEval(t *testing.T) {
 	testEvalCOMMAND(t, store)
 	testEvalGETRANGE(t, store)
 	testEvalPING(t, store)
+	testEvalSETEX(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -3084,4 +3086,110 @@ func TestMSETConsistency(t *testing.T) {
 
 	assert.Equal(t, "VAL", store.Get("KEY").Value)
 	assert.Equal(t, "VAL2", store.Get("KEY2").Value)
+}
+
+func testEvalSETEX(t *testing.T, store *dstore.Store) {
+	mockTime := &utils.MockClock{CurrTime: time.Now()}
+	utils.CurrentTime = mockTime
+
+	tests := map[string]evalTestCase{
+		"nil value":                              {input: nil, migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'setex' command\r\n")}},
+		"empty array":                            {input: []string{}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'setex' command\r\n")}},
+		"one value":                              {input: []string{"KEY"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'setex' command\r\n")}},
+		"key val pair":                           {input: []string{"KEY", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'setex' command\r\n")}},
+		"key exp pair":                           {input: []string{"KEY", "123456"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'setex' command\r\n")}},
+		"key exp value pair":                     {input: []string{"KEY", "123", "VAL"}, migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil}},
+		"key exp value pair with extra args":     {input: []string{"KEY", "123", "VAL", " "}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'setex' command\r\n")}},
+		"key exp value pair with invalid exp":    {input: []string{"KEY", "0", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR invalid expire time in 'setex' command\r\n")}},
+		"key exp value pair with exp > maxexp":   {input: []string{"KEY", "9223372036854776", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR invalid expire time in 'setex' command\r\n")}},
+		"key exp value pair with exp > maxint64": {input: []string{"KEY", "92233720368547760000000", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR value is not an integer or out of range\r\n")}},
+		"key exp value pair with negative exp":   {input: []string{"KEY", "-23", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR invalid expire time in 'setex' command\r\n")}},
+		"key exp value pair with not-int exp":    {input: []string{"KEY", "12a", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR value is not an integer or out of range\r\n")}},
+
+		"set and get": {
+			setup: func() {},
+			input: []string{"TEST_KEY", "5", "TEST_VALUE"},
+			validator: func(output []byte) {
+				assert.Equal(t, string(clientio.RespOK), string(output))
+
+				// Check if the key was set correctly
+				getValue := evalGET([]string{"TEST_KEY"}, store)
+				assert.Equal(t, string(clientio.Encode("TEST_VALUE", false)), string(getValue.Result.([]byte)))
+
+				// Check if the TTL is set correctly (should be 5 seconds or less)
+				ttlValue := evalTTL([]string{"TEST_KEY"}, store)
+				ttl, err := strconv.Atoi(strings.TrimPrefix(strings.TrimSpace(string(ttlValue)), ":"))
+				assert.NilError(t, err, "Failed to parse TTL")
+				assert.Assert(t, ttl > 0 && ttl <= 5)
+
+				// Wait for the key to expire
+				mockTime.SetTime(mockTime.CurrTime.Add(6 * time.Second))
+
+				// Check if the key has been deleted after expiry
+				expiredValue := evalGET([]string{"TEST_KEY"}, store)
+				assert.Equal(t, string(clientio.RespNIL), string(expiredValue.Result.([]byte)))
+			},
+		},
+		"update existing key": {
+			setup: func() {
+				evalSET([]string{"EXISTING_KEY", "OLD_VALUE"}, store)
+			},
+			input: []string{"EXISTING_KEY", "10", "NEW_VALUE"},
+			validator: func(output []byte) {
+				assert.Equal(t, string(clientio.RespOK), string(output))
+
+				// Check if the key was updated correctly
+				getValue := evalGET([]string{"EXISTING_KEY"}, store)
+				assert.Equal(t, string(clientio.Encode("NEW_VALUE", false)), string(getValue.Result.([]byte)))
+
+				// Check if the TTL is set correctly
+				ttlValue := evalTTL([]string{"EXISTING_KEY"}, store)
+				ttl, err := strconv.Atoi(strings.TrimPrefix(strings.TrimSpace(string(ttlValue)), ":"))
+				assert.NilError(t, err, "Failed to parse TTL")
+				assert.Assert(t, ttl > 0 && ttl <= 10)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			response := evalSETEX(tt.input, store)
+
+			if tt.validator != nil {
+				if tt.migratedOutput.Error != nil {
+					tt.validator([]byte(tt.migratedOutput.Error.Error()))
+				} else {
+					tt.validator(response.Result.([]byte))
+				}
+			} else {
+				// Handle comparison for byte slices
+				if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
+					if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
+						testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+					}
+				} else {
+					assert.Equal(t, tt.migratedOutput.Result, response.Result)
+				}
+
+				if tt.migratedOutput.Error != nil {
+					testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+				} else {
+					testifyAssert.NoError(t, response.Error)
+				}
+			}
+		})
+	}
+}
+
+func BenchmarkEvalSETEX(b *testing.B) {
+	store := dstore.NewStore(nil)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		key := fmt.Sprintf("key_%d", i)
+		value := fmt.Sprintf("value_%d", i)
+		expiry := "10" // 10 seconds expiry
+
+		evalSETEX([]string{key, expiry, value}, store)
+	}
 }

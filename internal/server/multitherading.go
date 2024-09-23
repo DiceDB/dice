@@ -82,5 +82,7 @@ func (s *AsyncServer) gather(redisCmd *cmd.RedisCmd, buf *bytes.Buffer, numShard
 
 	case Multishard:
 		buf.Write(val.Gather(evalResp...))
+	default:
+		buf.WriteString("ERR Invalid command type")
 	}
 }

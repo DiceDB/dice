@@ -214,3 +214,38 @@ func evalGETSET(args []string, store *dstore.Store) EvalResponse {
 
 	return getResp
 }
+
+// evalSETEX puts a new <key, value> pair in db as in the args
+// args must contain only  key , expiry and value
+// Returns encoded error response if <key,exp,value> is not part of args
+// Returns encoded error response if expiry time value in not integer
+// Returns encoded OK RESP once new entry is added
+// If the key already exists then the value and expiry will be overwritten
+func evalSETEX(args []string, store *dstore.Store) EvalResponse {
+	if len(args) != 3 {
+		return EvalResponse{
+			Result: nil,
+			Error:  errors.New(string(diceerrors.NewErrArity("SETEX"))),
+		}
+	}
+
+	var key, value string
+	key, value = args[0], args[2]
+
+	exDuration, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return EvalResponse{
+			Result: nil,
+			Error:  errors.New(string(diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr))),
+		}
+	}
+	if exDuration <= 0 || exDuration >= maxExDuration {
+		return EvalResponse{
+			Result: nil,
+			Error:  errors.New(string(diceerrors.NewErrExpireTime("SETEX"))),
+		}
+	}
+	newArgs := []string{key, value, Ex, args[1]}
+
+	return evalSET(newArgs, store)
+}
