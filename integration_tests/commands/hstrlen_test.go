@@ -9,7 +9,7 @@ import (
 func TestHSTRLEN(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
-	defer FireCommand(conn, "DEL key_hStrLen key")
+	defer FireCommand(conn, "DEL key_hStrLen1 key_hStrLen2 key_hStrLen3 key")
 
 	testCases := []TestCase{
 		{
@@ -19,20 +19,16 @@ func TestHSTRLEN(t *testing.T) {
 				"ERR wrong number of arguments for 'hstrlen' command"},
 		},
 		{
-			commands: []string{"HSET key_hStrLen field value", "HSET key_hStrLen field HelloWorld"},
+			commands: []string{"HSET key_hStrLen1 field value", "HSTRLEN wrong_key_hStrLen field"},
 			expected: []interface{}{ONE, ZERO},
 		},
 		{
-			commands: []string{"HSTRLEN wrong_key_hStrLen field"},
-			expected: []interface{}{ZERO},
+			commands: []string{"HSET key_hStrLen2 field value", "HSTRLEN key_hStrLen2 wrong_field"},
+			expected: []interface{}{ONE, ZERO},
 		},
 		{
-			commands: []string{"HSTRLEN key_hStrLen wrong_field"},
-			expected: []interface{}{ZERO},
-		},
-		{
-			commands: []string{"HSTRLEN key_hStrLen field"},
-			expected: []interface{}{int64(10)},
+			commands: []string{"HSET key_hStrLen3 field HelloWorld", "HSTRLEN key_hStrLen3 field"},
+			expected: []interface{}{ONE, int64(10)},
 		},
 		{
 			commands: []string{"SET key value", "HSTRLEN key field"},
