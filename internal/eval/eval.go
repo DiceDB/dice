@@ -2422,7 +2422,7 @@ func evalCommandInfo(args []string) []byte {
 
 	cmdMetaMap := make(map[string]interface{})
 	for _, cmdMeta := range DiceCmds {
-		cmdMetaMap[cmdMeta.Name] = convertCmdMetaToSlice(cmdMeta)
+		cmdMetaMap[cmdMeta.Name] = convertCmdMetaToSlice(&cmdMeta)
 	}
 
 	var result []interface{}
