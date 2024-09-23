@@ -10,7 +10,6 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -158,15 +157,15 @@ func main() {
 		err := websocketServer.Run(ctx)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
-				log.Debug("Websocket Server was canceled")
+				logr.Debug("Websocket Server was canceled")
 			} else if errors.Is(err, server.ErrAborted) {
-				log.Debug("Websocket received abort command")
+				logr.Debug("Websocket received abort command")
 			} else {
-				log.Error("Websocket Server error", "error", err)
+				logr.Error("Websocket Server error", "error", err)
 			}
 			serverErrCh <- err
 		} else {
-			log.Debug("Websocket Server stopped without error")
+			logr.Debug("Websocket Server stopped without error")
 		}
 	}()
 
