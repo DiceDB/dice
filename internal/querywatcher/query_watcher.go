@@ -138,7 +138,7 @@ func (w *QueryManager) listenForSubscriptions(ctx context.Context) {
 			if event.QwatchClient != nil {
 				client = NewClientIdentifier(int(event.ClientIdentifierID), true)
 			} else {
-				client = NewClientIdentifier(int(event.ClientIdentifierID), false)
+				client = NewClientIdentifier(event.ClientFD, false)
 			}
 
 			if event.Subscribe {
