@@ -820,9 +820,10 @@ var (
 		Returns encoded error response if expiry time value in not integer
 		Returns encoded OK RESP once new entry is added
 		If the key already exists then the value and expiry will be overwritten`,
-		Eval:     evalSETEX,
-		Arity:    3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalSETEX,
 	}
 )
 

@@ -3633,29 +3633,3 @@ func evalGETRANGE(args []string, store *dstore.Store) []byte {
 
 	return clientio.Encode(str[start:end+1], false)
 }
-
-// evalSETEX puts a new <key, value> pair in db as in the args
-// args must contain only  key , expiry and value
-// Returns encoded error response if <key,exp,value> is not part of args
-// Returns encoded error response if expiry time value in not integer
-// Returns encoded OK RESP once new entry is added
-// If the key already exists then the value and expiry will be overwritten
-func evalSETEX(args []string, store *dstore.Store) []byte {
-	if len(args) != 3 {
-		return diceerrors.NewErrArity("SETEX")
-	}
-
-	var key, value string
-	key, value = args[0], args[2]
-
-	exDuration, err := strconv.ParseInt(args[1], 10, 64)
-	if err != nil {
-		return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
-	}
-	if exDuration <= 0 || exDuration >= maxExDuration {
-		return diceerrors.NewErrExpireTime("SETEX")
-	}
-	newArgs := []string{key, value, Ex, strconv.FormatInt(exDuration, 10)}
-
-	return evalSET(newArgs, store)
-}
