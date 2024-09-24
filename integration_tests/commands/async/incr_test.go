@@ -238,7 +238,7 @@ func TestINCRBY(t *testing.T) {
 			},
 			incrByCommands: []IncrByCommand{
 				{"key", int64(1), math.MaxInt64, utils.EmptyStr},
-				{"key", int64(1), 0, "ERR value is out of range"},
+				{"key", int64(1), 0, "ERR increment or decrement would overflow"},
 			},
 			getCommands: []GetCommand{
 				{"key", math.MaxInt64},
@@ -251,7 +251,7 @@ func TestINCRBY(t *testing.T) {
 			},
 			incrByCommands: []IncrByCommand{
 				{"key", int64(-1), math.MinInt64, utils.EmptyStr},
-				{"key", int64(-1), 0, "ERR value is out of range"},
+				{"key", int64(-1), 0, "ERR increment or decrement would overflow"},
 			},
 			getCommands: []GetCommand{
 				{"key", math.MinInt64},
