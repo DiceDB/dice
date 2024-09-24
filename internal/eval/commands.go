@@ -244,6 +244,15 @@ var (
 		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsonobjkeysCmdMeta = DiceCmdMeta{
+		Name: "JSON.OBJKEYS",
+		Info: `JSON.OBJKEYS key [path]
+		Retrieves the keys of a JSON object stored at path specified.
+		Null reply: If the key doesn't exist or has expired.
+		Error reply: If the number of arguments is incorrect or the stored value is not a JSON type.`,
+		Eval:     evalJSONOBJKEYS,
+		Arity:    2,
+	}
 	jsonarrpopCmdMeta = DiceCmdMeta{
 		Name: "JSON.ARRPOP",
 		Info: `JSON.ARRPOP key [path [index]]
@@ -264,6 +273,17 @@ var (
 		Returns encoded error message if the number of arguments is incorrect or the JSON string is invalid.`,
 		Eval:     evalJSONINGEST,
 		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	jsonarrinsertCmdMeta = DiceCmdMeta{
+		Name: "JSON.ARRINSERT",
+		Info: `JSON.ARRINSERT key path index value [value ...]
+		Returns an array of integer replies for each path.
+		Returns nil if the matching JSON value is not an array.
+		Returns error response if the key doesn't exist or key is expired or the matching value is not an array.
+		Error reply: If the number of arguments is incorrect.`,
+		Eval:     evalJSONARRINSERT,
+		Arity:    -5,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	ttlCmdMeta = DiceCmdMeta{
@@ -887,8 +907,10 @@ func init() {
 	DiceCmds["JSON.NUMMULTBY"] = jsonnummultbyCmdMeta
 	DiceCmds["JSON.OBJLEN"] = jsonobjlenCmdMeta
 	DiceCmds["JSON.DEBUG"] = jsondebugCmdMeta
+	DiceCmds["JSON.OBJKEYS"] = jsonobjkeysCmdMeta
 	DiceCmds["JSON.ARRPOP"] = jsonarrpopCmdMeta
 	DiceCmds["JSON.INGEST"] = jsoningestCmdMeta
+	DiceCmds["JSON.ARRINSERT"] = jsonarrinsertCmdMeta
 	DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
 	DiceCmds["EXPIRE"] = expireCmdMeta
