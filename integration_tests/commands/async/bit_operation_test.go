@@ -133,6 +133,10 @@ func TestBitCount(t *testing.T) {
 			InCmds: []string{"BITCOUNT mykey 0 0"},
 			Out:    []interface{}{int64(1)},
 		},
+		{
+			InCmds: []string{"BITCOUNT"},
+			Out:    []interface{}{"ERR wrong number of arguments for 'bitcount' command"},
+		},
 	}
 
 	for _, tcase := range testcases {
