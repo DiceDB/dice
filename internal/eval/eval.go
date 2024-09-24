@@ -225,6 +225,97 @@ func evalGETDEL(args []string, store *dstore.Store) []byte {
 	}
 }
 
+// evalJSONARRINSERT insert the json values into the array at path before the index (shifts to the right)
+// returns an array of integer replies for each path, the array's new size, or nil.
+func evalJSONARRINSERT(args []string, store *dstore.Store) []byte {
+	if len(args) < 4 {
+		return diceerrors.NewErrArity("JSON.ARRINSERT")
+	}
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		return diceerrors.NewErrWithMessage("could not perform this operation on a key that doesn't exist")
+	}
+
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
+	}
+
+	jsonData := obj.Value
+	var err error
+	_, err = sonic.Marshal(jsonData)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
+	}
+
+	path := args[1]
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("invalid JSONPath")
+	}
+
+	results := expr.Get(jsonData)
+	if len(results) == 0 {
+		return clientio.RespEmptyArray
+	}
+	index := args[2]
+	var idx int
+	idx, err = strconv.Atoi(index)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("Couldn't parse as integer")
+	}
+
+	values := args[3:]
+	// Parse the input values as JSON
+	parsedValues := make([]interface{}, len(values))
+	for i, v := range values {
+		var parsedValue interface{}
+		err := sonic.UnmarshalString(v, &parsedValue)
+		if err != nil {
+			return diceerrors.NewErrWithMessage(err.Error())
+		}
+		parsedValues[i] = parsedValue
+	}
+
+	var resultsArray []interface{}
+	// Capture the modified data when modifying the root path
+	modified := false
+	newData, modifyErr := expr.Modify(jsonData, func(data any) (interface{}, bool) {
+		arr, ok := data.([]interface{})
+		if !ok {
+			// Not an array
+			resultsArray = append(resultsArray, nil)
+			return data, false
+		}
+
+		// Append the parsed values to the array
+		updatedArray, insertErr := insertElementAndUpdateArray(arr, idx, parsedValues)
+		if insertErr != nil {
+			err = insertErr
+			return data, false
+		}
+		modified = true
+		resultsArray = append(resultsArray, len(updatedArray))
+		return updatedArray, true
+	})
+	if err != nil {
+		return diceerrors.NewErrWithMessage(err.Error())
+	}
+
+	if modifyErr != nil {
+		return diceerrors.NewErrWithMessage(fmt.Sprintf("ERR failed to modify JSON data: %v", modifyErr))
+	}
+
+	if !modified {
+		return clientio.Encode(resultsArray, false)
+	}
+
+	jsonData = newData
+	obj.Value = jsonData
+	return clientio.Encode(resultsArray, false)
+}
+
 // evalJSONDEBUG reports value's memmory usage in bytes
 // Returns arity error if subcommand is missing
 // Supports only two subcommand as of now - HELP and MEMORY
@@ -539,6 +630,25 @@ func evalJSONARRPOP(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(popArr, false)
 }
 
+// insertElementAndUpdateArray add an element at the given index
+// Returns remaining array and error
+func insertElementAndUpdateArray(arr []any, index int, elements []interface{}) (updatedArray []any, err error) {
+	length := len(arr)
+	var idx int
+	if index >= -length && index <= length {
+		idx = adjustIndex(index, arr)
+	} else {
+		return nil, errors.New("index out of bounds")
+	}
+	before := arr[:idx]
+	after := arr[idx:]
+
+	elements = append(elements, after...)
+	before = append(before, elements...)
+	updatedArray = append(updatedArray, before...)
+	return updatedArray, nil
+}
+
 // popElementAndUpdateArray removes an element at the given index
 // Returns popped element, remaining array and error
 func popElementAndUpdateArray(arr []any, index string) (popElem any, updatedArray []any, err error) {
@@ -761,7 +871,7 @@ func evalJSONCLEAR(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrWithMessage("invalid JSONPath")
 	}
 
-	_, err = expr.Modify(jsonData, func(element any) (altered any, changed bool) {
+	newData, err := expr.Modify(jsonData, func(element any) (altered any, changed bool) {
 		switch utils.GetJSONFieldType(element) {
 		case utils.IntegerType, utils.NumberType:
 			if element != utils.NumberZeroValue {
@@ -786,9 +896,9 @@ func evalJSONCLEAR(args []string, store *dstore.Store) []byte {
 	if err != nil {
 		return diceerrors.NewErrWithMessage(err.Error())
 	}
-	// Create a new object with the updated JSON data
-	newObj := store.NewObj(jsonData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-	store.Put(key, newObj)
+
+	jsonData = newData
+	obj.Value = jsonData
 	return clientio.Encode(countClear, false)
 }
 

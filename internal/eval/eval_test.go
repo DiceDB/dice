@@ -49,6 +49,7 @@ func TestEval(t *testing.T) {
 	testEvalGET(t, store)
 	testEvalGETEX(t, store)
 	testEvalDebug(t, store)
+	testEvalJSONARRINSERT(t, store)
 	testEvalJSONARRPOP(t, store)
 	testEvalJSONARRLEN(t, store)
 	testEvalJSONDEL(t, store)
@@ -619,6 +620,113 @@ func testEvalEXPIREAT(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalEXPIREAT, store)
+}
+
+func testEvalJSONARRINSERT(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'json.arrinsert' command\r\n"),
+		},
+		"key does not exist": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"a\":2}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"NONEXISTENT_KEY", "$.a", "0", "1"},
+			output: []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
+		},
+		"index is not integer": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"a\":2}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$.a", "a", "1"},
+			output: []byte("-ERR Couldn't parse as integer\r\n"),
+		},
+		"index out of bounds": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "[1,2,3]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$", "4", "\"a\"", "1"},
+			output: []byte("-ERR index out of bounds\r\n"),
+		},
+		"root path is not array": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"a\":2}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$.a", "0", "6"},
+			output: []byte("*1\r\n$-1\r\n"),
+		},
+		"root path is array": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "[1,2]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$", "0", "6", "\"a\"", "3.14"},
+			output: []byte("*1\r\n:5\r\n"),
+		},
+		"subpath array insert positive index": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"connection\":{\"wireless\":true,\"names\":[\"1\",\"2\"]},\"price\":99.98,\"names\":[3,4]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$..names", "2", "7", "8"},
+			output: []byte("*2\r\n:4\r\n:4\r\n"),
+		},
+		"subpath array insert negative index": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"connection\":{\"wireless\":true,\"names\":[\"1\",\"2\"]},\"price\":99.98,\"names\":[3,4]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$..names", "-1", "7", "8"},
+			output: []byte("*2\r\n:4\r\n:4\r\n"),
+		},
+		"array insert with multitype value": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"a\":[1,2,3]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$.a", "0", "1", "null", "3.14", "true", "{\"a\":123}"},
+			output: []byte("*1\r\n:8\r\n"),
+		},
+	}
+	runEvalTests(t, tests, evalJSONARRINSERT, store)
 }
 
 func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {

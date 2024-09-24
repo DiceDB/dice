@@ -266,6 +266,17 @@ var (
 		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsonarrinsertCmdMeta = DiceCmdMeta{
+		Name: "JSON.ARRINSERT",
+		Info: `JSON.ARRINSERT key path index value [value ...]
+		Returns an array of integer replies for each path.
+		Returns nil if the matching JSON value is not an array.
+		Returns error response if the key doesn't exist or key is expired or the matching value is not an array.
+		Error reply: If the number of arguments is incorrect.`,
+		Eval:     evalJSONARRINSERT,
+		Arity:    -5,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	ttlCmdMeta = DiceCmdMeta{
 		Name: "TTL",
 		Info: `TTL returns Time-to-Live in secs for the queried key in args
@@ -880,6 +891,7 @@ func init() {
 	DiceCmds["JSON.DEBUG"] = jsondebugCmdMeta
 	DiceCmds["JSON.ARRPOP"] = jsonarrpopCmdMeta
 	DiceCmds["JSON.INGEST"] = jsoningestCmdMeta
+	DiceCmds["JSON.ARRINSERT"] = jsonarrinsertCmdMeta
 	DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
 	DiceCmds["EXPIRE"] = expireCmdMeta
