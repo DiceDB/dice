@@ -1793,6 +1793,26 @@ func evalDECRBY(args []string, store *dstore.Store) []byte {
 	return incrDecrCmd(args, -decrementAmount, store)
 }
 
+// INCRBY increments the value of the specified key in args by increment integer specified,
+// if the key exists and the value is integer format.
+// The key and the increment integer should be the only param in args.
+// If the key does not exist, new key is created with value 0,
+// the value of the new key is then incremented.
+// The value for the queried key should be of integer format,
+// if not INCRBY returns encoded error response.
+// evalINCRBY returns the incremented value for the key if there are no errors.
+func evalINCRBY(args []string, store *dstore.Store) []byte {
+	if len(args) != 2 {
+		return diceerrors.NewErrArity("INCRBY")
+	}
+	incrementAmount, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
+	}
+	return incrDecrCmd(args, incrementAmount, store)
+}
+
+
 func incrDecrCmd(args []string, incr int64, store *dstore.Store) []byte {
 	key := args[0]
 	obj := store.Get(key)

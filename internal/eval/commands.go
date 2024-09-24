@@ -857,6 +857,20 @@ var (
 		Arity:    1,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	incrbyCmdMeta = DiceCmdMeta{
+		Name: "INCRBY",
+		Info: `INCRBY increments the value of the specified key in args by increment integer specified,
+		if the key exists and the value is integer format.
+		The key and the increment integer should be the only param in args.
+		If the key does not exist, new key is created with value 0,
+		the value of the new key is then incremented.
+		The value for the queried key should be of integer format,
+		if not INCRBY returns encoded error response.
+		evalINCRBY returns the incremented value for the key if there are no errors.`,
+		Eval:     evalINCRBY,
+		Arity:    2,
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+	}
 	getRangeCmdMeta = DiceCmdMeta{
 		Name:     "GETRANGE",
 		Info:     `Returns a substring of the string stored at a key.`,
@@ -973,6 +987,7 @@ func init() {
 	DiceCmds["SELECT"] = selectCmdMeta
 	DiceCmds["JSON.NUMINCRBY"] = jsonnumincrbyCmdMeta
 	DiceCmds["TYPE"] = typeCmdMeta
+	DiceCmds["INCRBY"] = incrbyCmdMeta
 	DiceCmds["GETRANGE"] = getRangeCmdMeta
 	DiceCmds["SETEX"] = setexCmdMeta
 	DiceCmds["HDEL"] = hdelCmdMeta
