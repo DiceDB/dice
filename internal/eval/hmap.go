@@ -2,6 +2,7 @@ package eval
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 
 	"github.com/dicedb/dice/internal/clientio"
@@ -95,6 +96,10 @@ func (h HashMap) incrementValue(field string, increment int64) (int64, error) {
 	i, err := strconv.ParseInt(val, 10, 64)
 	if err != nil {
 		return -1, diceerrors.NewErr(diceerrors.HashValueNotIntegerErr)
+	}
+
+	if (i > 0 && increment > 0 && i > math.MaxInt64-increment) || (i < 0 && increment < 0 && i < math.MinInt64-increment) {
+		return -1, diceerrors.NewErr(diceerrors.IncrDecrOverflowErr)
 	}
 
 	total := i + increment

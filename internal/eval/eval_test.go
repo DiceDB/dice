@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/dicedb/dice/internal/server/utils"
+	"math"
 	"reflect"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dicedb/dice/internal/server/utils"
 
 	"github.com/bytedance/sonic"
 	"github.com/ohler55/ojg/jp"
@@ -3246,6 +3248,79 @@ func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"new_key", "new_field", "10"},
 			output: []byte("-ERR hash value is not an integer\r\n"),
+		},
+		"update the exisiting field which has spaces": {
+			setup: func() {
+				key := "key"
+				field := "field"
+				h := make(HashMap)
+				h[field] = " 10  "
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          h,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "field", "10"},
+			output: []byte("-ERR hash value is not an integer\r\n"),
+		},
+		"updating the new field with negative value": {
+			setup:  func() {},
+			input:  []string{"key", "field", "-10"},
+			output: clientio.Encode(int64(-10), false),
+		},
+		"update the exisiting field with negative value": {
+			setup: func() {
+				key := "key"
+				field := "field"
+				h := make(HashMap)
+
+				h[field] = "-10"
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          h,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "field", "-10"},
+			output: clientio.Encode(int64(-20), false),
+		},
+		"updating the existing field which would lead to positive overflow": {
+			setup: func() {
+				key := "key"
+				field := "field"
+				h := make(HashMap)
+
+				h[field] = fmt.Sprintf("%v", math.MaxInt64)
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          h,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "field", "10"},
+			output: []byte("-ERR increment or decrement would overflow\r\n"),
+		},
+		"updating the existing field which would lead to negative overflow": {
+			setup: func() {
+				key := "key"
+				field := "field"
+				h := make(HashMap)
+
+				h[field] = fmt.Sprintf("%v", math.MinInt64)
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          h,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "field", "-10"},
+			output: []byte("-ERR increment or decrement would overflow\r\n"),
 		},
 	}
 
