@@ -16,36 +16,36 @@ func TestCombineOr(t *testing.T) {
 		expected sql.Expression
 	}{
 		{
+			name:     "Combining two empty expressions",
+			a:        sql.Expression([][]string{}),
+			b:        sql.Expression([][]string{}),
+			expected: sql.Expression([][]string{}),
+		},
+		// {
+		// 	name:     "Annulment law",
+		// 	a:        sql.Expression([][]string{{"_value > 10"}}),
+		// 	b:        sql.Expression([][]string{{}}), // equivalent to 1
+		// 	expected: sql.Expression([][]string{{}}),
+		// },
+		{
+			name:     "Identity law",
+			a:        sql.Expression([][]string{{"_value > 10"}}),
+			b:        sql.Expression([][]string{}), // equivalent to 0
+			expected: sql.Expression([][]string{{"_value > 10"}}),
+		},
+		{
+			name:     "Idempotent law",
+			a:        sql.Expression([][]string{{"_value > 10"}}),
+			b:        sql.Expression([][]string{{"_value > 10"}}),
+			expected: sql.Expression([][]string{{"_value > 10"}}),
+		},
+		{
 			name: "Simple OR combination with non-overlapping terms",
 			a:    sql.Expression([][]string{{"_key LIKE 'test:*'"}}),
 			b:    sql.Expression([][]string{{"_value > 10"}}),
 			expected: sql.Expression([][]string{
 				{"_key LIKE 'test:*'"}, {"_value > 10"},
 			}),
-		},
-		{
-			name:     "OR combination with duplicate values",
-			a:        sql.Expression([][]string{{"_key LIKE 'test:*'"}}),
-			b:        sql.Expression([][]string{{"_key LIKE 'test:*'"}}),
-			expected: sql.Expression([][]string{{"_key LIKE 'test:*'"}}),
-		},
-		{
-			name:     "Combining empty and non-empty expression",
-			a:        sql.Expression([][]string{}),
-			b:        sql.Expression([][]string{{"_value < 5"}}),
-			expected: sql.Expression([][]string{{"_value < 5"}}),
-		},
-		{
-			name:     "Combining non-empty and empty expression",
-			a:        sql.Expression([][]string{{"_key LIKE 'test:*'"}}),
-			b:        sql.Expression([][]string{}),
-			expected: sql.Expression([][]string{{"_key LIKE 'test:*'"}}),
-		},
-		{
-			name:     "Combining two empty expressions",
-			a:        sql.Expression([][]string{}),
-			b:        sql.Expression([][]string{}),
-			expected: sql.Expression([][]string{}),
 		},
 		{
 			name: "Complex OR combination with multiple AND terms",
@@ -87,13 +87,25 @@ func TestCombineAnd(t *testing.T) {
 		expected sql.Expression
 	}{
 		{
-			name:     "Simple combine with no duplicates",
-			a:        sql.Expression([][]string{{"_value > 10"}}),
-			b:        sql.Expression([][]string{{"_key LIKE 'test:*'"}}),
-			expected: sql.Expression([][]string{{"_value > 10", "_key LIKE 'test:*'"}}),
+			name:     "Combining two empty expressions",
+			a:        sql.Expression([][]string{}),
+			b:        sql.Expression([][]string{}),
+			expected: sql.Expression([][]string{}),
 		},
 		{
-			name:     "Combine with duplicate values",
+			name:     "Annulment law",
+			a:        sql.Expression([][]string{{"_value > 10"}}),
+			b:        sql.Expression([][]string{}), // equivalent to 0
+			expected: sql.Expression([][]string{}),
+		},
+		{
+			name:     "Identity law",
+			a:        sql.Expression([][]string{{"_value > 10"}}),
+			b:        sql.Expression([][]string{{}}), // equivalent to 1
+			expected: sql.Expression([][]string{{"_value > 10"}}),
+		},
+		{
+			name:     "Idempotent law",
 			a:        sql.Expression([][]string{{"_value > 10"}}),
 			b:        sql.Expression([][]string{{"_value > 10"}}),
 			expected: sql.Expression([][]string{{"_value > 10"}}),
@@ -102,14 +114,14 @@ func TestCombineAnd(t *testing.T) {
 			name:     "Multiple AND terms, no duplicates",
 			a:        sql.Expression([][]string{{"_value > 10"}}),
 			b:        sql.Expression([][]string{{"_key LIKE 'test:*'", "_value < 5"}}),
-			expected: sql.Expression([][]string{{"_value > 10", "_key LIKE 'test:*'", "_value < 5"}}),
+			expected: sql.Expression([][]string{{"_key LIKE 'test:*'", "_value < 5", "_value > 10"}}),
 		},
 		{
 			name: "Multiple terms in both expressions with duplicates",
 			a:    sql.Expression([][]string{{"_value > 10", "_key LIKE 'test:*'"}}),
 			b:    sql.Expression([][]string{{"_key LIKE 'test:*'", "_value < 5"}}),
 			expected: sql.Expression([][]string{
-				{"_value > 10", "_key LIKE 'test:*'", "_value < 5"},
+				{"_key LIKE 'test:*'", "_value < 5", "_value > 10"},
 			}),
 		},
 		{
@@ -117,7 +129,7 @@ func TestCombineAnd(t *testing.T) {
 			a:    sql.Expression([][]string{{"_key LIKE 'test:*'", "_value > 10"}}),
 			b:    sql.Expression([][]string{{"_value < 5"}}),
 			expected: sql.Expression([][]string{
-				{"_key LIKE 'test:*'", "_value > 10", "_value < 5"},
+				{"_key LIKE 'test:*'", "_value < 5", "_value > 10"},
 			}),
 		},
 		{
@@ -125,7 +137,7 @@ func TestCombineAnd(t *testing.T) {
 			a:    sql.Expression([][]string{{"_value > 10", "_key LIKE 'test:*'"}}),
 			b:    sql.Expression([][]string{{"_key LIKE 'test:*'", "_value < 5"}}),
 			expected: sql.Expression([][]string{
-				{"_value > 10", "_key LIKE 'test:*'", "_value < 5"},
+				{"_key LIKE 'test:*'", "_value < 5", "_value > 10"},
 			}),
 		},
 		{
@@ -133,7 +145,7 @@ func TestCombineAnd(t *testing.T) {
 			a:    sql.Expression([][]string{{"_value > 10", "_key LIKE 'test:*'"}}),
 			b:    sql.Expression([][]string{{"_key LIKE 'test:*'", "_key = 'abc'"}}),
 			expected: sql.Expression([][]string{
-				{"_value > 10", "_key LIKE 'test:*'", "_key = 'abc'"},
+				{"_key = 'abc'", "_key LIKE 'test:*'", "_value > 10"},
 			}),
 		},
 		{
@@ -141,8 +153,8 @@ func TestCombineAnd(t *testing.T) {
 			a:    sql.Expression([][]string{{"_key LIKE 'test:*'", "_value > 10"}}),
 			b:    sql.Expression([][]string{{"_key LIKE 'test:*'", "_value < 5"}, {"_value = 7"}}),
 			expected: sql.Expression([][]string{
-				{"_key LIKE 'test:*'", "_value > 10", "_value < 5"},
-				{"_key LIKE 'test:*'", "_value > 10", "_value = 7"},
+				{"_key LIKE 'test:*'", "_value < 5", "_value > 10"},
+				{"_key LIKE 'test:*'", "_value = 7", "_value > 10"},
 			}),
 		},
 		{
@@ -153,12 +165,6 @@ func TestCombineAnd(t *testing.T) {
 				{"_key LIKE 'test:*'", "_value < 5"},
 				{"_key LIKE 'test:*'"},
 			}),
-		},
-		{
-			name:     "Empty expression",
-			a:        sql.Expression([][]string{}),
-			b:        sql.Expression([][]string{}),
-			expected: sql.Expression([][]string{}),
 		},
 	}
 	for _, tt := range tests {

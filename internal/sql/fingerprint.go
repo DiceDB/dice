@@ -54,6 +54,7 @@ func CombineAnd(a, b Expression) Expression {
 		for _, termB := range b {
 			combined := append(termA, termB...)
 			uniqueCombined := removeDuplicates(combined)
+			sort.Strings(uniqueCombined)
 			result = append(result, uniqueCombined)
 		}
 	}
