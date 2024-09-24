@@ -106,7 +106,7 @@ func TestSessionIsActive(t *testing.T) {
 
 func TestSessionActivate(t *testing.T) {
 	session := NewSession()
-	user := &User{Username: DefaultUserName}
+	user := &User{Username: config.DiceConfig.Auth.UserName}
 
 	session.Activate(user)
 
@@ -119,7 +119,7 @@ func TestSessionActivate(t *testing.T) {
 }
 
 func TestSessionValidate(t *testing.T) {
-	username := DefaultUserName
+	username := config.DiceConfig.Auth.UserName
 	password := "testpassword"
 
 	user, _ := UserStore.Add(username)

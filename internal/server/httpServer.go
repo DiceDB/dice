@@ -5,11 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"sync"
 	"time"
 
-	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/ops"
@@ -19,11 +19,13 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
+const Abort = "ABORT"
+
 var unimplementedCommands map[string]bool = map[string]bool{
 	"QWATCH":    true,
 	"QUNWATCH":  true,
 	"SUBSCRIBE": true,
-	"ABORT":     true,
+	Abort:       false,
 }
 
 type HTTPServer struct {
@@ -32,9 +34,15 @@ type HTTPServer struct {
 	ioChan       chan *ops.StoreResponse
 	watchChan    chan dstore.WatchEvent
 	httpServer   *http.Server
+	logger       *slog.Logger
+	shutdownChan chan struct{}
 }
 
-func NewHTTPServer(shardManager *shard.ShardManager, watchChan chan dstore.WatchEvent) *HTTPServer {
+func NewHTTPServer(
+	shardManager *shard.ShardManager,
+	watchChan chan dstore.WatchEvent,
+	logger *slog.Logger,
+) *HTTPServer {
 	mux := http.NewServeMux()
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", config.HTTPPort),
@@ -44,10 +52,12 @@ func NewHTTPServer(shardManager *shard.ShardManager, watchChan chan dstore.Watch
 
 	httpServer := &HTTPServer{
 		shardManager: shardManager,
-		queryWatcher: querywatcher.NewQueryManager(),
+		queryWatcher: querywatcher.NewQueryManager(logger),
 		ioChan:       make(chan *ops.StoreResponse, 1000),
 		watchChan:    watchChan,
 		httpServer:   srv,
+		logger:       logger,
+		shutdownChan: make(chan struct{}),
 	}
 
 	mux.HandleFunc("/", httpServer.DiceHTTPHandler)
@@ -73,10 +83,17 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		<-ctx.Done()
-		err = s.httpServer.Shutdown(httpCtx)
-		if err != nil {
-			log.Errorf("HTTP Server Shutdown Failed: %v", err)
+		select {
+		case <-ctx.Done():
+		case <-s.shutdownChan:
+			err = ErrAborted
+			s.logger.Debug("Shutting down HTTP Server")
+		}
+
+		shutdownErr := s.httpServer.Shutdown(httpCtx)
+		if shutdownErr != nil {
+			s.logger.Error("HTTP Server Shutdown Failed", slog.Any("error", err))
+			err = shutdownErr
 			return
 		}
 	}()
@@ -84,7 +101,7 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		log.Infof("HTTP Server running on Port%s", s.httpServer.Addr)
+		s.logger.Info("HTTP Server running", slog.String("addr", s.httpServer.Addr))
 		err = s.httpServer.ListenAndServe()
 	}()
 
@@ -96,15 +113,22 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 	// convert to REDIS cmd
 	redisCmd, err := utils.ParseHTTPRequest(request)
 	if err != nil {
-		log.Errorf("Error parsing HTTP request: %v", err)
+		s.logger.Error("Error parsing HTTP request", slog.Any("error", err))
+		return
+	}
+
+	if redisCmd.Cmd == Abort {
+		s.logger.Debug("ABORT command received")
+		s.logger.Debug("Shutting down HTTP Server")
+		close(s.shutdownChan)
 		return
 	}
 
 	if unimplementedCommands[redisCmd.Cmd] {
-		log.Errorf("Command %s is not implemented", redisCmd.Cmd)
+		s.logger.Error("Command %s is not implemented", slog.String("cmd", redisCmd.Cmd))
 		_, err := writer.Write([]byte("Command is not implemented with HTTP"))
 		if err != nil {
-			log.Errorf("Error writing response: %v", err)
+			s.logger.Error("Error writing response", slog.Any("error", err))
 			return
 		}
 		return
@@ -121,22 +145,28 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 	// Wait for response
 	resp := <-s.ioChan
 
-	rp := clientio.NewRESPParser(bytes.NewBuffer(resp.Result))
+	var rp *clientio.RESPParser
+	if resp.EvalResponse.Error != nil {
+		rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(resp.EvalResponse.Error.Error())))
+	} else {
+		rp = clientio.NewRESPParser(bytes.NewBuffer(resp.EvalResponse.Result.([]byte)))
+	}
+
 	val, err := rp.DecodeOne()
 	if err != nil {
-		log.Errorf("Error decoding response: %v", err)
+		s.logger.Error("Error decoding response", slog.Any("error", err))
 		return
 	}
 
 	// Write response
 	responseJSON, err := json.Marshal(val)
 	if err != nil {
-		log.Errorf("Error marshaling response: %v", err)
+		s.logger.Error("Error marshaling response", slog.Any("error", err))
 		return
 	}
 	_, err = writer.Write(responseJSON)
 	if err != nil {
-		log.Errorf("Error writing response: %v", err)
+		s.logger.Error("Error writing response", slog.Any("error", err))
 		return
 	}
 }
