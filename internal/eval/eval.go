@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"math/bits"
 	"regexp"
 	"sort"
 	"strconv"
@@ -2033,112 +2034,126 @@ func evalGETBIT(args []string, store *dstore.Store) []byte {
 func evalBITCOUNT(args []string, store *dstore.Store) []byte {
 	var err error
 
+	// if no key is provided, return error
+	if len(args) == 0 {
+		return diceerrors.NewErrArity("BITCOUNT")
+	}
+
 	// if more than 4 arguments are provided, return error
 	if len(args) > 4 {
 		return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 	}
 
 	// fetching value of the key
-	var key string = args[0]
+	key := args[0]
 	obj := store.Get(key)
 	if obj == nil {
 		return clientio.Encode(0, false)
 	}
 
-	// Check for the type of the object
-	if object.AssertType(obj.TypeEncoding, object.ObjTypeSet) == nil {
+	var value []byte
+	var valueLength int64
+
+	switch {
+	case object.AssertType(obj.TypeEncoding, object.ObjTypeByteArray) == nil:
+		byteArray := obj.Value.(*ByteArray)
+		value = byteArray.data
+		valueLength = byteArray.Length
+	case object.AssertType(obj.TypeEncoding, object.ObjTypeString) == nil:
+		value = []byte(obj.Value.(string))
+		valueLength = int64(len(value))
+	case object.AssertType(obj.TypeEncoding, object.ObjTypeInt) == nil:
+		value = []byte(strconv.FormatInt(obj.Value.(int64), 10))
+		valueLength = int64(len(value))
+	default:
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
-	valueInterface := obj.Value
-	value := []byte{}
-	valueLength := int64(0)
-
-	if object.AssertType(obj.TypeEncoding, object.ObjTypeByteArray) == nil {
-		byteArray := obj.Value.(*ByteArray)
-		byteArrayObject := *byteArray
-		value = byteArrayObject.data
-		valueLength = byteArray.Length
-	}
-
-	if object.AssertType(obj.TypeEncoding, object.ObjTypeString) == nil {
-		value = []byte(valueInterface.(string))
-		valueLength = int64(len(value))
-	}
-
-	if object.AssertType(obj.TypeEncoding, object.ObjTypeInt) == nil {
-		value = []byte(strconv.FormatInt(valueInterface.(int64), 10))
-		valueLength = int64(len(value))
-	}
-
 	// defining constants of the function
-	start := int64(0)
-	end := valueLength - 1
+	start, end := int64(0), valueLength-1
 	unit := BYTE
 
-	// checking which arguments are present and according validating arguments
+	// checking which arguments are present and validating arguments
 	if len(args) > 1 {
 		start, err = strconv.ParseInt(args[1], 10, 64)
 		if err != nil {
 			return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
 		}
-		// Adjust start index if it is negative
-		if start < 0 {
-			start += valueLength
+		if len(args) <= 2 {
+			return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 		}
-	}
-	if len(args) > 2 {
 		end, err = strconv.ParseInt(args[2], 10, 64)
 		if err != nil {
 			return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
 		}
-
-		// Adjust end index if it is negative
-		if end < 0 {
-			end += valueLength
-		}
 	}
 	if len(args) > 3 {
 		unit = strings.ToUpper(args[3])
-		if unit != BYTE && unit != BIT {
-			return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
-		}
-	}
-	if start > end {
-		return clientio.Encode(0, true)
-	}
-	if start > valueLength && unit == BYTE {
-		return clientio.Encode(0, true)
-	}
-	if end > valueLength && unit == BYTE {
-		end = valueLength - 1
 	}
 
-	bitCount := 0
-	if unit == BYTE {
+	switch unit {
+	case BYTE:
+		if start < 0 {
+			start += valueLength
+		}
+		if end < 0 {
+			end += valueLength
+		}
+		if start > end || start >= valueLength {
+			return clientio.Encode(0, true)
+		}
+		end = min(end, valueLength-1)
+		bitCount := 0
 		for i := start; i <= end; i++ {
-			bitCount += int(popcount(value[i]))
+			bitCount += bits.OnesCount8(value[i])
 		}
 		return clientio.Encode(bitCount, true)
-	}
-	startBitRange := start / 8
-	endBitRange := min(end/8, valueLength-1)
-	for i := startBitRange; i <= endBitRange; i++ {
-		if i == startBitRange {
-			considerBits := start % 8
-			for j := 8 - considerBits - 1; j >= 0; j-- {
-				bitCount += int(popcount(byte(int(value[i]) & (1 << j))))
-			}
-		} else if i == endBitRange {
-			considerBits := end % 8
-			for j := considerBits; j >= 0; j-- {
-				bitCount += int(popcount(byte(int(value[i]) & (1 << (8 - j - 1)))))
-			}
-		} else {
-			bitCount += int(popcount(value[i]))
+	case BIT:
+		if start < 0 {
+			start += valueLength * 8
 		}
+		if end < 0 {
+			end += valueLength * 8
+		}
+		if start > end {
+			return clientio.Encode(0, true)
+		}
+		startByte, endByte := start/8, min(end/8, valueLength-1)
+		startBitOffset, endBitOffset := start%8, end%8
+
+		if endByte == valueLength-1 {
+			endBitOffset = 7
+		}
+
+		if startByte >= valueLength {
+			return clientio.Encode(0, true)
+		}
+
+		bitCount := 0
+
+		// Use bit masks to count the bits instead of a loop
+		if startByte == endByte {
+			mask := byte(0xFF >> startBitOffset)
+			mask &= byte(0xFF << (7 - endBitOffset))
+			bitCount = bits.OnesCount8(value[startByte] & mask)
+		} else {
+			// Handle first byte
+			firstByteMask := byte(0xFF >> startBitOffset)
+			bitCount += bits.OnesCount8(value[startByte] & firstByteMask)
+
+			// Handle all the middle ones
+			for i := startByte + 1; i < endByte; i++ {
+				bitCount += bits.OnesCount8(value[i])
+			}
+
+			// Handle last byte
+			lastByteMask := byte(0xFF << (7 - endBitOffset))
+			bitCount += bits.OnesCount8(value[endByte] & lastByteMask)
+		}
+		return clientio.Encode(bitCount, true)
+	default:
+		return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 	}
-	return clientio.Encode(bitCount, true)
 }
 
 // BITOP <AND | OR | XOR | NOT> destkey key [key ...]
@@ -2238,7 +2253,7 @@ func evalBITOP(args []string, store *dstore.Store) []byte {
 				value := strconv.FormatInt(obj.Value.(int64), 10)
 				values[i] = []byte(value)
 			default:
-				return diceerrors.NewErrWithMessage("value is not a valid byte array")
+				return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 			}
 		}
 	}
@@ -2311,6 +2326,8 @@ func evalCommand(args []string, store *dstore.Store) []byte {
 		return evalCommandList()
 	case Help:
 		return evalCommandHelp()
+	case Info:
+		return evalCommandInfo(args[1:])
 	default:
 		return diceerrors.NewErrWithFormattedMessage("unknown subcommand '%s'. Try COMMAND HELP.", subcommand)
 	}
@@ -2411,6 +2428,29 @@ func evalCommandGetKeys(args []string) []byte {
 		keys = append(keys, args[i])
 	}
 	return clientio.Encode(keys, false)
+}
+
+func evalCommandInfo(args []string) []byte {
+	if len(args) == 0 {
+		return evalCommandDefault()
+	}
+
+	cmdMetaMap := make(map[string]interface{})
+	for _, cmdMeta := range DiceCmds {
+		cmdMetaMap[cmdMeta.Name] = convertCmdMetaToSlice(&cmdMeta)
+	}
+
+	var result []interface{}
+	for _, arg := range args {
+		arg = strings.ToUpper(arg)
+		if cmdMeta, found := cmdMetaMap[arg]; found {
+			result = append(result, cmdMeta)
+		} else {
+			result = append(result, clientio.RespNIL)
+		}
+	}
+
+	return clientio.Encode(result, false)
 }
 
 func evalRename(args []string, store *dstore.Store) []byte {
@@ -2809,6 +2849,39 @@ func evalHGET(args []string, store *dstore.Store) []byte {
 		return errWithMessage
 	}
 	return val
+}
+
+func evalHDEL(args []string, store *dstore.Store) []byte {
+	if len(args) < 2 {
+		return diceerrors.NewErrArity("HDEL")
+	}
+
+	key := args[0]
+	fields := args[1:]
+
+	obj := store.Get(key)
+	if obj == nil {
+		return clientio.Encode(0, false)
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
+	hashMap := obj.Value.(HashMap)
+	count := 0
+	for _, field := range fields {
+		if _, ok := hashMap[field]; ok {
+			delete(hashMap, field)
+			count++
+		}
+	}
+
+	if count > 0 {
+		store.Put(key, obj)
+	}
+
+	return clientio.Encode(count, false)
 }
 
 // evalHSTRLEN returns the length of value associated with field in the hash stored at key.
