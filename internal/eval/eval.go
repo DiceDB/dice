@@ -2248,7 +2248,7 @@ func evalBITOP(args []string, store *dstore.Store) []byte {
 				value := strconv.FormatInt(obj.Value.(int64), 10)
 				values[i] = []byte(value)
 			default:
-				return diceerrors.NewErrWithMessage("value is not a valid byte array")
+				return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 			}
 		}
 	}
