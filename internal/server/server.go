@@ -106,7 +106,7 @@ func (s *AsyncServer) FindPortAndBind() (socketErr error) {
 		return err
 	}
 	s.logger.Info(
-		"DiceDB is running",
+		"DiceDB server is running",
 		slog.String("version", "0.0.4"),
 		slog.Int("port", config.DiceConfig.Server.Port),
 	)

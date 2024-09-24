@@ -275,6 +275,17 @@ var (
 		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsonarrinsertCmdMeta = DiceCmdMeta{
+		Name: "JSON.ARRINSERT",
+		Info: `JSON.ARRINSERT key path index value [value ...]
+		Returns an array of integer replies for each path.
+		Returns nil if the matching JSON value is not an array.
+		Returns error response if the key doesn't exist or key is expired or the matching value is not an array.
+		Error reply: If the number of arguments is incorrect.`,
+		Eval:     evalJSONARRINSERT,
+		Arity:    -5,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	ttlCmdMeta = DiceCmdMeta{
 		Name: "TTL",
 		Info: `TTL returns Time-to-Live in secs for the queried key in args
@@ -474,9 +485,10 @@ var (
 		Eval: evalGETBIT,
 	}
 	bitCountCmdMeta = DiceCmdMeta{
-		Name: "BITCOUNT",
-		Info: "BITCOUNT counts the number of set bits in the string value stored at key",
-		Eval: evalBITCOUNT,
+		Name:  "BITCOUNT",
+		Info:  "BITCOUNT counts the number of set bits in the string value stored at key",
+		Eval:  evalBITCOUNT,
+		Arity: -1,
 	}
 	bitOpCmdMeta = DiceCmdMeta{
 		Name: "BITOP",
@@ -600,6 +612,25 @@ var (
         every field name is followed by its value, so the length of the reply is twice the size of the hash.`,
 		Eval:     evalHGETALL,
 		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	hstrLenCmdMeta = DiceCmdMeta{
+		Name:     "HSTRLEN",
+		Info:     `Returns the length of value associated with field in the hash stored at key.`,
+		Eval:     evalHSTRLEN,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	hdelCmdMeta = DiceCmdMeta{
+		Name: "HDEL",
+		Info: `HDEL removes the specified fields from the hash stored at key.
+		Specified fields that do not exist within this hash are ignored.
+		Deletes the hash if no fields remain.
+		If key does not exist, it is treated as an empty hash and this command returns 0.
+		Returns
+		The number of fields that were removed from the hash, not including specified but non-existing fields.`,
+		Eval:     evalHDEL,
+		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	objectCmdMeta = DiceCmdMeta{
@@ -870,6 +901,7 @@ func init() {
 	DiceCmds["JSON.OBJKEYS"] = jsonobjkeysCmdMeta
 	DiceCmds["JSON.ARRPOP"] = jsonarrpopCmdMeta
 	DiceCmds["JSON.INGEST"] = jsoningestCmdMeta
+	DiceCmds["JSON.ARRINSERT"] = jsonarrinsertCmdMeta
 	DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
 	DiceCmds["EXPIRE"] = expireCmdMeta
@@ -933,6 +965,7 @@ func init() {
 	DiceCmds["PFADD"] = pfAddCmdMeta
 	DiceCmds["PFCOUNT"] = pfCountCmdMeta
 	DiceCmds["HGET"] = hgetCmdMeta
+	DiceCmds["HSTRLEN"] = hstrLenCmdMeta
 	DiceCmds["PFMERGE"] = pfMergeCmdMeta
 	DiceCmds["JSON.STRLEN"] = jsonStrlenCmdMeta
 	DiceCmds["JSON.MGET"] = jsonMGetCmdMeta
@@ -942,6 +975,7 @@ func init() {
 	DiceCmds["TYPE"] = typeCmdMeta
 	DiceCmds["GETRANGE"] = getRangeCmdMeta
 	DiceCmds["SETEX"] = setexCmdMeta
+	DiceCmds["HDEL"] = hdelCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}
