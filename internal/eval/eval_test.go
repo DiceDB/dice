@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/dicedb/dice/internal/server/utils"
 	"reflect"
 	"strconv"
 	"strings"
@@ -12,6 +11,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/ohler55/ojg/jp"
 
 	"github.com/axiomhq/hyperloglog"
@@ -49,6 +49,7 @@ func TestEval(t *testing.T) {
 	testEvalGET(t, store)
 	testEvalGETEX(t, store)
 	testEvalDebug(t, store)
+	testEvalJSONARRINSERT(t, store)
 	testEvalJSONARRPOP(t, store)
 	testEvalJSONARRLEN(t, store)
 	testEvalJSONDEL(t, store)
@@ -72,6 +73,8 @@ func TestEval(t *testing.T) {
 	testEvalPFADD(t, store)
 	testEvalPFCOUNT(t, store)
 	testEvalHGET(t, store)
+	testEvalHSTRLEN(t, store)
+	testEvalHDEL(t, store)
 	testEvalPFMERGE(t, store)
 	testEvalJSONSTRLEN(t, store)
 	testEvalJSONOBJLEN(t, store)
@@ -82,11 +85,13 @@ func TestEval(t *testing.T) {
 	testEvalJSONNUMINCRBY(t, store)
 	testEvalTYPE(t, store)
 	testEvalCOMMAND(t, store)
+	testEvalJSONOBJKEYS(t, store)
 	testEvalGETRANGE(t, store)
 	testEvalPING(t, store)
 	testEvalSETEX(t, store)
 	testEvalFLUSHDB(t, store)
 	testEvalINCRBYFLOAT(t, store)
+	testEvalBITOP(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -616,6 +621,113 @@ func testEvalEXPIREAT(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalEXPIREAT, store)
+}
+
+func testEvalJSONARRINSERT(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'json.arrinsert' command\r\n"),
+		},
+		"key does not exist": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"a\":2}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"NONEXISTENT_KEY", "$.a", "0", "1"},
+			output: []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
+		},
+		"index is not integer": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"a\":2}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$.a", "a", "1"},
+			output: []byte("-ERR Couldn't parse as integer\r\n"),
+		},
+		"index out of bounds": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "[1,2,3]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$", "4", "\"a\"", "1"},
+			output: []byte("-ERR index out of bounds\r\n"),
+		},
+		"root path is not array": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"a\":2}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$.a", "0", "6"},
+			output: []byte("*1\r\n$-1\r\n"),
+		},
+		"root path is array": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "[1,2]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$", "0", "6", "\"a\"", "3.14"},
+			output: []byte("*1\r\n:5\r\n"),
+		},
+		"subpath array insert positive index": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"connection\":{\"wireless\":true,\"names\":[\"1\",\"2\"]},\"price\":99.98,\"names\":[3,4]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$..names", "2", "7", "8"},
+			output: []byte("*2\r\n:4\r\n:4\r\n"),
+		},
+		"subpath array insert negative index": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"connection\":{\"wireless\":true,\"names\":[\"1\",\"2\"]},\"price\":99.98,\"names\":[3,4]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$..names", "-1", "7", "8"},
+			output: []byte("*2\r\n:4\r\n:4\r\n"),
+		},
+		"array insert with multitype value": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"a\":[1,2,3]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$.a", "0", "1", "null", "3.14", "true", "{\"a\":123}"},
+			output: []byte("*1\r\n:8\r\n"),
+		},
+	}
+	runEvalTests(t, tests, evalJSONARRINSERT, store)
 }
 
 func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
@@ -1863,6 +1975,100 @@ func testEvalHGET(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalHGET, store)
 }
 
+func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"wrong number of args passed": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'hstrlen' command\r\n"),
+		},
+		"only key passed": {
+			setup:  func() {},
+			input:  []string{"KEY"},
+			output: []byte("-ERR wrong number of arguments for 'hstrlen' command\r\n"),
+		},
+		"key doesn't exist": {
+			setup:  func() {},
+			input:  []string{"KEY", "field_name"},
+			output: clientio.Encode(0, false),
+		},
+		"key exists but field_name doesn't exists": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field := "mock_field_name"
+				newMap := make(HashMap)
+				newMap[field] = "mock_field_value"
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input:  []string{"KEY_MOCK", "non_existent_key"},
+			output: clientio.Encode(0, false),
+		},
+		"both key and field_name exists": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field := "mock_field_name"
+				newMap := make(HashMap)
+				newMap[field] = "HelloWorld"
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input:  []string{"KEY_MOCK", "mock_field_name"},
+			output: clientio.Encode(10, false),
+		},
+	}
+
+	runEvalTests(t, tests, evalHSTRLEN, store)
+}
+
+func testEvalHDEL(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"HDEL with wrong number of args": {
+			input:  []string{"key"},
+			output: []byte("-ERR wrong number of arguments for 'hdel' command\r\n"),
+		},
+		"HDEL with key does not exist": {
+			input:  []string{"nonexistent", "field"},
+			output: clientio.RespZero,
+		},
+		"HDEL with key exists but not a hash": {
+			setup: func() {
+				evalSET([]string{"string_key", "string_value"}, store)
+			},
+			input:  []string{"string_key", "field"},
+			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+		},
+		"HDEL with delete existing fields": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
+			},
+			input:  []string{"hash_key", "field1", "field2", "nonexistent"},
+			output: clientio.Encode(int64(2), false),
+		},
+		"HDEL with delete non-existing fields": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1"}, store)
+			},
+			input:  []string{"hash_key", "nonexistent1", "nonexistent2"},
+			output: clientio.RespZero,
+		},
+	}
+
+	runEvalTests(t, tests, evalHDEL, store)
+}
+
 func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value":   {input: nil, output: []byte("-ERR wrong number of arguments for 'pfmerge' command\r\n")},
@@ -2931,10 +3137,162 @@ func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
 				"$21\r\n" +
 				"     Print this help.\r\n"),
 		},
+		"command info valid command SET": {
+			input:  []string{"INFO", "SET"},
+			output: []byte("*1\r\n*5\r\n$3\r\nSET\r\n:-3\r\n:1\r\n:0\r\n:0\r\n"),
+		},
+		"command info valid command GET": {
+			input:  []string{"INFO", "GET"},
+			output: []byte("*1\r\n*5\r\n$3\r\nGET\r\n:2\r\n:1\r\n:0\r\n:0\r\n"),
+		},
+		"command info valid command PING": {
+			input:  []string{"INFO", "PING"},
+			output: []byte("*1\r\n*5\r\n$4\r\nPING\r\n:-1\r\n:0\r\n:0\r\n:0\r\n"),
+		},
+		"command info multiple valid commands": {
+			input:  []string{"INFO", "SET", "GET"},
+			output: []byte("*2\r\n*5\r\n$3\r\nSET\r\n:-3\r\n:1\r\n:0\r\n:0\r\n*5\r\n$3\r\nGET\r\n:2\r\n:1\r\n:0\r\n:0\r\n"),
+		},
+		"command info invalid command": {
+			input:  []string{"INFO", "INVALID_CMD"},
+			output: []byte("*1\r\n$-1\r\n"),
+		},
+		"command info mixture of valid and invalid commands": {
+			input:  []string{"INFO", "SET", "INVALID_CMD"},
+			output: []byte("*2\r\n*5\r\n$3\r\nSET\r\n:-3\r\n:1\r\n:0\r\n:0\r\n$-1\r\n"),
+		},
+		"command unknown": {
+			input:  []string{"UNKNOWN"},
+			output: []byte("-ERR unknown subcommand 'UNKNOWN'. Try COMMAND HELP.\r\n"),
+		},
 	}
 
 	runEvalTests(t, tests, evalCommand, store)
 }
+
+func testEvalJSONOBJKEYS(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'json.objkeys' command\r\n"),
+		},
+		"empty args": {
+			setup:  func() {},
+			input:  []string{},
+			output: []byte("-ERR wrong number of arguments for 'json.objkeys' command\r\n"),
+		},
+		"key does not exist": {
+			setup:  func() {},
+			input:  []string{"NONEXISTENT_KEY"},
+			output:  []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
+		},
+		"root not object": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "[1]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY"},
+			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+		},
+		"wildcard no object objkeys": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"name\":\"John\",\"age\":30,\"pets\":null,\"languages\":[\"python\",\"golang\"],\"flag\":false}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$.*"},
+			output: []byte("*5\r\n$-1\r\n$-1\r\n$-1\r\n$-1\r\n$-1\r\n"),
+		},
+		"invalid JSONPath": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"name\":\"John\",\"age\":30}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$invalid_path"},
+			output: []byte("-ERR parse error at 2 in $invalid_path\r\n"),
+		},
+		"incomapitable type(int)": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"person\":{\"name\":\"John\",\"age\":30},\"languages\":[\"python\",\"golang\"]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$.person.age"},
+			output: []byte("*1\r\n$-1\r\n"),
+		},
+		"incomapitable type(string)": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"person\":{\"name\":\"John\",\"age\":30},\"languages\":[\"python\",\"golang\"]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$.person.name"},
+			output: []byte("*1\r\n$-1\r\n"),
+		},
+		"incomapitable type(array)": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"person\":{\"name\":\"John\",\"age\":30},\"languages\":[\"python\",\"golang\"]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "$.languages"},
+			output: []byte("*1\r\n$-1\r\n"),
+		},
+	}
+
+	runEvalTests(t, tests, evalJSONOBJKEYS, store)
+}
+
+func BenchmarkEvalJSONOBJKEYS(b *testing.B) {
+	sizes := []int{0, 10, 100, 1000, 10000, 100000} // Various sizes of JSON objects
+	store := dstore.NewStore(nil)
+
+	for _, size := range sizes {
+		b.Run(fmt.Sprintf("JSONObjectSize_%d", size), func(b *testing.B) {
+			key := fmt.Sprintf("benchmark_json_objkeys_%d", size)
+
+			// Create a large JSON object with the given size
+			jsonObj := make(map[string]interface{})
+			for i := 0; i < size; i++ {
+				jsonObj[fmt.Sprintf("key%d", i)] = fmt.Sprintf("value%d", i)
+			}
+
+			// Set the JSON object in the store
+			args := []string{key, "$", fmt.Sprintf("%v", jsonObj)}
+			evalJSONSET(args, store)
+
+			b.ResetTimer()
+			b.ReportAllocs()
+
+			// Benchmark the evalJSONOBJKEYS function
+			for i := 0; i < b.N; i++ {
+				_ = evalJSONOBJKEYS([]string{key, "$"}, store)
+			}
+		})
+	}
+}
+
 func testEvalGETRANGE(t *testing.T, store *dstore.Store) {
 	setupForStringValue := func() {
 		store.Put("STRING_KEY", store.NewObj("Hello World", maxExDuration, object.ObjTypeString, object.ObjEncodingRaw))
@@ -3396,6 +3754,127 @@ func BenchmarkEvalINCRBYFLOAT(b *testing.B) {
 		b.Run(fmt.Sprintf("INCRBYFLOAT %s %s", input.key, input.incr), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				_ = evalGETRANGE([]string{"INCRBYFLOAT", input.key, input.incr}, store)
+			}
+		})
+	}
+}
+
+func testEvalBITOP(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"BITOP NOT (empty string)": {
+			setup: func() {
+				store.Put("s{t}", store.NewObj(&ByteArray{data: []byte("")}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+			},
+			input:  []string{"NOT", "dest{t}", "s{t}"},
+			output: clientio.Encode(0, true),
+			validator: func(output []byte) {
+				expectedResult := []byte{}
+				assert.DeepEqual(t, expectedResult, store.Get("dest{t}").Value.(*ByteArray).data)
+			},
+		},
+		"BITOP NOT (known string)": {
+			setup: func() {
+				store.Put("s{t}", store.NewObj(&ByteArray{data: []byte{0xaa, 0x00, 0xff, 0x55}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+			},
+			input:  []string{"NOT", "dest{t}", "s{t}"},
+			output: clientio.Encode(4, true),
+			validator: func(output []byte) {
+				expectedResult := []byte{0x55, 0xff, 0x00, 0xaa}
+				assert.DeepEqual(t, expectedResult, store.Get("dest{t}").Value.(*ByteArray).data)
+			},
+		},
+		"BITOP where dest and target are the same key": {
+			setup: func() {
+				store.Put("s", store.NewObj(&ByteArray{data: []byte{0xaa, 0x00, 0xff, 0x55}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+			},
+			input:  []string{"NOT", "s", "s"},
+			output: clientio.Encode(4, true),
+			validator: func(output []byte) {
+				expectedResult := []byte{0x55, 0xff, 0x00, 0xaa}
+				assert.DeepEqual(t, expectedResult, store.Get("s").Value.(*ByteArray).data)
+			},
+		},
+		"BITOP AND|OR|XOR don't change the string with single input key": {
+			setup: func() {
+				store.Put("a{t}", store.NewObj(&ByteArray{data: []byte{0x01, 0x02, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+			},
+			input:  []string{"AND", "res1{t}", "a{t}"},
+			output: clientio.Encode(3, true),
+			validator: func(output []byte) {
+				expectedResult := []byte{0x01, 0x02, 0xff}
+				assert.DeepEqual(t, expectedResult, store.Get("res1{t}").Value.(*ByteArray).data)
+			},
+		},
+		"BITOP missing key is considered a stream of zero": {
+			setup: func() {
+				store.Put("a{t}", store.NewObj(&ByteArray{data: []byte{0x01, 0x02, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+			},
+			input:  []string{"AND", "res1{t}", "no-such-key{t}", "a{t}"},
+			output: clientio.Encode(3, true),
+			validator: func(output []byte) {
+				expectedResult := []byte{0x00, 0x00, 0x00}
+				assert.DeepEqual(t, expectedResult, store.Get("res1{t}").Value.(*ByteArray).data)
+			},
+		},
+		"BITOP shorter keys are zero-padded to the key with max length": {
+			setup: func() {
+				store.Put("a{t}", store.NewObj(&ByteArray{data: []byte{0x01, 0x02, 0xff, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+				store.Put("b{t}", store.NewObj(&ByteArray{data: []byte{0x01, 0x02, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+			},
+			input:  []string{"AND", "res1{t}", "a{t}", "b{t}"},
+			output: clientio.Encode(4, true),
+			validator: func(output []byte) {
+				expectedResult := []byte{0x01, 0x02, 0xff, 0x00}
+				assert.DeepEqual(t, expectedResult, store.Get("res1{t}").Value.(*ByteArray).data)
+			},
+		},
+		"BITOP with non string source key": {
+			setup: func() {
+				store.Put("a{t}", store.NewObj("1", maxExDuration, object.ObjTypeString, object.ObjEncodingRaw))
+				store.Put("b{t}", store.NewObj("2", maxExDuration, object.ObjTypeString, object.ObjEncodingRaw))
+				store.Put("c{t}", store.NewObj([]byte("foo"), maxExDuration, object.ObjTypeByteList, object.ObjEncodingRaw))
+			},
+			input:  []string{"XOR", "dest{t}", "a{t}", "b{t}", "c{t}", "d{t}"},
+			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+		},
+		"BITOP with empty string after non empty string": {
+			setup: func() {
+				store.Put("a{t}", store.NewObj(&ByteArray{data: []byte("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")}, -1, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+			},
+			input:  []string{"OR", "x{t}", "a{t}", "b{t}"},
+			output: clientio.Encode(32, true),
+		},
+	}
+
+	runEvalTests(t, tests, evalBITOP, store)
+}
+
+func BenchmarkEvalBITOP(b *testing.B) {
+	store := dstore.NewStore(nil)
+
+	// Setup initial data for benchmarking
+	store.Put("key1", store.NewObj(&ByteArray{data: []byte{0x01, 0x02, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+	store.Put("key2", store.NewObj(&ByteArray{data: []byte{0x01, 0x02, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+
+	// Define different operations to benchmark
+	operations := []struct {
+		name string
+		op   string
+	}{
+		{"AND", "AND"},
+		{"OR", "OR"},
+		{"XOR", "XOR"},
+		{"NOT", "NOT"},
+	}
+
+	for _, operation := range operations {
+		b.Run(fmt.Sprintf("BITOP_%s", operation.name), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				if operation.op == "NOT" {
+					evalBITOP([]string{operation.op, "dest", "key1"}, store)
+				} else {
+					evalBITOP([]string{operation.op, "dest", "key1", "key2"}, store)
+				}
 			}
 		})
 	}
