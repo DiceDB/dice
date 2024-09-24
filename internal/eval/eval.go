@@ -2034,6 +2034,11 @@ func evalGETBIT(args []string, store *dstore.Store) []byte {
 func evalBITCOUNT(args []string, store *dstore.Store) []byte {
 	var err error
 
+	// if no key is provided, return error
+	if len(args) == 0 {
+		return diceerrors.NewErrArity("BITCOUNT")
+	}
+
 	// if more than 4 arguments are provided, return error
 	if len(args) > 4 {
 		return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)

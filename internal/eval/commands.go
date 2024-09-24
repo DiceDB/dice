@@ -465,9 +465,10 @@ var (
 		Eval: evalGETBIT,
 	}
 	bitCountCmdMeta = DiceCmdMeta{
-		Name: "BITCOUNT",
-		Info: "BITCOUNT counts the number of set bits in the string value stored at key",
-		Eval: evalBITCOUNT,
+		Name:  "BITCOUNT",
+		Info:  "BITCOUNT counts the number of set bits in the string value stored at key",
+		Eval:  evalBITCOUNT,
+		Arity: -1,
 	}
 	bitOpCmdMeta = DiceCmdMeta{
 		Name: "BITOP",
