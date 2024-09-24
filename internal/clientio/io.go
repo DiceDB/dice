@@ -6,6 +6,8 @@ import (
 	"io"
 	"log"
 	"net"
+	"os"
+	"syscall"
 
 	"github.com/dicedb/dice/config"
 )
@@ -63,6 +65,19 @@ func (rp *RESPParser) DecodeOne() (interface{}, error) {
 			if err == io.EOF && rp.buf.Len() > 0 {
 				break
 			}
+
+			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+				return nil, errors.New("connection timeout")
+			}
+
+			if errors.Is(err, syscall.EBADF) || errors.Is(err, os.ErrClosed) {
+				return nil, errors.New("connection closed locally")
+			}
+
+			if errors.Is(err, syscall.ECONNRESET) {
+				return nil, errors.New("connection reset")
+			}
+
 			return nil, err
 		}
 

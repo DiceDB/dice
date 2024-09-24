@@ -465,9 +465,10 @@ var (
 		Eval: evalGETBIT,
 	}
 	bitCountCmdMeta = DiceCmdMeta{
-		Name: "BITCOUNT",
-		Info: "BITCOUNT counts the number of set bits in the string value stored at key",
-		Eval: evalBITCOUNT,
+		Name:  "BITCOUNT",
+		Info:  "BITCOUNT counts the number of set bits in the string value stored at key",
+		Eval:  evalBITCOUNT,
+		Arity: -1,
 	}
 	bitOpCmdMeta = DiceCmdMeta{
 		Name: "BITOP",
@@ -606,6 +607,18 @@ var (
 		Name:     "HSTRLEN",
 		Info:     `Returns the length of value associated with field in the hash stored at key.`,
 		Eval:     evalHSTRLEN,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	hdelCmdMeta = DiceCmdMeta{
+		Name: "HDEL",
+		Info: `HDEL removes the specified fields from the hash stored at key.
+		Specified fields that do not exist within this hash are ignored.
+		Deletes the hash if no fields remain.
+		If key does not exist, it is treated as an empty hash and this command returns 0.
+		Returns
+		The number of fields that were removed from the hash, not including specified but non-existing fields.`,
+		Eval:     evalHDEL,
 		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
@@ -950,6 +963,7 @@ func init() {
 	DiceCmds["HINCRBY"] = hincrbyCmdMeta
 	DiceCmds["GETRANGE"] = getRangeCmdMeta
 	DiceCmds["SETEX"] = setexCmdMeta
+	DiceCmds["HDEL"] = hdelCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}
