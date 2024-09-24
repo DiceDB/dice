@@ -114,7 +114,14 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		s.logger.Error("Websocket upgrade failed", slog.Any("error", err))
 	}
-	defer conn.Close()
+	// closing handshake
+	defer func() {
+		err := conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+		if err != nil {
+			s.logger.Error("Websocket close handshake failed", slog.Any("error", err))
+		}
+		conn.Close()
+	}()
 
 	// read incoming message
 	_, msg, err := conn.ReadMessage()
