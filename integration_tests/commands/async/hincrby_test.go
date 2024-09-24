@@ -1,7 +1,6 @@
 package async
 
 import (
-	"fmt"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -72,7 +71,6 @@ func TestHINCRBY(t *testing.T) {
 	for _, tc := range testcases {
 		for i, cmd := range tc.commands {
 			result := FireCommand(conn, cmd)
-			fmt.Println(tc.name)
 			assert.DeepEqual(t, tc.expected[i], result)
 		}
 	}
