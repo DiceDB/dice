@@ -2086,7 +2086,7 @@ func evalBITCOUNT(args []string, store *dstore.Store) []byte {
 	}
 
 	switch unit {
-	case "BYTE":
+	case BYTE:
 		if start < 0 {
 			start += valueLength
 		}
@@ -2102,7 +2102,7 @@ func evalBITCOUNT(args []string, store *dstore.Store) []byte {
 			bitCount += int(popcount(value[i]))
 		}
 		return clientio.Encode(bitCount, true)
-	case "BIT":
+	case BIT:
 		if start < 0 {
 			start += valueLength * 8
 		}
