@@ -3563,19 +3563,31 @@ func evalJSONRESP(args []string, store *dstore.Store) []byte {
 		return errWithMessage
 	}
 
+	jsonData := obj.Value
 	if path == defaultRootPath {
-		jsonData := obj.Value
-		resp := parseJSONStructure(jsonData)
+		resp := parseJSONStructure(jsonData, false)
 
-		alpha := clientio.Encode(resp, false)
-		return alpha
+		return clientio.Encode(resp, false)
 	}
 
-	// [TODO] write code for path != $
-	return []byte{}
+	// if path is not root then extract value at path
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("invalid JSONPath")
+	}
+	results := expr.Get(jsonData)
+
+	// process value at each path
+	ret := []any{}
+	for _, result := range results {
+		resp := parseJSONStructure(result, false)
+		ret = append(ret, resp)
+	}
+
+	return clientio.Encode(ret, false)
 }
 
-func parseJSONStructure(jsonData interface{}) (resp []any) {
+func parseJSONStructure(jsonData interface{}, nested bool) (resp []any) {
 	switch json := jsonData.(type) {
 	case string, bool:
 		resp = append(resp, json)
@@ -3585,12 +3597,20 @@ func parseJSONStructure(jsonData interface{}) (resp []any) {
 		resp = append(resp, "{")
 		for key, value := range json {
 			resp = append(resp, key)
-			resp = append(resp, parseJSONStructure(value)...)
+			resp = append(resp, parseJSONStructure(value, true)...)
+		}
+		// wrap in another array to offset print
+		if nested {
+			resp = []interface{}{resp}
 		}
 	case []interface{}:
 		resp = append(resp, "[")
 		for _, value := range json {
-			resp = append(resp, parseJSONStructure(value)...)
+			resp = append(resp, parseJSONStructure(value, true)...)
+		}
+		// wrap in another array to offset print
+		if nested {
+			resp = []interface{}{resp}
 		}
 	}
 	return resp

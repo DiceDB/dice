@@ -2881,19 +2881,30 @@ func testEvalJSONRESP(t *testing.T, store *dstore.Store) {
 			input:  []string{"MOCK_KEY"},
 			output: []byte("*6\r\n+[\r\n$4\r\ndice\r\n:10\r\n$4\r\n10.5\r\n+true\r\n$-1\r\n"),
 		},
-		// [TODO] fix arbitrary order of objects
-		// "object with mixed types": {
-		// 	setup: func() {
-		// 		key := "MOCK_KEY"
-		// 		value := "{\"a\": 1, \"b\": 1.5676475867, \"c\": \"dice\", \"d\": null, \"e\": false}"
-		// 		var rootData interface{}
-		// 		_ = sonic.Unmarshal([]byte(value), &rootData)
-		// 		obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-		// 		store.Put(key, obj)
-		// 	},
-		// 	input:  []string{"MOCK_KEY"},
-		// 	output: []byte("*6\r\n+[\r\n$4\r\ndice\r\n:10\r\n$4\r\n10.5\r\n+true\r\n$-1\r\n"),
-		// },
+		"one layer of nesting no path": {
+			setup: func() {
+				key := "MOCK_KEY"
+				value := "{\"b\": [\"dice\", 10, 10.5, true, null]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY"},
+			output: []byte("*3\r\n+{\r\n$1\r\nb\r\n*6\r\n+[\r\n$4\r\ndice\r\n:10\r\n$4\r\n10.5\r\n+true\r\n$-1\r\n"),
+		},
+		"one layer of nesting with path": {
+			setup: func() {
+				key := "MOCK_KEY"
+				value := "{\"b\": [\"dice\", 10, 10.5, true, null]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY", "$.b"},
+			output: []byte("*1\r\n*6\r\n+[\r\n$4\r\ndice\r\n:10\r\n$4\r\n10.5\r\n+true\r\n$-1\r\n"),
+		},
 	}
 
 	runEvalTests(t, tests, evalJSONRESP, store)
