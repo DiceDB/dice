@@ -2,6 +2,7 @@ package async
 
 import (
 	"fmt"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"net"
 	"strings"
 	"testing"
@@ -1105,164 +1106,117 @@ func TestJSONNumIncrBy(t *testing.T) {
 	}
 }
 
-func comparePermutations(result, expected []interface{}) bool {
-
-	// Get the length of result , and expected - they must be equal
-	if len(result) != len(expected) {
-		return false
-	}
-	interfaceLength := len(result)
-	permutationFound := make([]bool, interfaceLength)
-
-
-
-	for i, v := range result {
-		test_slice, ok1 := v.([]interface{})
-
-		for j, exp := range expected {
-			if permutationFound[j] {
-				continue
-			}
-			exp_slice, ok2 := exp.([]interface{})
-
-			if ok1 != ok2 {
-				continue
-			}
-
-			// Both are either valid interfaces or string
-			if ok1 {
-				if testutils.UnorderedEqual(test_slice, exp_slice) {
-					permutationFound[j] = true
-				}
-			} else {
-				if exp == result[i]  {
-					permutationFound[j] = true
-				}
-			}
-			
-		}
-
-		
-	}
-
-	for _, ex := range permutationFound {
-		if !ex {
-			return false
-		}
-	}
-	return true
-}
-
 func TestJsonObjKeys(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
-	//  No space between words please 
 	a := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"language":["rust"]}}`
 	b := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"name":12,"language":["rust"]}}`
 	c := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"name":12,"language":["rust"],"extra_key":"value"}}`
 	d := `{"a":[3],"nested":{"a":{"b":2,"c":1}}}`
 
-
 	testCases := []struct {
-		name        	string
-		set_command 	string
-		test_command 	string
-		expected        []interface{}
+		name        string
+		setCommand  string
+		testCommand string
+		expected    []interface{}
 	}{
 		{
-			name:        	"JSON.OBJKEYS root object",
-			set_command: 	"json.set doc $ " + a,
-			test_command: 	"json.objkeys doc $",
-			expected: 		[]interface{}{
-								[]interface{}{"name", "partner", "partner2"},
-							},
+			name:        "JSON.OBJKEYS root object",
+			setCommand:  "json.set doc $ " + a,
+			testCommand: "json.objkeys doc $",
+			expected: []interface{}{
+				[]interface{}{"name", "partner", "partner2"},
+			},
 		},
 		{
-			name:     		"JSON.OBJKEYS with nested path",
-			set_command: 	"json.set doc $ " + b,
-			test_command: 	"json.objkeys doc $.partner",
-			expected: 		[]interface{}{
-								[]interface{}{"name", "language"},
-							},
+			name:        "JSON.OBJKEYS with nested path",
+			setCommand:  "json.set doc $ " + b,
+			testCommand: "json.objkeys doc $.partner",
+			expected: []interface{}{
+				[]interface{}{"name", "language"},
+			},
 		},
 		{
-			name:     		"JSON.OBJKEYS with non-object path",
-			set_command: 	"json.set doc $ " + c,
-			test_command: 	"json.objkeys doc $.name",
-			expected: 		[]interface{}{
-								"(nil)",
-							},
+			name:        "JSON.OBJKEYS with non-object path",
+			setCommand:  "json.set doc $ " + c,
+			testCommand: "json.objkeys doc $.name",
+			expected: []interface{}{
+				"(nil)",
+			},
 		},
 		{
-			name:     		"JSON.OBJKEYS with nested non-object path",
-			set_command: 	"json.set doc $ " + b,
-			test_command: 	"json.objkeys doc $.partner.language",
-			expected: 		[]interface{}{
-								"(nil)",
-							},
+			name:        "JSON.OBJKEYS with nested non-object path",
+			setCommand:  "json.set doc $ " + b,
+			testCommand: "json.objkeys doc $.partner.language",
+			expected: []interface{}{
+				"(nil)",
+			},
 		},
 		{
-			name:     		"JSON.OBJKEYS with invalid json path - 1",
-			set_command: 	"json.set doc $ " + b,
-			test_command: 	"json.objkeys doc $..invalidpath*somethingrandomadded",
-			expected: 		[]interface{}{ "ERR parse error at 16 in $..invalidpath*somethingrandomadded" },
+			name:        "JSON.OBJKEYS with invalid json path - 1",
+			setCommand:  "json.set doc $ " + b,
+			testCommand: "json.objkeys doc $..invalidpath*somethingrandomadded",
+			expected:    []interface{}{"ERR parse error at 16 in $..invalidpath*somethingrandomadded"},
 		},
 		{
-			name:     		"JSON.OBJKEYS with invalid json path - 2",
-			set_command: 	"json.set doc $ " + c,
-			test_command: 	"json.objkeys doc $[1",
-			expected: 		[]interface{}{ "ERR expected a number at 4 in $[1" },
+			name:        "JSON.OBJKEYS with invalid json path - 2",
+			setCommand:  "json.set doc $ " + c,
+			testCommand: "json.objkeys doc $[1",
+			expected:    []interface{}{"ERR expected a number at 4 in $[1"},
 		},
 		{
-			name:     		"JSON.OBJKEYS with invalid json path - 3",
-			set_command: 	"json.set doc $ " + c,
-			test_command: 	"json.objkeys doc $[random",
-			expected: 		[]interface{}{ "ERR parse error at 3 in $[random" },
+			name:        "JSON.OBJKEYS with invalid json path - 3",
+			setCommand:  "json.set doc $ " + c,
+			testCommand: "json.objkeys doc $[random",
+			expected:    []interface{}{"ERR parse error at 3 in $[random"},
 		},
 		{
-			name:     		"JSON.OBJKEYS with only command",
-			set_command: 	"json.set doc $ " + c,
-			test_command: 	"json.objkeys",
-			expected: 		[]interface{}{ "ERR wrong number of arguments for 'json.objkeys' command" },
+			name:        "JSON.OBJKEYS with only command",
+			setCommand:  "json.set doc $ " + c,
+			testCommand: "json.objkeys",
+			expected:    []interface{}{"ERR wrong number of arguments for 'json.objkeys' command"},
 		},
 		{
-			name:     		"JSON.OBJKEYS with non-existing key",
-			set_command: 	"json.set doc $ " + c,
-			test_command: 	"json.objkeys thisdoesnotexist $",
-			expected: 		[]interface{}{ "ERR could not perform this operation on a key that doesn't exist" },
+			name:        "JSON.OBJKEYS with non-existing key",
+			setCommand:  "json.set doc $ " + c,
+			testCommand: "json.objkeys thisdoesnotexist $",
+			expected:    []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
 		},
 		{
-			name:     		"JSON.OBJKEYS with empty path",
-			set_command: 	"json.set doc $ " + c,
-			test_command: 	"json.objkeys doc",
-			expected: 		[]interface{}{ 
-								"name", "partner", "partner2",
-							},
+			name:        "JSON.OBJKEYS with empty path",
+			setCommand:  "json.set doc $ " + c,
+			testCommand: "json.objkeys doc",
+			expected: []interface{}{
+				"name", "partner", "partner2",
+			},
 		},
 		{
-			name:        	"JSON.OBJKEYS with multiple json path",
-			set_command: 	"json.set doc $ " + d,
-			test_command: 	"json.objkeys doc $..a",
-			expected: 		[]interface{}{
-								[]interface{}{"b", "c"}, 
-								"(nil)",
-							},
+			name:        "JSON.OBJKEYS with multiple json path",
+			setCommand:  "json.set doc $ " + d,
+			testCommand: "json.objkeys doc $..a",
+			expected: []interface{}{
+				[]interface{}{"b", "c"},
+				"(nil)",
+			},
 		},
 	}
 
-	for _, tcase := range testCases {
+	for _, tc := range testCases {
 		FireCommand(conn, "DEL doc")
-		t.Run(tcase.name, func(t *testing.T) {
-			FireCommand(conn, tcase.set_command)
-			expected := tcase.expected
-			out := FireCommand(conn, tcase.test_command)
+		t.Run(tc.name, func(t *testing.T) {
+			FireCommand(conn, tc.setCommand)
+			expected := tc.expected
+			out := FireCommand(conn, tc.testCommand)
 
 			_, isString := out.(string)
 			if isString {
-				out_interface := []interface{}{out}
-				assert.DeepEqual(t, out_interface, expected)
+				outInterface := []interface{}{out}
+				assert.DeepEqual(t, outInterface, expected)
 			} else {
-				assert.Assert(t, comparePermutations(out.([]interface{}), expected))
+				assert.DeepEqual(t, out.([]interface{}), expected,
+					cmpopts.SortSlices(func(a, b interface{}) bool {
+						return fmt.Sprintf("%v", a) < fmt.Sprintf("%v", b)
+					}))
 			}
 		})
 	}
