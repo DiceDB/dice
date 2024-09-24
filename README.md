@@ -3,6 +3,8 @@ DiceDB
 
 DiceDB is an in-memory real-time database with SQL-based reactivity. It is hyper-optimized for building and scaling truly real-time applications on modern hardware while being a drop-in replacement for Redis.
 
+We are looking for Early Design Partners, so, if you want to evaluate DiceDB, [block our calendar](https://cal.com/dicedb-arpit). always up for a chat.
+
 > Note: DiceDB is still in development and it supports a subset of Redis commands. So, please do not use it in production. But, feel free to go through the [open issues](https://github.com/DiceDB/dice/issues) and contribute to help us speed up the development.
 
 ## How is it different from Redis?
@@ -78,8 +80,10 @@ To run the live DiceDB server for local development:
 ```sh
 $ git clone https://github.com/dicedb/dice
 $ cd dice
-$ air
+$ DICE_ENV=dev air
 ```
+
+> The `DICE_ENV` environment variable is used set the environment, by default it is treated as production. `dev` is used to get pretty printed logs and lower log level.
 
 ### Local Setup with Custom Config
 

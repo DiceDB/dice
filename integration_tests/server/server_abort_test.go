@@ -3,18 +3,20 @@ package server
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/dicedb/dice/integration_tests/commands"
+	commands "github.com/dicedb/dice/integration_tests/commands/async"
 
 	"github.com/dicedb/dice/config"
 )
 
 var testServerOptions = commands.TestServerOptions{
-	Port: 8740,
+	Port:   8740,
+	Logger: slog.Default(),
 }
 
 func TestAbortCommand(t *testing.T) {
