@@ -95,7 +95,7 @@ func TestSessionIsActive(t *testing.T) {
 	}
 
 	oldLastAccessed := session.LastAccessedAt
-	mockTime.SetTime(time.Now().Add(time.Duration(5 * time.Millisecond)))
+	mockTime.SetTime(time.Now().Add(5 * time.Millisecond))
 
 	session.IsActive()
 	if !session.LastAccessedAt.After(oldLastAccessed) {

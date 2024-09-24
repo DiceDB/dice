@@ -2,6 +2,7 @@ package async
 
 import (
 	"fmt"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"net"
 	"strings"
 	"testing"
@@ -1103,4 +1104,195 @@ func TestJSONNumIncrBy(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestJsonARRINSERT(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+	a := `[1,2]`
+	b := `{"name":"tom","score":[10,20],"partner2":{"score":[10,20]}}`
+
+	testCases := []struct {
+		name       string
+		commands   []string
+		expected   []interface{}
+		assertType []string
+	}{
+		{
+			name:       "JSON.ARRINSERT index out if bounds",
+			commands:   []string{"json.set a $ " + a, `JSON.ARRINSERT a $ 4 3`, "JSON.GET a"},
+			expected:   []interface{}{"OK", "ERR index out of bounds", "[1,2]"},
+			assertType: []string{"equal", "equal", "equal"},
+		},
+		{
+			name:       "JSON.ARRINSERT index is not integer",
+			commands:   []string{"json.set a $ " + a, `JSON.ARRINSERT a $ ss 3`, "JSON.GET a"},
+			expected:   []interface{}{"OK", "ERR Couldn't parse as integer", "[1,2]"},
+			assertType: []string{"equal", "equal", "equal"},
+		},
+		{
+			name:       "JSON.ARRINSERT with postive index in root path",
+			commands:   []string{"json.set a $ " + a, `JSON.ARRINSERT a $ 2 3 4 5`, "JSON.GET a"},
+			expected:   []interface{}{"OK", []interface{}{int64(5)}, "[1,2,3,4,5]"},
+			assertType: []string{"equal", "deep_equal", "equal"},
+		},
+
+		{
+			name:       "JSON.ARRINSERT with postive index in root path",
+			commands:   []string{"json.set a $ " + a, `JSON.ARRINSERT a $ 2 3 4 5`, "JSON.GET a"},
+			expected:   []interface{}{"OK", []interface{}{int64(5)}, "[1,2,3,4,5]"},
+			assertType: []string{"equal", "deep_equal", "equal"},
+		},
+		{
+			name:       "JSON.ARRINSERT with negative index in root path",
+			commands:   []string{"json.set a $ " + a, `JSON.ARRINSERT a $ -2 3 4 5`, "JSON.GET a"},
+			expected:   []interface{}{"OK", []interface{}{int64(5)}, "[3,4,5,1,2]"},
+			assertType: []string{"equal", "deep_equal", "equal"},
+		},
+		{
+			name:       "JSON.ARRINSERT nested with postive index",
+			commands:   []string{"JSON.SET b $ " + b, `JSON.ARRINSERT b $..score 1 5 6 true`, "JSON.GET b"},
+			expected:   []interface{}{"OK", []interface{}{int64(5), int64(5)}, `{"name":"tom","score":[10,5,6,true,20],"partner2":{"score":[10,5,6,true,20]}}`},
+			assertType: []string{"equal", "deep_equal", "jsoneq"},
+		},
+		{
+			name:       "JSON.ARRINSERT nested with negative index",
+			commands:   []string{"JSON.SET b $ " + b, `JSON.ARRINSERT b $..score -2 5 6 true`, "JSON.GET b"},
+			expected:   []interface{}{"OK", []interface{}{int64(5), int64(5)}, `{"name":"tom","score":[5,6,true,10,20],"partner2":{"score":[5,6,true,10,20]}}`},
+			assertType: []string{"equal", "deep_equal", "jsoneq"},
+		},
+	}
+	for _, tcase := range testCases {
+		t.Run(tcase.name, func(t *testing.T) {
+			for i := 0; i < len(tcase.commands); i++ {
+				cmd := tcase.commands[i]
+				out := tcase.expected[i]
+				result := FireCommand(conn, cmd)
+				if tcase.assertType[i] == "equal" {
+					assert.Equal(t, out, result)
+				} else if tcase.assertType[i] == "deep_equal" {
+					assert.Assert(t, arraysArePermutations(out.([]interface{}), result.([]interface{})))
+				} else if tcase.assertType[i] == "jsoneq" {
+					testifyAssert.JSONEq(t, out.(string), result.(string))
+				}
+			}
+		})
+	}
+}
+
+func TestJsonObjKeys(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+	a := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"language":["rust"]}}`
+	b := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"name":12,"language":["rust"]}}`
+	c := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"name":12,"language":["rust"],"extra_key":"value"}}`
+	d := `{"a":[3],"nested":{"a":{"b":2,"c":1}}}`
+
+	testCases := []struct {
+		name        string
+		setCommand  string
+		testCommand string
+		expected    []interface{}
+	}{
+		{
+			name:        "JSON.OBJKEYS root object",
+			setCommand:  "json.set doc $ " + a,
+			testCommand: "json.objkeys doc $",
+			expected: []interface{}{
+				[]interface{}{"name", "partner", "partner2"},
+			},
+		},
+		{
+			name:        "JSON.OBJKEYS with nested path",
+			setCommand:  "json.set doc $ " + b,
+			testCommand: "json.objkeys doc $.partner",
+			expected: []interface{}{
+				[]interface{}{"name", "language"},
+			},
+		},
+		{
+			name:        "JSON.OBJKEYS with non-object path",
+			setCommand:  "json.set doc $ " + c,
+			testCommand: "json.objkeys doc $.name",
+			expected: []interface{}{
+				"(nil)",
+			},
+		},
+		{
+			name:        "JSON.OBJKEYS with nested non-object path",
+			setCommand:  "json.set doc $ " + b,
+			testCommand: "json.objkeys doc $.partner.language",
+			expected: []interface{}{
+				"(nil)",
+			},
+		},
+		{
+			name:        "JSON.OBJKEYS with invalid json path - 1",
+			setCommand:  "json.set doc $ " + b,
+			testCommand: "json.objkeys doc $..invalidpath*somethingrandomadded",
+			expected:    []interface{}{"ERR parse error at 16 in $..invalidpath*somethingrandomadded"},
+		},
+		{
+			name:        "JSON.OBJKEYS with invalid json path - 2",
+			setCommand:  "json.set doc $ " + c,
+			testCommand: "json.objkeys doc $[1",
+			expected:    []interface{}{"ERR expected a number at 4 in $[1"},
+		},
+		{
+			name:        "JSON.OBJKEYS with invalid json path - 3",
+			setCommand:  "json.set doc $ " + c,
+			testCommand: "json.objkeys doc $[random",
+			expected:    []interface{}{"ERR parse error at 3 in $[random"},
+		},
+		{
+			name:        "JSON.OBJKEYS with only command",
+			setCommand:  "json.set doc $ " + c,
+			testCommand: "json.objkeys",
+			expected:    []interface{}{"ERR wrong number of arguments for 'json.objkeys' command"},
+		},
+		{
+			name:        "JSON.OBJKEYS with non-existing key",
+			setCommand:  "json.set doc $ " + c,
+			testCommand: "json.objkeys thisdoesnotexist $",
+			expected:    []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
+		},
+		{
+			name:        "JSON.OBJKEYS with empty path",
+			setCommand:  "json.set doc $ " + c,
+			testCommand: "json.objkeys doc",
+			expected: []interface{}{
+				"name", "partner", "partner2",
+			},
+		},
+		{
+			name:        "JSON.OBJKEYS with multiple json path",
+			setCommand:  "json.set doc $ " + d,
+			testCommand: "json.objkeys doc $..a",
+			expected: []interface{}{
+				[]interface{}{"b", "c"},
+				"(nil)",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		FireCommand(conn, "DEL doc")
+		t.Run(tc.name, func(t *testing.T) {
+			FireCommand(conn, tc.setCommand)
+			expected := tc.expected
+			out := FireCommand(conn, tc.testCommand)
+
+			_, isString := out.(string)
+			if isString {
+				outInterface := []interface{}{out}
+				assert.DeepEqual(t, outInterface, expected)
+			} else {
+				assert.DeepEqual(t, out.([]interface{}), expected,
+					cmpopts.SortSlices(func(a, b interface{}) bool {
+						return fmt.Sprintf("%v", a) < fmt.Sprintf("%v", b)
+					}))
+			}
+		})
+	}
+
 }
