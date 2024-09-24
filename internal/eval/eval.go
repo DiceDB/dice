@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"math/bits"
 	"regexp"
 	"sort"
 	"strconv"
@@ -2099,7 +2100,7 @@ func evalBITCOUNT(args []string, store *dstore.Store) []byte {
 		end = min(end, valueLength-1)
 		bitCount := 0
 		for i := start; i <= end; i++ {
-			bitCount += int(popcount(value[i]))
+			bitCount += int(bits.OnesCount8(value[i]))
 		}
 		return clientio.Encode(bitCount, true)
 	case BIT:
@@ -2129,20 +2130,20 @@ func evalBITCOUNT(args []string, store *dstore.Store) []byte {
 		if startByte == endByte {
 			mask := byte(0xFF >> startBitOffset)
 			mask &= byte(0xFF << (7 - endBitOffset))
-			bitCount = int(popcount(value[startByte] & mask))
+			bitCount = int(bits.OnesCount8(value[startByte] & mask))
 		} else {
 			// Handle first byte
 			firstByteMask := byte(0xFF >> startBitOffset)
-			bitCount += int(popcount(value[startByte] & firstByteMask))
+			bitCount += int(bits.OnesCount8(value[startByte] & firstByteMask))
 
 			// Handle all the middle ones
 			for i := startByte + 1; i < endByte; i++ {
-				bitCount += int(popcount(value[i]))
+				bitCount += int(bits.OnesCount8(value[i]))
 			}
 
 			// Handle last byte
 			lastByteMask := byte(0xFF << (7 - endBitOffset))
-			bitCount += int(popcount(value[endByte] & lastByteMask))
+			bitCount += int(bits.OnesCount8(value[endByte] & lastByteMask))
 		}
 		return clientio.Encode(bitCount, true)
 	default:
