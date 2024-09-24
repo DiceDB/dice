@@ -1,9 +1,12 @@
 package cmd
 
 type RedisCmd struct {
-	ID   uint32
-	Cmd  string
-	Args []string
+	RequestID uint32
+	Cmd       string
+	Args      []string
 }
 
-type RedisCmds []*RedisCmd
+type RedisCmds struct {
+	Cmds      []*RedisCmd
+	RequestID uint32
+}

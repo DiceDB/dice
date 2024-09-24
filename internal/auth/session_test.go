@@ -144,10 +144,7 @@ func TestSessionValidate(t *testing.T) {
 
 func TestSessionExpire(t *testing.T) {
 	session := NewSession()
-	err := session.Expire()
-	if err != nil {
-		t.Errorf("Session.Expire() returned an error: %v", err)
-	}
+	session.Expire()
 	if session.Status != SessionStatusExpired {
 		t.Errorf("Session.Expire() did not set status to Expired. Got %v, want %v", session.Status, SessionStatusExpired)
 	}

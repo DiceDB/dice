@@ -37,25 +37,29 @@ func (c *Client) TxnBegin() {
 }
 
 func (c *Client) TxnDiscard() {
-	c.Cqueue = make(cmd.RedisCmds, 0)
+	c.Cqueue.Cmds = make([]*cmd.RedisCmd, 0)
 	c.IsTxn = false
 }
 
 func (c *Client) TxnQueue(redisCmd *cmd.RedisCmd) {
-	c.Cqueue = append(c.Cqueue, redisCmd)
+	c.Cqueue.Cmds = append(c.Cqueue.Cmds, redisCmd)
 }
 
 func NewClient(fd int) *Client {
+	cmds := make([]*cmd.RedisCmd, 0)
 	return &Client{
-		Fd:      fd,
-		Cqueue:  make(cmd.RedisCmds, 0),
+		Fd: fd,
+		Cqueue: cmd.RedisCmds{
+			Cmds: cmds,
+		},
 		Session: auth.NewSession(),
 	}
 }
 
 func NewHTTPQwatchClient(qwatchResponseChan chan QwatchResponse, clientIdentifierID uint32) *Client {
+	cmds := make([]*cmd.RedisCmd, 0)
 	return &Client{
-		Cqueue:                 make(cmd.RedisCmds, 0),
+		Cqueue:                 cmd.RedisCmds{Cmds: cmds},
 		Session:                auth.NewSession(),
 		ClientIdentifierID:     clientIdentifierID,
 		HTTPQwatchResponseChan: qwatchResponseChan,
