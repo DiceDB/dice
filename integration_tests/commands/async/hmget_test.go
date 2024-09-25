@@ -40,34 +40,42 @@ func TestHMGET(t *testing.T) {
 
 	testCases := []TestCase{
 		{
+			name:     "HMGET existing key and value",
 			commands: []string{"HSET key_hmGet field value", "HSET key_hmGet field2 value_new", "HMGET key_hmGet field field2"},
 			expected: []interface{}{ONE, ONE, []string{"value", "value_new"}},
 		},
 		{
+			name:     "HMGET non-existing key and value",
 			commands: []string{"HMGET doesntexist field"},
 			expected: []interface{}{[]interface{}{"(nil)"}},
 		},
 		{
+			name:     "HMGET non-existing value smallHash",
 			commands: []string{"HMGET smallHash field"},
 			expected: []interface{}{[]interface{}{"(nil)"}},
 		},
 		{
+			name:     "HMGET non-existing value bigHash",
 			commands: []string{"HMGET bigHash field"},
 			expected: []interface{}{[]interface{}{"(nil)"}},
 		},
 		{
+			name:     "HMGET bigHash",
 			commands: []string{"HMGET bigHash " + strings.Join(bigHashKeys, " ")},
 			expected: []interface{}{bigHashValues},
 		},
 		{
+			name:     "HMGET smallHash",
 			commands: []string{"HMGET smallHash " + strings.Join(smallHashKeys, " ")},
 			expected: []interface{}{smallHashValues},
 		},
 		{
+			name:     "HMGET wrongtype",
 			commands: []string{"SET key_hmGet1 field", "HMGET key_hmGet1 field"},
 			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
 		},
 		{
+			name:     "HMGET wrong number of arguments",
 			commands: []string{"HMGET key_hmGet", "HMGET"},
 			expected: []interface{}{"ERR wrong number of arguments for 'hmget' command",
 				"ERR wrong number of arguments for 'hmget' command"},
