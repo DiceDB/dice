@@ -1812,7 +1812,6 @@ func evalINCRBY(args []string, store *dstore.Store) []byte {
 	return incrDecrCmd(args, incrementAmount, store)
 }
 
-
 func incrDecrCmd(args []string, incr int64, store *dstore.Store) []byte {
 	key := args[0]
 	obj := store.Get(key)
@@ -2937,15 +2936,15 @@ func evalHMGET(args []string, store *dstore.Store) []byte {
 
 	obj := store.Get(key)
 
-	var hashMap HashMap
 	results := make([]interface{}, len(args[1:]))
-
-	if obj != nil {
-		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
-		}
-		hashMap = obj.Value.(HashMap)
+	if obj == nil {
+		return clientio.Encode(results, false)
 	}
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+	}
+
+	hashMap := obj.Value.(HashMap)
 
 	for i, hmKey := range args[1:] {
 		hmValue, ok := hashMap.Get(hmKey)
@@ -3888,7 +3887,7 @@ func evalJSONNUMINCRBY(args []string, store *dstore.Store) []byte {
 }
 
 // evalJSONOBJKEYS retrieves the keys of a JSON object stored at path specified.
-// It takes two arguments: the key where the JSON document is stored, and an optional JSON path. 
+// It takes two arguments: the key where the JSON document is stored, and an optional JSON path.
 // It returns a list of keys from the object at the specified path or an error if the path is invalid.
 func evalJSONOBJKEYS(args []string, store *dstore.Store) []byte {
 	if len(args) < 1 {
@@ -3915,7 +3914,7 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) []byte {
 	}
 
 	jsonData := obj.Value
-	_,err := sonic.Marshal(jsonData)
+	_, err := sonic.Marshal(jsonData)
 	if err != nil {
 		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
 	}
@@ -3923,7 +3922,7 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) []byte {
 	// If path is root, return all keys of the entire JSON
 	if len(args) == 1 {
 		if utils.GetJSONFieldType(jsonData) == utils.ObjectType {
-			keys := make([]string,0)
+			keys := make([]string, 0)
 			for key := range jsonData.(map[string]interface{}) {
 				keys = append(keys, key)
 			}
@@ -3944,18 +3943,18 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) []byte {
 		return clientio.RespEmptyArray
 	}
 
-	keysList := make([]interface{},0,len(results))
+	keysList := make([]interface{}, 0, len(results))
 
 	for _, result := range results {
 		switch utils.GetJSONFieldType(result) {
-			case utils.ObjectType:
-				keys := make([]string, 0)
-				for key := range result.(map[string]interface{}) {
-					keys = append(keys, key)
-				}
-				keysList = append(keysList, keys)
-			default:
-				keysList = append(keysList, clientio.RespNIL)
+		case utils.ObjectType:
+			keys := make([]string, 0)
+			for key := range result.(map[string]interface{}) {
+				keys = append(keys, key)
+			}
+			keysList = append(keysList, keys)
+		default:
+			keysList = append(keysList, clientio.RespNIL)
 		}
 	}
 
