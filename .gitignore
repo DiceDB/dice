@@ -7,3 +7,4 @@ venv
 __pycache__
 .idea/
 ./dice
+*.rdb
