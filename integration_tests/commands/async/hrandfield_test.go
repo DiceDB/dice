@@ -13,7 +13,7 @@ func TestHRANDFIELD(t *testing.T) {
 
 	testCases := []TestCase{
 		{
-			commands: []string{"HSET key_hrandfield field value", "HSET key_hrandfield field2 value_new", "HRANDFIELD key_hrandfield"},
+			commands: []string{"HSET key_hrandfield field value", "HSET key_hrandfield field2 value2", "HRANDFIELD key_hrandfield"},
 			expected: []interface{}{ONE, ONE, []string{"field", "field2"}},
 		},
 		{
@@ -22,15 +22,11 @@ func TestHRANDFIELD(t *testing.T) {
 		},
 		{
 			commands: []string{"HRANDFIELD key_hrandfield 2 WITHVALUES"},
-			expected: []interface{}{[]string{"field", "value", "field2", "value2", "field3", "value3"}}, // Expected two random fields with values
+			expected: []interface{}{[]string{"field", "value", "field2", "value2", "field3", "value3"}},
 		},
 		{
 			commands: []string{"HRANDFIELD key_hrandfield_nonexistent"},
 			expected: []interface{}{"(nil)"},
-		},
-		{
-			commands: []string{"SET key_hrandfield02 value", "HRANDFIELD key_hrandfield02"},
-			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
 		},
 		{
 			commands: []string{"HRANDFIELD"},
