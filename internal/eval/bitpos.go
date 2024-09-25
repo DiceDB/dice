@@ -136,27 +136,9 @@ func adjustBitPosSearchRange(start, end, byteLen int) (newStart, newEnd int) {
 		end += byteLen
 	}
 	start = max(0, start)
-	// TODO[Bhavya]:
-	// Fix scenario:For scenario where end = -200 and byteLen = 100, then end = -100
 	end = min(byteLen-1, end)
 
 	return start, end
-}
-
-func getBitPosWithByteRange(byteSlice []byte, bitToFind byte, start, end int) int {
-	for i := start; i <= end; i++ {
-		for j := 0; j < 8; j++ {
-			// Check each bit in the byte from left to right
-			// We use 7-j because bit 7 is the leftmost (most significant) bit
-			if ((byteSlice[i] >> (7 - j)) & 1) == bitToFind {
-				// Return the bit position (i*8 gives us the byte offset in bits)
-				return i*8 + j
-			}
-		}
-	}
-
-	// Bit not found in the range
-	return -1
 }
 
 func getBitPosWithBitRange(byteSlice []byte, bitToFind byte, start, end int) int {
