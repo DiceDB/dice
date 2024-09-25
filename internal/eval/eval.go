@@ -2903,6 +2903,14 @@ func evalHSET(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(numKeys, false)
 }
 
+// Increments the number stored at field in the hash stored at key by increment.
+//
+// If key does not exist, a new key holding a hash is created.
+// If field does not exist the value is set to 0 before the operation is performed.
+//
+// The range of values supported by HINCRBY is limited to 64 bit signed integers.
+//
+// Usage: HINCRBY key field increment
 func evalHINCRBY(args []string, store *dstore.Store) []byte {
 	if len(args) < 3 {
 		return diceerrors.NewErrArity("HINCRBY")
@@ -2919,14 +2927,14 @@ func evalHINCRBY(args []string, store *dstore.Store) []byte {
 		hashmap = obj.Value.(HashMap)
 	}
 
-	if hashmap == nil {
-		hashmap = make(HashMap)
-	}
-
 	field := args[1]
 	increment, err := strconv.ParseInt(args[2], 10, 64)
 	if err != nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
+	}
+
+	if hashmap == nil {
+		hashmap = make(HashMap)
 	}
 
 	numkey, err := hashmap.incrementValue(field, increment)
