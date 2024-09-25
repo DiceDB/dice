@@ -66,6 +66,11 @@ func TestHINCRBY(t *testing.T) {
 			commands: []string{"HSET new-key value 10", "HINCRBY new-key value -1"},
 			expected: []interface{}{int64(0), int64(9)},
 		},
+		{
+			name:     "HINCRBY should give integer error when trying to increment a key which is not a hash value with a value which is not integer",
+			commands: []string{"SET key value", "HINCRBY key value ten"},
+			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+		},
 	}
 
 	for _, tc := range testcases {
