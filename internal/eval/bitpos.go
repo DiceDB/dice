@@ -91,33 +91,35 @@ func parseOptionalParams(args []string, byteLen int) (start, end int, rangeType 
 func getBitPos(byteSlice []byte, bitToFind byte, start, end int, rangeType string, endRangeProvided bool) int {
 	byteLen := len(byteSlice)
 	bitLen := len(byteSlice) * 8
-	if rangeType == BIT {
-		// For BIT range, if start is beyond the total bits, it's invalid
-		if start > bitLen {
-			return -1
-		}
-	}
-
-	// Adjust start and end for both BYTE and BIT ranges
-	// This handles negative indices and ensures we're within bounds
-	start, end = adjustBitPosSearchRange(start, end, byteLen)
-
-	// If start is beyond end or byteLen, we can't find anything
-	if start > end || start >= byteLen {
-		return -1
-	}
 
 	var result int
+
 	if rangeType == BYTE {
-		result = getBitPosWithByteRange(byteSlice, bitToFind, start, end)
+		// Adjust start and end for both BYTE and BIT ranges
+		// This handles negative indices and ensures we're within bounds
+		start, end = adjustBitPosSearchRange(start, end, byteLen)
+
+		// If start is beyond end or byteLen, we can't find anything
+		if start > end || start >= byteLen {
+			return -1
+		}
+
+		result = getBitPosWithBitRange(byteSlice, bitToFind, start*8, end*8+7)
 	} else {
-		// Convert byte range to bit range
-		// We multiply by 8 because each byte has 8 bits
-		start *= 8
-		// The +7 ensures we include all bits in the last byte
-		// min() ensures we don't go beyond the actual bit length
-		end = min(end*8+7, bitLen-1)
+		// Adjust start and end for both BYTE and BIT ranges
+		// This handles negative indices and ensures we're within bounds
+		start, end = adjustBitPosSearchRange(start, end, bitLen)
+
+		// If start is beyond end or byteLen, we can't find anything
+		if start > end || start >= bitLen {
+			return -1
+		}
+
 		result = getBitPosWithBitRange(byteSlice, bitToFind, start, end)
+
+		if result > end {
+			return -1
+		}
 	}
 
 	// Special case: if we're looking for a 0 bit, didn't find it,
@@ -138,6 +140,8 @@ func adjustBitPosSearchRange(start, end, byteLen int) (newStart, newEnd int) {
 		end += byteLen
 	}
 	start = max(0, start)
+	// TODO[Bhavya]:
+	// Fix scenario:For scenario where end = -200 and byteLen = 100, then end = -100
 	end = min(byteLen-1, end)
 
 	return start, end
