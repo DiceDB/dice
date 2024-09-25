@@ -640,6 +640,13 @@ var (
 		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hmgetCmdMeta = DiceCmdMeta{
+		Name:     "HMGET",
+		Info:     `Returns the values associated with the specified fields in the hash stored at key.`,
+		Eval:     evalHMGET,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	objectCmdMeta = DiceCmdMeta{
 		Name: "OBJECT",
 		Info: `OBJECT subcommand [arguments [arguments ...]]
