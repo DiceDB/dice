@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 	"time"
-
+  
 	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/ohler55/ojg/jp"
@@ -87,6 +87,7 @@ func TestEval(t *testing.T) {
 	testEvalCOMMAND(t, store)
 	testEvalJSONOBJKEYS(t, store)
 	testEvalGETRANGE(t, store)
+	testEvalHSETNX(t, store)
 	testEvalPING(t, store)
 	testEvalSETEX(t, store)
 	testEvalFLUSHDB(t, store)
@@ -3484,6 +3485,68 @@ func BenchmarkEvalGETRANGE(b *testing.B) {
 			}
 		})
 	}
+}
+
+func BenchmarkEvalHSETNX(b *testing.B) {
+	store := dstore.NewStore(nil)
+	for i := 0; i < b.N; i++ {
+		evalHSETNX([]string{"KEY", fmt.Sprintf("FIELD_%d", i/2), fmt.Sprintf("VALUE_%d", i)}, store)
+	}
+}
+
+func testEvalHSETNX(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"no args passed": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'hsetnx' command\r\n"),
+		},
+		"only key passed": {
+			setup:  func() {},
+			input:  []string{"key"},
+			output: []byte("-ERR wrong number of arguments for 'hsetnx' command\r\n"),
+		},
+		"only key and field_name passed": {
+			setup:  func() {},
+			input:  []string{"KEY", "field_name"},
+			output: []byte("-ERR wrong number of arguments for 'hsetnx' command\r\n"),
+		},
+		"more than one field and value passed": {
+			setup: func() {},
+			input: []string{"KEY", "field1", "value1", "field2", "value2"},
+			output: []byte("-ERR wrong number of arguments for 'hsetnx' command\r\n"),
+		},
+		"key, field and value passed": {
+			setup:  func() {},
+			input:  []string{"KEY1", "field_name", "value"},
+			output: clientio.Encode(int64(1), false),
+		},
+		"new set of key, field and value added": {
+			setup:  func() {},
+			input:  []string{"KEY2", "field_name_new", "value_new_new"},
+			output: clientio.Encode(int64(1), false),
+		},
+		"apply with duplicate key, field and value names": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field := "mock_field_name"
+				newMap := make(HashMap)
+				newMap[field] = "mock_field_value"
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input:  []string{"KEY_MOCK", "mock_field_name", "mock_field_value_2"},
+			output: clientio.Encode(int64(0), false),
+		},
+	}
+
+	runEvalTests(t, tests, evalHSETNX, store)
 }
 
 func TestMSETConsistency(t *testing.T) {
