@@ -2903,6 +2903,26 @@ func evalHSET(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(numKeys, false)
 }
 
+func evalHSETNX(args []string, store *dstore.Store) []byte {
+	if len(args) != 3 {
+		return diceerrors.NewErrArity("HSETNX")
+	}
+
+	key := args[0]
+	hmKey := args[1]
+
+	val, errWithMessage := getValueFromHashMap(key, hmKey, store)
+	if errWithMessage != nil {
+		return errWithMessage
+	}
+	if !bytes.Equal(val, clientio.RespNIL) { // hmKey is already present in hash map
+		return clientio.RespZero
+	}
+
+	evalHSET(args, store)
+	return clientio.RespOne
+}
+
 func evalHGETALL(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("HGETALL")
