@@ -621,13 +621,6 @@ var (
 		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
-	hmgetCmdMeta = DiceCmdMeta{
-		Name:     "HMGET",
-		Info:     `Returns the values associated with the specified fields in the hash stored at key.`,
-		Eval:     evalHMGET,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
-	}
 	hdelCmdMeta = DiceCmdMeta{
 		Name: "HDEL",
 		Info: `HDEL removes the specified fields from the hash stored at key.
