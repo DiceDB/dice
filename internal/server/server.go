@@ -106,7 +106,7 @@ func (s *AsyncServer) FindPortAndBind() (socketErr error) {
 		return err
 	}
 	s.logger.Info(
-		"DiceDB is running",
+		"DiceDB server is running",
 		slog.String("version", "0.0.4"),
 		slog.Int("port", config.DiceConfig.Server.Port),
 	)
@@ -284,14 +284,14 @@ func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
 // Finally, it gathers responses from the shards and writes the result to the buffer.
 func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.RedisCmd, buf *bytes.Buffer, c *comm.Client) {
 	// Break down the single command into multiple commands if multisharding is supported.
-	// The length of cmdsBkp helps determine how many shards to wait for responses.
-	cmdsBkp := []cmd.RedisCmd{}
+	// The length of commandBreakup helps determine how many shards to wait for responses.
+	commandBreakup := []cmd.RedisCmd{}
 
 	// Retrieve metadata for the command to determine if multisharding is supported.
 	val, ok := WorkerCmdsMeta[redisCmd.Cmd]
 	if !ok {
 		// If no metadata exists, treat it as a single command.
-		cmdsBkp = append(cmdsBkp, *redisCmd)
+		commandBreakup = append(commandBreakup, *redisCmd)
 	} else {
 		// Depending on the command type, decide how to handle it.
 		switch val.CmdType {
@@ -302,19 +302,19 @@ func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.RedisCmd, buf *bytes.
 
 		case SingleShard, Custom:
 			// For single-shard or custom commands, process them without breaking up.
-			cmdsBkp = append(cmdsBkp, *redisCmd)
+			commandBreakup = append(commandBreakup, *redisCmd)
 
 		case Multishard:
 			// If the command supports multisharding, break it down into multiple commands.
-			cmdsBkp = s.cmdsBreakup(redisCmd, c)
+			commandBreakup = s.cmdsBreakup(redisCmd, c)
 		}
 	}
 
 	// Scatter the broken-down commands to the appropriate shards.
-	s.scatter(cmdsBkp, c)
+	s.scatter(commandBreakup, c)
 
 	// Gather the responses from the shards and write them to the buffer.
-	s.gather(redisCmd, buf, len(cmdsBkp), val.CmdType)
+	s.gather(redisCmd, buf, len(commandBreakup), val.CmdType)
 }
 
 func readCommands(c io.ReadWriter) (cmd.RedisCmds, bool, error) {

@@ -49,9 +49,9 @@ func TestINCR(t *testing.T) {
 			}{
 				{"s", "max_int", int64(math.MaxInt64 - 1), utils.EmptyStr},
 				{"i", "max_int", int64(math.MaxInt64), utils.EmptyStr},
-				{"i", "max_int", nil, "ERR value is out of range"},
+				{"i", "max_int", nil, "ERR increment or decrement would overflow"},
 				{"s", "max_int", int64(math.MaxInt64), utils.EmptyStr},
-				{"i", "max_int", nil, "ERR value is out of range"},
+				{"i", "max_int", nil, "ERR increment or decrement would overflow"},
 			},
 		},
 		{
@@ -76,11 +76,11 @@ func TestINCR(t *testing.T) {
 				expectedErr string
 			}{
 				{"s", "float_key", "3.14", utils.EmptyStr},
-				{"i", "float_key", nil, "ERR WRONGTYPE Operation against a key holding the wrong kind of value"},
+				{"i", "float_key", nil, "ERR value is not an integer or out of range"},
 				{"s", "string_key", "hello", utils.EmptyStr},
-				{"i", "string_key", nil, "ERR WRONGTYPE Operation against a key holding the wrong kind of value"},
+				{"i", "string_key", nil, "ERR value is not an integer or out of range"},
 				{"s", "bool_key", "true", utils.EmptyStr},
-				{"i", "bool_key", nil, "ERR WRONGTYPE Operation against a key holding the wrong kind of value"},
+				{"i", "bool_key", nil, "ERR value is not an integer or out of range"},
 			},
 		},
 		{
@@ -158,6 +158,144 @@ func TestINCR(t *testing.T) {
 				case "w":
 					time.Sleep(1100 * time.Millisecond)
 				}
+			}
+		})
+	}
+}
+
+func TestINCRBY(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	type SetCommand struct {
+		key string
+		val int64
+	}
+
+	type IncrByCommand struct {
+		key         string
+		decrValue   any
+		expectedVal int64
+		expectedErr string
+	}
+
+	type GetCommand struct {
+		key         string
+		expectedVal int64
+	}
+
+	testCases := []struct {
+		name           string
+		setCommands    []SetCommand
+		incrByCommands []IncrByCommand
+		getCommands    []GetCommand
+	}{
+		{
+			name: "happy flow",
+			setCommands: []SetCommand{
+				{"key", 3},
+			},
+			incrByCommands: []IncrByCommand{
+				{"key", int64(2), 5, utils.EmptyStr},
+				{"key", int64(1), 6, utils.EmptyStr},
+			},
+			getCommands: []GetCommand{
+				{"key", 6},
+			},
+		},
+		{
+			name: "happy flow with negative increment",
+			setCommands: []SetCommand{
+				{"key", 100},
+			},
+			incrByCommands: []IncrByCommand{
+				{"key", int64(-2), 98, utils.EmptyStr},
+				{"key", int64(-10), 88, utils.EmptyStr},
+				{"key", int64(-88), 0, utils.EmptyStr},
+				{"key", int64(-100), -100, utils.EmptyStr},
+			},
+			getCommands: []GetCommand{
+				{"key", -100},
+			},
+		},
+		{
+			name: "happy flow with unset key",
+			setCommands: []SetCommand{
+				{"key", 3},
+			},
+			incrByCommands: []IncrByCommand{
+				{"unsetKey", int64(2), 2, utils.EmptyStr},
+			},
+			getCommands: []GetCommand{
+				{"key", 3},
+				{"unsetKey", 2},
+			},
+		},
+		{
+			name: "edge case with maxInt64",
+			setCommands: []SetCommand{
+				{"key", math.MaxInt64 - 1},
+			},
+			incrByCommands: []IncrByCommand{
+				{"key", int64(1), math.MaxInt64, utils.EmptyStr},
+				{"key", int64(1), 0, "ERR increment or decrement would overflow"},
+			},
+			getCommands: []GetCommand{
+				{"key", math.MaxInt64},
+			},
+		},
+		{
+			name: "edge case with negative increment",
+			setCommands: []SetCommand{
+				{"key", math.MinInt64 + 1},
+			},
+			incrByCommands: []IncrByCommand{
+				{"key", int64(-1), math.MinInt64, utils.EmptyStr},
+				{"key", int64(-1), 0, "ERR increment or decrement would overflow"},
+			},
+			getCommands: []GetCommand{
+				{"key", math.MinInt64},
+			},
+		},
+		{
+			name: "edge case with string values",
+			setCommands: []SetCommand{
+				{"key", 1},
+			},
+			incrByCommands: []IncrByCommand{
+				{"stringkey", "abc", 0, "ERR value is not an integer or out of range"},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+
+			defer FireCommand(conn, "DEL key unsetKey stringkey")
+
+			for _, cmd := range tc.setCommands {
+				FireCommand(conn, fmt.Sprintf("SET %s %d", cmd.key, cmd.val))
+			}
+
+			for _, cmd := range tc.incrByCommands {
+				var result any
+				switch v := cmd.decrValue.(type) {
+				case int64:
+					result = FireCommand(conn, fmt.Sprintf("INCRBY %s %d", cmd.key, v))
+				case string:
+					result = FireCommand(conn, fmt.Sprintf("INCRBY %s %s", cmd.key, v))
+				}
+				switch v := result.(type) {
+				case string:
+					assert.Equal(t, cmd.expectedErr, v)
+				case int64:
+					assert.Equal(t, cmd.expectedVal, v)
+				}
+			}
+
+			for _, cmd := range tc.getCommands {
+				result := FireCommand(conn, fmt.Sprintf("GET %s", cmd.key))
+				assert.Equal(t, cmd.expectedVal, result)
 			}
 		})
 	}

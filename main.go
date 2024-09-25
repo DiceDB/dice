@@ -55,11 +55,11 @@ func main() {
 	// If not enabled multithreading, server will run on a single core.
 	var numCores int
 	if config.EnableMultiThreading {
-		logr.Debug("Running server in multi-threaded mode")
 		numCores = runtime.NumCPU()
+		logr.Info("The DiceDB server has started in multi-threaded mode.", slog.Int("number of cores", numCores))
 	} else {
-		logr.Debug("Running server in single-threaded mode")
 		numCores = 1
+		logr.Info("The DiceDB server has started in single-threaded mode.")
 	}
 
 	// The runtime.GOMAXPROCS(numCores) call limits the number of operating system
