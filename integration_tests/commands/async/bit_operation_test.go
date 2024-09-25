@@ -390,7 +390,7 @@ func TestBitPos(t *testing.T) {
 			name:  "StartAndEndEqualInBitRange",
 			val:   "\x0f\xff\xff",
 			inCmd: "BITPOS testkey 1 1 1 BIT",
-			out:   int64(8),
+			out:   int64(-1),
 		},
 		{
 			name:  "FindFirstZeroBitInNegativeRange",
