@@ -1812,7 +1812,6 @@ func evalINCRBY(args []string, store *dstore.Store) []byte {
 	return incrDecrCmd(args, incrementAmount, store)
 }
 
-
 func incrDecrCmd(args []string, incr int64, store *dstore.Store) []byte {
 	key := args[0]
 	obj := store.Get(key)
@@ -1963,7 +1962,7 @@ func evalMULTI(args []string, store *dstore.Store) []byte {
 // Every time a key in the watch list is modified, the client will be sent a response
 // containing the new value of the key along with the operation that was performed on it.
 // Contains only one argument, the query to be watched.
-func EvalQWATCH(args []string, clientFd int, store *dstore.Store) []byte {
+func EvalQWATCH(args []string, httpOp bool, client *comm.Client, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("QWATCH")
 	}
@@ -1980,13 +1979,26 @@ func EvalQWATCH(args []string, clientFd int, store *dstore.Store) []byte {
 		Key   string
 		Value *object.Obj
 	})
-	querywatcher.WatchSubscriptionChan <- querywatcher.WatchSubscription{
-		Subscribe: true,
-		Query:     query,
-		ClientFD:  clientFd,
-		CacheChan: cacheChannel,
+	var watchSubscription querywatcher.WatchSubscription
+
+	if httpOp {
+		watchSubscription = querywatcher.WatchSubscription{
+			Subscribe:          true,
+			Query:              query,
+			CacheChan:          cacheChannel,
+			QwatchClientChan:   client.HTTPQwatchResponseChan,
+			ClientIdentifierID: client.ClientIdentifierID,
+		}
+	} else {
+		watchSubscription = querywatcher.WatchSubscription{
+			Subscribe: true,
+			Query:     query,
+			ClientFD:  client.Fd,
+			CacheChan: cacheChannel,
+		}
 	}
 
+	querywatcher.WatchSubscriptionChan <- watchSubscription
 	store.CacheKeysForQuery(query.Where, cacheChannel)
 
 	// Return the result of the query.
@@ -2006,7 +2018,7 @@ func EvalQWATCH(args []string, clientFd int, store *dstore.Store) []byte {
 }
 
 // EvalQUNWATCH removes the specified key from the watch list for the caller client.
-func EvalQUNWATCH(args []string, clientFd int) []byte {
+func EvalQUNWATCH(args []string, httpOp bool, client *comm.Client) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("QUNWATCH")
 	}
@@ -2015,10 +2027,19 @@ func EvalQUNWATCH(args []string, clientFd int) []byte {
 		return clientio.Encode(e, false)
 	}
 
-	querywatcher.WatchSubscriptionChan <- querywatcher.WatchSubscription{
-		Subscribe: false,
-		Query:     query,
-		ClientFD:  clientFd,
+	if httpOp {
+		querywatcher.WatchSubscriptionChan <- querywatcher.WatchSubscription{
+			Subscribe:          false,
+			Query:              query,
+			QwatchClientChan:   client.HTTPQwatchResponseChan,
+			ClientIdentifierID: client.ClientIdentifierID,
+		}
+	} else {
+		querywatcher.WatchSubscriptionChan <- querywatcher.WatchSubscription{
+			Subscribe: false,
+			Query:     query,
+			ClientFD:  client.Fd,
+		}
 	}
 
 	return clientio.RespOK
@@ -3878,7 +3899,7 @@ func evalJSONNUMINCRBY(args []string, store *dstore.Store) []byte {
 }
 
 // evalJSONOBJKEYS retrieves the keys of a JSON object stored at path specified.
-// It takes two arguments: the key where the JSON document is stored, and an optional JSON path. 
+// It takes two arguments: the key where the JSON document is stored, and an optional JSON path.
 // It returns a list of keys from the object at the specified path or an error if the path is invalid.
 func evalJSONOBJKEYS(args []string, store *dstore.Store) []byte {
 	if len(args) < 1 {
@@ -3905,7 +3926,7 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) []byte {
 	}
 
 	jsonData := obj.Value
-	_,err := sonic.Marshal(jsonData)
+	_, err := sonic.Marshal(jsonData)
 	if err != nil {
 		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
 	}
@@ -3913,7 +3934,7 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) []byte {
 	// If path is root, return all keys of the entire JSON
 	if len(args) == 1 {
 		if utils.GetJSONFieldType(jsonData) == utils.ObjectType {
-			keys := make([]string,0)
+			keys := make([]string, 0)
 			for key := range jsonData.(map[string]interface{}) {
 				keys = append(keys, key)
 			}
@@ -3934,18 +3955,18 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) []byte {
 		return clientio.RespEmptyArray
 	}
 
-	keysList := make([]interface{},0,len(results))
+	keysList := make([]interface{}, 0, len(results))
 
 	for _, result := range results {
 		switch utils.GetJSONFieldType(result) {
-			case utils.ObjectType:
-				keys := make([]string, 0)
-				for key := range result.(map[string]interface{}) {
-					keys = append(keys, key)
-				}
-				keysList = append(keysList, keys)
-			default:
-				keysList = append(keysList, clientio.RespNIL)
+		case utils.ObjectType:
+			keys := make([]string, 0)
+			for key := range result.(map[string]interface{}) {
+				keys = append(keys, key)
+			}
+			keysList = append(keysList, keys)
+		default:
+			keysList = append(keysList, clientio.RespNIL)
 		}
 	}
 

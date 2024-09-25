@@ -8,7 +8,7 @@ import (
 
 type StoreOp struct {
 	SeqID     int16         // SeqID is the sequence id of the operation within a single request (optional, may be used for ordering)
-	RequestID int32         // RequestID identifies the request that this StoreOp belongs to
+	RequestID uint32        // RequestID identifies the request that this StoreOp belongs to
 	Cmd       *cmd.RedisCmd // Cmd is the atomic Store command (e.g., GET, SET)
 	ShardID   int           // ShardID of the shard on which the Store command will be executed
 	WorkerID  string        // WorkerID is the ID of the worker that sent this Store operation
@@ -18,6 +18,6 @@ type StoreOp struct {
 
 // StoreResponse represents the response of a Store operation.
 type StoreResponse struct {
-	RequestID    int32             // RequestID that this StoreResponse belongs to
+	RequestID    uint32            // RequestID that this StoreResponse belongs to
 	EvalResponse eval.EvalResponse // Result of the Store operation, for now the type is set to []byte, but this can change in the future.
 }

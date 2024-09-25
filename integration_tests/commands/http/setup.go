@@ -13,6 +13,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dicedb/dice/internal/querywatcher"
+
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/server"
 	"github.com/dicedb/dice/internal/shard"
@@ -48,35 +50,36 @@ type HTTPCommand struct {
 	Body    map[string]interface{}
 }
 
-func (e *HTTPCommandExecutor) FireCommand(cmd HTTPCommand) interface{} {
+func (e *HTTPCommandExecutor) FireCommand(cmd HTTPCommand) (interface{}, error) {
 	command := strings.ToUpper(cmd.Command)
 	body, err := json.Marshal(cmd.Body)
 
 	// Handle error during JSON marshaling
 	if err != nil {
-		return fmt.Sprintf("ERR failed to marshal command body: %v", err)
+		return nil, err
 	}
 
 	ctx := context.Background()
 	req, err := http.NewRequestWithContext(ctx, "POST", e.baseURL+"/"+command, bytes.NewBuffer(body))
 	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
+		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := e.httpClient.Do(req)
 
 	if err != nil {
-		return err.Error()
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	var result interface{}
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return result
+
+	return result, nil
 }
 
 func (e *HTTPCommandExecutor) Name() string {
@@ -89,17 +92,23 @@ func RunHTTPServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 
 	watchChan := make(chan dstore.WatchEvent, config.DiceConfig.Server.KeysLimit)
 	shardManager := shard.NewShardManager(1, watchChan, opt.Logger)
+	queryWatcherLocal := querywatcher.NewQueryManager(opt.Logger)
 	config.HTTPPort = opt.Port
-	// Initialize the AsyncServer
-	testServer := server.NewHTTPServer(shardManager, watchChan, opt.Logger)
+	// Initialize the HTTPServer
+	testServer := server.NewHTTPServer(shardManager, opt.Logger)
 	// Inform the user that the server is starting
 	fmt.Println("Starting the test server on port", config.HTTPPort)
-
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		shardManager.Run(shardManagerCtx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		queryWatcherLocal.Run(ctx, watchChan)
 	}()
 
 	// Start the server in a goroutine

@@ -93,13 +93,14 @@ func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 	workerChan, ok := shard.workerMap[op.WorkerID]
 	shard.workerMutex.RUnlock()
 
-	if ok {
-		workerChan <- &ops.StoreResponse{
-			RequestID:    op.RequestID,
-			EvalResponse: resp,
-		}
-	} else {
+	if !ok {
 		shard.errorChan <- &ShardError{shardID: shard.id, err: fmt.Errorf(diceerrors.WorkerNotFoundErr, op.WorkerID)}
+		return
+	}
+
+	workerChan <- &ops.StoreResponse{
+		RequestID:    op.RequestID,
+		EvalResponse: resp,
 	}
 }
 

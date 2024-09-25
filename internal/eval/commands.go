@@ -43,10 +43,11 @@ var (
 	}
 
 	pingCmdMeta = DiceCmdMeta{
-		Name:       "PING",
-		Info:       `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
-		Arity:      -1,
-		IsMigrated: true,
+		Name:  "PING",
+		Info:  `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
+		Arity: -1,
+		// TODO: Move this to true once compatible with HTTP server
+		IsMigrated: false,
 		Eval:       evalPING,
 	}
 
@@ -250,8 +251,8 @@ var (
 		Retrieves the keys of a JSON object stored at path specified.
 		Null reply: If the key doesn't exist or has expired.
 		Error reply: If the number of arguments is incorrect or the stored value is not a JSON type.`,
-		Eval:     evalJSONOBJKEYS,
-		Arity:    2,
+		Eval:  evalJSONOBJKEYS,
+		Arity: 2,
 	}
 	jsonarrpopCmdMeta = DiceCmdMeta{
 		Name: "JSON.ARRPOP",
@@ -601,8 +602,8 @@ var (
 	}
 	hsetnxCmdMeta = DiceCmdMeta{
 		Name: "HSETNX",
-		Info: `Sets field in the hash stored at key to value, only if field does not yet exist. 
-		If key does not exist, a new key holding a hash is created. If field already exists, 
+		Info: `Sets field in the hash stored at key to value, only if field does not yet exist.
+		If key does not exist, a new key holding a hash is created. If field already exists,
 		this operation has no effect.`,
 		Eval:     evalHSETNX,
 		Arity:    4,
