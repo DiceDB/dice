@@ -116,10 +116,6 @@ func getBitPos(byteSlice []byte, bitToFind byte, start, end int, rangeType strin
 		}
 
 		result = getBitPosWithBitRange(byteSlice, bitToFind, start, end)
-
-		if result > end {
-			return -1
-		}
 	}
 
 	// Special case: if we're looking for a 0 bit, didn't find it,
