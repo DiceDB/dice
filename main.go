@@ -72,7 +72,7 @@ func main() {
 
 	// Initialize the AsyncServer
 	asyncServer := server.NewAsyncServer(shardManager, watchChan, logr)
-	httpServer := server.NewHTTPServer(shardManager, watchChan, logr)
+	httpServer := server.NewHTTPServer(shardManager, logr)
 
 	// Initialize the HTTP server
 

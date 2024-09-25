@@ -176,38 +176,3 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 		}
 	}()
 }
-
-func RunHTTPServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOptions, serverReady chan struct{}) {
-	config.DiceConfig.Network.IOBufferLength = 16
-	config.DiceConfig.Server.WriteAOFOnCleanup = false
-
-	watchChan := make(chan dstore.WatchEvent, config.DiceConfig.Server.KeysLimit)
-	shardManager := shard.NewShardManager(1, watchChan, opt.Logger)
-	config.HTTPPort = opt.Port
-
-	// Initialize the AsyncServer
-	testServer := server.NewHTTPServer(shardManager, watchChan, opt.Logger)
-	fmt.Println("Starting the test server on port", config.HTTPPort)
-
-	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		shardManager.Run(shardManagerCtx)
-	}()
-
-	// Start the server in a goroutine
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		close(serverReady) // Signal that the server is ready
-		if err := testServer.Run(ctx); err != nil {
-			if errors.Is(err, server.ErrAborted) {
-				cancelShardManager()
-				return
-			}
-			slog.Error("HTTP test server encountered an error", slog.Any("error:", err))
-			os.Exit(1)
-		}
-	}()
-}

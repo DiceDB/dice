@@ -95,7 +95,7 @@ func RunHTTPServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	queryWatcherLocal := querywatcher.NewQueryManager(opt.Logger)
 	config.HTTPPort = opt.Port
 	// Initialize the HTTPServer
-	testServer := server.NewHTTPServer(shardManager, watchChan, opt.Logger)
+	testServer := server.NewHTTPServer(shardManager, opt.Logger)
 	// Inform the user that the server is starting
 	fmt.Println("Starting the test server on port", config.HTTPPort)
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
