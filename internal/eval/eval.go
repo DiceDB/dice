@@ -2964,7 +2964,6 @@ func evalHGET(args []string, store *dstore.Store) []byte {
 	return val
 }
 
-<<<<<<< HEAD
 func evalHDEL(args []string, store *dstore.Store) []byte {
 	if len(args) < 2 {
 		return diceerrors.NewErrArity("HDEL")
@@ -2998,7 +2997,6 @@ func evalHDEL(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(count, false)
 }
 
-=======
 func evalHVALS(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("HVALS")
@@ -3025,8 +3023,6 @@ func evalHVALS(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(results, false)
 }
 
-
->>>>>>> hvals
 // evalHSTRLEN returns the length of value associated with field in the hash stored at key.
 //
 // This command returns 0, if the specified field doesn't exist in the key
