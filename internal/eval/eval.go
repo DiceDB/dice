@@ -4530,7 +4530,7 @@ func evalBITFIELD(args []string, store *dstore.Store) []byte {
 			}
 			switch strings.ToUpper(args[i+1]) {
 			case "WRAP", "SAT", "FAIL":
-				overflowType = args[i+1]
+				overflowType = strings.ToUpper(args[i+1])
 			default:
 				return diceerrors.NewErrWithFormattedMessage("Invalid OVERFLOW type specified")
 			}

@@ -270,14 +270,9 @@ func (b *ByteArray) incrByBits(offset, width int, increment int64, overflow stri
 	switch overflow {
 	case "WRAP":
 		if signed {
-			// Handle signed wrap
-			if newValue > maxVal {
-				newValue = minVal + (newValue - maxVal - 1)
-			} else if newValue < minVal {
-				newValue = maxVal - (minVal - newValue - 1)
-			}
+			rangeSize := maxVal - minVal + 1
+			newValue = ((newValue-minVal)%rangeSize+rangeSize)%rangeSize + minVal
 		} else {
-			// Handle unsigned wrap
 			newValue %= maxVal + 1
 		}
 	case "SAT":
