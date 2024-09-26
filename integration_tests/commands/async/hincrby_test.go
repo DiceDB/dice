@@ -10,6 +10,8 @@ func TestHINCRBY(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 
+	defer FireCommand(conn, "FLUSHDB")
+
 	testcases := []TestCase{
 		{
 			name:     "HINCRBY Wrong number of arguments provided",
@@ -70,11 +72,6 @@ func TestHINCRBY(t *testing.T) {
 			name:     "HINCRBY should give integer error when trying to increment a key which is not a hash value with a value which is not integer",
 			commands: []string{"SET key value", "HINCRBY key value ten"},
 			expected: []interface{}{"OK", "ERR value is not an integer or out of range"},
-		},
-		{
-			name:     "Cleaning up the db",
-			commands: []string{"FLUSHDB"},
-			expected: []interface{}{"OK"},
 		},
 	}
 
