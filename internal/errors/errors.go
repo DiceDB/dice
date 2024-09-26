@@ -25,6 +25,7 @@ const (
 	JSONPathNotExistErr  = "-ERR Path '%s' does not exist"
 	JSONPathValueTypeErr = "-WRONGTYPE wrong type of path value - expected string but found integer"
 	InvalidExpireTime    = "-ERR invalid expire time"
+	HashValueNotIntegerErr = "hash value is not an integer"
 	InternalServerError  = "-ERR: Internal server error, unable to process command"
 )
 
