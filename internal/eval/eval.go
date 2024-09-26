@@ -3407,3 +3407,39 @@ func evalJSONSTRAPPEND(args []string, store *dstore.Store) []byte {
 	obj.Value = jsonData
 	return clientio.Encode(resultsArray, false)
 }
+
+func evalLINSERT(args []string, store *dstore.Store) []byte {
+	if len(args) != 4 {
+		return clientio.Encode(errors.New("wrong number of arguments for LINSERT"), false)
+	}
+
+	key := args[0]
+	beforeAfter := strings.ToLower(args[1])
+	pivot := args[2]
+	element := args[3]
+
+	obj := store.Get(key)
+	if obj == nil {
+		return clientio.RespZero
+	}
+
+	// if object is a set type, return error
+	if object.AssertType(obj.TypeEncoding, object.ObjTypeSet) == nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeByteList); err != nil {
+		return clientio.Encode(err, false)
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingDeque); err != nil {
+		return clientio.Encode(err, false)
+	}
+
+	q := obj.Value.(*Deque)
+	res, err := q.LInsert(pivot, element, beforeAfter)
+	if err != nil {
+		return clientio.Encode(err, false)
+	}
+	return clientio.Encode(res, false)
+}
