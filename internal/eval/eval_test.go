@@ -3511,8 +3511,8 @@ func testEvalHSETNX(t *testing.T, store *dstore.Store) {
 			output: []byte("-ERR wrong number of arguments for 'hsetnx' command\r\n"),
 		},
 		"more than one field and value passed": {
-			setup: func() {},
-			input: []string{"KEY", "field1", "value1", "field2", "value2"},
+			setup:  func() {},
+			input:  []string{"KEY", "field1", "value1", "field2", "value2"},
 			output: []byte("-ERR wrong number of arguments for 'hsetnx' command\r\n"),
 		},
 		"key, field and value passed": {
@@ -4065,7 +4065,7 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 			validator: func(output []byte) {
 				assert.Assert(t, output != nil)
 				decodedResult := string(output)
-				fieldsAndValues := []string{"field1", "value1", "field2", "value2", "field3", "value3"} // corrected "valeu3" to "value3"
+				fieldsAndValues := []string{"field1", "value1", "field2", "value2", "field3", "value3"}
 				count := 0
 				for _, item := range fieldsAndValues {
 					if strings.Contains(decodedResult, item) {
