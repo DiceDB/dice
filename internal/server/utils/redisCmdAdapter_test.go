@@ -154,6 +154,14 @@ func TestParseHTTPRequest(t *testing.T) {
 			expectedCmd:  "JSON.INGEST",
 			expectedArgs: []string{"gmtr_", "$..field", `{"field":"value"}`},
 		},
+		{
+			name:         "Test QWATCH command",
+			method:       "POST",
+			url:          "/qwatch",
+			body:         `{"query": "SELECT $key, $value WHERE $key LIKE \"player:*\" AND \"$value.score\" > 10 ORDER BY $value.score DESC LIMIT 5"}`,
+			expectedCmd:  "QWATCH",
+			expectedArgs: []string{"SELECT $key, $value WHERE $key LIKE \"player:*\" AND \"$value.score\" > 10 ORDER BY $value.score DESC LIMIT 5"},
+		},
 	}
 
 	for _, tc := range commands {

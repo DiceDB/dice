@@ -5,6 +5,7 @@ package eval
 import (
 	"syscall"
 
+	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -20,13 +21,27 @@ func EvalBGREWRITEAOF(args []string, store *dstore.Store) []byte {
 	// This technique utilizes the CoW or copy-on-write, so while the main process is free to modify them
 	// the child would save all the pages to disk.
 	// Check details here -https://www.sobyte.net/post/2022-10/fork-cow/
-	pid, _, err := syscall.RawSyscall(syscall.SYS_FORK, 0, 0, 0)
+	// TODO: Fix this to work with the threading
+	// TODO: Problem at hand: In multi-threaded environment, each shard instance would fork a child process.
+	// TODO: Each child process would now have a copy of the network file descriptor thus resulting in resource leaks.
+	// TODO: We need to find an alternative approach for the multi-threaded environment.
+	if config.EnableMultiThreading {
+		return nil
+	}
+
+	// Get the original PID (Process ID) - This is needed to check if we are in child process or not.
+	// The document approach is to check the return value of fork (it's 0 for child and non-zero for parent) but this is more reliable.
+	// For more details check - https://github.com/DiceDB/dice/issues/683
+	originalPID := syscall.Getpid()
+	_, _, err := syscall.RawSyscall(syscall.SYS_FORK, 0, 0, 0)
 
 	if err != 0 {
 		return diceerrors.NewErrWithMessage("Fork failed")
 	}
 
-	if pid == 0 {
+	isChild := syscall.Getppid() == originalPID
+
+	if isChild {
 		// We are inside child process now, so we'll start flushing to disk.
 		if err := dstore.DumpAllAOF(store); err != nil {
 			return diceerrors.NewErrWithMessage("AOF failed")

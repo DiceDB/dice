@@ -12,18 +12,19 @@ import (
 )
 
 const (
-	Key       = "key"
-	Keys      = "keys"
-	KeyPrefix = "key_prefix"
-	Field     = "field"
-	Path      = "path"
-	Value     = "value"
-	Values    = "values"
-	User      = "user"
-	Password  = "password"
-	Seconds   = "seconds"
-	KeyValues = "key_values"
-	True      = "true"
+	Key         = "key"
+	Keys        = "keys"
+	KeyPrefix   = "key_prefix"
+	Field       = "field"
+	Path        = "path"
+	Value       = "value"
+	Values      = "values"
+	User        = "user"
+	Password    = "password"
+	Seconds     = "seconds"
+	KeyValues   = "key_values"
+	True        = "true"
+	QwatchQuery = "query"
 )
 
 func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
@@ -55,9 +56,13 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 				return nil, err
 			}
 
+			if len(jsonBody) == 0 {
+				return nil, fmt.Errorf("empty JSON object")
+			}
+
 			// Define keys to exclude and process their values first
 			// Update as we support more commands
-			var priorityKeys = [10]string{
+			var priorityKeys = [11]string{
 				Key,
 				Keys,
 				Field,
@@ -68,6 +73,7 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 				User,
 				Password,
 				KeyValues,
+				QwatchQuery,
 			}
 			for _, key := range priorityKeys {
 				if val, exists := jsonBody[key]; exists {
