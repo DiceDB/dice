@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -18,6 +19,11 @@ const (
 	DefaultPort           int    = 7379
 	DefaultConfigName     string = "dice.toml"
 	DefaultConfigFilePath string = "./"
+	DefaultSSLMode        bool   = false
+	DefaultCertFile       string = "./dice.crt"
+	DefaultKeyFile        string = "./dice.key"
+	DefaultSecureHttpPort int    = 8083
+	DefaultSecureRespPort int    = 7340
 
 	EvictSimpleFirst   = "simple-first"
 	EvictAllKeysRandom = "allkeys-random"
@@ -32,6 +38,10 @@ var (
 	EnableMultiThreading = false
 	EnableHTTP           = true
 	HTTPPort             = 8082
+	// Secure Connection
+	InitSecureMode = DefaultSSLMode
+	HttpsPort      = DefaultSecureHttpPort
+	RespsPort      = DefaultSecureRespPort
 	// if RequirePass is set to an empty string, no authentication is required
 	RequirePass = utils.EmptyStr
 
@@ -71,6 +81,13 @@ type Config struct {
 		IOBufferLength    int `mapstructure:"iobufferlength"`
 		IOBufferLengthMAX int `mapstructure:"iobufferlengthmax"`
 	} `mapstructure:"network"`
+	Security struct {
+		HttpsPort          int    `mapstructure:"httpsport"`
+		RespsPort          int    `mapstructure:"respsport"`
+		SSLMode            bool   `mapstructure:"sslmode"`
+		SSLKeyFile         string `mapstructure:"sslkeyfile"`
+		SSLCertificateFile string `mapstructure:"sslcertfile"`
+	} `mapstructure:"security"`
 }
 
 // Default configurations for internal use
@@ -129,6 +146,19 @@ var baseConfig = Config{
 	}{
 		IOBufferLength:    512,
 		IOBufferLengthMAX: 50 * 1024,
+	},
+	Security: struct {
+		HttpsPort          int    `mapstructure:"httpsport"`
+		RespsPort          int    `mapstructure:"respsport"`
+		SSLMode            bool   `mapstructure:"sslmode"`
+		SSLKeyFile         string `mapstructure:"sslkeyfile"`
+		SSLCertificateFile string `mapstructure:"sslcertfile"`
+	}{
+		SSLMode:            DefaultSSLMode,
+		HttpsPort:          DefaultSecureHttpPort,
+		RespsPort:          DefaultSecureRespPort,
+		SSLCertificateFile: DefaultCertFile,
+		SSLKeyFile:         DefaultKeyFile,
 	},
 }
 
@@ -266,6 +296,8 @@ func setUpViperConfig(configFilePath string) {
 		return
 	}
 
+	fmt.Println("dice-config", DiceConfig)
+
 	// override default configurations with command line flags
 	mergeFlagsWithConfig()
 
@@ -281,9 +313,20 @@ func mergeFlagsWithConfig() {
 		DiceConfig.Server.Addr = Host
 	}
 
-	if Port != DefaultPort {
-		DiceConfig.Server.Port = Port
+	// Listen on secure port if server is started in secure-mode.
+	if InitSecureMode {
+		DiceConfig.Server.Port = RespsPort
+		HTTPPort = HttpsPort
+
+		if RespsPort != DefaultSecureRespPort {
+			DiceConfig.Server.Port = RespsPort
+		}
+	} else {
+		if Port != DefaultPort {
+			DiceConfig.Server.Port = Port
+		}
 	}
+
 }
 
 // This function checks if the config file is present or not at ConfigFileLocation

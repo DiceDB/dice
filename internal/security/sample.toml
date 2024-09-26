@@ -1,0 +1,32 @@
+[Server]
+Addr = '0.0.0.0'
+Port = 7379
+KeepAlive = 300
+Timeout = 300
+MaxConn = 0
+ShardCronFrequency = 1000000000
+MultiplexerPollTimeout = 100000000
+MaxClients = 20000
+MaxMemory = 0
+EvictionPolicy = 'allkeys-lru'
+EvictionRatio = 0.4
+KeysLimit = 10000
+AOFFile = './dice-master.aof'
+PersistenceEnabled = true
+WriteAOFOnCleanup = false
+
+[Auth]
+UserName = 'dice'
+Password = ''
+
+[Network]
+IOBufferLength = 512
+IOBufferLengthMAX = 51200
+
+
+[TLS]
+SSLMode=false # default value
+HTTPSPort=8083 # default value
+RESPsPort=7340 # default value
+SSLCertFile='dice.crt' # default value
+SSLKeyFile='dice.key' # default value.

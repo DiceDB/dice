@@ -31,6 +31,9 @@ func init() {
 	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the config file")
 	flag.StringVar(&config.ConfigFileLocation, "c", config.ConfigFileLocation, "file path of the config file")
 	flag.BoolVar(&config.InitConfigCmd, "init-config", false, "initialize a new config file")
+	flag.BoolVar(&config.InitSecureMode, "secure", false, "initialize server in secure mode")
+	flag.IntVar(&config.HttpsPort, "https-port", 8084, "Port for https communication.")
+	flag.IntVar(&config.RespsPort, "secure-port", 7340, "Port for secure RESP communication.")
 	flag.Parse()
 
 	config.SetupConfig()
