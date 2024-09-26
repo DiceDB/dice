@@ -3053,6 +3053,33 @@ func evalHDEL(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(count, false)
 }
 
+// evalHKEYS returns all the values in the hash stored at key.
+func evalHVALS(args []string, store *dstore.Store) []byte {
+	if len(args) != 1 {
+		return diceerrors.NewErrArity("HVALS")
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	if obj == nil {
+		return clientio.Encode([]string{}, false) // Return an empty array for non-existent keys
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+	}
+
+	hashMap := obj.Value.(HashMap)
+	results := make([]string, 0, len(hashMap))
+
+	for _, value := range hashMap {
+		results = append(results, value)
+	}
+
+	return clientio.Encode(results, false)
+}
+
 // evalHSTRLEN returns the length of value associated with field in the hash stored at key.
 //
 // This command returns 0, if the specified field doesn't exist in the key

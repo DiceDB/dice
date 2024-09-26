@@ -2079,6 +2079,42 @@ func testEvalHMGET(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalHMGET, store)
 }
 
+func testEvalHVALS(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"wrong number of args passed": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'hvals' command\r\n"),
+		},
+		"key doesn't exists": {
+			setup:  func() {},
+			input:  []string{"KEY"},
+			output: clientio.RespNIL,
+		},
+		"key exists": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field := "mock_field_name"
+				field_1 := "mock_field_name_1"
+				newMap := make(HashMap)
+				newMap[field] = "mock_field_value"
+				newMap[field_1] = "mock_field_value_1"
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input:  []string{"KEY_MOCK"},
+			output: clientio.Encode([]string{"mock_field_value", "mock_field_value_1"}, false),
+		},
+	}
+
+	runEvalTests(t, tests, evalHVALS, store)
+}
 func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"wrong number of args passed": {

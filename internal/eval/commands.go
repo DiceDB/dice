@@ -633,6 +633,13 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hValsCmdMeta = DiceCmdMeta{
+		Name:     "HVALS",
+		Info:     `Returns all values of the hash stored at key. The length of the reply is same as the size of the hash.`,
+		Eval:     evalHVALS,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	hstrLenCmdMeta = DiceCmdMeta{
 		Name:     "HSTRLEN",
 		Info:     `Returns the length of value associated with field in the hash stored at key.`,
@@ -1020,6 +1027,7 @@ func init() {
 	DiceCmds["SETEX"] = setexCmdMeta
 	DiceCmds["HRANDFIELD"] = hrandfieldCmdMeta
 	DiceCmds["HDEL"] = hdelCmdMeta
+	DiceCmds["HVALS"] = hValsCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}
