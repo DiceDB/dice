@@ -6,7 +6,6 @@ require gotest.tools/v3 v3.5.1
 
 require (
 	github.com/bytedance/sonic/loader v0.2.0 // indirect
-	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
@@ -41,6 +40,7 @@ require (
 require (
 	github.com/axiomhq/hyperloglog v0.2.0
 	github.com/bytedance/sonic v1.12.1
+	github.com/cespare/xxhash/v2 v2.2.0
 	github.com/cockroachdb/swiss v0.0.0-20240612210725-f4de07ae6964
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13
 	github.com/dicedb/go-dice v0.0.0-20240820180649-d97f15fca831

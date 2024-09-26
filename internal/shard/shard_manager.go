@@ -2,13 +2,13 @@ package shard
 
 import (
 	"context"
-	"log"
 	"log/slog"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 
+	"github.com/cespare/xxhash/v2"
 	"github.com/dicedb/dice/internal/ops"
 	dstore "github.com/dicedb/dice/internal/store"
 )
@@ -19,28 +19,32 @@ type ShardManager struct {
 	// concurrently without synchronization.
 	shards          []*ShardThread
 	shardReqMap     map[ShardID]chan *ops.StoreOp // shardReqMap is a map of shard id to its respective request channel
-	globalErrorChan chan *ShardError              // globalErrorChan is the common global error channel for all Shards
+	globalErrorChan chan error                    // globalErrorChan is the common global error channel for all Shards
+	ShardErrorChan  chan *ShardError              // ShardErrorChan is the channel for sending shard-level errors
 	sigChan         chan os.Signal                // sigChan is the signal channel for the shard manager
+	shardCount      uint8                         // shardCount is the number of shards managed by this manager
 }
 
 // NewShardManager creates a new ShardManager instance with the given number of Shards and a parent context.
-func NewShardManager(shardCount int8, watchChan chan dstore.WatchEvent, logger *slog.Logger) *ShardManager {
+func NewShardManager(shardCount uint8, watchChan chan dstore.WatchEvent, globalErrorChan chan error, logger *slog.Logger) *ShardManager {
 	shards := make([]*ShardThread, shardCount)
 	shardReqMap := make(map[ShardID]chan *ops.StoreOp)
-	globalErrorChan := make(chan *ShardError)
+	shardErrorChan := make(chan *ShardError)
 
-	for i := int8(0); i < shardCount; i++ {
+	for i := uint8(0); i < shardCount; i++ {
 		// Shards are numbered from 0 to shardCount-1
-		shard := NewShardThread(ShardID(i), globalErrorChan, watchChan, logger)
+		shard := NewShardThread(i, globalErrorChan, shardErrorChan, watchChan, logger)
 		shards[i] = shard
-		shardReqMap[ShardID(i)] = shard.ReqChan
+		shardReqMap[i] = shard.ReqChan
 	}
 
 	return &ShardManager{
 		shards:          shards,
 		shardReqMap:     shardReqMap,
 		globalErrorChan: globalErrorChan,
+		ShardErrorChan:  shardErrorChan,
 		sigChan:         make(chan os.Signal, 1),
+		shardCount:      shardCount,
 	}
 }
 
@@ -57,7 +61,6 @@ func (manager *ShardManager) Run(ctx context.Context) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		manager.listenForErrors()
 	}()
 
 	select {
@@ -67,8 +70,8 @@ func (manager *ShardManager) Run(ctx context.Context) {
 		// OS signal received, trigger shutdown
 	}
 
-	close(manager.globalErrorChan) // Close the error channel after all Shards stop
-	wg.Wait()                      // Wait for all shard goroutines to exit.
+	close(manager.ShardErrorChan) // Close the error channel after all Shards stop
+	wg.Wait()                     // Wait for all shard goroutines to exit.
 }
 
 // start initializes and starts the shard threads.
@@ -84,17 +87,15 @@ func (manager *ShardManager) start(ctx context.Context, wg *sync.WaitGroup) {
 	}
 }
 
-// listenForErrors listens to the global error channel and logs the errors. It exits when the error channel is closed.
-func (manager *ShardManager) listenForErrors() {
-	for err := range manager.globalErrorChan {
-		// Handle or log shard errors here
-		log.Printf("Shard %d error: %v", err.shardID, err.err)
-	}
+func (manager *ShardManager) GetShardInfo(key string) (id ShardID, c chan *ops.StoreOp) {
+	hash := xxhash.Sum64String(key)
+	id = ShardID(hash % uint64(manager.GetShardCount()))
+	return id, manager.GetShard(id).ReqChan
 }
 
 // GetShardCount returns the number of shards managed by this ShardManager.
-func (manager *ShardManager) GetShardCount() int {
-	return len(manager.shards)
+func (manager *ShardManager) GetShardCount() int8 {
+	return int8(len(manager.shards))
 }
 
 // GetShard returns the ShardThread for the given ShardID.

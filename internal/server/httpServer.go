@@ -12,14 +12,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dicedb/dice/internal/comm"
-
+	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/cmd"
-	"github.com/dicedb/dice/internal/server/utils"
-
-	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/internal/comm"
+	derrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/ops"
+	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/shard"
 )
 
@@ -100,7 +99,7 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 		case <-s.shutdownChan:
-			err = ErrAborted
+			err = derrors.ErrAborted
 			s.logger.Debug("Shutting down HTTP Server")
 		}
 
