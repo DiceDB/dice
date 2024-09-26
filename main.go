@@ -25,7 +25,7 @@ func init() {
 	flag.StringVar(&config.Host, "host", "0.0.0.0", "host for the dice server")
 	flag.IntVar(&config.Port, "port", 7379, "port for the dice server")
 	flag.BoolVar(&config.EnableHTTP, "enable-http", true, "run server in HTTP mode as well")
-	flag.BoolVar(&config.EnableMultiThreading, "enable-multithreading", false, "run server in multithreading mode")
+	flag.BoolVar(&config.EnableMultiThreading, "enable-multithreading", true, "run server in multithreading mode")
 	flag.IntVar(&config.HTTPPort, "http-port", 8082, "HTTP port for the dice server")
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
 	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the config file")
