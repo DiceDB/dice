@@ -633,6 +633,15 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hincrbyCmdMeta = DiceCmdMeta{
+		Name: "HINCRBY",
+		Info: `Increments the number stored at field in the hash stored at key by increment.
+		If key does not exist, a new key holding a hash is created.
+		If field does not exist the value is set to 0 before the operation is performed.`,
+		Eval:     evalHINCRBY,
+		Arity:    -4,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	hstrLenCmdMeta = DiceCmdMeta{
 		Name:     "HSTRLEN",
 		Info:     `Returns the length of value associated with field in the hash stored at key.`,
@@ -1014,6 +1023,7 @@ func init() {
 	DiceCmds["SELECT"] = selectCmdMeta
 	DiceCmds["JSON.NUMINCRBY"] = jsonnumincrbyCmdMeta
 	DiceCmds["TYPE"] = typeCmdMeta
+	DiceCmds["HINCRBY"] = hincrbyCmdMeta
 	DiceCmds["INCRBY"] = incrbyCmdMeta
 	DiceCmds["GETRANGE"] = getRangeCmdMeta
 	DiceCmds["SETEX"] = setexCmdMeta
