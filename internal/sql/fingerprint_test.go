@@ -281,6 +281,15 @@ func TestGenerateFingerprintAndParseAstExpression(t *testing.T) {
 			fingerprint: "f_5313097907453016110",
 		},
 		{
+			name: "expression with exactly 1 term, multiple AND OR (Idempotent law)",
+			similarExpr: []string{
+				"_value > 10 AND _value > 10 OR _value > 10 AND _value > 10",
+				"_value > 10",
+			},
+			expression:  ">_value10",
+			fingerprint: "f_11845737393789912467",
+		},
+		{
 			name: "Expression in form 'A AND (B OR C)' which can reduce to 'A AND B OR A AND C' etc (or Distributive law)",
 			similarExpr: []string{
 				"(_key LIKE 'test:*') AND (_value > 10 OR _value < 5)",
