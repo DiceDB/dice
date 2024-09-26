@@ -21,11 +21,14 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+const Qwatch = "QWATCH"
+const Qunwatch = "Qunwatch"
+const Subscribe = "Subscribe"
+
 var unimplementedCommandsWebsocket map[string]bool = map[string]bool{
-	"QWATCH":    true,
-	"QUNWATCH":  true,
-	"SUBSCRIBE": true,
-	Abort:       false,
+	Qwatch:    true,
+	Qunwatch:  true,
+	Subscribe: true,
 }
 
 type WebsocketServer struct {
