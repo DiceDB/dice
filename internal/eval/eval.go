@@ -2524,6 +2524,9 @@ func evalCommandList() []byte {
 	cmds := make([]string, 0, diceCommandsCount)
 	for k := range DiceCmds {
 		cmds = append(cmds, k)
+		for _, sc := range DiceCmds[k].SubCommands {
+			cmds = append(cmds, fmt.Sprint(k, "|", sc))
+		}
 	}
 	return clientio.Encode(cmds, false)
 }
