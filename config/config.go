@@ -22,7 +22,7 @@ const (
 	DefaultSSLMode        bool   = false
 	DefaultCertFile       string = "./dice.crt"
 	DefaultKeyFile        string = "./dice.key"
-	DefaultSecureHttpPort int    = 8083
+	DefaultSecureHTTPPort int    = 8083
 	DefaultSecureRespPort int    = 7340
 
 	EvictSimpleFirst   = "simple-first"
@@ -40,7 +40,7 @@ var (
 	HTTPPort             = 8082
 	// Secure Connection
 	InitSecureMode = DefaultSSLMode
-	HttpsPort      = DefaultSecureHttpPort
+	HTTPSPort      = DefaultSecureHTTPPort
 	RespsPort      = DefaultSecureRespPort
 	// if RequirePass is set to an empty string, no authentication is required
 	RequirePass = utils.EmptyStr
@@ -82,7 +82,7 @@ type Config struct {
 		IOBufferLengthMAX int `mapstructure:"iobufferlengthmax"`
 	} `mapstructure:"network"`
 	Security struct {
-		HttpsPort          int    `mapstructure:"httpsport"`
+		HTTPSPort          int    `mapstructure:"httpsport"`
 		RespsPort          int    `mapstructure:"respsport"`
 		SSLMode            bool   `mapstructure:"sslmode"`
 		SSLKeyFile         string `mapstructure:"sslkeyfile"`
@@ -148,14 +148,14 @@ var baseConfig = Config{
 		IOBufferLengthMAX: 50 * 1024,
 	},
 	Security: struct {
-		HttpsPort          int    `mapstructure:"httpsport"`
+		HTTPSPort          int    `mapstructure:"httpsport"`
 		RespsPort          int    `mapstructure:"respsport"`
 		SSLMode            bool   `mapstructure:"sslmode"`
 		SSLKeyFile         string `mapstructure:"sslkeyfile"`
 		SSLCertificateFile string `mapstructure:"sslcertfile"`
 	}{
 		SSLMode:            DefaultSSLMode,
-		HttpsPort:          DefaultSecureHttpPort,
+		HTTPSPort:          DefaultSecureHTTPPort,
 		RespsPort:          DefaultSecureRespPort,
 		SSLCertificateFile: DefaultCertFile,
 		SSLKeyFile:         DefaultKeyFile,
@@ -316,17 +316,14 @@ func mergeFlagsWithConfig() {
 	// Listen on secure port if server is started in secure-mode.
 	if InitSecureMode {
 		DiceConfig.Server.Port = RespsPort
-		HTTPPort = HttpsPort
+		HTTPPort = HTTPSPort
 
 		if RespsPort != DefaultSecureRespPort {
 			DiceConfig.Server.Port = RespsPort
 		}
-	} else {
-		if Port != DefaultPort {
-			DiceConfig.Server.Port = Port
-		}
+	} else if Port != DefaultPort {
+		DiceConfig.Server.Port = Port
 	}
-
 }
 
 // This function checks if the config file is present or not at ConfigFileLocation
