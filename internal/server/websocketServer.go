@@ -12,6 +12,7 @@ import (
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
+	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/ops"
 	"github.com/dicedb/dice/internal/querywatcher"
 	"github.com/dicedb/dice/internal/server/utils"
@@ -86,7 +87,7 @@ func (s *WebsocketServer) Run(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 		case <-s.shutdownChan:
-			err = ErrAborted
+			err = diceerrors.ErrAborted
 			s.logger.Debug("Shutting down Websocket Server")
 		}
 

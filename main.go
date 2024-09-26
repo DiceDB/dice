@@ -184,6 +184,7 @@ func main() {
 		}()
 	}
 
+	websocketServer := server.NewWebSocketServer(shardManager, watchChan, logr)
 	serverWg.Add(1)
 	go func() {
 		defer serverWg.Done()
@@ -192,7 +193,7 @@ func main() {
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				logr.Debug("Websocket Server was canceled")
-			} else if errors.Is(err, server.ErrAborted) {
+			} else if errors.Is(err, diceerrors.ErrAborted) {
 				logr.Debug("Websocket received abort command")
 			} else {
 				logr.Error("Websocket Server error", "error", err)
