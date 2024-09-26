@@ -1964,7 +1964,7 @@ func evalMULTI(args []string, store *dstore.Store) []byte {
 // Every time a key in the watch list is modified, the client will be sent a response
 // containing the new value of the key along with the operation that was performed on it.
 // Contains only one argument, the query to be watched.
-func EvalQWATCH(args []string, clientFd int, store *dstore.Store) []byte {
+func EvalQWATCH(args []string, httpOp bool, client *comm.Client, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("QWATCH")
 	}
@@ -1981,13 +1981,26 @@ func EvalQWATCH(args []string, clientFd int, store *dstore.Store) []byte {
 		Key   string
 		Value *object.Obj
 	})
-	querywatcher.WatchSubscriptionChan <- querywatcher.WatchSubscription{
-		Subscribe: true,
-		Query:     query,
-		ClientFD:  clientFd,
-		CacheChan: cacheChannel,
+	var watchSubscription querywatcher.WatchSubscription
+
+	if httpOp {
+		watchSubscription = querywatcher.WatchSubscription{
+			Subscribe:          true,
+			Query:              query,
+			CacheChan:          cacheChannel,
+			QwatchClientChan:   client.HTTPQwatchResponseChan,
+			ClientIdentifierID: client.ClientIdentifierID,
+		}
+	} else {
+		watchSubscription = querywatcher.WatchSubscription{
+			Subscribe: true,
+			Query:     query,
+			ClientFD:  client.Fd,
+			CacheChan: cacheChannel,
+		}
 	}
 
+	querywatcher.WatchSubscriptionChan <- watchSubscription
 	store.CacheKeysForQuery(query.Where, cacheChannel)
 
 	// Return the result of the query.
@@ -2007,7 +2020,7 @@ func EvalQWATCH(args []string, clientFd int, store *dstore.Store) []byte {
 }
 
 // EvalQUNWATCH removes the specified key from the watch list for the caller client.
-func EvalQUNWATCH(args []string, clientFd int) []byte {
+func EvalQUNWATCH(args []string, httpOp bool, client *comm.Client) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("QUNWATCH")
 	}
@@ -2016,10 +2029,19 @@ func EvalQUNWATCH(args []string, clientFd int) []byte {
 		return clientio.Encode(e, false)
 	}
 
-	querywatcher.WatchSubscriptionChan <- querywatcher.WatchSubscription{
-		Subscribe: false,
-		Query:     query,
-		ClientFD:  clientFd,
+	if httpOp {
+		querywatcher.WatchSubscriptionChan <- querywatcher.WatchSubscription{
+			Subscribe:          false,
+			Query:              query,
+			QwatchClientChan:   client.HTTPQwatchResponseChan,
+			ClientIdentifierID: client.ClientIdentifierID,
+		}
+	} else {
+		querywatcher.WatchSubscriptionChan <- querywatcher.WatchSubscription{
+			Subscribe: false,
+			Query:     query,
+			ClientFD:  client.Fd,
+		}
 	}
 
 	return clientio.RespOK

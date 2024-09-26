@@ -1,8 +1,8 @@
-package server
+package worker
 
 // Gather file is used by Worker to collect and process responses
 // from multiple shards. For commands that are executed across
-// several shards (e.g., Multishard commands), a Gather function
+// several shards (e.g., MultiShard commands), a Gather function
 // is responsible for aggregating the results.
 //
 // Each Gather function takes input in the form of shard responses,

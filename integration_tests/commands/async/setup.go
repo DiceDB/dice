@@ -11,13 +11,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dicedb/dice/internal/shard"
-
-	"github.com/dicedb/dice/internal/clientio"
-
-	"github.com/dicedb/dice/internal/server"
-
 	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/internal/clientio"
+	derrors "github.com/dicedb/dice/internal/errors"
+	"github.com/dicedb/dice/internal/server"
+	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dice/testutils"
 	redis "github.com/dicedb/go-dice"
@@ -121,7 +119,8 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	const totalRetries = 100
 	var err error
 	watchChan := make(chan dstore.WatchEvent, config.DiceConfig.Server.KeysLimit)
-	shardManager := shard.NewShardManager(1, watchChan, opt.Logger)
+	gec := make(chan error)
+	shardManager := shard.NewShardManager(1, watchChan, gec, opt.Logger)
 	// Initialize the AsyncServer
 	testServer := server.NewAsyncServer(shardManager, watchChan, opt.Logger)
 
@@ -167,7 +166,7 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	go func() {
 		defer wg.Done()
 		if err := testServer.Run(ctx); err != nil {
-			if errors.Is(err, server.ErrAborted) {
+			if errors.Is(err, derrors.ErrAborted) {
 				cancelShardManager()
 				return
 			}

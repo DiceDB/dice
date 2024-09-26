@@ -143,7 +143,6 @@ func (session *Session) Validate(username, password string) error {
 	return fmt.Errorf("WRONGPASS invalid username-password pair or user is disabled")
 }
 
-func (session *Session) Expire() (err error) {
+func (session *Session) Expire() {
 	session.Status = SessionStatusExpired
-	return
 }

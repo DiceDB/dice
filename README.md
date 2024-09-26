@@ -33,6 +33,17 @@ to it using DiceDB CLI and SDKs, or even Redis CLIs and SDKs.
 
 > Note: Given it is a drop-in replacement of Redis, you can also use any Redis CLI and SDK to connect to DiceDB.
 
+### Multi-Threading Mode (Experimental)
+
+Multi-threading is currently under active development. To run the server with multi-threading enabled, follow these steps:
+```shell
+$ git clone https://github.com/dicedb/dice
+$ cd dice
+$ go run main.go --enable-multithreading=true
+```
+
+**Note:** Only the following commands are optimised for multi-threaded execution: `PING, AUTH, SET, GET, GETSET, ABORT`
+
 ### Setting up DiceDB from source for development and contributions
 
 To run DiceDB for local development or running from source, you will need
@@ -101,7 +112,7 @@ $ go run main.go -init-config
 ```
 
 #### For Windows Users:
-If you're using Windows, it is recommended to use Windows Subsystem for Linux (WSL) or WSL 2 to run the above commands seamlessly in a Linux-like environment. 
+If you're using Windows, it is recommended to use Windows Subsystem for Linux (WSL) or WSL 2 to run the above commands seamlessly in a Linux-like environment.
 
 Alternatively, you can:
 

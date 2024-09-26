@@ -1,8 +1,8 @@
-package server
+package worker
 
 // Breakup file is used by Worker to split commands that need to be executed
 // across multiple shards. For commands that operate on multiple keys or
-// require distribution across shards (e.g., Multishard commands), a Breakup
+// require distribution across shards (e.g., MultiShard commands), a Breakup
 // function is invoked to break the original command into multiple smaller
 // commands, each targeted at a specific shard.
 //
