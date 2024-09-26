@@ -5,6 +5,7 @@ package eval
 import (
 	"syscall"
 
+	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -20,6 +21,13 @@ func EvalBGREWRITEAOF(args []string, store *dstore.Store) []byte {
 	// This technique utilizes the CoW or copy-on-write, so while the main process is free to modify them
 	// the child would save all the pages to disk.
 	// Check details here -https://www.sobyte.net/post/2022-10/fork-cow/
+	// TODO: Fix this to work with the threading
+	// TODO: Problem at hand: In multi-threaded environment, each shard instance would fork a child process.
+	// TODO: Each child process would now have a copy of the network file descriptor thus resulting in resource leaks.
+	// TODO: We need to find an alternative approach for the multi-threaded environment.
+	if config.EnableMultiThreading {
+		return nil
+	}
 	pid, _, err := syscall.RawSyscall(syscall.SYS_FORK, 0, 0, 0)
 
 	if err != 0 {
