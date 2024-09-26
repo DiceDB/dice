@@ -42,7 +42,7 @@ $ cd dice
 $ go run main.go --enable-multithreading=true
 ```
 
-**Note:** The following commands are currently supported in multi-threading mode: `PING, AUTH, SET, GET, GETSET, ABORT`
+**Note:** Only the following commands are optimised for multi-threaded execution: `PING, AUTH, SET, GET, GETSET, ABORT`
 
 ### Setting up DiceDB from source for development and contributions
 
