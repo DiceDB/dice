@@ -57,8 +57,8 @@ func main() {
 	var numCores int
 	if config.EnableMultiThreading {
 		serverErrCh = make(chan error, 1)
-		logr.Debug("The DiceDB server has started in multi-threaded mode.", slog.Int("number of cores", numCores))
 		numCores = runtime.NumCPU()
+		logr.Debug("The DiceDB server has started in multi-threaded mode.", slog.Int("number of cores", numCores))
 	} else {
 		serverErrCh = make(chan error, 2)
 		logr.Debug("The DiceDB server has started in single-threaded mode.")
