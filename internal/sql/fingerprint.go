@@ -52,13 +52,15 @@ func combineAnd(a, b expression) expression {
 	result := make(expression, 0, len(a)+len(b))
 	for _, termA := range a {
 		for _, termB := range b {
-			combined := append(termA, termB...)
+			combined := make([]string, len(termA), len(termA)+len(termB))
+			copy(combined, termA)
+			combined = append(combined, termB...)
 			uniqueCombined := removeDuplicates(combined)
 			sort.Strings(uniqueCombined)
 			result = append(result, uniqueCombined)
 		}
 	}
-	return expression(result)
+	return result
 }
 
 func combineOr(a, b expression) expression {
