@@ -2916,6 +2916,11 @@ func evalHINCRBY(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("HINCRBY")
 	}
 
+	increment, err := strconv.ParseInt(args[2], 10, 64)
+	if err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
+	}
+
 	key := args[0]
 	obj := store.Get(key)
 	var hashmap HashMap
@@ -2927,16 +2932,11 @@ func evalHINCRBY(args []string, store *dstore.Store) []byte {
 		hashmap = obj.Value.(HashMap)
 	}
 
-	field := args[1]
-	increment, err := strconv.ParseInt(args[2], 10, 64)
-	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
-	}
-
 	if hashmap == nil {
 		hashmap = make(HashMap)
 	}
 
+	field := args[1]
 	numkey, err := hashmap.incrementValue(field, increment)
 	if err != nil {
 		return diceerrors.NewErrWithMessage(err.Error())
