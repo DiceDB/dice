@@ -442,6 +442,40 @@ func TestLLEN(t *testing.T) {
 	deqCleanUp(conn, "k")
 }
 
+func TestLInsert(t *testing.T) {
+	deqTestInit()
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	testCases := []struct {
+		name   string
+		cmds   []string
+		expect []any
+	}{
+		{
+			name:   "LINSERT before",
+			cmds:   []string{"LPUSH k v1 v2 v3 v4", "LINSERT k before v2 e1", "LINSERT k before v1 e2", "LINSERT k before v4 e3"},
+			expect: []any{int64(4), int64(5), int64(6), int64(7)},
+		},
+		{
+			name:   "LINSERT after",
+			cmds:   []string{"LINSERT k after v2 e1", "LINSERT k after v1 e2", "LINSERT k after v4 e3"},
+			expect: []any{int64(8), int64(9), int64(10)},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for i, cmd := range tc.cmds {
+				result := FireCommand(conn, cmd)
+				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
+			}
+		})
+	}
+
+	deqCleanUp(conn, "k")
+}
+
 func deqCleanUp(conn net.Conn, key string) {
 	for {
 		result := FireCommand(conn, "LPOP "+key)
