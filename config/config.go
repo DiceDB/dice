@@ -296,7 +296,7 @@ func setUpViperConfig(configFilePath string) {
 		return
 	}
 
-	fmt.Println("dice-config", DiceConfig)
+	fmt.Println("This is dice-config", DiceConfig)
 
 	// override default configurations with command line flags
 	mergeFlagsWithConfig()
