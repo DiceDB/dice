@@ -7,7 +7,7 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func TesthVals(t *testing.T) {
+func TestHvals(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 	defer FireCommand(conn, "DEL key_hVals key_hVals02")
@@ -15,7 +15,7 @@ func TesthVals(t *testing.T) {
 	testCases := []TestCase{
 		{
 			commands: []string{"HSET key_hVals field value", "HSET key_hVals field2 value_new", "HVALS key_hVals"},
-			expected: []interface{}{ONE, ONE, []string{"value","value_new"}},
+			expected: []interface{}{ONE, ONE, []string{"value", "value_new"}},
 		},
 		{
 			commands: []string{"HVALS key_hVals01"},
@@ -28,7 +28,7 @@ func TesthVals(t *testing.T) {
 		{
 			commands: []string{"HVALS key_hVals03 x", "HVALS"},
 			expected: []interface{}{"ERR wrong number of arguments for 'hvals' command",
-				"ERR wrong number of arguments for 'hVals' command"},
+				"ERR wrong number of arguments for 'hvals' command"},
 		},
 	}
 
