@@ -11,17 +11,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dicedb/dice/internal/server/utils"
-
-	"github.com/bytedance/sonic"
-
-	"github.com/ohler55/ojg/jp"
-
 	"github.com/axiomhq/hyperloglog"
+	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
+	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/ohler55/ojg/jp"
 	testifyAssert "github.com/stretchr/testify/assert"
 	"gotest.tools/v3/assert"
 )
@@ -4130,4 +4127,115 @@ func BenchmarkEvalBITOP(b *testing.B) {
 			}
 		})
 	}
+}
+
+func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"wrong number of args passed": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'hrandfield' command\r\n"),
+		},
+		"key doesn't exist": {
+			setup:  func() {},
+			input:  []string{"KEY"},
+			output: clientio.RespNIL,
+		},
+		"key exists with fields and no count argument": {
+			setup: func() {
+				key := "KEY_MOCK"
+				newMap := make(HashMap)
+				newMap["field1"] = "Value1"
+				newMap["field2"] = "Value2"
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input: []string{"KEY_MOCK"},
+			validator: func(output []byte) {
+				assert.Assert(t, output != nil)
+				resultString := string(output)
+				parts := strings.SplitN(resultString, "\n", 2)
+				if len(parts) < 2 {
+					t.Errorf("Unexpected output format: %s", resultString)
+					return
+				}
+				decodedResult := strings.TrimSpace(parts[1])
+				fmt.Printf("Decoded Result: '%s'\n", decodedResult)
+				assert.Assert(t, decodedResult == "field1" || decodedResult == "field2")
+			},
+		},
+		"key exists with fields and count argument": {
+			setup: func() {
+				key := "KEY_MOCK"
+				newMap := make(HashMap)
+				newMap["field1"] = "value1"
+				newMap["field2"] = "value2"
+				newMap["field3"] = "value3"
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+
+			},
+			input: []string{"KEY_MOCK", "2"},
+			validator: func(output []byte) {
+				assert.Assert(t, output != nil)
+				decodedResult := string(output)
+				fields := []string{"field1", "field2", "field3"}
+				count := 0
+
+				for _, field := range fields {
+					if strings.Contains(decodedResult, field) {
+						count++
+					}
+				}
+
+				assert.Assert(t, count == 2)
+			},
+		},
+		"key exists with count and WITHVALUES argument": {
+			setup: func() {
+				key := "KEY_MOCK"
+				newMap := make(HashMap)
+				newMap["field1"] = "value1"
+				newMap["field2"] = "value2"
+				newMap["field3"] = "value3"
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+
+			},
+			input: []string{"KEY_MOCK", "2", "WITHVALUES"},
+			validator: func(output []byte) {
+				assert.Assert(t, output != nil)
+				decodedResult := string(output)
+				fieldsAndValues := []string{"field1", "value1", "field2", "value2", "field3", "value3"}
+				count := 0
+				for _, item := range fieldsAndValues {
+					if strings.Contains(decodedResult, item) {
+						count++
+					}
+				}
+
+				assert.Assert(t, count == 4)
+			},
+		},
+	}
+
+	runEvalTests(t, tests, evalHRANDFIELD, store)
 }

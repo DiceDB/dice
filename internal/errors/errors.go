@@ -26,6 +26,11 @@ const (
 	JSONPathValueTypeErr = "-WRONGTYPE wrong type of path value - expected string but found integer"
 	InvalidExpireTime    = "-ERR invalid expire time"
 	HashValueNotIntegerErr = "hash value is not an integer"
+	InternalServerError  = "-ERR: Internal server error, unable to process command"
+)
+
+var (
+	ErrAborted = errors.New("server received ABORT command")
 )
 
 type DiceError struct {

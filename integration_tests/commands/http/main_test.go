@@ -23,7 +23,8 @@ func TestMain(m *testing.M) {
 		Port:   8083,
 		Logger: logger,
 	}
-	RunHTTPServer(context.Background(), &wg, opts)
+	ctx, cancel := context.WithCancel(context.Background())
+	RunHTTPServer(ctx, &wg, opts)
 
 	// Wait for the server to start
 	time.Sleep(2 * time.Second)
@@ -38,6 +39,9 @@ func TestMain(m *testing.M) {
 		Body:    map[string]interface{}{},
 	})
 
+	cancel()
 	wg.Wait()
-	os.Exit(exitCode)
+	if exitCode != 0 {
+		os.Exit(exitCode)
+	}
 }
