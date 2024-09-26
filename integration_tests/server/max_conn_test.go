@@ -11,7 +11,6 @@ import (
 
 	"gotest.tools/v3/assert"
 
-	"github.com/dicedb/dice/config"
 	commands "github.com/dicedb/dice/integration_tests/commands/async"
 )
 
@@ -34,7 +33,7 @@ func TestMaxConnection(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 
-	var maxConnLimit = config.TestServerMaxClients + 2
+	var maxConnLimit = maxConnTestOptions.MaxClients + 2
 	connections := make([]net.Conn, maxConnLimit)
 	for i := 0; i < maxConnLimit; i++ {
 		conn, err := getConnection(maxConnTestOptions.Port)
