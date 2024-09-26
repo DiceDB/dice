@@ -12,7 +12,9 @@ const (
 	ExpiryErr            = "invalid expire time in '%s' command"
 	AuthErr              = "AUTH failed"
 	IntOrOutOfRangeErr   = "value is not an integer or out of range"
+	IntOrFloatErr        = "value is not an integer or a float"
 	ValOutOfRangeErr     = "value is out of range"
+	IncrDecrOverflowErr  = "increment or decrement would overflow"
 	ElementPeekErr       = "number of elements to peek should be a positive number less than %d"
 	NoKeyErr             = "no such key"
 	ErrDefault           = "-ERR %s"
@@ -23,6 +25,11 @@ const (
 	JSONPathNotExistErr  = "-ERR Path '%s' does not exist"
 	JSONPathValueTypeErr = "-WRONGTYPE wrong type of path value - expected string but found integer"
 	InvalidExpireTime    = "-ERR invalid expire time"
+	InternalServerError  = "-ERR: Internal server error, unable to process command"
+)
+
+var (
+	ErrAborted = errors.New("server received ABORT command")
 )
 
 type DiceError struct {

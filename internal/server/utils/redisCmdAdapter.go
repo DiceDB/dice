@@ -12,14 +12,20 @@ import (
 )
 
 const (
-	Command   = "command"
-	Key       = "key"
-	KeyPrefix = "key_prefix"
-	Field     = "field"
-	Path      = "path"
-	Value     = "value"
-	KeyValues = "key_values"
-	True      = "true"
+	Command     = "command"
+	Key         = "key"
+	Keys        = "keys"
+	KeyPrefix   = "key_prefix"
+	Field       = "field"
+	Path        = "path"
+	Value       = "value"
+	Values      = "values"
+	User        = "user"
+	Password    = "password"
+	Seconds     = "seconds"
+	KeyValues   = "key_values"
+	True        = "true"
+	QwatchQuery = "query"
 )
 
 func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
@@ -51,17 +57,50 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 				return nil, err
 			}
 
+			if len(jsonBody) == 0 {
+				return nil, fmt.Errorf("empty JSON object")
+			}
+
 			// Define keys to exclude and process their values first
 			// Update as we support more commands
-			var priorityKeys = [5]string{
+			var priorityKeys = [11]string{
 				Key,
+				Keys,
 				Field,
 				Path,
 				Value,
+				Values,
+				Seconds,
+				User,
+				Password,
 				KeyValues,
+				QwatchQuery,
 			}
 			for _, key := range priorityKeys {
 				if val, exists := jsonBody[key]; exists {
+					if key == Keys {
+						for _, v := range val.([]interface{}) {
+							args = append(args, fmt.Sprintf("%v", v))
+						}
+						delete(jsonBody, key)
+						continue
+					}
+					if key == Values {
+						for _, v := range val.([]interface{}) {
+							args = append(args, fmt.Sprintf("%v", v))
+						}
+						delete(jsonBody, key)
+						continue
+					}
+					// MultiKey operations
+					if key == KeyValues {
+						// Handle KeyValues separately
+						for k, v := range val.(map[string]interface{}) {
+							args = append(args, k, fmt.Sprintf("%v", v))
+						}
+						delete(jsonBody, key)
+						continue
+					}
 					args = append(args, fmt.Sprintf("%v", val))
 					delete(jsonBody, key)
 				}

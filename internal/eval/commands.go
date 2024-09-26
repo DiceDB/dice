@@ -43,10 +43,11 @@ var (
 	}
 
 	pingCmdMeta = DiceCmdMeta{
-		Name:       "PING",
-		Info:       `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
-		Arity:      -1,
-		IsMigrated: true,
+		Name:  "PING",
+		Info:  `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
+		Arity: -1,
+		// TODO: Move this to true once compatible with HTTP server
+		IsMigrated: false,
 		Eval:       evalPING,
 	}
 
@@ -244,6 +245,15 @@ var (
 		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsonobjkeysCmdMeta = DiceCmdMeta{
+		Name: "JSON.OBJKEYS",
+		Info: `JSON.OBJKEYS key [path]
+		Retrieves the keys of a JSON object stored at path specified.
+		Null reply: If the key doesn't exist or has expired.
+		Error reply: If the number of arguments is incorrect or the stored value is not a JSON type.`,
+		Eval:  evalJSONOBJKEYS,
+		Arity: 2,
+	}
 	jsonarrpopCmdMeta = DiceCmdMeta{
 		Name: "JSON.ARRPOP",
 		Info: `JSON.ARRPOP key [path [index]]
@@ -264,6 +274,17 @@ var (
 		Returns encoded error message if the number of arguments is incorrect or the JSON string is invalid.`,
 		Eval:     evalJSONINGEST,
 		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	jsonarrinsertCmdMeta = DiceCmdMeta{
+		Name: "JSON.ARRINSERT",
+		Info: `JSON.ARRINSERT key path index value [value ...]
+		Returns an array of integer replies for each path.
+		Returns nil if the matching JSON value is not an array.
+		Returns error response if the key doesn't exist or key is expired or the matching value is not an array.
+		Error reply: If the number of arguments is incorrect.`,
+		Eval:     evalJSONARRINSERT,
+		Arity:    -5,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	ttlCmdMeta = DiceCmdMeta{
@@ -322,6 +343,18 @@ var (
 		Eval:     evalINCR,
 		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+	}
+	incrByFloatCmdMeta = DiceCmdMeta{
+		Name: "INCRBYFLOAT",
+		Info: `INCRBYFLOAT increments the value of the key in args by the specified increment,
+		if the key exists and the value is a number.
+		The key should be the first parameter in args, and the increment should be the second parameter.
+		If the key does not exist, a new key is created with increment's value.
+		If the value at the key is a string, it should be parsable to float64,
+		if not INCRBYFLOAT returns an  error response.
+		INCRBYFLOAT returns the incremented value for the key after applying the specified increment if there are no errors.`,
+		Eval:  evalINCRBYFLOAT,
+		Arity: 2,
 	}
 	infoCmdMeta = DiceCmdMeta{
 		Name: "INFO",
@@ -453,9 +486,10 @@ var (
 		Eval: evalGETBIT,
 	}
 	bitCountCmdMeta = DiceCmdMeta{
-		Name: "BITCOUNT",
-		Info: "BITCOUNT counts the number of set bits in the string value stored at key",
-		Eval: evalBITCOUNT,
+		Name:  "BITCOUNT",
+		Info:  "BITCOUNT counts the number of set bits in the string value stored at key",
+		Eval:  evalBITCOUNT,
+		Arity: -1,
 	}
 	bitOpCmdMeta = DiceCmdMeta{
 		Name: "BITOP",
@@ -566,6 +600,15 @@ var (
 		Arity:    -4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hsetnxCmdMeta = DiceCmdMeta{
+		Name: "HSETNX",
+		Info: `Sets field in the hash stored at key to value, only if field does not yet exist.
+		If key does not exist, a new key holding a hash is created. If field already exists,
+		this operation has no effect.`,
+		Eval:     evalHSETNX,
+		Arity:    4,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	hgetCmdMeta = DiceCmdMeta{
 		Name:     "HGET",
 		Info:     `Returns the value associated with field in the hash stored at key.`,
@@ -579,6 +622,25 @@ var (
         every field name is followed by its value, so the length of the reply is twice the size of the hash.`,
 		Eval:     evalHGETALL,
 		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	hstrLenCmdMeta = DiceCmdMeta{
+		Name:     "HSTRLEN",
+		Info:     `Returns the length of value associated with field in the hash stored at key.`,
+		Eval:     evalHSTRLEN,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	hdelCmdMeta = DiceCmdMeta{
+		Name: "HDEL",
+		Info: `HDEL removes the specified fields from the hash stored at key.
+		Specified fields that do not exist within this hash are ignored.
+		Deletes the hash if no fields remain.
+		If key does not exist, it is treated as an empty hash and this command returns 0.
+		Returns
+		The number of fields that were removed from the hash, not including specified but non-existing fields.`,
+		Eval:     evalHDEL,
+		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	objectCmdMeta = DiceCmdMeta{
@@ -805,12 +867,39 @@ var (
 		Arity:    1,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	incrbyCmdMeta = DiceCmdMeta{
+		Name: "INCRBY",
+		Info: `INCRBY increments the value of the specified key in args by increment integer specified,
+		if the key exists and the value is integer format.
+		The key and the increment integer should be the only param in args.
+		If the key does not exist, new key is created with value 0,
+		the value of the new key is then incremented.
+		The value for the queried key should be of integer format,
+		if not INCRBY returns encoded error response.
+		evalINCRBY returns the incremented value for the key if there are no errors.`,
+		Eval:     evalINCRBY,
+		Arity:    2,
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+	}
 	getRangeCmdMeta = DiceCmdMeta{
 		Name:     "GETRANGE",
 		Info:     `Returns a substring of the string stored at a key.`,
 		Eval:     evalGETRANGE,
 		Arity:    4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	setexCmdMeta = DiceCmdMeta{
+		Name: "SETEX",
+		Info: `SETEX puts a new <key, value> pair in along with expity
+		args must contain key and value and expiry.
+		Returns encoded error response if <key,exp,value> is not part of args
+		Returns encoded error response if expiry time value in not integer
+		Returns encoded OK RESP once new entry is added
+		If the key already exists then the value and expiry will be overwritten`,
+		Arity:      3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalSETEX,
 	}
 )
 
@@ -833,8 +922,10 @@ func init() {
 	DiceCmds["JSON.NUMMULTBY"] = jsonnummultbyCmdMeta
 	DiceCmds["JSON.OBJLEN"] = jsonobjlenCmdMeta
 	DiceCmds["JSON.DEBUG"] = jsondebugCmdMeta
+	DiceCmds["JSON.OBJKEYS"] = jsonobjkeysCmdMeta
 	DiceCmds["JSON.ARRPOP"] = jsonarrpopCmdMeta
 	DiceCmds["JSON.INGEST"] = jsoningestCmdMeta
+	DiceCmds["JSON.ARRINSERT"] = jsonarrinsertCmdMeta
 	DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
 	DiceCmds["EXPIRE"] = expireCmdMeta
@@ -843,6 +934,7 @@ func init() {
 	DiceCmds["HELLO"] = helloCmdMeta
 	DiceCmds["BGREWRITEAOF"] = bgrewriteaofCmdMeta
 	DiceCmds["INCR"] = incrCmdMeta
+	DiceCmds["INCRBYFLOAT"] = incrByFloatCmdMeta
 	DiceCmds["INFO"] = infoCmdMeta
 	DiceCmds["CLIENT"] = clientCmdMeta
 	DiceCmds["LATENCY"] = latencyCmdMeta
@@ -876,6 +968,7 @@ func init() {
 	DiceCmds["GETEX"] = getexCmdMeta
 	DiceCmds["PTTL"] = pttlCmdMeta
 	DiceCmds["HSET"] = hsetCmdMeta
+	DiceCmds["HSETNX"] = hsetnxCmdMeta
 	DiceCmds["OBJECT"] = objectCmdMeta
 	DiceCmds["TOUCH"] = touchCmdMeta
 	DiceCmds["LPUSH"] = lpushCmdMeta
@@ -897,6 +990,7 @@ func init() {
 	DiceCmds["PFADD"] = pfAddCmdMeta
 	DiceCmds["PFCOUNT"] = pfCountCmdMeta
 	DiceCmds["HGET"] = hgetCmdMeta
+	DiceCmds["HSTRLEN"] = hstrLenCmdMeta
 	DiceCmds["PFMERGE"] = pfMergeCmdMeta
 	DiceCmds["JSON.STRLEN"] = jsonStrlenCmdMeta
 	DiceCmds["JSON.MGET"] = jsonMGetCmdMeta
@@ -904,7 +998,10 @@ func init() {
 	DiceCmds["SELECT"] = selectCmdMeta
 	DiceCmds["JSON.NUMINCRBY"] = jsonnumincrbyCmdMeta
 	DiceCmds["TYPE"] = typeCmdMeta
+	DiceCmds["INCRBY"] = incrbyCmdMeta
 	DiceCmds["GETRANGE"] = getRangeCmdMeta
+	DiceCmds["SETEX"] = setexCmdMeta
+	DiceCmds["HDEL"] = hdelCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

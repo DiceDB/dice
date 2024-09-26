@@ -13,11 +13,11 @@ type CmdType int
 
 // Enum values for CmdType using iota for auto-increment.
 // Global commands don't interact with shards, SingleShard commands interact with one shard,
-// Multishard commands interact with multiple shards, and Custom commands require a direct client connection.
+// MultiShard commands interact with multiple shards, and Custom commands require a direct client connection.
 const (
 	Global      CmdType = iota // Global commands don't need to interact with shards.
 	SingleShard                // Single-shard commands interact with only one shard.
-	Multishard                 // Multishard commands interact with multiple shards using scatter-gather logic.
+	MultiShard                 // MultiShard commands interact with multiple shards using scatter-gather logic.
 	Custom                     // Custom commands involve direct client communication.
 )
 
@@ -63,6 +63,10 @@ var (
 		Cmd:     "GETSET",
 		CmdType: SingleShard,
 	}
+	setexCmdMeta = CmdsMeta{
+		Cmd:     "SETEX",
+		CmdType: SingleShard,
+	}
 
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
@@ -80,6 +84,7 @@ func init() {
 	WorkerCmdsMeta["SET"] = setCmdMeta
 	WorkerCmdsMeta["GET"] = getCmdMeta
 	WorkerCmdsMeta["GETSET"] = getsetCmdMeta
+	WorkerCmdsMeta["SETEX"] = setexCmdMeta
 
 	// Additional commands (multishard, custom) can be added here as needed.
 }
