@@ -4073,100 +4073,87 @@ func evalGETRANGE(args []string, store *dstore.Store) []byte {
 // The "WITHVALUES" option returns both fields and values.
 // Returns nil if the key doesn't exist or the hash is empty.
 // Errors: arity error, type error for non-hash, syntax error for "WITHVALUES", or count format error.
-
 func evalHRANDFIELD(args []string, store *dstore.Store) []byte {
-	if len(args) < 1 {
+	if len(args) < 1 || len(args) > 3 {
 		return diceerrors.NewErrArity("HRANDFIELD")
 	}
 
 	key := args[0]
-
 	obj := store.Get(key)
-
-	var hashMap HashMap
-	var results []string
-
-	if obj != nil {
-		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
-		}
-		hashMap = obj.Value.(HashMap)
-	} else {
-		// To change this
+	if obj == nil {
 		return clientio.RespNIL
 	}
 
-	if len(args) == 1 {
-		keys := make([]string, 0, len(hashMap))
-		for k := range hashMap {
-			keys = append(keys, k)
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+	}
+
+	hashMap := obj.Value.(HashMap)
+	if len(hashMap) == 0 {
+		return clientio.Encode([]string{}, false)
+	}
+
+	count := 1
+	withValues := false
+
+	if len(args) > 1 {
+		var err error
+		// The second argument is the count.
+		count, err = strconv.Atoi(args[1])
+		if err != nil {
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
 		}
 
-		if len(keys) == 0 {
-			return clientio.Encode([]string{}, false)
+		// The third argument is the "WITHVALUES" option.
+		if len(args) == 3 {
+			if strings.ToUpper(args[2]) != WITHVALUES {
+				return diceerrors.NewErrWithFormattedMessage(diceerrors.SyntaxErr)
+			}
+			withValues = true
+		}
+	}
+
+	return selectRandomFields(hashMap, count, withValues)
+}
+
+// selectRandomFields returns random fields from a hashmap.
+func selectRandomFields(hashMap HashMap, count int, withValues bool) []byte {
+	keys := make([]string, 0, len(hashMap))
+	for k := range hashMap {
+		keys = append(keys, k)
+	}
+
+	var results []string
+	resultSet := make(map[string]struct{})
+
+	abs := func(x int) int {
+		if x < 0 {
+			return -x
+		}
+		return x
+	}
+
+	for i := 0; i < abs(count); i++ {
+		if count > 0 && len(resultSet) == len(keys) {
+			break
 		}
 
 		randomIndex, _ := rand.Int(rand.Reader, big.NewInt(int64(len(keys))))
 		randomField := keys[randomIndex.Int64()]
 
-		return clientio.Encode(randomField, false)
-	}
-
-	//Check if count is provided
-	if len(args) > 1 && len(args) < 4 {
-		countArg := args[1]
-		withValues := false
-		count, err := strconv.Atoi(countArg)
-		if err != nil {
-			return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
-		}
-
-		if len(args) == 3 {
-			withValues = (strings.ToUpper(args[2]) == "WITHVALUES")
-			if !withValues {
-				return diceerrors.NewErrWithFormattedMessage(diceerrors.SyntaxErr)
-			}
-		}
-
 		if count > 0 {
-			if count > len(hashMap) {
-				count = len(hashMap)
+			if _, exists := resultSet[randomField]; exists {
+				i--
+				continue
 			}
-
-			keys := make([]string, 0, len(hashMap))
-			for k := range hashMap {
-				keys = append(keys, k)
-			}
-
-			//Shuffle keys
-			for i := len(keys) - 1; i > 0; i-- {
-				jBig, _ := rand.Int(rand.Reader, big.NewInt(int64(i+1)))
-				j := int(jBig.Int64())
-				keys[i], keys[j] = keys[j], keys[i]
-			}
-
-			for i := 0; i < count; i++ {
-				results = append(results, keys[i])
-				if withValues {
-					results = append(results, hashMap[keys[i]])
-				}
-			}
-		} else if count < 0 {
-			for i := 0; i < -count; i++ {
-				keys := make([]string, 0, len(hashMap))
-				for k := range hashMap {
-					keys = append(keys, k)
-				}
-
-				// Randomly select a key
-				randomIndex, _ := rand.Int(rand.Reader, big.NewInt(int64(len(keys))))
-				results = append(results, keys[randomIndex.Int64()])
-				if withValues {
-					results = append(results, hashMap[keys[randomIndex.Int64()]])
-				}
-			}
+			resultSet[randomField] = struct{}{}
 		}
-		return clientio.Encode(results, false)
+
+		results = append(results, randomField)
+		if withValues {
+			results = append(results, hashMap[randomField])
+		}
 	}
-	return diceerrors.NewErrWithFormattedMessage(diceerrors.SyntaxErr)
+
+	return clientio.Encode(results, false)
 }
