@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/config"
+	derrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/server"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -100,8 +101,9 @@ func RunWebsocketServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerO
 	config.DiceConfig.Server.WriteAOFOnCleanup = false
 
 	// Initialize the WebsocketServer
+	globalErrChannel := make(chan error)
 	watchChan := make(chan dstore.WatchEvent, config.DiceConfig.Server.KeysLimit)
-	shardManager := shard.NewShardManager(1, watchChan, opt.Logger)
+	shardManager := shard.NewShardManager(1, watchChan, globalErrChannel, opt.Logger)
 	config.WebsocketPort = opt.Port
 	testServer := server.NewWebSocketServer(shardManager, watchChan, opt.Logger)
 
@@ -119,7 +121,7 @@ func RunWebsocketServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerO
 		srverr := testServer.Run(ctx)
 		if srverr != nil {
 			cancelShardManager()
-			if errors.Is(srverr, server.ErrAborted) {
+			if errors.Is(srverr, derrors.ErrAborted) {
 				return
 			}
 			log.Printf("Websocket test server encountered an error: %v", srverr)

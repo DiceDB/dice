@@ -124,8 +124,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 
 	for {
 		// read incoming message
-		mt, msg, err := conn.ReadMessage()
-		fmt.Println(mt, string(msg), err)
+		_, msg, err := conn.ReadMessage()
 		if err != nil {
 			sendTextMessage(conn, []byte("error: command reading failed"))
 			continue
@@ -173,7 +172,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 
 		respBytes, err := json.Marshal(val)
 		if err != nil {
-			sendTextMessage(conn, []byte("error: marshalling json response"))
+			sendTextMessage(conn, []byte("error: marshaling json response"))
 			continue
 		}
 
