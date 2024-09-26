@@ -37,6 +37,9 @@ func NewStore(watchChan chan WatchEvent) *Store {
 }
 
 func ResetStore(store *Store) *Store {
+	if KeyspaceStat[0] != nil {
+		KeyspaceStat[0]["keys"] -= store.store.Len()
+	}
 	store.store = swiss.New[string, *object.Obj](10240)
 	store.expires = swiss.New[*object.Obj, uint64](10240)
 
@@ -56,9 +59,11 @@ func (store *Store) NewObj(value interface{}, expDurationMs int64, oType, oEnc u
 }
 
 func (store *Store) ResetStore() {
+	if KeyspaceStat[0] != nil {
+		KeyspaceStat[0]["keys"] -= store.store.Len()
+	}
 	store.store.Clear()
 	store.expires.Clear()
-	store.watchChan = make(chan WatchEvent, config.DiceConfig.Server.KeysLimit)
 }
 
 type PutOptions struct {
@@ -117,7 +122,9 @@ func (store *Store) putHelper(k string, obj *object.Obj, opts ...PutOption) {
 	}
 	store.store.Put(k, obj)
 
-	store.incrementKeyCount()
+	if !ok {
+		store.incrementKeyCount()
+	}
 
 	if store.watchChan != nil {
 		store.notifyQueryManager(k, Set, *obj)
@@ -133,7 +140,7 @@ func (store *Store) getHelper(k string, touch bool) *object.Obj {
 			store.deleteKey(k, v)
 			v = nil
 		} else if touch {
-			v.LastAccessedAt = getCurrentClock()
+			v.LastAccessedAt = UpdateLastAccessedAt(v.LastAccessedAt)
 		}
 	}
 	return v
@@ -148,7 +155,7 @@ func (store *Store) GetAll(keys []string) []*object.Obj {
 				store.deleteKey(k, v)
 				response = append(response, nil)
 			} else {
-				v.LastAccessedAt = getCurrentClock()
+				v.LastAccessedAt = UpdateLastAccessedAt(v.LastAccessedAt)
 				response = append(response, v)
 			}
 		} else {

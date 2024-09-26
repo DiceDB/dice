@@ -3,15 +3,12 @@ package shard
 import (
 	"context"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
-	"github.com/charmbracelet/log"
+	"log/slog"
 
 	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/internal/auth"
-	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/eval"
 	"github.com/dicedb/dice/internal/ops"
@@ -35,10 +32,11 @@ type ShardThread struct {
 	errorChan        chan *ShardError                   // errorChan is the channel for sending system-level errors.
 	lastCronExecTime time.Time                          // lastCronExecTime is the last time the shard executed cron tasks.
 	cronFrequency    time.Duration                      // cronFrequency is the frequency at which the shard executes cron tasks.
+	logger           *slog.Logger                       // logger is the logger for the shard.
 }
 
 // NewShardThread creates a new ShardThread instance with the given shard id and error channel.
-func NewShardThread(id ShardID, errorChan chan *ShardError, watchChan chan dstore.WatchEvent) *ShardThread {
+func NewShardThread(id ShardID, errorChan chan *ShardError, watchChan chan dstore.WatchEvent, logger *slog.Logger) *ShardThread {
 	return &ShardThread{
 		id:               id,
 		store:            dstore.NewStore(watchChan),
@@ -47,6 +45,7 @@ func NewShardThread(id ShardID, errorChan chan *ShardError, watchChan chan dstor
 		errorChan:        errorChan,
 		lastCronExecTime: utils.GetCurrentTime(),
 		cronFrequency:    config.DiceConfig.Server.ShardCronFrequency,
+		logger:           logger,
 	}
 }
 
@@ -88,57 +87,28 @@ func (shard *ShardThread) unregisterWorker(workerID string) {
 
 // processRequest processes a Store operation for the shard.
 func (shard *ShardThread) processRequest(op *ops.StoreOp) {
-	resp := shard.executeCommand(op)
+	resp := eval.ExecuteCommand(op.Cmd, op.Client, shard.store, op.HTTPOp)
 
 	shard.workerMutex.RLock()
 	workerChan, ok := shard.workerMap[op.WorkerID]
 	shard.workerMutex.RUnlock()
 
-	if ok {
-		workerChan <- &ops.StoreResponse{
-			RequestID: op.RequestID,
-			Result:    resp,
-		}
-	} else {
-		shard.errorChan <- &ShardError{shardID: shard.id, err: fmt.Errorf(diceerrors.WorkerNotFoundErr, op.WorkerID)}
-	}
-}
-
-func (shard *ShardThread) executeCommand(op *ops.StoreOp) []byte {
-	diceCmd, ok := eval.DiceCmds[op.Cmd.Cmd]
 	if !ok {
-		return diceerrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", op.Cmd.Cmd, strings.Join(op.Cmd.Args, " "))
+		shard.errorChan <- &ShardError{shardID: shard.id, err: fmt.Errorf(diceerrors.WorkerNotFoundErr, op.WorkerID)}
+		return
 	}
 
-	// Till the time we refactor to handle QWATCH differently using HTTP Streaming/SSE
-	if op.HTTPOp {
-		return diceCmd.Eval(op.Cmd.Args, shard.store)
-	}
-
-	// The following commands could be handled at the shard level, however, we can randomly let any shard handle them
-	// to reduce load on main server.
-	switch diceCmd.Name {
-	case "SUBSCRIBE", "QWATCH":
-		return eval.EvalQWATCH(op.Cmd.Args, op.Client.Fd, shard.store)
-	case "UNSUBSCRIBE", "QUNWATCH":
-		return eval.EvalQUNWATCH(op.Cmd.Args, op.Client.Fd)
-	case auth.AuthCmd:
-		return eval.EvalAUTH(op.Cmd.Args, op.Client)
-	case "ABORT":
-		return clientio.RespOK
-	default:
-		return diceCmd.Eval(op.Cmd.Args, shard.store)
+	workerChan <- &ops.StoreResponse{
+		RequestID:    op.RequestID,
+		EvalResponse: resp,
 	}
 }
 
 // cleanup handles cleanup logic when the shard stops.
 func (shard *ShardThread) cleanup() {
 	close(shard.ReqChan)
-	if config.DiceConfig.Server.WriteAOFOnCleanup {
-		// Avoiding AOF dump for test enabled environments as
-		// the tests were taking longer due to background tasks which exceeded the WaitDelay,
-		// thus causing the test process to be forcibly terminated.
-		log.Info("Skipping AOF dump as test env enabled.")
+	if !config.DiceConfig.Server.WriteAOFOnCleanup {
+		slog.Info("Skipping AOF dump.")
 		return
 	}
 

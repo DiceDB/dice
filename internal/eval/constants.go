@@ -23,4 +23,13 @@ const (
 	Keepttl string = "keepttl"
 	Sync    string = "SYNC"
 	Async   string = "ASYNC"
+	Help    string = "HELP"
+	Memory  string = "MEMORY"
+	Count   string = "COUNT"
+	GetKeys string = "GETKEYS"
+	List    string = "LIST"
+	Info    string = "INFO"
+	Null    string = "null"
+	null    string = "null"
+	NULL    string = "null"
 )

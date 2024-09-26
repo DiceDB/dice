@@ -12,10 +12,19 @@ import (
 )
 
 const (
-	Key   = "key"
-	Field = "field"
-	Path  = "path"
-	Value = "value"
+	Key         = "key"
+	Keys        = "keys"
+	KeyPrefix   = "key_prefix"
+	Field       = "field"
+	Path        = "path"
+	Value       = "value"
+	Values      = "values"
+	User        = "user"
+	Password    = "password"
+	Seconds     = "seconds"
+	KeyValues   = "key_values"
+	True        = "true"
+	QwatchQuery = "query"
 )
 
 func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
@@ -27,6 +36,13 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 	command = strings.ToUpper(command)
 	var args []string
 
+	// Extract query parameters
+	queryParams := r.URL.Query()
+	keyPrefix := queryParams.Get(KeyPrefix)
+
+	if keyPrefix != "" && command == "JSON.INGEST" {
+		args = append(args, keyPrefix)
+	}
 	// Step 1: Handle JSON body if present
 	if r.Body != nil {
 		body, err := io.ReadAll(r.Body)
@@ -40,16 +56,50 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 				return nil, err
 			}
 
+			if len(jsonBody) == 0 {
+				return nil, fmt.Errorf("empty JSON object")
+			}
+
 			// Define keys to exclude and process their values first
 			// Update as we support more commands
-			var priorityKeys = [4]string{
+			var priorityKeys = [11]string{
 				Key,
+				Keys,
 				Field,
 				Path,
 				Value,
+				Values,
+				Seconds,
+				User,
+				Password,
+				KeyValues,
+				QwatchQuery,
 			}
 			for _, key := range priorityKeys {
 				if val, exists := jsonBody[key]; exists {
+					if key == Keys {
+						for _, v := range val.([]interface{}) {
+							args = append(args, fmt.Sprintf("%v", v))
+						}
+						delete(jsonBody, key)
+						continue
+					}
+					if key == Values {
+						for _, v := range val.([]interface{}) {
+							args = append(args, fmt.Sprintf("%v", v))
+						}
+						delete(jsonBody, key)
+						continue
+					}
+					// MultiKey operations
+					if key == KeyValues {
+						// Handle KeyValues separately
+						for k, v := range val.(map[string]interface{}) {
+							args = append(args, k, fmt.Sprintf("%v", v))
+						}
+						delete(jsonBody, key)
+						continue
+					}
 					args = append(args, fmt.Sprintf("%v", val))
 					delete(jsonBody, key)
 				}
@@ -60,9 +110,8 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 				switch v := val.(type) {
 				case string:
 					// Handle unary operations like 'nx' where value is "true"
-					if v == "true" {
-						args = append(args, key)
-					} else {
+					args = append(args, key)
+					if !strings.EqualFold(v, True) {
 						args = append(args, v)
 					}
 				case map[string]interface{}, []interface{}:
@@ -73,8 +122,12 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 					}
 					args = append(args, string(jsonValue))
 				default:
+					args = append(args, key)
 					// Append other types as strings
-					args = append(args, fmt.Sprintf("%v", v))
+					value := fmt.Sprintf("%v", v)
+					if !strings.EqualFold(value, True) {
+						args = append(args, value)
+					}
 				}
 			}
 		}

@@ -2,6 +2,7 @@ package auth
 
 import (
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -12,8 +13,7 @@ import (
 )
 
 const (
-	DefaultUserName = "default"
-	AuthCmd         = "AUTH"
+	AuthCmd = "AUTH"
 
 	SessionStatusPending SessionStatusT = SessionStatusT(0)
 	SessionStatusActive  SessionStatusT = SessionStatusT(1)
@@ -80,6 +80,10 @@ func (user *User) SetPassword(password string) (err error) {
 	var (
 		hashedPassword []byte
 	)
+	if password == utils.EmptyStr {
+		slog.Warn("DiceDB is running without authentication. Consider setting a password.")
+	}
+
 	if hashedPassword, err = bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost); err != nil {
 		return
 	}
@@ -125,7 +129,7 @@ func (session *Session) Validate(username, password string) error {
 	if user, err = UserStore.Get(username); err != nil {
 		return err
 	}
-	if username == DefaultUserName && len(user.Passwords) == 0 {
+	if username == config.DiceConfig.Auth.UserName && len(user.Passwords) == 0 {
 		session.Activate(user)
 		return nil
 	}
