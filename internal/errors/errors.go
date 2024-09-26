@@ -26,9 +26,12 @@ const (
 	JSONPathValueTypeErr   = "-WRONGTYPE wrong type of path value - expected string but found integer"
 	InvalidExpireTime      = "-ERR invalid expire time"
 	HashValueNotIntegerErr = "hash value is not an integer"
-	InternalServerError    = "-ERR: Internal server error, unable to process command"
+	InternalServerError      = "-ERR: Internal server error, unable to process command"
 	InvalidFloatErr        = "-ERR value is not a valid float"
 	InvalidIntErr          = "-ERR value is not a valid integer"
+	InvalidBitfieldType    = "-ERR Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is."
+	BitfieldOffsetErr      = "-ERR bit offset is not an integer or out of range"
+	OverflowTypeErr        = "-ERR Invalid OVERFLOW type specified"
 )
 
 var (

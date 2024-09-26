@@ -4405,26 +4405,26 @@ func parseEncodingAndOffset(args []string) (eType interface{}, eVal interface{},
 		eType = "SIGNED"
 		eVal, err = strconv.ParseInt(encodingRaw[1:], 10, 64)
 		if err != nil {
-			err = errors.New("Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is.")
+			err = errors.New(diceerrors.InvalidBitfieldType)
 			return
 		}
 		if eVal.(int64) <= 0 || eVal.(int64) > 64 {
-			err = errors.New("Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is.")
+			err = errors.New(diceerrors.InvalidBitfieldType)
 			return
 		}
 	case 'u':
 		eType = "UNSIGNED"
 		eVal, err = strconv.ParseInt(encodingRaw[1:], 10, 64)
 		if err != nil {
-			err = errors.New("Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is.")
+			err = errors.New(diceerrors.InvalidBitfieldType)
 			return
 		}
 		if eVal.(int64) <= 0 || eVal.(int64) >= 64 {
-			err = errors.New("Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is.")
+			err = errors.New(diceerrors.InvalidBitfieldType)
 			return
 		}
 	default:
-		err = errors.New("Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is.")
+		err = errors.New(diceerrors.InvalidBitfieldType)
 		return
 	}
 
@@ -4432,14 +4432,14 @@ func parseEncodingAndOffset(args []string) (eType interface{}, eVal interface{},
 	case '#':
 		offset, err = strconv.ParseInt(offsetRaw[1:], 10, 64)
 		if err != nil {
-			err = errors.New("bit offset is not an integer or out of range")
+			err = errors.New(diceerrors.BitfieldOffsetErr)
 			return
 		}
 		offset = offset.(int64) * eVal.(int64)
 	default:
 		offset, err = strconv.ParseInt(offsetRaw, 10, 64)
 		if err != nil {
-			err = errors.New("bit offset is not an integer or out of range")
+			err = errors.New(diceerrors.BitfieldOffsetErr)
 			return
 		}
 	}
@@ -4450,12 +4450,7 @@ func evalBITFIELD(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("BITFIELD")
 	}
 
-	if len(args) == 1 {
-		result := make([]int64, 0)
-		return clientio.Encode(result, false)
-	}
-
-	var overflowType string = "WRAP" // Default overflow type
+	var overflowType string = WRAP // Default overflow type
 
 	type BitFieldOp struct {
 		Kind   string
@@ -4468,7 +4463,7 @@ func evalBITFIELD(args []string, store *dstore.Store) []byte {
 
 	for i := 1; i < len(args); {
 		switch strings.ToUpper(args[i]) {
-		case "GET":
+		case GET:
 			if len(args) <= i+2 {
 				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 			}
@@ -4477,14 +4472,14 @@ func evalBITFIELD(args []string, store *dstore.Store) []byte {
 				return diceerrors.NewErrWithFormattedMessage(err.Error())
 			}
 			ops = append(ops, BitFieldOp{
-				Kind:   "GET",
+				Kind:   GET,
 				EType:  eType.(string),
 				EVal:   eVal.(int64),
 				Offset: offset.(int64),
 				Value:  int64(-1),
 			})
 			i += 3
-		case "SET":
+		case SET:
 			if len(args) <= i+3 {
 				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 			}
@@ -4497,14 +4492,14 @@ func evalBITFIELD(args []string, store *dstore.Store) []byte {
 				return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
 			}
 			ops = append(ops, BitFieldOp{
-				Kind:   "SET",
+				Kind:   SET,
 				EType:  eType.(string),
 				EVal:   eVal.(int64),
 				Offset: offset.(int64),
 				Value:  value,
 			})
 			i += 4
-		case "INCRBY":
+		case INCRBY:
 			if len(args) <= i+3 {
 				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 			}
@@ -4517,25 +4512,25 @@ func evalBITFIELD(args []string, store *dstore.Store) []byte {
 				return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
 			}
 			ops = append(ops, BitFieldOp{
-				Kind:   "INCRBY",
+				Kind:   INCRBY,
 				EType:  eType.(string),
 				EVal:   eVal.(int64),
 				Offset: offset.(int64),
 				Value:  value,
 			})
 			i += 4
-		case "OVERFLOW":
+		case OVERFLOW:
 			if len(args) <= i+1 {
 				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 			}
 			switch strings.ToUpper(args[i+1]) {
-			case "WRAP", "SAT", "FAIL":
+			case WRAP, FAIL, SAT:
 				overflowType = strings.ToUpper(args[i+1])
 			default:
-				return diceerrors.NewErrWithFormattedMessage("Invalid OVERFLOW type specified")
+				return diceerrors.NewErrWithFormattedMessage(diceerrors.OverflowTypeErr)
 			}
 			ops = append(ops, BitFieldOp{
-				Kind:   "OVERFLOW",
+				Kind:   OVERFLOW,
 				EType:  overflowType,
 				EVal:   int64(-1),
 				Offset: int64(-1),
@@ -4570,21 +4565,21 @@ func evalBITFIELD(args []string, store *dstore.Store) []byte {
 	var result []interface{}
 	for _, op := range ops {
 		switch op.Kind {
-		case "GET":
+		case GET:
 			res := value.getBits(int(op.Offset), int(op.EVal), op.EType == "SIGNED")
 			result = append(result, res)
-		case "SET":
+		case SET:
 			prevValue := value.getBits(int(op.Offset), int(op.EVal), op.EType == "SIGNED")
 			value.setBits(int(op.Offset), int(op.EVal), op.Value)
 			result = append(result, prevValue)
-		case "INCRBY":
+		case INCRBY:
 			res, err := value.incrByBits(int(op.Offset), int(op.EVal), op.Value, overflowType, op.EType == "SIGNED")
 			if err != nil {
 				result = append(result, nil)
 			} else {
 				result = append(result, res)
 			}
-		case "OVERFLOW":
+		case OVERFLOW:
 			overflowType = op.EType
 		}
 	}

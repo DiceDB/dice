@@ -268,21 +268,21 @@ func (b *ByteArray) incrByBits(offset, width int, increment int64, overflow stri
 	}
 
 	switch overflow {
-	case "WRAP":
+	case WRAP:
 		if signed {
 			rangeSize := maxVal - minVal + 1
 			newValue = ((newValue-minVal)%rangeSize+rangeSize)%rangeSize + minVal
 		} else {
 			newValue %= maxVal + 1
 		}
-	case "SAT":
+	case SAT:
 		// Handle saturation
 		if newValue > maxVal {
 			newValue = maxVal
 		} else if newValue < minVal {
 			newValue = minVal
 		}
-	case "FAIL":
+	case FAIL:
 		// Handle failure on overflow
 		if newValue > maxVal || newValue < minVal {
 			return value, errors.New("overflow detected")

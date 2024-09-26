@@ -30,4 +30,11 @@ const (
 	WithValues string = "WITHVALUES"
 	WithScores string = "WITHSCORES"
 	REV        string = "REV"
+	GET      string = "GET"
+	SET      string = "SET"
+	INCRBY   string = "INCRBY"
+	OVERFLOW string = "OVERFLOW"
+	WRAP     string = "WRAP"
+	SAT      string = "SAT"
+	FAIL     string = "FAIL"
 )
