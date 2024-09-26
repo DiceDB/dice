@@ -2,10 +2,12 @@ package eval
 
 import (
 	"bytes"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"log/slog"
 	"math"
+	"math/big"
 	"math/bits"
 	"regexp"
 	"sort"
@@ -1962,7 +1964,7 @@ func evalMULTI(args []string, store *dstore.Store) []byte {
 // Every time a key in the watch list is modified, the client will be sent a response
 // containing the new value of the key along with the operation that was performed on it.
 // Contains only one argument, the query to be watched.
-func EvalQWATCH(args []string, clientFd int, store *dstore.Store) []byte {
+func EvalQWATCH(args []string, httpOp bool, client *comm.Client, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("QWATCH")
 	}
@@ -1979,13 +1981,26 @@ func EvalQWATCH(args []string, clientFd int, store *dstore.Store) []byte {
 		Key   string
 		Value *object.Obj
 	})
-	querywatcher.WatchSubscriptionChan <- querywatcher.WatchSubscription{
-		Subscribe: true,
-		Query:     query,
-		ClientFD:  clientFd,
-		CacheChan: cacheChannel,
+	var watchSubscription querywatcher.WatchSubscription
+
+	if httpOp {
+		watchSubscription = querywatcher.WatchSubscription{
+			Subscribe:          true,
+			Query:              query,
+			CacheChan:          cacheChannel,
+			QwatchClientChan:   client.HTTPQwatchResponseChan,
+			ClientIdentifierID: client.ClientIdentifierID,
+		}
+	} else {
+		watchSubscription = querywatcher.WatchSubscription{
+			Subscribe: true,
+			Query:     query,
+			ClientFD:  client.Fd,
+			CacheChan: cacheChannel,
+		}
 	}
 
+	querywatcher.WatchSubscriptionChan <- watchSubscription
 	store.CacheKeysForQuery(query.Where, cacheChannel)
 
 	// Return the result of the query.
@@ -2005,7 +2020,7 @@ func EvalQWATCH(args []string, clientFd int, store *dstore.Store) []byte {
 }
 
 // EvalQUNWATCH removes the specified key from the watch list for the caller client.
-func EvalQUNWATCH(args []string, clientFd int) []byte {
+func EvalQUNWATCH(args []string, httpOp bool, client *comm.Client) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("QUNWATCH")
 	}
@@ -2014,10 +2029,19 @@ func EvalQUNWATCH(args []string, clientFd int) []byte {
 		return clientio.Encode(e, false)
 	}
 
-	querywatcher.WatchSubscriptionChan <- querywatcher.WatchSubscription{
-		Subscribe: false,
-		Query:     query,
-		ClientFD:  clientFd,
+	if httpOp {
+		querywatcher.WatchSubscriptionChan <- querywatcher.WatchSubscription{
+			Subscribe:          false,
+			Query:              query,
+			QwatchClientChan:   client.HTTPQwatchResponseChan,
+			ClientIdentifierID: client.ClientIdentifierID,
+		}
+	} else {
+		querywatcher.WatchSubscriptionChan <- querywatcher.WatchSubscription{
+			Subscribe: false,
+			Query:     query,
+			ClientFD:  client.Fd,
+		}
 	}
 
 	return clientio.RespOK
@@ -2500,6 +2524,9 @@ func evalCommandList() []byte {
 	cmds := make([]string, 0, diceCommandsCount)
 	for k := range DiceCmds {
 		cmds = append(cmds, k)
+		for _, sc := range DiceCmds[k].SubCommands {
+			cmds = append(cmds, fmt.Sprint(k, "|", sc))
+		}
 	}
 	return clientio.Encode(cmds, false)
 }
@@ -2902,6 +2929,26 @@ func evalHSET(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(numKeys, false)
 }
 
+func evalHSETNX(args []string, store *dstore.Store) []byte {
+	if len(args) != 3 {
+		return diceerrors.NewErrArity("HSETNX")
+	}
+
+	key := args[0]
+	hmKey := args[1]
+
+	val, errWithMessage := getValueFromHashMap(key, hmKey, store)
+	if errWithMessage != nil {
+		return errWithMessage
+	}
+	if !bytes.Equal(val, clientio.RespNIL) { // hmKey is already present in hash map
+		return clientio.RespZero
+	}
+
+	evalHSET(args, store)
+	return clientio.RespOne
+}
+
 func evalHGETALL(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("HGETALL")
@@ -3004,6 +3051,33 @@ func evalHDEL(args []string, store *dstore.Store) []byte {
 	}
 
 	return clientio.Encode(count, false)
+}
+
+// evalHKEYS returns all the values in the hash stored at key.
+func evalHVALS(args []string, store *dstore.Store) []byte {
+	if len(args) != 1 {
+		return diceerrors.NewErrArity("HVALS")
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	if obj == nil {
+		return clientio.Encode([]string{}, false) // Return an empty array for non-existent keys
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+	}
+
+	hashMap := obj.Value.(HashMap)
+	results := make([]string, 0, len(hashMap))
+
+	for _, value := range hashMap {
+		results = append(results, value)
+	}
+
+	return clientio.Encode(results, false)
 }
 
 // evalHSTRLEN returns the length of value associated with field in the hash stored at key.
@@ -4051,4 +4125,95 @@ func evalGETRANGE(args []string, store *dstore.Store) []byte {
 	}
 
 	return clientio.Encode(str[start:end+1], false)
+}
+
+// evalHRANDFIELD returns random fields from a hash stored at key.
+// If only the key is provided, one random field is returned.
+// If count is provided, it returns that many unique random fields. A negative count allows repeated selections.
+// The "WITHVALUES" option returns both fields and values.
+// Returns nil if the key doesn't exist or the hash is empty.
+// Errors: arity error, type error for non-hash, syntax error for "WITHVALUES", or count format error.
+func evalHRANDFIELD(args []string, store *dstore.Store) []byte {
+	if len(args) < 1 || len(args) > 3 {
+		return diceerrors.NewErrArity("HRANDFIELD")
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		return clientio.RespNIL
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+	}
+
+	hashMap := obj.Value.(HashMap)
+	if len(hashMap) == 0 {
+		return clientio.Encode([]string{}, false)
+	}
+
+	count := 1
+	withValues := false
+
+	if len(args) > 1 {
+		var err error
+		// The second argument is the count.
+		count, err = strconv.Atoi(args[1])
+		if err != nil {
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
+		}
+
+		// The third argument is the "WITHVALUES" option.
+		if len(args) == 3 {
+			if strings.ToUpper(args[2]) != WITHVALUES {
+				return diceerrors.NewErrWithFormattedMessage(diceerrors.SyntaxErr)
+			}
+			withValues = true
+		}
+	}
+
+	return selectRandomFields(hashMap, count, withValues)
+}
+
+// selectRandomFields returns random fields from a hashmap.
+func selectRandomFields(hashMap HashMap, count int, withValues bool) []byte {
+	keys := make([]string, 0, len(hashMap))
+	for k := range hashMap {
+		keys = append(keys, k)
+	}
+
+	var results []string
+	resultSet := make(map[string]struct{})
+
+	abs := func(x int) int {
+		if x < 0 {
+			return -x
+		}
+		return x
+	}
+
+	for i := 0; i < abs(count); i++ {
+		if count > 0 && len(resultSet) == len(keys) {
+			break
+		}
+
+		randomIndex, _ := rand.Int(rand.Reader, big.NewInt(int64(len(keys))))
+		randomField := keys[randomIndex.Int64()]
+
+		if count > 0 {
+			if _, exists := resultSet[randomField]; exists {
+				i--
+				continue
+			}
+			resultSet[randomField] = struct{}{}
+		}
+
+		results = append(results, randomField)
+		if withValues {
+			results = append(results, hashMap[randomField])
+		}
+	}
+
+	return clientio.Encode(results, false)
 }
