@@ -4560,53 +4560,53 @@ func evalZRANGE(args []string, store *dstore.Store) []byte {
 
 // parseEncodingAndOffet function parses offset and encoding type for bitfield commands
 // as this part is common to all subcommands
-func parseEncodingAndOffset(args []string) (eType interface{}, eVal interface{}, offset interface{}, err error) {
+func parseEncodingAndOffset(args []string) (eType, eVal, offset interface{}, err error) {
 	encodingRaw := args[0]
 	offsetRaw := args[1]
 	switch encodingRaw[0] {
 	case 'i':
-		eType = "SIGNED"
+		eType = SIGNED
 		eVal, err = strconv.ParseInt(encodingRaw[1:], 10, 64)
 		if err != nil {
-			err = errors.New(diceerrors.InvalidBitfieldType)
-			return
+			err = diceerrors.NewErr(diceerrors.InvalidBitfieldType)
+			return eType, eVal, offset, err
 		}
 		if eVal.(int64) <= 0 || eVal.(int64) > 64 {
-			err = errors.New(diceerrors.InvalidBitfieldType)
-			return
+			err = diceerrors.NewErr(diceerrors.InvalidBitfieldType)
+			return eType, eVal, offset, err
 		}
 	case 'u':
-		eType = "UNSIGNED"
+		eType = UNSIGNED
 		eVal, err = strconv.ParseInt(encodingRaw[1:], 10, 64)
 		if err != nil {
-			err = errors.New(diceerrors.InvalidBitfieldType)
-			return
+			err = diceerrors.NewErr(diceerrors.InvalidBitfieldType)
+			return eType, eVal, offset, err
 		}
 		if eVal.(int64) <= 0 || eVal.(int64) >= 64 {
-			err = errors.New(diceerrors.InvalidBitfieldType)
-			return
+			err = diceerrors.NewErr(diceerrors.InvalidBitfieldType)
+			return eType, eVal, offset, err
 		}
 	default:
-		err = errors.New(diceerrors.InvalidBitfieldType)
-		return
+		err = diceerrors.NewErr(diceerrors.InvalidBitfieldType)
+		return eType, eVal, offset, err
 	}
 
 	switch offsetRaw[0] {
 	case '#':
 		offset, err = strconv.ParseInt(offsetRaw[1:], 10, 64)
 		if err != nil {
-			err = errors.New(diceerrors.BitfieldOffsetErr)
-			return
+			err = diceerrors.NewErr(diceerrors.BitfieldOffsetErr)
+			return eType, eVal, offset, err
 		}
 		offset = offset.(int64) * eVal.(int64)
 	default:
 		offset, err = strconv.ParseInt(offsetRaw, 10, 64)
 		if err != nil {
-			err = errors.New(diceerrors.BitfieldOffsetErr)
-			return
+			err = diceerrors.NewErr(diceerrors.BitfieldOffsetErr)
+			return eType, eVal, offset, err
 		}
 	}
-	return
+	return eType, eVal, offset, err
 }
 
 // evalBITFIELD evaluates BITFIELD operations on a key store string, int or bytearray types
@@ -4742,14 +4742,14 @@ func evalBITFIELD(args []string, store *dstore.Store) []byte {
 	for _, op := range ops {
 		switch op.Kind {
 		case GET:
-			res := value.getBits(int(op.Offset), int(op.EVal), op.EType == "SIGNED")
+			res := value.getBits(int(op.Offset), int(op.EVal), op.EType == SIGNED)
 			result = append(result, res)
 		case SET:
-			prevValue := value.getBits(int(op.Offset), int(op.EVal), op.EType == "SIGNED")
+			prevValue := value.getBits(int(op.Offset), int(op.EVal), op.EType == SIGNED)
 			value.setBits(int(op.Offset), int(op.EVal), op.Value)
 			result = append(result, prevValue)
 		case INCRBY:
-			res, err := value.incrByBits(int(op.Offset), int(op.EVal), op.Value, overflowType, op.EType == "SIGNED")
+			res, err := value.incrByBits(int(op.Offset), int(op.EVal), op.Value, overflowType, op.EType == SIGNED)
 			if err != nil {
 				result = append(result, nil)
 			} else {
