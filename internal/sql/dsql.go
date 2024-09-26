@@ -152,7 +152,7 @@ func ParseQuery(sql string) (DSQLQuery, error) {
 		Where:       where,
 		OrderBy:     orderBy,
 		Limit:       limit,
-		Fingerprint: GenerateFingerprint(where),
+		Fingerprint: generateFingerprint(where),
 	}, nil
 }
 

@@ -1,80 +1,124 @@
-package sql_test
+package sql
 
 import (
 	"testing"
 
-	"github.com/dicedb/dice/internal/sql"
 	"github.com/xwb1989/sqlparser"
 	"gotest.tools/v3/assert"
 )
 
+func TestExpressionString(t *testing.T) {
+	tests := []struct {
+		name     string
+		expr     expression
+		expected string
+	}{
+		{
+			name:     "Single AND term",
+			expr:     expression{{"_key LIKE 'match:1:*'", "_value > 10"}},
+			expected: "_key LIKE 'match:1:*' AND _value > 10",
+		},
+		{
+			name:     "Multiple AND terms in a single OR term",
+			expr:     expression{{"_key LIKE 'match:1:*'", "_value > 10", "_value < 5"}},
+			expected: "_key LIKE 'match:1:*' AND _value < 5 AND _value > 10",
+		},
+		{
+			name:     "Multiple OR terms with single AND terms",
+			expr:     expression{{"_key LIKE 'match:1:*'"}, {"_value < 5"}, {"_value > 10"}},
+			expected: "_key LIKE 'match:1:*' OR _value < 5 OR _value > 10",
+		},
+		{
+			name:     "Multiple OR terms with AND combinations",
+			expr:     expression{{"_key LIKE 'match:1:*'", "_value > 10"}, {"_value < 5", "_value > 0"}},
+			expected: "_key LIKE 'match:1:*' AND _value > 10 OR _value < 5 AND _value > 0",
+		},
+		{
+			name:     "Unordered terms",
+			expr:     expression{{"_value > 10", "_key LIKE 'match:1:*'"}, {"_value > 0", "_value < 5"}},
+			expected: "_key LIKE 'match:1:*' AND _value > 10 OR _value < 5 AND _value > 0",
+		},
+		{
+			name:     "Nested AND and OR terms with duplicates",
+			expr:     expression{{"_key LIKE 'match:1:*'", "_value < 5"}, {"_key LIKE 'match:1:*'", "_value < 5", "_value > 10"}},
+			expected: "_key LIKE 'match:1:*' AND _value < 5 OR _key LIKE 'match:1:*' AND _value < 5 AND _value > 10",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.expected, test.expr.String())
+		})
+	}
+}
+
 func TestCombineOr(t *testing.T) {
 	tests := []struct {
 		name     string
-		a        sql.Expression
-		b        sql.Expression
-		expected sql.Expression
+		a        expression
+		b        expression
+		expected expression
 	}{
 		{
 			name:     "Combining two empty expressions",
-			a:        sql.Expression([][]string{}),
-			b:        sql.Expression([][]string{}),
-			expected: sql.Expression([][]string{}),
+			a:        expression([][]string{}),
+			b:        expression([][]string{}),
+			expected: expression([][]string{}),
 		},
 		// {
 		// 	name:     "Annulment law",
-		// 	a:        sql.Expression([][]string{{"_value > 10"}}),
-		// 	b:        sql.Expression([][]string{{}}), // equivalent to 1
-		// 	expected: sql.Expression([][]string{{}}),
+		// 	a:        Expression([][]string{{"_value > 10"}}),
+		// 	b:        Expression([][]string{{}}), // equivalent to 1
+		// 	expected: Expression([][]string{{}}),
 		// },
 		{
 			name:     "Identity law",
-			a:        sql.Expression([][]string{{"_value > 10"}}),
-			b:        sql.Expression([][]string{}), // equivalent to 0
-			expected: sql.Expression([][]string{{"_value > 10"}}),
+			a:        expression([][]string{{"_value > 10"}}),
+			b:        expression([][]string{}), // equivalent to 0
+			expected: expression([][]string{{"_value > 10"}}),
 		},
 		{
 			name:     "Idempotent law",
-			a:        sql.Expression([][]string{{"_value > 10"}}),
-			b:        sql.Expression([][]string{{"_value > 10"}}),
-			expected: sql.Expression([][]string{{"_value > 10"}}),
+			a:        expression([][]string{{"_value > 10"}}),
+			b:        expression([][]string{{"_value > 10"}}),
+			expected: expression([][]string{{"_value > 10"}}),
 		},
 		{
 			name: "Simple OR combination with non-overlapping terms",
-			a:    sql.Expression([][]string{{"_key LIKE 'test:*'"}}),
-			b:    sql.Expression([][]string{{"_value > 10"}}),
-			expected: sql.Expression([][]string{
+			a:    expression([][]string{{"_key LIKE 'test:*'"}}),
+			b:    expression([][]string{{"_value > 10"}}),
+			expected: expression([][]string{
 				{"_key LIKE 'test:*'"}, {"_value > 10"},
 			}),
 		},
 		{
 			name: "Complex OR combination with multiple AND terms",
-			a:    sql.Expression([][]string{{"_key LIKE 'test:*'", "_value > 10"}}),
-			b:    sql.Expression([][]string{{"_key LIKE 'example:*'", "_value < 5"}}),
-			expected: sql.Expression([][]string{
+			a:    expression([][]string{{"_key LIKE 'test:*'", "_value > 10"}}),
+			b:    expression([][]string{{"_key LIKE 'example:*'", "_value < 5"}}),
+			expected: expression([][]string{
 				{"_key LIKE 'test:*'", "_value > 10"}, {"_key LIKE 'example:*'", "_value < 5"},
 			}),
 		},
 		{
 			name: "Combining overlapping AND terms",
-			a:    sql.Expression([][]string{{"_key LIKE 'test:*'", "_value > 10"}}),
-			b:    sql.Expression([][]string{{"_value > 10", "_key LIKE 'test:*'"}}),
-			expected: sql.Expression([][]string{
+			a:    expression([][]string{{"_key LIKE 'test:*'", "_value > 10"}}),
+			b:    expression([][]string{{"_value > 10", "_key LIKE 'test:*'"}}),
+			expected: expression([][]string{
 				{"_key LIKE 'test:*'", "_value > 10"},
 			}),
 		},
 		{
 			name: "Combining overlapping AND terms in reverse order",
-			a:    sql.Expression([][]string{{"_value > 10", "_key LIKE 'test:*'"}}),
-			b:    sql.Expression([][]string{{"_key LIKE 'test:*'", "_value > 10"}}),
-			expected: sql.Expression([][]string{
+			a:    expression([][]string{{"_value > 10", "_key LIKE 'test:*'"}}),
+			b:    expression([][]string{{"_key LIKE 'test:*'", "_value > 10"}}),
+			expected: expression([][]string{
 				{"_key LIKE 'test:*'", "_value > 10"},
 			}),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.DeepEqual(t, tt.expected, sql.CombineOr(tt.a, tt.b))
+			assert.DeepEqual(t, tt.expected, combineOr(tt.a, tt.b))
 		})
 	}
 }
@@ -82,86 +126,86 @@ func TestCombineOr(t *testing.T) {
 func TestCombineAnd(t *testing.T) {
 	tests := []struct {
 		name     string
-		a        sql.Expression
-		b        sql.Expression
-		expected sql.Expression
+		a        expression
+		b        expression
+		expected expression
 	}{
 		{
 			name:     "Combining two empty expressions",
-			a:        sql.Expression([][]string{}),
-			b:        sql.Expression([][]string{}),
-			expected: sql.Expression([][]string{}),
+			a:        expression([][]string{}),
+			b:        expression([][]string{}),
+			expected: expression([][]string{}),
 		},
 		{
 			name:     "Annulment law",
-			a:        sql.Expression([][]string{{"_value > 10"}}),
-			b:        sql.Expression([][]string{}), // equivalent to 0
-			expected: sql.Expression([][]string{}),
+			a:        expression([][]string{{"_value > 10"}}),
+			b:        expression([][]string{}), // equivalent to 0
+			expected: expression([][]string{}),
 		},
 		{
 			name:     "Identity law",
-			a:        sql.Expression([][]string{{"_value > 10"}}),
-			b:        sql.Expression([][]string{{}}), // equivalent to 1
-			expected: sql.Expression([][]string{{"_value > 10"}}),
+			a:        expression([][]string{{"_value > 10"}}),
+			b:        expression([][]string{{}}), // equivalent to 1
+			expected: expression([][]string{{"_value > 10"}}),
 		},
 		{
 			name:     "Idempotent law",
-			a:        sql.Expression([][]string{{"_value > 10"}}),
-			b:        sql.Expression([][]string{{"_value > 10"}}),
-			expected: sql.Expression([][]string{{"_value > 10"}}),
+			a:        expression([][]string{{"_value > 10"}}),
+			b:        expression([][]string{{"_value > 10"}}),
+			expected: expression([][]string{{"_value > 10"}}),
 		},
 		{
 			name:     "Multiple AND terms, no duplicates",
-			a:        sql.Expression([][]string{{"_value > 10"}}),
-			b:        sql.Expression([][]string{{"_key LIKE 'test:*'", "_value < 5"}}),
-			expected: sql.Expression([][]string{{"_key LIKE 'test:*'", "_value < 5", "_value > 10"}}),
+			a:        expression([][]string{{"_value > 10"}}),
+			b:        expression([][]string{{"_key LIKE 'test:*'", "_value < 5"}}),
+			expected: expression([][]string{{"_key LIKE 'test:*'", "_value < 5", "_value > 10"}}),
 		},
 		{
 			name: "Multiple terms in both expressions with duplicates",
-			a:    sql.Expression([][]string{{"_value > 10", "_key LIKE 'test:*'"}}),
-			b:    sql.Expression([][]string{{"_key LIKE 'test:*'", "_value < 5"}}),
-			expected: sql.Expression([][]string{
+			a:    expression([][]string{{"_value > 10", "_key LIKE 'test:*'"}}),
+			b:    expression([][]string{{"_key LIKE 'test:*'", "_value < 5"}}),
+			expected: expression([][]string{
 				{"_key LIKE 'test:*'", "_value < 5", "_value > 10"},
 			}),
 		},
 		{
 			name: "Terms in different order, no duplicates",
-			a:    sql.Expression([][]string{{"_key LIKE 'test:*'", "_value > 10"}}),
-			b:    sql.Expression([][]string{{"_value < 5"}}),
-			expected: sql.Expression([][]string{
+			a:    expression([][]string{{"_key LIKE 'test:*'", "_value > 10"}}),
+			b:    expression([][]string{{"_value < 5"}}),
+			expected: expression([][]string{
 				{"_key LIKE 'test:*'", "_value < 5", "_value > 10"},
 			}),
 		},
 		{
 			name: "Terms in different order with duplicates",
-			a:    sql.Expression([][]string{{"_value > 10", "_key LIKE 'test:*'"}}),
-			b:    sql.Expression([][]string{{"_key LIKE 'test:*'", "_value < 5"}}),
-			expected: sql.Expression([][]string{
+			a:    expression([][]string{{"_value > 10", "_key LIKE 'test:*'"}}),
+			b:    expression([][]string{{"_key LIKE 'test:*'", "_value < 5"}}),
+			expected: expression([][]string{
 				{"_key LIKE 'test:*'", "_value < 5", "_value > 10"},
 			}),
 		},
 		{
 			name: "Partial duplicates across expressions",
-			a:    sql.Expression([][]string{{"_value > 10", "_key LIKE 'test:*'"}}),
-			b:    sql.Expression([][]string{{"_key LIKE 'test:*'", "_key = 'abc'"}}),
-			expected: sql.Expression([][]string{
+			a:    expression([][]string{{"_value > 10", "_key LIKE 'test:*'"}}),
+			b:    expression([][]string{{"_key LIKE 'test:*'", "_key = 'abc'"}}),
+			expected: expression([][]string{
 				{"_key = 'abc'", "_key LIKE 'test:*'", "_value > 10"},
 			}),
 		},
 		{
 			name: "Nested AND groups",
-			a:    sql.Expression([][]string{{"_key LIKE 'test:*'", "_value > 10"}}),
-			b:    sql.Expression([][]string{{"_key LIKE 'test:*'", "_value < 5"}, {"_value = 7"}}),
-			expected: sql.Expression([][]string{
+			a:    expression([][]string{{"_key LIKE 'test:*'", "_value > 10"}}),
+			b:    expression([][]string{{"_key LIKE 'test:*'", "_value < 5"}, {"_value = 7"}}),
+			expected: expression([][]string{
 				{"_key LIKE 'test:*'", "_value < 5", "_value > 10"},
 				{"_key LIKE 'test:*'", "_value = 7", "_value > 10"},
 			}),
 		},
 		{
 			name: "Same terms but in different AND groups",
-			a:    sql.Expression([][]string{{"_key LIKE 'test:*'"}}),
-			b:    sql.Expression([][]string{{"_key LIKE 'test:*'", "_value < 5"}, {"_key LIKE 'test:*'"}}),
-			expected: sql.Expression([][]string{
+			a:    expression([][]string{{"_key LIKE 'test:*'"}}),
+			b:    expression([][]string{{"_key LIKE 'test:*'", "_value < 5"}, {"_key LIKE 'test:*'"}}),
+			expected: expression([][]string{
 				{"_key LIKE 'test:*'", "_value < 5"},
 				{"_key LIKE 'test:*'"},
 			}),
@@ -169,164 +213,76 @@ func TestCombineAnd(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.DeepEqual(t, tt.expected, sql.CombineAnd(tt.a, tt.b))
+			assert.DeepEqual(t, tt.expected, combineAnd(tt.a, tt.b))
 		})
 	}
 }
 
-func TestParseAstExpression(t *testing.T) {
-	tests := []struct {
-		name       string
-		similarEq  []string // logically same where expressions
-		expression string
-	}{
-		{
-			name: "aa",
-			similarEq: []string{
-				"_value > 10 OR _value < 5",
-				" _value < 5 OR _value > 10",
-			},
-			expression: "<_value5 OR >_value10",
-		},
-		{
-			name: "aa",
-			similarEq: []string{
-				"_value > 10 AND _value < 5",
-				"_value < 5 AND _value > 10",
-			},
-			expression: "<_value5 AND >_value10",
-		},
-		{
-			name: "aa",
-			similarEq: []string{
-				"_key like `match:1:*`",
-			},
-			expression: "like_key`match:1:*`",
-		},
-		{
-			name: "aa",
-			similarEq: []string{
-				"_key like 'match:1:*'",
-			},
-			expression: "like_key'match:1:*'",
-		},
-		{
-			name: "aa",
-			similarEq: []string{
-				"_key like 'match:1:*'",
-				"(_key like 'match:1:*')",
-				"((_key like 'match:1:*'))",
-				"(((_key like 'match:1:*')))",
-			},
-			expression: "like_key'match:1:*'",
-		},
-		{
-			name: "pskd",
-			similarEq: []string{
-				"_key like 'match:1:*' AND _key like 'match:1:*'",
-				"_key like 'match:1:*'",
-			},
-			expression: "like_key'match:1:*'",
-		},
-		{
-			name: "dcdjfhcdipp",
-			similarEq: []string{
-				"(_key LIKE 'test:*') AND (_value > 10 OR _value < 5)",
-				"(_value > 10 OR _value < 5) AND (_key LIKE 'test:*')",
-				"(_value < 5 OR _value > 10) AND (_key LIKE 'test:*')",
-				"(_key LIKE 'test:*' AND _value > 10) OR (_key LIKE 'test:*' AND _value < 5)",
-				"((_key LIKE 'test:*') AND _value > 10) OR ((_key LIKE 'test:*') AND _value < 5)",
-				"(_key LIKE 'test:*') AND ((_value > 10) OR (_value < 5))",
-				"(_value > 10 AND _key LIKE 'test:*') OR (_value < 5 AND _key LIKE 'test:*')",
-				"(_value < 5 AND _key LIKE 'test:*') OR (_value > 10 AND _key LIKE 'test:*')",
-			},
-			expression: "<_value5 AND like_key'test:*' OR >_value10 AND like_key'test:*'",
-		},
-		// {
-		// 	name: "fjvh",
-		// 	similarEq: []string{
-		// 		// "(_key LIKE 'test:*') OR (_value > 10 AND _value < 5)", // "<_value5 AND >_value10 OR like_key'test:*'"
-		// 		// "(_value > 10 AND _value < 5) OR (_key LIKE 'test:*')", // "<_value5 AND >_value10 OR like_key'test:*'"
-		// 		// "(_value < 5 AND _value > 10) OR (_key LIKE 'test:*')", // "<_value5 AND >_value10 OR like_key'test:*'"
-		// 		// "(_key LIKE 'test:*' OR _value > 10) AND (_key LIKE 'test:*' OR _value < 5)",
-		// 		// {
-		// 		// 	  	"<_value5 AND >_value10 OR",
-		// 		// 	+ 	" <_value5 AND like_key'test:*' OR >_value10 AND like_key'test:*'",
-		// 		// 	+ 	" OR like_key'test:*' AND",
-		// 		// 	  	" like_key'test:*'",
-		// 		// 	  }
-
-		// 		// "((_key LIKE 'test:*') OR (_value > 10)) AND ((_key LIKE 'test:*') OR (_value < 5))",
-		// 	},
-		// 	expression: "<_value5 AND >_value10 OR like_key'test:*'",
-		// },
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			for _, query := range tt.similarEq {
-				statement, err := sqlparser.Parse("SELECT * WHERE " + query)
-				if err != nil {
-					t.Fail()
-				}
-				selectStmt, ok := statement.(*sqlparser.Select)
-				if !ok {
-					t.Fail()
-				}
-				assert.DeepEqual(t, tt.expression, sql.ParseAstExpression(selectStmt.Where.Expr).String())
-			}
-		})
-	}
-}
-
-func TestGenerateFingerprint(t *testing.T) {
+func TestGenerateFingerprintAndParseAstExpression(t *testing.T) {
 	tests := []struct {
 		name        string
-		similarEq   []string // logically same where expressions
-		fingerprint string   // expected fingerprint
+		similarExpr []string // logically same where expressions
+		expression  string
+		fingerprint string
 	}{
 		{
-			name: "aa",
-			similarEq: []string{
+			name: "Terms in different order, OR operator",
+			similarExpr: []string{
 				"_value > 10 OR _value < 5",
-				" _value < 5 OR _value > 10",
+				"_value < 5 OR _value > 10",
 			},
+			expression:  "<_value5 OR >_value10",
 			fingerprint: "f_5731466836575684070",
 		},
 		{
-			name: "aa",
-			similarEq: []string{
+			name: "Terms in different order, AND operator",
+			similarExpr: []string{
 				"_value > 10 AND _value < 5",
 				"_value < 5 AND _value > 10",
 			},
+			expression:  "<_value5 AND >_value10",
 			fingerprint: "f_8696580727138087340",
 		},
 		{
-			name: "aa",
-			similarEq: []string{
+			// ideally this and below test should spit same output
+			name: "Simple comparison operator (comparison value in backticks)",
+			similarExpr: []string{
 				"_key like `match:1:*`",
 			},
+			expression:  "like_key`match:1:*`",
 			fingerprint: "f_15929225480754059748",
 		},
 		{
-			name: "aa",
-			similarEq: []string{
+			name: "Simple comparison operator (comparison value in single quotes)",
+			similarExpr: []string{
 				"_key like 'match:1:*'",
 			},
+			expression:  "like_key'match:1:*'",
 			fingerprint: "f_5313097907453016110",
 		},
 		{
-			name: "aa",
-			similarEq: []string{
+			name: "Simple comparison operator with multiple redundant parentheses",
+			similarExpr: []string{
 				"_key like 'match:1:*'",
 				"(_key like 'match:1:*')",
 				"((_key like 'match:1:*'))",
 				"(((_key like 'match:1:*')))",
 			},
+			expression:  "like_key'match:1:*'",
 			fingerprint: "f_5313097907453016110",
 		},
 		{
-			name: "dcdjfhcdipp",
-			similarEq: []string{
+			name: "Expression with duplicate terms (or Idempotent law)",
+			similarExpr: []string{
+				"_key like 'match:1:*' AND _key like 'match:1:*'",
+				"_key like 'match:1:*'",
+			},
+			expression:  "like_key'match:1:*'",
+			fingerprint: "f_5313097907453016110",
+		},
+		{
+			name: "Expression in form 'A AND (B OR C)' which can reduce to 'A AND B OR A AND C' etc (or Distributive law)",
+			similarExpr: []string{
 				"(_key LIKE 'test:*') AND (_value > 10 OR _value < 5)",
 				"(_value > 10 OR _value < 5) AND (_key LIKE 'test:*')",
 				"(_value < 5 OR _value > 10) AND (_key LIKE 'test:*')",
@@ -336,12 +292,38 @@ func TestGenerateFingerprint(t *testing.T) {
 				"(_value > 10 AND _key LIKE 'test:*') OR (_value < 5 AND _key LIKE 'test:*')",
 				"(_value < 5 AND _key LIKE 'test:*') OR (_value > 10 AND _key LIKE 'test:*')",
 			},
+			expression:  "<_value5 AND like_key'test:*' OR >_value10 AND like_key'test:*'",
 			fingerprint: "f_6936111135456499050",
 		},
+		{
+			// ideally this and below test should spit same output
+			// but our algorithm is not sophisticated enough yet
+			name: "Expression in form 'A OR (B AND C)' which can reduce to 'A OR B AND A OR C' etc (or Distributive law)",
+			similarExpr: []string{
+				"_key LIKE 'test:*' OR _value > 10 AND _value < 5",
+				"(_key LIKE 'test:*') OR (_value > 10 AND _value < 5)",
+				"(_value > 10 AND _value < 5) OR (_key LIKE 'test:*')",
+				"(_value < 5 AND _value > 10) OR (_key LIKE 'test:*')",
+				// "(_key LIKE 'test:*' OR _value > 10) AND (_key LIKE 'test:*' OR _value < 5)",
+				// "((_key LIKE 'test:*') OR (_value > 10)) AND ((_key LIKE 'test:*') OR (_value < 5))",
+			},
+			expression:  "<_value5 AND >_value10 OR like_key'test:*'",
+			fingerprint: "f_655732287561200780",
+		},
+		{
+			name: "Complex expression with multiple redundant parentheses",
+			similarExpr: []string{
+				"(_key LIKE 'test:*' OR _value > 10) AND (_key LIKE 'test:*' OR _value < 5)",
+				"((_key LIKE 'test:*') OR (_value > 10)) AND ((_key LIKE 'test:*') OR (_value < 5))",
+			},
+			expression:  "<_value5 AND >_value10 OR <_value5 AND like_key'test:*' OR >_value10 AND like_key'test:*' OR like_key'test:*'",
+			fingerprint: "f_1509117529358989129",
+		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			for _, query := range tt.similarEq {
+			for _, query := range tt.similarExpr {
 				statement, err := sqlparser.Parse("SELECT * WHERE " + query)
 				if err != nil {
 					t.Fail()
@@ -350,7 +332,8 @@ func TestGenerateFingerprint(t *testing.T) {
 				if !ok {
 					t.Fail()
 				}
-				assert.DeepEqual(t, tt.fingerprint, sql.GenerateFingerprint(selectStmt.Where.Expr))
+				assert.DeepEqual(t, tt.expression, parseAstExpression(selectStmt.Where.Expr).String())
+				assert.DeepEqual(t, tt.fingerprint, generateFingerprint(selectStmt.Where.Expr))
 			}
 		})
 	}

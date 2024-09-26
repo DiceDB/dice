@@ -10,9 +10,9 @@ import (
 )
 
 // OR terms containing AND expressions
-type Expression [][]string
+type expression [][]string
 
-func (expr Expression) String() string {
+func (expr expression) String() string {
 	var orTerms []string
 	for _, andTerm := range expr {
 		// Sort AND terms within OR
@@ -24,32 +24,32 @@ func (expr Expression) String() string {
 	return strings.Join(orTerms, " OR ")
 }
 
-func GenerateFingerprint(where sqlparser.Expr) string {
-	expr := ParseAstExpression(where)
+func generateFingerprint(where sqlparser.Expr) string {
+	expr := parseAstExpression(where)
 	return fmt.Sprintf("f_%d", hash.Hash64([]byte(expr.String())))
 }
 
-func ParseAstExpression(expr sqlparser.Expr) Expression {
+func parseAstExpression(expr sqlparser.Expr) expression {
 	switch expr := expr.(type) {
 	case *sqlparser.AndExpr:
-		leftExpr := ParseAstExpression(expr.Left)
-		rightExpr := ParseAstExpression(expr.Right)
-		return CombineAnd(leftExpr, rightExpr)
+		leftExpr := parseAstExpression(expr.Left)
+		rightExpr := parseAstExpression(expr.Right)
+		return combineAnd(leftExpr, rightExpr)
 	case *sqlparser.OrExpr:
-		leftExpr := ParseAstExpression(expr.Left)
-		rightExpr := ParseAstExpression(expr.Right)
-		return CombineOr(leftExpr, rightExpr)
+		leftExpr := parseAstExpression(expr.Left)
+		rightExpr := parseAstExpression(expr.Right)
+		return combineOr(leftExpr, rightExpr)
 	case *sqlparser.ParenExpr:
-		return ParseAstExpression(expr.Expr)
+		return parseAstExpression(expr.Expr)
 	case *sqlparser.ComparisonExpr:
-		return Expression([][]string{{expr.Operator + sqlparser.String(expr.Left) + sqlparser.String(expr.Right)}})
+		return expression([][]string{{expr.Operator + sqlparser.String(expr.Left) + sqlparser.String(expr.Right)}})
 	default:
-		return Expression{}
+		return expression{}
 	}
 }
 
-func CombineAnd(a, b Expression) Expression {
-	result := make(Expression, 0, len(a)+len(b))
+func combineAnd(a, b expression) expression {
+	result := make(expression, 0, len(a)+len(b))
 	for _, termA := range a {
 		for _, termB := range b {
 			combined := append(termA, termB...)
@@ -58,11 +58,11 @@ func CombineAnd(a, b Expression) Expression {
 			result = append(result, uniqueCombined)
 		}
 	}
-	return Expression(result)
+	return expression(result)
 }
 
-func CombineOr(a, b Expression) Expression {
-	result := make(Expression, 0, len(a)+len(b))
+func combineOr(a, b expression) expression {
+	result := make(expression, 0, len(a)+len(b))
 	uniqueTerms := make(map[string]bool)
 
 	// Helper function to add unique terms
