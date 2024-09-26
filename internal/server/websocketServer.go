@@ -64,7 +64,7 @@ func NewWebSocketServer(shardManager *shard.ShardManager, watchChan chan dstore.
 
 	mux.HandleFunc("/", websocketServer.WebsocketHandler)
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		_, err := w.Write([]byte("ok"))
+		_, err := w.Write([]byte("OK"))
 		if err != nil {
 			return
 		}
@@ -113,81 +113,75 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 	// upgrade http connection to websocket
 	conn, err := s.upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		s.logger.Error("Websocket upgrade failed", slog.Any("error", err))
+		return
 	}
+
 	// closing handshake
 	defer func() {
-		err := conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-		if err != nil {
-			s.logger.Error("Websocket close handshake failed", slog.Any("error", err))
-		}
+		_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "close 1000 (normal)"))
 		conn.Close()
 	}()
 
-	// read incoming message
-	_, msg, err := conn.ReadMessage()
-	if err != nil {
-		s.logger.Error("Websocket read failed", slog.Any("error", err))
-		return
-	}
-
-	// parse message to dice command
-	redisCmd, err := utils.ParseWebsocketMessage(msg)
-	if err != nil {
-		s.logger.Error("Error parsing Websocket request", slog.Any("error", err))
-		return
-	}
-
-	if redisCmd.Cmd == Abort {
-		s.logger.Debug("ABORT command received")
-		s.logger.Debug("Shutting down Websocket Server")
-		close(s.shutdownChan)
-		return
-	}
-
-	if unimplementedCommandsWebsocket[redisCmd.Cmd] {
-		s.logger.Error("Command is not implemented", slog.String("Command", redisCmd.Cmd))
-		_, err := w.Write([]byte("Command is not implemented with Websocket"))
+	for {
+		// read incoming message
+		mt, msg, err := conn.ReadMessage()
+		fmt.Println(mt, string(msg), err)
 		if err != nil {
-			s.logger.Error("Error writing response", slog.Any("error", err))
-			return
+			sendTextMessage(conn, []byte("error: command reading failed"))
+			continue
 		}
-		return
-	}
 
-	// send request to Shard Manager
-	s.shardManager.GetShard(0).ReqChan <- &ops.StoreOp{
-		Cmd:         redisCmd,
-		WorkerID:    "wsServer",
-		ShardID:     0,
-		WebsocketOp: true,
-	}
+		// parse message to dice command
+		redisCmd, err := utils.ParseWebsocketMessage(msg)
+		if err != nil {
+			sendTextMessage(conn, []byte("error: parsing failed"))
+			continue
+		}
 
-	// Wait for response
-	resp := <-s.ioChan
+		if redisCmd.Cmd == Abort {
+			close(s.shutdownChan)
+			break
+		}
 
-	var rp *clientio.RESPParser
-	if resp.EvalResponse.Error != nil {
-		rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(resp.EvalResponse.Error.Error())))
-	} else {
-		rp = clientio.NewRESPParser(bytes.NewBuffer(resp.EvalResponse.Result.([]byte)))
-	}
+		if unimplementedCommandsWebsocket[redisCmd.Cmd] {
+			sendTextMessage(conn, []byte("Command is not implemented with Websocket"))
+			continue
+		}
 
-	val, err := rp.DecodeOne()
-	if err != nil {
-		s.logger.Error("Error decoding response", slog.Any("error", err))
-		return
-	}
+		// send request to Shard Manager
+		s.shardManager.GetShard(0).ReqChan <- &ops.StoreOp{
+			Cmd:         redisCmd,
+			WorkerID:    "wsServer",
+			ShardID:     0,
+			WebsocketOp: true,
+		}
 
-	// Write response
-	responseJSON, err := json.Marshal(val)
-	if err != nil {
-		s.logger.Error("Error marshaling response", slog.Any("error", err))
-		return
+		// Wait for response
+		resp := <-s.ioChan
+		var rp *clientio.RESPParser
+		if resp.EvalResponse.Error != nil {
+			rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(resp.EvalResponse.Error.Error())))
+		} else {
+			rp = clientio.NewRESPParser(bytes.NewBuffer(resp.EvalResponse.Result.([]byte)))
+		}
+
+		val, err := rp.DecodeOne()
+		if err != nil {
+			sendTextMessage(conn, []byte("error: decoding response"))
+			continue
+		}
+
+		respBytes, err := json.Marshal(val)
+		if err != nil {
+			sendTextMessage(conn, []byte("error: marshalling json response"))
+			continue
+		}
+
+		// Write response
+		sendTextMessage(conn, respBytes)
 	}
-	err = conn.WriteMessage(websocket.TextMessage, responseJSON)
-	if err != nil {
-		s.logger.Error("Error writing response: %v", slog.Any("error", err))
-		return
-	}
+}
+
+func sendTextMessage(conn *websocket.Conn, text []byte) {
+	_ = conn.WriteMessage(websocket.TextMessage, text)
 }
