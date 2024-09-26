@@ -72,6 +72,7 @@ func TestEval(t *testing.T) {
 	testEvalPFADD(t, store)
 	testEvalPFCOUNT(t, store)
 	testEvalHGET(t, store)
+	testEvalHMGET(t, store)
 	testEvalHSTRLEN(t, store)
 	testEvalHDEL(t, store)
 	testEvalPFMERGE(t, store)
