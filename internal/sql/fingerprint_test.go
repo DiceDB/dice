@@ -328,6 +328,15 @@ func TestGenerateFingerprintAndParseAstExpression(t *testing.T) {
 			expression:  "<_value5 AND >_value10 OR <_value5 AND like_key'test:*' OR >_value10 AND like_key'test:*' OR like_key'test:*'",
 			fingerprint: "f_1509117529358989129",
 		},
+		{
+			name: "Test Precedence: AND before OR with LIKE and Value Comparison",
+			similarExpr: []string{
+				"_key LIKE 'test:*' AND _value > 10 OR _value < 5",
+				"(_key LIKE 'test:*' AND _value > 10) OR _value < 5",
+			},
+			expression:  "<_value5 OR >_value10 AND like_key'test:*'",
+			fingerprint: "f_8791273852316817684",
+		},
 	}
 
 	for _, tt := range tests {
