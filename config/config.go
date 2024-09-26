@@ -29,7 +29,7 @@ var (
 	Host = DefaultHost
 	Port = DefaultPort
 
-	EnableMultiThreading = false
+	EnableMultiThreading = true
 	EnableHTTP           = true
 	HTTPPort             = 8082
 	// if RequirePass is set to an empty string, no authentication is required
@@ -114,7 +114,7 @@ var baseConfig = Config{
 		LFULogFactor:           10,
 		LogLevel:               "info",
 		PrettyPrintLogs:        false,
-		EnableMultiThreading:   false,
+		EnableMultiThreading:   true,
 	},
 	Auth: struct {
 		UserName string `mapstructure:"username"`
