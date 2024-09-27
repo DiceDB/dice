@@ -21,8 +21,8 @@ func TestExistsHttp(t *testing.T) {
 		{
 			name: "Test EXISTS command",
 			commands: []HTTPCommand{
-				{Command: "SET", Body: map[string]interface{}{"key": "k", "value": "123456789"}},
-				{Command: "EXISTS", Body: map[string]interface{}{"key": "k"}},
+				{Command: "SET", Body: map[string]interface{}{"key": "key", "value": "value"}},
+				{Command: "EXISTS", Body: map[string]interface{}{"key": "key"}},
 				{Command: "EXISTS", Body: map[string]interface{}{"key": "key2"}},
 			},
 			expected:      []interface{}{"OK", float64(1), float64(0)},
@@ -45,9 +45,9 @@ func TestExistsHttp(t *testing.T) {
 		{
 			name: "Test EXISTS an expired key",
 			commands: []HTTPCommand{
-				{Command: "SET", Body: map[string]interface{}{"key": "k", "value": "123456789", "ex": 1}},
-				{Command: "EXISTS", Body: map[string]interface{}{"key": "k"}},
-				{Command: "EXISTS", Body: map[string]interface{}{"key": "k"}},
+				{Command: "SET", Body: map[string]interface{}{"key": "key", "value": "value", "ex": 2}},
+				{Command: "EXISTS", Body: map[string]interface{}{"key": "key"}},
+				{Command: "EXISTS", Body: map[string]interface{}{"key": "key"}},
 			},
 			expected:      []interface{}{"OK", float64(1), float64(0)},
 			delay:         []time.Duration{0, 0, 2 * time.Second},
