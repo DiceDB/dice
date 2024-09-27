@@ -4232,3 +4232,37 @@ func selectRandomFields(hashMap HashMap, count int, withValues bool) []byte {
 
 	return clientio.Encode(results, false)
 }
+
+func evalAPPEND(args []string, store *dstore.Store) []byte {
+	if len(args) != 2 {
+		return diceerrors.NewErrArity("APPEND")
+	}
+
+	key, value := args[0], args[1]
+	obj := store.Get(key)
+
+	if obj == nil {
+		// Key does not exist path
+		oType, oEnc := deduceTypeEncoding(value)
+		store.Put(key, store.NewObj(value, -1, oType, oEnc))
+
+		return clientio.Encode(len(value), false)
+	} else {
+		// Key exists path
+		err := object.AssertType(obj.TypeEncoding, object.ObjTypeString)
+		if err != nil {
+			return clientio.Encode(err, false)
+		}
+
+		currentValue, ok1 := obj.Value.(string)
+		if !ok1 {
+			return clientio.Encode(errors.New("ERR obj.Value is not a string"), false)
+		}
+
+		newValue := currentValue + value
+		oType, oEnc := deduceTypeEncoding(newValue)
+		store.Put(key, store.NewObj(newValue, -1, oType, oEnc))
+
+		return clientio.Encode(len(newValue), false)
+	}
+}

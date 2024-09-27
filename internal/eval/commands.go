@@ -926,6 +926,13 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	appendCmdMeta = DiceCmdMeta{
+		Name:     "APPEND",
+		Info:     `Appends a string to the value of a key. Creates the key if it doesn't exist.`,
+		Eval:     evalAPPEND,
+		Arity:    3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -1030,6 +1037,7 @@ func init() {
 	DiceCmds["HRANDFIELD"] = hrandfieldCmdMeta
 	DiceCmds["HDEL"] = hdelCmdMeta
 	DiceCmds["HVALS"] = hValsCmdMeta
+	DiceCmds["APPEND"] = appendCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}
