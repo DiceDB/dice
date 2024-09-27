@@ -13,7 +13,7 @@ func TestJSONRESP(t *testing.T) {
 	FireCommand(conn, "DEL key")
 
 	arrayAtRoot := `["dice",10,10.5,true,null]`
-	nestedArray := `{"b":["dice",10,10.5,true,null]}`
+	object := `{"b":["dice",10,10.5,true,null]}`
 
 	testCases := []struct {
 		name        string
@@ -32,8 +32,14 @@ func TestJSONRESP(t *testing.T) {
 		},
 		{
 			name:        "print nested array with mixed types",
-			commands:    []string{"json.set key $ " + nestedArray, "json.resp key $.b"},
+			commands:    []string{"json.set key $ " + object, "json.resp key $.b"},
 			expected:    []interface{}{"OK", []interface{}{[]interface{}{"[", "dice", int64(10), "10.5", "true", "(nil)"}}},
+			assert_type: []string{"equal", "equal"},
+		},
+		{
+			name:        "print object at root path",
+			commands:    []string{"json.set key $ " + object, "json.resp key"},
+			expected:    []interface{}{"OK", []interface{}{"{", "b", []interface{}{"[", "dice", int64(10), "10.5", "true", "(nil)"}}},
 			assert_type: []string{"equal", "equal"},
 		},
 	}
