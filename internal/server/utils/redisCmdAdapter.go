@@ -100,6 +100,31 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 						delete(jsonBody, key)
 						continue
 					}
+
+					if key == Value {
+
+						var jsonValue string
+
+						switch v := val.(type) {
+
+						case string:
+							// Use the string directly without marshaling
+							jsonValue = v
+						default:
+							// Marshal non-string values (like maps, slices) into JSON
+							jsonBytes, err := json.Marshal(v)
+							if err != nil {
+								return nil, err
+							}
+							jsonValue = string(jsonBytes)
+						}
+
+						args = append(args, jsonValue)
+
+						delete(jsonBody, key)
+						continue
+					}
+
 					args = append(args, fmt.Sprintf("%v", val))
 					delete(jsonBody, key)
 				}
