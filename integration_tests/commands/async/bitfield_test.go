@@ -69,7 +69,7 @@ func TestBitfield(t *testing.T) {
 				integerErrMsg,
 			},
 			Delay:   []time.Duration{0, 0, 0, 0, 0},
-			CleanUp: []string{"Del bit"},
+			CleanUp: []string{"Del bits"},
 		},
 		{
 			Name:     "BITFIELD signed SET and GET basics",
