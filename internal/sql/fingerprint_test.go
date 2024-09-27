@@ -352,17 +352,57 @@ func TestGenerateFingerprintAndParseAstExpression(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			for _, query := range tt.similarExpr {
-				statement, err := sqlparser.Parse("SELECT * WHERE " + query)
+				where, err := parseSQL("SELECT * WHERE " + query)
 				if err != nil {
 					t.Fail()
 				}
-				selectStmt, ok := statement.(*sqlparser.Select)
-				if !ok {
-					t.Fail()
-				}
-				assert.DeepEqual(t, tt.expression, parseAstExpression(selectStmt.Where.Expr).String())
-				assert.DeepEqual(t, tt.fingerprint, generateFingerprint(selectStmt.Where.Expr))
+				assert.DeepEqual(t, tt.expression, parseAstExpression(where).String())
+				assert.DeepEqual(t, tt.fingerprint, generateFingerprint(where))
 			}
 		})
 	}
+}
+
+// Benchmark for generateFingerprint function
+func BenchmarkGenerateFingerprint(b *testing.B) {
+	queries := []struct {
+		name  string
+		query string
+	}{
+		{"Simple", "SELECT * WHERE _key LIKE 'match:1:*'"},
+		{"OrExpression", "SELECT * WHERE _key LIKE 'match:1:*' OR _value > 10"},
+		{"AndExpression", "SELECT * WHERE _key LIKE 'match:1:*' AND _value > 10"},
+		{"NestedOrAnd", "SELECT * WHERE _key LIKE 'match:1:*' OR (_value > 10 AND _value < 5)"},
+		{"DeepNested", "SELECT * FROM table WHERE _key LIKE 'match:1:*' OR (_value > 10 AND (_value < 5 OR '_value.age' > 18))"},
+	}
+
+	for _, tt := range queries {
+		expr, err := parseSQL(tt.query)
+		if err != nil {
+			b.Fail()
+		}
+
+		b.Run(tt.name, func(b *testing.B) {
+			b.ResetTimer()
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				generateFingerprint(expr)
+			}
+		})
+	}
+}
+
+// helper
+func parseSQL(query string) (sqlparser.Expr, error) {
+	stmt, err := sqlparser.Parse(query)
+	if err != nil {
+		return nil, err
+	}
+
+	selectStmt, ok := stmt.(*sqlparser.Select)
+	if !ok {
+		return nil, err
+	}
+
+	return selectStmt.Where.Expr, nil
 }
