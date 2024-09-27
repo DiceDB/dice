@@ -61,6 +61,7 @@ func TestEval(t *testing.T) {
 	testEvalJSONNUMMULTBY(t, store)
 	testEvalJSONTOGGLE(t, store)
 	testEvalJSONARRAPPEND(t, store)
+	testEvalJSONRESP(t, store)
 	testEvalTTL(t, store)
 	testEvalDel(t, store)
 	testEvalPersist(t, store)
@@ -4274,4 +4275,128 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalHRANDFIELD, store)
+}
+
+func testEvalJSONRESP(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"wrong number of args passed": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'json.resp' command\r\n"),
+		},
+		"key does not exist": {
+			setup:  func() {},
+			input:  []string{"NOTEXISTANT_KEY"},
+			output: []byte("$-1\r\n"),
+		},
+		"string json": {
+			setup: func() {
+				key := "MOCK_KEY"
+				value := "\"Roll the Dice\""
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY"},
+			output: []byte("*1\r\n$13\r\nRoll the Dice\r\n"),
+		},
+		"integer json": {
+			setup: func() {
+				key := "MOCK_KEY"
+				value := "10"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY"},
+			output: []byte("*1\r\n:10\r\n"),
+		},
+		"bool json": {
+			setup: func() {
+				key := "MOCK_KEY"
+				value := "true"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY"},
+			output: []byte("*1\r\n+true\r\n"),
+		},
+		"nil json": {
+			setup: func() {
+				key := "MOCK_KEY"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(nil), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY"},
+			output: []byte("*1\r\n$-1\r\n"),
+		},
+		"empty array": {
+			setup: func() {
+				key := "MOCK_KEY"
+				value := "[]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY"},
+			output: []byte("*1\r\n+[\r\n"),
+		},
+		"empty object": {
+			setup: func() {
+				key := "MOCK_KEY"
+				value := "{}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY"},
+			output: []byte("*1\r\n+{\r\n"),
+		},
+		"array with mixed types": {
+			setup: func() {
+				key := "MOCK_KEY"
+				value := "[\"dice\", 10, 10.5, true, null]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY"},
+			output: []byte("*6\r\n+[\r\n$4\r\ndice\r\n:10\r\n$4\r\n10.5\r\n+true\r\n$-1\r\n"),
+		},
+		"one layer of nesting no path": {
+			setup: func() {
+				key := "MOCK_KEY"
+				value := "{\"b\": [\"dice\", 10, 10.5, true, null]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY"},
+			output: []byte("*3\r\n+{\r\n$1\r\nb\r\n*6\r\n+[\r\n$4\r\ndice\r\n:10\r\n$4\r\n10.5\r\n+true\r\n$-1\r\n"),
+		},
+		"one layer of nesting with path": {
+			setup: func() {
+				key := "MOCK_KEY"
+				value := "{\"b\": [\"dice\", 10, 10.5, true, null]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY", "$.b"},
+			output: []byte("*1\r\n*6\r\n+[\r\n$4\r\ndice\r\n:10\r\n$4\r\n10.5\r\n+true\r\n$-1\r\n"),
+		},
+	}
+
+	runEvalTests(t, tests, evalJSONRESP, store)
 }
