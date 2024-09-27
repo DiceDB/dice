@@ -337,6 +337,16 @@ func TestGenerateFingerprintAndParseAstExpression(t *testing.T) {
 			expression:  "<_value5 OR >_value10 AND like_key'test:*'",
 			fingerprint: "f_8791273852316817684",
 		},
+		{
+			name: "Simple JSON expression",
+			similarExpr: []string{
+				"'_value.age' > 30 and _key like 'user:*' and '_value.age' > 30",
+				"'_value.age' > 30 and _key like 'user:*'",
+				"_key like 'user:*' and '_value.age' > 30 ",
+			},
+			expression:  ">'_value.age'30 AND like_key'user:*'",
+			fingerprint: "f_5016002712062179335",
+		},
 	}
 
 	for _, tt := range tests {
