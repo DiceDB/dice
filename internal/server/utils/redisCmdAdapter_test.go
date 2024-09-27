@@ -27,6 +27,14 @@ func TestParseHTTPRequest(t *testing.T) {
 			expectedArgs: []string{"k1", "v1", "nx"},
 		},
 		{
+			name:         "Test SET command with value as a map",
+			method:       "POST",
+			url:          "/set",
+			body:         `{"key": "k1", "value": {"subKey": "subValue"}, "nx": "true"}`,
+			expectedCmd:  "SET",
+			expectedArgs: []string{"k1", `{"subKey":"subValue"}`, "nx"},
+		},
+		{
 			name:         "Test GET command",
 			method:       "POST",
 			url:          "/get",
