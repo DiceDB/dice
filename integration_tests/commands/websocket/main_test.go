@@ -35,7 +35,7 @@ func TestMain(m *testing.M) {
 	exitCode := m.Run()
 
 	executor.FireCommand(WebsocketCommand{
-		Message: map[string]interface{}{"command": "ABORT"},
+		Message: "abort",
 	})
 
 	wg.Wait()

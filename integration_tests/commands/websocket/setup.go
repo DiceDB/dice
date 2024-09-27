@@ -50,16 +50,11 @@ func NewWebsocketCommandExecutor() *WebsocketCommandExecutor {
 }
 
 type WebsocketCommand struct {
-	Message map[string]interface{}
+	Message string
 }
 
 func (e *WebsocketCommandExecutor) FireCommand(cmd WebsocketCommand) (interface{}, error) {
-	msgJSON := cmd.Message
-
-	msg, err := json.Marshal(msgJSON)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling json: %v", err)
-	}
+	command := []byte(cmd.Message)
 
 	// connect with Websocket Server
 	conn, res, err := websocket.DefaultDialer.Dial(url, nil)
@@ -72,7 +67,7 @@ func (e *WebsocketCommandExecutor) FireCommand(cmd WebsocketCommand) (interface{
 	}
 
 	// send request
-	err = conn.WriteMessage(websocket.TextMessage, msg)
+	err = conn.WriteMessage(websocket.TextMessage, command)
 	if err != nil {
 		return nil, fmt.Errorf("error sending websocket request: %v", err)
 	}
