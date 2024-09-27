@@ -94,6 +94,7 @@ func TestEval(t *testing.T) {
 	testEvalFLUSHDB(t, store)
 	testEvalINCRBYFLOAT(t, store)
 	testEvalBITOP(t, store)
+	testEvalHRANDFIELD(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -4196,14 +4197,9 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 			validator: func(output []byte) {
 				assert.Assert(t, output != nil)
 				resultString := string(output)
-				parts := strings.SplitN(resultString, "\n", 2)
-				if len(parts) < 2 {
-					t.Errorf("Unexpected output format: %s", resultString)
-					return
-				}
-				decodedResult := strings.TrimSpace(parts[1])
-				fmt.Printf("Decoded Result: '%s'\n", decodedResult)
-				assert.Assert(t, decodedResult == "field1" || decodedResult == "field2")
+				assert.Assert(t,
+					resultString == "*1\r\n$6\r\nfield1\r\n" || resultString == "*1\r\n$6\r\nfield2\r\n",
+					"Unexpected field returned: %s", resultString)
 			},
 		},
 		"key exists with fields and count argument": {
@@ -4256,7 +4252,7 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 
 			},
-			input: []string{"KEY_MOCK", "2", "WITHVALUES"},
+			input: []string{"KEY_MOCK", "2", WithValues},
 			validator: func(output []byte) {
 				assert.Assert(t, output != nil)
 				decodedResult := string(output)
@@ -4268,7 +4264,7 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 					}
 				}
 
-				assert.Assert(t, count == 4)
+				assert.Equal(t, 4, count, "Expected 4 fields and values, found %d", count)
 			},
 		},
 	}

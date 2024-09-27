@@ -17,7 +17,7 @@ const (
 	NX         string = "NX"
 	GT         string = "GT"
 	LT         string = "LT"
-	KeepTTL    string = "KeepTTL"
+	KeepTTL    string = "KEEPTTL"
 	Sync       string = "SYNC"
 	Async      string = "ASYNC"
 	Help       string = "HELP"
@@ -27,7 +27,7 @@ const (
 	List       string = "LIST"
 	Info       string = "INFO"
 	null       string = "null"
-	WithValues string = "WithValues"
-	WithScores string = "WithScores"
+	WithValues string = "WITHVALUES"
+	WithScores string = "WITHSCORES"
 	REV        string = "REV"
 )
