@@ -58,11 +58,6 @@ func (manager *ShardManager) Run(ctx context.Context) {
 
 	manager.start(shardCtx, &wg)
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-	}()
-
 	select {
 	case <-ctx.Done():
 		// Parent context was canceled, trigger shutdown

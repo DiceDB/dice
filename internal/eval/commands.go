@@ -8,6 +8,7 @@ type DiceCmdMeta struct {
 	Eval  func([]string, *dstore.Store) []byte
 	Arity int // number of arguments, it is possible to use -N to say >= N
 	KeySpecs
+	SubCommands []string // list of sub-commands supported by the commmand
 
 	// IsMigrated indicates whether a command has been migrated to a new evaluation
 	// mechanism. If true, the command uses the newer evaluation logic represented by
@@ -497,10 +498,11 @@ var (
 		Eval: evalBITOP,
 	}
 	commandCmdMeta = DiceCmdMeta{
-		Name:  "COMMAND <subcommand>",
-		Info:  "Evaluates COMMAND <subcommand> command based on subcommand",
-		Eval:  evalCommand,
-		Arity: -1,
+		Name:        "COMMAND <subcommand>",
+		Info:        "Evaluates COMMAND <subcommand> command based on subcommand",
+		Eval:        evalCommand,
+		Arity:       -1,
+		SubCommands: []string{Count, GetKeys, List, Help, Info},
 	}
 	keysCmdMeta = DiceCmdMeta{
 		Name: "KEYS",
@@ -622,6 +624,22 @@ var (
         every field name is followed by its value, so the length of the reply is twice the size of the hash.`,
 		Eval:     evalHGETALL,
 		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	hValsCmdMeta = DiceCmdMeta{
+		Name:     "HVALS",
+		Info:     `Returns all values of the hash stored at key. The length of the reply is same as the size of the hash.`,
+		Eval:     evalHVALS,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	hincrbyCmdMeta = DiceCmdMeta{
+		Name: "HINCRBY",
+		Info: `Increments the number stored at field in the hash stored at key by increment.
+		If key does not exist, a new key holding a hash is created.
+		If field does not exist the value is set to 0 before the operation is performed.`,
+		Eval:     evalHINCRBY,
+		Arity:    -4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	hstrLenCmdMeta = DiceCmdMeta{
@@ -901,6 +919,13 @@ var (
 		IsMigrated: true,
 		NewEval:    evalSETEX,
 	}
+	hrandfieldCmdMeta = DiceCmdMeta{
+		Name:     "HRANDFIELD",
+		Info:     `Returns one or more random fields from a hash.`,
+		Eval:     evalHRANDFIELD,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -998,10 +1023,13 @@ func init() {
 	DiceCmds["SELECT"] = selectCmdMeta
 	DiceCmds["JSON.NUMINCRBY"] = jsonnumincrbyCmdMeta
 	DiceCmds["TYPE"] = typeCmdMeta
+	DiceCmds["HINCRBY"] = hincrbyCmdMeta
 	DiceCmds["INCRBY"] = incrbyCmdMeta
 	DiceCmds["GETRANGE"] = getRangeCmdMeta
 	DiceCmds["SETEX"] = setexCmdMeta
+	DiceCmds["HRANDFIELD"] = hrandfieldCmdMeta
 	DiceCmds["HDEL"] = hdelCmdMeta
+	DiceCmds["HVALS"] = hValsCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

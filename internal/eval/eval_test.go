@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"strconv"
 	"strings"
@@ -84,6 +85,7 @@ func TestEval(t *testing.T) {
 	testEvalJSONNUMINCRBY(t, store)
 	testEvalTYPE(t, store)
 	testEvalCOMMAND(t, store)
+	testEvalHINCRBY(t, store)
 	testEvalJSONOBJKEYS(t, store)
 	testEvalGETRANGE(t, store)
 	testEvalHSETNX(t, store)
@@ -2003,6 +2005,42 @@ func testEvalHGET(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalHGET, store)
 }
 
+func testEvalHVALS(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"wrong number of args passed": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'hvals' command\r\n"),
+		},
+		"key doesn't exists": {
+			setup:  func() {},
+			input:  []string{"KEY"},
+			output: clientio.RespNIL,
+		},
+		"key exists": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field := "mock_field_name"
+				field_1 := "mock_field_name_1"
+				newMap := make(HashMap)
+				newMap[field] = "mock_field_value"
+				newMap[field_1] = "mock_field_value_1"
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input:  []string{"KEY_MOCK"},
+			output: clientio.Encode([]string{"mock_field_value", "mock_field_value_1"}, false),
+		},
+	}
+
+	runEvalTests(t, tests, evalHVALS, store)
+}
 func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"wrong number of args passed": {
@@ -3213,7 +3251,7 @@ func testEvalJSONOBJKEYS(t *testing.T, store *dstore.Store) {
 		"key does not exist": {
 			setup:  func() {},
 			input:  []string{"NONEXISTENT_KEY"},
-			output:  []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
+			output: []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
 		},
 		"root not object": {
 			setup: func() {
@@ -3511,8 +3549,8 @@ func testEvalHSETNX(t *testing.T, store *dstore.Store) {
 			output: []byte("-ERR wrong number of arguments for 'hsetnx' command\r\n"),
 		},
 		"more than one field and value passed": {
-			setup: func() {},
-			input: []string{"KEY", "field1", "value1", "field2", "value2"},
+			setup:  func() {},
+			input:  []string{"KEY", "field1", "value1", "field2", "value2"},
 			output: []byte("-ERR wrong number of arguments for 'hsetnx' command\r\n"),
 		},
 		"key, field and value passed": {
@@ -3554,6 +3592,163 @@ func TestMSETConsistency(t *testing.T) {
 
 	assert.Equal(t, "VAL", store.Get("KEY").Value)
 	assert.Equal(t, "VAL2", store.Get("KEY2").Value)
+}
+
+func BenchmarkEvalHINCRBY(b *testing.B) {
+	store := dstore.NewStore(nil)
+
+	// creating new fields
+	for i := 0; i < b.N; i++ {
+		evalHINCRBY([]string{"KEY", fmt.Sprintf("FIELD_%d", i), fmt.Sprintf("%d", i)}, store)
+	}
+
+	// updating the existing fields
+	for i := 0; i < b.N; i++ {
+		evalHINCRBY([]string{"KEY", fmt.Sprintf("FIELD_%d", i), fmt.Sprintf("%d", i*10)}, store)
+	}
+}
+
+func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"invalid number of args passed": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'hincrby' command\r\n"),
+		},
+		"only key is passed in args": {
+			setup:  func() {},
+			input:  []string{"key"},
+			output: []byte("-ERR wrong number of arguments for 'hincrby' command\r\n"),
+		},
+		"only key and field is passed in args": {
+			setup:  func() {},
+			input:  []string{"key field"},
+			output: []byte("-ERR wrong number of arguments for 'hincrby' command\r\n"),
+		},
+		"key, field and increment passed in args": {
+			setup:  func() {},
+			input:  []string{"key", "field", "10"},
+			output: clientio.Encode(int64(10), false),
+		},
+		"update the already existing field in the key": {
+			setup: func() {
+				key := "key"
+				field := "field"
+				h := make(HashMap)
+				h[field] = "10"
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          h,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "field", "10"},
+			output: clientio.Encode(int64(20), false),
+		},
+		"increment value is not int64": {
+			setup:  func() {},
+			input:  []string{"key", "field", "hello"},
+			output: []byte("-ERR value is not an integer or out of range\r\n"),
+		},
+		"increment value is greater than the bound of int64": {
+			setup:  func() {},
+			input:  []string{"key", "field", "99999999999999999999999999999999999999999999999999999"},
+			output: []byte("-ERR value is not an integer or out of range\r\n"),
+		},
+		"update the existing field whose datatype is not int64": {
+			setup: func() {
+				key := "new_key"
+				field := "new_field"
+				newMap := make(HashMap)
+				newMap[field] = "new_value"
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input:  []string{"new_key", "new_field", "10"},
+			output: []byte("-ERR hash value is not an integer\r\n"),
+		},
+		"update the exisiting field which has spaces": {
+			setup: func() {
+				key := "key"
+				field := "field"
+				h := make(HashMap)
+				h[field] = " 10  "
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          h,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "field", "10"},
+			output: []byte("-ERR hash value is not an integer\r\n"),
+		},
+		"updating the new field with negative value": {
+			setup:  func() {},
+			input:  []string{"key", "field", "-10"},
+			output: clientio.Encode(int64(-10), false),
+		},
+		"update the exisiting field with negative value": {
+			setup: func() {
+				key := "key"
+				field := "field"
+				h := make(HashMap)
+
+				h[field] = "-10"
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          h,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "field", "-10"},
+			output: clientio.Encode(int64(-20), false),
+		},
+		"updating the existing field which would lead to positive overflow": {
+			setup: func() {
+				key := "key"
+				field := "field"
+				h := make(HashMap)
+
+				h[field] = fmt.Sprintf("%v", math.MaxInt64)
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          h,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "field", "10"},
+			output: []byte("-ERR increment or decrement would overflow\r\n"),
+		},
+		"updating the existing field which would lead to negative overflow": {
+			setup: func() {
+				key := "key"
+				field := "field"
+				h := make(HashMap)
+
+				h[field] = fmt.Sprintf("%v", math.MinInt64)
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          h,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "field", "-10"},
+			output: []byte("-ERR increment or decrement would overflow\r\n"),
+		},
+	}
+
+	runEvalTests(t, tests, evalHINCRBY, store)
 }
 
 func testEvalSETEX(t *testing.T, store *dstore.Store) {
@@ -3968,4 +4163,115 @@ func BenchmarkEvalBITOP(b *testing.B) {
 			}
 		})
 	}
+}
+
+func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"wrong number of args passed": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'hrandfield' command\r\n"),
+		},
+		"key doesn't exist": {
+			setup:  func() {},
+			input:  []string{"KEY"},
+			output: clientio.RespNIL,
+		},
+		"key exists with fields and no count argument": {
+			setup: func() {
+				key := "KEY_MOCK"
+				newMap := make(HashMap)
+				newMap["field1"] = "Value1"
+				newMap["field2"] = "Value2"
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input: []string{"KEY_MOCK"},
+			validator: func(output []byte) {
+				assert.Assert(t, output != nil)
+				resultString := string(output)
+				parts := strings.SplitN(resultString, "\n", 2)
+				if len(parts) < 2 {
+					t.Errorf("Unexpected output format: %s", resultString)
+					return
+				}
+				decodedResult := strings.TrimSpace(parts[1])
+				fmt.Printf("Decoded Result: '%s'\n", decodedResult)
+				assert.Assert(t, decodedResult == "field1" || decodedResult == "field2")
+			},
+		},
+		"key exists with fields and count argument": {
+			setup: func() {
+				key := "KEY_MOCK"
+				newMap := make(HashMap)
+				newMap["field1"] = "value1"
+				newMap["field2"] = "value2"
+				newMap["field3"] = "value3"
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+
+			},
+			input: []string{"KEY_MOCK", "2"},
+			validator: func(output []byte) {
+				assert.Assert(t, output != nil)
+				decodedResult := string(output)
+				fields := []string{"field1", "field2", "field3"}
+				count := 0
+
+				for _, field := range fields {
+					if strings.Contains(decodedResult, field) {
+						count++
+					}
+				}
+
+				assert.Assert(t, count == 2)
+			},
+		},
+		"key exists with count and WITHVALUES argument": {
+			setup: func() {
+				key := "KEY_MOCK"
+				newMap := make(HashMap)
+				newMap["field1"] = "value1"
+				newMap["field2"] = "value2"
+				newMap["field3"] = "value3"
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+
+			},
+			input: []string{"KEY_MOCK", "2", "WITHVALUES"},
+			validator: func(output []byte) {
+				assert.Assert(t, output != nil)
+				decodedResult := string(output)
+				fieldsAndValues := []string{"field1", "value1", "field2", "value2", "field3", "value3"}
+				count := 0
+				for _, item := range fieldsAndValues {
+					if strings.Contains(decodedResult, item) {
+						count++
+					}
+				}
+
+				assert.Assert(t, count == 4)
+			},
+		},
+	}
+
+	runEvalTests(t, tests, evalHRANDFIELD, store)
 }
