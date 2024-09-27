@@ -4304,6 +4304,8 @@ func parseJSONStructure(jsonData interface{}, nested bool) (resp []any) {
 		if nested {
 			resp = []interface{}{resp}
 		}
+	default:
+		resp = append(resp, []byte("(unsupported type)"))
 	}
 	return resp
 }
