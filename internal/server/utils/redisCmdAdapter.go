@@ -152,9 +152,16 @@ func ParseWebsocketMessage(msg []byte) (*cmd.RedisCmd, error) {
 
 	cmdArr := strings.Split(cmdStr, " ")
 	command := strings.ToUpper(cmdArr[0])
+	cmdArr = cmdArr[1:] // args
+
+	// if key prefix is empty for JSON.INGEST command
+	// add "" to cmdArr
+	if command == JSONIngest && len(cmdArr) == 2 {
+		cmdArr = append([]string{""}, cmdArr...)
+	}
 
 	return &cmd.RedisCmd{
 		Cmd:  command,
-		Args: cmdArr[1:],
+		Args: cmdArr,
 	}, nil
 }
