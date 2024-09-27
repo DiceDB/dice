@@ -33,8 +33,6 @@ type evalTestCase struct {
 
 func setupTest(store *dstore.Store) *dstore.Store {
 	dstore.ResetStore(store)
-	dstore.KeyspaceStat[0] = make(map[string]int)
-
 	return store
 }
 
@@ -1796,7 +1794,7 @@ func testEvalDel(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 
-				dstore.KeyspaceStat[0]["keys"]++
+				store.IncrementKeyCount()
 			},
 			input:  []string{"EXISTING_KEY"},
 			output: []byte(":1\r\n"),
@@ -3213,7 +3211,7 @@ func testEvalJSONOBJKEYS(t *testing.T, store *dstore.Store) {
 		"key does not exist": {
 			setup:  func() {},
 			input:  []string{"NONEXISTENT_KEY"},
-			output:  []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
+			output: []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
 		},
 		"root not object": {
 			setup: func() {
@@ -3511,8 +3509,8 @@ func testEvalHSETNX(t *testing.T, store *dstore.Store) {
 			output: []byte("-ERR wrong number of arguments for 'hsetnx' command\r\n"),
 		},
 		"more than one field and value passed": {
-			setup: func() {},
-			input: []string{"KEY", "field1", "value1", "field2", "value2"},
+			setup:  func() {},
+			input:  []string{"KEY", "field1", "value1", "field2", "value2"},
 			output: []byte("-ERR wrong number of arguments for 'hsetnx' command\r\n"),
 		},
 		"key, field and value passed": {
