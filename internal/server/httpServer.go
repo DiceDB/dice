@@ -35,6 +35,8 @@ type HTTPServer struct {
 	logger             *slog.Logger
 	qwatchResponseChan chan comm.QwatchResponse
 	shutdownChan       chan struct{}
+	Certkey            string
+	CACertFile         string
 }
 
 type HTTPQwatchResponse struct {
@@ -115,6 +117,9 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 	go func() {
 		defer wg.Done()
 		s.logger.Info("HTTP Server running", slog.String("addr", s.httpServer.Addr))
+		if config.EnableSecureMode {
+			err = s.httpServer.ListenAndServeTLS(s.CACertFile, s.Certkey)
+		}
 		err = s.httpServer.ListenAndServe()
 	}()
 

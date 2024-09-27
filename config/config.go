@@ -39,9 +39,9 @@ var (
 	EnableHTTP           = true
 	HTTPPort             = 8082
 	// Secure Connection
-	InitSecureMode = DefaultSSLMode
-	HTTPSPort      = DefaultSecureHTTPPort
-	RespsPort      = DefaultSecureRespPort
+	EnableSecureMode = DefaultSSLMode
+	HTTPSPort        = DefaultSecureHTTPPort
+	RespsPort        = DefaultSecureRespPort
 	// if RequirePass is set to an empty string, no authentication is required
 	RequirePass = utils.EmptyStr
 
@@ -314,7 +314,7 @@ func mergeFlagsWithConfig() {
 	}
 
 	// Listen on secure port if server is started in secure-mode.
-	if InitSecureMode {
+	if EnableSecureMode {
 		DiceConfig.Server.Port = RespsPort
 		HTTPPort = HTTPSPort
 

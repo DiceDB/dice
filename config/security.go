@@ -1,7 +1,7 @@
 package config
 
 func HandleSecureConnection() {
-	if InitSecureMode {
+	if EnableSecureMode {
 		DiceConfig.Server.Port = DiceConfig.Security.RespsPort
 	}
 }
