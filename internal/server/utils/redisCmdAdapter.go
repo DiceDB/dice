@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/dicedb/dice/internal/cmd"
+	diceerrors "github.com/dicedb/dice/internal/errors"
 )
 
 const (
@@ -142,75 +143,18 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 }
 
 func ParseWebsocketMessage(msg []byte) (*cmd.RedisCmd, error) {
-	var command string
-	var args []string
+	cmdStr := string(msg)
+	cmdStr = strings.TrimSpace(cmdStr)
 
-	// parse msg to json
-	var jsonBody map[string]interface{}
-	if err := json.Unmarshal(msg, &jsonBody); err != nil {
-		return nil, fmt.Errorf("error parsing message: %v", err)
+	if len(cmdStr) == 0 {
+		return nil, diceerrors.ErrEmptyCommand
 	}
 
-	// extract command
-	if comStr, exists := jsonBody[Command]; exists {
-		var ok bool
-		command, ok = comStr.(string)
-		if !ok {
-			return nil, fmt.Errorf("error typecasting command to string")
-		}
-		command = strings.ToUpper(command)
-	} else {
-		return nil, fmt.Errorf("error extracting command")
-	}
-	delete(jsonBody, Command)
-
-	// extract priority keys
-	var priorityKeys = [6]string{
-		KeyPrefix,
-		Key,
-		Field,
-		Path,
-		Value,
-		KeyValues,
-	}
-	for _, key := range priorityKeys {
-		if val, exists := jsonBody[key]; exists {
-			args = append(args, fmt.Sprintf("%v", val))
-			delete(jsonBody, key)
-		} else if command == JSONIngest && key == KeyPrefix {
-			// add empty key prefix
-			args = append(args, "")
-		}
-	}
-
-	// process remaining keys
-	for key, val := range jsonBody {
-		switch v := val.(type) {
-		case string:
-			// Handle unary operations like 'nx' where value is "true"
-			args = append(args, key)
-			if !strings.EqualFold(v, True) {
-				args = append(args, v)
-			}
-		case map[string]interface{}, []interface{}:
-			// Marshal nested JSON structures back into a string
-			jsonValue, err := json.Marshal(v)
-			if err != nil {
-				return nil, err
-			}
-			args = append(args, string(jsonValue))
-		default:
-			args = append(args, key)
-			// Append other types as strings
-			value := fmt.Sprintf("%v", v)
-			if !strings.EqualFold(value, True) {
-				args = append(args, value)
-			}
-		}
-	}
+	cmdArr := strings.Split(cmdStr, " ")
+	command := strings.ToUpper(cmdArr[0])
 
 	return &cmd.RedisCmd{
 		Cmd:  command,
-		Args: args,
+		Args: cmdArr[1:],
 	}, nil
 }

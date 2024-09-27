@@ -22,8 +22,8 @@ import (
 )
 
 const Qwatch = "QWATCH"
-const Qunwatch = "Qunwatch"
-const Subscribe = "Subscribe"
+const Qunwatch = "QUNWATCH"
+const Subscribe = "SUBSCRIBE"
 
 var unimplementedCommandsWebsocket map[string]bool = map[string]bool{
 	Qwatch:    true,
@@ -135,7 +135,9 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 
 		// parse message to dice command
 		redisCmd, err := utils.ParseWebsocketMessage(msg)
-		if err != nil {
+		if err == diceerrors.ErrEmptyCommand {
+			continue
+		} else if err != nil {
 			sendTextMessage(conn, []byte("error: parsing failed"))
 			continue
 		}
