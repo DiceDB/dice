@@ -55,9 +55,12 @@ type WebsocketCommand struct {
 
 func (e *WebsocketCommandExecutor) ConnectToServer() *websocket.Conn {
 	// connect with Websocket Server
-	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
+	conn, resp, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
 		return nil
+	}
+	if resp != nil {
+		resp.Body.Close()
 	}
 	return conn
 }
