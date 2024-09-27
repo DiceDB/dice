@@ -146,7 +146,7 @@ func ParseWebsocketMessage(msg []byte) (*cmd.RedisCmd, error) {
 	cmdStr := string(msg)
 	cmdStr = strings.TrimSpace(cmdStr)
 
-	if len(cmdStr) == 0 {
+	if cmdStr == "" {
 		return nil, diceerrors.ErrEmptyCommand
 	}
 
