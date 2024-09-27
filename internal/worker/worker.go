@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"sync"
 	"syscall"
 	"time"
 
@@ -29,14 +30,20 @@ type Worker interface {
 }
 
 type BaseWorker struct {
-	id              string
-	ioHandler       iohandler.IOHandler
-	parser          requestparser.Parser
-	shardManager    *shard.ShardManager
-	respChan        chan *ops.StoreResponse
-	Session         *auth.Session
-	globalErrorChan chan error
-	logger          *slog.Logger
+	id              	string
+	ioHandler       	iohandler.IOHandler
+	parser          	requestparser.Parser
+	shardManager    	*shard.ShardManager
+	respChan        	chan *ops.StoreResponse
+	Session         	*auth.Session
+	globalErrorChan 	chan error
+	logger          	*slog.Logger
+	lastActivity		time.Time
+	lastActivityMux		sync.RWMutex
+	keepAliveInterval	int32
+	clientTimeout		int32
+	commandTimeout		int32
+	connectionTimeout	int32
 }
 
 func NewWorker(wid string, respChan chan *ops.StoreResponse,
@@ -44,14 +51,19 @@ func NewWorker(wid string, respChan chan *ops.StoreResponse,
 	shardManager *shard.ShardManager, gec chan error,
 	logger *slog.Logger) *BaseWorker {
 	return &BaseWorker{
-		id:              wid,
-		ioHandler:       ioHandler,
-		parser:          parser,
-		shardManager:    shardManager,
-		globalErrorChan: gec,
-		respChan:        respChan,
-		logger:          logger,
-		Session:         auth.NewSession(),
+		id:              	wid,
+		ioHandler:       	ioHandler,
+		parser:          	parser,
+		shardManager:    	shardManager,
+		globalErrorChan: 	gec,
+		respChan:        	respChan,
+		logger:          	logger,
+		Session:         	auth.NewSession(),
+		lastActivity: 	 	time.Now(),
+		keepAliveInterval: 	config.DiceConfig.Server.KeepAlive,
+		clientTimeout: 		config.DiceConfig.Server.Timeout,
+		connectionTimeout: 	config.DiceConfig.Server.Timeout,
+		commandTimeout: 	config.DiceConfig.Server.Timeout,
 	}
 }
 
