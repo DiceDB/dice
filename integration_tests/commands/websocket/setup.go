@@ -53,21 +53,23 @@ type WebsocketCommand struct {
 	Message string
 }
 
-func (e *WebsocketCommandExecutor) FireCommand(cmd WebsocketCommand) (interface{}, error) {
+func (e *WebsocketCommandExecutor) ConnectToServer() *websocket.Conn {
+	// connect with Websocket Server
+	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
+	if err != nil {
+		return nil
+	}
+	// if res != nil {
+	// 	res.Body.Close()
+	// }
+	return conn
+}
+
+func (e *WebsocketCommandExecutor) FireCommand(conn *websocket.Conn, cmd WebsocketCommand) (interface{}, error) {
 	command := []byte(cmd.Message)
 
-	// connect with Websocket Server
-	conn, res, err := websocket.DefaultDialer.Dial(url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect with Websocket Server: %v", err)
-	}
-	defer conn.Close()
-	if res != nil {
-		res.Body.Close()
-	}
-
 	// send request
-	err = conn.WriteMessage(websocket.TextMessage, command)
+	err := conn.WriteMessage(websocket.TextMessage, command)
 	if err != nil {
 		return nil, fmt.Errorf("error sending websocket request: %v", err)
 	}
@@ -85,6 +87,10 @@ func (e *WebsocketCommandExecutor) FireCommand(cmd WebsocketCommand) (interface{
 	}
 
 	return respJSON, nil
+}
+
+func (e *WebsocketCommandExecutor) DisconnectServer(conn *websocket.Conn) {
+	conn.Close()
 }
 
 func (e *WebsocketCommandExecutor) Name() string {

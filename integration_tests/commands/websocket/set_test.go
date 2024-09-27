@@ -1,15 +1,12 @@
 package websocket
 
 import (
-	"context"
 	"fmt"
 	"strconv"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
-	"github.com/dicedb/dice/internal/logger"
 	testifyAssert "github.com/stretchr/testify/assert"
 
 	"gotest.tools/v3/assert"
@@ -21,18 +18,7 @@ type TestCase struct {
 	expected []interface{}
 }
 
-func RunTestServer() {
-	var wg sync.WaitGroup
-	logger := logger.New(logger.Opts{WithTimestamp: false})
-	opts := TestServerOptions{
-		Port:   8380,
-		Logger: logger,
-	}
-	RunWebsocketServer(context.Background(), &wg, opts)
-}
-
 func TestSet(t *testing.T) {
-	// RunTestServer()
 	exec := NewWebsocketCommandExecutor()
 
 	testCases := []TestCase{
@@ -65,14 +51,15 @@ func TestSet(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			conn := exec.ConnectToServer()
 			// delete existing key
-			_, err := exec.FireCommand(WebsocketCommand{
+			_, err := exec.FireCommand(conn, WebsocketCommand{
 				Message: "del k",
 			})
 			testifyAssert.NoError(t, err)
 
 			for i, cmd := range tc.commands {
-				result, err := exec.FireCommand(cmd)
+				result, err := exec.FireCommand(conn, cmd)
 				testifyAssert.NoError(t, err)
 				assert.DeepEqual(t, tc.expected[i], result)
 			}
@@ -81,7 +68,6 @@ func TestSet(t *testing.T) {
 }
 
 func TestSetWithOptions(t *testing.T) {
-	// RunTestServer()
 	exec := NewWebsocketCommandExecutor()
 	expiryTime := strconv.FormatInt(time.Now().Add(1*time.Minute).UnixMilli(), 10)
 
@@ -212,11 +198,12 @@ func TestSetWithOptions(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			exec.FireCommand(WebsocketCommand{Message: "del k"})
-			exec.FireCommand(WebsocketCommand{Message: "del k1"})
-			exec.FireCommand(WebsocketCommand{Message: "del k2"})
+			conn := exec.ConnectToServer()
+			exec.FireCommand(conn, WebsocketCommand{Message: "del k"})
+			exec.FireCommand(conn, WebsocketCommand{Message: "del k1"})
+			exec.FireCommand(conn, WebsocketCommand{Message: "del k2"})
 			for i, cmd := range tc.commands {
-				result, err := exec.FireCommand(cmd)
+				result, err := exec.FireCommand(conn, cmd)
 				assert.NilError(t, err)
 				assert.Equal(t, tc.expected[i], result)
 			}
@@ -225,7 +212,6 @@ func TestSetWithOptions(t *testing.T) {
 }
 
 func TestSetWithExat(t *testing.T) {
-	// RunTestServer()
 	exec := NewWebsocketCommandExecutor()
 	Etime := strconv.FormatInt(time.Now().Unix()+5, 10)
 	BadTime := "123123"
@@ -255,13 +241,14 @@ func TestSetWithExat(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			conn := exec.ConnectToServer()
 			// Ensure key is deleted before the test
-			exec.FireCommand(WebsocketCommand{
+			exec.FireCommand(conn, WebsocketCommand{
 				Message: "del k",
 			})
 
 			for i, cmd := range tc.commands {
-				result, err := exec.FireCommand(cmd)
+				result, err := exec.FireCommand(conn, cmd)
 				assert.NilError(t, err)
 				command := strings.Split(cmd.Message, "")
 				if command[0] == "ttl" {

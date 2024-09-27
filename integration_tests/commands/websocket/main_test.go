@@ -34,9 +34,12 @@ func TestMain(m *testing.M) {
 	// Run the test suite
 	exitCode := m.Run()
 
-	executor.FireCommand(WebsocketCommand{
+	// abort
+	conn := executor.ConnectToServer()
+	executor.FireCommand(conn, WebsocketCommand{
 		Message: "abort",
 	})
+	executor.DisconnectServer(conn)
 
 	wg.Wait()
 	os.Exit(exitCode)
