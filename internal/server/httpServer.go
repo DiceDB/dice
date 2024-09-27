@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/crc32"
+	"io/ioutil"
 	"log/slog"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -48,6 +50,14 @@ type CaseInsensitiveMux struct {
 	mux *http.ServeMux
 }
 
+// Struct to hold the metadata of each command
+type Command struct {
+	Title  string `json: "title"`
+	Syntax string `json: "syntax"`
+	Body   string `json: "body"`
+	URL    string `json: "url"`
+}
+
 func (cim *CaseInsensitiveMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Convert the path to lowercase before passing to the underlying mux.
 	r.URL.Path = strings.ToLower(r.URL.Path)
@@ -80,6 +90,7 @@ func NewHTTPServer(shardManager *shard.ShardManager, logger *slog.Logger) *HTTPS
 			return
 		}
 	})
+	mux.HandleFunc("/search", httpServer.DiceHTTPSearchHandler)
 
 	return httpServer
 }
@@ -333,4 +344,68 @@ func generateUniqueInt32(r *http.Request) uint32 {
 
 	// Hash the string using CRC32 and cast it to an int32
 	return crc32.ChecksumIEEE([]byte(sb.String()))
+}
+func LoadCommands(filePath string) ([]Command, error) {
+	// Open the JSON file
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("could not open file: %w", err)
+	}
+	defer file.Close()
+
+	// Read the file contents
+	data, err := ioutil.ReadAll(file)
+	if err != nil {
+		return nil, fmt.Errorf("could not read file: %w", err)
+	}
+
+	// Parse the JSON into a slice of Command structs
+	var commands []Command
+	if err := json.Unmarshal(data, &commands); err != nil {
+		return nil, fmt.Errorf("could not unmarshal JSON: %w", err)
+	}
+
+	return commands, nil
+}
+func (h *HTTPServer) DiceHTTPSearchHandler(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query().Get("q")
+	if q == "" {
+		http.Error(w, "Missing query parameter 'q' ", http.StatusBadRequest)
+		return
+	}
+	if q == "*" {
+		q = ""
+	}
+	matchingCommands := []Command{}
+	commands, err := LoadCommands("../eval/commands.go")
+	if err != nil {
+		http.Error(w, "Could not load commands", http.StatusInternalServerError)
+		return
+	}
+
+	for _, command := range commands {
+		if strings.Contains(strings.ToLower(command.Title), strings.ToLower(q)) {
+			// Highlight matching part in title using <b> tags
+			highlightedTitle := strings.ReplaceAll(command.Title, q, "<b>"+q+"</b>")
+			matchingCommands = append(matchingCommands, Command{
+				Title:  highlightedTitle,
+				Syntax: command.Syntax,
+				Body:   command.Body,
+				URL:    command.URL,
+			})
+		}
+	}
+	//If no commands matches
+	if len(matchingCommands) == 0 {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("No matches found for the query: " + q))
+		return
+	}
+	response := map[string]interface{}{
+		"total":   len(matchingCommands),
+		"results": matchingCommands,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+
 }
