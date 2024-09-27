@@ -4269,7 +4269,7 @@ func evalZADD(args []string, store *dstore.Store) []byte {
 		member := args[i+1]
 
 		score, err := strconv.ParseFloat(scoreStr, 64)
-		if err != nil {
+		if err != nil || math.IsNaN(score) {
 			return diceerrors.NewErrWithMessage(diceerrors.InvalidFloatErr)
 		}
 
@@ -4379,7 +4379,7 @@ func evalZRANGE(args []string, store *dstore.Store) []byte {
 			result = append(result, ssi.Member)
 			if withScores {
 				// Use 'g' format to match Redis's float formatting
-				scoreStr := strconv.FormatFloat(ssi.Score, 'g', -1, 64)
+				scoreStr := strings.ToLower(strconv.FormatFloat(ssi.Score, 'g', -1, 64))
 				result = append(result, scoreStr)
 			}
 		}
