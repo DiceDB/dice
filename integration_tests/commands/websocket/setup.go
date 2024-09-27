@@ -59,9 +59,6 @@ func (e *WebsocketCommandExecutor) ConnectToServer() *websocket.Conn {
 	if err != nil {
 		return nil
 	}
-	// if res != nil {
-	// 	res.Body.Close()
-	// }
 	return conn
 }
 
