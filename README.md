@@ -7,6 +7,15 @@ We are looking for Early Design Partners, so, if you want to evaluate DiceDB, [b
 
 > Note: DiceDB is still in development and it supports a subset of Redis commands. So, please do not use it in production. But, feel free to go through the [open issues](https://github.com/DiceDB/dice/issues) and contribute to help us speed up the development.
 
+## Want to contribute?
+
+We have multiple repositories where you can contribute. So, as per your interest, you can pick one and build a deeper understanding of the project on the go.
+
+- [dicedb/docs](https://github.com/dicedb/docs) for [documentation and blogs](https://dicedb.io). a great way to build initial understanding / Stack - Go
+- [dicedb/dice](https://github.com/dicedb/dice) for core database features and engine / Stack - Go
+- [dicedb/playground-mono](https://github.com/dicedb/playground-mono) backend APIs for DiceDB playground / Stack - Go
+- [dicedb/playground-web](https://github.com/dicedb/playground-web) frontend for DiceDB playground / Stack - NextJS
+
 ## How is it different from Redis?
 
 Although DiceDB is a drop-in replacement of Redis, which means almost no learning curve and switching does not require any code change, it still differs in two key aspects and they are
