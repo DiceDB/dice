@@ -130,7 +130,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		// read incoming message
 		_, msg, err := conn.ReadMessage()
 		if err != nil {
-			sendTextMessage(conn, []byte("error: command reading failed"))
+			writeResponse(conn, []byte("error: command reading failed"))
 			continue
 		}
 
@@ -139,7 +139,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		if errors.Is(err, diceerrors.ErrEmptyCommand) {
 			continue
 		} else if err != nil {
-			sendTextMessage(conn, []byte("error: parsing failed"))
+			writeResponse(conn, []byte("error: parsing failed"))
 			continue
 		}
 
@@ -149,7 +149,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		}
 
 		if unimplementedCommandsWebsocket[redisCmd.Cmd] {
-			sendTextMessage(conn, []byte("Command is not implemented with Websocket"))
+			writeResponse(conn, []byte("Command is not implemented with Websocket"))
 			continue
 		}
 
@@ -172,21 +172,21 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 
 		val, err := rp.DecodeOne()
 		if err != nil {
-			sendTextMessage(conn, []byte("error: decoding response"))
+			writeResponse(conn, []byte("error: decoding response"))
 			continue
 		}
 
 		respBytes, err := json.Marshal(val)
 		if err != nil {
-			sendTextMessage(conn, []byte("error: marshaling json response"))
+			writeResponse(conn, []byte("error: marshaling json response"))
 			continue
 		}
 
 		// Write response
-		sendTextMessage(conn, respBytes)
+		writeResponse(conn, respBytes)
 	}
 }
 
-func sendTextMessage(conn *websocket.Conn, text []byte) {
+func writeResponse(conn *websocket.Conn, text []byte) {
 	_ = conn.WriteMessage(websocket.TextMessage, text)
 }
