@@ -72,7 +72,7 @@ func TestTTLPTTL(t *testing.T) {
 			name: "TTL & PTTL with Persist",
 			commands: []HTTPCommand{
 				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "bar"}},
-				{Command: "GETEX", Body: map[string]interface{}{"key": "foo", "option": "persist"}},
+				{Command: "GETEX", Body: map[string]interface{}{"key": "foo", "value": "persist"}},
 				{Command: "TTL", Body: map[string]interface{}{"key": "foo"}},
 				{Command: "PTTL", Body: map[string]interface{}{"key": "foo"}},
 			},
