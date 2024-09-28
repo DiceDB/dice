@@ -9,6 +9,7 @@ func TestZADD(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 
+	FireCommand(conn, "DEL key")
 	defer FireCommand(conn, "DEL key")
 
 	testCases := []TestCase{
