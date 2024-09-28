@@ -155,7 +155,6 @@ func encodeString(v string) []byte {
 func Encode(value interface{}, isSimple bool) []byte {
 	// Use a type switch to determine the type of the provided value and encode accordingly.
 	switch v := value.(type) {
-
 	// Temporary case to maintain backwards compatibility.
 	// This case handles byte slices ([]byte) directly, allowing existing functionality
 	// that relies on byte slice inputs to continue working without modifications.

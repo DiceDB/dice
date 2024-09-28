@@ -20,7 +20,7 @@ var (
 	ErrSyntax                     = errors.New("ERR syntax error")                                                       // Represents a syntax error in a Redis command.
 	ErrKeyNotFound                = errors.New("ERR no such key")                                                        // Indicates that the specified key does not exist.
 	ErrWrongTypeOperation         = errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")      // Signals an operation attempted on a key with an incompatible type.
-	ErrInvalidHyperLogLogKey      = errors.New("WRONGTYPE Key is not a valid HyperLogLog string value.")                 // Indicates that a key is not a valid HyperLogLog value.
+	ErrInvalidHyperLogLogKey      = errors.New("WRONGTYPE Key is not a valid HyperLogLog string value")                  // Indicates that a key is not a valid HyperLogLog value.
 	ErrCorruptedHyperLogLogObject = errors.New("INVALIDOBJ Corrupted HLL object detected")                               // Signals detection of a corrupted HyperLogLog object.
 	ErrInvalidJSONPathType        = errors.New("WRONGTYPE wrong type of path value - expected string but found integer") // Represents an invalid type for a JSON path.
 	ErrInvalidExpireTimeValue     = errors.New("ERR invalid expire time")                                                // Indicates that the provided expiration time is invalid.
@@ -29,7 +29,7 @@ var (
 
 	// Error generation functions for specific error messages with dynamic parameters.
 	ErrWrongArgumentCount = func(command string) error {
-		return fmt.Errorf("ERR voila! wrong number of arguments for '%s' command", command) // Indicates an incorrect number of arguments for a given command.
+		return fmt.Errorf("ERR wrong number of arguments for '%s' command", command) // Indicates an incorrect number of arguments for a given command.
 	}
 	ErrInvalidExpireTime = func(command string) error {
 		return fmt.Errorf("ERR invalid expire time in '%s' command", command) // Represents an invalid expiration time for a specific command.
