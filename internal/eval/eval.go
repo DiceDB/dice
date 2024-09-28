@@ -228,6 +228,83 @@ func evalGETDEL(args []string, store *dstore.Store) []byte {
 	}
 }
 
+// evalJSONARRTRIM trim an array so that it contains only the specified inclusive range of elements
+// an array of integer replies for each path, the array's new size, or nil, if the matching JSON value is not an array.
+func evalJSONARRTRIM(args []string, store *dstore.Store) []byte {
+	if len(args) != 4 {
+		return diceerrors.NewErrArity("JSON.ARRTRIM")
+	}
+	var err error
+
+	start := args[2]
+	stop := args[3]
+	var startIdx, stopIdx int
+	startIdx, err = strconv.Atoi(start)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("Couldn't parse as integer")
+	}
+	stopIdx, err = strconv.Atoi(stop)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("Couldn't parse as integer")
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		return diceerrors.NewErrWithMessage("could not perform this operation on a key that doesn't exist")
+	}
+
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
+	}
+
+	jsonData := obj.Value
+
+	_, err = sonic.Marshal(jsonData)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
+	}
+
+	path := args[1]
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("invalid JSONPath")
+	}
+
+	results := expr.Get(jsonData)
+	if len(results) == 0 {
+		return clientio.RespEmptyArray
+	}
+
+	var resultsArray []interface{}
+	// Capture the modified data when modifying the root path
+	newData, modifyErr := expr.Modify(jsonData, func(data any) (interface{}, bool) {
+		arr, ok := data.([]interface{})
+		if !ok {
+			// Not an array
+			resultsArray = append(resultsArray, nil)
+			return data, false
+		}
+
+		updatedArray := trimElementAndUpdateArray(arr, startIdx, stopIdx)
+
+		resultsArray = append(resultsArray, len(updatedArray))
+		return updatedArray, true
+	})
+	if err != nil {
+		return diceerrors.NewErrWithMessage(err.Error())
+	}
+
+	if modifyErr != nil {
+		return diceerrors.NewErrWithMessage(fmt.Sprintf("ERR failed to modify JSON data: %v", modifyErr))
+	}
+
+	jsonData = newData
+	obj.Value = jsonData
+	return clientio.Encode(resultsArray, false)
+}
+
 // evalJSONARRINSERT insert the json values into the array at path before the index (shifts to the right)
 // returns an array of integer replies for each path, the array's new size, or nil.
 func evalJSONARRINSERT(args []string, store *dstore.Store) []byte {
@@ -631,6 +708,31 @@ func evalJSONARRPOP(args []string, store *dstore.Store) []byte {
 		popArr = append(popArr, popElem)
 	}
 	return clientio.Encode(popArr, false)
+}
+
+// trimElementAndUpdateArray trim the array between the given start and stop index
+// Returns trimed array
+func trimElementAndUpdateArray(arr []any, start, stop int) []any {
+	updatedArray := make([]any, 0)
+	length := len(arr)
+	if len(arr) == 0 {
+		return updatedArray
+	}
+	var startIdx, stopIdx int
+
+	if start >= length {
+		return updatedArray
+	}
+
+	startIdx = adjustIndex(start, arr)
+	stopIdx = adjustIndex(stop, arr)
+
+	if startIdx > stopIdx {
+		return updatedArray
+	}
+
+	updatedArray = arr[startIdx : stopIdx+1]
+	return updatedArray
 }
 
 // insertElementAndUpdateArray add an element at the given index
