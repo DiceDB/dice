@@ -22,7 +22,7 @@ func TestGetKeys(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.commands {
-				result := exec.FireCommand(cmd)
+				result, _ := exec.FireCommand(cmd)
 				assert.DeepEqual(t, tc.expected[i], result)
 			}
 		})
