@@ -4181,7 +4181,7 @@ func evalHRANDFIELD(args []string, store *dstore.Store) []byte {
 
 		// The third argument is the "WITHVALUES" option.
 		if len(args) == 3 {
-			if strings.ToUpper(args[2]) != WITHVALUES {
+			if !strings.EqualFold(args[2], WITHVALUES) {
 				return diceerrors.NewErrWithFormattedMessage(diceerrors.SyntaxErr)
 			}
 			withValues = true
