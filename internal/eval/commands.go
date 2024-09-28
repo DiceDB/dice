@@ -950,7 +950,7 @@ var (
 	}
 	bitfieldCmdMeta = DiceCmdMeta{
 		Name: "BITFIELD",
-		Info: `The command treats a Redis string as an array of bits, 
+		Info: `The command treats a string as an array of bits as well as bytearray data structure, 
 		and is capable of addressing specific integer fields of varying bit widths
 		and arbitrary non (necessary) aligned offset. 
 		In practical terms using this command you can set, for example, 
