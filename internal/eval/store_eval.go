@@ -140,7 +140,7 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 					Error:  nil,
 				}
 			}
-		case KEEPTTL, Keepttl:
+		case KeepTTL:
 			keepttl = true
 		default:
 			return &EvalResponse{
