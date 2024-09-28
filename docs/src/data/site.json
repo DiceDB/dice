@@ -1,0 +1,61 @@
+{
+  "title": "DiceDB",
+  "description": "",
+  "image": {
+    "src": "/img/general-cover.png",
+    "alt": "DiceDB"
+  },
+  "image_tw": {
+    "src": "/img/general-cover.png",
+    "alt": "DiceDB"
+  },
+  "featureHighlights": [
+    {
+      "title": "Speaks Redis",
+      "description": "a drop-in replacement of Redis; if you know Redis, you know DiceDB."
+    },
+    {
+      "title": "Faster and Efficient Redis",
+      "description": "5x faster than Redis and capable of handling larger workloads at lower latencies on a single machine."
+    },
+    {
+      "title": "SQL support",
+      "description": "fire SQL queries and query your most crucial data at ultra low latency."
+    },
+    {
+      "title": "Push and pull, both",
+      "description": "fire a SQL query like always, or watch it and get results pushed to you in real-time."
+    },
+    {
+      "title": "Native JSON support",
+      "description": "native, first-class JSON support for reads, writes, and queries."
+    },
+    {
+      "title": "Sub-millisecond latencies",
+      "description": "in-memory, no disk overhead, and every operation completes within 1 ms."
+    },
+    {
+      "title": "Built for modern hardware",
+      "description": "squeezes every single ounce of performance from all the cores with zero contention."
+    },
+    {
+      "title": "HTTP and WebSockets",
+      "description": "want your clients to talk to database? great! we natively support both HTTP and WebSocket."
+    }
+  ],
+  "aboutDiceDB": [
+    {
+      "title": "Why did we call it DiceDB?",
+      "description": ""
+    },
+    {
+      "title": "The Problem Statement",
+      "description": ""
+    },
+    {
+      "title": "How we Operate?",
+      "description": ""
+    }
+  ],
+  "calendar_url": "https://cal.com/dicedb-arpit"
+}
