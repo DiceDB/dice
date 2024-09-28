@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"github.com/google/btree"
 	"log/slog"
 	"math"
 	"math/big"
@@ -17,6 +16,8 @@ import (
 	"time"
 	"unicode"
 	"unsafe"
+
+	"github.com/google/btree"
 
 	"github.com/dicedb/dice/internal/object"
 	"github.com/rs/xid"
