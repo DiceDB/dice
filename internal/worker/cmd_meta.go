@@ -29,13 +29,26 @@ const (
 	CmdGetSet = "GETSET"
 )
 
+// CommandsMeta holds metadata about a command in the command processing system.
+// It encapsulates the necessary information for executing and handling commands,
+// including their type, structure, and associated functions for processing and responding.
 type CommandsMeta struct {
-	CmdType
-	Cmd                  string
-	isSimpleEnc          bool
+	CmdType // Represents the type of the command (Global, SingleShard, MultiShard, Custom)
+
+	isSimpleEnc bool // A flag indicating whether the command uses simple encoding or bulk encoding for responses.
+
+	// WorkerCommandHandler defines a function which don't go to shards, it returns response to clients from the worker level
+	// It takes a slice of strings representing command arguments and returns the encoded response.
 	WorkerCommandHandler func([]string) []byte
-	decomposeCommand     func(redisCmd *cmd.RedisCmd) []*cmd.RedisCmd
-	composeResponse      func(responses ...eval.EvalResponse) interface{}
+
+	// decomposeCommand is a function that takes a Redis command and breaks it down into smaller,
+	// manageable Redis commands for each shard processing. It returns a slice of Redis commands.
+	decomposeCommand func(redisCmd *cmd.RedisCmd) []*cmd.RedisCmd
+
+	// composeResponse is a function that combines multiple responses from the execution of commands
+	// into a single response object. It accepts a variadic parameter of EvalResponse objects
+	// and returns a unified response interface.
+	composeResponse func(responses ...eval.EvalResponse) interface{}
 }
 
 var WorkerCommandsMeta = map[string]CommandsMeta{
