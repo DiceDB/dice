@@ -2,10 +2,13 @@ package eval
 
 import (
 	"bytes"
+	"crypto/rand"
 	"errors"
 	"fmt"
+	"github.com/google/btree"
 	"log/slog"
 	"math"
+	"math/big"
 	"math/bits"
 	"regexp"
 	"sort"
@@ -1146,8 +1149,8 @@ func evalJSONSET(args []string, store *dstore.Store) []byte {
 	path := args[1]
 	jsonStr := args[2]
 	for i := 3; i < len(args); i++ {
-		switch args[i] {
-		case NX, Nx:
+		switch strings.ToUpper(args[i]) {
+		case NX:
 			if i != len(args)-1 {
 				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 			}
@@ -1155,7 +1158,7 @@ func evalJSONSET(args []string, store *dstore.Store) []byte {
 			if obj != nil {
 				return clientio.RespNIL
 			}
-		case XX, Xx:
+		case XX:
 			if i != len(args)-1 {
 				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 			}
@@ -1623,7 +1626,7 @@ func evalEXPIREAT(args []string, store *dstore.Store) []byte {
 	}
 
 	if err != nil {
-		return clientio.Encode(errors.New("ERR value is not an integer or out of range"), false)
+		return clientio.Encode(errors.New(diceerrors.InvalidIntErr), false)
 	}
 
 	isExpirySet, err2 := evaluateAndSetExpiry(args[2:], exUnixTimeSec, key, store)
@@ -1812,7 +1815,6 @@ func evalINCRBY(args []string, store *dstore.Store) []byte {
 	return incrDecrCmd(args, incrementAmount, store)
 }
 
-
 func incrDecrCmd(args []string, incr int64, store *dstore.Store) []byte {
 	key := args[0]
 	obj := store.Get(key)
@@ -1963,7 +1965,7 @@ func evalMULTI(args []string, store *dstore.Store) []byte {
 // Every time a key in the watch list is modified, the client will be sent a response
 // containing the new value of the key along with the operation that was performed on it.
 // Contains only one argument, the query to be watched.
-func EvalQWATCH(args []string, clientFd int, store *dstore.Store) []byte {
+func EvalQWATCH(args []string, httpOp bool, client *comm.Client, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("QWATCH")
 	}
@@ -1980,13 +1982,26 @@ func EvalQWATCH(args []string, clientFd int, store *dstore.Store) []byte {
 		Key   string
 		Value *object.Obj
 	})
-	querywatcher.WatchSubscriptionChan <- querywatcher.WatchSubscription{
-		Subscribe: true,
-		Query:     query,
-		ClientFD:  clientFd,
-		CacheChan: cacheChannel,
+	var watchSubscription querywatcher.WatchSubscription
+
+	if httpOp {
+		watchSubscription = querywatcher.WatchSubscription{
+			Subscribe:          true,
+			Query:              query,
+			CacheChan:          cacheChannel,
+			QwatchClientChan:   client.HTTPQwatchResponseChan,
+			ClientIdentifierID: client.ClientIdentifierID,
+		}
+	} else {
+		watchSubscription = querywatcher.WatchSubscription{
+			Subscribe: true,
+			Query:     query,
+			ClientFD:  client.Fd,
+			CacheChan: cacheChannel,
+		}
 	}
 
+	querywatcher.WatchSubscriptionChan <- watchSubscription
 	store.CacheKeysForQuery(query.Where, cacheChannel)
 
 	// Return the result of the query.
@@ -2006,7 +2021,7 @@ func EvalQWATCH(args []string, clientFd int, store *dstore.Store) []byte {
 }
 
 // EvalQUNWATCH removes the specified key from the watch list for the caller client.
-func EvalQUNWATCH(args []string, clientFd int) []byte {
+func EvalQUNWATCH(args []string, httpOp bool, client *comm.Client) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("QUNWATCH")
 	}
@@ -2015,10 +2030,19 @@ func EvalQUNWATCH(args []string, clientFd int) []byte {
 		return clientio.Encode(e, false)
 	}
 
-	querywatcher.WatchSubscriptionChan <- querywatcher.WatchSubscription{
-		Subscribe: false,
-		Query:     query,
-		ClientFD:  clientFd,
+	if httpOp {
+		querywatcher.WatchSubscriptionChan <- querywatcher.WatchSubscription{
+			Subscribe:          false,
+			Query:              query,
+			QwatchClientChan:   client.HTTPQwatchResponseChan,
+			ClientIdentifierID: client.ClientIdentifierID,
+		}
+	} else {
+		querywatcher.WatchSubscriptionChan <- querywatcher.WatchSubscription{
+			Subscribe: false,
+			Query:     query,
+			ClientFD:  client.Fd,
+		}
 	}
 
 	return clientio.RespOK
@@ -2501,6 +2525,9 @@ func evalCommandList() []byte {
 	cmds := make([]string, 0, diceCommandsCount)
 	for k := range DiceCmds {
 		cmds = append(cmds, k)
+		for _, sc := range DiceCmds[k].SubCommands {
+			cmds = append(cmds, fmt.Sprint(k, "|", sc))
+		}
 	}
 	return clientio.Encode(cmds, false)
 }
@@ -2903,6 +2930,51 @@ func evalHSET(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(numKeys, false)
 }
 
+// Increments the number stored at field in the hash stored at key by increment.
+//
+// If key does not exist, a new key holding a hash is created.
+// If field does not exist the value is set to 0 before the operation is performed.
+//
+// The range of values supported by HINCRBY is limited to 64 bit signed integers.
+//
+// Usage: HINCRBY key field increment
+func evalHINCRBY(args []string, store *dstore.Store) []byte {
+	if len(args) < 3 {
+		return diceerrors.NewErrArity("HINCRBY")
+	}
+
+	increment, err := strconv.ParseInt(args[2], 10, 64)
+	if err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+	var hashmap HashMap
+
+	if obj != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+		}
+		hashmap = obj.Value.(HashMap)
+	}
+
+	if hashmap == nil {
+		hashmap = make(HashMap)
+	}
+
+	field := args[1]
+	numkey, err := hashmap.incrementValue(field, increment)
+	if err != nil {
+		return diceerrors.NewErrWithMessage(err.Error())
+	}
+
+	obj = store.NewObj(hashmap, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
+	store.Put(key, obj)
+
+	return clientio.Encode(numkey, false)
+}
+
 func evalHSETNX(args []string, store *dstore.Store) []byte {
 	if len(args) != 3 {
 		return diceerrors.NewErrArity("HSETNX")
@@ -2995,6 +3067,33 @@ func evalHDEL(args []string, store *dstore.Store) []byte {
 	}
 
 	return clientio.Encode(count, false)
+}
+
+// evalHKEYS returns all the values in the hash stored at key.
+func evalHVALS(args []string, store *dstore.Store) []byte {
+	if len(args) != 1 {
+		return diceerrors.NewErrArity("HVALS")
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	if obj == nil {
+		return clientio.Encode([]string{}, false) // Return an empty array for non-existent keys
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+	}
+
+	hashMap := obj.Value.(HashMap)
+	results := make([]string, 0, len(hashMap))
+
+	for _, value := range hashMap {
+		results = append(results, value)
+	}
+
+	return clientio.Encode(results, false)
 }
 
 // evalHSTRLEN returns the length of value associated with field in the hash stored at key.
@@ -3878,7 +3977,7 @@ func evalJSONNUMINCRBY(args []string, store *dstore.Store) []byte {
 }
 
 // evalJSONOBJKEYS retrieves the keys of a JSON object stored at path specified.
-// It takes two arguments: the key where the JSON document is stored, and an optional JSON path. 
+// It takes two arguments: the key where the JSON document is stored, and an optional JSON path.
 // It returns a list of keys from the object at the specified path or an error if the path is invalid.
 func evalJSONOBJKEYS(args []string, store *dstore.Store) []byte {
 	if len(args) < 1 {
@@ -3905,7 +4004,7 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) []byte {
 	}
 
 	jsonData := obj.Value
-	_,err := sonic.Marshal(jsonData)
+	_, err := sonic.Marshal(jsonData)
 	if err != nil {
 		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
 	}
@@ -3913,7 +4012,7 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) []byte {
 	// If path is root, return all keys of the entire JSON
 	if len(args) == 1 {
 		if utils.GetJSONFieldType(jsonData) == utils.ObjectType {
-			keys := make([]string,0)
+			keys := make([]string, 0)
 			for key := range jsonData.(map[string]interface{}) {
 				keys = append(keys, key)
 			}
@@ -3934,18 +4033,18 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) []byte {
 		return clientio.RespEmptyArray
 	}
 
-	keysList := make([]interface{},0,len(results))
+	keysList := make([]interface{}, 0, len(results))
 
 	for _, result := range results {
 		switch utils.GetJSONFieldType(result) {
-			case utils.ObjectType:
-				keys := make([]string, 0)
-				for key := range result.(map[string]interface{}) {
-					keys = append(keys, key)
-				}
-				keysList = append(keysList, keys)
-			default:
-				keysList = append(keysList, clientio.RespNIL)
+		case utils.ObjectType:
+			keys := make([]string, 0)
+			for key := range result.(map[string]interface{}) {
+				keys = append(keys, key)
+			}
+			keysList = append(keysList, keys)
+		default:
+			keysList = append(keysList, clientio.RespNIL)
 		}
 	}
 
@@ -4042,4 +4141,257 @@ func evalGETRANGE(args []string, store *dstore.Store) []byte {
 	}
 
 	return clientio.Encode(str[start:end+1], false)
+}
+
+// evalHRANDFIELD returns random fields from a hash stored at key.
+// If only the key is provided, one random field is returned.
+// If count is provided, it returns that many unique random fields. A negative count allows repeated selections.
+// The "WITHVALUES" option returns both fields and values.
+// Returns nil if the key doesn't exist or the hash is empty.
+// Errors: arity error, type error for non-hash, syntax error for "WITHVALUES", or count format error.
+func evalHRANDFIELD(args []string, store *dstore.Store) []byte {
+	if len(args) < 1 || len(args) > 3 {
+		return diceerrors.NewErrArity("HRANDFIELD")
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		return clientio.RespNIL
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+	}
+
+	hashMap := obj.Value.(HashMap)
+	if len(hashMap) == 0 {
+		return clientio.Encode([]string{}, false)
+	}
+
+	count := 1
+	withValues := false
+
+	if len(args) > 1 {
+		var err error
+		// The second argument is the count.
+		count, err = strconv.Atoi(args[1])
+		if err != nil {
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
+		}
+
+		// The third argument is the "WITHVALUES" option.
+		if len(args) == 3 {
+			if strings.ToUpper(args[2]) != WithValues {
+				return diceerrors.NewErrWithFormattedMessage(diceerrors.SyntaxErr)
+			}
+			withValues = true
+		}
+	}
+
+	return selectRandomFields(hashMap, count, withValues)
+}
+
+// selectRandomFields returns random fields from a hashmap.
+func selectRandomFields(hashMap HashMap, count int, withValues bool) []byte {
+	keys := make([]string, 0, len(hashMap))
+	for k := range hashMap {
+		keys = append(keys, k)
+	}
+
+	var results []string
+	resultSet := make(map[string]struct{})
+
+	abs := func(x int) int {
+		if x < 0 {
+			return -x
+		}
+		return x
+	}
+
+	for i := 0; i < abs(count); i++ {
+		if count > 0 && len(resultSet) == len(keys) {
+			break
+		}
+
+		randomIndex, _ := rand.Int(rand.Reader, big.NewInt(int64(len(keys))))
+		randomField := keys[randomIndex.Int64()]
+
+		if count > 0 {
+			if _, exists := resultSet[randomField]; exists {
+				i--
+				continue
+			}
+			resultSet[randomField] = struct{}{}
+		}
+
+		results = append(results, randomField)
+		if withValues {
+			results = append(results, hashMap[randomField])
+		}
+	}
+
+	return clientio.Encode(results, false)
+}
+
+// evalZADD adds all the specified members with the specified scores to the sorted set stored at key.
+// If a specified member is already a member of the sorted set, the score is updated and the element reinserted at the right position to ensure the correct ordering.
+// If key does not exist, a new sorted set with the specified members as sole members is created.
+func evalZADD(args []string, store *dstore.Store) []byte {
+	if len(args) < 3 || len(args)%2 == 0 {
+		return diceerrors.NewErrArity("ZADD")
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	var tree *btree.BTree
+	var memberMap map[string]float64
+
+	if obj != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeSortedSet, object.ObjEncodingBTree); err != nil {
+			return err
+		}
+		valueSlice, ok := obj.Value.([]interface{})
+		if !ok || len(valueSlice) != 2 {
+			return diceerrors.NewErrWithMessage("Invalid sorted set object")
+		}
+		tree = valueSlice[0].(*btree.BTree)
+		memberMap = valueSlice[1].(map[string]float64)
+	} else {
+		tree = btree.New(2)
+		memberMap = make(map[string]float64)
+	}
+
+	added := 0
+	for i := 1; i < len(args); i += 2 {
+		scoreStr := args[i]
+		member := args[i+1]
+
+		score, err := strconv.ParseFloat(scoreStr, 64)
+		if err != nil || math.IsNaN(score) {
+			return diceerrors.NewErrWithMessage(diceerrors.InvalidFloatErr)
+		}
+
+		existingScore, exists := memberMap[member]
+		if exists {
+			// Remove the existing item from the B-tree
+			oldItem := &SortedSetItem{Score: existingScore, Member: member}
+			tree.Delete(oldItem)
+		} else {
+			added++
+		}
+
+		// Insert the new item into the B-tree
+		newItem := &SortedSetItem{Score: score, Member: member}
+		tree.ReplaceOrInsert(newItem)
+
+		// Update the member map
+		memberMap[member] = score
+	}
+
+	obj = store.NewObj([]interface{}{tree, memberMap}, -1, object.ObjTypeSortedSet, object.ObjEncodingBTree)
+	store.Put(key, obj)
+
+	return clientio.Encode(added, false)
+}
+
+// evalZRANGE returns the specified range of elements in the sorted set stored at key.
+// The elements are considered to be ordered from the lowest to the highest score.
+func evalZRANGE(args []string, store *dstore.Store) []byte {
+	if len(args) < 3 {
+		return diceerrors.NewErrArity("ZRANGE")
+	}
+
+	key := args[0]
+	startStr := args[1]
+	stopStr := args[2]
+
+	withScores := false
+	reverse := false
+	for i := 3; i < len(args); i++ {
+		arg := strings.ToUpper(args[i])
+		if arg == WithScores {
+			withScores = true
+		} else if arg == REV {
+			reverse = true
+		} else {
+			return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
+		}
+	}
+
+	start, err := strconv.Atoi(startStr)
+	if err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.InvalidIntErr)
+	}
+
+	stop, err := strconv.Atoi(stopStr)
+	if err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.InvalidIntErr)
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return clientio.Encode([]string{}, false)
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeSortedSet, object.ObjEncodingBTree); err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+	}
+
+	valueSlice, ok := obj.Value.([]interface{})
+	if !ok || len(valueSlice) != 2 {
+		return diceerrors.NewErrWithMessage("Invalid sorted set object")
+	}
+	tree := valueSlice[0].(*btree.BTree)
+	length := tree.Len()
+
+	// Handle negative indices
+	if start < 0 {
+		start += length
+	}
+	if stop < 0 {
+		stop += length
+	}
+
+	if start < 0 {
+		start = 0
+	}
+	if stop >= length {
+		stop = length - 1
+	}
+
+	if start > stop || start >= length {
+		return clientio.Encode([]string{}, false)
+	}
+
+	var result []interface{}
+	index := 0
+
+	// iterFunc is the function that will be called for each item in the B-tree. It will append the item to the result if it is within the specified range.
+	// It will return false if the specified range has been reached.
+	iterFunc := func(item btree.Item) bool {
+		if index > stop {
+			return false
+		}
+		if index >= start {
+			ssi := item.(*SortedSetItem)
+			result = append(result, ssi.Member)
+			if withScores {
+				// Use 'g' format to match Redis's float formatting
+				scoreStr := strings.ToLower(strconv.FormatFloat(ssi.Score, 'g', -1, 64))
+				result = append(result, scoreStr)
+			}
+		}
+		index++
+		return true
+	}
+
+	if !reverse {
+		tree.Ascend(iterFunc)
+	} else {
+		tree.Descend(iterFunc)
+	}
+
+	return clientio.Encode(result, false)
 }

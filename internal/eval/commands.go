@@ -8,6 +8,7 @@ type DiceCmdMeta struct {
 	Eval  func([]string, *dstore.Store) []byte
 	Arity int // number of arguments, it is possible to use -N to say >= N
 	KeySpecs
+	SubCommands []string // list of sub-commands supported by the commmand
 
 	// IsMigrated indicates whether a command has been migrated to a new evaluation
 	// mechanism. If true, the command uses the newer evaluation logic represented by
@@ -43,10 +44,11 @@ var (
 	}
 
 	pingCmdMeta = DiceCmdMeta{
-		Name:       "PING",
-		Info:       `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
-		Arity:      -1,
-		IsMigrated: true,
+		Name:  "PING",
+		Info:  `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
+		Arity: -1,
+		// TODO: Move this to true once compatible with HTTP server
+		IsMigrated: false,
 		Eval:       evalPING,
 	}
 
@@ -250,8 +252,8 @@ var (
 		Retrieves the keys of a JSON object stored at path specified.
 		Null reply: If the key doesn't exist or has expired.
 		Error reply: If the number of arguments is incorrect or the stored value is not a JSON type.`,
-		Eval:     evalJSONOBJKEYS,
-		Arity:    2,
+		Eval:  evalJSONOBJKEYS,
+		Arity: 2,
 	}
 	jsonarrpopCmdMeta = DiceCmdMeta{
 		Name: "JSON.ARRPOP",
@@ -496,10 +498,11 @@ var (
 		Eval: evalBITOP,
 	}
 	commandCmdMeta = DiceCmdMeta{
-		Name:  "COMMAND <subcommand>",
-		Info:  "Evaluates COMMAND <subcommand> command based on subcommand",
-		Eval:  evalCommand,
-		Arity: -1,
+		Name:        "COMMAND <subcommand>",
+		Info:        "Evaluates COMMAND <subcommand> command based on subcommand",
+		Eval:        evalCommand,
+		Arity:       -1,
+		SubCommands: []string{Count, GetKeys, List, Help, Info},
 	}
 	keysCmdMeta = DiceCmdMeta{
 		Name: "KEYS",
@@ -601,8 +604,8 @@ var (
 	}
 	hsetnxCmdMeta = DiceCmdMeta{
 		Name: "HSETNX",
-		Info: `Sets field in the hash stored at key to value, only if field does not yet exist. 
-		If key does not exist, a new key holding a hash is created. If field already exists, 
+		Info: `Sets field in the hash stored at key to value, only if field does not yet exist.
+		If key does not exist, a new key holding a hash is created. If field already exists,
 		this operation has no effect.`,
 		Eval:     evalHSETNX,
 		Arity:    4,
@@ -621,6 +624,22 @@ var (
         every field name is followed by its value, so the length of the reply is twice the size of the hash.`,
 		Eval:     evalHGETALL,
 		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	hValsCmdMeta = DiceCmdMeta{
+		Name:     "HVALS",
+		Info:     `Returns all values of the hash stored at key. The length of the reply is same as the size of the hash.`,
+		Eval:     evalHVALS,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	hincrbyCmdMeta = DiceCmdMeta{
+		Name: "HINCRBY",
+		Info: `Increments the number stored at field in the hash stored at key by increment.
+		If key does not exist, a new key holding a hash is created.
+		If field does not exist the value is set to 0 before the operation is performed.`,
+		Eval:     evalHINCRBY,
+		Arity:    -4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	hstrLenCmdMeta = DiceCmdMeta{
@@ -900,6 +919,35 @@ var (
 		IsMigrated: true,
 		NewEval:    evalSETEX,
 	}
+	hrandfieldCmdMeta = DiceCmdMeta{
+		Name:     "HRANDFIELD",
+		Info:     `Returns one or more random fields from a hash.`,
+		Eval:     evalHRANDFIELD,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	zaddCmdMeta = DiceCmdMeta{
+		Name: "ZADD",
+		Info: `ZADD key [NX|XX] [CH] [INCR] score member [score member ...]
+		Adds all the specified members with the specified scores to the sorted set stored at key.
+		Options: NX, XX, CH, INCR
+		Returns the number of elements added to the sorted set, not including elements already existing for which the score was updated.`,
+		Eval:     evalZADD,
+		Arity:    -4,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	zrangeCmdMeta = DiceCmdMeta{
+		Name: "ZRANGE",
+		Info: `ZRANGE key start stop [WithScores]
+		Returns the specified range of elements in the sorted set stored at key.
+		The elements are considered to be ordered from the lowest to the highest score.
+		Both start and stop are 0-based indexes, where 0 is the first element, 1 is the next element and so on.
+		These indexes can also be negative numbers indicating offsets from the end of the sorted set, with -1 being the last element of the sorted set, -2 the penultimate element and so on.
+		Returns the specified range of elements in the sorted set.`,
+		Eval:     evalZRANGE,
+		Arity:    -4,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -997,10 +1045,15 @@ func init() {
 	DiceCmds["SELECT"] = selectCmdMeta
 	DiceCmds["JSON.NUMINCRBY"] = jsonnumincrbyCmdMeta
 	DiceCmds["TYPE"] = typeCmdMeta
+	DiceCmds["HINCRBY"] = hincrbyCmdMeta
 	DiceCmds["INCRBY"] = incrbyCmdMeta
 	DiceCmds["GETRANGE"] = getRangeCmdMeta
 	DiceCmds["SETEX"] = setexCmdMeta
+	DiceCmds["HRANDFIELD"] = hrandfieldCmdMeta
 	DiceCmds["HDEL"] = hdelCmdMeta
+	DiceCmds["HVALS"] = hValsCmdMeta
+	DiceCmds["ZADD"] = zaddCmdMeta
+	DiceCmds["ZRANGE"] = zrangeCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}
