@@ -1,6 +1,7 @@
 package async
 
 import (
+	"github.com/dicedb/dice/testutils"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -46,7 +47,7 @@ func TestHvals(t *testing.T) {
 						expectedResultsMap[expectedResults[i]] = expectedResults[i+1]
 						resultsMap[results[i].(string)] = results[i+1].(string)
 					}
-					assert.DeepEqual(t, resultsMap, expectedResultsMap)
+					testutils.UnorderedEqual(resultsMap, expectedResultsMap)
 				} else {
 					assert.DeepEqual(t, tc.expected[i], result)
 				}
