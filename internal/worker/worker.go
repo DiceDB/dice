@@ -91,9 +91,9 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 			}
 			return fmt.Errorf("error writing response: %w", err)
 		default:
-			clientCtx, _ := context.WithTimeout(ctx, time.Duration(w.clientTimeout)*time.Millisecond)
+			clientCtx, clientCancel := context.WithTimeout(ctx, time.Duration(w.clientTimeout)*time.Millisecond)
 			data, err := w.ioHandler.Read(clientCtx)
-			// clientCancel()
+			clientCancel()
 
 			if err != nil {
 				if err == context.DeadlineExceeded{
