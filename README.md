@@ -203,6 +203,33 @@ $ go test -test.bench BenchmarkListRedis -benchmem
 
 To get started with building and contributing to DiceDB, please refer to the [issues](https://github.com/DiceDB/dice/issues) created in this repository.
 
+## Docs
+
+[![Netlify Status](https://api.netlify.com/api/v1/badges/3a298f6d-ae8d-44d4-a96d-00096b144b55/deploy-status)](https://app.netlify.com/sites/dicedb/deploys)
+[![Built with Starlight](https://astro.badg.es/v2/built-with-starlight/tiny.svg)](https://starlight.astro.build)
+
+We use [Astro](https://astro.build/) framework to power the [dicedb.io website](https://dicedb.io) and [Starlight](https://starlight.astro.build/) to power the docs. Once you have NodeJS installed, fire the following commands to get your local version of [dicedb.io](https://dicedb.io) running.
+
+```
+$ cd docs
+$ npm install
+$ npm run dev
+```
+
+Once the server starts, visit http://localhost:4321/ in your favourite browser. This runs with a hot reload which means any changes you make in the website and the documentation can be instantly viewed on the browser.
+
+## To build and deploy
+
+```
+$ cd docs
+$ npm run build
+```
+
+### Docs directory structure
+
+1. `docs/src/content/docs/commands` is where all the commands are documented
+2. `docs/src/content/docs/tutorials` is where all the tutorials are documented
+
 ## The story
 
 DiceDB started as a re-implementation of Redis in Golang and the idea was to - build a DB from scratch and understand the micro-nuances that come with its implementation. The database does not aim to replace Redis, instead, it will fit in and optimize itself for multi-core computations running on a single-threaded event loop.
