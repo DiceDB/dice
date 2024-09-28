@@ -32,7 +32,8 @@ const (
 )
 
 var (
-	ErrAborted = errors.New("server received ABORT command")
+	ErrAborted      = errors.New("server received ABORT command")
+	ErrEmptyCommand = errors.New("empty command")
 )
 
 type DiceError struct {

@@ -32,6 +32,10 @@ var (
 	EnableMultiThreading = false
 	EnableHTTP           = true
 	HTTPPort             = 8082
+
+	EnableWebsocket = true
+	WebsocketPort   = 8379
+
 	// if RequirePass is set to an empty string, no authentication is required
 	RequirePass = utils.EmptyStr
 

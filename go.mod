@@ -45,6 +45,7 @@ require (
 	github.com/cockroachdb/swiss v0.0.0-20240612210725-f4de07ae6964
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13
 	github.com/dicedb/go-dice v0.0.0-20240820180649-d97f15fca831
+	github.com/gorilla/websocket v1.5.3
 	github.com/google/go-cmp v0.6.0
 	github.com/ohler55/ojg v1.24.0
 	github.com/pelletier/go-toml/v2 v2.2.3

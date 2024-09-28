@@ -89,7 +89,7 @@ func (shard *ShardThread) unregisterWorker(workerID string) {
 
 // processRequest processes a Store operation for the shard.
 func (shard *ShardThread) processRequest(op *ops.StoreOp) {
-	resp := eval.ExecuteCommand(op.Cmd, op.Client, shard.store, op.HTTPOp)
+	resp := eval.ExecuteCommand(op.Cmd, op.Client, shard.store, op.HTTPOp, op.WebsocketOp)
 
 	shard.workerMutex.RLock()
 	workerChan, ok := shard.workerMap[op.WorkerID]
