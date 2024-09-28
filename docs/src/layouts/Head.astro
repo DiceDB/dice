@@ -1,0 +1,19 @@
+---
+import Seo from "../components/Seo.astro";
+const { title, description, img, blog, video, session, JSONLD } = Astro.props;
+---
+
+<head>
+  <meta charset="utf-8" />
+  <link rel="sitemap" href="/sitemap-index.xml" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/favicon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png" />
+  <link rel="manifest" href="/site.webmanifest" />
+  <meta name="viewport" content="width=device-width" />
+  <meta name="generator" content={Astro.generator} />
+  <title>{title}</title>
+  <meta name="description" content={description} />
+
+  <Seo {title} {description} {img} {blog} {session} {video} {JSONLD} />
+</head>
