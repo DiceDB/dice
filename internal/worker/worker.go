@@ -191,21 +191,10 @@ func (w *BaseWorker) executeCommand(ctx context.Context, redisCmd *cmd.RedisCmd)
 			w.logger.Debug("Error executing for worker", slog.String("workerID", w.id), slog.Any("error", err))
 			return err
 
-		case SingleShard:
-			// For single-shard or custom commands, process them without breaking up.
-			cmdList = append(cmdList, redisCmd)
-		} else {
-			// Depending on the command type, decide how to handle it.
-			switch meta.CmdType {
-			case Global:
-				// If it's a global command, process it immediately without involving any shards.
-				err := w.ioHandler.Write(cmdCtx, meta.WorkerCommandHandler(redisCmd.Args))
-				w.logger.Debug("Error executing for worker", slog.String("workerID", w.id), slog.Any("error", err))
-
 			case SingleShard:
 				// For single-shard or custom commands, process them without breaking up.
 				cmdList = append(cmdList, redisCmd)
-
+	
 			case MultiShard:
 				// If the command supports multisharding, break it down into multiple commands.
 				cmdList = meta.decomposeCommand(redisCmd)
@@ -214,7 +203,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, redisCmd *cmd.RedisCmd)
 				case CmdAuth:
 					err := w.ioHandler.Write(cmdCtx, w.RespAuth(redisCmd.Args))
 					w.logger.Error("Error sending auth response to worker", slog.String("workerID", w.id), slog.Any("error", err))
-
+			
 				case CmdAbort:
 					w.logger.Info("Received ABORT command, initiating server shutdown", slog.String("workerID", w.id))
 					w.globalErrorChan <- diceerrors.ErrAborted
@@ -224,13 +213,13 @@ func (w *BaseWorker) executeCommand(ctx context.Context, redisCmd *cmd.RedisCmd)
 				}
 			}
 		}
-
+	
 		// Scatter the broken-down commands to the appropriate shards.
 		err = w.scatter(cmdCtx, cmdList)
 		if err != nil {
 			return
 		}
-
+	
 		// Gather the responses from the shards and write them to the buffer.
 		err = w.gather(cmdCtx, redisCmd.Cmd, len(cmdList), meta.CmdType)
 		if err != nil {
@@ -238,16 +227,17 @@ func (w *BaseWorker) executeCommand(ctx context.Context, redisCmd *cmd.RedisCmd)
 		}
 	}()
 
+
 	select {
-	case <-cmdCtx.Done():
-		if cmdCtx.Err() == context.DeadlineExceeded {
-			w.logger.Warn("Command execution timed out", slog.String("workerID", w.id), slog.String("command", redisCmd.Cmd))
-			return fmt.Errorf("command execution timed out: %w", cmdCtx.Err())
-		}
-		return cmdCtx.Err()
-	case err := <-resultChan:
-		return err
-	}
+    case <-cmdCtx.Done():
+        if cmdCtx.Err() == context.DeadlineExceeded {
+            w.logger.Warn("Command execution timed out", slog.String("workerID", w.id), slog.String("command", redisCmd.Cmd))
+            return fmt.Errorf("command execution timed out: %w", cmdCtx.Err())
+        }
+        return cmdCtx.Err()
+    case err := <-resultChan:
+        return err
+    }
 }
 
 // scatter distributes the Redis commands to the respective shards based on the key.
