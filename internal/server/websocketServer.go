@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -135,7 +136,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 
 		// parse message to dice command
 		redisCmd, err := utils.ParseWebsocketMessage(msg)
-		if err == diceerrors.ErrEmptyCommand {
+		if errors.Is(err, diceerrors.ErrEmptyCommand) {
 			continue
 		} else if err != nil {
 			sendTextMessage(conn, []byte("error: parsing failed"))
