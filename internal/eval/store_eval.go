@@ -110,7 +110,7 @@ func evalSET(args []string, store *dstore.Store) EvalResponse {
 			if obj != nil {
 				return EvalResponse{Result: clientio.RespNIL, Error: nil}
 			}
-		case KEEPTTL, Keepttl:
+		case KeepTTL:
 			keepttl = true
 		default:
 			return EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)))}
