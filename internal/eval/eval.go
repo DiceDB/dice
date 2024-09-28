@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"github.com/google/btree"
 	"log/slog"
 	"math"
 	"math/big"
@@ -1148,8 +1149,8 @@ func evalJSONSET(args []string, store *dstore.Store) []byte {
 	path := args[1]
 	jsonStr := args[2]
 	for i := 3; i < len(args); i++ {
-		switch args[i] {
-		case NX, Nx:
+		switch strings.ToUpper(args[i]) {
+		case NX:
 			if i != len(args)-1 {
 				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 			}
@@ -1157,7 +1158,7 @@ func evalJSONSET(args []string, store *dstore.Store) []byte {
 			if obj != nil {
 				return clientio.RespNIL
 			}
-		case XX, Xx:
+		case XX:
 			if i != len(args)-1 {
 				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 			}
@@ -1625,7 +1626,7 @@ func evalEXPIREAT(args []string, store *dstore.Store) []byte {
 	}
 
 	if err != nil {
-		return clientio.Encode(errors.New("ERR value is not an integer or out of range"), false)
+		return clientio.Encode(errors.New(diceerrors.InvalidIntErr), false)
 	}
 
 	isExpirySet, err2 := evaluateAndSetExpiry(args[2:], exUnixTimeSec, key, store)
@@ -4181,7 +4182,7 @@ func evalHRANDFIELD(args []string, store *dstore.Store) []byte {
 
 		// The third argument is the "WITHVALUES" option.
 		if len(args) == 3 {
-			if !strings.EqualFold(args[2], WITHVALUES) {
+			if strings.ToUpper(args[2]) != WithValues {
 				return diceerrors.NewErrWithFormattedMessage(diceerrors.SyntaxErr)
 			}
 			withValues = true
@@ -4231,4 +4232,166 @@ func selectRandomFields(hashMap HashMap, count int, withValues bool) []byte {
 	}
 
 	return clientio.Encode(results, false)
+}
+
+// evalZADD adds all the specified members with the specified scores to the sorted set stored at key.
+// If a specified member is already a member of the sorted set, the score is updated and the element reinserted at the right position to ensure the correct ordering.
+// If key does not exist, a new sorted set with the specified members as sole members is created.
+func evalZADD(args []string, store *dstore.Store) []byte {
+	if len(args) < 3 || len(args)%2 == 0 {
+		return diceerrors.NewErrArity("ZADD")
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	var tree *btree.BTree
+	var memberMap map[string]float64
+
+	if obj != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeSortedSet, object.ObjEncodingBTree); err != nil {
+			return err
+		}
+		valueSlice, ok := obj.Value.([]interface{})
+		if !ok || len(valueSlice) != 2 {
+			return diceerrors.NewErrWithMessage("Invalid sorted set object")
+		}
+		tree = valueSlice[0].(*btree.BTree)
+		memberMap = valueSlice[1].(map[string]float64)
+	} else {
+		tree = btree.New(2)
+		memberMap = make(map[string]float64)
+	}
+
+	added := 0
+	for i := 1; i < len(args); i += 2 {
+		scoreStr := args[i]
+		member := args[i+1]
+
+		score, err := strconv.ParseFloat(scoreStr, 64)
+		if err != nil || math.IsNaN(score) {
+			return diceerrors.NewErrWithMessage(diceerrors.InvalidFloatErr)
+		}
+
+		existingScore, exists := memberMap[member]
+		if exists {
+			// Remove the existing item from the B-tree
+			oldItem := &SortedSetItem{Score: existingScore, Member: member}
+			tree.Delete(oldItem)
+		} else {
+			added++
+		}
+
+		// Insert the new item into the B-tree
+		newItem := &SortedSetItem{Score: score, Member: member}
+		tree.ReplaceOrInsert(newItem)
+
+		// Update the member map
+		memberMap[member] = score
+	}
+
+	obj = store.NewObj([]interface{}{tree, memberMap}, -1, object.ObjTypeSortedSet, object.ObjEncodingBTree)
+	store.Put(key, obj)
+
+	return clientio.Encode(added, false)
+}
+
+// evalZRANGE returns the specified range of elements in the sorted set stored at key.
+// The elements are considered to be ordered from the lowest to the highest score.
+func evalZRANGE(args []string, store *dstore.Store) []byte {
+	if len(args) < 3 {
+		return diceerrors.NewErrArity("ZRANGE")
+	}
+
+	key := args[0]
+	startStr := args[1]
+	stopStr := args[2]
+
+	withScores := false
+	reverse := false
+	for i := 3; i < len(args); i++ {
+		arg := strings.ToUpper(args[i])
+		if arg == WithScores {
+			withScores = true
+		} else if arg == REV {
+			reverse = true
+		} else {
+			return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
+		}
+	}
+
+	start, err := strconv.Atoi(startStr)
+	if err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.InvalidIntErr)
+	}
+
+	stop, err := strconv.Atoi(stopStr)
+	if err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.InvalidIntErr)
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return clientio.Encode([]string{}, false)
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeSortedSet, object.ObjEncodingBTree); err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+	}
+
+	valueSlice, ok := obj.Value.([]interface{})
+	if !ok || len(valueSlice) != 2 {
+		return diceerrors.NewErrWithMessage("Invalid sorted set object")
+	}
+	tree := valueSlice[0].(*btree.BTree)
+	length := tree.Len()
+
+	// Handle negative indices
+	if start < 0 {
+		start += length
+	}
+	if stop < 0 {
+		stop += length
+	}
+
+	if start < 0 {
+		start = 0
+	}
+	if stop >= length {
+		stop = length - 1
+	}
+
+	if start > stop || start >= length {
+		return clientio.Encode([]string{}, false)
+	}
+
+	var result []interface{}
+	index := 0
+
+	// iterFunc is the function that will be called for each item in the B-tree. It will append the item to the result if it is within the specified range.
+	// It will return false if the specified range has been reached.
+	iterFunc := func(item btree.Item) bool {
+		if index > stop {
+			return false
+		}
+		if index >= start {
+			ssi := item.(*SortedSetItem)
+			result = append(result, ssi.Member)
+			if withScores {
+				// Use 'g' format to match Redis's float formatting
+				scoreStr := strings.ToLower(strconv.FormatFloat(ssi.Score, 'g', -1, 64))
+				result = append(result, scoreStr)
+			}
+		}
+		index++
+		return true
+	}
+
+	if !reverse {
+		tree.Ascend(iterFunc)
+	} else {
+		tree.Descend(iterFunc)
+	}
+
+	return clientio.Encode(result, false)
 }

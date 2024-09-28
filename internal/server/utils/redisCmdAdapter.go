@@ -9,9 +9,11 @@ import (
 	"strings"
 
 	"github.com/dicedb/dice/internal/cmd"
+	diceerrors "github.com/dicedb/dice/internal/errors"
 )
 
 const (
+	Command     = "command"
 	Key         = "key"
 	Keys        = "keys"
 	KeyPrefix   = "key_prefix"
@@ -25,6 +27,9 @@ const (
 	KeyValues   = "key_values"
 	True        = "true"
 	QwatchQuery = "query"
+	Offset      = "offset"
+	Member      = "member"
+	Members     = "members"
 )
 
 func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
@@ -40,7 +45,7 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 	queryParams := r.URL.Query()
 	keyPrefix := queryParams.Get(KeyPrefix)
 
-	if keyPrefix != "" && command == "JSON.INGEST" {
+	if keyPrefix != "" && command == JSONIngest {
 		args = append(args, keyPrefix)
 	}
 	// Step 1: Handle JSON body if present
@@ -62,7 +67,7 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 
 			// Define keys to exclude and process their values first
 			// Update as we support more commands
-			var priorityKeys = [11]string{
+			var priorityKeys = []string{
 				Key,
 				Keys,
 				Field,
@@ -74,6 +79,9 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 				Password,
 				KeyValues,
 				QwatchQuery,
+				Offset,
+				Member,
+				Members,
 			}
 			for _, key := range priorityKeys {
 				if val, exists := jsonBody[key]; exists {
@@ -96,6 +104,13 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 						// Handle KeyValues separately
 						for k, v := range val.(map[string]interface{}) {
 							args = append(args, k, fmt.Sprintf("%v", v))
+						}
+						delete(jsonBody, key)
+						continue
+					}
+					if key == Members {
+						for _, v := range val.([]interface{}) {
+							args = append(args, fmt.Sprintf("%v", v))
 						}
 						delete(jsonBody, key)
 						continue
@@ -137,5 +152,29 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 	return &cmd.RedisCmd{
 		Cmd:  command,
 		Args: args,
+	}, nil
+}
+
+func ParseWebsocketMessage(msg []byte) (*cmd.RedisCmd, error) {
+	cmdStr := string(msg)
+	cmdStr = strings.TrimSpace(cmdStr)
+
+	if cmdStr == "" {
+		return nil, diceerrors.ErrEmptyCommand
+	}
+
+	cmdArr := strings.Split(cmdStr, " ")
+	command := strings.ToUpper(cmdArr[0])
+	cmdArr = cmdArr[1:] // args
+
+	// if key prefix is empty for JSON.INGEST command
+	// add "" to cmdArr
+	if command == JSONIngest && len(cmdArr) == 2 {
+		cmdArr = append([]string{""}, cmdArr...)
+	}
+
+	return &cmd.RedisCmd{
+		Cmd:  command,
+		Args: cmdArr,
 	}, nil
 }

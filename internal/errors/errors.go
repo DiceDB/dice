@@ -27,10 +27,13 @@ const (
 	InvalidExpireTime      = "-ERR invalid expire time"
 	HashValueNotIntegerErr = "hash value is not an integer"
 	InternalServerError    = "-ERR: Internal server error, unable to process command"
+	InvalidFloatErr        = "-ERR value is not a valid float"
+	InvalidIntErr          = "-ERR value is not a valid integer"
 )
 
 var (
-	ErrAborted = errors.New("server received ABORT command")
+	ErrAborted      = errors.New("server received ABORT command")
+	ErrEmptyCommand = errors.New("empty command")
 )
 
 type DiceError struct {
