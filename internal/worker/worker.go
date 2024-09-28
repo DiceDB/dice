@@ -72,6 +72,7 @@ func (w *BaseWorker) ID() string {
 }
 
 func (w *BaseWorker) Start(ctx context.Context) error {
+	go w.keepAliveCheck(ctx)
 	errChan := make(chan error, 1)
 	for {
 		select {
@@ -90,11 +91,22 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 			}
 			return fmt.Errorf("error writing response: %w", err)
 		default:
-			data, err := w.ioHandler.Read(ctx)
+			clientCtx, _ := context.WithTimeout(ctx, time.Duration(w.clientTimeout)*time.Millisecond)
+			data, err := w.ioHandler.Read(clientCtx)
+			// clientCancel()
+
 			if err != nil {
+				if err == context.DeadlineExceeded{
+					w.logger.Warn("Client read timeout", slog.String("workerID", w.id))
+                    continue
+				}
+
 				w.logger.Debug("Read error, connection closed possibly", slog.String("workerID", w.id), slog.Any("error", err))
 				return err
 			}
+
+			w.updateLastActivity()
+
 			cmds, err := w.parser.Parse(data)
 			if err != nil {
 				err = w.ioHandler.Write(ctx, clientio.Encode(err, true))
@@ -131,7 +143,7 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 				}
 			}
 			// executeCommand executes the command and return the response back to the client
-			func(errChan chan error) {
+			go func(errChan chan<- error) {
 				execctx, cancel := context.WithTimeout(ctx, 1*time.Second) // Timeout if
 				defer cancel()
 				err = w.executeCommand(execctx, cmds[0])
@@ -148,60 +160,82 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 }
 
 func (w *BaseWorker) executeCommand(ctx context.Context, redisCmd *cmd.RedisCmd) error {
-	// Break down the single command into multiple commands if multisharding is supported.
-	// The length of cmdList helps determine how many shards to wait for responses.
-	cmdList := make([]*cmd.RedisCmd, 0)
+	w.updateLastActivity()
 
-	// Retrieve metadata for the command to determine if multisharding is supported.
-	meta, ok := WorkerCommandsMeta[redisCmd.Cmd]
-	if !ok {
-		// If no metadata exists, treat it as a single command.
-		cmdList = append(cmdList, redisCmd)
-	} else {
-		// Depending on the command type, decide how to handle it.
-		switch meta.CmdType {
-		case Global:
-			// If it's a global command, process it immediately without involving any shards.
-			err := w.ioHandler.Write(ctx, meta.WorkerCommandHandler(redisCmd.Args))
-			w.logger.Debug("Error executing for worker", slog.String("workerID", w.id), slog.Any("error", err))
-			return err
+	cmdCtx, cancel := context.WithTimeout(ctx, time.Duration(w.commandTimeout)*time.Millisecond)
+	defer cancel()
 
-		case SingleShard:
-			// For single-shard or custom commands, process them without breaking up.
+	resultChan := make(chan error, 1)
+
+	go func(){
+		var err error
+		defer func(){
+			resultChan <- err
+		}()
+		// Break down the single command into multiple commands if multisharding is supported.
+		// The length of cmdList helps determine how many shards to wait for responses.
+		cmdList := make([]*cmd.RedisCmd, 0)
+	
+		// Retrieve metadata for the command to determine if multisharding is supported.
+		meta, ok := WorkerCommandsMeta[redisCmd.Cmd]
+		if !ok {
+			// If no metadata exists, treat it as a single command.
 			cmdList = append(cmdList, redisCmd)
+		} else {
+			// Depending on the command type, decide how to handle it.
+			switch meta.CmdType {
+			case Global:
+				// If it's a global command, process it immediately without involving any shards.
+				err := w.ioHandler.Write(cmdCtx, meta.WorkerCommandHandler(redisCmd.Args))
+				w.logger.Debug("Error executing for worker", slog.String("workerID", w.id), slog.Any("error", err))
 
-		case MultiShard:
-			// If the command supports multisharding, break it down into multiple commands.
-			cmdList = meta.decomposeCommand(redisCmd)
-		case Custom:
-			switch redisCmd.Cmd {
-			case CmdAuth:
-				err := w.ioHandler.Write(ctx, w.RespAuth(redisCmd.Args))
-				w.logger.Error("Error sending auth response to worker", slog.String("workerID", w.id), slog.Any("error", err))
-				return err
-			case CmdAbort:
-				w.logger.Info("Received ABORT command, initiating server shutdown", slog.String("workerID", w.id))
-				w.globalErrorChan <- diceerrors.ErrAborted
-				return nil
-			default:
+			case SingleShard:
+				// For single-shard or custom commands, process them without breaking up.
 				cmdList = append(cmdList, redisCmd)
+	
+			case MultiShard:
+				// If the command supports multisharding, break it down into multiple commands.
+				cmdList = meta.decomposeCommand(redisCmd)
+			case Custom:
+				switch redisCmd.Cmd {
+				case CmdAuth:
+					err := w.ioHandler.Write(cmdCtx, w.RespAuth(redisCmd.Args))
+					w.logger.Error("Error sending auth response to worker", slog.String("workerID", w.id), slog.Any("error", err))
+			
+				case CmdAbort:
+					w.logger.Info("Received ABORT command, initiating server shutdown", slog.String("workerID", w.id))
+					w.globalErrorChan <- diceerrors.ErrAborted
+					err = nil
+				default:
+					cmdList = append(cmdList, redisCmd)
+				}
 			}
 		}
-	}
+	
+		// Scatter the broken-down commands to the appropriate shards.
+		err = w.scatter(cmdCtx, cmdList)
+		if err != nil {
+			return
+		}
+	
+		// Gather the responses from the shards and write them to the buffer.
+		err = w.gather(cmdCtx, redisCmd.Cmd, len(cmdList), meta.CmdType)
+		if err != nil {
+			return
+		}
+	}()
 
-	// Scatter the broken-down commands to the appropriate shards.
-	err := w.scatter(ctx, cmdList)
-	if err != nil {
-		return err
-	}
 
-	// Gather the responses from the shards and write them to the buffer.
-	err = w.gather(ctx, redisCmd.Cmd, len(cmdList), meta.CmdType)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	select {
+    case <-cmdCtx.Done():
+        if cmdCtx.Err() == context.DeadlineExceeded {
+            w.logger.Warn("Command execution timed out", slog.String("workerID", w.id), slog.String("command", redisCmd.Cmd))
+            return fmt.Errorf("command execution timed out: %w", cmdCtx.Err())
+        }
+        return cmdCtx.Err()
+    case err := <-resultChan:
+        return err
+    }
 }
 
 // scatter distributes the Redis commands to the respective shards based on the key.
@@ -361,4 +395,36 @@ func (w *BaseWorker) Stop() error {
 	w.logger.Info("Stopping worker", slog.String("workerID", w.id))
 	w.Session.Expire()
 	return nil
+}
+
+func (w *BaseWorker) updateLastActivity() {
+	w.lastActivityMux.Lock()
+	w.lastActivity = time.Now()
+	w.lastActivityMux.Unlock()
+}
+
+func (w *BaseWorker) keepAliveCheck(ctx context.Context) {
+    ticker := time.NewTicker(time.Duration(w.keepAliveInterval) * time.Millisecond)
+    defer ticker.Stop()
+
+    for {
+        select {
+        case <-ctx.Done():
+            w.logger.Info("Stopping keepAliveCheck due to context cancellation", slog.String("workerID", w.id))
+            return
+        case <-ticker.C:
+            w.lastActivityMux.RLock()
+            lastActivity := w.lastActivity
+            w.lastActivityMux.RUnlock()
+
+            if time.Since(lastActivity) > time.Duration(w.keepAliveInterval)*time.Second {
+                w.logger.Warn("Connection timeout for worker", slog.String("workerID", w.id))
+                err := w.Stop()
+                if err != nil {
+                    w.logger.Error("Error stopping worker after timeout", slog.String("workerID", w.id), slog.Any("error", err))
+                }
+                return
+            }
+        }
+    }
 }
