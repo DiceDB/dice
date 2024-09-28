@@ -25,6 +25,9 @@ const (
 	KeyValues   = "key_values"
 	True        = "true"
 	QwatchQuery = "query"
+	Offset      = "offset"
+	Member      = "member"
+	Members     = "members"
 )
 
 func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
@@ -62,7 +65,7 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 
 			// Define keys to exclude and process their values first
 			// Update as we support more commands
-			var priorityKeys = [11]string{
+			var priorityKeys = []string{
 				Key,
 				Keys,
 				Field,
@@ -74,6 +77,9 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 				Password,
 				KeyValues,
 				QwatchQuery,
+				Offset,
+				Member,
+				Members,
 			}
 			for _, key := range priorityKeys {
 				if val, exists := jsonBody[key]; exists {
@@ -96,6 +102,13 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 						// Handle KeyValues separately
 						for k, v := range val.(map[string]interface{}) {
 							args = append(args, k, fmt.Sprintf("%v", v))
+						}
+						delete(jsonBody, key)
+						continue
+					}
+					if key == Members {
+						for _, v := range val.([]interface{}) {
+							args = append(args, fmt.Sprintf("%v", v))
 						}
 						delete(jsonBody, key)
 						continue
