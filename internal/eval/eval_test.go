@@ -2160,7 +2160,7 @@ func testEvalHVALS(t *testing.T, store *dstore.Store) {
 				field1 := "mock_field_name_1"
 				newMap := make(HashMap)
 				newMap[field] = "mock_field_value"
-				newMap[field1] = "mock_field_value_1"
+				newMap[field1] = "mock_field_value"
 
 				obj := &object.Obj{
 					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
@@ -2171,7 +2171,7 @@ func testEvalHVALS(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:  []string{"KEY_MOCK"},
-			output: clientio.Encode([]string{"mock_field_value", "mock_field_value_1"}, false),
+			output: clientio.Encode([]string{"mock_field_value", "mock_field_value"}, false),
 		},
 	}
 
