@@ -153,65 +153,98 @@ func encodeString(v string) []byte {
 }
 
 func Encode(value interface{}, isSimple bool) []byte {
+	// Use a type switch to determine the type of the provided value and encode accordingly.
 	switch v := value.(type) {
+
+	// Temporary case to maintain backwards compatibility.
+	// This case handles byte slices ([]byte) directly, allowing existing functionality
+	// that relies on byte slice inputs to continue working without modifications.
+	// It serves as a transitional measure and should be revisited for removal
+	// once all commands are migrated.
+	case []byte:
+		return v // Return the byte slice as-is.
+
 	case string:
+		// If isSimple is true, format the string in a simple RESP format.
 		if isSimple {
-			return []byte(fmt.Sprintf("+%s\r\n", v))
+			return []byte(fmt.Sprintf("+%s\r\n", v)) // Prefix with '+' for simple response.
 		}
-		return encodeString(v)
+		return encodeString(v) // Use detailed encoding for the string.
+
+	// Handle numeric types (int, uint, etc.) by formatting them as RESP integers.
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
-		return []byte(fmt.Sprintf(":%d\r\n", v))
+		return []byte(fmt.Sprintf(":%d\r\n", v)) // Prefix with ':' for RESP integers.
+
+	// Handle floating-point types similarly to integers.
 	case float32, float64:
-		return []byte(fmt.Sprintf(":%v\r\n", v))
+		return []byte(fmt.Sprintf(":%v\r\n", v)) // Format as RESP float.
+
+	// Handle slices of strings.
 	case []string:
 		var b []byte
-		buf := bytes.NewBuffer(b)
+		buf := bytes.NewBuffer(b) // Create a buffer to accumulate encoded strings.
 		for _, b := range value.([]string) {
-			buf.Write(encodeString(b))
+			buf.Write(encodeString(b)) // Encode each string and write to the buffer.
 		}
-		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
+		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes())) // Return the encoded response.
+
+	// Handle slices of custom objects (Obj).
 	case []*object.Obj:
 		var b []byte
-		buf := bytes.NewBuffer(b)
+		buf := bytes.NewBuffer(b) // Create a buffer to accumulate encoded objects.
 		for _, b := range value.([]*object.Obj) {
-			buf.Write(Encode(b.Value, false))
+			buf.Write(Encode(b.Value, false)) // Encode each object’s value and write to the buffer.
 		}
-		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
+		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes())) // Return the encoded response.
+
+	// Handle slices of interfaces.
 	case []interface{}:
 		var b []byte
-		buf := bytes.NewBuffer(b)
+		buf := bytes.NewBuffer(b) // Create a buffer for accumulating encoded values.
 		for _, elem := range v {
-			buf.Write(Encode(elem, false))
+			buf.Write(Encode(elem, false)) // Encode each element and write to the buffer.
 		}
-		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
+		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes())) // Return the encoded response.
+
+	// Handle slices of int64.
 	case []int64:
 		var b []byte
-		buf := bytes.NewBuffer(b)
+		buf := bytes.NewBuffer(b) // Create a buffer for accumulating encoded values.
 		for _, b := range value.([]int64) {
-			buf.Write(Encode(b, false))
+			buf.Write(Encode(b, false)) // Encode each int64 and write to the buffer.
 		}
-		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
+		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes())) // Return the encoded response.
+
+	// Handle error type by formatting it as a RESP error.
 	case error:
-		return []byte(fmt.Sprintf("-%s\r\n", v))
+		return []byte(fmt.Sprintf("-%s\r\n", v)) // Prefix with '-' for RESP error format.
+
+	// Handle custom watch event struct.
 	case dstore.WatchEvent:
 		var b []byte
-		buf := bytes.NewBuffer(b)
+		buf := bytes.NewBuffer(b) // Create a buffer for accumulating encoded values.
 		we := value.(dstore.WatchEvent)
-		buf.Write(Encode(fmt.Sprintf("key:%s", we.Key), false))
-		buf.Write(Encode(fmt.Sprintf("op:%s", we.Operation), false))
-		return []byte(fmt.Sprintf("*2\r\n%s", buf.Bytes()))
+		buf.Write(Encode(fmt.Sprintf("key:%s", we.Key), false))      // Encode the key field.
+		buf.Write(Encode(fmt.Sprintf("op:%s", we.Operation), false)) // Encode the operation field.
+		return []byte(fmt.Sprintf("*2\r\n%s", buf.Bytes()))          // Return the encoded response.
+
+	// Handle slices of SQL query result rows.
 	case []sql.QueryResultRow:
 		var b []byte
-		buf := bytes.NewBuffer(b)
+		buf := bytes.NewBuffer(b) // Create a buffer for accumulating encoded rows.
 		for _, row := range value.([]sql.QueryResultRow) {
-			buf.WriteString("*2\r\n")
-			buf.Write(Encode(row.Key, false))
-			buf.Write(Encode(row.Value.Value, false))
+			buf.WriteString("*2\r\n")                 // Start a new array for each row.
+			buf.Write(Encode(row.Key, false))         // Encode the row key.
+			buf.Write(Encode(row.Value.Value, false)) // Encode the row value.
 		}
-		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
+		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes())) // Return the encoded response.
+
+	// Handle map[string]bool and return a nil response indicating unsupported types.
 	case map[string]bool:
-		return RespNIL
+		return RespNIL // Return nil response for unsupported type.
+
+	// For all other unsupported types, return a nil response.
 	default:
-		return RespNIL
+		return RespNIL // Return nil response for unsupported types.
 	}
 }

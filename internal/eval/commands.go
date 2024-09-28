@@ -24,7 +24,7 @@ type DiceCmdMeta struct {
 	// instead of just raw bytes. Commands that have been migrated to this new model
 	// will utilize this function for evaluation, allowing for better handling of
 	// complex command execution scenarios and improved response consistency.
-	NewEval func([]string, *dstore.Store) EvalResponse
+	NewEval func([]string, *dstore.Store) *EvalResponse
 }
 
 type KeySpecs struct {

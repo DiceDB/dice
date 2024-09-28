@@ -32,9 +32,10 @@ const (
 type CommandsMeta struct {
 	CmdType
 	Cmd                  string
+	isSimpleEnc          bool
 	WorkerCommandHandler func([]string) []byte
 	decomposeCommand     func(redisCmd *cmd.RedisCmd) []*cmd.RedisCmd
-	composeResponse      func(responses ...eval.EvalResponse) []byte
+	composeResponse      func(responses ...eval.EvalResponse) interface{}
 }
 
 var WorkerCommandsMeta = map[string]CommandsMeta{
@@ -44,21 +45,26 @@ var WorkerCommandsMeta = map[string]CommandsMeta{
 		WorkerCommandHandler: eval.RespPING,
 	},
 	CmdAbort: {
-		CmdType: Custom,
+		CmdType:     Custom,
+		isSimpleEnc: true,
 	},
 	CmdAuth: {
-		CmdType: Custom,
+		CmdType:     Custom,
+		isSimpleEnc: true,
 	},
 
 	// Single-shard commands.
 	CmdSet: {
-		CmdType: SingleShard,
+		CmdType:     SingleShard,
+		isSimpleEnc: true,
 	},
 	CmdGet: {
-		CmdType: SingleShard,
+		CmdType:     SingleShard,
+		isSimpleEnc: true,
 	},
 	CmdGetSet: {
-		CmdType: SingleShard,
+		CmdType:     SingleShard,
+		isSimpleEnc: true,
 	},
 }
 

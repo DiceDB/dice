@@ -2,6 +2,7 @@ package netconn
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/clientio/iohandler"
 )
 
@@ -144,11 +146,29 @@ func (h *IOHandler) Read(ctx context.Context) ([]byte, error) {
 }
 
 // WriteResponse writes the response back to the network connection
-func (h *IOHandler) Write(ctx context.Context, response []byte) error {
+func (h *IOHandler) Write(ctx context.Context, response interface{}, isBlkEnc bool) error {
 	errChan := make(chan error, 1)
 
+	// Process the incoming response by calling the handleResponse function.
+	// This function checks the response against known RESP formatted values
+	// and returns the corresponding byte array representation. The result
+	// is assigned to the resp variable.
+	resp := handleResponse(response)
+
+	// Check if the processed response (resp) is not nil.
+	// If it is not nil, this means incoming response was not
+	// matched to any predefined RESP responses,
+	// and we proceed to encode the original response using
+	// the clientio.Encode function. This function converts the
+	// response into the desired format based on the specified
+	// isBlkEnc encoding flag, which indicates whether the
+	// response should be encoded in a block format.
+	if resp != nil {
+		resp = clientio.Encode(response, isBlkEnc)
+	}
+
 	go func(errChan chan error) {
-		_, err := h.writer.Write(response)
+		_, err := h.writer.Write(resp)
 		if err == nil {
 			err = h.writer.Flush()
 		}
@@ -182,4 +202,51 @@ func (h *IOHandler) Write(ctx context.Context, response []byte) error {
 func (h *IOHandler) Close() error {
 	h.logger.Info("Closing connection")
 	return errors.Join(h.conn.Close(), h.file.Close())
+}
+
+// handleResponse processes the incoming response from a client and returns the corresponding
+// RESP (REdis Serialization Protocol) formatted byte array based on the response content.
+//
+// The function takes an interface{} as input, attempts to assert it as a byte slice. If successful,
+// it checks the content of the byte slice against predefined RESP responses using the `bytes.Contains`
+// function. If a match is found, it returns the associated byte array response. If no match is found
+// or if the input cannot be converted to a byte slice, the function returns nil.
+//
+// This function is designed to handle various response scenarios, such as:
+// - $-1: Represents a nil response.
+// - +OK: Indicates a successful command execution.
+// - +QUEUED: Signifies that a command has been queued.
+// - :0, :1, :-1, :-2: Represents integer values in RESP format.
+// - *0: Represents an empty array in RESP format.
+//
+// Note: The use of `bytes.Contains` is to check if the provided response matches any of the
+// predefined RESP responses, making it flexible in handling responses that might include
+// additional content beyond the expected response format.
+func handleResponse(response interface{}) []byte {
+	// Attempt to convert response to []byte
+	respBytes, ok := response.([]byte)
+	if !ok {
+		return nil // or handle the error as needed
+	}
+
+	switch {
+	case bytes.Contains(respBytes, clientio.RespNIL):
+		return clientio.RespNIL
+	case bytes.Contains(respBytes, clientio.RespOK):
+		return clientio.RespOK
+	case bytes.Contains(respBytes, clientio.RespQueued):
+		return clientio.RespQueued
+	case bytes.Contains(respBytes, clientio.RespZero):
+		return clientio.RespZero
+	case bytes.Contains(respBytes, clientio.RespOne):
+		return clientio.RespOne
+	case bytes.Contains(respBytes, clientio.RespMinusOne):
+		return clientio.RespMinusOne
+	case bytes.Contains(respBytes, clientio.RespMinusTwo):
+		return clientio.RespMinusTwo
+	case bytes.Contains(respBytes, clientio.RespEmptyArray):
+		return clientio.RespEmptyArray
+	default:
+		return nil // or return an appropriate response for unknown cases
+	}
 }

@@ -18,6 +18,6 @@ type StoreOp struct {
 
 // StoreResponse represents the response of a Store operation.
 type StoreResponse struct {
-	RequestID    uint32            // RequestID that this StoreResponse belongs to
-	EvalResponse eval.EvalResponse // Result of the Store operation, for now the type is set to []byte, but this can change in the future.
+	RequestID    uint32             // RequestID that this StoreResponse belongs to
+	EvalResponse *eval.EvalResponse // Result of the Store operation, for now the type is set to []byte, but this can change in the future.
 }

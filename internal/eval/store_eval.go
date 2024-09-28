@@ -1,12 +1,9 @@
 package eval
 
 import (
-	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 
-	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/server/utils"
@@ -28,9 +25,12 @@ import (
 // Returns encoded error response if both PX and EX flags are present
 // Returns encoded OK RESP once new entry is added
 // If the key already exists then the value will be overwritten and expiry will be discarded
-func evalSET(args []string, store *dstore.Store) EvalResponse {
+func evalSET(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) <= 1 {
-		return EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrArity("SET")))}
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("SET"),
+		}
 	}
 
 	var key, value string
@@ -46,20 +46,32 @@ func evalSET(args []string, store *dstore.Store) EvalResponse {
 		switch arg {
 		case Ex, Px:
 			if state != Uninitialized {
-				return EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)))}
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrSyntax,
+				}
 			}
 			i++
 			if i == len(args) {
-				return EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)))}
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrSyntax,
+				}
 			}
 
 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
-				return EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)))}
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrIntegerOutOfRange,
+				}
 			}
 
 			if exDuration <= 0 || exDuration >= maxExDuration {
-				return EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrExpireTime("SET")))}
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrInvalidExpireTime("SET"),
+				}
 			}
 
 			// converting seconds to milliseconds
@@ -71,19 +83,31 @@ func evalSET(args []string, store *dstore.Store) EvalResponse {
 
 		case Pxat, Exat:
 			if state != Uninitialized {
-				return EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)))}
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrSyntax,
+				}
 			}
 			i++
 			if i == len(args) {
-				return EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)))}
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrSyntax,
+				}
 			}
 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
-				return EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)))}
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrIntegerOutOfRange,
+				}
 			}
 
 			if exDuration < 0 {
-				return EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrExpireTime("SET")))}
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrInvalidExpireTime("SET"),
+				}
 			}
 
 			if arg == Exat {
@@ -103,17 +127,26 @@ func evalSET(args []string, store *dstore.Store) EvalResponse {
 
 			// if key does not exist, return RESP encoded nil
 			if obj == nil {
-				return EvalResponse{Result: clientio.RespNIL, Error: nil}
+				return &EvalResponse{
+					Result: respNIL,
+					Error:  nil,
+				}
 			}
 		case NX:
 			obj := store.Get(key)
 			if obj != nil {
-				return EvalResponse{Result: clientio.RespNIL, Error: nil}
+				return &EvalResponse{
+					Result: respNIL,
+					Error:  nil,
+				}
 			}
 		case KEEPTTL, Keepttl:
 			keepttl = true
 		default:
-			return EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)))}
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrSyntax,
+			}
 		}
 	}
 
@@ -125,22 +158,31 @@ func evalSET(args []string, store *dstore.Store) EvalResponse {
 	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
 		storedValue = value
 	default:
-		return EvalResponse{Result: nil, Error: fmt.Errorf("ERR unsupported encoding: %d", oEnc)}
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrUnsupportedEncoding(int(oEnc)),
+		}
 	}
 
 	// putting the k and value in a Hash Table
 	store.Put(key, store.NewObj(storedValue, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
 
-	return EvalResponse{Result: clientio.RespOK, Error: nil}
+	return &EvalResponse{
+		Result: respOK,
+		Error:  nil,
+	}
 }
 
 // evalGET returns the value for the queried key in args
 // The key should be the only param in args
 // The RESP value of the key is encoded and then returned
 // evalGET returns response.RespNIL if key is expired or it does not exist
-func evalGET(args []string, store *dstore.Store) EvalResponse {
+func evalGET(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) != 1 {
-		return EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrArity("GET")))}
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("GET"),
+		}
 	}
 
 	key := args[0]
@@ -149,7 +191,10 @@ func evalGET(args []string, store *dstore.Store) EvalResponse {
 
 	// if key does not exist, return RESP encoded nil
 	if obj == nil {
-		return EvalResponse{Result: clientio.RespNIL, Error: nil}
+		return &EvalResponse{
+			Result: respNIL,
+			Error:  nil,
+		}
 	}
 
 	// Decode and return the value based on its encoding
@@ -157,31 +202,49 @@ func evalGET(args []string, store *dstore.Store) EvalResponse {
 	case object.ObjEncodingInt:
 		// Value is stored as an int64, so use type assertion
 		if val, ok := obj.Value.(int64); ok {
-			return EvalResponse{Result: clientio.Encode(val, false), Error: nil}
+			return &EvalResponse{
+				Result: val,
+				Error:  nil,
+			}
 		}
-		return EvalResponse{Result: nil,
-			Error: errors.New(string(diceerrors.NewErrWithFormattedMessage("expected int64 but got another type: %s", obj.Value)))}
+
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrUnexpectedType("int64", obj.Value),
+		}
 
 	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
 		// Value is stored as a string, use type assertion
 		if val, ok := obj.Value.(string); ok {
-			return EvalResponse{Result: clientio.Encode(val, false), Error: nil}
+			return &EvalResponse{
+				Result: val,
+				Error:  nil,
+			}
 		}
-		return EvalResponse{Result: nil,
-			Error: errors.New(string(diceerrors.NewErrWithMessage("expected string but got another type")))}
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrUnexpectedType("string", obj.Value),
+		}
 
 	case object.ObjEncodingByteArray:
 		// Value is stored as a bytearray, use type assertion
 		if val, ok := obj.Value.(*ByteArray); ok {
-			return EvalResponse{Result: clientio.Encode(string(val.data), false), Error: nil}
+			return &EvalResponse{
+				Result: val,
+				Error:  nil,
+			}
 		}
 
-		return EvalResponse{Result: nil,
-			Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)))}
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
 
 	default:
-		return EvalResponse{Result: nil,
-			Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)))}
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
 	}
 }
 
@@ -193,9 +256,12 @@ func evalGET(args []string, store *dstore.Store) EvalResponse {
 // Returns:
 // Bulk string reply: the old value stored at the key.
 // Nil reply: if the key does not exist.
-func evalGETSET(args []string, store *dstore.Store) EvalResponse {
+func evalGETSET(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) != 2 {
-		return EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrArity("GETSET")))}
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("GETSET"),
+		}
 	}
 
 	key, value := args[0], args[1]
@@ -221,11 +287,11 @@ func evalGETSET(args []string, store *dstore.Store) EvalResponse {
 // Returns encoded error response if expiry time value in not integer
 // Returns encoded OK RESP once new entry is added
 // If the key already exists then the value and expiry will be overwritten
-func evalSETEX(args []string, store *dstore.Store) EvalResponse {
+func evalSETEX(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) != 3 {
-		return EvalResponse{
+		return &EvalResponse{
 			Result: nil,
-			Error:  errors.New(string(diceerrors.NewErrArity("SETEX"))),
+			Error:  diceerrors.ErrWrongArgumentCount("SETEX"),
 		}
 	}
 
@@ -234,15 +300,15 @@ func evalSETEX(args []string, store *dstore.Store) EvalResponse {
 
 	exDuration, err := strconv.ParseInt(args[1], 10, 64)
 	if err != nil {
-		return EvalResponse{
+		return &EvalResponse{
 			Result: nil,
-			Error:  errors.New(string(diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr))),
+			Error:  diceerrors.ErrIntegerOutOfRange,
 		}
 	}
 	if exDuration <= 0 || exDuration >= maxExDuration {
-		return EvalResponse{
+		return &EvalResponse{
 			Result: nil,
-			Error:  errors.New(string(diceerrors.NewErrExpireTime("SETEX"))),
+			Error:  diceerrors.ErrInvalidExpireTime("SETEX"),
 		}
 	}
 	newArgs := []string{key, value, Ex, args[1]}

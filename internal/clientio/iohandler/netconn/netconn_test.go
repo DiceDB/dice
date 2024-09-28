@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/dicedb/dice/mocks"
 	"io"
 	"log/slog"
 	"net"
@@ -13,6 +12,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/dicedb/dice/mocks"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -163,7 +164,7 @@ func TestNetConnIOHandler(t *testing.T) {
 				tt.response = []byte("Response\r\n")
 			}
 
-			err = handler.Write(ctx, tt.response)
+			err = handler.Write(ctx, tt.response, false)
 
 			if tt.expectedWriteErr != nil {
 				assert.Error(t, err)

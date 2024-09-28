@@ -4,11 +4,12 @@ import (
 	"bufio"
 	"context"
 	"errors"
-	"github.com/dicedb/dice/mocks"
 	"log/slog"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dicedb/dice/mocks"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -189,7 +190,7 @@ func TestNetConnIOHandler_RESP(t *testing.T) {
 			}
 
 			// Test WriteResponse
-			err = handler.Write(ctx, []byte(tt.writeResponse))
+			err = handler.Write(ctx, []byte(tt.writeResponse), false)
 			if tt.expectedWriteErr != nil {
 				assert.Error(t, err)
 				assert.Equal(t, tt.expectedWriteErr.Error(), err.Error())
