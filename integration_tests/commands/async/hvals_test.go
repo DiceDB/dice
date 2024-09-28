@@ -1,7 +1,6 @@
 package async
 
 import (
-	"reflect"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -10,23 +9,23 @@ import (
 func TestHvals(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
-	defer FireCommand(conn, "DEL key_hVals key_hVals02")
+	defer FireCommand(conn, "DEL hvalsKey hvalsKey01 hvalsKey02")
 
 	testCases := []TestCase{
 		{
-			commands: []string{"HSET key_hVals field value", "HSET key_hVals field2 value_new", "HVALS key_hVals"},
+			commands: []string{"HSET hvalsKey field value", "HSET hvalsKey field2 value_new", "HVALS hvalsKey"},
 			expected: []interface{}{ONE, ONE, []string{"value", "value_new"}},
 		},
 		{
-			commands: []string{"HVALS key_hVals01"},
+			commands: []string{"HVALS hvalsKey01"},
 			expected: []interface{}{[]interface{}{}},
 		},
 		{
-			commands: []string{"SET key_hVals02 field", "HVALS key_hVals02"},
+			commands: []string{"SET hvalsKey02 field", "HVALS hvalsKey02"},
 			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
 		},
 		{
-			commands: []string{"HVALS key_hVals03 x", "HVALS"},
+			commands: []string{"HVALS hvalsKey03 x", "HVALS"},
 			expected: []interface{}{"ERR wrong number of arguments for 'hvals' command",
 				"ERR wrong number of arguments for 'hvals' command"},
 		},
@@ -47,10 +46,7 @@ func TestHvals(t *testing.T) {
 						expectedResultsMap[expectedResults[i]] = expectedResults[i+1]
 						resultsMap[results[i].(string)] = results[i+1].(string)
 					}
-					if !reflect.DeepEqual(resultsMap, expectedResultsMap) {
-						t.Fatalf("Assertion failed: expected true, got false")
-					}
-
+					assert.DeepEqual(t, resultsMap, expectedResultsMap)
 				} else {
 					assert.DeepEqual(t, tc.expected[i], result)
 				}

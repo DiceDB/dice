@@ -97,6 +97,7 @@ func TestEval(t *testing.T) {
 	testEvalHRANDFIELD(t, store)
 	testEvalZADD(t, store)
 	testEvalZRANGE(t, store)
+	testEvalHVALS(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -2017,17 +2018,17 @@ func testEvalHVALS(t *testing.T, store *dstore.Store) {
 		},
 		"key doesn't exists": {
 			setup:  func() {},
-			input:  []string{"KEY"},
-			output: clientio.RespNIL,
+			input:  []string{"NONEXISTENTHVALSKEY"},
+			output: clientio.Encode([]string{}, false),
 		},
 		"key exists": {
 			setup: func() {
 				key := "KEY_MOCK"
 				field := "mock_field_name"
-				field_1 := "mock_field_name_1"
+				field1 := "mock_field_name_1"
 				newMap := make(HashMap)
 				newMap[field] = "mock_field_value"
-				newMap[field_1] = "mock_field_value_1"
+				newMap[field1] = "mock_field_value_1"
 
 				obj := &object.Obj{
 					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
