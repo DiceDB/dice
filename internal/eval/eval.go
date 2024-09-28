@@ -4191,6 +4191,107 @@ func evalHRANDFIELD(args []string, store *dstore.Store) []byte {
 	return selectRandomFields(hashMap, count, withValues)
 }
 
+func evalJSONARRINDEX(args []string, store *dstore.Store) []byte {
+	if len(args) < 3 || len(args) > 5 {
+		return diceerrors.NewErrArity("JSONARRINDEX")
+	}
+
+	key := args[0]
+	path := args[1]
+	start := 0
+	stop := 0
+
+	var value interface{}
+	var err error
+
+	if strings.Contains(args[2], `"`) {
+		// user has provided string argument
+		value = args[2]
+	} else {
+		// parse it to float since default arg type would be string
+		value, err = strconv.ParseFloat(args[2], 64)
+
+		if err != nil {
+			return diceerrors.NewErrWithMessage("invalid value provided")
+		}
+	}
+
+	// Convert start to integer if provided
+	if len(args) >= 4 {
+		var err error
+		start, err = strconv.Atoi(args[3])
+		if err != nil {
+			return diceerrors.NewErrWithMessage("invalid start index")
+		}
+	}
+
+	// Convert stop to integer if provided
+	if len(args) == 5 {
+		var err error
+		stop, err = strconv.Atoi(args[4])
+		if err != nil {
+			return diceerrors.NewErrWithMessage("invalid stop index")
+		}
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return diceerrors.NewErrWithMessage("object with key does not exist")
+	}
+
+	jsonData := obj.Value
+
+	// Check if the value stored is JSON type
+	_, err = sonic.Marshal(jsonData)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("existing key has wrong Dice type")
+	}
+
+	// Check if the path specified is valid
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("invalid JSONPath")
+	}
+
+	results := expr.Get(jsonData)
+	arrIndexList := make([]interface{}, 0, len(results))
+
+	for _, result := range results {
+		switch utils.GetJSONFieldType(result) {
+		case utils.ArrayType:
+			elementFound := false
+			arr := result.([]interface{})
+
+			// stop 0 means end of the array
+			if stop > 0 && start > stop {
+				arrIndexList = append(arrIndexList, -1)
+				continue
+			}
+
+			// Ensure stop is within bounds
+			if stop == 0 || stop >= len(arr) {
+				stop = len(arr) - 1
+			}
+
+			for i := start; i <= stop; i++ {
+				if arr[i] == value {
+					arrIndexList = append(arrIndexList, i)
+					elementFound = true
+					break
+				}
+			}
+
+			if !elementFound {
+				arrIndexList = append(arrIndexList, -1)
+			}
+		default:
+			arrIndexList = append(arrIndexList, nil)
+		}
+	}
+
+	return clientio.Encode(arrIndexList, false)
+}
+
 // selectRandomFields returns random fields from a hashmap.
 func selectRandomFields(hashMap HashMap, count int, withValues bool) []byte {
 	keys := make([]string, 0, len(hashMap))

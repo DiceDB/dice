@@ -858,6 +858,14 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsonArrIndexCmdMeta = DiceCmdMeta{
+		Name: "JSON.ARRINDEX",
+		Info: `JSON.ARRINDEX key path value [start [stop]]
+		Search for the first occurrence of a JSON value in an array`,
+		Eval:     evalJSONARRINDEX,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	hlenCmdMeta = DiceCmdMeta{
 		Name: "HLEN",
 		Info: `HLEN key
@@ -951,6 +959,7 @@ func init() {
 	DiceCmds["JSON.ARRPOP"] = jsonarrpopCmdMeta
 	DiceCmds["JSON.INGEST"] = jsoningestCmdMeta
 	DiceCmds["JSON.ARRINSERT"] = jsonarrinsertCmdMeta
+	DiceCmds["JSON.ARRINDEX"] = jsonArrIndexCmdMeta
 	DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
 	DiceCmds["EXPIRE"] = expireCmdMeta
