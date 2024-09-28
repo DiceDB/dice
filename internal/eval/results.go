@@ -4,7 +4,7 @@ var (
 	respNIL []byte = []byte("$-1\r\n") // Represents a nil response in RESP format.
 	respOK  []byte = []byte("+OK\r\n") // Indicates a successful command execution.
 
-	// Following varaibles are commented out since not in used. Once we start migrating,
+	// Following varaibles are commented out since not in used (lint-check). Once we start migrating,
 	// we will uncomment according to the requirements
 
 	// respQueued     []byte = []byte("+QUEUED\r\n") // Signifies that a command has been queued for execution. //nolint:unused
