@@ -166,6 +166,36 @@ func TestBitPos(t *testing.T) {
 		setCmdSETBIT bool
 	}{
 		{
+			name:  "String interval BIT 0,-1 ",
+			val:   "\\x00\\xff\\x00",
+			inCmd: "BITPOS testkey 0 0 -1 bit",
+			out:   int64(0),
+		},
+		{
+			name:  "String interval BIT 8,-1",
+			val:   "\\x00\\xff\\x00",
+			inCmd: "BITPOS testkey 0 8 -1 bit",
+			out:   int64(8),
+		},
+		{
+			name:  "String interval BIT 16,-1",
+			val:   "\\x00\\xff\\x00",
+			inCmd: "BITPOS testkey 0 16 -1 bit",
+			out:   int64(16),
+		},
+		{
+			name:  "String interval BIT 16,200",
+			val:   "\\x00\\xff\\x00",
+			inCmd: "BITPOS testkey 0 16 200 bit",
+			out:   int64(16),
+		},
+		{
+			name:  "String interval BIT 8,8",
+			val:   "\\x00\\xff\\x00",
+			inCmd: "BITPOS testkey 0 8 8 bit",
+			out:   int64(8),
+		},
+		{
 			name:  "FindsFirstZeroBit",
 			val:   "\xff\xf0\x00",
 			inCmd: "BITPOS testkey 0",
@@ -390,7 +420,7 @@ func TestBitPos(t *testing.T) {
 			name:  "StartAndEndEqualInBitRange",
 			val:   "\x0f\xff\xff",
 			inCmd: "BITPOS testkey 1 1 1 BIT",
-			out:   int64(8),
+			out:   int64(-1),
 		},
 		{
 			name:  "FindFirstZeroBitInNegativeRange",
