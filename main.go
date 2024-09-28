@@ -148,7 +148,7 @@ func main() {
 			}
 		}()
 	} else {
-		workerManager := worker.NewWorkerManager(config.DiceConfig.Server.MaxClients, shardManager)
+		workerManager := worker.NewWorkerManager(int64(config.DiceConfig.Server.MaxClients), shardManager)
 		// Initialize the RESP Server
 		respServer := resp.NewServer(shardManager, workerManager, serverErrCh, logr)
 		serverWg.Add(1)

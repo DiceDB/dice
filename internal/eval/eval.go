@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"github.com/google/btree"
 	"log/slog"
 	"math"
 	"math/big"
@@ -18,21 +17,20 @@ import (
 	"unicode"
 	"unsafe"
 
-	"github.com/dicedb/dice/internal/object"
-	"github.com/rs/xid"
-
-	"github.com/dicedb/dice/internal/sql"
-
 	"github.com/axiomhq/hyperloglog"
 	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/comm"
 	diceerrors "github.com/dicedb/dice/internal/errors"
+	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/querywatcher"
 	"github.com/dicedb/dice/internal/server/utils"
+	"github.com/dicedb/dice/internal/sql"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/google/btree"
 	"github.com/ohler55/ojg/jp"
+	"github.com/rs/xid"
 )
 
 type exDurationState int
@@ -4182,7 +4180,7 @@ func evalHRANDFIELD(args []string, store *dstore.Store) []byte {
 
 		// The third argument is the "WITHVALUES" option.
 		if len(args) == 3 {
-			if strings.ToUpper(args[2]) != WithValues {
+			if !strings.EqualFold(args[2], WithValues) {
 				return diceerrors.NewErrWithFormattedMessage(diceerrors.SyntaxErr)
 			}
 			withValues = true

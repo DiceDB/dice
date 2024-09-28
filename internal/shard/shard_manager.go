@@ -2,6 +2,7 @@ package shard
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -60,8 +61,10 @@ func (manager *ShardManager) Run(ctx context.Context) {
 
 	select {
 	case <-ctx.Done():
+		fmt.Println("Parent context was canceled, trigger shutdown")
 		// Parent context was canceled, trigger shutdown
 	case <-manager.sigChan:
+		fmt.Println("Parent context was canceled, trigger shutdown")
 		// OS signal received, trigger shutdown
 	}
 
