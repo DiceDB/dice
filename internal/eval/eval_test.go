@@ -94,6 +94,7 @@ func TestEval(t *testing.T) {
 	testEvalFLUSHDB(t, store)
 	testEvalINCRBYFLOAT(t, store)
 	testEvalBITOP(t, store)
+	testEvalAPPEND(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -4274,4 +4275,78 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalHRANDFIELD, store)
+}
+
+func testEvalAPPEND(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'append' command\r\n"),
+		},
+		"invalid number of arguments": {
+			setup: func() {
+				store.Del("key")
+			},
+			input:  []string{"key", "val", "val2"},
+			output: []byte("-ERR wrong number of arguments for 'append' command\r\n"),
+		},
+		"append to non-existing key": {
+			setup: func() {
+				store.Del("key")
+			},
+			input:  []string{"key", "val"},
+			output: clientio.Encode(3, false),
+		},
+		"append to existing key": {
+			setup: func() {
+				key := "key"
+				value := "val"
+				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "val"},
+			output: clientio.Encode(6, false),
+		},
+		"append to existing key having integer value": {
+			setup: func() {
+				key := "key"
+				value := "123"
+				storedValue, _ := strconv.ParseInt(value, 10, 64)
+				obj := store.NewObj(storedValue, -1, object.ObjTypeInt, object.ObjEncodingInt)
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "val"},
+			output: clientio.Encode(6, false),
+		},
+		"append empty string to non-existing key": {
+			setup: func() {
+				store.Del("key")
+			},
+			input:  []string{"key", ""},
+			output: clientio.Encode(0, false),
+		},
+		"append empty string to existing key having empty string": {
+			setup: func() {
+				key := "key"
+				value := ""
+				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
+				store.Put(key, obj)
+			},
+			input:  []string{"key", ""},
+			output: clientio.Encode(0, false),
+		},
+		"append empty string to existing key": {
+			setup: func() {
+				key := "key"
+				value := "val"
+				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
+				store.Put(key, obj)
+			},
+			input:  []string{"key", ""},
+			output: clientio.Encode(3, false),
+		},
+	}
+
+	runEvalTests(t, tests, evalAPPEND, store)
 }
