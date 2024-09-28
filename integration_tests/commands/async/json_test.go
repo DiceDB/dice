@@ -1312,7 +1312,7 @@ func TestJsonARRTRIM(t *testing.T) {
 			name:       "JSON.ARRTRIM not array",
 			commands:   []string{"JSON.SET b $ " + b, `JSON.ARRTRIM b $ 0 10`, "JSON.GET b"},
 			expected:   []interface{}{"OK", []interface{}{"(nil)"}, b},
-			assertType: []string{"equal", "equal", "jsoneq"},
+			assertType: []string{"equal", "deep_equal", "jsoneq"},
 		},
 		{
 			name:       "JSON.ARRTRIM stop index out of bounds",
