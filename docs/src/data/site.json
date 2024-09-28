@@ -1,6 +1,6 @@
 {
   "title": "DiceDB",
-  "description": "A CS engineer passionate about Databases, Language Internals, Distributed Datastores, and Advanced Algorithms. I am currently working with Google as a Staff Software with the Dataproc team in making Apache Spark faster.",
+  "description": "",
   "image": {
     "src": "/img/general-cover.png",
     "alt": "DiceDB"
@@ -16,7 +16,7 @@
     },
     {
       "title": "Faster and Efficient Redis",
-      "description": "5x faster than Redis and can handle much larger workloads on a single machine."
+      "description": "5x faster than Redis and capable of handling larger workloads at lower latencies on a single machine."
     },
     {
       "title": "SQL support",
