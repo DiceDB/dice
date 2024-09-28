@@ -102,8 +102,8 @@ var baseConfig = Config{
 	}{
 		Addr:                   DefaultHost,
 		Port:                   DefaultPort,
-		KeepAlive:              int32(300),
-		Timeout:                int32(300),
+		KeepAlive:              int32(30),
+		Timeout:                int32(30),
 		MaxConn:                int32(0),
 		ShardCronFrequency:     1 * time.Second,
 		MultiplexerPollTimeout: 100 * time.Millisecond,

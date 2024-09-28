@@ -91,7 +91,7 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 			}
 			return fmt.Errorf("error writing response: %w", err)
 		default:
-			clientCtx, clientCancel := context.WithTimeout(ctx, time.Duration(w.clientTimeout)*time.Millisecond)
+			clientCtx, clientCancel := context.WithTimeout(ctx, time.Duration(w.clientTimeout)*time.Second)
 			data, err := w.ioHandler.Read(clientCtx)
 			clientCancel()
 
@@ -162,7 +162,7 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 func (w *BaseWorker) executeCommand(ctx context.Context, redisCmd *cmd.RedisCmd) error {
 	w.updateLastActivity()
 
-	cmdCtx, cancel := context.WithTimeout(ctx, time.Duration(w.commandTimeout)*time.Millisecond)
+	cmdCtx, cancel := context.WithTimeout(ctx, time.Duration(w.commandTimeout)*time.Second)
 	defer cancel()
 
 	resultChan := make(chan error, 1)
@@ -403,7 +403,7 @@ func (w *BaseWorker) updateLastActivity() {
 }
 
 func (w *BaseWorker) keepAliveCheck(ctx context.Context) {
-	ticker := time.NewTicker(time.Duration(w.keepAliveInterval) * time.Millisecond)
+	ticker := time.NewTicker(time.Duration(w.keepAliveInterval) * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -416,7 +416,7 @@ func (w *BaseWorker) keepAliveCheck(ctx context.Context) {
 			lastActivity := w.lastActivity
 			w.lastActivityMux.RUnlock()
 
-			if time.Since(lastActivity) > time.Duration(w.keepAliveInterval)*time.Millisecond {
+			if time.Since(lastActivity) > time.Duration(w.keepAliveInterval)*time.Second {
 				w.logger.Warn("Connection timeout for worker", slog.String("workerID", w.id))
 				err := w.Stop()
 				if err != nil {
