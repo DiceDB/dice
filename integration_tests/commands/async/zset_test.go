@@ -53,6 +53,7 @@ func TestZRANGE(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 
+	FireCommand(conn, "DEL key")
 	defer FireCommand(conn, "DEL key")
 
 	FireCommand(conn, "ZADD key 1 member1 2 member2 3 member3 4 member4 5 member5 6 member6")

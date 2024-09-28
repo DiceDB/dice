@@ -1,7 +1,7 @@
 package async
 
 import (
-	"github.com/dicedb/dice/testutils"
+	testifyAssert "github.com/stretchr/testify/assert"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -14,21 +14,24 @@ func TestHvals(t *testing.T) {
 
 	testCases := []TestCase{
 		{
+			name:     "HVALS with multiple fields",
 			commands: []string{"HSET hvalsKey field value", "HSET hvalsKey field2 value_new", "HVALS hvalsKey"},
 			expected: []interface{}{ONE, ONE, []string{"value", "value_new"}},
 		},
 		{
+			name:     "HVALS with non-existing key",
 			commands: []string{"HVALS hvalsKey01"},
-			expected: []interface{}{[]interface{}{}},
+			expected: []interface{}{[]string{}},
 		},
 		{
+			name:     "HVALS on wrong key type",
 			commands: []string{"SET hvalsKey02 field", "HVALS hvalsKey02"},
 			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
 		},
 		{
+			name:     "HVALS with wrong number of arguments",
 			commands: []string{"HVALS hvalsKey03 x", "HVALS"},
-			expected: []interface{}{"ERR wrong number of arguments for 'hvals' command",
-				"ERR wrong number of arguments for 'hvals' command"},
+			expected: []interface{}{"ERR wrong number of arguments for 'hvals' command", "ERR wrong number of arguments for 'hvals' command"},
 		},
 	}
 
@@ -36,22 +39,28 @@ func TestHvals(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.commands {
 				result := FireCommand(conn, cmd)
-				expectedResults, ok := tc.expected[i].([]string)
-				results, ok2 := result.([]interface{})
 
-				if ok && ok2 && len(results) == len(expectedResults) {
-					expectedResultsMap := make(map[string]string)
-					resultsMap := make(map[string]string)
+				// Type check for expected value and result
+				expectedList, isExpectedList := tc.expected[i].([]string)
+				resultList, isResultList := result.([]interface{})
 
-					for i := 0; i < len(results); i += 2 {
-						expectedResultsMap[expectedResults[i]] = expectedResults[i+1]
-						resultsMap[results[i].(string)] = results[i+1].(string)
-					}
-					testutils.UnorderedEqual(resultsMap, expectedResultsMap)
+				// If both are lists, compare them unordered
+				if isExpectedList && isResultList && len(resultList) == len(expectedList) {
+					testifyAssert.ElementsMatch(t, expectedList, convertToStringSlice(resultList))
 				} else {
+					// Otherwise, do a deep comparison
 					assert.DeepEqual(t, tc.expected[i], result)
 				}
 			}
 		})
 	}
+}
+
+// Helper function to convert []interface{} to []string for easier comparison
+func convertToStringSlice(input []interface{}) []string {
+	output := make([]string, len(input))
+	for i, v := range input {
+		output[i] = v.(string)
+	}
+	return output
 }
