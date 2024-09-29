@@ -7,6 +7,14 @@ The `QWATCH` command is a novel feature designed to provide real-time updates to
 
 This command is what makes DiceDB different from Redis and uniquely positions it as the easiest and most intuitive way to build real-time reactive applications like leaderboards.
 
+## Protocol Support
+
+| Protocol | Supported |
+| -------- | --------- |
+| TCP-RESP | ✅        |
+| HTTP     | ✅        |
+| WebSocket| ❌        |
+
 ## Syntax
 
 ```
