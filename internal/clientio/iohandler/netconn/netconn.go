@@ -223,24 +223,20 @@ func (h *IOHandler) Close() error {
 // predefined RESP responses, making it flexible in handling responses that might include
 // additional content beyond the expected response format.
 func HandlePredefinedResponse(response interface{}) []byte {
+	respArr := [][]byte{
+		[]byte("$-1\r\n"),     // Represents a RESP Nil Bulk String, which indicates a null value.
+		[]byte("+OK\r\n"),     // Represents a RESP Simple String with value "OK".
+		[]byte("+QUEUED\r\n"), // Represents a Simple String indicating that a command has been queued.
+		[]byte(":0\r\n"),      // Represents a RESP Integer with value 0.
+		[]byte(":1\r\n"),      // Represents a RESP Integer with value 1.
+		[]byte(":-1\r\n"),     // Represents a RESP Integer with value -1.
+		[]byte(":-2\r\n"),     // Represents a RESP Integer with value -2.
+		[]byte("*0\r\n"),      // Represents an empty RESP Array.
+	}
 
-	switch response.(type) {
-	case eval.RespNIL:
-		return clientio.RespNIL
-	case eval.RespOK:
-		return clientio.RespOK
-	case eval.RespQueued:
-		return clientio.RespQueued
-	case eval.RespZero:
-		return clientio.RespZero
-	case eval.RespOne:
-		return clientio.RespOne
-	case eval.RespMinusOne:
-		return clientio.RespMinusOne
-	case eval.RespMinusTwo:
-		return clientio.RespMinusTwo
-	case eval.RespEmptyArray:
-		return clientio.RespEmptyArray
+	switch val := response.(type) {
+	case eval.RespType:
+		return respArr[val]
 	default:
 		return nil
 	}

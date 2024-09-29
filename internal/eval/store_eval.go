@@ -128,7 +128,7 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 			// if key does not exist, return RESP encoded nil
 			if obj == nil {
 				return &EvalResponse{
-					Result: RespNIL("(nil)"),
+					Result: RespNIL,
 					Error:  nil,
 				}
 			}
@@ -136,7 +136,7 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 			obj := store.Get(key)
 			if obj != nil {
 				return &EvalResponse{
-					Result: RespNIL("(nil)"),
+					Result: RespNIL,
 					Error:  nil,
 				}
 			}
@@ -168,7 +168,7 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 	store.Put(key, store.NewObj(storedValue, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
 
 	return &EvalResponse{
-		Result: RespOK("OK"),
+		Result: RespOK,
 		Error:  nil,
 	}
 }
@@ -192,7 +192,7 @@ func evalGET(args []string, store *dstore.Store) *EvalResponse {
 	// if key does not exist, return RESP encoded nil
 	if obj == nil {
 		return &EvalResponse{
-			Result: RespNIL("(nil)"),
+			Result: RespNIL,
 			Error:  nil,
 		}
 	}
