@@ -4381,3 +4381,10 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 
 	runEvalTests(t, tests, evalAPPEND, store)
 }
+
+func BenchmarkEvalAPPEND(b *testing.B) {
+	store := dstore.NewStore(nil)
+	for i := 0; i < b.N; i++ {
+		evalAPPEND([]string{"key", fmt.Sprintf("val_%d", i)}, store)
+	}
+}
