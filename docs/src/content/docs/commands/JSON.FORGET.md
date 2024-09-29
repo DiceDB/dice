@@ -19,10 +19,10 @@ The `JSON.FORGET` command is part of the DiceDBJSON module, which allows you to 
 When the `JSON.FORGET` command is executed, the following actions occur:
 
 1. The command locates the JSON document stored at the specified key.
-1. It evaluates the provided JSONPath expression to identify the part of the document to be deleted.
-1. If the path is valid and exists, the specified part of the JSON document is removed.
-1. If the path leads to an array element, the element is removed, and the array is reindexed.
-1. The command returns the number of paths that were successfully deleted.
+2. It evaluates the provided JSONPath expression to identify the part of the document to be deleted.
+3. If the path is valid and exists, the specified part of the JSON document is removed.
+4. If the path leads to an array element, the element is removed, and the array is reindexed.
+5. The command returns the number of paths that were successfully deleted.
 
 ## Error Handling
 

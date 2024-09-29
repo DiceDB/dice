@@ -26,11 +26,11 @@ The command returns the new value after the increment operation. The return type
 When the `JSON.NUMINCRBY` command is executed, the following steps occur:
 
 1. The command locates the JSON document stored at the specified key.
-1. It navigates to the specified path within the JSON document.
-1. It retrieves the current numeric value at that path.
-1. It increments the current value by the specified increment.
-1. It updates the JSON document with the new value.
-1. It returns the new value.
+2. It navigates to the specified path within the JSON document.
+3. It retrieves the current numeric value at that path.
+4. It increments the current value by the specified increment.
+5. It updates the JSON document with the new value.
+6. It returns the new value.
 
 If the path does not exist or does not contain a numeric value, an error will be raised.
 

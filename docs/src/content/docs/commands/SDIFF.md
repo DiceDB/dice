@@ -29,9 +29,9 @@ The `SDIFF` command returns an array of elements that are present in the first s
 When the `SDIFF` command is executed:
 
 1. DiceDB retrieves the set associated with `key1`.
-1. DiceDB retrieves the sets associated with `key2` through `keyN`.
-1. DiceDB computes the difference by removing elements found in `key2` through `keyN` from the set found in `key1`.
-1. The resulting set, which contains elements unique to `key1`, is returned.
+2. DiceDB retrieves the sets associated with `key2` through `keyN`.
+3. DiceDB computes the difference by removing elements found in `key2` through `keyN` from the set found in `key1`.
+4. The resulting set, which contains elements unique to `key1`, is returned.
 
 ## Error Handling
 

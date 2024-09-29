@@ -26,9 +26,9 @@ JSON.STRLEN <key> <path>
 When the `JSON.STRLEN` command is executed, DiceDB will:
 
 1. Retrieve the JSON document stored at the specified key.
-1. Navigate to the specified path within the JSON document.
-1. If the path points to a JSON string, return the length of the string.
-1. If the path does not exist or does not point to a JSON string, return `null`.
+2. Navigate to the specified path within the JSON document.
+3. If the path points to a JSON string, return the length of the string.
+4. If the path does not exist or does not point to a JSON string, return `null`.
 
 ## Error Handling
 

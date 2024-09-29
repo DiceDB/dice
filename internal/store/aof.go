@@ -104,7 +104,7 @@ func dumpKey(aof *AOF, key string, obj *object.Obj) (err error) {
 	return aof.Write(string(encode(tokens)))
 }
 
-// TODO: To to new and switch
+// DumpAllAOF dumps all keys in the store to the AOF file
 func DumpAllAOF(store *Store) error {
 	var (
 		aof *AOF

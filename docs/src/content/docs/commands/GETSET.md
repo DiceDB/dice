@@ -37,6 +37,7 @@ When the `GETSET` command is executed, the following sequence of actions occurs:
 3. If the specified key had an existing `TTL` , it is reset.
 4. The old value is returned to the client.
 
+
 This operation is atomic, meaning that no other commands can be executed on the key between the get and set operations.
 
 ## Errors
@@ -45,7 +46,7 @@ The `GETSET` command can raise errors in the following scenarios:
 
 1. `Wrong Type Error`: If the key exists but is not a string, DiceDB will return an error.
    - Error Message: `(error) ERROR WRONGTYPE Operation against a key holding the wrong kind of value`
-1. `Syntax Error`: If the command is not provided with exactly two arguments (key and value), DiceDB will return a syntax error.
+2. `Syntax Error`: If the command is not provided with exactly two arguments (key and value), DiceDB will return a syntax error.
    - Error Message: `(error) ERROR wrong number of arguments for 'getset' command`
 
 ## Examples
