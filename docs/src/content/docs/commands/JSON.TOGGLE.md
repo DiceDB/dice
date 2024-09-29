@@ -18,7 +18,7 @@ The `JSON.TOGGLE` command is part of the DiceDBJSON module, which allows you to 
    - `Description`: The unique identifier for the JSON document stored in DiceDB.
    - `Example`: `"user:1001"`
 
-1. `path`:
+2. `path`:
 
    - `Type`: String
    - `Description`: A JSONPath expression that specifies the exact location of the boolean value within the JSON document.
@@ -43,17 +43,17 @@ The `JSON.TOGGLE` command can raise the following errors:
    - `Cause`: This error occurs if the number of arguments provided to the command is incorrect.
    - `Solution`: Ensure that you provide exactly two arguments: the key and the path.
 
-1. `(error) ERR key does not exist`:
+2. `(error) ERR key does not exist`:
 
    - `Cause`: This error occurs if the specified key does not exist in the DiceDB database.
    - `Solution`: Verify that the key exists before attempting to toggle a value within it.
 
-1. `(error) ERR path does not exist`:
+3. `(error) ERR path does not exist`:
 
    - `Cause`: This error occurs if the specified path does not exist within the JSON document.
    - `Solution`: Ensure that the path is correct and exists within the JSON document.
 
-1. `(error) ERR value at path is not a boolean`:
+4. `(error) ERR value at path is not a boolean`:
 
    - `Cause`: This error occurs if the value at the specified path is not a boolean.
    - `Solution`: Ensure that the value at the specified path is a boolean before attempting to toggle it.

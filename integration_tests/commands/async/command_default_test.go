@@ -5,7 +5,7 @@ import (
 	"net"
 	"testing"
 
-	eval "github.com/dicedb/dice/internal/eval"
+	"github.com/dicedb/dice/internal/eval"
 	"gotest.tools/v3/assert"
 )
 

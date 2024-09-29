@@ -24,8 +24,8 @@ The `MGET` command returns an array of values corresponding to the specified key
 When the `MGET` command is executed, DiceDB will:
 
 1. Look up each specified key in the database.
-1. Retrieve the value associated with each key.
-1. Return an array of values in the same order as the keys were specified.
+2. Retrieve the value associated with each key.
+3. Return an array of values in the same order as the keys were specified.
 
 If a key does not exist, the corresponding position in the returned array will contain `nil`.
 
@@ -34,7 +34,7 @@ If a key does not exist, the corresponding position in the returned array will c
 The `MGET` command can raise errors in the following scenarios:
 
 1. `Wrong Type Error`: If any of the specified keys exist but are not of the string type, a `WRONGTYPE` error will be raised.
-1. `Syntax Error`: If the command is not used with at least one key, a `syntax error` will be raised.
+2. `Syntax Error`: If the command is not used with at least one key, a `syntax error` will be raised.
 
 ## Example Usage
 

@@ -65,7 +65,7 @@ func UpdateLastAccessedAt(lastAccessedAt uint32) uint32 {
 /*
   - Similar to redis implementation of increasing access counter for a key
   - The larger the counter value, the lesser is probability of its increment in counter value
-  - This counter is 8 bit number that will represent an approximate access counter of a key and will
+  - This counter is 8-bit number that will represent an approximate access counter of a key and will
     piggyback first 8 bits of `LastAccessedAt` field of Dice Object
 */
 func incrLogCounter(counter uint8) uint8 {
@@ -105,8 +105,8 @@ func PopulateEvictionPool(store *Store) {
 	})
 }
 
-// TODO: no need to populate everytime. should populate
-// only when the number of keys to evict is less than what we have in the pool
+// EvictAllkeysLRUOrLFU evicts keys based on LRU or LFU policy.
+// TODO: no need to populate everytime. should populate only when the number of keys to evict is less than what we have in the pool
 func EvictAllkeysLRUOrLFU(store *Store) {
 	PopulateEvictionPool(store)
 	evictCount := int16(config.DiceConfig.Server.EvictionRatio * float64(config.DiceConfig.Server.KeysLimit))

@@ -26,9 +26,9 @@ The `BITCOUNT` command returns an integer representing the number of bits set to
 When the `BITCOUNT` command is executed, DiceDB will:
 
 1. Retrieve the string stored at the specified key.
-1. If the `start` and `end` parameters are provided, DiceDB will consider only the specified range of bytes within the string.
-1. Count the number of bits set to 1 within the specified range or the entire string if no range is specified.
-1. Return the count as an integer.
+2. If the `start` and `end` parameters are provided, DiceDB will consider only the specified range of bytes within the string.
+3. Count the number of bits set to 1 within the specified range or the entire string if no range is specified.
+4. Return the count as an integer.
 
 ## Example Usage
 
@@ -76,7 +76,7 @@ In this example, the command counts the bits set to 1 in the bytes from position
    0
    ```
 
-1. `Wrong Type of Key`: If the key exists but does not hold a string value, DiceDB will return an error.
+2. `Wrong Type of Key`: If the key exists but does not hold a string value, DiceDB will return an error.
 
    ```plaintext
    LPUSH mylist "element"
@@ -89,7 +89,7 @@ In this example, the command counts the bits set to 1 in the bytes from position
    (error) WRONGTYPE Operation against a key holding the wrong kind of value
    ```
 
-1. `Invalid Range`: If the `start` or `end` parameters are not integers, DiceDB will return an error.
+3. `Invalid Range`: If the `start` or `end` parameters are not integers, DiceDB will return an error.
 
    ```plaintext
    SET mykey "foobar"
@@ -102,7 +102,7 @@ In this example, the command counts the bits set to 1 in the bytes from position
    (error) ERR value is not an integer or out of range
    ```
 
-1. `Out of Range Indices`: If the `start` or `end` parameters are out of the range of the string length, DiceDB will handle it gracefully by considering the valid range within the string.
+4. `Out of Range Indices`: If the `start` or `end` parameters are out of the range of the string length, DiceDB will handle it gracefully by considering the valid range within the string.
 
    ```plaintext
    SET mykey "foobar"

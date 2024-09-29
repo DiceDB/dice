@@ -25,9 +25,9 @@ The command returns an array of JSON values corresponding to the specified path 
 When the `JSON.MGET` command is executed, DiceDB will:
 
 1. Iterate over each provided key.
-1. Retrieve the JSON document stored at each key.
-1. Extract the value at the specified JSON path from each document.
-1. Return an array of the extracted values.
+2. Retrieve the JSON document stored at each key.
+3. Extract the value at the specified JSON path from each document.
+4. Return an array of the extracted values.
 
 If a key does not exist or the specified path is not found within a JSON document, `null` will be returned for that key.
 

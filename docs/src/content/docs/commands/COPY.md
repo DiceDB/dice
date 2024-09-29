@@ -27,10 +27,10 @@ COPY source destination [DB destination-db] [REPLACE]
 When the `COPY` command is executed, DiceDB will:
 
 1. Check if the source key exists. If it does not, the command will return `0`.
-1. Check if the destination key exists. If it does and the `REPLACE` option is not specified, the command will return `0`.
-1. If the `DB destination-db` option is specified, DiceDB will switch to the specified database for the destination key.
-1. Copy the value from the source key to the destination key.
-1. Return `1` if the copy operation was successful.
+2. Check if the destination key exists. If it does and the `REPLACE` option is not specified, the command will return `0`.
+3. If the `DB destination-db` option is specified, DiceDB will switch to the specified database for the destination key.
+4. Copy the value from the source key to the destination key.
+5. Return `1` if the copy operation was successful.
 
 ## Error Handling
 

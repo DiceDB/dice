@@ -13,8 +13,8 @@ type StoreOp struct {
 	ShardID     uint8         // ShardID of the shard on which the Store command will be executed
 	WorkerID    string        // WorkerID is the ID of the worker that sent this Store operation
 	Client      *comm.Client  // Client that sent this Store operation. TODO: This can potentially replace the WorkerID in the future
-	HTTPOp      bool          // HTTPOp is true if this Store operation is a HTTP operation
-	WebsocketOp bool          // WebsocketOp is true if this Store operaton is a Websocket operation
+	HTTPOp      bool          // HTTPOp is true if this Store operation is an HTTP operation
+	WebsocketOp bool          // WebsocketOp is true if this Store operation is a Websocket operation
 }
 
 // StoreResponse represents the response of a Store operation.

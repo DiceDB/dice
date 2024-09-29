@@ -27,16 +27,16 @@ HSET key field value [field value ...]
 When the `HSET` command is executed, the following actions occur:
 
 1. If the specified hash does not exist, a new hash is created.
-1. The specified field(s) and value(s) are set in the hash.
-1. If a field already exists, its value is updated with the new value provided.
-1. The command returns the number of fields that were newly added to the hash.
+2. The specified field(s) and value(s) are set in the hash.
+3. If a field already exists, its value is updated with the new value provided.
+4. The command returns the number of fields that were newly added to the hash.
 
 ## Error Handling
 
 The `HSET` command can raise errors in the following scenarios:
 
 1. `WRONGTYPE Operation against a key holding the wrong kind of value`: This error occurs if the key exists but is not a hash.
-1. `ERR wrong number of arguments for 'hset' command`: This error occurs if the command is not provided with the correct number of arguments (i.e., an even number of arguments after the key).
+2. `ERR wrong number of arguments for 'hset' command`: This error occurs if the command is not provided with the correct number of arguments (i.e., an even number of arguments after the key).
 
 ## Example Usage
 

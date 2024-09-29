@@ -22,8 +22,8 @@ const (
 )
 
 var (
-	ln2      float64 = math.Log(2)
-	ln2Power float64 = ln2 * ln2
+	ln2      = math.Log(2)
+	ln2Power = ln2 * ln2
 )
 
 var (
@@ -206,7 +206,7 @@ func (b *Bloom) exists(value string) ([]byte, error) {
 	return clientio.RespOne, nil
 }
 
-// function creates a deep copy of the Bloom struct
+// DeepCopy creates a deep copy of the Bloom struct
 func (b *Bloom) DeepCopy() *Bloom {
 	if b == nil {
 		return nil
@@ -284,9 +284,8 @@ func evalBFINIT(args []string, store *dstore.Store) []byte {
 	return clientio.RespOK
 }
 
-// evalBFADD evaluates the BFADD command responsible for adding an element to
-// a bloom filter. If the filter does not exists, it will create a new one
-// with default parameters.
+// evalBFADD evaluates the BFADD command responsible for adding an element to a bloom filter. If the filter does not
+// exist, it will create a new one with default parameters.
 func evalBFADD(args []string, store *dstore.Store) []byte {
 	if len(args) != 2 {
 		return diceerrors.NewErrArity("BFADD")
@@ -307,8 +306,7 @@ func evalBFADD(args []string, store *dstore.Store) []byte {
 	return resp
 }
 
-// evalBFEXISTS evaluates the BFEXISTS command responsible for checking existence
-// of an element in a bloom filter.
+// evalBFEXISTS evaluates the BFEXISTS command responsible for checking existence of an element in a bloom filter.
 func evalBFEXISTS(args []string, store *dstore.Store) []byte {
 	if len(args) != 2 {
 		return diceerrors.NewErrArity("BFEXISTS")

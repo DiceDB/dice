@@ -1911,7 +1911,7 @@ func testEvalPFADD(t *testing.T, store *dstore.Store) {
 				key, value := "EXISTING_KEY", "VALUE"
 				oType, oEnc := deduceTypeEncoding(value)
 				var exDurationMs int64 = -1
-				var keepttl bool = false
+				var keepttl = false
 
 				store.Put(key, store.NewObj(value, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
 			},
@@ -2522,9 +2522,9 @@ func testEvalHSET(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "KEY_MOCK"
 				field := "mock_field_name"
-				mock_value := "mock_field_value"
+				mockValue := "mock_field_value"
 				newMap := make(HashMap)
-				newMap[field] = mock_value
+				newMap[field] = mockValue
 
 				obj := &object.Obj{
 					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
@@ -2538,7 +2538,7 @@ func testEvalHSET(t *testing.T, store *dstore.Store) {
 				res, err := getValueFromHashMap(key, field, store)
 
 				assert.Assert(t, err == nil)
-				assert.DeepEqual(t, res, clientio.Encode(mock_value, false))
+				assert.DeepEqual(t, res, clientio.Encode(mockValue, false))
 			},
 			input: []string{
 				"KEY_MOCK",
@@ -3165,7 +3165,7 @@ func BenchmarkEvalTYPE(b *testing.B) {
 
 	for objType, setupFunc := range objectTypes {
 		b.Run(fmt.Sprintf("ObjectType_%s", objType), func(b *testing.B) {
-			// Setup the object in the store
+			// Set up the object in the store
 			setupFunc()
 
 			b.ResetTimer()
@@ -4057,7 +4057,7 @@ func testEvalBITOP(t *testing.T, store *dstore.Store) {
 			input:  []string{"NOT", "dest{t}", "s{t}"},
 			output: clientio.Encode(0, true),
 			validator: func(output []byte) {
-				expectedResult := []byte{}
+				var expectedResult []byte
 				assert.DeepEqual(t, expectedResult, store.Get("dest{t}").Value.(*ByteArray).data)
 			},
 		},

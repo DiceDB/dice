@@ -13,7 +13,6 @@ import (
 )
 
 const (
-	Command     = "command"
 	Key         = "key"
 	Keys        = "keys"
 	KeyPrefix   = "key_prefix"

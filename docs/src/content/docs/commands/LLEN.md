@@ -24,8 +24,8 @@ LLEN key
 When the `LLEN` command is executed, DiceDB checks the specified key:
 
 1. If the key exists and is associated with a list, the command returns the number of elements in the list.
-1. If the key does not exist, the command returns `0`, indicating that the list is empty.
-1. If the key exists but is not associated with a list, an error is returned.
+2. If the key does not exist, the command returns `0`, indicating that the list is empty.
+3. If the key exists but is not associated with a list, an error is returned.
 
 ## Error Handling
 

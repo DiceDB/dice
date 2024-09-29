@@ -27,9 +27,9 @@ The `DEL` command returns an integer representing the number of keys that were r
 When the `DEL` command is executed, DiceDB will attempt to remove the specified keys from the database. The command operates in the following manner:
 
 1. `Key Existence Check`: For each key specified, DiceDB checks if the key exists in the database.
-1. `Key Removal`: If a key exists, it is removed from the database.
-1. `Count Removal`: The command keeps a count of how many keys were successfully removed.
-1. `Return Count`: The total count of removed keys is returned as the result of the command.
+2. `Key Removal`: If a key exists, it is removed from the database.
+3. `Count Removal`: The command keeps a count of how many keys were successfully removed.
+4. `Return Count`: The total count of removed keys is returned as the result of the command.
 
 ## Error Handling
 
@@ -39,7 +39,7 @@ The `DEL` command is generally robust and straightforward, but there are a few s
 
    - `Error Message`: `(error) ERR wrong number of arguments for 'del' command`
 
-1. `No Arguments Provided`: If no keys are provided to the `DEL` command, DiceDB will raise a syntax error.
+2. `No Arguments Provided`: If no keys are provided to the `DEL` command, DiceDB will raise a syntax error.
 
    - `Error Message`: `(error) ERR wrong number of arguments for 'del' command`
 

@@ -30,7 +30,7 @@ func NewBasicDeque() *DequeBasic {
 	return l
 }
 
-// LPush pushes `x` into the the left side of the Deque.
+// LPush pushes `x` into the left side of the Deque.
 func (q *DequeBasic) LPush(x string) {
 	// enc + data + backlen
 	xb := EncodeDeqEntry(x)
@@ -78,7 +78,7 @@ func (q *DequeBasic) RPop() (string, error) {
 	return x, nil
 }
 
-// RPop pops an element from the left side of the Deque.
+// LPop pops an element from the left side of the Deque.
 func (q *DequeBasic) LPop() (string, error) {
 	if q.Length == 0 {
 		return "", ErrDequeEmpty

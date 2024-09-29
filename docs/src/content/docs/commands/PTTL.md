@@ -35,7 +35,7 @@ The `PTTL` command can raise errors in the following scenarios:
 
    - `Error Message`: `ERR wrong number of arguments for 'pttl' command`
 
-1. `Invalid key type`: If the key is not a string, DiceDB will return an error.
+2. `Invalid key type`: If the key is not a string, DiceDB will return an error.
 
    - `Error Message`: `WRONGTYPE Operation against a key holding the wrong kind of value`
 

@@ -32,8 +32,8 @@ When the `BFEXISTS` command is executed, it checks the Bloom Filter associated w
 The `BFEXISTS` command can raise errors in the following scenarios:
 
 1. `Key does not exist`: If the specified key does not exist in the database, the command will return `0` without raising an error.
-1. `Wrong type of key`: If the key exists but is not associated with a Bloom Filter, a `WRONGTYPE` error will be raised.
-1. `Incorrect number of arguments`: If the command is called with an incorrect number of arguments, a `ERR wrong number of arguments` error will be raised.
+2. `Wrong type of key`: If the key exists but is not associated with a Bloom Filter, a `WRONGTYPE` error will be raised.
+3. `Incorrect number of arguments`: If the command is called with an incorrect number of arguments, a `ERR wrong number of arguments` error will be raised.
 
 ## Example Usage
 

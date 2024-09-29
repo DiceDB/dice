@@ -31,8 +31,8 @@ In this example, the `LRU` command returns a list of keys (`key1`, `key2`, `key3
 When the `LRU` command is executed, DiceDB performs the following actions:
 
 1. Scans the entire database to identify keys based on their usage patterns.
-1. Determines the least recently used keys.
-1. Returns a list of these keys to the user.
+2. Determines the least recently used keys.
+3. Returns a list of these keys to the user.
 
 This command is useful for understanding which keys are candidates for eviction when the DiceDB memory limit is reached and the `maxmemory-policy` is set to `allkeys-lru` or `volatile-lru`.
 
@@ -45,12 +45,12 @@ The `LRU` command may raise errors in the following scenarios:
    - `Error Message`: `(error) ERR unknown command 'LRU'`
    - `Cause`: This error occurs if the DiceDB server version does not support the `LRU` command or if there is a typo in the command.
 
-1. `Permission Denied`: If the user does not have the necessary permissions to execute the `LRU` command, an error will be raised.
+2. `Permission Denied`: If the user does not have the necessary permissions to execute the `LRU` command, an error will be raised.
 
    - `Error Message`: `(error) NOAUTH Authentication required.`
    - `Cause`: This error occurs if the DiceDB server requires authentication and the user has not authenticated.
 
-1. `Memory Limit Exceeded`: If the DiceDB server is under heavy memory pressure, executing the `LRU` command may result in an error.
+3. `Memory Limit Exceeded`: If the DiceDB server is under heavy memory pressure, executing the `LRU` command may result in an error.
 
    - `Error Message`: `(error) OOM command not allowed when used memory > 'maxmemory'.`
    - `Cause`: This error occurs if the DiceDB server has exceeded its configured memory limit and is unable to allocate additional memory for the `LRU` command.

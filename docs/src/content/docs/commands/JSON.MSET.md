@@ -32,9 +32,9 @@ The `JSON.MSET` command returns a simple string reply indicating the success of 
 When the `JSON.MSET` command is executed, DiceDB will:
 
 1. Validate that the number of arguments is even.
-1. Validate that each JSON value is a valid JSON string.
-1. Set each key to its corresponding JSON value in an atomic operation.
-1. Return `OK` if all operations are successful.
+2. Validate that each JSON value is a valid JSON string.
+3. Set each key to its corresponding JSON value in an atomic operation.
+4. Return `OK` if all operations are successful.
 
 If any of the validations fail, the command will not set any of the keys, ensuring atomicity.
 
@@ -46,11 +46,11 @@ The `JSON.MSET` command can raise errors in the following scenarios:
 
    - `Error Message`: `ERR wrong number of arguments for 'JSON.MSET' command`
 
-1. `Invalid JSON`: If any of the provided JSON values are not valid JSON strings, DiceDB will return an error.
+2. `Invalid JSON`: If any of the provided JSON values are not valid JSON strings, DiceDB will return an error.
 
    - `Error Message`: `ERR invalid JSON string`
 
-1. `Other DiceDB errors`: Any other standard DiceDB errors that might occur during the execution of the command.
+3. `Other DiceDB errors`: Any other standard DiceDB errors that might occur during the execution of the command.
 
 ## Example Usage
 
