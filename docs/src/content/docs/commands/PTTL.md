@@ -1,41 +1,43 @@
 ---
 title: PTTL
-description: Documentation for the DiceDB command PTTL
+description: The `PTTL` command in DiceDB is used to retrieve the remaining time to live (TTL) of a key in milliseconds. This command is particularly useful for understanding how much longer a key will exist before it expires. If the key does not have an associated expiration, the command will return a specific value indicating this state.
 ---
 
 The `PTTL` command in DiceDB is used to retrieve the remaining time to live (TTL) of a key in milliseconds. This command is particularly useful for understanding how much longer a key will exist before it expires. If the key does not have an associated expiration, the command will return a specific value indicating this state.
 
 ## Syntax
 
-```plaintext
+```
 PTTL key
 ```
 
 ## Parameters
 
-- `key`: The key for which the remaining TTL is to be retrieved. This parameter is mandatory and must be a valid key in the DiceDB database.
+| Parameter       | Description                                                              | Type    | Required |
+|-----------------|--------------------------------------------------------------------------|---------|----------|
+| `key`           | The key for which the remaining TTL is to be retrieved.                  | String  | Yes      |
 
-## Return Value
+## Return values
 
-The `PTTL` command returns an integer value representing the remaining time to live of the key in milliseconds. The possible return values are:
+| Condition                                                  | Return Value      |
+|------------------------------------------------------------|-------------------|
+| Command is successful                                      | Returns a positive integer value representing the remaining time to live of the key in milliseconds |
+| The key exists but has no associated expiration            | `-1`              |
+| The key does not exist                                     | `-2`              |
 
-- A positive integer: The remaining TTL in milliseconds.
-- `-1`: The key exists but has no associated expiration.
-- `-2`: The key does not exist.
 
 ## Behaviour
 
-When the `PTTL` command is executed, DiceDB checks the specified key to determine its remaining TTL. The command will return the TTL in milliseconds if the key exists and has an expiration. If the key exists but does not have an expiration, the command will return `-1`. If the key does not exist, the command will return `-2`.
 
-## Error Handling
 
-The `PTTL` command can raise errors in the following scenarios:
+## Errors
 
-1. `Wrong number of arguments`: If the command is called without the required number of arguments, DiceDB will return an error.
+1. `Wrong number of arguments`:
 
-   - `Error Message`: `ERR wrong number of arguments for 'pttl' command`
+   - Error Message: `ERROR wrong number of arguments for 'pttl' command`
+   - Occures when attempting to use this command without a key.
 
-1. `Invalid key type`: If the key is not a string, DiceDB will return an error.
+2. `Invalid key type`: If the key is not a string, DiceDB will return an error.
 
    - `Error Message`: `WRONGTYPE Operation against a key holding the wrong kind of value`
 
@@ -45,7 +47,7 @@ The `PTTL` command can raise errors in the following scenarios:
 
 ```plaintext
 SET mykey "Hello"
-PEXPIRE mykey 5000
+EXPIRE mykey 5000
 PTTL mykey
 ```
 
