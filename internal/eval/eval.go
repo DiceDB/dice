@@ -4258,24 +4258,23 @@ func evalAPPEND(args []string, store *dstore.Store) []byte {
 		store.Put(key, store.NewObj(storedValue, -1, oType, oEnc))
 
 		return clientio.Encode(len(value), false)
-	} else {
-		// Key exists path
-		_, currentEnc := object.ExtractTypeEncoding(obj)
-
-		var currentValueStr string
-		switch currentEnc {
-		case object.ObjEncodingInt:
-			currentValueStr = strconv.FormatInt(obj.Value.(int64), 10)
-		case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
-			currentValueStr = obj.Value.(string)
-		default:
-			return clientio.Encode(fmt.Errorf("ERR unsupported encoding: %d", currentEnc), false)
-		}
-
-		newValue := currentValueStr + value
-
-		store.Put(key, store.NewObj(newValue, -1, object.ObjTypeString, object.ObjEncodingRaw))
-
-		return clientio.Encode(len(newValue), false)
 	}
+	// Key exists path
+	_, currentEnc := object.ExtractTypeEncoding(obj)
+
+	var currentValueStr string
+	switch currentEnc {
+	case object.ObjEncodingInt:
+		currentValueStr = strconv.FormatInt(obj.Value.(int64), 10)
+	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
+		currentValueStr = obj.Value.(string)
+	default:
+		return clientio.Encode(fmt.Errorf("ERR unsupported encoding: %d", currentEnc), false)
+	}
+
+	newValue := currentValueStr + value
+
+	store.Put(key, store.NewObj(newValue, -1, object.ObjTypeString, object.ObjEncodingRaw))
+
+	return clientio.Encode(len(newValue), false)
 }
