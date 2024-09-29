@@ -34,8 +34,6 @@ type evalTestCase struct {
 
 func setupTest(store *dstore.Store) *dstore.Store {
 	dstore.ResetStore(store)
-	dstore.KeyspaceStat[0] = make(map[string]int)
-
 	return store
 }
 
@@ -1935,7 +1933,7 @@ func testEvalDel(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 
-				dstore.KeyspaceStat[0]["keys"]++
+				store.IncrementKeyCount()
 			},
 			input:  []string{"EXISTING_KEY"},
 			output: []byte(":1\r\n"),
