@@ -3260,6 +3260,7 @@ func evalHKEYS(args []string, store *dstore.Store) []byte {
 		return clientio.Encode([]interface{}{}, false)
 	}
 	keys := make([]interface{}, 0, len(hashMap))
+
 	for key := range hashMap {
 		keys = append(keys, key)
 	}
