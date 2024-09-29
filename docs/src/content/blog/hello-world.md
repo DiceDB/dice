@@ -26,7 +26,7 @@ You can always support the project by [starring the repository](https://github.c
 
 ## Community
 
-We have a thriving community on [Discord](https://discord.gg/6r8uXWtXh7) and we meet every Thursday at 7:00 pm IST.
+We have a thriving community on [Discord,](https://discord.gg/6r8uXWtXh7) and we meet every Thursday at 7:00 pm IST.
 The agenda of the call is to discuss the latest developments, gather feedback, and share insights into DiceDB's roadmap. This is a great opportunity to ask questions, contribute ideas, and connect with other developers.
 
 Stay updated with the latest news and announcements by keeping an eye on the blog and following [DiceDB](https://twitter.com/thedicedb) and [Arpit Bhayani](https://twitter.com/arpit_bhayani), and [Jyotinder Singh](https://twitter.com/Jyotinder_Singh/) on social handles.

@@ -5,6 +5,7 @@ package eval
 import (
 	"syscall"
 
+	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/server/utils"
@@ -26,7 +27,7 @@ func EvalBGREWRITEAOF(args []string, store *dstore.Store) []byte {
 	// TODO: Each child process would now have a copy of the network file descriptor thus resulting in resource leaks.
 	// TODO: We need to find an alternative approach for the multi-threaded environment.
 	if config.EnableMultiThreading {
-		nil
+		return nil
 	}
 	childThreadID, _, _ := syscall.Syscall(syscall.SYS_GETTID, 0, 0, 0)
 	newChild, _, _ := syscall.Syscall(syscall.SYS_CLONE, syscall.CLONE_PARENT_SETTID|syscall.CLONE_CHILD_CLEARTID|uintptr(syscall.SIGCHLD), 0, childThreadID)

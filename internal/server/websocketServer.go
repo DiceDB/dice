@@ -26,7 +26,7 @@ const Qwatch = "QWATCH"
 const Qunwatch = "QUNWATCH"
 const Subscribe = "SUBSCRIBE"
 
-var unimplementedCommandsWebsocket map[string]bool = map[string]bool{
+var unimplementedCommandsWebsocket = map[string]bool{
 	Qwatch:    true,
 	Qunwatch:  true,
 	Subscribe: true,

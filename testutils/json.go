@@ -10,7 +10,7 @@ import (
 )
 
 func IsJSONResponse(s string) bool {
-	return (s != utils.EmptyStr && (sonic.ValidString(s)))
+	return s != utils.EmptyStr && (sonic.ValidString(s))
 }
 
 func AssertJSONEqualList(t *testing.T, expected []string, actual string) {

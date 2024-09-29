@@ -25,9 +25,9 @@ The command returns an integer representing the length of the JSON array at the 
 When the `JSON.ARRLEN` command is executed, DiceDB will:
 
 1. Retrieve the JSON document stored at the specified key.
-1. Navigate to the specified path within the JSON document.
-1. Determine if the value at the specified path is a JSON array.
-1. Return the length of the JSON array if it exists, or `null` if the path does not exist or does not point to a JSON array.
+2. Navigate to the specified path within the JSON document.
+3. Determine if the value at the specified path is a JSON array.
+4. Return the length of the JSON array if it exists, or `null` if the path does not exist or does not point to a JSON array.
 
 ## Error Handling
 

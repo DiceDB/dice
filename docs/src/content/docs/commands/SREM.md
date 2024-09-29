@@ -25,10 +25,10 @@ SREM key member [member ...]
 When the `SREM` command is executed, the following steps occur:
 
 1. DiceDB checks if the key exists.
-1. If the key does not exist, it is treated as an empty set, and the command returns 0.
-1. If the key exists but is not of the set data type, an error is returned.
-1. DiceDB attempts to remove the specified members from the set.
-1. The command returns the number of members that were successfully removed.
+2. If the key does not exist, it is treated as an empty set, and the command returns 0.
+3. If the key exists but is not of the set data type, an error is returned.
+4. DiceDB attempts to remove the specified members from the set.
+5. The command returns the number of members that were successfully removed.
 
 ## Error Handling
 

@@ -27,8 +27,8 @@ GET key
 When the GET command is issued, DiceDB checks the existence of the specified key:
 
 1. `Key Exists and Holds a String`: The value associated with the key is retrieved and returned.
-1. `Key Does Not Exist`: The command returns `nil`.
-1. `Key Exists but Holds a Non-string Value`: An error is raised indicating that the operation against that key is not permitted.
+2. `Key Does Not Exist`: The command returns `nil`.
+3. `Key Exists but Holds a Non-string Value`: An error is raised indicating that the operation against that key is not permitted.
 
 The GET command is a read-only operation and does not modify the state of the DiceDB database.
 

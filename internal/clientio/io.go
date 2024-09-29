@@ -66,7 +66,8 @@ func (rp *RESPParser) DecodeOne() (interface{}, error) {
 				break
 			}
 
-			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+			var netErr net.Error
+			if errors.As(err, &netErr) && netErr.Timeout() {
 				return nil, errors.New("connection timeout")
 			}
 
