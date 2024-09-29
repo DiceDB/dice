@@ -226,3 +226,74 @@ func TestParseHTTPRequest(t *testing.T) {
 		})
 	}
 }
+
+func TestParseWebsocketMessage(t *testing.T) {
+	commands := []struct {
+		name         string
+		message      string
+		expectedCmd  string
+		expectedArgs []string
+	}{
+		{
+			name:         "Test SET command with nx flag",
+			message:      "set k1 v1 nx",
+			expectedCmd:  "SET",
+			expectedArgs: []string{"k1", "v1", "nx"},
+		},
+		{
+			name:         "Test GET command",
+			message:      "get k1",
+			expectedCmd:  "GET",
+			expectedArgs: []string{"k1"},
+		},
+		{
+			name:         "Test JSON.SET command",
+			message:      `json.set k1 . {"field":"value"}`,
+			expectedCmd:  "JSON.SET",
+			expectedArgs: []string{"k1", ".", `{"field":"value"}`},
+		},
+		{
+			name:         "Test JSON.GET command",
+			message:      "json.get k1",
+			expectedCmd:  "JSON.GET",
+			expectedArgs: []string{"k1"},
+		},
+		{
+			name:         "Test HSET command with JSON body",
+			message:      "hset hashkey f1 v1",
+			expectedCmd:  "HSET",
+			expectedArgs: []string{"hashkey", "f1", "v1"},
+		},
+		{
+			name:         "Test JSON.INGEST command with key prefix",
+			message:      `json.ingest gmtr_ $..field {"field":"value"}`,
+			expectedCmd:  "JSON.INGEST",
+			expectedArgs: []string{"gmtr_", "$..field", `{"field":"value"}`},
+		},
+		{
+			name:         "Test JSON.INGEST command without key prefix",
+			message:      `json.ingest $..field {"field":"value"}`,
+			expectedCmd:  "JSON.INGEST",
+			expectedArgs: []string{"", "$..field", `{"field":"value"}`},
+		},
+	}
+
+	for _, tc := range commands {
+		t.Run(tc.name, func(t *testing.T) {
+			// parse websocket message
+			redisCmd, err := ParseWebsocketMessage([]byte(tc.message))
+			assert.NoError(t, err)
+
+			expectedCmd := &cmd.RedisCmd{
+				Cmd:  tc.expectedCmd,
+				Args: tc.expectedArgs,
+			}
+
+			// Check command match
+			assert.Equal(t, expectedCmd.Cmd, redisCmd.Cmd)
+
+			// Check arguments match, regardless of order
+			assert.ElementsMatch(t, expectedCmd.Args, redisCmd.Args, "The parsed arguments should match the expected arguments, ignoring order")
+		})
+	}
+}

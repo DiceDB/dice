@@ -8,7 +8,7 @@ type DiceCmdMeta struct {
 	Eval  func([]string, *dstore.Store) []byte
 	Arity int // number of arguments, it is possible to use -N to say >= N
 	KeySpecs
-	SubCommands []string // list of sub-commands supported by the commmand
+	SubCommands []string // list of sub-commands supported by the command
 
 	// IsMigrated indicates whether a command has been migrated to a new evaluation
 	// mechanism. If true, the command uses the newer evaluation logic represented by
@@ -285,6 +285,17 @@ var (
 		Returns error response if the key doesn't exist or key is expired or the matching value is not an array.
 		Error reply: If the number of arguments is incorrect.`,
 		Eval:     evalJSONARRINSERT,
+		Arity:    -5,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	jsonarrtrimCmdMeta = DiceCmdMeta{
+		Name: "JSON.ARRTRIM",
+		Info: `JSON.ARRTRIM key path start stop
+		Trim an array so that it contains only the specified inclusive range of elements
+		Returns an array of integer replies for each path.
+		Returns error response if the key doesn't exist or key is expired.
+		Error reply: If the number of arguments is incorrect.`,
+		Eval:     evalJSONARRTRIM,
 		Arity:    -5,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
@@ -926,6 +937,40 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	zaddCmdMeta = DiceCmdMeta{
+		Name: "ZADD",
+		Info: `ZADD key [NX|XX] [CH] [INCR] score member [score member ...]
+		Adds all the specified members with the specified scores to the sorted set stored at key.
+		Options: NX, XX, CH, INCR
+		Returns the number of elements added to the sorted set, not including elements already existing for which the score was updated.`,
+		Eval:     evalZADD,
+		Arity:    -4,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	zrangeCmdMeta = DiceCmdMeta{
+		Name: "ZRANGE",
+		Info: `ZRANGE key start stop [WithScores]
+		Returns the specified range of elements in the sorted set stored at key.
+		The elements are considered to be ordered from the lowest to the highest score.
+		Both start and stop are 0-based indexes, where 0 is the first element, 1 is the next element and so on.
+		These indexes can also be negative numbers indicating offsets from the end of the sorted set, with -1 being the last element of the sorted set, -2 the penultimate element and so on.
+		Returns the specified range of elements in the sorted set.`,
+		Eval:     evalZRANGE,
+		Arity:    -4,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	hincrbyFloatCmdMeta = DiceCmdMeta{
+		Name: "HINCRBYFLOAT",
+		Info: `HINCRBYFLOAT increments the specified field of a hash stored at the key, 
+		and representing a floating point number, by the specified increment.
+		If the field does not exist, it is set to 0 before performing the operation.
+		If the field contains a value of wrong type or specified increment
+		is not parsable as floating point number, then an error occurs.
+		`,
+		Eval:     evalHINCRBYFLOAT,
+		Arity:    -4,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -951,6 +996,7 @@ func init() {
 	DiceCmds["JSON.ARRPOP"] = jsonarrpopCmdMeta
 	DiceCmds["JSON.INGEST"] = jsoningestCmdMeta
 	DiceCmds["JSON.ARRINSERT"] = jsonarrinsertCmdMeta
+	DiceCmds["JSON.ARRTRIM"] = jsonarrtrimCmdMeta
 	DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
 	DiceCmds["EXPIRE"] = expireCmdMeta
@@ -1030,6 +1076,9 @@ func init() {
 	DiceCmds["HRANDFIELD"] = hrandfieldCmdMeta
 	DiceCmds["HDEL"] = hdelCmdMeta
 	DiceCmds["HVALS"] = hValsCmdMeta
+	DiceCmds["ZADD"] = zaddCmdMeta
+	DiceCmds["ZRANGE"] = zrangeCmdMeta
+	DiceCmds["HINCRBYFLOAT"] = hincrbyFloatCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}
