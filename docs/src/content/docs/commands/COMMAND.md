@@ -10,9 +10,9 @@ The `COMMAND` command in DiceDB is a powerful introspection tool that provides d
 The `COMMAND` command can be used in several forms, each with different parameters:
 
 1. `COMMAND`: Returns details about all DiceDB commands.
-1. `COMMAND COUNT`: Returns the total number of commands in the DiceDB server.
-1. `COMMAND INFO command-name [command-name ...]`: Returns details about the specified commands.
-1. `COMMAND GETKEYS command arg [arg ...]`: Returns the keys from the provided command and arguments.
+2. `COMMAND COUNT`: Returns the total number of commands in the DiceDB server.
+3. `COMMAND INFO command-name [command-name ...]`: Returns details about the specified commands.
+4. `COMMAND GETKEYS command arg [arg ...]`: Returns the keys from the provided command and arguments.
 
 ### Detailed Parameter Descriptions
 
@@ -29,9 +29,9 @@ The `COMMAND` command can be used in several forms, each with different paramete
 The return value of the `COMMAND` command varies based on the form used:
 
 1. `COMMAND`: Returns an array where each element is an array describing a command.
-1. `COMMAND COUNT`: Returns an integer representing the total number of commands.
-1. `COMMAND INFO command-name [command-name ...]`: Returns an array of arrays, each containing information about the specified commands.
-1. `COMMAND GETKEYS command arg [arg ...]`: Returns an array of keys extracted from the provided command and arguments.
+2. `COMMAND COUNT`: Returns an integer representing the total number of commands.
+3. `COMMAND INFO command-name [command-name ...]`: Returns an array of arrays, each containing information about the specified commands.
+4. `COMMAND GETKEYS command arg [arg ...]`: Returns an array of keys extracted from the provided command and arguments.
 
 ### Detailed Return Value Descriptions
 
@@ -160,11 +160,11 @@ The `COMMAND` command can raise errors in the following scenarios:
 
    - `Error Message`: `(error) ERR unknown subcommand`
 
-1. `Invalid Command Name`: If a non-existent command name is provided in the `COMMAND INFO` subcommand, DiceDB will return an error.
+2. `Invalid Command Name`: If a non-existent command name is provided in the `COMMAND INFO` subcommand, DiceDB will return an error.
 
    - `Error Message`: `(error) ERR unknown command 'command-name'`
 
-1. `Invalid Arguments`: If the arguments provided to the `COMMAND GETKEYS` subcommand do not match the expected format, DiceDB will return an error.
+3. `Invalid Arguments`: If the arguments provided to the `COMMAND GETKEYS` subcommand do not match the expected format, DiceDB will return an error.
 
    - `Error Message`: `(error) ERR wrong number of arguments for 'command' command`
 

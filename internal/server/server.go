@@ -366,7 +366,7 @@ func (s *AsyncServer) EvalAndRespond(cmds *cmd.RedisCmds, c *comm.Client) {
 }
 
 func (s *AsyncServer) isAuthenticated(redisCmd *cmd.RedisCmd, c *comm.Client, buf *bytes.Buffer) bool {
-	if redisCmd.Cmd != auth.AuthCmd && !c.Session.IsActive() {
+	if redisCmd.Cmd != auth.Cmd && !c.Session.IsActive() {
 		buf.Write(clientio.Encode(errors.New("NOAUTH Authentication required"), false))
 		return false
 	}
@@ -414,8 +414,8 @@ func (s *AsyncServer) executeTransaction(c *comm.Client, buf *bytes.Buffer) {
 		return
 	}
 
-	for _, cmd := range cmds {
-		s.executeCommandToBuffer(cmd, buf, c)
+	for _, redisCmd := range cmds {
+		s.executeCommandToBuffer(redisCmd, buf, c)
 	}
 
 	c.Cqueue.Cmds = make([]*cmd.RedisCmd, 0)

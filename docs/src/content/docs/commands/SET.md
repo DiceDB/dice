@@ -13,17 +13,17 @@ SET key value [EX seconds | PX milliseconds | EXAT unix-time-seconds | PXAT unix
 
 ## Parameters
 
-| Parameter       | Description                                      | Type    | Required |
-|-----------------|--------------------------------------------------|---------|----------|
-| `key`           | The name of the key to be set.                   | String  | Yes      |
-| `value`         | The value to be set for the key.                 | String  | Yes      |
-| `EX`            | Set the specified expire time, in seconds.       | Integer | No       |
-| `EXAT`          | Set the specified Unix time at which the key will expire, in seconds  | Integer | No       |
-| `PX`            | Set the specified expire time, in milliseconds.  | Integer | No       |
-| `PXAT`          | Set the specified Unix time at which the key will expire, in milliseconds  | Integer | No       |
-| `NX`            | Only set the key if it does not already exist.   | None    | No       |
-| `XX`            | Only set the key if it already exists.           | None    | No       |
-| `KEEPTTL`       | Retain the time-to-live associated with the key. | None    | No       |
+| Parameter | Description                                                               | Type    | Required |
+|-----------|---------------------------------------------------------------------------|---------|----------|
+| `key`     | The name of the key to be set.                                            | String  | Yes      |
+| `value`   | The value to be set for the key.                                          | String  | Yes      |
+| `EX`      | Set the specified expire time, in seconds.                                | Integer | No       |
+| `EXAT`    | Set the specified Unix time at which the key will expire, in seconds      | Integer | No       |
+| `PX`      | Set the specified expire time, in milliseconds.                           | Integer | No       |
+| `PXAT`    | Set the specified Unix time at which the key will expire, in milliseconds | Integer | No       |
+| `NX`      | Only set the key if it does not already exist.                            | None    | No       |
+| `XX`      | Only set the key if it already exists.                                    | None    | No       |
+| `KEEPTTL` | Retain the time-to-live associated with the key.                          | None    | No       |
 
 ## Return values
 
@@ -49,12 +49,12 @@ SET key value [EX seconds | PX milliseconds | EXAT unix-time-seconds | PXAT unix
    - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
    - Occurs when attempting to use the command on a key that contains a non-string value.
 
-1. `Invalid syntax or conflicting options`:
+2. `Invalid syntax or conflicting options`:
 
    - Error Message: `(error) ERR syntax error`
    - Occurs if the command's syntax is incorrect, such as incompatible options like `EX` and `KEEPTTL` used together, or a missing required parameter.
 
-1. `Non-integer value for `EX`or`PX\`\`:
+3. `Non-integer value for `EX`or`PX\`\`:
 
    - Error Message: `(error) ERR value is not an integer or out of range`
    - Occurs when the expiration time provided is not a valid integer.

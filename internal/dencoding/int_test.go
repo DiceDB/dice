@@ -12,7 +12,7 @@ import (
 
 func TestDencodingUInt(t *testing.T) {
 	t.Run("EncodeDecodeRoundTrip", func(t *testing.T) {
-		// Test that encoding and then decoding a uint64 value returns the original value
+		// Test that encoding and then decoding an uint64 value returns the original value
 		tests := generateUIntTestCases()
 		for _, v := range tests {
 			t.Run(fmt.Sprintf("value_%d", v), func(t *testing.T) {
@@ -22,7 +22,7 @@ func TestDencodingUInt(t *testing.T) {
 	})
 
 	t.Run("EncodedLength", func(t *testing.T) {
-		// Test that encoding and then decoding a uint64 value returns the original value
+		// Test that encoding and then decoding an uint64 value returns the original value
 		testCases := map[uint64]int{
 			0:   1, // 0 should be encoded as 1 byte
 			127: 1, // 127 should be encoded as 1 byte

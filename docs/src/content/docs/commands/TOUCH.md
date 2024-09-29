@@ -24,9 +24,9 @@ The `TOUCH` command returns an integer representing the number of keys that were
 When the `TOUCH` command is executed, DiceDB will:
 
 1. Check if each specified key exists in the database.
-1. If a key exists, its last access time will be updated to the current time.
-1. If a key does not exist, it will be ignored.
-1. The command will return the count of keys that were successfully touched.
+2. If a key exists, its last access time will be updated to the current time.
+3. If a key does not exist, it will be ignored.
+4. The command will return the count of keys that were successfully touched.
 
 ## Error Handling
 

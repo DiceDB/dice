@@ -24,10 +24,10 @@ INCR key
 When the `INCR` command is executed, the following steps occur:
 
 1. `Key Existence Check`: DiceDB checks if the specified key exists.
-1. `Initialization`: If the key does not exist, DiceDB initializes it to 0.
-1. `Type Check`: DiceDB checks if the value stored at the key is a string that can be interpreted as an integer.
-1. `Increment Operation`: The value is incremented by 1.
-1. `Return New Value`: The new value is returned to the client.
+2. `Initialization`: If the key does not exist, DiceDB initializes it to 0.
+3. `Type Check`: DiceDB checks if the value stored at the key is a string that can be interpreted as an integer.
+4. `Increment Operation`: The value is incremented by 1.
+5. `Return New Value`: The new value is returned to the client.
 
 ## Error Handling
 
@@ -37,7 +37,7 @@ The `INCR` command can raise errors in the following scenarios:
 
    - `Error Message`: `(error) ERR value is not an integer or out of range`
 
-1. `Overflow Error`: If the increment operation causes the value to exceed the maximum integer value that DiceDB can handle, an overflow error will occur.
+2. `Overflow Error`: If the increment operation causes the value to exceed the maximum integer value that DiceDB can handle, an overflow error will occur.
 
    - `Error Message`: `(error) ERR increment or decrement would overflow`
 

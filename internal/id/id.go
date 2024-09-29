@@ -9,7 +9,7 @@ var turn, cycle, counter uint32 = 0, 0, 0
 
 var totalBits uint32 = 32
 var turnBits uint32 = 4
-var counterBits uint32 = totalBits - turnBits
+var counterBits = totalBits - turnBits
 
 var cycleMap []uint32
 
@@ -23,8 +23,8 @@ func ExpandID(id uint32) uint64 {
 	return _id
 }
 
-// TODO: Persisting the cycle on disk
-// and reloading it when we start the server
+// NextID returns a new unique ID
+// TODO: Persisting the cycle on disk and reloading it when we start the server
 func NextID() uint32 {
 	mu.Lock()
 	defer mu.Unlock()

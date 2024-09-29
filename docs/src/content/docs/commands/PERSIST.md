@@ -26,8 +26,8 @@ PERSIST key
 When the `PERSIST` command is executed:
 
 1. DiceDB checks if the specified key exists in the database.
-1. If the key exists and has an expiration time, the expiration time is removed, making the key persistent.
-1. If the key does not exist or does not have an expiration time, no changes are made.
+2. If the key exists and has an expiration time, the expiration time is removed, making the key persistent.
+3. If the key does not exist or does not have an expiration time, no changes are made.
 
 ## Error Handling
 
@@ -48,9 +48,9 @@ TTL mykey
 `Explanation`:
 
 1. `SET mykey "Hello"`: Sets the value of `mykey` to "Hello".
-1. `EXPIRE mykey 10`: Sets an expiration of 10 seconds on `mykey`.
-1. `PERSIST mykey`: Removes the expiration from `mykey`.
-1. `TTL mykey`: Returns `-1`, indicating that `mykey` does not have an expiration time.
+2. `EXPIRE mykey 10`: Sets an expiration of 10 seconds on `mykey`.
+3. `PERSIST mykey`: Removes the expiration from `mykey`.
+4. `TTL mykey`: Returns `-1`, indicating that `mykey` does not have an expiration time.
 
 ### Example 2: Attempting to Persist a Non-Existent Key
 

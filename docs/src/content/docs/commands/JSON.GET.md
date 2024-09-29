@@ -25,9 +25,9 @@ The command returns the JSON data stored at the specified key and path. The data
 When the `JSON.GET` command is executed:
 
 1. DiceDB checks if the specified key exists.
-1. If the key exists, DiceDB retrieves the JSON data stored at that key.
-1. If a path is provided, DiceDB extracts the specified part of the JSON document using the JSONPath expression.
-1. The retrieved JSON data is returned as a JSON string.
+2. If the key exists, DiceDB retrieves the JSON data stored at that key.
+3. If a path is provided, DiceDB extracts the specified part of the JSON document using the JSONPath expression.
+4. The retrieved JSON data is returned as a JSON string.
 
 ## Error Handling
 

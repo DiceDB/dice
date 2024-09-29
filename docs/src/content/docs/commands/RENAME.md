@@ -25,10 +25,10 @@ RENAME oldkey newkey
 When the `RENAME` command is executed, the following sequence of events occurs:
 
 1. DiceDB checks if the `oldkey` exists.
-1. If `oldkey` does not exist, an error is returned.
-1. If `newkey` already exists, it is deleted.
-1. The `oldkey` is renamed to `newkey`.
-1. The command returns `OK` to indicate success.
+2. If `oldkey` does not exist, an error is returned.
+3. If `newkey` already exists, it is deleted.
+4. The `oldkey` is renamed to `newkey`.
+5. The command returns `OK` to indicate success.
 
 ## Error Handling
 
@@ -50,8 +50,8 @@ GET mynewkey
 `Explanation:`
 
 1. `SET mykey "Hello"`: Sets the value of `mykey` to "Hello".
-1. `RENAME mykey mynewkey`: Renames `mykey` to `mynewkey`.
-1. `GET mynewkey`: Retrieves the value of `mynewkey`, which should be "Hello".
+2. `RENAME mykey mynewkey`: Renames `mykey` to `mynewkey`.
+3. `GET mynewkey`: Retrieves the value of `mynewkey`, which should be "Hello".
 
 ### Overwriting an Existing Key
 
@@ -65,9 +65,9 @@ GET key2
 `Explanation:`
 
 1. `SET key1 "Value1"`: Sets the value of `key1` to "Value1".
-1. `SET key2 "Value2"`: Sets the value of `key2` to "Value2".
-1. `RENAME key1 key2`: Renames `key1` to `key2`, overwriting the existing `key2`.
-1. `GET key2`: Retrieves the value of `key2`, which should now be "Value1".
+2. `SET key2 "Value2"`: Sets the value of `key2` to "Value2".
+3. `RENAME key1 key2`: Renames `key1` to `key2`, overwriting the existing `key2`.
+4. `GET key2`: Retrieves the value of `key2`, which should now be "Value1".
 
 ### Error Example
 
@@ -78,7 +78,7 @@ RENAME nonexistingkey newkey
 `Explanation:`
 
 1. `RENAME nonexistingkey newkey`: Attempts to rename `nonexistingkey` to `newkey`.
-1. Since `nonexistingkey` does not exist, the command returns an error: `(error) ERR no such key`.
+2. Since `nonexistingkey` does not exist, the command returns an error: `(error) ERR no such key`.
 
 ## Best Practices
 

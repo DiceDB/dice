@@ -53,8 +53,7 @@ func parseBitToFind(arg string) (byte, error) {
 	}
 
 	if bitToFindInt != 0 && bitToFindInt != 1 {
-		//nolint: stylecheck
-		return 0, errors.New("The bit argument must be 1 or 0")
+		return 0, errors.New("the bit argument must be 1 or 0")
 	}
 
 	return byte(bitToFindInt), nil
