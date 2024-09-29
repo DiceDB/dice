@@ -4298,7 +4298,7 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 			input:  []string{"key", "val"},
 			output: clientio.Encode(3, false),
 		},
-		"append to existing key": {
+		"append string value to existing key having string value": {
 			setup: func() {
 				key := "key"
 				value := "val"
@@ -4308,7 +4308,21 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 			input:  []string{"key", "val"},
 			output: clientio.Encode(6, false),
 		},
-		"append to existing key having integer value": {
+		"append integer value to non existing key": {
+			setup: func() {
+				store.Del("key")
+			},
+			input:  []string{"key", "123"},
+			output: clientio.Encode(3, false),
+			validator: func(output []byte) {
+				obj := store.Get("key")
+				_, enc := object.ExtractTypeEncoding(obj)
+				if enc != object.ObjEncodingInt {
+					t.Errorf("unexpected encoding")
+				}
+			},
+		},
+		"append string value to existing key having integer value": {
 			setup: func() {
 				key := "key"
 				value := "123"
@@ -4345,6 +4359,23 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"key", ""},
 			output: clientio.Encode(3, false),
+		},
+		"append modifies the encoding from int to raw": {
+			setup: func() {
+				store.Del("key")
+				storedValue, _ := strconv.ParseInt("1", 10, 64)
+				obj := store.NewObj(storedValue, -1, object.ObjTypeInt, object.ObjEncodingInt)
+				store.Put("key", obj)
+			},
+			input:  []string{"key", "2"},
+			output: clientio.Encode(2, false),
+			validator: func(output []byte) {
+				obj := store.Get("key")
+				_, enc := object.ExtractTypeEncoding(obj)
+				if enc != object.ObjEncodingRaw {
+					t.Errorf("unexpected encoding")
+				}
+			},
 		},
 	}
 
