@@ -34,7 +34,7 @@ The `SELECT` command can raise errors under the following conditions:
    - `Error`: `(error) ERR DB index is out of range`
    - `Condition`: If the specified database index is outside the range of available databases.
 
-1. `Non-Integer Index`:
+2. `Non-Integer Index`:
 
    - `Error`: `(error) ERR value is not an integer or out of range`
    - `Condition`: If the provided index is not a valid integer.

@@ -44,7 +44,7 @@ Open a web browser and navigate to `http://localhost:8000` to view the leaderboa
 
 ## How it works
 
-1. The Go backend connects to DiceDB and starts updating random player scores every few milli-seconds
+1. The Go backend connects to DiceDB and starts updating random player scores every few milliseconds
 2. A `QWATCH` query is set up to monitor changes in player scores above a threshold
 3. When the query's key-set receives updates, the backend is notified of the updated results
 4. The backend then broadcasts the updated leaderboard to all connected WebSocket clients

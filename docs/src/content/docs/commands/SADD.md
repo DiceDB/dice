@@ -27,9 +27,9 @@ When the `SADD` command is executed, the following actions occur:
 1. `Key Existence Check`: DiceDB checks if the key exists.
    - If the key does not exist, a new set is created.
    - If the key exists but is not a set, an error is returned.
-1. `Member Addition`: Each specified member is added to the set.
+2. `Member Addition`: Each specified member is added to the set.
    - If a member is already present in the set, it is ignored.
-1. `Return Value Calculation`: The command returns the number of members that were actually added to the set.
+3. `Return Value Calculation`: The command returns the number of members that were actually added to the set.
 
 ## Error Handling
 

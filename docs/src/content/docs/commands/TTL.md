@@ -22,8 +22,8 @@ The `TTL` command returns an integer value representing the remaining time to li
 When the `TTL` command is executed:
 
 1. If the key exists and has an expiration time set, the command returns the remaining time to live in seconds.
-1. If the key exists but does not have an expiration time set, the command returns `-1`.
-1. If the key does not exist, the command returns `-2`.
+2. If the key exists but does not have an expiration time set, the command returns `-1`.
+3. If the key does not exist, the command returns `-2`.
 
 ## Error Handling
 

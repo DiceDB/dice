@@ -44,15 +44,15 @@ The `BITOP` command can raise errors in the following cases:
 
    - `Error Message`: `ERR wrong number of arguments for 'bitop' command`
 
-1. `Invalid operation`: If the specified operation is not one of `AND`, `OR`, `XOR`, or `NOT`, DiceDB will return an error.
+2. `Invalid operation`: If the specified operation is not one of `AND`, `OR`, `XOR`, or `NOT`, DiceDB will return an error.
 
    - `Error Message`: `ERR syntax error`
 
-1. `Invalid number of keys for NOT operation`: If more than one key is provided for the `NOT` operation, DiceDB will return an error.
+3. `Invalid number of keys for NOT operation`: If more than one key is provided for the `NOT` operation, DiceDB will return an error.
 
    - `Error Message`: `ERR BITOP NOT must be called with a single source key`
 
-1. `Non-string keys`: If any of the provided keys are not strings, DiceDB will return an error.
+4. `Non-string keys`: If any of the provided keys are not strings, DiceDB will return an error.
 
    - `Error Message`: `WRONGTYPE Operation against a key holding the wrong kind of value`
 

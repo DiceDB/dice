@@ -28,8 +28,8 @@ The `EXPIRE` command returns an integer value:
 When the `EXPIRE` command is issued:
 
 1. If the specified key exists, DiceDB sets a timeout on the key. The key will be automatically deleted after the specified number of seconds.
-1. If the key does not exist, no timeout is set, and the command returns `0`.
-1. If the key already has a timeout, the existing timeout is replaced with the new one specified by the `EXPIRE` command.
+2. If the key does not exist, no timeout is set, and the command returns `0`.
+3. If the key already has a timeout, the existing timeout is replaced with the new one specified by the `EXPIRE` command.
 
 ## Error Handling
 

@@ -130,9 +130,9 @@ func (b *ByteArray) SetBit(pos int, value bool) {
 	bitIndex := 7 - uint(pos%8)
 
 	if value {
-		b.data[byteIndex] |= (1 << bitIndex)
+		b.data[byteIndex] |= 1 << bitIndex
 	} else {
-		b.data[byteIndex] &^= (1 << bitIndex)
+		b.data[byteIndex] &^= 1 << bitIndex
 	}
 }
 
@@ -197,7 +197,7 @@ func (b *ByteArray) ResizeIfNecessary() *ByteArray {
 	return b
 }
 
-// creates a deep copy of the ByteArray
+// DeepCopy creates a deep copy of the ByteArray
 func (b *ByteArray) DeepCopy() *ByteArray {
 	if b == nil {
 		return nil
@@ -214,7 +214,7 @@ func (b *ByteArray) DeepCopy() *ByteArray {
 // Using: https://en.wikipedia.org/wiki/Hamming_weight
 func popcount(x byte) byte {
 	// pairing bits and counting them in pairs
-	x -= ((x >> 1) & 0x55)
+	x -= (x >> 1) & 0x55
 	// counting bits in groups of four
 	x = (x & 0x33) + ((x >> 2) & 0x33)
 	// isolates the lower four bits

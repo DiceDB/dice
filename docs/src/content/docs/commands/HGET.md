@@ -26,9 +26,9 @@ HGET key field
 When the `HGET` command is executed, DiceDB performs the following steps:
 
 1. It checks if the key exists in the database.
-1. If the key exists and is of type hash, it then checks if the specified field exists within the hash.
-1. If the field exists, it retrieves and returns the value associated with the field.
-1. If the key does not exist or the field is not present in the hash, it returns `nil`.
+2. If the key exists and is of type hash, it then checks if the specified field exists within the hash.
+3. If the field exists, it retrieves and returns the value associated with the field.
+4. If the key does not exist or the field is not present in the hash, it returns `nil`.
 
 ## Error Handling
 

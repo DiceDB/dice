@@ -24,8 +24,8 @@ PFCOUNT key [key ...]
 When the `PFCOUNT` command is executed, DiceDB will:
 
 1. Retrieve the HyperLogLog data structure(s) associated with the specified key(s).
-1. Estimate the cardinality of the set(s) represented by the HyperLogLog data structure(s).
-1. If multiple keys are specified, DiceDB will merge the HyperLogLog data structures and return the cardinality of the union of the sets.
+2. Estimate the cardinality of the set(s) represented by the HyperLogLog data structure(s).
+3. If multiple keys are specified, DiceDB will merge the HyperLogLog data structures and return the cardinality of the union of the sets.
 
 ## Example Usage
 
@@ -60,7 +60,7 @@ The `PFCOUNT` command can raise errors in the following scenarios:
    (integer) 0
    ```
 
-1. `Wrong Type of Key`: If the specified key exists but is not a HyperLogLog data structure, DiceDB will return a type error.
+2. `Wrong Type of Key`: If the specified key exists but is not a HyperLogLog data structure, DiceDB will return a type error.
 
    `Error Message`: `WRONGTYPE Operation against a key holding the wrong kind of value`
 
@@ -71,7 +71,7 @@ The `PFCOUNT` command can raise errors in the following scenarios:
    (error) WRONGTYPE Operation against a key holding the wrong kind of value
    ```
 
-1. `Invalid Arguments`: If the command is called with no arguments, DiceDB will return a syntax error.
+3. `Invalid Arguments`: If the command is called with no arguments, DiceDB will return a syntax error.
 
    `Error Message`: `ERR wrong number of arguments for 'pfcount' command`
 

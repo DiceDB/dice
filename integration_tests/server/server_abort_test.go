@@ -98,7 +98,7 @@ func TestServerRestartAfterAbort(t *testing.T) {
 	}
 	conn.Close()
 
-	// wait for the server to shutdown
+	// wait for the server to shut down
 	time.Sleep(2 * time.Second)
 
 	wg.Wait()
@@ -108,7 +108,7 @@ func TestServerRestartAfterAbort(t *testing.T) {
 	t.Cleanup(cancel2)
 
 	// start test server.
-	// use different waitgroups and contexts to avoid race conditions.;
+	// use different wait groups and contexts to avoid race conditions.;
 	var wg2 sync.WaitGroup
 	commands.RunTestServer(ctx2, &wg2, testServerOptions)
 

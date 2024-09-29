@@ -37,9 +37,9 @@ JSON.SET <key> <path> <json> [NX | XX]
 When the `JSON.SET` command is executed, the following behaviors are observed:
 
 1. `Key Creation`: If the specified key does not exist and no flags are provided, a new key is created with the given JSON value.
-1. `Path Creation`: If the specified path does not exist within the JSON document, it will be created.
-1. `Conditional Set`: If the `NX` flag is provided, the value will only be set if the key does not already exist. If the `XX` flag is provided, the value will only be set if the key already exists.
-1. `Overwrite`: If the key and path already exist, the existing value will be overwritten with the new JSON value.
+2. `Path Creation`: If the specified path does not exist within the JSON document, it will be created.
+3. `Conditional Set`: If the `NX` flag is provided, the value will only be set if the key does not already exist. If the `XX` flag is provided, the value will only be set if the key already exists.
+4. `Overwrite`: If the key and path already exist, the existing value will be overwritten with the new JSON value.
 
 ## Error Handling
 
@@ -47,11 +47,11 @@ The `JSON.SET` command can raise the following errors:
 
 1. `Syntax Error`: If the command is not used with the correct syntax, a syntax error will be raised.
    - `Error Message`: `(error) ERR wrong number of arguments for 'JSON.SET' command`
-1. `Invalid JSON`: If the provided JSON value is not a valid JSON string, an error will be raised.
+2. `Invalid JSON`: If the provided JSON value is not a valid JSON string, an error will be raised.
    - `Error Message`: `(error) ERR invalid JSON string`
-1. `Path Error`: If the specified path is invalid or cannot be created, an error will be raised.
+3. `Path Error`: If the specified path is invalid or cannot be created, an error will be raised.
    - `Error Message`: `(error) ERR path not found`
-1. `NX/XX Conflict`: If both `NX` and `XX` flags are provided, an error will be raised.
+4. `NX/XX Conflict`: If both `NX` and `XX` flags are provided, an error will be raised.
    - `Error Message`: `(error) ERR NX and XX flags are mutually exclusive`
 
 ## Example Usage

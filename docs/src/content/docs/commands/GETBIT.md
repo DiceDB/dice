@@ -25,9 +25,9 @@ GETBIT key offset
 When the `GETBIT` command is executed, DiceDB will:
 
 1. Check if the specified key exists.
-1. If the key does not exist, it is treated as if it contains a string of zero bytes, and the bit at any offset will be `0`.
-1. If the key exists but does not hold a string value, an error is returned.
-1. If the key exists and holds a string value, the bit at the specified offset is retrieved and returned.
+2. If the key does not exist, it is treated as if it contains a string of zero bytes, and the bit at any offset will be `0`.
+3. If the key exists but does not hold a string value, an error is returned.
+4. If the key exists and holds a string value, the bit at the specified offset is retrieved and returned.
 
 ## Error Handling
 

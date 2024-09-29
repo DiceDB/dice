@@ -33,7 +33,7 @@ func TestSet(t *testing.T) {
 				{Command: "SET", Body: map[string]interface{}{"key": "k", "value": 123456789}},
 				{Command: "GET", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"OK", string("1.23456789e+08")},
+			expected: []interface{}{"OK", "1.23456789e+08"},
 		},
 		{
 			name: "Overwrite Existing Key",
