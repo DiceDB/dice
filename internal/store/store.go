@@ -31,16 +31,16 @@ type Store struct {
 
 func NewStore(watchChan chan WatchEvent) *Store {
 	return &Store{
-		store:     swiss.New[string, *object.Obj](10240),
-		expires:   swiss.New[*object.Obj, uint64](10240),
+		store:     swiss.New[string, *object.Obj](1024000),
+		expires:   swiss.New[*object.Obj, uint64](1024000),
 		watchChan: watchChan,
 	}
 }
 
 func ResetStore(store *Store) *Store {
 	store.numKeys = 0
-	store.store = swiss.New[string, *object.Obj](10240)
-	store.expires = swiss.New[*object.Obj, uint64](10240)
+	store.store = swiss.New[string, *object.Obj](1024000)
+	store.expires = swiss.New[*object.Obj, uint64](1024000)
 
 	return store
 }
