@@ -37,7 +37,7 @@ export default defineConfig({
           items: [
             {
               label: "Memtier Benchmark",
-              link: "https://dicedb-docs.netlify.app/metrics/memtier.html",
+              link: "https://dicedb.io/metrics/memtier.html",
               attrs: { target: "_blank" },
             },
           ],
