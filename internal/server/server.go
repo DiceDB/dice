@@ -291,12 +291,20 @@ func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.RedisCmd, buf *bytes.
 		return
 	}
 
-	_, ok := WorkerCmdsMeta[redisCmd.Cmd]
+	fmt.Printf("Cmd: %v | Response: %v: \n", redisCmd, resp)
+
+	val, ok := WorkerCmdsMeta[redisCmd.Cmd]
 
 	// TODO: Remove this conditional check and if (true) condition when all commands are migrated
 	if !ok {
 		buf.Write(resp.EvalResponse.Result.([]byte))
 	} else {
+
+		if val.CmdType == Global {
+			buf.Write(val.RespNoShards(redisCmd.Args))
+			return
+		}
+
 		// Process the incoming response by calling the handleResponse function.
 		// This function checks the response against known RESP formatted values
 		// and returns the corresponding byte array representation. The result
