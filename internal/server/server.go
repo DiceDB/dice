@@ -277,6 +277,28 @@ func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
 	return nil
 }
 
+func handleMigratedResp(resp interface{}, buf *bytes.Buffer) {
+	// Process the incoming response by calling the handleResponse function.
+	// This function checks the response against known RESP formatted values
+	// and returns the corresponding byte array representation. The result
+	// is assigned to the resp variable.
+	r := netconn.HandlePredefinedResponse(resp)
+
+	// Check if the processed response (resp) is not nil.
+	// If it is not nil, this means incoming response was not
+	// matched to any predefined RESP responses,
+	// and we proceed to encode the original response using
+	// the clientio.Encode function. This function converts the
+	// response into the desired format based on the specified
+	// isBlkEnc encoding flag, which indicates whether the
+	// response should be encoded in a block format.
+	if r == nil {
+		r = clientio.Encode(resp, true)
+	}
+
+	buf.Write(r)
+}
+
 func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.RedisCmd, buf *bytes.Buffer, c *comm.Client) {
 	s.shardManager.GetShard(0).ReqChan <- &ops.StoreOp{
 		Cmd:      redisCmd,
@@ -286,12 +308,6 @@ func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.RedisCmd, buf *bytes.
 	}
 
 	resp := <-s.ioChan
-	if resp.EvalResponse.Error != nil {
-		buf.WriteString(resp.EvalResponse.Error.Error())
-		return
-	}
-
-	fmt.Printf("Cmd: %v | Response: %v: \n", redisCmd, resp)
 
 	val, ok := WorkerCmdsMeta[redisCmd.Cmd]
 
@@ -305,25 +321,12 @@ func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.RedisCmd, buf *bytes.
 			return
 		}
 
-		// Process the incoming response by calling the handleResponse function.
-		// This function checks the response against known RESP formatted values
-		// and returns the corresponding byte array representation. The result
-		// is assigned to the resp variable.
-		r := netconn.HandlePredefinedResponse(resp)
-
-		// Check if the processed response (resp) is not nil.
-		// If it is not nil, this means incoming response was not
-		// matched to any predefined RESP responses,
-		// and we proceed to encode the original response using
-		// the clientio.Encode function. This function converts the
-		// response into the desired format based on the specified
-		// isBlkEnc encoding flag, which indicates whether the
-		// response should be encoded in a block format.
-		if r != nil {
-			r = clientio.Encode(r, true)
+		if resp.EvalResponse.Error != nil {
+			handleMigratedResp(resp.EvalResponse.Error, buf)
 		}
 
-		buf.Write(r)
+		handleMigratedResp(resp.EvalResponse.Result, buf)
+
 		return
 	}
 }
