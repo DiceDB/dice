@@ -4400,3 +4400,40 @@ func evalZRANGE(args []string, store *dstore.Store) []byte {
 
 	return clientio.Encode(result, false)
 }
+
+func evalHINCRBYFLOAT(args []string, store *dstore.Store) []byte {
+	if len(args) < 3 {
+		return diceerrors.NewErrArity("HINCRBYFLOAT")
+	}
+	incr, err := strconv.ParseFloat(strings.TrimSpace(args[2]), 64)
+
+	if err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.IntOrFloatErr)
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+	var hashmap HashMap
+
+	if obj != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+		}
+		hashmap = obj.Value.(HashMap)
+	}
+
+	if hashmap == nil {
+		hashmap = make(HashMap)
+	}
+
+	field := args[1]
+	numkey, err := hashmap.incrementFloatValue(field, incr)
+	if err != nil {
+		return diceerrors.NewErrWithMessage(err.Error())
+	}
+
+	obj = store.NewObj(hashmap, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
+	store.Put(key, obj)
+
+	return clientio.Encode(numkey, false)
+}

@@ -98,6 +98,7 @@ func TestEval(t *testing.T) {
 	testEvalZADD(t, store)
 	testEvalZRANGE(t, store)
 	testEvalHVALS(t, store)
+	testEvalHINCRBYFLOAT(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -4425,4 +4426,175 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalZRANGE, store)
+}
+
+func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"HINCRBYFLOAT on a non-existing key and field": {
+			setup:  func() {},
+			input:  []string{"key", "field", "0.1"},
+			output: clientio.Encode("0.1", false),
+		},
+		"HINCRBYFLOAT on an existing key and non-existing field": {
+			setup: func() {
+				key := "key"
+				h := make(HashMap)
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          h,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "field", "0.1"},
+			output: clientio.Encode("0.1", false),
+		},
+		"HINCRBYFLOAT on an existing key and field with a float value": {
+			setup: func() {
+				key := "key"
+				field := "field"
+				h := make(HashMap)
+				h[field] = "2.1"
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          h,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "field", "0.1"},
+			output: clientio.Encode("2.2", false),
+		},
+		"HINCRBYFLOAT on an existing key and field with an integer value": {
+			setup: func() {
+				key := "key"
+				field := "field"
+				h := make(HashMap)
+				h[field] = "2"
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          h,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "field", "0.1"},
+			output: clientio.Encode("2.1", false),
+		},
+		"HINCRBYFLOAT with a negative increment": {
+			setup: func() {
+				key := "key"
+				field := "field"
+				h := make(HashMap)
+				h[field] = "2.0"
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          h,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "field", "-0.1"},
+			output: clientio.Encode("1.9", false),
+		},
+		// this is failing
+		"HINCRBYFLOAT by a non-numeric increment": {
+			setup: func() {
+				key := "key"
+				field := "field"
+				h := make(HashMap)
+				h[field] = "2.0"
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          h,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "field", "a"},
+			output: []byte("-ERR value is not an integer or a float\r\n"),
+		},
+		// this is failing
+		"HINCRBYFLOAT on a field with non-numeric value": {
+			setup: func() {
+				key := "key"
+				field := "field"
+				h := make(HashMap)
+				h[field] = "non_numeric"
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          h,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "field", "0.1"},
+			output: []byte("-ERR value is not an integer or a float\r\n"),
+		},
+		// this failing
+		"HINCRBYFLOAT by a value that would turn float64 to Inf": {
+			setup: func() {
+				key := "key"
+				field := "field"
+				h := make(HashMap)
+				h[field] = "1e308"
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          h,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "field", "1e308"},
+			output: []byte("-ERR increment or decrement would overflow\r\n"),
+		},
+		"HINCRBYFLOAT with scientific notation": {
+			setup: func() {
+				key := "key"
+				field := "field"
+				h := make(HashMap)
+				h[field] = "1e2"
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          h,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "field", "1e-1"},
+			output: clientio.Encode("100.1", false),
+		},
+	}
+
+	runEvalTests(t, tests, evalHINCRBYFLOAT, store)
+}
+
+func BenchmarkEvalHINCRBYFLOAT(b *testing.B) {
+	store := dstore.NewStore(nil)
+
+	// Setting initial fields with some values
+	store.Put("key1", store.NewObj(HashMap{"field1": "1.0", "field2": "1.2"}, maxExDuration, object.ObjTypeHashMap, object.ObjEncodingHashMap))
+	store.Put("key2", store.NewObj(HashMap{"field1": "0.1"}, maxExDuration, object.ObjTypeHashMap, object.ObjEncodingHashMap))
+
+	inputs := []struct {
+		key   string
+		field string
+		incr  string
+	}{
+		{"key1", "field1", "0.1"},
+		{"key1", "field1", "-0.1"},
+		{"key1", "field2", "1000000.1"},
+		{"key1", "field2", "-1000000.1"},
+		{"key2", "field1", "-10.1234"},
+		{"key3", "field1", "1.5"}, // testing with non-existing key
+		{"key2", "field2", "2.75"}, // testing with non-existing field in existing key
+	}
+
+	for _, input := range inputs {
+		b.Run(fmt.Sprintf("HINCRBYFLOAT %s %s %s", input.key, input.field, input.incr), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_ = evalHINCRBYFLOAT([]string{"HINCRBYFLOAT", input.key, input.field, input.incr}, store)
+			}
+		})
+	}
 }
