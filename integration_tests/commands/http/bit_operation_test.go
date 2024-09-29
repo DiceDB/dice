@@ -146,14 +146,68 @@ func TestBitCount(t *testing.T) {
 			expected: []interface{}{float64(0), float64(1), float64(0), float64(1), float64(1), float64(0), float64(0), float64(1), float64(0)},
 			delays:   []time.Duration{0, 0, 0, 0, 0, 0, 0, 0, 0},
 		},
-		// {
-		// 	name: "Bitcount",
-		// 	commands: []HTTPCommand{
-		// 		{Command: "BITCOUNT", Body: map[string]interface{}{"key": "mykey", "value": []interface{}{"3", "7"}}},
-		// 	},
-		// 	expected: []interface{}{float64(0)},
-		// 	delays:   []time.Duration{0},
-		// },
+		{
+			name: "BitCount with unit",
+			commands: []HTTPCommand{
+				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "mykey", "start": 1, "end": 7, "unit": "BIT"}},
+			},
+			expected: []interface{}{float64(1)},
+			delays:   []time.Duration{0},
+		},
+		{
+			name: "BitCount",
+			commands: []HTTPCommand{
+				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "mykey", "start": 3, "end": 7}},
+				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "mykey", "start": 0, "end": 0}},
+				//{Command: "BITCOUNT", Body: nil},//:TODO add tests for ERR wrong number of arguments for 'bitcount' command
+				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "mykey"}},
+				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "mykey", "start": 0}},
+			},
+			expected: []interface{}{float64(0), float64(1), float64(1), "ERR syntax error"},
+			delays:   []time.Duration{0, 0, 0, 0},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for i, cmd := range tc.commands {
+				if tc.delays[i] > 0 {
+					time.Sleep(tc.delays[i])
+				}
+				result, _ := exec.FireCommand(cmd)
+				assert.Equal(t, tc.expected[i], result, "Value mismatch for cmd %s", cmd)
+			}
+		})
+	}
+
+}
+
+func TestBitPos(t *testing.T) {
+	exec := NewHTTPCommandExecutor()
+	testCases := []struct {
+		name     string
+		commands []HTTPCommand
+		expected []interface{}
+		delays   []time.Duration
+		value    interface{}
+	}{
+		{
+			name: "BitPos",
+			commands: []HTTPCommand{
+				{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "bit": 0, "start": 0, "end": -1, "unit": "BIT"}},
+			},
+			expected: []interface{}{float64(0), float64(8)},
+			delays:   []time.Duration{0, 0},
+			value:    "\\x00\\xff\\x00",
+		},
+		{
+			name: "BitPos",
+			commands: []HTTPCommand{
+				{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "bit": 0, "start": 0, "end": -1, "unit": "BIT"}},
+			},
+			expected: []interface{}{float64(0), float64(8)},
+			delays:   []time.Duration{0, 0},
+			value:    "\\x00\\xff\\x00",
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

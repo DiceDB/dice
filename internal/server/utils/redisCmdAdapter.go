@@ -29,6 +29,10 @@ const (
 	Offset      = "offset"
 	Member      = "member"
 	Members     = "members"
+	START       = "start"
+	END         = "end"
+	UNIT        = "unit"
+	BIT         = "bit"
 	Index       = "index"
 	JSON        = "json"
 )
@@ -85,6 +89,10 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 				Offset,
 				Member,
 				Members,
+				START,
+				END,
+				UNIT,
+				BIT,
 			}
 			for _, key := range priorityKeys {
 				if val, exists := jsonBody[key]; exists {
