@@ -4057,7 +4057,7 @@ func testEvalBITOP(t *testing.T, store *dstore.Store) {
 			input:  []string{"NOT", "dest{t}", "s{t}"},
 			output: clientio.Encode(0, true),
 			validator: func(output []byte) {
-				var expectedResult []byte
+				expectedResult := []byte{}
 				assert.DeepEqual(t, expectedResult, store.Get("dest{t}").Value.(*ByteArray).data)
 			},
 		},

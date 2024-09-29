@@ -15,7 +15,7 @@ import (
 const (
 	Cmd = "AUTH"
 
-	SessionStatusPending                = SessionStatusT(0)
+	SessionStatusPending = SessionStatusT(0)
 	SessionStatusActive  = SessionStatusT(1)
 	SessionStatusExpired = SessionStatusT(2)
 )
