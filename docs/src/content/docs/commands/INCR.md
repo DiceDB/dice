@@ -15,9 +15,12 @@ INCR key
 
 - `key`: The key whose value you want to increment. This key must hold a string that can be represented as an integer.
 
-## Return Value
+## Return values
 
-- `Integer`: The new value of the key after the increment operation.
+| Condition                                      | Return Value                                      |
+|------------------------------------------------|---------------------------------------------------|
+| Command is successful                          | `Integer`                                         |
+| Syntax or specified constraints are invalid    | error                                             |
 
 ## Behaviour
 
@@ -29,21 +32,24 @@ When the `INCR` command is executed, the following steps occur:
 4. `Increment Operation`: The value is incremented by 1.
 5. `Return New Value`: The new value is returned to the client.
 
-## Error Handling
+## Errors
+1. `Wrong Type Error`:
 
-The `INCR` command can raise errors in the following scenarios:
+   - Error Message: `(error) ERROR value is not an integer or out of range`
+   - If the key exists but does not hold a string value that can be interpreted as an integer, DiceDB will return an error.
 
-1. `Wrong Type Error`: If the key exists but does not hold a string value that can be interpreted as an integer, DiceDB will return an error.
 
-   - `Error Message`: `(error) ERR value is not an integer or out of range`
+2. `Overflow Error`:
 
-2. `Overflow Error`: If the increment operation causes the value to exceed the maximum integer value that DiceDB can handle, an overflow error will occur.
+   - Error Message: `(error) ERROR increment or decrement would overflow`
+   - If the increment operation causes the value to exceed the maximum integer value that DiceDB can handle, an overflow error will occur.
 
-   - `Error Message`: `(error) ERR increment or decrement would overflow`
 
 ## Example Usage
 
 ### Basic Usage
+
+Setting a key `mykey` to `10` and incrementing it by `1`:
 
 ```bash
 127.0.0.1:7379> SET mykey 10
@@ -53,6 +59,8 @@ The `INCR` command can raise errors in the following scenarios:
 
 ### Key Does Not Exist
 
+Incrementing a non-existent key `newkey` by `1`:
+
 ```bash
 127.0.0.1:7379> INCR newkey
 (integer) 1
@@ -60,18 +68,20 @@ The `INCR` command can raise errors in the following scenarios:
 
 ### Error Scenario: Non-Integer Value
 
+Incrementing a key `mykey` with a non-integer value:
 ```bash
 127.0.0.1:7379> SET mykey "hello"
 127.0.0.1:7379> INCR mykey
-(error) ERR value is not an integer or out of range
+(error) ERROR value is not an integer or out of range
 ```
 
 ### Error Scenario: Overflow
 
+Incrementing a key `mykey` with a value that exceeds the maximum integer value:
 ```bash
 127.0.0.1:7379> SET mykey 9223372036854775807
 127.0.0.1:7379> INCR mykey
-(error) ERR increment or decrement would overflow
+(error) ERROR increment or decrement would overflow
 ```
 
 ## Additional Notes

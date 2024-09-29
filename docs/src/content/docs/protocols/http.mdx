@@ -1,0 +1,139 @@
+--- 
+title: HTTP
+description: DiceDB supports HTTP protocol for clients to connect to the database. This document explains the request and response format.
+sidebar:
+  order: 1
+---
+
+## Table of Contents
+
+1. [Introduction](#introduction)
+2. [API Endpoint](#api-endpoint)
+3. [General Request Structure](#general-request-structure)
+4. [Supported Commands](#supported-commands)
+5. [Examples](#examples)
+
+## Introduction
+
+DiceDB supports HTTP protocol for clients to connect to the database. This allows clients to connect to DiceDB over the web stack, enabling frontends to have direct access to DiceDB, which is currently not possible with Redis.
+
+All commands except `QWATCH` are synchronous and will return the result of the command immediately. For `QWATCH`, we use [SSE](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events) to be able to respond with changes to the result set of the queries.
+
+
+## API Endpoint
+
+All requests should be sent to the base URL of your server, followed by the command name:
+
+```
+http://your-server-address:port/<command>
+```
+
+## General Request Structure
+
+- **HTTP Method**: POST for all operations
+- **Path**: The DiceDB command name (e.g., `/GET`, `/SET`, `/HGET`)
+- **Headers**: 
+  - `Content-Type: application/json`
+- **Body**: JSON object containing command arguments
+
+### Query Parameters
+
+Certain commands may require additional query parameters. For example:
+
+- `key_prefix`: Used for the `JSON.INGEST` command to specify a key prefix
+
+These will be specified in the command documentation.
+
+## Supported Commands
+
+Our HTTP API supports all DiceDB commands. Please refer to our comprehensive command reference for each command, commands which lack support will be flagged as such.
+
+## Examples
+
+### Setting a Key-Value Pair
+
+**Request:**
+```http
+POST /SET HTTP/1.1
+Host: your-server-address
+Content-Type: application/json
+
+{
+  "key": "mykey",
+  "value": "Hello, World!"
+}
+```
+
+**Response:**
+```json
+"OK"
+```
+
+### Getting a Value
+
+**Request:**
+```http
+POST /GET HTTP/1.1
+Host: your-server-address
+Content-Type: application/json
+
+{
+  "key": "mykey"
+}
+```
+
+**Response:**
+```json
+"Hello, World!"
+```
+
+### Setting a field in Hash
+
+```http
+POST http://localhost:8082/hset HTTP/1.1
+Content-Type: application/json
+
+{
+	"key": "test",
+	"field": "test",
+	"value": "test"
+}
+```
+
+**Response:**
+```json
+1
+```
+
+### Getting a field in a HashSet
+
+```http
+POST http://localhost:8082/hget HTTP/1.1
+Content-Type: application/json
+
+{
+  "key": "test",
+  "field": "test"
+}
+```
+
+**Response:**
+```json
+"test"
+```
+
+### QWATCH Example
+
+**NOTE**: The `QWATCH` command is asynchronous and requires the use of Server-Sent Events (SSE) to receive updates. The following example demonstrates how to use `QWATCH` with SSE.
+
+**Request:**
+```http
+POST /QWATCH HTTP/1.1
+Host: your-server-address
+Content-Type: application/json
+
+{
+  "query": "SELECT $key, $value WHERE $key like 'match:100:*' AND $value > 10 ORDER BY $value DESC LIMIT 3"
+}
+```
+

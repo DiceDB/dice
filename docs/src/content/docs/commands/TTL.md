@@ -5,33 +5,42 @@ description: The `TTL` command in DiceDB is used to retrieve the remaining time 
 
 The `TTL` command in DiceDB is used to retrieve the remaining time to live (TTL) of a key that has an expiration set. The TTL is returned in seconds. This command is useful for understanding how much longer a key will exist before it is automatically deleted by DiceDB.
 
+## Syntax
+
+```bash
+TTL key
+```
+
 ## Parameters
+| Parameter       | Description                                      | Type    | Required |
+|-----------------|--------------------------------------------------|---------|----------|
+| `key`           | The key for which you want to check the TTL.                   | String  | Yes      |
 
-- `key`: The key for which you want to check the TTL. This parameter is mandatory.
+## Return values
 
-## Return Value
+| Condition                                      | Return Value                                      |
+|------------------------------------------------|---------------------------------------------------|
+| The remaining TTL in seconds                         | A positive integer                                              |
+| The key exists but has no associated expiration time            | `-1`                                             |
+| The key does not exist.    | `-2`                                             |
 
-The `TTL` command returns an integer value representing the remaining time to live of the key in seconds. The possible return values are:
-
-- A positive integer: The remaining TTL in seconds.
-- `-1`: The key exists but has no associated expiration time.
-- `-2`: The key does not exist.
 
 ## Behaviour
 
-When the `TTL` command is executed:
+- If the `key` exists and has an expiration time set, the command returns the remaining time to live in seconds.
+- If the `key` exists but does not have an expiration time set, the command returns `-1`.
+- If the `key` does not exist, the command returns `-2`.
 
-1. If the key exists and has an expiration time set, the command returns the remaining time to live in seconds.
-2. If the key exists but does not have an expiration time set, the command returns `-1`.
-3. If the key does not exist, the command returns `-2`.
-
-## Error Handling
+## Errors
 
 The `TTL` command can raise errors in the following scenarios:
 
-- `Wrong Type Error`: If the key exists but is not a string, list, set, hash, or sorted set, an error will be raised. DiceDB will return an error message similar to `(error) WRONGTYPE Operation against a key holding the wrong kind of value`.
+- `Syntax Error`:
 
-## Example Usage
+   - (error) ERROR syntax error
+   - Occurs when attempting to use the command with more than one argument.
+
+## Examples
 
 ### Example 1: Key with Expiration
 
@@ -63,14 +72,13 @@ Here, the key `mykey` is set with a value of "Hello" but no expiration time is s
 
 In this example, the key `non_existent_key` does not exist in the database. The `TTL` command returns `-2`, indicating that the key does not exist.
 
-## Error Handling Example
 
-### Example 4: Wrong Type Error
-
+### Example 4: Invalid usage
 ```bash
-127.0.0.1:7379> HSET myhash field1 "value1"
-127.0.0.1:7379> TTL myhash
-(error) WRONGTYPE Operation against a key holding the wrong kind of value
+127.0.0.1:7379> SET newkey "value"
+127.0.0.1:7379> TTL newkey value
+(error) ERROR syntax error
 ```
 
-In this example, `myhash` is a hash, not a string, list, set, or sorted set. Attempting to use the `TTL` command on a hash results in a `WRONGTYPE` error.
+- The `TTL` command requires exactly one argument: `key`
+- Since only more than one argument is provided, DiceDB returns a syntax error.

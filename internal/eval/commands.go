@@ -288,6 +288,17 @@ var (
 		Arity:    -5,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsonarrtrimCmdMeta = DiceCmdMeta{
+		Name: "JSON.ARRTRIM",
+		Info: `JSON.ARRTRIM key path start stop
+		Trim an array so that it contains only the specified inclusive range of elements
+		Returns an array of integer replies for each path.
+		Returns error response if the key doesn't exist or key is expired.
+		Error reply: If the number of arguments is incorrect.`,
+		Eval:     evalJSONARRTRIM,
+		Arity:    -5,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	ttlCmdMeta = DiceCmdMeta{
 		Name: "TTL",
 		Info: `TTL returns Time-to-Live in secs for the queried key in args
@@ -948,6 +959,18 @@ var (
 		Arity:    -4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hincrbyFloatCmdMeta = DiceCmdMeta{
+		Name: "HINCRBYFLOAT",
+		Info: `HINCRBYFLOAT increments the specified field of a hash stored at the key, 
+		and representing a floating point number, by the specified increment.
+		If the field does not exist, it is set to 0 before performing the operation.
+		If the field contains a value of wrong type or specified increment
+		is not parsable as floating point number, then an error occurs.
+		`,
+		Eval:     evalHINCRBYFLOAT,
+		Arity:    -4,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -973,6 +996,7 @@ func init() {
 	DiceCmds["JSON.ARRPOP"] = jsonarrpopCmdMeta
 	DiceCmds["JSON.INGEST"] = jsoningestCmdMeta
 	DiceCmds["JSON.ARRINSERT"] = jsonarrinsertCmdMeta
+	DiceCmds["JSON.ARRTRIM"] = jsonarrtrimCmdMeta
 	DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
 	DiceCmds["EXPIRE"] = expireCmdMeta
@@ -1054,6 +1078,7 @@ func init() {
 	DiceCmds["HVALS"] = hValsCmdMeta
 	DiceCmds["ZADD"] = zaddCmdMeta
 	DiceCmds["ZRANGE"] = zrangeCmdMeta
+	DiceCmds["HINCRBYFLOAT"] = hincrbyFloatCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}
