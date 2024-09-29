@@ -75,38 +75,6 @@ func TestBitOp(t *testing.T) {
 			expected: []interface{}{"OK", float64(1), float64(0), float64(0), "kar"},
 			delays:   []time.Duration{0, 0, 0, 0, 0},
 		},
-		// {
-		// 	InCmds: []string{"BITOP NOT unitTestKeyNOT unitTestKeyA "},
-		// 	Out:    []interface{}{int64(2)},
-		// },
-		// {
-		// 	InCmds: []string{"GETBIT unitTestKeyNOT 1", "GETBIT unitTestKeyNOT 2", "GETBIT unitTestKeyNOT 7", "GETBIT unitTestKeyNOT 8", "GETBIT unitTestKeyNOT 9"},
-		// 	Out:    []interface{}{int64(0), int64(1), int64(0), int64(0), int64(1)},
-		// },
-		// {
-		// 	InCmds: []string{"BITOP OR unitTestKeyOR unitTestKeyB unitTestKeyA"},
-		// 	Out:    []interface{}{int64(2)},
-		// },
-		// {
-		// 	InCmds: []string{"GETBIT unitTestKeyOR 1", "GETBIT unitTestKeyOR 2", "GETBIT unitTestKeyOR 3", "GETBIT unitTestKeyOR 7", "GETBIT unitTestKeyOR 8", "GETBIT unitTestKeyOR 9", "GETBIT unitTestKeyOR 12"},
-		// 	Out:    []interface{}{int64(1), int64(1), int64(1), int64(1), int64(1), int64(0), int64(0)},
-		// },
-		// {
-		// 	InCmds: []string{"BITOP AND unitTestKeyAND unitTestKeyB unitTestKeyA"},
-		// 	Out:    []interface{}{int64(2)},
-		// },
-		// {
-		// 	InCmds: []string{"GETBIT unitTestKeyAND 1", "GETBIT unitTestKeyAND 2", "GETBIT unitTestKeyAND 7", "GETBIT unitTestKeyAND 8", "GETBIT unitTestKeyAND 9"},
-		// 	Out:    []interface{}{int64(0), int64(0), int64(1), int64(0), int64(0)},
-		// },
-		// {
-		// 	InCmds: []string{"BITOP XOR unitTestKeyXOR unitTestKeyB unitTestKeyA"},
-		// 	Out:    []interface{}{int64(2)},
-		// },
-		// {
-		// 	InCmds: []string{"GETBIT unitTestKeyXOR 1", "GETBIT unitTestKeyXOR 2", "GETBIT unitTestKeyXOR 3", "GETBIT unitTestKeyXOR 7", "GETBIT unitTestKeyXOR 8"},
-		// 	Out:    []interface{}{int64(1), int64(1), int64(1), int64(0), int64(1)},
-		// },
 	}
 
 	for _, tc := range testCases {
