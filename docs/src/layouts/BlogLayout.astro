@@ -1,0 +1,100 @@
+---
+import { getEntry } from "astro:content";
+import Layout from "./Layout.astro";
+import AboutMeVertical from "../components/AboutMeVertical.astro";
+
+const { blog } = Astro.props;
+const author = await getEntry("authors", blog.data.author.id);
+
+const JSONLD = {
+  "@context": "https://schema.org/",
+  "@type": "BlogPosting",
+  "@id": `${Astro.url}#BlogPosting`,
+  mainEntityOfPage: Astro.url,
+  headline: blog.data.title,
+  name: blog.data.title,
+  description: blog.data.description,
+  datePublished: blog.data.published_at,
+  dateModified: blog.data.published_at,
+  author: {
+    "@type": "Person",
+    name: author.data.name,
+    image: author.data.avatar_url,
+  },
+  url: Astro.url,
+  isPartOf: {
+    "@type": "Blog",
+    "@id": "https://dicedb.io/blog/",
+    name: "DiceDB Blog",
+    publisher: {
+      "@type": "Person",
+      name: author.data.name,
+      image: author.data.avatar_url,
+    },
+  },
+};
+---
+
+<Layout
+  title={blog.data.title}
+  description={blog.data.description}
+  blog={blog}
+  {JSONLD}
+>
+  <div>
+    <section>
+      <nav class="breadcrumb is-hidden-mobile" aria-label="breadcrumbs">
+        <ul>
+          <li><a href="/">DiceDB</a></li>
+          <li><a href=`/blog`>Blog</a></li>
+        </ul>
+      </nav>
+      <div class="columns">
+        <div class="column is-7-desktop is-12-tablet is-12-mobile">
+          <div>
+            <h1
+              class="title has-text-primary is-size-1 is-size-3-mobile"
+              style="line-height: 1.3em;"
+            >
+              {blog.data.title}
+            </h1>
+            <div class="media">
+              <div class="media-left">
+                <figure class="image is-48x48">
+                  <img class="is-rounded" src={author.data.avatar_url} />
+                </figure>
+              </div>
+              <div class="media-content">
+                <p class="title is-5">
+                  <a class="has-text-black" href={author.data.url}
+                    >{author.data.name}</a
+                  >
+                </p>
+                <p class="subtitle is-6">
+                  {author.data.bio}
+                </p>
+              </div>
+            </div>
+          </div>
+          <br />
+          <div class="content blog-content">
+            <p class="is-family-monospace">
+              {
+                blog.data.published_at.toLocaleString("en-us", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                })
+              }
+            </p>
+            <slot />
+          </div>
+        </div>
+        <div class="column is-1"></div>
+        <div class="column is-4">
+          <AboutMeVertical />
+        </div>
+      </div>
+    </section>
+  </div>
+</Layout>

@@ -14,14 +14,14 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
-var RespNIL []byte = []byte("$-1\r\n")
-var RespOK []byte = []byte("+OK\r\n")
-var RespQueued []byte = []byte("+QUEUED\r\n")
-var RespZero []byte = []byte(":0\r\n")
-var RespOne []byte = []byte(":1\r\n")
-var RespMinusOne []byte = []byte(":-1\r\n")
-var RespMinusTwo []byte = []byte(":-2\r\n")
-var RespEmptyArray []byte = []byte("*0\r\n")
+var RespNIL = []byte("$-1\r\n")
+var RespOK = []byte("+OK\r\n")
+var RespQueued = []byte("+QUEUED\r\n")
+var RespZero = []byte(":0\r\n")
+var RespOne = []byte(":1\r\n")
+var RespMinusOne = []byte(":-1\r\n")
+var RespMinusTwo = []byte(":-2\r\n")
+var RespEmptyArray = []byte("*0\r\n")
 
 func readLength(buf *bytes.Buffer) (int64, error) {
 	s, err := readStringUntilSr(buf)

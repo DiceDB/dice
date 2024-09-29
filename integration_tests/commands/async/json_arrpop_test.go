@@ -19,23 +19,23 @@ func TestJSONARRPOP(t *testing.T) {
 	testCases := []struct {
 		name        string
 		commands    []string
-		expected    []interface{}
-		assert_type []string
-		jsonResp    []bool
+		expected   []interface{}
+		assertType []string
+		jsonResp   []bool
 		nestedArray bool
 		path        string
 	}{
 		{
-			name:        "update array at root path",
-			commands:    []string{"json.set key $ " + arrayAtRoot, "json.arrpop key $ 2", "json.get key"},
-			expected:    []interface{}{"OK", int64(2), "[0,1,3]"},
-			assert_type: []string{"equal", "equal", "deep_equal"},
+			name:       "update array at root path",
+			commands:   []string{"json.set key $ " + arrayAtRoot, "json.arrpop key $ 2", "json.get key"},
+			expected:   []interface{}{"OK", int64(2), "[0,1,3]"},
+			assertType: []string{"equal", "equal", "deep_equal"},
 		},
 		{
-			name:        "update nested array",
-			commands:    []string{"json.set key $ " + nestedArray, "json.arrpop key $.b 2", "json.get key"},
-			expected:    []interface{}{"OK", []interface{}{int64(2)}, `{"a":2,"b":[0,1,3]}`},
-			assert_type: []string{"equal", "deep_equal", "na"},
+			name:       "update nested array",
+			commands:   []string{"json.set key $ " + nestedArray, "json.arrpop key $.b 2", "json.get key"},
+			expected:   []interface{}{"OK", []interface{}{int64(2)}, `{"a":2,"b":[0,1,3]}`},
+			assertType: []string{"equal", "deep_equal", "na"},
 		},
 	}
 
@@ -53,9 +53,9 @@ func TestJSONARRPOP(t *testing.T) {
 					continue
 				}
 
-				if tcase.assert_type[i] == "equal" {
+				if tcase.assertType[i] == "equal" {
 					assert.Equal(t, out, result)
-				} else if tcase.assert_type[i] == "deep_equal" {
+				} else if tcase.assertType[i] == "deep_equal" {
 					assert.Assert(t, arraysArePermutations(out.([]interface{}), result.([]interface{})))
 				}
 			}

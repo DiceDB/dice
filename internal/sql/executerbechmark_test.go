@@ -38,7 +38,6 @@ func BenchmarkExecuteQueryOrderBykey(b *testing.B) {
 	store := dstore.NewStore(nil)
 	for _, v := range benchmarkDataSizes {
 		generateBenchmarkData(v, store)
-		defer store.ResetStore()
 
 		queryStr := "SELECT $key, $value WHERE $key like 'k*' ORDER BY $key ASC"
 		query, err := sql.ParseQuery(queryStr)
@@ -56,6 +55,7 @@ func BenchmarkExecuteQueryOrderBykey(b *testing.B) {
 				}
 			}
 		})
+		store.ResetStore()
 	}
 }
 
@@ -63,7 +63,6 @@ func BenchmarkExecuteQueryBasicOrderByValue(b *testing.B) {
 	store := dstore.NewStore(nil)
 	for _, v := range benchmarkDataSizes {
 		generateBenchmarkData(v, store)
-		defer store.ResetStore()
 
 		queryStr := "SELECT $key, $value WHERE $key like 'k*' ORDER BY $value ASC"
 		query, err := sql.ParseQuery(queryStr)
@@ -79,6 +78,7 @@ func BenchmarkExecuteQueryBasicOrderByValue(b *testing.B) {
 				}
 			}
 		})
+		store.ResetStore()
 	}
 }
 
@@ -86,7 +86,6 @@ func BenchmarkExecuteQueryLimit(b *testing.B) {
 	store := dstore.NewStore(nil)
 	for _, v := range benchmarkDataSizes {
 		generateBenchmarkData(v, store)
-		defer store.ResetStore()
 
 		queryStr := fmt.Sprintf("SELECT $key, $value WHERE $key like 'k*' ORDER BY $key ASC LIMIT %d", v/3)
 		query, err := sql.ParseQuery(queryStr)
@@ -102,6 +101,7 @@ func BenchmarkExecuteQueryLimit(b *testing.B) {
 				}
 			}
 		})
+		store.ResetStore()
 	}
 }
 
@@ -109,7 +109,6 @@ func BenchmarkExecuteQueryNoMatch(b *testing.B) {
 	store := dstore.NewStore(nil)
 	for _, v := range benchmarkDataSizes {
 		generateBenchmarkData(v, store)
-		defer store.ResetStore()
 
 		queryStr := "SELECT $key, $value WHERE $key like 'x*' ORDER BY $key ASC"
 		query, err := sql.ParseQuery(queryStr)
@@ -125,6 +124,7 @@ func BenchmarkExecuteQueryNoMatch(b *testing.B) {
 				}
 			}
 		})
+		store.ResetStore()
 	}
 }
 
@@ -132,7 +132,6 @@ func BenchmarkExecuteQueryWithBasicWhere(b *testing.B) {
 	store := dstore.NewStore(nil)
 	for _, v := range benchmarkDataSizes {
 		generateBenchmarkData(v, store)
-		defer store.ResetStore()
 
 		queryStr := "SELECT $key, $value WHERE $value = 'v3' AND $key like 'k*'"
 		query, err := sql.ParseQuery(queryStr)
@@ -148,6 +147,7 @@ func BenchmarkExecuteQueryWithBasicWhere(b *testing.B) {
 				}
 			}
 		})
+		store.ResetStore()
 	}
 }
 
@@ -155,7 +155,6 @@ func BenchmarkExecuteQueryWithComplexWhere(b *testing.B) {
 	store := dstore.NewStore(nil)
 	for _, v := range benchmarkDataSizes {
 		generateBenchmarkData(v, store)
-		defer store.ResetStore()
 
 		queryStr := "SELECT $key, $value WHERE $value > 'v2' AND $value < 'v100' AND $key like 'k*' ORDER BY $value DESC"
 		query, err := sql.ParseQuery(queryStr)
@@ -171,6 +170,7 @@ func BenchmarkExecuteQueryWithComplexWhere(b *testing.B) {
 				}
 			}
 		})
+		store.ResetStore()
 	}
 }
 
@@ -178,7 +178,6 @@ func BenchmarkExecuteQueryWithCompareWhereKeyandValue(b *testing.B) {
 	store := dstore.NewStore(nil)
 	for _, v := range benchmarkDataSizes {
 		generateBenchmarkData(v, store)
-		defer store.ResetStore()
 
 		queryStr := "SELECT $key, $value WHERE $key = $value AND $key like 'k*'"
 		query, err := sql.ParseQuery(queryStr)
@@ -194,6 +193,7 @@ func BenchmarkExecuteQueryWithCompareWhereKeyandValue(b *testing.B) {
 				}
 			}
 		})
+		store.ResetStore()
 	}
 }
 
@@ -201,7 +201,6 @@ func BenchmarkExecuteQueryWithBasicWhereNoMatch(b *testing.B) {
 	store := dstore.NewStore(nil)
 	for _, v := range benchmarkDataSizes {
 		generateBenchmarkData(v, store)
-		defer store.ResetStore()
 
 		queryStr := "SELECT $key, $value WHERE $value = 'nonexistent' AND $key like 'k*'"
 		query, err := sql.ParseQuery(queryStr)
@@ -217,6 +216,7 @@ func BenchmarkExecuteQueryWithBasicWhereNoMatch(b *testing.B) {
 				}
 			}
 		})
+		store.ResetStore()
 	}
 }
 
@@ -224,7 +224,6 @@ func BenchmarkExecuteQueryWithCaseSesnsitivity(b *testing.B) {
 	store := dstore.NewStore(nil)
 	for _, v := range benchmarkDataSizes {
 		generateBenchmarkData(v, store)
-		defer store.ResetStore()
 
 		queryStr := "SELECT $key, $value WHERE $value = 'V9' AND $key like 'k*'"
 		query, err := sql.ParseQuery(queryStr)
@@ -239,6 +238,7 @@ func BenchmarkExecuteQueryWithCaseSesnsitivity(b *testing.B) {
 				}
 			}
 		})
+		store.ResetStore()
 	}
 }
 
@@ -246,7 +246,6 @@ func BenchmarkExecuteQueryWithClauseOnKey(b *testing.B) {
 	store := dstore.NewStore(nil)
 	for _, v := range benchmarkDataSizes {
 		generateBenchmarkData(v, store)
-		defer store.ResetStore()
 
 		queryStr := "SELECT $key, $value WHERE $key > 'k3' AND $key like 'k*' ORDER BY $key ASC"
 		query, err := sql.ParseQuery(queryStr)
@@ -262,6 +261,7 @@ func BenchmarkExecuteQueryWithClauseOnKey(b *testing.B) {
 				}
 			}
 		})
+		store.ResetStore()
 	}
 }
 
@@ -269,7 +269,6 @@ func BenchmarkExecuteQueryWithAllMatchingKeyRegex(b *testing.B) {
 	store := dstore.NewStore(nil)
 	for _, v := range benchmarkDataSizes {
 		generateBenchmarkData(v, store)
-		defer store.ResetStore()
 
 		queryStr := "SELECT $key, $value WHERE $key like '*' ORDER BY $key ASC"
 		query, err := sql.ParseQuery(queryStr)
@@ -285,6 +284,7 @@ func BenchmarkExecuteQueryWithAllMatchingKeyRegex(b *testing.B) {
 				}
 			}
 		})
+		store.ResetStore()
 	}
 }
 
@@ -312,7 +312,6 @@ func BenchmarkExecuteQueryWithJSON(b *testing.B) {
 	for _, v := range benchmarkDataSizesJSON {
 		for jsonSize, json := range jsonList {
 			generateBenchmarkJSONData(b, v, json, store)
-			defer store.ResetStore()
 
 			queryStr := "SELECT $key, $value WHERE $key like 'k*' AND '$value.id' = 3 ORDER BY $key ASC"
 			query, err := sql.ParseQuery(queryStr)
@@ -328,6 +327,7 @@ func BenchmarkExecuteQueryWithJSON(b *testing.B) {
 					}
 				}
 			})
+			store.ResetStore()
 		}
 	}
 }
@@ -337,7 +337,6 @@ func BenchmarkExecuteQueryWithNestedJSON(b *testing.B) {
 	for _, v := range benchmarkDataSizesJSON {
 		for jsonSize, json := range jsonList {
 			generateBenchmarkJSONData(b, v, json, store)
-			defer store.ResetStore()
 
 			queryStr := "SELECT $key, $value WHERE $key like 'k*' AND '$value.field1.field2.field3.score' > 10.1 ORDER BY $key ASC"
 			query, err := sql.ParseQuery(queryStr)
@@ -353,6 +352,7 @@ func BenchmarkExecuteQueryWithNestedJSON(b *testing.B) {
 					}
 				}
 			})
+			store.ResetStore()
 		}
 	}
 }
@@ -362,7 +362,6 @@ func BenchmarkExecuteQueryWithJsonInLeftAndRightExpressions(b *testing.B) {
 	for _, v := range benchmarkDataSizesJSON {
 		for jsonSize, json := range jsonList {
 			generateBenchmarkJSONData(b, v, json, store)
-			defer store.ResetStore()
 
 			queryStr := "SELECT $key, $value WHERE '$value.id' = '$value.score' AND $key like 'k*' ORDER BY $key ASC"
 			query, err := sql.ParseQuery(queryStr)
@@ -378,6 +377,7 @@ func BenchmarkExecuteQueryWithJsonInLeftAndRightExpressions(b *testing.B) {
 					}
 				}
 			})
+			store.ResetStore()
 		}
 	}
 }
@@ -387,7 +387,6 @@ func BenchmarkExecuteQueryWithJsonNoMatch(b *testing.B) {
 		store := dstore.NewStore(nil)
 		for jsonSize, json := range jsonList {
 			generateBenchmarkJSONData(b, v, json, store)
-			defer store.ResetStore()
 
 			queryStr := "SELECT $key, $value WHERE '$value.id' = 3 AND $key like 'k*' ORDER BY $key ASC"
 			query, err := sql.ParseQuery(queryStr)
@@ -403,6 +402,7 @@ func BenchmarkExecuteQueryWithJsonNoMatch(b *testing.B) {
 					}
 				}
 			})
+			store.ResetStore()
 		}
 	}
 }

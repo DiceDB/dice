@@ -16,65 +16,65 @@ func TestErrorsForSetData(t *testing.T) {
 	testCases := []struct {
 		name        string
 		cmd         []string
-		expected    []interface{}
-		assert_type []string
-		delay       []time.Duration
+		expected   []interface{}
+		assertType []string
+		delay      []time.Duration
 	}{
 		{
-			name:        "GET a key holding a set",
-			cmd:         []string{"SADD foo bar", "GET foo"},
-			expected:    []interface{}{int64(1), setErrorMsg},
-			assert_type: []string{"equal", "equal"},
-			delay:       []time.Duration{0, 0},
+			name:       "GET a key holding a set",
+			cmd:        []string{"SADD foo bar", "GET foo"},
+			expected:   []interface{}{int64(1), setErrorMsg},
+			assertType: []string{"equal", "equal"},
+			delay:      []time.Duration{0, 0},
 		},
 		{
-			name:        "GETDEL a key holding a set",
-			cmd:         []string{"SADD foo bar", "GETDEL foo"},
-			expected:    []interface{}{int64(1), setErrorMsg},
-			assert_type: []string{"equal", "equal"},
-			delay:       []time.Duration{0, 0},
+			name:       "GETDEL a key holding a set",
+			cmd:        []string{"SADD foo bar", "GETDEL foo"},
+			expected:   []interface{}{int64(1), setErrorMsg},
+			assertType: []string{"equal", "equal"},
+			delay:      []time.Duration{0, 0},
 		},
 		{
-			name:        "INCR a key holding a set",
-			cmd:         []string{"SADD foo bar", "INCR foo"},
-			expected:    []interface{}{int64(1), setErrorMsg},
-			assert_type: []string{"equal", "equal"},
-			delay:       []time.Duration{0, 0},
+			name:       "INCR a key holding a set",
+			cmd:        []string{"SADD foo bar", "INCR foo"},
+			expected:   []interface{}{int64(1), setErrorMsg},
+			assertType: []string{"equal", "equal"},
+			delay:      []time.Duration{0, 0},
 		},
 		{
-			name:        "DECR a key holding a set",
-			cmd:         []string{"SADD foo bar", "DECR foo"},
-			expected:    []interface{}{int64(1), setErrorMsg},
-			assert_type: []string{"equal", "equal"},
-			delay:       []time.Duration{0, 0},
+			name:       "DECR a key holding a set",
+			cmd:        []string{"SADD foo bar", "DECR foo"},
+			expected:   []interface{}{int64(1), setErrorMsg},
+			assertType: []string{"equal", "equal"},
+			delay:      []time.Duration{0, 0},
 		},
 		{
-			name:        "BIT operations on a key holding a set",
-			cmd:         []string{"SADD foo bar", "GETBIT foo 1", "BITCOUNT foo"},
-			expected:    []interface{}{int64(1), setErrorMsg, setErrorMsg},
-			assert_type: []string{"equal", "equal", "equal"},
-			delay:       []time.Duration{0, 0, 0},
+			name:       "BIT operations on a key holding a set",
+			cmd:        []string{"SADD foo bar", "GETBIT foo 1", "BITCOUNT foo"},
+			expected:   []interface{}{int64(1), setErrorMsg, setErrorMsg},
+			assertType: []string{"equal", "equal", "equal"},
+			delay:      []time.Duration{0, 0, 0},
 		},
 		{
-			name:        "GETEX a key holding a set",
-			cmd:         []string{"SADD foo bar", "GETEX foo"},
-			expected:    []interface{}{int64(1), setErrorMsg},
-			assert_type: []string{"equal", "equal"},
-			delay:       []time.Duration{0, 0},
+			name:       "GETEX a key holding a set",
+			cmd:        []string{"SADD foo bar", "GETEX foo"},
+			expected:   []interface{}{int64(1), setErrorMsg},
+			assertType: []string{"equal", "equal"},
+			delay:      []time.Duration{0, 0},
 		},
 		{
-			name:        "GETSET a key holding a set",
-			cmd:         []string{"SADD foo bar", "GETSET foo bar"},
-			expected:    []interface{}{int64(1), setErrorMsg},
-			assert_type: []string{"equal", "equal"},
-			delay:       []time.Duration{0, 0},
+			name:       "GETSET a key holding a set",
+			cmd:        []string{"SADD foo bar", "GETSET foo bar"},
+			expected:   []interface{}{int64(1), setErrorMsg},
+			assertType: []string{"equal", "equal"},
+			delay:      []time.Duration{0, 0},
 		},
 		{
-			name:        "LPUSH, LPOP, RPUSH, RPOP a key holding a set",
-			cmd:         []string{"SADD foo bar", "LPUSH foo bar", "LPOP foo", "RPUSH foo bar", "RPOP foo"},
-			expected:    []interface{}{int64(1), setErrorMsg, setErrorMsg, setErrorMsg, setErrorMsg},
-			assert_type: []string{"equal", "equal", "equal", "equal", "equal"},
-			delay:       []time.Duration{0, 0, 0, 0, 0},
+			name:       "LPUSH, LPOP, RPUSH, RPOP a key holding a set",
+			cmd:        []string{"SADD foo bar", "LPUSH foo bar", "LPOP foo", "RPUSH foo bar", "RPOP foo"},
+			expected:   []interface{}{int64(1), setErrorMsg, setErrorMsg, setErrorMsg, setErrorMsg},
+			assertType: []string{"equal", "equal", "equal", "equal", "equal"},
+			delay:      []time.Duration{0, 0, 0, 0, 0},
 		},
 	}
 
@@ -87,7 +87,7 @@ func TestErrorsForSetData(t *testing.T) {
 					time.Sleep(tc.delay[i])
 				}
 				res := FireCommand(conn, cmd)
-				if tc.assert_type[i] == "equal" {
+				if tc.assertType[i] == "equal" {
 					assert.Equal(t, res, tc.expected[i])
 				}
 			}

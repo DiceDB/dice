@@ -17,28 +17,23 @@ const (
 	Custom
 )
 
+// Global commands
 const (
-	// Global commands
 	CmdPing  = "PING"
 	CmdAbort = "ABORT"
 	CmdAuth  = "AUTH"
+)
 
-	// Single-shard commands.
+// Single-shard commands.
+const (
 	CmdSet    = "SET"
 	CmdGet    = "GET"
 	CmdGetSet = "GETSET"
 )
 
-// CommandsMeta holds metadata about a command in the command processing system.
-// It encapsulates the necessary information for executing and handling commands,
-// including their type, structure, and associated functions for processing and responding.
-type CommandsMeta struct {
-	CmdType // Represents the type of the command (Global, SingleShard, MultiShard, Custom)
-
-	isSimpleEnc bool // A flag indicating whether the command uses simple encoding or bulk encoding for responses.
-
-	// WorkerCommandHandler defines a function which don't go to shards, it returns response to clients from the worker level
-	// It takes a slice of strings representing command arguments and returns the encoded response.
+type CmdMeta struct {
+	CmdType
+	Cmd                  string
 	WorkerCommandHandler func([]string) []byte
 
 	// decomposeCommand is a function that takes a Redis command and breaks it down into smaller,
@@ -51,40 +46,35 @@ type CommandsMeta struct {
 	composeResponse func(responses ...eval.EvalResponse) interface{}
 }
 
-var WorkerCommandsMeta = map[string]CommandsMeta{
+var CommandsMeta = map[string]CmdMeta{
 	// Global commands.
 	CmdPing: {
 		CmdType:              Global,
 		WorkerCommandHandler: eval.RespPING,
 	},
 	CmdAbort: {
-		CmdType:     Custom,
-		isSimpleEnc: true,
+		CmdType: Custom,
 	},
 	CmdAuth: {
-		CmdType:     Custom,
-		isSimpleEnc: true,
+		CmdType: Custom,
 	},
 
 	// Single-shard commands.
 	CmdSet: {
-		CmdType:     SingleShard,
-		isSimpleEnc: true,
+		CmdType: SingleShard,
 	},
 	CmdGet: {
-		CmdType:     SingleShard,
-		isSimpleEnc: true,
+		CmdType: SingleShard,
 	},
 	CmdGetSet: {
-		CmdType:     SingleShard,
-		isSimpleEnc: true,
+		CmdType: SingleShard,
 	},
 }
 
 func init() {
 	l := logger.New(logger.Opts{WithTimestamp: true})
 	// Validate the metadata for each command
-	for c, meta := range WorkerCommandsMeta {
+	for c, meta := range CommandsMeta {
 		if err := validateCmdMeta(c, meta); err != nil {
 			l.Error("error validating worker command metadata %s: %v", c, err)
 		}
@@ -92,7 +82,7 @@ func init() {
 }
 
 // validateCmdMeta ensures that the metadata for each command is properly configured
-func validateCmdMeta(c string, meta CommandsMeta) error {
+func validateCmdMeta(c string, meta CmdMeta) error {
 	switch meta.CmdType {
 	case Global:
 		if meta.WorkerCommandHandler == nil {

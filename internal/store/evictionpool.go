@@ -11,8 +11,8 @@ type PoolItem struct {
 	lastAccessedAt uint32
 }
 
-// TODO: When last accessed at of object changes
-// update the poolItem corresponding to that
+// EvictionPool is a priority queue of PoolItem.
+// TODO: When last accessed at of object changes update the poolItem corresponding to that
 type EvictionPool struct {
 	pool   []*PoolItem
 	keyset map[string]*PoolItem
@@ -53,6 +53,7 @@ func (a ByCounterAndIdleTime) Less(i, j int) bool {
 	return counterI < counterJ
 }
 
+// Push adds a new item to the pool
 // TODO: Make the implementation efficient to not need repeated sorting
 func (pq *EvictionPool) Push(key string, lastAccessedAt uint32) {
 	_, ok := pq.keyset[key]
@@ -110,5 +111,5 @@ func NewEvictionPool(size int) *EvictionPool {
 	}
 }
 
-var ePoolSizeMax int = 16
-var EPool *EvictionPool = NewEvictionPool(0)
+var ePoolSizeMax = 16
+var EPool = NewEvictionPool(0)
