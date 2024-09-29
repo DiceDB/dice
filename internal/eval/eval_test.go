@@ -3241,35 +3241,35 @@ func testEvalTYPE(t *testing.T, store *dstore.Store) {
 		"TYPE : key does not exist": {
 			setup:  func() {},
 			input:  []string{"nonexistent_key"},
-			output: clientio.Encode("none", false),
+			output: []byte("+none\r\n"),
 		},
 		"TYPE : key exists and is of type String": {
 			setup: func() {
 				store.Put("string_key", store.NewObj("value", -1, object.ObjTypeString, object.ObjEncodingRaw))
 			},
 			input:  []string{"string_key"},
-			output: clientio.Encode("string", false),
+			output: []byte("+string\r\n"),
 		},
 		"TYPE : key exists and is of type List": {
 			setup: func() {
 				store.Put("list_key", store.NewObj([]byte("value"), -1, object.ObjTypeByteList, object.ObjEncodingRaw))
 			},
 			input:  []string{"list_key"},
-			output: clientio.Encode("list", false),
+			output: []byte("+list\r\n"),
 		},
 		"TYPE : key exists and is of type Set": {
 			setup: func() {
 				store.Put("set_key", store.NewObj([]byte("value"), -1, object.ObjTypeSet, object.ObjEncodingRaw))
 			},
 			input:  []string{"set_key"},
-			output: clientio.Encode("set", false),
+			output: []byte("+set\r\n"),
 		},
 		"TYPE : key exists and is of type Hash": {
 			setup: func() {
 				store.Put("hash_key", store.NewObj([]byte("value"), -1, object.ObjTypeHashMap, object.ObjEncodingRaw))
 			},
 			input:  []string{"hash_key"},
-			output: clientio.Encode("hash", false),
+			output: []byte("+hash\r\n"),
 		},
 	}
 	runEvalTests(t, tests, evalTYPE, store)
@@ -4716,7 +4716,7 @@ func BenchmarkEvalHINCRBYFLOAT(b *testing.B) {
 		{"key1", "field2", "1000000.1"},
 		{"key1", "field2", "-1000000.1"},
 		{"key2", "field1", "-10.1234"},
-		{"key3", "field1", "1.5"}, // testing with non-existing key
+		{"key3", "field1", "1.5"},  // testing with non-existing key
 		{"key2", "field2", "2.75"}, // testing with non-existing field in existing key
 	}
 
