@@ -230,7 +230,7 @@ func evalGET(args []string, store *dstore.Store) *EvalResponse {
 		// Value is stored as a bytearray, use type assertion
 		if val, ok := obj.Value.(*ByteArray); ok {
 			return &EvalResponse{
-				Result: val,
+				Result: string(val.data),
 				Error:  nil,
 			}
 		}
