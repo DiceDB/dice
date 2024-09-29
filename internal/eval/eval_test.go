@@ -4748,7 +4748,7 @@ func testEvalDUMP(t *testing.T, store *dstore.Store) {
         "key does not exist": {
             setup:  func() {},
             input:  []string{"NONEXISTENT_KEY"},
-            output: []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
+            output: []byte("-ERR nil\r\n"),
         },"dump string value": {
     		setup: func() {
         	key := "user"
@@ -4791,7 +4791,7 @@ func testEvalDUMP(t *testing.T, store *dstore.Store) {
                 store.SetExpiry(obj, exDurationMs)
             },
             input:  []string{"EXPIRED_KEY"},
-            output: []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
+            output: []byte("-ERR nil\r\n"),
         },
     }
 
