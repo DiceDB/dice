@@ -948,6 +948,18 @@ var (
 		Arity:    -4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hincrbyFloatCmdMeta = DiceCmdMeta{
+		Name: "HINCRBYFLOAT",
+		Info: `HINCRBYFLOAT increments the specified field of a hash stored at the key, 
+		and representing a floating point number, by the specified increment.
+		If the field does not exist, it is set to 0 before performing the operation.
+		If the field contains a value of wrong type or specified increment
+		is not parsable as floating point number, then an error occurs.
+		`,
+		Eval:     evalHINCRBYFLOAT,
+		Arity:    -4,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -1054,6 +1066,7 @@ func init() {
 	DiceCmds["HVALS"] = hValsCmdMeta
 	DiceCmds["ZADD"] = zaddCmdMeta
 	DiceCmds["ZRANGE"] = zrangeCmdMeta
+	DiceCmds["HINCRBYFLOAT"] = hincrbyFloatCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}
