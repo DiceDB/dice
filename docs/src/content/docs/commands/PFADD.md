@@ -27,9 +27,9 @@ When the `PFADD` command is executed, the following steps occur:
 1. `Key Existence Check`: DiceDB checks if the specified key exists.
    - If the key does not exist, a new HyperLogLog data structure is created.
    - If the key exists but is not a HyperLogLog, an error is returned.
-1. `Element Addition`: The specified elements are added to the HyperLogLog.
-1. `Register Update`: The internal registers of the HyperLogLog are updated based on the hash values of the added elements.
-1. `Cardinality Estimation`: The HyperLogLog uses the updated registers to maintain an estimate of the cardinality of the set.
+2. `Element Addition`: The specified elements are added to the HyperLogLog.
+3. `Register Update`: The internal registers of the HyperLogLog are updated based on the hash values of the added elements.
+4. `Cardinality Estimation`: The HyperLogLog uses the updated registers to maintain an estimate of the cardinality of the set.
 
 ## Error Handling
 

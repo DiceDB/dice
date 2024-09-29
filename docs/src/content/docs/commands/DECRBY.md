@@ -25,10 +25,10 @@ The command returns the value of the key after the decrement operation has been 
 When the `DECRBY` command is executed, the following steps occur:
 
 1. DiceDB checks if the key exists.
-1. If the key does not exist, DiceDB treats the key's value as 0 before performing the decrement operation.
-1. If the key exists but does not hold a string that can be represented as an integer, an error is returned.
-1. The value of the key is decremented by the specified decrement value.
-1. The new value of the key is returned.
+2. If the key does not exist, DiceDB treats the key's value as 0 before performing the decrement operation.
+3. If the key exists but does not hold a string that can be represented as an integer, an error is returned.
+4. The value of the key is decremented by the specified decrement value.
+5. The new value of the key is returned.
 
 ## Error Handling
 

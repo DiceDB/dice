@@ -29,8 +29,8 @@ The `GETEX` command returns the value of the specified key. If the key does not 
 When the `GETEX` command is executed, it performs the following actions:
 
 1. Retrieves the value of the specified key.
-1. Sets the expiration time for the key based on the provided option (`EX`, `PX`, `EXAT`, `PXAT`, or `PERSIST`).
-1. Returns the value of the key.
+2. Sets the expiration time for the key based on the provided option (`EX`, `PX`, `EXAT`, `PXAT`, or `PERSIST`).
+3. Returns the value of the key.
 
 If the key does not exist, the command will return `nil` and no expiration time will be set.
 
@@ -40,9 +40,9 @@ The `GETEX` command can raise errors in the following scenarios:
 
 1. `Wrong number of arguments`: If the command is not provided with the correct number of arguments, it will return an error.
    - Error message: `(error) ERR wrong number of arguments for 'getex' command`
-1. `Invalid expiration option`: If an invalid expiration option is provided, it will return an error.
+2. `Invalid expiration option`: If an invalid expiration option is provided, it will return an error.
    - Error message: `(error) ERR syntax error`
-1. `Invalid expiration time`: If the expiration time is not a valid integer or timestamp, it will return an error.
+3. `Invalid expiration time`: If the expiration time is not a valid integer or timestamp, it will return an error.
    - Error message: `(error) ERR value is not an integer or out of range`
 
 ## Example Usage

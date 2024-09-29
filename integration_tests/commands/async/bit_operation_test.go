@@ -324,7 +324,7 @@ func TestBitPos(t *testing.T) {
 		{
 			name:  "InvalidBitArgument",
 			inCmd: "BITPOS testkey 2",
-			out:   "ERR The bit argument must be 1 or 0",
+			out:   "ERR the bit argument must be 1 or 0",
 		},
 		{
 			name:  "NonIntegerStartParameter",

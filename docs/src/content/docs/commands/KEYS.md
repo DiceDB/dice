@@ -80,7 +80,7 @@ The `KEYS` command is straightforward and does not have many error conditions. H
 
    - `Error Message`: `(error) ERR wrong number of arguments for 'keys' command`
 
-1. `Memory Issues`: If the keyspace is extremely large, the `KEYS` command might consume a significant amount of memory, potentially leading to memory-related errors.
+2. `Memory Issues`: If the keyspace is extremely large, the `KEYS` command might consume a significant amount of memory, potentially leading to memory-related errors.
 
    - `Error Message`: This is more of a system-level issue and might not return a specific DiceDB error message but could lead to performance degradation or crashes.
 

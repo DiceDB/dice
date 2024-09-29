@@ -24,9 +24,9 @@ The `SMEMBERS` command returns an array of all the members in the set stored at 
 When the `SMEMBERS` command is executed:
 
 1. DiceDB checks if the key exists.
-1. If the key exists and is of type set, DiceDB retrieves all the members of the set.
-1. If the key does not exist, DiceDB returns an empty array.
-1. If the key exists but is not of type set, an error is returned.
+2. If the key exists and is of type set, DiceDB retrieves all the members of the set.
+3. If the key does not exist, DiceDB returns an empty array.
+4. If the key exists but is not of type set, an error is returned.
 
 ## Error Handling
 

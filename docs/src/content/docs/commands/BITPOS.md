@@ -35,11 +35,11 @@ The `BITPOS` command can raise errors in the following cases:
 
    - `Error Message`: `WRONGTYPE Operation against a key holding the wrong kind of value`
 
-1. `Invalid Bit Value`: If the bit value is not 0 or 1, an error is raised.
+2. `Invalid Bit Value`: If the bit value is not 0 or 1, an error is raised.
 
    - `Error Message`: `ERR bit is not an integer or out of range`
 
-1. `Invalid Range`: If the `start` or `end` parameters are not valid integers, an error is raised.
+3. `Invalid Range`: If the `start` or `end` parameters are not valid integers, an error is raised.
 
    - `Error Message`: `ERR value is not an integer or out of range`
 

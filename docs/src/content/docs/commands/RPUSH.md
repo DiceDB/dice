@@ -64,8 +64,8 @@ RPUSH mykey "value"
 ## Detailed Behaviour
 
 1. `List Creation`: If the specified key does not exist, DiceDB creates a new list and then inserts the values.
-1. `Appending Values`: The values are appended to the tail of the list in the order they are specified.
-1. `Atomicity`: The `RPUSH` operation is atomic. If multiple clients issue `RPUSH` commands concurrently, DiceDB ensures that the list remains consistent and the values are appended in the order the commands were received.
+2. `Appending Values`: The values are appended to the tail of the list in the order they are specified.
+3. `Atomicity`: The `RPUSH` operation is atomic. If multiple clients issue `RPUSH` commands concurrently, DiceDB ensures that the list remains consistent and the values are appended in the order the commands were received.
 
 ## Error Handling
 
@@ -81,7 +81,7 @@ RPUSH mykey "value"
      ```
      `Result`: `WRONGTYPE Operation against a key holding the wrong kind of value`
 
-1. `Invalid Syntax`: If the command is not used with the correct syntax, DiceDB returns a syntax error.
+2. `Invalid Syntax`: If the command is not used with the correct syntax, DiceDB returns a syntax error.
 
    - `Error Message`: `ERR wrong number of arguments for 'rpush' command`
    - `Example`:

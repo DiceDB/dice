@@ -25,8 +25,8 @@ The `GETSET` command returns the old value stored at the specified key before th
 When the `GETSET` command is executed, the following sequence of actions occurs:
 
 1. The current value of the specified key is retrieved.
-1. The specified key is updated with the new value.
-1. The old value is returned to the client.
+2. The specified key is updated with the new value.
+3. The old value is returned to the client.
 
 This operation is atomic, meaning that no other commands can be executed on the key between the get and set operations.
 
@@ -36,7 +36,7 @@ The `GETSET` command can raise errors in the following scenarios:
 
 1. `Wrong Type Error`: If the key exists but is not a string, DiceDB will return an error.
    - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
-1. `Syntax Error`: If the command is not provided with exactly two arguments (key and value), DiceDB will return a syntax error.
+2. `Syntax Error`: If the command is not provided with exactly two arguments (key and value), DiceDB will return a syntax error.
    - Error Message: `(error) ERR wrong number of arguments for 'getset' command`
 
 ## Example Usage

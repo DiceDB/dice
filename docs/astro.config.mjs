@@ -29,11 +29,15 @@ export default defineConfig({
           autogenerate: { directory: "commands" },
         },
         {
+          label: "Connection Protocols",
+          autogenerate: { directory: "protocols" },
+        },
+        {
           label: "Metrics",
           items: [
             {
               label: "Memtier Benchmark",
-              link: "https://dicedb-docs.netlify.app/metrics/memtier.html",
+              link: "https://dicedb.io/metrics/memtier.html",
               attrs: { target: "_blank" },
             },
           ],
