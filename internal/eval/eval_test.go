@@ -100,6 +100,7 @@ func TestEval(t *testing.T) {
 	testEvalZRANGE(t, store)
 	testEvalHVALS(t, store)
 	testEvalHINCRBYFLOAT(t, store)
+	testEvalHKEYS(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -2232,6 +2233,53 @@ func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalHSTRLEN, store)
+}
+
+func testEvalHKEYS(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"wrong number of args passed": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'hkeys' command\r\n"),
+		},
+		"more than one key passed": {
+			setup:  func() {},
+			input:  []string{"KEY1", "KEY2"},
+			output: []byte("-ERR wrong number of arguments for 'hkeys' command\r\n"),
+		},
+		"key doesn't exist": {
+			setup:  func() {},
+			input:  []string{"KEY"},
+			output: clientio.Encode([]string{}, false),
+		},
+		"key exists but not a hash": {
+			setup: func() {
+				evalSET([]string{"string_key", "string_value"}, store)
+			},
+			input:  []string{"string_key"},
+			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+		},
+		"key exists and is a hash": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field1 := "mock_field_name"
+				newMap := make(HashMap)
+				newMap[field1] = "HelloWorld"
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input:  []string{"KEY_MOCK"},
+			output: clientio.Encode([]string{"mock_field_name"}, false),
+		},
+	}
+
+	runEvalTests(t, tests, evalHKEYS, store)
 }
 
 func testEvalHDEL(t *testing.T, store *dstore.Store) {
@@ -4716,7 +4764,7 @@ func BenchmarkEvalHINCRBYFLOAT(b *testing.B) {
 		{"key1", "field2", "1000000.1"},
 		{"key1", "field2", "-1000000.1"},
 		{"key2", "field1", "-10.1234"},
-		{"key3", "field1", "1.5"}, // testing with non-existing key
+		{"key3", "field1", "1.5"},  // testing with non-existing key
 		{"key2", "field2", "2.75"}, // testing with non-existing field in existing key
 	}
 

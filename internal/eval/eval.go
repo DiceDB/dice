@@ -3174,7 +3174,7 @@ func evalHDEL(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(count, false)
 }
 
-// evalHKEYS returns all the values in the hash stored at key.
+// evalHVALS returns all the values in the hash stored at key.
 func evalHVALS(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("HVALS")
@@ -3234,6 +3234,36 @@ func evalHSTRLEN(args []string, store *dstore.Store) []byte {
 		return clientio.Encode(len(*val), false)
 	}
 	return clientio.Encode(0, false)
+}
+
+// evalHKEYS returns all field names in the hash stored at key.
+//
+// This command returns empty array, if the specified key doesn't exist
+//
+// Usage: HKEYS key
+func evalHKEYS(args []string, store *dstore.Store) []byte {
+	if len(args) != 1 {
+		return diceerrors.NewErrArity("HKEYS")
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	var hashMap HashMap
+
+	if obj != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+		}
+		hashMap = obj.Value.(HashMap)
+	} else {
+		return clientio.Encode([]interface{}{}, false)
+	}
+	keys := make([]interface{}, 0, len(hashMap))
+	for key := range hashMap {
+		keys = append(keys, key)
+	}
+	return clientio.Encode(keys, false)
 }
 
 func evalObjectIdleTime(key string, store *dstore.Store) []byte {

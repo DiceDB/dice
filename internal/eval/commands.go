@@ -660,6 +660,13 @@ var (
 		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hkeysCmdMeta = DiceCmdMeta{
+		Name:     "HKEYS",
+		Info:     `Returns all field names in the hash stored at key.`,
+		Eval:     evalHKEYS,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	hdelCmdMeta = DiceCmdMeta{
 		Name: "HDEL",
 		Info: `HDEL removes the specified fields from the hash stored at key.
@@ -1079,6 +1086,7 @@ func init() {
 	DiceCmds["ZADD"] = zaddCmdMeta
 	DiceCmds["ZRANGE"] = zrangeCmdMeta
 	DiceCmds["HINCRBYFLOAT"] = hincrbyFloatCmdMeta
+	DiceCmds["HKEYS"] = hkeysCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}
