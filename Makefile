@@ -1,7 +1,7 @@
 THREADS ?= 4 #number of threads
 CLIENTS ?= 50 #number of clients per thread
 REQUESTS ?= 10000 #number of requests per client
-DATA_SIZE ?= 32 #Object data size 
+DATA_SIZE ?= 32 #Object data size
 KEY_PATTERN ?= R:R #Set:Get pattern
 RATIO ?= 1:10 #Set:Get ratio
 PORT ?= 7379 #Port for dicedb

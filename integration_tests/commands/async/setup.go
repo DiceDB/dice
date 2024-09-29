@@ -22,8 +22,9 @@ import (
 )
 
 type TestServerOptions struct {
-	Port   int
-	Logger *slog.Logger
+	Port       int
+	Logger     *slog.Logger
+	MaxClients int
 }
 
 //nolint:unused
@@ -101,10 +102,15 @@ func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *clientio.RESPParser
 func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOptions) {
 	config.DiceConfig.Network.IOBufferLength = 16
 	config.DiceConfig.Server.WriteAOFOnCleanup = false
+
 	if opt.Port != 0 {
 		config.DiceConfig.Server.Port = opt.Port
 	} else {
 		config.DiceConfig.Server.Port = 8739
+	}
+
+	if opt.MaxClients != 0 {
+		config.DiceConfig.Server.MaxClients = opt.MaxClients
 	}
 
 	const totalRetries = 100
