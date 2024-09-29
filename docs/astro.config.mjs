@@ -29,6 +29,10 @@ export default defineConfig({
           autogenerate: { directory: "commands" },
         },
         {
+          label: "Connection Protocols",
+          autogenerate: { directory: "protocols" },
+        },
+        {
           label: "Metrics",
           items: [
             {
