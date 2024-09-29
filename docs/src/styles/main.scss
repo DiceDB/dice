@@ -32,6 +32,14 @@ $dimensions: 16 24 32 48 64 96 128 256 320 512;
 $button-border-color: #111;
 $button-hover-border-color: $link;
 
+pre {
+    background-color: #111 !important;
+}
+
+figcaption.header {
+    display: none !important;
+}
+
 .hnavbar {
   border: 0px solid #aaa;
   padding: 0.5em;
