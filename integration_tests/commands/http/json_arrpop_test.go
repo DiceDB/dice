@@ -88,6 +88,34 @@ func TestJSONARRPOP(t *testing.T) {
 			},
 			expected: []interface{}{"OK", []interface{}{float64(4)}, `{"a":2,"b":[0,1,2,[3,5]]}`},
 		},
+		{
+			name: "non-array path",
+			commands: []HTTPCommand{
+				{
+					Command: "JSON.SET",
+					Body:    map[string]interface{}{"key": "k", "path": "$", "json": nestedArray},
+				},
+				{
+					Command: "JSON.ARRPOP",
+					Body:    map[string]interface{}{"key": "k", "path": "$.a", "index": "1"},
+				},
+			},
+			expected: []interface{}{"OK", []interface{}{"(nil)"}},
+		},
+		{
+			name: "invalid json path",
+			commands: []HTTPCommand{
+				{
+					Command: "JSON.SET",
+					Body:    map[string]interface{}{"key": "k", "path": "$", "json": arrayAtRoot},
+				},
+				{
+					Command: "JSON.ARRPOP",
+					Body:    map[string]interface{}{"key": "k", "path": "$..invalid*path", "index": "1"},
+				},
+			},
+			expected: []interface{}{"OK", "ERR invalid JSONPath"},
+		},
 	}
 
 	for _, tc := range testCases {

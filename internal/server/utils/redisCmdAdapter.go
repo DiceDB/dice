@@ -30,6 +30,7 @@ const (
 	Member      = "member"
 	Members     = "members"
 	Index       = "index"
+	Json        = "json"
 )
 
 func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
@@ -72,6 +73,8 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 				Keys,
 				Field,
 				Path,
+				Json,
+				Index,
 				Value,
 				Values,
 				Seconds,
@@ -82,7 +85,6 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 				Offset,
 				Member,
 				Members,
-				Index,
 			}
 			for _, key := range priorityKeys {
 				if val, exists := jsonBody[key]; exists {
@@ -90,6 +92,15 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 						for _, v := range val.([]interface{}) {
 							args = append(args, fmt.Sprintf("%v", v))
 						}
+						delete(jsonBody, key)
+						continue
+					}
+					if key == Json {
+						jsonValue, err := json.Marshal(val)
+						if err != nil {
+							return nil, err
+						}
+						args = append(args, string(jsonValue))
 						delete(jsonBody, key)
 						continue
 					}
