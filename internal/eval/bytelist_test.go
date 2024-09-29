@@ -84,20 +84,20 @@ func TestByteListDeepCopy(t *testing.T) {
 	original.head = node1
 	original.tail = node2
 
-	copy := original.DeepCopy()
+	deepCopy := original.DeepCopy()
 
-	// Verify that the copy has the same bufLen and size
-	assert.Equal(t, copy.bufLen, original.bufLen, "bufLen should be the same")
-	assert.Equal(t, copy.size, original.size, "size should be the same")
+	// Verify that the deepCopy has the same bufLen and size
+	assert.Equal(t, deepCopy.bufLen, original.bufLen, "bufLen should be the same")
+	assert.Equal(t, deepCopy.size, original.size, "size should be the same")
 
 	// Verify that the head node data is correctly copied
-	assert.Equal(t, copy.head.buf[0], original.head.buf[0], "head node buffer should be the same")
+	assert.Equal(t, deepCopy.head.buf[0], original.head.buf[0], "head node buffer should be the same")
 
-	// Verify that changes to the copy do not affect the original
-	copy.head.buf[0] = 9
-	assert.Assert(t, original.head.buf[0] != copy.head.buf[0], "Original and copy head buffer should not be linked")
+	// Verify that changes to the deepCopy do not affect the original
+	deepCopy.head.buf[0] = 9
+	assert.Assert(t, original.head.buf[0] != deepCopy.head.buf[0], "Original and deepCopy head buffer should not be linked")
 
-	// Verify that changes to the original do not affect the copy
+	// Verify that changes to the original do not affect the deepCopy
 	original.head.buf[1] = 8
-	assert.Assert(t, original.head.buf[1] != copy.head.buf[1], "Original and copy head buffer should not be linked")
+	assert.Assert(t, original.head.buf[1] != deepCopy.head.buf[1], "Original and deepCopy head buffer should not be linked")
 }

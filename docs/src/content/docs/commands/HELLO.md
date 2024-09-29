@@ -36,9 +36,9 @@ The `HELLO` command returns a map with the following fields:
 When the `HELLO` command is issued:
 
 1. The server will switch to the specified protocol version.
-1. If authentication details are provided, the server will attempt to authenticate the client.
-1. If a client name is provided, the server will set the client name.
-1. The server will return a map containing details about the server and the connection.
+2. If authentication details are provided, the server will attempt to authenticate the client.
+3. If a client name is provided, the server will set the client name.
+4. The server will return a map containing details about the server and the connection.
 
 ## Error Handling
 

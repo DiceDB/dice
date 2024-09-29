@@ -56,7 +56,7 @@ OK
 `Explanation`:
 
 1. The `SET` command initializes the key `mycounter` with the value `10`.
-1. The `DECR` command decrements the value of `mycounter` by 1, resulting in `9`.
+2. The `DECR` command decrements the value of `mycounter` by 1, resulting in `9`.
 
 
 ### Key Does Not Exist
@@ -69,7 +69,7 @@ OK
 `Explanation`:
 
 1. The key `newcounter` does not exist.
-1. DiceDB sets `newcounter` to `0` and then decrements it by 1, resulting in `-1`.
+2. DiceDB sets `newcounter` to `0` and then decrements it by 1, resulting in `-1`.
 
 
 ### Error Scenario: Non-Integer Value
@@ -84,7 +84,7 @@ OK
 `Explanation`:
 
 1. The `SET` command initializes the key `mystring` with the value `"hello"`.
-1. The `DECR` command attempts to decrement the value of `mystring`, but since it is not an integer, an error is raised.
+2. The `DECR` command attempts to decrement the value of `mystring`, but since it is not an integer, an error is raised.
 
 
 ### Error Scenario: Out of Range

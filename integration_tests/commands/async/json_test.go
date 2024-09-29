@@ -864,44 +864,44 @@ func TestJsonNummultby(t *testing.T) {
 	testCases := []struct {
 		name        string
 		commands    []string
-		expected    []interface{}
-		assert_type []string
+		expected   []interface{}
+		assertType []string
 	}{
 		{
-			name:        "Invalid number of arguments",
-			commands:    []string{"JSON.NUMMULTBY ", "JSON.NUMMULTBY docu", "JSON.NUMMULTBY docu $"},
-			expected:    []interface{}{invalidArgMessage, invalidArgMessage, invalidArgMessage},
-			assert_type: []string{"equal", "equal", "equal"},
+			name:       "Invalid number of arguments",
+			commands:   []string{"JSON.NUMMULTBY ", "JSON.NUMMULTBY docu", "JSON.NUMMULTBY docu $"},
+			expected:   []interface{}{invalidArgMessage, invalidArgMessage, invalidArgMessage},
+			assertType: []string{"equal", "equal", "equal"},
 		},
 		{
-			name:        "MultBy at non-existent key",
-			commands:    []string{"JSON.NUMMULTBY docu $ 1"},
-			expected:    []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
-			assert_type: []string{"equal"},
+			name:       "MultBy at non-existent key",
+			commands:   []string{"JSON.NUMMULTBY docu $ 1"},
+			expected:   []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
+			assertType: []string{"equal"},
 		},
 		{
-			name:        "Invalid value of multiplier on non-existent key",
-			commands:    []string{"JSON.SET docu $ " + a, "JSON.NUMMULTBY docu $.fe x"},
-			expected:    []interface{}{"OK", "[]"},
-			assert_type: []string{"equal", "equal"},
+			name:       "Invalid value of multiplier on non-existent key",
+			commands:   []string{"JSON.SET docu $ " + a, "JSON.NUMMULTBY docu $.fe x"},
+			expected:   []interface{}{"OK", "[]"},
+			assertType: []string{"equal", "equal"},
 		},
 		{
-			name:        "Invalid value of multiplier on existent key",
-			commands:    []string{"JSON.SET docu $ " + a, "JSON.NUMMULTBY docu $.a x"},
-			expected:    []interface{}{"OK", "ERR expected value at line 1 column 1"},
-			assert_type: []string{"equal", "equal"},
+			name:       "Invalid value of multiplier on existent key",
+			commands:   []string{"JSON.SET docu $ " + a, "JSON.NUMMULTBY docu $.a x"},
+			expected:   []interface{}{"OK", "ERR expected value at line 1 column 1"},
+			assertType: []string{"equal", "equal"},
 		},
 		{
-			name:        "MultBy at recursive path",
-			commands:    []string{"JSON.SET docu $ " + a, "JSON.NUMMULTBY docu $..a 2"},
-			expected:    []interface{}{"OK", "[4,10,null,null]"},
-			assert_type: []string{"equal", "deep_equal"},
+			name:       "MultBy at recursive path",
+			commands:   []string{"JSON.SET docu $ " + a, "JSON.NUMMULTBY docu $..a 2"},
+			expected:   []interface{}{"OK", "[4,10,null,null]"},
+			assertType: []string{"equal", "deep_equal"},
 		},
 		{
-			name:        "MultBy at root path",
-			commands:    []string{"JSON.SET docu $ " + a, "JSON.NUMMULTBY docu $.a 2"},
-			expected:    []interface{}{"OK", "[null]"},
-			assert_type: []string{"equal", "deep_equal"},
+			name:       "MultBy at root path",
+			commands:   []string{"JSON.SET docu $ " + a, "JSON.NUMMULTBY docu $.a 2"},
+			expected:   []interface{}{"OK", "[null]"},
+			assertType: []string{"equal", "deep_equal"},
 		},
 	}
 
@@ -912,9 +912,9 @@ func TestJsonNummultby(t *testing.T) {
 				cmd := tcase.commands[i]
 				out := tcase.expected[i]
 				result := FireCommand(conn, cmd)
-				if tcase.assert_type[i] == "equal" {
+				if tcase.assertType[i] == "equal" {
 					assert.Equal(t, out, result)
-				} else if tcase.assert_type[i] == "deep_equal" {
+				} else if tcase.assertType[i] == "deep_equal" {
 					assert.Assert(t, arraysArePermutations(deStringify(out.(string)), deStringify(result.(string))))
 				}
 			}
@@ -1024,57 +1024,57 @@ func TestJSONNumIncrBy(t *testing.T) {
 		name        string
 		setupData   string
 		commands    []string
-		expected    []interface{}
-		assert_type []string
-		cleanUp     []string
+		expected   []interface{}
+		assertType []string
+		cleanUp    []string
 	}{
 		{
-			name:        "Invalid number of arguments",
-			setupData:   "",
-			commands:    []string{"JSON.NUMINCRBY ", "JSON.NUMINCRBY foo", "JSON.NUMINCRBY foo $"},
-			expected:    []interface{}{invalidArgMessage, invalidArgMessage, invalidArgMessage},
-			assert_type: []string{"equal", "equal", "equal"},
-			cleanUp:     []string{},
+			name:       "Invalid number of arguments",
+			setupData:  "",
+			commands:   []string{"JSON.NUMINCRBY ", "JSON.NUMINCRBY foo", "JSON.NUMINCRBY foo $"},
+			expected:   []interface{}{invalidArgMessage, invalidArgMessage, invalidArgMessage},
+			assertType: []string{"equal", "equal", "equal"},
+			cleanUp:    []string{},
 		},
 		{
-			name:        "Non-existant key",
-			setupData:   "",
-			commands:    []string{"JSON.NUMINCRBY foo $ 1"},
-			expected:    []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
-			assert_type: []string{"equal"},
-			cleanUp:     []string{},
+			name:       "Non-existant key",
+			setupData:  "",
+			commands:   []string{"JSON.NUMINCRBY foo $ 1"},
+			expected:   []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
+			assertType: []string{"equal"},
+			cleanUp:    []string{},
 		},
 		{
-			name:        "Invalid value of increment",
-			setupData:   "JSON.SET foo $ 1",
-			commands:    []string{"JSON.GET foo $", "JSON.NUMINCRBY foo $ @", "JSON.NUMINCRBY foo $ 122@"},
-			expected:    []interface{}{"1", "ERR expected value at line 1 column 1", "ERR trailing characters at line 1 column 4"},
-			assert_type: []string{"equal", "equal", "equal"},
-			cleanUp:     []string{"DEL foo"},
+			name:       "Invalid value of increment",
+			setupData:  "JSON.SET foo $ 1",
+			commands:   []string{"JSON.GET foo $", "JSON.NUMINCRBY foo $ @", "JSON.NUMINCRBY foo $ 122@"},
+			expected:   []interface{}{"1", "ERR expected value at line 1 column 1", "ERR trailing characters at line 1 column 4"},
+			assertType: []string{"equal", "equal", "equal"},
+			cleanUp:    []string{"DEL foo"},
 		},
 		{
-			name:        "incrby at non root path",
-			setupData:   fmt.Sprintf("JSON.SET %s $ %s", "foo", `{"a":"b","b":[{"a":2.2},{"a":5},{"a":"c"}]}`),
-			commands:    []string{"JSON.NUMINCRBY foo $..a 2", "JSON.NUMINCRBY foo $.a 2", "JSON.GET foo", "JSON.NUMINCRBY foo $..a -2", "JSON.GET foo"},
-			expected:    []interface{}{"[null,4.2,7,null]", "[null]", "{\"a\":\"b\",\"b\":[{\"a\":4.2},{\"a\":7},{\"a\":\"c\"}]}", "[null,2.2,5,null]", "{\"a\":\"b\",\"b\":[{\"a\":2.2},{\"a\":5},{\"a\":\"c\"}]}"},
-			assert_type: []string{"perm_equal", "perm_equal", "json_equal", "perm_equal", "json_equal"},
-			cleanUp:     []string{"DEL foo"},
+			name:       "incrby at non root path",
+			setupData:  fmt.Sprintf("JSON.SET %s $ %s", "foo", `{"a":"b","b":[{"a":2.2},{"a":5},{"a":"c"}]}`),
+			commands:   []string{"JSON.NUMINCRBY foo $..a 2", "JSON.NUMINCRBY foo $.a 2", "JSON.GET foo", "JSON.NUMINCRBY foo $..a -2", "JSON.GET foo"},
+			expected:   []interface{}{"[null,4.2,7,null]", "[null]", "{\"a\":\"b\",\"b\":[{\"a\":4.2},{\"a\":7},{\"a\":\"c\"}]}", "[null,2.2,5,null]", "{\"a\":\"b\",\"b\":[{\"a\":2.2},{\"a\":5},{\"a\":\"c\"}]}"},
+			assertType: []string{"perm_equal", "perm_equal", "json_equal", "perm_equal", "json_equal"},
+			cleanUp:    []string{"DEL foo"},
 		},
 		{
-			name:        "incrby at root path",
-			setupData:   "JSON.SET foo $ 1",
-			commands:    []string{"JSON.NUMINCRBY foo $ 1", "JSON.GET foo $", "JSON.NUMINCRBY foo $ -1", "JSON.GET foo $"},
-			expected:    []interface{}{"[2]", "2", "[1]", "1"},
-			assert_type: []string{"equal", "equal", "equal", "equal"},
-			cleanUp:     []string{"DEL foo"},
+			name:       "incrby at root path",
+			setupData:  "JSON.SET foo $ 1",
+			commands:   []string{"JSON.NUMINCRBY foo $ 1", "JSON.GET foo $", "JSON.NUMINCRBY foo $ -1", "JSON.GET foo $"},
+			expected:   []interface{}{"[2]", "2", "[1]", "1"},
+			assertType: []string{"equal", "equal", "equal", "equal"},
+			cleanUp:    []string{"DEL foo"},
 		},
 		{
-			name:        "incrby at root path",
-			setupData:   "JSON.SET foo $ 1",
-			commands:    []string{"expire foo 10", "JSON.NUMINCRBY foo $ 1", "ttl foo", "JSON.GET foo $", "JSON.NUMINCRBY foo $ -1", "JSON.GET foo $"},
-			expected:    []interface{}{int64(1), "[2]", int64(10), "2", "[1]", "1"},
-			assert_type: []string{"equal", "equal", "range", "equal", "equal", "equal"},
-			cleanUp:     []string{"DEL foo"},
+			name:       "incrby at root path",
+			setupData:  "JSON.SET foo $ 1",
+			commands:   []string{"expire foo 10", "JSON.NUMINCRBY foo $ 1", "ttl foo", "JSON.GET foo $", "JSON.NUMINCRBY foo $ -1", "JSON.GET foo $"},
+			expected:   []interface{}{int64(1), "[2]", int64(10), "2", "[1]", "1"},
+			assertType: []string{"equal", "equal", "range", "equal", "equal", "equal"},
+			cleanUp:    []string{"DEL foo"},
 		},
 	}
 
@@ -1088,7 +1088,7 @@ func TestJSONNumIncrBy(t *testing.T) {
 				cmd := tc.commands[i]
 				out := tc.expected[i]
 				result := FireCommand(conn, cmd)
-				switch tc.assert_type[i] {
+				switch tc.assertType[i] {
 				case "equal":
 					assert.Equal(t, out, result)
 				case "perm_equal":

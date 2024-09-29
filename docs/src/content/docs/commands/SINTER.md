@@ -18,8 +18,8 @@ The `SINTER` command in DiceDB is used to compute the intersection of multiple s
 When the `SINTER` command is executed, DiceDB performs the following steps:
 
 1. `Fetch Sets`: It retrieves the sets associated with the provided keys.
-1. `Intersection Calculation`: It computes the intersection of these sets.
-1. `Return Result`: It returns the members that are common to all the sets.
+2. `Intersection Calculation`: It computes the intersection of these sets.
+3. `Return Result`: It returns the members that are common to all the sets.
 
 If any of the specified keys do not exist, they are treated as empty sets. The intersection of any set with an empty set is always an empty set.
 

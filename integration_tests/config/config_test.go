@@ -30,7 +30,7 @@ func TestSetupConfig_DefaultConfig(t *testing.T) {
 	// Simulate no flags being set (default config scenario)
 	config.ResetConfig()
 	config.CustomConfigFilePath = ""
-	config.ConfigFileLocation = filepath.Join(config.DefaultConfigFilePath, config.DefaultConfigName)
+	config.FileLocation = filepath.Join(config.DefaultConfigFilePath, config.DefaultConfigName)
 
 	// Verify that the configuration was loaded from the default values
 	if config.DiceConfig.Server.Addr != config.DefaultHost {
@@ -41,7 +41,7 @@ func TestSetupConfig_DefaultConfig(t *testing.T) {
 	}
 }
 
-// scenario 3: Config file is present but not well structured (Malformed)
+// scenario 3: Config file is present but not well-structured (Malformed)
 func TestSetupConfig_InvalidConfigFile(t *testing.T) {
 	config.DiceConfig = nil
 	tempDir := t.TempDir()
@@ -58,7 +58,7 @@ func TestSetupConfig_InvalidConfigFile(t *testing.T) {
 
 	// Simulate the flag: -c=<configfile_path>
 	config.CustomConfigFilePath = ""
-	config.ConfigFileLocation = configFilePath
+	config.FileLocation = configFilePath
 
 	config.SetupConfig()
 
@@ -85,7 +85,7 @@ func TestSetupConfig_PartialConfigFile(t *testing.T) {
 
 	// Simulate the flag: -c=<configfile_path>
 	config.CustomConfigFilePath = ""
-	config.ConfigFileLocation = configFilePath
+	config.FileLocation = configFilePath
 
 	config.SetupConfig()
 
@@ -116,7 +116,7 @@ func TestSetupConfig_LoadFromFile(t *testing.T) {
 
 	// Simulate the flag: -c=<configfile_path>
 	config.CustomConfigFilePath = ""
-	config.ConfigFileLocation = configFilePath
+	config.FileLocation = configFilePath
 
 	config.SetupConfig()
 

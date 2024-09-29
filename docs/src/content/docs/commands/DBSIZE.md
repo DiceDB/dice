@@ -28,11 +28,11 @@ The `DBSIZE` command is straightforward and does not typically result in errors 
 
    - `Error Message:` `ERR Connection lost`
 
-1. `Authentication Issues:` If the DiceDB server requires authentication and the client has not authenticated, an error will be raised.
+2. `Authentication Issues:` If the DiceDB server requires authentication and the client has not authenticated, an error will be raised.
 
    - `Error Message:` `NOAUTH Authentication required`
 
-1. `Permission Issues:` If the client does not have the necessary permissions to execute the command, an error will be raised.
+3. `Permission Issues:` If the client does not have the necessary permissions to execute the command, an error will be raised.
 
    - `Error Message:` `NOPERM this user has no permissions to run the 'dbsize' command`
 

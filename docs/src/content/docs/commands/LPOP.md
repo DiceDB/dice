@@ -25,9 +25,9 @@ LPOP key
 When the `LPOP` command is executed:
 
 1. If the key exists and is associated with a list, the first element of the list is removed and returned.
-1. If the key does not exist, the command returns `nil`.
-1. If the key exists but is not associated with a list, an error is returned.
-1. If the list is empty, the command returns `nil`.
+2. If the key does not exist, the command returns `nil`.
+3. If the key exists but is not associated with a list, an error is returned.
+4. If the list is empty, the command returns `nil`.
 
 ## Error Handling
 

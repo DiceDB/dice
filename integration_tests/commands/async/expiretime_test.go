@@ -28,7 +28,7 @@ func TestExpiretime(t *testing.T) {
 				"EXPIREAT test_key " + strconv.FormatInt(futureUnixTimestamp, 10),
 				"EXPIRETIME test_key",
 			},
-			expected: []interface{}{int64(1), int64(futureUnixTimestamp)},
+			expected: []interface{}{int64(1), futureUnixTimestamp},
 			delay:    []time.Duration{0, 0},
 		},
 		{
