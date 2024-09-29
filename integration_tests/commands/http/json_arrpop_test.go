@@ -15,6 +15,12 @@ func TestJSONARRPOP(t *testing.T) {
 	nestedArray := map[string]interface{}{"a": 2, "b": []interface{}{0, 1, 2, 3}}
 	arrayWithinArray := map[string]interface{}{"a": 2, "b": []interface{}{0, 1, 2, []interface{}{3, 4, 5}}}
 
+	// Deleting the used keys
+	exec.FireCommand(HTTPCommand{
+		Command: "DEL",
+		Body:    map[string]interface{}{"key": "k"},
+	})
+
 	testCases := []TestCase{
 		{
 			name: "update array at root path",
