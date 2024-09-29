@@ -6,13 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
-
-	"log/slog"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/auth"
@@ -28,7 +27,6 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
-var ErrAborted = errors.New("server received ABORT command")
 var ErrInvalidIPAddress = errors.New("invalid IP address")
 
 type AsyncServer struct {
@@ -106,7 +104,7 @@ func (s *AsyncServer) FindPortAndBind() (socketErr error) {
 		return err
 	}
 	s.logger.Info(
-		"DiceDB is running",
+		"DiceDB server is running",
 		slog.String("version", "0.0.4"),
 		slog.Int("port", config.DiceConfig.Server.Port),
 	)
@@ -220,10 +218,14 @@ func (s *AsyncServer) eventLoop(ctx context.Context) error {
 				if event.Fd == s.serverFD {
 					if err := s.acceptConnection(); err != nil {
 						s.logger.Warn(err.Error())
+						// Close the event FD on error
+						if closeErr := syscall.Close(event.Fd); closeErr != nil {
+							s.logger.Error("Failed to close event FD:", slog.Any("error", closeErr))
+						}
 					}
 				} else {
 					if err := s.handleClientEvent(event); err != nil {
-						if errors.Is(err, ErrAborted) {
+						if errors.Is(err, diceerrors.ErrAborted) {
 							s.logger.Debug("Received abort command, initiating graceful shutdown")
 							return err
 						} else if !errors.Is(err, syscall.ECONNRESET) && !errors.Is(err, net.ErrClosed) {
@@ -238,6 +240,10 @@ func (s *AsyncServer) eventLoop(ctx context.Context) error {
 
 // acceptConnection accepts a new client connection and subscribes to read events on the connection.
 func (s *AsyncServer) acceptConnection() error {
+	if len(s.connectedClients) > s.maxClients {
+		return errors.New("connection refused. Reached the max-connection limit")
+	}
+
 	fd, _, err := syscall.Accept(s.serverFD)
 	if err != nil {
 		return err
@@ -272,52 +278,30 @@ func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
 
 	s.EvalAndRespond(commands, client)
 	if hasAbort {
-		return ErrAborted
+		return diceerrors.ErrAborted
 	}
 
 	return nil
 }
 
-// executeCommandToBuffer handles the execution of a Redis command and writes the result into a buffer.
-// It first checks if the command supports multisharding or is a single-shard command.
-// If necessary, it breaks down the command into multiple parts and scatters them to the appropriate shards.
-// Finally, it gathers responses from the shards and writes the result to the buffer.
 func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.RedisCmd, buf *bytes.Buffer, c *comm.Client) {
-	// Break down the single command into multiple commands if multisharding is supported.
-	// The length of commandBreakup helps determine how many shards to wait for responses.
-	commandBreakup := []cmd.RedisCmd{}
-
-	// Retrieve metadata for the command to determine if multisharding is supported.
-	val, ok := WorkerCmdsMeta[redisCmd.Cmd]
-	if !ok {
-		// If no metadata exists, treat it as a single command.
-		commandBreakup = append(commandBreakup, *redisCmd)
-	} else {
-		// Depending on the command type, decide how to handle it.
-		switch val.CmdType {
-		case Global:
-			// If it's a global command, process it immediately without involving any shards.
-			buf.Write(val.RespNoShards(redisCmd.Args))
-			return
-
-		case SingleShard, Custom:
-			// For single-shard or custom commands, process them without breaking up.
-			commandBreakup = append(commandBreakup, *redisCmd)
-
-		case Multishard:
-			// If the command supports multisharding, break it down into multiple commands.
-			commandBreakup = s.cmdsBreakup(redisCmd, c)
-		}
+	s.shardManager.GetShard(0).ReqChan <- &ops.StoreOp{
+		Cmd:      redisCmd,
+		WorkerID: "server",
+		ShardID:  0,
+		Client:   c,
 	}
 
-	// Scatter the broken-down commands to the appropriate shards.
-	s.scatter(commandBreakup, c)
+	resp := <-s.ioChan
+	if resp.EvalResponse.Error != nil {
+		buf.WriteString(resp.EvalResponse.Error.Error())
+		return
+	}
 
-	// Gather the responses from the shards and write them to the buffer.
-	s.gather(redisCmd, buf, len(commandBreakup), val.CmdType)
+	buf.Write(resp.EvalResponse.Result.([]byte))
 }
 
-func readCommands(c io.ReadWriter) (cmd.RedisCmds, bool, error) {
+func readCommands(c io.ReadWriter) (*cmd.RedisCmds, bool, error) {
 	var hasABORT = false
 	rp := clientio.NewRESPParser(c)
 	values, err := rp.DecodeMultiple()
@@ -351,7 +335,11 @@ func readCommands(c io.ReadWriter) (cmd.RedisCmds, bool, error) {
 			hasABORT = true
 		}
 	}
-	return cmds, hasABORT, nil
+
+	rCmds := &cmd.RedisCmds{
+		Cmds: cmds,
+	}
+	return rCmds, hasABORT, nil
 }
 
 func toArrayString(ai []interface{}) ([]string, error) {
@@ -366,11 +354,11 @@ func toArrayString(ai []interface{}) ([]string, error) {
 	return as, nil
 }
 
-func (s *AsyncServer) EvalAndRespond(cmds cmd.RedisCmds, c *comm.Client) {
+func (s *AsyncServer) EvalAndRespond(cmds *cmd.RedisCmds, c *comm.Client) {
 	var resp []byte
 	buf := bytes.NewBuffer(resp)
 
-	for _, redisCmd := range cmds {
+	for _, redisCmd := range cmds.Cmds {
 		if !s.isAuthenticated(redisCmd, c, buf) {
 			continue
 		}
@@ -386,7 +374,7 @@ func (s *AsyncServer) EvalAndRespond(cmds cmd.RedisCmds, c *comm.Client) {
 }
 
 func (s *AsyncServer) isAuthenticated(redisCmd *cmd.RedisCmd, c *comm.Client, buf *bytes.Buffer) bool {
-	if redisCmd.Cmd != auth.AuthCmd && !c.Session.IsActive() {
+	if redisCmd.Cmd != auth.Cmd && !c.Session.IsActive() {
 		buf.Write(clientio.Encode(errors.New("NOAUTH Authentication required"), false))
 		return false
 	}
@@ -427,17 +415,18 @@ func (s *AsyncServer) handleNonTransactionCommand(redisCmd *cmd.RedisCmd, c *com
 }
 
 func (s *AsyncServer) executeTransaction(c *comm.Client, buf *bytes.Buffer) {
-	_, err := fmt.Fprintf(buf, "*%d\r\n", len(c.Cqueue))
+	cmds := c.Cqueue.Cmds
+	_, err := fmt.Fprintf(buf, "*%d\r\n", len(cmds))
 	if err != nil {
 		s.logger.Error("Error writing to buffer", slog.Any("error", err))
 		return
 	}
 
-	for _, cmd := range c.Cqueue {
-		s.executeCommandToBuffer(cmd, buf, c)
+	for _, redisCmd := range cmds {
+		s.executeCommandToBuffer(redisCmd, buf, c)
 	}
 
-	c.Cqueue = make(cmd.RedisCmds, 0)
+	c.Cqueue.Cmds = make([]*cmd.RedisCmd, 0)
 	c.IsTxn = false
 }
 

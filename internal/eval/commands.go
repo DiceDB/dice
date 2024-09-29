@@ -8,6 +8,7 @@ type DiceCmdMeta struct {
 	Eval  func([]string, *dstore.Store) []byte
 	Arity int // number of arguments, it is possible to use -N to say >= N
 	KeySpecs
+	SubCommands []string // list of sub-commands supported by the command
 
 	// IsMigrated indicates whether a command has been migrated to a new evaluation
 	// mechanism. If true, the command uses the newer evaluation logic represented by
@@ -43,10 +44,11 @@ var (
 	}
 
 	pingCmdMeta = DiceCmdMeta{
-		Name:       "PING",
-		Info:       `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
-		Arity:      -1,
-		IsMigrated: true,
+		Name:  "PING",
+		Info:  `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
+		Arity: -1,
+		// TODO: Move this to true once compatible with HTTP server
+		IsMigrated: false,
 		Eval:       evalPING,
 	}
 
@@ -244,6 +246,15 @@ var (
 		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsonobjkeysCmdMeta = DiceCmdMeta{
+		Name: "JSON.OBJKEYS",
+		Info: `JSON.OBJKEYS key [path]
+		Retrieves the keys of a JSON object stored at path specified.
+		Null reply: If the key doesn't exist or has expired.
+		Error reply: If the number of arguments is incorrect or the stored value is not a JSON type.`,
+		Eval:  evalJSONOBJKEYS,
+		Arity: 2,
+	}
 	jsonarrpopCmdMeta = DiceCmdMeta{
 		Name: "JSON.ARRPOP",
 		Info: `JSON.ARRPOP key [path [index]]
@@ -264,6 +275,28 @@ var (
 		Returns encoded error message if the number of arguments is incorrect or the JSON string is invalid.`,
 		Eval:     evalJSONINGEST,
 		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	jsonarrinsertCmdMeta = DiceCmdMeta{
+		Name: "JSON.ARRINSERT",
+		Info: `JSON.ARRINSERT key path index value [value ...]
+		Returns an array of integer replies for each path.
+		Returns nil if the matching JSON value is not an array.
+		Returns error response if the key doesn't exist or key is expired or the matching value is not an array.
+		Error reply: If the number of arguments is incorrect.`,
+		Eval:     evalJSONARRINSERT,
+		Arity:    -5,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	jsonarrtrimCmdMeta = DiceCmdMeta{
+		Name: "JSON.ARRTRIM",
+		Info: `JSON.ARRTRIM key path start stop
+		Trim an array so that it contains only the specified inclusive range of elements
+		Returns an array of integer replies for each path.
+		Returns error response if the key doesn't exist or key is expired.
+		Error reply: If the number of arguments is incorrect.`,
+		Eval:     evalJSONARRTRIM,
+		Arity:    -5,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	ttlCmdMeta = DiceCmdMeta{
@@ -465,9 +498,10 @@ var (
 		Eval: evalGETBIT,
 	}
 	bitCountCmdMeta = DiceCmdMeta{
-		Name: "BITCOUNT",
-		Info: "BITCOUNT counts the number of set bits in the string value stored at key",
-		Eval: evalBITCOUNT,
+		Name:  "BITCOUNT",
+		Info:  "BITCOUNT counts the number of set bits in the string value stored at key",
+		Eval:  evalBITCOUNT,
+		Arity: -1,
 	}
 	bitOpCmdMeta = DiceCmdMeta{
 		Name: "BITOP",
@@ -475,10 +509,11 @@ var (
 		Eval: evalBITOP,
 	}
 	commandCmdMeta = DiceCmdMeta{
-		Name:  "COMMAND <subcommand>",
-		Info:  "Evaluates COMMAND <subcommand> command based on subcommand",
-		Eval:  evalCommand,
-		Arity: -1,
+		Name:        "COMMAND <subcommand>",
+		Info:        "Evaluates COMMAND <subcommand> command based on subcommand",
+		Eval:        evalCommand,
+		Arity:       -1,
+		SubCommands: []string{Count, GetKeys, List, Help, Info},
 	}
 	keysCmdMeta = DiceCmdMeta{
 		Name: "KEYS",
@@ -578,6 +613,15 @@ var (
 		Arity:    -4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hsetnxCmdMeta = DiceCmdMeta{
+		Name: "HSETNX",
+		Info: `Sets field in the hash stored at key to value, only if field does not yet exist.
+		If key does not exist, a new key holding a hash is created. If field already exists,
+		this operation has no effect.`,
+		Eval:     evalHSETNX,
+		Arity:    4,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	hgetCmdMeta = DiceCmdMeta{
 		Name:     "HGET",
 		Info:     `Returns the value associated with field in the hash stored at key.`,
@@ -593,10 +637,38 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hValsCmdMeta = DiceCmdMeta{
+		Name:     "HVALS",
+		Info:     `Returns all values of the hash stored at key. The length of the reply is same as the size of the hash.`,
+		Eval:     evalHVALS,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	hincrbyCmdMeta = DiceCmdMeta{
+		Name: "HINCRBY",
+		Info: `Increments the number stored at field in the hash stored at key by increment.
+		If key does not exist, a new key holding a hash is created.
+		If field does not exist the value is set to 0 before the operation is performed.`,
+		Eval:     evalHINCRBY,
+		Arity:    -4,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	hstrLenCmdMeta = DiceCmdMeta{
 		Name:     "HSTRLEN",
 		Info:     `Returns the length of value associated with field in the hash stored at key.`,
 		Eval:     evalHSTRLEN,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	hdelCmdMeta = DiceCmdMeta{
+		Name: "HDEL",
+		Info: `HDEL removes the specified fields from the hash stored at key.
+		Specified fields that do not exist within this hash are ignored.
+		Deletes the hash if no fields remain.
+		If key does not exist, it is treated as an empty hash and this command returns 0.
+		Returns
+		The number of fields that were removed from the hash, not including specified but non-existing fields.`,
+		Eval:     evalHDEL,
 		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
@@ -841,6 +913,20 @@ var (
 
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	incrbyCmdMeta = DiceCmdMeta{
+		Name: "INCRBY",
+		Info: `INCRBY increments the value of the specified key in args by increment integer specified,
+		if the key exists and the value is integer format.
+		The key and the increment integer should be the only param in args.
+		If the key does not exist, new key is created with value 0,
+		the value of the new key is then incremented.
+		The value for the queried key should be of integer format,
+		if not INCRBY returns encoded error response.
+		evalINCRBY returns the incremented value for the key if there are no errors.`,
+		Eval:     evalINCRBY,
+		Arity:    2,
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+	}
 	getRangeCmdMeta = DiceCmdMeta{
 		Name:     "GETRANGE",
 		Info:     `Returns a substring of the string stored at a key.`,
@@ -860,6 +946,47 @@ var (
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 		IsMigrated: true,
 		NewEval:    evalSETEX,
+	}
+	hrandfieldCmdMeta = DiceCmdMeta{
+		Name:     "HRANDFIELD",
+		Info:     `Returns one or more random fields from a hash.`,
+		Eval:     evalHRANDFIELD,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	zaddCmdMeta = DiceCmdMeta{
+		Name: "ZADD",
+		Info: `ZADD key [NX|XX] [CH] [INCR] score member [score member ...]
+		Adds all the specified members with the specified scores to the sorted set stored at key.
+		Options: NX, XX, CH, INCR
+		Returns the number of elements added to the sorted set, not including elements already existing for which the score was updated.`,
+		Eval:     evalZADD,
+		Arity:    -4,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	zrangeCmdMeta = DiceCmdMeta{
+		Name: "ZRANGE",
+		Info: `ZRANGE key start stop [WithScores]
+		Returns the specified range of elements in the sorted set stored at key.
+		The elements are considered to be ordered from the lowest to the highest score.
+		Both start and stop are 0-based indexes, where 0 is the first element, 1 is the next element and so on.
+		These indexes can also be negative numbers indicating offsets from the end of the sorted set, with -1 being the last element of the sorted set, -2 the penultimate element and so on.
+		Returns the specified range of elements in the sorted set.`,
+		Eval:     evalZRANGE,
+		Arity:    -4,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	hincrbyFloatCmdMeta = DiceCmdMeta{
+		Name: "HINCRBYFLOAT",
+		Info: `HINCRBYFLOAT increments the specified field of a hash stored at the key, 
+		and representing a floating point number, by the specified increment.
+		If the field does not exist, it is set to 0 before performing the operation.
+		If the field contains a value of wrong type or specified increment
+		is not parsable as floating point number, then an error occurs.
+		`,
+		Eval:     evalHINCRBYFLOAT,
+		Arity:    -4,
+		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 )
 
@@ -884,8 +1011,11 @@ func init() {
 	DiceCmds["JSON.NUMMULTBY"] = jsonnummultbyCmdMeta
 	DiceCmds["JSON.OBJLEN"] = jsonobjlenCmdMeta
 	DiceCmds["JSON.DEBUG"] = jsondebugCmdMeta
+	DiceCmds["JSON.OBJKEYS"] = jsonobjkeysCmdMeta
 	DiceCmds["JSON.ARRPOP"] = jsonarrpopCmdMeta
 	DiceCmds["JSON.INGEST"] = jsoningestCmdMeta
+	DiceCmds["JSON.ARRINSERT"] = jsonarrinsertCmdMeta
+	DiceCmds["JSON.ARRTRIM"] = jsonarrtrimCmdMeta
 	DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
 	DiceCmds["EXPIRE"] = expireCmdMeta
@@ -928,6 +1058,7 @@ func init() {
 	DiceCmds["GETEX"] = getexCmdMeta
 	DiceCmds["PTTL"] = pttlCmdMeta
 	DiceCmds["HSET"] = hsetCmdMeta
+	DiceCmds["HSETNX"] = hsetnxCmdMeta
 	DiceCmds["OBJECT"] = objectCmdMeta
 	DiceCmds["TOUCH"] = touchCmdMeta
 	DiceCmds["LPUSH"] = lpushCmdMeta
@@ -957,8 +1088,16 @@ func init() {
 	DiceCmds["SELECT"] = selectCmdMeta
 	DiceCmds["JSON.NUMINCRBY"] = jsonnumincrbyCmdMeta
 	DiceCmds["TYPE"] = typeCmdMeta
+	DiceCmds["HINCRBY"] = hincrbyCmdMeta
+	DiceCmds["INCRBY"] = incrbyCmdMeta
 	DiceCmds["GETRANGE"] = getRangeCmdMeta
 	DiceCmds["SETEX"] = setexCmdMeta
+	DiceCmds["HRANDFIELD"] = hrandfieldCmdMeta
+	DiceCmds["HDEL"] = hdelCmdMeta
+	DiceCmds["HVALS"] = hValsCmdMeta
+	DiceCmds["ZADD"] = zaddCmdMeta
+	DiceCmds["ZRANGE"] = zrangeCmdMeta
+	DiceCmds["HINCRBYFLOAT"] = hincrbyFloatCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

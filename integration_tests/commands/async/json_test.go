@@ -2,6 +2,7 @@ package async
 
 import (
 	"fmt"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"net"
 	"strings"
 	"testing"
@@ -863,44 +864,44 @@ func TestJsonNummultby(t *testing.T) {
 	testCases := []struct {
 		name        string
 		commands    []string
-		expected    []interface{}
-		assert_type []string
+		expected   []interface{}
+		assertType []string
 	}{
 		{
-			name:        "Invalid number of arguments",
-			commands:    []string{"JSON.NUMMULTBY ", "JSON.NUMMULTBY docu", "JSON.NUMMULTBY docu $"},
-			expected:    []interface{}{invalidArgMessage, invalidArgMessage, invalidArgMessage},
-			assert_type: []string{"equal", "equal", "equal"},
+			name:       "Invalid number of arguments",
+			commands:   []string{"JSON.NUMMULTBY ", "JSON.NUMMULTBY docu", "JSON.NUMMULTBY docu $"},
+			expected:   []interface{}{invalidArgMessage, invalidArgMessage, invalidArgMessage},
+			assertType: []string{"equal", "equal", "equal"},
 		},
 		{
-			name:        "MultBy at non-existent key",
-			commands:    []string{"JSON.NUMMULTBY docu $ 1"},
-			expected:    []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
-			assert_type: []string{"equal"},
+			name:       "MultBy at non-existent key",
+			commands:   []string{"JSON.NUMMULTBY docu $ 1"},
+			expected:   []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
+			assertType: []string{"equal"},
 		},
 		{
-			name:        "Invalid value of multiplier on non-existent key",
-			commands:    []string{"JSON.SET docu $ " + a, "JSON.NUMMULTBY docu $.fe x"},
-			expected:    []interface{}{"OK", "[]"},
-			assert_type: []string{"equal", "equal"},
+			name:       "Invalid value of multiplier on non-existent key",
+			commands:   []string{"JSON.SET docu $ " + a, "JSON.NUMMULTBY docu $.fe x"},
+			expected:   []interface{}{"OK", "[]"},
+			assertType: []string{"equal", "equal"},
 		},
 		{
-			name:        "Invalid value of multiplier on existent key",
-			commands:    []string{"JSON.SET docu $ " + a, "JSON.NUMMULTBY docu $.a x"},
-			expected:    []interface{}{"OK", "ERR expected value at line 1 column 1"},
-			assert_type: []string{"equal", "equal"},
+			name:       "Invalid value of multiplier on existent key",
+			commands:   []string{"JSON.SET docu $ " + a, "JSON.NUMMULTBY docu $.a x"},
+			expected:   []interface{}{"OK", "ERR expected value at line 1 column 1"},
+			assertType: []string{"equal", "equal"},
 		},
 		{
-			name:        "MultBy at recursive path",
-			commands:    []string{"JSON.SET docu $ " + a, "JSON.NUMMULTBY docu $..a 2"},
-			expected:    []interface{}{"OK", "[4,10,null,null]"},
-			assert_type: []string{"equal", "deep_equal"},
+			name:       "MultBy at recursive path",
+			commands:   []string{"JSON.SET docu $ " + a, "JSON.NUMMULTBY docu $..a 2"},
+			expected:   []interface{}{"OK", "[4,10,null,null]"},
+			assertType: []string{"equal", "deep_equal"},
 		},
 		{
-			name:        "MultBy at root path",
-			commands:    []string{"JSON.SET docu $ " + a, "JSON.NUMMULTBY docu $.a 2"},
-			expected:    []interface{}{"OK", "[null]"},
-			assert_type: []string{"equal", "deep_equal"},
+			name:       "MultBy at root path",
+			commands:   []string{"JSON.SET docu $ " + a, "JSON.NUMMULTBY docu $.a 2"},
+			expected:   []interface{}{"OK", "[null]"},
+			assertType: []string{"equal", "deep_equal"},
 		},
 	}
 
@@ -911,9 +912,9 @@ func TestJsonNummultby(t *testing.T) {
 				cmd := tcase.commands[i]
 				out := tcase.expected[i]
 				result := FireCommand(conn, cmd)
-				if tcase.assert_type[i] == "equal" {
+				if tcase.assertType[i] == "equal" {
 					assert.Equal(t, out, result)
-				} else if tcase.assert_type[i] == "deep_equal" {
+				} else if tcase.assertType[i] == "deep_equal" {
 					assert.Assert(t, arraysArePermutations(deStringify(out.(string)), deStringify(result.(string))))
 				}
 			}
@@ -1023,57 +1024,57 @@ func TestJSONNumIncrBy(t *testing.T) {
 		name        string
 		setupData   string
 		commands    []string
-		expected    []interface{}
-		assert_type []string
-		cleanUp     []string
+		expected   []interface{}
+		assertType []string
+		cleanUp    []string
 	}{
 		{
-			name:        "Invalid number of arguments",
-			setupData:   "",
-			commands:    []string{"JSON.NUMINCRBY ", "JSON.NUMINCRBY foo", "JSON.NUMINCRBY foo $"},
-			expected:    []interface{}{invalidArgMessage, invalidArgMessage, invalidArgMessage},
-			assert_type: []string{"equal", "equal", "equal"},
-			cleanUp:     []string{},
+			name:       "Invalid number of arguments",
+			setupData:  "",
+			commands:   []string{"JSON.NUMINCRBY ", "JSON.NUMINCRBY foo", "JSON.NUMINCRBY foo $"},
+			expected:   []interface{}{invalidArgMessage, invalidArgMessage, invalidArgMessage},
+			assertType: []string{"equal", "equal", "equal"},
+			cleanUp:    []string{},
 		},
 		{
-			name:        "Non-existant key",
-			setupData:   "",
-			commands:    []string{"JSON.NUMINCRBY foo $ 1"},
-			expected:    []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
-			assert_type: []string{"equal"},
-			cleanUp:     []string{},
+			name:       "Non-existant key",
+			setupData:  "",
+			commands:   []string{"JSON.NUMINCRBY foo $ 1"},
+			expected:   []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
+			assertType: []string{"equal"},
+			cleanUp:    []string{},
 		},
 		{
-			name:        "Invalid value of increment",
-			setupData:   "JSON.SET foo $ 1",
-			commands:    []string{"JSON.GET foo $", "JSON.NUMINCRBY foo $ @", "JSON.NUMINCRBY foo $ 122@"},
-			expected:    []interface{}{"1", "ERR expected value at line 1 column 1", "ERR trailing characters at line 1 column 4"},
-			assert_type: []string{"equal", "equal", "equal"},
-			cleanUp:     []string{"DEL foo"},
+			name:       "Invalid value of increment",
+			setupData:  "JSON.SET foo $ 1",
+			commands:   []string{"JSON.GET foo $", "JSON.NUMINCRBY foo $ @", "JSON.NUMINCRBY foo $ 122@"},
+			expected:   []interface{}{"1", "ERR expected value at line 1 column 1", "ERR trailing characters at line 1 column 4"},
+			assertType: []string{"equal", "equal", "equal"},
+			cleanUp:    []string{"DEL foo"},
 		},
 		{
-			name:        "incrby at non root path",
-			setupData:   fmt.Sprintf("JSON.SET %s $ %s", "foo", `{"a":"b","b":[{"a":2.2},{"a":5},{"a":"c"}]}`),
-			commands:    []string{"JSON.NUMINCRBY foo $..a 2", "JSON.NUMINCRBY foo $.a 2", "JSON.GET foo", "JSON.NUMINCRBY foo $..a -2", "JSON.GET foo"},
-			expected:    []interface{}{"[null,4.2,7,null]", "[null]", "{\"a\":\"b\",\"b\":[{\"a\":4.2},{\"a\":7},{\"a\":\"c\"}]}", "[null,2.2,5,null]", "{\"a\":\"b\",\"b\":[{\"a\":2.2},{\"a\":5},{\"a\":\"c\"}]}"},
-			assert_type: []string{"perm_equal", "perm_equal", "json_equal", "perm_equal", "json_equal"},
-			cleanUp:     []string{"DEL foo"},
+			name:       "incrby at non root path",
+			setupData:  fmt.Sprintf("JSON.SET %s $ %s", "foo", `{"a":"b","b":[{"a":2.2},{"a":5},{"a":"c"}]}`),
+			commands:   []string{"JSON.NUMINCRBY foo $..a 2", "JSON.NUMINCRBY foo $.a 2", "JSON.GET foo", "JSON.NUMINCRBY foo $..a -2", "JSON.GET foo"},
+			expected:   []interface{}{"[null,4.2,7,null]", "[null]", "{\"a\":\"b\",\"b\":[{\"a\":4.2},{\"a\":7},{\"a\":\"c\"}]}", "[null,2.2,5,null]", "{\"a\":\"b\",\"b\":[{\"a\":2.2},{\"a\":5},{\"a\":\"c\"}]}"},
+			assertType: []string{"perm_equal", "perm_equal", "json_equal", "perm_equal", "json_equal"},
+			cleanUp:    []string{"DEL foo"},
 		},
 		{
-			name:        "incrby at root path",
-			setupData:   "JSON.SET foo $ 1",
-			commands:    []string{"JSON.NUMINCRBY foo $ 1", "JSON.GET foo $", "JSON.NUMINCRBY foo $ -1", "JSON.GET foo $"},
-			expected:    []interface{}{"[2]", "2", "[1]", "1"},
-			assert_type: []string{"equal", "equal", "equal", "equal"},
-			cleanUp:     []string{"DEL foo"},
+			name:       "incrby at root path",
+			setupData:  "JSON.SET foo $ 1",
+			commands:   []string{"JSON.NUMINCRBY foo $ 1", "JSON.GET foo $", "JSON.NUMINCRBY foo $ -1", "JSON.GET foo $"},
+			expected:   []interface{}{"[2]", "2", "[1]", "1"},
+			assertType: []string{"equal", "equal", "equal", "equal"},
+			cleanUp:    []string{"DEL foo"},
 		},
 		{
-			name:        "incrby at root path",
-			setupData:   "JSON.SET foo $ 1",
-			commands:    []string{"expire foo 10", "JSON.NUMINCRBY foo $ 1", "ttl foo", "JSON.GET foo $", "JSON.NUMINCRBY foo $ -1", "JSON.GET foo $"},
-			expected:    []interface{}{int64(1), "[2]", int64(10), "2", "[1]", "1"},
-			assert_type: []string{"equal", "equal", "range", "equal", "equal", "equal"},
-			cleanUp:     []string{"DEL foo"},
+			name:       "incrby at root path",
+			setupData:  "JSON.SET foo $ 1",
+			commands:   []string{"expire foo 10", "JSON.NUMINCRBY foo $ 1", "ttl foo", "JSON.GET foo $", "JSON.NUMINCRBY foo $ -1", "JSON.GET foo $"},
+			expected:   []interface{}{int64(1), "[2]", int64(10), "2", "[1]", "1"},
+			assertType: []string{"equal", "equal", "range", "equal", "equal", "equal"},
+			cleanUp:    []string{"DEL foo"},
 		},
 	}
 
@@ -1087,7 +1088,7 @@ func TestJSONNumIncrBy(t *testing.T) {
 				cmd := tc.commands[i]
 				out := tc.expected[i]
 				result := FireCommand(conn, cmd)
-				switch tc.assert_type[i] {
+				switch tc.assertType[i] {
 				case "equal":
 					assert.Equal(t, out, result)
 				case "perm_equal":
@@ -1100,6 +1101,279 @@ func TestJSONNumIncrBy(t *testing.T) {
 			}
 			for i := 0; i < len(tc.cleanUp); i++ {
 				FireCommand(conn, tc.cleanUp[i])
+			}
+		})
+	}
+}
+
+func TestJsonARRINSERT(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+	a := `[1,2]`
+	b := `{"name":"tom","score":[10,20],"partner2":{"score":[10,20]}}`
+
+	testCases := []struct {
+		name       string
+		commands   []string
+		expected   []interface{}
+		assertType []string
+	}{
+		{
+			name:       "JSON.ARRINSERT index out of bounds",
+			commands:   []string{"json.set a $ " + a, `JSON.ARRINSERT a $ 4 3`, "JSON.GET a"},
+			expected:   []interface{}{"OK", "ERR index out of bounds", "[1,2]"},
+			assertType: []string{"equal", "equal", "equal"},
+		},
+		{
+			name:       "JSON.ARRINSERT index is not integer",
+			commands:   []string{"json.set a $ " + a, `JSON.ARRINSERT a $ ss 3`, "JSON.GET a"},
+			expected:   []interface{}{"OK", "ERR Couldn't parse as integer", "[1,2]"},
+			assertType: []string{"equal", "equal", "equal"},
+		},
+		{
+			name:       "JSON.ARRINSERT with postive index in root path",
+			commands:   []string{"json.set a $ " + a, `JSON.ARRINSERT a $ 2 3 4 5`, "JSON.GET a"},
+			expected:   []interface{}{"OK", []interface{}{int64(5)}, "[1,2,3,4,5]"},
+			assertType: []string{"equal", "deep_equal", "equal"},
+		},
+
+		{
+			name:       "JSON.ARRINSERT with postive index in root path",
+			commands:   []string{"json.set a $ " + a, `JSON.ARRINSERT a $ 2 3 4 5`, "JSON.GET a"},
+			expected:   []interface{}{"OK", []interface{}{int64(5)}, "[1,2,3,4,5]"},
+			assertType: []string{"equal", "deep_equal", "equal"},
+		},
+		{
+			name:       "JSON.ARRINSERT with negative index in root path",
+			commands:   []string{"json.set a $ " + a, `JSON.ARRINSERT a $ -2 3 4 5`, "JSON.GET a"},
+			expected:   []interface{}{"OK", []interface{}{int64(5)}, "[3,4,5,1,2]"},
+			assertType: []string{"equal", "deep_equal", "equal"},
+		},
+		{
+			name:       "JSON.ARRINSERT nested with postive index",
+			commands:   []string{"JSON.SET b $ " + b, `JSON.ARRINSERT b $..score 1 5 6 true`, "JSON.GET b"},
+			expected:   []interface{}{"OK", []interface{}{int64(5), int64(5)}, `{"name":"tom","score":[10,5,6,true,20],"partner2":{"score":[10,5,6,true,20]}}`},
+			assertType: []string{"equal", "deep_equal", "jsoneq"},
+		},
+		{
+			name:       "JSON.ARRINSERT nested with negative index",
+			commands:   []string{"JSON.SET b $ " + b, `JSON.ARRINSERT b $..score -2 5 6 true`, "JSON.GET b"},
+			expected:   []interface{}{"OK", []interface{}{int64(5), int64(5)}, `{"name":"tom","score":[5,6,true,10,20],"partner2":{"score":[5,6,true,10,20]}}`},
+			assertType: []string{"equal", "deep_equal", "jsoneq"},
+		},
+	}
+	for _, tcase := range testCases {
+		t.Run(tcase.name, func(t *testing.T) {
+			for i := 0; i < len(tcase.commands); i++ {
+				cmd := tcase.commands[i]
+				out := tcase.expected[i]
+				result := FireCommand(conn, cmd)
+				if tcase.assertType[i] == "equal" {
+					assert.Equal(t, out, result)
+				} else if tcase.assertType[i] == "deep_equal" {
+					assert.Assert(t, arraysArePermutations(out.([]interface{}), result.([]interface{})))
+				} else if tcase.assertType[i] == "jsoneq" {
+					testifyAssert.JSONEq(t, out.(string), result.(string))
+				}
+			}
+		})
+	}
+}
+
+func TestJsonObjKeys(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+	a := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"language":["rust"]}}`
+	b := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"name":12,"language":["rust"]}}`
+	c := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"name":12,"language":["rust"],"extra_key":"value"}}`
+	d := `{"a":[3],"nested":{"a":{"b":2,"c":1}}}`
+
+	testCases := []struct {
+		name        string
+		setCommand  string
+		testCommand string
+		expected    []interface{}
+	}{
+		{
+			name:        "JSON.OBJKEYS root object",
+			setCommand:  "json.set doc $ " + a,
+			testCommand: "json.objkeys doc $",
+			expected: []interface{}{
+				[]interface{}{"name", "partner", "partner2"},
+			},
+		},
+		{
+			name:        "JSON.OBJKEYS with nested path",
+			setCommand:  "json.set doc $ " + b,
+			testCommand: "json.objkeys doc $.partner",
+			expected: []interface{}{
+				[]interface{}{"name", "language"},
+			},
+		},
+		{
+			name:        "JSON.OBJKEYS with non-object path",
+			setCommand:  "json.set doc $ " + c,
+			testCommand: "json.objkeys doc $.name",
+			expected: []interface{}{
+				"(nil)",
+			},
+		},
+		{
+			name:        "JSON.OBJKEYS with nested non-object path",
+			setCommand:  "json.set doc $ " + b,
+			testCommand: "json.objkeys doc $.partner.language",
+			expected: []interface{}{
+				"(nil)",
+			},
+		},
+		{
+			name:        "JSON.OBJKEYS with invalid json path - 1",
+			setCommand:  "json.set doc $ " + b,
+			testCommand: "json.objkeys doc $..invalidpath*somethingrandomadded",
+			expected:    []interface{}{"ERR parse error at 16 in $..invalidpath*somethingrandomadded"},
+		},
+		{
+			name:        "JSON.OBJKEYS with invalid json path - 2",
+			setCommand:  "json.set doc $ " + c,
+			testCommand: "json.objkeys doc $[1",
+			expected:    []interface{}{"ERR expected a number at 4 in $[1"},
+		},
+		{
+			name:        "JSON.OBJKEYS with invalid json path - 3",
+			setCommand:  "json.set doc $ " + c,
+			testCommand: "json.objkeys doc $[random",
+			expected:    []interface{}{"ERR parse error at 3 in $[random"},
+		},
+		{
+			name:        "JSON.OBJKEYS with only command",
+			setCommand:  "json.set doc $ " + c,
+			testCommand: "json.objkeys",
+			expected:    []interface{}{"ERR wrong number of arguments for 'json.objkeys' command"},
+		},
+		{
+			name:        "JSON.OBJKEYS with non-existing key",
+			setCommand:  "json.set doc $ " + c,
+			testCommand: "json.objkeys thisdoesnotexist $",
+			expected:    []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
+		},
+		{
+			name:        "JSON.OBJKEYS with empty path",
+			setCommand:  "json.set doc $ " + c,
+			testCommand: "json.objkeys doc",
+			expected: []interface{}{
+				"name", "partner", "partner2",
+			},
+		},
+		{
+			name:        "JSON.OBJKEYS with multiple json path",
+			setCommand:  "json.set doc $ " + d,
+			testCommand: "json.objkeys doc $..a",
+			expected: []interface{}{
+				[]interface{}{"b", "c"},
+				"(nil)",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		FireCommand(conn, "DEL doc")
+		t.Run(tc.name, func(t *testing.T) {
+			FireCommand(conn, tc.setCommand)
+			expected := tc.expected
+			out := FireCommand(conn, tc.testCommand)
+
+			_, isString := out.(string)
+			if isString {
+				outInterface := []interface{}{out}
+				assert.DeepEqual(t, outInterface, expected)
+			} else {
+				assert.DeepEqual(t, out.([]interface{}), expected,
+					cmpopts.SortSlices(func(a, b interface{}) bool {
+						return fmt.Sprintf("%v", a) < fmt.Sprintf("%v", b)
+					}))
+			}
+		})
+	}
+
+}
+func TestJsonARRTRIM(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+	a := `[0,1,2]`
+	b := `{"connection":{"wireless":true,"names":[0,1,2,3,4]},"names":[0,1,2,3,4]}`
+
+	FireCommand(conn, "DEL a b")
+	defer FireCommand(conn, "DEL a b")
+
+	testCases := []struct {
+		name       string
+		commands   []string
+		expected   []interface{}
+		assertType []string
+	}{
+		{
+			name:       "JSON.ARRTRIM not array",
+			commands:   []string{"JSON.SET b $ " + b, `JSON.ARRTRIM b $ 0 10`, "JSON.GET b"},
+			expected:   []interface{}{"OK", []interface{}{"(nil)"}, b},
+			assertType: []string{"equal", "deep_equal", "jsoneq"},
+		},
+		{
+			name:       "JSON.ARRTRIM stop index out of bounds",
+			commands:   []string{"JSON.SET a $ " + a, `JSON.ARRTRIM a $ -10 10`, "JSON.GET a"},
+			expected:   []interface{}{"OK", []interface{}{int64(3)}, "[0,1,2]"},
+			assertType: []string{"equal", "deep_equal", "equal"},
+		},
+		{
+			name:       "JSON.ARRTRIM start&stop are postive",
+			commands:   []string{"JSON.SET a $ " + a, `JSON.ARRTRIM a $ 1 2`, "JSON.GET a"},
+			expected:   []interface{}{"OK", []interface{}{int64(2)}, "[1,2]"},
+			assertType: []string{"equal", "deep_equal", "equal"},
+		},
+		{
+			name:       "JSON.ARRTRIM start&stop are negative",
+			commands:   []string{"JSON.SET a $ " + a, `JSON.ARRTRIM a $ -2 -1 `, "JSON.GET a"},
+			expected:   []interface{}{"OK", []interface{}{int64(2)}, "[1,2]"},
+			assertType: []string{"equal", "deep_equal", "equal"},
+		},
+
+		{
+			name:       "JSON.ARRTRIM subpath trim",
+			commands:   []string{"JSON.SET b $ " + b, `JSON.ARRTRIM b $..names 1 4`, "JSON.GET b"},
+			expected:   []interface{}{"OK", []interface{}{int64(4), int64(4)}, `{"connection":{"wireless":true,"names":[1,2,3,4]},"names":[1,2,3,4]}`},
+			assertType: []string{"equal", "deep_equal", "jsoneq"},
+		},
+		{
+			name:       "JSON.ARRTRIM subpath not array",
+			commands:   []string{"JSON.SET b $ " + b, `JSON.ARRTRIM b $.connection 0 1`, "JSON.GET b"},
+			expected:   []interface{}{"OK", []interface{}{"(nil)"}, b},
+			assertType: []string{"equal", "deep_equal", "jsoneq"},
+		},
+		{
+			name:       "JSON.ARRTRIM postive start larger than stop",
+			commands:   []string{"JSON.SET b $ " + b, `JSON.ARRTRIM b $.names 3 1`, "JSON.GET b"},
+			expected:   []interface{}{"OK", []interface{}{int64(0)}, `{"names":[],"connection":{"wireless":true,"names":[0,1,2,3,4]}}`},
+			assertType: []string{"equal", "deep_equal", "jsoneq"},
+		},
+		{
+			name:       "JSON.ARRTRIM negative start larger than stop",
+			commands:   []string{"JSON.SET b $ " + b, `JSON.ARRTRIM b $.names -1 -3`, "JSON.GET b"},
+			expected:   []interface{}{"OK", []interface{}{int64(0)}, `{"names":[],"connection":{"wireless":true,"names":[0,1,2,3,4]}}`},
+			assertType: []string{"equal", "deep_equal", "jsoneq"},
+		},
+	}
+	for _, tcase := range testCases {
+		t.Run(tcase.name, func(t *testing.T) {
+			for i := 0; i < len(tcase.commands); i++ {
+				cmd := tcase.commands[i]
+				out := tcase.expected[i]
+				result := FireCommand(conn, cmd)
+				if tcase.assertType[i] == "equal" {
+					assert.Equal(t, out, result)
+				} else if tcase.assertType[i] == "deep_equal" {
+					assert.Assert(t, arraysArePermutations(out.([]interface{}), result.([]interface{})))
+				} else if tcase.assertType[i] == "jsoneq" {
+					testifyAssert.JSONEq(t, out.(string), result.(string))
+				}
 			}
 		})
 	}

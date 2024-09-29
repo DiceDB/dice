@@ -2,6 +2,8 @@ package eval
 
 import (
 	"fmt"
+	"math"
+	"strconv"
 
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
@@ -82,4 +84,50 @@ func getValueFromHashMap(key, field string, store *dstore.Store) (val, err []byt
 	}
 
 	return clientio.Encode(value, false), nil
+}
+
+func (h HashMap) incrementValue(field string, increment int64) (int64, error) {
+	val, ok := h[field]
+	if !ok {
+		h[field] = fmt.Sprintf("%v", increment)
+		return increment, nil
+	}
+
+	i, err := strconv.ParseInt(val, 10, 64)
+	if err != nil {
+		return -1, diceerrors.NewErr(diceerrors.HashValueNotIntegerErr)
+	}
+
+	if (i > 0 && increment > 0 && i > math.MaxInt64-increment) || (i < 0 && increment < 0 && i < math.MinInt64-increment) {
+		return -1, diceerrors.NewErr(diceerrors.IncrDecrOverflowErr)
+	}
+
+	total := i + increment
+	h[field] = fmt.Sprintf("%v", total)
+
+	return total, nil
+}
+
+func (h HashMap) incrementFloatValue(field string, incr float64) (string, error) {
+	val, ok := h[field]
+	if !ok {
+		h[field] = fmt.Sprintf("%v", incr)
+		strValue := formatFloat(incr, false)
+		return strValue, nil
+	}
+
+	i, err := strconv.ParseFloat(val, 64)
+	if err != nil {
+		return "-1", diceerrors.NewErr(diceerrors.IntOrFloatErr)
+	}
+
+	if (i > 0 && incr > 0 && i > math.MaxFloat64-incr) || (i < 0 && incr < 0 && i < -math.MaxFloat64-incr) {
+		return "-1", diceerrors.NewErr(diceerrors.IncrDecrOverflowErr)
+	}
+
+	total := i + incr
+	strValue := formatFloat(total, false)
+	h[field] = fmt.Sprintf("%v", total)
+
+	return strValue, nil
 }

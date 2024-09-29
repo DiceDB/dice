@@ -9,9 +9,10 @@ import (
 )
 
 type TestCase struct {
-	name     string
-	commands []HTTPCommand
-	expected []interface{}
+	name          string
+	commands      []HTTPCommand
+	expected      []interface{}
+	errorExpected bool
 }
 
 func TestSet(t *testing.T) {
@@ -32,7 +33,7 @@ func TestSet(t *testing.T) {
 				{Command: "SET", Body: map[string]interface{}{"key": "k", "value": 123456789}},
 				{Command: "GET", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"OK", string("1.23456789e+08")},
+			expected: []interface{}{"OK", "1.23456789e+08"},
 		},
 		{
 			name: "Overwrite Existing Key",
@@ -47,14 +48,13 @@ func TestSet(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// deleteTestKeys([]string{"k"}, store)
 			exec.FireCommand(HTTPCommand{
 				Command: "DEL",
 				Body:    map[string]interface{}{"key": "k"},
 			})
 
 			for i, cmd := range tc.commands {
-				result := exec.FireCommand(cmd)
+				result, _ := exec.FireCommand(cmd)
 				assert.DeepEqual(t, tc.expected[i], result)
 			}
 		})
@@ -196,7 +196,7 @@ func TestSetWithOptions(t *testing.T) {
 			exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k1"}})
 			exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k2"}})
 			for i, cmd := range tc.commands {
-				result := exec.FireCommand(cmd)
+				result, _ := exec.FireCommand(cmd)
 				assert.Equal(t, tc.expected[i], result)
 			}
 		})
@@ -240,7 +240,7 @@ func TestSetWithExat(t *testing.T) {
 			})
 
 			for i, cmd := range tc.commands {
-				result := exec.FireCommand(cmd)
+				result, _ := exec.FireCommand(cmd)
 				if cmd.Command == "TTL" {
 					assert.Assert(t, result.(float64) <= tc.expected[i].(float64))
 				} else {

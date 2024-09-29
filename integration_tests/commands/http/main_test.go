@@ -11,8 +11,8 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	logger := logger.New(logger.Opts{WithTimestamp: false})
-	slog.SetDefault(logger)
+	l := logger.New(logger.Opts{WithTimestamp: false})
+	slog.SetDefault(l)
 	var wg sync.WaitGroup
 
 	// Run the test server
@@ -21,9 +21,10 @@ func TestMain(m *testing.M) {
 	// to start the server
 	opts := TestServerOptions{
 		Port:   8083,
-		Logger: logger,
+		Logger: l,
 	}
-	RunHTTPServer(context.Background(), &wg, opts)
+	ctx, cancel := context.WithCancel(context.Background())
+	RunHTTPServer(ctx, &wg, opts)
 
 	// Wait for the server to start
 	time.Sleep(2 * time.Second)
@@ -38,6 +39,9 @@ func TestMain(m *testing.M) {
 		Body:    map[string]interface{}{},
 	})
 
+	cancel()
 	wg.Wait()
-	os.Exit(exitCode)
+	if exitCode != 0 {
+		os.Exit(exitCode)
+	}
 }

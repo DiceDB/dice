@@ -1,0 +1,40 @@
+---
+import siteData from "../data/site.json";
+
+const { title, description, img, video, blog, session, JSONLD } = Astro.props;
+---
+
+<!-- SEO -->
+<link rel="canonical" href={Astro.url} />
+
+<!-- Open Graph -->
+<meta property="og:site_name" content="DiceDB" />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={Astro.url} />
+<meta property="og:image" content={img || siteData.image.src} />
+<meta property="og:image:url" content={img || siteData.image.src} />
+<meta property="og:image:secure_url" content={img || siteData.image.src} />
+<meta property="og:image:type" content="image/png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="628" />
+<meta property="og:image:alt" content={siteData.image.alt} />
+
+<!-- Twitter -->
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:image" content={img || siteData.image_tw.src} />
+<meta name="twitter:image:alt" content={title} />
+<meta name="twitter:domain" content={import.meta.env.SITE} />
+
+<!-- JSON LD -->
+{
+  JSONLD && (
+    <Fragment
+      set:html={`<script type="application/ld+json">${JSON.stringify(
+        JSONLD,
+      )}</script>`}
+    />
+  )
+}

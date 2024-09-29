@@ -81,7 +81,7 @@ func TestDumpRestore(t *testing.T) {
 				"DUMP nonexistentkey",
 			},
 			expected: []interface{}{
-				"ERR could not perform this operation on a key that doesn't exist",
+				"ERR nil",
 			},
 		},
 	}
