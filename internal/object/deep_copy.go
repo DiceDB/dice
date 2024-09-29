@@ -23,7 +23,7 @@ func (obj *Obj) DeepCopy() *Obj {
 		switch sourceType {
 		case ObjTypeString:
 			sourceValue := obj.Value.(string)
-			newObj.Value = string([]byte(sourceValue))
+			newObj.Value = sourceValue
 
 		case ObjTypeJSON:
 			sourceValue := obj.Value

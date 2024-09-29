@@ -27,9 +27,10 @@ func init() {
 	flag.BoolVar(&config.EnableHTTP, "enable-http", true, "run server in HTTP mode as well")
 	flag.BoolVar(&config.EnableMultiThreading, "enable-multithreading", false, "run server in multithreading mode")
 	flag.IntVar(&config.HTTPPort, "http-port", 8082, "HTTP port for the dice server")
+	flag.IntVar(&config.WebsocketPort, "websocket-port", 8379, "Websocket port for the dice server")
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
 	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the config file")
-	flag.StringVar(&config.ConfigFileLocation, "c", config.ConfigFileLocation, "file path of the config file")
+	flag.StringVar(&config.FileLocation, "c", config.FileLocation, "file path of the config file")
 	flag.BoolVar(&config.InitConfigCmd, "init-config", false, "initialize a new config file")
 	flag.Parse()
 
@@ -57,8 +58,8 @@ func main() {
 	var numCores int
 	if config.EnableMultiThreading {
 		serverErrCh = make(chan error, 1)
-		logr.Debug("The DiceDB server has started in multi-threaded mode.", slog.Int("number of cores", numCores))
 		numCores = runtime.NumCPU()
+		logr.Debug("The DiceDB server has started in multi-threaded mode.", slog.Int("number of cores", numCores))
 	} else {
 		serverErrCh = make(chan error, 2)
 		logr.Debug("The DiceDB server has started in single-threaded mode.")
@@ -181,6 +182,26 @@ func main() {
 			cancel()
 		}()
 	}
+
+	websocketServer := server.NewWebSocketServer(shardManager, watchChan, logr)
+	serverWg.Add(1)
+	go func() {
+		defer serverWg.Done()
+		// Run the Websocket server
+		err := websocketServer.Run(ctx)
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				logr.Debug("Websocket Server was canceled")
+			} else if errors.Is(err, diceerrors.ErrAborted) {
+				logr.Debug("Websocket received abort command")
+			} else {
+				logr.Error("Websocket Server error", "error", err)
+			}
+			serverErrCh <- err
+		} else {
+			logr.Debug("Websocket Server stopped without error")
+		}
+	}()
 
 	go func() {
 		serverWg.Wait()

@@ -141,7 +141,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, redisCmd *cmd.RedisCmd)
 	cmdList := make([]*cmd.RedisCmd, 0)
 
 	// Retrieve metadata for the command to determine if multisharding is supported.
-	meta, ok := WorkerCommandsMeta[redisCmd.Cmd]
+	meta, ok := CommandsMeta[redisCmd.Cmd]
 	if !ok {
 		// If no metadata exists, treat it as a single command.
 		cmdList = append(cmdList, redisCmd)
@@ -254,7 +254,7 @@ func (w *BaseWorker) gather(ctx context.Context, c string, numCmds int, ct CmdTy
 	// TODO: These commands should be refactored to be multi-shard compatible before DICE-DB is completely multi-shard.
 	// Check if command is part of the new WorkerCommandsMeta map i.e. if the command has been refactored to be multi-shard compatible.
 	// If not found, treat it as a command that's not yet refactored, and write the response back to the client.
-	val, ok := WorkerCommandsMeta[c]
+	val, ok := CommandsMeta[c]
 	if !ok {
 		if evalResp[0].Error != nil {
 			err := w.ioHandler.Write(ctx, []byte(evalResp[0].Error.Error()))
@@ -310,7 +310,7 @@ func (w *BaseWorker) gather(ctx context.Context, c string, numCmds int, ct CmdTy
 }
 
 func (w *BaseWorker) isAuthenticated(redisCmd *cmd.RedisCmd) error {
-	if redisCmd.Cmd != auth.AuthCmd && !w.Session.IsActive() {
+	if redisCmd.Cmd != auth.Cmd && !w.Session.IsActive() {
 		return errors.New("NOAUTH Authentication required")
 	}
 

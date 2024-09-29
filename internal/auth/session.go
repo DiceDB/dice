@@ -13,15 +13,15 @@ import (
 )
 
 const (
-	AuthCmd = "AUTH"
+	Cmd = "AUTH"
 
-	SessionStatusPending SessionStatusT = SessionStatusT(0)
-	SessionStatusActive  SessionStatusT = SessionStatusT(1)
-	SessionStatusExpired SessionStatusT = SessionStatusT(2)
+	SessionStatusPending = SessionStatusT(0)
+	SessionStatusActive  = SessionStatusT(1)
+	SessionStatusExpired = SessionStatusT(2)
 )
 
 var (
-	UserStore *Users = NewUsersStore()
+	UserStore = NewUsersStore()
 )
 
 type (
