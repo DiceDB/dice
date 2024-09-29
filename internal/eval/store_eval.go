@@ -11,7 +11,8 @@ import (
 )
 
 // evalSET puts a new <key, value> pair in db as in the args
-// args must contain key and value, can also contain multiple options -
+// args must contain key and value.
+// args can also contain multiple options -
 //
 //	EX or ex which will set the expiry time(in secs) for the key
 //	PX or px which will set the expiry time(in milliseconds) for the key
@@ -34,8 +35,8 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 
 	var key, value string
 	var exDurationMs int64 = -1
-	var state = Uninitialized
-	var keepttl = false
+	var state exDurationState = Uninitialized
+	var keepttl bool = false
 
 	key, value = args[0], args[1]
 	oType, oEnc := deduceTypeEncoding(value)
@@ -127,7 +128,7 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 			// if key does not exist, return RESP encoded nil
 			if obj == nil {
 				return &EvalResponse{
-					Result: respNIL,
+					Result: RespNIL("-1"),
 					Error:  nil,
 				}
 			}
@@ -135,7 +136,7 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 			obj := store.Get(key)
 			if obj != nil {
 				return &EvalResponse{
-					Result: respNIL,
+					Result: RespNIL("-1"),
 					Error:  nil,
 				}
 			}
@@ -167,7 +168,7 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 	store.Put(key, store.NewObj(storedValue, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
 
 	return &EvalResponse{
-		Result: respOK,
+		Result: RespOK("OK"),
 		Error:  nil,
 	}
 }
@@ -191,7 +192,7 @@ func evalGET(args []string, store *dstore.Store) *EvalResponse {
 	// if key does not exist, return RESP encoded nil
 	if obj == nil {
 		return &EvalResponse{
-			Result: respNIL,
+			Result: RespNIL("-1"),
 			Error:  nil,
 		}
 	}
@@ -281,7 +282,7 @@ func evalGETSET(args []string, store *dstore.Store) *EvalResponse {
 }
 
 // evalSETEX puts a new <key, value> pair in db as in the args
-// args must contain only key, expiry and value
+// args must contain only  key , expiry and value
 // Returns encoded error response if <key,exp,value> is not part of args
 // Returns encoded error response if expiry time value in not integer
 // Returns encoded OK RESP once new entry is added

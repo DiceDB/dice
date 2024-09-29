@@ -219,10 +219,6 @@ func (s *AsyncServer) eventLoop(ctx context.Context) error {
 				if event.Fd == s.serverFD {
 					if err := s.acceptConnection(); err != nil {
 						s.logger.Warn(err.Error())
-						// Close the event FD on error
-						if closeErr := syscall.Close(event.Fd); closeErr != nil {
-							s.logger.Error("Failed to close event FD:", slog.Any("error", closeErr))
-						}
 					}
 				} else {
 					if err := s.handleClientEvent(event); err != nil {
@@ -241,10 +237,6 @@ func (s *AsyncServer) eventLoop(ctx context.Context) error {
 
 // acceptConnection accepts a new client connection and subscribes to read events on the connection.
 func (s *AsyncServer) acceptConnection() error {
-	if len(s.connectedClients) > s.maxClients {
-		return errors.New("connection refused. Reached the max-connection limit")
-	}
-
 	fd, _, err := syscall.Accept(s.serverFD)
 	if err != nil {
 		return err
@@ -324,11 +316,13 @@ func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.RedisCmd, buf *bytes.
 		buf.Write(resp.EvalResponse.Result.([]byte))
 	} else {
 
+		// If command type is Global then return the worker eval
 		if val.CmdType == Global {
 			buf.Write(val.RespNoShards(redisCmd.Args))
 			return
 		}
 
+		// Handle error case independently
 		if resp.EvalResponse.Error != nil {
 			handleMigratedResp(resp.EvalResponse.Error, buf)
 		}
@@ -460,8 +454,8 @@ func (s *AsyncServer) executeTransaction(c *comm.Client, buf *bytes.Buffer) {
 		return
 	}
 
-	for _, redisCmd := range cmds {
-		s.executeCommandToBuffer(redisCmd, buf, c)
+	for _, cmd := range cmds {
+		s.executeCommandToBuffer(cmd, buf, c)
 	}
 
 	c.Cqueue.Cmds = make([]*cmd.RedisCmd, 0)

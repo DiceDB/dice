@@ -2,7 +2,6 @@ package netconn
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/clientio/iohandler"
+	"github.com/dicedb/dice/internal/eval"
 )
 
 const (
@@ -223,30 +223,25 @@ func (h *IOHandler) Close() error {
 // predefined RESP responses, making it flexible in handling responses that might include
 // additional content beyond the expected response format.
 func HandlePredefinedResponse(response interface{}) []byte {
-	// Attempt to convert response to []byte
-	respBytes, ok := response.([]byte)
-	if !ok {
-		return nil // or handle the error as needed
-	}
 
-	switch {
-	case bytes.Contains(respBytes, clientio.RespNIL):
+	switch response.(type) {
+	case eval.RespNIL:
 		return clientio.RespNIL
-	case bytes.Contains(respBytes, clientio.RespOK):
+	case eval.RespOK:
 		return clientio.RespOK
-	case bytes.Contains(respBytes, clientio.RespQueued):
+	case eval.RespQueued:
 		return clientio.RespQueued
-	case bytes.Contains(respBytes, clientio.RespZero):
+	case eval.RespZero:
 		return clientio.RespZero
-	case bytes.Contains(respBytes, clientio.RespOne):
+	case eval.RespOne:
 		return clientio.RespOne
-	case bytes.Contains(respBytes, clientio.RespMinusOne):
+	case eval.RespMinusOne:
 		return clientio.RespMinusOne
-	case bytes.Contains(respBytes, clientio.RespMinusTwo):
+	case eval.RespMinusTwo:
 		return clientio.RespMinusTwo
-	case bytes.Contains(respBytes, clientio.RespEmptyArray):
+	case eval.RespEmptyArray:
 		return clientio.RespEmptyArray
 	default:
-		return nil // or return an appropriate response for unknown cases
+		return nil
 	}
 }
