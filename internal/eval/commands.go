@@ -288,6 +288,17 @@ var (
 		Arity:    -5,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsonarrtrimCmdMeta = DiceCmdMeta{
+		Name: "JSON.ARRTRIM",
+		Info: `JSON.ARRTRIM key path start stop
+		Trim an array so that it contains only the specified inclusive range of elements
+		Returns an array of integer replies for each path.
+		Returns error response if the key doesn't exist or key is expired.
+		Error reply: If the number of arguments is incorrect.`,
+		Eval:     evalJSONARRTRIM,
+		Arity:    -5,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	ttlCmdMeta = DiceCmdMeta{
 		Name: "TTL",
 		Info: `TTL returns Time-to-Live in secs for the queried key in args
@@ -985,6 +996,7 @@ func init() {
 	DiceCmds["JSON.ARRPOP"] = jsonarrpopCmdMeta
 	DiceCmds["JSON.INGEST"] = jsoningestCmdMeta
 	DiceCmds["JSON.ARRINSERT"] = jsonarrinsertCmdMeta
+	DiceCmds["JSON.ARRTRIM"] = jsonarrtrimCmdMeta
 	DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
 	DiceCmds["EXPIRE"] = expireCmdMeta

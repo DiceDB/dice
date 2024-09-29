@@ -1119,7 +1119,7 @@ func TestJsonARRINSERT(t *testing.T) {
 		assertType []string
 	}{
 		{
-			name:       "JSON.ARRINSERT index out if bounds",
+			name:       "JSON.ARRINSERT index out of bounds",
 			commands:   []string{"json.set a $ " + a, `JSON.ARRINSERT a $ 4 3`, "JSON.GET a"},
 			expected:   []interface{}{"OK", "ERR index out of bounds", "[1,2]"},
 			assertType: []string{"equal", "equal", "equal"},
@@ -1295,4 +1295,86 @@ func TestJsonObjKeys(t *testing.T) {
 		})
 	}
 
+}
+func TestJsonARRTRIM(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+	a := `[0,1,2]`
+	b := `{"connection":{"wireless":true,"names":[0,1,2,3,4]},"names":[0,1,2,3,4]}`
+
+	FireCommand(conn, "DEL a b")
+	defer FireCommand(conn, "DEL a b")
+
+	testCases := []struct {
+		name       string
+		commands   []string
+		expected   []interface{}
+		assertType []string
+	}{
+		{
+			name:       "JSON.ARRTRIM not array",
+			commands:   []string{"JSON.SET b $ " + b, `JSON.ARRTRIM b $ 0 10`, "JSON.GET b"},
+			expected:   []interface{}{"OK", []interface{}{"(nil)"}, b},
+			assertType: []string{"equal", "deep_equal", "jsoneq"},
+		},
+		{
+			name:       "JSON.ARRTRIM stop index out of bounds",
+			commands:   []string{"JSON.SET a $ " + a, `JSON.ARRTRIM a $ -10 10`, "JSON.GET a"},
+			expected:   []interface{}{"OK", []interface{}{int64(3)}, "[0,1,2]"},
+			assertType: []string{"equal", "deep_equal", "equal"},
+		},
+		{
+			name:       "JSON.ARRTRIM start&stop are postive",
+			commands:   []string{"JSON.SET a $ " + a, `JSON.ARRTRIM a $ 1 2`, "JSON.GET a"},
+			expected:   []interface{}{"OK", []interface{}{int64(2)}, "[1,2]"},
+			assertType: []string{"equal", "deep_equal", "equal"},
+		},
+		{
+			name:       "JSON.ARRTRIM start&stop are negative",
+			commands:   []string{"JSON.SET a $ " + a, `JSON.ARRTRIM a $ -2 -1 `, "JSON.GET a"},
+			expected:   []interface{}{"OK", []interface{}{int64(2)}, "[1,2]"},
+			assertType: []string{"equal", "deep_equal", "equal"},
+		},
+
+		{
+			name:       "JSON.ARRTRIM subpath trim",
+			commands:   []string{"JSON.SET b $ " + b, `JSON.ARRTRIM b $..names 1 4`, "JSON.GET b"},
+			expected:   []interface{}{"OK", []interface{}{int64(4), int64(4)}, `{"connection":{"wireless":true,"names":[1,2,3,4]},"names":[1,2,3,4]}`},
+			assertType: []string{"equal", "deep_equal", "jsoneq"},
+		},
+		{
+			name:       "JSON.ARRTRIM subpath not array",
+			commands:   []string{"JSON.SET b $ " + b, `JSON.ARRTRIM b $.connection 0 1`, "JSON.GET b"},
+			expected:   []interface{}{"OK", []interface{}{"(nil)"}, b},
+			assertType: []string{"equal", "deep_equal", "jsoneq"},
+		},
+		{
+			name:       "JSON.ARRTRIM postive start larger than stop",
+			commands:   []string{"JSON.SET b $ " + b, `JSON.ARRTRIM b $.names 3 1`, "JSON.GET b"},
+			expected:   []interface{}{"OK", []interface{}{int64(0)}, `{"names":[],"connection":{"wireless":true,"names":[0,1,2,3,4]}}`},
+			assertType: []string{"equal", "deep_equal", "jsoneq"},
+		},
+		{
+			name:       "JSON.ARRTRIM negative start larger than stop",
+			commands:   []string{"JSON.SET b $ " + b, `JSON.ARRTRIM b $.names -1 -3`, "JSON.GET b"},
+			expected:   []interface{}{"OK", []interface{}{int64(0)}, `{"names":[],"connection":{"wireless":true,"names":[0,1,2,3,4]}}`},
+			assertType: []string{"equal", "deep_equal", "jsoneq"},
+		},
+	}
+	for _, tcase := range testCases {
+		t.Run(tcase.name, func(t *testing.T) {
+			for i := 0; i < len(tcase.commands); i++ {
+				cmd := tcase.commands[i]
+				out := tcase.expected[i]
+				result := FireCommand(conn, cmd)
+				if tcase.assertType[i] == "equal" {
+					assert.Equal(t, out, result)
+				} else if tcase.assertType[i] == "deep_equal" {
+					assert.Assert(t, arraysArePermutations(out.([]interface{}), result.([]interface{})))
+				} else if tcase.assertType[i] == "jsoneq" {
+					testifyAssert.JSONEq(t, out.(string), result.(string))
+				}
+			}
+		})
+	}
 }
