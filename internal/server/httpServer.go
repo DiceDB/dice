@@ -296,21 +296,39 @@ func (s *HTTPServer) writeQWatchResponse(writer http.ResponseWriter, response co
 }
 
 func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.StoreResponse, redisCmd *cmd.RedisCmd) {
+	_, ok := WorkerCmdsMeta[redisCmd.Cmd]
 	var rp *clientio.RESPParser
-	if result.EvalResponse.Error != nil {
-		rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(result.EvalResponse.Error.Error())))
+
+	var responseValue interface{}
+	// TODO: Remove this conditional check and if (true) condition when all commands are migrated
+	if !ok {
+		var err error
+		if result.EvalResponse.Error != nil {
+			rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(result.EvalResponse.Error.Error())))
+		} else {
+			rp = clientio.NewRESPParser(bytes.NewBuffer(result.EvalResponse.Result.([]byte)))
+		}
+
+		responseValue, err = rp.DecodeOne()
+		if err != nil {
+			s.logger.Error("Error decoding response", "error", err)
+			http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
 	} else {
-		rp = clientio.NewRESPParser(bytes.NewBuffer(result.EvalResponse.Result.([]byte)))
+		if result.EvalResponse.Error != nil {
+			responseValue = result.EvalResponse.Error.Error()
+		} else {
+			responseValue = result.EvalResponse.Result
+		}
 	}
 
-	val, err := rp.DecodeOne()
-	if err != nil {
-		s.logger.Error("Error decoding response", "error", err)
-		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
-		return
+	if bytes, ok := responseValue.([]byte); ok {
+		responseValue = string(bytes)
 	}
+	httpResponse := utils.HttpResponse{Data: responseValue}
 
-	responseJSON, err := json.Marshal(val)
+	responseJSON, err := json.Marshal(httpResponse)
 	if err != nil {
 		s.logger.Error("Error marshaling response", "error", err)
 		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
