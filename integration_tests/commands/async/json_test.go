@@ -1302,6 +1302,9 @@ func TestJsonARRTRIM(t *testing.T) {
 	a := `[0,1,2]`
 	b := `{"connection":{"wireless":true,"names":[0,1,2,3,4]},"names":[0,1,2,3,4]}`
 
+        FireCommand(conn, "DEL a b")
+        defer FireCommand(conn, "DEL a b")
+
 	testCases := []struct {
 		name       string
 		commands   []string
