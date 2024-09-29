@@ -75,6 +75,7 @@ func TestEval(t *testing.T) {
 	testEvalPFCOUNT(t, store)
 	testEvalHGET(t, store)
 	testEvalHSTRLEN(t, store)
+	testEvalHEXISTS(t, store)
 	testEvalHDEL(t, store)
 	testEvalPFMERGE(t, store)
 	testEvalJSONSTRLEN(t, store)
@@ -2232,6 +2233,64 @@ func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalHSTRLEN, store)
+}
+
+func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"wrong number of args passed": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'hexists' command\r\n"),
+		},
+		"only key passed": {
+			setup:  func() {},
+			input:  []string{"KEY"},
+			output: []byte("-ERR wrong number of arguments for 'hexists' command\r\n"),
+		},
+		"key doesn't exist": {
+			setup:  func() {},
+			input:  []string{"KEY", "field_name"},
+			output: clientio.Encode(0, false),
+		},
+		"key exists but field_name doesn't exists": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field := "mock_field_name"
+				newMap := make(HashMap)
+				newMap[field] = "mock_field_value"
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input:  []string{"KEY_MOCK", "non_existent_key"},
+			output: clientio.Encode(0, false),
+		},
+		"both key and field_name exists": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field := "mock_field_name"
+				newMap := make(HashMap)
+				newMap[field] = "HelloWorld"
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input:  []string{"KEY_MOCK", "mock_field_name"},
+			output: clientio.Encode(1, false),
+		},
+	}
+
+	runEvalTests(t, tests, evalHEXISTS, store)
 }
 
 func testEvalHDEL(t *testing.T, store *dstore.Store) {
@@ -4716,7 +4775,7 @@ func BenchmarkEvalHINCRBYFLOAT(b *testing.B) {
 		{"key1", "field2", "1000000.1"},
 		{"key1", "field2", "-1000000.1"},
 		{"key2", "field1", "-10.1234"},
-		{"key3", "field1", "1.5"}, // testing with non-existing key
+		{"key3", "field1", "1.5"},  // testing with non-existing key
 		{"key2", "field2", "2.75"}, // testing with non-existing field in existing key
 	}
 
