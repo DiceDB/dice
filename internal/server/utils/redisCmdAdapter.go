@@ -30,7 +30,7 @@ const (
 	Member      = "member"
 	Members     = "members"
 	Index       = "index"
-	Json        = "json"
+	JSON        = "json"
 )
 
 func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
@@ -73,7 +73,7 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 				Keys,
 				Field,
 				Path,
-				Json,
+				JSON,
 				Index,
 				Value,
 				Values,
@@ -95,7 +95,7 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 						delete(jsonBody, key)
 						continue
 					}
-					if key == Json {
+					if key == JSON {
 						jsonValue, err := json.Marshal(val)
 						if err != nil {
 							return nil, err
