@@ -88,12 +88,3 @@ DiceDB server is pinged with `[1234]` and the server echoes with `"[1234]"` coer
 127.0.0.1:7379>  PING [1234]
 "[1234]"
 ```
-
-### Invalid Usage
-
-DiceDB server is pinged with multiple parameters `"hello" "world"` and the server echoes with error message as `"(error) ERR wrong number of arguments for 'ping' command"`.
-
-```bash
-127.0.0.1:7379>  PING "hello" "world"
-"(error) ERR wrong number of arguments for 'ping' command"
-```
