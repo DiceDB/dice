@@ -19,7 +19,7 @@ const (
 	TempValue   = TempPrefix + "value"
 )
 
-// Error definitions
+// UnsupportedDSQLStatementError is returned when a DSQL statement is not supported
 type UnsupportedDSQLStatementError struct {
 	Stmt sqlparser.Statement
 }
@@ -32,7 +32,7 @@ func newUnsupportedSQLStatementError(stmt sqlparser.Statement) *UnsupportedDSQLS
 	return &UnsupportedDSQLStatementError{Stmt: stmt}
 }
 
-// Query structures
+// QuerySelection represents the SELECT expressions in the query
 type QuerySelection struct {
 	KeySelection   bool
 	ValueSelection bool

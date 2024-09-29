@@ -14,30 +14,30 @@ func TestTouch(t *testing.T) {
 	testCases := []struct {
 		name        string
 		commands    []string
-		expected    []interface{}
-		assert_type []string
-		delay       []time.Duration
+		expected   []interface{}
+		assertType []string
+		delay      []time.Duration
 	}{
 		{
-			name:        "Touch Simple Value",
-			commands:    []string{"SET foo bar", "OBJECT IDLETIME foo", "TOUCH foo", "OBJECT IDLETIME foo"},
-			expected:    []interface{}{"OK", int64(2), int64(1), int64(0)},
-			assert_type: []string{"equal", "assert", "equal", "assert"},
-			delay:       []time.Duration{0, 2 * time.Second, 0, 0},
+			name:       "Touch Simple Value",
+			commands:   []string{"SET foo bar", "OBJECT IDLETIME foo", "TOUCH foo", "OBJECT IDLETIME foo"},
+			expected:   []interface{}{"OK", int64(2), int64(1), int64(0)},
+			assertType: []string{"equal", "assert", "equal", "assert"},
+			delay:      []time.Duration{0, 2 * time.Second, 0, 0},
 		},
 		{
-			name:        "Touch Multiple Existing Keys",
-			commands:    []string{"SET foo bar", "SET foo1 bar", "TOUCH foo foo1"},
-			expected:    []interface{}{"OK", "OK", int64(2)},
-			assert_type: []string{"equal", "equal", "equal"},
-			delay:       []time.Duration{0, 0, 0},
+			name:       "Touch Multiple Existing Keys",
+			commands:   []string{"SET foo bar", "SET foo1 bar", "TOUCH foo foo1"},
+			expected:   []interface{}{"OK", "OK", int64(2)},
+			assertType: []string{"equal", "equal", "equal"},
+			delay:      []time.Duration{0, 0, 0},
 		},
 		{
-			name:        "Touch Multiple Existing and Non-Existing Keys",
-			commands:    []string{"SET foo bar", "TOUCH foo foo1"},
-			expected:    []interface{}{"OK", int64(1)},
-			assert_type: []string{"equal", "equal"},
-			delay:       []time.Duration{0, 0},
+			name:       "Touch Multiple Existing and Non-Existing Keys",
+			commands:   []string{"SET foo bar", "TOUCH foo foo1"},
+			expected:   []interface{}{"OK", int64(1)},
+			assertType: []string{"equal", "equal"},
+			delay:      []time.Duration{0, 0},
 		},
 	}
 
@@ -51,7 +51,7 @@ func TestTouch(t *testing.T) {
 					time.Sleep(tc.delay[i])
 				}
 				result := FireCommand(conn, cmd)
-				if tc.assert_type[i] == "equal" {
+				if tc.assertType[i] == "equal" {
 					assert.DeepEqual(t, tc.expected[i], result)
 				} else {
 					assert.Assert(t, result.(int64) >= tc.expected[i].(int64), "Expected %v to be less than or equal to %v", result, tc.expected[i])

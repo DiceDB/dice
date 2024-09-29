@@ -1,0 +1,33 @@
+---
+import "../styles/main.scss";
+
+import Nav from "../components/Nav.astro";
+import Footer from "../components/Footer.astro";
+import Head from "./Head.astro";
+
+import { GoogleAnalytics } from "astro-analytics";
+
+const { title, description, img, blog, session, video, JSONLD } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <Head {title} {description} {img} {blog} {video} {JSONLD} {session} />
+  <body>
+    <div class="section container">
+      <Nav />
+      <div>
+        <div style="margin-top: 3em;">
+          <slot />
+        </div>
+      </div>
+    </div>
+    <div
+      class="section"
+      style="background-color: hsl(0, 0%, 96%); margin-top: 2em;"
+    >
+      <Footer />
+    </div>
+    <GoogleAnalytics id="G-4W2CFHCMDN" />
+  </body>
+</html>

@@ -111,7 +111,7 @@ func broadcast(entries []LeaderboardEntry) {
 
 	message, _ := json.Marshal(entries)
 	for client := range clients {
-		client.WriteMessage(websocket.TextMessage, []byte(message))
+		client.WriteMessage(websocket.TextMessage, message)
 	}
 }
 

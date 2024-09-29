@@ -1,0 +1,12 @@
+---
+import Layout from "./Layout.astro";
+const { title, description, img } = Astro.props;
+---
+
+<Layout title={title} description={description.slice(0, 240)} img={img}>
+  <div class="columns is-centered">
+    <div class="column is-8">
+      <slot />
+    </div>
+  </div>
+</Layout>

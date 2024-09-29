@@ -22,8 +22,8 @@ func newZerologHandler(logger *zerolog.Logger) *ZerologHandler {
 
 // Handle implements the slog.Handler interface
 //
-//nolint:gocritic // The slog.Record struct triggers hugeParam but we don't control the interface (it's a standard library one)
-func (h *ZerologHandler) Handle(ctx context.Context, record slog.Record) error {
+//nolint:gocritic // The slog.Record struct triggers hugeParam, but we don't control the interface (it's a standard library one)
+func (h *ZerologHandler) Handle(_ context.Context, record slog.Record) error {
 	event := h.logger.WithLevel(mapLevel(record.Level))
 	record.Attrs(func(attr slog.Attr) bool {
 		addAttrToZerolog(attr, event)
@@ -34,7 +34,7 @@ func (h *ZerologHandler) Handle(ctx context.Context, record slog.Record) error {
 }
 
 // Enabled implements the slog.Handler interface
-func (h *ZerologHandler) Enabled(ctx context.Context, level slog.Level) bool {
+func (h *ZerologHandler) Enabled(_ context.Context, level slog.Level) bool {
 	return h.logger.GetLevel() <= mapLevel(level)
 }
 
@@ -54,7 +54,7 @@ func (h *ZerologHandler) WithGroup(name string) slog.Handler {
 	return newZerologHandler(&logger)
 }
 
-// addAttrToZerolog is a generic function to add an slog.Attr to either a zerolog.Event or zerolog.Context
+// addAttrToZerolog is a generic function to add a slog.Attr to either a zerolog.Event or zerolog.Context
 func addAttrToZerolog[T interface {
 	Str(string, string) T
 	Int64(string, int64) T
@@ -95,7 +95,7 @@ func addAttrToZerolog[T interface {
 		return addAttrToZerolog(slog.Attr{Key: attr.Key, Value: resolved}, target)
 	default:
 		switch v := attr.Value.Any().(type) {
-		// error is a special case since zerlog has a dedicated method for it but it's not part of the slog.Kind
+		// error is a special case since zerlog has a dedicated method for it, but it's not part of the slog.Kind
 		case error:
 			return target.AnErr(attr.Key, v)
 		default:

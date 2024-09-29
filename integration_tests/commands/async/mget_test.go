@@ -10,6 +10,10 @@ import (
 func TestMGET(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
+
+	defer FireCommand(conn, "DEL k1")
+	defer FireCommand(conn, "DEL k2")
+	
 	testCases := []struct {
 		name     string
 		commands []string
@@ -39,7 +43,6 @@ func TestMGET(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// deleteTestKeys([]string{"k1", "k2"}, store)
 			FireCommand(conn, "DEL k1")
 			FireCommand(conn, "DEL k2")
 
