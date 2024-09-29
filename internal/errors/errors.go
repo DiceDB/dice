@@ -22,7 +22,7 @@ const (
 	WorkerNotFoundErr      = "worker with ID %s not found"
 	JSONPathValueTypeErr   = "-WRONGTYPE wrong type of path value - expected string but found integer"
 	HashValueNotIntegerErr = "hash value is not an integer"
-	InternalServerError      = "-ERR: Internal server error, unable to process command"
+	InternalServerError    = "-ERR: Internal server error, unable to process command"
 	InvalidFloatErr        = "-ERR value is not a valid float"
 	InvalidIntErr          = "-ERR value is not a valid integer"
 	InvalidBitfieldType    = "-ERR Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is."

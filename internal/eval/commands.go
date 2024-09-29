@@ -982,6 +982,7 @@ var (
 		Arity:    -1,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 		Eval:     evalBITFIELD,
+	}
 	hincrbyFloatCmdMeta = DiceCmdMeta{
 		Name: "HINCRBYFLOAT",
 		Info: `HINCRBYFLOAT increments the specified field of a hash stored at the key, 
