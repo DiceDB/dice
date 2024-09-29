@@ -16,6 +16,7 @@ import (
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/clientio"
+	"github.com/dicedb/dice/internal/clientio/iohandler/netconn"
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/comm"
 	diceerrors "github.com/dicedb/dice/internal/errors"
@@ -290,7 +291,33 @@ func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.RedisCmd, buf *bytes.
 		return
 	}
 
-	buf.Write(resp.EvalResponse.Result.([]byte))
+	_, ok := WorkerCmdsMeta[redisCmd.Cmd]
+
+	// TODO: Remove this conditional check and if (true) condition when all commands are migrated
+	if !ok {
+		buf.Write(resp.EvalResponse.Result.([]byte))
+	} else {
+		// Process the incoming response by calling the handleResponse function.
+		// This function checks the response against known RESP formatted values
+		// and returns the corresponding byte array representation. The result
+		// is assigned to the resp variable.
+		r := netconn.HandlePredefinedResponse(resp)
+
+		// Check if the processed response (resp) is not nil.
+		// If it is not nil, this means incoming response was not
+		// matched to any predefined RESP responses,
+		// and we proceed to encode the original response using
+		// the clientio.Encode function. This function converts the
+		// response into the desired format based on the specified
+		// isBlkEnc encoding flag, which indicates whether the
+		// response should be encoded in a block format.
+		if r != nil {
+			r = clientio.Encode(r, true)
+		}
+
+		buf.Write(r)
+		return
+	}
 }
 
 func readCommands(c io.ReadWriter) (*cmd.RedisCmds, bool, error) {

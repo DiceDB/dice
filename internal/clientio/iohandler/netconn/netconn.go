@@ -146,14 +146,14 @@ func (h *IOHandler) Read(ctx context.Context) ([]byte, error) {
 }
 
 // WriteResponse writes the response back to the network connection
-func (h *IOHandler) Write(ctx context.Context, response interface{}, isBlkEnc bool) error {
+func (h *IOHandler) Write(ctx context.Context, response interface{}) error {
 	errChan := make(chan error, 1)
 
 	// Process the incoming response by calling the handleResponse function.
 	// This function checks the response against known RESP formatted values
 	// and returns the corresponding byte array representation. The result
 	// is assigned to the resp variable.
-	resp := handleResponse(response)
+	resp := HandlePredefinedResponse(response)
 
 	// Check if the processed response (resp) is not nil.
 	// If it is not nil, this means incoming response was not
@@ -163,8 +163,8 @@ func (h *IOHandler) Write(ctx context.Context, response interface{}, isBlkEnc bo
 	// response into the desired format based on the specified
 	// isBlkEnc encoding flag, which indicates whether the
 	// response should be encoded in a block format.
-	if resp != nil {
-		resp = clientio.Encode(response, isBlkEnc)
+	if resp == nil {
+		resp = clientio.Encode(response, true)
 	}
 
 	go func(errChan chan error) {
@@ -222,7 +222,7 @@ func (h *IOHandler) Close() error {
 // Note: The use of `bytes.Contains` is to check if the provided response matches any of the
 // predefined RESP responses, making it flexible in handling responses that might include
 // additional content beyond the expected response format.
-func handleResponse(response interface{}) []byte {
+func HandlePredefinedResponse(response interface{}) []byte {
 	// Attempt to convert response to []byte
 	respBytes, ok := response.([]byte)
 	if !ok {

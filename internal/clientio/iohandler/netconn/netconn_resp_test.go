@@ -190,7 +190,7 @@ func TestNetConnIOHandler_RESP(t *testing.T) {
 			}
 
 			// Test WriteResponse
-			err = handler.Write(ctx, []byte(tt.writeResponse), false)
+			err = handler.Write(ctx, []byte(tt.writeResponse))
 			if tt.expectedWriteErr != nil {
 				assert.Error(t, err)
 				assert.Equal(t, tt.expectedWriteErr.Error(), err.Error())

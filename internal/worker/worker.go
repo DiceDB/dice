@@ -85,14 +85,14 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 			}
 			cmds, err := w.parser.Parse(data)
 			if err != nil {
-				err = w.ioHandler.Write(ctx, err, true)
+				err = w.ioHandler.Write(ctx, err)
 				if err != nil {
 					w.logger.Debug("Write error, connection closed possibly", slog.String("workerID", w.id), slog.Any("error", err))
 					return err
 				}
 			}
 			if len(cmds) == 0 {
-				err = w.ioHandler.Write(ctx, "ERR: Invalid request", true)
+				err = w.ioHandler.Write(ctx, "ERR: Invalid request")
 				if err != nil {
 					w.logger.Debug("Write error, connection closed possibly", slog.String("workerID", w.id), slog.Any("error", err))
 					return err
@@ -103,7 +103,7 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 			// DiceDB supports clients to send only one request at a time
 			// We also need to ensure that the client is blocked until the response is received
 			if len(cmds) > 1 {
-				err = w.ioHandler.Write(ctx, "ERR: Multiple commands not supported", true)
+				err = w.ioHandler.Write(ctx, "ERR: Multiple commands not supported")
 				if err != nil {
 					w.logger.Debug("Write error, connection closed possibly", slog.String("workerID", w.id), slog.Any("error", err))
 					return err
@@ -112,7 +112,7 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 
 			err = w.isAuthenticated(cmds[0])
 			if err != nil {
-				werr := w.ioHandler.Write(ctx, err, false)
+				werr := w.ioHandler.Write(ctx, err)
 				if werr != nil {
 					w.logger.Debug("Write error, connection closed possibly", slog.Any("error", errors.Join(err, werr)))
 					return errors.Join(err, werr)
@@ -150,7 +150,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, redisCmd *cmd.RedisCmd)
 		switch meta.CmdType {
 		case Global:
 			// If it's a global command, process it immediately without involving any shards.
-			err := w.ioHandler.Write(ctx, meta.WorkerCommandHandler(redisCmd.Args), meta.isSimpleEnc)
+			err := w.ioHandler.Write(ctx, meta.WorkerCommandHandler(redisCmd.Args))
 			w.logger.Debug("Error executing for worker", slog.String("workerID", w.id), slog.Any("error", err))
 			return err
 
@@ -164,7 +164,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, redisCmd *cmd.RedisCmd)
 		case Custom:
 			switch redisCmd.Cmd {
 			case CmdAuth:
-				err := w.ioHandler.Write(ctx, w.RespAuth(redisCmd.Args), meta.isSimpleEnc)
+				err := w.ioHandler.Write(ctx, w.RespAuth(redisCmd.Args))
 				w.logger.Error("Error sending auth response to worker", slog.String("workerID", w.id), slog.Any("error", err))
 				return err
 			case CmdAbort:
@@ -257,14 +257,14 @@ func (w *BaseWorker) gather(ctx context.Context, c string, numCmds int, ct CmdTy
 	val, ok := WorkerCommandsMeta[c]
 	if !ok {
 		if evalResp[0].Error != nil {
-			err := w.ioHandler.Write(ctx, []byte(evalResp[0].Error.Error()), false)
+			err := w.ioHandler.Write(ctx, []byte(evalResp[0].Error.Error()))
 			if err != nil {
 				w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
 				return err
 			}
 		}
 
-		err := w.ioHandler.Write(ctx, evalResp[0].Result.([]byte), false)
+		err := w.ioHandler.Write(ctx, evalResp[0].Result.([]byte))
 		if err != nil {
 			w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
 			return err
@@ -276,7 +276,7 @@ func (w *BaseWorker) gather(ctx context.Context, c string, numCmds int, ct CmdTy
 	switch ct {
 	case SingleShard, Custom:
 		if evalResp[0].Error != nil {
-			err := w.ioHandler.Write(ctx, evalResp[0].Error, val.isSimpleEnc)
+			err := w.ioHandler.Write(ctx, evalResp[0].Error)
 			if err != nil {
 				w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
 			}
@@ -284,14 +284,14 @@ func (w *BaseWorker) gather(ctx context.Context, c string, numCmds int, ct CmdTy
 			return err
 		}
 
-		err := w.ioHandler.Write(ctx, evalResp[0].Result, val.isSimpleEnc)
+		err := w.ioHandler.Write(ctx, evalResp[0].Result)
 		if err != nil {
 			w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
 			return err
 		}
 
 	case MultiShard:
-		err := w.ioHandler.Write(ctx, val.composeResponse(evalResp...), val.isSimpleEnc)
+		err := w.ioHandler.Write(ctx, val.composeResponse(evalResp...))
 		if err != nil {
 			w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
 			return err
@@ -299,7 +299,7 @@ func (w *BaseWorker) gather(ctx context.Context, c string, numCmds int, ct CmdTy
 
 	default:
 		w.logger.Error("Unknown command type", slog.String("workerID", w.id))
-		err := w.ioHandler.Write(ctx, diceerrors.ErrInternalServer, false)
+		err := w.ioHandler.Write(ctx, diceerrors.ErrInternalServer)
 		if err != nil {
 			w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
 			return err
