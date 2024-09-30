@@ -165,7 +165,7 @@ func evalDBSIZE(args []string, store *dstore.Store) []byte {
 	}
 
 	// return the RESP encoded value
-	return clientio.Encode(dstore.KeyspaceStat[0]["keys"], false)
+	return clientio.Encode(store.GetKeyCount(), false)
 }
 
 // evalGETDEL returns the value for the queried key in args
@@ -2015,11 +2015,9 @@ func evalINFO(args []string, store *dstore.Store) []byte {
 	var info []byte
 	buf := bytes.NewBuffer(info)
 	buf.WriteString("# Keyspace\r\n")
-	for i := range dstore.KeyspaceStat {
-		_, err := fmt.Fprintf(buf, "db%d:keys=%d,expires=0,avg_ttl=0\r\n", i, dstore.KeyspaceStat[i]["keys"])
-		if err != nil {
-			return diceerrors.NewErrWithMessage(err.Error())
-		}
+	_, err := fmt.Fprintf(buf, "db0:keys=%d,expires=0,avg_ttl=0\r\n", store.GetKeyCount())
+	if err != nil {
+		return []byte(err.Error())
 	}
 	return clientio.Encode(buf.String(), false)
 }
