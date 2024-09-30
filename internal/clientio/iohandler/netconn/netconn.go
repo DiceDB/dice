@@ -223,7 +223,6 @@ func (h *IOHandler) Close() error {
 // predefined RESP responses, making it flexible in handling responses that might include
 // additional content beyond the expected response format.
 func HandlePredefinedResponse(response interface{}) []byte {
-
 	// WARN: Do not change the ordering of the array elements
 	// It is strictly mapped to internal/eval/results.go enum.
 	respArr := [][]byte{
