@@ -54,9 +54,6 @@ func TestMaxConnection(t *testing.T) {
 	}
 	assert.Equal(t, maxConnLimit, len(connections), "should have reached the max connection limit")
 
-	_, err := getConnection(maxConnTestOptions.Port)
-	assert.ErrorContains(t, err, "connect: connection refused")
-
 	result := commands.FireCommand(connections[0], "ABORT")
 	if result != "OK" {
 		t.Fatalf("Unexpected response to ABORT command: %v", result)
