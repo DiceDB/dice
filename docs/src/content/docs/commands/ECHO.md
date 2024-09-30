@@ -13,7 +13,7 @@ ECHO message
 
 | Parameter | Description                                                               | Type    | Required |
 |-----------|---------------------------------------------------------------------------|---------|----------|
-| `message` | A string of characters or numbers to print                                | String / Number| Yes|
+| `message` | A string of characters, numbers, or a mix of both to print                | String / Number| Yes|
 
 ## Return values
 
@@ -47,7 +47,7 @@ Occurs when  message parameter is not passed  or more than one message parameter
 - `(error) ERROR wrong number of arguments for 'echo' command`
 
 ```bash
-127.0.0.1:7379> ECHO "DiceDB is" "very effcinet"
+127.0.0.1:7379> ECHO "DiceDB is" "very efficient"
 ```
 `Response`:
 - `(error) ERROR wrong number of arguments for 'echo' command`
