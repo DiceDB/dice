@@ -37,7 +37,7 @@ var (
 	WorkerCmdsMeta = map[string]CmdsMeta{}
 
 	// Metadata for global commands that don't interact with shards.
-	// INFO and PING are examples of global commands.
+	// PING is an example of global command.
 	pingCmdMeta = CmdsMeta{
 		Cmd:          "PING",
 		CmdType:      Global,
