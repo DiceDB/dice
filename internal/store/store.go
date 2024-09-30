@@ -30,18 +30,9 @@ type Store struct {
 }
 
 func NewStore(watchChan chan WatchEvent) *Store {
-	// WatchChan is nil when triggered from test cases
-	if watchChan == nil {
-		return &Store{
-			store:     swiss.New[string, *object.Obj](1024),
-			expires:   swiss.New[*object.Obj, uint64](1024),
-			watchChan: watchChan,
-		}
-	}
-
 	return &Store{
-		store:     swiss.New[string, *object.Obj](1024000),
-		expires:   swiss.New[*object.Obj, uint64](1024000),
+		store:     swiss.New[string, *object.Obj](1024),
+		expires:   swiss.New[*object.Obj, uint64](1024),
 		watchChan: watchChan,
 	}
 }
