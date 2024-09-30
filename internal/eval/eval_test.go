@@ -213,7 +213,7 @@ func testEvalSET(t *testing.T, store *dstore.Store) {
 		{
 			name:           "key val pair and invalid PXAT",
 			input:          []string{"KEY", "VAL", Pxat, "invalid_expiry_val"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")},
 		},
 		{
 			name:           "key val pair and expired PXAT",
@@ -348,7 +348,7 @@ func testEvalGET(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:          []string{"EXISTING_KEY"},
-			migratedOutput: EvalResponse{Result: fmt.Sprintf("$%d\r\n%s\r\n", len("mock_value"), "mock_value"), Error: nil},
+			migratedOutput: EvalResponse{Result: "mock_value", Error: nil},
 		},
 		{
 			name: "key exists but expired",
@@ -363,7 +363,7 @@ func testEvalGET(t *testing.T, store *dstore.Store) {
 				store.SetExpiry(obj, int64(-2*time.Millisecond))
 			},
 			input:          []string{"EXISTING_KEY"},
-			migratedOutput: EvalResponse{Result: clientio.RespNIL, Error: nil},
+			migratedOutput: EvalResponse{Result: RespNIL, Error: nil},
 		},
 	}
 
