@@ -36,6 +36,8 @@ type CmdsMeta struct {
 var (
 	WorkerCmdsMeta = map[string]CmdsMeta{}
 
+	// Metadata for global commands that don't interact with shards.
+	// PING is an example of global command.
 	pingCmdMeta = CmdsMeta{
 		Cmd:          "PING",
 		CmdType:      Global,
