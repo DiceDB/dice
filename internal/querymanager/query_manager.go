@@ -1,4 +1,4 @@
-package querywatcher
+package querymanager
 
 import (
 	"context"

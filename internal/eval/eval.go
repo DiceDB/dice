@@ -30,7 +30,7 @@ import (
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/comm"
 	diceerrors "github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/querywatcher"
+	"github.com/dicedb/dice/internal/querymanager"
 	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/ohler55/ojg/jp"
@@ -2083,10 +2083,10 @@ func EvalQWATCH(args []string, httpOp bool, client *comm.Client, store *dstore.S
 		Key   string
 		Value *object.Obj
 	})
-	var watchSubscription querywatcher.QuerySubscription
+	var watchSubscription querymanager.QuerySubscription
 
 	if httpOp {
-		watchSubscription = querywatcher.QuerySubscription{
+		watchSubscription = querymanager.QuerySubscription{
 			Subscribe:          true,
 			Query:              query,
 			CacheChan:          cacheChannel,
@@ -2094,7 +2094,7 @@ func EvalQWATCH(args []string, httpOp bool, client *comm.Client, store *dstore.S
 			ClientIdentifierID: client.ClientIdentifierID,
 		}
 	} else {
-		watchSubscription = querywatcher.QuerySubscription{
+		watchSubscription = querymanager.QuerySubscription{
 			Subscribe: true,
 			Query:     query,
 			ClientFD:  client.Fd,
@@ -2102,12 +2102,12 @@ func EvalQWATCH(args []string, httpOp bool, client *comm.Client, store *dstore.S
 		}
 	}
 
-	querywatcher.QuerySubscriptionChan <- watchSubscription
+	querymanager.QuerySubscriptionChan <- watchSubscription
 	store.CacheKeysForQuery(query.Where, cacheChannel)
 
 	// Return the result of the query.
-	responseChan := make(chan querywatcher.AdhocQueryResult)
-	querywatcher.AdhocQueryChan <- querywatcher.AdhocQuery{
+	responseChan := make(chan querymanager.AdhocQueryResult)
+	querymanager.AdhocQueryChan <- querymanager.AdhocQuery{
 		Query:        query,
 		ResponseChan: responseChan,
 	}
@@ -2132,14 +2132,14 @@ func EvalQUNWATCH(args []string, httpOp bool, client *comm.Client) []byte {
 	}
 
 	if httpOp {
-		querywatcher.QuerySubscriptionChan <- querywatcher.QuerySubscription{
+		querymanager.QuerySubscriptionChan <- querymanager.QuerySubscription{
 			Subscribe:          false,
 			Query:              query,
 			QwatchClientChan:   client.HTTPQwatchResponseChan,
 			ClientIdentifierID: client.ClientIdentifierID,
 		}
 	} else {
-		querywatcher.QuerySubscriptionChan <- querywatcher.QuerySubscription{
+		querymanager.QuerySubscriptionChan <- querymanager.QuerySubscription{
 			Subscribe: false,
 			Query:     query,
 			ClientFD:  client.Fd,

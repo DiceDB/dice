@@ -15,7 +15,7 @@ import (
 
 	"github.com/dicedb/dice/config"
 	derrors "github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/querywatcher"
+	"github.com/dicedb/dice/internal/querymanager"
 	"github.com/dicedb/dice/internal/server"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -93,7 +93,7 @@ func RunHTTPServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	globalErrChannel := make(chan error)
 	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Server.KeysLimit)
 	shardManager := shard.NewShardManager(1, watchChan, globalErrChannel, opt.Logger)
-	queryWatcherLocal := querywatcher.NewQueryManager(opt.Logger)
+	queryWatcherLocal := querymanager.NewQueryManager(opt.Logger)
 	config.HTTPPort = opt.Port
 	// Initialize the HTTPServer
 	testServer := server.NewHTTPServer(shardManager, opt.Logger)

@@ -15,7 +15,7 @@ import (
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/ops"
-	"github.com/dicedb/dice/internal/querywatcher"
+	"github.com/dicedb/dice/internal/querymanager"
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -33,7 +33,7 @@ var unimplementedCommandsWebsocket = map[string]bool{
 }
 
 type WebsocketServer struct {
-	querymanager    *querywatcher.Manager
+	querymanager    *querymanager.Manager
 	shardManager    *shard.ShardManager
 	ioChan          chan *ops.StoreResponse
 	watchChan       chan dstore.QueryWatchEvent
@@ -57,7 +57,7 @@ func NewWebSocketServer(shardManager *shard.ShardManager, watchChan chan dstore.
 
 	websocketServer := &WebsocketServer{
 		shardManager:    shardManager,
-		querymanager:    querywatcher.NewQueryManager(logger),
+		querymanager:    querymanager.NewQueryManager(logger),
 		ioChan:          make(chan *ops.StoreResponse, 1000),
 		watchChan:       watchChan,
 		websocketServer: srv,
