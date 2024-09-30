@@ -1,5 +1,5 @@
 package utils
 
-type HttpResponse struct {
+type HTTPResponse struct {
 	Data interface{} `json:"data"`
 }

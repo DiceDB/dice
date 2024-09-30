@@ -6,11 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dicedb/dice/internal/eval"
 	"log/slog"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/dicedb/dice/internal/eval"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
@@ -202,13 +203,12 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 			}
 		}
 
-		switch val := responseValue.(type) {
-		case eval.RespType:
+		if val, ok := responseValue.(eval.RespType); ok {
 			responseValue = respArr[val]
 		}
 
-		if bytes, ok := responseValue.([]byte); ok {
-			responseValue = string(bytes)
+		if bt, ok := responseValue.([]byte); ok {
+			responseValue = string(bt)
 		}
 
 		respBytes, err := json.Marshal(responseValue)

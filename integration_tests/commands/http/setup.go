@@ -6,13 +6,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dicedb/dice/internal/server/utils"
 	"log"
 	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/dicedb/dice/internal/server/utils"
 
 	"github.com/dicedb/dice/config"
 	derrors "github.com/dicedb/dice/internal/errors"
@@ -82,15 +83,14 @@ func (e *HTTPCommandExecutor) FireCommand(cmd HTTPCommand) (interface{}, error) 
 		}
 
 		return result.Data, nil
-	} else {
-		var result interface{}
-		err = json.NewDecoder(resp.Body).Decode(&result)
-		if err != nil {
-			return nil, err
-		}
-
-		return result, nil
 	}
+	var result interface{}
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func (e *HTTPCommandExecutor) Name() string {

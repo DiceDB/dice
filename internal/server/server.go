@@ -310,25 +310,20 @@ func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.RedisCmd, buf *bytes.
 	resp := <-s.ioChan
 
 	val, ok := WorkerCmdsMeta[redisCmd.Cmd]
-
 	// TODO: Remove this conditional check and if (true) condition when all commands are migrated
 	if !ok {
 		buf.Write(resp.EvalResponse.Result.([]byte))
 	} else {
-
 		// If command type is Global then return the worker eval
 		if val.CmdType == Global {
 			buf.Write(val.RespNoShards(redisCmd.Args))
 			return
 		}
-
 		// Handle error case independently
 		if resp.EvalResponse.Error != nil {
 			handleMigratedResp(resp.EvalResponse.Error, buf)
 		}
-
 		handleMigratedResp(resp.EvalResponse.Result, buf)
-
 		return
 	}
 }

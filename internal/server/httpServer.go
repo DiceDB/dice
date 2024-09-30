@@ -357,15 +357,14 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.Store
 		"*0",     // Represents an empty RESP Array.
 	}
 
-	switch val := responseValue.(type) {
-	case eval.RespType:
+	if val, ok := responseValue.(eval.RespType); ok {
 		responseValue = respArr[val]
 	}
 
-	if bytes, ok := responseValue.([]byte); ok {
-		responseValue = string(bytes)
+	if bt, ok := responseValue.([]byte); ok {
+		responseValue = string(bt)
 	}
-	httpResponse := utils.HttpResponse{Data: responseValue}
+	httpResponse := utils.HTTPResponse{Data: responseValue}
 
 	responseJSON, err := json.Marshal(httpResponse)
 	if err != nil {
