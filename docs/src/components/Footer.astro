@@ -1,0 +1,111 @@
+---
+import SocialHandlesIcons from "./SocialHandlesIcons.astro";
+import { Github } from "lucide-astro";
+---
+
+<div>
+  <section class="section container">
+    <div class="columns is-multiline is-mobile">
+      <div class="column is-2-desktop is-4-tablet is-half-mobile">
+        <div
+          style="margin-bottom: 0.75em;"
+          class="has-text-weight-bold has-text-grey"
+        >
+          DiceDB
+        </div>
+        <p>
+          <a
+            class="button is-primary is-fullwidth"
+            href="/get-started/installation"
+          >
+            Get Started →
+          </a>
+        </p>
+        <p style="margin-top: 0.5em;">
+          <a
+            class="button is-fullwidth"
+            target="_blank"
+            href="https://github.com/dicedb/dice"
+            title="DiceDB source code on GitHub"
+          >
+            <span class="icon"><Github /></span>
+            <span>GitHub (5k+)</span>
+          </a>
+        </p>
+      </div>
+      <div class="column is-1"></div>
+      <div class="column is-2-desktop is-4-tablet is-half-mobile">
+        <div
+          style="margin-bottom: 0.75em;"
+          class="has-text-weight-bold has-text-grey"
+        >
+          Developers
+        </div>
+        <p>
+          <a href="/get-started/installation" style="color: #333;">
+            Quickstart</a
+          >
+        </p>
+        <p>
+          <a href="/commands/get" style="color: #333;"> Commands</a>
+        </p>
+        <p>
+          <a
+            href="https://github.com/DiceDB/dice/tree/master/examples/leaderboard-go"
+            style="color: #333;"
+          >
+            Examples</a
+          >
+        </p>
+        <!-- <p>
+            <a href="/blog" style="color: #333;"> Blog</a>
+          </p> -->
+      </div>
+      <div class="column is-2-desktop is-4-tablet is-half-mobile">
+        <div
+          style="margin-bottom: 0.75em;"
+          class="has-text-weight-bold has-text-grey"
+        >
+          Examples
+        </div>
+        <p>
+          <a
+            href="https://github.com/DiceDB/dice/tree/master/examples/leaderboard-go"
+            style="color: #333;"
+          >
+            Real-time Leaderboard</a
+          >
+        </p>
+      </div>
+      <div class="column is-3-desktop is-6-tablet is-half-mobile">
+        <div
+          style="margin-bottom: 0.75em;"
+          class="has-text-weight-bold has-text-grey"
+        >
+          Us and Socials
+        </div>
+        <!-- <p>
+          <a href="/about-us" style="color: #333;"> About Us</a>
+        </p> -->
+        <p>
+          <a href="mailto:arpit@dicedb.io" style="color: #333;">
+            Contact Us</a
+          >
+        </p>
+        <br />
+        <p>
+          <SocialHandlesIcons />
+        </p>
+      </div>
+    </div>
+    <br />
+    <div class="columns has-text-centered">
+      <div class="column is-centered">
+        <br />
+        <ul class="horizontal">
+          <li style="margin-left: 0.5em">© DiceDB, 2024</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</div>
