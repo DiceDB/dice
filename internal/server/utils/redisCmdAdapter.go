@@ -40,13 +40,24 @@ const (
 )
 
 func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
-	command := strings.TrimPrefix(r.URL.Path, "/")
-	if command == "" {
+	commandParts := strings.Split(strings.TrimPrefix(r.URL.Path, "/"), "/")
+	if len(commandParts) == 0 {
 		return nil, errors.New("invalid command")
 	}
 
-	command = strings.ToUpper(command)
+	command := strings.ToUpper(commandParts[0])
+
+	var subcommand string
+	if len(commandParts) > 1 {
+		subcommand = strings.ToUpper(commandParts[1])
+	}
+
 	var args []string
+
+	//Handle subcommand and multiple arguments
+	if subcommand != "" {
+		args = append(args, subcommand)
+	}
 
 	// Extract query parameters
 	queryParams := r.URL.Query()
