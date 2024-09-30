@@ -216,7 +216,7 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 
 	// Wait for 1st sync response from server for QWATCH and flush it to client
 	resp := <-s.ioChan
-	s.writeResponse(writer, resp, redisCmd)
+	s.writeQWatchResponse(writer, resp)
 	flusher.Flush()
 	// Keep listening for context cancellation (client disconnect) and continuous responses
 	doneChan := request.Context().Done()
@@ -245,17 +245,35 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 	}
 }
 
-func (s *HTTPServer) writeQWatchResponse(writer http.ResponseWriter, response comm.QwatchResponse) {
+func (s *HTTPServer) writeQWatchResponse(writer http.ResponseWriter, response interface{}) {
+	var result interface{}
+	var err error
+
+	// Use type assertion to handle both types of responses
+	switch resp := response.(type) {
+	case comm.QwatchResponse:
+		result = resp.Result
+		err = resp.Error
+	case *ops.StoreResponse:
+		result = resp.EvalResponse.Result
+		err = resp.EvalResponse.Error
+	default:
+		s.logger.Error("Unsupported response type")
+		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
 	var rp *clientio.RESPParser
-	if response.Error != nil {
-		rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(response.Error.Error())))
+	if err != nil {
+		rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(err.Error())))
 	} else {
-		rp = clientio.NewRESPParser(bytes.NewBuffer(response.Result.([]byte)))
+		rp = clientio.NewRESPParser(bytes.NewBuffer(result.([]byte)))
 	}
 
 	val, err := rp.DecodeOne()
 	if err != nil {
 		s.logger.Error("Error decoding response: %v", slog.Any("error", err))
+		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
@@ -278,6 +296,7 @@ func (s *HTTPServer) writeQWatchResponse(writer http.ResponseWriter, response co
 
 	if err != nil {
 		s.logger.Error("Error marshaling QueryData to JSON: %v", slog.Any("error", err))
+		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
@@ -285,8 +304,10 @@ func (s *HTTPServer) writeQWatchResponse(writer http.ResponseWriter, response co
 	_, err = writer.Write(responseJSON)
 	if err != nil {
 		s.logger.Error("Error writing SSE data: %v", slog.Any("error", err))
+		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
+
 	flusher, ok := writer.(http.Flusher)
 	if !ok {
 		http.Error(writer, "Streaming unsupported", http.StatusInternalServerError)

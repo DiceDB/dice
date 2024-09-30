@@ -74,13 +74,23 @@ func (e *HTTPCommandExecutor) FireCommand(cmd HTTPCommand) (interface{}, error) 
 	}
 	defer resp.Body.Close()
 
-	var result utils.HttpResponse
-	err = json.NewDecoder(resp.Body).Decode(&result)
-	if err != nil {
-		return nil, err
-	}
+	if cmd.Command != "QWATCH" {
+		var result utils.HttpResponse
+		err = json.NewDecoder(resp.Body).Decode(&result)
+		if err != nil {
+			return nil, err
+		}
 
-	return result.Data, nil
+		return result.Data, nil
+	} else {
+		var result interface{}
+		err = json.NewDecoder(resp.Body).Decode(&result)
+		if err != nil {
+			return nil, err
+		}
+
+		return result, nil
+	}
 }
 
 func (e *HTTPCommandExecutor) Name() string {
