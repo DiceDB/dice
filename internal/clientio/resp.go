@@ -152,17 +152,37 @@ func encodeString(v string) []byte {
 	return []byte(fmt.Sprintf("$%d\r\n%s\r\n", len(v), v))
 }
 
+// encodeBool encodes bool as simple strings
+func encodeBool(v bool) []byte {
+	return []byte(fmt.Sprintf("+%t\r\n", v))
+}
+
 func Encode(value interface{}, isSimple bool) []byte {
 	switch v := value.(type) {
 	case string:
-		if isSimple {
+		// encode as simple strings
+		if isSimple || v == "[" || v == "{" {
 			return []byte(fmt.Sprintf("+%s\r\n", v))
 		}
+		// encode as bulk strings
 		return encodeString(v)
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 		return []byte(fmt.Sprintf(":%d\r\n", v))
 	case float32, float64:
-		return []byte(fmt.Sprintf(":%v\r\n", v))
+		// In case the element being encoded was obtained after parsing a JSON value,
+		// it is possible for integers to have been encoded as floats
+		// (since encoding/json unmarshals numeric values as floats).
+		// Therefore, we need to check if value is an integer
+		intValue, isInteger := utils.IsFloatToIntPossible(v.(float64))
+		if isInteger {
+			return []byte(fmt.Sprintf(":%d\r\n", intValue))
+		}
+
+		// if it is a float, encode like a string
+		str := strconv.FormatFloat(v.(float64), 'f', -1, 64)
+		return encodeString(str)
+	case bool:
+		return encodeBool(v)
 	case []string:
 		var b []byte
 		buf := bytes.NewBuffer(b)
