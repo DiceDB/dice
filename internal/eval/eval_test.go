@@ -147,87 +147,87 @@ func testEvalSET(t *testing.T, store *dstore.Store) {
 		{
 			name:           "nil value",
 			input:          nil,
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'set' command\r\n")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'SET' command")},
 		},
 		{
 			name:           "empty array",
 			input:          []string{},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'set' command\r\n")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'SET' command")},
 		},
 		{
 			name:           "one value",
 			input:          []string{"KEY"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'set' command\r\n")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'SET' command")},
 		},
 		{
 			name:           "key val pair",
 			input:          []string{"KEY", "VAL"},
-			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
+			migratedOutput: EvalResponse{Result: RespOK, Error: nil},
 		},
 		{
 			name:           "key val pair with int val",
 			input:          []string{"KEY", "123456"},
-			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
+			migratedOutput: EvalResponse{Result: RespOK, Error: nil},
 		},
 		{
 			name:           "key val pair and expiry key",
 			input:          []string{"KEY", "VAL", Px},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR syntax error\r\n")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
 		},
 		{
 			name:           "key val pair and EX no val",
 			input:          []string{"KEY", "VAL", Ex},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR syntax error\r\n")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
 		},
 		{
 			name:           "key val pair and valid EX",
 			input:          []string{"KEY", "VAL", Ex, "2"},
-			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
+			migratedOutput: EvalResponse{Result: RespOK, Error: nil},
 		},
 		{
 			name:           "key val pair and invalid EX",
 			input:          []string{"KEY", "VAL", Ex, "invalid_expiry_val"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR value is not an integer or out of range\r\n")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")},
 		},
 		{
 			name:           "key val pair and valid PX",
 			input:          []string{"KEY", "VAL", Px, "2000"},
-			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
+			migratedOutput: EvalResponse{Result: RespOK, Error: nil},
 		},
 		{
 			name:           "key val pair and invalid PX",
 			input:          []string{"KEY", "VAL", Px, "invalid_expiry_val"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR value is not an integer or out of range\r\n")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")},
 		},
 		{
 			name:           "key val pair and both EX and PX",
 			input:          []string{"KEY", "VAL", Ex, "2", Px, "2000"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR syntax error\r\n")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
 		},
 		{
 			name:           "key val pair and PXAT no val",
 			input:          []string{"KEY", "VAL", Pxat},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR syntax error\r\n")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
 		},
 		{
 			name:           "key val pair and invalid PXAT",
 			input:          []string{"KEY", "VAL", Pxat, "invalid_expiry_val"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR value is not an integer or out of range\r\n")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
 		},
 		{
 			name:           "key val pair and expired PXAT",
 			input:          []string{"KEY", "VAL", Pxat, "2"},
-			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
+			migratedOutput: EvalResponse{Result: RespOK, Error: nil},
 		},
 		{
 			name:           "key val pair and negative PXAT",
 			input:          []string{"KEY", "VAL", Pxat, "-123456"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR invalid expire time in 'set' command\r\n")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'SET' command")},
 		},
 		{
 			name:           "key val pair and valid PXAT",
 			input:          []string{"KEY", "VAL", Pxat, strconv.FormatInt(time.Now().Add(2*time.Minute).UnixMilli(), 10)},
-			migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil},
+			migratedOutput: EvalResponse{Result: RespOK, Error: nil},
 		},
 	}
 
@@ -318,22 +318,22 @@ func testEvalGET(t *testing.T, store *dstore.Store) {
 		{
 			name:           "nil value",
 			input:          nil,
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'get' command\r\n")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'GET' command")},
 		},
 		{
 			name:           "empty array",
 			input:          []string{},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'get' command\r\n")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'GET' command")},
 		},
 		{
 			name:           "key does not exist",
 			input:          []string{"NONEXISTENT_KEY"},
-			migratedOutput: EvalResponse{Result: clientio.RespNIL, Error: nil},
+			migratedOutput: EvalResponse{Result: RespNIL, Error: nil},
 		},
 		{
 			name:           "multiple arguments",
 			input:          []string{"KEY1", "KEY2"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'get' command\r\n")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'GET' command")},
 		},
 		{
 			name: "key exists",
@@ -393,17 +393,17 @@ func testEvalGETSET(t *testing.T, store *dstore.Store) {
 		{
 			name:           "GETSET with 1 arg",
 			input:          []string{"HELLO"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'getset' command\r\n")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'GETSET' command")},
 		},
 		{
 			name:           "GETSET with 3 args",
 			input:          []string{"HELLO", "WORLD", "WORLD1"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'getset' command\r\n")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'GETSET' command")},
 		},
 		{
 			name:           "GETSET key not exists",
 			input:          []string{"HELLO", "WORLD"},
-			migratedOutput: EvalResponse{Result: clientio.RespNIL, Error: nil},
+			migratedOutput: EvalResponse{Result: RespNIL, Error: nil},
 		},
 		{
 			name: "GETSET key exists",
@@ -417,7 +417,7 @@ func testEvalGETSET(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:          []string{"EXISTING_KEY", "WORLD"},
-			migratedOutput: EvalResponse{Result: fmt.Sprintf("$%d\r\n%s\r\n", len("mock_value"), "mock_value"), Error: nil},
+			migratedOutput: EvalResponse{Result: "mock_value", Error: nil},
 		},
 		{
 			name: "GETSET key exists TTL should be reset",
@@ -431,7 +431,7 @@ func testEvalGETSET(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:          []string{"EXISTING_KEY", "WORLD"},
-			migratedOutput: EvalResponse{Result: fmt.Sprintf("$%d\r\n%s\r\n", len("mock_value"), "mock_value"), Error: nil},
+			migratedOutput: EvalResponse{Result: "mock_value", Error: nil},
 		},
 	}
 
@@ -3889,18 +3889,18 @@ func testEvalSETEX(t *testing.T, store *dstore.Store) {
 	utils.CurrentTime = mockTime
 
 	tests := map[string]evalTestCase{
-		"nil value":                              {input: nil, migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'setex' command\r\n")}},
-		"empty array":                            {input: []string{}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'setex' command\r\n")}},
-		"one value":                              {input: []string{"KEY"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'setex' command\r\n")}},
-		"key val pair":                           {input: []string{"KEY", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'setex' command\r\n")}},
-		"key exp pair":                           {input: []string{"KEY", "123456"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'setex' command\r\n")}},
-		"key exp value pair":                     {input: []string{"KEY", "123", "VAL"}, migratedOutput: EvalResponse{Result: clientio.RespOK, Error: nil}},
-		"key exp value pair with extra args":     {input: []string{"KEY", "123", "VAL", " "}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'setex' command\r\n")}},
-		"key exp value pair with invalid exp":    {input: []string{"KEY", "0", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR invalid expire time in 'setex' command\r\n")}},
-		"key exp value pair with exp > maxexp":   {input: []string{"KEY", "9223372036854776", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR invalid expire time in 'setex' command\r\n")}},
-		"key exp value pair with exp > maxint64": {input: []string{"KEY", "92233720368547760000000", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR value is not an integer or out of range\r\n")}},
-		"key exp value pair with negative exp":   {input: []string{"KEY", "-23", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR invalid expire time in 'setex' command\r\n")}},
-		"key exp value pair with not-int exp":    {input: []string{"KEY", "12a", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR value is not an integer or out of range\r\n")}},
+		"nil value":                              {input: nil, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'SETEX' command")}},
+		"empty array":                            {input: []string{}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'SETEX' command")}},
+		"one value":                              {input: []string{"KEY"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'SETEX' command")}},
+		"key val pair":                           {input: []string{"KEY", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'SETEX' command")}},
+		"key exp pair":                           {input: []string{"KEY", "123456"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'SETEX' command")}},
+		"key exp value pair":                     {input: []string{"KEY", "123", "VAL"}, migratedOutput: EvalResponse{Result: RespOK, Error: nil}},
+		"key exp value pair with extra args":     {input: []string{"KEY", "123", "VAL", " "}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'SETEX' command")}},
+		"key exp value pair with invalid exp":    {input: []string{"KEY", "0", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'SETEX' command")}},
+		"key exp value pair with exp > maxexp":   {input: []string{"KEY", "9223372036854776", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'SETEX' command")}},
+		"key exp value pair with exp > maxint64": {input: []string{"KEY", "92233720368547760000000", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")}},
+		"key exp value pair with negative exp":   {input: []string{"KEY", "-23", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'SETEX' command")}},
+		"key exp value pair with not-int exp":    {input: []string{"KEY", "12a", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")}},
 
 		"set and get": {
 			setup: func() {},
