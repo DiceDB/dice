@@ -152,6 +152,11 @@ func encodeString(v string) []byte {
 	return []byte(fmt.Sprintf("$%d\r\n%s\r\n", len(v), v))
 }
 
+// encodeBool encodes bool as simple strings
+func encodeBool(v bool) []byte {
+	return []byte(fmt.Sprintf("+%t\r\n", v))
+}
+
 func Encode(value interface{}, isSimple bool) []byte {
 	// Use a type switch to determine the type of the provided value and encode accordingly.
 	switch v := value.(type) {
@@ -164,21 +169,31 @@ func Encode(value interface{}, isSimple bool) []byte {
 		return v // Return the byte slice as-is.
 
 	case string:
-		// If isSimple is true, format the string in a simple RESP format.
-		if isSimple {
-			return []byte(fmt.Sprintf("+%s\r\n", v)) // Prefix with '+' for simple response.
+		// encode as simple strings
+		if isSimple || v == "[" || v == "{" {
+			return []byte(fmt.Sprintf("+%s\r\n", v))
 		}
-		return encodeString(v) // Use detailed encoding for the string.
-
-	// Handle numeric types (int, uint, etc.) by formatting them as RESP integers.
+		// encode as bulk strings
+		return encodeString(v)
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 		return []byte(fmt.Sprintf(":%d\r\n", v)) // Prefix with ':' for RESP integers.
 
 	// Handle floating-point types similarly to integers.
 	case float32, float64:
-		return []byte(fmt.Sprintf(":%v\r\n", v)) // Format as RESP float.
+		// In case the element being encoded was obtained after parsing a JSON value,
+		// it is possible for integers to have been encoded as floats
+		// (since encoding/json unmarshals numeric values as floats).
+		// Therefore, we need to check if value is an integer
+		intValue, isInteger := utils.IsFloatToIntPossible(v.(float64))
+		if isInteger {
+			return []byte(fmt.Sprintf(":%d\r\n", intValue))
+		}
 
-	// Handle slices of strings.
+		// if it is a float, encode like a string
+		str := strconv.FormatFloat(v.(float64), 'f', -1, 64)
+		return encodeString(str)
+	case bool:
+		return encodeBool(v)
 	case []string:
 		var b []byte
 		buf := bytes.NewBuffer(b) // Create a buffer to accumulate encoded strings.
@@ -216,18 +231,14 @@ func Encode(value interface{}, isSimple bool) []byte {
 
 	// Handle error type by formatting it as a RESP error.
 	case error:
-		return []byte(fmt.Sprintf("-%s\r\n", v)) // Prefix with '-' for RESP error format.
-
-	// Handle custom watch event struct.
-	case dstore.WatchEvent:
+		return []byte(fmt.Sprintf("-%s\r\n", v))
+	case dstore.QueryWatchEvent:
 		var b []byte
-		buf := bytes.NewBuffer(b) // Create a buffer for accumulating encoded values.
-		we := value.(dstore.WatchEvent)
-		buf.Write(Encode(fmt.Sprintf("key:%s", we.Key), false))      // Encode the key field.
-		buf.Write(Encode(fmt.Sprintf("op:%s", we.Operation), false)) // Encode the operation field.
-		return []byte(fmt.Sprintf("*2\r\n%s", buf.Bytes()))          // Return the encoded response.
-
-	// Handle slices of SQL query result rows.
+		buf := bytes.NewBuffer(b)
+		we := value.(dstore.QueryWatchEvent)
+		buf.Write(Encode(fmt.Sprintf("key:%s", we.Key), false))
+		buf.Write(Encode(fmt.Sprintf("op:%s", we.Operation), false))
+		return []byte(fmt.Sprintf("*2\r\n%s", buf.Bytes()))
 	case []sql.QueryResultRow:
 		var b []byte
 		buf := bytes.NewBuffer(b) // Create a buffer for accumulating encoded rows.

@@ -15,8 +15,8 @@ import (
 	"github.com/dicedb/dice/config"
 )
 
-// WatchEvent represents a change in a watched key.
-type WatchEvent struct {
+// QueryWatchEvent represents a change in a watched key.
+type QueryWatchEvent struct {
 	Key       string
 	Operation string
 	Value     object.Obj
@@ -26,10 +26,10 @@ type Store struct {
 	store     *swiss.Map[string, *object.Obj]
 	expires   *swiss.Map[*object.Obj, uint64] // Does not need to be thread-safe as it is only accessed by a single thread.
 	numKeys   int
-	watchChan chan WatchEvent
+	watchChan chan QueryWatchEvent
 }
 
-func NewStore(watchChan chan WatchEvent) *Store {
+func NewStore(watchChan chan QueryWatchEvent) *Store {
 	return &Store{
 		store:     swiss.New[string, *object.Obj](config.DiceConfig.Server.StoreMapInitSize),
 		expires:   swiss.New[*object.Obj, uint64](config.DiceConfig.Server.StoreMapInitSize),
@@ -292,7 +292,7 @@ func (store *Store) delByPtr(ptr string) bool {
 
 // notifyQueryManager notifies the query manager about a key change, so that it can update the query cache if needed.
 func (store *Store) notifyQueryManager(k, operation string, obj object.Obj) {
-	store.watchChan <- WatchEvent{k, operation, obj}
+	store.watchChan <- QueryWatchEvent{k, operation, obj}
 }
 
 func (store *Store) GetStore() *swiss.Map[string, *object.Obj] {
