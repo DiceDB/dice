@@ -3032,28 +3032,29 @@ func evalHSET(args []string, store *dstore.Store) []byte {
 
 func evalHKEYS(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
-		return diceerrors.NewErrArity("HGETALL")
+		return diceerrors.NewErrArity("HKEYS")
 	}
 
 	key := args[0]
-
 	obj := store.Get(key)
 
 	var hashMap HashMap
-	var results []string
+	var result []string
 
 	if obj != nil {
 		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
 			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 		}
 		hashMap = obj.Value.(HashMap)
+	} else {
+		return clientio.Encode([]interface{}{}, false)
 	}
 
 	for hmKey := range hashMap {
-		results = append(results, hmKey)
+		result = append(result, hmKey)
 	}
 
-	return clientio.Encode(results, false)
+	return clientio.Encode(result, false)
 }
 
 // Increments the number stored at field in the hash stored at key by increment.
