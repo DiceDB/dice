@@ -105,6 +105,8 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	config.DiceConfig.Network.IOBufferLength = 16
 	config.DiceConfig.Server.WriteAOFOnCleanup = false
 	config.DiceConfig.Server.StoreMapInitSize = 1024
+	config.DiceConfig.Server.EvictionRatio = 0.4
+	config.DiceConfig.Server.KeysLimit = 2000000
 
 	if opt.Port != 0 {
 		config.DiceConfig.Server.Port = opt.Port

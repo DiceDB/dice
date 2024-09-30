@@ -88,7 +88,7 @@ func TestServerRestartAfterAbort(t *testing.T) {
 
 	conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", config.DiceConfig.Server.Port))
 	if err != nil {
-		t.Fatalf("Server should be running after restart: %v", err)
+		t.Fatalf("Server should be running at start: %v", err)
 	}
 
 	// Send ABORT command to shut down server
