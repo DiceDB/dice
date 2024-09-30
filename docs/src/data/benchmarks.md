@@ -60,8 +60,6 @@ The benchmark run tested DiceDB with 10 threads, 30 client connections per threa
   - p99 latency was 1.983 ms, indicating that 99% of requests were faster than this.
   - p99.9 latency (99.9th percentile) reached 4.607 ms, showing how the highest-latency outliers behaved.
 
-### Thank you for exploraing
-
 The results from the memtier benchmark suggest that DiceDB is well-optimized for handling high-concurrency environments with minimal resource consumption. The high throughput and low latency are clear indicators that DiceDB can serve mission-critical applications that require real-time processing with rapid response times. 
 
 Despite the simulated stress of 30 clients making simultaneous requests, DiceDB managed to maintain its performance characteristics without any visible degradation.
