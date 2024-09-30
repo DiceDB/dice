@@ -67,6 +67,7 @@ type Config struct {
 		LogLevel               string        `mapstructure:"loglevel"`
 		PrettyPrintLogs        bool          `mapstructure:"prettyprintlogs"`
 		EnableMultiThreading   bool          `mapstructure:"enablemultithreading"`
+		StoreMapInitSize       int           `mapstructure:"storemapinitsize"`
 	} `mapstructure:"server"`
 	Auth struct {
 		UserName string `mapstructure:"username"`
@@ -100,6 +101,7 @@ var baseConfig = Config{
 		LogLevel               string        `mapstructure:"loglevel"`
 		PrettyPrintLogs        bool          `mapstructure:"prettyprintlogs"`
 		EnableMultiThreading   bool          `mapstructure:"enablemultithreading"`
+		StoreMapInitSize       int           `mapstructure:"storemapinitsize"`
 	}{
 		Addr:                   DefaultHost,
 		Port:                   DefaultPort,
@@ -120,6 +122,7 @@ var baseConfig = Config{
 		LogLevel:               "info",
 		PrettyPrintLogs:        false,
 		EnableMultiThreading:   false,
+		StoreMapInitSize:       1024000,
 	},
 	Auth: struct {
 		UserName string `mapstructure:"username"`
