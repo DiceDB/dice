@@ -100,8 +100,11 @@ func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *clientio.RESPParser
 }
 
 func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOptions) {
+	// Override configs to test server config, this is enabled to handle test env runs
+	// as those envs are resource constrained
 	config.DiceConfig.Network.IOBufferLength = 16
 	config.DiceConfig.Server.WriteAOFOnCleanup = false
+	config.DiceConfig.Server.StoreMapInitSize = 1024
 
 	if opt.Port != 0 {
 		config.DiceConfig.Server.Port = opt.Port

@@ -31,7 +31,7 @@ type Store struct {
 
 func NewStore(watchChan chan WatchEvent) *Store {
 	return &Store{
-		store:     swiss.New[string, *object.Obj](1024),
+		store:     swiss.New[string, *object.Obj](config.DiceConfig.Server.StoreMapInitSize),
 		expires:   swiss.New[*object.Obj, uint64](1024),
 		watchChan: watchChan,
 	}
