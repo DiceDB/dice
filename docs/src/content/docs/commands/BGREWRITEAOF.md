@@ -26,9 +26,9 @@ The `BGREWRITEAOF` command does not take any parameters.
 When the `BGREWRITEAOF` command is issued, DiceDB performs the following steps:
 
 1. `Forking a Child Process`: DiceDB forks a child process to handle the AOF rewrite. This ensures that the main DiceDB server can continue to handle client requests without interruption.
-1. `Creating a Temporary AOF File`: The child process creates a temporary AOF file and writes the minimal set of commands needed to reconstruct the current dataset.
-1. `Swapping Files`: Once the temporary AOF file is fully written and synced to disk, the child process swaps the temporary file with the existing AOF file.
-1. `Cleaning Up`: The child process exits, and the main DiceDB server continues to operate with the new, optimized AOF file.
+2. `Creating a Temporary AOF File`: The child process creates a temporary AOF file and writes the minimal set of commands needed to reconstruct the current dataset.
+3. `Swapping Files`: Once the temporary AOF file is fully written and synced to disk, the child process swaps the temporary file with the existing AOF file.
+4. `Cleaning Up`: The child process exits, and the main DiceDB server continues to operate with the new, optimized AOF file.
 
 ## Example Usage
 
@@ -51,7 +51,7 @@ In this example, the `BGREWRITEAOF` command is issued, and the server responds w
      "Background append only file rewriting already in progress"
      ```
 
-1. `Forking Error`:
+2. `Forking Error`:
 
    - `Condition`: If DiceDB is unable to fork a new process due to system limitations or resource constraints.
    - `Error Message`:
@@ -59,7 +59,7 @@ In this example, the `BGREWRITEAOF` command is issued, and the server responds w
      "ERR Can't fork"
      ```
 
-1. `AOF Disabled`:
+3. `AOF Disabled`:
 
    - `Condition`: If AOF is disabled in the DiceDB configuration.
    - `Error Message`:

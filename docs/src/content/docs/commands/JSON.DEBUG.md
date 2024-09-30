@@ -41,15 +41,15 @@ The `JSON.DEBUG` command can raise errors in the following scenarios:
 
    - `Error Message`: `ERR unknown subcommand '<subcommand>'`
 
-1. `Non-Existent Key`: If the specified key does not exist in the DiceDB database, DiceDB will return an error.
+2. `Non-Existent Key`: If the specified key does not exist in the DiceDB database, DiceDB will return an error.
 
    - `Error Message`: `ERR no such key`
 
-1. `Invalid Path`: If the specified path does not exist within the JSON data, DiceDB will return an error.
+3. `Invalid Path`: If the specified path does not exist within the JSON data, DiceDB will return an error.
 
    - `Error Message`: `ERR path '<path>' does not exist`
 
-1. `Wrong Type`: If the key exists but does not hold JSON data, DiceDB will return an error.
+4. `Wrong Type`: If the key exists but does not hold JSON data, DiceDB will return an error.
 
    - `Error Message`: `WRONGTYPE Operation against a key holding the wrong kind of value`
 

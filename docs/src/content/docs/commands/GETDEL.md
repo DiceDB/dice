@@ -25,17 +25,17 @@ GETDEL key
 When the `GETDEL` command is executed, the following steps occur:
 
 1. The command checks if the specified key exists in the DiceDB database.
-1. If the key exists, the value associated with the key is retrieved.
-1. The key is then deleted from the database.
-1. The retrieved value is returned to the client.
-1. If the key does not exist, `nil` is returned, and no deletion occurs.
+2. If the key exists, the value associated with the key is retrieved.
+3. The key is then deleted from the database.
+4. The retrieved value is returned to the client.
+5. If the key does not exist, `nil` is returned, and no deletion occurs.
 
 ## Error Handling
 
 The `GETDEL` command can raise errors in the following scenarios:
 
 1. `Wrong Type Error`: If the key exists but is not a string (e.g., it is a list, set, hash, etc.), a `WRONGTYPE` error will be raised.
-1. `Syntax Error`: If the command is called without the required parameter, a syntax error will be raised.
+2. `Syntax Error`: If the command is called without the required parameter, a syntax error will be raised.
 
 ## Example Usage
 

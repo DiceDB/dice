@@ -25,9 +25,9 @@ RPOP key
 When the `RPOP` command is executed, the following steps occur:
 
 1. DiceDB checks if the key exists and is of type list.
-1. If the key does not exist, the command returns `nil`.
-1. If the key exists but the list is empty, the command returns `nil`.
-1. If the key exists and the list is not empty, the last element of the list is removed and returned.
+2. If the key does not exist, the command returns `nil`.
+3. If the key exists but the list is empty, the command returns `nil`.
+4. If the key exists and the list is not empty, the last element of the list is removed and returned.
 
 ## Error Handling
 

@@ -12,11 +12,11 @@ func TestSelect(t *testing.T) {
 
 	t.Run("SELECT command response", func(t *testing.T) {
 		actual := FireCommand(conn, "SELECT 1")
-		assert.DeepEqual(t, string("OK"), actual)
+		assert.DeepEqual(t, "OK", actual)
 	})
 
 	t.Run("SELECT command error response", func(t *testing.T) {
 		actual := FireCommand(conn, "SELECT")
-		assert.DeepEqual(t, string("ERR wrong number of arguments for 'select' command"), actual)
+		assert.DeepEqual(t, "ERR wrong number of arguments for 'select' command", actual)
 	})
 }

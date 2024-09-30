@@ -89,7 +89,7 @@ $ git push origin <your issue branch>
 After this, create a PullRequest in `github <https://github.com/dicedb/docs/pulls>`_. Make sure you have linked the relevant Issue in the description with "Closes #number" or "Fixes #number".
 ```
 
-- Once you receive comments on github on your changes, be sure to respond to them on github and address the concerns. If any discussions happen offline for the changes in question, make sure to capture the outcome of the discussion, so others can follow along as well.
+- Once you receive comments on GitHub on your changes, be sure to respond to them on GitHub and address the concerns. If any discussions happen offline for the changes in question, make sure to capture the outcome of the discussion, so others can follow along as well.
 
   It is possible that while your change is being reviewed, other changes were made to the master branch. Be sure to pull rebase your change on the new changes thus:
 

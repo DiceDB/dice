@@ -20,8 +20,8 @@ The `FLUSHDB` command returns a simple string reply:
 When the `FLUSHDB` command is executed, the following actions occur:
 
 1. `Immediate Deletion`: All keys in the currently selected database are immediately removed.
-1. `Database Isolation`: Only the keys in the currently selected database are affected. Other databases in the same DiceDB instance remain unchanged.
-1. `Persistence`: If DiceDB persistence is enabled (e.g., RDB snapshots or AOF), the deletion of keys will be reflected in the next persistence operation.
+2. `Database Isolation`: Only the keys in the currently selected database are affected. Other databases in the same DiceDB instance remain unchanged.
+3. `Persistence`: If DiceDB persistence is enabled (e.g., RDB snapshots or AOF), the deletion of keys will be reflected in the next persistence operation.
 
 ## Error Handling
 
@@ -31,7 +31,7 @@ The `FLUSHDB` command is straightforward and does not typically raise errors und
 
    - Error: `(error) NOAUTH Authentication required.` or `(error) NOPERM this user has no permissions to run the 'flushdb' command`
 
-1. `Read-Only Mode`: If the DiceDB instance is in read-only mode (e.g., a read-only replica), the `FLUSHDB` command will not be allowed.
+2. `Read-Only Mode`: If the DiceDB instance is in read-only mode (e.g., a read-only replica), the `FLUSHDB` command will not be allowed.
 
    - Error: `(error) READONLY You can't write against a read-only replica.`
 

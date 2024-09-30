@@ -24,9 +24,9 @@ The `HLEN` command returns an integer representing the number of fields in the h
 When the `HLEN` command is executed:
 
 1. DiceDB checks if the specified key exists.
-1. If the key exists and is associated with a hash, DiceDB counts the number of fields in the hash and returns this count.
-1. If the key does not exist, DiceDB returns `0`.
-1. If the key exists but is not associated with a hash, an error is returned.
+2. If the key exists and is associated with a hash, DiceDB counts the number of fields in the hash and returns this count.
+3. If the key does not exist, DiceDB returns `0`.
+4. If the key exists but is not associated with a hash, an error is returned.
 
 ## Error Handling
 

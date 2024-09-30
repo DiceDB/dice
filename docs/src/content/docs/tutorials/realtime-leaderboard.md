@@ -41,7 +41,7 @@ First, open your terminal and connect to your DiceDB instance:
 dice-cli
 ```
 
-To test that the connection is well established fire the `PING` command and you should get `PONG` in return.
+To test that the connection is well established fire the `PING` command, and you should get `PONG` in return.
 
 ## Ingesting the stats
 
@@ -86,7 +86,7 @@ Given that we have used [`QWATCH`](/commands/qwatch) command to get the leaderbo
 any time the data is updated, it will re-evaluate the query and
 emitting the list of key, value pairs in the descending order of the value (score).
 
-Thus your client will get the leaderboard in realtime, without having to poll or query the data periodically.
+Thus, your client will get the leaderboard in realtime, without having to poll or query the data periodically.
 
 ## Conclusion
 
@@ -95,4 +95,4 @@ By using DiceDB CLI commands, you can create fast, scalable, and feature-rich le
 without having to
 
 1. periodically poll for the data, or
-2. knowing the internal data data structures like Sorted Set.
+2. knowing the internal data structures like Sorted Set.

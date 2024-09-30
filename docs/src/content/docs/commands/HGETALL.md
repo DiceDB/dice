@@ -24,9 +24,9 @@ The `HGETALL` command returns an array of strings in the form of field-value pai
 When the `HGETALL` command is executed:
 
 1. DiceDB checks if the specified key exists.
-1. If the key exists and is of type hash, DiceDB retrieves all the fields and their corresponding values.
-1. If the key does not exist, DiceDB returns an empty array.
-1. If the key exists but is not of type hash, an error is returned.
+2. If the key exists and is of type hash, DiceDB retrieves all the fields and their corresponding values.
+3. If the key does not exist, DiceDB returns an empty array.
+4. If the key exists but is not of type hash, an error is returned.
 
 ## Error Handling
 

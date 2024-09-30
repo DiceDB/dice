@@ -50,7 +50,7 @@ PONG
 When the `PING` command is fired:
 
 1. If no message is given, it sends back a `PONG`.
-1. If a message is provided, it sends back the same message in the response.
+2. If a message is provided, it sends back the same message in the response.
 
 This helps clients determine if the server is up and responsive. Essentially, it acts as a keep-alive or heartbeat mechanism for clients to validate their connection with the DiceDB server.
 
@@ -70,7 +70,7 @@ This helps clients determine if the server is up and responsive. Essentially, it
 
 2. `Data Type Error`: If the argument provided is not a string (for example, if a list or other data type is provided), a type error will be raised.
 
-   - `Error message`: This specific type of error handling is internal, and improper types are generally implicitly converted or rejected by the protocol, raising basic syntax errors or allowing them based on DiceDB' internal type coercion rules.
+   - `Error message`: This specific type of error handling is internal, and improper types are generally implicitly converted or rejected by the protocol, raising basic syntax errors or allowing them based on DiceDB internal type coercion rules.
 
 ## Additional Notes
 

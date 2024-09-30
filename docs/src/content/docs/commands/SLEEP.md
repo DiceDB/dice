@@ -26,9 +26,9 @@ The `SLEEP` command returns a simple string reply of "OK" after the specified sl
 When the `SLEEP` command is executed, the following behavior is observed:
 
 1. The client connection that issued the `SLEEP` command will be paused for the specified duration.
-1. During this sleep period, the client will not be able to send or receive any other commands.
-1. Other clients connected to the DiceDB server will not be affected and can continue to execute commands normally.
-1. After the sleep duration has elapsed, the client will receive an "OK" response and can resume normal operations.
+2. During this sleep period, the client will not be able to send or receive any other commands.
+3. Other clients connected to the DiceDB server will not be affected and can continue to execute commands normally.
+4. After the sleep duration has elapsed, the client will receive an "OK" response and can resume normal operations.
 
 ## Error Handling
 
@@ -39,7 +39,7 @@ The `SLEEP` command can raise errors under the following conditions:
    - `Error Message`: `ERR wrong number of arguments for 'sleep' command`
    - `Condition`: This error occurs if the `SLEEP` command is called without the required `seconds` parameter or with more than one parameter.
 
-1. `Invalid Parameter Type`:
+2. `Invalid Parameter Type`:
 
    - `Error Message`: `ERR value is not a valid float`
    - `Condition`: This error occurs if the `seconds` parameter is not a valid floating-point number.

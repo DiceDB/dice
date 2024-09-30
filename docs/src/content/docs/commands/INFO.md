@@ -195,6 +195,6 @@ The `INFO` command can raise errors in the following scenarios:
 
    - `Error Message`: `ERR unknown INFO subcommand or wrong number of arguments for 'INFO'`
 
-1. `Syntax Error`: If the command is not used correctly, DiceDB will return a syntax error.
+2. `Syntax Error`: If the command is not used correctly, DiceDB will return a syntax error.
 
    - `Error Message`: `ERR syntax error`

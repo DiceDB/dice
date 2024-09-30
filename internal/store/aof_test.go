@@ -13,7 +13,12 @@ func TestAOF(t *testing.T) {
 	testFile := "test.aof"
 
 	// Ensure cleanup after tests
-	defer os.Remove(testFile)
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+			t.Fatalf("Failed to remove test file: %v", err)
+		}
+	}(testFile)
 
 	t.Run("Create and Write", func(t *testing.T) {
 		aof, err := NewAOF(testFile)

@@ -25,8 +25,8 @@ EXPIRETIME key
 When the `EXPIRETIME` command is executed:
 
 1. DiceDB checks if the specified key exists in the database.
-1. If the key exists and has an associated expiration time, DiceDB returns the absolute Unix timestamp (in seconds) at which the key will expire.
-1. If the key does not exist or does not have an associated expiration time, DiceDB returns `-1`.
+2. If the key exists and has an associated expiration time, DiceDB returns the absolute Unix timestamp (in seconds) at which the key will expire.
+3. If the key does not exist or does not have an associated expiration time, DiceDB returns `-1`.
 
 ## Error Handling
 
@@ -36,7 +36,7 @@ The `EXPIRETIME` command can raise errors in the following scenarios:
    ```
    ERR wrong number of arguments for 'expiretime' command
    ```
-1. `Invalid key type`: If the key is not a valid string, DiceDB will return an error message:
+2. `Invalid key type`: If the key is not a valid string, DiceDB will return an error message:
    ```
    ERR invalid key type
    ```

@@ -12,8 +12,8 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	logger := logger.New(logger.Opts{WithTimestamp: false})
-	slog.SetDefault(logger)
+	l := logger.New(logger.Opts{WithTimestamp: false})
+	slog.SetDefault(l)
 
 	var wg sync.WaitGroup
 
@@ -23,7 +23,7 @@ func TestMain(m *testing.M) {
 	// to start the server
 	opts := TestServerOptions{
 		Port:   8739,
-		Logger: logger,
+		Logger: l,
 	}
 	RunTestServer(context.Background(), &wg, opts)
 
