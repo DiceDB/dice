@@ -165,7 +165,7 @@ func evalDBSIZE(args []string, store *dstore.Store) []byte {
 	}
 
 	// return the RESP encoded value
-	return clientio.Encode(dstore.KeyspaceStat[0]["keys"], false)
+	return clientio.Encode(store.GetKeyCount(), false)
 }
 
 // evalGETDEL returns the value for the queried key in args
@@ -2015,12 +2015,7 @@ func evalINFO(args []string, store *dstore.Store) []byte {
 	var info []byte
 	buf := bytes.NewBuffer(info)
 	buf.WriteString("# Keyspace\r\n")
-	for i := range dstore.KeyspaceStat {
-		_, err := fmt.Fprintf(buf, "db%d:keys=%d,expires=0,avg_ttl=0\r\n", i, dstore.KeyspaceStat[i]["keys"])
-		if err != nil {
-			return diceerrors.NewErrWithMessage(err.Error())
-		}
-	}
+	fmt.Fprintf(buf, "db0:keys=%d,expires=0,avg_ttl=0\r\n", store.GetKeyCount())
 	return clientio.Encode(buf.String(), false)
 }
 
@@ -4165,7 +4160,7 @@ func evalTYPE(args []string, store *dstore.Store) []byte {
 	key := args[0]
 	obj := store.Get(key)
 	if obj == nil {
-		return clientio.Encode("none", false)
+		return clientio.Encode("none", true)
 	}
 
 	var typeStr string
@@ -4182,7 +4177,7 @@ func evalTYPE(args []string, store *dstore.Store) []byte {
 		typeStr = "non-supported type"
 	}
 
-	return clientio.Encode(typeStr, false)
+	return clientio.Encode(typeStr, true)
 }
 
 // evalGETRANGE returns the substring of the string value stored at key, determined by the offsets start and end
