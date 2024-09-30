@@ -76,57 +76,57 @@ func TestAbortCommand(t *testing.T) {
 	wg.Wait()
 }
 
-//func TestServerRestartAfterAbort(t *testing.T) {
-//	ctx, cancel := context.WithCancel(context.Background())
-//	t.Cleanup(cancel)
-//
-//	// start test server.
-//	var wg sync.WaitGroup
-//	commands.RunTestServer(ctx, &wg, testServerOptions)
-//
-//	time.Sleep(1 * time.Second)
-//
-//	conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", config.DiceConfig.Server.Port))
-//	if err != nil {
-//		t.Fatalf("Server should be running after restart: %v", err)
-//	}
-//
-//	// Send ABORT command to shut down server
-//	result := commands.FireCommand(conn, "ABORT")
-//	if result != "OK" {
-//		t.Fatalf("Unexpected response to ABORT command: %v", result)
-//	}
-//	conn.Close()
-//
-//	// wait for the server to shut down
-//	time.Sleep(2 * time.Second)
-//
-//	wg.Wait()
-//
-//	// restart server
-//	ctx2, cancel2 := context.WithCancel(context.Background())
-//	t.Cleanup(cancel2)
-//
-//	// start test server.
-//	// use different wait groups and contexts to avoid race conditions.;
-//	var wg2 sync.WaitGroup
-//	commands.RunTestServer(ctx2, &wg2, testServerOptions)
-//
-//	// wait for the server to start up
-//	time.Sleep(2 * time.Second)
-//
-//	// Check if the server is running
-//	conn2, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", config.DiceConfig.Server.Port))
-//	if err != nil {
-//		t.Fatalf("Server should be running after restart: %v", err)
-//	}
-//
-//	// Clean up
-//	result = commands.FireCommand(conn2, "ABORT")
-//	if result != "OK" {
-//		t.Fatalf("Unexpected response to ABORT command: %v", result)
-//	}
-//	conn2.Close()
-//
-//	wg2.Wait()
-//}
+func TestServerRestartAfterAbort(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	// start test server.
+	var wg sync.WaitGroup
+	commands.RunTestServer(ctx, &wg, testServerOptions)
+
+	time.Sleep(1 * time.Second)
+
+	conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", config.DiceConfig.Server.Port))
+	if err != nil {
+		t.Fatalf("Server should be running after restart: %v", err)
+	}
+
+	// Send ABORT command to shut down server
+	result := commands.FireCommand(conn, "ABORT")
+	if result != "OK" {
+		t.Fatalf("Unexpected response to ABORT command: %v", result)
+	}
+	conn.Close()
+
+	// wait for the server to shut down
+	time.Sleep(2 * time.Second)
+
+	wg.Wait()
+
+	// restart server
+	ctx2, cancel2 := context.WithCancel(context.Background())
+	t.Cleanup(cancel2)
+
+	// start test server.
+	// use different wait groups and contexts to avoid race conditions.;
+	var wg2 sync.WaitGroup
+	commands.RunTestServer(ctx2, &wg2, testServerOptions)
+
+	// wait for the server to start up
+	time.Sleep(2 * time.Second)
+
+	// Check if the server is running
+	conn2, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", config.DiceConfig.Server.Port))
+	if err != nil {
+		t.Fatalf("Server should be running after restart: %v", err)
+	}
+
+	// Clean up
+	result = commands.FireCommand(conn2, "ABORT")
+	if result != "OK" {
+		t.Fatalf("Unexpected response to ABORT command: %v", result)
+	}
+	conn2.Close()
+
+	wg2.Wait()
+}
