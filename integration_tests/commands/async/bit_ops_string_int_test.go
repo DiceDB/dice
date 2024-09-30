@@ -176,8 +176,6 @@ func TestBitOpsString(t *testing.T) {
 			for i := 0; i < len(tc.cmds); i++ {
 				res := FireCommand(conn, tc.cmds[i])
 
-				fmt.Printf("Response: %q | Expected: %q\n", res, tc.expected[i])
-
 				switch tc.assertType[i] {
 				case "equal":
 					assert.Equal(t, res, tc.expected[i])
