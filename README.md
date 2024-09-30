@@ -33,7 +33,7 @@ With this, you can build truly real-time applications like [Leaderboard](https:/
 The easiest way to get started with DiceDB is using [Docker](https://www.docker.com/) by running the following command.
 
 ```
-$ docker run dicedb/dicedb
+$ docker run -p 7379:7379 dicedb/dicedb
 ```
 
 The above command will start the DiceDB server running locally on the port `7379` and you can connect

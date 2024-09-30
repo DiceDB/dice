@@ -30,7 +30,7 @@ import (
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/comm"
 	diceerrors "github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/querywatcher"
+	"github.com/dicedb/dice/internal/querymanager"
 	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/ohler55/ojg/jp"
@@ -165,7 +165,7 @@ func evalDBSIZE(args []string, store *dstore.Store) []byte {
 	}
 
 	// return the RESP encoded value
-	return clientio.Encode(dstore.KeyspaceStat[0]["keys"], false)
+	return clientio.Encode(store.GetKeyCount(), false)
 }
 
 // evalGETDEL returns the value for the queried key in args
@@ -227,6 +227,83 @@ func evalGETDEL(args []string, store *dstore.Store) []byte {
 	default:
 		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 	}
+}
+
+// evalJSONARRTRIM trim an array so that it contains only the specified inclusive range of elements
+// an array of integer replies for each path, the array's new size, or nil, if the matching JSON value is not an array.
+func evalJSONARRTRIM(args []string, store *dstore.Store) []byte {
+	if len(args) != 4 {
+		return diceerrors.NewErrArity("JSON.ARRTRIM")
+	}
+	var err error
+
+	start := args[2]
+	stop := args[3]
+	var startIdx, stopIdx int
+	startIdx, err = strconv.Atoi(start)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("Couldn't parse as integer")
+	}
+	stopIdx, err = strconv.Atoi(stop)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("Couldn't parse as integer")
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		return diceerrors.NewErrWithMessage("could not perform this operation on a key that doesn't exist")
+	}
+
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
+	}
+
+	jsonData := obj.Value
+
+	_, err = sonic.Marshal(jsonData)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
+	}
+
+	path := args[1]
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("invalid JSONPath")
+	}
+
+	results := expr.Get(jsonData)
+	if len(results) == 0 {
+		return clientio.RespEmptyArray
+	}
+
+	var resultsArray []interface{}
+	// Capture the modified data when modifying the root path
+	newData, modifyErr := expr.Modify(jsonData, func(data any) (interface{}, bool) {
+		arr, ok := data.([]interface{})
+		if !ok {
+			// Not an array
+			resultsArray = append(resultsArray, nil)
+			return data, false
+		}
+
+		updatedArray := trimElementAndUpdateArray(arr, startIdx, stopIdx)
+
+		resultsArray = append(resultsArray, len(updatedArray))
+		return updatedArray, true
+	})
+	if err != nil {
+		return diceerrors.NewErrWithMessage(err.Error())
+	}
+
+	if modifyErr != nil {
+		return diceerrors.NewErrWithMessage(fmt.Sprintf("ERR failed to modify JSON data: %v", modifyErr))
+	}
+
+	jsonData = newData
+	obj.Value = jsonData
+	return clientio.Encode(resultsArray, false)
 }
 
 // evalJSONARRINSERT insert the json values into the array at path before the index (shifts to the right)
@@ -632,6 +709,31 @@ func evalJSONARRPOP(args []string, store *dstore.Store) []byte {
 		popArr = append(popArr, popElem)
 	}
 	return clientio.Encode(popArr, false)
+}
+
+// trimElementAndUpdateArray trim the array between the given start and stop index
+// Returns trimed array
+func trimElementAndUpdateArray(arr []any, start, stop int) []any {
+	updatedArray := make([]any, 0)
+	length := len(arr)
+	if len(arr) == 0 {
+		return updatedArray
+	}
+	var startIdx, stopIdx int
+
+	if start >= length {
+		return updatedArray
+	}
+
+	startIdx = adjustIndex(start, arr)
+	stopIdx = adjustIndex(stop, arr)
+
+	if startIdx > stopIdx {
+		return updatedArray
+	}
+
+	updatedArray = arr[startIdx : stopIdx+1]
+	return updatedArray
 }
 
 // insertElementAndUpdateArray add an element at the given index
@@ -1913,12 +2015,7 @@ func evalINFO(args []string, store *dstore.Store) []byte {
 	var info []byte
 	buf := bytes.NewBuffer(info)
 	buf.WriteString("# Keyspace\r\n")
-	for i := range dstore.KeyspaceStat {
-		_, err := fmt.Fprintf(buf, "db%d:keys=%d,expires=0,avg_ttl=0\r\n", i, dstore.KeyspaceStat[i]["keys"])
-		if err != nil {
-			return diceerrors.NewErrWithMessage(err.Error())
-		}
-	}
+	fmt.Fprintf(buf, "db0:keys=%d,expires=0,avg_ttl=0\r\n", store.GetKeyCount())
 	return clientio.Encode(buf.String(), false)
 }
 
@@ -1986,10 +2083,10 @@ func EvalQWATCH(args []string, httpOp bool, client *comm.Client, store *dstore.S
 		Key   string
 		Value *object.Obj
 	})
-	var watchSubscription querywatcher.WatchSubscription
+	var watchSubscription querymanager.QuerySubscription
 
 	if httpOp {
-		watchSubscription = querywatcher.WatchSubscription{
+		watchSubscription = querymanager.QuerySubscription{
 			Subscribe:          true,
 			Query:              query,
 			CacheChan:          cacheChannel,
@@ -1997,7 +2094,7 @@ func EvalQWATCH(args []string, httpOp bool, client *comm.Client, store *dstore.S
 			ClientIdentifierID: client.ClientIdentifierID,
 		}
 	} else {
-		watchSubscription = querywatcher.WatchSubscription{
+		watchSubscription = querymanager.QuerySubscription{
 			Subscribe: true,
 			Query:     query,
 			ClientFD:  client.Fd,
@@ -2005,12 +2102,12 @@ func EvalQWATCH(args []string, httpOp bool, client *comm.Client, store *dstore.S
 		}
 	}
 
-	querywatcher.WatchSubscriptionChan <- watchSubscription
+	querymanager.QuerySubscriptionChan <- watchSubscription
 	store.CacheKeysForQuery(query.Where, cacheChannel)
 
 	// Return the result of the query.
-	responseChan := make(chan querywatcher.AdhocQueryResult)
-	querywatcher.AdhocQueryChan <- querywatcher.AdhocQuery{
+	responseChan := make(chan querymanager.AdhocQueryResult)
+	querymanager.AdhocQueryChan <- querymanager.AdhocQuery{
 		Query:        query,
 		ResponseChan: responseChan,
 	}
@@ -2035,14 +2132,14 @@ func EvalQUNWATCH(args []string, httpOp bool, client *comm.Client) []byte {
 	}
 
 	if httpOp {
-		querywatcher.WatchSubscriptionChan <- querywatcher.WatchSubscription{
+		querymanager.QuerySubscriptionChan <- querymanager.QuerySubscription{
 			Subscribe:          false,
 			Query:              query,
 			QwatchClientChan:   client.HTTPQwatchResponseChan,
 			ClientIdentifierID: client.ClientIdentifierID,
 		}
 	} else {
-		querywatcher.WatchSubscriptionChan <- querywatcher.WatchSubscription{
+		querymanager.QuerySubscriptionChan <- querymanager.QuerySubscription{
 			Subscribe: false,
 			Query:     query,
 			ClientFD:  client.Fd,
@@ -4063,7 +4160,7 @@ func evalTYPE(args []string, store *dstore.Store) []byte {
 	key := args[0]
 	obj := store.Get(key)
 	if obj == nil {
-		return clientio.Encode("none", false)
+		return clientio.Encode("none", true)
 	}
 
 	var typeStr string
@@ -4080,7 +4177,7 @@ func evalTYPE(args []string, store *dstore.Store) []byte {
 		typeStr = "non-supported type"
 	}
 
-	return clientio.Encode(typeStr, false)
+	return clientio.Encode(typeStr, true)
 }
 
 // evalGETRANGE returns the substring of the string value stored at key, determined by the offsets start and end
@@ -4292,6 +4389,83 @@ func evalAPPEND(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(len(newValue), false)
 }
 
+func evalJSONRESP(args []string, store *dstore.Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("json.resp")
+	}
+	key := args[0]
+
+	path := defaultRootPath
+	if len(args) > 1 {
+		path = args[1]
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return clientio.RespNIL
+	}
+
+	// Check if the object is of JSON type
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
+	}
+
+	jsonData := obj.Value
+	if path == defaultRootPath {
+		resp := parseJSONStructure(jsonData, false)
+
+		return clientio.Encode(resp, false)
+	}
+
+	// if path is not root then extract value at path
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return diceerrors.NewErrWithMessage("invalid JSONPath")
+	}
+	results := expr.Get(jsonData)
+
+	// process value at each path
+	ret := []any{}
+	for _, result := range results {
+		resp := parseJSONStructure(result, false)
+		ret = append(ret, resp)
+	}
+
+	return clientio.Encode(ret, false)
+}
+
+func parseJSONStructure(jsonData interface{}, nested bool) (resp []any) {
+	switch json := jsonData.(type) {
+	case string, bool:
+		resp = append(resp, json)
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, nil:
+		resp = append(resp, json)
+	case map[string]interface{}:
+		resp = append(resp, "{")
+		for key, value := range json {
+			resp = append(resp, key)
+			resp = append(resp, parseJSONStructure(value, true)...)
+		}
+		// wrap in another array to offset print
+		if nested {
+			resp = []interface{}{resp}
+		}
+	case []interface{}:
+		resp = append(resp, "[")
+		for _, value := range json {
+			resp = append(resp, parseJSONStructure(value, true)...)
+		}
+		// wrap in another array to offset print
+		if nested {
+			resp = []interface{}{resp}
+		}
+	default:
+		resp = append(resp, []byte("(unsupported type)"))
+	}
+	return resp
+}
+
 // evalZADD adds all the specified members with the specified scores to the sorted set stored at key.
 // If a specified member is already a member of the sorted set, the score is updated and the element reinserted at the right position to ensure the correct ordering.
 // If key does not exist, a new sorted set with the specified members as sole members is created.
@@ -4452,4 +4626,41 @@ func evalZRANGE(args []string, store *dstore.Store) []byte {
 	}
 
 	return clientio.Encode(result, false)
+}
+
+func evalHINCRBYFLOAT(args []string, store *dstore.Store) []byte {
+	if len(args) < 3 {
+		return diceerrors.NewErrArity("HINCRBYFLOAT")
+	}
+	incr, err := strconv.ParseFloat(strings.TrimSpace(args[2]), 64)
+
+	if err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.IntOrFloatErr)
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+	var hashmap HashMap
+
+	if obj != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+		}
+		hashmap = obj.Value.(HashMap)
+	}
+
+	if hashmap == nil {
+		hashmap = make(HashMap)
+	}
+
+	field := args[1]
+	numkey, err := hashmap.incrementFloatValue(field, incr)
+	if err != nil {
+		return diceerrors.NewErrWithMessage(err.Error())
+	}
+
+	obj = store.NewObj(hashmap, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
+	store.Put(key, obj)
+
+	return clientio.Encode(numkey, false)
 }
