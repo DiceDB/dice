@@ -45,10 +45,6 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 	//Handle subcommand and multiple arguments
 	if subcommand != "" {
 		args = append(args, subcommand)
-
-		if len(commandParts) > 2 {
-			args = append(args, commandParts[2:]...)
-		}
 	}
 
 	// Extract query parameters
