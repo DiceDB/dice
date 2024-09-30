@@ -30,15 +30,6 @@ type Store struct {
 }
 
 func NewStore(watchChan chan WatchEvent) *Store {
-	// This is nil in case of test cases
-	if watchChan == nil {
-		return &Store{
-			store:     swiss.New[string, *object.Obj](1024),
-			expires:   swiss.New[*object.Obj, uint64](1024),
-			watchChan: watchChan,
-		}
-	}
-
 	return &Store{
 		store:     swiss.New[string, *object.Obj](1024000),
 		expires:   swiss.New[*object.Obj, uint64](1024000),
@@ -48,8 +39,8 @@ func NewStore(watchChan chan WatchEvent) *Store {
 
 func ResetStore(store *Store) *Store {
 	store.numKeys = 0
-	store.store = swiss.New[string, *object.Obj](10240)
-	store.expires = swiss.New[*object.Obj, uint64](10240)
+	store.store = swiss.New[string, *object.Obj](1024000)
+	store.expires = swiss.New[*object.Obj, uint64](1024000)
 
 	return store
 }
