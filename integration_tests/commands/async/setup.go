@@ -133,6 +133,7 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 				slog.Int("new_port", config.DiceConfig.Server.Port+1),
 			)
 			config.DiceConfig.Server.Port++
+			fmt.Println("address already in use on port: ", config.DiceConfig.Server.Port)
 		} else {
 			opt.Logger.Error("Failed to bind port", slog.Any("error", err))
 			return
