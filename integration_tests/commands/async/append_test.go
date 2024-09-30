@@ -10,13 +10,14 @@ func TestAPPEND(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 
+	setErrorMsg := "WRONGTYPE Operation against a key holding the wrong kind of value"
 	testCases := []struct {
 		name     string
 		commands []string
 		expected []interface{}
 	}{
 		{
-			name: "APPEND After Set and Delete",
+			name: "APPEND After SET and DEL",
 			commands: []string{
 				"SET key value",
 				"APPEND key value",
@@ -41,6 +42,20 @@ func TestAPPEND(t *testing.T) {
 				"GET key",
 			},
 			expected: []interface{}{int64(0), int64(1), int64(2), "12", "OK", int64(2), "12"},
+		},
+		{
+			name: "APPEND with Various Data Types",
+			commands: []string{
+				"LPUSH listKey lValue",     // Add element to a list
+				"SETBIT bitKey 0 1",        // Set a bit in a bitmap
+				"HSET hashKey hKey hValue", // Set a field in a hash
+				"SADD setKey sValue",       // Add element to a set
+				"APPEND listKey value",     // Attempt to append to a list
+				"APPEND bitKey value",      // Attempt to append to a bitmap
+				"APPEND hashKey value",     // Attempt to append to a hash
+				"APPEND setKey value",      // Attempt to append to a set
+			},
+			expected: []interface{}{"OK", int64(0), int64(1), int64(1), setErrorMsg, setErrorMsg, setErrorMsg, setErrorMsg},
 		},
 	}
 
