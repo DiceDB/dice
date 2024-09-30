@@ -22,11 +22,6 @@ type QueryWatchEvent struct {
 	Value     object.Obj
 }
 
-type CommandWatchEvent[T any] struct {
-	Kind    string
-	Payload T
-}
-
 type Store struct {
 	store     *swiss.Map[string, *object.Obj]
 	expires   *swiss.Map[*object.Obj, uint64] // Does not need to be thread-safe as it is only accessed by a single thread.
