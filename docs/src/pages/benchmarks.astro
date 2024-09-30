@@ -1,0 +1,19 @@
+---
+import Layout from "../layouts/Layout.astro";
+import BenchmarkContent from "../data/benchmarks.md";
+
+const title =
+  "DiceDB Benchmarks";
+const description =
+  "DiceDB is an in-memory, real-time, and reactive database with Redis and SQL support optimized for modern hardware and building real-time applications.";
+---
+
+<Layout {title} {description}>
+  <div class="columns is-centered">
+    <div class="column is-8">
+      <div class="content">
+        <BenchmarkContent />
+      </div>
+    </div>
+  </div>
+</Layout>

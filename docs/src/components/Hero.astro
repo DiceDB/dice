@@ -1,0 +1,52 @@
+---
+import { Github, MoveRight } from "lucide-astro";
+import Dice from "./Dice.astro";
+import site from "../data/site.json";
+---
+
+<div id="hero" class="hero">
+  <div class="hero-body">
+    <div class="columns is-vcentered">
+      <div class="column is-7 has-text-left">
+        <a class="button" href="/blog/dicedb-004-release-notes">
+          <span>We shipped DiceDB v0.0.4</span>
+          <span class="icon"><MoveRight /></span>
+        </a>
+        <div class="image is-128x128">
+          <img src="/icon.png" alt="DiceDB Logo" />
+        </div>
+        <br />
+        <h1 class="title is-size-1">Build truly real-time applications</h1>
+        <p class="subtitle is-size-5">
+          DiceDB is an in-memory, real-time, and reactive database with Redis and SQL support optimized for modern hardware and building real-time applications.
+        </p>
+        <div class="buttons is-large">
+          <a
+            href="/get-started/installation/"
+            class="button is-primary is-medium"
+          >
+            <strong>Get Started →</strong>
+          </a>
+          <a
+            class="button is-medium"
+            target="_blank"
+            href="https://github.com/dicedb/dice"
+            title="DiceDB source code on GitHub"
+          >
+            <span class="icon"><Github /></span>
+            <span>GitHub (5k+)</span>
+          </a>
+        </div>
+        <p class="has-text-grey">
+          Want to evaluate and adopt DiceDB at your org?
+          <a href={site.calendar_url} target="_blank">block our calendar</a>.
+        </p>
+      </div>
+      <div class="column is-1"></div>
+      <div class="column is-4 is-hidden-mobile">
+        <br />
+        <Dice />
+      </div>
+    </div>
+  </div>
+</div>

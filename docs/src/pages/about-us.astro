@@ -1,0 +1,36 @@
+---
+import Layout from "../layouts/Layout.astro";
+import site from "../data/site.json";
+
+const title = "About Us";
+const description = "";
+---
+
+<Layout {title} {description}>
+  <div class="hero is-medium">
+    <div class="hero-body">
+      <div class="columns">
+        <div class="column is-4">
+          <div class="image is-128x128">
+            <img src="/icon.png" alt="DiceDB Logo" />
+          </div>
+          <h1 class="title is-size-1">About Us</h1>
+        </div>
+        <div class="column is-8">
+          <div class="columns is-multiline">
+            {
+              site.aboutDiceDB.map((s) => (
+                <div class="column is-6">
+                  <div class="box">
+                    <h2 class="title is-size-5">{s.title}</h2>
+                    <p class="is-size-6">{s.description}</p>
+                  </div>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>

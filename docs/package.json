@@ -1,0 +1,29 @@
+{
+  "name": "DiceDB",
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "lint": "prettier . --write && eslint \"src/**/*.{js,astro}\""
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.1.6",
+    "@astrojs/starlight": "^0.26.3",
+    "astro-analytics": "^2.7.0",
+    "bulma": "^0.9.4",
+    "lucide-astro": "^0.438.0",
+    "sass": "^1.62.1",
+    "sharp": "^0.32.5"
+  },
+  "devDependencies": {
+    "eslint": "^9.11.0",
+    "eslint-plugin-astro": "^1.2.4",
+    "prettier": "^3.3.3",
+    "prettier-plugin-astro": "^0.14.1",
+    "sass-embedded": "^1.78.0"
+  }
+}

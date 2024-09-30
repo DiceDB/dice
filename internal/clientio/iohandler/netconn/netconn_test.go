@@ -61,14 +61,6 @@ func (m *mockConn) SetDeadline(t time.Time) error      { return nil }
 func (m *mockConn) SetReadDeadline(t time.Time) error  { return nil }
 func (m *mockConn) SetWriteDeadline(t time.Time) error { return nil }
 
-type mockFile struct {
-	f *os.File
-}
-
-func (f *mockFile) Close() error {
-	return nil
-}
-
 func (m *mockConn) File() (*os.File, error) {
 	return &os.File{}, nil
 }
