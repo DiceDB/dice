@@ -293,7 +293,7 @@ func handleMigratedResp(resp interface{}, buf *bytes.Buffer) {
 	// isBlkEnc encoding flag, which indicates whether the
 	// response should be encoded in a block format.
 	if r == nil {
-		r = clientio.Encode(resp, true)
+		r = clientio.Encode(resp, false)
 	}
 
 	buf.Write(r)
