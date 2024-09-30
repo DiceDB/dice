@@ -169,8 +169,7 @@ func Encode(value interface{}, isSimple bool) []byte {
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 		return []byte(fmt.Sprintf(":%d\r\n", v))
 	case float32, float64:
-		// since encoding/json unmarshals numeric values as floats
-		// we need to check if value is an integer
+		// In case the element being encoded was obtained after parsing a JSON value, it is possible for integers to have been encoded as floats (since encoding/json unmarshals numeric values as floats). Therefore, we need to check if value is an integer
 		intValue, isInteger := utils.IsFloatToIntPossible(v.(float64))
 		if isInteger {
 			return []byte(fmt.Sprintf(":%d\r\n", intValue))
