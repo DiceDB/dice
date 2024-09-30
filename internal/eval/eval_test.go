@@ -4284,7 +4284,7 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 			input:  nil,
 			output: []byte("-ERR wrong number of arguments for 'append' command\r\n"),
 		},
-		"invalid number of arguments": {
+		"append invalid number of arguments": {
 			setup: func() {
 				store.Del("key")
 			},
@@ -4376,6 +4376,58 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 					t.Errorf("unexpected encoding")
 				}
 			},
+		},
+		"append to key created using LPUSH": {
+			setup: func() {
+				key := "listKey"
+				value := "val"
+				// Create a new list object
+				obj := store.NewObj(NewDeque(), -1, object.ObjTypeByteList, object.ObjEncodingDeque)
+				store.Put(key, obj)
+				obj.Value.(*Deque).LPush(value)
+			},
+			input:  []string{"listKey", "val"},
+			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+		},
+		"append to key created using SADD": {
+			setup: func() {
+				key := "setKey"
+				// Create a new set object
+				initialValues := map[string]struct{}{
+					"existingVal": {},
+					"anotherVal":  {},
+				}
+				obj := store.NewObj(initialValues, -1, object.ObjTypeSet, object.ObjEncodingSetStr)
+				store.Put(key, obj)
+			},
+			input:  []string{"setKey", "val"},
+			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+		},
+		"append to key created using HSET": {
+			setup: func() {
+				key := "hashKey"
+				// Create a new hash map object
+				initialValues := HashMap{
+					"field1": "value1",
+					"field2": "value2",
+				}
+				obj := store.NewObj(initialValues, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
+				store.Put(key, obj)
+			},
+			input:  []string{"hashKey", "val"},
+			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+		},
+		"append to key created using SETBIT": {
+			setup: func() {
+				key := "bitKey"
+				// Create a new byte array object
+				initialByteArray := NewByteArray(1) // Initialize with 1 byte
+				initialByteArray.SetBit(0, true)    // Set the first bit to 1
+				obj := store.NewObj(initialByteArray, -1, object.ObjTypeByteArray, object.ObjEncodingByteArray)
+				store.Put(key, obj)
+			},
+			input:  []string{"bitKey", "val"},
+			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
 		},
 	}
 
