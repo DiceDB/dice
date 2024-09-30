@@ -1,6 +1,6 @@
 ---
 title: ECHO
-description: `ECHO` command in DICEDB is used to print a message
+description: `ECHO` command in DiceDB is used to print a message
 ---
 
 ### Syntax
@@ -13,7 +13,7 @@ ECHO message
 
 | Parameter | Description                                                               | Type    | Required |
 |-----------|---------------------------------------------------------------------------|---------|----------|
-| `message` | A string of characters or numbers to print                                | String  | Yes      |
+| `message` | A string of characters or numbers to print                                | String / Number| Yes|
 
 ## Return values
 
