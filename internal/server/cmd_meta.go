@@ -38,6 +38,11 @@ var (
 
 	// Metadata for global commands that don't interact with shards.
 	// INFO and PING are examples of global commands.
+	infoCmdMeta = CmdsMeta{
+		Cmd:          "INFO",
+		CmdType:      Global,
+		RespNoShards: eval.RespINFO,
+	}
 	pingCmdMeta = CmdsMeta{
 		Cmd:          "PING",
 		CmdType:      Global,
@@ -72,6 +77,7 @@ var (
 // init initializes the WorkerCmdsMeta map by associating each command name with its corresponding metadata.
 func init() {
 	// Global commands.
+	WorkerCmdsMeta["INFO"] = infoCmdMeta
 	WorkerCmdsMeta["PING"] = pingCmdMeta
 
 	// Single-shard commands.
