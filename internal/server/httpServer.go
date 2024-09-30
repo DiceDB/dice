@@ -17,6 +17,7 @@ import (
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/comm"
 	derrors "github.com/dicedb/dice/internal/errors"
+	"github.com/dicedb/dice/internal/eval"
 	"github.com/dicedb/dice/internal/ops"
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/shard"
@@ -321,6 +322,23 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.Store
 		} else {
 			responseValue = result.EvalResponse.Result
 		}
+	}
+
+	// func HandlePredefinedResponse(response interface{}) []byte {
+	respArr := []string{
+		"(nil)",  // Represents a RESP Nil Bulk String, which indicates a null value.
+		"OK",     // Represents a RESP Simple String with value "OK".
+		"QUEUED", // Represents a Simple String indicating that a command has been queued.
+		"0",      // Represents a RESP Integer with value 0.
+		"1",      // Represents a RESP Integer with value 1.
+		"-1",     // Represents a RESP Integer with value -1.
+		"-2",     // Represents a RESP Integer with value -2.
+		"*0",     // Represents an empty RESP Array.
+	}
+
+	switch val := responseValue.(type) {
+	case eval.RespType:
+		responseValue = respArr[val]
 	}
 
 	if bytes, ok := responseValue.([]byte); ok {

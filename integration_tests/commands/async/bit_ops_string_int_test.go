@@ -34,8 +34,8 @@ func TestBitOpsString(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name        string
-		cmds        []string
+		name       string
+		cmds       []string
 		expected   []interface{}
 		assertType []string
 	}{
@@ -149,13 +149,13 @@ func TestBitOpsString(t *testing.T) {
 		{
 			name:       "BITOP XOR of keys containing strings and get the destkey",
 			cmds:       []string{"MSET foo foobar baz abcdef", "BITOP XOR bazz foo baz", "GET bazz"},
-			expected:   []interface{}{"OK", int64(6), "\a\r\x0c\x06\x04\x14"},
+			expected:   []interface{}{"OK", int64(6), "\x07\x0d\x0c\x06\x04\x14"},
 			assertType: []string{"equal", "equal", "equal"},
 		},
 		{
 			name:       "BITOP XOR of keys containing strings and a bytearray and get the destkey",
 			cmds:       []string{"MSET foo foobar baz abcdef", "SETBIT bazz 8 1", "BITOP XOR bazzz foo baz bazz", "GET bazzz", "SETBIT bazz 8 0", "SETBIT bazz 49 1", "BITOP XOR bazzz foo baz bazz", "GET bazzz", "Setbit bazz 49 0", "bitop xor bazzz foo baz bazz", "get bazzz"},
-			expected:   []interface{}{"OK", int64(0), int64(6), "\a\x8d\x0c\x06\x04\x14", int64(1), int64(0), int64(7), "\a\r\x0c\x06\x04\x14@", int64(1), int64(7), "\a\r\x0c\x06\x04\x14\x00"},
+			expected:   []interface{}{"OK", int64(0), int64(6), "\x07\x8d\x0c\x06\x04\x14", int64(1), int64(0), int64(7), `\x07\r\x0c\x06\x04\x14@`, int64(1), int64(7), `\x07\r\x0c\x06\x04\x14\x00`},
 			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
 		},
 		{
@@ -175,6 +175,9 @@ func TestBitOpsString(t *testing.T) {
 			FireCommand(conn, "DEL bazzz")
 			for i := 0; i < len(tc.cmds); i++ {
 				res := FireCommand(conn, tc.cmds[i])
+
+				fmt.Printf("Response: %q | Expected: %q\n", res, tc.expected[i])
+
 				switch tc.assertType[i] {
 				case "equal":
 					assert.Equal(t, res, tc.expected[i])
