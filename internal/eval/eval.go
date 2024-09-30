@@ -1117,16 +1117,68 @@ func evalJSONGET(args []string, store *dstore.Store) []byte {
 	}
 
 	key := args[0]
-	// Default path is root if not specified
-	path := defaultRootPath
-	if len(args) > 1 {
-		path = args[1]
+	obj := store.Get(key)
+
+	if obj == nil {
+		return clientio.RespNIL
 	}
-	result, err := jsonGETHelper(store, path, key)
-	if err != nil {
-		return err
+
+	// Check if the object is of JSON type
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
 	}
-	return clientio.Encode(result, false)
+
+	jsonData := obj.Value
+
+	// If no path is specified, return the entire JSON document
+	if len(args) == 1 {
+		jsonString, err := sonic.MarshalString(jsonData)
+		if err != nil {
+			return diceerrors.NewErrWithMessage("Failed to marshal JSON")
+		}
+		return clientio.Encode(jsonString, false)
+	}
+
+	// Handle paths
+	results := make([]interface{}, 0)
+	for _, path := range args[1:] {
+		if path == "$" {
+			// Root path, return the entire document
+			jsonString, err := sonic.MarshalString(jsonData)
+			if err != nil {
+				return diceerrors.NewErrWithMessage("Failed to marshal JSON")
+			}
+			results = append(results, jsonString)
+		} else {
+			// Parse the JSONPath expression
+			expr, err := jp.ParseString(path)
+			if err != nil {
+				results = append(results, clientio.RespNIL)
+				continue
+			}
+
+			// Execute the JSONPath query
+			pathResults := expr.Get(jsonData)
+			if len(pathResults) == 0 {
+				results = append(results, clientio.RespNIL)
+			} else {
+				jsonString, err := sonic.MarshalString(pathResults[0])
+				if err != nil {
+					return diceerrors.NewErrWithMessage("Failed to marshal JSON")
+				}
+				results = append(results, jsonString)
+			}
+		}
+	}
+
+	// If only one path was specified, return the result directly
+	if len(results) == 1 {
+		return clientio.Encode(results[0], false)
+	}
+
+	// Otherwise, return an array of results
+	return clientio.Encode(results, false)
 }
 
 // helper function used by evalJSONGET and evalJSONMGET to prepare the results
@@ -5196,4 +5248,73 @@ func evalGEODIST(args []string, store *dstore.Store) []byte {
 	}
 
 	return clientio.Encode(utils.RoundToDecimals(result, 4), false)
+}
+
+// evalJSONSTRAPPEND appends a string value to the JSON string value at the specified path
+// in the JSON object saved at the key in arguments.
+// Args must contain at least a key and the string value to append.
+// If the key does not exist or is expired, it returns an error response.
+// If the value at the specified path is not a string, it returns an error response.
+// Returns the new length of the string at the specified path if successful.
+func evalJSONSTRAPPEND(args []string, store *dstore.Store) []byte {
+	if len(args) != 3 {
+		return diceerrors.NewErrArity("JSON.STRAPPEND")
+	}
+
+	key := args[0]
+	path := args[1]
+	value := args[2]
+
+	obj := store.Get(key)
+	if obj == nil {
+		return clientio.Encode([]interface{}{}, false)
+	}
+
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return errWithMessage
+	}
+
+	jsonData := obj.Value
+
+	var resultsArray []interface{}
+
+	if path == "$" {
+		// Handle root-level string
+		if str, ok := jsonData.(string); ok {
+			unquotedValue := strings.Trim(value, "\"")
+			newValue := str + unquotedValue
+			resultsArray = append(resultsArray, int64(len(newValue)))
+			jsonData = newValue
+		} else {
+			return clientio.Encode([]interface{}{}, false)
+		}
+	} else {
+		expr, err := jp.ParseString(path)
+		if err != nil {
+			return clientio.Encode([]interface{}{}, false)
+		}
+
+		newData, modifyErr := expr.Modify(jsonData, func(data any) (interface{}, bool) {
+			switch v := data.(type) {
+			case string:
+				unquotedValue := strings.Trim(value, "\"")
+				newValue := v + unquotedValue
+				resultsArray = append([]interface{}{int64(len(newValue))}, resultsArray...)
+				return newValue, true
+			default:
+				resultsArray = append([]interface{}{clientio.RespNIL}, resultsArray...)
+				return data, false
+			}
+		})
+
+		if modifyErr != nil {
+			return clientio.Encode([]interface{}{}, false)
+		}
+		jsonData = newData
+	}
+
+	store.Put(key, store.NewObj(jsonData, -1, object.ObjTypeJSON, object.ObjEncodingJSON))
+
+	return clientio.Encode(resultsArray, false)
 }

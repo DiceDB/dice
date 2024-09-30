@@ -114,6 +114,7 @@ func TestEval(t *testing.T) {
 	testEvalGEOADD(t, store)
 	testEvalGEODIST(t, store)
 	testEvalSINTER(t, store)
+	testEvalJSONSTRAPPEND(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -5679,4 +5680,85 @@ func testEvalSINTER(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalSINTER, store)
+}
+
+func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"append to multiple fields": {
+			setup: func() {
+				key := "doc1"
+				value := "{\"a\":\"foo\", \"nested1\": {\"a\": \"hello\"}, \"nested2\": {\"a\": 31}}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"doc1", "$..a", "\"bar\""},
+			output: []byte("*3\r\n:6\r\n:8\r\n$-1\r\n"), // Expected lengths after append
+		},
+		"append to single field": {
+			setup: func() {
+				key := "doc1"
+				value := "{\"a\":\"foo\", \"nested1\": {\"a\": \"hello\"}, \"nested2\": {\"a\": 31}}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"doc1", "$.nested1.a", "\"baz\""},
+			output: []byte("*1\r\n:11\r\n"), // Expected length after append
+		},
+		"append to non-existing key": {
+			setup: func() {
+				// No setup needed as we are testing a non-existing document.
+			},
+			input:  []string{"non_existing_doc", "$..a", "\"err\""},
+			output: []byte("*1\r\n$-1\r\n"), // Expect an error, but captured in the test framework
+		},
+		"legacy path append": {
+			setup: func() {
+				key := "doc1"
+				value := "{\"a\":\"foo\", \"nested1\": {\"a\": \"hello\"}, \"nested2\": {\"a\": 31}}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"doc1", ".*.a", "\"bar\""},
+			output: []byte("*1\r\n:8\r\n"), // Expected length after append for nested1.a
+		},
+		"append to root node": {
+			setup: func() {
+				key := "doc1"
+				value := "\"abcd\""
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"doc1", "$", "\"piu\""},
+			output: []byte("*1\r\n:7\r\n"), // Expected length after appending to "abcd"
+		},
+	}
+
+	// Run the tests
+	runEvalTests(t, tests, evalJSONSTRAPPEND, store)
+}
+
+func BenchmarkEvalJSONSTRAPPEND(b *testing.B) {
+	store := dstore.NewStore(nil)
+
+	// Setup a sample JSON document
+	key := "doc1"
+	value := "{\"a\":\"foo\", \"nested1\": {\"a\": \"hello\"}, \"nested2\": {\"a\": 31}}"
+	var rootData interface{}
+	_ = sonic.Unmarshal([]byte(value), &rootData)
+	obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+	store.Put(key, obj)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		// Benchmark appending to multiple fields
+		evalJSONSTRAPPEND([]string{"doc1", "$..a", "\"bar\""}, store)
+	}
 }
