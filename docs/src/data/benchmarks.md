@@ -4,7 +4,7 @@
 
 Benchmarks play a pivotal role in the world of databases. They provide measurable insights into how a system performs under different conditions, helping developers and system administrators optimize configurations, identify bottlenecks, and predict behavior under stress. For DiceDB, a high-performance in-memory key-value store, benchmarking is crucial to demonstrate its scalability, resilience, and efficiency. This page will provide the latest numbers of our benchmark and will provide the exact steps to be taken to reproduce the numbers.
 
-## Memtier benchmarks
+## Memtier Benchmark
 
 [Memtier](https://github.com/RedisLabs/memtier_benchmark) is a powerful, easy-to-use benchmarking tool specifically designed for key-value databases like [Redis](https://redis.io/) and [Memcached](https://memcached.org/), making it ideal for evaluating [DiceDB](https://github.com/dicedb/dice). In this test, we used Memtier to generate a workload that mimics a real-world scenario, stressing DiceDB under a balanced read/write ratio.
 
@@ -16,7 +16,8 @@ which has 48 vCPUs, 96 GB memory, and 12 Gbps network bandwidth. The benchmarks 
 ### Run DiceDB
 
 ```sh
-$ ./dice --enable-multithreading=true
+$ go build -o dicedb
+$ ./dicedb --enable-multithreading=true
 ```
 
 ### Running the benchmark
@@ -61,6 +62,6 @@ The benchmark run tested DiceDB with 10 threads, 30 client connections per threa
 
 ### Thank you for exploraing
 
-The results from the memtier benchmark suggest that we (DiceDB) are well-optimized for handling high-concurrency environments with minimal resource consumption. The high throughput and low latency are clear indicators that DiceDB can serve mission-critical applications that require real-time processing with rapid response times. 
+The results from the memtier benchmark suggest that DiceDB is well-optimized for handling high-concurrency environments with minimal resource consumption. The high throughput and low latency are clear indicators that DiceDB can serve mission-critical applications that require real-time processing with rapid response times. 
 
-Despite the simulated stress of 50 clients making simultaneous requests, DiceDB managed to maintain its performance characteristics without any visible degradation. This robustness makes DiceDB an excellent choice for use cases such as high-traffic web applications, caching layers, or real-time analytics platforms where performance under load is critical.
+Despite the simulated stress of 30 clients making simultaneous requests, DiceDB managed to maintain its performance characteristics without any visible degradation.
