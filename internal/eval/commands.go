@@ -664,7 +664,7 @@ var (
 		Name:     "HKEYS",
 		Info:     `Returns all field names in the hash stored at key.`,
 		Eval:     evalHKEYS,
-		Arity:    -2,
+		Arity:    -1,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	hdelCmdMeta = DiceCmdMeta{
