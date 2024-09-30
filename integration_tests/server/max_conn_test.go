@@ -35,6 +35,15 @@ func TestMaxConnection(t *testing.T) {
 
 	var maxConnLimit = maxConnTestOptions.MaxClients + 2
 	connections := make([]net.Conn, maxConnLimit)
+	defer func() {
+		// Ensure all connections are closed at the end of the test
+		for _, conn := range connections {
+			if conn != nil {
+				conn.Close()
+			}
+		}
+	}()
+
 	for i := 0; i < maxConnLimit; i++ {
 		conn, err := getConnection(maxConnTestOptions.Port)
 		if err == nil {
@@ -51,6 +60,8 @@ func TestMaxConnection(t *testing.T) {
 	result := commands.FireCommand(connections[0], "ABORT")
 	if result != "OK" {
 		t.Fatalf("Unexpected response to ABORT command: %v", result)
+	} else {
+		slog.Info("Closed server for max_conn_test")
 	}
 	wg.Wait()
 }
