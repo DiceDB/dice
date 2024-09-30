@@ -193,10 +193,10 @@ func Encode(value interface{}, isSimple bool) []byte {
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
 	case error:
 		return []byte(fmt.Sprintf("-%s\r\n", v))
-	case dstore.WatchEvent:
+	case dstore.QueryWatchEvent:
 		var b []byte
 		buf := bytes.NewBuffer(b)
-		we := value.(dstore.WatchEvent)
+		we := value.(dstore.QueryWatchEvent)
 		buf.Write(Encode(fmt.Sprintf("key:%s", we.Key), false))
 		buf.Write(Encode(fmt.Sprintf("op:%s", we.Operation), false))
 		return []byte(fmt.Sprintf("*2\r\n%s", buf.Bytes()))

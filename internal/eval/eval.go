@@ -2083,10 +2083,10 @@ func EvalQWATCH(args []string, httpOp bool, client *comm.Client, store *dstore.S
 		Key   string
 		Value *object.Obj
 	})
-	var watchSubscription querywatcher.WatchSubscription
+	var watchSubscription querywatcher.QuerySubscription
 
 	if httpOp {
-		watchSubscription = querywatcher.WatchSubscription{
+		watchSubscription = querywatcher.QuerySubscription{
 			Subscribe:          true,
 			Query:              query,
 			CacheChan:          cacheChannel,
@@ -2094,7 +2094,7 @@ func EvalQWATCH(args []string, httpOp bool, client *comm.Client, store *dstore.S
 			ClientIdentifierID: client.ClientIdentifierID,
 		}
 	} else {
-		watchSubscription = querywatcher.WatchSubscription{
+		watchSubscription = querywatcher.QuerySubscription{
 			Subscribe: true,
 			Query:     query,
 			ClientFD:  client.Fd,
@@ -2102,7 +2102,7 @@ func EvalQWATCH(args []string, httpOp bool, client *comm.Client, store *dstore.S
 		}
 	}
 
-	querywatcher.WatchSubscriptionChan <- watchSubscription
+	querywatcher.QuerySubscriptionChan <- watchSubscription
 	store.CacheKeysForQuery(query.Where, cacheChannel)
 
 	// Return the result of the query.
@@ -2132,14 +2132,14 @@ func EvalQUNWATCH(args []string, httpOp bool, client *comm.Client) []byte {
 	}
 
 	if httpOp {
-		querywatcher.WatchSubscriptionChan <- querywatcher.WatchSubscription{
+		querywatcher.QuerySubscriptionChan <- querywatcher.QuerySubscription{
 			Subscribe:          false,
 			Query:              query,
 			QwatchClientChan:   client.HTTPQwatchResponseChan,
 			ClientIdentifierID: client.ClientIdentifierID,
 		}
 	} else {
-		querywatcher.WatchSubscriptionChan <- querywatcher.WatchSubscription{
+		querywatcher.QuerySubscriptionChan <- querywatcher.QuerySubscription{
 			Subscribe: false,
 			Query:     query,
 			ClientFD:  client.Fd,

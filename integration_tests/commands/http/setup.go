@@ -91,7 +91,7 @@ func RunHTTPServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	config.DiceConfig.Server.WriteAOFOnCleanup = false
 
 	globalErrChannel := make(chan error)
-	watchChan := make(chan dstore.WatchEvent, config.DiceConfig.Server.KeysLimit)
+	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Server.KeysLimit)
 	shardManager := shard.NewShardManager(1, watchChan, globalErrChannel, opt.Logger)
 	queryWatcherLocal := querywatcher.NewQueryManager(opt.Logger)
 	config.HTTPPort = opt.Port
