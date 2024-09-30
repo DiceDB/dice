@@ -93,6 +93,6 @@ run-benchmark-large:
 	$(MAKE) run_benchmark THREADS=8 DATA_SIZE=4096 CLIENTS=100 REQUESTS=50000
 
 clean:
-	@echo "Cleaning build artifcats..."
+	@echo "Cleaning build artifacts..."
 	rm -f dicedb
 	@echo "Clean complete."
