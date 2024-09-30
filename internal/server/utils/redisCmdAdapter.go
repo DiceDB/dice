@@ -35,6 +35,8 @@ const (
 	BIT         = "bit"
 	Index       = "index"
 	JSON        = "json"
+	OPERATION   = "operation"
+	DESTKEY     = "destkey"
 )
 
 func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
@@ -73,6 +75,8 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 			// Define keys to exclude and process their values first
 			// Update as we support more commands
 			var priorityKeys = []string{
+				OPERATION,
+				DESTKEY,
 				Key,
 				Keys,
 				Field,
@@ -89,10 +93,10 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 				Offset,
 				Member,
 				Members,
+				BIT,
 				START,
 				END,
 				UNIT,
-				BIT,
 			}
 			for _, key := range priorityKeys {
 				if val, exists := jsonBody[key]; exists {

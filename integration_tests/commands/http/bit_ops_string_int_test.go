@@ -95,9 +95,104 @@ func TestBitOpsString(t *testing.T) {
 			delays:   delays,
 		},
 		{
-			name:     "Bitcount of a key containing a string",
-			commands: []HTTPCommand{},
-			expected: []interface{}{"OK", float64(0), float64(0), float64(0)},
+			name: "Bitcount of a key containing a string",
+			commands: []HTTPCommand{
+				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "foobar"}},
+				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "start": 0, "end": -1}},
+				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo"}},
+				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "start": 0, "end": 0}},
+				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "start": 1, "end": 1}},
+				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "start": 1, "end": 1, "unit": "BYTE"}},
+				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "start": 5, "end": 30, "unit": "BIT"}},
+			},
+			expected: []interface{}{"OK", float64(26), float64(26), float64(4), float64(6), float64(6), float64(17)},
+			delays:   delays,
+		},
+		{
+			name: "Bitcount of a key containing a integer",
+			commands: []HTTPCommand{
+				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": 10}},
+				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "start": 0, "end": -1}},
+				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo"}},
+				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "start": 0, "end": 0}},
+				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "start": 1, "end": 1}},
+				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "start": 1, "end": 1, "unit": "BYTE"}},
+				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "start": 5, "end": 30, "unit": "BIT"}},
+			},
+			expected: []interface{}{"OK", float64(5), float64(5), float64(3), float64(2), float64(2), float64(3)},
+			delays:   delays,
+		},
+		{
+			name: "Setbit of a key containing a string",
+			commands: []HTTPCommand{
+				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "foobar"}},
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "offset": 1, "value": 7}},
+				{Command: "GET", Body: map[string]interface{}{"key": "foo"}},
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "offset": 1, "value": 49}},
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "offset": 1, "value": 50}},
+				{Command: "GET", Body: map[string]interface{}{"key": "foo"}},
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "offset": 0, "value": 49}},
+				{Command: "GET", Body: map[string]interface{}{"key": "foo"}},
+			},
+			expected: []interface{}{"OK", float64(0), "goobar", float64(0), float64(0), "goobar`", float64(1), "goobar "},
+			delays:   delays,
+		},
+		{
+			name: "Setbit of a key must not change the expiry of the key if expiry is set", //:TODO is this working as expected?
+			commands: []HTTPCommand{
+				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "foobar"}},
+				{Command: "EXPIRE", Body: map[string]interface{}{"key": "foo", "value": 100}},
+				{Command: "TTL", Body: map[string]interface{}{"key": "foo"}},
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "offset": 0, "value": 7}},
+				{Command: "TTL", Body: map[string]interface{}{"key": "foo"}},
+			},
+			expected:   []interface{}{"OK", float64(1), float64(100), float64(0), float64(100)},
+			delays:     delays,
+			assertType: []string{"equal", "equal", "less", "equal", "less"},
+		},
+		{
+			name: "Setbit of a key must not add expiry to the key if expiry is not set",
+			commands: []HTTPCommand{
+				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "foobar"}},
+				{Command: "TTL", Body: map[string]interface{}{"key": "foo"}},
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "offset": 1, "value": 7}},
+				{Command: "TTL", Body: map[string]interface{}{"key": "foo"}},
+			},
+			expected: []interface{}{"OK", float64(-1), float64(0), float64(-1)},
+			delays:   delays,
+		},
+		{
+			name: "Bitop not of a key containing a string",
+			commands: []HTTPCommand{
+				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "foobar"}},
+				{Command: "BITOP", Body: map[string]interface{}{"operation": "NOT", "destkey": "baz", "key": "foo"}},
+				{Command: "GET", Body: map[string]interface{}{"key": "baz"}},
+				// {Command: "BITOP", Body: map[string]interface{}{"operation": "NOT", "destkey": "baz", "key": "baz"}},
+				// {Command: "GET", Body: map[string]interface{}{"key": "bazz"}},
+			},
+			expected: []interface{}{"OK", float64(6), "\x99\x90\x90\x9d\x9e\x8d", float64(6), "foobar"},
+			delays:   delays,
+		},
+		{
+			name: "Bitop not of a key containing an integer",
+			commands: []HTTPCommand{
+				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": 10}},
+				{Command: "BITOP", Body: map[string]interface{}{"operation": "NOT", "destkey": "baz", "key": "foo"}},
+				{Command: "GET", Body: map[string]interface{}{"key": "bazz"}},
+				{Command: "BITOP", Body: map[string]interface{}{"operation": "NOT", "destkey": "baz", "key": "baz"}},
+				{Command: "GET", Body: map[string]interface{}{"key": "bazz"}},
+			},
+			expected: []interface{}{"OK", float64(2), "\xce\xcf", float64(2), float64(10)},
+			delays:   delays,
+		},
+		{
+			name: "Get a string created with setbit",
+			commands: []HTTPCommand{
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "offset": 1, "value": 1}},
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "offset": 1, "value": 3}},
+				{Command: "GET", Body: map[string]interface{}{"key": "foo"}},
+			},
+			expected: []interface{}{float64(0), float64(0), "P"},
 			delays:   delays,
 		},
 	}
@@ -119,7 +214,10 @@ func TestBitOpsString(t *testing.T) {
 					switch tc.assertType[i] {
 					case "equal":
 						assert.Equal(t, tc.expected[i], result, "Value mismatch for cmd %s", cmd)
+					case "less":
+						assert.Assert(t, tc.expected[i].(float64) >= result.(float64), "CMD: %s Expected %d to be less than or equal to %d", cmd, result, tc.expected[i])
 					}
+
 				}
 			}
 		})

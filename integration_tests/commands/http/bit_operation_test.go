@@ -75,6 +75,60 @@ func TestBitOp(t *testing.T) {
 			expected: []interface{}{"OK", float64(1), float64(0), float64(0), "kar"},
 			delays:   []time.Duration{0, 0, 0, 0, 0},
 		},
+		{
+			name: "BITOP NOT",
+			commands: []HTTPCommand{
+				{Command: "BITOP", Body: map[string]interface{}{"operation": "NOT", "destkey": "unitTestKeyNOT", "key": "unitTestKeyA"}},
+				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyNOT", "offset": 1}},
+				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyNOT", "offset": 2}},
+				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyNOT", "offset": 7}},
+				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyNOT", "offset": 8}},
+				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyNOT", "offset": 9}},
+			},
+			expected: []interface{}{float64(2), float64(0), float64(1), float64(0), float64(0), float64(1)},
+			delays:   []time.Duration{0, 0, 0, 0, 0, 0},
+		},
+		{
+			name: "BITOP OR",
+			commands: []HTTPCommand{
+				{Command: "BITOP", Body: map[string]interface{}{"operation": "OR", "destkey": "unitTestKeyOR", "keys": []interface{}{"unitTestKeyB", "unitTestKeyA"}}},
+				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyOR", "offset": 1}},
+				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyOR", "offset": 2}},
+				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyOR", "offset": 3}},
+				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyOR", "offset": 7}},
+				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyOR", "offset": 8}},
+				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyOR", "offset": 9}},
+				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyOR", "offset": 12}},
+			},
+			expected: []interface{}{float64(2), float64(1), float64(1), float64(1), float64(1), float64(1), float64(0), float64(0)},
+			delays:   []time.Duration{0, 0, 0, 0, 0, 0, 0, 0},
+		},
+		{
+			name: "BITOP AND",
+			commands: []HTTPCommand{
+				{Command: "BITOP", Body: map[string]interface{}{"operation": "AND", "destkey": "unitTestKeyAND", "keys": []interface{}{"unitTestKeyB", "unitTestKeyA"}}},
+				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyAND", "offset": 1}},
+				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyAND", "offset": 2}},
+				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyAND", "offset": 7}},
+				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyAND", "offset": 8}},
+				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyAND", "offset": 9}},
+			},
+			expected: []interface{}{float64(2), float64(0), float64(0), float64(1), float64(0), float64(0)},
+			delays:   []time.Duration{0, 0, 0, 0, 0, 0},
+		},
+		{
+			name: "BITOP XOR",
+			commands: []HTTPCommand{
+				{Command: "BITOP", Body: map[string]interface{}{"operation": "XOR", "destkey": "unitTestKeyXOR", "keys": []interface{}{"unitTestKeyB", "unitTestKeyA"}}},
+				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyXOR", "offset": 1}},
+				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyXOR", "offset": 2}},
+				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyXOR", "offset": 3}},
+				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyXOR", "offset": 7}},
+				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyXOR", "offset": 8}},
+			},
+			expected: []interface{}{float64(2), float64(1), float64(1), float64(1), float64(0), float64(1)},
+			delays:   []time.Duration{0, 0, 0, 0, 0, 0},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -152,33 +206,47 @@ func TestBitCount(t *testing.T) {
 func TestBitPos(t *testing.T) {
 	exec := NewHTTPCommandExecutor()
 	testCases := []struct {
-		name     string
-		commands []HTTPCommand
-		expected []interface{}
-		delays   []time.Duration
-		value    interface{}
+		name         string
+		commands     []HTTPCommand
+		expected     []interface{}
+		delays       []time.Duration
+		val          interface{}
+		setCmdSETBIT bool
 	}{
 		{
 			name: "BitPos",
 			commands: []HTTPCommand{
 				{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "bit": 0, "start": 0, "end": -1, "unit": "BIT"}},
+				{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "bit": 0, "start": 8, "end": -1, "unit": "BIT"}},
+				{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "bit": 0, "start": 16, "end": -1, "unit": "BIT"}},
+				{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "bit": 0, "start": 16, "end": 200, "unit": "BIT"}},
+				{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "bit": 0, "start": 8, "end": 8, "unit": "BIT"}},
 			},
-			expected: []interface{}{float64(0), float64(8)},
-			delays:   []time.Duration{0, 0},
-			value:    "\\x00\\xff\\x00",
-		},
-		{
-			name: "BitPos",
-			commands: []HTTPCommand{
-				{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "bit": 0, "start": 0, "end": -1, "unit": "BIT"}},
-			},
-			expected: []interface{}{float64(0), float64(8)},
-			delays:   []time.Duration{0, 0},
-			value:    "\\x00\\xff\\x00",
+			expected: []interface{}{float64(0), float64(8), float64(16), float64(16), float64(8)},
+			delays:   []time.Duration{0, 0, 0, 0, 0},
+			val:      "\\x00\\xff\\x00",
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			if tc.setCmdSETBIT {
+				exec.FireCommand(HTTPCommand{
+					Command: "SETBIT", Body: map[string]interface{}{"key": "testkeysb", "offset": tc.val.(string)},
+				})
+			} else {
+				switch v := tc.val.(type) {
+				case string:
+					exec.FireCommand(HTTPCommand{
+						Command: "SET", Body: map[string]interface{}{"key": "testkey", "value": v},
+					})
+				case int:
+					exec.FireCommand(HTTPCommand{
+						Command: "SET", Body: map[string]interface{}{"key": "testkey", "value": v},
+					})
+				default:
+					// For test cases where we don't set a value (e.g., error cases)
+				}
+			}
 			for i, cmd := range tc.commands {
 				if tc.delays[i] > 0 {
 					time.Sleep(tc.delays[i])
