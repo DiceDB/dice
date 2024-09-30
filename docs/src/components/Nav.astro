@@ -33,6 +33,12 @@ import SocialHandlesIcons from "./SocialHandlesIcons.astro";
       <div class="navbar-start"></div>
       <div class="navbar-end">
         <a
+          class={`navbar-item ${currentPage === "benchmarks" && "is-active"}`}
+          href="/benchmarks"
+        >
+          <span class="has-text-weight-bold is-size-5"> Benchmarks</span>
+        </a>
+        <a
           class={`navbar-item ${currentPage === "docs" && "is-active"}`}
           href="/get-started/installation/"
         >
