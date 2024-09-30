@@ -32,15 +32,15 @@ type Store struct {
 func NewStore(watchChan chan WatchEvent) *Store {
 	return &Store{
 		store:     swiss.New[string, *object.Obj](config.DiceConfig.Server.StoreMapInitSize),
-		expires:   swiss.New[*object.Obj, uint64](1024),
+		expires:   swiss.New[*object.Obj, uint64](config.DiceConfig.Server.StoreMapInitSize),
 		watchChan: watchChan,
 	}
 }
 
 func ResetStore(store *Store) *Store {
 	store.numKeys = 0
-	store.store = swiss.New[string, *object.Obj](1024)
-	store.expires = swiss.New[*object.Obj, uint64](1024)
+	store.store = swiss.New[string, *object.Obj](config.DiceConfig.Server.StoreMapInitSize)
+	store.expires = swiss.New[*object.Obj, uint64](config.DiceConfig.Server.StoreMapInitSize)
 
 	return store
 }

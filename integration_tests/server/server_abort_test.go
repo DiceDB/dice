@@ -86,8 +86,7 @@ func TestServerRestartAfterAbort(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	initServerPort := config.DiceConfig.Server.Port
-	conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", initServerPort))
+	conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", config.DiceConfig.Server.Port))
 	if err != nil {
 		t.Fatalf("Server should be running after restart: %v", err)
 	}
@@ -101,10 +100,11 @@ func TestServerRestartAfterAbort(t *testing.T) {
 
 	// wait for the server to shut down
 	time.Sleep(2 * time.Second)
-	fmt.Println("Wait complete for server shutdown")
+	testServerOptions.Logger.Info("Wait completed for server shutdown")
 
 	wg.Wait()
 
+	testServerOptions.Logger.Info("Restarting server after abort for server_abort_test")
 	// restart server
 	ctx2, cancel2 := context.WithCancel(context.Background())
 	t.Cleanup(cancel2)
@@ -118,7 +118,7 @@ func TestServerRestartAfterAbort(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	// Check if the server is running
-	conn2, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", initServerPort))
+	conn2, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", config.DiceConfig.Server.Port))
 	if err != nil {
 		t.Fatalf("Server should be running after restart: %v", err)
 	}
