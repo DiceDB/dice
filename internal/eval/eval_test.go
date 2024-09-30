@@ -95,6 +95,10 @@ func TestEval(t *testing.T) {
 	testEvalINCRBYFLOAT(t, store)
 	testEvalBITOP(t, store)
 	testEvalAPPEND(t, store)
+	testEvalHRANDFIELD(t, store)
+	testEvalZADD(t, store)
+	testEvalZRANGE(t, store)
+	testEvalHVALS(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -1908,7 +1912,7 @@ func testEvalPFADD(t *testing.T, store *dstore.Store) {
 				key, value := "EXISTING_KEY", "VALUE"
 				oType, oEnc := deduceTypeEncoding(value)
 				var exDurationMs int64 = -1
-				var keepttl bool = false
+				var keepttl = false
 
 				store.Put(key, store.NewObj(value, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
 			},
@@ -2015,17 +2019,17 @@ func testEvalHVALS(t *testing.T, store *dstore.Store) {
 		},
 		"key doesn't exists": {
 			setup:  func() {},
-			input:  []string{"KEY"},
-			output: clientio.RespNIL,
+			input:  []string{"NONEXISTENTHVALSKEY"},
+			output: clientio.Encode([]string{}, false),
 		},
 		"key exists": {
 			setup: func() {
 				key := "KEY_MOCK"
 				field := "mock_field_name"
-				field_1 := "mock_field_name_1"
+				field1 := "mock_field_name_1"
 				newMap := make(HashMap)
 				newMap[field] = "mock_field_value"
-				newMap[field_1] = "mock_field_value_1"
+				newMap[field1] = "mock_field_value_1"
 
 				obj := &object.Obj{
 					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
@@ -2519,9 +2523,9 @@ func testEvalHSET(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "KEY_MOCK"
 				field := "mock_field_name"
-				mock_value := "mock_field_value"
+				mockValue := "mock_field_value"
 				newMap := make(HashMap)
-				newMap[field] = mock_value
+				newMap[field] = mockValue
 
 				obj := &object.Obj{
 					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
@@ -2535,7 +2539,7 @@ func testEvalHSET(t *testing.T, store *dstore.Store) {
 				res, err := getValueFromHashMap(key, field, store)
 
 				assert.Assert(t, err == nil)
-				assert.DeepEqual(t, res, clientio.Encode(mock_value, false))
+				assert.DeepEqual(t, res, clientio.Encode(mockValue, false))
 			},
 			input: []string{
 				"KEY_MOCK",
@@ -3162,7 +3166,7 @@ func BenchmarkEvalTYPE(b *testing.B) {
 
 	for objType, setupFunc := range objectTypes {
 		b.Run(fmt.Sprintf("ObjectType_%s", objType), func(b *testing.B) {
-			// Setup the object in the store
+			// Set up the object in the store
 			setupFunc()
 
 			b.ResetTimer()
@@ -4197,14 +4201,9 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 			validator: func(output []byte) {
 				assert.Assert(t, output != nil)
 				resultString := string(output)
-				parts := strings.SplitN(resultString, "\n", 2)
-				if len(parts) < 2 {
-					t.Errorf("Unexpected output format: %s", resultString)
-					return
-				}
-				decodedResult := strings.TrimSpace(parts[1])
-				fmt.Printf("Decoded Result: '%s'\n", decodedResult)
-				assert.Assert(t, decodedResult == "field1" || decodedResult == "field2")
+				assert.Assert(t,
+					resultString == "*1\r\n$6\r\nfield1\r\n" || resultString == "*1\r\n$6\r\nfield2\r\n",
+					"Unexpected field returned: %s", resultString)
 			},
 		},
 		"key exists with fields and count argument": {
@@ -4257,7 +4256,7 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 
 			},
-			input: []string{"KEY_MOCK", "2", "WITHVALUES"},
+			input: []string{"KEY_MOCK", "2", WithValues},
 			validator: func(output []byte) {
 				assert.Assert(t, output != nil)
 				decodedResult := string(output)
@@ -4269,7 +4268,7 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 					}
 				}
 
-				assert.Assert(t, count == 4)
+				assert.Equal(t, 4, count, "Expected 4 fields and values, found %d", count)
 			},
 		},
 	}
@@ -4439,4 +4438,156 @@ func BenchmarkEvalAPPEND(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		evalAPPEND([]string{"key", fmt.Sprintf("val_%d", i)}, store)
 	}
+}
+
+func testEvalZADD(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"ZADD with wrong number of arguments": {
+			input:  []string{"myzset", "1"},
+			output: diceerrors.NewErrArity("ZADD"),
+		},
+		"ZADD with non-numeric score": {
+			input:  []string{"myzset", "score", "member1"},
+			output: diceerrors.NewErrWithMessage(diceerrors.InvalidFloatErr),
+		},
+		"ZADD new member to non-existing key": {
+			setup:  func() {},
+			input:  []string{"myzset", "1", "member1"},
+			output: clientio.Encode(int64(1), false),
+		},
+		"ZADD existing member with updated score": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1"}, store)
+			},
+			input:  []string{"myzset", "2", "member1"},
+			output: clientio.Encode(int64(0), false),
+		},
+		"ZADD multiple members": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1"}, store)
+			},
+			input:  []string{"myzset", "2", "member2", "3", "member3"},
+			output: clientio.Encode(int64(2), false),
+		},
+		"ZADD with negative score": {
+			input:  []string{"myzset", "-1", "member_neg"},
+			output: clientio.Encode(int64(1), false),
+		},
+		"ZADD with duplicate members": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1"}, store)
+			},
+			input:  []string{"myzset", "2", "member1", "2", "member1"},
+			output: clientio.Encode(int64(0), false),
+		},
+		"ZADD with extreme float value": {
+			input:  []string{"myzset", "1e308", "member_large"},
+			output: clientio.Encode(int64(1), false),
+		},
+		"ZADD with NaN score": {
+			input:  []string{"myzset", "NaN", "member_nan"},
+			output: diceerrors.NewErrWithMessage(diceerrors.InvalidFloatErr),
+		},
+		"ZADD with INF score": {
+			input:  []string{"myzset", "INF", "member_inf"},
+			output: clientio.Encode(int64(1), false),
+		},
+		"ZADD to a key of wrong type": {
+			setup: func() {
+				store.Put("myzset", store.NewObj("string_value", -1, object.ObjTypeString, object.ObjEncodingRaw))
+			},
+			input:  []string{"myzset", "1", "member1"},
+			output: []byte("-ERR Existing key has wrong Dice type\r\n"),
+		},
+	}
+
+	runEvalTests(t, tests, evalZADD, store)
+}
+
+func testEvalZRANGE(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"ZRANGE on non-existing key": {
+			input:  []string{"non_existing_key", "0", "-1"},
+			output: clientio.Encode([]string{}, false),
+		},
+		"ZRANGE with wrong type key": {
+			setup: func() {
+				store.Put("mystring", store.NewObj("string_value", -1, object.ObjTypeString, object.ObjEncodingRaw))
+			},
+			input:  []string{"mystring", "0", "-1"},
+			output: diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr),
+		},
+		"ZRANGE with normal indices": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+			},
+			input:  []string{"myzset", "0", "1"},
+			output: clientio.Encode([]string{"member1", "member2"}, false),
+		},
+		"ZRANGE with negative indices": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+			},
+			input:  []string{"myzset", "-2", "-1"},
+			output: clientio.Encode([]string{"member2", "member3"}, false),
+		},
+		"ZRANGE with start > stop": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+			},
+			input:  []string{"myzset", "2", "1"},
+			output: clientio.Encode([]string{}, false),
+		},
+		"ZRANGE with indices out of bounds": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1"}, store)
+			},
+			input:  []string{"myzset", "0", "5"},
+			output: clientio.Encode([]string{"member1"}, false),
+		},
+		"ZRANGE WITHSCORES option": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1", "2", "member2"}, store)
+			},
+			input:  []string{"myzset", "0", "-1", "WITHSCORES"},
+			output: clientio.Encode([]string{"member1", "1", "member2", "2"}, false),
+		},
+		"ZRANGE with invalid option": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1"}, store)
+			},
+			input:  []string{"myzset", "0", "-1", "INVALIDOPTION"},
+			output: diceerrors.NewErrWithMessage(diceerrors.SyntaxErr),
+		},
+		"ZRANGE with REV option": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+			},
+			input:  []string{"myzset", "0", "-1", "REV"},
+			output: clientio.Encode([]string{"member3", "member2", "member1"}, false),
+		},
+		"ZRANGE with REV and WITHSCORES options": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+			},
+			input:  []string{"myzset", "0", "-1", "REV", "WITHSCORES"},
+			output: clientio.Encode([]string{"member3", "3", "member2", "2", "member1", "1"}, false),
+		},
+		"ZRANGE with start index greater than length": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1"}, store)
+			},
+			input:  []string{"myzset", "5", "10"},
+			output: clientio.Encode([]string{}, false),
+		},
+		"ZRANGE with negative start index greater than length": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1"}, store)
+			},
+			input:  []string{"myzset", "-10", "-5"},
+			output: clientio.Encode([]string{}, false),
+		},
+	}
+
+	runEvalTests(t, tests, evalZRANGE, store)
 }

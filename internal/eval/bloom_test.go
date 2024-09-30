@@ -2,6 +2,7 @@ package eval
 
 import (
 	"bytes"
+	"errors"
 	"hash"
 	"hash/fnv"
 	"reflect"
@@ -22,11 +23,11 @@ func TestBloomFilter(t *testing.T) {
 	t.Parallel()
 
 	// BFINIT
-	args := []string{} // empty args
+	var args []string // empty args
 	resp := evalBFINIT(args, store)
 
-	// We're just checking if the resposne is an error or not. This test does
-	// not checks the type of error. That is kept for different test.
+	// We're just checking if the resposne is an error or not. This test does not check the type of error. That is kept
+	//for different test.
 	if bytes.Equal(resp, clientio.RespOK) {
 		t.Errorf("BFINIT: invalid response, args: %v - expected an error, got: %s", args, string(resp))
 	}
@@ -70,7 +71,7 @@ func TestBloomFilter(t *testing.T) {
 		t.Errorf("BFADD: invalid response, args: %v - expected: %s, got error: %s", args, string(clientio.RespZero), string(resp))
 	}
 
-	// Try adding element into an non-existing filter
+	// Try adding element into a non-existing filter
 	args = []string{"bf2", "hello"} // BFADD bf2 hello
 	resp = evalBFADD(args, store)
 	if !bytes.Equal(resp, clientio.RespOne) {
@@ -138,7 +139,7 @@ func TestGetOrCreateBloomFilter(t *testing.T) {
 	// against a non existing key
 	key = "bf1"
 	_, err = getOrCreateBloomFilter(key, nil, store)
-	if err != errInvalidKey {
+	if !errors.Is(err, errInvalidKey) {
 		t.Errorf("nil or wrong error while fetching non existing bloom filter - key: %s, opts: %+v, err: %v", key, opts, err)
 	}
 }
@@ -198,7 +199,7 @@ func TestBloomOpts(t *testing.T) {
 				t.Errorf("invalid response in %s - expected: %v, got: %v", t.Name(), tc.response, opts)
 			}
 
-			if err != tc.err {
+			if !errors.Is(err, tc.err) {
 				t.Errorf("invalid error in %s - expected: %v, got: %v", t.Name(), tc.err, err)
 			}
 		})
@@ -258,7 +259,7 @@ func TestSetBit(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			// Set bit first and then try to read it
+			// Set the bit first and then try to read it
 			setBit(buf, tc.index)
 			actual := isBitSet(buf, tc.index)
 			if actual != tc.expected {

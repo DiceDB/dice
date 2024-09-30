@@ -10,8 +10,8 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	logger := logger.New(logger.Opts{WithTimestamp: false})
-	slog.SetDefault(logger)
+	l := logger.New(logger.Opts{WithTimestamp: false})
+	slog.SetDefault(l)
 
 	store := dstore.NewStore(nil)
 	store.ResetStore()

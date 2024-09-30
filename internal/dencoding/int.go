@@ -30,8 +30,8 @@ var bufPool = sync.Pool{
 
 var bitShifts = [10]uint8{7, 7, 7, 7, 7, 7, 7, 7, 7, 1}
 
-// EncodeInt encodes the unsigned 64 bit integer value into a varint
-// and returns an array of bytes (little endian encoded)
+// EncodeUInt encodes the unsigned 64-bit integer value into a varint and returns an array of bytes (little endian
+// encoded)
 func EncodeUInt(x uint64) []byte {
 	var i int
 	buf := bufPool.Get().(*[11]byte)
@@ -48,7 +48,7 @@ func EncodeUInt(x uint64) []byte {
 	return newBuf
 }
 
-// DecodeUInt decodes the array of bytes and returns an unsigned 64 bit integer
+// DecodeUInt decodes the array of bytes and returns an unsigned 64-bit integer
 func DecodeUInt(vint []byte) uint64 {
 	var i int
 	var v uint64 = 0
@@ -59,13 +59,13 @@ func DecodeUInt(vint []byte) uint64 {
 	return v
 }
 
-// EncodeInt encodes the signed 64 bit integer value into a varint
+// EncodeInt encodes the signed 64-bit integer value into a varint
 // and returns an array of bytes (little endian encoded)
 func EncodeInt(x int64) []byte {
 	return EncodeUInt(uint64((x << 1) ^ (x >> 63)))
 }
 
-// DecodeInt decodes the array of bytes and returns a signed 64 bit integer
+// DecodeInt decodes the array of bytes and returns a signed 64-bit integer
 func DecodeInt(vint []byte) int64 {
 	ux := DecodeUInt(vint)
 	return int64((ux >> 1) ^ uint64((int64(ux)<<63)>>63))
