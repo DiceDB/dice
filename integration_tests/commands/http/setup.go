@@ -76,7 +76,7 @@ func (e *HTTPCommandExecutor) FireCommand(cmd HTTPCommand) (interface{}, error) 
 	defer resp.Body.Close()
 
 	if cmd.Command != "QWATCH" {
-		var result utils.HttpResponse
+		var result utils.HTTPResponse
 		err = json.NewDecoder(resp.Body).Decode(&result)
 		if err != nil {
 			return nil, err
