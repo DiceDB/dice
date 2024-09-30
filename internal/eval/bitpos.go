@@ -53,8 +53,7 @@ func parseBitToFind(arg string) (byte, error) {
 	}
 
 	if bitToFindInt != 0 && bitToFindInt != 1 {
-		//nolint: stylecheck
-		return 0, errors.New("The bit argument must be 1 or 0")
+		return 0, errors.New("the bit argument must be 1 or 0")
 	}
 
 	return byte(bitToFindInt), nil
@@ -91,32 +90,30 @@ func parseOptionalParams(args []string, byteLen int) (start, end int, rangeType 
 func getBitPos(byteSlice []byte, bitToFind byte, start, end int, rangeType string, endRangeProvided bool) int {
 	byteLen := len(byteSlice)
 	bitLen := len(byteSlice) * 8
-	if rangeType == BIT {
-		// For BIT range, if start is beyond the total bits, it's invalid
-		if start > bitLen {
-			return -1
-		}
-	}
-
-	// Adjust start and end for both BYTE and BIT ranges
-	// This handles negative indices and ensures we're within bounds
-	start, end = adjustBitPosSearchRange(start, end, byteLen)
-
-	// If start is beyond end or byteLen, we can't find anything
-	if start > end || start >= byteLen {
-		return -1
-	}
 
 	var result int
+
 	if rangeType == BYTE {
-		result = getBitPosWithByteRange(byteSlice, bitToFind, start, end)
+		// Adjust start and end for both BYTE and BIT ranges
+		// This handles negative indices and ensures we're within bounds
+		start, end = adjustBitPosSearchRange(start, end, byteLen)
+
+		// If start is beyond end or byteLen, we can't find anything
+		if start > end || start >= byteLen {
+			return -1
+		}
+
+		result = getBitPosWithBitRange(byteSlice, bitToFind, start*8, end*8+7)
 	} else {
-		// Convert byte range to bit range
-		// We multiply by 8 because each byte has 8 bits
-		start *= 8
-		// The +7 ensures we include all bits in the last byte
-		// min() ensures we don't go beyond the actual bit length
-		end = min(end*8+7, bitLen-1)
+		// Adjust start and end for both BYTE and BIT ranges
+		// This handles negative indices and ensures we're within bounds
+		start, end = adjustBitPosSearchRange(start, end, bitLen)
+
+		// If start is beyond end or byteLen, we can't find anything
+		if start > end || start >= bitLen {
+			return -1
+		}
+
 		result = getBitPosWithBitRange(byteSlice, bitToFind, start, end)
 	}
 
@@ -141,22 +138,6 @@ func adjustBitPosSearchRange(start, end, byteLen int) (newStart, newEnd int) {
 	end = min(byteLen-1, end)
 
 	return start, end
-}
-
-func getBitPosWithByteRange(byteSlice []byte, bitToFind byte, start, end int) int {
-	for i := start; i <= end; i++ {
-		for j := 0; j < 8; j++ {
-			// Check each bit in the byte from left to right
-			// We use 7-j because bit 7 is the leftmost (most significant) bit
-			if ((byteSlice[i] >> (7 - j)) & 1) == bitToFind {
-				// Return the bit position (i*8 gives us the byte offset in bits)
-				return i*8 + j
-			}
-		}
-	}
-
-	// Bit not found in the range
-	return -1
 }
 
 func getBitPosWithBitRange(byteSlice []byte, bitToFind byte, start, end int) int {

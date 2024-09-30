@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"errors"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -42,11 +43,15 @@ var (
 	EnableSecureMode = DefaultSSLMode
 	HTTPSPort        = DefaultSecureHTTPPort
 	RespsPort        = DefaultSecureRespPort
+
+	EnableWebsocket = true
+	WebsocketPort   = 8379
+
 	// if RequirePass is set to an empty string, no authentication is required
 	RequirePass = utils.EmptyStr
 
 	CustomConfigFilePath = utils.EmptyStr
-	ConfigFileLocation   = utils.EmptyStr
+	FileLocation         = utils.EmptyStr
 
 	InitConfigCmd = false
 )
@@ -72,6 +77,7 @@ type Config struct {
 		LogLevel               string        `mapstructure:"loglevel"`
 		PrettyPrintLogs        bool          `mapstructure:"prettyprintlogs"`
 		EnableMultiThreading   bool          `mapstructure:"enablemultithreading"`
+		StoreMapInitSize       int           `mapstructure:"storemapinitsize"`
 	} `mapstructure:"server"`
 	Auth struct {
 		UserName string `mapstructure:"username"`
@@ -112,6 +118,7 @@ var baseConfig = Config{
 		LogLevel               string        `mapstructure:"loglevel"`
 		PrettyPrintLogs        bool          `mapstructure:"prettyprintlogs"`
 		EnableMultiThreading   bool          `mapstructure:"enablemultithreading"`
+		StoreMapInitSize       int           `mapstructure:"storemapinitsize"`
 	}{
 		Addr:                   DefaultHost,
 		Port:                   DefaultPort,
@@ -123,8 +130,8 @@ var baseConfig = Config{
 		MaxClients:             20000,
 		MaxMemory:              0,
 		EvictionPolicy:         EvictAllKeysLFU,
-		EvictionRatio:          0.40,
-		KeysLimit:              20000000,
+		EvictionRatio:          0.9,
+		KeysLimit:              200000000,
 		AOFFile:                "./dice-master.aof",
 		PersistenceEnabled:     true,
 		WriteAOFOnCleanup:      false,
@@ -132,6 +139,7 @@ var baseConfig = Config{
 		LogLevel:               "info",
 		PrettyPrintLogs:        false,
 		EnableMultiThreading:   false,
+		StoreMapInitSize:       1024000,
 	},
 	Auth: struct {
 		UserName string `mapstructure:"username"`
@@ -181,12 +189,12 @@ func init() {
 }
 
 // DiceConfig is the global configuration object for dice
-var DiceConfig *Config = &defaultConfig
+var DiceConfig = &defaultConfig
 
 func SetupConfig() {
 	if InitConfigCmd {
-		ConfigFileLocation = getConfigPath()
-		createConfigFile(ConfigFileLocation)
+		FileLocation = getConfigPath()
+		createConfigFile(FileLocation)
 		return
 	}
 
@@ -203,8 +211,8 @@ func SetupConfig() {
 	}
 
 	// Check if -c flag is set
-	if ConfigFileLocation != utils.EmptyStr || isConfigFilePresent() {
-		setUpViperConfig(ConfigFileLocation)
+	if FileLocation != utils.EmptyStr || isConfigFilePresent() {
+		setUpViperConfig(FileLocation)
 		return
 	}
 
@@ -264,7 +272,7 @@ func isValidDirPath() bool {
 
 // This function checks if both -o and -c flags are set or not
 func areBothFlagsSet() bool {
-	return ConfigFileLocation != utils.EmptyStr && CustomConfigFilePath != utils.EmptyStr
+	return FileLocation != utils.EmptyStr && CustomConfigFilePath != utils.EmptyStr
 }
 
 func setUpViperConfig(configFilePath string) {
@@ -283,7 +291,8 @@ func setUpViperConfig(configFilePath string) {
 
 	viper.SetConfigType("toml")
 	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+		var configFileNotFoundError viper.ConfigFileNotFoundError
+		if errors.As(err, &configFileNotFoundError) {
 			slog.Warn("config file not found. Using default configurations.")
 			return
 		}
@@ -328,7 +337,7 @@ func mergeFlagsWithConfig() {
 
 // This function checks if the config file is present or not at ConfigFileLocation
 func isConfigFilePresent() bool {
-	_, err := os.Stat(ConfigFileLocation)
+	_, err := os.Stat(FileLocation)
 	return err == nil
 }
 
@@ -336,17 +345,17 @@ func isConfigFilePresent() bool {
 func getConfigPath() string {
 	switch runtime.GOOS {
 	case "windows":
-		ConfigFileLocation = filepath.Join("C:", "ProgramData", "dice", DefaultConfigName)
+		FileLocation = filepath.Join("C:", "ProgramData", "dice", DefaultConfigName)
 	case "darwin", "linux":
-		ConfigFileLocation = filepath.Join(string(filepath.Separator), "etc", "dice", DefaultConfigName)
+		FileLocation = filepath.Join(string(filepath.Separator), "etc", "dice", DefaultConfigName)
 	default:
 		// Default to current directory if OS is unknown
-		ConfigFileLocation = filepath.Join(".", DefaultConfigName)
+		FileLocation = filepath.Join(".", DefaultConfigName)
 	}
-	return ConfigFileLocation
+	return FileLocation
 }
 
-// This function is only used for testing purposes
+// ResetConfig resets the DiceConfig to default configurations. This function is only used for testing purposes
 func ResetConfig() {
 	DiceConfig = &defaultConfig
 }

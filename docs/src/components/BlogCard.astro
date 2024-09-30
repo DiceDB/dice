@@ -1,0 +1,11 @@
+---
+const { blog } = Astro.props;
+---
+
+<div>
+  <h5 class="is-size-4 is-size-5-mobile has-text-weight-bold">
+    <a class="has-text-black" target="_blank" href={`/blog/${blog.slug}`}
+      >{blog.data.title}</a
+    >
+  </h5>
+</div>

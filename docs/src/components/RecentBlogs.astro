@@ -1,0 +1,27 @@
+---
+const { blogs } = Astro.props;
+---
+
+<div class="content">
+  <div>
+    <ul>
+      {
+        blogs.map((blog) => (
+          <li>
+            <span class="is-hidden-mobile has-text-grey is-family-monospace">
+              {blog.data.published_at.toLocaleString("en-us", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })}
+              :
+            </span>
+            <span>
+              <a href={"/blog/" + blog.slug}>{blog.data.title}</a>
+            </span>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</div>

@@ -1,0 +1,29 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Hero from "../components/Hero.astro";
+
+import site from "../data/site.json";
+
+const title =
+  "DiceDB - an in-memory, real-time, and reactive database with Redis and SQL support optimized for modern hardware and building real-time applications.";
+const description =
+  "DiceDB is an in-memory, real-time, and reactive database with Redis and SQL support optimized for modern hardware and building real-time applications.";
+---
+
+<Layout {title} {description}>
+  <Hero />
+  <div class="section" style="margin: 3em 0;">
+    <div class="columns is-multiline">
+      {
+        site.featureHighlights.map((s) => (
+          <div class="column is-4">
+            <div class="box">
+              <h2 class="title is-size-5">{s.title}</h2>
+              <p class="is-size-6">{s.description}</p>
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</Layout>
