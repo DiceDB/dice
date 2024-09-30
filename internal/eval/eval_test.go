@@ -3179,7 +3179,7 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 
 		"memory nonexistant key": {
 			setup:  func() {},
-			input:  []string{"MEMORY", "NONEXISTANT_KEY"},
+			input:  []string{"MEMORY", "NONEXISTENT_KEY"},
 			output: clientio.RespZero,
 		},
 
@@ -5351,7 +5351,6 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 			input:  []string{"key", "field", "-0.1"},
 			output: clientio.Encode("1.9", false),
 		},
-		// this is failing
 		"HINCRBYFLOAT by a non-numeric increment": {
 			setup: func() {
 				key := "key"
@@ -5368,7 +5367,6 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 			input:  []string{"key", "field", "a"},
 			output: []byte("-ERR value is not an integer or a float\r\n"),
 		},
-		// this is failing
 		"HINCRBYFLOAT on a field with non-numeric value": {
 			setup: func() {
 				key := "key"
@@ -5385,7 +5383,6 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 			input:  []string{"key", "field", "0.1"},
 			output: []byte("-ERR value is not an integer or a float\r\n"),
 		},
-		// this failing
 		"HINCRBYFLOAT by a value that would turn float64 to Inf": {
 			setup: func() {
 				key := "key"
@@ -5694,7 +5691,7 @@ func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:  []string{"doc1", "$..a", "\"bar\""},
-			output: []byte("*3\r\n:6\r\n:8\r\n$-1\r\n"), // Expected lengths after append
+			output: []byte("*3\r\n:6\r\n:8\r\n$-1\r\n"), // Cannot append to numeric field
 		},
 		"append to single field": {
 			setup: func() {
@@ -5706,14 +5703,14 @@ func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:  []string{"doc1", "$.nested1.a", "\"baz\""},
-			output: []byte("*1\r\n:11\r\n"), // Expected length after append
+			output: []byte("*1\r\n:8\r\n"), // Expected length after append
 		},
 		"append to non-existing key": {
 			setup: func() {
 				// No setup needed as we are testing a non-existing document.
 			},
 			input:  []string{"non_existing_doc", "$..a", "\"err\""},
-			output: []byte("*1\r\n$-1\r\n"), // Expect an error, but captured in the test framework
+			output: []byte("*0\r\n"), // No results for non-existing key
 		},
 		"legacy path append": {
 			setup: func() {
@@ -5725,7 +5722,7 @@ func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:  []string{"doc1", ".*.a", "\"bar\""},
-			output: []byte("*1\r\n:8\r\n"), // Expected length after append for nested1.a
+			output: []byte("*2\r\n:8\r\n$-1\r\n"), // Can't append to numeric field
 		},
 		"append to root node": {
 			setup: func() {

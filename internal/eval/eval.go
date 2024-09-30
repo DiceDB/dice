@@ -1117,68 +1117,16 @@ func evalJSONGET(args []string, store *dstore.Store) []byte {
 	}
 
 	key := args[0]
-	obj := store.Get(key)
-
-	if obj == nil {
-		return clientio.RespNIL
+	// Default path is root if not specified
+	path := defaultRootPath
+	if len(args) > 1 {
+		path = args[1]
 	}
-
-	// Check if the object is of JSON type
-	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
-	if errWithMessage != nil {
-		return errWithMessage
+	result, err := jsonGETHelper(store, path, key)
+	if err != nil {
+		return err
 	}
-
-	jsonData := obj.Value
-
-	// If no path is specified, return the entire JSON document
-	if len(args) == 1 {
-		jsonString, err := sonic.MarshalString(jsonData)
-		if err != nil {
-			return diceerrors.NewErrWithMessage("Failed to marshal JSON")
-		}
-		return clientio.Encode(jsonString, false)
-	}
-
-	// Handle paths
-	results := make([]interface{}, 0)
-	for _, path := range args[1:] {
-		if path == "$" {
-			// Root path, return the entire document
-			jsonString, err := sonic.MarshalString(jsonData)
-			if err != nil {
-				return diceerrors.NewErrWithMessage("Failed to marshal JSON")
-			}
-			results = append(results, jsonString)
-		} else {
-			// Parse the JSONPath expression
-			expr, err := jp.ParseString(path)
-			if err != nil {
-				results = append(results, clientio.RespNIL)
-				continue
-			}
-
-			// Execute the JSONPath query
-			pathResults := expr.Get(jsonData)
-			if len(pathResults) == 0 {
-				results = append(results, clientio.RespNIL)
-			} else {
-				jsonString, err := sonic.MarshalString(pathResults[0])
-				if err != nil {
-					return diceerrors.NewErrWithMessage("Failed to marshal JSON")
-				}
-				results = append(results, jsonString)
-			}
-		}
-	}
-
-	// If only one path was specified, return the result directly
-	if len(results) == 1 {
-		return clientio.Encode(results[0], false)
-	}
-
-	// Otherwise, return an array of results
-	return clientio.Encode(results, false)
+	return clientio.Encode(result, false)
 }
 
 // helper function used by evalJSONGET and evalJSONMGET to prepare the results
