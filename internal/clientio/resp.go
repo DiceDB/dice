@@ -154,14 +154,7 @@ func encodeString(v string) []byte {
 
 // encodeBool encodes bool as simple strings
 func encodeBool(v bool) []byte {
-	var val string
-	switch v {
-	case true:
-		val = "true"
-	case false:
-		val = "false"
-	}
-	return []byte(fmt.Sprintf("+%v\r\n", val))
+	return []byte(fmt.Sprintf("+%t\r\n", v))
 }
 
 func Encode(value interface{}, isSimple bool) []byte {
