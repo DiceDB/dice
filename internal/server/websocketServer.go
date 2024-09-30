@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dicedb/dice/internal/eval"
 	"log/slog"
 	"net/http"
 	"sync"
@@ -14,7 +15,6 @@ import (
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/eval"
 	"github.com/dicedb/dice/internal/ops"
 	"github.com/dicedb/dice/internal/querywatcher"
 	"github.com/dicedb/dice/internal/server/utils"
@@ -166,6 +166,16 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		resp := <-s.ioChan
 
 		_, ok := WorkerCmdsMeta[redisCmd.Cmd]
+		respArr := []string{
+			"(nil)",  // Represents a RESP Nil Bulk String, which indicates a null value.
+			"OK",     // Represents a RESP Simple String with value "OK".
+			"QUEUED", // Represents a Simple String indicating that a command has been queued.
+			"0",      // Represents a RESP Integer with value 0.
+			"1",      // Represents a RESP Integer with value 1.
+			"-1",     // Represents a RESP Integer with value -1.
+			"-2",     // Represents a RESP Integer with value -2.
+			"*0",     // Represents an empty RESP Array.
+		}
 		var rp *clientio.RESPParser
 
 		var responseValue interface{}
@@ -192,18 +202,6 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 			}
 		}
 
-		// func HandlePredefinedResponse(response interface{}) []byte {
-		respArr := []string{
-			"(nil)",  // Represents a RESP Nil Bulk String, which indicates a null value.
-			"OK",     // Represents a RESP Simple String with value "OK".
-			"QUEUED", // Represents a Simple String indicating that a command has been queued.
-			"0",      // Represents a RESP Integer with value 0.
-			"1",      // Represents a RESP Integer with value 1.
-			"-1",     // Represents a RESP Integer with value -1.
-			"-2",     // Represents a RESP Integer with value -2.
-			"*0",     // Represents an empty RESP Array.
-		}
-
 		switch val := responseValue.(type) {
 		case eval.RespType:
 			responseValue = respArr[val]
@@ -213,9 +211,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 			responseValue = string(bytes)
 		}
 
-		wsResp := utils.HttpResponse{Data: responseValue}
-
-		respBytes, err := json.Marshal(wsResp)
+		respBytes, err := json.Marshal(responseValue)
 		if err != nil {
 			writeResponse(conn, []byte("error: marshaling json response"))
 			continue
