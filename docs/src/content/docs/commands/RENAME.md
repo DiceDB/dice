@@ -1,6 +1,6 @@
 ---
 title: RENAME
-description: Documentation for the DiceDB command RENAME
+description: The `RENAME` command in DiceDB allows you to change the name of an existing key. If the new key name already exists, it will be overwritten.
 ---
 
 The `RENAME` command in DiceDB is used to change the name of an existing key to a new name. If the new key name already exists, it will be overwritten. This command is useful for renaming keys in a DiceDB database without having to delete and recreate them.
@@ -13,72 +13,85 @@ RENAME oldkey newkey
 
 ## Parameters
 
-- `oldkey`: The current name of the key you want to rename. This key must exist in the DiceDB database.
-- `newkey`: The new name for the key. If a key with this name already exists, it will be overwritten.
+| Parameter | Description                                                                                 | Type   | Required |
+| --------- | ------------------------------------------------------------------------------------------- | ------ | -------- |
+| `oldkey`  | The current name of the key you want to rename. This key must exist in the DiceDB database. | String | Yes      |
+| `newkey`  | The new name for the key. If a key with this name already exists, it will be overwritten.   | String | Yes      |
 
-## Return Value
+## Return values
 
-- `Simple String Reply`: Returns `OK` if the key was successfully renamed.
+| Condition                | Return Value                                                 |
+| ------------------------ | ------------------------------------------------------------ |
+| Command is successful    | `OK`                                                         |
+| `oldkey` does not exist  | `(error) ERR no such key`                                    |
+| arguments not equal to 2 | `(error) ERR wrong number of arguments for 'rename' command` |
 
 ## Behaviour
 
-When the `RENAME` command is executed, the following sequence of events occurs:
+- The `RENAME` command renames an existing key (`oldkey`) to a new name (`newkey`).
+- If `newkey` already exists, it will be overwritten by the value of `oldkey`.
+- If `oldkey` does not exist, an error is returned.
+- The operation is atomic, ensuring no other commands can interfere while it executes.
+- If the source and destination keys are the same, the command will return `OK` without making changes.
 
-1. DiceDB checks if the `oldkey` exists.
-2. If `oldkey` does not exist, an error is returned.
-3. If `newkey` already exists, it is deleted.
-4. The `oldkey` is renamed to `newkey`.
-5. The command returns `OK` to indicate success.
+## Errors
 
-## Error Handling
+1. `Key does not exist`:
 
-The `RENAME` command can raise the following errors:
+   - Error Message: `(error) ERR no such key`
+   - Occurs when the specified `oldkey` does not exist in the database.
 
-- `(error) ERR no such key`: This error is returned if the `oldkey` does not exist in the database.
-- `(error) ERR syntax error`: This error is returned if the command is not used with exactly two arguments.
+1. `Wrong number of arguments`:
+   - Error Message: `(error) ERR wrong number of arguments for 'rename' command`
+   - Occurs if the command is not used with exactly two arguments.
 
 ## Example Usage
 
 ### Basic Example
 
-```plaintext
-SET mykey "Hello"
-RENAME mykey mynewkey
-GET mynewkey
+Renaming a key from `mykey` to `mynewkey`
+
+```bash
+127.0.0.1:7379> SET mykey "Hello"
+OK
+127.0.0.1:7379> RENAME mykey mynewkey
+OK
+127.0.0.1:7379> GET mynewkey
+"Hello"
 ```
-
-`Explanation:`
-
-1. `SET mykey "Hello"`: Sets the value of `mykey` to "Hello".
-2. `RENAME mykey mynewkey`: Renames `mykey` to `mynewkey`.
-3. `GET mynewkey`: Retrieves the value of `mynewkey`, which should be "Hello".
 
 ### Overwriting an Existing Key
 
-```plaintext
-SET key1 "Value1"
-SET key2 "Value2"
-RENAME key1 key2
-GET key2
+Renaming `key1` to `key2` will overwrite `key2`:
+
+```bash
+127.0.0.1:7379> SET key1 "Value1"
+OK
+127.0.0.1:7379> SET key2 "Value2"
+OK
+127.0.0.1:7379> RENAME key1 key2
+OK
+127.0.0.1:7379> GET key2
+"Value1"
 ```
 
-`Explanation:`
+### Error Example: Non-Existent Key
 
-1. `SET key1 "Value1"`: Sets the value of `key1` to "Value1".
-2. `SET key2 "Value2"`: Sets the value of `key2` to "Value2".
-3. `RENAME key1 key2`: Renames `key1` to `key2`, overwriting the existing `key2`.
-4. `GET key2`: Retrieves the value of `key2`, which should now be "Value1".
+Attempting to rename a non-existing key
 
-### Error Example
-
-```plaintext
-RENAME nonexistingkey newkey
+```bash
+127.0.0.1:7379> RENAME nonexistingkey newkey
+(error) ERR no such key
 ```
 
-`Explanation:`
+### Error Example: Incorrect Number of Arguments
 
-1. `RENAME nonexistingkey newkey`: Attempts to rename `nonexistingkey` to `newkey`.
-2. Since `nonexistingkey` does not exist, the command returns an error: `(error) ERR no such key`.
+Trying to rename with only one argument
+
+```bash
+127.0.0.1:7379> RENAME key1
+(error) ERR wrong number of arguments for 'rename' command
+```
 
 ## Best Practices
 
