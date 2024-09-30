@@ -29,6 +29,7 @@ type evalTestCase struct {
 	input          []string
 	output         []byte
 	validator      func(output []byte)
+	newValidator   func(output interface{})
 	migratedOutput EvalResponse
 }
 
@@ -339,16 +340,16 @@ func testEvalGET(t *testing.T, store *dstore.Store) {
 		{
 			name: "key exists",
 			setup: func() {
-				key := "EXISTING_KEY"
-				value := "mock_value"
+				key := "diceKey"
+				value := "diceVal"
 				obj := &object.Obj{
 					Value:          value,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
 				store.Put(key, obj)
 			},
-			input:          []string{"EXISTING_KEY"},
-			migratedOutput: EvalResponse{Result: "mock_value", Error: nil},
+			input:          []string{"diceKey"},
+			migratedOutput: EvalResponse{Result: "diceVal", Error: nil},
 		},
 		{
 			name: "key exists but expired",
@@ -369,7 +370,14 @@ func testEvalGET(t *testing.T, store *dstore.Store) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Setup the test store
+			if tt.setup != nil {
+				tt.setup()
+			}
+
 			response := evalGET(tt.input, store)
+
+			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput.Result)
 
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
@@ -438,6 +446,11 @@ func testEvalGETSET(t *testing.T, store *dstore.Store) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Setup the test store
+			if tt.setup != nil {
+				tt.setup()
+			}
+
 			response := evalGETSET(tt.input, store)
 
 			// Handle comparison for byte slices
@@ -3906,12 +3919,12 @@ func testEvalSETEX(t *testing.T, store *dstore.Store) {
 		"set and get": {
 			setup: func() {},
 			input: []string{"TEST_KEY", "5", "TEST_VALUE"},
-			validator: func(output []byte) {
-				assert.Equal(t, string(clientio.RespOK), string(output))
+			newValidator: func(output interface{}) {
+				assert.Equal(t, RespOK, output)
 
 				// Check if the key was set correctly
 				getValue := evalGET([]string{"TEST_KEY"}, store)
-				assert.Equal(t, string(clientio.Encode("TEST_VALUE", false)), string(getValue.Result.([]byte)))
+				assert.Equal(t, "TEST_VALUE", getValue.Result)
 
 				// Check if the TTL is set correctly (should be 5 seconds or less)
 				ttlValue := evalTTL([]string{"TEST_KEY"}, store)
@@ -3924,7 +3937,7 @@ func testEvalSETEX(t *testing.T, store *dstore.Store) {
 
 				// Check if the key has been deleted after expiry
 				expiredValue := evalGET([]string{"TEST_KEY"}, store)
-				assert.Equal(t, string(clientio.RespNIL), string(expiredValue.Result.([]byte)))
+				assert.Equal(t, RespNIL, expiredValue.Result)
 			},
 		},
 		"update existing key": {
@@ -3932,12 +3945,12 @@ func testEvalSETEX(t *testing.T, store *dstore.Store) {
 				evalSET([]string{"EXISTING_KEY", "OLD_VALUE"}, store)
 			},
 			input: []string{"EXISTING_KEY", "10", "NEW_VALUE"},
-			validator: func(output []byte) {
-				assert.Equal(t, string(clientio.RespOK), string(output))
+			newValidator: func(output interface{}) {
+				assert.Equal(t, RespOK, output)
 
 				// Check if the key was updated correctly
 				getValue := evalGET([]string{"EXISTING_KEY"}, store)
-				assert.Equal(t, string(clientio.Encode("NEW_VALUE", false)), string(getValue.Result.([]byte)))
+				assert.Equal(t, "NEW_VALUE", getValue.Result)
 
 				// Check if the TTL is set correctly
 				ttlValue := evalTTL([]string{"EXISTING_KEY"}, store)
@@ -3952,11 +3965,11 @@ func testEvalSETEX(t *testing.T, store *dstore.Store) {
 		t.Run(tt.name, func(t *testing.T) {
 			response := evalSETEX(tt.input, store)
 
-			if tt.validator != nil {
+			if tt.newValidator != nil {
 				if tt.migratedOutput.Error != nil {
-					tt.validator([]byte(tt.migratedOutput.Error.Error()))
+					tt.newValidator(tt.migratedOutput.Error)
 				} else {
-					tt.validator(response.Result.([]byte))
+					tt.newValidator(response.Result)
 				}
 			} else {
 				// Handle comparison for byte slices
