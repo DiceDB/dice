@@ -1,6 +1,6 @@
 ---
 title: LLEN
-description: Documentation for the DiceDB command LLEN
+description: The `LLEN` command in DiceDB is used to obtain the length of a list stored at a specified key. This command is particularly useful for determining the number of elements in a list, which can help in various list management and processing tasks.
 ---
 
 The `LLEN` command in DiceDB is used to obtain the length of a list stored at a specified key. This command is particularly useful for determining the number of elements in a list, which can help in various list management and processing tasks.
@@ -13,62 +13,67 @@ LLEN key
 
 ## Parameters
 
-- `key`: The key associated with the list whose length you want to retrieve. The key must be a valid string.
+| Parameter | Description                                                               | Type    | Required |
+|-----------|---------------------------------------------------------------------------|---------|----------|
+| `key`     | The key associated with the list whose length you want to retrieve.       | String  | Yes      |
 
-## Return Value
+## Return values
 
-- `Integer`: The length of the list at the specified key. If the key does not exist, it is interpreted as an empty list and `0` is returned.
+| Condition                                      | Return Value                                                    |
+|------------------------------------------------|-----------------------------------------------------------------|
+| Command is successful                          | `Integer` denoting the length of the list at the specified key. |
+| If the key does not exist                      | `0` (the key is interpreted as an empty list)                   |
+| Syntax or specified constraints are invalid    | error                                                           |
 
 ## Behaviour
 
-When the `LLEN` command is executed, DiceDB checks the specified key:
+ - If the key exists and is associated with a list, the `LLEN` command returns the number of elements in the list.
+ - If the key does not exist, the `LLEN` command returns `0`, indicating that the list is empty.
+ - If the key exists but is not associated with a list, an error is returned.
 
-1. If the key exists and is associated with a list, the command returns the number of elements in the list.
-2. If the key does not exist, the command returns `0`, indicating that the list is empty.
-3. If the key exists but is not associated with a list, an error is returned.
+## Errors
 
-## Error Handling
+1. `Wrong type of value or key`:
 
-The `LLEN` command can raise errors in the following scenarios:
-
-1. `WRONGTYPE Operation against a key holding the wrong kind of value`: This error occurs if the key exists but is not associated with a list. For example, if the key is associated with a string, set, hash, or any other data type, DiceDB will return an error.
+   - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
+   - Occurs if the key exists but is not associated with a list.
 
 ## Example Usage
 
-### Example 1: Basic Usage
+### Basic Usage
 
-```DiceDB
-> RPUSH mylist "one"
+Getting the `LLEN` of a list `mylist` with values `["one", "two", "three"]`.
+
+```bash
+127.0.0.1:7379> RPUSH mylist "one"
 (integer) 1
-> RPUSH mylist "two"
+127.0.0.1:7379> RPUSH mylist "two"
 (integer) 2
-> RPUSH mylist "three"
+127.0.0.1:7379> RPUSH mylist "three"
 (integer) 3
-> LLEN mylist
+127.0.0.1:7379> LLEN mylist
 (integer) 3
 ```
 
-In this example, we first create a list `mylist` and add three elements to it. The `LLEN` command then returns `3`, indicating that the list contains three elements.
+### Non-Existent Key
 
-### Example 2: Non-Existent Key
+Getting the `LLEN` of a list `nonExistentList` which does not exist.
 
-```DiceDB
-> LLEN nonExistentList
+```bash
+127.0.0.1:7379> LLEN nonExistentList
 (integer) 0
 ```
 
-Here, the key `nonExistentList` does not exist. The `LLEN` command returns `0`, indicating that the list is empty.
+### Invalid usage
 
-### Example 3: Key with Wrong Data Type
+Trying to get the `LLEN` of a key `mystring` which is holding wrong data type `string`.
 
-```DiceDB
-> SET mystring "Hello, World!"
+```bash
+127.0.0.1:7379> SET mystring "Hello, World!"
 OK
-> LLEN mystring
+127.0.0.1:7379> LLEN mystring
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
-
-In this example, the key `mystring` is associated with a string, not a list. When the `LLEN` command is executed, DiceDB returns an error indicating that the operation is against a key holding the wrong kind of value.
 
 ## Best Practices
 
