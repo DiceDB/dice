@@ -309,8 +309,24 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.Store
 		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
+	var responseData interface{}
+	switch v := val.(type) {
+	case string:
+		// Try to unmarshal the string as JSON
+		var jsonData interface{}
+		if err := json.Unmarshal([]byte(v), &jsonData); err == nil {
+			responseData = jsonData
+		} else {
+			responseData = v
+		}
+	default:
+		responseData = v
+	}
 
-	responseJSON, err := json.Marshal(val)
+	fmt.Println("Before marshal", val, responseData)
+	responseJSON, err := json.Marshal(responseData)
+	fmt.Println("After marshal", string(responseJSON))
+
 	if err != nil {
 		s.logger.Error("Error marshaling response", "error", err)
 		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
