@@ -24,3 +24,15 @@ func getCommandCount(exec *HTTPCommandExecutor) float64 {
 	}
 	return responseValue.(float64)
 }
+
+func BenchmarkCountCommand(b *testing.B) {
+	exec := NewHTTPCommandExecutor()
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		commandCount := getCommandCount(exec)
+		if commandCount <= 0 {
+			b.Fail()
+		}
+	}
+}
