@@ -27,8 +27,6 @@ const (
 	InvalidIntErr          = "-ERR value is not a valid integer"
 )
 
-var ()
-
 type DiceError struct {
 	message error
 }
