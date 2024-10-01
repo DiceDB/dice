@@ -3030,6 +3030,13 @@ func evalHSET(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(numKeys, false)
 }
 
+// evalHKEYS is used toretrieve all the keys(or field names) within a hash.
+//
+// This command returns empty array, if the specified key doesn't exist.
+//
+// Complexity is O(n) where n is the size of the hash.
+//
+// Usage: HKEYS key
 func evalHKEYS(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("HKEYS")

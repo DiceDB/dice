@@ -624,7 +624,7 @@ var (
 		Name: "HKEYS",
 		Info:  `HKEYS command is used to retrieve all the keys(or field names) within a hash. Complexity is O(n) where n is the size of the hash.`,
 		Eval: evalHKEYS,
-		Arity: -1,
+		Arity: 1,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	hsetnxCmdMeta = DiceCmdMeta{
