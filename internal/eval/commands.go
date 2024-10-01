@@ -679,6 +679,14 @@ var (
 		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hexistsCmdMeta = DiceCmdMeta{
+		Name:     "HEXISTS",
+		Info:     `Returns if field is an existing field in the hash stored at key.`,
+		Eval:     evalHEXISTS,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+
 	objectCmdMeta = DiceCmdMeta{
 		Name: "OBJECT",
 		Info: `OBJECT subcommand [arguments [arguments ...]]
@@ -1087,6 +1095,7 @@ func init() {
 	DiceCmds["ZADD"] = zaddCmdMeta
 	DiceCmds["ZRANGE"] = zrangeCmdMeta
 	DiceCmds["HINCRBYFLOAT"] = hincrbyFloatCmdMeta
+	DiceCmds["HEXISTS"] = hexistsCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}
