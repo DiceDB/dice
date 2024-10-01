@@ -239,6 +239,10 @@ The Code Contribution Guidelines are published at [CONTRIBUTING.md](CONTRIBUTING
 
 Contributors can join the [Discord Server](https://discord.gg/6r8uXWtXh7) for quick collaboration.
 
+## Community
+
+- [Join the Discord Server](https://discord.gg/6r8uXWtXh7)
+
 ## Contributors
 
 <a href = "https://github.com/dicedb/dice/graphs/contributors">
@@ -253,3 +257,6 @@ Contributors can join the [Discord Server](https://discord.gg/6r8uXWtXh7) for qu
 $ sudo netstat -atlpn | grep :7379
 $ sudo kill -9 <process_id>
 ```
+
+[discord]: https://discord.gg/6r8uXWtXh7
+[discord-badge]: https://img.shields.io/discord/1034342738960855120?color=%235865F2&label=%20&logo=discord&logoColor=white&style=flat-square
