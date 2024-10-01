@@ -3254,14 +3254,14 @@ func evalHEXISTS(args []string, store *dstore.Store) []byte {
 
 	var hashMap HashMap
 
-	if obj != nil {
-		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
-		}
-		hashMap = obj.Value.(HashMap)
-	} else {
+	if obj == nil {
 		return clientio.Encode(0, false)
 	}
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+	}
+
+	hashMap = obj.Value.(HashMap)
 
 	_, ok := hashMap.Get(hmKey)
 	if ok {

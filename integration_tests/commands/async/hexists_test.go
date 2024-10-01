@@ -3,11 +3,13 @@ package async
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
+	testifyAssert "github.com/stretchr/testify/assert"
 )
 
 func TestHEXISTS(t *testing.T) {
 	conn := getLocalConnection()
+	FireCommand(conn, "DEL key_hExists1 key_hExists2 key_hExists3 key")
+
 	defer conn.Close()
 	defer FireCommand(conn, "DEL key_hExists1 key_hExists2 key_hExists3 key")
 
@@ -39,7 +41,7 @@ func TestHEXISTS(t *testing.T) {
 	for _, tc := range testCases {
 		for i, cmd := range tc.commands {
 			result := FireCommand(conn, cmd)
-			assert.DeepEqual(t, tc.expected[i], result)
+			testifyAssert.Equal(t, tc.expected[i], result)
 		}
 	}
 }
