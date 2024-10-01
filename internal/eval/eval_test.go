@@ -60,6 +60,7 @@ func TestEval(t *testing.T) {
 	testEvalJSONNUMMULTBY(t, store)
 	testEvalJSONTOGGLE(t, store)
 	testEvalJSONARRAPPEND(t, store)
+	testEvalJSONRESP(t, store)
 	testEvalTTL(t, store)
 	testEvalDel(t, store)
 	testEvalPersist(t, store)
@@ -73,6 +74,7 @@ func TestEval(t *testing.T) {
 	testEvalPFCOUNT(t, store)
 	testEvalHGET(t, store)
 	testEvalHSTRLEN(t, store)
+	testEvalHEXISTS(t, store)
 	testEvalHDEL(t, store)
 	testEvalPFMERGE(t, store)
 	testEvalJSONSTRLEN(t, store)
@@ -2263,6 +2265,46 @@ func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 				field1 := "mock_field_name"
 				newMap := make(HashMap)
 				newMap[field1] = "HelloWorld"
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+
+			input:  []string{"KEY_MOCK"},
+			output: clientio.Encode([]string{"mock_field_name"}, false),
+		},
+	}
+
+	runEvalTests(t, tests, evalHKEYS, store)
+}
+
+func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"wrong number of args passed": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'hexists' command\r\n"),
+		},
+		"only key passed": {
+			setup:  func() {},
+			input:  []string{"KEY"},
+			output: []byte("-ERR wrong number of arguments for 'hexists' command\r\n"),
+		},
+		"key doesn't exist": {
+			setup:  func() {},
+			input:  []string{"KEY", "field_name"},
+			output: clientio.Encode(0, false),
+		},
+		"key exists but field_name doesn't exists": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field := "mock_field_name"
+				newMap := make(HashMap)
+				newMap[field] = "mock_field_value"
 
 				obj := &object.Obj{
 					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
@@ -2272,12 +2314,29 @@ func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 
 				store.Put(key, obj)
 			},
-			input:  []string{"KEY_MOCK"},
-			output: clientio.Encode([]string{"mock_field_name"}, false),
+			input:  []string{"KEY_MOCK", "non_existent_key"},
+			output: clientio.Encode(0, false),
+		},
+		"both key and field_name exists": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field := "mock_field_name"
+				newMap := make(HashMap)
+				newMap[field] = "HelloWorld"
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input:  []string{"KEY_MOCK", "mock_field_name"},
+			output: clientio.Encode(1, false),
 		},
 	}
 
-	runEvalTests(t, tests, evalHKEYS, store)
+	runEvalTests(t, tests, evalHEXISTS, store)
 }
 
 func testEvalHDEL(t *testing.T, store *dstore.Store) {
@@ -4450,6 +4509,130 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalHRANDFIELD, store)
+}
+
+func testEvalJSONRESP(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"wrong number of args passed": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'json.resp' command\r\n"),
+		},
+		"key does not exist": {
+			setup:  func() {},
+			input:  []string{"NOTEXISTANT_KEY"},
+			output: []byte("$-1\r\n"),
+		},
+		"string json": {
+			setup: func() {
+				key := "MOCK_KEY"
+				value := "\"Roll the Dice\""
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY"},
+			output: []byte("*1\r\n$13\r\nRoll the Dice\r\n"),
+		},
+		"integer json": {
+			setup: func() {
+				key := "MOCK_KEY"
+				value := "10"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY"},
+			output: []byte("*1\r\n:10\r\n"),
+		},
+		"bool json": {
+			setup: func() {
+				key := "MOCK_KEY"
+				value := "true"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY"},
+			output: []byte("*1\r\n+true\r\n"),
+		},
+		"nil json": {
+			setup: func() {
+				key := "MOCK_KEY"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(nil), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY"},
+			output: []byte("*1\r\n$-1\r\n"),
+		},
+		"empty array": {
+			setup: func() {
+				key := "MOCK_KEY"
+				value := "[]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY"},
+			output: []byte("*1\r\n+[\r\n"),
+		},
+		"empty object": {
+			setup: func() {
+				key := "MOCK_KEY"
+				value := "{}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY"},
+			output: []byte("*1\r\n+{\r\n"),
+		},
+		"array with mixed types": {
+			setup: func() {
+				key := "MOCK_KEY"
+				value := "[\"dice\", 10, 10.5, true, null]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY"},
+			output: []byte("*6\r\n+[\r\n$4\r\ndice\r\n:10\r\n$4\r\n10.5\r\n+true\r\n$-1\r\n"),
+		},
+		"one layer of nesting no path": {
+			setup: func() {
+				key := "MOCK_KEY"
+				value := "{\"b\": [\"dice\", 10, 10.5, true, null]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY"},
+			output: []byte("*3\r\n+{\r\n$1\r\nb\r\n*6\r\n+[\r\n$4\r\ndice\r\n:10\r\n$4\r\n10.5\r\n+true\r\n$-1\r\n"),
+		},
+		"one layer of nesting with path": {
+			setup: func() {
+				key := "MOCK_KEY"
+				value := "{\"b\": [\"dice\", 10, 10.5, true, null]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"MOCK_KEY", "$.b"},
+			output: []byte("*1\r\n*6\r\n+[\r\n$4\r\ndice\r\n:10\r\n$4\r\n10.5\r\n+true\r\n$-1\r\n"),
+		},
+	}
+
+	runEvalTests(t, tests, evalJSONRESP, store)
 }
 
 func testEvalZADD(t *testing.T, store *dstore.Store) {

@@ -26,7 +26,7 @@ type ShardManager struct {
 }
 
 // NewShardManager creates a new ShardManager instance with the given number of Shards and a parent context.
-func NewShardManager(shardCount uint8, watchChan chan dstore.WatchEvent, globalErrorChan chan error, logger *slog.Logger) *ShardManager {
+func NewShardManager(shardCount uint8, watchChan chan dstore.QueryWatchEvent, globalErrorChan chan error, logger *slog.Logger) *ShardManager {
 	shards := make([]*ShardThread, shardCount)
 	shardReqMap := make(map[ShardID]chan *ops.StoreOp)
 	shardErrorChan := make(chan *ShardError)

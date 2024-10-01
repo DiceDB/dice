@@ -22,7 +22,7 @@ import (
 	"github.com/dicedb/dice/internal/eval"
 	"github.com/dicedb/dice/internal/iomultiplexer"
 	"github.com/dicedb/dice/internal/ops"
-	"github.com/dicedb/dice/internal/querywatcher"
+	"github.com/dicedb/dice/internal/querymanager"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
 )
@@ -35,20 +35,20 @@ type AsyncServer struct {
 	multiplexer            iomultiplexer.IOMultiplexer
 	multiplexerPollTimeout time.Duration
 	connectedClients       map[int]*comm.Client
-	queryWatcher           *querywatcher.QueryManager
+	queryWatcher           *querymanager.Manager
 	shardManager           *shard.ShardManager
-	ioChan                 chan *ops.StoreResponse // The server acts like a worker today, this behavior will change once IOThreads are introduced and each client gets its own worker.
-	watchChan              chan dstore.WatchEvent  // This is needed to co-ordinate between the store and the query watcher.
-	logger                 *slog.Logger            // logger is the logger for the server
+	ioChan                 chan *ops.StoreResponse     // The server acts like a worker today, this behavior will change once IOThreads are introduced and each client gets its own worker.
+	watchChan              chan dstore.QueryWatchEvent // This is needed to co-ordinate between the store and the query watcher.
+	logger                 *slog.Logger                // logger is the logger for the server
 }
 
 // NewAsyncServer initializes a new AsyncServer
-func NewAsyncServer(shardManager *shard.ShardManager, watchChan chan dstore.WatchEvent, logger *slog.Logger) *AsyncServer {
+func NewAsyncServer(shardManager *shard.ShardManager, watchChan chan dstore.QueryWatchEvent, logger *slog.Logger) *AsyncServer {
 	return &AsyncServer{
 		maxClients:             config.DiceConfig.Server.MaxClients,
 		connectedClients:       make(map[int]*comm.Client),
 		shardManager:           shardManager,
-		queryWatcher:           querywatcher.NewQueryManager(logger),
+		queryWatcher:           querymanager.NewQueryManager(logger),
 		multiplexerPollTimeout: config.DiceConfig.Server.MultiplexerPollTimeout,
 		ioChan:                 make(chan *ops.StoreResponse, 1000),
 		watchChan:              watchChan,

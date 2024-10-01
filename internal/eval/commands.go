@@ -288,6 +288,14 @@ var (
 		Arity:    -5,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsonrespCmdMeta = DiceCmdMeta{
+		Name: "JSON.RESP",
+		Info: `JSON.RESP key [path]
+		Return the JSON in key in Redis serialization protocol specification form`,
+		Eval:     evalJSONRESP,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	jsonarrtrimCmdMeta = DiceCmdMeta{
 		Name: "JSON.ARRTRIM",
 		Info: `JSON.ARRTRIM key path start stop
@@ -295,9 +303,8 @@ var (
 		Returns an array of integer replies for each path.
 		Returns error response if the key doesn't exist or key is expired.
 		Error reply: If the number of arguments is incorrect.`,
-		Eval:     evalJSONARRTRIM,
-		Arity:    -5,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Eval:  evalJSONARRTRIM,
+		Arity: -5,
 	}
 	ttlCmdMeta = DiceCmdMeta{
 		Name: "TTL",
@@ -679,6 +686,14 @@ var (
 		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hexistsCmdMeta = DiceCmdMeta{
+		Name:     "HEXISTS",
+		Info:     `Returns if field is an existing field in the hash stored at key.`,
+		Eval:     evalHEXISTS,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+
 	objectCmdMeta = DiceCmdMeta{
 		Name: "OBJECT",
 		Info: `OBJECT subcommand [arguments [arguments ...]]
@@ -1003,6 +1018,7 @@ func init() {
 	DiceCmds["JSON.ARRPOP"] = jsonarrpopCmdMeta
 	DiceCmds["JSON.INGEST"] = jsoningestCmdMeta
 	DiceCmds["JSON.ARRINSERT"] = jsonarrinsertCmdMeta
+	DiceCmds["JSON.RESP"] = jsonrespCmdMeta
 	DiceCmds["JSON.ARRTRIM"] = jsonarrtrimCmdMeta
 	DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
@@ -1087,6 +1103,7 @@ func init() {
 	DiceCmds["ZRANGE"] = zrangeCmdMeta
 	DiceCmds["HINCRBYFLOAT"] = hincrbyFloatCmdMeta
 	DiceCmds["HKEYS"] = hkeysCmdMeta
+	DiceCmds["HEXISTS"] = hexistsCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}
