@@ -1,6 +1,0 @@
-encryptionsalt: v1:ijhp4o46lL0=:v1:pKuqdc1jH5dLWJ2e:Kejq7S1mBxDdDib4vABK2zuqSJ9+GQ==
-config:
-  DiceDB:instance_name: dicedb
-  DiceDB:instance_type: t2.medium
-  aws-native:region: us-east-1
-  aws:region: us-east-1

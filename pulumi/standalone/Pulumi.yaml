@@ -1,6 +1,0 @@
-name: DiceDB Standalone
-runtime:
-  name: python
-description: Pulumi project to deploy DiceDB standalone EC2 instance
-backend:
-  url: s3://ddb-temp-1729?region=us-east-1&awssdk=v2
