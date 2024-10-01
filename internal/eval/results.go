@@ -2,6 +2,9 @@ package eval
 
 type RespType int
 
+// WARN: Do not change the ordering of the enum elements
+// It is strictly mapped to HandlePredefinedResponse func internal/clientio/iohandler/netconn/netconn.go
+
 const (
 	RespNIL        RespType = iota
 	RespOK                  // OK
