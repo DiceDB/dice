@@ -17,19 +17,21 @@ const (
 	Custom
 )
 
+// Global commands
 const (
-	// Global commands
 	CmdPing  = "PING"
 	CmdAbort = "ABORT"
 	CmdAuth  = "AUTH"
+)
 
-	// Single-shard commands.
+// Single-shard commands.
+const (
 	CmdSet    = "SET"
 	CmdGet    = "GET"
 	CmdGetSet = "GETSET"
 )
 
-type CommandsMeta struct {
+type CmdMeta struct {
 	CmdType
 	Cmd                  string
 	WorkerCommandHandler func([]string) []byte
@@ -37,7 +39,7 @@ type CommandsMeta struct {
 	composeResponse      func(responses ...eval.EvalResponse) []byte
 }
 
-var WorkerCommandsMeta = map[string]CommandsMeta{
+var CommandsMeta = map[string]CmdMeta{
 	// Global commands.
 	CmdPing: {
 		CmdType:              Global,
@@ -65,7 +67,7 @@ var WorkerCommandsMeta = map[string]CommandsMeta{
 func init() {
 	l := logger.New(logger.Opts{WithTimestamp: true})
 	// Validate the metadata for each command
-	for c, meta := range WorkerCommandsMeta {
+	for c, meta := range CommandsMeta {
 		if err := validateCmdMeta(c, meta); err != nil {
 			l.Error("error validating worker command metadata %s: %v", c, err)
 		}
@@ -73,7 +75,7 @@ func init() {
 }
 
 // validateCmdMeta ensures that the metadata for each command is properly configured
-func validateCmdMeta(c string, meta CommandsMeta) error {
+func validateCmdMeta(c string, meta CmdMeta) error {
 	switch meta.CmdType {
 	case Global:
 		if meta.WorkerCommandHandler == nil {

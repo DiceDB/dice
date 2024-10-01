@@ -172,14 +172,27 @@ func (w *BaseWorker) executeCommand(ctx context.Context, redisCmd *cmd.RedisCmd)
 		defer func() {
 			resultChan <- err
 		}()
-		// Break down the single command into multiple commands if multisharding is supported.
-		// The length of cmdList helps determine how many shards to wait for responses.
-		cmdList := make([]*cmd.RedisCmd, 0)
 
-		// Retrieve metadata for the command to determine if multisharding is supported.
-		meta, ok := WorkerCommandsMeta[redisCmd.Cmd]
-		if !ok {
-			// If no metadata exists, treat it as a single command.
+	// Break down the single command into multiple commands if multisharding is supported.
+	// The length of cmdList helps determine how many shards to wait for responses.
+	cmdList := make([]*cmd.RedisCmd, 0)
+
+	// Retrieve metadata for the command to determine if multisharding is supported.
+	meta, ok := CommandsMeta[redisCmd.Cmd]
+	if !ok {
+		// If no metadata exists, treat it as a single command.
+		cmdList = append(cmdList, redisCmd)
+	} else {
+		// Depending on the command type, decide how to handle it.
+		switch meta.CmdType {
+		case Global:
+			// If it's a global command, process it immediately without involving any shards.
+			err := w.ioHandler.Write(ctx, meta.WorkerCommandHandler(redisCmd.Args))
+			w.logger.Debug("Error executing for worker", slog.String("workerID", w.id), slog.Any("error", err))
+			return err
+
+		case SingleShard:
+			// For single-shard or custom commands, process them without breaking up.
 			cmdList = append(cmdList, redisCmd)
 		} else {
 			// Depending on the command type, decide how to handle it.
@@ -299,7 +312,7 @@ func (w *BaseWorker) gather(ctx context.Context, c string, numCmds int, ct CmdTy
 	// TODO: These commands should be refactored to be multi-shard compatible before DICE-DB is completely multi-shard.
 	// Check if command is part of the new WorkerCommandsMeta map i.e. if the command has been refactored to be multi-shard compatible.
 	// If not found, treat it as a command that's not yet refactored, and write the response back to the client.
-	val, ok := WorkerCommandsMeta[c]
+	val, ok := CommandsMeta[c]
 	if !ok {
 		if evalResp[0].Error != nil {
 			err := w.ioHandler.Write(ctx, []byte(evalResp[0].Error.Error()))
@@ -355,7 +368,7 @@ func (w *BaseWorker) gather(ctx context.Context, c string, numCmds int, ct CmdTy
 }
 
 func (w *BaseWorker) isAuthenticated(redisCmd *cmd.RedisCmd) error {
-	if redisCmd.Cmd != auth.AuthCmd && !w.Session.IsActive() {
+	if redisCmd.Cmd != auth.Cmd && !w.Session.IsActive() {
 		return errors.New("NOAUTH Authentication required")
 	}
 

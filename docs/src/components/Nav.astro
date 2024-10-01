@@ -1,0 +1,59 @@
+---
+const pathname = new URL(Astro.request.url).pathname;
+const currentPage = pathname.split("/")[1];
+import SocialHandlesIcons from "./SocialHandlesIcons.astro";
+---
+
+<div>
+  <nav
+    class="navbar container is-fixed-top"
+    role="navigation"
+    aria-label="main navigation"
+  >
+    <div class="navbar-brand">
+      <a href="/" class="navbar-item">
+        <div class="image">
+          <img src="/dicedb-logo-light.png" style="width: auto;" />
+        </div>
+      </a>
+      <a
+        role="button"
+        class="navbar-burger burger"
+        aria-label="menu"
+        aria-expanded="false"
+        data-target="menu"
+        onclick="document.querySelector('.navbar-menu').classList.toggle('is-active');"
+      >
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+      </a>
+    </div>
+    <div class="navbar-menu">
+      <div class="navbar-start"></div>
+      <div class="navbar-end">
+        <a
+          class={`navbar-item ${currentPage === "benchmarks" && "is-active"}`}
+          href="/benchmarks"
+        >
+          <span class="has-text-weight-bold is-size-5"> Benchmarks</span>
+        </a>
+        <a
+          class={`navbar-item ${currentPage === "docs" && "is-active"}`}
+          href="/get-started/installation/"
+        >
+          <span class="has-text-weight-bold is-size-5"> Docs</span>
+        </a>
+        <a
+          class={`navbar-item ${currentPage === "blogs" && "is-active"}`}
+          href="/blog"
+        >
+          <span class="has-text-weight-bold is-size-5"> Blog</span>
+        </a>
+        <div class="navbar-item">
+          <SocialHandlesIcons />
+        </div>
+      </div>
+    </div>
+  </nav>
+</div>

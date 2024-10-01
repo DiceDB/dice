@@ -1,15 +1,40 @@
 THREADS ?= 4 #number of threads
 CLIENTS ?= 50 #number of clients per thread
 REQUESTS ?= 10000 #number of requests per client
-DATA_SIZE ?= 32 #Object data size 
+DATA_SIZE ?= 32 #Object data size
 KEY_PATTERN ?= R:R #Set:Get pattern
 RATIO ?= 1:10 #Set:Get ratio
 PORT ?= 7379 #Port for dicedb
 
+# Default OS and architecture
+GOOS ?= $(shell go env GOOS)
+GOARCH ?= $(shell go env GOARCH)
+
 .PHONY: build test build-docker run test-one
 
+.DEFAULT_GOAL := build
+
+# Help command
+help:
+	@echo "Available commands:"
+	@echo "  build -               Build the project"
+	@echo "  format -              Format the code"
+	@echo "  run -                 Run the project"
+	@echo "  test -                Run the integration tests"
+	@echo "  test-one -            Run a specific integration tests"
+	@echo "  unittest -            Run unit tests"
+	@echo "  unittest-one -        Run a specific unit test"
+	@echo "  build-docker -        Build docker image"
+	@echo "  push-docker -         Push docker image"
+	@echo "  lint -                Run linter"
+	@echo "  run_benchmark -       Run benchmark"
+	@echo "  run_benchmark-small - Run small benchmark"
+	@echo "  run_benchmark-large - Run large benchmark"
+	@echo "  clean -               Remove build artifacts"
+
 build:
-	CGO_ENABLED=0 GOOS=linux go build -o ./dicedb
+	@echo "Building for $(GOOS)/$(GOARCH)"
+	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o ./dicedb
 
 format:
 	go fmt ./...
@@ -66,3 +91,8 @@ run-benchmark-small:
 
 run-benchmark-large:
 	$(MAKE) run_benchmark THREADS=8 DATA_SIZE=4096 CLIENTS=100 REQUESTS=50000
+
+clean:
+	@echo "Cleaning build artifacts..."
+	rm -f dicedb
+	@echo "Clean complete."

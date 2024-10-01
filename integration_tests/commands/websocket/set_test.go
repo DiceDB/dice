@@ -36,7 +36,7 @@ func TestSet(t *testing.T) {
 				{Message: "set k 123456789"},
 				{Message: "get k"},
 			},
-			expected: []interface{}{"OK", float64(1.23456789e+08)},
+			expected: []interface{}{"OK", 1.23456789e+08},
 		},
 		{
 			name: "Overwrite Existing Key",

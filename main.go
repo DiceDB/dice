@@ -30,7 +30,7 @@ func init() {
 	flag.IntVar(&config.WebsocketPort, "websocket-port", 8379, "Websocket port for the dice server")
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
 	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the config file")
-	flag.StringVar(&config.ConfigFileLocation, "c", config.ConfigFileLocation, "file path of the config file")
+	flag.StringVar(&config.FileLocation, "c", config.FileLocation, "file path of the config file")
 	flag.BoolVar(&config.InitConfigCmd, "init-config", false, "initialize a new config file")
 	flag.Parse()
 
@@ -47,7 +47,7 @@ func main() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
-	watchChan := make(chan dstore.WatchEvent, config.DiceConfig.Server.KeysLimit)
+	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Server.KeysLimit)
 	var serverErrCh chan error
 
 	// Get the number of available CPU cores on the machine using runtime.NumCPU().

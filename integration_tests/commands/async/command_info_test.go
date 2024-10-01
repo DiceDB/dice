@@ -14,10 +14,10 @@ var getInfoTestCases = []struct {
 	{"Set command", "SET", []interface{}{[]interface{}{"SET", int64(-3), int64(1), int64(0), int64(0)}}},
 	{"Get command", "GET", []interface{}{[]interface{}{"GET", int64(2), int64(1), int64(0), int64(0)}}},
 	{"Ping command", "PING", []interface{}{[]interface{}{"PING", int64(-1), int64(0), int64(0), int64(0)}}},
-	{"Invalid command", "INVALID_CMD", []interface{}{string("(nil)")}},
+	{"Invalid command", "INVALID_CMD", []interface{}{"(nil)"}},
 	{"Combination of valid and Invalid command", "SET INVALID_CMD", []interface{}{
 		[]interface{}{"SET", int64(-3), int64(1), int64(0), int64(0)},
-		string("(nil)"),
+		"(nil)",
 	}},
 	{"Combination of multiple valid commands", "SET GET", []interface{}{
 		[]interface{}{"SET", int64(-3), int64(1), int64(0), int64(0)},
