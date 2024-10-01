@@ -26,6 +26,9 @@ var (
 	ErrInvalidExpireTimeValue     = errors.New("ERR invalid expire time")                                                // Indicates that the provided expiration time is invalid.
 	ErrHashValueNotInteger        = errors.New("ERR hash value is not an integer")                                       // Signifies that a hash value is expected to be an integer.
 	ErrInternalServer             = errors.New("ERR Internal server error, unable to process command")                   // Represents a generic internal server error.
+	ErrAuth                       = errors.New("AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?")
+	ErrAborted                    = errors.New("server received ABORT command")
+	ErrEmptyCommand               = errors.New("empty command")
 
 	// Error generation functions for specific error messages with dynamic parameters.
 	ErrWrongArgumentCount = func(command string) error {

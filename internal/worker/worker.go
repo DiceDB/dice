@@ -11,7 +11,6 @@ import (
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/auth"
-	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/clientio/iohandler"
 	"github.com/dicedb/dice/internal/clientio/requestparser"
 	"github.com/dicedb/dice/internal/cmd"
@@ -92,7 +91,7 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 				}
 			}
 			if len(cmds) == 0 {
-				err = w.ioHandler.Write(ctx, "ERR: Invalid request")
+				err = w.ioHandler.Write(ctx, fmt.Errorf("ERR: Invalid request"))
 				if err != nil {
 					w.logger.Debug("Write error, connection closed possibly", slog.String("workerID", w.id), slog.Any("error", err))
 					return err
@@ -103,7 +102,7 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 			// DiceDB supports clients to send only one request at a time
 			// We also need to ensure that the client is blocked until the response is received
 			if len(cmds) > 1 {
-				err = w.ioHandler.Write(ctx, "ERR: Multiple commands not supported")
+				err = w.ioHandler.Write(ctx, fmt.Errorf("ERR: Multiple commands not supported"))
 				if err != nil {
 					w.logger.Debug("Write error, connection closed possibly", slog.String("workerID", w.id), slog.Any("error", err))
 					return err
@@ -319,14 +318,14 @@ func (w *BaseWorker) isAuthenticated(redisCmd *cmd.RedisCmd) error {
 
 // RespAuth returns with an encoded "OK" if the user is authenticated
 // If the user is not authenticated, it returns with an encoded error message
-func (w *BaseWorker) RespAuth(args []string) []byte {
+func (w *BaseWorker) RespAuth(args []string) interface{} {
 	// Check for incorrect number of arguments (arity error).
 	if len(args) < 1 || len(args) > 2 {
-		return diceerrors.NewErrArity("AUTH") // Return an error if the number of arguments is not equal to 1.
+		return diceerrors.ErrWrongArgumentCount("AUTH")
 	}
 
 	if config.DiceConfig.Auth.Password == "" {
-		return diceerrors.NewErrWithMessage("AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?")
+		return diceerrors.ErrAuth
 	}
 
 	username := config.DiceConfig.Auth.UserName
@@ -339,10 +338,10 @@ func (w *BaseWorker) RespAuth(args []string) []byte {
 	}
 
 	if err := w.Session.Validate(username, password); err != nil {
-		return clientio.Encode(err, false)
+		return err
 	}
 
-	return clientio.RespOK
+	return eval.RespOK
 }
 
 func (w *BaseWorker) Stop() error {

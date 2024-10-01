@@ -226,14 +226,14 @@ func HandlePredefinedResponse(response interface{}) []byte {
 	// WARN: Do not change the ordering of the array elements
 	// It is strictly mapped to internal/eval/results.go enum.
 	respArr := [][]byte{
-		[]byte("$-1\r\n"),     // Represents a RESP Nil Bulk String, which indicates a null value.
-		[]byte("+OK\r\n"),     // Represents a RESP Simple String with value "OK".
-		[]byte("+QUEUED\r\n"), // Represents a Simple String indicating that a command has been queued.
-		[]byte(":0\r\n"),      // Represents a RESP Integer with value 0.
-		[]byte(":1\r\n"),      // Represents a RESP Integer with value 1.
-		[]byte(":-1\r\n"),     // Represents a RESP Integer with value -1.
-		[]byte(":-2\r\n"),     // Represents a RESP Integer with value -2.
-		[]byte("*0\r\n"),      // Represents an empty RESP Array.
+		clientio.RespNIL,        // Represents a RESP Nil Bulk String, which indicates a null value.
+		clientio.RespOK,         // Represents a RESP Simple String with value "OK".
+		clientio.RespQueued,     // Represents a Simple String indicating that a command has been queued.
+		clientio.RespZero,       // Represents a RESP Integer with value 0.
+		clientio.RespOne,        // Represents a RESP Integer with value 1.
+		clientio.RespMinusOne,   // Represents a RESP Integer with value -1.
+		clientio.RespMinusTwo,   // Represents a RESP Integer with value -2.
+		clientio.RespEmptyArray, // Represents an empty RESP Array.
 	}
 
 	switch val := response.(type) {
