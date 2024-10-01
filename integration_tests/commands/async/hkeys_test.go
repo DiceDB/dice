@@ -8,6 +8,7 @@ import (
 
 func TestHKEYS(t *testing.T) {
 	conn := getLocalConnection()
+	FireCommand(conn, "DEL key_hKeys1 key_hKeys2 key_hKeys3 key")
 	defer conn.Close()
 	defer FireCommand(conn, "DEL key_hKeys1 key_hKeys2 key_hKeys3 key")
 
