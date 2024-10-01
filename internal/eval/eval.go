@@ -3030,6 +3030,40 @@ func evalHSET(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(numKeys, false)
 }
 
+// evalHKEYS is used toretrieve all the keys(or field names) within a hash.
+//
+// This command returns empty array, if the specified key doesn't exist.
+//
+// Complexity is O(n) where n is the size of the hash.
+//
+// Usage: HKEYS key
+func evalHKEYS(args []string, store *dstore.Store) []byte {
+	if len(args) != 1 {
+		return diceerrors.NewErrArity("HKEYS")
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	var hashMap HashMap
+	var result []string
+
+	if obj != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+		}
+		hashMap = obj.Value.(HashMap)
+	} else {
+		return clientio.Encode([]interface{}{}, false)
+	}
+
+	for hmKey := range hashMap {
+		result = append(result, hmKey)
+	}
+
+	return clientio.Encode(result, false)
+}
+
 // Increments the number stored at field in the hash stored at key by increment.
 //
 // If key does not exist, a new key holding a hash is created.

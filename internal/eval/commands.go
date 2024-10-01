@@ -620,6 +620,13 @@ var (
 		Arity:    -4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hkeysCmdMeta = DiceCmdMeta{
+		Name: "HKEYS",
+		Info:  `HKEYS command is used to retrieve all the keys(or field names) within a hash. Complexity is O(n) where n is the size of the hash.`,
+		Eval: evalHKEYS,
+		Arity: 1,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	hsetnxCmdMeta = DiceCmdMeta{
 		Name: "HSETNX",
 		Info: `Sets field in the hash stored at key to value, only if field does not yet exist.
@@ -1055,6 +1062,7 @@ func init() {
 	DiceCmds["GETEX"] = getexCmdMeta
 	DiceCmds["PTTL"] = pttlCmdMeta
 	DiceCmds["HSET"] = hsetCmdMeta
+	DiceCmds["HKEYS"] = hkeysCmdMeta
 	DiceCmds["HSETNX"] = hsetnxCmdMeta
 	DiceCmds["OBJECT"] = objectCmdMeta
 	DiceCmds["TOUCH"] = touchCmdMeta
