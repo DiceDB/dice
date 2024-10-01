@@ -128,5 +128,3 @@ While not part of the SADD command, you can use SMEMBERS to verify the contents 
 5) "elderberry"
 6) "fig"
 ```
-
-The `SADD` command is essential for managing sets in DiceDB, allowing for efficient creation and updating of unique collections of elements. Its ability to handle multiple members in a single call, combined with automatic deduplication, makes it a powerful tool for maintaining sets of unique items in your database.
