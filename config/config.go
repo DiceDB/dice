@@ -24,6 +24,8 @@ const (
 	EvictAllKeysRandom = "allkeys-random"
 	EvictAllKeysLRU    = "allkeys-lru"
 	EvictAllKeysLFU    = "allkeys-lfu"
+
+	DefaultKeysLimit int = 200000000
 )
 
 var (
@@ -44,6 +46,8 @@ var (
 	FileLocation         = utils.EmptyStr
 
 	InitConfigCmd = false
+
+	KeysLimit = DefaultKeysLimit
 )
 
 type Config struct {
@@ -114,7 +118,7 @@ var baseConfig = Config{
 		MaxMemory:              0,
 		EvictionPolicy:         EvictAllKeysLFU,
 		EvictionRatio:          0.9,
-		KeysLimit:              200000000,
+		KeysLimit:              DefaultKeysLimit,
 		AOFFile:                "./dice-master.aof",
 		PersistenceEnabled:     true,
 		WriteAOFOnCleanup:      false,
@@ -292,6 +296,10 @@ func mergeFlagsWithConfig() {
 
 	if Port != DefaultPort {
 		DiceConfig.Server.Port = Port
+	}
+
+	if KeysLimit != DefaultKeysLimit {
+		DiceConfig.Server.KeysLimit = KeysLimit
 	}
 }
 
