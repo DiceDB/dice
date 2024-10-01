@@ -189,7 +189,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, redisCmd *cmd.RedisCmd)
 			// If it's a global command, process it immediately without involving any shards.
 			err := w.ioHandler.Write(ctx, meta.WorkerCommandHandler(redisCmd.Args))
 			w.logger.Debug("Error executing for worker", slog.String("workerID", w.id), slog.Any("error", err))
-			return err
+			return
 
 			case SingleShard:
 				// For single-shard or custom commands, process them without breaking up.
