@@ -29,8 +29,18 @@ func getCommandDefault(exec *HTTPCommandExecutor) []interface{} {
 		return nil
 	}
 	var cmds []interface{}
-	for _, v := range responseValue.([]interface{}) {
-		cmds = append(cmds, v)
-	}
+	cmds = append(cmds, responseValue.([]interface{})...)
 	return cmds
+}
+
+func BenchmarkCommandDefault(b *testing.B) {
+	exec := NewHTTPCommandExecutor()
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		commands := getCommandDefault(exec)
+		if len(commands) <= 0 {
+			b.Fail()
+		}
+	}
 }
