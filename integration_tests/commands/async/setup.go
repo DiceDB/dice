@@ -22,8 +22,9 @@ import (
 )
 
 type TestServerOptions struct {
-	Port   int
-	Logger *slog.Logger
+	Port       int
+	Logger     *slog.Logger
+	MaxClients int
 }
 
 //nolint:unused
@@ -99,17 +100,27 @@ func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *clientio.RESPParser
 }
 
 func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOptions) {
+	// Override configs to test server config, this is enabled to handle test env runs
+	// as those envs are resource constrained
 	config.DiceConfig.Network.IOBufferLength = 16
 	config.DiceConfig.Server.WriteAOFOnCleanup = false
+	config.DiceConfig.Server.StoreMapInitSize = 1024
+	config.DiceConfig.Server.EvictionRatio = 0.4
+	config.DiceConfig.Server.KeysLimit = 2000000
+
 	if opt.Port != 0 {
 		config.DiceConfig.Server.Port = opt.Port
 	} else {
 		config.DiceConfig.Server.Port = 8739
 	}
 
+	if opt.MaxClients != 0 {
+		config.DiceConfig.Server.MaxClients = opt.MaxClients
+	}
+
 	const totalRetries = 100
 	var err error
-	watchChan := make(chan dstore.WatchEvent, config.DiceConfig.Server.KeysLimit)
+	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Server.KeysLimit)
 	gec := make(chan error)
 	shardManager := shard.NewShardManager(1, watchChan, gec, opt.Logger)
 	// Initialize the AsyncServer
