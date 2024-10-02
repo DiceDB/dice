@@ -119,7 +119,7 @@ func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
 	if opt.Port != 0 {
 		config.DiceConfig.Server.Port = opt.Port
 	} else {
-		config.DiceConfig.Server.Port = 8739
+		config.DiceConfig.Server.Port = 9739
 	}
 
 	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Server.KeysLimit)
