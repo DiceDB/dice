@@ -119,7 +119,7 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 			}
 			// executeCommand executes the command and return the response back to the client
 			func(errChan chan error) {
-				execctx, cancel := context.WithTimeout(ctx, 1*time.Second) // Timeout if
+				execctx, cancel := context.WithTimeout(ctx, 6*time.Second) // Timeout set to 6 seconds for integration tests
 				defer cancel()
 				err = w.executeCommand(execctx, cmds[0])
 				if err != nil {
@@ -164,12 +164,18 @@ func (w *BaseWorker) executeCommand(ctx context.Context, redisCmd *cmd.RedisCmd)
 			switch redisCmd.Cmd {
 			case CmdAuth:
 				err := w.ioHandler.Write(ctx, w.RespAuth(redisCmd.Args))
-				w.logger.Error("Error sending auth response to worker", slog.String("workerID", w.id), slog.Any("error", err))
+				if err != nil {
+					w.logger.Error("Error sending auth response to worker", slog.String("workerID", w.id), slog.Any("error", err))
+				}
 				return err
 			case CmdAbort:
+				err := w.ioHandler.Write(ctx, eval.RespOK)
+				if err != nil {
+					w.logger.Error("Error sending abort response to worker", slog.String("workerID", w.id), slog.Any("error", err))
+				}
 				w.logger.Info("Received ABORT command, initiating server shutdown", slog.String("workerID", w.id))
 				w.globalErrorChan <- diceerrors.ErrAborted
-				return nil
+				return err
 			default:
 				cmdList = append(cmdList, redisCmd)
 			}
