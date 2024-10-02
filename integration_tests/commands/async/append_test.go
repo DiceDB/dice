@@ -10,6 +10,9 @@ func TestAPPEND(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 
+	FireCommand(conn, "DEL key listKey bitKey hashKey setKey")
+	defer FireCommand(conn, "DEL key listKey bitKey hashKey setKey")
+
 	setErrorMsg := "WRONGTYPE Operation against a key holding the wrong kind of value"
 	testCases := []struct {
 		name     string
