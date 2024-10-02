@@ -163,7 +163,7 @@ func (s *AsyncServer) Run(ctx context.Context) error {
 	}
 
 	var err error
-	s.multiplexer, err = iomultiplexer.New(int32(s.maxClients))
+	s.multiplexer, err = iomultiplexer.New(s.maxClients)
 	if err != nil {
 		return err
 	}
