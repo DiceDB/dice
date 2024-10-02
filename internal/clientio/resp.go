@@ -14,6 +14,22 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
+type RespType int
+
+// WARN: Do not change the ordering of the enum elements
+// It is strictly mapped to HandlePredefinedResponse func internal/clientio/iohandler/netconn/netconn.go
+
+const (
+	NIL                RespType = iota // Represents an empty or null response.
+	OK                                 // Represents a successful "OK" response.
+	CommandQueued                      // Represents that a command has been queued for execution.
+	IntegerZero                        // Represents the integer value zero in RESP format.
+	IntegerOne                         // Represents the integer value one in RESP format.
+	IntegerNegativeOne                 // Represents the integer value negative one in RESP format.
+	IntegerNegativeTwo                 // Represents the integer value negative two in RESP format.
+	EmptyArray                         // Represents an empty array in RESP format.
+)
+
 var RespNIL = []byte("$-1\r\n")
 var RespOK = []byte("+OK\r\n")
 var RespQueued = []byte("+QUEUED\r\n")

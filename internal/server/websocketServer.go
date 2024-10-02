@@ -11,8 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dicedb/dice/internal/eval"
-
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
@@ -203,7 +201,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 			}
 		}
 
-		if val, ok := responseValue.(eval.RespType); ok {
+		if val, ok := responseValue.(clientio.RespType); ok {
 			responseValue = respArr[val]
 		}
 

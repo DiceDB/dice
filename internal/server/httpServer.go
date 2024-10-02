@@ -17,7 +17,6 @@ import (
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/comm"
 	derrors "github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/eval"
 	"github.com/dicedb/dice/internal/ops"
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/shard"
@@ -357,7 +356,7 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.Store
 		"*0",     // Represents an empty RESP Array.
 	}
 
-	if val, ok := responseValue.(eval.RespType); ok {
+	if val, ok := responseValue.(clientio.RespType); ok {
 		responseValue = respArr[val]
 	}
 

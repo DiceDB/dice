@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/server/utils"
@@ -128,7 +129,7 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 			// if key does not exist, return RESP encoded nil
 			if obj == nil {
 				return &EvalResponse{
-					Result: RespNIL,
+					Result: clientio.NIL,
 					Error:  nil,
 				}
 			}
@@ -136,7 +137,7 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 			obj := store.Get(key)
 			if obj != nil {
 				return &EvalResponse{
-					Result: RespNIL,
+					Result: clientio.NIL,
 					Error:  nil,
 				}
 			}
@@ -168,7 +169,7 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 	store.Put(key, store.NewObj(storedValue, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
 
 	return &EvalResponse{
-		Result: RespOK,
+		Result: clientio.OK,
 		Error:  nil,
 	}
 }
@@ -176,7 +177,7 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 // evalGET returns the value for the queried key in args
 // The key should be the only param in args
 // The RESP value of the key is encoded and then returned
-// evalGET returns response.RespNIL if key is expired or it does not exist
+// evalGET returns response.clientio.NIL if key is expired or it does not exist
 func evalGET(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) != 1 {
 		return &EvalResponse{
@@ -192,7 +193,7 @@ func evalGET(args []string, store *dstore.Store) *EvalResponse {
 	// if key does not exist, return RESP encoded nil
 	if obj == nil {
 		return &EvalResponse{
-			Result: RespNIL,
+			Result: clientio.NIL,
 			Error:  nil,
 		}
 	}

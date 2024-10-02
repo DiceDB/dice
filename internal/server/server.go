@@ -28,8 +28,6 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
-var ErrInvalidIPAddress = errors.New("invalid IP address")
-
 type AsyncServer struct {
 	serverFD               int
 	maxClients             int32
@@ -95,7 +93,7 @@ func (s *AsyncServer) FindPortAndBind() (socketErr error) {
 
 	ip4 := net.ParseIP(config.DiceConfig.Server.Addr)
 	if ip4 == nil {
-		return ErrInvalidIPAddress
+		return diceerrors.ErrInvalidIPAddress
 	}
 
 	if err := syscall.Bind(serverFD, &syscall.SockaddrInet4{
@@ -105,7 +103,7 @@ func (s *AsyncServer) FindPortAndBind() (socketErr error) {
 		return err
 	}
 	s.logger.Info(
-		"DiceDB server is running",
+		"DiceDB server is running in a single-threaded mode",
 		slog.String("version", "0.0.4"),
 		slog.Int("port", config.DiceConfig.Server.Port),
 	)

@@ -11,6 +11,7 @@ import (
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/auth"
+	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/clientio/iohandler"
 	"github.com/dicedb/dice/internal/clientio/requestparser"
 	"github.com/dicedb/dice/internal/cmd"
@@ -169,7 +170,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, redisCmd *cmd.RedisCmd)
 				}
 				return err
 			case CmdAbort:
-				err := w.ioHandler.Write(ctx, eval.RespOK)
+				err := w.ioHandler.Write(ctx, clientio.OK)
 				if err != nil {
 					w.logger.Error("Error sending abort response to worker", slog.String("workerID", w.id), slog.Any("error", err))
 				}
@@ -347,7 +348,7 @@ func (w *BaseWorker) RespAuth(args []string) interface{} {
 		return err
 	}
 
-	return eval.RespOK
+	return clientio.OK
 }
 
 func (w *BaseWorker) Stop() error {

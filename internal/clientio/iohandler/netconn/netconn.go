@@ -14,7 +14,6 @@ import (
 
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/clientio/iohandler"
-	"github.com/dicedb/dice/internal/eval"
 )
 
 const (
@@ -237,7 +236,7 @@ func HandlePredefinedResponse(response interface{}) []byte {
 	}
 
 	switch val := response.(type) {
-	case eval.RespType:
+	case clientio.RespType:
 		return respArr[val]
 	default:
 		return nil
