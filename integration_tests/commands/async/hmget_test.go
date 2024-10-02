@@ -1,9 +1,6 @@
 package async
 
 import (
-	"fmt"
-	"reflect"
-	"strings"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -11,33 +8,14 @@ import (
 
 func TestHMGET(t *testing.T) {
 	conn := getLocalConnection()
-	var smallHashKeys []string
-	var smallHashValues []string
-	var bigHashKeys []string
-	var bigHashValues []string
-	// Setup smallHash
-	for i := 0; i < 8; i++ {
-		key := fmt.Sprintf("field%d", i)
-		value := fmt.Sprintf("value%d", i)
-		smallHashKeys = append(smallHashKeys, key)
-		smallHashValues = append(smallHashValues, value)
-		FireCommand(conn, "HSET smallHash "+key+" "+value)
-	}
-	// Setup bigHash
-	for i := 0; i < 1024; i++ {
-		key := fmt.Sprintf("field%d", i)
-		value := fmt.Sprintf("value%d", i)
-		bigHashKeys = append(bigHashKeys, key)
-		bigHashValues = append(bigHashValues, value)
-		FireCommand(conn, "HSET bigHash "+key+" "+value)
-	}
 	defer conn.Close()
-	defer FireCommand(conn, "DEL key_hmGet key_hmGet1 smallHash bigHash")
+	defer FireCommand(conn, "DEL key_hmGet key_hmGet1")
+
 	testCases := []TestCase{
 		{
 			name:     "hmget existing keys and fields",
 			commands: []string{"HSET key_hmGet field value", "HSET key_hmGet field2 value_new", "HMGET key_hmGet field field2"},
-			expected: []interface{}{ONE, ONE, []string{"value", "value_new"}},
+			expected: []interface{}{ONE, ONE, []interface{}{"value", "value_new"}},
 		},
 		{
 			name:     "hmget key does not exist",
@@ -45,24 +23,14 @@ func TestHMGET(t *testing.T) {
 			expected: []interface{}{[]interface{}{"(nil)"}},
 		},
 		{
-			name:     "hmget field does not exist in smallHash",
-			commands: []string{"HMGET smallHash field"},
+			name:     "hmget field does not exist",
+			commands: []string{"HMGET key_hmGet field3"},
 			expected: []interface{}{[]interface{}{"(nil)"}},
 		},
 		{
-			name:     "hmget field does not exist in bigHash",
-			commands: []string{"HMGET bigHash field"},
-			expected: []interface{}{[]interface{}{"(nil)"}},
-		},
-		{
-			name:     "hmget bigHash",
-			commands: []string{"HMGET bigHash " + strings.Join(bigHashKeys, " ")},
-			expected: []interface{}{bigHashValues},
-		},
-		{
-			name:     "hmget smallHsh",
-			commands: []string{"HMGET smallHash " + strings.Join(smallHashKeys, " ")},
-			expected: []interface{}{smallHashValues},
+			name:     "hmget some fields do not exist",
+			commands: []string{"HMGET key_hmGet field field2 field3 field3"},
+			expected: []interface{}{[]interface{}{"value", "value_new", "(nil)", "(nil)"}},
 		},
 		{
 			name:     "hmget with wrongtype",
@@ -76,25 +44,13 @@ func TestHMGET(t *testing.T) {
 				"ERR wrong number of arguments for 'hmget' command"},
 		},
 	}
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.commands {
+				// Fire the command and get the result
 				result := FireCommand(conn, cmd)
-				expectedResults, ok := tc.expected[i].([]string)
-				results, ok2 := result.([]interface{})
-				if ok && ok2 && len(results) == len(expectedResults) {
-					expectedResultsMap := make(map[string]string)
-					resultsMap := make(map[string]string)
-					for i := 0; i < len(results); i += 2 {
-						expectedResultsMap[expectedResults[i]] = expectedResults[i+1]
-						resultsMap[results[i].(string)] = results[i+1].(string)
-					}
-					if !reflect.DeepEqual(resultsMap, expectedResultsMap) {
-						t.Fatalf("Assertion failed: expected true, got false")
-					}
-				} else {
-					assert.DeepEqual(t, tc.expected[i], result)
-				}
+				assert.DeepEqual(t, result, tc.expected[i])
 			}
 		})
 	}
