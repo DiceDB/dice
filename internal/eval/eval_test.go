@@ -5055,6 +5055,13 @@ func testEvalSINTER(t *testing.T, store *dstore.Store) {
             input:  []string{"set1", "set2", "set3"},
             output: clientio.Encode([]string{"c"}, false),
         },
+		"intersection with single set": {
+            setup: func() {
+                evalSADD([]string{"set1", "a", "b", "c"}, store)
+            },
+            input:  []string{"set1"},
+            output: clientio.Encode([]string{"a", "b", "c"}, false),
+        },
         "intersection with a non-existent key": {
             setup: func() {
                 evalSADD([]string{"set1", "a", "b", "c"}, store)
