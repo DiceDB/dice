@@ -124,23 +124,21 @@ func evalSET(args []string, store *dstore.Store) EvalResponse {
 		if obj == nil {
 			tempResult = clientio.RespNIL // Store nil if key does not exist
 		} else {
-			// Handle the GET return behavior based on encoding type (similar to evalGET)
+			// Handle the GET return behavior based on encoding type 
 			switch _, oEnc := object.ExtractTypeEncoding(obj); oEnc {
 			case object.ObjEncodingInt:
 				if val, ok := obj.Value.(int64); ok {
 					tempResult = clientio.Encode(val, false)
-				} else {
-					// Handle `nil` case here, if the object exists but the value is nil
-					tempResult = clientio.RespNIL
 				}
+				return EvalResponse{Result: nil,
+					Error: errors.New(string(diceerrors.NewErrWithFormattedMessage("expected int64 but got another type: %s", obj.Value)))}
 
 			case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
 				if val, ok := obj.Value.(string); ok {
 					tempResult = clientio.Encode(val, false)
-				} else {
-					// Handle `nil` case here, if the object exists but the value is nil
-					tempResult = clientio.RespNIL
 				}
+				return EvalResponse{Result: nil,
+					Error: errors.New(string(diceerrors.NewErrWithMessage("expected string but got another type")))}
 			default:
 				// If the type is unknown or unsupported, return nil for the value
 				tempResult = clientio.RespNIL
