@@ -109,7 +109,7 @@ func evalSET(args []string, store *dstore.Store) EvalResponse {
 			if obj != nil {
 				return EvalResponse{Result: clientio.RespNIL, Error: nil}
 			}
-		case KEEPTTL:
+		case KeepTTL:
 			keepttl = true
 		case GET:
 			isGetCmdPresent = true
