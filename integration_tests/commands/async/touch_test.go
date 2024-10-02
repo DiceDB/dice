@@ -12,14 +12,14 @@ func TestTouch(t *testing.T) {
 	defer conn.Close()
 
 	testCases := []struct {
-		name        string
-		commands    []string
+		name       string
+		commands   []string
 		expected   []interface{}
 		assertType []string
 		delay      []time.Duration
 	}{
 		{
-			name:       "Touch Simple Value",
+			name:       "Touch Simple Cmd",
 			commands:   []string{"SET foo bar", "OBJECT IDLETIME foo", "TOUCH foo", "OBJECT IDLETIME foo"},
 			expected:   []interface{}{"OK", int64(2), int64(1), int64(0)},
 			assertType: []string{"equal", "assert", "equal", "assert"},

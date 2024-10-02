@@ -154,7 +154,7 @@ func evalGET(args []string, store *dstore.Store) EvalResponse {
 	// Decode and return the value based on its encoding
 	switch _, oEnc := object.ExtractTypeEncoding(obj); oEnc {
 	case object.ObjEncodingInt:
-		// Value is stored as an int64, so use type assertion
+		// Cmd is stored as an int64, so use type assertion
 		if val, ok := obj.Value.(int64); ok {
 			return EvalResponse{Result: clientio.Encode(val, false), Error: nil}
 		}
@@ -162,7 +162,7 @@ func evalGET(args []string, store *dstore.Store) EvalResponse {
 			Error: errors.New(string(diceerrors.NewErrWithFormattedMessage("expected int64 but got another type: %s", obj.Value)))}
 
 	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
-		// Value is stored as a string, use type assertion
+		// Cmd is stored as a string, use type assertion
 		if val, ok := obj.Value.(string); ok {
 			return EvalResponse{Result: clientio.Encode(val, false), Error: nil}
 		}
@@ -170,7 +170,7 @@ func evalGET(args []string, store *dstore.Store) EvalResponse {
 			Error: errors.New(string(diceerrors.NewErrWithMessage("expected string but got another type")))}
 
 	case object.ObjEncodingByteArray:
-		// Value is stored as a bytearray, use type assertion
+		// Cmd is stored as a bytearray, use type assertion
 		if val, ok := obj.Value.(*ByteArray); ok {
 			return EvalResponse{Result: clientio.Encode(string(val.data), false), Error: nil}
 		}
