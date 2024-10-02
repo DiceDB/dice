@@ -621,10 +621,10 @@ var (
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	hkeysCmdMeta = DiceCmdMeta{
-		Name: "HKEYS",
-		Info:  `HKEYS command is used to retrieve all the keys(or field names) within a hash. Complexity is O(n) where n is the size of the hash.`,
-		Eval: evalHKEYS,
-		Arity: 1,
+		Name:     "HKEYS",
+		Info:     `HKEYS command is used to retrieve all the keys(or field names) within a hash. Complexity is O(n) where n is the size of the hash.`,
+		Eval:     evalHKEYS,
+		Arity:    1,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	hsetnxCmdMeta = DiceCmdMeta{
@@ -911,27 +911,27 @@ var (
 		Arity:    3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
-	dumpkeyCMmdMeta=DiceCmdMeta{
-		Name:	 "DUMP",
-		Info:	`Serialize the value stored at key in a Redis-specific format and return it to the user.
+	dumpkeyCMmdMeta = DiceCmdMeta{
+		Name: "DUMP",
+		Info: `Serialize the value stored at key in a Redis-specific format and return it to the user.
 				The returned value can be synthesized back into a Redis key using the RESTORE command.`,
-		Eval:   evalDUMP,
-		Arity: 	1,
-		KeySpecs:   KeySpecs{BeginIndex: 1},
+		Eval:     evalDUMP,
+		Arity:    1,
+		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
-	restorekeyCmdMeta=DiceCmdMeta{
-		Name:	"RESTORE",
-		Info:  `Serialize the value stored at key in a Redis-specific format and return it to the user.
+	restorekeyCmdMeta = DiceCmdMeta{
+		Name: "RESTORE",
+		Info: `Serialize the value stored at key in a Redis-specific format and return it to the user.
 				The returned value can be synthesized back into a Redis key using the RESTORE command.`,
-		Eval: evalRestore,
-		Arity:	2,
+		Eval:     evalRestore,
+		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	typeCmdMeta = DiceCmdMeta{
-		Name:     "TYPE",
-		Info:     `Returns the string representation of the type of the value stored at key. The different types that can be returned are: string, list, set, zset, hash and stream.`,
-		Eval:     evalTYPE,
-		Arity:    1,
+		Name:  "TYPE",
+		Info:  `Returns the string representation of the type of the value stored at key. The different types that can be returned are: string, list, set, zset, hash and stream.`,
+		Eval:  evalTYPE,
+		Arity: 1,
 
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
@@ -1000,7 +1000,7 @@ var (
 	}
 	hincrbyFloatCmdMeta = DiceCmdMeta{
 		Name: "HINCRBYFLOAT",
-		Info: `HINCRBYFLOAT increments the specified field of a hash stored at the key, 
+		Info: `HINCRBYFLOAT increments the specified field of a hash stored at the key,
 		and representing a floating point number, by the specified increment.
 		If the field does not exist, it is set to 0 before performing the operation.
 		If the field contains a value of wrong type or specified increment
@@ -1016,8 +1016,8 @@ func init() {
 	DiceCmds["PING"] = pingCmdMeta
 	DiceCmds["ECHO"] = echoCmdMeta
 	DiceCmds["AUTH"] = authCmdMeta
-	DiceCmds["DUMP"]=dumpkeyCMmdMeta
-	DiceCmds["RESTORE"]=restorekeyCmdMeta
+	DiceCmds["DUMP"] = dumpkeyCMmdMeta
+	DiceCmds["RESTORE"] = restorekeyCmdMeta
 	DiceCmds["SET"] = setCmdMeta
 	DiceCmds["GET"] = getCmdMeta
 	DiceCmds["MSET"] = msetCmdMeta

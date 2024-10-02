@@ -297,7 +297,14 @@ func mergeFlagsWithConfig() {
 
 // This function checks if the config file is present or not at ConfigFileLocation
 func isConfigFilePresent() bool {
+	// If config file present in current directory use it
+	if _, err := os.Stat(filepath.Join(".", DefaultConfigName)); err == nil {
+		FileLocation = filepath.Join(".", DefaultConfigName)
+		return true
+	}
+
 	_, err := os.Stat(FileLocation)
+
 	return err == nil
 }
 
