@@ -976,6 +976,12 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	appendCmdMeta = DiceCmdMeta{
+		Name:  "APPEND",
+		Info:  `Appends a string to the value of a key. Creates the key if it doesn't exist.`,
+		Eval:  evalAPPEND,
+		Arity: 3,
+	}
 	zaddCmdMeta = DiceCmdMeta{
 		Name: "ZADD",
 		Info: `ZADD key [NX|XX] [CH] [INCR] score member [score member ...]
@@ -1119,6 +1125,7 @@ func init() {
 	DiceCmds["HRANDFIELD"] = hrandfieldCmdMeta
 	DiceCmds["HDEL"] = hdelCmdMeta
 	DiceCmds["HVALS"] = hValsCmdMeta
+	DiceCmds["APPEND"] = appendCmdMeta
 	DiceCmds["ZADD"] = zaddCmdMeta
 	DiceCmds["ZRANGE"] = zrangeCmdMeta
 	DiceCmds["HINCRBYFLOAT"] = hincrbyFloatCmdMeta
