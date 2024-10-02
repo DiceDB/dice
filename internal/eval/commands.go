@@ -620,6 +620,13 @@ var (
 		Arity:    -4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hkeysCmdMeta = DiceCmdMeta{
+		Name: "HKEYS",
+		Info:  `HKEYS command is used to retrieve all the keys(or field names) within a hash. Complexity is O(n) where n is the size of the hash.`,
+		Eval: evalHKEYS,
+		Arity: 1,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	hsetnxCmdMeta = DiceCmdMeta{
 		Name: "HSETNX",
 		Info: `Sets field in the hash stored at key to value, only if field does not yet exist.
@@ -679,6 +686,14 @@ var (
 		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hexistsCmdMeta = DiceCmdMeta{
+		Name:     "HEXISTS",
+		Info:     `Returns if field is an existing field in the hash stored at key.`,
+		Eval:     evalHEXISTS,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+
 	objectCmdMeta = DiceCmdMeta{
 		Name: "OBJECT",
 		Info: `OBJECT subcommand [arguments [arguments ...]]
@@ -896,11 +911,28 @@ var (
 		Arity:    3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	dumpkeyCMmdMeta=DiceCmdMeta{
+		Name:	 "DUMP",
+		Info:	`Serialize the value stored at key in a Redis-specific format and return it to the user.
+				The returned value can be synthesized back into a Redis key using the RESTORE command.`,
+		Eval:   evalDUMP,
+		Arity: 	1,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+	}
+	restorekeyCmdMeta=DiceCmdMeta{
+		Name:	"RESTORE",
+		Info:  `Serialize the value stored at key in a Redis-specific format and return it to the user.
+				The returned value can be synthesized back into a Redis key using the RESTORE command.`,
+		Eval: evalRestore,
+		Arity:	2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	typeCmdMeta = DiceCmdMeta{
 		Name:     "TYPE",
 		Info:     `Returns the string representation of the type of the value stored at key. The different types that can be returned are: string, list, set, zset, hash and stream.`,
 		Eval:     evalTYPE,
 		Arity:    1,
+
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	incrbyCmdMeta = DiceCmdMeta{
@@ -984,6 +1016,8 @@ func init() {
 	DiceCmds["PING"] = pingCmdMeta
 	DiceCmds["ECHO"] = echoCmdMeta
 	DiceCmds["AUTH"] = authCmdMeta
+	DiceCmds["DUMP"]=dumpkeyCMmdMeta
+	DiceCmds["RESTORE"]=restorekeyCmdMeta
 	DiceCmds["SET"] = setCmdMeta
 	DiceCmds["GET"] = getCmdMeta
 	DiceCmds["MSET"] = msetCmdMeta
@@ -1047,6 +1081,7 @@ func init() {
 	DiceCmds["GETEX"] = getexCmdMeta
 	DiceCmds["PTTL"] = pttlCmdMeta
 	DiceCmds["HSET"] = hsetCmdMeta
+	DiceCmds["HKEYS"] = hkeysCmdMeta
 	DiceCmds["HSETNX"] = hsetnxCmdMeta
 	DiceCmds["OBJECT"] = objectCmdMeta
 	DiceCmds["TOUCH"] = touchCmdMeta
@@ -1087,6 +1122,7 @@ func init() {
 	DiceCmds["ZADD"] = zaddCmdMeta
 	DiceCmds["ZRANGE"] = zrangeCmdMeta
 	DiceCmds["HINCRBYFLOAT"] = hincrbyFloatCmdMeta
+	DiceCmds["HEXISTS"] = hexistsCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

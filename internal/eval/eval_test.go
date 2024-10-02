@@ -2,6 +2,7 @@ package eval
 
 import (
 	"bytes"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"math"
@@ -71,10 +72,12 @@ func TestEval(t *testing.T) {
 	testEvalDbsize(t, store)
 	testEvalGETSET(t, store)
 	testEvalHSET(t, store)
+	testEvalHKEYS(t, store)
 	testEvalPFADD(t, store)
 	testEvalPFCOUNT(t, store)
 	testEvalHGET(t, store)
 	testEvalHSTRLEN(t, store)
+	testEvalHEXISTS(t, store)
 	testEvalHDEL(t, store)
 	testEvalPFMERGE(t, store)
 	testEvalJSONSTRLEN(t, store)
@@ -84,6 +87,7 @@ func TestEval(t *testing.T) {
 	testEvalLLEN(t, store)
 	testEvalGETEX(t, store)
 	testEvalJSONNUMINCRBY(t, store)
+	testEvalDUMP(t,store)
 	testEvalTYPE(t, store)
 	testEvalCOMMAND(t, store)
 	testEvalHINCRBY(t, store)
@@ -2246,6 +2250,64 @@ func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalHSTRLEN, store)
 }
 
+func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"wrong number of args passed": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'hexists' command\r\n"),
+		},
+		"only key passed": {
+			setup:  func() {},
+			input:  []string{"KEY"},
+			output: []byte("-ERR wrong number of arguments for 'hexists' command\r\n"),
+		},
+		"key doesn't exist": {
+			setup:  func() {},
+			input:  []string{"KEY", "field_name"},
+			output: clientio.Encode(0, false),
+		},
+		"key exists but field_name doesn't exists": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field := "mock_field_name"
+				newMap := make(HashMap)
+				newMap[field] = "mock_field_value"
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input:  []string{"KEY_MOCK", "non_existent_key"},
+			output: clientio.Encode(0, false),
+		},
+		"both key and field_name exists": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field := "mock_field_name"
+				newMap := make(HashMap)
+				newMap[field] = "HelloWorld"
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input:  []string{"KEY_MOCK", "mock_field_name"},
+			output: clientio.Encode(1, false),
+		},
+	}
+
+	runEvalTests(t, tests, evalHEXISTS, store)
+}
+
 func testEvalHDEL(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"HDEL with wrong number of args": {
@@ -2590,6 +2652,8 @@ func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]s
 			if tc.validator != nil {
 				tc.validator(output)
 			} else {
+				fmt.Println(tc.output)
+				fmt.Println(output)
 				assert.Equal(t, string(tc.output), string(output))
 			}
 		})
@@ -2697,6 +2761,59 @@ func testEvalHSET(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalHSET, store)
 }
 
+func testEvalHKEYS(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"wrong number of args passed": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'hkeys' command\r\n"),
+		},
+		"key doesn't exist": {
+			setup:  func() {},
+			input:  []string{"KEY"},
+			output: clientio.Encode([]string{}, false),
+		},
+		"key exists but not a hash": {
+			setup: func() {
+				evalSET([]string{"string_key", "string_value"}, store)
+			},
+			input:  []string{"string_key"},
+			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+		},
+		"key exists and is a hash": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field1 := "mock_field_name"
+				newMap := make(HashMap)
+				newMap[field1] = "HelloWorld"
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input:  []string{"KEY_MOCK"},
+			output: clientio.Encode([]string{"mock_field_name"}, false),
+		},
+	}
+
+	runEvalTests(t, tests, evalHKEYS, store)
+}
+
+func BenchmarkEvalHKEYS(b *testing.B) {
+	store := dstore.NewStore(nil)
+
+	for i := 0; i < b.N; i++ {
+		evalHSET([]string{"KEY", fmt.Sprintf("FIELD_%d", i), fmt.Sprintf("VALUE_%d", i)}, store)
+	}
+	// Benchmark HKEYS
+	for i := 0; i < b.N; i++ {
+		evalHKEYS([]string{"KEY"}, store)
+	}
+}
 func BenchmarkEvalPFCOUNT(b *testing.B) {
 	store := *dstore.NewStore(nil)
 
@@ -4863,4 +4980,69 @@ func BenchmarkEvalHINCRBYFLOAT(b *testing.B) {
 			}
 		})
 	}
+}
+
+func testEvalDUMP(t *testing.T, store *dstore.Store) {
+    tests := map[string]evalTestCase{
+        "nil value": {
+            setup:  func() {},
+            input:  nil,
+            output: []byte("-ERR wrong number of arguments for 'dump' command\r\n"),
+        },
+        "empty array": {
+            setup:  func() {},
+            input:  []string{},
+            output: []byte("-ERR wrong number of arguments for 'dump' command\r\n"),
+        },
+        "key does not exist": {
+            setup:  func() {},
+            input:  []string{"NONEXISTENT_KEY"},
+            output: []byte("-ERR nil\r\n"),
+        },"dump string value": {
+    		setup: func() {
+        	key := "user"
+        	value := "hello"
+        	obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
+        	store.Put(key, obj)
+    		},
+    		input:  []string{"user"},
+    		output: clientio.Encode(
+                base64.StdEncoding.EncodeToString([]byte{
+                    0x09, 0x00, 0x00,0x00, 0x00, 0x05, 0x68, 0x65, 0x6c, 0x6c, 0x6f,
+                    0xFF, // End marker
+                    // CRC64 checksum here:
+                    0x00 ,0x47 ,0x97 ,0x93 ,0xBE ,0x36 ,0x45,0xC7,
+            }), false),
+		},
+        "dump integer value": {
+            setup: func() {
+                key := "INTEGER_KEY"
+                value := int64(10)
+                obj := store.NewObj(value, -1, object.ObjTypeInt, object.ObjEncodingInt)
+                store.Put(key, obj)
+            },
+            input:  []string{"INTEGER_KEY"},
+            output: clientio.Encode(base64.StdEncoding.EncodeToString([]byte{
+				0x09,       
+				0xC0,      
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A,
+				0xFF,       
+				0x12, 0x77, 0xDE, 0x29, 0x53, 0xDB, 0x44, 0xC2,
+			}), false),
+        },
+        "dump expired key": {
+            setup: func() {
+                key := "EXPIRED_KEY"
+                value := "This will expire"
+                obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
+                store.Put(key, obj)
+				var exDurationMs int64 = -1
+                store.SetExpiry(obj, exDurationMs)
+            },
+            input:  []string{"EXPIRED_KEY"},
+            output: []byte("-ERR nil\r\n"),
+        },
+    }
+
+    runEvalTests(t, tests, evalDUMP, store)
 }
