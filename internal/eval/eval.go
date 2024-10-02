@@ -20,8 +20,8 @@ import (
 	"unicode"
 	"unsafe"
 
-	"github.com/dicedb/dice/internal/eval/geo"
-	"github.com/dicedb/dice/internal/eval/sortedset"
+	"github.com/google/btree"
+
 	"github.com/dicedb/dice/internal/object"
 	"github.com/rs/xid"
 
@@ -4340,6 +4340,8 @@ func evalJSONNUMINCRBY(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(resultString, false)
 }
 
+
+
 // evalJSONOBJKEYS retrieves the keys of a JSON object stored at path specified.
 // It takes two arguments: the key where the JSON document is stored, and an optional JSON path.
 // It returns a list of keys from the object at the specified path or an error if the path is invalid.
@@ -4442,6 +4444,10 @@ func evalTYPE(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(typeStr, true)
 }
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> a005df7 (Revert linted files)
 // evalGETRANGE returns the substring of the string value stored at key, determined by the offsets start and end
 // The offsets are zero-based and can be negative values to index from the end of the string
 //
@@ -5066,205 +5072,3 @@ func evalHINCRBYFLOAT(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(numkey, false)
 }
 
-func evalGEOADD(args []string, store *dstore.Store) []byte {
-	if len(args) < 4 {
-		return diceerrors.NewErrArity("GEOADD")
-	}
-
-	key := args[0]
-	var nx, xx bool
-	startIdx := 1
-
-	// Parse options
-	for startIdx < len(args) {
-		option := strings.ToUpper(args[startIdx])
-		if option == "NX" {
-			nx = true
-			startIdx++
-		} else if option == "XX" {
-			xx = true
-			startIdx++
-		} else {
-			break
-		}
-	}
-
-	// Check if we have the correct number of arguments after parsing options
-	if (len(args)-startIdx)%3 != 0 {
-		return diceerrors.NewErrArity("GEOADD")
-	}
-
-	if xx && nx {
-		return diceerrors.NewErrWithMessage("ERR XX and NX options at the same time are not compatible")
-	}
-
-	// Get or create sorted set
-	obj := store.Get(key)
-	var ss *sortedset.Set
-	if obj != nil {
-		var err []byte
-		ss, err = sortedset.FromObject(obj)
-		if err != nil {
-			return err
-		}
-	} else {
-		ss = sortedset.New()
-	}
-
-	added := 0
-	for i := startIdx; i < len(args); i += 3 {
-		longitude, err := strconv.ParseFloat(args[i], 64)
-		if err != nil || math.IsNaN(longitude) || longitude < -180 || longitude > 180 {
-			return diceerrors.NewErrWithMessage("ERR invalid longitude")
-		}
-
-		latitude, err := strconv.ParseFloat(args[i+1], 64)
-		if err != nil || math.IsNaN(latitude) || latitude < -85.05112878 || latitude > 85.05112878 {
-			return diceerrors.NewErrWithMessage("ERR invalid latitude")
-		}
-
-		member := args[i+2]
-		_, exists := ss.Get(member)
-
-		// Handle XX option: Only update existing elements
-		if xx && !exists {
-			continue
-		}
-
-		// Handle NX option: Only add new elements
-		if nx && exists {
-			continue
-		}
-
-		hash := geo.EncodeHash(latitude, longitude)
-
-		wasInserted := ss.Upsert(hash, member)
-		if wasInserted {
-			added++
-		}
-	}
-
-	obj = store.NewObj(ss, -1, object.ObjTypeSortedSet, object.ObjEncodingBTree)
-	store.Put(key, obj)
-
-	return clientio.Encode(added, false)
-}
-
-func evalGEODIST(args []string, store *dstore.Store) []byte {
-	if len(args) < 3 || len(args) > 4 {
-		return diceerrors.NewErrArity("GEODIST")
-	}
-
-	key := args[0]
-	member1 := args[1]
-	member2 := args[2]
-	unit := "m"
-	if len(args) == 4 {
-		unit = strings.ToLower(args[3])
-	}
-
-	// Get the sorted set
-	obj := store.Get(key)
-	if obj == nil {
-		return clientio.RespNIL
-	}
-
-	ss, err := sortedset.FromObject(obj)
-	if err != nil {
-		return err
-	}
-
-	// Get the scores (geohashes) for both members
-	score1, ok := ss.Get(member1)
-	if !ok {
-		return clientio.RespNIL
-	}
-	score2, ok := ss.Get(member2)
-	if !ok {
-		return clientio.RespNIL
-	}
-
-	lat1, lon1 := geo.DecodeHash(score1)
-	lat2, lon2 := geo.DecodeHash(score2)
-
-	distance := geo.GetDistance(lon1, lat1, lon2, lat2)
-
-	result, err := geo.ConvertDistance(distance, unit)
-
-	if err != nil {
-		return err
-	}
-
-	return clientio.Encode(utils.RoundToDecimals(result, 4), false)
-}
-
-// evalJSONSTRAPPEND appends a string value to the JSON string value at the specified path
-// in the JSON object saved at the key in arguments.
-// Args must contain at least a key and the string value to append.
-// If the key does not exist or is expired, it returns an error response.
-// If the value at the specified path is not a string, it returns an error response.
-// Returns the new length of the string at the specified path if successful.
-func evalJSONSTRAPPEND(args []string, store *dstore.Store) []byte {
-	if len(args) != 3 {
-		return diceerrors.NewErrArity("JSON.STRAPPEND")
-	}
-
-	key := args[0]
-	path := args[1]
-	value := args[2]
-
-	obj := store.Get(key)
-	if obj == nil {
-		return diceerrors.NewErrWithMessage(diceerrors.NoKeyExistsErr)
-	}
-
-	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
-	if errWithMessage != nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongKeyTypeErr)
-	}
-
-	jsonData := obj.Value
-
-	var resultsArray []interface{}
-
-	if path == "$" {
-		// Handle root-level string
-		if str, ok := jsonData.(string); ok {
-			unquotedValue := strings.Trim(value, "\"")
-			newValue := str + unquotedValue
-			resultsArray = append(resultsArray, int64(len(newValue)))
-			jsonData = newValue
-		} else {
-			return clientio.RespEmptyArray
-		}
-	} else {
-		expr, err := jp.ParseString(path)
-		if err != nil {
-			return clientio.RespEmptyArray
-		}
-
-		_, modifyErr := expr.Modify(jsonData, func(data any) (interface{}, bool) {
-			switch v := data.(type) {
-			case string:
-				unquotedValue := strings.Trim(value, "\"")
-				newValue := v + unquotedValue
-				resultsArray = append([]interface{}{int64(len(newValue))}, resultsArray...)
-				return newValue, true
-			default:
-				resultsArray = append([]interface{}{clientio.RespNIL}, resultsArray...)
-				return data, false
-			}
-		})
-
-		if modifyErr != nil {
-			return clientio.RespEmptyArray
-		}
-	}
-
-	if len(resultsArray) == 0 {
-		return clientio.RespEmptyArray
-	}
-
-	obj.Value = jsonData
-	return clientio.Encode(resultsArray, false)
-}
