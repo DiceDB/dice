@@ -68,6 +68,7 @@ const (
 
 const defaultRootPath = "$"
 const maxExDuration = 9223372036854775
+const CountConst = "COUNT"
 
 func init() {
 	diceCommandsCount = len(DiceCmds)
@@ -2595,7 +2596,7 @@ func evalCommandHelp() []byte {
 	format := "COMMAND <subcommand> [<arg> [value] [opt] ...]. Subcommands are:"
 	noTitle := "(no subcommand)"
 	noMessage := "    Return details about all Dice commands."
-	countTitle := "COUNT"
+	countTitle := CountConst
 	countMessage := "    Return the total number of commands in this Dice server."
 	listTitle := "LIST"
 	listMessage := "     Return a list of all commands in this Dice server."
@@ -3270,7 +3271,7 @@ func evalHSCAN(args []string, store *dstore.Store) []byte {
 			if i+1 < len(args) {
 				pattern = args[i+1]
 			}
-		case "COUNT":
+		case CountConst:
 			if i+1 < len(args) {
 				parsedCount, err := strconv.Atoi(args[i+1])
 				if err != nil || parsedCount < 1 {
