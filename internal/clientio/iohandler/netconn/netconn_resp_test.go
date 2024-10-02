@@ -4,11 +4,12 @@ import (
 	"bufio"
 	"context"
 	"errors"
-	"github.com/dicedb/dice/mocks"
 	"log/slog"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dicedb/dice/mocks"
 
 	"github.com/stretchr/testify/assert"
 )

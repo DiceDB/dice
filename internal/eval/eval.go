@@ -57,6 +57,7 @@ type EvalResponse struct {
 	Result interface{} // Result of the Store operation, for now the type is set to []byte, but this can change in the future.
 	Error  error
 }
+
 type jsonOperation string
 
 const (
@@ -297,10 +298,6 @@ func evalJSONARRTRIM(args []string, store *dstore.Store) []byte {
 		resultsArray = append(resultsArray, len(updatedArray))
 		return updatedArray, true
 	})
-	if err != nil {
-		return diceerrors.NewErrWithMessage(err.Error())
-	}
-
 	if modifyErr != nil {
 		return diceerrors.NewErrWithMessage(fmt.Sprintf("ERR failed to modify JSON data: %v", modifyErr))
 	}
@@ -4151,8 +4148,6 @@ func evalJSONNUMINCRBY(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(resultString, false)
 }
 
-
-
 // evalJSONOBJKEYS retrieves the keys of a JSON object stored at path specified.
 // It takes two arguments: the key where the JSON document is stored, and an optional JSON path.
 // It returns a list of keys from the object at the specified path or an error if the path is invalid.
@@ -4254,7 +4249,6 @@ func evalTYPE(args []string, store *dstore.Store) []byte {
 
 	return clientio.Encode(typeStr, true)
 }
-
 
 // evalGETRANGE returns the substring of the string value stored at key, determined by the offsets start and end
 // The offsets are zero-based and can be negative values to index from the end of the string
@@ -4410,6 +4404,59 @@ func selectRandomFields(hashMap HashMap, count int, withValues bool) []byte {
 	}
 
 	return clientio.Encode(results, false)
+}
+
+// evalAPPEND takes two arguments: the key and the value to append to the key's current value.
+// If the key does not exist, it creates a new key with the given value (so APPEND will be similar to SET in this special case)
+// If key already exists and is a string (or integers stored as strings), this command appends the value at the end of the string
+func evalAPPEND(args []string, store *dstore.Store) []byte {
+	if len(args) != 2 {
+		return diceerrors.NewErrArity("APPEND")
+	}
+
+	key, value := args[0], args[1]
+	obj := store.Get(key)
+
+	if obj == nil {
+		// Key does not exist path
+		oType, oEnc := deduceTypeEncoding(value)
+
+		var storedValue interface{}
+		// Store the value with the appropriate encoding based on the type
+		switch oEnc {
+		case object.ObjEncodingInt:
+			storedValue, _ = strconv.ParseInt(value, 10, 64)
+		case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
+			storedValue = value
+		default:
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+		}
+
+		store.Put(key, store.NewObj(storedValue, -1, oType, oEnc))
+
+		return clientio.Encode(len(value), false)
+	}
+	// Key exists path
+	_, currentEnc := object.ExtractTypeEncoding(obj)
+
+	var currentValueStr string
+	switch currentEnc {
+	case object.ObjEncodingInt:
+		// If the encoding is an integer, convert the current value to a string for concatenation
+		currentValueStr = strconv.FormatInt(obj.Value.(int64), 10)
+	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
+		// If the encoding is a string, retrieve the string value for concatenation
+		currentValueStr = obj.Value.(string)
+	default:
+		// If the encoding is neither integer nor string, return a "wrong type" error
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
+	newValue := currentValueStr + value
+
+	store.Put(key, store.NewObj(newValue, -1, object.ObjTypeString, object.ObjEncodingRaw))
+
+	return clientio.Encode(len(newValue), false)
 }
 
 func evalJSONRESP(args []string, store *dstore.Store) []byte {
@@ -4687,4 +4734,3 @@ func evalHINCRBYFLOAT(args []string, store *dstore.Store) []byte {
 
 	return clientio.Encode(numkey, false)
 }
-

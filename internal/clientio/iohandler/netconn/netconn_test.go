@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/dicedb/dice/mocks"
 	"io"
 	"log/slog"
 	"net"
@@ -13,6 +12,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/dicedb/dice/mocks"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

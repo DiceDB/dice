@@ -35,8 +35,15 @@ type CmdMeta struct {
 	CmdType
 	Cmd                  string
 	WorkerCommandHandler func([]string) []byte
-	decomposeCommand     func(redisCmd *cmd.RedisCmd) []*cmd.RedisCmd
-	composeResponse      func(responses ...eval.EvalResponse) []byte
+
+	// decomposeCommand is a function that takes a Redis command and breaks it down into smaller,
+	// manageable Redis commands for each shard processing. It returns a slice of Redis commands.
+	decomposeCommand func(redisCmd *cmd.RedisCmd) []*cmd.RedisCmd
+
+	// composeResponse is a function that combines multiple responses from the execution of commands
+	// into a single response object. It accepts a variadic parameter of EvalResponse objects
+	// and returns a unified response interface.
+	composeResponse func(responses ...eval.EvalResponse) interface{}
 }
 
 var CommandsMeta = map[string]CmdMeta{
