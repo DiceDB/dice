@@ -13,12 +13,20 @@ GETSET key value
 
 ## Parameters
 
-- `key`: The key whose value you want to retrieve and set. This must be a string.
-- `value`: The new value to set for the specified key. This must be a string.
+| Parameter       | Description                                      | Type    | Required |
+|-----------------|--------------------------------------------------|---------|----------|
+| `key`           | The key whose value you want to retrieve and set.                   | String  | Yes      |
+| `value`           | The new value to set for the specified key.                   | String  | Yes      |
 
-## Return Value
 
-The `GETSET` command returns the old value stored at the specified key before the new value was set. If the key did not exist, it returns `nil`.
+
+## Return values
+
+| Condition                                      | Return Value                                      |
+|------------------------------------------------|---------------------------------------------------|
+| The old value stored at the specifiied `key`                         | A string value                                             |
+| The key does not exist           |  `nil`                                             |
+
 
 ## Behaviour
 
@@ -26,31 +34,28 @@ When the `GETSET` command is executed, the following sequence of actions occurs:
 
 1. The current value of the specified key is retrieved.
 2. The specified key is updated with the new value.
-3. The old value is returned to the client.
+3. If the specified key had an existing `TTL` , it is reset.
+4. The old value is returned to the client.
+
 
 This operation is atomic, meaning that no other commands can be executed on the key between the get and set operations.
 
-## Error Handling
+## Errors
 
 The `GETSET` command can raise errors in the following scenarios:
 
 1. `Wrong Type Error`: If the key exists but is not a string, DiceDB will return an error.
-   - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
+   - Error Message: `(error) ERROR WRONGTYPE Operation against a key holding the wrong kind of value`
 2. `Syntax Error`: If the command is not provided with exactly two arguments (key and value), DiceDB will return a syntax error.
-   - Error Message: `(error) ERR wrong number of arguments for 'getset' command`
+   - Error Message: `(error) ERROR wrong number of arguments for 'getset' command`
 
-## Example Usage
+## Examples
 
 ### Basic Example
 
 ```DiceDB
-SET mykey "Hello"
-GETSET mykey "World"
-```
-
-`Output:`
-
-```
+127.0.0.1:7379> SET mykey "Hello"
+127.0.0.1:7379> GETSET mykey "World"
 "Hello"
 ```
 
@@ -63,12 +68,7 @@ GETSET mykey "World"
 ### Example with Non-Existent Key
 
 ```DiceDB
-GETSET newkey "NewValue"
-```
-
-`Output:`
-
-```
+127.0.0.1:7379> GETSET newkey "NewValue"
 (nil)
 ```
 
@@ -78,17 +78,34 @@ GETSET newkey "NewValue"
 - The `GETSET` command sets the value of `newkey` to "NewValue".
 - Since the key did not exist before, `nil` is returned.
 
+
+### Example with Key having pre-existing TTL
+```DiceDB
+127.0.0.1:7379> SET newkey "test"
+OK
+127.0.0.1:7379> EXPIRE newkey 60
+1
+127.0.0.1:7379> TTL newkey
+55
+127.0.0.1:7379> GETSET newkey "new value"
+"test"
+127.0.0.1:7379> TTL newkey
+(integer) -1
+```
+
+`Explanation:`
+
+- The `newkey` used in the `GETSET` command had an existing `TTL` set to expire in 60 seconds
+- When `GETSET` is executed on the mentioned key, it updates the value and resets the `TTL` on the key.
+- Hence, the `TTL` on `newkey` post `GETSET` returns `-1` , suggesting that the key exists without any `TTL` configured
+
+
 ### Error Example: Wrong Type
 
 ```DiceDB
-LPUSH mylist "item"
-GETSET mylist "NewValue"
-```
-
-`Output:`
-
-```
-(error) WRONGTYPE Operation against a key holding the wrong kind of value
+127.0.0.1:7379> LPUSH mylist "item"
+127.0.0.1:7379> GETSET mylist "NewValue"
+(error) ERROR WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
 `Explanation:`
@@ -99,25 +116,12 @@ GETSET mylist "NewValue"
 ### Error Example: Syntax Error
 
 ```DiceDB
-GETSET mykey
-```
-
-`Output:`
-
-```
-(error) ERR wrong number of arguments for 'getset' command
+127.0.0.1:7379> GETSET mykey
+(error) ERROR wrong number of arguments for 'getset' command
 ```
 
 `Explanation:`
 
 - The `GETSET` command requires exactly two arguments: a key and a value.
 - Since only one argument is provided, DiceDB returns a syntax error.
-
-## Best Practices
-
-- Ensure that the key you are operating on is of type string to avoid `WRONGTYPE` errors.
-- Use `GETSET` when you need to update a value and also need to know the previous value in a single atomic operation.
-- Handle the `nil` return value appropriately in your application logic, especially when dealing with non-existent keys.
-
-By following this documentation, you should be able to effectively use the `GETSET` command in DiceDB to manage key-value pairs with atomic get-and-set operations.
 

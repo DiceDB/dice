@@ -2,10 +2,14 @@ package eval
 
 import (
 	"bytes"
+
 	"crypto/rand"
+
 	"errors"
 	"fmt"
+
 	"log/slog"
+
 	"math"
 	"math/big"
 	"math/bits"
@@ -53,6 +57,7 @@ type EvalResponse struct {
 	Result interface{} // Result of the Store operation, for now the type is set to []byte, but this can change in the future.
 	Error  error
 }
+
 type jsonOperation string
 
 const (
@@ -293,10 +298,6 @@ func evalJSONARRTRIM(args []string, store *dstore.Store) []byte {
 		resultsArray = append(resultsArray, len(updatedArray))
 		return updatedArray, true
 	})
-	if err != nil {
-		return diceerrors.NewErrWithMessage(err.Error())
-	}
-
 	if modifyErr != nil {
 		return diceerrors.NewErrWithMessage(fmt.Sprintf("ERR failed to modify JSON data: %v", modifyErr))
 	}

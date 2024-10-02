@@ -27,11 +27,6 @@ const (
 	InvalidIntErr          = "-ERR value is not a valid integer"
 )
 
-var (
-	ErrAborted      = errors.New("server received ABORT command")
-	ErrEmptyCommand = errors.New("empty command")
-)
-
 type DiceError struct {
 	message error
 }

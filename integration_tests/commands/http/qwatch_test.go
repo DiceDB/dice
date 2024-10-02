@@ -33,11 +33,10 @@ func TestQWatch(t *testing.T) {
 				{Command: "QWATCH", Body: map[string]interface{}{"query": qWatchQuery}},
 			},
 			expected: []interface{}{
-				[]interface{}{
-					"qwatch",
-					"SELECT $key, $value WHERE $key like 'match:100:*' and $value > 10 ORDER BY $value desc LIMIT 3",
-					// Empty array, as the initial result will be empty
-					[]interface{}{},
+				map[string]interface{}{
+					"cmd":   "qwatch",
+					"query": "SELECT $key, $value WHERE $key like 'match:100:*' and $value > 10 ORDER BY $value desc LIMIT 3",
+					"data":  []interface{}{},
 				},
 			},
 			errorExpected: false,
@@ -92,10 +91,10 @@ func TestQwatchWithSSE(t *testing.T) {
 
 		decoder := json.NewDecoder(resp.Body)
 		expectedResponses := []interface{}{
-			[]interface{}{
-				"qwatch",
-				"SELECT $key, $value WHERE $key like 'match:100:*' and $value > 10 ORDER BY $value desc LIMIT 3",
-				[]interface{}{},
+			map[string]interface{}{
+				"cmd":   "qwatch",
+				"query": "SELECT $key, $value WHERE $key like 'match:100:*' and $value > 10 ORDER BY $value desc LIMIT 3",
+				"data":  []interface{}{},
 			},
 			map[string]interface{}{
 				"cmd":   "qwatch",

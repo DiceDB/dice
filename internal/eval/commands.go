@@ -24,7 +24,7 @@ type DiceCmdMeta struct {
 	// instead of just raw bytes. Commands that have been migrated to this new model
 	// will utilize this function for evaluation, allowing for better handling of
 	// complex command execution scenarios and improved response consistency.
-	NewEval func([]string, *dstore.Store) EvalResponse
+	NewEval func([]string, *dstore.Store) *EvalResponse
 }
 
 type KeySpecs struct {
@@ -911,11 +911,28 @@ var (
 		Arity:    3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	dumpkeyCMmdMeta=DiceCmdMeta{
+		Name:	 "DUMP",
+		Info:	`Serialize the value stored at key in a Redis-specific format and return it to the user.
+				The returned value can be synthesized back into a Redis key using the RESTORE command.`,
+		Eval:   evalDUMP,
+		Arity: 	1,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+	}
+	restorekeyCmdMeta=DiceCmdMeta{
+		Name:	"RESTORE",
+		Info:  `Serialize the value stored at key in a Redis-specific format and return it to the user.
+				The returned value can be synthesized back into a Redis key using the RESTORE command.`,
+		Eval: evalRestore,
+		Arity:	2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	typeCmdMeta = DiceCmdMeta{
 		Name:     "TYPE",
 		Info:     `Returns the string representation of the type of the value stored at key. The different types that can be returned are: string, list, set, zset, hash and stream.`,
 		Eval:     evalTYPE,
 		Arity:    1,
+
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	incrbyCmdMeta = DiceCmdMeta{
@@ -999,6 +1016,8 @@ func init() {
 	DiceCmds["PING"] = pingCmdMeta
 	DiceCmds["ECHO"] = echoCmdMeta
 	DiceCmds["AUTH"] = authCmdMeta
+	DiceCmds["DUMP"]=dumpkeyCMmdMeta
+	DiceCmds["RESTORE"]=restorekeyCmdMeta
 	DiceCmds["SET"] = setCmdMeta
 	DiceCmds["GET"] = getCmdMeta
 	DiceCmds["MSET"] = msetCmdMeta
