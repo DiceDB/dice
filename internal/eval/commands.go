@@ -621,10 +621,10 @@ var (
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	hkeysCmdMeta = DiceCmdMeta{
-		Name: "HKEYS",
-		Info:  `HKEYS command is used to retrieve all the keys(or field names) within a hash. Complexity is O(n) where n is the size of the hash.`,
-		Eval: evalHKEYS,
-		Arity: 1,
+		Name:     "HKEYS",
+		Info:     `HKEYS command is used to retrieve all the keys(or field names) within a hash. Complexity is O(n) where n is the size of the hash.`,
+		Eval:     evalHKEYS,
+		Arity:    1,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	hsetnxCmdMeta = DiceCmdMeta{
@@ -690,6 +690,16 @@ var (
 		Returns
 		The number of fields that were removed from the hash, not including specified but non-existing fields.`,
 		Eval:     evalHDEL,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	hscanCmdMeta = DiceCmdMeta{
+		Name: "HSCAN",
+		Info: `HSCAN is used to iterate over fields and values of a hash.
+		It returns a cursor and a list of key-value pairs.
+		The cursor is used to paginate through the hash.
+		The command returns a cursor value of 0 when all the elements are iterated.`,
+		Eval:     evalHSCAN,
 		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
@@ -918,27 +928,27 @@ var (
 		Arity:    3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
-	dumpkeyCMmdMeta=DiceCmdMeta{
-		Name:	 "DUMP",
-		Info:	`Serialize the value stored at key in a Redis-specific format and return it to the user.
+	dumpkeyCMmdMeta = DiceCmdMeta{
+		Name: "DUMP",
+		Info: `Serialize the value stored at key in a Redis-specific format and return it to the user.
 				The returned value can be synthesized back into a Redis key using the RESTORE command.`,
-		Eval:   evalDUMP,
-		Arity: 	1,
-		KeySpecs:   KeySpecs{BeginIndex: 1},
+		Eval:     evalDUMP,
+		Arity:    1,
+		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
-	restorekeyCmdMeta=DiceCmdMeta{
-		Name:	"RESTORE",
-		Info:  `Serialize the value stored at key in a Redis-specific format and return it to the user.
+	restorekeyCmdMeta = DiceCmdMeta{
+		Name: "RESTORE",
+		Info: `Serialize the value stored at key in a Redis-specific format and return it to the user.
 				The returned value can be synthesized back into a Redis key using the RESTORE command.`,
-		Eval: evalRestore,
-		Arity:	2,
+		Eval:     evalRestore,
+		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	typeCmdMeta = DiceCmdMeta{
-		Name:     "TYPE",
-		Info:     `Returns the string representation of the type of the value stored at key. The different types that can be returned are: string, list, set, zset, hash and stream.`,
-		Eval:     evalTYPE,
-		Arity:    1,
+		Name:  "TYPE",
+		Info:  `Returns the string representation of the type of the value stored at key. The different types that can be returned are: string, list, set, zset, hash and stream.`,
+		Eval:  evalTYPE,
+		Arity: 1,
 
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
@@ -1053,8 +1063,8 @@ func init() {
 	DiceCmds["PING"] = pingCmdMeta
 	DiceCmds["ECHO"] = echoCmdMeta
 	DiceCmds["AUTH"] = authCmdMeta
-	DiceCmds["DUMP"]=dumpkeyCMmdMeta
-	DiceCmds["RESTORE"]=restorekeyCmdMeta
+	DiceCmds["DUMP"] = dumpkeyCMmdMeta
+	DiceCmds["RESTORE"] = restorekeyCmdMeta
 	DiceCmds["SET"] = setCmdMeta
 	DiceCmds["GET"] = getCmdMeta
 	DiceCmds["MSET"] = msetCmdMeta
@@ -1156,6 +1166,7 @@ func init() {
 	DiceCmds["SETEX"] = setexCmdMeta
 	DiceCmds["HRANDFIELD"] = hrandfieldCmdMeta
 	DiceCmds["HDEL"] = hdelCmdMeta
+	DiceCmds["HSCAN"] = hscanCmdMeta
 	DiceCmds["HVALS"] = hValsCmdMeta
 	DiceCmds["APPEND"] = appendCmdMeta
 	DiceCmds["ZADD"] = zaddCmdMeta

@@ -37,6 +37,7 @@ import (
 	"github.com/dicedb/dice/internal/querymanager"
 	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/gobwas/glob"
 	"github.com/ohler55/ojg/jp"
 )
 
@@ -3236,6 +3237,79 @@ func evalHDEL(args []string, store *dstore.Store) []byte {
 	}
 
 	return clientio.Encode(count, false)
+}
+
+func evalHSCAN(args []string, store *dstore.Store) []byte {
+	if len(args) < 2 {
+		return diceerrors.NewErrArity("HSCAN")
+	}
+
+	key := args[0]
+	cursor, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.InvalidIntErr)
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return clientio.Encode([]interface{}{0, []string{}}, false)
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+	}
+
+	hashMap := obj.Value.(HashMap)
+	pattern := "*"
+	count := 10
+
+	// Parse optional arguments
+	for i := 2; i < len(args); i += 2 {
+		switch strings.ToUpper(args[i]) {
+		case "MATCH":
+			if i+1 < len(args) {
+				pattern = args[i+1]
+			}
+		case "COUNT":
+			if i+1 < len(args) {
+				count, _ = strconv.Atoi(args[i+1])
+			}
+		}
+	}
+
+	keys := make([]string, 0, len(hashMap))
+	for k := range hashMap {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	matched := 0
+	results := make([]string, 0, count*2)
+	newCursor := 0
+
+	g, err := glob.Compile(pattern)
+	if err != nil {
+		return diceerrors.NewErrWithMessage(fmt.Sprintf("Invalid glob pattern: %s", err))
+	}
+
+	// Scan the keys and add them to the results if they match the pattern
+	for i := int(cursor); i < len(keys); i++ {
+		if g.Match(keys[i]) {
+			results = append(results, keys[i], hashMap[keys[i]])
+			matched++
+			if matched >= count {
+				newCursor = i + 1
+				break
+			}
+		}
+	}
+
+	// If we've scanned all keys, reset cursor to 0
+	if newCursor >= len(keys) {
+		newCursor = 0
+	}
+
+	return clientio.Encode([]interface{}{newCursor, results}, false)
 }
 
 // evalHKEYS returns all the values in the hash stored at key.
