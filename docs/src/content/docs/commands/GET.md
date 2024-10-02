@@ -4,7 +4,7 @@ description: The `GET` command in DiceDB is used to retrieve the value of a spec
 ---
 
 The `GET` command in DiceDB is used to retrieve the value of a specified key. If the key exists, the value is written and
-if it does not then the command returns `nil` and an error is returned if the value stored at key is not a string, because GET only handles string values. This is one of the most fundamental operations in DiceDB.
+if it does not then the command returns `nil` and an error is returned if the value stored at key is not a string. This is one of the most fundamental operations in DiceDB.
 
 ## Syntax
 
