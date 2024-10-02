@@ -1,6 +1,6 @@
 ---
 title: LLEN
-description: The `LLEN` command in DiceDB is used to obtain the length of a list stored at a specified key. This command is particularly useful for determining the number of elements in a list, which can help in various list management and processing tasks.
+description: Returns the length of the list stored at a key. If the key does not exist, it is interpreted as an empty list and 0 is returned. An error is returned when the value stored at the key is not a list.
 ---
 
 The `LLEN` command in DiceDB is used to obtain the length of a list stored at a specified key. This command is particularly useful for determining the number of elements in a list, which can help in various list management and processing tasks.
