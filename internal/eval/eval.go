@@ -3734,7 +3734,7 @@ func evalSDIFF(args []string, store *dstore.Store) []byte {
 }
 
 func evalSINTER(args []string, store *dstore.Store) []byte {
-	if len(args) < 2 {
+	if len(args) < 1 {
 		return diceerrors.NewErrArity("SINTER")
 	}
 
