@@ -5215,12 +5215,12 @@ func evalJSONSTRAPPEND(args []string, store *dstore.Store) []byte {
 
 	obj := store.Get(key)
 	if obj == nil {
-		return clientio.Encode([]interface{}{}, false)
+		return diceerrors.NewErrWithMessage(diceerrors.NoKeyExistsErr)
 	}
 
 	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
 	if errWithMessage != nil {
-		return errWithMessage
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongKeyTypeErr)
 	}
 
 	jsonData := obj.Value
@@ -5235,15 +5235,15 @@ func evalJSONSTRAPPEND(args []string, store *dstore.Store) []byte {
 			resultsArray = append(resultsArray, int64(len(newValue)))
 			jsonData = newValue
 		} else {
-			return clientio.Encode([]interface{}{}, false)
+			return clientio.RespEmptyArray
 		}
 	} else {
 		expr, err := jp.ParseString(path)
 		if err != nil {
-			return clientio.Encode([]interface{}{}, false)
+			return clientio.RespEmptyArray
 		}
 
-		newData, modifyErr := expr.Modify(jsonData, func(data any) (interface{}, bool) {
+		_, modifyErr := expr.Modify(jsonData, func(data any) (interface{}, bool) {
 			switch v := data.(type) {
 			case string:
 				unquotedValue := strings.Trim(value, "\"")
@@ -5257,12 +5257,14 @@ func evalJSONSTRAPPEND(args []string, store *dstore.Store) []byte {
 		})
 
 		if modifyErr != nil {
-			return clientio.Encode([]interface{}{}, false)
+			return clientio.RespEmptyArray
 		}
-		jsonData = newData
 	}
 
-	store.Put(key, store.NewObj(jsonData, -1, object.ObjTypeJSON, object.ObjEncodingJSON))
+	if len(resultsArray) == 0 {
+		return clientio.RespEmptyArray
+	}
 
+	obj.Value = jsonData
 	return clientio.Encode(resultsArray, false)
 }

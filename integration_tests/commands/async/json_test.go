@@ -2,10 +2,11 @@ package async
 
 import (
 	"fmt"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"net"
 	"strings"
 	"testing"
+
+	"github.com/google/go-cmp/cmp/cmpopts"
 
 	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/testutils"
@@ -1447,6 +1448,7 @@ func TestJsonSTRAPPEND(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			FireCommand(conn, "DEL doc")
+			defer FireCommand(conn, "DEL doc")
 
 			result := FireCommand(conn, tc.setCmd)
 
@@ -1456,5 +1458,4 @@ func TestJsonSTRAPPEND(t *testing.T) {
 			assert.DeepEqual(t, tc.expected, result)
 		})
 	}
-
 }

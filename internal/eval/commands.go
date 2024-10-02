@@ -1090,7 +1090,7 @@ var (
 		Returns an array of integer replies for each path, the string's new length, or nil, if the matching JSON value is not a string. 
 		Error reply: If the value at path is not a string or if the key doesn't exist.`,
 		Eval:     evalJSONSTRAPPEND,
-		Arity:    -3,
+		Arity:    3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 )

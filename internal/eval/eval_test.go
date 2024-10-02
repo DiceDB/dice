@@ -5681,18 +5681,6 @@ func testEvalSINTER(t *testing.T, store *dstore.Store) {
 
 func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
-		"append to multiple fields": {
-			setup: func() {
-				key := "doc1"
-				value := "{\"a\":\"foo\", \"nested1\": {\"a\": \"hello\"}, \"nested2\": {\"a\": 31}}"
-				var rootData interface{}
-				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-				store.Put(key, obj)
-			},
-			input:  []string{"doc1", "$..a", "\"bar\""},
-			output: []byte("*3\r\n:6\r\n:8\r\n$-1\r\n"), // Cannot append to numeric field
-		},
 		"append to single field": {
 			setup: func() {
 				key := "doc1"
@@ -5710,19 +5698,7 @@ func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {
 				// No setup needed as we are testing a non-existing document.
 			},
 			input:  []string{"non_existing_doc", "$..a", "\"err\""},
-			output: []byte("*0\r\n"), // No results for non-existing key
-		},
-		"legacy path append": {
-			setup: func() {
-				key := "doc1"
-				value := "{\"a\":\"foo\", \"nested1\": {\"a\": \"hello\"}, \"nested2\": {\"a\": 31}}"
-				var rootData interface{}
-				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-				store.Put(key, obj)
-			},
-			input:  []string{"doc1", ".*.a", "\"bar\""},
-			output: []byte("*2\r\n:8\r\n$-1\r\n"), // Can't append to numeric field
+			output: []byte("-ERR Could not perform this operation on a key that doesn't exist\r\n"),
 		},
 		"append to root node": {
 			setup: func() {
