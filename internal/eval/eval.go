@@ -3252,7 +3252,7 @@ func evalHSCAN(args []string, store *dstore.Store) []byte {
 
 	obj := store.Get(key)
 	if obj == nil {
-		return clientio.Encode([]interface{}{0, []string{}}, false)
+		return clientio.Encode([]interface{}{"0", []string{}}, false)
 	}
 
 	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
@@ -3272,7 +3272,11 @@ func evalHSCAN(args []string, store *dstore.Store) []byte {
 			}
 		case "COUNT":
 			if i+1 < len(args) {
-				count, _ = strconv.Atoi(args[i+1])
+				parsedCount, err := strconv.Atoi(args[i+1])
+				if err != nil || parsedCount < 1 {
+					return diceerrors.NewErrWithMessage("value is not an integer or out of range")
+				}
+				count = parsedCount
 			}
 		}
 	}
@@ -3309,7 +3313,7 @@ func evalHSCAN(args []string, store *dstore.Store) []byte {
 		newCursor = 0
 	}
 
-	return clientio.Encode([]interface{}{newCursor, results}, false)
+	return clientio.Encode([]interface{}{strconv.Itoa(newCursor), results}, false)
 }
 
 // evalHKEYS returns all the values in the hash stored at key.

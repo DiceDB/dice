@@ -82,6 +82,7 @@ func TestEval(t *testing.T) {
 	testEvalHSTRLEN(t, store)
 	testEvalHEXISTS(t, store)
 	testEvalHDEL(t, store)
+	testEvalHSCAN(t, store)
 	testEvalPFMERGE(t, store)
 	testEvalJSONSTRLEN(t, store)
 	testEvalJSONOBJLEN(t, store)
@@ -2423,6 +2424,91 @@ func testEvalHDEL(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalHDEL, store)
+}
+
+func testEvalHSCAN(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"HSCAN with wrong number of args": {
+			input:  []string{"key"},
+			output: []byte("-ERR wrong number of arguments for 'hscan' command\r\n"),
+		},
+		"HSCAN with key does not exist": {
+			input:  []string{"NONEXISTENT_KEY", "0"},
+			output: []byte("*2\r\n$1\r\n0\r\n*0\r\n"),
+		},
+		"HSCAN with key exists but not a hash": {
+			setup: func() {
+				evalSET([]string{"string_key", "string_value"}, store)
+			},
+			input:  []string{"string_key", "0"},
+			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+		},
+		"HSCAN with valid key and cursor": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
+			},
+			input:  []string{"hash_key", "0"},
+			output: []byte("*2\r\n$1\r\n0\r\n*4\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+		},
+		"HSCAN with cursor at the end": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
+			},
+			input:  []string{"hash_key", "2"},
+			output: []byte("*2\r\n$1\r\n0\r\n*0\r\n"),
+		},
+		"HSCAN with cursor at the beginning": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
+			},
+			input:  []string{"hash_key", "0"},
+			output: []byte("*2\r\n$1\r\n0\r\n*4\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+		},
+		"HSCAN with cursor in the middle": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
+			},
+			input:  []string{"hash_key", "1"},
+			output: []byte("*2\r\n$1\r\n0\r\n*2\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+		},
+		"HSCAN with MATCH argument": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3"}, store)
+			},
+			input:  []string{"hash_key", "0", "MATCH", "field[12]*"},
+			output: []byte("*2\r\n$1\r\n0\r\n*4\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+		},
+		"HSCAN with COUNT argument": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3"}, store)
+			},
+			input:  []string{"hash_key", "0", "COUNT", "2"},
+			output: []byte("*2\r\n$1\r\n2\r\n*4\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+		},
+		"HSCAN with MATCH and COUNT arguments": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3", "field4", "value4"}, store)
+			},
+			input:  []string{"hash_key", "0", "MATCH", "field[13]*", "COUNT", "1"},
+			output: []byte("*2\r\n$1\r\n1\r\n*2\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n"),
+		},
+		"HSCAN with invalid MATCH pattern": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
+			},
+			input:  []string{"hash_key", "0", "MATCH", "[invalid"},
+			output: []byte("-ERR Invalid glob pattern: unexpected end of input\r\n"),
+		},
+		"HSCAN with invalid COUNT value": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
+			},
+			input:  []string{"hash_key", "0", "COUNT", "invalid"},
+			output: []byte("-ERR value is not an integer or out of range\r\n"),
+		},
+	}
+
+	runEvalTests(t, tests, evalHSCAN, store)
 }
 
 func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
