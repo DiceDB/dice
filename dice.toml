@@ -4,21 +4,23 @@ Port = 7379
 KeepAlive = 300
 Timeout = 300
 MaxConn = 0
+# Value in nanoseconds (1 second)
 ShardCronFrequency = 1000000000
+# Value in nanoseconds (1 second)
 MultiplexerPollTimeout = 100000000
-MaxClients = 200
+MaxClients = 20000
 MaxMemory = 0
 EvictionPolicy = 'allkeys-lfu'
 EvictionRatio = 0.4
-KeysLimit = 20000
+KeysLimit = 100000
 AOFFile = './dice-master.aof'
-PersistenceEnabled = true
 WriteAOFOnCleanup = false
 LFULogFactor = 10
 LogLevel = 'info'
 PrettyPrintLogs = false
 EnableMultiThreading = false
 StoreMapInitSize = 10240
+WatchChanBufSize = 20000
 
 [Auth]
 UserName = 'dice'

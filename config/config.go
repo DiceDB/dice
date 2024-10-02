@@ -61,13 +61,13 @@ type Config struct {
 		EvictionRatio          float64       `mapstructure:"evictionratio"`
 		KeysLimit              int           `mapstructure:"keyslimit"`
 		AOFFile                string        `mapstructure:"aoffile"`
-		PersistenceEnabled     bool          `mapstructure:"persistenceenabled"`
 		WriteAOFOnCleanup      bool          `mapstructure:"writeaofoncleanup"`
 		LFULogFactor           int           `mapstructure:"lfulogfactor"`
 		LogLevel               string        `mapstructure:"loglevel"`
 		PrettyPrintLogs        bool          `mapstructure:"prettyprintlogs"`
 		EnableMultiThreading   bool          `mapstructure:"enablemultithreading"`
 		StoreMapInitSize       int           `mapstructure:"storemapinitsize"`
+		WatchChanBufSize       int           `mapstructure:"watchchanbufsize"`
 	} `mapstructure:"server"`
 	Auth struct {
 		UserName string `mapstructure:"username"`
@@ -95,13 +95,13 @@ var baseConfig = Config{
 		EvictionRatio          float64       `mapstructure:"evictionratio"`
 		KeysLimit              int           `mapstructure:"keyslimit"`
 		AOFFile                string        `mapstructure:"aoffile"`
-		PersistenceEnabled     bool          `mapstructure:"persistenceenabled"`
 		WriteAOFOnCleanup      bool          `mapstructure:"writeaofoncleanup"`
 		LFULogFactor           int           `mapstructure:"lfulogfactor"`
 		LogLevel               string        `mapstructure:"loglevel"`
 		PrettyPrintLogs        bool          `mapstructure:"prettyprintlogs"`
 		EnableMultiThreading   bool          `mapstructure:"enablemultithreading"`
 		StoreMapInitSize       int           `mapstructure:"storemapinitsize"`
+		WatchChanBufSize       int           `mapstructure:"watchchanbufsize"`
 	}{
 		Addr:                   DefaultHost,
 		Port:                   DefaultPort,
@@ -116,13 +116,13 @@ var baseConfig = Config{
 		EvictionRatio:          0.9,
 		KeysLimit:              200000000,
 		AOFFile:                "./dice-master.aof",
-		PersistenceEnabled:     true,
 		WriteAOFOnCleanup:      false,
 		LFULogFactor:           10,
 		LogLevel:               "info",
 		PrettyPrintLogs:        false,
 		EnableMultiThreading:   false,
 		StoreMapInitSize:       1024000,
+		WatchChanBufSize:       20000,
 	},
 	Auth: struct {
 		UserName string `mapstructure:"username"`
