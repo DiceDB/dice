@@ -36,10 +36,10 @@ func evalSET(args []string, store *dstore.Store) EvalResponse {
 	var exDurationMs int64 = -1
 	var state = Uninitialized
 	var keepttl = false
-
+	var isGetCmdPresent = false
 	key, value = args[0], args[1]
 	oType, oEnc := deduceTypeEncoding(value)
-
+	var tempResult []byte
 	for i := 2; i < len(args); i++ {
 		arg := strings.ToUpper(args[i])
 		switch arg {
@@ -109,10 +109,42 @@ func evalSET(args []string, store *dstore.Store) EvalResponse {
 			if obj != nil {
 				return EvalResponse{Result: clientio.RespNIL, Error: nil}
 			}
-		case KeepTTL:
+		case KEEPTTL:
 			keepttl = true
+		case GET:
+			isGetCmdPresent = true
 		default:
 			return EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)))}
+		}
+	}
+	// If getCmd is present, fetch and store the existing value in tempResult
+	if isGetCmdPresent {
+		// Perform GET operation for the key
+		obj := store.Get(key)
+		if obj == nil {
+			tempResult = clientio.RespNIL // Store nil if key does not exist
+		} else {
+			// Handle the GET return behavior based on encoding type (similar to evalGET)
+			switch _, oEnc := object.ExtractTypeEncoding(obj); oEnc {
+			case object.ObjEncodingInt:
+				if val, ok := obj.Value.(int64); ok {
+					tempResult = clientio.Encode(val, false)
+				} else {
+					// Handle `nil` case here, if the object exists but the value is nil
+					tempResult = clientio.RespNIL
+				}
+
+			case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
+				if val, ok := obj.Value.(string); ok {
+					tempResult = clientio.Encode(val, false)
+				} else {
+					// Handle `nil` case here, if the object exists but the value is nil
+					tempResult = clientio.RespNIL
+				}
+			default:
+				// If the type is unknown or unsupported, return nil for the value
+				tempResult = clientio.RespNIL
+			}
 		}
 	}
 
@@ -126,10 +158,11 @@ func evalSET(args []string, store *dstore.Store) EvalResponse {
 	default:
 		return EvalResponse{Result: nil, Error: fmt.Errorf("ERR unsupported encoding: %d", oEnc)}
 	}
-
 	// putting the k and value in a Hash Table
 	store.Put(key, store.NewObj(storedValue, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
-
+	if isGetCmdPresent {
+		return EvalResponse{Result: tempResult, Error: nil}
+	}
 	return EvalResponse{Result: clientio.RespOK, Error: nil}
 }
 
