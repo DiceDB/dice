@@ -3,18 +3,15 @@ package websocket
 import (
 	"fmt"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
-
-	testifyAssert "github.com/stretchr/testify/assert"
 
 	"gotest.tools/v3/assert"
 )
 
 type TestCase struct {
 	name     string
-	commands []WebsocketCommand
+	commands []string
 	expected []interface{}
 }
 
@@ -23,28 +20,18 @@ func TestSet(t *testing.T) {
 
 	testCases := []TestCase{
 		{
-			name: "Set and Get Simple Value",
-			commands: []WebsocketCommand{
-				{Message: "set k v"},
-				{Message: "get k"},
-			},
+			name:     "Set and Get Simple Value",
+			commands: []string{"SET k v", "GET k"},
 			expected: []interface{}{"OK", "v"},
 		},
 		{
-			name: "Set and Get Integer Value",
-			commands: []WebsocketCommand{
-				{Message: "set k 123456789"},
-				{Message: "get k"},
-			},
-			expected: []interface{}{"OK", 1.23456789e+08},
+			name:     "Set and Get Integer Value",
+			commands: []string{"SET k 123456789", "GET k"},
+			expected: []interface{}{"OK", float64(123456789)},
 		},
 		{
-			name: "Overwrite Existing Key",
-			commands: []WebsocketCommand{
-				{Message: "set k v1"},
-				{Message: "set k 5"},
-				{Message: "get k"},
-			},
+			name:     "Overwrite Existing Key",
+			commands: []string{"SET k v1", "SET k 5", "GET k"},
 			expected: []interface{}{"OK", "OK", float64(5)},
 		},
 	}
@@ -52,15 +39,10 @@ func TestSet(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			conn := exec.ConnectToServer()
-			// delete existing key
-			_, err := exec.FireCommand(conn, WebsocketCommand{
-				Message: "del k",
-			})
-			testifyAssert.NoError(t, err)
+			exec.FireCommand(conn, "del k")
 
 			for i, cmd := range tc.commands {
-				result, err := exec.FireCommand(conn, cmd)
-				testifyAssert.NoError(t, err)
+				result := exec.FireCommand(conn, cmd)
 				assert.DeepEqual(t, tc.expected[i], result)
 			}
 		})
@@ -73,125 +55,68 @@ func TestSetWithOptions(t *testing.T) {
 
 	testCases := []TestCase{
 		{
-			name: "Set with EX option",
-			commands: []WebsocketCommand{
-				{Message: "set k v ex 3"},
-				{Message: "get k"},
-				{Message: "sleep 3"},
-				{Message: "get k"},
-			},
+			name:     "Set with EX option",
+			commands: []string{"SET k v EX 2", "GET k", "SLEEP 3", "GET k"},
 			expected: []interface{}{"OK", "v", "OK", "(nil)"},
 		},
 		{
-			name: "Set with PX option",
-			commands: []WebsocketCommand{
-				{Message: "set k v px 2000"},
-				{Message: "get k"},
-				{Message: "sleep 3"},
-				{Message: "get k"},
-			},
+			name:     "Set with PX option",
+			commands: []string{"SET k v PX 2000", "GET k", "SLEEP 3", "GET k"},
 			expected: []interface{}{"OK", "v", "OK", "(nil)"},
 		},
 		{
-			name: "Set with EX and PX option",
-			commands: []WebsocketCommand{
-				{Message: "set k v ex 2 px 2000"},
-			},
+			name:     "Set with EX and PX option",
+			commands: []string{"SET k v EX 2 PX 2000"},
 			expected: []interface{}{"ERR syntax error"},
 		},
 		{
-			name: "XX on non-existing key",
-			commands: []WebsocketCommand{
-				{Message: "del k"},
-				{Message: "set k v xx true"},
-				{Message: "get k"},
-			},
+			name:     "XX on non-existing key",
+			commands: []string{"DEL k", "SET k v XX", "GET k"},
 			expected: []interface{}{float64(0), "(nil)", "(nil)"},
 		},
 		{
-			name: "NX on non-existing key",
-			commands: []WebsocketCommand{
-				{Message: "del k"},
-				{Message: "set k v nx"},
-				{Message: "get k"},
-			},
+			name:     "NX on non-existing key",
+			commands: []string{"DEL k", "SET k v NX", "GET k"},
 			expected: []interface{}{float64(0), "OK", "v"},
 		},
 		{
-			name: "NX on existing key",
-			commands: []WebsocketCommand{
-				{Message: "del k"},
-				{Message: "set k v nx"},
-				{Message: "get k"},
-				{Message: "set k v nx"},
-			},
+			name:     "NX on existing key",
+			commands: []string{"DEL k", "SET k v NX", "GET k", "SET k v NX"},
 			expected: []interface{}{float64(0), "OK", "v", "(nil)"},
 		},
 		{
-			name: "PXAT option",
-			commands: []WebsocketCommand{
-				{Message: fmt.Sprintf("set k v pxat %v", expiryTime)},
-				{Message: "get k"},
-			},
+			name:     "PXAT option",
+			commands: []string{"SET k v PXAT " + expiryTime, "GET k"},
 			expected: []interface{}{"OK", "v"},
 		},
 		{
-			name: "PXAT option with delete",
-			commands: []WebsocketCommand{
-				{Message: fmt.Sprintf("set k1 v1 pxat %v", expiryTime)},
-				{Message: "get k1"},
-				{Message: "sleep 4"},
-				{Message: "del k1"},
-			},
+			name:     "PXAT option with delete",
+			commands: []string{"SET k1 v1 PXAT " + expiryTime, "GET k1", "SLEEP 2", "DEL k1"},
 			expected: []interface{}{"OK", "v1", "OK", float64(1)},
 		},
 		{
-			name: "PXAT option with invalid unix time ms",
-			commands: []WebsocketCommand{
-				{Message: "set k2 v2 pxat 123123"},
-				{Message: "get k2"},
-			},
+			name:     "PXAT option with invalid unix time ms",
+			commands: []string{"SET k2 v2 PXAT 123123", "GET k2"},
 			expected: []interface{}{"OK", "(nil)"},
 		},
 		{
-			name: "XX on existing key",
-			commands: []WebsocketCommand{
-				{Message: "set k v2"},
-				{Message: "set k v2 xx"},
-				{Message: "get k"},
-			},
+			name:     "XX on existing key",
+			commands: []string{"SET k v1", "SET k v2 XX", "GET k"},
 			expected: []interface{}{"OK", "OK", "v2"},
 		},
 		{
-			name: "Multiple XX operations",
-			commands: []WebsocketCommand{
-				{Message: "set k v1"},
-				{Message: "set k v2 xx"},
-				{Message: "set k v3 xx"},
-				{Message: "get k"},
-			},
+			name:     "Multiple XX operations",
+			commands: []string{"SET k v1", "SET k v2 XX", "SET k v3 XX", "GET k"},
 			expected: []interface{}{"OK", "OK", "OK", "v3"},
 		},
 		{
-			name: "EX option",
-			commands: []WebsocketCommand{
-				{Message: "set k v ex 1"},
-				{Message: "get k"},
-				{Message: "sleep 2"},
-				{Message: "get k"},
-			},
+			name:     "EX option",
+			commands: []string{"SET k v EX 1", "GET k", "SLEEP 2", "GET k"},
 			expected: []interface{}{"OK", "v", "OK", "(nil)"},
 		},
 		{
-			name: "XX option",
-			commands: []WebsocketCommand{
-				{Message: "set k v xx ex 1"},
-				{Message: "get k"},
-				{Message: "sleep 2"},
-				{Message: "get k"},
-				{Message: "set k v xx ex 1"},
-				{Message: "get k"},
-			},
+			name:     "XX option",
+			commands: []string{"SET k v XX EX 1", "GET k", "SLEEP 2", "GET k", "SET k v XX EX 1", "GET k"},
 			expected: []interface{}{"(nil)", "(nil)", "OK", "(nil)", "(nil)", "(nil)"},
 		},
 	}
@@ -199,12 +124,11 @@ func TestSetWithOptions(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			conn := exec.ConnectToServer()
-			exec.FireCommand(conn, WebsocketCommand{Message: "del k"})
-			exec.FireCommand(conn, WebsocketCommand{Message: "del k1"})
-			exec.FireCommand(conn, WebsocketCommand{Message: "del k2"})
+			exec.FireCommand(conn, "del k")
+			exec.FireCommand(conn, "del k1")
+			exec.FireCommand(conn, "del k2")
 			for i, cmd := range tc.commands {
-				result, err := exec.FireCommand(conn, cmd)
-				assert.NilError(t, err)
+				result := exec.FireCommand(conn, cmd)
 				assert.Equal(t, tc.expected[i], result)
 			}
 		})
@@ -216,47 +140,59 @@ func TestSetWithExat(t *testing.T) {
 	Etime := strconv.FormatInt(time.Now().Unix()+5, 10)
 	BadTime := "123123"
 
-	testCases := []TestCase{
-		{
-			name: "SET with EXAT",
-			commands: []WebsocketCommand{
-				{Message: "del k"},
-				{Message: fmt.Sprintf("set k v exat %v", Etime)},
-				{Message: "get k"},
-				{Message: "ttl k"},
-			},
-			expected: []interface{}{float64(0), "OK", "v", float64(4)},
-		},
-		{
-			name: "SET with invalid EXAT expires key immediately",
-			commands: []WebsocketCommand{
-				{Message: "del k"},
-				{Message: fmt.Sprintf("set k v exat %v", BadTime)},
-				{Message: "get k"},
-				{Message: "ttl k"},
-			},
-			expected: []interface{}{float64(0), "OK", "(nil)", float64(-2)},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
+	t.Run("SET with EXAT",
+		func(t *testing.T) {
 			conn := exec.ConnectToServer()
-			// Ensure key is deleted before the test
-			exec.FireCommand(conn, WebsocketCommand{
-				Message: "del k",
-			})
-
-			for i, cmd := range tc.commands {
-				result, err := exec.FireCommand(conn, cmd)
-				assert.NilError(t, err)
-				command := strings.Split(cmd.Message, "")
-				if command[0] == "ttl" {
-					assert.Assert(t, result.(float64) <= tc.expected[i].(float64))
-				} else {
-					assert.DeepEqual(t, tc.expected[i], result)
-				}
-			}
+			exec.FireCommand(conn, "DEL k")
+			assert.Equal(t, "OK", exec.FireCommand(conn, fmt.Sprintf("SET k v EXAT %v", Etime)), "Value mismatch for cmd SET k v EXAT "+Etime)
+			assert.Equal(t, "v", exec.FireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
+			assert.Assert(t, exec.FireCommand(conn, "TTL k").(float64) <= 5, "Value mismatch for cmd TTL k")
+			time.Sleep(3 * time.Second)
+			assert.Assert(t, exec.FireCommand(conn, "TTL k").(float64) <= 3, "Value mismatch for cmd TTL k")
+			time.Sleep(3 * time.Second)
+			assert.Equal(t, "(nil)", exec.FireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
+			assert.Equal(t, float64(-2), exec.FireCommand(conn, "TTL k"), "Value mismatch for cmd TTL k")
 		})
+
+	t.Run("SET with invalid EXAT expires key immediately",
+		func(t *testing.T) {
+			conn := exec.ConnectToServer()
+			exec.FireCommand(conn, "DEL k")
+			assert.Equal(t, "OK", exec.FireCommand(conn, "SET k v EXAT "+BadTime), "Value mismatch for cmd SET k v EXAT "+BadTime)
+			assert.Equal(t, "(nil)", exec.FireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
+			assert.Equal(t, float64(-2), exec.FireCommand(conn, "TTL k"), "Value mismatch for cmd TTL k")
+		})
+
+	t.Run("SET with EXAT and PXAT returns syntax error",
+		func(t *testing.T) {
+			conn := exec.ConnectToServer()
+			exec.FireCommand(conn, "DEL k")
+			assert.Equal(t, "ERR syntax error", exec.FireCommand(conn, "SET k v PXAT "+Etime+" EXAT "+Etime), "Value mismatch for cmd SET k v PXAT "+Etime+" EXAT "+Etime)
+			assert.Equal(t, "(nil)", exec.FireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
+		})
+}
+
+func TestWithKeepTTLFlag(t *testing.T) {
+	exec := NewWebsocketCommandExecutor()
+	conn := exec.ConnectToServer()
+
+	for _, tcase := range []TestCase{
+		{
+			commands: []string{"SET k v EX 2", "SET k vv KEEPTTL", "GET k", "SET kk vv", "SET kk vvv KEEPTTL", "GET kk"},
+			expected: []interface{}{"OK", "OK", "vv", "OK", "OK", "vvv"},
+		},
+	} {
+		for i := 0; i < len(tcase.commands); i++ {
+			cmd := tcase.commands[i]
+			out := tcase.expected[i]
+			assert.Equal(t, out, exec.FireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
+		}
 	}
+
+	time.Sleep(2 * time.Second)
+
+	cmd := "GET k"
+	out := "(nil)"
+
+	assert.Equal(t, out, exec.FireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
 }

@@ -2,10 +2,14 @@ package eval
 
 import (
 	"bytes"
+
 	"crypto/rand"
+
 	"errors"
 	"fmt"
+
 	"log/slog"
+
 	"math"
 	"math/big"
 	"math/bits"
@@ -3030,6 +3034,40 @@ func evalHSET(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(numKeys, false)
 }
 
+// evalHKEYS is used toretrieve all the keys(or field names) within a hash.
+//
+// This command returns empty array, if the specified key doesn't exist.
+//
+// Complexity is O(n) where n is the size of the hash.
+//
+// Usage: HKEYS key
+func evalHKEYS(args []string, store *dstore.Store) []byte {
+	if len(args) != 1 {
+		return diceerrors.NewErrArity("HKEYS")
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	var hashMap HashMap
+	var result []string
+
+	if obj != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+		}
+		hashMap = obj.Value.(HashMap)
+	} else {
+		return clientio.Encode([]interface{}{}, false)
+	}
+
+	for hmKey := range hashMap {
+		result = append(result, hmKey)
+	}
+
+	return clientio.Encode(result, false)
+}
+
 // Increments the number stored at field in the hash stored at key by increment.
 //
 // If key does not exist, a new key holding a hash is created.
@@ -3228,6 +3266,41 @@ func evalHSTRLEN(args []string, store *dstore.Store) []byte {
 	if ok {
 		return clientio.Encode(len(*val), false)
 	}
+	return clientio.Encode(0, false)
+}
+
+// evalHEXISTS returns if field is an existing field in the hash stored at key.
+//
+// This command returns 0, if the specified field doesn't exist in the key and 1 if it exists.
+//
+// If key doesn't exist, it returns 0.
+//
+// Usage: HEXISTS key field
+func evalHEXISTS(args []string, store *dstore.Store) []byte {
+	if len(args) != 2 {
+		return diceerrors.NewErrArity("HEXISTS")
+	}
+
+	key := args[0]
+	hmKey := args[1]
+	obj := store.Get(key)
+
+	var hashMap HashMap
+
+	if obj == nil {
+		return clientio.Encode(0, false)
+	}
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+	}
+
+	hashMap = obj.Value.(HashMap)
+
+	_, ok := hashMap.Get(hmKey)
+	if ok {
+		return clientio.Encode(1, false)
+	}
+	// Return 0, if specified field doesn't exist in the HashMap.
 	return clientio.Encode(0, false)
 }
 
@@ -4078,6 +4151,8 @@ func evalJSONNUMINCRBY(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(resultString, false)
 }
 
+
+
 // evalJSONOBJKEYS retrieves the keys of a JSON object stored at path specified.
 // It takes two arguments: the key where the JSON document is stored, and an optional JSON path.
 // It returns a list of keys from the object at the specified path or an error if the path is invalid.
@@ -4179,6 +4254,7 @@ func evalTYPE(args []string, store *dstore.Store) []byte {
 
 	return clientio.Encode(typeStr, true)
 }
+
 
 // evalGETRANGE returns the substring of the string value stored at key, determined by the offsets start and end
 // The offsets are zero-based and can be negative values to index from the end of the string
@@ -4611,3 +4687,4 @@ func evalHINCRBYFLOAT(args []string, store *dstore.Store) []byte {
 
 	return clientio.Encode(numkey, false)
 }
+
