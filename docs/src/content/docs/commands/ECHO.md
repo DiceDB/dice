@@ -1,6 +1,6 @@
 ---
 title: ECHO
-description: `ECHO` command in DiceDB is used to print a message
+description: ECHO command in DiceDB is used to print a message
 ---
 
 ### Syntax
