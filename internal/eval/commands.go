@@ -911,11 +911,28 @@ var (
 		Arity:    3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	dumpkeyCMmdMeta=DiceCmdMeta{
+		Name:	 "DUMP",
+		Info:	`Serialize the value stored at key in a Redis-specific format and return it to the user.
+				The returned value can be synthesized back into a Redis key using the RESTORE command.`,
+		Eval:   evalDUMP,
+		Arity: 	1,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+	}
+	restorekeyCmdMeta=DiceCmdMeta{
+		Name:	"RESTORE",
+		Info:  `Serialize the value stored at key in a Redis-specific format and return it to the user.
+				The returned value can be synthesized back into a Redis key using the RESTORE command.`,
+		Eval: evalRestore,
+		Arity:	2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	typeCmdMeta = DiceCmdMeta{
 		Name:     "TYPE",
 		Info:     `Returns the string representation of the type of the value stored at key. The different types that can be returned are: string, list, set, zset, hash and stream.`,
 		Eval:     evalTYPE,
 		Arity:    1,
+
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	incrbyCmdMeta = DiceCmdMeta{
@@ -999,6 +1016,8 @@ func init() {
 	DiceCmds["PING"] = pingCmdMeta
 	DiceCmds["ECHO"] = echoCmdMeta
 	DiceCmds["AUTH"] = authCmdMeta
+	DiceCmds["DUMP"]=dumpkeyCMmdMeta
+	DiceCmds["RESTORE"]=restorekeyCmdMeta
 	DiceCmds["SET"] = setCmdMeta
 	DiceCmds["GET"] = getCmdMeta
 	DiceCmds["MSET"] = msetCmdMeta
