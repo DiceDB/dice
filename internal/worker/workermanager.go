@@ -10,8 +10,8 @@ import (
 
 type WorkerManager struct {
 	connectedClients sync.Map
-	numWorkers       atomic.Int32
-	maxClients       int32
+	numWorkers       atomic.Int64
+	maxClients       int64
 	shardManager     *shard.ShardManager
 	mu               sync.Mutex
 }
@@ -21,9 +21,9 @@ var (
 	ErrWorkerNotFound    = errors.New("worker not found")
 )
 
-func NewWorkerManager(maxClients int32, sm *shard.ShardManager) *WorkerManager {
+func NewWorkerManager(maxClients int, sm *shard.ShardManager) *WorkerManager {
 	return &WorkerManager{
-		maxClients:   maxClients,
+		maxClients:   int64(maxClients),
 		shardManager: sm,
 	}
 }
@@ -46,7 +46,7 @@ func (wm *WorkerManager) RegisterWorker(worker Worker) error {
 	return nil
 }
 
-func (wm *WorkerManager) GetWorkerCount() int32 {
+func (wm *WorkerManager) GetWorkerCount() int64 {
 	return wm.numWorkers.Load()
 }
 

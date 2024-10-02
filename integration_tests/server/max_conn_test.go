@@ -44,7 +44,7 @@ func TestMaxConnection(t *testing.T) {
 		}
 	}()
 
-	for i := int32(0); i < maxConnLimit; i++ {
+	for i := 0; i < maxConnLimit; i++ {
 		conn, err := getConnection(maxConnTestOptions.Port)
 		if err == nil {
 			connections[i] = conn

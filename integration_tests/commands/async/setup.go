@@ -24,7 +24,7 @@ import (
 type TestServerOptions struct {
 	Port       int
 	Logger     *slog.Logger
-	MaxClients int32
+	MaxClients int
 }
 
 //nolint:unused

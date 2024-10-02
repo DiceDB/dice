@@ -32,7 +32,7 @@ var ErrInvalidIPAddress = errors.New("invalid IP address")
 
 type AsyncServer struct {
 	serverFD               int
-	maxClients             int32
+	maxClients             int
 	multiplexer            iomultiplexer.IOMultiplexer
 	multiplexerPollTimeout time.Duration
 	connectedClients       map[int]*comm.Client
@@ -163,7 +163,7 @@ func (s *AsyncServer) Run(ctx context.Context) error {
 	}
 
 	var err error
-	s.multiplexer, err = iomultiplexer.New(int32(s.maxClients))
+	s.multiplexer, err = iomultiplexer.New(s.maxClients)
 	if err != nil {
 		return err
 	}
