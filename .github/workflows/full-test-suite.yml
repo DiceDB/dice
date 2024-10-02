@@ -2,8 +2,18 @@ name: dice-test-suite
 on:
   push:
     branches: [master]
+    paths:
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+      - "Makefile"
   pull_request:
     branches: [master]
+    paths:
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+      - "Makefile"
 
 jobs:
   build:
