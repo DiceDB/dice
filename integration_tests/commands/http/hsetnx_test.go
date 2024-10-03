@@ -16,7 +16,8 @@ func TestHSetNX(t *testing.T) {
 		expected []interface{}
 		delays   []time.Duration
 	}{
-		{name: "HSetNX returns 0 when field is already set",
+		{
+			name: "HSetNX returns 0 when field is already set",
 			commands: []HTTPCommand{
 				{Command: "HSETNX", Body: map[string]interface{}{"key": "key_nx_t1", "field": "field", "value": "value"}},
 				{Command: "HSETNX", Body: map[string]interface{}{"key": "key_nx_t1", "field": "field", "value": "value_new"}},
@@ -24,14 +25,16 @@ func TestHSetNX(t *testing.T) {
 			expected: []interface{}{float64(1), float64(0)},
 			delays:   []time.Duration{0, 0},
 		},
-		{name: "HSetNX",
+		{
+			name: "HSetNX with new field",
 			commands: []HTTPCommand{
 				{Command: "HSETNX", Body: map[string]interface{}{"key": "key_nx_t2", "field": "field", "value": "value"}},
 			},
 			expected: []interface{}{float64(1)},
 			delays:   []time.Duration{0},
 		},
-		{name: "HSetNX",
+		{
+			name: "HSetNX with wrong number of arguments",
 			commands: []HTTPCommand{
 				{Command: "HSETNX", Body: map[string]interface{}{"key": "key_nx_t3", "field": "field", "value": "value"}},
 				{Command: "HSETNX", Body: map[string]interface{}{"key": "key_nx_t3", "field": "field", "value": "value_new"}},
@@ -40,7 +43,8 @@ func TestHSetNX(t *testing.T) {
 			expected: []interface{}{float64(1), float64(0), "ERR wrong number of arguments for 'hsetnx' command"},
 			delays:   []time.Duration{0, 0, 0},
 		},
-		{name: "HSetNX",
+		{
+			name: "HSetNX with wrong type",
 			commands: []HTTPCommand{
 				{Command: "SET", Body: map[string]interface{}{"key": "key_nx_t4", "value": "v"}},
 				{Command: "HSETNX", Body: map[string]interface{}{"key": "key_nx_t4", "field": "f", "value": "v_new"}},
