@@ -107,13 +107,11 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 						delete(jsonBody, key)
 						continue
 					}
-          
-					if key == Value {
 
+					if key == Value {
 						var jsonValue string
 
 						switch v := val.(type) {
-
 						case string:
 							// Use the string directly without marshaling
 							jsonValue = v
