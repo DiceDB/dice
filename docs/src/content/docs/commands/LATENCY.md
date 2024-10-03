@@ -13,25 +13,26 @@ LATENCY [SUBCOMMAND] [ARGUMENTS]
 
 ## Parameters
 
-- `SUBCOMMAND`: The specific operation to perform. The available subcommands are:
+| Parameter    | Subcommand | Description                                                          | Return Type | Required |
+|--------------|------------|----------------------------------------------------------------------|-------------|----------|
+| `SUBCOMMAND` |            | Specifies the operation to perform. Available subcommands are:       | String      | Yes      |
+|              | `LATEST`   | Returns the latest latency spikes.                                   | Array       | Yes      |
+|              | `HISTORY`  | Returns the latency history for a specific event.                    | Array       | Yes      |
+|              | `RESET`    | Resets the latency data for specific events or all events.           | Integer     | Yes      |
+|              | `GRAPH`    | Returns a latency graph for a specific event.                        | String      | Yes      |
+|              | `DOCTOR`   | Provides a human-readable report of latency issues.                  | String      | Yes      |
+| `ARGUMENTS`  | N/A        | Additional arguments required by certain subcommands (if applicable).| Varies      | No       |
 
-  - `LATEST`: Returns the latest latency spikes.
-  - `HISTORY`: Returns the latency history for a specific event.
-  - `RESET`: Resets the latency data for specific events or all events.
-  - `GRAPH`: Returns a latency graph for a specific event.
-  - `DOCTOR`: Provides a human-readable report of latency issues.
+## Return Values
 
-- `ARGUMENTS`: Additional arguments required by certain subcommands. The arguments vary based on the subcommand used.
-
-## Return Value
-
-The return value of the `LATENCY` command depends on the subcommand used:
-
-- `LATEST`: Returns an array of the latest latency spikes.
-- `HISTORY`: Returns an array of latency samples for a specific event.
-- `RESET`: Returns the number of events reset.
-- `GRAPH`: Returns a string representing the latency graph.
-- `DOCTOR`: Returns a string with a human-readable latency report.
+| Condition  | Return Value                                       |
+|-------------|----------------------------------------------------|
+| `LATEST`    | Array of latency spikes                            |
+| `HISTORY`   | Array of latency samples (timestamp, latency)       |
+| `RESET`     | Integer (number of events reset)                   |
+| `GRAPH`     | String (graph representing latency data)            |
+| `DOCTOR`    | String (detailed report with suggestions)           |
+| `Syntax or specified constraints are invalid`    | error           |
 
 ## Behaviour
 
@@ -43,21 +44,22 @@ When the `LATENCY` command is executed, it performs the specified subcommand ope
 - `GRAPH`: Generates and returns a visual representation of the latency data for a specified event.
 - `DOCTOR`: Analyzes the latency data and provides a human-readable report with potential causes and suggestions for mitigation.
 
-## Error Handling
+## Errors
 
-Errors may be raised in the following scenarios:
-
-- `Invalid Subcommand`: If an unrecognized subcommand is provided, DiceDB will return an error.
+- `Invalid Subcommand`:
 
   - Error Message: `ERR unknown subcommand 'subcommand'`
+  - If an unrecognized subcommand is provided, DiceDB will return an error.
 
-- `Missing Arguments`: If required arguments for a subcommand are missing, DiceDB will return an error.
+- `Missing Arguments`:
 
   - Error Message: `ERR wrong number of arguments for 'latency subcommand' command`
+  - If required arguments for a subcommand are missing, DiceDB will return an error.
 
-- `Invalid Event Name`: If an invalid event name is provided for subcommands like `HISTORY`, `RESET`, or `GRAPH`, DiceDB will return an error.
+- `Invalid Event Name`:
 
   - Error Message: `ERR no such event 'event_name'`
+  - If an invalid event name is provided for subcommands like `HISTORY`, `RESET`, or `GRAPH`, DiceDB will return an error.
 
 ## Example Usage
 
