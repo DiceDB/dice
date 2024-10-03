@@ -40,7 +40,7 @@ func TestDeqEncodeEntryString(t *testing.T) {
 		deqRandStr((1 << 12) - 1),    // max 12 bit string
 		deqRandStr(1 << 12),          // min 32 bit string
 		deqRandStr((1 << 20) - 1000), // 32 bit string
-		// randStr((1 << 32) - 1),   // max 32 bit string, maybe too huge to test..
+		// randStr((1 << 32) - 1),   // max 32 bit string, maybe too huge to test.
 
 		"0",                    // min 7 bit uint
 		"28",                   // 7 bit uint
@@ -73,13 +73,13 @@ func TestDeqEncodeEntryString(t *testing.T) {
 	}
 }
 
-func dequeRPushIntStrMany(howmany int, deq eval.DequeI, b *testing.B) {
+func dequeRPushIntStrMany(howmany int, deq eval.DequeI) {
 	for i := 0; i < howmany; i++ {
 		deq.RPush(strconv.FormatInt(int64(i), 10))
 	}
 }
 
-func dequeLPushIntStrMany(howmany int, deq eval.DequeI, b *testing.B) {
+func dequeLPushIntStrMany(howmany int, deq eval.DequeI) {
 	for i := 0; i < howmany; i++ {
 		deq.LPush(strconv.FormatInt(int64(i), 10))
 	}
@@ -87,54 +87,54 @@ func dequeLPushIntStrMany(howmany int, deq eval.DequeI, b *testing.B) {
 
 func BenchmarkBasicDequeRPush20(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		dequeRPushIntStrMany(20, eval.NewBasicDeque(), b)
+		dequeRPushIntStrMany(20, eval.NewBasicDeque())
 	}
 }
 
 func BenchmarkBasicDequeRPush200(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		dequeRPushIntStrMany(200, eval.NewBasicDeque(), b)
+		dequeRPushIntStrMany(200, eval.NewBasicDeque())
 	}
 }
 
 func BenchmarkBasicDequeRPush2000(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		dequeRPushIntStrMany(2000, eval.NewBasicDeque(), b)
+		dequeRPushIntStrMany(2000, eval.NewBasicDeque())
 	}
 }
 
 func BenchmarkDequeRPush20(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		dequeRPushIntStrMany(20, eval.NewDeque(), b)
+		dequeRPushIntStrMany(20, eval.NewDeque())
 	}
 }
 
 func BenchmarkDequeRPush200(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		dequeRPushIntStrMany(200, eval.NewDeque(), b)
+		dequeRPushIntStrMany(200, eval.NewDeque())
 	}
 }
 
 func BenchmarkDequeRPush2000(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		dequeRPushIntStrMany(2000, eval.NewDeque(), b)
+		dequeRPushIntStrMany(2000, eval.NewDeque())
 	}
 }
 
 func BenchmarkDequeLPush20(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		dequeLPushIntStrMany(20, eval.NewDeque(), b)
+		dequeLPushIntStrMany(20, eval.NewDeque())
 	}
 }
 
 func BenchmarkDequeLPush200(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		dequeLPushIntStrMany(200, eval.NewDeque(), b)
+		dequeLPushIntStrMany(200, eval.NewDeque())
 	}
 }
 
 func BenchmarkDequeLPush2000(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		dequeLPushIntStrMany(2000, eval.NewDeque(), b)
+		dequeLPushIntStrMany(2000, eval.NewDeque())
 	}
 }

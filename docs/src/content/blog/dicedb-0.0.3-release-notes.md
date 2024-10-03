@@ -57,7 +57,7 @@ This release introduces two significant architectural improvements: the removal 
 
 ### Lock-Free Store Design
 
-The removal of locking structures in the store is one of the most impactful optimizations introduced in this release. By transitioning to a fully **lock-free design**, DiceDB reduces contention and overhead, especially in highly concurrent environments. This change is vital for scaling DiceDB in multi-core systems, as it enables more efficient parallelism and improves the overall throughput of data operations.
+The removal of locking structures in the store is one of the most impactful optimizations introduced in this release. By transitioning to a fully **lock-free design**, DiceDB reduces contention and overhead, especially in highly concurrent environments. This change is vital for scaling DiceDB in multicore systems, as it enables more efficient parallelism and improves the overall throughput of data operations.
 
 ### Asynchronous Notifications for Key Changes
 

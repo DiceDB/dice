@@ -88,7 +88,7 @@ func TestServerRestartAfterAbort(t *testing.T) {
 
 	conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", config.DiceConfig.Server.Port))
 	if err != nil {
-		t.Fatalf("Server should be running after restart: %v", err)
+		t.Fatalf("Server should be running at start: %v", err)
 	}
 
 	// Send ABORT command to shut down server
@@ -98,17 +98,19 @@ func TestServerRestartAfterAbort(t *testing.T) {
 	}
 	conn.Close()
 
-	// wait for the server to shutdown
+	// wait for the server to shut down
 	time.Sleep(2 * time.Second)
+	testServerOptions.Logger.Info("Wait completed for server shutdown")
 
 	wg.Wait()
 
+	testServerOptions.Logger.Info("Restarting server after abort for server_abort_test")
 	// restart server
 	ctx2, cancel2 := context.WithCancel(context.Background())
 	t.Cleanup(cancel2)
 
 	// start test server.
-	// use different waitgroups and contexts to avoid race conditions.;
+	// use different wait groups and contexts to avoid race conditions.;
 	var wg2 sync.WaitGroup
 	commands.RunTestServer(ctx2, &wg2, testServerOptions)
 

@@ -53,7 +53,7 @@ func deqTestInit() {
 		deqRandStr(1 << 6),        // min 12 bit string
 		deqRandStr((1 << 12) - 1), // max 12 bit string
 		deqRandStr(1 << 12),       // min 32 bit string
-		// randStr((1 << 32) - 1),   // max 32 bit string, maybe too huge to test..
+		// randStr((1 << 32) - 1),   // max 32 bit string, maybe too huge to test.
 
 		"0",                    // min 7 bit uint
 		"127",                  // max 7 bit uint

@@ -19,9 +19,9 @@ The `JSON.DEL` command is part of the DiceDBJSON module, which allows you to man
 When the `JSON.DEL` command is executed, it performs the following actions:
 
 1. `Key Existence Check`: The command first checks if the specified key exists in the DiceDB database.
-1. `Path Evaluation`: If a path is provided, the command evaluates the JSONPath expression to locate the part of the JSON document to delete.
-1. `Deletion`: The specified path or the entire JSON document is deleted.
-1. `Return`: The command returns the number of paths that were successfully deleted.
+2. `Path Evaluation`: If a path is provided, the command evaluates the JSONPath expression to locate the part of the JSON document to delete.
+3. `Deletion`: The specified path or the entire JSON document is deleted.
+4. `Return`: The command returns the number of paths that were successfully deleted.
 
 ## Error Handling
 

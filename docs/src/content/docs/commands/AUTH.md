@@ -25,8 +25,8 @@ AUTH password
 When the `AUTH` command is executed, DiceDB will perform the following steps:
 
 1. `Check Authentication Status:` DiceDB will check if the server is configured to require authentication (i.e., if a password is set in the DiceDB configuration).
-1. `Validate Password:` If authentication is required, DiceDB will then verify the provided password against the configured password.
-1. `Return Response:`
+2. `Validate Password:` If authentication is required, DiceDB will then verify the provided password against the configured password.
+3. `Return Response:`
    - If the password is valid, DiceDB will store the authenticated session for that client.
    - If the password is invalid, an error message will be returned.
 

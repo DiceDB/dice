@@ -32,7 +32,7 @@ When the `BFADD` command is executed, the specified item is added to the Bloom F
 The `BFADD` command can raise errors in the following scenarios:
 
 1. `Wrong number of arguments`: If the command is called with an incorrect number of arguments, a `ERR wrong number of arguments for 'BFADD' command` error will be raised.
-1. `Non-string key or item`: If the key or item is not a string, a `WRONGTYPE Operation against a key holding the wrong kind of value` error will be raised.
+2. `Non-string key or item`: If the key or item is not a string, a `WRONGTYPE Operation against a key holding the wrong kind of value` error will be raised.
 
 ## Example Usage
 

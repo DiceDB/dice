@@ -43,7 +43,7 @@ func ExecuteCommand(c *cmd.RedisCmd, client *comm.Client, store *dstore.Store, h
 		return EvalResponse{Result: EvalQWATCH(c.Args, httpOp, client, store), Error: nil}
 	case "UNSUBSCRIBE", "QUNWATCH":
 		return EvalResponse{Result: EvalQUNWATCH(c.Args, httpOp, client), Error: nil}
-	case auth.AuthCmd:
+	case auth.Cmd:
 		return EvalResponse{Result: EvalAUTH(c.Args, client), Error: nil}
 	case "ABORT":
 		return EvalResponse{Result: clientio.RespOK, Error: nil}

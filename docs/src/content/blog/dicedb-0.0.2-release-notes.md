@@ -62,7 +62,7 @@ In DiceDB v0.0.2, we’ve significantly expanded the set of Redis-compatible com
 
 Additionally, we’ve introduced several JSON-specific commands, including:
 
-- `JSON.TYPE`: Returns the type of a JSON element (e.g., object, array, string).
+- `JSON.TYPE`: Returns the type of JSON element (e.g., object, array, string).
 - `JSON.CLEAR`: Clears the contents of a JSON object or array.
 - `JSON.DEL`: Deletes a specific JSON element from a key.
 

@@ -37,7 +37,7 @@ The `EXISTS` command is straightforward and typically does not raise errors unde
 
    - `Error Message`: `(error) ERR wrong number of arguments for 'exists' command`
 
-1. `Non-String Keys`: If the keys provided are not strings, DiceDB will raise a type error.
+2. `Non-String Keys`: If the keys provided are not strings, DiceDB will raise a type error.
 
    - `Error Message`: `(error) ERR value is not a valid string`
 

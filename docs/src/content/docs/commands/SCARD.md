@@ -24,9 +24,9 @@ SCARD key
 When the `SCARD` command is executed, DiceDB will:
 
 1. Check if the key exists.
-1. If the key does not exist, it will return 0.
-1. If the key exists but is not a set, an error will be returned.
-1. If the key exists and is a set, it will return the number of elements in the set.
+2. If the key does not exist, it will return 0.
+3. If the key exists but is not a set, an error will be returned.
+4. If the key exists and is a set, it will return the number of elements in the set.
 
 ## Error Handling
 
