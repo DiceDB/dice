@@ -3,7 +3,7 @@ title: JSON.FORGET
 description: Documentation for the DiceDB command JSON.FORGET
 ---
 
-The `JSON.FORGET` command in DiceDBJSON is used to delete a specified path from a JSON document stored at a given key. If the path leads to an array element, the element is removed, and the array is reindexed. This is useful for modifying and updating portions of a JSON document.
+The `JSON.FORGET` command in DiceDB is used to delete a specified path from a JSON document stored at a given key. If the path leads to an array element, the element is removed, and the array is reindexed. This is useful for modifying and updating portions of a JSON document.
 
 ## Syntax
 
