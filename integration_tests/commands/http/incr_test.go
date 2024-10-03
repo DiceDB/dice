@@ -12,6 +12,8 @@ import (
 func TestINCR(t *testing.T) {
 	exec := NewHTTPCommandExecutor()
 
+	exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": [...]string{"key1", "key2"}}})
+
 	testCases := []struct {
 		name     string
 		commands []HTTPCommand
@@ -104,6 +106,8 @@ func TestINCR(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			defer exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": [...]string{"key1", "key2", "expiry_key", "max_int", "min_int", "float_key", "string_key", "bool_key"}}})
+
 			for i, cmd := range tc.commands {
 				if tc.delays[i] > 0 {
 					time.Sleep(tc.delays[i])
@@ -199,6 +203,8 @@ func TestINCRBY(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			defer exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": [...]string{"key", "unsetKey", "stringkey"}}})
+
 			for i, cmd := range tc.commands {
 				if tc.delays[i] > 0 {
 					time.Sleep(tc.delays[i])

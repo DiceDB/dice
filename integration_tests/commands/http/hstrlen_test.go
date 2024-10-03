@@ -68,6 +68,8 @@ func TestHStrLen(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			defer exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": [...]string{"KEY", "key"}}})
+
 			for i, cmd := range tc.commands {
 				if tc.delays[i] > 0 {
 					time.Sleep(tc.delays[i])
