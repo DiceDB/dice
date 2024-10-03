@@ -28,47 +28,36 @@ PTTL key
 
 ## Behaviour
 
+- The command is non-destructive and does not modify the key or its expiration in any way.
+- If a key's TTL is modified (e.g., by `EXPIRE` or `PEXPIRE` commands), subsequent `PTTL` calls will reflect the updated remaining time.
 
 
 ## Errors
 
 1. `Wrong number of arguments`:
 
-   - Error Message: `ERROR wrong number of arguments for 'pttl' command`
-   - Occures when attempting to use this command without a key.
+   - Error Message: `(error) ERR wrong number of arguments for 'pttl' command`
+   - Occures when attempting to use this command without any arguments or with more than one argument.
 
-2. `Invalid key type`: If the key is not a string, DiceDB will return an error.
-
-   - `Error Message`: `WRONGTYPE Operation against a key holding the wrong kind of value`
 
 ## Example Usage
 
-### Example 1: Key with TTL
+### Example 1: Key with Expiration
 
-```plaintext
-SET mykey "Hello"
-EXPIRE mykey 5000
-PTTL mykey
-```
-
-`Output:`
-
-```plaintext
+```bash
+127.0.0.1:7379> SET mykey "Hello"
+127.0.0.1:7379> EXPIRE mykey 5000
+127.0.0.1:7379> PTTL mykey
 (integer) 5000
 ```
 
 In this example, the key `mykey` is set with a value of "Hello" and an expiration of 5000 milliseconds. The `PTTL` command returns `5000`, indicating that the key will expire in 5000 milliseconds.
 
-### Example 2: Key without TTL
+### Example 2: Key without Expiration
 
-```plaintext
-SET mykey "Hello"
-PTTL mykey
-```
-
-`Output:`
-
-```plaintext
+```bash
+127.0.0.1:7379> SET mykey "Hello"
+127.0.0.1:7379> PTTL mykey
 (integer) -1
 ```
 
@@ -76,14 +65,19 @@ In this example, the key `mykey` is set with a value of "Hello" but no expiratio
 
 ### Example 3: Non-existent Key
 
-```plaintext
-PTTL nonExistentKey
-```
-
-`Output:`
-
-```plaintext
+```bash
+127.0.0.1:7379> PTTL nonExistentKey
 (integer) -2
 ```
 
 In this example, the key `nonExistentKey` does not exist in the DiceDB database. The `PTTL` command returns `-2`, indicating that the key does not exist.
+
+### Example 4: Invalid usage
+
+```bash
+127.0.0.1:7379> SET newkey "value"
+127.0.0.1:7379> PTTL newkey value
+(error) ERR wrong number of arguments for 'pttl' command
+```
+
+In this example, the `PTTL` command is used with an extra argument. This results in an error, as the `PTTL` command accepts only one argument.
