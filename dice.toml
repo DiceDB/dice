@@ -4,9 +4,9 @@ Port = 7379
 KeepAlive = 300
 Timeout = 300
 MaxConn = 0
-# Value in nanoseconds (1 second)
-ShardCronFrequency = 1000000000
-# Value in nanoseconds (1 second)
+# Value in nanoseconds (30 seconds)
+ShardCronFrequency = 30000000000
+# Value in nanoseconds (100 ms/0.1 seconds)
 MultiplexerPollTimeout = 100000000
 MaxClients = 20000
 MaxMemory = 0
