@@ -25,14 +25,14 @@ LATENCY [SUBCOMMAND] [ARGUMENTS]
 
 ## Return Values
 
-| Condition  | Return Value                                       |
-|-------------|----------------------------------------------------|
-| `LATEST`    | Array of latency spikes                            |
-| `HISTORY`   | Array of latency samples (timestamp, latency)       |
-| `RESET`     | Integer (number of events reset)                   |
-| `GRAPH`     | String (graph representing latency data)            |
-| `DOCTOR`    | String (detailed report with suggestions)           |
-| `Syntax or specified constraints are invalid`    | error           |
+| Condition                                        | Return Value                                      |
+|--------------------------------------------------|---------------------------------------------------|
+| `LATEST`                                         | Array of latency spikes                           |
+| `HISTORY`                                        | Array of latency samples (timestamp, latency)     |
+| `RESET`                                          | Integer (number of events reset)                  |
+| `GRAPH`                                          | String (graph representing latency data)          |
+| `DOCTOR`                                         | String (detailed report with suggestions)         |
+| `Syntax or specified constraints are invalid`    | error                                             |
 
 ## Behaviour
 
