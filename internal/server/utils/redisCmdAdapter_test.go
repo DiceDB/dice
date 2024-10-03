@@ -172,7 +172,7 @@ func TestParseHTTPRequest(t *testing.T) {
 			redisCmd, err := ParseHTTPRequest(req)
 			assert.NoError(t, err)
 
-			expectedCmd := &cmd.RedisCmd{
+			expectedCmd := &cmd.DiceDBCmd{
 				Cmd:  tc.expectedCmd,
 				Args: tc.expectedArgs,
 			}
@@ -244,7 +244,7 @@ func TestParseWebsocketMessage(t *testing.T) {
 			redisCmd, err := ParseWebsocketMessage([]byte(tc.message))
 			assert.NoError(t, err)
 
-			expectedCmd := &cmd.RedisCmd{
+			expectedCmd := &cmd.DiceDBCmd{
 				Cmd:  tc.expectedCmd,
 				Args: tc.expectedArgs,
 			}

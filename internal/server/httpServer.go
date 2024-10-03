@@ -231,7 +231,7 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 		case <-doneChan:
 			// Client disconnected or request finished
 			s.logger.Info("Client disconnected")
-			unWatchCmd := &cmd.RedisCmd{
+			unWatchCmd := &cmd.DiceDBCmd{
 				Cmd:  "QUNWATCH",
 				Args: []string{qwatchQuery},
 			}
@@ -316,7 +316,7 @@ func (s *HTTPServer) writeQWatchResponse(writer http.ResponseWriter, response in
 	flusher.Flush() // Flush the response to send it to the client
 }
 
-func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.StoreResponse, redisCmd *cmd.RedisCmd) {
+func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.StoreResponse, redisCmd *cmd.DiceDBCmd) {
 	_, ok := WorkerCmdsMeta[redisCmd.Cmd]
 	var rp *clientio.RESPParser
 

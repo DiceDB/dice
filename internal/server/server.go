@@ -297,7 +297,7 @@ func handleMigratedResp(resp interface{}, buf *bytes.Buffer) {
 	buf.Write(r)
 }
 
-func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.RedisCmd, buf *bytes.Buffer, c *comm.Client) {
+func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.DiceDBCmd, buf *bytes.Buffer, c *comm.Client) {
 	s.shardManager.GetShard(0).ReqChan <- &ops.StoreOp{
 		Cmd:      redisCmd,
 		WorkerID: "server",
@@ -334,7 +334,7 @@ func readCommands(c io.ReadWriter) (*cmd.RedisCmds, bool, error) {
 		return nil, false, err
 	}
 
-	var cmds = make([]*cmd.RedisCmd, 0)
+	var cmds = make([]*cmd.DiceDBCmd, 0)
 	for _, value := range values {
 		arrayValue, ok := value.([]interface{})
 		if !ok {
@@ -351,7 +351,7 @@ func readCommands(c io.ReadWriter) (*cmd.RedisCmds, bool, error) {
 		}
 
 		command := strings.ToUpper(tokens[0])
-		cmds = append(cmds, &cmd.RedisCmd{
+		cmds = append(cmds, &cmd.DiceDBCmd{
 			Cmd:  command,
 			Args: tokens[1:],
 		})
@@ -398,7 +398,7 @@ func (s *AsyncServer) EvalAndRespond(cmds *cmd.RedisCmds, c *comm.Client) {
 	s.writeResponse(c, buf)
 }
 
-func (s *AsyncServer) isAuthenticated(redisCmd *cmd.RedisCmd, c *comm.Client, buf *bytes.Buffer) bool {
+func (s *AsyncServer) isAuthenticated(redisCmd *cmd.DiceDBCmd, c *comm.Client, buf *bytes.Buffer) bool {
 	if redisCmd.Cmd != auth.Cmd && !c.Session.IsActive() {
 		buf.Write(clientio.Encode(errors.New("NOAUTH Authentication required"), false))
 		return false
@@ -406,7 +406,7 @@ func (s *AsyncServer) isAuthenticated(redisCmd *cmd.RedisCmd, c *comm.Client, bu
 	return true
 }
 
-func (s *AsyncServer) handleTransactionCommand(redisCmd *cmd.RedisCmd, c *comm.Client, buf *bytes.Buffer) {
+func (s *AsyncServer) handleTransactionCommand(redisCmd *cmd.DiceDBCmd, c *comm.Client, buf *bytes.Buffer) {
 	if eval.TxnCommands[redisCmd.Cmd] {
 		switch redisCmd.Cmd {
 		case eval.ExecCmdMeta.Name:
@@ -425,7 +425,7 @@ func (s *AsyncServer) handleTransactionCommand(redisCmd *cmd.RedisCmd, c *comm.C
 	}
 }
 
-func (s *AsyncServer) handleNonTransactionCommand(redisCmd *cmd.RedisCmd, c *comm.Client, buf *bytes.Buffer) {
+func (s *AsyncServer) handleNonTransactionCommand(redisCmd *cmd.DiceDBCmd, c *comm.Client, buf *bytes.Buffer) {
 	switch redisCmd.Cmd {
 	case eval.MultiCmdMeta.Name:
 		c.TxnBegin()
@@ -451,7 +451,7 @@ func (s *AsyncServer) executeTransaction(c *comm.Client, buf *bytes.Buffer) {
 		s.executeCommandToBuffer(cmd, buf, c)
 	}
 
-	c.Cqueue.Cmds = make([]*cmd.RedisCmd, 0)
+	c.Cqueue.Cmds = make([]*cmd.DiceDBCmd, 0)
 	c.IsTxn = false
 }
 
