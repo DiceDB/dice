@@ -23,7 +23,7 @@ import (
 )
 
 type (
-	cacheStore common.IStoreMap[string, *object.Obj]
+	cacheStore common.ITable[string, *object.Obj]
 
 	// QuerySubscription represents a subscription to watch a query.
 	QuerySubscription struct {
@@ -53,8 +53,8 @@ type (
 
 	// Manager watches for changes in keys and notifies clients.
 	Manager struct {
-		WatchList    sync.Map                             // WatchList is a map of query string to their respective clients, type: map[string]*sync.Map[int]struct{}
-		QueryCache   common.IStoreMap[string, cacheStore] // QueryCache is a map of fingerprints to their respective data caches
+		WatchList    sync.Map                          // WatchList is a map of query string to their respective clients, type: map[string]*sync.Map[int]struct{}
+		QueryCache   common.ITable[string, cacheStore] // QueryCache is a map of fingerprints to their respective data caches
 		QueryCacheMu sync.RWMutex
 		logger       *slog.Logger
 	}
@@ -86,13 +86,13 @@ func NewClientIdentifier(clientIdentifierID int, isHTTPClient bool) ClientIdenti
 	}
 }
 
-func NewQueryCacheStoreRegMap() common.IStoreMap[string, cacheStore] {
+func NewQueryCacheStoreRegMap() common.ITable[string, cacheStore] {
 	return &common.RegMap[string, cacheStore]{
 		M: make(map[string]cacheStore),
 	}
 }
 
-func NewQueryCacheStore() common.IStoreMap[string, cacheStore] {
+func NewQueryCacheStore() common.ITable[string, cacheStore] {
 	return NewQueryCacheStoreRegMap()
 }
 

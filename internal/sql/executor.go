@@ -31,7 +31,7 @@ type QueryResultRowWithOrder struct {
 	OrderByType  string
 }
 
-func ExecuteQuery(query *DSQLQuery, store common.IStoreMap[string, *object.Obj]) ([]QueryResultRow, error) {
+func ExecuteQuery(query *DSQLQuery, store common.ITable[string, *object.Obj]) ([]QueryResultRow, error) {
 	var result []QueryResultRow
 	var err error
 	jsonPathCache := make(map[string]jp.Expr) // Cache for parsed JSON paths

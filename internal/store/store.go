@@ -15,23 +15,23 @@ import (
 	"github.com/dicedb/dice/config"
 )
 
-func NewStoreRegMap() common.IStoreMap[string, *object.Obj] {
+func NewStoreRegMap() common.ITable[string, *object.Obj] {
 	return &common.RegMap[string, *object.Obj]{
 		M: make(map[string]*object.Obj),
 	}
 }
 
-func NewExpireRegMap() common.IStoreMap[*object.Obj, uint64] {
+func NewExpireRegMap() common.ITable[*object.Obj, uint64] {
 	return &common.RegMap[*object.Obj, uint64]{
 		M: make(map[*object.Obj]uint64),
 	}
 }
 
-func NewStoreMap() common.IStoreMap[string, *object.Obj] {
+func NewStoreMap() common.ITable[string, *object.Obj] {
 	return NewStoreRegMap()
 }
 
-func NewExpireMap() common.IStoreMap[*object.Obj, uint64] {
+func NewExpireMap() common.ITable[*object.Obj, uint64] {
 	return NewExpireRegMap()
 }
 
@@ -43,8 +43,8 @@ type QueryWatchEvent struct {
 }
 
 type Store struct {
-	store     common.IStoreMap[string, *object.Obj]
-	expires   common.IStoreMap[*object.Obj, uint64] // Does not need to be thread-safe as it is only accessed by a single thread.
+	store     common.ITable[string, *object.Obj]
+	expires   common.ITable[*object.Obj, uint64] // Does not need to be thread-safe as it is only accessed by a single thread.
 	numKeys   int
 	watchChan chan QueryWatchEvent
 }
@@ -315,7 +315,7 @@ func (store *Store) notifyQueryManager(k, operation string, obj object.Obj) {
 	store.watchChan <- QueryWatchEvent{k, operation, obj}
 }
 
-func (store *Store) GetStore() common.IStoreMap[string, *object.Obj] {
+func (store *Store) GetStore() common.ITable[string, *object.Obj] {
 	return store.store
 }
 
