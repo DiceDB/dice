@@ -122,7 +122,7 @@ func (s *AsyncServer) BindToTcp(addr *Address) (socketErr error) {
 	defer func() {
 		if socketErr != nil {
 			if err := syscall.Close(serverFD); err != nil {
-				log.Warn("failed to close server socket", "error", err)
+				slog.Warn("failed to close server socket", "error", err)
 			}
 		}
 	}()
@@ -139,10 +139,10 @@ func (s *AsyncServer) BindToTcp(addr *Address) (socketErr error) {
 
 	ip4 := net.ParseIP(addr.Host)
 	if ip4 == nil {
-		return ErrInvalidIPAddress
+		return diceerrors.ErrInvalidIPAddress
 	}
 
-	log.Infof("DiceDB running on port %d", addr.Port)
+	slog.Info("DiceDB running on port", "port", addr.Port)
 	return syscall.Bind(serverFD, &syscall.SockaddrInet4{
 		Port: addr.Port,
 		Addr: [4]byte{ip4[0], ip4[1], ip4[2], ip4[3]},
@@ -160,7 +160,7 @@ func (s *AsyncServer) BindToSocket(addr *Address) (socketErr error) {
 	defer func() {
 		if socketErr != nil {
 			if err := syscall.Close(serverFD); err != nil {
-				log.Warn("failed to close server socket", "error", err)
+				slog.Warn("failed to close server socket", "error", err)
 			}
 		}
 	}()
@@ -176,7 +176,7 @@ func (s *AsyncServer) BindToSocket(addr *Address) (socketErr error) {
 	}
 
 	if addr.IsSocketAvail() {
-		log.Infof("DiceDB running on socket: %s", addr.Path)
+		slog.Info("DiceDB running on socket", "path", addr.Path)
 		sockAddr := &syscall.SockaddrUnix{Name: addr.Path}
 		return syscall.Bind(serverFD, sockAddr)
 	} else {
@@ -195,7 +195,7 @@ func (s *AsyncServer) Bind() (socketErr error) {
 	case "tcp", "dice":
 		return s.BindToTcp(addr)
 	default:
-		return ErrInvalidAddress
+		return diceerrors.ErrInvalidAddress
 	}
 }
 
