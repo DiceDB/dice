@@ -297,9 +297,9 @@ func handleMigratedResp(resp interface{}, buf *bytes.Buffer) {
 	buf.Write(r)
 }
 
-func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.DiceDBCmd, buf *bytes.Buffer, c *comm.Client) {
+func (s *AsyncServer) executeCommandToBuffer(diceDBCmd *cmd.DiceDBCmd, buf *bytes.Buffer, c *comm.Client) {
 	s.shardManager.GetShard(0).ReqChan <- &ops.StoreOp{
-		Cmd:      redisCmd,
+		Cmd:      diceDBCmd,
 		WorkerID: "server",
 		ShardID:  0,
 		Client:   c,
@@ -307,14 +307,14 @@ func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.DiceDBCmd, buf *bytes
 
 	resp := <-s.ioChan
 
-	val, ok := WorkerCmdsMeta[redisCmd.Cmd]
+	val, ok := WorkerCmdsMeta[diceDBCmd.Cmd]
 	// TODO: Remove this conditional check and if (true) condition when all commands are migrated
 	if !ok {
 		buf.Write(resp.EvalResponse.Result.([]byte))
 	} else {
 		// If command type is Global then return the worker eval
 		if val.CmdType == Global {
-			buf.Write(val.RespNoShards(redisCmd.Args))
+			buf.Write(val.RespNoShards(diceDBCmd.Args))
 			return
 		}
 		// Handle error case independently
@@ -383,32 +383,32 @@ func (s *AsyncServer) EvalAndRespond(cmds *cmd.RedisCmds, c *comm.Client) {
 	var resp []byte
 	buf := bytes.NewBuffer(resp)
 
-	for _, redisCmd := range cmds.Cmds {
-		if !s.isAuthenticated(redisCmd, c, buf) {
+	for _, diceDBCmd := range cmds.Cmds {
+		if !s.isAuthenticated(diceDBCmd, c, buf) {
 			continue
 		}
 
 		if c.IsTxn {
-			s.handleTransactionCommand(redisCmd, c, buf)
+			s.handleTransactionCommand(diceDBCmd, c, buf)
 		} else {
-			s.handleNonTransactionCommand(redisCmd, c, buf)
+			s.handleNonTransactionCommand(diceDBCmd, c, buf)
 		}
 	}
 
 	s.writeResponse(c, buf)
 }
 
-func (s *AsyncServer) isAuthenticated(redisCmd *cmd.DiceDBCmd, c *comm.Client, buf *bytes.Buffer) bool {
-	if redisCmd.Cmd != auth.Cmd && !c.Session.IsActive() {
+func (s *AsyncServer) isAuthenticated(diceDBCmd *cmd.DiceDBCmd, c *comm.Client, buf *bytes.Buffer) bool {
+	if diceDBCmd.Cmd != auth.Cmd && !c.Session.IsActive() {
 		buf.Write(clientio.Encode(errors.New("NOAUTH Authentication required"), false))
 		return false
 	}
 	return true
 }
 
-func (s *AsyncServer) handleTransactionCommand(redisCmd *cmd.DiceDBCmd, c *comm.Client, buf *bytes.Buffer) {
-	if eval.TxnCommands[redisCmd.Cmd] {
-		switch redisCmd.Cmd {
+func (s *AsyncServer) handleTransactionCommand(diceDBCmd *cmd.DiceDBCmd, c *comm.Client, buf *bytes.Buffer) {
+	if eval.TxnCommands[diceDBCmd.Cmd] {
+		switch diceDBCmd.Cmd {
 		case eval.ExecCmdMeta.Name:
 			s.executeTransaction(c, buf)
 		case eval.DiscardCmdMeta.Name:
@@ -416,17 +416,17 @@ func (s *AsyncServer) handleTransactionCommand(redisCmd *cmd.DiceDBCmd, c *comm.
 		default:
 			s.logger.Error(
 				"Unhandled transaction command",
-				slog.String("command", redisCmd.Cmd),
+				slog.String("command", diceDBCmd.Cmd),
 			)
 		}
 	} else {
-		c.TxnQueue(redisCmd)
+		c.TxnQueue(diceDBCmd)
 		buf.Write(clientio.RespQueued)
 	}
 }
 
-func (s *AsyncServer) handleNonTransactionCommand(redisCmd *cmd.DiceDBCmd, c *comm.Client, buf *bytes.Buffer) {
-	switch redisCmd.Cmd {
+func (s *AsyncServer) handleNonTransactionCommand(diceDBCmd *cmd.DiceDBCmd, c *comm.Client, buf *bytes.Buffer) {
+	switch diceDBCmd.Cmd {
 	case eval.MultiCmdMeta.Name:
 		c.TxnBegin()
 		buf.Write(clientio.RespOK)
@@ -435,7 +435,7 @@ func (s *AsyncServer) handleNonTransactionCommand(redisCmd *cmd.DiceDBCmd, c *co
 	case eval.DiscardCmdMeta.Name:
 		buf.Write(diceerrors.NewErrWithMessage("DISCARD without MULTI"))
 	default:
-		s.executeCommandToBuffer(redisCmd, buf, c)
+		s.executeCommandToBuffer(diceDBCmd, buf, c)
 	}
 }
 

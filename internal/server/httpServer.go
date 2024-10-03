@@ -124,23 +124,23 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 
 func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.Request) {
 	// convert to REDIS cmd
-	redisCmd, err := utils.ParseHTTPRequest(request)
+	diceDBCmd, err := utils.ParseHTTPRequest(request)
 	if err != nil {
 		http.Error(writer, "Error parsing HTTP request", http.StatusBadRequest)
 		s.logger.Error("Error parsing HTTP request", slog.Any("error", err))
 		return
 	}
 
-	if redisCmd.Cmd == Abort {
+	if diceDBCmd.Cmd == Abort {
 		s.logger.Debug("ABORT command received")
 		s.logger.Debug("Shutting down HTTP Server")
 		close(s.shutdownChan)
 		return
 	}
 
-	if unimplementedCommands[redisCmd.Cmd] {
+	if unimplementedCommands[diceDBCmd.Cmd] {
 		http.Error(writer, "Command is not implemented with HTTP", http.StatusBadRequest)
-		s.logger.Error("Command %s is not implemented", slog.String("cmd", redisCmd.Cmd))
+		s.logger.Error("Command %s is not implemented", slog.String("cmd", diceDBCmd.Cmd))
 		_, err := writer.Write([]byte("Command is not implemented with HTTP"))
 		if err != nil {
 			s.logger.Error("Error writing response", slog.Any("error", err))
@@ -151,7 +151,7 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 
 	// send request to Shard Manager
 	s.shardManager.GetShard(0).ReqChan <- &ops.StoreOp{
-		Cmd:      redisCmd,
+		Cmd:      diceDBCmd,
 		WorkerID: "httpServer",
 		ShardID:  0,
 		HTTPOp:   true,
@@ -160,19 +160,19 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 	// Wait for response
 	resp := <-s.ioChan
 
-	s.writeResponse(writer, resp, redisCmd)
+	s.writeResponse(writer, resp, diceDBCmd)
 }
 
 func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *http.Request) {
 	// convert to REDIS cmd
-	redisCmd, err := utils.ParseHTTPRequest(request)
+	diceDBCmd, err := utils.ParseHTTPRequest(request)
 	if err != nil {
 		http.Error(writer, "Error parsing HTTP request", http.StatusBadRequest)
 		s.logger.Error("Error parsing HTTP request", slog.Any("error", err))
 		return
 	}
 
-	if len(redisCmd.Args) < 1 {
+	if len(diceDBCmd.Args) < 1 {
 		s.logger.Error("Invalid request for QWATCH")
 		http.Error(writer, "Invalid request for QWATCH", http.StatusBadRequest)
 		return
@@ -198,11 +198,11 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 	writer.WriteHeader(http.StatusOK)
 	// We're a generating a unique client id, to keep track in core of requests from registered clients
 	clientIdentifierID := generateUniqueInt32(request)
-	qwatchQuery := redisCmd.Args[0]
+	qwatchQuery := diceDBCmd.Args[0]
 	qwatchClient := comm.NewHTTPQwatchClient(s.qwatchResponseChan, clientIdentifierID)
 	// Prepare the store operation
 	storeOp := &ops.StoreOp{
-		Cmd:      redisCmd,
+		Cmd:      diceDBCmd,
 		WorkerID: "httpServer",
 		ShardID:  0,
 		Client:   qwatchClient,
@@ -238,7 +238,7 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 			storeOp.Cmd = unWatchCmd
 			s.shardManager.GetShard(0).ReqChan <- storeOp
 			resp := <-s.ioChan
-			s.writeResponse(writer, resp, redisCmd)
+			s.writeResponse(writer, resp, diceDBCmd)
 			return
 		}
 	}
@@ -316,8 +316,8 @@ func (s *HTTPServer) writeQWatchResponse(writer http.ResponseWriter, response in
 	flusher.Flush() // Flush the response to send it to the client
 }
 
-func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.StoreResponse, redisCmd *cmd.DiceDBCmd) {
-	_, ok := WorkerCmdsMeta[redisCmd.Cmd]
+func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.StoreResponse, diceDBCmd *cmd.DiceDBCmd) {
+	_, ok := WorkerCmdsMeta[diceDBCmd.Cmd]
 	var rp *clientio.RESPParser
 
 	var responseValue interface{}

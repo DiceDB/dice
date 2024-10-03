@@ -162,6 +162,14 @@ func TestParseHTTPRequest(t *testing.T) {
 			expectedCmd:  "QWATCH",
 			expectedArgs: []string{"SELECT $key, $value WHERE $key LIKE \"player:*\" AND \"$value.score\" > 10 ORDER BY $value.score DESC LIMIT 5"},
 		},
+		{
+			name:         "Test JSON.ARRPOP command",
+			method:       "POST",
+			url:          "/json.arrpop",
+			body:         `{"key": "k1", "path": "$", "index": 1}`,
+			expectedCmd:  "JSON.ARRPOP",
+			expectedArgs: []string{"k1", "$", "1"},
+		},
 	}
 
 	for _, tc := range commands {
