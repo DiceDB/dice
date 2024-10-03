@@ -29,18 +29,35 @@ const (
 	Offset      = "offset"
 	Member      = "member"
 	Members     = "members"
+	START       = "start"
+	END         = "end"
+	UNIT        = "unit"
+	BIT         = "bit"
 	Index       = "index"
 	JSON        = "json"
+	OPERATION   = "operation"
+	DESTKEY     = "destkey"
 )
 
 func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
-	command := strings.TrimPrefix(r.URL.Path, "/")
-	if command == "" {
+	commandParts := strings.Split(strings.TrimPrefix(r.URL.Path, "/"), "/")
+	if len(commandParts) == 0 {
 		return nil, errors.New("invalid command")
 	}
 
-	command = strings.ToUpper(command)
+	command := strings.ToUpper(commandParts[0])
+
+	var subcommand string
+	if len(commandParts) > 1 {
+		subcommand = strings.ToUpper(commandParts[1])
+	}
+
 	var args []string
+
+	//Handle subcommand and multiple arguments
+	if subcommand != "" {
+		args = append(args, subcommand)
+	}
 
 	// Extract query parameters
 	queryParams := r.URL.Query()
@@ -69,6 +86,8 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 			// Define keys to exclude and process their values first
 			// Update as we support more commands
 			var priorityKeys = []string{
+				OPERATION,
+				DESTKEY,
 				Key,
 				Keys,
 				Field,
@@ -85,6 +104,10 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 				Offset,
 				Member,
 				Members,
+				BIT,
+				START,
+				END,
+				UNIT,
 			}
 			for _, key := range priorityKeys {
 				if val, exists := jsonBody[key]; exists {
