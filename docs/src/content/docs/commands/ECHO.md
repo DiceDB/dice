@@ -1,6 +1,6 @@
 ---
 title: ECHO
-description: `ECHO` command in DiceDB is used to print a message
+description: The `ECHO` command in DiceDB is used to print a message
 ---
 
 ### Syntax
@@ -25,7 +25,7 @@ ECHO message
 ## ERROR
 `Error Message` : `(error) ERROR wrong number of arguments for 'echo' command`
 
-Occurs when  message parameter is not passed  or more than one message parameter is passed 
+Occurs when  message parameter is not passed  or more than one message parameter is passed
 
 
 ## Example Usage
@@ -41,7 +41,7 @@ Occurs when  message parameter is not passed  or more than one message parameter
 ### Invalid Usage
 
 ```bash
-127.0.0.1:7379> ECHO 
+127.0.0.1:7379> ECHO
 ```
 `Response`:
 - `(error) ERROR wrong number of arguments for 'echo' command`

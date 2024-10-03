@@ -24,7 +24,7 @@ type DiceCmdMeta struct {
 	// instead of just raw bytes. Commands that have been migrated to this new model
 	// will utilize this function for evaluation, allowing for better handling of
 	// complex command execution scenarios and improved response consistency.
-	NewEval func([]string, *dstore.Store) EvalResponse
+	NewEval func([]string, *dstore.Store) *EvalResponse
 }
 
 type KeySpecs struct {
@@ -976,6 +976,12 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	appendCmdMeta = DiceCmdMeta{
+		Name:  "APPEND",
+		Info:  `Appends a string to the value of a key. Creates the key if it doesn't exist.`,
+		Eval:  evalAPPEND,
+		Arity: 3,
+	}
 	zaddCmdMeta = DiceCmdMeta{
 		Name: "ZADD",
 		Info: `ZADD key [NX|XX] [CH] [INCR] score member [score member ...]
@@ -1119,6 +1125,7 @@ func init() {
 	DiceCmds["HRANDFIELD"] = hrandfieldCmdMeta
 	DiceCmds["HDEL"] = hdelCmdMeta
 	DiceCmds["HVALS"] = hValsCmdMeta
+	DiceCmds["APPEND"] = appendCmdMeta
 	DiceCmds["ZADD"] = zaddCmdMeta
 	DiceCmds["ZRANGE"] = zrangeCmdMeta
 	DiceCmds["HINCRBYFLOAT"] = hincrbyFloatCmdMeta

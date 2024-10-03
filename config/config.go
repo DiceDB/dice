@@ -55,7 +55,7 @@ type Config struct {
 		MaxConn                int32         `mapstructure:"max-conn"`
 		ShardCronFrequency     time.Duration `mapstructure:"shardcronfrequency"`
 		MultiplexerPollTimeout time.Duration `mapstructure:"servermultiplexerpolltimeout"`
-		MaxClients             int           `mapstructure:"maxclients"`
+		MaxClients             int32         `mapstructure:"maxclients"`
 		MaxMemory              int64         `mapstructure:"maxmemory"`
 		EvictionPolicy         string        `mapstructure:"evictionpolicy"`
 		EvictionRatio          float64       `mapstructure:"evictionratio"`
@@ -89,7 +89,7 @@ var baseConfig = Config{
 		MaxConn                int32         `mapstructure:"max-conn"`
 		ShardCronFrequency     time.Duration `mapstructure:"shardcronfrequency"`
 		MultiplexerPollTimeout time.Duration `mapstructure:"servermultiplexerpolltimeout"`
-		MaxClients             int           `mapstructure:"maxclients"`
+		MaxClients             int32         `mapstructure:"maxclients"`
 		MaxMemory              int64         `mapstructure:"maxmemory"`
 		EvictionPolicy         string        `mapstructure:"evictionpolicy"`
 		EvictionRatio          float64       `mapstructure:"evictionratio"`
@@ -110,7 +110,7 @@ var baseConfig = Config{
 		MaxConn:                int32(0),
 		ShardCronFrequency:     1 * time.Second,
 		MultiplexerPollTimeout: 100 * time.Millisecond,
-		MaxClients:             20000,
+		MaxClients:             int32(20000),
 		MaxMemory:              0,
 		EvictionPolicy:         EvictAllKeysLFU,
 		EvictionRatio:          0.9,
