@@ -265,6 +265,15 @@ func TestSetDataCmd(t *testing.T) {
 		},
 	}
 
+	defer exec.FireCommand(HTTPCommand{
+		Command: "DEL",
+		Body:    map[string]interface{}{"key": "foo"},
+	})
+	defer exec.FireCommand(HTTPCommand{
+		Command: "DEL",
+		Body:    map[string]interface{}{"key": "foo2"},
+	})
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			exec.FireCommand(HTTPCommand{

@@ -99,6 +99,7 @@ func TestEval(t *testing.T) {
 	testEvalFLUSHDB(t, store)
 	testEvalINCRBYFLOAT(t, store)
 	testEvalBITOP(t, store)
+	testEvalAPPEND(t, store)
 	testEvalHRANDFIELD(t, store)
 	testEvalZADD(t, store)
 	testEvalZRANGE(t, store)
@@ -4533,6 +4534,170 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalHRANDFIELD, store)
+}
+
+func testEvalAPPEND(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'append' command\r\n"),
+		},
+		"append invalid number of arguments": {
+			setup: func() {
+				store.Del("key")
+			},
+			input:  []string{"key", "val", "val2"},
+			output: []byte("-ERR wrong number of arguments for 'append' command\r\n"),
+		},
+		"append to non-existing key": {
+			setup: func() {
+				store.Del("key")
+			},
+			input:  []string{"key", "val"},
+			output: clientio.Encode(3, false),
+		},
+		"append string value to existing key having string value": {
+			setup: func() {
+				key := "key"
+				value := "val"
+				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "val"},
+			output: clientio.Encode(6, false),
+		},
+		"append integer value to non existing key": {
+			setup: func() {
+				store.Del("key")
+			},
+			input:  []string{"key", "123"},
+			output: clientio.Encode(3, false),
+			validator: func(output []byte) {
+				obj := store.Get("key")
+				_, enc := object.ExtractTypeEncoding(obj)
+				if enc != object.ObjEncodingInt {
+					t.Errorf("unexpected encoding")
+				}
+			},
+		},
+		"append string value to existing key having integer value": {
+			setup: func() {
+				key := "key"
+				value := "123"
+				storedValue, _ := strconv.ParseInt(value, 10, 64)
+				obj := store.NewObj(storedValue, -1, object.ObjTypeInt, object.ObjEncodingInt)
+				store.Put(key, obj)
+			},
+			input:  []string{"key", "val"},
+			output: clientio.Encode(6, false),
+		},
+		"append empty string to non-existing key": {
+			setup: func() {
+				store.Del("key")
+			},
+			input:  []string{"key", ""},
+			output: clientio.Encode(0, false),
+		},
+		"append empty string to existing key having empty string": {
+			setup: func() {
+				key := "key"
+				value := ""
+				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
+				store.Put(key, obj)
+			},
+			input:  []string{"key", ""},
+			output: clientio.Encode(0, false),
+		},
+		"append empty string to existing key": {
+			setup: func() {
+				key := "key"
+				value := "val"
+				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
+				store.Put(key, obj)
+			},
+			input:  []string{"key", ""},
+			output: clientio.Encode(3, false),
+		},
+		"append modifies the encoding from int to raw": {
+			setup: func() {
+				store.Del("key")
+				storedValue, _ := strconv.ParseInt("1", 10, 64)
+				obj := store.NewObj(storedValue, -1, object.ObjTypeInt, object.ObjEncodingInt)
+				store.Put("key", obj)
+			},
+			input:  []string{"key", "2"},
+			output: clientio.Encode(2, false),
+			validator: func(output []byte) {
+				obj := store.Get("key")
+				_, enc := object.ExtractTypeEncoding(obj)
+				if enc != object.ObjEncodingRaw {
+					t.Errorf("unexpected encoding")
+				}
+			},
+		},
+		"append to key created using LPUSH": {
+			setup: func() {
+				key := "listKey"
+				value := "val"
+				// Create a new list object
+				obj := store.NewObj(NewDeque(), -1, object.ObjTypeByteList, object.ObjEncodingDeque)
+				store.Put(key, obj)
+				obj.Value.(*Deque).LPush(value)
+			},
+			input:  []string{"listKey", "val"},
+			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+		},
+		"append to key created using SADD": {
+			setup: func() {
+				key := "setKey"
+				// Create a new set object
+				initialValues := map[string]struct{}{
+					"existingVal": {},
+					"anotherVal":  {},
+				}
+				obj := store.NewObj(initialValues, -1, object.ObjTypeSet, object.ObjEncodingSetStr)
+				store.Put(key, obj)
+			},
+			input:  []string{"setKey", "val"},
+			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+		},
+		"append to key created using HSET": {
+			setup: func() {
+				key := "hashKey"
+				// Create a new hash map object
+				initialValues := HashMap{
+					"field1": "value1",
+					"field2": "value2",
+				}
+				obj := store.NewObj(initialValues, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
+				store.Put(key, obj)
+			},
+			input:  []string{"hashKey", "val"},
+			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+		},
+		"append to key created using SETBIT": {
+			setup: func() {
+				key := "bitKey"
+				// Create a new byte array object
+				initialByteArray := NewByteArray(1) // Initialize with 1 byte
+				initialByteArray.SetBit(0, true)    // Set the first bit to 1
+				obj := store.NewObj(initialByteArray, -1, object.ObjTypeByteArray, object.ObjEncodingByteArray)
+				store.Put(key, obj)
+			},
+			input:  []string{"bitKey", "val"},
+			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+		},
+	}
+
+	runEvalTests(t, tests, evalAPPEND, store)
+}
+
+func BenchmarkEvalAPPEND(b *testing.B) {
+	store := dstore.NewStore(nil)
+	for i := 0; i < b.N; i++ {
+		evalAPPEND([]string{"key", fmt.Sprintf("val_%d", i)}, store)
+	}
 }
 
 func testEvalJSONRESP(t *testing.T, store *dstore.Store) {

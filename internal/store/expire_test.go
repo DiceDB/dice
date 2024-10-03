@@ -1,17 +1,16 @@
 package store
 
 import (
-	"github.com/dicedb/dice/internal/object"
 	"testing"
 
-	"github.com/cockroachdb/swiss"
+	"github.com/dicedb/dice/internal/object"
 )
 
 func TestDelExpiry(t *testing.T) {
 	store := NewStore(nil)
 	// Initialize the test environment
-	store.store = swiss.New[string, *object.Obj](10240)
-	store.expires = swiss.New[*object.Obj, uint64](10240)
+	store.store = NewStoreMap()
+	store.expires = NewExpireMap()
 
 	// Define test cases
 	tests := []struct {

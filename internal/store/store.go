@@ -5,15 +5,35 @@ import (
 
 	"github.com/ohler55/ojg/jp"
 
+	"github.com/dicedb/dice/internal/common"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/sql"
 	"github.com/xwb1989/sqlparser"
 
 	"github.com/dicedb/dice/internal/server/utils"
 
-	"github.com/cockroachdb/swiss"
 	"github.com/dicedb/dice/config"
 )
+
+func NewStoreRegMap() common.ITable[string, *object.Obj] {
+	return &common.RegMap[string, *object.Obj]{
+		M: make(map[string]*object.Obj),
+	}
+}
+
+func NewExpireRegMap() common.ITable[*object.Obj, uint64] {
+	return &common.RegMap[*object.Obj, uint64]{
+		M: make(map[*object.Obj]uint64),
+	}
+}
+
+func NewStoreMap() common.ITable[string, *object.Obj] {
+	return NewStoreRegMap()
+}
+
+func NewExpireMap() common.ITable[*object.Obj, uint64] {
+	return NewExpireRegMap()
+}
 
 // QueryWatchEvent represents a change in a watched key.
 type QueryWatchEvent struct {
@@ -28,24 +48,24 @@ type CmdWatchEvent struct {
 }
 
 type Store struct {
-	store     *swiss.Map[string, *object.Obj]
-	expires   *swiss.Map[*object.Obj, uint64] // Does not need to be thread-safe as it is only accessed by a single thread.
+	store     common.ITable[string, *object.Obj]
+	expires   common.ITable[*object.Obj, uint64] // Does not need to be thread-safe as it is only accessed by a single thread.
 	numKeys   int
 	watchChan chan QueryWatchEvent
 }
 
 func NewStore(watchChan chan QueryWatchEvent) *Store {
 	return &Store{
-		store:     swiss.New[string, *object.Obj](config.DiceConfig.Server.StoreMapInitSize),
-		expires:   swiss.New[*object.Obj, uint64](config.DiceConfig.Server.StoreMapInitSize),
+		store:     NewStoreRegMap(),
+		expires:   NewExpireRegMap(),
 		watchChan: watchChan,
 	}
 }
 
 func ResetStore(store *Store) *Store {
 	store.numKeys = 0
-	store.store = swiss.New[string, *object.Obj](config.DiceConfig.Server.StoreMapInitSize)
-	store.expires = swiss.New[*object.Obj, uint64](config.DiceConfig.Server.StoreMapInitSize)
+	store.store = NewStoreMap()
+	store.expires = NewExpireMap()
 
 	return store
 }
@@ -64,8 +84,8 @@ func (store *Store) NewObj(value interface{}, expDurationMs int64, oType, oEnc u
 
 func (store *Store) ResetStore() {
 	store.numKeys = 0
-	store.store.Clear()
-	store.expires.Clear()
+	store.store = NewStoreMap()
+	store.expires = NewExpireMap()
 }
 
 type PutOptions struct {
@@ -300,7 +320,7 @@ func (store *Store) notifyQueryManager(k, operation string, obj object.Obj) {
 	store.watchChan <- QueryWatchEvent{k, operation, obj}
 }
 
-func (store *Store) GetStore() *swiss.Map[string, *object.Obj] {
+func (store *Store) GetStore() common.ITable[string, *object.Obj] {
 	return store.store
 }
 
