@@ -111,13 +111,9 @@ func TestErrorsForSetData(t *testing.T) {
 					time.Sleep(tc.delays[i])
 				}
 				result, _ := exec.FireCommand(cmd)
-				if len(tc.assertType) == 0 {
+				switch tc.assertType[i] {
+				case "equal":
 					assert.Equal(t, tc.expected[i], result, "Value mismatch for cmd %s", cmd)
-				} else {
-					switch tc.assertType[i] {
-					case "equal":
-						assert.Equal(t, tc.expected[i], result, "Value mismatch for cmd %s", cmd)
-					}
 				}
 			}
 		})
