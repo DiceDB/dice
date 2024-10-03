@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/internal/comm"
+	"github.com/dicedb/dice/internal/common"
 
 	"github.com/ohler55/ojg/jp"
 
@@ -17,13 +18,12 @@ import (
 
 	"github.com/dicedb/dice/internal/sql"
 
-	"github.com/cockroachdb/swiss"
 	"github.com/dicedb/dice/internal/clientio"
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
 type (
-	cacheStore *swiss.Map[string, *object.Obj]
+	cacheStore common.IStoreMap[string, *object.Obj]
 
 	// QuerySubscription represents a subscription to watch a query.
 	QuerySubscription struct {
@@ -53,8 +53,8 @@ type (
 
 	// Manager watches for changes in keys and notifies clients.
 	Manager struct {
-		WatchList    sync.Map                       // WatchList is a map of query string to their respective clients, type: map[string]*sync.Map[int]struct{}
-		QueryCache   *swiss.Map[string, cacheStore] // QueryCache is a map of fingerprints to their respective data caches
+		WatchList    sync.Map                             // WatchList is a map of query string to their respective clients, type: map[string]*sync.Map[int]struct{}
+		QueryCache   common.IStoreMap[string, cacheStore] // QueryCache is a map of fingerprints to their respective data caches
 		QueryCacheMu sync.RWMutex
 		logger       *slog.Logger
 	}
@@ -86,19 +86,35 @@ func NewClientIdentifier(clientIdentifierID int, isHTTPClient bool) ClientIdenti
 	}
 }
 
+func NewQueryCacheStoreRegMap() common.IStoreMap[string, cacheStore] {
+	return &common.RegMap[string, cacheStore]{
+		M: make(map[string]cacheStore),
+	}
+}
+
+func NewQueryCacheStore() common.IStoreMap[string, cacheStore] {
+	return NewQueryCacheStoreRegMap()
+}
+
+func NewCacheStoreRegMap() cacheStore {
+	return &common.RegMap[string, *object.Obj]{
+		M: make(map[string]*object.Obj),
+	}
+}
+
+func NewCacheStore() cacheStore {
+	return NewCacheStoreRegMap()
+}
+
 // NewQueryManager initializes a new Manager.
 func NewQueryManager(logger *slog.Logger) *Manager {
 	QuerySubscriptionChan = make(chan QuerySubscription)
 	AdhocQueryChan = make(chan AdhocQuery, 1000)
 	return &Manager{
 		WatchList:  sync.Map{},
-		QueryCache: swiss.New[string, cacheStore](0),
+		QueryCache: NewQueryCacheStore(),
 		logger:     logger,
 	}
-}
-
-func newCacheStore() cacheStore {
-	return swiss.New[string, *object.Obj](0)
 }
 
 // Run starts the Manager's main loops.
@@ -211,9 +227,9 @@ func (m *Manager) updateQueryCache(queryFingerprint string, event dstore.QueryWa
 
 	switch event.Operation {
 	case dstore.Set:
-		((*swiss.Map[string, *object.Obj])(store)).Put(event.Key, &event.Value)
+		store.Put(event.Key, &event.Value)
 	case dstore.Del:
-		((*swiss.Map[string, *object.Obj])(store)).Delete(event.Key)
+		store.Delete(event.Key)
 	default:
 		m.logger.Warn("Unknown operation", slog.String("operation", event.Operation))
 	}
@@ -314,13 +330,13 @@ func (m *Manager) addWatcher(query *sql.DSQLQuery, clientIdentifier ClientIdenti
 	m.QueryCacheMu.Lock()
 	defer m.QueryCacheMu.Unlock()
 
-	cache := newCacheStore()
+	cache := NewCacheStore()
 	// Hydrate the cache with data from all shards.
 	// TODO: We need to ensure we receive cache data from all shards once we have multithreading in place.
 	//  For now we only expect one update.
 	kvs := <-cacheChan
 	for _, kv := range *kvs {
-		((*swiss.Map[string, *object.Obj])(cache)).Put(kv.Key, kv.Value)
+		cache.Put(kv.Key, kv.Value)
 	}
 
 	m.QueryCache.Put(query.Fingerprint, cache)
