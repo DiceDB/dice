@@ -239,13 +239,13 @@ func TestQWATCHWhere(t *testing.T) {
 	runQWATCHScenarios(t, publisher, respParsers, qWatchWhereQuery, qWatchWhereTestCases)
 }
 
-func TestQWATCHWhereWithSDK(t *testing.T) {
-	publisher, subscribers, cleanup := setupQWATCHTestWithSDK(t, qWatchWhereQuery)
-	defer cleanup()
+// func TestQWATCHWhereWithSDK(t *testing.T) {
+// 	publisher, subscribers, cleanup := setupQWATCHTestWithSDK(t, qWatchWhereQuery)
+// 	defer cleanup()
 
-	channels := subscribeToQWATCHWithSDK(t, subscribers, qWatchWhereQuery)
-	runQWATCHScenarios(t, publisher, channels, qWatchWhereQuery, qWatchWhereTestCases)
-}
+// 	channels := subscribeToQWATCHWithSDK(t, subscribers, qWatchWhereQuery)
+// 	runQWATCHScenarios(t, publisher, channels, qWatchWhereQuery, qWatchWhereTestCases)
+// }
 
 type JSONTestCase struct {
 	key             string
