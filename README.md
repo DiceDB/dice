@@ -206,6 +206,20 @@ $ go test -test.bench BenchmarkListRedis -benchmem
 
 To get started with building and contributing to DiceDB, please refer to the [issues](https://github.com/DiceDB/dice/issues) created in this repository.
 
+## Profiling
+
+```
+$ sudo apt-get update
+$ sudo apt-get install graphviz
+$ go tool pprof -http=:8080 cpu.pprof
+```
+
+### Running memtier_benchmark locally
+
+```
+$ docker run --network host redislabs/memtier_benchmark memtier_benchmark -s host.docker.internal -p 7379
+```
+
 ## Docs
 
 [![Netlify Status](https://api.netlify.com/api/v1/badges/3a298f6d-ae8d-44d4-a96d-00096b144b55/deploy-status)](https://app.netlify.com/sites/dicedb/deploys)
