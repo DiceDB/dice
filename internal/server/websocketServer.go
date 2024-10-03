@@ -15,7 +15,7 @@ import (
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/ops"
-	"github.com/dicedb/dice/internal/querywatcher"
+	"github.com/dicedb/dice/internal/querymanager"
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -33,17 +33,17 @@ var unimplementedCommandsWebsocket = map[string]bool{
 }
 
 type WebsocketServer struct {
-	querywatcher    *querywatcher.QueryManager
+	querymanager    *querymanager.Manager
 	shardManager    *shard.ShardManager
 	ioChan          chan *ops.StoreResponse
-	watchChan       chan dstore.WatchEvent
+	watchChan       chan dstore.QueryWatchEvent
 	websocketServer *http.Server
 	upgrader        websocket.Upgrader
 	logger          *slog.Logger
 	shutdownChan    chan struct{}
 }
 
-func NewWebSocketServer(shardManager *shard.ShardManager, watchChan chan dstore.WatchEvent, logger *slog.Logger) *WebsocketServer {
+func NewWebSocketServer(shardManager *shard.ShardManager, watchChan chan dstore.QueryWatchEvent, logger *slog.Logger) *WebsocketServer {
 	mux := http.NewServeMux()
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", config.WebsocketPort),
@@ -57,7 +57,7 @@ func NewWebSocketServer(shardManager *shard.ShardManager, watchChan chan dstore.
 
 	websocketServer := &WebsocketServer{
 		shardManager:    shardManager,
-		querywatcher:    querywatcher.NewQueryManager(logger),
+		querymanager:    querymanager.NewQueryManager(logger),
 		ioChan:          make(chan *ops.StoreResponse, 1000),
 		watchChan:       watchChan,
 		websocketServer: srv,
@@ -163,20 +163,53 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 
 		// Wait for response
 		resp := <-s.ioChan
+
+		_, ok := WorkerCmdsMeta[redisCmd.Cmd]
+		respArr := []string{
+			"(nil)",  // Represents a RESP Nil Bulk String, which indicates a null value.
+			"OK",     // Represents a RESP Simple String with value "OK".
+			"QUEUED", // Represents a Simple String indicating that a command has been queued.
+			"0",      // Represents a RESP Integer with value 0.
+			"1",      // Represents a RESP Integer with value 1.
+			"-1",     // Represents a RESP Integer with value -1.
+			"-2",     // Represents a RESP Integer with value -2.
+			"*0",     // Represents an empty RESP Array.
+		}
 		var rp *clientio.RESPParser
-		if resp.EvalResponse.Error != nil {
-			rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(resp.EvalResponse.Error.Error())))
+
+		var responseValue interface{}
+		// TODO: Remove this conditional check and if (true) condition when all commands are migrated
+		if !ok {
+			var err error
+			if resp.EvalResponse.Error != nil {
+				rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(resp.EvalResponse.Error.Error())))
+			} else {
+				rp = clientio.NewRESPParser(bytes.NewBuffer(resp.EvalResponse.Result.([]byte)))
+			}
+
+			responseValue, err = rp.DecodeOne()
+			if err != nil {
+				s.logger.Error("Error decoding response", "error", err)
+				writeResponse(conn, []byte("error: Internal Server Error"))
+				return
+			}
 		} else {
-			rp = clientio.NewRESPParser(bytes.NewBuffer(resp.EvalResponse.Result.([]byte)))
+			if resp.EvalResponse.Error != nil {
+				responseValue = resp.EvalResponse.Error.Error()
+			} else {
+				responseValue = resp.EvalResponse.Result
+			}
 		}
 
-		val, err := rp.DecodeOne()
-		if err != nil {
-			writeResponse(conn, []byte("error: decoding response"))
-			continue
+		if val, ok := responseValue.(clientio.RespType); ok {
+			responseValue = respArr[val]
 		}
 
-		respBytes, err := json.Marshal(val)
+		if bt, ok := responseValue.([]byte); ok {
+			responseValue = string(bt)
+		}
+
+		respBytes, err := json.Marshal(responseValue)
 		if err != nil {
 			writeResponse(conn, []byte("error: marshaling json response"))
 			continue

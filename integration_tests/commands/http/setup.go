@@ -13,9 +13,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dicedb/dice/internal/server/utils"
+
 	"github.com/dicedb/dice/config"
 	derrors "github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/querywatcher"
+	"github.com/dicedb/dice/internal/querymanager"
 	"github.com/dicedb/dice/internal/server"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -73,6 +75,15 @@ func (e *HTTPCommandExecutor) FireCommand(cmd HTTPCommand) (interface{}, error) 
 	}
 	defer resp.Body.Close()
 
+	if cmd.Command != "QWATCH" {
+		var result utils.HTTPResponse
+		err = json.NewDecoder(resp.Body).Decode(&result)
+		if err != nil {
+			return nil, err
+		}
+
+		return result.Data, nil
+	}
 	var result interface{}
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
@@ -91,9 +102,9 @@ func RunHTTPServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	config.DiceConfig.Server.WriteAOFOnCleanup = false
 
 	globalErrChannel := make(chan error)
-	watchChan := make(chan dstore.WatchEvent, config.DiceConfig.Server.KeysLimit)
+	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Server.KeysLimit)
 	shardManager := shard.NewShardManager(1, watchChan, globalErrChannel, opt.Logger)
-	queryWatcherLocal := querywatcher.NewQueryManager(opt.Logger)
+	queryWatcherLocal := querymanager.NewQueryManager(opt.Logger)
 	config.HTTPPort = opt.Port
 	// Initialize the HTTPServer
 	testServer := server.NewHTTPServer(shardManager, opt.Logger)
