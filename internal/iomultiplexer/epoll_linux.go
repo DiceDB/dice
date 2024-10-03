@@ -18,7 +18,7 @@ type Epoll struct {
 }
 
 // New creates a new Epoll instance
-func New(maxClients int) (*Epoll, error) {
+func New(maxClients int32) (*Epoll, error) {
 	if maxClients < 0 {
 		return nil, ErrInvalidMaxClients
 	}

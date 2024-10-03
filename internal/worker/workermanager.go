@@ -3,14 +3,15 @@ package worker
 import (
 	"errors"
 	"sync"
+	"sync/atomic"
 
 	"github.com/dicedb/dice/internal/shard"
 )
 
 type WorkerManager struct {
 	connectedClients sync.Map
-	numWorkers       int
-	maxClients       int
+	numWorkers       atomic.Int32
+	maxClients       int32
 	shardManager     *shard.ShardManager
 	mu               sync.Mutex
 }
@@ -20,7 +21,7 @@ var (
 	ErrWorkerNotFound    = errors.New("worker not found")
 )
 
-func NewWorkerManager(maxClients int, sm *shard.ShardManager) *WorkerManager {
+func NewWorkerManager(maxClients int32, sm *shard.ShardManager) *WorkerManager {
 	return &WorkerManager{
 		maxClients:   maxClients,
 		shardManager: sm,
@@ -41,12 +42,12 @@ func (wm *WorkerManager) RegisterWorker(worker Worker) error {
 		wm.shardManager.RegisterWorker(worker.ID(), respChan) // TODO: Change respChan type to ShardResponse
 	}
 
-	wm.numWorkers++
+	wm.numWorkers.Add(1)
 	return nil
 }
 
-func (wm *WorkerManager) GetWorkerCount() int {
-	return wm.numWorkers
+func (wm *WorkerManager) GetWorkerCount() int32 {
+	return wm.numWorkers.Load()
 }
 
 func (wm *WorkerManager) GetWorker(workerID string) (Worker, bool) {
@@ -68,7 +69,7 @@ func (wm *WorkerManager) UnregisterWorker(workerID string) error {
 	}
 
 	wm.shardManager.UnregisterWorker(workerID)
-	wm.numWorkers++
+	wm.numWorkers.Add(-1)
 
 	return nil
 }

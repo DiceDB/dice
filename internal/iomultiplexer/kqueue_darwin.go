@@ -18,7 +18,7 @@ type KQueue struct {
 }
 
 // New creates a new KQueue instance
-func New(maxClients int) (*KQueue, error) {
+func New(maxClients int32) (*KQueue, error) {
 	if maxClients < 0 {
 		return nil, ErrInvalidMaxClients
 	}
