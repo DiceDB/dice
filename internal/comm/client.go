@@ -41,8 +41,8 @@ func (c *Client) TxnDiscard() {
 	c.IsTxn = false
 }
 
-func (c *Client) TxnQueue(redisCmd *cmd.DiceDBCmd) {
-	c.Cqueue.Cmds = append(c.Cqueue.Cmds, redisCmd)
+func (c *Client) TxnQueue(diceDBCmd *cmd.DiceDBCmd) {
+	c.Cqueue.Cmds = append(c.Cqueue.Cmds, diceDBCmd)
 }
 
 func NewClient(fd int) *Client {
