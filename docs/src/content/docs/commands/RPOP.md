@@ -75,13 +75,11 @@ OK
 
 - The `RPOP` command is atomic, meaning it is safe to use in concurrent environments.
 - If you need to remove and return the first element of the list, use the `LPOP` command instead.
-- For blocking behavior, consider using `BRPOP`.
 
 ## Related Commands
 
 - `LPUSH`: Insert all the specified values at the head of the list stored at key.
 - `LPOP`: Removes and returns the first element of the list stored at key.
-- `BRPOP`: Removes and returns the last element of the list stored at key, or blocks until one is available.
 
 By understanding the `RPOP` command, you can effectively manage lists in DiceDB, ensuring that you can retrieve and process elements in a LIFO order.
 
