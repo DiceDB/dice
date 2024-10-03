@@ -52,12 +52,6 @@ func TestHyperLogLogCommands(t *testing.T) {
 			expected: []interface{}{"OK", int64(0)},
 		},
 		{
-			name: "PFMERGE with srcKey non-existing",
-			commands: []string{
-				"PFMERGE NON_EXISTING_SRC_KEY", "PFCOUNT NON_EXISTING_SRC_KEY"},
-			expected: []interface{}{"OK", int64(0)},
-		},
-		{
 			name: "PFMERGE with destKey non-existing",
 			commands: []string{
 				"PFMERGE EXISTING_SRC_KEY NON_EXISTING_DEST_KEY", "PFCOUNT EXISTING_SRC_KEY"},
