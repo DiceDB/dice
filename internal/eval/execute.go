@@ -11,10 +11,10 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
-func ExecuteCommand(c *cmd.RedisCmd, client *comm.Client, store *dstore.Store, httpOp, websocketOp bool) EvalResponse {
+func ExecuteCommand(c *cmd.RedisCmd, client *comm.Client, store *dstore.Store, httpOp, websocketOp bool) *EvalResponse {
 	diceCmd, ok := DiceCmds[c.Cmd]
 	if !ok {
-		return EvalResponse{Result: diceerrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", c.Cmd, strings.Join(c.Args, " ")), Error: nil}
+		return &EvalResponse{Result: diceerrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", c.Cmd, strings.Join(c.Args, " ")), Error: nil}
 	}
 
 	// Till the time we refactor to handle QWATCH differently for websocket
@@ -23,7 +23,7 @@ func ExecuteCommand(c *cmd.RedisCmd, client *comm.Client, store *dstore.Store, h
 			return diceCmd.NewEval(c.Args, store)
 		}
 
-		return EvalResponse{Result: diceCmd.Eval(c.Args, store), Error: nil}
+		return &EvalResponse{Result: diceCmd.Eval(c.Args, store), Error: nil}
 	}
 
 	// Temporary logic till we move all commands to new eval logic.
@@ -40,14 +40,14 @@ func ExecuteCommand(c *cmd.RedisCmd, client *comm.Client, store *dstore.Store, h
 	// Old implementation kept as it is, but we will be moving
 	// to the new implmentation soon for all commands
 	case "SUBSCRIBE", "QWATCH":
-		return EvalResponse{Result: EvalQWATCH(c.Args, httpOp, client, store), Error: nil}
+		return &EvalResponse{Result: EvalQWATCH(c.Args, httpOp, client, store), Error: nil}
 	case "UNSUBSCRIBE", "QUNWATCH":
-		return EvalResponse{Result: EvalQUNWATCH(c.Args, httpOp, client), Error: nil}
+		return &EvalResponse{Result: EvalQUNWATCH(c.Args, httpOp, client), Error: nil}
 	case auth.Cmd:
-		return EvalResponse{Result: EvalAUTH(c.Args, client), Error: nil}
+		return &EvalResponse{Result: EvalAUTH(c.Args, client), Error: nil}
 	case "ABORT":
-		return EvalResponse{Result: clientio.RespOK, Error: nil}
+		return &EvalResponse{Result: clientio.RespOK, Error: nil}
 	default:
-		return EvalResponse{Result: diceCmd.Eval(c.Args, store), Error: nil}
+		return &EvalResponse{Result: diceCmd.Eval(c.Args, store), Error: nil}
 	}
 }

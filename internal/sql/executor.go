@@ -10,7 +10,7 @@ import (
 	"github.com/dicedb/dice/internal/object"
 
 	"github.com/bytedance/sonic"
-	"github.com/cockroachdb/swiss"
+	"github.com/dicedb/dice/internal/common"
 	"github.com/dicedb/dice/internal/regex"
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/ohler55/ojg/jp"
@@ -31,7 +31,7 @@ type QueryResultRowWithOrder struct {
 	OrderByType  string
 }
 
-func ExecuteQuery(query *DSQLQuery, store *swiss.Map[string, *object.Obj]) ([]QueryResultRow, error) {
+func ExecuteQuery(query *DSQLQuery, store common.ITable[string, *object.Obj]) ([]QueryResultRow, error) {
 	var result []QueryResultRow
 	var err error
 	jsonPathCache := make(map[string]jp.Expr) // Cache for parsed JSON paths
