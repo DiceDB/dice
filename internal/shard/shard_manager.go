@@ -89,8 +89,8 @@ func (manager *ShardManager) GetShardInfo(key string) (id ShardID, c chan *ops.S
 }
 
 // GetShardCount returns the number of shards managed by this ShardManager.
-func (manager *ShardManager) GetShardCount() int8 {
-	return int8(len(manager.shards))
+func (manager *ShardManager) GetShardCount() uint8 {
+	return uint8(len(manager.shards))
 }
 
 // GetShard returns the ShardThread for the given ShardID.

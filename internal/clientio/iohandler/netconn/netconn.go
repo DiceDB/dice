@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"sync"
 	"syscall"
 	"time"
 
@@ -18,24 +19,31 @@ import (
 
 const (
 	maxRequestSize = 512 * 1024 // 512 KB
-	readBufferSize = 4 * 1024   // 4 KB
+	bufferSize     = 4 * 1024   // 4 KB
 	idleTimeout    = 10 * time.Minute
 )
+
+var bufferPool = sync.Pool{
+	New: func() interface{} {
+		return make([]byte, bufferSize)
+	},
+}
 
 var (
 	ErrRequestTooLarge = errors.New("request too large")
 	ErrIdleTimeout     = errors.New("connection idle timeout")
-	ErrorClosed        = errors.New("connection closed")
+	ErrorConnClosed    = errors.New("connection closed")
 )
 
 // IOHandler handles I/O operations for a network connection
 type IOHandler struct {
-	fd     int
-	file   *os.File
-	conn   net.Conn
-	reader *bufio.Reader
-	writer *bufio.Writer
-	logger *slog.Logger
+	fd         int
+	file       *os.File
+	conn       net.Conn
+	reader     *bufio.Reader
+	writer     *bufio.Writer
+	bufferPool sync.Pool
+	logger     *slog.Logger
 }
 
 var _ iohandler.IOHandler = (*IOHandler)(nil)
@@ -69,8 +77,13 @@ func NewIOHandler(clientFD int, logger *slog.Logger) (*IOHandler, error) {
 		fd:     clientFD,
 		file:   file,
 		conn:   conn,
-		reader: bufio.NewReader(conn),
-		writer: bufio.NewWriter(conn),
+		reader: bufio.NewReaderSize(conn, bufferSize),
+		writer: bufio.NewWriterSize(conn, bufferSize),
+		bufferPool: sync.Pool{
+			New: func() interface{} {
+				return make([]byte, maxRequestSize)
+			},
+		},
 		logger: logger,
 	}, nil
 }
@@ -78,8 +91,8 @@ func NewIOHandler(clientFD int, logger *slog.Logger) (*IOHandler, error) {
 func NewIOHandlerWithConn(conn net.Conn) *IOHandler {
 	return &IOHandler{
 		conn:   conn,
-		reader: bufio.NewReader(conn),
-		writer: bufio.NewWriter(conn),
+		reader: bufio.NewReaderSize(conn, bufferSize),
+		writer: bufio.NewWriterSize(conn, bufferSize),
 	}
 }
 
@@ -90,7 +103,8 @@ func (h *IOHandler) FileDescriptor() int {
 // ReadRequest reads data from the network connection
 func (h *IOHandler) Read(ctx context.Context) ([]byte, error) {
 	var data []byte
-	buf := make([]byte, readBufferSize)
+	buf := bufferPool.Get().([]byte)
+	defer bufferPool.Put(buf)
 
 	for {
 		select {
@@ -112,12 +126,12 @@ func (h *IOHandler) Read(ctx context.Context) ([]byte, error) {
 					// No more data to read at this time
 					return data, nil
 				case errors.Is(err, net.ErrClosed), errors.Is(err, syscall.EPIPE), errors.Is(err, syscall.ECONNRESET):
-					h.logger.Error("Connection closed", slog.Any("error", err))
+					h.logger.Info("Connection closed", slog.Any("error", err))
 					cerr := h.Close()
 					if cerr != nil {
 						h.logger.Warn("Error closing connection", slog.Any("error", errors.Join(err, cerr)))
 					}
-					return nil, ErrorClosed
+					return nil, ErrorConnClosed
 				case errors.Is(err, syscall.ETIMEDOUT):
 					h.logger.Info("Connection idle timeout", slog.Any("error", err))
 					cerr := h.Close()
@@ -146,8 +160,6 @@ func (h *IOHandler) Read(ctx context.Context) ([]byte, error) {
 
 // WriteResponse writes the response back to the network connection
 func (h *IOHandler) Write(ctx context.Context, response interface{}) error {
-	errChan := make(chan error, 1)
-
 	// Process the incoming response by calling the handleResponse function.
 	// This function checks the response against known RESP formatted values
 	// and returns the corresponding byte array representation. The result
@@ -166,32 +178,23 @@ func (h *IOHandler) Write(ctx context.Context, response interface{}) error {
 		resp = clientio.Encode(response, true)
 	}
 
-	go func(errChan chan error) {
-		_, err := h.writer.Write(resp)
-		if err == nil {
-			err = h.writer.Flush()
-		}
+	_, err := h.writer.Write(resp)
+	if err == nil {
+		err = h.writer.Flush()
+	}
 
-		errChan <- err
-	}(errChan)
-
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case err := <-errChan:
-		if err != nil {
-			if errors.Is(err, net.ErrClosed) || errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) {
-				cerr := h.Close()
-				if cerr != nil {
-					err = errors.Join(err, cerr)
-				}
-
-				h.logger.Error("Connection closed", slog.Any("error", err))
-				return err
+	if err != nil {
+		if errors.Is(err, net.ErrClosed) || errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) {
+			cerr := h.Close()
+			if cerr != nil {
+				err = errors.Join(err, cerr)
 			}
 
-			return fmt.Errorf("error writing response: %w", err)
+			h.logger.Info("Connection closed", slog.Any("error", err)) // Connection closed, logging as info
+			return nil
 		}
+
+		return fmt.Errorf("error writing response: %w", err)
 	}
 
 	return nil

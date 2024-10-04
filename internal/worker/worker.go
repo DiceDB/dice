@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/dicedb/dice/internal/clientio/iohandler/netconn"
 	"log/slog"
 	"net"
 	"syscall"
@@ -80,9 +81,15 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 		default:
 			data, err := w.ioHandler.Read(ctx)
 			if err != nil {
+				if errors.Is(netconn.ErrorConnClosed, err) {
+					w.logger.Debug("Connection closed", slog.String("workerID", w.id))
+					return nil
+				}
+
 				w.logger.Debug("Read error, connection closed possibly", slog.String("workerID", w.id), slog.Any("error", err))
 				return err
 			}
+
 			cmds, err := w.parser.Parse(data)
 			if err != nil {
 				err = w.ioHandler.Write(ctx, err)

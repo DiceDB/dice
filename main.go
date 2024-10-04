@@ -8,6 +8,8 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"runtime/pprof"
+	"runtime/trace"
 	"sync"
 	"syscall"
 
@@ -149,6 +151,50 @@ func main() {
 			}
 		}()
 	} else {
+		// Start CPU profiling
+		cpuFile, err := os.Create("cpu.prof")
+		if err != nil {
+			logr.Warn("could not create CPU profile: ", err)
+		}
+		defer cpuFile.Close()
+
+		if err := pprof.StartCPUProfile(cpuFile); err != nil {
+			logr.Warn("could not start CPU profile: ", err)
+		}
+		defer pprof.StopCPUProfile()
+
+		// Start memory profiling
+		memFile, err := os.Create("mem.prof")
+		if err != nil {
+			logr.Warn("could not create memory profile: ", err)
+		}
+		defer memFile.Close()
+
+		// Start block profiling
+		runtime.SetBlockProfileRate(1)
+		defer func() {
+			blockFile, err := os.Create("block.prof")
+			if err != nil {
+				logr.Warn("could not create block profile: ", err)
+			}
+			defer blockFile.Close()
+			if err := pprof.Lookup("block").WriteTo(blockFile, 0); err != nil {
+				logr.Warn("could not write block profile: ", err)
+			}
+		}()
+
+		// Start execution trace
+		traceFile, err := os.Create("trace.out")
+		if err != nil {
+			logr.Warn("could not create trace output file: ", err)
+		}
+		defer traceFile.Close()
+
+		if err := trace.Start(traceFile); err != nil {
+			logr.Warn("could not start trace: ", err)
+		}
+		defer trace.Stop()
+
 		workerManager := worker.NewWorkerManager(config.DiceConfig.Server.MaxClients, shardManager)
 		// Initialize the RESP Server
 		respServer := resp.NewServer(shardManager, workerManager, serverErrCh, logr)
@@ -181,6 +227,12 @@ func main() {
 			respServer.Shutdown()
 			cancel()
 		}()
+
+		// Ensure all profiling data is written before exiting
+		runtime.GC()
+		if err := pprof.WriteHeapProfile(memFile); err != nil {
+			logr.Warn("could not write memory profile: ", err)
+		}
 	}
 
 	websocketServer := server.NewWebSocketServer(shardManager, watchChan, logr)
