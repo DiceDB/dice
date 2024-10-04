@@ -1,9 +1,8 @@
 package eval
 
-// This file contains functions required by worker nodes to
-// evaluate specific Redis-like commands (e.g., INFO, PING).
-// These evaluation functions are exposed to the worker,
-// allowing them to process commands and return appropriate responses.
+// These evaluation functions are exposed to the worker, without
+// making any contact with shards allowing them to process
+// commands and return appropriate responses.
 
 import (
 	"github.com/dicedb/dice/internal/clientio"

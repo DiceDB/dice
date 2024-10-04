@@ -6,6 +6,8 @@ dicedb
 venv
 __pycache__
 .idea/
+./dice
+*.rdb
 dice
 
 # build output

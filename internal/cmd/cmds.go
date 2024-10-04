@@ -1,12 +1,12 @@
 package cmd
 
-type RedisCmd struct {
+type DiceDBCmd struct {
 	RequestID uint32
 	Cmd       string
 	Args      []string
 }
 
 type RedisCmds struct {
-	Cmds      []*RedisCmd
+	Cmds      []*DiceDBCmd
 	RequestID uint32
 }
