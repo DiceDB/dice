@@ -2,18 +2,26 @@ name: dice-test-suite
 on:
   push:
     branches: [master]
-    paths:
-      - "**/*.go"
-      - "go.mod"
-      - "go.sum"
-      - "Makefile"
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - ".github/**"
+      - "**.txt"
+      - "**.json"
+      - "**.yaml"
+      - "**.yml"
+      - "LICENSE"
   pull_request:
     branches: [master]
-    paths:
-      - "**/*.go"
-      - "go.mod"
-      - "go.sum"
-      - "Makefile"
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - ".github/**"
+      - "**.txt"
+      - "**.json"
+      - "**.yaml"
+      - "**.yml"
+      - "LICENSE"
 
 jobs:
   build:
