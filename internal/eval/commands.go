@@ -643,6 +643,13 @@ var (
 		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hmgetCmdMeta = DiceCmdMeta{
+		Name:     "HMGET",
+		Info:     `Returns the values associated with the specified fields in the hash stored at key.`,
+		Eval:     evalHMGET,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	hgetAllCmdMeta = DiceCmdMeta{
 		Name: "HGETALL",
 		Info: `Returns all fields and values of the hash stored at key. In the returned value,
@@ -1134,6 +1141,7 @@ func init() {
 	DiceCmds["PFADD"] = pfAddCmdMeta
 	DiceCmds["PFCOUNT"] = pfCountCmdMeta
 	DiceCmds["HGET"] = hgetCmdMeta
+	DiceCmds["HMGET"] = hmgetCmdMeta
 	DiceCmds["HSTRLEN"] = hstrLenCmdMeta
 	DiceCmds["PFMERGE"] = pfMergeCmdMeta
 	DiceCmds["JSON.STRLEN"] = jsonStrlenCmdMeta
