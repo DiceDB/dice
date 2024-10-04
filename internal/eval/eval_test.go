@@ -12,14 +12,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/axiomhq/hyperloglog"
+	"github.com/dicedb/dice/internal/server/utils"
+
 	"github.com/bytedance/sonic"
+	"github.com/ohler55/ojg/jp"
+
+	"github.com/axiomhq/hyperloglog"
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
-	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
-	"github.com/ohler55/ojg/jp"
 	testifyAssert "github.com/stretchr/testify/assert"
 	"gotest.tools/v3/assert"
 )
@@ -104,6 +106,7 @@ func TestEval(t *testing.T) {
 	testEvalZADD(t, store)
 	testEvalZRANGE(t, store)
 	testEvalHVALS(t, store)
+	testEvalBitField(t, store)
 	testEvalHINCRBYFLOAT(t, store)
 }
 
@@ -4976,6 +4979,56 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalZRANGE, store)
 }
 
+
+func testEvalBitField(t *testing.T, store *dstore.Store) {
+	testCases := map[string]evalTestCase{
+		"BITFIELD signed SET": {
+			input:  []string{"bits", "set", "i8", "0", "-100"},
+			output: clientio.Encode([]int64{0}, false),
+		},
+		"BITFIELD GET": {
+			setup: func() {
+				args := []string{"bits", "set", "u8", "0", "255"}
+				evalBITFIELD(args, store)
+			},
+			input:  []string{"bits", "get", "u8", "0"},
+			output: clientio.Encode([]int64{255}, false),
+		},
+		"BITFIELD INCRBY": {
+			setup: func() {
+				args := []string{"bits", "set", "u8", "0", "255"}
+				evalBITFIELD(args, store)
+			},
+			input:  []string{"bits", "incrby", "u8", "0", "100"},
+			output: clientio.Encode([]int64{99}, false),
+		},
+		"BITFIELD Arity": {
+			input:  []string{},
+			output: diceerrors.NewErrArity("BITFIELD"),
+		},
+		"BITFIELD invalid combination of commands in a single operation": {
+			input:  []string{"bits", "SET", "u8", "0", "255", "INCRBY", "u8", "0", "100", "GET", "u8"},
+			output: []byte("-ERR syntax error\r\n"),
+		},
+		"BITFIELD invalid bitfield type": {
+			input:  []string{"bits", "SET", "a8", "0", "255", "INCRBY", "u8", "0", "100", "GET", "u8"},
+			output: []byte("-ERR Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is.\r\n"),
+		},
+		"BITFIELD invalid bit offset": {
+			input:  []string{"bits", "SET", "u8", "a", "255", "INCRBY", "u8", "0", "100", "GET", "u8"},
+			output: []byte("-ERR bit offset is not an integer or out of range\r\n"),
+		},
+		"BITFIELD invalid overflow type": {
+			input:  []string{"bits", "SET", "u8", "0", "255", "INCRBY", "u8", "0", "100", "OVERFLOW", "wraap"},
+			output: []byte("-ERR Invalid OVERFLOW type specified\r\n"),
+		},
+		"BITFIELD missing arguments in SET": {
+			input:  []string{"bits", "SET", "u8", "0", "INCRBY", "u8", "0", "100", "GET", "u8", "288"},
+			output: []byte("-ERR value is not an integer or out of range\r\n"),
+		},
+	}
+	runEvalTests(t, testCases, evalBITFIELD, store)
+}
 func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"HINCRBYFLOAT on a non-existing key and field": {
