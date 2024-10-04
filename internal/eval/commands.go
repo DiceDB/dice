@@ -1004,6 +1004,30 @@ var (
 		Arity:    -4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	bitfieldCmdMeta = DiceCmdMeta{
+		Name: "BITFIELD",
+		Info: `The command treats a string as an array of bits as well as bytearray data structure, 
+		and is capable of addressing specific integer fields of varying bit widths
+		and arbitrary non (necessary) aligned offset. 
+		In practical terms using this command you can set, for example, 
+		a signed 5 bits integer at bit offset 1234 to a specific value, 
+		retrieve a 31 bit unsigned integer from offset 4567. 
+		Similarly the command handles increments and decrements of the 
+		specified integers, providing guaranteed and well specified overflow 
+		and underflow behavior that the user can configure.
+		The following is the list of supported commands.
+		GET <encoding> <offset> -- Returns the specified bit field.
+		SET <encoding> <offset> <value> -- Set the specified bit field 
+		and returns its old value.
+		INCRBY <encoding> <offset> <increment> -- Increments or decrements 
+		(if a negative increment is given) the specified bit field and returns the new value.
+		There is another subcommand that only changes the behavior of successive
+		INCRBY and SET subcommands calls by setting the overflow behavior:
+		OVERFLOW [WRAP|SAT|FAIL]`,
+		Arity:    -1,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+		Eval:     evalBITFIELD,
+	}
 	hincrbyFloatCmdMeta = DiceCmdMeta{
 		Name: "HINCRBYFLOAT",
 		Info: `HINCRBYFLOAT increments the specified field of a hash stored at the key, 
@@ -1128,6 +1152,7 @@ func init() {
 	DiceCmds["APPEND"] = appendCmdMeta
 	DiceCmds["ZADD"] = zaddCmdMeta
 	DiceCmds["ZRANGE"] = zrangeCmdMeta
+	DiceCmds["BITFIELD"] = bitfieldCmdMeta
 	DiceCmds["HINCRBYFLOAT"] = hincrbyFloatCmdMeta
 	DiceCmds["HEXISTS"] = hexistsCmdMeta
 }
