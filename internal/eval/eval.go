@@ -57,7 +57,6 @@ type EvalResponse struct {
 	Result interface{} // Result of the Store operation, for now the type is set to []byte, but this can change in the future.
 	Error  error
 }
-
 type jsonOperation string
 
 const (
@@ -4340,8 +4339,6 @@ func evalJSONNUMINCRBY(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(resultString, false)
 }
 
-
-
 // evalJSONOBJKEYS retrieves the keys of a JSON object stored at path specified.
 // It takes two arguments: the key where the JSON document is stored, and an optional JSON path.
 // It returns a list of keys from the object at the specified path or an error if the path is invalid.
@@ -4444,10 +4441,6 @@ func evalTYPE(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(typeStr, true)
 }
 
-<<<<<<< HEAD
-=======
-
->>>>>>> a005df7 (Revert linted files)
 // evalGETRANGE returns the substring of the string value stored at key, determined by the offsets start and end
 // The offsets are zero-based and can be negative values to index from the end of the string
 //
@@ -5071,4 +5064,3 @@ func evalHINCRBYFLOAT(args []string, store *dstore.Store) []byte {
 
 	return clientio.Encode(numkey, false)
 }
-

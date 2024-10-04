@@ -48,7 +48,7 @@ func ParseHTTPRequest(r *http.Request) (*cmd.DiceDBCmd, error) {
 
 	var args []string
 
-	// Handle subcommand and multiple arguments
+	//Handle subcommand and multiple arguments
 	if subcommand != "" {
 		args = append(args, subcommand)
 	}
