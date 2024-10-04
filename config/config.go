@@ -108,7 +108,7 @@ var baseConfig = Config{
 		KeepAlive:              int32(300),
 		Timeout:                int32(300),
 		MaxConn:                int32(0),
-		ShardCronFrequency:     1 * time.Second,
+		ShardCronFrequency:     30 * time.Second,
 		MultiplexerPollTimeout: 100 * time.Millisecond,
 		MaxClients:             20000,
 		MaxMemory:              0,
