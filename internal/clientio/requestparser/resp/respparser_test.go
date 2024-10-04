@@ -1,10 +1,11 @@
 package respparser
 
 import (
-	"github.com/dicedb/dice/mocks"
 	"log/slog"
 	"reflect"
 	"testing"
+
+	"github.com/dicedb/dice/mocks"
 
 	"github.com/dicedb/dice/internal/cmd"
 )
@@ -13,27 +14,27 @@ func TestParser_Parse(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   string
-		want    []*cmd.RedisCmd
+		want    []*cmd.DiceDBCmd
 		wantErr bool
 	}{
 		{
 			name:  "Simple SET command",
 			input: "*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n$5\r\nvalue\r\n",
-			want: []*cmd.RedisCmd{
+			want: []*cmd.DiceDBCmd{
 				{Cmd: "SET", Args: []string{"key", "value"}},
 			},
 		},
 		{
 			name:  "GET command",
 			input: "*2\r\n$3\r\nGET\r\n$3\r\nkey\r\n",
-			want: []*cmd.RedisCmd{
+			want: []*cmd.DiceDBCmd{
 				{Cmd: "GET", Args: []string{"key"}},
 			},
 		},
 		{
 			name:  "Multiple commands",
 			input: "*2\r\n$4\r\nPING\r\n$4\r\nPONG\r\n*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n$5\r\nvalue\r\n",
-			want: []*cmd.RedisCmd{
+			want: []*cmd.DiceDBCmd{
 				{Cmd: "PING", Args: []string{"PONG"}},
 				{Cmd: "SET", Args: []string{"key", "value"}},
 			},
@@ -41,7 +42,7 @@ func TestParser_Parse(t *testing.T) {
 		{
 			name:  "Command with integer argument",
 			input: "*3\r\n$6\r\nEXPIRE\r\n$3\r\nkey\r\n:60\r\n",
-			want: []*cmd.RedisCmd{
+			want: []*cmd.DiceDBCmd{
 				{Cmd: "EXPIRE", Args: []string{"key", "60"}},
 			},
 		},
@@ -58,28 +59,28 @@ func TestParser_Parse(t *testing.T) {
 		{
 			name:  "Command with null bulk string argument",
 			input: "*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n$-1\r\n",
-			want: []*cmd.RedisCmd{
+			want: []*cmd.DiceDBCmd{
 				{Cmd: "SET", Args: []string{"key", "(nil)"}},
 			},
 		},
 		{
 			name:  "Command with Simple String argument",
 			input: "*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n+OK\r\n",
-			want: []*cmd.RedisCmd{
+			want: []*cmd.DiceDBCmd{
 				{Cmd: "SET", Args: []string{"key", "OK"}},
 			},
 		},
 		{
 			name:  "Command with Error argument",
 			input: "*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n-ERR Invalid argument\r\n",
-			want: []*cmd.RedisCmd{
+			want: []*cmd.DiceDBCmd{
 				{Cmd: "SET", Args: []string{"key", "ERR Invalid argument"}},
 			},
 		},
 		{
 			name:  "Command with mixed argument types",
 			input: "*5\r\n$4\r\nMSET\r\n$3\r\nkey\r\n$5\r\nvalue\r\n:1000\r\n+OK\r\n",
-			want: []*cmd.RedisCmd{
+			want: []*cmd.DiceDBCmd{
 				{Cmd: "MSET", Args: []string{"key", "value", "1000", "OK"}},
 			},
 		},
@@ -96,7 +97,7 @@ func TestParser_Parse(t *testing.T) {
 		{
 			name:  "Command with empty bulk string",
 			input: "*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n$0\r\n\r\n",
-			want: []*cmd.RedisCmd{
+			want: []*cmd.DiceDBCmd{
 				{Cmd: "SET", Args: []string{"key", ""}},
 			},
 		},
@@ -113,7 +114,7 @@ func TestParser_Parse(t *testing.T) {
 		{
 			name:  "Large bulk string",
 			input: "*2\r\n$4\r\nECHO\r\n$1000\r\n" + string(make([]byte, 1000)) + "\r\n",
-			want: []*cmd.RedisCmd{
+			want: []*cmd.DiceDBCmd{
 				{Cmd: "ECHO", Args: []string{string(make([]byte, 1000))}},
 			},
 		},

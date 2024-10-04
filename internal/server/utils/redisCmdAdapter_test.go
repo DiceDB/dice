@@ -162,6 +162,14 @@ func TestParseHTTPRequest(t *testing.T) {
 			expectedCmd:  "QWATCH",
 			expectedArgs: []string{"SELECT $key, $value WHERE $key LIKE \"player:*\" AND \"$value.score\" > 10 ORDER BY $value.score DESC LIMIT 5"},
 		},
+		{
+			name:         "Test JSON.ARRPOP command",
+			method:       "POST",
+			url:          "/json.arrpop",
+			body:         `{"key": "k1", "path": "$", "index": 1}`,
+			expectedCmd:  "JSON.ARRPOP",
+			expectedArgs: []string{"k1", "$", "1"},
+		},
 	}
 
 	for _, tc := range commands {
@@ -169,19 +177,19 @@ func TestParseHTTPRequest(t *testing.T) {
 			req := httptest.NewRequest(tc.method, tc.url, strings.NewReader(tc.body))
 			req.Header.Set("Content-Type", "application/json")
 
-			redisCmd, err := ParseHTTPRequest(req)
+			diceDBCmd, err := ParseHTTPRequest(req)
 			assert.NoError(t, err)
 
-			expectedCmd := &cmd.RedisCmd{
+			expectedCmd := &cmd.DiceDBCmd{
 				Cmd:  tc.expectedCmd,
 				Args: tc.expectedArgs,
 			}
 
 			// Check command match
-			assert.Equal(t, expectedCmd.Cmd, redisCmd.Cmd)
+			assert.Equal(t, expectedCmd.Cmd, diceDBCmd.Cmd)
 
 			// Check arguments match, regardless of order
-			assert.ElementsMatch(t, expectedCmd.Args, redisCmd.Args, "The parsed arguments should match the expected arguments, ignoring order")
+			assert.ElementsMatch(t, expectedCmd.Args, diceDBCmd.Args, "The parsed arguments should match the expected arguments, ignoring order")
 
 		})
 	}
@@ -241,19 +249,19 @@ func TestParseWebsocketMessage(t *testing.T) {
 	for _, tc := range commands {
 		t.Run(tc.name, func(t *testing.T) {
 			// parse websocket message
-			redisCmd, err := ParseWebsocketMessage([]byte(tc.message))
+			diceDBCmd, err := ParseWebsocketMessage([]byte(tc.message))
 			assert.NoError(t, err)
 
-			expectedCmd := &cmd.RedisCmd{
+			expectedCmd := &cmd.DiceDBCmd{
 				Cmd:  tc.expectedCmd,
 				Args: tc.expectedArgs,
 			}
 
 			// Check command match
-			assert.Equal(t, expectedCmd.Cmd, redisCmd.Cmd)
+			assert.Equal(t, expectedCmd.Cmd, diceDBCmd.Cmd)
 
 			// Check arguments match, regardless of order
-			assert.ElementsMatch(t, expectedCmd.Args, redisCmd.Args, "The parsed arguments should match the expected arguments, ignoring order")
+			assert.ElementsMatch(t, expectedCmd.Args, diceDBCmd.Args, "The parsed arguments should match the expected arguments, ignoring order")
 		})
 	}
 }

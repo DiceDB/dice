@@ -1,6 +1,10 @@
 DiceDB
 ===
 
+<a href="https://dicedb.io">![slatedb.io](https://img.shields.io/badge/site-dicedb.io-00A1FF?style=flat-square)</a>
+<a href="https://discord.gg/6r8uXWtXh7">![Discord](https://img.shields.io/discord/1232385660460204122?style=flat-square)</a>
+<a href="https://dicedb.io/get-started/installation/">![Docs](https://img.shields.io/badge/docs-00A1FF?style=flat-square)</a>
+
 DiceDB is an in-memory, real-time, and reactive database with Redis and SQL support optimized for modern hardware and building real-time applications.
 
 We are looking for Early Design Partners, so, if you want to evaluate DiceDB, [block our calendar](https://cal.com/dicedb-arpit). always up for a chat.
@@ -22,7 +26,7 @@ Although DiceDB is a drop-in replacement of Redis, which means almost no learnin
 1. DiceDB is multithreaded and follows [shared-nothing architecture](https://en.wikipedia.org/wiki/Shared-nothing_architecture).
 2. DiceDB supports a new command called `QWATCH` that lets clients listen to a SQL query and get notified in real-time whenever something changes.
 
-With this, you can build truly real-time applications like [Leaderboard](https://github.com/DiceDB/dice/tree/master/examples/leaderboard-go) with simple SQL query.
+With this, you can build truly real-time applications like [Leaderboard](https://github.com/DiceDB/dice/tree/master/examples/leaderboard-go) with simple SQL queries.
 
 ![Leaderboard with DiceDB](https://github.com/user-attachments/assets/327792c7-d788-47d4-a767-ef2c478d75cb)
 
@@ -33,7 +37,7 @@ With this, you can build truly real-time applications like [Leaderboard](https:/
 The easiest way to get started with DiceDB is using [Docker](https://www.docker.com/) by running the following command.
 
 ```
-$ docker run dicedb/dicedb
+$ docker run -p 7379:7379 dicedb/dicedb
 ```
 
 The above command will start the DiceDB server running locally on the port `7379` and you can connect
@@ -50,14 +54,14 @@ $ cd dice
 $ go run main.go --enable-multithreading=true
 ```
 
-**Note:** Only the following commands are optimised for multithreaded execution: `PING, AUTH, SET, GET, GETSET, ABORT`
+**Note:** Only the following commands are optimized for multithreaded execution: `PING, AUTH, SET, GET, GETSET, ABORT`
 
 ### Setting up DiceDB from source for development and contributions
 
 To run DiceDB for local development or running from source, you will need
 
 1. [Golang](https://go.dev/)
-2. Any of the below supported platform environment:
+2. Any of the below supported platform environments:
     1. [Linux based environment](https://en.wikipedia.org/wiki/Comparison_of_Linux_distributions)
     2. [OSX (Darwin) based environment](https://en.wikipedia.org/wiki/MacOS)
     3. WSL under Windows
@@ -239,6 +243,10 @@ The Code Contribution Guidelines are published at [CONTRIBUTING.md](CONTRIBUTING
 
 Contributors can join the [Discord Server](https://discord.gg/6r8uXWtXh7) for quick collaboration.
 
+## Community
+
+- [Join the Discord Server](https://discord.gg/6r8uXWtXh7)
+
 ## Contributors
 
 <a href = "https://github.com/dicedb/dice/graphs/contributors">
@@ -253,3 +261,6 @@ Contributors can join the [Discord Server](https://discord.gg/6r8uXWtXh7) for qu
 $ sudo netstat -atlpn | grep :7379
 $ sudo kill -9 <process_id>
 ```
+
+[discord]: https://discord.gg/6r8uXWtXh7
+[discord-badge]: https://img.shields.io/discord/1034342738960855120?color=%235865F2&label=%20&logo=discord&logoColor=white&style=flat-square

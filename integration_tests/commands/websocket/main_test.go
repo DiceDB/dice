@@ -36,9 +36,7 @@ func TestMain(m *testing.M) {
 
 	// abort
 	conn := executor.ConnectToServer()
-	executor.FireCommand(conn, WebsocketCommand{
-		Message: "abort",
-	})
+	executor.FireCommand(conn, "abort")
 	executor.DisconnectServer(conn)
 
 	wg.Wait()

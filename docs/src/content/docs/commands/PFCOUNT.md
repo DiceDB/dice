@@ -7,17 +7,22 @@ The `PFCOUNT` command in DiceDB is used to return the approximate cardinality (i
 
 ## Syntax
 
-```plaintext
+```
 PFCOUNT key [key ...]
 ```
 
 ## Parameters
 
-- `key`: The key(s) of the HyperLogLog data structure(s) whose cardinality you want to estimate. You can specify one or more keys.
+| Parameter | Description | Type | Required |
+|-----------|-------------|------|----------|
+| `key` | The key(s) of the HyperLogLog data structure(s) whose cardinality you want to estimate. You can specify one or more keys. | String | Yes |
 
-## Return Value
+## Return Values
 
-- `Integer`: The command returns an integer that represents the approximate number of unique elements observed in the specified HyperLogLog data structure(s).
+| Condition                                      | Return Value                                      |
+|------------------------------------------------|---------------------------------------------------|
+| The specified `key` exists and contains a valid HyperLogLog | The estimated number of unique elements as an integer |
+| The `key` does not exist or is not a valid HyperLogLog | `0` |
 
 ## Behaviour
 
@@ -27,36 +32,14 @@ When the `PFCOUNT` command is executed, DiceDB will:
 2. Estimate the cardinality of the set(s) represented by the HyperLogLog data structure(s).
 3. If multiple keys are specified, DiceDB will merge the HyperLogLog data structures and return the cardinality of the union of the sets.
 
-## Example Usage
-
-### Single Key
-
-```plaintext
-127.0.0.1:6379> PFADD hll1 "foo" "bar" "baz"
-(integer) 1
-127.0.0.1:6379> PFCOUNT hll1
-(integer) 3
-```
-
-### Multiple Keys
-
-```plaintext
-127.0.0.1:6379> PFADD hll1 "foo" "bar"
-(integer) 1
-127.0.0.1:6379> PFADD hll2 "baz" "qux"
-(integer) 1
-127.0.0.1:6379> PFCOUNT hll1 hll2
-(integer) 4
-```
-
-## Error Handling
+## Errors
 
 The `PFCOUNT` command can raise errors in the following scenarios:
 
 1. `Non-Existent Key`: If the specified key does not exist, DiceDB will treat it as an empty HyperLogLog and return a cardinality of 0.
 
-   ```plaintext
-   127.0.0.1:6379> PFCOUNT non_existent_key
+   ```bash
+   127.0.0.1:7379> PFCOUNT non_existent_key
    (integer) 0
    ```
 
@@ -64,10 +47,10 @@ The `PFCOUNT` command can raise errors in the following scenarios:
 
    `Error Message`: `WRONGTYPE Operation against a key holding the wrong kind of value`
 
-   ```plaintext
-   127.0.0.1:6379> SET mykey "value"
+   ```bash
+   127.0.0.1:7379> SET mykey "value"
    OK
-   127.0.0.1:6379> PFCOUNT mykey
+   127.0.0.1:7379> PFCOUNT mykey
    (error) WRONGTYPE Operation against a key holding the wrong kind of value
    ```
 
@@ -75,10 +58,32 @@ The `PFCOUNT` command can raise errors in the following scenarios:
 
    `Error Message`: `ERR wrong number of arguments for 'pfcount' command`
 
-   ```plaintext
-   127.0.0.1:6379> PFCOUNT
+   ```bash
+   127.0.0.1:7379> PFCOUNT
    (error) ERR wrong number of arguments for 'pfcount' command
    ```
+
+## Examples
+
+### Single Key
+
+```bash
+127.0.0.1:7379> PFADD hll1 "foo" "bar" "baz"
+(integer) 1
+127.0.0.1:7379> PFCOUNT hll1
+(integer) 3
+```
+
+### Multiple Keys
+
+```bash
+127.0.0.1:7379> PFADD hll1 "foo" "bar"
+(integer) 1
+127.0.0.1:7379> PFADD hll2 "baz" "qux"
+(integer) 1
+127.0.0.1:7379> PFCOUNT hll1 hll2
+(integer) 4
+```
 
 ## Notes
 

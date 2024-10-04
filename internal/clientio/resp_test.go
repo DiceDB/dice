@@ -8,6 +8,7 @@ import (
 
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/server/utils"
+	testifyAssert "github.com/stretchr/testify/assert"
 )
 
 func TestSimpleStringDecode(t *testing.T) {
@@ -173,5 +174,47 @@ func TestArrayInt(t *testing.T) {
 		if nv != buf.String() {
 			t.Errorf("resp parser decoded value mismatch: %v", buf.String())
 		}
+	}
+}
+
+func TestBoolean(t *testing.T) {
+	tests := []struct {
+		input  bool
+		output []byte
+	}{
+		{
+			input:  true,
+			output: []byte("+true\r\n"),
+		},
+		{
+			input:  false,
+			output: []byte("+false\r\n"),
+		},
+	}
+
+	for _, v := range tests {
+		ev := clientio.Encode(v.input, false)
+		testifyAssert.Equal(t, ev, v.output)
+	}
+}
+
+func TestInteger(t *testing.T) {
+	tests := []struct {
+		input  int
+		output []byte
+	}{
+		{
+			input:  10,
+			output: []byte(":10\r\n"),
+		},
+		{
+			input:  -19,
+			output: []byte(":-19\r\n"),
+		},
+	}
+
+	for _, v := range tests {
+		ev := clientio.Encode(v.input, false)
+		testifyAssert.Equal(t, ev, v.output)
 	}
 }
