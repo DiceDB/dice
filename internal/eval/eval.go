@@ -57,6 +57,7 @@ type EvalResponse struct {
 	Result interface{} // Result of the Store operation, for now the type is set to []byte, but this can change in the future.
 	Error  error
 }
+
 type jsonOperation string
 
 const (
