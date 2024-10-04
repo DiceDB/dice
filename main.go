@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
-	"runtime/pprof"
 	"sync"
 	"syscall"
 
@@ -39,13 +38,6 @@ func init() {
 }
 
 func main() {
-	f, err := os.Create("cpu.pprof")
-	if err != nil {
-		panic(err)
-	}
-	pprof.StartCPUProfile(f)
-	defer pprof.StopCPUProfile()
-
 	logr := logger.New(logger.Opts{WithTimestamp: true})
 	slog.SetDefault(logr)
 
