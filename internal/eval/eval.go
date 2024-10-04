@@ -3249,7 +3249,7 @@ func evalHGET(args []string, store *dstore.Store) []byte {
 // evalHMGET returns an array of values associated with the given fields,
 // in the same order as they are requested.
 // If a field does not exist, returns a corresponding nil value in the array.
-// If the key does not exist, returns an array of nil values.
+// If the key does not exist, returns an array of nil values. 
 func evalHMGET(args []string, store *dstore.Store) []byte {
 	if len(args) < 2 {
 		return diceerrors.NewErrArity("HMGET")
