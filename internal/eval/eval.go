@@ -917,6 +917,7 @@ func evalJSONDEL(args []string, store *dstore.Store) []byte {
 
 	hasBrackets := strings.Contains(path, "[") && strings.Contains(path, "]")
 
+	//If the command has square brackets then we have to delete an element inside an array
 	if hasBrackets {
 		_, err = expr.Remove(jsonData)
 	} else {
