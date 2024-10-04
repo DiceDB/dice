@@ -160,10 +160,8 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 	}
 }
 
-
 func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCmd) error {
-  
-  w.updateLastActivity()
+	w.updateLastActivity()
 
 	cmdCtx, cancel := context.WithTimeout(ctx, time.Duration(w.commandTimeout)*time.Second)
 	defer cancel()
@@ -171,53 +169,54 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 	resultChan := make(chan error, 1)
 
 	go func() {
-      var err error
-      defer func() {
-        resultChan <- err
-      }()
-    // Break down the single command into multiple commands if multisharding is supported.
-    // The length of cmdList helps determine how many shards to wait for responses.
-    cmdList := make([]*cmd.DiceDBCmd, 0)
+		var err error
+		defer func() {
+			resultChan <- err
+		}()
+		// Break down the single command into multiple commands if multisharding is supported.
+		// The length of cmdList helps determine how many shards to wait for responses.
+		cmdList := make([]*cmd.DiceDBCmd, 0)
 
-    // Retrieve metadata for the command to determine if multisharding is supported.
-    meta, ok := CommandsMeta[diceDBCmd.Cmd]
-    if !ok {
-      // If no metadata exists, treat it as a single command and not migrated
-      cmdList = append(cmdList, diceDBCmd)
-    } else {
-      // Depending on the command type, decide how to handle it.
-      switch meta.CmdType {
-      case Global:
-        // If it's a global command, process it immediately without involving any shards.
-        err := w.ioHandler.Write(cmdCtx, meta.WorkerCommandHandler(diceDBCmd.Args))
-        w.logger.Debug("Error executing for worker", slog.String("workerID", w.id), slog.Any("error", err))
-        return
+		// Retrieve metadata for the command to determine if multisharding is supported.
+		meta, ok := CommandsMeta[diceDBCmd.Cmd]
+		if !ok {
+			// If no metadata exists, treat it as a single command and not migrated
+			cmdList = append(cmdList, diceDBCmd)
+		} else {
+			// Depending on the command type, decide how to handle it.
+			switch meta.CmdType {
+			case Global:
+				// If it's a global command, process it immediately without involving any shards.
+				err = w.ioHandler.Write(cmdCtx, meta.WorkerCommandHandler(diceDBCmd.Args))
+				w.logger.Debug("Error executing for worker", slog.String("workerID", w.id), slog.Any("error", err))
+				return
 
-      case SingleShard:
-        // For single-shard or custom commands, process them without breaking up.
-        cmdList = append(cmdList, diceDBCmd)
+			case SingleShard:
+				// For single-shard or custom commands, process them without breaking up.
+				cmdList = append(cmdList, diceDBCmd)
 
-      case MultiShard:
-        // If the command supports multisharding, break it down into multiple commands.
-        cmdList = meta.decomposeCommand(diceDBCmd)
-      case Custom:
-        switch diceDBCmd.Cmd {
-        case CmdAuth:
-          err := w.ioHandler.Write(cmdCtx, w.RespAuth(diceDBCmd.Args))
-          if err != nil {
-            w.logger.Error("Error sending auth response to worker", slog.String("workerID", w.id), slog.Any("error", err))
-          }
-          return err
-        case CmdAbort:
-          err := w.ioHandler.Write(cmdCtx, clientio.OK)
-          if err != nil {
-            w.logger.Error("Error sending abort response to worker", slog.String("workerID", w.id), slog.Any("error", err))
-          }
-          w.logger.Info("Received ABORT command, initiating server shutdown", slog.String("workerID", w.id))
-          w.globalErrorChan <- diceerrors.ErrAborted
-          return err
-        default:
-          cmdList = append(cmdList, diceDBCmd)
+			case MultiShard:
+				// If the command supports multisharding, break it down into multiple commands.
+				cmdList = meta.decomposeCommand(diceDBCmd)
+			case Custom:
+				switch diceDBCmd.Cmd {
+				case CmdAuth:
+					err = w.ioHandler.Write(cmdCtx, w.RespAuth(diceDBCmd.Args))
+					if err != nil {
+						w.logger.Error("Error sending auth response to worker", slog.String("workerID", w.id), slog.Any("error", err))
+					}
+					return
+				case CmdAbort:
+					err = w.ioHandler.Write(cmdCtx, clientio.OK)
+					if err != nil {
+						w.logger.Error("Error sending abort response to worker", slog.String("workerID", w.id), slog.Any("error", err))
+					}
+					w.logger.Info("Received ABORT command, initiating server shutdown", slog.String("workerID", w.id))
+					w.globalErrorChan <- diceerrors.ErrAborted
+					return
+				default:
+					cmdList = append(cmdList, diceDBCmd)
+				}
 			}
 		}
 
@@ -228,7 +227,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 		}
 
 		// Gather the responses from the shards and write them to the buffer.
-		err = w.gather(cmdCtx, redisCmd.Cmd, len(cmdList), meta.CmdType)
+		err = w.gather(cmdCtx, diceDBCmd.Cmd, len(cmdList), meta.CmdType)
 		if err != nil {
 			return
 		}
@@ -237,7 +236,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 	select {
 	case <-cmdCtx.Done():
 		if cmdCtx.Err() == context.DeadlineExceeded {
-			w.logger.Warn("Command execution timed out", slog.String("workerID", w.id), slog.String("command", redisCmd.Cmd))
+			w.logger.Warn("Command execution timed out", slog.String("workerID", w.id), slog.String("command", diceDBCmd.Cmd))
 			return fmt.Errorf("command execution timed out: %w", cmdCtx.Err())
 		}
 		return cmdCtx.Err()
