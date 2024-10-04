@@ -592,6 +592,13 @@ func TestJSONForgetOperations(t *testing.T) {
 				"JSON.GET user $"},
 			expected: []interface{}{"OK", int64(1), `{"name":"sugar"}`},
 		},
+		{
+			name: "forget array element",
+			commands: []string{`JSON.SET user $ {"names":["Rahul","Tom"],"bosses":{"names":["Jerry","Rocky"],"hobby":"swim"}}`,
+				"JSON.FORGET user $.names[0]",
+				"JSON.GET user $"},
+			expected: []interface{}{"OK", int64(1), `{"names":["Tom"],"bosses":{"names":["Jerry","Rocky"],"hobby":"swim"}}`},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -862,8 +869,8 @@ func TestJsonNummultby(t *testing.T) {
 	invalidArgMessage := "ERR wrong number of arguments for 'json.nummultby' command"
 
 	testCases := []struct {
-		name        string
-		commands    []string
+		name       string
+		commands   []string
 		expected   []interface{}
 		assertType []string
 	}{
@@ -1021,9 +1028,9 @@ func TestJSONNumIncrBy(t *testing.T) {
 	defer conn.Close()
 	invalidArgMessage := "ERR wrong number of arguments for 'json.numincrby' command"
 	testCases := []struct {
-		name        string
-		setupData   string
-		commands    []string
+		name       string
+		setupData  string
+		commands   []string
 		expected   []interface{}
 		assertType []string
 		cleanUp    []string
