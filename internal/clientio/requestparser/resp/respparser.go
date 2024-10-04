@@ -52,10 +52,10 @@ func (p *Parser) SetData(data []byte) {
 	p.pos = 0
 }
 
-// Parse parses the entire input and returns a slice of RedisCmd
-func (p *Parser) Parse(data []byte) ([]*cmd.RedisCmd, error) {
+// Parse parses the entire input and returns a slice of DiceDBCmd
+func (p *Parser) Parse(data []byte) ([]*cmd.DiceDBCmd, error) {
 	p.SetData(data)
-	var commands []*cmd.RedisCmd
+	var commands []*cmd.DiceDBCmd
 	for p.pos < len(p.data) {
 		c, err := p.parseCommand()
 		if err != nil {
@@ -68,7 +68,7 @@ func (p *Parser) Parse(data []byte) ([]*cmd.RedisCmd, error) {
 	return commands, nil
 }
 
-func (p *Parser) parseCommand() (*cmd.RedisCmd, error) {
+func (p *Parser) parseCommand() (*cmd.DiceDBCmd, error) {
 	if p.pos >= len(p.data) {
 		return nil, ErrUnexpectedEOF
 	}
@@ -84,7 +84,7 @@ func (p *Parser) parseCommand() (*cmd.RedisCmd, error) {
 		return nil, fmt.Errorf("error while parsing command, empty command")
 	}
 
-	return &cmd.RedisCmd{
+	return &cmd.DiceDBCmd{
 		Cmd:  strings.ToUpper(elements[0]),
 		Args: elements[1:],
 	}, nil

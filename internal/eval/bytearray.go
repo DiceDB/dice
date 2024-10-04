@@ -210,6 +210,91 @@ func (b *ByteArray) DeepCopy() *ByteArray {
 	return copyArray
 }
 
+func (b *ByteArray) getBits(offset, width int, signed bool) int64 {
+	extraBits := 0
+	if offset+width > int(b.Length)*8 {
+		// If bits exceed the current data size, we will pad the result with zeros for the missing bits.
+		extraBits = offset + width - int(b.Length)*8
+	}
+	var value int64
+	for i := 0; i < width-extraBits; i++ {
+		value <<= 1
+		byteIndex := (offset + i) / 8
+		bitIndex := 7 - ((offset + i) % 8)
+		if b.data[byteIndex]&(1<<bitIndex) != 0 {
+			value |= 1 << 0
+		}
+	}
+	value <<= int64(extraBits)
+	if signed && (value&(1<<(width-1)) != 0) {
+		value -= 1 << width
+	}
+	return value
+}
+
+func (b *ByteArray) setBits(offset, width int, value int64) {
+	if offset+width > int(b.Length)*8 {
+		newSize := (offset + width + 7) / 8
+		b.IncreaseSize(newSize)
+	}
+	for i := 0; i < width; i++ {
+		byteIndex := (offset + i) / 8
+		bitIndex := (offset + i) % 8
+		if value&(1<<i) != 0 {
+			b.data[byteIndex] |= 1 << bitIndex
+		} else {
+			b.data[byteIndex] &^= 1 << bitIndex
+		}
+	}
+}
+
+// Increment value at a specific bitfield and handle overflow.
+func (b *ByteArray) incrByBits(offset, width int, increment int64, overflow string, signed bool) (int64, error) {
+	if offset+width > int(b.Length)*8 {
+		newSize := (offset + width + 7) / 8
+		b.IncreaseSize(newSize)
+	}
+
+	value := b.getBits(offset, width, signed)
+	newValue := value + increment
+
+	var maxVal, minVal int64
+	if signed {
+		maxVal = int64(1<<(width-1) - 1)
+		minVal = int64(-1 << (width - 1))
+	} else {
+		maxVal = int64(1<<width - 1)
+		minVal = 0
+	}
+
+	switch overflow {
+	case WRAP:
+		if signed {
+			rangeSize := maxVal - minVal + 1
+			newValue = ((newValue-minVal)%rangeSize+rangeSize)%rangeSize + minVal
+		} else {
+			newValue %= maxVal + 1
+		}
+	case SAT:
+		// Handle saturation
+		if newValue > maxVal {
+			newValue = maxVal
+		} else if newValue < minVal {
+			newValue = minVal
+		}
+	case FAIL:
+		// Handle failure on overflow
+		if newValue > maxVal || newValue < minVal {
+			return value, errors.New("overflow detected")
+		}
+	default:
+		return value, errors.New("invalid overflow type")
+	}
+
+	b.setBits(offset, width, newValue)
+	return newValue, nil
+}
+
 // population counting, counts the number of set bits in a byte
 // Using: https://en.wikipedia.org/wiki/Hamming_weight
 func popcount(x byte) byte {

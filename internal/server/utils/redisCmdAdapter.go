@@ -33,7 +33,7 @@ const (
 	JSON        = "json"
 )
 
-func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
+func ParseHTTPRequest(r *http.Request) (*cmd.DiceDBCmd, error) {
 	command := strings.TrimPrefix(r.URL.Path, "/")
 	if command == "" {
 		return nil, errors.New("invalid command")
@@ -160,14 +160,14 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 		}
 	}
 
-	// Step 2: Return the constructed Redis command
-	return &cmd.RedisCmd{
+	// Step 2: Return the constructed DiceDB command
+	return &cmd.DiceDBCmd{
 		Cmd:  command,
 		Args: args,
 	}, nil
 }
 
-func ParseWebsocketMessage(msg []byte) (*cmd.RedisCmd, error) {
+func ParseWebsocketMessage(msg []byte) (*cmd.DiceDBCmd, error) {
 	cmdStr := string(msg)
 	cmdStr = strings.TrimSpace(cmdStr)
 
@@ -185,7 +185,7 @@ func ParseWebsocketMessage(msg []byte) (*cmd.RedisCmd, error) {
 		cmdArr = append([]string{""}, cmdArr...)
 	}
 
-	return &cmd.RedisCmd{
+	return &cmd.DiceDBCmd{
 		Cmd:  command,
 		Args: cmdArr,
 	}, nil
