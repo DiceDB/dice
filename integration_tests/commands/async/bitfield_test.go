@@ -11,6 +11,7 @@ func TestBitfield(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 
+        FireCommand(conn, "FLUSHDB")
 	defer FireCommand(conn, "FLUSHDB") // clean up after all test cases
 	syntaxErrMsg := "ERR syntax error"
 	bitFieldTypeErrMsg := "ERR Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is."
