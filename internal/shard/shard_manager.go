@@ -1,10 +1,46 @@
 package shard
 
+/*
+#define _GNU_SOURCE
+#cgo CFLAGS: -pthread
+#cgo LDFLAGS: -pthread
+#include <pthread.h>
+#include <sched.h>
+
+	void SetThreadAffinity(int cpu) {
+	    cpu_set_t cpuset;
+	    CPU_ZERO(&cpuset);
+	    CPU_SET(cpu, &cpuset);
+	    pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
+	}
+
+	int GetThreadAffinity() {
+    cpu_set_t cpuset;
+    pthread_t current_thread = pthread_self();
+    CPU_ZERO(&cpuset);
+    int ret = pthread_getaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset);
+
+    if (ret != 0) {
+        printf("Error getting CPU affinity: %d\n", ret);
+        exit(EXIT_FAILURE);
+    }
+
+    for (int i = 0; i < CPU_SETSIZE; i++) {
+        if (CPU_ISSET(i, &cpuset)) {
+            return i;  // Return the first CPU where the thread is running
+        }
+    }
+    return -1; // Should not reach here
+}
+*/
+import "C"
+
 import (
 	"context"
 	"log/slog"
 	"os"
 	"os/signal"
+	"runtime"
 	"sync"
 	"syscall"
 
@@ -12,6 +48,10 @@ import (
 	"github.com/dicedb/dice/internal/ops"
 	dstore "github.com/dicedb/dice/internal/store"
 )
+
+func setCPUAffinity(cpu int) {
+	C.SetThreadAffinity(C.int(cpu))
+}
 
 type ShardManager struct {
 	// shards is a constant slice of all Shards managed by this manager, indexed by ShardID. The shards slice is
@@ -71,11 +111,13 @@ func (manager *ShardManager) Run(ctx context.Context) {
 
 // start initializes and starts the shard threads.
 func (manager *ShardManager) start(ctx context.Context, wg *sync.WaitGroup) {
-	for _, shard := range manager.shards {
+	for i, shard := range manager.shards {
 		shard := shard
 
 		wg.Add(1)
 		go func() {
+			runtime.LockOSThread()
+			setCPUAffinity(i)
 			defer wg.Done()
 			shard.Start(ctx)
 		}()
