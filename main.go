@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"log"
 	"log/slog"
 	"os"
 	"os/signal"
 	"runtime"
+	"runtime/pprof"
 	"sync"
 	"syscall"
 
@@ -38,6 +40,16 @@ func init() {
 }
 
 func main() {
+	f, err := os.Create("cpu.pprof")
+	if err != nil {
+		log.Fatal("could not create CPU profile: ", err)
+	}
+	defer f.Close() // error handling omitted for example
+	if err := pprof.StartCPUProfile(f); err != nil {
+		log.Fatal("could not start CPU profile: ", err)
+	}
+	defer pprof.StopCPUProfile()
+
 	logr := logger.New(logger.Opts{WithTimestamp: true})
 	slog.SetDefault(logr)
 
