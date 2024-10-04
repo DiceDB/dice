@@ -43,7 +43,7 @@ The `DBSIZE` command is straightforward and does not typically result in errors 
 To get the number of keys in the currently selected database, simply execute the `DBSIZE` command:
 
 ```shell
-127.0.0.1:6379> DBSIZE
+127.0.0.1:7379> DBSIZE
 (integer) 42
 ```
 
@@ -54,14 +54,14 @@ In this example, the currently selected database contains 42 keys.
 If you are working with multiple databases, you can switch between them using the `SELECT` command and then use `DBSIZE` to get the number of keys in each database:
 
 ```shell
-127.0.0.1:6379> SELECT 0
+127.0.0.1:7379> SELECT 0
 OK
-127.0.0.1:6379> DBSIZE
+127.0.0.1:7379> DBSIZE
 (integer) 42
 
-127.0.0.1:6379> SELECT 1
+127.0.0.1:7379> SELECT 1
 OK
-127.0.0.1:6379> DBSIZE
+127.0.0.1:7379> DBSIZE
 (integer) 15
 ```
 
