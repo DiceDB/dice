@@ -56,12 +56,15 @@ The `GETDEL` command can raise errors in the following scenarios:
 OK
 127.0.0.1:7379> GETDEL mykey
 "Hello, World!"
+127.0.0.1:7379> GET mykey
+(nil)
 ```
 
 `Explanation:` 
 
 - The key `mykey` is set with the value `"Hello, World!"`.
 - The `GETDEL` command retrieves the value `"Hello, World!"` and deletes the key `mykey` from the database.
+- The `GET` command attempts to retrieve the value associated with the key `mykey` and returns `nil` as the key no longer exists.
 
 ### Example with a Non-Existent Key
 
