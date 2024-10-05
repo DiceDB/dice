@@ -31,6 +31,7 @@ When the `GETBIT` command is executed, DiceDB will:
 
 ## Error Handling
 
+- `wrong number of arguments for 'GETBIT' command`: This error is returned if either key or offset or both are missing.
 - `WRONGTYPE Operation against a key holding the wrong kind of value`: This error is returned if the key exists but does not contain a string value.
 - `ERR bit offset is not an integer or out of range`: This error is returned if the offset is not a valid integer or is negative.
 
@@ -64,10 +65,15 @@ GETBIT mykey -1        # Returns an error: ERR bit offset is not an integer or o
 GETBIT mykey "abc"     # Returns an error: ERR bit offset is not an integer or out of range
 ```
 
+### Example 5: Error with incorrect parameters
+
+```shell
+GETBIT mykey        # Returns an error: wrong number of arguments for 'GETBIT' command
+```
+
 ## Notes
 
 - The `GETBIT` command operates on the raw binary representation of the string. This means that the offset is counted in bits, not bytes.
 - The maximum offset that can be specified is 2^32 - 1 (4294967295), as DiceDB strings are limited to 512 MB.
 
 By understanding and utilizing the `GETBIT` command, you can efficiently manage and manipulate binary data within your DiceDB database.
-
