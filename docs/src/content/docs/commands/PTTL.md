@@ -46,12 +46,12 @@ PTTL key
 
 ```bash
 127.0.0.1:7379> SET mykey "Hello"
-127.0.0.1:7379> EXPIRE mykey 5000
+127.0.0.1:7379> EXPIRE mykey 10
 127.0.0.1:7379> PTTL mykey
-(integer) 5000
+(integer) 10000
 ```
 
-In this example, the key `mykey` is set with a value of "Hello" and an expiration of 5000 milliseconds. The `PTTL` command returns `5000`, indicating that the key will expire in 5000 milliseconds.
+In this example, the key `mykey` is set with a value of "Hello" and an expiration of 10 seconds. The `PTTL` command returns `10000`, indicating that the key will expire in 10000 milliseconds.
 
 ### Example 2: Key without Expiration
 
