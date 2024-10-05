@@ -1130,7 +1130,7 @@ func jsonGETHelper(store *dstore.Store, path, key string) (result interface{}, e
 	// Execute the JSONPath query
 	results := expr.Get(jsonData)
 	if len(results) == 0 {
-		return result, nil
+		return result, diceerrors.NewErrWithMessage(fmt.Sprintf("Path '%s' does not exist", path))
 	}
 
 	// Serialize the result
