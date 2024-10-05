@@ -21,8 +21,8 @@ import (
 	"unicode"
 	"unsafe"
 
-	"github.com/google/btree"
-
+	"github.com/dicedb/dice/internal/eval/geo"
+	"github.com/dicedb/dice/internal/eval/sortedset"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/rs/xid"
 
@@ -3174,7 +3174,7 @@ func evalHGET(args []string, store *dstore.Store) []byte {
 // evalHMGET returns an array of values associated with the given fields,
 // in the same order as they are requested.
 // If a field does not exist, returns a corresponding nil value in the array.
-// If the key does not exist, returns an array of nil values. 
+// If the key does not exist, returns an array of nil values.
 func evalHMGET(args []string, store *dstore.Store) []byte {
 	if len(args) < 2 {
 		return diceerrors.NewErrArity("HMGET")
@@ -4581,22 +4581,16 @@ func evalZADD(args []string, store *dstore.Store) []byte {
 	key := args[0]
 	obj := store.Get(key)
 
-	var tree *btree.BTree
-	var memberMap map[string]float64
+	var ss *sortedset.Set
 
 	if obj != nil {
-		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeSortedSet, object.ObjEncodingBTree); err != nil {
+		var err []byte
+		ss, err = sortedset.FromObject(obj)
+		if err != nil {
 			return err
 		}
-		valueSlice, ok := obj.Value.([]interface{})
-		if !ok || len(valueSlice) != 2 {
-			return diceerrors.NewErrWithMessage("Invalid sorted set object")
-		}
-		tree = valueSlice[0].(*btree.BTree)
-		memberMap = valueSlice[1].(map[string]float64)
 	} else {
-		tree = btree.New(2)
-		memberMap = make(map[string]float64)
+		ss = sortedset.New()
 	}
 
 	added := 0
@@ -4609,24 +4603,14 @@ func evalZADD(args []string, store *dstore.Store) []byte {
 			return diceerrors.NewErrWithMessage(diceerrors.InvalidFloatErr)
 		}
 
-		existingScore, exists := memberMap[member]
-		if exists {
-			// Remove the existing item from the B-tree
-			oldItem := &SortedSetItem{Score: existingScore, Member: member}
-			tree.Delete(oldItem)
-		} else {
-			added++
+		wasInserted := ss.Upsert(score, member)
+
+		if wasInserted {
+			added += 1
 		}
-
-		// Insert the new item into the B-tree
-		newItem := &SortedSetItem{Score: score, Member: member}
-		tree.ReplaceOrInsert(newItem)
-
-		// Update the member map
-		memberMap[member] = score
 	}
 
-	obj = store.NewObj([]interface{}{tree, memberMap}, -1, object.ObjTypeSortedSet, object.ObjEncodingBTree)
+	obj = store.NewObj(ss, -1, object.ObjTypeSortedSet, object.ObjEncodingBTree)
 	store.Put(key, obj)
 
 	return clientio.Encode(added, false)
@@ -4671,63 +4655,13 @@ func evalZRANGE(args []string, store *dstore.Store) []byte {
 		return clientio.Encode([]string{}, false)
 	}
 
-	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeSortedSet, object.ObjEncodingBTree); err != nil {
+	ss, errMsg := sortedset.FromObject(obj)
+
+	if errMsg != nil {
 		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 	}
 
-	valueSlice, ok := obj.Value.([]interface{})
-	if !ok || len(valueSlice) != 2 {
-		return diceerrors.NewErrWithMessage("Invalid sorted set object")
-	}
-	tree := valueSlice[0].(*btree.BTree)
-	length := tree.Len()
-
-	// Handle negative indices
-	if start < 0 {
-		start += length
-	}
-	if stop < 0 {
-		stop += length
-	}
-
-	if start < 0 {
-		start = 0
-	}
-	if stop >= length {
-		stop = length - 1
-	}
-
-	if start > stop || start >= length {
-		return clientio.Encode([]string{}, false)
-	}
-
-	var result []interface{}
-	index := 0
-
-	// iterFunc is the function that will be called for each item in the B-tree. It will append the item to the result if it is within the specified range.
-	// It will return false if the specified range has been reached.
-	iterFunc := func(item btree.Item) bool {
-		if index > stop {
-			return false
-		}
-		if index >= start {
-			ssi := item.(*SortedSetItem)
-			result = append(result, ssi.Member)
-			if withScores {
-				// Use 'g' format to match Redis's float formatting
-				scoreStr := strings.ToLower(strconv.FormatFloat(ssi.Score, 'g', -1, 64))
-				result = append(result, scoreStr)
-			}
-		}
-		index++
-		return true
-	}
-
-	if !reverse {
-		tree.Ascend(iterFunc)
-	} else {
-		tree.Descend(iterFunc)
-	}
+	result := ss.GetRange(start, stop, withScores, reverse)
 
 	return clientio.Encode(result, false)
 }
@@ -4972,4 +4906,136 @@ func evalHINCRBYFLOAT(args []string, store *dstore.Store) []byte {
 	store.Put(key, obj)
 
 	return clientio.Encode(numkey, false)
+}
+
+func evalGEOADD(args []string, store *dstore.Store) []byte {
+	if len(args) < 4 {
+		return diceerrors.NewErrArity("GEOADD")
+	}
+
+	key := args[0]
+	var nx, xx bool
+	startIdx := 1
+
+	// Parse options
+	for startIdx < len(args) {
+		option := strings.ToUpper(args[startIdx])
+		if option == "NX" {
+			nx = true
+			startIdx++
+		} else if option == "XX" {
+			xx = true
+			startIdx++
+		} else {
+			break
+		}
+	}
+
+	// Check if we have the correct number of arguments after parsing options
+	if (len(args)-startIdx)%3 != 0 {
+		return diceerrors.NewErrArity("GEOADD")
+	}
+
+	if xx && nx {
+		return diceerrors.NewErrWithMessage("ERR XX and NX options at the same time are not compatible")
+	}
+
+	// Get or create sorted set
+	obj := store.Get(key)
+	var ss *sortedset.Set
+	if obj != nil {
+		var err []byte
+		ss, err = sortedset.FromObject(obj)
+		if err != nil {
+			return err
+		}
+	} else {
+		ss = sortedset.New()
+	}
+
+	added := 0
+	for i := startIdx; i < len(args); i += 3 {
+		longitude, err := strconv.ParseFloat(args[i], 64)
+		if err != nil || math.IsNaN(longitude) || longitude < -180 || longitude > 180 {
+			return diceerrors.NewErrWithMessage("ERR invalid longitude")
+		}
+
+		latitude, err := strconv.ParseFloat(args[i+1], 64)
+		if err != nil || math.IsNaN(latitude) || latitude < -85.05112878 || latitude > 85.05112878 {
+			return diceerrors.NewErrWithMessage("ERR invalid latitude")
+		}
+
+		member := args[i+2]
+		_, exists := ss.Get(member)
+
+		// Handle XX option: Only update existing elements
+		if xx && !exists {
+			continue
+		}
+
+		// Handle NX option: Only add new elements
+		if nx && exists {
+			continue
+		}
+
+		hash := geo.EncodeHash(latitude, longitude)
+
+		wasInserted := ss.Upsert(hash, member)
+		if wasInserted {
+			added++
+		}
+	}
+
+	obj = store.NewObj(ss, -1, object.ObjTypeSortedSet, object.ObjEncodingBTree)
+	store.Put(key, obj)
+
+	return clientio.Encode(added, false)
+}
+
+func evalGEODIST(args []string, store *dstore.Store) []byte {
+	if len(args) < 3 || len(args) > 4 {
+		return diceerrors.NewErrArity("GEODIST")
+	}
+
+	key := args[0]
+	member1 := args[1]
+	member2 := args[2]
+	unit := "m"
+	if len(args) == 4 {
+		unit = strings.ToLower(args[3])
+	}
+
+	// Get the sorted set
+	obj := store.Get(key)
+	if obj == nil {
+		return clientio.RespNIL
+	}
+
+	ss, err := sortedset.FromObject(obj)
+	if err != nil {
+		return err
+	}
+
+	// Get the scores (geohashes) for both members
+	score1, ok := ss.Get(member1)
+	if !ok {
+		return clientio.RespNIL
+	}
+	score2, ok := ss.Get(member2)
+	if !ok {
+		return clientio.RespNIL
+	}
+
+	lat1, lon1 := geo.DecodeHash(score1)
+	lat2, lon2 := geo.DecodeHash(score2)
+
+	distance := geo.GetDistance(lon1, lat1, lon2, lat2)
+
+	result, err := geo.ConvertDistance(distance, unit)
+
+	if err != nil {
+		return err
+	}
+
+	return clientio.Encode(utils.RoundToDecimals(result, 4), false)
 }

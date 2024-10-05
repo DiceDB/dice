@@ -1013,20 +1013,20 @@ var (
 	}
 	bitfieldCmdMeta = DiceCmdMeta{
 		Name: "BITFIELD",
-		Info: `The command treats a string as an array of bits as well as bytearray data structure, 
+		Info: `The command treats a string as an array of bits as well as bytearray data structure,
 		and is capable of addressing specific integer fields of varying bit widths
-		and arbitrary non (necessary) aligned offset. 
-		In practical terms using this command you can set, for example, 
-		a signed 5 bits integer at bit offset 1234 to a specific value, 
-		retrieve a 31 bit unsigned integer from offset 4567. 
-		Similarly the command handles increments and decrements of the 
-		specified integers, providing guaranteed and well specified overflow 
+		and arbitrary non (necessary) aligned offset.
+		In practical terms using this command you can set, for example,
+		a signed 5 bits integer at bit offset 1234 to a specific value,
+		retrieve a 31 bit unsigned integer from offset 4567.
+		Similarly the command handles increments and decrements of the
+		specified integers, providing guaranteed and well specified overflow
 		and underflow behavior that the user can configure.
 		The following is the list of supported commands.
 		GET <encoding> <offset> -- Returns the specified bit field.
-		SET <encoding> <offset> <value> -- Set the specified bit field 
+		SET <encoding> <offset> <value> -- Set the specified bit field
 		and returns its old value.
-		INCRBY <encoding> <offset> <increment> -- Increments or decrements 
+		INCRBY <encoding> <offset> <increment> -- Increments or decrements
 		(if a negative increment is given) the specified bit field and returns the new value.
 		There is another subcommand that only changes the behavior of successive
 		INCRBY and SET subcommands calls by setting the overflow behavior:
@@ -1037,7 +1037,7 @@ var (
 	}
 	hincrbyFloatCmdMeta = DiceCmdMeta{
 		Name: "HINCRBYFLOAT",
-		Info: `HINCRBYFLOAT increments the specified field of a hash stored at the key, 
+		Info: `HINCRBYFLOAT increments the specified field of a hash stored at the key,
 		and representing a floating point number, by the specified increment.
 		If the field does not exist, it is set to 0 before performing the operation.
 		If the field contains a value of wrong type or specified increment
@@ -1045,6 +1045,20 @@ var (
 		`,
 		Eval:     evalHINCRBYFLOAT,
 		Arity:    -4,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	geoAddCmdMeta = DiceCmdMeta{
+		Name:     "GEOADD",
+		Info:     `Adds one or more members to a geospatial index. The key is created if it doesn't exist.`,
+		Arity:    -5,
+		Eval:     evalGEOADD,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	geoDistCmdMeta = DiceCmdMeta{
+		Name:     "GEODIST",
+		Info:     `Returns the distance between two members in the geospatial index.`,
+		Arity:    -4,
+		Eval:     evalGEODIST,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 )
@@ -1163,6 +1177,8 @@ func init() {
 	DiceCmds["BITFIELD"] = bitfieldCmdMeta
 	DiceCmds["HINCRBYFLOAT"] = hincrbyFloatCmdMeta
 	DiceCmds["HEXISTS"] = hexistsCmdMeta
+	DiceCmds["GEOADD"] = geoAddCmdMeta
+	DiceCmds["GEODIST"] = geoDistCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

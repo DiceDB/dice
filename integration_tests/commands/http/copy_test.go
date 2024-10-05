@@ -1,9 +1,10 @@
 package http
 
 import (
+	"github.com/dicedb/dice/testutils"
 	"testing"
 
-	"gotest.tools/v3/assert"
+	testifyAssert "github.com/stretchr/testify/assert"
 )
 
 func TestCopy(t *testing.T) {
@@ -106,7 +107,17 @@ func TestCopy(t *testing.T) {
 			exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": []interface{}{"k2"}}})
 			for i, cmd := range tc.commands {
 				result, _ := exec.FireCommand(cmd)
-				assert.DeepEqual(t, tc.expected[i], result)
+				_, ok := result.(float64)
+				if ok {
+					testifyAssert.Equal(t, tc.expected[i], result)
+					continue
+				}
+
+				if testutils.IsJSONResponse(result.(string)) {
+					testifyAssert.JSONEq(t, tc.expected[i].(string), result.(string))
+				} else {
+					testifyAssert.Equal(t, tc.expected[i], result)
+				}
 			}
 		})
 	}
