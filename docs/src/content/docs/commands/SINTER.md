@@ -1,17 +1,28 @@
 ---
 title: SINTER
-description: Documentation for the DiceDB command SINTER
+description: The `SINTER` command in DiceDB is used to compute the intersection of multiple sets. This command returns the members that are common to all the specified sets. If any of the sets do not exist, they are considered to be empty sets. The result of the intersection will be an empty set if at least one of the sets is empty.
 ---
 
 The `SINTER` command in DiceDB is used to compute the intersection of multiple sets. This command returns the members that are common to all the specified sets. If any of the sets do not exist, they are considered to be empty sets. The result of the intersection will be an empty set if at least one of the sets is empty.
 
+## Syntax
+
+```
+SINTER key [key ...]
+```
 ## Parameters
 
-- `key [key ...]`: One or more keys corresponding to the sets you want to intersect. At least one key must be provided.
+| Parameter      | Description                                                                                   | Type    | Required |
+|----------------|-----------------------------------------------------------------------------------------------|---------|----------|
+| `key [key ...]`| One or more identifier keys representing sets to intersect. At least one key must be provided.| String  | Yes      |
 
-## Return Value
+## Return Values
 
-- `Array of elements`: The command returns an array of elements that are present in all the specified sets. If no common elements are found, an empty array is returned.
+| Condition                                      | Return Value                                                              |
+|------------------------------------------------|---------------------------------------------------------------------------|
+| Common elements exist                          | array of elements (as strings) that are present in all the specified sets |
+| No common elements exist                       | `(empty array)`                                                           |
+| Invalid syntax or no specified keys            | error                                                                     |
 
 ## Behaviour
 
@@ -36,17 +47,15 @@ If any of the specified keys do not exist, they are treated as empty sets. The i
 
 ```shell
 # Add elements to sets
-SADD set1 "a" "b" "c"
-SADD set2 "b" "c" "d"
-SADD set3 "c" "d" "e"
+127.0.0.1:7379> SADD set1 "a" "b" "c"
+(integer) 3
+127.0.0.1:7379> SADD set2 "b" "c" "d"
+(integer) 3
+127.0.0.1:7379> SADD set3 "c" "d" "e"
+(integer) 3
 
 # Compute intersection
-SINTER set1 set2 set3
-```
-
-`Expected Output:`
-
-```shell
+127.0.0.1:7379> SINTER set1 set2 set3
 1) "c"
 ```
 
@@ -54,67 +63,36 @@ SINTER set1 set2 set3
 
 ```shell
 # Add elements to sets
-SADD set1 "a" "b" "c"
-SADD set2 "b" "c" "d"
+127.0.0.1:7379> SADD set1 "a" "b" "c"
+(integer) 3
+127.0.0.1:7379> SADD set2 "b" "c" "d"
+(integer) 3
 
 # Compute intersection with a non-existent set
-SINTER set1 set2 set3
-```
-
-`Expected Output:`
-
-```shell
+127.0.0.1:7379> SINTER set1 set2 set3
 (empty array)
 ```
+Note: By default, non-existent keys (such as set3 in the example above) are treated like empty sets. There's no built-in way to create an empty set.
 
-### Example 3: Intersection with Empty Set
+### Example 3: Error Handling - Wrong Type
 
 ```shell
 # Add elements to sets
-SADD set1 "a" "b" "c"
-SADD set2 "b" "c" "d"
-
-# Create an empty set
-SADD set3
-
-# Compute intersection
-SINTER set1 set2 set3
-```
-
-`Expected Output:`
-
-```shell
-(empty array)
-```
-
-### Example 4: Error Handling - Wrong Type
-
-```shell
-# Add elements to sets
-SADD set1 "a" "b" "c"
-
+127.0.0.1:7379> SADD set1 "a" "b" "c"
+(integer) 3
 # Create a string key
-SET stringKey "value"
+127.0.0.1:7379> SET stringKey "value"
+OK
 
 # Attempt to compute intersection with a non-set key
 SINTER set1 stringKey
-```
-
-`Expected Output:`
-
-```shell
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
-### Example 5: Error Handling - No Keys Provided
+### Example 4: Error Handling - No Keys Provided
 
 ```shell
 # Attempt to compute intersection without providing any keys
-SINTER
-```
-
-`Expected Output:`
-
-```shell
+127.0.0.1:7379> SINTER
 (error) ERR wrong number of arguments for 'sinter' command
 ```

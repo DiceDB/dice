@@ -5,8 +5,6 @@ import (
 	"strconv"
 	"strings"
 
-	hash "github.com/dgryski/go-farm"
-
 	"github.com/xwb1989/sqlparser"
 )
 
@@ -274,10 +272,4 @@ func parseWhere(selectStmt *sqlparser.Select) sqlparser.Expr {
 		return nil
 	}
 	return selectStmt.Where.Expr
-}
-
-func generateFingerprint(where sqlparser.Expr) string {
-	// Generate a unique fingerprint for the query
-	// TODO: Add logic to ensure that logically equivalent WHERE clause expressions generate the same fingerprint.
-	return fmt.Sprintf("f_%d", hash.Hash64([]byte(sqlparser.String(where))))
 }

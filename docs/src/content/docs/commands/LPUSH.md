@@ -1,6 +1,6 @@
 ---
 title: LPUSH
-description: Documentation for the DiceDB command LPUSH
+description: The `LPUSH` command is used to insert one or multiple values at the head (left) of a list stored at a specified key. If the key does not exist, a new list is created before performing the push operations. If the key exists but is not a list, an error is returned.
 ---
 
 The `LPUSH` command is used to insert one or multiple values at the head (left) of a list stored at a specified key. If the key does not exist, a new list is created before performing the push operations. If the key exists but is not a list, an error is returned.
@@ -13,63 +13,77 @@ LPUSH key value [value ...]
 
 ## Parameters
 
-- `key`: The name of the list where the values will be inserted. If the list does not exist, it will be created.
-- `value`: One or more values to be inserted at the head of the list. Multiple values can be specified, and they will be inserted in the order they are provided, from left to right.
+| Parameter          | Description                                                                               | Type   | Required |
+| ------------------ | ----------------------------------------------------------------------------------------- | ------ | -------- |
+| `key`              | The name of the list where values are inserted. If it does not exist, it will be created. | String | Yes      |
+| `value [value...]` | One or more values to be inserted at the head of the list.                                | String | Yes      |
 
 ## Return Value
 
-The command returns an integer representing the length of the list after the push operations.
+| Condition                                   | Return Value                                   |
+| ------------------------------------------- | ---------------------------------------------- |
+| Command is successful                       | `Integer` - length of the list after execution |
+| Syntax or specified constraints are invalid | error                                          |
 
 ## Behaviour
 
-When the `LPUSH` command is executed, the specified values are inserted at the head of the list. If multiple values are provided, they are inserted in the order they are given, with the leftmost value being the first to be inserted. If the key does not exist, a new list is created. If the key exists but is not a list, an error is returned.
+- The specified values are inserted at the head of the list provided by the key. 
+- If multiple values are provided, they are inserted in the order they are given, with the leftmost value being the first to be inserted. 
+- If the key does not exist, a new list is created. 
+- If the key exists but is not a list, an error is returned.
 
-## Error Handling
+## Errors
 
-- `WRONGTYPE Operation against a key holding the wrong kind of value`: This error is returned if the key exists and is not a list. DiceDB expects the key to either be non-existent or to hold a list data type.
+1. `Wrong Number of Arguments`
+
+    - Error Message: `(error) ERR wrong number of arguments for 'lpush' command`
+    - Occurs if the key parameters is not provided or at least one value is not provided. 
+
+2. `Wrong Type of Key or Value`: 
+   
+   - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
+   - Occurs if the key exists and is not a list. DiceDB expects the key to either be non-existent or to hold a list data type.
 
 ## Example Usage
 
 ### Single Value Insertion
 
+Insert the value `world` at the head of the list stored at key `mylist`. If `mylist` does not exist, a new list is created.
+
 ```shell
-LPUSH mylist "world"
+127.0.0.1:7379> LPUSH mylist "world"
+(integer) 1
 ```
-
-`Description`: Inserts the value "world" at the head of the list stored at key `mylist`. If `mylist` does not exist, a new list is created.
-
-`Return Value`: `1` (since the list now contains one element)
 
 ### Multiple Values Insertion
 
+Insert the value `hello` and `world` at the head of the list stored at key `mylist`.  After execution, `world` will be the first element, followed by `hello`.
+<!-- Once LRANGE command is added, update docs to use LRANGE in examples. -->
+
 ```shell
-LPUSH mylist "hello" "world"
+127.0.0.1:7379> LPUSH mylist "hello" "world"
+(integer) 2
 ```
-
-`Description`: Inserts the values "hello" and "world" at the head of the list stored at key `mylist`. "hello" will be the first element, followed by "world".
-
-`Return Value`: `3` (assuming `mylist` already contained one element before the operation)
 
 ### Creating a New List
 
-```shell
-LPUSH newlist "first"
-```
-
-`Description`: Creates a new list with the key `newlist` and inserts the value "first" at the head.
-
-`Return Value`: `1` (since the list now contains one element)
-
-### Error Case
+Create a new list with the key `newlist` and inserts the value `first` at the head.
 
 ```shell
-SET mystring "not a list"
-LPUSH mystring "value"
+127.0.0.1:7379> LPUSH newlist "first"
+(integer) 1
 ```
 
-`Description`: Attempts to insert the value "value" at the head of the key `mystring`, which is not a list but a string.
+### Error Case - Wrong Type
 
-`Error`: `WRONGTYPE Operation against a key holding the wrong kind of value`
+Insert the value `value` at the head of the key `mystring`, which stores a string, not a list.
+
+```shell
+127.0.0.1:7379> SET mystring "not a list"
+OK
+127.0.0.1:7379> LPUSH mystring "value"
+(error) WRONGTYPE Operation against a key holding the wrong kind of value
+```
 
 ## Notes
 
