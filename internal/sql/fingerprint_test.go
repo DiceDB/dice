@@ -65,12 +65,6 @@ func TestCombineOr(t *testing.T) {
 			b:        expression([][]string{}),
 			expected: expression([][]string{}),
 		},
-		// {
-		// 	name:     "Annulment law",
-		// 	a:        Expression([][]string{{"_value > 10"}}),
-		// 	b:        Expression([][]string{{}}), // equivalent to 1
-		// 	expected: Expression([][]string{{}}),
-		// },
 		{
 			name:     "Identity law",
 			a:        expression([][]string{{"_value > 10"}}),
