@@ -24,7 +24,6 @@ GETBIT key offset
 |------------------------------------------------|---------------------------------------------------|
 | Command is successful                           | `0` or `1`  |
 | Key does not exists                             | `0`         |
-| Key exists but value is not String              | error       |
 | Syntax or specified constraints are invalid     | error       |
 
 ## Behaviour
