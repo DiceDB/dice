@@ -3403,7 +3403,7 @@ func evalLPUSH(args []string, store *dstore.Store) []byte {
 		obj.Value.(*Deque).LPush(args[i])
 	}
 
-	return clientio.RespOK
+	return clientio.Encode((obj.Value.(*Deque).Length), false)
 }
 
 func evalRPUSH(args []string, store *dstore.Store) []byte {
