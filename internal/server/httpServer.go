@@ -124,23 +124,23 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 
 func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.Request) {
 	// convert to REDIS cmd
-	redisCmd, err := utils.ParseHTTPRequest(request)
+	diceDBCmd, err := utils.ParseHTTPRequest(request)
 	if err != nil {
 		http.Error(writer, "Error parsing HTTP request", http.StatusBadRequest)
 		s.logger.Error("Error parsing HTTP request", slog.Any("error", err))
 		return
 	}
 
-	if redisCmd.Cmd == Abort {
+	if diceDBCmd.Cmd == Abort {
 		s.logger.Debug("ABORT command received")
 		s.logger.Debug("Shutting down HTTP Server")
 		close(s.shutdownChan)
 		return
 	}
 
-	if unimplementedCommands[redisCmd.Cmd] {
+	if unimplementedCommands[diceDBCmd.Cmd] {
 		http.Error(writer, "Command is not implemented with HTTP", http.StatusBadRequest)
-		s.logger.Error("Command %s is not implemented", slog.String("cmd", redisCmd.Cmd))
+		s.logger.Error("Command %s is not implemented", slog.String("cmd", diceDBCmd.Cmd))
 		_, err := writer.Write([]byte("Command is not implemented with HTTP"))
 		if err != nil {
 			s.logger.Error("Error writing response", slog.Any("error", err))
@@ -151,7 +151,7 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 
 	// send request to Shard Manager
 	s.shardManager.GetShard(0).ReqChan <- &ops.StoreOp{
-		Cmd:      redisCmd,
+		Cmd:      diceDBCmd,
 		WorkerID: "httpServer",
 		ShardID:  0,
 		HTTPOp:   true,
@@ -160,19 +160,19 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 	// Wait for response
 	resp := <-s.ioChan
 
-	s.writeResponse(writer, resp)
+	s.writeResponse(writer, resp, diceDBCmd)
 }
 
 func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *http.Request) {
 	// convert to REDIS cmd
-	redisCmd, err := utils.ParseHTTPRequest(request)
+	diceDBCmd, err := utils.ParseHTTPRequest(request)
 	if err != nil {
 		http.Error(writer, "Error parsing HTTP request", http.StatusBadRequest)
 		s.logger.Error("Error parsing HTTP request", slog.Any("error", err))
 		return
 	}
 
-	if len(redisCmd.Args) < 1 {
+	if len(diceDBCmd.Args) < 1 {
 		s.logger.Error("Invalid request for QWATCH")
 		http.Error(writer, "Invalid request for QWATCH", http.StatusBadRequest)
 		return
@@ -198,11 +198,11 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 	writer.WriteHeader(http.StatusOK)
 	// We're a generating a unique client id, to keep track in core of requests from registered clients
 	clientIdentifierID := generateUniqueInt32(request)
-	qwatchQuery := redisCmd.Args[0]
+	qwatchQuery := diceDBCmd.Args[0]
 	qwatchClient := comm.NewHTTPQwatchClient(s.qwatchResponseChan, clientIdentifierID)
 	// Prepare the store operation
 	storeOp := &ops.StoreOp{
-		Cmd:      redisCmd,
+		Cmd:      diceDBCmd,
 		WorkerID: "httpServer",
 		ShardID:  0,
 		Client:   qwatchClient,
@@ -215,7 +215,7 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 
 	// Wait for 1st sync response from server for QWATCH and flush it to client
 	resp := <-s.ioChan
-	s.writeResponse(writer, resp)
+	s.writeQWatchResponse(writer, resp)
 	flusher.Flush()
 	// Keep listening for context cancellation (client disconnect) and continuous responses
 	doneChan := request.Context().Done()
@@ -231,30 +231,48 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 		case <-doneChan:
 			// Client disconnected or request finished
 			s.logger.Info("Client disconnected")
-			unWatchCmd := &cmd.RedisCmd{
+			unWatchCmd := &cmd.DiceDBCmd{
 				Cmd:  "QUNWATCH",
 				Args: []string{qwatchQuery},
 			}
 			storeOp.Cmd = unWatchCmd
 			s.shardManager.GetShard(0).ReqChan <- storeOp
 			resp := <-s.ioChan
-			s.writeResponse(writer, resp)
+			s.writeResponse(writer, resp, diceDBCmd)
 			return
 		}
 	}
 }
 
-func (s *HTTPServer) writeQWatchResponse(writer http.ResponseWriter, response comm.QwatchResponse) {
+func (s *HTTPServer) writeQWatchResponse(writer http.ResponseWriter, response interface{}) {
+	var result interface{}
+	var err error
+
+	// Use type assertion to handle both types of responses
+	switch resp := response.(type) {
+	case comm.QwatchResponse:
+		result = resp.Result
+		err = resp.Error
+	case *ops.StoreResponse:
+		result = resp.EvalResponse.Result
+		err = resp.EvalResponse.Error
+	default:
+		s.logger.Error("Unsupported response type")
+		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
 	var rp *clientio.RESPParser
-	if response.Error != nil {
-		rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(response.Error.Error())))
+	if err != nil {
+		rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(err.Error())))
 	} else {
-		rp = clientio.NewRESPParser(bytes.NewBuffer(response.Result.([]byte)))
+		rp = clientio.NewRESPParser(bytes.NewBuffer(result.([]byte)))
 	}
 
 	val, err := rp.DecodeOne()
 	if err != nil {
 		s.logger.Error("Error decoding response: %v", slog.Any("error", err))
+		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
@@ -277,6 +295,7 @@ func (s *HTTPServer) writeQWatchResponse(writer http.ResponseWriter, response co
 
 	if err != nil {
 		s.logger.Error("Error marshaling QueryData to JSON: %v", slog.Any("error", err))
+		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
@@ -284,8 +303,10 @@ func (s *HTTPServer) writeQWatchResponse(writer http.ResponseWriter, response co
 	_, err = writer.Write(responseJSON)
 	if err != nil {
 		s.logger.Error("Error writing SSE data: %v", slog.Any("error", err))
+		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
+
 	flusher, ok := writer.(http.Flusher)
 	if !ok {
 		http.Error(writer, "Streaming unsupported", http.StatusInternalServerError)
@@ -295,22 +316,56 @@ func (s *HTTPServer) writeQWatchResponse(writer http.ResponseWriter, response co
 	flusher.Flush() // Flush the response to send it to the client
 }
 
-func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.StoreResponse) {
+func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.StoreResponse, diceDBCmd *cmd.DiceDBCmd) {
+	_, ok := WorkerCmdsMeta[diceDBCmd.Cmd]
 	var rp *clientio.RESPParser
-	if result.EvalResponse.Error != nil {
-		rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(result.EvalResponse.Error.Error())))
+
+	var responseValue interface{}
+	// TODO: Remove this conditional check and if (true) condition when all commands are migrated
+	if !ok {
+		var err error
+		if result.EvalResponse.Error != nil {
+			rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(result.EvalResponse.Error.Error())))
+		} else {
+			rp = clientio.NewRESPParser(bytes.NewBuffer(result.EvalResponse.Result.([]byte)))
+		}
+
+		responseValue, err = rp.DecodeOne()
+		if err != nil {
+			s.logger.Error("Error decoding response", "error", err)
+			http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
 	} else {
-		rp = clientio.NewRESPParser(bytes.NewBuffer(result.EvalResponse.Result.([]byte)))
+		if result.EvalResponse.Error != nil {
+			responseValue = result.EvalResponse.Error.Error()
+		} else {
+			responseValue = result.EvalResponse.Result
+		}
 	}
 
-	val, err := rp.DecodeOne()
-	if err != nil {
-		s.logger.Error("Error decoding response", "error", err)
-		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
-		return
+	// func HandlePredefinedResponse(response interface{}) []byte {
+	respArr := []string{
+		"(nil)",  // Represents a RESP Nil Bulk String, which indicates a null value.
+		"OK",     // Represents a RESP Simple String with value "OK".
+		"QUEUED", // Represents a Simple String indicating that a command has been queued.
+		"0",      // Represents a RESP Integer with value 0.
+		"1",      // Represents a RESP Integer with value 1.
+		"-1",     // Represents a RESP Integer with value -1.
+		"-2",     // Represents a RESP Integer with value -2.
+		"*0",     // Represents an empty RESP Array.
 	}
 
-	responseJSON, err := json.Marshal(val)
+	if val, ok := responseValue.(clientio.RespType); ok {
+		responseValue = respArr[val]
+	}
+
+	if bt, ok := responseValue.([]byte); ok {
+		responseValue = string(bt)
+	}
+	httpResponse := utils.HTTPResponse{Data: responseValue}
+
+	responseJSON, err := json.Marshal(httpResponse)
 	if err != nil {
 		s.logger.Error("Error marshaling response", "error", err)
 		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)

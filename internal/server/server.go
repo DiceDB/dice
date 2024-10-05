@@ -16,6 +16,7 @@ import (
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/clientio"
+	"github.com/dicedb/dice/internal/clientio/iohandler/netconn"
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/comm"
 	diceerrors "github.com/dicedb/dice/internal/errors"
@@ -27,11 +28,9 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
-var ErrInvalidIPAddress = errors.New("invalid IP address")
-
 type AsyncServer struct {
 	serverFD               int
-	maxClients             int
+	maxClients             int32
 	multiplexer            iomultiplexer.IOMultiplexer
 	multiplexerPollTimeout time.Duration
 	connectedClients       map[int]*comm.Client
@@ -94,7 +93,7 @@ func (s *AsyncServer) FindPortAndBind() (socketErr error) {
 
 	ip4 := net.ParseIP(config.DiceConfig.Server.Addr)
 	if ip4 == nil {
-		return ErrInvalidIPAddress
+		return diceerrors.ErrInvalidIPAddress
 	}
 
 	if err := syscall.Bind(serverFD, &syscall.SockaddrInet4{
@@ -104,7 +103,7 @@ func (s *AsyncServer) FindPortAndBind() (socketErr error) {
 		return err
 	}
 	s.logger.Info(
-		"DiceDB server is running",
+		"DiceDB server is running in a single-threaded mode",
 		slog.String("version", "0.0.4"),
 		slog.Int("port", config.DiceConfig.Server.Port),
 	)
@@ -157,7 +156,7 @@ func (s *AsyncServer) Run(ctx context.Context) error {
 
 	s.shardManager.RegisterWorker("server", s.ioChan)
 
-	if err := syscall.Listen(s.serverFD, s.maxClients); err != nil {
+	if err := syscall.Listen(s.serverFD, int(s.maxClients)); err != nil {
 		return err
 	}
 
@@ -218,10 +217,6 @@ func (s *AsyncServer) eventLoop(ctx context.Context) error {
 				if event.Fd == s.serverFD {
 					if err := s.acceptConnection(); err != nil {
 						s.logger.Warn(err.Error())
-						// Close the event FD on error
-						if closeErr := syscall.Close(event.Fd); closeErr != nil {
-							s.logger.Error("Failed to close event FD:", slog.Any("error", closeErr))
-						}
 					}
 				} else {
 					if err := s.handleClientEvent(event); err != nil {
@@ -240,10 +235,6 @@ func (s *AsyncServer) eventLoop(ctx context.Context) error {
 
 // acceptConnection accepts a new client connection and subscribes to read events on the connection.
 func (s *AsyncServer) acceptConnection() error {
-	if len(s.connectedClients) > s.maxClients {
-		return errors.New("connection refused. Reached the max-connection limit")
-	}
-
 	fd, _, err := syscall.Accept(s.serverFD)
 	if err != nil {
 		return err
@@ -284,21 +275,55 @@ func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
 	return nil
 }
 
-func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.RedisCmd, buf *bytes.Buffer, c *comm.Client) {
+func handleMigratedResp(resp interface{}, buf *bytes.Buffer) {
+	// Process the incoming response by calling the handleResponse function.
+	// This function checks the response against known RESP formatted values
+	// and returns the corresponding byte array representation. The result
+	// is assigned to the resp variable.
+	r := netconn.HandlePredefinedResponse(resp)
+
+	// Check if the processed response (resp) is not nil.
+	// If it is not nil, this means incoming response was not
+	// matched to any predefined RESP responses,
+	// and we proceed to encode the original response using
+	// the clientio.Encode function. This function converts the
+	// response into the desired format based on the specified
+	// isBlkEnc encoding flag, which indicates whether the
+	// response should be encoded in a block format.
+	if r == nil {
+		r = clientio.Encode(resp, false)
+	}
+
+	buf.Write(r)
+}
+
+func (s *AsyncServer) executeCommandToBuffer(diceDBCmd *cmd.DiceDBCmd, buf *bytes.Buffer, c *comm.Client) {
 	s.shardManager.GetShard(0).ReqChan <- &ops.StoreOp{
-		Cmd:      redisCmd,
+		Cmd:      diceDBCmd,
 		WorkerID: "server",
 		ShardID:  0,
 		Client:   c,
 	}
 
 	resp := <-s.ioChan
-	if resp.EvalResponse.Error != nil {
-		buf.WriteString(resp.EvalResponse.Error.Error())
+
+	val, ok := WorkerCmdsMeta[diceDBCmd.Cmd]
+	// TODO: Remove this conditional check and if (true) condition when all commands are migrated
+	if !ok {
+		buf.Write(resp.EvalResponse.Result.([]byte))
+	} else {
+		// If command type is Global then return the worker eval
+		if val.CmdType == Global {
+			buf.Write(val.RespNoShards(diceDBCmd.Args))
+			return
+		}
+		// Handle error case independently
+		if resp.EvalResponse.Error != nil {
+			handleMigratedResp(resp.EvalResponse.Error, buf)
+		}
+		handleMigratedResp(resp.EvalResponse.Result, buf)
 		return
 	}
-
-	buf.Write(resp.EvalResponse.Result.([]byte))
 }
 
 func readCommands(c io.ReadWriter) (*cmd.RedisCmds, bool, error) {
@@ -309,7 +334,7 @@ func readCommands(c io.ReadWriter) (*cmd.RedisCmds, bool, error) {
 		return nil, false, err
 	}
 
-	var cmds = make([]*cmd.RedisCmd, 0)
+	var cmds = make([]*cmd.DiceDBCmd, 0)
 	for _, value := range values {
 		arrayValue, ok := value.([]interface{})
 		if !ok {
@@ -326,7 +351,7 @@ func readCommands(c io.ReadWriter) (*cmd.RedisCmds, bool, error) {
 		}
 
 		command := strings.ToUpper(tokens[0])
-		cmds = append(cmds, &cmd.RedisCmd{
+		cmds = append(cmds, &cmd.DiceDBCmd{
 			Cmd:  command,
 			Args: tokens[1:],
 		})
@@ -358,32 +383,32 @@ func (s *AsyncServer) EvalAndRespond(cmds *cmd.RedisCmds, c *comm.Client) {
 	var resp []byte
 	buf := bytes.NewBuffer(resp)
 
-	for _, redisCmd := range cmds.Cmds {
-		if !s.isAuthenticated(redisCmd, c, buf) {
+	for _, diceDBCmd := range cmds.Cmds {
+		if !s.isAuthenticated(diceDBCmd, c, buf) {
 			continue
 		}
 
 		if c.IsTxn {
-			s.handleTransactionCommand(redisCmd, c, buf)
+			s.handleTransactionCommand(diceDBCmd, c, buf)
 		} else {
-			s.handleNonTransactionCommand(redisCmd, c, buf)
+			s.handleNonTransactionCommand(diceDBCmd, c, buf)
 		}
 	}
 
 	s.writeResponse(c, buf)
 }
 
-func (s *AsyncServer) isAuthenticated(redisCmd *cmd.RedisCmd, c *comm.Client, buf *bytes.Buffer) bool {
-	if redisCmd.Cmd != auth.Cmd && !c.Session.IsActive() {
+func (s *AsyncServer) isAuthenticated(diceDBCmd *cmd.DiceDBCmd, c *comm.Client, buf *bytes.Buffer) bool {
+	if diceDBCmd.Cmd != auth.Cmd && !c.Session.IsActive() {
 		buf.Write(clientio.Encode(errors.New("NOAUTH Authentication required"), false))
 		return false
 	}
 	return true
 }
 
-func (s *AsyncServer) handleTransactionCommand(redisCmd *cmd.RedisCmd, c *comm.Client, buf *bytes.Buffer) {
-	if eval.TxnCommands[redisCmd.Cmd] {
-		switch redisCmd.Cmd {
+func (s *AsyncServer) handleTransactionCommand(diceDBCmd *cmd.DiceDBCmd, c *comm.Client, buf *bytes.Buffer) {
+	if eval.TxnCommands[diceDBCmd.Cmd] {
+		switch diceDBCmd.Cmd {
 		case eval.ExecCmdMeta.Name:
 			s.executeTransaction(c, buf)
 		case eval.DiscardCmdMeta.Name:
@@ -391,17 +416,17 @@ func (s *AsyncServer) handleTransactionCommand(redisCmd *cmd.RedisCmd, c *comm.C
 		default:
 			s.logger.Error(
 				"Unhandled transaction command",
-				slog.String("command", redisCmd.Cmd),
+				slog.String("command", diceDBCmd.Cmd),
 			)
 		}
 	} else {
-		c.TxnQueue(redisCmd)
+		c.TxnQueue(diceDBCmd)
 		buf.Write(clientio.RespQueued)
 	}
 }
 
-func (s *AsyncServer) handleNonTransactionCommand(redisCmd *cmd.RedisCmd, c *comm.Client, buf *bytes.Buffer) {
-	switch redisCmd.Cmd {
+func (s *AsyncServer) handleNonTransactionCommand(diceDBCmd *cmd.DiceDBCmd, c *comm.Client, buf *bytes.Buffer) {
+	switch diceDBCmd.Cmd {
 	case eval.MultiCmdMeta.Name:
 		c.TxnBegin()
 		buf.Write(clientio.RespOK)
@@ -410,7 +435,7 @@ func (s *AsyncServer) handleNonTransactionCommand(redisCmd *cmd.RedisCmd, c *com
 	case eval.DiscardCmdMeta.Name:
 		buf.Write(diceerrors.NewErrWithMessage("DISCARD without MULTI"))
 	default:
-		s.executeCommandToBuffer(redisCmd, buf, c)
+		s.executeCommandToBuffer(diceDBCmd, buf, c)
 	}
 }
 
@@ -422,11 +447,11 @@ func (s *AsyncServer) executeTransaction(c *comm.Client, buf *bytes.Buffer) {
 		return
 	}
 
-	for _, redisCmd := range cmds {
-		s.executeCommandToBuffer(redisCmd, buf, c)
+	for _, cmd := range cmds {
+		s.executeCommandToBuffer(cmd, buf, c)
 	}
 
-	c.Cqueue.Cmds = make([]*cmd.RedisCmd, 0)
+	c.Cqueue.Cmds = make([]*cmd.DiceDBCmd, 0)
 	c.IsTxn = false
 }
 

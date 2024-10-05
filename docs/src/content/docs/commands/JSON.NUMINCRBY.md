@@ -13,100 +13,104 @@ JSON.NUMINCRBY <key> <path> <increment>
 
 ## Parameters
 
-- `key`: The key under which the JSON document is stored. This is a string.
-- `path`: The JSONPath expression that specifies the location of the numeric value to be incremented. This is a string.
-- `increment`: The numeric value by which to increment the target value. This can be an integer or a floating-point number.
+| Parameter   | Description                                                                             | Type           | Required |
+|-------------|-----------------------------------------------------------------------------------------|----------------|----------|
+| `key`       | The key under which the JSON document is stored.                                        | String         | Yes      |
+| `path`      | The JSONPath expression specifying the location of the numeric value to be incremented. | String         | Yes      |
+| `increment` | The numeric value by which to increment the target value.                               | Floating Point | Yes      |
 
 ## Return Value
 
-The command returns the new value after the increment operation. The return type is a number, which can be either an integer or a floating-point number, depending on the type of the increment and the original value.
+| Condition                                  | Return Value                          |
+|--------------------------------------------|---------------------------------------|
+| Command is successful                      | Array of new value for update objects |
+| Key does not exist or JSON path is invalid | error                                 |
 
 ## Behaviour
 
-When the `JSON.NUMINCRBY` command is executed, the following steps occur:
+- If the specified key exists, specified path is valid and the value is numeric/floating point, `JSON.NUMINCRBY` command will increment the current value with the specified value and return the new value.
+- If the path does not exist or does not contain a numeric value, an error will is raised.
 
-1. The command locates the JSON document stored at the specified key.
-2. It navigates to the specified path within the JSON document.
-3. It retrieves the current numeric value at that path.
-4. It increments the current value by the specified increment.
-5. It updates the JSON document with the new value.
-6. It returns the new value.
+## Errors
 
-If the path does not exist or does not contain a numeric value, an error will be raised.
+1. `Key does not exist`:
 
-## Error Handling
+    - Error Message: `(error) ERROR could not perform this operation on a key that doesn't exist`
+    - Occurs when the specified key does not exist in the DiceDB database. 
 
-The `JSON.NUMINCRBY` command can raise the following errors:
+2. `Invalid JSON path`:
 
-- `ERR key does not exist`: This error is raised if the specified key does not exist in the DiceDB database.
-- `ERR path does not exist`: This error is raised if the specified path does not exist within the JSON document.
-- `ERR path is not a number`: This error is raised if the value at the specified path is not a numeric value.
-- `ERR invalid JSONPath`: This error is raised if the provided JSONPath expression is not valid.
+    - Error Message: `(error) ERROR invalid JSONPath`
+    - Occurs when the provided JSONPath expression is not valid.
 
 ## Example Usage
 
-### Example 1: Incrementing an Integer Value
+Create a document:
 
-Assume we have a JSON document stored under the key `user:1001`:
-
-```json
-{
-  "name": "John Doe",
-  "age": 30,
-  "balance": 100.50
-}
+```shell
+127.0.0.1:7379> JSON.SET user:1001 $ '{"name": "John Doe", "age": 30, "balance": 100.50, "account": {"id": 0, "lien": 0, "balance": 100.50}}'
+"OK"
 ```
 
-To increment the `age` by 1:
+### Basic Usage
 
-```plaintext
-JSON.NUMINCRBY user:1001 $.age 1
+Incrementing the value of `age` object by 1
+
+```shell
+127.0.0.1:7379> JSON.NUMINCRBY user:1001 $.age 1
+"[31]"
 ```
 
-`Return Value:`
+### Incrementing a Floating-Point Value
 
-```plaintext
-31
+Incrementing the value of `balance` object by 25.75
+
+```shell
+127.0.0.1:7379> JSON.NUMINCRBY user:1001 $.balance 25.75
+"[126.25]"
 ```
 
-### Example 2: Incrementing a Floating-Point Value
+### Incrementing values for all matching objects recursively
 
-To increment the `balance` by 25.75:
+Finding and recursively incrementing the values of both `balance` objects by 25.75
 
-```plaintext
-JSON.NUMINCRBY user:1001 $.balance 25.75
+```shell
+127.0.0.1:7379> JSON.NUMINCRBY user:1001 $..balance 25.75
+"[126.25,126.25]"
 ```
 
-`Return Value:`
+### Handling Non-Numeric Value
 
-```plaintext
-126.25
+Incrementing a non-numeric value
+
+```shell
+127.0.0.1:7379> JSON.NUMINCRBY user:1001 $.name 5
+"[null]"
 ```
 
-### Example 3: Handling Non-Existent Path
+### Handling Non-Existent Path
 
-If we try to increment a non-existent path:
+Incrementing a non-existent path
 
-```plaintext
-JSON.NUMINCRBY user:1001 $.nonexistent 10
+```shell
+127.0.0.1:7379> JSON.NUMINCRBY user:1001 $.nonexistent 10
+"[]"
 ```
 
-`Error:`
+### Invalid Usage: Handling Invalid Path
 
-```plaintext
-ERR path does not exist
+Trying to increment an invalid path will result in an error
+
+```shell
+127.0.0.1:7379> JSON.NUMINCRBY user:1001 . 5
+(error) ERROR invalid JSONPath
 ```
 
-### Example 4: Handling Non-Numeric Value
+### Invalid Usage: Handling Non-existent Key
 
-If we try to increment a non-numeric value:
+Trying to increment a path for a non-existent key will result in an error
 
-```plaintext
-JSON.NUMINCRBY user:1001 $.name 5
-```
-
-`Error:`
-
-```plaintext
-ERR path is not a number
+```shell
+127.0.0.1:7379> JSON.NUMINCRBY user:1002 . 5
+(error) ERROR could not perform this operation on a key that doesn't exist
 ```
