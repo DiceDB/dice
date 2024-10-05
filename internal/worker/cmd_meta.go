@@ -36,9 +36,9 @@ type CmdMeta struct {
 	Cmd                  string
 	WorkerCommandHandler func([]string) []byte
 
-	// decomposeCommand is a function that takes a Redis command and breaks it down into smaller,
-	// manageable Redis commands for each shard processing. It returns a slice of Redis commands.
-	decomposeCommand func(redisCmd *cmd.RedisCmd) []*cmd.RedisCmd
+	// decomposeCommand is a function that takes a DiceDB command and breaks it down into smaller,
+	// manageable DiceDB commands for each shard processing. It returns a slice of DiceDB commands.
+	decomposeCommand func(DiceDBCmd *cmd.DiceDBCmd) []*cmd.DiceDBCmd
 
 	// composeResponse is a function that combines multiple responses from the execution of commands
 	// into a single response object. It accepts a variadic parameter of EvalResponse objects

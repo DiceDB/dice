@@ -12,14 +12,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/axiomhq/hyperloglog"
+	"github.com/dicedb/dice/internal/server/utils"
+
 	"github.com/bytedance/sonic"
+	"github.com/ohler55/ojg/jp"
+
+	"github.com/axiomhq/hyperloglog"
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
-	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
-	"github.com/ohler55/ojg/jp"
 	testifyAssert "github.com/stretchr/testify/assert"
 	"gotest.tools/v3/assert"
 )
@@ -76,6 +78,7 @@ func TestEval(t *testing.T) {
 	testEvalPFADD(t, store)
 	testEvalPFCOUNT(t, store)
 	testEvalHGET(t, store)
+	testEvalHMGET(t, store)
 	testEvalHSTRLEN(t, store)
 	testEvalHEXISTS(t, store)
 	testEvalHDEL(t, store)
@@ -104,6 +107,7 @@ func TestEval(t *testing.T) {
 	testEvalZADD(t, store)
 	testEvalZRANGE(t, store)
 	testEvalHVALS(t, store)
+	testEvalBitField(t, store)
 	testEvalHINCRBYFLOAT(t, store)
 }
 
@@ -2157,6 +2161,82 @@ func testEvalHGET(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalHGET, store)
+}
+
+func testEvalHMGET(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"wrong number of args passed": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'hmget' command\r\n"),
+		},
+		"only key passed": {
+			setup:  func() {},
+			input:  []string{"KEY"},
+			output: []byte("-ERR wrong number of arguments for 'hmget' command\r\n"),
+		},
+		"key doesn't exists": {
+			setup:  func() {},
+			input:  []string{"KEY", "field_name"},
+			output: clientio.Encode([]interface{}{nil}, false),
+		},
+		"key exists but field_name doesn't exists": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field := "mock_field_name"
+				newMap := make(HashMap)
+				newMap[field] = "mock_field_value"
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input:  []string{"KEY_MOCK", "non_existent_key"},
+			output: clientio.Encode([]interface{}{nil}, false),
+		},
+		"both key and field_name exists": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field := "mock_field_name"
+				newMap := make(HashMap)
+				newMap[field] = "mock_field_value"
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input:  []string{"KEY_MOCK", "mock_field_name"},
+			output: clientio.Encode([]interface{}{"mock_field_value"}, false),
+		},
+		"some fields exist some do not": {
+			setup: func() {
+				key := "KEY_MOCK"
+				newMap := HashMap{
+					"field1": "value1",
+					"field2": "value2",
+				}
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input:  []string{"KEY_MOCK", "field1", "field2", "field3", "field4"},
+			output: clientio.Encode([]interface{}{"value1", "value2", nil, nil}, false),
+		},
+	}
+
+	runEvalTests(t, tests, evalHMGET, store)
 }
 
 func testEvalHVALS(t *testing.T, store *dstore.Store) {
@@ -4976,6 +5056,56 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalZRANGE, store)
 }
 
+
+func testEvalBitField(t *testing.T, store *dstore.Store) {
+	testCases := map[string]evalTestCase{
+		"BITFIELD signed SET": {
+			input:  []string{"bits", "set", "i8", "0", "-100"},
+			output: clientio.Encode([]int64{0}, false),
+		},
+		"BITFIELD GET": {
+			setup: func() {
+				args := []string{"bits", "set", "u8", "0", "255"}
+				evalBITFIELD(args, store)
+			},
+			input:  []string{"bits", "get", "u8", "0"},
+			output: clientio.Encode([]int64{255}, false),
+		},
+		"BITFIELD INCRBY": {
+			setup: func() {
+				args := []string{"bits", "set", "u8", "0", "255"}
+				evalBITFIELD(args, store)
+			},
+			input:  []string{"bits", "incrby", "u8", "0", "100"},
+			output: clientio.Encode([]int64{99}, false),
+		},
+		"BITFIELD Arity": {
+			input:  []string{},
+			output: diceerrors.NewErrArity("BITFIELD"),
+		},
+		"BITFIELD invalid combination of commands in a single operation": {
+			input:  []string{"bits", "SET", "u8", "0", "255", "INCRBY", "u8", "0", "100", "GET", "u8"},
+			output: []byte("-ERR syntax error\r\n"),
+		},
+		"BITFIELD invalid bitfield type": {
+			input:  []string{"bits", "SET", "a8", "0", "255", "INCRBY", "u8", "0", "100", "GET", "u8"},
+			output: []byte("-ERR Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is.\r\n"),
+		},
+		"BITFIELD invalid bit offset": {
+			input:  []string{"bits", "SET", "u8", "a", "255", "INCRBY", "u8", "0", "100", "GET", "u8"},
+			output: []byte("-ERR bit offset is not an integer or out of range\r\n"),
+		},
+		"BITFIELD invalid overflow type": {
+			input:  []string{"bits", "SET", "u8", "0", "255", "INCRBY", "u8", "0", "100", "OVERFLOW", "wraap"},
+			output: []byte("-ERR Invalid OVERFLOW type specified\r\n"),
+		},
+		"BITFIELD missing arguments in SET": {
+			input:  []string{"bits", "SET", "u8", "0", "INCRBY", "u8", "0", "100", "GET", "u8", "288"},
+			output: []byte("-ERR value is not an integer or out of range\r\n"),
+		},
+	}
+	runEvalTests(t, testCases, evalBITFIELD, store)
+}
 func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"HINCRBYFLOAT on a non-existing key and field": {
