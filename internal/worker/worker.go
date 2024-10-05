@@ -135,36 +135,36 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 	}
 }
 
-func (w *BaseWorker) executeCommand(ctx context.Context, redisCmd *cmd.RedisCmd) error {
+func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCmd) error {
 	// Break down the single command into multiple commands if multisharding is supported.
 	// The length of cmdList helps determine how many shards to wait for responses.
-	cmdList := make([]*cmd.RedisCmd, 0)
+	cmdList := make([]*cmd.DiceDBCmd, 0)
 
 	// Retrieve metadata for the command to determine if multisharding is supported.
-	meta, ok := CommandsMeta[redisCmd.Cmd]
+	meta, ok := CommandsMeta[diceDBCmd.Cmd]
 	if !ok {
 		// If no metadata exists, treat it as a single command and not migrated
-		cmdList = append(cmdList, redisCmd)
+		cmdList = append(cmdList, diceDBCmd)
 	} else {
 		// Depending on the command type, decide how to handle it.
 		switch meta.CmdType {
 		case Global:
 			// If it's a global command, process it immediately without involving any shards.
-			err := w.ioHandler.Write(ctx, meta.WorkerCommandHandler(redisCmd.Args))
+			err := w.ioHandler.Write(ctx, meta.WorkerCommandHandler(diceDBCmd.Args))
 			w.logger.Debug("Error executing for worker", slog.String("workerID", w.id), slog.Any("error", err))
 			return err
 
 		case SingleShard:
 			// For single-shard or custom commands, process them without breaking up.
-			cmdList = append(cmdList, redisCmd)
+			cmdList = append(cmdList, diceDBCmd)
 
 		case MultiShard:
 			// If the command supports multisharding, break it down into multiple commands.
-			cmdList = meta.decomposeCommand(redisCmd)
+			cmdList = meta.decomposeCommand(diceDBCmd)
 		case Custom:
-			switch redisCmd.Cmd {
+			switch diceDBCmd.Cmd {
 			case CmdAuth:
-				err := w.ioHandler.Write(ctx, w.RespAuth(redisCmd.Args))
+				err := w.ioHandler.Write(ctx, w.RespAuth(diceDBCmd.Args))
 				if err != nil {
 					w.logger.Error("Error sending auth response to worker", slog.String("workerID", w.id), slog.Any("error", err))
 				}
@@ -178,7 +178,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, redisCmd *cmd.RedisCmd)
 				w.globalErrorChan <- diceerrors.ErrAborted
 				return err
 			default:
-				cmdList = append(cmdList, redisCmd)
+				cmdList = append(cmdList, diceDBCmd)
 			}
 		}
 	}
@@ -190,7 +190,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, redisCmd *cmd.RedisCmd)
 	}
 
 	// Gather the responses from the shards and write them to the buffer.
-	err = w.gather(ctx, redisCmd.Cmd, len(cmdList), meta.CmdType)
+	err = w.gather(ctx, diceDBCmd.Cmd, len(cmdList), meta.CmdType)
 	if err != nil {
 		return err
 	}
@@ -198,9 +198,9 @@ func (w *BaseWorker) executeCommand(ctx context.Context, redisCmd *cmd.RedisCmd)
 	return nil
 }
 
-// scatter distributes the Redis commands to the respective shards based on the key.
+// scatter distributes the DiceDB commands to the respective shards based on the key.
 // For each command, it calculates the shard ID and sends the command to the shard's request channel for processing.
-func (w *BaseWorker) scatter(ctx context.Context, cmds []*cmd.RedisCmd) error {
+func (w *BaseWorker) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd) error {
 	// Otherwise check for the shard based on the key using hash
 	// and send it to the particular shard
 	select {
@@ -315,8 +315,8 @@ func (w *BaseWorker) gather(ctx context.Context, c string, numCmds int, ct CmdTy
 	return nil
 }
 
-func (w *BaseWorker) isAuthenticated(redisCmd *cmd.RedisCmd) error {
-	if redisCmd.Cmd != auth.Cmd && !w.Session.IsActive() {
+func (w *BaseWorker) isAuthenticated(diceDBCmd *cmd.DiceDBCmd) error {
+	if diceDBCmd.Cmd != auth.Cmd && !w.Session.IsActive() {
 		return errors.New("NOAUTH Authentication required")
 	}
 
