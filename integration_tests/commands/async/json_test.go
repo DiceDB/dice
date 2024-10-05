@@ -997,7 +997,7 @@ func TestJsonObjLen(t *testing.T) {
 			expected: []interface{}{"OK", int64(3)},
 		},
 		{
-			name:     "JSON.OBJLEN with definite path - inner exisiting path",
+			name:     "JSON.OBJLEN with definite path - inner existing path",
 			commands: []string{"json.set obj $ " + c, "json.objlen obj .partner", "json.objlen obj .partner2",},
 			expected: []interface{}{"OK", int64(2), int64(2)},
 		},
@@ -1010,6 +1010,11 @@ func TestJsonObjLen(t *testing.T) {
 			name:     "JSON.OBJLEN with definite path - inner existent path with nonJSON object",
 			commands: []string{"json.set obj $ " + c, "json.objlen obj .a",},
 			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+		},
+		{
+			name:     "JSON.OBJLEN with definite path - inner existent path nested object",
+			commands: []string{"json.set obj $ " + c, "json.objlen obj ..partner",},
+			expected: []interface{}{"OK", int64(2)},
 		},
 	}
 
