@@ -9,6 +9,12 @@ import (
 	"strings"
 )
 
+const (
+	UnixScheme = "unix"
+	TCPScheme  = "tcp"
+	DiceScheme = "dice"
+)
+
 type Address struct {
 	Kind string // allowed values: unix, tcp, dice
 	Host string // e.g: "0.0.0.0", "::1"
@@ -32,14 +38,14 @@ func ParseAddress(address string) (*Address, error) {
 	}
 
 	switch u.Scheme {
-	case "unix":
+	case UnixScheme:
 		return &Address{
 			Kind: "unix",
 			Host: "",
 			Port: -1,
 			Path: u.Path,
 		}, nil
-	case "tcp", "dice":
+	case TCPScheme, DiceScheme:
 		host, portStr, err := net.SplitHostPort(u.Host)
 		if err != nil {
 			return nil, err
@@ -58,5 +64,5 @@ func ParseAddress(address string) (*Address, error) {
 			Path: "",
 		}, nil
 	}
-	return nil, errors.New("invalid address supplied!")
+	return nil, errors.New("invalid address supplied")
 }

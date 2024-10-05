@@ -111,7 +111,7 @@ func (s *AsyncServer) FindPortAndBind() (socketErr error) {
 	return nil
 }
 
-func (s *AsyncServer) BindToTcp(addr *Address) (socketErr error) {
+func (s *AsyncServer) BindToTCP(addr *Address) (socketErr error) {
 	serverFD, socketErr := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, 0)
 
 	if socketErr != nil {
@@ -179,9 +179,8 @@ func (s *AsyncServer) BindToSocket(addr *Address) (socketErr error) {
 		slog.Info("DiceDB running on socket", "path", addr.Path)
 		sockAddr := &syscall.SockaddrUnix{Name: addr.Path}
 		return syscall.Bind(serverFD, sockAddr)
-	} else {
-		return errors.New("socket already in use")
 	}
+	return errors.New("socket already in use")
 }
 
 func (s *AsyncServer) Bind() (socketErr error) {
@@ -193,7 +192,7 @@ func (s *AsyncServer) Bind() (socketErr error) {
 	case "unix":
 		return s.BindToSocket(addr)
 	case "tcp", "dice":
-		return s.BindToTcp(addr)
+		return s.BindToTCP(addr)
 	default:
 		return diceerrors.ErrInvalidAddress
 	}
