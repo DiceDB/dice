@@ -991,6 +991,26 @@ func TestJsonObjLen(t *testing.T) {
 			commands: []string{"json.set obj $ " + c, "json.objlen"},
 			expected: []interface{}{"OK", "ERR wrong number of arguments for 'json.objlen' command"},
 		},
+		{
+			name:     "JSON.OBJLEN with definite path - root",
+			commands: []string{"json.set obj $ " + c, "json.objlen obj ."},
+			expected: []interface{}{"OK", int64(3)},
+		},
+		{
+			name:     "JSON.OBJLEN with definite path - inner exisiting path",
+			commands: []string{"json.set obj $ " + c, "json.objlen obj .partner", "json.objlen obj .partner2",},
+			expected: []interface{}{"OK", int64(2), int64(2)},
+		},
+		{
+			name:     "JSON.OBJLEN with definite path - inner non-existent path",
+			commands: []string{"json.set obj $ " + c, "json.objlen obj .idonotexist",},
+			expected: []interface{}{"OK", "(nil)"},
+		},
+		{
+			name:     "JSON.OBJLEN with definite path - inner existent path with nonJSON object",
+			commands: []string{"json.set obj $ " + c, "json.objlen obj .a",},
+			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+		},
 	}
 
 	for _, tcase := range testCases {

@@ -844,8 +844,7 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
-	path := args[1]
-
+	path, isDefinitePath := utils.ParseInputJsonPath(args[1])
 	expr, err := jp.ParseString(path)
 	if err != nil {
 		return diceerrors.NewErrWithMessage(err.Error())
@@ -853,7 +852,6 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) []byte {
 
 	// get all values for matching paths
 	results := expr.Get(jsonData)
-
 	objectLen := make([]interface{}, 0, len(results))
 
 	for _, result := range results {
@@ -865,8 +863,20 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) []byte {
 				objectLen = append(objectLen, nil)
 			}
 		default:
+			// If it is a definitePath, and the only value is not JSON, throw wrong type error
+			if isDefinitePath {
+				return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+			}
 			objectLen = append(objectLen, nil)
 		}
+	}
+
+	// Must return a single integer if it is a definite Path
+	if isDefinitePath {
+		if len(objectLen) == 0 {
+			return clientio.RespNIL
+		}
+		return clientio.Encode(objectLen[0], false)
 	}
 	return clientio.Encode(objectLen, false)
 }
