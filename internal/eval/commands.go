@@ -1047,6 +1047,20 @@ var (
 		Arity:    -4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	geoAddCmdMeta = DiceCmdMeta{
+		Name:     "GEOADD",
+		Info:     `Adds one or more members to a geospatial index. The key is created if it doesn't exist.`,
+		Arity:    -5,
+		Eval:     evalGEOADD,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	geoDistCmdMeta = DiceCmdMeta{
+		Name:     "GEODIST",
+		Info:     `Returns the distance between two members in the geospatial index.`,
+		Arity:    -4,
+		Eval:     evalGEODIST,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -1163,6 +1177,8 @@ func init() {
 	DiceCmds["BITFIELD"] = bitfieldCmdMeta
 	DiceCmds["HINCRBYFLOAT"] = hincrbyFloatCmdMeta
 	DiceCmds["HEXISTS"] = hexistsCmdMeta
+	DiceCmds["GEOADD"] = geoAddCmdMeta
+	DiceCmds["GEODIST"] = geoDistCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

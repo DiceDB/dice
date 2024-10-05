@@ -109,6 +109,8 @@ func TestEval(t *testing.T) {
 	testEvalHVALS(t, store)
 	testEvalBitField(t, store)
 	testEvalHINCRBYFLOAT(t, store)
+	testEvalGEOADD(t, store)
+	testEvalGEODIST(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -5056,7 +5058,6 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalZRANGE, store)
 }
 
-
 func testEvalBitField(t *testing.T, store *dstore.Store) {
 	testCases := map[string]evalTestCase{
 		"BITFIELD signed SET": {
@@ -5340,4 +5341,118 @@ func testEvalDUMP(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalDUMP, store)
+}
+
+func testEvalGEOADD(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"GEOADD with wrong number of arguments": {
+			input:  []string{"mygeo", "1", "2"},
+			output: diceerrors.NewErrArity("GEOADD"),
+		},
+		"GEOADD with non-numeric longitude": {
+			input:  []string{"mygeo", "long", "40.7128", "NewYork"},
+			output: diceerrors.NewErrWithMessage("ERR invalid longitude"),
+		},
+		"GEOADD with non-numeric latitude": {
+			input:  []string{"mygeo", "-74.0060", "lat", "NewYork"},
+			output: diceerrors.NewErrWithMessage("ERR invalid latitude"),
+		},
+		"GEOADD new member to non-existing key": {
+			setup:  func() {},
+			input:  []string{"mygeo", "-74.0060", "40.7128", "NewYork"},
+			output: clientio.Encode(int64(1), false),
+		},
+		"GEOADD existing member with updated coordinates": {
+			setup: func() {
+				evalGEOADD([]string{"mygeo", "-74.0060", "40.7128", "NewYork"}, store)
+			},
+			input:  []string{"mygeo", "-73.9352", "40.7304", "NewYork"},
+			output: clientio.Encode(int64(0), false),
+		},
+		"GEOADD multiple members": {
+			setup: func() {
+				evalGEOADD([]string{"mygeo", "-74.0060", "40.7128", "NewYork"}, store)
+			},
+			input:  []string{"mygeo", "-118.2437", "34.0522", "LosAngeles", "-87.6298", "41.8781", "Chicago"},
+			output: clientio.Encode(int64(2), false),
+		},
+		"GEOADD with NX option (new member)": {
+			input:  []string{"mygeo", "NX", "-122.4194", "37.7749", "SanFrancisco"},
+			output: clientio.Encode(int64(1), false),
+		},
+		"GEOADD with NX option (existing member)": {
+			setup: func() {
+				evalGEOADD([]string{"mygeo", "-74.0060", "40.7128", "NewYork"}, store)
+			},
+			input:  []string{"mygeo", "NX", "-73.9352", "40.7304", "NewYork"},
+			output: clientio.Encode(int64(0), false),
+		},
+		"GEOADD with XX option (new member)": {
+			input:  []string{"mygeo", "XX", "-71.0589", "42.3601", "Boston"},
+			output: clientio.Encode(int64(0), false),
+		},
+		"GEOADD with XX option (existing member)": {
+			setup: func() {
+				evalGEOADD([]string{"mygeo", "-74.0060", "40.7128", "NewYork"}, store)
+			},
+			input:  []string{"mygeo", "XX", "-73.9352", "40.7304", "NewYork"},
+			output: clientio.Encode(int64(0), false),
+		},
+		"GEOADD with both NX and XX options": {
+			input:  []string{"mygeo", "NX", "XX", "-74.0060", "40.7128", "NewYork"},
+			output: diceerrors.NewErrWithMessage("ERR XX and NX options at the same time are not compatible"),
+		},
+		"GEOADD with invalid option": {
+			input:  []string{"mygeo", "INVALID", "-74.0060", "40.7128", "NewYork"},
+			output: diceerrors.NewErrArity("GEOADD"),
+		},
+		"GEOADD to a key of wrong type": {
+			setup: func() {
+				store.Put("mygeo", store.NewObj("string_value", -1, object.ObjTypeString, object.ObjEncodingRaw))
+			},
+			input:  []string{"mygeo", "-74.0060", "40.7128", "NewYork"},
+			output: []byte("-ERR Existing key has wrong Dice type\r\n"),
+		},
+		"GEOADD with longitude out of range": {
+			input:  []string{"mygeo", "181.0", "40.7128", "Invalid"},
+			output: diceerrors.NewErrWithMessage("ERR invalid longitude"),
+		},
+		"GEOADD with latitude out of range": {
+			input:  []string{"mygeo", "-74.0060", "91.0", "Invalid"},
+			output: diceerrors.NewErrWithMessage("ERR invalid latitude"),
+		},
+	}
+
+	runEvalTests(t, tests, evalGEOADD, store)
+}
+
+func testEvalGEODIST(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"GEODIST between existing points": {
+			setup: func() {
+				evalGEOADD([]string{"points", "13.361389", "38.115556", "Palermo"}, store)
+				evalGEOADD([]string{"points", "15.087269", "37.502669", "Catania"}, store)
+			},
+			input:  []string{"points", "Palermo", "Catania"},
+			output: clientio.Encode(float64(166274.1440), false), // Example value
+		},
+		"GEODIST with units (km)": {
+			setup: func() {
+				evalGEOADD([]string{"points", "13.361389", "38.115556", "Palermo"}, store)
+				evalGEOADD([]string{"points", "15.087269", "37.502669", "Catania"}, store)
+			},
+			input:  []string{"points", "Palermo", "Catania", "km"},
+			output: clientio.Encode(float64(166.2741), false), // Example value
+		},
+		"GEODIST to same point": {
+			setup: func() {
+				evalGEOADD([]string{"points", "13.361389", "38.115556", "Palermo"}, store)
+			},
+			input:  []string{"points", "Palermo", "Palermo"},
+			output: clientio.Encode(float64(0.0000), false), // Expecting distance 0 formatted to 4 decimals
+		},
+		// Add other test cases here...
+	}
+
+	runEvalTests(t, tests, evalGEODIST, store)
 }

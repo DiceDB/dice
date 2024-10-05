@@ -46,6 +46,7 @@ require (
 	github.com/google/btree v1.1.3
 	github.com/google/go-cmp v0.6.0
 	github.com/gorilla/websocket v1.5.3
+	github.com/mmcloughlin/geohash v0.10.0
 	github.com/ohler55/ojg v1.24.0
 	github.com/pelletier/go-toml/v2 v2.2.3
 	github.com/rs/xid v1.6.0
