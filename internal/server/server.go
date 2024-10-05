@@ -13,7 +13,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/charmbracelet/log"
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/clientio"
