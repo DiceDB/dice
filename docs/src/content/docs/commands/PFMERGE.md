@@ -30,20 +30,19 @@ PFMERGE destkey sourcekey [sourcekey ...]
 
 ## Behaviour
 
-When the `PFMERGE` command is executed, DiceDB will:
+- If the `destkey` already exists, the `PFMERGE` command will overwrite the existing value with the new merged HyperLogLog.
+- The command retrieves the HyperLogLog data structures from the specified `sourcekey` keys.
+- These `sourcekey` keys are merged into a single HyperLogLog and stored in the `destkey`.
+- If the `sourcekey` keys are not valid HyperLogLogs, an error is returned.
+  
 
-1. Retrieve the HyperLogLog data structures from the specified `sourcekey` keys.
-2. Merge these HyperLogLogs into a single HyperLogLog.
-3. Store the resulting HyperLogLog in the `destkey`.
-4. If the `destkey` already exists, its previous value will be overwritten with the new merged HyperLogLog.
-
-## Error Handling
+## Errors
 
 The `PFMERGE` command can raise errors in the following scenarios:
 
 1. `Wrong Type Error`: If any of the `sourcekey` keys or the `destkey` key contains a value that is not a HyperLogLog, DiceDB will return an error.
 
-   - `Error Message`: `WRONGTYPE Operation against a key holding the wrong kind of value`
+   - `(error)`: `WRONGTYPE Operation against a key holding the wrong kind of value`
 
 2. `Non-Existent Key Error`: If any of the `sourcekey` keys do not exist, DiceDB will treat them as empty HyperLogLogs and proceed with the merge operation without raising an error.
 
