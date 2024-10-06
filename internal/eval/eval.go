@@ -844,7 +844,7 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
-	path, isLegacyPath := utils.ParseInputJsonPath(args[1])
+	path, isLegacyPath := utils.ParseInputJSONPath(args[1])
 	expr, err := jp.ParseString(path)
 	if err != nil {
 		return diceerrors.NewErrWithMessage(err.Error())
