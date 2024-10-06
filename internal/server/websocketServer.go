@@ -135,7 +135,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		}
 
 		// parse message to dice command
-		redisCmd, err := utils.ParseWebsocketMessage(msg)
+		diceDBCmd, err := utils.ParseWebsocketMessage(msg)
 		if errors.Is(err, diceerrors.ErrEmptyCommand) {
 			continue
 		} else if err != nil {
@@ -143,19 +143,19 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 			continue
 		}
 
-		if redisCmd.Cmd == Abort {
+		if diceDBCmd.Cmd == Abort {
 			close(s.shutdownChan)
 			break
 		}
 
-		if unimplementedCommandsWebsocket[redisCmd.Cmd] {
+		if unimplementedCommandsWebsocket[diceDBCmd.Cmd] {
 			writeResponse(conn, []byte("Command is not implemented with Websocket"))
 			continue
 		}
 
 		// send request to Shard Manager
 		s.shardManager.GetShard(0).ReqChan <- &ops.StoreOp{
-			Cmd:         redisCmd,
+			Cmd:         diceDBCmd,
 			WorkerID:    "wsServer",
 			ShardID:     0,
 			WebsocketOp: true,
@@ -164,7 +164,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		// Wait for response
 		resp := <-s.ioChan
 
-		_, ok := WorkerCmdsMeta[redisCmd.Cmd]
+		_, ok := WorkerCmdsMeta[diceDBCmd.Cmd]
 		respArr := []string{
 			"(nil)",  // Represents a RESP Nil Bulk String, which indicates a null value.
 			"OK",     // Represents a RESP Simple String with value "OK".

@@ -6,18 +6,18 @@ import (
 )
 
 // Package errors provides error definitions and utility functions for handling
-// common Redis error scenarios within the application. This package centralizes
-// error messages to ensure consistency and clarity when interacting with Redis
+// common DiceDB error scenarios within the application. This package centralizes
+// error messages to ensure consistency and clarity when interacting with DiceDB
 // commands and responses.
 
-// Standard error variables for various Redis-related error conditions.
+// Standard error variables for various DiceDB-related error conditions.
 var (
 	ErrAuthFailed                 = errors.New("AUTH failed")                                                            // Indicates authentication failure.
 	ErrIntegerOutOfRange          = errors.New("ERR value is not an integer or out of range")                            // Represents a value that is either not an integer or is out of allowed range.
 	ErrInvalidNumberFormat        = errors.New("ERR value is not an integer or a float")                                 // Signals that a value provided is not in a valid integer or float format.
 	ErrValueOutOfRange            = errors.New("ERR value is out of range")                                              // Indicates that a value is beyond the permissible range.
 	ErrOverflow                   = errors.New("ERR increment or decrement would overflow")                              // Signifies that an increment or decrement operation would exceed the limits.
-	ErrSyntax                     = errors.New("ERR syntax error")                                                       // Represents a syntax error in a Redis command.
+	ErrSyntax                     = errors.New("ERR syntax error")                                                       // Represents a syntax error in a DiceDB command.
 	ErrKeyNotFound                = errors.New("ERR no such key")                                                        // Indicates that the specified key does not exist.
 	ErrWrongTypeOperation         = errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")      // Signals an operation attempted on a key with an incompatible type.
 	ErrInvalidHyperLogLogKey      = errors.New("WRONGTYPE Key is not a valid HyperLogLog string value")                  // Indicates that a key is not a valid HyperLogLog value.
