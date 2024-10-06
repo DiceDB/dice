@@ -3176,7 +3176,7 @@ func evalHGET(args []string, store *dstore.Store) []byte {
 // evalHMGET returns an array of values associated with the given fields,
 // in the same order as they are requested.
 // If a field does not exist, returns a corresponding nil value in the array.
-// If the key does not exist, returns an array of nil values. 
+// If the key does not exist, returns an array of nil values.
 func evalHMGET(args []string, store *dstore.Store) []byte {
 	if len(args) < 2 {
 		return diceerrors.NewErrArity("HMGET")
@@ -3282,6 +3282,8 @@ func evalHSCAN(args []string, store *dstore.Store) []byte {
 		}
 	}
 
+	// Note that this implementation has a time complexity of O(N), where N is the number of keys in 'hashMap'.
+	// This is in contrast to Redis, which implements HSCAN in O(1) time complexity by maintaining a cursor.
 	keys := make([]string, 0, len(hashMap))
 	for k := range hashMap {
 		keys = append(keys, k)

@@ -27,14 +27,7 @@ func TestHSCAN(t *testing.T) {
 				THREE,
 				[]interface{}{
 					"0",
-					[]interface{}{
-						"field1",
-						"value1",
-						"field2",
-						"value2",
-						"field3",
-						"value3",
-					},
+					[]interface{}{"field1", "value1", "field2", "value2", "field3", "value3"},
 				},
 			},
 		},
@@ -74,6 +67,18 @@ func TestHSCAN(t *testing.T) {
 		{
 			commands: []string{"HSCAN"},
 			expected: []interface{}{"ERR wrong number of arguments for 'hscan' command"},
+		},
+		{
+			commands: []string{
+				"HSET test_hash1 field1 value1 field2 value2 field3 value3 field4 value4",
+				"HSCAN test_hash1 0 COUNT 2",
+				"HSCAN test_hash1 2 COUNT 2",
+			},
+			expected: []interface{}{
+				FOUR,
+				[]interface{}{"2", []interface{}{"field1", "value1", "field2", "value2"}},
+				[]interface{}{"0", []interface{}{"field3", "value3", "field4", "value4"}},
+			},
 		},
 	}
 
