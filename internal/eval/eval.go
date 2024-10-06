@@ -2,14 +2,10 @@ package eval
 
 import (
 	"bytes"
-
 	"crypto/rand"
-
 	"errors"
 	"fmt"
-
 	"log/slog"
-
 	"math"
 	"math/big"
 	"math/bits"
@@ -66,9 +62,11 @@ const (
 	MultBy = "MULTBY"
 )
 
-const defaultRootPath = "$"
-const maxExDuration = 9223372036854775
-const CountConst = "COUNT"
+const (
+	defaultRootPath = "$"
+	maxExDuration   = 9223372036854775
+	CountConst      = "COUNT"
+)
 
 func init() {
 	diceCommandsCount = len(DiceCmds)
@@ -109,7 +107,7 @@ func evalECHO(args []string, store *dstore.Store) []byte {
 func EvalAUTH(args []string, c *comm.Client) []byte {
 	var err error
 
-	if config.DiceConfig.Auth.Password == "" {
+	if config.DiceConfig.Auth.Password == utils.EmptyStr {
 		return diceerrors.NewErrWithMessage("AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?")
 	}
 
@@ -631,7 +629,7 @@ func evalJSONARRPOP(args []string, store *dstore.Store) []byte {
 	}
 	key := args[0]
 
-	var path = defaultRootPath
+	path := defaultRootPath
 	if len(args) >= 2 {
 		path = args[1]
 	}
@@ -1211,7 +1209,6 @@ func evalJSONTOGGLE(args []string, store *dstore.Store) []byte {
 		modified = true
 		return newValue, true
 	})
-
 	if err != nil {
 		return diceerrors.NewErrWithMessage("failed to toggle values")
 	}
@@ -1429,7 +1426,6 @@ func evalJSONNUMMULTBY(args []string, store *dstore.Store) []byte {
 	path := args[1]
 	// Parse the JSONPath expression
 	expr, err := jp.ParseString(path)
-
 	if err != nil {
 		return diceerrors.NewErrWithMessage("invalid JSONPath")
 	}
@@ -1615,7 +1611,7 @@ func evalTTL(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("TTL")
 	}
 
-	var key = args[0]
+	key := args[0]
 
 	obj := store.Get(key)
 
@@ -1640,7 +1636,7 @@ func evalTTL(args []string, store *dstore.Store) []byte {
 // evalDEL deletes all the specified keys in args list
 // returns the count of total deleted keys after encoding
 func evalDEL(args []string, store *dstore.Store) []byte {
-	var countDeleted = 0
+	countDeleted := 0
 
 	if len(args) < 1 {
 		return diceerrors.NewErrArity("DEL")
@@ -1665,7 +1661,7 @@ func evalEXPIRE(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("EXPIRE")
 	}
 
-	var key = args[0]
+	key := args[0]
 	exDurationSec, err := strconv.ParseInt(args[1], 10, 64)
 	if err != nil {
 		return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
@@ -1701,7 +1697,7 @@ func evalEXPIRETIME(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("EXPIRETIME")
 	}
 
-	var key = args[0]
+	key := args[0]
 
 	obj := store.Get(key)
 
@@ -1729,7 +1725,7 @@ func evalEXPIREAT(args []string, store *dstore.Store) []byte {
 		return clientio.Encode(errors.New("ERR wrong number of arguments for 'expireat' command"), false)
 	}
 
-	var key = args[0]
+	key := args[0]
 	exUnixTimeSec, err := strconv.ParseInt(args[1], 10, 64)
 	if exUnixTimeSec < 0 || exUnixTimeSec > maxExDuration {
 		return diceerrors.NewErrExpireTime("EXPIREAT")
@@ -1756,8 +1752,9 @@ func evalEXPIREAT(args []string, store *dstore.Store) []byte {
 // Returns Boolean False and error nil if conditions didn't met.
 // Returns Boolean False and error not-nil if invalid combination of subCommands or if subCommand is invalid
 func evaluateAndSetExpiry(subCommands []string, newExpiry int64, key string,
-	store *dstore.Store) (shouldSetExpiry bool, err []byte) {
-	var newExpInMilli = newExpiry * 1000
+	store *dstore.Store,
+) (shouldSetExpiry bool, err []byte) {
+	newExpInMilli := newExpiry * 1000
 	var prevExpiry *uint64 = nil
 	var nxCmd, xxCmd, gtCmd, ltCmd bool
 
@@ -1865,7 +1862,6 @@ func evalINCRBYFLOAT(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("INCRBYFLOAT")
 	}
 	incr, err := strconv.ParseFloat(strings.TrimSpace(args[1]), 64)
-
 	if err != nil {
 		return diceerrors.NewErrWithMessage(diceerrors.IntOrFloatErr)
 	}
@@ -2868,7 +2864,7 @@ func evalGETEX(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("GETEX")
 	}
 
-	var key = args[0]
+	key := args[0]
 
 	// Get the key from the hash table
 	obj := store.Get(key)
@@ -2885,8 +2881,8 @@ func evalGETEX(args []string, store *dstore.Store) []byte {
 	}
 
 	var exDurationMs int64 = -1
-	var state = Uninitialized
-	var persist = false
+	state := Uninitialized
+	persist := false
 	for i := 1; i < len(args); i++ {
 		arg := strings.ToUpper(args[i])
 		switch arg {
@@ -3642,10 +3638,10 @@ func evalSADD(args []string, store *dstore.Store) []byte {
 	obj := store.Get(key)
 	lengthOfItems := len(args[1:])
 
-	var count = 0
+	count := 0
 	if obj == nil {
 		var exDurationMs int64 = -1
-		var keepttl = false
+		keepttl := false
 		// If the object does not exist, create a new set object.
 		value := make(map[string]struct{}, lengthOfItems)
 		// Create a new object.
@@ -3716,7 +3712,7 @@ func evalSREM(args []string, store *dstore.Store) []byte {
 	// Get the set object from the store.
 	obj := store.Get(key)
 
-	var count = 0
+	count := 0
 	if obj == nil {
 		return clientio.Encode(count, false)
 	}
@@ -3856,7 +3852,7 @@ func evalSINTER(args []string, store *dstore.Store) []byte {
 
 	sets := make([]map[string]struct{}, 0, len(args))
 
-	var empty = 0
+	empty := 0
 
 	for _, arg := range args {
 		// Get the set object from the store.
@@ -4203,7 +4199,6 @@ func evalJSONNUMINCRBY(args []string, store *dstore.Store) []byte {
 	jsonData := obj.Value
 	// Parse the JSONPath expression
 	expr, err := jp.ParseString(path)
-
 	if err != nil {
 		return diceerrors.NewErrWithMessage("invalid JSONPath")
 	}
@@ -4961,7 +4956,6 @@ func evalHINCRBYFLOAT(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("HINCRBYFLOAT")
 	}
 	incr, err := strconv.ParseFloat(strings.TrimSpace(args[2]), 64)
-
 	if err != nil {
 		return diceerrors.NewErrWithMessage(diceerrors.IntOrFloatErr)
 	}
@@ -5117,7 +5111,6 @@ func evalGEODIST(args []string, store *dstore.Store) []byte {
 	distance := geo.GetDistance(lon1, lat1, lon2, lat2)
 
 	result, err := geo.ConvertDistance(distance, unit)
-
 	if err != nil {
 		return err
 	}

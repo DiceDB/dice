@@ -13,12 +13,16 @@ AUTH password
 
 ## Parameters
 
-- `password` (string): The password that you have set for the DiceDB server. This is a required parameter for the `AUTH` command. If the password is correct, the command will return a success response; if it is incorrect, an error will be raised.
+| Parameter | Description                                                               | Type    | Required |
+|-----------|---------------------------------------------------------------------------|---------|----------|
+| `password`| The password that you have set for the DiceDB server.                     | String  | Yes      |
 
-## Return Value
+## Return values
 
-- On success: The command returns the string `OK`, indicating that the authentication was successful.
-- On failure: If the authentication fails (due to an incorrect password), it raises an error indicating the failure reason.
+| Condition                                      | Return Value                                      |
+|------------------------------------------------|---------------------------------------------------|
+| Authentication is successful                   | `OK`                                               |
+| Syntax or specified constraints are invalid    | error                                             |
 
 ## Behaviour
 
@@ -32,42 +36,58 @@ When the `AUTH` command is executed, DiceDB will perform the following steps:
 
 Once authenticated, the client can execute commands on the DiceDB server that require authentication. If a client attempts to send commands without being authenticated (and while authentication is required), DiceDB will respond with an error for unauthorized access.
 
+## Errors
+
+1. `(error) WRONGPASS invalid username-password pair or user is disabled`: This error occurs if the password provided to the `AUTH` command does not match the configured password of the DiceDB server. The client will not be granted access unless the correct password is provided.
+
+2. `(error) NOAUTH Authentication required`: This error occurs when a client attempts to execute a command without authenticating first. The client must use the `AUTH` command to authenticate before executing any other commands.
+
+3. `(error) ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?`: This error will be raised if the DiceDB server is not configured to use a password (i.e., the `requirepass` directive in the DiceDB.conf file is empty or commented out), and a client attempts to authenticate using the `AUTH` command.
+
 ## Example Usage
 
 ### Successful Authentication
+
+In this example, after successfully typing the correct password, the DiceDB server responds with `OK`, indicating that the client is now authenticated and can execute further commands.
 
 ```bash
 127.0.0.1:7379> AUTH your_secret_password
 OK
 ```
 
-In this example, after successfully typing the correct password, the DiceDB server responds with `OK`, indicating that the client is now authenticated and can execute further commands.
-
 ### Failed Authentication
+
+In this example, the provided password is incorrect. As a result, the DiceDB server responds with an error indicating that the authentication has failed.
 
 ```bash
 127.0.0.1:7379> AUTH incorrect_password
 (error) WRONGPASS invalid username-password pair or user is disabled
 ```
 
-In this example, the provided password is incorrect. As a result, the DiceDB server responds with an error stating `(error) ERR invalid password`, indicating that the authentication has failed.
-
 ### Invoking commands without AUTH
+
+In this example, when some other command is fired without doing `AUTH` then the above error is thrown denoting that authentication is required.
 
 ```bash
 127.0.0.1:7379> GET x
 (error) NOAUTH Authentication required
 ```
 
-In this example, when some other command is fired without doing `AUTH` then the above error is thrown denoting that authentication is required.
+### Invoking AUTH without configuring password
 
-## Error Handling
+In this example, when `AUTH` is fired without actually configuring the password for the DiceDB server, then the server returns an error indicating that no password is set or the configuration is incorrect.
 
-The `AUTH` command may raise the following errors:
+```bash
+127.0.0.1:7379> AUTH incorrect_password
+(error) ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?
+```
 
-- `(error) ERR invalid password`: This error occurs if the password provided to the `AUTH` command does not match the configured password of the DiceDB server. The client will not be granted access unless the correct password is provided.
+### Invalid usage
 
-- `(error) ERR Client sent AUTH but no password is set`: This error will be raised if the DiceDB server is not configured to use a password (i.e., the `requirepass` directive in the DiceDB.conf file is empty or commented out), and a client attempts to authenticate using the `AUTH` command.
+```bash
+127.0.0.1:7379> AUTH your_secret_password foo bar
+(error) ERR wrong number of arguments for 'auth' command
+```
 
 ### Additional Notes
 
