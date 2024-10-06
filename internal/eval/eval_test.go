@@ -1088,7 +1088,7 @@ func testEvalJSONOBJLEN(t *testing.T, store *dstore.Store) {
 			input:  []string{"EXISTING_KEY", "$.person.name"},
 			output: []byte("*1\r\n$-1\r\n"),
 		},
-		"incomapitable type(array) objlen": {
+		"legacy path - root": {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "{\"person\":{\"name\":\"John\",\"age\":30},\"languages\":[\"python\",\"golang\"]}"
@@ -1097,8 +1097,56 @@ func testEvalJSONOBJLEN(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"EXISTING_KEY", "$.languages"},
-			output: []byte("*1\r\n$-1\r\n"),
+			input:  []string{"EXISTING_KEY", "."},
+			output: []byte(":2\r\n"),
+		},
+		"legacy path - non_root": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"person\":{\"name\":\"John\",\"age\":30, \"post\":\"MTS2\"},\"languages\":[\"python\",\"golang\"]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", ".person"},
+			output: []byte(":3\r\n"),
+		},
+		"legacy path - non_root_2": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"person\":{\"name\":\"John\",\"age\":30, \"post\":\"MTS2\"},\"languages\":[\"python\",\"golang\"]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "person"},
+			output: []byte(":3\r\n"),
+		},
+		"legacy path not object": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"person\":{\"name\":\"John\",\"age\":30, \"post\":\"MTS2\"},\"languages\":[\"python\",\"golang\"]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", ".person.name"},
+			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+		},
+		"json value not object": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "[1,2,3]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY", "."},
+			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
 		},
 	}
 

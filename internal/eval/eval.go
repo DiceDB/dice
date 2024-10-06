@@ -844,7 +844,7 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
-	path, isDefinitePath := utils.ParseInputJsonPath(args[1])
+	path, isLegacyPath := utils.ParseInputJsonPath(args[1])
 	expr, err := jp.ParseString(path)
 	if err != nil {
 		return diceerrors.NewErrWithMessage(err.Error())
@@ -863,16 +863,16 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) []byte {
 				objectLen = append(objectLen, nil)
 			}
 		default:
-			// If it is a definitePath, and the only value is not JSON, throw wrong type error
-			if isDefinitePath {
+			// If it is a legacyPath, and the only value is not JSON, throw wrong type error
+			if isLegacyPath {
 				return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 			}
 			objectLen = append(objectLen, nil)
 		}
 	}
 
-	// Must return a single integer if it is a definite Path
-	if isDefinitePath {
+	// Must return a single integer if it is a legacy Path
+	if isLegacyPath {
 		if len(objectLen) == 0 {
 			return clientio.RespNIL
 		}
