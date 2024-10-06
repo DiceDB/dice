@@ -32,6 +32,9 @@ func init() {
 	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the config file")
 	flag.StringVar(&config.FileLocation, "c", config.FileLocation, "file path of the config file")
 	flag.BoolVar(&config.InitConfigCmd, "init-config", false, "initialize a new config file")
+	flag.IntVar(&config.KeysLimit, "keys-limit", config.KeysLimit, "keys limit for the dice server. "+
+		"This flag controls the number of keys each shard holds at startup. You can multiply this number with the "+
+		"total number of shard threads to estimate how much memory will be required at system start up.")
 	flag.Parse()
 
 	config.SetupConfig()

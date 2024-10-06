@@ -11,7 +11,7 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
-func ExecuteCommand(c *cmd.RedisCmd, client *comm.Client, store *dstore.Store, httpOp, websocketOp bool) *EvalResponse {
+func ExecuteCommand(c *cmd.DiceDBCmd, client *comm.Client, store *dstore.Store, httpOp, websocketOp bool) *EvalResponse {
 	diceCmd, ok := DiceCmds[c.Cmd]
 	if !ok {
 		return &EvalResponse{Result: diceerrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", c.Cmd, strings.Join(c.Args, " ")), Error: nil}
