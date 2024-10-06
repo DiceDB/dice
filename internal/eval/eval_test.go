@@ -1937,12 +1937,12 @@ func testEvalDel(t *testing.T, store *dstore.Store) {
 		"nil value": {
 			setup:  func() {},
 			input:  nil,
-			output: []byte(":0\r\n"),
+			output: clientio.Encode(errors.New("ERR wrong number of arguments for 'del' command"), false),
 		},
 		"empty array": {
 			setup:  func() {},
 			input:  []string{},
-			output: []byte(":0\r\n"),
+			output: clientio.Encode(errors.New("ERR wrong number of arguments for 'del' command"), false),
 		},
 		"key does not exist": {
 			setup:  func() {},
