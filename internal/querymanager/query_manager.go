@@ -64,6 +64,11 @@ type (
 		Query string `json:"query"`
 		Data  []any  `json:"data"`
 	}
+
+	ClientIdentifier struct {
+		ClientIdentifierID int
+		IsHTTPClient       bool
+	}
 )
 
 var (
@@ -74,8 +79,8 @@ var (
 	AdhocQueryChan chan AdhocQuery
 )
 
-func NewClientIdentifier(clientIdentifierID int, isHTTPClient bool) clientio.ClientIdentifier {
-	return clientio.ClientIdentifier{
+func NewClientIdentifier(clientIdentifierID int, isHTTPClient bool) ClientIdentifier {
+	return ClientIdentifier{
 		ClientIdentifierID: clientIdentifierID,
 		IsHTTPClient:       isHTTPClient,
 	}
@@ -141,11 +146,11 @@ func (m *Manager) listenForSubscriptions(ctx context.Context) {
 	for {
 		select {
 		case event := <-QuerySubscriptionChan:
-			var client clientio.ClientIdentifier
+			var client ClientIdentifier
 			if event.QwatchClientChan != nil {
-				client = clientio.NewClientIdentifier(int(event.ClientIdentifierID), true)
+				client = NewClientIdentifier(int(event.ClientIdentifierID), true)
 			} else {
-				client = clientio.NewClientIdentifier(event.ClientFD, false)
+				client = NewClientIdentifier(event.ClientFD, false)
 			}
 
 			if event.Subscribe {
@@ -235,7 +240,7 @@ func (m *Manager) notifyClients(query *sql.DSQLQuery, clients *sync.Map, queryRe
 
 	clients.Range(func(clientKey, clientVal interface{}) bool {
 		// Identify the type of client and respond accordingly
-		switch clientIdentifier := clientKey.(clientio.ClientIdentifier); {
+		switch clientIdentifier := clientKey.(ClientIdentifier); {
 		case clientIdentifier.IsHTTPClient:
 			qwatchClientResponseChannel := clientVal.(chan comm.QwatchResponse)
 			qwatchClientResponseChannel <- comm.QwatchResponse{
@@ -285,7 +290,7 @@ func (m *Manager) sendWithRetry(query *sql.DSQLQuery, clientFD int, data []byte)
 			slog.Int("client", clientFD),
 			slog.Any("error", err),
 		)
-		m.removeWatcher(query, clientio.NewClientIdentifier(clientFD, false), nil)
+		m.removeWatcher(query, NewClientIdentifier(clientFD, false), nil)
 		return
 	}
 }
@@ -308,7 +313,7 @@ func (m *Manager) serveAdhocQueries(ctx context.Context) {
 }
 
 // addWatcher adds a client as a watcher to a query.
-func (m *Manager) addWatcher(query *sql.DSQLQuery, clientIdentifier clientio.ClientIdentifier,
+func (m *Manager) addWatcher(query *sql.DSQLQuery, clientIdentifier ClientIdentifier,
 	qwatchClientChan chan comm.QwatchResponse, cacheChan chan *[]struct {
 		Key   string
 		Value *object.Obj
@@ -338,7 +343,7 @@ func (m *Manager) addWatcher(query *sql.DSQLQuery, clientIdentifier clientio.Cli
 }
 
 // removeWatcher removes a client from the watchlist for a query.
-func (m *Manager) removeWatcher(query *sql.DSQLQuery, clientIdentifier clientio.ClientIdentifier,
+func (m *Manager) removeWatcher(query *sql.DSQLQuery, clientIdentifier ClientIdentifier,
 	qwatchClientChan chan comm.QwatchResponse) {
 	queryString := query.String()
 	if clients, ok := m.WatchList.Load(queryString); ok {
