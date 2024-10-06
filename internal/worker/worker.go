@@ -252,11 +252,8 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 	}
 
 	// Gather the responses from the shards and write them to the buffer.
-	if err := w.gather(ctx, diceDBCmd, len(cmdList), responseType); err != nil {
-		return err
-	}
-
-	return nil
+	err := w.gather(ctx, diceDBCmd, len(cmdList), responseType)
+	return err
 }
 
 // scatter distributes the DiceDB commands to the respective shards based on the key.
@@ -296,7 +293,7 @@ func (w *BaseWorker) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd) error {
 
 // gather collects the responses from multiple shards and writes the results into the provided buffer.
 // It first waits for responses from all the shards and then processes the result based on the command type (SingleShard, Custom, or Multishard).
-func (w *BaseWorker) gather(ctx context.Context, cmd *cmd.DiceDBCmd, numCmds int, responseType int) error {
+func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCmds, responseType int) error {
 	// Loop to wait for messages from number of shards
 	var evalResp []eval.EvalResponse
 	for numCmds != 0 {
@@ -318,9 +315,9 @@ func (w *BaseWorker) gather(ctx context.Context, cmd *cmd.DiceDBCmd, numCmds int
 
 	switch responseType {
 	case clientio.ResponseTypeRegular:
-		return w.handleRegularResponse(ctx, cmd, evalResp)
+		return w.handleRegularResponse(ctx, diceDBCmd, evalResp)
 	case clientio.ResponseTypePush:
-		return w.handlePushResponse(ctx, cmd, cmd.Cmd, evalResp)
+		return w.handlePushResponse(ctx, diceDBCmd, diceDBCmd.Cmd, evalResp)
 	default:
 		w.logger.Error("Unknown response type", slog.String("workerID", w.id), slog.Int("responseType", responseType))
 		err := w.ioHandler.Write(ctx, diceerrors.ErrInternalServer)
@@ -333,14 +330,14 @@ func (w *BaseWorker) gather(ctx context.Context, cmd *cmd.DiceDBCmd, numCmds int
 }
 
 // handleRegularResponse handles the response for regular commands, i.e., responses for which are pushed from the server to the client.
-func (w *BaseWorker) handleRegularResponse(ctx context.Context, cmd *cmd.DiceDBCmd, evalResp []eval.EvalResponse) error {
+func (w *BaseWorker) handleRegularResponse(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, evalResp []eval.EvalResponse) error {
 	// Check if the command is multi-shard capable
 	// TODO: This is a temporary solution. In the future, all commands should be refactored to be multi-shard compatible.
 	// TODO: There are a few commands such as QWATCH, RENAME, MGET, MSET that wouldn't work in multi-shard mode without refactoring.
 	// TODO: These commands should be refactored to be multi-shard compatible before DICE-DB is completely multi-shard.
 	// Check if command is part of the new WorkerCommandsMeta map i.e. if the command has been refactored to be multi-shard compatible.
 	// If not found, treat it as a command that's not yet refactored, and write the response back to the client.
-	val, ok := CommandsMeta[cmd.Cmd]
+	val, ok := CommandsMeta[diceDBCmd.Cmd]
 	if !ok || val.CmdType == SingleShard || val.CmdType == Custom {
 		// Handle single-shard or custom commands
 		if evalResp[0].Error != nil {
@@ -364,7 +361,7 @@ func (w *BaseWorker) handleRegularResponse(ctx context.Context, cmd *cmd.DiceDBC
 			return err
 		}
 	} else {
-		w.logger.Error("Unknown command type", slog.String("workerID", w.id), slog.String("command", cmd.Cmd), slog.Any("evalResp", evalResp))
+		w.logger.Error("Unknown command type", slog.String("workerID", w.id), slog.String("command", diceDBCmd.Cmd), slog.Any("evalResp", evalResp))
 		err := w.ioHandler.Write(ctx, diceerrors.ErrInternalServer)
 		if err != nil {
 			w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
@@ -375,16 +372,16 @@ func (w *BaseWorker) handleRegularResponse(ctx context.Context, cmd *cmd.DiceDBC
 }
 
 // handlePushResponse handles the response for push commands, i.e., responses for which are pushed from the server to the client.
-func (w *BaseWorker) handlePushResponse(ctx context.Context, cmd *cmd.DiceDBCmd, pushResponseKey string, evalResp []eval.EvalResponse) error {
+func (w *BaseWorker) handlePushResponse(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, pushResponseKey string, evalResp []eval.EvalResponse) error {
 	if evalResp[0].Error != nil {
-		err := w.ioHandler.Write(ctx, clientio.CreatePushResponse(cmd.Cmd, pushResponseKey, evalResp[0].Error))
+		err := w.ioHandler.Write(ctx, clientio.CreatePushResponse(diceDBCmd.Cmd, pushResponseKey, evalResp[0].Error))
 		if err != nil {
 			w.logger.Debug("Error sending push response to client", slog.String("workerID", w.id), slog.Any("error", err))
 		}
 		return err
 	}
 
-	err := w.ioHandler.Write(ctx, clientio.CreatePushResponse(cmd.Cmd, pushResponseKey, evalResp[0].Result))
+	err := w.ioHandler.Write(ctx, clientio.CreatePushResponse(diceDBCmd.Cmd, pushResponseKey, evalResp[0].Result))
 	if err != nil {
 		w.logger.Debug("Error sending push response to client", slog.String("workerID", w.id), slog.Any("error", err))
 		return err
