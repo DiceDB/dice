@@ -75,7 +75,8 @@ The `HGETALL` command can raise the following errors:
 (empty list or set)
 ```
 
-### Example 3: Error when key is not a hash
+### Error Example:
+Key is not a hash
 
 ```DiceDB
 127.0.0.1:7379> SET user:3000 "This is a string"
@@ -89,7 +90,8 @@ OK
 (error) ERROR WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
-### Example 4: Error when an invalid number of arguments are passed
+### Error Example: 
+Invalid number of arguments are passed
 
 ```DiceDB
 127.0.0.1:7379> HGETALL user:3000 helloworld
