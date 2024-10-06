@@ -23,7 +23,6 @@ GETBIT key offset
 | Condition                                      | Return Value                                      |
 |------------------------------------------------|---------------------------------------------------|
 | Command is successful                           | `0` or `1`  |
-| Key does not exists                             | `0`         |
 | Syntax or specified constraints are invalid     | error       |
 
 ## Behaviour
@@ -32,6 +31,7 @@ GETBIT key offset
 - If the key does not exist, it is treated as if it contains a string of zero bytes, and the bit at any offset will be `0`.
 - If the key exists but does not hold a string value, an error is returned.
 - If the key exists and holds a string value, the bit at the specified offset is retrieved and returned.
+- If the key exists and holds a string value, however the offset is more than string length, `0` will be returned.
 
 ## Errors
 
