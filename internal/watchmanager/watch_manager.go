@@ -2,24 +2,25 @@ package watchmanager
 
 import (
 	"context"
-	"github.com/dicedb/dice/internal/cmd"
-	dstore "github.com/dicedb/dice/internal/store"
 	"log/slog"
 	"sync"
+
+	"github.com/dicedb/dice/internal/cmd"
+	dstore "github.com/dicedb/dice/internal/store"
 )
 
 type (
 	WatchSubscription struct {
-		Subscribe    bool               // Subscribe is true for subscribe, false for unsubscribe. Required.
-		AdhocReqChan chan *cmd.RedisCmd // AdhocReqChan is the channel to send adhoc requests to the worker. Required.
-		WatchCmd     *cmd.RedisCmd      // WatchCmd Represents a unique key for each watch artifact, only populated for subscriptions.
-		Fingerprint  uint32             // Fingerprint is a unique identifier for each watch artifact, only populated for unsubscriptions.
+		Subscribe    bool                // Subscribe is true for subscribe, false for unsubscribe. Required.
+		AdhocReqChan chan *cmd.DiceDBCmd // AdhocReqChan is the channel to send adhoc requests to the worker. Required.
+		WatchCmd     *cmd.DiceDBCmd      // WatchCmd Represents a unique key for each watch artifact, only populated for subscriptions.
+		Fingerprint  uint32              // Fingerprint is a unique identifier for each watch artifact, only populated for unsubscriptions.
 	}
 
 	Manager struct {
-		querySubscriptionMap map[string]map[uint32]struct{}             // querySubscriptionMap is a map of Key -> [fingerprint1, fingerprint2, ...]
-		tcpSubscriptionMap   map[uint32]map[chan *cmd.RedisCmd]struct{} // tcpSubscriptionMap is a map of fingerprint -> [client1Chan, client2Chan, ...]
-		fingerprintCmdMap    map[uint32]*cmd.RedisCmd                   // fingerprintCmdMap is a map of fingerprint -> RedisCmd
+		querySubscriptionMap map[string]map[uint32]struct{}              // querySubscriptionMap is a map of Key -> [fingerprint1, fingerprint2, ...]
+		tcpSubscriptionMap   map[uint32]map[chan *cmd.DiceDBCmd]struct{} // tcpSubscriptionMap is a map of fingerprint -> [client1Chan, client2Chan, ...]
+		fingerprintCmdMap    map[uint32]*cmd.DiceDBCmd                   // fingerprintCmdMap is a map of fingerprint -> DiceDBCmd
 		logger               *slog.Logger
 	}
 )
@@ -36,8 +37,8 @@ func NewManager(logger *slog.Logger) *Manager {
 	CmdWatchSubscriptionChan = make(chan WatchSubscription)
 	return &Manager{
 		querySubscriptionMap: make(map[string]map[uint32]struct{}),
-		tcpSubscriptionMap:   make(map[uint32]map[chan *cmd.RedisCmd]struct{}),
-		fingerprintCmdMap:    make(map[uint32]*cmd.RedisCmd),
+		tcpSubscriptionMap:   make(map[uint32]map[chan *cmd.DiceDBCmd]struct{}),
+		fingerprintCmdMap:    make(map[uint32]*cmd.DiceDBCmd),
 		logger:               logger,
 	}
 }
@@ -85,12 +86,12 @@ func (m *Manager) handleSubscription(sub WatchSubscription) {
 	}
 	m.querySubscriptionMap[key][fingerprint] = struct{}{}
 
-	// Add RedisCmd to fingerprintCmdMap
+	// Add DiceDBCmd to fingerprintCmdMap
 	m.fingerprintCmdMap[fingerprint] = sub.WatchCmd
 
 	// Add client channel to tcpSubscriptionMap
 	if _, exists := m.tcpSubscriptionMap[fingerprint]; !exists {
-		m.tcpSubscriptionMap[fingerprint] = make(map[chan *cmd.RedisCmd]struct{})
+		m.tcpSubscriptionMap[fingerprint] = make(map[chan *cmd.DiceDBCmd]struct{})
 	}
 	m.tcpSubscriptionMap[fingerprint][sub.AdhocReqChan] = struct{}{}
 }
@@ -116,8 +117,8 @@ func (m *Manager) handleUnsubscription(sub WatchSubscription) {
 	}
 
 	// Remove fingerprint from querySubscriptionMap
-	if redisCmd, ok := m.fingerprintCmdMap[fingerprint]; ok {
-		key := redisCmd.GetKey()
+	if diceDBCmd, ok := m.fingerprintCmdMap[fingerprint]; ok {
+		key := diceDBCmd.GetKey()
 		if fingerprints, ok := m.querySubscriptionMap[key]; ok {
 			// Remove the fingerprint from the list of fingerprints listening to this key
 			delete(fingerprints, fingerprint)
@@ -161,7 +162,7 @@ func (m *Manager) handleWatchEvent(event dstore.CmdWatchEvent) {
 }
 
 // notifyClients sends cmd to all clients listening to this fingerprint, so that they can execute it.
-func (m *Manager) notifyClients(fingerprint uint32, cmd *cmd.RedisCmd) {
+func (m *Manager) notifyClients(fingerprint uint32, diceDBCmd *cmd.DiceDBCmd) {
 	clients, exists := m.tcpSubscriptionMap[fingerprint]
 	if !exists {
 		m.logger.Warn("No clients found for fingerprint",
@@ -170,6 +171,6 @@ func (m *Manager) notifyClients(fingerprint uint32, cmd *cmd.RedisCmd) {
 	}
 
 	for clientChan := range clients {
-		clientChan <- cmd
+		clientChan <- diceDBCmd
 	}
 }

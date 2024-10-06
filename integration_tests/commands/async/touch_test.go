@@ -19,7 +19,7 @@ func TestTouch(t *testing.T) {
 		delay      []time.Duration
 	}{
 		{
-			name:       "Touch Simple Cmd",
+			name:       "Touch Simple Value",
 			commands:   []string{"SET foo bar", "OBJECT IDLETIME foo", "TOUCH foo", "OBJECT IDLETIME foo"},
 			expected:   []interface{}{"OK", int64(2), int64(1), int64(0)},
 			assertType: []string{"equal", "assert", "equal", "assert"},

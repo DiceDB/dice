@@ -2,8 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/dgryski/go-farm"
 	"strings"
+
+	"github.com/dgryski/go-farm"
 )
 
 type DiceDBCmd struct {

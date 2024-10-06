@@ -99,7 +99,7 @@ func RunWebsocketServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerO
 	// Initialize the WebsocketServer
 	globalErrChannel := make(chan error)
 	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Server.KeysLimit)
-	shardManager := shard.NewShardManager(1, watchChan, globalErrChannel, opt.Logger)
+	shardManager := shard.NewShardManager(1, watchChan, nil, globalErrChannel, opt.Logger)
 	config.WebsocketPort = opt.Port
 	testServer := server.NewWebSocketServer(shardManager, watchChan, opt.Logger)
 

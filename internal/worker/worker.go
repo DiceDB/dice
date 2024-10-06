@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/dicedb/dice/internal/watchmanager"
 	"log/slog"
 	"net"
 	"syscall"
 	"time"
+
+	"github.com/dicedb/dice/internal/watchmanager"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/auth"
@@ -35,7 +36,7 @@ type BaseWorker struct {
 	parser          requestparser.Parser
 	shardManager    *shard.ShardManager
 	respChan        chan *ops.StoreResponse
-	adhocReqChan    chan *cmd.RedisCmd
+	adhocReqChan    chan *cmd.DiceDBCmd
 	Session         *auth.Session
 	globalErrorChan chan error
 	logger          *slog.Logger
@@ -54,7 +55,7 @@ func NewWorker(wid string, respChan chan *ops.StoreResponse,
 		respChan:        respChan,
 		logger:          logger,
 		Session:         auth.NewSession(),
-		adhocReqChan:    make(chan *cmd.RedisCmd, 20), // assuming we wouldn't have more than 20 adhoc requests being sent at a time.
+		adhocReqChan:    make(chan *cmd.DiceDBCmd, 20), // assuming we wouldn't have more than 20 adhoc requests being sent at a time.
 	}
 }
 
@@ -96,8 +97,12 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 			}
 			return fmt.Errorf("error writing response: %w", err)
 		case cmdReq := <-w.adhocReqChan:
-			// Handle adhoc requests of RedisCmd
-			w.executeCommandHandler(errChan, nil, ctx, []*cmd.RedisCmd{cmdReq}, true)
+			// Handle adhoc requests of DiceDBCmd
+			func() {
+				execCtx, cancel := context.WithTimeout(ctx, 6*time.Second) // Timeout set to 6 seconds for integration tests
+				defer cancel()
+				w.executeCommandHandler(execCtx, errChan, []*cmd.DiceDBCmd{cmdReq}, true)
+			}()
 		case data := <-dataChan:
 			cmds, err := w.parser.Parse(data)
 			if err != nil {
@@ -138,17 +143,17 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 			func(errChan chan error) {
 				execCtx, cancel := context.WithTimeout(ctx, 6*time.Second) // Timeout set to 6 seconds for integration tests
 				defer cancel()
-				w.executeCommandHandler(errChan, err, execCtx, cmds, false)
+				w.executeCommandHandler(execCtx, errChan, cmds, false)
 			}(errChan)
-		case err := <-errChan:
+		case err := <-readErrChan:
 			w.logger.Debug("Read error, connection closed possibly", slog.String("workerID", w.id), slog.Any("error", err))
 			return err
 		}
 	}
 }
 
-func (w *BaseWorker) executeCommandHandler(errChan chan error, err error, execCtx context.Context, cmds []*cmd.RedisCmd, isWatchNotification bool) {
-	err = w.executeCommand(execCtx, cmds[0], isWatchNotification)
+func (w *BaseWorker) executeCommandHandler(execCtx context.Context, errChan chan error, cmds []*cmd.DiceDBCmd, isWatchNotification bool) {
+	err := w.executeCommand(execCtx, cmds[0], isWatchNotification)
 	if err != nil {
 		w.logger.Error("Error executing command", slog.String("workerID", w.id), slog.Any("error", err))
 		if errors.Is(err, net.ErrClosed) || errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.ETIMEDOUT) {

@@ -92,7 +92,7 @@ func main() {
 	// Initialize the AsyncServer server
 	// Find a port and bind it
 	if !config.EnableMultiThreading {
-		asyncServer := server.NewAsyncServer(shardManager, queryWatchChan, cmdWatchChan, logr)
+		asyncServer := server.NewAsyncServer(shardManager, queryWatchChan, logr)
 		if err := asyncServer.FindPortAndBind(); err != nil {
 			cancel()
 			logr.Error("Error finding and binding port", slog.Any("error", err))
@@ -155,7 +155,7 @@ func main() {
 	} else {
 		workerManager := worker.NewWorkerManager(config.DiceConfig.Server.MaxClients, shardManager)
 		// Initialize the RESP Server
-		respServer := resp.NewServer(shardManager, workerManager, serverErrCh, logr)
+		respServer := resp.NewServer(shardManager, workerManager, cmdWatchChan, serverErrCh, logr)
 		serverWg.Add(1)
 		go func() {
 			defer serverWg.Done()

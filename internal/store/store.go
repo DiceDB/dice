@@ -331,7 +331,7 @@ func (store *Store) notifyQueryManager(k, operation string, obj object.Obj) {
 	store.queryWatchChan <- QueryWatchEvent{k, operation, obj}
 }
 
-func (store *Store) notifyWatchManager(cmd string, affectedKey string) {
+func (store *Store) notifyWatchManager(cmd, affectedKey string) {
 	store.cmdWatchChan <- CmdWatchEvent{cmd, affectedKey}
 }
 

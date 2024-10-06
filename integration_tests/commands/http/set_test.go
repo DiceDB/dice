@@ -20,7 +20,7 @@ func TestSet(t *testing.T) {
 
 	testCases := []TestCase{
 		{
-			name: "Set and Get Simple Cmd",
+			name: "Set and Get Simple Value",
 			commands: []HTTPCommand{
 				{Command: "SET", Body: map[string]interface{}{"key": "k", "value": "v"}},
 				{Command: "GET", Body: map[string]interface{}{"key": "k"}},
@@ -28,12 +28,12 @@ func TestSet(t *testing.T) {
 			expected: []interface{}{"OK", "v"},
 		},
 		{
-			name: "Set and Get Integer Cmd",
+			name: "Set and Get Integer Value",
 			commands: []HTTPCommand{
 				{Command: "SET", Body: map[string]interface{}{"key": "k", "value": 123456789}},
 				{Command: "GET", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"OK", 1.23456789e+08},
+			expected: []interface{}{"OK", "1.23456789e+08"},
 		},
 		{
 			name: "Overwrite Existing Key",

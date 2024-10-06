@@ -25,10 +25,6 @@ type DiceCmdMeta struct {
 	// will utilize this function for evaluation, allowing for better handling of
 	// complex command execution scenarios and improved response consistency.
 	NewEval func([]string, *dstore.Store) *EvalResponse
-
-	// CmdEquivalent refers to the regular version of a watch command. For instance, "GET" is the regular version of "GET.WATCH".
-	// This field is only populated for watch commands.
-	CmdEquivalent string
 }
 
 type KeySpecs struct {
@@ -1050,16 +1046,6 @@ var (
 		Eval:     evalHINCRBYFLOAT,
 		Arity:    -4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
-	}
-	getWatchCmdMeta = DiceCmdMeta{
-		Name: "GET.WATCH",
-		Info: `GET.WATCH key
-		Returns the value of the key and starts watching for changes in the key's value. Note that some update 
-		deliveries may be missed in case of high write rate on the given key. However, the values being delivered will
-		always be monotonically consistent.`,
-		Arity:         2,
-		KeySpecs:      KeySpecs{BeginIndex: 1},
-		CmdEquivalent: "GET",
 	}
 	geoAddCmdMeta = DiceCmdMeta{
 		Name:     "GEOADD",

@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	dstore "github.com/dicedb/dice/internal/store"
-	"github.com/dicedb/dice/internal/watchmanager"
 	"log/slog"
 	"net"
 	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
+
+	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dice/internal/watchmanager"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio/iohandler/netconn"
