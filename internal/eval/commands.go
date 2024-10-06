@@ -693,6 +693,16 @@ var (
 		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hscanCmdMeta = DiceCmdMeta{
+		Name: "HSCAN",
+		Info: `HSCAN is used to iterate over fields and values of a hash.
+		It returns a cursor and a list of key-value pairs.
+		The cursor is used to paginate through the hash.
+		The command returns a cursor value of 0 when all the elements are iterated.`,
+		Eval:     evalHSCAN,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	hexistsCmdMeta = DiceCmdMeta{
 		Name:     "HEXISTS",
 		Info:     `Returns if field is an existing field in the hash stored at key.`,
@@ -1170,6 +1180,7 @@ func init() {
 	DiceCmds["SETEX"] = setexCmdMeta
 	DiceCmds["HRANDFIELD"] = hrandfieldCmdMeta
 	DiceCmds["HDEL"] = hdelCmdMeta
+	DiceCmds["HSCAN"] = hscanCmdMeta
 	DiceCmds["HVALS"] = hValsCmdMeta
 	DiceCmds["APPEND"] = appendCmdMeta
 	DiceCmds["ZADD"] = zaddCmdMeta
