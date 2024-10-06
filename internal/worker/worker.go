@@ -372,7 +372,7 @@ func (w *BaseWorker) handleRegularResponse(ctx context.Context, diceDBCmd *cmd.D
 }
 
 // handlePushResponse handles the response for push commands, i.e., responses for which are pushed from the server to the client.
-func (w *BaseWorker) handlePushResponse(ctx context.Context, cmdName string, pushResponseKey string, evalResp []eval.EvalResponse) error {
+func (w *BaseWorker) handlePushResponse(ctx context.Context, cmdName, pushResponseKey string, evalResp []eval.EvalResponse) error {
 	if evalResp[0].Error != nil {
 		err := w.ioHandler.Write(ctx, clientio.CreatePushResponse(cmdName, pushResponseKey, evalResp[0].Error))
 		if err != nil {
