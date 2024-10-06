@@ -37,10 +37,10 @@ type ShardThread struct {
 }
 
 // NewShardThread creates a new ShardThread instance with the given shard id and error channel.
-func NewShardThread(id ShardID, gec chan error, sec chan *ShardError, watchChan chan dstore.QueryWatchEvent, logger *slog.Logger) *ShardThread {
+func NewShardThread(id ShardID, gec chan error, sec chan *ShardError, queryWatchChan chan dstore.QueryWatchEvent, cmdWatchChan chan dstore.CmdWatchEvent, logger *slog.Logger) *ShardThread {
 	return &ShardThread{
 		id:               id,
-		store:            dstore.NewStore(watchChan),
+		store:            dstore.NewStore(queryWatchChan, cmdWatchChan),
 		ReqChan:          make(chan *ops.StoreOp, 1000),
 		workerMap:        make(map[string]chan *ops.StoreResponse),
 		globalErrorChan:  gec,

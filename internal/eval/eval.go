@@ -2119,7 +2119,7 @@ func EvalQWATCH(args []string, httpOp bool, client *comm.Client, store *dstore.S
 	}
 
 	// TODO: We should return the list of all queries being watched by the client.
-	return clientio.Encode(clientio.CreatePushResponse(&query, queryResult.Result), false)
+	return clientio.Encode(clientio.CreatePushResponse(query.String(), *queryResult.Result), false)
 }
 
 // EvalQUNWATCH removes the specified key from the watch list for the caller client.

@@ -84,7 +84,7 @@ func setupQWATCHTest(t *testing.T) (net.Conn, []net.Conn, func()) {
 	subscribers := []net.Conn{getLocalConnection(), getLocalConnection(), getLocalConnection()}
 
 	cleanup := func() {
-		cleanupKeys(publisher)
+		cleanupQWATCHKeys(publisher)
 		if err := publisher.Close(); err != nil {
 			t.Errorf("Error closing publisher connection: %v", err)
 		}
@@ -342,7 +342,7 @@ func verifyJSONUpdates(t *testing.T, rp *clientio.RESPParser, tc JSONTestCase) {
 	}
 }
 
-func cleanupKeys(publisher net.Conn) {
+func cleanupQWATCHKeys(publisher net.Conn) {
 	for _, tc := range qWatchTestCases {
 		FireCommand(publisher, fmt.Sprintf("DEL %s:%d", tc.key, tc.userID))
 	}

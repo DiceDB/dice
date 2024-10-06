@@ -2,9 +2,7 @@ package watchmanager
 
 import (
 	"context"
-	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/cmd"
-	"github.com/dicedb/dice/internal/comm"
 	dstore "github.com/dicedb/dice/internal/store"
 	"log/slog"
 	"sync"
@@ -12,67 +10,66 @@ import (
 
 type (
 	WatchSubscription struct {
-		Subscribe          bool                       // Subscribe is true for subscribe, false for unsubscribe
-		WatchCmd           cmd.RedisCmd               // WatchCmd Represents a unique key for each watch artifact, only populated for subscriptions.
-		Fingerprint        uint32                     // Fingerprint is a unique identifier for each watch artifact, only populated for unsubscriptions.
-		ClientFD           int                        // ClientFD is the file descriptor of the client connection
-		CmdWatchClientChan chan comm.CmdWatchResponse // CmdWatchClientChan is the generic channel for HTTP/Websockets etc.
-		ClientIdentifierID uint32                     // ClientIdentifierID Helps identify CmdWatch client on httpserver side
+		Subscribe    bool               // Subscribe is true for subscribe, false for unsubscribe. Required.
+		AdhocReqChan chan *cmd.RedisCmd // AdhocReqChan is the channel to send adhoc requests to the worker. Required.
+		WatchCmd     *cmd.RedisCmd      // WatchCmd Represents a unique key for each watch artifact, only populated for subscriptions.
+		Fingerprint  uint32             // Fingerprint is a unique identifier for each watch artifact, only populated for unsubscriptions.
 	}
 
 	Manager struct {
-		querySubscriptionMap map[string]map[uint32]bool                    // querySubscriptionMap is a map of Key -> [fingerprint1, fingerprint2, ...]
-		tcpSubscriptionMap   map[uint32]map[clientio.ClientIdentifier]bool // tcpSubscriptionMap is a map of fingerprint -> [client1, client2, ...]
-		fingerprintCmdMap    map[uint32]cmd.RedisCmd                       // fingerprintCmdMap is a map of fingerprint -> RedisCmd
-		mu                   sync.RWMutex
+		querySubscriptionMap map[string]map[uint32]struct{}             // querySubscriptionMap is a map of Key -> [fingerprint1, fingerprint2, ...]
+		tcpSubscriptionMap   map[uint32]map[chan *cmd.RedisCmd]struct{} // tcpSubscriptionMap is a map of fingerprint -> [client1Chan, client2Chan, ...]
+		fingerprintCmdMap    map[uint32]*cmd.RedisCmd                   // fingerprintCmdMap is a map of fingerprint -> RedisCmd
 		logger               *slog.Logger
 	}
 )
 
 var (
 	CmdWatchSubscriptionChan chan WatchSubscription
+	affectedCmdMap           = map[string]map[string]struct{}{
+		"SET": {"GET": struct{}{}},
+		"DEL": {"GET": struct{}{}},
+	}
 )
 
 func NewManager(logger *slog.Logger) *Manager {
 	CmdWatchSubscriptionChan = make(chan WatchSubscription)
 	return &Manager{
-		querySubscriptionMap: make(map[string]map[uint32]bool),
-		tcpSubscriptionMap:   make(map[uint32]map[clientio.ClientIdentifier]bool),
-		fingerprintCmdMap:    make(map[uint32]cmd.RedisCmd),
+		querySubscriptionMap: make(map[string]map[uint32]struct{}),
+		tcpSubscriptionMap:   make(map[uint32]map[chan *cmd.RedisCmd]struct{}),
+		fingerprintCmdMap:    make(map[uint32]*cmd.RedisCmd),
 		logger:               logger,
 	}
 }
 
 // Run starts the watch manager, listening for subscription requests and events
-func (m *Manager) Run(ctx context.Context, eventChan chan dstore.CmdWatchEvent) {
+func (m *Manager) Run(ctx context.Context, cmdWatchChan chan dstore.CmdWatchEvent) {
 	var wg sync.WaitGroup
 
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		m.listenForSubscriptions(ctx)
-	}()
+	wg.Add(1)
 
 	go func() {
 		defer wg.Done()
-		m.listenForEvents(ctx, eventChan)
+		m.listenForEvents(ctx, cmdWatchChan)
 	}()
 
+	<-ctx.Done()
 	wg.Wait()
 }
 
-// listenForSubscriptions handles incoming subscription requests
-func (m *Manager) listenForSubscriptions(ctx context.Context) {
+func (m *Manager) listenForEvents(ctx context.Context, cmdWatchChan chan dstore.CmdWatchEvent) {
 	for {
 		select {
+		case <-ctx.Done():
+			return
 		case sub := <-CmdWatchSubscriptionChan:
 			if sub.Subscribe {
 				m.handleSubscription(sub)
 			} else {
 				m.handleUnsubscription(sub)
 			}
-		case <-ctx.Done():
-			return
+		case watchEvent := <-cmdWatchChan:
+			m.handleWatchEvent(watchEvent)
 		}
 	}
 }
@@ -82,38 +79,29 @@ func (m *Manager) handleSubscription(sub WatchSubscription) {
 	fingerprint := sub.WatchCmd.GetFingerprint()
 	key := sub.WatchCmd.GetKey()
 
-	client := clientio.NewClientIdentifier(sub.ClientFD, false)
-
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	// Add fingerprint to querySubscriptionMap
-	if m.querySubscriptionMap[key] == nil {
-		m.querySubscriptionMap[key] = make(map[uint32]bool)
+	if _, exists := m.querySubscriptionMap[key]; !exists {
+		m.querySubscriptionMap[key] = make(map[uint32]struct{})
 	}
-	m.querySubscriptionMap[key][fingerprint] = true
+	m.querySubscriptionMap[key][fingerprint] = struct{}{}
 
 	// Add RedisCmd to fingerprintCmdMap
 	m.fingerprintCmdMap[fingerprint] = sub.WatchCmd
 
-	// Add clientID to tcpSubscriptionMap
-	if m.tcpSubscriptionMap[fingerprint] == nil {
-		m.tcpSubscriptionMap[fingerprint] = make(map[clientio.ClientIdentifier]bool)
+	// Add client channel to tcpSubscriptionMap
+	if _, exists := m.tcpSubscriptionMap[fingerprint]; !exists {
+		m.tcpSubscriptionMap[fingerprint] = make(map[chan *cmd.RedisCmd]struct{})
 	}
-	m.tcpSubscriptionMap[fingerprint][client] = true
+	m.tcpSubscriptionMap[fingerprint][sub.AdhocReqChan] = struct{}{}
 }
 
 // handleUnsubscription processes an unsubscription request
 func (m *Manager) handleUnsubscription(sub WatchSubscription) {
 	fingerprint := sub.Fingerprint
-	client := clientio.NewClientIdentifier(sub.ClientFD, false)
-
-	m.mu.Lock()
-	defer m.mu.Unlock()
 
 	// Remove clientID from tcpSubscriptionMap
 	if clients, ok := m.tcpSubscriptionMap[fingerprint]; ok {
-		delete(clients, client)
+		delete(clients, sub.AdhocReqChan)
 		// If there are no more clients listening to this fingerprint, remove it from the map
 		if len(clients) == 0 {
 			// Remove the fingerprint from tcpSubscriptionMap
@@ -122,6 +110,7 @@ func (m *Manager) handleUnsubscription(sub WatchSubscription) {
 			delete(m.fingerprintCmdMap, fingerprint)
 		} else {
 			// Update the map with the new set of clients
+			// TODO: Is this actually required?
 			m.tcpSubscriptionMap[fingerprint] = clients
 		}
 	}
@@ -136,47 +125,51 @@ func (m *Manager) handleUnsubscription(sub WatchSubscription) {
 			if len(fingerprints) == 0 {
 				delete(m.querySubscriptionMap, key)
 			} else {
-				// Update the map with the new set of fingerprints
+				// Update the map with the new set of fingerprints.
+				// TODO: Is this actually required?
 				m.querySubscriptionMap[key] = fingerprints
 			}
 		}
 	}
 }
 
-func (m *Manager) listenForEvents(ctx context.Context, eventChan chan dstore.CmdWatchEvent) {
-	affectedCmdMap := map[string]map[string]bool{"SET": {"GET": true}}
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case event := <-eventChan:
-			m.mu.RLock()
+func (m *Manager) handleWatchEvent(event dstore.CmdWatchEvent) {
+	// Check if any watch commands are listening to updates on this key.
+	fingerprints, exists := m.querySubscriptionMap[event.AffectedKey]
+	if !exists {
+		return
+	}
 
-			// Check if any watch commands are listening to updates on this key.
-			if _, ok := m.querySubscriptionMap[event.AffectedKey]; ok {
-				// iterate through all command fingerprints that are listening to this key
-				for fingerprint := range m.querySubscriptionMap[event.AffectedKey] {
-					// Check if the command associated with this fingerprint actually needs to be executed for this event.
-					// For instance, if the event is a SET, only execute GET commands need to be executed. This also
-					// helps us handle cases where a key might get updated by an unrelated command which makes it
-					// incompatible with the watched command.
-					if affectedCommands, ok := affectedCmdMap[event.Cmd]; ok {
-						if _, ok := affectedCommands[m.fingerprintCmdMap[fingerprint].Cmd]; ok {
-							// TODO: execute the command, store the result, send to clients
-							if clients, ok := m.tcpSubscriptionMap[fingerprint]; ok {
-								for client := range clients {
-									notifyClient(client, result)
-								}
-							}
-						}
-					} else {
-						m.logger.Error("Received a watch event for an unknown command type",
-							slog.String("cmd", event.Cmd))
-					}
-				}
-			}
+	affectedCommands, cmdExists := affectedCmdMap[event.Cmd]
+	if !cmdExists {
+		m.logger.Error("Received a watch event for an unknown command type",
+			slog.String("cmd", event.Cmd))
+		return
+	}
 
-			m.mu.RUnlock()
+	// iterate through all command fingerprints that are listening to this key
+	for fingerprint := range fingerprints {
+		cmdToExecute := m.fingerprintCmdMap[fingerprint]
+		// Check if the command associated with this fingerprint actually needs to be executed for this event.
+		// For instance, if the event is a SET, only GET commands need to be executed. This also
+		// helps us handle cases where a key might get updated by an unrelated command which makes it
+		// incompatible with the watched command.
+		if _, affected := affectedCommands[cmdToExecute.Cmd]; affected {
+			m.notifyClients(fingerprint, cmdToExecute)
 		}
+	}
+}
+
+// notifyClients sends cmd to all clients listening to this fingerprint, so that they can execute it.
+func (m *Manager) notifyClients(fingerprint uint32, cmd *cmd.RedisCmd) {
+	clients, exists := m.tcpSubscriptionMap[fingerprint]
+	if !exists {
+		m.logger.Warn("No clients found for fingerprint",
+			slog.Uint64("fingerprint", uint64(fingerprint)))
+		return
+	}
+
+	for clientChan := range clients {
+		clientChan <- cmd
 	}
 }

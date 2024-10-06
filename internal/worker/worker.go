@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/dicedb/dice/internal/watchmanager"
 	"log/slog"
 	"net"
 	"syscall"
@@ -34,6 +35,7 @@ type BaseWorker struct {
 	parser          requestparser.Parser
 	shardManager    *shard.ShardManager
 	respChan        chan *ops.StoreResponse
+	adhocReqChan    chan *cmd.RedisCmd
 	Session         *auth.Session
 	globalErrorChan chan error
 	logger          *slog.Logger
@@ -52,6 +54,7 @@ func NewWorker(wid string, respChan chan *ops.StoreResponse,
 		respChan:        respChan,
 		logger:          logger,
 		Session:         auth.NewSession(),
+		adhocReqChan:    make(chan *cmd.RedisCmd, 20), // assuming we wouldn't have more than 20 adhoc requests being sent at a time.
 	}
 }
 
@@ -61,6 +64,21 @@ func (w *BaseWorker) ID() string {
 
 func (w *BaseWorker) Start(ctx context.Context) error {
 	errChan := make(chan error, 1)
+
+	dataChan := make(chan []byte)
+	readErrChan := make(chan error)
+
+	go func() {
+		for {
+			data, err := w.ioHandler.Read(ctx)
+			if err != nil {
+				readErrChan <- err
+				return
+			}
+			dataChan <- data
+		}
+	}()
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -77,12 +95,10 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 				}
 			}
 			return fmt.Errorf("error writing response: %w", err)
-		default:
-			data, err := w.ioHandler.Read(ctx)
-			if err != nil {
-				w.logger.Debug("Read error, connection closed possibly", slog.String("workerID", w.id), slog.Any("error", err))
-				return err
-			}
+		case cmdReq := <-w.adhocReqChan:
+			// Handle adhoc requests of RedisCmd
+			w.executeCommandHandler(errChan, nil, ctx, []*cmd.RedisCmd{cmdReq}, true)
+		case data := <-dataChan:
 			cmds, err := w.parser.Parse(data)
 			if err != nil {
 				err = w.ioHandler.Write(ctx, err)
@@ -120,25 +136,34 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 			}
 			// executeCommand executes the command and return the response back to the client
 			func(errChan chan error) {
-				execctx, cancel := context.WithTimeout(ctx, 6*time.Second) // Timeout set to 6 seconds for integration tests
+				execCtx, cancel := context.WithTimeout(ctx, 6*time.Second) // Timeout set to 6 seconds for integration tests
 				defer cancel()
-				err = w.executeCommand(execctx, cmds[0])
-				if err != nil {
-					w.logger.Error("Error executing command", slog.String("workerID", w.id), slog.Any("error", err))
-					if errors.Is(err, net.ErrClosed) || errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.ETIMEDOUT) {
-						w.logger.Debug("Connection closed for worker", slog.String("workerID", w.id), slog.Any("error", err))
-						errChan <- err
-					}
-				}
+				w.executeCommandHandler(errChan, err, execCtx, cmds, false)
 			}(errChan)
+		case err := <-errChan:
+			w.logger.Debug("Read error, connection closed possibly", slog.String("workerID", w.id), slog.Any("error", err))
+			return err
 		}
 	}
 }
 
-func (w *BaseWorker) executeCommand(ctx context.Context, redisCmd *cmd.RedisCmd) error {
+func (w *BaseWorker) executeCommandHandler(errChan chan error, err error, execCtx context.Context, cmds []*cmd.RedisCmd, isWatchNotification bool) {
+	err = w.executeCommand(execCtx, cmds[0], isWatchNotification)
+	if err != nil {
+		w.logger.Error("Error executing command", slog.String("workerID", w.id), slog.Any("error", err))
+		if errors.Is(err, net.ErrClosed) || errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.ETIMEDOUT) {
+			w.logger.Debug("Connection closed for worker", slog.String("workerID", w.id), slog.Any("error", err))
+			errChan <- err
+		}
+	}
+}
+
+func (w *BaseWorker) executeCommand(ctx context.Context, redisCmd *cmd.RedisCmd, isWatchNotification bool) error {
 	// Break down the single command into multiple commands if multisharding is supported.
 	// The length of cmdList helps determine how many shards to wait for responses.
 	cmdList := make([]*cmd.RedisCmd, 0)
+
+	localErrChan := make(chan error, 1)
 
 	// Retrieve metadata for the command to determine if multisharding is supported.
 	meta, ok := CommandsMeta[redisCmd.Cmd]
@@ -180,21 +205,50 @@ func (w *BaseWorker) executeCommand(ctx context.Context, redisCmd *cmd.RedisCmd)
 			default:
 				cmdList = append(cmdList, redisCmd)
 			}
+		case Watch:
+			// Generate the Cmd being watched. All we need to do is remove the .WATCH suffix from the command and pass
+			// it along as is.
+			watchCmd := &cmd.RedisCmd{
+				Cmd:  redisCmd.Cmd[:len(redisCmd.Cmd)-6], // Remove the .WATCH suffix
+				Args: redisCmd.Args,
+			}
+
+			cmdList = append(cmdList, watchCmd)
+
+			go func() {
+				err := <-localErrChan
+				if err != nil {
+					return
+				}
+				watchmanager.CmdWatchSubscriptionChan <- watchmanager.WatchSubscription{
+					Subscribe:    true,
+					WatchCmd:     watchCmd,
+					AdhocReqChan: w.adhocReqChan,
+				}
+			}()
 		}
 	}
 
 	// Scatter the broken-down commands to the appropriate shards.
 	err := w.scatter(ctx, cmdList)
 	if err != nil {
+		localErrChan <- err
 		return err
 	}
 
+	cmdType := meta.CmdType
+	if isWatchNotification {
+		cmdType = Watch
+	}
+	
 	// Gather the responses from the shards and write them to the buffer.
-	err = w.gather(ctx, redisCmd.Cmd, len(cmdList), meta.CmdType)
+	err = w.gather(ctx, redisCmd.Cmd, len(cmdList), cmdType)
 	if err != nil {
+		localErrChan <- err
 		return err
 	}
 
+	localErrChan <- nil
 	return nil
 }
 
@@ -298,6 +352,21 @@ func (w *BaseWorker) gather(ctx context.Context, c string, numCmds int, ct CmdTy
 
 	case MultiShard:
 		err := w.ioHandler.Write(ctx, val.composeResponse(evalResp...))
+		if err != nil {
+			w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
+			return err
+		}
+	case Watch:
+		if evalResp[0].Error != nil {
+			err := w.ioHandler.Write(ctx, clientio.CreatePushResponse("GET.WATCH", evalResp[0].Error))
+			if err != nil {
+				w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
+			}
+
+			return err
+		}
+
+		err := w.ioHandler.Write(ctx, clientio.CreatePushResponse("GET.WATCH", evalResp[0].Result))
 		if err != nil {
 			w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
 			return err

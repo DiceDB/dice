@@ -74,8 +74,8 @@ var (
 	AdhocQueryChan chan AdhocQuery
 )
 
-func NewClientIdentifier(clientIdentifierID int, isHTTPClient bool) ClientIdentifier {
-	return ClientIdentifier{
+func NewClientIdentifier(clientIdentifierID int, isHTTPClient bool) clientio.ClientIdentifier {
+	return clientio.ClientIdentifier{
 		ClientIdentifierID: clientIdentifierID,
 		IsHTTPClient:       isHTTPClient,
 	}
@@ -231,7 +231,7 @@ func (m *Manager) updateQueryCache(queryFingerprint string, event dstore.QueryWa
 }
 
 func (m *Manager) notifyClients(query *sql.DSQLQuery, clients *sync.Map, queryResult *[]sql.QueryResultRow) {
-	encodedResult := clientio.Encode(clientio.CreatePushResponse(query, queryResult), false)
+	encodedResult := clientio.Encode(clientio.CreatePushResponse(query.String(), *queryResult), false)
 
 	clients.Range(func(clientKey, clientVal interface{}) bool {
 		// Identify the type of client and respond accordingly

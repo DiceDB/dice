@@ -48,17 +48,19 @@ type CmdWatchEvent struct {
 }
 
 type Store struct {
-	store     common.ITable[string, *object.Obj]
-	expires   common.ITable[*object.Obj, uint64] // Does not need to be thread-safe as it is only accessed by a single thread.
-	numKeys   int
-	watchChan chan QueryWatchEvent
+	store          common.ITable[string, *object.Obj]
+	expires        common.ITable[*object.Obj, uint64] // Does not need to be thread-safe as it is only accessed by a single thread.
+	numKeys        int
+	queryWatchChan chan QueryWatchEvent
+	cmdWatchChan   chan CmdWatchEvent
 }
 
-func NewStore(watchChan chan QueryWatchEvent) *Store {
+func NewStore(queryWatchChan chan QueryWatchEvent, cmdWatchChan chan CmdWatchEvent) *Store {
 	return &Store{
-		store:     NewStoreRegMap(),
-		expires:   NewExpireRegMap(),
-		watchChan: watchChan,
+		store:          NewStoreRegMap(),
+		expires:        NewExpireRegMap(),
+		queryWatchChan: queryWatchChan,
+		cmdWatchChan:   cmdWatchChan,
 	}
 }
 
@@ -154,8 +156,11 @@ func (store *Store) putHelper(k string, obj *object.Obj, opts ...PutOption) {
 	}
 	store.store.Put(k, obj)
 
-	if store.watchChan != nil {
+	if store.queryWatchChan != nil {
 		store.notifyQueryManager(k, Set, *obj)
+	}
+	if store.cmdWatchChan != nil {
+		store.notifyWatchManager("SET", k)
 	}
 }
 
@@ -254,8 +259,11 @@ func (store *Store) Rename(sourceKey, destKey string) bool {
 	store.numKeys--
 
 	// Notify watchers about the deletion of the source key
-	if store.watchChan != nil {
+	if store.queryWatchChan != nil {
 		store.notifyQueryManager(sourceKey, Del, *sourceObj)
+	}
+	if store.cmdWatchChan != nil {
+		store.notifyWatchManager("DEL", sourceKey)
 	}
 
 	return true
@@ -297,8 +305,11 @@ func (store *Store) deleteKey(k string, obj *object.Obj) bool {
 		store.expires.Delete(obj)
 		store.numKeys--
 
-		if store.watchChan != nil {
+		if store.queryWatchChan != nil {
 			store.notifyQueryManager(k, Del, *obj)
+		}
+		if store.cmdWatchChan != nil {
+			store.notifyWatchManager("DEL", k)
 		}
 
 		return true
@@ -317,7 +328,11 @@ func (store *Store) delByPtr(ptr string) bool {
 
 // notifyQueryManager notifies the query manager about a key change, so that it can update the query cache if needed.
 func (store *Store) notifyQueryManager(k, operation string, obj object.Obj) {
-	store.watchChan <- QueryWatchEvent{k, operation, obj}
+	store.queryWatchChan <- QueryWatchEvent{k, operation, obj}
+}
+
+func (store *Store) notifyWatchManager(cmd string, affectedKey string) {
+	store.cmdWatchChan <- CmdWatchEvent{cmd, affectedKey}
 }
 
 func (store *Store) GetStore() common.ITable[string, *object.Obj] {
