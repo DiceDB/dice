@@ -201,7 +201,7 @@ func evalGET(args []string, store *dstore.Store) *EvalResponse {
 	// Decode and return the value based on its encoding
 	switch _, oEnc := object.ExtractTypeEncoding(obj); oEnc {
 	case object.ObjEncodingInt:
-		// Cmd is stored as an int64, so use type assertion
+		// Value is stored as an int64, so use type assertion
 		if val, ok := obj.Value.(int64); ok {
 			return &EvalResponse{
 				Result: val,
@@ -215,7 +215,7 @@ func evalGET(args []string, store *dstore.Store) *EvalResponse {
 		}
 
 	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
-		// Cmd is stored as a string, use type assertion
+		// Value is stored as a string, use type assertion
 		if val, ok := obj.Value.(string); ok {
 			return &EvalResponse{
 				Result: val,
@@ -228,7 +228,7 @@ func evalGET(args []string, store *dstore.Store) *EvalResponse {
 		}
 
 	case object.ObjEncodingByteArray:
-		// Cmd is stored as a bytearray, use type assertion
+		// Value is stored as a bytearray, use type assertion
 		if val, ok := obj.Value.(*ByteArray); ok {
 			return &EvalResponse{
 				Result: string(val.data),
