@@ -1640,6 +1640,10 @@ func evalTTL(args []string, store *dstore.Store) []byte {
 func evalDEL(args []string, store *dstore.Store) []byte {
 	var countDeleted = 0
 
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("DEL")
+	}
+
 	for _, key := range args {
 		if ok := store.Del(key); ok {
 			countDeleted++
