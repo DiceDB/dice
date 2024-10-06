@@ -13,12 +13,20 @@ PFMERGE destkey sourcekey [sourcekey ...]
 
 ## Parameters
 
-- `destkey`: The key where the merged HyperLogLog will be stored. If this key already exists, it will be overwritten.
-- `sourcekey`: One or more keys of the HyperLogLogs that you want to merge. These keys must already exist and contain HyperLogLog data structures.
+
+| Parameter  | Description                                                                     | Type         | Required |
+|------------|---------------------------------------------------------------------------------|--------------|----------|
+| `destkey`  | The key where the merged HyperLogLog will be stored. If this key already exists, it will be overwritten. | String       | Yes      |
+| `sourcekey`| One or more keys of the HyperLogLogs that you want to merge. These keys must already exist and contain HyperLogLog data. | List[String] | Yes      |
 
 ## Return Value
 
-- `Simple String Reply`: Returns `OK` if the merge operation is successful.
+
+| Condition                                      | Return Value                                      |
+|------------------------------------------------|---------------------------------------------------|
+| Command is successful                          | `OK`                                              |
+| Syntax or specified constraints are invalid    | error                                             |
+
 
 ## Behaviour
 
@@ -46,15 +54,15 @@ The `PFMERGE` command can raise errors in the following scenarios:
 Suppose you have three HyperLogLogs stored at keys `hll1`, `hll2`, and `hll3`, and you want to merge them into a new HyperLogLog stored at key `hll_merged`.
 
 ```sh
-127.0.0.1:6379> PFADD hll1 "a" "b" "c"
+127.0.0.1:7379> PFADD hll1 "a" "b" "c"
 (integer) 1
-127.0.0.1:6379> PFADD hll2 "c" "d" "e"
+127.0.0.1:7379> PFADD hll2 "c" "d" "e"
 (integer) 1
-127.0.0.1:6379> PFADD hll3 "e" "f" "g"
+127.0.0.1:7379> PFADD hll3 "e" "f" "g"
 (integer) 1
-127.0.0.1:6379> PFMERGE hll_merged hll1 hll2 hll3
+127.0.0.1:7379> PFMERGE hll_merged hll1 hll2 hll3
 OK
-127.0.0.1:6379> PFCOUNT hll_merged
+127.0.0.1:7379> PFCOUNT hll_merged
 (integer) 7
 ```
 
@@ -63,11 +71,11 @@ OK
 If the `destkey` already exists, it will be overwritten by the merged HyperLogLog.
 
 ```sh
-127.0.0.1:6379> PFADD hll_merged "x" "y" "z"
+127.0.0.1:7379> PFADD hll_merged "x" "y" "z"
 (integer) 1
-127.0.0.1:6379> PFMERGE hll_merged hll1 hll2 hll3
+127.0.0.1:7379> PFMERGE hll_merged hll1 hll2 hll3
 OK
-127.0.0.1:6379> PFCOUNT hll_merged
+127.0.0.1:7379> PFCOUNT hll_merged
 (integer) 7
 ```
 
@@ -76,8 +84,8 @@ OK
 If a `sourcekey` does not exist, DiceDB will treat it as an empty HyperLogLog.
 
 ```sh
-127.0.0.1:6379> PFMERGE hll_merged hll1 hll2 non_existent_key
+127.0.0.1:7379> PFMERGE hll_merged hll1 hll2 non_existent_key
 OK
-127.0.0.1:6379> PFCOUNT hll_merged
+127.0.0.1:7379> PFCOUNT hll_merged
 (integer) 5
 ```
