@@ -19,13 +19,13 @@ PFMERGE destkey sourcekey [sourcekey ...]
 | `destkey`  | The key where the merged HyperLogLog will be stored. If this key already exists, it will be overwritten. | String       | Yes      |
 | `sourcekey`| One or more keys of the HyperLogLogs that you want to merge. These keys must already exist and contain HyperLogLog data. | List[String] | Yes      |
 
-## Return Value
+## Return Values
 
 
 | Condition                                      | Return Value                                      |
 |------------------------------------------------|---------------------------------------------------|
 | Command is successful                          | `OK`                                              |
-| Syntax or specified constraints are invalid    | error                                             |
+| Syntax or specified constraints are invalid    | `(error)`                                             |
 
 
 ## Behaviour
