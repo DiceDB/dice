@@ -317,7 +317,7 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 	case clientio.ResponseTypeRegular:
 		return w.handleRegularResponse(ctx, diceDBCmd, evalResp)
 	case clientio.ResponseTypePush:
-		return w.handlePushResponse(ctx, diceDBCmd, diceDBCmd.Cmd, evalResp)
+		return w.handlePushResponse(ctx, diceDBCmd.Cmd, fmt.Sprintf("%d", diceDBCmd.GetFingerprint()), evalResp)
 	default:
 		w.logger.Error("Unknown response type", slog.String("workerID", w.id), slog.Int("responseType", responseType))
 		err := w.ioHandler.Write(ctx, diceerrors.ErrInternalServer)
@@ -372,16 +372,16 @@ func (w *BaseWorker) handleRegularResponse(ctx context.Context, diceDBCmd *cmd.D
 }
 
 // handlePushResponse handles the response for push commands, i.e., responses for which are pushed from the server to the client.
-func (w *BaseWorker) handlePushResponse(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, pushResponseKey string, evalResp []eval.EvalResponse) error {
+func (w *BaseWorker) handlePushResponse(ctx context.Context, cmdName string, pushResponseKey string, evalResp []eval.EvalResponse) error {
 	if evalResp[0].Error != nil {
-		err := w.ioHandler.Write(ctx, clientio.CreatePushResponse(diceDBCmd.Cmd, pushResponseKey, evalResp[0].Error))
+		err := w.ioHandler.Write(ctx, clientio.CreatePushResponse(cmdName, pushResponseKey, evalResp[0].Error))
 		if err != nil {
 			w.logger.Debug("Error sending push response to client", slog.String("workerID", w.id), slog.Any("error", err))
 		}
 		return err
 	}
 
-	err := w.ioHandler.Write(ctx, clientio.CreatePushResponse(diceDBCmd.Cmd, pushResponseKey, evalResp[0].Result))
+	err := w.ioHandler.Write(ctx, clientio.CreatePushResponse(cmdName, pushResponseKey, evalResp[0].Result))
 	if err != nil {
 		w.logger.Debug("Error sending push response to client", slog.String("workerID", w.id), slog.Any("error", err))
 		return err

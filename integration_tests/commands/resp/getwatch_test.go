@@ -73,7 +73,7 @@ func TestGETWATCH(t *testing.T) {
 			}
 			assert.Equal(t, 3, len(castedValue))
 			assert.Equal(t, "GET", castedValue[0])
-			assert.Equal(t, "GET", castedValue[1])
+			assert.Equal(t, "1768826704", castedValue[1])
 			assert.Equal(t, tc.val, castedValue[2])
 		}
 	}
