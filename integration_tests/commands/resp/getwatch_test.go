@@ -72,7 +72,7 @@ func TestGETWATCH(t *testing.T) {
 				t.Errorf("Type assertion to []interface{} failed for value: %v", v)
 			}
 			assert.Equal(t, 3, len(castedValue))
-			assert.Equal(t, "GET.WATCH", castedValue[1])
+			assert.Equal(t, "GET", castedValue[1])
 			assert.Equal(t, tc.val, castedValue[2])
 		}
 	}
