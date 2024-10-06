@@ -10,10 +10,11 @@ import (
 func TestObjectCommand(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
+	simpleJSON := `{"name":"John","age":30}`
 
 	testCases := []struct {
-		name        string
-		commands    []string
+		name       string
+		commands   []string
 		expected   []interface{}
 		assertType []string
 		delay      []time.Duration
@@ -24,6 +25,76 @@ func TestObjectCommand(t *testing.T) {
 			expected:   []interface{}{"OK", int64(2), int64(3), int64(1), int64(0)},
 			assertType: []string{"equal", "assert", "assert", "equal", "assert"},
 			delay:      []time.Duration{0, 2 * time.Second, 3 * time.Second, 0, 0},
+		},
+		{
+			name:       "Object Encoding check for raw",
+			commands:   []string{"SET foo foobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobar", "OBJECT ENCODING foo"},
+			expected:   []interface{}{"OK", "raw"},
+			assertType: []string{"equal", "equal"},
+			delay:      []time.Duration{0, 2 * time.Second},
+		},
+		{
+			name:       "Object Encoding check for int",
+			commands:   []string{"SET foo 1", "OBJECT ENCODING foo"},
+			expected:   []interface{}{"OK", "int"},
+			assertType: []string{"equal", "equal"},
+			delay:      []time.Duration{0, 2 * time.Second},
+		},
+		{
+			name:       "Object Encoding check for embstr",
+			commands:   []string{"SET foo bar", "OBJECT ENCODING foo"},
+			expected:   []interface{}{"OK", "embstr"},
+			assertType: []string{"equal", "equal"},
+			delay:      []time.Duration{0, 2 * time.Second},
+		},
+		{
+			name:       "Object Encoding check for deque",
+			commands:   []string{"LPUSH listKey 'value1'", "LPUSH listKey 'value2'", "OBJECT ENCODING listKey"},
+			expected:   []interface{}{"OK", "OK", "deque"},
+			assertType: []string{"equal", "equal", "equal"},
+			delay:      []time.Duration{0, 2 * time.Second, 3 * time.Second},
+		},
+		{
+			name:       "Object Encoding check for bf",
+			commands:   []string{"BFADD bloomkey value1", "BFADD bloomkey value2", "OBJECT ENCODING bloomkey"},
+			expected:   []interface{}{int64(1), int64(1), "bf"},
+			assertType: []string{"assert", "assert", "equal"},
+			delay:      []time.Duration{0, 2 * time.Second, 3 * time.Second},
+		},
+		{
+			name:       "Object Encoding check for json",
+			commands:   []string{`JSON.SET k1 $ ` + simpleJSON, "OBJECT ENCODING k1"},
+			expected:   []interface{}{"OK", "json"},
+			assertType: []string{"equal", "equal"},
+			delay:      []time.Duration{0, 2 * time.Second},
+		},
+		{
+			name:       "Object Encoding check for bytearray",
+			commands:   []string{"SETBIT kbitset 0 1", "SETBIT kbitset 1 0", "SETBIT kbitset 2 1", "OBJECT ENCODING kbitset"},
+			expected:   []interface{}{int64(0), int64(0), int64(0), "bytearray"},
+			assertType: []string{"assert", "assert", "assert", "equal"},
+			delay:      []time.Duration{0, 2 * time.Second, 3 * time.Second, 4 * time.Second},
+		},
+		{
+			name:       "Object Encoding check for hashmap",
+			commands:   []string{"HSET hashKey hKey hValue", "OBJECT ENCODING hashKey"},
+			expected:   []interface{}{int64(1), "hashmap"},
+			assertType: []string{"assert", "equal"},
+			delay:      []time.Duration{0, 2 * time.Second},
+		},
+		{
+			name:       "Object Encoding check for btree",
+			commands:   []string{"ZADD btreekey 1 'member1' 2 'member2'", "OBJECT ENCODING btreekey"},
+			expected:   []interface{}{int64(2), "btree"},
+			assertType: []string{"equal", "equal"},
+			delay:      []time.Duration{0, 2 * time.Second},
+		},
+		{
+			name:       "Object Encoding check for setstr",
+			commands:   []string{"SADD skey one two three", "OBJECT ENCODING skey"},
+			expected:   []interface{}{int64(3), "setstr"},
+			assertType: []string{"assert", "equal"},
+			delay:      []time.Duration{0, 2 * time.Second},
 		},
 	}
 

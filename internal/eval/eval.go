@@ -3344,6 +3344,73 @@ func evalObjectIdleTime(key string, store *dstore.Store) []byte {
 	return clientio.Encode(int64(dstore.GetIdleTime(obj.LastAccessedAt)), true)
 }
 
+// OBJECT COMMAND returns the internal encoding of key stored in dicedb
+func evalObjectEncoding(key string, store *dstore.Store) []byte {
+	var encodingTypeStr string
+
+	obj := store.GetNoTouch(key)
+	if obj == nil {
+		return clientio.RespNIL
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeString, object.ObjEncodingRaw); err == nil {
+		encodingTypeStr = "raw"
+		return clientio.Encode(encodingTypeStr, false)
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeString, object.ObjEncodingEmbStr); err == nil {
+		encodingTypeStr = "embstr"
+		return clientio.Encode(encodingTypeStr, false)
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeInt, object.ObjEncodingInt); err == nil {
+		encodingTypeStr = "int"
+		return clientio.Encode(encodingTypeStr, false)
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeByteList, object.ObjEncodingDeque); err == nil {
+		encodingTypeStr = "deque"
+		return clientio.Encode(encodingTypeStr, false)
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeBitSet, object.ObjEncodingBF); err == nil {
+		encodingTypeStr = "bf"
+		return clientio.Encode(encodingTypeStr, false)
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON); err == nil {
+		encodingTypeStr = "json"
+		return clientio.Encode(encodingTypeStr, false)
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeByteArray, object.ObjEncodingByteArray); err == nil {
+		encodingTypeStr = "bytearray"
+		return clientio.Encode(encodingTypeStr, false)
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeSet, object.ObjEncodingSetStr); err == nil {
+		encodingTypeStr = "setstr"
+		return clientio.Encode(encodingTypeStr, false)
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeSet, object.ObjEncodingSetInt); err == nil {
+		encodingTypeStr = "setint"
+		return clientio.Encode(encodingTypeStr, false)
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err == nil {
+		encodingTypeStr = "hashmap"
+		return clientio.Encode(encodingTypeStr, false)
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeSortedSet, object.ObjEncodingBTree); err == nil {
+		encodingTypeStr = "btree"
+		return clientio.Encode(encodingTypeStr, false)
+	}
+
+	return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+}
+
 func evalOBJECT(args []string, store *dstore.Store) []byte {
 	if len(args) < 2 {
 		return diceerrors.NewErrArity("OBJECT")
@@ -3355,6 +3422,9 @@ func evalOBJECT(args []string, store *dstore.Store) []byte {
 	switch subcommand {
 	case "IDLETIME":
 		return evalObjectIdleTime(key, store)
+
+	case "ENCODING":
+		return evalObjectEncoding(key, store)
 	default:
 		return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 	}

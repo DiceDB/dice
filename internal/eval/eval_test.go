@@ -112,6 +112,7 @@ func TestEval(t *testing.T) {
 	testEvalGEOADD(t, store)
 	testEvalGEODIST(t, store)
 	testEvalSINTER(t, store)
+	testEvalObjectEncoding(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -5506,4 +5507,37 @@ func testEvalSINTER(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalSINTER, store)
+}
+func testEvalObjectEncoding(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'object' command\r\n"),
+		},
+		"empty array": {
+			setup:  func() {},
+			input:  []string{},
+			output: []byte("-ERR wrong number of arguments for 'object' command\r\n"),
+		},
+		"object with invalid subcommand": {
+			setup:  func() {},
+			input:  []string{"TESTSUBCOMMAND", "key"},
+			output: []byte("-ERR syntax error\r\n"),
+		},
+		"key does not exist": {
+			setup:  func() {},
+			input:  []string{"ENCODING", "NONEXISTENT_KEY"},
+			output: clientio.RespNIL,
+		},
+		"key exists": {
+			setup: func() {
+				evalLPUSH([]string{"EXISTING_KEY", "mock_value"}, store)
+			},
+			input:  []string{"ENCODING", "EXISTING_KEY"},
+			output: []byte("$5\r\ndeque\r\n"),
+		},
+	}
+
+	runEvalTests(t, tests, evalOBJECT, store)
 }
