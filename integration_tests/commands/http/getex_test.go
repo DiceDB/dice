@@ -14,8 +14,8 @@ func TestGetEx(t *testing.T) {
 	Etime10 := strconv.FormatInt(time.Now().Unix()+10, 10)
 
 	testCases := []struct {
-		name        string
-		commands    []HTTPCommand
+		name       string
+		commands   []HTTPCommand
 		expected   []interface{}
 		assertType []string
 		delay      []time.Duration

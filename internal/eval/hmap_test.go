@@ -71,7 +71,7 @@ func TestHashMapIncrementValue(t *testing.T) {
 }
 
 func TestGetValueFromHashMap(t *testing.T) {
-	store := store.NewStore(nil)
+	store := store.NewStore(nil, nil)
 	key := "key1"
 	field := "field1"
 	value := "value1"

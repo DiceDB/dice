@@ -11,7 +11,7 @@ import (
 func TestLFUEviction(t *testing.T) {
 	originalEvictionPolicy := config.DiceConfig.Server.EvictionPolicy
 
-	store := NewStore(nil)
+	store := NewStore(nil, nil)
 	config.DiceConfig.Server.EvictionPolicy = config.EvictAllKeysLFU
 
 	// Define test cases
