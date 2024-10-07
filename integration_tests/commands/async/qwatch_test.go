@@ -164,7 +164,7 @@ func runQWATCHScenarios(t *testing.T, publisher interface{}, receivers interface
 	t.Helper()
 	for _, tc := range tests {
 		publishUpdate(t, publisher, tc)
-		fmt.Println("verifying updates for tc: ", fmt.Sprintf("%v%v-score:%v-updates:%v", tc.key, tc.userID, tc.score, tc.expectedUpdates))
+		fmt.Println("verifying updates for tc: ", fmt.Sprintf("%v%v-score:%v updates: %v", tc.key, tc.userID, tc.score, tc.expectedUpdates))
 		verifyUpdates(t, receivers, tc.expectedUpdates, query)
 	}
 }
@@ -176,6 +176,7 @@ func publishUpdate(t *testing.T, publisher interface{}, tc qWatchTestCase) {
 		FireCommand(p, fmt.Sprintf("SET %s %d", key, tc.score))
 	case *redis.Client:
 		err := p.Set(context.Background(), key, tc.score, 0).Err()
+		time.Sleep(100 * time.Millisecond)
 		assert.NilError(t, err)
 	}
 }
@@ -208,6 +209,7 @@ func verifySDKUpdates(t *testing.T, channels []<-chan *redis.QMessage, expectedU
 	for _, ch := range channels {
 		v := <-ch
 		fmt.Println("actual update length: ", len(v.Updates), "expected update length: ", len(expectedUpdate))
+		fmt.Println("actual updates: ", v.Updates)
 		assert.Equal(t, len(expectedUpdate), len(v.Updates), "updates length do not match. actual update: %v, expected update: %v", len(v.Updates), len(expectedUpdate))
 		for i, update := range v.Updates {
 			assert.DeepEqual(t, expectedUpdate[i], []interface{}{update.Key, update.Value})
@@ -226,9 +228,9 @@ var qWatchWhereTestCases = []qWatchTestCase{
 	{"match:100:user", 1, 60, [][]interface{}{
 		{[]interface{}{"match:100:user:1", int64(60)}, []interface{}{"match:100:user:0", int64(55)}},
 	}},
-	// {"match:100:user", 2, 80, [][]interface{}{
-	// 	{[]interface{}{"match:100:user:2", int64(80)}, []interface{}{"match:100:user:1", int64(60)}, []interface{}{"match:100:user:0", int64(55)}},
-	// }},
+	{"match:100:user", 2, 80, [][]interface{}{
+		{[]interface{}{"match:100:user:2", int64(80)}, []interface{}{"match:100:user:1", int64(60)}, []interface{}{"match:100:user:0", int64(55)}},
+	}},
 	// {"match:100:user", 0, 90, [][]interface{}{
 	// 	{[]interface{}{"match:100:user:0", int64(90)}, []interface{}{"match:100:user:2", int64(80)}, []interface{}{"match:100:user:1", int64(60)}},
 	// }},
