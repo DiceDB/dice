@@ -163,7 +163,9 @@ func subscribeToQWATCHWithSDK(t *testing.T, subscribers []qWatchSDKSubscriber, q
 func runQWATCHScenarios(t *testing.T, publisher interface{}, receivers interface{}, query string, tests []qWatchTestCase) {
 	t.Helper()
 	for _, tc := range tests {
+		fmt.Println("publishing updates for tc: ", fmt.Sprintf("%v%v-score:%v updates: %v", tc.key, tc.userID, tc.score, tc.expectedUpdates))
 		publishUpdate(t, publisher, tc)
+		time.Sleep(100 * time.Millisecond)
 		fmt.Println("verifying updates for tc: ", fmt.Sprintf("%v%v-score:%v updates: %v", tc.key, tc.userID, tc.score, tc.expectedUpdates))
 		verifyUpdates(t, receivers, tc.expectedUpdates, query)
 	}
@@ -176,7 +178,6 @@ func publishUpdate(t *testing.T, publisher interface{}, tc qWatchTestCase) {
 		FireCommand(p, fmt.Sprintf("SET %s %d", key, tc.score))
 	case *redis.Client:
 		err := p.Set(context.Background(), key, tc.score, 0).Err()
-		time.Sleep(100 * time.Millisecond)
 		assert.NilError(t, err)
 	}
 }
