@@ -620,11 +620,23 @@ var (
 		Arity:    -4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hmsetCmdMeta = DiceCmdMeta{
+		Name: "HMSET",
+		Info: `HSET sets the specific fields to their respective values in the
+		hash stored at key. If any given field is already present, the previous
+		value will be overwritten with the new value
+		Returns
+		This command returns the number of keys that are stored at given key.
+		`,
+		Eval:     evalHMSET,
+		Arity:    -4,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	hkeysCmdMeta = DiceCmdMeta{
-		Name: "HKEYS",
-		Info:  `HKEYS command is used to retrieve all the keys(or field names) within a hash. Complexity is O(n) where n is the size of the hash.`,
-		Eval: evalHKEYS,
-		Arity: 1,
+		Name:     "HKEYS",
+		Info:     `HKEYS command is used to retrieve all the keys(or field names) within a hash. Complexity is O(n) where n is the size of the hash.`,
+		Eval:     evalHKEYS,
+		Arity:    1,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	hsetnxCmdMeta = DiceCmdMeta{
@@ -641,6 +653,13 @@ var (
 		Info:     `Returns the value associated with field in the hash stored at key.`,
 		Eval:     evalHGET,
 		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	hmgetCmdMeta = DiceCmdMeta{
+		Name:     "HMGET",
+		Info:     `Returns the values associated with the specified fields in the hash stored at key.`,
+		Eval:     evalHMGET,
+		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	hgetAllCmdMeta = DiceCmdMeta{
@@ -683,6 +702,16 @@ var (
 		Returns
 		The number of fields that were removed from the hash, not including specified but non-existing fields.`,
 		Eval:     evalHDEL,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	hscanCmdMeta = DiceCmdMeta{
+		Name: "HSCAN",
+		Info: `HSCAN is used to iterate over fields and values of a hash.
+		It returns a cursor and a list of key-value pairs.
+		The cursor is used to paginate through the hash.
+		The command returns a cursor value of 0 when all the elements are iterated.`,
+		Eval:     evalHSCAN,
 		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
@@ -911,27 +940,27 @@ var (
 		Arity:    3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
-	dumpkeyCMmdMeta=DiceCmdMeta{
-		Name:	 "DUMP",
-		Info:	`Serialize the value stored at key in a Redis-specific format and return it to the user.
+	dumpkeyCMmdMeta = DiceCmdMeta{
+		Name: "DUMP",
+		Info: `Serialize the value stored at key in a Redis-specific format and return it to the user.
 				The returned value can be synthesized back into a Redis key using the RESTORE command.`,
-		Eval:   evalDUMP,
-		Arity: 	1,
-		KeySpecs:   KeySpecs{BeginIndex: 1},
+		Eval:     evalDUMP,
+		Arity:    1,
+		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
-	restorekeyCmdMeta=DiceCmdMeta{
-		Name:	"RESTORE",
-		Info:  `Serialize the value stored at key in a Redis-specific format and return it to the user.
+	restorekeyCmdMeta = DiceCmdMeta{
+		Name: "RESTORE",
+		Info: `Serialize the value stored at key in a Redis-specific format and return it to the user.
 				The returned value can be synthesized back into a Redis key using the RESTORE command.`,
-		Eval: evalRestore,
-		Arity:	2,
+		Eval:     evalRestore,
+		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	typeCmdMeta = DiceCmdMeta{
-		Name:     "TYPE",
-		Info:     `Returns the string representation of the type of the value stored at key. The different types that can be returned are: string, list, set, zset, hash and stream.`,
-		Eval:     evalTYPE,
-		Arity:    1,
+		Name:  "TYPE",
+		Info:  `Returns the string representation of the type of the value stored at key. The different types that can be returned are: string, list, set, zset, hash and stream.`,
+		Eval:  evalTYPE,
+		Arity: 1,
 
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
@@ -1004,9 +1033,33 @@ var (
 		Arity:    -4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	bitfieldCmdMeta = DiceCmdMeta{
+		Name: "BITFIELD",
+		Info: `The command treats a string as an array of bits as well as bytearray data structure,
+		and is capable of addressing specific integer fields of varying bit widths
+		and arbitrary non (necessary) aligned offset.
+		In practical terms using this command you can set, for example,
+		a signed 5 bits integer at bit offset 1234 to a specific value,
+		retrieve a 31 bit unsigned integer from offset 4567.
+		Similarly the command handles increments and decrements of the
+		specified integers, providing guaranteed and well specified overflow
+		and underflow behavior that the user can configure.
+		The following is the list of supported commands.
+		GET <encoding> <offset> -- Returns the specified bit field.
+		SET <encoding> <offset> <value> -- Set the specified bit field
+		and returns its old value.
+		INCRBY <encoding> <offset> <increment> -- Increments or decrements
+		(if a negative increment is given) the specified bit field and returns the new value.
+		There is another subcommand that only changes the behavior of successive
+		INCRBY and SET subcommands calls by setting the overflow behavior:
+		OVERFLOW [WRAP|SAT|FAIL]`,
+		Arity:    -1,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+		Eval:     evalBITFIELD,
+	}
 	hincrbyFloatCmdMeta = DiceCmdMeta{
 		Name: "HINCRBYFLOAT",
-		Info: `HINCRBYFLOAT increments the specified field of a hash stored at the key, 
+		Info: `HINCRBYFLOAT increments the specified field of a hash stored at the key,
 		and representing a floating point number, by the specified increment.
 		If the field does not exist, it is set to 0 before performing the operation.
 		If the field contains a value of wrong type or specified increment
@@ -1016,14 +1069,28 @@ var (
 		Arity:    -4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	geoAddCmdMeta = DiceCmdMeta{
+		Name:     "GEOADD",
+		Info:     `Adds one or more members to a geospatial index. The key is created if it doesn't exist.`,
+		Arity:    -5,
+		Eval:     evalGEOADD,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	geoDistCmdMeta = DiceCmdMeta{
+		Name:     "GEODIST",
+		Info:     `Returns the distance between two members in the geospatial index.`,
+		Arity:    -4,
+		Eval:     evalGEODIST,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
 	DiceCmds["PING"] = pingCmdMeta
 	DiceCmds["ECHO"] = echoCmdMeta
 	DiceCmds["AUTH"] = authCmdMeta
-	DiceCmds["DUMP"]=dumpkeyCMmdMeta
-	DiceCmds["RESTORE"]=restorekeyCmdMeta
+	DiceCmds["DUMP"] = dumpkeyCMmdMeta
+	DiceCmds["RESTORE"] = restorekeyCmdMeta
 	DiceCmds["SET"] = setCmdMeta
 	DiceCmds["GET"] = getCmdMeta
 	DiceCmds["MSET"] = msetCmdMeta
@@ -1087,6 +1154,7 @@ func init() {
 	DiceCmds["GETEX"] = getexCmdMeta
 	DiceCmds["PTTL"] = pttlCmdMeta
 	DiceCmds["HSET"] = hsetCmdMeta
+	DiceCmds["HMSET"] = hmsetCmdMeta
 	DiceCmds["HKEYS"] = hkeysCmdMeta
 	DiceCmds["HSETNX"] = hsetnxCmdMeta
 	DiceCmds["OBJECT"] = objectCmdMeta
@@ -1110,6 +1178,7 @@ func init() {
 	DiceCmds["PFADD"] = pfAddCmdMeta
 	DiceCmds["PFCOUNT"] = pfCountCmdMeta
 	DiceCmds["HGET"] = hgetCmdMeta
+	DiceCmds["HMGET"] = hmgetCmdMeta
 	DiceCmds["HSTRLEN"] = hstrLenCmdMeta
 	DiceCmds["PFMERGE"] = pfMergeCmdMeta
 	DiceCmds["JSON.STRLEN"] = jsonStrlenCmdMeta
@@ -1124,12 +1193,16 @@ func init() {
 	DiceCmds["SETEX"] = setexCmdMeta
 	DiceCmds["HRANDFIELD"] = hrandfieldCmdMeta
 	DiceCmds["HDEL"] = hdelCmdMeta
+	DiceCmds["HSCAN"] = hscanCmdMeta
 	DiceCmds["HVALS"] = hValsCmdMeta
 	DiceCmds["APPEND"] = appendCmdMeta
 	DiceCmds["ZADD"] = zaddCmdMeta
 	DiceCmds["ZRANGE"] = zrangeCmdMeta
+	DiceCmds["BITFIELD"] = bitfieldCmdMeta
 	DiceCmds["HINCRBYFLOAT"] = hincrbyFloatCmdMeta
 	DiceCmds["HEXISTS"] = hexistsCmdMeta
+	DiceCmds["GEOADD"] = geoAddCmdMeta
+	DiceCmds["GEODIST"] = geoDistCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

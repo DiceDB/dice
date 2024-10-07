@@ -1,9 +1,9 @@
 ---
-title: PFADD
-description: Documentation for the DiceDB command PFADD
+title: PFADD  
+description: The `PFADD` command in DiceDB is used to add elements to a HyperLogLog data structure. HyperLogLog is a probabilistic data structure used for estimating the cardinality of a set, i.e., the number of unique elements in a dataset.
 ---
 
-The `PFADD` command in DiceDB is used to add elements to a HyperLogLog data structure. HyperLogLog is a probabilistic data structure used for estimating the cardinality of a set, i.e., the number of unique elements in a dataset. The `PFADD` command helps in maintaining this data structure by adding new elements to it.
+The `PFADD` command in DiceDB is used to add elements to a HyperLogLog data structure. HyperLogLog is a probabilistic data structure used for estimating the cardinality of a set, i.e., the number of unique elements in a dataset.
 
 ## Syntax
 
@@ -13,61 +13,64 @@ PFADD key element [element ...]
 
 ## Parameters
 
-- `key`: The name of the HyperLogLog data structure to which the elements will be added. If the key does not exist, a new HyperLogLog structure is created.
-- `element`: One or more elements to be added to the HyperLogLog. Multiple elements can be specified, separated by spaces.
+| Parameter  | Description                                                                                              | Type    | Required |
+|------------|----------------------------------------------------------------------------------------------------------|---------|----------|
+| `key`      | The name of the HyperLogLog data structure. If it does not exist, a new one is created.                  | String  | Yes      |
+| `element`  | One or more elements to add to the HyperLogLog. Multiple elements can be specified, separated by spaces. | String  | Yes      |
 
-## Return Value
+## Return values
 
-- `Integer reply`: The command returns `1` if at least one internal register was altered, `0` otherwise. This indicates whether the HyperLogLog was modified by the addition of the new elements.
+| Condition                                           | Return Value    |
+|-----------------------------------------------------|-----------------|
+| At least one internal register was altered          | `1`             |
+| No internal register was altered                    | `0`             |
 
 ## Behaviour
 
-When the `PFADD` command is executed, the following steps occur:
+- The command first checks if the specified key exists.
+- If the key does not exist, a new HyperLogLog data structure is created.
+- If the key exists but is not a HyperLogLog, an error is returned.
+- The specified elements are added to the HyperLogLog, and the internal registers are updated based on the hash values of these elements.
+- The HyperLogLog maintains an estimate of the cardinality of the set using these updated registers.
 
-1. `Key Existence Check`: DiceDB checks if the specified key exists.
-   - If the key does not exist, a new HyperLogLog data structure is created.
-   - If the key exists but is not a HyperLogLog, an error is returned.
-2. `Element Addition`: The specified elements are added to the HyperLogLog.
-3. `Register Update`: The internal registers of the HyperLogLog are updated based on the hash values of the added elements.
-4. `Cardinality Estimation`: The HyperLogLog uses the updated registers to maintain an estimate of the cardinality of the set.
+## Errors
 
-## Error Handling
+1. `Wrong type error`:
 
-- `Wrong Type Error`: If the key exists but is not a HyperLogLog, DiceDB will return an error:
-  ```
-  (error) WRONGTYPE Operation against a key holding the wrong kind of value
-  ```
-- `Syntax Error`: If the command is not used with the correct syntax, DiceDB will return a syntax error:
-  ```
-  (error) ERR wrong number of arguments for 'pfadd' command
-  ```
+   - Error Message: `(error) ERROR WRONGTYPE Key is not a valid HyperLogLog string value.`
+   - Occurs when trying to use the command on a key that is not a HyperLogLog.
 
-## Example Usage
+2. `Syntax error`:
+
+   - Error Message: `(error) ERROR wrong number of arguments for 'pfadd' command`
+   - Occurs when the command syntax is incorrect or missing required parameters.
+
+## Examples
 
 ### Basic Example
 
-Add a single element to a HyperLogLog:
+Adding a single element to a HyperLogLog:
 
-```shell
-> PFADD myhyperloglog "element1"
+```bash
+127.0.0.1:7379> PFADD myhyperloglog "element1"
 (integer) 1
 ```
 
 ### Adding Multiple Elements
 
-Add multiple elements to a HyperLogLog:
+Adding multiple elements to a HyperLogLog:
 
-```shell
-> PFADD myhyperloglog "element1" "element2" "element3"
+```bash
+127.0.0.1:7379> PFADD myhyperloglog "element1" "element2" "element3"
 (integer) 1
 ```
 
 ### Checking if the HyperLogLog was Modified
 
-If the elements are already present and do not alter the internal registers:
+If the elements do not alter the internal registers:
 
-```shell
-> PFADD myhyperloglog "element1"
+```bash
+127.0.0.1:7379> PFADD myhyperloglog "element1"
 (integer) 0
 ```
 
@@ -75,18 +78,11 @@ If the elements are already present and do not alter the internal registers:
 
 Attempting to add elements to a key that is not a HyperLogLog:
 
-```shell
-> SET mykey "notahyperloglog"
+```bash
+127.0.0.1:7379> SET mykey "notahyperloglog"
 OK
-> PFADD mykey "element1"
-(error) WRONGTYPE Operation against a key holding the wrong kind of value
+127.0.0.1:7379> PFADD mykey "element1"
+(error) ERROR WRONGTYPE Key is not a valid HyperLogLog string value.
 ```
 
-## Notes
-
-- The `PFADD` command is part of the HyperLogLog family of commands in DiceDB, which also includes `PFCOUNT` and `PFMERGE`.
-- HyperLogLog is a probabilistic data structure, so it provides an approximate count of unique elements with a standard error of 0.81%.
-- The `PFADD` command is useful for applications that need to count unique items in a large dataset efficiently, such as unique visitor counts, unique search queries, etc.
-
-By understanding and using the `PFADD` command effectively, you can leverage DiceDB's powerful HyperLogLog data structure to manage and estimate the cardinality of large sets with minimal memory usage.
-
+---

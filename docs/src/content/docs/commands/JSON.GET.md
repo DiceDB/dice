@@ -13,12 +13,21 @@ JSON.GET <key> [path]
 
 ## Parameters
 
-- `key`: (Required) The key under which the JSON data is stored in DiceDB.
-- `path`: (Optional) A JSONPath expression to specify the part of the JSON document to retrieve. If not provided, the entire JSON document is returned.
+| Parameter | Description                                                                                                                                                     | Type   | Required |
+|-----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|----------|
+| `key`     | The key against which the JSON data is stored in DiceDB                                                                                                         | String | Yes      |
+| `path`    | A JSONPath expression to specify the part of the JSON document to retrieve. If not provided, the entire JSON document is returned. Default value is **$** (root) | String | No       |
 
-## Return Value
 
-The command returns the JSON data stored at the specified key and path. The data is returned as a JSON string. If the specified key or path does not exist, the command returns `nil`.
+## Return Values
+
+| Condition                                                                    | Return Value                                         |
+| ---------------------------------------------------------------------------- | ---------------------------------------------------- |
+| The specified key does not exists                                            | `nil`                                                |
+| The specified key exists and path argument is not specified                  | `String`: The entire JSON data for the key                |
+| The specified key exists and the specified path exists in the JSON data      | `String`: The data for the key at the specified path |
+| The specified key exists and specified path does not exists in the JSON data | `nil`                                                |
+| Syntax or specified constraints are invalid                                  | error                                                |
 
 ## Behaviour
 
@@ -29,17 +38,16 @@ When the `JSON.GET` command is executed:
 3. If a path is provided, DiceDB extracts the specified part of the JSON document using the JSONPath expression.
 4. The retrieved JSON data is returned as a JSON string.
 
-## Error Handling
+## Errors
 
-The `JSON.GET` command can raise the following errors:
-
-- `(error) ERR wrong number of arguments for 'JSON.GET' command`: This error occurs if the command is called with an incorrect number of arguments.
-- `(error) ERR key does not exist`: This error occurs if the specified key does not exist in the DiceDB database.
-- `(error) ERR invalid path`: This error occurs if the provided JSONPath expression is invalid or does not match any part of the JSON document.
+1. `Incorrect number of arguments`
+    - Error Message: `(error) ERR wrong number of arguments for 'json.get' command`
+2. `Invalid JSONPath expression`
+    - Error Message: `(error) ERR invalid JSONPath`
 
 ## Example Usage
 
-### Example 1: Retrieve Entire JSON Document
+### Retrieve Entire JSON Document
 
 ```bash
 127.0.0.1:7379> JSON.SET user:1001 $ '{"name": "John Doe", "age": 30, "email": "john.doe@example.com"}'
@@ -48,7 +56,7 @@ OK
 "{\"name\":\"John Doe\",\"age\":30,\"email\":\"john.doe@example.com\"}"
 ```
 
-### Example 2: Retrieve Specific Field from JSON Document
+### Retrieve Specific Field from JSON Document
 
 ```bash
 127.0.0.1:7379> JSON.SET user:1001 $ '{"name": "John Doe", "age": 30, "email": "john.doe@example.com"}'
@@ -57,7 +65,7 @@ OK
 "\"John Doe\""
 ```
 
-### Example 3: Retrieve Nested Field from JSON Document
+### Retrieve Nested Field from JSON Document
 
 ```bash
 127.0.0.1:7379> JSON.SET user:1002 $ '{"name": "Jane Doe", "address": {"city": "New York", "zip": "10001"}}'
@@ -66,14 +74,14 @@ OK
 "\"New York\""
 ```
 
-### Example 4: Handling Non-Existent Key
+### Handling Non-Existent Key
 
 ```bash
 127.0.0.1:7379> JSON.GET user:9999
 (nil)
 ```
 
-### Example 5: Handling Invalid Path
+### Handling Non-Existent Path
 
 ```bash
 127.0.0.1:7379> JSON.SET user:1001 $ '{"name": "John Doe", "age": 30, "email": "john.doe@example.com"}'
@@ -86,4 +94,4 @@ OK
 
 - JSONPath expressions allow you to navigate and retrieve specific parts of a JSON document. Ensure that your JSONPath expressions are correctly formatted to avoid errors.
 
-By understanding the `JSON.GET` command, you can efficiently retrieve JSON data stored in your DiceDB database, enabling you to build powerful and flexible applications that leverage the capabilities of DiceDBJSON.
+By understanding the `JSON.GET` command, you can efficiently retrieve JSON data stored in your DiceDB database, enabling you to build powerful and flexible applications that leverage the capabilities of DiceDB.

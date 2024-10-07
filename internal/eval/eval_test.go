@@ -12,14 +12,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/axiomhq/hyperloglog"
+	"github.com/dicedb/dice/internal/server/utils"
+
 	"github.com/bytedance/sonic"
+	"github.com/ohler55/ojg/jp"
+
+	"github.com/axiomhq/hyperloglog"
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
-	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
-	"github.com/ohler55/ojg/jp"
 	testifyAssert "github.com/stretchr/testify/assert"
 	"gotest.tools/v3/assert"
 )
@@ -40,7 +42,7 @@ func setupTest(store *dstore.Store) *dstore.Store {
 }
 
 func TestEval(t *testing.T) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	testEvalMSET(t, store)
 	testEvalECHO(t, store)
@@ -72,13 +74,16 @@ func TestEval(t *testing.T) {
 	testEvalDbsize(t, store)
 	testEvalGETSET(t, store)
 	testEvalHSET(t, store)
+	testEvalHMSET(t, store)
 	testEvalHKEYS(t, store)
 	testEvalPFADD(t, store)
 	testEvalPFCOUNT(t, store)
 	testEvalHGET(t, store)
+	testEvalHMGET(t, store)
 	testEvalHSTRLEN(t, store)
 	testEvalHEXISTS(t, store)
 	testEvalHDEL(t, store)
+	testEvalHSCAN(t, store)
 	testEvalPFMERGE(t, store)
 	testEvalJSONSTRLEN(t, store)
 	testEvalJSONOBJLEN(t, store)
@@ -104,7 +109,11 @@ func TestEval(t *testing.T) {
 	testEvalZADD(t, store)
 	testEvalZRANGE(t, store)
 	testEvalHVALS(t, store)
+	testEvalBitField(t, store)
 	testEvalHINCRBYFLOAT(t, store)
+	testEvalGEOADD(t, store)
+	testEvalGEODIST(t, store)
+	testEvalSINTER(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -924,7 +933,7 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 		"key does not exist": {
 			setup:  func() {},
 			input:  []string{"NONEXISTENT_KEY"},
-			output: []byte("-ERR Path '.' does not exist or not an array\r\n"),
+			output: []byte("$-1\r\n"),
 		},
 		"root not array arrlen": {
 			setup: func() {
@@ -936,7 +945,7 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:  []string{"EXISTING_KEY"},
-			output: []byte("-ERR Path '.' does not exist or not an array\r\n"),
+			output: []byte("-ERR Path '$' does not exist or not an array\r\n"),
 		},
 		"root array arrlen": {
 			setup: func() {
@@ -975,7 +984,7 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 			},
 
 			input:  []string{"EXISTING_KEY", "$.language"},
-			output: []byte("*1\r\n:2\r\n"),
+			output: []byte(":2\r\n"),
 		},
 	}
 	runEvalTests(t, tests, evalJSONARRLEN, store)
@@ -1101,7 +1110,7 @@ func testEvalJSONOBJLEN(t *testing.T, store *dstore.Store) {
 
 func BenchmarkEvalJSONOBJLEN(b *testing.B) {
 	sizes := []int{0, 10, 100, 1000, 10000, 100000} // Various sizes of JSON objects
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("JSONObjectSize_%d", size), func(b *testing.B) {
@@ -1930,12 +1939,12 @@ func testEvalDel(t *testing.T, store *dstore.Store) {
 		"nil value": {
 			setup:  func() {},
 			input:  nil,
-			output: []byte(":0\r\n"),
+			output: clientio.Encode(errors.New("ERR wrong number of arguments for 'del' command"), false),
 		},
 		"empty array": {
 			setup:  func() {},
 			input:  []string{},
-			output: []byte(":0\r\n"),
+			output: clientio.Encode(errors.New("ERR wrong number of arguments for 'del' command"), false),
 		},
 		"key does not exist": {
 			setup:  func() {},
@@ -2159,6 +2168,82 @@ func testEvalHGET(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalHGET, store)
 }
 
+func testEvalHMGET(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"wrong number of args passed": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'hmget' command\r\n"),
+		},
+		"only key passed": {
+			setup:  func() {},
+			input:  []string{"KEY"},
+			output: []byte("-ERR wrong number of arguments for 'hmget' command\r\n"),
+		},
+		"key doesn't exists": {
+			setup:  func() {},
+			input:  []string{"KEY", "field_name"},
+			output: clientio.Encode([]interface{}{nil}, false),
+		},
+		"key exists but field_name doesn't exists": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field := "mock_field_name"
+				newMap := make(HashMap)
+				newMap[field] = "mock_field_value"
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input:  []string{"KEY_MOCK", "non_existent_key"},
+			output: clientio.Encode([]interface{}{nil}, false),
+		},
+		"both key and field_name exists": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field := "mock_field_name"
+				newMap := make(HashMap)
+				newMap[field] = "mock_field_value"
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input:  []string{"KEY_MOCK", "mock_field_name"},
+			output: clientio.Encode([]interface{}{"mock_field_value"}, false),
+		},
+		"some fields exist some do not": {
+			setup: func() {
+				key := "KEY_MOCK"
+				newMap := HashMap{
+					"field1": "value1",
+					"field2": "value2",
+				}
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input:  []string{"KEY_MOCK", "field1", "field2", "field3", "field4"},
+			output: clientio.Encode([]interface{}{"value1", "value2", nil, nil}, false),
+		},
+	}
+
+	runEvalTests(t, tests, evalHMGET, store)
+}
+
 func testEvalHVALS(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"wrong number of args passed": {
@@ -2343,6 +2428,91 @@ func testEvalHDEL(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalHDEL, store)
+}
+
+func testEvalHSCAN(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"HSCAN with wrong number of args": {
+			input:  []string{"key"},
+			output: []byte("-ERR wrong number of arguments for 'hscan' command\r\n"),
+		},
+		"HSCAN with key does not exist": {
+			input:  []string{"NONEXISTENT_KEY", "0"},
+			output: []byte("*2\r\n$1\r\n0\r\n*0\r\n"),
+		},
+		"HSCAN with key exists but not a hash": {
+			setup: func() {
+				evalSET([]string{"string_key", "string_value"}, store)
+			},
+			input:  []string{"string_key", "0"},
+			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+		},
+		"HSCAN with valid key and cursor": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
+			},
+			input:  []string{"hash_key", "0"},
+			output: []byte("*2\r\n$1\r\n0\r\n*4\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+		},
+		"HSCAN with cursor at the end": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
+			},
+			input:  []string{"hash_key", "2"},
+			output: []byte("*2\r\n$1\r\n0\r\n*0\r\n"),
+		},
+		"HSCAN with cursor at the beginning": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
+			},
+			input:  []string{"hash_key", "0"},
+			output: []byte("*2\r\n$1\r\n0\r\n*4\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+		},
+		"HSCAN with cursor in the middle": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
+			},
+			input:  []string{"hash_key", "1"},
+			output: []byte("*2\r\n$1\r\n0\r\n*2\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+		},
+		"HSCAN with MATCH argument": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3"}, store)
+			},
+			input:  []string{"hash_key", "0", "MATCH", "field[12]*"},
+			output: []byte("*2\r\n$1\r\n0\r\n*4\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+		},
+		"HSCAN with COUNT argument": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3"}, store)
+			},
+			input:  []string{"hash_key", "0", "COUNT", "2"},
+			output: []byte("*2\r\n$1\r\n2\r\n*4\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+		},
+		"HSCAN with MATCH and COUNT arguments": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3", "field4", "value4"}, store)
+			},
+			input:  []string{"hash_key", "0", "MATCH", "field[13]*", "COUNT", "1"},
+			output: []byte("*2\r\n$1\r\n1\r\n*2\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n"),
+		},
+		"HSCAN with invalid MATCH pattern": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
+			},
+			input:  []string{"hash_key", "0", "MATCH", "[invalid"},
+			output: []byte("-ERR Invalid glob pattern: unexpected end of input\r\n"),
+		},
+		"HSCAN with invalid COUNT value": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
+			},
+			input:  []string{"hash_key", "0", "COUNT", "invalid"},
+			output: []byte("-ERR value is not an integer or out of range\r\n"),
+		},
+	}
+
+	runEvalTests(t, tests, evalHSCAN, store)
 }
 
 func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
@@ -2664,13 +2834,13 @@ func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]s
 func BenchmarkEvalMSET(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		store := dstore.NewStore(nil)
+		store := dstore.NewStore(nil, nil)
 		evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"}, store)
 	}
 }
 
 func BenchmarkEvalHSET(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	for i := 0; i < b.N; i++ {
 		evalHSET([]string{"KEY", fmt.Sprintf("FIELD_%d", i), fmt.Sprintf("VALUE_%d", i)}, store)
 	}
@@ -2762,6 +2932,92 @@ func testEvalHSET(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalHSET, store)
 }
 
+func testEvalHMSET(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"wrong number of args passed": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'hmset' command\r\n"),
+		},
+		"only key passed": {
+			setup:  func() {},
+			input:  []string{"key"},
+			output: []byte("-ERR wrong number of arguments for 'hmset' command\r\n"),
+		},
+		"only key and field_name passed": {
+			setup:  func() {},
+			input:  []string{"KEY", "field_name"},
+			output: []byte("-ERR wrong number of arguments for 'hmset' command\r\n"),
+		},
+		"key, field and value passed": {
+			setup:  func() {},
+			input:  []string{"KEY1", "field_name", "value"},
+			output: clientio.RespOK,
+		},
+		"key, field and value updated": {
+			setup:  func() {},
+			input:  []string{"KEY1", "field_name", "value_new"},
+			output: clientio.RespOK,
+		},
+		"new set of key, field and value added": {
+			setup:  func() {},
+			input:  []string{"KEY2", "field_name_new", "value_new_new"},
+			output: clientio.RespOK,
+		},
+		"apply with duplicate key, field and value names": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field := "mock_field_name"
+				newMap := make(HashMap)
+				newMap[field] = "mock_field_value"
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input:  []string{"KEY_MOCK", "mock_field_name", "mock_field_value"},
+			output: clientio.RespOK,
+		},
+		"same key -> update value, add new field and value": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field := "mock_field_name"
+				mockValue := "mock_field_value"
+				newMap := make(HashMap)
+				newMap[field] = mockValue
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+
+				// Check if the map is saved correctly in the store
+				res, err := getValueFromHashMap(key, field, store)
+
+				assert.Assert(t, err == nil)
+				assert.DeepEqual(t, res, clientio.Encode(mockValue, false))
+			},
+			input: []string{
+				"KEY_MOCK",
+				"mock_field_name",
+				"mock_field_value_new",
+				"mock_field_name_new",
+				"mock_value_new",
+			},
+			output: clientio.RespOK,
+		},
+	}
+
+	runEvalTests(t, tests, evalHMSET, store)
+}
+
 func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"wrong number of args passed": {
@@ -2805,7 +3061,7 @@ func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalHKEYS(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	for i := 0; i < b.N; i++ {
 		evalHSET([]string{"KEY", fmt.Sprintf("FIELD_%d", i), fmt.Sprintf("VALUE_%d", i)}, store)
@@ -2816,7 +3072,7 @@ func BenchmarkEvalHKEYS(b *testing.B) {
 	}
 }
 func BenchmarkEvalPFCOUNT(b *testing.B) {
-	store := *dstore.NewStore(nil)
+	store := *dstore.NewStore(nil, nil)
 
 	// Helper function to create and insert HLL objects
 	createAndInsertHLL := func(key string, items []string) {
@@ -3164,7 +3420,7 @@ func testEvalHLEN(t *testing.T, store *dstore.Store) {
 
 func BenchmarkEvalHLEN(b *testing.B) {
 	sizes := []int{0, 10, 100, 1000, 10000, 100000}
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("HashSize_%d", size), func(b *testing.B) {
@@ -3406,7 +3662,7 @@ func testEvalTYPE(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalTYPE(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	// Define different types of objects to benchmark
 	objectTypes := map[string]func(){
@@ -3597,7 +3853,7 @@ func testEvalJSONOBJKEYS(t *testing.T, store *dstore.Store) {
 
 func BenchmarkEvalJSONOBJKEYS(b *testing.B) {
 	sizes := []int{0, 10, 100, 1000, 10000, 100000} // Various sizes of JSON objects
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("JSONObjectSize_%d", size), func(b *testing.B) {
@@ -3765,7 +4021,7 @@ func testEvalGETRANGE(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalGETRANGE(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	store.Put("BENCHMARK_KEY", store.NewObj("Hello World", maxExDuration, object.ObjTypeString, object.ObjEncodingRaw))
 
 	inputs := []struct {
@@ -3790,7 +4046,7 @@ func BenchmarkEvalGETRANGE(b *testing.B) {
 }
 
 func BenchmarkEvalHSETNX(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	for i := 0; i < b.N; i++ {
 		evalHSETNX([]string{"KEY", fmt.Sprintf("FIELD_%d", i/2), fmt.Sprintf("VALUE_%d", i)}, store)
 	}
@@ -3852,7 +4108,7 @@ func testEvalHSETNX(t *testing.T, store *dstore.Store) {
 }
 
 func TestMSETConsistency(t *testing.T) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"}, store)
 
 	assert.Equal(t, "VAL", store.Get("KEY").Value)
@@ -3860,7 +4116,7 @@ func TestMSETConsistency(t *testing.T) {
 }
 
 func BenchmarkEvalHINCRBY(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	// creating new fields
 	for i := 0; i < b.N; i++ {
@@ -4110,7 +4366,7 @@ func testEvalSETEX(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalSETEX(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -4285,7 +4541,7 @@ func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalINCRBYFLOAT(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	store.Put("key1", store.NewObj("1", maxExDuration, object.ObjTypeString, object.ObjEncodingEmbStr))
 	store.Put("key2", store.NewObj("1.2", maxExDuration, object.ObjTypeString, object.ObjEncodingEmbStr))
 
@@ -4400,7 +4656,7 @@ func testEvalBITOP(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalBITOP(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	// Setup initial data for benchmarking
 	store.Put("key1", store.NewObj(&ByteArray{data: []byte{0x01, 0x02, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
@@ -4694,7 +4950,7 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalAPPEND(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	for i := 0; i < b.N; i++ {
 		evalAPPEND([]string{"key", fmt.Sprintf("val_%d", i)}, store)
 	}
@@ -4976,6 +5232,55 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalZRANGE, store)
 }
 
+func testEvalBitField(t *testing.T, store *dstore.Store) {
+	testCases := map[string]evalTestCase{
+		"BITFIELD signed SET": {
+			input:  []string{"bits", "set", "i8", "0", "-100"},
+			output: clientio.Encode([]int64{0}, false),
+		},
+		"BITFIELD GET": {
+			setup: func() {
+				args := []string{"bits", "set", "u8", "0", "255"}
+				evalBITFIELD(args, store)
+			},
+			input:  []string{"bits", "get", "u8", "0"},
+			output: clientio.Encode([]int64{255}, false),
+		},
+		"BITFIELD INCRBY": {
+			setup: func() {
+				args := []string{"bits", "set", "u8", "0", "255"}
+				evalBITFIELD(args, store)
+			},
+			input:  []string{"bits", "incrby", "u8", "0", "100"},
+			output: clientio.Encode([]int64{99}, false),
+		},
+		"BITFIELD Arity": {
+			input:  []string{},
+			output: diceerrors.NewErrArity("BITFIELD"),
+		},
+		"BITFIELD invalid combination of commands in a single operation": {
+			input:  []string{"bits", "SET", "u8", "0", "255", "INCRBY", "u8", "0", "100", "GET", "u8"},
+			output: []byte("-ERR syntax error\r\n"),
+		},
+		"BITFIELD invalid bitfield type": {
+			input:  []string{"bits", "SET", "a8", "0", "255", "INCRBY", "u8", "0", "100", "GET", "u8"},
+			output: []byte("-ERR Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is.\r\n"),
+		},
+		"BITFIELD invalid bit offset": {
+			input:  []string{"bits", "SET", "u8", "a", "255", "INCRBY", "u8", "0", "100", "GET", "u8"},
+			output: []byte("-ERR bit offset is not an integer or out of range\r\n"),
+		},
+		"BITFIELD invalid overflow type": {
+			input:  []string{"bits", "SET", "u8", "0", "255", "INCRBY", "u8", "0", "100", "OVERFLOW", "wraap"},
+			output: []byte("-ERR Invalid OVERFLOW type specified\r\n"),
+		},
+		"BITFIELD missing arguments in SET": {
+			input:  []string{"bits", "SET", "u8", "0", "INCRBY", "u8", "0", "100", "GET", "u8", "288"},
+			output: []byte("-ERR value is not an integer or out of range\r\n"),
+		},
+	}
+	runEvalTests(t, testCases, evalBITFIELD, store)
+}
 func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"HINCRBYFLOAT on a non-existing key and field": {
@@ -5118,7 +5423,7 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalHINCRBYFLOAT(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	// Setting initial fields with some values
 	store.Put("key1", store.NewObj(HashMap{"field1": "1.0", "field2": "1.2"}, maxExDuration, object.ObjTypeHashMap, object.ObjEncodingHashMap))
@@ -5210,4 +5515,168 @@ func testEvalDUMP(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalDUMP, store)
+}
+
+func testEvalGEOADD(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"GEOADD with wrong number of arguments": {
+			input:  []string{"mygeo", "1", "2"},
+			output: diceerrors.NewErrArity("GEOADD"),
+		},
+		"GEOADD with non-numeric longitude": {
+			input:  []string{"mygeo", "long", "40.7128", "NewYork"},
+			output: diceerrors.NewErrWithMessage("ERR invalid longitude"),
+		},
+		"GEOADD with non-numeric latitude": {
+			input:  []string{"mygeo", "-74.0060", "lat", "NewYork"},
+			output: diceerrors.NewErrWithMessage("ERR invalid latitude"),
+		},
+		"GEOADD new member to non-existing key": {
+			setup:  func() {},
+			input:  []string{"mygeo", "-74.0060", "40.7128", "NewYork"},
+			output: clientio.Encode(int64(1), false),
+		},
+		"GEOADD existing member with updated coordinates": {
+			setup: func() {
+				evalGEOADD([]string{"mygeo", "-74.0060", "40.7128", "NewYork"}, store)
+			},
+			input:  []string{"mygeo", "-73.9352", "40.7304", "NewYork"},
+			output: clientio.Encode(int64(0), false),
+		},
+		"GEOADD multiple members": {
+			setup: func() {
+				evalGEOADD([]string{"mygeo", "-74.0060", "40.7128", "NewYork"}, store)
+			},
+			input:  []string{"mygeo", "-118.2437", "34.0522", "LosAngeles", "-87.6298", "41.8781", "Chicago"},
+			output: clientio.Encode(int64(2), false),
+		},
+		"GEOADD with NX option (new member)": {
+			input:  []string{"mygeo", "NX", "-122.4194", "37.7749", "SanFrancisco"},
+			output: clientio.Encode(int64(1), false),
+		},
+		"GEOADD with NX option (existing member)": {
+			setup: func() {
+				evalGEOADD([]string{"mygeo", "-74.0060", "40.7128", "NewYork"}, store)
+			},
+			input:  []string{"mygeo", "NX", "-73.9352", "40.7304", "NewYork"},
+			output: clientio.Encode(int64(0), false),
+		},
+		"GEOADD with XX option (new member)": {
+			input:  []string{"mygeo", "XX", "-71.0589", "42.3601", "Boston"},
+			output: clientio.Encode(int64(0), false),
+		},
+		"GEOADD with XX option (existing member)": {
+			setup: func() {
+				evalGEOADD([]string{"mygeo", "-74.0060", "40.7128", "NewYork"}, store)
+			},
+			input:  []string{"mygeo", "XX", "-73.9352", "40.7304", "NewYork"},
+			output: clientio.Encode(int64(0), false),
+		},
+		"GEOADD with both NX and XX options": {
+			input:  []string{"mygeo", "NX", "XX", "-74.0060", "40.7128", "NewYork"},
+			output: diceerrors.NewErrWithMessage("ERR XX and NX options at the same time are not compatible"),
+		},
+		"GEOADD with invalid option": {
+			input:  []string{"mygeo", "INVALID", "-74.0060", "40.7128", "NewYork"},
+			output: diceerrors.NewErrArity("GEOADD"),
+		},
+		"GEOADD to a key of wrong type": {
+			setup: func() {
+				store.Put("mygeo", store.NewObj("string_value", -1, object.ObjTypeString, object.ObjEncodingRaw))
+			},
+			input:  []string{"mygeo", "-74.0060", "40.7128", "NewYork"},
+			output: []byte("-ERR Existing key has wrong Dice type\r\n"),
+		},
+		"GEOADD with longitude out of range": {
+			input:  []string{"mygeo", "181.0", "40.7128", "Invalid"},
+			output: diceerrors.NewErrWithMessage("ERR invalid longitude"),
+		},
+		"GEOADD with latitude out of range": {
+			input:  []string{"mygeo", "-74.0060", "91.0", "Invalid"},
+			output: diceerrors.NewErrWithMessage("ERR invalid latitude"),
+		},
+	}
+
+	runEvalTests(t, tests, evalGEOADD, store)
+}
+
+func testEvalGEODIST(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"GEODIST between existing points": {
+			setup: func() {
+				evalGEOADD([]string{"points", "13.361389", "38.115556", "Palermo"}, store)
+				evalGEOADD([]string{"points", "15.087269", "37.502669", "Catania"}, store)
+			},
+			input:  []string{"points", "Palermo", "Catania"},
+			output: clientio.Encode(float64(166274.1440), false), // Example value
+		},
+		"GEODIST with units (km)": {
+			setup: func() {
+				evalGEOADD([]string{"points", "13.361389", "38.115556", "Palermo"}, store)
+				evalGEOADD([]string{"points", "15.087269", "37.502669", "Catania"}, store)
+			},
+			input:  []string{"points", "Palermo", "Catania", "km"},
+			output: clientio.Encode(float64(166.2741), false), // Example value
+		},
+		"GEODIST to same point": {
+			setup: func() {
+				evalGEOADD([]string{"points", "13.361389", "38.115556", "Palermo"}, store)
+			},
+			input:  []string{"points", "Palermo", "Palermo"},
+			output: clientio.Encode(float64(0.0000), false), // Expecting distance 0 formatted to 4 decimals
+		},
+		// Add other test cases here...
+	}
+
+	runEvalTests(t, tests, evalGEODIST, store)
+}
+
+func testEvalSINTER(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"intersection of two sets": {
+			setup: func() {
+				evalSADD([]string{"set1", "a", "b", "c"}, store)
+				evalSADD([]string{"set2", "c", "d", "e"}, store)
+			},
+			input:  []string{"set1", "set2"},
+			output: clientio.Encode([]string{"c"}, false),
+		},
+		"intersection of three sets": {
+			setup: func() {
+				evalSADD([]string{"set1", "a", "b", "c"}, store)
+				evalSADD([]string{"set2", "b", "c", "d"}, store)
+				evalSADD([]string{"set3", "c", "d", "e"}, store)
+			},
+			input:  []string{"set1", "set2", "set3"},
+			output: clientio.Encode([]string{"c"}, false),
+		},
+		"intersection with single set": {
+			setup: func() {
+				evalSADD([]string{"set1", "a"}, store)
+			},
+			input:  []string{"set1"},
+			output: clientio.Encode([]string{"a"}, false),
+		},
+		"intersection with a non-existent key": {
+			setup: func() {
+				evalSADD([]string{"set1", "a", "b", "c"}, store)
+			},
+			input:  []string{"set1", "nonexistent"},
+			output: clientio.Encode([]string{}, false),
+		},
+		"intersection with wrong type": {
+			setup: func() {
+				evalSADD([]string{"set1", "a", "b", "c"}, store)
+				store.Put("string", &object.Obj{Value: "string", TypeEncoding: object.ObjTypeString})
+			},
+			input:  []string{"set1", "string"},
+			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+		},
+		"no arguments": {
+			input:  []string{},
+			output: diceerrors.NewErrArity("SINTER"),
+		},
+	}
+
+	runEvalTests(t, tests, evalSINTER, store)
 }

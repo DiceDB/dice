@@ -37,12 +37,12 @@ type AsyncServer struct {
 	queryWatcher           *querymanager.Manager
 	shardManager           *shard.ShardManager
 	ioChan                 chan *ops.StoreResponse     // The server acts like a worker today, this behavior will change once IOThreads are introduced and each client gets its own worker.
-	watchChan              chan dstore.QueryWatchEvent // This is needed to co-ordinate between the store and the query watcher.
+	queryWatchChan         chan dstore.QueryWatchEvent // This is needed to co-ordinate between the store and the query watcher.
 	logger                 *slog.Logger                // logger is the logger for the server
 }
 
 // NewAsyncServer initializes a new AsyncServer
-func NewAsyncServer(shardManager *shard.ShardManager, watchChan chan dstore.QueryWatchEvent, logger *slog.Logger) *AsyncServer {
+func NewAsyncServer(shardManager *shard.ShardManager, queryWatchChan chan dstore.QueryWatchEvent, logger *slog.Logger) *AsyncServer {
 	return &AsyncServer{
 		maxClients:             config.DiceConfig.Server.MaxClients,
 		connectedClients:       make(map[int]*comm.Client),
@@ -50,7 +50,7 @@ func NewAsyncServer(shardManager *shard.ShardManager, watchChan chan dstore.Quer
 		queryWatcher:           querymanager.NewQueryManager(logger),
 		multiplexerPollTimeout: config.DiceConfig.Server.MultiplexerPollTimeout,
 		ioChan:                 make(chan *ops.StoreResponse, 1000),
-		watchChan:              watchChan,
+		queryWatchChan:         queryWatchChan,
 		logger:                 logger,
 	}
 }
@@ -151,7 +151,7 @@ func (s *AsyncServer) Run(ctx context.Context) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		s.queryWatcher.Run(watchCtx, s.watchChan)
+		s.queryWatcher.Run(watchCtx, s.queryWatchChan)
 	}()
 
 	s.shardManager.RegisterWorker("server", s.ioChan)

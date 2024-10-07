@@ -71,7 +71,7 @@ func TestHashMapIncrementValue(t *testing.T) {
 }
 
 func TestGetValueFromHashMap(t *testing.T) {
-	store := store.NewStore(nil)
+	store := store.NewStore(nil, nil)
 	key := "key1"
 	field := "field1"
 	value := "value1"
@@ -116,4 +116,14 @@ func TestHashMapIncrementFloatValue(t *testing.T) {
 	val, err = hmap.incrementFloatValue("field2", 1.0)
 	assert.NotNil(t, err, "Expected error when incrementing a non-float value")
 	assert.Equal(t, errors.IntOrFloatErr, err.Error(), "Expected int or float error")
+
+	inf := math.MaxFloat64
+
+	val, err = hmap.incrementFloatValue("field1", inf+float64(1e308))
+	assert.NotNil(t, err, "Expected error when incrementing a overflowing value")
+	assert.Equal(t, errors.IncrDecrOverflowErr, err.Error(), "Expected overflow to be detected")
+
+	val, err = hmap.incrementFloatValue("field1", -inf-float64(1e308))
+	assert.NotNil(t, err, "Expected error when incrementing a overflowing value")
+	assert.Equal(t, errors.IncrDecrOverflowErr, err.Error(), "Expected overflow to be detected")
 }
