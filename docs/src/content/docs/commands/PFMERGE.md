@@ -48,7 +48,7 @@ The `PFMERGE` command can raise errors in the following scenarios:
 
 ## Example Usage
 
-### Example 1: Basic Usage
+### Basic Usage
 
 Suppose you have three HyperLogLogs stored at keys `hll1`, `hll2`, and `hll3`, and you want to merge them into a new HyperLogLog stored at key `hll_merged`.
 
@@ -65,7 +65,7 @@ OK
 (integer) 7
 ```
 
-### Example 2: Overwriting Existing Key
+### Overwriting Existing Key
 
 If the `destkey` already exists, it will be overwritten by the merged HyperLogLog.
 
@@ -78,7 +78,7 @@ OK
 (integer) 7
 ```
 
-### Example 3: Handling Non-Existent Source Keys
+### Handling Non-Existent Source Keys
 
 If a `sourcekey` does not exist, DiceDB will treat it as an empty HyperLogLog.
 
@@ -87,4 +87,14 @@ If a `sourcekey` does not exist, DiceDB will treat it as an empty HyperLogLog.
 OK
 127.0.0.1:7379> PFCOUNT hll_merged
 (integer) 5
+```
+
+### Invalid Usage
+
+if a `sourcekey` exists and is not of type HyperLogLog, the command will result in an error
+
+```sh
+127.0.0.1:7379> PFMERGE hll_merged not_hyperLogLog
+(error) WRONGTYPE Key is not a valid HyperLogLog string value.
+
 ```
