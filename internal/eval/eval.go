@@ -584,8 +584,10 @@ func evalJSONARRLEN(args []string, store *dstore.Store) []byte {
 
 	// Retrieve the object from the database
 	obj := store.Get(key)
+
+	// If the object is not present in the store or if its nil, then we should simply return nil.
 	if obj == nil {
-		return diceerrors.NewErrWithMessage("Path '.' does not exist or not an array")
+		return clientio.RespNIL
 	}
 
 	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
@@ -600,32 +602,38 @@ func evalJSONARRLEN(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
 	}
 
+	// This is the case if only argument passed to JSON.ARRLEN is the key itself.
+	// This is valid only if the key holds an array; otherwise, an error should be returned.
 	if len(args) == 1 {
 		if utils.GetJSONFieldType(jsonData) == utils.ArrayType {
 			return clientio.Encode(len(jsonData.([]interface{})), false)
 		}
-		return diceerrors.NewErrWithMessage("Path '.' does not exist or not an array")
+		return diceerrors.NewErrWithMessage("Path '$' does not exist or not an array")
 	}
 
-	path := args[1]
+	path := args[1] // Getting the path to find the length of the array
 	expr, err := jp.ParseString(path)
 	if err != nil {
-		return diceerrors.NewErrWithMessage("invalid JSONPath")
+		return diceerrors.NewErrWithMessage("Invalid JSONPath")
 	}
 
 	results := expr.Get(jsonData)
+	errMessage := fmt.Sprintf("Path '%s' does not exist", args[1])
 
-	arrlenList := make([]interface{}, 0, len(results))
-	for _, result := range results {
-		switch utils.GetJSONFieldType(result) {
-		case utils.ArrayType:
-			arrlenList = append(arrlenList, len(result.([]interface{})))
-		default:
-			arrlenList = append(arrlenList, nil)
-		}
+	// If there are no results, that means the JSONPath does not exist
+	if len(results) == 0 {
+		return diceerrors.NewErrWithMessage(errMessage)
 	}
 
-	return clientio.Encode(arrlenList, false)
+	jsonValue := results[0] // Getting the final result
+
+	if utils.GetJSONFieldType(jsonValue) == utils.ArrayType {
+		return clientio.Encode(len(jsonValue.([]interface{})), false)
+	}
+
+	// If execution reaches this point, the provided path either does not exist.
+	errMessage = fmt.Sprintf("Path '%s' does not exist or not array", args[1])
+	return diceerrors.NewErrWithMessage(errMessage)
 }
 
 func evalJSONARRPOP(args []string, store *dstore.Store) []byte {
