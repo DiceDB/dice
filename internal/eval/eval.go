@@ -2626,6 +2626,8 @@ func evalCommand(args []string, store *dstore.Store) []byte {
 		return evalCommandHelp(args[1:])
 	case Info:
 		return evalCommandInfo(args[1:])
+	case Docs:
+		return evalCommandDocs(args[1:])
 	default:
 		return diceerrors.NewErrWithFormattedMessage("unknown subcommand '%s'. Try COMMAND HELP.", subcommand)
 	}
@@ -2650,6 +2652,8 @@ func evalCommandHelp(args []string) []byte {
 	getKeysMessage := "     Return the keys from a full DiceDB command."
 	helpTitle := "HELP"
 	helpMessage := "     Print this help."
+	docsTitle := "DOCS [<command-name> ...]"
+	docsMessage := "\tReturn documentation details about multiple dice commands.\n\tIf no command names are given, documentation details for all\n\tcommands are returned."
 	message := []string{
 		format,
 		noTitle,
@@ -2664,6 +2668,8 @@ func evalCommandHelp(args []string) []byte {
 		getKeysMessage,
 		helpTitle,
 		helpMessage,
+		docsTitle,
+		docsMessage,
 	}
 	return clientio.Encode(message, false)
 }
@@ -2746,6 +2752,11 @@ func evalCommandGetKeys(args []string) []byte {
 	return clientio.Encode(keys, false)
 }
 
+func evalCommandDefaultDocs() []byte {
+	cmds := convertDiceCmdsMapToDocs()
+	return clientio.Encode(cmds, false)
+}
+
 func evalCommandInfo(args []string) []byte {
 	if len(args) == 0 {
 		return evalCommandDefault()
@@ -2763,6 +2774,27 @@ func evalCommandInfo(args []string) []byte {
 			result = append(result, cmdMeta)
 		} else {
 			result = append(result, clientio.RespNIL)
+		}
+	}
+
+	return clientio.Encode(result, false)
+}
+
+func evalCommandDocs(args []string) []byte {
+	if len(args) == 0 {
+		return evalCommandDefaultDocs()
+	}
+
+	cmdMetaMap := make(map[string]interface{})
+	for _, cmdMeta := range DiceCmds {
+		cmdMetaMap[cmdMeta.Name] = convertCmdMetaToDocs(&cmdMeta)
+	}
+
+	var result []interface{}
+	for _, arg := range args {
+		arg = strings.ToUpper(arg)
+		if cmdMeta, found := cmdMetaMap[arg]; found {
+			result = append(result, cmdMeta)
 		}
 	}
 
