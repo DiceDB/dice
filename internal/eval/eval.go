@@ -37,6 +37,7 @@ import (
 	"github.com/dicedb/dice/internal/querymanager"
 	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/gobwas/glob"
 	"github.com/ohler55/ojg/jp"
 )
 
@@ -67,6 +68,7 @@ const (
 
 const defaultRootPath = "$"
 const maxExDuration = 9223372036854775
+const CountConst = "COUNT"
 
 func init() {
 	diceCommandsCount = len(DiceCmds)
@@ -169,8 +171,11 @@ func evalDBSIZE(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("DBSIZE")
 	}
 
+	// Expired keys must be explicitly deleted since the cronFrequency for cleanup is configurable.
+	// A longer delay may prevent timely cleanup, leading to incorrect DBSIZE results.
+	dstore.DeleteExpiredKeys(store)
 	// return the RESP encoded value
-	return clientio.Encode(store.GetKeyCount(), false)
+	return clientio.Encode(store.GetDBSize(), false)
 }
 
 // evalGETDEL returns the value for the queried key in args
@@ -1640,6 +1645,10 @@ func evalTTL(args []string, store *dstore.Store) []byte {
 func evalDEL(args []string, store *dstore.Store) []byte {
 	var countDeleted = 0
 
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("DEL")
+	}
+
 	for _, key := range args {
 		if ok := store.Del(key); ok {
 			countDeleted++
@@ -2594,7 +2603,7 @@ func evalCommandHelp() []byte {
 	format := "COMMAND <subcommand> [<arg> [value] [opt] ...]. Subcommands are:"
 	noTitle := "(no subcommand)"
 	noMessage := "    Return details about all Dice commands."
-	countTitle := "COUNT"
+	countTitle := CountConst
 	countMessage := "    Return the total number of commands in this Dice server."
 	listTitle := "LIST"
 	listMessage := "     Return a list of all commands in this Dice server."
@@ -3236,6 +3245,85 @@ func evalHDEL(args []string, store *dstore.Store) []byte {
 	}
 
 	return clientio.Encode(count, false)
+}
+
+func evalHSCAN(args []string, store *dstore.Store) []byte {
+	if len(args) < 2 {
+		return diceerrors.NewErrArity("HSCAN")
+	}
+
+	key := args[0]
+	cursor, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.InvalidIntErr)
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return clientio.Encode([]interface{}{"0", []string{}}, false)
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+	}
+
+	hashMap := obj.Value.(HashMap)
+	pattern := "*"
+	count := 10
+
+	// Parse optional arguments
+	for i := 2; i < len(args); i += 2 {
+		switch strings.ToUpper(args[i]) {
+		case "MATCH":
+			if i+1 < len(args) {
+				pattern = args[i+1]
+			}
+		case CountConst:
+			if i+1 < len(args) {
+				parsedCount, err := strconv.Atoi(args[i+1])
+				if err != nil || parsedCount < 1 {
+					return diceerrors.NewErrWithMessage("value is not an integer or out of range")
+				}
+				count = parsedCount
+			}
+		}
+	}
+
+	// Note that this implementation has a time complexity of O(N), where N is the number of keys in 'hashMap'.
+	// This is in contrast to Redis, which implements HSCAN in O(1) time complexity by maintaining a cursor.
+	keys := make([]string, 0, len(hashMap))
+	for k := range hashMap {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	matched := 0
+	results := make([]string, 0, count*2)
+	newCursor := 0
+
+	g, err := glob.Compile(pattern)
+	if err != nil {
+		return diceerrors.NewErrWithMessage(fmt.Sprintf("Invalid glob pattern: %s", err))
+	}
+
+	// Scan the keys and add them to the results if they match the pattern
+	for i := int(cursor); i < len(keys); i++ {
+		if g.Match(keys[i]) {
+			results = append(results, keys[i], hashMap[keys[i]])
+			matched++
+			if matched >= count {
+				newCursor = i + 1
+				break
+			}
+		}
+	}
+
+	// If we've scanned all keys, reset cursor to 0
+	if newCursor >= len(keys) {
+		newCursor = 0
+	}
+
+	return clientio.Encode([]interface{}{strconv.Itoa(newCursor), results}, false)
 }
 
 // evalHKEYS returns all the values in the hash stored at key.
