@@ -4805,23 +4805,7 @@ func parseEncodingAndOffset(args []string) (eType, eVal, offset interface{}, err
 	return eType, eVal, offset, err
 }
 
-// evalBITFIELD evaluates BITFIELD operations on a key store string, int or bytearray types
-// it returns an array of results depending on the subcommands
-// it allows mutation using SET and INCRBY commands
-// returns arity error, offset type error, overflow type error, encoding type error, integer error, syntax error
-// GET <encoding> <offset> -- Returns the specified bit field.
-// SET <encoding> <offset> <value> -- Set the specified bit field
-// and returns its old value.
-// INCRBY <encoding> <offset> <increment> -- Increments or decrements
-// (if a negative increment is given) the specified bit field and returns the new value.
-// There is another subcommand that only changes the behavior of successive
-// INCRBY and SET subcommands calls by setting the overflow behavior:
-// OVERFLOW [WRAP|SAT|FAIL]`
-func evalBITFIELD(args []string, store *dstore.Store) []byte {
-	if len(args) < 1 {
-		return diceerrors.NewErrArity("BITFIELD")
-	}
-
+func evalBITFIELDGeneric(args []string, store *dstore.Store, isReadOnly bool) []byte {
 	var overflowType string = WRAP // Default overflow type
 
 	type BitFieldOp struct {
@@ -4834,6 +4818,7 @@ func evalBITFIELD(args []string, store *dstore.Store) []byte {
 	var ops []BitFieldOp
 
 	for i := 1; i < len(args); {
+		isReadOnlyCommand := false
 		switch strings.ToUpper(args[i]) {
 		case GET:
 			if len(args) <= i+2 {
@@ -4851,6 +4836,7 @@ func evalBITFIELD(args []string, store *dstore.Store) []byte {
 				Value:  int64(-1),
 			})
 			i += 3
+			isReadOnlyCommand = true
 		case SET:
 			if len(args) <= i+3 {
 				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
@@ -4912,6 +4898,9 @@ func evalBITFIELD(args []string, store *dstore.Store) []byte {
 		default:
 			return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 		}
+		if isReadOnly && !isReadOnlyCommand {
+			return diceerrors.NewErrWithMessage("BITFIELD_RO only supports the GET subcommand")
+		}
 	}
 	key := args[0]
 	obj := store.Get(key)
@@ -4959,6 +4948,26 @@ func evalBITFIELD(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(result, false)
 }
 
+// evalBITFIELD evaluates BITFIELD operations on a key store string, int or bytearray types
+// it returns an array of results depending on the subcommands
+// it allows mutation using SET and INCRBY commands
+// returns arity error, offset type error, overflow type error, encoding type error, integer error, syntax error
+// GET <encoding> <offset> -- Returns the specified bit field.
+// SET <encoding> <offset> <value> -- Set the specified bit field
+// and returns its old value.
+// INCRBY <encoding> <offset> <increment> -- Increments or decrements
+// (if a negative increment is given) the specified bit field and returns the new value.
+// There is another subcommand that only changes the behavior of successive
+// INCRBY and SET subcommands calls by setting the overflow behavior:
+// OVERFLOW [WRAP|SAT|FAIL]`
+func evalBITFIELD(args []string, store *dstore.Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("BITFIELD")
+	}
+
+	return evalBITFIELDGeneric(args, store, false)
+}
+
 func evalHINCRBYFLOAT(args []string, store *dstore.Store) []byte {
 	if len(args) < 3 {
 		return diceerrors.NewErrArity("HINCRBYFLOAT")
@@ -5002,69 +5011,7 @@ func evalBITFIELDRO(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("BITFIELD_RO")
 	}
 
-	type BitFieldOp struct {
-		Kind   string
-		EType  string
-		EVal   int64
-		Offset int64
-		Value  int64
-	}
-	var ops []BitFieldOp
-
-	for i := 1; i < len(args); {
-		switch strings.ToUpper(args[i]) {
-		case GET:
-			if len(args) <= i+2 {
-				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
-			}
-			eType, eVal, offset, err := parseEncodingAndOffset(args[i+1 : i+3])
-			if err != nil {
-				return diceerrors.NewErrWithFormattedMessage(err.Error())
-			}
-			ops = append(ops, BitFieldOp{
-				Kind:   GET,
-				EType:  eType.(string),
-				EVal:   eVal.(int64),
-				Offset: offset.(int64),
-				Value:  int64(-1),
-			})
-			i += 3
-		default:
-			return diceerrors.NewErrWithMessage("BITFIELD_RO only supports the GET subcommand")
-		}
-	}
-
-	key := args[0]
-	obj := store.Get(key)
-
-	/* Lookup for read is ok if key doesn't exit, but errors if it's not a string. */
-	if obj == nil {
-		obj = store.NewObj(NewByteArray(1), -1, object.ObjTypeByteArray, object.ObjEncodingByteArray)
-		store.Put(args[0], obj)
-	}
-
-	var value *ByteArray
-	var err error
-
-	switch oType, _ := object.ExtractTypeEncoding(obj); oType {
-	case object.ObjTypeByteArray:
-		value = obj.Value.(*ByteArray)
-	case object.ObjTypeString, object.ObjTypeInt:
-		value, err = NewByteArrayFromObj(obj)
-		if err != nil {
-			return diceerrors.NewErrWithMessage("value is not a valid byte array")
-		}
-	default:
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	var result []interface{}
-	for _, op := range ops {
-		res := value.getBits(int(op.Offset), int(op.EVal), op.EType == SIGNED)
-		result = append(result, res)
-	}
-
-	return clientio.Encode(result, false)
+	return evalBITFIELDGeneric(args, store, true)
 }
 
 func evalGEOADD(args []string, store *dstore.Store) []byte {
