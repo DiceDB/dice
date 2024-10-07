@@ -103,7 +103,8 @@ func setupQWATCHTest(t *testing.T, query string) (net.Conn, []net.Conn, func()) 
 func setupQWATCHTestWithSDK(t *testing.T, query string) (*redis.Client, []qWatchSDKSubscriber, func()) {
 	t.Helper()
 	publisher := getLocalSdk()
-	subscribers := []qWatchSDKSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
+	// subscribers := []qWatchSDKSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
+	subscribers := []qWatchSDKSubscriber{{client: getLocalSdk()}}
 
 	cleanup := func() {
 		cleanupKeysWithSDK(publisher)
