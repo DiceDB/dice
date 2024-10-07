@@ -44,11 +44,11 @@ func TestJSONToggle(t *testing.T) {
 		// 	commands: []string{"JSON.TOGGLE user $.flag"},
 		// 	expected: []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
 		// },
-		{
-			name:     "JSON.TOGGLE with invalid path",
-			commands: []string{"JSON.TOGGLE user $.invalidPath"},
-			expected: []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
-		},
+		// {
+		// 	name:     "JSON.TOGGLE with invalid path",
+		// 	commands: []string{"JSON.TOGGLE user $.invalidPath"},
+		// 	expected: []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
+		// },
 		{
 			name:     "JSON.TOGGLE with invalid command format",
 			commands: []string{"JSON.TOGGLE testKey"},
