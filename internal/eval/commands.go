@@ -620,6 +620,18 @@ var (
 		Arity:    -4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hmsetCmdMeta = DiceCmdMeta{
+		Name: "HMSET",
+		Info: `HSET sets the specific fields to their respective values in the
+		hash stored at key. If any given field is already present, the previous
+		value will be overwritten with the new value
+		Returns
+		This command returns the number of keys that are stored at given key.
+		`,
+		Eval:     evalHMSET,
+		Arity:    -4,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	hkeysCmdMeta = DiceCmdMeta{
 		Name:     "HKEYS",
 		Info:     `HKEYS command is used to retrieve all the keys(or field names) within a hash. Complexity is O(n) where n is the size of the hash.`,
@@ -1142,6 +1154,7 @@ func init() {
 	DiceCmds["GETEX"] = getexCmdMeta
 	DiceCmds["PTTL"] = pttlCmdMeta
 	DiceCmds["HSET"] = hsetCmdMeta
+	DiceCmds["HMSET"] = hmsetCmdMeta
 	DiceCmds["HKEYS"] = hkeysCmdMeta
 	DiceCmds["HSETNX"] = hsetnxCmdMeta
 	DiceCmds["OBJECT"] = objectCmdMeta

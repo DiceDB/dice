@@ -3038,16 +3038,49 @@ func evalHSET(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("HSET")
 	}
 
+	numKeys, err := insertInHashMap(args, store)
+
+	if err != nil {
+		return err
+	}
+
+	return clientio.Encode(numKeys, false)
+}
+
+// evalHMSET sets the specified fields to their
+// respective values in a hashmap stored at key
+//
+// This command overwrites the values of specified
+// fields that exist in the hash.
+//
+// If key doesn't exist, a new key holding a hash is created.
+//
+// Usage: HMSET key field value [field value ...]
+func evalHMSET(args []string, store *dstore.Store) []byte {
+	if len(args) < 3 {
+		return diceerrors.NewErrArity("HMSET")
+	}
+
+	_, err := insertInHashMap(args, store)
+
+	if err != nil {
+		return err
+	}
+
+	return clientio.RespOK
+}
+
+// helper function to insert key value in hashmap associated with the given hash
+func insertInHashMap(args []string, store *dstore.Store) (numKeys int64, err2 []byte) {
 	key := args[0]
 
 	obj := store.Get(key)
 
 	var hashMap HashMap
-	var numKeys int64
 
 	if obj != nil {
 		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+			return 0, diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 		}
 		hashMap = obj.Value.(HashMap)
 	}
@@ -3055,14 +3088,14 @@ func evalHSET(args []string, store *dstore.Store) []byte {
 	keyValuePairs := args[1:]
 	hashMap, numKeys, err := hashMapBuilder(keyValuePairs, hashMap)
 	if err != nil {
-		return diceerrors.NewErrWithMessage(err.Error())
+		return 0, diceerrors.NewErrWithMessage(err.Error())
 	}
 
 	obj = store.NewObj(hashMap, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
 
 	store.Put(key, obj)
 
-	return clientio.Encode(numKeys, false)
+	return numKeys, nil
 }
 
 // evalHKEYS is used toretrieve all the keys(or field names) within a hash.
