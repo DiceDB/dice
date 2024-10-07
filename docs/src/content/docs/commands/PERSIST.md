@@ -13,16 +13,11 @@ PERSIST key
 
 ## Parameters
 
-<!-- - `key`: The key for which the expiration should be removed. This is a required parameter and must be a valid key in the DiceDB database. -->
 | Parameter | Description                                                               | Type    | Required |
 |-----------|---------------------------------------------------------------------------|---------|----------|
 | `key`     | The name of the key to persist.                                            | String  | Yes      |
 
 ## Return Value
-
-<!-- - `Integer reply`: The command returns an integer:
-  - `1` if the timeout was successfully removed.
-  - `0` if the key does not exist or does not have an associated timeout. -->
 
 | Condition                                      | Return Value                                      |
 |------------------------------------------------|---------------------------------------------------|
@@ -38,9 +33,6 @@ When the `PERSIST` command is executed:
 3. This command does not alter the key’s value, only its expiration state.
 
 ## Error Handling
-
-<!-- - `WRONGTYPE Operation against a key holding the wrong kind of value`: This error is raised if the key exists but is not of a type that supports expiration (e.g., a key holding a stream).
-- `(nil)`: This is not an error but an indication that the key does not exist or does not have an expiration time. -->
 
 1. `Wrong type of value or key`:
     - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
