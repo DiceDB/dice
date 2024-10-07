@@ -171,8 +171,11 @@ func evalDBSIZE(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("DBSIZE")
 	}
 
+	// Expired keys must be explicitly deleted since the cronFrequency for cleanup is configurable.
+	// A longer delay may prevent timely cleanup, leading to incorrect DBSIZE results.
+	dstore.DeleteExpiredKeys(store)
 	// return the RESP encoded value
-	return clientio.Encode(store.GetKeyCount(), false)
+	return clientio.Encode(store.GetDBSize(), false)
 }
 
 // evalGETDEL returns the value for the queried key in args

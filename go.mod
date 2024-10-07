@@ -12,7 +12,6 @@ require (
 	github.com/dgryski/go-metro v0.0.0-20211217172704-adc40b04c140 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
-	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
@@ -44,6 +43,7 @@ require (
 	github.com/cockroachdb/swiss v0.0.0-20240612210725-f4de07ae6964
 	github.com/dgryski/go-farm v0.0.0-20240924180020-3414d57e47da
 	github.com/dicedb/go-dice v0.0.0-20240820180649-d97f15fca831
+	github.com/gobwas/glob v0.2.3
 	github.com/google/btree v1.1.3
 	github.com/google/go-cmp v0.6.0
 	github.com/gorilla/websocket v1.5.3

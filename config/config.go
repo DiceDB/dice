@@ -65,13 +65,13 @@ type Config struct {
 		EvictionRatio          float64       `mapstructure:"evictionratio"`
 		KeysLimit              int           `mapstructure:"keyslimit"`
 		AOFFile                string        `mapstructure:"aoffile"`
-		PersistenceEnabled     bool          `mapstructure:"persistenceenabled"`
 		WriteAOFOnCleanup      bool          `mapstructure:"writeaofoncleanup"`
 		LFULogFactor           int           `mapstructure:"lfulogfactor"`
 		LogLevel               string        `mapstructure:"loglevel"`
 		PrettyPrintLogs        bool          `mapstructure:"prettyprintlogs"`
 		EnableMultiThreading   bool          `mapstructure:"enablemultithreading"`
 		StoreMapInitSize       int           `mapstructure:"storemapinitsize"`
+		WatchChanBufSize       int           `mapstructure:"watchchanbufsize"`
 	} `mapstructure:"server"`
 	Auth struct {
 		UserName string `mapstructure:"username"`
@@ -99,20 +99,20 @@ var baseConfig = Config{
 		EvictionRatio          float64       `mapstructure:"evictionratio"`
 		KeysLimit              int           `mapstructure:"keyslimit"`
 		AOFFile                string        `mapstructure:"aoffile"`
-		PersistenceEnabled     bool          `mapstructure:"persistenceenabled"`
 		WriteAOFOnCleanup      bool          `mapstructure:"writeaofoncleanup"`
 		LFULogFactor           int           `mapstructure:"lfulogfactor"`
 		LogLevel               string        `mapstructure:"loglevel"`
 		PrettyPrintLogs        bool          `mapstructure:"prettyprintlogs"`
 		EnableMultiThreading   bool          `mapstructure:"enablemultithreading"`
 		StoreMapInitSize       int           `mapstructure:"storemapinitsize"`
+		WatchChanBufSize       int           `mapstructure:"watchchanbufsize"`
 	}{
 		Addr:                   DefaultHost,
 		Port:                   DefaultPort,
 		KeepAlive:              int32(300),
 		Timeout:                int32(300),
 		MaxConn:                int32(0),
-		ShardCronFrequency:     1 * time.Second,
+		ShardCronFrequency:     30 * time.Second,
 		MultiplexerPollTimeout: 100 * time.Millisecond,
 		MaxClients:             int32(20000),
 		MaxMemory:              0,
@@ -120,13 +120,13 @@ var baseConfig = Config{
 		EvictionRatio:          0.9,
 		KeysLimit:              DefaultKeysLimit,
 		AOFFile:                "./dice-master.aof",
-		PersistenceEnabled:     true,
 		WriteAOFOnCleanup:      false,
 		LFULogFactor:           10,
 		LogLevel:               "info",
 		PrettyPrintLogs:        false,
 		EnableMultiThreading:   false,
 		StoreMapInitSize:       1024000,
+		WatchChanBufSize:       20000,
 	},
 	Auth: struct {
 		UserName string `mapstructure:"username"`
@@ -305,7 +305,14 @@ func mergeFlagsWithConfig() {
 
 // This function checks if the config file is present or not at ConfigFileLocation
 func isConfigFilePresent() bool {
+	// If config file present in current directory use it
+	if _, err := os.Stat(filepath.Join(".", DefaultConfigName)); err == nil {
+		FileLocation = filepath.Join(".", DefaultConfigName)
+		return true
+	}
+
 	_, err := os.Stat(FileLocation)
+
 	return err == nil
 }
 
