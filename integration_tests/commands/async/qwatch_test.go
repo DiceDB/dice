@@ -164,6 +164,7 @@ func runQWATCHScenarios(t *testing.T, publisher interface{}, receivers interface
 	t.Helper()
 	for _, tc := range tests {
 		publishUpdate(t, publisher, tc)
+		fmt.Println("verifying updates for tc: ", fmt.Sprintf("%v%v-score:%v-updates:%v", tc.key, tc.userID, tc.score, tc.expectedUpdates))
 		verifyUpdates(t, receivers, tc.expectedUpdates, query)
 	}
 }
@@ -206,7 +207,8 @@ func verifyRESPUpdates(t *testing.T, respParsers []*clientio.RESPParser, expecte
 func verifySDKUpdates(t *testing.T, channels []<-chan *redis.QMessage, expectedUpdate []interface{}) {
 	for _, ch := range channels {
 		v := <-ch
-		assert.Equal(t, len(v.Updates), len(expectedUpdate), v.Updates)
+		fmt.Println("actual update length: ", len(v.Updates), "expected update length: ", len(expectedUpdate))
+		assert.Equal(t, len(expectedUpdate), len(v.Updates), "updates length do not match. actual update: %v, expected update: %v", len(v.Updates), len(expectedUpdate))
 		for i, update := range v.Updates {
 			assert.DeepEqual(t, expectedUpdate[i], []interface{}{update.Key, update.Value})
 		}
