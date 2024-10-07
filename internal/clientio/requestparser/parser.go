@@ -5,5 +5,5 @@ import (
 )
 
 type Parser interface {
-	Parse(data []byte) ([]*cmd.RedisCmd, error)
+	Parse(data []byte) ([]*cmd.DiceDBCmd, error)
 }

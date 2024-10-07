@@ -263,7 +263,26 @@ func TestSetDataCmd(t *testing.T) {
 			assert_type: []string{"equal", "equal", "equal", "equal"},
 			expected:    []interface{}{float64(1), float64(1), "OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
 		},
+		{
+			name: "SADD & SINTER with single key",
+			commands: []HTTPCommand{
+				{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "bar"}},
+				{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "baz"}},
+				{Command: "SINTER", Body: map[string]interface{}{"values": []interface{}{"foo"}}},
+			},
+			assert_type: []string{"equal", "equal", "unordered_equal"},
+			expected:    []interface{}{float64(1), float64(1), []any{string("bar"), string("baz")}},
+		},
 	}
+
+	defer exec.FireCommand(HTTPCommand{
+		Command: "DEL",
+		Body:    map[string]interface{}{"key": "foo"},
+	})
+	defer exec.FireCommand(HTTPCommand{
+		Command: "DEL",
+		Body:    map[string]interface{}{"key": "foo2"},
+	})
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

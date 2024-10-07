@@ -29,16 +29,29 @@ const (
 	Offset      = "offset"
 	Member      = "member"
 	Members     = "members"
+	Index       = "index"
+	JSON        = "json"
 )
 
-func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
-	command := strings.TrimPrefix(r.URL.Path, "/")
-	if command == "" {
+func ParseHTTPRequest(r *http.Request) (*cmd.DiceDBCmd, error) {
+	commandParts := strings.Split(strings.TrimPrefix(r.URL.Path, "/"), "/")
+	if len(commandParts) == 0 {
 		return nil, errors.New("invalid command")
 	}
 
-	command = strings.ToUpper(command)
+	command := strings.ToUpper(commandParts[0])
+
+	var subcommand string
+	if len(commandParts) > 1 {
+		subcommand = strings.ToUpper(commandParts[1])
+	}
+
 	var args []string
+
+	// Handle subcommand and multiple arguments
+	if subcommand != "" {
+		args = append(args, subcommand)
+	}
 
 	// Extract query parameters
 	queryParams := r.URL.Query()
@@ -66,58 +79,7 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 
 			// Define keys to exclude and process their values first
 			// Update as we support more commands
-			var priorityKeys = []string{
-				Key,
-				Keys,
-				Field,
-				Path,
-				Value,
-				Values,
-				Seconds,
-				User,
-				Password,
-				KeyValues,
-				QwatchQuery,
-				Offset,
-				Member,
-				Members,
-			}
-			for _, key := range priorityKeys {
-				if val, exists := jsonBody[key]; exists {
-					if key == Keys {
-						for _, v := range val.([]interface{}) {
-							args = append(args, fmt.Sprintf("%v", v))
-						}
-						delete(jsonBody, key)
-						continue
-					}
-					if key == Values {
-						for _, v := range val.([]interface{}) {
-							args = append(args, fmt.Sprintf("%v", v))
-						}
-						delete(jsonBody, key)
-						continue
-					}
-					// MultiKey operations
-					if key == KeyValues {
-						// Handle KeyValues separately
-						for k, v := range val.(map[string]interface{}) {
-							args = append(args, k, fmt.Sprintf("%v", v))
-						}
-						delete(jsonBody, key)
-						continue
-					}
-					if key == Members {
-						for _, v := range val.([]interface{}) {
-							args = append(args, fmt.Sprintf("%v", v))
-						}
-						delete(jsonBody, key)
-						continue
-					}
-					args = append(args, fmt.Sprintf("%v", val))
-					delete(jsonBody, key)
-				}
-			}
+			processPriorityKeys(jsonBody, &args)
 
 			// Process remaining keys in the JSON body
 			for key, val := range jsonBody {
@@ -147,14 +109,14 @@ func ParseHTTPRequest(r *http.Request) (*cmd.RedisCmd, error) {
 		}
 	}
 
-	// Step 2: Return the constructed Redis command
-	return &cmd.RedisCmd{
+	// Step 2: Return the constructed DiceDB command
+	return &cmd.DiceDBCmd{
 		Cmd:  command,
 		Args: args,
 	}, nil
 }
 
-func ParseWebsocketMessage(msg []byte) (*cmd.RedisCmd, error) {
+func ParseWebsocketMessage(msg []byte) (*cmd.DiceDBCmd, error) {
 	cmdStr := string(msg)
 	cmdStr = strings.TrimSpace(cmdStr)
 
@@ -172,8 +134,54 @@ func ParseWebsocketMessage(msg []byte) (*cmd.RedisCmd, error) {
 		cmdArr = append([]string{""}, cmdArr...)
 	}
 
-	return &cmd.RedisCmd{
+	return &cmd.DiceDBCmd{
 		Cmd:  command,
 		Args: cmdArr,
 	}, nil
+}
+
+func processPriorityKeys(jsonBody map[string]interface{}, args *[]string) {
+	for _, key := range getPriorityKeys() {
+		if val, exists := jsonBody[key]; exists {
+			switch key {
+			case Keys, Members:
+				for _, v := range val.([]interface{}) {
+					*args = append(*args, fmt.Sprintf("%v", v))
+				}
+			case JSON:
+				jsonValue, _ := json.Marshal(val)
+				*args = append(*args, string(jsonValue))
+			case KeyValues:
+				for k, v := range val.(map[string]interface{}) {
+					*args = append(*args, k, fmt.Sprintf("%v", v))
+				}
+			case Value:
+				*args = append(*args, formatValue(val))
+			case Values:
+				for _, v := range val.([]interface{}) {
+					*args = append(*args, fmt.Sprintf("%v", v))
+				}
+			default:
+				*args = append(*args, fmt.Sprintf("%v", val))
+			}
+			delete(jsonBody, key)
+		}
+	}
+}
+
+func getPriorityKeys() []string {
+	return []string{
+		Key, Keys, Field, Path, JSON, Index, Value, Values, Seconds, User, Password,
+		KeyValues, QwatchQuery, Offset, Member, Members,
+	}
+}
+
+func formatValue(val interface{}) string {
+	switch v := val.(type) {
+	case string:
+		return v
+	default:
+		jsonBytes, _ := json.Marshal(v)
+		return string(jsonBytes)
+	}
 }
