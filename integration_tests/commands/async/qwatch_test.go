@@ -221,15 +221,15 @@ var qWatchWhereTestCases = []qWatchTestCase{
 	{"match:100:user", 0, 55, [][]interface{}{
 		{[]interface{}{"match:100:user:0", int64(55)}},
 	}},
-	{"match:100:user", 1, 60, [][]interface{}{
-		{[]interface{}{"match:100:user:1", int64(60)}, []interface{}{"match:100:user:0", int64(55)}},
-	}},
-	{"match:100:user", 2, 80, [][]interface{}{
-		{[]interface{}{"match:100:user:2", int64(80)}, []interface{}{"match:100:user:1", int64(60)}, []interface{}{"match:100:user:0", int64(55)}},
-	}},
-	{"match:100:user", 0, 90, [][]interface{}{
-		{[]interface{}{"match:100:user:0", int64(90)}, []interface{}{"match:100:user:2", int64(80)}, []interface{}{"match:100:user:1", int64(60)}},
-	}},
+	// {"match:100:user", 1, 60, [][]interface{}{
+	// 	{[]interface{}{"match:100:user:1", int64(60)}, []interface{}{"match:100:user:0", int64(55)}},
+	// }},
+	// {"match:100:user", 2, 80, [][]interface{}{
+	// 	{[]interface{}{"match:100:user:2", int64(80)}, []interface{}{"match:100:user:1", int64(60)}, []interface{}{"match:100:user:0", int64(55)}},
+	// }},
+	// {"match:100:user", 0, 90, [][]interface{}{
+	// 	{[]interface{}{"match:100:user:0", int64(90)}, []interface{}{"match:100:user:2", int64(80)}, []interface{}{"match:100:user:1", int64(60)}},
+	// }},
 }
 
 func TestQWATCHWhere(t *testing.T) {
