@@ -625,7 +625,24 @@ func evalJSONARRLEN(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrWithMessage(errMessage)
 	}
 
-	jsonValue := results[0] // Getting the final result
+	// If the results are greater than one, we need to print them as a list
+	// This condition should be updated in future when supporting Complex JSONPaths
+	if len(results) > 1 {
+		arrlenList := make([]interface{}, 0, len(results))
+		for _, result := range results {
+			switch utils.GetJSONFieldType(result) {
+			case utils.ArrayType:
+				arrlenList = append(arrlenList, len(result.([]interface{})))
+			default:
+				arrlenList = append(arrlenList, nil)
+			}
+		}
+
+		return clientio.Encode(arrlenList, false)
+	}
+
+	// Single result should be printed as single integer instead of list
+	jsonValue := results[0]
 
 	if utils.GetJSONFieldType(jsonValue) == utils.ArrayType {
 		return clientio.Encode(len(jsonValue.([]interface{})), false)
