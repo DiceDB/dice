@@ -4824,95 +4824,13 @@ func evalBITFIELD(args []string, store *dstore.Store) []byte {
 
 	var overflowType string = WRAP // Default overflow type
 
-	type BitFieldOp struct {
-		Kind   string
-		EType  string
-		EVal   int64
-		Offset int64
-		Value  int64
-	}
-	var ops []BitFieldOp
+	var ops []utils.BitFieldOp
+	ops, err2 := utils.ParseOps(args, true)
 
-	for i := 1; i < len(args); {
-		switch strings.ToUpper(args[i]) {
-		case GET:
-			if len(args) <= i+2 {
-				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
-			}
-			eType, eVal, offset, err := parseEncodingAndOffset(args[i+1 : i+3])
-			if err != nil {
-				return diceerrors.NewErrWithFormattedMessage(err.Error())
-			}
-			ops = append(ops, BitFieldOp{
-				Kind:   GET,
-				EType:  eType.(string),
-				EVal:   eVal.(int64),
-				Offset: offset.(int64),
-				Value:  int64(-1),
-			})
-			i += 3
-		case SET:
-			if len(args) <= i+3 {
-				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
-			}
-			eType, eVal, offset, err := parseEncodingAndOffset(args[i+1 : i+3])
-			if err != nil {
-				return diceerrors.NewErrWithFormattedMessage(err.Error())
-			}
-			value, err1 := strconv.ParseInt(args[i+3], 10, 64)
-			if err1 != nil {
-				return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
-			}
-			ops = append(ops, BitFieldOp{
-				Kind:   SET,
-				EType:  eType.(string),
-				EVal:   eVal.(int64),
-				Offset: offset.(int64),
-				Value:  value,
-			})
-			i += 4
-		case INCRBY:
-			if len(args) <= i+3 {
-				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
-			}
-			eType, eVal, offset, err := parseEncodingAndOffset(args[i+1 : i+3])
-			if err != nil {
-				return diceerrors.NewErrWithFormattedMessage(err.Error())
-			}
-			value, err1 := strconv.ParseInt(args[i+3], 10, 64)
-			if err1 != nil {
-				return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
-			}
-			ops = append(ops, BitFieldOp{
-				Kind:   INCRBY,
-				EType:  eType.(string),
-				EVal:   eVal.(int64),
-				Offset: offset.(int64),
-				Value:  value,
-			})
-			i += 4
-		case OVERFLOW:
-			if len(args) <= i+1 {
-				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
-			}
-			switch strings.ToUpper(args[i+1]) {
-			case WRAP, FAIL, SAT:
-				overflowType = strings.ToUpper(args[i+1])
-			default:
-				return diceerrors.NewErrWithFormattedMessage(diceerrors.OverflowTypeErr)
-			}
-			ops = append(ops, BitFieldOp{
-				Kind:   OVERFLOW,
-				EType:  overflowType,
-				EVal:   int64(-1),
-				Offset: int64(-1),
-				Value:  int64(-1),
-			})
-			i += 2
-		default:
-			return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
-		}
+	if err2 != nil {
+		return err2
 	}
+
 	key := args[0]
 	obj := store.Get(key)
 	if obj == nil {
@@ -5002,36 +4920,11 @@ func evalBITFIELDRO(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("BITFIELD_RO")
 	}
 
-	type BitFieldOp struct {
-		Kind   string
-		EType  string
-		EVal   int64
-		Offset int64
-		Value  int64
-	}
-	var ops []BitFieldOp
+	var ops []utils.BitFieldOp
+	ops, err2 := utils.ParseOps(args, true)
 
-	for i := 1; i < len(args); {
-		switch strings.ToUpper(args[i]) {
-		case GET:
-			if len(args) <= i+2 {
-				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
-			}
-			eType, eVal, offset, err := parseEncodingAndOffset(args[i+1 : i+3])
-			if err != nil {
-				return diceerrors.NewErrWithFormattedMessage(err.Error())
-			}
-			ops = append(ops, BitFieldOp{
-				Kind:   GET,
-				EType:  eType.(string),
-				EVal:   eVal.(int64),
-				Offset: offset.(int64),
-				Value:  int64(-1),
-			})
-			i += 3
-		default:
-			return diceerrors.NewErrWithMessage("BITFIELD_RO only supports the GET subcommand")
-		}
+	if err2 != nil {
+		return err2
 	}
 
 	key := args[0]
@@ -5045,7 +4938,6 @@ func evalBITFIELDRO(args []string, store *dstore.Store) []byte {
 
 	var value *ByteArray
 	var err error
-
 	switch oType, _ := object.ExtractTypeEncoding(obj); oType {
 	case object.ObjTypeByteArray:
 		value = obj.Value.(*ByteArray)
