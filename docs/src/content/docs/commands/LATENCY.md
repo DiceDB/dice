@@ -2,6 +2,7 @@
 title: LATENCY
 description: The `LATENCY` command in DiceDB is used to measure and analyze the latency of various operations within the DiceDB server. This command provides insights into the performance and responsiveness of the DiceDB instance, helping administrators to identify and troubleshoot latency issues.
 ---
+Note: `Not yet supported`
 
 The `LATENCY` command in DiceDB is used to measure and analyze the latency of various operations within the DiceDB server. This command provides insights into the performance and responsiveness of the DiceDB instance, helping administrators to identify and troubleshoot latency issues.
 
