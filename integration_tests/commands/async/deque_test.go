@@ -422,9 +422,9 @@ func TestLLEN(t *testing.T) {
 				"RPOP k", "LLEN k", "LPOP k", "LPOP k", "RPOP k", "LLEN k",
 			},
 			expect: []any{
-				"OK", "OK", int64(4),
+				int64(2), int64(4), int64(4),
 				"1000", int64(3), "v1000", "2000", int64(1),
-				"OK", int64(2),
+				int64(2), int64(2),
 				"v2000", int64(1), "v6", "(nil)", "(nil)", int64(0),
 			},
 		},
