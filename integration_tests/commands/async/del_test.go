@@ -30,6 +30,11 @@ func TestDel(t *testing.T) {
 			commands: []string{"GET k3", "DEL k3"},
 			expected: []interface{}{"(nil)", int64(0)},
 		},
+		{
+			name:     "DEL with no keys or arguments",
+			commands: []string{"DEL"},
+			expected: []interface{}{"ERR wrong number of arguments for 'del' command"},
+		},
 	}
 
 	for _, tc := range testCases {
