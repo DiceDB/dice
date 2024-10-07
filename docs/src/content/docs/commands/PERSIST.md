@@ -13,36 +13,52 @@ PERSIST key
 
 ## Parameters
 
-- `key`: The key for which the expiration should be removed. This is a required parameter and must be a valid key in the DiceDB database.
+| Parameter | Description                                                               | Type    | Required |
+|-----------|---------------------------------------------------------------------------|---------|----------|
+| `key`     | The name of the key to persist.                                            | String  | Yes      |
 
 ## Return Value
 
-- `Integer reply`: The command returns an integer:
-  - `1` if the timeout was successfully removed.
-  - `0` if the key does not exist or does not have an associated timeout.
+| Condition                                      | Return Value                                      |
+|------------------------------------------------|---------------------------------------------------|
+| The timeout was successfully removed           | `1`                                              |
+| The key does not exist or does not have a timeout| `0`                                             |
 
 ## Behaviour
 
 When the `PERSIST` command is executed:
 
-1. DiceDB checks if the specified key exists in the database.
-2. If the key exists and has an expiration time, the expiration time is removed, making the key persistent.
-3. If the key does not exist or does not have an expiration time, no changes are made.
+1. If the specified key has an expiration time, the `PERSIST` command removes that expiration, making the key persistent.
+2. If the key does not exist or does not have an expiration, the command does nothing and returns `0`.
+3. This command does not alter the key’s value, only its expiration state.
 
 ## Error Handling
 
-- `WRONGTYPE Operation against a key holding the wrong kind of value`: This error is raised if the key exists but is not of a type that supports expiration (e.g., a key holding a stream).
-- `(nil)`: This is not an error but an indication that the key does not exist or does not have an expiration time.
+1. `Wrong type of value or key`:
+    - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
+    - Occurs when attempting to use the command on a key that contains a non-string value or one that does not support expiration.
+2. `No timeout to persist`:
+    - This is not an error but occurs when the key either does not exist or does not have an expiration time. The command will return `0` in such cases.    
 
 ## Example Usage
 
 ### Example 1: Removing Expiration from a Key
 
-```DiceDB
-SET mykey "Hello"
-EXPIRE mykey 10
-PERSIST mykey
-TTL mykey
+```bash
+127.0.0.1:7379> SET mykey "Hello"
+OK
+```
+```bash
+127.0.0.1:7379> EXPIRE mykey 10
+(integer) 1
+```
+```bash
+127.0.0.1:7379> PERSIST mykey
+(integer) 1
+```
+```bash
+127.0.0.1:7379> TTL mykey
+(integer) -1
 ```
 
 `Explanation`:
@@ -54,42 +70,31 @@ TTL mykey
 
 ### Example 2: Attempting to Persist a Non-Existent Key
 
-```DiceDB
-PERSIST nonExistentKey
+```bash
+127.0.0.1:7379> PERSIST mykey
+(integer) 0
 ```
 
 `Explanation`:
 
-- The command returns `0` because `nonExistentKey` does not exist in the database.
+- The command returns `0` because `mykey` does not exist in the database.
 
 ### Example 3: Persisting a Key Without Expiration
 
-```DiceDB
-SET mykey "Hello"
-PERSIST mykey
+```bash
+127.0.0.1:7379> SET mykey
+OK
+```
+
+```bash
+127.0.0.1:7379> PERSIST mykey
+(integer) 0
 ```
 
 `Explanation`:
 
 - The command returns `0` because `mykey` does not have an expiration time set.
 
-## Error Handling
-
-### Case 1: Key Does Not Exist
-
-If the key does not exist, the `PERSIST` command will return `0` and no error will be raised.
-
-### Case 2: Key Does Not Have an Expiration
-
-If the key exists but does not have an expiration time, the `PERSIST` command will return `0` and no error will be raised.
-
-### Case 3: Key Holds the Wrong Kind of Value
-
-If the key exists but holds a value type that does not support expiration (e.g., a stream), the command will raise an error:
-
-```
-(error) WRONGTYPE Operation against a key holding the wrong kind of value
-```
 
 ## Summary
 

@@ -35,7 +35,7 @@ func generateBenchmarkData(count int, store *dstore.Store) {
 }
 
 func BenchmarkExecuteQueryOrderBykey(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	for _, v := range benchmarkDataSizes {
 		generateBenchmarkData(v, store)
 
@@ -60,7 +60,7 @@ func BenchmarkExecuteQueryOrderBykey(b *testing.B) {
 }
 
 func BenchmarkExecuteQueryBasicOrderByValue(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	for _, v := range benchmarkDataSizes {
 		generateBenchmarkData(v, store)
 
@@ -83,7 +83,7 @@ func BenchmarkExecuteQueryBasicOrderByValue(b *testing.B) {
 }
 
 func BenchmarkExecuteQueryLimit(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	for _, v := range benchmarkDataSizes {
 		generateBenchmarkData(v, store)
 
@@ -106,7 +106,7 @@ func BenchmarkExecuteQueryLimit(b *testing.B) {
 }
 
 func BenchmarkExecuteQueryNoMatch(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	for _, v := range benchmarkDataSizes {
 		generateBenchmarkData(v, store)
 
@@ -129,7 +129,7 @@ func BenchmarkExecuteQueryNoMatch(b *testing.B) {
 }
 
 func BenchmarkExecuteQueryWithBasicWhere(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	for _, v := range benchmarkDataSizes {
 		generateBenchmarkData(v, store)
 
@@ -152,7 +152,7 @@ func BenchmarkExecuteQueryWithBasicWhere(b *testing.B) {
 }
 
 func BenchmarkExecuteQueryWithComplexWhere(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	for _, v := range benchmarkDataSizes {
 		generateBenchmarkData(v, store)
 
@@ -175,7 +175,7 @@ func BenchmarkExecuteQueryWithComplexWhere(b *testing.B) {
 }
 
 func BenchmarkExecuteQueryWithCompareWhereKeyandValue(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	for _, v := range benchmarkDataSizes {
 		generateBenchmarkData(v, store)
 
@@ -198,7 +198,7 @@ func BenchmarkExecuteQueryWithCompareWhereKeyandValue(b *testing.B) {
 }
 
 func BenchmarkExecuteQueryWithBasicWhereNoMatch(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	for _, v := range benchmarkDataSizes {
 		generateBenchmarkData(v, store)
 
@@ -221,7 +221,7 @@ func BenchmarkExecuteQueryWithBasicWhereNoMatch(b *testing.B) {
 }
 
 func BenchmarkExecuteQueryWithCaseSesnsitivity(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	for _, v := range benchmarkDataSizes {
 		generateBenchmarkData(v, store)
 
@@ -243,7 +243,7 @@ func BenchmarkExecuteQueryWithCaseSesnsitivity(b *testing.B) {
 }
 
 func BenchmarkExecuteQueryWithClauseOnKey(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	for _, v := range benchmarkDataSizes {
 		generateBenchmarkData(v, store)
 
@@ -266,7 +266,7 @@ func BenchmarkExecuteQueryWithClauseOnKey(b *testing.B) {
 }
 
 func BenchmarkExecuteQueryWithAllMatchingKeyRegex(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	for _, v := range benchmarkDataSizes {
 		generateBenchmarkData(v, store)
 
@@ -308,7 +308,7 @@ func generateBenchmarkJSONData(b *testing.B, count int, json string, store *dsto
 }
 
 func BenchmarkExecuteQueryWithJSON(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	for _, v := range benchmarkDataSizesJSON {
 		for jsonSize, json := range jsonList {
 			generateBenchmarkJSONData(b, v, json, store)
@@ -333,7 +333,7 @@ func BenchmarkExecuteQueryWithJSON(b *testing.B) {
 }
 
 func BenchmarkExecuteQueryWithNestedJSON(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	for _, v := range benchmarkDataSizesJSON {
 		for jsonSize, json := range jsonList {
 			generateBenchmarkJSONData(b, v, json, store)
@@ -358,7 +358,7 @@ func BenchmarkExecuteQueryWithNestedJSON(b *testing.B) {
 }
 
 func BenchmarkExecuteQueryWithJsonInLeftAndRightExpressions(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	for _, v := range benchmarkDataSizesJSON {
 		for jsonSize, json := range jsonList {
 			generateBenchmarkJSONData(b, v, json, store)
@@ -384,7 +384,7 @@ func BenchmarkExecuteQueryWithJsonInLeftAndRightExpressions(b *testing.B) {
 
 func BenchmarkExecuteQueryWithJsonNoMatch(b *testing.B) {
 	for _, v := range benchmarkDataSizesJSON {
-		store := dstore.NewStore(nil)
+		store := dstore.NewStore(nil, nil)
 		for jsonSize, json := range jsonList {
 			generateBenchmarkJSONData(b, v, json, store)
 

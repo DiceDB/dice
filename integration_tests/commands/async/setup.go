@@ -120,9 +120,9 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 
 	const totalRetries = 100
 	var err error
-	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Server.KeysLimit)
+	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Server.WatchChanBufSize)
 	gec := make(chan error)
-	shardManager := shard.NewShardManager(1, watchChan, gec, opt.Logger)
+	shardManager := shard.NewShardManager(1, watchChan, nil, gec, opt.Logger)
 	// Initialize the AsyncServer
 	testServer := server.NewAsyncServer(shardManager, watchChan, opt.Logger)
 

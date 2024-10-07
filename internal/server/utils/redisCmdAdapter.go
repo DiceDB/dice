@@ -48,7 +48,7 @@ func ParseHTTPRequest(r *http.Request) (*cmd.DiceDBCmd, error) {
 
 	var args []string
 
-	//Handle subcommand and multiple arguments
+	// Handle subcommand and multiple arguments
 	if subcommand != "" {
 		args = append(args, subcommand)
 	}
@@ -79,69 +79,7 @@ func ParseHTTPRequest(r *http.Request) (*cmd.DiceDBCmd, error) {
 
 			// Define keys to exclude and process their values first
 			// Update as we support more commands
-			var priorityKeys = []string{
-				Key,
-				Keys,
-				Field,
-				Path,
-				JSON,
-				Index,
-				Value,
-				Values,
-				Seconds,
-				User,
-				Password,
-				KeyValues,
-				QwatchQuery,
-				Offset,
-				Member,
-				Members,
-			}
-			for _, key := range priorityKeys {
-				if val, exists := jsonBody[key]; exists {
-					if key == Keys {
-						for _, v := range val.([]interface{}) {
-							args = append(args, fmt.Sprintf("%v", v))
-						}
-						delete(jsonBody, key)
-						continue
-					}
-					if key == JSON {
-						jsonValue, err := json.Marshal(val)
-						if err != nil {
-							return nil, err
-						}
-						args = append(args, string(jsonValue))
-						delete(jsonBody, key)
-						continue
-					}
-					if key == Values {
-						for _, v := range val.([]interface{}) {
-							args = append(args, fmt.Sprintf("%v", v))
-						}
-						delete(jsonBody, key)
-						continue
-					}
-					// MultiKey operations
-					if key == KeyValues {
-						// Handle KeyValues separately
-						for k, v := range val.(map[string]interface{}) {
-							args = append(args, k, fmt.Sprintf("%v", v))
-						}
-						delete(jsonBody, key)
-						continue
-					}
-					if key == Members {
-						for _, v := range val.([]interface{}) {
-							args = append(args, fmt.Sprintf("%v", v))
-						}
-						delete(jsonBody, key)
-						continue
-					}
-					args = append(args, fmt.Sprintf("%v", val))
-					delete(jsonBody, key)
-				}
-			}
+			processPriorityKeys(jsonBody, &args)
 
 			// Process remaining keys in the JSON body
 			for key, val := range jsonBody {
@@ -200,4 +138,50 @@ func ParseWebsocketMessage(msg []byte) (*cmd.DiceDBCmd, error) {
 		Cmd:  command,
 		Args: cmdArr,
 	}, nil
+}
+
+func processPriorityKeys(jsonBody map[string]interface{}, args *[]string) {
+	for _, key := range getPriorityKeys() {
+		if val, exists := jsonBody[key]; exists {
+			switch key {
+			case Keys, Members:
+				for _, v := range val.([]interface{}) {
+					*args = append(*args, fmt.Sprintf("%v", v))
+				}
+			case JSON:
+				jsonValue, _ := json.Marshal(val)
+				*args = append(*args, string(jsonValue))
+			case KeyValues:
+				for k, v := range val.(map[string]interface{}) {
+					*args = append(*args, k, fmt.Sprintf("%v", v))
+				}
+			case Value:
+				*args = append(*args, formatValue(val))
+			case Values:
+				for _, v := range val.([]interface{}) {
+					*args = append(*args, fmt.Sprintf("%v", v))
+				}
+			default:
+				*args = append(*args, fmt.Sprintf("%v", val))
+			}
+			delete(jsonBody, key)
+		}
+	}
+}
+
+func getPriorityKeys() []string {
+	return []string{
+		Key, Keys, Field, Path, JSON, Index, Value, Values, Seconds, User, Password,
+		KeyValues, QwatchQuery, Offset, Member, Members,
+	}
+}
+
+func formatValue(val interface{}) string {
+	switch v := val.(type) {
+	case string:
+		return v
+	default:
+		jsonBytes, _ := json.Marshal(v)
+		return string(jsonBytes)
+	}
 }

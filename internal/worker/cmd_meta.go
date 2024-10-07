@@ -15,6 +15,7 @@ const (
 	SingleShard
 	MultiShard
 	Custom
+	Watch
 )
 
 // Global commands
@@ -26,9 +27,10 @@ const (
 
 // Single-shard commands.
 const (
-	CmdSet    = "SET"
-	CmdGet    = "GET"
-	CmdGetSet = "GETSET"
+	CmdSet      = "SET"
+	CmdGet      = "GET"
+	CmdGetSet   = "GETSET"
+	CmdGetWatch = "GET.WATCH"
 )
 
 type CmdMeta struct {
@@ -69,6 +71,9 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdGetSet: {
 		CmdType: SingleShard,
 	},
+	CmdGetWatch: {
+		CmdType: Watch,
+	},
 }
 
 func init() {
@@ -92,7 +97,7 @@ func validateCmdMeta(c string, meta CmdMeta) error {
 		if meta.decomposeCommand == nil || meta.composeResponse == nil {
 			return fmt.Errorf("multi-shard command %s must have both decomposeCommand and composeResponse implemented", c)
 		}
-	case SingleShard, Custom:
+	case SingleShard, Watch, Custom:
 		// No specific validations for these types currently
 	default:
 		return fmt.Errorf("unknown command type for %s", c)

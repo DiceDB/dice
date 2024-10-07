@@ -8,6 +8,12 @@ import (
 	"github.com/dicedb/dice/internal/cmd"
 )
 
+type CmdWatchResponse struct {
+	ClientIdentifierID uint32
+	Result             interface{}
+	Error              error
+}
+
 type QwatchResponse struct {
 	ClientIdentifierID uint32
 	Result             interface{}

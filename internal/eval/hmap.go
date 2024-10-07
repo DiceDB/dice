@@ -121,7 +121,7 @@ func (h HashMap) incrementFloatValue(field string, incr float64) (string, error)
 		return "-1", diceerrors.NewErr(diceerrors.IntOrFloatErr)
 	}
 
-	if (i > 0 && incr > 0 && i > math.MaxFloat64-incr) || (i < 0 && incr < 0 && i < -math.MaxFloat64-incr) {
+	if math.IsInf(i+incr, 1) || math.IsInf(i+incr, -1) {
 		return "-1", diceerrors.NewErr(diceerrors.IncrDecrOverflowErr)
 	}
 

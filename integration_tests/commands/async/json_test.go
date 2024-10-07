@@ -862,8 +862,8 @@ func TestJsonNummultby(t *testing.T) {
 	invalidArgMessage := "ERR wrong number of arguments for 'json.nummultby' command"
 
 	testCases := []struct {
-		name        string
-		commands    []string
+		name       string
+		commands   []string
 		expected   []interface{}
 		assertType []string
 	}{
@@ -1021,9 +1021,9 @@ func TestJSONNumIncrBy(t *testing.T) {
 	defer conn.Close()
 	invalidArgMessage := "ERR wrong number of arguments for 'json.numincrby' command"
 	testCases := []struct {
-		name        string
-		setupData   string
-		commands    []string
+		name       string
+		setupData  string
+		commands   []string
 		expected   []interface{}
 		assertType []string
 		cleanUp    []string
