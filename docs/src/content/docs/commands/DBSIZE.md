@@ -77,3 +77,23 @@ OK
 ```
 
 In this example, database 0 contains 42 keys, and database 1 contains 15 keys.
+
+### Error Scenarios
+
+1. Attempting to use `DBSIZE` without proper authentication:
+
+```shell
+127.0.0.1:7379> DBSIZE
+(error) NOAUTH Authentication required
+```
+
+
+
+
+<!-- TODO: Need to verify and test the below -->
+2. Trying to use `DBSIZE` without proper permissions:
+
+```shell
+127.0.0.1:7379> DBSIZE
+(error) NOPERM this user has no permissions to run the 'dbsize' command
+```
