@@ -72,6 +72,7 @@ type Config struct {
 		EnableMultiThreading   bool          `mapstructure:"enablemultithreading"`
 		StoreMapInitSize       int           `mapstructure:"storemapinitsize"`
 		WatchChanBufSize       int           `mapstructure:"watchchanbufsize"`
+		AdhocReqChanBufSize    int           `mapstructure:"adhocreqchanbufsize"`
 	} `mapstructure:"server"`
 	Auth struct {
 		UserName string `mapstructure:"username"`
@@ -106,6 +107,7 @@ var baseConfig = Config{
 		EnableMultiThreading   bool          `mapstructure:"enablemultithreading"`
 		StoreMapInitSize       int           `mapstructure:"storemapinitsize"`
 		WatchChanBufSize       int           `mapstructure:"watchchanbufsize"`
+		AdhocReqChanBufSize    int           `mapstructure:"adhocreqchanbufsize"`
 	}{
 		Addr:                   DefaultHost,
 		Port:                   DefaultPort,
@@ -127,6 +129,7 @@ var baseConfig = Config{
 		EnableMultiThreading:   false,
 		StoreMapInitSize:       1024000,
 		WatchChanBufSize:       20000,
+		AdhocReqChanBufSize:    20,
 	},
 	Auth: struct {
 		UserName string `mapstructure:"username"`
