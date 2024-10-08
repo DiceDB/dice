@@ -39,15 +39,32 @@ EXPIREAT key timestamp [NX|XX|GT|LT]
 
 ## Error Handling
 
-1. `Wrong number of arguments`: 
-   - Error Message: `(error) ERROR wrong number of arguments for 'expireat' command`
-   - Occurs if the command is called with too little arguments
-2. `Invalid timestamp`: 
-   - Error Message: `(error) ERROR value is not an integer or out of range`
-   - If the provided timestamp is not a valid integer
-3. `Invalid format of Unix Timestamp`: 
-   - Error Message: `(error) ERROR invalid expire time in 'expireat' command`
-   - If the expiry time is not in the allowed range.
+### Wrong number of arguments
+
+When the `EXPIREAT` command is called with the wrong number of arguments, an error is returned.
+
+```bash
+  127.0.0.1:7379> EXPIREAT testkey1
+(error) ERROR wrong number of arguments for 'expireat' command
+```
+
+### Invalid timestamp
+
+When the provided timestamp is not a valid integer, an error is returned.
+
+```bash
+127.0.0.1:7379> EXPIREAT testkey1 17282112781a
+(error) ERROR value is not an integer or out of range
+```
+
+### Invalid format of Unix Timestamp
+
+When the provided timestamp is not a valid Unix timestamp, or is outside the supported range, an error is returned.
+
+```bash
+127.0.0.1:7379> EXPIREAT testkey1 11111111111111111
+(error) ERROR invalid expire time in 'expireat' command
+```
 
 ## Example Usage
 
