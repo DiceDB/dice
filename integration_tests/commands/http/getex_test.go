@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetEx(t *testing.T) {
@@ -259,11 +259,11 @@ func TestGetEx(t *testing.T) {
 					time.Sleep(tc.delay[i])
 				}
 				result, err := exec.FireCommand(cmd)
-				assert.NilError(t, err)
+				assert.Nil(t, err)
 				if tc.assertType[i] == "equal" {
-					assert.DeepEqual(t, tc.expected[i], result)
+					assert.Equal(t, tc.expected[i], result)
 				} else if tc.assertType[i] == "assert" {
-					assert.Assert(t, result.(float64) <= tc.expected[i].(float64), "Expected %v to be less than or equal to %v", result, tc.expected[i])
+					assert.True(t, result.(float64) <= tc.expected[i].(float64), "Expected %v to be less than or equal to %v", result, tc.expected[i])
 				}
 			}
 		})

@@ -3,7 +3,7 @@ package http
 import (
 	"testing"
 
-	testifyAssert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSetDataCmd(t *testing.T) {
@@ -299,9 +299,9 @@ func TestSetDataCmd(t *testing.T) {
 				result, _ := exec.FireCommand(cmd)
 				switch tc.assert_type[i] {
 				case "array":
-					testifyAssert.ElementsMatch(t, tc.expected[i], result)
+					assert.ElementsMatch(t, tc.expected[i], result)
 				default:
-					testifyAssert.Equal(t, tc.expected[i], result)
+					assert.Equal(t, tc.expected[i], result)
 				}
 			}
 		})

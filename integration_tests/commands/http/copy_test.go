@@ -4,7 +4,7 @@ import (
 	"github.com/dicedb/dice/testutils"
 	"testing"
 
-	testifyAssert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCopy(t *testing.T) {
@@ -109,14 +109,14 @@ func TestCopy(t *testing.T) {
 				result, _ := exec.FireCommand(cmd)
 				_, ok := result.(float64)
 				if ok {
-					testifyAssert.Equal(t, tc.expected[i], result)
+					assert.Equal(t, tc.expected[i], result)
 					continue
 				}
 
 				if testutils.IsJSONResponse(result.(string)) {
-					testifyAssert.JSONEq(t, tc.expected[i].(string), result.(string))
+					assert.JSONEq(t, tc.expected[i].(string), result.(string))
 				} else {
-					testifyAssert.Equal(t, tc.expected[i], result)
+					assert.Equal(t, tc.expected[i], result)
 				}
 			}
 		})
