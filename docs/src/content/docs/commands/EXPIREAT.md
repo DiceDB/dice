@@ -44,7 +44,7 @@ When the `EXPIREAT` command is called with the wrong number of arguments, an err
 
 ```bash
 127.0.0.1:7379> EXPIREAT testkey1
-(error) ERROR wrong number of arguments for 'expireat' command
+(error) ERROR wrong number of arguments for 'EXPIREAT' command
 ```
 
 ### Invalid timestamp
@@ -62,7 +62,7 @@ When the provided timestamp is not a valid Unix timestamp, or is outside the sup
 
 ```bash
 127.0.0.1:7379> EXPIREAT testkey1 11111111111111111
-(error) ERROR invalid expire time in 'expireat' command
+(error) ERROR invalid expire time in 'EXPIREAT' command
 ```
 
 ## Example Usage
