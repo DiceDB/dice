@@ -3,7 +3,7 @@ package async
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAPPEND(t *testing.T) {
@@ -68,7 +68,7 @@ func TestAPPEND(t *testing.T) {
 
 			for i, cmd := range tc.commands {
 				result := FireCommand(conn, cmd)
-				assert.DeepEqual(t, tc.expected[i], result)
+				assert.Equal(t, tc.expected[i], result, "They should be deeply equal")
 			}
 		})
 	}

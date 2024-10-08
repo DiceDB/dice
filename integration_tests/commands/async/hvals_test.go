@@ -1,10 +1,8 @@
 package async
 
 import (
-	testifyAssert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 	"testing"
-
-	"gotest.tools/v3/assert"
 )
 
 func TestHvals(t *testing.T) {
@@ -46,10 +44,10 @@ func TestHvals(t *testing.T) {
 
 				// If both are lists, compare them unordered
 				if isExpectedList && isResultList && len(resultList) == len(expectedList) {
-					testifyAssert.ElementsMatch(t, expectedList, convertToStringSlice(resultList))
+					assert.ElementsMatch(t, expectedList, convertToStringSlice(resultList))
 				} else {
 					// Otherwise, do a deep comparison
-					assert.DeepEqual(t, tc.expected[i], result)
+					assert.Equal(t, tc.expected[i], result)
 				}
 			}
 		})

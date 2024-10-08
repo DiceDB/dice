@@ -3,7 +3,7 @@ package async
 import (
 	"testing"
 
-	testifyAssert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHKEYS(t *testing.T) {
@@ -31,7 +31,7 @@ func TestHKEYS(t *testing.T) {
 			name:     "HKEYS with wrong number of arguments",
 			commands: []string{"HKEYS key_hkeys03 x", "HKEYS"},
 			expected: []interface{}{"ERR wrong number of arguments for 'hkeys' command",
-					"ERR wrong number of arguments for 'hkeys' command"},
+				"ERR wrong number of arguments for 'hkeys' command"},
 		},
 	}
 
@@ -39,9 +39,9 @@ func TestHKEYS(t *testing.T) {
 		for i, cmd := range tc.commands {
 			result := FireCommand(conn, cmd)
 			if slice, ok := tc.expected[i].([]interface{}); ok {
-				testifyAssert.ElementsMatch(t, slice, result)
+				assert.ElementsMatch(t, slice, result)
 			} else {
-				testifyAssert.Equal(t, tc.expected[i], result)
+				assert.Equal(t, tc.expected[i], result)
 			}
 		}
 	}

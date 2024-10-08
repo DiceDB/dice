@@ -2,7 +2,7 @@ package async
 
 import (
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -59,7 +59,7 @@ func TestHRANDFIELD(t *testing.T) {
 					if str, ok := result.(string); ok {
 						assert.Equal(t, str, expected, "Unexpected result for command: %s", cmd)
 					} else {
-						assert.DeepEqual(t, result, expected, cmpopts.EquateEmpty())
+						assert.Equal(t, result, expected, cmpopts.EquateEmpty())
 					}
 				}
 			}
@@ -99,7 +99,7 @@ func assertRandomFieldResult(t *testing.T, result interface{}, expected []string
 	}
 
 	// assert that all results are in the expected set or that there is a single valid result
-	assert.Assert(t, count == len(resultsList) || count == 1,
+	assert.True(t, count == len(resultsList) || count == 1,
 		"Expected all results to be in the expected set or a single valid result. Got %d out of %d",
 		count, len(resultsList))
 }

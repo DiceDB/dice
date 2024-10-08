@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/internal/server/utils"
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestINCR(t *testing.T) {

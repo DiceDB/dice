@@ -3,7 +3,7 @@ package async
 // All commands related to Hyperloglog are part of this test class
 // PFADD, PFCOUNT, PFMERGE, PFDEBUG, PFSELFTEST etc.
 import (
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -89,7 +89,7 @@ func TestHyperLogLogCommands(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.commands {
 				result := FireCommand(conn, cmd)
-				assert.DeepEqual(t, tc.expected[i], result)
+				assert.Equal(t, tc.expected[i], result)
 			}
 		})
 	}

@@ -3,7 +3,7 @@ package async
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHSTRLEN(t *testing.T) {
@@ -39,7 +39,7 @@ func TestHSTRLEN(t *testing.T) {
 	for _, tc := range testCases {
 		for i, cmd := range tc.commands {
 			result := FireCommand(conn, cmd)
-			assert.DeepEqual(t, tc.expected[i], result)
+			assert.Equal(t, tc.expected[i], result)
 		}
 	}
 }

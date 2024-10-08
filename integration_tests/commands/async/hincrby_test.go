@@ -3,7 +3,7 @@ package async
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHINCRBY(t *testing.T) {
@@ -78,7 +78,7 @@ func TestHINCRBY(t *testing.T) {
 	for _, tc := range testcases {
 		for i, cmd := range tc.commands {
 			result := FireCommand(conn, cmd)
-			assert.DeepEqual(t, tc.expected[i], result)
+			assert.Equal(t, tc.expected[i], result)
 		}
 	}
 }

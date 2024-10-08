@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBitOpsString(t *testing.T) {
@@ -180,7 +180,7 @@ func TestBitOpsString(t *testing.T) {
 				case "equal":
 					assert.Equal(t, res, tc.expected[i])
 				case "less":
-					assert.Assert(t, res.(int64) <= tc.expected[i].(int64), "CMD: %s Expected %d to be less than or equal to %d", tc.cmds[i], res, tc.expected[i])
+					assert.True(t, res.(int64) <= tc.expected[i].(int64), "CMD: %s Expected %d to be less than or equal to %d", tc.cmds[i], res, tc.expected[i])
 				}
 			}
 		})

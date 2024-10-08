@@ -1,9 +1,8 @@
 package async
 
 import (
+	"github.com/stretchr/testify/assert"
 	"testing"
-
-	testifyAssert "github.com/stretchr/testify/assert"
 )
 
 func TestHEXISTS(t *testing.T) {
@@ -41,7 +40,7 @@ func TestHEXISTS(t *testing.T) {
 	for _, tc := range testCases {
 		for i, cmd := range tc.commands {
 			result := FireCommand(conn, cmd)
-			testifyAssert.Equal(t, tc.expected[i], result)
+			assert.Equal(t, tc.expected[i], result)
 		}
 	}
 }

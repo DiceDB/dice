@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/dicedb/dice/internal/server/utils"
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDECR(t *testing.T) {
