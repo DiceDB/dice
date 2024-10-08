@@ -7,7 +7,7 @@ The `EXPIREAT` command is used to set the expiration time of a key in DiceDB. Un
 
 ## Syntax
 
-```
+```plaintext
 EXPIREAT key timestamp [NX|XX|GT|LT]
 ```
 
@@ -21,7 +21,6 @@ EXPIREAT key timestamp [NX|XX|GT|LT]
 | `XX`        | Set the expiration only if the key already has an expiration time.                              | None    | No       |
 | `GT`        | Set the expiration only if the new expiration time is greater than or equal to the current one. | None    | No       |
 | `LT`        | Set the expiration only if the new expiration time is less than the current one.                | None    | No       |
-
 
 ## Return values
 
@@ -44,7 +43,7 @@ EXPIREAT key timestamp [NX|XX|GT|LT]
 When the `EXPIREAT` command is called with the wrong number of arguments, an error is returned.
 
 ```bash
-  127.0.0.1:7379> EXPIREAT testkey1
+127.0.0.1:7379> EXPIREAT testkey1
 (error) ERROR wrong number of arguments for 'expireat' command
 ```
 
@@ -131,7 +130,7 @@ OK
 
 The `GT` option is used to set the expiration time only if the new expiration time is greater than or equal to the current one.
 
-```bash 
+```bash
 127.0.0.1:7379> SET key value
 OK                             
 127.0.0.1:7379> EXPIREAT key 12334444444
