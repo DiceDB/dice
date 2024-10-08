@@ -1,137 +1,141 @@
 ---
 title: JSON.ARRLEN
-description: Documentation for the DiceDB command JSON.ARRLEN
+description: The `JSON.ARRLEN` command in DiceDBJSON is used to retrieve the length of a JSON array at a specified path within a JSON document.
 ---
 
-The `JSON.ARRLEN` command is part of the DiceDBJSON module, which allows you to work with JSON data structures in DiceDB. This command is used to retrieve the length of a JSON array at a specified path within a JSON document.
+The `JSON.ARRLEN` command in DiceDBJSON is used to retrieve the length of a JSON array at a specified path within a JSON document.
 
 ## Syntax
 
-```plaintext
+```
 JSON.ARRLEN <key> [path]
 ```
 
 ## Parameters
 
-- `key`: (Required) The key under which the JSON document is stored.
-- `path`: (Optional) The JSONPath to the array within the JSON document. If not provided, the root path (`$`) is assumed.
+| Parameter | Description                                                             | Type   | Required |
+|-----------|-------------------------------------------------------------------------|--------|----------|
+| `key`     | The key under which the JSON document is stored.                        | String | Yes      |
+| `path`    | The JSONPath to the array within the JSON document. Defaults to root.   | String | No       |
 
-## Return Value
+## Return values
 
-The command returns an integer representing the length of the JSON array at the specified path. If the path does not exist or does not point to a JSON array, the command returns `null`.
+| Condition                                 | Return Value                                                                    |
+|-------------------------------------------|---------------------------------------------------------------------------------|
+| JSON array is found at the specified path | Length of the JSON array                                                        |
+| JSONPath contains `*` wildcard            | Indicates the length of each key in the JSON. Returns `nil` for non-array keys. |
 
 ## Behaviour
 
-When the `JSON.ARRLEN` command is executed, DiceDB will:
+- If the specified `key` does not exist, the command returns `null`.
+- If `path` is not specified, the command assumes the root path (`$`).
+- If the specified path exists and points to a JSON array, the command returns the length of the array.
+- If the path does not exist or does not point to a JSON array, an error is returned.
+- Multiple results are represented as a list in case of wildcards, where each array length is returned in order of appearance.
 
-1. Retrieve the JSON document stored at the specified key.
-2. Navigate to the specified path within the JSON document.
-3. Determine if the value at the specified path is a JSON array.
-4. Return the length of the JSON array if it exists, or `null` if the path does not exist or does not point to a JSON array.
+## Errors
 
-## Error Handling
+1. **Wrong number of arguments**:
+   - Error Message: `(error) ERROR wrong number of arguments for 'JSON.ARRLEN' command`
+   - Occurs when the command is executed with less than one argument or with an invalid number of parameters.
 
-The following errors may be raised by the `JSON.ARRLEN` command:
+2. **Invalid JSONPath**:
+   - Error Message: `(error) ERROR Invalid JSONPath`
+   - Occurs when the specified JSONPath is not valid or incorrect
 
-- `(error) ERR wrong number of arguments for 'JSON.ARRLEN' command`: This error occurs if the command is called with an incorrect number of arguments.
-- `(error) ERR key does not exist`: This error occurs if the specified key does not exist in the DiceDB database.
-- `(error) ERR path does not exist`: This error occurs if the specified path does not exist within the JSON document.
-- `(error) ERR path is not a JSON array`: This error occurs if the specified path does not point to a JSON array.
+3. **Path does not exist**:
+   - Error Message: `(error) ERROR Path 'NON_EXISTANT_PATH' does not exist`
+   - Occurs when the provided JSON path does not exist in the document.
 
-## Example Usage
+4. **Path is not a JSON array**:
+   - Error Message: `(error) ERROR Path 'NON_ARRAY_PATH' does not exist or not array`
+   - Occurs when the specified path does not point to a JSON array.
+
+## Examples
 
 ### Example 1: Basic Usage
 
-Assume we have a JSON document stored at key `user:1001`:
+Setting a key `user:1001` with a JSON document:
 
-```json
-{
-  "name": "John Doe",
-  "emails": ["john.doe@example.com", "johndoe@gmail.com"],
-  "age": 30
-}
+```bash
+127.0.0.1:7379> JSON.SET user:1001 $ '{"name":"John Doe","emails":["john.doe@example.com","johndoe@gmail.com"],"age":30}'
+OK
 ```
 
 To get the length of the `emails` array:
 
-```plaintext
-JSON.ARRLEN user:1001 $.emails
-```
-
-`Response:`
-
-```plaintext
-2
+```bash
+127.0.0.1:7379> JSON.ARRLEN user:1001 $.emails
+(integer) 2
 ```
 
 ### Example 2: Root Path
 
-Assume we have a JSON document stored at key `user:1002`:
+Setting a key `user:1002` with a root array:
 
-```json
-[
-  "item1",
-  "item2",
-  "item3"
-]
+```bash
+127.0.0.1:7379> JSON.SET user:1002 $ '["item1", "item2", "item3"]'
+OK
 ```
 
 To get the length of the root array:
 
-```plaintext
-JSON.ARRLEN user:1002
+```bash
+127.0.0.1:7379> JSON.ARRLEN user:1002
+(integer) 3
 ```
 
-`Response:`
-
-```plaintext
-3
-```
+`Response: 3`
 
 ### Example 3: Non-Existent Path
 
-Assume we have a JSON document stored at key `user:1003`:
+Setting a key `user:1003` with a JSON document:
 
-```json
-{
-  "name": "Jane Doe",
-  "contacts": {
-    "phone": "123-456-7890"
-  }
-}
+```bash
+127.0.0.1:7379> JSON.SET user:1003 $ '{"name": "Jane Doe","contacts":{"phone":"123-456-7890"}}'
+OK
 ```
 
-To get the length of a non-existent array:
+To get the length of a non-existent `emails` array:
 
-```plaintext
-JSON.ARRLEN user:1003 $.emails
-```
-
-`Response:`
-
-```plaintext
-(null)
+```bash
+127.0.0.1:7379> JSON.ARRLEN user:1003 $.emails
+(error) ERROR Path '$.emails' does not exist
 ```
 
 ### Example 4: Path is Not an Array
 
-Assume we have a JSON document stored at key `user:1004`:
+Setting a key `user:1004` with a JSON document:
 
-```json
-{
-  "name": "Alice",
-  "age": 25
-}
+```bash
+127.0.0.1:7379> JSON.SET user:1004 $ '{"name": "Alice","age": 25}'
+OK
 ```
 
 To get the length of a non-array path:
 
-```plaintext
-JSON.ARRLEN user:1004 $.age
+```bash
+127.0.0.1:7379> JSON.ARRLEN user:1004 $.age
+(error) ERROR Path '$.age' does not exist or not array
 ```
 
-`Response:`
+### Example 5: Path with Wildcards
 
-```plaintext
-(null)
+Setting a key `user:1005` with a complex JSON document:
+
+```bash
+127.0.0.1:7379> JSON.SET user:1005 $ '{"age": 13,"high": 1.60,"pet": null,"language": ["python", "golang"],"partner": {"name": "tom"}}'
+OK
 ```
+
+To get the length of the `language` array using a wildcard path:
+
+```bash
+127.0.0.1:7379> JSON.ARRLEN user:1005 $.*
+1) (nil)
+1) (nil)
+1) (nil)
+4) (integer) 2
+5) (nil)
+```
+---
