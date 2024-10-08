@@ -42,7 +42,7 @@ func setup(store *dstore.Store, dataset []keyValue) {
 }
 
 func TestExecuteQueryOrderBykey(t *testing.T) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	setup(store, simpleKVDataset)
 
 	queryString := "SELECT $key, $value WHERE $key like 'k*' ORDER BY $key ASC"
@@ -69,7 +69,7 @@ func TestExecuteQueryOrderBykey(t *testing.T) {
 }
 
 func TestExecuteQueryBasicOrderByValue(t *testing.T) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	setup(store, simpleKVDataset)
 
 	queryStr := "SELECT $key, $value WHERE $key like 'k*' ORDER BY $value ASC"
@@ -96,7 +96,7 @@ func TestExecuteQueryBasicOrderByValue(t *testing.T) {
 }
 
 func TestExecuteQueryLimit(t *testing.T) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	setup(store, simpleKVDataset)
 
 	queryStr := "SELECT $value WHERE $key like 'k*' ORDER BY $key ASC LIMIT 3"
@@ -123,7 +123,7 @@ func TestExecuteQueryLimit(t *testing.T) {
 }
 
 func TestExecuteQueryNoMatch(t *testing.T) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	setup(store, simpleKVDataset)
 
 	queryStr := "SELECT $key, $value WHERE $key like 'x*'"
@@ -137,7 +137,7 @@ func TestExecuteQueryNoMatch(t *testing.T) {
 }
 
 func TestExecuteQueryWithWhere(t *testing.T) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	setup(store, simpleKVDataset)
 	t.Run("BasicWhereClause", func(t *testing.T) {
 		queryStr := "SELECT $key, $value WHERE $value = 'v3' AND $key like 'k*'"
@@ -190,7 +190,7 @@ func TestExecuteQueryWithWhere(t *testing.T) {
 }
 
 func TestExecuteQueryWithIncompatibleTypes(t *testing.T) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	setup(store, simpleKVDataset)
 
 	t.Run("ComparingStrWithInt", func(t *testing.T) {
@@ -205,7 +205,7 @@ func TestExecuteQueryWithIncompatibleTypes(t *testing.T) {
 }
 
 func TestExecuteQueryWithEdgeCases(t *testing.T) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	setup(store, simpleKVDataset)
 
 	t.Run("CaseSensitivity", func(t *testing.T) {
@@ -285,7 +285,7 @@ func setupJSON(t *testing.T, store *dstore.Store, dataset []keyValue) {
 }
 
 func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	setupJSON(t, store, jsonWhereClauseDataset)
 
 	t.Run("BasicWhereClauseWithJSON", func(t *testing.T) {
@@ -394,7 +394,7 @@ var jsonOrderDataset = []keyValue{
 }
 
 func TestExecuteQueryWithJsonOrderBy(t *testing.T) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	setupJSON(t, store, jsonOrderDataset)
 
 	t.Run("OrderBySimpleJSONField", func(t *testing.T) {
@@ -557,7 +557,7 @@ var stringComparisonDataset = []keyValue{
 }
 
 func TestExecuteQueryWithLikeStringComparisons(t *testing.T) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	setup(store, stringComparisonDataset)
 
 	testCases := []struct {
@@ -642,7 +642,7 @@ func TestExecuteQueryWithLikeStringComparisons(t *testing.T) {
 }
 
 func TestExecuteQueryWithStringNotLikeComparisons(t *testing.T) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	setup(store, stringComparisonDataset)
 
 	testCases := []struct {

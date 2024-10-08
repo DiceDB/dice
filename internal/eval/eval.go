@@ -584,8 +584,10 @@ func evalJSONARRLEN(args []string, store *dstore.Store) []byte {
 
 	// Retrieve the object from the database
 	obj := store.Get(key)
+
+	// If the object is not present in the store or if its nil, then we should simply return nil.
 	if obj == nil {
-		return diceerrors.NewErrWithMessage("Path '.' does not exist or not an array")
+		return clientio.RespNIL
 	}
 
 	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
@@ -600,32 +602,55 @@ func evalJSONARRLEN(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
 	}
 
+	// This is the case if only argument passed to JSON.ARRLEN is the key itself.
+	// This is valid only if the key holds an array; otherwise, an error should be returned.
 	if len(args) == 1 {
 		if utils.GetJSONFieldType(jsonData) == utils.ArrayType {
 			return clientio.Encode(len(jsonData.([]interface{})), false)
 		}
-		return diceerrors.NewErrWithMessage("Path '.' does not exist or not an array")
+		return diceerrors.NewErrWithMessage("Path '$' does not exist or not an array")
 	}
 
-	path := args[1]
+	path := args[1] // Getting the path to find the length of the array
 	expr, err := jp.ParseString(path)
 	if err != nil {
-		return diceerrors.NewErrWithMessage("invalid JSONPath")
+		return diceerrors.NewErrWithMessage("Invalid JSONPath")
 	}
 
 	results := expr.Get(jsonData)
+	errMessage := fmt.Sprintf("Path '%s' does not exist", args[1])
 
-	arrlenList := make([]interface{}, 0, len(results))
-	for _, result := range results {
-		switch utils.GetJSONFieldType(result) {
-		case utils.ArrayType:
-			arrlenList = append(arrlenList, len(result.([]interface{})))
-		default:
-			arrlenList = append(arrlenList, nil)
-		}
+	// If there are no results, that means the JSONPath does not exist
+	if len(results) == 0 {
+		return diceerrors.NewErrWithMessage(errMessage)
 	}
 
-	return clientio.Encode(arrlenList, false)
+	// If the results are greater than one, we need to print them as a list
+	// This condition should be updated in future when supporting Complex JSONPaths
+	if len(results) > 1 {
+		arrlenList := make([]interface{}, 0, len(results))
+		for _, result := range results {
+			switch utils.GetJSONFieldType(result) {
+			case utils.ArrayType:
+				arrlenList = append(arrlenList, len(result.([]interface{})))
+			default:
+				arrlenList = append(arrlenList, nil)
+			}
+		}
+
+		return clientio.Encode(arrlenList, false)
+	}
+
+	// Single result should be printed as single integer instead of list
+	jsonValue := results[0]
+
+	if utils.GetJSONFieldType(jsonValue) == utils.ArrayType {
+		return clientio.Encode(len(jsonValue.([]interface{})), false)
+	}
+
+	// If execution reaches this point, the provided path either does not exist.
+	errMessage = fmt.Sprintf("Path '%s' does not exist or not array", args[1])
+	return diceerrors.NewErrWithMessage(errMessage)
 }
 
 func evalJSONARRPOP(args []string, store *dstore.Store) []byte {
@@ -2128,7 +2153,7 @@ func EvalQWATCH(args []string, httpOp bool, client *comm.Client, store *dstore.S
 	}
 
 	// TODO: We should return the list of all queries being watched by the client.
-	return clientio.Encode(clientio.CreatePushResponse(&query, queryResult.Result), false)
+	return clientio.Encode(clientio.CreatePushResponse(sql.Qwatch, query.String(), *queryResult.Result), false)
 }
 
 // EvalQUNWATCH removes the specified key from the watch list for the caller client.
@@ -3013,16 +3038,49 @@ func evalHSET(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("HSET")
 	}
 
+	numKeys, err := insertInHashMap(args, store)
+
+	if err != nil {
+		return err
+	}
+
+	return clientio.Encode(numKeys, false)
+}
+
+// evalHMSET sets the specified fields to their
+// respective values in a hashmap stored at key
+//
+// This command overwrites the values of specified
+// fields that exist in the hash.
+//
+// If key doesn't exist, a new key holding a hash is created.
+//
+// Usage: HMSET key field value [field value ...]
+func evalHMSET(args []string, store *dstore.Store) []byte {
+	if len(args) < 3 {
+		return diceerrors.NewErrArity("HMSET")
+	}
+
+	_, err := insertInHashMap(args, store)
+
+	if err != nil {
+		return err
+	}
+
+	return clientio.RespOK
+}
+
+// helper function to insert key value in hashmap associated with the given hash
+func insertInHashMap(args []string, store *dstore.Store) (numKeys int64, err2 []byte) {
 	key := args[0]
 
 	obj := store.Get(key)
 
 	var hashMap HashMap
-	var numKeys int64
 
 	if obj != nil {
 		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+			return 0, diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 		}
 		hashMap = obj.Value.(HashMap)
 	}
@@ -3030,14 +3088,14 @@ func evalHSET(args []string, store *dstore.Store) []byte {
 	keyValuePairs := args[1:]
 	hashMap, numKeys, err := hashMapBuilder(keyValuePairs, hashMap)
 	if err != nil {
-		return diceerrors.NewErrWithMessage(err.Error())
+		return 0, diceerrors.NewErrWithMessage(err.Error())
 	}
 
 	obj = store.NewObj(hashMap, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
 
 	store.Put(key, obj)
 
-	return clientio.Encode(numKeys, false)
+	return numKeys, nil
 }
 
 // evalHKEYS is used toretrieve all the keys(or field names) within a hash.
@@ -3491,7 +3549,9 @@ func evalLPUSH(args []string, store *dstore.Store) []byte {
 		obj.Value.(*Deque).LPush(args[i])
 	}
 
-	return clientio.RespOK
+	deq := obj.Value.(*Deque)
+
+	return clientio.Encode(deq.Length, false)
 }
 
 func evalRPUSH(args []string, store *dstore.Store) []byte {
@@ -3522,7 +3582,9 @@ func evalRPUSH(args []string, store *dstore.Store) []byte {
 		obj.Value.(*Deque).RPush(args[i])
 	}
 
-	return clientio.RespOK
+	deq := obj.Value.(*Deque)
+
+	return clientio.Encode(deq.Length, false)
 }
 
 func evalRPOP(args []string, store *dstore.Store) []byte {

@@ -13,7 +13,7 @@ func TestMain(m *testing.M) {
 	l := logger.New(logger.Opts{WithTimestamp: false})
 	slog.SetDefault(l)
 
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	store.ResetStore()
 
 	exitCode := m.Run()

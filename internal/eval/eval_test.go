@@ -42,7 +42,7 @@ func setupTest(store *dstore.Store) *dstore.Store {
 }
 
 func TestEval(t *testing.T) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	testEvalMSET(t, store)
 	testEvalECHO(t, store)
@@ -74,6 +74,7 @@ func TestEval(t *testing.T) {
 	testEvalDbsize(t, store)
 	testEvalGETSET(t, store)
 	testEvalHSET(t, store)
+	testEvalHMSET(t, store)
 	testEvalHKEYS(t, store)
 	testEvalPFADD(t, store)
 	testEvalPFCOUNT(t, store)
@@ -933,7 +934,7 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 		"key does not exist": {
 			setup:  func() {},
 			input:  []string{"NONEXISTENT_KEY"},
-			output: []byte("-ERR Path '.' does not exist or not an array\r\n"),
+			output: []byte("$-1\r\n"),
 		},
 		"root not array arrlen": {
 			setup: func() {
@@ -945,7 +946,7 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:  []string{"EXISTING_KEY"},
-			output: []byte("-ERR Path '.' does not exist or not an array\r\n"),
+			output: []byte("-ERR Path '$' does not exist or not an array\r\n"),
 		},
 		"root array arrlen": {
 			setup: func() {
@@ -984,7 +985,7 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 			},
 
 			input:  []string{"EXISTING_KEY", "$.language"},
-			output: []byte("*1\r\n:2\r\n"),
+			output: []byte(":2\r\n"),
 		},
 	}
 	runEvalTests(t, tests, evalJSONARRLEN, store)
@@ -1110,7 +1111,7 @@ func testEvalJSONOBJLEN(t *testing.T, store *dstore.Store) {
 
 func BenchmarkEvalJSONOBJLEN(b *testing.B) {
 	sizes := []int{0, 10, 100, 1000, 10000, 100000} // Various sizes of JSON objects
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("JSONObjectSize_%d", size), func(b *testing.B) {
@@ -2834,13 +2835,13 @@ func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]s
 func BenchmarkEvalMSET(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		store := dstore.NewStore(nil)
+		store := dstore.NewStore(nil, nil)
 		evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"}, store)
 	}
 }
 
 func BenchmarkEvalHSET(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	for i := 0; i < b.N; i++ {
 		evalHSET([]string{"KEY", fmt.Sprintf("FIELD_%d", i), fmt.Sprintf("VALUE_%d", i)}, store)
 	}
@@ -2932,6 +2933,92 @@ func testEvalHSET(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalHSET, store)
 }
 
+func testEvalHMSET(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"wrong number of args passed": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'hmset' command\r\n"),
+		},
+		"only key passed": {
+			setup:  func() {},
+			input:  []string{"key"},
+			output: []byte("-ERR wrong number of arguments for 'hmset' command\r\n"),
+		},
+		"only key and field_name passed": {
+			setup:  func() {},
+			input:  []string{"KEY", "field_name"},
+			output: []byte("-ERR wrong number of arguments for 'hmset' command\r\n"),
+		},
+		"key, field and value passed": {
+			setup:  func() {},
+			input:  []string{"KEY1", "field_name", "value"},
+			output: clientio.RespOK,
+		},
+		"key, field and value updated": {
+			setup:  func() {},
+			input:  []string{"KEY1", "field_name", "value_new"},
+			output: clientio.RespOK,
+		},
+		"new set of key, field and value added": {
+			setup:  func() {},
+			input:  []string{"KEY2", "field_name_new", "value_new_new"},
+			output: clientio.RespOK,
+		},
+		"apply with duplicate key, field and value names": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field := "mock_field_name"
+				newMap := make(HashMap)
+				newMap[field] = "mock_field_value"
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input:  []string{"KEY_MOCK", "mock_field_name", "mock_field_value"},
+			output: clientio.RespOK,
+		},
+		"same key -> update value, add new field and value": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field := "mock_field_name"
+				mockValue := "mock_field_value"
+				newMap := make(HashMap)
+				newMap[field] = mockValue
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+
+				// Check if the map is saved correctly in the store
+				res, err := getValueFromHashMap(key, field, store)
+
+				assert.Assert(t, err == nil)
+				assert.DeepEqual(t, res, clientio.Encode(mockValue, false))
+			},
+			input: []string{
+				"KEY_MOCK",
+				"mock_field_name",
+				"mock_field_value_new",
+				"mock_field_name_new",
+				"mock_value_new",
+			},
+			output: clientio.RespOK,
+		},
+	}
+
+	runEvalTests(t, tests, evalHMSET, store)
+}
+
 func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"wrong number of args passed": {
@@ -2975,7 +3062,7 @@ func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalHKEYS(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	for i := 0; i < b.N; i++ {
 		evalHSET([]string{"KEY", fmt.Sprintf("FIELD_%d", i), fmt.Sprintf("VALUE_%d", i)}, store)
@@ -2986,7 +3073,7 @@ func BenchmarkEvalHKEYS(b *testing.B) {
 	}
 }
 func BenchmarkEvalPFCOUNT(b *testing.B) {
-	store := *dstore.NewStore(nil)
+	store := *dstore.NewStore(nil, nil)
 
 	// Helper function to create and insert HLL objects
 	createAndInsertHLL := func(key string, items []string) {
@@ -3334,7 +3421,7 @@ func testEvalHLEN(t *testing.T, store *dstore.Store) {
 
 func BenchmarkEvalHLEN(b *testing.B) {
 	sizes := []int{0, 10, 100, 1000, 10000, 100000}
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("HashSize_%d", size), func(b *testing.B) {
@@ -3576,7 +3663,7 @@ func testEvalTYPE(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalTYPE(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	// Define different types of objects to benchmark
 	objectTypes := map[string]func(){
@@ -3767,7 +3854,7 @@ func testEvalJSONOBJKEYS(t *testing.T, store *dstore.Store) {
 
 func BenchmarkEvalJSONOBJKEYS(b *testing.B) {
 	sizes := []int{0, 10, 100, 1000, 10000, 100000} // Various sizes of JSON objects
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("JSONObjectSize_%d", size), func(b *testing.B) {
@@ -3935,7 +4022,7 @@ func testEvalGETRANGE(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalGETRANGE(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	store.Put("BENCHMARK_KEY", store.NewObj("Hello World", maxExDuration, object.ObjTypeString, object.ObjEncodingRaw))
 
 	inputs := []struct {
@@ -3960,7 +4047,7 @@ func BenchmarkEvalGETRANGE(b *testing.B) {
 }
 
 func BenchmarkEvalHSETNX(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	for i := 0; i < b.N; i++ {
 		evalHSETNX([]string{"KEY", fmt.Sprintf("FIELD_%d", i/2), fmt.Sprintf("VALUE_%d", i)}, store)
 	}
@@ -4022,7 +4109,7 @@ func testEvalHSETNX(t *testing.T, store *dstore.Store) {
 }
 
 func TestMSETConsistency(t *testing.T) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"}, store)
 
 	assert.Equal(t, "VAL", store.Get("KEY").Value)
@@ -4030,7 +4117,7 @@ func TestMSETConsistency(t *testing.T) {
 }
 
 func BenchmarkEvalHINCRBY(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	// creating new fields
 	for i := 0; i < b.N; i++ {
@@ -4280,7 +4367,7 @@ func testEvalSETEX(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalSETEX(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -4455,7 +4542,7 @@ func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalINCRBYFLOAT(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	store.Put("key1", store.NewObj("1", maxExDuration, object.ObjTypeString, object.ObjEncodingEmbStr))
 	store.Put("key2", store.NewObj("1.2", maxExDuration, object.ObjTypeString, object.ObjEncodingEmbStr))
 
@@ -4570,7 +4657,7 @@ func testEvalBITOP(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalBITOP(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	// Setup initial data for benchmarking
 	store.Put("key1", store.NewObj(&ByteArray{data: []byte{0x01, 0x02, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
@@ -4864,7 +4951,7 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalAPPEND(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	for i := 0; i < b.N; i++ {
 		evalAPPEND([]string{"key", fmt.Sprintf("val_%d", i)}, store)
 	}
@@ -5337,7 +5424,7 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalHINCRBYFLOAT(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	// Setting initial fields with some values
 	store.Put("key1", store.NewObj(HashMap{"field1": "1.0", "field2": "1.2"}, maxExDuration, object.ObjTypeHashMap, object.ObjEncodingHashMap))

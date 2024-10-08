@@ -30,8 +30,8 @@ func TestSetDataCommand(t *testing.T) {
 	defer conn.Close()
 
 	testCases := []struct {
-		name        string
-		cmd         []string
+		name       string
+		cmd        []string
 		expected   []interface{}
 		assertType []string
 		delay      []time.Duration
