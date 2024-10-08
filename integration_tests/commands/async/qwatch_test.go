@@ -100,6 +100,13 @@ func setupQWATCHTest(t *testing.T, query string) (net.Conn, []net.Conn, func()) 
 	return publisher, subscribers, cleanup
 }
 
+func cleanupQWATCHKeys(publisher net.Conn) {
+	for _, tc := range qWatchTestCases {
+		FireCommand(publisher, fmt.Sprintf("DEL %s:%d", tc.key, tc.userID))
+	}
+	time.Sleep(100 * time.Millisecond)
+}
+
 func setupQWATCHTestWithSDK(t *testing.T) (*redis.Client, []qWatchSDKSubscriber, func()) {
 	t.Helper()
 	publisher := getLocalSdk()
@@ -121,6 +128,13 @@ func setupQWATCHTestWithSDK(t *testing.T) (*redis.Client, []qWatchSDKSubscriber,
 	}
 
 	return publisher, subscribers, cleanup
+}
+
+func cleanupKeysWithSDK(publisher *redis.Client) {
+	for _, tc := range qWatchTestCases {
+		publisher.Del(context.Background(), fmt.Sprintf("%s:%d", tc.key, tc.userID))
+	}
+	time.Sleep(100 * time.Millisecond)
 }
 
 func subscribeToQWATCH(t *testing.T, subscribers []net.Conn, query string) []*clientio.RESPParser {
@@ -212,7 +226,7 @@ func verifySDKUpdates(t *testing.T, channels []<-chan *redis.QMessage, expectedU
 	}
 }
 
-// Test cases for WHERE clause
+// Test cases for WHERE clause for Regular keys
 
 var qWatchWhereQuery = "SELECT $key, $value WHERE $value > 50 and $key like 'match:10?:*' ORDER BY $value desc"
 
@@ -290,27 +304,27 @@ var JSONTestCases = []JSONTestCase{
 }
 
 func TestQwatchWithJSON(t *testing.T) {
-	publisher, subscribers, cleanup := setupJSONTest(t)
+	publisher, subscribers, cleanup := setupJSONTest(t, JSONTestCases)
 	defer cleanup()
 
-	respParsers := subscribeToJSONQueries(t, subscribers)
-	runJSONScenarios(t, publisher, respParsers)
+	respParsers := subscribeToJSONQueries(t, subscribers, JSONTestCases)
+	runJSONScenarios(t, publisher, respParsers, JSONTestCases)
 }
 
-func setupJSONTest(t *testing.T) (net.Conn, []net.Conn, func()) {
+func setupJSONTest(t *testing.T, tests []JSONTestCase) (net.Conn, []net.Conn, func()) {
 	publisher := getLocalConnection()
-	subscribers := make([]net.Conn, len(JSONTestCases))
+	subscribers := make([]net.Conn, len(tests))
 	for i := range subscribers {
 		subscribers[i] = getLocalConnection()
 	}
 
 	cleanup := func() {
-		cleanupJSONKeys(publisher)
+		cleanupJSONKeys(publisher, tests)
 		if err := publisher.Close(); err != nil {
 			t.Errorf("Error closing publisher connection: %v", err)
 		}
 		for i, sub := range subscribers {
-			FireCommand(sub, fmt.Sprintf("QUNWATCH \"%s\"", JSONTestCases[i].qwatchQuery))
+			FireCommand(sub, fmt.Sprintf("QUNWATCH \"%s\"", tests[i].qwatchQuery))
 			if err := sub.Close(); err != nil {
 				t.Errorf("Error closing subscriber connection: %v", err)
 			}
@@ -321,9 +335,9 @@ func setupJSONTest(t *testing.T) (net.Conn, []net.Conn, func()) {
 	return publisher, subscribers, cleanup
 }
 
-func subscribeToJSONQueries(t *testing.T, subscribers []net.Conn) []*clientio.RESPParser {
+func subscribeToJSONQueries(t *testing.T, subscribers []net.Conn, tests []JSONTestCase) []*clientio.RESPParser {
 	respParsers := make([]*clientio.RESPParser, len(subscribers))
-	for i, testCase := range JSONTestCases {
+	for i, testCase := range tests {
 		rp := fireCommandAndGetRESPParser(subscribers[i], fmt.Sprintf("QWATCH \"%s\"", testCase.qwatchQuery))
 		assert.Assert(t, rp != nil)
 		respParsers[i] = rp
@@ -335,8 +349,8 @@ func subscribeToJSONQueries(t *testing.T, subscribers []net.Conn) []*clientio.RE
 	return respParsers
 }
 
-func runJSONScenarios(t *testing.T, publisher net.Conn, respParsers []*clientio.RESPParser) {
-	for i, tc := range JSONTestCases {
+func runJSONScenarios(t *testing.T, publisher net.Conn, respParsers []*clientio.RESPParser, tests []JSONTestCase) {
+	for i, tc := range tests {
 		FireCommand(publisher, fmt.Sprintf("JSON.SET %s $ %s", tc.key, tc.value))
 		verifyJSONUpdates(t, respParsers[i], tc)
 	}
@@ -369,22 +383,8 @@ func verifyJSONUpdates(t *testing.T, rp *clientio.RESPParser, tc JSONTestCase) {
 	}
 }
 
-func cleanupQWATCHKeys(publisher net.Conn) {
-	for _, tc := range qWatchTestCases {
-		FireCommand(publisher, fmt.Sprintf("DEL %s:%d", tc.key, tc.userID))
-	}
-	time.Sleep(100 * time.Millisecond)
-}
-
-func cleanupKeysWithSDK(publisher *redis.Client) {
-	for _, tc := range qWatchTestCases {
-		publisher.Del(context.Background(), fmt.Sprintf("%s:%d", tc.key, tc.userID))
-	}
-	time.Sleep(100 * time.Millisecond)
-}
-
-func cleanupJSONKeys(publisher net.Conn) {
-	for _, tc := range JSONTestCases {
+func cleanupJSONKeys(publisher net.Conn, tests []JSONTestCase) {
+	for _, tc := range tests {
 		FireCommand(publisher, fmt.Sprintf("DEL %s", tc.key))
 	}
 }
@@ -523,4 +523,58 @@ func cleanupJSONOrderByKeys(publisher net.Conn) {
 	for i := 1; i <= 4; i++ {
 		FireCommand(publisher, fmt.Sprintf("DEL player:%d", i))
 	}
+}
+
+// Test cases for WHERE clause for JSON keys
+
+var whereJSONTestCases = []JSONTestCase{
+	{
+		key:         "match:200:user:0",
+		value:       `{"name":"Tom"}`,
+		qwatchQuery: "SELECT $key, $value WHERE '$value.name' = 'Tom' AND $key like 'match:200:user:0'",
+		expectedUpdates: [][]interface{}{
+			{[]interface{}{"match:200:user:0", map[string]interface{}{"name": "Tom"}}},
+		},
+	},
+	{
+		key:         "match:200:user:1",
+		value:       `{"name":"Tom","age":24}`,
+		qwatchQuery: "SELECT $key, $value WHERE '$value.age' > 20 AND $key like 'match:200:user:1'",
+		expectedUpdates: [][]interface{}{
+			{[]interface{}{"match:200:user:1", map[string]interface{}{"name": "Tom", "age": float64(24)}}},
+		},
+	},
+	{
+		key:         "match:200:user:2",
+		value:       `{"score":10.36}`,
+		qwatchQuery: "SELECT $key, $value WHERE '$value.score' = 10.36 AND $key like 'match:200:user:2'",
+		expectedUpdates: [][]interface{}{
+			{[]interface{}{"match:200:user:2", map[string]interface{}{"score": 10.36}}},
+		},
+	},
+	{
+		key:         "match:200:user:3",
+		value:       `{"field1":{"field2":{"field3":{"score":10.36}}}}`,
+		qwatchQuery: "SELECT $key, $value WHERE '$value.field1.field2.field3.score' > 10.1 AND $key like 'match:200:user:3'",
+		expectedUpdates: [][]interface{}{
+			{[]interface{}{"match:200:user:3", map[string]interface{}{
+				"field1": map[string]interface{}{
+					"field2": map[string]interface{}{
+						"field3": map[string]interface{}{
+							"score": 10.36,
+						},
+					},
+				},
+			}}},
+		},
+	},
+}
+
+func TestQwatchWhereWithJSON(t *testing.T) {
+	tests := whereJSONTestCases
+	publisher, subscribers, cleanup := setupJSONTest(t, tests)
+	defer cleanup()
+
+	respParsers := subscribeToJSONQueries(t, subscribers, tests)
+	runJSONScenarios(t, publisher, respParsers, tests)
 }
