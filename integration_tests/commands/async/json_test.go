@@ -1447,15 +1447,16 @@ func TestJsonSTRAPPEND(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			FireCommand(conn, "DEL doc")
-			defer FireCommand(conn, "DEL doc")
+			// Use FLUSHDB to clear all keys before each test
+			result := FireCommand(conn, "FLUSHDB")
+			assert.Equal(t, "OK", result)
 
-			result := FireCommand(conn, tc.setCmd)
-
+			result = FireCommand(conn, tc.setCmd)
 			assert.Equal(t, "OK", result)
 
 			result = FireCommand(conn, tc.getCmd)
 			assert.DeepEqual(t, tc.expected, result)
+
 		})
 	}
 }

@@ -5719,7 +5719,7 @@ func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalJSONSTRAPPEND(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	// Setup a sample JSON document
 	key := "doc1"
