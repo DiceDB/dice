@@ -83,17 +83,17 @@ func TestLPush(t *testing.T) {
 		{
 			name:   "LPUSH",
 			cmds:   []string{"LPUSH k v", "LPUSH k v1 1 v2 2", "LPUSH k 3 3 3 v3 v3 v3"},
-			expect: []any{"OK", "OK", "OK"},
+			expect: []any{int64(1), int64(5), int64(11)},
 		},
 		{
 			name:   "LPUSH normal values",
 			cmds:   []string{"LPUSH k " + strings.Join(deqNormalValues, " ")},
-			expect: []any{"OK"},
+			expect: []any{int64(25)},
 		},
 		{
 			name:   "LPUSH edge values",
 			cmds:   []string{"LPUSH k " + strings.Join(deqEdgeValues, " ")},
-			expect: []any{"OK"},
+			expect: []any{int64(42)},
 		},
 	}
 
@@ -122,17 +122,17 @@ func TestRPush(t *testing.T) {
 		{
 			name:   "RPUSH",
 			cmds:   []string{"LPUSH k v", "LPUSH k v1 1 v2 2", "LPUSH k 3 3 3 v3 v3 v3"},
-			expect: []any{"OK", "OK", "OK"},
+			expect: []any{int64(1), int64(5), int64(11)},
 		},
 		{
 			name:   "RPUSH normal values",
 			cmds:   []string{"LPUSH k " + strings.Join(deqNormalValues, " ")},
-			expect: []any{"OK"},
+			expect: []any{int64(25)},
 		},
 		{
 			name:   "RPUSH edge values",
 			cmds:   []string{"LPUSH k " + strings.Join(deqEdgeValues, " ")},
-			expect: []any{"OK"},
+			expect: []any{int64(42)},
 		},
 	}
 
@@ -176,17 +176,17 @@ func TestLPushLPop(t *testing.T) {
 		{
 			name:   "LPUSH LPOP",
 			cmds:   []string{"LPUSH k v1 1", "LPOP k", "LPOP k", "LPOP k"},
-			expect: []any{"OK", "1", "v1", "(nil)"},
+			expect: []any{int64(2), "1", "v1", "(nil)"},
 		},
 		{
 			name:   "LPUSH LPOP normal values",
 			cmds:   append([]string{"LPUSH k " + strings.Join(deqNormalValues, " ")}, getPops(deqNormalValues)...),
-			expect: append(append([]any{"OK"}, getPopExpects(deqNormalValues)...), "(nil)"),
+			expect: append(append([]any{int64(14)}, getPopExpects(deqNormalValues)...), "(nil)"),
 		},
 		{
 			name:   "LPUSH LPOP edge values",
 			cmds:   append([]string{"LPUSH k " + strings.Join(deqEdgeValues, " ")}, getPops(deqEdgeValues)...),
-			expect: append(append([]any{"OK"}, getPopExpects(deqEdgeValues)...), "(nil)"),
+			expect: append(append([]any{int64(17)}, getPopExpects(deqEdgeValues)...), "(nil)"),
 		},
 	}
 
@@ -230,17 +230,17 @@ func TestLPushRPop(t *testing.T) {
 		{
 			name:   "LPUSH RPOP",
 			cmds:   []string{"LPUSH k v1 1", "RPOP k", "RPOP k", "RPOP k"},
-			expect: []any{"OK", "v1", "1", "(nil)"},
+			expect: []any{int64(2), "v1", "1", "(nil)"},
 		},
 		{
 			name:   "LPUSH RPOP normal values",
 			cmds:   append([]string{"LPUSH k " + strings.Join(deqNormalValues, " ")}, getPops(deqNormalValues)...),
-			expect: append(append([]any{"OK"}, getPopExpects(deqNormalValues)...), "(nil)"),
+			expect: append(append([]any{int64(14)}, getPopExpects(deqNormalValues)...), "(nil)"),
 		},
 		{
 			name:   "LPUSH RPOP edge values",
 			cmds:   append([]string{"LPUSH k " + strings.Join(deqEdgeValues, " ")}, getPops(deqEdgeValues)...),
-			expect: append(append([]any{"OK"}, getPopExpects(deqEdgeValues)...), "(nil)"),
+			expect: append(append([]any{int64(17)}, getPopExpects(deqEdgeValues)...), "(nil)"),
 		},
 	}
 
@@ -284,17 +284,17 @@ func TestRPushLPop(t *testing.T) {
 		{
 			name:   "RPUSH LPOP",
 			cmds:   []string{"RPUSH k v1 1", "LPOP k", "LPOP k", "LPOP k"},
-			expect: []any{"OK", "v1", "1", "(nil)"},
+			expect: []any{int64(2), "v1", "1", "(nil)"},
 		},
 		{
 			name:   "RPUSH LPOP normal values",
 			cmds:   append([]string{"RPUSH k " + strings.Join(deqNormalValues, " ")}, getPops(deqNormalValues)...),
-			expect: append(append([]any{"OK"}, getPopExpects(deqNormalValues)...), "(nil)"),
+			expect: append(append([]any{int64(14)}, getPopExpects(deqNormalValues)...), "(nil)"),
 		},
 		{
 			name:   "RPUSH LPOP edge values",
 			cmds:   append([]string{"RPUSH k " + strings.Join(deqEdgeValues, " ")}, getPops(deqEdgeValues)...),
-			expect: append(append([]any{"OK"}, getPopExpects(deqEdgeValues)...), "(nil)"),
+			expect: append(append([]any{int64(17)}, getPopExpects(deqEdgeValues)...), "(nil)"),
 		},
 	}
 
@@ -338,17 +338,17 @@ func TestRPushRPop(t *testing.T) {
 		{
 			name:   "RPUSH RPOP",
 			cmds:   []string{"RPUSH k v1 1", "RPOP k", "RPOP k", "RPOP k"},
-			expect: []any{"OK", "1", "v1", "(nil)"},
+			expect: []any{int64(2), "1", "v1", "(nil)"},
 		},
 		{
 			name:   "RPUSH RPOP normal values",
 			cmds:   append([]string{"RPUSH k " + strings.Join(deqNormalValues, " ")}, getPops(deqNormalValues)...),
-			expect: append(append([]any{"OK"}, getPopExpects(deqNormalValues)...), "(nil)"),
+			expect: append(append([]any{int64(14)}, getPopExpects(deqNormalValues)...), "(nil)"),
 		},
 		{
 			name:   "RPUSH RPOP edge values",
 			cmds:   append([]string{"RPUSH k " + strings.Join(deqEdgeValues, " ")}, getPops(deqEdgeValues)...),
-			expect: append(append([]any{"OK"}, getPopExpects(deqEdgeValues)...), "(nil)"),
+			expect: append(append([]any{int64(17)}, getPopExpects(deqEdgeValues)...), "(nil)"),
 		},
 	}
 
@@ -383,9 +383,9 @@ func TestLRPushLRPop(t *testing.T) {
 				"RPOP k", "LPOP k", "LPOP k", "RPOP k",
 			},
 			expect: []any{
-				"OK", "OK",
+				int64(2), int64(4),
 				"1000", "v1000", "2000",
-				"OK",
+				int64(2),
 				"v2000", "v6", "(nil)", "(nil)",
 			},
 		},
@@ -422,9 +422,9 @@ func TestLLEN(t *testing.T) {
 				"RPOP k", "LLEN k", "LPOP k", "LPOP k", "RPOP k", "LLEN k",
 			},
 			expect: []any{
-				"OK", "OK", int64(4),
+				int64(2), int64(4), int64(4),
 				"1000", int64(3), "v1000", "2000", int64(1),
-				"OK", int64(2),
+				int64(2), int64(2),
 				"v2000", int64(1), "v6", "(nil)", "(nil)", int64(0),
 			},
 		},
