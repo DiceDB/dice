@@ -8,19 +8,19 @@ The `EXPIREAT` command is used to set the expiration time of a key in DiceDB. Un
 ## Syntax
 
 ```
-EXPIREAT key timestamp
+EXPIREAT key timestamp [NX|XX|GT|LT]
 ```
 
 ## Parameters
 
-| Parameter           | Description                                                                                     | Type    | Required |
-| ------------------- | ----------------------------------------------------------------------------------------------- | ------- | -------- |
-| `key`               | The name of the key to be set.                                                                  | String  | Yes      |
-| `unix-time-seconds` | The unix-time-seconds timestamp at which the key should expire. This is an integer.             | Integer | Yes      |
-| NX                  | Set the expiration only if the key does not already have an expiration time.                    | None    | No       |
-| XX                  | Set the expiration only if the key already has an expiration time.                              | None    | No       |
-| GT                  | Set the expiration only if the new expiration time is greater than or equal to the current one. | None    | No       |
-| LT                  | Set the expiration only if the new expiration time is less than the current one.                | None    | No       |
+| Parameter   | Description                                                                                     | Type    | Required |
+| ----------- | ----------------------------------------------------------------------------------------------- | ------- | -------- |
+| `key`       | The name of the key to be set.                                                                  | String  | Yes      |
+| `timestamp` | The unix-time-seconds timestamp at which the key should expire. This is an integer.             | Integer | Yes      |
+| `NX`        | Set the expiration only if the key does not already have an expiration time.                    | None    | No       |
+| `XX`        | Set the expiration only if the key already has an expiration time.                              | None    | No       |
+| `GT`        | Set the expiration only if the new expiration time is greater than or equal to the current one. | None    | No       |
+| `LT`        | Set the expiration only if the new expiration time is less than the current one.                | None    | No       |
 
 
 ## Return Value
@@ -36,7 +36,6 @@ EXPIREAT key timestamp
 - When the `EXPIREAT` command is executed, DiceDB will set the expiration time of the specified key to the given Unix timestamp.
 - If the key already has an expiration time, it will be overwritten with the new timestamp.
 - If the key does not exist, the command will return `0` and no expiration time will be set.
-- 
 
 ## Error Handling
 
@@ -54,6 +53,8 @@ EXPIREAT key timestamp
 
 ### Setting an Expiration Time
 
+Setting a key `mykey` to expire at the Unix timestamp `17282126871`.
+
 ```bash
 127.0.0.1:7379> SET mykey "Hello"
 OK
@@ -61,11 +62,9 @@ OK
 (integer) 1
 ```
 
-In this example, the key `mykey` is set to expire at the Unix timestamp `17282126871`.
-
 ### Checking the expiration time
 
-This will return the remaining time to live for the key `mykey` in seconds.
+Checking the remaining time to live of a key (in seconds).
 
 ```bash
 127.0.0.1:7379> EXPIREAT mykey 17282126871
@@ -76,7 +75,7 @@ This will return the remaining time to live for the key `mykey` in seconds.
 
 ### Key does not exist
 
-This will return `0` as the key does not exist.
+Trying to set an expiration time for a non-existing key.
 
 ```bash
 127.0.0.1:7379> EXPIREAT nonexistingkey 17282126871
@@ -85,8 +84,10 @@ This will return `0` as the key does not exist.
 
 ### Setting an EXPIRYTIME only if not exists
 
+Here, the `NX` option is used to set the expiration time only if the key does not already have an expiration time.
+
 ```bash
-127.0.0.1:7379> set key value
+127.0.0.1:7379> SET key value
 OK
 127.0.0.1:7379> EXPIREAT key 1728212987222 NX
 (integer) 1
@@ -96,8 +97,10 @@ OK
 
 ### Setting an EXPIRYTIME only if it already has one
 
+Here, the `XX` option is used to set the expiration time only if the key already has an expiration time.
+
 ```bash
-127.0.0.1:7379> set key value
+127.0.0.1:7379> SET key value
 OK                                                                           
 127.0.0.1:7379> EXPIREAT key 12345677777 XX
 (integer) 0
@@ -109,29 +112,31 @@ OK
 
 ### Setting an EXPIRYTIME only if the new expiry time is greater than or equal to the current one
 
+The `GT` option is used to set the expiration time only if the new expiration time is greater than or equal to the current one.
+
 ```bash 
-127.0.0.1:7379> set key value
+127.0.0.1:7379> SET key value
 OK                             
-127.0.0.1:7379> expireat key 12334444444
+127.0.0.1:7379> EXPIREAT key 12334444444
 (integer) 1
-127.0.0.1:7379> expireat key 12334444424 GT 
+127.0.0.1:7379> EXPIREAT key 12334444424 GT 
 (integer) 0
-127.0.0.1:7379> expireat key 12334444524 GT 
+127.0.0.1:7379> EXPIREAT key 12334444524 GT 
 (integer) 1
 ```
 
 ### Setting an EXPIRYTIME only if the new expiry time is less than or equal to the current one
 
+Similar to the `GT` option, the `LT` option is used to set the expiration time only if the new expiration time is less than (or equal to) the current one.
+
 ```bash
-127.0.0.1:7379> set key value
+127.0.0.1:7379> SET key value
 OK          
-127.0.0.1:7379> expireat key 12334444444
+127.0.0.1:7379> EXPIREAT key 12334444444
 (integer) 1
-127.0.0.1:7379> expireat key 12334444444 LT
-(integer) 1
-127.0.0.1:7379> expireat key 12334444445 LT
+127.0.0.1:7379> EXPIREAT key 12334444445 LT
 (integer) 0
-127.0.0.1:7379> expireat key 12334444442 LT
+127.0.0.1:7379> EXPIREAT key 12334444442 LT
 (integer) 1
 ```
 
@@ -145,7 +150,7 @@ OK
 
 - `EXPIRE`: Sets the expiration time of a key in seconds from the current time.
 - `PEXPIREAT`: Sets the expiration time of a key as an absolute Unix timestamp in milliseconds.
-- `TTL`: Returns the remaining time to live of a key in seconds.
+- `TTL`: Returns the remaining time to 127.0.0.1:7379 of a key in seconds.
 - `PTTL`: Returns the remaining time to live of a key in milliseconds.
 
 By understanding and using the `EXPIREAT` command, you can effectively manage the lifecycle of keys in your DiceDB database, ensuring that data is available only as long as it is needed.
