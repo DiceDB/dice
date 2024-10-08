@@ -1,6 +1,6 @@
 ---
 title: EXPIREAT
-description: Documentation for the DiceDB command EXPIREAT
+description: The `EXPIREAT` command is used to set the expiration time of a key in DiceDB. Unlike the `EXPIRE` command, which sets the expiration time in seconds from the current time, `EXPIREAT` sets the expiration time as an absolute Unix timestamp (in seconds). This allows for more precise control over when a key should expire.
 ---
 
 The `EXPIREAT` command is used to set the expiration time of a key in DiceDB. Unlike the `EXPIRE` command, which sets the expiration time in seconds from the current time, `EXPIREAT` sets the expiration time as an absolute Unix timestamp (in seconds). This allows for more precise control over when a key should expire.
@@ -23,7 +23,7 @@ EXPIREAT key timestamp [NX|XX|GT|LT]
 | `LT`        | Set the expiration only if the new expiration time is less than the current one.                | None    | No       |
 
 
-## Return Value
+## Return values
 
 | Condition                                          | Return Value |
 | -------------------------------------------------- | ------------ |
@@ -37,7 +37,7 @@ EXPIREAT key timestamp [NX|XX|GT|LT]
 - If the key already has an expiration time, it will be overwritten with the new timestamp.
 - If the key does not exist, the command will return `0` and no expiration time will be set.
 
-## Error Handling
+## Errors
 
 ### Wrong number of arguments
 
@@ -157,13 +157,13 @@ OK
 (integer) 1
 ```
 
-## Additional Notes
+## Additional notes
 
 - The `EXPIREAT` command is useful when you need to synchronize the expiration of keys across multiple DiceDB instances or when you need to set an expiration time based on an external event that provides a Unix timestamp.
 - The timestamp should be in seconds. If you have a timestamp in milliseconds, you need to convert it to seconds before using it with `EXPIREAT`.
 - There is an arbritrary limit to the size of the `unix-time-seconds` of [9223372036854775](https://github.com/DiceDB/dice/blob/b74dc8ffd5e518eaa9b82020d2b25a592c6472d4/internal/eval/eval.go#L69).
 
-## Related Commands
+## Related commands
 
 - `EXPIRE`: Sets the expiration time of a key in seconds from the current time.
 - `PEXPIREAT`: Sets the expiration time of a key as an absolute Unix timestamp in milliseconds.
