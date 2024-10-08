@@ -320,9 +320,9 @@ func (s *AsyncServer) executeCommandToBuffer(diceDBCmd *cmd.DiceDBCmd, buf *byte
 		// Handle error case independently
 		if resp.EvalResponse.Error != nil {
 			handleMigratedResp(resp.EvalResponse.Error, buf)
+			return
 		}
 		handleMigratedResp(resp.EvalResponse.Result, buf)
-		return
 	}
 }
 
