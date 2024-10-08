@@ -129,7 +129,7 @@ var baseConfig = Config{
 		EnableMultiThreading:   false,
 		StoreMapInitSize:       1024000,
 		WatchChanBufSize:       20000,
-		AdhocReqChanBufSize:    20,
+		AdhocReqChanBufSize:    20, // assuming we wouldn't have more than 20 adhoc requests being sent at a time.
 	},
 	Auth: struct {
 		UserName string `mapstructure:"username"`
