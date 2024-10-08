@@ -1,9 +1,9 @@
 ---
 title: JSON.ARRLEN
-description: The `JSON.ARRLEN` command in DiceDBJSON is used to retrieve the length of a JSON array at a specified path within a JSON document.
+description: The `JSON.ARRLEN` command in DiceDB is used to retrieve the length of a JSON array at a specified path within a JSON document.
 ---
 
-The `JSON.ARRLEN` command in DiceDBJSON is used to retrieve the length of a JSON array at a specified path within a JSON document.
+The `JSON.ARRLEN` command in DiceDB is used to retrieve the length of a JSON array at a specified path within a JSON document.
 
 ## Syntax
 
@@ -138,4 +138,3 @@ To get the length of the `language` array using a wildcard path:
 4) (integer) 2
 5) (nil)
 ```
----
