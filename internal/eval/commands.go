@@ -1083,6 +1083,27 @@ var (
 		Eval:     evalGEODIST,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	cmsInitByDimCmdMeta = DiceCmdMeta{
+		Name:     "CMS.INITBYDIM",
+		Info:     `Sets up count min sketch`,
+		Arity:    3,
+		Eval:     evalCMSINITBYDIM,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	cmsInitByProbCmdMeta = DiceCmdMeta{
+		Name:     "CMS.INITBYPROB",
+		Info:     `Sets up count min sketch with given error rate and probability`,
+		Arity:    3,
+		Eval:     evalCMSINITBYPROB,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	cmsInfoCmdMeta = DiceCmdMeta{
+		Name:     "CMS.INFO",
+		Info:     `Get info about count min sketch`,
+		Arity:    1,
+		Eval:     evalCMSINFO,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -1203,6 +1224,9 @@ func init() {
 	DiceCmds["HEXISTS"] = hexistsCmdMeta
 	DiceCmds["GEOADD"] = geoAddCmdMeta
 	DiceCmds["GEODIST"] = geoDistCmdMeta
+	DiceCmds["CMS.INITBYDIM"] = cmsInitByDimCmdMeta
+	DiceCmds["CMS.INITBYPROB"] = cmsInitByProbCmdMeta
+	DiceCmds["CMS.INFO"] = cmsInfoCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}
