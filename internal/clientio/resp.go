@@ -39,6 +39,11 @@ var RespMinusOne = []byte(":-1\r\n")
 var RespMinusTwo = []byte(":-2\r\n")
 var RespEmptyArray = []byte("*0\r\n")
 
+type KVs struct {
+	Key    string
+	Values []string
+}
+
 func readLength(buf *bytes.Buffer) (int64, error) {
 	s, err := readStringUntilSr(buf)
 	if err != nil {
@@ -244,6 +249,16 @@ func Encode(value interface{}, isSimple bool) []byte {
 			buf.Write(Encode(b, false)) // Encode each int64 and write to the buffer.
 		}
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes())) // Return the encoded response.
+
+	case []KVs:
+		var b []byte
+		buf := bytes.NewBuffer(b)
+		for _, v := range value.([]KVs) {
+			buf.WriteString("*2\r\n")
+			buf.Write(Encode(v.Key, false))
+			buf.Write(Encode(v.Values, false))
+		}
+		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes()))
 
 	// Handle error type by formatting it as a RESP error.
 	case error:

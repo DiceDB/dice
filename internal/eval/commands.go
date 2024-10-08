@@ -25,12 +25,17 @@ type DiceCmdMeta struct {
 	// will utilize this function for evaluation, allowing for better handling of
 	// complex command execution scenarios and improved response consistency.
 	NewEval func([]string, *dstore.Store) *EvalResponse
+
+	//helper function to getKeys
+	getFlags func(args []string, ks *KeySpecs)
 }
 
 type KeySpecs struct {
 	BeginIndex int
 	Step       int
 	LastKey    int
+
+	Flags uint64
 }
 
 var (
@@ -63,9 +68,10 @@ var (
 		Returns encoded OK RESP once new entry is added
 		If the key already exists then the value will be overwritten and expiry will be discarded`,
 		Arity:      -3,
-		KeySpecs:   KeySpecs{BeginIndex: 1},
+		KeySpecs:   KeySpecs{BeginIndex: 1, Flags: RW | ACCESS | UPDATE | VARIABLE_FLAGS},
 		IsMigrated: true,
 		NewEval:    evalSET,
+		getFlags:   setGetKeys,
 	}
 	getCmdMeta = DiceCmdMeta{
 		Name: "GET",
@@ -74,7 +80,7 @@ var (
 		The RESP value of the key is encoded and then returned
 		GET returns RespNIL if key is expired or it does not exist`,
 		Arity:      2,
-		KeySpecs:   KeySpecs{BeginIndex: 1},
+		KeySpecs:   KeySpecs{BeginIndex: 1, Flags: RO | ACCESS},
 		IsMigrated: true,
 		NewEval:    evalGET,
 	}
@@ -101,7 +107,7 @@ var (
 		GETDEL returns RespNIL if key is expired or it does not exist`,
 		Eval:     evalGETDEL,
 		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Flags: RW | ACCESS | DELETE},
 	}
 	msetCmdMeta = DiceCmdMeta{
 		Name: "MSET",
@@ -112,7 +118,7 @@ var (
 		Returns encoded OK RESP once all entries are added`,
 		Eval:     evalMSET,
 		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 2, LastKey: -1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 2, LastKey: -1, Flags: OW | UPDATE},
 	}
 	jsonsetCmdMeta = DiceCmdMeta{
 		Name: "JSON.SET",
@@ -318,7 +324,7 @@ var (
 		RESP encoded -1 in case no expiration is set on the key`,
 		Eval:     evalTTL,
 		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Flags: RO | ACCESS},
 	}
 	delCmdMeta = DiceCmdMeta{
 		Name: "DEL",
@@ -326,7 +332,7 @@ var (
 		returns the count of total deleted keys after encoding`,
 		Eval:     evalDEL,
 		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1, LastKey: -1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1, LastKey: -1, Flags: RM | DELETE},
 	}
 	expireCmdMeta = DiceCmdMeta{
 		Name: "EXPIRE",
@@ -337,7 +343,7 @@ var (
 		Once the time is lapsed, the key will be deleted automatically`,
 		Eval:     evalEXPIRE,
 		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1, Flags: RW | UPDATE},
 	}
 	helloCmdMeta = DiceCmdMeta{
 		Name:  "HELLO",
@@ -363,7 +369,7 @@ var (
 		evalINCR returns the incremented value for the key if there are no errors.`,
 		Eval:     evalINCR,
 		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1, Flags: RW | ACCESS | UPDATE},
 	}
 	incrByFloatCmdMeta = DiceCmdMeta{
 		Name: "INCRBYFLOAT",
@@ -537,7 +543,7 @@ var (
 		`,
 		Eval:     evalMGET,
 		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1, LastKey: -1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1, LastKey: -1, Flags: RO | ACCESS},
 	}
 	persistCmdMeta = DiceCmdMeta{
 		Name: "PERSIST",
@@ -562,7 +568,7 @@ var (
 		evalDECR returns the decremented value for the key if there are no errors.`,
 		Eval:     evalDECR,
 		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1, Flags: RW | ACCESS | UPDATE},
 	}
 	decrByCmdMeta = DiceCmdMeta{
 		Name: "DECRBY",
@@ -576,7 +582,7 @@ var (
 		evalDECRBY returns the decremented value for the key after applying the specified decrement if there are no errors.`,
 		Eval:     evalDECRBY,
 		Arity:    3,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1, Flags: RW | ACCESS | UPDATE},
 	}
 	existsCmdMeta = DiceCmdMeta{
 		Name: "EXISTS",
@@ -596,7 +602,7 @@ var (
 		GETEX is similar to GET, but is a write command with additional options.`,
 		Eval:     evalGETEX,
 		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Flags: RW | ACCESS | UPDATE},
 	}
 	pttlCmdMeta = DiceCmdMeta{
 		Name: "PTTL",
@@ -608,7 +614,7 @@ var (
 		RESP encoded -1 in case no expiration is set on the key`,
 		Eval:     evalPTTL,
 		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Flags: RO | ACCESS},
 	}
 	hsetCmdMeta = DiceCmdMeta{
 		Name: "HSET",
@@ -620,7 +626,7 @@ var (
 		`,
 		Eval:     evalHSET,
 		Arity:    -4,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Flags: RW | UPDATE},
 	}
 	hmsetCmdMeta = DiceCmdMeta{
 		Name: "HMSET",
@@ -648,14 +654,14 @@ var (
 		this operation has no effect.`,
 		Eval:     evalHSETNX,
 		Arity:    4,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Flags: RW | INSERT},
 	}
 	hgetCmdMeta = DiceCmdMeta{
 		Name:     "HGET",
 		Info:     `Returns the value associated with field in the hash stored at key.`,
 		Eval:     evalHGET,
 		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Flags: RO | ACCESS},
 	}
 	hmgetCmdMeta = DiceCmdMeta{
 		Name:     "HMGET",
@@ -670,14 +676,14 @@ var (
         every field name is followed by its value, so the length of the reply is twice the size of the hash.`,
 		Eval:     evalHGETALL,
 		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Flags: RO | ACCESS},
 	}
 	hValsCmdMeta = DiceCmdMeta{
 		Name:     "HVALS",
 		Info:     `Returns all values of the hash stored at key. The length of the reply is same as the size of the hash.`,
 		Eval:     evalHVALS,
 		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Flags: RO | ACCESS},
 	}
 	hincrbyCmdMeta = DiceCmdMeta{
 		Name: "HINCRBY",
@@ -686,14 +692,14 @@ var (
 		If field does not exist the value is set to 0 before the operation is performed.`,
 		Eval:     evalHINCRBY,
 		Arity:    -4,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Flags: RW | ACCESS | UPDATE},
 	}
 	hstrLenCmdMeta = DiceCmdMeta{
 		Name:     "HSTRLEN",
 		Info:     `Returns the length of value associated with field in the hash stored at key.`,
 		Eval:     evalHSTRLEN,
 		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Flags: RO},
 	}
 	hdelCmdMeta = DiceCmdMeta{
 		Name: "HDEL",
@@ -705,7 +711,7 @@ var (
 		The number of fields that were removed from the hash, not including specified but non-existing fields.`,
 		Eval:     evalHDEL,
 		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Flags: RW | DELETE},
 	}
 	hscanCmdMeta = DiceCmdMeta{
 		Name: "HSCAN",
@@ -740,7 +746,7 @@ var (
 		A key is ignored if it does not exist.`,
 		Eval:     evalTOUCH,
 		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Flags: RO},
 	}
 	expiretimeCmdMeta = DiceCmdMeta{
 		Name: "EXPIRETIME",
@@ -748,7 +754,7 @@ var (
 		at which the given key will expire`,
 		Eval:     evalEXPIRETIME,
 		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1, Flags: RO | ACCESS},
 	}
 	expireatCmdMeta = DiceCmdMeta{
 		Name: "EXPIREAT",
@@ -759,7 +765,7 @@ var (
 		Once the time is lapsed, the key will be deleted automatically`,
 		Eval:     evalEXPIREAT,
 		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1, Flags: RW | UPDATE},
 	}
 	lpushCmdMeta = DiceCmdMeta{
 		Name:  "LPUSH",
@@ -843,7 +849,7 @@ var (
 		An error is returned when the value stored at key is not a set.`,
 		Eval:     evalSADD,
 		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Flags: RW | INSERT},
 	}
 	smembersCmdMeta = DiceCmdMeta{
 		Name: "SMEMBERS",
@@ -851,7 +857,7 @@ var (
 		Returns all the members of the set value stored at key.`,
 		Eval:     evalSMEMBERS,
 		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Flags: RO | ACCESS},
 	}
 	sremCmdMeta = DiceCmdMeta{
 		Name: "SREM",
@@ -861,7 +867,7 @@ var (
 		An error is returned when the value stored at key is not a set.`,
 		Eval:     evalSREM,
 		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Flags: RW | DELETE},
 	}
 	scardCmdMeta = DiceCmdMeta{
 		Name: "SCARD",
@@ -870,7 +876,7 @@ var (
 		An error is returned when the value stored at key is not a set.`,
 		Eval:     evalSCARD,
 		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Flags: RO},
 	}
 	sdiffCmdMeta = DiceCmdMeta{
 		Name: "SDIFF",
@@ -879,7 +885,7 @@ var (
 		Non existing keys are treated as empty sets.`,
 		Eval:     evalSDIFF,
 		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Flags: RO | ACCESS},
 	}
 	sinterCmdMeta = DiceCmdMeta{
 		Name: "SINTER",
@@ -888,7 +894,7 @@ var (
 		Non existing keys are treated as empty sets.`,
 		Eval:     evalSINTER,
 		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Flags: RO | ACCESS},
 	}
 	pfAddCmdMeta = DiceCmdMeta{
 		Name: "PFADD",
@@ -897,7 +903,7 @@ var (
 		NewEval:    evalPFADD,
 		IsMigrated: true,
 		Arity:      -2,
-		KeySpecs:   KeySpecs{BeginIndex: 1},
+		KeySpecs:   KeySpecs{BeginIndex: 1, Flags: RW | INSERT},
 	}
 	pfCountCmdMeta = DiceCmdMeta{
 		Name: "PFCOUNT",
@@ -906,7 +912,7 @@ var (
 		NewEval:    evalPFCOUNT,
 		IsMigrated: true,
 		Arity:      -2,
-		KeySpecs:   KeySpecs{BeginIndex: 1},
+		KeySpecs:   KeySpecs{BeginIndex: 1, Flags: RW | ACCESS},
 	}
 	pfMergeCmdMeta = DiceCmdMeta{
 		Name: "PFMERGE",
@@ -915,7 +921,7 @@ var (
 		NewEval:    evalPFMERGE,
 		IsMigrated: true,
 		Arity:      -2,
-		KeySpecs:   KeySpecs{BeginIndex: 1},
+		KeySpecs:   KeySpecs{BeginIndex: 1, Flags: RW | ACCESS | INSERT},
 	}
 	jsonStrlenCmdMeta = DiceCmdMeta{
 		Name: "JSON.STRLEN",
@@ -952,7 +958,7 @@ var (
 				The returned value can be synthesized back into a Redis key using the RESTORE command.`,
 		Eval:     evalDUMP,
 		Arity:    1,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Flags: RO},
 	}
 	restorekeyCmdMeta = DiceCmdMeta{
 		Name: "RESTORE",
@@ -982,14 +988,14 @@ var (
 		evalINCRBY returns the incremented value for the key if there are no errors.`,
 		Eval:     evalINCRBY,
 		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1, Flags: RW | ACCESS | UPDATE},
 	}
 	getRangeCmdMeta = DiceCmdMeta{
 		Name:     "GETRANGE",
 		Info:     `Returns a substring of the string stored at a key.`,
 		Eval:     evalGETRANGE,
 		Arity:    4,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Flags: RO | ACCESS},
 	}
 	setexCmdMeta = DiceCmdMeta{
 		Name: "SETEX",
@@ -1000,7 +1006,7 @@ var (
 		Returns encoded OK RESP once new entry is added
 		If the key already exists then the value and expiry will be overwritten`,
 		Arity:      3,
-		KeySpecs:   KeySpecs{BeginIndex: 1},
+		KeySpecs:   KeySpecs{BeginIndex: 1, Flags: OW | UPDATE},
 		IsMigrated: true,
 		NewEval:    evalSETEX,
 	}
@@ -1009,7 +1015,7 @@ var (
 		Info:     `Returns one or more random fields from a hash.`,
 		Eval:     evalHRANDFIELD,
 		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		KeySpecs: KeySpecs{BeginIndex: 1, Flags: RO | ACCESS},
 	}
 	appendCmdMeta = DiceCmdMeta{
 		Name:  "APPEND",
@@ -1024,7 +1030,7 @@ var (
 		Options: NX, XX, CH, INCR
 		Returns the number of elements added to the sorted set, not including elements already existing for which the score was updated.`,
 		Arity:      -4,
-		KeySpecs:   KeySpecs{BeginIndex: 1},
+		KeySpecs:   KeySpecs{BeginIndex: 1, Flags: RW | UPDATE},
 		IsMigrated: true,
 		NewEval:    evalZADD,
 	}
@@ -1037,7 +1043,7 @@ var (
 		These indexes can also be negative numbers indicating offsets from the end of the sorted set, with -1 being the last element of the sorted set, -2 the penultimate element and so on.
 		Returns the specified range of elements in the sorted set.`,
 		Arity:      -4,
-		KeySpecs:   KeySpecs{BeginIndex: 1},
+		KeySpecs:   KeySpecs{BeginIndex: 1, Flags: RO | ACCESS},
 		IsMigrated: true,
 		NewEval:    evalZRANGE,
 	}

@@ -6,7 +6,6 @@ import (
 
 	"errors"
 	"fmt"
-
 	"log/slog"
 
 	"math"
@@ -22,6 +21,7 @@ import (
 
 	"github.com/dicedb/dice/internal/eval/geo"
 	"github.com/dicedb/dice/internal/eval/sortedset"
+
 	"github.com/dicedb/dice/internal/object"
 	"github.com/rs/xid"
 
@@ -2467,6 +2467,8 @@ func evalCommand(args []string, store *dstore.Store) []byte {
 		return evalCommandCount(args[1:])
 	case GetKeys:
 		return evalCommandGetKeys(args[1:])
+	case GetKeysAndFlags:
+		return evalCommandGetKeysAndFlags(args[1:])
 	case List:
 		return evalCommandList(args[1:])
 	case Help:
@@ -2591,6 +2593,62 @@ func evalCommandGetKeys(args []string) []byte {
 		keys = append(keys, args[i])
 	}
 	return clientio.Encode(keys, false)
+}
+
+// evalCommandGetKeysAndFlags helps identify which arguments in a redis
+// command are interpreted as keys and their respective flags/permissions.
+func evalCommandGetKeysAndFlags(args []string) []byte {
+
+	if len(args) == 0 {
+		return diceerrors.NewErrArity("COMMAND|GETKEYSANDFLAGS")
+	}
+	diceCmd, ok := DiceCmds[strings.ToUpper(args[0])]
+	if !ok {
+		return diceerrors.NewErrWithMessage("invalid command specified")
+	}
+
+	keySpecs := diceCmd.KeySpecs
+	if keySpecs.BeginIndex == 0 {
+		return diceerrors.NewErrWithMessage("the command has no key arguments")
+	}
+
+	arity := diceCmd.Arity
+	if (arity < 0 && len(args) < -arity) ||
+		(arity >= 0 && len(args) != arity) {
+		return diceerrors.NewErrWithMessage("invalid number of arguments specified for command")
+	}
+
+	if VARIABLE_FLAGS&keySpecs.Flags != 0 {
+		diceCmd.getFlags(args, &keySpecs)
+	}
+
+	keysAndFlags := []clientio.KVs{}
+	flagNames := make([]string, 0)
+	step := max(keySpecs.Step, 1)
+
+	lastIdx := keySpecs.BeginIndex
+	if keySpecs.LastKey != 0 {
+		lastIdx = len(args) + keySpecs.LastKey
+	}
+
+	flags := getFlags()
+	flagNameMap := getFlagsNameMap()
+
+	for _, v := range flags {
+		if fname, ok := flagNameMap[v]; ok && (v&keySpecs.Flags != 0) {
+			flagNames = append(flagNames, fname)
+		}
+	}
+
+	for i := keySpecs.BeginIndex; i <= lastIdx; i += step {
+		r := clientio.KVs{
+			Key:    args[i],
+			Values: flagNames,
+		}
+		keysAndFlags = append(keysAndFlags, r)
+	}
+
+	return clientio.Encode(keysAndFlags, false)
 }
 
 func evalCommandInfo(args []string) []byte {

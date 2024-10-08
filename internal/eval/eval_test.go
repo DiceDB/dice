@@ -4169,6 +4169,30 @@ func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
 			input:  []string{"GETKEYS", "MSET", "key1"},
 			output: []byte("-ERR invalid number of arguments specified for command\r\n"),
 		},
+		"command getKeysAndFlags (set)": {
+			input:  []string{"GETKEYSANDFLAGS", "SET", "1", "2"},
+			output: clientio.Encode([]clientio.KVs{{Key: "1", Values: []string{"OW", "update"}}}, false),
+		},
+		"command getKeysAndFlags (set with get as arg)": {
+			input:  []string{"GETKEYSANDFLAGS", "SET", "1", "3", "GET"},
+			output: clientio.Encode([]clientio.KVs{{Key: "1", Values: []string{"RW", "access", "update"}}}, false),
+		},
+		"command getKeysAndFlags (No Args)": {
+			input:  []string{"GETKEYSANDFLAGS"},
+			output: []byte("-ERR wrong number of arguments for 'command|getkeysandflags' command\r\n"),
+		},
+		"command getKeysAndFlags (Invalid Command)": {
+			input:  []string{"GETKEYSANDFLAGS", "GETA", "1"},
+			output: []byte("-ERR invalid command specified\r\n"),
+		},
+		"command getKeysAndFlags (Command having no keys)": {
+			input:  []string{"GETKEYSANDFLAGS", "PING"},
+			output: []byte("-ERR the command has no key arguments\r\n"),
+		},
+		"command getKeysAndFlags (providing invalid number of args)": {
+			input:  []string{"GETKEYSANDFLAGS", "SET", "1"},
+			output: []byte("-ERR invalid number of arguments specified for command\r\n"),
+		},
 	}
 
 	runEvalTests(t, tests, evalCommand, store)
