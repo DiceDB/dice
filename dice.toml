@@ -21,6 +21,7 @@ PrettyPrintLogs = false
 EnableMultiThreading = false
 StoreMapInitSize = 10240
 WatchChanBufSize = 20000
+AdhocReqChanBufSize = 20
 
 [Auth]
 UserName = 'dice'
