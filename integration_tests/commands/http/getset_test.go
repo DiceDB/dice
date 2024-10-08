@@ -52,7 +52,7 @@ func TestGetSet(t *testing.T) {
 				{Command: "LPUSH", Body: map[string]interface{}{"key": "k1", "value": "val"}},
 				{Command: "GETSET", Body: map[string]interface{}{"key": "k1", "value": "v1"}},
 			},
-			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{float64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
 			delays:   []time.Duration{0, 0},
 		},
 	}
