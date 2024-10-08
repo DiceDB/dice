@@ -4818,7 +4818,7 @@ func evalZRANGE(args []string, store *dstore.Store) []byte {
 
 // This method executes each operation, contained in ops array, based on commands used.
 func executeOps(value *ByteArray, ops []utils.BitFieldOp) []interface{} {
-	var overflowType string = WRAP
+	overflowType := WRAP
 	var result []interface{}
 	for _, op := range ops {
 		switch op.Kind {

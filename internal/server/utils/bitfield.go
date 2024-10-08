@@ -68,8 +68,7 @@ func parseEncodingAndOffset(args []string) (eType, eVal, offset interface{}, err
 
 
 func ParseOps(args []string, readOnly bool) ([]BitFieldOp, []byte) {
-	var overflowType string = WRAP // Default overflow type
-
+	overflowType := WRAP // Default overflow type
 	var ops []BitFieldOp
 
 	for i := 1; i < len(args); {
