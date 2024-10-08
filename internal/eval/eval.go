@@ -4754,6 +4754,7 @@ func evalZRANGE(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(result, false)
 }
 
+// This method executes each operation, contained in ops array, based on commands used.
 func executeOps(value *ByteArray, ops []utils.BitFieldOp) []interface{} {
 	var overflowType string = WRAP
 	var result []interface{}
