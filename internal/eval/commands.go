@@ -103,9 +103,10 @@ var (
 		The key should be the only param in args And If the key exists, it will be deleted before its value is returned.
 		The RESP value of the key is encoded and then returned
 		GETDEL returns RespNIL if key is expired or it does not exist`,
-		Eval:     evalGETDEL,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalGETDEL,
 	}
 	msetCmdMeta = DiceCmdMeta{
 		Name: "MSET",

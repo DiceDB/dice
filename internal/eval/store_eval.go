@@ -3350,3 +3350,97 @@ func evalGETEX(args []string, store *dstore.Store) *EvalResponse {
 	// return an EvalResponse with the value
 	return getResp
 }
+
+// evalGETDEL returns the value for the queried key in args
+// The key should be the only param in args
+// The RESP value of the key is encoded and then returned
+// In evalGETDEL  If the key exists, it will be deleted before its value is returned.
+// evalGETDEL returns response.RespNIL if key is expired or it does not exist
+func evalGETDEL(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("GETDEL"),
+		}
+	}
+
+	key := args[0]
+
+	// getting the key based on previous touch value
+	obj := store.GetNoTouch(key)
+
+	// if key does not exist, return RESP encoded nil
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	// If the object exists, check if it is a Set object.
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err == nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// If the object exists, check if it is a JSON object.
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeJSON); err == nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// Get the key from the hash table
+	objVal := store.GetDel(key)
+
+	// Decode and return the value based on its encoding
+	switch _, oEnc := object.ExtractTypeEncoding(objVal); oEnc {
+	case object.ObjEncodingInt:
+		// Value is stored as an int64, so use type assertion
+		if val, ok := objVal.Value.(int64); ok {
+			return &EvalResponse{
+				Result: val,
+				Error:  nil,
+			}
+		}
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrUnexpectedType("int64", obj.Value),
+		}
+
+	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
+		// Value is stored as a string, use type assertion
+		if val, ok := objVal.Value.(string); ok {
+			return &EvalResponse{
+				Result: val,
+				Error:  nil,
+			}
+		}
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrUnexpectedType("string", obj.Value),
+		}
+
+	case object.ObjEncodingByteArray:
+		// Value is stored as a bytearray, use type assertion
+		if val, ok := objVal.Value.(*ByteArray); ok {
+			return &EvalResponse{
+				Result: string(val.data),
+				Error:  nil,
+			}
+		}
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+
+	default:
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+}

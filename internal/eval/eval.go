@@ -204,67 +204,6 @@ func evalDBSIZE(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(store.GetDBSize(), false)
 }
 
-// evalGETDEL returns the value for the queried key in args
-// The key should be the only param in args
-// The RESP value of the key is encoded and then returned
-// In evalGETDEL  If the key exists, it will be deleted before its value is returned.
-// evalGETDEL returns response.RespNIL if key is expired or it does not exist
-func evalGETDEL(args []string, store *dstore.Store) []byte {
-	if len(args) != 1 {
-		return diceerrors.NewErrArity("GETDEL")
-	}
-
-	key := args[0]
-
-	// getting the key based on previous touch value
-	obj := store.GetNoTouch(key)
-
-	// if key does not exist, return RESP encoded nil
-	if obj == nil {
-		return clientio.RespNIL
-	}
-
-	// If the object exists, check if it is a Set object.
-	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err == nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	// If the object exists, check if it is a JSON object.
-	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeJSON); err == nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	// Get the key from the hash table
-	objVal := store.GetDel(key)
-
-	// Decode and return the value based on its encoding
-	switch _, oEnc := object.ExtractTypeEncoding(objVal); oEnc {
-	case object.ObjEncodingInt:
-		// Value is stored as an int64, so use type assertion
-		if val, ok := objVal.Value.(int64); ok {
-			return clientio.Encode(val, false)
-		}
-		return diceerrors.NewErrWithFormattedMessage("expected int64 but got another type: %s", objVal.Value)
-
-	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
-		// Value is stored as a string, use type assertion
-		if val, ok := objVal.Value.(string); ok {
-			return clientio.Encode(val, false)
-		}
-		return diceerrors.NewErrWithMessage("expected string but got another type")
-
-	case object.ObjEncodingByteArray:
-		// Value is stored as a bytearray, use type assertion
-		if val, ok := objVal.Value.(*ByteArray); ok {
-			return clientio.Encode(string(val.data), false)
-		}
-		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
-
-	default:
-		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
-	}
-}
-
 // evalJSONDEBUG reports value's memory usage in bytes
 // Returns arity error if subcommand is missing
 // Supports only two subcommand as of now - HELP and MEMORY
