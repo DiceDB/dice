@@ -41,10 +41,11 @@ const (
 
 // Single-shard commands.
 const (
-	CmdSet      = "SET"
-	CmdGet      = "GET"
-	CmdGetSet   = "GETSET"
-	CmdGetWatch = "GET.WATCH"
+	CmdSet         = "SET"
+	CmdGet         = "GET"
+	CmdGetSet      = "GETSET"
+	CmdGetWatch    = "GET.WATCH"
+	CmdZRangeWatch = "ZRANGE.WATCH"
 )
 
 type CmdMeta struct {
@@ -90,6 +91,9 @@ var CommandsMeta = map[string]CmdMeta{
 
 	// Watch commands
 	CmdGetWatch: {
+		CmdType: Watch,
+	},
+	CmdZRangeWatch: {
 		CmdType: Watch,
 	},
 }
