@@ -6,7 +6,6 @@ import (
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/eval"
 	"github.com/dicedb/dice/internal/logger"
-	"github.com/dicedb/dice/internal/querymanager"
 )
 
 type CmdType int
@@ -61,12 +60,6 @@ type CmdMeta struct {
 	// into a single response object. It accepts a variadic parameter of EvalResponse objects
 	// and returns a unified response interface. It is used in the command type "MultiShard"
 	composeResponse func(responses ...eval.EvalResponse) interface{}
-
-	// watchResponse constructs a response object from a command execution.
-	// It accepts the command name, key, and result as parameters and returns a slice of interfaces.
-	// The returned slice contains the command, the key, and the result, which could be any type including an error.
-	// response from this function is required when server sends to clients without the client explicitly requesting them
-	watchResponse func(cmd, key string, result interface{}) []interface{}
 }
 
 var CommandsMeta = map[string]CmdMeta{
@@ -97,8 +90,7 @@ var CommandsMeta = map[string]CmdMeta{
 
 	// Watch commands
 	CmdGetWatch: {
-		CmdType:       Watch,
-		watchResponse: querymanager.GenericWatchResponse,
+		CmdType: Watch,
 	},
 }
 

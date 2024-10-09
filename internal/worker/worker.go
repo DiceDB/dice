@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/dicedb/dice/internal/querymanager"
 	"github.com/dicedb/dice/internal/watchmanager"
 
 	"github.com/dicedb/dice/config"
@@ -221,6 +222,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 				Args: diceDBCmd.Args,
 			}
 			cmdList = append(cmdList, watchCmd)
+			isWatchChan = true
 		}
 	}
 
@@ -306,16 +308,15 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 	val, ok := CommandsMeta[diceDBCmd.Cmd]
 
 	if isWatchChan {
-		// Handle the watch logic here before switching
 		if evalResp[0].Error != nil {
-			err := w.ioHandler.Write(ctx, val.watchResponse(diceDBCmd.Cmd, fmt.Sprintf("%d", diceDBCmd.GetFingerprint()), evalResp[0].Error))
+			err := w.ioHandler.Write(ctx, querymanager.GenericWatchResponse(diceDBCmd.Cmd, fmt.Sprintf("%d", diceDBCmd.GetFingerprint()), evalResp[0].Error))
 			if err != nil {
 				w.logger.Debug("Error sending push response to client", slog.String("workerID", w.id), slog.Any("error", err))
 			}
 			return err
 		}
 
-		err := w.ioHandler.Write(ctx, val.watchResponse(diceDBCmd.Cmd, fmt.Sprintf("%d", diceDBCmd.GetFingerprint()), evalResp[0].Result))
+		err := w.ioHandler.Write(ctx, querymanager.GenericWatchResponse(diceDBCmd.Cmd, fmt.Sprintf("%d", diceDBCmd.GetFingerprint()), evalResp[0].Result))
 		if err != nil {
 			w.logger.Debug("Error sending push response to client", slog.String("workerID", w.id), slog.Any("error", err))
 			return err
