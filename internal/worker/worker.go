@@ -104,9 +104,9 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 				defer cancel()
 
 				// adhoc requests should be classified as watch requests
-				if !strings.HasSuffix(cmdReq.Cmd, ".WATCH") {
-					cmdReq.Cmd += ".WATCH"
-				}
+				// if !strings.HasSuffix(cmdReq.Cmd, ".WATCH") {
+				cmdReq.Cmd += ".WATCH"
+				// }
 				w.executeCommandHandler(execCtx, errChan, []*cmd.DiceDBCmd{cmdReq})
 			}()
 		case data := <-dataChan:
