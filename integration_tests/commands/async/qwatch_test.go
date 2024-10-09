@@ -212,7 +212,7 @@ func verifyRESPUpdates(t *testing.T, respParsers []*clientio.RESPParser, expecte
 			t.Errorf("Type assertion to []interface{} failed for value: %v", v)
 			return
 		}
-		assert.DeepEqual(t, []interface{}{sql.Qwatch, qWatchQuery, expectedUpdate}, update)
+		assert.Equal(t, []interface{}{sql.Qwatch, qWatchQuery, expectedUpdate}, update)
 	}
 }
 
@@ -224,33 +224,6 @@ func verifySDKUpdates(t *testing.T, channels []<-chan *redis.QMessage, expectedU
 			assert.Equal(t, expectedUpdate[i], []interface{}{update.Key, update.Value})
 		}
 	}
-}
-
-// Test cases for WHERE clause for Regular keys
-
-var qWatchWhereQuery = "SELECT $key, $value WHERE $value > 50 and $key like 'match:10?:*' ORDER BY $value desc"
-
-var qWatchWhereTestCases = []qWatchTestCase{
-	{"match:100:user", 0, 55, [][]interface{}{
-		{[]interface{}{"match:100:user:0", int64(55)}},
-	}},
-	{"match:100:user", 1, 60, [][]interface{}{
-		{[]interface{}{"match:100:user:1", int64(60)}, []interface{}{"match:100:user:0", int64(55)}},
-	}},
-	{"match:100:user", 2, 80, [][]interface{}{
-		{[]interface{}{"match:100:user:2", int64(80)}, []interface{}{"match:100:user:1", int64(60)}, []interface{}{"match:100:user:0", int64(55)}},
-	}},
-	{"match:100:user", 0, 90, [][]interface{}{
-		{[]interface{}{"match:100:user:0", int64(90)}, []interface{}{"match:100:user:2", int64(80)}, []interface{}{"match:100:user:1", int64(60)}},
-	}},
-}
-
-func TestQWatchWhere(t *testing.T) {
-	publisher, subscribers, cleanup := setupQWATCHTest(t, qWatchWhereQuery)
-	defer cleanup()
-
-	respParsers := subscribeToQWATCH(t, subscribers, qWatchWhereQuery)
-	runQWatchScenarios(t, publisher, respParsers, qWatchWhereQuery, qWatchWhereTestCases)
 }
 
 // Test cases for WHERE clause for Regular keys

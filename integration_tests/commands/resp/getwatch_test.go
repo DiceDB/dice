@@ -94,16 +94,16 @@ func TestGETWATCHWithSDK(t *testing.T) {
 	for i, subscriber := range subscribers {
 		watch := subscriber.client.WatchCommand(context.Background())
 		subscribers[i].watch = watch
-		assert.Assert(t, watch != nil)
+		assert.True(t, watch != nil)
 		err := watch.Watch(context.Background(), "GET", getWatchKey)
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		channels[i] = watch.Channel()
 		<-channels[i] // Get the first message
 	}
 
 	for _, tc := range getWatchTestCases {
 		err := publisher.Set(context.Background(), tc.key, tc.val, 0).Err()
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 
 		for _, channel := range channels {
 			v := <-channel

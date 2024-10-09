@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 
 	commands "github.com/dicedb/dice/integration_tests/commands/async"
 )
