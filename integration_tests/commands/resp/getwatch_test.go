@@ -3,12 +3,13 @@ package resp
 import (
 	"context"
 	"fmt"
-	"github.com/dicedb/dice/internal/clientio"
-	redis "github.com/dicedb/go-dice"
-	"gotest.tools/v3/assert"
 	"net"
 	"testing"
 	"time"
+
+	"github.com/dicedb/dice/internal/clientio"
+	redis "github.com/dicedb/go-dice"
+	"gotest.tools/v3/assert"
 )
 
 type WatchSubscriber struct {
@@ -79,8 +80,8 @@ func TestGETWATCH(t *testing.T) {
 				t.Errorf("Type assertion to []interface{} failed for value: %v", v)
 			}
 			assert.Equal(t, 3, len(castedValue))
-			assert.Equal(t, "GET", castedValue[0])
-			assert.Equal(t, "1768826704", castedValue[1])
+			assert.Equal(t, "GET.WATCH", castedValue[0])
+			assert.Equal(t, "270139821", castedValue[1])
 			assert.Equal(t, tc.val, castedValue[2])
 		}
 	}
@@ -107,8 +108,8 @@ func TestGETWATCHWithSDK(t *testing.T) {
 
 		for _, channel := range channels {
 			v := <-channel
-			assert.Equal(t, "GET", v.Command)        // command
-			assert.Equal(t, "1768826704", v.Name)    // Fingerprint
+			assert.Equal(t, "GET.WATCH", v.Command)  // command
+			assert.Equal(t, "270139821", v.Name)     // Fingerprint
 			assert.Equal(t, tc.val, v.Data.(string)) // data
 		}
 	}
