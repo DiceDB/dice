@@ -155,8 +155,8 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 	}
 }
 
-func (w *BaseWorker) executeCommandHandler(execCtx context.Context, errChan chan error, cmds []*cmd.DiceDBCmd, isWatchChan bool) {
-	err := w.executeCommand(execCtx, cmds[0], isWatchChan)
+func (w *BaseWorker) executeCommandHandler(execCtx context.Context, errChan chan error, cmds []*cmd.DiceDBCmd, isWatchNotification bool) {
+	err := w.executeCommand(execCtx, cmds[0], isWatchNotification)
 	if err != nil {
 		w.logger.Error("Error executing command", slog.String("workerID", w.id), slog.Any("error", err))
 		if errors.Is(err, net.ErrClosed) || errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.ETIMEDOUT) {
@@ -166,7 +166,7 @@ func (w *BaseWorker) executeCommandHandler(execCtx context.Context, errChan chan
 	}
 }
 
-func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, isWatchChan bool) error {
+func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, isWatchNotification bool) error {
 	// Break down the single command into multiple commands if multisharding is supported.
 	// The length of cmdList helps determine how many shards to wait for responses.
 	cmdList := make([]*cmd.DiceDBCmd, 0)
@@ -222,7 +222,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 				Args: diceDBCmd.Args,
 			}
 			cmdList = append(cmdList, watchCmd)
-			isWatchChan = true
+			isWatchNotification = true
 		}
 	}
 
@@ -232,7 +232,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 	}
 
 	// Gather the responses from the shards and write them to the buffer.
-	if err := w.gather(ctx, diceDBCmd, len(cmdList), isWatchChan); err != nil {
+	if err := w.gather(ctx, diceDBCmd, len(cmdList), isWatchNotification); err != nil {
 		return err
 	}
 
@@ -285,7 +285,7 @@ func (w *BaseWorker) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd) error {
 
 // gather collects the responses from multiple shards and writes the results into the provided buffer.
 // It first waits for responses from all the shards and then processes the result based on the command type (SingleShard, Custom, or Multishard).
-func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCmds int, isWatchChan bool) error {
+func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCmds int, isWatchNotification bool) error {
 	// Loop to wait for messages from number of shards
 	var evalResp []eval.EvalResponse
 	for numCmds != 0 {
@@ -307,7 +307,7 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 
 	val, ok := CommandsMeta[diceDBCmd.Cmd]
 
-	if isWatchChan {
+	if isWatchNotification {
 		if evalResp[0].Error != nil {
 			err := w.ioHandler.Write(ctx, querymanager.GenericWatchResponse(diceDBCmd.Cmd, fmt.Sprintf("%d", diceDBCmd.GetFingerprint()), evalResp[0].Error))
 			if err != nil {
