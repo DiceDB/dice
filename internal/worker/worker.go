@@ -191,6 +191,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 			cmdList = meta.decomposeCommand(diceDBCmd)
 
 		case Custom:
+			// if command is of type Custom, write a custom logic around it
 			switch diceDBCmd.Cmd {
 			case CmdAuth:
 				err := w.ioHandler.Write(ctx, w.RespAuth(diceDBCmd.Args))
