@@ -36,7 +36,6 @@ func TestGETWATCH(t *testing.T) {
 	subscribers := []net.Conn{getLocalConnection(), getLocalConnection(), getLocalConnection()}
 
 	FireCommand(publisher, fmt.Sprintf("DEL %s", getWatchKey))
-	defer FireCommand(publisher, fmt.Sprintf("DEL %s", getWatchKey))
 
 	defer func() {
 		if err := publisher.Close(); err != nil {
@@ -95,7 +94,6 @@ func TestGETWATCHWithSDK(t *testing.T) {
 	subscribers := []WatchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
 
 	publisher.Del(context.Background(), getWatchKey)
-	defer publisher.Del(context.Background(), getWatchKey)
 
 	channels := make([]<-chan *redis.WMessage, len(subscribers))
 	for i, subscriber := range subscribers {
