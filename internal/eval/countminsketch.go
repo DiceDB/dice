@@ -326,7 +326,7 @@ func evalCMSINITBYDIM(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrWithFormattedMessage("%w for 'CMS.INITBYDIM' command", err)
 	}
 
-	if _, err = createCountMinSketch(args[0], opts, store); err != nil {
+	if err = createCountMinSketch(args[0], opts, store); err != nil {
 		return diceerrors.NewErrWithFormattedMessage("%w for 'CMS.INITBYDIM' command", err)
 	}
 
@@ -343,25 +343,24 @@ func evalCMSINITBYPROB(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrWithFormattedMessage("%w for 'CMS.INITBYPROB' command", err)
 	}
 
-	_, err = createCountMinSketch(args[0], opts, store)
-	if err != nil {
+	if err = createCountMinSketch(args[0], opts, store); err != nil {
 		return diceerrors.NewErrWithFormattedMessage("%w for 'CMS.INITBYPROB' command", err)
 	}
 
 	return clientio.RespOK
 }
 
-func createCountMinSketch(key string, opts *CountMinSketchOpts, store *dstore.Store) (*CountMinSketch, error) {
+func createCountMinSketch(key string, opts *CountMinSketchOpts, store *dstore.Store) error {
 	obj := store.Get(key)
 
 	if obj != nil {
-		return nil, diceerrors.NewErr("key already exists")
+		return diceerrors.NewErr("key already exists")
 	}
 
 	obj = store.NewObj(newCountMinSketch(opts), -1, object.ObjTypeCountMinSketch, object.ObjEncodingMatrix)
 	store.Put(key, obj)
 
-	return obj.Value.(*CountMinSketch), nil
+	return nil
 }
 
 func getCountMinSketch(key string, store *dstore.Store) (*CountMinSketch, error) {
