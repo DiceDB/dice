@@ -101,6 +101,10 @@ var (
 		Cmd:     "GETEX",
 		CmdType: SingleShard,
 	}
+	getdelCmdMeta = CmdsMeta{
+		Cmd:     "GETDEL",
+		CmdType: SingleShard,
+	}
 
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
@@ -127,6 +131,7 @@ func init() {
 	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
 	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
 	WorkerCmdsMeta["GETEX"] = getexCmdMeta
+	WorkerCmdsMeta["GETDEL"] = getdelCmdMeta
 
 	// Additional commands (multishard, custom) can be added here as needed.
 }
