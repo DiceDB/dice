@@ -45,7 +45,7 @@ func TestQWatchUnwatch(t *testing.T) {
 	}
 
 	// Make updates to the store
-	runQWatchScenarios(t, publisher, respParsers)
+	runQWatchScenarios(t, publisher, respParsers, qWatchQuery, qWatchTestCases)
 
 	// Unwatch the query on two of the subscribers
 	for _, sub := range subscribers[0:2] {

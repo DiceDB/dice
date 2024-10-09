@@ -270,7 +270,7 @@ func TestSetDataCmd(t *testing.T) {
 				{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "baz"}},
 				{Command: "SINTER", Body: map[string]interface{}{"values": []interface{}{"foo"}}},
 			},
-			assert_type: []string{"equal", "equal", "unordered_equal"},
+			assert_type: []string{"equal", "equal", "array"},
 			expected:    []interface{}{float64(1), float64(1), []any{string("bar"), string("baz")}},
 		},
 	}
