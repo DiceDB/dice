@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
-	"strings"
 	"syscall"
 	"time"
 
@@ -107,7 +106,7 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 				// if !strings.HasSuffix(cmdReq.Cmd, ".WATCH") {
 				cmdReq.Cmd += ".WATCH"
 				// }
-				w.executeCommandHandler(execCtx, errChan, []*cmd.DiceDBCmd{cmdReq})
+				w.executeCommandHandler(execCtx, errChan, []*cmd.DiceDBCmd{cmdReq}, true)
 			}()
 		case data := <-dataChan:
 			cmds, err := w.parser.Parse(data)
@@ -149,7 +148,7 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 			func(errChan chan error) {
 				execCtx, cancel := context.WithTimeout(ctx, 6*time.Second) // Timeout set to 6 seconds for integration tests
 				defer cancel()
-				w.executeCommandHandler(execCtx, errChan, cmds)
+				w.executeCommandHandler(execCtx, errChan, cmds, false)
 			}(errChan)
 		case err := <-readErrChan:
 			w.logger.Debug("Read error, connection closed possibly", slog.String("workerID", w.id), slog.Any("error", err))
@@ -158,8 +157,8 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 	}
 }
 
-func (w *BaseWorker) executeCommandHandler(execCtx context.Context, errChan chan error, cmds []*cmd.DiceDBCmd) {
-	err := w.executeCommand(execCtx, cmds[0])
+func (w *BaseWorker) executeCommandHandler(execCtx context.Context, errChan chan error, cmds []*cmd.DiceDBCmd, isWatchChan bool) {
+	err := w.executeCommand(execCtx, cmds[0], isWatchChan)
 	if err != nil {
 		w.logger.Error("Error executing command", slog.String("workerID", w.id), slog.Any("error", err))
 		if errors.Is(err, net.ErrClosed) || errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.ETIMEDOUT) {
@@ -169,7 +168,7 @@ func (w *BaseWorker) executeCommandHandler(execCtx context.Context, errChan chan
 	}
 }
 
-func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCmd) error {
+func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, isWatchChan bool) error {
 	// Break down the single command into multiple commands if multisharding is supported.
 	// The length of cmdList helps determine how many shards to wait for responses.
 	cmdList := make([]*cmd.DiceDBCmd, 0)
@@ -225,27 +224,6 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 				Args: diceDBCmd.Args,
 			}
 			cmdList = append(cmdList, watchCmd)
-
-			// Scatter the broken-down commands to the appropriate shards.
-			if err := w.scatter(ctx, cmdList); err != nil {
-				return err
-			}
-
-			// Gather the responses from the shards and write them to the buffer.
-			if err := w.gather(ctx, diceDBCmd, len(cmdList)); err != nil {
-				return err
-			}
-
-			if meta.CmdType == Watch {
-				// Proceed to subscribe after successful execution
-				watchmanager.CmdWatchSubscriptionChan <- watchmanager.WatchSubscription{
-					Subscribe:    true,
-					WatchCmd:     cmdList[len(cmdList)-1],
-					AdhocReqChan: w.adhocReqChan,
-				}
-			}
-
-			return nil
 		}
 	}
 
@@ -255,7 +233,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 	}
 
 	// Gather the responses from the shards and write them to the buffer.
-	if err := w.gather(ctx, diceDBCmd, len(cmdList)); err != nil {
+	if err := w.gather(ctx, diceDBCmd, len(cmdList), isWatchChan); err != nil {
 		return err
 	}
 
@@ -308,7 +286,7 @@ func (w *BaseWorker) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd) error {
 
 // gather collects the responses from multiple shards and writes the results into the provided buffer.
 // It first waits for responses from all the shards and then processes the result based on the command type (SingleShard, Custom, or Multishard).
-func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCmds int) error {
+func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCmds int, isWatchChan bool) error {
 	// Loop to wait for messages from number of shards
 	var evalResp []eval.EvalResponse
 	for numCmds != 0 {
@@ -329,6 +307,24 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 	}
 
 	val, ok := CommandsMeta[diceDBCmd.Cmd]
+
+	if isWatchChan {
+		// Handle the watch logic here before switching
+		if evalResp[0].Error != nil {
+			err := w.ioHandler.Write(ctx, val.watchResponse(diceDBCmd.Cmd, fmt.Sprintf("%d", diceDBCmd.GetFingerprint()), evalResp[0].Error))
+			if err != nil {
+				w.logger.Debug("Error sending push response to client", slog.String("workerID", w.id), slog.Any("error", err))
+			}
+			return err
+		}
+
+		err := w.ioHandler.Write(ctx, val.watchResponse(diceDBCmd.Cmd, fmt.Sprintf("%d", diceDBCmd.GetFingerprint()), evalResp[0].Result))
+		if err != nil {
+			w.logger.Debug("Error sending push response to client", slog.String("workerID", w.id), slog.Any("error", err))
+			return err
+		}
+		return nil // Exit after handling watch case
+	}
 
 	// TODO: Remove it once we have migrated all the commands
 	if !ok {
@@ -372,7 +368,6 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 			}
 
 		case Watch:
-			diceDBCmd.Cmd = strings.TrimSuffix(diceDBCmd.Cmd, ".WATCH")
 			if evalResp[0].Error != nil {
 				err := w.ioHandler.Write(ctx, val.watchResponse(diceDBCmd.Cmd, fmt.Sprintf("%d", diceDBCmd.GetFingerprint()), evalResp[0].Error))
 				if err != nil {
