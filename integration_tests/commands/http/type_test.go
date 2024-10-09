@@ -41,7 +41,7 @@ func TestType(t *testing.T) {
 				{Command: "LPUSH", Body: map[string]interface{}{"key": "k1", "value": "v1"}},
 				{Command: "TYPE", Body: map[string]interface{}{"key": "k1"}},
 			},
-			expected:      []interface{}{"OK", "list"},
+			expected:      []interface{}{float64(1), "list"},
 			errorExpected: false,
 		},
 		{
