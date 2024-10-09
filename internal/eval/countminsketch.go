@@ -25,6 +25,7 @@ type CountMinSketch struct {
 	opts *CountMinSketchOpts
 
 	matrix [][]uint64
+	count  uint64
 }
 
 func newCountMinSketchOpts(args []string) (*CountMinSketchOpts, error) {
@@ -79,6 +80,7 @@ func (c *CountMinSketch) info(name string) string {
 	}
 	info += fmt.Sprintf("width: %d, ", c.opts.width)
 	info += fmt.Sprintf("depth: %d,", c.opts.depth)
+	info += fmt.Sprintf("count: %d,", c.count)
 
 	return info
 }
@@ -116,6 +118,7 @@ func (c *CountMinSketch) updateMatrix(key string, count uint64) {
 	for row, col := range c.matrixPositions([]byte(key)) {
 		c.matrix[row][col] += count
 	}
+	c.count += count
 }
 
 func (c *CountMinSketch) estimateCount(key string) uint64 {
