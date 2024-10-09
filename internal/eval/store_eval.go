@@ -161,30 +161,24 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 		} else {
 			// Handle the GET return behavior based on encoding type 
 			switch _, oEnc := object.ExtractTypeEncoding(obj); oEnc {
-			case object.ObjEncodingInt:
-				if val, ok := obj.Value.(int64); ok {
-					tempResult = clientio.Encode(val, false)
-				}
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrUnexpectedType("int64", obj.Value),
-				}
-
 			case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
-				if val, ok := obj.Value.(string); ok {
-					tempResult = clientio.Encode(val, false)
-				}
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrUnexpectedType("string", obj.Value),
+				if val, ok := obj.Value.(string); !ok {
+					return &EvalResponse{
+						Result: nil,
+						Error:  diceerrors.ErrWrongTypeOperation,
+					}
+				}else{
+					tempResult = clientio.Encode(val, true)
 				}
 			default:
 				// If the type is unknown or unsupported, return nil for the value
-				tempResult = clientio.RespNIL
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrWrongTypeOperation,
+				}
 			}
 		}
 	}
-
 	// Cast the value properly based on the encoding type
 	var storedValue interface{}
 	switch oEnc {
