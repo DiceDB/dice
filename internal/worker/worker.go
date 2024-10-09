@@ -351,6 +351,7 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 			}
 
 		case Watch:
+			diceDBCmd.Cmd = strings.TrimSuffix(diceDBCmd.Cmd, ".WATCH")
 			if evalResp[0].Error != nil {
 				err := w.ioHandler.Write(ctx, val.watchResponse(diceDBCmd.Cmd, fmt.Sprintf("%d", diceDBCmd.GetFingerprint()), evalResp[0].Error))
 				if err != nil {

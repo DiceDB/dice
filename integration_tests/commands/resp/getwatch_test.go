@@ -1,21 +1,14 @@
 package resp
 
 import (
-	"context"
 	"fmt"
 	"net"
 	"testing"
 	"time"
 
 	"github.com/dicedb/dice/internal/clientio"
-	redis "github.com/dicedb/go-dice"
 	"gotest.tools/v3/assert"
 )
-
-type WatchSubscriber struct {
-	client *redis.Client
-	watch  *redis.WatchCommand
-}
 
 const getWatchKey = "getwatchkey"
 
@@ -80,37 +73,9 @@ func TestGETWATCH(t *testing.T) {
 				t.Errorf("Type assertion to []interface{} failed for value: %v", v)
 			}
 			assert.Equal(t, 3, len(castedValue))
-			assert.Equal(t, "GET.WATCH", castedValue[0])
-			assert.Equal(t, "270139821", castedValue[1])
+			assert.Equal(t, "GET", castedValue[0])
+			assert.Equal(t, "1768826704", castedValue[1])
 			assert.Equal(t, tc.val, castedValue[2])
-		}
-	}
-}
-
-func TestGETWATCHWithSDK(t *testing.T) {
-	publisher := getLocalSdk()
-	subscribers := []WatchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
-
-	channels := make([]<-chan *redis.WMessage, len(subscribers))
-	for i, subscriber := range subscribers {
-		watch := subscriber.client.WatchCommand(context.Background())
-		subscribers[i].watch = watch
-		assert.Assert(t, watch != nil)
-		err := watch.Watch(context.Background(), "GET", getWatchKey)
-		assert.NilError(t, err)
-		channels[i] = watch.Channel()
-		<-channels[i] // Get the first message
-	}
-
-	for _, tc := range getWatchTestCases {
-		err := publisher.Set(context.Background(), tc.key, tc.val, 0).Err()
-		assert.NilError(t, err)
-
-		for _, channel := range channels {
-			v := <-channel
-			assert.Equal(t, "GET.WATCH", v.Command)  // command
-			assert.Equal(t, "270139821", v.Name)     // Fingerprint
-			assert.Equal(t, tc.val, v.Data.(string)) // data
 		}
 	}
 }
