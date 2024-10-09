@@ -225,6 +225,27 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 				Args: diceDBCmd.Args,
 			}
 			cmdList = append(cmdList, watchCmd)
+
+			// Scatter the broken-down commands to the appropriate shards.
+			if err := w.scatter(ctx, cmdList); err != nil {
+				return err
+			}
+
+			// Gather the responses from the shards and write them to the buffer.
+			if err := w.gather(ctx, diceDBCmd, len(cmdList)); err != nil {
+				return err
+			}
+
+			if meta.CmdType == Watch {
+				// Proceed to subscribe after successful execution
+				watchmanager.CmdWatchSubscriptionChan <- watchmanager.WatchSubscription{
+					Subscribe:    true,
+					WatchCmd:     cmdList[len(cmdList)-1],
+					AdhocReqChan: w.adhocReqChan,
+				}
+			}
+
+			return nil
 		}
 	}
 
