@@ -1,6 +1,7 @@
 package eval
 
 import (
+	"encoding/binary"
 	"fmt"
 	"hash"
 	"hash/fnv"
@@ -80,6 +81,106 @@ func (c *CountMinSketch) info(name string) string {
 	info += fmt.Sprintf("depth: %d,", c.opts.depth)
 
 	return info
+}
+
+func (c *CountMinSketch) baseHashes(key []byte) (hash1, hash2 uint32) {
+	c.opts.hasher.Reset()
+	c.opts.hasher.Write(key)
+
+	sum := c.opts.hasher.Sum(nil)
+
+	upper := sum[0:4]
+	lower := sum[4:8]
+
+	hash1 = binary.BigEndian.Uint32(upper)
+	hash2 = binary.BigEndian.Uint32(lower)
+
+	return
+}
+
+func (c *CountMinSketch) matrixPositions(key []byte) (positions []uint64) {
+	positions = make([]uint64, c.opts.depth)
+
+	hash1, hash2 := c.baseHashes(key)
+
+	uintHash1 := uint64(hash1)
+	uintHash2 := uint64(hash2)
+
+	for row := uint64(0); row < c.opts.depth; row++ {
+		positions[row] = (uintHash1 + uintHash2*row) % c.opts.width
+	}
+	return
+}
+
+func (c *CountMinSketch) updateMatrix(key string, count uint64) {
+	for row, col := range c.matrixPositions([]byte(key)) {
+		c.matrix[row][col] += count
+	}
+}
+
+func (c *CountMinSketch) estimateCount(key string) uint64 {
+	var count uint64 = math.MaxUint64
+	for row, col := range c.matrixPositions([]byte(key)) {
+		if c.matrix[row][col] < count {
+			count = c.matrix[row][col]
+		}
+	}
+
+	return count
+}
+
+func evalCMSQuery(args []string, store *dstore.Store) []byte {
+	if len(args) < 2 {
+		return diceerrors.NewErrArity("CMS.QUERY")
+	}
+
+	cms, err := getCountMinSketch(args[0], store)
+	if err != nil {
+		return diceerrors.NewErrWithFormattedMessage("%w for 'CMS.INFO' command", err)
+	}
+
+	results := make([]uint64, 0, len(args[1:]))
+
+	for _, key := range args[1:] {
+		results = append(results, cms.estimateCount(key))
+	}
+
+	return clientio.Encode(results, false)
+}
+
+func evalCMSIncrBy(args []string, store *dstore.Store) []byte {
+	if len(args) < 3 || len(args)%2 == 0 {
+		return diceerrors.NewErrArity("CMS.INCRBY")
+	}
+
+	cms, err := getCountMinSketch(args[0], store)
+	if err != nil {
+		return diceerrors.NewErrWithFormattedMessage("%w for 'CMS.INCRBY' command", err)
+	}
+
+	keyValuePairs := args[1:]
+	for iter := 1; iter < len(keyValuePairs); iter += 2 {
+		_, err := strconv.ParseUint(keyValuePairs[iter], 10, 64)
+		if err != nil {
+			return diceerrors.NewErrWithMessage("cannot parse number")
+		}
+	}
+
+	results := make([]uint64, 0, len(keyValuePairs)/2)
+
+	for iter := 0; iter <= len(keyValuePairs)-2; iter += 2 {
+		key := keyValuePairs[iter]
+		value, err := strconv.ParseUint(keyValuePairs[iter+1], 10, 64)
+		if err != nil {
+			return diceerrors.NewErrWithMessage("cannot parse number")
+		}
+
+		cms.updateMatrix(key, value)
+		count := cms.estimateCount(key)
+		results = append(results, count)
+	}
+
+	return clientio.Encode(results, false)
 }
 
 func evalCMSINFO(args []string, store *dstore.Store) []byte {

@@ -1104,6 +1104,20 @@ var (
 		Eval:     evalCMSINFO,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	cmsQueryCmdMeta = DiceCmdMeta{
+		Name:     "CMS.QUERY",
+		Info:     `Query count min sketch with for given list of keys`,
+		Arity:    -2,
+		Eval:     evalCMSQuery,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	cmsIncrByCmdMeta = DiceCmdMeta{
+		Name:     "CMS.INCRBY",
+		Info:     `Increase count of the list of keys to count min sketch`,
+		Arity:    -3,
+		Eval:     evalCMSIncrBy,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -1227,6 +1241,8 @@ func init() {
 	DiceCmds["CMS.INITBYDIM"] = cmsInitByDimCmdMeta
 	DiceCmds["CMS.INITBYPROB"] = cmsInitByProbCmdMeta
 	DiceCmds["CMS.INFO"] = cmsInfoCmdMeta
+	DiceCmds["CMS.QUERY"] = cmsQueryCmdMeta
+	DiceCmds["CMS.INCRBY"] = cmsIncrByCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

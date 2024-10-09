@@ -245,6 +245,14 @@ func Encode(value interface{}, isSimple bool) []byte {
 		}
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes())) // Return the encoded response.
 
+	case []uint64:
+		var b []byte
+		buf := bytes.NewBuffer(b) // Create a buffer for accumulating encoded values.
+		for _, b := range value.([]uint64) {
+			buf.Write(Encode(b, false)) // Encode each uint64 and write to the buffer.
+		}
+		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes())) // Return the encoded response.
+
 	// Handle error type by formatting it as a RESP error.
 	case error:
 		return []byte(fmt.Sprintf("-%s\r\n", v))
