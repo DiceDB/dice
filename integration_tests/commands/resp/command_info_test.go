@@ -3,7 +3,7 @@ package resp
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 var getInfoTestCases = []struct {
@@ -32,7 +32,7 @@ func TestCommandInfo(t *testing.T) {
 	for _, tc := range getInfoTestCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result := FireCommand(conn, "COMMAND INFO "+tc.inCmd)
-			assert.DeepEqual(t, tc.expected, result)
+			assert.Equal(t, tc.expected, result)
 		})
 	}
 }

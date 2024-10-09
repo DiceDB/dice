@@ -3,7 +3,7 @@ package resp
 import (
 	"fmt"
 	"github.com/dicedb/dice/internal/clientio"
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 	"net"
 	"testing"
 	"time"
@@ -47,11 +47,11 @@ func TestGETWATCH(t *testing.T) {
 	respParsers := make([]*clientio.RESPParser, len(subscribers))
 	for i, subscriber := range subscribers {
 		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("GET.WATCH %s", getWatchKey))
-		assert.Assert(t, rp != nil)
+		assert.True(t, rp != nil)
 		respParsers[i] = rp
 
 		v, err := rp.DecodeOne()
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		castedValue, ok := v.([]interface{})
 		if !ok {
 			t.Errorf("Type assertion to []interface{} failed for value: %v", v)
@@ -66,7 +66,7 @@ func TestGETWATCH(t *testing.T) {
 
 		for _, rp := range respParsers {
 			v, err := rp.DecodeOne()
-			assert.NilError(t, err)
+			assert.Nil(t, err)
 			castedValue, ok := v.([]interface{})
 			if !ok {
 				t.Errorf("Type assertion to []interface{} failed for value: %v", v)

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 type TestCase struct {
@@ -43,7 +43,7 @@ func TestSet(t *testing.T) {
 
 			for i, cmd := range tc.commands {
 				result := FireCommand(conn, cmd)
-				assert.DeepEqual(t, tc.expected[i], result)
+				assert.Equal(t, tc.expected[i], result)
 			}
 		})
 	}
@@ -148,9 +148,9 @@ func TestSetWithExat(t *testing.T) {
 			FireCommand(conn, "DEL k")
 			assert.Equal(t, "OK", FireCommand(conn, "SET k v EXAT "+Etime), "Value mismatch for cmd SET k v EXAT "+Etime)
 			assert.Equal(t, "v", FireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
-			assert.Assert(t, FireCommand(conn, "TTL k").(int64) <= 5, "Value mismatch for cmd TTL k")
+			assert.True(t, FireCommand(conn, "TTL k").(int64) <= 5, "Value mismatch for cmd TTL k")
 			time.Sleep(3 * time.Second)
-			assert.Assert(t, FireCommand(conn, "TTL k").(int64) <= 3, "Value mismatch for cmd TTL k")
+			assert.True(t, FireCommand(conn, "TTL k").(int64) <= 3, "Value mismatch for cmd TTL k")
 			time.Sleep(3 * time.Second)
 			assert.Equal(t, "(nil)", FireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
 			assert.Equal(t, int64(-2), FireCommand(conn, "TTL k"), "Value mismatch for cmd TTL k")
