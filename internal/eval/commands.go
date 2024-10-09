@@ -1118,6 +1118,15 @@ var (
 		Eval:     evalCMSIncrBy,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	cmsMergeCmdMeta = DiceCmdMeta{
+		Name: "CMS.MERGE",
+		Info: `Merges several sketches into one sketch.
+				 All sketches must have identical width and depth.
+				 Weights can be used to multiply certain sketches. Default weight is 1.`,
+		Arity:    -3,
+		Eval:     evalCMSMerge,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -1243,6 +1252,7 @@ func init() {
 	DiceCmds["CMS.INFO"] = cmsInfoCmdMeta
 	DiceCmds["CMS.QUERY"] = cmsQueryCmdMeta
 	DiceCmds["CMS.INCRBY"] = cmsIncrByCmdMeta
+	DiceCmds["CMS.MERGE"] = cmsMergeCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

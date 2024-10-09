@@ -6,7 +6,9 @@ import (
 	"hash"
 	"hash/fnv"
 	"math"
+	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
@@ -132,6 +134,122 @@ func (c *CountMinSketch) estimateCount(key string) uint64 {
 	return count
 }
 
+func (c *CountMinSketch) DeepCopy() *CountMinSketch {
+	if c == nil {
+		return nil
+	}
+
+	copyOpts := &CountMinSketchOpts{
+		depth:  c.opts.depth,
+		width:  c.opts.width,
+		hasher: c.opts.hasher,
+	}
+
+	// Deep copy the matrix
+	matrix := make([][]uint64, c.opts.depth)
+	for row := uint64(0); row < c.opts.depth; row++ {
+		matrix[row] = make([]uint64, c.opts.width)
+		copy(matrix[row], c.matrix[row])
+	}
+
+	return &CountMinSketch{
+		opts:   copyOpts,
+		matrix: matrix,
+		count:  c.count,
+	}
+}
+
+func (c *CountMinSketch) mergeMatrices(sources []*CountMinSketch, weights []uint64, originalKey string, keys []string) {
+	originalCopy := c.DeepCopy()
+
+	for row := uint64(0); row < c.opts.depth; row++ {
+		for col := uint64(0); col < c.opts.width; col++ {
+			c.matrix[row][col] = 0
+		}
+	}
+
+	for row := uint64(0); row < c.opts.depth; row++ {
+		for col := uint64(0); col < c.opts.width; col++ {
+			for i, cms := range sources {
+				if keys[i] == originalKey {
+					c.matrix[row][col] += weights[i] * originalCopy.matrix[row][col]
+				} else {
+					c.matrix[row][col] += weights[i] * cms.matrix[row][col]
+				}
+			}
+		}
+	}
+
+	c.count = 0
+	for i, cms := range sources {
+		if keys[i] == originalKey {
+			c.count += weights[i] * originalCopy.count
+		} else {
+			c.count += weights[i] * cms.count
+		}
+	}
+}
+
+func evalCMSMerge(args []string, store *dstore.Store) []byte {
+	if len(args) < 3 {
+		return diceerrors.NewErrArity("CMS.MERGE")
+	}
+
+	destination, err := getCountMinSketch(args[0], store)
+	if err != nil {
+		return diceerrors.NewErrWithFormattedMessage("%w for 'CMS.MERGE' command", err)
+	}
+
+	numberOfKeys, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil || numberOfKeys < 1 {
+		return diceerrors.NewErrWithMessage("invalid number of keys to merge")
+	}
+
+	keys := args[2 : 2+numberOfKeys]
+	sources := make([]*CountMinSketch, 0, numberOfKeys)
+
+	for _, key := range keys {
+		c, err := getCountMinSketch(key, store)
+		if err != nil {
+			return diceerrors.NewErrWithFormattedMessage("%w for 'CMS.MERGE' command", err)
+		}
+		if c.opts.depth != destination.opts.depth || c.opts.width != destination.opts.width {
+			return diceerrors.NewErrWithMessage("width/depth doesn't match")
+		}
+		sources = append(sources, c)
+	}
+
+	if len(args) == int(2+numberOfKeys) {
+		weights := slices.Repeat([]uint64{1}, int(numberOfKeys))
+		destination.mergeMatrices(sources, weights, args[0], keys)
+
+		return clientio.RespOK
+	}
+
+	if !strings.EqualFold(args[2+numberOfKeys], "WEIGHTS") {
+		return diceerrors.NewErrWithMessage("syntax error")
+	}
+
+	numberOfWeights := len(args) - 3 - int(numberOfKeys)
+	if int(numberOfKeys) != numberOfWeights {
+		return diceerrors.NewErrWithMessage("syntax error")
+	}
+
+	values := args[3+numberOfWeights:]
+	weights := make([]uint64, 0, numberOfWeights)
+	for _, value := range values {
+		weight, err := strconv.ParseUint(value, 10, 64)
+		if err != nil {
+			return diceerrors.NewErrWithMessage("invalid number")
+		}
+		weights = append(weights, weight)
+	}
+
+	destination.mergeMatrices(sources, weights, args[0], keys)
+
+	return clientio.RespOK
+}
+
 func evalCMSQuery(args []string, store *dstore.Store) []byte {
 	if len(args) < 2 {
 		return diceerrors.NewErrArity("CMS.QUERY")
@@ -139,7 +257,7 @@ func evalCMSQuery(args []string, store *dstore.Store) []byte {
 
 	cms, err := getCountMinSketch(args[0], store)
 	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%w for 'CMS.INFO' command", err)
+		return diceerrors.NewErrWithFormattedMessage("%w for 'CMS.QUERY' command", err)
 	}
 
 	results := make([]uint64, 0, len(args[1:]))
