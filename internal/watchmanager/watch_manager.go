@@ -28,8 +28,9 @@ type (
 var (
 	CmdWatchSubscriptionChan chan WatchSubscription
 	affectedCmdMap           = map[string]map[string]struct{}{
-		"SET": {"GET": struct{}{}},
-		"DEL": {"GET": struct{}{}},
+		dstore.Set:    {dstore.Get: struct{}{}},
+		dstore.Del:    {dstore.Get: struct{}{}},
+		dstore.Rename: {dstore.Get: struct{}{}},
 	}
 )
 
