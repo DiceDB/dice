@@ -109,10 +109,6 @@ func (m *Manager) handleUnsubscription(sub WatchSubscription) {
 			delete(m.tcpSubscriptionMap, fingerprint)
 			// Also remove the fingerprint from fingerprintCmdMap
 			delete(m.fingerprintCmdMap, fingerprint)
-		} else {
-			// Update the map with the new set of clients
-			// TODO: Is this actually required?
-			m.tcpSubscriptionMap[fingerprint] = clients
 		}
 	}
 
@@ -125,10 +121,6 @@ func (m *Manager) handleUnsubscription(sub WatchSubscription) {
 			// If there are no more fingerprints listening to this key, remove it from the map
 			if len(fingerprints) == 0 {
 				delete(m.querySubscriptionMap, key)
-			} else {
-				// Update the map with the new set of fingerprints.
-				// TODO: Is this actually required?
-				m.querySubscriptionMap[key] = fingerprints
 			}
 		}
 	}
