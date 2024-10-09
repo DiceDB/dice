@@ -3,12 +3,13 @@ package resp
 import (
 	"context"
 	"fmt"
-	"github.com/dicedb/dice/internal/clientio"
-	redis "github.com/dicedb/go-dice"
-	"gotest.tools/v3/assert"
 	"net"
 	"testing"
 	"time"
+
+	"github.com/dicedb/dice/internal/clientio"
+	redis "github.com/dicedb/go-dice"
+	"gotest.tools/v3/assert"
 )
 
 type WatchSubscriber struct {
