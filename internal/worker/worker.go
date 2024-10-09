@@ -103,9 +103,6 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 				defer cancel()
 
 				// adhoc requests should be classified as watch requests
-				// if !strings.HasSuffix(cmdReq.Cmd, ".WATCH") {
-				cmdReq.Cmd += ".WATCH"
-				// }
 				w.executeCommandHandler(execCtx, errChan, []*cmd.DiceDBCmd{cmdReq}, true)
 			}()
 		case data := <-dataChan:
@@ -364,21 +361,6 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 			err := w.ioHandler.Write(ctx, val.composeResponse(evalResp...))
 			if err != nil {
 				w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
-				return err
-			}
-
-		case Watch:
-			if evalResp[0].Error != nil {
-				err := w.ioHandler.Write(ctx, val.watchResponse(diceDBCmd.Cmd, fmt.Sprintf("%d", diceDBCmd.GetFingerprint()), evalResp[0].Error))
-				if err != nil {
-					w.logger.Debug("Error sending push response to client", slog.String("workerID", w.id), slog.Any("error", err))
-				}
-				return err
-			}
-
-			err := w.ioHandler.Write(ctx, val.watchResponse(diceDBCmd.Cmd, fmt.Sprintf("%d", diceDBCmd.GetFingerprint()), evalResp[0].Result))
-			if err != nil {
-				w.logger.Debug("Error sending push response to client", slog.String("workerID", w.id), slog.Any("error", err))
 				return err
 			}
 
