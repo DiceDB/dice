@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"strings"
 	"syscall"
 	"time"
 
@@ -101,6 +102,11 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 			func() {
 				execCtx, cancel := context.WithTimeout(ctx, 6*time.Second) // Timeout set to 6 seconds for integration tests
 				defer cancel()
+
+				// adhoc requests should be classified as watch requests
+				if !strings.HasSuffix(cmdReq.Cmd, ".WATCH") {
+					cmdReq.Cmd += ".WATCH"
+				}
 				w.executeCommandHandler(execCtx, errChan, []*cmd.DiceDBCmd{cmdReq})
 			}()
 		case data := <-dataChan:
