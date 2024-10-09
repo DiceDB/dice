@@ -38,7 +38,7 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 	var exDurationMs int64 = -1
 	var state exDurationState = Uninitialized
 	var keepttl bool = false
-	var isGetCmdPresent = false
+	var isGetCmdPresent bool = false
 	key, value = args[0], args[1]
 	oType, oEnc := deduceTypeEncoding(value)
 	var tempResult []byte
