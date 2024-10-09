@@ -212,7 +212,7 @@ func verifyRESPUpdates(t *testing.T, respParsers []*clientio.RESPParser, expecte
 			t.Errorf("Type assertion to []interface{} failed for value: %v", v)
 			return
 		}
-		assert.Equal(t, []interface{}{sql.Qwatch, qWatchQuery, expectedUpdate}, update)
+		assert.Equal(t, []interface{}{sql.Qwatch, query, expectedUpdate}, update)
 	}
 }
 

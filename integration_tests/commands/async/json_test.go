@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"net"
+	"sort"
 	"strings"
 	"testing"
 
@@ -1286,7 +1287,7 @@ func TestJsonObjKeys(t *testing.T) {
 				outInterface := []interface{}{out}
 				assert.Equal(t, outInterface, expected)
 			} else {
-				assert.Equal(t, out.([]interface{}), expected,
+				assert.EqualValues(t, sortNestedSlices(out.([]interface{})), sortNestedSlices(expected),
 					cmpopts.SortSlices(func(a, b interface{}) bool {
 						return fmt.Sprintf("%v", a) < fmt.Sprintf("%v", b)
 					}))
@@ -1295,6 +1296,23 @@ func TestJsonObjKeys(t *testing.T) {
 	}
 
 }
+func sortNestedSlices(data []interface{}) []interface{} {
+	result := make([]interface{}, len(data))
+	for i, item := range data {
+		if slice, ok := item.([]interface{}); ok {
+			sorted := make([]interface{}, len(slice))
+			copy(sorted, slice)
+			sort.Slice(sorted, func(i, j int) bool {
+				return fmt.Sprintf("%v", sorted[i]) < fmt.Sprintf("%v", sorted[j])
+			})
+			result[i] = sorted
+		} else {
+			result[i] = item
+		}
+	}
+	return result
+}
+
 func TestJsonARRTRIM(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
