@@ -3206,3 +3206,159 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) *EvalResponse {
 		Error:  nil,
 	}
 }
+
+// GETEX key [EX seconds | PX milliseconds | EXAT unix-time-seconds |
+// PXAT unix-time-milliseconds | PERSIST]
+// Get the value of key and optionally set its expiration.
+// GETEX is similar to GET, but is a write command with additional options.
+// The GETEX command supports a set of options that modify its behavior:
+// EX seconds -- Set the specified expire time, in seconds.
+// PX milliseconds -- Set the specified expire time, in milliseconds.
+// EXAT timestamp-seconds -- Set the specified Unix time at which the key will expire, in seconds.
+// PXAT timestamp-milliseconds -- Set the specified Unix time at which the key will expire, in milliseconds.
+// PERSIST -- Remove the time to live associated with the key.
+// The RESP value of the key is encoded and then returned
+// evalGET returns response.RespNIL if key is expired or it does not exist
+func evalGETEX(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("GETEX"),
+		}
+	}
+
+	var key = args[0]
+
+	// Get the key from the hash table
+	obj := store.Get(key)
+
+	// if key does not exist, return RESP encoded nil
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.RespNIL,
+			Error:  nil,
+		}
+	}
+
+	// check if the object is set type or json type if yes then return error
+	if object.AssertType(obj.TypeEncoding, object.ObjTypeSet) == nil ||
+		object.AssertType(obj.TypeEncoding, object.ObjTypeJSON) == nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	var exDurationMs int64 = -1
+	var state = Uninitialized
+	var persist = false
+	for i := 1; i < len(args); i++ {
+		arg := strings.ToUpper(args[i])
+		switch arg {
+		case Ex, Px:
+			if state != Uninitialized {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrSyntax,
+				}
+			}
+			i++
+			if i == len(args) {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrSyntax,
+				}
+			}
+
+			exDuration, err := strconv.ParseInt(args[i], 10, 64)
+			if err != nil {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrIntegerOutOfRange,
+				}
+			}
+			if exDuration <= 0 || exDuration > maxExDuration {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrInvalidExpireTime("GETEX"),
+				}
+			}
+
+			// converting seconds to milliseconds
+			if arg == Ex {
+				exDuration *= 1000
+			}
+			exDurationMs = exDuration
+			state = Initialized
+
+		case Pxat, Exat:
+			if state != Uninitialized {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrSyntax,
+				}
+			}
+			i++
+			if i == len(args) {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrSyntax,
+				}
+			}
+			exDuration, err := strconv.ParseInt(args[i], 10, 64)
+			if err != nil {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrIntegerOutOfRange,
+				}
+			}
+
+			if exDuration < 0 || exDuration > maxExDuration {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrInvalidExpireTime("GETEX"),
+				}
+			}
+
+			if arg == Exat {
+				exDuration *= 1000
+			}
+			exDurationMs = exDuration - utils.GetCurrentTime().UnixMilli()
+			// If the expiry time is in the past, set exDurationMs to 0
+			// This will be used to signal immediate expiration
+			if exDurationMs < 0 {
+				exDurationMs = 0
+			}
+			state = Initialized
+
+		case "PERSIST":
+			if state != Uninitialized {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrIntegerOutOfRange,
+				}
+			}
+			persist = true
+			state = Initialized
+		default:
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrIntegerOutOfRange,
+			}
+		}
+	}
+
+	if state == Initialized {
+		if persist {
+			dstore.DelExpiry(obj, store)
+		} else {
+			store.SetExpiry(obj, exDurationMs)
+		}
+	}
+
+	// return the RESP encoded value
+	return &EvalResponse{
+		Result: clientio.Encode(obj.Value, false),
+		Error:  nil,
+	}
+}

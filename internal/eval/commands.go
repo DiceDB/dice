@@ -678,9 +678,10 @@ var (
 		Name: "GETEX",
 		Info: `Get the value of key and optionally set its expiration.
 		GETEX is similar to GET, but is a write command with additional options.`,
-		Eval:     evalGETEX,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalGETEX,
 	}
 	pttlCmdMeta = DiceCmdMeta{
 		Name: "PTTL",
