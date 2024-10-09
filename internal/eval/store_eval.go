@@ -1079,80 +1079,67 @@ func evalAPPEND(args []string, store *dstore.Store) *EvalResponse {
 	key, value := args[0], args[1]
 	obj := store.Get(key)
 
-	if obj == nil {
-		// Key does not exist path
+	// Get the current expiry time
+	var exDurationMs int64 = -1 // -1 indicates no expiry time
+	expiryTStampMs, hasExpiry := dstore.GetExpiry(obj, store)
 
-		// check if the value starts with '0' and has more than 1 character to handle leading zeros
-		if len(value) > 1 && value[0] == '0' {
-			// treat as string if has leading zeros
-			store.Put(key, store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw))
-			return &EvalResponse{
-				Result: len(value),
-				Error:  nil,
-			}
+	// Set the new expiry time
+	if hasExpiry {
+		// get the new expiry time in milliseconds
+		exDurationMs = int64(expiryTStampMs) - utils.GetCurrentTime().UnixMilli()
+		if exDurationMs < 0 {
+			// set expiry time to 0
+			exDurationMs = 0
 		}
+	}
 
+	// Key does not exist, create a new key
+	if obj == nil {
 		// Deduce type and encoding based on the value if no leading zeros
 		oType, oEnc := deduceTypeEncoding(value)
 
-		var storedValue interface{}
-		// Store the value with the appropriate encoding based on the type
-		switch oEnc {
-		case object.ObjEncodingInt:
-			storedValue, _ = strconv.ParseInt(value, 10, 64)
-		case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
-			storedValue = value
-		default:
+		// Transform the value based on the type and encoding
+		storedValue, err := storeValueWithEncoding(value, oEnc)
+		if err != nil {
 			return &EvalResponse{
 				Result: nil,
-				Error:  diceerrors.ErrWrongTypeOperation,
+				Error:  err,
 			}
 		}
 
-		store.Put(key, store.NewObj(storedValue, -1, oType, oEnc))
-
+		store.Put(key, store.NewObj(storedValue, exDurationMs, oType, oEnc))
 		return &EvalResponse{
 			Result: len(value),
 			Error:  nil,
 		}
 	}
 
-	var currentValueStr string
-	switch currentType, currentEnc := object.ExtractTypeEncoding(obj); currentEnc {
-	case object.ObjEncodingInt:
-		// If the encoding is an integer, convert the current value to a string for concatenation
-		currentValueStr = strconv.FormatInt(obj.Value.(int64), 10)
-	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
-		// If the encoding and type is a string, retrieve the string value for concatenation
-		if currentType == object.ObjTypeString {
-			currentValueStr = obj.Value.(string)
-		} else {
-			return &EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrWrongTypeOperation,
-			}
-		}
-	case object.ObjEncodingByteArray:
-		if val, ok := obj.Value.(*ByteArray); ok {
-			currentValueStr = string(val.data)
-		} else {
-			return &EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrWrongTypeOperation,
-			}
-		}
-	default:
-		// If the encoding is neither integer, string, nor byte array, return a "wrong type" error
+	// Key exists path
+	if _, ok := obj.Value.(*sortedset.Set); ok {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongTypeOperation,
 		}
 	}
+	_, currentEnc := object.ExtractTypeEncoding(obj)
 
-	newValue := currentValueStr + value
+	// Transform the value based on the current encoding
+	currentValue, err := convertValueToString(obj, currentEnc)
+	if err != nil {
+		// If the encoding is neither integer nor string, return a "wrong type" error
+		return &EvalResponse{
+			Result: nil,
+			Error:  err,
+		}
+	}
 
-	store.Put(key, store.NewObj(newValue, -1, object.ObjTypeString, object.ObjEncodingRaw))
+	// Append the value
+	newValue := currentValue + value
 
+	// We need to store the new appended value as a string
+	// Even if append is performed on integers, the result will be stored as a string
+	// This is consistent with the redis implementation as append is considered a string operation
+	store.Put(key, store.NewObj(newValue, exDurationMs, object.ObjTypeString, object.ObjEncodingRaw))
 	return &EvalResponse{
 		Result: len(newValue),
 		Error:  nil,
