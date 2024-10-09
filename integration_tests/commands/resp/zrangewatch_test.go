@@ -34,6 +34,9 @@ func TestZRANGEWATCH(t *testing.T) {
 	publisher := getLocalConnection()
 	subscribers := []net.Conn{getLocalConnection(), getLocalConnection(), getLocalConnection()}
 
+	FireCommand(publisher, "FLUSHDB")
+	defer FireCommand(publisher, "FLUSHDB")
+
 	defer func() {
 		if err := publisher.Close(); err != nil {
 			t.Errorf("Error closing publisher connection: %v", err)
@@ -83,6 +86,9 @@ func TestZRANGEWATCH(t *testing.T) {
 func TestZRANGEWATCHWithSDK(t *testing.T) {
 	publisher := getLocalSdk()
 	subscribers := []WatchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
+
+	publisher.FlushDB(context.Background())
+	defer publisher.FlushDB(context.Background())
 
 	channels := make([]<-chan *redis.WMessage, len(subscribers))
 	for i, subscriber := range subscribers {
