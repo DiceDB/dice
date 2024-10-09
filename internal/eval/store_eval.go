@@ -3229,25 +3229,16 @@ func evalGETEX(args []string, store *dstore.Store) *EvalResponse {
 
 	var key = args[0]
 
+	// Get EvalResponse with correct data type
+	getResp := evalGET([]string{key}, store)
+
+	// If there is an error or the key doesn't exist return the error response or nil
+	if getResp.Error != nil || getResp.Result == clientio.NIL {
+		return getResp
+	}
+
 	// Get the key from the hash table
 	obj := store.Get(key)
-
-	// if key does not exist, return RESP encoded nil
-	if obj == nil {
-		return &EvalResponse{
-			Result: clientio.RespNIL,
-			Error:  nil,
-		}
-	}
-
-	// check if the object is set type or json type if yes then return error
-	if object.AssertType(obj.TypeEncoding, object.ObjTypeSet) == nil ||
-		object.AssertType(obj.TypeEncoding, object.ObjTypeJSON) == nil {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongTypeOperation,
-		}
-	}
 
 	var exDurationMs int64 = -1
 	var state = Uninitialized
@@ -3356,9 +3347,6 @@ func evalGETEX(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	// return the RESP encoded value
-	return &EvalResponse{
-		Result: clientio.Encode(obj.Value, false),
-		Error:  nil,
-	}
+	// return an EvalResponse with the value
+	return getResp
 }
