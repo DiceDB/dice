@@ -4761,7 +4761,7 @@ func evalZADD(args []string, store *dstore.Store) []byte {
 	}
 
 	obj = store.NewObj(ss, -1, object.ObjTypeSortedSet, object.ObjEncodingBTree)
-	store.Put(key, obj)
+	store.Put(key, obj, dstore.WithPutCmd(dstore.ZAdd))
 
 	return clientio.Encode(added, false)
 }
