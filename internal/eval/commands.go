@@ -620,11 +620,23 @@ var (
 		Arity:    -4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hmsetCmdMeta = DiceCmdMeta{
+		Name: "HMSET",
+		Info: `HSET sets the specific fields to their respective values in the
+		hash stored at key. If any given field is already present, the previous
+		value will be overwritten with the new value
+		Returns
+		This command returns the number of keys that are stored at given key.
+		`,
+		Eval:     evalHMSET,
+		Arity:    -4,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	hkeysCmdMeta = DiceCmdMeta{
-		Name: "HKEYS",
-		Info:  `HKEYS command is used to retrieve all the keys(or field names) within a hash. Complexity is O(n) where n is the size of the hash.`,
-		Eval: evalHKEYS,
-		Arity: 1,
+		Name:     "HKEYS",
+		Info:     `HKEYS command is used to retrieve all the keys(or field names) within a hash. Complexity is O(n) where n is the size of the hash.`,
+		Eval:     evalHKEYS,
+		Arity:    1,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	hsetnxCmdMeta = DiceCmdMeta{
@@ -641,6 +653,13 @@ var (
 		Info:     `Returns the value associated with field in the hash stored at key.`,
 		Eval:     evalHGET,
 		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	hmgetCmdMeta = DiceCmdMeta{
+		Name:     "HMGET",
+		Info:     `Returns the values associated with the specified fields in the hash stored at key.`,
+		Eval:     evalHMGET,
+		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	hgetAllCmdMeta = DiceCmdMeta{
@@ -683,6 +702,16 @@ var (
 		Returns
 		The number of fields that were removed from the hash, not including specified but non-existing fields.`,
 		Eval:     evalHDEL,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	hscanCmdMeta = DiceCmdMeta{
+		Name: "HSCAN",
+		Info: `HSCAN is used to iterate over fields and values of a hash.
+		It returns a cursor and a list of key-value pairs.
+		The cursor is used to paginate through the hash.
+		The command returns a cursor value of 0 when all the elements are iterated.`,
+		Eval:     evalHSCAN,
 		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
@@ -911,27 +940,27 @@ var (
 		Arity:    3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
-	dumpkeyCMmdMeta=DiceCmdMeta{
-		Name:	 "DUMP",
-		Info:	`Serialize the value stored at key in a Redis-specific format and return it to the user.
+	dumpkeyCMmdMeta = DiceCmdMeta{
+		Name: "DUMP",
+		Info: `Serialize the value stored at key in a Redis-specific format and return it to the user.
 				The returned value can be synthesized back into a Redis key using the RESTORE command.`,
-		Eval:   evalDUMP,
-		Arity: 	1,
-		KeySpecs:   KeySpecs{BeginIndex: 1},
+		Eval:     evalDUMP,
+		Arity:    1,
+		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
-	restorekeyCmdMeta=DiceCmdMeta{
-		Name:	"RESTORE",
-		Info:  `Serialize the value stored at key in a Redis-specific format and return it to the user.
+	restorekeyCmdMeta = DiceCmdMeta{
+		Name: "RESTORE",
+		Info: `Serialize the value stored at key in a Redis-specific format and return it to the user.
 				The returned value can be synthesized back into a Redis key using the RESTORE command.`,
-		Eval: evalRestore,
-		Arity:	2,
+		Eval:     evalRestore,
+		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	typeCmdMeta = DiceCmdMeta{
-		Name:     "TYPE",
-		Info:     `Returns the string representation of the type of the value stored at key. The different types that can be returned are: string, list, set, zset, hash and stream.`,
-		Eval:     evalTYPE,
-		Arity:    1,
+		Name:  "TYPE",
+		Info:  `Returns the string representation of the type of the value stored at key. The different types that can be returned are: string, list, set, zset, hash and stream.`,
+		Eval:  evalTYPE,
+		Arity: 1,
 
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
@@ -1004,9 +1033,33 @@ var (
 		Arity:    -4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	bitfieldCmdMeta = DiceCmdMeta{
+		Name: "BITFIELD",
+		Info: `The command treats a string as an array of bits as well as bytearray data structure,
+		and is capable of addressing specific integer fields of varying bit widths
+		and arbitrary non (necessary) aligned offset.
+		In practical terms using this command you can set, for example,
+		a signed 5 bits integer at bit offset 1234 to a specific value,
+		retrieve a 31 bit unsigned integer from offset 4567.
+		Similarly the command handles increments and decrements of the
+		specified integers, providing guaranteed and well specified overflow
+		and underflow behavior that the user can configure.
+		The following is the list of supported commands.
+		GET <encoding> <offset> -- Returns the specified bit field.
+		SET <encoding> <offset> <value> -- Set the specified bit field
+		and returns its old value.
+		INCRBY <encoding> <offset> <increment> -- Increments or decrements
+		(if a negative increment is given) the specified bit field and returns the new value.
+		There is another subcommand that only changes the behavior of successive
+		INCRBY and SET subcommands calls by setting the overflow behavior:
+		OVERFLOW [WRAP|SAT|FAIL]`,
+		Arity:    -1,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+		Eval:     evalBITFIELD,
+	}
 	hincrbyFloatCmdMeta = DiceCmdMeta{
 		Name: "HINCRBYFLOAT",
-		Info: `HINCRBYFLOAT increments the specified field of a hash stored at the key, 
+		Info: `HINCRBYFLOAT increments the specified field of a hash stored at the key,
 		and representing a floating point number, by the specified increment.
 		If the field does not exist, it is set to 0 before performing the operation.
 		If the field contains a value of wrong type or specified increment
@@ -1016,120 +1069,140 @@ var (
 		Arity:    -4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	geoAddCmdMeta = DiceCmdMeta{
+		Name:     "GEOADD",
+		Info:     `Adds one or more members to a geospatial index. The key is created if it doesn't exist.`,
+		Arity:    -5,
+		Eval:     evalGEOADD,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	geoDistCmdMeta = DiceCmdMeta{
+		Name:     "GEODIST",
+		Info:     `Returns the distance between two members in the geospatial index.`,
+		Arity:    -4,
+		Eval:     evalGEODIST,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
-	DiceCmds["PING"] = pingCmdMeta
-	DiceCmds["ECHO"] = echoCmdMeta
+	DiceCmds["ABORT"] = abortCmdMeta
+	DiceCmds["APPEND"] = appendCmdMeta
 	DiceCmds["AUTH"] = authCmdMeta
-	DiceCmds["DUMP"]=dumpkeyCMmdMeta
-	DiceCmds["RESTORE"]=restorekeyCmdMeta
-	DiceCmds["SET"] = setCmdMeta
-	DiceCmds["GET"] = getCmdMeta
-	DiceCmds["MSET"] = msetCmdMeta
-	DiceCmds["JSON.SET"] = jsonsetCmdMeta
-	DiceCmds["JSON.TOGGLE"] = jsontoggleCmdMeta
-	DiceCmds["JSON.GET"] = jsongetCmdMeta
-	DiceCmds["JSON.TYPE"] = jsontypeCmdMeta
-	DiceCmds["JSON.CLEAR"] = jsonclearCmdMeta
-	DiceCmds["JSON.DEL"] = jsondelCmdMeta
-	DiceCmds["JSON.ARRAPPEND"] = jsonarrappendCmdMeta
-	DiceCmds["JSON.FORGET"] = jsonforgetCmdMeta
-	DiceCmds["JSON.ARRLEN"] = jsonarrlenCmdMeta
-	DiceCmds["JSON.NUMMULTBY"] = jsonnummultbyCmdMeta
-	DiceCmds["JSON.OBJLEN"] = jsonobjlenCmdMeta
-	DiceCmds["JSON.DEBUG"] = jsondebugCmdMeta
-	DiceCmds["JSON.OBJKEYS"] = jsonobjkeysCmdMeta
-	DiceCmds["JSON.ARRPOP"] = jsonarrpopCmdMeta
-	DiceCmds["JSON.INGEST"] = jsoningestCmdMeta
-	DiceCmds["JSON.ARRINSERT"] = jsonarrinsertCmdMeta
-	DiceCmds["JSON.RESP"] = jsonrespCmdMeta
-	DiceCmds["JSON.ARRTRIM"] = jsonarrtrimCmdMeta
-	DiceCmds["TTL"] = ttlCmdMeta
-	DiceCmds["DEL"] = delCmdMeta
-	DiceCmds["EXPIRE"] = expireCmdMeta
-	DiceCmds["EXPIRETIME"] = expiretimeCmdMeta
-	DiceCmds["EXPIREAT"] = expireatCmdMeta
-	DiceCmds["HELLO"] = helloCmdMeta
-	DiceCmds["BGREWRITEAOF"] = bgrewriteaofCmdMeta
-	DiceCmds["INCR"] = incrCmdMeta
-	DiceCmds["INCRBYFLOAT"] = incrByFloatCmdMeta
-	DiceCmds["INFO"] = infoCmdMeta
-	DiceCmds["CLIENT"] = clientCmdMeta
-	DiceCmds["LATENCY"] = latencyCmdMeta
-	DiceCmds["LRU"] = lruCmdMeta
-	DiceCmds["SLEEP"] = sleepCmdMeta
-	DiceCmds["BFINIT"] = bfinitCmdMeta
 	DiceCmds["BFADD"] = bfaddCmdMeta
 	DiceCmds["BFEXISTS"] = bfexistsCmdMeta
 	DiceCmds["BFINFO"] = bfinfoCmdMeta
-	DiceCmds["SUBSCRIBE"] = subscribeCmdMeta
-	DiceCmds["QWATCH"] = qwatchCmdMeta
-	DiceCmds["QUNWATCH"] = qUnwatchCmdMeta
-	DiceCmds["MULTI"] = MultiCmdMeta
-	DiceCmds["EXEC"] = ExecCmdMeta
-	DiceCmds["DISCARD"] = DiscardCmdMeta
-	DiceCmds["ABORT"] = abortCmdMeta
-	DiceCmds["COMMAND"] = commandCmdMeta
-	DiceCmds["SETBIT"] = setBitCmdMeta
-	DiceCmds["GETBIT"] = getBitCmdMeta
+	DiceCmds["BFINIT"] = bfinitCmdMeta
+	DiceCmds["BGREWRITEAOF"] = bgrewriteaofCmdMeta
 	DiceCmds["BITCOUNT"] = bitCountCmdMeta
+	DiceCmds["BITFIELD"] = bitfieldCmdMeta
 	DiceCmds["BITOP"] = bitOpCmdMeta
-	DiceCmds["KEYS"] = keysCmdMeta
-	DiceCmds["MGET"] = MGetCmdMeta
-	DiceCmds["PERSIST"] = persistCmdMeta
-	DiceCmds["COPY"] = copyCmdMeta
-	DiceCmds["DECR"] = decrCmdMeta
-	DiceCmds["EXISTS"] = existsCmdMeta
-	DiceCmds["GETDEL"] = getDelCmdMeta
-	DiceCmds["DECRBY"] = decrByCmdMeta
-	DiceCmds["RENAME"] = renameCmdMeta
-	DiceCmds["GETEX"] = getexCmdMeta
-	DiceCmds["PTTL"] = pttlCmdMeta
-	DiceCmds["HSET"] = hsetCmdMeta
-	DiceCmds["HKEYS"] = hkeysCmdMeta
-	DiceCmds["HSETNX"] = hsetnxCmdMeta
-	DiceCmds["OBJECT"] = objectCmdMeta
-	DiceCmds["TOUCH"] = touchCmdMeta
-	DiceCmds["LPUSH"] = lpushCmdMeta
-	DiceCmds["RPOP"] = rpopCmdMeta
-	DiceCmds["RPUSH"] = rpushCmdMeta
-	DiceCmds["LPOP"] = lpopCmdMeta
-	DiceCmds["LLEN"] = llenCmdMeta
-	DiceCmds["DBSIZE"] = dbSizeCmdMeta
-	DiceCmds["GETSET"] = getSetCmdMeta
-	DiceCmds["FLUSHDB"] = flushdbCmdMeta
 	DiceCmds["BITPOS"] = bitposCmdMeta
-	DiceCmds["SADD"] = saddCmdMeta
-	DiceCmds["SMEMBERS"] = smembersCmdMeta
-	DiceCmds["SREM"] = sremCmdMeta
-	DiceCmds["SCARD"] = scardCmdMeta
-	DiceCmds["SDIFF"] = sdiffCmdMeta
-	DiceCmds["SINTER"] = sinterCmdMeta
+	DiceCmds["CLIENT"] = clientCmdMeta
+	DiceCmds["COMMAND"] = commandCmdMeta
+	DiceCmds["COPY"] = copyCmdMeta
+	DiceCmds["DBSIZE"] = dbSizeCmdMeta
+	DiceCmds["DECR"] = decrCmdMeta
+	DiceCmds["DECRBY"] = decrByCmdMeta
+	DiceCmds["DEL"] = delCmdMeta
+	DiceCmds["DISCARD"] = DiscardCmdMeta
+	DiceCmds["DUMP"] = dumpkeyCMmdMeta
+	DiceCmds["ECHO"] = echoCmdMeta
+	DiceCmds["EXEC"] = ExecCmdMeta
+	DiceCmds["EXISTS"] = existsCmdMeta
+	DiceCmds["EXPIRE"] = expireCmdMeta
+	DiceCmds["EXPIREAT"] = expireatCmdMeta
+	DiceCmds["EXPIRETIME"] = expiretimeCmdMeta
+	DiceCmds["FLUSHDB"] = flushdbCmdMeta
+	DiceCmds["GEOADD"] = geoAddCmdMeta
+	DiceCmds["GEODIST"] = geoDistCmdMeta
+	DiceCmds["GET"] = getCmdMeta
+	DiceCmds["GETBIT"] = getBitCmdMeta
+	DiceCmds["GETDEL"] = getDelCmdMeta
+	DiceCmds["GETEX"] = getexCmdMeta
+	DiceCmds["GETRANGE"] = getRangeCmdMeta
+	DiceCmds["GETSET"] = getSetCmdMeta
+	DiceCmds["HDEL"] = hdelCmdMeta
+	DiceCmds["HELLO"] = helloCmdMeta
+	DiceCmds["HEXISTS"] = hexistsCmdMeta
+	DiceCmds["HGET"] = hgetCmdMeta
 	DiceCmds["HGETALL"] = hgetAllCmdMeta
+	DiceCmds["HINCRBY"] = hincrbyCmdMeta
+	DiceCmds["HINCRBYFLOAT"] = hincrbyFloatCmdMeta
+	DiceCmds["HKEYS"] = hkeysCmdMeta
+	DiceCmds["HLEN"] = hlenCmdMeta
+	DiceCmds["HMGET"] = hmgetCmdMeta
+	DiceCmds["HMSET"] = hmsetCmdMeta
+	DiceCmds["HRANDFIELD"] = hrandfieldCmdMeta
+	DiceCmds["HSCAN"] = hscanCmdMeta
+	DiceCmds["HSET"] = hsetCmdMeta
+	DiceCmds["HSETNX"] = hsetnxCmdMeta
+	DiceCmds["HSTRLEN"] = hstrLenCmdMeta
+	DiceCmds["HVALS"] = hValsCmdMeta
+	DiceCmds["INCR"] = incrCmdMeta
+	DiceCmds["INCRBYFLOAT"] = incrByFloatCmdMeta
+	DiceCmds["INCRBY"] = incrbyCmdMeta
+	DiceCmds["INFO"] = infoCmdMeta
+	DiceCmds["JSON.ARRAPPEND"] = jsonarrappendCmdMeta
+	DiceCmds["JSON.ARRINSERT"] = jsonarrinsertCmdMeta
+	DiceCmds["JSON.ARRLEN"] = jsonarrlenCmdMeta
+	DiceCmds["JSON.ARRPOP"] = jsonarrpopCmdMeta
+	DiceCmds["JSON.ARRTRIM"] = jsonarrtrimCmdMeta
+	DiceCmds["JSON.CLEAR"] = jsonclearCmdMeta
+	DiceCmds["JSON.DEBUG"] = jsondebugCmdMeta
+	DiceCmds["JSON.DEL"] = jsondelCmdMeta
+	DiceCmds["JSON.FORGET"] = jsonforgetCmdMeta
+	DiceCmds["JSON.GET"] = jsongetCmdMeta
+	DiceCmds["JSON.INGEST"] = jsoningestCmdMeta
+	DiceCmds["JSON.MGET"] = jsonMGetCmdMeta
+	DiceCmds["JSON.NUMINCRBY"] = jsonnumincrbyCmdMeta
+	DiceCmds["JSON.NUMMULTBY"] = jsonnummultbyCmdMeta
+	DiceCmds["JSON.OBJKEYS"] = jsonobjkeysCmdMeta
+	DiceCmds["JSON.OBJLEN"] = jsonobjlenCmdMeta
+	DiceCmds["JSON.RESP"] = jsonrespCmdMeta
+	DiceCmds["JSON.SET"] = jsonsetCmdMeta
+	DiceCmds["JSON.STRLEN"] = jsonStrlenCmdMeta
+	DiceCmds["JSON.TOGGLE"] = jsontoggleCmdMeta
+	DiceCmds["JSON.TYPE"] = jsontypeCmdMeta
+	DiceCmds["KEYS"] = keysCmdMeta
+	DiceCmds["LATENCY"] = latencyCmdMeta
+	DiceCmds["LLEN"] = llenCmdMeta
+	DiceCmds["LPOP"] = lpopCmdMeta
+	DiceCmds["LPUSH"] = lpushCmdMeta
+	DiceCmds["LRU"] = lruCmdMeta
+	DiceCmds["MGET"] = MGetCmdMeta
+	DiceCmds["MSET"] = msetCmdMeta
+	DiceCmds["MULTI"] = MultiCmdMeta
+	DiceCmds["OBJECT"] = objectCmdMeta
+	DiceCmds["PERSIST"] = persistCmdMeta
 	DiceCmds["PFADD"] = pfAddCmdMeta
 	DiceCmds["PFCOUNT"] = pfCountCmdMeta
-	DiceCmds["HGET"] = hgetCmdMeta
-	DiceCmds["HSTRLEN"] = hstrLenCmdMeta
 	DiceCmds["PFMERGE"] = pfMergeCmdMeta
-	DiceCmds["JSON.STRLEN"] = jsonStrlenCmdMeta
-	DiceCmds["JSON.MGET"] = jsonMGetCmdMeta
-	DiceCmds["HLEN"] = hlenCmdMeta
+	DiceCmds["PING"] = pingCmdMeta
+	DiceCmds["PTTL"] = pttlCmdMeta
+	DiceCmds["QUNWATCH"] = qUnwatchCmdMeta
+	DiceCmds["QWATCH"] = qwatchCmdMeta
+	DiceCmds["RENAME"] = renameCmdMeta
+	DiceCmds["RESTORE"] = restorekeyCmdMeta
+	DiceCmds["RPOP"] = rpopCmdMeta
+	DiceCmds["RPUSH"] = rpushCmdMeta
+	DiceCmds["SADD"] = saddCmdMeta
+	DiceCmds["SCARD"] = scardCmdMeta
+	DiceCmds["SDIFF"] = sdiffCmdMeta
 	DiceCmds["SELECT"] = selectCmdMeta
-	DiceCmds["JSON.NUMINCRBY"] = jsonnumincrbyCmdMeta
-	DiceCmds["TYPE"] = typeCmdMeta
-	DiceCmds["HINCRBY"] = hincrbyCmdMeta
-	DiceCmds["INCRBY"] = incrbyCmdMeta
-	DiceCmds["GETRANGE"] = getRangeCmdMeta
+	DiceCmds["SET"] = setCmdMeta
+	DiceCmds["SETBIT"] = setBitCmdMeta
 	DiceCmds["SETEX"] = setexCmdMeta
-	DiceCmds["HRANDFIELD"] = hrandfieldCmdMeta
-	DiceCmds["HDEL"] = hdelCmdMeta
-	DiceCmds["HVALS"] = hValsCmdMeta
-	DiceCmds["APPEND"] = appendCmdMeta
+	DiceCmds["SINTER"] = sinterCmdMeta
+	DiceCmds["SLEEP"] = sleepCmdMeta
+	DiceCmds["SMEMBERS"] = smembersCmdMeta
+	DiceCmds["SREM"] = sremCmdMeta
+	DiceCmds["SUBSCRIBE"] = subscribeCmdMeta
+	DiceCmds["TOUCH"] = touchCmdMeta
+	DiceCmds["TTL"] = ttlCmdMeta
+	DiceCmds["TYPE"] = typeCmdMeta
 	DiceCmds["ZADD"] = zaddCmdMeta
 	DiceCmds["ZRANGE"] = zrangeCmdMeta
-	DiceCmds["HINCRBYFLOAT"] = hincrbyFloatCmdMeta
-	DiceCmds["HEXISTS"] = hexistsCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

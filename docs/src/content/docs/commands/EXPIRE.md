@@ -8,20 +8,29 @@ The `EXPIRE` command in DiceDB is used to set a timeout on a specified key. Afte
 ## Syntax
 
 ```
-EXPIRE key seconds
+EXPIRE key seconds [NX | XX | GT | LT]
 ```
 
 ## Parameters
 
-- `key`: The key on which the timeout is to be set. This must be an existing key in the DiceDB database.
-- `seconds`: The timeout duration in seconds. This must be a positive integer.
+| Parameter | Description                                                               | Type    | Required |
+|-----------|---------------------------------------------------------------------------|---------|----------|
+| `key`     | The key to set the timeout on. Must be an existing key.                   | String  | Yes      |
+| `seconds` | Timeout duration in seconds. Must be a positive integer.                  | Integer | Yes      |
+| `NX`      | Set expiry only if the key does not already have an expiry.               | None    | No       |
+| `XX`      | Set expiry only if the key already has an expiry.                         | None    | No       |
+| `GT`      | Set expiry only if the new expiry is greater than the current one.        | None    | No       |
+| `LT`      | Set expiry only if the new expiry is less than the current one.           | None    | No       |
+
 
 ## Return Value
 
 The `EXPIRE` command returns an integer value:
 
-- `1` if the timeout was successfully set.
-- `0` if the key does not exist or the timeout could not be set.
+| Condition                                      | Return Value                                      |
+|------------------------------------------------|---------------------------------------------------|
+| Timeout was successfully set.                  | `1`                                              |
+| Timeout was not set (e.g., key does not exist, or conditions not met).| `0`                                             |
 
 ## Behaviour
 
@@ -35,8 +44,9 @@ When the `EXPIRE` command is issued:
 
 The `EXPIRE` command can raise errors in the following scenarios:
 
-- `Wrong Type Error`: If the key exists but is not a string, list, set, hash, or zset, DiceDB will return an error.
-- `Syntax Error`: If the command is not used with the correct number of arguments, DiceDB will return a syntax error.
+1. `Syntax Error`: If the command is not used with the correct number of arguments, DiceDB will return a syntax error.
+    - Error Message: `(error) ERROR wrong number of arguments for 'expire' command`
+    - Returned if the command is issued with an incorrect number of arguments.
 
 ## Example Usage
 
@@ -44,7 +54,11 @@ The `EXPIRE` command can raise errors in the following scenarios:
 
 ```bash
 127.0.0.1:7379> SET mykey "Hello"
+OK
+```
+```bash
 127.0.0.1:7379> EXPIRE mykey 10
+(integer) 1
 ```
 
 In this example, the key `mykey` is set with the value "Hello". The `EXPIRE` command sets a timeout of 10 seconds on `mykey`. After 10 seconds, `mykey` will be automatically deleted.
@@ -53,11 +67,59 @@ In this example, the key `mykey` is set with the value "Hello". The `EXPIRE` com
 
 ```bash
 127.0.0.1:7379> SET mykey "Hello"
+OK
+```
+```bash
+127.0.0.1:7379> EXPIRE mykey 10
+(integer) 1
+```
+```bash
+127.0.0.1:7379> TTL mykey
+(integer) 10
+```
+
+The `TTL` command shows the remaining time to live for mykey, which is 10 seconds.
+
+### Setting Expiry with Conditions (NX and XX)
+```bash
+127.0.0.1:7379> SET mykey "Hello"
+OK
+```
+```bash
+127.0.0.1:7379> EXPIRE mykey 10 NX
+(integer) 1
+```
+```bash
+127.0.0.1:7379> EXPIRE mykey 20 XX
+(integer) 1
+```
+
+The `NX` option sets the expiry only if there was no expiry set, and the `XX` option updates it because there was an existing expiry.
+
+### Replacing an Existing Timeout
+
+
+```bash
+127.0.0.1:7379> SET mykey "Hello"
+OK
+```
+
+```bash
 127.0.0.1:7379> EXPIRE mykey 10
 (integer) 1
 ```
 
-The command returns `1`, indicating that the timeout was successfully set.
+```bash
+127.0.0.1:7379> EXPIRE mykey 20
+(integer) 1
+```
+
+```bash
+127.0.0.1:7379> TTL mykey
+(integer) 20
+```
+
+The initial `EXPIRE` command sets a timeout of 10 seconds. The subsequent `EXPIRE` command replaces the existing timeout with a new timeout of 20 seconds.
 
 ### Attempting to Set Timeout on a Non-Existent Key
 
@@ -68,33 +130,13 @@ The command returns `1`, indicating that the timeout was successfully set.
 
 The command returns `0`, indicating that the key does not exist and no timeout was set.
 
-### Replacing an Existing Timeout
-
-```bash
-127.0.0.1:7379> SET mykey "Hello"
-127.0.0.1:7379> EXPIRE mykey 10
-127.0.0.1:7379> EXPIRE mykey 20
-```
-
-The initial `EXPIRE` command sets a timeout of 10 seconds. The subsequent `EXPIRE` command replaces the existing timeout with a new timeout of 20 seconds.
-
 ## Error Handling Examples
-
-### Wrong Type Error
-
-```bash
-127.0.0.1:7379> LPUSH mylist "Hello"
-127.0.0.1:7379> EXPIRE mylist 10
-(error) WRONGTYPE Operation against a key holding the wrong kind of value
-```
-
-In this example, `mylist` is a list, and attempting to set an expiration on it will result in a `WRONGTYPE` error.
 
 ### Syntax Error
 
 ```bash
 127.0.0.1:7379> EXPIRE mykey
-(error) ERR wrong number of arguments for 'expire' command
+(error) ERROR wrong number of arguments for 'expire' command
 ```
 
 This example shows a syntax error due to missing the `seconds` argument.

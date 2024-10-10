@@ -5,21 +5,18 @@ description: The `BGREWRITEAOF` command in DiceDB is used to asynchronously rewr
 
 The `BGREWRITEAOF` command in DiceDB is used to asynchronously rewrite the Append-Only File (AOF). This command triggers a background process that creates a new AOF file, which is a more compact and optimized version of the current AOF file. The new AOF file will contain the minimal set of commands needed to reconstruct the current dataset.
 
-## Parameters
+## Syntax
 
-The `BGREWRITEAOF` command does not take any parameters.
+```
+BGREWRITEAOF
+```
 
-## Return Value
+## Return values
 
-- `Simple String Reply`: The command returns a simple string reply indicating the status of the operation.
-  - If the background rewrite operation is successfully started, the reply will be:
-    ```
-    "Background append only file rewriting started"
-    ```
-  - If the operation cannot be started because a previous `BGREWRITEAOF` operation is still in progress, the reply will be:
-    ```
-    "Background append only file rewriting already in progress"
-    ```
+| Condition                                      | Return Value                                      |
+|------------------------------------------------|---------------------------------------------------|
+| Command is successful                          | `OK`                                              |
+| Syntax or specified constraints are invalid    | error                                             |
 
 ## Behaviour
 
@@ -30,45 +27,22 @@ When the `BGREWRITEAOF` command is issued, DiceDB performs the following steps:
 3. `Swapping Files`: Once the temporary AOF file is fully written and synced to disk, the child process swaps the temporary file with the existing AOF file.
 4. `Cleaning Up`: The child process exits, and the main DiceDB server continues to operate with the new, optimized AOF file.
 
-## Example Usage
+## Errors
 
-```sh
-127.0.0.1:7379> BGREWRITEAOF
-"Background append only file rewriting started"
-```
+1. `Unable to create/write AOF file`:
 
-In this example, the `BGREWRITEAOF` command is issued, and the server responds with a confirmation that the background rewrite process has started.
-
-## Error Handling
-
-### Errors
-
-1. `Background Rewrite Already in Progress`:
-
-   - `Condition`: If a `BGREWRITEAOF` operation is already in progress when the command is issued again.
-   - `Error Message`:
-     ```
-     "Background append only file rewriting already in progress"
-     ```
+   - Error Message: `ERR AOF failed`
+   - Occurs when diceDB is unable to create or write into the AOF file
 
 2. `Forking Error`:
 
-   - `Condition`: If DiceDB is unable to fork a new process due to system limitations or resource constraints.
-   - `Error Message`:
-     ```
-     "ERR Can't fork"
-     ```
+   - Error Message: `ERR Fork failed`
+   - Occurs when diceDB is unable to fork a new process due to system limitations or resource constraints.
 
-3. `AOF Disabled`:
+## Example Usage
 
-   - `Condition`: If AOF is disabled in the DiceDB configuration.
-   - `Error Message`:
-     ```
-     "ERR AOF is not enabled"
-     ```
-
-## Best Practices
-
-- `Regular Maintenance`: Schedule regular `BGREWRITEAOF` operations during off-peak hours to ensure the AOF file remains compact and optimized.
-- `Monitor Resource Usage`: Be aware that the `BGREWRITEAOF` operation can be resource-intensive. Monitor CPU and memory usage to avoid potential performance degradation.
-- `Backup Before Rewrite`: Consider taking a backup of the current AOF file before initiating a rewrite, especially in production environments.
+### Basic Usage
+```sh
+127.0.0.1:7379> BGREWRITEAOF
+OK
+```

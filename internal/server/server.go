@@ -37,12 +37,12 @@ type AsyncServer struct {
 	queryWatcher           *querymanager.Manager
 	shardManager           *shard.ShardManager
 	ioChan                 chan *ops.StoreResponse     // The server acts like a worker today, this behavior will change once IOThreads are introduced and each client gets its own worker.
-	watchChan              chan dstore.QueryWatchEvent // This is needed to co-ordinate between the store and the query watcher.
+	queryWatchChan         chan dstore.QueryWatchEvent // This is needed to co-ordinate between the store and the query watcher.
 	logger                 *slog.Logger                // logger is the logger for the server
 }
 
 // NewAsyncServer initializes a new AsyncServer
-func NewAsyncServer(shardManager *shard.ShardManager, watchChan chan dstore.QueryWatchEvent, logger *slog.Logger) *AsyncServer {
+func NewAsyncServer(shardManager *shard.ShardManager, queryWatchChan chan dstore.QueryWatchEvent, logger *slog.Logger) *AsyncServer {
 	return &AsyncServer{
 		maxClients:             config.DiceConfig.Server.MaxClients,
 		connectedClients:       make(map[int]*comm.Client),
@@ -50,7 +50,7 @@ func NewAsyncServer(shardManager *shard.ShardManager, watchChan chan dstore.Quer
 		queryWatcher:           querymanager.NewQueryManager(logger),
 		multiplexerPollTimeout: config.DiceConfig.Server.MultiplexerPollTimeout,
 		ioChan:                 make(chan *ops.StoreResponse, 1000),
-		watchChan:              watchChan,
+		queryWatchChan:         queryWatchChan,
 		logger:                 logger,
 	}
 }
@@ -151,7 +151,7 @@ func (s *AsyncServer) Run(ctx context.Context) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		s.queryWatcher.Run(watchCtx, s.watchChan)
+		s.queryWatcher.Run(watchCtx, s.queryWatchChan)
 	}()
 
 	s.shardManager.RegisterWorker("server", s.ioChan)
@@ -297,9 +297,9 @@ func handleMigratedResp(resp interface{}, buf *bytes.Buffer) {
 	buf.Write(r)
 }
 
-func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.RedisCmd, buf *bytes.Buffer, c *comm.Client) {
+func (s *AsyncServer) executeCommandToBuffer(diceDBCmd *cmd.DiceDBCmd, buf *bytes.Buffer, c *comm.Client) {
 	s.shardManager.GetShard(0).ReqChan <- &ops.StoreOp{
-		Cmd:      redisCmd,
+		Cmd:      diceDBCmd,
 		WorkerID: "server",
 		ShardID:  0,
 		Client:   c,
@@ -307,14 +307,14 @@ func (s *AsyncServer) executeCommandToBuffer(redisCmd *cmd.RedisCmd, buf *bytes.
 
 	resp := <-s.ioChan
 
-	val, ok := WorkerCmdsMeta[redisCmd.Cmd]
+	val, ok := WorkerCmdsMeta[diceDBCmd.Cmd]
 	// TODO: Remove this conditional check and if (true) condition when all commands are migrated
 	if !ok {
 		buf.Write(resp.EvalResponse.Result.([]byte))
 	} else {
 		// If command type is Global then return the worker eval
 		if val.CmdType == Global {
-			buf.Write(val.RespNoShards(redisCmd.Args))
+			buf.Write(val.RespNoShards(diceDBCmd.Args))
 			return
 		}
 		// Handle error case independently
@@ -334,7 +334,7 @@ func readCommands(c io.ReadWriter) (*cmd.RedisCmds, bool, error) {
 		return nil, false, err
 	}
 
-	var cmds = make([]*cmd.RedisCmd, 0)
+	var cmds = make([]*cmd.DiceDBCmd, 0)
 	for _, value := range values {
 		arrayValue, ok := value.([]interface{})
 		if !ok {
@@ -351,7 +351,7 @@ func readCommands(c io.ReadWriter) (*cmd.RedisCmds, bool, error) {
 		}
 
 		command := strings.ToUpper(tokens[0])
-		cmds = append(cmds, &cmd.RedisCmd{
+		cmds = append(cmds, &cmd.DiceDBCmd{
 			Cmd:  command,
 			Args: tokens[1:],
 		})
@@ -383,32 +383,32 @@ func (s *AsyncServer) EvalAndRespond(cmds *cmd.RedisCmds, c *comm.Client) {
 	var resp []byte
 	buf := bytes.NewBuffer(resp)
 
-	for _, redisCmd := range cmds.Cmds {
-		if !s.isAuthenticated(redisCmd, c, buf) {
+	for _, diceDBCmd := range cmds.Cmds {
+		if !s.isAuthenticated(diceDBCmd, c, buf) {
 			continue
 		}
 
 		if c.IsTxn {
-			s.handleTransactionCommand(redisCmd, c, buf)
+			s.handleTransactionCommand(diceDBCmd, c, buf)
 		} else {
-			s.handleNonTransactionCommand(redisCmd, c, buf)
+			s.handleNonTransactionCommand(diceDBCmd, c, buf)
 		}
 	}
 
 	s.writeResponse(c, buf)
 }
 
-func (s *AsyncServer) isAuthenticated(redisCmd *cmd.RedisCmd, c *comm.Client, buf *bytes.Buffer) bool {
-	if redisCmd.Cmd != auth.Cmd && !c.Session.IsActive() {
+func (s *AsyncServer) isAuthenticated(diceDBCmd *cmd.DiceDBCmd, c *comm.Client, buf *bytes.Buffer) bool {
+	if diceDBCmd.Cmd != auth.Cmd && !c.Session.IsActive() {
 		buf.Write(clientio.Encode(errors.New("NOAUTH Authentication required"), false))
 		return false
 	}
 	return true
 }
 
-func (s *AsyncServer) handleTransactionCommand(redisCmd *cmd.RedisCmd, c *comm.Client, buf *bytes.Buffer) {
-	if eval.TxnCommands[redisCmd.Cmd] {
-		switch redisCmd.Cmd {
+func (s *AsyncServer) handleTransactionCommand(diceDBCmd *cmd.DiceDBCmd, c *comm.Client, buf *bytes.Buffer) {
+	if eval.TxnCommands[diceDBCmd.Cmd] {
+		switch diceDBCmd.Cmd {
 		case eval.ExecCmdMeta.Name:
 			s.executeTransaction(c, buf)
 		case eval.DiscardCmdMeta.Name:
@@ -416,17 +416,17 @@ func (s *AsyncServer) handleTransactionCommand(redisCmd *cmd.RedisCmd, c *comm.C
 		default:
 			s.logger.Error(
 				"Unhandled transaction command",
-				slog.String("command", redisCmd.Cmd),
+				slog.String("command", diceDBCmd.Cmd),
 			)
 		}
 	} else {
-		c.TxnQueue(redisCmd)
+		c.TxnQueue(diceDBCmd)
 		buf.Write(clientio.RespQueued)
 	}
 }
 
-func (s *AsyncServer) handleNonTransactionCommand(redisCmd *cmd.RedisCmd, c *comm.Client, buf *bytes.Buffer) {
-	switch redisCmd.Cmd {
+func (s *AsyncServer) handleNonTransactionCommand(diceDBCmd *cmd.DiceDBCmd, c *comm.Client, buf *bytes.Buffer) {
+	switch diceDBCmd.Cmd {
 	case eval.MultiCmdMeta.Name:
 		c.TxnBegin()
 		buf.Write(clientio.RespOK)
@@ -435,7 +435,7 @@ func (s *AsyncServer) handleNonTransactionCommand(redisCmd *cmd.RedisCmd, c *com
 	case eval.DiscardCmdMeta.Name:
 		buf.Write(diceerrors.NewErrWithMessage("DISCARD without MULTI"))
 	default:
-		s.executeCommandToBuffer(redisCmd, buf, c)
+		s.executeCommandToBuffer(diceDBCmd, buf, c)
 	}
 }
 
@@ -451,7 +451,7 @@ func (s *AsyncServer) executeTransaction(c *comm.Client, buf *bytes.Buffer) {
 		s.executeCommandToBuffer(cmd, buf, c)
 	}
 
-	c.Cqueue.Cmds = make([]*cmd.RedisCmd, 0)
+	c.Cqueue.Cmds = make([]*cmd.DiceDBCmd, 0)
 	c.IsTxn = false
 }
 

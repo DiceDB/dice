@@ -27,6 +27,46 @@ func TestParseHTTPRequest(t *testing.T) {
 			expectedArgs: []string{"k1", "v1", "nx"},
 		},
 		{
+			name:         "Test SET command with value as a map",
+			method:       "POST",
+			url:          "/set",
+			body:         `{"key": "k1", "value": {"subKey": "subValue"}, "nx": "true"}`,
+			expectedCmd:  "SET",
+			expectedArgs: []string{"k1", `{"subKey":"subValue"}`, "nx"},
+		},
+		{
+			name:         "Test SET command with value as an array",
+			method:       "POST",
+			url:          "/set",
+			body:         `{"key": "k1", "value": ["item1", "item2", "item3"], "nx": "true"}`,
+			expectedCmd:  "SET",
+			expectedArgs: []string{"k1", `["item1","item2","item3"]`, "nx"},
+		},
+		{
+			name:         "Test SET command with value as a map containing an array",
+			method:       "POST",
+			url:          "/set",
+			body:         `{"key": "k1", "value": {"subKey": ["item1", "item2"]}, "nx": "true"}`,
+			expectedCmd:  "SET",
+			expectedArgs: []string{"k1", `{"subKey":["item1","item2"]}`, "nx"},
+		},
+		{
+			name:         "Test SET command with value as a deeply nested map",
+			method:       "POST",
+			url:          "/set",
+			body:         `{"key": "k1", "value": {"subKey": {"subSubKey": {"deepKey": "deepValue"}}}, "nx": "true"}`,
+			expectedCmd:  "SET",
+			expectedArgs: []string{"k1", `{"subKey":{"subSubKey":{"deepKey":"deepValue"}}}`, "nx"},
+		},
+		{
+			name:         "Test SET command with value as an array of maps",
+			method:       "POST",
+			url:          "/set",
+			body:         `{"key": "k1", "value": [{"subKey1": "value1"}, {"subKey2": "value2"}], "nx": "true"}`,
+			expectedCmd:  "SET",
+			expectedArgs: []string{"k1", `[{"subKey1":"value1"},{"subKey2":"value2"}]`, "nx"},
+		},
+		{
 			name:         "Test GET command",
 			method:       "POST",
 			url:          "/get",
@@ -162,6 +202,14 @@ func TestParseHTTPRequest(t *testing.T) {
 			expectedCmd:  "QWATCH",
 			expectedArgs: []string{"SELECT $key, $value WHERE $key LIKE \"player:*\" AND \"$value.score\" > 10 ORDER BY $value.score DESC LIMIT 5"},
 		},
+		{
+			name:         "Test JSON.ARRPOP command",
+			method:       "POST",
+			url:          "/json.arrpop",
+			body:         `{"key": "k1", "path": "$", "index": 1}`,
+			expectedCmd:  "JSON.ARRPOP",
+			expectedArgs: []string{"k1", "$", "1"},
+		},
 	}
 
 	for _, tc := range commands {
@@ -169,19 +217,19 @@ func TestParseHTTPRequest(t *testing.T) {
 			req := httptest.NewRequest(tc.method, tc.url, strings.NewReader(tc.body))
 			req.Header.Set("Content-Type", "application/json")
 
-			redisCmd, err := ParseHTTPRequest(req)
+			diceDBCmd, err := ParseHTTPRequest(req)
 			assert.NoError(t, err)
 
-			expectedCmd := &cmd.RedisCmd{
+			expectedCmd := &cmd.DiceDBCmd{
 				Cmd:  tc.expectedCmd,
 				Args: tc.expectedArgs,
 			}
 
 			// Check command match
-			assert.Equal(t, expectedCmd.Cmd, redisCmd.Cmd)
+			assert.Equal(t, expectedCmd.Cmd, diceDBCmd.Cmd)
 
 			// Check arguments match, regardless of order
-			assert.ElementsMatch(t, expectedCmd.Args, redisCmd.Args, "The parsed arguments should match the expected arguments, ignoring order")
+			assert.ElementsMatch(t, expectedCmd.Args, diceDBCmd.Args, "The parsed arguments should match the expected arguments, ignoring order")
 
 		})
 	}
@@ -241,19 +289,19 @@ func TestParseWebsocketMessage(t *testing.T) {
 	for _, tc := range commands {
 		t.Run(tc.name, func(t *testing.T) {
 			// parse websocket message
-			redisCmd, err := ParseWebsocketMessage([]byte(tc.message))
+			diceDBCmd, err := ParseWebsocketMessage([]byte(tc.message))
 			assert.NoError(t, err)
 
-			expectedCmd := &cmd.RedisCmd{
+			expectedCmd := &cmd.DiceDBCmd{
 				Cmd:  tc.expectedCmd,
 				Args: tc.expectedArgs,
 			}
 
 			// Check command match
-			assert.Equal(t, expectedCmd.Cmd, redisCmd.Cmd)
+			assert.Equal(t, expectedCmd.Cmd, diceDBCmd.Cmd)
 
 			// Check arguments match, regardless of order
-			assert.ElementsMatch(t, expectedCmd.Args, redisCmd.Args, "The parsed arguments should match the expected arguments, ignoring order")
+			assert.ElementsMatch(t, expectedCmd.Args, diceDBCmd.Args, "The parsed arguments should match the expected arguments, ignoring order")
 		})
 	}
 }

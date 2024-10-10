@@ -21,8 +21,8 @@ import (
 	"unicode"
 	"unsafe"
 
-	"github.com/google/btree"
-
+	"github.com/dicedb/dice/internal/eval/geo"
+	"github.com/dicedb/dice/internal/eval/sortedset"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/rs/xid"
 
@@ -37,6 +37,7 @@ import (
 	"github.com/dicedb/dice/internal/querymanager"
 	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/gobwas/glob"
 	"github.com/ohler55/ojg/jp"
 )
 
@@ -67,6 +68,7 @@ const (
 
 const defaultRootPath = "$"
 const maxExDuration = 9223372036854775
+const CountConst = "COUNT"
 
 func init() {
 	diceCommandsCount = len(DiceCmds)
@@ -169,8 +171,11 @@ func evalDBSIZE(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("DBSIZE")
 	}
 
+	// Expired keys must be explicitly deleted since the cronFrequency for cleanup is configurable.
+	// A longer delay may prevent timely cleanup, leading to incorrect DBSIZE results.
+	dstore.DeleteExpiredKeys(store)
 	// return the RESP encoded value
-	return clientio.Encode(store.GetKeyCount(), false)
+	return clientio.Encode(store.GetDBSize(), false)
 }
 
 // evalGETDEL returns the value for the queried key in args
@@ -579,8 +584,10 @@ func evalJSONARRLEN(args []string, store *dstore.Store) []byte {
 
 	// Retrieve the object from the database
 	obj := store.Get(key)
+
+	// If the object is not present in the store or if its nil, then we should simply return nil.
 	if obj == nil {
-		return diceerrors.NewErrWithMessage("Path '.' does not exist or not an array")
+		return clientio.RespNIL
 	}
 
 	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
@@ -595,32 +602,55 @@ func evalJSONARRLEN(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
 	}
 
+	// This is the case if only argument passed to JSON.ARRLEN is the key itself.
+	// This is valid only if the key holds an array; otherwise, an error should be returned.
 	if len(args) == 1 {
 		if utils.GetJSONFieldType(jsonData) == utils.ArrayType {
 			return clientio.Encode(len(jsonData.([]interface{})), false)
 		}
-		return diceerrors.NewErrWithMessage("Path '.' does not exist or not an array")
+		return diceerrors.NewErrWithMessage("Path '$' does not exist or not an array")
 	}
 
-	path := args[1]
+	path := args[1] // Getting the path to find the length of the array
 	expr, err := jp.ParseString(path)
 	if err != nil {
-		return diceerrors.NewErrWithMessage("invalid JSONPath")
+		return diceerrors.NewErrWithMessage("Invalid JSONPath")
 	}
 
 	results := expr.Get(jsonData)
+	errMessage := fmt.Sprintf("Path '%s' does not exist", args[1])
 
-	arrlenList := make([]interface{}, 0, len(results))
-	for _, result := range results {
-		switch utils.GetJSONFieldType(result) {
-		case utils.ArrayType:
-			arrlenList = append(arrlenList, len(result.([]interface{})))
-		default:
-			arrlenList = append(arrlenList, nil)
-		}
+	// If there are no results, that means the JSONPath does not exist
+	if len(results) == 0 {
+		return diceerrors.NewErrWithMessage(errMessage)
 	}
 
-	return clientio.Encode(arrlenList, false)
+	// If the results are greater than one, we need to print them as a list
+	// This condition should be updated in future when supporting Complex JSONPaths
+	if len(results) > 1 {
+		arrlenList := make([]interface{}, 0, len(results))
+		for _, result := range results {
+			switch utils.GetJSONFieldType(result) {
+			case utils.ArrayType:
+				arrlenList = append(arrlenList, len(result.([]interface{})))
+			default:
+				arrlenList = append(arrlenList, nil)
+			}
+		}
+
+		return clientio.Encode(arrlenList, false)
+	}
+
+	// Single result should be printed as single integer instead of list
+	jsonValue := results[0]
+
+	if utils.GetJSONFieldType(jsonValue) == utils.ArrayType {
+		return clientio.Encode(len(jsonValue.([]interface{})), false)
+	}
+
+	// If execution reaches this point, the provided path either does not exist.
+	errMessage = fmt.Sprintf("Path '%s' does not exist or not array", args[1])
+	return diceerrors.NewErrWithMessage(errMessage)
 }
 
 func evalJSONARRPOP(args []string, store *dstore.Store) []byte {
@@ -1640,6 +1670,10 @@ func evalTTL(args []string, store *dstore.Store) []byte {
 func evalDEL(args []string, store *dstore.Store) []byte {
 	var countDeleted = 0
 
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("DEL")
+	}
+
 	for _, key := range args {
 		if ok := store.Del(key); ok {
 			countDeleted++
@@ -2119,7 +2153,7 @@ func EvalQWATCH(args []string, httpOp bool, client *comm.Client, store *dstore.S
 	}
 
 	// TODO: We should return the list of all queries being watched by the client.
-	return clientio.Encode(clientio.CreatePushResponse(&query, queryResult.Result), false)
+	return clientio.Encode(querymanager.GenericWatchResponse(sql.Qwatch, query.String(), *queryResult.Result), false)
 }
 
 // EvalQUNWATCH removes the specified key from the watch list for the caller client.
@@ -2594,7 +2628,7 @@ func evalCommandHelp() []byte {
 	format := "COMMAND <subcommand> [<arg> [value] [opt] ...]. Subcommands are:"
 	noTitle := "(no subcommand)"
 	noMessage := "    Return details about all Dice commands."
-	countTitle := "COUNT"
+	countTitle := CountConst
 	countMessage := "    Return the total number of commands in this Dice server."
 	listTitle := "LIST"
 	listMessage := "     Return a list of all commands in this Dice server."
@@ -2784,10 +2818,10 @@ func evalPersist(args []string, store *dstore.Store) []byte {
 		return clientio.RespZero
 	}
 
-	// If the object exists but no expiration is set on it, return -1
+	// If the object exists but no expiration is set on it, return 0
 	_, isExpirySet := dstore.GetExpiry(obj, store)
 	if !isExpirySet {
-		return clientio.RespMinusOne
+		return clientio.RespZero
 	}
 
 	// If the object exists, remove the expiration time
@@ -3004,16 +3038,49 @@ func evalHSET(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("HSET")
 	}
 
+	numKeys, err := insertInHashMap(args, store)
+
+	if err != nil {
+		return err
+	}
+
+	return clientio.Encode(numKeys, false)
+}
+
+// evalHMSET sets the specified fields to their
+// respective values in a hashmap stored at key
+//
+// This command overwrites the values of specified
+// fields that exist in the hash.
+//
+// If key doesn't exist, a new key holding a hash is created.
+//
+// Usage: HMSET key field value [field value ...]
+func evalHMSET(args []string, store *dstore.Store) []byte {
+	if len(args) < 3 {
+		return diceerrors.NewErrArity("HMSET")
+	}
+
+	_, err := insertInHashMap(args, store)
+
+	if err != nil {
+		return err
+	}
+
+	return clientio.RespOK
+}
+
+// helper function to insert key value in hashmap associated with the given hash
+func insertInHashMap(args []string, store *dstore.Store) (numKeys int64, err2 []byte) {
 	key := args[0]
 
 	obj := store.Get(key)
 
 	var hashMap HashMap
-	var numKeys int64
 
 	if obj != nil {
 		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+			return 0, diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 		}
 		hashMap = obj.Value.(HashMap)
 	}
@@ -3021,14 +3088,14 @@ func evalHSET(args []string, store *dstore.Store) []byte {
 	keyValuePairs := args[1:]
 	hashMap, numKeys, err := hashMapBuilder(keyValuePairs, hashMap)
 	if err != nil {
-		return diceerrors.NewErrWithMessage(err.Error())
+		return 0, diceerrors.NewErrWithMessage(err.Error())
 	}
 
 	obj = store.NewObj(hashMap, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
 
 	store.Put(key, obj)
 
-	return clientio.Encode(numKeys, false)
+	return numKeys, nil
 }
 
 // evalHKEYS is used toretrieve all the keys(or field names) within a hash.
@@ -3171,6 +3238,40 @@ func evalHGET(args []string, store *dstore.Store) []byte {
 	return val
 }
 
+// evalHMGET returns an array of values associated with the given fields,
+// in the same order as they are requested.
+// If a field does not exist, returns a corresponding nil value in the array.
+// If the key does not exist, returns an array of nil values.
+func evalHMGET(args []string, store *dstore.Store) []byte {
+	if len(args) < 2 {
+		return diceerrors.NewErrArity("HMGET")
+	}
+	key := args[0]
+
+	obj := store.Get(key)
+
+	results := make([]interface{}, len(args[1:]))
+	if obj == nil {
+		return clientio.Encode(results, false)
+	}
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+	}
+
+	hashMap := obj.Value.(HashMap)
+
+	for i, hmKey := range args[1:] {
+		hmValue, ok := hashMap.Get(hmKey)
+		if ok {
+			results[i] = *hmValue
+		} else {
+			results[i] = clientio.RespNIL
+		}
+	}
+
+	return clientio.Encode(results, false)
+}
+
 func evalHDEL(args []string, store *dstore.Store) []byte {
 	if len(args) < 2 {
 		return diceerrors.NewErrArity("HDEL")
@@ -3202,6 +3303,85 @@ func evalHDEL(args []string, store *dstore.Store) []byte {
 	}
 
 	return clientio.Encode(count, false)
+}
+
+func evalHSCAN(args []string, store *dstore.Store) []byte {
+	if len(args) < 2 {
+		return diceerrors.NewErrArity("HSCAN")
+	}
+
+	key := args[0]
+	cursor, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.InvalidIntErr)
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return clientio.Encode([]interface{}{"0", []string{}}, false)
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+	}
+
+	hashMap := obj.Value.(HashMap)
+	pattern := "*"
+	count := 10
+
+	// Parse optional arguments
+	for i := 2; i < len(args); i += 2 {
+		switch strings.ToUpper(args[i]) {
+		case "MATCH":
+			if i+1 < len(args) {
+				pattern = args[i+1]
+			}
+		case CountConst:
+			if i+1 < len(args) {
+				parsedCount, err := strconv.Atoi(args[i+1])
+				if err != nil || parsedCount < 1 {
+					return diceerrors.NewErrWithMessage("value is not an integer or out of range")
+				}
+				count = parsedCount
+			}
+		}
+	}
+
+	// Note that this implementation has a time complexity of O(N), where N is the number of keys in 'hashMap'.
+	// This is in contrast to Redis, which implements HSCAN in O(1) time complexity by maintaining a cursor.
+	keys := make([]string, 0, len(hashMap))
+	for k := range hashMap {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	matched := 0
+	results := make([]string, 0, count*2)
+	newCursor := 0
+
+	g, err := glob.Compile(pattern)
+	if err != nil {
+		return diceerrors.NewErrWithMessage(fmt.Sprintf("Invalid glob pattern: %s", err))
+	}
+
+	// Scan the keys and add them to the results if they match the pattern
+	for i := int(cursor); i < len(keys); i++ {
+		if g.Match(keys[i]) {
+			results = append(results, keys[i], hashMap[keys[i]])
+			matched++
+			if matched >= count {
+				newCursor = i + 1
+				break
+			}
+		}
+	}
+
+	// If we've scanned all keys, reset cursor to 0
+	if newCursor >= len(keys) {
+		newCursor = 0
+	}
+
+	return clientio.Encode([]interface{}{strconv.Itoa(newCursor), results}, false)
 }
 
 // evalHKEYS returns all the values in the hash stored at key.
@@ -3369,7 +3549,9 @@ func evalLPUSH(args []string, store *dstore.Store) []byte {
 		obj.Value.(*Deque).LPush(args[i])
 	}
 
-	return clientio.RespOK
+	deq := obj.Value.(*Deque)
+
+	return clientio.Encode(deq.Length, false)
 }
 
 func evalRPUSH(args []string, store *dstore.Store) []byte {
@@ -3400,7 +3582,9 @@ func evalRPUSH(args []string, store *dstore.Store) []byte {
 		obj.Value.(*Deque).RPush(args[i])
 	}
 
-	return clientio.RespOK
+	deq := obj.Value.(*Deque)
+
+	return clientio.Encode(deq.Length, false)
 }
 
 func evalRPOP(args []string, store *dstore.Store) []byte {
@@ -3731,7 +3915,7 @@ func evalSDIFF(args []string, store *dstore.Store) []byte {
 }
 
 func evalSINTER(args []string, store *dstore.Store) []byte {
-	if len(args) < 2 {
+	if len(args) < 1 {
 		return diceerrors.NewErrArity("SINTER")
 	}
 
@@ -4547,22 +4731,16 @@ func evalZADD(args []string, store *dstore.Store) []byte {
 	key := args[0]
 	obj := store.Get(key)
 
-	var tree *btree.BTree
-	var memberMap map[string]float64
+	var ss *sortedset.Set
 
 	if obj != nil {
-		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeSortedSet, object.ObjEncodingBTree); err != nil {
+		var err []byte
+		ss, err = sortedset.FromObject(obj)
+		if err != nil {
 			return err
 		}
-		valueSlice, ok := obj.Value.([]interface{})
-		if !ok || len(valueSlice) != 2 {
-			return diceerrors.NewErrWithMessage("Invalid sorted set object")
-		}
-		tree = valueSlice[0].(*btree.BTree)
-		memberMap = valueSlice[1].(map[string]float64)
 	} else {
-		tree = btree.New(2)
-		memberMap = make(map[string]float64)
+		ss = sortedset.New()
 	}
 
 	added := 0
@@ -4575,25 +4753,15 @@ func evalZADD(args []string, store *dstore.Store) []byte {
 			return diceerrors.NewErrWithMessage(diceerrors.InvalidFloatErr)
 		}
 
-		existingScore, exists := memberMap[member]
-		if exists {
-			// Remove the existing item from the B-tree
-			oldItem := &SortedSetItem{Score: existingScore, Member: member}
-			tree.Delete(oldItem)
-		} else {
-			added++
+		wasInserted := ss.Upsert(score, member)
+
+		if wasInserted {
+			added += 1
 		}
-
-		// Insert the new item into the B-tree
-		newItem := &SortedSetItem{Score: score, Member: member}
-		tree.ReplaceOrInsert(newItem)
-
-		// Update the member map
-		memberMap[member] = score
 	}
 
-	obj = store.NewObj([]interface{}{tree, memberMap}, -1, object.ObjTypeSortedSet, object.ObjEncodingBTree)
-	store.Put(key, obj)
+	obj = store.NewObj(ss, -1, object.ObjTypeSortedSet, object.ObjEncodingBTree)
+	store.Put(key, obj, dstore.WithPutCmd(dstore.ZAdd))
 
 	return clientio.Encode(added, false)
 }
@@ -4637,62 +4805,217 @@ func evalZRANGE(args []string, store *dstore.Store) []byte {
 		return clientio.Encode([]string{}, false)
 	}
 
-	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeSortedSet, object.ObjEncodingBTree); err != nil {
+	ss, errMsg := sortedset.FromObject(obj)
+
+	if errMsg != nil {
 		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 	}
 
-	valueSlice, ok := obj.Value.([]interface{})
-	if !ok || len(valueSlice) != 2 {
-		return diceerrors.NewErrWithMessage("Invalid sorted set object")
-	}
-	tree := valueSlice[0].(*btree.BTree)
-	length := tree.Len()
+	result := ss.GetRange(start, stop, withScores, reverse)
 
-	// Handle negative indices
-	if start < 0 {
-		start += length
-	}
-	if stop < 0 {
-		stop += length
+	return clientio.Encode(result, false)
+}
+
+// parseEncodingAndOffet function parses offset and encoding type for bitfield commands
+// as this part is common to all subcommands
+func parseEncodingAndOffset(args []string) (eType, eVal, offset interface{}, err error) {
+	encodingRaw := args[0]
+	offsetRaw := args[1]
+	switch encodingRaw[0] {
+	case 'i':
+		eType = SIGNED
+		eVal, err = strconv.ParseInt(encodingRaw[1:], 10, 64)
+		if err != nil {
+			err = diceerrors.NewErr(diceerrors.InvalidBitfieldType)
+			return eType, eVal, offset, err
+		}
+		if eVal.(int64) <= 0 || eVal.(int64) > 64 {
+			err = diceerrors.NewErr(diceerrors.InvalidBitfieldType)
+			return eType, eVal, offset, err
+		}
+	case 'u':
+		eType = UNSIGNED
+		eVal, err = strconv.ParseInt(encodingRaw[1:], 10, 64)
+		if err != nil {
+			err = diceerrors.NewErr(diceerrors.InvalidBitfieldType)
+			return eType, eVal, offset, err
+		}
+		if eVal.(int64) <= 0 || eVal.(int64) >= 64 {
+			err = diceerrors.NewErr(diceerrors.InvalidBitfieldType)
+			return eType, eVal, offset, err
+		}
+	default:
+		err = diceerrors.NewErr(diceerrors.InvalidBitfieldType)
+		return eType, eVal, offset, err
 	}
 
-	if start < 0 {
-		start = 0
+	switch offsetRaw[0] {
+	case '#':
+		offset, err = strconv.ParseInt(offsetRaw[1:], 10, 64)
+		if err != nil {
+			err = diceerrors.NewErr(diceerrors.BitfieldOffsetErr)
+			return eType, eVal, offset, err
+		}
+		offset = offset.(int64) * eVal.(int64)
+	default:
+		offset, err = strconv.ParseInt(offsetRaw, 10, 64)
+		if err != nil {
+			err = diceerrors.NewErr(diceerrors.BitfieldOffsetErr)
+			return eType, eVal, offset, err
+		}
 	}
-	if stop >= length {
-		stop = length - 1
+	return eType, eVal, offset, err
+}
+
+// evalBITFIELD evaluates BITFIELD operations on a key store string, int or bytearray types
+// it returns an array of results depending on the subcommands
+// it allows mutation using SET and INCRBY commands
+// returns arity error, offset type error, overflow type error, encoding type error, integer error, syntax error
+// GET <encoding> <offset> -- Returns the specified bit field.
+// SET <encoding> <offset> <value> -- Set the specified bit field
+// and returns its old value.
+// INCRBY <encoding> <offset> <increment> -- Increments or decrements
+// (if a negative increment is given) the specified bit field and returns the new value.
+// There is another subcommand that only changes the behavior of successive
+// INCRBY and SET subcommands calls by setting the overflow behavior:
+// OVERFLOW [WRAP|SAT|FAIL]`
+func evalBITFIELD(args []string, store *dstore.Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("BITFIELD")
 	}
 
-	if start > stop || start >= length {
-		return clientio.Encode([]string{}, false)
+	var overflowType string = WRAP // Default overflow type
+
+	type BitFieldOp struct {
+		Kind   string
+		EType  string
+		EVal   int64
+		Offset int64
+		Value  int64
+	}
+	var ops []BitFieldOp
+
+	for i := 1; i < len(args); {
+		switch strings.ToUpper(args[i]) {
+		case GET:
+			if len(args) <= i+2 {
+				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
+			}
+			eType, eVal, offset, err := parseEncodingAndOffset(args[i+1 : i+3])
+			if err != nil {
+				return diceerrors.NewErrWithFormattedMessage(err.Error())
+			}
+			ops = append(ops, BitFieldOp{
+				Kind:   GET,
+				EType:  eType.(string),
+				EVal:   eVal.(int64),
+				Offset: offset.(int64),
+				Value:  int64(-1),
+			})
+			i += 3
+		case SET:
+			if len(args) <= i+3 {
+				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
+			}
+			eType, eVal, offset, err := parseEncodingAndOffset(args[i+1 : i+3])
+			if err != nil {
+				return diceerrors.NewErrWithFormattedMessage(err.Error())
+			}
+			value, err1 := strconv.ParseInt(args[i+3], 10, 64)
+			if err1 != nil {
+				return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
+			}
+			ops = append(ops, BitFieldOp{
+				Kind:   SET,
+				EType:  eType.(string),
+				EVal:   eVal.(int64),
+				Offset: offset.(int64),
+				Value:  value,
+			})
+			i += 4
+		case INCRBY:
+			if len(args) <= i+3 {
+				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
+			}
+			eType, eVal, offset, err := parseEncodingAndOffset(args[i+1 : i+3])
+			if err != nil {
+				return diceerrors.NewErrWithFormattedMessage(err.Error())
+			}
+			value, err1 := strconv.ParseInt(args[i+3], 10, 64)
+			if err1 != nil {
+				return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
+			}
+			ops = append(ops, BitFieldOp{
+				Kind:   INCRBY,
+				EType:  eType.(string),
+				EVal:   eVal.(int64),
+				Offset: offset.(int64),
+				Value:  value,
+			})
+			i += 4
+		case OVERFLOW:
+			if len(args) <= i+1 {
+				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
+			}
+			switch strings.ToUpper(args[i+1]) {
+			case WRAP, FAIL, SAT:
+				overflowType = strings.ToUpper(args[i+1])
+			default:
+				return diceerrors.NewErrWithFormattedMessage(diceerrors.OverflowTypeErr)
+			}
+			ops = append(ops, BitFieldOp{
+				Kind:   OVERFLOW,
+				EType:  overflowType,
+				EVal:   int64(-1),
+				Offset: int64(-1),
+				Value:  int64(-1),
+			})
+			i += 2
+		default:
+			return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
+		}
+	}
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		obj = store.NewObj(NewByteArray(1), -1, object.ObjTypeByteArray, object.ObjEncodingByteArray)
+		store.Put(args[0], obj)
+	}
+	var value *ByteArray
+	var err error
+
+	switch oType, _ := object.ExtractTypeEncoding(obj); oType {
+	case object.ObjTypeByteArray:
+		value = obj.Value.(*ByteArray)
+	case object.ObjTypeString, object.ObjTypeInt:
+		value, err = NewByteArrayFromObj(obj)
+		if err != nil {
+			return diceerrors.NewErrWithMessage("value is not a valid byte array")
+		}
+	default:
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
 	var result []interface{}
-	index := 0
-
-	// iterFunc is the function that will be called for each item in the B-tree. It will append the item to the result if it is within the specified range.
-	// It will return false if the specified range has been reached.
-	iterFunc := func(item btree.Item) bool {
-		if index > stop {
-			return false
-		}
-		if index >= start {
-			ssi := item.(*SortedSetItem)
-			result = append(result, ssi.Member)
-			if withScores {
-				// Use 'g' format to match Redis's float formatting
-				scoreStr := strings.ToLower(strconv.FormatFloat(ssi.Score, 'g', -1, 64))
-				result = append(result, scoreStr)
+	for _, op := range ops {
+		switch op.Kind {
+		case GET:
+			res := value.getBits(int(op.Offset), int(op.EVal), op.EType == SIGNED)
+			result = append(result, res)
+		case SET:
+			prevValue := value.getBits(int(op.Offset), int(op.EVal), op.EType == SIGNED)
+			value.setBits(int(op.Offset), int(op.EVal), op.Value)
+			result = append(result, prevValue)
+		case INCRBY:
+			res, err := value.incrByBits(int(op.Offset), int(op.EVal), op.Value, overflowType, op.EType == SIGNED)
+			if err != nil {
+				result = append(result, nil)
+			} else {
+				result = append(result, res)
 			}
+		case OVERFLOW:
+			overflowType = op.EType
 		}
-		index++
-		return true
-	}
-
-	if !reverse {
-		tree.Ascend(iterFunc)
-	} else {
-		tree.Descend(iterFunc)
 	}
 
 	return clientio.Encode(result, false)
@@ -4733,4 +5056,136 @@ func evalHINCRBYFLOAT(args []string, store *dstore.Store) []byte {
 	store.Put(key, obj)
 
 	return clientio.Encode(numkey, false)
+}
+
+func evalGEOADD(args []string, store *dstore.Store) []byte {
+	if len(args) < 4 {
+		return diceerrors.NewErrArity("GEOADD")
+	}
+
+	key := args[0]
+	var nx, xx bool
+	startIdx := 1
+
+	// Parse options
+	for startIdx < len(args) {
+		option := strings.ToUpper(args[startIdx])
+		if option == "NX" {
+			nx = true
+			startIdx++
+		} else if option == "XX" {
+			xx = true
+			startIdx++
+		} else {
+			break
+		}
+	}
+
+	// Check if we have the correct number of arguments after parsing options
+	if (len(args)-startIdx)%3 != 0 {
+		return diceerrors.NewErrArity("GEOADD")
+	}
+
+	if xx && nx {
+		return diceerrors.NewErrWithMessage("ERR XX and NX options at the same time are not compatible")
+	}
+
+	// Get or create sorted set
+	obj := store.Get(key)
+	var ss *sortedset.Set
+	if obj != nil {
+		var err []byte
+		ss, err = sortedset.FromObject(obj)
+		if err != nil {
+			return err
+		}
+	} else {
+		ss = sortedset.New()
+	}
+
+	added := 0
+	for i := startIdx; i < len(args); i += 3 {
+		longitude, err := strconv.ParseFloat(args[i], 64)
+		if err != nil || math.IsNaN(longitude) || longitude < -180 || longitude > 180 {
+			return diceerrors.NewErrWithMessage("ERR invalid longitude")
+		}
+
+		latitude, err := strconv.ParseFloat(args[i+1], 64)
+		if err != nil || math.IsNaN(latitude) || latitude < -85.05112878 || latitude > 85.05112878 {
+			return diceerrors.NewErrWithMessage("ERR invalid latitude")
+		}
+
+		member := args[i+2]
+		_, exists := ss.Get(member)
+
+		// Handle XX option: Only update existing elements
+		if xx && !exists {
+			continue
+		}
+
+		// Handle NX option: Only add new elements
+		if nx && exists {
+			continue
+		}
+
+		hash := geo.EncodeHash(latitude, longitude)
+
+		wasInserted := ss.Upsert(hash, member)
+		if wasInserted {
+			added++
+		}
+	}
+
+	obj = store.NewObj(ss, -1, object.ObjTypeSortedSet, object.ObjEncodingBTree)
+	store.Put(key, obj)
+
+	return clientio.Encode(added, false)
+}
+
+func evalGEODIST(args []string, store *dstore.Store) []byte {
+	if len(args) < 3 || len(args) > 4 {
+		return diceerrors.NewErrArity("GEODIST")
+	}
+
+	key := args[0]
+	member1 := args[1]
+	member2 := args[2]
+	unit := "m"
+	if len(args) == 4 {
+		unit = strings.ToLower(args[3])
+	}
+
+	// Get the sorted set
+	obj := store.Get(key)
+	if obj == nil {
+		return clientio.RespNIL
+	}
+
+	ss, err := sortedset.FromObject(obj)
+	if err != nil {
+		return err
+	}
+
+	// Get the scores (geohashes) for both members
+	score1, ok := ss.Get(member1)
+	if !ok {
+		return clientio.RespNIL
+	}
+	score2, ok := ss.Get(member2)
+	if !ok {
+		return clientio.RespNIL
+	}
+
+	lat1, lon1 := geo.DecodeHash(score1)
+	lat2, lon2 := geo.DecodeHash(score2)
+
+	distance := geo.GetDistance(lon1, lat1, lon2, lat2)
+
+	result, err := geo.ConvertDistance(distance, unit)
+
+	if err != nil {
+		return err
+	}
+
+	return clientio.Encode(utils.RoundToDecimals(result, 4), false)
 }

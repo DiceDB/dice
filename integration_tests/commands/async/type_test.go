@@ -33,7 +33,7 @@ func TestType(t *testing.T) {
 		{
 			name:     "TYPE for key with List value",
 			commands: []string{"LPUSH k1 v1", "TYPE k1"},
-			expected: []interface{}{"OK", "list"},
+			expected: []interface{}{int64(1), "list"},
 		},
 		{
 			name:     "TYPE for key with Set value",

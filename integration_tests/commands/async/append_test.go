@@ -58,7 +58,7 @@ func TestAPPEND(t *testing.T) {
 				"APPEND hashKey value",     // Attempt to append to a hash
 				"APPEND setKey value",      // Attempt to append to a set
 			},
-			expected: []interface{}{"OK", int64(0), int64(1), int64(1), setErrorMsg, setErrorMsg, setErrorMsg, setErrorMsg},
+			expected: []interface{}{int64(1), int64(0), int64(1), int64(1), setErrorMsg, setErrorMsg, setErrorMsg, setErrorMsg},
 		},
 	}
 

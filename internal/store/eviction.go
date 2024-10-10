@@ -12,7 +12,7 @@ import (
 // TODO: Make it efficient by doing thorough sampling
 func evictFirst(store *Store) {
 	store.store.All(func(k string, obj *object.Obj) bool {
-		store.delByPtr(k)
+		store.delByPtr(k, WithDelCmd(Del))
 		// stop after iterating over the first element
 		return false
 	})
@@ -25,7 +25,7 @@ func evictAllkeysRandom(store *Store) {
 	// Iteration of Golang dictionary can be considered as a random
 	// because it depends on the hash of the inserted key
 	store.store.All(func(k string, obj *object.Obj) bool {
-		store.delByPtr(k)
+		store.delByPtr(k, WithDelCmd(Del))
 		evictCount--
 		// continue if evictCount > 0
 		return evictCount > 0
@@ -116,7 +116,7 @@ func EvictAllkeysLRUOrLFU(store *Store) {
 		if item == nil {
 			return
 		}
-		store.DelByPtr(item.keyPtr)
+		store.DelByPtr(item.keyPtr, WithDelCmd(Del))
 	}
 }
 
