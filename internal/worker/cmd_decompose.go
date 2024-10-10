@@ -1,8 +1,6 @@
 package worker
 
 import (
-	"fmt"
-
 	"github.com/dicedb/dice/internal/cmd"
 )
 
@@ -20,23 +18,19 @@ import (
 //
 // The result is a list of commands, one for each shard, which are then
 // scattered to the shard threads for execution.
-func decomposeRename(DiceDBCmd *cmd.DiceDBCmd) []*cmd.DiceDBCmd {
-
-	fmt.Println(DiceDBCmd.Cmd)
-	fmt.Println(DiceDBCmd.Args)
-
+func decomposeRename(cd *cmd.DiceDBCmd) []*cmd.DiceDBCmd {
 	decomposedCmds := []*cmd.DiceDBCmd{}
-	decomposedCmds = append(decomposedCmds, &cmd.DiceDBCmd{
-		RequestID: DiceDBCmd.RequestID,
-		Cmd:       "GET",
-		Args:      []string{DiceDBCmd.Args[0]},
-	})
-
-	decomposedCmds = append(decomposedCmds, &cmd.DiceDBCmd{
-		RequestID: DiceDBCmd.RequestID,
-		Cmd:       "DELETE",
-		Args:      []string{DiceDBCmd.Args[0]},
-	})
-
+	decomposedCmds = append(decomposedCmds,
+		&cmd.DiceDBCmd{
+			RequestID: cd.RequestID,
+			Cmd:       "GET",
+			Args:      []string{cd.Args[0]},
+		},
+		&cmd.DiceDBCmd{
+			RequestID: cd.RequestID,
+			Cmd:       "DELETE",
+			Args:      []string{cd.Args[0]},
+		},
+	)
 	return decomposedCmds
 }
