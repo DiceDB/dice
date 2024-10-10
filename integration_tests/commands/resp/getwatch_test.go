@@ -3,12 +3,13 @@ package resp
 import (
 	"context"
 	"fmt"
-	"github.com/dicedb/dice/internal/clientio"
-	redis "github.com/dicedb/go-dice"
-	"github.com/stretchr/testify/assert"
 	"net"
 	"testing"
 	"time"
+
+	"github.com/dicedb/dice/internal/clientio"
+	redis "github.com/dicedb/go-dice"
+	"gotest.tools/v3/assert"
 )
 
 type WatchSubscriber struct {
@@ -33,6 +34,8 @@ var getWatchTestCases = []getWatchTestCase{
 func TestGETWATCH(t *testing.T) {
 	publisher := getLocalConnection()
 	subscribers := []net.Conn{getLocalConnection(), getLocalConnection(), getLocalConnection()}
+
+	FireCommand(publisher, fmt.Sprintf("DEL %s", getWatchKey))
 
 	defer func() {
 		if err := publisher.Close(); err != nil {
@@ -89,6 +92,8 @@ func TestGETWATCH(t *testing.T) {
 func TestGETWATCHWithSDK(t *testing.T) {
 	publisher := getLocalSdk()
 	subscribers := []WatchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
+
+	publisher.Del(context.Background(), getWatchKey)
 
 	channels := make([]<-chan *redis.WMessage, len(subscribers))
 	for i, subscriber := range subscribers {

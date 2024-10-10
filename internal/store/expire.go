@@ -44,7 +44,7 @@ func expireSample(store *Store) float32 {
 
 	// Delete the keys outside the read lock
 	for _, keyPtr := range keysToDelete {
-		store.DelByPtr(keyPtr)
+		store.DelByPtr(keyPtr, WithDelCmd(Del))
 	}
 
 	return float32(expiredCount) / float32(20.0)
