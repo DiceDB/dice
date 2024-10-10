@@ -504,6 +504,14 @@ func TestJSONDelOperations(t *testing.T) {
 				"JSON.GET user $"},
 			expected: []interface{}{"OK", int64(1), `{"name":"sugar"}`},
 		},
+		{
+			name: "delete key with []",
+			commands: []string{
+				`JSON.SET data $ {"key[0]":"value","array":["a","b"]}`,
+				`JSON.DEL data ["key[0]"]`,
+				"JSON.GET data $"},
+			expected: []interface{}{"OK", int64(1), `{"array": ["a","b"]}`},
+		},
 	}
 
 	for _, tc := range testCases {
