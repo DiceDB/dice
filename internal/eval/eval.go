@@ -2,7 +2,6 @@ package eval
 
 import (
 	"bytes"
-
 	"crypto/rand"
 
 	"errors"
@@ -945,7 +944,16 @@ func evalJSONDEL(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrWithMessage("invalid JSONPath")
 	}
 	results := expr.Get(jsonData)
-	err = expr.Del(jsonData)
+
+	hasBrackets := strings.Contains(path, "[") && strings.Contains(path, "]")
+
+	//If the command has square brackets then we have to delete an element inside an array
+	if hasBrackets {
+		_, err = expr.Remove(jsonData)
+	} else {
+		err = expr.Del(jsonData)
+	}
+
 	if err != nil {
 		return diceerrors.NewErrWithMessage(err.Error())
 	}
