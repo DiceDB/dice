@@ -3229,32 +3229,6 @@ func evalGETEX(args []string, store *dstore.Store) *EvalResponse {
 
 	var key = args[0]
 
-	// Get the key from the hash table
-	obj := store.Get(key)
-
-	if obj == nil {
-		return &EvalResponse{
-			Result: clientio.NIL,
-			Error:  nil,
-		}
-	}
-
-	if object.AssertType(obj.TypeEncoding, object.ObjTypeSet) == nil ||
-		object.AssertType(obj.TypeEncoding, object.ObjTypeJSON) == nil {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongTypeOperation,
-		}
-	}
-
-	// Get EvalResponse with correct data type
-	getResp := evalGET([]string{key}, store)
-
-	// If there is an error or the key doesn't exist return the error response or nil
-	if getResp.Error != nil {
-		return getResp
-	}
-
 	var exDurationMs int64 = -1
 	var state = Uninitialized
 	var persist = false
@@ -3270,6 +3244,14 @@ func evalGETEX(args []string, store *dstore.Store) *EvalResponse {
 			}
 			i++
 			if i == len(args) {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrSyntax,
+				}
+			}
+
+			// If an option is provided instead of expire time return a syntax error
+			if opt := strings.ToUpper(args[i]); opt == "PERSIST" || opt == "PX" || opt == "EX" {
 				return &EvalResponse{
 					Result: nil,
 					Error:  diceerrors.ErrSyntax,
@@ -3352,6 +3334,32 @@ func evalGETEX(args []string, store *dstore.Store) *EvalResponse {
 				Error:  diceerrors.ErrIntegerOutOfRange,
 			}
 		}
+	}
+
+	// Get the key from the hash table
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	if object.AssertType(obj.TypeEncoding, object.ObjTypeSet) == nil ||
+		object.AssertType(obj.TypeEncoding, object.ObjTypeJSON) == nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// Get EvalResponse with correct data type
+	getResp := evalGET([]string{key}, store)
+
+	// If there is an error return the error response
+	if getResp.Error != nil {
+		return getResp
 	}
 
 	if state == Initialized {
