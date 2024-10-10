@@ -1,9 +1,9 @@
 ---
 title: LPOP
-description: The LPOP command in DiceDB removes and returns the first element of a list at a specified key. This command is ideal for implementing queue-like data structures that process elements in a First-In-First-Out (FIFO) order.
+description: The `LPOP` command in DiceDB removes and returns the first element of a list at a specified key. This command is ideal for implementing queue-like data structures that process elements in a First-In-First-Out (FIFO) order.
 ---
 
-The LPOP command in DiceDB removes and returns the first element of a list at a specified key. This command is ideal for implementing queue-like data structures that process elements in a First-In-First-Out (FIFO) order.
+The `LPOP` command in DiceDB removes and returns the first element of a list at a specified key. This command is ideal for implementing queue-like data structures that process elements in a First-In-First-Out (FIFO) order.
 
 ## Syntax
 
