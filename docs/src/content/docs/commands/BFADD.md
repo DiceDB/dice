@@ -13,12 +13,17 @@ BFADD key item
 
 ## Parameters
 
-- `key`: The name of the Bloom Filter to which the item will be added. This is a string.
-- `item`: The item to be added to the Bloom Filter. This is a string.
+| Parameter | Description                                      | Type   | Required |
+|-----------|--------------------------------------------------|--------|----------|
+| `key`     | The name of the Bloom Filter to which the item will be added. | String | Yes      |
+| `item`    | The item to be added to the Bloom Filter.        | String | Yes      |
 
-## Return Value
+## Return values
 
-- `Integer reply`: The command returns `1` if the item was not already present in the Bloom Filter and `0` if the item was already present.
+| Condition                                      | Return Value                                      |
+|------------------------------------------------|---------------------------------------------------|
+| Item was not already present in the Bloom Filter | `1`                                              |
+| Item was already present in the Bloom Filter   | `0`                                              |
 
 ## Behaviour
 
@@ -27,19 +32,17 @@ When the `BFADD` command is executed, the specified item is added to the Bloom F
 - If the item is not present, it will be added, and the command will return `1`.
 - If the item is already present, the command will return `0`.
 
-## Error Handling
+## Errors
 
-The `BFADD` command can raise errors in the following scenarios:
-
-1. `Wrong number of arguments`: If the command is called with an incorrect number of arguments, a `ERR wrong number of arguments for 'BFADD' command` error will be raised.
-2. `Non-string key or item`: If the key or item is not a string, a `WRONGTYPE Operation against a key holding the wrong kind of value` error will be raised.
+1. `ERR wrong number of arguments for 'BFADD' command`: This error occurs if the command is called with an incorrect number of arguments.
+2. `WRONGTYPE Operation against a key holding the wrong kind of value`: This error occurs if the key or item is not a string.
 
 ## Example Usage
 
 ### Adding an Item to a Bloom Filter
 
 ```plaintext
-127.0.0.1:6379> BFADD mybloomfilter "apple"
+127.0.0.1:7379> BFADD mybloomfilter "apple"
 (integer) 1
 ```
 
@@ -48,7 +51,7 @@ In this example, the item "apple" is added to the Bloom Filter named `mybloomfil
 ### Adding an Existing Item to a Bloom Filter
 
 ```plaintext
-127.0.0.1:6379> BFADD mybloomfilter "apple"
+127.0.0.1:7379> BFADD mybloomfilter "apple"
 (integer) 0
 ```
 
@@ -57,7 +60,7 @@ In this example, the item "apple" is added to the Bloom Filter named `mybloomfil
 ### Error Scenario: Wrong Number of Arguments
 
 ```plaintext
-127.0.0.1:6379> BFADD mybloomfilter
+127.0.0.1:7379> BFADD mybloomfilter
 (error) ERR wrong number of arguments for 'BFADD' command
 ```
 
@@ -66,7 +69,7 @@ In this example, the command is called with only one argument instead of the req
 ### Error Scenario: Non-string Key or Item
 
 ```plaintext
-127.0.0.1:6379> BFADD 12345 67890
+127.0.0.1:7379> BFADD 12345 67890
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
