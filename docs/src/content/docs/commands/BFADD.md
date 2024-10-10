@@ -41,7 +41,7 @@ When the `BFADD` command is executed, the specified item is added to the Bloom F
 
 ### Adding an Item to a Bloom Filter
 
-```plaintext
+```bash
 127.0.0.1:7379> BFADD mybloomfilter "apple"
 (integer) 1
 ```
