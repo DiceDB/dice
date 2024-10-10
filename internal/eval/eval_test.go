@@ -3699,21 +3699,25 @@ func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"command help": {
 			input: []string{"HELP"},
-			output: []byte("*11\r\n" +
+			output: []byte("*13\r\n" +
 				"$64\r\n" +
 				"COMMAND <subcommand> [<arg> [value] [opt] ...]. Subcommands are:\r\n" +
 				"$15\r\n" +
 				"(no subcommand)\r\n" +
-				"$43\r\n" +
-				"    Return details about all Dice commands.\r\n" +
+				"$44\r\n" +
+				"     Return details about all Dice commands.\r\n" +
 				"$5\r\n" +
 				"COUNT\r\n" +
-				"$60\r\n" +
-				"    Return the total number of commands in this Dice server.\r\n" +
+				"$61\r\n" +
+				"     Return the total number of commands in this Dice server.\r\n" +
 				"$4\r\n" +
 				"LIST\r\n" +
 				"$55\r\n" +
 				"     Return a list of all commands in this Dice server.\r\n" +
+				"$25\r\n" +
+				"INFO [<command-name> ...]\r\n" +
+				"$140\r\n" +
+				"     Return details about the specified DiceDB commands. If no command names are given, documentation details for all commands are returned.\r\n" +
 				"$22\r\n" +
 				"GETKEYS <full-command>\r\n" +
 				"$46\r\n" +

@@ -2635,11 +2635,13 @@ func evalCommand(args []string, store *dstore.Store) []byte {
 func evalCommandHelp() []byte {
 	format := "COMMAND <subcommand> [<arg> [value] [opt] ...]. Subcommands are:"
 	noTitle := "(no subcommand)"
-	noMessage := "    Return details about all Dice commands."
+	noMessage := "     Return details about all Dice commands."
 	countTitle := CountConst
-	countMessage := "    Return the total number of commands in this Dice server."
+	countMessage := "     Return the total number of commands in this Dice server."
 	listTitle := "LIST"
 	listMessage := "     Return a list of all commands in this Dice server."
+	infoTitle := "INFO [<command-name> ...]"
+	infoMessage := "     Return details about the specified DiceDB commands. If no command names are given, documentation details for all commands are returned."
 	getKeysTitle := "GETKEYS <full-command>"
 	getKeysMessage := "     Return the keys from a full Dice command."
 	helpTitle := "HELP"
@@ -2652,6 +2654,8 @@ func evalCommandHelp() []byte {
 		countMessage,
 		listTitle,
 		listMessage,
+		infoTitle,
+		infoMessage,
 		getKeysTitle,
 		getKeysMessage,
 		helpTitle,
