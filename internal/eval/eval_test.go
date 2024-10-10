@@ -377,8 +377,9 @@ func testEvalSET(t *testing.T, store *dstore.Store) {
 }
 
 func testEvalGETEX(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"key val pair and valid EX": {
+	tests := []evalTestCase{
+		{
+			name: "key val pair and valid EX",
 			setup: func() {
 				key := "foo"
 				value := "bar"
@@ -387,10 +388,14 @@ func testEvalGETEX(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input:  []string{"foo", Ex, "10"},
-			output: clientio.Encode("bar", false),
+			input: []string{"foo", Ex, "10"},
+			migratedOutput: EvalResponse{
+				Result: "bar",
+				Error:  nil,
+			},
 		},
-		"key val pair and invalid EX": {
+		{
+			name: "key val pair and invalid EX",
 			setup: func() {
 				key := "foo"
 				value := "bar"
@@ -399,26 +404,37 @@ func testEvalGETEX(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input:  []string{"foo", Ex, "10000000000000000"},
-			output: []byte("-ERR invalid expire time in 'getex' command\r\n"),
+			input: []string{"foo", Ex, "10000000000000000"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrInvalidExpireTime("GETEX"),
+			},
 		},
-		"key holding json type": {
+		{
+			name: "key holding json type",
 			setup: func() {
 				evalJSONSET([]string{"JSONKEY", "$", "1"}, store)
 			},
-			input:  []string{"JSONKEY"},
-			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+			input: []string{"JSONKEY"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			},
 		},
-		"key holding set type": {
+		{
+			name: "key holding set type",
 			setup: func() {
 				evalSADD([]string{"SETKEY", "FRUITS", "APPLE", "MANGO", "BANANA"}, store)
 			},
-			input:  []string{"SETKEY"},
-			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+			input: []string{"SETKEY"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			},
 		},
 	}
 
-	runEvalTests(t, tests, evalGETEX, store)
+	runMigratedEvalTests(t, tests, evalGETEX, store)
 }
 
 func testEvalMSET(t *testing.T, store *dstore.Store) {
@@ -3732,6 +3748,36 @@ func testEvalJSONNUMINCRBY(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalJSONNUMINCRBY, store)
+}
+
+func runMigratedEvalTests(t *testing.T, tests []evalTestCase, evalFunc func([]string, *dstore.Store) *EvalResponse, store *dstore.Store) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup the test store
+			if tt.setup != nil {
+				tt.setup()
+			}
+
+			response := evalFunc(tt.input, store)
+
+			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput.Result)
+
+			// Handle comparison for byte slices
+			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
+				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
+					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+				}
+			} else {
+				assert.Equal(t, tt.migratedOutput.Result, response.Result)
+			}
+
+			if tt.migratedOutput.Error != nil {
+				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+			} else {
+				testifyAssert.NoError(t, response.Error)
+			}
+		})
+	}
 }
 
 func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]string, *dstore.Store) []byte, store *dstore.Store) {
