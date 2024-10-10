@@ -144,6 +144,12 @@ func TestJSONOperations(t *testing.T) {
 			getCmd:   `JSON.GET inventory $.inventory.mountain_bikes[0].price`,
 			expected: `2000`,
 		},
+		{
+			name:     "Get JSON with non-existent path",
+			setCmd:   `JSON.SET user $ ` + simpleJSON,
+			getCmd:   `JSON.GET user $.nonExistent`,
+			expected: `ERR Path '$.nonExistent' does not exist`,
+		},
 	}
 
 	// Multiple test cases will address JSON operations where the order of elements can vary, but all orders are "valid" and to be accepted
