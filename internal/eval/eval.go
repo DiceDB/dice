@@ -2818,10 +2818,10 @@ func evalPersist(args []string, store *dstore.Store) []byte {
 		return clientio.RespZero
 	}
 
-	// If the object exists but no expiration is set on it, return -1
+	// If the object exists but no expiration is set on it, return 0
 	_, isExpirySet := dstore.GetExpiry(obj, store)
 	if !isExpirySet {
-		return clientio.RespMinusOne
+		return clientio.RespZero
 	}
 
 	// If the object exists, remove the expiration time
