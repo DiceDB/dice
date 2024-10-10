@@ -716,11 +716,13 @@ var (
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	hexistsCmdMeta = DiceCmdMeta{
-		Name:     "HEXISTS",
-		Info:     `Returns if field is an existing field in the hash stored at key.`,
-		Eval:     evalHEXISTS,
+		Name: "HEXISTS",
+		Info: `Returns if field is an existing field in the hash stored at key.`,
+		// Eval:     evalHEXISTS,
+		NewEval:  evalHEXISTS,
 		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 
 	objectCmdMeta = DiceCmdMeta{

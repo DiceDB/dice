@@ -391,7 +391,7 @@ func testEvalGET(t *testing.T, store *dstore.Store) {
 
 			response := evalGET(tt.input, store)
 
-			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput.Result)
+			// fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput.Result)
 
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
@@ -2337,23 +2337,27 @@ func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
 }
 
 func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"wrong number of args passed": {
-			setup:  func() {},
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'hexists' command\r\n"),
+	tests := []evalTestCase{
+		{
+			name: "HEXISTS wrong number of args passed",
+			setup:          func() {},
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'HEXISTS' command")},
 		},
-		"only key passed": {
-			setup:  func() {},
-			input:  []string{"KEY"},
-			output: []byte("-ERR wrong number of arguments for 'hexists' command\r\n"),
+		{
+			name: "HEXISTS only key passed",
+			setup:          func() {},
+			input:          []string{"KEY"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'HEXISTS' command")},
 		},
-		"key doesn't exist": {
+		{
+			name: "HEXISTS key doesn't exist",
 			setup:  func() {},
 			input:  []string{"KEY", "field_name"},
-			output: clientio.Encode(0, false),
+			migratedOutput: EvalResponse{Result: ":0\r\n", Error: nil},
 		},
-		"key exists but field_name doesn't exists": {
+		{
+			name: "HEXISTS key exists but field_name doesn't exists",
 			setup: func() {
 				key := "KEY_MOCK"
 				field := "mock_field_name"
@@ -2369,9 +2373,10 @@ func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:  []string{"KEY_MOCK", "non_existent_key"},
-			output: clientio.Encode(0, false),
+			migratedOutput: EvalResponse{Result: ":0\r\n", Error: nil},
 		},
-		"both key and field_name exists": {
+		{
+			name: "HEXISTS both key and field_name exists",
 			setup: func() {
 				key := "KEY_MOCK"
 				field := "mock_field_name"
@@ -2387,11 +2392,30 @@ func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:  []string{"KEY_MOCK", "mock_field_name"},
-			output: clientio.Encode(1, false),
+			migratedOutput: EvalResponse{Result: ":1\r\n", Error: nil},
 		},
 	}
 
-	runEvalTests(t, tests, evalHEXISTS, store)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			response := evalHEXISTS(tt.input, store)
+
+			// Handle comparison for byte slices
+			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
+				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
+					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+				}
+			} else {
+				assert.Equal(t, tt.migratedOutput.Result, response.Result)
+			}
+
+			if tt.migratedOutput.Error != nil {
+				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+			} else {
+				testifyAssert.NoError(t, response.Error)
+			}
+		})
+	}
 }
 
 func testEvalHDEL(t *testing.T, store *dstore.Store) {
@@ -2823,8 +2847,6 @@ func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]s
 			if tc.validator != nil {
 				tc.validator(output)
 			} else {
-				fmt.Println(tc.output)
-				fmt.Println(output)
 				assert.Equal(t, string(tc.output), string(output))
 			}
 		})

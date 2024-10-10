@@ -46,6 +46,7 @@ const (
 	CmdGetSet      = "GETSET"
 	CmdGetWatch    = "GET.WATCH"
 	CmdZRangeWatch = "ZRANGE.WATCH"
+	CmdHExists     = "HEXISTS"
 )
 
 type CmdMeta struct {
@@ -78,6 +79,9 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdGetSet: {
+		CmdType: SingleShard,
+	},
+	CmdHExists: {
 		CmdType: SingleShard,
 	},
 

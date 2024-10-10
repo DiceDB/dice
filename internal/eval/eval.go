@@ -3453,33 +3453,50 @@ func evalHSTRLEN(args []string, store *dstore.Store) []byte {
 // If key doesn't exist, it returns 0.
 //
 // Usage: HEXISTS key field
-func evalHEXISTS(args []string, store *dstore.Store) []byte {
-	if len(args) != 2 {
-		return diceerrors.NewErrArity("HEXISTS")
-	}
+// func evalHEXISTS(args []string, store *dstore.Store) []byte {
 
-	key := args[0]
-	hmKey := args[1]
-	obj := store.Get(key)
+// 	// fmt.Printf("%v | %v\n", args, store)
 
-	var hashMap HashMap
+// 	// args contains the rest of the arguments from the command exect the command itself
+// 	// store
+// 	fmt.Printf("The store information:\n")
+// 	keys := []string{"store"}
+// 	objs := store.GetAll(keys)
+// 	for index := range objs{
+// 		fmt.Printf("store: %v\n", objs[index])
+// 	}
 
-	if obj == nil {
-		return clientio.Encode(0, false)
-	}
-	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
-	}
+// 	// for arg := range args {
+// 	// 	fmt.Printf("%v ", args[arg])
+// 	// }
+// 	fmt.Println("")
 
-	hashMap = obj.Value.(HashMap)
+// 	if len(args) != 2 {
+// 		return diceerrors.NewErrArity("HEXISTS")
+// 	}
 
-	_, ok := hashMap.Get(hmKey)
-	if ok {
-		return clientio.Encode(1, false)
-	}
-	// Return 0, if specified field doesn't exist in the HashMap.
-	return clientio.Encode(0, false)
-}
+// 	key := args[0]
+// 	hmKey := args[1]
+// 	obj := store.Get(key)
+
+// 	var hashMap HashMap
+
+// 	if obj == nil {
+// 		return clientio.Encode(0, false)
+// 	}
+// 	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+// 		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+// 	}
+
+// 	hashMap = obj.Value.(HashMap)
+
+// 	_, ok := hashMap.Get(hmKey)
+// 	if ok {
+// 		return clientio.Encode(1, false)
+// 	}
+// 	// Return 0, if specified field doesn't exist in the HashMap.
+// 	return clientio.Encode(0, false)
+// }
 
 func evalObjectIdleTime(key string, store *dstore.Store) []byte {
 	obj := store.GetNoTouch(key)

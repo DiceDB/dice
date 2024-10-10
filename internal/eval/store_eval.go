@@ -1,6 +1,7 @@
 package eval
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -315,4 +316,56 @@ func evalSETEX(args []string, store *dstore.Store) *EvalResponse {
 	newArgs := []string{key, value, Ex, args[1]}
 
 	return evalSET(newArgs, store)
+}
+
+// evalHEXISTS returns if field is an existing field in the hash stored at key.
+//
+// This command returns 0, if the specified field doesn't exist in the key and 1 if it exists.
+//
+// If key doesn't exist, it returns 0.
+//
+// Usage: HEXISTS key field
+func evalHEXISTS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("HEXISTS"),
+		}
+	}
+
+	key := args[0]
+	hmKey := args[1]
+	obj := store.Get(key)
+
+	var hashMap HashMap
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.Encode(0, false),
+			Error:  nil,
+		}
+	}
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		// TODO: need to catch if its a encoding error
+		fmt.Printf("The error is: %v", err)
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrUnexpectedType("string", obj.Value),
+		}
+	}
+
+	hashMap = obj.Value.(HashMap)
+
+	_, ok := hashMap.Get(hmKey)
+	if ok {
+		return &EvalResponse{
+			Result: clientio.Encode(1, false),
+			Error:  nil,
+		}
+	}
+	// Return 0, if specified field doesn't exist in the HashMap.
+	return &EvalResponse{
+		Result: clientio.Encode(0, false),
+		Error:  nil,
+	}
 }
