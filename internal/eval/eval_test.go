@@ -1988,7 +1988,7 @@ func testEvalPersist(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				evalSET([]string{"existent_no_expiry", "value"}, store)
 			},
-			output: clientio.RespMinusOne,
+			output: clientio.RespZero,
 		},
 		"key exists and expiration removed": {
 			input: []string{"existent_with_expiry"},

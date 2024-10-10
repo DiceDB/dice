@@ -1,6 +1,10 @@
 package store
 
 const (
-	Set string = "set"
-	Del string = "del"
+	Set    string = "SET"
+	Del    string = "DEL"
+	Get    string = "GET"
+	Rename string = "RENAME"
+	ZAdd   string = "ZADD"
+	ZRange string = "ZRANGE"
 )
