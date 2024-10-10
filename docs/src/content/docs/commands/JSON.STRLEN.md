@@ -1,43 +1,49 @@
 ---
 title: JSON.STRLEN
-description: Documentation for the DiceDB command JSON.STRLEN
+description: The 'JSON.STRLEN' command is used to get the length of a string at a given path in a JSON Document stored in DiceDB
 ---
 
 The `JSON.STRLEN` command is part of the DiceDBJSON module, which allows you to work with JSON data in DiceDB. This command is used to determine the length of a JSON string at a specified path within a JSON document stored in DiceDB.
 
 ## Syntax
 
-```plaintext
+```
 JSON.STRLEN <key> <path>
 ```
 
 ## Parameters
 
-- `key`: The key under which the JSON document is stored in DiceDB.
-- `path`: The JSONPath expression that specifies the location of the JSON string within the document. The path must point to a JSON string.
+| Parameter | Description                                                             | Type   | Required |
+|-----------|-------------------------------------------------------------------------|--------|----------|
+| `key`     | The key under which the JSON document is stored.                        | String | Yes      |
+| `path`    | The JSONPath to the string within the JSON document. The path must contain a string.  | String | No       |
 
 ## Return Value
 
-- `Integer`: The length of the JSON string at the specified path.
-- `Null`: If the path does not exist or does not point to a JSON string.
+| Condition                                 | Return Value                                                                    |
+|-------------------------------------------|---------------------------------------------------------------------------------|
+| JSON string is found at the specified path| Length of the JSON string.                                                      |
+| JSONPath contains `*` wildcard            | Indicates the length of each key in the JSON. Returns `nil` for non-string keys.|
+
 
 ## Behaviour
 
 When the `JSON.STRLEN` command is executed, DiceDB will:
 
-1. Retrieve the JSON document stored at the specified key.
-2. Navigate to the specified path within the JSON document.
-3. If the path points to a JSON string, return the length of the string.
-4. If the path does not exist or does not point to a JSON string, return `null`.
+1. If the specified `key` does not exist, the command returns `null`.
+2. If `path` is not specified, the command throws an error.
+3. `$` is considered as root path which returns `null`.
+4. If the specified path exists and points to a JSON string, the command returns the length of the string.
+5. If the path does not exist or does not point to a JSON string, an error is returned.
+6. Multiple results are represented as a list in case of wildcards, where each string length is returned in order of appearance and `null` is returned if it's not a string.
 
-## Error Handling
+## Errors
 
 The following errors may be raised when executing the `JSON.STRLEN` command:
 
-- `(error) ERR wrong number of arguments for 'JSON.STRLEN' command`: This error occurs if the number of arguments provided to the command is incorrect.
-- `(error) ERR key does not exist`: This error occurs if the specified key does not exist in the DiceDB database.
-- `(error) ERR path does not exist`: This error occurs if the specified path does not exist within the JSON document.
-- `(error) ERR path is not a string`: This error occurs if the specified path does not point to a JSON string.
+- `(error) ERROR wrong number of arguments for 'json.strlen' command`: This error occurs if the number of arguments provided to the command is incorrect.
+- `(error)  ERROR invalid JSONPath`: This error occurs if the specified path does not exist within the JSON document.
+- `(error)  ERROR WRONGTYPE wrong type of path value - expected string but found integer`: This error occurs if valid key is provided but path is not provided.
 
 ## Example Usage
 
@@ -82,7 +88,7 @@ If the path does not exist:
 JSON.STRLEN user:1001 $.phone
 ```
 
-`Return Value`: `null`
+`Return Value`: `(empty list or set)`
 
 ### Example 4: Path is Not a String
 
