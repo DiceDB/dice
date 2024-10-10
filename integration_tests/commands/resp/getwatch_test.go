@@ -9,7 +9,7 @@ import (
 
 	"github.com/dicedb/dice/internal/clientio"
 	redis "github.com/dicedb/go-dice"
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 type WatchSubscriber struct {
