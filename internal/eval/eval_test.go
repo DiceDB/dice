@@ -91,7 +91,7 @@ func TestEval(t *testing.T) {
 	testEvalHLEN(t, store)
 	testEvalSELECT(t, store)
 	testEvalLLEN(t, store)
-	testEvalGETEX(t, store)
+	testEvalGETDEL(t, store)
 	testEvalJSONNUMINCRBY(t, store)
 	testEvalDUMP(t, store)
 	testEvalTYPE(t, store)
@@ -435,6 +435,77 @@ func testEvalGETEX(t *testing.T, store *dstore.Store) {
 	}
 
 	runMigratedEvalTests(t, tests, evalGETEX, store)
+}
+
+func testEvalGETDEL(t *testing.T, store *dstore.Store) {
+	tests := []evalTestCase{
+		{
+			name:           "nil value",
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'GETDEL' command")},
+		},
+		{
+			name:           "empty array",
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'GETDEL' command")},
+		},
+		{
+			name:           "key does not exist",
+			input:          []string{"NONEXISTENT_KEY"},
+			migratedOutput: EvalResponse{Result: clientio.NIL, Error: nil},
+		},
+		{
+			name:           "multiple arguments",
+			input:          []string{"KEY1", "KEY2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'GETDEL' command")},
+		},
+		{
+			name: "key exists",
+			setup: func() {
+				key := "diceKey"
+				value := "diceVal"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input:          []string{"diceKey"},
+			migratedOutput: EvalResponse{Result: "diceVal", Error: nil},
+		},
+		{
+			name: "key exists but expired",
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "mock_value"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+				store.SetExpiry(obj, int64(-2*time.Millisecond))
+			},
+			input:          []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{Result: clientio.NIL, Error: nil},
+		},
+		{
+			name: "key deleted by previous call of GETDEL",
+			setup: func() {
+				key := "DELETED_KEY"
+				value := "mock_value"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+				evalGETDEL([]string{key}, store)
+			},
+			input:          []string{"DELETED_KEY"},
+			migratedOutput: EvalResponse{Result: clientio.NIL, Error: nil},
+		},
+	}
+
+	runMigratedEvalTests(t, tests, evalGETDEL, store)
 }
 
 func testEvalMSET(t *testing.T, store *dstore.Store) {
