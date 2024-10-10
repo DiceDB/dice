@@ -38,24 +38,25 @@ LPOP key
 
 ## Errors
 
-### `Wrong type of key`
+1. `Wrong type of key`
 
 When the `LPOP` command is executed for a key that exists but is not associated with a list, an error is returned. This error occurs if the key is associated with a type other than a list, such as a string or set.
 
-```DiceDB
+```bash
 127.0.0.1:7379> LPOP mystring
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
-### Wrong number of arguments
+2. `Wrong number of arguments`
+
 If the `LPOP` command is executed with more than one key or no key, the following error is returned:
 
-```DiceDB
+```bash
 127.0.0.1:7379> LPOP
 (error) ERR wrong number of arguments for 'lpop' command
 ```
 
-```DiceDB
-127.0.0.1:7379> LPOP mylist 2
+```bash
+127.0.0.1:7379> LPOP mylist secondlist
 (error) ERR wrong number of arguments for 'lpop' command
 ```
 
@@ -64,12 +65,12 @@ If the `LPOP` command is executed with more than one key or no key, the followin
 ### Basic Usage
 Setting a list `mylist` with elements \["one", "two", "three"\].
 
-```DiceDB
+```bash
 RPUSH mylist "one" "two" "three"
 ```
 Removing the first element from the list `mylist`
 
-```DiceDB
+```bash
 LPOP mylist
 "one"
 ```
@@ -77,7 +78,7 @@ LPOP mylist
 The list `mylist` now contains \["two", "three"\].
 
 If the LPOP command is executed one more time:
-```DiceDB
+```bash
 LPOP mylist
 "two"
 ```
@@ -90,7 +91,7 @@ The list `mylist` now contains \["three"\].
 
 Returns `(nil)` if the list is empty or the provided key is non-existent
 
-```DiceDB
+```bash
 LPOP emptylist
 (nil)
 ```
@@ -102,14 +103,14 @@ LPOP emptylist
 
 Setting a key `mystring` with the value `hello`:
 
-```DiceDB
+```bash
 SET mystring "hello"
 OK
 ```
 
 Executing `LPOP` command on any key that is not associated with a List type will result in an error:
 
-```DiceDB
+```bash
 LPOP mystring
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
@@ -118,7 +119,7 @@ LPOP mystring
 
 Passing more than one key will result in an error:
 
-```DiceDB
+```bash
 LPOP mylist secondlist
 (error) ERR wrong number of arguments for 'lpop' command
 ```
