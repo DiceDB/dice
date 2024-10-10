@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/dicedb/dice/internal/cmd"
@@ -41,9 +42,18 @@ const (
 
 // Single-shard commands.
 const (
-	CmdSet         = "SET"
-	CmdGet         = "GET"
-	CmdGetSet      = "GETSET"
+	CmdSet    = "SET"
+	CmdGet    = "GET"
+	CmdGetSet = "GETSET"
+)
+
+// Multi-shard commands.
+const (
+	CmdRename = "RENAME"
+)
+
+// Watch commands
+const (
 	CmdGetWatch    = "GET.WATCH"
 	CmdZRangeWatch = "ZRANGE.WATCH"
 )
@@ -60,7 +70,7 @@ type CmdMeta struct {
 	// composeResponse is a function that combines multiple responses from the execution of commands
 	// into a single response object. It accepts a variadic parameter of EvalResponse objects
 	// and returns a unified response interface. It is used in the command type "MultiShard"
-	composeResponse func(responses ...eval.EvalResponse) interface{}
+	composeResponse func(ctx context.Context, originalCmd *cmd.DiceDBCmd, worker *BaseWorker, responses ...eval.EvalResponse) error
 }
 
 var CommandsMeta = map[string]CmdMeta{
@@ -79,6 +89,13 @@ var CommandsMeta = map[string]CmdMeta{
 	},
 	CmdGetSet: {
 		CmdType: SingleShard,
+	},
+
+	// Multi-shard commands.
+	CmdRename: {
+		CmdType:          MultiShard,
+		decomposeCommand: decomposeRename,
+		composeResponse:  composeRename,
 	},
 
 	// Custom commands.

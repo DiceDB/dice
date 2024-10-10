@@ -1,5 +1,11 @@
 package worker
 
+import (
+	"fmt"
+
+	"github.com/dicedb/dice/internal/cmd"
+)
+
 // Breakup file is used by Worker to split commands that need to be executed
 // across multiple shards. For commands that operate on multiple keys or
 // require distribution across shards (e.g., MultiShard commands), a Breakup
@@ -14,3 +20,23 @@ package worker
 //
 // The result is a list of commands, one for each shard, which are then
 // scattered to the shard threads for execution.
+func decomposeRename(DiceDBCmd *cmd.DiceDBCmd) []*cmd.DiceDBCmd {
+
+	fmt.Println(DiceDBCmd.Cmd)
+	fmt.Println(DiceDBCmd.Args)
+
+	decomposedCmds := []*cmd.DiceDBCmd{}
+	decomposedCmds = append(decomposedCmds, &cmd.DiceDBCmd{
+		RequestID: DiceDBCmd.RequestID,
+		Cmd:       "GET",
+		Args:      []string{DiceDBCmd.Args[0]},
+	})
+
+	decomposedCmds = append(decomposedCmds, &cmd.DiceDBCmd{
+		RequestID: DiceDBCmd.RequestID,
+		Cmd:       "DELETE",
+		Args:      []string{DiceDBCmd.Args[0]},
+	})
+
+	return decomposedCmds
+}
