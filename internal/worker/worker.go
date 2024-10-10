@@ -144,8 +144,9 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 			}
 			// executeCommand executes the command and return the response back to the client
 			func(errChan chan error) {
+				type id string
 				execCtx, cancel := context.WithTimeout(ctx, 500*time.Second) // Timeout set to 6 seconds for integration tests
-				execCtx = context.WithValue(execCtx, "request_id", cmds[0].RequestID)
+				execCtx = context.WithValue(execCtx, id("request_id"), cmds[0].RequestID)
 				defer cancel()
 				w.executeCommandHandler(execCtx, errChan, cmds, false)
 			}(errChan)
@@ -361,7 +362,6 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 		case MultiShard:
 			// Handle multi-shard commands
 			err := val.composeResponse(ctx, diceDBCmd, w, evalResp...)
-			// err := w.ioHandler.Write(ctx, val.composeResponse(w, evalResp...))
 			if err != nil {
 				w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
 				return err
