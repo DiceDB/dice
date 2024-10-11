@@ -3705,48 +3705,6 @@ func evalFLUSHDB(args []string, store *dstore.Store) []byte {
 	return clientio.RespOK
 }
 
-func evalSADD(args []string, store *dstore.Store) []byte {
-	if len(args) < 2 {
-		return diceerrors.NewErrArity("SADD")
-	}
-	key := args[0]
-
-	// Get the set object from the store.
-	obj := store.Get(key)
-	lengthOfItems := len(args[1:])
-
-	var count = 0
-	if obj == nil {
-		var exDurationMs int64 = -1
-		var keepttl = false
-		// If the object does not exist, create a new set object.
-		value := make(map[string]struct{}, lengthOfItems)
-		// Create a new object.
-		obj = store.NewObj(value, exDurationMs, object.ObjTypeSet, object.ObjEncodingSetStr)
-		store.Put(key, obj, dstore.WithKeepTTL(keepttl))
-	}
-
-	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err != nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingSetStr); err != nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	// Get the set object.
-	set := obj.Value.(map[string]struct{})
-
-	for _, arg := range args[1:] {
-		if _, ok := set[arg]; !ok {
-			set[arg] = struct{}{}
-			count++
-		}
-	}
-
-	return clientio.Encode(count, false)
-}
-
 func evalSMEMBERS(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("SMEMBERS")
