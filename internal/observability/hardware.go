@@ -16,6 +16,12 @@ type HardwareConfig struct {
 	TotalCores    int    `json:"total_cores"`
 }
 
+const (
+	linux   = "linux"
+	darwin  = "darwin"
+	windows = "windows"
+)
+
 func GetHardwareMeta() (HardwareConfig, error) {
 	var res HardwareConfig
 	totalMemory, err := getTotalMemoryMB()
@@ -125,7 +131,7 @@ func executeCommand(cmd string) (string, error) {
 	var out []byte
 	var err error
 
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == windows {
 		out, err = exec.Command("cmd", "/C", cmd).Output()
 	} else {
 		out, err = exec.Command("sh", "-c", cmd).Output()

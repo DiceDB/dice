@@ -19,6 +19,12 @@ type PingPayload struct {
 	Err            error          `json:"error"`
 }
 
+const (
+	token = "p.eyJ1IjogIjhjNWQxMjdlLTczZmYtNGRjZS04Mzk5LTQyMDU0MThhYjc2OSIsI" +
+		"CJpZCI6ICJhZjcxNGExNC0xZWQyLTQ3ZDktOTM0MS0xMzgwNWNiOWFhNDYiLCAiaG9zdCI6ICJ1cy1lYXN0LWF3cyJ9.o9LqZqTZ9YkhbcusZOltsm95RzVQUzJLQOHV2YA7L0E"
+	url = "https://api.us-east.aws.tinybird.co/v0/events?name=ping"
+)
+
 type DBConfig struct {
 }
 
@@ -37,12 +43,12 @@ func Ping() {
 		DBConfig:       DBConfig{},
 	}
 
-	url := "https://api.us-east.aws.tinybird.co/v0/events?name=ping"
 	b, _ := json.Marshal(payload)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-	req, _ := http.NewRequestWithContext(context.Background(), "POST", url, bytes.NewBuffer(b))
-	//nolint:lll
-	req.Header.Set("Authorization", "Bearer p.eyJ1IjogIjhjNWQxMjdlLTczZmYtNGRjZS04Mzk5LTQyMDU0MThhYjc2OSIsICJpZCI6ICJhZjcxNGExNC0xZWQyLTQ3ZDktOTM0MS0xMzgwNWNiOWFhNDYiLCAiaG9zdCI6ICJ1cy1lYXN0LWF3cyJ9.o9LqZqTZ9YkhbcusZOltsm95RzVQUzJLQOHV2YA7L0E")
+	req, _ := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(b))
+	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{Timeout: time.Second * 5}
@@ -50,5 +56,5 @@ func Ping() {
 	if err != nil {
 		panic(err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 }
