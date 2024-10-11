@@ -34,52 +34,44 @@ func composeRename(ctx context.Context, originalCmd *cmd.DiceDBCmd, worker *Base
 		}
 	}
 
-	cmds := []cmd.DiceDBCmd{
-		{
-			RequestID: ctx.Value("request_id").(uint32),
-			Cmd:       "SET",
-			Args:      []string{originalCmd.Args[1], responses[0].Result.(string)},
-		},
+	cmds := cmd.DiceDBCmd{
+		RequestID: ctx.Value("request_id").(uint32),
+		Cmd:       "SET",
+		Args:      []string{originalCmd.Args[1], responses[0].Result.(string)},
 	}
 
-	for i := uint8(0); i < uint8(len(cmds)); i++ {
-		var rc chan *ops.StoreOp
-		var sid shard.ShardID
-		var key string
-		if len(cmds[i].Args) > 0 {
-			key = cmds[i].Args[0]
-		} else {
-			key = cmds[i].Cmd
-		}
-
-		sid, rc = worker.shardManager.GetShardInfo(key)
-
-		rc <- &ops.StoreOp{
-			SeqID:     i,
-			RequestID: cmds[i].RequestID,
-			Cmd:       &cmds[i],
-			WorkerID:  worker.id,
-			ShardID:   sid,
-			Client:    nil,
-		}
+	var rc chan *ops.StoreOp
+	var sid shard.ShardID
+	var key string
+	if len(cmds.Args) > 0 {
+		key = cmds.Args[0]
+	} else {
+		key = cmds.Cmd
 	}
 
-	numCmds := len(cmds)
+	sid, rc = worker.shardManager.GetShardInfo(key)
+
+	rc <- &ops.StoreOp{
+		SeqID:     0,
+		RequestID: cmds.RequestID,
+		Cmd:       &cmds,
+		WorkerID:  worker.id,
+		ShardID:   sid,
+		Client:    nil,
+	}
+
 	var evalResp []eval.EvalResponse
-	for numCmds != 0 {
-		select {
-		case <-ctx.Done():
-			worker.logger.Error("Timed out waiting for response from shards", slog.String("workerID", worker.id), slog.Any("error", ctx.Err()))
-		case resp, ok := <-worker.respChan:
-			if ok {
-				evalResp = append(evalResp, *resp.EvalResponse)
-			}
-			numCmds--
-			continue
-		case sError, ok := <-worker.shardManager.ShardErrorChan:
-			if ok {
-				worker.logger.Error("Error from shard", slog.String("workerID", worker.id), slog.Any("error", sError))
-			}
+
+	select {
+	case <-ctx.Done():
+		worker.logger.Error("Timed out waiting for response from shards", slog.String("workerID", worker.id), slog.Any("error", ctx.Err()))
+	case resp, ok := <-worker.respChan:
+		if ok {
+			evalResp = append(evalResp, *resp.EvalResponse)
+		}
+	case sError, ok := <-worker.shardManager.ShardErrorChan:
+		if ok {
+			worker.logger.Error("Error from shard", slog.String("workerID", worker.id), slog.Any("error", sError))
 		}
 	}
 
