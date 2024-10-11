@@ -2617,7 +2617,7 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:  []string{"EXISTING_KEY"},
-			output: []byte("-WRONGTYPE wrong type of path value - expected string but found integer\r\n"),
+			output: []byte("-ERR Path '$' does not exist or not an string\r\n"),
 		},
 		"root array strlen": {
 			setup: func() {
