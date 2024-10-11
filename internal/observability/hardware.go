@@ -16,12 +16,6 @@ type HardwareConfig struct {
 	TotalCores    int    `json:"total_cores"`
 }
 
-const (
-	linux   = "linux"
-	darwin  = "darwin"
-	windows = "windows"
-)
-
 func GetHardwareMeta() (HardwareConfig, error) {
 	var res HardwareConfig
 	totalMemory, err := getTotalMemoryMB()
