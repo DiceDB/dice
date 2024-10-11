@@ -77,7 +77,7 @@ func newCountMinSketchOptsWithErrorRate(args []string) (*CountMinSketchOpts, err
 
 	probability, err := strconv.ParseFloat(args[0], 64)
 	if err != nil || probability <= 0 || probability >= 1.0 {
-		return nil, diceerrors.NewErr("invalid overestimation value")
+		return nil, diceerrors.NewErr("invalid prob value")
 	}
 
 	// These formulas are taken from the original paper that introduced Count Min Sketch.
@@ -247,7 +247,7 @@ func evalCMSMerge(args []string, store *dstore.Store) []byte {
 
 	destination, err := getCountMinSketch(args[0], store)
 	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%w for 'CMS.MERGE' command", err)
+		return diceerrors.NewErrWithFormattedMessage("%v for 'CMS.MERGE' command", err)
 	}
 
 	numberOfKeys, err := strconv.ParseInt(args[1], 10, 64)
@@ -261,7 +261,7 @@ func evalCMSMerge(args []string, store *dstore.Store) []byte {
 	for _, key := range keys {
 		c, err := getCountMinSketch(key, store)
 		if err != nil {
-			return diceerrors.NewErrWithFormattedMessage("%w for 'CMS.MERGE' command", err)
+			return diceerrors.NewErrWithFormattedMessage("%v for 'CMS.MERGE' command", err)
 		}
 		if c.opts.depth != destination.opts.depth || c.opts.width != destination.opts.width {
 			return diceerrors.NewErrWithMessage("width/depth doesn't match")
@@ -277,12 +277,12 @@ func evalCMSMerge(args []string, store *dstore.Store) []byte {
 	}
 
 	if !strings.EqualFold(args[2+numberOfKeys], "WEIGHTS") {
-		return diceerrors.NewErrWithMessage("syntax error")
+		return []byte(diceerrors.SyntaxErr)
 	}
 
 	numberOfWeights := len(args) - 3 - int(numberOfKeys)
 	if int(numberOfKeys) != numberOfWeights {
-		return diceerrors.NewErrWithMessage("syntax error")
+		return []byte(diceerrors.SyntaxErr)
 	}
 
 	values := args[3+numberOfWeights:]
@@ -308,7 +308,7 @@ func evalCMSQuery(args []string, store *dstore.Store) []byte {
 
 	cms, err := getCountMinSketch(args[0], store)
 	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%w for 'CMS.QUERY' command", err)
+		return diceerrors.NewErrWithFormattedMessage("%v for 'CMS.QUERY' command", err)
 	}
 
 	results := make([]uint64, 0, len(args[1:]))
@@ -328,7 +328,7 @@ func evalCMSIncrBy(args []string, store *dstore.Store) []byte {
 
 	cms, err := getCountMinSketch(args[0], store)
 	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%w for 'CMS.INCRBY' command", err)
+		return diceerrors.NewErrWithFormattedMessage("%v for 'CMS.INCRBY' command", err)
 	}
 
 	keyValuePairs := args[1:]
@@ -363,7 +363,7 @@ func evalCMSINFO(args []string, store *dstore.Store) []byte {
 	}
 	cms, err := getCountMinSketch(args[0], store)
 	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%w for 'CMS.INFO' command", err)
+		return diceerrors.NewErrWithFormattedMessage("%v for 'CMS.INFO' command", err)
 	}
 
 	return clientio.Encode(cms.info(args[0]), false)
@@ -377,11 +377,11 @@ func evalCMSINITBYDIM(args []string, store *dstore.Store) []byte {
 
 	opts, err := newCountMinSketchOpts(args[1:])
 	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%w for 'CMS.INITBYDIM' command", err)
+		return diceerrors.NewErrWithFormattedMessage("%v for 'CMS.INITBYDIM' command", err)
 	}
 
 	if err = createCountMinSketch(args[0], opts, store); err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%w for 'CMS.INITBYDIM' command", err)
+		return diceerrors.NewErrWithFormattedMessage("%v for 'CMS.INITBYDIM' command", err)
 	}
 
 	return clientio.RespOK
@@ -397,11 +397,11 @@ func evalCMSINITBYPROB(args []string, store *dstore.Store) []byte {
 
 	opts, err := newCountMinSketchOptsWithErrorRate(args[1:])
 	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%w for 'CMS.INITBYPROB' command", err)
+		return diceerrors.NewErrWithFormattedMessage("%v for 'CMS.INITBYPROB' command", err)
 	}
 
 	if err = createCountMinSketch(args[0], opts, store); err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%w for 'CMS.INITBYPROB' command", err)
+		return diceerrors.NewErrWithFormattedMessage("%v for 'CMS.INITBYPROB' command", err)
 	}
 
 	return clientio.RespOK
