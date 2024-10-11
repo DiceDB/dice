@@ -106,7 +106,7 @@ func PopulateEvictionPool(store *Store) {
 }
 
 // EvictAllkeysLRUOrLFU evicts keys based on LRU or LFU policy.
-// TODO: no need to populate everytime. should populate only when the number of keys to evict is less than what we have in the pool
+// TODO: no need to populate every time. should populate only when the number of keys to evict is less than what we have in the pool
 func EvictAllkeysLRUOrLFU(store *Store) {
 	PopulateEvictionPool(store)
 	evictCount := int16(config.DiceConfig.Server.EvictionRatio * float64(config.DiceConfig.Server.KeysLimit))

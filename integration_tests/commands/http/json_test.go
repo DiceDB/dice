@@ -992,7 +992,7 @@ func TestJsonObjLen(t *testing.T) {
 			expected: []interface{}{"ERR parse error at 13 in $..language*something"},
 		},
 		{
-			name: "JSON.OBJLEN with non-existant key",
+			name: "JSON.OBJLEN with non-existent key",
 			commands: []HTTPCommand{
 				{Command: "JSON.OBJLEN", Body: map[string]interface{}{"key": "non_existing_key", "path": "$"}},
 			},
@@ -1049,7 +1049,7 @@ func TestJSONNumIncrBy(t *testing.T) {
 			expected: []interface{}{invalidArgMessage, invalidArgMessage, invalidArgMessage},
 		},
 		{
-			name: "Non-existant key",
+			name: "Non-existent key",
 			commands: []HTTPCommand{
 				{Command: "JSON.NUMINCRBY", Body: map[string]interface{}{"key": "non_existant_key", "path": "$", "value": 1}},
 			},
@@ -1151,7 +1151,7 @@ func TestJsonARRINSERT(t *testing.T) {
 			expected: []interface{}{"OK", "ERR Couldn't parse as integer", "[1,2]"},
 		},
 		{
-			name: "JSON.ARRINSERT with postive index in root path",
+			name: "JSON.ARRINSERT with positive index in root path",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": a}},
 				{Command: "JSON.ARRINSERT", Body: map[string]interface{}{"key": "k", "path": "$", "index": 2, "values": []int{3, 4, 5}}},
@@ -1169,7 +1169,7 @@ func TestJsonARRINSERT(t *testing.T) {
 			expected: []interface{}{"OK", []interface{}{5.0}, "[3,4,5,1,2]"},
 		},
 		{
-			name: "JSON.ARRINSERT nested with postive index",
+			name: "JSON.ARRINSERT nested with positive index",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": b}},
 				{Command: "JSON.ARRINSERT", Body: map[string]interface{}{"key": "k", "path": "$..score", "index": 1, "values": []interface{}{5, 6, true}}},

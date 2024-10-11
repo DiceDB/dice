@@ -28,7 +28,7 @@ func ExecuteCommand(c *cmd.DiceDBCmd, client *comm.Client, store *dstore.Store, 
 
 	// Temporary logic till we move all commands to new eval logic.
 	// MigratedDiceCmds map contains refactored eval commands
-	// For any command we will first check in the exisiting map
+	// For any command we will first check in the existing map
 	// if command is NA then we will check in the new map
 	if diceCmd.IsMigrated {
 		return diceCmd.NewEval(c.Args, store)
@@ -38,7 +38,7 @@ func ExecuteCommand(c *cmd.DiceDBCmd, client *comm.Client, store *dstore.Store, 
 	// to reduce load on main server.
 	switch diceCmd.Name {
 	// Old implementation kept as it is, but we will be moving
-	// to the new implmentation soon for all commands
+	// to the new implementation soon for all commands
 	case "SUBSCRIBE", "QWATCH":
 		return &EvalResponse{Result: EvalQWATCH(c.Args, httpOp, client, store), Error: nil}
 	case "UNSUBSCRIBE", "QUNWATCH":

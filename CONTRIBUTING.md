@@ -96,7 +96,7 @@ After this, create a PullRequest in `github <https://github.com/dicedb/docs/pull
 ```text
 # commit your changes
 $ git add <updated files>
-$ git commit -m "Meaningful message for the udpate"
+$ git commit -m "Meaningful message for the update"
 # pull new changes
 $ git checkout master
 $ git merge upstream/master
