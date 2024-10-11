@@ -340,7 +340,7 @@ func evalJSONARRAPPEND(args []string, store *dstore.Store) *EvalResponse {
 	obj := store.Get(key)
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.NIL,
+			Result: nil,
 			Error:  nil,
 		}
 	}
@@ -442,7 +442,7 @@ func evalJSONARRLEN(args []string, store *dstore.Store) *EvalResponse {
 	// If the object is not present in the store or if its nil, then we should simply return nil.
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.NIL,
+			Result: nil,
 			Error:  nil,
 		}
 	}
@@ -585,7 +585,7 @@ func evalJSONARRPOP(args []string, store *dstore.Store) *EvalResponse {
 	obj := store.Get(key)
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.NIL,
+			Result: nil,
 			Error:  nil,
 		}
 	}
@@ -615,7 +615,7 @@ func evalJSONARRPOP(args []string, store *dstore.Store) *EvalResponse {
 		if !ok || len(arr) == 0 {
 			return &EvalResponse{
 				Result: nil,
-				Error:  diceerrors.ErrJSONPathNotFound(path),
+				Error:  diceerrors.ErrWrongTypeOperation,
 			}
 		}
 		popElem, arr, err := popElementAndUpdateArray(arr, index)
@@ -654,8 +654,7 @@ func evalJSONARRPOP(args []string, store *dstore.Store) *EvalResponse {
 		// returns nil in this case similar to redis
 		// also, return nil if array is empty
 		if !ok || len(arr) == 0 {
-			popElem := clientio.RespNIL
-			popArr = append(popArr, popElem)
+			popArr = append(popArr, nil)
 			continue
 		}
 
