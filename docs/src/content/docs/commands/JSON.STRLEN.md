@@ -32,10 +32,10 @@ When the `JSON.STRLEN` command is executed, DiceDB will:
 
 1. If the specified `key` does not exist, the command returns `(empty list or set)`.
 2. If `path` is not specified, the command throws an error.
-3. `$` is considered as root path which returns `null`.
+3. `$` is considered as root path which returns `nil`.
 4. If the specified path exists and points to a JSON string, the command returns the length of the string.
 5. If the path does not exist or does not point to a JSON string, an error is returned.
-6. Multiple results are represented as a list in case of wildcards, where each string length is returned in order of appearance and `null` is returned if it's not a string.
+6. Multiple results are represented as a list in case of wildcards, where each string length is returned in order of appearance and `nil` is returned if it's not a string.
 
 ## Errors
 
