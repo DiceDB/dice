@@ -12,9 +12,13 @@ import (
 type PingPayload struct {
 	Date           string         `json:"date"`
 	HardwareConfig HardwareConfig `json:"hardware_config"`
+	DBConfig       DBConfig       `json:"db_config"`
 	Version        string         `json:"version"`
 	InstanceID     string         `json:"instance_id"`
 	Err            error          `json:"error"`
+}
+
+type DBConfig struct {
 }
 
 func Ping() {
@@ -29,9 +33,10 @@ func Ping() {
 		Version:        config.DiceConfig.Server.Version,
 		Err:            err,
 		Date:           time.Now().UTC().Format("2006-01-02 15:04:05"),
+		DBConfig:       DBConfig{},
 	}
 
-	url := "https://api.us-east.aws.tinybird.co/v0/events?name=test"
+	url := "https://api.us-east.aws.tinybird.co/v0/events?name=ping"
 	b, _ := json.Marshal(payload)
 
 	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(b))
