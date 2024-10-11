@@ -2,7 +2,6 @@ package eval
 
 import (
 	"encoding/binary"
-	"fmt"
 	"hash"
 	"hash/fnv"
 	"math"
@@ -13,7 +12,6 @@ import (
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
-	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
@@ -105,14 +103,10 @@ func newCountMinSketch(opts *CountMinSketchOpts) *CountMinSketch {
 }
 
 // returns information about the underlying matrix for the given Count Min Sketch.
-func (c *CountMinSketch) info(name string) string {
-	info := utils.EmptyStr
-	if name != utils.EmptyStr {
-		info = "name: " + name + ", "
-	}
-	info += fmt.Sprintf("width: %d, ", c.opts.width)
-	info += fmt.Sprintf("depth: %d,", c.opts.depth)
-	info += fmt.Sprintf("count: %d,", c.count)
+func (c *CountMinSketch) info() []interface{} {
+	info := make([]interface{}, 0, 3)
+
+	info = append(info, "width", c.opts.width, "depth", c.opts.depth, "count", c.count)
 
 	return info
 }
@@ -366,7 +360,7 @@ func evalCMSINFO(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrWithFormattedMessage("%v for 'CMS.INFO' command", err)
 	}
 
-	return clientio.Encode(cms.info(args[0]), false)
+	return clientio.Encode(cms.info(), false)
 }
 
 // evalCMSINITBYDIM initializes a Count-Min Sketch by dimensions (width and depth) specified in the call.
