@@ -366,7 +366,7 @@ func evalSADD(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	return &EvalResponse{
-		Result: clientio.Encode(count, false),
+		Result: float64(count),
 		Error:  nil,
 	}
 }
