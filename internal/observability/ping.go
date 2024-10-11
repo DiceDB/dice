@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -28,7 +29,7 @@ const (
 type DBConfig struct {
 }
 
-func Ping() {
+func Ping(logger *slog.Logger) {
 	hwConfig, err := GetHardwareMeta()
 	if err != nil {
 		return
@@ -54,7 +55,9 @@ func Ping() {
 	client := &http.Client{Timeout: time.Second * 5}
 	resp, err := client.Do(req)
 	if err != nil {
-		panic(err)
+		logger.Error("Error reporting observability metrics.", slog.Any("error", err))
+		return
 	}
+
 	_ = resp.Body.Close()
 }
