@@ -4115,7 +4115,7 @@ func evalJSONSTRLEN(args []string, store *dstore.Store) []byte {
 		jsonData := obj.Value
 
 		if utils.GetJSONFieldType(jsonData) != utils.StringType {
-			return diceerrors.NewErrWithFormattedMessage(diceerrors.JSONPathValueTypeErr)
+			return diceerrors.NewErrWithMessage("Path '$' does not exist or not an string")
 		}
 		return clientio.Encode(len(jsonData.(string)), false)
 	}
