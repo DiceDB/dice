@@ -23,7 +23,7 @@ This command does not accept any parameters.
 - **Integer**: The command returns an integer representing the total number of commands available in the DiceDB server.
   - For example, if there are 87 commands, the return value will be `(integer) 87`.
 
-#### output format
+### Output format
 
 ```
 (integer) number_of_commands
@@ -42,5 +42,5 @@ When executed, the `COMMAND COUNT` command scans the command registry of the Dic
 
 ```bash
 127.0.0.1:7379> COMMAND COUNT
-(integer) 87
+(integer) 117
 ```

@@ -15,7 +15,7 @@ COMMAND HELP
 
 ## Parameters
 
-- None.
+This command does not accept any parameters.
 
 ## Return Values
 

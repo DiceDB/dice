@@ -7,13 +7,13 @@ description: Documentation for the DiceDB command COMMAND INFO
 
 The `COMMAND INFO` command is used to retrieve detailed information about one or more specified commands in the DiceDB server. For each command, it returns an array containing the command's name, arity (number of arguments), command flags, and key-related information.
 
-### Syntax
+## Syntax
 
 ```
 COMMAND INFO command-name [command-name ...]
 ```
 
-### Parameters
+## Parameters
 
 - **`command-name`**: One or more command names for which the information is requested. You can pass multiple command names to retrieve their details.
 
@@ -101,7 +101,7 @@ The structure of the returned data is as follows:
 
 In this example, we request information for two commands: one valid (`SET`) and one invalid (`UNKNOWNCOMMAND`).
 
-````bash
+```bash
 127.0.0.1:7379> COMMAND INFO SET UNKNOWNCOMMAND
 [
   [
@@ -113,11 +113,11 @@ In this example, we request information for two commands: one valid (`SET`) and 
   ],
   (nil)
 ]
-````
+```
 
 ### When the command name passed is incorrect or not supported
 
 ```bash
 127.0.0.1:7379> COMMAND INFO UNKNOWNCOMMAND
-(error) ERR invalid command specified
-````
+1) (nil)
+```

@@ -61,7 +61,6 @@ The `COMMAND GETKEYS` command parses the provided command and its arguments to e
 (error) ERR invalid number of arguments specified for command
 ```
 
-
 ### Example 4: Error when speficied command is not supported
 
 ```bash
