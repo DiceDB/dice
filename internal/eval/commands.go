@@ -195,8 +195,9 @@ var (
 		Info: `JSON.ARRAPPEND key [path] value [value ...]
         Returns an array of integer replies for each path, the array's new size,
         or nil, if the matching JSON value is not an array.`,
-		Eval:  evalJSONARRAPPEND,
-		Arity: -3,
+		Arity:      -3,
+		IsMigrated: true,
+		NewEval:    evalJSONARRAPPEND,
 	}
 	jsonforgetCmdMeta = DiceCmdMeta{
 		Name: "JSON.FORGET",
@@ -214,9 +215,10 @@ var (
 		Returns an array of integer replies.
 		Returns error response if the key doesn't exist or key is expired or the matching value is not an array.
 		Error reply: If the number of arguments is incorrect.`,
-		Eval:     evalJSONARRLEN,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalJSONARRLEN,
 	}
 	jsonnummultbyCmdMeta = DiceCmdMeta{
 		Name: "JSON.NUMMULTBY",
@@ -263,8 +265,9 @@ var (
 		Return nil if array is empty or there is no array at the path.
 		It supports negative index and is out of bound safe.
 		`,
-		Eval:  evalJSONARRPOP,
-		Arity: -2,
+		Arity:      -2,
+		IsMigrated: true,
+		NewEval:    evalJSONARRPOP,
 	}
 	jsoningestCmdMeta = DiceCmdMeta{
 		Name: "JSON.INGEST",
