@@ -18,18 +18,37 @@ import (
 )
 
 type CountMinSketchOpts struct {
-	depth  uint64
-	width  uint64
-	hasher hash.Hash64
+	depth  uint64      // depth of the count min sketch matrix
+	width  uint64      // width of the count min sketch matrix
+	hasher hash.Hash64 // the hash function used to hash the key
 }
 
+// CountMinSketch implements a Count-Min Sketch as described by Cormode and
+// Muthukrishnan in their paper:
+// "An Improved Data Stream Summary: The Count-Min Sketch and its Applications"
+// (http://dimacs.rutgers.edu/~graham/pubs/papers/cm-full.pdf).
+//
+// A Count-Min Sketch (CMS) is a space-efficient, probabilistic data structure
+// for approximating the frequency of events in a data stream. Instead of using
+// large space like a hash map, it trades accuracy for space by allowing a configurable
+// error margin. Similar to Counting Bloom filters, each item is hashed into multiple
+// buckets, and the item's frequency is estimated by taking the minimum count across
+// those buckets.
+//
+// CMS is particularly useful for tracking event frequencies in large or unbounded
+// data streams where storing all data or maintaining a counter for each event
+// in memory is infeasible. It provides an efficient solution for real-time processing
+// with minimal memory usage.
 type CountMinSketch struct {
 	opts *CountMinSketchOpts
 
-	matrix [][]uint64
-	count  uint64
+	matrix [][]uint64 // the underlying matrix that stores the counts
+	count  uint64     // total number of occurrences seen by the sketch
 }
 
+// newCountMinSketchOpts extracts the depth and width of the matrix when these values
+// are provided by the user. depth and width must be positive integers. It returns the
+// options used to create a new Count Min Sketch.
 func newCountMinSketchOpts(args []string) (*CountMinSketchOpts, error) {
 	width, err := strconv.ParseUint(args[0], 10, 64)
 	if err != nil || width <= 0 {
@@ -44,6 +63,12 @@ func newCountMinSketchOpts(args []string) (*CountMinSketchOpts, error) {
 	return &CountMinSketchOpts{depth: depth, width: width, hasher: fnv.New64()}, nil
 }
 
+// newCountMinSketchOptsWithErrorRate calculates the depth and width of the matrix based
+// on the given permissible error rate (ε) and probability (δ). Both the values must lie
+// between zero and one. A given error rate (ε) means the count estimate may exceed
+// the actual count by at most ε * N, where N is the total number of elements processed,
+// and the probability (1 - δ) guarantees this bound holds with at least (1 - δ) confidence.
+// It returns the options used to create a new Count Min Sketch.
 func newCountMinSketchOptsWithErrorRate(args []string) (*CountMinSketchOpts, error) {
 	errorRate, err := strconv.ParseFloat(args[0], 64)
 	if err != nil || errorRate <= 0 || errorRate >= 1.0 {
@@ -55,12 +80,16 @@ func newCountMinSketchOptsWithErrorRate(args []string) (*CountMinSketchOpts, err
 		return nil, diceerrors.NewErr("invalid overestimation value")
 	}
 
+	// These formulas are taken from the original paper that introduced Count Min Sketch.
+	// Link to paper - http://dimacs.rutgers.edu/~graham/pubs/papers/cm-full.pdf
 	width := uint64(math.Ceil(math.Exp(1) / errorRate))
 	depth := uint64(math.Ceil(math.Log(1 / probability)))
 
 	return &CountMinSketchOpts{depth: depth, width: width, hasher: fnv.New64()}, nil
 }
 
+// newCountMinSketch creates a new Count Min Sketch with given options.
+// It also initializes the underlying matrix.
 func newCountMinSketch(opts *CountMinSketchOpts) *CountMinSketch {
 	cms := &CountMinSketch{
 		opts: opts,
@@ -75,6 +104,7 @@ func newCountMinSketch(opts *CountMinSketchOpts) *CountMinSketch {
 	return cms
 }
 
+// returns information about the underlying matrix for the given Count Min Sketch.
 func (c *CountMinSketch) info(name string) string {
 	info := utils.EmptyStr
 	if name != utils.EmptyStr {
@@ -87,6 +117,8 @@ func (c *CountMinSketch) info(name string) string {
 	return info
 }
 
+// this function computes the base hash values which are then used to generate
+// other hash values for the given key.
 func (c *CountMinSketch) baseHashes(key []byte) (hash1, hash2 uint32) {
 	c.opts.hasher.Reset()
 	c.opts.hasher.Write(key)
@@ -102,6 +134,8 @@ func (c *CountMinSketch) baseHashes(key []byte) (hash1, hash2 uint32) {
 	return
 }
 
+// returns the positions in the matrix where the count of the given key
+// should be updated.
 func (c *CountMinSketch) matrixPositions(key []byte) (positions []uint64) {
 	positions = make([]uint64, c.opts.depth)
 
@@ -116,6 +150,7 @@ func (c *CountMinSketch) matrixPositions(key []byte) (positions []uint64) {
 	return
 }
 
+// updates the underlying matrix for the given key by count.
 func (c *CountMinSketch) updateMatrix(key string, count uint64) {
 	for row, col := range c.matrixPositions([]byte(key)) {
 		c.matrix[row][col] += count
@@ -123,6 +158,9 @@ func (c *CountMinSketch) updateMatrix(key string, count uint64) {
 	c.count += count
 }
 
+// estimateCount is used to query the sketch for the value of a key.
+// The estimated count is the minimum of the values present at the
+// positons for a given key.
 func (c *CountMinSketch) estimateCount(key string) uint64 {
 	var count uint64 = math.MaxUint64
 	for row, col := range c.matrixPositions([]byte(key)) {
@@ -134,6 +172,7 @@ func (c *CountMinSketch) estimateCount(key string) uint64 {
 	return count
 }
 
+// returns a deep copy of the Count Min Sketch
 func (c *CountMinSketch) DeepCopy() *CountMinSketch {
 	if c == nil {
 		return nil
@@ -159,19 +198,26 @@ func (c *CountMinSketch) DeepCopy() *CountMinSketch {
 	}
 }
 
+// mergeMatrices combines two or more Count Min Sketches and puts the result in another Count Min Sketch.
+// The merging is done based on the weights assigned to each sketch. The counts stored in the original sketch
+// are ignored. The array of source sketches might include the destination sketch too. That is handled by
+// making a deep copy of the destination sketch.
 func (c *CountMinSketch) mergeMatrices(sources []*CountMinSketch, weights []uint64, originalKey string, keys []string) {
 	originalCopy := c.DeepCopy()
 
+	// resets the destination sketch
 	for row := uint64(0); row < c.opts.depth; row++ {
 		for col := uint64(0); col < c.opts.width; col++ {
 			c.matrix[row][col] = 0
 		}
 	}
 
+	// for every row and column, take the weighted sum of the source sketches.
 	for row := uint64(0); row < c.opts.depth; row++ {
 		for col := uint64(0); col < c.opts.width; col++ {
 			for i, cms := range sources {
 				if keys[i] == originalKey {
+					// use the deep copy of the destination
 					c.matrix[row][col] += weights[i] * originalCopy.matrix[row][col]
 				} else {
 					c.matrix[row][col] += weights[i] * cms.matrix[row][col]
@@ -180,6 +226,7 @@ func (c *CountMinSketch) mergeMatrices(sources []*CountMinSketch, weights []uint
 		}
 	}
 
+	// update the count attribute
 	c.count = 0
 	for i, cms := range sources {
 		if keys[i] == originalKey {
@@ -190,6 +237,9 @@ func (c *CountMinSketch) mergeMatrices(sources []*CountMinSketch, weights []uint
 	}
 }
 
+// evalCMSMerge is used to merge multiple sketches into one. The final sketch
+// contains the weighted sum of the values in each of the source sketches. If
+// weights are not provided, default is 1.
 func evalCMSMerge(args []string, store *dstore.Store) []byte {
 	if len(args) < 3 {
 		return diceerrors.NewErrArity("CMS.MERGE")
@@ -250,6 +300,7 @@ func evalCMSMerge(args []string, store *dstore.Store) []byte {
 	return clientio.RespOK
 }
 
+// evalCMSQuery returns the count for one or more items in a sketch.
 func evalCMSQuery(args []string, store *dstore.Store) []byte {
 	if len(args) < 2 {
 		return diceerrors.NewErrArity("CMS.QUERY")
@@ -269,6 +320,7 @@ func evalCMSQuery(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(results, false)
 }
 
+// evalCMSIncrBy increases the count of item by increment. Multiple items can be increased with one call.
 func evalCMSIncrBy(args []string, store *dstore.Store) []byte {
 	if len(args) < 3 || len(args)%2 == 0 {
 		return diceerrors.NewErrArity("CMS.INCRBY")
@@ -304,6 +356,7 @@ func evalCMSIncrBy(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(results, false)
 }
 
+// evalCMSINFO returns width, depth and total count of the sketch.
 func evalCMSINFO(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("CMS.INFO")
@@ -316,6 +369,7 @@ func evalCMSINFO(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(cms.info(args[0]), false)
 }
 
+// evalCMSINITBYDIM initializes a Count-Min Sketch by dimensions (width and depth) specified in the call.
 func evalCMSINITBYDIM(args []string, store *dstore.Store) []byte {
 	if len(args) != 3 {
 		return diceerrors.NewErrArity("CMS.INITBYDIM")
@@ -333,6 +387,9 @@ func evalCMSINITBYDIM(args []string, store *dstore.Store) []byte {
 	return clientio.RespOK
 }
 
+// evalCMSINITBYPROB initializes a Count-Min Sketch for a given error rate and probability.
+// Error rate is used to calculate the width while probability is used to calculate the depth
+// of the sketch.
 func evalCMSINITBYPROB(args []string, store *dstore.Store) []byte {
 	if len(args) != 3 {
 		return diceerrors.NewErrArity("CMS.INITBYPROB")
@@ -350,6 +407,7 @@ func evalCMSINITBYPROB(args []string, store *dstore.Store) []byte {
 	return clientio.RespOK
 }
 
+// creates a new Count Min Sketch in the key-value store. Returns error if the key already exists.
 func createCountMinSketch(key string, opts *CountMinSketchOpts, store *dstore.Store) error {
 	obj := store.Get(key)
 
@@ -363,6 +421,8 @@ func createCountMinSketch(key string, opts *CountMinSketchOpts, store *dstore.St
 	return nil
 }
 
+// fetches the Count Min Sketch for the given key from the key-value store. Returns error if key
+// does not exist or the key has the wrong encoding.
 func getCountMinSketch(key string, store *dstore.Store) (*CountMinSketch, error) {
 	obj := store.Get(key)
 
