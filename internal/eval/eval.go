@@ -5197,3 +5197,74 @@ func evalGEODIST(args []string, store *dstore.Store) []byte {
 
 	return clientio.Encode(utils.RoundToDecimals(result, 4), false)
 }
+
+// evalJSONSTRAPPEND appends a string value to the JSON string value at the specified path
+// in the JSON object saved at the key in arguments.
+// Args must contain at least a key and the string value to append.
+// If the key does not exist or is expired, it returns an error response.
+// If the value at the specified path is not a string, it returns an error response.
+// Returns the new length of the string at the specified path if successful.
+func evalJSONSTRAPPEND(args []string, store *dstore.Store) []byte {
+	if len(args) != 3 {
+		return diceerrors.NewErrArity("JSON.STRAPPEND")
+	}
+
+	key := args[0]
+	path := args[1]
+	value := args[2]
+
+	obj := store.Get(key)
+	if obj == nil {
+		return diceerrors.NewErrWithMessage(diceerrors.NoKeyExistsErr)
+	}
+
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongKeyTypeErr)
+	}
+
+	jsonData := obj.Value
+
+	var resultsArray []interface{}
+
+	if path == "$" {
+		// Handle root-level string
+		if str, ok := jsonData.(string); ok {
+			unquotedValue := strings.Trim(value, "\"")
+			newValue := str + unquotedValue
+			resultsArray = append(resultsArray, int64(len(newValue)))
+			jsonData = newValue
+		} else {
+			return clientio.RespEmptyArray
+		}
+	} else {
+		expr, err := jp.ParseString(path)
+		if err != nil {
+			return clientio.RespEmptyArray
+		}
+
+		_, modifyErr := expr.Modify(jsonData, func(data any) (interface{}, bool) {
+			switch v := data.(type) {
+			case string:
+				unquotedValue := strings.Trim(value, "\"")
+				newValue := v + unquotedValue
+				resultsArray = append([]interface{}{int64(len(newValue))}, resultsArray...)
+				return newValue, true
+			default:
+				resultsArray = append([]interface{}{clientio.RespNIL}, resultsArray...)
+				return data, false
+			}
+		})
+
+		if modifyErr != nil {
+			return clientio.RespEmptyArray
+		}
+	}
+
+	if len(resultsArray) == 0 {
+		return clientio.RespEmptyArray
+	}
+
+	obj.Value = jsonData
+	return clientio.Encode(resultsArray, false)
+}

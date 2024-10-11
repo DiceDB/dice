@@ -114,6 +114,7 @@ func TestEval(t *testing.T) {
 	testEvalGEOADD(t, store)
 	testEvalGEODIST(t, store)
 	testEvalSINTER(t, store)
+	testEvalJSONSTRAPPEND(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -3178,7 +3179,7 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 
 		"memory nonexistant key": {
 			setup:  func() {},
-			input:  []string{"MEMORY", "NONEXISTANT_KEY"},
+			input:  []string{"MEMORY", "NONEXISTENT_KEY"},
 			output: clientio.RespZero,
 		},
 
@@ -5350,7 +5351,6 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 			input:  []string{"key", "field", "-0.1"},
 			output: clientio.Encode("1.9", false),
 		},
-		// this is failing
 		"HINCRBYFLOAT by a non-numeric increment": {
 			setup: func() {
 				key := "key"
@@ -5367,7 +5367,6 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 			input:  []string{"key", "field", "a"},
 			output: []byte("-ERR value is not an integer or a float\r\n"),
 		},
-		// this is failing
 		"HINCRBYFLOAT on a field with non-numeric value": {
 			setup: func() {
 				key := "key"
@@ -5384,7 +5383,6 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 			input:  []string{"key", "field", "0.1"},
 			output: []byte("-ERR value is not an integer or a float\r\n"),
 		},
-		// this failing
 		"HINCRBYFLOAT by a value that would turn float64 to Inf": {
 			setup: func() {
 				key := "key"
@@ -5679,4 +5677,61 @@ func testEvalSINTER(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalSINTER, store)
+}
+
+func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"append to single field": {
+			setup: func() {
+				key := "doc1"
+				value := "{\"a\":\"foo\", \"nested1\": {\"a\": \"hello\"}, \"nested2\": {\"a\": 31}}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"doc1", "$.nested1.a", "\"baz\""},
+			output: []byte("*1\r\n:8\r\n"), // Expected length after append
+		},
+		"append to non-existing key": {
+			setup: func() {
+				// No setup needed as we are testing a non-existing document.
+			},
+			input:  []string{"non_existing_doc", "$..a", "\"err\""},
+			output: []byte("-ERR Could not perform this operation on a key that doesn't exist\r\n"),
+		},
+		"append to root node": {
+			setup: func() {
+				key := "doc1"
+				value := "\"abcd\""
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"doc1", "$", "\"piu\""},
+			output: []byte("*1\r\n:7\r\n"), // Expected length after appending to "abcd"
+		},
+	}
+
+	// Run the tests
+	runEvalTests(t, tests, evalJSONSTRAPPEND, store)
+}
+
+func BenchmarkEvalJSONSTRAPPEND(b *testing.B) {
+	store := dstore.NewStore(nil, nil)
+
+	// Setup a sample JSON document
+	key := "doc1"
+	value := "{\"a\":\"foo\", \"nested1\": {\"a\": \"hello\"}, \"nested2\": {\"a\": 31}}"
+	var rootData interface{}
+	_ = sonic.Unmarshal([]byte(value), &rootData)
+	obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+	store.Put(key, obj)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		// Benchmark appending to multiple fields
+		evalJSONSTRAPPEND([]string{"doc1", "$..a", "\"bar\""}, store)
+	}
 }
