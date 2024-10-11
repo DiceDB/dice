@@ -59,3 +59,7 @@ require (
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
 	golang.org/x/crypto v0.27.0
 )
+
+replace (
+	github.com/dicedb/go-dice => ../dicedb-go
+)

@@ -95,15 +95,15 @@ func TestGETWATCHWithSDK(t *testing.T) {
 
 	publisher.Del(context.Background(), getWatchKey)
 
-	channels := make([]<-chan *dicedb.WMessage, len(subscribers))
+	channels := make([]<-chan *dicedb.WatchNotification, len(subscribers))
 	for i, subscriber := range subscribers {
 		watch := subscriber.client.WatchCommand(context.Background())
 		subscribers[i].watch = watch
 		assert.Assert(t, watch != nil)
-		err := watch.Watch(context.Background(), "GET", getWatchKey)
+		firstMsg, err := watch.Watch(context.Background(), "GET", getWatchKey)
 		assert.NilError(t, err)
+		assert.Equal(t, firstMsg.Command, "GET.WATCH")
 		channels[i] = watch.Channel()
-		<-channels[i] // Get the first message
 	}
 
 	for _, tc := range getWatchTestCases {
@@ -112,9 +112,9 @@ func TestGETWATCHWithSDK(t *testing.T) {
 
 		for _, channel := range channels {
 			v := <-channel
-			assert.Equal(t, "GET", v.Command)        // command
-			assert.Equal(t, "1768826704", v.Name)    // Fingerprint
-			assert.Equal(t, tc.val, v.Data.(string)) // data
+			assert.Equal(t, "GET", v.Command)            // command
+			assert.Equal(t, "1768826704", v.Fingerprint) // Fingerprint
+			assert.Equal(t, tc.val, v.Data.(string))     // data
 		}
 	}
 }
