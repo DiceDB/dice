@@ -16,6 +16,7 @@ func GetOrCreateInstanceID() string {
 
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		id := uuid.New().String()
+		// #nosec G306
 		if err := os.WriteFile(filePath, []byte(id), 0644); err != nil {
 			slog.Error("unable to create dicedb.iid hence running anon", slog.Any("error", err))
 			return ""

@@ -49,17 +49,17 @@ func getTotalMemoryMB() (int64, error) {
 	var res string
 	var err error
 	switch runtime.GOOS {
-	case "linux":
+	case linux:
 		res, err = executeCommand("free -b | grep Mem | awk '{print $2}'")
 		if err != nil {
 			return 0, fmt.Errorf("error:stats.total_memory_mb failed to capture memory err=%w", err)
 		}
-	case "darwin":
+	case darwin:
 		res, err = executeCommand("sysctl -n hw.memsize")
 		if err != nil {
 			return 0, fmt.Errorf("error:stats.total_memory_mb failed to capture memory err=%w", err)
 		}
-	case "windows":
+	case windows:
 		res, err = executeCommand("wmic OS get TotalVisibleMemorySize /Value")
 		if err != nil {
 			return 0, fmt.Errorf("error:stats.total_memory_mb failed to capture memory err=%w", err)
@@ -87,17 +87,17 @@ func getTotalDiskMB() (int64, error) {
 	var res string
 	var err error
 	switch runtime.GOOS {
-	case "linux":
+	case linux:
 		res, err = executeCommand("df --block-size=1 / | tail -1 | awk '{print $2}'")
 		if err != nil {
 			return 0, fmt.Errorf("error:stats.total_disk_mb failed to capture disk usage err=%w", err)
 		}
-	case "darwin":
+	case darwin:
 		res, err = executeCommand("df -k / | tail -1 | awk '{print $2}'")
 		if err != nil {
 			return 0, fmt.Errorf("error:stats.total_disk_mb failed to capture disk usage err=%w", err)
 		}
-	case "windows":
+	case windows:
 		res, err = executeCommand("wmic logicaldisk get size /Value")
 		if err != nil {
 			return 0, fmt.Errorf("error:stats.total_disk_mb failed to capture disk usage err=%w", err)

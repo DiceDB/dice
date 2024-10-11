@@ -2,6 +2,7 @@ package observability
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -39,7 +40,8 @@ func Ping() {
 	url := "https://api.us-east.aws.tinybird.co/v0/events?name=ping"
 	b, _ := json.Marshal(payload)
 
-	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(b))
+	req, _ := http.NewRequestWithContext(context.Background(), "POST", url, bytes.NewBuffer(b))
+	//nolint:lll
 	req.Header.Set("Authorization", "Bearer p.eyJ1IjogIjhjNWQxMjdlLTczZmYtNGRjZS04Mzk5LTQyMDU0MThhYjc2OSIsICJpZCI6ICJhZjcxNGExNC0xZWQyLTQ3ZDktOTM0MS0xMzgwNWNiOWFhNDYiLCAiaG9zdCI6ICJ1cy1lYXN0LWF3cyJ9.o9LqZqTZ9YkhbcusZOltsm95RzVQUzJLQOHV2YA7L0E")
 	req.Header.Set("Content-Type", "application/json")
 
@@ -48,5 +50,5 @@ func Ping() {
 	if err != nil {
 		panic(err)
 	}
-	defer resp.Body.Close()
+	resp.Body.Close()
 }
