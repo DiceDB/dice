@@ -10,7 +10,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/sql"
-	redis "github.com/dicedb/go-dice"
+	dicedb "github.com/dicedb/go-dice"
 	"gotest.tools/v3/assert"
 )
 
@@ -22,8 +22,8 @@ type qWatchTestCase struct {
 }
 
 type qWatchSDKSubscriber struct {
-	client *redis.Client
-	qwatch *redis.QWatch
+	client *dicedb.Client
+	qwatch *dicedb.QWatch
 }
 
 var qWatchQuery = "SELECT $key, $value WHERE $key like 'match:10?:*' ORDER BY $value desc LIMIT 3"
@@ -107,7 +107,7 @@ func cleanupQWATCHKeys(publisher net.Conn) {
 	time.Sleep(100 * time.Millisecond)
 }
 
-func setupQWATCHTestWithSDK(t *testing.T) (*redis.Client, []qWatchSDKSubscriber, func()) {
+func setupQWATCHTestWithSDK(t *testing.T) (*dicedb.Client, []qWatchSDKSubscriber, func()) {
 	t.Helper()
 	publisher := getLocalSdk()
 	subscribers := []qWatchSDKSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
@@ -130,7 +130,7 @@ func setupQWATCHTestWithSDK(t *testing.T) (*redis.Client, []qWatchSDKSubscriber,
 	return publisher, subscribers, cleanup
 }
 
-func cleanupKeysWithSDK(publisher *redis.Client) {
+func cleanupKeysWithSDK(publisher *dicedb.Client) {
 	for _, tc := range qWatchTestCases {
 		publisher.Del(context.Background(), fmt.Sprintf("%s:%d", tc.key, tc.userID))
 	}
@@ -157,10 +157,10 @@ func subscribeToQWATCH(t *testing.T, subscribers []net.Conn, query string) []*cl
 	return respParsers
 }
 
-func subscribeToQWATCHWithSDK(t *testing.T, subscribers []qWatchSDKSubscriber) []<-chan *redis.QMessage {
+func subscribeToQWATCHWithSDK(t *testing.T, subscribers []qWatchSDKSubscriber) []<-chan *dicedb.QMessage {
 	t.Helper()
 	ctx := context.Background()
-	channels := make([]<-chan *redis.QMessage, len(subscribers))
+	channels := make([]<-chan *dicedb.QMessage, len(subscribers))
 	for i, subscriber := range subscribers {
 		qwatch := subscriber.client.QWatch(ctx)
 		subscribers[i].qwatch = qwatch
@@ -186,7 +186,7 @@ func publishUpdate(t *testing.T, publisher interface{}, tc qWatchTestCase) {
 	switch p := publisher.(type) {
 	case net.Conn:
 		FireCommand(p, fmt.Sprintf("SET %s %d", key, tc.score))
-	case *redis.Client:
+	case *dicedb.Client:
 		err := p.Set(context.Background(), key, tc.score, 0).Err()
 		assert.NilError(t, err)
 	}
@@ -197,7 +197,7 @@ func verifyUpdates(t *testing.T, receivers interface{}, expectedUpdates [][]inte
 		switch r := receivers.(type) {
 		case []*clientio.RESPParser:
 			verifyRESPUpdates(t, r, expectedUpdate, query)
-		case []<-chan *redis.QMessage:
+		case []<-chan *dicedb.QMessage:
 			verifySDKUpdates(t, r, expectedUpdate)
 		}
 	}
@@ -216,7 +216,7 @@ func verifyRESPUpdates(t *testing.T, respParsers []*clientio.RESPParser, expecte
 	}
 }
 
-func verifySDKUpdates(t *testing.T, channels []<-chan *redis.QMessage, expectedUpdate []interface{}) {
+func verifySDKUpdates(t *testing.T, channels []<-chan *dicedb.QMessage, expectedUpdate []interface{}) {
 	for _, ch := range channels {
 		v := <-ch
 		assert.Equal(t, len(v.Updates), len(expectedUpdate), v.Updates)
