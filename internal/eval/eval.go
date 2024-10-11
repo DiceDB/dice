@@ -4825,7 +4825,7 @@ func evalZRANGE(args []string, store *dstore.Store) []byte {
 }
 
 // This method executes each operation, contained in ops array, based on commands used.
-func executeOps(value *ByteArray, ops []utils.BitFieldOp) []interface{} {
+func executeBitfieldOps(value *ByteArray, ops []utils.BitFieldOp) []interface{} {
 	overflowType := WRAP
 	var result []interface{}
 	for _, op := range ops {
@@ -4853,9 +4853,9 @@ func executeOps(value *ByteArray, ops []utils.BitFieldOp) []interface{} {
 
 // Generic method for both BITFIELD and BITFIELD_RO.
 // isReadOnly method is true for BITFIELD_RO command.
-func evalBITFIELDGeneric(args []string, store *dstore.Store, isReadOnly bool) []byte {
+func bitfieldEvalGeneric(args []string, store *dstore.Store, isReadOnly bool) []byte {
 	var ops []utils.BitFieldOp
-	ops, err2 := utils.ParseOps(args, isReadOnly)
+	ops, err2 := utils.ParseBitfieldOps(args, isReadOnly)
 
 	if err2 != nil {
 		return err2
@@ -4882,7 +4882,7 @@ func evalBITFIELDGeneric(args []string, store *dstore.Store, isReadOnly bool) []
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
-	result := executeOps(value, ops)
+	result := executeBitfieldOps(value, ops)
 	return clientio.Encode(result, false)
 }
 
@@ -4903,7 +4903,7 @@ func evalBITFIELD(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("BITFIELD")
 	}
 
-	return evalBITFIELDGeneric(args, store, false)
+	return bitfieldEvalGeneric(args, store, false)
 }
 
 func evalHINCRBYFLOAT(args []string, store *dstore.Store) []byte {
@@ -4949,7 +4949,7 @@ func evalBITFIELDRO(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("BITFIELD_RO")
 	}
 
-	return evalBITFIELDGeneric(args, store, true)
+	return bitfieldEvalGeneric(args, store, true)
 }
 
 func evalGEOADD(args []string, store *dstore.Store) []byte {

@@ -17,7 +17,7 @@ type BitFieldOp struct {
 
 // parseEncodingAndOffet function parses offset and encoding type for bitfield commands
 // as this part is common to all subcommands
-func parseEncodingAndOffset(args []string) (eType, eVal, offset interface{}, err error) {
+func parseBitfieldEncodingAndOffset(args []string) (eType, eVal, offset interface{}, err error) {
 	encodingRaw := args[0]
 	offsetRaw := args[1]
 	switch encodingRaw[0] {
@@ -66,7 +66,7 @@ func parseEncodingAndOffset(args []string) (eType, eVal, offset interface{}, err
 	return eType, eVal, offset, err
 }
 
-func ParseOps(args []string, readOnly bool) (ops []BitFieldOp, err []byte) {
+func ParseBitfieldOps(args []string, readOnly bool) (ops []BitFieldOp, err []byte) {
 	var overflowType string
 
 	for i := 1; i < len(args); {
@@ -76,7 +76,7 @@ func ParseOps(args []string, readOnly bool) (ops []BitFieldOp, err []byte) {
 			if len(args) <= i+2 {
 				return nil, diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 			}
-			eType, eVal, offset, err := parseEncodingAndOffset(args[i+1 : i+3])
+			eType, eVal, offset, err := parseBitfieldEncodingAndOffset(args[i+1 : i+3])
 			if err != nil {
 				return nil, diceerrors.NewErrWithFormattedMessage(err.Error())
 			}
@@ -93,7 +93,7 @@ func ParseOps(args []string, readOnly bool) (ops []BitFieldOp, err []byte) {
 			if len(args) <= i+3 {
 				return nil, diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 			}
-			eType, eVal, offset, err := parseEncodingAndOffset(args[i+1 : i+3])
+			eType, eVal, offset, err := parseBitfieldEncodingAndOffset(args[i+1 : i+3])
 			if err != nil {
 				return nil, diceerrors.NewErrWithFormattedMessage(err.Error())
 			}
@@ -113,7 +113,7 @@ func ParseOps(args []string, readOnly bool) (ops []BitFieldOp, err []byte) {
 			if len(args) <= i+3 {
 				return nil, diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 			}
-			eType, eVal, offset, err := parseEncodingAndOffset(args[i+1 : i+3])
+			eType, eVal, offset, err := parseBitfieldEncodingAndOffset(args[i+1 : i+3])
 			if err != nil {
 				return nil, diceerrors.NewErrWithFormattedMessage(err.Error())
 			}
