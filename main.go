@@ -14,12 +14,15 @@ import (
 	"github.com/dicedb/dice/config"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/logger"
+	"github.com/dicedb/dice/internal/observability"
 	"github.com/dicedb/dice/internal/server"
 	"github.com/dicedb/dice/internal/server/resp"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dice/internal/worker"
 )
+
+const Version string = "0.0.4"
 
 func init() {
 	flag.StringVar(&config.Host, "host", "0.0.0.0", "host for the dice server")
@@ -38,11 +41,17 @@ func init() {
 	flag.Parse()
 
 	config.SetupConfig()
+	config.DiceConfig.Server.Version = Version
+
+	iid := observability.GetOrCreateInstanceID()
+	config.DiceConfig.InstanceID = iid
 }
 
 func main() {
 	logr := logger.New(logger.Opts{WithTimestamp: true})
 	slog.SetDefault(logr)
+
+	go observability.Ping()
 
 	ctx, cancel := context.WithCancel(context.Background())
 
