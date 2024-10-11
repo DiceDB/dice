@@ -633,10 +633,10 @@ var (
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	hkeysCmdMeta = DiceCmdMeta{
-		Name: "HKEYS",
-		Info:  `HKEYS command is used to retrieve all the keys(or field names) within a hash. Complexity is O(n) where n is the size of the hash.`,
-		Eval: evalHKEYS,
-		Arity: 1,
+		Name:     "HKEYS",
+		Info:     `HKEYS command is used to retrieve all the keys(or field names) within a hash. Complexity is O(n) where n is the size of the hash.`,
+		Eval:     evalHKEYS,
+		Arity:    1,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	hsetnxCmdMeta = DiceCmdMeta{
@@ -940,27 +940,27 @@ var (
 		Arity:    3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
-	dumpkeyCMmdMeta=DiceCmdMeta{
-		Name:	 "DUMP",
-		Info:	`Serialize the value stored at key in a Redis-specific format and return it to the user.
+	dumpkeyCMmdMeta = DiceCmdMeta{
+		Name: "DUMP",
+		Info: `Serialize the value stored at key in a Redis-specific format and return it to the user.
 				The returned value can be synthesized back into a Redis key using the RESTORE command.`,
-		Eval:   evalDUMP,
-		Arity: 	1,
-		KeySpecs:   KeySpecs{BeginIndex: 1},
+		Eval:     evalDUMP,
+		Arity:    1,
+		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
-	restorekeyCmdMeta=DiceCmdMeta{
-		Name:	"RESTORE",
-		Info:  `Serialize the value stored at key in a Redis-specific format and return it to the user.
+	restorekeyCmdMeta = DiceCmdMeta{
+		Name: "RESTORE",
+		Info: `Serialize the value stored at key in a Redis-specific format and return it to the user.
 				The returned value can be synthesized back into a Redis key using the RESTORE command.`,
-		Eval: evalRestore,
-		Arity:	2,
+		Eval:     evalRestore,
+		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	typeCmdMeta = DiceCmdMeta{
-		Name:     "TYPE",
-		Info:     `Returns the string representation of the type of the value stored at key. The different types that can be returned are: string, list, set, zset, hash and stream.`,
-		Eval:     evalTYPE,
-		Arity:    1,
+		Name:  "TYPE",
+		Info:  `Returns the string representation of the type of the value stored at key. The different types that can be returned are: string, list, set, zset, hash and stream.`,
+		Eval:  evalTYPE,
+		Arity: 1,
 
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
@@ -1099,44 +1099,6 @@ func init() {
 	DiceCmds["ABORT"] = abortCmdMeta
 	DiceCmds["APPEND"] = appendCmdMeta
 	DiceCmds["AUTH"] = authCmdMeta
-	DiceCmds["DUMP"]=dumpkeyCMmdMeta
-	DiceCmds["RESTORE"]=restorekeyCmdMeta
-	DiceCmds["SET"] = setCmdMeta
-	DiceCmds["GET"] = getCmdMeta
-	DiceCmds["MSET"] = msetCmdMeta
-	DiceCmds["JSON.SET"] = jsonsetCmdMeta
-	DiceCmds["JSON.TOGGLE"] = jsontoggleCmdMeta
-	DiceCmds["JSON.GET"] = jsongetCmdMeta
-	DiceCmds["JSON.TYPE"] = jsontypeCmdMeta
-	DiceCmds["JSON.CLEAR"] = jsonclearCmdMeta
-	DiceCmds["JSON.DEL"] = jsondelCmdMeta
-	DiceCmds["JSON.ARRAPPEND"] = jsonarrappendCmdMeta
-	DiceCmds["JSON.FORGET"] = jsonforgetCmdMeta
-	DiceCmds["JSON.ARRLEN"] = jsonarrlenCmdMeta
-	DiceCmds["JSON.NUMMULTBY"] = jsonnummultbyCmdMeta
-	DiceCmds["JSON.OBJLEN"] = jsonobjlenCmdMeta
-	DiceCmds["JSON.DEBUG"] = jsondebugCmdMeta
-	DiceCmds["JSON.OBJKEYS"] = jsonobjkeysCmdMeta
-	DiceCmds["JSON.ARRPOP"] = jsonarrpopCmdMeta
-	DiceCmds["JSON.INGEST"] = jsoningestCmdMeta
-	DiceCmds["JSON.ARRINSERT"] = jsonarrinsertCmdMeta
-	DiceCmds["JSON.RESP"] = jsonrespCmdMeta
-	DiceCmds["JSON.ARRTRIM"] = jsonarrtrimCmdMeta
-	DiceCmds["TTL"] = ttlCmdMeta
-	DiceCmds["DEL"] = delCmdMeta
-	DiceCmds["EXPIRE"] = expireCmdMeta
-	DiceCmds["EXPIRETIME"] = expiretimeCmdMeta
-	DiceCmds["EXPIREAT"] = expireatCmdMeta
-	DiceCmds["HELLO"] = helloCmdMeta
-	DiceCmds["BGREWRITEAOF"] = bgrewriteaofCmdMeta
-	DiceCmds["INCR"] = incrCmdMeta
-	DiceCmds["INCRBYFLOAT"] = incrByFloatCmdMeta
-	DiceCmds["INFO"] = infoCmdMeta
-	DiceCmds["CLIENT"] = clientCmdMeta
-	DiceCmds["LATENCY"] = latencyCmdMeta
-	DiceCmds["LRU"] = lruCmdMeta
-	DiceCmds["SLEEP"] = sleepCmdMeta
-	DiceCmds["BFINIT"] = bfinitCmdMeta
 	DiceCmds["BFADD"] = bfaddCmdMeta
 	DiceCmds["BFEXISTS"] = bfexistsCmdMeta
 	DiceCmds["BFINFO"] = bfinfoCmdMeta
