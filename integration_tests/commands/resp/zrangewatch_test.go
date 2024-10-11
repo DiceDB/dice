@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/dicedb/dice/internal/clientio"
-	redis "github.com/dicedb/go-dice"
+	dicedb "github.com/dicedb/go-dice"
 	"gotest.tools/v3/assert"
 	"net"
 	"testing"
@@ -88,7 +88,7 @@ func TestZRANGEWATCHWithSDK(t *testing.T) {
 
 	publisher.Del(context.Background(), zrangeWatchKey)
 
-	channels := make([]<-chan *redis.WMessage, len(subscribers))
+	channels := make([]<-chan *dicedb.WMessage, len(subscribers))
 	for i, subscriber := range subscribers {
 		watch := subscriber.client.WatchCommand(context.Background())
 		subscribers[i].watch = watch
@@ -100,7 +100,7 @@ func TestZRANGEWATCHWithSDK(t *testing.T) {
 	}
 
 	for _, tc := range zrangeWatchTestCases {
-		err := publisher.ZAdd(context.Background(), tc.key, redis.Z{
+		err := publisher.ZAdd(context.Background(), tc.key, dicedb.Z{
 			Score:  tc.score,
 			Member: tc.val,
 		}).Err()

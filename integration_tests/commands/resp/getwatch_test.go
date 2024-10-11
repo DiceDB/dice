@@ -8,13 +8,13 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/internal/clientio"
-	redis "github.com/dicedb/go-dice"
+	dicedb "github.com/dicedb/go-dice"
 	"gotest.tools/v3/assert"
 )
 
 type WatchSubscriber struct {
-	client *redis.Client
-	watch  *redis.WatchCommand
+	client *dicedb.Client
+	watch  *dicedb.WatchCommand
 }
 
 const getWatchKey = "getwatchkey"
@@ -95,7 +95,7 @@ func TestGETWATCHWithSDK(t *testing.T) {
 
 	publisher.Del(context.Background(), getWatchKey)
 
-	channels := make([]<-chan *redis.WMessage, len(subscribers))
+	channels := make([]<-chan *dicedb.WMessage, len(subscribers))
 	for i, subscriber := range subscribers {
 		watch := subscriber.client.WatchCommand(context.Background())
 		subscribers[i].watch = watch

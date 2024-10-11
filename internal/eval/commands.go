@@ -1083,6 +1083,16 @@ var (
 		Eval:     evalGEODIST,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsonstrappendCmdMeta = DiceCmdMeta{
+		Name: "JSON.STRAPPEND",
+		Info: `JSON.STRAPPEND key [path] value
+		Append the JSON string values to the string at path
+		Returns an array of integer replies for each path, the string's new length, or nil, if the matching JSON value is not a string. 
+		Error reply: If the value at path is not a string or if the key doesn't exist.`,
+		Eval:     evalJSONSTRAPPEND,
+		Arity:    3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -1203,6 +1213,7 @@ func init() {
 	DiceCmds["TYPE"] = typeCmdMeta
 	DiceCmds["ZADD"] = zaddCmdMeta
 	DiceCmds["ZRANGE"] = zrangeCmdMeta
+	DiceCmds["JSON.STRAPPEND"] = jsonstrappendCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}
