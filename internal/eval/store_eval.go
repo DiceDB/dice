@@ -317,6 +317,12 @@ func evalSETEX(args []string, store *dstore.Store) *EvalResponse {
 	return evalSET(newArgs, store)
 }
 
+// evalSADD adds one or more members to a set
+// args must contain a key and one or more members to add the set
+// If the set does not exist, a new set is created and members are added to it
+// An error response is returned if the command is used on a key that contains a non-set value(eg: string)
+// Returns an integer which represents the number of members that were added to the set, not including
+// the members that were already present
 func evalSADD(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) < 2 {
 		return &EvalResponse{
