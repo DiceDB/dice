@@ -51,7 +51,7 @@ func main() {
 	logr := logger.New(logger.Opts{WithTimestamp: true})
 	slog.SetDefault(logr)
 
-	go observability.Ping()
+	go observability.Ping(logr)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
