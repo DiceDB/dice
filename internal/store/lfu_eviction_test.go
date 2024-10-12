@@ -45,7 +45,7 @@ func TestLFUEviction(t *testing.T) {
 				store.Put(k, obj)
 			},
 			perform: func() {
-				// ensuring approximate counter is incremented atleast one time
+				// ensuring approximate counter is incremented at least one time
 				for i := 0; i < 100; i++ {
 					store.Get("k1")
 					store.Get("k2")

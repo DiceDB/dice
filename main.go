@@ -25,17 +25,17 @@ import (
 const Version string = "0.0.4"
 
 func init() {
-	flag.StringVar(&config.Host, "host", "0.0.0.0", "host for the dice server")
-	flag.IntVar(&config.Port, "port", 7379, "port for the dice server")
+	flag.StringVar(&config.Host, "host", "0.0.0.0", "host for the dicedb server")
+	flag.IntVar(&config.Port, "port", 7379, "port for the dicedb server")
 	flag.BoolVar(&config.EnableHTTP, "enable-http", true, "run server in HTTP mode as well")
 	flag.BoolVar(&config.EnableMultiThreading, "enable-multithreading", false, "run server in multithreading mode")
-	flag.IntVar(&config.HTTPPort, "http-port", 8082, "HTTP port for the dice server")
-	flag.IntVar(&config.WebsocketPort, "websocket-port", 8379, "Websocket port for the dice server")
+	flag.IntVar(&config.HTTPPort, "http-port", 8082, "HTTP port for the dicedb server")
+	flag.IntVar(&config.WebsocketPort, "websocket-port", 8379, "Websocket port for the dicedb server")
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
 	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the config file")
 	flag.StringVar(&config.FileLocation, "c", config.FileLocation, "file path of the config file")
 	flag.BoolVar(&config.InitConfigCmd, "init-config", false, "initialize a new config file")
-	flag.IntVar(&config.KeysLimit, "keys-limit", config.KeysLimit, "keys limit for the dice server. "+
+	flag.IntVar(&config.KeysLimit, "keys-limit", config.KeysLimit, "keys limit for the dicedb server. "+
 		"This flag controls the number of keys each shard holds at startup. You can multiply this number with the "+
 		"total number of shard threads to estimate how much memory will be required at system start up.")
 	flag.Parse()
