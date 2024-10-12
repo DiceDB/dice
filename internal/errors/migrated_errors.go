@@ -3,6 +3,7 @@ package errors
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 // Package errors provides error definitions and utility functions for handling
@@ -33,10 +34,10 @@ var (
 
 	// Error generation functions for specific error messages with dynamic parameters.
 	ErrWrongArgumentCount = func(command string) error {
-		return fmt.Errorf("ERR wrong number of arguments for '%s' command", command) // Indicates an incorrect number of arguments for a given command.
+		return fmt.Errorf("ERR wrong number of arguments for '%s' command", strings.ToLower(command)) // Indicates an incorrect number of arguments for a given command.
 	}
 	ErrInvalidExpireTime = func(command string) error {
-		return fmt.Errorf("ERR invalid expire time in '%s' command", command) // Represents an invalid expiration time for a specific command.
+		return fmt.Errorf("ERR invalid expire time in '%s' command", strings.ToLower(command)) // Represents an invalid expiration time for a specific command.
 	}
 
 	ErrInvalidElementPeekCount = func(max int) error {

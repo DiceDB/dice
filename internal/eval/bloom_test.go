@@ -26,7 +26,7 @@ func TestBloomFilter(t *testing.T) {
 	var args []string // empty args
 	resp := evalBFINIT(args, store)
 
-	// We're just checking if the resposne is an error or not. This test does not check the type of error. That is kept
+	// We're just checking if the response is an error or not. This test does not check the type of error. That is kept
 	//for different test.
 	if bytes.Equal(resp, clientio.RespOK) {
 		t.Errorf("BFINIT: invalid response, args: %v - expected an error, got: %s", args, string(resp))
@@ -194,7 +194,7 @@ func TestBloomOpts(t *testing.T) {
 
 			opts, err := newBloomOpts(tc.args, tc.useDefaults)
 			// Using reflect.DeepEqual as we have pointers to struct and direct value
-			// comparision is not possible because of []hash.Hash64 type.
+			// comparison is not possible because of []hash.Hash64 type.
 			if !reflect.DeepEqual(opts, tc.response) {
 				t.Errorf("invalid response in %s - expected: %v, got: %v", t.Name(), tc.response, opts)
 			}

@@ -104,7 +104,7 @@ func (s *AsyncServer) FindPortAndBind() (socketErr error) {
 	}
 	s.logger.Info(
 		"DiceDB server is running in a single-threaded mode",
-		slog.String("version", "0.0.4"),
+		slog.String("version", config.DiceConfig.Server.Version),
 		slog.Int("port", config.DiceConfig.Server.Port),
 	)
 	return nil
@@ -320,6 +320,7 @@ func (s *AsyncServer) executeCommandToBuffer(diceDBCmd *cmd.DiceDBCmd, buf *byte
 		// Handle error case independently
 		if resp.EvalResponse.Error != nil {
 			handleMigratedResp(resp.EvalResponse.Error, buf)
+			return
 		}
 		handleMigratedResp(resp.EvalResponse.Result, buf)
 		return

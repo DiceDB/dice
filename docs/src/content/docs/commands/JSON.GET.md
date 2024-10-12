@@ -26,7 +26,7 @@ JSON.GET <key> [path]
 | The specified key does not exists                                            | `nil`                                                |
 | The specified key exists and path argument is not specified                  | `String`: The entire JSON data for the key                |
 | The specified key exists and the specified path exists in the JSON data      | `String`: The data for the key at the specified path |
-| The specified key exists and specified path does not exists in the JSON data | `nil`                                                |
+| The specified key exists and specified path does not exists in the JSON data | `error`                                                |
 | Syntax or specified constraints are invalid                                  | error                                                |
 
 ## Behaviour
@@ -44,6 +44,8 @@ When the `JSON.GET` command is executed:
     - Error Message: `(error) ERR wrong number of arguments for 'json.get' command`
 2. `Invalid JSONPath expression`
     - Error Message: `(error) ERR invalid JSONPath`
+3. `Non-Existent JSONPath in the JSON data stored against a key`
+    - Error Message: `(error) ERR Path '$.<path>' does not exist`
 
 ## Example Usage
 
@@ -87,7 +89,7 @@ OK
 127.0.0.1:7379> JSON.SET user:1001 $ '{"name": "John Doe", "age": 30, "email": "john.doe@example.com"}'
 OK
 127.0.0.1:7379> JSON.GET user:1001 $.nonexistent
-(nil)
+(error) ERR Path '$.nonexistent' does not exist
 ```
 
 ## Notes
