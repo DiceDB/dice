@@ -73,7 +73,7 @@ func newCountMinSketchOptsWithErrorRate(args []string) (*CountMinSketchOpts, err
 		return nil, diceerrors.NewErr("invalid overestimation value")
 	}
 
-	probability, err := strconv.ParseFloat(args[0], 64)
+	probability, err := strconv.ParseFloat(args[1], 64)
 	if err != nil || probability <= 0 || probability >= 1.0 {
 		return nil, diceerrors.NewErr("invalid prob value")
 	}
@@ -236,26 +236,34 @@ func (c *CountMinSketch) mergeMatrices(sources []*CountMinSketch, weights []uint
 // weights are not provided, default is 1.
 func evalCMSMerge(args []string, store *dstore.Store) []byte {
 	if len(args) < 3 {
-		return diceerrors.NewErrArity("CMS.MERGE")
+		return diceerrors.NewErrArity("cms.merge")
 	}
 
 	destination, err := getCountMinSketch(args[0], store)
 	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%v for 'CMS.MERGE' command", err)
+		return diceerrors.NewErrWithFormattedMessage("%v for 'cms.merge' command", err)
 	}
 
 	numberOfKeys, err := strconv.ParseInt(args[1], 10, 64)
-	if err != nil || numberOfKeys < 1 {
-		return diceerrors.NewErrWithMessage("invalid number of keys to merge")
+
+	if err != nil {
+		return diceerrors.NewErrWithMessage("cannot parse number for 'cms.merge' command")
 	}
 
+	if numberOfKeys < 1 {
+		return diceerrors.NewErrWithMessage("invalid number of arguments to merge for 'cms.merge' command")
+	}
+
+	if len(args) != int(2+numberOfKeys) && len(args) != int(3+2*numberOfKeys) {
+		return diceerrors.NewErrWithMessage("invalid number of arguments to merge for 'cms.merge' command")
+	}
 	keys := args[2 : 2+numberOfKeys]
 	sources := make([]*CountMinSketch, 0, numberOfKeys)
 
 	for _, key := range keys {
 		c, err := getCountMinSketch(key, store)
 		if err != nil {
-			return diceerrors.NewErrWithFormattedMessage("%v for 'CMS.MERGE' command", err)
+			return diceerrors.NewErrWithFormattedMessage("%v for 'cms.merge' command", err)
 		}
 		if c.opts.depth != destination.opts.depth || c.opts.width != destination.opts.width {
 			return diceerrors.NewErrWithMessage("width/depth doesn't match")
@@ -271,12 +279,12 @@ func evalCMSMerge(args []string, store *dstore.Store) []byte {
 	}
 
 	if !strings.EqualFold(args[2+numberOfKeys], "WEIGHTS") {
-		return []byte(diceerrors.SyntaxErr)
+		return diceerrors.NewErrWithMessage("invalid number of arguments to merge for 'cms.merge' command")
 	}
 
 	numberOfWeights := len(args) - 3 - int(numberOfKeys)
 	if int(numberOfKeys) != numberOfWeights {
-		return []byte(diceerrors.SyntaxErr)
+		return diceerrors.NewErrWithMessage("invalid number of arguments to merge for 'cms.merge' command")
 	}
 
 	values := args[3+numberOfWeights:]
@@ -297,12 +305,12 @@ func evalCMSMerge(args []string, store *dstore.Store) []byte {
 // evalCMSQuery returns the count for one or more items in a sketch.
 func evalCMSQuery(args []string, store *dstore.Store) []byte {
 	if len(args) < 2 {
-		return diceerrors.NewErrArity("CMS.QUERY")
+		return diceerrors.NewErrArity("cms.query")
 	}
 
 	cms, err := getCountMinSketch(args[0], store)
 	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%v for 'CMS.QUERY' command", err)
+		return diceerrors.NewErrWithFormattedMessage("%v for 'cms.query' command", err)
 	}
 
 	results := make([]uint64, 0, len(args[1:]))
@@ -317,19 +325,19 @@ func evalCMSQuery(args []string, store *dstore.Store) []byte {
 // evalCMSIncrBy increases the count of item by increment. Multiple items can be increased with one call.
 func evalCMSIncrBy(args []string, store *dstore.Store) []byte {
 	if len(args) < 3 || len(args)%2 == 0 {
-		return diceerrors.NewErrArity("CMS.INCRBY")
+		return diceerrors.NewErrArity("cms.incrby")
 	}
 
 	cms, err := getCountMinSketch(args[0], store)
 	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%v for 'CMS.INCRBY' command", err)
+		return diceerrors.NewErrWithFormattedMessage("%v for 'cms.incrby' command", err)
 	}
 
 	keyValuePairs := args[1:]
 	for iter := 1; iter < len(keyValuePairs); iter += 2 {
 		_, err := strconv.ParseUint(keyValuePairs[iter], 10, 64)
 		if err != nil {
-			return diceerrors.NewErrWithMessage("cannot parse number")
+			return diceerrors.NewErrWithMessage("cannot parse number for 'cms.incrby' command")
 		}
 	}
 
@@ -353,11 +361,11 @@ func evalCMSIncrBy(args []string, store *dstore.Store) []byte {
 // evalCMSINFO returns width, depth and total count of the sketch.
 func evalCMSINFO(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
-		return diceerrors.NewErrArity("CMS.INFO")
+		return diceerrors.NewErrArity("cms.info")
 	}
 	cms, err := getCountMinSketch(args[0], store)
 	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%v for 'CMS.INFO' command", err)
+		return diceerrors.NewErrWithFormattedMessage("%v for 'cms.info' command", err)
 	}
 
 	return clientio.Encode(cms.info(), false)
@@ -366,16 +374,16 @@ func evalCMSINFO(args []string, store *dstore.Store) []byte {
 // evalCMSINITBYDIM initializes a Count-Min Sketch by dimensions (width and depth) specified in the call.
 func evalCMSINITBYDIM(args []string, store *dstore.Store) []byte {
 	if len(args) != 3 {
-		return diceerrors.NewErrArity("CMS.INITBYDIM")
+		return diceerrors.NewErrArity("cms.initbydim")
 	}
 
 	opts, err := newCountMinSketchOpts(args[1:])
 	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%v for 'CMS.INITBYDIM' command", err)
+		return diceerrors.NewErrWithFormattedMessage("%v for 'cms.initbydim' command", err)
 	}
 
 	if err = createCountMinSketch(args[0], opts, store); err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%v for 'CMS.INITBYDIM' command", err)
+		return diceerrors.NewErrWithFormattedMessage("%v for 'cms.initbydim' command", err)
 	}
 
 	return clientio.RespOK
@@ -386,16 +394,16 @@ func evalCMSINITBYDIM(args []string, store *dstore.Store) []byte {
 // of the sketch.
 func evalCMSINITBYPROB(args []string, store *dstore.Store) []byte {
 	if len(args) != 3 {
-		return diceerrors.NewErrArity("CMS.INITBYPROB")
+		return diceerrors.NewErrArity("cms.initbyprob")
 	}
 
 	opts, err := newCountMinSketchOptsWithErrorRate(args[1:])
 	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%v for 'CMS.INITBYPROB' command", err)
+		return diceerrors.NewErrWithFormattedMessage("%v for 'cms.initbyprob' command", err)
 	}
 
 	if err = createCountMinSketch(args[0], opts, store); err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%v for 'CMS.INITBYPROB' command", err)
+		return diceerrors.NewErrWithFormattedMessage("%v for 'cms.initbyprob' command", err)
 	}
 
 	return clientio.RespOK
