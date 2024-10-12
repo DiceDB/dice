@@ -100,7 +100,8 @@ func main() {
 	// Find a port and bind it
 	if !config.EnableMultiThreading {
 		asyncServer := server.NewAsyncServer(shardManager, queryWatchChan, logr)
-		if err := asyncServer.FindPortAndBind(); err != nil {
+		// if err := asyncServer.FindPortAndBind(); err != nil {
+		if err := asyncServer.Bind(); err != nil {
 			cancel()
 			logr.Error("Error finding and binding port", slog.Any("error", err))
 			os.Exit(1)
