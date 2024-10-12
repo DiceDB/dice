@@ -7,66 +7,92 @@ The `SCARD` command in DiceDB is used to get the number of members in a set. Thi
 
 ## Syntax
 
-```plaintext
+```
 SCARD key
 ```
 
 ## Parameters
 
-- `key`: The key of the set whose cardinality (number of members) you want to retrieve. The key must be a valid string.
+| Parameter  | Description                                                                     | Type   | Required |
+|------------|---------------------------------------------------------------------------------|--------|----------|
+| `key`      | The key of the set whose cardinality (number of members) you want to retrieve.  | String |  Yes     |
 
-## Return Value
 
-- `Integer`: The number of elements in the set, or 0 if the set does not exist.
+## Return Values
+
+| Condition                               | Return Value                     |
+|-----------------------------------------|----------------------------------|
+| Key of Set type exists                  | Number of elements in the set    |
+| Key doesn't exist                       | `0`                              |
+| Invalid syntax/key is of the wrong type | error                            |
+
 
 ## Behaviour
 
 When the `SCARD` command is executed, DiceDB will:
 
 1. Check if the key exists.
-2. If the key does not exist, it will return 0.
-3. If the key exists but is not a set, an error will be returned.
-4. If the key exists and is a set, it will return the number of elements in the set.
+2. If the key exists and is a set, it will return the number of elements in the set.
+3. If the key does not exist, it will return 0.
+4. If the key exists but is not a set, an error will be returned.
 
-## Error Handling
+## Errors
 
-The `SCARD` command can raise the following errors:
+1. `Wrong type of key`:
 
-- `WRONGTYPE Operation against a key holding the wrong kind of value`: This error occurs if the key exists but is not a set. DiceDB expects the key to be associated with a set data type. If the key is associated with a different data type (e.g., a string, list, hash, or sorted set), this error will be raised.
+    - Error Message: `(error) ERROR WRONGTYPE Operation against a key holding the wrong kind of value`
+    - Occurs if the key exists but is not a set. DiceDB expects the key to be associated with a set data type. If the key is associated with a different data type (e.g., a string, list, hash, or sorted set), this error will be raised.
 
-## Example Usage
+2. `Wrong number of arguments`:
 
-### Example 1: Basic Usage
+    - Error Message: `(error) ERROR wrong number of arguments for 'scard' command`
+    - Occurs if wrong number of keys is passed to the command, such as passing more than 1 key, or passing no key.
 
-```plaintext
-DiceDB> SADD myset "apple"
+
+## Examples
+
+### Basic Example
+
+Add three members to the set `myset` and then get the cardinality of the set using `SCARD` command.
+
+```bash
+127.0.0.1:7379> SADD myset "apple"
 (integer) 1
-DiceDB> SADD myset "banana"
+127.0.0.1:7379> SADD myset "banana"
 (integer) 1
-DiceDB> SADD myset "cherry"
+127.0.0.1:7379> SADD myset "cherry"
 (integer) 1
-DiceDB> SCARD myset
+127.0.0.1:7379> SCARD myset
 (integer) 3
 ```
 
-In this example, we first add three members to the set `myset`. Then, we use the `SCARD` command to get the number of members in the set, which returns 3.
+### Non-Existent Key
 
-### Example 2: Non-Existent Key
+Get the cardinality of a set that does not exist.
 
-```plaintext
-DiceDB> SCARD nonexistingset
+```bash
+127.0.0.1:7379> SCARD nonexistingset
 (integer) 0
 ```
 
-In this example, we attempt to get the cardinality of a set that does not exist. The `SCARD` command returns 0, indicating that the set is empty or does not exist.
+### Error Example: Wrong Type
 
-### Example 3: Wrong Type Error
+Get the cardinality of a key holding string value
 
-```plaintext
-DiceDB> SET mystring "hello"
+```bash
+127.0.0.1:7379> SET mystring "hello"
 OK
-DiceDB> SCARD mystring
-(error) WRONGTYPE Operation against a key holding the wrong kind of value
+127.0.0.1:7379> SCARD mystring
+(error) ERROR WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
-In this example, we first set a string value to the key `mystring`. When we attempt to use the `SCARD` command on this key, DiceDB returns an error because `mystring` is not a set.
+### Error Example: Wrong Argument
+
+Get cardinality of a set holding 0 or more than 1 argument
+
+```bash
+127.0.0.1:7379> SCARD
+(error) ERROR wrong number of arguments for 'scard' command
+127.0.0.1:7379> SCARD myset1 myset2
+(error) ERROR wrong number of arguments for 'scard' command
+```

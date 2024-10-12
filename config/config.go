@@ -51,7 +51,9 @@ var (
 )
 
 type Config struct {
-	Server struct {
+	InstanceID string `mapstructure:"instance_id"`
+	Server     struct {
+		Version                string        `mapstructure:"version"`
 		Addr                   string        `mapstructure:"addr"`
 		Port                   int           `mapstructure:"port"`
 		KeepAlive              int32         `mapstructure:"keepalive"`
@@ -65,13 +67,14 @@ type Config struct {
 		EvictionRatio          float64       `mapstructure:"evictionratio"`
 		KeysLimit              int           `mapstructure:"keyslimit"`
 		AOFFile                string        `mapstructure:"aoffile"`
-		PersistenceEnabled     bool          `mapstructure:"persistenceenabled"`
 		WriteAOFOnCleanup      bool          `mapstructure:"writeaofoncleanup"`
 		LFULogFactor           int           `mapstructure:"lfulogfactor"`
 		LogLevel               string        `mapstructure:"loglevel"`
 		PrettyPrintLogs        bool          `mapstructure:"prettyprintlogs"`
 		EnableMultiThreading   bool          `mapstructure:"enablemultithreading"`
 		StoreMapInitSize       int           `mapstructure:"storemapinitsize"`
+		WatchChanBufSize       int           `mapstructure:"watchchanbufsize"`
+		AdhocReqChanBufSize    int           `mapstructure:"adhocreqchanbufsize"`
 	} `mapstructure:"server"`
 	Auth struct {
 		UserName string `mapstructure:"username"`
@@ -86,6 +89,7 @@ type Config struct {
 // Default configurations for internal use
 var baseConfig = Config{
 	Server: struct {
+		Version                string        `mapstructure:"version"`
 		Addr                   string        `mapstructure:"addr"`
 		Port                   int           `mapstructure:"port"`
 		KeepAlive              int32         `mapstructure:"keepalive"`
@@ -99,20 +103,21 @@ var baseConfig = Config{
 		EvictionRatio          float64       `mapstructure:"evictionratio"`
 		KeysLimit              int           `mapstructure:"keyslimit"`
 		AOFFile                string        `mapstructure:"aoffile"`
-		PersistenceEnabled     bool          `mapstructure:"persistenceenabled"`
 		WriteAOFOnCleanup      bool          `mapstructure:"writeaofoncleanup"`
 		LFULogFactor           int           `mapstructure:"lfulogfactor"`
 		LogLevel               string        `mapstructure:"loglevel"`
 		PrettyPrintLogs        bool          `mapstructure:"prettyprintlogs"`
 		EnableMultiThreading   bool          `mapstructure:"enablemultithreading"`
 		StoreMapInitSize       int           `mapstructure:"storemapinitsize"`
+		WatchChanBufSize       int           `mapstructure:"watchchanbufsize"`
+		AdhocReqChanBufSize    int           `mapstructure:"adhocreqchanbufsize"`
 	}{
 		Addr:                   DefaultHost,
 		Port:                   DefaultPort,
 		KeepAlive:              int32(300),
 		Timeout:                int32(300),
 		MaxConn:                int32(0),
-		ShardCronFrequency:     1 * time.Second,
+		ShardCronFrequency:     30 * time.Second,
 		MultiplexerPollTimeout: 100 * time.Millisecond,
 		MaxClients:             int32(20000),
 		MaxMemory:              0,
@@ -120,13 +125,14 @@ var baseConfig = Config{
 		EvictionRatio:          0.9,
 		KeysLimit:              DefaultKeysLimit,
 		AOFFile:                "./dice-master.aof",
-		PersistenceEnabled:     true,
 		WriteAOFOnCleanup:      false,
 		LFULogFactor:           10,
 		LogLevel:               "info",
 		PrettyPrintLogs:        false,
 		EnableMultiThreading:   false,
 		StoreMapInitSize:       1024000,
+		WatchChanBufSize:       20000,
+		AdhocReqChanBufSize:    20, // assuming we wouldn't have more than 20 adhoc requests being sent at a time.
 	},
 	Auth: struct {
 		UserName string `mapstructure:"username"`
@@ -305,7 +311,14 @@ func mergeFlagsWithConfig() {
 
 // This function checks if the config file is present or not at ConfigFileLocation
 func isConfigFilePresent() bool {
+	// If config file present in current directory use it
+	if _, err := os.Stat(filepath.Join(".", DefaultConfigName)); err == nil {
+		FileLocation = filepath.Join(".", DefaultConfigName)
+		return true
+	}
+
 	_, err := os.Stat(FileLocation)
+
 	return err == nil
 }
 

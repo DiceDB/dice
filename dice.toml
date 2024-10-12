@@ -1,0 +1,32 @@
+[Server]
+Addr = '0.0.0.0'
+Port = 7379
+KeepAlive = 300
+Timeout = 300
+MaxConn = 0
+# Value in nanoseconds (30 seconds)
+ShardCronFrequency = 30000000000
+# Value in nanoseconds (100 ms/0.1 seconds)
+MultiplexerPollTimeout = 100000000
+MaxClients = 20000
+MaxMemory = 0
+EvictionPolicy = 'allkeys-lfu'
+EvictionRatio = 0.4
+KeysLimit = 100000
+AOFFile = './dice-master.aof'
+WriteAOFOnCleanup = false
+LFULogFactor = 10
+LogLevel = 'info'
+PrettyPrintLogs = false
+EnableMultiThreading = false
+StoreMapInitSize = 10240
+WatchChanBufSize = 20000
+AdhocReqChanBufSize = 20
+
+[Auth]
+UserName = 'dice'
+Password = ''
+
+[Network]
+IOBufferLength = 512
+IOBufferLengthMAX = 51200

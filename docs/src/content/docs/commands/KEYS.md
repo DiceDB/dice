@@ -13,64 +13,93 @@ KEYS pattern
 
 ## Parameters
 
-- `pattern`: A string that represents the pattern to match against the keys in the DiceDB database. The pattern can include special glob-style characters:
-  - `*` matches any number of characters (including zero).
-  - `?` matches exactly one character.
-  - `[abc]` matches any one of the characters inside the brackets.
-  - `[a-z]` matches any character in the specified range.
+| Parameter       | Description                                      | Type    | Required |
+|-----------------|--------------------------------------------------|---------|----------|
+| `pattern`           | A string representing the pattern to match against the keys in DiceDB databse.| String  | Yes      |
 
-## Return Value
+Supported glob-style characters:
+   - `*` matches any number of characters (including zero).
+   - `?` matches exactly one character.
+   - `[abc]` matches any one of the characters inside the brackets.
+   - `[a-z]` matches any character in the specified range.
 
-The `KEYS` command returns an array of strings, where each string is a key that matches the specified pattern. If no keys match the pattern, an empty array is returned.
+Use `\` to escape special characters if you want to match them verbatim.
 
-## Example Usage
+## Return values
 
-### Basic Example
+| Condition                                      | Return Value                                      |
+|------------------------------------------------|---------------------------------------------------|
+| Command is successful                          | Array of strings, where each string is key that matches the specified pattern.|
+| Command is successful but key not found        | `(empty list or set)`  |
+| Syntax or specified constraints are invalid    | error   |
+
+## Example usage
+
+### Basic example
 
 ```plaintext
-DiceDB> SET key1 "value1"
+127.0.0.1:7379> SET key1 "value1"
 OK
-DiceDB> SET key2 "value2"
+127.0.0.1:7379> SET key2 "value2"
 OK
-DiceDB> SET anotherkey "value3"
+127.0.0.1:7379> SET anotherkey "value3"
 OK
-DiceDB> KEYS key*
+127.0.0.1:7379> KEYS key*
 1) "key1"
 2) "key2"
 ```
 
-### Using Wildcards
+### Using wildcards
 
 ```plaintext
-DiceDB> SET key1 "value1"
+127.0.0.1:7379> SET key1 "value1"
 OK
-DiceDB> SET key2 "value2"
+127.0.0.1:7379> SET key2 "value2"
 OK
-DiceDB> SET key3 "value3"
+127.0.0.1:7379> SET key3 "value3"
 OK
-DiceDB> KEYS key?
-1) "key1"
-2) "key2"
-3) "key3"
+127.0.0.1:7379> KEYS key?
+1) "key3"
+2) "key1"
+3) "key2"
 ```
 
-### Using Character Ranges
+### Using character ranges
 
 ```plaintext
-DiceDB> SET key1 "value1"
+127.0.0.1:7379> SET key1 "value1"
 OK
-DiceDB> SET key2 "value2"
+127.0.0.1:7379> SET key2 "value2"
 OK
-DiceDB> SET key3 "value3"
+127.0.0.1:7379> SET key3 "value3"
 OK
-DiceDB> KEYS key[1-2]
+127.0.0.1:7379> KEYS key[1-2]
 1) "key1"
 2) "key2"
+```
+
+### Using \ to escape special characters
+
+```plaintext
+127.0.0.1:7379> SET key1 "value1"
+OK
+127.0.0.1:7379> SET key2 "value2"
+OK
+127.0.0.1:7379> SET key3 "value3"
+OK
+127.0.0.1:7379> KEYS key?
+1) "key3"
+2) "key*"
+3) "key?"
+127.0.0.1:7379> KEYS key\?
+1) "key?"
 ```
 
 ## Behaviour
 
 When the `KEYS` command is executed, DiceDB scans the entire keyspace to find all keys that match the specified pattern. This operation is performed in a non-blocking manner, but it can still be slow if the keyspace is large. Therefore, it is generally not recommended to use the `KEYS` command in a production environment where performance is critical.
+
+Additionally, the ordering of the output keys can be different if you run the same command subsequently.
 
 ## Error Handling
 
@@ -94,11 +123,8 @@ The `KEYS` command is straightforward and does not have many error conditions. H
 - `SCAN`: The `SCAN` command is a cursor-based iterator that allows you to incrementally iterate over the keyspace without blocking the server. It is a more efficient alternative to `KEYS` for large datasets.
 
 ```plaintext
-DiceDB> SCAN 0 MATCH key*
+127.0.0.1:7379> SCAN 0 MATCH key*
 1) "0"
 2) 1) "key1"
    2) "key2"
 ```
-
-By following this detailed documentation, you should be able to effectively use the `KEYS` command in DiceDB while understanding its limitations and best practices.
-

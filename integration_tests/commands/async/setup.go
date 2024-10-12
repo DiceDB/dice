@@ -18,7 +18,7 @@ import (
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dice/testutils"
-	redis "github.com/dicedb/go-dice"
+	dicedb "github.com/dicedb/go-dice"
 )
 
 type TestServerOptions struct {
@@ -37,8 +37,8 @@ func getLocalConnection() net.Conn {
 }
 
 //nolint:unused
-func getLocalSdk() *redis.Client {
-	return redis.NewClient(&redis.Options{
+func getLocalSdk() *dicedb.Client {
+	return dicedb.NewClient(&dicedb.Options{
 		Addr: fmt.Sprintf(":%d", config.DiceConfig.Server.Port),
 
 		DialTimeout:           10 * time.Second,
@@ -120,9 +120,9 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 
 	const totalRetries = 100
 	var err error
-	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Server.KeysLimit)
+	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Server.WatchChanBufSize)
 	gec := make(chan error)
-	shardManager := shard.NewShardManager(1, watchChan, gec, opt.Logger)
+	shardManager := shard.NewShardManager(1, watchChan, nil, gec, opt.Logger)
 	// Initialize the AsyncServer
 	testServer := server.NewAsyncServer(shardManager, watchChan, opt.Logger)
 

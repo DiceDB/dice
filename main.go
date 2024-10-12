@@ -14,12 +14,15 @@ import (
 	"github.com/dicedb/dice/config"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/logger"
+	"github.com/dicedb/dice/internal/observability"
 	"github.com/dicedb/dice/internal/server"
 	"github.com/dicedb/dice/internal/server/resp"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dice/internal/worker"
 )
+
+const Version string = "0.0.4"
 
 func init() {
 	flag.StringVar(&config.Host, "host", "0.0.0.0", "host for the dice server")
@@ -38,11 +41,17 @@ func init() {
 	flag.Parse()
 
 	config.SetupConfig()
+	config.DiceConfig.Server.Version = Version
+
+	iid := observability.GetOrCreateInstanceID()
+	config.DiceConfig.InstanceID = iid
 }
 
 func main() {
 	logr := logger.New(logger.Opts{WithTimestamp: true})
 	slog.SetDefault(logr)
+
+	go observability.Ping(logr)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -50,7 +59,8 @@ func main() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
-	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Server.KeysLimit)
+	queryWatchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Server.WatchChanBufSize)
+	cmdWatchChan := make(chan dstore.CmdWatchEvent, config.DiceConfig.Server.KeysLimit)
 	var serverErrCh chan error
 
 	// Get the number of available CPU cores on the machine using runtime.NumCPU().
@@ -76,7 +86,7 @@ func main() {
 	runtime.GOMAXPROCS(numCores)
 
 	// Initialize the ShardManager
-	shardManager := shard.NewShardManager(uint8(numCores), watchChan, serverErrCh, logr)
+	shardManager := shard.NewShardManager(uint8(numCores), queryWatchChan, cmdWatchChan, serverErrCh, logr)
 
 	wg := sync.WaitGroup{}
 
@@ -91,7 +101,7 @@ func main() {
 	// Initialize the AsyncServer server
 	// Find a port and bind it
 	if !config.EnableMultiThreading {
-		asyncServer := server.NewAsyncServer(shardManager, watchChan, logr)
+		asyncServer := server.NewAsyncServer(shardManager, queryWatchChan, logr)
 		if err := asyncServer.FindPortAndBind(); err != nil {
 			cancel()
 			logr.Error("Error finding and binding port", slog.Any("error", err))
@@ -154,7 +164,7 @@ func main() {
 	} else {
 		workerManager := worker.NewWorkerManager(config.DiceConfig.Server.MaxClients, shardManager)
 		// Initialize the RESP Server
-		respServer := resp.NewServer(shardManager, workerManager, serverErrCh, logr)
+		respServer := resp.NewServer(shardManager, workerManager, cmdWatchChan, serverErrCh, logr)
 		serverWg.Add(1)
 		go func() {
 			defer serverWg.Done()
@@ -186,7 +196,7 @@ func main() {
 		}()
 	}
 
-	websocketServer := server.NewWebSocketServer(shardManager, watchChan, logr)
+	websocketServer := server.NewWebSocketServer(shardManager, queryWatchChan, logr)
 	serverWg.Add(1)
 	go func() {
 		defer serverWg.Done()

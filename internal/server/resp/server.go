@@ -11,6 +11,9 @@ import (
 	"syscall"
 	"time"
 
+	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dice/internal/watchmanager"
+
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio/iohandler/netconn"
 	respparser "github.com/dicedb/dice/internal/clientio/requestparser/resp"
@@ -37,20 +40,24 @@ type Server struct {
 	Port            int
 	serverFD        int
 	connBacklogSize int
-	wm              *worker.WorkerManager
-	sm              *shard.ShardManager
+	workerManager   *worker.WorkerManager
+	shardManager    *shard.ShardManager
+	watchManager    *watchmanager.Manager
+	cmdWatchChan    chan dstore.CmdWatchEvent
 	globalErrorChan chan error
 	logger          *slog.Logger
 }
 
-func NewServer(sm *shard.ShardManager, wm *worker.WorkerManager, gec chan error, l *slog.Logger) *Server {
+func NewServer(shardManager *shard.ShardManager, workerManager *worker.WorkerManager, cmdWatchChan chan dstore.CmdWatchEvent, globalErrChan chan error, l *slog.Logger) *Server {
 	return &Server{
 		Host:            config.DiceConfig.Server.Addr,
 		Port:            config.DiceConfig.Server.Port,
 		connBacklogSize: DefaultConnBacklogSize,
-		wm:              wm,
-		sm:              sm,
-		globalErrorChan: gec,
+		workerManager:   workerManager,
+		shardManager:    shardManager,
+		watchManager:    watchmanager.NewManager(l),
+		cmdWatchChan:    cmdWatchChan,
+		globalErrorChan: globalErrChan,
 		logger:          l,
 	}
 }
@@ -67,7 +74,13 @@ func (s *Server) Run(ctx context.Context) (err error) {
 	// Start a go routine to accept connections
 	errChan := make(chan error, 1)
 	wg := &sync.WaitGroup{}
-	wg.Add(1)
+
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		s.watchManager.Run(ctx, s.cmdWatchChan)
+	}()
+
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
 		if err := s.AcceptConnectionRequests(ctx, wg); err != nil {
@@ -178,14 +191,14 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 			parser := respparser.NewParser(s.logger)
 			respChan := make(chan *ops.StoreResponse)
 			wID := GenerateUniqueWorkerID()
-			w := worker.NewWorker(wID, respChan, ioHandler, parser, s.sm, s.globalErrorChan, s.logger)
+			w := worker.NewWorker(wID, respChan, ioHandler, parser, s.shardManager, s.globalErrorChan, s.logger)
 			if err != nil {
 				s.logger.Error("Failed to create new worker for clientFD", slog.Int("client-fd", clientFD), slog.Any("error", err))
 				return err
 			}
 
 			// Register the worker with the worker manager
-			err = s.wm.RegisterWorker(w)
+			err = s.workerManager.RegisterWorker(w)
 			if err != nil {
 				return err
 			}
@@ -198,7 +211,7 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 					if err != nil {
 						s.logger.Warn("Failed to unregister worker", slog.String("worker-id", wID), slog.Any("error", err))
 					}
-				}(s.wm, wID)
+				}(s.workerManager, wID)
 				wctx, cwctx := context.WithCancel(ctx)
 				defer cwctx()
 				err := w.Start(wctx)

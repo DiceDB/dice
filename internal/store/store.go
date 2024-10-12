@@ -42,18 +42,25 @@ type QueryWatchEvent struct {
 	Value     object.Obj
 }
 
-type Store struct {
-	store     common.ITable[string, *object.Obj]
-	expires   common.ITable[*object.Obj, uint64] // Does not need to be thread-safe as it is only accessed by a single thread.
-	numKeys   int
-	watchChan chan QueryWatchEvent
+type CmdWatchEvent struct {
+	Cmd         string
+	AffectedKey string
 }
 
-func NewStore(watchChan chan QueryWatchEvent) *Store {
+type Store struct {
+	store          common.ITable[string, *object.Obj]
+	expires        common.ITable[*object.Obj, uint64] // Does not need to be thread-safe as it is only accessed by a single thread.
+	numKeys        int
+	queryWatchChan chan QueryWatchEvent
+	cmdWatchChan   chan CmdWatchEvent
+}
+
+func NewStore(queryWatchChan chan QueryWatchEvent, cmdWatchChan chan CmdWatchEvent) *Store {
 	return &Store{
-		store:     NewStoreRegMap(),
-		expires:   NewExpireRegMap(),
-		watchChan: watchChan,
+		store:          NewStoreRegMap(),
+		expires:        NewExpireRegMap(),
+		queryWatchChan: queryWatchChan,
+		cmdWatchChan:   cmdWatchChan,
 	}
 }
 
@@ -83,10 +90,6 @@ func (store *Store) ResetStore() {
 	store.expires = NewExpireMap()
 }
 
-type PutOptions struct {
-	KeepTTL bool
-}
-
 func (store *Store) Put(k string, obj *object.Obj, opts ...PutOption) {
 	store.putHelper(k, obj, opts...)
 }
@@ -97,20 +100,6 @@ func (store *Store) GetKeyCount() int {
 
 func (store *Store) IncrementKeyCount() {
 	store.numKeys++
-}
-
-func getDefaultOptions() *PutOptions {
-	return &PutOptions{
-		KeepTTL: false,
-	}
-}
-
-type PutOption func(*PutOptions)
-
-func WithKeepTTL(value bool) PutOption {
-	return func(po *PutOptions) {
-		po.KeepTTL = value
-	}
 }
 
 func (store *Store) PutAll(data map[string]*object.Obj) {
@@ -124,7 +113,7 @@ func (store *Store) GetNoTouch(k string) *object.Obj {
 }
 
 func (store *Store) putHelper(k string, obj *object.Obj, opts ...PutOption) {
-	options := getDefaultOptions()
+	options := getDefaultPutOptions()
 
 	for _, optApplier := range opts {
 		optApplier(options)
@@ -149,8 +138,11 @@ func (store *Store) putHelper(k string, obj *object.Obj, opts ...PutOption) {
 	}
 	store.store.Put(k, obj)
 
-	if store.watchChan != nil {
+	if store.queryWatchChan != nil {
 		store.notifyQueryManager(k, Set, *obj)
+	}
+	if store.cmdWatchChan != nil {
+		store.notifyWatchManager(options.PutCmd, k)
 	}
 }
 
@@ -188,16 +180,16 @@ func (store *Store) GetAll(keys []string) []*object.Obj {
 	return response
 }
 
-func (store *Store) Del(k string) bool {
+func (store *Store) Del(k string, opts ...DelOption) bool {
 	v, ok := store.store.Get(k)
 	if ok {
-		return store.deleteKey(k, v)
+		return store.deleteKey(k, v, opts...)
 	}
 	return false
 }
 
-func (store *Store) DelByPtr(ptr string) bool {
-	return store.delByPtr(ptr)
+func (store *Store) DelByPtr(ptr string, opts ...DelOption) bool {
+	return store.delByPtr(ptr, opts...)
 }
 
 func (store *Store) Keys(p string) ([]string, error) {
@@ -236,21 +228,24 @@ func (store *Store) Rename(sourceKey, destKey string) bool {
 	sourceObj, _ := store.store.Get(sourceKey)
 	if sourceObj == nil || hasExpired(sourceObj, store) {
 		if sourceObj != nil {
-			store.deleteKey(sourceKey, sourceObj)
+			store.deleteKey(sourceKey, sourceObj, WithDelCmd(Rename))
 		}
 		return false
 	}
 
 	// Use putHelper to handle putting the object at the destination key
-	store.putHelper(destKey, sourceObj)
+	store.putHelper(destKey, sourceObj, WithPutCmd(Set))
 
 	// Remove the source key
 	store.store.Delete(sourceKey)
 	store.numKeys--
 
 	// Notify watchers about the deletion of the source key
-	if store.watchChan != nil {
+	if store.queryWatchChan != nil {
 		store.notifyQueryManager(sourceKey, Del, *sourceObj)
+	}
+	if store.cmdWatchChan != nil {
+		store.notifyWatchManager(Rename, sourceKey)
 	}
 
 	return true
@@ -260,12 +255,12 @@ func (store *Store) Get(k string) *object.Obj {
 	return store.getHelper(k, true)
 }
 
-func (store *Store) GetDel(k string) *object.Obj {
+func (store *Store) GetDel(k string, opts ...DelOption) *object.Obj {
 	var v *object.Obj
 	v, _ = store.store.Get(k)
 	if v != nil {
 		expired := hasExpired(v, store)
-		store.deleteKey(k, v)
+		store.deleteKey(k, v, opts...)
 		if expired {
 			v = nil
 		}
@@ -286,14 +281,23 @@ func (store *Store) SetUnixTimeExpiry(obj *object.Obj, exUnixTimeSec int64) {
 	store.expires.Put(obj, uint64(exUnixTimeSec*1000))
 }
 
-func (store *Store) deleteKey(k string, obj *object.Obj) bool {
+func (store *Store) deleteKey(k string, obj *object.Obj, opts ...DelOption) bool {
+	options := getDefaultDelOptions()
+
+	for _, optApplier := range opts {
+		optApplier(options)
+	}
+
 	if obj != nil {
 		store.store.Delete(k)
 		store.expires.Delete(obj)
 		store.numKeys--
 
-		if store.watchChan != nil {
+		if store.queryWatchChan != nil {
 			store.notifyQueryManager(k, Del, *obj)
+		}
+		if store.cmdWatchChan != nil {
+			store.notifyWatchManager(options.DelCmd, k)
 		}
 
 		return true
@@ -302,17 +306,21 @@ func (store *Store) deleteKey(k string, obj *object.Obj) bool {
 	return false
 }
 
-func (store *Store) delByPtr(ptr string) bool {
+func (store *Store) delByPtr(ptr string, opts ...DelOption) bool {
 	if obj, ok := store.store.Get(ptr); ok {
 		key := ptr
-		return store.deleteKey(key, obj)
+		return store.deleteKey(key, obj, opts...)
 	}
 	return false
 }
 
 // notifyQueryManager notifies the query manager about a key change, so that it can update the query cache if needed.
 func (store *Store) notifyQueryManager(k, operation string, obj object.Obj) {
-	store.watchChan <- QueryWatchEvent{k, operation, obj}
+	store.queryWatchChan <- QueryWatchEvent{k, operation, obj}
+}
+
+func (store *Store) notifyWatchManager(cmd, affectedKey string) {
+	store.cmdWatchChan <- CmdWatchEvent{cmd, affectedKey}
 }
 
 func (store *Store) GetStore() common.ITable[string, *object.Obj] {

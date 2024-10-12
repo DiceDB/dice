@@ -21,7 +21,7 @@ import (
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dice/testutils"
-	redis "github.com/dicedb/go-dice"
+	dicedb "github.com/dicedb/go-dice"
 )
 
 type TestServerOptions struct {
@@ -48,8 +48,8 @@ func deleteTestKeys(keysToDelete []string, store *dstore.Store) {
 }
 
 //nolint:unused
-func getLocalSdk() *redis.Client {
-	return redis.NewClient(&redis.Options{
+func getLocalSdk() *dicedb.Client {
+	return dicedb.NewClient(&dicedb.Options{
 		Addr: fmt.Sprintf(":%d", config.DiceConfig.Server.Port),
 
 		DialTimeout:           10 * time.Second,
@@ -122,12 +122,13 @@ func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
 		config.DiceConfig.Server.Port = 9739
 	}
 
-	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Server.KeysLimit)
+	queryWatchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Server.KeysLimit)
+	cmdWatchChan := make(chan dstore.CmdWatchEvent, config.DiceConfig.Server.KeysLimit)
 	gec := make(chan error)
-	shardManager := shard.NewShardManager(1, watchChan, gec, logr)
+	shardManager := shard.NewShardManager(1, queryWatchChan, cmdWatchChan, gec, logr)
 	workerManager := worker.NewWorkerManager(20000, shardManager)
-	// Initialize the REST Server
-	testServer := resp.NewServer(shardManager, workerManager, gec, logr)
+	// Initialize the RESP Server
+	testServer := resp.NewServer(shardManager, workerManager, cmdWatchChan, gec, logr)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	fmt.Println("Starting the test server on port", config.DiceConfig.Server.Port)

@@ -42,7 +42,7 @@ func setupTest(store *dstore.Store) *dstore.Store {
 }
 
 func TestEval(t *testing.T) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	testEvalMSET(t, store)
 	testEvalECHO(t, store)
@@ -74,6 +74,7 @@ func TestEval(t *testing.T) {
 	testEvalDbsize(t, store)
 	testEvalGETSET(t, store)
 	testEvalHSET(t, store)
+	testEvalHMSET(t, store)
 	testEvalHKEYS(t, store)
 	testEvalPFADD(t, store)
 	testEvalPFCOUNT(t, store)
@@ -82,6 +83,7 @@ func TestEval(t *testing.T) {
 	testEvalHSTRLEN(t, store)
 	testEvalHEXISTS(t, store)
 	testEvalHDEL(t, store)
+	testEvalHSCAN(t, store)
 	testEvalPFMERGE(t, store)
 	testEvalJSONSTRLEN(t, store)
 	testEvalJSONOBJLEN(t, store)
@@ -112,6 +114,7 @@ func TestEval(t *testing.T) {
 	testEvalGEOADD(t, store)
 	testEvalGEODIST(t, store)
 	testEvalSINTER(t, store)
+	testEvalJSONSTRAPPEND(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -161,17 +164,17 @@ func testEvalSET(t *testing.T, store *dstore.Store) {
 		{
 			name:           "nil value",
 			input:          nil,
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'SET' command")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'set' command")},
 		},
 		{
 			name:           "empty array",
 			input:          []string{},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'SET' command")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'set' command")},
 		},
 		{
 			name:           "one value",
 			input:          []string{"KEY"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'SET' command")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'set' command")},
 		},
 		{
 			name:           "key val pair",
@@ -236,7 +239,7 @@ func testEvalSET(t *testing.T, store *dstore.Store) {
 		{
 			name:           "key val pair and negative PXAT",
 			input:          []string{"KEY", "VAL", Pxat, "-123456"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'SET' command")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'set' command")},
 		},
 		{
 			name:           "key val pair and valid PXAT",
@@ -332,12 +335,12 @@ func testEvalGET(t *testing.T, store *dstore.Store) {
 		{
 			name:           "nil value",
 			input:          nil,
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'GET' command")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'get' command")},
 		},
 		{
 			name:           "empty array",
 			input:          []string{},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'GET' command")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'get' command")},
 		},
 		{
 			name:           "key does not exist",
@@ -347,7 +350,7 @@ func testEvalGET(t *testing.T, store *dstore.Store) {
 		{
 			name:           "multiple arguments",
 			input:          []string{"KEY1", "KEY2"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'GET' command")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'get' command")},
 		},
 		{
 			name: "key exists",
@@ -389,8 +392,6 @@ func testEvalGET(t *testing.T, store *dstore.Store) {
 
 			response := evalGET(tt.input, store)
 
-			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput.Result)
-
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
@@ -414,12 +415,12 @@ func testEvalGETSET(t *testing.T, store *dstore.Store) {
 		{
 			name:           "GETSET with 1 arg",
 			input:          []string{"HELLO"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'GETSET' command")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'getset' command")},
 		},
 		{
 			name:           "GETSET with 3 args",
 			input:          []string{"HELLO", "WORLD", "WORLD1"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'GETSET' command")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'getset' command")},
 		},
 		{
 			name:           "GETSET key not exists",
@@ -931,7 +932,7 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 		"key does not exist": {
 			setup:  func() {},
 			input:  []string{"NONEXISTENT_KEY"},
-			output: []byte("-ERR Path '.' does not exist or not an array\r\n"),
+			output: []byte("$-1\r\n"),
 		},
 		"root not array arrlen": {
 			setup: func() {
@@ -943,7 +944,7 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:  []string{"EXISTING_KEY"},
-			output: []byte("-ERR Path '.' does not exist or not an array\r\n"),
+			output: []byte("-ERR Path '$' does not exist or not an array\r\n"),
 		},
 		"root array arrlen": {
 			setup: func() {
@@ -982,7 +983,7 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 			},
 
 			input:  []string{"EXISTING_KEY", "$.language"},
-			output: []byte("*1\r\n:2\r\n"),
+			output: []byte(":2\r\n"),
 		},
 	}
 	runEvalTests(t, tests, evalJSONARRLEN, store)
@@ -1156,7 +1157,7 @@ func testEvalJSONOBJLEN(t *testing.T, store *dstore.Store) {
 
 func BenchmarkEvalJSONOBJLEN(b *testing.B) {
 	sizes := []int{0, 10, 100, 1000, 10000, 100000} // Various sizes of JSON objects
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("JSONObjectSize_%d", size), func(b *testing.B) {
@@ -1985,12 +1986,12 @@ func testEvalDel(t *testing.T, store *dstore.Store) {
 		"nil value": {
 			setup:  func() {},
 			input:  nil,
-			output: []byte(":0\r\n"),
+			output: clientio.Encode(errors.New("ERR wrong number of arguments for 'del' command"), false),
 		},
 		"empty array": {
 			setup:  func() {},
 			input:  []string{},
-			output: []byte(":0\r\n"),
+			output: clientio.Encode(errors.New("ERR wrong number of arguments for 'del' command"), false),
 		},
 		"key does not exist": {
 			setup:  func() {},
@@ -2034,7 +2035,7 @@ func testEvalPersist(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				evalSET([]string{"existent_no_expiry", "value"}, store)
 			},
-			output: clientio.RespMinusOne,
+			output: clientio.RespZero,
 		},
 		"key exists and expiration removed": {
 			input: []string{"existent_with_expiry"},
@@ -2476,6 +2477,91 @@ func testEvalHDEL(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalHDEL, store)
 }
 
+func testEvalHSCAN(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"HSCAN with wrong number of args": {
+			input:  []string{"key"},
+			output: []byte("-ERR wrong number of arguments for 'hscan' command\r\n"),
+		},
+		"HSCAN with key does not exist": {
+			input:  []string{"NONEXISTENT_KEY", "0"},
+			output: []byte("*2\r\n$1\r\n0\r\n*0\r\n"),
+		},
+		"HSCAN with key exists but not a hash": {
+			setup: func() {
+				evalSET([]string{"string_key", "string_value"}, store)
+			},
+			input:  []string{"string_key", "0"},
+			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+		},
+		"HSCAN with valid key and cursor": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
+			},
+			input:  []string{"hash_key", "0"},
+			output: []byte("*2\r\n$1\r\n0\r\n*4\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+		},
+		"HSCAN with cursor at the end": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
+			},
+			input:  []string{"hash_key", "2"},
+			output: []byte("*2\r\n$1\r\n0\r\n*0\r\n"),
+		},
+		"HSCAN with cursor at the beginning": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
+			},
+			input:  []string{"hash_key", "0"},
+			output: []byte("*2\r\n$1\r\n0\r\n*4\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+		},
+		"HSCAN with cursor in the middle": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
+			},
+			input:  []string{"hash_key", "1"},
+			output: []byte("*2\r\n$1\r\n0\r\n*2\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+		},
+		"HSCAN with MATCH argument": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3"}, store)
+			},
+			input:  []string{"hash_key", "0", "MATCH", "field[12]*"},
+			output: []byte("*2\r\n$1\r\n0\r\n*4\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+		},
+		"HSCAN with COUNT argument": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3"}, store)
+			},
+			input:  []string{"hash_key", "0", "COUNT", "2"},
+			output: []byte("*2\r\n$1\r\n2\r\n*4\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+		},
+		"HSCAN with MATCH and COUNT arguments": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3", "field4", "value4"}, store)
+			},
+			input:  []string{"hash_key", "0", "MATCH", "field[13]*", "COUNT", "1"},
+			output: []byte("*2\r\n$1\r\n1\r\n*2\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n"),
+		},
+		"HSCAN with invalid MATCH pattern": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
+			},
+			input:  []string{"hash_key", "0", "MATCH", "[invalid"},
+			output: []byte("-ERR Invalid glob pattern: unexpected end of input\r\n"),
+		},
+		"HSCAN with invalid COUNT value": {
+			setup: func() {
+				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
+			},
+			input:  []string{"hash_key", "0", "COUNT", "invalid"},
+			output: []byte("-ERR value is not an integer or out of range\r\n"),
+		},
+	}
+
+	runEvalTests(t, tests, evalHSCAN, store)
+}
+
 func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value":   {input: nil, output: []byte("-ERR wrong number of arguments for 'pfmerge' command\r\n")},
@@ -2795,13 +2881,13 @@ func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]s
 func BenchmarkEvalMSET(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		store := dstore.NewStore(nil)
+		store := dstore.NewStore(nil, nil)
 		evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"}, store)
 	}
 }
 
 func BenchmarkEvalHSET(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	for i := 0; i < b.N; i++ {
 		evalHSET([]string{"KEY", fmt.Sprintf("FIELD_%d", i), fmt.Sprintf("VALUE_%d", i)}, store)
 	}
@@ -2893,6 +2979,92 @@ func testEvalHSET(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalHSET, store)
 }
 
+func testEvalHMSET(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"wrong number of args passed": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'hmset' command\r\n"),
+		},
+		"only key passed": {
+			setup:  func() {},
+			input:  []string{"key"},
+			output: []byte("-ERR wrong number of arguments for 'hmset' command\r\n"),
+		},
+		"only key and field_name passed": {
+			setup:  func() {},
+			input:  []string{"KEY", "field_name"},
+			output: []byte("-ERR wrong number of arguments for 'hmset' command\r\n"),
+		},
+		"key, field and value passed": {
+			setup:  func() {},
+			input:  []string{"KEY1", "field_name", "value"},
+			output: clientio.RespOK,
+		},
+		"key, field and value updated": {
+			setup:  func() {},
+			input:  []string{"KEY1", "field_name", "value_new"},
+			output: clientio.RespOK,
+		},
+		"new set of key, field and value added": {
+			setup:  func() {},
+			input:  []string{"KEY2", "field_name_new", "value_new_new"},
+			output: clientio.RespOK,
+		},
+		"apply with duplicate key, field and value names": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field := "mock_field_name"
+				newMap := make(HashMap)
+				newMap[field] = "mock_field_value"
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input:  []string{"KEY_MOCK", "mock_field_name", "mock_field_value"},
+			output: clientio.RespOK,
+		},
+		"same key -> update value, add new field and value": {
+			setup: func() {
+				key := "KEY_MOCK"
+				field := "mock_field_name"
+				mockValue := "mock_field_value"
+				newMap := make(HashMap)
+				newMap[field] = mockValue
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+
+				// Check if the map is saved correctly in the store
+				res, err := getValueFromHashMap(key, field, store)
+
+				assert.Assert(t, err == nil)
+				assert.DeepEqual(t, res, clientio.Encode(mockValue, false))
+			},
+			input: []string{
+				"KEY_MOCK",
+				"mock_field_name",
+				"mock_field_value_new",
+				"mock_field_name_new",
+				"mock_value_new",
+			},
+			output: clientio.RespOK,
+		},
+	}
+
+	runEvalTests(t, tests, evalHMSET, store)
+}
+
 func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"wrong number of args passed": {
@@ -2936,7 +3108,7 @@ func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalHKEYS(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	for i := 0; i < b.N; i++ {
 		evalHSET([]string{"KEY", fmt.Sprintf("FIELD_%d", i), fmt.Sprintf("VALUE_%d", i)}, store)
@@ -2947,7 +3119,7 @@ func BenchmarkEvalHKEYS(b *testing.B) {
 	}
 }
 func BenchmarkEvalPFCOUNT(b *testing.B) {
-	store := *dstore.NewStore(nil)
+	store := *dstore.NewStore(nil, nil)
 
 	// Helper function to create and insert HLL objects
 	createAndInsertHLL := func(key string, items []string) {
@@ -3053,7 +3225,7 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 
 		"memory nonexistant key": {
 			setup:  func() {},
-			input:  []string{"MEMORY", "NONEXISTANT_KEY"},
+			input:  []string{"MEMORY", "NONEXISTENT_KEY"},
 			output: clientio.RespZero,
 		},
 
@@ -3295,7 +3467,7 @@ func testEvalHLEN(t *testing.T, store *dstore.Store) {
 
 func BenchmarkEvalHLEN(b *testing.B) {
 	sizes := []int{0, 10, 100, 1000, 10000, 100000}
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("HashSize_%d", size), func(b *testing.B) {
@@ -3537,7 +3709,7 @@ func testEvalTYPE(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalTYPE(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	// Define different types of objects to benchmark
 	objectTypes := map[string]func(){
@@ -3728,7 +3900,7 @@ func testEvalJSONOBJKEYS(t *testing.T, store *dstore.Store) {
 
 func BenchmarkEvalJSONOBJKEYS(b *testing.B) {
 	sizes := []int{0, 10, 100, 1000, 10000, 100000} // Various sizes of JSON objects
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("JSONObjectSize_%d", size), func(b *testing.B) {
@@ -3896,7 +4068,7 @@ func testEvalGETRANGE(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalGETRANGE(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	store.Put("BENCHMARK_KEY", store.NewObj("Hello World", maxExDuration, object.ObjTypeString, object.ObjEncodingRaw))
 
 	inputs := []struct {
@@ -3921,7 +4093,7 @@ func BenchmarkEvalGETRANGE(b *testing.B) {
 }
 
 func BenchmarkEvalHSETNX(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	for i := 0; i < b.N; i++ {
 		evalHSETNX([]string{"KEY", fmt.Sprintf("FIELD_%d", i/2), fmt.Sprintf("VALUE_%d", i)}, store)
 	}
@@ -3983,7 +4155,7 @@ func testEvalHSETNX(t *testing.T, store *dstore.Store) {
 }
 
 func TestMSETConsistency(t *testing.T) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"}, store)
 
 	assert.Equal(t, "VAL", store.Get("KEY").Value)
@@ -3991,7 +4163,7 @@ func TestMSETConsistency(t *testing.T) {
 }
 
 func BenchmarkEvalHINCRBY(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	// creating new fields
 	for i := 0; i < b.N; i++ {
@@ -4152,17 +4324,17 @@ func testEvalSETEX(t *testing.T, store *dstore.Store) {
 	utils.CurrentTime = mockTime
 
 	tests := map[string]evalTestCase{
-		"nil value":                              {input: nil, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'SETEX' command")}},
-		"empty array":                            {input: []string{}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'SETEX' command")}},
-		"one value":                              {input: []string{"KEY"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'SETEX' command")}},
-		"key val pair":                           {input: []string{"KEY", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'SETEX' command")}},
-		"key exp pair":                           {input: []string{"KEY", "123456"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'SETEX' command")}},
+		"nil value":                              {input: nil, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'setex' command")}},
+		"empty array":                            {input: []string{}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'setex' command")}},
+		"one value":                              {input: []string{"KEY"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'setex' command")}},
+		"key val pair":                           {input: []string{"KEY", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'setex' command")}},
+		"key exp pair":                           {input: []string{"KEY", "123456"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'setex' command")}},
 		"key exp value pair":                     {input: []string{"KEY", "123", "VAL"}, migratedOutput: EvalResponse{Result: clientio.OK, Error: nil}},
-		"key exp value pair with extra args":     {input: []string{"KEY", "123", "VAL", " "}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'SETEX' command")}},
-		"key exp value pair with invalid exp":    {input: []string{"KEY", "0", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'SETEX' command")}},
-		"key exp value pair with exp > maxexp":   {input: []string{"KEY", "9223372036854776", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'SETEX' command")}},
+		"key exp value pair with extra args":     {input: []string{"KEY", "123", "VAL", " "}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'setex' command")}},
+		"key exp value pair with invalid exp":    {input: []string{"KEY", "0", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'setex' command")}},
+		"key exp value pair with exp > maxexp":   {input: []string{"KEY", "9223372036854776", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'setex' command")}},
 		"key exp value pair with exp > maxint64": {input: []string{"KEY", "92233720368547760000000", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")}},
-		"key exp value pair with negative exp":   {input: []string{"KEY", "-23", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'SETEX' command")}},
+		"key exp value pair with negative exp":   {input: []string{"KEY", "-23", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'setex' command")}},
 		"key exp value pair with not-int exp":    {input: []string{"KEY", "12a", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")}},
 
 		"set and get": {
@@ -4241,7 +4413,7 @@ func testEvalSETEX(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalSETEX(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -4416,7 +4588,7 @@ func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalINCRBYFLOAT(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	store.Put("key1", store.NewObj("1", maxExDuration, object.ObjTypeString, object.ObjEncodingEmbStr))
 	store.Put("key2", store.NewObj("1.2", maxExDuration, object.ObjTypeString, object.ObjEncodingEmbStr))
 
@@ -4531,7 +4703,7 @@ func testEvalBITOP(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalBITOP(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	// Setup initial data for benchmarking
 	store.Put("key1", store.NewObj(&ByteArray{data: []byte{0x01, 0x02, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
@@ -4825,7 +4997,7 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalAPPEND(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 	for i := 0; i < b.N; i++ {
 		evalAPPEND([]string{"key", fmt.Sprintf("val_%d", i)}, store)
 	}
@@ -5225,7 +5397,6 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 			input:  []string{"key", "field", "-0.1"},
 			output: clientio.Encode("1.9", false),
 		},
-		// this is failing
 		"HINCRBYFLOAT by a non-numeric increment": {
 			setup: func() {
 				key := "key"
@@ -5242,7 +5413,6 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 			input:  []string{"key", "field", "a"},
 			output: []byte("-ERR value is not an integer or a float\r\n"),
 		},
-		// this is failing
 		"HINCRBYFLOAT on a field with non-numeric value": {
 			setup: func() {
 				key := "key"
@@ -5259,7 +5429,6 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 			input:  []string{"key", "field", "0.1"},
 			output: []byte("-ERR value is not an integer or a float\r\n"),
 		},
-		// this failing
 		"HINCRBYFLOAT by a value that would turn float64 to Inf": {
 			setup: func() {
 				key := "key"
@@ -5298,7 +5467,7 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalHINCRBYFLOAT(b *testing.B) {
-	store := dstore.NewStore(nil)
+	store := dstore.NewStore(nil, nil)
 
 	// Setting initial fields with some values
 	store.Put("key1", store.NewObj(HashMap{"field1": "1.0", "field2": "1.2"}, maxExDuration, object.ObjTypeHashMap, object.ObjEncodingHashMap))
@@ -5554,4 +5723,61 @@ func testEvalSINTER(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalSINTER, store)
+}
+
+func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"append to single field": {
+			setup: func() {
+				key := "doc1"
+				value := "{\"a\":\"foo\", \"nested1\": {\"a\": \"hello\"}, \"nested2\": {\"a\": 31}}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"doc1", "$.nested1.a", "\"baz\""},
+			output: []byte("*1\r\n:8\r\n"), // Expected length after append
+		},
+		"append to non-existing key": {
+			setup: func() {
+				// No setup needed as we are testing a non-existing document.
+			},
+			input:  []string{"non_existing_doc", "$..a", "\"err\""},
+			output: []byte("-ERR Could not perform this operation on a key that doesn't exist\r\n"),
+		},
+		"append to root node": {
+			setup: func() {
+				key := "doc1"
+				value := "\"abcd\""
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"doc1", "$", "\"piu\""},
+			output: []byte("*1\r\n:7\r\n"), // Expected length after appending to "abcd"
+		},
+	}
+
+	// Run the tests
+	runEvalTests(t, tests, evalJSONSTRAPPEND, store)
+}
+
+func BenchmarkEvalJSONSTRAPPEND(b *testing.B) {
+	store := dstore.NewStore(nil, nil)
+
+	// Setup a sample JSON document
+	key := "doc1"
+	value := "{\"a\":\"foo\", \"nested1\": {\"a\": \"hello\"}, \"nested2\": {\"a\": 31}}"
+	var rootData interface{}
+	_ = sonic.Unmarshal([]byte(value), &rootData)
+	obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+	store.Put(key, obj)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		// Benchmark appending to multiple fields
+		evalJSONSTRAPPEND([]string{"doc1", "$..a", "\"bar\""}, store)
+	}
 }
