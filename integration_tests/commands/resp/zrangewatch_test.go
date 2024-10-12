@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/dicedb/dice/internal/clientio"
-	dicedb "github.com/dicedb/go-dice"
+	dicedb "github.com/dicedb/dicedb-go"
 	"gotest.tools/v3/assert"
 	"net"
 	"testing"
@@ -16,11 +16,6 @@ type zrangeWatchTestCase struct {
 	score  float64
 	val    string
 	result any
-}
-
-type ZRangeWatchSubscriber struct {
-	client *dicedb.Client
-	watch  *dicedb.ZRangeWatch
 }
 
 const (
@@ -87,48 +82,14 @@ func TestZRANGEWATCH(t *testing.T) {
 	}
 }
 
-func TestZRANGEWATCHWithSDK(t *testing.T) {
-	publisher := getLocalSdk()
-	subscribers := []WatchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
-
-	publisher.Del(context.Background(), zrangeWatchKey)
-
-	channels := make([]<-chan *dicedb.WatchNotification, len(subscribers))
-	for i, subscriber := range subscribers {
-		watch := subscriber.client.WatchCommand(context.Background())
-		subscribers[i].watch = watch
-		assert.Assert(t, watch != nil)
-		firstMsg, err := watch.Watch(context.Background(), "ZRANGE", zrangeWatchKey, "0", "-1", "REV", "WITHSCORES")
-		assert.NilError(t, err)
-		assert.Equal(t, firstMsg.Command, "ZRANGE.WATCH")
-		channels[i] = watch.Channel()
-	}
-
-	for _, tc := range zrangeWatchTestCases {
-		err := publisher.ZAdd(context.Background(), tc.key, dicedb.Z{
-			Score:  tc.score,
-			Member: tc.val,
-		}).Err()
-		assert.NilError(t, err)
-
-		for _, channel := range channels {
-			v := <-channel
-
-			assert.Equal(t, "ZRANGE", v.Command)         // command
-			assert.Equal(t, "2491069200", v.Fingerprint) // Fingerprint
-			assert.DeepEqual(t, tc.result, v.Data)       // data
-		}
-	}
-}
-
-type zrangeWatchTestCaseZ struct {
+type zrangeWatchSDKTestCase struct {
 	key    string
 	score  float64
 	val    string
 	result []dicedb.Z
 }
 
-var zrangeWatch2TestCases = []zrangeWatchTestCaseZ{
+var zrangeWatchSDKTestCases = []zrangeWatchSDKTestCase{
 	{zrangeWatchKey, 1.0, "member1", []dicedb.Z{
 		{Score: 1, Member: "member1"},
 	}},
@@ -149,24 +110,57 @@ var zrangeWatch2TestCases = []zrangeWatchTestCaseZ{
 	}},
 }
 
-func TestZRANGEWATCHWithSDK2(t *testing.T) {
+func TestZRANGEWATCHWithSDK(t *testing.T) {
 	publisher := getLocalSdk()
-	subscribers := []ZRangeWatchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
+	subscribers := []WatchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
 
 	publisher.Del(context.Background(), zrangeWatchKey)
 
-	channels := make([]<-chan *dicedb.ZRangeWatchNotification, len(subscribers))
-	for i := range subscribers {
-		zRangeWatcher, err := subscribers[i].client.ZRangeWatcher(context.Background())
-		assert.NilError(t, err)
-		subscribers[i].watch = zRangeWatcher
-		firstMsg, err := zRangeWatcher.Watch(context.Background(), zrangeWatchKey, "0", "-1", "REV", "WITHSCORES")
+	channels := make([]<-chan *dicedb.WatchResult, len(subscribers))
+	for i, subscriber := range subscribers {
+		watch := subscriber.client.WatchConn(context.Background())
+		subscribers[i].watch = watch
+		assert.Assert(t, watch != nil)
+		firstMsg, err := watch.Watch(context.Background(), "ZRANGE", zrangeWatchKey, "0", "-1", "REV", "WITHSCORES")
 		assert.NilError(t, err)
 		assert.Equal(t, firstMsg.Command, "ZRANGE.WATCH")
-		channels[i] = zRangeWatcher.Channel()
+		channels[i] = watch.Channel()
 	}
 
-	for _, tc := range zrangeWatch2TestCases {
+	for _, tc := range zrangeWatchSDKTestCases {
+		err := publisher.ZAdd(context.Background(), tc.key, dicedb.Z{
+			Score:  tc.score,
+			Member: tc.val,
+		}).Err()
+		assert.NilError(t, err)
+
+		for _, channel := range channels {
+			v := <-channel
+
+			assert.Equal(t, "ZRANGE", v.Command)         // command
+			assert.Equal(t, "2491069200", v.Fingerprint) // Fingerprint
+			assert.DeepEqual(t, tc.result, v.Data)       // data
+		}
+	}
+}
+
+func TestZRANGEWATCHWithSDK2(t *testing.T) {
+	publisher := getLocalSdk()
+	subscribers := []WatchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
+
+	publisher.Del(context.Background(), zrangeWatchKey)
+
+	channels := make([]<-chan *dicedb.WatchResult, len(subscribers))
+	for i := range subscribers {
+		conn := subscribers[i].client.WatchConn(context.Background())
+		subscribers[i].watch = conn
+		firstMsg, err := conn.ZRangeWatch(context.Background(), zrangeWatchKey, "0", "-1", "REV", "WITHSCORES")
+		assert.NilError(t, err)
+		assert.Equal(t, firstMsg.Command, "ZRANGE.WATCH")
+		channels[i] = conn.Channel()
+	}
+
+	for _, tc := range zrangeWatchSDKTestCases {
 		err := publisher.ZAdd(context.Background(), tc.key, dicedb.Z{
 			Score:  tc.score,
 			Member: tc.val,

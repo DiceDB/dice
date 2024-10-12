@@ -12,7 +12,6 @@ require (
 	github.com/dgryski/go-metro v0.0.0-20211217172704-adc40b04c140 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
@@ -43,10 +42,11 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/cockroachdb/swiss v0.0.0-20240612210725-f4de07ae6964
 	github.com/dgryski/go-farm v0.0.0-20240924180020-3414d57e47da
-	github.com/dicedb/go-dice v0.0.0-20241010141515-5558caec8ae4
+	github.com/dicedb/dicedb-go v0.0.0-20241011194507-ad62a2dfc08e
 	github.com/gobwas/glob v0.2.3
 	github.com/google/btree v1.1.3
 	github.com/google/go-cmp v0.6.0
+	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/mmcloughlin/geohash v0.10.0
 	github.com/ohler55/ojg v1.24.0
@@ -58,8 +58,4 @@ require (
 	github.com/twmb/murmur3 v1.1.8
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
 	golang.org/x/crypto v0.27.0
-)
-
-replace (
-	github.com/dicedb/go-dice => ../dicedb-go
 )
