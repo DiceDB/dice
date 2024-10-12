@@ -10,7 +10,7 @@ The `COMMAND COUNT` command retrieves the total number of commands supported by 
 
 ## Syntax
 
-```
+```bash
 COMMAND COUNT
 ```
 
@@ -21,11 +21,10 @@ This command does not accept any parameters.
 ## Return values
 
 - **Integer**: The command returns an integer representing the total number of commands available in the DiceDB server.
-  - For example, if there are 87 commands, the return value will be `(integer) 87`.
 
 ### Output format
 
-```
+```bash
 (integer) number_of_commands
 ```
 
@@ -35,12 +34,23 @@ When executed, the `COMMAND COUNT` command scans the command registry of the Dic
 
 ## Errors
 
-- **Error: unknown sucommand**: This error may occur if the subcommand is misspelled or not recognized by the server.
-- `(error) ERR unknown subcommand 'sucommand-name'. Try COMMAND HELP.`
+- **Error: Arity Error**: Returned when invalid number of arguments provided.
+  ```bash
+  (error) ERR wrong number of arguments for 'command|count' command
+  ```
 
-## Example
+## Examples
+
+### Retrieve the number of commands supported by the DiceDB server
 
 ```bash
 127.0.0.1:7379> COMMAND COUNT
 (integer) 117
+```
+
+### Arity Error
+
+```bash
+127.0.0.1:7379> COMMAND COUNT EXTRA ARGS
+(error) ERR wrong number of arguments for 'command|count' command
 ```

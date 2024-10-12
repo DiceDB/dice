@@ -9,7 +9,7 @@ The `COMMAND GETKEYS` command is used to extract the keys from a given command a
 
 ## Syntax
 
-```
+```bash
 COMMAND GETKEYS command arg [arg ...]
 ```
 
@@ -22,8 +22,9 @@ COMMAND GETKEYS command arg [arg ...]
 
 - **Array**: Returns an array of keys found in the provided command and its arguments.
   - For example, if the command is `MSET key1 value1 key2 value2`, the return value will be:
-    ```
-    ["key1", "key2"]
+    ```bash
+    1) "key1"
+    2) "key2"
     ```
 
 ## Behavior
@@ -32,38 +33,66 @@ The `COMMAND GETKEYS` command parses the provided command and its arguments to e
 
 ## Errors
 
-- **Error: Invalid number of arguments**: Returned when the number of arguments provided is insufficient or incorrect.
-  - `(error) ERR invalid number of arguments specified for command`
+- **Error: Arity Error for `COMMAND GETKEYS`**: Occurs when an incorrect number of arguments is provided for the `COMMAND GETKEYS` command.
+  ```bash
+    (error) ERR wrong number of arguments for 'command|getkeys' command
+  ```
+- **Error: Arity Error**: Occurs when invalid number of arguments provided for command.
+  ```bash
+    (error) ERR invalid number of arguments specified for command
+  ```
 - **Error: Invalid command specified**: If the provided command is not a recognized DiceDB command.
-  - `(error) ERR invalid command specified`
+  ```bash
+    (error) ERR invalid command specified
+  ```
+- **Error: No keys arguments**: If the provided command does not accept any key arguments (ex. `FLUSHDB`).
+  ```bash
+    (error) ERR the command has no key arguments
+  ```
 
 ## Examples
 
-### Example 1: Extracting keys from MSET command
+### Extracting keys from MSET command
 
 ```bash
 127.0.0.1:7379> COMMAND GETKEYS MSET key1 value1 key2 value2
-["key1", "key2"]
+1) "key1"
+2) "key2"
 ```
 
-### Example 2: Extracting keys from DEL command
+### Extracting keys from DEL command
 
 ```bash
 127.0.0.1:7379> COMMAND GETKEYS DEL key1 key2 key3
-["key1", "key2", "key3"]
-
+1) "key1"
+2) "key2"
+3) "key3"
 ```
 
-### Example 3: Error due to insufficient arguments
+### Arity error due to incorrect number of arguments for `COMMAND GETKEYS`
+
+```bash
+127.0.0.1:7379> COMMAND GETKEYS
+(error) ERR wrong number of arguments for 'command|getkeys' command
+```
+
+### Arity error due to invalid number of arguments for command
 
 ```bash
 127.0.0.1:7379> COMMAND GETKEYS MSET key1
 (error) ERR invalid number of arguments specified for command
 ```
 
-### Example 4: Error when speficied command is not supported
+### Error when specified command is not supported.
 
 ```bash
-127.0.0.1:7379> COMMAND GETKEYSs MSET key1
+127.0.0.1:7379> COMMAND GETKEYS UNKNOWNCOMMAND key1
 (error) ERR invalid command specified
+```
+
+### Error when specified command does not accept any key arguments
+
+```bash
+127.0.0.1:7379> COMMAND GETKEYS FLUSHDB
+(error) ERR The command has no key arguments
 ```

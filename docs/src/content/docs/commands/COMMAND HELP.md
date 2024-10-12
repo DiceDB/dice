@@ -9,7 +9,7 @@ The `COMMAND HELP` command provides details on all the available subcommands for
 
 ## Syntax
 
-```
+```bash
 COMMAND HELP
 ```
 
@@ -27,23 +27,35 @@ The `COMMAND HELP` command outputs help text that lists all the available subcom
 
 ## Errors
 
-- No specific errors are thrown by `COMMAND HELP` as it does not take any arguments.
+- **Error: Arity Error**: Returned when invalid number of arguments provided.
+  ```bash
+  (error) ERR wrong number of arguments for 'command|help' command
+  ```
 
-## Example
+## Examples
+
+### Print help
 
 ```bash
 127.0.0.1:7379> COMMAND HELP
  1) "COMMAND <subcommand> [<arg> [value] [opt] ...]. Subcommands are:"
  2) "(no subcommand)"
- 3) "    Return details about all Dice commands."
+ 3) "     Return details about all DiceDB commands."
  4) "COUNT"
- 5) "    Return the total number of commands in this Dice server."
+ 5) "     Return the total number of commands in this DiceDB server."
  6) "LIST"
- 7) "     Return a list of all commands in this Dice server."
+ 7) "     Return a list of all commands in this DiceDB server."
  8) "INFO [<command-name> ...]"
- 9) "    Returns details about the specified DiceDB commands. If no command names are given, documentation details for all commands are returned"
+ 9) "     Returns details about the specified DiceDB commands. If no command names are given, documentation details for all commands are returned"
  10) "GETKEYS <full-command>"
- 11) "     Return the keys from a full Dice command."
+ 11) "     Return the keys from a full DiceDB command."
  12) "HELP"
  13) "     Print this help."
+```
+
+### Arity Error
+
+```bash
+127.0.0.1:7379> COMMAND HELP EXTRA ARGS
+(error) ERR wrong number of arguments for 'command|help' command
 ```

@@ -9,7 +9,7 @@ The `COMMAND INFO` command is used to retrieve detailed information about one or
 
 ## Syntax
 
-```
+```bash
 COMMAND INFO command-name [command-name ...]
 ```
 
@@ -69,32 +69,24 @@ The structure of the returned data is as follows:
 
 ## Errors
 
-- **Error: unknown subcommand**: This error may occur if the subcommand is misspelled or not recognized by the server.
+No error is raised, as this command supports a variable number of arguments.
 
-  - `(error) ERR unknown subcommand 'subcommand-name'. Try COMMAND HELP.`
+## Examples
 
-## Example Usage
-
-### Basic Usage : Get command info for `SET` and `MGET`
+### Get command info for `SET` and `MGET`
 
 ```bash
 127.0.0.1:7379> COMMAND INFO SET MGET
-[
-  [
-    "SET",
-    -3,
-    1,
-    0,
-    0
-  ],
-  [
-    "MGET",
-    -2,
-    1,
-    -1,
-    1
-  ]
-]
+1) 1) "SET"
+   2) (integer) -3
+   3) (integer) 1
+   4) (integer) 0
+   5) (integer) 0
+2) 1) "MGET"
+   2) (integer) -2
+   3) (integer) 1
+   4) (integer) -1
+   5) (integer) 1
 ```
 
 ### Usage Example when mixture of valid and invalid commands
@@ -103,16 +95,12 @@ In this example, we request information for two commands: one valid (`SET`) and 
 
 ```bash
 127.0.0.1:7379> COMMAND INFO SET UNKNOWNCOMMAND
-[
-  [
-    "SET",
-    -3,
-    1,
-    0,
-    0
-  ],
-  (nil)
-]
+1) 1) "SET"
+   2) (integer) -3
+   3) (integer) 1
+   4) (integer) 0
+   5) (integer) 0
+2) (nil)
 ```
 
 ### When the command name passed is incorrect or not supported
