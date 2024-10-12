@@ -2607,17 +2607,53 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 			input:  []string{"NONEXISTENT_KEY"},
 			output: []byte("$-1\r\n"),
 		},
-		"root not string strlen": {
+		"root not string strlen(object)": {
 			setup: func() {
 				key := "EXISTING_KEY"
-				value := "{\"age\":13,\"name\":\"a\"}"
+				value := "{\"name\":\"Bhima\",\"age\":10}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
 			input:  []string{"EXISTING_KEY"},
-			output: []byte("-ERR Path '$' does not exist or not an string\r\n"),
+			output: []byte("-WRONGTYPE wrong type of path value - expected string but found object\r\n"),
+		},
+		"root not string strlen(number)": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "10"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY"},
+			output: []byte("-WRONGTYPE wrong type of path value - expected string but found number\r\n"),
+		},
+		"root not string strlen(array)": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "[\"age\", \"name\"]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY"},
+			output: []byte("-WRONGTYPE wrong type of path value - expected string but found array\r\n"),
+		},
+		"root not string strlen(boolean)": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "true"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY"},
+			output: []byte("-WRONGTYPE wrong type of path value - expected string but found boolean\r\n"),
 		},
 		"root array strlen": {
 			setup: func() {
