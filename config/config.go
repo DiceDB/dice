@@ -51,7 +51,9 @@ var (
 )
 
 type Config struct {
-	Server struct {
+	InstanceID string `mapstructure:"instance_id"`
+	Server     struct {
+		Version                string        `mapstructure:"version"`
 		Addr                   string        `mapstructure:"addr"`
 		Port                   int           `mapstructure:"port"`
 		KeepAlive              int32         `mapstructure:"keepalive"`
@@ -87,6 +89,7 @@ type Config struct {
 // Default configurations for internal use
 var baseConfig = Config{
 	Server: struct {
+		Version                string        `mapstructure:"version"`
 		Addr                   string        `mapstructure:"addr"`
 		Port                   int           `mapstructure:"port"`
 		KeepAlive              int32         `mapstructure:"keepalive"`
