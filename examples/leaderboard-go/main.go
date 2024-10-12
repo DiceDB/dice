@@ -4,14 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/dicedb/dicedb-go"
 	"log"
 	"math/rand"
 	"net/http"
 	"os"
 	"sync"
 	"time"
-
-	dicedb "github.com/dicedb/go-dice"
 
 	"github.com/gorilla/websocket"
 )

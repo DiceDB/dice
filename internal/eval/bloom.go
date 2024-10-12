@@ -141,7 +141,7 @@ func (b *Bloom) info(name string) string {
 // add adds a new entry for `value` in the filter. It hashes the given
 // value and sets the bit of the underlying bitset. Returns "-1" in
 // case of errors, "0" if all the bits were already set and "1" if
-// atleast 1 new bit was set.
+// at least 1 new bit was set.
 func (b *Bloom) add(value string) ([]byte, error) {
 	// We're sure that empty values will be handled upper functions itself.
 	// This is just a property check for the bloom struct.

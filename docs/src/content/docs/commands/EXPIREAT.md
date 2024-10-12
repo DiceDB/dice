@@ -160,7 +160,7 @@ OK
 
 - The `EXPIREAT` command is useful when you need to synchronize the expiration of keys across multiple DiceDB instances or when you need to set an expiration time based on an external event that provides a Unix timestamp.
 - The timestamp should be in seconds. If you have a timestamp in milliseconds, you need to convert it to seconds before using it with `EXPIREAT`.
-- There is an arbritrary limit to the size of the `unix-time-seconds` of [9223372036854775](https://github.com/DiceDB/dice/blob/b74dc8ffd5e518eaa9b82020d2b25a592c6472d4/internal/eval/eval.go#L69).
+- There is an arbitrary limit to the size of the `unix-time-seconds` of [9223372036854775](https://github.com/DiceDB/dice/blob/b74dc8ffd5e518eaa9b82020d2b25a592c6472d4/internal/eval/eval.go#L69).
 
 ## Related commands
 

@@ -3176,7 +3176,7 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 			output: []byte("-ERR wrong number of arguments for 'json.debug' command\r\n"),
 		},
 
-		"memory nonexistant key": {
+		"memory nonexistent key": {
 			setup:  func() {},
 			input:  []string{"MEMORY", "NONEXISTENT_KEY"},
 			output: clientio.RespZero,
@@ -3576,7 +3576,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"MOCK_KEY", "$", "2"},
 			output: []byte(":0\r\n"),
-			validator: func(ouput []byte) {
+			validator: func(output []byte) {
 				key := "MOCK_KEY"
 				obj := store.Get(key)
 				want := []interface{}{float64(0), float64(1), float64(3), float64(4), float64(5)}
@@ -3595,7 +3595,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"MOCK_KEY", "$.b", "2"},
 			output: []byte("*1\r\n:2\r\n"),
-			validator: func(ouput []byte) {
+			validator: func(output []byte) {
 				key := "MOCK_KEY"
 				path := "$.b"
 				obj := store.Get(key)
@@ -4194,7 +4194,7 @@ func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
 			input:  []string{"new_key", "new_field", "10"},
 			output: []byte("-ERR hash value is not an integer\r\n"),
 		},
-		"update the exisiting field which has spaces": {
+		"update the existing field which has spaces": {
 			setup: func() {
 				key := "key"
 				field := "field"
@@ -4216,7 +4216,7 @@ func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
 			input:  []string{"key", "field", "-10"},
 			output: clientio.Encode(int64(-10), false),
 		},
-		"update the exisiting field with negative value": {
+		"update the existing field with negative value": {
 			setup: func() {
 				key := "key"
 				field := "field"
