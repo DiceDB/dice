@@ -12,7 +12,7 @@ import (
 // TODO: Make it efficient by doing thorough sampling
 func evictFirst(store *Store) {
 	store.store.All(func(k string, obj *object.Obj) bool {
-		store.delByPtr(k)
+		store.delByPtr(k, WithDelCmd(Del))
 		// stop after iterating over the first element
 		return false
 	})
@@ -25,7 +25,7 @@ func evictAllkeysRandom(store *Store) {
 	// Iteration of Golang dictionary can be considered as a random
 	// because it depends on the hash of the inserted key
 	store.store.All(func(k string, obj *object.Obj) bool {
-		store.delByPtr(k)
+		store.delByPtr(k, WithDelCmd(Del))
 		evictCount--
 		// continue if evictCount > 0
 		return evictCount > 0
@@ -106,7 +106,7 @@ func PopulateEvictionPool(store *Store) {
 }
 
 // EvictAllkeysLRUOrLFU evicts keys based on LRU or LFU policy.
-// TODO: no need to populate everytime. should populate only when the number of keys to evict is less than what we have in the pool
+// TODO: no need to populate every time. should populate only when the number of keys to evict is less than what we have in the pool
 func EvictAllkeysLRUOrLFU(store *Store) {
 	PopulateEvictionPool(store)
 	evictCount := int16(config.DiceConfig.Server.EvictionRatio * float64(config.DiceConfig.Server.KeysLimit))
@@ -116,7 +116,7 @@ func EvictAllkeysLRUOrLFU(store *Store) {
 		if item == nil {
 			return
 		}
-		store.DelByPtr(item.keyPtr)
+		store.DelByPtr(item.keyPtr, WithDelCmd(Del))
 	}
 }
 

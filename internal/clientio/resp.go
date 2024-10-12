@@ -58,7 +58,7 @@ func readStringUntilSr(buf *bytes.Buffer) (string, error) {
 	if err != nil {
 		return utils.EmptyStr, err
 	}
-	// increamenting to skip `\n`
+	// incrementing to skip `\n`
 	if _, err := buf.ReadByte(); err != nil {
 		return utils.EmptyStr, err
 	}
@@ -82,7 +82,7 @@ func readError(buf *bytes.Buffer) (string, error) {
 }
 
 // reads a RESP encoded integer from data and returns
-// the intger value and the error
+// the integer value and the error
 // the function internally manipulates the buffer pointer
 // and keepts it at a point where the subsequent value can be read from.
 func readInt64(buf *bytes.Buffer) (int64, error) {

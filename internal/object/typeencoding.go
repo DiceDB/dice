@@ -30,10 +30,10 @@ func AssertEncoding(te, e uint8) error {
 
 func AssertTypeAndEncoding(typeEncoding, expectedType, expectedEncoding uint8) []byte {
 	if err := AssertType(typeEncoding, expectedType); err != nil {
-		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
+		return diceerrors.NewErrWithMessage(diceerrors.WrongKeyTypeErr)
 	}
 	if err := AssertEncoding(typeEncoding, expectedEncoding); err != nil {
-		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
+		return diceerrors.NewErrWithMessage(diceerrors.WrongKeyTypeErr)
 	}
 	return nil
 }
