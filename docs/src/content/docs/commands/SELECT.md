@@ -3,7 +3,7 @@ title: SELECT
 description: Documentation for the DiceDB command SELECT
 ---
 
-As of today, DiceDB no longer supports multiple databases. Therefore, the `SELECT` command is a dummy method and does not affect the database. It remains as a placeholder.
+As of today, DiceDB does not support multiple databases. Therefore, the `SELECT` command is currently a dummy method and does not affect the database. It remains as a placeholder.
 
 The `SELECT` command is used to switch the currently selected database for the current connection in DiceDB. By default, DiceDB starts with database 0, but it supports multiple databases, which can be accessed by using the `SELECT` command. This command is essential for managing data across different logical databases within a single DiceDB instance.
 
