@@ -8,7 +8,7 @@ import (
 
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/server/utils"
-	testifyAssert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSimpleStringDecode(t *testing.T) {
@@ -194,7 +194,7 @@ func TestBoolean(t *testing.T) {
 
 	for _, v := range tests {
 		ev := clientio.Encode(v.input, false)
-		testifyAssert.Equal(t, ev, v.output)
+		assert.Equal(t, ev, v.output)
 	}
 }
 
@@ -215,6 +215,6 @@ func TestInteger(t *testing.T) {
 
 	for _, v := range tests {
 		ev := clientio.Encode(v.input, false)
-		testifyAssert.Equal(t, ev, v.output)
+		assert.Equal(t, ev, v.output)
 	}
 }

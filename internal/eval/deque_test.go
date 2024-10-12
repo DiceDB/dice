@@ -2,13 +2,14 @@ package eval_test
 
 import (
 	"fmt"
-	"github.com/dicedb/dice/internal/eval"
 	"math/rand"
 	"strconv"
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/dicedb/dice/internal/eval"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var deqRandGenerator *rand.Rand

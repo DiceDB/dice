@@ -11,7 +11,7 @@ import (
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBloomFilter(t *testing.T) {
@@ -298,14 +298,14 @@ func TestBloomDeepCopy(t *testing.T) {
 	copyBloom := original.DeepCopy()
 
 	// Verify that the copy is not nil
-	assert.Assert(t, copyBloom != nil, "DeepCopy returned nil, expected a valid copy")
+	assert.True(t, copyBloom != nil, "DeepCopy returned nil, expected a valid copy")
 
-	assert.Assert(t, original.opts.indexes[0] == copyBloom.opts.indexes[0], "Original and copy indexes values should be same")
-	assert.Assert(t, original.bitset[0] == copyBloom.bitset[0], "Original and copy bitset values should be same")
+	assert.True(t, original.opts.indexes[0] == copyBloom.opts.indexes[0], "Original and copy indexes values should be same")
+	assert.True(t, original.bitset[0] == copyBloom.bitset[0], "Original and copy bitset values should be same")
 
 	// Verify that changes to the copy do not affect the original
 	copyBloom.opts.indexes[0] = 10
 	copyBloom.bitset[0] = 0xFF
-	assert.Assert(t, original.opts.indexes[0] != copyBloom.opts.indexes[0], "Original and copy indexes should not be linked")
-	assert.Assert(t, original.bitset[0] != copyBloom.bitset[0], "Original and copy bitset should not be linked")
+	assert.True(t, original.opts.indexes[0] != copyBloom.opts.indexes[0], "Original and copy indexes should not be linked")
+	assert.True(t, original.bitset[0] != copyBloom.bitset[0], "Original and copy bitset should not be linked")
 }
