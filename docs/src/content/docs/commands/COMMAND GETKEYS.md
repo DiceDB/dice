@@ -33,24 +33,26 @@ The `COMMAND GETKEYS` command parses the provided command and its arguments to e
 
 ## Errors
 
-- **Error: Arity Error for `COMMAND GETKEYS`**: Occurs when an incorrect number of arguments is provided for the `COMMAND GETKEYS` command.
-  ```bash
-    (error) ERR wrong number of arguments for 'command|getkeys' command
-  ```
-- **Error: Arity Error**: Occurs when invalid number of arguments provided for command.
-  ```bash
-    (error) ERR invalid number of arguments specified for command
-  ```
-- **Error: Invalid command specified**: If the provided command is not a recognized DiceDB command.
-  ```bash
-    (error) ERR invalid command specified
-  ```
-- **Error: No keys arguments**: If the provided command does not accept any key arguments (ex. `FLUSHDB`).
-  ```bash
-    (error) ERR the command has no key arguments
-  ```
+1.  `Arity Error for COMMAND GETKEYS`
 
-## Examples
+    - Error Message: `(error) ERR wrong number of arguments for 'command|getkeys' command`
+    - Occurs when an incorrect number of arguments is provided for the `COMMAND GETKEYS` command.
+
+2.  `Arity Error for command`
+
+    - Error Message: `(error) ERR invalid number of arguments specified for command`
+    - Occurs when invalid number of arguments provided for command.
+
+3.  `Invalid command specified`
+
+    - Error Message: `(error) ERR invalid command specified`
+    - Occurs when the provided command is not a recognized DiceDB command.
+
+4.  `No keys arguments`
+    - Error Message: `(error) ERR the command has no key arguments`
+    - Occurs when the provided command does not accept any key arguments (ex. `FLUSHDB`).
+
+## Example Usage
 
 ### Extracting keys from MSET command
 
@@ -69,28 +71,36 @@ The `COMMAND GETKEYS` command parses the provided command and its arguments to e
 3) "key3"
 ```
 
-### Arity error due to incorrect number of arguments for `COMMAND GETKEYS`
+### Error: Arity Error for `COMMAND GETKEYS`
+
+An arity error is thrown when the incorrect number of arguments is provided to the `COMMAND GETKEYS` command.
 
 ```bash
 127.0.0.1:7379> COMMAND GETKEYS
 (error) ERR wrong number of arguments for 'command|getkeys' command
 ```
 
-### Arity error due to invalid number of arguments for command
+### Error: Arity Error for command name passed to `COMMAND GETKEYS`
+
+An arity error is thrown when the incorrect number of arguments is provided to the command passed to `COMMAND GETKEYS` command.
 
 ```bash
 127.0.0.1:7379> COMMAND GETKEYS MSET key1
 (error) ERR invalid number of arguments specified for command
 ```
 
-### Error when specified command is not supported.
+### Error: Command Not Supported
+
+An error is thrown when the specified command is not supported or recognized by the DiceDB server.
 
 ```bash
 127.0.0.1:7379> COMMAND GETKEYS UNKNOWNCOMMAND key1
 (error) ERR invalid command specified
 ```
 
-### Error when specified command does not accept any key arguments
+### Error: Command Does Not Accept Key Arguments
+
+An error is thrown when attempting to retrieve keys for a command that does not accept any key arguments.
 
 ```bash
 127.0.0.1:7379> COMMAND GETKEYS FLUSHDB

@@ -27,12 +27,11 @@ When executed, the `COMMAND LIST` command scans the DiceDB server's command regi
 
 ## Errors
 
-- **Error: Arity Error**: Returned when invalid number of arguments provided.
-  ```bash
-    (error) ERR wrong number of arguments for 'command|list' command
-  ```
+1.  Arity Error
+    - Error Message: `(error) ERR wrong number of arguments for 'command|list' command`
+    - Occurs when invalid number of arguments provided for `COMMAND LIST` command.
 
-## Examples
+## Example Usage
 
 ### Retrieve the list of available commands on the DiceDB server
 
@@ -49,6 +48,8 @@ When executed, the `COMMAND LIST` command scans the DiceDB server's command regi
 ```
 
 ### Arity Error
+
+An error is thrown when extra arguments are passed to the `COMMAND LIST` command, as it does not accept any additional arguments.
 
 ```bash
 127.0.0.1:7379> COMMAND LIST EXTRA ARGS

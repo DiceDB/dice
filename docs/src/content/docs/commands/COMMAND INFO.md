@@ -71,7 +71,7 @@ The structure of the returned data is as follows:
 
 No error is raised, as this command supports a variable number of arguments.
 
-## Examples
+## Example Usage
 
 ### Get command info for `SET` and `MGET`
 
@@ -103,7 +103,9 @@ In this example, we request information for two commands: one valid (`SET`) and 
 2) (nil)
 ```
 
-### When the command name passed is incorrect or not supported
+### Incorrect Usage
+
+An error is thrown when the command name passed to the `COMMAND INFO` command is incorrect or not supported in DiceDB.
 
 ```bash
 127.0.0.1:7379> COMMAND INFO UNKNOWNCOMMAND

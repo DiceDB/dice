@@ -5,9 +5,9 @@ description: Documentation for the DiceDB command COMMAND
 
 The `COMMAND` command in DiceDB is a powerful introspection tool that provides detailed information about all the DiceDB commands supported by the server. This command can be used to retrieve metadata about commands, such as their arity, flags, first key, last key, and key step. It is particularly useful for clients and developers who need to understand the capabilities and constraints of the DiceDB commands available in their environment.
 
-**_The COMMAND command can be used in multiple forms, supporting various subcommands, each with its own set of parameters. However, the default implementation, which does not require any subcommand, is as follows._**
+The `COMMAND` command can be used in multiple forms, supporting various subcommands, each with its own set of parameters. However, the default implementation, which does not require any subcommand, is as follows.
 
-## Syntex
+## Syntax
 
 ```bash
 COMMAND
@@ -21,7 +21,7 @@ This command does not accept any parameters.
 
 When no subcommand is provided, this command functions as the default implementation of the `COMMAND INFO` command in the absence of a specified command name. It iterates through the list of registered commands and subcommands, returning an array containing detailed metadata for each command.
 
-### Return Value
+## Return values
 
 Returns an array, where each element is a nested array containing the following details for each command
 
@@ -33,8 +33,6 @@ Returns an array, where each element is a nested array containing the following 
 - **First Key**: The position of the first key in the argument list (0-based index).
 - **Last Key**: The position of the last key in the argument list.
 - **Key Step**: The step between keys in the argument list, useful for commands with multiple keys.
-
-### Detailed Return Value Description
 
 ```bash
 127.0.0.1:7379> COMMAND
@@ -55,7 +53,7 @@ Returns an array, where each element is a nested array containing the following 
 
 No error is thrown in the default implementation of the `COMMAND` command when no subcommand is provided.
 
-## Examples
+## Example Usage
 
 ### Retrieve Detailed Information for Each Command Supported by the DiceDB Server
 
@@ -95,7 +93,7 @@ No error is thrown in the default implementation of the `COMMAND` command when n
 COMMAND <subcommand>
 ```
 
-### Pamaters
+### Parameters
 
 - **subcommand**: Optional. Available subcommands include:
   - `COUNT` : Returns the total number of commands in the DiceDB server.
@@ -108,14 +106,15 @@ COMMAND <subcommand>
 
 ### Errors
 
-- **Error: unknown sucommand**: This error may occur if the subcommand is misspelled or not recognized by the server.
-  ```bash
-  (error) ERR unknown subcommand 'sucommand-name'. Try COMMAND HELP.
-  ```
+1.  `Unknown sucommand`
+    - Error Message: ` (error) ERR unknown subcommand 'sucommand-name'. Try COMMAND HELP.`
+    - This error may occur if the subcommand is misspelled or not recognized by the DiceDB server.
 
-### Examples
+### Example Usage
 
-#### When the subcommand name passed is incorrect or not supported
+#### Invalid usage
+
+An error is thrown when an incorrect or unsupported subcommand name is provided.
 
 ```bash
 127.0.0.1:7379> COMMAND UNKNOWNSUBCOMMAND

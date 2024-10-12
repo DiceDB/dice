@@ -17,7 +17,7 @@ COMMAND HELP
 
 This command does not accept any parameters.
 
-## Return Values
+## Return values
 
 Returns an array of help text entries. Each entry describes a subcommand, its syntax, and its purpose.
 
@@ -27,12 +27,11 @@ The `COMMAND HELP` command outputs help text that lists all the available subcom
 
 ## Errors
 
-- **Error: Arity Error**: Returned when invalid number of arguments provided.
-  ```bash
-  (error) ERR wrong number of arguments for 'command|help' command
-  ```
+1.  `Arity Error`
+    - Error Message: `(error) ERR wrong number of arguments for 'command|help' command`
+    - Occurs when invalid number of arguments provided to `COMMAND HELP` command.
 
-## Examples
+## Example Usage
 
 ### Print help
 
@@ -54,6 +53,8 @@ The `COMMAND HELP` command outputs help text that lists all the available subcom
 ```
 
 ### Arity Error
+
+An error is thrown when extra arguments are passed to the `COMMAND HELP` command, as it does not accept any additional arguments.
 
 ```bash
 127.0.0.1:7379> COMMAND HELP EXTRA ARGS

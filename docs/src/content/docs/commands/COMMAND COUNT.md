@@ -22,24 +22,17 @@ This command does not accept any parameters.
 
 - **Integer**: The command returns an integer representing the total number of commands available in the DiceDB server.
 
-### Output format
-
-```bash
-(integer) number_of_commands
-```
-
 ## Behavior
 
 When executed, the `COMMAND COUNT` command scans the command registry of the DiceDB server and counts the number of registered commands. This allows users to determine the current command count quickly. The operation is efficient and performed in constant time, as the server maintains this information internally.
 
 ## Errors
 
-- **Error: Arity Error**: Returned when invalid number of arguments provided.
-  ```bash
-  (error) ERR wrong number of arguments for 'command|count' command
-  ```
+1.  `Arity Error`
+    - Error Message: `(error) ERR wrong number of arguments for 'command|count' command`
+    - Occurs when invalid number of arguments provided to `COMMAND COUNT` command.
 
-## Examples
+## Example Usage
 
 ### Retrieve the number of commands supported by the DiceDB server
 
@@ -49,6 +42,8 @@ When executed, the `COMMAND COUNT` command scans the command registry of the Dic
 ```
 
 ### Arity Error
+
+An error is thrown when extra arguments are passed to the `COMMAND COUNT` command, as it does not accept any additional arguments.
 
 ```bash
 127.0.0.1:7379> COMMAND COUNT EXTRA ARGS
