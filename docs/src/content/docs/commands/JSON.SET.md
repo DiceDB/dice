@@ -7,21 +7,28 @@ The `JSON.SET` command in DiceDB is used to set the JSON value at a specified ke
 
 ## Syntax
 
-```plaintext
+```bash
 JSON.SET <key> <path> <json> [NX | XX]
 ```
 
 ## Parameters
 
-- `key`: The key under which the JSON document is stored. If the key does not exist, it will be created.
-- `path`: The path within the JSON document where the value should be set. The path should be specified in JSONPath format. Use `$` to refer to the root of the document.
-- `json`: The JSON value to set at the specified path. This should be a valid JSON string.
-- `NX`: Optional flag. Only set the value if the key does not already exist.
-- `XX`: Optional flag. Only set the value if the key already exists.
+| Parameter | Description                                                                                                                                                     | Type   | Required |
+|-----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|----------|
+| `key`| The key under which the JSON document is stored. If the key does not exist, it will be created| String | Yes
+| `path`| The path within the JSON document where the value should be set. The path should be specified in JSONPath format. Use `$` to refer to the root of the document | String | Yes
+| `json`| The JSON value to set at the specified path. This should be a valid JSON string | JSON | Yes
+| `NX` | Optional flag. Only set the value if the key does not already exist | Flag | No
+| `XX`| Optional flag. Only set the value if the key already exists  | Flag | No
 
-## Return Value
+## Return Values
 
-- `Simple String Reply`: Returns `OK` if the operation was successful.
+
+| Condition                                              | Return Value                                                                                       |
+|--------------------------------------------------------|---------------------------------------------------------------------------------------------------|
+| Command is successful  | returns `OK` |
+| NX or XX conditions not met | returns `nil` |
+| Syntax or specified constraints are invalid | error |
 
 ### JSONPath Support
 
@@ -41,18 +48,23 @@ When the `JSON.SET` command is executed, the following behaviors are observed:
 3. `Conditional Set`: If the `NX` flag is provided, the value will only be set if the key does not already exist. If the `XX` flag is provided, the value will only be set if the key already exists.
 4. `Overwrite`: If the key and path already exist, the existing value will be overwritten with the new JSON value.
 
-## Error Handling
+## Errors
 
-The `JSON.SET` command can raise the following errors:
 
-1. `Syntax Error`: If the command is not used with the correct syntax, a syntax error will be raised.
+1. `Incorrect number of arguments`
    - `Error Message`: `(error) ERR wrong number of arguments for 'JSON.SET' command`
 2. `Invalid JSON`: If the provided JSON value is not a valid JSON string, an error will be raised.
-   - `Error Message`: `(error) ERR invalid JSON string`
-3. `Path Error`: If the specified path is invalid or cannot be created, an error will be raised.
-   - `Error Message`: `(error) ERR path not found`
+   - `Error Message`: `(error) expected value at line 1 column 1`
+3. `Invalid JSONPath expression`: 
+   1. If the object is being created and the path is not root:
+      - Error Message: `ERR new objects must be created at the root`
+   1. If the specified path is static but does not exist/cannot be created
+      - Error Message: `(error) Err wrong static path`
+   2. If the specified path does not exist and cannot be created
+      - Error Message: `Error occurred on position {}, "$.. <<<<----", expected one of the following: <string>, '*'`
 4. `NX/XX Conflict`: If both `NX` and `XX` flags are provided, an error will be raised.
-   - `Error Message`: `(error) ERR NX and XX flags are mutually exclusive`
+   - `Error Message`: `(error) ERR syntax error`
+
 
 ## Example Usage
 
@@ -81,6 +93,8 @@ Set a JSON value only if the key does not already exist:
 ```bash
 127.0.0.1:7379> JSON.SET user:1002 $ '{"name": "Jane Doe", "age": 25}' NX
 OK
+127.0.0.1:7379> JSON.SET user:1002 $ '{"name": "Jane Doe", "age": 30}' NX
+(nil)
 ```
 
 ### Conditional Set with XX Flag
@@ -91,3 +105,5 @@ Set a JSON value only if the key already exists:
 127.0.0.1:7379> JSON.SET user:1001 $.age 31 XX
 OK
 ```
+
+###

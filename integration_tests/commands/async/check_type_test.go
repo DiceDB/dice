@@ -7,7 +7,7 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-// this file may contain test cases for checking error messages accross all commands
+// this file may contain test cases for checking error messages across all commands
 func TestErrorsForSetData(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()

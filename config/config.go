@@ -51,7 +51,9 @@ var (
 )
 
 type Config struct {
-	Server struct {
+	InstanceID string `mapstructure:"instance_id"`
+	Server     struct {
+		Version                string        `mapstructure:"version"`
 		Addr                   string        `mapstructure:"addr"`
 		Port                   int           `mapstructure:"port"`
 		KeepAlive              int32         `mapstructure:"keepalive"`
@@ -87,6 +89,7 @@ type Config struct {
 // Default configurations for internal use
 var baseConfig = Config{
 	Server: struct {
+		Version                string        `mapstructure:"version"`
 		Addr                   string        `mapstructure:"addr"`
 		Port                   int           `mapstructure:"port"`
 		KeepAlive              int32         `mapstructure:"keepalive"`
@@ -124,8 +127,8 @@ var baseConfig = Config{
 		AOFFile:                "./dice-master.aof",
 		WriteAOFOnCleanup:      false,
 		LFULogFactor:           10,
-		LogLevel:               "info",
-		PrettyPrintLogs:        false,
+		LogLevel:               "debug",
+		PrettyPrintLogs:        true,
 		EnableMultiThreading:   false,
 		StoreMapInitSize:       1024000,
 		WatchChanBufSize:       20000,
@@ -153,9 +156,9 @@ func init() {
 	config := baseConfig
 	env := os.Getenv("DICE_ENV")
 	switch env {
-	case "dev":
-		config.Server.LogLevel = "debug"
-		config.Server.PrettyPrintLogs = true
+	case "prod":
+		config.Server.LogLevel = "info"
+		config.Server.PrettyPrintLogs = false
 	default:
 	}
 	logLevel := os.Getenv("DICE_LOG_LEVEL")

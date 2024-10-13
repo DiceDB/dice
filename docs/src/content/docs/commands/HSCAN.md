@@ -41,7 +41,7 @@ The `HSCAN` command can raise the following errors:
 
 ## Examples
 
-```DiceDB
+```bash
 > HSET myhash field1 "value1" field2 "value2"
 1) (integer) 2
 

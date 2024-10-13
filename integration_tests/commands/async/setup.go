@@ -18,7 +18,7 @@ import (
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dice/testutils"
-	redis "github.com/dicedb/go-dice"
+	dicedb "github.com/dicedb/dicedb-go"
 )
 
 type TestServerOptions struct {
@@ -37,8 +37,8 @@ func getLocalConnection() net.Conn {
 }
 
 //nolint:unused
-func getLocalSdk() *redis.Client {
-	return redis.NewClient(&redis.Options{
+func getLocalSdk() *dicedb.Client {
+	return dicedb.NewClient(&dicedb.Options{
 		Addr: fmt.Sprintf(":%d", config.DiceConfig.Server.Port),
 
 		DialTimeout:           10 * time.Second,
