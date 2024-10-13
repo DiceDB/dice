@@ -3513,7 +3513,64 @@ func evalObjectIdleTime(key string, store *dstore.Store) []byte {
 
 	return clientio.Encode(int64(dstore.GetIdleTime(obj.LastAccessedAt)), true)
 }
+func evalObjectEncoding(key string, store *dstore.Store) []byte {
+	var encodingTypeStr string
 
+	obj := store.GetNoTouch(key)
+	if obj == nil {
+		return clientio.RespNIL
+	}
+
+	oType, oEnc := object.ExtractTypeEncoding(obj)
+	switch {
+	case oType == object.ObjTypeString && oEnc == object.ObjEncodingRaw:
+		encodingTypeStr = "raw"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeString && oEnc == object.ObjEncodingEmbStr:
+		encodingTypeStr = "embstr"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeInt && oEnc == object.ObjEncodingInt:
+		encodingTypeStr = "int"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeByteList && oEnc == object.ObjEncodingDeque:
+		encodingTypeStr = "deque"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeBitSet && oEnc == object.ObjEncodingBF:
+		encodingTypeStr = "bf"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeJSON && oEnc == object.ObjEncodingJSON:
+		encodingTypeStr = "json"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeByteArray && oEnc == object.ObjEncodingByteArray:
+		encodingTypeStr = "bytearray"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeSet && oEnc == object.ObjEncodingSetStr:
+		encodingTypeStr = "setstr"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeSet && oEnc == object.ObjEncodingSetInt:
+		encodingTypeStr = "setint"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeHashMap && oEnc == object.ObjEncodingHashMap:
+		encodingTypeStr = "hashmap"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeSortedSet && oEnc == object.ObjEncodingBTree:
+		encodingTypeStr = "btree"
+		return clientio.Encode(encodingTypeStr, false)
+
+	default:
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+}
 func evalOBJECT(args []string, store *dstore.Store) []byte {
 	if len(args) < 2 {
 		return diceerrors.NewErrArity("OBJECT")
@@ -3525,6 +3582,8 @@ func evalOBJECT(args []string, store *dstore.Store) []byte {
 	switch subcommand {
 	case "IDLETIME":
 		return evalObjectIdleTime(key, store)
+	case "ENCODING":
+		return evalObjectEncoding(key, store)
 	default:
 		return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 	}
