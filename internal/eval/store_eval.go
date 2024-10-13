@@ -432,3 +432,49 @@ func evalSREM(args []string, store *dstore.Store) *EvalResponse {
 		Error:  nil,
 	}
 }
+
+// evalSCARD returns the number of elements of the set stored at key
+// Returns 0 if the key does not exist
+// An error response is returned if the command is used on a key that contains a non-set value(eg: string)
+func evalSCARD(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("SCARD"),
+		}
+	}
+
+	key := args[0]
+
+	// Get the set object from the store.
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: 0,
+			Error:  nil,
+		}
+	}
+
+	// If the object exists, check if it is a set object.
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingSetStr); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// Get the set object.
+	count := len(obj.Value.(map[string]struct{}))
+	return &EvalResponse{
+		Result: count,
+		Error:  nil,
+	}
+}

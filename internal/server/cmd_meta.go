@@ -70,6 +70,10 @@ var (
 		Cmd:     "SREM",
 		CmdType: SingleShard,
 	}
+	scardCmdMeta = CmdsMeta{
+		Cmd:     "SCARD",
+		CmdType: SingleShard,
+	}
 
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
@@ -89,6 +93,7 @@ func init() {
 	WorkerCmdsMeta["SETEX"] = setexCmdMeta
 	WorkerCmdsMeta["SADD"] = saddCmdMeta
 	WorkerCmdsMeta["SREM"] = sremCmdMeta
+	WorkerCmdsMeta["SCARD"] = scardCmdMeta
 
 	// Additional commands (multishard, custom) can be added here as needed.
 }

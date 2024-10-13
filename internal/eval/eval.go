@@ -3813,34 +3813,6 @@ func evalSMEMBERS(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(members, false)
 }
 
-func evalSCARD(args []string, store *dstore.Store) []byte {
-	if len(args) != 1 {
-		return diceerrors.NewErrArity("SCARD")
-	}
-
-	key := args[0]
-
-	// Get the set object from the store.
-	obj := store.Get(key)
-
-	if obj == nil {
-		return clientio.Encode(0, false)
-	}
-
-	// If the object exists, check if it is a set object.
-	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err != nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingSetStr); err != nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	// Get the set object.
-	count := len(obj.Value.(map[string]struct{}))
-	return clientio.Encode(count, false)
-}
-
 func evalSDIFF(args []string, store *dstore.Store) []byte {
 	if len(args) < 1 {
 		return diceerrors.NewErrArity("SDIFF")

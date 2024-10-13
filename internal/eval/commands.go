@@ -868,9 +868,10 @@ var (
 		Info: `SCARD key
 		Returns the number of elements of the set stored at key.
 		An error is returned when the value stored at key is not a set.`,
-		Eval:     evalSCARD,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalSCARD,
 	}
 	sdiffCmdMeta = DiceCmdMeta{
 		Name: "SDIFF",

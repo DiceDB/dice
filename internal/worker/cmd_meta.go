@@ -48,6 +48,7 @@ const (
 	CmdZRangeWatch = "ZRANGE.WATCH"
 	CmdSadd        = "SADD"
 	CmdSrem        = "SREM"
+	CmdScard       = "SCARD"
 )
 
 type CmdMeta struct {
@@ -86,6 +87,9 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdSrem: {
+		CmdType: SingleShard,
+	},
+	CmdScard: {
 		CmdType: SingleShard,
 	},
 
