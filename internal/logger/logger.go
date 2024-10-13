@@ -11,7 +11,7 @@ import (
 
 func getLogLevel() slog.Leveler {
 	var level slog.Leveler
-	switch config.DiceConfig.Server.LogLevel {
+	switch config.DiceConfig.Logging.LogLevel {
 	case "debug":
 		level = slog.LevelDebug
 	case "warn":
@@ -30,7 +30,7 @@ type Opts struct {
 
 func New(opts Opts) *slog.Logger {
 	var writer io.Writer = os.Stderr
-	if config.DiceConfig.Server.PrettyPrintLogs {
+	if config.DiceConfig.Logging.PrettyPrintLogs {
 		writer = zerolog.ConsoleWriter{Out: os.Stderr}
 	}
 	zerologLogger := zerolog.New(writer).Level(mapLevel(getLogLevel().Level()))
