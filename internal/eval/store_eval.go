@@ -3251,7 +3251,7 @@ func evalGETEX(args []string, store *dstore.Store) *EvalResponse {
 			}
 
 			// If an option is provided instead of expire time return a syntax error
-			if opt := strings.ToUpper(args[i]); opt == "PERSIST" || opt == "PX" || opt == "EX" {
+			if opt := strings.ToUpper(args[i]); opt == Persist || opt == Px || opt == Ex {
 				return &EvalResponse{
 					Result: nil,
 					Error:  diceerrors.ErrSyntax,
@@ -3319,7 +3319,7 @@ func evalGETEX(args []string, store *dstore.Store) *EvalResponse {
 			}
 			state = Initialized
 
-		case "PERSIST":
+		case Persist:
 			if state != Uninitialized {
 				return &EvalResponse{
 					Result: nil,
