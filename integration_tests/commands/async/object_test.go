@@ -12,8 +12,8 @@ func TestObjectCommand(t *testing.T) {
 	defer conn.Close()
 
 	testCases := []struct {
-		name        string
-		commands    []string
+		name       string
+		commands   []string
 		expected   []interface{}
 		assertType []string
 		delay      []time.Duration

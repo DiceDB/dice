@@ -47,6 +47,7 @@ const (
 	CmdGetWatch    = "GET.WATCH"
 	CmdZRangeWatch = "ZRANGE.WATCH"
 	CmdHExists     = "HEXISTS"
+	CmdHKeys       = "HKEYS"
 )
 
 type CmdMeta struct {
@@ -82,6 +83,9 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdHExists: {
+		CmdType: SingleShard,
+	},
+	CmdHKeys: {
 		CmdType: SingleShard,
 	},
 

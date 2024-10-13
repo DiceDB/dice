@@ -1,7 +1,6 @@
 package eval
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -346,11 +345,9 @@ func evalHEXISTS(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-		// TODO: need to catch if its a encoding error
-		fmt.Printf("The error is: %v", err)
 		return &EvalResponse{
+			Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeErr),
 			Result: nil,
-			Error:  diceerrors.ErrUnexpectedType("string", obj.Value),
 		}
 	}
 
@@ -366,6 +363,52 @@ func evalHEXISTS(args []string, store *dstore.Store) *EvalResponse {
 	// Return 0, if specified field doesn't exist in the HashMap.
 	return &EvalResponse{
 		Result: clientio.Encode(0, false),
+		Error:  nil,
+	}
+}
+
+// evalHKEYS is used to retrieve all the keys(or field names) within a hash.
+//
+// This command returns empty array, if the specified key doesn't exist.
+//
+// Complexity is O(n) where n is the size of the hash.
+//
+// Usage: HKEYS key
+func evalHKEYS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("HKEYS"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	var hashMap HashMap
+	var result []string
+
+	if obj != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+			return &EvalResponse{
+				Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeErr),
+				Result: nil,
+			}
+		}
+		hashMap = obj.Value.(HashMap)
+	} else {
+		return &EvalResponse{
+			Result: clientio.Encode([]interface{}{}, false),
+			Error:  nil,
+		}
+	}
+
+	for hmKey := range hashMap {
+		result = append(result, hmKey)
+	}
+
+	return &EvalResponse{
+		Result: clientio.Encode(result, false),
 		Error:  nil,
 	}
 }

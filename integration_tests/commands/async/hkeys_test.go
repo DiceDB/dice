@@ -31,7 +31,7 @@ func TestHKEYS(t *testing.T) {
 			name:     "HKEYS with wrong number of arguments",
 			commands: []string{"HKEYS key_hkeys03 x", "HKEYS"},
 			expected: []interface{}{"ERR wrong number of arguments for 'hkeys' command",
-					"ERR wrong number of arguments for 'hkeys' command"},
+				"ERR wrong number of arguments for 'hkeys' command"},
 		},
 	}
 

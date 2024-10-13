@@ -3098,40 +3098,6 @@ func insertInHashMap(args []string, store *dstore.Store) (numKeys int64, err2 []
 	return numKeys, nil
 }
 
-// evalHKEYS is used toretrieve all the keys(or field names) within a hash.
-//
-// This command returns empty array, if the specified key doesn't exist.
-//
-// Complexity is O(n) where n is the size of the hash.
-//
-// Usage: HKEYS key
-func evalHKEYS(args []string, store *dstore.Store) []byte {
-	if len(args) != 1 {
-		return diceerrors.NewErrArity("HKEYS")
-	}
-
-	key := args[0]
-	obj := store.Get(key)
-
-	var hashMap HashMap
-	var result []string
-
-	if obj != nil {
-		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
-		}
-		hashMap = obj.Value.(HashMap)
-	} else {
-		return clientio.Encode([]interface{}{}, false)
-	}
-
-	for hmKey := range hashMap {
-		result = append(result, hmKey)
-	}
-
-	return clientio.Encode(result, false)
-}
-
 // Increments the number stored at field in the hash stored at key by increment.
 //
 // If key does not exist, a new key holding a hash is created.
@@ -3445,58 +3411,6 @@ func evalHSTRLEN(args []string, store *dstore.Store) []byte {
 	}
 	return clientio.Encode(0, false)
 }
-
-// evalHEXISTS returns if field is an existing field in the hash stored at key.
-//
-// This command returns 0, if the specified field doesn't exist in the key and 1 if it exists.
-//
-// If key doesn't exist, it returns 0.
-//
-// Usage: HEXISTS key field
-// func evalHEXISTS(args []string, store *dstore.Store) []byte {
-
-// 	// fmt.Printf("%v | %v\n", args, store)
-
-// 	// args contains the rest of the arguments from the command exect the command itself
-// 	// store
-// 	fmt.Printf("The store information:\n")
-// 	keys := []string{"store"}
-// 	objs := store.GetAll(keys)
-// 	for index := range objs{
-// 		fmt.Printf("store: %v\n", objs[index])
-// 	}
-
-// 	// for arg := range args {
-// 	// 	fmt.Printf("%v ", args[arg])
-// 	// }
-// 	fmt.Println("")
-
-// 	if len(args) != 2 {
-// 		return diceerrors.NewErrArity("HEXISTS")
-// 	}
-
-// 	key := args[0]
-// 	hmKey := args[1]
-// 	obj := store.Get(key)
-
-// 	var hashMap HashMap
-
-// 	if obj == nil {
-// 		return clientio.Encode(0, false)
-// 	}
-// 	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-// 		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
-// 	}
-
-// 	hashMap = obj.Value.(HashMap)
-
-// 	_, ok := hashMap.Get(hmKey)
-// 	if ok {
-// 		return clientio.Encode(1, false)
-// 	}
-// 	// Return 0, if specified field doesn't exist in the HashMap.
-// 	return clientio.Encode(0, false)
-// }
 
 func evalObjectIdleTime(key string, store *dstore.Store) []byte {
 	obj := store.GetNoTouch(key)

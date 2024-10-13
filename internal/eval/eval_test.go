@@ -2339,21 +2339,21 @@ func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
 func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
 	tests := []evalTestCase{
 		{
-			name: "HEXISTS wrong number of args passed",
+			name:           "HEXISTS wrong number of args passed",
 			setup:          func() {},
 			input:          nil,
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'HEXISTS' command")},
 		},
 		{
-			name: "HEXISTS only key passed",
+			name:           "HEXISTS only key passed",
 			setup:          func() {},
 			input:          []string{"KEY"},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'HEXISTS' command")},
 		},
 		{
-			name: "HEXISTS key doesn't exist",
-			setup:  func() {},
-			input:  []string{"KEY", "field_name"},
+			name:           "HEXISTS key doesn't exist",
+			setup:          func() {},
+			input:          []string{"KEY", "field_name"},
 			migratedOutput: EvalResponse{Result: ":0\r\n", Error: nil},
 		},
 		{
@@ -2372,7 +2372,7 @@ func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
 
 				store.Put(key, obj)
 			},
-			input:  []string{"KEY_MOCK", "non_existent_key"},
+			input:          []string{"KEY_MOCK", "non_existent_key"},
 			migratedOutput: EvalResponse{Result: ":0\r\n", Error: nil},
 		},
 		{
@@ -2391,7 +2391,7 @@ func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
 
 				store.Put(key, obj)
 			},
-			input:  []string{"KEY_MOCK", "mock_field_name"},
+			input:          []string{"KEY_MOCK", "mock_field_name"},
 			migratedOutput: EvalResponse{Result: ":1\r\n", Error: nil},
 		},
 	}
@@ -3041,25 +3041,29 @@ func testEvalHMSET(t *testing.T, store *dstore.Store) {
 }
 
 func testEvalHKEYS(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"wrong number of args passed": {
-			setup:  func() {},
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'hkeys' command\r\n"),
+	tests := []evalTestCase{
+		{
+			name:           "wrong number of args passed",
+			setup:          func() {},
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR wrong number of arguments for 'HKEYS' command\r\n")},
 		},
-		"key doesn't exist": {
-			setup:  func() {},
-			input:  []string{"KEY"},
-			output: clientio.Encode([]string{}, false),
+		{
+			name:           "key doesn't exist",
+			setup:          func() {},
+			input:          []string{"KEY"},
+			migratedOutput: EvalResponse{Result: clientio.Encode([]string{}, false), Error: nil},
 		},
-		"key exists but not a hash": {
+		{
+			name: "key exists but not a hash",
 			setup: func() {
 				evalSET([]string{"string_key", "string_value"}, store)
 			},
-			input:  []string{"string_key"},
-			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+			input:          []string{"string_key"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n")},
 		},
-		"key exists and is a hash": {
+		{
+			name: "key exists and is a hash",
 			setup: func() {
 				key := "KEY_MOCK"
 				field1 := "mock_field_name"
@@ -3074,12 +3078,31 @@ func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 
 				store.Put(key, obj)
 			},
-			input:  []string{"KEY_MOCK"},
-			output: clientio.Encode([]string{"mock_field_name"}, false),
+			input:          []string{"KEY_MOCK"},
+			migratedOutput: EvalResponse{Result: clientio.Encode([]string{"mock_field_name"}, false), Error: nil},
 		},
 	}
 
-	runEvalTests(t, tests, evalHKEYS, store)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			response := evalHKEYS(tt.input, store)
+
+			// Handle comparison for byte slices
+			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
+				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
+					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+				}
+			} else {
+				assert.Equal(t, tt.migratedOutput.Result, response.Result)
+			}
+
+			if tt.migratedOutput.Error != nil {
+				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+			} else {
+				testifyAssert.NoError(t, response.Error)
+			}
+		})
+	}
 }
 
 func BenchmarkEvalHKEYS(b *testing.B) {

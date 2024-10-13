@@ -267,7 +267,6 @@ func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
 		return err
 	}
 
-
 	// function used within package, limit the scope
 	s.EvalAndRespond(commands, client)
 	// if we are aborting, why are we processing the request previously?
