@@ -62,6 +62,18 @@ var (
 		Cmd:     "SETEX",
 		CmdType: SingleShard,
 	}
+	jsonArrAppendCmdMeta = CmdsMeta{
+		Cmd:     "JSON.ARRAPPEND",
+		CmdType: SingleShard,
+	}
+	jsonArrLenCmdMeta = CmdsMeta{
+		Cmd:     "JSON.ARRLEN",
+		CmdType: SingleShard,
+	}
+	jsonArrPopCmdMeta = CmdsMeta{
+		Cmd:     "JSON.ARRPOP",
+		CmdType: SingleShard,
+	}
 
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
@@ -79,6 +91,9 @@ func init() {
 	WorkerCmdsMeta["GET"] = getCmdMeta
 	WorkerCmdsMeta["GETSET"] = getsetCmdMeta
 	WorkerCmdsMeta["SETEX"] = setexCmdMeta
+	WorkerCmdsMeta["JSON.ARRAPPEND"] = jsonArrAppendCmdMeta
+	WorkerCmdsMeta["JSON.ARRLEN"] = jsonArrLenCmdMeta
+	WorkerCmdsMeta["JSON.ARRPOP"] = jsonArrPopCmdMeta
 
 	// Additional commands (multishard, custom) can be added here as needed.
 }
