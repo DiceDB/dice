@@ -74,7 +74,7 @@ func TestSetWithOptions(t *testing.T) {
 				{Command: "SLEEP", Body: map[string]interface{}{"key": 3}},
 				{Command: "GET", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"OK", "v", "OK", "(nil)"},
+			expected: []interface{}{"OK", "v", "OK", nil},
 		},
 		{
 			name: "Set with PX option",
@@ -84,7 +84,7 @@ func TestSetWithOptions(t *testing.T) {
 				{Command: "SLEEP", Body: map[string]interface{}{"key": 3}},
 				{Command: "GET", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"OK", "v", "OK", "(nil)"},
+			expected: []interface{}{"OK", "v", "OK", nil},
 		},
 		{
 			name: "Set with EX and PX option",
@@ -100,7 +100,7 @@ func TestSetWithOptions(t *testing.T) {
 				{Command: "SET", Body: map[string]interface{}{"key": "k", "value": "v", "xx": true}},
 				{Command: "GET", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{float64(0), "(nil)", "(nil)"},
+			expected: []interface{}{float64(0), nil, nil},
 		},
 		{
 			name: "NX on non-existing key",
@@ -119,7 +119,7 @@ func TestSetWithOptions(t *testing.T) {
 				{Command: "GET", Body: map[string]interface{}{"key": "k"}},
 				{Command: "SET", Body: map[string]interface{}{"key": "k", "value": "v", "nx": true}},
 			},
-			expected: []interface{}{float64(0), "OK", "v", "(nil)"},
+			expected: []interface{}{float64(0), "OK", "v", nil},
 		},
 		{
 			name: "PXAT option",
@@ -145,7 +145,7 @@ func TestSetWithOptions(t *testing.T) {
 				{Command: "SET", Body: map[string]interface{}{"key": "k2", "value": "v2", "pxat": "123123"}},
 				{Command: "GET", Body: map[string]interface{}{"key": "k2"}},
 			},
-			expected: []interface{}{"OK", "(nil)"},
+			expected: []interface{}{"OK", nil},
 		},
 		{
 			name: "XX on existing key",
@@ -174,7 +174,7 @@ func TestSetWithOptions(t *testing.T) {
 				{Command: "SLEEP", Body: map[string]interface{}{"key": 2}},
 				{Command: "GET", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"OK", "v", "OK", "(nil)"},
+			expected: []interface{}{"OK", "v", "OK", nil},
 		},
 		{
 			name: "XX option",
@@ -186,7 +186,7 @@ func TestSetWithOptions(t *testing.T) {
 				{Command: "SET", Body: map[string]interface{}{"key": "k", "value": "v", "xx": true, "ex": 1}},
 				{Command: "GET", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"(nil)", "(nil)", "OK", "(nil)", "(nil)", "(nil)"},
+			expected: []interface{}{nil, nil, "OK", nil, nil, nil},
 		},
 	}
 
@@ -227,7 +227,7 @@ func TestSetWithExat(t *testing.T) {
 				{Command: "GET", Body: map[string]interface{}{"key": "k"}},
 				{Command: "TTL", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{float64(0), "OK", "(nil)", float64(-2)},
+			expected: []interface{}{float64(0), "OK", nil, float64(-2)},
 		},
 	}
 

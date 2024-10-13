@@ -1,13 +1,21 @@
 package resp
 
 import (
+	"context"
 	"fmt"
-	"github.com/dicedb/dice/internal/clientio"
-	"gotest.tools/v3/assert"
 	"net"
 	"testing"
 	"time"
+
+	"github.com/dicedb/dice/internal/clientio"
+	"github.com/dicedb/dicedb-go"
+	"gotest.tools/v3/assert"
 )
+
+type WatchSubscriber struct {
+	client *dicedb.Client
+	watch  *dicedb.WatchConn
+}
 
 const getWatchKey = "getwatchkey"
 
@@ -26,6 +34,8 @@ var getWatchTestCases = []getWatchTestCase{
 func TestGETWATCH(t *testing.T) {
 	publisher := getLocalConnection()
 	subscribers := []net.Conn{getLocalConnection(), getLocalConnection(), getLocalConnection()}
+
+	FireCommand(publisher, fmt.Sprintf("DEL %s", getWatchKey))
 
 	defer func() {
 		if err := publisher.Close(); err != nil {
@@ -75,6 +85,68 @@ func TestGETWATCH(t *testing.T) {
 			assert.Equal(t, "GET", castedValue[0])
 			assert.Equal(t, "1768826704", castedValue[1])
 			assert.Equal(t, tc.val, castedValue[2])
+		}
+	}
+}
+
+func TestGETWATCHWithSDK(t *testing.T) {
+	publisher := getLocalSdk()
+	subscribers := []WatchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
+
+	publisher.Del(context.Background(), getWatchKey)
+
+	channels := make([]<-chan *dicedb.WatchResult, len(subscribers))
+	for i, subscriber := range subscribers {
+		watch := subscriber.client.WatchConn(context.Background())
+		subscribers[i].watch = watch
+		assert.Assert(t, watch != nil)
+		firstMsg, err := watch.Watch(context.Background(), "GET", getWatchKey)
+		assert.NilError(t, err)
+		assert.Equal(t, firstMsg.Command, "GET")
+		assert.Equal(t, firstMsg.Fingerprint, "1768826704")
+		channels[i] = watch.Channel()
+	}
+
+	for _, tc := range getWatchTestCases {
+		err := publisher.Set(context.Background(), tc.key, tc.val, 0).Err()
+		assert.NilError(t, err)
+
+		for _, channel := range channels {
+			v := <-channel
+			assert.Equal(t, "GET", v.Command)            // command
+			assert.Equal(t, "1768826704", v.Fingerprint) // Fingerprint
+			assert.Equal(t, tc.val, v.Data.(string))     // data
+		}
+	}
+}
+
+func TestGETWATCHWithSDK2(t *testing.T) {
+	publisher := getLocalSdk()
+	subscribers := []WatchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
+
+	publisher.Del(context.Background(), getWatchKey)
+
+	channels := make([]<-chan *dicedb.WatchResult, len(subscribers))
+	for i, subscriber := range subscribers {
+		watch := subscriber.client.WatchConn(context.Background())
+		subscribers[i].watch = watch
+		assert.Assert(t, watch != nil)
+		firstMsg, err := watch.GetWatch(context.Background(), getWatchKey)
+		assert.NilError(t, err)
+		assert.Equal(t, firstMsg.Command, "GET")
+		assert.Equal(t, firstMsg.Fingerprint, "1768826704")
+		channels[i] = watch.Channel()
+	}
+
+	for _, tc := range getWatchTestCases {
+		err := publisher.Set(context.Background(), tc.key, tc.val, 0).Err()
+		assert.NilError(t, err)
+
+		for _, channel := range channels {
+			v := <-channel
+			assert.Equal(t, "GET", v.Command)            // command
+			assert.Equal(t, "1768826704", v.Fingerprint) // Fingerprint
+			assert.Equal(t, tc.val, v.Data.(string))     // data
 		}
 	}
 }

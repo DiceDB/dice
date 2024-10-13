@@ -10,4 +10,5 @@ FROM gcr.io/distroless/static-debian12:nonroot
 WORKDIR /app
 COPY --from=builder /dicedb/dicedb ./
 EXPOSE  7379
+ENV DICE_ENV=prod
 CMD ["/app/dicedb"]
