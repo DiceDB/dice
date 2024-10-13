@@ -402,7 +402,7 @@ func evalJSONARRINSERT(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(resultsArray, false)
 }
 
-// evalJSONDEBUG reports value's memmory usage in bytes
+// evalJSONDEBUG reports value's memory usage in bytes
 // Returns arity error if subcommand is missing
 // Supports only two subcommand as of now - HELP and MEMORY
 func evalJSONDebug(args []string, store *dstore.Store) []byte {
@@ -742,7 +742,7 @@ func evalJSONARRPOP(args []string, store *dstore.Store) []byte {
 }
 
 // trimElementAndUpdateArray trim the array between the given start and stop index
-// Returns trimed array
+// Returns trimmed array
 func trimElementAndUpdateArray(arr []any, start, stop int) []any {
 	updatedArray := make([]any, 0)
 	length := len(arr)
@@ -1535,7 +1535,7 @@ func evalJSONNUMMULTBY(args []string, store *dstore.Store) []byte {
 
 // evalJSONARRAPPEND appends the value(s) provided in the args to the given array path
 // in the JSON object saved at key in arguments.
-// Args must contain atleast a key, path and value.
+// Args must contain at least a key, path and value.
 // If the key does not exist or is expired, it returns response.RespNIL.
 // If the object at given path is not an array, it returns response.RespNIL.
 // Returns the new length of the array at path.
@@ -2027,7 +2027,7 @@ func incrByFloatCmd(args []string, incr float64, store *dstore.Store) []byte {
 
 	oType, oEnc := deduceTypeEncoding(strValue)
 
-	// Remove the trailing decimal for interger values
+	// Remove the trailing decimal for integer values
 	// to maintain consistency with redis
 	obj.Value = strings.TrimSuffix(strValue, ".0")
 	obj.TypeEncoding = oType | oEnc
@@ -2617,13 +2617,13 @@ func evalCommand(args []string, store *dstore.Store) []byte {
 	subcommand := strings.ToUpper(args[0])
 	switch subcommand {
 	case Count:
-		return evalCommandCount()
+		return evalCommandCount(args[1:])
 	case GetKeys:
 		return evalCommandGetKeys(args[1:])
 	case List:
-		return evalCommandList()
+		return evalCommandList(args[1:])
 	case Help:
-		return evalCommandHelp()
+		return evalCommandHelp(args[1:])
 	case Info:
 		return evalCommandInfo(args[1:])
 	default:
@@ -2632,16 +2632,22 @@ func evalCommand(args []string, store *dstore.Store) []byte {
 }
 
 // evalCommandHelp prints help message
-func evalCommandHelp() []byte {
+func evalCommandHelp(args []string) []byte {
+	if len(args) > 0 {
+		return diceerrors.NewErrArity("COMMAND|HELP")
+	}
+
 	format := "COMMAND <subcommand> [<arg> [value] [opt] ...]. Subcommands are:"
 	noTitle := "(no subcommand)"
-	noMessage := "    Return details about all Dice commands."
+	noMessage := "     Return details about all DiceDB commands."
 	countTitle := CountConst
-	countMessage := "    Return the total number of commands in this Dice server."
+	countMessage := "     Return the total number of commands in this DiceDB server."
 	listTitle := "LIST"
-	listMessage := "     Return a list of all commands in this Dice server."
+	listMessage := "     Return a list of all commands in this DiceDB server."
+	infoTitle := "INFO [<command-name> ...]"
+	infoMessage := "     Return details about the specified DiceDB commands. If no command names are given, documentation details for all commands are returned."
 	getKeysTitle := "GETKEYS <full-command>"
-	getKeysMessage := "     Return the keys from a full Dice command."
+	getKeysMessage := "     Return the keys from a full DiceDB command."
 	helpTitle := "HELP"
 	helpMessage := "     Print this help."
 	message := []string{
@@ -2652,6 +2658,8 @@ func evalCommandHelp() []byte {
 		countMessage,
 		listTitle,
 		listMessage,
+		infoTitle,
+		infoMessage,
 		getKeysTitle,
 		getKeysMessage,
 		helpTitle,
@@ -2665,7 +2673,11 @@ func evalCommandDefault() []byte {
 	return clientio.Encode(cmds, false)
 }
 
-func evalCommandList() []byte {
+func evalCommandList(args []string) []byte {
+	if len(args) > 0 {
+		return diceerrors.NewErrArity("COMMAND|LIST")
+	}
+
 	cmds := make([]string, 0, diceCommandsCount)
 	for k := range DiceCmds {
 		cmds = append(cmds, k)
@@ -2692,7 +2704,11 @@ func evalKeys(args []string, store *dstore.Store) []byte {
 }
 
 // evalCommandCount returns a number of commands supported by DiceDB
-func evalCommandCount() []byte {
+func evalCommandCount(args []string) []byte {
+	if len(args) > 0 {
+		return diceerrors.NewErrArity("COMMAND|COUNT")
+	}
+
 	return clientio.Encode(diceCommandsCount, false)
 }
 
@@ -3497,7 +3513,64 @@ func evalObjectIdleTime(key string, store *dstore.Store) []byte {
 
 	return clientio.Encode(int64(dstore.GetIdleTime(obj.LastAccessedAt)), true)
 }
+func evalObjectEncoding(key string, store *dstore.Store) []byte {
+	var encodingTypeStr string
 
+	obj := store.GetNoTouch(key)
+	if obj == nil {
+		return clientio.RespNIL
+	}
+
+	oType, oEnc := object.ExtractTypeEncoding(obj)
+	switch {
+	case oType == object.ObjTypeString && oEnc == object.ObjEncodingRaw:
+		encodingTypeStr = "raw"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeString && oEnc == object.ObjEncodingEmbStr:
+		encodingTypeStr = "embstr"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeInt && oEnc == object.ObjEncodingInt:
+		encodingTypeStr = "int"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeByteList && oEnc == object.ObjEncodingDeque:
+		encodingTypeStr = "deque"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeBitSet && oEnc == object.ObjEncodingBF:
+		encodingTypeStr = "bf"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeJSON && oEnc == object.ObjEncodingJSON:
+		encodingTypeStr = "json"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeByteArray && oEnc == object.ObjEncodingByteArray:
+		encodingTypeStr = "bytearray"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeSet && oEnc == object.ObjEncodingSetStr:
+		encodingTypeStr = "setstr"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeSet && oEnc == object.ObjEncodingSetInt:
+		encodingTypeStr = "setint"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeHashMap && oEnc == object.ObjEncodingHashMap:
+		encodingTypeStr = "hashmap"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeSortedSet && oEnc == object.ObjEncodingBTree:
+		encodingTypeStr = "btree"
+		return clientio.Encode(encodingTypeStr, false)
+
+	default:
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+}
 func evalOBJECT(args []string, store *dstore.Store) []byte {
 	if len(args) < 2 {
 		return diceerrors.NewErrArity("OBJECT")
@@ -3509,6 +3582,8 @@ func evalOBJECT(args []string, store *dstore.Store) []byte {
 	switch subcommand {
 	case "IDLETIME":
 		return evalObjectIdleTime(key, store)
+	case "ENCODING":
+		return evalObjectEncoding(key, store)
 	default:
 		return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 	}

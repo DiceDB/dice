@@ -114,6 +114,7 @@ func TestEval(t *testing.T) {
 	testEvalGEOADD(t, store)
 	testEvalGEODIST(t, store)
 	testEvalSINTER(t, store)
+	testEvalOBJECTENCODING(t, store)
 	testEvalJSONSTRAPPEND(t, store)
 }
 
@@ -3175,7 +3176,7 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 			output: []byte("-ERR wrong number of arguments for 'json.debug' command\r\n"),
 		},
 
-		"memory nonexistant key": {
+		"memory nonexistent key": {
 			setup:  func() {},
 			input:  []string{"MEMORY", "NONEXISTENT_KEY"},
 			output: clientio.RespZero,
@@ -3575,7 +3576,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"MOCK_KEY", "$", "2"},
 			output: []byte(":0\r\n"),
-			validator: func(ouput []byte) {
+			validator: func(output []byte) {
 				key := "MOCK_KEY"
 				obj := store.Get(key)
 				want := []interface{}{float64(0), float64(1), float64(3), float64(4), float64(5)}
@@ -3594,7 +3595,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"MOCK_KEY", "$.b", "2"},
 			output: []byte("*1\r\n:2\r\n"),
-			validator: func(ouput []byte) {
+			validator: func(output []byte) {
 				key := "MOCK_KEY"
 				path := "$.b"
 				obj := store.Get(key)
@@ -3699,29 +3700,37 @@ func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"command help": {
 			input: []string{"HELP"},
-			output: []byte("*11\r\n" +
+			output: []byte("*13\r\n" +
 				"$64\r\n" +
 				"COMMAND <subcommand> [<arg> [value] [opt] ...]. Subcommands are:\r\n" +
 				"$15\r\n" +
 				"(no subcommand)\r\n" +
-				"$43\r\n" +
-				"    Return details about all Dice commands.\r\n" +
+				"$46\r\n" +
+				"     Return details about all DiceDB commands.\r\n" +
 				"$5\r\n" +
 				"COUNT\r\n" +
-				"$60\r\n" +
-				"    Return the total number of commands in this Dice server.\r\n" +
+				"$63\r\n" +
+				"     Return the total number of commands in this DiceDB server.\r\n" +
 				"$4\r\n" +
 				"LIST\r\n" +
-				"$55\r\n" +
-				"     Return a list of all commands in this Dice server.\r\n" +
+				"$57\r\n" +
+				"     Return a list of all commands in this DiceDB server.\r\n" +
+				"$25\r\n" +
+				"INFO [<command-name> ...]\r\n" +
+				"$140\r\n" +
+				"     Return details about the specified DiceDB commands. If no command names are given, documentation details for all commands are returned.\r\n" +
 				"$22\r\n" +
 				"GETKEYS <full-command>\r\n" +
-				"$46\r\n" +
-				"     Return the keys from a full Dice command.\r\n" +
+				"$48\r\n" +
+				"     Return the keys from a full DiceDB command.\r\n" +
 				"$4\r\n" +
 				"HELP\r\n" +
 				"$21\r\n" +
 				"     Print this help.\r\n"),
+		},
+		"command help with wrong number of arguments": {
+			input:  []string{"HELP", "EXTRA-ARGS"},
+			output: []byte("-ERR wrong number of arguments for 'command|help' command\r\n"),
 		},
 		"command info valid command SET": {
 			input:  []string{"INFO", "SET"},
@@ -3747,9 +3756,33 @@ func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
 			input:  []string{"INFO", "SET", "INVALID_CMD"},
 			output: []byte("*2\r\n*5\r\n$3\r\nSET\r\n:-3\r\n:1\r\n:0\r\n:0\r\n$-1\r\n"),
 		},
+		"command count with wrong number of arguments": {
+			input:  []string{"COUNT", "EXTRA-ARGS"},
+			output: []byte("-ERR wrong number of arguments for 'command|count' command\r\n"),
+		},
+		"command list with wrong number of arguments": {
+			input:  []string{"LIST", "EXTRA-ARGS"},
+			output: []byte("-ERR wrong number of arguments for 'command|list' command\r\n"),
+		},
 		"command unknown": {
 			input:  []string{"UNKNOWN"},
 			output: []byte("-ERR unknown subcommand 'UNKNOWN'. Try COMMAND HELP.\r\n"),
+		},
+		"command getkeys with incorrect number of arguments": {
+			input:  []string{"GETKEYS"},
+			output: []byte("-ERR wrong number of arguments for 'command|getkeys' command\r\n"),
+		},
+		"command getkeys with unknown command": {
+			input:  []string{"GETKEYS", "UNKNOWN"},
+			output: []byte("-ERR invalid command specified\r\n"),
+		},
+		"command getkeys with a command that accepts no key arguments": {
+			input:  []string{"GETKEYS", "FLUSHDB"},
+			output: []byte("-ERR the command has no key arguments\r\n"),
+		},
+		"command getkeys with an invalid number of arguments for a command": {
+			input:  []string{"GETKEYS", "MSET", "key1"},
+			output: []byte("-ERR invalid number of arguments specified for command\r\n"),
 		},
 	}
 
@@ -4193,7 +4226,7 @@ func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
 			input:  []string{"new_key", "new_field", "10"},
 			output: []byte("-ERR hash value is not an integer\r\n"),
 		},
-		"update the exisiting field which has spaces": {
+		"update the existing field which has spaces": {
 			setup: func() {
 				key := "key"
 				field := "field"
@@ -4215,7 +4248,7 @@ func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
 			input:  []string{"key", "field", "-10"},
 			output: clientio.Encode(int64(-10), false),
 		},
-		"update the exisiting field with negative value": {
+		"update the existing field with negative value": {
 			setup: func() {
 				key := "key"
 				field := "field"
@@ -5676,7 +5709,39 @@ func testEvalSINTER(t *testing.T, store *dstore.Store) {
 
 	runEvalTests(t, tests, evalSINTER, store)
 }
+func testEvalOBJECTENCODING(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'object' command\r\n"),
+		},
+		"empty array": {
+			setup:  func() {},
+			input:  []string{},
+			output: []byte("-ERR wrong number of arguments for 'object' command\r\n"),
+		},
+		"object with invalid subcommand": {
+			setup:  func() {},
+			input:  []string{"TESTSUBCOMMAND", "key"},
+			output: []byte("-ERR syntax error\r\n"),
+		},
+		"key does not exist": {
+			setup:  func() {},
+			input:  []string{"ENCODING", "NONEXISTENT_KEY"},
+			output: clientio.RespNIL,
+		},
+		"key exists": {
+			setup: func() {
+				evalLPUSH([]string{"EXISTING_KEY", "mock_value"}, store)
+			},
+			input:  []string{"ENCODING", "EXISTING_KEY"},
+			output: []byte("$5\r\ndeque\r\n"),
+		},
+	}
 
+	runEvalTests(t, tests, evalOBJECT, store)
+}
 func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"append to single field": {

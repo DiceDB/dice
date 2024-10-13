@@ -6,16 +6,16 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func TestCommandList(t *testing.T) {
+func TestCommandCount(t *testing.T) {
 	exec := NewHTTPCommandExecutor()
 
 	testCases := []TestCase{
 		{
-			name: "Command list should not be empty",
+			name: "Command count should not support any argument",
 			commands: []HTTPCommand{
-				{Command: "COMMAND/LIST", Body: map[string]interface{}{"key": ""}},
+				{Command: "COMMAND/COUNT", Body: map[string]interface{}{"key": ""}},
 			},
-			expected: []interface{}{"ERR wrong number of arguments for 'command|list' command"},
+			expected: []interface{}{"ERR wrong number of arguments for 'command|count' command"},
 		},
 	}
 

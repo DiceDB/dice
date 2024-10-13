@@ -18,7 +18,7 @@ import (
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dice/testutils"
-	dicedb "github.com/dicedb/go-dice"
+	dicedb "github.com/dicedb/dicedb-go"
 )
 
 type TestServerOptions struct {
