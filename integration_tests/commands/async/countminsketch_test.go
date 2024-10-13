@@ -46,7 +46,7 @@ func TestCMSInitByDim(t *testing.T) {
 			expected: []interface{}{"OK"},
 		},
 		{
-			name:     "correct width and depth",
+			name:     "key already exists",
 			commands: []string{"CMS.INITBYDIM new_cms_key 1000 5", "CMS.INITBYDIM new_cms_key 1000 5"},
 			expected: []interface{}{"OK", "ERR key already exists for 'cms.initbydim' command"},
 		},
