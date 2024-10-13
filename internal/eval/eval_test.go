@@ -111,6 +111,7 @@ func TestEval(t *testing.T) {
 	testEvalHVALS(t, store)
 	testEvalBitField(t, store)
 	testEvalHINCRBYFLOAT(t, store)
+	testEvalBitFieldRO(t, store)
 	testEvalGEOADD(t, store)
 	testEvalGEODIST(t, store)
 	testEvalSINTER(t, store)
@@ -5544,6 +5545,28 @@ func testEvalDUMP(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalDUMP, store)
+}
+
+func testEvalBitFieldRO(t *testing.T, store *dstore.Store) {
+	testCases := map[string]evalTestCase{
+		"BITFIELD_RO Arity": {
+			input:  []string{},
+			output: diceerrors.NewErrArity("BITFIELD_RO"),
+		},
+		"BITFIELD_RO syntax error": {
+			input:  []string{"bits", "GET", "u8"},
+			output: []byte("-ERR syntax error\r\n"),
+		},
+		"BITFIELD_RO invalid bitfield type": {
+			input:  []string{"bits", "GET", "a8", "0", "255"},
+			output: []byte("-ERR Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is.\r\n"),
+		},
+		"BITFIELD_RO unsupported commands": {
+			input:  []string{"bits", "set", "u8", "0", "255"},
+			output: []byte("-ERR BITFIELD_RO only supports the GET subcommand\r\n"),
+		},
+	}
+	runEvalTests(t, testCases, evalBITFIELDRO, store)
 }
 
 func testEvalGEOADD(t *testing.T, store *dstore.Store) {

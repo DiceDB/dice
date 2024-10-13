@@ -106,7 +106,7 @@ COMMAND <subcommand>
 
 ### Errors
 
-1.  `Unknown sucommand`
+1.  `Unknown subcommand`
     - Error Message: ` (error) ERR unknown subcommand 'sucommand-name'. Try COMMAND HELP.`
     - This error may occur if the subcommand is misspelled or not recognized by the DiceDB server.
 

@@ -17,11 +17,11 @@ func TestSetupConfig_CreateAndLoadDefault(t *testing.T) {
 	config.CustomConfigFilePath = tempDir
 	config.SetupConfig()
 
-	if config.DiceConfig.Server.Addr != config.DefaultHost {
-		t.Fatalf("Expected server addr to be '%s', got '%s'", config.DefaultHost, config.DiceConfig.Server.Addr)
+	if config.DiceConfig.AsyncServer.Addr != config.DefaultHost {
+		t.Fatalf("Expected server addr to be '%s', got '%s'", config.DefaultHost, config.DiceConfig.AsyncServer.Addr)
 	}
-	if config.DiceConfig.Server.Port != config.DefaultPort {
-		t.Fatalf("Expected server port to be %d, got %d", config.DefaultPort, config.DiceConfig.Server.Port)
+	if config.DiceConfig.AsyncServer.Port != config.DefaultPort {
+		t.Fatalf("Expected server port to be %d, got %d", config.DefaultPort, config.DiceConfig.AsyncServer.Port)
 	}
 }
 
@@ -33,11 +33,11 @@ func TestSetupConfig_DefaultConfig(t *testing.T) {
 	config.FileLocation = filepath.Join(config.DefaultConfigFilePath, config.DefaultConfigName)
 
 	// Verify that the configuration was loaded from the default values
-	if config.DiceConfig.Server.Addr != config.DefaultHost {
-		t.Fatalf("Expected server addr to be '%s', got '%s'", config.DefaultHost, config.DiceConfig.Server.Addr) // 127.0.0.1
+	if config.DiceConfig.AsyncServer.Addr != config.DefaultHost {
+		t.Fatalf("Expected server addr to be '%s', got '%s'", config.DefaultHost, config.DiceConfig.AsyncServer.Addr) // 127.0.0.1
 	}
-	if config.DiceConfig.Server.Port != config.DefaultPort {
-		t.Fatalf("Expected server port to be %d, got %d", 8739, config.DiceConfig.Server.Port)
+	if config.DiceConfig.AsyncServer.Port != config.DefaultPort {
+		t.Fatalf("Expected server port to be %d, got %d", 8739, config.DiceConfig.AsyncServer.Port)
 	}
 }
 
@@ -48,7 +48,7 @@ func TestSetupConfig_InvalidConfigFile(t *testing.T) {
 	configFilePath := filepath.Join(tempDir, "dice.toml")
 
 	content := `
-		[server]
+		[asyncserver]
 		addr = 127.0.0.1  // Missing quotes around string value
 		port = abc        // Invalid integer
 	`
@@ -62,11 +62,11 @@ func TestSetupConfig_InvalidConfigFile(t *testing.T) {
 
 	config.SetupConfig()
 
-	if config.DiceConfig.Server.Addr != config.DefaultHost {
-		t.Fatalf("Expected server addr to be '%s' after unmarshal error, got '%s'", config.DefaultHost, config.DiceConfig.Server.Addr)
+	if config.DiceConfig.AsyncServer.Addr != config.DefaultHost {
+		t.Fatalf("Expected server addr to be '%s' after unmarshal error, got '%s'", config.DefaultHost, config.DiceConfig.AsyncServer.Addr)
 	}
-	if config.DiceConfig.Server.Port != config.DefaultPort {
-		t.Fatalf("Expected server port to be %d after unmarshal error, got %d", config.DefaultPort, config.DiceConfig.Server.Port)
+	if config.DiceConfig.AsyncServer.Port != config.DefaultPort {
+		t.Fatalf("Expected server port to be %d after unmarshal error, got %d", config.DefaultPort, config.DiceConfig.AsyncServer.Port)
 	}
 }
 
@@ -76,7 +76,7 @@ func TestSetupConfig_PartialConfigFile(t *testing.T) {
 	configFilePath := filepath.Join(tempDir, "dice.toml")
 
 	content := `
-        [server]
+        [asyncserver]
         addr = "127.0.0.1"
     `
 	if err := os.WriteFile(configFilePath, []byte(content), 0666); err != nil {
@@ -89,13 +89,13 @@ func TestSetupConfig_PartialConfigFile(t *testing.T) {
 
 	config.SetupConfig()
 
-	t.Log(config.DiceConfig.Server.Port)
+	t.Log(config.DiceConfig.AsyncServer.Port)
 
-	if config.DiceConfig.Server.Addr != "127.0.0.1" {
-		t.Fatalf("Expected server addr to be '127.0.0.1', got '%s'", config.DiceConfig.Server.Addr)
+	if config.DiceConfig.AsyncServer.Addr != "127.0.0.1" {
+		t.Fatalf("Expected server addr to be '127.0.0.1', got '%s'", config.DiceConfig.AsyncServer.Addr)
 	}
-	if config.DiceConfig.Server.Port != config.DefaultPort {
-		t.Fatalf("Expected server port to be %d (default), got %d", config.DefaultPort, config.DiceConfig.Server.Port)
+	if config.DiceConfig.AsyncServer.Port != config.DefaultPort {
+		t.Fatalf("Expected server port to be %d (default), got %d", config.DefaultPort, config.DiceConfig.AsyncServer.Port)
 	}
 }
 
@@ -106,7 +106,7 @@ func TestSetupConfig_LoadFromFile(t *testing.T) {
 	configFilePath := filepath.Join(tempDir, "dice.toml")
 
 	content := `
-		[server]
+		[asyncserver]
 		addr = "127.0.0.1"
 		port = 8739
 	`
@@ -120,11 +120,11 @@ func TestSetupConfig_LoadFromFile(t *testing.T) {
 
 	config.SetupConfig()
 
-	if config.DiceConfig.Server.Addr != "127.0.0.1" {
-		t.Fatalf("Expected server addr to be '127.0.0.1', got '%s'", config.DiceConfig.Server.Addr)
+	if config.DiceConfig.AsyncServer.Addr != "127.0.0.1" {
+		t.Fatalf("Expected server addr to be '127.0.0.1', got '%s'", config.DiceConfig.AsyncServer.Addr)
 	}
-	if config.DiceConfig.Server.Port != 8739 {
-		t.Fatalf("Expected server port to be 8374, got %d", config.DiceConfig.Server.Port)
+	if config.DiceConfig.AsyncServer.Port != 8739 {
+		t.Fatalf("Expected server port to be 8374, got %d", config.DiceConfig.AsyncServer.Port)
 	}
 
 }
