@@ -15,6 +15,8 @@ func TestCountMinSketch(t *testing.T) {
 	testCMSInitByProb(t, store)
 	testCMSInfo(t, store)
 	testCMSIncrBy(t, store)
+	testCMSQuery(t, store)
+	testCMSMerge(t, store)
 }
 
 func testCMSInitByDim(t *testing.T, store *dstore.Store) {
@@ -195,11 +197,11 @@ func testCMSMerge(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"wrong number of arguments": {
 			input: []string{"cms_key5"},
-			output: []byte("-ERR wrong number of arguments for 'cms.query' command\r\n"),
+			output: []byte("-ERR wrong number of arguments for 'cms.merge' command\r\n"),
 		},
 		"key doesn't exist": {
 			input: []string{"cms_key5", "1", "test"},
-			output: []byte("-ERR key does not exist for 'cms.query' command\r\n"),
+			output: []byte("-ERR key does not exist for 'cms.merge' command\r\n"),
 		},
 		"wrong type of number of sources": {
 			setup: func () {
@@ -213,7 +215,7 @@ func testCMSMerge(t *testing.T, store *dstore.Store) {
 
 			},
 			input: []string{"cms_key5", "not_a_number", "test"},
-			output: []byte("-ERR cannot parse number for 'cms.query' command\r\n"),
+			output: []byte("-ERR cannot parse number for 'cms.merge' command\r\n"),
 		},
 		"more sources than specified": {
 			setup: func () {
@@ -231,7 +233,7 @@ func testCMSMerge(t *testing.T, store *dstore.Store) {
 
 			},
 			input: []string{"cms_key5", "3", "test", "test1"},
-			output: []byte("-ERR invalid number of arguments to merge for 'cms.query' command\r\n"),
+			output: []byte("-ERR invalid number of arguments to merge for 'cms.merge' command\r\n"),
 		},
 		"fewer sources than specified": {
 			setup: func () {
@@ -249,7 +251,7 @@ func testCMSMerge(t *testing.T, store *dstore.Store) {
 
 			},
 			input: []string{"cms_key5", "1", "test", "test1"},
-			output: []byte("-ERR invalid number of arguments to merge for 'cms.query' command\r\n"),
+			output: []byte("-ERR invalid number of arguments to merge for 'cms.merge' command\r\n"),
 		},
 		"missing weights": {
 			setup: func () {
@@ -263,7 +265,7 @@ func testCMSMerge(t *testing.T, store *dstore.Store) {
 
 			},
 			input: []string{"cms_key5", "1", "test", "WEIGHTS"},
-			output: []byte("-ERR invalid number of arguments to merge for 'cms.query' command\r\n"),
+			output: []byte("-ERR invalid number of arguments to merge for 'cms.merge' command\r\n"),
 		},
 		"more weights than needed": {
 			setup: func () {
@@ -277,7 +279,7 @@ func testCMSMerge(t *testing.T, store *dstore.Store) {
 
 			},
 			input: []string{"cms_key5", "1", "test", "WEIGHTS", "1", "2"},
-			output: []byte("-ERR invalid number of arguments to merge for 'cms.query' command\r\n"),
+			output: []byte("-ERR invalid number of arguments to merge for 'cms.merge' command\r\n"),
 		},
 		"correct case": {
 			setup: func () {
