@@ -848,9 +848,10 @@ var (
 		Name: "SMEMBERS",
 		Info: `SMEMBERS key
 		Returns all the members of the set value stored at key.`,
-		Eval:     evalSMEMBERS,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalSMEMBERS,
 	}
 	sremCmdMeta = DiceCmdMeta{
 		Name: "SREM",

@@ -49,6 +49,7 @@ const (
 	CmdSadd        = "SADD"
 	CmdSrem        = "SREM"
 	CmdScard       = "SCARD"
+	CmdSmembers    = "SMEMBERS"
 )
 
 type CmdMeta struct {
@@ -90,6 +91,9 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdScard: {
+		CmdType: SingleShard,
+	},
+	CmdSmembers: {
 		CmdType: SingleShard,
 	},
 

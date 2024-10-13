@@ -478,3 +478,54 @@ func evalSCARD(args []string, store *dstore.Store) *EvalResponse {
 		Error:  nil,
 	}
 }
+
+// evalSMEMBERS returns all the members of a set
+// An error response is returned if the command is used on a key that contains a non-set value(eg: string)
+// An empty set is returned if no set exists for given key
+func evalSMEMBERS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("SMEMBERS"),
+		}
+	}
+	key := args[0]
+
+	// Get the set object from the store.
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: []string{},
+			Error:  nil,
+		}
+	}
+
+	// If the object exists, check if it is a set object.
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingSetStr); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// Get the set object.
+	set := obj.Value.(map[string]struct{})
+	// Get the members of the set.
+	members := make([]string, 0, len(set))
+	for k := range set {
+		members = append(members, k)
+	}
+
+	return &EvalResponse{
+		Result: members,
+		Error:  nil,
+	}
+}
