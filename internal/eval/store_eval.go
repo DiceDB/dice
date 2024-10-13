@@ -376,3 +376,59 @@ func evalSADD(args []string, store *dstore.Store) *EvalResponse {
 		Error:  nil,
 	}
 }
+
+// evalSREM removes one or more members from a set
+// Members that are not member of this set are ignored
+// Returns the number of members that are removed from set
+// If set does not exist, 0 is returned
+// An error response is returned if the command is used on a key that contains a non-set value(eg: string)
+func evalSREM(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("SREM"),
+		}
+	}
+	key := args[0]
+
+	// Get the set object from the store.
+	obj := store.Get(key)
+
+	var count = 0
+	if obj == nil {
+		return &EvalResponse{
+			Result: count,
+			Error:  nil,
+		}
+	}
+
+	// If the object exists, check if it is a set object.
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingSetStr); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// Get the set object.
+	set := obj.Value.(map[string]struct{})
+
+	for _, arg := range args[1:] {
+		if _, ok := set[arg]; ok {
+			delete(set, arg)
+			count++
+		}
+	}
+
+	return &EvalResponse{
+		Result: count,
+		Error:  nil,
+	}
+}

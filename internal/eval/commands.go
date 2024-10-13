@@ -858,9 +858,10 @@ var (
 		Removes the specified members from the set stored at key.
 		Non existing keys are treated as empty sets.
 		An error is returned when the value stored at key is not a set.`,
-		Eval:     evalSREM,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalSREM,
 	}
 	scardCmdMeta = DiceCmdMeta{
 		Name: "SCARD",
