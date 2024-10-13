@@ -2617,13 +2617,13 @@ func evalCommand(args []string, store *dstore.Store) []byte {
 	subcommand := strings.ToUpper(args[0])
 	switch subcommand {
 	case Count:
-		return evalCommandCount()
+		return evalCommandCount(args[1:])
 	case GetKeys:
 		return evalCommandGetKeys(args[1:])
 	case List:
-		return evalCommandList()
+		return evalCommandList(args[1:])
 	case Help:
-		return evalCommandHelp()
+		return evalCommandHelp(args[1:])
 	case Info:
 		return evalCommandInfo(args[1:])
 	default:
@@ -2632,16 +2632,22 @@ func evalCommand(args []string, store *dstore.Store) []byte {
 }
 
 // evalCommandHelp prints help message
-func evalCommandHelp() []byte {
+func evalCommandHelp(args []string) []byte {
+	if len(args) > 0 {
+		return diceerrors.NewErrArity("COMMAND|HELP")
+	}
+
 	format := "COMMAND <subcommand> [<arg> [value] [opt] ...]. Subcommands are:"
 	noTitle := "(no subcommand)"
-	noMessage := "    Return details about all Dice commands."
+	noMessage := "     Return details about all DiceDB commands."
 	countTitle := CountConst
-	countMessage := "    Return the total number of commands in this Dice server."
+	countMessage := "     Return the total number of commands in this DiceDB server."
 	listTitle := "LIST"
-	listMessage := "     Return a list of all commands in this Dice server."
+	listMessage := "     Return a list of all commands in this DiceDB server."
+	infoTitle := "INFO [<command-name> ...]"
+	infoMessage := "     Return details about the specified DiceDB commands. If no command names are given, documentation details for all commands are returned."
 	getKeysTitle := "GETKEYS <full-command>"
-	getKeysMessage := "     Return the keys from a full Dice command."
+	getKeysMessage := "     Return the keys from a full DiceDB command."
 	helpTitle := "HELP"
 	helpMessage := "     Print this help."
 	message := []string{
@@ -2652,6 +2658,8 @@ func evalCommandHelp() []byte {
 		countMessage,
 		listTitle,
 		listMessage,
+		infoTitle,
+		infoMessage,
 		getKeysTitle,
 		getKeysMessage,
 		helpTitle,
@@ -2665,7 +2673,11 @@ func evalCommandDefault() []byte {
 	return clientio.Encode(cmds, false)
 }
 
-func evalCommandList() []byte {
+func evalCommandList(args []string) []byte {
+	if len(args) > 0 {
+		return diceerrors.NewErrArity("COMMAND|LIST")
+	}
+
 	cmds := make([]string, 0, diceCommandsCount)
 	for k := range DiceCmds {
 		cmds = append(cmds, k)
@@ -2692,7 +2704,11 @@ func evalKeys(args []string, store *dstore.Store) []byte {
 }
 
 // evalCommandCount returns a number of commands supported by DiceDB
-func evalCommandCount() []byte {
+func evalCommandCount(args []string) []byte {
+	if len(args) > 0 {
+		return diceerrors.NewErrArity("COMMAND|COUNT")
+	}
+
 	return clientio.Encode(diceCommandsCount, false)
 }
 
