@@ -5174,22 +5174,43 @@ func testEvalZADD(t *testing.T, store *dstore.Store) {
 		},
 	}
 
+	// for name, tc := range tests {
+	// 	t.Run(name, func(t *testing.T) {
+	// 		store = setupTest(store)
+
+	// 		if tc.setup != nil {
+	// 			tc.setup()
+	// 		}
+
+	// 		output := evalZADD(tc.input, store)
+
+	// 		if tc.validator != nil {
+	// 			tc.newValidator(output)
+	// 		} else {
+	// 			fmt.Println(tc.migratedOutput)
+	// 			fmt.Println(output)
+	// 			assert.Equal(t, tc.migratedOutput, *output)
+	// 		}
+	// 	})
+	// }
+
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			store = setupTest(store)
+			response := evalZADD(tc.input, store)
 
-			if tc.setup != nil {
-				tc.setup()
+			// Handle comparison for byte slices
+			if b, ok := response.Result.([]byte); ok && tc.migratedOutput.Result != nil {
+				if expectedBytes, ok := tc.migratedOutput.Result.([]byte); ok {
+					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+				}
+			} else {
+				testifyAssert.Equal(t, tc.migratedOutput.Result, response.Result)
 			}
 
-			output := evalZADD(tc.input, store)
-
-			if tc.validator != nil {
-				tc.newValidator(output)
+			if tc.migratedOutput.Error != nil {
+				testifyAssert.EqualError(t, response.Error, tc.migratedOutput.Error.Error())
 			} else {
-				fmt.Println(tc.migratedOutput)
-				fmt.Println(output)
-				assert.Equal(t, tc.migratedOutput, output)
+				testifyAssert.NoError(t, response.Error)
 			}
 		})
 	}
@@ -5316,22 +5337,42 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 		},
 	}
 
+	// for name, tc := range tests {
+	// 	t.Run(name, func(t *testing.T) {
+	// 		store = setupTest(store)
+
+	// 		if tc.setup != nil {
+	// 			tc.setup()
+	// 		}
+
+	// 		output := evalZADD(tc.input, store)
+
+	// 		if tc.validator != nil {
+	// 			tc.newValidator(output)
+	// 		} else {
+	// 			fmt.Println(tc.migratedOutput)
+	// 			fmt.Println(output)
+	// 			assert.Equal(t, tc.migratedOutput, *output)
+	// 		}
+	// 	})
+	// }
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			store = setupTest(store)
+			response := evalZRANGE(tc.input, store)
 
-			if tc.setup != nil {
-				tc.setup()
+			// Handle comparison for byte slices
+			if b, ok := response.Result.([]byte); ok && tc.migratedOutput.Result != nil {
+				if expectedBytes, ok := tc.migratedOutput.Result.([]byte); ok {
+					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+				}
+			} else {
+				testifyAssert.Equal(t, tc.migratedOutput.Result, response.Result)
 			}
 
-			output := evalZADD(tc.input, store)
-
-			if tc.validator != nil {
-				tc.newValidator(output)
+			if tc.migratedOutput.Error != nil {
+				testifyAssert.EqualError(t, response.Error, tc.migratedOutput.Error.Error())
 			} else {
-				fmt.Println(tc.migratedOutput)
-				fmt.Println(output)
-				assert.Equal(t, tc.migratedOutput, output)
+				testifyAssert.NoError(t, response.Error)
 			}
 		})
 	}

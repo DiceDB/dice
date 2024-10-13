@@ -373,7 +373,7 @@ func evalZADD(args []string, store *dstore.Store) *EvalResponse {
 	store.Put(key, obj, dstore.WithPutCmd(dstore.ZAdd))
 
 	return &EvalResponse{
-		Result: clientio.Encode(added, false),
+		Result: added,
 		Error:  nil,
 	}
 }
@@ -427,12 +427,12 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 	obj := store.Get(key)
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.Encode([]string{}, false),
+			Result: []string{},
 			Error:  nil,
 		}
 	}
 
-	ss, errMsg := sortedset.FromObject(obj)
+	sortedSet, errMsg := sortedset.FromObject(obj)
 
 	if errMsg != nil {
 		return &EvalResponse{
@@ -441,10 +441,10 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	result := ss.GetRange(start, stop, withScores, reverse)
+	result := sortedSet.GetRange(start, stop, withScores, reverse)
 
 	return &EvalResponse{
-		Result: clientio.Encode(result, false),
+		Result: result,
 		Error:  nil,
 	}
 }
