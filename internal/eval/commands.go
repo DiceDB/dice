@@ -374,8 +374,8 @@ var (
 		If the value at the key is a string, it should be parsable to float64,
 		if not INCRBYFLOAT returns an  error response.
 		INCRBYFLOAT returns the incremented value for the key after applying the specified increment if there are no errors.`,
-		Eval:  evalINCRBYFLOAT,
 		Arity: 2,
+		Eval:  evalINCRBYFLOAT,
 	}
 	infoCmdMeta = DiceCmdMeta{
 		Name: "INFO",
@@ -981,9 +981,9 @@ var (
 		The value for the queried key should be of integer format,
 		if not INCRBY returns encoded error response.
 		evalINCRBY returns the incremented value for the key if there are no errors.`,
-		Eval:     evalINCRBY,
 		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+		Eval:     evalINCRBY,
 	}
 	getRangeCmdMeta = DiceCmdMeta{
 		Name:     "GETRANGE",
