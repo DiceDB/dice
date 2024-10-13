@@ -15,6 +15,8 @@ import (
 )
 
 const (
+	DiceVersion string = "0.0.4"
+
 	DefaultHost           string = "0.0.0.0"
 	DefaultPort           int    = 7379
 	DefaultConfigName     string = "dice.toml"
@@ -113,6 +115,7 @@ type Config struct {
 
 // Default configurations for internal use
 var baseConfig = Config{
+	Version: DiceVersion,
 	AsyncServer: struct {
 		Addr      string `mapstructure:"addr"`
 		Port      int    `mapstructure:"port"`
@@ -211,7 +214,6 @@ func init() {
 	case "prod":
 		config.Logging.LogLevel = "info"
 		config.Logging.PrettyPrintLogs = false
-	default:
 	}
 
 	if logLevel := os.Getenv("DICE_LOG_LEVEL"); logLevel != "" {

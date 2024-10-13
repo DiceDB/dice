@@ -22,8 +22,6 @@ import (
 	"github.com/dicedb/dice/internal/worker"
 )
 
-const Version string = "0.0.4"
-
 func init() {
 	flag.StringVar(&config.Host, "host", "0.0.0.0", "host for the dicedb server")
 	flag.IntVar(&config.Port, "port", 7379, "port for the dicedb server")
@@ -41,7 +39,6 @@ func init() {
 	flag.Parse()
 
 	config.SetupConfig()
-	config.DiceConfig.Version = Version
 
 	iid := observability.GetOrCreateInstanceID()
 	config.DiceConfig.InstanceID = iid

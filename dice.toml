@@ -5,6 +5,9 @@
 #
 # go run main.go -c /path/to/dice.toml
 
+Version = '0.0.4'
+InstanceID = ''
+
 [AsyncServer]
 Addr = '0.0.0.0'
 Port = 7379
@@ -42,8 +45,8 @@ PersistenceEnabled = true
 WriteAOFOnCleanup = false
 
 [Logging]
-LogLevel = 'info'
-PrettyPrintLogs = false
+LogLevel = 'debug'
+PrettyPrintLogs = true
 
 [Auth]
 UserName = 'dice'
