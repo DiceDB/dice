@@ -9,10 +9,10 @@ import (
 )
 
 func TestLFUEviction(t *testing.T) {
-	originalEvictionPolicy := config.DiceConfig.Server.EvictionPolicy
+	originalEvictionPolicy := config.DiceConfig.Memory.EvictionPolicy
 
 	store := NewStore(nil, nil)
-	config.DiceConfig.Server.EvictionPolicy = config.EvictAllKeysLFU
+	config.DiceConfig.Memory.EvictionPolicy = config.EvictAllKeysLFU
 
 	// Define test cases
 	tests := []struct {
@@ -82,5 +82,5 @@ func TestLFUEviction(t *testing.T) {
 		})
 	}
 
-	config.DiceConfig.Server.EvictionPolicy = originalEvictionPolicy
+	config.DiceConfig.Memory.EvictionPolicy = originalEvictionPolicy
 }

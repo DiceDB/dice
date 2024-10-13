@@ -41,7 +41,7 @@ func init() {
 	flag.Parse()
 
 	config.SetupConfig()
-	config.DiceConfig.Server.Version = Version
+	config.DiceConfig.Version = Version
 
 	iid := observability.GetOrCreateInstanceID()
 	config.DiceConfig.InstanceID = iid
@@ -59,8 +59,8 @@ func main() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
-	queryWatchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Server.WatchChanBufSize)
-	cmdWatchChan := make(chan dstore.CmdWatchEvent, config.DiceConfig.Server.KeysLimit)
+	queryWatchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Performance.WatchChanBufSize)
+	cmdWatchChan := make(chan dstore.CmdWatchEvent, config.DiceConfig.Memory.KeysLimit)
 	var serverErrCh chan error
 
 	// Get the number of available CPU cores on the machine using runtime.NumCPU().
@@ -162,7 +162,7 @@ func main() {
 			}
 		}()
 	} else {
-		workerManager := worker.NewWorkerManager(config.DiceConfig.Server.MaxClients, shardManager)
+		workerManager := worker.NewWorkerManager(config.DiceConfig.Performance.MaxClients, shardManager)
 		// Initialize the RESP Server
 		respServer := resp.NewServer(shardManager, workerManager, cmdWatchChan, serverErrCh, logr)
 		serverWg.Add(1)

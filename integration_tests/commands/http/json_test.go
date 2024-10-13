@@ -758,7 +758,7 @@ func TestJSONMGET(t *testing.T) {
 	})
 
 	// Deleting the used keys
-	for key, _ := range setupData {
+	for key := range setupData {
 		exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": key}})
 	}
 }
@@ -1029,7 +1029,7 @@ func TestJsonObjLen(t *testing.T) {
 	}
 
 	// Deleting the used keys
-	for key, _ := range setupData {
+	for key := range setupData {
 		exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": key}})
 	}
 }
@@ -1333,7 +1333,7 @@ func TestJsonObjKeys(t *testing.T) {
 	}
 
 	// Deleting the used keys
-	for key, _ := range setupData {
+	for key := range setupData {
 		exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": key}})
 	}
 }
