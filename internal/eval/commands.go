@@ -1057,6 +1057,14 @@ var (
 		KeySpecs: KeySpecs{BeginIndex: 1},
 		Eval:     evalBITFIELD,
 	}
+	bitfieldroCmdMeta = DiceCmdMeta{
+		Name: "BITFIELD_RO",
+		Info: `It is read-only variant of the BITFIELD command. 
+		It is like the original BITFIELD but only accepts GET subcommand.`,
+		Arity:    -1,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+		Eval:     evalBITFIELDRO,
+	}
 	hincrbyFloatCmdMeta = DiceCmdMeta{
 		Name: "HINCRBYFLOAT",
 		Info: `HINCRBYFLOAT increments the specified field of a hash stored at the key,
@@ -1107,6 +1115,7 @@ func init() {
 	DiceCmds["BITCOUNT"] = bitCountCmdMeta
 	DiceCmds["BITFIELD"] = bitfieldCmdMeta
 	DiceCmds["BITOP"] = bitOpCmdMeta
+	DiceCmds["BITFIELD_RO"] = bitfieldroCmdMeta
 	DiceCmds["BITPOS"] = bitposCmdMeta
 	DiceCmds["CLIENT"] = clientCmdMeta
 	DiceCmds["COMMAND"] = commandCmdMeta
