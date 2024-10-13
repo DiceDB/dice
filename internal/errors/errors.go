@@ -76,7 +76,3 @@ func NewErrArity(cmdName string) []byte {
 func NewErrExpireTime(cmdName string) []byte {
 	return NewErrWithFormattedMessage(ExpiryErr, strings.ToLower(cmdName))
 }
-
-func NewErrPathTypeErr(cmdName string) []byte {
-	return NewErrWithFormattedMessage(JSONPathValueTypeErr, strings.ToLower((cmdName)))
-}
