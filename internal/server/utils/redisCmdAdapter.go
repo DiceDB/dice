@@ -67,7 +67,7 @@ func ParseHTTPRequest(r *http.Request) (*cmd.DiceDBCmd, error) {
 			return nil, err
 		}
 
-		if len(body) > 0 {
+		if len(body) > 0 && string(body) != "{}" {
 			var jsonBody map[string]interface{}
 			if err := json.Unmarshal(body, &jsonBody); err != nil {
 				return nil, err

@@ -5,9 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/dicedb/dice/internal/worker"
 	"hash/crc32"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -36,7 +38,7 @@ type HTTPServer struct {
 	httpServer         *http.Server
 	logger             *slog.Logger
 	qwatchResponseChan chan comm.QwatchResponse
-	shutdownChan       chan struct{}
+	shutdownChan       chan error
 }
 
 type HTTPQwatchResponse struct {
@@ -71,7 +73,7 @@ func NewHTTPServer(shardManager *shard.ShardManager, logger *slog.Logger) *HTTPS
 		httpServer:         srv,
 		logger:             logger,
 		qwatchResponseChan: make(chan comm.QwatchResponse),
-		shutdownChan:       make(chan struct{}),
+		shutdownChan:       make(chan error),
 	}
 
 	mux.HandleFunc("/", httpServer.DiceHTTPHandler)
@@ -126,6 +128,11 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 
 func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.Request) {
 	// convert to REDIS cmd
+	clientIdentifierID := generateUniqueInt32(request)
+	s.shardManager.RegisterWorker(strconv.Itoa(int(clientIdentifierID)), s.ioChan)
+	defer func() {
+		s.shardManager.UnregisterWorker(strconv.Itoa(int(clientIdentifierID)))
+	}()
 	diceDBCmd, err := utils.ParseHTTPRequest(request)
 	if err != nil {
 		responseJSON, _ := json.Marshal(utils.HTTPResponse{Status: utils.HTTPStatusError, Data: "Invalid HTTP request format"})
@@ -158,18 +165,17 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 		return
 	}
 
-	// send request to Shard Manager
-	s.shardManager.GetShard(0).ReqChan <- &ops.StoreOp{
-		Cmd:      diceDBCmd,
-		WorkerID: "httpServer",
-		ShardID:  0,
-		HTTPOp:   true,
+	commandHandler := &worker.CommandHandler{
+		ShardManager:       s.shardManager,
+		Id:                 strconv.Itoa(int(clientIdentifierID)),
+		RespChan:           s.ioChan,
+		Logger:             s.logger,
+		GlobalErrorChannel: s.shutdownChan,
 	}
 
-	// Wait for response
-	resp := <-s.ioChan
+	result := commandHandler.ExecuteCommand(context.Background(), diceDBCmd, true, false, nil)
 
-	s.writeResponse(writer, resp, diceDBCmd)
+	s.writeResponse(writer, result, diceDBCmd)
 }
 
 func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *http.Request) {
@@ -247,7 +253,7 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 			storeOp.Cmd = unWatchCmd
 			s.shardManager.GetShard(0).ReqChan <- storeOp
 			resp := <-s.ioChan
-			s.writeResponse(writer, resp, diceDBCmd)
+			s.writeQUnWatchResponse(writer, resp, diceDBCmd)
 			return
 		}
 	}
@@ -325,7 +331,70 @@ func (s *HTTPServer) writeQWatchResponse(writer http.ResponseWriter, response in
 	flusher.Flush() // Flush the response to send it to the client
 }
 
-func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.StoreResponse, diceDBCmd *cmd.DiceDBCmd) {
+func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *worker.CommandResponse, diceDBCmd *cmd.DiceDBCmd) {
+	_, ok := WorkerCmdsMeta[diceDBCmd.Cmd]
+	var rp *clientio.RESPParser
+
+	var responseValue interface{}
+	// TODO: Remove this conditional check and if (true) condition when all commands are migrated
+	if !ok {
+		var err error
+		if result.Error != nil {
+			rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(result.Error.Error())))
+		} else {
+			rp = clientio.NewRESPParser(bytes.NewBuffer(result.ResponseData.([]byte)))
+		}
+
+		responseValue, err = rp.DecodeOne()
+		if err != nil {
+			s.logger.Error("Error decoding response", "error", err)
+			http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		if result.Error != nil {
+			responseValue = result.Error.Error()
+		} else {
+			responseValue = result.ResponseData
+		}
+	}
+
+	// func HandlePredefinedResponse(response interface{}) []byte {
+	respArr := []string{
+		"(nil)",  // Represents a RESP Nil Bulk String, which indicates a null value.
+		"OK",     // Represents a RESP Simple String with value "OK".
+		"QUEUED", // Represents a Simple String indicating that a command has been queued.
+		"0",      // Represents a RESP Integer with value 0.
+		"1",      // Represents a RESP Integer with value 1.
+		"-1",     // Represents a RESP Integer with value -1.
+		"-2",     // Represents a RESP Integer with value -2.
+		"*0",     // Represents an empty RESP Array.
+	}
+
+	if val, ok := responseValue.(clientio.RespType); ok {
+		responseValue = respArr[val]
+	}
+
+	if bt, ok := responseValue.([]byte); ok {
+		responseValue = string(bt)
+	}
+	httpResponse := utils.HTTPResponse{Data: responseValue}
+
+	responseJSON, err := json.Marshal(httpResponse)
+	if err != nil {
+		s.logger.Error("Error marshaling response", "error", err)
+		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	writer.Header().Set("Content-Type", "application/json")
+	_, err = writer.Write(responseJSON)
+	if err != nil {
+		s.logger.Error("Error writing response", "error", err)
+	}
+}
+
+func (s *HTTPServer) writeQUnWatchResponse(writer http.ResponseWriter, result *ops.StoreResponse, diceDBCmd *cmd.DiceDBCmd) {
 	_, ok := WorkerCmdsMeta[diceDBCmd.Cmd]
 	var rp *clientio.RESPParser
 

@@ -139,7 +139,6 @@ func RunHTTPServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 			if err.Error() != "http: Server closed" {
 				log.Fatalf("Http test server encountered an error: %v", err)
 			}
-			log.Printf("Http test server encountered an error: %v", err)
 		}
 	}()
 }
