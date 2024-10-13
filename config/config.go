@@ -210,8 +210,7 @@ var defaultConfig Config
 func init() {
 	config := baseConfig
 	env := os.Getenv("DICE_ENV")
-	switch env {
-	case "prod":
+	if env == "prod" {
 		config.Logging.LogLevel = "info"
 		config.Logging.PrettyPrintLogs = false
 	}
