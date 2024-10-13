@@ -17,12 +17,11 @@ The `DBSIZE` command does not take any parameters.
 
 ## Return values
 
-| Condition             | Return Value                                                             |
-| --------------------- | ------------------------------------------------------------------------ |
-| Command is successful | Integer representing the number of keys                                  |
-| Connection issues     | Error: `ERR Connection lost`                                             |
-| Authentication issues | Error: `NOAUTH Authentication required`                                  |
-| Permission issues     | Error: `NOPERM this user has no permissions to run the 'dbsize' command` |
+| Condition             | Return Value                            |
+| --------------------- | --------------------------------------- |
+| Command is successful | Integer representing the number of keys |
+| Connection issues     | Error: `ERR Connection lost`            |
+| Authentication issues | Error: `NOAUTH Authentication required` |
 
 ## Behaviour
 
@@ -42,10 +41,6 @@ The `DBSIZE` command is straightforward and does not typically result in errors 
 2. `Authentication Issues`:
    - Error Message: `NOAUTH Authentication required`
    - Occurs if the DiceDB server requires authentication and the client has not authenticated.
-
-3. `Permission Issues`:
-   - Error Message: `NOPERM this user has no permissions to run the 'dbsize' command`
-   - Occurs if the client does not have the necessary permissions to execute the command.
 
 ## Example Usage
 
@@ -85,15 +80,4 @@ In this example, database 0 contains 42 keys, and database 1 contains 15 keys.
 ```shell
 127.0.0.1:7379> DBSIZE
 (error) NOAUTH Authentication required
-```
-
-
-
-
-<!-- TODO: Need to verify and test the below -->
-2. Trying to use `DBSIZE` without proper permissions:
-
-```shell
-127.0.0.1:7379> DBSIZE
-(error) NOPERM this user has no permissions to run the 'dbsize' command
 ```
