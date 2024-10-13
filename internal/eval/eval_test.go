@@ -2832,6 +2832,50 @@ func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]s
 	}
 }
 
+func runMigratedEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]string, *dstore.Store) *EvalResponse, store *dstore.Store) {
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			store = setupTest(store)
+
+			if tc.setup != nil {
+				tc.setup()
+			}
+
+			output := evalFunc(tc.input, store)
+
+			if tc.newValidator != nil {
+				if tc.migratedOutput.Error != nil {
+					tc.newValidator(tc.migratedOutput.Error)
+				} else {
+					tc.newValidator(output.Result)
+				}
+				return
+			}
+
+			if tc.migratedOutput.Error != nil {
+				testifyAssert.EqualError(t, output.Error, tc.migratedOutput.Error.Error())
+				return
+			}
+
+			// Handle comparison for byte slices and string slices
+			// TODO: Make this generic so that all kind of slices can be handled
+			if b, ok := output.Result.([]byte); ok && tc.migratedOutput.Result != nil {
+				if expectedBytes, ok := tc.migratedOutput.Result.([]byte); ok {
+					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+				}
+			} else if a, ok := output.Result.([]string); ok && tc.migratedOutput.Result != nil {
+				if expectedStringSlice, ok := tc.migratedOutput.Result.([]string); ok {
+					testifyAssert.ElementsMatch(t, a, expectedStringSlice)
+				}
+			} else {
+				testifyAssert.Equal(t, tc.migratedOutput.Result, output.Result)
+			}
+
+			testifyAssert.NoError(t, output.Error)
+		})
+	}
+}
+
 func BenchmarkEvalMSET(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -5130,10 +5174,9 @@ func testEvalZADD(t *testing.T, store *dstore.Store) {
 			},
 		},
 		"ZADD new member to non-existing key": {
-			setup: func() {},
 			input: []string{"myzset", "1", "member1"},
 			migratedOutput: EvalResponse{
-				Result: clientio.Encode(int64(1), false),
+				Result: 1,
 				Error:  nil,
 			},
 		},
@@ -5143,7 +5186,7 @@ func testEvalZADD(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"myzset", "2", "member1"},
 			migratedOutput: EvalResponse{
-				Result: clientio.Encode(int64(0), false),
+				Result: 0,
 				Error:  nil,
 			},
 		},
@@ -5153,14 +5196,14 @@ func testEvalZADD(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"myzset", "2", "member2", "3", "member3"},
 			migratedOutput: EvalResponse{
-				Result: clientio.Encode(int64(2), false),
+				Result: 2,
 				Error:  nil,
 			},
 		},
 		"ZADD with negative score": {
 			input: []string{"myzset", "-1", "member_neg"},
 			migratedOutput: EvalResponse{
-				Result: clientio.Encode(int64(1), false),
+				Result: 1,
 				Error:  nil,
 			},
 		},
@@ -5170,14 +5213,14 @@ func testEvalZADD(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"myzset", "2", "member1", "2", "member1"},
 			migratedOutput: EvalResponse{
-				Result: clientio.Encode(int64(0), false),
+				Result: 0,
 				Error:  nil,
 			},
 		},
 		"ZADD with extreme float value": {
 			input: []string{"myzset", "1e308", "member_large"},
 			migratedOutput: EvalResponse{
-				Result: clientio.Encode(int64(1), false),
+				Result: 1,
 				Error:  nil,
 			},
 		},
@@ -5191,15 +5234,15 @@ func testEvalZADD(t *testing.T, store *dstore.Store) {
 		"ZADD with INF score": {
 			input: []string{"myzset", "INF", "member_inf"},
 			migratedOutput: EvalResponse{
-				Result: clientio.Encode(int64(1), false),
+				Result: 1,
 				Error:  nil,
 			},
 		},
 		"ZADD to a key of wrong type": {
 			setup: func() {
-				store.Put("myzset", store.NewObj("string_value", -1, object.ObjTypeString, object.ObjEncodingRaw))
+				store.Put("mywrongtypekey", store.NewObj("string_value", -1, object.ObjTypeString, object.ObjEncodingRaw))
 			},
-			input: []string{"myzset", "1", "member1"},
+			input: []string{"mywrongtypekey", "1", "member1"},
 			migratedOutput: EvalResponse{
 				Result: nil,
 				Error:  diceerrors.ErrWrongTypeOperation,
@@ -5207,46 +5250,7 @@ func testEvalZADD(t *testing.T, store *dstore.Store) {
 		},
 	}
 
-	// for name, tc := range tests {
-	// 	t.Run(name, func(t *testing.T) {
-	// 		store = setupTest(store)
-
-	// 		if tc.setup != nil {
-	// 			tc.setup()
-	// 		}
-
-	// 		output := evalZADD(tc.input, store)
-
-	// 		if tc.validator != nil {
-	// 			tc.newValidator(output)
-	// 		} else {
-	// 			fmt.Println(tc.migratedOutput)
-	// 			fmt.Println(output)
-	// 			assert.Equal(t, tc.migratedOutput, *output)
-	// 		}
-	// 	})
-	// }
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			response := evalZADD(tc.input, store)
-
-			// Handle comparison for byte slices
-			if b, ok := response.Result.([]byte); ok && tc.migratedOutput.Result != nil {
-				if expectedBytes, ok := tc.migratedOutput.Result.([]byte); ok {
-					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
-				}
-			} else {
-				testifyAssert.Equal(t, tc.migratedOutput.Result, response.Result)
-			}
-
-			if tc.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tc.migratedOutput.Error.Error())
-			} else {
-				testifyAssert.NoError(t, response.Error)
-			}
-		})
-	}
+	runMigratedEvalTests(t, tests, evalZADD, store)
 }
 
 func testEvalZRANGE(t *testing.T, store *dstore.Store) {
@@ -5254,7 +5258,7 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 		"ZRANGE on non-existing key": {
 			input: []string{"non_existing_key", "0", "-1"},
 			migratedOutput: EvalResponse{
-				Result: clientio.Encode([]string{}, false),
+				Result: []string{},
 				Error:  nil,
 			},
 		},
@@ -5274,7 +5278,7 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"myzset", "0", "1"},
 			migratedOutput: EvalResponse{
-				Result: clientio.Encode([]string{"member1", "member2"}, false),
+				Result: []string{"member1", "member2"},
 				Error:  nil,
 			},
 		},
@@ -5284,7 +5288,7 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"myzset", "-2", "-1"},
 			migratedOutput: EvalResponse{
-				Result: clientio.Encode([]string{"member2", "member3"}, false),
+				Result: []string{"member2", "member3"},
 				Error:  nil,
 			},
 		},
@@ -5294,7 +5298,7 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"myzset", "2", "1"},
 			migratedOutput: EvalResponse{
-				Result: clientio.Encode([]string{}, false),
+				Result: []string{},
 				Error:  nil,
 			},
 		},
@@ -5304,7 +5308,7 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"myzset", "0", "5"},
 			migratedOutput: EvalResponse{
-				Result: clientio.Encode([]string{"member1"}, false),
+				Result: []string{"member1"},
 				Error:  nil,
 			},
 		},
@@ -5314,7 +5318,7 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"myzset", "0", "-1", "WITHSCORES"},
 			migratedOutput: EvalResponse{
-				Result: clientio.Encode([]string{"member1", "1", "member2", "2"}, false),
+				Result: []string{"member1", "1", "member2", "2"},
 				Error:  nil,
 			},
 		},
@@ -5334,7 +5338,7 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"myzset", "0", "-1", "REV"},
 			migratedOutput: EvalResponse{
-				Result: clientio.Encode([]string{"member3", "member2", "member1"}, false),
+				Result: []string{"member3", "member2", "member1"},
 				Error:  nil,
 			},
 		},
@@ -5344,7 +5348,7 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"myzset", "0", "-1", "REV", "WITHSCORES"},
 			migratedOutput: EvalResponse{
-				Result: clientio.Encode([]string{"member3", "3", "member2", "2", "member1", "1"}, false),
+				Result: []string{"member3", "3", "member2", "2", "member1", "1"},
 				Error:  nil,
 			},
 		},
@@ -5354,7 +5358,7 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"myzset", "5", "10"},
 			migratedOutput: EvalResponse{
-				Result: clientio.Encode([]string{}, false),
+				Result: []string{},
 				Error:  nil,
 			},
 		},
@@ -5364,51 +5368,13 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"myzset", "-10", "-5"},
 			migratedOutput: EvalResponse{
-				Result: clientio.Encode([]string{}, false),
+				Result: []string{},
 				Error:  nil,
 			},
 		},
 	}
 
-	// for name, tc := range tests {
-	// 	t.Run(name, func(t *testing.T) {
-	// 		store = setupTest(store)
-
-	// 		if tc.setup != nil {
-	// 			tc.setup()
-	// 		}
-
-	// 		output := evalZADD(tc.input, store)
-
-	// 		if tc.validator != nil {
-	// 			tc.newValidator(output)
-	// 		} else {
-	// 			fmt.Println(tc.migratedOutput)
-	// 			fmt.Println(output)
-	// 			assert.Equal(t, tc.migratedOutput, *output)
-	// 		}
-	// 	})
-	// }
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			response := evalZRANGE(tc.input, store)
-
-			// Handle comparison for byte slices
-			if b, ok := response.Result.([]byte); ok && tc.migratedOutput.Result != nil {
-				if expectedBytes, ok := tc.migratedOutput.Result.([]byte); ok {
-					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
-				}
-			} else {
-				testifyAssert.Equal(t, tc.migratedOutput.Result, response.Result)
-			}
-
-			if tc.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tc.migratedOutput.Error.Error())
-			} else {
-				testifyAssert.NoError(t, response.Error)
-			}
-		})
-	}
+	runMigratedEvalTests(t, tests, evalZRANGE, store)
 }
 
 func testEvalBitField(t *testing.T, store *dstore.Store) {
