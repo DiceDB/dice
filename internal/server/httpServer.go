@@ -139,13 +139,8 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 	}
 
 	if unimplementedCommands[diceDBCmd.Cmd] {
-		http.Error(writer, "Command is not implemented with HTTP", http.StatusBadRequest)
+		http.Error(writer, fmt.Sprintf("Command %s is not implemented with HTTP", diceDBCmd.Cmd), http.StatusBadRequest)
 		s.logger.Error("Command %s is not implemented", slog.String("cmd", diceDBCmd.Cmd))
-		_, err := writer.Write([]byte("Command is not implemented with HTTP"))
-		if err != nil {
-			s.logger.Error("Error writing response", slog.Any("error", err))
-			return
-		}
 		return
 	}
 
