@@ -5709,7 +5709,6 @@ func testEvalOBJECTENCODING(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalOBJECT, store)
-=======
 }
 func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
