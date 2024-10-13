@@ -10,6 +10,7 @@ import (
 func TestObjectCommand(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
+	defer FireCommand(conn, "FLUSHDB")
 	simpleJSON := `{"name":"John","age":30}`
 
 	testCases := []struct {
@@ -18,6 +19,7 @@ func TestObjectCommand(t *testing.T) {
 		expected   []interface{}
 		assertType []string
 		delay      []time.Duration
+		cleanup    []string
 	}{
 		{
 			name:       "Object Idletime",
@@ -25,6 +27,7 @@ func TestObjectCommand(t *testing.T) {
 			expected:   []interface{}{"OK", int64(2), int64(3), int64(1), int64(0)},
 			assertType: []string{"equal", "assert", "assert", "equal", "assert"},
 			delay:      []time.Duration{0, 2 * time.Second, 3 * time.Second, 0, 0},
+			cleanup:    []string{"DEL foo"},
 		},
 		{
 			name:       "Object Encoding check for raw",
@@ -32,6 +35,7 @@ func TestObjectCommand(t *testing.T) {
 			expected:   []interface{}{"OK", "raw"},
 			assertType: []string{"equal", "equal"},
 			delay:      []time.Duration{0, 0},
+			cleanup:    []string{"DEL foo"},
 		},
 		{
 			name:       "Object Encoding check for int",
@@ -39,6 +43,7 @@ func TestObjectCommand(t *testing.T) {
 			expected:   []interface{}{"OK", "int"},
 			assertType: []string{"equal", "equal"},
 			delay:      []time.Duration{0, 0},
+			cleanup:    []string{"DEL foo"},
 		},
 		{
 			name:       "Object Encoding check for embstr",
@@ -46,6 +51,7 @@ func TestObjectCommand(t *testing.T) {
 			expected:   []interface{}{"OK", "embstr"},
 			assertType: []string{"equal", "equal"},
 			delay:      []time.Duration{0, 0},
+			cleanup:    []string{"DEL foo"},
 		},
 		{
 			name:       "Object Encoding check for deque",
@@ -53,6 +59,7 @@ func TestObjectCommand(t *testing.T) {
 			expected:   []interface{}{int64(1), int64(2), "deque"},
 			assertType: []string{"assert", "assert", "equal"},
 			delay:      []time.Duration{0, 0, 0},
+			cleanup:    []string{"DEL listKey"},
 		},
 		{
 			name:       "Object Encoding check for bf",
@@ -60,6 +67,7 @@ func TestObjectCommand(t *testing.T) {
 			expected:   []interface{}{int64(1), int64(1), "bf"},
 			assertType: []string{"assert", "assert", "equal"},
 			delay:      []time.Duration{0, 0, 0},
+			cleanup:    []string{"DEL bloomkey"},
 		},
 		{
 			name:       "Object Encoding check for json",
@@ -67,6 +75,7 @@ func TestObjectCommand(t *testing.T) {
 			expected:   []interface{}{"OK", "json"},
 			assertType: []string{"equal", "equal"},
 			delay:      []time.Duration{0, time.Second},
+			cleanup:    []string{"DEL k1"},
 		},
 		{
 			name:       "Object Encoding check for bytearray",
@@ -74,6 +83,7 @@ func TestObjectCommand(t *testing.T) {
 			expected:   []interface{}{int64(0), int64(0), int64(0), "bytearray"},
 			assertType: []string{"assert", "assert", "assert", "equal"},
 			delay:      []time.Duration{0, 0, 0, 0},
+			cleanup:    []string{"DEL kbitset"},
 		},
 		{
 			name:       "Object Encoding check for hashmap",
@@ -81,6 +91,7 @@ func TestObjectCommand(t *testing.T) {
 			expected:   []interface{}{int64(1), "hashmap"},
 			assertType: []string{"assert", "equal"},
 			delay:      []time.Duration{0, 0},
+			cleanup:    []string{"DEL hashKey"},
 		},
 		{
 			name:       "Object Encoding check for btree",
@@ -88,6 +99,7 @@ func TestObjectCommand(t *testing.T) {
 			expected:   []interface{}{int64(2), "btree"},
 			assertType: []string{"equal", "equal"},
 			delay:      []time.Duration{0, 0},
+			cleanup:    []string{"DEL btreekey"},
 		},
 		{
 			name:       "Object Encoding check for setstr",
@@ -95,6 +107,7 @@ func TestObjectCommand(t *testing.T) {
 			expected:   []interface{}{int64(3), "setstr"},
 			assertType: []string{"assert", "equal"},
 			delay:      []time.Duration{0, 0},
+			cleanup:    []string{"DEL skey"},
 		},
 	}
 
@@ -107,12 +120,16 @@ func TestObjectCommand(t *testing.T) {
 				if tc.delay[i] != 0 {
 					time.Sleep(tc.delay[i])
 				}
+
 				result := FireCommand(conn, cmd)
 				if tc.assertType[i] == "equal" {
 					assert.DeepEqual(t, tc.expected[i], result)
 				} else {
 					assert.Assert(t, result.(int64) >= tc.expected[i].(int64), "Expected %v to be less than or equal to %v", result, tc.expected[i])
 				}
+			}
+			for _, cmd := range tc.cleanup { // run cleanup
+				FireCommand(conn, cmd)
 			}
 		})
 	}
