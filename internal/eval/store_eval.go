@@ -1026,7 +1026,7 @@ func evalGETEX(args []string, store *dstore.Store) *EvalResponse {
 			if state != Uninitialized {
 				return &EvalResponse{
 					Result: nil,
-					Error:  diceerrors.ErrIntegerOutOfRange,
+					Error:  diceerrors.ErrSyntax,
 				}
 			}
 			persist = true
