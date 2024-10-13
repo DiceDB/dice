@@ -23,6 +23,7 @@ import (
 	"github.com/dicedb/dice/internal/eval/geo"
 	"github.com/dicedb/dice/internal/eval/sortedset"
 	"github.com/dicedb/dice/internal/object"
+	"github.com/gobwas/glob"
 	"github.com/rs/xid"
 
 	"github.com/dicedb/dice/internal/sql"
@@ -36,7 +37,6 @@ import (
 	"github.com/dicedb/dice/internal/querymanager"
 	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
-	"github.com/gobwas/glob"
 	"github.com/ohler55/ojg/jp"
 )
 
@@ -59,6 +59,7 @@ type EvalResponse struct {
 }
 
 type jsonOperation string
+type StrStrHashMap = *HashMap[string, string]
 
 const (
 	IncrBy = "INCRBY"
@@ -3048,6 +3049,45 @@ func evalPTTL(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(int64(durationMs), false)
 }
 
+func hsetGeneric(cmd string, args []string, store *dstore.Store) []byte {
+	if len(args) < 3 {
+		return diceerrors.NewErrArity(cmd)
+	}
+
+	key := args[0]
+	size := len(args) - 1
+
+	if size < 0 || size%2 != 0 {
+		return diceerrors.NewErrArity(cmd)
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		value := NewHashMap[string, string]()
+		obj = store.NewObj(value, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
+		store.Put(key, obj)
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeHashMap); err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
+	data := make(map[string]string, size/2)
+
+	for i := 1; i < len(args); i += 2 {
+		data[args[i]] = args[i+1]
+	}
+	hashMap := obj.Value.(StrStrHashMap)
+	count := hashMap.SetAll(data)
+	obj.Value = hashMap
+	switch strings.ToUpper(cmd) {
+	case "HMSET":
+		return clientio.RespOK
+	default:
+		return clientio.Encode(count, false)
+	}
+}
+
 // evalHSET sets the specified fields to their
 // respective values in a hashmap stored at key
 //
@@ -3058,17 +3098,7 @@ func evalPTTL(args []string, store *dstore.Store) []byte {
 //
 // Usage: HSET key field value [field value ...]
 func evalHSET(args []string, store *dstore.Store) []byte {
-	if len(args) < 3 {
-		return diceerrors.NewErrArity("HSET")
-	}
-
-	numKeys, err := insertInHashMap(args, store)
-
-	if err != nil {
-		return err
-	}
-
-	return clientio.Encode(numKeys, false)
+	return hsetGeneric("HSET", args, store)
 }
 
 // evalHMSET sets the specified fields to their
@@ -3081,45 +3111,7 @@ func evalHSET(args []string, store *dstore.Store) []byte {
 //
 // Usage: HMSET key field value [field value ...]
 func evalHMSET(args []string, store *dstore.Store) []byte {
-	if len(args) < 3 {
-		return diceerrors.NewErrArity("HMSET")
-	}
-
-	_, err := insertInHashMap(args, store)
-
-	if err != nil {
-		return err
-	}
-
-	return clientio.RespOK
-}
-
-// helper function to insert key value in hashmap associated with the given hash
-func insertInHashMap(args []string, store *dstore.Store) (numKeys int64, err2 []byte) {
-	key := args[0]
-
-	obj := store.Get(key)
-
-	var hashMap HashMap
-
-	if obj != nil {
-		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-			return 0, diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
-		}
-		hashMap = obj.Value.(HashMap)
-	}
-
-	keyValuePairs := args[1:]
-	hashMap, numKeys, err := hashMapBuilder(keyValuePairs, hashMap)
-	if err != nil {
-		return 0, diceerrors.NewErrWithMessage(err.Error())
-	}
-
-	obj = store.NewObj(hashMap, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
-
-	store.Put(key, obj)
-
-	return numKeys, nil
+	return hsetGeneric("HMSET", args, store)
 }
 
 // evalHKEYS is used toretrieve all the keys(or field names) within a hash.
@@ -3137,68 +3129,72 @@ func evalHKEYS(args []string, store *dstore.Store) []byte {
 	key := args[0]
 	obj := store.Get(key)
 
-	var hashMap HashMap
-	var result []string
+	var hashMap StrStrHashMap
 
 	if obj != nil {
 		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
 			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 		}
-		hashMap = obj.Value.(HashMap)
+		hashMap = obj.Value.(StrStrHashMap)
 	} else {
 		return clientio.Encode([]interface{}{}, false)
 	}
 
-	for hmKey := range hashMap {
-		result = append(result, hmKey)
-	}
-
-	return clientio.Encode(result, false)
+	return clientio.Encode(hashMap.Keys(), false)
 }
 
 // Increments the number stored at field in the hash stored at key by increment.
-//
+
 // If key does not exist, a new key holding a hash is created.
 // If field does not exist the value is set to 0 before the operation is performed.
-//
+
 // The range of values supported by HINCRBY is limited to 64-bit signed integers.
-//
+
 // Usage: HINCRBY key field increment
 func evalHINCRBY(args []string, store *dstore.Store) []byte {
 	if len(args) < 3 {
 		return diceerrors.NewErrArity("HINCRBY")
 	}
 
-	increment, err := strconv.ParseInt(args[2], 10, 64)
+	incr, err := strconv.ParseInt(args[2], 10, 64)
 	if err != nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
 	}
 
 	key := args[0]
-	obj := store.Get(key)
-	var hashmap HashMap
-
-	if obj != nil {
-		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
-		}
-		hashmap = obj.Value.(HashMap)
-	}
-
-	if hashmap == nil {
-		hashmap = make(HashMap)
-	}
-
 	field := args[1]
-	numkey, err := hashmap.incrementValue(field, increment)
+	obj := store.Get(key)
+
+	if obj == nil {
+		value := NewHashMap[string, string]()
+		obj = store.NewObj(value, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
+		store.Put(key, obj)
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeHashMap); err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
+	hashMap := obj.Value.(StrStrHashMap)
+
+	newVal, err := hashMap.CreateOrModify(field, func(element string) (altered string, err error) {
+		if element == "" {
+			element = "0"
+		}
+		i, err := strconv.ParseInt(element, 10, 64)
+		if err != nil {
+			return "-1", diceerrors.NewErr(diceerrors.HashValueNotIntegerErr)
+		}
+		newVal, err := utils.IncrementInt(i, incr)
+		return fmt.Sprintf("%v", newVal), err
+	})
 	if err != nil {
 		return diceerrors.NewErrWithMessage(err.Error())
 	}
 
-	obj = store.NewObj(hashmap, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
-	store.Put(key, obj)
-
-	return clientio.Encode(numkey, false)
+	obj.Value = hashMap
+	res, _ := strconv.ParseInt(newVal, 10, 64)
+	return clientio.Encode(res, false)
 }
 
 func evalHSETNX(args []string, store *dstore.Store) []byte {
@@ -3207,18 +3203,25 @@ func evalHSETNX(args []string, store *dstore.Store) []byte {
 	}
 
 	key := args[0]
-	hmKey := args[1]
-
-	val, errWithMessage := getValueFromHashMap(key, hmKey, store)
-	if errWithMessage != nil {
-		return errWithMessage
+	field := args[1]
+	val := args[2]
+	obj := store.Get(key)
+	if obj == nil {
+		value := NewHashMap[string, string]()
+		obj = store.NewObj(value, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
+		store.Put(key, obj)
 	}
-	if !bytes.Equal(val, clientio.RespNIL) { // hmKey is already present in hash map
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeHashMap); err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+	hashMap := obj.Value.(StrStrHashMap)
+	if _, exists := hashMap.Get(field); exists {
 		return clientio.RespZero
+	} else {
+		hashMap.Set(field, val)
+		return clientio.RespOne
 	}
-
-	evalHSET(args, store)
-	return clientio.RespOne
 }
 
 func evalHGETALL(args []string, store *dstore.Store) []byte {
@@ -3230,18 +3233,21 @@ func evalHGETALL(args []string, store *dstore.Store) []byte {
 
 	obj := store.Get(key)
 
-	var hashMap HashMap
+	var hashMap StrStrHashMap
 	var results []string
 
 	if obj != nil {
 		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
 			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 		}
-		hashMap = obj.Value.(HashMap)
+		hashMap = obj.Value.(StrStrHashMap)
 	}
 
-	for hmKey, hmValue := range hashMap {
-		results = append(results, hmKey, hmValue)
+	for _, hmKey := range hashMap.Keys() {
+		val, ok := hashMap.Get(hmKey)
+		if ok {
+			results = append(results, hmKey, val)
+		}
 	}
 
 	return clientio.Encode(results, false)
@@ -3253,13 +3259,25 @@ func evalHGET(args []string, store *dstore.Store) []byte {
 	}
 
 	key := args[0]
-	hmKey := args[1]
+	field := args[1]
 
-	val, errWithMessage := getValueFromHashMap(key, hmKey, store)
-	if errWithMessage != nil {
-		return errWithMessage
+	obj := store.Get(key)
+
+	if obj == nil {
+		return clientio.RespNIL
 	}
-	return val
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeHashMap); err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
+	h := obj.Value.(StrStrHashMap)
+	val, ok := h.Get(field)
+
+	if !ok {
+		return clientio.RespNIL
+	}
+	return clientio.Encode(val, false)
 }
 
 // evalHMGET returns an array of values associated with the given fields,
@@ -3271,25 +3289,27 @@ func evalHMGET(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("HMGET")
 	}
 	key := args[0]
-
 	obj := store.Get(key)
+	results := make([]interface{}, 0, len(args)-1)
 
-	results := make([]interface{}, len(args[1:]))
 	if obj == nil {
+		for i := 0; i < len(args[1:]); i++ {
+			results = append(results, nil)
+		}
 		return clientio.Encode(results, false)
 	}
-	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeHashMap); err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
-	hashMap := obj.Value.(HashMap)
-
-	for i, hmKey := range args[1:] {
+	hashMap := obj.Value.(StrStrHashMap)
+	for _, hmKey := range args[1:] {
 		hmValue, ok := hashMap.Get(hmKey)
 		if ok {
-			results[i] = *hmValue
+			results = append(results, hmValue)
 		} else {
-			results[i] = clientio.RespNIL
+			results = append(results, nil)
 		}
 	}
 
@@ -3313,19 +3333,13 @@ func evalHDEL(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
-	hashMap := obj.Value.(HashMap)
+	hashMap := obj.Value.(StrStrHashMap)
 	count := 0
 	for _, field := range fields {
-		if _, ok := hashMap[field]; ok {
-			delete(hashMap, field)
+		if ok := hashMap.Delete(field); ok {
 			count++
 		}
 	}
-
-	if count > 0 {
-		store.Put(key, obj)
-	}
-
 	return clientio.Encode(count, false)
 }
 
@@ -3349,7 +3363,7 @@ func evalHSCAN(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 	}
 
-	hashMap := obj.Value.(HashMap)
+	hashMap := obj.Value.(StrStrHashMap)
 	pattern := "*"
 	count := 10
 
@@ -3373,10 +3387,7 @@ func evalHSCAN(args []string, store *dstore.Store) []byte {
 
 	// Note that this implementation has a time complexity of O(N), where N is the number of keys in 'hashMap'.
 	// This is in contrast to Redis, which implements HSCAN in O(1) time complexity by maintaining a cursor.
-	keys := make([]string, 0, len(hashMap))
-	for k := range hashMap {
-		keys = append(keys, k)
-	}
+	keys := hashMap.Keys()
 	sort.Strings(keys)
 
 	matched := 0
@@ -3391,11 +3402,13 @@ func evalHSCAN(args []string, store *dstore.Store) []byte {
 	// Scan the keys and add them to the results if they match the pattern
 	for i := int(cursor); i < len(keys); i++ {
 		if g.Match(keys[i]) {
-			results = append(results, keys[i], hashMap[keys[i]])
-			matched++
-			if matched >= count {
-				newCursor = i + 1
-				break
+			if val, ok := hashMap.Get(keys[i]); ok {
+				results = append(results, keys[i], val)
+				matched++
+				if matched >= count {
+					newCursor = i + 1
+					break
+				}
 			}
 		}
 	}
@@ -3425,14 +3438,9 @@ func evalHVALS(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 	}
 
-	hashMap := obj.Value.(HashMap)
-	results := make([]string, 0, len(hashMap))
+	hashMap := obj.Value.(StrStrHashMap)
 
-	for _, value := range hashMap {
-		results = append(results, value)
-	}
-
-	return clientio.Encode(results, false)
+	return clientio.Encode(hashMap.Values(), false)
 }
 
 // evalHSTRLEN returns the length of value associated with field in the hash stored at key.
@@ -3451,23 +3459,23 @@ func evalHSTRLEN(args []string, store *dstore.Store) []byte {
 	hmKey := args[1]
 	obj := store.Get(key)
 
-	var hashMap HashMap
+	var hashMap StrStrHashMap
 
 	if obj != nil {
 		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
 			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 		}
-		hashMap = obj.Value.(HashMap)
+		hashMap = obj.Value.(StrStrHashMap)
 	} else {
-		return clientio.Encode(0, false)
+		return clientio.RespZero
 	}
 
 	val, ok := hashMap.Get(hmKey)
 	// Return 0, if specified field doesn't exist in the HashMap.
 	if ok {
-		return clientio.Encode(len(*val), false)
+		return clientio.Encode(len(val), false)
 	}
-	return clientio.Encode(0, false)
+	return clientio.RespZero
 }
 
 // evalHEXISTS returns if field is an existing field in the hash stored at key.
@@ -3486,7 +3494,7 @@ func evalHEXISTS(args []string, store *dstore.Store) []byte {
 	hmKey := args[1]
 	obj := store.Get(key)
 
-	var hashMap HashMap
+	var hashMap StrStrHashMap
 
 	if obj == nil {
 		return clientio.Encode(0, false)
@@ -3495,14 +3503,14 @@ func evalHEXISTS(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 	}
 
-	hashMap = obj.Value.(HashMap)
+	hashMap = obj.Value.(StrStrHashMap)
 
 	_, ok := hashMap.Get(hmKey)
 	if ok {
-		return clientio.Encode(1, false)
+		return clientio.RespOne
 	}
 	// Return 0, if specified field doesn't exist in the HashMap.
-	return clientio.Encode(0, false)
+	return clientio.RespZero
 }
 
 func evalObjectIdleTime(key string, store *dstore.Store) []byte {
@@ -4272,8 +4280,8 @@ func evalHLEN(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
-	hashMap := obj.Value.(HashMap)
-	return clientio.Encode(len(hashMap), false)
+	hashMap := obj.Value.(StrStrHashMap)
+	return clientio.Encode(hashMap.Len(), false)
 }
 
 func evalSELECT(args []string, store *dstore.Store) []byte {
@@ -4603,9 +4611,9 @@ func evalHRANDFIELD(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 	}
 
-	hashMap := obj.Value.(HashMap)
-	if len(hashMap) == 0 {
-		return clientio.Encode([]string{}, false)
+	hashMap := obj.Value.(StrStrHashMap)
+	if len(hashMap.hmap) == 0 {
+		return clientio.RespEmptyArray
 	}
 
 	count := 1
@@ -4627,19 +4635,14 @@ func evalHRANDFIELD(args []string, store *dstore.Store) []byte {
 			withValues = true
 		}
 	}
-
 	return selectRandomFields(hashMap, count, withValues)
 }
 
 // selectRandomFields returns random fields from a hashmap.
-func selectRandomFields(hashMap HashMap, count int, withValues bool) []byte {
-	keys := make([]string, 0, len(hashMap))
-	for k := range hashMap {
-		keys = append(keys, k)
-	}
-
+func selectRandomFields(hashMap StrStrHashMap, count int, withValues bool) []byte {
+	items := hashMap.Items()
 	var results []string
-	resultSet := make(map[string]struct{})
+	resultSet := make(map[int64]struct{})
 
 	abs := func(x int) int {
 		if x < 0 {
@@ -4649,24 +4652,22 @@ func selectRandomFields(hashMap HashMap, count int, withValues bool) []byte {
 	}
 
 	for i := 0; i < abs(count); i++ {
-		if count > 0 && len(resultSet) == len(keys) {
+		if count > 0 && len(resultSet) == len(items) {
 			break
 		}
 
-		randomIndex, _ := rand.Int(rand.Reader, big.NewInt(int64(len(keys))))
-		randomField := keys[randomIndex.Int64()]
-
+		randomIndex, _ := rand.Int(rand.Reader, big.NewInt(int64(len(items))))
+		idx := randomIndex.Int64()
 		if count > 0 {
-			if _, exists := resultSet[randomField]; exists {
+			if _, exists := resultSet[idx]; exists {
 				i--
 				continue
 			}
-			resultSet[randomField] = struct{}{}
+			resultSet[idx] = struct{}{}
 		}
-
-		results = append(results, randomField)
+		results = append(results, items[idx][0].(string))
 		if withValues {
-			results = append(results, hashMap[randomField])
+			results = append(results, items[idx][1].(string))
 		}
 	}
 
@@ -4985,37 +4986,46 @@ func evalHINCRBYFLOAT(args []string, store *dstore.Store) []byte {
 	if len(args) < 3 {
 		return diceerrors.NewErrArity("HINCRBYFLOAT")
 	}
-	incr, err := strconv.ParseFloat(strings.TrimSpace(args[2]), 64)
 
+	incr, err := strconv.ParseFloat(strings.TrimSpace(args[2]), 64)
 	if err != nil {
 		return diceerrors.NewErrWithMessage(diceerrors.IntOrFloatErr)
 	}
 
 	key := args[0]
-	obj := store.Get(key)
-	var hashmap HashMap
-
-	if obj != nil {
-		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
-		}
-		hashmap = obj.Value.(HashMap)
-	}
-
-	if hashmap == nil {
-		hashmap = make(HashMap)
-	}
-
 	field := args[1]
-	numkey, err := hashmap.incrementFloatValue(field, incr)
+	obj := store.Get(key)
+
+	if obj == nil {
+		value := NewHashMap[string, string]()
+		obj = store.NewObj(value, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
+		store.Put(key, obj)
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeHashMap); err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
+	hashMap := obj.Value.(StrStrHashMap)
+
+	newVal, err := hashMap.CreateOrModify(field, func(element string) (altered string, err error) {
+		if element == "" {
+			element = "0"
+		}
+		i, err := strconv.ParseFloat(element, 64)
+		if err != nil {
+			return "-1", diceerrors.NewErr(diceerrors.IntOrFloatErr)
+		}
+		newVal, err := utils.IncrementFloat(i, incr)
+		strValue := formatFloat(newVal, false)
+		return strValue, err
+	})
 	if err != nil {
 		return diceerrors.NewErrWithMessage(err.Error())
 	}
 
-	obj = store.NewObj(hashmap, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
-	store.Put(key, obj)
-
-	return clientio.Encode(numkey, false)
+	obj.Value = hashMap
+	return clientio.Encode(newVal, false)
 }
 
 // Read-only variant of the BITFIELD command. It is like the original BITFIELD but only accepts GET subcommand and can safely be used in read-only replicas.
