@@ -372,7 +372,7 @@ func evalSADD(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	return &EvalResponse{
-		Result: float64(count),
+		Result: count,
 		Error:  nil,
 	}
 }
