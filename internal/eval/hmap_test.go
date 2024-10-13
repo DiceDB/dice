@@ -1,129 +1,164 @@
 package eval
 
 import (
-	"math"
-	"strconv"
 	"testing"
 	"time"
 
-	"github.com/dicedb/dice/internal/clientio"
-	"github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/object"
-	"github.com/dicedb/dice/internal/store"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestHashMapSetAndGet(t *testing.T) {
-	hmap := make(HashMap)
+func TestNewHashMap(t *testing.T) {
+	hmap := NewHashMap[string, string]()
+	assert.NotNil(t, hmap, "Expected new HashMap instance to be non-nil")
+	assert.Equal(t, 0, hmap.ApproxLength(), "Expected initial length to be 0")
+}
 
+func TestSetAndGet(t *testing.T) {
+	hmap := NewHashMap[string, string]()
 	hmap.Set("key1", "value1")
+
 	val, ok := hmap.Get("key1")
-	assert.True(t, ok, "Expected key1 to exist in the HashMap")
-	assert.Equal(t, "value1", *val, "Expected value1 to be returned")
-
-	oldVal, ok := hmap.Set("key1", "newValue")
-	assert.True(t, ok, "Expected key1 to exist when overwriting")
-	assert.Equal(t, "value1", *oldVal, "Expected the old value to be returned")
-
-	val, ok = hmap.Get("key2")
-	assert.False(t, ok, "Expected key2 to not exist in the HashMap")
-	assert.Nil(t, val, "Expected nil value for non-existent key")
-}
-
-func TestHashMapBuilder(t *testing.T) {
-	keyValuePairs := []string{"key1", "value1", "key2", "value2"}
-	hmap, numSet, err := hashMapBuilder(keyValuePairs, nil)
-	assert.Nil(t, err, "Expected no error for valid input")
-	assert.Equal(t, int64(2), numSet, "Expected 2 keys to be newly set")
-	val1, ok := hmap.Get("key1")
 	assert.True(t, ok, "Expected key1 to exist")
-	assert.Equal(t, "value1", *val1, "Expected value1 for key1")
-	val2, ok := hmap.Get("key2")
-	assert.True(t, ok, "Expected key2 to exist")
-	assert.Equal(t, "value2", *val2, "Expected value2 for key2")
+	assert.Equal(t, "value1", val, "Expected value1 to be returned")
 
-	keyValuePairs = []string{"key1", "value1", "key2"}
-	hmap, numSet, err = hashMapBuilder(keyValuePairs, nil)
-	assert.NotNil(t, err, "Expected error for odd number of key-value pairs")
-	assert.Equal(t, int64(-1), numSet, "Expected -1 for number of keys set when error occurs")
+	// Test non-existent key
+	val, ok = hmap.Get("key2")
+	assert.False(t, ok, "Expected key2 to not exist")
+	assert.Empty(t, val, "Expected empty value for non-existent key")
 }
 
-func TestHashMapIncrementValue(t *testing.T) {
-	hmap := make(HashMap)
+func TestSetExpiry(t *testing.T) {
+	hmap := NewHashMap[string, string]()
+	hmap.Set("key1", "value1")
 
-	val, err := hmap.incrementValue("field1", 10)
-	assert.Nil(t, err, "Expected no error when incrementing a non-existent key")
-	assert.Equal(t, int64(10), val, "Expected value to be set to 10")
+	// Set expiry to 1 second in the future
+	expiryTime := uint64(time.Now().UnixMilli() + 1000)
+	hmap.SetExpiry("key1", expiryTime)
 
-	val, err = hmap.incrementValue("field1", 5)
-	assert.Nil(t, err, "Expected no error when incrementing an existing key")
-	assert.Equal(t, int64(15), val, "Expected value to be incremented to 15")
-
-	hmap.Set("field2", "notAnInt")
-	val, err = hmap.incrementValue("field2", 1)
-	assert.NotNil(t, err, "Expected error when incrementing a non-integer value")
-	assert.Equal(t, errors.HashValueNotIntegerErr, err.Error(), "Expected hash value not integer error")
-
-	hmap.Set("field3", strconv.FormatInt(math.MaxInt64, 10))
-	val, err = hmap.incrementValue("field3", 1)
-	assert.NotNil(t, err, "Expected error when integer overflow occurs")
-	assert.Equal(t, errors.IncrDecrOverflowErr, err.Error(), "Expected increment overflow error")
+	expiry, ok := hmap.GetExpiry("key1")
+	assert.True(t, ok, "Expected expiry for key1 to exist")
+	assert.Equal(t, expiryTime, expiry, "Expected expiry time to match")
 }
 
-func TestGetValueFromHashMap(t *testing.T) {
-	store := store.NewStore(nil, nil)
-	key := "key1"
-	field := "field1"
-	value := "value1"
-	hmap := make(HashMap)
-	hmap.Set(field, value)
+func TestGetExpiredKey(t *testing.T) {
+	hmap := NewHashMap[string, string]()
+	hmap.Set("key1", "value1")
 
-	obj := &object.Obj{
-		TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
-		Value:          hmap,
-		LastAccessedAt: uint32(time.Now().Unix()),
+	// Set expiry to 1 second in the past
+	expiryTime := uint64(time.Now().UnixMilli() - 1000)
+	hmap.SetExpiry("key1", expiryTime)
+
+	val, ok := hmap.Get("key1")
+	assert.False(t, ok, "Expected key1 to be expired")
+	assert.Empty(t, val, "Expected empty value for expired key")
+}
+
+func TestKeys(t *testing.T) {
+	hmap := NewHashMap[string, string]()
+	hmap.Set("key1", "value1")
+	hmap.Set("key2", "value2")
+
+	// Set expiry for key2
+	hmap.SetExpiry("key2", uint64(time.Now().UnixMilli()-1000)) // key2 expired
+
+	keys := hmap.Keys()
+	assert.Equal(t, 1, len(keys), "Expected only 1 valid key")
+	assert.Contains(t, keys, "key1", "Expected key1 to be in valid keys")
+	assert.NotContains(t, keys, "key2", "Expected key2 to be expired and not in valid keys")
+}
+
+func TestValues(t *testing.T) {
+	hmap := NewHashMap[string, string]()
+	hmap.Set("key1", "value1")
+	hmap.Set("key2", "value2")
+
+	// Set expiry for key2
+	hmap.SetExpiry("key2", uint64(time.Now().UnixMilli()-1000)) // key2 expired
+
+	values := hmap.Values()
+	assert.Equal(t, 1, len(values), "Expected only 1 valid value")
+	assert.Contains(t, values, "value1", "Expected value1 to be in valid values")
+	assert.NotContains(t, values, "value2", "Expected value2 to be expired and not in valid values")
+}
+
+// func TestItems(t *testing.T) {
+// 	hmap := NewHashMap[string, string]()
+// 	hmap.Set("key1", "value1")
+// 	hmap.Set("key2", "value2")
+
+// 	// Set expiry for key2
+// 	hmap.SetExpiry("key2", uint64(time.Now().UnixMilli()-1000)) // key2 expired
+
+// 	items := hmap.Items()
+// 	assert.Equal(t, 1, len(items), "Expected only 1 valid item")
+// 	assert.Equal(t, "value1", items["key1"][1].(string), "Expected key1 to map to value1")
+// 	assert.NotContains(t, items, "key2", "Expected key2 to be expired and not in items")
+// }
+
+func TestClear(t *testing.T) {
+	hmap := NewHashMap[string, string]()
+	hmap.Set("key1", "value1")
+	hmap.Clear()
+
+	assert.Equal(t, 0, hmap.ApproxLength(), "Expected length to be 0 after clearing")
+}
+
+func TestApproxLength(t *testing.T) {
+	hmap := NewHashMap[string, string]()
+	hmap.Set("key1", "value1")
+	hmap.Set("key2", "value2")
+
+	assert.Equal(t, 2, hmap.ApproxLength(), "Expected approximate length to be 2")
+}
+
+func TestActualValidLength(t *testing.T) {
+	hmap := NewHashMap[string, string]()
+	hmap.Set("key1", "value1")
+	hmap.Set("key2", "value2")
+
+	// Set expiry for key2
+	hmap.SetExpiry("key2", uint64(time.Now().UnixMilli()-1000)) // key2 expired
+
+	assert.Equal(t, 1, hmap.Len(), "Expected actual valid length to be 1")
+}
+
+func TestDelete(t *testing.T) {
+	hmap := NewHashMap[string, string]()
+	hmap.Set("key1", "value1")
+	hmap.Set("key2", "value2")
+
+	// Delete key1
+	deleted := hmap.Delete("key1")
+	assert.True(t, deleted, "Expected key1 to be deleted successfully")
+	assert.False(t, hmap.Delete("key1"), "Expected key1 to not exist after deletion")
+
+	// Ensure key2 still exists
+	val, ok := hmap.Get("key2")
+	assert.True(t, ok, "Expected key2 to still exist")
+	assert.Equal(t, "value2", val, "Expected value2 for key2")
+}
+
+func TestCreateOrModify(t *testing.T) {
+	hmap := NewHashMap[string, int]()
+
+	// Increment an integer value
+	modifier := func(currentValue int) (int, error) {
+		return currentValue + 1, nil // Increment the current value by 1
 	}
 
-	store.Put(key, obj)
+	// Key does not exist yet
+	_, err := hmap.CreateOrModify("counter", modifier)
+	assert.NoError(t, err, "Expected no error when modifying non-existent key")
 
-	val, err := getValueFromHashMap(key, field, store)
-	assert.Nil(t, err, "Expected no error when fetching an existing value from the hashmap")
-	assert.Equal(t, clientio.Encode("value1", false), val, "Expected value1 to be fetched for key1 and field1")
+	val, ok := hmap.Get("counter")
+	assert.True(t, ok, "Expected counter to exist")
+	assert.Equal(t, 1, val, "Expected counter to be initialized to 1")
 
-	// Fetching a non-existing field (should return RESP NIL)
-	val, err = getValueFromHashMap(key, "nonfield", store)
-	assert.Nil(t, err, "Expected no error when fetching a non-existing value from the hashmap")
-	assert.Equal(t, clientio.RespNIL, val, "Expected the value to give RespNIL")
+	// Increment again
+	_, err = hmap.CreateOrModify("counter", modifier)
+	assert.NoError(t, err, "Expected no error when modifying existing key")
 
-	// Fetching a non-existing key (should return RESP NIL)
-	val, err = getValueFromHashMap("nonkey", field, store)
-	assert.Nil(t, err, "Expected no error when fetching a non-existing key from the hashmap")
-	assert.Equal(t, clientio.RespNIL, val, "Expected the value to give RespNIL")
-}
-
-func TestHashMapIncrementFloatValue(t *testing.T) {
-	hmap := make(HashMap)
-
-	val, err := hmap.incrementFloatValue("field1", 5.5)
-	assert.Nil(t, err, "Expected no error when incrementing a non-existent key")
-	assert.Equal(t, "5.5", val, "Expected value to be set to 5.5")
-
-	val, err = hmap.incrementFloatValue("field1", 4.5)
-	assert.Nil(t, err, "Expected no error when incrementing an existing key")
-	assert.Equal(t, "10", val, "Expected value to be incremented to 10")
-
-	hmap.Set("field2", "notAFloat")
-	val, err = hmap.incrementFloatValue("field2", 1.0)
-	assert.NotNil(t, err, "Expected error when incrementing a non-float value")
-	assert.Equal(t, errors.IntOrFloatErr, err.Error(), "Expected int or float error")
-
-	inf := math.MaxFloat64
-
-	val, err = hmap.incrementFloatValue("field1", inf+float64(1e308))
-	assert.NotNil(t, err, "Expected error when incrementing a overflowing value")
-	assert.Equal(t, errors.IncrDecrOverflowErr, err.Error(), "Expected overflow to be detected")
-
-	val, err = hmap.incrementFloatValue("field1", -inf-float64(1e308))
-	assert.NotNil(t, err, "Expected error when incrementing a overflowing value")
-	assert.Equal(t, errors.IncrDecrOverflowErr, err.Error(), "Expected overflow to be detected")
+	val, ok = hmap.Get("counter")
+	assert.True(t, ok, "Expected counter to exist")
+	assert.Equal(t, 2, val, "Expected counter to be incremented to 2")
 }
