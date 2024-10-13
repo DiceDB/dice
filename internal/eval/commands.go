@@ -688,9 +688,9 @@ var (
 		Info: `Increments the number stored at field in the hash stored at key by increment.
 		If key does not exist, a new key holding a hash is created.
 		If field does not exist the value is set to 0 before the operation is performed.`,
-		Eval:     evalHINCRBY,
 		Arity:    -4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:  evalHINCRBY,
 	}
 	hstrLenCmdMeta = DiceCmdMeta{
 		Name:     "HSTRLEN",
@@ -1110,9 +1110,9 @@ var (
 		If the field contains a value of wrong type or specified increment
 		is not parsable as floating point number, then an error occurs.
 		`,
-		Eval:     evalHINCRBYFLOAT,
 		Arity:    -4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:  evalHINCRBYFLOAT,
 	}
 	geoAddCmdMeta = DiceCmdMeta{
 		Name:     "GEOADD",

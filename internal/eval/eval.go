@@ -4242,6 +4242,7 @@ func evalBITFIELD(args []string, store *dstore.Store) []byte {
 
 	return bitfieldEvalGeneric(args, store, false)
 }
+
 // Read-only variant of the BITFIELD command. It is like the original BITFIELD but only accepts GET subcommand and can safely be used in read-only replicas.
 func evalBITFIELDRO(args []string, store *dstore.Store) []byte {
 	if len(args) < 1 {
