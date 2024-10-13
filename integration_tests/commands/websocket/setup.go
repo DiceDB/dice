@@ -94,11 +94,11 @@ func (e *WebsocketCommandExecutor) Name() string {
 
 func RunWebsocketServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOptions) {
 	config.DiceConfig.Network.IOBufferLength = 16
-	config.DiceConfig.Server.WriteAOFOnCleanup = false
+	config.DiceConfig.Persistence.WriteAOFOnCleanup = false
 
 	// Initialize the WebsocketServer
 	globalErrChannel := make(chan error)
-	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Server.WatchChanBufSize)
+	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Performance.WatchChanBufSize)
 	shardManager := shard.NewShardManager(1, watchChan, nil, globalErrChannel, opt.Logger)
 	config.WebsocketPort = opt.Port
 	testServer := server.NewWebSocketServer(shardManager, watchChan, opt.Logger)

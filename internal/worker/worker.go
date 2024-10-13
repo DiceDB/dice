@@ -56,7 +56,7 @@ func NewWorker(wid string, respChan chan *ops.StoreResponse,
 		respChan:        respChan,
 		logger:          logger,
 		Session:         auth.NewSession(),
-		adhocReqChan:    make(chan *cmd.DiceDBCmd, config.DiceConfig.Server.AdhocReqChanBufSize),
+		adhocReqChan:    make(chan *cmd.DiceDBCmd, config.DiceConfig.Performance.AdhocReqChanBufSize),
 	}
 }
 
