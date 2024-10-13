@@ -74,7 +74,7 @@ func TestObjectCommand(t *testing.T) {
 			commands:   []string{`JSON.SET k1 $ ` + simpleJSON, "OBJECT ENCODING k1"},
 			expected:   []interface{}{"OK", "json"},
 			assertType: []string{"equal", "equal"},
-			delay:      []time.Duration{0, time.Second},
+			delay:      []time.Duration{0, 0},
 			cleanup:    []string{"DEL k1"},
 		},
 		{
