@@ -368,16 +368,16 @@ func cmdOverrides() {
 		slog.Warn("Unable to bind 'enable-multithreading' flag")
 	}
 	if err := viper.BindPFlag("Auth.Password", pflag.Lookup("requirepass")); err != nil {
-		slog.Warn("Unable to bind 'enable-multithreading' flag")
+		slog.Warn("Unable to bind 'requirepass' flag")
 	}
 	if err := viper.BindPFlag("AsyncServer.Addr", pflag.Lookup("host")); err != nil {
-		slog.Warn("Unable to bind 'enable-multithreading' flag")
+		slog.Warn("Unable to bind 'host' flag")
 	}
 	if err := viper.BindPFlag("AsyncServer.Port", pflag.Lookup("port")); err != nil {
-		slog.Warn("Unable to bind 'enable-multithreading' flag")
+		slog.Warn("Unable to bind 'port' flag")
 	}
 	if err := viper.BindPFlag("Memory.KeysLimit", pflag.Lookup("keys-limit")); err != nil {
-		slog.Warn("Unable to bind 'enable-multithreading' flag")
+		slog.Warn("Unable to bind 'keys-limit' flag")
 	}
 }
 
