@@ -9,7 +9,13 @@ import (
 func TestCommandCount(t *testing.T) {
 	exec := NewHTTPCommandExecutor()
 
-	testCases := []TestCase{
+	testCases := []struct {
+		name          string
+		commands      []HTTPCommand
+		expected      []interface{}
+		errorExpected bool
+		assertType    []string
+	}{
 		{
 			name: "Command count should be greather than zero",
 			commands: []HTTPCommand{
@@ -27,7 +33,6 @@ func TestCommandCount(t *testing.T) {
 			assertType: []string{"equal"},
 		},
 	}
-
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			for c, cmd := range tc.commands {
