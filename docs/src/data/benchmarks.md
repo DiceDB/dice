@@ -70,7 +70,7 @@ The benchmark run tested DiceDB with 24 threads, 50 client connections per threa
   - p99 latency was 8.89 ms, indicating that 99% of requests were faster than this.
   - p99.9 latency reached 17.91 ms, showing how the highest-latency outliers behaved.
 
-## Redis Benchmark
+## DiceDB Benchmark
 
 ```sh
 $ go build -o dicedb
