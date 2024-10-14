@@ -13,37 +13,29 @@ import (
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
+	"github.com/dicedb/dice/internal/cmd"
+	"github.com/dicedb/dice/internal/comm"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/ops"
-	"github.com/dicedb/dice/internal/querymanager"
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/shard"
-	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/gorilla/websocket"
 )
 
-const Qwatch = "QWATCH"
-const Qunwatch = "QUNWATCH"
-const Subscribe = "SUBSCRIBE"
-
-var unimplementedCommandsWebsocket = map[string]bool{
-	Qwatch:    true,
-	Qunwatch:  true,
-	Subscribe: true,
-}
+const QWatch = "QWATCH"
+const QUnwatch = "QUNWATCH"
 
 type WebsocketServer struct {
-	querymanager    *querymanager.Manager
-	shardManager    *shard.ShardManager
-	ioChan          chan *ops.StoreResponse
-	watchChan       chan dstore.QueryWatchEvent
-	websocketServer *http.Server
-	upgrader        websocket.Upgrader
-	logger          *slog.Logger
-	shutdownChan    chan struct{}
+	shardManager       *shard.ShardManager
+	ioChan             chan *ops.StoreResponse
+	websocketServer    *http.Server
+	upgrader           websocket.Upgrader
+	qwatchResponseChan chan comm.QwatchResponse
+	shutdownChan       chan struct{}
+	logger             *slog.Logger
 }
 
-func NewWebSocketServer(shardManager *shard.ShardManager, watchChan chan dstore.QueryWatchEvent, logger *slog.Logger) *WebsocketServer {
+func NewWebSocketServer(shardManager *shard.ShardManager, logger *slog.Logger) *WebsocketServer {
 	mux := http.NewServeMux()
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", config.WebsocketPort),
@@ -56,23 +48,16 @@ func NewWebSocketServer(shardManager *shard.ShardManager, watchChan chan dstore.
 	}
 
 	websocketServer := &WebsocketServer{
-		shardManager:    shardManager,
-		querymanager:    querymanager.NewQueryManager(logger),
-		ioChan:          make(chan *ops.StoreResponse, 1000),
-		watchChan:       watchChan,
-		websocketServer: srv,
-		upgrader:        upgrader,
-		logger:          logger,
-		shutdownChan:    make(chan struct{}),
+		shardManager:       shardManager,
+		ioChan:             make(chan *ops.StoreResponse, 1000),
+		websocketServer:    srv,
+		upgrader:           upgrader,
+		qwatchResponseChan: make(chan comm.QwatchResponse),
+		shutdownChan:       make(chan struct{}),
+		logger:             logger,
 	}
 
 	mux.HandleFunc("/", websocketServer.WebsocketHandler)
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		_, err := w.Write([]byte("OK"))
-		if err != nil {
-			return
-		}
-	})
 	return websocketServer
 }
 
@@ -148,76 +133,114 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 			break
 		}
 
-		if unimplementedCommandsWebsocket[diceDBCmd.Cmd] {
-			writeResponse(conn, []byte("Command is not implemented with Websocket"))
-			continue
-		}
-
-		// send request to Shard Manager
-		s.shardManager.GetShard(0).ReqChan <- &ops.StoreOp{
+		// create request
+		sp := &ops.StoreOp{
 			Cmd:         diceDBCmd,
 			WorkerID:    "wsServer",
 			ShardID:     0,
 			WebsocketOp: true,
 		}
 
-		// Wait for response
+		// handle qwatch and qunwatch commands
+		if diceDBCmd.Cmd == QWatch || diceDBCmd.Cmd == QUnwatch {
+			clientIdentifierID := generateUniqueInt32(r)
+			sp.Client = comm.NewHTTPQwatchClient(s.qwatchResponseChan, clientIdentifierID)
+
+			// start a goroutine for subsequent updates
+			go s.processQwatchUpdates(clientIdentifierID, conn, diceDBCmd)
+		}
+
+		s.shardManager.GetShard(0).ReqChan <- sp
 		resp := <-s.ioChan
-
-		_, ok := WorkerCmdsMeta[diceDBCmd.Cmd]
-		respArr := []string{
-			"(nil)",  // Represents a RESP Nil Bulk String, which indicates a null value.
-			"OK",     // Represents a RESP Simple String with value "OK".
-			"QUEUED", // Represents a Simple String indicating that a command has been queued.
-			"0",      // Represents a RESP Integer with value 0.
-			"1",      // Represents a RESP Integer with value 1.
-			"-1",     // Represents a RESP Integer with value -1.
-			"-2",     // Represents a RESP Integer with value -2.
-			"*0",     // Represents an empty RESP Array.
-		}
-		var rp *clientio.RESPParser
-
-		var responseValue interface{}
-		// TODO: Remove this conditional check and if (true) condition when all commands are migrated
-		if !ok {
-			var err error
-			if resp.EvalResponse.Error != nil {
-				rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(resp.EvalResponse.Error.Error())))
-			} else {
-				rp = clientio.NewRESPParser(bytes.NewBuffer(resp.EvalResponse.Result.([]byte)))
-			}
-
-			responseValue, err = rp.DecodeOne()
-			if err != nil {
-				s.logger.Error("Error decoding response", "error", err)
-				writeResponse(conn, []byte("error: Internal Server Error"))
-				return
-			}
-		} else {
-			if resp.EvalResponse.Error != nil {
-				responseValue = resp.EvalResponse.Error.Error()
-			} else {
-				responseValue = resp.EvalResponse.Result
-			}
-		}
-
-		if val, ok := responseValue.(clientio.RespType); ok {
-			responseValue = respArr[val]
-		}
-
-		if bt, ok := responseValue.([]byte); ok {
-			responseValue = string(bt)
-		}
-
-		respBytes, err := json.Marshal(responseValue)
-		if err != nil {
-			writeResponse(conn, []byte("error: marshaling json response"))
-			continue
-		}
-
-		// Write response
-		writeResponse(conn, respBytes)
+		s.processResponse(conn, diceDBCmd, resp)
 	}
+}
+
+func (s *WebsocketServer) processQwatchUpdates(clientIdentifierID uint32, conn *websocket.Conn, dicDBCmd *cmd.DiceDBCmd) {
+	for {
+		select {
+		case resp := <-s.qwatchResponseChan:
+			if resp.ClientIdentifierID == clientIdentifierID {
+				s.processResponse(conn, dicDBCmd, resp)
+			}
+		case <-s.shutdownChan:
+			return
+		}
+
+	}
+}
+
+func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.DiceDBCmd, response interface{}) {
+	var result interface{}
+	var err error
+
+	// check response type
+	switch resp := response.(type) {
+	case comm.QwatchResponse:
+		result = resp.Result
+		err = resp.Error
+	case *ops.StoreResponse:
+		result = resp.EvalResponse.Result
+		err = resp.EvalResponse.Error
+	default:
+		s.logger.Error("Unsupported response type")
+		writeResponse(conn, []byte("error: 500 Internal Server Error"))
+		return
+	}
+
+	_, ok := WorkerCmdsMeta[diceDBCmd.Cmd]
+	respArr := []string{
+		"(nil)",  // Represents a RESP Nil Bulk String, which indicates a null value.
+		"OK",     // Represents a RESP Simple String with value "OK".
+		"QUEUED", // Represents a Simple String indicating that a command has been queued.
+		"0",      // Represents a RESP Integer with value 0.
+		"1",      // Represents a RESP Integer with value 1.
+		"-1",     // Represents a RESP Integer with value -1.
+		"-2",     // Represents a RESP Integer with value -2.
+		"*0",     // Represents an empty RESP Array.
+	}
+
+	var responseValue interface{}
+	// TODO: Remove this conditional check and if (true) condition when all commands are migrated
+	if !ok {
+		var rp *clientio.RESPParser
+		if err != nil {
+			rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(err.Error())))
+		} else {
+			rp = clientio.NewRESPParser(bytes.NewBuffer(result.([]byte)))
+		}
+
+		responseValue, err = rp.DecodeOne()
+		if err != nil {
+			s.logger.Error("Error decoding response", "error", err)
+			writeResponse(conn, []byte("error: 500 Internal Server Error"))
+			return
+		}
+	} else {
+		if err != nil {
+			responseValue = err.Error()
+		} else {
+			responseValue = result
+		}
+	}
+
+	if val, ok := responseValue.(clientio.RespType); ok {
+		responseValue = respArr[val]
+	}
+
+	if bt, ok := responseValue.([]byte); ok {
+		responseValue = string(bt)
+	}
+
+	respBytes, err := json.Marshal(responseValue)
+	if err != nil {
+		s.logger.Error("Error marshaling json", "error", err)
+		writeResponse(conn, []byte("error: marshaling json"))
+		return
+	}
+
+	// success
+	writeResponse(conn, respBytes)
 }
 
 func writeResponse(conn *websocket.Conn, text []byte) {

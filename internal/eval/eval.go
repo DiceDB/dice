@@ -2109,7 +2109,7 @@ func evalMULTI(args []string, store *dstore.Store) []byte {
 // Every time a key in the watch list is modified, the client will be sent a response
 // containing the new value of the key along with the operation that was performed on it.
 // Contains only one argument, the query to be watched.
-func EvalQWATCH(args []string, httpOp bool, client *comm.Client, store *dstore.Store) []byte {
+func EvalQWATCH(args []string, httpOp, websocketOp bool, client *comm.Client, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("QWATCH")
 	}
@@ -2128,7 +2128,7 @@ func EvalQWATCH(args []string, httpOp bool, client *comm.Client, store *dstore.S
 	})
 	var watchSubscription querymanager.QuerySubscription
 
-	if httpOp {
+	if httpOp || websocketOp {
 		watchSubscription = querymanager.QuerySubscription{
 			Subscribe:          true,
 			Query:              query,
@@ -2165,7 +2165,7 @@ func EvalQWATCH(args []string, httpOp bool, client *comm.Client, store *dstore.S
 }
 
 // EvalQUNWATCH removes the specified key from the watch list for the caller client.
-func EvalQUNWATCH(args []string, httpOp bool, client *comm.Client) []byte {
+func EvalQUNWATCH(args []string, httpOp, websocketOp bool, client *comm.Client) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("QUNWATCH")
 	}
@@ -2174,7 +2174,7 @@ func EvalQUNWATCH(args []string, httpOp bool, client *comm.Client) []byte {
 		return clientio.Encode(e, false)
 	}
 
-	if httpOp {
+	if httpOp || websocketOp {
 		querymanager.QuerySubscriptionChan <- querymanager.QuerySubscription{
 			Subscribe:          false,
 			Query:              query,
