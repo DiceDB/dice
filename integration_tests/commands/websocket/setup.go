@@ -18,7 +18,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-const url = "ws://localhost:8380"
+const URL = "ws://localhost:8380"
 
 type TestServerOptions struct {
 	Port   int
@@ -38,7 +38,7 @@ type WebsocketCommandExecutor struct {
 
 func NewWebsocketCommandExecutor() *WebsocketCommandExecutor {
 	return &WebsocketCommandExecutor{
-		baseURL: url,
+		baseURL: URL,
 		websocketClient: &http.Client{
 			Timeout: time.Second * 100,
 		},
@@ -50,7 +50,7 @@ func NewWebsocketCommandExecutor() *WebsocketCommandExecutor {
 
 func (e *WebsocketCommandExecutor) ConnectToServer() *websocket.Conn {
 	// connect with Websocket Server
-	conn, resp, err := websocket.DefaultDialer.Dial(url, nil)
+	conn, resp, err := websocket.DefaultDialer.Dial(URL, nil)
 	if err != nil {
 		return nil
 	}
