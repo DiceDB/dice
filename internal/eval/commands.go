@@ -1018,9 +1018,10 @@ var (
 		Adds all the specified members with the specified scores to the sorted set stored at key.
 		Options: NX, XX, CH, INCR
 		Returns the number of elements added to the sorted set, not including elements already existing for which the score was updated.`,
-		Eval:     evalZADD,
-		Arity:    -4,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -4,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalZADD,
 	}
 	zrangeCmdMeta = DiceCmdMeta{
 		Name: "ZRANGE",
@@ -1030,9 +1031,10 @@ var (
 		Both start and stop are 0-based indexes, where 0 is the first element, 1 is the next element and so on.
 		These indexes can also be negative numbers indicating offsets from the end of the sorted set, with -1 being the last element of the sorted set, -2 the penultimate element and so on.
 		Returns the specified range of elements in the sorted set.`,
-		Eval:     evalZRANGE,
-		Arity:    -4,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -4,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalZRANGE,
 	}
 	bitfieldCmdMeta = DiceCmdMeta{
 		Name: "BITFIELD",
@@ -1057,6 +1059,14 @@ var (
 		Arity:    -1,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 		Eval:     evalBITFIELD,
+	}
+	bitfieldroCmdMeta = DiceCmdMeta{
+		Name: "BITFIELD_RO",
+		Info: `It is read-only variant of the BITFIELD command. 
+		It is like the original BITFIELD but only accepts GET subcommand.`,
+		Arity:    -1,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+		Eval:     evalBITFIELDRO,
 	}
 	hincrbyFloatCmdMeta = DiceCmdMeta{
 		Name: "HINCRBYFLOAT",
@@ -1108,6 +1118,7 @@ func init() {
 	DiceCmds["BITCOUNT"] = bitCountCmdMeta
 	DiceCmds["BITFIELD"] = bitfieldCmdMeta
 	DiceCmds["BITOP"] = bitOpCmdMeta
+	DiceCmds["BITFIELD_RO"] = bitfieldroCmdMeta
 	DiceCmds["BITPOS"] = bitposCmdMeta
 	DiceCmds["CLIENT"] = clientCmdMeta
 	DiceCmds["COMMAND"] = commandCmdMeta

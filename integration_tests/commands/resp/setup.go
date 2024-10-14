@@ -31,7 +31,7 @@ type TestServerOptions struct {
 
 //nolint:unused
 func getLocalConnection() net.Conn {
-	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.DiceConfig.Server.Port))
+	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.DiceConfig.AsyncServer.Port))
 	if err != nil {
 		panic(err)
 	}
@@ -50,7 +50,7 @@ func deleteTestKeys(keysToDelete []string, store *dstore.Store) {
 //nolint:unused
 func getLocalSdk() *dicedb.Client {
 	return dicedb.NewClient(&dicedb.Options{
-		Addr: fmt.Sprintf(":%d", config.DiceConfig.Server.Port),
+		Addr: fmt.Sprintf(":%d", config.DiceConfig.AsyncServer.Port),
 
 		DialTimeout:           10 * time.Second,
 		ReadTimeout:           30 * time.Second,
@@ -115,15 +115,15 @@ func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
 	logr := logger.New(logger.Opts{WithTimestamp: true})
 	slog.SetDefault(logr)
 	config.DiceConfig.Network.IOBufferLength = 16
-	config.DiceConfig.Server.WriteAOFOnCleanup = false
+	config.DiceConfig.Persistence.WriteAOFOnCleanup = false
 	if opt.Port != 0 {
-		config.DiceConfig.Server.Port = opt.Port
+		config.DiceConfig.AsyncServer.Port = opt.Port
 	} else {
-		config.DiceConfig.Server.Port = 9739
+		config.DiceConfig.AsyncServer.Port = 9739
 	}
 
-	queryWatchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Server.KeysLimit)
-	cmdWatchChan := make(chan dstore.CmdWatchEvent, config.DiceConfig.Server.KeysLimit)
+	queryWatchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Memory.KeysLimit)
+	cmdWatchChan := make(chan dstore.CmdWatchEvent, config.DiceConfig.Memory.KeysLimit)
 	gec := make(chan error)
 	shardManager := shard.NewShardManager(1, queryWatchChan, cmdWatchChan, gec, logr)
 	workerManager := worker.NewWorkerManager(20000, shardManager)
@@ -131,7 +131,7 @@ func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
 	testServer := resp.NewServer(shardManager, workerManager, cmdWatchChan, gec, logr)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	fmt.Println("Starting the test server on port", config.DiceConfig.Server.Port)
+	fmt.Println("Starting the test server on port", config.DiceConfig.AsyncServer.Port)
 
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
 	wg.Add(1)

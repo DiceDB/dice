@@ -5,188 +5,118 @@ description: Documentation for the DiceDB command COMMAND
 
 The `COMMAND` command in DiceDB is a powerful introspection tool that provides detailed information about all the DiceDB commands supported by the server. This command can be used to retrieve metadata about commands, such as their arity, flags, first key, last key, and key step. It is particularly useful for clients and developers who need to understand the capabilities and constraints of the DiceDB commands available in their environment.
 
+The `COMMAND` command can be used in multiple forms, supporting various subcommands, each with its own set of parameters. However, the default implementation, which does not require any subcommand, is as follows.
+
+## Syntax
+
+```bash
+COMMAND
+```
+
 ## Parameters
 
-The `COMMAND` command can be used in several forms, each with different parameters:
+This command does not accept any parameters.
 
-1. `COMMAND`: Returns details about all DiceDB commands.
-2. `COMMAND COUNT`: Returns the total number of commands in the DiceDB server.
-3. `COMMAND INFO command-name [command-name ...]`: Returns details about the specified commands.
-4. `COMMAND GETKEYS command arg [arg ...]`: Returns the keys from the provided command and arguments.
+## Behavior
 
-### Detailed Parameter Descriptions
+When no subcommand is provided, this command functions as the default implementation of the `COMMAND INFO` command in the absence of a specified command name. It iterates through the list of registered commands and subcommands, returning an array containing detailed metadata for each command.
 
-- `COMMAND`: No parameters. This form returns a list of all commands supported by the DiceDB server.
-- `COMMAND COUNT`: No parameters. This form returns the total number of commands.
-- `COMMAND INFO command-name [command-name ...]`:
-  - `command-name`: One or more command names for which information is requested.
-- `COMMAND GETKEYS command arg [arg ...]`:
-  - `command`: The command to analyze.
-  - `arg [arg ...]`: The arguments for the command.
+## Return values
 
-## Return Value
+Returns an array, where each element is a nested array containing the following details for each command
 
-The return value of the `COMMAND` command varies based on the form used:
+- **Command Name**: The name of the command.
+- **Arity**: An integer representing the number of arguments the command expects.
+  - A positive number indicates the exact number of arguments.
+  - A negative number indicates that the command accepts a variable number of arguments.
+- **Flags** (_Note_: Not supported currently) : An array of flags that describe the command's properties (e.g., `readonly`, `fast`).
+- **First Key**: The position of the first key in the argument list (0-based index).
+- **Last Key**: The position of the last key in the argument list.
+- **Key Step**: The step between keys in the argument list, useful for commands with multiple keys.
 
-1. `COMMAND`: Returns an array where each element is an array describing a command.
-2. `COMMAND COUNT`: Returns an integer representing the total number of commands.
-3. `COMMAND INFO command-name [command-name ...]`: Returns an array of arrays, each containing information about the specified commands.
-4. `COMMAND GETKEYS command arg [arg ...]`: Returns an array of keys extracted from the provided command and arguments.
+```bash
+127.0.0.1:7379> COMMAND
+  1)  1) "command-name"
+      2) (integer) arity
+      3) 1) "flag1"       # Optional
+         2) "flag2"      # Optional
+         ...
+      4) (integer) first-key
+      5) (integer) last-key
+      6) (integer) key-step
+  .
+  .
+  .
+```
 
-### Detailed Return Value Descriptions
+## Errors
 
-- `COMMAND`:
-  ```plaintext
-  [
-    [
-      "command-name",
-      arity,
-      [
-        "flag1",
-        "flag2",
-        ...
-      ],
-      first-key,
-      last-key,
-      key-step
-    ],
-    ...
-  ]
-  ```
-- `COMMAND COUNT`:
-  ```plaintext
-  (integer) number_of_commands
-  ```
-- `COMMAND INFO command-name [command-name ...]`:
-  ```plaintext
-  [
-    [
-      "command-name",
-      arity,
-      [
-        "flag1",
-        "flag2",
-        ...
-      ],
-      first-key,
-      last-key,
-      key-step
-    ],
-    ...
-  ]
-  ```
-- `COMMAND GETKEYS command arg [arg ...]`:
-  ```plaintext
-  [
-    "key1",
-    "key2",
-    ...
-  ]
-  ```
+No error is thrown in the default implementation of the `COMMAND` command when no subcommand is provided.
 
 ## Example Usage
 
-### Example 1: Retrieving All Commands
+### Retrieve Detailed Information for Each Command Supported by the DiceDB Server
 
-```plaintext
-> COMMAND
-1) 1) "get"
-   2) (integer) 2
-   3) 1) "readonly"
-      2) "fast"
-   4) (integer) 1
-   5) (integer) 1
-   6) (integer) 1
-2) 1) "set"
-   2) (integer) -3
-   3) 1) "write"
-      2) "denyoom"
-   4) (integer) 1
-   5) (integer) 1
-   6) (integer) 1
-...
+```bash
+127.0.0.1:7379> COMMAND
+  1) 1) "AUTH"
+     2) (integer) 0
+     3) (integer) 0
+     4) (integer) 0
+     5) (integer) 0
+  2) 1) "HSCAN"
+     2) (integer) -3
+     3) (integer) 1
+     4) (integer) 0
+     5) (integer) 0
+  3) 1) "PERSIST"
+     2) (integer) 0
+     3) (integer) 0
+     4) (integer) 0
+     5) (integer) 0
+  4) 1) "PING"
+     2) (integer) -1
+     3) (integer) 0
+     4) (integer) 0
+     5) (integer) 0
+   .
+   .
+   .
+127.0.0.1:7379>
 ```
 
-### Example 2: Counting Commands
+## Subcommands
 
-```plaintext
-> COMMAND COUNT
-(integer) 200
+### Syntax
+
+```bash
+COMMAND <subcommand>
 ```
 
-### Example 3: Retrieving Information About Specific Commands
+### Parameters
 
-```plaintext
-> COMMAND INFO get set
-1) 1) "get"
-   2) (integer) 2
-   3) 1) "readonly"
-      2) "fast"
-   4) (integer) 1
-   5) (integer) 1
-   6) (integer) 1
-2) 1) "set"
-   2) (integer) -3
-   3) 1) "write"
-      2) "denyoom"
-   4) (integer) 1
-   5) (integer) 1
-   6) (integer) 1
-```
+- **subcommand**: Optional. Available subcommands include:
+  - `COUNT` : Returns the total number of commands in the DiceDB server.
+  - `GETKEYS` : Returns the keys from the provided command and arguments.
+  - `LIST` : Returns the list of all the commands in the DiceDB server.
+  - `INFO` : Returns details about the specified commands.
+  - `HELP` : Displays the help section for `COMMAND`, providing information about each available subcommand.
 
-### Example 4: Extracting Keys from a Command
+**For more details on each subcommand, please refer to their respective documentation pages.**
 
-```plaintext
-> COMMAND GETKEYS del key1 key2 key3
-1) "key1"
-2) "key2"
-3) "key3"
-```
+### Errors
 
-## Behaviour
+1.  `Unknown subcommand`
+    - Error Message: ` (error) ERR unknown subcommand 'sucommand-name'. Try COMMAND HELP.`
+    - This error may occur if the subcommand is misspelled or not recognized by the DiceDB server.
 
-When the `COMMAND` command is executed, DiceDB inspects its internal command table and returns the requested information. The behavior varies slightly depending on the form of the command used:
+### Example Usage
 
-- `COMMAND`: Returns a comprehensive list of all commands and their metadata.
-- `COMMAND COUNT`: Returns the total number of commands.
-- `COMMAND INFO`: Returns detailed information about the specified commands.
-- `COMMAND GETKEYS`: Analyzes the provided command and arguments to extract the keys involved.
+#### Invalid usage
 
-## Error Handling
+An error is thrown when an incorrect or unsupported subcommand name is provided.
 
-The `COMMAND` command can raise errors in the following scenarios:
-
-1. `Invalid Subcommand`: If an unrecognized subcommand is provided, DiceDB will return an error.
-
-   - `Error Message`: `(error) ERR unknown subcommand`
-
-2. `Invalid Command Name`: If a non-existent command name is provided in the `COMMAND INFO` subcommand, DiceDB will return an error.
-
-   - `Error Message`: `(error) ERR unknown command 'command-name'`
-
-3. `Invalid Arguments`: If the arguments provided to the `COMMAND GETKEYS` subcommand do not match the expected format, DiceDB will return an error.
-
-   - `Error Message`: `(error) ERR wrong number of arguments for 'command' command`
-
-### Example of Error Handling
-
-#### Invalid Subcommand
-
-```plaintext
-> COMMAND INVALID
-(error) ERR unknown subcommand
-```
-
-#### Invalid Command Name
-
-```plaintext
-> COMMAND INFO non_existent_command
-(error) ERR unknown command 'non_existent_command'
-```
-
-#### Invalid Arguments for `COMMAND GETKEYS`
-
-```plaintext
-> COMMAND GETKEYS set
-(error) ERR wrong number of arguments for 'set' command
+```bash
+127.0.0.1:7379> COMMAND UNKNOWNSUBCOMMAND
+(error) ERR unknown subcommand 'UNKNOWNSUBCOMMAND'. Try COMMAND HELP.
 ```

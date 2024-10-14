@@ -38,7 +38,7 @@ func Ping(logger *slog.Logger) {
 	payload := &PingPayload{
 		HardwareConfig: hwConfig,
 		InstanceID:     config.DiceConfig.InstanceID,
-		Version:        config.DiceConfig.Server.Version,
+		Version:        config.DiceConfig.Version,
 		Err:            err,
 		Date:           time.Now().UTC().Format("2006-01-02 15:04:05"),
 		DBConfig:       DBConfig{},
