@@ -3250,14 +3250,6 @@ func evalGETEX(args []string, store *dstore.Store) *EvalResponse {
 				}
 			}
 
-			// If an option is provided instead of expire time return a syntax error
-			if opt := strings.ToUpper(args[i]); opt == Persist || opt == Px || opt == Ex {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrSyntax,
-				}
-			}
-
 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
 				return &EvalResponse{

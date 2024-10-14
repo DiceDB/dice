@@ -411,6 +411,38 @@ func testEvalGETEX(t *testing.T, store *dstore.Store) {
 			},
 		},
 		{
+			name: "key val pair and EX and string expire time",
+			setup: func() {
+				key := "foo"
+				value := "bar"
+				obj := &object.Obj{
+					Value: value,
+				}
+				store.Put(key, obj)
+			},
+			input: []string{"foo", Ex, "string"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrIntegerOutOfRange,
+			},
+		},
+		{
+			name: "key val pair and both EX and PERSIST",
+			setup: func() {
+				key := "foo"
+				value := "bar"
+				obj := &object.Obj{
+					Value: value,
+				}
+				store.Put(key, obj)
+			},
+			input: []string{"foo", Ex, Persist},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrIntegerOutOfRange,
+			},
+		},
+		{
 			name: "key holding json type",
 			setup: func() {
 				evalJSONSET([]string{"JSONKEY", "$", "1"}, store)
