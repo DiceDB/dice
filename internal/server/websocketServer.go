@@ -24,6 +24,11 @@ import (
 
 const QWatch = "QWATCH"
 const Subscribe = "SUBSCRIBE"
+const Qunwatch = "QUNWATCH"
+
+var unimplementedCommandsWebsocket = map[string]bool{
+	Qunwatch: true,
+}
 
 type WebsocketServer struct {
 	shardManager       *shard.ShardManager
@@ -131,6 +136,11 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		if diceDBCmd.Cmd == Abort {
 			close(s.shutdownChan)
 			break
+		}
+
+		if unimplementedCommandsWebsocket[diceDBCmd.Cmd] {
+			writeResponse(conn, []byte("Command is not implemented with Websocket"))
+			continue
 		}
 
 		// create request
