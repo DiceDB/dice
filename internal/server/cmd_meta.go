@@ -62,6 +62,34 @@ var (
 		Cmd:     "SETEX",
 		CmdType: SingleShard,
 	}
+	setbitCmdMeta = CmdsMeta{
+		Cmd:     "SETBIT",
+		CmdType: SingleShard,
+	}
+	getbitCmdMeta = CmdsMeta{
+		Cmd:     "GETBIT",
+		CmdType: SingleShard,
+	}
+	bitcountCmdMeta = CmdsMeta{
+		Cmd:     "BITCOUNT",
+		CmdType: SingleShard,
+	}
+	bitfieldCmdMeta = CmdsMeta{
+		Cmd:     "BITFIELD",
+		CmdType: SingleShard,
+	}
+	bitopCmdMeta = CmdsMeta{
+		Cmd:     "BITOP",
+		CmdType: SingleShard,
+	}
+	bitposCmdMeta = CmdsMeta{
+		Cmd:     "BITPOS",
+		CmdType: SingleShard,
+	}
+	bitfieldroCmdMeta = CmdsMeta{
+		Cmd:     "BITFIELD_RO",
+		CmdType: SingleShard,
+	}
 
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
@@ -79,6 +107,13 @@ func init() {
 	WorkerCmdsMeta["GET"] = getCmdMeta
 	WorkerCmdsMeta["GETSET"] = getsetCmdMeta
 	WorkerCmdsMeta["SETEX"] = setexCmdMeta
+	WorkerCmdsMeta["SETBIT"] = setbitCmdMeta
+	WorkerCmdsMeta["GETBIT"] = getbitCmdMeta
+	WorkerCmdsMeta["BITCOUNT"] = bitcountCmdMeta
+	WorkerCmdsMeta["BITFIELD"] = bitfieldCmdMeta
+	WorkerCmdsMeta["BITOP"] = bitopCmdMeta
+	WorkerCmdsMeta["BITPOS"] = bitposCmdMeta
+	WorkerCmdsMeta["BITFIELD_RO"] = bitfieldroCmdMeta
 
 	// Additional commands (multishard, custom) can be added here as needed.
 }

@@ -46,6 +46,13 @@ const (
 	CmdGetSet      = "GETSET"
 	CmdGetWatch    = "GET.WATCH"
 	CmdZRangeWatch = "ZRANGE.WATCH"
+	CmdSetBit      = "SETBIT"
+	CmdGetBit      = "GETBIT"
+	CmdBitCount    = "BITCOUNT"
+	CmdBitField    = "BITFIELD"
+	CmdBitOp       = "BITOP"
+	CmdBitPos      = "BITPOS"
+	CmdBitFieldRO  = "BITFIELD_RO"
 )
 
 type CmdMeta struct {
@@ -78,6 +85,27 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdGetSet: {
+		CmdType: SingleShard,
+	},
+	CmdSetBit: {
+		CmdType: SingleShard,
+	},
+	CmdGetBit: {
+		CmdType: SingleShard,
+	},
+	CmdBitCount: {
+		CmdType: SingleShard,
+	},
+	CmdBitField: {
+		CmdType: SingleShard,
+	},
+	CmdBitOp: {
+		CmdType: SingleShard,
+	},
+	CmdBitPos: {
+		CmdType: SingleShard,
+	},
+	CmdBitFieldRO: {
 		CmdType: SingleShard,
 	},
 

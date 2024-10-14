@@ -25,26 +25,26 @@ func parseBitfieldEncodingAndOffset(args []string) (eType, eVal, offset interfac
 		eType = SIGNED
 		eVal, err = strconv.ParseInt(encodingRaw[1:], 10, 64)
 		if err != nil {
-			err = diceerrors.NewErr(diceerrors.InvalidBitfieldType)
+			err = diceerrors.ErrInvalidBitfieldType
 			return eType, eVal, offset, err
 		}
 		if eVal.(int64) <= 0 || eVal.(int64) > 64 {
-			err = diceerrors.NewErr(diceerrors.InvalidBitfieldType)
+			err = diceerrors.ErrInvalidBitfieldType
 			return eType, eVal, offset, err
 		}
 	case 'u':
 		eType = UNSIGNED
 		eVal, err = strconv.ParseInt(encodingRaw[1:], 10, 64)
 		if err != nil {
-			err = diceerrors.NewErr(diceerrors.InvalidBitfieldType)
+			err = diceerrors.ErrInvalidBitfieldType
 			return eType, eVal, offset, err
 		}
 		if eVal.(int64) <= 0 || eVal.(int64) >= 64 {
-			err = diceerrors.NewErr(diceerrors.InvalidBitfieldType)
+			err = diceerrors.ErrInvalidBitfieldType
 			return eType, eVal, offset, err
 		}
 	default:
-		err = diceerrors.NewErr(diceerrors.InvalidBitfieldType)
+		err = diceerrors.ErrInvalidBitfieldType
 		return eType, eVal, offset, err
 	}
 
@@ -52,21 +52,21 @@ func parseBitfieldEncodingAndOffset(args []string) (eType, eVal, offset interfac
 	case '#':
 		offset, err = strconv.ParseInt(offsetRaw[1:], 10, 64)
 		if err != nil {
-			err = diceerrors.NewErr(diceerrors.BitfieldOffsetErr)
+			err = diceerrors.ErrBitfieldOffset
 			return eType, eVal, offset, err
 		}
 		offset = offset.(int64) * eVal.(int64)
 	default:
 		offset, err = strconv.ParseInt(offsetRaw, 10, 64)
 		if err != nil {
-			err = diceerrors.NewErr(diceerrors.BitfieldOffsetErr)
+			err = diceerrors.ErrBitfieldOffset
 			return eType, eVal, offset, err
 		}
 	}
 	return eType, eVal, offset, err
 }
 
-func ParseBitfieldOps(args []string, readOnly bool) (ops []BitFieldOp, err []byte) {
+func ParseBitfieldOps(args []string, readOnly bool) (ops []BitFieldOp, err error) {
 	var overflowType string
 
 	for i := 1; i < len(args); {
@@ -74,11 +74,11 @@ func ParseBitfieldOps(args []string, readOnly bool) (ops []BitFieldOp, err []byt
 		switch strings.ToUpper(args[i]) {
 		case GET:
 			if len(args) <= i+2 {
-				return nil, diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
+				return nil, diceerrors.ErrSyntax
 			}
 			eType, eVal, offset, err := parseBitfieldEncodingAndOffset(args[i+1 : i+3])
 			if err != nil {
-				return nil, diceerrors.NewErrWithFormattedMessage(err.Error())
+				return nil, err
 			}
 			ops = append(ops, BitFieldOp{
 				Kind:   GET,
@@ -91,15 +91,15 @@ func ParseBitfieldOps(args []string, readOnly bool) (ops []BitFieldOp, err []byt
 			isReadOnlyCommand = true
 		case SET:
 			if len(args) <= i+3 {
-				return nil, diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
+				return nil, diceerrors.ErrSyntax
 			}
 			eType, eVal, offset, err := parseBitfieldEncodingAndOffset(args[i+1 : i+3])
 			if err != nil {
-				return nil, diceerrors.NewErrWithFormattedMessage(err.Error())
+				return nil, err
 			}
 			value, err1 := strconv.ParseInt(args[i+3], 10, 64)
 			if err1 != nil {
-				return nil, diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
+				return nil, diceerrors.ErrIntegerOutOfRange
 			}
 			ops = append(ops, BitFieldOp{
 				Kind:   SET,
@@ -111,15 +111,15 @@ func ParseBitfieldOps(args []string, readOnly bool) (ops []BitFieldOp, err []byt
 			i += 4
 		case INCRBY:
 			if len(args) <= i+3 {
-				return nil, diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
+				return nil, diceerrors.ErrSyntax
 			}
 			eType, eVal, offset, err := parseBitfieldEncodingAndOffset(args[i+1 : i+3])
 			if err != nil {
-				return nil, diceerrors.NewErrWithFormattedMessage(err.Error())
+				return nil, err
 			}
 			value, err1 := strconv.ParseInt(args[i+3], 10, 64)
 			if err1 != nil {
-				return nil, diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
+				return nil, diceerrors.ErrIntegerOutOfRange
 			}
 			ops = append(ops, BitFieldOp{
 				Kind:   INCRBY,
@@ -131,13 +131,13 @@ func ParseBitfieldOps(args []string, readOnly bool) (ops []BitFieldOp, err []byt
 			i += 4
 		case OVERFLOW:
 			if len(args) <= i+1 {
-				return nil, diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
+				return nil, diceerrors.ErrSyntax
 			}
 			switch strings.ToUpper(args[i+1]) {
 			case WRAP, FAIL, SAT:
 				overflowType = strings.ToUpper(args[i+1])
 			default:
-				return nil, diceerrors.NewErrWithFormattedMessage(diceerrors.OverflowTypeErr)
+				return nil, diceerrors.ErrOverflowType
 			}
 			ops = append(ops, BitFieldOp{
 				Kind:   OVERFLOW,
@@ -148,11 +148,11 @@ func ParseBitfieldOps(args []string, readOnly bool) (ops []BitFieldOp, err []byt
 			})
 			i += 2
 		default:
-			return nil, diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
+			return nil, diceerrors.ErrSyntax
 		}
 
 		if readOnly && !isReadOnlyCommand {
-			return nil, diceerrors.NewErrWithMessage("BITFIELD_RO only supports the GET subcommand")
+			return nil, diceerrors.ErrGeneral("BITFIELD_RO only supports the GET subcommand")
 		}
 	}
 

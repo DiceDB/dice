@@ -10,9 +10,12 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
-func evalBITPOS(args []string, store *dstore.Store) []byte {
+func evalBITPOS(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) < 2 || len(args) > 5 {
-		return diceerrors.NewErrArity("BITPOS")
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("BITPOS"),
+		}
 	}
 
 	key := args[0]
@@ -20,36 +23,55 @@ func evalBITPOS(args []string, store *dstore.Store) []byte {
 
 	bitToFind, err := parseBitToFind(args[1])
 	if err != nil {
-		return diceerrors.NewErrWithMessage(err.Error())
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(err.Error()),
+		}
 	}
 
 	if obj == nil {
 		if bitToFind == 0 {
-			return clientio.Encode(0, true)
+			return &EvalResponse{
+				Result: clientio.IntegerZero,
+				Error:  nil,
+			}
 		}
 
-		return clientio.Encode(-1, true)
+		return &EvalResponse{
+			Result: clientio.IntegerNegativeOne,
+			Error:  nil,
+		}
 	}
 
 	byteSlice, err := getValueAsByteSlice(obj)
 	if err != nil {
-		return diceerrors.NewErrWithMessage(err.Error())
+		return &EvalResponse{
+			Result: nil,
+			Error:  err,
+		}
+
 	}
 
 	start, end, rangeType, endRangeProvided, err := parseOptionalParams(args[2:], len(byteSlice))
 	if err != nil {
-		return diceerrors.NewErrWithMessage(err.Error())
+		return &EvalResponse{
+			Result: nil,
+			Error:  err,
+		}
 	}
 
 	result := getBitPos(byteSlice, bitToFind, start, end, rangeType, endRangeProvided)
 
-	return clientio.Encode(result, true)
+	return &EvalResponse{
+		Result: result,
+		Error:  nil,
+	}
 }
 
 func parseBitToFind(arg string) (byte, error) {
 	bitToFindInt, err := strconv.Atoi(arg)
 	if err != nil {
-		return 0, errors.New("value is not an integer or out of range")
+		return 0, diceerrors.ErrIntegerOutOfRange
 	}
 
 	if bitToFindInt != 0 && bitToFindInt != 1 {
@@ -66,14 +88,14 @@ func parseOptionalParams(args []string, byteLen int) (start, end int, rangeType 
 	if len(args) > 0 {
 		start, err = strconv.Atoi(args[0])
 		if err != nil {
-			return 0, 0, "", false, errors.New("value is not an integer or out of range")
+			return 0, 0, "", false, diceerrors.ErrIntegerOutOfRange
 		}
 	}
 
 	if len(args) > 1 {
 		end, err = strconv.Atoi(args[1])
 		if err != nil {
-			return 0, 0, "", false, errors.New("value is not an integer or out of range")
+			return 0, 0, "", false, diceerrors.ErrIntegerOutOfRange
 		}
 		endRangeProvided = true
 	}
@@ -81,7 +103,7 @@ func parseOptionalParams(args []string, byteLen int) (start, end int, rangeType 
 	if len(args) > 2 {
 		rangeType = strings.ToUpper(args[2])
 		if rangeType != BYTE && rangeType != BIT {
-			return 0, 0, "", false, errors.New("syntax error")
+			return 0, 0, "", false, diceerrors.ErrSyntax
 		}
 	}
 	return start, end, rangeType, endRangeProvided, err
