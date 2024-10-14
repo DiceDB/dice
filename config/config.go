@@ -69,8 +69,10 @@ type Config struct {
 	} `mapstructure:"http"`
 
 	WebSocket struct {
-		Enabled bool `mapstructure:"enabled"`
-		Port    int  `mapstructure:"port"`
+		Enabled                 bool          `mapstructure:"enabled"`
+		Port                    int           `mapstructure:"port"`
+		MaxWriteResponseRetries int           `mapstructure:"maxwriteresponseretries"`
+		WriteResponseTimeout    time.Duration `mapstructure:"writeresponsetimeout"`
 	} `mapstructure:"websocket"`
 
 	Performance struct {
@@ -137,11 +139,15 @@ var baseConfig = Config{
 		Port:    HTTPPort,
 	},
 	WebSocket: struct {
-		Enabled bool `mapstructure:"enabled"`
-		Port    int  `mapstructure:"port"`
+		Enabled                 bool          `mapstructure:"enabled"`
+		Port                    int           `mapstructure:"port"`
+		MaxWriteResponseRetries int           `mapstructure:"maxwriteresponseretries"`
+		WriteResponseTimeout    time.Duration `mapstructure:"writeresponsetimeout"`
 	}{
-		Enabled: EnableWebsocket,
-		Port:    WebsocketPort,
+		Enabled:                 EnableWebsocket,
+		Port:                    WebsocketPort,
+		MaxWriteResponseRetries: 3,
+		WriteResponseTimeout:    10 * time.Second,
 	},
 	Performance: struct {
 		WatchChanBufSize       int           `mapstructure:"watchchanbufsize"`

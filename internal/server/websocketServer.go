@@ -7,8 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
+	"os"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/dicedb/dice/config"
@@ -20,6 +23,7 @@ import (
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/shard"
 	"github.com/gorilla/websocket"
+	"golang.org/x/exp/rand"
 )
 
 const QWatch = "QWATCH"
@@ -162,7 +166,9 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 
 		s.shardManager.GetShard(0).ReqChan <- sp
 		resp := <-s.ioChan
-		s.processResponse(conn, diceDBCmd, resp)
+		if err := s.processResponse(conn, diceDBCmd, resp); err != nil {
+			break
+		}
 	}
 }
 
@@ -171,7 +177,10 @@ func (s *WebsocketServer) processQwatchUpdates(clientIdentifierID uint32, conn *
 		select {
 		case resp := <-s.qwatchResponseChan:
 			if resp.ClientIdentifierID == clientIdentifierID {
-				s.processResponse(conn, dicDBCmd, resp)
+				if err := s.processResponse(conn, dicDBCmd, resp); err != nil {
+					s.logger.Error("Error writing response to client. Shutting down goroutine for qwatch updates", slog.Any("clientIdentifierID", clientIdentifierID), slog.Any("error", err))
+					return
+				}
 			}
 		case <-s.shutdownChan:
 			return
@@ -179,7 +188,7 @@ func (s *WebsocketServer) processQwatchUpdates(clientIdentifierID uint32, conn *
 	}
 }
 
-func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.DiceDBCmd, response interface{}) {
+func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.DiceDBCmd, response interface{}) error {
 	var result interface{}
 	var err error
 
@@ -194,7 +203,7 @@ func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.D
 	default:
 		s.logger.Error("Unsupported response type")
 		writeResponse(conn, []byte("error: 500 Internal Server Error"))
-		return
+		return nil
 	}
 
 	_, ok := WorkerCmdsMeta[diceDBCmd.Cmd]
@@ -223,7 +232,7 @@ func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.D
 		if err != nil {
 			s.logger.Error("Error decoding response", "error", err)
 			writeResponse(conn, []byte("error: 500 Internal Server Error"))
-			return
+			return nil
 		}
 	} else {
 		if err != nil {
@@ -245,13 +254,83 @@ func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.D
 	if err != nil {
 		s.logger.Error("Error marshaling json", "error", err)
 		writeResponse(conn, []byte("error: marshaling json"))
-		return
+		return nil
 	}
 
 	// success
-	writeResponse(conn, respBytes)
+	// Write response with retries for transient errors
+	if err := WriteResponseWithRetries(conn, respBytes, config.DiceConfig.WebSocket.MaxWriteResponseRetries); err != nil {
+		s.logger.Error(fmt.Sprintf("Error reading message: %v", err))
+		return fmt.Errorf("error writing response: %v", err)
+	}
+
+	return nil
+}
+
+func WriteResponseWithRetries(conn *websocket.Conn, text []byte, maxRetries int) error {
+	for attempts := 0; attempts < maxRetries; attempts++ {
+		// Set a write deadline
+		if err := conn.SetWriteDeadline(time.Now().Add(config.DiceConfig.WebSocket.WriteResponseTimeout)); err != nil {
+			slog.Error(fmt.Sprintf("Error setting write deadline: %v", err))
+			return err
+		}
+
+		// Attempt to write message
+		err := conn.WriteMessage(websocket.TextMessage, text)
+		if err == nil {
+			break // Exit loop if write succeeds
+		}
+
+		// Handle network errors
+		var netErr *net.OpError
+		if !errors.As(err, &netErr) {
+			return fmt.Errorf("error writing message: %w", err)
+		}
+
+		opErr, ok := netErr.Err.(*os.SyscallError)
+		if !ok {
+			return fmt.Errorf("network operation error: %w", err)
+		}
+
+		if opErr.Syscall != "write" {
+			return fmt.Errorf("unexpected syscall error: %w", err)
+		}
+
+		switch opErr.Err {
+		case syscall.EPIPE:
+			return fmt.Errorf("broken pipe: %w", err)
+		case syscall.ECONNRESET:
+			return fmt.Errorf("connection reset by peer: %w", err)
+		case syscall.ENOBUFS:
+			return fmt.Errorf("no buffer space available: %w", err)
+		case syscall.EAGAIN:
+			// Exponential backoff with jitter
+			backoffDuration := time.Duration(attempts+1)*100*time.Millisecond + time.Duration(rand.Intn(50))*time.Millisecond
+
+			slog.Warn(fmt.Sprintf(
+				"Temporary issue (EAGAIN) on attempt %d. Retrying in %v...",
+				attempts+1, backoffDuration,
+			))
+
+			time.Sleep(backoffDuration)
+			continue
+		default:
+			return fmt.Errorf("write error: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func writeResponse(conn *websocket.Conn, text []byte) {
-	_ = conn.WriteMessage(websocket.TextMessage, text)
+	// Set a write deadline to prevent hanging
+	if err := conn.SetWriteDeadline(time.Now().Add(10 * time.Second)); err != nil {
+		slog.Error(fmt.Sprintf("Error setting write deadline: %v", err))
+		return
+	}
+
+	err := conn.WriteMessage(websocket.TextMessage, text)
+	if err != nil {
+		slog.Error(fmt.Sprintf("Error writing response: %v", err))
+	}
 }

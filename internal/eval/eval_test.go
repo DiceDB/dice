@@ -2832,6 +2832,50 @@ func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]s
 	}
 }
 
+func runMigratedEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]string, *dstore.Store) *EvalResponse, store *dstore.Store) {
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			store = setupTest(store)
+
+			if tc.setup != nil {
+				tc.setup()
+			}
+
+			output := evalFunc(tc.input, store)
+
+			if tc.newValidator != nil {
+				if tc.migratedOutput.Error != nil {
+					tc.newValidator(tc.migratedOutput.Error)
+				} else {
+					tc.newValidator(output.Result)
+				}
+				return
+			}
+
+			if tc.migratedOutput.Error != nil {
+				testifyAssert.EqualError(t, output.Error, tc.migratedOutput.Error.Error())
+				return
+			}
+
+			// Handle comparison for byte slices and string slices
+			// TODO: Make this generic so that all kind of slices can be handled
+			if b, ok := output.Result.([]byte); ok && tc.migratedOutput.Result != nil {
+				if expectedBytes, ok := tc.migratedOutput.Result.([]byte); ok {
+					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+				}
+			} else if a, ok := output.Result.([]string); ok && tc.migratedOutput.Result != nil {
+				if expectedStringSlice, ok := tc.migratedOutput.Result.([]string); ok {
+					testifyAssert.ElementsMatch(t, a, expectedStringSlice)
+				}
+			} else {
+				testifyAssert.Equal(t, tc.migratedOutput.Result, output.Result)
+			}
+
+			testifyAssert.NoError(t, output.Error)
+		})
+	}
+}
+
 func BenchmarkEvalMSET(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -5116,153 +5160,221 @@ func testEvalJSONRESP(t *testing.T, store *dstore.Store) {
 func testEvalZADD(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"ZADD with wrong number of arguments": {
-			input:  []string{"myzset", "1"},
-			output: diceerrors.NewErrArity("ZADD"),
+			input: []string{"myzset", "1"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("ZADD"),
+			},
 		},
 		"ZADD with non-numeric score": {
-			input:  []string{"myzset", "score", "member1"},
-			output: diceerrors.NewErrWithMessage(diceerrors.InvalidFloatErr),
+			input: []string{"myzset", "score", "member1"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrInvalidNumberFormat,
+			},
 		},
 		"ZADD new member to non-existing key": {
-			setup:  func() {},
-			input:  []string{"myzset", "1", "member1"},
-			output: clientio.Encode(int64(1), false),
+			input: []string{"myzset", "1", "member1"},
+			migratedOutput: EvalResponse{
+				Result: 1,
+				Error:  nil,
+			},
 		},
 		"ZADD existing member with updated score": {
 			setup: func() {
 				evalZADD([]string{"myzset", "1", "member1"}, store)
 			},
-			input:  []string{"myzset", "2", "member1"},
-			output: clientio.Encode(int64(0), false),
+			input: []string{"myzset", "2", "member1"},
+			migratedOutput: EvalResponse{
+				Result: 0,
+				Error:  nil,
+			},
 		},
 		"ZADD multiple members": {
 			setup: func() {
 				evalZADD([]string{"myzset", "1", "member1"}, store)
 			},
-			input:  []string{"myzset", "2", "member2", "3", "member3"},
-			output: clientio.Encode(int64(2), false),
+			input: []string{"myzset", "2", "member2", "3", "member3"},
+			migratedOutput: EvalResponse{
+				Result: 2,
+				Error:  nil,
+			},
 		},
 		"ZADD with negative score": {
-			input:  []string{"myzset", "-1", "member_neg"},
-			output: clientio.Encode(int64(1), false),
+			input: []string{"myzset", "-1", "member_neg"},
+			migratedOutput: EvalResponse{
+				Result: 1,
+				Error:  nil,
+			},
 		},
 		"ZADD with duplicate members": {
 			setup: func() {
 				evalZADD([]string{"myzset", "1", "member1"}, store)
 			},
-			input:  []string{"myzset", "2", "member1", "2", "member1"},
-			output: clientio.Encode(int64(0), false),
+			input: []string{"myzset", "2", "member1", "2", "member1"},
+			migratedOutput: EvalResponse{
+				Result: 0,
+				Error:  nil,
+			},
 		},
 		"ZADD with extreme float value": {
-			input:  []string{"myzset", "1e308", "member_large"},
-			output: clientio.Encode(int64(1), false),
+			input: []string{"myzset", "1e308", "member_large"},
+			migratedOutput: EvalResponse{
+				Result: 1,
+				Error:  nil,
+			},
 		},
 		"ZADD with NaN score": {
-			input:  []string{"myzset", "NaN", "member_nan"},
-			output: diceerrors.NewErrWithMessage(diceerrors.InvalidFloatErr),
+			input: []string{"myzset", "NaN", "member_nan"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrInvalidNumberFormat,
+			},
 		},
 		"ZADD with INF score": {
-			input:  []string{"myzset", "INF", "member_inf"},
-			output: clientio.Encode(int64(1), false),
+			input: []string{"myzset", "INF", "member_inf"},
+			migratedOutput: EvalResponse{
+				Result: 1,
+				Error:  nil,
+			},
 		},
 		"ZADD to a key of wrong type": {
 			setup: func() {
-				store.Put("myzset", store.NewObj("string_value", -1, object.ObjTypeString, object.ObjEncodingRaw))
+				store.Put("mywrongtypekey", store.NewObj("string_value", -1, object.ObjTypeString, object.ObjEncodingRaw))
 			},
-			input:  []string{"myzset", "1", "member1"},
-			output: []byte("-ERR Existing key has wrong Dice type\r\n"),
+			input: []string{"mywrongtypekey", "1", "member1"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			},
 		},
 	}
 
-	runEvalTests(t, tests, evalZADD, store)
+	runMigratedEvalTests(t, tests, evalZADD, store)
 }
 
 func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"ZRANGE on non-existing key": {
-			input:  []string{"non_existing_key", "0", "-1"},
-			output: clientio.Encode([]string{}, false),
+			input: []string{"non_existing_key", "0", "-1"},
+			migratedOutput: EvalResponse{
+				Result: []string{},
+				Error:  nil,
+			},
 		},
 		"ZRANGE with wrong type key": {
 			setup: func() {
 				store.Put("mystring", store.NewObj("string_value", -1, object.ObjTypeString, object.ObjEncodingRaw))
 			},
-			input:  []string{"mystring", "0", "-1"},
-			output: diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr),
+			input: []string{"mystring", "0", "-1"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			},
 		},
 		"ZRANGE with normal indices": {
 			setup: func() {
 				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
 			},
-			input:  []string{"myzset", "0", "1"},
-			output: clientio.Encode([]string{"member1", "member2"}, false),
+			input: []string{"myzset", "0", "1"},
+			migratedOutput: EvalResponse{
+				Result: []string{"member1", "member2"},
+				Error:  nil,
+			},
 		},
 		"ZRANGE with negative indices": {
 			setup: func() {
 				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
 			},
-			input:  []string{"myzset", "-2", "-1"},
-			output: clientio.Encode([]string{"member2", "member3"}, false),
+			input: []string{"myzset", "-2", "-1"},
+			migratedOutput: EvalResponse{
+				Result: []string{"member2", "member3"},
+				Error:  nil,
+			},
 		},
 		"ZRANGE with start > stop": {
 			setup: func() {
 				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
 			},
-			input:  []string{"myzset", "2", "1"},
-			output: clientio.Encode([]string{}, false),
+			input: []string{"myzset", "2", "1"},
+			migratedOutput: EvalResponse{
+				Result: []string{},
+				Error:  nil,
+			},
 		},
 		"ZRANGE with indices out of bounds": {
 			setup: func() {
 				evalZADD([]string{"myzset", "1", "member1"}, store)
 			},
-			input:  []string{"myzset", "0", "5"},
-			output: clientio.Encode([]string{"member1"}, false),
+			input: []string{"myzset", "0", "5"},
+			migratedOutput: EvalResponse{
+				Result: []string{"member1"},
+				Error:  nil,
+			},
 		},
 		"ZRANGE WITHSCORES option": {
 			setup: func() {
 				evalZADD([]string{"myzset", "1", "member1", "2", "member2"}, store)
 			},
-			input:  []string{"myzset", "0", "-1", "WITHSCORES"},
-			output: clientio.Encode([]string{"member1", "1", "member2", "2"}, false),
+			input: []string{"myzset", "0", "-1", "WITHSCORES"},
+			migratedOutput: EvalResponse{
+				Result: []string{"member1", "1", "member2", "2"},
+				Error:  nil,
+			},
 		},
 		"ZRANGE with invalid option": {
 			setup: func() {
 				evalZADD([]string{"myzset", "1", "member1"}, store)
 			},
-			input:  []string{"myzset", "0", "-1", "INVALIDOPTION"},
-			output: diceerrors.NewErrWithMessage(diceerrors.SyntaxErr),
+			input: []string{"myzset", "0", "-1", "INVALIDOPTION"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrSyntax,
+			},
 		},
 		"ZRANGE with REV option": {
 			setup: func() {
 				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
 			},
-			input:  []string{"myzset", "0", "-1", "REV"},
-			output: clientio.Encode([]string{"member3", "member2", "member1"}, false),
+			input: []string{"myzset", "0", "-1", "REV"},
+			migratedOutput: EvalResponse{
+				Result: []string{"member3", "member2", "member1"},
+				Error:  nil,
+			},
 		},
 		"ZRANGE with REV and WITHSCORES options": {
 			setup: func() {
 				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
 			},
-			input:  []string{"myzset", "0", "-1", "REV", "WITHSCORES"},
-			output: clientio.Encode([]string{"member3", "3", "member2", "2", "member1", "1"}, false),
+			input: []string{"myzset", "0", "-1", "REV", "WITHSCORES"},
+			migratedOutput: EvalResponse{
+				Result: []string{"member3", "3", "member2", "2", "member1", "1"},
+				Error:  nil,
+			},
 		},
 		"ZRANGE with start index greater than length": {
 			setup: func() {
 				evalZADD([]string{"myzset", "1", "member1"}, store)
 			},
-			input:  []string{"myzset", "5", "10"},
-			output: clientio.Encode([]string{}, false),
+			input: []string{"myzset", "5", "10"},
+			migratedOutput: EvalResponse{
+				Result: []string{},
+				Error:  nil,
+			},
 		},
 		"ZRANGE with negative start index greater than length": {
 			setup: func() {
 				evalZADD([]string{"myzset", "1", "member1"}, store)
 			},
-			input:  []string{"myzset", "-10", "-5"},
-			output: clientio.Encode([]string{}, false),
+			input: []string{"myzset", "-10", "-5"},
+			migratedOutput: EvalResponse{
+				Result: []string{},
+				Error:  nil,
+			},
 		},
 	}
 
-	runEvalTests(t, tests, evalZRANGE, store)
+	runMigratedEvalTests(t, tests, evalZRANGE, store)
 }
 
 func testEvalBitField(t *testing.T, store *dstore.Store) {
