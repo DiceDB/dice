@@ -36,8 +36,8 @@ With this, you can build truly real-time applications like [Leaderboard](https:/
 
 The easiest way to get started with DiceDB is using [Docker](https://www.docker.com/) by running the following command.
 
-```
-$ docker run -p 7379:7379 dicedb/dicedb
+```bash
+docker run -p 7379:7379 dicedb/dicedb
 ```
 
 The above command will start the DiceDB server running locally on the port `7379` and you can connect
@@ -48,10 +48,10 @@ to it using DiceDB CLI and SDKs, or even Redis CLIs and SDKs.
 ### Multi-Threading Mode (Experimental)
 
 Multi-threading is currently under active development. To run the server with multi-threading enabled, follow these steps:
-```shell
-$ git clone https://github.com/dicedb/dice
-$ cd dice
-$ go run main.go --enable-multithreading=true
+```bash
+git clone https://github.com/dicedb/dice
+cd dice
+go run main.go --enable-multithreading=true
 ```
 
 **Note:** Only the following commands are optimized for multithreaded execution: `PING, AUTH, SET, GET, GETSET, ABORT`
@@ -66,17 +66,17 @@ To run DiceDB for local development or running from source, you will need
     2. [OSX (Darwin) based environment](https://en.wikipedia.org/wiki/MacOS)
     3. WSL under Windows
 
-```
-$ git clone https://github.com/dicedb/dice
-$ cd dice
-$ go run main.go
+```bash
+git clone https://github.com/dicedb/dice
+cd dice
+go run main.go
 ```
 
 1. Install GoLangCI
 
-```
-$ sudo su
-$ curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /bin v1.60.1
+```bash
+sudo su
+curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /bin v1.60.1
 ```
 
 ### Live Development Server
@@ -86,12 +86,12 @@ DiceDB provides a hot-reloading development environment, which allows you to ins
 To Install Air on your system you have the following options.
 
 1. If you're on go 1.22+
-```sh
+```bash
 go install github.com/air-verse/air@latest
 ```
 
 1. Install the Air binary
-```sh
+```bash
 # binary will be installed at $(go env GOPATH)/bin/air
 curl -sSfL https://raw.githubusercontent.com/air-verse/air/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
 ```
@@ -100,10 +100,10 @@ Once `air` is installed you can verify the installation using the command `air -
 
 To run the live DiceDB server for local development:
 
-```sh
-$ git clone https://github.com/dicedb/dice
-$ cd dice
-$ DICE_ENV=dev air
+```bash
+git clone https://github.com/dicedb/dice
+cd dice
+air
 ```
 
 > The `DICE_ENV` environment variable is used set the environment, by default it is treated as production. `dev` is used to get pretty printed logs and lower log level.
@@ -112,14 +112,14 @@ $ DICE_ENV=dev air
 
 By default, DiceDB will look for the configuration file at `/etc/dice/config.toml`. (Linux, Darwin, and WSL)
 
-```sh
-$ # set up configuration file # (optional but recommended)
-$ sudo mkdir -p /etc/dice
-$ sudo chown root:$USER /etc/dice
-$ sudo chmod 775 /etc/dice # or 777 if you are the only user
-$ git clone https://github.com/DiceDB/dice.git
-$ cd dice
-$ go run main.go -init-config
+```bash
+# set up configuration file # (optional but recommended)
+sudo mkdir -p /etc/dice
+sudo chown root:$USER /etc/dice
+sudo chmod 775 /etc/dice # or 777 if you are the only user
+git clone https://github.com/DiceDB/dice.git
+cd dice
+go run main.go -init-config
 
 ```
 
@@ -151,8 +151,8 @@ go run main.go -o /path/of/output/dir
 
 The best way to connect to DiceDB is using DiceDB CLI and you can install it by running the following command.
 
-```
-$ pip install dicedb-cli
+```bash
+pip install dicedb-cli
 ```
 
 > Because DiceDB speaks Redis dialect, you can connect to it with any Redis Client and SDK also.
@@ -166,30 +166,30 @@ For unit testing, you can execute individual unit tests by specifying the name o
 
 ### Executing one unit test
 
-```
-$ TEST_FUNC=<name of the test function> make unittest-one
-$ TEST_FUNC=TestByteList make unittest-one
+```bash
+TEST_FUNC=<name of the test function> make unittest-one
+TEST_FUNC=TestByteList make unittest-one
 ```
 
 ### Running all unit tests
 
-```
-$ make unittest
+```bash
+make unittest
 ```
 
 Integration tests, on the other hand, involve starting up the DiceDB server and running a series of commands to verify the expected end state and output. To execute a single integration test, you can set the `TEST_FUNC` environment variable to the name of the test function and run `make test-one`. Running `make test` will execute all integration tests.
 
 ### Executing a single integration test
 
-```
-$ TEST_FUNC=<name of the test function> make test-one
-$ TEST_FUNC=TestSet make test-one
+```bash
+TEST_FUNC=<name of the test function> make test-one
+TEST_FUNC=TestSet make test-one
 ```
 
 ### Running all integration tests
 
-```
-$ make test
+```bash
+make test
 ```
 
 > Work to add more tests in DiceDB is in progress, and we will soon port the
@@ -197,9 +197,9 @@ $ make test
 
 ## Running Benchmark
 
-```sh
-$ go test -test.bench <pattern>
-$ go test -test.bench BenchmarkListRedis -benchmem
+```bash
+go test -test.bench <pattern>
+go test -test.bench BenchmarkListRedis -benchmem
 ```
 
 ## Getting Started
@@ -213,19 +213,19 @@ To get started with building and contributing to DiceDB, please refer to the [is
 
 We use [Astro](https://astro.build/) framework to power the [dicedb.io website](https://dicedb.io) and [Starlight](https://starlight.astro.build/) to power the docs. Once you have NodeJS installed, fire the following commands to get your local version of [dicedb.io](https://dicedb.io) running.
 
-```
-$ cd docs
-$ npm install
-$ npm run dev
+```bash
+cd docs
+npm install
+npm run dev
 ```
 
 Once the server starts, visit http://localhost:4321/ in your favourite browser. This runs with a hot reload which means any changes you make in the website and the documentation can be instantly viewed on the browser.
 
 ## To build and deploy
 
-```
-$ cd docs
-$ npm run build
+```bash
+cd docs
+npm run build
 ```
 
 ### Docs directory structure

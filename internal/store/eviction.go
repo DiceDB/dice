@@ -12,7 +12,7 @@ import (
 // TODO: Make it efficient by doing thorough sampling
 func evictFirst(store *Store) {
 	store.store.All(func(k string, obj *object.Obj) bool {
-		store.delByPtr(k)
+		store.delByPtr(k, WithDelCmd(Del))
 		// stop after iterating over the first element
 		return false
 	})
@@ -21,11 +21,11 @@ func evictFirst(store *Store) {
 // Randomly removes keys to make space for the new data added.
 // The number of keys removed will be sufficient to free up at least 10% space
 func evictAllkeysRandom(store *Store) {
-	evictCount := int64(config.DiceConfig.Server.EvictionRatio * float64(config.DiceConfig.Server.KeysLimit))
+	evictCount := int64(config.DiceConfig.Memory.EvictionRatio * float64(config.DiceConfig.Memory.KeysLimit))
 	// Iteration of Golang dictionary can be considered as a random
 	// because it depends on the hash of the inserted key
 	store.store.All(func(k string, obj *object.Obj) bool {
-		store.delByPtr(k)
+		store.delByPtr(k, WithDelCmd(Del))
 		evictCount--
 		// continue if evictCount > 0
 		return evictCount > 0
@@ -56,7 +56,7 @@ func GetLastAccessedAt(lastAccessedAt uint32) uint32 {
 }
 
 func UpdateLastAccessedAt(lastAccessedAt uint32) uint32 {
-	if config.DiceConfig.Server.EvictionPolicy == config.EvictAllKeysLFU {
+	if config.DiceConfig.Memory.EvictionPolicy == config.EvictAllKeysLFU {
 		return UpdateLFULastAccessedAt(lastAccessedAt)
 	}
 	return getCurrentClock()
@@ -73,7 +73,7 @@ func incrLogCounter(counter uint8) uint8 {
 		return 255
 	}
 	randomFactor := rand.Float32() //nolint:gosec
-	approxFactor := 1.0 / float32(counter*uint8(config.DiceConfig.Server.LFULogFactor)+1)
+	approxFactor := 1.0 / float32(counter*uint8(config.DiceConfig.Memory.LFULogFactor)+1)
 	if approxFactor > randomFactor {
 		counter++
 	}
@@ -106,22 +106,22 @@ func PopulateEvictionPool(store *Store) {
 }
 
 // EvictAllkeysLRUOrLFU evicts keys based on LRU or LFU policy.
-// TODO: no need to populate everytime. should populate only when the number of keys to evict is less than what we have in the pool
+// TODO: no need to populate every time. should populate only when the number of keys to evict is less than what we have in the pool
 func EvictAllkeysLRUOrLFU(store *Store) {
 	PopulateEvictionPool(store)
-	evictCount := int16(config.DiceConfig.Server.EvictionRatio * float64(config.DiceConfig.Server.KeysLimit))
+	evictCount := int16(config.DiceConfig.Memory.EvictionRatio * float64(config.DiceConfig.Memory.KeysLimit))
 
 	for i := 0; i < int(evictCount) && len(EPool.pool) > 0; i++ {
 		item := EPool.Pop()
 		if item == nil {
 			return
 		}
-		store.DelByPtr(item.keyPtr)
+		store.DelByPtr(item.keyPtr, WithDelCmd(Del))
 	}
 }
 
 func (store *Store) evict() {
-	switch config.DiceConfig.Server.EvictionPolicy {
+	switch config.DiceConfig.Memory.EvictionPolicy {
 	case config.EvictSimpleFirst:
 		evictFirst(store)
 	case config.EvictAllKeysRandom:

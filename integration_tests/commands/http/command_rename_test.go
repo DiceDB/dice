@@ -19,7 +19,7 @@ func TestCommandRename(t *testing.T) {
 				{Command: "GET", Body: map[string]interface{}{"key": "destKey"}},
 				{Command: "GET", Body: map[string]interface{}{"key": "sourceKey"}},
 			},
-			expected: []interface{}{"OK", "hello", "OK", "hello", "(nil)"},
+			expected: []interface{}{"OK", "hello", "OK", "hello", nil},
 		},
 		{
 			name: "same key for source and destination on Rename",
@@ -54,7 +54,7 @@ func TestCommandRename(t *testing.T) {
 				{Command: "GET", Body: map[string]interface{}{"key": "newKey"}},
 				{Command: "GET", Body: map[string]interface{}{"key": "destinationKey"}},
 			},
-			expected: []interface{}{"OK", "OK", "OK", "(nil)", "hello"},
+			expected: []interface{}{"OK", "OK", "OK", nil, "hello"},
 		},
 	}
 

@@ -99,10 +99,10 @@ func (e *HTTPCommandExecutor) Name() string {
 
 func RunHTTPServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOptions) {
 	config.DiceConfig.Network.IOBufferLength = 16
-	config.DiceConfig.Server.WriteAOFOnCleanup = false
+	config.DiceConfig.Persistence.WriteAOFOnCleanup = false
 
 	globalErrChannel := make(chan error)
-	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Server.WatchChanBufSize)
+	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Performance.WatchChanBufSize)
 	shardManager := shard.NewShardManager(1, watchChan, nil, globalErrChannel, opt.Logger)
 	queryWatcherLocal := querymanager.NewQueryManager(opt.Logger)
 	config.HTTPPort = opt.Port

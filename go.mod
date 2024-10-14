@@ -42,10 +42,11 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/cockroachdb/swiss v0.0.0-20240612210725-f4de07ae6964
 	github.com/dgryski/go-farm v0.0.0-20240924180020-3414d57e47da
-	github.com/dicedb/go-dice v0.0.0-20241008182110-fc365d560804
+	github.com/dicedb/dicedb-go v0.0.0-20241011194507-ad62a2dfc08e
 	github.com/gobwas/glob v0.2.3
 	github.com/google/btree v1.1.3
 	github.com/google/go-cmp v0.6.0
+	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/mmcloughlin/geohash v0.10.0
 	github.com/ohler55/ojg v1.24.0
