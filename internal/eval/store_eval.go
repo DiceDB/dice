@@ -1,6 +1,7 @@
 package eval
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -159,16 +160,27 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 		if obj == nil {
 			tempResult = clientio.RespNIL // Store nil if key does not exist
 		} else {
-			// Handle the GET return behavior based on encoding type 
+			// Handle the GET return behavior based on encoding type
 			switch _, oEnc := object.ExtractTypeEncoding(obj); oEnc {
 			case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
-				if val, ok := obj.Value.(string); !ok {
+				if val, ok := obj.Value.(string); ok {
+					// If it's a string, encode as string
+					tempResult = clientio.Encode(val, true)
+				} else {
 					return &EvalResponse{
 						Result: nil,
 						Error:  diceerrors.ErrWrongTypeOperation,
 					}
-				}else{
-					tempResult = clientio.Encode(val, true)
+				}
+			case object.ObjEncodingByteArray:
+				if val, ok := obj.Value.(*ByteArray); ok {
+					//convert into string
+					tempResult = clientio.Encode(string(val.data), false)
+				} else {
+					return &EvalResponse{
+						Result: nil,
+						Error:  diceerrors.ErrWrongTypeOperation,
+					}
 				}
 			default:
 				// If the type is unknown or unsupported, return nil for the value
