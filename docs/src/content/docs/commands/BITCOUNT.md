@@ -104,7 +104,7 @@ When the `BITCOUNT` command is executed, DiceDB will:
    (integer) 4
    ```
 
-## Examples
+## Example Usage
 
 ### Example 1: Counting bits in the entire string
 
