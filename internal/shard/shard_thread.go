@@ -46,7 +46,7 @@ func NewShardThread(id ShardID, gec chan error, sec chan *ShardError, queryWatch
 		globalErrorChan:  gec,
 		shardErrorChan:   sec,
 		lastCronExecTime: utils.GetCurrentTime(),
-		cronFrequency:    config.DiceConfig.Server.ShardCronFrequency,
+		cronFrequency:    config.DiceConfig.Performance.ShardCronFrequency,
 		logger:           logger,
 	}
 }
@@ -114,7 +114,7 @@ func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 // cleanup handles cleanup logic when the shard stops.
 func (shard *ShardThread) cleanup() {
 	close(shard.ReqChan)
-	if !config.DiceConfig.Server.WriteAOFOnCleanup {
+	if !config.DiceConfig.Persistence.WriteAOFOnCleanup {
 		slog.Info("Skipping AOF dump.")
 		return
 	}

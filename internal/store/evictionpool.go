@@ -66,14 +66,14 @@ func (pq *EvictionPool) Push(key string, lastAccessedAt uint32) {
 		pq.pool = append(pq.pool, item)
 
 		// Performance bottleneck
-		if config.DiceConfig.Server.EvictionPolicy == config.EvictAllKeysLFU {
+		if config.DiceConfig.Memory.EvictionPolicy == config.EvictAllKeysLFU {
 			sort.Sort(ByCounterAndIdleTime(pq.pool))
 		} else {
 			sort.Sort(ByIdleTime(pq.pool))
 		}
 	} else {
 		shouldShift := func() bool {
-			if config.DiceConfig.Server.EvictionPolicy == config.EvictAllKeysLFU {
+			if config.DiceConfig.Memory.EvictionPolicy == config.EvictAllKeysLFU {
 				logCounter, poolLogCounter := GetLFULogCounter(lastAccessedAt), GetLFULogCounter(pq.pool[0].lastAccessedAt)
 				if logCounter < poolLogCounter {
 					return true

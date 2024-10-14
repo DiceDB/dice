@@ -36,7 +36,7 @@ func TestCommandInfo(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "COMMAND/INFO", Body: map[string]interface{}{"key": "INVALID_CMD"}},
 			},
-			expected: []interface{}{[]interface{}{"(nil)"}},
+			expected: []interface{}{[]interface{}{nil}},
 		},
 		{
 			name: "Combination of valid and Invalid command",
@@ -45,7 +45,7 @@ func TestCommandInfo(t *testing.T) {
 			},
 			expected: []interface{}{[]interface{}{
 				[]interface{}{"SET", float64(-3), float64(1), float64(0), float64(0)},
-				"(nil)",
+				nil,
 			}},
 		},
 		{

@@ -9,10 +9,10 @@ import (
 )
 
 func TestLFUEviction(t *testing.T) {
-	originalEvictionPolicy := config.DiceConfig.Server.EvictionPolicy
+	originalEvictionPolicy := config.DiceConfig.Memory.EvictionPolicy
 
 	store := NewStore(nil, nil)
-	config.DiceConfig.Server.EvictionPolicy = config.EvictAllKeysLFU
+	config.DiceConfig.Memory.EvictionPolicy = config.EvictAllKeysLFU
 
 	// Define test cases
 	tests := []struct {
@@ -45,7 +45,7 @@ func TestLFUEviction(t *testing.T) {
 				store.Put(k, obj)
 			},
 			perform: func() {
-				// ensuring approximate counter is incremented atleast one time
+				// ensuring approximate counter is incremented at least one time
 				for i := 0; i < 100; i++ {
 					store.Get("k1")
 					store.Get("k2")
@@ -82,5 +82,5 @@ func TestLFUEviction(t *testing.T) {
 		})
 	}
 
-	config.DiceConfig.Server.EvictionPolicy = originalEvictionPolicy
+	config.DiceConfig.Memory.EvictionPolicy = originalEvictionPolicy
 }

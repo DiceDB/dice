@@ -18,7 +18,7 @@ import (
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dice/testutils"
-	dicedb "github.com/dicedb/go-dice"
+	dicedb "github.com/dicedb/dicedb-go"
 )
 
 type TestServerOptions struct {
@@ -29,7 +29,7 @@ type TestServerOptions struct {
 
 //nolint:unused
 func getLocalConnection() net.Conn {
-	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.DiceConfig.Server.Port))
+	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.DiceConfig.AsyncServer.Port))
 	if err != nil {
 		panic(err)
 	}
@@ -39,7 +39,7 @@ func getLocalConnection() net.Conn {
 //nolint:unused
 func getLocalSdk() *dicedb.Client {
 	return dicedb.NewClient(&dicedb.Options{
-		Addr: fmt.Sprintf(":%d", config.DiceConfig.Server.Port),
+		Addr: fmt.Sprintf(":%d", config.DiceConfig.AsyncServer.Port),
 
 		DialTimeout:           10 * time.Second,
 		ReadTimeout:           30 * time.Second,
@@ -103,24 +103,24 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	// Override configs to test server config, this is enabled to handle test env runs
 	// as those envs are resource constrained
 	config.DiceConfig.Network.IOBufferLength = 16
-	config.DiceConfig.Server.WriteAOFOnCleanup = false
-	config.DiceConfig.Server.StoreMapInitSize = 1024
-	config.DiceConfig.Server.EvictionRatio = 0.4
-	config.DiceConfig.Server.KeysLimit = 2000000
+	config.DiceConfig.Persistence.WriteAOFOnCleanup = false
+	config.DiceConfig.Performance.StoreMapInitSize = 1024
+	config.DiceConfig.Memory.EvictionRatio = 0.4
+	config.DiceConfig.Memory.KeysLimit = 2000000
 
 	if opt.Port != 0 {
-		config.DiceConfig.Server.Port = opt.Port
+		config.DiceConfig.AsyncServer.Port = opt.Port
 	} else {
-		config.DiceConfig.Server.Port = 8739
+		config.DiceConfig.AsyncServer.Port = 8739
 	}
 
 	if opt.MaxClients != 0 {
-		config.DiceConfig.Server.MaxClients = opt.MaxClients
+		config.DiceConfig.Performance.MaxClients = opt.MaxClients
 	}
 
 	const totalRetries = 100
 	var err error
-	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Server.WatchChanBufSize)
+	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Memory.KeysLimit)
 	gec := make(chan error)
 	shardManager := shard.NewShardManager(1, watchChan, nil, gec, opt.Logger)
 	// Initialize the AsyncServer
@@ -134,10 +134,10 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 
 		if err.Error() == "address already in use" {
 			opt.Logger.Info("Port already in use, trying port",
-				slog.Int("port", config.DiceConfig.Server.Port),
-				slog.Int("new_port", config.DiceConfig.Server.Port+1),
+				slog.Int("port", config.DiceConfig.AsyncServer.Port),
+				slog.Int("new_port", config.DiceConfig.AsyncServer.Port+1),
 			)
-			config.DiceConfig.Server.Port++
+			config.DiceConfig.AsyncServer.Port++
 		} else {
 			opt.Logger.Error("Failed to bind port", slog.Any("error", err))
 			return
@@ -154,7 +154,7 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	}
 
 	// Inform the user that the server is starting
-	fmt.Println("Starting the test server on port", config.DiceConfig.Server.Port)
+	fmt.Println("Starting the test server on port", config.DiceConfig.AsyncServer.Port)
 
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
 	wg.Add(1)
