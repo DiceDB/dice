@@ -364,7 +364,7 @@ func TestJSONClearOperations(t *testing.T) {
 		expected []interface{}
 	}{
 		{
-			name: "Clear root path",
+			name: "jsonclear root path",
 			commands: []string{
 				`JSON.SET user $ {"age":13,"high":1.60,"flag":true,"name":"jerry","pet":null,"language":["python","golang"],"partner":{"name":"tom","language":["rust"]}}`,
 				"JSON.CLEAR user $",
@@ -373,7 +373,7 @@ func TestJSONClearOperations(t *testing.T) {
 			expected: []interface{}{"OK", int64(1), "{}"},
 		},
 		{
-			name: "Clear string type",
+			name: "jsonclear string type",
 			commands: []string{
 				`JSON.SET user $ {"name":"Tom","age":30}`,
 				"JSON.CLEAR user $.name",
@@ -382,7 +382,7 @@ func TestJSONClearOperations(t *testing.T) {
 			expected: []interface{}{"OK", int64(0), `"Tom"`},
 		},
 		{
-			name: "Clear array type",
+			name: "jsonclear array type",
 			commands: []string{
 				`JSON.SET user $ {"names":["Rahul","Tom"],"ages":[25,30]}`,
 				"JSON.CLEAR user $.names",
@@ -391,7 +391,7 @@ func TestJSONClearOperations(t *testing.T) {
 			expected: []interface{}{"OK", int64(1), "[]"},
 		},
 		{
-			name: "clear bool type",
+			name: "jsonclear bool type",
 			commands: []string{
 				`JSON.SET user $  {"flag":true,"name":"Tom"}`,
 				"JSON.CLEAR user $.flag",
@@ -399,7 +399,7 @@ func TestJSONClearOperations(t *testing.T) {
 			expected: []interface{}{"OK", int64(0), "true"},
 		},
 		{
-			name: "clear null type",
+			name: "jsonclear null type",
 			commands: []string{
 				`JSON.SET user $ {"name":null,"age":28}`,
 				"JSON.CLEAR user $.pet",
@@ -407,7 +407,7 @@ func TestJSONClearOperations(t *testing.T) {
 			expected: []interface{}{"OK", int64(0), "null"},
 		},
 		{
-			name: "clear integer type",
+			name: "jsonclear integer type",
 			commands: []string{
 				`JSON.SET user $ {"age":28,"name":"Tom"}`,
 				"JSON.CLEAR user $.age",
@@ -415,7 +415,7 @@ func TestJSONClearOperations(t *testing.T) {
 			expected: []interface{}{"OK", int64(1), "0"},
 		},
 		{
-			name: "clear float type",
+			name: "jsonclear float type",
 			commands: []string{
 				`JSON.SET user $ {"price":3.14,"name":"sugar"}`,
 				"JSON.CLEAR user $.price",
@@ -672,7 +672,7 @@ func TestJsonStrlen(t *testing.T) {
 		expected []interface{}
 	}{
 		{
-			name: "STRLEN with root path",
+			name: "jsonstrlen with root path",
 			commands: []string{
 				`JSON.SET doc $ ["hello","world"]`,
 				"JSON.STRLEN doc $",
@@ -680,7 +680,7 @@ func TestJsonStrlen(t *testing.T) {
 			expected: []interface{}{"OK", []interface{}{"(nil)"}},
 		},
 		{
-			name: "STRLEN nested",
+			name: "jsonstrlen nested",
 			commands: []string{
 				`JSON.SET doc $ {"name":"jerry","partner":{"name":"tom"}}`,
 				"JSON.STRLEN doc $..name",
@@ -991,7 +991,7 @@ func TestJsonObjLen(t *testing.T) {
 		{
 			name:     "JSON.OBJLEN invalid json path",
 			commands: []string{"json.set obj $ " + b, "json.objlen obj $..language*something"},
-			expected: []interface{}{"OK", "ERR parse error at 13 in $..language*something"},
+			expected: []interface{}{"OK", "ERR Path '$..language*something' does not exist"},
 		},
 		{
 			name:     "JSON.OBJLEN with non-existent key",
@@ -1004,9 +1004,9 @@ func TestJsonObjLen(t *testing.T) {
 			expected: []interface{}{"OK", int64(2)},
 		},
 		{
-			name:     "JSON.OBJLEN invalid json path",
+			name:     "JSON.OBJLEN invalid json path2",
 			commands: []string{"json.set obj $ " + c, "json.objlen obj $[1"},
-			expected: []interface{}{"OK", "ERR expected a number at 4 in $[1"},
+			expected: []interface{}{"OK", "ERR Path '$[1' does not exist"},
 		},
 		{
 			name:     "JSON.OBJLEN invalid json path",
