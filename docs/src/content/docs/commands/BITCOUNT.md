@@ -112,7 +112,7 @@ When the `BITCOUNT` command is executed, DiceDB will:
 127.0.0.1:7379> SET mykey "foobar"
 OK
 127.0.0.1:7379> BITCOUNT mykey
-26
+(integer) 26
 ```
 
 ### Example 2: Counting bits in a specified range
@@ -121,7 +121,7 @@ OK
 127.0.0.1:7379> SET mykey "foobar"
 OK
 127.0.0.1:7379> BITCOUNT mykey 1 3
-15
+(integer) 15
 ```
 In this example, the command counts the bits set to 1 in the bytes from position 1 to 3 (inclusive) of the string "foobar".
 
@@ -131,6 +131,6 @@ In this example, the command counts the bits set to 1 in the bytes from position
 127.0.0.1:7379> SET mykey "foobar"
 OK
 127.0.0.1:7379> BITCOUNT mykey 8 31 BIT
-15
+(integer) 15
 ```
 In this example, the command counts the bits set to 1 in the bit ranges from position 8 to 31 (inclusive) of the string "foobar".
