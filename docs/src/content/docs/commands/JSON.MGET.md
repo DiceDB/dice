@@ -8,7 +8,7 @@ The `JSON.MGET` command in DiceDB is used to retrieve the values of specific JSO
 
 ## Syntax
 
-```plaintext
+```bash
 JSON.MGET key [key ...] path
 ```
 
@@ -21,10 +21,10 @@ JSON.MGET key [key ...] path
 
 ## Return values
 
-| Condition                                                  | Return Value                                                      |
-|-----------------------------------------------------------|------------------------------------------------------------------|
+| Condition                                                  | Return Value                                                                                |
+|-----------------------------------------------------------|---------------------------------------------------------------------------------------------|
 | Command is successful                                      | An array of JSON values corresponding to the specified path from each of the provided keys. |
-| If a key does not exist or the path does not exist within a JSON document | The corresponding entry in the returned array will be `null`.   |
+| If a key does not exist or the path does not exist within a JSON document | The corresponding entry in the returned array will be `nil`.                                |
 
 
 ## Behaviour
@@ -36,7 +36,7 @@ When the `JSON.MGET` command is executed, DiceDB will:
 3. Extract the value at the specified JSON path from each document.
 4. Return an array of the extracted values.
 
-If a key does not exist or the specified path is not found within a JSON document, `null` will be returned for that key.
+If a key does not exist or the specified path is not found within a JSON document, `nil` will be returned for that key.
 
 ## Errors
 
@@ -53,7 +53,7 @@ The following errors may be raised by the `JSON.MGET` command:
 
 Assume we have the following JSON documents stored in DiceDB:
 
-```plaintext
+```bash
 127.0.0.1:7379> JSON.SET user:1 $ '{"name": "Alice", "age": 30}'
 OK
 127.0.0.1:7379> JSON.SET user:2 $ '{"name": "Bob", "age": 25}'
@@ -64,7 +64,7 @@ OK
 
 To retrieve the `name` field from each of these JSON documents:
 
-```plaintext
+```bash
 127.0.0.1:7379> JSON.MGET user:1 user:2 user:3 $.name
 1) "\"Alice\""
 2) "\"Bob\""
@@ -75,7 +75,7 @@ To retrieve the `name` field from each of these JSON documents:
 
 Assume we have the following JSON documents stored in DiceDB:
 
-```plaintext
+```bash
 127.0.0.1:7379> JSON.SET user:1 $ '{"name": "Alice", "age": 30}'
 OK
 127.0.0.1:7379> JSON.SET user:2 $ '{"name": "Bob", "age": 25}'
@@ -84,12 +84,12 @@ OK
 
 To retrieve the `address` field, which does not exist in the documents:
 
-```plaintext
+```bash
 127.0.0.1:7379> JSON.MGET user:1 user:2 user:3 $.address
 1) (nil)
 2) (nil)
 3) (nil)
 ```
 
-In this case, `user:3` does not exist, and the `address` field does not exist in `user:1` and `user:2`, so `null` is returned for each key.
+In this case, `user:3` does not exist, and the `address` field does not exist in `user:1` and `user:2`, so `nil` is returned for each key.
 
