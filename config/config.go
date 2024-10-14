@@ -352,11 +352,7 @@ func setUpViperConfig(configFilePath string) {
 	}
 
 	// override default configurations with command line flags
-	viper.BindPFlag("Performance.EnableMultiThreading", pflag.Lookup("enable-multithreading"))
-	viper.BindPFlag("Auth.Password", pflag.Lookup("requirepass"))
-	viper.BindPFlag("AsyncServer.Addr", pflag.Lookup("host"))
-	viper.BindPFlag("AsyncServer.Port", pflag.Lookup("port"))
-	viper.BindPFlag("Memory.KeysLimit", pflag.Lookup("keys-limit"))
+	cmdOverrides()
 
 	if err := viper.Unmarshal(&DiceConfig); err != nil {
 		slog.Error("Error unmarshalling config file", slog.Any("error", err))
@@ -367,18 +363,22 @@ func setUpViperConfig(configFilePath string) {
 	slog.Info("configurations loaded successfully.")
 }
 
-// This function checks if the config file is present or not at default location or at -c flag location
-func isConfigFilePresent() bool {
-	// If -c flag is not set then look for config file in current directory use it
-	if _, err := os.Stat(filepath.Join(".", DefaultConfigName)); FileLocation == utils.EmptyStr && err == nil {
-		FileLocation = filepath.Join(".", DefaultConfigName)
-		return true
+func cmdOverrides() {
+	if err := viper.BindPFlag("Performance.EnableMultiThreading", pflag.Lookup("enable-multithreading")); err != nil {
+		slog.Warn("Unable to bind 'enable-multithreading' flag")
 	}
-
-	// will be executed if -c flag is used
-	_, err := os.Stat(FileLocation)
-
-	return err == nil
+	if err := viper.BindPFlag("Auth.Password", pflag.Lookup("requirepass")); err != nil {
+		slog.Warn("Unable to bind 'enable-multithreading' flag")
+	}
+	if err := viper.BindPFlag("AsyncServer.Addr", pflag.Lookup("host")); err != nil {
+		slog.Warn("Unable to bind 'enable-multithreading' flag")
+	}
+	if err := viper.BindPFlag("AsyncServer.Port", pflag.Lookup("port")); err != nil {
+		slog.Warn("Unable to bind 'enable-multithreading' flag")
+	}
+	if err := viper.BindPFlag("Memory.KeysLimit", pflag.Lookup("keys-limit")); err != nil {
+		slog.Warn("Unable to bind 'enable-multithreading' flag")
+	}
 }
 
 // This function returns the config file path based on the OS
