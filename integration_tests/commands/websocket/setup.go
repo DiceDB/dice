@@ -12,6 +12,7 @@ import (
 
 	"github.com/dicedb/dice/config"
 	derrors "github.com/dicedb/dice/internal/errors"
+	"github.com/dicedb/dice/internal/querymanager"
 	"github.com/dicedb/dice/internal/server"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -96,21 +97,30 @@ func RunWebsocketServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerO
 	config.DiceConfig.Network.IOBufferLength = 16
 	config.DiceConfig.Persistence.WriteAOFOnCleanup = false
 
-	// Initialize the WebsocketServer
+	// Initialize WebsocketServer
 	globalErrChannel := make(chan error)
 	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Performance.WatchChanBufSize)
 	shardManager := shard.NewShardManager(1, watchChan, nil, globalErrChannel, opt.Logger)
+	queryWatcherLocal := querymanager.NewQueryManager(opt.Logger)
 	config.WebsocketPort = opt.Port
-	testServer := server.NewWebSocketServer(shardManager, watchChan, opt.Logger)
-
+	testServer := server.NewWebSocketServer(shardManager, opt.Logger)
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
+
+	// run shard manager
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		shardManager.Run(shardManagerCtx)
 	}()
 
-	// Start the server in a goroutine
+	// run query manager
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		queryWatcherLocal.Run(ctx, watchChan)
+	}()
+
+	// start websocket server
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
