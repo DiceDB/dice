@@ -72,6 +72,11 @@ func ParseHTTPRequest(r *http.Request) (*cmd.DiceDBCmd, error) {
 			if err := json.Unmarshal(body, &jsonBody); err != nil {
 				return nil, err
 			}
+
+			if len(jsonBody) == 0 {
+				return nil, fmt.Errorf("empty JSON object")
+			}
+
 			// Define keys to exclude and process their values first
 			// Update as we support more commands
 			processPriorityKeys(jsonBody, &args)
