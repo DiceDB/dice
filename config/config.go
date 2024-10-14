@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"flag"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/pelletier/go-toml/v2"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
@@ -222,11 +224,32 @@ var baseConfig = Config{
 
 var defaultConfig Config
 
+func setupFlags() {
+	flag.StringVar(&Host, "host", "0.0.0.0", "host for the dicedb server")
+	flag.IntVar(&Port, "port", 7379, "port for the dicedb server")
+	flag.BoolVar(&EnableHTTP, "enable-http", true, "run server in HTTP mode as well")
+	flag.BoolVar(&EnableMultiThreading, "enable-multithreading", false, "run server in multithreading mode")
+	flag.IntVar(&HTTPPort, "http-port", 8082, "HTTP port for the dicedb server")
+	flag.IntVar(&WebsocketPort, "websocket-port", 8379, "Websocket port for the dicedb server")
+	flag.StringVar(&RequirePass, "requirepass", RequirePass, "enable authentication for the default user")
+	flag.StringVar(&CustomConfigFilePath, "o", CustomConfigFilePath, "dir path to create the config file")
+	flag.StringVar(&FileLocation, "c", FileLocation, "file path of the config file")
+	flag.BoolVar(&InitConfigCmd, "init-config", false, "initialize a new config file")
+	flag.IntVar(&KeysLimit, "keys-limit", KeysLimit, "keys limit for the dicedb server. "+
+		"This flag controls the number of keys each shard holds at startup. You can multiply this number with the "+
+		"total number of shard threads to estimate how much memory will be required at system start up.")
+
+	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+	pflag.Parse()
+}
+
 func init() {
 	config := baseConfig
 	config.Logging.PrettyPrintLogs = false
 	config.Logging.LogLevel = "info"
 	defaultConfig = config
+
+	setupFlags()
 }
 
 // DiceConfig is the global configuration object for dice
@@ -251,14 +274,7 @@ func SetupConfig() {
 		return
 	}
 
-	// Check if -c flag is set
-	if FileLocation != utils.EmptyStr || isConfigFilePresent() {
-		setUpViperConfig(FileLocation)
-		return
-	}
-
-	// If no flags are set, use default configurations with prioritizing command line flags
-	mergeFlagsWithConfig()
+	setUpViperConfig(FileLocation)
 }
 
 func createConfigFile(configFilePath string) {
@@ -335,32 +351,20 @@ func setUpViperConfig(configFilePath string) {
 		slog.Error("Error reading config file", slog.Any("error", err))
 	}
 
+	// override default configurations with command line flags
+	viper.BindPFlag("Performance.EnableMultiThreading", pflag.Lookup("enable-multithreading"))
+	viper.BindPFlag("Auth.Password", pflag.Lookup("requirepass"))
+	viper.BindPFlag("AsyncServer.Addr", pflag.Lookup("host"))
+	viper.BindPFlag("AsyncServer.Port", pflag.Lookup("port"))
+	viper.BindPFlag("Memory.KeysLimit", pflag.Lookup("keys-limit"))
+
 	if err := viper.Unmarshal(&DiceConfig); err != nil {
 		slog.Error("Error unmarshalling config file", slog.Any("error", err))
 		slog.Warn("starting DiceDB with default configurations.")
 		return
 	}
 
-	// override default configurations with command line flags
-	mergeFlagsWithConfig()
-}
-
-func mergeFlagsWithConfig() {
-	if RequirePass != utils.EmptyStr {
-		DiceConfig.Auth.Password = RequirePass
-	}
-
-	if Host != DefaultHost {
-		DiceConfig.AsyncServer.Addr = Host
-	}
-
-	if Port != DefaultPort {
-		DiceConfig.AsyncServer.Port = Port
-	}
-
-	if KeysLimit != DefaultKeysLimit {
-		DiceConfig.Memory.KeysLimit = KeysLimit
-	}
+	slog.Info("configurations loaded successfully.")
 }
 
 // This function checks if the config file is present or not at default location or at -c flag location

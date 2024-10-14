@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"flag"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -38,34 +37,6 @@ type configEntry struct {
 var configTable = []configEntry{}
 
 func init() {
-	flag.StringVar(&config.Host, "host", "0.0.0.0", "host for the DiceDB server")
-
-	flag.IntVar(&config.Port, "port", 7379, "port for the DiceDB server")
-
-	flag.IntVar(&config.HTTPPort, "http-port", 7380, "port for accepting requets over HTTP")
-	flag.BoolVar(&config.EnableHTTP, "enable-http", false, "enable DiceDB to listen, accept, and process HTTP")
-
-	flag.IntVar(&config.WebsocketPort, "websocket-port", 7381, "port for accepting requets over WebSocket")
-	flag.BoolVar(&config.EnableWebsocket, "enable-websocket", false, "enable DiceDB to listen, accept, and process WebSocket")
-
-	flag.BoolVar(&config.EnableMultiThreading, "enable-multithreading", false, "enable multithreading execution and leverage multiple CPU cores")
-	flag.IntVar(&config.NumShards, "num-shards", -1, "number shards to create. defaults to number of cores")
-
-	flag.BoolVar(&config.EnableWatch, "enable-watch", false, "enable support for .WATCH commands and real-time reactivity")
-	flag.BoolVar(&config.EnableProfiling, "enable-profiling", false, "enable profiling and capture critical metrics and traces in .prof files")
-
-	flag.StringVar(&config.DiceConfig.Logging.LogLevel, "log-level", "info", "log level, values: info, debug")
-
-	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
-	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the config file")
-	flag.StringVar(&config.FileLocation, "c", config.FileLocation, "file path of the config file")
-	flag.BoolVar(&config.InitConfigCmd, "init-config", false, "initialize a new config file")
-	flag.IntVar(&config.KeysLimit, "keys-limit", config.KeysLimit, "keys limit for the DiceDB server. "+
-		"This flag controls the number of keys each shard holds at startup. You can multiply this number with the "+
-		"total number of shard threads to estimate how much memory will be required at system start up.")
-
-	flag.Parse()
-
 	config.SetupConfig()
 
 	iid := observability.GetOrCreateInstanceID()
@@ -190,7 +161,7 @@ func main() {
 	// core count ensures the application can make full use of all available hardware.
 	// If multithreading is not enabled, server will run on a single core.
 	var numShards int
-	if config.EnableMultiThreading {
+	if config.DiceConfig.Performance.EnableMultiThreading {
 		numShards = runtime.NumCPU()
 		if config.NumShards > 0 {
 			numShards = config.NumShards
@@ -218,7 +189,7 @@ func main() {
 
 	var serverWg sync.WaitGroup
 
-	if config.EnableMultiThreading {
+	if config.DiceConfig.Performance.EnableMultiThreading {
 		if config.EnableProfiling {
 			stopProfiling, err := startProfiling()
 			if err != nil {
