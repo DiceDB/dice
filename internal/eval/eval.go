@@ -3112,7 +3112,7 @@ func evalHKEYS(args []string, store *dstore.Store) []byte {
 		}
 		hashMap = obj.Value.(StrStrHashMap)
 	} else {
-		return clientio.Encode([]interface{}{}, false)
+		return clientio.RespEmptyArray
 	}
 
 	return clientio.Encode(hashMap.Keys(), false)
@@ -3168,7 +3168,7 @@ func evalHINCRBY(args []string, store *dstore.Store) []byte {
 	}
 
 	obj.Value = hashMap
-	res, _ := strconv.ParseInt(newVal, 10, 64)
+	res, _ := strconv.ParseInt(*newVal, 10, 64)
 	return clientio.Encode(res, false)
 }
 
@@ -3216,12 +3216,14 @@ func evalHGETALL(args []string, store *dstore.Store) []byte {
 			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 		}
 		hashMap = obj.Value.(StrStrHashMap)
+	} else {
+		return clientio.RespEmptyArray
 	}
 
 	for _, hmKey := range hashMap.Keys() {
 		val, ok := hashMap.Get(hmKey)
 		if ok {
-			results = append(results, hmKey, val)
+			results = append(results, hmKey, *val)
 		}
 	}
 
@@ -3301,7 +3303,7 @@ func evalHDEL(args []string, store *dstore.Store) []byte {
 
 	obj := store.Get(key)
 	if obj == nil {
-		return clientio.Encode(0, false)
+		return clientio.RespZero
 	}
 
 	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
@@ -3378,7 +3380,7 @@ func evalHSCAN(args []string, store *dstore.Store) []byte {
 	for i := int(cursor); i < len(keys); i++ {
 		if g.Match(keys[i]) {
 			if val, ok := hashMap.Get(keys[i]); ok {
-				results = append(results, keys[i], val)
+				results = append(results, keys[i], *val)
 				matched++
 				if matched >= count {
 					newCursor = i + 1
@@ -3406,7 +3408,7 @@ func evalHVALS(args []string, store *dstore.Store) []byte {
 	obj := store.Get(key)
 
 	if obj == nil {
-		return clientio.Encode([]string{}, false) // Return an empty array for non-existent keys
+		return clientio.RespEmptyArray
 	}
 
 	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
@@ -3448,7 +3450,7 @@ func evalHSTRLEN(args []string, store *dstore.Store) []byte {
 	val, ok := hashMap.Get(hmKey)
 	// Return 0, if specified field doesn't exist in the HashMap.
 	if ok {
-		return clientio.Encode(len(val), false)
+		return clientio.Encode(len(*val), false)
 	}
 	return clientio.RespZero
 }
@@ -3472,7 +3474,7 @@ func evalHEXISTS(args []string, store *dstore.Store) []byte {
 	var hashMap StrStrHashMap
 
 	if obj == nil {
-		return clientio.Encode(0, false)
+		return clientio.RespZero
 	}
 	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
 		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
@@ -5193,4 +5195,77 @@ func evalGEODIST(args []string, store *dstore.Store) []byte {
 	}
 
 	return clientio.Encode(utils.RoundToDecimals(result, 4), false)
+}
+
+func evalHEXPIRE(args []string, store *dstore.Store) []byte {
+	if len(args) < 5 {
+		return diceerrors.NewErrArity("HEXPIRE")
+	}
+	// key := args[0]
+	seconds, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
+	}
+	if seconds < 0 {
+		return diceerrors.NewErrWithFormattedMessage("invalid expire time, must be >= 0")
+	}
+
+	return clientio.RespNIL
+}
+
+func evalHTTL(args []string, store *dstore.Store) []byte {
+	// errors are validated in the following order:
+	// 1. arity
+	// 2. if obj exists then valid type
+	// 3. FIELDS
+	// 4. Number of Fields valid value
+	// 5. Number of fields equal field args
+	if len(args) < 4 {
+		return diceerrors.NewErrArity("HTTL")
+	}
+	key := args[0]
+	obj := store.Get(key)
+
+	if obj != nil {
+		if err := object.AssertType(obj.TypeEncoding, object.ObjTypeHashMap); err != nil {
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+		}
+	}
+
+	fields := strings.ToUpper(args[1])
+
+	if fields != FIELDS {
+		return diceerrors.NewErrWithFormattedMessage("Mandatory argument FIELDS is missing or not at the right position")
+	}
+
+	numFields, err := strconv.ParseInt(args[2], 10, 64)
+	if err != nil || numFields <= 0 {
+		return diceerrors.NewErrWithFormattedMessage("Number of fields must be a positive integer")
+	}
+
+	if len(args)-3 != int(numFields) {
+		return diceerrors.NewErrWithFormattedMessage("The `numfields` parameter must match the number of arguments")
+	}
+
+	results := make([]interface{}, 0, numFields)
+
+	if obj == nil {
+		for i := 0; i < int(numFields); i++ {
+			results = append(results, -2)
+		}
+	} else {
+		hashMap := obj.Value.(StrStrHashMap)
+
+		for i := 0; i < int(numFields); i++ {
+			field := args[i+3]
+			_, expiry := hashMap.GetWithExpiry(field)
+			if expiry > 0 {
+				results = append(results, expiry/1000)
+			} else {
+				results = append(results, expiry)
+			}
+		}
+	}
+
+	return clientio.Encode(results, false)
 }

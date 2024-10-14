@@ -1083,6 +1083,23 @@ var (
 		Eval:     evalGEODIST,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	hexpireCmdMeta = DiceCmdMeta{
+		Name: "HEXPIRE",
+		Info: `Set an expiration (TTL or time to live) on one or more fields of a given hash key. 
+		You must specify at least one field. Field(s) will automatically be deleted from the hash 
+		key when their TTLs expire.`,
+		Arity: -5,
+		Eval:  evalHEXPIRE,
+	}
+	httlCmdMeta = DiceCmdMeta{
+		Name: "HTTL",
+		Info: `Returns the remaining TTL (time to live) of a hash key's field(s) that have a set 
+		expiration. This introspection capability allows you to check how many seconds a given 
+		hash field will continue to be part of the hash key.`,
+		Arity:    -4,
+		Eval:     evalHTTL,
+		KeySpecs: KeySpecs{BeginIndex: 4, Step: 1},
+	}
 )
 
 func init() {
@@ -1203,6 +1220,8 @@ func init() {
 	DiceCmds["HEXISTS"] = hexistsCmdMeta
 	DiceCmds["GEOADD"] = geoAddCmdMeta
 	DiceCmds["GEODIST"] = geoDistCmdMeta
+	DiceCmds["HEXPIRE"] = hexpireCmdMeta
+	DiceCmds["HTTL"] = httlCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

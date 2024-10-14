@@ -19,7 +19,7 @@ func TestSetAndGet(t *testing.T) {
 
 	val, ok := hmap.Get("key1")
 	assert.True(t, ok, "Expected key1 to exist")
-	assert.Equal(t, "value1", val, "Expected value1 to be returned")
+	assert.Equal(t, "value1", *val, "Expected value1 to be returned")
 
 	// Test non-existent key
 	val, ok = hmap.Get("key2")
@@ -81,20 +81,6 @@ func TestValues(t *testing.T) {
 	assert.NotContains(t, values, "value2", "Expected value2 to be expired and not in valid values")
 }
 
-// func TestItems(t *testing.T) {
-// 	hmap := NewHashMap[string, string]()
-// 	hmap.Set("key1", "value1")
-// 	hmap.Set("key2", "value2")
-
-// 	// Set expiry for key2
-// 	hmap.SetExpiry("key2", uint64(time.Now().UnixMilli()-1000)) // key2 expired
-
-// 	items := hmap.Items()
-// 	assert.Equal(t, 1, len(items), "Expected only 1 valid item")
-// 	assert.Equal(t, "value1", items["key1"][1].(string), "Expected key1 to map to value1")
-// 	assert.NotContains(t, items, "key2", "Expected key2 to be expired and not in items")
-// }
-
 func TestClear(t *testing.T) {
 	hmap := NewHashMap[string, string]()
 	hmap.Set("key1", "value1")
@@ -111,7 +97,7 @@ func TestApproxLength(t *testing.T) {
 	assert.Equal(t, 2, hmap.ApproxLength(), "Expected approximate length to be 2")
 }
 
-func TestActualValidLength(t *testing.T) {
+func TestLen(t *testing.T) {
 	hmap := NewHashMap[string, string]()
 	hmap.Set("key1", "value1")
 	hmap.Set("key2", "value2")
@@ -135,7 +121,7 @@ func TestDelete(t *testing.T) {
 	// Ensure key2 still exists
 	val, ok := hmap.Get("key2")
 	assert.True(t, ok, "Expected key2 to still exist")
-	assert.Equal(t, "value2", val, "Expected value2 for key2")
+	assert.Equal(t, "value2", *val, "Expected value2 for key2")
 }
 
 func TestCreateOrModify(t *testing.T) {
@@ -152,7 +138,7 @@ func TestCreateOrModify(t *testing.T) {
 
 	val, ok := hmap.Get("counter")
 	assert.True(t, ok, "Expected counter to exist")
-	assert.Equal(t, 1, val, "Expected counter to be initialized to 1")
+	assert.Equal(t, 1, *val, "Expected counter to be initialized to 1")
 
 	// Increment again
 	_, err = hmap.CreateOrModify("counter", modifier)
@@ -160,5 +146,5 @@ func TestCreateOrModify(t *testing.T) {
 
 	val, ok = hmap.Get("counter")
 	assert.True(t, ok, "Expected counter to exist")
-	assert.Equal(t, 2, val, "Expected counter to be incremented to 2")
+	assert.Equal(t, 2, *val, "Expected counter to be incremented to 2")
 }

@@ -39,4 +39,5 @@ const (
 	FAIL       string = "FAIL"
 	SIGNED     string = "SIGNED"
 	UNSIGNED   string = "UNSIGNED"
+	FIELDS     string = "FIELDS"
 )

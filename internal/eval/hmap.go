@@ -1,8 +1,6 @@
 package eval
 
-import (
-	"time"
-)
+import "github.com/dicedb/dice/internal/server/utils"
 
 // HashMap is a generic implementation of a hashmap with expiration support.
 // hmap stores the actual values
@@ -38,7 +36,7 @@ func (h *HashMap[K, V]) Values() []V {
 	values := make([]V, 0, len(h.hmap))
 	for k := range h.hmap {
 		if val, ok := h.Get(k); ok {
-			values = append(values, val)
+			values = append(values, *val)
 		}
 	}
 	return values
@@ -69,7 +67,7 @@ func (h *HashMap[K, V]) ApproxLength() int {
 	return len(h.hmap)
 }
 
-// ActualValidLength returns the actual number of valid entries in the HashMap.
+// Len returns the actual number of valid entries in the HashMap.
 // It counts only those entries that have not expired.
 func (h *HashMap[K, V]) Len() int {
 	validKeys := h.Keys()
@@ -77,35 +75,65 @@ func (h *HashMap[K, V]) Len() int {
 }
 
 // hasExpired checks if the key has expired.
-func (h *HashMap[K, V]) hasExpired(k K) bool {
+func (h *HashMap[K, V]) HasExpired(k K) bool {
 	exp, ok := h.expires[k]
 	if !ok {
 		return false
 	}
-	return exp <= uint64(time.Now().UnixMilli())
+	hasExpired := exp <= uint64(utils.GetCurrentTime().UnixMilli())
+	if hasExpired {
+		h.Delete(k)
+	}
+	return hasExpired
 }
 
-// GetExpiry returns the expiry time for a given key\
+// GetExpiry returns the expiry time for a given key
 // with an expiry set
+// checks for expiry to invalidate the key if expired
 func (h *HashMap[K, V]) GetExpiry(k K) (uint64, bool) {
+	h.HasExpired(k)
 	expiryMs, ok := h.expires[k]
 	return expiryMs, ok
 }
 
+// GetWithExpiry returns the value and its expiry in milliseconds
+// if the key does not exist, the expiry is -2
+// if expire is -1, then key does not expire
+// an alternative of Get() then GetExpiry() for one access
+func (h *HashMap[K, V]) GetWithExpiry(k K) (value *V, expiry int64) {
+	val, exist := h.Get(k)
+	if !exist {
+		return nil, -2
+	}
+	expireMs, ok := h.expires[k]
+	if !ok {
+		return val, -1
+	}
+	return val, int64(expireMs)
+}
+
 // SetExpiry sets an expiry time for a given key.
+// Setting expiry with a past value will result in expiration
 func (h *HashMap[K, V]) SetExpiry(k K, expiryMs uint64) {
+	if expiryMs <= 0 {
+		h.Delete(k)
+		return
+	}
 	h.expires[k] = expiryMs
 }
 
 // Get retrieves the value associated with a key, checking expiration.
 // Any key which is past its ttl will be deleted
-func (h *HashMap[K, V]) Get(k K) (V, bool) {
-	value, ok := h.hmap[k]
-	if ok && h.hasExpired(k) {
-		h.Delete(k)
-		return *new(V), false
+func (h *HashMap[K, V]) Get(k K) (*V, bool) {
+	isExpired := h.HasExpired(k)
+	if isExpired {
+		return nil, false
 	}
-	return value, ok
+	value, ok := h.hmap[k]
+	if !ok {
+		return nil, false
+	}
+	return &value, ok
 }
 
 // Delete removes a key and its expiration from the map.
@@ -119,15 +147,15 @@ func (h *HashMap[K, V]) Delete(k K) bool {
 }
 
 // SetHelper sets a value in the map and removes expiration.
-func (h *HashMap[K, V]) SetHelper(k K, v V) (V, bool) {
+func (h *HashMap[K, V]) SetHelper(k K, v V) (*V, bool) {
 	oldVal, ok := h.hmap[k]
 	h.hmap[k] = v
 	delete(h.expires, k)
-	return oldVal, ok
+	return &oldVal, ok
 }
 
 // Set adds or updates a value in the map.
-func (h *HashMap[K, V]) Set(k K, v V) (V, bool) {
+func (h *HashMap[K, V]) Set(k K, v V) (*V, bool) {
 	return h.SetHelper(k, v)
 }
 
@@ -182,15 +210,15 @@ func (h *HashMap[K, V]) SetAll(data map[K]V) int64 {
 // to their zero values (empty string for Name and Email, 0 for Age), and increment the Age to 1.
 //
 // The ModifyOrCreate method allows for flexible modifications of complex data types based on the provided logic.
-func (h *HashMap[K, V]) CreateOrModify(k K, modifier func(V) (V, error)) (V, error) {
-	val, ok := h.hmap[k]
+func (h *HashMap[K, V]) CreateOrModify(k K, modifier func(V) (V, error)) (*V, error) {
+	val, ok := h.Get(k)
 	if !ok {
-		val = *new(V)
+		val = new(V)
 	}
-	newVal, err := modifier(val)
+	newVal, err := modifier(*val)
 	if err != nil {
 		return val, err
 	}
 	h.hmap[k] = newVal
-	return newVal, nil
+	return &newVal, nil
 }
