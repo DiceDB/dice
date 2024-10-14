@@ -3,7 +3,7 @@ title: JSON.TYPE
 description: Documentation for the DiceDB command JSON.TYPE
 ---
 
-The `JSON.TYPE` command is part of the DiceDBJSON module, which allows you to work with JSON data structures in DiceDB. This command is used to determine the type of value stored at a specified path within a JSON document.
+The `JSON.TYPE` command allows you to work with JSON data structures in DiceDB. This command is used to determine the type of value stored at a specified path within a JSON document.
 
 ## Syntax
 
