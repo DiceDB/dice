@@ -412,3 +412,40 @@ func evalHKEYS(args []string, store *dstore.Store) *EvalResponse {
 		Error:  nil,
 	}
 }
+
+// evalHKEYS returns all the values in the hash stored at key.
+func evalHVALS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{Error: diceerrors.ErrWrongArgumentCount("HVALS"), Result: nil}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	if obj == nil {
+		// Return an empty array for non-existent keys
+		return &EvalResponse{
+			Result: clientio.Encode([]string{}, false),
+			Error:  nil,
+		}
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return &EvalResponse{
+			Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeErr),
+			Result: nil,
+		}
+	}
+
+	hashMap := obj.Value.(HashMap)
+	results := make([]string, 0, len(hashMap))
+
+	for _, value := range hashMap {
+		results = append(results, value)
+	}
+
+	return &EvalResponse{
+		Result: clientio.Encode(results, false),
+		Error:  nil,
+	}
+}

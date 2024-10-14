@@ -673,11 +673,12 @@ var (
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	hValsCmdMeta = DiceCmdMeta{
-		Name:     "HVALS",
-		Info:     `Returns all values of the hash stored at key. The length of the reply is same as the size of the hash.`,
-		Eval:     evalHVALS,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Name:       "HVALS",
+		Info:       `Returns all values of the hash stored at key. The length of the reply is same as the size of the hash.`,
+		NewEval:    evalHVALS,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	hincrbyCmdMeta = DiceCmdMeta{
 		Name: "HINCRBY",

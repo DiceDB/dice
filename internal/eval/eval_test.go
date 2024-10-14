@@ -2245,18 +2245,21 @@ func testEvalHMGET(t *testing.T, store *dstore.Store) {
 }
 
 func testEvalHVALS(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"wrong number of args passed": {
+	tests := []evalTestCase{
+		{
+			name:   "wrong number of args passed",
 			setup:  func() {},
 			input:  nil,
 			output: []byte("-ERR wrong number of arguments for 'hvals' command\r\n"),
 		},
-		"key doesn't exists": {
+		{
+			name: "key doesn't exists",
 			setup:  func() {},
 			input:  []string{"NONEXISTENTHVALSKEY"},
 			output: clientio.Encode([]string{}, false),
 		},
-		"key exists": {
+		{
+			name: "key exists",
 			setup: func() {
 				key := "KEY_MOCK"
 				field := "mock_field_name"
@@ -2276,7 +2279,26 @@ func testEvalHVALS(t *testing.T, store *dstore.Store) {
 		},
 	}
 
-	runEvalTests(t, tests, evalHVALS, store)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			response := evalHVALS(tt.input, store)
+
+			// Handle comparison for byte slices
+			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
+				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
+					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+				}
+			} else {
+				assert.Equal(t, tt.migratedOutput.Result, response.Result)
+			}
+
+			if tt.migratedOutput.Error != nil {
+				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+			} else {
+				testifyAssert.NoError(t, response.Error)
+			}
+		})
+	}
 }
 func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
