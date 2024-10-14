@@ -40,10 +40,10 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 	var exDurationMs int64 = -1
 	var state exDurationState = Uninitialized
 	var keepttl bool = false
-
+	var isGetCmdPresent bool = false
 	key, value = args[0], args[1]
 	oType, oEnc := deduceTypeEncoding(value)
-
+	var tempResult []byte
 	for i := 2; i < len(args); i++ {
 		arg := strings.ToUpper(args[i])
 		switch arg {
@@ -145,6 +145,8 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 			}
 		case KeepTTL:
 			keepttl = true
+		case GET:
+			isGetCmdPresent = true
 		default:
 			return &EvalResponse{
 				Result: nil,
@@ -152,7 +154,33 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 			}
 		}
 	}
-
+	// If getCmd is present, fetch and store the existing value in tempResult
+	if isGetCmdPresent {
+		// Perform GET operation for the key
+		obj := store.Get(key)
+		if obj == nil {
+			tempResult = clientio.RespNIL // Store nil if key does not exist
+		} else {
+			// Handle the GET return behavior based on encoding type 
+			switch _, oEnc := object.ExtractTypeEncoding(obj); oEnc {
+			case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
+				if val, ok := obj.Value.(string); !ok {
+					return &EvalResponse{
+						Result: nil,
+						Error:  diceerrors.ErrWrongTypeOperation,
+					}
+				}else{
+					tempResult = clientio.Encode(val, true)
+				}
+			default:
+				// If the type is unknown or unsupported, return nil for the value
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrWrongTypeOperation,
+				}
+			}
+		}
+	}
 	// Cast the value properly based on the encoding type
 	var storedValue interface{}
 	switch oEnc {
@@ -166,10 +194,11 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 			Error:  diceerrors.ErrUnsupportedEncoding(int(oEnc)),
 		}
 	}
-
 	// putting the k and value in a Hash Table
 	store.Put(key, store.NewObj(storedValue, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
-
+	if isGetCmdPresent {
+		return &EvalResponse{Result: tempResult, Error: nil}
+	}
 	return &EvalResponse{
 		Result: clientio.OK,
 		Error:  nil,

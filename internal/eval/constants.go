@@ -20,6 +20,7 @@ const (
 	KeepTTL    string = "KEEPTTL"
 	Sync       string = "SYNC"
 	Async      string = "ASYNC"
+	GET        string = "GET"
 	Help       string = "HELP"
 	Memory     string = "MEMORY"
 	Count      string = "COUNT"
