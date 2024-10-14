@@ -23,7 +23,7 @@ import (
 )
 
 const QWatch = "QWATCH"
-const QUnwatch = "QUNWATCH"
+const Subscribe = "SUBSCRIBE"
 
 type WebsocketServer struct {
 	shardManager       *shard.ShardManager
@@ -142,7 +142,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		}
 
 		// handle qwatch and qunwatch commands
-		if diceDBCmd.Cmd == QWatch || diceDBCmd.Cmd == QUnwatch {
+		if diceDBCmd.Cmd == QWatch || diceDBCmd.Cmd == Subscribe {
 			clientIdentifierID := generateUniqueInt32(r)
 			sp.Client = comm.NewHTTPQwatchClient(s.qwatchResponseChan, clientIdentifierID)
 

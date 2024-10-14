@@ -35,7 +35,6 @@ const (
 )
 
 const QWatch string = "QWATCH"
-const QUnwatch string = "QUNWATCH"
 
 func ParseHTTPRequest(r *http.Request) (*cmd.DiceDBCmd, error) {
 	commandParts := strings.Split(strings.TrimPrefix(r.URL.Path, "/"), "/")
@@ -142,9 +141,8 @@ func ParseWebsocketMessage(msg []byte) (*cmd.DiceDBCmd, error) {
 	cmdStr = cmdStr[idx+1:]
 
 	var cmdArr []string // args
-	// cmdArr := []string{} // args
-	// handle qwatch and qunwatch commands
-	if command == QWatch || command == QUnwatch {
+	// handle qwatch commands
+	if command == QWatch {
 		// remove quotes from query string
 		cmdStr, err := strconv.Unquote(cmdStr)
 		if err != nil {

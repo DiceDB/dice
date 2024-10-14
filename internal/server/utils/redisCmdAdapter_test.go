@@ -398,12 +398,6 @@ func TestParseWebsocketMessage(t *testing.T) {
 			expectedCmd:  "QWATCH",
 			expectedArgs: []string{"SELECT $key, $value WHERE $key LIKE 'player:*' AND '$value.score' > 10 ORDER BY $value.score DESC LIMIT 5"},
 		},
-		{
-			name:         "Test simple QUNWATCH command",
-			message:      "qunwatch \"select $key, $value where $key like 'k?'\"",
-			expectedCmd:  "QUNWATCH",
-			expectedArgs: []string{"select $key, $value where $key like 'k?'"},
-		},
 	}
 
 	for _, tc := range commands {
