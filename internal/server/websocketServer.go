@@ -166,7 +166,6 @@ func (s *WebsocketServer) processQwatchUpdates(clientIdentifierID uint32, conn *
 		case <-s.shutdownChan:
 			return
 		}
-
 	}
 }
 

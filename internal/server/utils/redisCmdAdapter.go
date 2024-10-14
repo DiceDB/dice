@@ -135,20 +135,22 @@ func ParseWebsocketMessage(msg []byte) (*cmd.DiceDBCmd, error) {
 			Cmd:  command,
 			Args: nil,
 		}, nil
-	} else {
-		command = strings.ToUpper(cmdStr[:idx])
-		cmdStr = cmdStr[idx+1:]
 	}
 
-	cmdArr := []string{} // args
+	// handle commands with args
+	command = strings.ToUpper(cmdStr[:idx])
+	cmdStr = cmdStr[idx+1:]
+
+	var cmdArr []string // args
+	// cmdArr := []string{} // args
 	// handle qwatch and qunwatch commands
 	if command == QWatch || command == QUnwatch {
 		// remove quotes from query string
-		if cmdStr, err := strconv.Unquote(cmdStr); err != nil {
+		cmdStr, err := strconv.Unquote(cmdStr)
+		if err != nil {
 			return nil, fmt.Errorf("error parsing qwatch query: %v", err)
-		} else {
-			cmdArr = []string{cmdStr}
 		}
+		cmdArr = []string{cmdStr}
 	} else {
 		// handle other commands
 		cmdArr = strings.Split(cmdStr, " ")
