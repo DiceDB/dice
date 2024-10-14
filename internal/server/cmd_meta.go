@@ -62,6 +62,14 @@ var (
 		Cmd:     "SETEX",
 		CmdType: SingleShard,
 	}
+	zaddCmdMeta = CmdsMeta{
+		Cmd:     "ZADD",
+		CmdType: SingleShard,
+	}
+	zrangeCmdMeta = CmdsMeta{
+		Cmd:     "ZRANGE",
+		CmdType: SingleShard,
+	}
 
 	jsonclearCmdMeta = CmdsMeta{
 		Cmd:     "JSON.CLEAR",
@@ -97,6 +105,7 @@ func init() {
 	WorkerCmdsMeta["JSON.CLEAR"] = jsonclearCmdMeta
 	WorkerCmdsMeta["JSON.STRLEN"] = jsonstrlenCmdMeta
 	WorkerCmdsMeta["JSON.OBJLEN"] = jsonobjlenCmdMeta
-
+	WorkerCmdsMeta["ZADD"] = zaddCmdMeta
+	WorkerCmdsMeta["ZRANGE"] = zrangeCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }
