@@ -155,7 +155,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 			WebsocketOp: true,
 		}
 
-		// handle qwatch and qunwatch commands
+		// handle qwatch commands
 		if diceDBCmd.Cmd == QWatch || diceDBCmd.Cmd == Subscribe {
 			clientIdentifierID := generateUniqueInt32(r)
 			sp.Client = comm.NewHTTPQwatchClient(s.qwatchResponseChan, clientIdentifierID)
