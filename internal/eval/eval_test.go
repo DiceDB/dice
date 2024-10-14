@@ -2376,7 +2376,7 @@ func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
 			name:           "HEXISTS key doesn't exist",
 			setup:          func() {},
 			input:          []string{"KEY", "field_name"},
-			migratedOutput: EvalResponse{Result: ":0\r\n", Error: nil},
+			migratedOutput: EvalResponse{Result: clientio.Encode(0, false), Error: nil},
 		},
 		{
 			name: "HEXISTS key exists but field_name doesn't exists",
@@ -2395,7 +2395,7 @@ func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:          []string{"KEY_MOCK", "non_existent_key"},
-			migratedOutput: EvalResponse{Result: ":0\r\n", Error: nil},
+			migratedOutput: EvalResponse{Result: clientio.Encode(0, false), Error: nil},
 		},
 		{
 			name: "HEXISTS both key and field_name exists",
@@ -2414,7 +2414,7 @@ func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:          []string{"KEY_MOCK", "mock_field_name"},
-			migratedOutput: EvalResponse{Result: ":1\r\n", Error: nil},
+			migratedOutput: EvalResponse{Result: clientio.Encode(1, false), Error: nil},
 		},
 	}
 
