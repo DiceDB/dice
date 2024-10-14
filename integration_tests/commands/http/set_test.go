@@ -13,6 +13,7 @@ type TestCase struct {
 	commands      []HTTPCommand
 	expected      []interface{}
 	errorExpected bool
+	assertType    []string
 }
 
 func TestSet(t *testing.T) {

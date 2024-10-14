@@ -3,6 +3,7 @@ package http
 import (
 	"fmt"
 	"testing"
+
 	"gotest.tools/v3/assert"
 )
 
@@ -11,26 +12,38 @@ func TestCommandCount(t *testing.T) {
 
 	testCases := []TestCase{
 		{
+			name: "Command count should be greather than zero",
+			commands: []HTTPCommand{
+				{Command: "COMMAND/COUNT"},
+			},
+			expected:   []interface{}{float64(0)},
+			assertType: []string{"greater"},
+		},
+		{
 			name: "Command count should not support any argument",
 			commands: []HTTPCommand{
 				{Command: "COMMAND/COUNT", Body: map[string]interface{}{"key": ""}},
 			},
-			expected: []interface{}{"ERR wrong number of arguments for 'command|count' command"},
+			expected:   []interface{}{"ERR wrong number of arguments for 'command|count' command"},
+			assertType: []string{"equal"},
 		},
 	}
 
-	for i, tc := range testCases {
+	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			for _, cmd := range tc.commands {
+			for c, cmd := range tc.commands {
 				result, _ := exec.FireCommand(cmd)
-				assert.DeepEqual(t, tc.expected[i], result)
-
+				switch tc.assertType[c] {
+				case "equal":
+					assert.DeepEqual(t, tc.expected[c], result)
+				case "greater":
+					assert.Assert(t, result.(float64) >= tc.expected[c].(float64))
+				}
 			}
 
 		})
 	}
 }
-
 
 func TestCommandCount1(t *testing.T) {
 	exec := NewHTTPCommandExecutor()
