@@ -13,16 +13,19 @@ import (
 
 // Standard error variables for various DiceDB-related error conditions.
 var (
-	ErrAuthFailed                 = errors.New("AUTH failed")                                                            // Indicates authentication failure.
-	ErrIntegerOutOfRange          = errors.New("ERR value is not an integer or out of range")                            // Represents a value that is either not an integer or is out of allowed range.
-	ErrInvalidNumberFormat        = errors.New("ERR value is not an integer or a float")                                 // Signals that a value provided is not in a valid integer or float format.
-	ErrValueOutOfRange            = errors.New("ERR value is out of range")                                              // Indicates that a value is beyond the permissible range.
-	ErrOverflow                   = errors.New("ERR increment or decrement would overflow")                              // Signifies that an increment or decrement operation would exceed the limits.
-	ErrSyntax                     = errors.New("ERR syntax error")                                                       // Represents a syntax error in a DiceDB command.
-	ErrKeyNotFound                = errors.New("ERR no such key")                                                        // Indicates that the specified key does not exist.
-	ErrWrongTypeOperation         = errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")      // Signals an operation attempted on a key with an incompatible type.
-	ErrInvalidHyperLogLogKey      = errors.New("WRONGTYPE Key is not a valid HyperLogLog string value")                  // Indicates that a key is not a valid HyperLogLog value.
-	ErrCorruptedHyperLogLogObject = errors.New("INVALIDOBJ Corrupted HLL object detected")                               // Signals detection of a corrupted HyperLogLog object.
+	ErrAuthFailed                 = errors.New("AUTH failed")                                                                                     // Indicates authentication failure.
+	ErrIntegerOutOfRange          = errors.New("ERR value is not an integer or out of range")                                                     // Represents a value that is either not an integer or is out of allowed range.
+	ErrInvalidNumberFormat        = errors.New("ERR value is not an integer or a float")                                                          // Signals that a value provided is not in a valid integer or float format.
+	ErrValueOutOfRange            = errors.New("ERR value is out of range")                                                                       // Indicates that a value is beyond the permissible range.
+	ErrOverflow                   = errors.New("ERR increment or decrement would overflow")                                                       // Signifies that an increment or decrement operation would exceed the limits.
+	ErrOverflowType               = errors.New("ERR Invalid OVERFLOW type specified")                                                             // Signifies that the type of overflow is invalid.
+	ErrSyntax                     = errors.New("ERR syntax error")                                                                                // Represents a syntax error in a DiceDB command.
+	ErrKeyNotFound                = errors.New("ERR no such key")                                                                                 // Indicates that the specified key does not exist.
+	ErrWrongTypeOperation         = errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")                               // Signals an operation attempted on a key with an incompatible type.
+	ErrInvalidHyperLogLogKey      = errors.New("WRONGTYPE Key is not a valid HyperLogLog string value")                                           // Indicates that a key is not a valid HyperLogLog value.
+	ErrCorruptedHyperLogLogObject = errors.New("INVALIDOBJ Corrupted HLL object detected")                                                        // Signals detection of a corrupted HyperLogLog object.
+	ErrInvalidBitfieldType        = errors.New("ERR Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is") // Indicates the bitfield type is invalid.
+	ErrBitfieldOffset             = errors.New("ERR bit offset is not an integer or out of range")
 	ErrInvalidJSONPathType        = errors.New("WRONGTYPE wrong type of path value - expected string but found integer") // Represents an invalid type for a JSON path.
 	ErrInvalidExpireTimeValue     = errors.New("ERR invalid expire time")                                                // Indicates that the provided expiration time is invalid.
 	ErrHashValueNotInteger        = errors.New("ERR hash value is not an integer")                                       // Signifies that a hash value is expected to be an integer.
