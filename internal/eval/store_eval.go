@@ -316,3 +316,91 @@ func evalSETEX(args []string, store *dstore.Store) *EvalResponse {
 
 	return evalSET(newArgs, store)
 }
+
+func evalGETRANGE(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 3 {
+		return &EvalResponse{
+			Result: nil,
+			Error: diceerrors.ErrWrongArgumentCount("GETRANGE"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: string(""),
+			Error: nil,
+		}
+	}
+
+	start, err := strconv.Atoi(args[1])
+	if err != nil {
+		return &EvalResponse{
+			Result:  nil,
+			Error: diceerrors.ErrIntegerOutOfRange,
+		}
+	}
+	end, err := strconv.Atoi(args[2])
+	if err != nil {
+		return &EvalResponse{
+			Result:  nil,
+			Error: diceerrors.ErrIntegerOutOfRange,
+		}
+	}
+
+	var str string
+	switch _, oEnc := object.ExtractTypeEncoding(obj); oEnc {
+	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
+		if val, ok := obj.Value.(string); ok {
+			str = val
+		} else {
+			return &EvalResponse{
+				Result:  nil,
+				Error: diceerrors.ErrGeneral("expected string but got another type"),
+			}
+		} 
+	case object.ObjEncodingInt:
+		str = strconv.FormatInt(obj.Value.(int64), 10)
+	default:
+		return  &EvalResponse{
+			Result: nil,
+			Error: diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if str == "" {
+		return &EvalResponse{
+			Result: string(""),
+			Error: nil,
+		}
+	}
+
+	if start < 0 {
+		start = len(str) + start
+	}
+
+	if end < 0 {
+		end = len(str) + end
+	}
+
+	if start >= len(str) || end < 0 || start > end {
+		return &EvalResponse{
+			Result: string(""),
+			Error: nil,
+		}
+	}
+
+	if start < 0 {
+		start = 0
+	}
+
+	if end >= len(str) {
+		end = len(str) - 1
+	}
+
+	return &EvalResponse{
+		Result:str[start:end+1],
+		Error: nil,
+	}
+}

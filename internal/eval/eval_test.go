@@ -3886,137 +3886,181 @@ func testEvalGETRANGE(t *testing.T, store *dstore.Store) {
 	setupForIntegerValue := func() {
 		store.Put("INTEGER_KEY", store.NewObj("1234", maxExDuration, object.ObjTypeString, object.ObjEncodingRaw))
 	}
-	tests := map[string]evalTestCase{
-		"GETRANGE against non-existing key": {
+	tests := []evalTestCase {
+		{
+
+			name: "GETRANGE against non-existing key",
 			setup:  func() {},
 			input:  []string{"NON_EXISTING_KEY", "0", "-1"},
-			output: clientio.Encode("", false),
+			migratedOutput: EvalResponse{Result: "", Error: nil},
 		},
-		"GETRANGE against wrong key type": {
+		{
+			name: "GETRANGE against wrong key type",
 			setup: func() {
 				evalLPUSH([]string{"LKEY1", "list"}, store)
 			},
 			input:  []string{"LKEY1", "0", "-1"},
-			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
-		"GETRANGE against string value: 0, 3": {
+		{
+			name: "GETRANGE against string value: 0, 3",
 			setup:  setupForStringValue,
 			input:  []string{"STRING_KEY", "0", "3"},
-			output: clientio.Encode("Hell", false),
+			migratedOutput: EvalResponse{Result: "Hell", Error: nil},
 		},
-		"GETRANGE against string value: 0, -1": {
+		{
+			name: "GETRANGE against string value: 0, -1",
 			setup:  setupForStringValue,
 			input:  []string{"STRING_KEY", "0", "-1"},
-			output: clientio.Encode("Hello World", false),
+			migratedOutput:  EvalResponse{Result: "Hello World", Error: nil},
 		},
-		"GETRANGE against string value: -4, -1": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "-4", "-1"},
-			output: clientio.Encode("orld", false),
+		{
+			name: "GETRANGE against string value: -4, -1",
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "-4", "-1"},
+			migratedOutput: EvalResponse{Result: "orld", Error: nil},
 		},
-		"GETRANGE against string value: 5, 3": {
+		{
+			name: "GETRANGE against string value: 5, 3",
 			setup:  setupForStringValue,
 			input:  []string{"STRING_KEY", "5", "3"},
-			output: clientio.Encode("", false),
+			migratedOutput: EvalResponse{Result: "", Error: nil},	
 		},
-		"GETRANGE against string value: 5, 5000": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "5", "5000"},
-			output: clientio.Encode(" World", false),
-		},
-		"GETRANGE against string value: -5000, 10000": {
+		{
+			name: "GETRANGE against string value: -5000, 10000",
 			setup:  setupForStringValue,
 			input:  []string{"STRING_KEY", "-5000", "10000"},
-			output: clientio.Encode("Hello World", false),
+			migratedOutput: EvalResponse{Result: "Hello World", Error: nil},	
 		},
-		"GETRANGE against string value: 0, -100": {
+		{
+			name: "GETRANGE against string value: 0, -100",
 			setup:  setupForStringValue,
 			input:  []string{"STRING_KEY", "0", "-100"},
-			output: clientio.Encode("", false),
+			migratedOutput: EvalResponse{Result: "", Error: nil},	
+
 		},
-		"GETRANGE against string value: 1, -100": {
+		{
+			name: "GETRANGE against string value: 1, -100",
 			setup:  setupForStringValue,
 			input:  []string{"STRING_KEY", "1", "-100"},
-			output: clientio.Encode("", false),
+			migratedOutput: EvalResponse{Result: "", Error: nil},
 		},
-		"GETRANGE against string value: -1, -100": {
+		{
+			name: "GETRANGE against string value: -1, -100",
 			setup:  setupForStringValue,
 			input:  []string{"STRING_KEY", "-1", "-100"},
-			output: clientio.Encode("", false),
+			migratedOutput: EvalResponse{Result: "", Error: nil},
 		},
-		"GETRANGE against string value: -100, -100": {
+		{
+			name: "GETRANGE against string value: -100, -100",
 			setup:  setupForStringValue,
 			input:  []string{"STRING_KEY", "-100", "-100"},
-			output: clientio.Encode("", false),
+			migratedOutput: EvalResponse{Result: "", Error: nil},
 		},
-		"GETRANGE against string value: -100, -101": {
+		{
+			name: "GETRANGE against string value: -100, -101",
 			setup:  setupForStringValue,
 			input:  []string{"STRING_KEY", "-100", "-101"},
-			output: clientio.Encode("", false),
+			migratedOutput: EvalResponse{Result: "", Error: nil},
 		},
-		"GETRANGE against integer value: 0, 2": {
+		{
+			name: "GETRANGE against integer value: 0, 2",
 			setup:  setupForIntegerValue,
 			input:  []string{"INTEGER_KEY", "0", "2"},
-			output: clientio.Encode("123", false),
+			migratedOutput: EvalResponse{Result: "123", Error: nil},	
 		},
-		"GETRANGE against integer value: 0, -1": {
+		{
+			name: "GETRANGE against integer value: 0, -1",
 			setup:  setupForIntegerValue,
 			input:  []string{"INTEGER_KEY", "0", "-1"},
-			output: clientio.Encode("1234", false),
+			migratedOutput: EvalResponse{Result: "1234", Error: nil},
 		},
-		"GETRANGE against integer value: -3, -1": {
+		{
+			name: "GETRANGE against integer value: -3, -1",
 			setup:  setupForIntegerValue,
 			input:  []string{"INTEGER_KEY", "-3", "-1"},
-			output: clientio.Encode("234", false),
+			migratedOutput: EvalResponse{Result: "234", Error: nil},
 		},
-		"GETRANGE against integer value: 5, 3": {
+		{
+			name: "GETRANGE against integer value: 5, 3",
 			setup:  setupForIntegerValue,
 			input:  []string{"INTEGER_KEY", "5", "3"},
-			output: clientio.Encode("", false),
+			migratedOutput: EvalResponse{Result: "", Error: nil},
 		},
-		"GETRANGE against integer value: 3, 5000": {
+		{
+			name:  "GETRANGE against integer value: 3, 5000",
 			setup:  setupForIntegerValue,
 			input:  []string{"INTEGER_KEY", "3", "5000"},
-			output: clientio.Encode("4", false),
+			migratedOutput: EvalResponse{Result: "4", Error: nil},
 		},
-
-		"GETRANGE against integer value: -5000, 10000": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "-5000", "10000"},
-			output: clientio.Encode("1234", false),
+		{
+			name: "GETRANGE against integer value: -5000, 10000",
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "-5000", "10000"},
+			migratedOutput: EvalResponse{Result: "1234", Error: nil},
 		},
-		"GETRANGE against integer value: 0, -100": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "0", "-100"},
-			output: clientio.Encode("", false),
+		{
+			name: "GETRANGE against integer value: 0, -100",
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "0", "-100"},
+			migratedOutput: EvalResponse{Result: "", Error: nil},
 		},
-		"GETRANGE against integer value: 1, -100": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "1", "-100"},
-			output: clientio.Encode("", false),
+		{
+			name: "GETRANGE against integer value: 1, -100",
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "1", "-100"},
+			migratedOutput: EvalResponse{Result: "", Error: nil},
 		},
-		"GETRANGE against integer value: -1, -100": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "-1", "-100"},
-			output: clientio.Encode("", false),
+		{
+			name: "GETRANGE against integer value: -1, -100",
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "-1", "-100"},
+			migratedOutput: EvalResponse{Result: "", Error: nil},
 		},
-		"GETRANGE against integer value: -100, -99": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "-100", "-99"},
-			output: clientio.Encode("", false),
+		{
+			name: "GETRANGE against integer value: -100, -99",
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "-100", "-99"},
+			migratedOutput: EvalResponse{Result: "", Error: nil},
 		},
-		"GETRANGE against integer value: -100, -100": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "-100", "-100"},
-			output: clientio.Encode("", false),
+		{
+			name: "GETRANGE against integer value: -100, -100",
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "-100", "-100"},
+			migratedOutput: EvalResponse{Result: "", Error: nil},
 		},
-		"GETRANGE against integer value: -100, -101": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "-100", "-101"},
-			output: clientio.Encode("", false),
+		{
+			name: "GETRANGE against integer value: -100, -101",
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "-100", "-101"},
+			migratedOutput: EvalResponse{Result: "", Error: nil},
 		},
 	}
-	runEvalTests(t, tests, evalGETRANGE, store)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store = setupTest(store)
+
+			if tt.setup != nil {
+				tt.setup()
+			}
+			response := evalGETRANGE(tt.input, store)
+
+			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
+				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
+					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+				}
+			} else {
+ 				assert.Equal(t, tt.migratedOutput.Result, response.Result)
+			}
+			
+			if tt.migratedOutput.Error != nil {
+				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+			} else {
+				testifyAssert.NoError(t, response.Error)
+			}
+		})
+	}
 }
 
 func BenchmarkEvalGETRANGE(b *testing.B) {

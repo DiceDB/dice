@@ -981,7 +981,8 @@ var (
 	getRangeCmdMeta = DiceCmdMeta{
 		Name:     "GETRANGE",
 		Info:     `Returns a substring of the string stored at a key.`,
-		Eval:     evalGETRANGE,
+		IsMigrated: true,
+		NewEval: evalGETRANGE,
 		Arity:    4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
