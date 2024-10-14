@@ -111,9 +111,11 @@ func TestEval(t *testing.T) {
 	testEvalHVALS(t, store)
 	testEvalBitField(t, store)
 	testEvalHINCRBYFLOAT(t, store)
+	testEvalBitFieldRO(t, store)
 	testEvalGEOADD(t, store)
 	testEvalGEODIST(t, store)
 	testEvalSINTER(t, store)
+	testEvalOBJECTENCODING(t, store)
 	testEvalJSONSTRAPPEND(t, store)
 }
 
@@ -164,17 +166,17 @@ func testEvalSET(t *testing.T, store *dstore.Store) {
 		{
 			name:           "nil value",
 			input:          nil,
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'SET' command")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'set' command")},
 		},
 		{
 			name:           "empty array",
 			input:          []string{},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'SET' command")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'set' command")},
 		},
 		{
 			name:           "one value",
 			input:          []string{"KEY"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'SET' command")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'set' command")},
 		},
 		{
 			name:           "key val pair",
@@ -239,7 +241,7 @@ func testEvalSET(t *testing.T, store *dstore.Store) {
 		{
 			name:           "key val pair and negative PXAT",
 			input:          []string{"KEY", "VAL", Pxat, "-123456"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'SET' command")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'set' command")},
 		},
 		{
 			name:           "key val pair and valid PXAT",
@@ -335,12 +337,12 @@ func testEvalGET(t *testing.T, store *dstore.Store) {
 		{
 			name:           "nil value",
 			input:          nil,
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'GET' command")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'get' command")},
 		},
 		{
 			name:           "empty array",
 			input:          []string{},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'GET' command")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'get' command")},
 		},
 		{
 			name:           "key does not exist",
@@ -350,7 +352,7 @@ func testEvalGET(t *testing.T, store *dstore.Store) {
 		{
 			name:           "multiple arguments",
 			input:          []string{"KEY1", "KEY2"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'GET' command")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'get' command")},
 		},
 		{
 			name: "key exists",
@@ -392,8 +394,6 @@ func testEvalGET(t *testing.T, store *dstore.Store) {
 
 			response := evalGET(tt.input, store)
 
-			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput.Result)
-
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
@@ -417,12 +417,12 @@ func testEvalGETSET(t *testing.T, store *dstore.Store) {
 		{
 			name:           "GETSET with 1 arg",
 			input:          []string{"HELLO"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'GETSET' command")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'getset' command")},
 		},
 		{
 			name:           "GETSET with 3 args",
 			input:          []string{"HELLO", "WORLD", "WORLD1"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'GETSET' command")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'getset' command")},
 		},
 		{
 			name:           "GETSET key not exists",
@@ -2832,6 +2832,50 @@ func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]s
 	}
 }
 
+func runMigratedEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]string, *dstore.Store) *EvalResponse, store *dstore.Store) {
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			store = setupTest(store)
+
+			if tc.setup != nil {
+				tc.setup()
+			}
+
+			output := evalFunc(tc.input, store)
+
+			if tc.newValidator != nil {
+				if tc.migratedOutput.Error != nil {
+					tc.newValidator(tc.migratedOutput.Error)
+				} else {
+					tc.newValidator(output.Result)
+				}
+				return
+			}
+
+			if tc.migratedOutput.Error != nil {
+				testifyAssert.EqualError(t, output.Error, tc.migratedOutput.Error.Error())
+				return
+			}
+
+			// Handle comparison for byte slices and string slices
+			// TODO: Make this generic so that all kind of slices can be handled
+			if b, ok := output.Result.([]byte); ok && tc.migratedOutput.Result != nil {
+				if expectedBytes, ok := tc.migratedOutput.Result.([]byte); ok {
+					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+				}
+			} else if a, ok := output.Result.([]string); ok && tc.migratedOutput.Result != nil {
+				if expectedStringSlice, ok := tc.migratedOutput.Result.([]string); ok {
+					testifyAssert.ElementsMatch(t, a, expectedStringSlice)
+				}
+			} else {
+				testifyAssert.Equal(t, tc.migratedOutput.Result, output.Result)
+			}
+
+			testifyAssert.NoError(t, output.Error)
+		})
+	}
+}
+
 func BenchmarkEvalMSET(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -3177,7 +3221,7 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 			output: []byte("-ERR wrong number of arguments for 'json.debug' command\r\n"),
 		},
 
-		"memory nonexistant key": {
+		"memory nonexistent key": {
 			setup:  func() {},
 			input:  []string{"MEMORY", "NONEXISTENT_KEY"},
 			output: clientio.RespZero,
@@ -3577,7 +3621,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"MOCK_KEY", "$", "2"},
 			output: []byte(":0\r\n"),
-			validator: func(ouput []byte) {
+			validator: func(output []byte) {
 				key := "MOCK_KEY"
 				obj := store.Get(key)
 				want := []interface{}{float64(0), float64(1), float64(3), float64(4), float64(5)}
@@ -3596,7 +3640,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"MOCK_KEY", "$.b", "2"},
 			output: []byte("*1\r\n:2\r\n"),
-			validator: func(ouput []byte) {
+			validator: func(output []byte) {
 				key := "MOCK_KEY"
 				path := "$.b"
 				obj := store.Get(key)
@@ -3701,29 +3745,37 @@ func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"command help": {
 			input: []string{"HELP"},
-			output: []byte("*11\r\n" +
+			output: []byte("*13\r\n" +
 				"$64\r\n" +
 				"COMMAND <subcommand> [<arg> [value] [opt] ...]. Subcommands are:\r\n" +
 				"$15\r\n" +
 				"(no subcommand)\r\n" +
-				"$43\r\n" +
-				"    Return details about all Dice commands.\r\n" +
+				"$46\r\n" +
+				"     Return details about all DiceDB commands.\r\n" +
 				"$5\r\n" +
 				"COUNT\r\n" +
-				"$60\r\n" +
-				"    Return the total number of commands in this Dice server.\r\n" +
+				"$63\r\n" +
+				"     Return the total number of commands in this DiceDB server.\r\n" +
 				"$4\r\n" +
 				"LIST\r\n" +
-				"$55\r\n" +
-				"     Return a list of all commands in this Dice server.\r\n" +
+				"$57\r\n" +
+				"     Return a list of all commands in this DiceDB server.\r\n" +
+				"$25\r\n" +
+				"INFO [<command-name> ...]\r\n" +
+				"$140\r\n" +
+				"     Return details about the specified DiceDB commands. If no command names are given, documentation details for all commands are returned.\r\n" +
 				"$22\r\n" +
 				"GETKEYS <full-command>\r\n" +
-				"$46\r\n" +
-				"     Return the keys from a full Dice command.\r\n" +
+				"$48\r\n" +
+				"     Return the keys from a full DiceDB command.\r\n" +
 				"$4\r\n" +
 				"HELP\r\n" +
 				"$21\r\n" +
 				"     Print this help.\r\n"),
+		},
+		"command help with wrong number of arguments": {
+			input:  []string{"HELP", "EXTRA-ARGS"},
+			output: []byte("-ERR wrong number of arguments for 'command|help' command\r\n"),
 		},
 		"command info valid command SET": {
 			input:  []string{"INFO", "SET"},
@@ -3749,9 +3801,33 @@ func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
 			input:  []string{"INFO", "SET", "INVALID_CMD"},
 			output: []byte("*2\r\n*5\r\n$3\r\nSET\r\n:-3\r\n:1\r\n:0\r\n:0\r\n$-1\r\n"),
 		},
+		"command count with wrong number of arguments": {
+			input:  []string{"COUNT", "EXTRA-ARGS"},
+			output: []byte("-ERR wrong number of arguments for 'command|count' command\r\n"),
+		},
+		"command list with wrong number of arguments": {
+			input:  []string{"LIST", "EXTRA-ARGS"},
+			output: []byte("-ERR wrong number of arguments for 'command|list' command\r\n"),
+		},
 		"command unknown": {
 			input:  []string{"UNKNOWN"},
 			output: []byte("-ERR unknown subcommand 'UNKNOWN'. Try COMMAND HELP.\r\n"),
+		},
+		"command getkeys with incorrect number of arguments": {
+			input:  []string{"GETKEYS"},
+			output: []byte("-ERR wrong number of arguments for 'command|getkeys' command\r\n"),
+		},
+		"command getkeys with unknown command": {
+			input:  []string{"GETKEYS", "UNKNOWN"},
+			output: []byte("-ERR invalid command specified\r\n"),
+		},
+		"command getkeys with a command that accepts no key arguments": {
+			input:  []string{"GETKEYS", "FLUSHDB"},
+			output: []byte("-ERR the command has no key arguments\r\n"),
+		},
+		"command getkeys with an invalid number of arguments for a command": {
+			input:  []string{"GETKEYS", "MSET", "key1"},
+			output: []byte("-ERR invalid number of arguments specified for command\r\n"),
 		},
 	}
 
@@ -4195,7 +4271,7 @@ func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
 			input:  []string{"new_key", "new_field", "10"},
 			output: []byte("-ERR hash value is not an integer\r\n"),
 		},
-		"update the exisiting field which has spaces": {
+		"update the existing field which has spaces": {
 			setup: func() {
 				key := "key"
 				field := "field"
@@ -4217,7 +4293,7 @@ func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
 			input:  []string{"key", "field", "-10"},
 			output: clientio.Encode(int64(-10), false),
 		},
-		"update the exisiting field with negative value": {
+		"update the existing field with negative value": {
 			setup: func() {
 				key := "key"
 				field := "field"
@@ -4278,17 +4354,17 @@ func testEvalSETEX(t *testing.T, store *dstore.Store) {
 	utils.CurrentTime = mockTime
 
 	tests := map[string]evalTestCase{
-		"nil value":                              {input: nil, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'SETEX' command")}},
-		"empty array":                            {input: []string{}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'SETEX' command")}},
-		"one value":                              {input: []string{"KEY"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'SETEX' command")}},
-		"key val pair":                           {input: []string{"KEY", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'SETEX' command")}},
-		"key exp pair":                           {input: []string{"KEY", "123456"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'SETEX' command")}},
+		"nil value":                              {input: nil, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'setex' command")}},
+		"empty array":                            {input: []string{}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'setex' command")}},
+		"one value":                              {input: []string{"KEY"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'setex' command")}},
+		"key val pair":                           {input: []string{"KEY", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'setex' command")}},
+		"key exp pair":                           {input: []string{"KEY", "123456"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'setex' command")}},
 		"key exp value pair":                     {input: []string{"KEY", "123", "VAL"}, migratedOutput: EvalResponse{Result: clientio.OK, Error: nil}},
-		"key exp value pair with extra args":     {input: []string{"KEY", "123", "VAL", " "}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'SETEX' command")}},
-		"key exp value pair with invalid exp":    {input: []string{"KEY", "0", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'SETEX' command")}},
-		"key exp value pair with exp > maxexp":   {input: []string{"KEY", "9223372036854776", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'SETEX' command")}},
+		"key exp value pair with extra args":     {input: []string{"KEY", "123", "VAL", " "}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'setex' command")}},
+		"key exp value pair with invalid exp":    {input: []string{"KEY", "0", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'setex' command")}},
+		"key exp value pair with exp > maxexp":   {input: []string{"KEY", "9223372036854776", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'setex' command")}},
 		"key exp value pair with exp > maxint64": {input: []string{"KEY", "92233720368547760000000", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")}},
-		"key exp value pair with negative exp":   {input: []string{"KEY", "-23", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'SETEX' command")}},
+		"key exp value pair with negative exp":   {input: []string{"KEY", "-23", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'setex' command")}},
 		"key exp value pair with not-int exp":    {input: []string{"KEY", "12a", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")}},
 
 		"set and get": {
@@ -5084,153 +5160,221 @@ func testEvalJSONRESP(t *testing.T, store *dstore.Store) {
 func testEvalZADD(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"ZADD with wrong number of arguments": {
-			input:  []string{"myzset", "1"},
-			output: diceerrors.NewErrArity("ZADD"),
+			input: []string{"myzset", "1"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("ZADD"),
+			},
 		},
 		"ZADD with non-numeric score": {
-			input:  []string{"myzset", "score", "member1"},
-			output: diceerrors.NewErrWithMessage(diceerrors.InvalidFloatErr),
+			input: []string{"myzset", "score", "member1"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrInvalidNumberFormat,
+			},
 		},
 		"ZADD new member to non-existing key": {
-			setup:  func() {},
-			input:  []string{"myzset", "1", "member1"},
-			output: clientio.Encode(int64(1), false),
+			input: []string{"myzset", "1", "member1"},
+			migratedOutput: EvalResponse{
+				Result: 1,
+				Error:  nil,
+			},
 		},
 		"ZADD existing member with updated score": {
 			setup: func() {
 				evalZADD([]string{"myzset", "1", "member1"}, store)
 			},
-			input:  []string{"myzset", "2", "member1"},
-			output: clientio.Encode(int64(0), false),
+			input: []string{"myzset", "2", "member1"},
+			migratedOutput: EvalResponse{
+				Result: 0,
+				Error:  nil,
+			},
 		},
 		"ZADD multiple members": {
 			setup: func() {
 				evalZADD([]string{"myzset", "1", "member1"}, store)
 			},
-			input:  []string{"myzset", "2", "member2", "3", "member3"},
-			output: clientio.Encode(int64(2), false),
+			input: []string{"myzset", "2", "member2", "3", "member3"},
+			migratedOutput: EvalResponse{
+				Result: 2,
+				Error:  nil,
+			},
 		},
 		"ZADD with negative score": {
-			input:  []string{"myzset", "-1", "member_neg"},
-			output: clientio.Encode(int64(1), false),
+			input: []string{"myzset", "-1", "member_neg"},
+			migratedOutput: EvalResponse{
+				Result: 1,
+				Error:  nil,
+			},
 		},
 		"ZADD with duplicate members": {
 			setup: func() {
 				evalZADD([]string{"myzset", "1", "member1"}, store)
 			},
-			input:  []string{"myzset", "2", "member1", "2", "member1"},
-			output: clientio.Encode(int64(0), false),
+			input: []string{"myzset", "2", "member1", "2", "member1"},
+			migratedOutput: EvalResponse{
+				Result: 0,
+				Error:  nil,
+			},
 		},
 		"ZADD with extreme float value": {
-			input:  []string{"myzset", "1e308", "member_large"},
-			output: clientio.Encode(int64(1), false),
+			input: []string{"myzset", "1e308", "member_large"},
+			migratedOutput: EvalResponse{
+				Result: 1,
+				Error:  nil,
+			},
 		},
 		"ZADD with NaN score": {
-			input:  []string{"myzset", "NaN", "member_nan"},
-			output: diceerrors.NewErrWithMessage(diceerrors.InvalidFloatErr),
+			input: []string{"myzset", "NaN", "member_nan"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrInvalidNumberFormat,
+			},
 		},
 		"ZADD with INF score": {
-			input:  []string{"myzset", "INF", "member_inf"},
-			output: clientio.Encode(int64(1), false),
+			input: []string{"myzset", "INF", "member_inf"},
+			migratedOutput: EvalResponse{
+				Result: 1,
+				Error:  nil,
+			},
 		},
 		"ZADD to a key of wrong type": {
 			setup: func() {
-				store.Put("myzset", store.NewObj("string_value", -1, object.ObjTypeString, object.ObjEncodingRaw))
+				store.Put("mywrongtypekey", store.NewObj("string_value", -1, object.ObjTypeString, object.ObjEncodingRaw))
 			},
-			input:  []string{"myzset", "1", "member1"},
-			output: []byte("-ERR Existing key has wrong Dice type\r\n"),
+			input: []string{"mywrongtypekey", "1", "member1"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			},
 		},
 	}
 
-	runEvalTests(t, tests, evalZADD, store)
+	runMigratedEvalTests(t, tests, evalZADD, store)
 }
 
 func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"ZRANGE on non-existing key": {
-			input:  []string{"non_existing_key", "0", "-1"},
-			output: clientio.Encode([]string{}, false),
+			input: []string{"non_existing_key", "0", "-1"},
+			migratedOutput: EvalResponse{
+				Result: []string{},
+				Error:  nil,
+			},
 		},
 		"ZRANGE with wrong type key": {
 			setup: func() {
 				store.Put("mystring", store.NewObj("string_value", -1, object.ObjTypeString, object.ObjEncodingRaw))
 			},
-			input:  []string{"mystring", "0", "-1"},
-			output: diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr),
+			input: []string{"mystring", "0", "-1"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			},
 		},
 		"ZRANGE with normal indices": {
 			setup: func() {
 				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
 			},
-			input:  []string{"myzset", "0", "1"},
-			output: clientio.Encode([]string{"member1", "member2"}, false),
+			input: []string{"myzset", "0", "1"},
+			migratedOutput: EvalResponse{
+				Result: []string{"member1", "member2"},
+				Error:  nil,
+			},
 		},
 		"ZRANGE with negative indices": {
 			setup: func() {
 				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
 			},
-			input:  []string{"myzset", "-2", "-1"},
-			output: clientio.Encode([]string{"member2", "member3"}, false),
+			input: []string{"myzset", "-2", "-1"},
+			migratedOutput: EvalResponse{
+				Result: []string{"member2", "member3"},
+				Error:  nil,
+			},
 		},
 		"ZRANGE with start > stop": {
 			setup: func() {
 				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
 			},
-			input:  []string{"myzset", "2", "1"},
-			output: clientio.Encode([]string{}, false),
+			input: []string{"myzset", "2", "1"},
+			migratedOutput: EvalResponse{
+				Result: []string{},
+				Error:  nil,
+			},
 		},
 		"ZRANGE with indices out of bounds": {
 			setup: func() {
 				evalZADD([]string{"myzset", "1", "member1"}, store)
 			},
-			input:  []string{"myzset", "0", "5"},
-			output: clientio.Encode([]string{"member1"}, false),
+			input: []string{"myzset", "0", "5"},
+			migratedOutput: EvalResponse{
+				Result: []string{"member1"},
+				Error:  nil,
+			},
 		},
 		"ZRANGE WITHSCORES option": {
 			setup: func() {
 				evalZADD([]string{"myzset", "1", "member1", "2", "member2"}, store)
 			},
-			input:  []string{"myzset", "0", "-1", "WITHSCORES"},
-			output: clientio.Encode([]string{"member1", "1", "member2", "2"}, false),
+			input: []string{"myzset", "0", "-1", "WITHSCORES"},
+			migratedOutput: EvalResponse{
+				Result: []string{"member1", "1", "member2", "2"},
+				Error:  nil,
+			},
 		},
 		"ZRANGE with invalid option": {
 			setup: func() {
 				evalZADD([]string{"myzset", "1", "member1"}, store)
 			},
-			input:  []string{"myzset", "0", "-1", "INVALIDOPTION"},
-			output: diceerrors.NewErrWithMessage(diceerrors.SyntaxErr),
+			input: []string{"myzset", "0", "-1", "INVALIDOPTION"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrSyntax,
+			},
 		},
 		"ZRANGE with REV option": {
 			setup: func() {
 				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
 			},
-			input:  []string{"myzset", "0", "-1", "REV"},
-			output: clientio.Encode([]string{"member3", "member2", "member1"}, false),
+			input: []string{"myzset", "0", "-1", "REV"},
+			migratedOutput: EvalResponse{
+				Result: []string{"member3", "member2", "member1"},
+				Error:  nil,
+			},
 		},
 		"ZRANGE with REV and WITHSCORES options": {
 			setup: func() {
 				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
 			},
-			input:  []string{"myzset", "0", "-1", "REV", "WITHSCORES"},
-			output: clientio.Encode([]string{"member3", "3", "member2", "2", "member1", "1"}, false),
+			input: []string{"myzset", "0", "-1", "REV", "WITHSCORES"},
+			migratedOutput: EvalResponse{
+				Result: []string{"member3", "3", "member2", "2", "member1", "1"},
+				Error:  nil,
+			},
 		},
 		"ZRANGE with start index greater than length": {
 			setup: func() {
 				evalZADD([]string{"myzset", "1", "member1"}, store)
 			},
-			input:  []string{"myzset", "5", "10"},
-			output: clientio.Encode([]string{}, false),
+			input: []string{"myzset", "5", "10"},
+			migratedOutput: EvalResponse{
+				Result: []string{},
+				Error:  nil,
+			},
 		},
 		"ZRANGE with negative start index greater than length": {
 			setup: func() {
 				evalZADD([]string{"myzset", "1", "member1"}, store)
 			},
-			input:  []string{"myzset", "-10", "-5"},
-			output: clientio.Encode([]string{}, false),
+			input: []string{"myzset", "-10", "-5"},
+			migratedOutput: EvalResponse{
+				Result: []string{},
+				Error:  nil,
+			},
 		},
 	}
 
-	runEvalTests(t, tests, evalZRANGE, store)
+	runMigratedEvalTests(t, tests, evalZRANGE, store)
 }
 
 func testEvalBitField(t *testing.T, store *dstore.Store) {
@@ -5515,6 +5659,28 @@ func testEvalDUMP(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalDUMP, store)
 }
 
+func testEvalBitFieldRO(t *testing.T, store *dstore.Store) {
+	testCases := map[string]evalTestCase{
+		"BITFIELD_RO Arity": {
+			input:  []string{},
+			output: diceerrors.NewErrArity("BITFIELD_RO"),
+		},
+		"BITFIELD_RO syntax error": {
+			input:  []string{"bits", "GET", "u8"},
+			output: []byte("-ERR syntax error\r\n"),
+		},
+		"BITFIELD_RO invalid bitfield type": {
+			input:  []string{"bits", "GET", "a8", "0", "255"},
+			output: []byte("-ERR Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is.\r\n"),
+		},
+		"BITFIELD_RO unsupported commands": {
+			input:  []string{"bits", "set", "u8", "0", "255"},
+			output: []byte("-ERR BITFIELD_RO only supports the GET subcommand\r\n"),
+		},
+	}
+	runEvalTests(t, testCases, evalBITFIELDRO, store)
+}
+
 func testEvalGEOADD(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"GEOADD with wrong number of arguments": {
@@ -5678,7 +5844,39 @@ func testEvalSINTER(t *testing.T, store *dstore.Store) {
 
 	runEvalTests(t, tests, evalSINTER, store)
 }
+func testEvalOBJECTENCODING(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			setup:  func() {},
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'object' command\r\n"),
+		},
+		"empty array": {
+			setup:  func() {},
+			input:  []string{},
+			output: []byte("-ERR wrong number of arguments for 'object' command\r\n"),
+		},
+		"object with invalid subcommand": {
+			setup:  func() {},
+			input:  []string{"TESTSUBCOMMAND", "key"},
+			output: []byte("-ERR syntax error\r\n"),
+		},
+		"key does not exist": {
+			setup:  func() {},
+			input:  []string{"ENCODING", "NONEXISTENT_KEY"},
+			output: clientio.RespNIL,
+		},
+		"key exists": {
+			setup: func() {
+				evalLPUSH([]string{"EXISTING_KEY", "mock_value"}, store)
+			},
+			input:  []string{"ENCODING", "EXISTING_KEY"},
+			output: []byte("$5\r\ndeque\r\n"),
+		},
+	}
 
+	runEvalTests(t, tests, evalOBJECT, store)
+}
 func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"append to single field": {
