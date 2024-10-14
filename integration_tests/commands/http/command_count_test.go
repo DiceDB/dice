@@ -3,7 +3,6 @@ package http
 import (
 	"fmt"
 	"testing"
-
 	"gotest.tools/v3/assert"
 )
 
@@ -31,6 +30,7 @@ func TestCommandCount(t *testing.T) {
 		})
 	}
 }
+
 
 func TestCommandCount1(t *testing.T) {
 	exec := NewHTTPCommandExecutor()

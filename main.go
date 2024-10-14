@@ -22,26 +22,23 @@ import (
 	"github.com/dicedb/dice/internal/worker"
 )
 
-const Version string = "0.0.4"
-
 func init() {
-	flag.StringVar(&config.Host, "host", "0.0.0.0", "host for the dice server")
-	flag.IntVar(&config.Port, "port", 7379, "port for the dice server")
+	flag.StringVar(&config.Host, "host", "0.0.0.0", "host for the dicedb server")
+	flag.IntVar(&config.Port, "port", 7379, "port for the dicedb server")
 	flag.BoolVar(&config.EnableHTTP, "enable-http", true, "run server in HTTP mode as well")
 	flag.BoolVar(&config.EnableMultiThreading, "enable-multithreading", false, "run server in multithreading mode")
-	flag.IntVar(&config.HTTPPort, "http-port", 8082, "HTTP port for the dice server")
-	flag.IntVar(&config.WebsocketPort, "websocket-port", 8379, "Websocket port for the dice server")
+	flag.IntVar(&config.HTTPPort, "http-port", 8082, "HTTP port for the dicedb server")
+	flag.IntVar(&config.WebsocketPort, "websocket-port", 8379, "Websocket port for the dicedb server")
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
 	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the config file")
 	flag.StringVar(&config.FileLocation, "c", config.FileLocation, "file path of the config file")
 	flag.BoolVar(&config.InitConfigCmd, "init-config", false, "initialize a new config file")
-	flag.IntVar(&config.KeysLimit, "keys-limit", config.KeysLimit, "keys limit for the dice server. "+
+	flag.IntVar(&config.KeysLimit, "keys-limit", config.KeysLimit, "keys limit for the dicedb server. "+
 		"This flag controls the number of keys each shard holds at startup. You can multiply this number with the "+
 		"total number of shard threads to estimate how much memory will be required at system start up.")
 	flag.Parse()
 
 	config.SetupConfig()
-	config.DiceConfig.Server.Version = Version
 
 	iid := observability.GetOrCreateInstanceID()
 	config.DiceConfig.InstanceID = iid
@@ -51,7 +48,7 @@ func main() {
 	logr := logger.New(logger.Opts{WithTimestamp: true})
 	slog.SetDefault(logr)
 
-	go observability.Ping()
+	go observability.Ping(logr)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -59,8 +56,8 @@ func main() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
-	queryWatchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Server.WatchChanBufSize)
-	cmdWatchChan := make(chan dstore.CmdWatchEvent, config.DiceConfig.Server.KeysLimit)
+	queryWatchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Performance.WatchChanBufSize)
+	cmdWatchChan := make(chan dstore.CmdWatchEvent, config.DiceConfig.Memory.KeysLimit)
 	var serverErrCh chan error
 
 	// Get the number of available CPU cores on the machine using runtime.NumCPU().
@@ -162,7 +159,7 @@ func main() {
 			}
 		}()
 	} else {
-		workerManager := worker.NewWorkerManager(config.DiceConfig.Server.MaxClients, shardManager)
+		workerManager := worker.NewWorkerManager(config.DiceConfig.Performance.MaxClients, shardManager)
 		// Initialize the RESP Server
 		respServer := resp.NewServer(shardManager, workerManager, cmdWatchChan, serverErrCh, logr)
 		serverWg.Add(1)

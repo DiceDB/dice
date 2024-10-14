@@ -106,7 +106,7 @@ func TestJSONARRPOP(t *testing.T) {
 					Body:    map[string]interface{}{"key": "k", "path": "$.a", "index": "1"},
 				},
 			},
-			expected: []interface{}{"OK", []interface{}{"(nil)"}},
+			expected: []interface{}{"OK", []interface{}{nil}},
 		},
 		{
 			name: "invalid json path",

@@ -72,7 +72,7 @@ const CountConst = "COUNT"
 func init() {
 	diceCommandsCount = len(DiceCmds)
 	TxnCommands = map[string]bool{"EXEC": true, "DISCARD": true}
-	serverID = fmt.Sprintf("%s:%d", config.DiceConfig.Server.Addr, config.DiceConfig.Server.Port)
+	serverID = fmt.Sprintf("%s:%d", config.DiceConfig.AsyncServer.Addr, config.DiceConfig.AsyncServer.Port)
 }
 
 // evalPING returns with an encoded "PONG"
@@ -402,7 +402,7 @@ func evalJSONARRINSERT(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(resultsArray, false)
 }
 
-// evalJSONDEBUG reports value's memmory usage in bytes
+// evalJSONDEBUG reports value's memory usage in bytes
 // Returns arity error if subcommand is missing
 // Supports only two subcommand as of now - HELP and MEMORY
 func evalJSONDebug(args []string, store *dstore.Store) []byte {
@@ -742,7 +742,7 @@ func evalJSONARRPOP(args []string, store *dstore.Store) []byte {
 }
 
 // trimElementAndUpdateArray trim the array between the given start and stop index
-// Returns trimed array
+// Returns trimmed array
 func trimElementAndUpdateArray(arr []any, start, stop int) []any {
 	updatedArray := make([]any, 0)
 	length := len(arr)
@@ -1535,7 +1535,7 @@ func evalJSONNUMMULTBY(args []string, store *dstore.Store) []byte {
 
 // evalJSONARRAPPEND appends the value(s) provided in the args to the given array path
 // in the JSON object saved at key in arguments.
-// Args must contain atleast a key, path and value.
+// Args must contain at least a key, path and value.
 // If the key does not exist or is expired, it returns response.RespNIL.
 // If the object at given path is not an array, it returns response.RespNIL.
 // Returns the new length of the array at path.
@@ -2027,7 +2027,7 @@ func incrByFloatCmd(args []string, incr float64, store *dstore.Store) []byte {
 
 	oType, oEnc := deduceTypeEncoding(strValue)
 
-	// Remove the trailing decimal for interger values
+	// Remove the trailing decimal for integer values
 	// to maintain consistency with redis
 	obj.Value = strings.TrimSuffix(strValue, ".0")
 	obj.TypeEncoding = oType | oEnc
@@ -2617,13 +2617,13 @@ func evalCommand(args []string, store *dstore.Store) []byte {
 	subcommand := strings.ToUpper(args[0])
 	switch subcommand {
 	case Count:
-		return evalCommandCount()
+		return evalCommandCount(args[1:])
 	case GetKeys:
 		return evalCommandGetKeys(args[1:])
 	case List:
-		return evalCommandList()
+		return evalCommandList(args[1:])
 	case Help:
-		return evalCommandHelp()
+		return evalCommandHelp(args[1:])
 	case Info:
 		return evalCommandInfo(args[1:])
 	default:
@@ -2632,16 +2632,22 @@ func evalCommand(args []string, store *dstore.Store) []byte {
 }
 
 // evalCommandHelp prints help message
-func evalCommandHelp() []byte {
+func evalCommandHelp(args []string) []byte {
+	if len(args) > 0 {
+		return diceerrors.NewErrArity("COMMAND|HELP")
+	}
+
 	format := "COMMAND <subcommand> [<arg> [value] [opt] ...]. Subcommands are:"
 	noTitle := "(no subcommand)"
-	noMessage := "    Return details about all Dice commands."
+	noMessage := "     Return details about all DiceDB commands."
 	countTitle := CountConst
-	countMessage := "    Return the total number of commands in this Dice server."
+	countMessage := "     Return the total number of commands in this DiceDB server."
 	listTitle := "LIST"
-	listMessage := "     Return a list of all commands in this Dice server."
+	listMessage := "     Return a list of all commands in this DiceDB server."
+	infoTitle := "INFO [<command-name> ...]"
+	infoMessage := "     Return details about the specified DiceDB commands. If no command names are given, documentation details for all commands are returned."
 	getKeysTitle := "GETKEYS <full-command>"
-	getKeysMessage := "     Return the keys from a full Dice command."
+	getKeysMessage := "     Return the keys from a full DiceDB command."
 	helpTitle := "HELP"
 	helpMessage := "     Print this help."
 	message := []string{
@@ -2652,6 +2658,8 @@ func evalCommandHelp() []byte {
 		countMessage,
 		listTitle,
 		listMessage,
+		infoTitle,
+		infoMessage,
 		getKeysTitle,
 		getKeysMessage,
 		helpTitle,
@@ -2665,7 +2673,11 @@ func evalCommandDefault() []byte {
 	return clientio.Encode(cmds, false)
 }
 
-func evalCommandList() []byte {
+func evalCommandList(args []string) []byte {
+	if len(args) > 0 {
+		return diceerrors.NewErrArity("COMMAND|LIST")
+	}
+
 	cmds := make([]string, 0, diceCommandsCount)
 	for k := range DiceCmds {
 		cmds = append(cmds, k)
@@ -2692,7 +2704,11 @@ func evalKeys(args []string, store *dstore.Store) []byte {
 }
 
 // evalCommandCount returns a number of commands supported by DiceDB
-func evalCommandCount() []byte {
+func evalCommandCount(args []string) []byte {
+	if len(args) > 0 {
+		return diceerrors.NewErrArity("COMMAND|COUNT")
+	}
+
 	return clientio.Encode(diceCommandsCount, false)
 }
 
@@ -3497,7 +3513,64 @@ func evalObjectIdleTime(key string, store *dstore.Store) []byte {
 
 	return clientio.Encode(int64(dstore.GetIdleTime(obj.LastAccessedAt)), true)
 }
+func evalObjectEncoding(key string, store *dstore.Store) []byte {
+	var encodingTypeStr string
 
+	obj := store.GetNoTouch(key)
+	if obj == nil {
+		return clientio.RespNIL
+	}
+
+	oType, oEnc := object.ExtractTypeEncoding(obj)
+	switch {
+	case oType == object.ObjTypeString && oEnc == object.ObjEncodingRaw:
+		encodingTypeStr = "raw"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeString && oEnc == object.ObjEncodingEmbStr:
+		encodingTypeStr = "embstr"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeInt && oEnc == object.ObjEncodingInt:
+		encodingTypeStr = "int"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeByteList && oEnc == object.ObjEncodingDeque:
+		encodingTypeStr = "deque"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeBitSet && oEnc == object.ObjEncodingBF:
+		encodingTypeStr = "bf"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeJSON && oEnc == object.ObjEncodingJSON:
+		encodingTypeStr = "json"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeByteArray && oEnc == object.ObjEncodingByteArray:
+		encodingTypeStr = "bytearray"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeSet && oEnc == object.ObjEncodingSetStr:
+		encodingTypeStr = "setstr"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeSet && oEnc == object.ObjEncodingSetInt:
+		encodingTypeStr = "setint"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeHashMap && oEnc == object.ObjEncodingHashMap:
+		encodingTypeStr = "hashmap"
+		return clientio.Encode(encodingTypeStr, false)
+
+	case oType == object.ObjTypeSortedSet && oEnc == object.ObjEncodingBTree:
+		encodingTypeStr = "btree"
+		return clientio.Encode(encodingTypeStr, false)
+
+	default:
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+}
 func evalOBJECT(args []string, store *dstore.Store) []byte {
 	if len(args) < 2 {
 		return diceerrors.NewErrArity("OBJECT")
@@ -3509,6 +3582,8 @@ func evalOBJECT(args []string, store *dstore.Store) []byte {
 	switch subcommand {
 	case "IDLETIME":
 		return evalObjectIdleTime(key, store)
+	case "ENCODING":
+		return evalObjectEncoding(key, store)
 	default:
 		return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
 	}
@@ -4728,282 +4803,9 @@ func parseJSONStructure(jsonData interface{}, nested bool) (resp []any) {
 	return resp
 }
 
-// evalZADD adds all the specified members with the specified scores to the sorted set stored at key.
-// If a specified member is already a member of the sorted set, the score is updated and the element reinserted at the right position to ensure the correct ordering.
-// If key does not exist, a new sorted set with the specified members as sole members is created.
-func evalZADD(args []string, store *dstore.Store) []byte {
-	if len(args) < 3 || len(args)%2 == 0 {
-		return diceerrors.NewErrArity("ZADD")
-	}
-
-	key := args[0]
-	obj := store.Get(key)
-
-	var ss *sortedset.Set
-
-	if obj != nil {
-		var err []byte
-		ss, err = sortedset.FromObject(obj)
-		if err != nil {
-			return err
-		}
-	} else {
-		ss = sortedset.New()
-	}
-
-	added := 0
-	for i := 1; i < len(args); i += 2 {
-		scoreStr := args[i]
-		member := args[i+1]
-
-		score, err := strconv.ParseFloat(scoreStr, 64)
-		if err != nil || math.IsNaN(score) {
-			return diceerrors.NewErrWithMessage(diceerrors.InvalidFloatErr)
-		}
-
-		wasInserted := ss.Upsert(score, member)
-
-		if wasInserted {
-			added += 1
-		}
-	}
-
-	obj = store.NewObj(ss, -1, object.ObjTypeSortedSet, object.ObjEncodingBTree)
-	store.Put(key, obj, dstore.WithPutCmd(dstore.ZAdd))
-
-	return clientio.Encode(added, false)
-}
-
-// evalZRANGE returns the specified range of elements in the sorted set stored at key.
-// The elements are considered to be ordered from the lowest to the highest score.
-func evalZRANGE(args []string, store *dstore.Store) []byte {
-	if len(args) < 3 {
-		return diceerrors.NewErrArity("ZRANGE")
-	}
-
-	key := args[0]
-	startStr := args[1]
-	stopStr := args[2]
-
-	withScores := false
-	reverse := false
-	for i := 3; i < len(args); i++ {
-		arg := strings.ToUpper(args[i])
-		if arg == WithScores {
-			withScores = true
-		} else if arg == REV {
-			reverse = true
-		} else {
-			return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
-		}
-	}
-
-	start, err := strconv.Atoi(startStr)
-	if err != nil {
-		return diceerrors.NewErrWithMessage(diceerrors.InvalidIntErr)
-	}
-
-	stop, err := strconv.Atoi(stopStr)
-	if err != nil {
-		return diceerrors.NewErrWithMessage(diceerrors.InvalidIntErr)
-	}
-
-	obj := store.Get(key)
-	if obj == nil {
-		return clientio.Encode([]string{}, false)
-	}
-
-	ss, errMsg := sortedset.FromObject(obj)
-
-	if errMsg != nil {
-		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
-	}
-
-	result := ss.GetRange(start, stop, withScores, reverse)
-
-	return clientio.Encode(result, false)
-}
-
-// parseEncodingAndOffet function parses offset and encoding type for bitfield commands
-// as this part is common to all subcommands
-func parseEncodingAndOffset(args []string) (eType, eVal, offset interface{}, err error) {
-	encodingRaw := args[0]
-	offsetRaw := args[1]
-	switch encodingRaw[0] {
-	case 'i':
-		eType = SIGNED
-		eVal, err = strconv.ParseInt(encodingRaw[1:], 10, 64)
-		if err != nil {
-			err = diceerrors.NewErr(diceerrors.InvalidBitfieldType)
-			return eType, eVal, offset, err
-		}
-		if eVal.(int64) <= 0 || eVal.(int64) > 64 {
-			err = diceerrors.NewErr(diceerrors.InvalidBitfieldType)
-			return eType, eVal, offset, err
-		}
-	case 'u':
-		eType = UNSIGNED
-		eVal, err = strconv.ParseInt(encodingRaw[1:], 10, 64)
-		if err != nil {
-			err = diceerrors.NewErr(diceerrors.InvalidBitfieldType)
-			return eType, eVal, offset, err
-		}
-		if eVal.(int64) <= 0 || eVal.(int64) >= 64 {
-			err = diceerrors.NewErr(diceerrors.InvalidBitfieldType)
-			return eType, eVal, offset, err
-		}
-	default:
-		err = diceerrors.NewErr(diceerrors.InvalidBitfieldType)
-		return eType, eVal, offset, err
-	}
-
-	switch offsetRaw[0] {
-	case '#':
-		offset, err = strconv.ParseInt(offsetRaw[1:], 10, 64)
-		if err != nil {
-			err = diceerrors.NewErr(diceerrors.BitfieldOffsetErr)
-			return eType, eVal, offset, err
-		}
-		offset = offset.(int64) * eVal.(int64)
-	default:
-		offset, err = strconv.ParseInt(offsetRaw, 10, 64)
-		if err != nil {
-			err = diceerrors.NewErr(diceerrors.BitfieldOffsetErr)
-			return eType, eVal, offset, err
-		}
-	}
-	return eType, eVal, offset, err
-}
-
-// evalBITFIELD evaluates BITFIELD operations on a key store string, int or bytearray types
-// it returns an array of results depending on the subcommands
-// it allows mutation using SET and INCRBY commands
-// returns arity error, offset type error, overflow type error, encoding type error, integer error, syntax error
-// GET <encoding> <offset> -- Returns the specified bit field.
-// SET <encoding> <offset> <value> -- Set the specified bit field
-// and returns its old value.
-// INCRBY <encoding> <offset> <increment> -- Increments or decrements
-// (if a negative increment is given) the specified bit field and returns the new value.
-// There is another subcommand that only changes the behavior of successive
-// INCRBY and SET subcommands calls by setting the overflow behavior:
-// OVERFLOW [WRAP|SAT|FAIL]`
-func evalBITFIELD(args []string, store *dstore.Store) []byte {
-	if len(args) < 1 {
-		return diceerrors.NewErrArity("BITFIELD")
-	}
-
-	var overflowType string = WRAP // Default overflow type
-
-	type BitFieldOp struct {
-		Kind   string
-		EType  string
-		EVal   int64
-		Offset int64
-		Value  int64
-	}
-	var ops []BitFieldOp
-
-	for i := 1; i < len(args); {
-		switch strings.ToUpper(args[i]) {
-		case GET:
-			if len(args) <= i+2 {
-				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
-			}
-			eType, eVal, offset, err := parseEncodingAndOffset(args[i+1 : i+3])
-			if err != nil {
-				return diceerrors.NewErrWithFormattedMessage(err.Error())
-			}
-			ops = append(ops, BitFieldOp{
-				Kind:   GET,
-				EType:  eType.(string),
-				EVal:   eVal.(int64),
-				Offset: offset.(int64),
-				Value:  int64(-1),
-			})
-			i += 3
-		case SET:
-			if len(args) <= i+3 {
-				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
-			}
-			eType, eVal, offset, err := parseEncodingAndOffset(args[i+1 : i+3])
-			if err != nil {
-				return diceerrors.NewErrWithFormattedMessage(err.Error())
-			}
-			value, err1 := strconv.ParseInt(args[i+3], 10, 64)
-			if err1 != nil {
-				return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
-			}
-			ops = append(ops, BitFieldOp{
-				Kind:   SET,
-				EType:  eType.(string),
-				EVal:   eVal.(int64),
-				Offset: offset.(int64),
-				Value:  value,
-			})
-			i += 4
-		case INCRBY:
-			if len(args) <= i+3 {
-				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
-			}
-			eType, eVal, offset, err := parseEncodingAndOffset(args[i+1 : i+3])
-			if err != nil {
-				return diceerrors.NewErrWithFormattedMessage(err.Error())
-			}
-			value, err1 := strconv.ParseInt(args[i+3], 10, 64)
-			if err1 != nil {
-				return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
-			}
-			ops = append(ops, BitFieldOp{
-				Kind:   INCRBY,
-				EType:  eType.(string),
-				EVal:   eVal.(int64),
-				Offset: offset.(int64),
-				Value:  value,
-			})
-			i += 4
-		case OVERFLOW:
-			if len(args) <= i+1 {
-				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
-			}
-			switch strings.ToUpper(args[i+1]) {
-			case WRAP, FAIL, SAT:
-				overflowType = strings.ToUpper(args[i+1])
-			default:
-				return diceerrors.NewErrWithFormattedMessage(diceerrors.OverflowTypeErr)
-			}
-			ops = append(ops, BitFieldOp{
-				Kind:   OVERFLOW,
-				EType:  overflowType,
-				EVal:   int64(-1),
-				Offset: int64(-1),
-				Value:  int64(-1),
-			})
-			i += 2
-		default:
-			return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
-		}
-	}
-	key := args[0]
-	obj := store.Get(key)
-	if obj == nil {
-		obj = store.NewObj(NewByteArray(1), -1, object.ObjTypeByteArray, object.ObjEncodingByteArray)
-		store.Put(args[0], obj)
-	}
-	var value *ByteArray
-	var err error
-
-	switch oType, _ := object.ExtractTypeEncoding(obj); oType {
-	case object.ObjTypeByteArray:
-		value = obj.Value.(*ByteArray)
-	case object.ObjTypeString, object.ObjTypeInt:
-		value, err = NewByteArrayFromObj(obj)
-		if err != nil {
-			return diceerrors.NewErrWithMessage("value is not a valid byte array")
-		}
-	default:
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
+// This method executes each operation, contained in ops array, based on commands used.
+func executeBitfieldOps(value *ByteArray, ops []utils.BitFieldOp) []interface{} {
+	overflowType := WRAP
 	var result []interface{}
 	for _, op := range ops {
 		switch op.Kind {
@@ -5025,8 +4827,62 @@ func evalBITFIELD(args []string, store *dstore.Store) []byte {
 			overflowType = op.EType
 		}
 	}
+	return result
+}
 
+// Generic method for both BITFIELD and BITFIELD_RO.
+// isReadOnly method is true for BITFIELD_RO command.
+func bitfieldEvalGeneric(args []string, store *dstore.Store, isReadOnly bool) []byte {
+	var ops []utils.BitFieldOp
+	ops, err2 := utils.ParseBitfieldOps(args, isReadOnly)
+
+	if err2 != nil {
+		return err2
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		obj = store.NewObj(NewByteArray(1), -1, object.ObjTypeByteArray, object.ObjEncodingByteArray)
+		store.Put(args[0], obj)
+	}
+	var value *ByteArray
+	var err error
+
+	switch oType, _ := object.ExtractTypeEncoding(obj); oType {
+	case object.ObjTypeByteArray:
+		value = obj.Value.(*ByteArray)
+	case object.ObjTypeString, object.ObjTypeInt:
+		value, err = NewByteArrayFromObj(obj)
+		if err != nil {
+			return diceerrors.NewErrWithMessage("value is not a valid byte array")
+		}
+	default:
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
+	result := executeBitfieldOps(value, ops)
 	return clientio.Encode(result, false)
+}
+
+// evalBITFIELD evaluates BITFIELD operations on a key store string, int or bytearray types
+// it returns an array of results depending on the subcommands
+// it allows mutation using SET and INCRBY commands
+// returns arity error, offset type error, overflow type error, encoding type error, integer error, syntax error
+// GET <encoding> <offset> -- Returns the specified bit field.
+// SET <encoding> <offset> <value> -- Set the specified bit field
+// and returns its old value.
+// INCRBY <encoding> <offset> <increment> -- Increments or decrements
+// (if a negative increment is given) the specified bit field and returns the new value.
+// There is another subcommand that only changes the behavior of successive
+// INCRBY and SET subcommands calls by setting the overflow behavior:
+// OVERFLOW [WRAP|SAT|FAIL]`
+func evalBITFIELD(args []string, store *dstore.Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("BITFIELD")
+	}
+
+	return bitfieldEvalGeneric(args, store, false)
 }
 
 func evalHINCRBYFLOAT(args []string, store *dstore.Store) []byte {
@@ -5064,6 +4920,15 @@ func evalHINCRBYFLOAT(args []string, store *dstore.Store) []byte {
 	store.Put(key, obj)
 
 	return clientio.Encode(numkey, false)
+}
+
+// Read-only variant of the BITFIELD command. It is like the original BITFIELD but only accepts GET subcommand and can safely be used in read-only replicas.
+func evalBITFIELDRO(args []string, store *dstore.Store) []byte {
+	if len(args) < 1 {
+		return diceerrors.NewErrArity("BITFIELD_RO")
+	}
+
+	return bitfieldEvalGeneric(args, store, true)
 }
 
 func evalGEOADD(args []string, store *dstore.Store) []byte {

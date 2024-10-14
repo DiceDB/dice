@@ -56,7 +56,7 @@ func NewWorker(wid string, respChan chan *ops.StoreResponse,
 		respChan:        respChan,
 		logger:          logger,
 		Session:         auth.NewSession(),
-		adhocReqChan:    make(chan *cmd.DiceDBCmd, config.DiceConfig.Server.AdhocReqChanBufSize),
+		adhocReqChan:    make(chan *cmd.DiceDBCmd, config.DiceConfig.Performance.AdhocReqChanBufSize),
 	}
 }
 
@@ -217,8 +217,11 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 		case Watch:
 			// Generate the Cmd being watched. All we need to do is remove the .WATCH suffix from the command and pass
 			// it along as is.
+			// Modify the command name to remove the .WATCH suffix, this will allow us to generate a consistent
+			// fingerprint (which uses the command name without the suffix)
+			diceDBCmd.Cmd = diceDBCmd.Cmd[:len(diceDBCmd.Cmd)-6]
 			watchCmd := &cmd.DiceDBCmd{
-				Cmd:  diceDBCmd.Cmd[:len(diceDBCmd.Cmd)-6], // Remove the .WATCH suffix
+				Cmd:  diceDBCmd.Cmd,
 				Args: diceDBCmd.Args,
 			}
 			cmdList = append(cmdList, watchCmd)

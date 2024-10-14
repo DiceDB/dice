@@ -125,7 +125,7 @@ func executeCommand(cmd string) (string, error) {
 	var out []byte
 	var err error
 
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == windows {
 		out, err = exec.Command("cmd", "/C", cmd).Output()
 	} else {
 		out, err = exec.Command("sh", "-c", cmd).Output()

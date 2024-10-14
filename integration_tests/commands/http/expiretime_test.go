@@ -95,8 +95,8 @@ func TestExpireTimeHttp(t *testing.T) {
 					t.Fatalf("Not enough results. Expected %d, got %d", len(tc.expected), len(results))
 				}
 
-				if expected == "(nil)" {
-					assert.Assert(t, results[i] == "(nil)" || results[i] == "",
+				if expected == nil {
+					assert.Assert(t, results[i] == nil || results[i] == "",
 						"Expected nil or empty result, got %v", results[i])
 				} else {
 					assert.DeepEqual(t, expected, results[i])
