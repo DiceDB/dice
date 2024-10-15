@@ -11,6 +11,7 @@ func TestHINCRBY(t *testing.T) {
 	defer conn.Close()
 
 	defer FireCommand(conn, "FLUSHDB")
+	defer FireCommand(conn, "DEL key new-key")
 
 	testcases := []TestCase{
 		{
