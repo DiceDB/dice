@@ -49,7 +49,6 @@ func evalBITPOS(args []string, store *dstore.Store) *EvalResponse {
 			Result: nil,
 			Error:  err,
 		}
-
 	}
 
 	start, end, rangeType, endRangeProvided, err := parseOptionalParams(args[2:], len(byteSlice))
@@ -174,7 +173,6 @@ func getBitPosWithBitRange(byteSlice []byte, bitToFind byte, start, end int) int
 			return i
 		}
 	}
-
 	// Bit not found in the range
 	return -1
 }
