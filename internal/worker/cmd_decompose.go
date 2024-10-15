@@ -78,7 +78,7 @@ func decomposeCopy(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cm
 	}
 
 	if len(cd.Args) != 2 {
-		return nil, diceerrors.ErrWrongArgumentCount("RENAME")
+		return nil, diceerrors.ErrWrongArgumentCount("COPY")
 	}
 
 	decomposedCmds := []*cmd.DiceDBCmd{}
