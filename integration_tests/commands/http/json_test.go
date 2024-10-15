@@ -672,9 +672,17 @@ func TestJsonStrlen(t *testing.T) {
 			expected: []interface{}{"OK", "WRONGTYPE wrong type of path value - expected string but found array"},
 		},
 		{
-			name: "STRLEN with no path and object at number",
+			name: "STRLEN with no path and object at integer",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": 1}},
+				{Command: "JSON.STRLEN", Body: map[string]interface{}{"key": "k"}},
+			},
+			expected: []interface{}{"OK", "WRONGTYPE wrong type of path value - expected string but found integer"},
+		},
+		{
+			name: "STRLEN with no path and object at number",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": 1.9}},
 				{Command: "JSON.STRLEN", Body: map[string]interface{}{"key": "k"}},
 			},
 			expected: []interface{}{"OK", "WRONGTYPE wrong type of path value - expected string but found number"},
