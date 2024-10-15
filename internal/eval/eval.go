@@ -3783,9 +3783,15 @@ func evalJSONSTRLEN(args []string, store *dstore.Store) []byte {
 			return clientio.RespNIL
 		}
 		jsonData := obj.Value
-
-		if utils.GetJSONFieldType(jsonData) != utils.StringType {
-			return diceerrors.NewErrWithFormattedMessage(diceerrors.JSONPathValueTypeErr)
+		jsonDataType := strings.ToLower(utils.GetJSONFieldType(jsonData))
+		if jsonDataType == "number" {
+			jsonDataFloat := jsonData.(float64)
+			if jsonDataFloat == float64(int64(jsonDataFloat)) {
+				jsonDataType = "integer"
+			}
+		}
+		if jsonDataType != utils.StringType {
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.JSONPathValueTypeErr, jsonDataType)
 		}
 		return clientio.Encode(len(jsonData.(string)), false)
 	}
@@ -4384,102 +4390,6 @@ func parseJSONStructure(jsonData interface{}, nested bool) (resp []any) {
 		resp = append(resp, []byte("(unsupported type)"))
 	}
 	return resp
-}
-
-// evalZADD adds all the specified members with the specified scores to the sorted set stored at key.
-// If a specified member is already a member of the sorted set, the score is updated and the element reinserted at the right position to ensure the correct ordering.
-// If key does not exist, a new sorted set with the specified members as sole members is created.
-func evalZADD(args []string, store *dstore.Store) []byte {
-	if len(args) < 3 || len(args)%2 == 0 {
-		return diceerrors.NewErrArity("ZADD")
-	}
-
-	key := args[0]
-	obj := store.Get(key)
-
-	var ss *sortedset.Set
-
-	if obj != nil {
-		var err []byte
-		ss, err = sortedset.FromObject(obj)
-		if err != nil {
-			return err
-		}
-	} else {
-		ss = sortedset.New()
-	}
-
-	added := 0
-	for i := 1; i < len(args); i += 2 {
-		scoreStr := args[i]
-		member := args[i+1]
-
-		score, err := strconv.ParseFloat(scoreStr, 64)
-		if err != nil || math.IsNaN(score) {
-			return diceerrors.NewErrWithMessage(diceerrors.InvalidFloatErr)
-		}
-
-		wasInserted := ss.Upsert(score, member)
-
-		if wasInserted {
-			added += 1
-		}
-	}
-
-	obj = store.NewObj(ss, -1, object.ObjTypeSortedSet, object.ObjEncodingBTree)
-	store.Put(key, obj, dstore.WithPutCmd(dstore.ZAdd))
-
-	return clientio.Encode(added, false)
-}
-
-// evalZRANGE returns the specified range of elements in the sorted set stored at key.
-// The elements are considered to be ordered from the lowest to the highest score.
-func evalZRANGE(args []string, store *dstore.Store) []byte {
-	if len(args) < 3 {
-		return diceerrors.NewErrArity("ZRANGE")
-	}
-
-	key := args[0]
-	startStr := args[1]
-	stopStr := args[2]
-
-	withScores := false
-	reverse := false
-	for i := 3; i < len(args); i++ {
-		arg := strings.ToUpper(args[i])
-		if arg == WithScores {
-			withScores = true
-		} else if arg == REV {
-			reverse = true
-		} else {
-			return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
-		}
-	}
-
-	start, err := strconv.Atoi(startStr)
-	if err != nil {
-		return diceerrors.NewErrWithMessage(diceerrors.InvalidIntErr)
-	}
-
-	stop, err := strconv.Atoi(stopStr)
-	if err != nil {
-		return diceerrors.NewErrWithMessage(diceerrors.InvalidIntErr)
-	}
-
-	obj := store.Get(key)
-	if obj == nil {
-		return clientio.Encode([]string{}, false)
-	}
-
-	ss, errMsg := sortedset.FromObject(obj)
-
-	if errMsg != nil {
-		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
-	}
-
-	result := ss.GetRange(start, stop, withScores, reverse)
-
-	return clientio.Encode(result, false)
 }
 
 // This method executes each operation, contained in ops array, based on commands used.

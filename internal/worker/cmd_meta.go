@@ -46,6 +46,8 @@ const (
 	CmdGetSet      = "GETSET"
 	CmdGetWatch    = "GET.WATCH"
 	CmdZRangeWatch = "ZRANGE.WATCH"
+	CmdZAdd        = "ZADD"
+	CmdZRange      = "ZRANGE"
 	CmdSetBit      = "SETBIT"
 	CmdGetBit      = "GETBIT"
 	CmdBitCount    = "BITCOUNT"
@@ -123,6 +125,14 @@ var CommandsMeta = map[string]CmdMeta{
 	},
 	CmdZRangeWatch: {
 		CmdType: Watch,
+	},
+
+	// Sorted set commands
+	CmdZAdd: {
+		CmdType: SingleShard,
+	},
+	CmdZRange: {
+		CmdType: SingleShard,
 	},
 }
 

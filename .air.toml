@@ -10,7 +10,7 @@ tmp_dir = "tmp"
   exclude_regex = []
   exclude_unchanged = false
   follow_symlink = false
-  full_bin = "GO_ENV=development ./dicedb --enable-multithreading=false"
+  full_bin = "GO_ENV=development ./dicedb --enable-multithreading=false --enable-profiling=false"
   include_dir = []
   include_ext = ["go", "tpl", "tmpl", "yaml", "env"]
   kill_delay = "1s"

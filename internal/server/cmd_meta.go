@@ -62,6 +62,14 @@ var (
 		Cmd:     "SETEX",
 		CmdType: SingleShard,
 	}
+	zaddCmdMeta = CmdsMeta{
+		Cmd:     "ZADD",
+		CmdType: SingleShard,
+	}
+	zrangeCmdMeta = CmdsMeta{
+		Cmd:     "ZRANGE",
+		CmdType: SingleShard,
+	}
 	setbitCmdMeta = CmdsMeta{
 		Cmd:     "SETBIT",
 		CmdType: SingleShard,
@@ -107,6 +115,8 @@ func init() {
 	WorkerCmdsMeta["GET"] = getCmdMeta
 	WorkerCmdsMeta["GETSET"] = getsetCmdMeta
 	WorkerCmdsMeta["SETEX"] = setexCmdMeta
+	WorkerCmdsMeta["ZADD"] = zaddCmdMeta
+	WorkerCmdsMeta["ZRANGE"] = zrangeCmdMeta	
 	WorkerCmdsMeta["SETBIT"] = setbitCmdMeta
 	WorkerCmdsMeta["GETBIT"] = getbitCmdMeta
 	WorkerCmdsMeta["BITCOUNT"] = bitcountCmdMeta
