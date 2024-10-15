@@ -83,7 +83,7 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdGetSet: {
 		CmdType: SingleShard,
 	},
-	CmdGetRange : {
+	CmdGetRange: {
 		CmdType: SingleShard,
 	},
 

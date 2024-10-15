@@ -979,12 +979,12 @@ var (
 		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
 	}
 	getRangeCmdMeta = DiceCmdMeta{
-		Name:     "GETRANGE",
-		Info:     `Returns a substring of the string stored at a key.`,
+		Name:       "GETRANGE",
+		Info:       `Returns a substring of the string stored at a key.`,
 		IsMigrated: true,
-		NewEval: evalGETRANGE,
-		Arity:    4,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalGETRANGE,
+		Arity:      4,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	setexCmdMeta = DiceCmdMeta{
 		Name: "SETEX",

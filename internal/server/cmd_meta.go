@@ -64,6 +64,7 @@ var (
 	}
 	getrangeCmdMeta = CmdsMeta{
 		Cmd:     "GETRANGE",
+		CmdType: SingleShard,
 	}
 	zaddCmdMeta = CmdsMeta{
 		Cmd:     "ZADD",
@@ -91,7 +92,6 @@ func init() {
 	WorkerCmdsMeta["GETSET"] = getsetCmdMeta
 	WorkerCmdsMeta["SETEX"] = setexCmdMeta
 	WorkerCmdsMeta["GETRANGE"] = getrangeCmdMeta
-
 	WorkerCmdsMeta["ZADD"] = zaddCmdMeta
 	WorkerCmdsMeta["ZRANGE"] = zrangeCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
