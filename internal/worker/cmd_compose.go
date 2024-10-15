@@ -2,13 +2,9 @@ package worker
 
 import (
 	"context"
-	"log/slog"
 
-	"github.com/dicedb/dice/internal/cmd"
-	diceerrors "github.com/dicedb/dice/internal/errors"
+	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/eval"
-	"github.com/dicedb/dice/internal/ops"
-	"github.com/dicedb/dice/internal/shard"
 )
 
 // Gather file is used by Worker to collect and process responses
@@ -24,70 +20,22 @@ import (
 // The result is a unified response that reflects the combined
 // outcome of operations executed across multiple shards, ensuring
 // that the client receives a single, cohesive result.
-func composeRename(ctx context.Context, originalCmd *cmd.DiceDBCmd, worker *BaseWorker, responses ...eval.EvalResponse) error {
+func composeRename(ctx context.Context, responses ...eval.EvalResponse) interface{} {
 	for idx := range responses {
 		if responses[idx].Error != nil {
-			err := worker.ioHandler.Write(ctx, diceerrors.ErrInternalServer)
-			if err != nil {
-				return err
-			}
+			return responses[idx].Error
 		}
 	}
 
-	cmds := cmd.DiceDBCmd{
-		RequestID: ctx.Value("request_id").(uint32),
-		Cmd:       "SET",
-		Args:      []string{originalCmd.Args[1], responses[0].Result.(string)},
-	}
+	return clientio.OK
+}
 
-	var rc chan *ops.StoreOp
-	var sid shard.ShardID
-	var key string
-	if len(cmds.Args) > 0 {
-		key = cmds.Args[0]
-	} else {
-		key = cmds.Cmd
-	}
-
-	sid, rc = worker.shardManager.GetShardInfo(key)
-
-	rc <- &ops.StoreOp{
-		SeqID:     0,
-		RequestID: cmds.RequestID,
-		Cmd:       &cmds,
-		WorkerID:  worker.id,
-		ShardID:   sid,
-		Client:    nil,
-	}
-
-	var evalResp []eval.EvalResponse
-
-	select {
-	case <-ctx.Done():
-		worker.logger.Error("Timed out waiting for response from shards", slog.String("workerID", worker.id), slog.Any("error", ctx.Err()))
-	case resp, ok := <-worker.respChan:
-		if ok {
-			evalResp = append(evalResp, *resp.EvalResponse)
-		}
-	case sError, ok := <-worker.shardManager.ShardErrorChan:
-		if ok {
-			worker.logger.Error("Error from shard", slog.String("workerID", worker.id), slog.Any("error", sError))
+func composeCopy(ctx context.Context, responses ...eval.EvalResponse) interface{} {
+	for idx := range responses {
+		if responses[idx].Error != nil {
+			return responses[idx].Error
 		}
 	}
 
-	if evalResp[0].Error != nil {
-		err := worker.ioHandler.Write(ctx, evalResp[0].Error)
-		if err != nil {
-			worker.logger.Debug("Error sending response to client", slog.String("workerID", worker.id), slog.Any("error", err))
-		}
-		return err
-	}
-
-	err := worker.ioHandler.Write(ctx, evalResp[0].Result)
-	if err != nil {
-		worker.logger.Debug("Error sending response to client", slog.String("workerID", worker.id), slog.Any("error", err))
-		return err
-	}
-
-	return nil
+	return clientio.OK
 }

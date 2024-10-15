@@ -190,8 +190,9 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 
 			parser := respparser.NewParser(s.logger)
 			respChan := make(chan *ops.StoreResponse)
+			preProcessingChan := make(chan *ops.StoreResponse)
 			wID := GenerateUniqueWorkerID()
-			w := worker.NewWorker(wID, respChan, ioHandler, parser, s.shardManager, s.globalErrorChan, s.logger)
+			w := worker.NewWorker(wID, respChan, ioHandler, parser, s.shardManager, s.globalErrorChan, preProcessingChan, s.logger)
 
 			// Register the worker with the worker manager
 			err = s.workerManager.RegisterWorker(w)

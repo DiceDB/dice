@@ -32,31 +32,33 @@ type Worker interface {
 }
 
 type BaseWorker struct {
-	id              string
-	ioHandler       iohandler.IOHandler
-	parser          requestparser.Parser
-	shardManager    *shard.ShardManager
-	respChan        chan *ops.StoreResponse
-	adhocReqChan    chan *cmd.DiceDBCmd
-	Session         *auth.Session
-	globalErrorChan chan error
-	logger          *slog.Logger
+	id                string
+	ioHandler         iohandler.IOHandler
+	parser            requestparser.Parser
+	shardManager      *shard.ShardManager
+	respChan          chan *ops.StoreResponse
+	adhocReqChan      chan *cmd.DiceDBCmd
+	Session           *auth.Session
+	globalErrorChan   chan error
+	logger            *slog.Logger
+	preProcessingChan chan *ops.StoreResponse
 }
 
 func NewWorker(wid string, respChan chan *ops.StoreResponse,
 	ioHandler iohandler.IOHandler, parser requestparser.Parser,
-	shardManager *shard.ShardManager, gec chan error,
+	shardManager *shard.ShardManager, gec chan error, preProcessingChan chan *ops.StoreResponse,
 	logger *slog.Logger) *BaseWorker {
 	return &BaseWorker{
-		id:              wid,
-		ioHandler:       ioHandler,
-		parser:          parser,
-		shardManager:    shardManager,
-		globalErrorChan: gec,
-		respChan:        respChan,
-		logger:          logger,
-		Session:         auth.NewSession(),
-		adhocReqChan:    make(chan *cmd.DiceDBCmd, config.DiceConfig.Performance.AdhocReqChanBufSize),
+		id:                wid,
+		ioHandler:         ioHandler,
+		parser:            parser,
+		shardManager:      shardManager,
+		globalErrorChan:   gec,
+		respChan:          respChan,
+		preProcessingChan: preProcessingChan,
+		logger:            logger,
+		Session:           auth.NewSession(),
+		adhocReqChan:      make(chan *cmd.DiceDBCmd, config.DiceConfig.Performance.AdhocReqChanBufSize),
 	}
 }
 
@@ -158,6 +160,14 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 }
 
 func (w *BaseWorker) executeCommandHandler(execCtx context.Context, errChan chan error, cmds []*cmd.DiceDBCmd, isWatchNotification bool) {
+	// Retrieve metadata for the command to determine if multisharding is supported.
+	meta, ok := CommandsMeta[cmds[0].Cmd]
+	if ok {
+		if meta.preProcessingReq {
+			meta.preProcessResponse(w, cmds[0])
+		}
+	}
+
 	err := w.executeCommand(execCtx, cmds[0], isWatchNotification)
 	if err != nil {
 		w.logger.Error("Error executing command", slog.String("workerID", w.id), slog.Any("error", err))
@@ -192,8 +202,16 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 			cmdList = append(cmdList, diceDBCmd)
 
 		case MultiShard:
+			var err error
 			// If the command supports multisharding, break it down into multiple commands.
-			cmdList = meta.decomposeCommand(diceDBCmd)
+			cmdList, err = meta.decomposeCommand(ctx, w, diceDBCmd)
+			if err != nil {
+				workerErr := w.ioHandler.Write(ctx, err)
+				if workerErr != nil {
+					w.logger.Debug("Error executing for worker", slog.String("workerID", w.id), slog.Any("error", workerErr))
+				}
+				return workerErr
+			}
 
 		case Custom:
 			// if command is of type Custom, write a custom logic around it
@@ -363,8 +381,7 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 			}
 
 		case MultiShard:
-			// Handle multi-shard commands
-			err := val.composeResponse(ctx, diceDBCmd, w, evalResp...)
+			err := w.ioHandler.Write(ctx, val.composeResponse(ctx, evalResp...))
 			if err != nil {
 				w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
 				return err

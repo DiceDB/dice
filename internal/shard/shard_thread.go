@@ -28,6 +28,7 @@ type ShardThread struct {
 	store            *dstore.Store                      // store that the shard is responsible for.
 	ReqChan          chan *ops.StoreOp                  // ReqChan is this shard's channel for receiving requests.
 	workerMap        map[string]chan *ops.StoreResponse // workerMap maps workerID to its unique response channel
+	preProcessingMap map[string]chan *ops.StoreResponse // map to maintain list of preprocessing requests
 	workerMutex      sync.RWMutex                       // workerMutex is the workerMap's mutex for thread safety.
 	globalErrorChan  chan error                         // globalErrorChan is the channel for sending system-level errors.
 	shardErrorChan   chan *ShardError                   // ShardErrorChan is the channel for sending shard-level errors.
@@ -43,6 +44,7 @@ func NewShardThread(id ShardID, gec chan error, sec chan *ShardError, queryWatch
 		store:            dstore.NewStore(queryWatchChan, cmdWatchChan),
 		ReqChan:          make(chan *ops.StoreOp, 1000),
 		workerMap:        make(map[string]chan *ops.StoreResponse),
+		preProcessingMap: make(map[string]chan *ops.StoreResponse),
 		globalErrorChan:  gec,
 		shardErrorChan:   sec,
 		lastCronExecTime: utils.GetCurrentTime(),
@@ -75,9 +77,13 @@ func (shard *ShardThread) runCronTasks() {
 	shard.lastCronExecTime = utils.GetCurrentTime()
 }
 
-func (shard *ShardThread) registerWorker(workerID string, workerChan chan *ops.StoreResponse) {
+func (shard *ShardThread) registerWorker(workerID string, processingChan ...chan *ops.StoreResponse) {
 	shard.workerMutex.Lock()
-	shard.workerMap[workerID] = workerChan
+	if len(processingChan) > 1 {
+		shard.workerMap[workerID] = processingChan[0]        // response channel on first index
+		shard.preProcessingMap[workerID] = processingChan[1] // preprocessing channel on second index
+	}
+	shard.workerMap[workerID] = processingChan[0]
 	shard.workerMutex.Unlock()
 }
 
@@ -93,6 +99,7 @@ func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 
 	shard.workerMutex.RLock()
 	workerChan, ok := shard.workerMap[op.WorkerID]
+	preProcessChan := shard.preProcessingMap[op.WorkerID]
 	shard.workerMutex.RUnlock()
 
 	sp := &ops.StoreResponse{
@@ -108,7 +115,11 @@ func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 		}
 	}
 
-	workerChan <- sp
+	if op.Cmd.PreProcessingReq {
+		preProcessChan <- sp
+	} else {
+		workerChan <- sp
+	}
 }
 
 // cleanup handles cleanup logic when the shard stops.

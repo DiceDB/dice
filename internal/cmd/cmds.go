@@ -8,9 +8,10 @@ import (
 )
 
 type DiceDBCmd struct {
-	RequestID uint32
-	Cmd       string
-	Args      []string
+	RequestID        uint32
+	Cmd              string
+	Args             []string
+	PreProcessingReq bool
 }
 
 type RedisCmds struct {

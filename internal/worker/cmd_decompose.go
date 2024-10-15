@@ -1,7 +1,11 @@
 package worker
 
 import (
+	"context"
+	"log/slog"
+
 	"github.com/dicedb/dice/internal/cmd"
+	diceerrors "github.com/dicedb/dice/internal/errors"
 )
 
 // Breakup file is used by Worker to split commands that need to be executed
@@ -18,19 +22,73 @@ import (
 //
 // The result is a list of commands, one for each shard, which are then
 // scattered to the shard threads for execution.
-func decomposeRename(cd *cmd.DiceDBCmd) []*cmd.DiceDBCmd {
+func decomposeRename(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+	// Waiting for GET command response
+	var val string
+	select {
+	case <-ctx.Done():
+		w.logger.Error("Timed out waiting for response from shards", slog.String("workerID", w.id), slog.Any("error", ctx.Err()))
+	case preProcessedResp, ok := <-w.preProcessingChan:
+		if ok {
+			evalResp := preProcessedResp.EvalResponse
+			if evalResp.Error != nil {
+				return nil, evalResp.Error
+			}
+
+			val = evalResp.Result.(string)
+		}
+	}
+
+	if len(cd.Args) != 2 {
+		return nil, diceerrors.ErrWrongArgumentCount("RENAME")
+	}
+
 	decomposedCmds := []*cmd.DiceDBCmd{}
 	decomposedCmds = append(decomposedCmds,
 		&cmd.DiceDBCmd{
 			RequestID: cd.RequestID,
-			Cmd:       "GET",
+			Cmd:       "DEL",
 			Args:      []string{cd.Args[0]},
 		},
 		&cmd.DiceDBCmd{
 			RequestID: cd.RequestID,
-			Cmd:       "DELETE",
-			Args:      []string{cd.Args[0]},
+			Cmd:       "SET",
+			Args:      []string{cd.Args[1], val},
 		},
 	)
-	return decomposedCmds
+
+	return decomposedCmds, nil
+}
+
+func decomposeCopy(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+	// Waiting for GET command response
+	var val string
+	select {
+	case <-ctx.Done():
+		w.logger.Error("Timed out waiting for response from shards", slog.String("workerID", w.id), slog.Any("error", ctx.Err()))
+	case preProcessedResp, ok := <-w.preProcessingChan:
+		if ok {
+			evalResp := preProcessedResp.EvalResponse
+			if evalResp.Error != nil {
+				return nil, evalResp.Error
+			}
+
+			val = evalResp.Result.(string)
+		}
+	}
+
+	if len(cd.Args) != 2 {
+		return nil, diceerrors.ErrWrongArgumentCount("RENAME")
+	}
+
+	decomposedCmds := []*cmd.DiceDBCmd{}
+	decomposedCmds = append(decomposedCmds,
+		&cmd.DiceDBCmd{
+			RequestID: cd.RequestID,
+			Cmd:       "SET",
+			Args:      []string{cd.Args[1], val},
+		},
+	)
+
+	return decomposedCmds, nil
 }

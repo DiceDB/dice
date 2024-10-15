@@ -50,6 +50,7 @@ const (
 // Multi-shard commands.
 const (
 	CmdRename = "RENAME"
+	CmdCopy   = "COPY"
 )
 
 // Watch commands
@@ -67,12 +68,16 @@ type CmdMeta struct {
 
 	// decomposeCommand is a function that takes a DiceDB command and breaks it down into smaller,
 	// manageable DiceDB commands for each shard processing. It returns a slice of DiceDB commands.
-	decomposeCommand func(DiceDBCmd *cmd.DiceDBCmd) []*cmd.DiceDBCmd
+	decomposeCommand func(ctx context.Context, worker *BaseWorker, DiceDBCmd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error)
 
 	// composeResponse is a function that combines multiple responses from the execution of commands
 	// into a single response object. It accepts a variadic parameter of EvalResponse objects
 	// and returns a unified response interface. It is used in the command type "MultiShard"
-	composeResponse func(ctx context.Context, originalCmd *cmd.DiceDBCmd, worker *BaseWorker, responses ...eval.EvalResponse) error
+	composeResponse func(ctx context.Context, responses ...eval.EvalResponse) interface{}
+
+	preProcessingReq bool
+
+	preProcessResponse func(worker *BaseWorker, DiceDBCmd *cmd.DiceDBCmd)
 }
 
 var CommandsMeta = map[string]CmdMeta{
@@ -95,9 +100,19 @@ var CommandsMeta = map[string]CmdMeta{
 
 	// Multi-shard commands.
 	CmdRename: {
-		CmdType:          MultiShard,
-		decomposeCommand: decomposeRename,
-		composeResponse:  composeRename,
+		CmdType:            MultiShard,
+		preProcessingReq:   true,
+		preProcessResponse: preProcessRename,
+		decomposeCommand:   decomposeRename,
+		composeResponse:    composeRename,
+	},
+
+	CmdCopy: {
+		CmdType:            MultiShard,
+		preProcessingReq:   true,
+		preProcessResponse: preProcessCopy,
+		decomposeCommand:   decomposeCopy,
+		composeResponse:    composeCopy,
 	},
 
 	// Custom commands.

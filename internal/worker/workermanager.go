@@ -38,8 +38,9 @@ func (wm *WorkerManager) RegisterWorker(worker Worker) error {
 
 	wm.connectedClients.Store(worker.ID(), worker)
 	respChan := worker.(*BaseWorker).respChan
-	if respChan != nil {
-		wm.shardManager.RegisterWorker(worker.ID(), respChan) // TODO: Change respChan type to ShardResponse
+	preProcessingChan := worker.(*BaseWorker).preProcessingChan
+	if respChan != nil && preProcessingChan != nil {
+		wm.shardManager.RegisterWorker(worker.ID(), respChan, preProcessingChan) // TODO: Change respChan type to ShardResponse
 	}
 
 	wm.numWorkers.Add(1)
