@@ -596,7 +596,7 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 	store.Put(destKey, obj)
 
 	return &EvalResponse{
-		Result: "OK",
+		Result: clientio.OK,
 		Error:  nil,
 	}
 }

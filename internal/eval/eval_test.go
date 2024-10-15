@@ -2213,7 +2213,7 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 			setup: func() {},
 			input: []string{"NON_EXISTING_DEST_KEY"},
 			migratedOutput: EvalResponse{
-				Result: "OK",
+				Result: clientio.OK,
 				Error:  nil,
 			},
 		},
@@ -2222,7 +2222,7 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 			setup: func() {},
 			input: []string{"NON_EXISTING_DEST_KEY"},
 			migratedOutput: EvalResponse{
-				Result: "OK",
+				Result: clientio.OK,
 				Error:  nil,
 			},
 		},
@@ -2240,7 +2240,7 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"EXISTING_DEST_KEY", "NON_EXISTING_SRC_KEY"},
 			migratedOutput: EvalResponse{
-				Result: "OK",
+				Result: clientio.OK,
 				Error:  nil,
 			},
 		},
@@ -2258,7 +2258,7 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"EXISTING_DEST_KEY", "NON_EXISTING_SRC_KEY"},
 			migratedOutput: EvalResponse{
-				Result: "OK",
+				Result: clientio.OK,
 				Error:  nil,
 			},
 		},
@@ -2284,7 +2284,7 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"EXISTING_DEST_KEY", "EXISTING_SRC_KEY"},
 			migratedOutput: EvalResponse{
-				Result: "OK",
+				Result: clientio.OK,
 				Error:  nil,
 			},
 		},
