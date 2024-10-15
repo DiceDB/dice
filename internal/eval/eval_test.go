@@ -5205,6 +5205,74 @@ func testEvalJSONRESP(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalJSONRESP, store)
 }
 
+func testEvalSADD(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"SADD with wrong number of arguments": {
+			input: []string{},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("SADD"),
+			},
+		},
+		"SADD new member to non existing key": {
+			input: []string{"myset", "member"},
+			migratedOutput: EvalResponse{
+				Result: 1,
+				Error:  nil,
+			},
+		},
+		"SADD new members to non existing key": {
+			input: []string{"myset", "member1", "member2"},
+			migratedOutput: EvalResponse{
+				Result: 2,
+				Error:  nil,
+			},
+		},
+		"SADD new member to existing key": {
+			setup: func() {
+				evalSADD([]string{"myset", "member1"}, store)
+			},
+			input: []string{"myset", "member2"},
+			migratedOutput: EvalResponse{
+				Result: 1,
+				Error:  nil,
+			},
+		},
+		"SADD existing member to existing key": {
+			setup: func() {
+				evalSADD([]string{"myset", "member1"}, store)
+			},
+			input: []string{"myset", "member1"},
+			migratedOutput: EvalResponse{
+				Result: 0,
+				Error:  nil,
+			},
+		},
+		"SADD new and existing member to existing key": {
+			setup: func() {
+				evalSADD([]string{"myset", "member1"}, store)
+			},
+			input: []string{"myset", "member1", "member2", "member3"},
+			migratedOutput: EvalResponse{
+				Result: 2,
+				Error:  nil,
+			},
+		},
+		"SADD member to key with invalid type": {
+			setup: func() {
+				evalSET([]string{"key", "value"}, store)
+			},
+			input: []string{"key", "member"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			},
+		},
+	}
+
+	runMigratedEvalTests(t, tests, evalSADD, store)
+}
+
 func testEvalZADD(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"ZADD with wrong number of arguments": {
