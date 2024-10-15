@@ -265,10 +265,10 @@ func WriteResponseWithRetries(conn *websocket.Conn, text []byte, maxRetries int)
 			return fmt.Errorf("no buffer space available: %w", err)
 		case syscall.EAGAIN:
 			// Exponential backoff with jitter
-			backoffDuration := time.Duration(attempts+1)*100*time.Millisecond + time.Duration(rand.Intn(50))*time.Millisecond 
+			backoffDuration := time.Duration(attempts+1)*100*time.Millisecond + time.Duration(rand.Intn(50))*time.Millisecond
 
 			slog.Warn(fmt.Sprintf(
-				"Temporary issue (EAGAIN) on attempt %d. Retrying in %v...", 
+				"Temporary issue (EAGAIN) on attempt %d. Retrying in %v...",
 				attempts+1, backoffDuration,
 			))
 
