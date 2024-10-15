@@ -8,13 +8,13 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/internal/clientio"
-	redis "github.com/dicedb/go-dice"
+	"github.com/dicedb/dicedb-go"
 	"gotest.tools/v3/assert"
 )
 
 type WatchSubscriber struct {
-	client *redis.Client
-	watch  *redis.WatchCommand
+	client *dicedb.Client
+	watch  *dicedb.WatchConn
 }
 
 const getWatchKey = "getwatchkey"
@@ -95,15 +95,16 @@ func TestGETWATCHWithSDK(t *testing.T) {
 
 	publisher.Del(context.Background(), getWatchKey)
 
-	channels := make([]<-chan *redis.WMessage, len(subscribers))
+	channels := make([]<-chan *dicedb.WatchResult, len(subscribers))
 	for i, subscriber := range subscribers {
-		watch := subscriber.client.WatchCommand(context.Background())
+		watch := subscriber.client.WatchConn(context.Background())
 		subscribers[i].watch = watch
 		assert.Assert(t, watch != nil)
-		err := watch.Watch(context.Background(), "GET", getWatchKey)
+		firstMsg, err := watch.Watch(context.Background(), "GET", getWatchKey)
 		assert.NilError(t, err)
+		assert.Equal(t, firstMsg.Command, "GET")
+		assert.Equal(t, firstMsg.Fingerprint, "1768826704")
 		channels[i] = watch.Channel()
-		<-channels[i] // Get the first message
 	}
 
 	for _, tc := range getWatchTestCases {
@@ -112,9 +113,40 @@ func TestGETWATCHWithSDK(t *testing.T) {
 
 		for _, channel := range channels {
 			v := <-channel
-			assert.Equal(t, "GET", v.Command)        // command
-			assert.Equal(t, "1768826704", v.Name)    // Fingerprint
-			assert.Equal(t, tc.val, v.Data.(string)) // data
+			assert.Equal(t, "GET", v.Command)            // command
+			assert.Equal(t, "1768826704", v.Fingerprint) // Fingerprint
+			assert.Equal(t, tc.val, v.Data.(string))     // data
+		}
+	}
+}
+
+func TestGETWATCHWithSDK2(t *testing.T) {
+	publisher := getLocalSdk()
+	subscribers := []WatchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
+
+	publisher.Del(context.Background(), getWatchKey)
+
+	channels := make([]<-chan *dicedb.WatchResult, len(subscribers))
+	for i, subscriber := range subscribers {
+		watch := subscriber.client.WatchConn(context.Background())
+		subscribers[i].watch = watch
+		assert.Assert(t, watch != nil)
+		firstMsg, err := watch.GetWatch(context.Background(), getWatchKey)
+		assert.NilError(t, err)
+		assert.Equal(t, firstMsg.Command, "GET")
+		assert.Equal(t, firstMsg.Fingerprint, "1768826704")
+		channels[i] = watch.Channel()
+	}
+
+	for _, tc := range getWatchTestCases {
+		err := publisher.Set(context.Background(), tc.key, tc.val, 0).Err()
+		assert.NilError(t, err)
+
+		for _, channel := range channels {
+			v := <-channel
+			assert.Equal(t, "GET", v.Command)            // command
+			assert.Equal(t, "1768826704", v.Fingerprint) // Fingerprint
+			assert.Equal(t, tc.val, v.Data.(string))     // data
 		}
 	}
 }

@@ -50,8 +50,8 @@ type Server struct {
 
 func NewServer(shardManager *shard.ShardManager, workerManager *worker.WorkerManager, cmdWatchChan chan dstore.CmdWatchEvent, globalErrChan chan error, l *slog.Logger) *Server {
 	return &Server{
-		Host:            config.DiceConfig.Server.Addr,
-		Port:            config.DiceConfig.Server.Port,
+		Host:            config.DiceConfig.AsyncServer.Addr,
+		Port:            config.DiceConfig.AsyncServer.Port,
 		connBacklogSize: DefaultConnBacklogSize,
 		workerManager:   workerManager,
 		shardManager:    shardManager,
@@ -192,10 +192,6 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 			respChan := make(chan *ops.StoreResponse)
 			wID := GenerateUniqueWorkerID()
 			w := worker.NewWorker(wID, respChan, ioHandler, parser, s.shardManager, s.globalErrorChan, s.logger)
-			if err != nil {
-				s.logger.Error("Failed to create new worker for clientFD", slog.Int("client-fd", clientFD), slog.Any("error", err))
-				return err
-			}
 
 			// Register the worker with the worker manager
 			err = s.workerManager.RegisterWorker(w)
