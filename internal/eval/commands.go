@@ -1007,10 +1007,11 @@ var (
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	appendCmdMeta = DiceCmdMeta{
-		Name:  "APPEND",
-		Info:  `Appends a string to the value of a key. Creates the key if it doesn't exist.`,
-		Eval:  evalAPPEND,
-		Arity: 3,
+		Name:       "APPEND",
+		Info:       `Appends a string to the value of a key. Creates the key if it doesn't exist.`,
+		IsMigrated: true,
+		NewEval:    evalAPPEND,
+		Arity:      3,
 	}
 	zaddCmdMeta = DiceCmdMeta{
 		Name: "ZADD",

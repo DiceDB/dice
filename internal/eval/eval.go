@@ -4614,59 +4614,6 @@ func selectRandomFields(hashMap HashMap, count int, withValues bool) []byte {
 	return clientio.Encode(results, false)
 }
 
-// evalAPPEND takes two arguments: the key and the value to append to the key's current value.
-// If the key does not exist, it creates a new key with the given value (so APPEND will be similar to SET in this special case)
-// If key already exists and is a string (or integers stored as strings), this command appends the value at the end of the string
-func evalAPPEND(args []string, store *dstore.Store) []byte {
-	if len(args) != 2 {
-		return diceerrors.NewErrArity("APPEND")
-	}
-
-	key, value := args[0], args[1]
-	obj := store.Get(key)
-
-	if obj == nil {
-		// Key does not exist path
-		oType, oEnc := deduceTypeEncoding(value)
-
-		var storedValue interface{}
-		// Store the value with the appropriate encoding based on the type
-		switch oEnc {
-		case object.ObjEncodingInt:
-			storedValue, _ = strconv.ParseInt(value, 10, 64)
-		case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
-			storedValue = value
-		default:
-			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-		}
-
-		store.Put(key, store.NewObj(storedValue, -1, oType, oEnc))
-
-		return clientio.Encode(len(value), false)
-	}
-	// Key exists path
-	_, currentEnc := object.ExtractTypeEncoding(obj)
-
-	var currentValueStr string
-	switch currentEnc {
-	case object.ObjEncodingInt:
-		// If the encoding is an integer, convert the current value to a string for concatenation
-		currentValueStr = strconv.FormatInt(obj.Value.(int64), 10)
-	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
-		// If the encoding is a string, retrieve the string value for concatenation
-		currentValueStr = obj.Value.(string)
-	default:
-		// If the encoding is neither integer nor string, return a "wrong type" error
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	newValue := currentValueStr + value
-
-	store.Put(key, store.NewObj(newValue, -1, object.ObjTypeString, object.ObjEncodingRaw))
-
-	return clientio.Encode(len(newValue), false)
-}
-
 func evalJSONRESP(args []string, store *dstore.Store) []byte {
 	if len(args) < 1 {
 		return diceerrors.NewErrArity("json.resp")

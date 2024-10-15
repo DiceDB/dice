@@ -49,6 +49,7 @@ const (
 	CmdGetRange    = "GETRANGE"
 	CmdZAdd        = "ZADD"
 	CmdZRange      = "ZRANGE"
+	CmdAppend      = "APPEND"
 )
 
 type CmdMeta struct {
@@ -108,6 +109,9 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdZRange: {
+		CmdType: SingleShard,
+	},
+	CmdAppend: {
 		CmdType: SingleShard,
 	},
 }

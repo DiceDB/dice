@@ -4986,23 +4986,23 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
-			setup:  func() {},
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'append' command\r\n"),
+			setup:          func() {},
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("APPEND")},
 		},
 		"append invalid number of arguments": {
 			setup: func() {
 				store.Del("key")
 			},
-			input:  []string{"key", "val", "val2"},
-			output: []byte("-ERR wrong number of arguments for 'append' command\r\n"),
+			input:          []string{"key", "val", "val2"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("APPEND")},
 		},
 		"append to non-existing key": {
 			setup: func() {
 				store.Del("key")
 			},
-			input:  []string{"key", "val"},
-			output: clientio.Encode(3, false),
+			input:          []string{"key", "val"},
+			migratedOutput: EvalResponse{Result: 3, Error: nil},
 		},
 		"append string value to existing key having string value": {
 			setup: func() {
@@ -5011,15 +5011,15 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "val"},
-			output: clientio.Encode(6, false),
+			input:          []string{"key", "val"},
+			migratedOutput: EvalResponse{Result: 6, Error: nil},
 		},
 		"append integer value to non existing key": {
 			setup: func() {
 				store.Del("key")
 			},
-			input:  []string{"key", "123"},
-			output: clientio.Encode(3, false),
+			input:          []string{"key", "123"},
+			migratedOutput: EvalResponse{Result: 3, Error: nil},
 			validator: func(output []byte) {
 				obj := store.Get("key")
 				_, enc := object.ExtractTypeEncoding(obj)
@@ -5036,15 +5036,15 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(storedValue, -1, object.ObjTypeInt, object.ObjEncodingInt)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "val"},
-			output: clientio.Encode(6, false),
+			input:          []string{"key", "val"},
+			migratedOutput: EvalResponse{Result: 6, Error: nil},
 		},
 		"append empty string to non-existing key": {
 			setup: func() {
 				store.Del("key")
 			},
-			input:  []string{"key", ""},
-			output: clientio.Encode(0, false),
+			input:          []string{"key", ""},
+			migratedOutput: EvalResponse{Result: 0, Error: nil},
 		},
 		"append empty string to existing key having empty string": {
 			setup: func() {
@@ -5053,8 +5053,8 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", ""},
-			output: clientio.Encode(0, false),
+			input:          []string{"key", ""},
+			migratedOutput: EvalResponse{Result: 0, Error: nil},
 		},
 		"append empty string to existing key": {
 			setup: func() {
@@ -5063,8 +5063,8 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", ""},
-			output: clientio.Encode(3, false),
+			input:          []string{"key", ""},
+			migratedOutput: EvalResponse{Result: 3, Error: nil},
 		},
 		"append modifies the encoding from int to raw": {
 			setup: func() {
@@ -5073,8 +5073,8 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(storedValue, -1, object.ObjTypeInt, object.ObjEncodingInt)
 				store.Put("key", obj)
 			},
-			input:  []string{"key", "2"},
-			output: clientio.Encode(2, false),
+			input:          []string{"key", "2"},
+			migratedOutput: EvalResponse{Result: 2, Error: nil},
 			validator: func(output []byte) {
 				obj := store.Get("key")
 				_, enc := object.ExtractTypeEncoding(obj)
@@ -5092,8 +5092,8 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 				obj.Value.(*Deque).LPush(value)
 			},
-			input:  []string{"listKey", "val"},
-			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+			input:          []string{"listKey", "val"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		"append to key created using SADD": {
 			setup: func() {
@@ -5106,8 +5106,8 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(initialValues, -1, object.ObjTypeSet, object.ObjEncodingSetStr)
 				store.Put(key, obj)
 			},
-			input:  []string{"setKey", "val"},
-			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+			input:          []string{"setKey", "val"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		"append to key created using HSET": {
 			setup: func() {
@@ -5120,8 +5120,8 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(initialValues, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
 				store.Put(key, obj)
 			},
-			input:  []string{"hashKey", "val"},
-			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+			input:          []string{"hashKey", "val"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		"append to key created using SETBIT": {
 			setup: func() {
@@ -5132,12 +5132,12 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(initialByteArray, -1, object.ObjTypeByteArray, object.ObjEncodingByteArray)
 				store.Put(key, obj)
 			},
-			input:  []string{"bitKey", "val"},
-			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+			input:          []string{"bitKey", "val"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 	}
 
-	runEvalTests(t, tests, evalAPPEND, store)
+	runMigratedEvalTests(t, tests, evalAPPEND, store)
 }
 
 func BenchmarkEvalAPPEND(b *testing.B) {
