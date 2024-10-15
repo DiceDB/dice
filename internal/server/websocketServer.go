@@ -126,7 +126,8 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		_, msg, err := conn.ReadMessage()
 		if err != nil {
 			WriteResponseWithRetries(conn, []byte("error: command reading failed"), maxRetries)
-			continue
+			close(s.shutdownChan)
+			break
 		}
 
 		// parse message to dice command
@@ -262,7 +263,7 @@ func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.D
 	// success
 	// Write response with retries for transient errors
 	if err := WriteResponseWithRetries(conn, respBytes, config.DiceConfig.WebSocket.MaxWriteResponseRetries); err != nil {
-		s.logger.Error(fmt.Sprintf("Error reading message: %v", err))
+		s.logger.Error(fmt.Sprintf("Error writing message: %v", err))
 		return fmt.Errorf("error writing response: %v", err)
 	}
 

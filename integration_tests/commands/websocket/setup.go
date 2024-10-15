@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
@@ -109,7 +108,6 @@ func RunWebsocketServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerO
 	queryWatcherLocal := querymanager.NewQueryManager(opt.Logger)
 	config.WebsocketPort = opt.Port
 	testServer := server.NewWebSocketServer(shardManager, testPort, opt.Logger)
-	fmt.Println("Starting Websocket Test Server on port: ", testPort)
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
 
 	// run shard manager
