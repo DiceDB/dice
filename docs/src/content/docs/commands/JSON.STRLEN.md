@@ -43,7 +43,7 @@ The following errors may be raised when executing the `JSON.STRLEN` command:
 
 - `(error) ERROR wrong number of arguments for 'JSON.STRLEN' command`: This error occurs if the number of arguments provided to the command is incorrect.
 - `(error)  ERROR invalid JSONPath`: This error occurs if the specified path does not exist within the JSON document.
-- `(error)  ERROR WRONGTYPE wrong type of path value - expected string but found integer`: This error occurs if valid key is provided but path is not provided.
+- `(error) WRONGTYPE wrong type of path value - expected string but found {DataType at root path}`: This error occurs when a valid key is provided but no specific path value is given. By default, DiceDB assumes the root path ($) in such cases. If the data at the root path is not of type string, this error is returned, indicating a type mismatch between the expected string and the actual data type at the root.
 
 ## Example Usage
 
