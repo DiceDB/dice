@@ -25,26 +25,26 @@ func parseBitfieldEncodingAndOffset(args []string) (eType, eVal, offset interfac
 		eType = SIGNED
 		eVal, err = strconv.ParseInt(encodingRaw[1:], 10, 64)
 		if err != nil {
-			err = diceerrors.ErrInvalidBitfieldType
+			err = diceerrors.ErrGeneral("Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is")
 			return eType, eVal, offset, err
 		}
 		if eVal.(int64) <= 0 || eVal.(int64) > 64 {
-			err = diceerrors.ErrInvalidBitfieldType
+			err = diceerrors.ErrGeneral("Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is")
 			return eType, eVal, offset, err
 		}
 	case 'u':
 		eType = UNSIGNED
 		eVal, err = strconv.ParseInt(encodingRaw[1:], 10, 64)
 		if err != nil {
-			err = diceerrors.ErrInvalidBitfieldType
+			err = diceerrors.ErrGeneral("Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is")
 			return eType, eVal, offset, err
 		}
 		if eVal.(int64) <= 0 || eVal.(int64) >= 64 {
-			err = diceerrors.ErrInvalidBitfieldType
+			err = diceerrors.ErrGeneral("Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is")
 			return eType, eVal, offset, err
 		}
 	default:
-		err = diceerrors.ErrInvalidBitfieldType
+		err = diceerrors.ErrGeneral("Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is")
 		return eType, eVal, offset, err
 	}
 
@@ -52,14 +52,14 @@ func parseBitfieldEncodingAndOffset(args []string) (eType, eVal, offset interfac
 	case '#':
 		offset, err = strconv.ParseInt(offsetRaw[1:], 10, 64)
 		if err != nil {
-			err = diceerrors.ErrBitfieldOffset
+			err = diceerrors.ErrGeneral("bit offset is not an integer or out of range")
 			return eType, eVal, offset, err
 		}
 		offset = offset.(int64) * eVal.(int64)
 	default:
 		offset, err = strconv.ParseInt(offsetRaw, 10, 64)
 		if err != nil {
-			err = diceerrors.ErrBitfieldOffset
+			err = diceerrors.ErrGeneral("bit offset is not an integer or out of range")
 			return eType, eVal, offset, err
 		}
 	}
@@ -137,7 +137,7 @@ func ParseBitfieldOps(args []string, readOnly bool) (ops []BitFieldOp, err error
 			case WRAP, FAIL, SAT:
 				overflowType = strings.ToUpper(args[i+1])
 			default:
-				return nil, diceerrors.ErrOverflowType
+				return nil, diceerrors.ErrGeneral("Invalid OVERFLOW type specified")
 			}
 			ops = append(ops, BitFieldOp{
 				Kind:   OVERFLOW,

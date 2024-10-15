@@ -334,7 +334,7 @@ func evalSETBIT(args []string, store *dstore.Store) *EvalResponse {
 	if err != nil {
 		return &EvalResponse{
 			Result: nil,
-			Error:  diceerrors.ErrIntegerOutOfRange,
+			Error:  diceerrors.ErrGeneral("bit offset is not an integer or out of range"),
 		}
 	}
 
@@ -342,7 +342,7 @@ func evalSETBIT(args []string, store *dstore.Store) *EvalResponse {
 	if err != nil {
 		return &EvalResponse{
 			Result: nil,
-			Error:  diceerrors.ErrIntegerOutOfRange,
+			Error:  diceerrors.ErrGeneral("bit is not an integer or out of range"),
 		}
 	}
 

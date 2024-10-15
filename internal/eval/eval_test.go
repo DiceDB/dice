@@ -5338,15 +5338,15 @@ func testEvalBitField(t *testing.T, store *dstore.Store) {
 		},
 		"BITFIELD invalid bitfield type": {
 			input:          []string{"bits", "SET", "a8", "0", "255", "INCRBY", "u8", "0", "100", "GET", "u8"},
-			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrInvalidBitfieldType},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrGeneral("Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is")},
 		},
 		"BITFIELD invalid bit offset": {
 			input:          []string{"bits", "SET", "u8", "a", "255", "INCRBY", "u8", "0", "100", "GET", "u8"},
-			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrBitfieldOffset},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrGeneral("bit offset is not an integer or out of range")},
 		},
 		"BITFIELD invalid overflow type": {
 			input:          []string{"bits", "SET", "u8", "0", "255", "INCRBY", "u8", "0", "100", "OVERFLOW", "wraap"},
-			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrOverflowType},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrGeneral("Invalid OVERFLOW type specified")},
 		},
 		"BITFIELD missing arguments in SET": {
 			input:          []string{"bits", "SET", "u8", "0", "INCRBY", "u8", "0", "100", "GET", "u8", "288"},
@@ -5628,7 +5628,7 @@ func testEvalBitFieldRO(t *testing.T, store *dstore.Store) {
 		},
 		"BITFIELD_RO invalid bitfield type": {
 			input:          []string{"bits", "GET", "a8", "0", "255"},
-			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrInvalidBitfieldType},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrGeneral("Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is")},
 		},
 		"BITFIELD_RO unsupported commands": {
 			input:          []string{"bits", "set", "u8", "0", "255"},
