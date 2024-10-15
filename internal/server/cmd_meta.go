@@ -75,7 +75,15 @@ var (
 		CmdType: SingleShard,
 	}
 	smembersCmdMeta = CmdsMeta{
-		Cmd:     "SMEMBERS",
+		Cmd: "SMEMBERS",
+	}
+
+	zaddCmdMeta = CmdsMeta{
+		Cmd:     "ZADD",
+		CmdType: SingleShard,
+	}
+	zrangeCmdMeta = CmdsMeta{
+		Cmd:     "ZRANGE",
 		CmdType: SingleShard,
 	}
 
@@ -99,6 +107,7 @@ func init() {
 	WorkerCmdsMeta["SREM"] = sremCmdMeta
 	WorkerCmdsMeta["SCARD"] = scardCmdMeta
 	WorkerCmdsMeta["SMEMBERS"] = smembersCmdMeta
-
+	WorkerCmdsMeta["ZADD"] = zaddCmdMeta
+	WorkerCmdsMeta["ZRANGE"] = zrangeCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }
