@@ -197,9 +197,9 @@ func TestParseHTTPRequest(t *testing.T) {
 		{
 			name:         "Test QWATCH command",
 			method:       "POST",
-			url:          "/qwatch",
+			url:          "/q.watch",
 			body:         `{"query": "SELECT $key, $value WHERE $key LIKE \"player:*\" AND \"$value.score\" > 10 ORDER BY $value.score DESC LIMIT 5"}`,
-			expectedCmd:  "QWATCH",
+			expectedCmd:  "Q.WATCH",
 			expectedArgs: []string{"SELECT $key, $value WHERE $key LIKE \"player:*\" AND \"$value.score\" > 10 ORDER BY $value.score DESC LIMIT 5"},
 		},
 		{
