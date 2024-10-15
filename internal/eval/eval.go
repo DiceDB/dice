@@ -4090,9 +4090,15 @@ func evalJSONSTRLEN(args []string, store *dstore.Store) []byte {
 			return clientio.RespNIL
 		}
 		jsonData := obj.Value
-
-		if utils.GetJSONFieldType(jsonData) != utils.StringType {
-			return diceerrors.NewErrWithFormattedMessage(diceerrors.JSONPathValueTypeErr)
+		jsonDataType := strings.ToLower(utils.GetJSONFieldType(jsonData))
+		if jsonDataType == "number" {
+			jsonDataFloat := jsonData.(float64)
+			if jsonDataFloat == float64(int64(jsonDataFloat)) {
+				jsonDataType = "integer"
+			}
+		}
+		if jsonDataType != utils.StringType {
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.JSONPathValueTypeErr, jsonDataType)
 		}
 		return clientio.Encode(len(jsonData.(string)), false)
 	}
