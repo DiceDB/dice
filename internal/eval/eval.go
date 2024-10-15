@@ -2598,7 +2598,6 @@ func evalCommandGetKeys(args []string) []byte {
 // evalCommandGetKeysAndFlags helps identify which arguments in a redis
 // command are interpreted as keys and their respective flags/permissions.
 func evalCommandGetKeysAndFlags(args []string) []byte {
-
 	if len(args) == 0 {
 		return diceerrors.NewErrArity("COMMAND|GETKEYSANDFLAGS")
 	}
@@ -2618,7 +2617,7 @@ func evalCommandGetKeysAndFlags(args []string) []byte {
 		return diceerrors.NewErrWithMessage("invalid number of arguments specified for command")
 	}
 
-	if VARIABLE_FLAGS&keySpecs.Flags != 0 {
+	if (VARIABLEFLAGS)&(keySpecs.Flags) != 0 {
 		diceCmd.getFlags(args, &keySpecs)
 	}
 

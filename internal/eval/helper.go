@@ -1,7 +1,6 @@
 package eval
 
 func setGetKeys(args []string, ks *KeySpecs) {
-
 	for i := 2; i < len(args); i++ {
 		if (len(args[i]) == 3) &&
 			(args[i][0] == 'g' || args[i][0] == 'G') &&

@@ -26,7 +26,7 @@ type DiceCmdMeta struct {
 	// complex command execution scenarios and improved response consistency.
 	NewEval func([]string, *dstore.Store) *EvalResponse
 
-	//helper function to getKeys
+	// helper function to getKeys
 	getFlags func(args []string, ks *KeySpecs)
 }
 
@@ -68,7 +68,7 @@ var (
 		Returns encoded OK RESP once new entry is added
 		If the key already exists then the value will be overwritten and expiry will be discarded`,
 		Arity:      -3,
-		KeySpecs:   KeySpecs{BeginIndex: 1, Flags: RW | ACCESS | UPDATE | VARIABLE_FLAGS},
+		KeySpecs:   KeySpecs{BeginIndex: 1, Flags: RW | ACCESS | UPDATE | VARIABLEFLAGS},
 		IsMigrated: true,
 		NewEval:    evalSET,
 		getFlags:   setGetKeys,
