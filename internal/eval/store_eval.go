@@ -378,6 +378,8 @@ func evalZADD(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+// evalZRANGE returns the specified range of elements in the sorted set stored at key.
+// The elements are considered to be ordered from the lowest to the highest score.
 func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) < 3 {
 		return &EvalResponse{
