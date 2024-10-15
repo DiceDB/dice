@@ -478,7 +478,7 @@ func evalPFADD(args []string, store *dstore.Store) *EvalResponse {
 
 		store.Put(key, obj)
 		return &EvalResponse{
-			Result: clientio.IntegerOne,
+			Result: int64(1),
 			Error:  nil,
 		}
 	}
@@ -497,13 +497,13 @@ func evalPFADD(args []string, store *dstore.Store) *EvalResponse {
 
 	if newCardinality := existingHll.Estimate(); initialCardinality != newCardinality {
 		return &EvalResponse{
-			Result: clientio.IntegerOne,
+			Result: int64(1),
 			Error:  nil,
 		}
 	}
 
 	return &EvalResponse{
-		Result: clientio.IntegerZero,
+		Result: int64(0),
 		Error:  nil,
 	}
 }
@@ -596,7 +596,7 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 	store.Put(destKey, obj)
 
 	return &EvalResponse{
-		Result: clientio.OK,
+		Result: "OK",
 		Error:  nil,
 	}
 }
