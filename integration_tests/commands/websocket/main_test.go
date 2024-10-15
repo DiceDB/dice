@@ -35,9 +35,13 @@ func TestMain(m *testing.M) {
 	exitCode := m.Run()
 
 	// abort
-	conn := executor.ConnectToServer()
-	executor.FireCommand(conn, "abort")
-	executor.DisconnectServer(conn)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		conn := executor.ConnectToServer()
+		executor.FireCommand(conn, "abort")
+		executor.DisconnectServer(conn)
+	}()
 
 	wg.Wait()
 	os.Exit(exitCode)

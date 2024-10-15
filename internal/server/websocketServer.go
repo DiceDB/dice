@@ -120,11 +120,12 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		conn.Close()
 	}()
 
+	maxRetries := config.DiceConfig.WebSocket.MaxWriteResponseRetries
 	for {
 		// read incoming message
 		_, msg, err := conn.ReadMessage()
 		if err != nil {
-			writeResponse(conn, []byte("error: command reading failed"))
+			WriteResponseWithRetries(conn, []byte("error: command reading failed"), maxRetries)
 			continue
 		}
 
@@ -133,7 +134,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		if errors.Is(err, diceerrors.ErrEmptyCommand) {
 			continue
 		} else if err != nil {
-			writeResponse(conn, []byte("error: parsing failed"))
+			WriteResponseWithRetries(conn, []byte("error: parsing failed"), maxRetries)
 			continue
 		}
 
@@ -143,7 +144,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		}
 
 		if unimplementedCommandsWebsocket[diceDBCmd.Cmd] {
-			writeResponse(conn, []byte("Command is not implemented with Websocket"))
+			WriteResponseWithRetries(conn, []byte("Command is not implemented with Websocket"), maxRetries)
 			continue
 		}
 
@@ -191,6 +192,7 @@ func (s *WebsocketServer) processQwatchUpdates(clientIdentifierID uint32, conn *
 func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.DiceDBCmd, response interface{}) error {
 	var result interface{}
 	var err error
+	maxRetries := config.DiceConfig.WebSocket.MaxWriteResponseRetries
 
 	// check response type
 	switch resp := response.(type) {
@@ -202,7 +204,7 @@ func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.D
 		err = resp.EvalResponse.Error
 	default:
 		s.logger.Error("Unsupported response type")
-		writeResponse(conn, []byte("error: 500 Internal Server Error"))
+		WriteResponseWithRetries(conn, []byte("error: 500 Internal Server Error"), maxRetries)
 		return nil
 	}
 
@@ -231,7 +233,7 @@ func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.D
 		responseValue, err = rp.DecodeOne()
 		if err != nil {
 			s.logger.Error("Error decoding response", "error", err)
-			writeResponse(conn, []byte("error: 500 Internal Server Error"))
+			WriteResponseWithRetries(conn, []byte("error: 500 Internal Server Error"), maxRetries)
 			return nil
 		}
 	} else {
@@ -253,7 +255,7 @@ func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.D
 	respBytes, err := json.Marshal(responseValue)
 	if err != nil {
 		s.logger.Error("Error marshaling json", "error", err)
-		writeResponse(conn, []byte("error: marshaling json"))
+		WriteResponseWithRetries(conn, []byte("error: marshaling json"), maxRetries)
 		return nil
 	}
 
@@ -331,7 +333,7 @@ func writeResponse(conn *websocket.Conn, text []byte) {
 
 	err := conn.WriteMessage(websocket.TextMessage, text)
 	if err != nil {
-		slog.Error(fmt.Sprintf("Error writing response: %v", err))
 		slog.String("data: ", string(text))
+		slog.Error(fmt.Sprintf("Error1 writing response: %v", err))
 	}
 }
