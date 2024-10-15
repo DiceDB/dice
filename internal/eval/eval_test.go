@@ -4012,181 +4012,203 @@ func testEvalGETRANGE(t *testing.T, store *dstore.Store) {
 	setupForIntegerValue := func() {
 		store.Put("INTEGER_KEY", store.NewObj("1234", maxExDuration, object.ObjTypeString, object.ObjEncodingRaw))
 	}
-	tests := []evalTestCase {
-		{
-
-			name: "GETRANGE against non-existing key",
-			setup:  func() {},
-			input:  []string{"NON_EXISTING_KEY", "0", "-1"},
-			migratedOutput: EvalResponse{Result: "", Error: nil},
+	tests := map[string]evalTestCase{
+		"GETRANGE against non-existing key": {
+			input: []string{"NON_EXISTING_KEY", "0", "-1"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
-		{
-			name: "GETRANGE against wrong key type",
+		"GETRANGE against wrong key type": {
 			setup: func() {
 				evalLPUSH([]string{"LKEY1", "list"}, store)
 			},
-			input:  []string{"LKEY1", "0", "-1"},
-			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
+			input: []string{"LKEY1", "0", "-1"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			},
 		},
-		{
-			name: "GETRANGE against string value: 0, 3",
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "0", "3"},
-			migratedOutput: EvalResponse{Result: "Hell", Error: nil},
+		"GETRANGE against string value: 0, 3": {
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "0", "3"},
+			migratedOutput: EvalResponse{
+				Result: "Hell",
+				Error:  nil,
+			},
 		},
-		{
-			name: "GETRANGE against string value: 0, -1",
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "0", "-1"},
-			migratedOutput:  EvalResponse{Result: "Hello World", Error: nil},
+		"GETRANGE against string value: 0, -1": {
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "0", "-1"},
+			migratedOutput: EvalResponse{
+				Result: "Hello World",
+				Error:  nil,
+			},
 		},
-		{
-			name: "GETRANGE against string value: -4, -1",
+		"GETRANGE against string value: -4, -1": {
 			setup: setupForStringValue,
 			input: []string{"STRING_KEY", "-4", "-1"},
-			migratedOutput: EvalResponse{Result: "orld", Error: nil},
+			migratedOutput: EvalResponse{
+				Result: "orld",
+				Error:  nil,
+			},
 		},
-		{
-			name: "GETRANGE against string value: 5, 3",
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "5", "3"},
-			migratedOutput: EvalResponse{Result: "", Error: nil},	
+		"GETRANGE against string value: 5, 3": {
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "5", "3"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
-		{
-			name: "GETRANGE against string value: -5000, 10000",
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "-5000", "10000"},
-			migratedOutput: EvalResponse{Result: "Hello World", Error: nil},	
+		"GETRANGE against string value: -5000, 10000": {
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "-5000", "10000"},
+			migratedOutput: EvalResponse{
+				Result: "Hello World",
+				Error:  nil,
+			},
 		},
-		{
-			name: "GETRANGE against string value: 0, -100",
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "0", "-100"},
-			migratedOutput: EvalResponse{Result: "", Error: nil},	
-
+		"GETRANGE against string value: 0, -100": {
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "0", "-100"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
-		{
-			name: "GETRANGE against string value: 1, -100",
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "1", "-100"},
-			migratedOutput: EvalResponse{Result: "", Error: nil},
+		"GETRANGE against string value: 1, -100": {
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "1", "-100"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
-		{
-			name: "GETRANGE against string value: -1, -100",
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "-1", "-100"},
-			migratedOutput: EvalResponse{Result: "", Error: nil},
+		"GETRANGE against string value: -1, -100": {
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "-1", "-100"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
-		{
-			name: "GETRANGE against string value: -100, -100",
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "-100", "-100"},
-			migratedOutput: EvalResponse{Result: "", Error: nil},
+		"GETRANGE against string value: -100, -100": {
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "-100", "-100"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
-		{
-			name: "GETRANGE against string value: -100, -101",
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "-100", "-101"},
-			migratedOutput: EvalResponse{Result: "", Error: nil},
+		"GETRANGE against string value: -100, -101": {
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "-100", "-101"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
-		{
-			name: "GETRANGE against integer value: 0, 2",
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "0", "2"},
-			migratedOutput: EvalResponse{Result: "123", Error: nil},	
+		"GETRANGE against integer value: 0, 2": {
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "0", "2"},
+			migratedOutput: EvalResponse{
+				Result: "123",
+				Error:  nil,
+			},
 		},
-		{
-			name: "GETRANGE against integer value: 0, -1",
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "0", "-1"},
-			migratedOutput: EvalResponse{Result: "1234", Error: nil},
+		"GETRANGE against integer value: 0, -1": {
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "0", "-1"},
+			migratedOutput: EvalResponse{
+				Result: "1234",
+				Error:  nil,
+			},
 		},
-		{
-			name: "GETRANGE against integer value: -3, -1",
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "-3", "-1"},
-			migratedOutput: EvalResponse{Result: "234", Error: nil},
+		"GETRANGE against integer value: -3, -1": {
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "-3", "-1"},
+			migratedOutput: EvalResponse{
+				Result: "234",
+				Error:  nil,
+			},
 		},
-		{
-			name: "GETRANGE against integer value: 5, 3",
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "5", "3"},
-			migratedOutput: EvalResponse{Result: "", Error: nil},
+		"GETRANGE against integer value: 5, 3": {
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "5", "3"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
-		{
-			name:  "GETRANGE against integer value: 3, 5000",
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "3", "5000"},
-			migratedOutput: EvalResponse{Result: "4", Error: nil},
+		"GETRANGE against integer value: 3, 5000": {
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "3", "5000"},
+			migratedOutput: EvalResponse{
+				Result: "4",
+				Error:  nil,
+			},
 		},
-		{
-			name: "GETRANGE against integer value: -5000, 10000",
+		"GETRANGE against integer value: -5000, 10000": {
 			setup: setupForIntegerValue,
 			input: []string{"INTEGER_KEY", "-5000", "10000"},
-			migratedOutput: EvalResponse{Result: "1234", Error: nil},
+			migratedOutput: EvalResponse{
+				Result: "1234",
+				Error:  nil,
+			},
 		},
-		{
-			name: "GETRANGE against integer value: 0, -100",
+		"GETRANGE against integer value: 0, -100": {
 			setup: setupForIntegerValue,
 			input: []string{"INTEGER_KEY", "0", "-100"},
-			migratedOutput: EvalResponse{Result: "", Error: nil},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
-		{
-			name: "GETRANGE against integer value: 1, -100",
+		"GETRANGE against integer value: 1, -100": {
 			setup: setupForIntegerValue,
 			input: []string{"INTEGER_KEY", "1", "-100"},
-			migratedOutput: EvalResponse{Result: "", Error: nil},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
-		{
-			name: "GETRANGE against integer value: -1, -100",
+		"GETRANGE against integer value: -1, -100": {
 			setup: setupForIntegerValue,
 			input: []string{"INTEGER_KEY", "-1", "-100"},
-			migratedOutput: EvalResponse{Result: "", Error: nil},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
-		{
-			name: "GETRANGE against integer value: -100, -99",
+		"GETRANGE against integer value: -100, -99": {
 			setup: setupForIntegerValue,
 			input: []string{"INTEGER_KEY", "-100", "-99"},
-			migratedOutput: EvalResponse{Result: "", Error: nil},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
-		{
-			name: "GETRANGE against integer value: -100, -100",
+		"GETRANGE against integer value: -100, -100": {
 			setup: setupForIntegerValue,
 			input: []string{"INTEGER_KEY", "-100", "-100"},
-			migratedOutput: EvalResponse{Result: "", Error: nil},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
-		{
-			name: "GETRANGE against integer value: -100, -101",
+		"GETRANGE against integer value: -100, -101": {
 			setup: setupForIntegerValue,
 			input: []string{"INTEGER_KEY", "-100", "-101"},
-			migratedOutput: EvalResponse{Result: "", Error: nil},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			store = setupTest(store)
-
-			if tt.setup != nil {
-				tt.setup()
-			}
-			response := evalGETRANGE(tt.input, store)
-
-			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
-				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
-				}
-			} else {
- 				assert.Equal(t, tt.migratedOutput.Result, response.Result)
-			}
-			
-			if tt.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
-			} else {
-				testifyAssert.NoError(t, response.Error)
-			}
-		})
-	}
+	runMigratedEvalTests(t, tests, evalGETRANGE, store)
 }
 
 func BenchmarkEvalGETRANGE(b *testing.B) {
