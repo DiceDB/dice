@@ -7,7 +7,7 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func TestRespHINCRBYFLOAT(t *testing.T) {
+func TestHINCRBYFLOAT(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 	FireCommand(conn, "FLUSHDB")
