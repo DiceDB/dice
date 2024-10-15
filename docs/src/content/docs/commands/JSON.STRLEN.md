@@ -32,7 +32,7 @@ When the `JSON.STRLEN` command is executed, DiceDB will:
 
 1. If the specified `key` does not exist, the command returns `(nil)`.
 2. If `path` is not specified, the command takes `$` as root path and if the data at root path is string, returns an integer that represents the length of the string and if the data at root is not a string, returns an error indicating a type mismatch.
-3. `$` is considered as root path which returns `nil`.
+3. `$` is considered as root path which returns the length of the string if the data at root path is of type string or returns `nil` if the data at root is not of type string.
 4. If the specified path exists and points to a JSON string, the command returns the length of the string.
 5. Multiple results are represented as a list in case of wildcards(*), where each string length is returned in order of appearance and `nil` is returned if it's not a string.
 
