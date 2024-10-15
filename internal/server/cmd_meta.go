@@ -62,7 +62,18 @@ var (
 		Cmd:     "SETEX",
 		CmdType: SingleShard,
 	}
-
+	hexistsCmdMeta = CmdsMeta{
+		Cmd:     "HEXISTS",
+		CmdType: SingleShard,
+	}
+	hkeysCmdMeta = CmdsMeta{
+		Cmd:     "HKEYS",
+		CmdType: SingleShard,
+	}
+	hvalsCmdMeta = CmdsMeta{
+		Cmd:     "HVALS",
+		CmdType: SingleShard,
+	}
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
 
@@ -79,6 +90,9 @@ func init() {
 	WorkerCmdsMeta["GET"] = getCmdMeta
 	WorkerCmdsMeta["GETSET"] = getsetCmdMeta
 	WorkerCmdsMeta["SETEX"] = setexCmdMeta
+	WorkerCmdsMeta["HEXISTS"] = hexistsCmdMeta
+	WorkerCmdsMeta["HKEYS"] = hkeysCmdMeta
+	WorkerCmdsMeta["HVALS"] = hvalsCmdMeta
 
 	// Additional commands (multishard, custom) can be added here as needed.
 }

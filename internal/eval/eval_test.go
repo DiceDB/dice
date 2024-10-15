@@ -2256,7 +2256,7 @@ func testEvalHVALS(t *testing.T, store *dstore.Store) {
 			name:           "HVALS key doesn't exists",
 			setup:          func() {},
 			input:          []string{"NONEXISTENTHVALSKEY"},
-			migratedOutput: EvalResponse{Result: clientio.Encode([]string{}, false), Error: nil},
+			migratedOutput: EvalResponse{Result: clientio.RespEmptyArray, Error: nil},
 		},
 		{
 			name: "HVALS key exists",
@@ -2283,14 +2283,17 @@ func testEvalHVALS(t *testing.T, store *dstore.Store) {
 		t.Run(tt.name, func(t *testing.T) {
 			response := evalHVALS(tt.input, store)
 
+			fmt.Printf("THE RESPONSE IS: %v\n", response)
+
 			// Handle comparison for byte slices
 			if responseBytes, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-					fmt.Printf("-> %v | %v\n", responseBytes, expectedBytes)
+					fmt.Printf("1.-> %v | %v\n", responseBytes, expectedBytes)
+					fmt.Printf("1.-> %s | %s\n", responseBytes, expectedBytes)
 					testifyAssert.True(t, bytes.Equal(responseBytes, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else {
-				fmt.Printf("|-> %v | %v\n", tt.migratedOutput.Result, response.Result)
+				fmt.Printf("1.|-> %v | %v\n", tt.migratedOutput.Result, response.Result)
 				assert.Equal(t, tt.migratedOutput.Result, response.Result)
 			}
 

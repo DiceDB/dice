@@ -340,7 +340,7 @@ func evalHEXISTS(args []string, store *dstore.Store) *EvalResponse {
 
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.Encode(0, false),
+			Result: clientio.IntegerZero,
 			Error:  nil,
 		}
 	}
@@ -356,13 +356,13 @@ func evalHEXISTS(args []string, store *dstore.Store) *EvalResponse {
 	_, ok := hashMap.Get(hmKey)
 	if ok {
 		return &EvalResponse{
-			Result: clientio.Encode(1, false),
+			Result: clientio.IntegerOne,
 			Error:  nil,
 		}
 	}
 	// Return 0, if specified field doesn't exist in the HashMap.
 	return &EvalResponse{
-		Result: clientio.Encode(0, false),
+		Result: clientio.IntegerZero,
 		Error:  nil,
 	}
 }
@@ -398,7 +398,7 @@ func evalHKEYS(args []string, store *dstore.Store) *EvalResponse {
 		hashMap = obj.Value.(HashMap)
 	} else {
 		return &EvalResponse{
-			Result: clientio.Encode([]interface{}{}, false),
+			Result: clientio.RespEmptyArray,
 			Error:  nil,
 		}
 	}
@@ -408,7 +408,7 @@ func evalHKEYS(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	return &EvalResponse{
-		Result: clientio.Encode(result, false),
+		Result: result,
 		Error:  nil,
 	}
 }
@@ -425,7 +425,7 @@ func evalHVALS(args []string, store *dstore.Store) *EvalResponse {
 	if obj == nil {
 		// Return an empty array for non-existent keys
 		return &EvalResponse{
-			Result: clientio.Encode([]string{}, false),
+			Result: clientio.RespEmptyArray,
 			Error:  nil,
 		}
 	}
@@ -445,7 +445,7 @@ func evalHVALS(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	return &EvalResponse{
-		Result: clientio.Encode(results, false),
+		Result: results,
 		Error:  nil,
 	}
 }
