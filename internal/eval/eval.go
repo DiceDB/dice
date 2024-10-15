@@ -2157,8 +2157,29 @@ func evalRPOP(args []string, store *dstore.Store) []byte {
 }
 
 func evalLPOP(args []string, store *dstore.Store) []byte {
-	if len(args) != 1 {
+	// By default we pop only 1
+	pop_number := 1
+
+	// LPOP accepts 1 or 2 arguments only - LPOP key [count]
+	if len(args) < 1 || len(args) > 2 {
 		return diceerrors.NewErrArity("LPOP")
+	}
+
+	// to updated the number of pops
+	if len(args) == 2 {
+		nos, err := strconv.Atoi(args[1])
+		if err != nil {
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
+		}
+		if nos == 0 {
+			// returns empty string if count given is 0
+			return clientio.Encode([]string{}, false)
+		}
+		if nos < 0 {
+			// returns an out of range err if count is negetive
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.ValOutOfRangeErr)
+		}
+		pop_number = nos
 	}
 
 	obj := store.Get(args[0])
@@ -2180,15 +2201,29 @@ func evalLPOP(args []string, store *dstore.Store) []byte {
 	}
 
 	deq := obj.Value.(*Deque)
-	x, err := deq.LPop()
-	if err != nil {
-		if errors.Is(err, ErrDequeEmpty) {
-			return clientio.RespNIL
+
+	// holds the elements popped
+	var str []string
+	for iter := 0; iter < pop_number; iter++ {
+		x, err := deq.LPop()
+		if err != nil {
+			if errors.Is(err, ErrDequeEmpty) {
+				break
+			}
+			panic(fmt.Sprintf("unknown error: %v", err))
 		}
-		panic(fmt.Sprintf("unknown error: %v", err))
+		str = append(str, x)
 	}
 
-	return clientio.Encode(x, false)
+	if len(str) == 0 {
+		return clientio.RespNIL
+	}
+
+	if len(str) == 1 {
+		return clientio.Encode(str[0], false)
+	}
+
+	return clientio.Encode(str, false)
 }
 
 func evalLLEN(args []string, store *dstore.Store) []byte {
