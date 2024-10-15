@@ -30,12 +30,11 @@ JSON.STRLEN <key> <path>
 
 When the `JSON.STRLEN` command is executed, DiceDB will:
 
-1. If the specified `key` does not exist, the command returns `(empty list or set)`.
-2. If `path` is not specified, the command throws an error.
+1. If the specified `key` does not exist, the command returns `(nil)`.
+2. If `path` is not specified, the command takes `$` as root path and if the data at root path is string, returns an integer that represents the length of the string and if the data at root is not a string, returns an error indicating a type mismatch.
 3. `$` is considered as root path which returns `nil`.
 4. If the specified path exists and points to a JSON string, the command returns the length of the string.
-5. If the path does not exist or does not point to a JSON string, an error is returned.
-6. Multiple results are represented as a list in case of wildcards, where each string length is returned in order of appearance and `nil` is returned if it's not a string.
+5. Multiple results are represented as a list in case of wildcards(*), where each string length is returned in order of appearance and `nil` is returned if it's not a string.
 
 ## Errors
 
@@ -66,7 +65,7 @@ To get the length of the `name` string:
 
 ```bash
 JSON.STRLEN user:1001 $.name
-"8"
+(integer) 8
 ```
 
 ### Example 2: Nested JSON String
@@ -75,7 +74,7 @@ To get the length of the `city` string within the `address` object:
 
 ```bash
 JSON.STRLEN user:1001 $.address.city
-"8"
+(integer) 8
 ```
 
 ### Example 3: Non-Existent Path
@@ -84,7 +83,7 @@ If the path does not exist:
 
 ```bash
 JSON.STRLEN user:1001 $.phone
-(empty list or set)
+(empty array)
 ```
 
 `Return Value`: `(empty list or set)`
