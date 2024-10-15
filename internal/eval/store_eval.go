@@ -5,14 +5,14 @@ import (
 	"strconv"
 	"strings"
 
-  "github.com/bytedance/sonic"
-	"github.com/ohler55/ojg/jp"
+	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/eval/sortedset"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/ohler55/ojg/jp"
 )
 
 // evalSET puts a new <key, value> pair in db as in the args
@@ -434,7 +434,6 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-
 	sortedSet, errMsg := sortedset.FromObject(obj)
 
 	if errMsg != nil {
@@ -556,7 +555,7 @@ func evalJSONCLEAR(args []string, store *dstore.Store) *EvalResponse {
 	obj.Value = jsonData
 	return &EvalResponse{
 		Result: countClear,
-    Error:  nil,
+		Error:  nil,
 	}
 }
 
@@ -588,10 +587,17 @@ func evalJSONSTRLEN(args []string, store *dstore.Store) *EvalResponse {
 		// to-do parsing
 		jsonData := obj.Value
 
-		if utils.GetJSONFieldType(jsonData) != utils.StringType {
+		jsonDataType := strings.ToLower(utils.GetJSONFieldType(jsonData))
+		if jsonDataType == "number" {
+			jsonDataFloat := jsonData.(float64)
+			if jsonDataFloat == float64(int64(jsonDataFloat)) {
+				jsonDataType = "integer"
+			}
+		}
+		if jsonDataType != utils.StringType {
 			return &EvalResponse{
 				Result: nil,
-				Error:  diceerrors.ErrInvalidJSONPathType,
+				Error:  diceerrors.ErrUnexpectedJSONPathType("string", jsonDataType),
 			}
 		}
 		return &EvalResponse{

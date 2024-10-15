@@ -2735,7 +2735,7 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 				Error:  diceerrors.ErrWrongArgumentCount("JSON.STRLEN"),
 			},
 		},
-		" jsonstrlen key does not exist": {
+		"jsonstrlen key does not exist": {
 			name:  "jsonstrlen key does not exist",
 			setup: func() {},
 			input: []string{"NONEXISTENT_KEY"},
@@ -2744,11 +2744,11 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 				Error:  nil,
 			},
 		},
-		"jsonstrlen root not string": {
-			name: "jsonstrlen root not string",
+		"jsonstrlen root not string(object)": {
+			name: "jsonstrlen root not string(object)",
 			setup: func() {
 				key := "EXISTING_KEY"
-				value := "{\"age\":13,\"name\":\"a\"}"
+				value := "{\"name\":\"Bhima\",\"age\":10}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
@@ -2757,7 +2757,71 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 			input: []string{"EXISTING_KEY"},
 			migratedOutput: EvalResponse{
 				Result: nil,
-				Error:  diceerrors.ErrInvalidJSONPathType,
+				Error:  diceerrors.ErrUnexpectedJSONPathType("string", "object"),
+			},
+		},
+		"jsonstrlen root not string(number)": {
+			name: "jsonstrlen root not string(number)",
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "10.9"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input: []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrUnexpectedJSONPathType("string", "number"),
+			},
+		},
+		"jsonstrlen root not string(integer)": {
+			name: "jsonstrlen root not string(integer)",
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "10"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input: []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrUnexpectedJSONPathType("string", "integer"),
+			},
+		},
+		"jsonstrlen not string(array)": {
+			name: "jsonstrlen not string(array)",
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "[\"age\", \"name\"]"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input: []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrUnexpectedJSONPathType("string", "array"),
+			},
+		},
+		"jsonstrlen not string(boolean)": {
+			name: "jsonstrlen not string(boolean)",
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "true"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input: []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrUnexpectedJSONPathType("string", "boolean"),
 			},
 		},
 		"jsonstrlen root array": {

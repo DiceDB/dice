@@ -127,6 +127,46 @@ func TestJsonStrlen(t *testing.T) {
 			},
 			expected: []interface{}{"OK", []interface{}{float64(5), float64(3)}},
 		},
+		{
+			name: "jsonstrlen with no path and object at root",
+			commands: []string{
+				`JSON.SET doc $ {"name":"bhima","age":10}`,
+				"JSON.STRLEN doc",
+			},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found object"},
+		},
+		{
+			name: "jsonstrlen with no path and object at boolean",
+			commands: []string{
+				`JSON.SET doc $ true`,
+				"JSON.STRLEN doc",
+			},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found boolean"},
+		},
+		{
+			name: "jsonstrlen with no path and object at array",
+			commands: []string{
+				`JSON.SET doc $ [1,2,3,4]`,
+				"JSON.STRLEN doc",
+			},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found array"},
+		},
+		{
+			name: "jsonstrlen with no path and object at integer",
+			commands: []string{
+				`JSON.SET doc $ 1`,
+				"JSON.STRLEN doc",
+			},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found integer"},
+		},
+		{
+			name: "jsonstrlen with no path and object at number",
+			commands: []string{
+				`JSON.SET doc $ 1.9`,
+				"JSON.STRLEN doc",
+			},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found number"},
+		},
 	}
 
 	for _, tc := range testCases {

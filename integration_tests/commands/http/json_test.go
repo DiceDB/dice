@@ -648,44 +648,44 @@ func TestJsonStrlen(t *testing.T) {
 			expected: []interface{}{"OK", []interface{}{float64(5), float64(3)}},
 		},
 		{
-			name: "STRLEN with no path and object at root",
+			name: "jsonstrlen with no path and object at root",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": map[string]interface{}{"name": "bhima", "age": 10}}},
 				{Command: "JSON.STRLEN", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"OK", "WRONGTYPE wrong type of path value - expected string but found object"},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found object"},
 		},
 		{
-			name: "STRLEN with no path and object at boolean",
+			name: "jsonstrlen with no path and object at boolean",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": true}},
 				{Command: "JSON.STRLEN", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"OK", "WRONGTYPE wrong type of path value - expected string but found boolean"},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found boolean"},
 		},
 		{
-			name: "STRLEN with no path and object at array",
+			name: "jsonstrlen with no path and object at array",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": []int{1, 2, 3, 4}}},
 				{Command: "JSON.STRLEN", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"OK", "WRONGTYPE wrong type of path value - expected string but found array"},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found array"},
 		},
 		{
-			name: "STRLEN with no path and object at integer",
+			name: "jsonstrlen with no path and object at integer",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": 1}},
 				{Command: "JSON.STRLEN", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"OK", "WRONGTYPE wrong type of path value - expected string but found integer"},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found integer"},
 		},
 		{
-			name: "STRLEN with no path and object at number",
+			name: "jsonstrlen with no path and object at number",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": 1.9}},
 				{Command: "JSON.STRLEN", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"OK", "WRONGTYPE wrong type of path value - expected string but found number"},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found number"},
 		},
 	}
 
