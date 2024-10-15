@@ -1,11 +1,13 @@
 package eval
 
 import (
+	"math"
 	"strconv"
 	"strings"
 
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
+	"github.com/dicedb/dice/internal/eval/sortedset"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -315,4 +317,134 @@ func evalSETEX(args []string, store *dstore.Store) *EvalResponse {
 	newArgs := []string{key, value, Ex, args[1]}
 
 	return evalSET(newArgs, store)
+}
+
+// evalZADD adds all the specified members with the specified scores to the sorted set stored at key.
+// If a specified member is already a member of the sorted set, the score is updated and the element
+// reinserted at the right position to ensure the correct ordering.
+// If key does not exist, a new sorted set with the specified members as sole members is created.
+func evalZADD(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 3 || len(args)%2 == 0 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("ZADD"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	var sortedSet *sortedset.Set
+
+	if obj != nil {
+		var err []byte
+		sortedSet, err = sortedset.FromObject(obj)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			}
+		}
+	} else {
+		sortedSet = sortedset.New()
+	}
+
+	added := 0
+	for i := 1; i < len(args); i += 2 {
+		scoreStr := args[i]
+		member := args[i+1]
+
+		score, err := strconv.ParseFloat(scoreStr, 64)
+		if err != nil || math.IsNaN(score) {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrInvalidNumberFormat,
+			}
+		}
+
+		wasInserted := sortedSet.Upsert(score, member)
+
+		if wasInserted {
+			added += 1
+		}
+	}
+
+	obj = store.NewObj(sortedSet, -1, object.ObjTypeSortedSet, object.ObjEncodingBTree)
+	store.Put(key, obj, dstore.WithPutCmd(dstore.ZAdd))
+
+	return &EvalResponse{
+		Result: added,
+		Error:  nil,
+	}
+}
+
+// evalZRANGE returns the specified range of elements in the sorted set stored at key.
+// The elements are considered to be ordered from the lowest to the highest score.
+func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 3 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("ZRANGE"),
+		}
+	}
+
+	key := args[0]
+	startStr := args[1]
+	stopStr := args[2]
+
+	withScores := false
+	reverse := false
+	for i := 3; i < len(args); i++ {
+		arg := strings.ToUpper(args[i])
+		if arg == WithScores {
+			withScores = true
+		} else if arg == REV {
+			reverse = true
+		} else {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrSyntax,
+			}
+		}
+	}
+
+	start, err := strconv.Atoi(startStr)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrInvalidNumberFormat,
+		}
+	}
+
+	stop, err := strconv.Atoi(stopStr)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrInvalidNumberFormat,
+		}
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: []string{},
+			Error:  nil,
+		}
+	}
+
+	sortedSet, errMsg := sortedset.FromObject(obj)
+
+	if errMsg != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	result := sortedSet.GetRange(start, stop, withScores, reverse)
+
+	return &EvalResponse{
+		Result: result,
+		Error:  nil,
+	}
 }

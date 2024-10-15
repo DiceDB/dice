@@ -452,7 +452,7 @@ func DecodeDeqEntry(xb []byte) (x string, entryLen int) {
 		backlenlen := dencoding.GetEncodeUIntSize(uint64(5 + strLen))
 		return string(xb[5 : 5+strLen]), 5 + int(strLen) + int(backlenlen)
 	} else {
-		// for recognizing badly encoding case instead of panicing
+		// for recognizing badly encoding case instead of panicking
 		val = 12345678900000000 + int64(xb[0])
 		bit = 64
 	}

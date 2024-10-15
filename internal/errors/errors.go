@@ -28,6 +28,8 @@ const (
 	InvalidBitfieldType    = "-ERR Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is."
 	BitfieldOffsetErr      = "-ERR bit offset is not an integer or out of range"
 	OverflowTypeErr        = "-ERR Invalid OVERFLOW type specified"
+	WrongKeyTypeErr        = "-ERR Existing key has wrong Dice type"
+	NoKeyExistsErr         = "-ERR Could not perform this operation on a key that doesn't exist"
 )
 
 type DiceError struct {

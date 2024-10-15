@@ -59,7 +59,7 @@ func TestSetDataCommand(t *testing.T) {
 			delay:      []time.Duration{0, 0, 0},
 		},
 		{
-			name:       "SADD Wrong Key Valye Type",
+			name:       "SADD Wrong Key Value Type",
 			cmd:        []string{"SET foo bar", "SADD foo baz"},
 			expected:   []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
 			assertType: []string{"equal", "equal"},
