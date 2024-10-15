@@ -2253,7 +2253,7 @@ func testEvalHVALS(t *testing.T, store *dstore.Store) {
 			output: []byte("-ERR wrong number of arguments for 'hvals' command\r\n"),
 		},
 		{
-			name: "key doesn't exists",
+			name:   "key doesn't exists",
 			setup:  func() {},
 			input:  []string{"NONEXISTENTHVALSKEY"},
 			output: clientio.Encode([]string{}, false),

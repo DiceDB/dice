@@ -48,7 +48,7 @@ const (
 	CmdZRangeWatch = "ZRANGE.WATCH"
 	CmdHExists     = "HEXISTS"
 	CmdHKeys       = "HKEYS"
-	CmdHVals = "HVALS"
+	CmdHVals       = "HVALS"
 )
 
 type CmdMeta struct {
