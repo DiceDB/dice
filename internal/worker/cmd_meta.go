@@ -156,6 +156,15 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdHRandField: {
 		CmdType: SingleShard,
 	},
+	CmdPFAdd: {
+		CmdType: SingleShard,
+	},
+	CmdPFCount: {
+		CmdType: SingleShard,
+	},
+	CmdPFMerge: {
+		CmdType: SingleShard,
+	},
 
 	// Multi-shard commands.
 	CmdRename: {

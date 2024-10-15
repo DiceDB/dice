@@ -1315,7 +1315,7 @@ func evalHINCRBY(args []string, store *dstore.Store) *EvalResponse {
 		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
 			return &EvalResponse{
 				Result: nil,
-				Error:  diceerrors.ErrUnexpectedType("hashmap", obj.Value),
+				Error:  diceerrors.ErrWrongTypeOperation,
 			}
 		}
 		hashmap = obj.Value.(HashMap)
@@ -1365,7 +1365,7 @@ func evalHINCRBYFLOAT(args []string, store *dstore.Store) *EvalResponse {
 		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
 			return &EvalResponse{
 				Result: nil,
-				Error:  diceerrors.ErrUnexpectedType("hashmap", obj.Value),
+				Error:  diceerrors.ErrWrongTypeOperation,
 			}
 		}
 		hashmap = obj.Value.(HashMap)
@@ -1419,7 +1419,7 @@ func evalHRANDFIELD(args []string, store *dstore.Store) *EvalResponse {
 	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
 		return &EvalResponse{
 			Result: nil,
-			Error:  diceerrors.ErrUnexpectedType("hashmap", obj.Value),
+			Error:  diceerrors.ErrWrongTypeOperation,
 		}
 	}
 

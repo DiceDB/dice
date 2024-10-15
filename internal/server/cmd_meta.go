@@ -138,6 +138,18 @@ var (
 		Cmd:     "HRANDFIELD",
 		CmdType: SingleShard,
 	}
+	pfaddCmdMeta = CmdsMeta{
+		Cmd:     "PFADD",
+		CmdType: SingleShard,
+	}
+	pfcountCmdMeta = CmdsMeta{
+		Cmd:     "PFCOUNT",
+		CmdType: SingleShard,
+	}
+	pfmergeCmdMeta = CmdsMeta{
+		Cmd:     "PFMERGE",
+		CmdType: SingleShard,
+	}
 
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
@@ -174,5 +186,8 @@ func init() {
 	WorkerCmdsMeta["HINCRBY"] = hincrbyCmdMeta
 	WorkerCmdsMeta["HINCRBYFLOAT"] = hincrbyfloatCmdMeta
 	WorkerCmdsMeta["HRANDFIELD"] = hrandfieldCmdMeta
+	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
+	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
+	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }

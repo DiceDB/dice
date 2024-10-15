@@ -4651,7 +4651,7 @@ func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:          []string{"new_key", "new_field", "10"},
-			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrGeneral("hash value is not an integer")},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrHashValueNotInteger},
 		},
 		"update the existing field which has spaces": {
 			setup: func() {
@@ -4668,7 +4668,7 @@ func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:          []string{"key", "field", "10"},
-			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrGeneral("hash value is not an integer")},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrHashValueNotInteger},
 		},
 		"updating the new field with negative value": {
 			setup:          func() {},
