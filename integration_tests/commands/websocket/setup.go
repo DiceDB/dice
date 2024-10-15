@@ -86,6 +86,7 @@ func (e *WebsocketCommandExecutor) FireCommand(conn *websocket.Conn, cmd string)
 }
 
 func (e *WebsocketCommandExecutor) DisconnectServer(conn *websocket.Conn) {
+	slog.Info("Disconnecting server")
 	conn.Close()
 }
 

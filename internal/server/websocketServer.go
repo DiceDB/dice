@@ -332,5 +332,6 @@ func writeResponse(conn *websocket.Conn, text []byte) {
 	err := conn.WriteMessage(websocket.TextMessage, text)
 	if err != nil {
 		slog.Error(fmt.Sprintf("Error writing response: %v", err))
+		slog.String("data: ", string(text))
 	}
 }
