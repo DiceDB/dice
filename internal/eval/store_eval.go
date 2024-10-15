@@ -389,7 +389,6 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	key := args[0]
-
 	startStr := args[1]
 	stopStr := args[2]
 
