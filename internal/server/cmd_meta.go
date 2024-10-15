@@ -70,19 +70,6 @@ var (
 		Cmd:     "ZRANGE",
 		CmdType: SingleShard,
 	}
-	pfaddCmdMeta = CmdsMeta{
-		Cmd:     "PFADD",
-		CmdType: SingleShard,
-	}
-	pfcountCmdMeta = CmdsMeta{
-		Cmd:     "PFCOUNT",
-		CmdType: SingleShard,
-	}
-	pfmergeCmdMeta = CmdsMeta{
-		Cmd:     "PFMERGE",
-		CmdType: SingleShard,
-	}
-
 	jsonclearCmdMeta = CmdsMeta{
 		Cmd:     "JSON.CLEAR",
 		CmdType: SingleShard,
@@ -107,6 +94,18 @@ var (
 	}
 	hrandfieldCmdMeta = CmdsMeta{
 		Cmd:     "HRANDFIELD",
+		CmdType: SingleShard,
+	}
+	pfaddCmdMeta = CmdsMeta{
+		Cmd:     "PFADD",
+		CmdType: SingleShard,
+	}
+	pfcountCmdMeta = CmdsMeta{
+		Cmd:     "PFCOUNT",
+		CmdType: SingleShard,
+	}
+	pfmergeCmdMeta = CmdsMeta{
+		Cmd:     "PFMERGE",
 		CmdType: SingleShard,
 	}
 
@@ -143,5 +142,14 @@ func init() {
 	WorkerCmdsMeta["HINCRBY"] = hincrbyCmdMeta
 	WorkerCmdsMeta["HINCRBYFLOAT"] = hincrbyfloatCmdMeta
 	WorkerCmdsMeta["HRANDFIELD"] = hrandfieldCmdMeta
+	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
+	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
+	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
+	WorkerCmdsMeta["HINCRBY"] = hincrbyCmdMeta
+	WorkerCmdsMeta["HINCRBYFLOAT"] = hincrbyfloatCmdMeta
+	WorkerCmdsMeta["HRANDFIELD"] = hrandfieldCmdMeta
+	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
+	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
+	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }
