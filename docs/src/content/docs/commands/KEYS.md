@@ -15,7 +15,7 @@ KEYS pattern
 
 | Parameter       | Description                                      | Type    | Required |
 |-----------------|--------------------------------------------------|---------|----------|
-| `pattern`           | A string representing the pattern to match against the keys in DiceDB databse.| String  | Yes      |
+| `pattern`           | A string representing the pattern to match against the keys in DiceDB database.| String  | Yes      |
 
 Supported glob-style characters:
    - `*` matches any number of characters (including zero).

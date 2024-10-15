@@ -37,7 +37,7 @@ PTTL key
 1. `Wrong number of arguments`:
 
    - Error Message: `(error) ERR wrong number of arguments for 'pttl' command`
-   - Occures when attempting to use this command without any arguments or with more than one argument.
+   - Occurs when attempting to use this command without any arguments or with more than one argument.
 
 
 ## Example Usage
