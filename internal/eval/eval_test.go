@@ -2623,7 +2623,7 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 		"root not string strlen(number)": {
 			setup: func() {
 				key := "EXISTING_KEY"
-				value := "10"
+				value := "10.9"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
@@ -2631,6 +2631,18 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"EXISTING_KEY"},
 			output: []byte("-WRONGTYPE wrong type of path value - expected string but found number\r\n"),
+		},
+		"root not string strlen(integer)": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "10"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input:  []string{"EXISTING_KEY"},
+			output: []byte("-WRONGTYPE wrong type of path value - expected string but found integer\r\n"),
 		},
 		"root not string strlen(array)": {
 			setup: func() {
