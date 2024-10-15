@@ -44,79 +44,79 @@ func setupTest(store *dstore.Store) *dstore.Store {
 func TestEval(t *testing.T) {
 	store := dstore.NewStore(nil, nil)
 
-	// testEvalMSET(t, store)
-	// testEvalECHO(t, store)
-	// testEvalHELLO(t, store)
-	// testEvalSET(t, store)
-	// testEvalGET(t, store)
-	// testEvalGETEX(t, store)
-	// testEvalDebug(t, store)
-	// testEvalJSONARRTRIM(t, store)
-	// testEvalJSONARRINSERT(t, store)
-	// testEvalJSONARRPOP(t, store)
-	// testEvalJSONARRLEN(t, store)
-	// testEvalJSONDEL(t, store)
-	// testEvalJSONFORGET(t, store)
-	// testEvalJSONCLEAR(t, store)
-	// testEvalJSONTYPE(t, store)
-	// testEvalJSONGET(t, store)
-	// testEvalJSONSET(t, store)
-	// testEvalJSONNUMMULTBY(t, store)
-	// testEvalJSONTOGGLE(t, store)
-	// testEvalJSONARRAPPEND(t, store)
-	// testEvalJSONRESP(t, store)
-	// testEvalTTL(t, store)
-	// testEvalDel(t, store)
-	// testEvalPersist(t, store)
-	// testEvalEXPIRE(t, store)
-	// testEvalEXPIRETIME(t, store)
-	// testEvalEXPIREAT(t, store)
-	// testEvalDbsize(t, store)
-	// testEvalGETSET(t, store)
-	// testEvalHSET(t, store)
-	// testEvalHMSET(t, store)
-	// testEvalHKEYS(t, store)
+	testEvalMSET(t, store)
+	testEvalECHO(t, store)
+	testEvalHELLO(t, store)
+	testEvalSET(t, store)
+	testEvalGET(t, store)
+	testEvalGETEX(t, store)
+	testEvalDebug(t, store)
+	testEvalJSONARRTRIM(t, store)
+	testEvalJSONARRINSERT(t, store)
+	testEvalJSONARRPOP(t, store)
+	testEvalJSONARRLEN(t, store)
+	testEvalJSONDEL(t, store)
+	testEvalJSONFORGET(t, store)
+	testEvalJSONCLEAR(t, store)
+	testEvalJSONTYPE(t, store)
+	testEvalJSONGET(t, store)
+	testEvalJSONSET(t, store)
+	testEvalJSONNUMMULTBY(t, store)
+	testEvalJSONTOGGLE(t, store)
+	testEvalJSONARRAPPEND(t, store)
+	testEvalJSONRESP(t, store)
+	testEvalTTL(t, store)
+	testEvalDel(t, store)
+	testEvalPersist(t, store)
+	testEvalEXPIRE(t, store)
+	testEvalEXPIRETIME(t, store)
+	testEvalEXPIREAT(t, store)
+	testEvalDbsize(t, store)
+	testEvalGETSET(t, store)
+	testEvalHSET(t, store)
+	testEvalHMSET(t, store)
+	testEvalHKEYS(t, store)
 	testEvalPFADD(t, store)
 	testEvalPFCOUNT(t, store)
 	testEvalPFMERGE(t, store)
-	// testEvalHGET(t, store)
-	// testEvalHMGET(t, store)
-	// testEvalHSTRLEN(t, store)
-	// testEvalHEXISTS(t, store)
-	// testEvalHDEL(t, store)
-	// testEvalHSCAN(t, store)
-	// testEvalJSONSTRLEN(t, store)
-	// testEvalJSONOBJLEN(t, store)
-	// testEvalHLEN(t, store)
-	// testEvalSELECT(t, store)
-	// testEvalLLEN(t, store)
-	// testEvalGETEX(t, store)
-	// testEvalJSONNUMINCRBY(t, store)
-	// testEvalDUMP(t, store)
-	// testEvalTYPE(t, store)
-	// testEvalCOMMAND(t, store)
-	// testEvalHINCRBY(t, store)
-	// testEvalJSONOBJKEYS(t, store)
-	// testEvalGETRANGE(t, store)
-	// testEvalHSETNX(t, store)
-	// testEvalPING(t, store)
-	// testEvalSETEX(t, store)
-	// testEvalFLUSHDB(t, store)
-	// testEvalINCRBYFLOAT(t, store)
-	// testEvalBITOP(t, store)
-	// testEvalAPPEND(t, store)
-	// testEvalHRANDFIELD(t, store)
-	// testEvalZADD(t, store)
-	// testEvalZRANGE(t, store)
-	// testEvalHVALS(t, store)
-	// testEvalBitField(t, store)
-	// testEvalHINCRBYFLOAT(t, store)
-	// testEvalBitFieldRO(t, store)
-	// testEvalGEOADD(t, store)
-	// testEvalGEODIST(t, store)
-	// testEvalSINTER(t, store)
-	// testEvalOBJECTENCODING(t, store)
-	// testEvalJSONSTRAPPEND(t, store)
+	testEvalHGET(t, store)
+	testEvalHMGET(t, store)
+	testEvalHSTRLEN(t, store)
+	testEvalHEXISTS(t, store)
+	testEvalHDEL(t, store)
+	testEvalHSCAN(t, store)
+	testEvalJSONSTRLEN(t, store)
+	testEvalJSONOBJLEN(t, store)
+	testEvalHLEN(t, store)
+	testEvalSELECT(t, store)
+	testEvalLLEN(t, store)
+	testEvalGETEX(t, store)
+	testEvalJSONNUMINCRBY(t, store)
+	testEvalDUMP(t, store)
+	testEvalTYPE(t, store)
+	testEvalCOMMAND(t, store)
+	testEvalHINCRBY(t, store)
+	testEvalJSONOBJKEYS(t, store)
+	testEvalGETRANGE(t, store)
+	testEvalHSETNX(t, store)
+	testEvalPING(t, store)
+	testEvalSETEX(t, store)
+	testEvalFLUSHDB(t, store)
+	testEvalINCRBYFLOAT(t, store)
+	testEvalBITOP(t, store)
+	testEvalAPPEND(t, store)
+	testEvalHRANDFIELD(t, store)
+	testEvalZADD(t, store)
+	testEvalZRANGE(t, store)
+	testEvalHVALS(t, store)
+	testEvalBitField(t, store)
+	testEvalHINCRBYFLOAT(t, store)
+	testEvalBitFieldRO(t, store)
+	testEvalGEOADD(t, store)
+	testEvalGEODIST(t, store)
+	testEvalSINTER(t, store)
+	testEvalOBJECTENCODING(t, store)
+	testEvalJSONSTRAPPEND(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -2125,29 +2125,7 @@ func testEvalPFADD(t *testing.T, store *dstore.Store) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			store = setupTest(store)
-			if tt.setup != nil {
-				tt.setup()
-			}
-
-			response := evalPFADD(tt.input, store)
-			if tt.migratedOutput.Result != nil {
-				if slice, ok := tt.migratedOutput.Result.([]interface{}); ok {
-					assert.DeepEqual(t, slice, response.Result)
-				} else {
-					assert.Equal(t, tt.migratedOutput.Result, response.Result)
-				}
-			}
-
-			if tt.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
-			} else {
-				testifyAssert.NoError(t, response.Error)
-			}
-		})
-	}
+	runMigratedEvalTests(t, tests, evalPFADD, store)
 }
 
 func testEvalPFCOUNT(t *testing.T, store *dstore.Store) {
@@ -2190,29 +2168,7 @@ func testEvalPFCOUNT(t *testing.T, store *dstore.Store) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			store = setupTest(store)
-			if tt.setup != nil {
-				tt.setup()
-			}
-
-			response := evalPFCOUNT(tt.input, store)
-			if tt.migratedOutput.Result != nil {
-				if slice, ok := tt.migratedOutput.Result.([]interface{}); ok {
-					assert.DeepEqual(t, slice, response.Result)
-				} else {
-					assert.Equal(t, tt.migratedOutput.Result, response.Result)
-				}
-			}
-
-			if tt.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
-			} else {
-				testifyAssert.NoError(t, response.Error)
-			}
-		})
-	}
+	runMigratedEvalTests(t, tests, evalPFCOUNT, store)
 }
 
 func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
@@ -2334,29 +2290,7 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			store = setupTest(store)
-			if tt.setup != nil {
-				tt.setup()
-			}
-
-			response := evalPFMERGE(tt.input, store)
-			if tt.migratedOutput.Result != nil {
-				if slice, ok := tt.migratedOutput.Result.([]interface{}); ok {
-					assert.DeepEqual(t, slice, response.Result)
-				} else {
-					assert.Equal(t, tt.migratedOutput.Result, response.Result)
-				}
-			}
-
-			if tt.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
-			} else {
-				testifyAssert.NoError(t, response.Error)
-			}
-		})
-	}
+	runMigratedEvalTests(t, tests, evalPFMERGE, store)
 }
 
 func testEvalHGET(t *testing.T, store *dstore.Store) {
