@@ -413,12 +413,12 @@ func evalSETBIT(args []string, store *dstore.Store) *EvalResponse {
 		store.Put(key, newObj)
 		if resp {
 			return &EvalResponse{
-				Result: 1,
+				Result: clientio.IntegerOne,
 				Error:  nil,
 			}
 		}
 		return &EvalResponse{
-			Result: 0,
+			Result: clientio.IntegerZero,
 			Error:  nil,
 		}
 	}
