@@ -2,8 +2,8 @@ package eval
 
 import (
 	"testing"
-	"time"
 
+	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,12 +32,13 @@ func TestSetExpiry(t *testing.T) {
 	hmap.Set("key1", "value1")
 
 	// Set expiry to 1 second in the future
-	expiryTime := uint64(time.Now().UnixMilli() + 1000)
-	hmap.SetExpiry("key1", expiryTime)
+	expiryTime := 1000
+	hmap.SetExpiry("key1", int64(expiryTime))
 
 	expiry, ok := hmap.GetExpiry("key1")
 	assert.True(t, ok, "Expected expiry for key1 to exist")
-	assert.Equal(t, expiryTime, expiry, "Expected expiry time to match")
+	expiryMs := expiry - uint64(utils.GetCurrentTime().UnixMilli())
+	assert.True(t, expiryMs > 0, "Expected expiry time to be greater than 0")
 }
 
 func TestGetExpiredKey(t *testing.T) {
@@ -45,8 +46,8 @@ func TestGetExpiredKey(t *testing.T) {
 	hmap.Set("key1", "value1")
 
 	// Set expiry to 1 second in the past
-	expiryTime := uint64(time.Now().UnixMilli() - 1000)
-	hmap.SetExpiry("key1", expiryTime)
+	expiryTime := -1000
+	hmap.SetExpiry("key1", int64(expiryTime))
 
 	val, ok := hmap.Get("key1")
 	assert.False(t, ok, "Expected key1 to be expired")
@@ -59,7 +60,7 @@ func TestKeys(t *testing.T) {
 	hmap.Set("key2", "value2")
 
 	// Set expiry for key2
-	hmap.SetExpiry("key2", uint64(time.Now().UnixMilli()-1000)) // key2 expired
+	hmap.SetExpiry("key2", -1000) // key2 expired
 
 	keys := hmap.Keys()
 	assert.Equal(t, 1, len(keys), "Expected only 1 valid key")
@@ -73,7 +74,7 @@ func TestValues(t *testing.T) {
 	hmap.Set("key2", "value2")
 
 	// Set expiry for key2
-	hmap.SetExpiry("key2", uint64(time.Now().UnixMilli()-1000)) // key2 expired
+	hmap.SetExpiry("key2", -1000) // key2 expire
 
 	values := hmap.Values()
 	assert.Equal(t, 1, len(values), "Expected only 1 valid value")
@@ -103,7 +104,7 @@ func TestLen(t *testing.T) {
 	hmap.Set("key2", "value2")
 
 	// Set expiry for key2
-	hmap.SetExpiry("key2", uint64(time.Now().UnixMilli()-1000)) // key2 expired
+	hmap.SetExpiry("key2", -1000) // key2 expired
 
 	assert.Equal(t, 1, hmap.Len(), "Expected actual valid length to be 1")
 }
@@ -147,4 +148,18 @@ func TestCreateOrModify(t *testing.T) {
 	val, ok = hmap.Get("counter")
 	assert.True(t, ok, "Expected counter to exist")
 	assert.Equal(t, 2, *val, "Expected counter to be incremented to 2")
+}
+
+func TestFind(t *testing.T) {
+	hmap := NewHashMap[string, string]()
+	hmap.Set("apple", "fruit")
+	hmap.Set("banana", "fruit")
+	hmap.Set("carrot", "vegetable")
+	hmap.Set("apricot", "fruit")
+	hmap.Set("avocado", "fruit")
+	assert.Equal(t, 5, hmap.Len())
+	result := hmap.Find("a*")
+	assert.ElementsMatch(t, result, []string{"avocado", "apple", "apricot"})
+	result = hmap.Find("*r*")
+	assert.ElementsMatch(t, result, []string{"carrot", "apricot"})
 }

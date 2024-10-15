@@ -1,10 +1,15 @@
 package eval
 
-import "github.com/dicedb/dice/internal/server/utils"
+import (
+	"path"
+
+	"github.com/dicedb/dice/internal/server/utils"
+)
 
 // HashMap is a generic implementation of a hashmap with expiration support.
 // hmap stores the actual values
 // expires stores the expiry values
+
 type HashMap[K comparable, V any] struct {
 	hmap    map[K]V
 	expires map[K]uint64
@@ -25,6 +30,25 @@ func (h *HashMap[K, V]) Keys() []K {
 	for k := range h.hmap {
 		if _, ok := h.Get(k); ok {
 			keys = append(keys, k)
+		}
+	}
+	return keys
+}
+
+// Find searches for keys that match the specified pattern p and returns them.
+// This function is only available if K is a string.
+func (h *HashMap[K, V]) Find(p string) []K {
+	var stringKey K
+	if _, ok := any(stringKey).(string); !ok {
+		panic("Find is only available when K is a string")
+	}
+
+	keys := make([]K, 0, h.ApproxLength())
+	for k := range h.hmap {
+		if _, ok := h.Get(k); ok {
+			if found, _ := path.Match(p, any(k).(string)); found {
+				keys = append(keys, k)
+			}
 		}
 	}
 	return keys
@@ -112,14 +136,54 @@ func (h *HashMap[K, V]) GetWithExpiry(k K) (value *V, expiry int64) {
 	return val, int64(expireMs)
 }
 
-// SetExpiry sets an expiry time for a given key.
-// Setting expiry with a past value will result in expiration
-func (h *HashMap[K, V]) SetExpiry(k K, expiryMs uint64) {
-	if expiryMs <= 0 {
+// SetExpiry sets an expiry time for a given key, specified as a duration in milliseconds from the current time.
+//
+// If the key does not exist in the HashMap, the function returns the constant `NOT_FOUND`.
+// If the specified expiry duration is less than or equal to zero, the key will be deleted, and the function will return the constant `PAST`.
+// Otherwise, the expiry time is calculated as the current time plus the provided duration, and the expiry is set using the `SetExpiryUnixMilli` method.
+//
+// Parameters:
+//   - k: The key for which to set the expiry time.
+//   - expiryMs: The duration in milliseconds from the current time to set the expiry.
+//
+// Returns:
+//
+//	An int64 status code:
+//	- `NOT_FOUND` if the key does not exist.
+//	- `PAST` if the expiry duration is zero or negative, resulting in key deletion.
+//	- `EXPIRY_SET` if the expiry time is successfully set.
+func (h *HashMap[K, V]) SetExpiry(k K, expiryMs int64) int64 {
+	expiryUnixMs := uint64(utils.GetCurrentTime().UnixMilli() + expiryMs)
+	return h.SetExpiryUnixMilli(k, expiryUnixMs)
+}
+
+// SetExpiryUnixMilli sets an expiry time for a given key, specified in Unix milliseconds.
+//
+// If the key does not exist in the HashMap, the function returns the constant `NOT_FOUND`.
+// If the provided expiry time is in the past (i.e., less than or equal to the current time),
+// the key will be deleted, and the function will return the constant `PAST`.
+// Otherwise, the expiry time for the key is updated, and the function returns the constant `EXPIRY_SET`.
+//
+// Parameters:
+//   - k: The key for which to set the expiry time.
+//   - expiryMs: The expiry time in Unix milliseconds.
+//
+// Returns:
+//
+//	An int64 status code:
+//	- `NOT_FOUND` if the key does not exist.
+//	- `PAST` if the expiry time is in the past, resulting in key deletion.
+//	- `EXPIRY_SET` if the expiry time is successfully set.
+func (h *HashMap[K, V]) SetExpiryUnixMilli(k K, expiryMs uint64) int64 {
+	if _, exists := h.Get(k); !exists {
+		return NOT_FOUND
+	}
+	if expiryMs <= uint64(utils.GetCurrentTime().UnixMilli()) {
 		h.Delete(k)
-		return
+		return PAST
 	}
 	h.expires[k] = expiryMs
+	return EXPIRY_SET
 }
 
 // Get retrieves the value associated with a key, checking expiration.

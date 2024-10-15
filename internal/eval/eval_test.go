@@ -2919,7 +2919,7 @@ func testEvalHSET(t *testing.T, store *dstore.Store) {
 				res, ok := hashMap.Get(field)
 
 				assert.Assert(t, ok == true)
-				assert.DeepEqual(t, res, mockValue)
+				assert.DeepEqual(t, *res, mockValue)
 			},
 			input: []string{
 				"KEY_MOCK",
@@ -3009,7 +3009,7 @@ func testEvalHMSET(t *testing.T, store *dstore.Store) {
 				res, ok := hashMap.Get(field)
 
 				assert.Assert(t, ok == true)
-				assert.DeepEqual(t, res, mockValue)
+				assert.DeepEqual(t, *res, mockValue)
 			},
 			input: []string{
 				"KEY_MOCK",

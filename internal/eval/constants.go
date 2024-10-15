@@ -40,4 +40,7 @@ const (
 	SIGNED     string = "SIGNED"
 	UNSIGNED   string = "UNSIGNED"
 	FIELDS     string = "FIELDS"
+	NOT_FOUND  int64  = -2
+	PAST       int64  = -1
+	EXPIRY_SET int64  = 1
 )

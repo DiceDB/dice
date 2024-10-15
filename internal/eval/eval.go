@@ -3254,7 +3254,7 @@ func evalHGET(args []string, store *dstore.Store) []byte {
 	if !ok {
 		return clientio.RespNIL
 	}
-	return clientio.Encode(val, false)
+	return clientio.Encode(*val, false)
 }
 
 // evalHMGET returns an array of values associated with the given fields,
@@ -3284,7 +3284,7 @@ func evalHMGET(args []string, store *dstore.Store) []byte {
 	for _, hmKey := range args[1:] {
 		hmValue, ok := hashMap.Get(hmKey)
 		if ok {
-			results = append(results, hmValue)
+			results = append(results, *hmValue)
 		} else {
 			results = append(results, nil)
 		}
@@ -5062,7 +5062,7 @@ func evalHINCRBYFLOAT(args []string, store *dstore.Store) []byte {
 	}
 
 	obj.Value = hashMap
-	return clientio.Encode(newVal, false)
+	return clientio.Encode(*newVal, false)
 }
 
 func evalGEOADD(args []string, store *dstore.Store) []byte {
@@ -5201,7 +5201,14 @@ func evalHEXPIRE(args []string, store *dstore.Store) []byte {
 	if len(args) < 5 {
 		return diceerrors.NewErrArity("HEXPIRE")
 	}
-	// key := args[0]
+	key := args[0]
+	obj := store.Get(key)
+
+	if obj != nil {
+		if err := object.AssertType(obj.TypeEncoding, object.ObjTypeHashMap); err != nil {
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+		}
+	}
 	seconds, err := strconv.ParseInt(args[1], 10, 64)
 	if err != nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
@@ -5210,7 +5217,38 @@ func evalHEXPIRE(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrWithFormattedMessage("invalid expire time, must be >= 0")
 	}
 
-	return clientio.RespNIL
+	// currently optional [nx,lt,gt,xx] not supported
+
+	fields := strings.ToUpper(args[2])
+
+	if fields != FIELDS {
+		return diceerrors.NewErrWithFormattedMessage("Mandatory argument FIELDS is missing or not at the right position")
+	}
+
+	numFields, err := strconv.ParseInt(args[3], 10, 64)
+	if err != nil {
+		return diceerrors.NewErrWithFormattedMessage("Parameter `numFields` should be greater than 0")
+	}
+
+	if len(args)-4 != int(numFields) {
+		return diceerrors.NewErrWithFormattedMessage("The `numfields` parameter must match the number of arguments")
+	}
+
+	results := make([]interface{}, 0, numFields)
+	if obj == nil {
+		for i := 1; i < int(numFields); i++ {
+			results = append(results, -2)
+		}
+		return clientio.Encode(results, false)
+	}
+
+	hashMap := obj.Value.(StrStrHashMap)
+
+	for i := 0; i < int(numFields); i++ {
+		status := hashMap.SetExpiry(args[i+4], seconds*1000)
+		results = append(results, status)
+	}
+	return clientio.Encode(results, false)
 }
 
 func evalHTTL(args []string, store *dstore.Store) []byte {
@@ -5260,7 +5298,8 @@ func evalHTTL(args []string, store *dstore.Store) []byte {
 			field := args[i+3]
 			_, expiry := hashMap.GetWithExpiry(field)
 			if expiry > 0 {
-				results = append(results, expiry/1000)
+				durationMs := expiry - utils.GetCurrentTime().UnixMilli()
+				results = append(results, durationMs/1000)
 			} else {
 				results = append(results, expiry)
 			}
