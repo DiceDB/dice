@@ -425,6 +425,12 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: []string{},
+			Error:  nil,
+		}
+	}
 
 	sortedSet, errMsg := sortedset.FromObject(obj)
 
