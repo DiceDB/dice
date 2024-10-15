@@ -13,16 +13,22 @@ GETEX key [EX seconds|PX milliseconds|EXAT timestamp|PXAT milliseconds-timestamp
 
 ## Parameters
 
-- `key`: The key whose value you want to retrieve and set an expiration for.
-- `EX seconds`: Set the expiration time in seconds.
-- `PX milliseconds`: Set the expiration time in milliseconds.
-- `EXAT timestamp`: Set the expiration time as a Unix timestamp in seconds.
-- `PXAT milliseconds-timestamp`: Set the expiration time as a Unix timestamp in milliseconds.
-- `PERSIST`: Remove the existing expiration time, making the key persistent.
+| Parameter | Description                                                               | Type    | Required |
+|-----------|---------------------------------------------------------------------------|---------|----------|
+| `key`     | The key whose value you want to retrieve and set an expiration for.       | String  | Yes      |
+| `EX`      | Set the expiration time in seconds.                                       | Integer | No       |
+| `EXAT`    | Set the expiration time as a Unix timestamp in seconds.                   | Integer | No       |
+| `PX`      | Set the expiration time in milliseconds.                                  | Integer | No       |
+| `PXAT`    | Set the expiration time as a Unix timestamp in milliseconds.              | Integer | No       |
+| `PERSIST` | Remove the existing expiration time, making the key persistent.           | None    | No       |
 
-## Return Value
+## Return Values
 
-The `GETEX` command returns the value of the specified key. If the key does not exist, it returns `nil`.
+| Condition                                         | Return Value                                      |
+|---------------------------------------------------|---------------------------------------------------|
+| The specified key exists and holds a value        | The value stored at the key                       |
+| The specified key does not exist                  | `nil`                                             |
+| Syntax or specified constraints are invalid       | error                                             |
 
 ## Behaviour
 
@@ -34,7 +40,7 @@ When the `GETEX` command is executed, it performs the following actions:
 
 If the key does not exist, the command will return `nil` and no expiration time will be set.
 
-## Error Handling
+## Errors
 
 The `GETEX` command can raise errors in the following scenarios:
 
@@ -45,50 +51,57 @@ The `GETEX` command can raise errors in the following scenarios:
 3. `Invalid expiration time`: If the expiration time is not a valid integer or timestamp, it will return an error.
    - Error message: `(error) ERR value is not an integer or out of range`
 
-## Example Usage
+## Examples
 
 ### Example 1: Retrieve value and set expiration in seconds
 
-```DiceDB
-SET mykey "Hello"
-GETEX mykey EX 10
+
+```bash
+127.0.0.1:7379> SET mykey "Hello"
+OK
+127.0.0.1:7379> GETEX mykey EX 10
 ```
 
 - This command will return `"Hello"` and set the expiration time of `mykey` to 10 seconds.
 
 ### Example 2: Retrieve value and set expiration in milliseconds
 
-```DiceDB
-SET mykey "Hello"
-GETEX mykey PX 10000
+```bash
+127.0.0.1:7379> SET mykey "Hello"
+OK
+127.0.0.1:7379> GETEX mykey PX 10000
 ```
 
 - This command will return `"Hello"` and set the expiration time of `mykey` to 10,000 milliseconds (10 seconds).
 
 ### Example 3: Retrieve value and set expiration as Unix timestamp in seconds
 
-```DiceDB
-SET mykey "Hello"
-GETEX mykey EXAT 1672531199
+```bash
+127.0.0.1:7379> SET mykey "Hello"
+OK
+127.0.0.1:7379> GETEX mykey EXAT 1672531199
 ```
 
 - This command will return `"Hello"` and set the expiration time of `mykey` to the Unix timestamp `1672531199`.
 
 ### Example 4: Retrieve value and set expiration as Unix timestamp in milliseconds
 
-```DiceDB
-SET mykey "Hello"
-GETEX mykey PXAT 1672531199000
+```bash
+127.0.0.1:7379> SET mykey "Hello"
+OK
+127.0.0.1:7379> GETEX mykey PXAT 1672531199000
 ```
 
 - This command will return `"Hello"` and set the expiration time of `mykey` to the Unix timestamp `1672531199000` milliseconds.
 
 ### Example 5: Retrieve value and remove expiration
 
-```DiceDB
-SET mykey "Hello"
-EXPIRE mykey 10
-GETEX mykey PERSIST
+```bash
+127.0.0.1:7379> SET mykey "Hello"
+OK
+127.0.0.1:7379> EXPIRE mykey 10
+OK
+127.0.0.1:7379> GETEX mykey PERSIST
 ```
 
 - This command will return `"Hello"` and remove the expiration time of `mykey`, making it persistent.
