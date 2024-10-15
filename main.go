@@ -193,7 +193,7 @@ func main() {
 		}()
 	}
 
-	websocketServer := server.NewWebSocketServer(shardManager, logr)
+	websocketServer := server.NewWebSocketServer(shardManager, config.WebsocketPort, logr)
 	serverWg.Add(1)
 	go func() {
 		defer serverWg.Done()

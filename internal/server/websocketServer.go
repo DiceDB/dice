@@ -44,10 +44,10 @@ type WebsocketServer struct {
 	logger             *slog.Logger
 }
 
-func NewWebSocketServer(shardManager *shard.ShardManager, logger *slog.Logger) *WebsocketServer {
+func NewWebSocketServer(shardManager *shard.ShardManager, port int, logger *slog.Logger) *WebsocketServer {
 	mux := http.NewServeMux()
 	srv := &http.Server{
-		Addr:              fmt.Sprintf(":%d", config.WebsocketPort),
+		Addr:              fmt.Sprintf(":%d", port),
 		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
 	}

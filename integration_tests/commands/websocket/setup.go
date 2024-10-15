@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
@@ -19,7 +20,10 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-const URL = "ws://localhost:8380"
+const (
+	URL      = "ws://localhost:8380"
+	testPort = 8380
+)
 
 type TestServerOptions struct {
 	Port   int
@@ -104,7 +108,8 @@ func RunWebsocketServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerO
 	shardManager := shard.NewShardManager(1, watchChan, nil, globalErrChannel, opt.Logger)
 	queryWatcherLocal := querymanager.NewQueryManager(opt.Logger)
 	config.WebsocketPort = opt.Port
-	testServer := server.NewWebSocketServer(shardManager, opt.Logger)
+	testServer := server.NewWebSocketServer(shardManager, testPort, opt.Logger)
+	fmt.Println("Starting Websocket Test Server on port: ", testPort)
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
 
 	// run shard manager
