@@ -897,25 +897,28 @@ var (
 		Name: "PFADD",
 		Info: `PFADD key [element [element ...]]
 		Adds elements to a HyperLogLog key. Creates the key if it doesn't exist.`,
-		Eval:     evalPFADD,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalPFADD,
+		IsMigrated: true,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	pfCountCmdMeta = DiceCmdMeta{
 		Name: "PFCOUNT",
 		Info: `PFCOUNT key [key ...]
 		Returns the approximated cardinality of the set(s) observed by the HyperLogLog key(s).`,
-		Eval:     evalPFCOUNT,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalPFCOUNT,
+		IsMigrated: true,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	pfMergeCmdMeta = DiceCmdMeta{
 		Name: "PFMERGE",
 		Info: `PFMERGE destkey [sourcekey [sourcekey ...]]
 		Merges one or more HyperLogLog values into a single key.`,
-		Eval:     evalPFMERGE,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalPFMERGE,
+		IsMigrated: true,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	jsonStrlenCmdMeta = DiceCmdMeta{
 		Name: "JSON.STRLEN",

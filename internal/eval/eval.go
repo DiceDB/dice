@@ -26,7 +26,6 @@ import (
 
 	"github.com/dicedb/dice/internal/sql"
 
-	"github.com/axiomhq/hyperloglog"
 	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
@@ -3657,115 +3656,6 @@ func evalSINTER(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(members, false)
 }
 
-// PFADD Adds all the element arguments to the HyperLogLog data structure stored at the variable
-// name specified as first argument.
-//
-// Returns:
-// If the approximated cardinality estimated by the HyperLogLog changed after executing the command,
-// returns 1, otherwise 0 is returned.
-func evalPFADD(args []string, store *dstore.Store) []byte {
-	if len(args) < 1 {
-		return diceerrors.NewErrArity("PFADD")
-	}
-
-	key := args[0]
-	obj := store.Get(key)
-
-	// If key doesn't exist prior initial cardinality changes hence return 1
-	if obj == nil {
-		hll := hyperloglog.New()
-		for _, arg := range args[1:] {
-			hll.Insert([]byte(arg))
-		}
-
-		obj = store.NewObj(hll, -1, object.ObjTypeString, object.ObjEncodingRaw)
-
-		store.Put(key, obj)
-		return clientio.Encode(1, false)
-	}
-
-	existingHll, ok := obj.Value.(*hyperloglog.Sketch)
-	if !ok {
-		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeHllErr)
-	}
-	initialCardinality := existingHll.Estimate()
-	for _, arg := range args[1:] {
-		existingHll.Insert([]byte(arg))
-	}
-
-	if newCardinality := existingHll.Estimate(); initialCardinality != newCardinality {
-		return clientio.Encode(1, false)
-	}
-
-	return clientio.Encode(0, false)
-}
-
-func evalPFCOUNT(args []string, store *dstore.Store) []byte {
-	if len(args) < 1 {
-		return diceerrors.NewErrArity("PFCOUNT")
-	}
-
-	unionHll := hyperloglog.New()
-
-	for _, arg := range args {
-		obj := store.Get(arg)
-		if obj != nil {
-			currKeyHll, ok := obj.Value.(*hyperloglog.Sketch)
-			if !ok {
-				return diceerrors.NewErrWithMessage(diceerrors.WrongTypeHllErr)
-			}
-			err := unionHll.Merge(currKeyHll)
-			if err != nil {
-				return diceerrors.NewErrWithMessage(diceerrors.InvalidHllErr)
-			}
-		}
-	}
-
-	return clientio.Encode(unionHll.Estimate(), false)
-}
-
-func evalPFMERGE(args []string, store *dstore.Store) []byte {
-	if len(args) < 1 {
-		return diceerrors.NewErrArity("PFMERGE")
-	}
-
-	var mergedHll *hyperloglog.Sketch
-	destKey := args[0]
-	obj := store.Get(destKey)
-
-	// If destKey doesn't exist, create a new HLL, else fetch the existing
-	if obj == nil {
-		mergedHll = hyperloglog.New()
-	} else {
-		var ok bool
-		mergedHll, ok = obj.Value.(*hyperloglog.Sketch)
-		if !ok {
-			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeHllErr)
-		}
-	}
-
-	for _, arg := range args {
-		obj := store.Get(arg)
-		if obj != nil {
-			currKeyHll, ok := obj.Value.(*hyperloglog.Sketch)
-			if !ok {
-				return diceerrors.NewErrWithMessage(diceerrors.WrongTypeHllErr)
-			}
-
-			err := mergedHll.Merge(currKeyHll)
-			if err != nil {
-				return diceerrors.NewErrWithMessage(diceerrors.InvalidHllErr)
-			}
-		}
-	}
-
-	// Save the mergedHll
-	obj = store.NewObj(mergedHll, -1, object.ObjTypeString, object.ObjEncodingRaw)
-	store.Put(destKey, obj)
-
-	return clientio.RespOK
-}
-
 func evalJSONSTRLEN(args []string, store *dstore.Store) []byte {
 	if len(args) < 1 {
 		return diceerrors.NewErrArity("JSON.STRLEN")
@@ -4275,6 +4165,15 @@ func evalAPPEND(args []string, store *dstore.Store) []byte {
 
 	if obj == nil {
 		// Key does not exist path
+
+		// check if the value starts with '0' and has more than 1 character to handle leading zeros
+		if len(value) > 1 && value[0] == '0' {
+			// treat as string if has leading zeros
+			store.Put(key, store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw))
+			return clientio.Encode(len(value), false)
+		}
+
+		// Deduce type and encoding based on the value if no leading zeros
 		oType, oEnc := deduceTypeEncoding(value)
 
 		var storedValue interface{}

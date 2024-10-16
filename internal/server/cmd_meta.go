@@ -70,6 +70,18 @@ var (
 		Cmd:     "ZRANGE",
 		CmdType: SingleShard,
 	}
+	pfaddCmdMeta = CmdsMeta{
+		Cmd:     "PFADD",
+		CmdType: SingleShard,
+	}
+	pfcountCmdMeta = CmdsMeta{
+		Cmd:     "PFCOUNT",
+		CmdType: SingleShard,
+	}
+	pfmergeCmdMeta = CmdsMeta{
+		Cmd:     "PFMERGE",
+		CmdType: SingleShard,
+	}
 	setbitCmdMeta = CmdsMeta{
 		Cmd:     "SETBIT",
 		CmdType: SingleShard,
@@ -116,7 +128,10 @@ func init() {
 	WorkerCmdsMeta["GETSET"] = getsetCmdMeta
 	WorkerCmdsMeta["SETEX"] = setexCmdMeta
 	WorkerCmdsMeta["ZADD"] = zaddCmdMeta
-	WorkerCmdsMeta["ZRANGE"] = zrangeCmdMeta	
+	WorkerCmdsMeta["ZRANGE"] = zrangeCmdMeta
+	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
+	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
+	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
 	WorkerCmdsMeta["SETBIT"] = setbitCmdMeta
 	WorkerCmdsMeta["GETBIT"] = getbitCmdMeta
 	WorkerCmdsMeta["BITCOUNT"] = bitcountCmdMeta

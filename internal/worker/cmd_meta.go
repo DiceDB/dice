@@ -48,6 +48,9 @@ const (
 	CmdZRangeWatch = "ZRANGE.WATCH"
 	CmdZAdd        = "ZADD"
 	CmdZRange      = "ZRANGE"
+	CmdPFAdd       = "PFADD"
+	CmdPFCount     = "PFCOUNT"
+	CmdPFMerge     = "PFMERGE"
 	CmdSetBit      = "SETBIT"
 	CmdGetBit      = "GETBIT"
 	CmdBitCount    = "BITCOUNT"
@@ -87,6 +90,15 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdGetSet: {
+		CmdType: SingleShard,
+	},
+	CmdPFAdd: {
+		CmdType: SingleShard,
+	},
+	CmdPFCount: {
+		CmdType: SingleShard,
+	},
+	CmdPFMerge: {
 		CmdType: SingleShard,
 	},
 	CmdSetBit: {
