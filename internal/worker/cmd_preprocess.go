@@ -1,9 +1,6 @@
 package worker
 
 import (
-	"math/rand"
-	"time"
-
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/ops"
 )
@@ -48,9 +45,14 @@ func preProcessCopy(w *BaseWorker, diceDBCmd *cmd.DiceDBCmd) {
 		Args: []string{key},
 	}
 
+	requestID, err := GenerateRandomUint32()
+	if err != nil {
+		requestID = 0
+	}
+
 	rc <- &ops.StoreOp{
 		SeqID:         0,
-		RequestID:     rand.New(rand.NewSource(time.Now().UnixNano())).Uint32(),
+		RequestID:     requestID,
 		Cmd:           &preCmd,
 		WorkerID:      w.id,
 		ShardID:       sid,
