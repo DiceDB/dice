@@ -75,7 +75,8 @@ var (
 		CmdType: SingleShard,
 	}
 	appendCmdMeta = CmdsMeta{
-		Cmd: "APPEND",
+		Cmd:     "APPEND",
+		CmdType: SingleShard,
 	}
 	pfaddCmdMeta = CmdsMeta{
 		Cmd:     "PFADD",
