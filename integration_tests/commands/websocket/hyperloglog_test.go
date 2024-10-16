@@ -82,7 +82,7 @@ func TestHyperLogLogCommands(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			conn := exec.ConnectToServer()
-			deleteKey(t, conn, exec, "k")
+			DeleteKey(t, conn, exec, "k")
 
 			for i, cmd := range tc.commands {
 				result, err := exec.FireCommandAndReadResponse(conn, cmd)

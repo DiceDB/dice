@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func deleteKey(t *testing.T, conn *websocket.Conn, exec *WebsocketCommandExecutor, key string) {
+func DeleteKey(t *testing.T, conn *websocket.Conn, exec *WebsocketCommandExecutor, key string) {
 	cmd := "DEL " + key
 	resp, err := exec.FireCommandAndReadResponse(conn, cmd)
 	assert.Nil(t, err)
