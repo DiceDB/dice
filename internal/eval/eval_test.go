@@ -5171,6 +5171,23 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 			input:  []string{"bitKey", "val"},
 			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
 		},
+		"append value with leading zeros":{
+			setup: func() {
+				store.Del("key_with_leading_zeros")
+			},
+			input: []string{"key_with_leading_zeros", "0043"},
+			output: clientio.Encode(4, false), // The length of "0043" is 4
+			validator: func(output []byte){
+				obj := store.Get("key_with_leading_zeros")
+				_, enc := object.ExtractTypeEncoding(obj)
+				if enc != object.ObjEncodingRaw {
+					t.Errorf("expected encoding to be Raw for string with leading zeros")
+				} 
+				if obj.Value.(string) != "0043" {
+					t.Errorf("expected value to be '0043', got %v", obj.Value)
+				}
+			},
+		},
 	}
 
 	runEvalTests(t, tests, evalAPPEND, store)

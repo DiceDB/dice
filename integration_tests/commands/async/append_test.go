@@ -47,6 +47,17 @@ func TestAPPEND(t *testing.T) {
 			expected: []interface{}{int64(0), int64(1), int64(2), "12", "OK", int64(2), "12"},
 		},
 		{
+			name: "APPEND with leading zeros",
+			commands: []string{
+				"DEL key",
+				"APPEND key 0043",
+				"GET key",
+				"APPEND key 0034",
+				"GET key",
+			},
+			expected: []interface{}{int64(4), "0043", int64(8), "00430034"},
+		},
+		{
 			name: "APPEND with Various Data Types",
 			commands: []string{
 				"LPUSH listKey lValue",     // Add element to a list
