@@ -939,7 +939,7 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 			input:  []string{"NONEXISTENT_KEY"},
 			output: []byte("$-1\r\n"),
             migratedOutput: EvalResponse{
-                Result: nil,
+                Result: clientio.NIL,
                 Error: nil,
             },
 		},
@@ -988,7 +988,7 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 			input:  []string{"EXISTING_KEY", "$.*"},
 			output: []byte("*5\r\n$-1\r\n$-1\r\n$-1\r\n$-1\r\n$-1\r\n"),
             migratedOutput: EvalResponse{
-                Result: []interface{}{nil,nil,nil,nil,nil},
+                Result: []interface{}{clientio.NIL,clientio.NIL,clientio.NIL,clientio.NIL,clientio.NIL},
                 Error: nil,
             },
 		},
@@ -1029,7 +1029,6 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 			}
 
 			if tt.migratedOutput.Error != nil {
-                fmt.Println(tt.name, tt.migratedOutput.Error.Error(), response.Error)
 				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
 				testifyAssert.NoError(t, response.Error)
@@ -3580,7 +3579,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			output: []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
             migratedOutput: EvalResponse{
                 Result: nil,
-                Error: nil,
+                Error: diceerrors.ErrKeyNotFound,
             },
 		},
 		"empty array at root path": {
@@ -3611,7 +3610,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			input:  []string{"MOCK_KEY", "$.b"},
 			output: []byte("*1\r\n$-1\r\n"),
             migratedOutput: EvalResponse{
-                Result: []interface{}{nil},
+                Result: []interface{}{clientio.NIL},
                 Error: nil,
             },
 		},
@@ -3627,7 +3626,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			input:  []string{"MOCK_KEY", "$.*"},
 			output: []byte("*2\r\n$-1\r\n$-1\r\n"),
             migratedOutput: EvalResponse{
-                Result: []interface{}{nil,nil},
+                Result: []interface{}{clientio.NIL,clientio.NIL},
                 Error: nil,
             },
 		},
