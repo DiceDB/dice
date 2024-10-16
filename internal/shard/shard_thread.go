@@ -23,16 +23,18 @@ type ShardError struct {
 	Error   error   // Error is the error that occurred
 }
 
+// WorkerChannels holds the communication channels for a worker.
+// It contains both the common response channel and the preprocessing response channel.
 type WorkerChannels struct {
-	CommonResponseChan        chan *ops.StoreResponse // Common responseChan channel
-	PreProcessingResponseChan chan *ops.StoreResponse // Preprocessing responseChan channel
+	CommonResponseChan        chan *ops.StoreResponse // CommonResponseChan is used to send standard responses for worker operations.
+	PreProcessingResponseChan chan *ops.StoreResponse // PreProcessingResponseChan is used to send responses related to preprocessing operations.
 }
 
 type ShardThread struct {
 	id               ShardID                   // id is the unique identifier for the shard.
 	store            *dstore.Store             // store that the shard is responsible for.
 	ReqChan          chan *ops.StoreOp         // ReqChan is this shard's channel for receiving requests.
-	workerMap        map[string]WorkerChannels // workerMap maps workerID to its unique responseChan channel
+	workerMap        map[string]WorkerChannels // workerMap maps each workerID to its corresponding WorkerChannels, containing both the common and preprocessing response channels.
 	workerMutex      sync.RWMutex              // workerMutex is the workerMap's mutex for thread safety.
 	globalErrorChan  chan error                // globalErrorChan is the channel for sending system-level errors.
 	shardErrorChan   chan *ShardError          // ShardErrorChan is the channel for sending shard-level errors.
