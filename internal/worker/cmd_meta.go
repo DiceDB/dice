@@ -95,6 +95,8 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdJSONObjlen: {
+		CmdType: SingleShard,
+	},
 	CmdPFAdd: {
 		CmdType: SingleShard,
 	},
