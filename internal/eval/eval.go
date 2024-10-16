@@ -1376,13 +1376,25 @@ func evalRANDOMKEY(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	if len(availKeys) > 0 {
-		randKeyIdx, err := rand.Int(rand.Reader, big.NewInt(int64(len(availKeys))))
-		if err != nil {
-			return &EvalResponse{Result: nil,
-				Error: errors.New(string(diceerrors.NewErrWithMessage("could not generate a random key seed")))}
-		}
+		maxIters := 128
+		for range maxIters {
+			randKeyIdx, err := rand.Int(rand.Reader, big.NewInt(int64(len(availKeys))))
+			if err != nil {
+				continue
+			}
 
-		return &EvalResponse{Result: availKeys[randKeyIdx.Uint64()], Error: nil}
+			randKey := availKeys[randKeyIdx.Uint64()]
+			keyObj := store.Get(randKey)
+			if keyObj == nil {
+				continue
+			}
+
+			currTimeMs := uint64(utils.GetCurrentTime().UnixMilli())
+			expireTimeMs, isExpirySet := dstore.GetExpiry(keyObj, store)
+			if (isExpirySet && expireTimeMs > currTimeMs) || !isExpirySet {
+				return &EvalResponse{Result: clientio.Encode(randKey, false), Error: nil}
+			}
+		}
 	}
 
 	return &EvalResponse{Result: clientio.RespNIL, Error: nil}

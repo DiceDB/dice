@@ -1625,11 +1625,14 @@ func testEvalRANDOMKEY(t *testing.T, store *dstore.Store) {
 		results := make(map[string]int)
 		for i := 0; i < 10000; i++ {
 			result := evalRANDOMKEY([]string{}, store)
-			results[result.Result.(string)]++
+			if res, ok := result.Result.([]byte); ok {
+				results[string(res)]++
+			}
 		}
 
 		for key, _ := range data {
-			if results[key] == 0 {
+			returnedKey := clientio.Encode(key, false)
+			if results[string(returnedKey)] == 0 {
 				t.Errorf("key %s was never returned", key)
 			}
 		}
