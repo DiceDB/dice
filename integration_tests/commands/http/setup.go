@@ -54,11 +54,14 @@ type HTTPCommand struct {
 
 func (e *HTTPCommandExecutor) FireCommand(cmd HTTPCommand) (interface{}, error) {
 	command := strings.ToUpper(cmd.Command)
-	body, err := json.Marshal(cmd.Body)
-
-	// Handle error during JSON marshaling
-	if err != nil {
-		return nil, err
+	var body []byte
+	if cmd.Body != nil {
+		var err error
+		body, err = json.Marshal(cmd.Body)
+		// Handle error during JSON marshaling
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	ctx := context.Background()
