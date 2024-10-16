@@ -176,9 +176,10 @@ var (
 		Returns an integer reply specifying the number ofmatching JSON arrays and
 		objects cleared +number of matching JSON numerical values zeroed.
 		Error reply: If the number of arguments is incorrect the key doesn't exist.`,
-		Eval:     evalJSONCLEAR,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalJSONCLEAR,
 	}
 	jsondelCmdMeta = DiceCmdMeta{
 		Name: "JSON.DEL",
@@ -232,9 +233,10 @@ var (
 		Report the number of keys in the JSON object at path in key
 		Returns error response if the key doesn't exist or key is expired or the matching value is not an array.
 		Error reply: If the number of arguments is incorrect.`,
-		Eval:     evalJSONOBJLEN,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalJSONOBJLEN,
 	}
 	jsondebugCmdMeta = DiceCmdMeta{
 		Name: "JSON.DEBUG",
@@ -919,9 +921,10 @@ var (
 		Name: "JSON.STRLEN",
 		Info: `JSON.STRLEN key [path]
 		Report the length of the JSON String at path in key`,
-		Eval:     evalJSONSTRLEN,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalJSONSTRLEN,
 	}
 	hlenCmdMeta = DiceCmdMeta{
 		Name: "HLEN",

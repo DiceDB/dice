@@ -340,7 +340,7 @@ func TestJSONClearOperations(t *testing.T) {
 
 	testCases := []TestCase{
 		{
-			name: "Clear root path",
+			name: "jsonclear clear root path",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": map[string]interface{}{"a": 1}}},
 				{Command: "JSON.CLEAR", Body: map[string]interface{}{"key": "k", "path": "$"}},
@@ -349,7 +349,7 @@ func TestJSONClearOperations(t *testing.T) {
 			expected: []interface{}{"OK", float64(1), "{}"},
 		},
 		{
-			name: "Clear string type",
+			name: "jsonclear clear string type",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": map[string]interface{}{"name": "Tom"}}},
 				{Command: "JSON.CLEAR", Body: map[string]interface{}{"key": "k", "path": "$.name"}},
@@ -358,7 +358,7 @@ func TestJSONClearOperations(t *testing.T) {
 			expected: []interface{}{"OK", float64(0), `"Tom"`},
 		},
 		{
-			name: "Clear array type",
+			name: "jsonclear clear array type",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": map[string]interface{}{"names": []interface{}{"Tom", "Jerry"}}}},
 				{Command: "JSON.CLEAR", Body: map[string]interface{}{"key": "k", "path": "$.names"}},
@@ -367,7 +367,7 @@ func TestJSONClearOperations(t *testing.T) {
 			expected: []interface{}{"OK", float64(1), "[]"},
 		},
 		{
-			name: "clear bool type",
+			name: "jsonclear clear bool type",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": map[string]interface{}{"flag": true}}},
 				{Command: "JSON.CLEAR", Body: map[string]interface{}{"key": "k", "path": "$.flag"}},
@@ -376,7 +376,7 @@ func TestJSONClearOperations(t *testing.T) {
 			expected: []interface{}{"OK", float64(0), "true"},
 		},
 		{
-			name: "clear null type",
+			name: "jsonclear clear null type",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": map[string]interface{}{"name": nil}}},
 				{Command: "JSON.CLEAR", Body: map[string]interface{}{"key": "k", "path": "$.name"}},
@@ -385,7 +385,7 @@ func TestJSONClearOperations(t *testing.T) {
 			expected: []interface{}{"OK", float64(0), "null"},
 		},
 		{
-			name: "clear integer type",
+			name: "jsonclear clear integer type",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": map[string]interface{}{"age": 30}}},
 				{Command: "JSON.CLEAR", Body: map[string]interface{}{"key": "k", "path": "$.age"}},
@@ -394,7 +394,7 @@ func TestJSONClearOperations(t *testing.T) {
 			expected: []interface{}{"OK", float64(1), "0"},
 		},
 		{
-			name: "clear float type",
+			name: "jsonclear clear float type",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": map[string]interface{}{"price": 3.14}}},
 				{Command: "JSON.CLEAR", Body: map[string]interface{}{"key": "k", "path": "$.price"}},
@@ -632,7 +632,7 @@ func TestJsonStrlen(t *testing.T) {
 	exec := NewHTTPCommandExecutor()
 	testCases := []TestCase{
 		{
-			name: "STRLEN with root path",
+			name: "jsonstrlen with root path",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": []string{"hello", "world"}}},
 				{Command: "JSON.STRLEN", Body: map[string]interface{}{"key": "k", "path": "$"}},
@@ -640,7 +640,7 @@ func TestJsonStrlen(t *testing.T) {
 			expected: []interface{}{"OK", []interface{}{nil}},
 		},
 		{
-			name: "STRLEN nested",
+			name: "jsonstrlen nested",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": map[string]interface{}{"name": "jerry", "partner": map[string]interface{}{"name": "tom"}}}},
 				{Command: "JSON.STRLEN", Body: map[string]interface{}{"key": "k", "path": "$..name"}},
@@ -648,44 +648,44 @@ func TestJsonStrlen(t *testing.T) {
 			expected: []interface{}{"OK", []interface{}{float64(5), float64(3)}},
 		},
 		{
-			name: "STRLEN with no path and object at root",
+			name: "jsonstrlen with no path and object at root",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": map[string]interface{}{"name": "bhima", "age": 10}}},
 				{Command: "JSON.STRLEN", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"OK", "WRONGTYPE wrong type of path value - expected string but found object"},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found object"},
 		},
 		{
-			name: "STRLEN with no path and object at boolean",
+			name: "jsonstrlen with no path and object at boolean",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": true}},
 				{Command: "JSON.STRLEN", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"OK", "WRONGTYPE wrong type of path value - expected string but found boolean"},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found boolean"},
 		},
 		{
-			name: "STRLEN with no path and object at array",
+			name: "jsonstrlen with no path and object at array",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": []int{1, 2, 3, 4}}},
 				{Command: "JSON.STRLEN", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"OK", "WRONGTYPE wrong type of path value - expected string but found array"},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found array"},
 		},
 		{
-			name: "STRLEN with no path and object at integer",
+			name: "jsonstrlen with no path and object at integer",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": 1}},
 				{Command: "JSON.STRLEN", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"OK", "WRONGTYPE wrong type of path value - expected string but found integer"},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found integer"},
 		},
 		{
-			name: "STRLEN with no path and object at number",
+			name: "jsonstrlen with no path and object at number",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": 1.9}},
 				{Command: "JSON.STRLEN", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"OK", "WRONGTYPE wrong type of path value - expected string but found number"},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found number"},
 		},
 	}
 
@@ -1046,7 +1046,7 @@ func TestJsonObjLen(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "JSON.OBJLEN", Body: map[string]interface{}{"key": "b", "path": "$..language*something"}},
 			},
-			expected: []interface{}{"ERR parse error at 13 in $..language*something"},
+			expected: []interface{}{"ERR Path '$..language*something' does not exist"},
 		},
 		{
 			name: "JSON.OBJLEN with non-existent key",
@@ -1067,7 +1067,7 @@ func TestJsonObjLen(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "JSON.OBJLEN", Body: map[string]interface{}{"key": "c", "path": "$[1"}},
 			},
-			expected: []interface{}{"ERR expected a number at 4 in $[1"},
+			expected: []interface{}{"ERR Path '$[1' does not exist"},
 		},
 	}
 
