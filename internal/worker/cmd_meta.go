@@ -47,9 +47,15 @@ const (
 	CmdGetWatch    = "GET.WATCH"
 	CmdZRangeWatch = "ZRANGE.WATCH"
 	CmdGetRange    = "GETRANGE"
+	CmdAppend      = "APPEND"
+	CmdJSONClear   = "JSON.CLEAR"
+	CmdJSONStrlen  = "JSON.STRLEN"
+	CmdJSONObjlen  = "JSON.OBJLEN"
 	CmdZAdd        = "ZADD"
 	CmdZRange      = "ZRANGE"
-	CmdAppend      = "APPEND"
+	CmdPFAdd       = "PFADD"
+	CmdPFCount     = "PFCOUNT"
+	CmdPFMerge     = "PFMERGE"
 )
 
 type CmdMeta struct {
@@ -85,6 +91,24 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdGetRange: {
+		CmdType: SingleShard,
+	},
+	CmdJSONClear: {
+		CmdType: SingleShard,
+	},
+	CmdJSONStrlen: {
+		CmdType: SingleShard,
+	},
+	CmdJSONObjlen: {
+		CmdType: SingleShard,
+	},
+	CmdPFAdd: {
+		CmdType: SingleShard,
+	},
+	CmdPFCount: {
+		CmdType: SingleShard,
+	},
+	CmdPFMerge: {
 		CmdType: SingleShard,
 	},
 
