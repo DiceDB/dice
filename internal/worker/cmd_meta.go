@@ -46,6 +46,10 @@ const (
 	CmdGetSet      = "GETSET"
 	CmdGetWatch    = "GET.WATCH"
 	CmdZRangeWatch = "ZRANGE.WATCH"
+	CmdSadd        = "SADD"
+	CmdSrem        = "SREM"
+	CmdScard       = "SCARD"
+	CmdSmembers    = "SMEMBERS"
 	CmdZAdd        = "ZADD"
 	CmdZRange      = "ZRANGE"
 	CmdPFAdd       = "PFADD"
@@ -83,6 +87,18 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdGetSet: {
+		CmdType: SingleShard,
+	},
+	CmdSadd: {
+		CmdType: SingleShard,
+	},
+	CmdSrem: {
+		CmdType: SingleShard,
+	},
+	CmdScard: {
+		CmdType: SingleShard,
+	},
+	CmdSmembers: {
 		CmdType: SingleShard,
 	},
 	CmdPFAdd: {

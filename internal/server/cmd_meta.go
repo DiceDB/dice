@@ -62,6 +62,22 @@ var (
 		Cmd:     "SETEX",
 		CmdType: SingleShard,
 	}
+	saddCmdMeta = CmdsMeta{
+		Cmd:     "SADD",
+		CmdType: SingleShard,
+	}
+	sremCmdMeta = CmdsMeta{
+		Cmd:     "SREM",
+		CmdType: SingleShard,
+	}
+	scardCmdMeta = CmdsMeta{
+		Cmd:     "SCARD",
+		CmdType: SingleShard,
+	}
+	smembersCmdMeta = CmdsMeta{
+		Cmd: "SMEMBERS",
+	}
+
 	zaddCmdMeta = CmdsMeta{
 		Cmd:     "ZADD",
 		CmdType: SingleShard,
@@ -99,6 +115,10 @@ func init() {
 	WorkerCmdsMeta["GET"] = getCmdMeta
 	WorkerCmdsMeta["GETSET"] = getsetCmdMeta
 	WorkerCmdsMeta["SETEX"] = setexCmdMeta
+	WorkerCmdsMeta["SADD"] = saddCmdMeta
+	WorkerCmdsMeta["SREM"] = sremCmdMeta
+	WorkerCmdsMeta["SCARD"] = scardCmdMeta
+	WorkerCmdsMeta["SMEMBERS"] = smembersCmdMeta
 	WorkerCmdsMeta["ZADD"] = zaddCmdMeta
 	WorkerCmdsMeta["ZRANGE"] = zrangeCmdMeta
 	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
