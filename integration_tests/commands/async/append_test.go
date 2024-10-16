@@ -55,7 +55,7 @@ func TestAPPEND(t *testing.T) {
 				"APPEND key 0034",
 				"GET key",
 			},
-			expected: []interface{}{int64(4), "0043", int64(8), "00430034"},
+			expected: []interface{}{int64(0), int64(4), "0043", int64(8), "00430034"},
 		},
 		{
 			name: "APPEND with Various Data Types",
