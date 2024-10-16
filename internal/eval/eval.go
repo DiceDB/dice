@@ -54,6 +54,7 @@ var (
 )
 
 type EvalResponse struct {
+	SeqID  uint8
 	Result interface{} // Result of the Store operation, for now the type is set to []byte, but this can change in the future.
 	Error  error
 }

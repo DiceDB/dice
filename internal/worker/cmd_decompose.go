@@ -92,3 +92,42 @@ func decomposeCopy(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cm
 
 	return decomposedCmds, nil
 }
+
+func decomposeMSet(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+	if len(cd.Args)%2 != 0 {
+		return nil, diceerrors.ErrWrongArgumentCount("MSET")
+	}
+
+	decomposedCmds := make([]*cmd.DiceDBCmd, 0, len(cd.Args)/2)
+
+	for i := 0; i < len(cd.Args)-1; i += 2 {
+		key := cd.Args[i]
+		val := cd.Args[i+1]
+
+		decomposedCmds = append(decomposedCmds,
+			&cmd.DiceDBCmd{
+				RequestID: cd.RequestID,
+				Cmd:       "SET",
+				Args:      []string{key, val},
+			},
+		)
+	}
+	return decomposedCmds, nil
+}
+
+func decomposeMGet(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+	if len(cd.Args) < 1 {
+		return nil, diceerrors.ErrWrongArgumentCount("MGET")
+	}
+	decomposedCmds := make([]*cmd.DiceDBCmd, 0, len(cd.Args))
+	for i := 0; i < len(cd.Args); i++ {
+		decomposedCmds = append(decomposedCmds,
+			&cmd.DiceDBCmd{
+				RequestID: cd.RequestID,
+				Cmd:       "GET",
+				Args:      []string{cd.Args[i]},
+			},
+		)
+	}
+	return decomposedCmds, nil
+}

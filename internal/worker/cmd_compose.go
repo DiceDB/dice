@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"sort"
 
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/eval"
@@ -38,4 +39,32 @@ func composeCopy(ctx context.Context, responses ...eval.EvalResponse) interface{
 	}
 
 	return clientio.OK
+}
+
+func composeMSet(_ context.Context, responses ...eval.EvalResponse) interface{} {
+	for idx := range responses {
+		if responses[idx].Error != nil {
+			return responses[idx].Error
+		}
+	}
+
+	return clientio.OK
+}
+
+func composeMGet(_ context.Context, responses ...eval.EvalResponse) interface{} {
+	sort.Slice(responses, func(i, j int) bool {
+		return responses[i].SeqID < responses[j].SeqID
+	})
+
+	results := make([]interface{}, 0, len(responses))
+
+	for idx := range responses {
+		if responses[idx].Error != nil {
+			return responses[idx].Error
+		}
+
+		results = append(results, responses[idx].Result)
+	}
+
+	return results
 }

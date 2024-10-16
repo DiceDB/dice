@@ -51,6 +51,8 @@ const (
 const (
 	CmdRename = "RENAME"
 	CmdCopy   = "COPY"
+	CmdMset   = "MSET"
+	CmdMget   = "MGET"
 )
 
 // Watch commands
@@ -113,6 +115,18 @@ var CommandsMeta = map[string]CmdMeta{
 		preProcessResponse: preProcessCopy,
 		decomposeCommand:   decomposeCopy,
 		composeResponse:    composeCopy,
+	},
+
+	CmdMset: {
+		CmdType:          MultiShard,
+		decomposeCommand: decomposeMSet,
+		composeResponse:  composeMSet,
+	},
+
+	CmdMget: {
+		CmdType:          MultiShard,
+		decomposeCommand: decomposeMGet,
+		composeResponse:  composeMGet,
 	},
 
 	// Custom commands.
