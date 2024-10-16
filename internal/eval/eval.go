@@ -4582,6 +4582,15 @@ func evalAPPEND(args []string, store *dstore.Store) []byte {
 
 	if obj == nil {
 		// Key does not exist path
+
+		// check if the value starts with '0' and has more than 1 character to handle leading zeros
+		if len(value) > 1 && value[0] == '0' {
+			// treat as string if has leading zeros
+			store.Put(key, store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw))
+			return clientio.Encode(len(value), false)
+		}
+
+		// Deduce type and encoding based on the value if no leading zeros
 		oType, oEnc := deduceTypeEncoding(value)
 
 		var storedValue interface{}
