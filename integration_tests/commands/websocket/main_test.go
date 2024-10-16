@@ -21,10 +21,11 @@ func TestMain(m *testing.M) {
 	// checks for available port and then forks a goroutine
 	// to start the server
 	opts := TestServerOptions{
-		Port:   testPort,
+		Port:   testPort1,
 		Logger: l,
 	}
-	RunWebsocketServer(context.Background(), &wg, opts)
+	ctx, cancel := context.WithCancel(context.Background())
+	RunWebsocketServer(ctx, &wg, opts)
 
 	// Wait for the server to start
 	time.Sleep(2 * time.Second)
@@ -34,15 +35,10 @@ func TestMain(m *testing.M) {
 	// Run the test suite
 	exitCode := m.Run()
 
-	// abort
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		conn := executor.ConnectToServer()
-		executor.FireCommand(conn, "abort")
-		executor.DisconnectServer(conn)
-	}()
+	conn := executor.ConnectToServer()
+	executor.FireCommand(conn, "abort")
 
+	cancel()
 	wg.Wait()
 	os.Exit(exitCode)
 }
