@@ -1,7 +1,9 @@
 package async
 
 import (
+	"net"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -187,4 +189,55 @@ func TestWithKeepTTLFlag(t *testing.T) {
 	out := "(nil)"
 
 	assert.Equal(t, out, FireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
+}
+
+/*
+We open some connections to the db and fire concurrent SET commands for a particular key
+with different values. We expect that there are no dirty reads/writes.
+All the values read should be among the values that were attempted to set in the first place.
+*/
+func TestConcurrentSetCommands(t *testing.T) {
+	numOfConnections := 10
+	connectionValues := make(map[net.Conn]*string)
+	expectedValues := make(map[string]struct{})
+	valuesReadChan := make(chan string, numOfConnections)
+
+	// Create connections and the values to set through them.
+	for connNum := 0; connNum < numOfConnections; connNum++ {
+		value := strconv.Itoa(connNum)
+		connectionValues[getLocalConnection()] = &value
+		expectedValues[value] = struct{}{}
+	}
+
+	// Execute the SET commands from the connections, and pass the output of GET to a channel
+	var wgroup sync.WaitGroup
+	key := "sample_key"
+	for conn, value := range connectionValues {
+		wgroup.Add(1)
+		go executeCommands(conn, &key, value, valuesReadChan, &wgroup)
+	}
+	wgroup.Wait()
+	close(valuesReadChan)
+
+	// Verify the values received in the channel
+	assert.Equal(t, numOfConnections, len(valuesReadChan))
+	for valueRead := range valuesReadChan {
+		if valueRead != "" {
+			valueReadStr := valueRead
+			_, ok := expectedValues[valueReadStr]
+			if !ok {
+				t.Fail()
+				break
+			}
+		}
+	}
+}
+
+func executeCommands(conn net.Conn, key, value *string, valReadChan chan string, wGroup *sync.WaitGroup) {
+	defer wGroup.Done()
+	defer (conn).Close()
+	FireCommand(conn, "SET "+*key+" "+*value)
+	var readValue = FireCommand(conn, "GET "+*key)
+	readValueStr, _ := readValue.(string)
+	valReadChan <- readValueStr
 }
