@@ -2,10 +2,11 @@ package worker
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"log/slog"
-	"math/rand"
 	"net"
 	"syscall"
 	"time"
@@ -280,7 +281,10 @@ func (w *BaseWorker) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd) error {
 		return ctx.Err()
 	default:
 
-		rID := rand.New(rand.NewSource(time.Now().UnixNano())).Uint32()
+		requestID, err := GenerateRandomUint32()
+		if err != nil {
+			requestID = 0
+		}
 
 		for i := uint8(0); i < uint8(len(cmds)); i++ {
 			var rc chan *ops.StoreOp
@@ -296,7 +300,7 @@ func (w *BaseWorker) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd) error {
 
 			rc <- &ops.StoreOp{
 				SeqID:     i,
-				RequestID: rID,
+				RequestID: requestID,
 				Cmd:       cmds[i],
 				WorkerID:  w.id,
 				ShardID:   sid,
@@ -442,4 +446,13 @@ func (w *BaseWorker) Stop() error {
 	w.logger.Info("Stopping worker", slog.String("workerID", w.id))
 	w.Session.Expire()
 	return nil
+}
+
+func GenerateRandomUint32() (uint32, error) {
+	var b [4]byte             // Create a byte array to hold the random bytes
+	_, err := rand.Read(b[:]) // Fill the byte array with secure random bytes
+	if err != nil {
+		return 0, err // Return an error if reading failed
+	}
+	return binary.BigEndian.Uint32(b[:]), nil // Convert bytes to uint32
 }
