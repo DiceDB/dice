@@ -118,24 +118,6 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdHRandField: {
 		CmdType: SingleShard,
 	},
-	CmdPFAdd: {
-		CmdType: SingleShard,
-	},
-	CmdPFCount: {
-		CmdType: SingleShard,
-	},
-	CmdPFMerge: {
-		CmdType: SingleShard,
-	},
-	CmdHIncrBy: {
-		CmdType: SingleShard,
-	},
-	CmdHIncrByFloat: {
-		CmdType: SingleShard,
-	},
-	CmdHRandField: {
-		CmdType: SingleShard,
-	},
 
 	// Custom commands.
 	CmdAbort: {
