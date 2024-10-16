@@ -232,7 +232,7 @@ func Encode(value interface{}, isSimple bool) []byte {
 		var b []byte
 		buf := bytes.NewBuffer(b) // Create a buffer for accumulating encoded values.
 		for _, elem := range v {
-			buf.Write(Encode(elem, false)) // Encode each element and write to the buffer.
+			buf.Write(Encode(elem, true)) // Encode each element and write to the buffer.
 		}
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes())) // Return the encoded response.
 
