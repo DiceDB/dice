@@ -442,6 +442,58 @@ func TestLLEN(t *testing.T) {
 	deqCleanUp(conn, "k")
 }
 
+func TestLPOPCount(t *testing.T) {
+	deqTestInit()
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	testCases := []struct {
+		name   string
+		cmds   []string
+		expect []interface{}
+	}{
+		{
+			name: "LPOP with count argument - valid, invalid, and edge cases",
+			cmds: []string{
+				"RPUSH k v1 v2 v3 v4", 
+				"LPOP k 2",            
+                "LLEN k",
+				"LPOP k 0",            
+                "LLEN k",
+				"LPOP k 5",            
+                "LLEN k",
+				"LPOP k -1",           
+				"LPOP k abc",          
+				"LLEN k",              
+			},
+			expect: []any{
+				int64(4),                  
+				[]interface{}{"v1", "v2"}, 
+                int64(2),
+				[]interface{}{},           
+                int64(2),
+				[]interface{}{"v3", "v4"}, 
+                int64(0),
+				"ERR value is out of range",                   
+				"ERR value is not an integer or out of range", 
+				int64(0),                                      
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for i, cmd := range tc.cmds {
+				result := FireCommand(conn, cmd)
+				assert.DeepEqual(t, tc.expect[i], result)
+			}
+		})
+	}
+
+	deqCleanUp(conn, "k")
+
+}
+
 func deqCleanUp(conn net.Conn, key string) {
 	for {
 		result := FireCommand(conn, "LPOP "+key)
