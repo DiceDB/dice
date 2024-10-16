@@ -1,4 +1,4 @@
-package async
+package resp
 
 // All commands related to Hyperloglog are part of this test class
 // PFADD, PFCOUNT, PFMERGE, PFDEBUG, PFSELFTEST etc.
@@ -12,11 +12,7 @@ func TestHyperLogLogCommands(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 
-	testCases := []struct {
-		name     string
-		commands []string
-		expected []interface{}
-	}{
+	testCases := []TestCase{
 		{
 			name:     "PFADD with one key-value pair",
 			commands: []string{"PFADD hll0 v1", "PFCOUNT hll0"},

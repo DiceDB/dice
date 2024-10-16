@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/bytedance/sonic"
+	"github.com/axiomhq/hyperloglog"
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/eval/sortedset"
@@ -555,6 +556,64 @@ func evalJSONCLEAR(args []string, store *dstore.Store) *EvalResponse {
 	obj.Value = jsonData
 	return &EvalResponse{
 		Result: countClear,
+    Error:  nil,
+	}
+}
+
+// PFADD Adds all the element arguments to the HyperLogLog data structure stored at the variable
+// name specified as first argument.
+//
+// Returns:
+// If the approximated cardinality estimated by the HyperLogLog changed after executing the command,
+// returns 1, otherwise 0 is returned.
+func evalPFADD(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("PFADD"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	// If key doesn't exist prior initial cardinality changes hence return 1
+	if obj == nil {
+		hll := hyperloglog.New()
+		for _, arg := range args[1:] {
+			hll.Insert([]byte(arg))
+		}
+
+		obj = store.NewObj(hll, -1, object.ObjTypeString, object.ObjEncodingRaw)
+
+		store.Put(key, obj)
+		return &EvalResponse{
+			Result: int64(1),
+			Error:  nil,
+		}
+	}
+
+	existingHll, ok := obj.Value.(*hyperloglog.Sketch)
+	if !ok {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeHllErr),
+		}
+	}
+	initialCardinality := existingHll.Estimate()
+	for _, arg := range args[1:] {
+		existingHll.Insert([]byte(arg))
+	}
+
+	if newCardinality := existingHll.Estimate(); initialCardinality != newCardinality {
+		return &EvalResponse{
+			Result: int64(1),
+			Error:  nil,
+		}
+	}
+
+	return &EvalResponse{
+		Result: int64(0),
 		Error:  nil,
 	}
 }
@@ -659,6 +718,42 @@ func evalJSONSTRLEN(args []string, store *dstore.Store) *EvalResponse {
 	}
 	return &EvalResponse{
 		Result: strLenResults,
+    Error:  nil,
+	}
+}
+
+func evalPFCOUNT(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("PFCOUNT"),
+		}
+	}
+
+	unionHll := hyperloglog.New()
+
+	for _, arg := range args {
+		obj := store.Get(arg)
+		if obj != nil {
+			currKeyHll, ok := obj.Value.(*hyperloglog.Sketch)
+			if !ok {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeHllErr),
+				}
+			}
+			err := unionHll.Merge(currKeyHll)
+			if err != nil {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrGeneral(diceerrors.InvalidHllErr),
+				}
+			}
+		}
+	}
+
+	return &EvalResponse{
+		Result: unionHll.Estimate(),
 		Error:  nil,
 	}
 }
@@ -754,6 +849,63 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) *EvalResponse {
 	}
 	return &EvalResponse{
 		Result: objectLen,
+    Error:  nil,
+	}
+}
+
+func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("PFMERGE"),
+		}
+	}
+
+	var mergedHll *hyperloglog.Sketch
+	destKey := args[0]
+	obj := store.Get(destKey)
+
+	// If destKey doesn't exist, create a new HLL, else fetch the existing
+	if obj == nil {
+		mergedHll = hyperloglog.New()
+	} else {
+		var ok bool
+		mergedHll, ok = obj.Value.(*hyperloglog.Sketch)
+		if !ok {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeHllErr),
+			}
+		}
+	}
+
+	for _, arg := range args {
+		obj := store.Get(arg)
+		if obj != nil {
+			currKeyHll, ok := obj.Value.(*hyperloglog.Sketch)
+			if !ok {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeHllErr),
+				}
+			}
+
+			err := mergedHll.Merge(currKeyHll)
+			if err != nil {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrGeneral(diceerrors.InvalidHllErr),
+				}
+			}
+		}
+	}
+
+	// Save the mergedHll
+	obj = store.NewObj(mergedHll, -1, object.ObjTypeString, object.ObjEncodingRaw)
+	store.Put(destKey, obj)
+
+	return &EvalResponse{
+		Result: clientio.OK,
 		Error:  nil,
 	}
 }

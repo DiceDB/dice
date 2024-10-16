@@ -51,6 +51,9 @@ const (
 	CmdJSONObjlen  = "JSON.OBJLEN"
 	CmdZAdd        = "ZADD"
 	CmdZRange      = "ZRANGE"
+	CmdPFAdd       = "PFADD"
+	CmdPFCount     = "PFCOUNT"
+	CmdPFMerge     = "PFMERGE"
 )
 
 type CmdMeta struct {
@@ -92,6 +95,13 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdJSONObjlen: {
+	CmdPFAdd: {
+		CmdType: SingleShard,
+	},
+	CmdPFCount: {
+		CmdType: SingleShard,
+	},
+	CmdPFMerge: {
 		CmdType: SingleShard,
 	},
 

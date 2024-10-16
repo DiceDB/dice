@@ -78,13 +78,13 @@ func TestEval(t *testing.T) {
 	testEvalHKEYS(t, store)
 	testEvalPFADD(t, store)
 	testEvalPFCOUNT(t, store)
+	testEvalPFMERGE(t, store)
 	testEvalHGET(t, store)
 	testEvalHMGET(t, store)
 	testEvalHSTRLEN(t, store)
 	testEvalHEXISTS(t, store)
 	testEvalHDEL(t, store)
 	testEvalHSCAN(t, store)
-	testEvalPFMERGE(t, store)
 	testEvalJSONSTRLEN(t, store)
 	testEvalJSONOBJLEN(t, store)
 	testEvalHLEN(t, store)
@@ -2189,12 +2189,53 @@ func testEvalDbsize(t *testing.T, store *dstore.Store) {
 
 func testEvalPFADD(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
-		"nil value":           {input: nil, output: []byte("-ERR wrong number of arguments for 'pfadd' command\r\n")},
-		"empty array":         {input: []string{}, output: []byte("-ERR wrong number of arguments for 'pfadd' command\r\n")},
-		"one value":           {input: []string{"KEY"}, output: []byte(":1\r\n")},
-		"key val pair":        {input: []string{"KEY", "VAL"}, output: []byte(":1\r\n")},
-		"key multiple values": {input: []string{"KEY", "VAL", "VAL1", "VAL2"}, output: []byte(":1\r\n")},
-		"Incorrect type provided": {
+		"PFADD nil value": {
+			name:  "PFADD nil value",
+			setup: func() {},
+			input: nil,
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("PFADD"),
+			},
+		},
+		"PFADD empty array": {
+			name:  "PFADD empty array",
+			setup: func() {},
+			input: []string{},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("PFADD"),
+			},
+		},
+		"PFADD one value": {
+			name:  "PFADD one value",
+			setup: func() {},
+			input: []string{"KEY"},
+			migratedOutput: EvalResponse{
+				Result: int64(1),
+				Error:  nil,
+			},
+		},
+		"PFADD key val pair": {
+			name:  "PFADD key val pair",
+			setup: func() {},
+			input: []string{"KEY", "VAL"},
+			migratedOutput: EvalResponse{
+				Result: int64(1),
+				Error:  nil,
+			},
+		},
+		"PFADD key multiple values": {
+			name:  "PFADD key multiple values",
+			setup: func() {},
+			input: []string{"KEY", "VAL", "VAL1", "VAL2"},
+			migratedOutput: EvalResponse{
+				Result: int64(1),
+				Error:  nil,
+			},
+		},
+		"PFADD Incorrect type provided": {
+			name: "PFADD Incorrect type provided",
 			setup: func() {
 				key, value := "EXISTING_KEY", "VALUE"
 				oType, oEnc := deduceTypeEncoding(value)
@@ -2204,23 +2245,39 @@ func testEvalPFADD(t *testing.T, store *dstore.Store) {
 				store.Put(key, store.NewObj(value, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
 			},
 			input:  []string{"EXISTING_KEY", "1"},
-			output: []byte("-WRONGTYPE Key is not a valid HyperLogLog string value.\r\n")},
+			output: []byte("-WRONGTYPE Key is not a valid HyperLogLog string value."),
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("-WRONGTYPE Key is not a valid HyperLogLog string value."),
+			},
+		},
 	}
 
-	runEvalTests(t, tests, evalPFADD, store)
+	runMigratedEvalTests(t, tests, evalPFADD, store)
 }
 
 func testEvalPFCOUNT(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"PFCOUNT with empty arg": {
-			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'pfcount' command\r\n"),
+			name:  "PFCOUNT with empty arg",
+			setup: func() {},
+			input: []string{},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("PFCOUNT"),
+			},
 		},
 		"PFCOUNT key not exists": {
-			input:  []string{"HELLO"},
-			output: clientio.Encode(0, false),
+			name:  "PFCOUNT key not exists",
+			setup: func() {},
+			input: []string{"HELLO"},
+			migratedOutput: EvalResponse{
+				Result: uint64(0),
+				Error:  nil,
+			},
 		},
 		"PFCOUNT key exists": {
+			name: "PFCOUNT key exists",
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := hyperloglog.New()
@@ -2231,12 +2288,137 @@ func testEvalPFCOUNT(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input:  []string{"EXISTING_KEY"},
-			output: clientio.Encode(1, false),
+			input: []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{
+				Result: uint64(1),
+				Error:  nil,
+			},
 		},
 	}
 
-	runEvalTests(t, tests, evalPFCOUNT, store)
+	runMigratedEvalTests(t, tests, evalPFCOUNT, store)
+}
+
+func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"PFMERGE nil value": {
+			name:  "PFMERGE nil value",
+			setup: func() {},
+			input: nil,
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("PFMERGE"),
+			},
+		},
+		"PFMERGE empty array": {
+			name:  "PFMERGE empty array",
+			setup: func() {},
+			input: []string{},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("PFMERGE"),
+			},
+		},
+		"PFMERGE invalid hll object": {
+			name: "PFMERGE invalid hll object",
+			setup: func() {
+				key := "INVALID_OBJ_DEST_KEY"
+				value := "123"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input: []string{"INVALID_OBJ_DEST_KEY"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("-WRONGTYPE Key is not a valid HyperLogLog string value."),
+			},
+		},
+		"PFMERGE destKey doesn't exist": {
+			name:  "PFMERGE destKey doesn't exist",
+			setup: func() {},
+			input: []string{"NON_EXISTING_DEST_KEY"},
+			migratedOutput: EvalResponse{
+				Result: clientio.OK,
+				Error:  nil,
+			},
+		},
+		"PFMERGE destKey exist": {
+			name:  "PFMERGE destKey exist",
+			setup: func() {},
+			input: []string{"NON_EXISTING_DEST_KEY"},
+			migratedOutput: EvalResponse{
+				Result: clientio.OK,
+				Error:  nil,
+			},
+		},
+		"PFMERGE destKey exist srcKey doesn't exists": {
+			name: "PFMERGE destKey exist srcKey doesn't exists",
+			setup: func() {
+				key := "EXISTING_DEST_KEY"
+				value := hyperloglog.New()
+				value.Insert([]byte("VALUE"))
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input: []string{"EXISTING_DEST_KEY", "NON_EXISTING_SRC_KEY"},
+			migratedOutput: EvalResponse{
+				Result: clientio.OK,
+				Error:  nil,
+			},
+		},
+		"PFMERGE destKey exist srcKey exists": {
+			name: "PFMERGE destKey exist srcKey exists",
+			setup: func() {
+				key := "EXISTING_DEST_KEY"
+				value := hyperloglog.New()
+				value.Insert([]byte("VALUE"))
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input: []string{"EXISTING_DEST_KEY", "NON_EXISTING_SRC_KEY"},
+			migratedOutput: EvalResponse{
+				Result: clientio.OK,
+				Error:  nil,
+			},
+		},
+		"PFMERGE destKey exist multiple srcKey exist": {
+			name: "PFMERGE destKey exist multiple srcKey exist",
+			setup: func() {
+				key := "EXISTING_DEST_KEY"
+				value := hyperloglog.New()
+				value.Insert([]byte("VALUE"))
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+				srcKey := "EXISTING_SRC_KEY"
+				srcValue := hyperloglog.New()
+				value.Insert([]byte("SRC_VALUE"))
+				srcKeyObj := &object.Obj{
+					Value:          srcValue,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(srcKey, srcKeyObj)
+			},
+			input: []string{"EXISTING_DEST_KEY", "EXISTING_SRC_KEY"},
+			migratedOutput: EvalResponse{
+				Result: clientio.OK,
+				Error:  nil,
+			},
+		},
+	}
+
+	runMigratedEvalTests(t, tests, evalPFMERGE, store)
 }
 
 func testEvalHGET(t *testing.T, store *dstore.Store) {
@@ -2642,86 +2824,6 @@ func testEvalHSCAN(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalHSCAN, store)
-}
-
-func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"nil value":   {input: nil, output: []byte("-ERR wrong number of arguments for 'pfmerge' command\r\n")},
-		"empty array": {input: []string{}, output: []byte("-ERR wrong number of arguments for 'pfmerge' command\r\n")},
-		"PFMERGE invalid hll object": {
-			setup: func() {
-				key := "INVALID_OBJ_DEST_KEY"
-				value := "123"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
-				store.Put(key, obj)
-			},
-			input:  []string{"INVALID_OBJ_DEST_KEY"},
-			output: []byte("-WRONGTYPE Key is not a valid HyperLogLog string value.\r\n"),
-		},
-		"PFMERGE destKey doesn't exist": {
-			input:  []string{"NON_EXISTING_DEST_KEY"},
-			output: clientio.RespOK,
-		},
-		"PFMERGE destKey exist": {
-			input:  []string{"NON_EXISTING_DEST_KEY"},
-			output: clientio.RespOK,
-		},
-		"PFMERGE destKey exist srcKey doesn't exists": {
-			setup: func() {
-				key := "EXISTING_DEST_KEY"
-				value := hyperloglog.New()
-				value.Insert([]byte("VALUE"))
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
-				store.Put(key, obj)
-			},
-			input:  []string{"EXISTING_DEST_KEY", "NON_EXISTING_SRC_KEY"},
-			output: clientio.RespOK,
-		},
-		"PFMERGE destKey exist srcKey exists": {
-			setup: func() {
-				key := "EXISTING_DEST_KEY"
-				value := hyperloglog.New()
-				value.Insert([]byte("VALUE"))
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
-				store.Put(key, obj)
-			},
-			input:  []string{"EXISTING_DEST_KEY", "NON_EXISTING_SRC_KEY"},
-			output: clientio.RespOK,
-		},
-		"PFMERGE destKey exist multiple srcKey exist": {
-			setup: func() {
-				key := "EXISTING_DEST_KEY"
-				value := hyperloglog.New()
-				value.Insert([]byte("VALUE"))
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
-				store.Put(key, obj)
-				srcKey := "EXISTING_SRC_KEY"
-				srcValue := hyperloglog.New()
-				value.Insert([]byte("SRC_VALUE"))
-				srcKeyObj := &object.Obj{
-					Value:          srcValue,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
-				store.Put(srcKey, srcKeyObj)
-			},
-			input:  []string{"EXISTING_DEST_KEY", "EXISTING_SRC_KEY"},
-			output: clientio.RespOK,
-		},
-	}
-
-	runEvalTests(t, tests, evalPFMERGE, store)
 }
 
 func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
