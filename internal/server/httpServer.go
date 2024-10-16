@@ -93,7 +93,7 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 	httpCtx, cancelHTTP := context.WithCancel(ctx)
 	defer cancelHTTP()
 
-	s.shardManager.RegisterWorker("httpServer", s.ioChan)
+	s.shardManager.RegisterWorker("httpServer", s.ioChan, nil)
 
 	wg.Add(1)
 	go func() {

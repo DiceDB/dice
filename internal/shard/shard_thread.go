@@ -23,18 +23,22 @@ type ShardError struct {
 	Error   error   // Error is the error that occurred
 }
 
+type WorkerChannels struct {
+	CommonResponseChan        chan *ops.StoreResponse // Common responseChan channel
+	PreProcessingResponseChan chan *ops.StoreResponse // Preprocessing responseChan channel
+}
+
 type ShardThread struct {
-	id               ShardID                            // id is the unique identifier for the shard.
-	store            *dstore.Store                      // store that the shard is responsible for.
-	ReqChan          chan *ops.StoreOp                  // ReqChan is this shard's channel for receiving requests.
-	workerMap        map[string]chan *ops.StoreResponse // workerMap maps workerID to its unique response channel
-	preProcessingMap map[string]chan *ops.StoreResponse // map to maintain list of preprocessing requests
-	workerMutex      sync.RWMutex                       // workerMutex is the workerMap's mutex for thread safety.
-	globalErrorChan  chan error                         // globalErrorChan is the channel for sending system-level errors.
-	shardErrorChan   chan *ShardError                   // ShardErrorChan is the channel for sending shard-level errors.
-	lastCronExecTime time.Time                          // lastCronExecTime is the last time the shard executed cron tasks.
-	cronFrequency    time.Duration                      // cronFrequency is the frequency at which the shard executes cron tasks.
-	logger           *slog.Logger                       // logger is the logger for the shard.
+	id               ShardID                   // id is the unique identifier for the shard.
+	store            *dstore.Store             // store that the shard is responsible for.
+	ReqChan          chan *ops.StoreOp         // ReqChan is this shard's channel for receiving requests.
+	workerMap        map[string]WorkerChannels // workerMap maps workerID to its unique responseChan channel
+	workerMutex      sync.RWMutex              // workerMutex is the workerMap's mutex for thread safety.
+	globalErrorChan  chan error                // globalErrorChan is the channel for sending system-level errors.
+	shardErrorChan   chan *ShardError          // ShardErrorChan is the channel for sending shard-level errors.
+	lastCronExecTime time.Time                 // lastCronExecTime is the last time the shard executed cron tasks.
+	cronFrequency    time.Duration             // cronFrequency is the frequency at which the shard executes cron tasks.
+	logger           *slog.Logger              // logger is the logger for the shard.
 }
 
 // NewShardThread creates a new ShardThread instance with the given shard id and error channel.
@@ -43,8 +47,7 @@ func NewShardThread(id ShardID, gec chan error, sec chan *ShardError, queryWatch
 		id:               id,
 		store:            dstore.NewStore(queryWatchChan, cmdWatchChan),
 		ReqChan:          make(chan *ops.StoreOp, 1000),
-		workerMap:        make(map[string]chan *ops.StoreResponse),
-		preProcessingMap: make(map[string]chan *ops.StoreResponse),
+		workerMap:        make(map[string]WorkerChannels),
 		globalErrorChan:  gec,
 		shardErrorChan:   sec,
 		lastCronExecTime: utils.GetCurrentTime(),
@@ -77,13 +80,13 @@ func (shard *ShardThread) runCronTasks() {
 	shard.lastCronExecTime = utils.GetCurrentTime()
 }
 
-func (shard *ShardThread) registerWorker(workerID string, processingChan ...chan *ops.StoreResponse) {
+func (shard *ShardThread) registerWorker(workerID string, responseChan, preprocessingChan chan *ops.StoreResponse) {
 	shard.workerMutex.Lock()
-	if len(processingChan) > 1 {
-		shard.workerMap[workerID] = processingChan[0]        // response channel on first index
-		shard.preProcessingMap[workerID] = processingChan[1] // preprocessing channel on second index
+	shard.workerMap[workerID] = WorkerChannels{
+		CommonResponseChan:        responseChan,
+		PreProcessingResponseChan: preprocessingChan,
 	}
-	shard.workerMap[workerID] = processingChan[0]
+
 	shard.workerMutex.Unlock()
 }
 
@@ -98,9 +101,11 @@ func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 	resp := eval.ExecuteCommand(op.Cmd, op.Client, shard.store, op.HTTPOp, op.WebsocketOp)
 
 	shard.workerMutex.RLock()
-	workerChan, ok := shard.workerMap[op.WorkerID]
-	preProcessChan := shard.preProcessingMap[op.WorkerID]
+	workerChans, ok := shard.workerMap[op.WorkerID]
 	shard.workerMutex.RUnlock()
+
+	workerChan := workerChans.CommonResponseChan
+	preProcessChan := workerChans.PreProcessingResponseChan
 
 	sp := &ops.StoreResponse{
 		RequestID: op.RequestID,
@@ -116,7 +121,7 @@ func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 		}
 	}
 
-	if op.Cmd.PreProcessingReq {
+	if op.PreProcessing {
 		preProcessChan <- sp
 	} else {
 		workerChan <- sp

@@ -1,32 +1,29 @@
 package worker
 
 import (
-	"context"
 	"sort"
 
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/eval"
 )
 
-// Gather file is used by Worker to collect and process responses
-// from multiple shards. For commands that are executed across
-// several shards (e.g., MultiShard commands), a Gather function
-// is responsible for aggregating the results.
+// This file contains functions used by the Worker to handle and process responses
+// from multiple shards during distributed operations. For commands that are executed
+// across several shards, such as MultiShard commands, dedicated functions are responsible
+// for aggregating and managing the results.
 //
-// Each Gather function takes input in the form of shard responses,
-// applies command-specific logic to combine or process these
-// individual shard responses, and returns the final response
-// expected by the client.
+// Each function takes a variable number of shard responses as input, applies command-specific
+// logic to evaluate or combine these responses, and returns the final outcome to the client.
 //
-// The result is a unified response that reflects the combined
-// outcome of operations executed across multiple shards, ensuring
-// that the client receives a single, cohesive result.
+// The goal is to provide a unified response that accurately reflects the result of operations
+// executed across multiple shards, ensuring the client receives a single, coherent result.
+//
 
 // composeRename processes responses from multiple shards for a "Rename" operation.
 // It iterates through all shard responses, checking for any errors. If an error is found
 // in any shard response, it returns that error immediately. If all responses are successful,
 // it returns an "OK" response to indicate that the Rename operation succeeded across all shards.
-func composeRename(ctx context.Context, responses ...eval.EvalResponse) interface{} {
+func composeRename(responses ...eval.EvalResponse) interface{} {
 	for idx := range responses {
 		if responses[idx].Error != nil {
 			return responses[idx].Error
@@ -41,7 +38,7 @@ func composeRename(ctx context.Context, responses ...eval.EvalResponse) interfac
 // in any shard response, it returns that error immediately. If all responses are successful,
 // it returns an "OK" response to indicate that the Rename operation succeeded across all shards.
 
-func composeCopy(ctx context.Context, responses ...eval.EvalResponse) interface{} {
+func composeCopy(responses ...eval.EvalResponse) interface{} {
 	for idx := range responses {
 		if responses[idx].Error != nil {
 			return responses[idx].Error
@@ -55,7 +52,7 @@ func composeCopy(ctx context.Context, responses ...eval.EvalResponse) interface{
 // (Multi-set operation). It loops through the responses to check if any shard returned an error.
 // If an error is detected, it immediately returns that error. Otherwise, it returns "OK"
 // to indicate that all "MSet" operations across shards were successful.
-func composeMSet(_ context.Context, responses ...eval.EvalResponse) interface{} {
+func composeMSet(responses ...eval.EvalResponse) interface{} {
 	for idx := range responses {
 		if responses[idx].Error != nil {
 			return responses[idx].Error
@@ -70,7 +67,7 @@ func composeMSet(_ context.Context, responses ...eval.EvalResponse) interface{} 
 // are in the correct sequence. It then checks for any errors in the responses; if any error
 // is encountered, it returns the error. If no errors are found, the function collects the
 // results from all responses and returns them as a slice.
-func composeMGet(_ context.Context, responses ...eval.EvalResponse) interface{} {
+func composeMGet(responses ...eval.EvalResponse) interface{} {
 	sort.Slice(responses, func(i, j int) bool {
 		return responses[i].SeqID < responses[j].SeqID
 	})

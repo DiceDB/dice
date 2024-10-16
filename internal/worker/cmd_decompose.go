@@ -6,22 +6,18 @@ import (
 
 	"github.com/dicedb/dice/internal/cmd"
 	diceerrors "github.com/dicedb/dice/internal/errors"
+	"github.com/dicedb/dice/internal/store"
 )
 
-// Breakup file is used by Worker to split commands that need to be executed
-// across multiple shards. For commands that operate on multiple keys or
-// require distribution across shards (e.g., MultiShard commands), a Breakup
-// function is invoked to break the original command into multiple smaller
-// commands, each targeted at a specific shard.
+// This file is utilized by the Worker to decompose commands that need to be executed
+// across multiple shards. For commands that operate on multiple keys or necessitate
+// distribution across shards (e.g., MultiShard commands), a Breakup function is invoked
+// to transform the original command into multiple smaller commands, each directed at
+// a specific shard.
 //
-// Each Breakup function takes the input command, identifies the relevant keys
-// and their corresponding shards, and generates a set of commands that are
-// individually sent to the respective shards. This ensures that commands can
-// be executed in parallel across shards, allowing for horizontal scaling
-// and distribution of data processing.
-//
-// The result is a list of commands, one for each shard, which are then
-// scattered to the shard threads for execution.
+// Each Breakup function processes the input command, identifies relevant keys and their
+// corresponding shards, and generates a set of individual commands. These commands are
+// sent to the appropriate shards for parallel execution.
 
 // decomposeRename breaks down the RENAME command into separate DELETE and SET commands.
 // It first waits for the result of a GET command from shards. If successful, it removes
@@ -32,7 +28,7 @@ func decomposeRename(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*
 	select {
 	case <-ctx.Done():
 		w.logger.Error("Timed out waiting for response from shards", slog.String("workerID", w.id), slog.Any("error", ctx.Err()))
-	case preProcessedResp, ok := <-w.preProcessingChan:
+	case preProcessedResp, ok := <-w.preprocessingChan:
 		if ok {
 			evalResp := preProcessedResp.EvalResponse
 			if evalResp.Error != nil {
@@ -50,14 +46,12 @@ func decomposeRename(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*
 	decomposedCmds := []*cmd.DiceDBCmd{}
 	decomposedCmds = append(decomposedCmds,
 		&cmd.DiceDBCmd{
-			RequestID: cd.RequestID,
-			Cmd:       "DEL",
-			Args:      []string{cd.Args[0]},
+			Cmd:  store.Del,
+			Args: []string{cd.Args[0]},
 		},
 		&cmd.DiceDBCmd{
-			RequestID: cd.RequestID,
-			Cmd:       "SET",
-			Args:      []string{cd.Args[1], val},
+			Cmd:  store.Set,
+			Args: []string{cd.Args[1], val},
 		},
 	)
 
@@ -73,7 +67,7 @@ func decomposeCopy(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cm
 	select {
 	case <-ctx.Done():
 		w.logger.Error("Timed out waiting for response from shards", slog.String("workerID", w.id), slog.Any("error", ctx.Err()))
-	case preProcessedResp, ok := <-w.preProcessingChan:
+	case preProcessedResp, ok := <-w.preprocessingChan:
 		if ok {
 			evalResp := preProcessedResp.EvalResponse
 			if evalResp.Error != nil {
@@ -91,9 +85,8 @@ func decomposeCopy(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cm
 	decomposedCmds := []*cmd.DiceDBCmd{}
 	decomposedCmds = append(decomposedCmds,
 		&cmd.DiceDBCmd{
-			RequestID: cd.RequestID,
-			Cmd:       "SET",
-			Args:      []string{cd.Args[1], val},
+			Cmd:  store.Set,
+			Args: []string{cd.Args[1], val},
 		},
 	)
 
@@ -116,9 +109,8 @@ func decomposeMSet(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.
 
 		decomposedCmds = append(decomposedCmds,
 			&cmd.DiceDBCmd{
-				RequestID: cd.RequestID,
-				Cmd:       "SET",
-				Args:      []string{key, val},
+				Cmd:  store.Set,
+				Args: []string{key, val},
 			},
 		)
 	}
@@ -136,9 +128,8 @@ func decomposeMGet(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.
 	for i := 0; i < len(cd.Args); i++ {
 		decomposedCmds = append(decomposedCmds,
 			&cmd.DiceDBCmd{
-				RequestID: cd.RequestID,
-				Cmd:       "GET",
-				Args:      []string{cd.Args[i]},
+				Cmd:  store.Get,
+				Args: []string{cd.Args[i]},
 			},
 		)
 	}

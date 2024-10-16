@@ -102,9 +102,9 @@ func (manager *ShardManager) GetShard(id ShardID) *ShardThread {
 }
 
 // RegisterWorker registers a worker with all Shards present in the ShardManager.
-func (manager *ShardManager) RegisterWorker(workerID string, processingChan ...chan *ops.StoreResponse) {
+func (manager *ShardManager) RegisterWorker(workerID string, request chan *ops.StoreResponse, processing chan *ops.StoreResponse) {
 	for _, shard := range manager.shards {
-		shard.registerWorker(workerID, processingChan...)
+		shard.registerWorker(workerID, request, processing)
 	}
 }
 

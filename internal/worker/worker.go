@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math/rand"
 	"net"
 	"syscall"
 	"time"
@@ -36,17 +37,17 @@ type BaseWorker struct {
 	ioHandler         iohandler.IOHandler
 	parser            requestparser.Parser
 	shardManager      *shard.ShardManager
-	respChan          chan *ops.StoreResponse
 	adhocReqChan      chan *cmd.DiceDBCmd
 	Session           *auth.Session
 	globalErrorChan   chan error
 	logger            *slog.Logger
-	preProcessingChan chan *ops.StoreResponse
+	responseChan      chan *ops.StoreResponse
+	preprocessingChan chan *ops.StoreResponse
 }
 
-func NewWorker(wid string, respChan chan *ops.StoreResponse,
+func NewWorker(wid string, responseChan, preprocessingChan chan *ops.StoreResponse,
 	ioHandler iohandler.IOHandler, parser requestparser.Parser,
-	shardManager *shard.ShardManager, gec chan error, preProcessingChan chan *ops.StoreResponse,
+	shardManager *shard.ShardManager, gec chan error,
 	logger *slog.Logger) *BaseWorker {
 	return &BaseWorker{
 		id:                wid,
@@ -54,8 +55,8 @@ func NewWorker(wid string, respChan chan *ops.StoreResponse,
 		parser:            parser,
 		shardManager:      shardManager,
 		globalErrorChan:   gec,
-		respChan:          respChan,
-		preProcessingChan: preProcessingChan,
+		responseChan:      responseChan,
+		preprocessingChan: preprocessingChan,
 		logger:            logger,
 		Session:           auth.NewSession(),
 		adhocReqChan:      make(chan *cmd.DiceDBCmd, config.DiceConfig.Performance.AdhocReqChanBufSize),
@@ -102,7 +103,7 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 		case cmdReq := <-w.adhocReqChan:
 			// Handle adhoc requests of DiceDBCmd
 			func() {
-				execCtx, cancel := context.WithTimeout(ctx, 500*time.Second) // Timeout set to 6 seconds for integration tests
+				execCtx, cancel := context.WithTimeout(ctx, 6*time.Second) // Timeout set to 6 seconds for integration tests
 				defer cancel()
 
 				// adhoc requests should be classified as watch requests
@@ -146,9 +147,7 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 			}
 			// executeCommand executes the command and return the response back to the client
 			func(errChan chan error) {
-				type id string
-				execCtx, cancel := context.WithTimeout(ctx, 500*time.Second) // Timeout set to 6 seconds for integration tests
-				execCtx = context.WithValue(execCtx, id("request_id"), cmds[0].RequestID)
+				execCtx, cancel := context.WithTimeout(ctx, 6*time.Second) // Timeout set to 6 seconds for integration tests
 				defer cancel()
 				w.executeCommandHandler(execCtx, errChan, cmds, false)
 			}(errChan)
@@ -280,6 +279,9 @@ func (w *BaseWorker) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	default:
+
+		rID := rand.New(rand.NewSource(time.Now().UnixNano())).Uint32()
+
 		for i := uint8(0); i < uint8(len(cmds)); i++ {
 			var rc chan *ops.StoreOp
 			var sid shard.ShardID
@@ -294,7 +296,7 @@ func (w *BaseWorker) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd) error {
 
 			rc <- &ops.StoreOp{
 				SeqID:     i,
-				RequestID: cmds[i].RequestID,
+				RequestID: rID,
 				Cmd:       cmds[i],
 				WorkerID:  w.id,
 				ShardID:   sid,
@@ -315,7 +317,7 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 		select {
 		case <-ctx.Done():
 			w.logger.Error("Timed out waiting for response from shards", slog.String("workerID", w.id), slog.Any("error", ctx.Err()))
-		case resp, ok := <-w.respChan:
+		case resp, ok := <-w.responseChan:
 			if ok {
 				evalResp = append(evalResp, *resp.EvalResponse)
 			}
@@ -381,7 +383,7 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 			}
 
 		case MultiShard:
-			err := w.ioHandler.Write(ctx, val.composeResponse(ctx, evalResp...))
+			err := w.ioHandler.Write(ctx, val.composeResponse(evalResp...))
 			if err != nil {
 				w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
 				return err

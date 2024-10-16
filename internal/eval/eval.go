@@ -53,10 +53,12 @@ var (
 	diceCommandsCount int
 )
 
+// EvalResponse represents the response of an evaluation operation for a command from store.
+// It contains the sequence ID, the result of the store operation, and any error encountered during the operation.
 type EvalResponse struct {
-	SeqID  uint8
-	Result interface{} // Result of the Store operation, for now the type is set to []byte, but this can change in the future.
-	Error  error
+	SeqID  uint8       // SeqID is the sequence ID of the operation, used to track the order of operations.
+	Result interface{} // Result holds the outcome of the Store operation. Currently, it is expected to be of type []byte, but this may change in the future.
+	Error  error       // Error holds any error that occurred during the operation. If no error, it will be nil.
 }
 
 type jsonOperation string
