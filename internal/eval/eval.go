@@ -2656,7 +2656,8 @@ func evalCommandInfo(args []string) []byte {
 	}
 
 	cmdMetaMap := make(map[string]interface{})
-	for _, cmdMeta := range DiceCmds {
+	for key := range DiceCmds {
+		cmdMeta := DiceCmds[key]
 		cmdMetaMap[cmdMeta.Name] = convertCmdMetaToSlice(&cmdMeta)
 	}
 

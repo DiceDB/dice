@@ -1247,7 +1247,8 @@ func convertCmdMetaToSlice(cmdMeta *DiceCmdMeta) []interface{} {
 // Function to convert map[string]DiceCmdMeta{} to []interface{}
 func convertDiceCmdsMapToSlice() []interface{} {
 	var result []interface{}
-	for _, cmdMeta := range DiceCmds {
+	for key := range DiceCmds {
+		cmdMeta := DiceCmds[key]
 		result = append(result, convertCmdMetaToSlice(&cmdMeta))
 	}
 	return result
