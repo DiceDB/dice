@@ -3,7 +3,7 @@ package websocket
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHyperLogLogCommands(t *testing.T) {
@@ -82,11 +82,12 @@ func TestHyperLogLogCommands(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			conn := exec.ConnectToServer()
-			exec.FireCommand(conn, "del k")
+			deleteKey(t, conn, exec, "k")
 
 			for i, cmd := range tc.commands {
-				result := exec.FireCommand(conn, cmd)
-				assert.DeepEqual(t, tc.expected[i], result)
+				result, err := exec.FireCommandAndReadResponse(conn, cmd)
+				assert.Nil(t, err)
+				assert.Equal(t, tc.expected[i], result)
 			}
 		})
 	}

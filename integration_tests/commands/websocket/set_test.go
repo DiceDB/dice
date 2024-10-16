@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -41,7 +40,7 @@ func TestSet(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			conn := exec.ConnectToServer()
 
-			DeleteKey(t, conn, exec, "k")
+			deleteKey(t, conn, exec, "k")
 
 			for i, cmd := range tc.commands {
 				result, err := exec.FireCommandAndReadResponse(conn, cmd)
@@ -128,9 +127,9 @@ func TestSetWithOptions(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			conn := exec.ConnectToServer()
 
-			DeleteKey(t, conn, exec, "k")
-			DeleteKey(t, conn, exec, "k1")
-			DeleteKey(t, conn, exec, "k2")
+			deleteKey(t, conn, exec, "k")
+			deleteKey(t, conn, exec, "k1")
+			deleteKey(t, conn, exec, "k2")
 
 			for i, cmd := range tc.commands {
 				result, err := exec.FireCommandAndReadResponse(conn, cmd)
@@ -150,7 +149,7 @@ func TestSetWithExat(t *testing.T) {
 		func(t *testing.T) {
 			conn := exec.ConnectToServer()
 
-			DeleteKey(t, conn, exec, "k")
+			deleteKey(t, conn, exec, "k")
 
 			resp, err := exec.FireCommandAndReadResponse(conn, fmt.Sprintf("SET k v EXAT %v", Etime))
 			assert.Nil(t, err)
@@ -189,7 +188,7 @@ func TestSetWithExat(t *testing.T) {
 		func(t *testing.T) {
 			conn := exec.ConnectToServer()
 
-			DeleteKey(t, conn, exec, "k")
+			deleteKey(t, conn, exec, "k")
 
 			resp, err := exec.FireCommandAndReadResponse(conn, "SET k v EXAT "+BadTime)
 			assert.Nil(t, err)
@@ -210,7 +209,7 @@ func TestSetWithExat(t *testing.T) {
 		func(t *testing.T) {
 			conn := exec.ConnectToServer()
 
-			DeleteKey(t, conn, exec, "k")
+			deleteKey(t, conn, exec, "k")
 
 			resp, err := exec.FireCommandAndReadResponse(conn, "SET k v PXAT "+Etime+" EXAT "+Etime)
 			assert.Nil(t, err)
@@ -248,13 +247,4 @@ func TestWithKeepTTLFlag(t *testing.T) {
 	resp, err := exec.FireCommandAndReadResponse(conn, cmd)
 	assert.Nil(t, err)
 	assert.Equal(t, out, resp, "Value mismatch for cmd %s\n.", cmd)
-}
-
-func DeleteKey(t *testing.T, conn *websocket.Conn, exec *WebsocketCommandExecutor, key string) {
-	cmd := "DEL " + key
-	resp, err := exec.FireCommandAndReadResponse(conn, cmd)
-	assert.Nil(t, err)
-	respFloat, ok := resp.(float64)
-	assert.True(t, ok, "error converting response to float64")
-	assert.True(t, respFloat == 1 || respFloat == 0, "unexpected response in %v: %v", cmd, resp)
 }
