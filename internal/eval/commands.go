@@ -453,8 +453,8 @@ var (
 		Arity: 1,
 	}
 	qwatchCmdMeta = DiceCmdMeta{
-		Name: "QWATCH",
-		Info: `QWATCH adds the specified key to the watch list for the caller client.
+		Name: "Q.WATCH",
+		Info: `Q.WATCH adds the specified key to the watch list for the caller client.
 		Every time a key in the watch list is modified, the client will be sent a response
 		containing the new value of the key along with the operation that was performed on it.
 		Contains only one argument, the key to be watched.`,
@@ -462,7 +462,7 @@ var (
 		Arity: 1,
 	}
 	qUnwatchCmdMeta = DiceCmdMeta{
-		Name: "QUNWATCH",
+		Name: "Q.UNWATCH",
 		Info: `Unsubscribes or QUnwatches the client from the given key's watch session.
 		It removes the key from the watch list for the caller client.`,
 		Eval:  nil,
@@ -1207,8 +1207,8 @@ func init() {
 	DiceCmds["PFMERGE"] = pfMergeCmdMeta
 	DiceCmds["PING"] = pingCmdMeta
 	DiceCmds["PTTL"] = pttlCmdMeta
-	DiceCmds["QUNWATCH"] = qUnwatchCmdMeta
-	DiceCmds["QWATCH"] = qwatchCmdMeta
+	DiceCmds["Q.UNWATCH"] = qUnwatchCmdMeta
+	DiceCmds["Q.WATCH"] = qwatchCmdMeta
 	DiceCmds["RENAME"] = renameCmdMeta
 	DiceCmds["RESTORE"] = restorekeyCmdMeta
 	DiceCmds["RPOP"] = rpopCmdMeta

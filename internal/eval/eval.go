@@ -1958,7 +1958,7 @@ func evalMULTI(args []string, store *dstore.Store) []byte {
 // Contains only one argument, the query to be watched.
 func EvalQWATCH(args []string, httpOp bool, client *comm.Client, store *dstore.Store) []byte {
 	if len(args) != 1 {
-		return diceerrors.NewErrArity("QWATCH")
+		return diceerrors.NewErrArity("Q.WATCH")
 	}
 
 	// Parse and get the selection from the query.
@@ -2014,7 +2014,7 @@ func EvalQWATCH(args []string, httpOp bool, client *comm.Client, store *dstore.S
 // EvalQUNWATCH removes the specified key from the watch list for the caller client.
 func EvalQUNWATCH(args []string, httpOp bool, client *comm.Client) []byte {
 	if len(args) != 1 {
-		return diceerrors.NewErrArity("QUNWATCH")
+		return diceerrors.NewErrArity("Q.UNWATCH")
 	}
 	query, e := sql.ParseQuery( /*sql=*/ args[0])
 	if e != nil {
