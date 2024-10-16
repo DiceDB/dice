@@ -377,9 +377,8 @@ func testEvalSET(t *testing.T, store *dstore.Store) {
 }
 
 func testEvalGETEX(t *testing.T, store *dstore.Store) {
-	tests := []evalTestCase{
-		{
-			name: "key val pair and valid EX",
+	tests := map[string]evalTestCase{
+		"key val pair and valid EX": {
 			setup: func() {
 				key := "foo"
 				value := "bar"
@@ -394,8 +393,7 @@ func testEvalGETEX(t *testing.T, store *dstore.Store) {
 				Error:  nil,
 			},
 		},
-		{
-			name: "key val pair and invalid EX",
+		"key val pair and invalid EX": {
 			setup: func() {
 				key := "foo"
 				value := "bar"
@@ -410,8 +408,7 @@ func testEvalGETEX(t *testing.T, store *dstore.Store) {
 				Error:  diceerrors.ErrInvalidExpireTime("GETEX"),
 			},
 		},
-		{
-			name: "key val pair and EX and string expire time",
+		"key val pair and EX and string expire time": {
 			setup: func() {
 				key := "foo"
 				value := "bar"
@@ -426,8 +423,7 @@ func testEvalGETEX(t *testing.T, store *dstore.Store) {
 				Error:  diceerrors.ErrIntegerOutOfRange,
 			},
 		},
-		{
-			name: "key val pair and both EX and PERSIST",
+		"key val pair and both EX and PERSIST": {
 			setup: func() {
 				key := "foo"
 				value := "bar"
@@ -442,8 +438,7 @@ func testEvalGETEX(t *testing.T, store *dstore.Store) {
 				Error:  diceerrors.ErrIntegerOutOfRange,
 			},
 		},
-		{
-			name: "key holding json type",
+		"key holding json type": {
 			setup: func() {
 				evalJSONSET([]string{"JSONKEY", "$", "1"}, store)
 			},
@@ -453,8 +448,7 @@ func testEvalGETEX(t *testing.T, store *dstore.Store) {
 				Error:  diceerrors.ErrWrongTypeOperation,
 			},
 		},
-		{
-			name: "key holding set type",
+		"key holding set type": {
 			setup: func() {
 				evalSADD([]string{"SETKEY", "FRUITS", "APPLE", "MANGO", "BANANA"}, store)
 			},
@@ -470,29 +464,24 @@ func testEvalGETEX(t *testing.T, store *dstore.Store) {
 }
 
 func testEvalGETDEL(t *testing.T, store *dstore.Store) {
-	tests := []evalTestCase{
-		{
-			name:           "nil value",
+	tests := map[string]evalTestCase{
+		"nil value": {
 			input:          nil,
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'getdel' command")},
 		},
-		{
-			name:           "empty array",
+		"empty array": {
 			input:          []string{},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'getdel' command")},
 		},
-		{
-			name:           "key does not exist",
+		"key does not exist": {
 			input:          []string{"NONEXISTENT_KEY"},
 			migratedOutput: EvalResponse{Result: clientio.NIL, Error: nil},
 		},
-		{
-			name:           "multiple arguments",
+		"multiple arguments": {
 			input:          []string{"KEY1", "KEY2"},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'getdel' command")},
 		},
-		{
-			name: "key exists",
+		"key exists": {
 			setup: func() {
 				key := "diceKey"
 				value := "diceVal"
@@ -505,8 +494,7 @@ func testEvalGETDEL(t *testing.T, store *dstore.Store) {
 			input:          []string{"diceKey"},
 			migratedOutput: EvalResponse{Result: "diceVal", Error: nil},
 		},
-		{
-			name: "key exists but expired",
+		"key exists but expired": {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
@@ -520,8 +508,7 @@ func testEvalGETDEL(t *testing.T, store *dstore.Store) {
 			input:          []string{"EXISTING_KEY"},
 			migratedOutput: EvalResponse{Result: clientio.NIL, Error: nil},
 		},
-		{
-			name: "key deleted by previous call of GETDEL",
+		"key deleted by previous call of GETDEL": {
 			setup: func() {
 				key := "DELETED_KEY"
 				value := "mock_value"
@@ -3851,36 +3838,6 @@ func testEvalJSONNUMINCRBY(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalJSONNUMINCRBY, store)
-}
-
-func runMigratedEvalTests(t *testing.T, tests []evalTestCase, evalFunc func([]string, *dstore.Store) *EvalResponse, store *dstore.Store) {
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Setup the test store
-			if tt.setup != nil {
-				tt.setup()
-			}
-
-			response := evalFunc(tt.input, store)
-
-			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput.Result)
-
-			// Handle comparison for byte slices
-			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
-				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
-				}
-			} else {
-				assert.Equal(t, tt.migratedOutput.Result, response.Result)
-			}
-
-			if tt.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
-			} else {
-				testifyAssert.NoError(t, response.Error)
-			}
-		})
-	}
 }
 
 func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]string, *dstore.Store) []byte, store *dstore.Store) {
