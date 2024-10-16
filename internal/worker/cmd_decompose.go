@@ -22,6 +22,10 @@ import (
 //
 // The result is a list of commands, one for each shard, which are then
 // scattered to the shard threads for execution.
+
+// decomposeRename breaks down the RENAME command into separate DELETE and SET commands.
+// It first waits for the result of a GET command from shards. If successful, it removes
+// the old key using a DEL command and sets the new key with the retrieved value using a SET command.
 func decomposeRename(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
 	// Waiting for GET command response
 	var val string
@@ -60,6 +64,9 @@ func decomposeRename(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*
 	return decomposedCmds, nil
 }
 
+// decomposeCopy breaks down the COPY command into a SET command that copies a value from
+// one key to another. It first retrieves the value of the original key from shards, then
+// sets the value to the destination key using a SET command.
 func decomposeCopy(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
 	// Waiting for GET command response
 	var val string
@@ -93,6 +100,9 @@ func decomposeCopy(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cm
 	return decomposedCmds, nil
 }
 
+// decomposeMSet decomposes the MSET (Multi-set) command into individual SET commands.
+// It expects an even number of arguments (key-value pairs). For each pair, it creates
+// a separate SET command to store the value at the given key.
 func decomposeMSet(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
 	if len(cd.Args)%2 != 0 {
 		return nil, diceerrors.ErrWrongArgumentCount("MSET")
@@ -115,6 +125,9 @@ func decomposeMSet(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.
 	return decomposedCmds, nil
 }
 
+// decomposeMGet decomposes the MGET (Multi-get) command into individual GET commands.
+// It expects a list of keys, and for each key, it creates a separate GET command to
+// retrieve the value associated with that key.
 func decomposeMGet(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
 	if len(cd.Args) < 1 {
 		return nil, diceerrors.ErrWrongArgumentCount("MGET")

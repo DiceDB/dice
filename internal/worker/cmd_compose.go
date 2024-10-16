@@ -21,6 +21,11 @@ import (
 // The result is a unified response that reflects the combined
 // outcome of operations executed across multiple shards, ensuring
 // that the client receives a single, cohesive result.
+
+// composeRename processes responses from multiple shards for a "Rename" operation.
+// It iterates through all shard responses, checking for any errors. If an error is found
+// in any shard response, it returns that error immediately. If all responses are successful,
+// it returns an "OK" response to indicate that the Rename operation succeeded across all shards.
 func composeRename(ctx context.Context, responses ...eval.EvalResponse) interface{} {
 	for idx := range responses {
 		if responses[idx].Error != nil {
@@ -30,6 +35,11 @@ func composeRename(ctx context.Context, responses ...eval.EvalResponse) interfac
 
 	return clientio.OK
 }
+
+// composeRename processes responses from multiple shards for a "Copy" operation.
+// It iterates through all shard responses, checking for any errors. If an error is found
+// in any shard response, it returns that error immediately. If all responses are successful,
+// it returns an "OK" response to indicate that the Rename operation succeeded across all shards.
 
 func composeCopy(ctx context.Context, responses ...eval.EvalResponse) interface{} {
 	for idx := range responses {
@@ -41,6 +51,10 @@ func composeCopy(ctx context.Context, responses ...eval.EvalResponse) interface{
 	return clientio.OK
 }
 
+// composeMSet processes responses from multiple shards for an "MSet" operation
+// (Multi-set operation). It loops through the responses to check if any shard returned an error.
+// If an error is detected, it immediately returns that error. Otherwise, it returns "OK"
+// to indicate that all "MSet" operations across shards were successful.
 func composeMSet(_ context.Context, responses ...eval.EvalResponse) interface{} {
 	for idx := range responses {
 		if responses[idx].Error != nil {
@@ -51,6 +65,11 @@ func composeMSet(_ context.Context, responses ...eval.EvalResponse) interface{} 
 	return clientio.OK
 }
 
+// composeMGet processes responses from multiple shards for an "MGet" operation
+// (Multi-get operation). It first sorts the responses by their SeqID to ensure the results
+// are in the correct sequence. It then checks for any errors in the responses; if any error
+// is encountered, it returns the error. If no errors are found, the function collects the
+// results from all responses and returns them as a slice.
 func composeMGet(_ context.Context, responses ...eval.EvalResponse) interface{} {
 	sort.Slice(responses, func(i, j int) bool {
 		return responses[i].SeqID < responses[j].SeqID

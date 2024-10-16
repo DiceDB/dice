@@ -77,8 +77,17 @@ type CmdMeta struct {
 	// and returns a unified response interface. It is used in the command type "MultiShard"
 	composeResponse func(ctx context.Context, responses ...eval.EvalResponse) interface{}
 
+	// preProcessingReq indicates whether the command requires preprocessing before execution.
+	// If set to true, it signals that a preliminary step (such as fetching values from shards)
+	// is necessary before the main command is executed. This is important for commands that depend
+	// on the current state of data in the database.
 	preProcessingReq bool
 
+	// preProcessResponse is a function that handles the preprocessing of a DiceDB command by
+	// preparing the necessary operations (e.g., fetching values from shards) before the command
+	// is executed. It takes the worker and the original DiceDB command as parameters and
+	// ensures that any required information is retrieved and processed in advance. Use this when set
+	// preProcessingReq = true.
 	preProcessResponse func(worker *BaseWorker, DiceDBCmd *cmd.DiceDBCmd)
 }
 

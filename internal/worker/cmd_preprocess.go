@@ -6,6 +6,9 @@ import (
 	"github.com/dicedb/dice/internal/shard"
 )
 
+// preProcessRename prepares the RENAME command for preprocessing by sending a GET command
+// to retrieve the value of the original key. The retrieved value is used later in the
+// decomposeRename function to delete the old key and set the new key.
 func preProcessRename(w *BaseWorker, diceDBCmd *cmd.DiceDBCmd) {
 	var rc chan *ops.StoreOp
 	var sid shard.ShardID
@@ -30,6 +33,9 @@ func preProcessRename(w *BaseWorker, diceDBCmd *cmd.DiceDBCmd) {
 	}
 }
 
+// preProcessCopy prepares the COPY command for preprocessing by sending a GET command
+// to retrieve the value of the original key. The retrieved value is used later in the
+// decomposeCopy function to copy the value to the destination key.
 func preProcessCopy(w *BaseWorker, diceDBCmd *cmd.DiceDBCmd) {
 	var rc chan *ops.StoreOp
 	var sid shard.ShardID
