@@ -1643,3 +1643,130 @@ func evalZPOPMIN(args []string, store *dstore.Store) *EvalResponse {
 		Error:  nil,
 	}
 }
+
+// evalBF.RESERVE evaluates the BF.RESERVE command responsible for initializing a
+// new bloom filter and allocation it's relevant parameters based on given inputs.
+// If no params are provided, it uses defaults.
+func evalBFRESERVE(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 && len(args) != 3 {
+		return &EvalResponse{
+			Result: []interface{}{},
+			Error:  diceerrors.ErrWrongArgumentCount("BF.RESERVE"),
+		}
+	}
+
+	useDefaults := false
+	if len(args) == 1 {
+		useDefaults = true
+	}
+
+	opts, err := newBloomOpts(args[1:], useDefaults)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrFormatted("%w for 'BF.RESERVE' command", err),
+		}
+	}
+
+	_, err = getOrCreateBloomFilter(args[0], opts, store)
+
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrFormatted("%w for 'BF.RESERVE' command", err),
+		}
+	}
+	return &EvalResponse{
+		Result: clientio.OK,
+		Error:  nil,
+	}
+}
+
+// evalBFADD evaluates the BF.ADD command responsible for adding an element to a bloom filter. If the filter does not
+// exist, it will create a new one with default parameters.
+func evalBFADD(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 2 {
+		return &EvalResponse{
+			Result: []interface{}{},
+			Error:  diceerrors.ErrWrongArgumentCount("BF.ADD"),
+		}
+	}
+
+	opts, _ := newBloomOpts(args[1:], true)
+
+	bloom, err := getOrCreateBloomFilter(args[0], opts, store)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrFormatted("%w for 'BF.ADD' command", err),
+		}
+	}
+
+	result, err := bloom.add(args[1])
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrFormatted("%w for 'BF.ADD' command", err),
+		}
+	}
+
+	return &EvalResponse{
+		Result: result,
+		Error:  nil,
+	}
+}
+
+// evalBFEXISTS evaluates the BF.EXISTS command responsible for checking existence of an element in a bloom filter.
+func evalBFEXISTS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 2 {
+		return &EvalResponse{
+			Result: []interface{}{},
+			Error:  diceerrors.ErrWrongArgumentCount("BF.EXISTS"),
+		}
+	}
+
+	bloom, err := getOrCreateBloomFilter(args[0], nil, store)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrFormatted("%w for 'BF.EXISTS' command", err),
+		}
+	}
+
+	result, err := bloom.exists(args[1])
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrFormatted("%w for 'BF.EXISTS' command", err),
+		}
+	}
+
+	return &EvalResponse{
+		Result: result,
+		Error:  nil,
+	}
+}
+
+// evalBFINFO evaluates the BF.INFO command responsible for returning the
+// parameters and metadata of an existing bloom filter.
+func evalBFINFO(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: []interface{}{},
+			Error:  diceerrors.ErrWrongArgumentCount("BF.INFO"),
+		}
+	}
+
+	bloom, err := getOrCreateBloomFilter(args[0], nil, store)
+	if err != nil {
+		return &EvalResponse{
+			Result: []interface{}{},
+			Error:  diceerrors.ErrGeneral("not found"),
+		}
+	}
+
+	return &EvalResponse{
+		Result: bloom.info(args[0]),
+		Error:  nil,
+	}
+}

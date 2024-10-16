@@ -24,7 +24,7 @@ func TestBloomFilter(t *testing.T) {
 
 	// BFINIT
 	var args []string // empty args
-	resp := evalBFINIT(args, store)
+	resp := evalBFRESERVE(args, store)
 
 	// We're just checking if the response is an error or not. This test does not check the type of error. That is kept
 	//for different test.
@@ -34,14 +34,14 @@ func TestBloomFilter(t *testing.T) {
 
 	// BFINIT bf 0.01 10000
 	args = append(args, "bf", "0.01", "10000") // Add key, error rate and capacity
-	resp = evalBFINIT(args, store)
+	resp = evalBFRESERVE(args, store)
 	if !bytes.Equal(resp, clientio.RespOK) {
 		t.Errorf("BFINIT: invalid response, args: %v - expected: %s, got error: %s", args, string(clientio.RespOK), string(resp))
 	}
 
 	// BFINIT bf1
 	args = []string{"bf1"}
-	resp = evalBFINIT(args, store)
+	resp = evalBFRESERVE(args, store)
 	if !bytes.Equal(resp, clientio.RespOK) {
 		t.Errorf("BFINIT: invalid response, args: %v - expected: %s, got error: %s", args, string(clientio.RespOK), string(resp))
 	}
