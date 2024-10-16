@@ -2158,7 +2158,7 @@ func evalRPOP(args []string, store *dstore.Store) []byte {
 
 func evalLPOP(args []string, store *dstore.Store) []byte {
 	// By default we pop only 1
-	pop_number := 1
+	popNumber := 1
 
 	// LPOP accepts 1 or 2 arguments only - LPOP key [count]
 	if len(args) < 1 || len(args) > 2 {
@@ -2179,7 +2179,7 @@ func evalLPOP(args []string, store *dstore.Store) []byte {
 			// returns an out of range err if count is negetive
 			return diceerrors.NewErrWithFormattedMessage(diceerrors.ValOutOfRangeErr)
 		}
-		pop_number = nos
+		popNumber = nos
 	}
 
 	obj := store.Get(args[0])
@@ -2204,7 +2204,7 @@ func evalLPOP(args []string, store *dstore.Store) []byte {
 
 	// holds the elements popped
 	var str []string
-	for iter := 0; iter < pop_number; iter++ {
+	for iter := 0; iter < popNumber; iter++ {
 		x, err := deq.LPop()
 		if err != nil {
 			if errors.Is(err, ErrDequeEmpty) {
