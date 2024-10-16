@@ -38,14 +38,20 @@ When the `JSON.MGET` command is executed, DiceDB will:
 
 If a key does not exist or the specified path is not found within a JSON document, `nil` will be returned for that key.
 
+Here’s the revised error section for the `JSON.MGET` command documentation in the specified format:
+
+---
+
 ## Errors
 
-The following errors may be raised by the `JSON.MGET` command:
+1. `Key does not exist`:
+   - **Error Message**: `(error) ERROR could not perform this operation on a key that doesn't exist`
+   - This error occurs when the specified key does not exist in the DiceDB database.
 
-| Error Type                        | Description                                                                                                            |
-|-----------------------------------|------------------------------------------------------------------------------------------------------------------------|
-| `WRONGTYPE`                       | Operation against a key holding the wrong kind of value: This error occurs if one of the specified keys does not hold a JSON document. |
-| `ERR syntax error`                | This error occurs if the command syntax is incorrect, such as missing parameters or incorrect JSON path format.      |
+
+2. `Invalid JSON path`:
+   - **Error Message**: `(error) ERROR invalid JSONPath`
+   - This error occurs when the provided JSONPath expression is not valid.
 
 ## Example Usage
 
