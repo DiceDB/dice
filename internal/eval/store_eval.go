@@ -322,8 +322,8 @@ func evalSETEX(args []string, store *dstore.Store) *EvalResponse {
 // evalJSONARRAPPEND appends the value(s) provided in the args to the given array path
 // in the JSON object saved at key in arguments.
 // Args must contain atleast a key, path and value.
-// If the key does not exist or is expired, it returns response.RespNIL.
-// If the object at given path is not an array, it returns response.RespNIL.
+// If the key does not exist or is expired, it returns response.NIL.
+// If the object at given path is not an array, it returns response.NIL.
 // Returns the new length of the array at path.
 func evalJSONARRAPPEND(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) < 3 {
@@ -340,7 +340,7 @@ func evalJSONARRAPPEND(args []string, store *dstore.Store) *EvalResponse {
 	obj := store.Get(key)
 	if obj == nil {
 		return &EvalResponse{
-			Result: nil,
+			Result: clientio.NIL,
 			Error:  nil,
 		}
 	}
@@ -386,7 +386,7 @@ func evalJSONARRAPPEND(args []string, store *dstore.Store) *EvalResponse {
 		arr, ok := data.([]interface{})
 		if !ok {
 			// Not an array
-			resultsArray = append(resultsArray, nil)
+			resultsArray = append(resultsArray, clientio.NIL)
 			return data, false
 		}
 
@@ -442,7 +442,7 @@ func evalJSONARRLEN(args []string, store *dstore.Store) *EvalResponse {
 	// If the object is not present in the store or if its nil, then we should simply return nil.
 	if obj == nil {
 		return &EvalResponse{
-			Result: nil,
+			Result: clientio.NIL,
 			Error:  nil,
 		}
 	}
@@ -508,7 +508,7 @@ func evalJSONARRLEN(args []string, store *dstore.Store) *EvalResponse {
 			case utils.ArrayType:
 				arrlenList = append(arrlenList, len(result.([]interface{})))
 			default:
-				arrlenList = append(arrlenList, nil)
+				arrlenList = append(arrlenList, clientio.NIL)
 			}
 		}
 
@@ -586,7 +586,7 @@ func evalJSONARRPOP(args []string, store *dstore.Store) *EvalResponse {
 	if obj == nil {
 		return &EvalResponse{
 			Result: nil,
-			Error:  nil,
+			Error:  diceerrors.ErrKeyNotFound,
 		}
 	}
 
@@ -654,7 +654,7 @@ func evalJSONARRPOP(args []string, store *dstore.Store) *EvalResponse {
 		// returns nil in this case similar to redis
 		// also, return nil if array is empty
 		if !ok || len(arr) == 0 {
-			popArr = append(popArr, nil)
+			popArr = append(popArr, clientio.NIL)
 			continue
 		}
 
