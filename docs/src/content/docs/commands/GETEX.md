@@ -51,7 +51,7 @@ The `GETEX` command can raise errors in the following scenarios:
 3. `Invalid expiration time`: If the expiration time is not a valid integer or timestamp, it will return an error.
    - Error message: `(error) ERR value is not an integer or out of range`
 
-## Examples
+## Example Usage
 
 ### Example 1: Retrieve value and set expiration in seconds
 
