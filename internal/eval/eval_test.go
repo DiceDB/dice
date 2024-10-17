@@ -2422,10 +2422,11 @@ func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
 			response := evalHEXISTS(tt.input, store)
 
 			// Handle comparison for byte slices
-			if resposeBytes, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
+			if responseBytes, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				// If has result
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-					testifyAssert.True(t, bytes.Equal(resposeBytes, expectedBytes), "expected and actual byte slices should be equal")
+					// fmt.Printf("%v | %v\n", responseBytes, expectedBytes)
+					testifyAssert.True(t, bytes.Equal(responseBytes, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else {
 				// If has error

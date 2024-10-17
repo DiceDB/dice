@@ -11,17 +11,25 @@ func TestHexists(t *testing.T){
 	defer conn.Close()
 
 	testCases := []TestCase{
-
+		{
+			name: "Check if field exists when k f and v are set",
+			commands: []string{"HSET key field value", "HEXISTS key field"},
+			expected: []interface{}{int64(1), int64(1)},
+		},
+		{
+			name: "Check if field exists when k exists but not f and v",
+			commands: []string{"HEXISTS key field"},
+			expected: []interface{}{int64(0)},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// deleteTestKeys([]string{"k"}, store)
-			FireCommand(conn, "DEL k")
+			FireCommand(conn, "HDEL key field")
 
 			for i, cmd := range tc.commands {
 				result := FireCommand(conn, cmd)
-				assert.DeepEqual(t, tc.expected[i], result)
+				assert.Equal(t, tc.expected[i], result)
 			}
 		})
 	}
