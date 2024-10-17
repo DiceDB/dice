@@ -1,12 +1,13 @@
 package eval
 
 import (
+	"fmt"
 	"math"
 	"strconv"
 	"strings"
 
-	"github.com/bytedance/sonic"
 	"github.com/axiomhq/hyperloglog"
+	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/eval/sortedset"
@@ -556,7 +557,7 @@ func evalJSONCLEAR(args []string, store *dstore.Store) *EvalResponse {
 	obj.Value = jsonData
 	return &EvalResponse{
 		Result: countClear,
-    Error:  nil,
+		Error:  nil,
 	}
 }
 
@@ -718,7 +719,7 @@ func evalJSONSTRLEN(args []string, store *dstore.Store) *EvalResponse {
 	}
 	return &EvalResponse{
 		Result: strLenResults,
-    Error:  nil,
+		Error:  nil,
 	}
 }
 
@@ -849,7 +850,7 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) *EvalResponse {
 	}
 	return &EvalResponse{
 		Result: objectLen,
-    Error:  nil,
+		Error:  nil,
 	}
 }
 
@@ -906,6 +907,110 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 
 	return &EvalResponse{
 		Result: clientio.OK,
+		Error:  nil,
+	}
+}
+
+// evalJSONARRTRIM trim an array so that it contains only the specified inclusive range of elements
+// an array of integer replies for each path, the array's new size, or nil, if the matching JSON value is not an array.
+func evalJSONARRTRIM(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 4 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("JSON.ARRTRIM"),
+		}
+	}
+	var err error
+
+	start := args[2]
+	stop := args[3]
+	var startIdx, stopIdx int
+	startIdx, err = strconv.Atoi(start)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrIntegerOutOfRange,
+		}
+	}
+	stopIdx, err = strconv.Atoi(stop)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrIntegerOutOfRange,
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("key does not exist"),
+		}
+	}
+
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(string(errWithMessage)),
+		}
+	}
+
+	jsonData := obj.Value
+
+	_, err = sonic.Marshal(jsonData)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("Existing key has wrong Dice type"),
+		}
+	}
+
+	path := args[1]
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrJSONPathNotFound(path),
+		}
+	}
+
+	results := expr.Get(jsonData)
+	if len(results) == 0 {
+		return &EvalResponse{
+			Result: clientio.RespEmptyArray,
+			Error:  nil,
+		}
+	}
+
+	var resultsArray []interface{}
+	// Capture the modified data when modifying the root path
+	newData, modifyErr := expr.Modify(jsonData, func(data any) (interface{}, bool) {
+		arr, ok := data.([]interface{})
+		if !ok {
+			// Not an array
+			resultsArray = append(resultsArray, nil)
+			return data, false
+		}
+
+		updatedArray := trimElementAndUpdateArray(arr, startIdx, stopIdx)
+
+		resultsArray = append(resultsArray, len(updatedArray))
+		return updatedArray, true
+	})
+	if modifyErr != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(fmt.Sprintf("ERR failed to modify JSON data: %v", modifyErr)),
+		}
+	}
+
+	jsonData = newData
+	obj.Value = jsonData
+
+	return &EvalResponse{
+		Result: resultsArray,
 		Error:  nil,
 	}
 }
