@@ -1,6 +1,7 @@
 package async
 
 import (
+	"fmt"
 	"net"
 	"strconv"
 	"sync"
@@ -191,53 +192,70 @@ func TestWithKeepTTLFlag(t *testing.T) {
 	assert.Equal(t, out, FireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
 }
 
-/*
-We open some connections to the db and fire concurrent SET commands for a particular key
-with different values. We expect that there are no dirty reads/writes.
-All the values read should be among the values that were attempted to set in the first place.
-*/
+type reqSet struct {
+	key   string
+	value int64
+}
+type respSet struct {
+	client   net.Conn
+	response int64
+}
+
 func TestConcurrentSetCommands(t *testing.T) {
-	numOfConnections := 10
-	connectionValues := make(map[net.Conn]*string)
-	expectedValues := make(map[string]struct{})
-	valuesReadChan := make(chan string, numOfConnections)
+	numOfClients := 10 // parallel connections
 
-	// Create connections and the values to set through them.
-	for connNum := 0; connNum < numOfConnections; connNum++ {
-		value := strconv.Itoa(connNum)
-		connectionValues[getLocalConnection()] = &value
-		expectedValues[value] = struct{}{}
-	}
-
-	// Execute the SET commands from the connections, and pass the output of GET to a channel
-	var wgroup sync.WaitGroup
-	key := "sample_key"
-	for conn, value := range connectionValues {
-		wgroup.Add(1)
-		go executeCommands(conn, &key, value, valuesReadChan, &wgroup)
-	}
-	wgroup.Wait()
-	close(valuesReadChan)
-
-	// Verify the values received in the channel
-	assert.Equal(t, numOfConnections, len(valuesReadChan))
-	for valueRead := range valuesReadChan {
-		if valueRead != "" {
-			valueReadStr := valueRead
-			_, ok := expectedValues[valueReadStr]
-			if !ok {
-				t.Fail()
-				break
-			}
+	requests := make(map[net.Conn]reqSet, numOfClients)
+	// create requests from different clients
+	for i := 0; i < numOfClients; i++ {
+		client := getLocalConnection()
+		req := reqSet{
+			key:   fmt.Sprintf("k%v", i),
+			value: int64(i),
 		}
+		requests[client] = req
+		fmt.Printf("i: %v\t localAddr: %v\t RemoteAddr: %v\n", i, client.LocalAddr(), client.RemoteAddr())
+	}
+
+	// set and get value
+	var wg sync.WaitGroup
+	respChan := make(chan respSet, numOfClients)
+	for client, req := range requests {
+		wg.Add(1)
+		go executeSetAndGet(t, client, req, respChan, &wg)
+	}
+	wg.Wait()
+	close(respChan)
+
+	// verify responses
+	assert.Equal(t, numOfClients, len(respChan))
+	for resp := range respChan {
+		fmt.Printf("final assertion: %v\n", resp.client.LocalAddr())
+		got := resp.response
+		want := requests[resp.client].value
+		assert.Equal(t, want, got, "LocalAdds: %v, got: %v, want: %v", resp.client.LocalAddr(), want, got)
 	}
 }
 
-func executeCommands(conn net.Conn, key, value *string, valReadChan chan string, wGroup *sync.WaitGroup) {
-	defer wGroup.Done()
-	defer (conn).Close()
-	FireCommand(conn, "SET "+*key+" "+*value)
-	var readValue = FireCommand(conn, "GET "+*key)
-	readValueStr, _ := readValue.(string)
-	valReadChan <- readValueStr
+func executeSetAndGet(t *testing.T, client net.Conn, req reqSet, respChan chan respSet, wg *sync.WaitGroup) {
+	defer wg.Done()
+	defer client.Close()
+	fmt.Printf("Goroutine: Processing for LocalAddr: %v\n", client.LocalAddr())
+
+	resp := FireCommand(client, fmt.Sprintf("SET %v %v", req.key, req.value))
+	fmt.Printf("Goroutine: setting value: %v\n", req.value)
+	fmt.Printf("Set %v at %v\n", req.value, time.Now().UnixNano())
+	assert.Equal(t, "OK", resp, "setting value failed")
+
+	resp = FireCommand(client, fmt.Sprintf("GET %v", req.key))
+	fmt.Printf("Goroutine: getting value: %v\n", resp)
+	assert.NotNil(t, resp, "received nil value in GET") // value should not be nil i.e. not set
+
+	response, ok := resp.(int64)
+	assert.True(t, ok, "typecasting failed. LocalAddr: %v, response: %v, ok: %v", client.LocalAddr(), response, ok)
+
+	rs := respSet{
+		client:   client,
+		response: response,
+	}
+	respChan <- rs
 }
