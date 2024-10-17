@@ -25,7 +25,7 @@ type Client struct {
 	HTTPQwatchResponseChan chan QwatchResponse // Response channel to send back the operation response
 	Fd                     int
 	Cqueue                 cmd.RedisCmds
-	IsTxn                  bool // is a transaction?
+	IsTxn                  bool
 	Session                *auth.Session
 	ClientIdentifierID     uint32
 }
