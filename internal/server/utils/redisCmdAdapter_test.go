@@ -387,13 +387,13 @@ func TestParseWebsocketMessage(t *testing.T) {
 			expectedArgs: []string{"", "$..field", `{"field":"value"}`},
 		},
 		{
-			name:         "Test simple QWATCH command",
+			name:         "Test simple Q.WATCH command",
 			message:      "q.watch \"select $key, $value where $key like 'k?'\"",
 			expectedCmd:  "Q.WATCH",
 			expectedArgs: []string{"select $key, $value where $key like 'k?'"},
 		},
 		{
-			name:         "Test complex QWATCH command",
+			name:         "Test complex Q.WATCH command",
 			message:      "q.watch \"SELECT $key, $value WHERE $key LIKE 'player:*' AND '$value.score' > 10 ORDER BY $value.score DESC LIMIT 5\"",
 			expectedCmd:  "Q.WATCH",
 			expectedArgs: []string{"SELECT $key, $value WHERE $key LIKE 'player:*' AND '$value.score' > 10 ORDER BY $value.score DESC LIMIT 5"},
