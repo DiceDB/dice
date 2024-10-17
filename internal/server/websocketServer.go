@@ -26,11 +26,9 @@ import (
 	"golang.org/x/exp/rand"
 )
 
-const (
-	QWatch    = "QWATCH"
-	Qunwatch  = "QUNWATCH"
-	Subscribe = "SUBSCRIBE"
-)
+const Qwatch = "Q.WATCH"
+const Qunwatch = "Q.UNWATCH"
+const Subscribe = "SUBSCRIBE"
 
 var unimplementedCommandsWebsocket = map[string]bool{
 	Qunwatch: true,
@@ -165,7 +163,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		}
 
 		// handle qwatch commands
-		if diceDBCmd.Cmd == QWatch || diceDBCmd.Cmd == Subscribe {
+		if diceDBCmd.Cmd == Qwatch || diceDBCmd.Cmd == Subscribe {
 			clientIdentifierID := generateUniqueInt32(r)
 			sp.Client = comm.NewHTTPQwatchClient(s.qwatchResponseChan, clientIdentifierID)
 
