@@ -917,7 +917,7 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 func evalBFRESERVE(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) != 1 && len(args) != 3 {
 		return &EvalResponse{
-			Result: []interface{}{},
+			Result: nil,
 			Error:  diceerrors.ErrWrongArgumentCount("BF.RESERVE"),
 		}
 	}
@@ -931,7 +931,7 @@ func evalBFRESERVE(args []string, store *dstore.Store) *EvalResponse {
 	if err != nil {
 		return &EvalResponse{
 			Result: nil,
-			Error:  diceerrors.ErrFormatted("%w for 'BF.RESERVE' command", err),
+			Error:  diceerrors.ErrGeneral(err.Error()),
 		}
 	}
 
@@ -940,7 +940,7 @@ func evalBFRESERVE(args []string, store *dstore.Store) *EvalResponse {
 	if err != nil {
 		return &EvalResponse{
 			Result: nil,
-			Error:  diceerrors.ErrFormatted("%w for 'BF.RESERVE' command", err),
+			Error:  diceerrors.ErrGeneral(err.Error()),
 		}
 	}
 	return &EvalResponse{
@@ -954,7 +954,7 @@ func evalBFRESERVE(args []string, store *dstore.Store) *EvalResponse {
 func evalBFADD(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) != 2 {
 		return &EvalResponse{
-			Result: []interface{}{},
+			Result: nil,
 			Error:  diceerrors.ErrWrongArgumentCount("BF.ADD"),
 		}
 	}
@@ -965,7 +965,7 @@ func evalBFADD(args []string, store *dstore.Store) *EvalResponse {
 	if err != nil {
 		return &EvalResponse{
 			Result: nil,
-			Error:  diceerrors.ErrFormatted("%w for 'BF.ADD' command", err),
+			Error:  diceerrors.ErrGeneral(err.Error()),
 		}
 	}
 
@@ -973,7 +973,7 @@ func evalBFADD(args []string, store *dstore.Store) *EvalResponse {
 	if err != nil {
 		return &EvalResponse{
 			Result: nil,
-			Error:  diceerrors.ErrFormatted("%w for 'BF.ADD' command", err),
+			Error:  diceerrors.ErrGeneral(err.Error()),
 		}
 	}
 
@@ -987,7 +987,7 @@ func evalBFADD(args []string, store *dstore.Store) *EvalResponse {
 func evalBFEXISTS(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) != 2 {
 		return &EvalResponse{
-			Result: []interface{}{},
+			Result: nil,
 			Error:  diceerrors.ErrWrongArgumentCount("BF.EXISTS"),
 		}
 	}
@@ -996,7 +996,7 @@ func evalBFEXISTS(args []string, store *dstore.Store) *EvalResponse {
 	if err != nil {
 		return &EvalResponse{
 			Result: nil,
-			Error:  diceerrors.ErrFormatted("%w for 'BF.EXISTS' command", err),
+			Error:  diceerrors.ErrFormatted(err.Error()),
 		}
 	}
 
@@ -1004,7 +1004,7 @@ func evalBFEXISTS(args []string, store *dstore.Store) *EvalResponse {
 	if err != nil {
 		return &EvalResponse{
 			Result: nil,
-			Error:  diceerrors.ErrFormatted("%w for 'BF.EXISTS' command", err),
+			Error:  diceerrors.ErrGeneral(err.Error()),
 		}
 	}
 
@@ -1019,7 +1019,7 @@ func evalBFEXISTS(args []string, store *dstore.Store) *EvalResponse {
 func evalBFINFO(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) != 1 {
 		return &EvalResponse{
-			Result: []interface{}{},
+			Result: nil,
 			Error:  diceerrors.ErrWrongArgumentCount("BF.INFO"),
 		}
 	}
@@ -1027,7 +1027,7 @@ func evalBFINFO(args []string, store *dstore.Store) *EvalResponse {
 	bloom, err := getOrCreateBloomFilter(args[0], nil, store)
 	if err != nil {
 		return &EvalResponse{
-			Result: []interface{}{},
+			Result: nil,
 			Error:  diceerrors.ErrGeneral("not found"),
 		}
 	}
