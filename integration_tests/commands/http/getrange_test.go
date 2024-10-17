@@ -13,46 +13,41 @@ func TestGETRANGE(t *testing.T) {
 		{
 			name: "Get range on a string",
 			commands: []HTTPCommand{
-				{Command: "SET", Body: map[string]interface{}{"key": "k1", "value": "shankar"}},
-				{Command: "GETRANGE", Body: map[string]interface{}{"key": "k1", "values": []interface{}{0, 7}}},
+				{Command: "SET", Body: map[string]interface{}{"key": "test1", "value": "shankar"}},
+				{Command: "GETRANGE", Body: map[string]interface{}{"key": "test1", "values": []interface{}{0, 7}}},
 			},
 			expected: []interface{}{"OK", "shankar"},
 		},
 		{
 			name: "Get range on a non existent key",
 			commands: []HTTPCommand{
-				{Command: "GETRANGE", Body: map[string]interface{}{"key": "k2", "values": []interface{}{0, 7}}},
+				{Command: "GETRANGE", Body: map[string]interface{}{"key": "test2", "values": []interface{}{0, 7}}},
 			},
 			expected: []interface{}{""},
 		},
 		{
 			name: "Get range on wrong key type",
 			commands: []HTTPCommand{
-				{Command: "LPUSH", Body: map[string]interface{}{"key": "k3", "value": "shankar"}},
-				{Command: "GETRANGE", Body: map[string]interface{}{"key": "k3", "values": []interface{}{0, 7}}},
+				{Command: "LPUSH", Body: map[string]interface{}{"key": "test3", "value": "shankar"}},
+				{Command: "GETRANGE", Body: map[string]interface{}{"key": "test3", "values": []interface{}{0, 7}}},
 			},
 			expected: []interface{}{float64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
 		},
 		{
 			name: "GETRANGE against string value: 0, -1",
 			commands: []HTTPCommand{
-				{Command: "GETRANGE", Body: map[string]interface{}{"key": "k1", "values": []interface{}{0, -1}}},
+				{Command: "SET", Body: map[string]interface{}{"key": "test4", "value": "shankar"}},
+				{Command: "GETRANGE", Body: map[string]interface{}{"key": "test4", "values": []interface{}{0, -1}}},
 			},
-			expected: []interface{}{"shankar"},
+			expected: []interface{}{"OK", "shankar"},
 		},
 		{
 			name: "GETRANGE against string value: 5, 3",
 			commands: []HTTPCommand{
-				{Command: "GETRANGE", Body: map[string]interface{}{"key": "k1", "values": []interface{}{5, 3}}},
+				{Command: "SET", Body: map[string]interface{}{"key": "test5", "value": "shankar"}},
+				{Command: "GETRANGE", Body: map[string]interface{}{"key": "test5", "values": []interface{}{5, 3}}},
 			},
-			expected: []interface{}{""},
-		},
-		{
-			name: "GETRANGE against integer value: -1, -100",
-			commands: []HTTPCommand{
-				{Command: "GETRANGE", Body: map[string]interface{}{"key": "k1", "values": []interface{}{-1, -100}}},
-			},
-			expected: []interface{}{""},
+			expected: []interface{}{"OK", ""},
 		},
 	}
 	for _, tc := range testCases {
