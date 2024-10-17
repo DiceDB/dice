@@ -28,6 +28,7 @@ import (
 func init() {
 	flag.StringVar(&config.Host, "host", "0.0.0.0", "host for the dicedb server")
 	flag.IntVar(&config.Port, "port", 7379, "port for the dicedb server")
+	flag.StringVar(&config.Address, "address", "0.0.0.0:7379", "address for the dice server")
 	flag.BoolVar(&config.EnableHTTP, "enable-http", true, "run server in HTTP mode as well")
 	flag.BoolVar(&config.EnableMultiThreading, "enable-multithreading", false, "run server in multithreading mode")
 	flag.IntVar(&config.HTTPPort, "http-port", 8082, "HTTP port for the dicedb server")
@@ -103,7 +104,8 @@ func main() {
 	// Find a port and bind it
 	if !config.EnableMultiThreading {
 		asyncServer := server.NewAsyncServer(shardManager, queryWatchChan, logr)
-		if err := asyncServer.FindPortAndBind(); err != nil {
+		// if err := asyncServer.FindPortAndBind(); err != nil {
+		if err := asyncServer.Bind(); err != nil {
 			cancel()
 			logr.Error("Error finding and binding port", slog.Any("error", err))
 			os.Exit(1)
