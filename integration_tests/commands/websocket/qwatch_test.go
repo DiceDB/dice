@@ -17,12 +17,12 @@ func TestQWatch(t *testing.T) {
 	}{
 		{
 			name:   "Wrong number of arguments",
-			cmds:   []string{"QWATCH "},
-			expect: "ERR wrong number of arguments for 'qwatch' command",
+			cmds:   []string{"Q.WATCH "},
+			expect: "ERR wrong number of arguments for 'q.watch' command",
 		},
 		{
 			name:   "Invalid query",
-			cmds:   []string{"QWATCH \"SELECT \""},
+			cmds:   []string{"Q.WATCH \"SELECT \""},
 			expect: "error parsing SQL statement: syntax error at position 8",
 		},
 		// TODO - once following query is registered, websocket will also attempt sending updates
@@ -30,8 +30,8 @@ func TestQWatch(t *testing.T) {
 		// Add unregister test case to handle this scenario once qunwatch support is added
 		{
 			name:   "Successful register",
-			cmds:   []string{`QWATCH "SELECT $key, $value WHERE $key like 'qwatch-test-key?'"`},
-			expect: []interface{}{"qwatch", "SELECT $key, $value WHERE $key like 'qwatch-test-key?'", []interface{}{}},
+			cmds:   []string{`Q.WATCH "SELECT $key, $value WHERE $key like 'test-key?'"`},
+			expect: []interface{}{"q.watch", "SELECT $key, $value WHERE $key like 'test-key?'", []interface{}{}},
 		},
 	}
 
