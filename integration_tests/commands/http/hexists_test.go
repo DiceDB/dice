@@ -27,7 +27,7 @@ func TestHExists(t *testing.T) {
 			expected: []interface{}{float64(1), "0"},
 		},
 		{
-			name:     "HTTP Check if field exists when no k,f and v exist",
+			name: "HTTP Check if field exists when no k,f and v exist",
 			commands: []HTTPCommand{
 				{Command: "HEXISTS", Body: map[string]interface{}{"key": "k", "field": "f"}},
 			},

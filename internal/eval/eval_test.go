@@ -2272,7 +2272,7 @@ func testEvalHVALS(t *testing.T, store *dstore.Store) {
 
 				store.Put(key, obj)
 			},
-			input:  []string{"KEY_MOCK"},
+			input:          []string{"KEY_MOCK"},
 			migratedOutput: EvalResponse{Result: []string{"mock_field_value"}, Error: nil},
 		},
 	}
@@ -2280,7 +2280,6 @@ func testEvalHVALS(t *testing.T, store *dstore.Store) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			response := evalHVALS(tt.input, store)
-
 
 			// Handle comparison for byte slices
 			if responseBytes, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {

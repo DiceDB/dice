@@ -6,18 +6,18 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func TestHVals(t *testing.T){
+func TestHVals(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 
 	testCases := []TestCase{
 		{
-			name: "RESP One or more vals exist",
-			commands: []string{"HSET key field value", "HSET key field1 value1","HVALS key"},
+			name:     "RESP One or more vals exist",
+			commands: []string{"HSET key field value", "HSET key field1 value1", "HVALS key"},
 			expected: []interface{}{int64(1), int64(1), []interface{}{"value", "value1"}},
 		},
 		{
-			name: "RESP No values exist",
+			name:     "RESP No values exist",
 			commands: []string{"HVALS key"},
 			expected: []interface{}{[]interface{}{}},
 		},

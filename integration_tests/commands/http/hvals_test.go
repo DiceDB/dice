@@ -7,8 +7,8 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func TestHVals(t *testing.T){
-	cmdExec:= NewHTTPCommandExecutor()
+func TestHVals(t *testing.T) {
+	cmdExec := NewHTTPCommandExecutor()
 
 	testCases := []TestCase{
 		{

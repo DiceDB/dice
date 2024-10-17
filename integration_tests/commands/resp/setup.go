@@ -30,6 +30,7 @@ type TestServerOptions struct {
 }
 
 // getLocalConnection returns a local TCP connection to the database
+//
 //nolint:unused
 func getLocalConnection() net.Conn {
 	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.DiceConfig.Server.Port))

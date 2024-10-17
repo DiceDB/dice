@@ -6,8 +6,8 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func TestHKeys(t *testing.T){
-	cmdExec:= NewHTTPCommandExecutor()
+func TestHKeys(t *testing.T) {
+	cmdExec := NewHTTPCommandExecutor()
 
 	testCases := []TestCase{
 		{
