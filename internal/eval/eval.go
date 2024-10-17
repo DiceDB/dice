@@ -4351,6 +4351,20 @@ func evalAPPEND(args []string, store *dstore.Store) []byte {
 	key, value := args[0], args[1]
 	obj := store.Get(key)
 
+	// Get the current expiry time
+	var exDurationMs int64 = -1 // -1 indicates no expiry time
+	expiryTStampMs, hasExpiry := store.GetUnixTimeExpiry(obj)
+
+	// Set the new expiry time
+	if hasExpiry {
+		// get the new expiry time in milliseconds
+		exDurationMs = int64(expiryTStampMs) - utils.GetCurrentTime().UnixMilli()
+		if exDurationMs < 0 {
+			// set expiry time to 0
+			exDurationMs = 0
+		}
+	}
+
 	if obj == nil {
 		// Key does not exist path
 
@@ -4375,7 +4389,7 @@ func evalAPPEND(args []string, store *dstore.Store) []byte {
 			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 		}
 
-		store.Put(key, store.NewObj(storedValue, -1, oType, oEnc))
+		store.Put(key, store.NewObj(storedValue, exDurationMs, oType, oEnc))
 
 		return clientio.Encode(len(value), false)
 	}
@@ -4397,7 +4411,7 @@ func evalAPPEND(args []string, store *dstore.Store) []byte {
 
 	newValue := currentValueStr + value
 
-	store.Put(key, store.NewObj(newValue, -1, object.ObjTypeString, object.ObjEncodingRaw))
+	store.Put(key, store.NewObj(newValue, exDurationMs, object.ObjTypeString, object.ObjEncodingRaw))
 
 	return clientio.Encode(len(newValue), false)
 }
