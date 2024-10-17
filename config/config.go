@@ -31,8 +31,9 @@ const (
 )
 
 var (
-	Host = DefaultHost
-	Port = DefaultPort
+	Host          = DefaultHost
+	Port          = DefaultPort
+	MaxCPUThreads = 0
 
 	EnableMultiThreading = false
 	EnableHTTP           = true
