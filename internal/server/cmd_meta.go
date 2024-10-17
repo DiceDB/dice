@@ -82,6 +82,34 @@ var (
 		Cmd:     "PFMERGE",
 		CmdType: SingleShard,
 	}
+	setbitCmdMeta = CmdsMeta{
+		Cmd:     "SETBIT",
+		CmdType: SingleShard,
+	}
+	getbitCmdMeta = CmdsMeta{
+		Cmd:     "GETBIT",
+		CmdType: SingleShard,
+	}
+	bitcountCmdMeta = CmdsMeta{
+		Cmd:     "BITCOUNT",
+		CmdType: SingleShard,
+	}
+	bitfieldCmdMeta = CmdsMeta{
+		Cmd:     "BITFIELD",
+		CmdType: SingleShard,
+	}
+	bitopCmdMeta = CmdsMeta{
+		Cmd:     "BITOP",
+		CmdType: SingleShard,
+	}
+	bitposCmdMeta = CmdsMeta{
+		Cmd:     "BITPOS",
+		CmdType: SingleShard,
+	}
+	bitfieldroCmdMeta = CmdsMeta{
+		Cmd:     "BITFIELD_RO",
+		CmdType: SingleShard,
+	}
 
 	jsonclearCmdMeta = CmdsMeta{
 		Cmd:     "JSON.CLEAR",
@@ -122,5 +150,13 @@ func init() {
 	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
 	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
 	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
+	WorkerCmdsMeta["SETBIT"] = setbitCmdMeta
+	WorkerCmdsMeta["GETBIT"] = getbitCmdMeta
+	WorkerCmdsMeta["BITCOUNT"] = bitcountCmdMeta
+	WorkerCmdsMeta["BITFIELD"] = bitfieldCmdMeta
+	WorkerCmdsMeta["BITOP"] = bitopCmdMeta
+	WorkerCmdsMeta["BITPOS"] = bitposCmdMeta
+	WorkerCmdsMeta["BITFIELD_RO"] = bitfieldroCmdMeta
+
 	// Additional commands (multishard, custom) can be added here as needed.
 }
