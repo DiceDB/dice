@@ -2,6 +2,7 @@ package worker
 
 import (
 	"fmt"
+
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/eval"
 	"github.com/dicedb/dice/internal/logger"

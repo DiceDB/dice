@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/dicedb/dice/internal/worker"
 	"hash/crc32"
 	"log/slog"
 	"net/http"
@@ -13,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/dicedb/dice/internal/worker"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
@@ -167,7 +168,7 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 
 	commandHandler := &worker.CommandHandler{
 		ShardManager:       s.shardManager,
-		Id:                 strconv.Itoa(int(clientIdentifierID)),
+		ID:                 strconv.Itoa(int(clientIdentifierID)),
 		RespChan:           s.ioChan,
 		Logger:             s.logger,
 		GlobalErrorChannel: s.shutdownChan,
@@ -345,10 +346,18 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *worker.Co
 			rp = clientio.NewRESPParser(bytes.NewBuffer(result.ResponseData.([]byte)))
 		}
 
-		responseValue, err = rp.DecodeOne()
+		res, err := rp.DecodeOne()
+		responseValue = replaceNilInInterface(res)
 		if err != nil {
 			s.logger.Error("Error decoding response", "error", err)
-			http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
+			httpResponse := utils.HTTPResponse{Status: utils.HTTPStatusError, Data: "Internal Server Error"}
+			responseJSON, _ := json.Marshal(httpResponse)
+			writer.Header().Set("Content-Type", "application/json")
+			writer.WriteHeader(http.StatusInternalServerError) // Set HTTP status code to 500
+			_, err = writer.Write(responseJSON)
+			if err != nil {
+				s.logger.Error("Error writing response", "error", err)
+			}
 			return
 		}
 	} else {
@@ -373,6 +382,10 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *worker.Co
 
 	if val, ok := responseValue.(clientio.RespType); ok {
 		responseValue = respArr[val]
+	}
+
+	if responseValue == stringNil {
+		responseValue = nil // in order to convert it in json null
 	}
 
 	if bt, ok := responseValue.([]byte); ok {

@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/dicedb/dice/internal/comm"
-	"github.com/dicedb/dice/internal/querymanager"
-	"github.com/dicedb/dice/internal/watchmanager"
 	"log/slog"
 	"net"
 	"syscall"
 	"time"
+
+	"github.com/dicedb/dice/internal/comm"
+	"github.com/dicedb/dice/internal/querymanager"
+	"github.com/dicedb/dice/internal/watchmanager"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/auth"
@@ -36,7 +37,7 @@ type CommandHandler struct {
 	RespChan           chan *ops.StoreResponse
 	GlobalErrorChannel chan error
 	Logger             *slog.Logger
-	Id                 string
+	ID                 string
 }
 
 type CommandResponse struct {
@@ -46,7 +47,7 @@ type CommandResponse struct {
 	Args         []string
 }
 
-func (ch *CommandHandler) ExecuteCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, isHttpOp, isWebsocketOp bool, client *comm.Client) *CommandResponse {
+func (ch *CommandHandler) ExecuteCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, isHTTPOp, isWebsocketOp bool, client *comm.Client) *CommandResponse {
 	cmdList := make([]*cmd.DiceDBCmd, 0)
 	meta, ok := CommandsMeta[diceDBCmd.Cmd]
 	if !ok {
@@ -71,7 +72,7 @@ func (ch *CommandHandler) ExecuteCommand(ctx context.Context, diceDBCmd *cmd.Dic
 		}
 	}
 
-	err := ch.scatter(ctx, cmdList, isHttpOp, isWebsocketOp, client)
+	err := ch.scatter(ctx, cmdList, isHTTPOp, isWebsocketOp, client)
 	if err != nil {
 		return &CommandResponse{Error: err}
 	}
@@ -99,7 +100,7 @@ func (ch *CommandHandler) handleCustomCommand(redisCmd *cmd.DiceDBCmd) *CommandR
 	}
 }
 
-func (ch *CommandHandler) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd, isHttpOp, isWebsocketOp bool, client *comm.Client) error {
+func (ch *CommandHandler) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd, isHTTPOp, isWebsocketOp bool, client *comm.Client) error {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -116,7 +117,7 @@ func (ch *CommandHandler) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd, is
 
 			sid, rc = ch.ShardManager.GetShardInfo(key)
 			if rc == nil {
-				ch.Logger.Error("Shard channel is nil", slog.String("workerID", ch.Id), slog.Any("key", key))
+				ch.Logger.Error("Shard channel is nil", slog.String("workerID", ch.ID), slog.Any("key", key))
 				return fmt.Errorf("shard channel is nil for key: %s", key)
 			}
 
@@ -124,10 +125,10 @@ func (ch *CommandHandler) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd, is
 				SeqID:       i,
 				RequestID:   cmds[i].RequestID,
 				Cmd:         cmds[i],
-				WorkerID:    ch.Id,
+				WorkerID:    ch.ID,
 				ShardID:     sid,
 				Client:      client,
-				HTTPOp:      isHttpOp,
+				HTTPOp:      isHTTPOp,
 				WebsocketOp: isWebsocketOp,
 			}
 		}
@@ -141,19 +142,19 @@ func (ch *CommandHandler) gather(ctx context.Context, c string, numCmds int, ct 
 	for numCmds != 0 {
 		select {
 		case <-ctx.Done():
-			ch.Logger.Error("Timed out waiting for response from shards", slog.String("workerID", ch.Id), slog.Any("error", ctx.Err()))
+			ch.Logger.Error("Timed out waiting for response from shards", slog.String("workerID", ch.ID), slog.Any("error", ctx.Err()))
 			return nil, ctx.Err()
 		case resp, ok := <-ch.RespChan:
 			if ok {
 				evalResp = append(evalResp, *resp.EvalResponse)
 			} else {
-				ch.Logger.Warn("Response channel closed", slog.String("workerID", ch.Id))
+				ch.Logger.Warn("Response channel closed", slog.String("workerID", ch.ID))
 				numCmds--
 			}
 			numCmds--
 		case sError, ok := <-ch.ShardManager.ShardErrorChan:
 			if ok {
-				ch.Logger.Error("Error from shard", slog.String("workerID", ch.Id), slog.Any("error", sError))
+				ch.Logger.Error("Error from shard", slog.String("workerID", ch.ID), slog.Any("error", sError))
 			}
 		}
 	}
@@ -189,7 +190,7 @@ func (ch *CommandHandler) gather(ctx context.Context, c string, numCmds int, ct 
 		responseData := val.composeResponse(evalResp...)
 		return responseData, nil
 	default:
-		ch.Logger.Error("Unknown command type", slog.String("workerID", ch.Id), slog.String("command", c))
+		ch.Logger.Error("Unknown command type", slog.String("workerID", ch.ID), slog.String("command", c))
 		return nil, diceerrors.ErrInternalServer
 	}
 }
@@ -209,7 +210,7 @@ func NewWorker(wid string, respChan chan *ops.StoreResponse,
 	return &BaseWorker{
 		ch: &CommandHandler{
 			ShardManager:       shardManager,
-			Id:                 wid,
+			ID:                 wid,
 			RespChan:           respChan,
 			Logger:             logger,
 			GlobalErrorChannel: gec,
@@ -222,7 +223,7 @@ func NewWorker(wid string, respChan chan *ops.StoreResponse,
 }
 
 func (w *BaseWorker) ID() string {
-	return w.ch.Id
+	return w.ch.ID
 }
 
 func (w *BaseWorker) Start(ctx context.Context) error {
@@ -247,13 +248,13 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 		case <-ctx.Done():
 			err := w.Stop()
 			if err != nil {
-				w.ch.Logger.Warn("Error stopping worker:", slog.String("workerID", w.ch.Id), slog.Any("error", err))
+				w.ch.Logger.Warn("Error stopping worker:", slog.String("workerID", w.ch.ID), slog.Any("error", err))
 			}
 			return ctx.Err()
 		case err := <-errChan:
 			if err != nil {
 				if errors.Is(err, net.ErrClosed) || errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) {
-					w.ch.Logger.Error("Connection closed for worker", slog.String("workerID", w.ch.Id), slog.Any("error", err))
+					w.ch.Logger.Error("Connection closed for worker", slog.String("workerID", w.ch.ID), slog.Any("error", err))
 					return err
 				}
 			}
@@ -272,14 +273,14 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 			if err != nil {
 				err = w.ioHandler.Write(ctx, err)
 				if err != nil {
-					w.ch.Logger.Debug("Write error, connection closed possibly", slog.String("workerID", w.ch.Id), slog.Any("error", err))
+					w.ch.Logger.Debug("Write error, connection closed possibly", slog.String("workerID", w.ch.ID), slog.Any("error", err))
 					return err
 				}
 			}
 			if len(cmds) == 0 {
 				err = w.ioHandler.Write(ctx, fmt.Errorf("ERR: Invalid request"))
 				if err != nil {
-					w.ch.Logger.Debug("Write error, connection closed possibly", slog.String("workerID", w.ch.Id), slog.Any("error", err))
+					w.ch.Logger.Debug("Write error, connection closed possibly", slog.String("workerID", w.ch.ID), slog.Any("error", err))
 					return err
 				}
 				continue
@@ -290,7 +291,7 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 			if len(cmds) > 1 {
 				err = w.ioHandler.Write(ctx, fmt.Errorf("ERR: Multiple commands not supported"))
 				if err != nil {
-					w.ch.Logger.Debug("Write error, connection closed possibly", slog.String("workerID", w.ch.Id), slog.Any("error", err))
+					w.ch.Logger.Debug("Write error, connection closed possibly", slog.String("workerID", w.ch.ID), slog.Any("error", err))
 					return err
 				}
 			}
@@ -316,9 +317,9 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 func (w *BaseWorker) executeCommandHandler(execCtx context.Context, errChan chan error, cmds []*cmd.DiceDBCmd, isWatchNotification bool) {
 	err := w.executeCommand(execCtx, cmds[0], isWatchNotification)
 	if err != nil {
-		w.ch.Logger.Error("Error executing command", slog.String("workerID", w.ch.Id), slog.Any("error", err))
+		w.ch.Logger.Error("Error executing command", slog.String("workerID", w.ch.ID), slog.Any("error", err))
 		if errors.Is(err, net.ErrClosed) || errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.ETIMEDOUT) {
-			w.ch.Logger.Debug("Connection closed for worker", slog.String("workerID", w.ch.Id), slog.Any("error", err))
+			w.ch.Logger.Debug("Connection closed for worker", slog.String("workerID", w.ch.ID), slog.Any("error", err))
 			errChan <- err
 		}
 	}
@@ -334,14 +335,14 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 		if result.Error != nil {
 			err := w.ioHandler.Write(ctx, querymanager.GenericWatchResponse(diceDBCmd.Cmd, fmt.Sprintf("%d", diceDBCmd.GetFingerprint()), result.Error))
 			if err != nil {
-				w.ch.Logger.Debug("Error sending push response to client", slog.String("workerID", w.ch.Id), slog.Any("error", err))
+				w.ch.Logger.Debug("Error sending push response to client", slog.String("workerID", w.ch.ID), slog.Any("error", err))
 			}
 			return err
 		}
 
 		err := w.ioHandler.Write(ctx, querymanager.GenericWatchResponse(diceDBCmd.Cmd, fmt.Sprintf("%d", diceDBCmd.GetFingerprint()), result.ResponseData))
 		if err != nil {
-			w.ch.Logger.Debug("Error sending push response to client", slog.String("workerID", w.ch.Id), slog.Any("error", err))
+			w.ch.Logger.Debug("Error sending push response to client", slog.String("workerID", w.ch.ID), slog.Any("error", err))
 			return err
 		}
 
@@ -360,7 +361,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 	if result.Error != nil {
 		err := w.ioHandler.Write(ctx, result.Error)
 		if err != nil {
-			w.ch.Logger.Debug("Error sending response to client", slog.String("workerID", w.ch.Id), slog.Any("error", err))
+			w.ch.Logger.Debug("Error sending response to client", slog.String("workerID", w.ch.ID), slog.Any("error", err))
 			return err
 		}
 	}
@@ -372,9 +373,9 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 	case CmdAbort:
 		err := w.ioHandler.Write(ctx, clientio.OK)
 		if err != nil {
-			w.ch.Logger.Error("Error sending abort response to worker", slog.String("workerID", w.ch.Id), slog.Any("error", err))
+			w.ch.Logger.Error("Error sending abort response to worker", slog.String("workerID", w.ch.ID), slog.Any("error", err))
 		}
-		w.ch.Logger.Info("Received ABORT command, initiating server shutdown", slog.String("workerID", w.ch.Id))
+		w.ch.Logger.Info("Received ABORT command, initiating server shutdown", slog.String("workerID", w.ch.ID))
 		w.ch.GlobalErrorChannel <- diceerrors.ErrAborted
 		return err
 	case CmdAuth:
@@ -384,7 +385,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 
 	err := w.ioHandler.Write(ctx, result.ResponseData)
 	if err != nil {
-		w.ch.Logger.Debug("Error sending response to client", slog.String("workerID", w.ch.Id), slog.Any("error", err))
+		w.ch.Logger.Debug("Error sending response to client", slog.String("workerID", w.ch.ID), slog.Any("error", err))
 		return err
 	}
 	return nil
@@ -427,7 +428,7 @@ func (w *BaseWorker) RespAuth(args []string) interface{} {
 }
 
 func (w *BaseWorker) Stop() error {
-	w.ch.Logger.Info("Stopping worker", slog.String("workerID", w.ch.Id))
+	w.ch.Logger.Info("Stopping worker", slog.String("workerID", w.ch.ID))
 	w.Session.Expire()
 	return nil
 }

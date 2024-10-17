@@ -102,8 +102,8 @@ func TestGETWATCHWithSDK(t *testing.T) {
 		assert.Assert(t, watch != nil)
 		firstMsg, err := watch.Watch(context.Background(), "GET", getWatchKey)
 		assert.NilError(t, err)
-		assert.Equal(t, firstMsg.Command, "GET")
-		assert.Equal(t, firstMsg.Fingerprint, "1768826704")
+		assert.Equal(t, firstMsg.Command, "GET.WATCH")
+		assert.Equal(t, firstMsg.Fingerprint, "270139821")
 		channels[i] = watch.Channel()
 	}
 
@@ -133,8 +133,8 @@ func TestGETWATCHWithSDK2(t *testing.T) {
 		assert.Assert(t, watch != nil)
 		firstMsg, err := watch.GetWatch(context.Background(), getWatchKey)
 		assert.NilError(t, err)
-		assert.Equal(t, firstMsg.Command, "GET")
-		assert.Equal(t, firstMsg.Fingerprint, "1768826704")
+		assert.Equal(t, firstMsg.Command, "GET.WATCH")
+		assert.Equal(t, firstMsg.Fingerprint, "270139821")
 		channels[i] = watch.Channel()
 	}
 

@@ -123,8 +123,8 @@ func TestZRANGEWATCHWithSDK(t *testing.T) {
 		assert.Assert(t, watch != nil)
 		firstMsg, err := watch.Watch(context.Background(), "ZRANGE", zrangeWatchKey, "0", "-1", "REV", "WITHSCORES")
 		assert.NilError(t, err)
-		assert.Equal(t, firstMsg.Command, "ZRANGE")
-		assert.Equal(t, firstMsg.Fingerprint, "2491069200")
+		assert.Equal(t, firstMsg.Command, "ZRANGE.WATCH")
+		assert.Equal(t, firstMsg.Fingerprint, "1044857109")
 		channels[i] = watch.Channel()
 	}
 
@@ -157,8 +157,8 @@ func TestZRANGEWATCHWithSDK2(t *testing.T) {
 		subscribers[i].watch = conn
 		firstMsg, err := conn.ZRangeWatch(context.Background(), zrangeWatchKey, "0", "-1", "REV", "WITHSCORES")
 		assert.NilError(t, err)
-		assert.Equal(t, firstMsg.Command, "ZRANGE")
-		assert.Equal(t, firstMsg.Fingerprint, "2491069200")
+		assert.Equal(t, firstMsg.Command, "ZRANGE.WATCH")
+		assert.Equal(t, firstMsg.Fingerprint, "1044857109")
 		channels[i] = conn.Channel()
 	}
 
