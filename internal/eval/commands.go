@@ -1109,6 +1109,24 @@ var (
 		Arity:    3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	linsertCmdMeta = DiceCmdMeta{
+		Name: "LINSERT",
+		Info: `
+		Usage:
+			LINSERT key <BEFORE | AFTER> pivot element
+		Info:
+			Inserts element in the list stored at key either before or after the reference value pivot.
+			When key does not exist, it is considered an empty list and no operation is performed.
+			An error is returned when key exists but does not hold a list value.
+		Returns:
+			Integer - the list length after a successful insert operation.
+			0 when the key doesn't exist.
+			-1 when the pivot wasn't found.
+		`,
+		Eval:     evalLINSERT,
+		Arity:    4,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -1231,6 +1249,7 @@ func init() {
 	DiceCmds["ZADD"] = zaddCmdMeta
 	DiceCmds["ZRANGE"] = zrangeCmdMeta
 	DiceCmds["JSON.STRAPPEND"] = jsonstrappendCmdMeta
+	DiceCmds["LINSERT"] = linsertCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}
