@@ -91,6 +91,7 @@ OK
 127.0.0.1:7379> SET mykey "Hello"
 OK
 127.0.0.1:7379> GETEX mykey PXAT 1672531199000
+127.0.0.1:7379> "Hello"
 ```
 
 - This command will return `"Hello"` and set the expiration time of `mykey` to the Unix timestamp `1672531199000` milliseconds.
