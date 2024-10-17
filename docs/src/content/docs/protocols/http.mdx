@@ -55,7 +55,7 @@ Our HTTP API supports all DiceDB commands. Please refer to our comprehensive com
 ### Setting a Key-Value Pair
 
 **Request:**
-<Tabs>
+<Tabs syncKey="http-request-format">
   <TabItem label="HTTP Request">
   ```http
   POST /SET HTTP/1.1
@@ -92,7 +92,7 @@ Our HTTP API supports all DiceDB commands. Please refer to our comprehensive com
 ### Getting a Value
 
 **Request:**
-<Tabs>
+<Tabs syncKey="http-request-format">
   <TabItem label="HTTP Request">
   ```http
   POST /GET HTTP/1.1
@@ -127,7 +127,7 @@ Our HTTP API supports all DiceDB commands. Please refer to our comprehensive com
 ### Setting a field in Hash
 
 **Request:**
-<Tabs>
+<Tabs syncKey="http-request-format">
   <TabItem label="HTTP Request">
   ```http
 POST http://localhost:8082/hset HTTP/1.1
@@ -165,7 +165,7 @@ Content-Type: application/json
 ### Getting a field in a HashSet
 
 **Request:**
-<Tabs>
+<Tabs syncKey="http-request-format">
   <TabItem label="HTTP Request">
 ```http
 POST http://localhost:8082/hget HTTP/1.1
@@ -202,7 +202,7 @@ curl --location 'http://your-server-address:PORT/HGET' \
 **NOTE**: The `QWATCH` command is asynchronous and requires the use of Server-Sent Events (SSE) to receive updates. The following example demonstrates how to use `QWATCH` with SSE.
 
 **Request:**
-<Tabs>
+<Tabs syncKey="http-request-format">
   <TabItem label="HTTP Request">
 ```http
 POST /QWATCH HTTP/1.1
