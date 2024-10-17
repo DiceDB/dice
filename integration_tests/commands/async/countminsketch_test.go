@@ -184,8 +184,17 @@ func TestCMSIncrBy(t *testing.T) {
 			commands: []string{
 				"CMS.INITBYDIM cms_key3 1000 5",
 				"CMS.INCRBY cms_key3 test 10 test1 10",
+				"CMS.QUERY cms_key3 test",
+				"CMS.QUERY cms_key3 test1 test2",
+				"CMS.INFO cms_key3",
 			},
-			expected: []interface{}{"OK", []interface{}{int64(10), int64(10)}},
+			expected: []interface{}{
+				"OK",
+				[]interface{}{int64(10), int64(10)},
+				[]interface{}{int64(10)},
+				[]interface{}{int64(10), int64(0)},
+				[]interface{}{"width", int64(1000), "depth", int64(5), "count", int64(20)},
+			},
 		},
 		{
 			name: "missing values",
@@ -355,12 +364,20 @@ func TestCMSMerge(t *testing.T) {
 			commands: []string{
 				"CMS.INITBYDIM cms_key5 1000 5",
 				"CMS.INITBYDIM test 1000 5",
-				"CMS.MERGE cms_key5 1 test",
+				"CMS.INCRBY cms_key5 test 10 test1 10",
+				"CMS.INCRBY test test 10 test2 10",
+				"CMS.MERGE cms_key5 2 cms_key5 test",
+				"CMS.QUERY cms_key5 test test1 test2",
+				"CMS.INFO cms_key5",
 			},
 			expected: []interface{}{
 				"OK",
 				"OK",
+				[]interface{}{int64(10), int64(10)},
+				[]interface{}{int64(10), int64(10)},
 				"OK",
+				[]interface{}{int64(20), int64(10), int64(10)},
+				[]interface{}{"width", int64(1000), "depth", int64(5), "count", int64(40)},
 			},
 		},
 		{
@@ -369,13 +386,19 @@ func TestCMSMerge(t *testing.T) {
 				"CMS.INITBYDIM cms_key5 1000 5",
 				"CMS.INITBYDIM test 1000 5",
 				"CMS.INITBYDIM test1 1000 5",
+				"CMS.INCRBY test a 10 b 20",
+				"CMS.INCRBY test1 a 20 b 20",
 				"CMS.MERGE cms_key5 2 test test1 WEIGHTS 1 2",
+				"CMS.QUERY cms_key5 a b",
 			},
 			expected: []interface{}{
 				"OK",
 				"OK",
 				"OK",
+				[]interface{}{int64(10), int64(20)},
+				[]interface{}{int64(20), int64(20)},
 				"OK",
+				[]interface{}{int64(50), int64(60)},
 			},
 		},
 	}
@@ -385,7 +408,7 @@ func TestCMSMerge(t *testing.T) {
 			FireCommand(conn, "DEL cms_key5 test test1")
 			for i, cmd := range tc.commands {
 				result := FireCommand(conn, cmd)
-				assert.Equal(t, tc.expected[i], result, "Value mismatch for %s", cmd)
+				assert.DeepEqual(t, tc.expected[i], result)
 			}
 		})
 	}

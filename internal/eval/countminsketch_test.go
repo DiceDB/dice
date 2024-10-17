@@ -21,31 +21,31 @@ func TestCountMinSketch(t *testing.T) {
 
 func testCMSInitByDim(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
-		"wrong number of arguments": {
+		"cms initbydim - wrong number of arguments": {
 			input: []string{"cms_key"},
 			output: []byte("-ERR wrong number of arguments for 'cms.initbydim' command\r\n"),
 		},
-		"wrong type of width": {
+		"cms initbydim - wrong type of width": {
 			input: []string{"cms_key", "not_a_number", "5"},
 			output: []byte("-ERR invalid width for 'cms.initbydim' command\r\n"),
 		},
-		"wrong type of depth": {
+		"cms initbydim - wrong type of depth": {
 			input: []string{"cms_key", "5", "not_a_number"},
 			output: []byte("-ERR invalid depth for 'cms.initbydim' command\r\n"),
 		},
-		"negative width": {
+		"cms initbydim - negative width": {
 			input: []string{"cms_key", "-100", "5"},
 			output: []byte("-ERR invalid width for 'cms.initbydim' command\r\n"),
 		},
-		"negative depth": {
+		"cms initbydim - negative depth": {
 			input: []string{"cms_key", "5", "-100"},
 			output: []byte("-ERR invalid depth for 'cms.initbydim' command\r\n"),
 		},
-		"correct width and depth": {
+		"cms initbydim - correct width and depth": {
 			input: []string{"cms_key", "1000", "5"},
 			output: clientio.RespOK,
 		},
-		"key already exists": {
+		"cms initbydim - key already exists": {
 			setup: func () {
 				key := "cms_key"
 				opts, _ := newCountMinSketchOpts([]string{"1000", "5"})
@@ -61,31 +61,31 @@ func testCMSInitByDim(t *testing.T, store *dstore.Store) {
 
 func testCMSInitByProb(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
-		"wrong number of arguments": {
+		"cms initbyprob - wrong number of arguments": {
 			input: []string{"cms_key1"},
 			output: []byte("-ERR wrong number of arguments for 'cms.initbyprob' command\r\n"),
 		},
-		"wrong type of error rate": {
+		"cms initbyprob - wrong type of error rate": {
 			input: []string{"cms_key1", "not_a_number", "0.01"},
 			output: []byte("-ERR invalid overestimation value for 'cms.initbyprob' command\r\n"),
 		},
-		"wrong type of probability": {
+		"cms initbyprob - wrong type of probability": {
 			input: []string{"cms_key1", "0.01", "not_a_number"},
 			output: []byte("-ERR invalid prob value for 'cms.initbyprob' command\r\n"),
 		},
-		"error rate out of range": {
+		"cms initbyprob - error rate out of range": {
 			input: []string{"cms_key1", "1", "0.01"},
 			output: []byte("-ERR invalid overestimation value for 'cms.initbyprob' command\r\n"),
 		},
-		"probability out of range": {
+		"cms initbyprob - probability out of range": {
 			input: []string{"cms_key1", "0.01", "1"},
 			output: []byte("-ERR invalid prob value for 'cms.initbyprob' command\r\n"),
 		},
-		"correct error rate and probability": {
+		"cms initbyprob - correct error rate and probability": {
 			input: []string{"cms_key1", "0.01", "0.01"},
 			output: clientio.RespOK,
 		},
-		"key already exists": {
+		"cms initbyprob - key already exists": {
 			setup: func () {
 				key := "cms_key1"
 				opts, _ := newCountMinSketchOpts([]string{"1000", "5"})
@@ -101,15 +101,15 @@ func testCMSInitByProb(t *testing.T, store *dstore.Store) {
 
 func testCMSInfo(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
-		"wrong number of arguments": {
+		"cms info - wrong number of arguments": {
 			input: []string{},
 			output: []byte("-ERR wrong number of arguments for 'cms.info' command\r\n"),
 		},
-		"key doesn't exist": {
+		"cms info - key doesn't exist": {
 			input: []string{"cms_key2"},
 			output: []byte("-ERR key does not exist for 'cms.info' command\r\n"),
 		},
-		"one argument": {
+		"cms info - one argument": {
 			setup: func () {
 				key := "cms_key2"
 				opts, _ := newCountMinSketchOpts([]string{"1000", "5"})
@@ -125,15 +125,15 @@ func testCMSInfo(t *testing.T, store *dstore.Store) {
 
 func testCMSIncrBy(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
-		"wrong number of arguments": {
+		"cms incrby - wrong number of arguments": {
 			input: []string{"cms_key3"},
 			output: []byte("-ERR wrong number of arguments for 'cms.incrby' command\r\n"),
 		},
-		"key doesn't exist": {
+		"cms incrby - key doesn't exist": {
 			input: []string{"cms_key3", "test", "10"},
 			output: []byte("-ERR key does not exist for 'cms.incrby' command\r\n"),
 		},
-		"inserting keys": {
+		"cms incrby - inserting keys": {
 			setup: func () {
 				key := "cms_key3"
 				opts, _ := newCountMinSketchOpts([]string{"1000", "5"})
@@ -142,7 +142,7 @@ func testCMSIncrBy(t *testing.T, store *dstore.Store) {
 			input: []string{"cms_key3", "test", "10", "test1", "10"},
 			output: clientio.Encode([]uint64{10,10}, false),
 		},
-		"missing values": {
+		"cms incrby - missing values": {
 			setup: func () {
 				key := "cms_key3"
 				opts, _ := newCountMinSketchOpts([]string{"1000", "5"})
@@ -151,7 +151,7 @@ func testCMSIncrBy(t *testing.T, store *dstore.Store) {
 			input: []string{"cms_key3", "test", "10", "test1"},
 			output: []byte("-ERR wrong number of arguments for 'cms.incrby' command\r\n"),
 		},
-		"negative values": {
+		"cms incrby - negative values": {
 			setup: func () {
 				key := "cms_key3"
 				opts, _ := newCountMinSketchOpts([]string{"1000", "5"})
@@ -167,15 +167,15 @@ func testCMSIncrBy(t *testing.T, store *dstore.Store) {
 
 func testCMSQuery(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
-		"wrong number of arguments": {
+		"cms query - wrong number of arguments": {
 			input: []string{"cms_key4"},
 			output: []byte("-ERR wrong number of arguments for 'cms.query' command\r\n"),
 		},
-		"key doesn't exist": {
+		"cms query - key doesn't exist": {
 			input: []string{"cms_key4", "test"},
 			output: []byte("-ERR key does not exist for 'cms.query' command\r\n"),
 		},
-		"query keys": {
+		"cms query - query keys": {
 			setup: func () {
 				key := "cms_key4"
 				opts, _ := newCountMinSketchOpts([]string{"1000", "5"})
@@ -195,15 +195,15 @@ func testCMSQuery(t *testing.T, store *dstore.Store) {
 
 func testCMSMerge(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
-		"wrong number of arguments": {
+		"cms merge - wrong number of arguments": {
 			input: []string{"cms_key5"},
 			output: []byte("-ERR wrong number of arguments for 'cms.merge' command\r\n"),
 		},
-		"key doesn't exist": {
+		"cms merge - key doesn't exist": {
 			input: []string{"cms_key5", "1", "test"},
 			output: []byte("-ERR key does not exist for 'cms.merge' command\r\n"),
 		},
-		"wrong type of number of sources": {
+		"cms merge - wrong type of number of sources": {
 			setup: func () {
 				key := "cms_key5"
 				opts, _ := newCountMinSketchOpts([]string{"1000", "5"})
@@ -217,7 +217,7 @@ func testCMSMerge(t *testing.T, store *dstore.Store) {
 			input: []string{"cms_key5", "not_a_number", "test"},
 			output: []byte("-ERR cannot parse number for 'cms.merge' command\r\n"),
 		},
-		"more sources than specified": {
+		"cms merge - more sources than specified": {
 			setup: func () {
 				key := "cms_key5"
 				opts, _ := newCountMinSketchOpts([]string{"1000", "5"})
@@ -235,7 +235,7 @@ func testCMSMerge(t *testing.T, store *dstore.Store) {
 			input: []string{"cms_key5", "3", "test", "test1"},
 			output: []byte("-ERR invalid number of arguments to merge for 'cms.merge' command\r\n"),
 		},
-		"fewer sources than specified": {
+		"cms merge - fewer sources than specified": {
 			setup: func () {
 				key := "cms_key5"
 				opts, _ := newCountMinSketchOpts([]string{"1000", "5"})
@@ -253,7 +253,7 @@ func testCMSMerge(t *testing.T, store *dstore.Store) {
 			input: []string{"cms_key5", "1", "test", "test1"},
 			output: []byte("-ERR invalid number of arguments to merge for 'cms.merge' command\r\n"),
 		},
-		"missing weights": {
+		"cms merge - missing weights": {
 			setup: func () {
 				key := "cms_key5"
 				opts, _ := newCountMinSketchOpts([]string{"1000", "5"})
@@ -267,7 +267,7 @@ func testCMSMerge(t *testing.T, store *dstore.Store) {
 			input: []string{"cms_key5", "1", "test", "WEIGHTS"},
 			output: []byte("-ERR invalid number of arguments to merge for 'cms.merge' command\r\n"),
 		},
-		"more weights than needed": {
+		"cms merge - more weights than needed": {
 			setup: func () {
 				key := "cms_key5"
 				opts, _ := newCountMinSketchOpts([]string{"1000", "5"})
@@ -281,7 +281,7 @@ func testCMSMerge(t *testing.T, store *dstore.Store) {
 			input: []string{"cms_key5", "1", "test", "WEIGHTS", "1", "2"},
 			output: []byte("-ERR invalid number of arguments to merge for 'cms.merge' command\r\n"),
 		},
-		"correct case": {
+		"cms merge - correct case": {
 			setup: func () {
 				key := "cms_key5"
 				opts, _ := newCountMinSketchOpts([]string{"1000", "5"})
@@ -295,7 +295,7 @@ func testCMSMerge(t *testing.T, store *dstore.Store) {
 			input: []string{"cms_key5", "1", "test"},
 			output: clientio.RespOK,
 		},
-		"correct case with given weights": {
+		"cms merge - correct case with given weights": {
 			setup: func () {
 				key := "cms_key5"
 				opts, _ := newCountMinSketchOpts([]string{"1000", "5"})
