@@ -19,7 +19,7 @@ func TestHExists(t *testing.T) {
 		{
 			name:     "RESP Check if field exists when k exists but not f and v",
 			commands: []string{"HSET key field1 value", "HEXISTS key field"},
-			expected: []interface{}{int(1), int64(0)},
+			expected: []interface{}{int64(1), int64(0)},
 		},
 		{
 			name:     "RESP Check if field exists when no k,f and v exist",

@@ -11,27 +11,27 @@ func TestHExists(t *testing.T) {
 
 	testCases := []TestCase{
 		{
-			name: "Check if field exists when k f and v are set",
+			name: "HTTP Check if field exists when k f and v are set",
 			commands: []HTTPCommand{
 				{Command: "HSET", Body: map[string]interface{}{"key": "k", "field": "f", "value": "v"}},
 				{Command: "HEXISTS", Body: map[string]interface{}{"key": "k", "field": "f"}},
 			},
-			expected: []interface{}{int64(1), int64(1)},
+			expected: []interface{}{float64(1), "1"},
 		},
 		{
-			name: "Check if field exists when k exists but not f and v",
+			name: "HTTP Check if field exists when k exists but not f and v",
 			commands: []HTTPCommand{
 				{Command: "HSET", Body: map[string]interface{}{"key": "k", "field": "f1", "value": "v"}},
 				{Command: "HEXISTS", Body: map[string]interface{}{"key": "k", "field": "f"}},
 			},
-			expected: []interface{}{int(1), int64(0)},
+			expected: []interface{}{float64(1), "0"},
 		},
 		{
-			name:     "Check if field exists when no k,f and v exist",
+			name:     "HTTP Check if field exists when no k,f and v exist",
 			commands: []HTTPCommand{
 				{Command: "HEXISTS", Body: map[string]interface{}{"key": "k", "field": "f"}},
 			},
-			expected: []interface{}{int64(0)},
+			expected: []interface{}{"0"},
 		},
 	}
 
