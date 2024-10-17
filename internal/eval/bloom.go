@@ -163,7 +163,6 @@ func (b *Bloom) add(value string) (interface{}, error) {
 	for _, v := range b.opts.indexes {
 		if isBitSet(b.bitset, v) {
 			count++
-			b.cnt++
 		} else {
 			setBit(b.bitset, v)
 		}
@@ -173,8 +172,8 @@ func (b *Bloom) add(value string) (interface{}, error) {
 		// All the bits were already set, return 0 in that case.
 		return clientio.IntegerZero, nil
 	}
-
-	return clientio.IntegerZero, nil
+	b.cnt++
+	return clientio.IntegerOne, nil
 }
 
 // exists checks if the given `value` exists in the filter or not.
@@ -182,18 +181,18 @@ func (b *Bloom) add(value string) (interface{}, error) {
 // the underlying bitset. Returns "-1" in case of errors, "0" if the
 // element surely does not exist in the filter, and "1" if the element
 // may or may not exist in the filter.
-func (b *Bloom) exists(value string) ([]byte, error) {
+func (b *Bloom) exists(value string) (clientio.RespType, error) {
 	// We're sure that empty values will be handled upper functions itself.
 	// This is just a property check for the bloom struct.
 	if value == utils.EmptyStr {
-		return clientio.RespMinusOne, errEmptyValue
+		return clientio.IntegerOne, errEmptyValue
 	}
 
 	// Update the indexes where bits are supposed to be set
 	err := b.opts.updateIndexes(value)
 	if err != nil {
 		fmt.Println("error in getting indexes for value:", value, "err:", err)
-		return clientio.RespMinusOne, errUnableToHash
+		return clientio.IntegerNegativeOne, errUnableToHash
 	}
 
 	// Check if all the bits at given indexes are set or not
@@ -201,12 +200,12 @@ func (b *Bloom) exists(value string) ([]byte, error) {
 	for _, v := range b.opts.indexes {
 		if !isBitSet(b.bitset, v) {
 			// Return with "0" as we found one non-set bit (which is enough to conclude)
-			return clientio.RespZero, nil
+			return clientio.IntegerZero, nil
 		}
 	}
 
 	// We reached here, which means the element may exist in the filter. Return "1" now.
-	return clientio.RespOne, nil
+	return clientio.IntegerOne, nil
 }
 
 // DeepCopy creates a deep copy of the Bloom struct
@@ -269,14 +268,12 @@ func getOrCreateBloomFilter(key string, opts *BloomOpts, store *dstore.Store) (*
 	obj := store.Get(key)
 
 	// If we don't have a filter yet and `opts` are provided, create one.
-	if obj == nil && opts != nil {
+	if obj == nil {
+		if opts == nil {
+			opts, _ = newBloomOpts([]string{}, true)
+		}
 		obj = store.NewObj(newBloomFilter(opts), -1, object.ObjTypeBitSet, object.ObjEncodingBF)
 		store.Put(key, obj)
-	}
-
-	// If no `opts` are provided for filter creation, return err
-	if obj == nil && opts == nil {
-		return nil, errInvalidKey
 	}
 
 	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeBitSet); err != nil {
