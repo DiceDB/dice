@@ -312,7 +312,8 @@ var (
 		Returns an array of integer replies for each path.
 		Returns error response if the key doesn't exist or key is expired.
 		Error reply: If the number of arguments is incorrect.`,
-		Eval:  evalJSONARRTRIM,
+		NewEval:  evalJSONARRTRIM,
+		IsMigrated: true,
 		Arity: -5,
 	}
 	ttlCmdMeta = DiceCmdMeta{
