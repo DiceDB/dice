@@ -1880,7 +1880,6 @@ func evalJSONARRINSERT(args []string, store *dstore.Store) *EvalResponse {
 // It returns a list of keys from the object at the specified path or an error if the path is invalid.
 func evalJSONOBJKEYS(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) < 1 {
-		// return diceerrors.NewErrArity("JSON.OBJKEYS")
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongArgumentCount("JSON.OBJKEYS"),
@@ -1897,7 +1896,6 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) *EvalResponse {
 	// Retrieve the object from the database
 	obj := store.Get(key)
 	if obj == nil {
-		// return diceerrors.NewErrWithMessage("could not perform this operation on a key that doesn't exist")
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrGeneral("could not perform this operation on a key that doesn't exist"),
@@ -1907,7 +1905,6 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) *EvalResponse {
 	// Check if the object is of JSON type
 	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
 	if errWithMessage != nil {
-		// return errWithMessage
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrGeneral(string(errWithMessage)),
@@ -1917,7 +1914,6 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) *EvalResponse {
 	jsonData := obj.Value
 	_, err := sonic.Marshal(jsonData)
 	if err != nil {
-		// return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrGeneral("Existing key has wrong Dice type"),
@@ -1931,13 +1927,11 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) *EvalResponse {
 			for key := range jsonData.(map[string]interface{}) {
 				keys = append(keys, key)
 			}
-			// return clientio.Encode(keys, false)
 			return &EvalResponse{
 				Result: keys,
 				Error:  nil,
 			}
 		}
-		// return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongTypeOperation,
@@ -1947,7 +1941,6 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) *EvalResponse {
 	// Parse the JSONPath expression
 	expr, err := jp.ParseString(path)
 	if err != nil {
-		// return diceerrors.NewErrWithMessage(err.Error())
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrGeneral(err.Error()),
@@ -1957,7 +1950,6 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) *EvalResponse {
 	// Execute the JSONPath query
 	results := expr.Get(jsonData)
 	if len(results) == 0 {
-		// return clientio.RespEmptyArray
 		return &EvalResponse{
 			Result: clientio.RespEmptyArray,
 			Error:  nil,
@@ -1979,7 +1971,6 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	// return clientio.Encode(keysList, false)
 	return &EvalResponse{
 		Result: keysList,
 		Error:  nil,
