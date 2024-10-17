@@ -260,7 +260,8 @@ var (
 		Retrieves the keys of a JSON object stored at path specified.
 		Null reply: If the key doesn't exist or has expired.
 		Error reply: If the number of arguments is incorrect or the stored value is not a JSON type.`,
-		Eval:  evalJSONOBJKEYS,
+		NewEval:  evalJSONOBJKEYS,
+		IsMigrated: true,
 		Arity: 2,
 	}
 	jsonarrpopCmdMeta = DiceCmdMeta{
