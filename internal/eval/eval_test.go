@@ -391,8 +391,6 @@ func testEvalGET(t *testing.T, store *dstore.Store) {
 
 			response := evalGET(tt.input, store)
 
-			// fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput.Result)
-
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
@@ -2275,7 +2273,7 @@ func testEvalHVALS(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:  []string{"KEY_MOCK"},
-			migratedOutput: EvalResponse{Result: clientio.Encode([]string{"mock_field_value"}, false), Error: nil},
+			migratedOutput: EvalResponse{Result: []string{"mock_field_value"}, Error: nil},
 		},
 	}
 
@@ -2283,17 +2281,13 @@ func testEvalHVALS(t *testing.T, store *dstore.Store) {
 		t.Run(tt.name, func(t *testing.T) {
 			response := evalHVALS(tt.input, store)
 
-			fmt.Printf("THE RESPONSE IS: %v\n", response)
 
 			// Handle comparison for byte slices
 			if responseBytes, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-					fmt.Printf("1.-> %v | %v\n", responseBytes, expectedBytes)
-					fmt.Printf("1.-> %s | %s\n", responseBytes, expectedBytes)
 					testifyAssert.True(t, bytes.Equal(responseBytes, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else {
-				fmt.Printf("1.|-> %v | %v\n", tt.migratedOutput.Result, response.Result)
 				assert.Equal(t, tt.migratedOutput.Result, response.Result)
 			}
 
@@ -2381,7 +2375,7 @@ func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
 			name:           "HEXISTS key doesn't exist",
 			setup:          func() {},
 			input:          []string{"KEY", "field_name"},
-			migratedOutput: EvalResponse{Result: clientio.Encode(0, false), Error: nil},
+			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
 		},
 		{
 			name: "HEXISTS key exists but field_name doesn't exists",
@@ -2400,7 +2394,7 @@ func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:          []string{"KEY_MOCK", "non_existent_key"},
-			migratedOutput: EvalResponse{Result: clientio.Encode(0, false), Error: nil},
+			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
 		},
 		{
 			name: "HEXISTS both key and field_name exists",
@@ -2419,7 +2413,7 @@ func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:          []string{"KEY_MOCK", "mock_field_name"},
-			migratedOutput: EvalResponse{Result: clientio.Encode(1, false), Error: nil},
+			migratedOutput: EvalResponse{Result: clientio.IntegerOne, Error: nil},
 		},
 	}
 
@@ -2431,7 +2425,6 @@ func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
 			if resposeBytes, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				// If has result
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-					fmt.Printf("%v | %v\n", resposeBytes, expectedBytes)
 					testifyAssert.True(t, bytes.Equal(resposeBytes, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else {
@@ -3120,7 +3113,7 @@ func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:          []string{"KEY_MOCK"},
-			migratedOutput: EvalResponse{Result: clientio.Encode([]string{"mock_field_name"}, false), Error: nil},
+			migratedOutput: EvalResponse{Result: []string{"mock_field_name"}, Error: nil},
 		},
 	}
 
@@ -3131,12 +3124,9 @@ func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 			// Handle comparison for byte slices
 			if responseBytes, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-					fmt.Printf("-> %v | %v\n", responseBytes, expectedBytes)
-					fmt.Printf("-> %s | %s\n", responseBytes, expectedBytes)
 					testifyAssert.True(t, bytes.Equal(responseBytes, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else {
-				fmt.Printf("|-> %v | %s\n", tt.migratedOutput.Result, response.Result)
 				assert.Equal(t, tt.migratedOutput.Result, response.Result)
 			}
 
