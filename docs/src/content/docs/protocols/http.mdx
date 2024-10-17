@@ -64,9 +64,22 @@ Content-Type: application/json
 }
 ```
 
+**cURL:**
+```bash
+curl --location 'http://your-server-address:PORT/SET' \
+--header 'Content-Type: application/json' \
+--data '{
+  "key": "mykey",
+  "value": "Hello, World!"
+}'
+```
+
 **Response:**
 ```json
-"OK"
+{
+    "status": "success",
+    "data": "OK"
+}
 ```
 
 ### Getting a Value
@@ -82,13 +95,26 @@ Content-Type: application/json
 }
 ```
 
+**cURL:**
+```bash
+curl --location 'http://your-server-address:PORT/GET' \
+--header 'Content-Type: application/json' \
+--data '{
+  "key": "mykey"
+}'
+```
+
 **Response:**
 ```json
-"Hello, World!"
+{
+    "status": "success",
+    "data": "Hello, World!"
+}
 ```
 
 ### Setting a field in Hash
 
+**Request:**
 ```http
 POST http://localhost:8082/hset HTTP/1.1
 Content-Type: application/json
@@ -100,13 +126,28 @@ Content-Type: application/json
 }
 ```
 
+**cURL:**
+```bash
+curl --location 'http://your-server-address:PORT/HSET' \
+--header 'Content-Type: application/json' \
+--data '{
+  "key": "test",
+  "field": "test",
+  "value": "test"
+}'
+```
+
 **Response:**
 ```json
-1
+{
+    "status": "success",
+    "data": 1
+}
 ```
 
 ### Getting a field in a HashSet
 
+**Request:**
 ```http
 POST http://localhost:8082/hget HTTP/1.1
 Content-Type: application/json
@@ -117,9 +158,22 @@ Content-Type: application/json
 }
 ```
 
+**cURL:**
+```bash
+curl --location 'http://your-server-address:PORT/HGET' \
+--header 'Content-Type: application/json' \
+--data '{
+  "key": "test",
+  "field": "test"
+}'
+```
+
 **Response:**
 ```json
-"test"
+{
+    "status": "success",
+    "data": "test"
+}
 ```
 
 ### QWATCH Example
@@ -135,5 +189,14 @@ Content-Type: application/json
 {
   "query": "SELECT $key, $value WHERE $key like 'match:100:*' AND $value > 10 ORDER BY $value DESC LIMIT 3"
 }
+```
+
+**cURL:**
+```bash
+curl --location 'http://your-server-address:PORT/QWATCH' \
+--header 'Content-Type: application/json' \
+--data '{
+  "query": "SELECT $key, $value WHERE $key like '\''match:100:*'\'' AND $value > 10 ORDER BY $value DESC LIMIT 3"
+}'
 ```
 
