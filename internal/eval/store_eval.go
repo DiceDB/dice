@@ -909,6 +909,7 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 
 	return &EvalResponse{
 		Result: clientio.OK,
+		Error:  nil,
 	}
 }
 func evalHINCRBY(args []string, store *dstore.Store) *EvalResponse {
