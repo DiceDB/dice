@@ -388,14 +388,14 @@ func TestParseWebsocketMessage(t *testing.T) {
 		},
 		{
 			name:         "Test simple QWATCH command",
-			message:      "qwatch \"select $key, $value where $key like 'k?'\"",
-			expectedCmd:  "QWATCH",
+			message:      "q.watch \"select $key, $value where $key like 'k?'\"",
+			expectedCmd:  "Q.WATCH",
 			expectedArgs: []string{"select $key, $value where $key like 'k?'"},
 		},
 		{
 			name:         "Test complex QWATCH command",
-			message:      "qwatch \"SELECT $key, $value WHERE $key LIKE 'player:*' AND '$value.score' > 10 ORDER BY $value.score DESC LIMIT 5\"",
-			expectedCmd:  "QWATCH",
+			message:      "q.watch \"SELECT $key, $value WHERE $key LIKE 'player:*' AND '$value.score' > 10 ORDER BY $value.score DESC LIMIT 5\"",
+			expectedCmd:  "Q.WATCH",
 			expectedArgs: []string{"SELECT $key, $value WHERE $key LIKE 'player:*' AND '$value.score' > 10 ORDER BY $value.score DESC LIMIT 5"},
 		},
 	}
