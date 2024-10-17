@@ -44,11 +44,11 @@ type AsyncServer struct {
 // NewAsyncServer initializes a new AsyncServer
 func NewAsyncServer(shardManager *shard.ShardManager, queryWatchChan chan dstore.QueryWatchEvent, logger *slog.Logger) *AsyncServer {
 	return &AsyncServer{
-		maxClients:             config.DiceConfig.Server.MaxClients,
+		maxClients:             config.DiceConfig.Performance.MaxClients,
 		connectedClients:       make(map[int]*comm.Client),
 		shardManager:           shardManager,
 		queryWatcher:           querymanager.NewQueryManager(logger),
-		multiplexerPollTimeout: config.DiceConfig.Server.MultiplexerPollTimeout,
+		multiplexerPollTimeout: config.DiceConfig.Performance.MultiplexerPollTimeout,
 		ioChan:                 make(chan *ops.StoreResponse, 1000),
 		queryWatchChan:         queryWatchChan,
 		logger:                 logger,
@@ -91,21 +91,21 @@ func (s *AsyncServer) FindPortAndBind() (socketErr error) {
 		return err
 	}
 
-	ip4 := net.ParseIP(config.DiceConfig.Server.Addr)
+	ip4 := net.ParseIP(config.DiceConfig.AsyncServer.Addr)
 	if ip4 == nil {
 		return diceerrors.ErrInvalidIPAddress
 	}
 
 	if err := syscall.Bind(serverFD, &syscall.SockaddrInet4{
-		Port: config.DiceConfig.Server.Port,
+		Port: config.DiceConfig.AsyncServer.Port,
 		Addr: [4]byte{ip4[0], ip4[1], ip4[2], ip4[3]},
 	}); err != nil {
 		return err
 	}
 	s.logger.Info(
 		"DiceDB server is running in a single-threaded mode",
-		slog.String("version", config.DiceConfig.Server.Version),
-		slog.Int("port", config.DiceConfig.Server.Port),
+		slog.String("version", config.DiceConfig.Version),
+		slog.Int("port", config.DiceConfig.AsyncServer.Port),
 	)
 	return nil
 }

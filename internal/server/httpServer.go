@@ -25,8 +25,10 @@ import (
 const Abort = "ABORT"
 
 var unimplementedCommands = map[string]bool{
-	"QUNWATCH": true,
+	"Q.UNWATCH": true,
 }
+
+const stringNil = "(nil)"
 
 type HTTPServer struct {
 	shardManager       *shard.ShardManager
@@ -73,7 +75,7 @@ func NewHTTPServer(shardManager *shard.ShardManager, logger *slog.Logger) *HTTPS
 	}
 
 	mux.HandleFunc("/", httpServer.DiceHTTPHandler)
-	mux.HandleFunc("/qwatch", httpServer.DiceHTTPQwatchHandler)
+	mux.HandleFunc("/q.watch", httpServer.DiceHTTPQwatchHandler)
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("ok"))
 		if err != nil {
@@ -126,7 +128,13 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 	// convert to REDIS cmd
 	diceDBCmd, err := utils.ParseHTTPRequest(request)
 	if err != nil {
-		http.Error(writer, "Error parsing HTTP request", http.StatusBadRequest)
+		responseJSON, _ := json.Marshal(utils.HTTPResponse{Status: utils.HTTPStatusError, Data: "Invalid HTTP request format"})
+		writer.Header().Set("Content-Type", "application/json")
+		writer.WriteHeader(http.StatusBadRequest) // Set HTTP status code to 500
+		_, err = writer.Write(responseJSON)
+		if err != nil {
+			s.logger.Error("Error writing response", "error", err)
+		}
 		s.logger.Error("Error parsing HTTP request", slog.Any("error", err))
 		return
 	}
@@ -139,13 +147,14 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 	}
 
 	if unimplementedCommands[diceDBCmd.Cmd] {
-		http.Error(writer, "Command is not implemented with HTTP", http.StatusBadRequest)
-		s.logger.Error("Command %s is not implemented", slog.String("cmd", diceDBCmd.Cmd))
-		_, err := writer.Write([]byte("Command is not implemented with HTTP"))
+		responseJSON, _ := json.Marshal(utils.HTTPResponse{Status: utils.HTTPStatusError, Data: fmt.Sprintf("Command %s is not implemented with HTTP", diceDBCmd.Cmd)})
+		writer.Header().Set("Content-Type", "application/json")
+		writer.WriteHeader(http.StatusBadRequest) // Set HTTP status code to 500
+		_, err = writer.Write(responseJSON)
 		if err != nil {
-			s.logger.Error("Error writing response", slog.Any("error", err))
-			return
+			s.logger.Error("Error writing response", "error", err)
 		}
+		s.logger.Error("Command %s is not implemented", slog.String("cmd", diceDBCmd.Cmd))
 		return
 	}
 
@@ -232,7 +241,7 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 			// Client disconnected or request finished
 			s.logger.Info("Client disconnected")
 			unWatchCmd := &cmd.DiceDBCmd{
-				Cmd:  "QUNWATCH",
+				Cmd:  "Q.UNWATCH",
 				Args: []string{qwatchQuery},
 			}
 			storeOp.Cmd = unWatchCmd
@@ -321,6 +330,8 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.Store
 	var rp *clientio.RESPParser
 
 	var responseValue interface{}
+	var isDiceErr bool = false
+	var httpResponse utils.HTTPResponse
 	// TODO: Remove this conditional check and if (true) condition when all commands are migrated
 	if !ok {
 		var err error
@@ -330,14 +341,23 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.Store
 			rp = clientio.NewRESPParser(bytes.NewBuffer(result.EvalResponse.Result.([]byte)))
 		}
 
-		responseValue, err = rp.DecodeOne()
+		res, err := rp.DecodeOne()
+		responseValue = replaceNilInInterface(res)
 		if err != nil {
 			s.logger.Error("Error decoding response", "error", err)
-			http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
+			httpResponse := utils.HTTPResponse{Status: utils.HTTPStatusError, Data: "Internal Server Error"}
+			responseJSON, _ := json.Marshal(httpResponse)
+			writer.Header().Set("Content-Type", "application/json")
+			writer.WriteHeader(http.StatusInternalServerError) // Set HTTP status code to 500
+			_, err = writer.Write(responseJSON)
+			if err != nil {
+				s.logger.Error("Error writing response", "error", err)
+			}
 			return
 		}
 	} else {
 		if result.EvalResponse.Error != nil {
+			isDiceErr = true
 			responseValue = result.EvalResponse.Error.Error()
 		} else {
 			responseValue = result.EvalResponse.Result
@@ -360,10 +380,18 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.Store
 		responseValue = respArr[val]
 	}
 
+	if responseValue == stringNil {
+		responseValue = nil // in order to convert it in json null
+	}
+
 	if bt, ok := responseValue.([]byte); ok {
 		responseValue = string(bt)
 	}
-	httpResponse := utils.HTTPResponse{Data: responseValue}
+	if isDiceErr {
+		httpResponse = utils.HTTPResponse{Status: utils.HTTPStatusError, Data: responseValue}
+	} else {
+		httpResponse = utils.HTTPResponse{Status: utils.HTTPStatusSuccess, Data: responseValue}
+	}
 
 	responseJSON, err := json.Marshal(httpResponse)
 	if err != nil {
@@ -373,6 +401,7 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.Store
 	}
 
 	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusOK)
 	_, err = writer.Write(responseJSON)
 	if err != nil {
 		s.logger.Error("Error writing response", "error", err)
@@ -388,4 +417,29 @@ func generateUniqueInt32(r *http.Request) uint32 {
 
 	// Hash the string using CRC32 and cast it to an int32
 	return crc32.ChecksumIEEE([]byte(sb.String()))
+}
+
+func replaceNilInInterface(data interface{}) interface{} {
+	switch v := data.(type) {
+	case string:
+		if v == stringNil {
+			return nil
+		}
+		return v
+	case []interface{}:
+		// Process each element in the slice
+		for i, elem := range v {
+			v[i] = replaceNilInInterface(elem)
+		}
+		return v
+	case map[string]interface{}:
+		// Process each value in the map
+		for key, value := range v {
+			v[key] = replaceNilInInterface(value)
+		}
+		return v
+	default:
+		// For other types, return as is
+		return data
+	}
 }

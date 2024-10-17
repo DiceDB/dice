@@ -3,8 +3,9 @@ package async
 // All commands related to Hyperloglog are part of this test class
 // PFADD, PFCOUNT, PFMERGE, PFDEBUG, PFSELFTEST etc.
 import (
-	"gotest.tools/v3/assert"
 	"testing"
+
+	"gotest.tools/v3/assert"
 )
 
 func TestHyperLogLogCommands(t *testing.T) {
@@ -75,13 +76,13 @@ func TestHyperLogLogCommands(t *testing.T) {
 			name: "PFMERGE with invalid object",
 			commands: []string{
 				"PFADD INVALID_HLL a b c", "SET INVALID_HLL \"1\"", "PFMERGE INVALID_HLL"},
-			expected: []interface{}{int64(1), "OK", "WRONGTYPE Key is not a valid HyperLogLog string value."},
+			expected: []interface{}{int64(1), "OK", "ERR -WRONGTYPE Key is not a valid HyperLogLog string value."},
 		},
 		{
 			name: "PFMERGE with invalid src object",
 			commands: []string{
 				"PFADD INVALID_SRC_HLL a b c", "SET INVALID_SRC_HLL \"1\"", "PFMERGE HLL INVALID_SRC_HLL"},
-			expected: []interface{}{int64(1), "OK", "WRONGTYPE Key is not a valid HyperLogLog string value."},
+			expected: []interface{}{int64(1), "OK", "ERR -WRONGTYPE Key is not a valid HyperLogLog string value."},
 		},
 	}
 
