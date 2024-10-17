@@ -70,6 +70,7 @@ OK
 127.0.0.1:7379> SET mykey "Hello"
 OK
 127.0.0.1:7379> GETEX mykey PX 10000
+127.0.0.1:7379> "Hello"
 ```
 
 - This command will return `"Hello"` and set the expiration time of `mykey` to 10,000 milliseconds (10 seconds).
