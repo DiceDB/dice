@@ -3921,7 +3921,6 @@ func evalSINTER(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(members, false)
 }
 
-
 func evalHLEN(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("HLEN")
