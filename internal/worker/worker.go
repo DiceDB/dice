@@ -2,6 +2,8 @@ package worker
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -32,31 +34,33 @@ type Worker interface {
 }
 
 type BaseWorker struct {
-	id              string
-	ioHandler       iohandler.IOHandler
-	parser          requestparser.Parser
-	shardManager    *shard.ShardManager
-	respChan        chan *ops.StoreResponse
-	adhocReqChan    chan *cmd.DiceDBCmd
-	Session         *auth.Session
-	globalErrorChan chan error
-	logger          *slog.Logger
+	id                string
+	ioHandler         iohandler.IOHandler
+	parser            requestparser.Parser
+	shardManager      *shard.ShardManager
+	adhocReqChan      chan *cmd.DiceDBCmd
+	Session           *auth.Session
+	globalErrorChan   chan error
+	logger            *slog.Logger
+	responseChan      chan *ops.StoreResponse
+	preprocessingChan chan *ops.StoreResponse
 }
 
-func NewWorker(wid string, respChan chan *ops.StoreResponse,
+func NewWorker(wid string, responseChan, preprocessingChan chan *ops.StoreResponse,
 	ioHandler iohandler.IOHandler, parser requestparser.Parser,
 	shardManager *shard.ShardManager, gec chan error,
 	logger *slog.Logger) *BaseWorker {
 	return &BaseWorker{
-		id:              wid,
-		ioHandler:       ioHandler,
-		parser:          parser,
-		shardManager:    shardManager,
-		globalErrorChan: gec,
-		respChan:        respChan,
-		logger:          logger,
-		Session:         auth.NewSession(),
-		adhocReqChan:    make(chan *cmd.DiceDBCmd, config.DiceConfig.Performance.AdhocReqChanBufSize),
+		id:                wid,
+		ioHandler:         ioHandler,
+		parser:            parser,
+		shardManager:      shardManager,
+		globalErrorChan:   gec,
+		responseChan:      responseChan,
+		preprocessingChan: preprocessingChan,
+		logger:            logger,
+		Session:           auth.NewSession(),
+		adhocReqChan:      make(chan *cmd.DiceDBCmd, config.DiceConfig.Performance.AdhocReqChanBufSize),
 	}
 }
 
@@ -156,6 +160,14 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 }
 
 func (w *BaseWorker) executeCommandHandler(execCtx context.Context, errChan chan error, cmds []*cmd.DiceDBCmd, isWatchNotification bool) {
+	// Retrieve metadata for the command to determine if multisharding is supported.
+	meta, ok := CommandsMeta[cmds[0].Cmd]
+	if ok {
+		if meta.preProcessingReq {
+			meta.preProcessResponse(w, cmds[0])
+		}
+	}
+
 	err := w.executeCommand(execCtx, cmds[0], isWatchNotification)
 	if err != nil {
 		w.logger.Error("Error executing command", slog.String("workerID", w.id), slog.Any("error", err))
@@ -190,8 +202,16 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 			cmdList = append(cmdList, diceDBCmd)
 
 		case MultiShard:
+			var err error
 			// If the command supports multisharding, break it down into multiple commands.
-			cmdList = meta.decomposeCommand(diceDBCmd)
+			cmdList, err = meta.decomposeCommand(ctx, w, diceDBCmd)
+			if err != nil {
+				workerErr := w.ioHandler.Write(ctx, err)
+				if workerErr != nil {
+					w.logger.Debug("Error executing for worker", slog.String("workerID", w.id), slog.Any("error", workerErr))
+				}
+				return workerErr
+			}
 
 		case Custom:
 			// if command is of type Custom, write a custom logic around it
@@ -260,6 +280,12 @@ func (w *BaseWorker) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	default:
+
+		requestID, err := GenerateRandomUint32()
+		if err != nil {
+			requestID = 0
+		}
+
 		for i := uint8(0); i < uint8(len(cmds)); i++ {
 			var rc chan *ops.StoreOp
 			var sid shard.ShardID
@@ -274,7 +300,7 @@ func (w *BaseWorker) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd) error {
 
 			rc <- &ops.StoreOp{
 				SeqID:     i,
-				RequestID: cmds[i].RequestID,
+				RequestID: requestID,
 				Cmd:       cmds[i],
 				WorkerID:  w.id,
 				ShardID:   sid,
@@ -295,7 +321,7 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 		select {
 		case <-ctx.Done():
 			w.logger.Error("Timed out waiting for response from shards", slog.String("workerID", w.id), slog.Any("error", ctx.Err()))
-		case resp, ok := <-w.respChan:
+		case resp, ok := <-w.responseChan:
 			if ok {
 				evalResp = append(evalResp, *resp.EvalResponse)
 			}
@@ -361,7 +387,6 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 			}
 
 		case MultiShard:
-			// Handle multi-shard commands
 			err := w.ioHandler.Write(ctx, val.composeResponse(evalResp...))
 			if err != nil {
 				w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
@@ -421,4 +446,13 @@ func (w *BaseWorker) Stop() error {
 	w.logger.Info("Stopping worker", slog.String("workerID", w.id))
 	w.Session.Expire()
 	return nil
+}
+
+func GenerateRandomUint32() (uint32, error) {
+	var b [4]byte             // Create a byte array to hold the random bytes
+	_, err := rand.Read(b[:]) // Fill the byte array with secure random bytes
+	if err != nil {
+		return 0, err // Return an error if reading failed
+	}
+	return binary.BigEndian.Uint32(b[:]), nil // Convert bytes to uint32
 }
