@@ -63,4 +63,8 @@ var (
 	ErrUnexpectedType = func(expectedType string, actualType interface{}) error {
 		return fmt.Errorf("ERR expected %s but got another type: %s", expectedType, actualType) // Signals an unexpected type received when an integer was expected.
 	}
+
+	ErrUnexpectedJSONPathType = func(expectedType string, actualType interface{}) error {
+		return fmt.Errorf("ERR wrong type of path value - expected %s but found %s", expectedType, actualType) // Signals an unexpected type received when an integer was expected.
+	}
 )

@@ -25,7 +25,7 @@ import (
 const Abort = "ABORT"
 
 var unimplementedCommands = map[string]bool{
-	"QUNWATCH": true,
+	"Q.UNWATCH": true,
 }
 
 const stringNil = "(nil)"
@@ -75,7 +75,7 @@ func NewHTTPServer(shardManager *shard.ShardManager, logger *slog.Logger) *HTTPS
 	}
 
 	mux.HandleFunc("/", httpServer.DiceHTTPHandler)
-	mux.HandleFunc("/qwatch", httpServer.DiceHTTPQwatchHandler)
+	mux.HandleFunc("/q.watch", httpServer.DiceHTTPQwatchHandler)
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("ok"))
 		if err != nil {
@@ -147,7 +147,7 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 	}
 
 	if unimplementedCommands[diceDBCmd.Cmd] {
-		responseJSON, _ := json.Marshal(utils.HTTPResponse{Status: utils.HTTPStatusError, Data: "Command is not implemented with HTTP"})
+		responseJSON, _ := json.Marshal(utils.HTTPResponse{Status: utils.HTTPStatusError, Data: fmt.Sprintf("Command %s is not implemented with HTTP", diceDBCmd.Cmd)})
 		writer.Header().Set("Content-Type", "application/json")
 		writer.WriteHeader(http.StatusBadRequest) // Set HTTP status code to 500
 		_, err = writer.Write(responseJSON)
@@ -155,11 +155,6 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 			s.logger.Error("Error writing response", "error", err)
 		}
 		s.logger.Error("Command %s is not implemented", slog.String("cmd", diceDBCmd.Cmd))
-		_, err := writer.Write([]byte("Command is not implemented with HTTP"))
-		if err != nil {
-			s.logger.Error("Error writing response", slog.Any("error", err))
-			return
-		}
 		return
 	}
 
@@ -246,7 +241,7 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 			// Client disconnected or request finished
 			s.logger.Info("Client disconnected")
 			unWatchCmd := &cmd.DiceDBCmd{
-				Cmd:  "QUNWATCH",
+				Cmd:  "Q.UNWATCH",
 				Args: []string{qwatchQuery},
 			}
 			storeOp.Cmd = unWatchCmd

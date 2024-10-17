@@ -46,6 +46,14 @@ const (
 	CmdGetSet      = "GETSET"
 	CmdGetWatch    = "GET.WATCH"
 	CmdZRangeWatch = "ZRANGE.WATCH"
+	CmdJSONClear   = "JSON.CLEAR"
+	CmdJSONStrlen  = "JSON.STRLEN"
+	CmdJSONObjlen  = "JSON.OBJLEN"
+	CmdZAdd        = "ZADD"
+	CmdZRange      = "ZRANGE"
+	CmdPFAdd       = "PFADD"
+	CmdPFCount     = "PFCOUNT"
+	CmdPFMerge     = "PFMERGE"
 )
 
 type CmdMeta struct {
@@ -80,6 +88,24 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdGetSet: {
 		CmdType: SingleShard,
 	},
+	CmdJSONClear: {
+		CmdType: SingleShard,
+	},
+	CmdJSONStrlen: {
+		CmdType: SingleShard,
+	},
+	CmdJSONObjlen: {
+		CmdType: SingleShard,
+	},
+	CmdPFAdd: {
+		CmdType: SingleShard,
+	},
+	CmdPFCount: {
+		CmdType: SingleShard,
+	},
+	CmdPFMerge: {
+		CmdType: SingleShard,
+	},
 
 	// Custom commands.
 	CmdAbort: {
@@ -95,6 +121,14 @@ var CommandsMeta = map[string]CmdMeta{
 	},
 	CmdZRangeWatch: {
 		CmdType: Watch,
+	},
+
+	// Sorted set commands
+	CmdZAdd: {
+		CmdType: SingleShard,
+	},
+	CmdZRange: {
+		CmdType: SingleShard,
 	},
 }
 

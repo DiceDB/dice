@@ -50,6 +50,8 @@ var (
 	InitConfigCmd = false
 
 	KeysLimit = DefaultKeysLimit
+
+	EnableProfiling = false
 )
 
 type Config struct {
@@ -69,8 +71,10 @@ type Config struct {
 	} `mapstructure:"http"`
 
 	WebSocket struct {
-		Enabled bool `mapstructure:"enabled"`
-		Port    int  `mapstructure:"port"`
+		Enabled                 bool          `mapstructure:"enabled"`
+		Port                    int           `mapstructure:"port"`
+		MaxWriteResponseRetries int           `mapstructure:"maxwriteresponseretries"`
+		WriteResponseTimeout    time.Duration `mapstructure:"writeresponsetimeout"`
 	} `mapstructure:"websocket"`
 
 	Performance struct {
@@ -81,6 +85,7 @@ type Config struct {
 		EnableMultiThreading   bool          `mapstructure:"enablemultithreading"`
 		StoreMapInitSize       int           `mapstructure:"storemapinitsize"`
 		AdhocReqChanBufSize    int           `mapstructure:"adhocreqchanbufsize"`
+		EnableProfiling        bool  		 `mapstructure:"profiling"`
 	} `mapstructure:"performance"`
 
 	Memory struct {
@@ -137,11 +142,15 @@ var baseConfig = Config{
 		Port:    HTTPPort,
 	},
 	WebSocket: struct {
-		Enabled bool `mapstructure:"enabled"`
-		Port    int  `mapstructure:"port"`
+		Enabled                 bool          `mapstructure:"enabled"`
+		Port                    int           `mapstructure:"port"`
+		MaxWriteResponseRetries int           `mapstructure:"maxwriteresponseretries"`
+		WriteResponseTimeout    time.Duration `mapstructure:"writeresponsetimeout"`
 	}{
-		Enabled: EnableWebsocket,
-		Port:    WebsocketPort,
+		Enabled:                 EnableWebsocket,
+		Port:                    WebsocketPort,
+		MaxWriteResponseRetries: 3,
+		WriteResponseTimeout:    10 * time.Second,
 	},
 	Performance: struct {
 		WatchChanBufSize       int           `mapstructure:"watchchanbufsize"`
@@ -151,6 +160,7 @@ var baseConfig = Config{
 		EnableMultiThreading   bool          `mapstructure:"enablemultithreading"`
 		StoreMapInitSize       int           `mapstructure:"storemapinitsize"`
 		AdhocReqChanBufSize    int           `mapstructure:"adhocreqchanbufsize"`
+		EnableProfiling        bool  		 `mapstructure:"profiling"`
 	}{
 		WatchChanBufSize:       20000,
 		ShardCronFrequency:     1 * time.Second,

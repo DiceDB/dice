@@ -62,6 +62,41 @@ var (
 		Cmd:     "SETEX",
 		CmdType: SingleShard,
 	}
+	zaddCmdMeta = CmdsMeta{
+		Cmd:     "ZADD",
+		CmdType: SingleShard,
+	}
+	zrangeCmdMeta = CmdsMeta{
+		Cmd:     "ZRANGE",
+		CmdType: SingleShard,
+	}
+	pfaddCmdMeta = CmdsMeta{
+		Cmd:     "PFADD",
+		CmdType: SingleShard,
+	}
+	pfcountCmdMeta = CmdsMeta{
+		Cmd:     "PFCOUNT",
+		CmdType: SingleShard,
+	}
+	pfmergeCmdMeta = CmdsMeta{
+		Cmd:     "PFMERGE",
+		CmdType: SingleShard,
+	}
+
+	jsonclearCmdMeta = CmdsMeta{
+		Cmd:     "JSON.CLEAR",
+		CmdType: SingleShard,
+	}
+
+	jsonstrlenCmdMeta = CmdsMeta{
+		Cmd:     "JSON.STRLEN",
+		CmdType: SingleShard,
+	}
+
+	jsonobjlenCmdMeta = CmdsMeta{
+		Cmd:     "JSON.OBJLEN",
+		CmdType: SingleShard,
+	}
 
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
@@ -79,6 +114,13 @@ func init() {
 	WorkerCmdsMeta["GET"] = getCmdMeta
 	WorkerCmdsMeta["GETSET"] = getsetCmdMeta
 	WorkerCmdsMeta["SETEX"] = setexCmdMeta
-
+	WorkerCmdsMeta["JSON.CLEAR"] = jsonclearCmdMeta
+	WorkerCmdsMeta["JSON.STRLEN"] = jsonstrlenCmdMeta
+	WorkerCmdsMeta["JSON.OBJLEN"] = jsonobjlenCmdMeta
+	WorkerCmdsMeta["ZADD"] = zaddCmdMeta
+	WorkerCmdsMeta["ZRANGE"] = zrangeCmdMeta
+	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
+	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
+	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }
