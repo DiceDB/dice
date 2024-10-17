@@ -204,9 +204,34 @@ func testEvalSET(t *testing.T, store *dstore.Store) {
 			migratedOutput: EvalResponse{Result: clientio.OK, Error: nil},
 		},
 		{
+			name:           "key val pair and invalid negative EX",
+			input:          []string{"KEY", "VAL", Ex, "-2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'set' command")},
+		},
+		{
+			name:           "key val pair and invalid float EX",
+			input:          []string{"KEY", "VAL", Ex, "2.0"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")},
+		},
+		{
+			name:           "key val pair and invalid out of range int EX",
+			input:          []string{"KEY", "VAL", Ex, "9223372036854775807"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'set' command")},
+		},
+		{
+			name:           "key val pair and invalid greater than max duration EX",
+			input:          []string{"KEY", "VAL", Ex, "9223372036854775"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'set' command")},
+		},
+		{
 			name:           "key val pair and invalid EX",
 			input:          []string{"KEY", "VAL", Ex, "invalid_expiry_val"},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")},
+		},
+		{
+			name:           "key val pair and PX no val",
+			input:          []string{"KEY", "VAL", Px},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
 		},
 		{
 			name:           "key val pair and valid PX",
@@ -217,6 +242,26 @@ func testEvalSET(t *testing.T, store *dstore.Store) {
 			name:           "key val pair and invalid PX",
 			input:          []string{"KEY", "VAL", Px, "invalid_expiry_val"},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")},
+		},
+		{
+			name:           "key val pair and invalid negative PX",
+			input:          []string{"KEY", "VAL", Px, "-2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'set' command")},
+		},
+		{
+			name:           "key val pair and invalid float PX",
+			input:          []string{"KEY", "VAL", Px, "2.0"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")},
+		},
+		{
+			name:           "key val pair and invalid out of range int PX",
+			input:          []string{"KEY", "VAL", Px, "9223372036854775807"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'set' command")},
+		},
+		{
+			name:           "key val pair and invalid greater than max duration PX",
+			input:          []string{"KEY", "VAL", Px, "9223372036854775"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'set' command")},
 		},
 		{
 			name:           "key val pair and both EX and PX",
@@ -5427,7 +5472,7 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 			input:          []string{"bitKey", "val"},
 			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
-		"append value with leading zeros":{
+		"append value with leading zeros": {
 			setup: func() {
 				store.Del("key_with_leading_zeros")
 			},

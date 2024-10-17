@@ -22,9 +22,10 @@ import (
 //
 //	EX or ex which will set the expiry time(in secs) for the key
 //	PX or px which will set the expiry time(in milliseconds) for the key
-//	EXAT or exat which will set the specified Unix time at which the key will expire, in seconds (a positive integer).
-//	PXAT or PX which will the specified Unix time at which the key will expire, in milliseconds (a positive integer).
-//	XX orr xx which will only set the key if it already exists.
+//	EXAT or exat which will set the specified Unix time at which the key will expire, in seconds (a positive integer)
+//	PXAT or PX which will the specified Unix time at which the key will expire, in milliseconds (a positive integer)
+//	XX or xx which will only set the key if it already exists
+//	NX or nx which will only set the key if it doesn not already exist
 //
 // Returns encoded error response if at least a <key, value> pair is not part of args
 // Returns encoded error response if expiry time value in not integer
@@ -546,7 +547,6 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 // If the key does not exist, it creates a new key with the given value (so APPEND will be similar to SET in this special case)
 // If key already exists and is a string (or integers stored as strings), this command appends the value at the end of the string
 func evalAPPEND(args []string, store *dstore.Store) *EvalResponse {
-
 	if len(args) != 2 {
 		return &EvalResponse{
 			Result: nil,
