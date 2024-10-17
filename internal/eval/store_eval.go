@@ -546,6 +546,7 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 // If the key does not exist, it creates a new key with the given value (so APPEND will be similar to SET in this special case)
 // If key already exists and is a string (or integers stored as strings), this command appends the value at the end of the string
 func evalAPPEND(args []string, store *dstore.Store) *EvalResponse {
+
 	if len(args) != 2 {
 		return &EvalResponse{
 			Result: nil,
@@ -558,6 +559,18 @@ func evalAPPEND(args []string, store *dstore.Store) *EvalResponse {
 
 	if obj == nil {
 		// Key does not exist path
+
+		// check if the value starts with '0' and has more than 1 character to handle leading zeros
+		if len(value) > 1 && value[0] == '0' {
+			// treat as string if has leading zeros
+			store.Put(key, store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw))
+			return &EvalResponse{
+				Result: len(value),
+				Error:  nil,
+			}
+		}
+
+		// Deduce type and encoding based on the value if no leading zeros
 		oType, oEnc := deduceTypeEncoding(value)
 
 		var storedValue interface{}
@@ -593,6 +606,7 @@ func evalAPPEND(args []string, store *dstore.Store) *EvalResponse {
 		// If the encoding is a string, retrieve the string value for concatenation
 		currentValueStr = obj.Value.(string)
 	default:
+		// If the encoding is neither integer nor string, return a "wrong type" error
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongTypeOperation,
