@@ -1,52 +1,64 @@
-package async
+package resp
 
 import (
+	"testing"
+	"time"
+
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"gotest.tools/v3/assert"
-	"testing"
 )
 
 func TestHRANDFIELD(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
-	defer FireCommand(conn, "DEL key_hrandfield key_hrandfield02 key_hrandfield03")
+	FireCommand(conn, "FLUSHDB")
 
 	testCases := []struct {
-		name     string
-		commands []string
-		expected []interface{}
+		name   string
+		cmds   []string
+		expect []interface{}
+		delays []time.Duration
 	}{
 		{
-			name:     "Basic HRANDFIELD operations",
-			commands: []string{"HSET key_hrandfield field value", "HSET key_hrandfield field2 value2", "HRANDFIELD key_hrandfield"},
-			expected: []interface{}{ONE, ONE, []string{"field", "field2"}},
+			name:   "Basic HRANDFIELD operations",
+			cmds:   []string{"HSET key_hrandfield field value", "HSET key_hrandfield field2 value2", "HRANDFIELD key_hrandfield"},
+			expect: []interface{}{int64(1), int64(1), []string{"field", "field2"}},
+			delays: []time.Duration{0, 0, 0},
 		},
 		{
-			name:     "HRANDFIELD with count",
-			commands: []string{"HSET key_hrandfield field3 value3", "HRANDFIELD key_hrandfield 2"},
-			expected: []interface{}{ONE, []string{"field", "field2", "field3"}},
+			name:   "HRANDFIELD with count",
+			cmds:   []string{"HSET key_hrandfield field3 value3", "HRANDFIELD key_hrandfield 2"},
+			expect: []interface{}{int64(1), []string{"field", "field2", "field3"}},
+			delays: []time.Duration{0, 0},
 		},
 		{
-			name:     "HRANDFIELD with WITHVALUES",
-			commands: []string{"HRANDFIELD key_hrandfield 2 WITHVALUES"},
-			expected: []interface{}{[]string{"field", "value", "field2", "value2", "field3", "value3"}},
+			name:   "HRANDFIELD with WITHVALUES",
+			cmds:   []string{"HRANDFIELD key_hrandfield 2 WITHVALUES"},
+			expect: []interface{}{[]string{"field", "value", "field2", "value2", "field3", "value3"}},
+			delays: []time.Duration{0},
 		},
 		{
-			name:     "HRANDFIELD on non-existent key",
-			commands: []string{"HRANDFIELD key_hrandfield_nonexistent"},
-			expected: []interface{}{"(nil)"},
+			name:   "HRANDFIELD on non-existent key",
+			cmds:   []string{"HRANDFIELD key_hrandfield_nonexistent"},
+			expect: []interface{}{"(nil)"},
+			delays: []time.Duration{0},
 		},
 		{
-			name:     "HRANDFIELD with wrong number of arguments",
-			commands: []string{"HRANDFIELD"},
-			expected: []interface{}{"ERR wrong number of arguments for 'hrandfield' command"},
+			name:   "HRANDFIELD with wrong number of arguments",
+			cmds:   []string{"HRANDFIELD"},
+			expect: []interface{}{"ERR wrong number of arguments for 'hrandfield' command"},
+			delays: []time.Duration{0},
 		},
 	}
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			for i, cmd := range tc.commands {
+			for i, cmd := range tc.cmds {
+				if tc.delays[i] > 0 {
+					time.Sleep(tc.delays[i])
+				}
 				result := FireCommand(conn, cmd)
-				expected := tc.expected[i]
+				expected := tc.expect[i]
 
 				switch expected := expected.(type) {
 				case []string:
