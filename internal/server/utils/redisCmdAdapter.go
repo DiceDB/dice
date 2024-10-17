@@ -34,7 +34,7 @@ const (
 	JSON        = "json"
 )
 
-const QWatch string = "QWATCH"
+const QWatch string = "Q.WATCH"
 
 func ParseHTTPRequest(r *http.Request) (*cmd.DiceDBCmd, error) {
 	commandParts := strings.Split(strings.TrimPrefix(r.URL.Path, "/"), "/")
@@ -146,7 +146,7 @@ func ParseWebsocketMessage(msg []byte) (*cmd.DiceDBCmd, error) {
 		// remove quotes from query string
 		cmdStr, err := strconv.Unquote(cmdStr)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing qwatch query: %v", err)
+			return nil, fmt.Errorf("error parsing q.watch query: %v", err)
 		}
 		cmdArr = []string{cmdStr}
 	} else {
