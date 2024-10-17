@@ -3077,25 +3077,14 @@ func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 			input:          []string{"KEY"},
 			migratedOutput: EvalResponse{Result: clientio.Encode([]string{}, false), Error: nil},
 		},
-		// {
-		// 	name: "HKEYS key exists but not a hash",
-		// 	setup: func() {
-		// 		evalSET([]string{"string_key", "string_value"}, store)
-		// 		// key := "KEY_MOCK"
-		// 		// newMap := make(HashMap)
-
-		// 		// obj := &object.Obj{
-		// 		// 	TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
-		// 		// 	Value:          newMap,
-		// 		// 	LastAccessedAt: uint32(time.Now().Unix()),
-		// 		// }
-
-		// 		// store.Put(key, obj)
-		// 	},
-		// 	// input:          []string{"KEY_MOCK"},
-		// 	input:          []string{"string_key"},
-		// 	migratedOutput: EvalResponse{Result: clientio.Encode(0, false), Error: nil},
-		// },
+		{
+			name: "HKEYS key exists but not a hash",
+			setup: func() {
+				evalSET([]string{"string_key", "string_value"}, store)
+			},
+			input:          []string{"string_key"},
+			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
+		},
 		{
 			name: "HKEYS key exists and is a hash",
 			setup: func() {
