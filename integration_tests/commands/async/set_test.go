@@ -213,7 +213,6 @@ func TestConcurrentSetCommands(t *testing.T) {
 			value: int64(i),
 		}
 		requests[client] = req
-		fmt.Printf("i: %v\t localAddr: %v\t RemoteAddr: %v\n", i, client.LocalAddr(), client.RemoteAddr())
 	}
 
 	// set and get value
@@ -229,7 +228,6 @@ func TestConcurrentSetCommands(t *testing.T) {
 	// verify responses
 	assert.Equal(t, numOfClients, len(respChan))
 	for resp := range respChan {
-		fmt.Printf("final assertion: %v\n", resp.client.LocalAddr())
 		got := resp.response
 		want := requests[resp.client].value
 		assert.Equal(t, want, got, "LocalAdds: %v, got: %v, want: %v", resp.client.LocalAddr(), want, got)
@@ -239,15 +237,11 @@ func TestConcurrentSetCommands(t *testing.T) {
 func executeSetAndGet(t *testing.T, client net.Conn, req reqSet, respChan chan respSet, wg *sync.WaitGroup) {
 	defer wg.Done()
 	defer client.Close()
-	fmt.Printf("Goroutine: Processing for LocalAddr: %v\n", client.LocalAddr())
 
 	resp := FireCommand(client, fmt.Sprintf("SET %v %v", req.key, req.value))
-	fmt.Printf("Goroutine: setting value: %v\n", req.value)
-	fmt.Printf("Set %v at %v\n", req.value, time.Now().UnixNano())
 	assert.Equal(t, "OK", resp, "setting value failed")
 
 	resp = FireCommand(client, fmt.Sprintf("GET %v", req.key))
-	fmt.Printf("Goroutine: getting value: %v\n", resp)
 	assert.NotNil(t, resp, "received nil value in GET") // value should not be nil i.e. not set
 
 	response, ok := resp.(int64)
