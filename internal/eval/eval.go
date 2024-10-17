@@ -58,6 +58,22 @@ type EvalResponse struct {
 	Error  error
 }
 
+//go:inline
+func makeEvalResult(result interface{}) *EvalResponse {
+	return &EvalResponse{
+		Result: result,
+		Error:  nil,
+	}
+}
+
+//go:inline
+func makeEvalError(err error) *EvalResponse {
+	return &EvalResponse{
+		Result: nil,
+		Error:  err,
+	}
+}
+
 type jsonOperation string
 
 const (
