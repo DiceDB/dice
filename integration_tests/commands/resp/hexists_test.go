@@ -6,18 +6,23 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func TestHexists(t *testing.T){
+func TestHExists(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 
 	testCases := []TestCase{
 		{
-			name: "Check if field exists when k f and v are set",
+			name:     "RESP Check if field exists when k f and v are set",
 			commands: []string{"HSET key field value", "HEXISTS key field"},
 			expected: []interface{}{int64(1), int64(1)},
 		},
 		{
-			name: "Check if field exists when k exists but not f and v",
+			name:     "RESP Check if field exists when k exists but not f and v",
+			commands: []string{"HSET key field1 value", "HEXISTS key field"},
+			expected: []interface{}{int(1), int64(0)},
+		},
+		{
+			name:     "RESP Check if field exists when no k,f and v exist",
 			commands: []string{"HEXISTS key field"},
 			expected: []interface{}{int64(0)},
 		},
