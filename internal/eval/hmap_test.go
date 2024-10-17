@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/store"
@@ -86,19 +85,21 @@ func TestGetValueFromHashMap(t *testing.T) {
 
 	store.Put(key, obj)
 
+	// Test case: Fetching an existing field
 	val, err := getValueFromHashMap(key, field, store)
 	assert.Nil(t, err, "Expected no error when fetching an existing value from the hashmap")
-	assert.Equal(t, clientio.Encode("value1", false), val, "Expected value1 to be fetched for key1 and field1")
+	assert.NotNil(t, val, "Expected a non-nil value to be fetched for key 'key1' and field 'field1'")
+	assert.Equal(t, value, *val, "Expected 'value1' to be fetched for key 'key1' and field 'field1'")
 
-	// Fetching a non-existing field (should return RESP NIL)
+	// Test case: Fetching a non-existing field (should return nil)
 	val, err = getValueFromHashMap(key, "nonfield", store)
-	assert.Nil(t, err, "Expected no error when fetching a non-existing value from the hashmap")
-	assert.Equal(t, clientio.RespNIL, val, "Expected the value to give RespNIL")
+	assert.Nil(t, err, "Expected no error when fetching a non-existing field from the hashmap")
+	assert.Nil(t, val, "Expected nil to be returned for a non-existing field")
 
-	// Fetching a non-existing key (should return RESP NIL)
+	// Test case: Fetching a non-existing key (should return nil)
 	val, err = getValueFromHashMap("nonkey", field, store)
 	assert.Nil(t, err, "Expected no error when fetching a non-existing key from the hashmap")
-	assert.Equal(t, clientio.RespNIL, val, "Expected the value to give RespNIL")
+	assert.Nil(t, val, "Expected nil to be returned for a non-existing key")
 }
 
 func TestHashMapIncrementFloatValue(t *testing.T) {
