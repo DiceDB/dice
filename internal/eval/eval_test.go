@@ -935,15 +935,19 @@ func testEvalJSONARRTRIM(t *testing.T, store *dstore.Store) {
 	}
 }
 
-
 func testEvalJSONARRINSERT(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"nil value": {
-			setup:  func() {},
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'json.arrinsert' command\r\n"),
+	tests := []evalTestCase{
+		{
+			name:  "nil value",
+			setup: func() {},
+			input: nil,
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("JSON.ARRINSERT"),
+			},
 		},
-		"key does not exist": {
+		{
+			name: "key does not exist",
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "{\"a\":2}"
@@ -952,10 +956,14 @@ func testEvalJSONARRINSERT(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"NONEXISTENT_KEY", "$.a", "0", "1"},
-			output: []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
+			input: []string{"NONEXISTENT_KEY", "$.a", "0", "1"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("key does not exist"),
+			},
 		},
-		"index is not integer": {
+		{
+			name: "index is not integer",
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "{\"a\":2}"
@@ -964,10 +972,14 @@ func testEvalJSONARRINSERT(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"EXISTING_KEY", "$.a", "a", "1"},
-			output: []byte("-ERR Couldn't parse as integer\r\n"),
+			input: []string{"EXISTING_KEY", "$.a", "a", "1"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrIntegerOutOfRange,
+			},
 		},
-		"index out of bounds": {
+		{
+			name: "index out of bounds",
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "[1,2,3]"
@@ -976,10 +988,14 @@ func testEvalJSONARRINSERT(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"EXISTING_KEY", "$", "4", "\"a\"", "1"},
-			output: []byte("-ERR index out of bounds\r\n"),
+			input: []string{"EXISTING_KEY", "$", "4", "\"a\"", "1"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("index out of bounds"),
+			},
 		},
-		"root path is not array": {
+		{
+			name: "root path is not array",
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "{\"a\":2}"
@@ -988,10 +1004,14 @@ func testEvalJSONARRINSERT(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"EXISTING_KEY", "$.a", "0", "6"},
-			output: []byte("*1\r\n$-1\r\n"),
+			input: []string{"EXISTING_KEY", "$.a", "0", "6"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{nil},
+				Error:  nil,
+			},
 		},
-		"root path is array": {
+		{
+			name: "root path is array",
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "[1,2]"
@@ -1000,34 +1020,46 @@ func testEvalJSONARRINSERT(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"EXISTING_KEY", "$", "0", "6", "\"a\"", "3.14"},
-			output: []byte("*1\r\n:5\r\n"),
+			input: []string{"EXISTING_KEY", "$", "0", "6", "\"a\"", "3.14"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{5},
+				Error:  nil,
+			},
 		},
-		"subpath array insert positive index": {
+		{
+			name: "subpath array insert positive index",
 			setup: func() {
 				key := "EXISTING_KEY"
-				value := "{\"connection\":{\"wireless\":true,\"names\":[\"1\",\"2\"]},\"price\":99.98,\"names\":[3,4]}"
+				value := `{"connection":{"wireless":true,"names":["1","2"]},"price":99.98,"names":[3,4]}`
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"EXISTING_KEY", "$..names", "2", "7", "8"},
-			output: []byte("*2\r\n:4\r\n:4\r\n"),
+			input: []string{"EXISTING_KEY", "$..names", "2", "7", "8"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{4, 4},
+				Error:  nil,
+			},
 		},
-		"subpath array insert negative index": {
+		{
+			name: "subpath array insert negative index",
 			setup: func() {
 				key := "EXISTING_KEY"
-				value := "{\"connection\":{\"wireless\":true,\"names\":[\"1\",\"2\"]},\"price\":99.98,\"names\":[3,4]}"
+				value := `{"connection":{"wireless":true,"names":["1","2"]},"price":99.98,"names":[3,4]}`
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"EXISTING_KEY", "$..names", "-1", "7", "8"},
-			output: []byte("*2\r\n:4\r\n:4\r\n"),
+			input: []string{"EXISTING_KEY", "$..names", "-1", "7", "8"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{4, 4},
+				Error:  nil,
+			},
 		},
-		"array insert with multitype value": {
+		{
+			name: "array insert with multitype value",
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "{\"a\":[1,2,3]}"
@@ -1036,11 +1068,39 @@ func testEvalJSONARRINSERT(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"EXISTING_KEY", "$.a", "0", "1", "null", "3.14", "true", "{\"a\":123}"},
-			output: []byte("*1\r\n:8\r\n"),
+			input: []string{"EXISTING_KEY", "$.a", "0", "1", "null", "3.14", "true", "{\"a\":123}"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{8},
+				Error:  nil,
+			},
 		},
 	}
-	runEvalTests(t, tests, evalJSONARRINSERT, store)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store = setupTest(store)
+
+			if tt.setup != nil {
+				tt.setup()
+			}
+
+			response := evalJSONARRINSERT(tt.input, store)
+
+			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
+				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
+					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+				}
+			} else {
+				testifyAssert.Equal(t, tt.migratedOutput.Result, response.Result)
+			}
+
+			if tt.migratedOutput.Error != nil {
+				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+			} else {
+				testifyAssert.NoError(t, response.Error)
+			}
+		})
+	}
 }
 
 func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {

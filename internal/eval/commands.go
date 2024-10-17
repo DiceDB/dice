@@ -293,7 +293,8 @@ var (
 		Returns nil if the matching JSON value is not an array.
 		Returns error response if the key doesn't exist or key is expired or the matching value is not an array.
 		Error reply: If the number of arguments is incorrect.`,
-		Eval:     evalJSONARRINSERT,
+		NewEval:     evalJSONARRINSERT,
+		IsMigrated: true,
 		Arity:    -5,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
