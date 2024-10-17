@@ -106,6 +106,7 @@ OK
 127.0.0.1:7379> EXPIRE mykey 10
 OK
 127.0.0.1:7379> GETEX mykey PERSIST
+127.0.0.1:7379> "Hello"
 ```
 
 - This command will return `"Hello"` and remove the expiration time of `mykey`, making it persistent.
