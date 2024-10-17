@@ -60,6 +60,7 @@ The `GETEX` command can raise errors in the following scenarios:
 127.0.0.1:7379> SET mykey "Hello"
 OK
 127.0.0.1:7379> GETEX mykey EX 10
+127.0.0.1:7379> "Hello"
 ```
 
 - This command will return `"Hello"` and set the expiration time of `mykey` to 10 seconds.
