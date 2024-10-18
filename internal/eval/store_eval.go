@@ -910,3 +910,27 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 		Error:  nil,
 	}
 }
+
+
+// evalDEL deletes all the specified keys in args list
+// returns the count of total deleted keys after encoding
+func evalDEL(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("DEL"),
+		}
+	}
+
+	var count int64
+	for _, key := range args {
+		if ok := store.Del(key); ok {
+			count++
+		}
+	}
+
+	return &EvalResponse{
+		Result: count,
+		Error:  nil,
+	}
+}
