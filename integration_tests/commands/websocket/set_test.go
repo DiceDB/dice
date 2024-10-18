@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 type TestCase struct {
@@ -39,11 +39,13 @@ func TestSet(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			conn := exec.ConnectToServer()
-			exec.FireCommand(conn, "del k")
+
+			DeleteKey(t, conn, exec, "k")
 
 			for i, cmd := range tc.commands {
-				result := exec.FireCommand(conn, cmd)
-				assert.DeepEqual(t, tc.expected[i], result)
+				result, err := exec.FireCommandAndReadResponse(conn, cmd)
+				assert.Nil(t, err)
+				assert.Equal(t, tc.expected[i], result)
 			}
 		})
 	}
@@ -124,11 +126,14 @@ func TestSetWithOptions(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			conn := exec.ConnectToServer()
-			exec.FireCommand(conn, "del k")
-			exec.FireCommand(conn, "del k1")
-			exec.FireCommand(conn, "del k2")
+
+			DeleteKey(t, conn, exec, "k")
+			DeleteKey(t, conn, exec, "k1")
+			DeleteKey(t, conn, exec, "k2")
+
 			for i, cmd := range tc.commands {
-				result := exec.FireCommand(conn, cmd)
+				result, err := exec.FireCommandAndReadResponse(conn, cmd)
+				assert.Nil(t, err)
 				assert.Equal(t, tc.expected[i], result)
 			}
 		})
@@ -143,32 +148,76 @@ func TestSetWithExat(t *testing.T) {
 	t.Run("SET with EXAT",
 		func(t *testing.T) {
 			conn := exec.ConnectToServer()
-			exec.FireCommand(conn, "DEL k")
-			assert.Equal(t, "OK", exec.FireCommand(conn, fmt.Sprintf("SET k v EXAT %v", Etime)), "Value mismatch for cmd SET k v EXAT "+Etime)
-			assert.Equal(t, "v", exec.FireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
-			assert.Assert(t, exec.FireCommand(conn, "TTL k").(float64) <= 5, "Value mismatch for cmd TTL k")
+
+			DeleteKey(t, conn, exec, "k")
+
+			resp, err := exec.FireCommandAndReadResponse(conn, fmt.Sprintf("SET k v EXAT %v", Etime))
+			assert.Nil(t, err)
+			assert.Equal(t, "OK", resp, "Value mismatch for cmd SET k v EXAT "+Etime)
+
+			resp, err = exec.FireCommandAndReadResponse(conn, "GET k")
+			assert.Nil(t, err)
+			assert.Equal(t, "v", resp, "Value mismatch for cmd GET k")
+
+			resp, err = exec.FireCommandAndReadResponse(conn, "TTL k")
+			assert.Nil(t, err)
+			respFloat, ok := resp.(float64)
+			assert.True(t, ok)
+			assert.True(t, respFloat <= 5, "Value mismatch for cmd TTL k")
+
 			time.Sleep(3 * time.Second)
-			assert.Assert(t, exec.FireCommand(conn, "TTL k").(float64) <= 3, "Value mismatch for cmd TTL k")
+			resp, err = exec.FireCommandAndReadResponse(conn, "TTL k")
+			assert.Nil(t, err)
+			respFloat, ok = resp.(float64)
+			assert.True(t, ok)
+			assert.True(t, respFloat <= 3, "Value mismatch for cmd TTL k")
+
 			time.Sleep(3 * time.Second)
-			assert.Equal(t, "(nil)", exec.FireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
-			assert.Equal(t, float64(-2), exec.FireCommand(conn, "TTL k"), "Value mismatch for cmd TTL k")
+			resp, err = exec.FireCommandAndReadResponse(conn, "GET k")
+			assert.Nil(t, err)
+			assert.Equal(t, "(nil)", resp, "Value mismatch for cmd GET k")
+
+			resp, err = exec.FireCommandAndReadResponse(conn, "TTL k")
+			assert.Nil(t, err)
+			respFloat, ok = resp.(float64)
+			assert.True(t, ok)
+			assert.Equal(t, float64(-2), respFloat, "Value mismatch for cmd TTL k")
 		})
 
 	t.Run("SET with invalid EXAT expires key immediately",
 		func(t *testing.T) {
 			conn := exec.ConnectToServer()
-			exec.FireCommand(conn, "DEL k")
-			assert.Equal(t, "OK", exec.FireCommand(conn, "SET k v EXAT "+BadTime), "Value mismatch for cmd SET k v EXAT "+BadTime)
-			assert.Equal(t, "(nil)", exec.FireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
-			assert.Equal(t, float64(-2), exec.FireCommand(conn, "TTL k"), "Value mismatch for cmd TTL k")
+
+			DeleteKey(t, conn, exec, "k")
+
+			resp, err := exec.FireCommandAndReadResponse(conn, "SET k v EXAT "+BadTime)
+			assert.Nil(t, err)
+			assert.Equal(t, "OK", resp, "Value mismatch for cmd SET k v EXAT "+BadTime)
+
+			resp, err = exec.FireCommandAndReadResponse(conn, "GET k")
+			assert.Nil(t, err)
+			assert.Equal(t, "(nil)", resp, "Value mismatch for cmd GET k")
+
+			resp, err = exec.FireCommandAndReadResponse(conn, "TTL k")
+			assert.Nil(t, err)
+			respFloat, ok := resp.(float64)
+			assert.True(t, ok)
+			assert.Equal(t, float64(-2), respFloat, "Value mismatch for cmd TTL k")
 		})
 
 	t.Run("SET with EXAT and PXAT returns syntax error",
 		func(t *testing.T) {
 			conn := exec.ConnectToServer()
-			exec.FireCommand(conn, "DEL k")
-			assert.Equal(t, "ERR syntax error", exec.FireCommand(conn, "SET k v PXAT "+Etime+" EXAT "+Etime), "Value mismatch for cmd SET k v PXAT "+Etime+" EXAT "+Etime)
-			assert.Equal(t, "(nil)", exec.FireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
+
+			DeleteKey(t, conn, exec, "k")
+
+			resp, err := exec.FireCommandAndReadResponse(conn, "SET k v PXAT "+Etime+" EXAT "+Etime)
+			assert.Nil(t, err)
+			assert.Equal(t, "ERR syntax error", resp, "Value mismatch for cmd SET k v PXAT "+Etime+" EXAT "+Etime)
+
+			resp, err = exec.FireCommandAndReadResponse(conn, "GET k")
+			assert.Nil(t, err)
+			assert.Equal(t, "(nil)", resp, "Value mismatch for cmd GET k")
 		})
 }
 
@@ -185,14 +234,17 @@ func TestWithKeepTTLFlag(t *testing.T) {
 		for i := 0; i < len(tcase.commands); i++ {
 			cmd := tcase.commands[i]
 			out := tcase.expected[i]
-			assert.Equal(t, out, exec.FireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
+
+			resp, err := exec.FireCommandAndReadResponse(conn, cmd)
+			assert.Nil(t, err)
+			assert.Equal(t, out, resp, "Value mismatch for cmd %s\n.", cmd)
 		}
 	}
 
 	time.Sleep(2 * time.Second)
-
 	cmd := "GET k"
 	out := "(nil)"
-
-	assert.Equal(t, out, exec.FireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
+	resp, err := exec.FireCommandAndReadResponse(conn, cmd)
+	assert.Nil(t, err)
+	assert.Equal(t, out, resp, "Value mismatch for cmd %s\n.", cmd)
 }
