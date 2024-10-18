@@ -6385,7 +6385,7 @@ func testEvalINCR(t *testing.T, store *dstore.Store) {
 		{
 			name:           "INCR More than one args passed",
 			input:          []string{"KEY4", "ARG2"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'INCR' command")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'incr' command")},
 		},
 		{
 			name: "INCR Max Overflow",
@@ -6473,7 +6473,7 @@ func testEvalINCRBY(t *testing.T, store *dstore.Store) {
 		{
 			name:           "INCRBY Wrong number of args passed",
 			input:          []string{"KEY4"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'INCRBY' command")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'incrby' command")},
 		},
 		{
 			name: "INCRBY Max Overflow",
@@ -6561,7 +6561,7 @@ func testEvalDECR(t *testing.T, store *dstore.Store) {
 		{
 			name:           "DECR More than one args passed",
 			input:          []string{"KEY4", "ARG2"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'DECR' command")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'decr' command")},
 		},
 		{
 			name: "DECR Min Overflow",
@@ -6649,7 +6649,7 @@ func testEvalDECRBY(t *testing.T, store *dstore.Store) {
 		{
 			name:           "DECRBY Wrong number of args passed",
 			input:          []string{"KEY4"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'DECRBY' command")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'decrby' command")},
 		},
 		{
 			name: "DECRBY Min Overflow",
