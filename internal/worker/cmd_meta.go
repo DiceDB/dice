@@ -41,19 +41,22 @@ const (
 
 // Single-shard commands.
 const (
-	CmdSet         = "SET"
-	CmdGet         = "GET"
-	CmdGetSet      = "GETSET"
-	CmdGetWatch    = "GET.WATCH"
-	CmdZRangeWatch = "ZRANGE.WATCH"
-	CmdJSONClear   = "JSON.CLEAR"
-	CmdJSONStrlen  = "JSON.STRLEN"
-	CmdJSONObjlen  = "JSON.OBJLEN"
-	CmdZAdd        = "ZADD"
-	CmdZRange      = "ZRANGE"
-	CmdPFAdd       = "PFADD"
-	CmdPFCount     = "PFCOUNT"
-	CmdPFMerge     = "PFMERGE"
+	CmdSet           = "SET"
+	CmdGet           = "GET"
+	CmdGetSet        = "GETSET"
+	CmdGetWatch      = "GET.WATCH"
+	CmdZRangeWatch   = "ZRANGE.WATCH"
+	CmdJSONArrAppend = "JSON.ARRAPPEND"
+	CmdJSONArrLen    = "JSON.ARRLEN"
+	CmdJSONArrPop    = "JSON.ARRPOP"
+	CmdJSONClear     = "JSON.CLEAR"
+	CmdJSONStrlen    = "JSON.STRLEN"
+	CmdJSONObjlen    = "JSON.OBJLEN"
+	CmdZAdd          = "ZADD"
+	CmdZRange        = "ZRANGE"
+	CmdPFAdd         = "PFADD"
+	CmdPFCount       = "PFCOUNT"
+	CmdPFMerge       = "PFMERGE"
 )
 
 type CmdMeta struct {
@@ -86,6 +89,15 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdGetSet: {
+		CmdType: SingleShard,
+	},
+	CmdJSONArrAppend: {
+		CmdType: SingleShard,
+	},
+	CmdJSONArrLen: {
+		CmdType: SingleShard,
+	},
+	CmdJSONArrPop: {
 		CmdType: SingleShard,
 	},
 	CmdJSONClear: {
