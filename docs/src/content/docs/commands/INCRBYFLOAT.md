@@ -41,9 +41,9 @@ The `INCRBYFLOAT` command can raise errors in the following scenarios:
 
 1. `Wrong Type Error`:
 
-   - Error Message: `ERR  value is not an integer or float`
-   - This error occurs if the increment value provided is not a valid integer.
-   - This error occurs if the key exists but its value is not a string that can be represented as an integer
+   - Error Message: `ERR  value is not a valid float`
+   - This error occurs if the increment value provided is not a valid number.
+   - This error occurs if the key exists but its value is not a string that can be represented as an number
 
 2. `Syntax Error`:
 

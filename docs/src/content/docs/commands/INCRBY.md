@@ -52,7 +52,7 @@ The `INCRBY` command can raise errors in the following scenarios:
 
 3. `Overflow Error`:
 
-   - Error Message: `(error) ERR increment or decrement would overflow`
+   - Error Message: `ERR increment or decrement would overflow`
    - If the increment operation causes the value to exceed the maximum integer value that DiceDB can handle, an overflow error will occur.
 
 
