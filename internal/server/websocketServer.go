@@ -128,6 +128,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		// read incoming message
 		_, msg, err := conn.ReadMessage()
 		if err != nil {
+			s.logger.Warn("failed to read message from client", slog.Any("localAddr", conn.LocalAddr()))
 			break
 		}
 
@@ -162,7 +163,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 			WebsocketOp: true,
 		}
 
-		// handle qwatch commands
+		// handle q.watch commands
 		if diceDBCmd.Cmd == Qwatch || diceDBCmd.Cmd == Subscribe {
 			clientIdentifierID := generateUniqueInt32(r)
 			sp.Client = comm.NewHTTPQwatchClient(s.qwatchResponseChan, clientIdentifierID)
@@ -185,7 +186,7 @@ func (s *WebsocketServer) processQwatchUpdates(clientIdentifierID uint32, conn *
 		case resp := <-s.qwatchResponseChan:
 			if resp.ClientIdentifierID == clientIdentifierID {
 				if err := s.processResponse(conn, dicDBCmd, resp); err != nil {
-					s.logger.Debug("Error writing response to client. Shutting down goroutine for qwatch updates", slog.Any("clientIdentifierID", clientIdentifierID), slog.Any("error", err))
+					s.logger.Debug("Error writing response to client. Shutting down goroutine for q.watch updates", slog.Any("clientIdentifierID", clientIdentifierID), slog.Any("error", err))
 					return
 				}
 			}
