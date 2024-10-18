@@ -376,8 +376,20 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.Store
 		"*0",     // Represents an empty RESP Array.
 	}
 
-	if val, ok := responseValue.(clientio.RespType); ok {
+	switch val := responseValue.(type) {
+	case clientio.RespType:
 		responseValue = respArr[val]
+	case []interface{}:
+		migrated := false
+		for idx := range val {
+			if v, ok := val[idx].(clientio.RespType); ok {
+				migrated = true
+				val[idx] = respArr[v]
+			}
+		}
+		if migrated {
+			responseValue = val
+		}
 	}
 
 	if responseValue == stringNil {
