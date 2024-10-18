@@ -1,9 +1,9 @@
 ---
-title: QWATCH
-description: The `QWATCH` command is a novel feature designed to provide real-time updates to clients based on changes in underlying data.
+title: Q.WATCH
+description: The `Q.WATCH` command is a novel feature designed to provide real-time updates to clients based on changes in underlying data.
 ---
 
-The `QWATCH` command is a novel feature designed to provide real-time updates to clients based on changes in underlying data. It operates similarly to the `SUBSCRIBE` command but focuses on SQL-like queries over data structures. Whenever data modifications affect the query's results, the updated result set is pushed to the subscribed client. This eliminates the need for clients to constantly poll for changes.
+The `Q.WATCH` command is a novel feature designed to provide real-time updates to clients based on changes in underlying data. It operates similarly to the `SUBSCRIBE` command but focuses on SQL-like queries over data structures. Whenever data modifications affect the query's results, the updated result set is pushed to the subscribed client. This eliminates the need for clients to constantly poll for changes.
 
 This command is what makes DiceDB different from Redis and uniquely positions it as the easiest and most intuitive way to build real-time reactive applications like leaderboards.
 
@@ -13,12 +13,12 @@ This command is what makes DiceDB different from Redis and uniquely positions it
 | -------- | --------- |
 | TCP-RESP | ✅        |
 | HTTP     | ✅        |
-| WebSocket| ❌        |
+| WebSocket| ✅        |
 
 ## Syntax
 
 ```
-QWATCH dsql-query
+Q.WATCH dsql-query
 ```
 
 ## Parameters
@@ -72,12 +72,12 @@ Supported features:
 
 ## Example Usage with Query Flow
 
-Let's explore a practical example of using the `QWATCH` command to create a real-time leaderboard for a game match, including filtering with a `WHERE` clause.
+Let's explore a practical example of using the `Q.WATCH` command to create a real-time leaderboard for a game match, including filtering with a `WHERE` clause.
 
 ### Query
 
 ```bash
-127.0.0.1:7379> QWATCH "SELECT $key, $value WHERE $key like 'match:100:*' AND $value > 10 ORDER BY $value DESC LIMIT 3"
+127.0.0.1:7379> Q.WATCH "SELECT $key, $value WHERE $key like 'match:100:*' AND $value > 10 ORDER BY $value DESC LIMIT 3"
 ```
 
 This query does the following:
@@ -91,11 +91,11 @@ This query does the following:
 
 Imagine we're tracking player scores in a game match with ID 100. Each player's score is stored in a key formatted as `match:100:user:<userID>`.
 
-Let's walk through a series of updates and see how the `QWATCH` command responds. Please note
+Let's walk through a series of updates and see how the `Q.WATCH` command responds. Please note
 that the response will be RESP encoded and parsing will be handled by the SDK that you are using.
 
 1. Initial state (empty leaderboard):
-   QWATCH response: `[] (empty array)`
+   Q.WATCH response: `[] (empty array)`
 
 2. Player 0 scores 5 points:
 
@@ -103,7 +103,7 @@ that the response will be RESP encoded and parsing will be handled by the SDK th
    127.0.0.1:7379> SET match:100:user:0 5
    ```
 
-   QWATCH response: `[] (no change, score <= 10)`
+   Q.WATCH response: `[] (no change, score <= 10)`
 
 3. Player 1 scores 15 points:
 
@@ -111,7 +111,7 @@ that the response will be RESP encoded and parsing will be handled by the SDK th
    127.0.0.1:7379> SET match:100:user:1 15
    ```
 
-   QWATCH response: `[["match:100:user:1", "15"]]`
+   Q.WATCH response: `[["match:100:user:1", "15"]]`
 
 4. Player 2 scores 20 points:
 
@@ -119,7 +119,7 @@ that the response will be RESP encoded and parsing will be handled by the SDK th
    127.0.0.1:7379> SET match:100:user:2 20
    ```
 
-   QWATCH response: `[["match:100:user:2", "20"], ["match:100:user:1", "15"]]`
+   Q.WATCH response: `[["match:100:user:2", "20"], ["match:100:user:1", "15"]]`
 
 5. Player 3 scores 12 points:
 
@@ -127,7 +127,7 @@ that the response will be RESP encoded and parsing will be handled by the SDK th
    127.0.0.1:7379> SET match:100:user:3 12
    ```
 
-   QWATCH response: `[["match:100:user:2", "20"], ["match:100:user:1", "15"], ["match:100:user:3", "12"]]`
+   Q.WATCH response: `[["match:100:user:2", "20"], ["match:100:user:1", "15"], ["match:100:user:3", "12"]]`
 
 6. Player 4 scores 25 points:
 
@@ -135,21 +135,21 @@ that the response will be RESP encoded and parsing will be handled by the SDK th
    127.0.0.1:7379> SET match:100:user:4 25
    ```
 
-   QWATCH response: `[["match:100:user:4", "25"], ["match:100:user:2", "20"], ["match:100:user:1", "15"]]`
+   Q.WATCH response: `[["match:100:user:4", "25"], ["match:100:user:2", "20"], ["match:100:user:1", "15"]]`
 
 7. Player 0 improves their score to 30:
    ```bash
    127.0.0.1:7379> SET match:100:user:0 30
    ```
-   QWATCH response: `[["match:100:user:0", "30"], ["match:100:user:4", "25"], ["match:100:user:2", "20"]]`
+   Q.WATCH response: `[["match:100:user:0", "30"], ["match:100:user:4", "25"], ["match:100:user:2", "20"]]`
 
-This example demonstrates how `QWATCH` provides real-time updates as the leaderboard changes, always keeping clients informed of the top 3 scores above 10, without the need for constant polling.
+This example demonstrates how `Q.WATCH` provides real-time updates as the leaderboard changes, always keeping clients informed of the top 3 scores above 10, without the need for constant polling.
 
 ## Error Handling
 
 - `ERR invalid query`: If the provided query is malformed or unsupported.
 - `ERR syntax error`: If the query syntax is incorrect.
-- `ERR unknown command`: If the `QWATCH` command is not implemented.
+- `ERR unknown command`: If the `Q.WATCH` command is not implemented.
 - `ERR max number of subscriptions reached`: If the maximum number of allowed subscriptions is exceeded.
 
 ## Best Practices
