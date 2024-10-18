@@ -111,11 +111,11 @@ func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 
 	sp := &ops.StoreResponse{
 		RequestID: op.RequestID,
+		SeqID:     op.SeqID,
 	}
 
 	if ok {
 		sp.EvalResponse = resp
-		sp.EvalResponse.SeqID = op.SeqID
 	} else {
 		shard.shardErrorChan <- &ShardError{
 			ShardID: shard.id,

@@ -7,6 +7,7 @@ import (
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/eval"
 	"github.com/dicedb/dice/internal/logger"
+	"github.com/dicedb/dice/internal/ops"
 )
 
 type CmdType int
@@ -49,10 +50,14 @@ const (
 
 // Multi-shard commands.
 const (
+	CmdMset = "MSET"
+	CmdMget = "MGET"
+)
+
+// Multi-Step-Multi-Shard commands
+const (
 	CmdRename = "RENAME"
 	CmdCopy   = "COPY"
-	CmdMset   = "MSET"
-	CmdMget   = "MGET"
 )
 
 // Watch commands
@@ -75,7 +80,7 @@ type CmdMeta struct {
 	// composeResponse is a function that combines multiple responses from the execution of commands
 	// into a single response object. It accepts a variadic parameter of EvalResponse objects
 	// and returns a unified response interface. It is used in the command type "MultiShard"
-	composeResponse func(responses ...eval.EvalResponse) interface{}
+	composeResponse func(responses ...ops.StoreResponse) interface{}
 
 	// preProcessingReq indicates whether the command requires preprocessing before execution.
 	// If set to true, it signals that a preliminary step (such as fetching values from shards)

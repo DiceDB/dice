@@ -17,14 +17,9 @@ func preProcessRename(w *BaseWorker, diceDBCmd *cmd.DiceDBCmd) {
 		Args: []string{key},
 	}
 
-	requestID, err := GenerateRandomUint32()
-	if err != nil {
-		requestID = 0
-	}
-
 	rc <- &ops.StoreOp{
 		SeqID:         0,
-		RequestID:     requestID,
+		RequestID:     GenerateUniqueRequestID(),
 		Cmd:           &preCmd,
 		WorkerID:      w.id,
 		ShardID:       sid,
@@ -45,14 +40,9 @@ func preProcessCopy(w *BaseWorker, diceDBCmd *cmd.DiceDBCmd) {
 		Args: []string{key},
 	}
 
-	requestID, err := GenerateRandomUint32()
-	if err != nil {
-		requestID = 0
-	}
-
 	rc <- &ops.StoreOp{
 		SeqID:         0,
-		RequestID:     requestID,
+		RequestID:     GenerateUniqueRequestID(),
 		Cmd:           &preCmd,
 		WorkerID:      w.id,
 		ShardID:       sid,

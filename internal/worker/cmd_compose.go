@@ -4,7 +4,7 @@ import (
 	"sort"
 
 	"github.com/dicedb/dice/internal/clientio"
-	"github.com/dicedb/dice/internal/eval"
+	"github.com/dicedb/dice/internal/ops"
 )
 
 // This file contains functions used by the Worker to handle and process responses
@@ -23,10 +23,10 @@ import (
 // It iterates through all shard responses, checking for any errors. If an error is found
 // in any shard response, it returns that error immediately. If all responses are successful,
 // it returns an "OK" response to indicate that the Rename operation succeeded across all shards.
-func composeRename(responses ...eval.EvalResponse) interface{} {
+func composeRename(responses ...ops.StoreResponse) interface{} {
 	for idx := range responses {
-		if responses[idx].Error != nil {
-			return responses[idx].Error
+		if responses[idx].EvalResponse.Error != nil {
+			return responses[idx].EvalResponse.Error
 		}
 	}
 
@@ -38,10 +38,10 @@ func composeRename(responses ...eval.EvalResponse) interface{} {
 // in any shard response, it returns that error immediately. If all responses are successful,
 // it returns an "OK" response to indicate that the Rename operation succeeded across all shards.
 
-func composeCopy(responses ...eval.EvalResponse) interface{} {
+func composeCopy(responses ...ops.StoreResponse) interface{} {
 	for idx := range responses {
-		if responses[idx].Error != nil {
-			return responses[idx].Error
+		if responses[idx].EvalResponse.Error != nil {
+			return responses[idx].EvalResponse.Error
 		}
 	}
 
@@ -52,10 +52,10 @@ func composeCopy(responses ...eval.EvalResponse) interface{} {
 // (Multi-set operation). It loops through the responses to check if any shard returned an error.
 // If an error is detected, it immediately returns that error. Otherwise, it returns "OK"
 // to indicate that all "MSet" operations across shards were successful.
-func composeMSet(responses ...eval.EvalResponse) interface{} {
+func composeMSet(responses ...ops.StoreResponse) interface{} {
 	for idx := range responses {
-		if responses[idx].Error != nil {
-			return responses[idx].Error
+		if responses[idx].EvalResponse.Error != nil {
+			return responses[idx].EvalResponse.Error
 		}
 	}
 
@@ -67,7 +67,7 @@ func composeMSet(responses ...eval.EvalResponse) interface{} {
 // are in the correct sequence. It then checks for any errors in the responses; if any error
 // is encountered, it returns the error. If no errors are found, the function collects the
 // results from all responses and returns them as a slice.
-func composeMGet(responses ...eval.EvalResponse) interface{} {
+func composeMGet(responses ...ops.StoreResponse) interface{} {
 	sort.Slice(responses, func(i, j int) bool {
 		return responses[i].SeqID < responses[j].SeqID
 	})
@@ -75,11 +75,11 @@ func composeMGet(responses ...eval.EvalResponse) interface{} {
 	results := make([]interface{}, 0, len(responses))
 
 	for idx := range responses {
-		if responses[idx].Error != nil {
-			return responses[idx].Error
+		if responses[idx].EvalResponse.Error != nil {
+			return responses[idx].EvalResponse.Error
 		}
 
-		results = append(results, responses[idx].Result)
+		results = append(results, responses[idx].EvalResponse.Result)
 	}
 
 	return results

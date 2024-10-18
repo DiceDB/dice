@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -21,9 +22,12 @@ import (
 	"github.com/dicedb/dice/internal/clientio/requestparser"
 	"github.com/dicedb/dice/internal/cmd"
 	diceerrors "github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/eval"
 	"github.com/dicedb/dice/internal/ops"
 	"github.com/dicedb/dice/internal/shard"
+)
+
+var (
+	requestCounter uint32
 )
 
 // Worker interface
@@ -162,10 +166,8 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 func (w *BaseWorker) executeCommandHandler(execCtx context.Context, errChan chan error, cmds []*cmd.DiceDBCmd, isWatchNotification bool) {
 	// Retrieve metadata for the command to determine if multisharding is supported.
 	meta, ok := CommandsMeta[cmds[0].Cmd]
-	if ok {
-		if meta.preProcessingReq {
-			meta.preProcessResponse(w, cmds[0])
-		}
+	if ok && meta.preProcessingReq {
+		meta.preProcessResponse(w, cmds[0])
 	}
 
 	err := w.executeCommand(execCtx, cmds[0], isWatchNotification)
@@ -280,12 +282,6 @@ func (w *BaseWorker) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	default:
-
-		requestID, err := GenerateRandomUint32()
-		if err != nil {
-			requestID = 0
-		}
-
 		for i := uint8(0); i < uint8(len(cmds)); i++ {
 			var rc chan *ops.StoreOp
 			var sid shard.ShardID
@@ -300,7 +296,7 @@ func (w *BaseWorker) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd) error {
 
 			rc <- &ops.StoreOp{
 				SeqID:     i,
-				RequestID: requestID,
+				RequestID: GenerateUniqueRequestID(),
 				Cmd:       cmds[i],
 				WorkerID:  w.id,
 				ShardID:   sid,
@@ -316,14 +312,14 @@ func (w *BaseWorker) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd) error {
 // It first waits for responses from all the shards and then processes the result based on the command type (SingleShard, Custom, or Multishard).
 func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCmds int, isWatchNotification bool) error {
 	// Loop to wait for messages from number of shards
-	var evalResp []eval.EvalResponse
+	var storeOp []ops.StoreResponse
 	for numCmds != 0 {
 		select {
 		case <-ctx.Done():
 			w.logger.Error("Timed out waiting for response from shards", slog.String("workerID", w.id), slog.Any("error", ctx.Err()))
 		case resp, ok := <-w.responseChan:
 			if ok {
-				evalResp = append(evalResp, *resp.EvalResponse)
+				storeOp = append(storeOp, *resp)
 			}
 			numCmds--
 			continue
@@ -337,15 +333,15 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 	val, ok := CommandsMeta[diceDBCmd.Cmd]
 
 	if isWatchNotification {
-		if evalResp[0].Error != nil {
-			err := w.ioHandler.Write(ctx, querymanager.GenericWatchResponse(diceDBCmd.Cmd, fmt.Sprintf("%d", diceDBCmd.GetFingerprint()), evalResp[0].Error))
+		if storeOp[0].EvalResponse.Error != nil {
+			err := w.ioHandler.Write(ctx, querymanager.GenericWatchResponse(diceDBCmd.Cmd, fmt.Sprintf("%d", diceDBCmd.GetFingerprint()), storeOp[0].EvalResponse.Error))
 			if err != nil {
 				w.logger.Debug("Error sending push response to client", slog.String("workerID", w.id), slog.Any("error", err))
 			}
 			return err
 		}
 
-		err := w.ioHandler.Write(ctx, querymanager.GenericWatchResponse(diceDBCmd.Cmd, fmt.Sprintf("%d", diceDBCmd.GetFingerprint()), evalResp[0].Result))
+		err := w.ioHandler.Write(ctx, querymanager.GenericWatchResponse(diceDBCmd.Cmd, fmt.Sprintf("%d", diceDBCmd.GetFingerprint()), storeOp[0].EvalResponse.Result))
 		if err != nil {
 			w.logger.Debug("Error sending push response to client", slog.String("workerID", w.id), slog.Any("error", err))
 			return err
@@ -355,15 +351,15 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 
 	// TODO: Remove it once we have migrated all the commands
 	if !ok {
-		if evalResp[0].Error != nil {
-			err := w.ioHandler.Write(ctx, evalResp[0].Error)
+		if storeOp[0].EvalResponse.Error != nil {
+			err := w.ioHandler.Write(ctx, storeOp[0].EvalResponse.Error)
 			if err != nil {
 				w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
 			}
 			return err
 		}
 
-		err := w.ioHandler.Write(ctx, evalResp[0].Result)
+		err := w.ioHandler.Write(ctx, storeOp[0].EvalResponse.Result)
 		if err != nil {
 			w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
 			return err
@@ -372,29 +368,29 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 		switch val.CmdType {
 		case SingleShard, Custom:
 			// Handle single-shard or custom commands
-			if evalResp[0].Error != nil {
-				err := w.ioHandler.Write(ctx, evalResp[0].Error)
+			if storeOp[0].EvalResponse.Error != nil {
+				err := w.ioHandler.Write(ctx, storeOp[0].EvalResponse.Error)
 				if err != nil {
 					w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
 				}
 				return err
 			}
 
-			err := w.ioHandler.Write(ctx, evalResp[0].Result)
+			err := w.ioHandler.Write(ctx, storeOp[0].EvalResponse.Result)
 			if err != nil {
 				w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
 				return err
 			}
 
 		case MultiShard:
-			err := w.ioHandler.Write(ctx, val.composeResponse(evalResp...))
+			err := w.ioHandler.Write(ctx, val.composeResponse(storeOp...))
 			if err != nil {
 				w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
 				return err
 			}
 
 		default:
-			w.logger.Error("Unknown command type", slog.String("workerID", w.id), slog.String("command", diceDBCmd.Cmd), slog.Any("evalResp", evalResp))
+			w.logger.Error("Unknown command type", slog.String("workerID", w.id), slog.String("command", diceDBCmd.Cmd), slog.Any("evalResp", storeOp))
 			err := w.ioHandler.Write(ctx, diceerrors.ErrInternalServer)
 			if err != nil {
 				w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
@@ -455,4 +451,8 @@ func GenerateRandomUint32() (uint32, error) {
 		return 0, err // Return an error if reading failed
 	}
 	return binary.BigEndian.Uint32(b[:]), nil // Convert bytes to uint32
+}
+
+func GenerateUniqueRequestID() uint32 {
+	return atomic.AddUint32(&requestCounter, 1)
 }
