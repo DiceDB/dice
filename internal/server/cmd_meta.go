@@ -72,6 +72,8 @@ var (
 	}
 	jsonArrPopCmdMeta = CmdsMeta{
 		Cmd:     "JSON.ARRPOP",
+		CmdType: SingleShard,
+	}
 	zaddCmdMeta = CmdsMeta{
 		Cmd:     "ZADD",
 		CmdType: SingleShard,

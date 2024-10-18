@@ -49,11 +49,6 @@ const (
 	CmdJSONArrAppend = "JSON.ARRAPPEND"
 	CmdJSONArrLen    = "JSON.ARRLEN"
 	CmdJSONArrPop    = "JSON.ARRPOP"
-	CmdSet           = "SET"
-	CmdGet           = "GET"
-	CmdGetSet        = "GETSET"
-	CmdGetWatch      = "GET.WATCH"
-	CmdZRangeWatch   = "ZRANGE.WATCH"
 	CmdJSONClear     = "JSON.CLEAR"
 	CmdJSONStrlen    = "JSON.STRLEN"
 	CmdJSONObjlen    = "JSON.OBJLEN"
@@ -103,7 +98,7 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdJSONArrPop: {
-    CmdType: SingleShard,
+		CmdType: SingleShard,
 	},
 	CmdJSONClear: {
 		CmdType: SingleShard,
