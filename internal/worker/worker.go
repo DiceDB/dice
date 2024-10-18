@@ -92,7 +92,7 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 		case err := <-errChan:
 			if err != nil {
 				if errors.Is(err, net.ErrClosed) || errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) {
-					w.logger.Error("Connection closed for worker", slog.String("workerID", w.id), slog.Any("error", err))
+					w.logger.Debug("Connection closed for worker", slog.String("workerID", w.id), slog.Any("error", err))
 					return err
 				}
 			}
