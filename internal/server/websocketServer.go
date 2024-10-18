@@ -143,6 +143,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 			continue
 		}
 
+		// TODO - on abort, close client connection instead of closing server?
 		if diceDBCmd.Cmd == Abort {
 			close(s.shutdownChan)
 			break
