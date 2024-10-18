@@ -91,7 +91,7 @@ OK
 
 ```bash
 127.0.0.1:7379> JSON.TYPE user:1001 $.nonexistent
-(empty list or set)
+(empty array)
 ```
 
 ### Example 3: Key Does Not Exist
