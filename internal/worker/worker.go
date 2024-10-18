@@ -63,10 +63,10 @@ func NewWorker(wid string, respChan chan *ops.StoreResponse,
 		respChan:        respChan,
 		logger:          logger,
 		Session:         auth.NewSession(),
-		adhocReqChan:    make(chan *cmd.DiceDBCmd, config.DiceConfig.Server.AdhocReqChanBufSize),
-		keepAliveInterval: config.DiceConfig.Server.KeepAlive,
-		clientTimeout:     config.DiceConfig.Server.Timeout,
-		connectionTimeout: config.DiceConfig.Server.Timeout,
+		adhocReqChan:    make(chan *cmd.DiceDBCmd, config.DiceConfig.Performance.AdhocReqChanBufSize),
+		keepAliveInterval: config.DiceConfig.AsyncServer.KeepAlive,
+		clientTimeout:     config.DiceConfig.AsyncServer.Timeout,
+		connectionTimeout: config.DiceConfig.AsyncServer.Timeout,
 	}
 }
 
