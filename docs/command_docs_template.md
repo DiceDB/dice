@@ -12,29 +12,45 @@ SET key value [EX seconds | PX milliseconds | EXAT unix-time-seconds | PXAT unix
 ```
 
 ## Parameters
-<!-- add all parameters, small description, type and required -->
-
+<!-- please add all parameters, small description, type and required, see example for SET command-->
 | Parameter | Description                                                               | Type    | Required |
 |-----------|---------------------------------------------------------------------------|---------|----------|
 | `key`     | The name of the key to be set.                                            | String  | Yes      |
-|           |                                                                           |         |       |
-
+| `value`   | The value to be set for the key.                                          | String  | Yes      |
+| `EX`      | Set the specified expire time, in seconds.                                | Integer | No       |
+| `EXAT`    | Set the specified Unix time at which the key will expire, in seconds      | Integer | No       |
+| `PX`      | Set the specified expire time, in milliseconds.                           | Integer | No       |
+| `PXAT`    | Set the specified Unix time at which the key will expire, in milliseconds | Integer | No       |
+| `NX`      | Only set the key if it does not already exist.                            | None    | No       |
+| `XX`      | Only set the key if it already exists.                                    | None    | No       |
+| `KEEPTTL` | Retain the time-to-live associated with the key.                          | None    | No       |
 
 ## Return values
-<!-- add all scenarios -->
+<!-- add all scenarios, see below example for SET -->
 
 | Condition                                      | Return Value                                      |
 |------------------------------------------------|---------------------------------------------------|
-|                                                |                                                   |
+| if key is set successfully                     | `OK`                                              |
+| If `NX` is used and key already exists         | `nil`                                             |
+| If `XX` is used and key doesn't exist          | `nil`                                             |
 
 ## Behaviour
+<!-- How does the command execute goes here, kind of explaining the underlying algorithm -->
+<!-- see below example for SET command -->
+<!-- Please modify for the command by going through the code -->
+- If the specified key already exists, the `SET` command will overwrite the existing key-value pair with the new value unless the `NX` option is provided.
+- If the `NX` option is present, the command will set the key only if it does not already exist. If the key exists, no operation is performed and `nil` is returned.
+- If the `XX` option is present, the command will set the key only if it already exists. If the key does not exist, no operation is performed and `nil` is returned.
+- Using the `EX`, `EXAT`, `PX` or `PXAT` options together with `KEEPTTL` is not allowed and will result in an error.
+- When provided, `EX` sets the expiry time in seconds and `PX` sets the expiry time in milliseconds.
+- The `KEEPTTL` option ensures that the key's existing TTL is retained.
 
-- How does the command execute
-- goes here
-- Kind of explaining the underlying algorithm
 
 ## Errors
-<!-- sample errors, please update for commands -->
+<!-- sample errors, please update for commands-->
+<!-- please add all the errors here -->
+<!-- incase of a dynamic error message, feel free to use variable names -->
+
 1. `Wrong type of value or key`:
 
    - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
@@ -54,6 +70,7 @@ SET key value [EX seconds | PX milliseconds | EXAT unix-time-seconds | PXAT unix
 
 ### Basic Usage
 <!-- examples here are for set, please update them for the command -->
+
 Setting a key `foo` with the value `bar`
 
 ```bash
@@ -123,4 +140,22 @@ Trying to set key `foo` with both `EX` and `KEEPTTL` will result in an error
 (error) ERR syntax error
 ```
 <!-- Optional: Used when additional information is to conveyed to users -->
+<!-- For example warnings about usage ex: Keys * -->
+<!-- OR alternatives of the commands -->
+<!-- Or perhaps deprecation warning -->
+<!-- anything related to the command which cannot be shared in other sections -->
+<!-- can be added here -->
 ### Notes
+
+
+<!-- Optional -->
+### Subcommands
+<!-- if the command you are working on has subcommands -->
+<!-- please mention them here and add links to the pages -->
+<!-- please see below example for COMMAND docs -->
+- **subcommand**: Optional. Available subcommands include:
+  - `COUNT` : Returns the total number of commands in the DiceDB server.
+  - `GETKEYS` : Returns the keys from the provided command and arguments.
+  - `LIST` : Returns the list of all the commands in the DiceDB server.
+  - `INFO` : Returns details about the specified commands.
+  - `HELP` : Displays the help section for `COMMAND`, providing information about each available subcommand.
