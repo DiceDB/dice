@@ -11,7 +11,6 @@ func TestINCRBYFLOAT(t *testing.T) {
 	exec := NewHTTPCommandExecutor()
 
 	invalidArgMessage := "ERR wrong number of arguments for 'incrbyfloat' command"
-	invalidValueTypeMessage := "WRONGTYPE Operation against a key holding the wrong kind of value"
 	invalidIncrTypeMessage := "ERR value is not an valid a float"
 	valueOutOfRangeMessage := "ERR value is out of range"
 
