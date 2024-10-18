@@ -70,19 +70,6 @@ var (
 		Cmd:     "ZRANGE",
 		CmdType: SingleShard,
 	}
-	pfaddCmdMeta = CmdsMeta{
-		Cmd:     "PFADD",
-		CmdType: SingleShard,
-	}
-	pfcountCmdMeta = CmdsMeta{
-		Cmd:     "PFCOUNT",
-		CmdType: SingleShard,
-	}
-	pfmergeCmdMeta = CmdsMeta{
-		Cmd:     "PFMERGE",
-		CmdType: SingleShard,
-	}
-
 	jsonclearCmdMeta = CmdsMeta{
 		Cmd:     "JSON.CLEAR",
 		CmdType: SingleShard,
@@ -95,6 +82,30 @@ var (
 
 	jsonobjlenCmdMeta = CmdsMeta{
 		Cmd:     "JSON.OBJLEN",
+		CmdType: SingleShard,
+	}
+	hincrbyCmdMeta = CmdsMeta{
+		Cmd:     "HINCRBY",
+		CmdType: SingleShard,
+	}
+	hincrbyfloatCmdMeta = CmdsMeta{
+		Cmd:     "HINCRBYFLOAT",
+		CmdType: SingleShard,
+	}
+	hrandfieldCmdMeta = CmdsMeta{
+		Cmd:     "HRANDFIELD",
+		CmdType: SingleShard,
+	}
+	pfaddCmdMeta = CmdsMeta{
+		Cmd:     "PFADD",
+		CmdType: SingleShard,
+	}
+	pfcountCmdMeta = CmdsMeta{
+		Cmd:     "PFCOUNT",
+		CmdType: SingleShard,
+	}
+	pfmergeCmdMeta = CmdsMeta{
+		Cmd:     "PFMERGE",
 		CmdType: SingleShard,
 	}
 
@@ -119,6 +130,24 @@ func init() {
 	WorkerCmdsMeta["JSON.OBJLEN"] = jsonobjlenCmdMeta
 	WorkerCmdsMeta["ZADD"] = zaddCmdMeta
 	WorkerCmdsMeta["ZRANGE"] = zrangeCmdMeta
+	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
+	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
+	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
+	WorkerCmdsMeta["HINCRBY"] = hincrbyCmdMeta
+	WorkerCmdsMeta["HINCRBYFLOAT"] = hincrbyfloatCmdMeta
+	WorkerCmdsMeta["HRANDFIELD"] = hrandfieldCmdMeta
+	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
+	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
+	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
+	WorkerCmdsMeta["HINCRBY"] = hincrbyCmdMeta
+	WorkerCmdsMeta["HINCRBYFLOAT"] = hincrbyfloatCmdMeta
+	WorkerCmdsMeta["HRANDFIELD"] = hrandfieldCmdMeta
+	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
+	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
+	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
+	WorkerCmdsMeta["HINCRBY"] = hincrbyCmdMeta
+	WorkerCmdsMeta["HINCRBYFLOAT"] = hincrbyfloatCmdMeta
+	WorkerCmdsMeta["HRANDFIELD"] = hrandfieldCmdMeta
 	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
 	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
 	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
