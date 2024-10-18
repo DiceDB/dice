@@ -1112,11 +1112,11 @@ func incrByFloatCmd(args []string, incr float64, store *dstore.Store) *EvalRespo
 	}
 	strValue := formatFloat(value, true)
 
+	oType, oEnc := deduceTypeEncoding(strValue)
+
 	// Remove the trailing decimal for integer values
 	// to maintain consistency with redis
 	strValue = strings.TrimSuffix(strValue, ".0")
-
-	oType, oEnc := deduceTypeEncoding(strValue)
 
 	obj.Value = strValue
 	obj.TypeEncoding = oType | oEnc
