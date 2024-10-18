@@ -3,12 +3,11 @@ package websocket
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAppend(t *testing.T) {
 	exec := NewWebsocketCommandExecutor()
-	conn := exec.ConnectToServer()
 
 	testCases := []TestCase{
 		{
@@ -39,8 +38,12 @@ func TestAppend(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			conn := exec.ConnectToServer()
+			DeleteKey(t, conn, exec, "k")
+
 			for i, cmd := range tc.commands {
-				result := exec.FireCommand(conn, cmd)
+				result, err := exec.FireCommandAndReadResponse(conn, cmd)
+				assert.Nil(t, err)
 				assert.Equal(t, tc.expected[i], result)
 			}
 		})
