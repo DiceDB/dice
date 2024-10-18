@@ -3,7 +3,7 @@ package websocket
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestZPOPMIN(t *testing.T) {
@@ -67,8 +67,9 @@ func TestZPOPMIN(t *testing.T) {
 			conn := exec.ConnectToServer()
 
 			for i, cmd := range tc.commands {
-				result := exec.FireCommand(conn, cmd)
-				assert.DeepEqual(t, tc.expected[i], result)
+				result, err := exec.FireCommandAndReadResponse(conn, cmd)
+				assert.Nil(t, err)
+				assert.Equal(t, tc.expected[i], result)
 			}
 		})
 	}
