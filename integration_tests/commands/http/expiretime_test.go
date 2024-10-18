@@ -8,7 +8,7 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func TestExpireTimeHttp(t *testing.T) {
+func TestEXPIRETIME(t *testing.T) {
 	exec := NewHTTPCommandExecutor()
 
 	futureUnixTimestamp := time.Now().Unix() + 1
@@ -28,7 +28,7 @@ func TestExpireTimeHttp(t *testing.T) {
 				{Command: "EXPIREAT", Body: map[string]interface{}{"key": "test_key", "seconds": strconv.FormatInt(futureUnixTimestamp, 10)}},
 				{Command: "EXPIRETIME", Body: map[string]interface{}{"key": "test_key"}},
 			},
-			expected:      []interface{}{float64(1), float64(futureUnixTimestamp)},
+			expected:      []interface{}{"1", float64(futureUnixTimestamp)},
 			delay:         []time.Duration{0, 0},
 			errorExpected: false,
 		},
@@ -38,7 +38,7 @@ func TestExpireTimeHttp(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "EXPIRETIME", Body: map[string]interface{}{"key": "non_existent_key"}},
 			},
-			expected:      []interface{}{float64(-2)},
+			expected:      []interface{}{"-2"},
 			delay:         []time.Duration{0},
 			errorExpected: false,
 		},
@@ -49,7 +49,7 @@ func TestExpireTimeHttp(t *testing.T) {
 				{Command: "EXPIREAT", Body: map[string]interface{}{"key": "test_key", "seconds": "1724167183"}},
 				{Command: "EXPIRETIME", Body: map[string]interface{}{"key": "test_key"}},
 			},
-			expected:      []interface{}{float64(1), float64(-2)},
+			expected:      []interface{}{"1", "-2"},
 			delay:         []time.Duration{0, 0},
 			errorExpected: false,
 		},

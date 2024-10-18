@@ -1,8 +1,18 @@
 package store
 
 import (
+	"strings"
+
+	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/server/utils"
+)
+
+const (
+	NX string = "NX"
+	XX string = "XX"
+	GT string = "GT"
+	LT string = "LT"
 )
 
 func hasExpired(obj *object.Obj, store *Store) bool {
@@ -61,4 +71,78 @@ func DeleteExpiredKeys(store *Store) {
 			break
 		}
 	}
+}
+
+// NX: Set the expiration only if the key does not already have an expiration time.
+// XX: Set the expiration only if the key already has an expiration time.
+// GT: Set the expiration only if the new expiration time is greater than the current one.
+// LT: Set the expiration only if the new expiration time is less than the current one.
+// Returns Boolean True and error nil if expiry was set on the key successfully.
+// Returns Boolean False and error nil if conditions didn't met.
+// Returns Boolean False and error not-nil if invalid combination of subCommands or if subCommand is invalid
+func EvaluateAndSetExpiry(subCommands []string, newExpiry int64, key string,
+	store *Store) (shouldSetExpiry bool, err error) {
+	var newExpInMilli = newExpiry * 1000
+	var prevExpiry *uint64 = nil
+	var nxCmd, xxCmd, gtCmd, ltCmd bool
+
+	obj := store.Get(key)
+	//  key doesn't exist
+	if obj == nil {
+		return false, nil
+	}
+	shouldSetExpiry = true
+	// if no condition exists
+	if len(subCommands) == 0 {
+		store.SetUnixTimeExpiry(obj, newExpiry)
+		return shouldSetExpiry, nil
+	}
+
+	expireTime, ok := GetExpiry(obj, store)
+	if ok {
+		prevExpiry = &expireTime
+	}
+
+	for i := range subCommands {
+		subCommand := strings.ToUpper(subCommands[i])
+
+		switch subCommand {
+		case NX:
+			nxCmd = true
+			if prevExpiry != nil {
+				shouldSetExpiry = false
+			}
+		case XX:
+			xxCmd = true
+			if prevExpiry == nil {
+				shouldSetExpiry = false
+			}
+		case GT:
+			gtCmd = true
+			if prevExpiry == nil || *prevExpiry > uint64(newExpInMilli) {
+				shouldSetExpiry = false
+			}
+		case LT:
+			ltCmd = true
+			if prevExpiry != nil && *prevExpiry < uint64(newExpInMilli) {
+				shouldSetExpiry = false
+			}
+		default:
+			return false, diceerrors.ErrGeneral("Unsupported option " + subCommands[i])
+		}
+	}
+
+	if !nxCmd && gtCmd && ltCmd {
+		return false, diceerrors.ErrGeneral("GT and LT options at the same time are not compatible")
+	}
+
+	if nxCmd && (xxCmd || gtCmd || ltCmd) {
+		return false, diceerrors.ErrGeneral("NX and XX," +
+			" GT or LT options at the same time are not compatible")
+	}
+
+	if shouldSetExpiry {
+		store.SetUnixTimeExpiry(obj, newExpiry)
+	}
+	return shouldSetExpiry, nil
 }
