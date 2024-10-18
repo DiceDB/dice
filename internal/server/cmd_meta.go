@@ -98,6 +98,27 @@ var (
 		CmdType: SingleShard,
 	}
 
+	incrCmdMeta = CmdsMeta{
+		Cmd:     "INCR",
+		CmdType: SingleShard,
+	}
+	incrByCmdMeta = CmdsMeta{
+		Cmd:     "INCRBY",
+		CmdType: SingleShard,
+	}
+	decrCmdMeta = CmdsMeta{
+		Cmd:     "DECR",
+		CmdType: SingleShard,
+	}
+	decrByCmdMeta = CmdsMeta{
+		Cmd:     "DECRBY",
+		CmdType: SingleShard,
+	}
+	incrByFloatCmdMeta = CmdsMeta{
+		Cmd:     "INCRBYFLOAT",
+		CmdType: SingleShard,
+	}
+
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
 
@@ -122,5 +143,11 @@ func init() {
 	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
 	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
 	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
+	WorkerCmdsMeta["INCR"] = incrCmdMeta
+	WorkerCmdsMeta["INCRBY"] = incrByCmdMeta
+	WorkerCmdsMeta["INCR"] = incrCmdMeta
+	WorkerCmdsMeta["DECR"] = decrCmdMeta
+	WorkerCmdsMeta["DECRBY"] = decrByCmdMeta
+	WorkerCmdsMeta["INCRBYFLOAT"] = incrByFloatCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }

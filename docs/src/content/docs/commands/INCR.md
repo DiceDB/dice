@@ -35,13 +35,13 @@ When the `INCR` command is executed, the following steps occur:
 ## Errors
 1. `Wrong Type Error`:
 
-   - Error Message: `(error) ERROR value is not an integer or out of range`
+   - Error Message: `(error) ERR value is not an integer or out of range`
    - If the key exists but does not hold a string value that can be interpreted as an integer, DiceDB will return an error.
 
 
 2. `Overflow Error`:
 
-   - Error Message: `(error) ERROR increment or decrement would overflow`
+   - Error Message: `(error) ERR increment or decrement would overflow`
    - If the increment operation causes the value to exceed the maximum integer value that DiceDB can handle, an overflow error will occur.
 
 
