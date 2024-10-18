@@ -910,3 +910,62 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 		Error:  nil,
 	}
 }
+
+// ZPOPMIN Removes and returns the member with the lowest score from the sorted set at the specified key.
+// If multiple members have the same score, the one that comes first alphabetically is returned.
+// You can also specify a count to remove and return multiple members at once.
+// If the set is empty, it returns an empty result.
+func evalZPOPMIN(args []string, store *dstore.Store) *EvalResponse {
+	// Incorrect number of arguments should return error
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongArgumentCount("ZPOPMIN"),
+		}
+	}
+
+	key := args[0]        // Key argument
+	obj := store.Get(key) // Getting sortedSet object from store
+
+	// If the sortedSet is nil, return an empty list
+	if obj == nil {
+		return &EvalResponse{
+			Result: []string{},
+			Error:  nil,
+		}
+	}
+
+	sortedSet, err := sortedset.FromObject(obj)
+	if err != nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	var results []string
+
+	// If the count argument is not passed, return the first member with lowest score
+	if len(args) < 2 {
+		results = sortedSet.GetMin(1)
+	} else {
+		count, err := strconv.Atoi(args[1])
+
+		// If the count argument is invalid, return integer error
+		if err != nil {
+			return &EvalResponse{
+				Result: clientio.NIL,
+				Error:  diceerrors.ErrIntegerOutOfRange,
+			}
+		}
+
+		// If the count argument is present, return all the members with lowest score sorted in ascending order.
+		// If there are multiple lowest scores with same score value, it sorts the members in lexographical order of member name
+		results = sortedSet.GetMin(count)
+	}
+
+	return &EvalResponse{
+		Result: results,
+		Error:  nil,
+	}
+}
