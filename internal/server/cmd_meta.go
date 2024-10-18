@@ -50,6 +50,18 @@ var (
 		Cmd:     "SET",
 		CmdType: SingleShard,
 	}
+	expireCmdMeta = CmdsMeta{
+		Cmd:     "EXPIRE",
+		CmdType: SingleShard,
+	}
+	expireAtCmdMeta = CmdsMeta{
+		Cmd:     "EXPIREAT",
+		CmdType: SingleShard,
+	}
+	expireTimeCmdMeta = CmdsMeta{
+		Cmd:     "EXPIRETIME",
+		CmdType: SingleShard,
+	}
 	getCmdMeta = CmdsMeta{
 		Cmd:     "GET",
 		CmdType: SingleShard,
@@ -132,6 +144,14 @@ var (
 	}
 	pfmergeCmdMeta = CmdsMeta{
 		Cmd:     "PFMERGE",
+		CmdType: SingleShard,
+	}
+	ttlCmdMeta = CmdsMeta{
+		Cmd:     "TTL",
+		CmdType: SingleShard,
+	}
+	pttlCmdMeta = CmdsMeta{
+		Cmd:     "PTTL",
 		CmdType: SingleShard,
 	}
 
@@ -273,6 +293,9 @@ func init() {
 
 	// Single-shard commands.
 	WorkerCmdsMeta["SET"] = setCmdMeta
+	WorkerCmdsMeta["EXPIRE"] = expireCmdMeta
+	WorkerCmdsMeta["EXPIREAT"] = expireAtCmdMeta
+	WorkerCmdsMeta["EXPIRETIME"] = expireTimeCmdMeta
 	WorkerCmdsMeta["GET"] = getCmdMeta
 	WorkerCmdsMeta["GETSET"] = getsetCmdMeta
 	WorkerCmdsMeta["SETEX"] = setexCmdMeta
@@ -316,6 +339,8 @@ func init() {
 	WorkerCmdsMeta["ZPOPMIN"] = zpopminCmdMeta
 	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
 	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
+	WorkerCmdsMeta["TTL"] = ttlCmdMeta
+	WorkerCmdsMeta["PTTL"] = pttlCmdMeta
 	WorkerCmdsMeta["HINCRBY"] = hincrbyCmdMeta
 	WorkerCmdsMeta["HINCRBYFLOAT"] = hincrbyfloatCmdMeta
 	WorkerCmdsMeta["HRANDFIELD"] = hrandfieldCmdMeta

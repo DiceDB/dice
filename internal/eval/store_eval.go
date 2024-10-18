@@ -19,6 +19,151 @@ import (
 	"github.com/ohler55/ojg/jp"
 )
 
+// evalEXPIRE sets an expiry time(in secs) on the specified key in args
+// args should contain 2 values, key and the expiry time to be set for the key
+// The expiry time should be in integer format; if not, it returns encoded error response
+// Returns clientio.IntegerOne if expiry was set on the key successfully.
+// Once the time is lapsed, the key will be deleted automatically
+func evalEXPIRE(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) <= 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("EXPIRE"),
+		}
+	}
+
+	var key = args[0]
+	exDurationSec, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrIntegerOutOfRange,
+		}
+	}
+
+	if exDurationSec < 0 || exDurationSec > maxExDuration {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrInvalidExpireTime("EXPIRE"),
+		}
+	}
+
+	obj := store.Get(key)
+
+	// 0 if the timeout was not set. e.g. key doesn't exist, or operation skipped due to the provided arguments
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+	isExpirySet, err2 := dstore.EvaluateAndSetExpiry(args[2:], utils.AddSecondsToUnixEpoch(exDurationSec), key, store)
+
+	if isExpirySet {
+		return &EvalResponse{
+			Result: clientio.IntegerOne,
+			Error:  nil,
+		}
+	} else if err2 != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  err2,
+		}
+	}
+
+	return &EvalResponse{
+		Result: clientio.IntegerZero,
+		Error:  nil,
+	}
+}
+
+// evalEXPIREAT sets a expiry time(in unix-time-seconds) on the specified key in args
+// args should contain 2 values, key and the expiry time to be set for the key
+// The expiry time should be in integer format; if not, it returns encoded error response
+// Returns response.IntegerOne if expiry was set on the key successfully.
+// Once the time is lapsed, the key will be deleted automatically
+func evalEXPIREAT(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) <= 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("EXPIREAT"),
+		}
+	}
+
+	var key = args[0]
+	exUnixTimeSec, err := strconv.ParseInt(args[1], 10, 64)
+	if exUnixTimeSec < 0 || exUnixTimeSec > maxExDuration {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrInvalidExpireTime("EXPIREAT"),
+		}
+	}
+
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrIntegerOutOfRange,
+		}
+	}
+
+	isExpirySet, err := dstore.EvaluateAndSetExpiry(args[2:], exUnixTimeSec, key, store)
+	if isExpirySet {
+		return &EvalResponse{
+			Result: clientio.IntegerOne,
+			Error:  nil,
+		}
+	} else if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  err,
+		}
+	}
+	return &EvalResponse{
+		Result: clientio.IntegerZero,
+		Error:  nil,
+	}
+}
+
+// evalEXPIRETIME returns the absolute Unix timestamp (since January 1, 1970) in seconds at which the given key will expire
+// args should contain only 1 value, the key
+// Returns expiration Unix timestamp in seconds.
+// Returns -1 if the key exists but has no associated expiration time.
+// Returns -2 if the key does not exist.
+func evalEXPIRETIME(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("EXPIRETIME"),
+		}
+	}
+
+	var key = args[0]
+
+	obj := store.Get(key)
+
+	// -2 if key doesn't exist
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerNegativeTwo,
+			Error:  nil,
+		}
+	}
+
+	exTimeMili, ok := dstore.GetExpiry(obj, store)
+	// -1 if key doesn't have expiration time set
+	if !ok {
+		return &EvalResponse{
+			Result: clientio.IntegerNegativeOne,
+			Error:  nil,
+		}
+	}
+
+	return &EvalResponse{
+		Result: exTimeMili / 1000,
+		Error:  nil,
+	}
+}
+
 // evalSET puts a new <key, value> pair in db as in the args
 // args must contain key and value.
 // args can also contain multiple options -
@@ -1452,6 +1597,94 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 
 	return &EvalResponse{
 		Result: clientio.OK,
+		Error:  nil,
+	}
+}
+
+// evalPTTL returns Time-to-Live in millisecs for the queried key in args
+// The key should be the only param in args else returns with an error
+// Returns	RESP encoded time (in secs) remaining for the key to expire
+//
+//	RESP encoded -2 stating key doesn't exist or key is expired
+//	RESP encoded -1 in case no expiration is set on the key
+func evalPTTL(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("PTTL"),
+		}
+	}
+
+	key := args[0]
+
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerNegativeTwo,
+			Error:  nil,
+		}
+	}
+
+	exp, isExpirySet := dstore.GetExpiry(obj, store)
+
+	if !isExpirySet {
+		return &EvalResponse{
+			Result: clientio.IntegerNegativeOne,
+			Error:  nil,
+		}
+	}
+
+	// compute the time remaining for the key to expire and
+	// return the RESP encoded form of it
+	durationMs := exp - uint64(utils.GetCurrentTime().UnixMilli())
+	return &EvalResponse{
+		Result: durationMs,
+		Error:  nil,
+	}
+}
+
+// evalTTL returns Time-to-Live in secs for the queried key in args
+// The key should be the only param in args else returns with an error
+// Returns	RESP encoded time (in secs) remaining for the key to expire
+//
+//	RESP encoded -2 stating key doesn't exist or key is expired
+//	RESP encoded -1 in case no expiration is set on the key
+func evalTTL(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("TTL"),
+		}
+	}
+
+	var key = args[0]
+
+	obj := store.Get(key)
+
+	// if key does not exist, return RESP encoded -2 denoting key does not exist
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerNegativeTwo,
+			Error:  nil,
+		}
+	}
+
+	// if object exist, but no expiration is set on it then send -1
+	exp, isExpirySet := dstore.GetExpiry(obj, store)
+	if !isExpirySet {
+		return &EvalResponse{
+			Result: clientio.IntegerNegativeOne,
+			Error:  nil,
+		}
+	}
+
+	// compute the time remaining for the key to expire and
+	// return the RESP encoded form of it
+	durationMs := exp - uint64(utils.GetCurrentTime().UnixMilli())
+
+	return &EvalResponse{
+		Result: durationMs / 1000,
 		Error:  nil,
 	}
 }
