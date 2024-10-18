@@ -28,9 +28,9 @@ When the `JSON.ARRAPPEND` command is executed, the specified JSON values are app
 ## Error Handling
 
 - `(error) ERR key does not exist`: Raised if the specified key does not exist in the DiceDB database.
-- `(error) ERR path does not exist`: Raised if the specified path does not exist within the JSON document.
+- `(error) ERR path %s does not exist`: Raised if the specified path, s, does not exist within the JSON document.
 - `(error) ERR path is not an array`: Raised if the specified path does not point to a JSON array.
-- `(error) ERR invalid JSON`: Raised if any of the provided JSON values are not valid JSON.
+- `(error) WRONGTYPE Operation against a key holding the wrong kind of value`: Raised if any of the provided JSON values are not valid JSON.
 
 ## Example Usage
 
@@ -69,7 +69,7 @@ OK
 127.0.0.1:6379> JSON.SET myjson . '{"numbers": [1, 2, 3]}'
 OK
 127.0.0.1:6379> JSON.ARRAPPEND myjson .nonexistingpath 4
-(error) ERR path does not exist
+(error) ERR path .nonexistingpath does not exist
 ```
 
 ### Example 5: Error when path is not an array
