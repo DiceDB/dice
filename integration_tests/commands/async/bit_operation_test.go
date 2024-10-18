@@ -25,6 +25,14 @@ func TestBitOp(t *testing.T) {
 			Out:    []interface{}{int64(0), int64(0), int64(0)},
 		},
 		{
+			InCmds: []string{"SETBIT foo -1 1", "SETBIT foo -1 0", "SETBIT foo -10000 1", "SETBIT foo -10000 0"},
+			Out:    []interface{}{"ERR bit offset is not an integer or out of range", "ERR bit offset is not an integer or out of range", "ERR bit offset is not an integer or out of range", "ERR bit offset is not an integer or out of range"},
+		},
+		{
+			InCmds: []string{"SET foo bar", "SETBIT foo -1 1", "SETBIT foo -1 0", "SETBIT foo -10000 1", "SETBIT foo -10000 0"},
+			Out:    []interface{}{"OK", "ERR bit offset is not an integer or out of range", "ERR bit offset is not an integer or out of range", "ERR bit offset is not an integer or out of range", "ERR bit offset is not an integer or out of range"},
+		},
+		{
 			InCmds: []string{"SET foo bar", "SETBIT foo 2 1", "SETBIT foo 4 1", "SETBIT foo 7 1", "GET foo"},
 			Out:    []interface{}{"OK", int64(1), int64(0), int64(0), "kar"},
 		},

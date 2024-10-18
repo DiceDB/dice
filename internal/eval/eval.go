@@ -2049,7 +2049,7 @@ func evalSETBIT(args []string, store *dstore.Store) []byte {
 
 	key := args[0]
 	offset, err := strconv.ParseInt(args[1], 10, 64)
-	if err != nil {
+	if err != nil || offset < 0 {
 		return diceerrors.NewErrWithMessage("bit offset is not an integer or out of range")
 	}
 
