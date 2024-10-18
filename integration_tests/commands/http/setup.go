@@ -54,11 +54,14 @@ type HTTPCommand struct {
 
 func (e *HTTPCommandExecutor) FireCommand(cmd HTTPCommand) (interface{}, error) {
 	command := strings.ToUpper(cmd.Command)
-	body, err := json.Marshal(cmd.Body)
-
-	// Handle error during JSON marshaling
-	if err != nil {
-		return nil, err
+	var body []byte
+	if cmd.Body != nil {
+		var err error
+		body, err = json.Marshal(cmd.Body)
+		// Handle error during JSON marshaling
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	ctx := context.Background()
@@ -75,7 +78,7 @@ func (e *HTTPCommandExecutor) FireCommand(cmd HTTPCommand) (interface{}, error) 
 	}
 	defer resp.Body.Close()
 
-	if cmd.Command != "QWATCH" {
+	if cmd.Command != "Q.WATCH" {
 		var result utils.HTTPResponse
 		err = json.NewDecoder(resp.Body).Decode(&result)
 		if err != nil {
@@ -99,10 +102,10 @@ func (e *HTTPCommandExecutor) Name() string {
 
 func RunHTTPServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOptions) {
 	config.DiceConfig.Network.IOBufferLength = 16
-	config.DiceConfig.Server.WriteAOFOnCleanup = false
+	config.DiceConfig.Persistence.WriteAOFOnCleanup = false
 
 	globalErrChannel := make(chan error)
-	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Server.WatchChanBufSize)
+	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Performance.WatchChanBufSize)
 	shardManager := shard.NewShardManager(1, watchChan, nil, globalErrChannel, opt.Logger)
 	queryWatcherLocal := querymanager.NewQueryManager(opt.Logger)
 	config.HTTPPort = opt.Port

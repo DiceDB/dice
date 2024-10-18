@@ -7,8 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
+	"os"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/dicedb/dice/config"
@@ -20,10 +23,11 @@ import (
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/gorilla/websocket"
+	"golang.org/x/exp/rand"
 )
 
-const Qwatch = "QWATCH"
-const Qunwatch = "QUNWATCH"
+const Qwatch = "Q.WATCH"
+const Qunwatch = "Q.UNWATCH"
 const Subscribe = "SUBSCRIBE"
 
 var unimplementedCommandsWebsocket = map[string]bool{
@@ -43,10 +47,10 @@ type WebsocketServer struct {
 	shutdownChan    chan struct{}
 }
 
-func NewWebSocketServer(shardManager *shard.ShardManager, watchChan chan dstore.QueryWatchEvent, logger *slog.Logger) *WebsocketServer {
+func NewWebSocketServer(shardManager *shard.ShardManager, watchChan chan dstore.QueryWatchEvent, port int, logger *slog.Logger) *WebsocketServer {
 	mux := http.NewServeMux()
 	srv := &http.Server{
-		Addr:              fmt.Sprintf(":%d", config.WebsocketPort),
+		Addr:              fmt.Sprintf(":%d", port),
 		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
@@ -130,8 +134,12 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		// read incoming message
 		_, msg, err := conn.ReadMessage()
 		if err != nil {
-			writeResponse(conn, []byte("error: command reading failed"))
-			continue
+			// acceptable close errors
+			errs := []int{websocket.CloseNormalClosure, websocket.CloseGoingAway, websocket.CloseAbnormalClosure}
+			if !websocket.IsCloseError(err, errs...) {
+				s.logger.Warn("failed to read message from client", slog.Any("error", err))
+			}
+			break
 		}
 
 		// parse message to dice command
@@ -215,11 +223,78 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 			continue
 		}
 
-		// Write response
-		writeResponse(conn, respBytes)
+		// Write response with retries for transient errors
+		if err := WriteResponseWithRetries(conn, respBytes, config.DiceConfig.WebSocket.MaxWriteResponseRetries); err != nil {
+			s.logger.Error(fmt.Sprintf("Error reading message: %v", err))
+			break // Exit the loop on write error
+		}
 	}
 }
 
+func WriteResponseWithRetries(conn *websocket.Conn, text []byte, maxRetries int) error {
+	for attempts := 0; attempts < maxRetries; attempts++ {
+		// Set a write deadline
+		if err := conn.SetWriteDeadline(time.Now().Add(config.DiceConfig.WebSocket.WriteResponseTimeout)); err != nil {
+			slog.Error(fmt.Sprintf("Error setting write deadline: %v", err))
+			return err
+		}
+
+		// Attempt to write message
+		err := conn.WriteMessage(websocket.TextMessage, text)
+		if err == nil {
+			break // Exit loop if write succeeds
+		}
+
+		// Handle network errors
+		var netErr *net.OpError
+		if !errors.As(err, &netErr) {
+			return fmt.Errorf("error writing message: %w", err)
+		}
+
+		opErr, ok := netErr.Err.(*os.SyscallError)
+		if !ok {
+			return fmt.Errorf("network operation error: %w", err)
+		}
+
+		if opErr.Syscall != "write" {
+			return fmt.Errorf("unexpected syscall error: %w", err)
+		}
+
+		switch opErr.Err {
+		case syscall.EPIPE:
+			return fmt.Errorf("broken pipe: %w", err)
+		case syscall.ECONNRESET:
+			return fmt.Errorf("connection reset by peer: %w", err)
+		case syscall.ENOBUFS:
+			return fmt.Errorf("no buffer space available: %w", err)
+		case syscall.EAGAIN:
+			// Exponential backoff with jitter
+			backoffDuration := time.Duration(attempts+1)*100*time.Millisecond + time.Duration(rand.Intn(50))*time.Millisecond
+
+			slog.Warn(fmt.Sprintf(
+				"Temporary issue (EAGAIN) on attempt %d. Retrying in %v...",
+				attempts+1, backoffDuration,
+			))
+
+			time.Sleep(backoffDuration)
+			continue
+		default:
+			return fmt.Errorf("write error: %w", err)
+		}
+	}
+
+	return nil
+}
+
 func writeResponse(conn *websocket.Conn, text []byte) {
-	_ = conn.WriteMessage(websocket.TextMessage, text)
+	// Set a write deadline to prevent hanging
+	if err := conn.SetWriteDeadline(time.Now().Add(10 * time.Second)); err != nil {
+		slog.Error(fmt.Sprintf("Error setting write deadline: %v", err))
+		return
+	}
+
+	err := conn.WriteMessage(websocket.TextMessage, text)
+	if err != nil {
+		slog.Error(fmt.Sprintf("Error writing response: %v", err))
+	}
 }

@@ -10,7 +10,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/sql"
-	dicedb "github.com/dicedb/go-dice"
+	dicedb "github.com/dicedb/dicedb-go"
 	"gotest.tools/v3/assert"
 )
 
@@ -89,7 +89,7 @@ func setupQWATCHTest(t *testing.T, query string) (net.Conn, []net.Conn, func()) 
 			t.Errorf("Error closing publisher connection: %v", err)
 		}
 		for _, sub := range subscribers {
-			FireCommand(sub, fmt.Sprintf("QUNWATCH \"%s\"", query))
+			FireCommand(sub, fmt.Sprintf("Q.UNWATCH \"%s\"", query))
 			time.Sleep(100 * time.Millisecond)
 			if err := sub.Close(); err != nil {
 				t.Errorf("Error closing subscriber connection: %v", err)
@@ -141,7 +141,7 @@ func subscribeToQWATCH(t *testing.T, subscribers []net.Conn, query string) []*cl
 	t.Helper()
 	respParsers := make([]*clientio.RESPParser, len(subscribers))
 	for i, subscriber := range subscribers {
-		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("QWATCH \"%s\"", query))
+		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("Q.WATCH \"%s\"", query))
 		assert.Assert(t, rp != nil)
 		respParsers[i] = rp
 
@@ -324,7 +324,7 @@ func setupJSONTest(t *testing.T, tests []JSONTestCase) (net.Conn, []net.Conn, fu
 			t.Errorf("Error closing publisher connection: %v", err)
 		}
 		for i, sub := range subscribers {
-			FireCommand(sub, fmt.Sprintf("QUNWATCH \"%s\"", tests[i].qwatchQuery))
+			FireCommand(sub, fmt.Sprintf("Q.UNWATCH \"%s\"", tests[i].qwatchQuery))
 			if err := sub.Close(); err != nil {
 				t.Errorf("Error closing subscriber connection: %v", err)
 			}
@@ -338,7 +338,7 @@ func setupJSONTest(t *testing.T, tests []JSONTestCase) (net.Conn, []net.Conn, fu
 func subscribeToJSONQueries(t *testing.T, subscribers []net.Conn, tests []JSONTestCase) []*clientio.RESPParser {
 	respParsers := make([]*clientio.RESPParser, len(subscribers))
 	for i, testCase := range tests {
-		rp := fireCommandAndGetRESPParser(subscribers[i], fmt.Sprintf("QWATCH \"%s\"", testCase.qwatchQuery))
+		rp := fireCommandAndGetRESPParser(subscribers[i], fmt.Sprintf("Q.WATCH \"%s\"", testCase.qwatchQuery))
 		assert.Assert(t, rp != nil)
 		respParsers[i] = rp
 
@@ -406,7 +406,7 @@ func setupJSONOrderByTest(t *testing.T) (net.Conn, net.Conn, func(), string) {
 		if err := publisher.Close(); err != nil {
 			t.Errorf("Error closing publisher connection: %v", err)
 		}
-		FireCommand(subscriber, fmt.Sprintf("QUNWATCH \"%s\"", watchquery))
+		FireCommand(subscriber, fmt.Sprintf("Q.UNWATCH \"%s\"", watchquery))
 		time.Sleep(100 * time.Millisecond)
 		if err := subscriber.Close(); err != nil {
 			t.Errorf("Error closing subscriber connection: %v", err)
@@ -417,7 +417,7 @@ func setupJSONOrderByTest(t *testing.T) (net.Conn, net.Conn, func(), string) {
 }
 
 func subscribeToJSONOrderByQuery(t *testing.T, subscriber net.Conn, watchquery string) *clientio.RESPParser {
-	rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("QWATCH \"%s\"", watchquery))
+	rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("Q.WATCH \"%s\"", watchquery))
 	assert.Assert(t, rp != nil)
 
 	v, err := rp.DecodeOne()

@@ -2,10 +2,11 @@ package async
 
 import (
 	"fmt"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"net"
 	"strings"
 	"testing"
+
+	"github.com/google/go-cmp/cmp/cmpopts"
 
 	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/testutils"
@@ -363,7 +364,7 @@ func TestJSONClearOperations(t *testing.T) {
 		expected []interface{}
 	}{
 		{
-			name: "Clear root path",
+			name: "jsonclear root path",
 			commands: []string{
 				`JSON.SET user $ {"age":13,"high":1.60,"flag":true,"name":"jerry","pet":null,"language":["python","golang"],"partner":{"name":"tom","language":["rust"]}}`,
 				"JSON.CLEAR user $",
@@ -372,7 +373,7 @@ func TestJSONClearOperations(t *testing.T) {
 			expected: []interface{}{"OK", int64(1), "{}"},
 		},
 		{
-			name: "Clear string type",
+			name: "jsonclear string type",
 			commands: []string{
 				`JSON.SET user $ {"name":"Tom","age":30}`,
 				"JSON.CLEAR user $.name",
@@ -381,7 +382,7 @@ func TestJSONClearOperations(t *testing.T) {
 			expected: []interface{}{"OK", int64(0), `"Tom"`},
 		},
 		{
-			name: "Clear array type",
+			name: "jsonclear array type",
 			commands: []string{
 				`JSON.SET user $ {"names":["Rahul","Tom"],"ages":[25,30]}`,
 				"JSON.CLEAR user $.names",
@@ -390,7 +391,7 @@ func TestJSONClearOperations(t *testing.T) {
 			expected: []interface{}{"OK", int64(1), "[]"},
 		},
 		{
-			name: "clear bool type",
+			name: "jsonclear bool type",
 			commands: []string{
 				`JSON.SET user $  {"flag":true,"name":"Tom"}`,
 				"JSON.CLEAR user $.flag",
@@ -398,7 +399,7 @@ func TestJSONClearOperations(t *testing.T) {
 			expected: []interface{}{"OK", int64(0), "true"},
 		},
 		{
-			name: "clear null type",
+			name: "jsonclear null type",
 			commands: []string{
 				`JSON.SET user $ {"name":null,"age":28}`,
 				"JSON.CLEAR user $.pet",
@@ -406,7 +407,7 @@ func TestJSONClearOperations(t *testing.T) {
 			expected: []interface{}{"OK", int64(0), "null"},
 		},
 		{
-			name: "clear integer type",
+			name: "jsonclear integer type",
 			commands: []string{
 				`JSON.SET user $ {"age":28,"name":"Tom"}`,
 				"JSON.CLEAR user $.age",
@@ -414,7 +415,7 @@ func TestJSONClearOperations(t *testing.T) {
 			expected: []interface{}{"OK", int64(1), "0"},
 		},
 		{
-			name: "clear float type",
+			name: "jsonclear float type",
 			commands: []string{
 				`JSON.SET user $ {"price":3.14,"name":"sugar"}`,
 				"JSON.CLEAR user $.price",
@@ -671,7 +672,7 @@ func TestJsonStrlen(t *testing.T) {
 		expected []interface{}
 	}{
 		{
-			name: "STRLEN with root path",
+			name: "jsonstrlen with root path",
 			commands: []string{
 				`JSON.SET doc $ ["hello","world"]`,
 				"JSON.STRLEN doc $",
@@ -679,12 +680,52 @@ func TestJsonStrlen(t *testing.T) {
 			expected: []interface{}{"OK", []interface{}{"(nil)"}},
 		},
 		{
-			name: "STRLEN nested",
+			name: "jsonstrlen nested",
 			commands: []string{
 				`JSON.SET doc $ {"name":"jerry","partner":{"name":"tom"}}`,
 				"JSON.STRLEN doc $..name",
 			},
 			expected: []interface{}{"OK", []interface{}{int64(5), int64(3)}},
+		},
+		{
+			name: "jsonstrlen with no path and object at root",
+			commands: []string{
+				`JSON.SET doc $ {"name":"bhima","age":10}`,
+				"JSON.STRLEN doc",
+			},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found object"},
+		},
+		{
+			name: "jsonstrlen with no path and object at boolean",
+			commands: []string{
+				`JSON.SET doc $ true`,
+				"JSON.STRLEN doc",
+			},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found boolean"},
+		},
+		{
+			name: "jsonstrlen with no path and object at array",
+			commands: []string{
+				`JSON.SET doc $ [1,2,3,4]`,
+				"JSON.STRLEN doc",
+			},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found array"},
+		},
+		{
+			name: "jsonstrlen with no path and object at integer",
+			commands: []string{
+				`JSON.SET doc $ 1`,
+				"JSON.STRLEN doc",
+			},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found integer"},
+		},
+		{
+			name: "jsonstrlen with no path and object at number",
+			commands: []string{
+				`JSON.SET doc $ 1.9`,
+				"JSON.STRLEN doc",
+			},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found number"},
 		},
 	}
 
@@ -990,10 +1031,10 @@ func TestJsonObjLen(t *testing.T) {
 		{
 			name:     "JSON.OBJLEN invalid json path",
 			commands: []string{"json.set obj $ " + b, "json.objlen obj $..language*something"},
-			expected: []interface{}{"OK", "ERR parse error at 13 in $..language*something"},
+			expected: []interface{}{"OK", "ERR Path '$..language*something' does not exist"},
 		},
 		{
-			name:     "JSON.OBJLEN with non-existant key",
+			name:     "JSON.OBJLEN with non-existent key",
 			commands: []string{"json.set obj $ " + b, "json.objlen non_existing_key $"},
 			expected: []interface{}{"OK", "(nil)"},
 		},
@@ -1003,9 +1044,9 @@ func TestJsonObjLen(t *testing.T) {
 			expected: []interface{}{"OK", int64(2)},
 		},
 		{
-			name:     "JSON.OBJLEN invalid json path",
+			name:     "JSON.OBJLEN invalid json path2",
 			commands: []string{"json.set obj $ " + c, "json.objlen obj $[1"},
-			expected: []interface{}{"OK", "ERR expected a number at 4 in $[1"},
+			expected: []interface{}{"OK", "ERR Path '$[1' does not exist"},
 		},
 		{
 			name:     "JSON.OBJLEN invalid json path",
@@ -1058,7 +1099,7 @@ func TestJSONNumIncrBy(t *testing.T) {
 			cleanUp:    []string{},
 		},
 		{
-			name:       "Non-existant key",
+			name:       "Non-existent key",
 			setupData:  "",
 			commands:   []string{"JSON.NUMINCRBY foo $ 1"},
 			expected:   []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
@@ -1152,14 +1193,14 @@ func TestJsonARRINSERT(t *testing.T) {
 			assertType: []string{"equal", "equal", "equal"},
 		},
 		{
-			name:       "JSON.ARRINSERT with postive index in root path",
+			name:       "JSON.ARRINSERT with positive index in root path",
 			commands:   []string{"json.set a $ " + a, `JSON.ARRINSERT a $ 2 3 4 5`, "JSON.GET a"},
 			expected:   []interface{}{"OK", []interface{}{int64(5)}, "[1,2,3,4,5]"},
 			assertType: []string{"equal", "deep_equal", "equal"},
 		},
 
 		{
-			name:       "JSON.ARRINSERT with postive index in root path",
+			name:       "JSON.ARRINSERT with positive index in root path",
 			commands:   []string{"json.set a $ " + a, `JSON.ARRINSERT a $ 2 3 4 5`, "JSON.GET a"},
 			expected:   []interface{}{"OK", []interface{}{int64(5)}, "[1,2,3,4,5]"},
 			assertType: []string{"equal", "deep_equal", "equal"},
@@ -1171,7 +1212,7 @@ func TestJsonARRINSERT(t *testing.T) {
 			assertType: []string{"equal", "deep_equal", "equal"},
 		},
 		{
-			name:       "JSON.ARRINSERT nested with postive index",
+			name:       "JSON.ARRINSERT nested with positive index",
 			commands:   []string{"JSON.SET b $ " + b, `JSON.ARRINSERT b $..score 1 5 6 true`, "JSON.GET b"},
 			expected:   []interface{}{"OK", []interface{}{int64(5), int64(5)}, `{"name":"tom","score":[10,5,6,true,20],"partner2":{"score":[10,5,6,true,20]}}`},
 			assertType: []string{"equal", "deep_equal", "jsoneq"},
@@ -1345,7 +1386,7 @@ func TestJsonARRTRIM(t *testing.T) {
 			assertType: []string{"equal", "deep_equal", "equal"},
 		},
 		{
-			name:       "JSON.ARRTRIM start&stop are postive",
+			name:       "JSON.ARRTRIM start&stop are positive",
 			commands:   []string{"JSON.SET a $ " + a, `JSON.ARRTRIM a $ 1 2`, "JSON.GET a"},
 			expected:   []interface{}{"OK", []interface{}{int64(2)}, "[1,2]"},
 			assertType: []string{"equal", "deep_equal", "equal"},
@@ -1370,7 +1411,7 @@ func TestJsonARRTRIM(t *testing.T) {
 			assertType: []string{"equal", "deep_equal", "jsoneq"},
 		},
 		{
-			name:       "JSON.ARRTRIM postive start larger than stop",
+			name:       "JSON.ARRTRIM positive start larger than stop",
 			commands:   []string{"JSON.SET b $ " + b, `JSON.ARRTRIM b $.names 3 1`, "JSON.GET b"},
 			expected:   []interface{}{"OK", []interface{}{int64(0)}, `{"names":[],"connection":{"wireless":true,"names":[0,1,2,3,4]}}`},
 			assertType: []string{"equal", "deep_equal", "jsoneq"},
@@ -1396,6 +1437,66 @@ func TestJsonARRTRIM(t *testing.T) {
 					testifyAssert.JSONEq(t, out.(string), result.(string))
 				}
 			}
+		})
+	}
+}
+
+func TestJsonSTRAPPEND(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	simpleJSON := `{"name":"John","age":30}`
+
+	testCases := []struct {
+		name     string
+		setCmd   string
+		getCmd   string
+		expected interface{}
+	}{
+		{
+			name:     "STRAPPEND to nested string",
+			setCmd:   `JSON.SET doc $ ` + simpleJSON,
+			getCmd:   `JSON.STRAPPEND doc $.name " Doe"`,
+			expected: []interface{}{int64(8)},
+		},
+		{
+			name:     "STRAPPEND to multiple paths",
+			setCmd:   `JSON.SET doc $ ` + simpleJSON,
+			getCmd:   `JSON.STRAPPEND doc $..name "baz"`,
+			expected: []interface{}{int64(7)},
+		},
+		{
+			name:     "STRAPPEND to non-string",
+			setCmd:   `JSON.SET doc $ ` + simpleJSON,
+			getCmd:   `JSON.STRAPPEND doc $.age " years"`,
+			expected: []interface{}{"(nil)"},
+		},
+		{
+			name:     "STRAPPEND with empty string",
+			setCmd:   `JSON.SET doc $ ` + simpleJSON,
+			getCmd:   `JSON.STRAPPEND doc $.name ""`,
+			expected: []interface{}{int64(4)},
+		},
+		{
+			name:     "STRAPPEND to non-existent path",
+			setCmd:   `JSON.SET doc $ ` + simpleJSON,
+			getCmd:   `JSON.STRAPPEND doc $.nonexistent " test"`,
+			expected: []interface{}{},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Use FLUSHDB to clear all keys before each test
+			result := FireCommand(conn, "FLUSHDB")
+			assert.Equal(t, "OK", result)
+
+			result = FireCommand(conn, tc.setCmd)
+			assert.Equal(t, "OK", result)
+
+			result = FireCommand(conn, tc.getCmd)
+			assert.DeepEqual(t, tc.expected, result)
+
 		})
 	}
 }

@@ -176,9 +176,10 @@ var (
 		Returns an integer reply specifying the number ofmatching JSON arrays and
 		objects cleared +number of matching JSON numerical values zeroed.
 		Error reply: If the number of arguments is incorrect the key doesn't exist.`,
-		Eval:     evalJSONCLEAR,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalJSONCLEAR,
 	}
 	jsondelCmdMeta = DiceCmdMeta{
 		Name: "JSON.DEL",
@@ -234,9 +235,10 @@ var (
 		Report the number of keys in the JSON object at path in key
 		Returns error response if the key doesn't exist or key is expired or the matching value is not an array.
 		Error reply: If the number of arguments is incorrect.`,
-		Eval:     evalJSONOBJLEN,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalJSONOBJLEN,
 	}
 	jsondebugCmdMeta = DiceCmdMeta{
 		Name: "JSON.DEBUG",
@@ -454,8 +456,8 @@ var (
 		Arity: 1,
 	}
 	qwatchCmdMeta = DiceCmdMeta{
-		Name: "QWATCH",
-		Info: `QWATCH adds the specified key to the watch list for the caller client.
+		Name: "Q.WATCH",
+		Info: `Q.WATCH adds the specified key to the watch list for the caller client.
 		Every time a key in the watch list is modified, the client will be sent a response
 		containing the new value of the key along with the operation that was performed on it.
 		Contains only one argument, the key to be watched.`,
@@ -463,7 +465,7 @@ var (
 		Arity: 1,
 	}
 	qUnwatchCmdMeta = DiceCmdMeta{
-		Name: "QUNWATCH",
+		Name: "Q.UNWATCH",
 		Info: `Unsubscribes or QUnwatches the client from the given key's watch session.
 		It removes the key from the watch list for the caller client.`,
 		Eval:  nil,
@@ -895,33 +897,37 @@ var (
 		Name: "PFADD",
 		Info: `PFADD key [element [element ...]]
 		Adds elements to a HyperLogLog key. Creates the key if it doesn't exist.`,
-		Eval:     evalPFADD,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalPFADD,
+		IsMigrated: true,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	pfCountCmdMeta = DiceCmdMeta{
 		Name: "PFCOUNT",
 		Info: `PFCOUNT key [key ...]
 		Returns the approximated cardinality of the set(s) observed by the HyperLogLog key(s).`,
-		Eval:     evalPFCOUNT,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalPFCOUNT,
+		IsMigrated: true,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	pfMergeCmdMeta = DiceCmdMeta{
 		Name: "PFMERGE",
 		Info: `PFMERGE destkey [sourcekey [sourcekey ...]]
 		Merges one or more HyperLogLog values into a single key.`,
-		Eval:     evalPFMERGE,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalPFMERGE,
+		IsMigrated: true,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	jsonStrlenCmdMeta = DiceCmdMeta{
 		Name: "JSON.STRLEN",
 		Info: `JSON.STRLEN key [path]
 		Report the length of the JSON String at path in key`,
-		Eval:     evalJSONSTRLEN,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalJSONSTRLEN,
 	}
 	hlenCmdMeta = DiceCmdMeta{
 		Name: "HLEN",
@@ -1020,9 +1026,10 @@ var (
 		Adds all the specified members with the specified scores to the sorted set stored at key.
 		Options: NX, XX, CH, INCR
 		Returns the number of elements added to the sorted set, not including elements already existing for which the score was updated.`,
-		Eval:     evalZADD,
-		Arity:    -4,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -4,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalZADD,
 	}
 	zrangeCmdMeta = DiceCmdMeta{
 		Name: "ZRANGE",
@@ -1032,9 +1039,10 @@ var (
 		Both start and stop are 0-based indexes, where 0 is the first element, 1 is the next element and so on.
 		These indexes can also be negative numbers indicating offsets from the end of the sorted set, with -1 being the last element of the sorted set, -2 the penultimate element and so on.
 		Returns the specified range of elements in the sorted set.`,
-		Eval:     evalZRANGE,
-		Arity:    -4,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -4,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalZRANGE,
 	}
 	bitfieldCmdMeta = DiceCmdMeta{
 		Name: "BITFIELD",
@@ -1059,6 +1067,14 @@ var (
 		Arity:    -1,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 		Eval:     evalBITFIELD,
+	}
+	bitfieldroCmdMeta = DiceCmdMeta{
+		Name: "BITFIELD_RO",
+		Info: `It is read-only variant of the BITFIELD command. 
+		It is like the original BITFIELD but only accepts GET subcommand.`,
+		Arity:    -1,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+		Eval:     evalBITFIELDRO,
 	}
 	hincrbyFloatCmdMeta = DiceCmdMeta{
 		Name: "HINCRBYFLOAT",
@@ -1086,6 +1102,16 @@ var (
 		Eval:     evalGEODIST,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	jsonstrappendCmdMeta = DiceCmdMeta{
+		Name: "JSON.STRAPPEND",
+		Info: `JSON.STRAPPEND key [path] value
+		Append the JSON string values to the string at path
+		Returns an array of integer replies for each path, the string's new length, or nil, if the matching JSON value is not a string. 
+		Error reply: If the value at path is not a string or if the key doesn't exist.`,
+		Eval:     evalJSONSTRAPPEND,
+		Arity:    3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -1100,6 +1126,7 @@ func init() {
 	DiceCmds["BITCOUNT"] = bitCountCmdMeta
 	DiceCmds["BITFIELD"] = bitfieldCmdMeta
 	DiceCmds["BITOP"] = bitOpCmdMeta
+	DiceCmds["BITFIELD_RO"] = bitfieldroCmdMeta
 	DiceCmds["BITPOS"] = bitposCmdMeta
 	DiceCmds["CLIENT"] = clientCmdMeta
 	DiceCmds["COMMAND"] = commandCmdMeta
@@ -1183,8 +1210,8 @@ func init() {
 	DiceCmds["PFMERGE"] = pfMergeCmdMeta
 	DiceCmds["PING"] = pingCmdMeta
 	DiceCmds["PTTL"] = pttlCmdMeta
-	DiceCmds["QUNWATCH"] = qUnwatchCmdMeta
-	DiceCmds["QWATCH"] = qwatchCmdMeta
+	DiceCmds["Q.UNWATCH"] = qUnwatchCmdMeta
+	DiceCmds["Q.WATCH"] = qwatchCmdMeta
 	DiceCmds["RENAME"] = renameCmdMeta
 	DiceCmds["RESTORE"] = restorekeyCmdMeta
 	DiceCmds["RPOP"] = rpopCmdMeta
@@ -1206,6 +1233,7 @@ func init() {
 	DiceCmds["TYPE"] = typeCmdMeta
 	DiceCmds["ZADD"] = zaddCmdMeta
 	DiceCmds["ZRANGE"] = zrangeCmdMeta
+	DiceCmds["JSON.STRAPPEND"] = jsonstrappendCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

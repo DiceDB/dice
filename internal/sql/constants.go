@@ -10,5 +10,5 @@ const (
 	Bool   string = "bool"
 	Nil    string = "nil"
 
-	Qwatch string = "qwatch"
+	Qwatch string = "q.watch"
 )

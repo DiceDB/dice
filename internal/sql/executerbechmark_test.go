@@ -22,7 +22,7 @@ var jsonList = map[string]string{
 }
 
 func generateBenchmarkData(count int, store *dstore.Store) {
-	config.DiceConfig.Server.KeysLimit = 2000000 // Set a high limit for benchmarking
+	config.DiceConfig.Memory.KeysLimit = 2000000 // Set a high limit for benchmarking
 	store.ResetStore()
 
 	data := make(map[string]*object.Obj, count)
@@ -289,7 +289,7 @@ func BenchmarkExecuteQueryWithAllMatchingKeyRegex(b *testing.B) {
 }
 
 func generateBenchmarkJSONData(b *testing.B, count int, json string, store *dstore.Store) {
-	config.DiceConfig.Server.KeysLimit = 2000000 // Set a high limit for benchmarking
+	config.DiceConfig.Memory.KeysLimit = 2000000 // Set a high limit for benchmarking
 	store.ResetStore()
 
 	data := make(map[string]*object.Obj, count)
