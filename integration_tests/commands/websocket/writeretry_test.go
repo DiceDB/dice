@@ -1,10 +1,10 @@
 package websocket
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var serverAddr = "localhost:12345"
+var serverAddr = fmt.Sprintf("localhost:%v", testPort2)
 var once sync.Once
 
 func TestWriteResponseWithRetries_Success(t *testing.T) {
@@ -68,10 +68,6 @@ func TestWriteResponseWithRetries_EAGAINRetry(t *testing.T) {
 		}
 	}
 	assert.Equal(t, 2, retries)
-}
-
-func newSyscallError(syscall string, err error) *os.SyscallError {
-	return &os.SyscallError{Syscall: syscall, Err: err}
 }
 
 func startWebSocketServer() {
