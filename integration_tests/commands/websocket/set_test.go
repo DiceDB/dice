@@ -179,9 +179,9 @@ func TestSetWithExat(t *testing.T) {
 
 			resp, err = exec.FireCommandAndReadResponse(conn, "TTL k")
 			assert.Nil(t, err)
-			respFloat, ok = resp.(float64)
+			respString, ok := resp.(string)
 			assert.True(t, ok)
-			assert.Equal(t, float64(-2), respFloat, "Value mismatch for cmd TTL k")
+			assert.Equal(t, "-2", respString, "Value mismatch for cmd TTL k")
 		})
 
 	t.Run("SET with invalid EXAT expires key immediately",
@@ -200,9 +200,9 @@ func TestSetWithExat(t *testing.T) {
 
 			resp, err = exec.FireCommandAndReadResponse(conn, "TTL k")
 			assert.Nil(t, err)
-			respFloat, ok := resp.(float64)
+			respString, ok := resp.(string)
 			assert.True(t, ok)
-			assert.Equal(t, float64(-2), respFloat, "Value mismatch for cmd TTL k")
+			assert.Equal(t, "-2", respString, "Value mismatch for cmd TTL k")
 		})
 
 	t.Run("SET with EXAT and PXAT returns syntax error",

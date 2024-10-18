@@ -85,7 +85,7 @@ func TestCopy(t *testing.T) {
 				{Command: "TTL", Body: map[string]interface{}{"key": "k1"}},
 				{Command: "TTL", Body: map[string]interface{}{"key": "k2"}},
 			},
-			expected: []interface{}{"OK", float64(1), float64(-1), float64(-1)},
+			expected: []interface{}{"OK", float64(1), "-1", "-1"},
 		},
 		{
 			name: "COPY with expiry making sure copy expires",

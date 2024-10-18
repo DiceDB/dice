@@ -43,7 +43,7 @@ func TestGetSet(t *testing.T) {
 				{Command: "GETSET", Body: map[string]interface{}{"key": "k", "value": "v1"}},
 				{Command: "TTL", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"OK", "v", float64(-1)},
+			expected: []interface{}{"OK", "v", "-1"},
 			delays:   []time.Duration{0, 0, 0},
 		},
 		{

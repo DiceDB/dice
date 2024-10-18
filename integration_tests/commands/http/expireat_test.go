@@ -8,7 +8,7 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func TestExpireAtHttp(t *testing.T) {
+func TestEXPIREAT(t *testing.T) {
 	exec := NewHTTPCommandExecutor()
 
 	testCases := []struct {
@@ -25,7 +25,7 @@ func TestExpireAtHttp(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "EXPIREAT", Body: map[string]interface{}{"key": "test_key", "seconds": strconv.FormatInt(time.Now().Unix()+1, 10)}},
 			},
-			expected:      []interface{}{float64(1)},
+			expected:      []interface{}{"1"},
 			delay:         []time.Duration{0},
 			errorExpected: false,
 		},
@@ -36,7 +36,7 @@ func TestExpireAtHttp(t *testing.T) {
 				{Command: "EXPIREAT", Body: map[string]interface{}{"key": "test_key", "seconds": strconv.FormatInt(time.Now().Unix()+1, 10)}},
 				{Command: "GET", Body: map[string]interface{}{"key": "test_key"}},
 			},
-			expected:      []interface{}{float64(1), nil},
+			expected:      []interface{}{"1", nil},
 			delay:         []time.Duration{0, 1100 * time.Millisecond},
 			errorExpected: false,
 		},
@@ -46,7 +46,7 @@ func TestExpireAtHttp(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "EXPIREAT", Body: map[string]interface{}{"key": "non_existent_key", "seconds": strconv.FormatInt(time.Now().Unix()+1, 10)}},
 			},
-			expected:      []interface{}{float64(0)},
+			expected:      []interface{}{"0"},
 			delay:         []time.Duration{0},
 			errorExpected: false,
 		},
@@ -78,7 +78,7 @@ func TestExpireAtHttp(t *testing.T) {
 				{Command: "EXPIREAT", Body: map[string]interface{}{"key": "test_key", "seconds": strconv.FormatInt(time.Now().Unix()+10, 10), "nx": true}},
 				{Command: "EXPIREAT", Body: map[string]interface{}{"key": "test_key", "seconds": strconv.FormatInt(time.Now().Unix()+1, 10), "nx": true}},
 			},
-			expected:      []interface{}{float64(1), float64(0)},
+			expected:      []interface{}{"1", "0"},
 			delay:         []time.Duration{0, 0},
 			errorExpected: false,
 		},
@@ -91,7 +91,7 @@ func TestExpireAtHttp(t *testing.T) {
 				{Command: "EXPIREAT", Body: map[string]interface{}{"key": "test_key", "seconds": strconv.FormatInt(time.Now().Unix()+10, 10)}},
 				{Command: "EXPIREAT", Body: map[string]interface{}{"key": "test_key", "seconds": strconv.FormatInt(time.Now().Unix()+10, 10), "xx": true}},
 			},
-			expected:      []interface{}{float64(0), float64(-1), float64(1), float64(1)},
+			expected:      []interface{}{"0", "-1", "1", "1"},
 			delay:         []time.Duration{0, 0, 0, 0},
 			errorExpected: false,
 		},
@@ -104,7 +104,7 @@ func TestExpireAtHttp(t *testing.T) {
 				{Command: "EXPIREAT", Body: map[string]interface{}{"key": "test_key", "seconds": strconv.FormatInt(time.Now().Unix()+10, 10)}},
 				{Command: "EXPIREAT", Body: map[string]interface{}{"key": "test_key", "seconds": strconv.FormatInt(time.Now().Unix()+20, 10), "gt": true}},
 			},
-			expected:      []interface{}{float64(0), float64(-1), float64(1), float64(1)},
+			expected:      []interface{}{"0", "-1", "1", "1"},
 			delay:         []time.Duration{0, 0, 0, 0},
 			errorExpected: false,
 		},
@@ -115,7 +115,7 @@ func TestExpireAtHttp(t *testing.T) {
 				{Command: "EXPIREAT", Body: map[string]interface{}{"key": "test_key", "seconds": strconv.FormatInt(time.Now().Unix()+10, 10), "lt": true}},
 				{Command: "EXPIREAT", Body: map[string]interface{}{"key": "test_key", "seconds": strconv.FormatInt(time.Now().Unix()+20, 10), "lt": true}},
 			},
-			expected:      []interface{}{float64(1), float64(0)},
+			expected:      []interface{}{"1", "0"},
 			delay:         []time.Duration{0, 0},
 			errorExpected: false,
 		},
@@ -129,7 +129,7 @@ func TestExpireAtHttp(t *testing.T) {
 				{Command: "EXPIREAT", Body: map[string]interface{}{"key": "test_key", "seconds": strconv.FormatInt(time.Now().Unix()+20, 10), "nx": true, "gt": true}},
 				{Command: "GET", Body: map[string]interface{}{"key": "test_key"}},
 			},
-			expected: []interface{}{float64(1),
+			expected: []interface{}{"1",
 				"ERR NX and XX, GT or LT options at the same time are not compatible",
 				"ERR NX and XX, GT or LT options at the same time are not compatible",
 				"test_value"},
@@ -147,7 +147,7 @@ func TestExpireAtHttp(t *testing.T) {
 				{Command: "EXPIREAT", Body: map[string]interface{}{"key": "test_key", "seconds": strconv.FormatInt(time.Now().Unix()+20, 10), "xx": true, "gt": true}},
 				{Command: "GET", Body: map[string]interface{}{"key": "test_key"}},
 			},
-			expected:      []interface{}{float64(1), float64(1), float64(1), float64(1), "test_value"},
+			expected:      []interface{}{"1", "1", "1", "1", "test_value"},
 			delay:         []time.Duration{0, 0, 0, 0, 0, 0},
 			errorExpected: false,
 		},
@@ -160,7 +160,7 @@ func TestExpireAtHttp(t *testing.T) {
 				{Command: "EXPIREAT", Body: map[string]interface{}{"key": "test_key", "seconds": strconv.FormatInt(time.Now().Unix()+2, 10), "xx": true, "lt": true}},
 				{Command: "GET", Body: map[string]interface{}{"key": "test_key"}},
 			},
-			expected:      []interface{}{float64(1), float64(1), nil},
+			expected:      []interface{}{"1", "1", nil},
 			delay:         []time.Duration{0, 0, 2 * time.Second},
 			errorExpected: false,
 		},
@@ -172,7 +172,7 @@ func TestExpireAtHttp(t *testing.T) {
 				{Command: "EXPIREAT", Body: map[string]interface{}{"key": "test_key", "seconds": strconv.FormatInt(time.Now().Unix()+2, 10), "nx": true}},
 				{Command: "GET", Body: map[string]interface{}{"key": "test_key"}},
 			},
-			expected:      []interface{}{float64(1), nil},
+			expected:      []interface{}{"1", nil},
 			delay:         []time.Duration{0, 2 * time.Second},
 			errorExpected: false,
 		},

@@ -12,6 +12,7 @@ type TestCase struct {
 	name          string
 	commands      []HTTPCommand
 	expected      []interface{}
+	assertType    []string
 	errorExpected bool
 }
 
@@ -217,7 +218,8 @@ func TestSetWithExat(t *testing.T) {
 				{Command: "GET", Body: map[string]interface{}{"key": "k"}},
 				{Command: "TTL", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{float64(0), "OK", "v", float64(4)},
+			expected:   []interface{}{float64(0), "OK", "v", float64(4)},
+			assertType: []string{"equal", "equal", "equal", "assert"},
 		},
 		{
 			name: "SET with invalid EXAT expires key immediately",
@@ -227,7 +229,8 @@ func TestSetWithExat(t *testing.T) {
 				{Command: "GET", Body: map[string]interface{}{"key": "k"}},
 				{Command: "TTL", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{float64(0), "OK", nil, float64(-2)},
+			expected:   []interface{}{float64(0), "OK", nil, "-2"},
+			assertType: []string{"equal", "equal", "equal", "equal"},
 		},
 	}
 
@@ -241,8 +244,8 @@ func TestSetWithExat(t *testing.T) {
 
 			for i, cmd := range tc.commands {
 				result, _ := exec.FireCommand(cmd)
-				if cmd.Command == "TTL" {
-					assert.Assert(t, result.(float64) <= tc.expected[i].(float64))
+				if tc.assertType[i] == "assert" {
+					assert.Assert(t, result.(float64) <= tc.expected[i].(float64), "Expected %v to be less than or equal to %v", result, tc.expected[i])
 				} else {
 					assert.DeepEqual(t, tc.expected[i], result)
 				}
