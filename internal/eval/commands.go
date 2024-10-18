@@ -324,9 +324,10 @@ var (
 		Name: "DEL",
 		Info: `DEL deletes all the specified keys in args list
 		returns the count of total deleted keys after encoding`,
-		Eval:     evalDEL,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1, LastKey: -1},
+		IsMigrated: true,
+		NewEval:    evalDEL,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1, LastKey: -1},
 	}
 	expireCmdMeta = DiceCmdMeta{
 		Name: "EXPIRE",

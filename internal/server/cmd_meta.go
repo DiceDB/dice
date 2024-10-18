@@ -82,6 +82,10 @@ var (
 		Cmd:     "PFMERGE",
 		CmdType: SingleShard,
 	}
+	delCmdMeta = CmdsMeta{
+		Cmd:     "DEL",
+		CmdType: SingleShard,
+	}
 
 	jsonclearCmdMeta = CmdsMeta{
 		Cmd:     "JSON.CLEAR",
@@ -122,5 +126,6 @@ func init() {
 	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
 	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
 	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
+	WorkerCmdsMeta["DEL"] = delCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }

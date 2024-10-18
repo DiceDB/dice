@@ -1520,24 +1520,6 @@ func evalTTL(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(int64(durationMs/1000), false)
 }
 
-// evalDEL deletes all the specified keys in args list
-// returns the count of total deleted keys after encoding
-func evalDEL(args []string, store *dstore.Store) []byte {
-	var countDeleted = 0
-
-	if len(args) < 1 {
-		return diceerrors.NewErrArity("DEL")
-	}
-
-	for _, key := range args {
-		if ok := store.Del(key); ok {
-			countDeleted++
-		}
-	}
-
-	return clientio.Encode(countDeleted, false)
-}
-
 // evalEXPIRE sets an expiry time(in secs) on the specified key in args
 // args should contain 2 values, key and the expiry time to be set for the key
 // The expiry time should be in integer format; if not, it returns encoded error response

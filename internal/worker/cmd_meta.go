@@ -54,6 +54,7 @@ const (
 	CmdPFAdd       = "PFADD"
 	CmdPFCount     = "PFCOUNT"
 	CmdPFMerge     = "PFMERGE"
+	CmdDel         = "DEL"
 )
 
 type CmdMeta struct {
@@ -104,6 +105,9 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdPFMerge: {
+		CmdType: SingleShard,
+	},
+	CmdDel: {
 		CmdType: SingleShard,
 	},
 
