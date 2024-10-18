@@ -268,6 +268,15 @@ func (store *Store) GetDel(k string, opts ...DelOption) *object.Obj {
 	return v
 }
 
+// GetUnixTimeExpiry returns the expiry time for an object.
+func (store *Store) GetUnixTimeExpiry(obj *object.Obj) (uint64, bool) {
+	v, ok := store.expires.Get(obj)
+	if ok {
+		return v, true
+	}
+	return 0, false
+}
+
 // SetExpiry sets the expiry time for an object.
 // This method is not thread-safe. It should be called within a lock.
 func (store *Store) SetExpiry(obj *object.Obj, expDurationMs int64) {
