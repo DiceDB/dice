@@ -1,9 +1,15 @@
-name: linter
+name: Linter
+
 on:
   push:
-    branches: [ master ]
+    branches: [master]
+    paths:
+      - '*.go'
+
   pull_request:
-    branches: [ master ]
+    branches: [master]
+    paths:
+      - '*.go'
 
 permissions:
   contents: read
