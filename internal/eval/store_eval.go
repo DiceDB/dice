@@ -1066,7 +1066,7 @@ func evalINCRBYFLOAT(args []string, store *dstore.Store) *EvalResponse {
 	if err != nil {
 		return &EvalResponse{
 			Result: nil,
-			Error:  diceerrors.ErrInvalidNumberFormat,
+			Error:  diceerrors.ErrInvalidFloat,
 		}
 	}
 	return incrByFloatCmd(args, incr, store)
@@ -1100,7 +1100,7 @@ func incrByFloatCmd(args []string, incr float64, store *dstore.Store) *EvalRespo
 	if err != nil {
 		return &EvalResponse{
 			Result: nil,
-			Error:  diceerrors.ErrWrongTypeOperation,
+			Error:  diceerrors.ErrInvalidFloat,
 		}
 	}
 	value += incr
