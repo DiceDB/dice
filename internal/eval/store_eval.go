@@ -1004,10 +1004,10 @@ func incrDecrCmd(args []string, incr int64, store *dstore.Store) *EvalResponse {
 	key := args[0]
 	obj := store.Get(key)
 	if obj == nil {
-		obj = store.NewObj(int64(incr), -1, object.ObjTypeInt, object.ObjEncodingInt)
+		obj = store.NewObj(incr, -1, object.ObjTypeInt, object.ObjEncodingInt)
 		store.Put(key, obj)
 		return &EvalResponse{
-			Result: int64(incr),
+			Result: incr,
 			Error:  nil,
 		}
 	}
