@@ -25,7 +25,7 @@ import (
 const Abort = "ABORT"
 
 var unimplementedCommands = map[string]bool{
-	"QUNWATCH": true,
+	"Q.UNWATCH": true,
 }
 
 const stringNil = "(nil)"
@@ -75,7 +75,7 @@ func NewHTTPServer(shardManager *shard.ShardManager, logger *slog.Logger) *HTTPS
 	}
 
 	mux.HandleFunc("/", httpServer.DiceHTTPHandler)
-	mux.HandleFunc("/qwatch", httpServer.DiceHTTPQwatchHandler)
+	mux.HandleFunc("/q.watch", httpServer.DiceHTTPQwatchHandler)
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("ok"))
 		if err != nil {
@@ -241,7 +241,7 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 			// Client disconnected or request finished
 			s.logger.Info("Client disconnected")
 			unWatchCmd := &cmd.DiceDBCmd{
-				Cmd:  "QUNWATCH",
+				Cmd:  "Q.UNWATCH",
 				Args: []string{qwatchQuery},
 			}
 			storeOp.Cmd = unWatchCmd

@@ -54,11 +54,14 @@ type HTTPCommand struct {
 
 func (e *HTTPCommandExecutor) FireCommand(cmd HTTPCommand) (interface{}, error) {
 	command := strings.ToUpper(cmd.Command)
-	body, err := json.Marshal(cmd.Body)
-
-	// Handle error during JSON marshaling
-	if err != nil {
-		return nil, err
+	var body []byte
+	if cmd.Body != nil {
+		var err error
+		body, err = json.Marshal(cmd.Body)
+		// Handle error during JSON marshaling
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	ctx := context.Background()
@@ -75,7 +78,7 @@ func (e *HTTPCommandExecutor) FireCommand(cmd HTTPCommand) (interface{}, error) 
 	}
 	defer resp.Body.Close()
 
-	if cmd.Command != "QWATCH" {
+	if cmd.Command != "Q.WATCH" {
 		var result utils.HTTPResponse
 		err = json.NewDecoder(resp.Body).Decode(&result)
 		if err != nil {

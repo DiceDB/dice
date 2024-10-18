@@ -35,7 +35,7 @@ func TestQWatchUnwatch(t *testing.T) {
 	respParsers := make([]*clientio.RESPParser, len(subscribers))
 
 	for i, sub := range subscribers {
-		rp := fireCommandAndGetRESPParser(sub, "QWATCH \""+qWatchQuery+"\"")
+		rp := fireCommandAndGetRESPParser(sub, "Q.WATCH \""+qWatchQuery+"\"")
 		respParsers[i] = rp
 
 		// Check if the response is OK
@@ -49,7 +49,7 @@ func TestQWatchUnwatch(t *testing.T) {
 
 	// Unwatch the query on two of the subscribers
 	for _, sub := range subscribers[0:2] {
-		rp := fireCommandAndGetRESPParser(sub, "QUNWATCH \""+qWatchQuery+"\"")
+		rp := fireCommandAndGetRESPParser(sub, "Q.UNWATCH \""+qWatchQuery+"\"")
 		resp, err := rp.DecodeOne()
 		assert.NilError(t, err)
 		assert.Equal(t, "OK", resp)
@@ -81,5 +81,5 @@ func TestQWatchUnwatch(t *testing.T) {
 		FireCommand(publisher, fmt.Sprintf("DEL %s:%d", tc.key, tc.userID))
 	}
 	// Unwatch the query on the third subscriber
-	fireCommandAndGetRESPParser(subscribers[2], "QUNWATCH \""+qWatchQuery+"\"")
+	fireCommandAndGetRESPParser(subscribers[2], "Q.UNWATCH \""+qWatchQuery+"\"")
 }
