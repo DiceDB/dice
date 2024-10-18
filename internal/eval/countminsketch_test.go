@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"github.com/dicedb/dice/internal/clientio"
+	diceerrors "github.com/dicedb/dice/internal/errors"
 	dstore "github.com/dicedb/dice/internal/store"
 )
-
 
 func TestCountMinSketch(t *testing.T) {
 	store := dstore.NewStore(nil, nil)
@@ -23,160 +23,233 @@ func testCMSInitByDim(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"cms initbydim - wrong number of arguments": {
 			input: []string{"cms_key"},
-			output: []byte("-ERR wrong number of arguments for 'cms.initbydim' command\r\n"),
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("cms.initbydim"),
+			},
 		},
 		"cms initbydim - wrong type of width": {
 			input: []string{"cms_key", "not_a_number", "5"},
-			output: []byte("-ERR invalid width for 'cms.initbydim' command\r\n"),
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("invalid width for 'cms.initbydim' command"),
+			},
 		},
 		"cms initbydim - wrong type of depth": {
 			input: []string{"cms_key", "5", "not_a_number"},
-			output: []byte("-ERR invalid depth for 'cms.initbydim' command\r\n"),
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("invalid depth for 'cms.initbydim' command"),
+			},
 		},
 		"cms initbydim - negative width": {
 			input: []string{"cms_key", "-100", "5"},
-			output: []byte("-ERR invalid width for 'cms.initbydim' command\r\n"),
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("invalid width for 'cms.initbydim' command"),
+			},
 		},
 		"cms initbydim - negative depth": {
 			input: []string{"cms_key", "5", "-100"},
-			output: []byte("-ERR invalid depth for 'cms.initbydim' command\r\n"),
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("invalid depth for 'cms.initbydim' command"),
+			},
 		},
+
 		"cms initbydim - correct width and depth": {
 			input: []string{"cms_key", "1000", "5"},
-			output: clientio.RespOK,
+			migratedOutput: EvalResponse{
+				Result: clientio.OK,
+				Error:  nil,
+			},
 		},
 		"cms initbydim - key already exists": {
-			setup: func () {
+			setup: func() {
 				key := "cms_key"
 				opts, _ := newCountMinSketchOpts([]string{"1000", "5"})
 				createCountMinSketch(key, opts, store)
 			},
 			input: []string{"cms_key", "1000", "5"},
-			output: []byte("-ERR key already exists for 'cms.initbydim' command\r\n"),
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("key already exists for 'cms.initbydim' command"),
+			},
 		},
 	}
 
-	runEvalTests(t, tests, evalCMSINITBYDIM, store)
+	runMigratedEvalTests(t, tests, evalCMSINITBYDIM, store)
 }
 
 func testCMSInitByProb(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"cms initbyprob - wrong number of arguments": {
 			input: []string{"cms_key1"},
-			output: []byte("-ERR wrong number of arguments for 'cms.initbyprob' command\r\n"),
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("cms.initbyprob"),
+			},
 		},
 		"cms initbyprob - wrong type of error rate": {
 			input: []string{"cms_key1", "not_a_number", "0.01"},
-			output: []byte("-ERR invalid overestimation value for 'cms.initbyprob' command\r\n"),
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("invalid overestimation value for 'cms.initbyprob' command"),
+			},
 		},
 		"cms initbyprob - wrong type of probability": {
 			input: []string{"cms_key1", "0.01", "not_a_number"},
-			output: []byte("-ERR invalid prob value for 'cms.initbyprob' command\r\n"),
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("invalid prob value for 'cms.initbyprob' command"),
+			},
 		},
 		"cms initbyprob - error rate out of range": {
 			input: []string{"cms_key1", "1", "0.01"},
-			output: []byte("-ERR invalid overestimation value for 'cms.initbyprob' command\r\n"),
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("invalid overestimation value for 'cms.initbyprob' command"),
+			},
 		},
 		"cms initbyprob - probability out of range": {
 			input: []string{"cms_key1", "0.01", "1"},
-			output: []byte("-ERR invalid prob value for 'cms.initbyprob' command\r\n"),
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("invalid prob value for 'cms.initbyprob' command"),
+			},
 		},
 		"cms initbyprob - correct error rate and probability": {
 			input: []string{"cms_key1", "0.01", "0.01"},
-			output: clientio.RespOK,
+			migratedOutput: EvalResponse{
+				Result: clientio.OK,
+				Error:  nil,
+			},
 		},
 		"cms initbyprob - key already exists": {
-			setup: func () {
+			setup: func() {
 				key := "cms_key1"
 				opts, _ := newCountMinSketchOpts([]string{"1000", "5"})
 				createCountMinSketch(key, opts, store)
 			},
 			input: []string{"cms_key1", "0.01", "0.01"},
-			output: []byte("-ERR key already exists for 'cms.initbyprob' command\r\n"),
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("key already exists for 'cms.initbyprob' command"),
+			},
 		},
 	}
 
-	runEvalTests(t, tests, evalCMSINITBYPROB, store)
+	runMigratedEvalTests(t, tests, evalCMSINITBYPROB, store)
 }
 
 func testCMSInfo(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"cms info - wrong number of arguments": {
 			input: []string{},
-			output: []byte("-ERR wrong number of arguments for 'cms.info' command\r\n"),
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("cms.info"),
+			},
 		},
 		"cms info - key doesn't exist": {
 			input: []string{"cms_key2"},
-			output: []byte("-ERR key does not exist for 'cms.info' command\r\n"),
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("key does not exist for 'cms.info' command"),
+			},
 		},
 		"cms info - one argument": {
-			setup: func () {
+			setup: func() {
 				key := "cms_key2"
 				opts, _ := newCountMinSketchOpts([]string{"1000", "5"})
 				createCountMinSketch(key, opts, store)
 			},
 			input: []string{"cms_key2"},
-			output: clientio.Encode([]interface{}{"width", 1000, "depth", 5, "count", 0}, false),
+			migratedOutput: EvalResponse{
+				Result: clientio.Encode([]interface{}{"width", 1000, "depth", 5, "count", 0}, false),
+				Error:  nil,
+			},
 		},
 	}
 
-	runEvalTests(t, tests, evalCMSINFO, store)
+	runMigratedEvalTests(t, tests, evalCMSINFO, store)
 }
 
 func testCMSIncrBy(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"cms incrby - wrong number of arguments": {
 			input: []string{"cms_key3"},
-			output: []byte("-ERR wrong number of arguments for 'cms.incrby' command\r\n"),
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("cms.incrby"),
+			},
 		},
 		"cms incrby - key doesn't exist": {
 			input: []string{"cms_key3", "test", "10"},
-			output: []byte("-ERR key does not exist for 'cms.incrby' command\r\n"),
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("key does not exist for 'cms.incrby' command"),
+			},
 		},
 		"cms incrby - inserting keys": {
-			setup: func () {
+			setup: func() {
 				key := "cms_key3"
 				opts, _ := newCountMinSketchOpts([]string{"1000", "5"})
 				createCountMinSketch(key, opts, store)
 			},
 			input: []string{"cms_key3", "test", "10", "test1", "10"},
-			output: clientio.Encode([]uint64{10,10}, false),
+			migratedOutput: EvalResponse{
+				Result: clientio.Encode([]uint64{10, 10}, false),
+				Error:  nil,
+			},
 		},
 		"cms incrby - missing values": {
-			setup: func () {
+			setup: func() {
 				key := "cms_key3"
 				opts, _ := newCountMinSketchOpts([]string{"1000", "5"})
 				createCountMinSketch(key, opts, store)
 			},
 			input: []string{"cms_key3", "test", "10", "test1"},
-			output: []byte("-ERR wrong number of arguments for 'cms.incrby' command\r\n"),
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("cms.incrby"),
+			},
 		},
 		"cms incrby - negative values": {
-			setup: func () {
+			setup: func() {
 				key := "cms_key3"
 				opts, _ := newCountMinSketchOpts([]string{"1000", "5"})
 				createCountMinSketch(key, opts, store)
 			},
 			input: []string{"cms_key3", "test", "-1"},
-			output: []byte("-ERR cannot parse number for 'cms.incrby' command\r\n"),
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("cannot parse number for 'cms.incrby' command"),
+			},
 		},
 	}
 
-	runEvalTests(t, tests, evalCMSIncrBy, store)
+	runMigratedEvalTests(t, tests, evalCMSIncrBy, store)
 }
 
 func testCMSQuery(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"cms query - wrong number of arguments": {
 			input: []string{"cms_key4"},
-			output: []byte("-ERR wrong number of arguments for 'cms.query' command\r\n"),
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("cms.query"),
+			},
 		},
 		"cms query - key doesn't exist": {
 			input: []string{"cms_key4", "test"},
-			output: []byte("-ERR key does not exist for 'cms.query' command\r\n"),
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("key does not exist for 'cms.query' command"),
+			},
 		},
 		"cms query - query keys": {
-			setup: func () {
+			setup: func() {
 				key := "cms_key4"
 				opts, _ := newCountMinSketchOpts([]string{"1000", "5"})
 				createCountMinSketch(key, opts, store)
@@ -186,25 +259,34 @@ func testCMSQuery(t *testing.T, store *dstore.Store) {
 				cms.updateMatrix("test1", 100)
 			},
 			input: []string{"cms_key4", "test", "test1"},
-			output: clientio.Encode([]uint64{10000,100}, false),
+			migratedOutput: EvalResponse{
+				Result: clientio.Encode([]uint64{10000, 100}, false),
+				Error:  nil,
+			},
 		},
 	}
 
-	runEvalTests(t, tests, evalCMSQuery, store)
+	runMigratedEvalTests(t, tests, evalCMSQuery, store)
 }
 
 func testCMSMerge(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"cms merge - wrong number of arguments": {
 			input: []string{"cms_key5"},
-			output: []byte("-ERR wrong number of arguments for 'cms.merge' command\r\n"),
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("cms.merge"),
+			},
 		},
 		"cms merge - key doesn't exist": {
 			input: []string{"cms_key5", "1", "test"},
-			output: []byte("-ERR key does not exist for 'cms.merge' command\r\n"),
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("key does not exist for 'cms.merge' command"),
+			},
 		},
 		"cms merge - wrong type of number of sources": {
-			setup: func () {
+			setup: func() {
 				key := "cms_key5"
 				opts, _ := newCountMinSketchOpts([]string{"1000", "5"})
 				createCountMinSketch(key, opts, store)
@@ -215,10 +297,13 @@ func testCMSMerge(t *testing.T, store *dstore.Store) {
 
 			},
 			input: []string{"cms_key5", "not_a_number", "test"},
-			output: []byte("-ERR cannot parse number for 'cms.merge' command\r\n"),
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("cannot parse number for 'cms.merge' command"),
+			},
 		},
 		"cms merge - more sources than specified": {
-			setup: func () {
+			setup: func() {
 				key := "cms_key5"
 				opts, _ := newCountMinSketchOpts([]string{"1000", "5"})
 				createCountMinSketch(key, opts, store)
@@ -233,10 +318,13 @@ func testCMSMerge(t *testing.T, store *dstore.Store) {
 
 			},
 			input: []string{"cms_key5", "3", "test", "test1"},
-			output: []byte("-ERR invalid number of arguments to merge for 'cms.merge' command\r\n"),
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("invalid number of arguments to merge for 'cms.merge' command"),
+			},
 		},
 		"cms merge - fewer sources than specified": {
-			setup: func () {
+			setup: func() {
 				key := "cms_key5"
 				opts, _ := newCountMinSketchOpts([]string{"1000", "5"})
 				createCountMinSketch(key, opts, store)
@@ -251,10 +339,13 @@ func testCMSMerge(t *testing.T, store *dstore.Store) {
 
 			},
 			input: []string{"cms_key5", "1", "test", "test1"},
-			output: []byte("-ERR invalid number of arguments to merge for 'cms.merge' command\r\n"),
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("invalid number of arguments to merge for 'cms.merge' command"),
+			},
 		},
 		"cms merge - missing weights": {
-			setup: func () {
+			setup: func() {
 				key := "cms_key5"
 				opts, _ := newCountMinSketchOpts([]string{"1000", "5"})
 				createCountMinSketch(key, opts, store)
@@ -265,10 +356,13 @@ func testCMSMerge(t *testing.T, store *dstore.Store) {
 
 			},
 			input: []string{"cms_key5", "1", "test", "WEIGHTS"},
-			output: []byte("-ERR invalid number of arguments to merge for 'cms.merge' command\r\n"),
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("invalid number of arguments to merge for 'cms.merge' command"),
+			},
 		},
 		"cms merge - more weights than needed": {
-			setup: func () {
+			setup: func() {
 				key := "cms_key5"
 				opts, _ := newCountMinSketchOpts([]string{"1000", "5"})
 				createCountMinSketch(key, opts, store)
@@ -279,10 +373,13 @@ func testCMSMerge(t *testing.T, store *dstore.Store) {
 
 			},
 			input: []string{"cms_key5", "1", "test", "WEIGHTS", "1", "2"},
-			output: []byte("-ERR invalid number of arguments to merge for 'cms.merge' command\r\n"),
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("invalid number of arguments to merge for 'cms.merge' command"),
+			},
 		},
 		"cms merge - correct case": {
-			setup: func () {
+			setup: func() {
 				key := "cms_key5"
 				opts, _ := newCountMinSketchOpts([]string{"1000", "5"})
 				createCountMinSketch(key, opts, store)
@@ -293,10 +390,13 @@ func testCMSMerge(t *testing.T, store *dstore.Store) {
 
 			},
 			input: []string{"cms_key5", "1", "test"},
-			output: clientio.RespOK,
+			migratedOutput: EvalResponse{
+				Result: clientio.RespOK,
+				Error:  nil,
+			},
 		},
 		"cms merge - correct case with given weights": {
-			setup: func () {
+			setup: func() {
 				key := "cms_key5"
 				opts, _ := newCountMinSketchOpts([]string{"1000", "5"})
 				createCountMinSketch(key, opts, store)
@@ -310,9 +410,12 @@ func testCMSMerge(t *testing.T, store *dstore.Store) {
 				createCountMinSketch(source2, opts, store)
 			},
 			input: []string{"cms_key5", "2", "test", "test1", "WEIGHTS", "1", "2"},
-			output: clientio.RespOK,
+			migratedOutput: EvalResponse{
+				Result: clientio.RespOK,
+				Error:  nil,
+			},
 		},
 	}
 
-	runEvalTests(t, tests, evalCMSMerge, store)
+	runMigratedEvalTests(t, tests, evalCMSMerge, store)
 }

@@ -2,6 +2,7 @@ package eval
 
 import (
 	"encoding/binary"
+	"fmt"
 	"hash"
 	"hash/fnv"
 	"math"
@@ -234,28 +235,43 @@ func (c *CountMinSketch) mergeMatrices(sources []*CountMinSketch, weights []uint
 // evalCMSMerge is used to merge multiple sketches into one. The final sketch
 // contains the weighted sum of the values in each of the source sketches. If
 // weights are not provided, default is 1.
-func evalCMSMerge(args []string, store *dstore.Store) []byte {
+func evalCMSMerge(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) < 3 {
-		return diceerrors.NewErrArity("cms.merge")
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("cms.merge"),
+		}
 	}
 
 	destination, err := getCountMinSketch(args[0], store)
 	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%v for 'cms.merge' command", err)
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(fmt.Sprintf("%v for 'cms.merge' command", err)),
+		}
 	}
 
 	numberOfKeys, err := strconv.ParseInt(args[1], 10, 64)
 
 	if err != nil {
-		return diceerrors.NewErrWithMessage("cannot parse number for 'cms.merge' command")
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("cannot parse number for 'cms.merge' command"),
+		}
 	}
 
 	if numberOfKeys < 1 {
-		return diceerrors.NewErrWithMessage("invalid number of arguments to merge for 'cms.merge' command")
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("invalid number of arguments to merge for 'cms.merge' command"),
+		}
 	}
 
 	if len(args) != int(2+numberOfKeys) && len(args) != int(3+2*numberOfKeys) {
-		return diceerrors.NewErrWithMessage("invalid number of arguments to merge for 'cms.merge' command")
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("invalid number of arguments to merge for 'cms.merge' command"),
+		}
 	}
 	keys := args[2 : 2+numberOfKeys]
 	sources := make([]*CountMinSketch, 0, numberOfKeys)
@@ -263,10 +279,16 @@ func evalCMSMerge(args []string, store *dstore.Store) []byte {
 	for _, key := range keys {
 		c, err := getCountMinSketch(key, store)
 		if err != nil {
-			return diceerrors.NewErrWithFormattedMessage("%v for 'cms.merge' command", err)
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral(fmt.Sprintf("%v for 'cms.merge' command", err)),
+			}
 		}
 		if c.opts.depth != destination.opts.depth || c.opts.width != destination.opts.width {
-			return diceerrors.NewErrWithMessage("width/depth doesn't match")
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("width/depth doesn't match"),
+			}
 		}
 		sources = append(sources, c)
 	}
@@ -275,16 +297,25 @@ func evalCMSMerge(args []string, store *dstore.Store) []byte {
 		weights := slices.Repeat([]uint64{1}, int(numberOfKeys))
 		destination.mergeMatrices(sources, weights, args[0], keys)
 
-		return clientio.RespOK
+		return &EvalResponse{
+			Result: clientio.RespOK,
+			Error:  nil,
+		}
 	}
 
 	if !strings.EqualFold(args[2+numberOfKeys], "WEIGHTS") {
-		return diceerrors.NewErrWithMessage("invalid number of arguments to merge for 'cms.merge' command")
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("invalid number of arguments to merge for 'cms.merge' command"),
+		}
 	}
 
 	numberOfWeights := len(args) - 3 - int(numberOfKeys)
 	if int(numberOfKeys) != numberOfWeights {
-		return diceerrors.NewErrWithMessage("invalid number of arguments to merge for 'cms.merge' command")
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("invalid number of arguments to merge for 'cms.merge' command"),
+		}
 	}
 
 	values := args[3+numberOfWeights:]
@@ -292,25 +323,37 @@ func evalCMSMerge(args []string, store *dstore.Store) []byte {
 	for _, value := range values {
 		weight, err := strconv.ParseUint(value, 10, 64)
 		if err != nil {
-			return diceerrors.NewErrWithMessage("invalid number")
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("invalid number"),
+			}
 		}
 		weights = append(weights, weight)
 	}
 
 	destination.mergeMatrices(sources, weights, args[0], keys)
 
-	return clientio.RespOK
+	return &EvalResponse{
+		Result: clientio.RespOK,
+		Error:  nil,
+	}
 }
 
 // evalCMSQuery returns the count for one or more items in a sketch.
-func evalCMSQuery(args []string, store *dstore.Store) []byte {
+func evalCMSQuery(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) < 2 {
-		return diceerrors.NewErrArity("cms.query")
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("cms.query"),
+		}
 	}
 
 	cms, err := getCountMinSketch(args[0], store)
 	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%v for 'cms.query' command", err)
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(fmt.Sprintf("%v for 'cms.query' command", err)),
+		}
 	}
 
 	results := make([]uint64, 0, len(args[1:]))
@@ -319,25 +362,37 @@ func evalCMSQuery(args []string, store *dstore.Store) []byte {
 		results = append(results, cms.estimateCount(key))
 	}
 
-	return clientio.Encode(results, false)
+	return &EvalResponse{
+		Result: clientio.Encode(results, false),
+		Error:  nil,
+	}
 }
 
 // evalCMSIncrBy increases the count of item by increment. Multiple items can be increased with one call.
-func evalCMSIncrBy(args []string, store *dstore.Store) []byte {
+func evalCMSIncrBy(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) < 3 || len(args)%2 == 0 {
-		return diceerrors.NewErrArity("cms.incrby")
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("cms.incrby"),
+		}
 	}
 
 	cms, err := getCountMinSketch(args[0], store)
 	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%v for 'cms.incrby' command", err)
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(fmt.Sprintf("%v for 'cms.incrby' command", err)),
+		}
 	}
 
 	keyValuePairs := args[1:]
 	for iter := 1; iter < len(keyValuePairs); iter += 2 {
 		_, err := strconv.ParseUint(keyValuePairs[iter], 10, 64)
 		if err != nil {
-			return diceerrors.NewErrWithMessage("cannot parse number for 'cms.incrby' command")
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("cannot parse number for 'cms.incrby' command"),
+			}
 		}
 	}
 
@@ -347,7 +402,10 @@ func evalCMSIncrBy(args []string, store *dstore.Store) []byte {
 		key := keyValuePairs[iter]
 		value, err := strconv.ParseUint(keyValuePairs[iter+1], 10, 64)
 		if err != nil {
-			return diceerrors.NewErrWithMessage("cannot parse number")
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("cannot parse number"),
+			}
 		}
 
 		cms.updateMatrix(key, value)
@@ -355,58 +413,94 @@ func evalCMSIncrBy(args []string, store *dstore.Store) []byte {
 		results = append(results, count)
 	}
 
-	return clientio.Encode(results, false)
+	return &EvalResponse{
+		Result: clientio.Encode(results, false),
+		Error:  nil,
+	}
 }
 
 // evalCMSINFO returns width, depth and total count of the sketch.
-func evalCMSINFO(args []string, store *dstore.Store) []byte {
+func evalCMSINFO(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) != 1 {
-		return diceerrors.NewErrArity("cms.info")
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("cms.info"),
+		}
 	}
 	cms, err := getCountMinSketch(args[0], store)
 	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%v for 'cms.info' command", err)
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(fmt.Sprintf("%v for 'cms.info' command", err)),
+		}
 	}
 
-	return clientio.Encode(cms.info(), false)
+	return &EvalResponse{
+		Result: clientio.Encode(cms.info(), false),
+		Error:  nil,
+	}
 }
 
 // evalCMSINITBYDIM initializes a Count-Min Sketch by dimensions (width and depth) specified in the call.
-func evalCMSINITBYDIM(args []string, store *dstore.Store) []byte {
+func evalCMSINITBYDIM(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) != 3 {
-		return diceerrors.NewErrArity("cms.initbydim")
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("cms.initbydim"),
+		}
 	}
 
 	opts, err := newCountMinSketchOpts(args[1:])
 	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%v for 'cms.initbydim' command", err)
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(fmt.Sprintf("%v for 'cms.initbydim' command", err)),
+		}
 	}
 
 	if err = createCountMinSketch(args[0], opts, store); err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%v for 'cms.initbydim' command", err)
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(fmt.Sprintf("%v for 'cms.initbydim' command", err)),
+		}
 	}
 
-	return clientio.RespOK
+	return &EvalResponse{
+		Result: clientio.RespOK,
+		Error:  nil,
+	}
 }
 
 // evalCMSINITBYPROB initializes a Count-Min Sketch for a given error rate and probability.
 // Error rate is used to calculate the width while probability is used to calculate the depth
 // of the sketch.
-func evalCMSINITBYPROB(args []string, store *dstore.Store) []byte {
+func evalCMSINITBYPROB(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) != 3 {
-		return diceerrors.NewErrArity("cms.initbyprob")
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("cms.initbyprob"),
+		}
 	}
 
 	opts, err := newCountMinSketchOptsWithErrorRate(args[1:])
 	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%v for 'cms.initbyprob' command", err)
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(fmt.Sprintf("%v for 'cms.initbyprob' command", err)),
+		}
 	}
 
 	if err = createCountMinSketch(args[0], opts, store); err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%v for 'cms.initbyprob' command", err)
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(fmt.Sprintf("%v for 'cms.initbyprob' command", err)),
+		}
 	}
 
-	return clientio.RespOK
+	return &EvalResponse{
+		Result: clientio.RespOK,
+		Error:  nil,
+	}
 }
 
 // creates a new Count Min Sketch in the key-value store. Returns error if the key already exists.
