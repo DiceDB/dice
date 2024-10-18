@@ -142,6 +142,35 @@ func (ss *Set) GetRange(
 	return result
 }
 
+// GetMin returns the first 'count' key-value pairs (member and score) with the minimum scores
+// and removes those items from the sorted set.
+func (ss *Set) GetMin(count int) []string {
+	// Initialize the result slice to hold the key-value pairs (member and score).
+	result := []string{}
+
+	// Iterate 'count' times to get the minimum items.
+	for i := 0; i < count; i++ {
+		// Delete the minimum item from the tree and get the item. If the tree is empty, this returns nil.
+		minItem := ss.tree.DeleteMin()
+		if minItem == nil {
+			break // Exit if the tree is empty before reaching the desired count.
+		}
+
+		// Cast the btree.Item to *Item.
+		ssi := minItem.(*Item)
+
+		// Add member and score to the result.
+		result = append(result, ssi.Member)
+		scoreStr := strings.ToLower(strconv.FormatFloat(ssi.Score, 'g', -1, 64))
+		result = append(result, scoreStr)
+
+		// Remove the item from the member map.
+		delete(ss.memberMap, ssi.Member)
+	}
+
+	return result
+}
+
 func (ss *Set) Get(member string) (float64, bool) {
 	score, exists := ss.memberMap[member]
 	return score, exists
