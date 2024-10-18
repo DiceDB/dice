@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/dicedb/dice/internal/clientio"
-	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
 	assert "github.com/stretchr/testify/assert"
 )
@@ -36,8 +35,8 @@ func TestBloomFilter(t *testing.T) {
 	// BF.RESERVE bf1
 	args = []string{"bf1"}
 	resp = evalBFRESERVE(args, store)
-	assert.Nil(t, resp.Error)
-	assert.ObjectsAreEqualValues(resp.Result, clientio.OK)
+	assert.Error(t, resp.Error, "ERR wrong number of arguments for 'bf.reserve' command")
+	assert.Nil(t, resp.Result)
 
 	// BF.ADD with wrong arguments, must return non-nil error and nil result
 	args = []string{"bf"}
@@ -98,22 +97,22 @@ func TestGetOrCreateBloomFilter(t *testing.T) {
 	store := dstore.NewStore(nil, nil)
 	// Create a key and default opts
 	key := "bf"
-	opts, _ := newBloomOpts([]string{}, true)
+	opts := defaultBloomOpts()
 
 	// Should create a new filter under the key `key`.
-	bloom, err := getOrCreateBloomFilter(key, opts, store)
+	bloom, err := getOrCreateBloomFilter(key, store, opts)
 	if bloom == nil || err != nil {
 		t.Errorf("nil bloom or non-nil error returned while creating new filter - key: %s, opts: %+v, err: %v", key, opts, err)
 	}
 
 	// Should get the filter (which was created above)
-	bloom, err = getOrCreateBloomFilter(key, opts, store)
+	bloom, err = getOrCreateBloomFilter(key, store, opts)
 	if bloom == nil || err != nil {
 		t.Errorf("nil bloom or non-nil error returned while fetching existing filter - key: %s, opts: %+v, err: %v", key, opts, err)
 	}
 
 	// Should get the filter with nil opts
-	bloom, err = getOrCreateBloomFilter(key, nil, store)
+	bloom, err = getOrCreateBloomFilter(key, store, nil)
 	if bloom == nil || err != nil {
 		t.Errorf("nil bloom or non-nil error returned while fetching existing filter - key: %s, opts: %+v, err: %v", key, opts, err)
 	}
@@ -122,7 +121,7 @@ func TestGetOrCreateBloomFilter(t *testing.T) {
 func TestUpdateIndexes(t *testing.T) {
 	// Create a value, default opts and initialize all params of the filter
 	value := "hello"
-	opts, _ := newBloomOpts([]string{}, true)
+	opts := defaultBloomOpts()
 	bloom := newBloomFilter(opts)
 
 	err := opts.updateIndexes(value)
@@ -149,17 +148,16 @@ func TestBloomOpts(t *testing.T) {
 		response    *BloomOpts
 		err         error
 	}{
-		{"default values", []string{utils.EmptyStr}, true, &BloomOpts{errorRate: defaultErrorRate, capacity: defaultCapacity}, nil},
 		{"should return valid values - 1", []string{"0.01", "1000"}, false, &BloomOpts{errorRate: 0.01, capacity: 1000}, nil},
 		{"should return valid values - 2", []string{"0.1", "200"}, false, &BloomOpts{errorRate: 0.1, capacity: 200}, nil},
-		{"should return invalid error rate type - 1", []string{"aa", "100"}, false, nil, errInvalidErrorRateType},
-		{"should return invalid error rate type - 2", []string{"0.1a", "100"}, false, nil, errInvalidErrorRateType},
-		{"should return invalid error rate - 1", []string{"-0.1", "100"}, false, nil, errInvalidErrorRate},
-		{"should return invalid error rate - 2", []string{"1.001", "100"}, false, nil, errInvalidErrorRate},
+		{"should return invalid error rate type - 1", []string{"aa", "100"}, false, nil, errInvalidErrorRate},
+		{"should return invalid error rate type - 2", []string{"0.1a", "100"}, false, nil, errInvalidErrorRate},
+		{"should return invalid error rate - 1", []string{"-0.1", "100"}, false, nil, errInvalidRangeErrorRateType},
+		{"should return invalid error rate - 2", []string{"1.001", "100"}, false, nil, errInvalidRangeErrorRateType},
 		{"should return invalid capacity type - 1", []string{"0.01", "aa"}, false, nil, errInvalidCapacityType},
 		{"should return invalid capacity type - 2", []string{"0.01", "100a"}, false, nil, errInvalidCapacityType},
-		{"should return invalid capacity type - 3", []string{"0.01", "-1"}, false, nil, errInvalidCapacityType},
-		{"should return invalid capacity - 1", []string{"0.01", "0"}, false, nil, errInvalidCapacity},
+		{"should return invalid capacity type - 3", []string{"0.01", "-1"}, false, nil, errNonPositiveCapacity},
+		{"should return invalid capacity - 1", []string{"0.01", "0"}, false, nil, errNonPositiveCapacity},
 	}
 
 	for _, tc := range testCases {
@@ -167,7 +165,7 @@ func TestBloomOpts(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			opts, err := newBloomOpts(tc.args, tc.useDefaults)
+			opts, err := newBloomOpts(tc.args)
 			// Using reflect.DeepEqual as we have pointers to struct and direct value
 			// comparison is not possible because of []hash.Hash64 type.
 			if !reflect.DeepEqual(opts, tc.response) {

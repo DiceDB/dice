@@ -27,15 +27,16 @@ var (
 )
 
 var (
-	errInvalidErrorRateType = diceerrors.NewErr("only float values can be provided for error rate")
-	errInvalidErrorRate     = diceerrors.NewErr("invalid error rate value provided")
-	errInvalidCapacityType  = diceerrors.NewErr("only integer values can be provided for capacity")
-	errInvalidCapacity      = diceerrors.NewErr("invalid capacity value provided")
+	errInvalidRangeErrorRateType = diceerrors.ErrGeneral("(0 < error rate range < 1) ")
+	errInvalidErrorRate          = diceerrors.ErrGeneral("bad error rate")
+	errInvalidCapacityType       = diceerrors.ErrGeneral("bad capacity")
+	errNonPositiveCapacity       = diceerrors.ErrGeneral("(capacity should be larger than 0)")
 
-	errInvalidKey = diceerrors.NewErr("invalid key: no bloom filter found")
+	errInvalidKey = diceerrors.ErrGeneral("invalid key: no bloom filter found")
 
-	errEmptyValue   = diceerrors.NewErr("empty value provided")
-	errUnableToHash = diceerrors.NewErr("unable to hash given value")
+	errEmptyValue   = diceerrors.ErrGeneral("empty value provided")
+	errUnableToHash = diceerrors.ErrGeneral("unable to hash given value")
+	errNotFound     = diceerrors.ErrGeneral("not found")
 )
 
 type BloomOpts struct {
@@ -61,30 +62,33 @@ type Bloom struct {
 // newBloomOpts extracts the user defined values from `args`. It falls back to
 // default values if `useDefaults` is set to true. Using those values, it
 // creates and returns the options for bloom filter.
-func newBloomOpts(args []string, useDefaults bool) (*BloomOpts, error) {
-	if useDefaults {
-		return &BloomOpts{errorRate: defaultErrorRate, capacity: defaultCapacity}, nil
-	}
 
+func defaultBloomOpts() *BloomOpts {
+	return &BloomOpts{errorRate: defaultErrorRate, capacity: defaultCapacity}
+}
+
+func newBloomOpts(args []string) (*BloomOpts, error) {
 	errorRate, err := strconv.ParseFloat(args[0], 64)
 	if err != nil {
-		return nil, errInvalidErrorRateType
-	}
-
-	if errorRate <= 0 || errorRate >= 1.0 {
 		return nil, errInvalidErrorRate
 	}
 
-	capacity, err := strconv.ParseUint(args[1], 10, 64)
+	if errorRate <= 0 || errorRate >= 1.0 {
+		return nil, errInvalidRangeErrorRateType
+	}
+
+	capacity, err := strconv.ParseInt(args[1], 10, 64)
 	if err != nil {
 		return nil, errInvalidCapacityType
 	}
 
-	if capacity < 1 {
-		return nil, errInvalidCapacity
+	if capacity <= 0 {
+		return nil, errNonPositiveCapacity
 	}
 
-	return &BloomOpts{errorRate: errorRate, capacity: capacity}, nil
+	capacityUint, _ := strconv.ParseUint(args[1], 10, 64)
+
+	return &BloomOpts{errorRate: errorRate, capacity: capacityUint}, nil
 }
 
 // newBloomFilter creates and returns a new filter. It is responsible for initializing the
@@ -264,25 +268,46 @@ func (opts *BloomOpts) updateIndexes(value string) error {
 // getOrCreateBloomFilter attempts to fetch an existing bloom filter from
 // the kv store. If it does not exist, it tries to create one with
 // given `opts` and returns it.
-func getOrCreateBloomFilter(key string, opts *BloomOpts, store *dstore.Store) (*Bloom, error) {
-	obj := store.Get(key)
-
-	// If we don't have a filter yet and `opts` are provided, create one.
-	if obj == nil {
-		if opts == nil {
-			opts, _ = newBloomOpts([]string{}, true)
-		}
-		obj = store.NewObj(newBloomFilter(opts), -1, object.ObjTypeBitSet, object.ObjEncodingBF)
-		store.Put(key, obj)
-	}
-
-	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeBitSet); err != nil {
+func getOrCreateBloomFilter(key string, store *dstore.Store, opts *BloomOpts) (*Bloom, error) {
+	bf, err := GetBloomFilter(key, store)
+	if err != nil {
 		return nil, err
+	}
+	if bf == nil {
+		bf, err = CreateBloomFilter(key, store, opts)
+	}
+	return bf, err
+
+}
+
+// get the bloom filter
+func GetBloomFilter(key string, store *dstore.Store) (*Bloom, error) {
+	obj := store.Get(key)
+	if obj == nil {
+		return nil, nil
+	}
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeBitSet); err != nil {
+		return nil, diceerrors.ErrWrongTypeOperation
 	}
 
 	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingBF); err != nil {
+		return nil, diceerrors.ErrWrongTypeOperation
+	}
+	return obj.Value.(*Bloom), nil
+}
+
+func CreateBloomFilter(key string, store *dstore.Store, opts *BloomOpts) (*Bloom, error) {
+	bf, err := GetBloomFilter(key, store)
+	if bf != nil {
+		return nil, diceerrors.ErrGeneral("item exists")
+	}
+	if err != nil {
 		return nil, err
 	}
-
+	if opts == nil {
+		opts = defaultBloomOpts()
+	}
+	obj := store.NewObj(newBloomFilter(opts), -1, object.ObjTypeBitSet, object.ObjEncodingBF)
+	store.Put(key, obj)
 	return obj.Value.(*Bloom), nil
 }

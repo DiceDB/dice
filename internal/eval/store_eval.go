@@ -1648,125 +1648,79 @@ func evalZPOPMIN(args []string, store *dstore.Store) *EvalResponse {
 // new bloom filter and allocation it's relevant parameters based on given inputs.
 // If no params are provided, it uses defaults.
 func evalBFRESERVE(args []string, store *dstore.Store) *EvalResponse {
-	if len(args) != 1 && len(args) != 3 {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongArgumentCount("BF.RESERVE"),
-		}
+	if len(args) < 3 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.RESERVE"))
 	}
 
-	useDefaults := false
-	if len(args) == 1 {
-		useDefaults = true
-	}
-
-	opts, err := newBloomOpts(args[1:], useDefaults)
+	opts, err := newBloomOpts(args[1:])
 	if err != nil {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrGeneral(err.Error()),
-		}
+		return makeEvalError(err)
 	}
 
-	_, err = getOrCreateBloomFilter(args[0], opts, store)
-
+	_, err = CreateBloomFilter(args[0], store, opts)
 	if err != nil {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrGeneral(err.Error()),
-		}
+		return makeEvalError(err)
 	}
-	return &EvalResponse{
-		Result: clientio.OK,
-		Error:  nil,
-	}
+	return makeEvalResult(clientio.OK)
 }
 
 // evalBFADD evaluates the BF.ADD command responsible for adding an element to a bloom filter. If the filter does not
 // exist, it will create a new one with default parameters.
 func evalBFADD(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) != 2 {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongArgumentCount("BF.ADD"),
-		}
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.ADD"))
 	}
 
-	opts, _ := newBloomOpts(args[1:], true)
-
-	bloom, err := getOrCreateBloomFilter(args[0], opts, store)
+	bloom, err := getOrCreateBloomFilter(args[0], store, nil)
 	if err != nil {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrGeneral(err.Error()),
-		}
+		return makeEvalError(err)
 	}
 
 	result, err := bloom.add(args[1])
 	if err != nil {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrGeneral(err.Error()),
-		}
+		return makeEvalError(err)
 	}
 
-	return &EvalResponse{
-		Result: result,
-		Error:  nil,
-	}
+	return makeEvalResult(result)
 }
 
 // evalBFEXISTS evaluates the BF.EXISTS command responsible for checking existence of an element in a bloom filter.
 func evalBFEXISTS(args []string, store *dstore.Store) *EvalResponse {
+	// todo must work with objects of
 	if len(args) != 2 {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongArgumentCount("BF.EXISTS"),
-		}
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.EXISTS"))
 	}
 
-	bloom, err := getOrCreateBloomFilter(args[0], nil, store)
+	bloom, err := GetBloomFilter(args[0], store)
 	if err != nil {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrFormatted(err.Error()),
-		}
+		return makeEvalError(err)
 	}
-
+	if bloom == nil {
+		return makeEvalResult(clientio.IntegerZero)
+	}
 	result, err := bloom.exists(args[1])
 	if err != nil {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrGeneral(err.Error()),
-		}
+		return makeEvalError(err)
 	}
-
-	return &EvalResponse{
-		Result: result,
-		Error:  nil,
-	}
+	return makeEvalResult(result)
 }
 
 // evalBFINFO evaluates the BF.INFO command responsible for returning the
 // parameters and metadata of an existing bloom filter.
 func evalBFINFO(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) != 1 {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongArgumentCount("BF.INFO"),
-		}
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.INFO"))
 	}
 
-	bloom, err := getOrCreateBloomFilter(args[0], nil, store)
+	bloom, err := GetBloomFilter(args[0], store)
+
 	if err != nil {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrGeneral("not found"),
-		}
+		return makeEvalError(err)
 	}
 
-	return &EvalResponse{
-		Result: bloom.info(args[0]),
-		Error:  nil,
+	if bloom == nil {
+		return makeEvalError(diceerrors.ErrGeneral("not found"))
 	}
+
+	return makeEvalResult(bloom.info(args[0]))
 }
