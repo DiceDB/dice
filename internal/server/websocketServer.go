@@ -34,11 +34,20 @@ var unimplementedCommandsWebsocket = map[string]bool{
 	Qunwatch: true,
 }
 
+type QuerySubscription struct {
+	Subscribe          bool // true for subscribe, false for unsubscribe
+	Cmd                *cmd.DiceDBCmd
+	ClientIdentifierID uint32
+	Client             *websocket.Conn
+}
+
 type WebsocketServer struct {
 	shardManager       *shard.ShardManager
 	ioChan             chan *ops.StoreResponse
 	websocketServer    *http.Server
 	upgrader           websocket.Upgrader
+	subscriptionChan   chan QuerySubscription // to subscribe client x query
+	subscribedClients  *sync.Map              // to maintain records of subscribed clients
 	qwatchResponseChan chan comm.QwatchResponse
 	shutdownChan       chan struct{}
 	logger             *slog.Logger
@@ -74,8 +83,8 @@ func (s *WebsocketServer) Run(ctx context.Context) error {
 	var wg sync.WaitGroup
 	var err error
 
-	websocketCtx, cancelWebsocket := context.WithCancel(ctx)
-	defer cancelWebsocket()
+	wsCtx, cancelWS := context.WithCancel(ctx)
+	defer cancelWS() // TODO move cancel below wg.WAIT()
 
 	s.shardManager.RegisterWorker("wsServer", s.ioChan, nil)
 
@@ -89,7 +98,7 @@ func (s *WebsocketServer) Run(ctx context.Context) error {
 			s.logger.Debug("Shutting down Websocket Server", slog.Any("time", time.Now()))
 		}
 
-		shutdownErr := s.websocketServer.Shutdown(websocketCtx)
+		shutdownErr := s.websocketServer.Shutdown(wsCtx)
 		if shutdownErr != nil {
 			s.logger.Error("Websocket Server shutdown failed:", slog.Any("error", err))
 			return
@@ -104,6 +113,18 @@ func (s *WebsocketServer) Run(ctx context.Context) error {
 		if err != nil {
 			s.logger.Debug("Error in Websocket Server", slog.Any("time", time.Now()), slog.Any("error", err))
 		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		s.listenForSubscriptions(wsCtx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		s.processQwatchUpdates(wsCtx)
 	}()
 
 	wg.Wait()
@@ -174,7 +195,16 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 			sp.Client = comm.NewHTTPQwatchClient(s.qwatchResponseChan, clientIdentifierID)
 
 			// start a goroutine for subsequent updates
-			go s.processQwatchUpdates(clientIdentifierID, conn, diceDBCmd)
+			// go s.processQwatchUpdates(clientIdentifierID, conn, diceDBCmd)
+
+			// subscribe client for updates
+			event := QuerySubscription{
+				Subscribe:          true,
+				Cmd:                diceDBCmd,
+				ClientIdentifierID: clientIdentifierID,
+				Client:             conn,
+			}
+			s.subscriptionChan <- event
 		}
 
 		s.shardManager.GetShard(0).ReqChan <- sp
@@ -185,17 +215,49 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (s *WebsocketServer) processQwatchUpdates(clientIdentifierID uint32, conn *websocket.Conn, dicDBCmd *cmd.DiceDBCmd) {
+func (s *WebsocketServer) listenForSubscriptions(ctx context.Context) {
+	for {
+		select {
+		case event := <-s.subscriptionChan:
+			if event.Subscribe {
+				_, loaded := s.subscribedClients.LoadOrStore(event.ClientIdentifierID, event.Client)
+				if loaded {
+					fmt.Println("listenForSubscriptions: client already subscribed")
+				} else {
+					fmt.Println("listenForSubscriptions: added client to subscription records")
+				}
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func (s *WebsocketServer) processQwatchUpdates(ctx context.Context) {
 	for {
 		select {
 		case resp := <-s.qwatchResponseChan:
-			if resp.ClientIdentifierID == clientIdentifierID {
-				if err := s.processResponse(conn, dicDBCmd, resp); err != nil {
-					s.logger.Debug("Error writing response to client. Shutting down goroutine for q.watch updates", slog.Any("clientIdentifierID", clientIdentifierID), slog.Any("error", err))
-					return
-				}
+			client, ok := s.subscribedClients.Load(resp.ClientIdentifierID)
+			if !ok {
+				s.logger.Error("message received but client not found, clientIdentifierID: %v", resp.ClientIdentifierID)
+			}
+			conn, ok := client.(*websocket.Conn)
+			if !ok {
+				s.logger.Error("error typecasting client to *websocket.Conn")
+			}
+
+			dicDBCmd := &cmd.DiceDBCmd{
+				Cmd:  Qwatch,
+				Args: []string{},
+			}
+
+			if err := s.processResponse(conn, dicDBCmd, resp); err != nil {
+				s.logger.Debug("Error writing response to client. Shutting down goroutine for q.watch updates", slog.Any("clientIdentifierID", resp.ClientIdentifierID), slog.Any("error", err))
+				return
 			}
 		case <-s.shutdownChan:
+			return
+		case <-ctx.Done():
 			return
 		}
 	}
