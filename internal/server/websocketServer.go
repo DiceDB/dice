@@ -26,8 +26,8 @@ import (
 	"golang.org/x/exp/rand"
 )
 
-const Qwatch = "QWATCH"
-const Qunwatch = "QUNWATCH"
+const Qwatch = "Q.WATCH"
+const Qunwatch = "Q.UNWATCH"
 const Subscribe = "SUBSCRIBE"
 
 var unimplementedCommandsWebsocket = map[string]bool{
@@ -47,10 +47,10 @@ type WebsocketServer struct {
 	shutdownChan    chan struct{}
 }
 
-func NewWebSocketServer(shardManager *shard.ShardManager, watchChan chan dstore.QueryWatchEvent, logger *slog.Logger) *WebsocketServer {
+func NewWebSocketServer(shardManager *shard.ShardManager, watchChan chan dstore.QueryWatchEvent, port int, logger *slog.Logger) *WebsocketServer {
 	mux := http.NewServeMux()
 	srv := &http.Server{
-		Addr:              fmt.Sprintf(":%d", config.WebsocketPort),
+		Addr:              fmt.Sprintf(":%d", port),
 		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
@@ -87,7 +87,7 @@ func (s *WebsocketServer) Run(ctx context.Context) error {
 	websocketCtx, cancelWebsocket := context.WithCancel(ctx)
 	defer cancelWebsocket()
 
-	s.shardManager.RegisterWorker("wsServer", s.ioChan)
+	s.shardManager.RegisterWorker("wsServer", s.ioChan, nil)
 
 	wg.Add(1)
 	go func() {
@@ -134,8 +134,12 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		// read incoming message
 		_, msg, err := conn.ReadMessage()
 		if err != nil {
-			writeResponse(conn, []byte("error: command reading failed"))
-			continue
+			// acceptable close errors
+			errs := []int{websocket.CloseNormalClosure, websocket.CloseGoingAway, websocket.CloseAbnormalClosure}
+			if !websocket.IsCloseError(err, errs...) {
+				s.logger.Warn("failed to read message from client", slog.Any("error", err))
+			}
+			break
 		}
 
 		// parse message to dice command
@@ -265,10 +269,10 @@ func WriteResponseWithRetries(conn *websocket.Conn, text []byte, maxRetries int)
 			return fmt.Errorf("no buffer space available: %w", err)
 		case syscall.EAGAIN:
 			// Exponential backoff with jitter
-			backoffDuration := time.Duration(attempts+1)*100*time.Millisecond + time.Duration(rand.Intn(50))*time.Millisecond 
+			backoffDuration := time.Duration(attempts+1)*100*time.Millisecond + time.Duration(rand.Intn(50))*time.Millisecond
 
 			slog.Warn(fmt.Sprintf(
-				"Temporary issue (EAGAIN) on attempt %d. Retrying in %v...", 
+				"Temporary issue (EAGAIN) on attempt %d. Retrying in %v...",
 				attempts+1, backoffDuration,
 			))
 

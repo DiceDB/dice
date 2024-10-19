@@ -7,12 +7,14 @@ import (
 	"strings"
 
 	"github.com/axiomhq/hyperloglog"
+	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/eval/sortedset"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/ohler55/ojg/jp"
 )
 
 // evalSET puts a new <key, value> pair in db as in the args
@@ -21,9 +23,10 @@ import (
 //
 //	EX or ex which will set the expiry time(in secs) for the key
 //	PX or px which will set the expiry time(in milliseconds) for the key
-//	EXAT or exat which will set the specified Unix time at which the key will expire, in seconds (a positive integer).
-//	PXAT or PX which will the specified Unix time at which the key will expire, in milliseconds (a positive integer).
-//	XX orr xx which will only set the key if it already exists.
+//	EXAT or exat which will set the specified Unix time at which the key will expire, in seconds (a positive integer)
+//	PXAT or PX which will the specified Unix time at which the key will expire, in milliseconds (a positive integer)
+//	XX or xx which will only set the key if it already exists
+//	NX or nx which will only set the key if it doesn not already exist
 //
 // Returns encoded error response if at least a <key, value> pair is not part of args
 // Returns encoded error response if expiry time value in not integer
@@ -451,6 +454,114 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+// evalJSONCLEAR Clear container values (arrays/objects) and set numeric values to 0,
+// Already cleared values are ignored for empty containers and zero numbers
+// args must contain at least the key;  (path unused in this implementation)
+// Returns encoded error if key is expired, or it does not exist
+// Returns encoded error response if incorrect number of arguments
+// Returns an integer reply specifying the number of matching JSON arrays
+// and objects cleared + number of matching JSON numerical values zeroed.
+func evalJSONCLEAR(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("JSON.CLEAR"),
+		}
+	}
+	key := args[0]
+
+	// Default path is root if not specified
+	path := defaultRootPath
+	if len(args) > 1 {
+		path = args[1]
+	}
+
+	// Retrieve the object from the database
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  nil,
+		}
+	}
+
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	jsonData := obj.Value
+
+	_, err := sonic.Marshal(jsonData)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	var countClear int64 = 0
+	if len(args) == 1 || path == defaultRootPath {
+		if jsonData != struct{}{} {
+			// If path is root and len(args) == 1, return it instantly
+			newObj := store.NewObj(struct{}{}, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+			store.Put(key, newObj)
+			countClear++
+			return &EvalResponse{
+				Result: countClear,
+				Error:  nil,
+			}
+		}
+	}
+
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrJSONPathNotFound(path),
+		}
+	}
+
+	newData, err := expr.Modify(jsonData, func(element any) (altered any, changed bool) {
+		switch utils.GetJSONFieldType(element) {
+		case utils.IntegerType, utils.NumberType:
+			if element != utils.NumberZeroValue {
+				countClear++
+				return utils.NumberZeroValue, true
+			}
+		case utils.ArrayType:
+			if len(element.([]interface{})) != 0 {
+				countClear++
+				return []interface{}{}, true
+			}
+		case utils.ObjectType:
+			if element != struct{}{} {
+				countClear++
+				return struct{}{}, true
+			}
+		default:
+			return element, false
+		}
+		return
+	})
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(err.Error()),
+		}
+	}
+
+	jsonData = newData
+	obj.Value = jsonData
+	return &EvalResponse{
+		Result: countClear,
+		Error:  nil,
+	}
+}
+
 // PFADD Adds all the element arguments to the HyperLogLog data structure stored at the variable
 // name specified as first argument.
 //
@@ -509,6 +620,110 @@ func evalPFADD(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+// evalJSONSTRLEN Report the length of the JSON String at path in key
+// Returns by recursive descent an array of integer replies for each path,
+// the string's length, or nil, if the matching JSON value is not a string.
+func evalJSONSTRLEN(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("JSON.STRLEN"),
+		}
+	}
+
+	key := args[0]
+
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  nil,
+		}
+	}
+
+	if len(args) < 2 {
+		// no recursive
+		// making consistent with arrlen
+		// to-do parsing
+		jsonData := obj.Value
+
+		jsonDataType := strings.ToLower(utils.GetJSONFieldType(jsonData))
+		if jsonDataType == "number" {
+			jsonDataFloat := jsonData.(float64)
+			if jsonDataFloat == float64(int64(jsonDataFloat)) {
+				jsonDataType = "integer"
+			}
+		}
+		if jsonDataType != utils.StringType {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrUnexpectedJSONPathType("string", jsonDataType),
+			}
+		}
+		return &EvalResponse{
+			Result: int64(len(jsonData.(string))),
+			Error:  nil,
+		}
+	}
+
+	path := args[1]
+
+	// Check if the object is of JSON type
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	jsonData := obj.Value
+	if path == defaultRootPath {
+		defaultStringResult := make([]interface{}, 0, 1)
+		if utils.GetJSONFieldType(jsonData) == utils.StringType {
+			defaultStringResult = append(defaultStringResult, int64(len(jsonData.(string))))
+		} else {
+			defaultStringResult = append(defaultStringResult, nil)
+		}
+
+		return &EvalResponse{
+			Result: defaultStringResult,
+			Error:  nil,
+		}
+	}
+
+	// Parse the JSONPath expression
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrJSONPathNotFound(path),
+		}
+	}
+	// Execute the JSONPath query
+	results := expr.Get(jsonData)
+	if len(results) == 0 {
+		return &EvalResponse{
+			Result: []interface{}{},
+			Error:  nil,
+		}
+	}
+	strLenResults := make([]interface{}, 0, len(results))
+	for _, result := range results {
+		switch utils.GetJSONFieldType(result) {
+		case utils.StringType:
+			strLenResults = append(strLenResults, int64(len(result.(string))))
+		default:
+			strLenResults = append(strLenResults, nil)
+		}
+	}
+	return &EvalResponse{
+		Result: strLenResults,
+		Error:  nil,
+	}
+}
+
 func evalPFCOUNT(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) < 1 {
 		return &EvalResponse{
@@ -541,6 +756,101 @@ func evalPFCOUNT(args []string, store *dstore.Store) *EvalResponse {
 
 	return &EvalResponse{
 		Result: unionHll.Estimate(),
+		Error:  nil,
+	}
+}
+
+// evalJSONOBJLEN return the number of keys in the JSON object at path in key.
+// Returns an array of integer replies, an integer for each matching value,
+// which is the json objects length, or nil, if the matching value is not a json.
+// Returns encoded error if the key doesn't exist or key is expired or the matching value is not an array.
+// Returns encoded error response if incorrect number of arguments
+func evalJSONOBJLEN(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("JSON.OBJLEN"),
+		}
+	}
+
+	key := args[0]
+
+	// Retrieve the object from the database
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  nil,
+		}
+	}
+
+	// check if the object is json
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// get the value & check for marsheling error
+	jsonData := obj.Value
+	_, err := sonic.Marshal(jsonData)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+	if len(args) == 1 {
+		// check if the value is of json type
+		if utils.GetJSONFieldType(jsonData) == utils.ObjectType {
+			if castedData, ok := jsonData.(map[string]interface{}); ok {
+				return &EvalResponse{
+					Result: int64(len(castedData)),
+					Error:  nil,
+				}
+			}
+			return &EvalResponse{
+				Result: nil,
+				Error:  nil,
+			}
+		}
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	path := args[1]
+
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrJSONPathNotFound(path),
+		}
+	}
+
+	// get all values for matching paths
+	results := expr.Get(jsonData)
+
+	objectLen := make([]interface{}, 0, len(results))
+
+	for _, result := range results {
+		switch utils.GetJSONFieldType(result) {
+		case utils.ObjectType:
+			if castedResult, ok := result.(map[string]interface{}); ok {
+				objectLen = append(objectLen, int64(len(castedResult)))
+			} else {
+				objectLen = append(objectLen, nil)
+			}
+		default:
+			objectLen = append(objectLen, nil)
+		}
+	}
+	return &EvalResponse{
+		Result: objectLen,
 		Error:  nil,
 	}
 }
@@ -598,6 +908,62 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 
 	return &EvalResponse{
 		Result: clientio.OK,
+		Error:  nil,
+	}
+}
+
+// ZPOPMIN Removes and returns the member with the lowest score from the sorted set at the specified key.
+// If multiple members have the same score, the one that comes first alphabetically is returned.
+// You can also specify a count to remove and return multiple members at once.
+// If the set is empty, it returns an empty result.
+func evalZPOPMIN(args []string, store *dstore.Store) *EvalResponse {
+	// Incorrect number of arguments should return error
+	if len(args) < 1 || len(args) > 2 {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongArgumentCount("ZPOPMIN"),
+		}
+	}
+
+	key := args[0]        // Key argument
+	obj := store.Get(key) // Getting sortedSet object from store
+
+	// If the sortedSet is nil, return an empty list
+	if obj == nil {
+		return &EvalResponse{
+			Result: []string{},
+			Error:  nil,
+		}
+	}
+
+	sortedSet, err := sortedset.FromObject(obj)
+	if err != nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	count := 1
+	// Check if the count argument is provided.
+	if len(args) == 2 {
+		countArg, err := strconv.Atoi(args[1])
+		if err != nil {
+			// Return an error if the argument is not a valid integer
+			return &EvalResponse{
+				Result: clientio.NIL,
+				Error:  diceerrors.ErrIntegerOutOfRange,
+			}
+		}
+		count = countArg
+	}
+
+	// If the count argument is present, return all the members with lowest score sorted in ascending order.
+	// If there are multiple lowest scores with same score value, it sorts the members in lexographical order of member name
+	results := sortedSet.GetMin(count)
+
+	return &EvalResponse{
+		Result: results,
 		Error:  nil,
 	}
 }

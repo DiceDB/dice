@@ -18,9 +18,9 @@ func TestQWatch(t *testing.T) {
 
 	testCases := []TestCase{
 		{
-			name: "QWATCH Register Bad Request",
+			name: "Q.WATCH Register Bad Request",
 			commands: []HTTPCommand{
-				{Command: "QWATCH", Body: map[string]interface{}{}},
+				{Command: "Q.WATCH", Body: map[string]interface{}{}},
 			},
 			expected: []interface{}{
 				[]interface{}{},
@@ -28,13 +28,13 @@ func TestQWatch(t *testing.T) {
 			errorExpected: true,
 		},
 		{
-			name: "QWATCH Register",
+			name: "Q.WATCH Register",
 			commands: []HTTPCommand{
-				{Command: "QWATCH", Body: map[string]interface{}{"query": qWatchQuery}},
+				{Command: "Q.WATCH", Body: map[string]interface{}{"query": qWatchQuery}},
 			},
 			expected: []interface{}{
 				map[string]interface{}{
-					"cmd":   "qwatch",
+					"cmd":   "q.watch",
 					"query": "SELECT $key, $value WHERE $key like 'match:100:*' and $value > 10 ORDER BY $value desc LIMIT 3",
 					"data":  []interface{}{},
 				},
@@ -74,7 +74,7 @@ func TestQwatchWithSSE(t *testing.T) {
 	go func() {
 		defer wg.Done()
 
-		resp, err := http.Post("http://localhost:8083/qwatch", "application/json",
+		resp, err := http.Post("http://localhost:8083/q.watch", "application/json",
 			bytes.NewBuffer([]byte(`{
 				"query": "SELECT $key, $value WHERE $key like 'match:100:*' and $value > 10 ORDER BY $value desc LIMIT 3"
 			}`)))
@@ -92,12 +92,12 @@ func TestQwatchWithSSE(t *testing.T) {
 		decoder := json.NewDecoder(resp.Body)
 		expectedResponses := []interface{}{
 			map[string]interface{}{
-				"cmd":   "qwatch",
+				"cmd":   "q.watch",
 				"query": "SELECT $key, $value WHERE $key like 'match:100:*' and $value > 10 ORDER BY $value desc LIMIT 3",
 				"data":  []interface{}{},
 			},
 			map[string]interface{}{
-				"cmd":   "qwatch",
+				"cmd":   "q.watch",
 				"query": "SELECT $key, $value WHERE $key like 'match:100:*' and $value > 10 ORDER BY $value desc LIMIT 3",
 				"data":  []interface{}{[]interface{}{key, float64(val)}},
 			},
