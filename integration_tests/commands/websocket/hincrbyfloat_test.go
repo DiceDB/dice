@@ -4,13 +4,14 @@ import (
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHINCRBYFLOAT(t *testing.T) {
 	exec := NewWebsocketCommandExecutor()
 	conn := exec.ConnectToServer()
-	exec.FireCommand(conn, "DEL key_hincrfloat keys")
+	DeleteKey(t, conn, exec, "keys")
+	DeleteKey(t, conn, exec, "key_hincrfloat")
 
 	testCases := []struct {
 		name   string
@@ -51,7 +52,8 @@ func TestHINCRBYFLOAT(t *testing.T) {
 				if tc.delays[i] > 0 {
 					time.Sleep(tc.delays[i])
 				}
-				result := exec.FireCommand(conn, cmd)
+				result, err := exec.FireCommandAndReadResponse(conn, cmd)
+				assert.Nil(t, err)
 				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
 			}
 		})

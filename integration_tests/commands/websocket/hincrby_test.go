@@ -4,13 +4,15 @@ import (
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHINCRBY(t *testing.T) {
 	exec := NewWebsocketCommandExecutor()
 	conn := exec.ConnectToServer()
-	exec.FireCommand(conn, "DEL key keys new-key")
+	DeleteKey(t, conn, exec, "key")
+	DeleteKey(t, conn, exec, "keys")
+	DeleteKey(t, conn, exec, "new-key")
 
 	testCases := []struct {
 		name   string
@@ -53,11 +55,13 @@ func TestHINCRBY(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+
 			for i, cmd := range tc.cmds {
 				if tc.delays[i] > 0 {
 					time.Sleep(tc.delays[i])
 				}
-				result := exec.FireCommand(conn, cmd)
+				result, err := exec.FireCommandAndReadResponse(conn, cmd)
+				assert.Nil(t, err)
 				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
 			}
 		})

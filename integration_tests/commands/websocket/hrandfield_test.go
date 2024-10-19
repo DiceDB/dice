@@ -5,13 +5,13 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHRANDFIELD(t *testing.T) {
 	exec := NewWebsocketCommandExecutor()
 	conn := exec.ConnectToServer()
-	exec.FireCommand(conn, "DEL key_hrandfield")
+	DeleteKey(t, conn, exec, "key_hrandfield")
 
 	testCases := []struct {
 		name   string
@@ -56,7 +56,7 @@ func TestHRANDFIELD(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.cmds {
 				result, err := exec.FireCommandAndReadResponse(conn, cmd)
-				assert.NilError(t, err)
+				assert.Nil(t, err)
 				expected := tc.expect[i]
 
 				switch expected := expected.(type) {
@@ -70,7 +70,7 @@ func TestHRANDFIELD(t *testing.T) {
 					if str, ok := result.(string); ok {
 						assert.Equal(t, str, expected, "Unexpected result for command: %s", cmd)
 					} else {
-						assert.DeepEqual(t, result, expected, cmpopts.EquateEmpty())
+						assert.Equal(t, result, expected, cmpopts.EquateEmpty())
 					}
 				}
 			}
@@ -110,7 +110,7 @@ func assertRandomFieldResult(t *testing.T, result interface{}, expected []string
 	}
 
 	// assert that all results are in the expected set or that there is a single valid result
-	assert.Assert(t, count == len(resultsList) || count == 1,
+	assert.True(t, count == len(resultsList) || count == 1,
 		"Expected all results to be in the expected set or a single valid result. Got %d out of %d",
 		count, len(resultsList))
 }
