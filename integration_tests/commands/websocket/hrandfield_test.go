@@ -8,7 +8,7 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func TestHRANDFIELDWebsocket(t *testing.T) {
+func TestHRANDFIELD(t *testing.T) {
 	exec := NewWebsocketCommandExecutor()
 	conn := exec.ConnectToServer()
 	exec.FireCommand(conn, "DEL key_hrandfield")
