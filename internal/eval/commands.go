@@ -1041,6 +1041,18 @@ var (
 		IsMigrated: true,
 		NewEval:    evalZRANGE,
 	}
+	zpopminCmdMeta = DiceCmdMeta{
+		Name: "ZPOPMIN",
+		Info: `ZPOPMIN key [count]
+		Removes and returns the member with the lowest score from the sorted set at the specified key. 
+		If multiple members have the same score, the one that comes first alphabetically is returned. 
+		You can also specify a count to remove and return multiple members at once. 
+		If the set is empty, it returns an empty result.`,
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalZPOPMIN,
+	}
 	bitfieldCmdMeta = DiceCmdMeta{
 		Name: "BITFIELD",
 		Info: `The command treats a string as an array of bits as well as bytearray data structure,
@@ -1230,6 +1242,7 @@ func init() {
 	DiceCmds["TYPE"] = typeCmdMeta
 	DiceCmds["ZADD"] = zaddCmdMeta
 	DiceCmds["ZRANGE"] = zrangeCmdMeta
+	DiceCmds["ZPOPMIN"] = zpopminCmdMeta
 	DiceCmds["JSON.STRAPPEND"] = jsonstrappendCmdMeta
 }
 

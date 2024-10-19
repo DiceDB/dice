@@ -77,7 +77,7 @@ func (s *WebsocketServer) Run(ctx context.Context) error {
 	websocketCtx, cancelWebsocket := context.WithCancel(ctx)
 	defer cancelWebsocket()
 
-	s.shardManager.RegisterWorker("wsServer", s.ioChan)
+	s.shardManager.RegisterWorker("wsServer", s.ioChan, nil)
 
 	wg.Add(1)
 	go func() {
