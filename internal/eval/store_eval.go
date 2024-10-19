@@ -48,6 +48,8 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 
 	key, value = args[0], args[1]
 	oType, oEnc := deduceTypeEncoding(value)
+	fmt.Printf("args %v\n", args)
+	fmt.Printf("oType: %d, oEnc: %d\n", oType, oEnc)
 
 	for i := 2; i < len(args); i++ {
 		arg := strings.ToUpper(args[i])
@@ -1016,6 +1018,7 @@ func incrDecrCmd(args []string, incr int64, store *dstore.Store) *EvalResponse {
 	// if the encoding or type is not int : return value is not an int error
 	errStr := object.AssertType(obj.TypeEncoding, object.ObjTypeString)
 	if errStr == nil {
+		fmt.Println("errStr")
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrIntegerOutOfRange,
@@ -1066,7 +1069,7 @@ func evalINCRBYFLOAT(args []string, store *dstore.Store) *EvalResponse {
 	if err != nil {
 		return &EvalResponse{
 			Result: nil,
-			Error:  diceerrors.ErrInvalidFloat,
+			Error:  diceerrors.ErrGeneral("value is not a valid float"),
 		}
 	}
 	return incrByFloatCmd(args, incr, store)
@@ -1100,7 +1103,7 @@ func incrByFloatCmd(args []string, incr float64, store *dstore.Store) *EvalRespo
 	if err != nil {
 		return &EvalResponse{
 			Result: nil,
-			Error:  diceerrors.ErrInvalidFloat,
+			Error:  diceerrors.ErrGeneral("value is not a valid float"),
 		}
 	}
 	value += incr

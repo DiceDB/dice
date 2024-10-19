@@ -16,7 +16,6 @@ var (
 	ErrAuthFailed                 = errors.New("AUTH failed")                                                            // Indicates authentication failure.
 	ErrIntegerOutOfRange          = errors.New("ERR value is not an integer or out of range")                            // Represents a value that is either not an integer or is out of allowed range.
 	ErrInvalidNumberFormat        = errors.New("ERR value is not an integer or a float")                                 // Signals that a value provided is not in a valid integer or float format.
-	ErrInvalidFloat               = errors.New("ERR value is not a valid float")                                         // Signals that a value provided is not in a valid float format.
 	ErrValueOutOfRange            = errors.New("ERR value is out of range")                                              // Indicates that a value is beyond the permissible range.
 	ErrOverflow                   = errors.New("ERR increment or decrement would overflow")                              // Signifies that an increment or decrement operation would exceed the limits.
 	ErrSyntax                     = errors.New("ERR syntax error")                                                       // Represents a syntax error in a DiceDB command.
