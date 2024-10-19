@@ -336,7 +336,10 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.Store
 		isDiceErr     bool
 	)
 
+	// Check if the command is migrated, if it is we use EvalResponse values
+	// else we use RESPParser to decode the response
 	_, ok := WorkerCmdsMeta[diceDBCmd.Cmd]
+	// TODO: Remove this conditional check and if (true) condition when all commands are migrated
 	if !ok {
 		responseValue, err = decodeEvalResponse(result.EvalResponse)
 		if err != nil {
@@ -416,6 +419,9 @@ func createHTTPResponse(responseValue interface{}) utils.HTTPResponse {
 
 	switch v := responseValue.(type) {
 	case []interface{}:
+		// Parses []interface{} as part of EvalResponse e.g. JSON.ARRPOP
+		// and adds to httpResponse. Also replaces "(nil)" with null JSON value
+		// in response array.
 		r := make([]interface{}, 0, len(v))
 		for _, resp := range v {
 			if val, ok := resp.(clientio.RespType); ok {
