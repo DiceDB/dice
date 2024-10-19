@@ -75,7 +75,10 @@ var (
 		CmdType: SingleShard,
 	}
 	appendCmdMeta = CmdsMeta{
-		Cmd:     "APPEND",
+		Cmd: "APPEND",
+	}
+	zpopminCmdMeta = CmdsMeta{
+		Cmd:     "ZPOPMIN",
 		CmdType: SingleShard,
 	}
 	pfaddCmdMeta = CmdsMeta{
@@ -130,6 +133,7 @@ func init() {
 	WorkerCmdsMeta["ZADD"] = zaddCmdMeta
 	WorkerCmdsMeta["ZRANGE"] = zrangeCmdMeta
 	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
+	WorkerCmdsMeta["ZPOPMIN"] = zpopminCmdMeta
 	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
 	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
