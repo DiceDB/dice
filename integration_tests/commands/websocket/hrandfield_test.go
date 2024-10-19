@@ -8,7 +8,7 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func TestHRANDFIELD(t *testing.T) {
+func TestHRANDFIELDWebsocket(t *testing.T) {
 	exec := NewWebsocketCommandExecutor()
 	conn := exec.ConnectToServer()
 	exec.FireCommand(conn, "DEL key_hrandfield")
@@ -55,7 +55,8 @@ func TestHRANDFIELD(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.cmds {
-				result := exec.FireCommand(conn, cmd)
+				result, err := exec.FireCommandAndReadResponse(conn, cmd)
+				assert.NilError(t, err)
 				expected := tc.expect[i]
 
 				switch expected := expected.(type) {
