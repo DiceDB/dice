@@ -2110,22 +2110,35 @@ func testEvalTTL(t *testing.T, store *dstore.Store) {
 
 func testEvalDel(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
-		"nil value": {
-			setup:  func() {},
-			input:  nil,
-			output: clientio.Encode(errors.New("ERR wrong number of arguments for 'del' command"), false),
+		"DEL nil value": {
+			name:  "DEL nil value",
+			setup: func() {},
+			input: nil,
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("DEL"),
+			},
 		},
-		"empty array": {
-			setup:  func() {},
-			input:  []string{},
-			output: clientio.Encode(errors.New("ERR wrong number of arguments for 'del' command"), false),
+		"DEL empty array": {
+			name:  "DEL empty array",
+			setup: func() {},
+			input: []string{},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("DEL"),
+			},
 		},
-		"key does not exist": {
-			setup:  func() {},
-			input:  []string{"NONEXISTENT_KEY"},
-			output: []byte(":0\r\n"),
+		"DEL key does not exist": {
+			name:  "DEL key does not exist",
+			setup: func() {},
+			input: []string{"NONEXISTENT_KEY"},
+			migratedOutput: EvalResponse{
+				Result: int64(0),
+				Error:  nil,
+			},
 		},
-		"key exists": {
+		"DEL key exists": {
+			name: "DEL key exists",
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
@@ -2137,12 +2150,15 @@ func testEvalDel(t *testing.T, store *dstore.Store) {
 
 				store.IncrementKeyCount()
 			},
-			input:  []string{"EXISTING_KEY"},
-			output: []byte(":1\r\n"),
+			input: []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{
+				Result: int64(1),
+				Error:  nil,
+			},
 		},
 	}
 
-	runEvalTests(t, tests, evalDEL, store)
+	runMigratedEvalTests(t, tests, evalDEL, store)
 }
 
 // TestEvalPersist tests the evalPersist function using table-driven tests.
