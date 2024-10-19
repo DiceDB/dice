@@ -189,9 +189,12 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 			}
 
 			parser := respparser.NewParser(s.logger)
-			respChan := make(chan *ops.StoreResponse)
+
+			responseChan := make(chan *ops.StoreResponse)      // responseChan is used for handling common responses from shards
+			preprocessingChan := make(chan *ops.StoreResponse) // preprocessingChan is specifically for handling responses from shards for commands that require preprocessing
+
 			wID := GenerateUniqueWorkerID()
-			w := worker.NewWorker(wID, respChan, ioHandler, parser, s.shardManager, s.globalErrorChan, s.logger)
+			w := worker.NewWorker(wID, responseChan, preprocessingChan, ioHandler, parser, s.shardManager, s.globalErrorChan, s.logger)
 
 			// Register the worker with the worker manager
 			err = s.workerManager.RegisterWorker(w)
