@@ -21,7 +21,6 @@ func TestZPOPMIN(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "SET", Body: map[string]interface{}{"key": "stringkey", "value": "string_value"}},
 				{Command: "ZPOPMIN", Body: map[string]interface{}{"key": "stringkey"}},
-				{Command: "DEL", Body: map[string]interface{}{"key": "stringkey"}},
 			},
 			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value", float64(1)},
 		},
@@ -30,7 +29,6 @@ func TestZPOPMIN(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "ZADD", Body: map[string]interface{}{"key": "myzset", "values": [...]string{"1", "member1", "2", "member2", "3", "member3"}}},
 				{Command: "ZPOPMIN", Body: map[string]interface{}{"key": "myzset"}},
-				{Command: "DEL", Body: map[string]interface{}{"key": "myzset"}},
 			},
 			expected: []interface{}{float64(3), []interface{}{"member1", "1"}, float64(1)},
 		},
@@ -39,7 +37,6 @@ func TestZPOPMIN(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "ZADD", Body: map[string]interface{}{"key": "myzset", "values": [...]string{"1", "member1", "2", "member2", "3", "member3"}}},
 				{Command: "ZPOPMIN", Body: map[string]interface{}{"key": "myzset", "value": int64(2)}},
-				{Command: "DEL", Body: map[string]interface{}{"key": "myzset"}},
 			},
 			expected: []interface{}{float64(3), []interface{}{"member1", "1", "member2", "2"}, float64(1)},
 		},
@@ -48,7 +45,6 @@ func TestZPOPMIN(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "ZADD", Body: map[string]interface{}{"key": "myzset", "values": [...]string{"1", "member1", "1", "member2", "1", "member3"}}},
 				{Command: "ZPOPMIN", Body: map[string]interface{}{"key": "myzset", "value": int64(2)}},
-				{Command: "DEL", Body: map[string]interface{}{"key": "myzset"}},
 			},
 			expected: []interface{}{float64(3), []interface{}{"member1", "1", "member2", "1"}, float64(1)},
 		},
@@ -57,7 +53,6 @@ func TestZPOPMIN(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "ZADD", Body: map[string]interface{}{"key": "myzset", "values": [...]string{"1", "member1", "2", "member2", "3", "member3"}}},
 				{Command: "ZPOPMIN", Body: map[string]interface{}{"key": "myzset", "value": int64(-1)}},
-				{Command: "DEL", Body: map[string]interface{}{"key": "myzset"}},
 			},
 			expected: []interface{}{float64(3), []interface{}{}, float64(1)},
 		},
@@ -66,7 +61,6 @@ func TestZPOPMIN(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "ZADD", Body: map[string]interface{}{"key": "myzset", "values": [...]string{"1", "member1"}}},
 				{Command: "ZPOPMIN", Body: map[string]interface{}{"key": "myzset", "value": "INCORRECT_COUNT_ARGUMENT"}},
-				{Command: "DEL", Body: map[string]interface{}{"key": "myzset"}},
 			},
 			expected: []interface{}{float64(1), "ERR value is not an integer or out of range", float64(1)},
 		},
@@ -75,7 +69,6 @@ func TestZPOPMIN(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "ZADD", Body: map[string]interface{}{"key": "myzset", "values": [...]string{"1", "member1", "2", "member2", "3", "member3"}}},
 				{Command: "ZPOPMIN", Body: map[string]interface{}{"key": "myzset", "value": int64(10)}},
-				{Command: "DEL", Body: map[string]interface{}{"key": "myzset"}},
 			},
 			expected: []interface{}{float64(3), []interface{}{"member1", "1", "member2", "2", "member3", "3"}, float64(1)},
 		},
@@ -85,7 +78,6 @@ func TestZPOPMIN(t *testing.T) {
 				{Command: "ZADD", Body: map[string]interface{}{"key": "myzset", "values": [...]string{"1", "member1"}}},
 				{Command: "ZPOPMIN", Body: map[string]interface{}{"key": "myzset", "value": int64(1)}},
 				{Command: "ZPOPMIN", Body: map[string]interface{}{"key": "myzset"}},
-				{Command: "DEL", Body: map[string]interface{}{"key": "myzset"}},
 			},
 			expected: []interface{}{float64(1), []interface{}{"member1", "1"}, []interface{}{}, float64(1)},
 		},
@@ -94,7 +86,6 @@ func TestZPOPMIN(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "ZADD", Body: map[string]interface{}{"key": "myzset", "values": [...]string{"1.5", "member1", "2.7", "member2", "3.8", "member3"}}},
 				{Command: "ZPOPMIN", Body: map[string]interface{}{"key": "myzset"}},
-				{Command: "DEL", Body: map[string]interface{}{"key": "myzset"}},
 			},
 			expected: []interface{}{float64(3), []interface{}{"member1", "1.5"}, float64(1)},
 		},
@@ -102,6 +93,10 @@ func TestZPOPMIN(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			exec.FireCommand(HTTPCommand{
+				Command: "DEL",
+				Body:    map[string]interface{}{"key": "myzset"},
+			})
 			for i, cmd := range tc.commands {
 				result, _ := exec.FireCommand(cmd)
 

@@ -917,7 +917,7 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 // If the set is empty, it returns an empty result.
 func evalZPOPMIN(args []string, store *dstore.Store) *EvalResponse {
 	// Incorrect number of arguments should return error
-	if len(args) < 1 {
+	if len(args) < 1 || len(args) > 2 {
 		return &EvalResponse{
 			Result: clientio.NIL,
 			Error:  diceerrors.ErrWrongArgumentCount("ZPOPMIN"),
@@ -943,26 +943,23 @@ func evalZPOPMIN(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	var results []string
-
-	// If the count argument is not passed, return the first member with lowest score
-	if len(args) < 2 {
-		results = sortedSet.GetMin(1)
-	} else {
-		count, err := strconv.Atoi(args[1])
-
-		// If the count argument is invalid, return integer error
+	count := 1
+	// Check if the count argument is provided.
+	if len(args) == 2 {
+		countArg, err := strconv.Atoi(args[1])
 		if err != nil {
+			// Return an error if the argument is not a valid integer
 			return &EvalResponse{
 				Result: clientio.NIL,
 				Error:  diceerrors.ErrIntegerOutOfRange,
 			}
 		}
-
-		// If the count argument is present, return all the members with lowest score sorted in ascending order.
-		// If there are multiple lowest scores with same score value, it sorts the members in lexographical order of member name
-		results = sortedSet.GetMin(count)
+		count = countArg
 	}
+
+	// If the count argument is present, return all the members with lowest score sorted in ascending order.
+	// If there are multiple lowest scores with same score value, it sorts the members in lexographical order of member name
+	results := sortedSet.GetMin(count)
 
 	return &EvalResponse{
 		Result: results,

@@ -1048,7 +1048,7 @@ var (
 		If multiple members have the same score, the one that comes first alphabetically is returned. 
 		You can also specify a count to remove and return multiple members at once. 
 		If the set is empty, it returns an empty result.`,
-		Arity:      -4,
+		Arity:      2,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 		IsMigrated: true,
 		NewEval:    evalZPOPMIN,

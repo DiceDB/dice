@@ -57,17 +57,6 @@ Attempting to pop the member with the lowest score from a non-existent sorted se
 (empty array)
 ```
 
-### Wrong Type of Key (without count argument)
-
-Attempting to pop from a key that is not a sorted set:
-
-```bash
-127.0.0.1:7379> SET stringkey "string_value"
-OK
-127.0.0.1:7379> ZPOPMIN stringkey
-(error) WRONGTYPE Operation against a key holding the wrong kind of value
-```
-
 ### Existing Key (without count argument)
 
 Popping the member with the lowest score from an existing sorted set:
@@ -114,6 +103,28 @@ Attempting to pop members using a negative count argument:
 (empty array)
 ```
 
+### Floating-Point Scores
+
+Popping members with floating-point scores:
+
+```bash
+127.0.0.1:7379> ZADD myzset 1.5 member1 2.7 member2 3.8 member3
+(integer) 3
+127.0.0.1:7379> ZPOPMIN myzset
+1) 1.5 "member1"
+```
+
+### Wrong number of arguments
+
+Attempting to pop from a key that is not a sorted set:
+
+```bash
+127.0.0.1:7379> SET stringkey "string_value"
+OK
+127.0.0.1:7379> ZPOPMIN stringkey
+(error) WRONGTYPE Operation against a key holding the wrong kind of value
+```
+
 ### Invalid Count Argument
 
 Using an invalid (non-integer) count argument:
@@ -125,13 +136,13 @@ Using an invalid (non-integer) count argument:
 (error) ERR value is not an integer or out of range
 ```
 
-### Floating-Point Scores
+### Wrong Type of Key (without count argument)
 
-Popping members with floating-point scores:
+Attempting to pop from a key that is not a sorted set:
 
 ```bash
-127.0.0.1:7379> ZADD myzset 1.5 member1 2.7 member2 3.8 member3
-(integer) 3
-127.0.0.1:7379> ZPOPMIN myzset
-1) 1.5 "member1"
+127.0.0.1:7379> SET stringkey "string_value"
+OK
+127.0.0.1:7379> ZPOPMIN stringkey
+(error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
