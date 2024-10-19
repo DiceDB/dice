@@ -39,4 +39,9 @@ const (
 	FAIL       string = "FAIL"
 	SIGNED     string = "SIGNED"
 	UNSIGNED   string = "UNSIGNED"
+	CAPACITY   string = "CAPACITY"
+	SIZE       string = "SIZE"
+	FILTERS    string = "FILTER"
+	ITEMS      string = "ITEMS"
+	EXPANSION  string = "EXPANSION"
 )

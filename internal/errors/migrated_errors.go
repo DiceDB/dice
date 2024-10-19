@@ -48,6 +48,9 @@ var (
 		return fmt.Errorf("ERR %s", err) // General error format for various commands.
 	}
 
+	ErrFormatted = func(errMsg string, opts ...any) error {
+		return ErrGeneral(fmt.Sprintf(errMsg, opts...))
+	}
 	ErrWorkerNotFound = func(workerID string) error {
 		return fmt.Errorf("ERR worker with ID %s not found", workerID) // Indicates that a worker with the specified ID does not exist.
 	}
