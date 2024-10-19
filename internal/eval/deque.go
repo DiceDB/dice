@@ -11,11 +11,13 @@ import (
 var ErrDequeEmpty = errors.New("deque is empty")
 
 type DequeI interface {
+	GetLength() int64
 	LPush(string)
 	RPush(string)
 	LPop() (string, error)
 	RPop() (string, error)
 	LInsert(string, string, string) (int64, error)
+	LRange(start, stop int64) ([]string, error)
 }
 
 var _ DequeI = (*DequeBasic)(nil)
@@ -30,6 +32,10 @@ func NewBasicDeque() *DequeBasic {
 		Length: 0,
 	}
 	return l
+}
+
+func (q *DequeBasic) GetLength() int64 {
+	return q.Length
 }
 
 // LPush pushes `x` into the left side of the Deque.
@@ -95,6 +101,7 @@ func (q *DequeBasic) LPop() (string, error) {
 	return x, nil
 }
 
+// Inserts element after the given index in the buffer.
 func (q *DequeBasic) insertElementAfterIndex(element string, idx int) {
 	// enc + data + backlen
 	xb := EncodeDeqEntry(element)
@@ -115,6 +122,7 @@ func (q *DequeBasic) insertElementAfterIndex(element string, idx int) {
 	q.Length++
 }
 
+// Inserts the element before/after based on pivot's position.
 func (q *DequeBasic) insertBeforeAfterPivot(element, beforeAfter string, pivotIndexStart int, qIterator *DequeBasicIterator) {
 	if pivotIndexStart == 0 && beforeAfter == Before {
 		q.LPush(element)
@@ -131,13 +139,14 @@ func (q *DequeBasic) insertBeforeAfterPivot(element, beforeAfter string, pivotIn
 	q.insertElementAfterIndex(element, idx)
 }
 
+// Inserts element before/after pivot element.
 func (q *DequeBasic) LInsert(pivot, element, beforeAfter string) (int64, error) {
 	// Check if the deque is empty.
 	if q.Length == 0 {
 		return -1, nil
 	}
 	if beforeAfter != Before && beforeAfter != After {
-		return -1, errors.New("invalid before/after argument")
+		return -1, errors.New("syntax error")
 	}
 
 	qIterator := q.NewIterator()
@@ -149,6 +158,36 @@ func (q *DequeBasic) LInsert(pivot, element, beforeAfter string) (int64, error) 
 		}
 	}
 	return -1, nil
+}
+
+// Iterates over the Deque and returns the element in order.
+func (q *DequeBasic) LRange(start, stop int64) ([]string, error) {
+	start = sanitizeStartIndex(q, start)
+	stop = sanitizeStopIndex(q, stop)
+	if start > stop {
+		return []string{}, nil
+	}
+	qIterator := q.NewIterator()
+	currIndex := int64(0)
+	res := make([]string, 0, stop-start+1)
+
+	for qIterator.HasNext() {
+		if currIndex > stop {
+			break
+		}
+
+		currElem, err := qIterator.Next()
+		if err != nil {
+			return []string{}, err
+		}
+
+		if currIndex >= start && currIndex <= stop {
+			res = append(res, currElem)
+		}
+		currIndex++
+	}
+
+	return res, nil
 }
 
 type DequeBasicIterator struct {
@@ -199,6 +238,10 @@ func NewDeque() *Deque {
 		list:    newByteList(minDequeNodeSize),
 		leftIdx: 0,
 	}
+}
+
+func (q *Deque) GetLength() int64 {
+	return q.Length
 }
 
 func (q *Deque) LPush(x string) {
@@ -302,6 +345,7 @@ func (q *Deque) RPop() (string, error) {
 	return x, nil
 }
 
+// Breaks the pivot node's buffer and inserts the element after the pivot in a Deque.
 func (q *Deque) breakPivotNodeAndInsertAfter(qIterator *DequeIterator, pivotNode *byteListNode, element string) *byteListNode {
 	newNode := q.list.newNode()
 	if pivotNode.next != nil {
@@ -318,6 +362,8 @@ func (q *Deque) breakPivotNodeAndInsertAfter(qIterator *DequeIterator, pivotNode
 	return newNode
 }
 
+// Helper function to insert the element after pivot.
+// Uses RPush to insert the element after the pivot node and updates the tail of the node accordingly.
 func (q *Deque) insertAfterPivotNodeHelper(element string, qIterator *DequeIterator, pivotNode *byteListNode) {
 	prevTail := q.list.tail
 	if qIterator.BufIndex == 0 {
@@ -337,6 +383,7 @@ func (q *Deque) insertAfterPivotNodeHelper(element string, qIterator *DequeItera
 	}
 }
 
+// Inserts the element after the pivot.
 func (q *Deque) insertAfterPivotNode(element string, qIterator *DequeIterator, pivotNode *byteListNode) {
 	if qIterator.ElementsTraversed == q.Length {
 		// Element needs to be inserted at the end of the Deque.
@@ -347,6 +394,7 @@ func (q *Deque) insertAfterPivotNode(element string, qIterator *DequeIterator, p
 	}
 }
 
+// Creates a new byteListNode and encodes the given element into its buffer.
 func (q *Deque) getNewNodeWithElement(element string) *byteListNode {
 	elementEntryLen := int(GetEncodeDeqEntrySize(element))
 	elementNode := q.list.newNodeWithCapacity(elementEntryLen)
@@ -355,6 +403,7 @@ func (q *Deque) getNewNodeWithElement(element string) *byteListNode {
 	return elementNode
 }
 
+// Breaks the pivot node's buffer and inserts the element before the pivot in a Deque.
 func (q *Deque) breakPivotNodeAndInsertBefore(qIterator *DequeIterator, pivotNode, elementNode *byteListNode, pivotEntryLen, leftIdx int) *byteListNode {
 	bufIndex := qIterator.BufIndex
 	if bufIndex == 0 {
@@ -374,6 +423,8 @@ func (q *Deque) breakPivotNodeAndInsertBefore(qIterator *DequeIterator, pivotNod
 	return newNode
 }
 
+// Updates the head node and left index of a Deque based on the newly inserted node.
+// It determines whether the newly inserted node becomes the new head of the Deque and updates the q.list.head and q.leftIdx accordingly.
 func (q *Deque) updateHeadLInsert(newNode, prevHead *byteListNode, prevLeftIdx int) {
 	if newNode.prev == nil {
 		q.list.head = newNode
@@ -384,6 +435,10 @@ func (q *Deque) updateHeadLInsert(newNode, prevHead *byteListNode, prevLeftIdx i
 	}
 }
 
+// Helper function to insert the element before pivot.
+// If it's a simple insertion at the beginning: Connects the new element node with the previous node before the pivot.
+// If it's a complex insertion within the pivot:
+// Splits the pivot node's buffer using breakPivotNodeAndInsertBefore. Updates the Deque's head and left index using updateHeadLInsert.
 func (q *Deque) insertBeforePivotHelper(pivot, element string, qIterator *DequeIterator, pivotNode *byteListNode) {
 	pivotEntryLen := int(GetEncodeDeqEntrySize(pivot))
 	prevHead := q.list.head
@@ -407,6 +462,7 @@ func (q *Deque) insertBeforePivotHelper(pivot, element string, qIterator *DequeI
 	q.Length++
 }
 
+// Inserts the element before the pivot.
 func (q *Deque) insertBeforePivotNode(pivot, element string, qIterator *DequeIterator, pivotNode *byteListNode) {
 	if qIterator.ElementsTraversed == 1 {
 		// Element needs to be inserted at the front of the Deque.
@@ -416,13 +472,14 @@ func (q *Deque) insertBeforePivotNode(pivot, element string, qIterator *DequeIte
 	}
 }
 
+// Inserts element before/after pivot element.
 func (q *Deque) LInsert(pivot, element, beforeAfter string) (int64, error) {
 	// Check if the deque is empty.
 	if q.Length == 0 {
 		return -1, nil
 	}
 	if beforeAfter != Before && beforeAfter != After {
-		return -1, errors.New("invalid before/after argument")
+		return -1, errors.New("syntax error")
 	}
 
 	qIterator := q.NewIterator()
@@ -441,6 +498,66 @@ func (q *Deque) LInsert(pivot, element, beforeAfter string) (int64, error) {
 	return -1, nil
 }
 
+// Validates and adjusts the start index to ensure it's within the valid range of the Deque.
+// Ensure that the start index for operations on the Deque is valid, preventing potential errors or unexpected behavior.
+func sanitizeStartIndex(q DequeI, start int64) int64 {
+	// if start offset is -ve then find the offset from the end of the list.
+	if start < 0 {
+		start = q.GetLength() + start
+	}
+	// if start offset is still -ve then set it to 0 i.e. the first index of the list.
+	if start < 0 {
+		start = 0
+	}
+	return start
+}
+
+// Validates and adjusts the stop index to ensure it's within the valid range of the Deque.
+// Handles both negative and out-of-range stop indices.
+func sanitizeStopIndex(q DequeI, stop int64) int64 {
+	// if stop offset is -ve then find the offset from the end of the list.
+	qLen := q.GetLength()
+	if stop < 0 {
+		stop = qLen + stop
+	}
+	// if stop offset is greater than the last index then set it to last index.
+	if stop >= qLen {
+		stop = qLen - 1
+	}
+	return stop
+}
+
+// Iterates over the Deque and returns the element in order.
+func (q *Deque) LRange(start, stop int64) ([]string, error) {
+	start = sanitizeStartIndex(q, start)
+	stop = sanitizeStopIndex(q, stop)
+	fmt.Printf("executing LRange with start: %d, stop: %d\n", start, stop)
+	if start > stop {
+		return []string{}, nil
+	}
+	qIterator := q.NewIterator()
+	currIndex := int64(0)
+	res := make([]string, 0, stop-start+1)
+
+	for qIterator.HasNext() {
+		if currIndex > stop {
+			break
+		}
+
+		currElem, err := qIterator.Next()
+		if err != nil {
+			return []string{}, err
+		}
+
+		if currIndex >= start && currIndex <= stop {
+			res = append(res, currElem)
+		}
+		currIndex++
+	}
+
+	return res, nil
+}
+
 type DequeIterator struct {
 	deque             *Deque
 	CurrentNode       *byteListNode
@@ -448,6 +565,7 @@ type DequeIterator struct {
 	BufIndex          int
 }
 
+// Creates a new iterator for Deque.
 func (q *Deque) NewIterator() *DequeIterator {
 	return &DequeIterator{
 		deque:             q,

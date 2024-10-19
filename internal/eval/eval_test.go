@@ -132,6 +132,7 @@ func TestEval(t *testing.T) {
 	testEvalBFEXISTS(t, store)
 	testEvalBFADD(t, store)
 	testEvalLINSERT(t, store)
+	testEvalLRANGE(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -8302,4 +8303,51 @@ func testEvalLINSERT(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalLINSERT, store)
+}
+
+func testEvalLRANGE(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			input:  nil,
+			output: []byte("-wrong number of arguments for LRANGE\r\n"),
+		},
+		"empty args": {
+			input:  []string{},
+			output: []byte("-wrong number of arguments for LRANGE\r\n"),
+		},
+		"wrong number of args": {
+			input:  []string{"KEY1"},
+			output: []byte("-wrong number of arguments for LRANGE\r\n"),
+		},
+		"invalid start": {
+			input:  []string{"KEY1", "014f", "2"},
+			output: []byte("-ERR value is not an integer or out of range\r\n"),
+		},
+		"invalid stop": {
+			input:  []string{"KEY1", "2", "f2"},
+			output: []byte("-ERR value is not an integer or out of range\r\n"),
+		},
+		"key does not exist": {
+			input:  []string{"NONEXISTENT_KEY", "2", "4"},
+			output: clientio.Encode([]string{}, false),
+		},
+		"key exists": {
+			setup: func() {
+				evalLPUSH([]string{"EXISTING_KEY", "pivot_value"}, store)
+				evalLINSERT([]string{"EXISTING_KEY", "before", "pivot_value", "before_value"}, store)
+				evalLINSERT([]string{"EXISTING_KEY", "after", "pivot_value", "after_value"}, store)
+			},
+			input:  []string{"EXISTING_KEY", "0", "5"},
+			output: clientio.Encode([]string{"before_value", "pivot_value", "after_value"}, false),
+		},
+		"key with different type": {
+			setup: func() {
+				evalSET([]string{"EXISTING_KEY", "mock_value"}, store)
+			},
+			input:  []string{"EXISTING_KEY", "0", "4"},
+			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+		},
+	}
+
+	runEvalTests(t, tests, evalLRANGE, store)
 }

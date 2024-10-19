@@ -95,33 +95,9 @@ func dequeLInsertIntStrMany(howMany int, beforeAfter string, deq eval.DequeI) {
 	}
 }
 
-func BenchmarkBasicDequeLInsertBefore20(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		dequeLInsertIntStrMany(20, "before", eval.NewBasicDeque())
-	}
-}
-
-func BenchmarkBasicDequeLInsertBefore200(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		dequeLInsertIntStrMany(200, "before", eval.NewBasicDeque())
-	}
-}
-
 func BenchmarkBasicDequeLInsertBefore2000(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		dequeLInsertIntStrMany(2000, "before", eval.NewBasicDeque())
-	}
-}
-
-func BenchmarkBasicDequeLInsertAfter20(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		dequeLInsertIntStrMany(20, "after", eval.NewBasicDeque())
-	}
-}
-
-func BenchmarkBasicDequeLInsertAfter200(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		dequeLInsertIntStrMany(200, "after", eval.NewBasicDeque())
 	}
 }
 
@@ -131,33 +107,9 @@ func BenchmarkBasicDequeLInsertAfter2000(b *testing.B) {
 	}
 }
 
-func BenchmarkDequeLInsertBefore20(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		dequeLInsertIntStrMany(20, "before", eval.NewDeque())
-	}
-}
-
-func BenchmarkDequeLInsertBefore200(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		dequeLInsertIntStrMany(200, "before", eval.NewDeque())
-	}
-}
-
 func BenchmarkDequeLInsertBefore2000(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		dequeLInsertIntStrMany(2000, "before", eval.NewDeque())
-	}
-}
-
-func BenchmarkDequeLInsertAfter20(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		dequeLInsertIntStrMany(20, "after", eval.NewDeque())
-	}
-}
-
-func BenchmarkDequeLInsertAfter200(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		dequeLInsertIntStrMany(200, "after", eval.NewDeque())
 	}
 }
 
@@ -221,6 +173,43 @@ func BenchmarkDequeLPush2000(b *testing.B) {
 	}
 }
 
+func TestLRange(t *testing.T) {
+	testCases := []struct {
+		name           string
+		dq             eval.DequeI
+		input          []string
+		expectedOutput []string
+		start          int64
+		stop           int64
+	}{
+		{"DequeWithStartStopPositiveAndInRange", eval.NewDeque(), []string{"a", "b", "c"}, []string{"c", "b", "a"}, 0, 2},
+		{"DequeWhereStopIsOutOfRange", eval.NewDeque(), []string{"a", "b", "c"}, []string{"c", "b", "a"}, 0, 20},
+		{"DequeWhereStartIsOutOfRange", eval.NewDeque(), []string{"a", "b", "c"}, []string{}, 10, 2},
+		{"DequeWhereStartIsNegative", eval.NewDeque(), []string{"a", "b", "c"}, []string{"b", "a"}, -2, 2},
+		{"DequeWhereStartIsNegativeOutOfRange", eval.NewDeque(), []string{"a", "b", "c"}, []string{"c", "b", "a"}, -20, 2},
+		{"DequeWhereStopIsNegative", eval.NewDeque(), []string{"a", "b", "c"}, []string{"c", "b"}, 0, -2},
+		{"DequeWhereStopIsNegativeOutOfRange", eval.NewDeque(), []string{"a", "b", "c"}, []string{}, 0, -4},
+		{"DequeWhereStartGreaterThanStop", eval.NewDeque(), []string{"a", "b", "c"}, []string{}, 2, 0},
+		{"BasicDequeWithStartStopPositiveAndInRange", eval.NewBasicDeque(), []string{"a", "b", "c"}, []string{"c", "b", "a"}, 0, 2},
+		{"BasicDequeWhereStopIsOutOfRange", eval.NewBasicDeque(), []string{"a", "b", "c"}, []string{"c", "b", "a"}, 0, 20},
+		{"BasicDequeWhereStartIsOutOfRange", eval.NewBasicDeque(), []string{"a", "b", "c"}, []string{}, 10, 2},
+		{"BasicDequeWhereStartIsNegative", eval.NewBasicDeque(), []string{"a", "b", "c"}, []string{"b", "a"}, -2, 2},
+		{"BasicDequeWhereStartIsNegativeOutOfRange", eval.NewBasicDeque(), []string{"a", "b", "c"}, []string{"c", "b", "a"}, -20, 2},
+		{"BasicDequeWhereStopIsNegative", eval.NewBasicDeque(), []string{"a", "b", "c"}, []string{"c", "b"}, 0, -2},
+		{"BasicDequeWhereStopIsNegativeOutOfRange", eval.NewBasicDeque(), []string{"a", "b", "c"}, []string{}, 0, -4},
+		{"BasicDequeWhereStartGreaterThanStop", eval.NewBasicDeque(), []string{"a", "b", "c"}, []string{}, 2, 0},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, i := range tc.input {
+				tc.dq.LPush(i)
+			}
+			output, _ := tc.dq.LRange(tc.start, tc.stop)
+			assert.DeepEqual(t, output, tc.expectedOutput)
+		})
+	}
+}
+
 func TestLInsertOnInvalidOperationTypeReturnsError(t *testing.T) {
 	testCases := []struct {
 		name string
@@ -235,8 +224,8 @@ func TestLInsertOnInvalidOperationTypeReturnsError(t *testing.T) {
 			tc.dq.LPush("b")
 			tc.dq.LPush("c")
 			newLen, err := tc.dq.LInsert("a", "x", "randomOperation")
-			if err == nil || err.Error() != "invalid before/after argument" {
-				t.Errorf("Expected error 'invalid before/after argument', got %v", err)
+			if err == nil || err.Error() != "syntax error" {
+				t.Errorf("Expected error 'syntax error', got %v", err)
 			}
 			if newLen != -1 {
 				t.Errorf("Expected int -1, got %v", newLen)

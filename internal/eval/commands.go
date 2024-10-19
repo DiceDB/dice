@@ -1319,6 +1319,27 @@ var (
 		Arity:    4,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	lrangeCmdMeta = DiceCmdMeta{
+		Name: "LRANGE",
+		Info: `
+		Usage:
+			LRANGE key start stop
+		Info:
+			Returns the specified elements of the list stored at key.
+			The offsets start and stop are zero-based indexes, with 0 being the first element of the list (the head of the list), 1 being the next element and so on.
+
+			These offsets can also be negative numbers indicating offsets starting at the end of the list.
+			For example, -1 is the last element of the list, -2 the penultimate, and so on.
+			
+			Out of range indexes will not produce an error. If start is larger than the end of the list, an empty list is returned.
+			If stop is larger than the actual end of the list it will be treated like the last element of the list.
+		Returns:
+			Array reply: a list of elements in the specified range, or an empty array if the key doesn't exist.
+		`,
+		Eval:     evalLRANGE,
+		Arity:    3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -1461,6 +1482,7 @@ func init() {
 	DiceCmds["CMS.INCRBY"] = cmsIncrByCmdMeta
 	DiceCmds["CMS.MERGE"] = cmsMergeCmdMeta
 	DiceCmds["LINSERT"] = linsertCmdMeta
+	DiceCmds["LRANGE"] = lrangeCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

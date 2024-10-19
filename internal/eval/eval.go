@@ -3408,6 +3408,46 @@ func evalJSONSTRAPPEND(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(resultsArray, false)
 }
 
+func evalLRANGE(args []string, store *dstore.Store) []byte {
+	if len(args) != 3 {
+		return clientio.Encode(errors.New("wrong number of arguments for LRANGE"), false)
+	}
+	key := args[0]
+	start, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return clientio.Encode(errors.New("ERR value is not an integer or out of range"), false)
+	}
+	stop, err := strconv.ParseInt(args[2], 10, 64)
+	if err != nil {
+		return clientio.Encode(errors.New("ERR value is not an integer or out of range"), false)
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return clientio.Encode([]string{}, false)
+	}
+
+	// if object is a set type, return error
+	if object.AssertType(obj.TypeEncoding, object.ObjTypeSet) == nil {
+		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeByteList); err != nil {
+		return clientio.Encode(err, false)
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingDeque); err != nil {
+		return clientio.Encode(err, false)
+	}
+
+	q := obj.Value.(*Deque)
+	res, err := q.LRange(start, stop)
+	if err != nil {
+		return clientio.Encode(err, false)
+	}
+	return clientio.Encode(res, false)
+}
+
 func evalLINSERT(args []string, store *dstore.Store) []byte {
 	if len(args) != 4 {
 		return clientio.Encode(errors.New("wrong number of arguments for LINSERT"), false)
