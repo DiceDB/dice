@@ -1041,6 +1041,16 @@ var (
 		IsMigrated: true,
 		NewEval:    evalZRANGE,
 	}
+	zpopmaxCmdMeta = DiceCmdMeta{
+		Name: "ZPOPMAX",
+		Info: `ZPOPMAX  key [count]
+		Pops count number of elements from the sorted set from highest to lowest and returns those score and member.
+		If count is not provided '1' is considered by default.`,
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalZPOPMAX,
+	}
 	bitfieldCmdMeta = DiceCmdMeta{
 		Name: "BITFIELD",
 		Info: `The command treats a string as an array of bits as well as bytearray data structure,
@@ -1230,6 +1240,7 @@ func init() {
 	DiceCmds["TYPE"] = typeCmdMeta
 	DiceCmds["ZADD"] = zaddCmdMeta
 	DiceCmds["ZRANGE"] = zrangeCmdMeta
+	DiceCmds["ZPOPMAX"] = zpopmaxCmdMeta
 	DiceCmds["JSON.STRAPPEND"] = jsonstrappendCmdMeta
 }
 
