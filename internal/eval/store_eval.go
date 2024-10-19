@@ -911,6 +911,7 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+
 // evalDEL deletes all the specified keys in args list
 // returns the count of total deleted keys
 func evalDEL(args []string, store *dstore.Store) *EvalResponse {
@@ -982,6 +983,8 @@ func evalPersist(args []string, store *dstore.Store) *EvalResponse {
 	if !isExpirySet {
 		return &EvalResponse{
 			Result: int64(0),
+      
+
 			Error:  nil,
 		}
 	}
@@ -1030,6 +1033,63 @@ func evalTYPE(args []string, store *dstore.Store) *EvalResponse {
 
 	return &EvalResponse{
 		Result: typeStr,
+		Error:  nil,
+	}
+}
+
+
+// ZPOPMIN Removes and returns the member with the lowest score from the sorted set at the specified key.
+// If multiple members have the same score, the one that comes first alphabetically is returned.
+// You can also specify a count to remove and return multiple members at once.
+// If the set is empty, it returns an empty result.
+func evalZPOPMIN(args []string, store *dstore.Store) *EvalResponse {
+	// Incorrect number of arguments should return error
+	if len(args) < 1 || len(args) > 2 {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongArgumentCount("ZPOPMIN"),
+		}
+	}
+
+	key := args[0]        // Key argument
+	obj := store.Get(key) // Getting sortedSet object from store
+
+	// If the sortedSet is nil, return an empty list
+	if obj == nil {
+		return &EvalResponse{
+			Result: []string{},
+			Error:  nil,
+		}
+	}
+
+	sortedSet, err := sortedset.FromObject(obj)
+	if err != nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	count := 1
+	// Check if the count argument is provided.
+	if len(args) == 2 {
+		countArg, err := strconv.Atoi(args[1])
+		if err != nil {
+			// Return an error if the argument is not a valid integer
+			return &EvalResponse{
+				Result: clientio.NIL,
+				Error:  diceerrors.ErrIntegerOutOfRange,
+			}
+		}
+		count = countArg
+	}
+
+	// If the count argument is present, return all the members with lowest score sorted in ascending order.
+	// If there are multiple lowest scores with same score value, it sorts the members in lexographical order of member name
+	results := sortedSet.GetMin(count)
+
+	return &EvalResponse{
+		Result: results,
 		Error:  nil,
 	}
 }
