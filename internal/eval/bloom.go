@@ -6,6 +6,7 @@ import (
 	"math"
 	"math/rand"
 	"strconv"
+	"strings"
 
 	"github.com/dicedb/dice/internal/object"
 
@@ -34,9 +35,10 @@ var (
 
 	errInvalidKey = diceerrors.ErrGeneral("invalid key: no bloom filter found")
 
-	errEmptyValue   = diceerrors.ErrGeneral("empty value provided")
-	errUnableToHash = diceerrors.ErrGeneral("unable to hash given value")
-	errNotFound     = diceerrors.ErrGeneral("not found")
+	errEmptyValue              = diceerrors.ErrGeneral("empty value provided")
+	errUnableToHash            = diceerrors.ErrGeneral("unable to hash given value")
+	errNotFound                = diceerrors.ErrGeneral("not found")
+	errInvalidInformationValue = fmt.Errorf("Invalid information value")
 )
 
 type BloomOpts struct {
@@ -129,19 +131,31 @@ func newBloomFilter(opts *BloomOpts) *Bloom {
 	return &Bloom{opts, bitset, 0}
 }
 
-func (b *Bloom) info(name string, opts ...any) []interface{} {
-	result := make([]interface{}, 10)
-	result[0] = "Capacity"
-	result[1] = b.opts.capacity
-	result[2] = "Size"
-	result[3] = b.opts.bits
-	result[4] = "Number of filters"
-	result[5] = len(b.opts.hashFns)
-	result[6] = "Number of items inserted"
-	result[7] = b.cnt
-	result[8] = "Expansion rate"
-	result[9] = 2
-	return result
+func (b *Bloom) info(opt string) ([]interface{}, error) {
+	result := make([]interface{}, 0, 10)
+	if strings.EqualFold(opt, "") {
+		result = append(result, "Capacity", b.opts.capacity)
+		result = append(result, "Size", b.opts.bits)
+		result = append(result, "Number of filters", len(b.opts.hashFns))
+		result = append(result, "Number of items inserted", b.cnt)
+		result = append(result, "Expansion rate", 2)
+	} else {
+		switch strings.ToUpper(opt) {
+		case CAPACITY:
+			result = append(result, "Capacity", b.opts.capacity)
+		case SIZE:
+			result = append(result, "Size", b.opts.bits)
+		case FILTERS:
+			result = append(result, "Number of filters", len(b.opts.hashFns))
+		case ITEMS:
+			result = append(result, "Number of items inserted", b.cnt)
+		case EXPANSION:
+			result = append(result, "Expansion rate", 2)
+		default:
+			return nil, errInvalidInformationValue
+		}
+	}
+	return result, nil
 }
 
 // add adds a new entry for `value` in the filter. It hashes the given
