@@ -910,3 +910,60 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 		Error:  nil,
 	}
 }
+
+// This command removes the element with the maximum score from the sorted set.
+// If two elements have the same score then the members are aligned in lexicographically and the lexicographically greater element is removed.
+// There is a second optional element called count which specifies the number of element to be removed.
+// Returns the removed elements from the sorted set.
+func evalZPOPMAX(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 || len(args) > 2 {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongArgumentCount("ZPOPMAX"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+	count := 1
+	if len(args) > 1 {
+		ops, err := strconv.Atoi(args[1])
+		if err != nil {
+			return &EvalResponse{
+				Result: clientio.NIL,
+				Error:  diceerrors.ErrIntegerOutOfRange, // This error is thrown when then count argument is not an integer
+			}
+		}
+		if ops <= 0 {
+			return &EvalResponse{
+				Result: []string{}, // Returns empty array when the count is less than or equal to  0
+				Error:  nil,
+			}
+		}
+		count = ops
+	}
+
+	var sortedSet *sortedset.Set
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: []string{}, // Returns empty array when the object with given key is not present in the store
+			Error:  nil,
+		}
+	}
+	var err []byte
+	sortedSet, err = sortedset.FromObject(obj)
+	if err != nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongTypeOperation, // Returns this error when a key is present in the store but is not of type sortedset.Set
+		}
+	}
+
+	var res []string = sortedSet.PopMax(count)
+
+	return &EvalResponse{
+		Result: res,
+		Error:  nil,
+	}
+}
