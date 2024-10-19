@@ -57,6 +57,7 @@ const (
 	CmdDel         = "DEL"
 	CmdExists      = "EXISTS"
 	CmdPersist     = "PERSIST"
+	CmdType        = "TYPE"
 )
 
 type CmdMeta struct {
@@ -116,6 +117,9 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdPersist: {
+		CmdType: SingleShard,
+	},
+	CmdType: {
 		CmdType: SingleShard,
 	},
 
