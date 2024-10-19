@@ -9,6 +9,7 @@ __pycache__
 ./dice
 *.rdb
 dice
+main
 
 # build output
 dist/
