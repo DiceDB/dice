@@ -43,9 +43,9 @@ const (
 
 // Single-shard commands.
 const (
-	CmdSet     = "SET"
-	CmdGet     = "GET"
-	CmdGetSet  = "GETSET"
+	CmdSet    = "SET"
+	CmdGet    = "GET"
+	CmdGetSet = "GETSET"
 )
 
 // Multi-shard commands.
@@ -64,7 +64,7 @@ const (
 const (
 	CmdGetWatch     = "GET.WATCH"
 	CmdZRangeWatch  = "ZRANGE.WATCH"
-	CmdZPopMin     = "ZPOPMIN"
+	CmdZPopMin      = "ZPOPMIN"
 	CmdJSONClear    = "JSON.CLEAR"
 	CmdJSONStrlen   = "JSON.STRLEN"
 	CmdJSONObjlen   = "JSON.OBJLEN"
