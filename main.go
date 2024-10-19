@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
 	"runtime"
+	"runtime/pprof"
+	"runtime/trace"
 	"sync"
 	"syscall"
 
@@ -36,6 +39,7 @@ func init() {
 	flag.IntVar(&config.KeysLimit, "keys-limit", config.KeysLimit, "keys limit for the dicedb server. "+
 		"This flag controls the number of keys each shard holds at startup. You can multiply this number with the "+
 		"total number of shard threads to estimate how much memory will be required at system start up.")
+	flag.BoolVar(&config.EnableProfiling, "enable-profiling", false, "enable profiling for the dicedb server")
 	flag.Parse()
 
 	config.SetupConfig()
@@ -159,6 +163,16 @@ func main() {
 			}
 		}()
 	} else {
+		if config.EnableProfiling {
+			stopProfiling, err := startProfiling(logr)
+			if err != nil {
+				logr.Error("Profiling could not be started", slog.Any("error", err))
+				os.Exit(1)
+			}
+
+			defer stopProfiling()
+		}
+
 		workerManager := worker.NewWorkerManager(config.DiceConfig.Performance.MaxClients, shardManager)
 		// Initialize the RESP Server
 		respServer := resp.NewServer(shardManager, workerManager, cmdWatchChan, serverErrCh, logr)
@@ -193,7 +207,7 @@ func main() {
 		}()
 	}
 
-	websocketServer := server.NewWebSocketServer(shardManager, queryWatchChan, logr)
+	websocketServer := server.NewWebSocketServer(shardManager, queryWatchChan, config.WebsocketPort, logr)
 	serverWg.Add(1)
 	go func() {
 		defer serverWg.Done()
@@ -231,4 +245,79 @@ func main() {
 
 	wg.Wait()
 	logr.Debug("Server has shut down gracefully")
+}
+
+func startProfiling(logr *slog.Logger) (func(), error) {
+	// Start CPU profiling
+	cpuFile, err := os.Create("cpu.prof")
+	if err != nil {
+		return nil, fmt.Errorf("could not create cpu.prof: %w", err)
+	}
+
+	if err = pprof.StartCPUProfile(cpuFile); err != nil {
+		cpuFile.Close()
+		return nil, fmt.Errorf("could not start CPU profile: %w", err)
+	}
+
+	// Start memory profiling
+	memFile, err := os.Create("mem.prof")
+	if err != nil {
+		pprof.StopCPUProfile()
+		cpuFile.Close()
+		return nil, fmt.Errorf("could not create mem.prof: %w", err)
+	}
+
+	// Start block profiling
+	runtime.SetBlockProfileRate(1)
+
+	// Start execution trace
+	traceFile, err := os.Create("trace.out")
+	if err != nil {
+		runtime.SetBlockProfileRate(0)
+		memFile.Close()
+		pprof.StopCPUProfile()
+		cpuFile.Close()
+		return nil, fmt.Errorf("could not create trace.out: %w", err)
+	}
+
+	if err := trace.Start(traceFile); err != nil {
+		traceFile.Close()
+		runtime.SetBlockProfileRate(0)
+		memFile.Close()
+		pprof.StopCPUProfile()
+		cpuFile.Close()
+		return nil, fmt.Errorf("could not start trace: %w", err)
+	}
+
+	// Return a cleanup function
+	return func() {
+		// Stop the CPU profiling and close cpuFile
+		pprof.StopCPUProfile()
+		cpuFile.Close()
+
+		// Write heap profile
+		runtime.GC()
+		if err := pprof.WriteHeapProfile(memFile); err != nil {
+			logr.Warn("could not write memory profile", slog.Any("error", err))
+		}
+
+		memFile.Close()
+
+		// Write block profile
+		blockFile, err := os.Create("block.prof")
+		if err != nil {
+			logr.Warn("could not create block profile", slog.Any("error", err))
+		} else {
+			if err := pprof.Lookup("block").WriteTo(blockFile, 0); err != nil {
+				logr.Warn("could not write block profile", slog.Any("error", err))
+			}
+			blockFile.Close()
+		}
+
+		runtime.SetBlockProfileRate(0)
+
+		// Stop trace and close traceFile
+		trace.Stop()
+		traceFile.Close()
+	}, nil
 }

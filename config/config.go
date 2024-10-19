@@ -50,6 +50,8 @@ var (
 	InitConfigCmd = false
 
 	KeysLimit = DefaultKeysLimit
+
+	EnableProfiling = false
 )
 
 type Config struct {
@@ -83,6 +85,7 @@ type Config struct {
 		EnableMultiThreading   bool          `mapstructure:"enablemultithreading"`
 		StoreMapInitSize       int           `mapstructure:"storemapinitsize"`
 		AdhocReqChanBufSize    int           `mapstructure:"adhocreqchanbufsize"`
+		EnableProfiling        bool          `mapstructure:"profiling"`
 	} `mapstructure:"performance"`
 
 	Memory struct {
@@ -157,6 +160,7 @@ var baseConfig = Config{
 		EnableMultiThreading   bool          `mapstructure:"enablemultithreading"`
 		StoreMapInitSize       int           `mapstructure:"storemapinitsize"`
 		AdhocReqChanBufSize    int           `mapstructure:"adhocreqchanbufsize"`
+		EnableProfiling        bool          `mapstructure:"profiling"`
 	}{
 		WatchChanBufSize:       20000,
 		ShardCronFrequency:     1 * time.Second,
