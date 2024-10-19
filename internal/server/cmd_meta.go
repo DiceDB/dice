@@ -82,6 +82,30 @@ var (
 		Cmd:     "PFMERGE",
 		CmdType: SingleShard,
 	}
+	hsetCmdMeta = CmdsMeta{
+		Cmd:     "HSET",
+		CmdType: SingleShard,
+	}
+	hgetCmdMeta = CmdsMeta{
+		Cmd:     "HGET",
+		CmdType: SingleShard,
+	}
+	hsetnxCmdMeta = CmdsMeta{
+		Cmd:     "HSETNX",
+		CmdType: SingleShard,
+	}
+	hdelCmdMeta = CmdsMeta{
+		Cmd:     "HDEL",
+		CmdType: SingleShard,
+	}
+	hmsetCmdMeta = CmdsMeta{
+		Cmd:     "HMSET",
+		CmdType: SingleShard,
+	}
+	hmgetCmdMeta = CmdsMeta{
+		Cmd:     "HMGET",
+		CmdType: SingleShard,
+	}
 
 	jsonclearCmdMeta = CmdsMeta{
 		Cmd:     "JSON.CLEAR",
@@ -122,5 +146,11 @@ func init() {
 	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
 	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
 	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
+	WorkerCmdsMeta["HSET"] = hsetCmdMeta
+	WorkerCmdsMeta["HGET"] = hgetCmdMeta
+	WorkerCmdsMeta["HSETNX"] = hsetnxCmdMeta
+	WorkerCmdsMeta["HDEL"] = hdelCmdMeta
+	WorkerCmdsMeta["HMSET"] = hmsetCmdMeta
+	WorkerCmdsMeta["HMGET"] = hmgetCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }
