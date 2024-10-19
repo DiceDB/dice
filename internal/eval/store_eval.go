@@ -45,7 +45,7 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 	var state exDurationState = Uninitialized
 	var keepttl bool = false
 	var isGetCmdPresent bool = false
-	var getResp *EvalResponse;
+	var getResp *EvalResponse
 
 	key, value = args[0], args[1]
 	oType, oEnc := deduceTypeEncoding(value)
@@ -154,6 +154,10 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 		case GET:
 			isGetCmdPresent = true
 			getResp = evalGET([]string{key}, store)
+			//Abort SET operation if it has error
+			if getResp.Error != nil{
+				return getResp
+			}
 		default:
 			return &EvalResponse{
 				Result: nil,
@@ -175,12 +179,12 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 			Error:  diceerrors.ErrUnsupportedEncoding(int(oEnc)),
 		}
 	}
-	
+
 	// putting the k and value in a Hash Table
 	store.Put(key, store.NewObj(storedValue, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
-	
-	if(isGetCmdPresent){
-		return getResp;
+
+	if isGetCmdPresent {
+		return getResp
 	}
 	return &EvalResponse{
 		Result: clientio.OK,
