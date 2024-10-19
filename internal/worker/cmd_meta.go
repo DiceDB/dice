@@ -41,19 +41,25 @@ const (
 
 // Single-shard commands.
 const (
-	CmdSet         = "SET"
-	CmdGet         = "GET"
-	CmdGetSet      = "GETSET"
-	CmdGetWatch    = "GET.WATCH"
-	CmdZRangeWatch = "ZRANGE.WATCH"
-	CmdJSONClear   = "JSON.CLEAR"
-	CmdJSONStrlen  = "JSON.STRLEN"
-	CmdJSONObjlen  = "JSON.OBJLEN"
-	CmdZAdd        = "ZADD"
-	CmdZRange      = "ZRANGE"
-	CmdPFAdd       = "PFADD"
-	CmdPFCount     = "PFCOUNT"
-	CmdPFMerge     = "PFMERGE"
+	CmdSet           = "SET"
+	CmdGet           = "GET"
+	CmdGetSet        = "GETSET"
+	CmdGetWatch      = "GET.WATCH"
+	CmdZRangeWatch   = "ZRANGE.WATCH"
+	CmdJSONClear     = "JSON.CLEAR"
+	CmdJSONStrlen    = "JSON.STRLEN"
+	CmdJSONObjlen    = "JSON.OBJLEN"
+	CmdZAdd          = "ZADD"
+	CmdZRange        = "ZRANGE"
+	CmdPFAdd         = "PFADD"
+	CmdPFCount       = "PFCOUNT"
+	CmdPFMerge       = "PFMERGE"
+	CmdCMSQuery      = "CMS.QUERY"
+	CmdCMSInfo       = "CMS.INFO"
+	CmdCMSInitByDim  = "CMS.INITBYDIM"
+	CmdCMSInitByProb = "CMS.INITBYPROB"
+	CmdCMSMerge      = "CMS.MERGE"
+	CmdCMSIncrBy     = "CMS.INCRBY"
 )
 
 type CmdMeta struct {
@@ -104,6 +110,24 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdPFMerge: {
+		CmdType: SingleShard,
+	},
+	CmdCMSQuery: {
+		CmdType: SingleShard,
+	},
+	CmdCMSInfo: {
+		CmdType: SingleShard,
+	},
+	CmdCMSIncrBy: {
+		CmdType: SingleShard,
+	},
+	CmdCMSInitByDim: {
+		CmdType: SingleShard,
+	},
+	CmdCMSInitByProb: {
+		CmdType: SingleShard,
+	},
+	CmdCMSMerge: {
 		CmdType: SingleShard,
 	},
 
