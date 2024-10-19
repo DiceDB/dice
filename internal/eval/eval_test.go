@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dicedb/dice/internal/eval/sortedset"
 	"github.com/dicedb/dice/internal/server/utils"
 
 	"github.com/bytedance/sonic"
@@ -108,6 +109,7 @@ func TestEval(t *testing.T) {
 	testEvalHRANDFIELD(t, store)
 	testEvalZADD(t, store)
 	testEvalZRANGE(t, store)
+	testEvalZPOPMAX(t, store)
 	testEvalHVALS(t, store)
 	testEvalBitField(t, store)
 	testEvalHINCRBYFLOAT(t, store)
@@ -6333,5 +6335,128 @@ func BenchmarkEvalJSONSTRAPPEND(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		// Benchmark appending to multiple fields
 		evalJSONSTRAPPEND([]string{"doc1", "$..a", "\"bar\""}, store)
+	}
+}
+
+func testEvalZPOPMAX(t *testing.T, store *dstore.Store) {
+	setup := func() {
+		evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+	}
+
+	tests := map[string]evalTestCase{
+		"ZPOPMAX without key": {
+			setup: func() {},
+			input: []string{"KEY_INVALID"},
+			migratedOutput: EvalResponse{
+				Result: []string{},
+				Error:  nil,
+			},
+		},
+		"ZPOPMAX on wrongtype of key": {
+			setup: func() {
+				evalSET([]string{"mystring", "shankar"}, store)
+			},
+			input: []string{"mystring", "1"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			},
+		},
+		"ZPOPMAX without count argument": {
+			setup: setup,
+			input: []string{"myzset"},
+			migratedOutput: EvalResponse{
+				Result: []string{"3", "member3"},
+				Error:  nil,
+			},
+		},
+		"ZPOPMAX with count argument": {
+			setup: setup,
+			input: []string{"myzset", "2"},
+			migratedOutput: EvalResponse{
+				Result: []string{"3", "member3", "2", "member2"},
+				Error:  nil,
+			},
+		},
+		"ZPOPMAX with count more than the elements in sorted set": {
+			setup: setup,
+			input: []string{"myzset", "4"},
+			migratedOutput: EvalResponse{
+				Result: []string{"3", "member3", "2", "member2", "1", "member1"},
+			},
+		},
+		"ZPOPMAX with count as zero": {
+			setup: setup,
+			input: []string{"myzsert", "0"},
+			migratedOutput: EvalResponse{
+				Result: []string{},
+				Error:  nil,
+			},
+		},
+		"ZPOPMAX on an empty sorted set": {
+			setup: func() {
+				store.Put("myzset", store.NewObj(sortedset.New(), -1, object.ObjTypeSortedSet, object.ObjEncodingBTree))
+			},
+			input: []string{"myzset"},
+			migratedOutput: EvalResponse{
+				Result: []string{},
+				Error:  nil,
+			},
+		},
+	}
+	runMigratedEvalTests(t, tests, evalZPOPMAX, store)
+}
+
+func BenchmarkEvalZPOPMAX(b *testing.B) {
+	// Define benchmark cases with varying sizes of sorted sets
+	benchmarks := []struct {
+		name  string
+		setup func(store *dstore.Store)
+		input []string
+	}{
+		{
+			name: "ZPOPMAX on small sorted set (10 members)",
+			setup: func(store *dstore.Store) {
+				evalZADD([]string{"sortedSet", "1", "member1", "2", "member2", "3", "member3", "4", "member4", "5", "member5", "6", "member6", "7", "member7", "8", "member8", "9", "member9", "10", "member10"}, store)
+			},
+			input: []string{"sortedSet", "3"},
+		},
+		{
+			name: "ZPOPMAX on large sorted set (10000 members)",
+			setup: func(store *dstore.Store) {
+				args := []string{"sortedSet"}
+				for i := 1; i <= 10000; i++ {
+					args = append(args, fmt.Sprintf("%d", i), fmt.Sprintf("member%d", i))
+				}
+				evalZADD(args, store)
+			},
+			input: []string{"sortedSet", "10"},
+		},
+		{
+			name: "ZPOPMAX with large sorted set with duplicate scores",
+			setup: func(store *dstore.Store) {
+				args := []string{"sortedSet"}
+				for i := 1; i <= 10000; i++ {
+					args = append(args, "1", fmt.Sprintf("member%d", i))
+				}
+				evalZADD(args, store)
+			},
+			input: []string{"sortedSet", "2"},
+		},
+	}
+
+	store := dstore.NewStore(nil, nil)
+
+	for _, bm := range benchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			bm.setup(store)
+
+			for i := 0; i < b.N; i++ {
+				// Reset the store before each run to avoid contamination
+				dstore.ResetStore(store)
+				bm.setup(store)
+				evalZPOPMAX(bm.input, store)
+			}
+		})
 	}
 }
