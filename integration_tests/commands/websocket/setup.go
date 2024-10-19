@@ -96,6 +96,22 @@ func (e *WebsocketCommandExecutor) FireCommand(conn *websocket.Conn, cmd string)
 	return nil
 }
 
+func (e *WebsocketCommandExecutor) ReadResponse(conn *websocket.Conn, cmd string) (interface{}, error) {
+	// read the response
+	_, resp, err := conn.ReadMessage()
+	if err != nil {
+		return nil, err
+	}
+
+	// marshal to json
+	var respJSON interface{}
+	if err = json.Unmarshal(resp, &respJSON); err != nil {
+		return nil, fmt.Errorf("error unmarshaling response")
+	}
+
+	return respJSON, nil
+}
+
 func (e *WebsocketCommandExecutor) Name() string {
 	return "Websocket"
 }

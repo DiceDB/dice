@@ -3,6 +3,7 @@ package websocket
 import (
 	"testing"
 
+	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -49,5 +50,45 @@ func TestQWatch(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestQWatchMultipleClients(t *testing.T) {
+	numOfClients := 10
+	exec := NewWebsocketCommandExecutor()
+	clients := []*websocket.Conn{}
+
+	for i := 0; i < numOfClients; i++ {
+		client := exec.ConnectToServer()
+		clients = append(clients, client)
+	}
+
+	tc := struct {
+		cmd    string
+		expect interface{}
+	}{
+		cmd:    `Q.WATCH "SELECT $key, $value WHERE $key like 'key'"`,
+		expect: []interface{}{"q.watch", "SELECT $key, $value WHERE $key like 'key'", []interface{}{}},
+	}
+
+	for i := 0; i < numOfClients; i++ {
+		conn := clients[i]
+
+		// subscribe query
+		resp, err := exec.FireCommandAndReadResponse(conn, tc.cmd)
+		assert.Nil(t, err)
+		assert.ElementsMatch(t, tc.expect, resp, "Value mismatch for cmd %s", tc.cmd)
+	}
+
+	// update key
+	resp, err := exec.FireCommandAndReadResponse(clients[0], "SET key 1")
+	assert.Nil(t, err)
+	assert.Equal(t, "OK", resp, "Value mismatch for cmd SET key 1")
+
+	// read and validate query updates
+	for i := 0; i < numOfClients; i++ {
+		resp, err := exec.ReadResponse(clients[i], tc.cmd)
+		assert.Nil(t, err)
+		assert.Equal(t, []interface{}{"q.watch", "SELECT $key, $value WHERE $key like 'key'", []interface{}{[]interface{}{"key", float64(1)}}}, resp, "Value mismatch for reading query update message")
 	}
 }
