@@ -911,9 +911,8 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
-
 // evalDEL deletes all the specified keys in args list
-// returns the count of total deleted keys after encoding
+// returns the count of total deleted keys
 func evalDEL(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) < 1 {
 		return &EvalResponse{
@@ -925,6 +924,29 @@ func evalDEL(args []string, store *dstore.Store) *EvalResponse {
 	var count int64
 	for _, key := range args {
 		if ok := store.Del(key); ok {
+			count++
+		}
+	}
+
+	return &EvalResponse{
+		Result: count,
+		Error:  nil,
+	}
+}
+
+// evalEXISTS returns the number of keys existing in the db
+// returns the count of total existing keys
+func evalEXISTS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("EXISTS"),
+		}
+	}
+
+	var count int64
+	for _, key := range args {
+		if store.GetNoTouch(key) != nil {
 			count++
 		}
 	}

@@ -2642,21 +2642,6 @@ func evalMGET(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(resp, false)
 }
 
-func evalEXISTS(args []string, store *dstore.Store) []byte {
-	if len(args) == 0 {
-		return diceerrors.NewErrArity("EXISTS")
-	}
-
-	var count int
-	for _, key := range args {
-		if store.GetNoTouch(key) != nil {
-			count++
-		}
-	}
-
-	return clientio.Encode(count, false)
-}
-
 func evalPersist(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("PERSIST")

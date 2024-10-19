@@ -55,6 +55,7 @@ const (
 	CmdPFCount     = "PFCOUNT"
 	CmdPFMerge     = "PFMERGE"
 	CmdDel         = "DEL"
+	CmdExists      = "EXISTS"
 )
 
 type CmdMeta struct {
@@ -108,6 +109,9 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdDel: {
+		CmdType: SingleShard,
+	},
+	CmdExists: {
 		CmdType: SingleShard,
 	},
 

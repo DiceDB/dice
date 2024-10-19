@@ -583,7 +583,8 @@ var (
 		Name: "EXISTS",
 		Info: `EXISTS key1 key2 ... key_N
 		Return value is the number of keys existing.`,
-		Eval: evalEXISTS,
+		IsMigrated: true,
+		NewEval:    evalEXISTS,
 	}
 	renameCmdMeta = DiceCmdMeta{
 		Name:  "RENAME",
