@@ -14,7 +14,7 @@ func TestJSONARRPOP(t *testing.T) {
 	arrayAtRoot := []interface{}{0, 1, 2, 3}
 	nestedArray := map[string]interface{}{"a": 2, "b": []interface{}{0, 1, 2, 3}}
 	arrayWithinArray := map[string]interface{}{"a": 2, "b": []interface{}{0, 1, 2, []interface{}{3, 4, 5}}}
-
+	simpleJson := map[string]interface{}{"a": 2}
 	// Deleting the used keys
 	exec.FireCommand(HTTPCommand{
 		Command: "DEL",
@@ -121,6 +121,44 @@ func TestJSONARRPOP(t *testing.T) {
 				},
 			},
 			expected: []interface{}{"OK", "ERR invalid JSONPath"},
+		},
+		{
+			name: "key doesn't exist error",
+			commands: []HTTPCommand{
+				{
+					Command: "JSON.ARRPOP",
+					Body:    map[string]interface{}{"key": "doc_new"},
+				},
+			},
+			expected: []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
+		},
+		{
+			name: "arr pop on wrong key type",
+			commands: []HTTPCommand{
+				{
+					Command: "SET",
+					Body:    map[string]interface{}{"key": "doc_new", "value": "v1"},
+				},
+				{
+					Command: "JSON.ARRPOP",
+					Body:    map[string]interface{}{"key": "doc_new"},
+				},
+			},
+			expected: []interface{}{"OK", "ERR Existing key has wrong Dice type"},
+		},
+		{
+			name: "nil response for arr pop",
+			commands: []HTTPCommand{
+				{
+					Command: "JSON.SET",
+					Body:    map[string]interface{}{"key": "doc", "path": "$", "json": simpleJson},
+				},
+				{
+					Command: "JSON.ARRPOP",
+					Body:    map[string]interface{}{"key": "doc", "path": "$.a", "index": "1"},
+				},
+			},
+			expected: []interface{}{"OK", []interface{}{nil}},
 		},
 	}
 
