@@ -15,12 +15,12 @@ type StoreOp struct {
 	Client        *comm.Client   // Client that sent this Store operation. TODO: This can potentially replace the WorkerID in the future
 	HTTPOp        bool           // HTTPOp is true if this Store operation is an HTTP operation
 	WebsocketOp   bool           // WebsocketOp is true if this Store operation is a Websocket operation
-	PreProcessing bool
+	PreProcessing bool           // PreProcessing indicates whether a comamnd operation requires preprocessing before execution. This is mainly used is multi-step-multi-shard commands
 }
 
 // StoreResponse represents the response of a Store operation.
 type StoreResponse struct {
 	RequestID    uint32             // RequestID that this StoreResponse belongs to
 	EvalResponse *eval.EvalResponse // Result of the Store operation, for now the type is set to []byte, but this can change in the future.
-	SeqID        uint8              //
+	SeqID        uint8              // Sequence ID to maintain the order of responses, used to track the sequence in which operations are processed or received.
 }
