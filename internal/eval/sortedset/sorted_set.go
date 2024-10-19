@@ -187,8 +187,7 @@ func (ss *Set) PopMax(count int) []string {
 			break
 		}
 		ssi := item.(*Item)
-		result = append(result, ssi.Member)
-		result = append(result, strconv.FormatFloat(ssi.Score, 'g', -1, 64))
+		result = append(result, ssi.Member, strconv.FormatFloat(ssi.Score, 'g', -1, 64))
 
 		delete(ss.memberMap, ssi.Member)
 	}
