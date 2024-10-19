@@ -25,6 +25,7 @@ func TestMain(m *testing.M) {
 		Logger: l,
 	}
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	RunWebsocketServer(ctx, &wg, opts)
 
 	// Wait for the server to start
@@ -38,7 +39,6 @@ func TestMain(m *testing.M) {
 	conn := executor.ConnectToServer()
 	executor.FireCommand(conn, "abort")
 
-	cancel()
 	wg.Wait()
 	os.Exit(exitCode)
 }

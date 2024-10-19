@@ -128,7 +128,11 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		// read incoming message
 		_, msg, err := conn.ReadMessage()
 		if err != nil {
-			s.logger.Warn("failed to read message from client", slog.Any("localAddr", conn.LocalAddr()))
+			// acceptable close errors
+			errs := []int{websocket.CloseNormalClosure, websocket.CloseGoingAway, websocket.CloseAbnormalClosure}
+			if !websocket.IsCloseError(err, errs...) {
+				s.logger.Warn("failed to read message from client", slog.Any("error", err))
+			}
 			break
 		}
 

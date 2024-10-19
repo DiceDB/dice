@@ -112,7 +112,7 @@ func (h *IOHandler) Read(ctx context.Context) ([]byte, error) {
 					// No more data to read at this time
 					return data, nil
 				case errors.Is(err, net.ErrClosed), errors.Is(err, syscall.EPIPE), errors.Is(err, syscall.ECONNRESET):
-					h.logger.Error("Connection closed", slog.Any("error", err))
+					h.logger.Debug("Connection closed", slog.Any("error", err))
 					cerr := h.Close()
 					if cerr != nil {
 						h.logger.Warn("Error closing connection", slog.Any("error", errors.Join(err, cerr)))
@@ -186,7 +186,7 @@ func (h *IOHandler) Write(ctx context.Context, response interface{}) error {
 					err = errors.Join(err, cerr)
 				}
 
-				h.logger.Error("Connection closed", slog.Any("error", err))
+				h.logger.Debug("Connection closed", slog.Any("error", err))
 				return err
 			}
 

@@ -87,8 +87,6 @@ func (e *WebsocketCommandExecutor) FireCommandAndReadResponse(conn *websocket.Co
 }
 
 func (e *WebsocketCommandExecutor) FireCommand(conn *websocket.Conn, cmd string) error {
-	defer time.Sleep(100 * time.Millisecond)
-
 	// send request
 	err := conn.WriteMessage(websocket.TextMessage, []byte(cmd))
 	if err != nil {
