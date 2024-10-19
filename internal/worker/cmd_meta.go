@@ -54,6 +54,10 @@ const (
 	CmdPFAdd       = "PFADD"
 	CmdPFCount     = "PFCOUNT"
 	CmdPFMerge     = "PFMERGE"
+	CmdBFAdd       = "BF.ADD"
+	CmdBFReserve   = "BF.RESERVE"
+	CmdBFInfo      = "BF.INFO"
+	CmdBFExists    = "BF.EXISTS"
 )
 
 type CmdMeta struct {
@@ -128,6 +132,20 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdZRange: {
+		CmdType: SingleShard,
+	},
+
+	// Bloom Filter
+	CmdBFAdd: {
+		CmdType: SingleShard,
+	},
+	CmdBFInfo: {
+		CmdType: SingleShard,
+	},
+	CmdBFExists: {
+		CmdType: SingleShard,
+	},
+	CmdBFReserve: {
 		CmdType: SingleShard,
 	},
 }
