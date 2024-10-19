@@ -1983,7 +1983,7 @@ func EvalQWATCH(args []string, httpOp bool, client *comm.Client, store *dstore.S
 			Query:              query,
 			CacheChan:          cacheChannel,
 			QwatchClientChan:   client.HTTPQwatchResponseChan,
-			ClientIdentifierID: client.ClientIdentifierID,
+			ClientIdentifierID: uint32(client.ClientIdentifierID),
 		}
 	} else {
 		watchSubscription = querymanager.QuerySubscription{
@@ -2028,7 +2028,7 @@ func EvalQUNWATCH(args []string, httpOp bool, client *comm.Client) []byte {
 			Subscribe:          false,
 			Query:              query,
 			QwatchClientChan:   client.HTTPQwatchResponseChan,
-			ClientIdentifierID: client.ClientIdentifierID,
+			ClientIdentifierID: uint32(client.ClientIdentifierID),
 		}
 	} else {
 		querymanager.QuerySubscriptionChan <- querymanager.QuerySubscription{
