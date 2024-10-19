@@ -90,6 +90,10 @@ var (
 		Cmd:     "EXISTS",
 		CmdType: SingleShard,
 	}
+	persistCmdMeta = CmdsMeta{
+		Cmd:     "PERSIST",
+		CmdType: SingleShard,
+	}
 
 	jsonclearCmdMeta = CmdsMeta{
 		Cmd:     "JSON.CLEAR",
@@ -132,5 +136,6 @@ func init() {
 	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
 	WorkerCmdsMeta["DEL"] = delCmdMeta
 	WorkerCmdsMeta["EXISTS"] = existsCmdMeta
+	WorkerCmdsMeta["PERSIST"] = persistCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }
