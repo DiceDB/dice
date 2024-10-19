@@ -48,8 +48,6 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 
 	key, value = args[0], args[1]
 	oType, oEnc := deduceTypeEncoding(value)
-	fmt.Printf("args %v\n", args)
-	fmt.Printf("oType: %d, oEnc: %d\n", oType, oEnc)
 
 	for i := 2; i < len(args); i++ {
 		arg := strings.ToUpper(args[i])

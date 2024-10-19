@@ -2,6 +2,7 @@ package http
 
 import (
 	"math"
+	"strconv"
 	"testing"
 	"time"
 
@@ -28,12 +29,11 @@ func TestDECR(t *testing.T) {
 				{Command: "DECR", Body: map[string]interface{}{"key": "key2"}},
 				{Command: "GET", Body: map[string]interface{}{"key": "key1"}},
 				{Command: "GET", Body: map[string]interface{}{"key": "key2"}},
-				{Command: "SET", Body: map[string]interface{}{"key": "key3", "value": math.MinInt64}},
-				{Command: "GET", Body: map[string]interface{}{"key": "key3"}},
+				{Command: "SET", Body: map[string]interface{}{"key": "key3", "value": strconv.Itoa(math.MinInt64 + 1)}},
 				{Command: "DECR", Body: map[string]interface{}{"key": "key3"}},
 				{Command: "DECR", Body: map[string]interface{}{"key": "key3"}},
 			},
-			expected: []interface{}{"OK", float64(2), float64(1), float64(-1), float64(1), float64(-1), "OK", float64(math.MinInt64), float64(math.MinInt64), "ERR increment or decrement would overflow"},
+			expected: []interface{}{"OK", float64(2), float64(1), float64(-1), float64(1), float64(-1), "OK", float64(math.MinInt64), "ERR increment or decrement would overflow"},
 			delays:   []time.Duration{0, 0, 0, 0, 0, 0, 0, 0, 0},
 		},
 	}
@@ -73,12 +73,12 @@ func TestDECRBY(t *testing.T) {
 			name: "Decrement multiple keys",
 			commands: []HTTPCommand{
 				{Command: "SET", Body: map[string]interface{}{"key": "key1", "value": 3}},
-				{Command: "SET", Body: map[string]interface{}{"key": "key3", "value": math.MinInt64 + 1}},
+				{Command: "SET", Body: map[string]interface{}{"key": "key3", "value": strconv.Itoa(math.MinInt64 + 1)}},
 				{Command: "DECRBY", Body: map[string]interface{}{"key": "key1", "value": 2}},
 				{Command: "DECRBY", Body: map[string]interface{}{"key": "key1", "value": 1}},
 				{Command: "DECRBY", Body: map[string]interface{}{"key": "key4", "value": 1}},
 				{Command: "DECRBY", Body: map[string]interface{}{"key": "key3", "value": 1}},
-				{Command: "DECRBY", Body: map[string]interface{}{"key": "key3", "value": math.MinInt64}},
+				{Command: "DECRBY", Body: map[string]interface{}{"key": "key3", "value": strconv.Itoa(math.MinInt64)}},
 				{Command: "DECRBY", Body: map[string]interface{}{"key": "key5", "value": "abc"}},
 				{Command: "GET", Body: map[string]interface{}{"key": "key1"}},
 				{Command: "GET", Body: map[string]interface{}{"key": "key4"}},
