@@ -94,6 +94,10 @@ var (
 		Cmd:     "PERSIST",
 		CmdType: SingleShard,
 	}
+	typeCmdMeta = CmdsMeta{
+		Cmd:     "TYPE",
+		CmdType: SingleShard,
+	}
 
 	jsonclearCmdMeta = CmdsMeta{
 		Cmd:     "JSON.CLEAR",
@@ -137,5 +141,6 @@ func init() {
 	WorkerCmdsMeta["DEL"] = delCmdMeta
 	WorkerCmdsMeta["EXISTS"] = existsCmdMeta
 	WorkerCmdsMeta["PERSIST"] = persistCmdMeta
+	WorkerCmdsMeta["TYPE"] = typeCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }
