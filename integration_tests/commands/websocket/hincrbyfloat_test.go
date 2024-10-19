@@ -7,7 +7,7 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func TestHINCRBYFLOATWebsocket(t *testing.T) {
+func TestHINCRBYFLOAT(t *testing.T) {
 	exec := NewWebsocketCommandExecutor()
 	conn := exec.ConnectToServer()
 	exec.FireCommand(conn, "DEL key_hincrfloat keys")

@@ -42,6 +42,12 @@ func TestHINCRBYFLOAT(t *testing.T) {
 			expect: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
 			delays: []time.Duration{0, 0},
 		},
+		{
+			name:   "HINCRBYFLOAT using a non integer / non-float value",
+			cmds:   []string{"HINCRBYFLOAT key value new"},
+			expect: []interface{}{"ERR value is not an integer or a float"},
+			delays: []time.Duration{0},
+		},
 	}
 
 	for _, tc := range testCases {

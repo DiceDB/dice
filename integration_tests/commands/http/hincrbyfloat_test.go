@@ -71,7 +71,7 @@ func TestHINCRBYFLOAT(t *testing.T) {
 			errorExpected: false,
 		},
 		{
-			name: "HINCRBYFLOAT should give integer error when trying to increment a key which is not a hash value with a value which is not integer or a float",
+			name: "HINCRBYFLOAT should give error when trying to increment a key which is not a hash value with a value which is not integer or a float",
 			commands: []HTTPCommand{
 				{Command: "SET", Body: map[string]interface{}{"key": "key", "value": "value"}},
 				{Command: "HINCRBYFLOAT", Body: map[string]interface{}{"key": "key", "field": "field-1", "value": "ten"}},

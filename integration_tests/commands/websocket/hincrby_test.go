@@ -7,7 +7,7 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func TestHINCRBYWebsocket(t *testing.T) {
+func TestHINCRBY(t *testing.T) {
 	exec := NewWebsocketCommandExecutor()
 	conn := exec.ConnectToServer()
 	exec.FireCommand(conn, "DEL key keys new-key")
