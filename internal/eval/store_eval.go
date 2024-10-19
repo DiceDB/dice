@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/bytedance/sonic"
 	"github.com/axiomhq/hyperloglog"
+	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/eval/sortedset"
@@ -22,9 +22,10 @@ import (
 //
 //	EX or ex which will set the expiry time(in secs) for the key
 //	PX or px which will set the expiry time(in milliseconds) for the key
-//	EXAT or exat which will set the specified Unix time at which the key will expire, in seconds (a positive integer).
-//	PXAT or PX which will the specified Unix time at which the key will expire, in milliseconds (a positive integer).
-//	XX orr xx which will only set the key if it already exists.
+//	EXAT or exat which will set the specified Unix time at which the key will expire, in seconds (a positive integer)
+//	PXAT or PX which will the specified Unix time at which the key will expire, in milliseconds (a positive integer)
+//	XX or xx which will only set the key if it already exists
+//	NX or nx which will only set the key if it doesn not already exist
 //
 // Returns encoded error response if at least a <key, value> pair is not part of args
 // Returns encoded error response if expiry time value in not integer
@@ -556,7 +557,7 @@ func evalJSONCLEAR(args []string, store *dstore.Store) *EvalResponse {
 	obj.Value = jsonData
 	return &EvalResponse{
 		Result: countClear,
-    Error:  nil,
+		Error:  nil,
 	}
 }
 
@@ -718,7 +719,7 @@ func evalJSONSTRLEN(args []string, store *dstore.Store) *EvalResponse {
 	}
 	return &EvalResponse{
 		Result: strLenResults,
-    Error:  nil,
+		Error:  nil,
 	}
 }
 
@@ -849,7 +850,7 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) *EvalResponse {
 	}
 	return &EvalResponse{
 		Result: objectLen,
-    Error:  nil,
+		Error:  nil,
 	}
 }
 
