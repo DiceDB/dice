@@ -4941,7 +4941,7 @@ func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:          []string{"key", "0.1"},
-			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrInvalidFloat},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrGeneral("value is not a valid float")},
 		},
 		{
 			name: "INCRBYFLOAT on a key with non numeric value",
@@ -4952,7 +4952,7 @@ func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:          []string{"key", "0.1"},
-			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrInvalidFloat},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrGeneral("value is not a valid float")},
 		},
 		{
 			name: "INCRBYFLOAT by a non numeric increment",
@@ -4963,7 +4963,7 @@ func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:          []string{"key", "a"},
-			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrInvalidFloat},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrGeneral("value is not a valid float")},
 		},
 		{
 			name: "INCRBYFLOAT by a number that would turn float64 to Inf",
