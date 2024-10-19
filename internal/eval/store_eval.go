@@ -650,7 +650,7 @@ func evalHSET(args []string, store *dstore.Store) *EvalResponse {
 	if err != nil {
 		return &EvalResponse{
 			Result: nil,
-			Error:  err,
+			Error:  diceerrors.ErrGeneral(err.Error()),
 		}
 	}
 
@@ -759,22 +759,16 @@ func evalHGET(args []string, store *dstore.Store) *EvalResponse {
 	key := args[0]
 	hmKey := args[1]
 
-	val, err := getValueFromHashMap(key, hmKey, store)
-	if err != nil {
-		return &EvalResponse{
-			Error: err,
-		}
-	}
-
-	if val == nil {
+	response := getValueFromHashMap(key, hmKey, store)
+	if response.Error != nil {
 		return &EvalResponse{
 			Result: nil,
-			Error:  nil,
+			Error:  response.Error,
 		}
 	}
 
 	return &EvalResponse{
-		Result: *val,
+		Result: response.Result,
 		Error:  nil,
 	}
 }
@@ -790,14 +784,15 @@ func evalHSETNX(args []string, store *dstore.Store) *EvalResponse {
 	key := args[0]
 	hmKey := args[1]
 
-	val, err := getValueFromHashMap(key, hmKey, store)
-	if err != nil {
+	response := getValueFromHashMap(key, hmKey, store)
+	if response.Error != nil {
 		return &EvalResponse{
-			Error: err,
+			Result: nil,
+			Error:  response.Error,
 		}
 	}
 
-	if val != nil {
+	if response.Result != clientio.NIL {
 		return &EvalResponse{
 			Result: int64(0),
 			Error:  nil,
@@ -808,6 +803,7 @@ func evalHSETNX(args []string, store *dstore.Store) *EvalResponse {
 
 	return &EvalResponse{
 		Result: int64(1),
+		Error:  nil,
 	}
 }
 
@@ -827,6 +823,7 @@ func evalHDEL(args []string, store *dstore.Store) *EvalResponse {
 	if obj == nil {
 		return &EvalResponse{
 			Result: int64(0),
+			Error:  nil,
 		}
 	}
 

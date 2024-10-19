@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/store"
@@ -86,20 +87,20 @@ func TestGetValueFromHashMap(t *testing.T) {
 	store.Put(key, obj)
 
 	// Test case: Fetching an existing field
-	val, err := getValueFromHashMap(key, field, store)
-	assert.Nil(t, err, "Expected no error when fetching an existing value from the hashmap")
-	assert.NotNil(t, val, "Expected a non-nil value to be fetched for key 'key1' and field 'field1'")
-	assert.Equal(t, value, *val, "Expected 'value1' to be fetched for key 'key1' and field 'field1'")
+	response := getValueFromHashMap(key, field, store)
+	assert.Nil(t, response.Error, "Expected no error when fetching an existing value from the hashmap")
+	assert.NotNil(t, response.Result, "Expected a non-nil value to be fetched for key 'key1' and field 'field1'")
+	assert.Equal(t, value, response.Result, "Expected 'value1' to be fetched for key 'key1' and field 'field1'")
 
-	// Test case: Fetching a non-existing field (should return nil)
-	val, err = getValueFromHashMap(key, "nonfield", store)
-	assert.Nil(t, err, "Expected no error when fetching a non-existing field from the hashmap")
-	assert.Nil(t, val, "Expected nil to be returned for a non-existing field")
+	// Test case: Fetching a non-existing field (should return clientio.NIL and no error)
+	response = getValueFromHashMap(key, "nonfield", store)
+	assert.Equal(t, clientio.NIL, response.Result, "Expected clientio.NIL for a non-existing field")
+	assert.Nil(t, response.Error, "Expected no error when fetching a non-existing field from the hashmap")
 
-	// Test case: Fetching a non-existing key (should return nil)
-	val, err = getValueFromHashMap("nonkey", field, store)
-	assert.Nil(t, err, "Expected no error when fetching a non-existing key from the hashmap")
-	assert.Nil(t, val, "Expected nil to be returned for a non-existing key")
+	// Test case: Fetching a non-existing key (should return clientio.NIL and ErrKeyNotFound)
+	response = getValueFromHashMap("nonkey", field, store)
+	assert.Equal(t, clientio.NIL, response.Result, "Expected clientio.NIL for a non-existing key")
+	assert.Nil(t, response.Error, "Expected no error for a non-existing key")
 }
 
 func TestHashMapIncrementFloatValue(t *testing.T) {
