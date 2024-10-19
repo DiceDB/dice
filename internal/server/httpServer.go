@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dicedb/dice/internal/eval"
+
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/cmd"
@@ -22,10 +24,13 @@ import (
 	"github.com/dicedb/dice/internal/shard"
 )
 
-const Abort = "ABORT"
+const (
+	Abort     = "ABORT"
+	stringNil = "(nil)"
+)
 
 var unimplementedCommands = map[string]bool{
-	"QUNWATCH": true,
+	"Q.UNWATCH": true,
 }
 
 type HTTPServer struct {
@@ -73,7 +78,7 @@ func NewHTTPServer(shardManager *shard.ShardManager, logger *slog.Logger) *HTTPS
 	}
 
 	mux.HandleFunc("/", httpServer.DiceHTTPHandler)
-	mux.HandleFunc("/qwatch", httpServer.DiceHTTPQwatchHandler)
+	mux.HandleFunc("/q.watch", httpServer.DiceHTTPQwatchHandler)
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("ok"))
 		if err != nil {
@@ -91,7 +96,7 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 	httpCtx, cancelHTTP := context.WithCancel(ctx)
 	defer cancelHTTP()
 
-	s.shardManager.RegisterWorker("httpServer", s.ioChan)
+	s.shardManager.RegisterWorker("httpServer", s.ioChan, nil)
 
 	wg.Add(1)
 	go func() {
@@ -126,7 +131,13 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 	// convert to REDIS cmd
 	diceDBCmd, err := utils.ParseHTTPRequest(request)
 	if err != nil {
-		http.Error(writer, "Error parsing HTTP request", http.StatusBadRequest)
+		responseJSON, _ := json.Marshal(utils.HTTPResponse{Status: utils.HTTPStatusError, Data: "Invalid HTTP request format"})
+		writer.Header().Set("Content-Type", "application/json")
+		writer.WriteHeader(http.StatusBadRequest) // Set HTTP status code to 500
+		_, err = writer.Write(responseJSON)
+		if err != nil {
+			s.logger.Error("Error writing response", "error", err)
+		}
 		s.logger.Error("Error parsing HTTP request", slog.Any("error", err))
 		return
 	}
@@ -139,13 +150,14 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 	}
 
 	if unimplementedCommands[diceDBCmd.Cmd] {
-		http.Error(writer, "Command is not implemented with HTTP", http.StatusBadRequest)
-		s.logger.Error("Command %s is not implemented", slog.String("cmd", diceDBCmd.Cmd))
-		_, err := writer.Write([]byte("Command is not implemented with HTTP"))
+		responseJSON, _ := json.Marshal(utils.HTTPResponse{Status: utils.HTTPStatusError, Data: fmt.Sprintf("Command %s is not implemented with HTTP", diceDBCmd.Cmd)})
+		writer.Header().Set("Content-Type", "application/json")
+		writer.WriteHeader(http.StatusBadRequest) // Set HTTP status code to 500
+		_, err = writer.Write(responseJSON)
 		if err != nil {
-			s.logger.Error("Error writing response", slog.Any("error", err))
-			return
+			s.logger.Error("Error writing response", "error", err)
 		}
+		s.logger.Error("Command %s is not implemented", slog.String("cmd", diceDBCmd.Cmd))
 		return
 	}
 
@@ -232,7 +244,7 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 			// Client disconnected or request finished
 			s.logger.Info("Client disconnected")
 			unWatchCmd := &cmd.DiceDBCmd{
-				Cmd:  "QUNWATCH",
+				Cmd:  "Q.UNWATCH",
 				Args: []string{qwatchQuery},
 			}
 			storeOp.Cmd = unWatchCmd
@@ -317,34 +329,83 @@ func (s *HTTPServer) writeQWatchResponse(writer http.ResponseWriter, response in
 }
 
 func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.StoreResponse, diceDBCmd *cmd.DiceDBCmd) {
-	_, ok := WorkerCmdsMeta[diceDBCmd.Cmd]
-	var rp *clientio.RESPParser
+	var (
+		responseValue interface{}
+		err           error
+		httpResponse  utils.HTTPResponse
+		isDiceErr     bool
+	)
 
-	var responseValue interface{}
+	// Check if the command is migrated, if it is we use EvalResponse values
+	// else we use RESPParser to decode the response
+	_, ok := WorkerCmdsMeta[diceDBCmd.Cmd]
 	// TODO: Remove this conditional check and if (true) condition when all commands are migrated
 	if !ok {
-		var err error
-		if result.EvalResponse.Error != nil {
-			rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(result.EvalResponse.Error.Error())))
-		} else {
-			rp = clientio.NewRESPParser(bytes.NewBuffer(result.EvalResponse.Result.([]byte)))
-		}
-
-		responseValue, err = rp.DecodeOne()
+		responseValue, err = decodeEvalResponse(result.EvalResponse)
 		if err != nil {
 			s.logger.Error("Error decoding response", "error", err)
-			http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
+			httpResponse = utils.HTTPResponse{Status: utils.HTTPStatusError, Data: "Internal Server Error"}
+			writeJSONResponse(writer, httpResponse, http.StatusInternalServerError)
 			return
 		}
 	} else {
 		if result.EvalResponse.Error != nil {
+			isDiceErr = true
 			responseValue = result.EvalResponse.Error.Error()
 		} else {
 			responseValue = result.EvalResponse.Result
 		}
 	}
 
-	// func HandlePredefinedResponse(response interface{}) []byte {
+	// Create the HTTP response
+	httpResponse = createHTTPResponse(responseValue)
+	if isDiceErr {
+		httpResponse.Status = utils.HTTPStatusError
+	} else {
+		httpResponse.Status = utils.HTTPStatusSuccess
+	}
+
+	// Write the response back to the client
+	writeJSONResponse(writer, httpResponse, http.StatusOK)
+}
+
+// Helper function to decode EvalResponse based on the error or result
+func decodeEvalResponse(evalResp *eval.EvalResponse) (interface{}, error) {
+	var rp *clientio.RESPParser
+
+	if evalResp.Error != nil {
+		rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(evalResp.Error.Error())))
+	} else {
+		rp = clientio.NewRESPParser(bytes.NewBuffer(evalResp.Result.([]byte)))
+	}
+
+	res, err := rp.DecodeOne()
+	if err != nil {
+		return nil, err
+	}
+
+	return replaceNilInInterface(res), nil
+}
+
+// Helper function to write the JSON response
+func writeJSONResponse(writer http.ResponseWriter, response utils.HTTPResponse, statusCode int) {
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(statusCode)
+
+	responseJSON, err := json.Marshal(response)
+	if err != nil {
+		slog.Error("Error marshaling response", "error", err)
+		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	_, err = writer.Write(responseJSON)
+	if err != nil {
+		slog.Error("Error writing response", "error", err)
+	}
+}
+
+func createHTTPResponse(responseValue interface{}) utils.HTTPResponse {
 	respArr := []string{
 		"(nil)",  // Represents a RESP Nil Bulk String, which indicates a null value.
 		"OK",     // Represents a RESP Simple String with value "OK".
@@ -356,27 +417,43 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.Store
 		"*0",     // Represents an empty RESP Array.
 	}
 
-	if val, ok := responseValue.(clientio.RespType); ok {
-		responseValue = respArr[val]
+	switch v := responseValue.(type) {
+	case []interface{}:
+		// Parses []interface{} as part of EvalResponse e.g. JSON.ARRPOP
+		// and adds to httpResponse. Also replaces "(nil)" with null JSON value
+		// in response array.
+		r := make([]interface{}, 0, len(v))
+		for _, resp := range v {
+			if val, ok := resp.(clientio.RespType); ok {
+				if stringNil == respArr[val] {
+					r = append(r, nil)
+				} else {
+					r = append(r, respArr[val])
+				}
+			} else {
+				r = append(r, resp)
+			}
+		}
+		return utils.HTTPResponse{Data: r}
+
+	case []byte:
+		return utils.HTTPResponse{Data: string(v)}
+
+	case clientio.RespType:
+		responseValue = respArr[v]
+		if responseValue == stringNil {
+			responseValue = nil // in order to convert it in json null
+		}
+
+		return utils.HTTPResponse{Data: responseValue}
+
+	case interface{}:
+		if val, ok := v.(clientio.RespType); ok {
+			return utils.HTTPResponse{Data: respArr[val]}
+		}
 	}
 
-	if bt, ok := responseValue.([]byte); ok {
-		responseValue = string(bt)
-	}
-	httpResponse := utils.HTTPResponse{Data: responseValue}
-
-	responseJSON, err := json.Marshal(httpResponse)
-	if err != nil {
-		s.logger.Error("Error marshaling response", "error", err)
-		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	writer.Header().Set("Content-Type", "application/json")
-	_, err = writer.Write(responseJSON)
-	if err != nil {
-		s.logger.Error("Error writing response", "error", err)
-	}
+	return utils.HTTPResponse{Data: responseValue}
 }
 
 func generateUniqueInt32(r *http.Request) uint32 {
@@ -388,4 +465,29 @@ func generateUniqueInt32(r *http.Request) uint32 {
 
 	// Hash the string using CRC32 and cast it to an int32
 	return crc32.ChecksumIEEE([]byte(sb.String()))
+}
+
+func replaceNilInInterface(data interface{}) interface{} {
+	switch v := data.(type) {
+	case string:
+		if v == stringNil {
+			return nil
+		}
+		return v
+	case []interface{}:
+		// Process each element in the slice
+		for i, elem := range v {
+			v[i] = replaceNilInInterface(elem)
+		}
+		return v
+	case map[string]interface{}:
+		// Process each value in the map
+		for key, value := range v {
+			v[key] = replaceNilInInterface(value)
+		}
+		return v
+	default:
+		// For other types, return as is
+		return data
+	}
 }

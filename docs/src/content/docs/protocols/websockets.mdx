@@ -5,6 +5,10 @@ sidebar:
   order: 2
 ---
 
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+
+
 ## Introduction
 
 DiceDB supports WebSocket for connecting to the database, allowing for real-time, bidirectional communication between the client and the server. This can be particularly useful for applications that require low-latency, high-frequency updates.
@@ -12,12 +16,11 @@ DiceDB supports WebSocket for connecting to the database, allowing for real-time
 ## Connecting to the WebSocket Server
 
 To connect to the WebSocket server, use the following URL:
-
 ```
 ws://your-server-address:port/
 ```
-
 Replace `your-server-address` and `port` with the appropriate values for your server.
+
 
 ## Message Format
 
@@ -37,7 +40,7 @@ This is very similar to what you'd type in the DiceDB CLI.
 
 All DiceDB commands are supported over the WebSocket protocol. If some commands are not supported, they will be flagged as such in the command documentation.
 
-For more information on specific commands and their usage, please refer to the command documentation, keeping in mind the WebSocket-specific formatting requirements outlined in this guide.
+For more information on specific commands and their usage, **please refer to the command documentation**, keeping in mind the WebSocket-specific formatting requirements outlined in this guide.
 
 ### Special Commands
 
@@ -49,27 +52,43 @@ Responses are sent back through the WebSocket connection as JSON-encoded data. T
 
 ## Example Usage
 
-Here's a simple example of how to interact with the WebSocket server using JavaScript:
+Here's a simple example of how to interact with the WebSocket server:
 
-```javascript
-const ws = new WebSocket('ws://your-server-address:port/ws');
+<Tabs>
+  <TabItem label="JavaScript">
+    ```javascript
+    const ws = new WebSocket('ws://your-server-address:port/ws');
 
-ws.onopen = function() {
-    console.log('Connected to WebSocket server');
-    
-    // Set a key
-    ws.send('SET mykey "Hello, WebSocket!"');
-};
+    ws.onopen = function() {
+        console.log('Connected to WebSocket server');
+        
+        // Set a key
+        ws.send('SET mykey "Hello, WebSocket!"');
+    };
 
-ws.onmessage = function(event) {
-    console.log('Received:', event.data);
-};
+    ws.onmessage = function(event) {
+        console.log('Received:', event.data);
+    };
 
-ws.onerror = function(error) {
-    console.error('WebSocket Error:', error);
-};
+    ws.onerror = function(error) {
+        console.error('WebSocket Error:', error);
+    };
 
-ws.onclose = function(event) {
-    console.log('WebSocket connection closed:', event.code, event.reason);
-};
-```
+    ws.onclose = function(event) {
+        console.log('WebSocket connection closed:', event.code, event.reason);
+    };
+    ```
+</TabItem>
+
+<TabItem label="CLI">
+    ```bash
+     wscat -c ws://localhost:8379
+     127.0.0.1:8379> SET foo bar
+     127.0.0.1:8379< "OK"
+     127.0.0.1:8379> GET foo
+     127.0.0.1:8379< "bar"
+    ```
+</TabItem>
+</Tabs>
+
+

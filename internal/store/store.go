@@ -119,7 +119,7 @@ func (store *Store) putHelper(k string, obj *object.Obj, opts ...PutOption) {
 		optApplier(options)
 	}
 
-	if store.store.Len() >= config.DiceConfig.Server.KeysLimit {
+	if store.store.Len() >= config.DiceConfig.Memory.KeysLimit {
 		store.evict()
 	}
 	obj.LastAccessedAt = getCurrentClock()

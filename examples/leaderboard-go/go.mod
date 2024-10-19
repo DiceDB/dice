@@ -1,9 +1,11 @@
 module leaderboard-go
 
-go 1.21.0
+go 1.23
+
+toolchain go1.23.2
 
 require (
-	github.com/dicedb/dicedb-go v0.0.0-20241011194507-ad62a2dfc08e
+	github.com/dicedb/dicedb-go v0.0.0-20241015181607-d31c1df12107
 	github.com/gorilla/websocket v1.5.3
 )
 

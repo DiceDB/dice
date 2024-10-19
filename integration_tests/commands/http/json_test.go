@@ -277,7 +277,7 @@ func TestJSONSetWithNXAndXX(t *testing.T) {
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": user2, "nx": "true"}},
 				{Command: "JSON.GET", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"(nil)", "OK", user2JsonString},
+			expected: []interface{}{nil, "OK", user2JsonString},
 		},
 		{
 			name: "Set with NX on existing key",
@@ -286,7 +286,7 @@ func TestJSONSetWithNXAndXX(t *testing.T) {
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": user2, "nx": "true"}},
 				{Command: "JSON.GET", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"OK", "(nil)", user1JsonString},
+			expected: []interface{}{"OK", nil, user1JsonString},
 		},
 		{
 			name: "Set with XX on existing key",
@@ -304,7 +304,7 @@ func TestJSONSetWithNXAndXX(t *testing.T) {
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": user2, "nx": "true"}},
 				{Command: "JSON.GET", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"OK", "(nil)", user1JsonString},
+			expected: []interface{}{"OK", nil, user1JsonString},
 		},
 		{
 			name: "Invalid combinations of NX and XX",
@@ -340,7 +340,7 @@ func TestJSONClearOperations(t *testing.T) {
 
 	testCases := []TestCase{
 		{
-			name: "Clear root path",
+			name: "jsonclear clear root path",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": map[string]interface{}{"a": 1}}},
 				{Command: "JSON.CLEAR", Body: map[string]interface{}{"key": "k", "path": "$"}},
@@ -349,7 +349,7 @@ func TestJSONClearOperations(t *testing.T) {
 			expected: []interface{}{"OK", float64(1), "{}"},
 		},
 		{
-			name: "Clear string type",
+			name: "jsonclear clear string type",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": map[string]interface{}{"name": "Tom"}}},
 				{Command: "JSON.CLEAR", Body: map[string]interface{}{"key": "k", "path": "$.name"}},
@@ -358,7 +358,7 @@ func TestJSONClearOperations(t *testing.T) {
 			expected: []interface{}{"OK", float64(0), `"Tom"`},
 		},
 		{
-			name: "Clear array type",
+			name: "jsonclear clear array type",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": map[string]interface{}{"names": []interface{}{"Tom", "Jerry"}}}},
 				{Command: "JSON.CLEAR", Body: map[string]interface{}{"key": "k", "path": "$.names"}},
@@ -367,7 +367,7 @@ func TestJSONClearOperations(t *testing.T) {
 			expected: []interface{}{"OK", float64(1), "[]"},
 		},
 		{
-			name: "clear bool type",
+			name: "jsonclear clear bool type",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": map[string]interface{}{"flag": true}}},
 				{Command: "JSON.CLEAR", Body: map[string]interface{}{"key": "k", "path": "$.flag"}},
@@ -376,7 +376,7 @@ func TestJSONClearOperations(t *testing.T) {
 			expected: []interface{}{"OK", float64(0), "true"},
 		},
 		{
-			name: "clear null type",
+			name: "jsonclear clear null type",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": map[string]interface{}{"name": nil}}},
 				{Command: "JSON.CLEAR", Body: map[string]interface{}{"key": "k", "path": "$.name"}},
@@ -385,7 +385,7 @@ func TestJSONClearOperations(t *testing.T) {
 			expected: []interface{}{"OK", float64(0), "null"},
 		},
 		{
-			name: "clear integer type",
+			name: "jsonclear clear integer type",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": map[string]interface{}{"age": 30}}},
 				{Command: "JSON.CLEAR", Body: map[string]interface{}{"key": "k", "path": "$.age"}},
@@ -394,7 +394,7 @@ func TestJSONClearOperations(t *testing.T) {
 			expected: []interface{}{"OK", float64(1), "0"},
 		},
 		{
-			name: "clear float type",
+			name: "jsonclear clear float type",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": map[string]interface{}{"price": 3.14}}},
 				{Command: "JSON.CLEAR", Body: map[string]interface{}{"key": "k", "path": "$.price"}},
@@ -428,7 +428,7 @@ func TestJSONDelOperations(t *testing.T) {
 				{Command: "JSON.DEL", Body: map[string]interface{}{"key": "k", "path": "$"}},
 				{Command: "JSON.GET", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"OK", float64(1), "(nil)"},
+			expected: []interface{}{"OK", float64(1), nil},
 		},
 		{
 			name: "Delete nested field",
@@ -533,7 +533,7 @@ func TestJSONForgetOperations(t *testing.T) {
 				{Command: "JSON.FORGET", Body: map[string]interface{}{"key": "k", "path": "$"}},
 				{Command: "JSON.GET", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"OK", float64(1), "(nil)"},
+			expected: []interface{}{"OK", float64(1), nil},
 		},
 		{
 			name: "forget nested field",
@@ -632,20 +632,60 @@ func TestJsonStrlen(t *testing.T) {
 	exec := NewHTTPCommandExecutor()
 	testCases := []TestCase{
 		{
-			name: "STRLEN with root path",
+			name: "jsonstrlen with root path",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": []string{"hello", "world"}}},
 				{Command: "JSON.STRLEN", Body: map[string]interface{}{"key": "k", "path": "$"}},
 			},
-			expected: []interface{}{"OK", []interface{}{"(nil)"}},
+			expected: []interface{}{"OK", []interface{}{nil}},
 		},
 		{
-			name: "STRLEN nested",
+			name: "jsonstrlen nested",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": map[string]interface{}{"name": "jerry", "partner": map[string]interface{}{"name": "tom"}}}},
 				{Command: "JSON.STRLEN", Body: map[string]interface{}{"key": "k", "path": "$..name"}},
 			},
 			expected: []interface{}{"OK", []interface{}{float64(5), float64(3)}},
+		},
+		{
+			name: "jsonstrlen with no path and object at root",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": map[string]interface{}{"name": "bhima", "age": 10}}},
+				{Command: "JSON.STRLEN", Body: map[string]interface{}{"key": "k"}},
+			},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found object"},
+		},
+		{
+			name: "jsonstrlen with no path and object at boolean",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": true}},
+				{Command: "JSON.STRLEN", Body: map[string]interface{}{"key": "k"}},
+			},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found boolean"},
+		},
+		{
+			name: "jsonstrlen with no path and object at array",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": []int{1, 2, 3, 4}}},
+				{Command: "JSON.STRLEN", Body: map[string]interface{}{"key": "k"}},
+			},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found array"},
+		},
+		{
+			name: "jsonstrlen with no path and object at integer",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": 1}},
+				{Command: "JSON.STRLEN", Body: map[string]interface{}{"key": "k"}},
+			},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found integer"},
+		},
+		{
+			name: "jsonstrlen with no path and object at number",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": 1.9}},
+				{Command: "JSON.STRLEN", Body: map[string]interface{}{"key": "k"}},
+			},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found number"},
 		},
 	}
 
@@ -688,6 +728,8 @@ func TestJSONMGET(t *testing.T) {
 				"json": jsonPayload,
 			},
 		})
+
+		fmt.Printf("expacting: %s with got: %s\n", "OK", resp)
 		assert.Equal(t, "OK", resp)
 	}
 
@@ -704,14 +746,14 @@ func TestJSONMGET(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "JSON.MGET", Body: map[string]interface{}{"keys": []interface{}{"xx", "yy", "zz"}, "path": "$.name"}},
 			},
-			expected: []interface{}{[]interface{}{"(nil)", `"jerry"`, `"tom"`}},
+			expected: []interface{}{[]interface{}{nil, `"jerry"`, `"tom"`}},
 		},
 		{
 			name: "MGET with nested path",
 			commands: []HTTPCommand{
 				{Command: "JSON.MGET", Body: map[string]interface{}{"keys": []interface{}{"xx", "yy", "zz"}, "path": "$.partner2.age"}},
 			},
-			expected: []interface{}{[]interface{}{"(nil)", "(nil)", "12"}},
+			expected: []interface{}{[]interface{}{nil, nil, "12"}},
 		},
 		{
 			name: "MGET error",
@@ -726,19 +768,34 @@ func TestJSONMGET(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.commands {
 				result, _ := exec.FireCommand(cmd)
+
 				results, ok := result.([]interface{})
 				if ok {
 					expectedResults := tc.expected[i].([]interface{})
 					assert.Equal(t, len(expectedResults), len(results))
 
 					for j := range results {
-						if testutils.IsJSONResponse(expectedResults[j].(string)) {
-							testifyAssert.JSONEq(t, expectedResults[j].(string), results[j].(string))
+						// Check if the expected result is a string and not nil
+						expectedVal := expectedResults[j]
+						resultVal := results[j]
+
+						// Handle nil comparisons
+						if expectedVal == nil || resultVal == nil {
+							assert.Equal(t, expectedVal, resultVal)
+							continue
+						}
+
+						expectedStr, isString := expectedVal.(string)
+						resultStr, resultIsString := resultVal.(string)
+
+						if isString && resultIsString && testutils.IsJSONResponse(expectedStr) {
+							testifyAssert.JSONEq(t, expectedStr, resultStr)
 						} else {
-							assert.Equal(t, expectedResults[j], results[j])
+							assert.Equal(t, expectedVal, resultVal)
 						}
 					}
 				} else {
+					// Handle non-slice result
 					assert.Equal(t, tc.expected[i], result)
 				}
 			}
@@ -758,7 +815,7 @@ func TestJSONMGET(t *testing.T) {
 	})
 
 	// Deleting the used keys
-	for key, _ := range setupData {
+	for key := range setupData {
 		exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": key}})
 	}
 }
@@ -804,7 +861,7 @@ func TestJsonARRAPPEND(t *testing.T) {
 				{Command: "JSON.ARRAPPEND", Body: map[string]interface{}{"key": "k", "path": "$..score", "value": 10}},
 				{Command: "JSON.GET", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"OK", []interface{}{2.0, "(nil)"}, `{"name":["jerry"],"partner":{"name":"tom","score":[10,10]},"partner2":{"name":12,"score":"rust"}}`},
+			expected: []interface{}{"OK", []interface{}{2.0, nil}, `{"name":["jerry"],"partner":{"name":"tom","score":[10,10]},"partner2":{"name":12,"score":"rust"}}`},
 		},
 		{
 			name: "JSON.ARRAPPEND with different datatypes",
@@ -968,35 +1025,35 @@ func TestJsonObjLen(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "JSON.OBJLEN", Body: map[string]interface{}{"key": "d", "path": "$"}},
 			},
-			expected: []interface{}{[]interface{}{"(nil)"}},
+			expected: []interface{}{[]interface{}{nil}},
 		},
 		{
 			name: "JSON.OBJLEN with nested non-object path",
 			commands: []HTTPCommand{
 				{Command: "JSON.OBJLEN", Body: map[string]interface{}{"key": "c", "path": "$.partner2.name"}},
 			},
-			expected: []interface{}{[]interface{}{"(nil)"}},
+			expected: []interface{}{[]interface{}{nil}},
 		},
 		{
 			name: "JSON.OBJLEN nested objects",
 			commands: []HTTPCommand{
 				{Command: "JSON.OBJLEN", Body: map[string]interface{}{"key": "b", "path": "$..language"}},
 			},
-			expected: []interface{}{[]interface{}{"(nil)", "(nil)"}},
+			expected: []interface{}{[]interface{}{nil, nil}},
 		},
 		{
 			name: "JSON.OBJLEN invalid json path",
 			commands: []HTTPCommand{
 				{Command: "JSON.OBJLEN", Body: map[string]interface{}{"key": "b", "path": "$..language*something"}},
 			},
-			expected: []interface{}{"ERR parse error at 13 in $..language*something"},
+			expected: []interface{}{"ERR Path '$..language*something' does not exist"},
 		},
 		{
 			name: "JSON.OBJLEN with non-existent key",
 			commands: []HTTPCommand{
 				{Command: "JSON.OBJLEN", Body: map[string]interface{}{"key": "non_existing_key", "path": "$"}},
 			},
-			expected: []interface{}{"(nil)"},
+			expected: []interface{}{nil},
 		},
 		{
 			name: "JSON.OBJLEN with empty path",
@@ -1010,7 +1067,7 @@ func TestJsonObjLen(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "JSON.OBJLEN", Body: map[string]interface{}{"key": "c", "path": "$[1"}},
 			},
-			expected: []interface{}{"ERR expected a number at 4 in $[1"},
+			expected: []interface{}{"ERR Path '$[1' does not exist"},
 		},
 		{
 			name:     "JSON.OBJLEN with legacy path - root",
@@ -1078,7 +1135,7 @@ func TestJsonObjLen(t *testing.T) {
 	}
 
 	// Deleting the used keys
-	for key, _ := range setupData {
+	for key := range setupData {
 		exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": key}})
 	}
 }
@@ -1305,14 +1362,14 @@ func TestJsonObjKeys(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "JSON.OBJKEYS", Body: map[string]interface{}{"key": "c", "path": "$.name"}},
 			},
-			expected: []interface{}{[]interface{}{"(nil)"}},
+			expected: []interface{}{[]interface{}{nil}},
 		},
 		{
 			name: "JSON.OBJKEYS with nested non-object path",
 			commands: []HTTPCommand{
 				{Command: "JSON.OBJKEYS", Body: map[string]interface{}{"key": "b", "path": "$.partner.language"}},
 			},
-			expected: []interface{}{[]interface{}{"(nil)"}},
+			expected: []interface{}{[]interface{}{nil}},
 		},
 		{
 			name: "JSON.OBJKEYS with invalid json path - 1",
@@ -1359,7 +1416,7 @@ func TestJsonObjKeys(t *testing.T) {
 			expected: []interface{}{
 				[]interface{}{
 					[]interface{}{"b", "c"},
-					"(nil)",
+					nil,
 				},
 			},
 		},
@@ -1382,7 +1439,7 @@ func TestJsonObjKeys(t *testing.T) {
 	}
 
 	// Deleting the used keys
-	for key, _ := range setupData {
+	for key := range setupData {
 		exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": key}})
 	}
 }

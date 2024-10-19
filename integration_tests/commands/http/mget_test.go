@@ -1,7 +1,6 @@
 package http
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/dicedb/dice/testutils"
@@ -23,7 +22,7 @@ func TestMGET(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "MGET", Body: map[string]interface{}{"keys": []interface{}{"k1", "k2"}}},
 			},
-			expected: []interface{}{[]interface{}{"(nil)", "(nil)"}},
+			expected: []interface{}{[]interface{}{nil, nil}},
 		},
 		{
 			name: "MGET With existing keys",
@@ -42,7 +41,7 @@ func TestMGET(t *testing.T) {
 				{Command: "SET", Body: map[string]interface{}{"key": "k1", "value": "v1"}},
 				{Command: "MGET", Body: map[string]interface{}{"keys": []interface{}{"k1", "k3"}}},
 			},
-			expected: []interface{}{"OK", []interface{}{"v1", "(nil)"}},
+			expected: []interface{}{"OK", []interface{}{"v1", nil}},
 		},
 	}
 
@@ -50,9 +49,6 @@ func TestMGET(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.commands {
 				result, _ := exec.FireCommand(cmd)
-
-				fmt.Println(result)
-				// because the order of keys is not guaranteed, we need to check if the result is an array
 				if slice, ok := tc.expected[i].([]interface{}); ok {
 					assert.Assert(t, testutils.UnorderedEqual(slice, result))
 				} else {

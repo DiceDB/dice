@@ -23,7 +23,7 @@ type PingPayload struct {
 const (
 	token = "p.eyJ1IjogIjhjNWQxMjdlLTczZmYtNGRjZS04Mzk5LTQyMDU0MThhYjc2OSIsI" +
 		"CJpZCI6ICJhZjcxNGExNC0xZWQyLTQ3ZDktOTM0MS0xMzgwNWNiOWFhNDYiLCAiaG9zdCI6ICJ1cy1lYXN0LWF3cyJ9.o9LqZqTZ9YkhbcusZOltsm95RzVQUzJLQOHV2YA7L0E"
-	url = "https://api.us-east.aws.tinybird.co/v0/events?name=ping"
+	url = "https://api.us-east.aws.tinybird.co/v0/events?name=ping2"
 )
 
 type DBConfig struct {
@@ -38,7 +38,7 @@ func Ping(logger *slog.Logger) {
 	payload := &PingPayload{
 		HardwareConfig: hwConfig,
 		InstanceID:     config.DiceConfig.InstanceID,
-		Version:        config.DiceConfig.Server.Version,
+		Version:        config.DiceConfig.Version,
 		Err:            err,
 		Date:           time.Now().UTC().Format("2006-01-02 15:04:05"),
 		DBConfig:       DBConfig{},
