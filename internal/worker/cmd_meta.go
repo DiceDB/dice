@@ -64,6 +64,7 @@ const (
 const (
 	CmdGetWatch    = "GET.WATCH"
 	CmdZRangeWatch = "ZRANGE.WATCH"
+	CmdZPopMin     = "ZPOPMIN"
 	CmdJSONClear   = "JSON.CLEAR"
 	CmdJSONStrlen  = "JSON.STRLEN"
 	CmdJSONObjlen  = "JSON.OBJLEN"
@@ -188,6 +189,9 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdZRange: {
+		CmdType: SingleShard,
+	},
+	CmdZPopMin: {
 		CmdType: SingleShard,
 	},
 }
