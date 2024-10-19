@@ -1015,7 +1015,6 @@ func incrDecrCmd(args []string, incr int64, store *dstore.Store) *EvalResponse {
 	// if the encoding or type is not int : return value is not an int error
 	errStr := object.AssertType(obj.TypeEncoding, object.ObjTypeString)
 	if errStr == nil {
-		fmt.Println("errStr")
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrIntegerOutOfRange,
