@@ -154,7 +154,7 @@ func (s *AsyncServer) Run(ctx context.Context) error {
 		s.queryWatcher.Run(watchCtx, s.queryWatchChan)
 	}()
 
-	s.shardManager.RegisterWorker("server", s.ioChan)
+	s.shardManager.RegisterWorker("server", s.ioChan, nil)
 
 	if err := syscall.Listen(s.serverFD, int(s.maxClients)); err != nil {
 		return err

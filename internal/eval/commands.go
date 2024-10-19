@@ -1045,11 +1045,25 @@ var (
 		Name: "ZPOPMAX",
 		Info: `ZPOPMAX  key [count]
 		Pops count number of elements from the sorted set from highest to lowest and returns those score and member.
-		If count is not provided '1' is considered by default.`,
+		If count is not provided '1' is considered by default.
+		The element with the highest score is removed first
+		if two elements have same score then the element which is lexicographically higher is popped first`,
 		Arity:      2,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 		IsMigrated: true,
 		NewEval:    evalZPOPMAX,
+	}
+	zpopminCmdMeta = DiceCmdMeta{
+		Name: "ZPOPMIN",
+		Info: `ZPOPMIN key [count]
+		Removes and returns the member with the lowest score from the sorted set at the specified key. 
+		If multiple members have the same score, the one that comes first alphabetically is returned. 
+		You can also specify a count to remove and return multiple members at once. 
+		If the set is empty, it returns an empty result.`,
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalZPOPMIN,
 	}
 	bitfieldCmdMeta = DiceCmdMeta{
 		Name: "BITFIELD",
@@ -1241,6 +1255,7 @@ func init() {
 	DiceCmds["ZADD"] = zaddCmdMeta
 	DiceCmds["ZRANGE"] = zrangeCmdMeta
 	DiceCmds["ZPOPMAX"] = zpopmaxCmdMeta
+	DiceCmds["ZPOPMIN"] = zpopminCmdMeta
 	DiceCmds["JSON.STRAPPEND"] = jsonstrappendCmdMeta
 }
 
