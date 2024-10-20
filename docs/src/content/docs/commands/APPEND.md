@@ -27,7 +27,7 @@ APPEND key value
 - If the specified key already exists, the `APPEND` command will append the value to the existing value of the key.
 
 
-## Errors`
+## Errors
 1. `Wrong type of value or key`:
 
    - Error Message: `(error) ERROR WRONGTYPE Operation against a key holding the wrong kind of value`

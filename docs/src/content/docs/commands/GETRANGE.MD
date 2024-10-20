@@ -32,7 +32,7 @@ GETRANGE key start end
 - `start` and `end` can be negative which removed `end + 1` characters from the other side of the string.
 - If both `start` and `end` are within the string's length, the resulting substring includes all characters from start to end, inclusive.
 
-## Errors`
+## Errors
 1. `Wrong type of value or key`:
 
    - Error Message: `(error) ERROR WRONGTYPE Operation against a key holding the wrong kind of value`
