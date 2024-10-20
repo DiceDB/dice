@@ -2796,8 +2796,7 @@ func testEvalHSCAN(t *testing.T, store *dstore.Store) {
 			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("HSCAN")},
 		},
 		"HSCAN with key does not exist": {
-			input: []string{"NONEXISTENT_KEY", "0"},
-			// output: []byte("*2\r\n$1\r\n0\r\n*0\r\n"),
+			input:          []string{"NONEXISTENT_KEY", "0"},
 			migratedOutput: EvalResponse{Result: []interface{}{"0", []string{}}, Error: nil},
 		},
 		"HSCAN with key exists but not a hash": {
@@ -2818,48 +2817,42 @@ func testEvalHSCAN(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
 			},
-			input: []string{"hash_key", "2"},
-			// output: []byte("*2\r\n$1\r\n0\r\n*0\r\n"),
+			input:          []string{"hash_key", "2"},
 			migratedOutput: EvalResponse{Result: []interface{}{"0", []string{}}, Error: nil},
 		},
 		"HSCAN with cursor at the beginning": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
 			},
-			input: []string{"hash_key", "0"},
-			// output: []byte("*2\r\n$1\r\n0\r\n*4\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+			input:          []string{"hash_key", "0"},
 			migratedOutput: EvalResponse{Result: []interface{}{"0", []string{"field1", "value1", "field2", "value2"}}, Error: nil},
 		},
 		"HSCAN with cursor in the middle": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
 			},
-			input: []string{"hash_key", "1"},
-			// output: []byte("*2\r\n$1\r\n0\r\n*2\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+			input:          []string{"hash_key", "1"},
 			migratedOutput: EvalResponse{Result: []interface{}{"0", []string{"field2", "value2"}}, Error: nil},
 		},
 		"HSCAN with MATCH argument": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3"}, store)
 			},
-			input: []string{"hash_key", "0", "MATCH", "field[12]*"},
-			// output: []byte("*2\r\n$1\r\n0\r\n*4\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+			input:          []string{"hash_key", "0", "MATCH", "field[12]*"},
 			migratedOutput: EvalResponse{Result: []interface{}{"0", []string{"field1", "value1", "field2", "value2"}}, Error: nil},
 		},
 		"HSCAN with COUNT argument": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3"}, store)
 			},
-			input: []string{"hash_key", "0", "COUNT", "2"},
-			// output: []byte("*2\r\n$1\r\n2\r\n*4\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+			input:          []string{"hash_key", "0", "COUNT", "2"},
 			migratedOutput: EvalResponse{Result: []interface{}{"2", []string{"field1", "value1", "field2", "value2"}}, Error: nil},
 		},
 		"HSCAN with MATCH and COUNT arguments": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3", "field4", "value4"}, store)
 			},
-			input: []string{"hash_key", "0", "MATCH", "field[13]*", "COUNT", "1"},
-			// output:         []byte("*2\r\n$1\r\n1\r\n*2\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n"),
+			input:          []string{"hash_key", "0", "MATCH", "field[13]*", "COUNT", "1"},
 			migratedOutput: EvalResponse{Result: []interface{}{"1", []string{"field1", "value1"}}, Error: nil},
 		},
 		"HSCAN with invalid MATCH pattern": {
@@ -2873,8 +2866,7 @@ func testEvalHSCAN(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
 			},
-			input: []string{"hash_key", "0", "COUNT", "invalid"},
-			// output:         []byte("-ERR value is not an integer or out of range\r\n"),
+			input:          []string{"hash_key", "0", "COUNT", "invalid"},
 			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrIntegerOutOfRange},
 		},
 	}
