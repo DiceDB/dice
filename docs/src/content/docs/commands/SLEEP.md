@@ -7,7 +7,7 @@ The `SLEEP` command in DiceDB is used to pause the execution of the current clie
 
 ## Syntax
 
-```
+```bash
 SLEEP seconds
 ```
 
@@ -56,7 +56,6 @@ Pause the client for 5 seconds.
 ```shell
 127.0.0.1:7379> SLEEP 5
 OK
-(5.01s)
 ```
 
 ### Example 2: Error Handling - Missing Parameter
