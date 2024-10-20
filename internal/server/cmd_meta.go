@@ -102,6 +102,21 @@ var (
 		CmdType: SingleShard,
 	}
 
+	hlenCmdMeta = CmdsMeta{
+		Cmd:     "HLEN",
+		CmdType: SingleShard,
+	}
+
+	hstrlenCmdMeta = CmdsMeta{
+		Cmd:     "HSTRLEN",
+		CmdType: SingleShard,
+	}
+
+	hscanCmdMeta = CmdsMeta{
+		Cmd:     "HSCAN",
+		CmdType: SingleShard,
+	}
+
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
 
@@ -127,5 +142,8 @@ func init() {
 	WorkerCmdsMeta["ZPOPMIN"] = zpopminCmdMeta
 	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
 	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
+	WorkerCmdsMeta["HLEN"] = hlenCmdMeta
+	WorkerCmdsMeta["HSTRLEN"] = hstrlenCmdMeta
+	WorkerCmdsMeta["HSCAN"] = hscanCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }

@@ -689,12 +689,14 @@ var (
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	hstrLenCmdMeta = DiceCmdMeta{
-		Name:     "HSTRLEN",
-		Info:     `Returns the length of value associated with field in the hash stored at key.`,
-		Eval:     evalHSTRLEN,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Name:       "HSTRLEN",
+		Info:       `Returns the length of value associated with field in the hash stored at key.`,
+		NewEval:    evalHSTRLEN,
+		IsMigrated: true,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
+
 	hdelCmdMeta = DiceCmdMeta{
 		Name: "HDEL",
 		Info: `HDEL removes the specified fields from the hash stored at key.
@@ -713,9 +715,10 @@ var (
 		It returns a cursor and a list of key-value pairs.
 		The cursor is used to paginate through the hash.
 		The command returns a cursor value of 0 when all the elements are iterated.`,
-		Eval:     evalHSCAN,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalHSCAN,
+		IsMigrated: true,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	hexistsCmdMeta = DiceCmdMeta{
 		Name:     "HEXISTS",
@@ -930,8 +933,9 @@ var (
 		Name: "HLEN",
 		Info: `HLEN key
 		Returns the number of fields contained in the hash stored at key.`,
-		Eval:  evalHLEN,
-		Arity: 2,
+		NewEval:    evalHLEN,
+		IsMigrated: true,
+		Arity:      2,
 	}
 	selectCmdMeta = DiceCmdMeta{
 		Name:  "SELECT",

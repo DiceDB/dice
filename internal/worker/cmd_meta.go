@@ -73,6 +73,9 @@ const (
 	CmdPFAdd       = "PFADD"
 	CmdPFCount     = "PFCOUNT"
 	CmdPFMerge     = "PFMERGE"
+	CmdHLen        = "HLEN"
+	CmdHStrLen     = "HSTRLEN"
+	CmdHScan       = "HSCAN"
 )
 
 type CmdMeta struct {
@@ -136,6 +139,15 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdPFMerge: {
+		CmdType: SingleShard,
+	},
+	CmdHLen: {
+		CmdType: SingleShard,
+	},
+	CmdHStrLen: {
+		CmdType: SingleShard,
+	},
+	CmdHScan: {
 		CmdType: SingleShard,
 	},
 
