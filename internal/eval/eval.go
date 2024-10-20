@@ -1211,7 +1211,7 @@ func evalJSONSET(args []string, store *dstore.Store) []byte {
 
 	// Create a new object with the updated JSON data
 	newObj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-	store.Put(key, newObj)
+	store.Put(key, newObj, dstore.WithPutCmd(dstore.JSONSet))
 	return clientio.RespOK
 }
 
