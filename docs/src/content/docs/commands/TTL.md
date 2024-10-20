@@ -77,7 +77,7 @@ In this example, the key `non_existent_key` does not exist in the database. The 
 ```bash
 127.0.0.1:7379> SET newkey "value"
 127.0.0.1:7379> TTL newkey value
-(error) ERROR syntax error
+(error) ERR wrong number of arguments for 'ttl' command
 ```
 
 - The `TTL` command requires exactly one argument: `key`

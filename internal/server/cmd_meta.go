@@ -86,6 +86,14 @@ var (
 		Cmd:     "ZRANGE",
 		CmdType: SingleShard,
 	}
+	zpopminCmdMeta = CmdsMeta{
+		Cmd:     "ZPOPMIN",
+		CmdType: SingleShard,
+	}
+	zrankCmdMeta = CmdsMeta{
+		Cmd:     "ZRANK",
+		CmdType: SingleShard,
+	}
 	pfaddCmdMeta = CmdsMeta{
 		Cmd:     "PFADD",
 		CmdType: SingleShard,
@@ -96,6 +104,42 @@ var (
 	}
 	pfmergeCmdMeta = CmdsMeta{
 		Cmd:     "PFMERGE",
+		CmdType: SingleShard,
+	}
+
+	jsonclearCmdMeta = CmdsMeta{
+		Cmd:     "JSON.CLEAR",
+		CmdType: SingleShard,
+	}
+
+	jsonstrlenCmdMeta = CmdsMeta{
+		Cmd:     "JSON.STRLEN",
+		CmdType: SingleShard,
+	}
+
+	jsonobjlenCmdMeta = CmdsMeta{
+		Cmd:     "JSON.OBJLEN",
+		CmdType: SingleShard,
+	}
+
+	incrCmdMeta = CmdsMeta{
+		Cmd:     "INCR",
+		CmdType: SingleShard,
+	}
+	incrByCmdMeta = CmdsMeta{
+		Cmd:     "INCRBY",
+		CmdType: SingleShard,
+	}
+	decrCmdMeta = CmdsMeta{
+		Cmd:     "DECR",
+		CmdType: SingleShard,
+	}
+	decrByCmdMeta = CmdsMeta{
+		Cmd:     "DECRBY",
+		CmdType: SingleShard,
+	}
+	incrByFloatCmdMeta = CmdsMeta{
+		Cmd:     "INCRBYFLOAT",
 		CmdType: SingleShard,
 	}
 
@@ -119,10 +163,22 @@ func init() {
 	WorkerCmdsMeta["SREM"] = sremCmdMeta
 	WorkerCmdsMeta["SCARD"] = scardCmdMeta
 	WorkerCmdsMeta["SMEMBERS"] = smembersCmdMeta
+
+	WorkerCmdsMeta["JSON.CLEAR"] = jsonclearCmdMeta
+	WorkerCmdsMeta["JSON.STRLEN"] = jsonstrlenCmdMeta
+	WorkerCmdsMeta["JSON.OBJLEN"] = jsonobjlenCmdMeta
 	WorkerCmdsMeta["ZADD"] = zaddCmdMeta
 	WorkerCmdsMeta["ZRANGE"] = zrangeCmdMeta
+	WorkerCmdsMeta["ZRANK"] = zrankCmdMeta
 	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
+	WorkerCmdsMeta["ZPOPMIN"] = zpopminCmdMeta
 	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
 	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
+	WorkerCmdsMeta["INCR"] = incrCmdMeta
+	WorkerCmdsMeta["INCRBY"] = incrByCmdMeta
+	WorkerCmdsMeta["INCR"] = incrCmdMeta
+	WorkerCmdsMeta["DECR"] = decrCmdMeta
+	WorkerCmdsMeta["DECRBY"] = decrByCmdMeta
+	WorkerCmdsMeta["INCRBYFLOAT"] = incrByFloatCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }

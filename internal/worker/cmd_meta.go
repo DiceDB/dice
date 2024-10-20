@@ -1,11 +1,13 @@
 package worker
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/eval"
 	"github.com/dicedb/dice/internal/logger"
+	"github.com/dicedb/dice/internal/ops"
 )
 
 type CmdType int
@@ -41,20 +43,47 @@ const (
 
 // Single-shard commands.
 const (
-	CmdSet         = "SET"
-	CmdGet         = "GET"
-	CmdGetSet      = "GETSET"
+	CmdSet    = "SET"
+	CmdGet    = "GET"
+	CmdGetSet = "GETSET"
+)
+
+// Multi-shard commands.
+const (
+	CmdMset = "MSET"
+	CmdMget = "MGET"
+)
+
+// Multi-Step-Multi-Shard commands
+const (
+	CmdRename = "RENAME"
+	CmdCopy   = "COPY"
+)
+
+// Watch commands
+const (
 	CmdGetWatch    = "GET.WATCH"
 	CmdZRangeWatch = "ZRANGE.WATCH"
-	CmdSadd        = "SADD"
-	CmdSrem        = "SREM"
-	CmdScard       = "SCARD"
-	CmdSmembers    = "SMEMBERS"
+
+	CmdSadd     = "SADD"
+	CmdSrem     = "SREM"
+	CmdScard    = "SCARD"
+	CmdSmembers = "SMEMBERS"
+	CmdZPopMin    = "ZPOPMIN"
+	CmdJSONClear  = "JSON.CLEAR"
+	CmdJSONStrlen = "JSON.STRLEN"
+	CmdJSONObjlen = "JSON.OBJLEN"
 	CmdZAdd        = "ZADD"
 	CmdZRange      = "ZRANGE"
+	CmdZRank       = "ZRANK"
 	CmdPFAdd       = "PFADD"
 	CmdPFCount     = "PFCOUNT"
 	CmdPFMerge     = "PFMERGE"
+	CmdIncr        = "INCR"
+	CmdIncrBy      = "INCRBY"
+	CmdDecr        = "DECR"
+	CmdDecrBy      = "DECRBY"
+	CmdIncrByFloat = "INCRBYFLOAT"
 )
 
 type CmdMeta struct {
@@ -64,12 +93,25 @@ type CmdMeta struct {
 
 	// decomposeCommand is a function that takes a DiceDB command and breaks it down into smaller,
 	// manageable DiceDB commands for each shard processing. It returns a slice of DiceDB commands.
-	decomposeCommand func(DiceDBCmd *cmd.DiceDBCmd) []*cmd.DiceDBCmd
+	decomposeCommand func(ctx context.Context, worker *BaseWorker, DiceDBCmd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error)
 
 	// composeResponse is a function that combines multiple responses from the execution of commands
 	// into a single response object. It accepts a variadic parameter of EvalResponse objects
 	// and returns a unified response interface. It is used in the command type "MultiShard"
-	composeResponse func(responses ...eval.EvalResponse) interface{}
+	composeResponse func(responses ...ops.StoreResponse) interface{}
+
+	// preProcessingReq indicates whether the command requires preprocessing before execution.
+	// If set to true, it signals that a preliminary step (such as fetching values from shards)
+	// is necessary before the main command is executed. This is important for commands that depend
+	// on the current state of data in the database.
+	preProcessingReq bool
+
+	// preProcessResponse is a function that handles the preprocessing of a DiceDB command by
+	// preparing the necessary operations (e.g., fetching values from shards) before the command
+	// is executed. It takes the worker and the original DiceDB command as parameters and
+	// ensures that any required information is retrieved and processed in advance. Use this when set
+	// preProcessingReq = true.
+	preProcessResponse func(worker *BaseWorker, DiceDBCmd *cmd.DiceDBCmd)
 }
 
 var CommandsMeta = map[string]CmdMeta{
@@ -101,6 +143,15 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdSmembers: {
 		CmdType: SingleShard,
 	},
+	CmdJSONClear: {
+		CmdType: SingleShard,
+	},
+	CmdJSONStrlen: {
+		CmdType: SingleShard,
+	},
+	CmdJSONObjlen: {
+		CmdType: SingleShard,
+	},
 	CmdPFAdd: {
 		CmdType: SingleShard,
 	},
@@ -109,6 +160,35 @@ var CommandsMeta = map[string]CmdMeta{
 	},
 	CmdPFMerge: {
 		CmdType: SingleShard,
+	},
+
+	// Multi-shard commands.
+	CmdRename: {
+		CmdType:            MultiShard,
+		preProcessingReq:   true,
+		preProcessResponse: preProcessRename,
+		decomposeCommand:   decomposeRename,
+		composeResponse:    composeRename,
+	},
+
+	CmdCopy: {
+		CmdType:            MultiShard,
+		preProcessingReq:   true,
+		preProcessResponse: preProcessCopy,
+		decomposeCommand:   decomposeCopy,
+		composeResponse:    composeCopy,
+	},
+
+	CmdMset: {
+		CmdType:          MultiShard,
+		decomposeCommand: decomposeMSet,
+		composeResponse:  composeMSet,
+	},
+
+	CmdMget: {
+		CmdType:          MultiShard,
+		decomposeCommand: decomposeMGet,
+		composeResponse:  composeMGet,
 	},
 
 	// Custom commands.
@@ -131,7 +211,29 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdZAdd: {
 		CmdType: SingleShard,
 	},
+	CmdZRank: {
+		CmdType: SingleShard,
+	},
 	CmdZRange: {
+		CmdType: SingleShard,
+	},
+
+	CmdIncr: {
+		CmdType: SingleShard,
+	},
+	CmdIncrBy: {
+		CmdType: SingleShard,
+	},
+	CmdDecr: {
+		CmdType: SingleShard,
+	},
+	CmdDecrBy: {
+		CmdType: SingleShard,
+	},
+	CmdIncrByFloat: {
+		CmdType: SingleShard,
+	},
+	CmdZPopMin: {
 		CmdType: SingleShard,
 	},
 }
