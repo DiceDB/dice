@@ -48,6 +48,101 @@ func TestSet(t *testing.T) {
 		})
 	}
 }
+func TestSetWithGetOption(t *testing.T) {
+	conn := getLocalConnection()
+	expiryTime := strconv.FormatInt(time.Now().Add(1*time.Minute).UnixMilli(), 10) // For PXAT expiry
+	defer conn.Close()
+
+	testCases := []TestCase{
+		{
+			name:     "Set with GET on Existing Key",
+			commands: []string{"SET k old_value", "SET k new_value GET", "GET k"},
+			expected: []interface{}{"OK", "old_value", "new_value"},
+		},
+		{
+			name:     "Set with GET on Non-Existent Key",
+			commands: []string{"SET k new_value GET", "GET k"},
+			expected: []interface{}{"(nil)", "new_value"},
+		},
+		{
+			name:     "Set with GET and NX on Non-Existent Key",
+			commands: []string{"DEL k", "SET k new_value NX GET", "GET k"},
+			expected: []interface{}{int64(0), "(nil)", "new_value"},
+		},
+		{
+			name:     "Set with GET and NX on Existing Key",
+			commands: []string{"SET k old_value", "SET k new_value NX GET", "GET k"},
+			expected: []interface{}{"OK", "(nil)", "old_value"},
+		},
+		{
+			name:     "Set with GET and XX on Existing Key",
+			commands: []string{"SET k old_value", "SET k new_value XX GET", "GET k"},
+			expected: []interface{}{"OK", "old_value", "new_value"},
+		},
+		{
+			name:     "Set with GET and XX on Non-Existent Key",
+			commands: []string{"SET k new_value XX GET", "GET k"},
+			expected: []interface{}{"(nil)", "(nil)"},
+		},
+		{
+			name:     "Set with GET and Expiry EX option",
+			commands: []string{"SET k old_value", "SET k new_value GET EX 2", "GET k", "SLEEP 3", "GET k"},
+			expected: []interface{}{"OK", "old_value", "new_value", "OK", "(nil)"},
+		},
+		{
+			name:     "Set with GET and Expiry PX option",
+			commands: []string{"SET k old_value", "SET k new_value GET PX 2000", "GET k", "SLEEP 3", "GET k"},
+			expected: []interface{}{"OK", "old_value", "new_value", "OK", "(nil)"},
+		},
+		{
+			name:     "Set with GET and Expiry PXAT option",
+			commands: []string{"SET k old_value", "SET k new_value GET PXAT " + expiryTime, "GET k"},
+			expected: []interface{}{"OK", "old_value", "new_value"},
+		},
+		{
+			name:     "Set with GET and Invalid PXAT timestamp",
+			commands: []string{"SET k new_value GET PXAT 123123", "GET k"},
+			expected: []interface{}{"(nil)", "(nil)"},
+		},
+		{
+			name:     "Set with GET and KEEPTTL",
+			commands: []string{"SET k old_value EX 5", "SET k new_value GET KEEPTTL", "GET k"},
+			expected: []interface{}{"OK", "old_value", "new_value"},
+		},
+		// Edge cases
+		{
+			name:     "Set with GET and Both EX and PX options",
+			commands: []string{"SET k new_value GET EX 2 PX 2000"},
+			expected: []interface{}{"ERR syntax error"},
+		},
+		{
+			name:     "Set with GET and NX on an Already Existing Key",
+			commands: []string{"DEL k", "SET k existing_value", "SET k new_value NX GET", "GET k"},
+			expected: []interface{}{int64(0), "OK", "(nil)", "existing_value"},
+		},
+		{
+			name:     "Set with GET and XX on a Non-Existent Key",
+			commands: []string{"DEL k", "SET k new_value XX GET", "GET k"},
+			expected: []interface{}{int64(0),"(nil)", "(nil)"},
+		},
+		{
+			name:     "Set with GET and NX followed by XX",
+			commands: []string{"SET k first_value NX GET", "SET k second_value XX GET", "GET k"},
+			expected: []interface{}{"(nil)", "first_value","second_value"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Clean up keys before each test
+			FireCommand(conn, "DEL k")
+			for i, cmd := range tc.commands {
+				result := FireCommand(conn, cmd)
+				assert.Equal(t, tc.expected[i], result)
+			}
+		})
+	}
+}
 
 func TestSetWithOptions(t *testing.T) {
 	conn := getLocalConnection()
