@@ -1042,6 +1042,14 @@ func evalZPOPMIN(args []string, store *dstore.Store) *EvalResponse {
 		count = countArg
 	}
 
+	// If count is less than 1, empty array is returned
+	if count < 1 {
+		return &EvalResponse{
+			Result: []string{},
+			Error:  nil,
+		}
+	}
+
 	// If the count argument is present, return all the members with lowest score sorted in ascending order.
 	// If there are multiple lowest scores with same score value, it sorts the members in lexographical order of member name
 	results := sortedSet.GetMin(count)
