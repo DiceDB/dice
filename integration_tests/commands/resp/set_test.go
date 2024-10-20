@@ -71,8 +71,8 @@ func TestSetWithGetOption(t *testing.T) {
 		},
 		{
 			name:     "Bitwise Set and Retrieve with GET",
-			commands: []string{"SETBIT k 1 1", "GET k","SET k val GET"},
-			expected: []interface{}{int64(0), "@","@"},
+			commands: []string{"SETBIT k 1 1", "GET k", "SET k val GET"},
+			expected: []interface{}{int64(0), "@", "@"},
 		},
 		{
 			name:     "Set with GET and NX on Existing Key",
@@ -128,12 +128,12 @@ func TestSetWithGetOption(t *testing.T) {
 		{
 			name:     "Set with GET and XX on a Non-Existent Key",
 			commands: []string{"DEL k", "SET k new_value XX GET", "GET k"},
-			expected: []interface{}{int64(0),"(nil)", "(nil)"},
+			expected: []interface{}{int64(0), "(nil)", "(nil)"},
 		},
 		{
 			name:     "Set with GET and NX followed by XX",
 			commands: []string{"SET k first_value NX GET", "SET k second_value XX GET", "GET k"},
-			expected: []interface{}{"(nil)", "first_value","second_value"},
+			expected: []interface{}{"(nil)", "first_value", "second_value"},
 		},
 	}
 

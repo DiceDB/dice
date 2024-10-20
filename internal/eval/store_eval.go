@@ -154,8 +154,8 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 		case GET:
 			isGetCmdPresent = true
 			getResp = evalGET([]string{key}, store)
-			//Abort SET operation if it has error
-			if getResp.Error != nil{
+			// Abort SET operation if it has error
+			if getResp.Error != nil {
 				return getResp
 			}
 		default:
