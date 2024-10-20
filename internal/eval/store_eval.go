@@ -453,6 +453,69 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+// evalZRANK returns the rank of the member in the sorted set stored at key.
+// The rank (or index) is 0-based, which means that the member with the lowest score has rank 0.
+// If the 'WITHSCORE' option is specified, it returns both the rank and the score of the member.
+// Returns nil if the key does not exist or the member is not a member of the sorted set.
+func evalZRANK(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 || len(args) > 3 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("ZRANK"),
+		}
+	}
+
+	key := args[0]
+	member := args[1]
+	withScore := false
+
+	if len(args) == 3 {
+		if !strings.EqualFold(args[2], WithScore) {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrSyntax,
+			}
+		}
+		withScore = true
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	sortedSet, err := sortedset.FromObject(obj)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	rank, score := sortedSet.RankWithScore(member, false)
+	if rank == -1 {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	if withScore {
+		return &EvalResponse{
+			Result: []interface{}{rank, score},
+			Error:  nil,
+		}
+	}
+
+	return &EvalResponse{
+		Result: rank,
+		Error:  nil,
+	}
+}
+
 // evalJSONCLEAR Clear container values (arrays/objects) and set numeric values to 0,
 // Already cleared values are ignored for empty containers and zero numbers
 // args must contain at least the key;  (path unused in this implementation)
@@ -907,6 +970,62 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 
 	return &EvalResponse{
 		Result: clientio.OK,
+		Error:  nil,
+	}
+}
+
+// ZPOPMIN Removes and returns the member with the lowest score from the sorted set at the specified key.
+// If multiple members have the same score, the one that comes first alphabetically is returned.
+// You can also specify a count to remove and return multiple members at once.
+// If the set is empty, it returns an empty result.
+func evalZPOPMIN(args []string, store *dstore.Store) *EvalResponse {
+	// Incorrect number of arguments should return error
+	if len(args) < 1 || len(args) > 2 {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongArgumentCount("ZPOPMIN"),
+		}
+	}
+
+	key := args[0]        // Key argument
+	obj := store.Get(key) // Getting sortedSet object from store
+
+	// If the sortedSet is nil, return an empty list
+	if obj == nil {
+		return &EvalResponse{
+			Result: []string{},
+			Error:  nil,
+		}
+	}
+
+	sortedSet, err := sortedset.FromObject(obj)
+	if err != nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	count := 1
+	// Check if the count argument is provided.
+	if len(args) == 2 {
+		countArg, err := strconv.Atoi(args[1])
+		if err != nil {
+			// Return an error if the argument is not a valid integer
+			return &EvalResponse{
+				Result: clientio.NIL,
+				Error:  diceerrors.ErrIntegerOutOfRange,
+			}
+		}
+		count = countArg
+	}
+
+	// If the count argument is present, return all the members with lowest score sorted in ascending order.
+	// If there are multiple lowest scores with same score value, it sorts the members in lexographical order of member name
+	results := sortedSet.GetMin(count)
+
+	return &EvalResponse{
+		Result: results,
 		Error:  nil,
 	}
 }
