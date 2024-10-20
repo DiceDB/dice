@@ -106,6 +106,10 @@ var (
 		CmdType: SingleShard,
 	}
 
+	zpopmaxCmdMeta = CmdsMeta{
+		Cmd:     "ZPOPMAX",
+		CmdType: SingleShard,
+	}
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
 
@@ -132,5 +136,6 @@ func init() {
 	WorkerCmdsMeta["ZPOPMIN"] = zpopminCmdMeta
 	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
 	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
+	WorkerCmdsMeta["ZPOPMAX"] = zpopmaxCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }

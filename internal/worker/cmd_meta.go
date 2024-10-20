@@ -74,6 +74,7 @@ const (
 	CmdPFAdd       = "PFADD"
 	CmdPFCount     = "PFCOUNT"
 	CmdPFMerge     = "PFMERGE"
+	CmdZPopMax     = "ZPOPMAX"
 )
 
 type CmdMeta struct {
@@ -193,6 +194,9 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdZRange: {
+		CmdType: SingleShard,
+	},
+	CmdZPopMax: {
 		CmdType: SingleShard,
 	},
 	CmdZPopMin: {
