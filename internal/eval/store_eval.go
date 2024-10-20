@@ -328,7 +328,7 @@ func evalSETEX(args []string, store *dstore.Store) *EvalResponse {
 // reinserted at the right position to ensure the correct ordering.
 // If key does not exist, a new sorted set with the specified members as sole members is created.
 func evalZADD(args []string, store *dstore.Store) *EvalResponse {
-	if len(args) < 3 || len(args)%2 == 0 {
+	if len(args) < 3 {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongArgumentCount("ZADD"),
@@ -353,11 +353,119 @@ func evalZADD(args []string, store *dstore.Store) *EvalResponse {
 		sortedSet = sortedset.New()
 	}
 
-	added := 0
-	for i := 1; i < len(args); i += 2 {
-		scoreStr := args[i]
-		member := args[i+1]
+	var useNX, useXX, useLT, useGT, useCH, useINCR bool
+	i := 1
+	for i < len(args) {
+		if strings.ToUpper(args[i]) == "NX" {
+			useNX = true
+		} else if strings.ToUpper(args[i]) == "XX" {
+			useXX = true
+		} else if strings.ToUpper(args[i]) == "LT" {
+			useLT = true
+		} else if strings.ToUpper(args[i]) == "GT" {
+			useGT = true
+		} else if strings.ToUpper(args[i]) == "CH" {
+			useCH = true
+		} else if strings.ToUpper(args[i]) == "INCR" {
+			useINCR = true
+		} else {
 
+			break
+		}
+		i++
+	}
+
+	if !useXX && !useNX && !useCH && !useGT && !useLT && !useINCR {
+		if len(args) < 3 || len(args)%2 == 0 {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("ZADD"),
+			}
+		}
+
+		key := args[0]
+		obj := store.Get(key)
+
+		if obj != nil {
+			var err []byte
+			sortedSet, err = sortedset.FromObject(obj)
+			if err != nil {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrWrongTypeOperation,
+				}
+			}
+		} else {
+			sortedSet = sortedset.New()
+		}
+		added := 0
+		for i := 1; i < len(args); i += 2 {
+			scoreStr := args[i]
+			member := args[i+1]
+
+			score, err := strconv.ParseFloat(scoreStr, 64)
+			if err != nil || math.IsNaN(score) {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrInvalidNumberFormat,
+				}
+			}
+
+			wasInserted := sortedSet.Upsert(score, member)
+
+			if wasInserted {
+				added += 1
+			}
+		}
+
+		obj = store.NewObj(sortedSet, -1, object.ObjTypeSortedSet, object.ObjEncodingBTree)
+		store.Put(key, obj, dstore.WithPutCmd(dstore.ZAdd))
+
+		return &EvalResponse{
+			Result: added,
+			Error:  nil,
+		}
+	}
+
+	// Check that there are enough arguments left after parsing options.
+	remainingArgs := len(args[i:])
+	if remainingArgs == 0 || remainingArgs%2 != 0 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("syntax error"),
+		}
+	}
+
+	// Handle incompatible options
+	if useNX && useXX {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("xx and nx options at the same time are not compatible"),
+		}
+	}
+
+	if (useGT && useNX) || (useLT && useNX) || (useGT && useLT) {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("gt and LT and NX options at the same time are not compatible"),
+		}
+	}
+
+	// Handle INCR option
+	if useINCR && (len(args)-i)/2 > 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("incr option supports a single increment-element pair"),
+		}
+	}
+
+	added, updated := 0, 0
+
+	for j := i; j < len(args); j += 2 {
+		scoreStr := args[j]
+		member := args[j+1]
+
+		// Parse the score
 		score, err := strconv.ParseFloat(scoreStr, 64)
 		if err != nil || math.IsNaN(score) {
 			return &EvalResponse{
@@ -366,18 +474,104 @@ func evalZADD(args []string, store *dstore.Store) *EvalResponse {
 			}
 		}
 
+		// Get the current score of the member
+		currentScore, exists := sortedSet.Get(member)
+
+		if useINCR {
+			newMemberScoreForINCR := 0.0
+			if math.IsNaN(score) {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrInvalidNumberFormat,
+				}
+			}
+
+			if exists {
+				if useLT {
+					if currentScore+score >= currentScore {
+						return &EvalResponse{
+							Result: nil,
+							Error:  nil,
+						}
+					}
+				}
+
+				if useGT {
+					if currentScore+score <= currentScore {
+						return &EvalResponse{
+							Result: nil,
+							Error:  nil,
+						}
+					}
+				}
+				score += currentScore
+			} else {
+				score = newMemberScoreForINCR + score
+			}
+		}
+
+		// Handling NX: Only add new elements, skip if it already exists
+		if useNX && exists {
+			continue
+		}
+
+		// Handling XX: Only update existing elements, skip if it doesn't exist
+		if useXX && !exists {
+			continue
+		}
+
+		// Handling LT: Only update if the new score is less than the current score
+		if exists && useLT && score >= currentScore {
+			continue
+		}
+
+		// Handling GT: Only update if the new score is greater than the current score
+		if exists && useGT && score <= currentScore {
+			continue
+		}
+
+		// Insert or update the member in the sorted set
 		wasInserted := sortedSet.Upsert(score, member)
 
-		if wasInserted {
-			added += 1
+		// Track additions and updates
+		if wasInserted && !exists {
+			added++
+		} else if exists && score != currentScore {
+			updated++
+		}
+
+		// Since INCR allows only one score-member pair, exit after processing one pair
+		if useINCR {
+			return &EvalResponse{
+				Result: score,
+				Error:  nil,
+			}
+
 		}
 	}
 
+	// Store the updated sorted set
 	obj = store.NewObj(sortedSet, -1, object.ObjTypeSortedSet, object.ObjEncodingBTree)
 	store.Put(key, obj, dstore.WithPutCmd(dstore.ZAdd))
 
+	// If CH flag is used, return the total changes (added + updated)
+	if useCH {
+		return &EvalResponse{
+			Result: added + updated,
+			Error:  nil,
+		}
+	}
+
+	// Return only the count of added members
+	if added >= 0 {
+		return &EvalResponse{
+			Result: added,
+			Error:  nil,
+		}
+	}
+	// Return if no addition or updation took place
 	return &EvalResponse{
-		Result: added,
+		Result: nil,
 		Error:  nil,
 	}
 }
