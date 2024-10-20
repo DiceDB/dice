@@ -913,7 +913,7 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) *EvalResponse {
 			if isDefinitePath {
 				return &EvalResponse{
 					Result: nil,
-					Error: diceerrors.ErrWrongTypeOperation,
+					Error:  diceerrors.ErrWrongTypeOperation,
 				}
 			}
 			objectLen = append(objectLen, nil)
