@@ -168,26 +168,31 @@ func (ss *Set) GetRange(
 // and removes those items from the sorted set.
 func (ss *Set) GetMin(count int) []string {
 	// Initialize the result slice to hold the key-value pairs (member and score).
-	result := []string{}
+	result := make([]string, 2*count)
 
-	// Iterate 'count' times to get the minimum items.
+	// Tracking length of the sortedSet that is popped
+	length := 0
+
 	for i := 0; i < count; i++ {
 		// Delete the minimum item from the tree and get the item. If the tree is empty, this returns nil.
 		minItem := ss.tree.DeleteMin()
 		if minItem == nil {
-			break // Exit if the tree is empty before reaching the desired count.
+			break
 		}
 
-		// Cast the btree.Item to *Item.
 		ssi := minItem.(*Item)
 
-		// Add member and score to the result.
-		result = append(result, ssi.Member)
+		result[2*i] = ssi.Member
 		scoreStr := strings.ToLower(strconv.FormatFloat(ssi.Score, 'g', -1, 64))
-		result = append(result, scoreStr)
+		result[2*i+1] = scoreStr
 
-		// Remove the item from the member map.
 		delete(ss.memberMap, ssi.Member)
+		length++
+	}
+
+	// This condition is to handle the usecase where the count passed is greater than the size of btree
+	if len(result) > 2*length {
+		result = result[0 : 2*length]
 	}
 
 	return result
