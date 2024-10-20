@@ -50,4 +50,6 @@ const (
 	FILTERS         string = "FILTER"
 	ITEMS           string = "ITEMS"
 	EXPANSION       string = "EXPANSION"
+	GETNAME         string = "GETNAME"
+	SETNAME         string = "SETNAME"
 )
