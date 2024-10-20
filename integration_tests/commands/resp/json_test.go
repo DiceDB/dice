@@ -242,6 +242,41 @@ func TestJsonObjLen(t *testing.T) {
 			commands: []string{"json.set obj $ " + c, "json.objlen"},
 			expected: []interface{}{"OK", "ERR wrong number of arguments for 'json.objlen' command"},
 		},
+		{
+			name:     "JSON.OBJLEN with legacy path - root",
+			commands: []string{"json.set obj $ " + c, "json.objlen obj ."},
+			expected: []interface{}{"OK", int64(3)},
+		},
+		{
+			name:     "JSON.OBJLEN with legacy path - inner existing path",
+			commands: []string{"json.set obj $ " + c, "json.objlen obj .partner", "json.objlen obj .partner2",},
+			expected: []interface{}{"OK", int64(2), int64(2)},
+		},
+		{
+			name:     "JSON.OBJLEN with legacy path - inner existing path v2",
+			commands: []string{"json.set obj $ " + c, "json.objlen obj partner", "json.objlen obj partner2",},
+			expected: []interface{}{"OK", int64(2), int64(2)},
+		},
+		{
+			name:     "JSON.OBJLEN with legacy path - inner non-existent path",
+			commands: []string{"json.set obj $ " + c, "json.objlen obj .idonotexist",},
+			expected: []interface{}{"OK", "(nil)"},
+		},
+		{
+			name:     "JSON.OBJLEN with legacy path - inner non-existent path v2",
+			commands: []string{"json.set obj $ " + c, "json.objlen obj idonotexist",},
+			expected: []interface{}{"OK", "(nil)"},
+		},
+		{
+			name:     "JSON.OBJLEN with legacy path - inner existent path with nonJSON object",
+			commands: []string{"json.set obj $ " + c, "json.objlen obj .name",},
+			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+		},
+		{
+			name:     "JSON.OBJLEN with legacy path - inner existent path recursive object",
+			commands: []string{"json.set obj $ " + c, "json.objlen obj ..partner",},
+			expected: []interface{}{"OK", int64(2)},
+		},
 	}
 
 	for _, tcase := range testCases {
