@@ -913,7 +913,7 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) *EvalResponse {
 			if isDefinitePath {
 				return &EvalResponse{
 					Result: nil,
-					Error: diceerrors.ErrWrongTypeOperation,
+					Error:  diceerrors.ErrWrongTypeOperation,
 				}
 			}
 			objectLen = append(objectLen, nil)
@@ -995,6 +995,190 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 		Result: clientio.OK,
 		Error:  nil,
 	}
+}
+
+// Increments the number stored at field in the hash stored at key by increment.
+//
+// If key does not exist, a new key holding a hash is created.
+// If field does not exist the value is set to the increment value passed
+//
+// The range of values supported by HINCRBY is limited to 64-bit signed integers.
+//
+// Usage: HINCRBY key field increment
+func evalHINCRBY(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 3 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("HINCRBY"),
+		}
+	}
+
+	increment, err := strconv.ParseInt(args[2], 10, 64)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrIntegerOutOfRange,
+		}
+	}
+	var hashmap HashMap
+	key := args[0]
+	obj := store.Get(key)
+	if obj != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			}
+		}
+		hashmap = obj.Value.(HashMap)
+	}
+
+	if hashmap == nil {
+		hashmap = make(HashMap)
+	}
+
+	field := args[1]
+	numkey, err := hashmap.incrementValue(field, increment)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(err.Error()),
+		}
+	}
+
+	obj = store.NewObj(hashmap, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
+	store.Put(key, obj)
+
+	return &EvalResponse{
+		Result: numkey,
+		Error:  nil,
+	}
+}
+
+// Increments the number stored at field in the hash stored at key by the specified floating point increment.
+//
+// If key does not exist, a new key holding a hash is created.
+// If field does not exist, the value is set to the increment passed before the operation is performed.
+//
+// The precision of the increment is not restricted to integers, allowing for floating point values.
+//
+// Usage: HINCRBYFLOAT key field increment
+func evalHINCRBYFLOAT(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 3 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("HINCRBYFLOAT"),
+		}
+	}
+
+	increment, err := strconv.ParseFloat(strings.TrimSpace(args[2]), 64)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrInvalidNumberFormat,
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+	var hashmap HashMap
+	if obj != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			}
+		}
+		hashmap = obj.Value.(HashMap)
+	}
+
+	if hashmap == nil {
+		hashmap = make(HashMap)
+	}
+
+	field := args[1]
+	numkey, err := hashmap.incrementFloatValue(field, increment)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(err.Error()),
+		}
+	}
+
+	obj = store.NewObj(hashmap, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
+	store.Put(key, obj)
+
+	return &EvalResponse{
+		Result: numkey,
+		Error:  nil,
+	}
+}
+
+// evalHRANDFIELD returns random fields from a hash stored at key.
+// If only the key is provided, one random field is returned.
+// If count is provided, it returns that many unique random fields. A negative count allows repeated selections.
+// The "WITHVALUES" option returns both fields and values.
+// Returns nil if the key doesn't exist or the hash is empty.
+// Errors: arity error, type error for non-hash, syntax error for "WITHVALUES", or count format error.
+func evalHRANDFIELD(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 || len(args) > 3 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("HRANDFIELD"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	hashMap := obj.Value.(HashMap)
+	if len(hashMap) == 0 {
+		return &EvalResponse{
+			Result: clientio.EmptyArray,
+			Error:  nil,
+		}
+	}
+
+	count := 1
+	withValues := false
+
+	if len(args) > 1 {
+		var err error
+		// The second argument is the count.
+		count, err = strconv.Atoi(args[1])
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrIntegerOutOfRange,
+			}
+		}
+
+		// The third argument is the "WITHVALUES" option.
+		if len(args) == 3 {
+			if !strings.EqualFold(args[2], WithValues) {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrSyntax,
+				}
+			}
+			withValues = true
+		}
+	}
+
+	return selectRandomFields(hashMap, count, withValues)
 }
 
 // evalINCR increments the value of the specified key in args by 1,

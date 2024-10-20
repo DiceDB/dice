@@ -375,9 +375,9 @@ var (
 		If the value at the key is a string, it should be parsable to float64,
 		if not INCRBYFLOAT returns an  error response.
 		INCRBYFLOAT returns the incremented value for the key after applying the specified increment if there are no errors.`,
+		Arity:      2,
 		NewEval:    evalINCRBYFLOAT,
 		IsMigrated: true,
-		Arity:      2,
 	}
 	infoCmdMeta = DiceCmdMeta{
 		Name: "INFO",
@@ -688,9 +688,10 @@ var (
 		Info: `Increments the number stored at field in the hash stored at key by increment.
 		If key does not exist, a new key holding a hash is created.
 		If field does not exist the value is set to 0 before the operation is performed.`,
-		Eval:     evalHINCRBY,
-		Arity:    -4,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -4,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalHINCRBY,
 	}
 	hstrLenCmdMeta = DiceCmdMeta{
 		Name:     "HSTRLEN",
@@ -1010,11 +1011,12 @@ var (
 		NewEval:    evalSETEX,
 	}
 	hrandfieldCmdMeta = DiceCmdMeta{
-		Name:     "HRANDFIELD",
-		Info:     `Returns one or more random fields from a hash.`,
-		Eval:     evalHRANDFIELD,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Name:       "HRANDFIELD",
+		Info:       `Returns one or more random fields from a hash.`,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalHRANDFIELD,
 	}
 	appendCmdMeta = DiceCmdMeta{
 		Name:  "APPEND",
@@ -1109,9 +1111,10 @@ var (
 		If the field contains a value of wrong type or specified increment
 		is not parsable as floating point number, then an error occurs.
 		`,
-		Eval:     evalHINCRBYFLOAT,
-		Arity:    -4,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -4,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalHINCRBYFLOAT,
 	}
 	geoAddCmdMeta = DiceCmdMeta{
 		Name:     "GEOADD",

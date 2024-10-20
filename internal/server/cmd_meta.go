@@ -126,6 +126,18 @@ var (
 		Cmd:     "INCRBYFLOAT",
 		CmdType: SingleShard,
 	}
+	hincrbyCmdMeta = CmdsMeta{
+		Cmd:     "HINCRBY",
+		CmdType: SingleShard,
+	}
+	hincrbyfloatCmdMeta = CmdsMeta{
+		Cmd:     "HINCRBYFLOAT",
+		CmdType: SingleShard,
+	}
+	hrandfieldCmdMeta = CmdsMeta{
+		Cmd:     "HRANDFIELD",
+		CmdType: SingleShard,
+	}
 
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
@@ -159,5 +171,21 @@ func init() {
 	WorkerCmdsMeta["DECR"] = decrCmdMeta
 	WorkerCmdsMeta["DECRBY"] = decrByCmdMeta
 	WorkerCmdsMeta["INCRBYFLOAT"] = incrByFloatCmdMeta
+	WorkerCmdsMeta["HINCRBY"] = hincrbyCmdMeta
+	WorkerCmdsMeta["HINCRBYFLOAT"] = hincrbyfloatCmdMeta
+	WorkerCmdsMeta["HRANDFIELD"] = hrandfieldCmdMeta
+	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
+	WorkerCmdsMeta["ZPOPMIN"] = zpopminCmdMeta
+	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
+	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
+	WorkerCmdsMeta["HINCRBY"] = hincrbyCmdMeta
+	WorkerCmdsMeta["HINCRBYFLOAT"] = hincrbyfloatCmdMeta
+	WorkerCmdsMeta["HRANDFIELD"] = hrandfieldCmdMeta
+	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
+	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
+	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
+	WorkerCmdsMeta["HINCRBY"] = hincrbyCmdMeta
+	WorkerCmdsMeta["HINCRBYFLOAT"] = hincrbyfloatCmdMeta
+	WorkerCmdsMeta["HRANDFIELD"] = hrandfieldCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }
