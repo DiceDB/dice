@@ -29,6 +29,7 @@ const (
 	null       string = "null"
 	WithValues string = "WITHVALUES"
 	WithScores string = "WITHSCORES"
+	WithScore  string = "WITHSCORE"
 	REV        string = "REV"
 	GET        string = "GET"
 	SET        string = "SET"

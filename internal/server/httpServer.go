@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dicedb/dice/internal/eval"
+
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/cmd"
@@ -22,13 +24,14 @@ import (
 	"github.com/dicedb/dice/internal/shard"
 )
 
-const Abort = "ABORT"
+const (
+	Abort     = "ABORT"
+	stringNil = "(nil)"
+)
 
 var unimplementedCommands = map[string]bool{
 	"Q.UNWATCH": true,
 }
-
-const stringNil = "(nil)"
 
 type HTTPServer struct {
 	shardManager       *shard.ShardManager
@@ -326,33 +329,23 @@ func (s *HTTPServer) writeQWatchResponse(writer http.ResponseWriter, response in
 }
 
 func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.StoreResponse, diceDBCmd *cmd.DiceDBCmd) {
-	_, ok := WorkerCmdsMeta[diceDBCmd.Cmd]
-	var rp *clientio.RESPParser
+	var (
+		responseValue interface{}
+		err           error
+		httpResponse  utils.HTTPResponse
+		isDiceErr     bool
+	)
 
-	var responseValue interface{}
-	var isDiceErr bool = false
-	var httpResponse utils.HTTPResponse
+	// Check if the command is migrated, if it is we use EvalResponse values
+	// else we use RESPParser to decode the response
+	_, ok := WorkerCmdsMeta[diceDBCmd.Cmd]
 	// TODO: Remove this conditional check and if (true) condition when all commands are migrated
 	if !ok {
-		var err error
-		if result.EvalResponse.Error != nil {
-			rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(result.EvalResponse.Error.Error())))
-		} else {
-			rp = clientio.NewRESPParser(bytes.NewBuffer(result.EvalResponse.Result.([]byte)))
-		}
-
-		res, err := rp.DecodeOne()
-		responseValue = replaceNilInInterface(res)
+		responseValue, err = decodeEvalResponse(result.EvalResponse)
 		if err != nil {
 			s.logger.Error("Error decoding response", "error", err)
-			httpResponse := utils.HTTPResponse{Status: utils.HTTPStatusError, Data: "Internal Server Error"}
-			responseJSON, _ := json.Marshal(httpResponse)
-			writer.Header().Set("Content-Type", "application/json")
-			writer.WriteHeader(http.StatusInternalServerError) // Set HTTP status code to 500
-			_, err = writer.Write(responseJSON)
-			if err != nil {
-				s.logger.Error("Error writing response", "error", err)
-			}
+			httpResponse = utils.HTTPResponse{Status: utils.HTTPStatusError, Data: "Internal Server Error"}
+			writeJSONResponse(writer, httpResponse, http.StatusInternalServerError)
 			return
 		}
 	} else {
@@ -364,7 +357,55 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.Store
 		}
 	}
 
-	// func HandlePredefinedResponse(response interface{}) []byte {
+	// Create the HTTP response
+	httpResponse = createHTTPResponse(responseValue)
+	if isDiceErr {
+		httpResponse.Status = utils.HTTPStatusError
+	} else {
+		httpResponse.Status = utils.HTTPStatusSuccess
+	}
+
+	// Write the response back to the client
+	writeJSONResponse(writer, httpResponse, http.StatusOK)
+}
+
+// Helper function to decode EvalResponse based on the error or result
+func decodeEvalResponse(evalResp *eval.EvalResponse) (interface{}, error) {
+	var rp *clientio.RESPParser
+
+	if evalResp.Error != nil {
+		rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(evalResp.Error.Error())))
+	} else {
+		rp = clientio.NewRESPParser(bytes.NewBuffer(evalResp.Result.([]byte)))
+	}
+
+	res, err := rp.DecodeOne()
+	if err != nil {
+		return nil, err
+	}
+
+	return replaceNilInInterface(res), nil
+}
+
+// Helper function to write the JSON response
+func writeJSONResponse(writer http.ResponseWriter, response utils.HTTPResponse, statusCode int) {
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(statusCode)
+
+	responseJSON, err := json.Marshal(response)
+	if err != nil {
+		slog.Error("Error marshaling response", "error", err)
+		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	_, err = writer.Write(responseJSON)
+	if err != nil {
+		slog.Error("Error writing response", "error", err)
+	}
+}
+
+func createHTTPResponse(responseValue interface{}) utils.HTTPResponse {
 	respArr := []string{
 		"(nil)",  // Represents a RESP Nil Bulk String, which indicates a null value.
 		"OK",     // Represents a RESP Simple String with value "OK".
@@ -376,36 +417,43 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.Store
 		"*0",     // Represents an empty RESP Array.
 	}
 
-	if val, ok := responseValue.(clientio.RespType); ok {
-		responseValue = respArr[val]
+	switch v := responseValue.(type) {
+	case []interface{}:
+		// Parses []interface{} as part of EvalResponse e.g. JSON.ARRPOP
+		// and adds to httpResponse. Also replaces "(nil)" with null JSON value
+		// in response array.
+		r := make([]interface{}, 0, len(v))
+		for _, resp := range v {
+			if val, ok := resp.(clientio.RespType); ok {
+				if stringNil == respArr[val] {
+					r = append(r, nil)
+				} else {
+					r = append(r, respArr[val])
+				}
+			} else {
+				r = append(r, resp)
+			}
+		}
+		return utils.HTTPResponse{Data: r}
+
+	case []byte:
+		return utils.HTTPResponse{Data: string(v)}
+
+	case clientio.RespType:
+		responseValue = respArr[v]
+		if responseValue == stringNil {
+			responseValue = nil // in order to convert it in json null
+		}
+
+		return utils.HTTPResponse{Data: responseValue}
+
+	case interface{}:
+		if val, ok := v.(clientio.RespType); ok {
+			return utils.HTTPResponse{Data: respArr[val]}
+		}
 	}
 
-	if responseValue == stringNil {
-		responseValue = nil // in order to convert it in json null
-	}
-
-	if bt, ok := responseValue.([]byte); ok {
-		responseValue = string(bt)
-	}
-	if isDiceErr {
-		httpResponse = utils.HTTPResponse{Status: utils.HTTPStatusError, Data: responseValue}
-	} else {
-		httpResponse = utils.HTTPResponse{Status: utils.HTTPStatusSuccess, Data: responseValue}
-	}
-
-	responseJSON, err := json.Marshal(httpResponse)
-	if err != nil {
-		s.logger.Error("Error marshaling response", "error", err)
-		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(http.StatusOK)
-	_, err = writer.Write(responseJSON)
-	if err != nil {
-		s.logger.Error("Error writing response", "error", err)
-	}
+	return utils.HTTPResponse{Data: responseValue}
 }
 
 func generateUniqueInt32(r *http.Request) uint32 {
