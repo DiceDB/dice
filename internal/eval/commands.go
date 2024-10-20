@@ -989,7 +989,7 @@ var (
 		Info:       `Returns a substring of the string stored at a key.`,
 		IsMigrated: true,
 		NewEval:    evalGETRANGE,
-		Arity:      4,
+		Arity:      3,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	setexCmdMeta = DiceCmdMeta{
@@ -1017,7 +1017,7 @@ var (
 		Info:       `Appends a string to the value of a key. Creates the key if it doesn't exist.`,
 		IsMigrated: true,
 		NewEval:    evalAPPEND,
-		Arity:      3,
+		Arity:      2,
 	}
 	zaddCmdMeta = DiceCmdMeta{
 		Name: "ZADD",
