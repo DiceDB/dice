@@ -120,6 +120,10 @@ func TestEval(t *testing.T) {
 	testEvalSINTER(t, store)
 	testEvalOBJECTENCODING(t, store)
 	testEvalJSONSTRAPPEND(t, store)
+	testEvalINCR(t, store)
+	testEvalINCRBY(t, store)
+	testEvalDECR(t, store)
+	testEvalDECRBY(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -150,7 +154,8 @@ func testEvalHELLO(t *testing.T, store *dstore.Store) {
 		"id", serverID,
 		"mode", "standalone",
 		"role", "master",
-		"modules", []interface{}{},
+		"modules",
+		[]interface{}{},
 	}
 
 	tests := map[string]evalTestCase{
@@ -164,7 +169,6 @@ func testEvalHELLO(t *testing.T, store *dstore.Store) {
 }
 
 func testEvalSET(t *testing.T, store *dstore.Store) {
-
 	tests := []evalTestCase{
 		{
 			name:           "nil value",
@@ -322,7 +326,6 @@ func testEvalSET(t *testing.T, store *dstore.Store) {
 
 func testEvalGETEX(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
-
 		"key val pair and valid EX": {
 			setup: func() {
 				key := "foo"
@@ -345,11 +348,11 @@ func testEvalGETEX(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:  []string{"foo", Ex, "10000000000000000"},
-			output: []byte("-ERR invalid expire time in 'getex' command\r\n")},
+			output: []byte("-ERR invalid expire time in 'getex' command\r\n"),
+		},
 		"key holding json type": {
 			setup: func() {
 				evalJSONSET([]string{"JSONKEY", "$", "1"}, store)
-
 			},
 			input:  []string{"JSONKEY"},
 			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
@@ -357,7 +360,6 @@ func testEvalGETEX(t *testing.T, store *dstore.Store) {
 		"key holding set type": {
 			setup: func() {
 				evalSADD([]string{"SETKEY", "FRUITS", "APPLE", "MANGO", "BANANA"}, store)
-
 			},
 			input:  []string{"SETKEY"},
 			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
@@ -574,7 +576,6 @@ func testEvalEXPIRE(t *testing.T, store *dstore.Store) {
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
 				store.Put(key, obj)
-
 			},
 			input:  []string{"EXISTING_KEY", strconv.FormatInt(9223372036854776, 10)},
 			output: []byte("-ERR invalid expire time in 'expire' command\r\n"),
@@ -589,7 +590,6 @@ func testEvalEXPIRE(t *testing.T, store *dstore.Store) {
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
 				store.Put(key, obj)
-
 			},
 			input:  []string{"EXISTING_KEY", strconv.FormatInt(-1, 10)},
 			output: []byte("-ERR invalid expire time in 'expire' command\r\n"),
@@ -603,7 +603,6 @@ func testEvalEXPIRE(t *testing.T, store *dstore.Store) {
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
 				store.Put(key, obj)
-
 			},
 			input:  []string{"EXISTING_KEY", ""},
 			output: []byte("-ERR value is not an integer or out of range\r\n"),
@@ -617,7 +616,6 @@ func testEvalEXPIRE(t *testing.T, store *dstore.Store) {
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
 				store.Put(key, obj)
-
 			},
 			input:  []string{"EXISTING_KEY", "0.456"},
 			output: []byte("-ERR value is not an integer or out of range\r\n"),
@@ -710,7 +708,6 @@ func testEvalEXPIREAT(t *testing.T, store *dstore.Store) {
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
 				store.Put(key, obj)
-
 			},
 			input:  []string{"EXISTING_KEY", strconv.FormatInt(9223372036854776, 10)},
 			output: []byte("-ERR invalid expire time in 'expireat' command\r\n"),
@@ -724,7 +721,6 @@ func testEvalEXPIREAT(t *testing.T, store *dstore.Store) {
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
 				store.Put(key, obj)
-
 			},
 			input:  []string{"EXISTING_KEY", strconv.FormatInt(-1, 10)},
 			output: []byte("-ERR invalid expire time in 'expireat' command\r\n"),
@@ -1975,7 +1971,6 @@ func testEvalJSONTOGGLE(t *testing.T, store *dstore.Store) {
 				}
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
-
 			},
 			input:  []string{"EXISTING_KEY", ".active"},
 			output: clientio.Encode([]interface{}{0}, false),
@@ -2288,7 +2283,7 @@ func testEvalPFADD(t *testing.T, store *dstore.Store) {
 				key, value := "EXISTING_KEY", "VALUE"
 				oType, oEnc := deduceTypeEncoding(value)
 				var exDurationMs int64 = -1
-				var keepttl = false
+				keepttl := false
 
 				store.Put(key, store.NewObj(value, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
 			},
@@ -2637,6 +2632,7 @@ func testEvalHVALS(t *testing.T, store *dstore.Store) {
 
 	runEvalTests(t, tests, evalHVALS, store)
 }
+
 func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"wrong number of args passed": {
@@ -3212,8 +3208,6 @@ func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]s
 			if tc.validator != nil {
 				tc.validator(output)
 			} else {
-				fmt.Println(tc.output)
-				fmt.Println(output)
 				assert.Equal(t, string(tc.output), string(output))
 			}
 		})
@@ -3504,6 +3498,7 @@ func BenchmarkEvalHKEYS(b *testing.B) {
 		evalHKEYS([]string{"KEY"}, store)
 	}
 }
+
 func BenchmarkEvalPFCOUNT(b *testing.B) {
 	store := *dstore.NewStore(nil, nil)
 
@@ -3575,7 +3570,6 @@ func BenchmarkEvalPFCOUNT(b *testing.B) {
 
 func testEvalDebug(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
-
 		// invalid subcommand tests
 		"no subcommand passed": {
 			setup:  func() {},
@@ -4931,144 +4925,150 @@ func testEvalFLUSHDB(t *testing.T, store *dstore.Store) {
 }
 
 func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"INCRBYFLOAT on a non existing key": {
-			input:  []string{"float", "0.1"},
-			output: clientio.Encode("0.1", false),
+	tests := []evalTestCase{
+		{
+			name:           "INCRBYFLOAT on a non existing key",
+			input:          []string{"float", "0.1"},
+			migratedOutput: EvalResponse{Result: "0.1", Error: nil},
 		},
-		"INCRBYFLOAT on an existing key": {
+		{
+			name: "INCRBYFLOAT on an existing key",
 			setup: func() {
 				key := "key"
 				value := "2.1"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
+				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "0.1"},
-			output: clientio.Encode("2.2", false),
+			input:          []string{"key", "0.1"},
+			migratedOutput: EvalResponse{Result: "2.2", Error: nil},
 		},
-		"INCRBYFLOAT on a key with integer value": {
+		{
+			name: "INCRBYFLOAT on a key with integer value",
 			setup: func() {
 				key := "key"
 				value := "2"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
+				obj := store.NewObj(value, -1, object.ObjTypeInt, object.ObjEncodingInt)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "0.1"},
-			output: clientio.Encode("2.1", false),
+			input:          []string{"key", "0.1"},
+			migratedOutput: EvalResponse{Result: "2.1", Error: nil},
 		},
-		"INCRBYFLOAT by a negative increment": {
+		{
+			name: "INCRBYFLOAT by a negative increment",
 			setup: func() {
 				key := "key"
 				value := "2"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
+				obj := store.NewObj(value, -1, object.ObjTypeInt, object.ObjEncodingInt)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "-0.1"},
-			output: clientio.Encode("1.9", false),
+			input:          []string{"key", "-0.1"},
+			migratedOutput: EvalResponse{Result: "1.9", Error: nil},
 		},
-		"INCRBYFLOAT by a scientific notation increment": {
+		{
+			name: "INCRBYFLOAT by a scientific notation increment",
 			setup: func() {
 				key := "key"
 				value := "1"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
+				obj := store.NewObj(value, -1, object.ObjTypeInt, object.ObjEncodingInt)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "1e-2"},
-			output: clientio.Encode("1.01", false),
+			input:          []string{"key", "1e-2"},
+			migratedOutput: EvalResponse{Result: "1.01", Error: nil},
 		},
-		"INCRBYFLOAT on a key holding a scientific notation value": {
+		{
+			name: "INCRBYFLOAT on a key holding a scientific notation value",
 			setup: func() {
 				key := "key"
 				value := "1e2"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
+				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingEmbStr)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "1e-1"},
-			output: clientio.Encode("100.1", false),
+			input:          []string{"key", "1e-1"},
+			migratedOutput: EvalResponse{Result: "100.1", Error: nil},
 		},
-		"INCRBYFLOAT by an negative increment of the same value": {
+		{
+			name: "INCRBYFLOAT by an negative increment of the same value",
 			setup: func() {
 				key := "key"
 				value := "0.1"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
+				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingEmbStr)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "-0.1"},
-			output: clientio.Encode("0", false),
+			input:          []string{"key", "-0.1"},
+			migratedOutput: EvalResponse{Result: "0", Error: nil},
 		},
-		"INCRBYFLOAT on a key with spaces": {
+		{
+			name: "INCRBYFLOAT on a key with spaces",
 			setup: func() {
 				key := "key"
 				value := "   2   "
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
+				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingEmbStr)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "0.1"},
-			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+			input:          []string{"key", "0.1"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrGeneral("value is not a valid float")},
 		},
-		"INCRBYFLOAT on a key with non numeric value": {
+		{
+			name: "INCRBYFLOAT on a key with non numeric value",
 			setup: func() {
 				key := "key"
 				value := "string"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
+				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingEmbStr)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "0.1"},
-			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+			input:          []string{"key", "0.1"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrGeneral("value is not a valid float")},
 		},
-		"INCRBYFLOAT by a non numeric increment": {
+		{
+			name: "INCRBYFLOAT by a non numeric increment",
 			setup: func() {
 				key := "key"
 				value := "2.0"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
+				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingEmbStr)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "a"},
-			output: []byte("-ERR value is not an integer or a float\r\n"),
+			input:          []string{"key", "a"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrGeneral("value is not a valid float")},
 		},
-		"INCRBYFLOAT by a number that would turn float64 to Inf": {
+		{
+			name: "INCRBYFLOAT by a number that would turn float64 to Inf",
 			setup: func() {
 				key := "key"
 				value := "1e308"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
+				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingEmbStr)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "1e308"},
-			output: []byte("-ERR value is out of range\r\n"),
+			input:          []string{"key", "1e308"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrValueOutOfRange},
 		},
 	}
 
-	runEvalTests(t, tests, evalINCRBYFLOAT, store)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store = setupTest(store)
+			if tt.setup != nil {
+				tt.setup()
+			}
+
+			response := evalINCRBYFLOAT(tt.input, store)
+			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput)
+
+			// Handle comparison for byte slices
+			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
+				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
+					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+				}
+			} else {
+				assert.Equal(t, tt.migratedOutput.Result, response.Result)
+			}
+
+			if tt.migratedOutput.Error != nil {
+				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+			} else {
+				testifyAssert.NoError(t, response.Error)
+			}
+		})
+	}
 }
 
 func BenchmarkEvalINCRBYFLOAT(b *testing.B) {
@@ -5268,7 +5268,6 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 				}
 
 				store.Put(key, obj)
-
 			},
 			input: []string{"KEY_MOCK", "2"},
 			validator: func(output []byte) {
@@ -5301,7 +5300,6 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 				}
 
 				store.Put(key, obj)
-
 			},
 			input: []string{"KEY_MOCK", "2", WithValues},
 			validator: func(output []byte) {
@@ -6147,6 +6145,7 @@ func testEvalBitField(t *testing.T, store *dstore.Store) {
 	}
 	runEvalTests(t, testCases, evalBITFIELD, store)
 }
+
 func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"HINCRBYFLOAT on a non-existing key and field": {
@@ -6565,6 +6564,7 @@ func testEvalSINTER(t *testing.T, store *dstore.Store) {
 
 	runEvalTests(t, tests, evalSINTER, store)
 }
+
 func testEvalOBJECTENCODING(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
@@ -6598,6 +6598,7 @@ func testEvalOBJECTENCODING(t *testing.T, store *dstore.Store) {
 
 	runEvalTests(t, tests, evalOBJECT, store)
 }
+
 func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"append to single field": {
@@ -6652,5 +6653,357 @@ func BenchmarkEvalJSONSTRAPPEND(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		// Benchmark appending to multiple fields
 		evalJSONSTRAPPEND([]string{"doc1", "$..a", "\"bar\""}, store)
+	}
+}
+
+func testEvalINCR(t *testing.T, store *dstore.Store) {
+	tests := []evalTestCase{
+		{
+			name:           "INCR key does not exist",
+			input:          []string{"KEY1"},
+			migratedOutput: EvalResponse{Result: int64(1), Error: nil},
+		},
+		{
+			name: "INCR key exists",
+			setup: func() {
+				key := "KEY2"
+				obj := store.NewObj(int64(1), -1, object.ObjTypeInt, object.ObjEncodingInt)
+				store.Put(key, obj)
+			},
+			input:          []string{"KEY2"},
+			migratedOutput: EvalResponse{Result: int64(2), Error: nil},
+		},
+		{
+			name: "INCR key holding string value",
+			setup: func() {
+				key := "KEY3"
+				obj := store.NewObj("VAL1", -1, object.ObjTypeString, object.ObjEncodingEmbStr)
+				store.Put(key, obj)
+			},
+			input:          []string{"KEY3"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")},
+		},
+		{
+			name: "INCR key holding SET type",
+			setup: func() {
+				evalSADD([]string{"SET1", "1", "2", "3"}, store)
+			},
+			input:          []string{"SET1"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+		},
+		{
+			name: "INCR key holding MAP type",
+			setup: func() {
+				evalHSET([]string{"MAP1", "a", "1", "b", "2", "c", "3"}, store)
+			},
+			input:          []string{"MAP1"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+		},
+		{
+			name:           "INCR More than one args passed",
+			input:          []string{"KEY4", "ARG2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'incr' command")},
+		},
+		{
+			name: "INCR Max Overflow",
+			setup: func() {
+				key := "KEY5"
+				obj := store.NewObj(int64(math.MaxInt64), -1, object.ObjTypeInt, object.ObjEncodingInt)
+				store.Put(key, obj)
+			},
+			input:          []string{"KEY5"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR increment or decrement would overflow")},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store = setupTest(store)
+			if tt.setup != nil {
+				tt.setup()
+			}
+
+			response := evalINCR(tt.input, store)
+			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput)
+
+			// Handle comparison for byte slices
+			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
+				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
+					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+				}
+			} else {
+				assert.Equal(t, tt.migratedOutput.Result, response.Result)
+			}
+
+			if tt.migratedOutput.Error != nil {
+				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+			} else {
+				testifyAssert.NoError(t, response.Error)
+			}
+		})
+	}
+}
+
+func testEvalINCRBY(t *testing.T, store *dstore.Store) {
+	tests := []evalTestCase{
+		{
+			name:           "INCRBY key does not exist",
+			input:          []string{"KEY1", "2"},
+			migratedOutput: EvalResponse{Result: int64(2), Error: nil},
+		},
+		{
+			name: "INCRBY key exists",
+			setup: func() {
+				key := "KEY2"
+				obj := store.NewObj(int64(1), -1, object.ObjTypeInt, object.ObjEncodingInt)
+				store.Put(key, obj)
+			},
+			input:          []string{"KEY2", "3"},
+			migratedOutput: EvalResponse{Result: int64(4), Error: nil},
+		},
+		{
+			name: "INCRBY key holding string value",
+			setup: func() {
+				key := "KEY3"
+				obj := store.NewObj("VAL1", -1, object.ObjTypeString, object.ObjEncodingEmbStr)
+				store.Put(key, obj)
+			},
+			input:          []string{"KEY3", "2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")},
+		},
+		{
+			name: "INCRBY key holding SET type",
+			setup: func() {
+				evalSADD([]string{"SET1", "1", "2", "3"}, store)
+			},
+			input:          []string{"SET1", "2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+		},
+		{
+			name: "INCRBY key holding MAP type",
+			setup: func() {
+				evalHSET([]string{"MAP1", "a", "1", "b", "2", "c", "3"}, store)
+			},
+			input:          []string{"MAP1", "2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+		},
+		{
+			name:           "INCRBY Wrong number of args passed",
+			input:          []string{"KEY4"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'incrby' command")},
+		},
+		{
+			name: "INCRBY Max Overflow",
+			setup: func() {
+				key := "KEY5"
+				obj := store.NewObj(int64(math.MaxInt64-3), -1, object.ObjTypeInt, object.ObjEncodingInt)
+				store.Put(key, obj)
+			},
+			input:          []string{"KEY5", "4"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR increment or decrement would overflow")},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store = setupTest(store)
+			if tt.setup != nil {
+				tt.setup()
+			}
+
+			response := evalINCRBY(tt.input, store)
+			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput)
+
+			// Handle comparison for byte slices
+			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
+				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
+					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+				}
+			} else {
+				assert.Equal(t, tt.migratedOutput.Result, response.Result)
+			}
+
+			if tt.migratedOutput.Error != nil {
+				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+			} else {
+				testifyAssert.NoError(t, response.Error)
+			}
+		})
+	}
+}
+
+func testEvalDECR(t *testing.T, store *dstore.Store) {
+	tests := []evalTestCase{
+		{
+			name:           "DECR key does not exist",
+			input:          []string{"KEY1"},
+			migratedOutput: EvalResponse{Result: int64(-1), Error: nil},
+		},
+		{
+			name: "DECR key exists",
+			setup: func() {
+				key := "KEY2"
+				obj := store.NewObj(int64(1), -1, object.ObjTypeInt, object.ObjEncodingInt)
+				store.Put(key, obj)
+			},
+			input:          []string{"KEY2"},
+			migratedOutput: EvalResponse{Result: int64(0), Error: nil},
+		},
+		{
+			name: "DECR key holding string value",
+			setup: func() {
+				key := "KEY3"
+				obj := store.NewObj("VAL1", -1, object.ObjTypeString, object.ObjEncodingEmbStr)
+				store.Put(key, obj)
+			},
+			input:          []string{"KEY3"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")},
+		},
+		{
+			name: "DECR key holding SET type",
+			setup: func() {
+				evalSADD([]string{"SET1", "1", "2", "3"}, store)
+			},
+			input:          []string{"SET1"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+		},
+		{
+			name: "DECR key holding MAP type",
+			setup: func() {
+				evalHSET([]string{"MAP1", "a", "1", "b", "2", "c", "3"}, store)
+			},
+			input:          []string{"MAP1"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+		},
+		{
+			name:           "DECR More than one args passed",
+			input:          []string{"KEY4", "ARG2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'decr' command")},
+		},
+		{
+			name: "DECR Min Overflow",
+			setup: func() {
+				key := "KEY5"
+				obj := store.NewObj(int64(math.MinInt64), -1, object.ObjTypeInt, object.ObjEncodingInt)
+				store.Put(key, obj)
+			},
+			input:          []string{"KEY5"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR increment or decrement would overflow")},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store = setupTest(store)
+			if tt.setup != nil {
+				tt.setup()
+			}
+
+			response := evalDECR(tt.input, store)
+			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput)
+
+			// Handle comparison for byte slices
+			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
+				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
+					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+				}
+			} else {
+				assert.Equal(t, tt.migratedOutput.Result, response.Result)
+			}
+
+			if tt.migratedOutput.Error != nil {
+				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+			} else {
+				testifyAssert.NoError(t, response.Error)
+			}
+		})
+	}
+}
+
+func testEvalDECRBY(t *testing.T, store *dstore.Store) {
+	tests := []evalTestCase{
+		{
+			name:           "DECRBY key does not exist",
+			input:          []string{"KEY1", "2"},
+			migratedOutput: EvalResponse{Result: int64(-2), Error: nil},
+		},
+		{
+			name: "DECRBY key exists",
+			setup: func() {
+				key := "KEY2"
+				obj := store.NewObj(int64(1), -1, object.ObjTypeInt, object.ObjEncodingInt)
+				store.Put(key, obj)
+			},
+			input:          []string{"KEY2", "3"},
+			migratedOutput: EvalResponse{Result: int64(-2), Error: nil},
+		},
+		{
+			name: "DECRBY key holding string value",
+			setup: func() {
+				key := "KEY3"
+				obj := store.NewObj("VAL1", -1, object.ObjTypeString, object.ObjEncodingEmbStr)
+				store.Put(key, obj)
+			},
+			input:          []string{"KEY3", "2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")},
+		},
+		{
+			name: "DECRBY key holding SET type",
+			setup: func() {
+				evalSADD([]string{"SET1", "1", "2", "3"}, store)
+			},
+			input:          []string{"SET1", "2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+		},
+		{
+			name: "DECRBY key holding MAP type",
+			setup: func() {
+				evalHSET([]string{"MAP1", "a", "1", "b", "2", "c", "3"}, store)
+			},
+			input:          []string{"MAP1", "2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+		},
+		{
+			name:           "DECRBY Wrong number of args passed",
+			input:          []string{"KEY4"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'decrby' command")},
+		},
+		{
+			name: "DECRBY Min Overflow",
+			setup: func() {
+				key := "KEY5"
+				obj := store.NewObj(int64(math.MinInt64+3), -1, object.ObjTypeInt, object.ObjEncodingInt)
+				store.Put(key, obj)
+			},
+			input:          []string{"KEY5", "4"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR increment or decrement would overflow")},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store = setupTest(store)
+			if tt.setup != nil {
+				tt.setup()
+			}
+
+			response := evalDECRBY(tt.input, store)
+			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput)
+
+			// Handle comparison for byte slices
+			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
+				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
+					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+				}
+			} else {
+				assert.Equal(t, tt.migratedOutput.Result, response.Result)
+			}
+
+			if tt.migratedOutput.Error != nil {
+				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+			} else {
+				testifyAssert.NoError(t, response.Error)
+			}
+		})
 	}
 }

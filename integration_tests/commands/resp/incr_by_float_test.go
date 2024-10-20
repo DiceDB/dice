@@ -1,4 +1,4 @@
-package async
+package resp
 
 import (
 	"testing"
@@ -10,8 +10,7 @@ func TestINCRBYFLOAT(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 	invalidArgMessage := "ERR wrong number of arguments for 'incrbyfloat' command"
-	invalidValueTypeMessage := "WRONGTYPE Operation against a key holding the wrong kind of value"
-	invalidIncrTypeMessage := "ERR value is not an integer or a float"
+	invalidIncrTypeMessage := "ERR value is not a valid float"
 	valueOutOfRangeMessage := "ERR value is out of range"
 
 	testCases := []struct {
@@ -48,7 +47,7 @@ func TestINCRBYFLOAT(t *testing.T) {
 			name:      "Increment a non numeric value",
 			setupData: "SET foo bar",
 			commands:  []string{"INCRBYFLOAT foo 0.1"},
-			expected:  []interface{}{invalidValueTypeMessage},
+			expected:  []interface{}{invalidIncrTypeMessage},
 		},
 		{
 			name:      "Increment by a non numeric value",

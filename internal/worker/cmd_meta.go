@@ -76,6 +76,11 @@ const (
 	CmdPFAdd       = "PFADD"
 	CmdPFCount     = "PFCOUNT"
 	CmdPFMerge     = "PFMERGE"
+	CmdIncr        = "INCR"
+	CmdIncrBy      = "INCRBY"
+	CmdDecr        = "DECR"
+	CmdDecrBy      = "DECRBY"
+	CmdIncrByFloat = "INCRBYFLOAT"
 )
 
 type CmdMeta struct {
@@ -200,7 +205,22 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdZRange: {
 		CmdType: SingleShard,
 	},
-	CmdAppend: {
+  CmdAppend: {
+    CmdType: SingleShard,
+  },
+	CmdIncr: {
+		CmdType: SingleShard,
+	},
+	CmdIncrBy: {
+		CmdType: SingleShard,
+	},
+	CmdDecr: {
+		CmdType: SingleShard,
+	},
+	CmdDecrBy: {
+		CmdType: SingleShard,
+	},
+	CmdIncrByFloat: {
 		CmdType: SingleShard,
 	},
 	CmdZPopMin: {
