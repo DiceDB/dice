@@ -126,19 +126,31 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 
 	// closing handshake
 	defer func() {
-		_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "close 1000 (normal)"))
+		closeErr := conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "close 1000 (normal)"))
+		if closeErr != nil {
+			s.logger.Warn("Error during closing handshake", slog.Any("error", closeErr))
+		}
 		conn.Close()
 	}()
 
 	for {
 		// read incoming message
-		_, msg, err := conn.ReadMessage()
+		messageType, msg, err := conn.ReadMessage()
 		if err != nil {
 			// acceptable close errors
 			errs := []int{websocket.CloseNormalClosure, websocket.CloseGoingAway, websocket.CloseAbnormalClosure}
-			if !websocket.IsCloseError(err, errs...) {
-				s.logger.Warn("failed to read message from client", slog.Any("error", err))
+			if websocket.IsCloseError(err, errs...) {
+				s.logger.Info("Gracefully Exited")
+				break
+			} else {
+				s.logger.Error("Error reading message", slog.Any("error", err))
+				break
 			}
+
+		}
+
+		if messageType == websocket.CloseMessage {
+			s.logger.Info("graceful shutdown...")
 			break
 		}
 
@@ -225,8 +237,13 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 
 		// Write response with retries for transient errors
 		if err := WriteResponseWithRetries(conn, respBytes, config.DiceConfig.WebSocket.MaxWriteResponseRetries); err != nil {
-			s.logger.Error(fmt.Sprintf("Error reading message: %v", err))
-			break // Exit the loop on write error
+			if errors.Is(err, syscall.EPIPE) {
+				s.logger.Warn("Connection closed abruptly due to broken pipe", slog.Any("error", err))
+			} else {
+				s.logger.Error(fmt.Sprintf("Error writing response: %v", err))
+			}
+			break
+
 		}
 	}
 }
