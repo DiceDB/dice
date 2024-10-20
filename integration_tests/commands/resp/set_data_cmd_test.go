@@ -156,11 +156,7 @@ func TestSetDataCommand(t *testing.T) {
 					time.Sleep(tc.delay[i])
 				}
 				result := FireCommand(conn, cmd)
-				if tc.assertType[i] == "equal" {
-					CustomDeepEqual(t, result, tc.expected[i])
-				} else if tc.assertType[i] == "assert" {
-					assert.Assert(t, result.(int64) <= tc.expected[i].(int64), "Expected %v to be less than or equal to %v", result, tc.expected[i])
-				}
+				CustomDeepEqual(t, result, tc.expected[i])
 			}
 		})
 	}
