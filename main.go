@@ -22,6 +22,7 @@ import (
 	"github.com/dicedb/dice/internal/server/resp"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dice/internal/watchmanager"
 	"github.com/dicedb/dice/internal/worker"
 )
 
@@ -174,8 +175,11 @@ func main() {
 		}
 
 		workerManager := worker.NewWorkerManager(config.DiceConfig.Performance.MaxClients, shardManager)
+		var (
+			cmdWatchSubscriptionChan chan watchmanager.WatchSubscription
+		)
 		// Initialize the RESP Server
-		respServer := resp.NewServer(shardManager, workerManager, cmdWatchChan, serverErrCh, logr)
+		respServer := resp.NewServer(shardManager, workerManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh, logr)
 		serverWg.Add(1)
 		go func() {
 			defer serverWg.Done()
