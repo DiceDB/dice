@@ -884,7 +884,7 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	path := args[1]
+	path, isDefinitePath := utils.ParseInputJSONPath(args[1])
 
 	expr, err := jp.ParseString(path)
 	if err != nil {
@@ -908,9 +908,31 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) *EvalResponse {
 				objectLen = append(objectLen, nil)
 			}
 		default:
+			// If it is a definitePath, and the only value is not JSON, throw wrong type error
+			if isDefinitePath {
+				return &EvalResponse{
+					Result: nil,
+					Error: diceerrors.ErrWrongTypeOperation,
+				}
+			}
 			objectLen = append(objectLen, nil)
 		}
 	}
+
+	// Must return a single integer if it is a definite Path
+	if isDefinitePath {
+		if len(objectLen) == 0 {
+			return &EvalResponse{
+				Result: nil,
+				Error:  nil,
+			}
+		}
+		return &EvalResponse{
+			Result: objectLen[0],
+			Error:  nil,
+		}
+	}
+
 	return &EvalResponse{
 		Result: objectLen,
 		Error:  nil,
