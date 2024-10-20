@@ -31,7 +31,8 @@ var (
 	ErrAborted                    = errors.New("server received ABORT command")
 	ErrEmptyCommand               = errors.New("empty command")
 	ErrInvalidIPAddress           = errors.New("invalid IP address")
-
+	ErrWrongKeyType               = errors.New("ERR Existing key has wrong Dice type")
+	ErrKeyDoesNotExist            = errors.New("ERR could not perform this operation on a key that doesn't exist")
 	// Error generation functions for specific error messages with dynamic parameters.
 	ErrWrongArgumentCount = func(command string) error {
 		return fmt.Errorf("ERR wrong number of arguments for '%s' command", strings.ToLower(command)) // Indicates an incorrect number of arguments for a given command.

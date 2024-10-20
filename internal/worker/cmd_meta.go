@@ -74,6 +74,11 @@ const (
 	CmdJSONClear     = "JSON.CLEAR"
 	CmdJSONStrlen    = "JSON.STRLEN"
 	CmdJSONObjlen    = "JSON.OBJLEN"
+	CmdJSONForget    = "JSON.FORGET"
+	CmdJSONDel       = "JSON.DEL"
+	CmdJSONToggle    = "JSON.TOGGLE"
+	CmdJSONNumIncrBY = "JSON.NUMINCRBY"
+	CmdJSONNumMultBY = "JSON.NUMMULTBY"
 	CmdZAdd          = "ZADD"
 	CmdZRange        = "ZRANGE"
 	CmdZRank         = "ZRANK"
@@ -181,6 +186,21 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdJSONObjlen: {
+		CmdType: SingleShard,
+	},
+	CmdJSONForget: {
+		CmdType: SingleShard,
+	},
+	CmdJSONDel: {
+		CmdType: SingleShard,
+	},
+	CmdJSONToggle: {
+		CmdType: SingleShard,
+	},
+	CmdJSONNumIncrBY: {
+		CmdType: SingleShard,
+	},
+	CmdJSONNumMultBY: {
 		CmdType: SingleShard,
 	},
 	CmdPFAdd: {

@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/axiomhq/hyperloglog"
 	"github.com/bytedance/sonic"
@@ -1191,6 +1192,531 @@ func evalJSONSTRLEN(args []string, store *dstore.Store) *EvalResponse {
 	}
 	return &EvalResponse{
 		Result: strLenResults,
+		Error:  nil,
+	}
+}
+
+// evaLJSONFORGET removes the field specified by the given JSONPath from the JSON document stored under the provided key.
+// calls the evalJSONDEL() with the arguments passed
+// If the specified key has expired or does not exist, it returns 0.
+// Returns encoded error response if incorrect number of arguments
+// If the JSONPath points to the root of the JSON document, the entire key is deleted from the store.
+// Returns an integer reply specified as the number of paths deleted (0 or more)
+func evalJSONFORGET(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("JSON.FORGET"),
+		}
+	}
+
+	return evalJSONDEL(args, store)
+}
+
+// evalJSONDEL deletes a value specified by the given JSON path from the store.
+// It returns an integer indicating the number of paths deleted (0 or more).
+// If the specified key has expired or does not exist, it returns 0.
+// If the number of arguments provided is incorrect, it returns an encoded error response.
+func evalJSONDEL(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("JSON.DEL"),
+		}
+	}
+	key := args[0]
+
+	// Default path is root if not specified
+	path := defaultRootPath
+	if len(args) > 1 {
+		path = args[1]
+	}
+
+	// Retrieve the object from the database
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: 0,
+			Error:  nil,
+		}
+	}
+
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	jsonData := obj.Value
+
+	_, err := sonic.Marshal(jsonData)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongKeyType,
+		}
+	}
+
+	if len(args) == 1 || path == defaultRootPath {
+		store.Del(key)
+		return &EvalResponse{
+			Result: int64(1),
+			Error:  nil,
+		}
+	}
+
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrJSONPathNotFound(path),
+		}
+	}
+	results := expr.Get(jsonData)
+
+	hasBrackets := strings.Contains(path, "[") && strings.Contains(path, "]")
+
+	// If the command has square brackets then we have to delete an element inside an array
+	if hasBrackets {
+		_, err = expr.Remove(jsonData)
+	} else {
+		err = expr.Del(jsonData)
+	}
+
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(err.Error()),
+		}
+	}
+	// Create a new object with the updated JSON data
+	newObj := store.NewObj(jsonData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+	store.Put(key, newObj)
+
+	return &EvalResponse{
+		Result: int64(len(results)),
+		Error:  nil,
+	}
+}
+
+// evalJSONTOGGLE toggles a boolean value stored at the specified key and path.
+// args must contain at least the key and path (where the boolean is located).
+// If the key does not exist or is expired, it returns response.RespNIL.
+// If the field at the specified path is not a boolean, it returns an encoded error response.
+// If the boolean is `true`, it toggles to `false` (returns :0), and if `false`, it toggles to `true` (returns :1).
+// Returns an encoded error response if the incorrect number of arguments is provided.
+func evalJSONTOGGLE(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("JSON.TOGGLE"),
+		}
+	}
+	key := args[0]
+	path := args[1]
+
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrKeyDoesNotExist,
+		}
+	}
+
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	jsonData := obj.Value
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrJSONPathNotFound(path),
+		}
+	}
+
+	var toggleResults []interface{}
+	modified := false
+
+	_, err = expr.Modify(jsonData, func(value interface{}) (interface{}, bool) {
+		boolValue, ok := value.(bool)
+		if !ok {
+			toggleResults = append(toggleResults, nil)
+			return value, false
+		}
+		newValue := !boolValue
+		toggleResults = append(toggleResults, boolToInt(newValue))
+		modified = true
+		return newValue, true
+	})
+
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("failed to toggle values"),
+		}
+	}
+
+	if modified {
+		obj.Value = jsonData
+	}
+
+	toggleResults = ReverseSlice(toggleResults)
+	return &EvalResponse{
+		Result: toggleResults,
+		Error:  nil,
+	}
+}
+
+// formatFloat formats float64 as string.
+// Optionally appends a decimal (.0) for whole numbers,
+// if b is true.
+func formatFloat(f float64, b bool) string {
+	formatted := strconv.FormatFloat(f, 'f', -1, 64)
+	if b {
+		parts := strings.Split(formatted, ".")
+		if len(parts) == 1 {
+			formatted += ".0"
+		}
+	}
+	return formatted
+}
+
+// takes original value, increment values (float or int), a flag representing if increment is float
+// returns new value, string representation, a boolean representing if the value was modified
+func incrementValue(value any, isIncrFloat bool, incrFloat float64, incrInt int64) (newVal interface{}, stringRepresentation string, isModified bool) {
+	switch utils.GetJSONFieldType(value) {
+	case utils.NumberType:
+		oldVal := value.(float64)
+		var newVal float64
+		if isIncrFloat {
+			newVal = oldVal + incrFloat
+		} else {
+			newVal = oldVal + float64(incrInt)
+		}
+		resultString := formatFloat(newVal, isIncrFloat)
+		return newVal, resultString, true
+	case utils.IntegerType:
+		if isIncrFloat {
+			oldVal := float64(value.(int64))
+			newVal := oldVal + incrFloat
+			resultString := formatFloat(newVal, isIncrFloat)
+			return newVal, resultString, true
+		} else {
+			oldVal := value.(int64)
+			newVal := oldVal + incrInt
+			resultString := fmt.Sprintf("%d", newVal)
+			return newVal, resultString, true
+		}
+	default:
+		return value, null, false
+	}
+}
+
+func evalJSONNUMINCRBY(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 3 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("JSON.NUMINCRBY"),
+		}
+	}
+	key := args[0]
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrKeyDoesNotExist,
+		}
+	}
+
+	// Check if the object is of JSON type
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	path := args[1]
+
+	jsonData := obj.Value
+	// Parse the JSONPath expression
+	expr, err := jp.ParseString(path)
+
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrJSONPathNotFound(path),
+		}
+	}
+
+	isIncrFloat := false
+
+	for i, r := range args[2] {
+		if !unicode.IsDigit(r) && r != '.' && r != '-' {
+			if i == 0 {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrGeneral(fmt.Sprintf("expected value at line 1 column %d", i+1)),
+				}
+			}
+
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral(fmt.Sprintf("trailing characters at line 1 column %d", i+1)),
+			}
+		}
+		if r == '.' {
+			isIncrFloat = true
+		}
+	}
+	var incrFloat float64
+	var incrInt int64
+	if isIncrFloat {
+		incrFloat, err = strconv.ParseFloat(args[2], 64)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrIntegerOutOfRange,
+			}
+		}
+	} else {
+		incrInt, err = strconv.ParseInt(args[2], 10, 64)
+
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrIntegerOutOfRange,
+			}
+		}
+	}
+	results := expr.Get(jsonData)
+
+	if len(results) == 0 {
+		respString := "[]"
+		return &EvalResponse{
+			Result: respString,
+			Error:  nil,
+		}
+	}
+
+	resultArray := make([]string, 0, len(results))
+
+	if path == defaultRootPath {
+		newValue, resultString, isModified := incrementValue(jsonData, isIncrFloat, incrFloat, incrInt)
+		if isModified {
+			jsonData = newValue
+		}
+		resultArray = append(resultArray, resultString)
+	} else {
+		// Execute the JSONPath query
+		_, err := expr.Modify(jsonData, func(value any) (interface{}, bool) {
+			newValue, resultString, isModified := incrementValue(value, isIncrFloat, incrFloat, incrInt)
+			resultArray = append(resultArray, resultString)
+			return newValue, isModified
+		})
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrJSONPathNotFound(path),
+			}
+		}
+	}
+
+	resultString := `[` + strings.Join(resultArray, ",") + `]`
+
+	obj.Value = jsonData
+
+	return &EvalResponse{
+		Result: resultString,
+		Error:  nil,
+	}
+}
+
+// Returns the new value after incrementing or multiplying the existing value
+func incrMultValue(value any, multiplier interface{}, operation jsonOperation) (newVal interface{}, resultString string, isModified bool) {
+	switch utils.GetJSONFieldType(value) {
+	case utils.NumberType:
+		oldVal := value.(float64)
+		var newVal float64
+		if v, ok := multiplier.(float64); ok {
+			switch operation {
+			case IncrBy:
+				newVal = oldVal + v
+			case MultBy:
+				newVal = oldVal * v
+			}
+		} else {
+			v, _ := multiplier.(int64)
+			switch operation {
+			case IncrBy:
+				newVal = oldVal + float64(v)
+			case MultBy:
+				newVal = oldVal * float64(v)
+			}
+		}
+		resultString := strconv.FormatFloat(newVal, 'f', -1, 64)
+		return newVal, resultString, true
+	case utils.IntegerType:
+		if v, ok := multiplier.(float64); ok {
+			oldVal := float64(value.(int64))
+			var newVal float64
+			switch operation {
+			case IncrBy:
+				newVal = oldVal + v
+			case MultBy:
+				newVal = oldVal * v
+			}
+			resultString := strconv.FormatFloat(newVal, 'f', -1, 64)
+			return newVal, resultString, true
+		} else {
+			v, _ := multiplier.(int64)
+			oldVal := value.(int64)
+			var newVal int64
+			switch operation {
+			case IncrBy:
+				newVal = oldVal + v
+			case MultBy:
+				newVal = oldVal * v
+			}
+			resultString := strconv.FormatInt(newVal, 10)
+			return newVal, resultString, true
+		}
+	default:
+		return value, "null", false
+	}
+}
+
+// evalJSONNUMMULTBY multiplies the JSON fields matching the specified JSON path at the specified key
+// args must contain key, JSON path and the multiplier value
+// Returns encoded error response if incorrect number of arguments
+// Returns encoded error if the JSON path or key is invalid
+// Returns bulk string reply specified as a stringified updated values for each path
+// Returns null if matching field is non-numerical
+func evalJSONNUMMULTBY(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 3 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("JSON.NUMMULTBY"),
+		}
+	}
+	key := args[0]
+
+	// Retrieve the object from the database
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrKeyDoesNotExist,
+		}
+	}
+
+	// Check if the object is of JSON type
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+	path := args[1]
+	// Parse the JSONPath expression
+	expr, err := jp.ParseString(path)
+
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrJSONPathNotFound(path),
+		}
+	}
+
+	// Get json matching expression
+	jsonData := obj.Value
+	results := expr.Get(jsonData)
+	if len(results) == 0 {
+		return &EvalResponse{
+			Result: "[]",
+			Error:  nil,
+		}
+	}
+
+	for i, r := range args[2] {
+		if !unicode.IsDigit(r) && r != '.' && r != '-' && r != 'e' && r != 'E' {
+			if i == 0 {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrGeneral(fmt.Sprintf("expected value at line 1 column %d", i+1)),
+				}
+			}
+
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral(fmt.Sprintf("trailing characters at line 1 column %d", i+1)),
+			}
+		}
+	}
+
+	// Parse the mulplier value
+	multiplier, err := parseFloatInt(args[2])
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrIntegerOutOfRange,
+		}
+	}
+
+	// Update matching values using Modify
+	resultArray := make([]string, 0, len(results))
+	if path == defaultRootPath {
+		newValue, resultString, modified := incrMultValue(jsonData, multiplier, MultBy)
+		if modified {
+			jsonData = newValue
+		}
+		resultArray = append(resultArray, resultString)
+	} else {
+		_, err := expr.Modify(jsonData, func(value any) (interface{}, bool) {
+			newValue, resultString, modified := incrMultValue(value, multiplier, MultBy)
+			resultArray = append(resultArray, resultString)
+			return newValue, modified
+		})
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrJSONPathNotFound(path),
+			}
+		}
+	}
+
+	// Stringified updated values
+	resultString := `[` + strings.Join(resultArray, ",") + `]`
+
+	newObj := &object.Obj{
+		Value:        jsonData,
+		TypeEncoding: object.ObjTypeJSON,
+	}
+	exp, ok := dstore.GetExpiry(obj, store)
+
+	var exDurationMs int64 = -1
+	if ok {
+		exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
+	}
+	// newObj has default expiry time of -1 , we need to set it
+	if exDurationMs > 0 {
+		store.SetExpiry(newObj, exDurationMs)
+	}
+
+	store.Put(key, newObj)
+	return &EvalResponse{
+		Result: resultString,
 		Error:  nil,
 	}
 }

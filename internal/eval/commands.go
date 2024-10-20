@@ -160,9 +160,10 @@ var (
     	1.String ("true"/"false") that represents the resulting Boolean value.
     	2.NONEXISTENT if the document key does not exist.
     	3.WRONGTYPE error if the value at the path is not a Boolean value.`,
-		Eval:     evalJSONTOGGLE,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalJSONTOGGLE,
 	}
 	jsontypeCmdMeta = DiceCmdMeta{
 		Name: "JSON.TYPE",
@@ -191,9 +192,10 @@ var (
 		Returns an integer reply specified as the number of paths deleted (0 or more).
 		Returns RespZero if the key doesn't exist or key is expired.
 		Error reply: If the number of arguments is incorrect.`,
-		Eval:     evalJSONDEL,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalJSONDEL,
 	}
 	jsonarrappendCmdMeta = DiceCmdMeta{
 		Name: "JSON.ARRAPPEND",
@@ -210,9 +212,10 @@ var (
 		Returns an integer reply specified as the number of paths deleted (0 or more).
 		Returns RespZero if the key doesn't exist or key is expired.
 		Error reply: If the number of arguments is incorrect.`,
-		Eval:     evalJSONFORGET,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalJSONFORGET,
 	}
 	jsonarrlenCmdMeta = DiceCmdMeta{
 		Name: "JSON.ARRLEN",
@@ -229,9 +232,10 @@ var (
 		Name: "JSON.NUMMULTBY",
 		Info: `JSON.NUMMULTBY key path value
 		Multiply the number value stored at the specified path by a value.`,
-		Eval:     evalJSONNUMMULTBY,
-		Arity:    3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalJSONNUMMULTBY,
 	}
 	jsonobjlenCmdMeta = DiceCmdMeta{
 		Name: "JSON.OBJLEN",
@@ -1009,11 +1013,12 @@ var (
 		Arity: 1,
 	}
 	jsonnumincrbyCmdMeta = DiceCmdMeta{
-		Name:     "JSON.NUMINCRBY",
-		Info:     `Increment the number value stored at path by number.`,
-		Eval:     evalJSONNUMINCRBY,
-		Arity:    3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Name:       "JSON.NUMINCRBY",
+		Info:       `Increment the number value stored at path by number.`,
+		Arity:      3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalJSONNUMINCRBY,
 	}
 	dumpkeyCMmdMeta = DiceCmdMeta{
 		Name: "DUMP",
