@@ -38,10 +38,9 @@ A SQL-like query specifying the data to be monitored and operation to be perform
 ### Syntax
 
 ```sql
-SELECT $key,
-       $value WHERE condition [AND | OR] $key LIKE 'pattern' [AND | OR] ($key != n [AND | OR] $value > n)
-ORDER BY field [ASC | DESC]
-    LIMIT n
+SELECT $key, $value
+WHERE condition
+ORDER BY field [ASC | DESC] LIMIT n
 ```
 
 ### SELECT Clause
