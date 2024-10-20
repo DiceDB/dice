@@ -70,6 +70,7 @@ const (
 	CmdJSONObjlen  = "JSON.OBJLEN"
 	CmdZAdd        = "ZADD"
 	CmdZRange      = "ZRANGE"
+	CmdZRank       = "ZRANK"
 	CmdPFAdd       = "PFADD"
 	CmdPFCount     = "PFCOUNT"
 	CmdPFMerge     = "PFMERGE"
@@ -187,6 +188,9 @@ var CommandsMeta = map[string]CmdMeta{
 
 	// Sorted set commands
 	CmdZAdd: {
+		CmdType: SingleShard,
+	},
+	CmdZRank: {
 		CmdType: SingleShard,
 	},
 	CmdZRange: {

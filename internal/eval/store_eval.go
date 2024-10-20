@@ -453,6 +453,69 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+// evalZRANK returns the rank of the member in the sorted set stored at key.
+// The rank (or index) is 0-based, which means that the member with the lowest score has rank 0.
+// If the 'WITHSCORE' option is specified, it returns both the rank and the score of the member.
+// Returns nil if the key does not exist or the member is not a member of the sorted set.
+func evalZRANK(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 || len(args) > 3 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("ZRANK"),
+		}
+	}
+
+	key := args[0]
+	member := args[1]
+	withScore := false
+
+	if len(args) == 3 {
+		if !strings.EqualFold(args[2], WithScore) {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrSyntax,
+			}
+		}
+		withScore = true
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	sortedSet, err := sortedset.FromObject(obj)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	rank, score := sortedSet.RankWithScore(member, false)
+	if rank == -1 {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	if withScore {
+		return &EvalResponse{
+			Result: []interface{}{rank, score},
+			Error:  nil,
+		}
+	}
+
+	return &EvalResponse{
+		Result: rank,
+		Error:  nil,
+	}
+}
+
 // evalJSONCLEAR Clear container values (arrays/objects) and set numeric values to 0,
 // Already cleared values are ignored for empty containers and zero numbers
 // args must contain at least the key;  (path unused in this implementation)
@@ -821,7 +884,7 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	path := args[1]
+	path, isDefinitePath := utils.ParseInputJSONPath(args[1])
 
 	expr, err := jp.ParseString(path)
 	if err != nil {
@@ -845,9 +908,31 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) *EvalResponse {
 				objectLen = append(objectLen, nil)
 			}
 		default:
+			// If it is a definitePath, and the only value is not JSON, throw wrong type error
+			if isDefinitePath {
+				return &EvalResponse{
+					Result: nil,
+					Error: diceerrors.ErrWrongTypeOperation,
+				}
+			}
 			objectLen = append(objectLen, nil)
 		}
 	}
+
+	// Must return a single integer if it is a definite Path
+	if isDefinitePath {
+		if len(objectLen) == 0 {
+			return &EvalResponse{
+				Result: nil,
+				Error:  nil,
+			}
+		}
+		return &EvalResponse{
+			Result: objectLen[0],
+			Error:  nil,
+		}
+	}
+
 	return &EvalResponse{
 		Result: objectLen,
 		Error:  nil,
@@ -1012,6 +1097,14 @@ func evalZPOPMIN(args []string, store *dstore.Store) *EvalResponse {
 			}
 		}
 		count = countArg
+	}
+
+	// If count is less than 1, empty array is returned
+	if count < 1 {
+		return &EvalResponse{
+			Result: []string{},
+			Error:  nil,
+		}
 	}
 
 	// If the count argument is present, return all the members with lowest score sorted in ascending order.

@@ -1069,6 +1069,55 @@ func TestJsonObjLen(t *testing.T) {
 			},
 			expected: []interface{}{"ERR Path '$[1' does not exist"},
 		},
+		{
+			name:     "JSON.OBJLEN with legacy path - root",
+			commands: []HTTPCommand{
+				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": "."}},
+			},
+			expected: []interface{}{3.0},
+		},
+		{
+			name:     "JSON.OBJLEN with legacy path - inner existing path",
+			commands: []HTTPCommand{
+				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": ".partner2"}},
+			},
+			expected: []interface{}{2.0},
+		},
+		{
+			name:     "JSON.OBJLEN with legacy path - inner existing path v2",
+			commands: []HTTPCommand{
+				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": "partner"}},
+			},
+			expected: []interface{}{2.0},
+		},
+		{
+			name:     "JSON.OBJLEN with legacy path - inner non-existent path",
+			commands: []HTTPCommand{
+				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": ".idonotexist"}},
+			},
+			expected: []interface{}{nil},
+		},
+		{
+			name:     "JSON.OBJLEN with legacy path - inner non-existent path v2",
+			commands: []HTTPCommand{
+				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": "idonotexist"}},
+			},
+			expected: []interface{}{nil},
+		},
+		{
+			name:     "JSON.OBJLEN with legacy path - inner existent path with nonJSON object",
+			commands: []HTTPCommand{
+				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": ".name"}},
+			},
+			expected: []interface{}{"WRONGTYPE Operation against a key holding the wrong kind of value"},
+		},
+		{
+			name:     "JSON.OBJLEN with legacy path - inner existent path recursive object",
+			commands: []HTTPCommand{
+				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": "..partner"}},
+			},
+			expected: []interface{}{2.0},
+		},
 	}
 
 	for _, tc := range testCases {
