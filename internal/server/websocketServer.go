@@ -137,11 +137,9 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 			if websocket.IsCloseError(err, errs...) {
 				slog.Info("Gracefully Exited")
 				break
-			} else {
-				slog.Error("Error reading message", slog.Any("error", err))
-				break
 			}
-
+			slog.Error("Error reading message", slog.Any("error", err))
+			break
 		}
 
 		if messageType == websocket.CloseMessage {
@@ -194,7 +192,6 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		resp := <-s.ioChan
 		if err := s.processResponse(conn, diceDBCmd, resp); err != nil {
 			break
-
 		}
 	}
 }
