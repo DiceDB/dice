@@ -934,6 +934,15 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 		Error:  nil,
 	}
 }
+
+// Increments the number stored at field in the hash stored at key by increment.
+//
+// If key does not exist, a new key holding a hash is created.
+// If field does not exist the value is set to the increment value passed
+//
+// The range of values supported by HINCRBY is limited to 64-bit signed integers.
+//
+// Usage: HINCRBY key field increment
 func evalHINCRBY(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) < 3 {
 		return &EvalResponse{
@@ -983,6 +992,15 @@ func evalHINCRBY(args []string, store *dstore.Store) *EvalResponse {
 		Error:  nil,
 	}
 }
+
+// Increments the number stored at field in the hash stored at key by the specified floating point increment.
+//
+// If key does not exist, a new key holding a hash is created.
+// If field does not exist, the value is set to the increment passed before the operation is performed.
+//
+// The precision of the increment is not restricted to integers, allowing for floating point values.
+//
+// Usage: HINCRBYFLOAT key field increment
 func evalHINCRBYFLOAT(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) < 3 {
 		return &EvalResponse{
