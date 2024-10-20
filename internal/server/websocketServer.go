@@ -146,7 +146,6 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 				s.logger.Error("Error reading message", slog.Any("error", err))
 				break
 			}
-
 		}
 
 		if messageType == websocket.CloseMessage {
@@ -243,7 +242,6 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 				s.logger.Error(fmt.Sprintf("Error writing response: %v", err))
 			}
 			break
-
 		}
 	}
 }
