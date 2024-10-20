@@ -1,8 +1,8 @@
 ---
 title: GETRANGE
-description: The `GETRANGE` command in DiceDB is used get a substring of string provided the start and end.
+description: The `GETRANGE` command in DiceDB is used to get a substring of a string, provided the start and end indices
 ---
-The `GETRANGE` command in DiceDB is used get a substring of string provided the start and end.
+The `GETRANGE` command in DiceDB is used to get a substring of a string, provided the start and end indices.
 
 ## Syntax
 
@@ -14,13 +14,13 @@ GETRANGE key start end
 | Parameter | Description                                                               | Type    | Required |
 |-----------|---------------------------------------------------------------------------|---------|----------|
 | `key`     | The name of the key to be set.                                            | String  | Yes      |
-| `start`   | The starting index of the required substring                              | Integer | Yes      |
+| `start`   | The starting index of the required substring.                              | Integer | Yes      |
 | `end`     | The ending index of the required substring.                               | Integer | Yes      |
 ## Return values
 
 | Condition                                      | Return Value                                      |
 |------------------------------------------------|---------------------------------------------------|
-| if key contains a valid stirng                 | a substring based on the start and end indices    |
+| if key contains a valid string                 | a substring based on the start and end indices    |
 | if `start` is greater than `end`               | an empty string is returned                       |
 | if the `end` exceeds the length of the string present at `key` | the entire string is returned     |
 | if the `start` is greater than the length of the string | an empty string is returned.             |
@@ -30,7 +30,7 @@ GETRANGE key start end
 - If `start` is greater than `end`, the `GETRANGE` command returns an empty string.
 - If `start` is not within the length of the string, the `GETRANGE` command returns an empty string.
 - `start` and `end` can be negative which removed `end + 1` characters from the other side of the string.
-- If both `start` and `end` are within the string's length, the resulting substring includes all characters from start to end, inclusive.
+- Both `start` and `end` can be negative, which removes characters from the string, starting from the `end + 1` position on the right.
 
 ## Errors
 1. `Wrong type of value or key`:
@@ -43,7 +43,7 @@ GETRANGE key start end
    - Error Message: `(error) ERROR wrong number of arguments for 'GETRANGE' command`
    - If the number of arguments are not exactly equal to 4.
 
-3. `Invalid Type given as input for start and end`
+3. `Invalid input type for start and end`
 
    - Error Message: `(error) ERROR value is not an integer or out of range`
    - If `start` and `end` are not integers.
@@ -93,7 +93,7 @@ Trying to use `GETRANGE` without giving the value
 (error) ERROR wrong number of arguments for 'getrange' command
 ```
 
-Trying to use `GETRANGE` on a invalid data type.
+Trying to use `GETRANGE` on an invalid data type..
 
 ```bash
 127.0.0.1:7379> LPUSH foo apple
