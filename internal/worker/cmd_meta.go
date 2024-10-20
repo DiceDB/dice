@@ -206,6 +206,9 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdZAdd: {
 		CmdType: SingleShard,
 	},
+	CmdZRank: {
+		CmdType: SingleShard,
+	},
 	CmdZRange: {
 		CmdType: SingleShard,
 	},

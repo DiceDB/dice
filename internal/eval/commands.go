@@ -1060,6 +1060,17 @@ var (
 		IsMigrated: true,
 		NewEval:    evalZPOPMIN,
 	}
+	zrankCmdMeta = DiceCmdMeta{
+		Name: "ZRANK",
+		Info: `ZRANK key member [WITHSCORE]
+		Returns the rank of member in the sorted set stored at key, with the scores ordered from low to high.
+		The rank (or index) is 0-based, which means that the member with the lowest score has rank 0.
+		The optional WITHSCORE argument supplements the command's reply with the score of the element returned.`,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalZRANK,
+	}
 	bitfieldCmdMeta = DiceCmdMeta{
 		Name: "BITFIELD",
 		Info: `The command treats a string as an array of bits as well as bytearray data structure,
@@ -1251,6 +1262,7 @@ func init() {
 	DiceCmds["ZADD"] = zaddCmdMeta
 	DiceCmds["ZRANGE"] = zrangeCmdMeta
 	DiceCmds["ZPOPMIN"] = zpopminCmdMeta
+	DiceCmds["ZRANK"] = zrankCmdMeta
 	DiceCmds["JSON.STRAPPEND"] = jsonstrappendCmdMeta
 }
 

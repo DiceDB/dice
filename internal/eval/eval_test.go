@@ -110,6 +110,7 @@ func TestEval(t *testing.T) {
 	testEvalZADD(t, store)
 	testEvalZRANGE(t, store)
 	testEvalZPOPMIN(t, store)
+	testEvalZRANK(t, store)
 	testEvalHVALS(t, store)
 	testEvalBitField(t, store)
 	testEvalHINCRBYFLOAT(t, store)
@@ -5943,6 +5944,112 @@ func BenchmarkEvalZPOPMIN(b *testing.B) {
 				dstore.ResetStore(store)
 				bm.setup(store)
 				evalZPOPMIN(bm.input, store)
+			}
+		})
+	}
+}
+
+func testEvalZRANK(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"ZRANK with non-existing key": {
+			input: []string{"non_existing_key", "member"},
+			migratedOutput: EvalResponse{
+				Result: clientio.NIL,
+				Error:  nil,
+			},
+		},
+		"ZRANK with existing member": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+			},
+			input: []string{"myzset", "member2"},
+			migratedOutput: EvalResponse{
+				Result: int64(1),
+				Error:  nil,
+			},
+		},
+		"ZRANK with non-existing member": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+			},
+			input: []string{"myzset", "non_existing_member"},
+			migratedOutput: EvalResponse{
+				Result: clientio.NIL,
+				Error:  nil,
+			},
+		},
+		"ZRANK with WITHSCORE option": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+			},
+			input: []string{"myzset", "member2", "WITHSCORE"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{int64(1), float64(2)},
+				Error:  nil,
+			},
+		},
+		"ZRANK with invalid option": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+			},
+			input: []string{"myzset", "member2", "INVALID_OPTION"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrSyntax,
+			},
+		},
+		"ZRANK with multiple members having same score": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1", "1", "member2", "1", "member3"}, store)
+			},
+			input: []string{"myzset", "member3"},
+			migratedOutput: EvalResponse{
+				Result: int64(2),
+				Error:  nil,
+			},
+		},
+		"ZRANK with non-integer scores": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1.5", "member1", "2.5", "member2"}, store)
+			},
+			input: []string{"myzset", "member2"},
+			migratedOutput: EvalResponse{
+				Result: int64(1),
+				Error:  nil,
+			},
+		},
+		"ZRANK with too many arguments": {
+			input: []string{"myzset", "member", "WITHSCORES", "extra"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("ZRANK"),
+			},
+		},
+	}
+
+	runMigratedEvalTests(t, tests, evalZRANK, store)
+}
+
+func BenchmarkEvalZRANK(b *testing.B) {
+	store := dstore.NewStore(nil, nil)
+
+	// Set up initial sorted set
+	evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+
+	benchmarks := []struct {
+		name      string
+		input     []string
+		withScore bool
+	}{
+		{"ZRANK existing member", []string{"myzset", "member3"}, false},
+		{"ZRANK non-existing member", []string{"myzset", "nonexistent"}, false},
+		{"ZRANK with WITHSCORE", []string{"myzset", "member2", "WITHSCORE"}, true},
+	}
+
+	for _, bm := range benchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				evalZRANK(bm.input, store)
 			}
 		})
 	}
