@@ -83,6 +83,9 @@ const (
 	CmdDecr        = "DECR"
 	CmdDecrBy      = "DECRBY"
 	CmdIncrByFloat = "INCRBYFLOAT"
+	CmdHIncrBy      = "HINCRBY"
+	CmdHIncrByFloat = "HINCRBYFLOAT"
+	CmdHRandField   = "HRANDFIELD"
 )
 
 type CmdMeta struct {
@@ -158,6 +161,15 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdTypeOf: {
+		CmdType: SingleShard,
+	},
+  CmdHIncrBy: {
+		CmdType: SingleShard,
+	},
+	CmdHIncrByFloat: {
+		CmdType: SingleShard,
+	},
+	CmdHRandField: {
 		CmdType: SingleShard,
 	},
 
