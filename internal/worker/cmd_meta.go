@@ -62,25 +62,28 @@ const (
 
 // Watch commands
 const (
-	CmdGetWatch    = "GET.WATCH"
-	CmdZRangeWatch = "ZRANGE.WATCH"
-	CmdGetRange    = "GETRANGE"
-	CmdAppend      = "APPEND"
-	CmdZPopMin     = "ZPOPMIN"
-	CmdJSONClear   = "JSON.CLEAR"
-	CmdJSONStrlen  = "JSON.STRLEN"
-	CmdJSONObjlen  = "JSON.OBJLEN"
-	CmdZAdd        = "ZADD"
-	CmdZRange      = "ZRANGE"
-	CmdZRank       = "ZRANK"
-	CmdPFAdd       = "PFADD"
-	CmdPFCount     = "PFCOUNT"
-	CmdPFMerge     = "PFMERGE"
-	CmdIncr        = "INCR"
-	CmdIncrBy      = "INCRBY"
-	CmdDecr        = "DECR"
-	CmdDecrBy      = "DECRBY"
-	CmdIncrByFloat = "INCRBYFLOAT"
+	CmdGetWatch     = "GET.WATCH"
+	CmdZRangeWatch  = "ZRANGE.WATCH"
+	CmdZPopMin      = "ZPOPMIN"
+	CmdJSONClear    = "JSON.CLEAR"
+	CmdJSONStrlen   = "JSON.STRLEN"
+	CmdJSONObjlen   = "JSON.OBJLEN"
+	CmdZAdd         = "ZADD"
+	CmdZRange       = "ZRANGE"
+	CmdZRank        = "ZRANK"
+	CmdPFAdd        = "PFADD"
+	CmdPFCount      = "PFCOUNT"
+	CmdPFMerge      = "PFMERGE"
+	CmdIncr         = "INCR"
+	CmdIncrBy       = "INCRBY"
+	CmdDecr         = "DECR"
+	CmdDecrBy       = "DECRBY"
+	CmdIncrByFloat  = "INCRBYFLOAT"
+	CmdHIncrBy      = "HINCRBY"
+	CmdHIncrByFloat = "HINCRBYFLOAT"
+	CmdHRandField   = "HRANDFIELD"
+	CmdGetRange     = "GETRANGE"
+	CmdAppend       = "APPEND"
 )
 
 type CmdMeta struct {
@@ -147,6 +150,15 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdPFMerge: {
+		CmdType: SingleShard,
+	},
+	CmdHIncrBy: {
+		CmdType: SingleShard,
+	},
+	CmdHIncrByFloat: {
+		CmdType: SingleShard,
+	},
+	CmdHRandField: {
 		CmdType: SingleShard,
 	},
 
