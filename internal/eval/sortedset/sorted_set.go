@@ -68,28 +68,6 @@ func (ss *Set) Upsert(score float64, member string) bool {
 	return !exists
 }
 
-func (ss *Set) RankWithScore(member string, reverse bool) (rank int64, score float64) {
-	score, exists := ss.memberMap[member]
-	if !exists {
-		return -1, 0
-	}
-
-	rank = int64(0)
-	ss.tree.Ascend(func(item btree.Item) bool {
-		if item.(*Item).Member == member {
-			return false
-		}
-		rank++
-		return true
-	})
-
-	if reverse {
-		rank = int64(len(ss.memberMap)) - rank - 1
-	}
-
-	return
-}
-
 // Remove removes a member from the  and returns true if the member was removed, false if it did not exist.
 func (ss *Set) Remove(member string) bool {
 	score, exists := ss.memberMap[member]
