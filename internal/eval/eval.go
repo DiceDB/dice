@@ -599,12 +599,16 @@ func EvalCLIENT(args []string, httpOp bool, client *comm.Client, store *dstore.S
 		if client.Name == utils.EmptyStr {
 			return clientio.RespNIL
 		}
-		return clientio.Encode(client.Name, true)
+		return clientio.Encode(client.Name, false)
 	case SETNAME:
 		if len(args) != 2 {
 			return clientio.Encode(diceerrors.ErrWrongArgumentCount("CLIENT|SETNAME"), false)
 		}
-		client.Name = args[1]
+		clientName := args[1]
+		if containsSpacesNewlinesOrSpecialChars(clientName) {
+			return clientio.Encode(diceerrors.NewErrWithMessage("Client names cannot contain spaces, newlines or special characters."), false)
+		}
+		client.Name = clientName
 		return clientio.RespOK
 	default:
 		return clientio.Encode(diceerrors.ErrUnknownSubcommand(subcommand), false)

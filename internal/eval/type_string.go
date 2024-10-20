@@ -2,6 +2,7 @@ package eval
 
 import (
 	"strconv"
+	"unicode"
 
 	dstore "github.com/dicedb/dice/internal/object"
 )
@@ -16,4 +17,13 @@ func deduceTypeEncoding(v string) (o, e uint8) {
 		return dstore.ObjTypeString, dstore.ObjEncodingEmbStr
 	}
 	return dstore.ObjTypeString, dstore.ObjEncodingRaw
+}
+
+func containsSpacesNewlinesOrSpecialChars(s string) bool {
+	for _, r := range s {
+		if unicode.IsSpace(r) || !unicode.IsLetter(r) && !unicode.IsDigit(r) {
+			return true
+		}
+	}
+	return false
 }
