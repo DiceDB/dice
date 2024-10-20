@@ -120,20 +120,32 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 
 	// closing handshake
 	defer func() {
-		_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "close 1000 (normal)"))
+		closeErr := conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "close 1000 (normal)"))
+		if closeErr != nil {
+			slog.Warn("Error during closing handshake", slog.Any("error", closeErr))
+		}
 		conn.Close()
 	}()
 
 	maxRetries := config.DiceConfig.WebSocket.MaxWriteResponseRetries
 	for {
 		// read incoming message
-		_, msg, err := conn.ReadMessage()
+		messageType, msg, err := conn.ReadMessage()
 		if err != nil {
 			// acceptable close errors
 			errs := []int{websocket.CloseNormalClosure, websocket.CloseGoingAway, websocket.CloseAbnormalClosure}
-			if !websocket.IsCloseError(err, errs...) {
-				slog.Warn("failed to read message from client", slog.Any("error", err))
+			if websocket.IsCloseError(err, errs...) {
+				slog.Info("Gracefully Exited")
+				break
+			} else {
+				slog.Error("Error reading message", slog.Any("error", err))
+				break
 			}
+
+		}
+
+		if messageType == websocket.CloseMessage {
+			slog.Info("graceful shutdown...")
 			break
 		}
 
@@ -182,6 +194,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		resp := <-s.ioChan
 		if err := s.processResponse(conn, diceDBCmd, resp); err != nil {
 			break
+
 		}
 	}
 }
