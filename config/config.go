@@ -238,6 +238,7 @@ func setupFlags() {
 	flag.IntVar(&KeysLimit, "keys-limit", KeysLimit, "keys limit for the dicedb server. "+
 		"This flag controls the number of keys each shard holds at startup. You can multiply this number with the "+
 		"total number of shard threads to estimate how much memory will be required at system start up.")
+	flag.BoolVar(&EnableProfiling, "enable-profiling", false, "enable profiling for the dicedb server")
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.Parse()
