@@ -362,9 +362,10 @@ var (
 		The value for the queried key should be of integer format,
 		if not INCR returns encoded error response.
 		evalINCR returns the incremented value for the key if there are no errors.`,
-		Eval:     evalINCR,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+		NewEval:    evalINCR,
+		IsMigrated: true,
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
 	}
 	incrByFloatCmdMeta = DiceCmdMeta{
 		Name: "INCRBYFLOAT",
@@ -375,8 +376,9 @@ var (
 		If the value at the key is a string, it should be parsable to float64,
 		if not INCRBYFLOAT returns an  error response.
 		INCRBYFLOAT returns the incremented value for the key after applying the specified increment if there are no errors.`,
-		Eval:  evalINCRBYFLOAT,
-		Arity: 2,
+		NewEval:    evalINCRBYFLOAT,
+		IsMigrated: true,
+		Arity:      2,
 	}
 	infoCmdMeta = DiceCmdMeta{
 		Name: "INFO",
@@ -562,9 +564,10 @@ var (
 		The value for the queried key should be of integer format,
 		if not DECR returns encoded error response.
 		evalDECR returns the decremented value for the key if there are no errors.`,
-		Eval:     evalDECR,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+		NewEval:    evalDECR,
+		IsMigrated: true,
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
 	}
 	decrByCmdMeta = DiceCmdMeta{
 		Name: "DECRBY",
@@ -576,9 +579,10 @@ var (
 		The value for the queried key should be of integer format,
 		if not, DECRBY returns an encoded error response.
 		evalDECRBY returns the decremented value for the key after applying the specified decrement if there are no errors.`,
-		Eval:     evalDECRBY,
-		Arity:    3,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+		NewEval:    evalDECRBY,
+		IsMigrated: true,
+		Arity:      3,
+		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
 	}
 	existsCmdMeta = DiceCmdMeta{
 		Name: "EXISTS",
@@ -984,9 +988,10 @@ var (
 		The value for the queried key should be of integer format,
 		if not INCRBY returns encoded error response.
 		evalINCRBY returns the incremented value for the key if there are no errors.`,
-		Eval:     evalINCRBY,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+		NewEval:    evalINCRBY,
+		IsMigrated: true,
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
 	}
 	getRangeCmdMeta = DiceCmdMeta{
 		Name:     "GETRANGE",
@@ -1052,10 +1057,21 @@ var (
 		If multiple members have the same score, the one that comes first alphabetically is returned. 
 		You can also specify a count to remove and return multiple members at once. 
 		If the set is empty, it returns an empty result.`,
-		Arity:      2,
+		Arity:      -1,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 		IsMigrated: true,
 		NewEval:    evalZPOPMIN,
+	}
+	zrankCmdMeta = DiceCmdMeta{
+		Name: "ZRANK",
+		Info: `ZRANK key member [WITHSCORE]
+		Returns the rank of member in the sorted set stored at key, with the scores ordered from low to high.
+		The rank (or index) is 0-based, which means that the member with the lowest score has rank 0.
+		The optional WITHSCORE argument supplements the command's reply with the score of the element returned.`,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalZRANK,
 	}
 	bitfieldCmdMeta = DiceCmdMeta{
 		Name: "BITFIELD",
@@ -1247,6 +1263,7 @@ func init() {
 	DiceCmds["ZADD"] = zaddCmdMeta
 	DiceCmds["ZRANGE"] = zrangeCmdMeta
 	DiceCmds["ZPOPMIN"] = zpopminCmdMeta
+	DiceCmds["ZRANK"] = zrankCmdMeta
 	DiceCmds["JSON.STRAPPEND"] = jsonstrappendCmdMeta
 }
 

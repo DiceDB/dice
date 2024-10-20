@@ -70,13 +70,19 @@ const (
 	CmdJSONObjlen  = "JSON.OBJLEN"
 	CmdZAdd        = "ZADD"
 	CmdZRange      = "ZRANGE"
+	CmdZRank       = "ZRANK"
 	CmdPFAdd       = "PFADD"
 	CmdPFCount     = "PFCOUNT"
 	CmdPFMerge     = "PFMERGE"
 	CmdDel         = "DEL"
 	CmdExists      = "EXISTS"
 	CmdPersist     = "PERSIST"
-	CmdType        = "TYPE"
+	CmdTypeOf      = "TYPE"
+	CmdIncr        = "INCR"
+	CmdIncrBy      = "INCRBY"
+	CmdDecr        = "DECR"
+	CmdDecrBy      = "DECRBY"
+	CmdIncrByFloat = "INCRBYFLOAT"
 )
 
 type CmdMeta struct {
@@ -151,7 +157,7 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdPersist: {
 		CmdType: SingleShard,
 	},
-	CmdType: {
+	CmdTypeOf: {
 		CmdType: SingleShard,
 	},
 
@@ -204,7 +210,26 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdZAdd: {
 		CmdType: SingleShard,
 	},
+	CmdZRank: {
+		CmdType: SingleShard,
+	},
 	CmdZRange: {
+		CmdType: SingleShard,
+	},
+
+	CmdIncr: {
+		CmdType: SingleShard,
+	},
+	CmdIncrBy: {
+		CmdType: SingleShard,
+	},
+	CmdDecr: {
+		CmdType: SingleShard,
+	},
+	CmdDecrBy: {
+		CmdType: SingleShard,
+	},
+	CmdIncrByFloat: {
 		CmdType: SingleShard,
 	},
 	CmdZPopMin: {
