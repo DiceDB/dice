@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"hash/crc32"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -209,9 +208,8 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 	writer.Header().Set("Connection", "keep-alive")
 	writer.WriteHeader(http.StatusOK)
 	// We're a generating a unique client id, to keep track in core of requests from registered clients
-	clientIdentifierID := generateUniqueInt32(request)
 	qwatchQuery := diceDBCmd.Args[0]
-	qwatchClient := comm.NewHTTPQwatchClient(s.qwatchResponseChan, clientIdentifierID)
+	qwatchClient := comm.NewHTTPQwatchClient(s.qwatchResponseChan)
 	// Prepare the store operation
 	storeOp := &ops.StoreOp{
 		Cmd:      diceDBCmd,
@@ -221,7 +219,7 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 		HTTPOp:   true,
 	}
 
-	s.logger.Info("Registered client for watching query", slog.Any("clientID", clientIdentifierID),
+	s.logger.Info("Registered client for watching query", slog.Any("clientID", qwatchClient.ClientIdentifierID),
 		slog.Any("query", qwatchQuery))
 	s.shardManager.GetShard(0).ReqChan <- storeOp
 
@@ -235,7 +233,7 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 		select {
 		case resp := <-s.qwatchResponseChan:
 			// Since we're reusing
-			if resp.ClientIdentifierID == clientIdentifierID {
+			if resp.ClientIdentifierID == uint32(qwatchClient.ClientIdentifierID) {
 				s.writeQWatchResponse(writer, resp)
 			}
 		case <-s.shutdownChan:
@@ -454,17 +452,6 @@ func createHTTPResponse(responseValue interface{}) utils.HTTPResponse {
 	}
 
 	return utils.HTTPResponse{Data: responseValue}
-}
-
-func generateUniqueInt32(r *http.Request) uint32 {
-	var sb strings.Builder
-	sb.WriteString(r.RemoteAddr)
-	sb.WriteString(r.UserAgent())
-	sb.WriteString(r.Method)
-	sb.WriteString(r.URL.Path)
-
-	// Hash the string using CRC32 and cast it to an int32
-	return crc32.ChecksumIEEE([]byte(sb.String()))
 }
 
 func replaceNilInInterface(data interface{}) interface{} {

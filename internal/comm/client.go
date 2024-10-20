@@ -6,6 +6,7 @@ import (
 
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/cmd"
+	"github.com/dicedb/dice/internal/id"
 )
 
 type CmdWatchResponse struct {
@@ -27,7 +28,7 @@ type Client struct {
 	Cqueue                 cmd.RedisCmds
 	IsTxn                  bool
 	Session                *auth.Session
-	ClientIdentifierID     uint32
+	ClientIdentifierID     uint64
 }
 
 func (c *Client) Write(b []byte) (int, error) {
@@ -62,12 +63,12 @@ func NewClient(fd int) *Client {
 	}
 }
 
-func NewHTTPQwatchClient(qwatchResponseChan chan QwatchResponse, clientIdentifierID uint32) *Client {
+func NewHTTPQwatchClient(qwatchResponseChan chan QwatchResponse) *Client {
 	cmds := make([]*cmd.DiceDBCmd, 0)
 	return &Client{
 		Cqueue:                 cmd.RedisCmds{Cmds: cmds},
 		Session:                auth.NewSession(),
-		ClientIdentifierID:     clientIdentifierID,
+		ClientIdentifierID:     id.NextUint64(),
 		HTTPQwatchResponseChan: qwatchResponseChan,
 	}
 }
