@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"flag"
 	"fmt"
 	"log/slog"
 	"os"
@@ -26,22 +25,6 @@ import (
 )
 
 func init() {
-	flag.StringVar(&config.Host, "host", "0.0.0.0", "host for the dicedb server")
-	flag.IntVar(&config.Port, "port", 7379, "port for the dicedb server")
-	flag.BoolVar(&config.EnableHTTP, "enable-http", true, "run server in HTTP mode as well")
-	flag.BoolVar(&config.EnableMultiThreading, "enable-multithreading", false, "run server in multithreading mode")
-	flag.IntVar(&config.HTTPPort, "http-port", 8082, "HTTP port for the dicedb server")
-	flag.IntVar(&config.WebsocketPort, "websocket-port", 8379, "Websocket port for the dicedb server")
-	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
-	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the config file")
-	flag.StringVar(&config.FileLocation, "c", config.FileLocation, "file path of the config file")
-	flag.BoolVar(&config.InitConfigCmd, "init-config", false, "initialize a new config file")
-	flag.IntVar(&config.KeysLimit, "keys-limit", config.KeysLimit, "keys limit for the dicedb server. "+
-		"This flag controls the number of keys each shard holds at startup. You can multiply this number with the "+
-		"total number of shard threads to estimate how much memory will be required at system start up.")
-	flag.BoolVar(&config.EnableProfiling, "enable-profiling", false, "enable profiling for the dicedb server")
-	flag.Parse()
-
 	config.SetupConfig()
 
 	iid := observability.GetOrCreateInstanceID()
@@ -70,7 +53,7 @@ func main() {
 	// core count ensures the application can make full use of all available hardware.
 	// If multithreading is not enabled, server will run on a single core.
 	var numCores int
-	if config.EnableMultiThreading {
+	if config.DiceConfig.Performance.EnableMultiThreading {
 		serverErrCh = make(chan error, 1)
 		numCores = runtime.NumCPU()
 		logr.Debug("The DiceDB server has started in multi-threaded mode.", slog.Int("number of cores", numCores))
@@ -101,7 +84,7 @@ func main() {
 
 	// Initialize the AsyncServer server
 	// Find a port and bind it
-	if !config.EnableMultiThreading {
+	if !config.DiceConfig.Performance.EnableMultiThreading {
 		asyncServer := server.NewAsyncServer(shardManager, queryWatchChan, logr)
 		if err := asyncServer.FindPortAndBind(); err != nil {
 			cancel()
