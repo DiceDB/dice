@@ -1095,14 +1095,14 @@ func TestJsonObjLen(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": ".idonotexist"}},
 			},
-			expected: []interface{}{"(nil)"},
+			expected: []interface{}{nil},
 		},
 		{
 			name:     "JSON.OBJLEN with legacy path - inner non-existent path v2",
 			commands: []HTTPCommand{
 				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": "idonotexist"}},
 			},
-			expected: []interface{}{"(nil)"},
+			expected: []interface{}{nil},
 		},
 		{
 			name:     "JSON.OBJLEN with legacy path - inner existent path with nonJSON object",
