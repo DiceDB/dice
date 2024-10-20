@@ -73,6 +73,7 @@ const (
 	CmdPFAdd       = "PFADD"
 	CmdPFCount     = "PFCOUNT"
 	CmdPFMerge     = "PFMERGE"
+	CmdPFCountWatch = "PFCOUNT.WATCH"
 )
 
 type CmdMeta struct {
@@ -181,6 +182,9 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: Watch,
 	},
 	CmdZRangeWatch: {
+		CmdType: Watch,
+	},
+	CmdPFCountWatch: {
 		CmdType: Watch,
 	},
 

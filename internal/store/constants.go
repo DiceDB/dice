@@ -7,4 +7,6 @@ const (
 	Rename string = "RENAME"
 	ZAdd   string = "ZADD"
 	ZRange string = "ZRANGE"
+	PFADD  string = "PFADD"
+	PFCOUNT string = "PFCOUNT"
 )

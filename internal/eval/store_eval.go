@@ -587,7 +587,7 @@ func evalPFADD(args []string, store *dstore.Store) *EvalResponse {
 
 		obj = store.NewObj(hll, -1, object.ObjTypeString, object.ObjEncodingRaw)
 
-		store.Put(key, obj)
+		store.Put(key, obj, dstore.WithPutCmd(dstore.PFADD))
 		return &EvalResponse{
 			Result: int64(1),
 			Error:  nil,

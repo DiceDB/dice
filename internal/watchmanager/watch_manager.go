@@ -32,6 +32,7 @@ var (
 		dstore.Del:    {dstore.Get: struct{}{}},
 		dstore.Rename: {dstore.Get: struct{}{}},
 		dstore.ZAdd:   {dstore.ZRange: struct{}{}},
+		dstore.PFADD:  {dstore.PFCOUNT: struct{}{}},
 	}
 )
 
