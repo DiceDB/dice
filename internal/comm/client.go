@@ -1,11 +1,13 @@
 package comm
 
 import (
+	"fmt"
 	"io"
 	"syscall"
 
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/cmd"
+	"github.com/dicedb/dice/internal/id"
 )
 
 type CmdWatchResponse struct {
@@ -53,12 +55,26 @@ func (c *Client) TxnQueue(diceDBCmd *cmd.DiceDBCmd) {
 
 func NewClient(fd int) *Client {
 	cmds := make([]*cmd.DiceDBCmd, 0)
+
+	addr, err := syscall.Getsockname(fd)
+	fmt.Println("addr: ", addr, err)
+	switch v := addr.(type) {
+	case *syscall.SockaddrInet4:
+		fmt.Println("addr: ", v.Addr, v.Port)
+	case *syscall.SockaddrInet6:
+		fmt.Println("addr: ", v.Addr, v.Port, v.ZoneId)
+	}
+
+	// remoteAddr, err := syscall.Getpeername(fd)
+	// fmt.Println("addr: ", remoteAddr, err)
+
 	return &Client{
 		Fd: fd,
 		Cqueue: cmd.RedisCmds{
 			Cmds: cmds,
 		},
-		Session: auth.NewSession(),
+		Session:            auth.NewSession(),
+		ClientIdentifierID: id.NextClientID(),
 	}
 }
 

@@ -118,6 +118,13 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		return
 	}
+	f, err := conn.NetConn().(*net.TCPConn).File()
+	if err != nil {
+		fmt.Println("err", err)
+		return
+	}
+	fd := f.Fd()
+	fmt.Println("file desc ws", fd)
 
 	// closing handshake
 	defer func() {

@@ -1,6 +1,7 @@
 package eval
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/dicedb/dice/internal/auth"
@@ -65,11 +66,16 @@ func (e *Eval) ExecuteCommand() *EvalResponse {
 		return diceCmd.NewEval(e.cmd.Args, e.store)
 	}
 
+	fmt.Println(":", diceCmd.Name)
+
 	// The following commands could be handled at the shard level, however, we can randomly let any shard handle them
 	// to reduce load on main server.
 	switch diceCmd.Name {
 	// Old implementation kept as it is, but we will be moving
 	// to the new implementation soon for all commands
+	case "CLIENT":
+		fmt.Println("matched")
+		return &EvalResponse{Result: EvalCLIENT(c.Args, httpOp, client, store), Error: nil}
 	case "SUBSCRIBE", "Q.WATCH":
 		return &EvalResponse{Result: EvalQWATCH(e.cmd.Args, e.isHTTPOperation, e.isWebSocketOperation, e.client, e.store), Error: nil}
 	case "UNSUBSCRIBE", "Q.UNWATCH":
