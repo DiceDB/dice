@@ -70,6 +70,11 @@ func TestSetWithGetOption(t *testing.T) {
 			expected: []interface{}{int64(0), "(nil)", "new_value"},
 		},
 		{
+			name:     "Bitwise Set and Retrieve with GET",
+			commands: []string{"SETBIT k 1 1", "GET k","SET k val GET"},
+			expected: []interface{}{int64(0), "@","@"},
+		},
+		{
 			name:     "Set with GET and NX on Existing Key",
 			commands: []string{"SET k old_value", "SET k new_value NX GET", "GET k"},
 			expected: []interface{}{"OK", "(nil)", "old_value"},
