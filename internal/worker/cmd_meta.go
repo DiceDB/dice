@@ -70,7 +70,7 @@ const (
 	CmdJSONObjlen   = "JSON.OBJLEN"
 	CmdZAdd         = "ZADD"
 	CmdZRange       = "ZRANGE"
-	CmdZRank       = "ZRANK"
+	CmdZRank        = "ZRANK"
 	CmdPFAdd        = "PFADD"
 	CmdPFCount      = "PFCOUNT"
 	CmdPFMerge      = "PFMERGE"
