@@ -2,7 +2,6 @@ package eval
 
 import (
 	"bytes"
-	"crypto/rand"
 	"errors"
 	"fmt"
 	"log/slog"
