@@ -30,6 +30,8 @@ const (
 	OverflowTypeErr        = "-ERR Invalid OVERFLOW type specified"
 	WrongKeyTypeErr        = "-ERR Existing key has wrong Dice type"
 	NoKeyExistsErr         = "-ERR Could not perform this operation on a key that doesn't exist"
+	UnknownSubcommandErr   = "-ERR Unknown subcommand '%s' - try `JSON.DEBUG HELP`"
+	InvalidJsonPathErr     = "-ERR invalid JSON path"
 )
 
 type DiceError struct {
@@ -77,4 +79,8 @@ func NewErrArity(cmdName string) []byte {
 
 func NewErrExpireTime(cmdName string) []byte {
 	return NewErrWithFormattedMessage(ExpiryErr, strings.ToLower(cmdName))
+}
+
+func NewErrUnknownSubcommand(cmdName string) error {
+	return fmt.Errorf(UnknownSubcommandErr, strings.ToLower(cmdName))
 }

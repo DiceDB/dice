@@ -244,9 +244,10 @@ var (
 		JSON.DEBUG MEMORY returns memory usage by key in bytes
 		JSON.DEBUG HELP displays help message
 		`,
-		Eval:     evalJSONDebug,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalJSONDEBUG,
 	}
 	jsonobjkeysCmdMeta = DiceCmdMeta{
 		Name: "JSON.OBJKEYS",
@@ -275,9 +276,10 @@ var (
 		the generated key is then used to store the provided JSON value at specified path.
 		Returns unique identifier if successful.
 		Returns encoded error message if the number of arguments is incorrect or the JSON string is invalid.`,
-		Eval:     evalJSONINGEST,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalJSONINGEST,
 	}
 	jsonarrinsertCmdMeta = DiceCmdMeta{
 		Name: "JSON.ARRINSERT",
@@ -294,9 +296,10 @@ var (
 		Name: "JSON.RESP",
 		Info: `JSON.RESP key [path]
 		Return the JSON in key in Redis serialization protocol specification form`,
-		Eval:     evalJSONRESP,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalJSONRESP,
 	}
 	jsonarrtrimCmdMeta = DiceCmdMeta{
 		Name: "JSON.ARRTRIM",

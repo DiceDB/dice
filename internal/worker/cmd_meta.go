@@ -54,6 +54,9 @@ const (
 	CmdPFAdd       = "PFADD"
 	CmdPFCount     = "PFCOUNT"
 	CmdPFMerge     = "PFMERGE"
+	CmdJSONResp    = "JSON.RESP"
+	CmdJSONDebug   = "JSON.DEBUG"
+	CmdJSONIngest  = "JSON.INGEST"
 )
 
 type CmdMeta struct {
@@ -104,6 +107,15 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdPFMerge: {
+		CmdType: SingleShard,
+	},
+	CmdJSONResp: {
+		CmdType: SingleShard,
+	},
+	CmdJSONDebug: {
+		CmdType: SingleShard,
+	},
+	CmdJSONIngest: {
 		CmdType: SingleShard,
 	},
 

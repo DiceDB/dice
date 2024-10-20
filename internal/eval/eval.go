@@ -23,7 +23,6 @@ import (
 	"github.com/dicedb/dice/internal/eval/geo"
 	"github.com/dicedb/dice/internal/eval/sortedset"
 	"github.com/dicedb/dice/internal/object"
-	"github.com/rs/xid"
 
 	"github.com/dicedb/dice/internal/sql"
 
@@ -399,24 +398,6 @@ func evalJSONARRINSERT(args []string, store *dstore.Store) []byte {
 	jsonData = newData
 	obj.Value = jsonData
 	return clientio.Encode(resultsArray, false)
-}
-
-// evalJSONDEBUG reports value's memory usage in bytes
-// Returns arity error if subcommand is missing
-// Supports only two subcommand as of now - HELP and MEMORY
-func evalJSONDebug(args []string, store *dstore.Store) []byte {
-	if len(args) < 1 {
-		return diceerrors.NewErrArity("JSON.DEBUG")
-	}
-	subcommand := strings.ToUpper(args[0])
-	switch subcommand {
-	case Help:
-		return evalJSONDebugHelp()
-	case Memory:
-		return evalJSONDebugMemory(args[1:], store)
-	default:
-		return diceerrors.NewErrWithFormattedMessage("unknown subcommand - try `JSON.DEBUG HELP`")
-	}
 }
 
 // evalJSONDebugHelp implements HELP subcommand for evalJSONDebug
@@ -1457,34 +1438,6 @@ func evalJSONARRAPPEND(args []string, store *dstore.Store) []byte {
 	obj.Value = jsonData
 
 	return clientio.Encode(resultsArray, false)
-}
-
-// evalJSONINGEST stores a value at a dynamically generated key
-// The key is created using a provided key prefix combined with a unique identifier
-// args must contains key_prefix and path and json value
-// It will call to evalJSONSET internally.
-// Returns encoded error response if incorrect number of arguments
-// Returns encoded error if the JSON string is invalid
-// Returns unique identifier if the JSON value is successfully stored
-func evalJSONINGEST(args []string, store *dstore.Store) []byte {
-	if len(args) < 3 {
-		return diceerrors.NewErrArity("JSON.INGEST")
-	}
-
-	keyPrefix := args[0]
-
-	uniqueID := xid.New()
-	uniqueKey := keyPrefix + uniqueID.String()
-
-	var setArgs []string
-	setArgs = append(setArgs, uniqueKey)
-	setArgs = append(setArgs, args[1:]...)
-
-	result := evalJSONSET(setArgs, store)
-	if bytes.Equal(result, clientio.RespOK) {
-		return clientio.Encode(uniqueID.String(), true)
-	}
-	return result
 }
 
 // evalTTL returns Time-to-Live in secs for the queried key in args
@@ -4399,52 +4352,6 @@ func evalAPPEND(args []string, store *dstore.Store) []byte {
 	store.Put(key, store.NewObj(newValue, -1, object.ObjTypeString, object.ObjEncodingRaw))
 
 	return clientio.Encode(len(newValue), false)
-}
-
-func evalJSONRESP(args []string, store *dstore.Store) []byte {
-	if len(args) < 1 {
-		return diceerrors.NewErrArity("json.resp")
-	}
-	key := args[0]
-
-	path := defaultRootPath
-	if len(args) > 1 {
-		path = args[1]
-	}
-
-	obj := store.Get(key)
-	if obj == nil {
-		return clientio.RespNIL
-	}
-
-	// Check if the object is of JSON type
-	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
-	if errWithMessage != nil {
-		return errWithMessage
-	}
-
-	jsonData := obj.Value
-	if path == defaultRootPath {
-		resp := parseJSONStructure(jsonData, false)
-
-		return clientio.Encode(resp, false)
-	}
-
-	// if path is not root then extract value at path
-	expr, err := jp.ParseString(path)
-	if err != nil {
-		return diceerrors.NewErrWithMessage("invalid JSONPath")
-	}
-	results := expr.Get(jsonData)
-
-	// process value at each path
-	ret := []any{}
-	for _, result := range results {
-		resp := parseJSONStructure(result, false)
-		ret = append(ret, resp)
-	}
-
-	return clientio.Encode(ret, false)
 }
 
 func parseJSONStructure(jsonData interface{}, nested bool) (resp []any) {

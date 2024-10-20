@@ -1,6 +1,7 @@
 package eval
 
 import (
+	"bytes"
 	"math"
 	"strconv"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/ohler55/ojg/jp"
+	"github.com/rs/xid"
 )
 
 // evalSET puts a new <key, value> pair in db as in the args
@@ -907,6 +909,136 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 
 	return &EvalResponse{
 		Result: clientio.OK,
+		Error:  nil,
+	}
+}
+
+func evalJSONRESP(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("JSON.RESP"),
+		}
+	}
+
+	key := args[0]
+
+	path := defaultRootPath
+	if len(args) > 1 {
+		path = args[1]
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(diceerrors.NoKeyExistsErr),
+		}
+	}
+
+	// Check if the object is of JSON type
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(string(errWithMessage)),
+		}
+	}
+
+	jsonData := obj.Value
+	if path == defaultRootPath {
+		resp := parseJSONStructure(jsonData, false)
+
+		return &EvalResponse{
+			Result: resp,
+			Error:  nil,
+		}
+	}
+
+	// if path is not root then extract value at path
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(diceerrors.InvalidJsonPathErr),
+		}
+	}
+	results := expr.Get(jsonData)
+
+	// process value at each path
+	ret := []any{}
+	for _, result := range results {
+		resp := parseJSONStructure(result, false)
+		ret = append(ret, resp)
+	}
+
+	return &EvalResponse{
+		Result: ret,
+		Error:  nil,
+	}
+}
+
+func evalJSONDEBUG(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("JSON.DEBUG"),
+		}
+	}
+	subcommand := strings.ToUpper(args[0])
+	switch subcommand {
+	case Help:
+		return &EvalResponse{
+			Result: evalJSONDebugHelp(),
+			Error:  nil,
+		}
+	case Memory:
+		return &EvalResponse{
+			Result: evalJSONDebugMemory(args[1:], store),
+			Error:  nil,
+		}
+	default:
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.NewErrUnknownSubcommand(subcommand),
+		}
+	}
+}
+
+// evalJSONINGEST stores a value at a dynamically generated key
+// The key is created using a provided key prefix combined with a unique identifier
+// args must contains key_prefix and path and json value
+// It will call to evalJSONSET internally.
+// Returns error response if incorrect number of arguments
+// Returns error if the JSON string is invalid
+// Returns unique identifier if the JSON value is successfully stored
+func evalJSONINGEST(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 3 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("JSON.INGEST"),
+		}
+	}
+
+	keyPrefix := args[0]
+
+	uniqueID := xid.New()
+	uniqueKey := keyPrefix + uniqueID.String()
+
+	var setArgs []string
+	setArgs = append(setArgs, uniqueKey)
+	setArgs = append(setArgs, args[1:]...)
+
+	result := evalJSONSET(setArgs, store)
+	if bytes.Equal(result, clientio.RespOK) {
+		return &EvalResponse{
+			Result: uniqueID.String(),
+			Error:  nil,
+		}
+	}
+
+	return &EvalResponse{
+		Result: result,
 		Error:  nil,
 	}
 }

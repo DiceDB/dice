@@ -98,6 +98,21 @@ var (
 		CmdType: SingleShard,
 	}
 
+	jsonrespCmdMeta = CmdsMeta{
+		Cmd:     "JSON.RESP",
+		CmdType: SingleShard,
+	}
+
+	jsondebugCmdMeta = CmdsMeta{
+		Cmd:     "JSON.DEBUG",
+		CmdType: SingleShard,
+	}
+
+	jsoningestCmdMeta = CmdsMeta{
+		Cmd:     "JSON.INGEST",
+		CmdType: SingleShard,
+	}
+
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
 
@@ -117,6 +132,9 @@ func init() {
 	WorkerCmdsMeta["JSON.CLEAR"] = jsonclearCmdMeta
 	WorkerCmdsMeta["JSON.STRLEN"] = jsonstrlenCmdMeta
 	WorkerCmdsMeta["JSON.OBJLEN"] = jsonobjlenCmdMeta
+	WorkerCmdsMeta["JSON.RESP"] = jsonrespCmdMeta
+	WorkerCmdsMeta["JSON.DEBUG"] = jsondebugCmdMeta
+	WorkerCmdsMeta["JSON.INGEST"] = jsoningestCmdMeta
 	WorkerCmdsMeta["ZADD"] = zaddCmdMeta
 	WorkerCmdsMeta["ZRANGE"] = zrangeCmdMeta
 	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
