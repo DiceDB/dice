@@ -915,7 +915,7 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) *EvalResponse {
 			if isDefinitePath {
 				return &EvalResponse{
 					Result: nil,
-					Error: diceerrors.ErrWrongTypeOperation,
+					Error:  diceerrors.ErrWrongTypeOperation,
 				}
 			}
 			objectLen = append(objectLen, nil)
@@ -1072,7 +1072,6 @@ func evalHLEN(args []string, store *dstore.Store) *EvalResponse {
 			Result: clientio.RespZero,
 			Error:  nil,
 		}
-
 	}
 
 	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
@@ -1190,7 +1189,6 @@ func evalHSCAN(args []string, store *dstore.Store) *EvalResponse {
 						Result: nil,
 						Error:  diceerrors.ErrIntegerOutOfRange,
 					}
-
 				}
 				count = parsedCount
 			}
@@ -1215,7 +1213,6 @@ func evalHSCAN(args []string, store *dstore.Store) *EvalResponse {
 			Result: nil,
 			Error:  diceerrors.ErrGeneral(fmt.Sprintf("Invalid glob pattern: %s", err)),
 		}
-
 	}
 
 	// Scan the keys and add them to the results if they match the pattern
