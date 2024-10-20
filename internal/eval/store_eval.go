@@ -1085,7 +1085,7 @@ func evalHRANDFIELD(args []string, store *dstore.Store) *EvalResponse {
 	hashMap := obj.Value.(HashMap)
 	if len(hashMap) == 0 {
 		return &EvalResponse{
-			Result: clientio.RespEmptyArray,
+			Result: clientio.EmptyArray,
 			Error:  nil,
 		}
 	}
