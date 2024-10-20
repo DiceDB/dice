@@ -20,6 +20,7 @@ var (
 	ErrOverflow                   = errors.New("ERR increment or decrement would overflow")                              // Signifies that an increment or decrement operation would exceed the limits.
 	ErrSyntax                     = errors.New("ERR syntax error")                                                       // Represents a syntax error in a DiceDB command.
 	ErrKeyNotFound                = errors.New("ERR no such key")                                                        // Indicates that the specified key does not exist.
+	ErrUnableToFetchKeys          = errors.New("ERR unable to fetch keys from store")                                    // Indicates that the specified key does not exist.
 	ErrWrongTypeOperation         = errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")      // Signals an operation attempted on a key with an incompatible type.
 	ErrInvalidHyperLogLogKey      = errors.New("WRONGTYPE Key is not a valid HyperLogLog string value")                  // Indicates that a key is not a valid HyperLogLog value.
 	ErrCorruptedHyperLogLogObject = errors.New("INVALIDOBJ Corrupted HLL object detected")                               // Signals detection of a corrupted HyperLogLog object.

@@ -1371,8 +1371,7 @@ func evalRANDOMKEY(args []string, store *dstore.Store) *EvalResponse {
 
 	availKeys, err := store.Keys("*")
 	if err != nil {
-		return &EvalResponse{Result: nil,
-			Error: errors.New(string(diceerrors.NewErrWithMessage("could not fetch keys to extract a random key")))}
+		return &EvalResponse{Result: nil, Error: diceerrors.ErrUnableToFetchKeys}
 	}
 
 	if len(availKeys) > 0 {
