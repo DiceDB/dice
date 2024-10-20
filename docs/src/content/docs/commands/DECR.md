@@ -101,3 +101,6 @@ OK
 1. The `SET` command initializes the key `mycounter` with the out-of-range value for a 64-bit signed integer.
 1. The `DECR` command attempts to decrement the value of `mycounter`, but this would result in an overflow, so an error is raised.
 
+## Alternatives
+
+You can also use the `DECRBY` command to decrement the value of a key by a specified amount.
