@@ -41,15 +41,19 @@ The `DECRBY` command can raise errors in the following scenarios:
 
 1. `Wrong Type Error`:
 
-   - Error Message: `ERROR  value is not an integer or out of range`
+   - Error Message: `(error) ERR  value is not an integer or out of range`
    - This error occurs if the decrement value provided is not a valid integer.
    - This error occurs if the key exists but its value is not a string that can be represented as an integer
 
 2. `Syntax Error`:
 
-   - Error Message: `ERROR wrong number of arguments for 'decrby' command`
+   - Error Message: `(error) ERR wrong number of arguments for 'decrby' command`
    - Occurs if the command is called without the required parameter.
 
+3. `Overflow Error`:
+
+   - Error Message: `(error) ERR increment or decrement would overflow`
+   - If the decrement operation causes the value to exceed the maximum integer value that DiceDB can handle, an overflow error will occur.
 
 ## Examples
 
@@ -81,7 +85,7 @@ OK
 127.0.0.1:7379>SET mystring "hello"
 OK
 127.0.0.1:7379>DECRBY mystring 2
-(error) ERROR value is not an integer or out of range
+(error) ERR value is not an integer or out of range
 ```
 `Explanation:` 
 - In this example, the key `mystring` holds a non-integer value, so the `DECRBY` command returns an error.
@@ -90,7 +94,7 @@ OK
 
 ```bash
 127.0.0.1:7379>DECRBY mycounter "two"
-(error) ERROR value is not an integer or out of range
+(error) ERR value is not an integer or out of range
 ```
 
 `Explanation:` 
