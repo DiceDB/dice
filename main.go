@@ -89,6 +89,7 @@ func main() {
 		}
 		logr.Debug("The DiceDB server has started in multi-threaded mode.", slog.Int("number of cores", numCores))
 	} else {
+		numCores = 1
 		logr.Debug("The DiceDB server has started in single-threaded mode.")
 	}
 
