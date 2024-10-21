@@ -61,7 +61,7 @@ func main() {
 
 	// Handle SIGTERM and SIGINT
 	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT, syscall.SIGKILL)
+	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
 	var (
 		queryWatchChan chan dstore.QueryWatchEvent
