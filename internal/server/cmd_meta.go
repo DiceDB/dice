@@ -98,6 +98,22 @@ var (
 		Cmd:     "PFMERGE",
 		CmdType: SingleShard,
 	}
+	delCmdMeta = CmdsMeta{
+		Cmd:     "DEL",
+		CmdType: SingleShard,
+	}
+	existsCmdMeta = CmdsMeta{
+		Cmd:     "EXISTS",
+		CmdType: SingleShard,
+	}
+	persistCmdMeta = CmdsMeta{
+		Cmd:     "PERSIST",
+		CmdType: SingleShard,
+	}
+	typeCmdMeta = CmdsMeta{
+		Cmd:     "TYPE",
+		CmdType: SingleShard,
+	}
 
 	jsonclearCmdMeta = CmdsMeta{
 		Cmd:     "JSON.CLEAR",
@@ -175,6 +191,10 @@ func init() {
 	WorkerCmdsMeta["ZPOPMIN"] = zpopminCmdMeta
 	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
 	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
+	WorkerCmdsMeta["DEL"] = delCmdMeta
+	WorkerCmdsMeta["EXISTS"] = existsCmdMeta
+	WorkerCmdsMeta["PERSIST"] = persistCmdMeta
+	WorkerCmdsMeta["TYPE"] = typeCmdMeta
 	WorkerCmdsMeta["INCR"] = incrCmdMeta
 	WorkerCmdsMeta["INCRBY"] = incrByCmdMeta
 	WorkerCmdsMeta["INCR"] = incrCmdMeta

@@ -1517,24 +1517,6 @@ func evalTTL(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(int64(durationMs/1000), false)
 }
 
-// evalDEL deletes all the specified keys in args list
-// returns the count of total deleted keys after encoding
-func evalDEL(args []string, store *dstore.Store) []byte {
-	countDeleted := 0
-
-	if len(args) < 1 {
-		return diceerrors.NewErrArity("DEL")
-	}
-
-	for _, key := range args {
-		if ok := store.Del(key); ok {
-			countDeleted++
-		}
-	}
-
-	return clientio.Encode(countDeleted, false)
-}
-
 // evalEXPIRE sets an expiry time(in secs) on the specified key in args
 // args should contain 2 values, key and the expiry time to be set for the key
 // The expiry time should be in integer format; if not, it returns encoded error response
@@ -2478,47 +2460,6 @@ func evalMGET(args []string, store *dstore.Store) []byte {
 		}
 	}
 	return clientio.Encode(resp, false)
-}
-
-func evalEXISTS(args []string, store *dstore.Store) []byte {
-	if len(args) == 0 {
-		return diceerrors.NewErrArity("EXISTS")
-	}
-
-	var count int
-	for _, key := range args {
-		if store.GetNoTouch(key) != nil {
-			count++
-		}
-	}
-
-	return clientio.Encode(count, false)
-}
-
-func evalPersist(args []string, store *dstore.Store) []byte {
-	if len(args) != 1 {
-		return diceerrors.NewErrArity("PERSIST")
-	}
-
-	key := args[0]
-
-	obj := store.Get(key)
-
-	// If the key does not exist, return RESP encoded 0 to denote the key does not exist
-	if obj == nil {
-		return clientio.RespZero
-	}
-
-	// If the object exists but no expiration is set on it, return 0
-	_, isExpirySet := dstore.GetExpiry(obj, store)
-	if !isExpirySet {
-		return clientio.RespZero
-	}
-
-	// If the object exists, remove the expiration time
-	dstore.DelExpiry(obj, store)
-
-	return clientio.RespOne
 }
 
 func evalCOPY(args []string, store *dstore.Store) []byte {
@@ -3926,33 +3867,6 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) []byte {
 	}
 
 	return clientio.Encode(keysList, false)
-}
-
-func evalTYPE(args []string, store *dstore.Store) []byte {
-	if len(args) != 1 {
-		return diceerrors.NewErrArity("TYPE")
-	}
-	key := args[0]
-	obj := store.Get(key)
-	if obj == nil {
-		return clientio.Encode("none", true)
-	}
-
-	var typeStr string
-	switch oType, _ := object.ExtractTypeEncoding(obj); oType {
-	case object.ObjTypeString, object.ObjTypeInt, object.ObjTypeByteArray:
-		typeStr = "string"
-	case object.ObjTypeByteList:
-		typeStr = "list"
-	case object.ObjTypeSet:
-		typeStr = "set"
-	case object.ObjTypeHashMap:
-		typeStr = "hash"
-	default:
-		typeStr = "non-supported type"
-	}
-
-	return clientio.Encode(typeStr, true)
 }
 
 func evalJSONRESP(args []string, store *dstore.Store) []byte {
