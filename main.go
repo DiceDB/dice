@@ -124,7 +124,7 @@ func main() {
 		}
 
 		workerManager := worker.NewWorkerManager(config.DiceConfig.Performance.MaxClients, shardManager)
-		respServer := resp.NewServer(shardManager, workerManager, cmdWatchChan, serverErrCh, logr)
+		respServer := resp.NewServer(shardManager, workerManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh, logr)
 		serverWg.Add(1)
 		go runServer(ctx, &serverWg, respServer, logr, serverErrCh)
 	} else {
