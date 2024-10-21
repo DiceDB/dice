@@ -63,13 +63,13 @@ func TestZPOPMAX(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			conn := exec.ConnectToServer()
-			DeleteKey(t, conn, exec, "sortedSet")
 
 			for i, cmd := range tc.commands {
 				result, err := exec.FireCommandAndReadResponse(conn, cmd)
 				assert.Nil(t, err)
 				assert.Equal(t, tc.expected[i], result)
 			}
+			DeleteKey(t, conn, exec, "sortedSet")
 		})
 	}
 }

@@ -1048,7 +1048,7 @@ var (
 		If count is not provided '1' is considered by default.
 		The element with the highest score is removed first
 		if two elements have same score then the element which is lexicographically higher is popped first`,
-		Arity:      2,
+		Arity:      -1,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 		IsMigrated: true,
 		NewEval:    evalZPOPMAX,

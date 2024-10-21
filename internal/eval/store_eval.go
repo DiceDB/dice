@@ -912,7 +912,7 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) *EvalResponse {
 			if isDefinitePath {
 				return &EvalResponse{
 					Result: nil,
-					Error: diceerrors.ErrWrongTypeOperation,
+					Error:  diceerrors.ErrWrongTypeOperation,
 				}
 			}
 			objectLen = append(objectLen, nil)
@@ -1028,16 +1028,15 @@ func evalZPOPMAX(args []string, store *dstore.Store) *EvalResponse {
 		count = ops
 	}
 
-	var sortedSet *sortedset.Set
-
 	if obj == nil {
 		return &EvalResponse{
 			Result: []string{}, // Returns empty array when the object with given key is not present in the store
 			Error:  nil,
 		}
 	}
-	var err []byte
-	sortedSet, err = sortedset.FromObject(obj)
+
+	var sortedSet *sortedset.Set
+	sortedSet, err := sortedset.FromObject(obj)
 	if err != nil {
 		return &EvalResponse{
 			Result: clientio.NIL,

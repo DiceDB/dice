@@ -3,7 +3,7 @@ package http
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestZPOPMAX(t *testing.T) {
@@ -84,14 +84,14 @@ func TestZPOPMAX(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			for i, cmd := range tc.commands {
+				result, _ := exec.FireCommand(cmd)
+				assert.Equal(t, tc.expected[i], result)
+			}
 			exec.FireCommand(HTTPCommand{
 				Command: "DEL",
 				Body:    map[string]interface{}{"key": "sortedSet"},
 			})
-			for i, cmd := range tc.commands {
-				result, _ := exec.FireCommand(cmd)
-				assert.DeepEqual(t, tc.expected[i], result)
-			}
 		})
 	}
 }
