@@ -13,7 +13,7 @@ GETRANGE key start end
 ## Parameters
 | Parameter | Description                                                               | Type    | Required |
 |-----------|---------------------------------------------------------------------------|---------|----------|
-| `key`     | The name of the key to be set.                                            | String  | Yes      |
+| `key`     | The name of the key containing the string.                                           | String  | Yes      |
 | `start`   | The starting index of the required substring.                              | Integer | Yes      |
 | `end`     | The ending index of the required substring.                               | Integer | Yes      |
 ## Return values
