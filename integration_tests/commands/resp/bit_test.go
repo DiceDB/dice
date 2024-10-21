@@ -254,7 +254,7 @@ func TestBitOpsString(t *testing.T) {
 
 				switch tc.assertType[i] {
 				case "equal":
-					testifyAssert.Equal(t, res, tc.expected[i])
+					testifyAssert.Equal(t, tc.expected[i], res)
 				case "less":
 					assert.Assert(t, res.(int64) <= tc.expected[i].(int64), "CMD: %s Expected %d to be less than or equal to %d", tc.cmds[i], res, tc.expected[i])
 				}
