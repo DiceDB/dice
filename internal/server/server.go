@@ -110,6 +110,93 @@ func (s *AsyncServer) FindPortAndBind() (socketErr error) {
 	return nil
 }
 
+func (s *AsyncServer) BindToTCP(addr *Address) (socketErr error) {
+	serverFD, socketErr := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, 0)
+
+	if socketErr != nil {
+		return socketErr
+	}
+
+	// Close the socket on exit if an error occurs
+	defer func() {
+		if socketErr != nil {
+			if err := syscall.Close(serverFD); err != nil {
+				slog.Warn("failed to close server socket", "error", err)
+			}
+		}
+	}()
+
+	if err := syscall.SetsockoptInt(serverFD, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
+		return err
+	}
+
+	s.serverFD = serverFD
+
+	if err := syscall.SetNonblock(serverFD, true); err != nil {
+		return err
+	}
+
+	ip4 := net.ParseIP(addr.Host)
+	if ip4 == nil {
+		return diceerrors.ErrInvalidIPAddress
+	}
+
+	slog.Info("DiceDB running on port", "port", addr.Port)
+	return syscall.Bind(serverFD, &syscall.SockaddrInet4{
+		Port: addr.Port,
+		Addr: [4]byte{ip4[0], ip4[1], ip4[2], ip4[3]},
+	})
+}
+
+func (s *AsyncServer) BindToSocket(addr *Address) (socketErr error) {
+	serverFD, socketErr := syscall.Socket(syscall.AF_UNIX, syscall.SOCK_STREAM, 0)
+
+	if socketErr != nil {
+		return socketErr
+	}
+
+	// Close the socket on exit if an error occurs
+	defer func() {
+		if socketErr != nil {
+			if err := syscall.Close(serverFD); err != nil {
+				slog.Warn("failed to close server socket", "error", err)
+			}
+		}
+	}()
+
+	if err := syscall.SetsockoptInt(serverFD, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
+		return err
+	}
+
+	s.serverFD = serverFD
+
+	if err := syscall.SetNonblock(serverFD, true); err != nil {
+		return err
+	}
+
+	if addr.IsSocketAvail() {
+		slog.Info("DiceDB running on socket", "path", addr.Path)
+		sockAddr := &syscall.SockaddrUnix{Name: addr.Path}
+		return syscall.Bind(serverFD, sockAddr)
+	}
+	return errors.New("socket already in use")
+}
+
+func (s *AsyncServer) Bind() (socketErr error) {
+	addr, err := ParseAddress(config.Address)
+	if err != nil {
+		return err
+	}
+	switch addr.Kind {
+	case "unix":
+		return s.BindToSocket(addr)
+	case "tcp", "dice":
+		return s.BindToTCP(addr)
+	default:
+		return diceerrors.ErrInvalidAddress
+	}
+}
+
 // ClosePort ensures the server socket is closed properly.
 func (s *AsyncServer) ClosePort() {
 	if s.serverFD != 0 {
@@ -328,14 +415,14 @@ func (s *AsyncServer) executeCommandToBuffer(diceDBCmd *cmd.DiceDBCmd, buf *byte
 }
 
 func readCommands(c io.ReadWriter) (*cmd.RedisCmds, bool, error) {
-	var hasABORT = false
+	hasABORT := false
 	rp := clientio.NewRESPParser(c)
 	values, err := rp.DecodeMultiple()
 	if err != nil {
 		return nil, false, err
 	}
 
-	var cmds = make([]*cmd.DiceDBCmd, 0)
+	cmds := make([]*cmd.DiceDBCmd, 0)
 	for _, value := range values {
 		arrayValue, ok := value.([]interface{})
 		if !ok {

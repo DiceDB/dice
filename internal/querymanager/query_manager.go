@@ -317,7 +317,8 @@ func (m *Manager) addWatcher(query *sql.DSQLQuery, clientIdentifier ClientIdenti
 	qwatchClientChan chan comm.QwatchResponse, cacheChan chan *[]struct {
 		Key   string
 		Value *object.Obj
-	}) {
+	},
+) {
 	queryString := query.String()
 
 	clients, _ := m.WatchList.LoadOrStore(queryString, &sync.Map{})
@@ -344,7 +345,8 @@ func (m *Manager) addWatcher(query *sql.DSQLQuery, clientIdentifier ClientIdenti
 
 // removeWatcher removes a client from the watchlist for a query.
 func (m *Manager) removeWatcher(query *sql.DSQLQuery, clientIdentifier ClientIdentifier,
-	qwatchClientChan chan comm.QwatchResponse) {
+	qwatchClientChan chan comm.QwatchResponse,
+) {
 	queryString := query.String()
 	if clients, ok := m.WatchList.Load(queryString); ok {
 		if qwatchClientChan != nil {
