@@ -38,8 +38,9 @@ var (
 	EnableHTTP           = true
 	HTTPPort             = 8082
 
-	EnableWebsocket = true
-	WebsocketPort   = 8379
+	EnableWebsocket     = true
+	WebsocketPort       = 8379
+	NumShards       int = -1
 
 	// if RequirePass is set to an empty string, no authentication is required
 	RequirePass = utils.EmptyStr
@@ -116,6 +117,8 @@ type Config struct {
 		IOBufferLength    int `mapstructure:"iobufferlength"`
 		IOBufferLengthMAX int `mapstructure:"iobufferlengthmax"`
 	} `mapstructure:"network"`
+
+	NumShards int `mapstructure:"num_shards"`
 }
 
 // Default configurations for internal use
