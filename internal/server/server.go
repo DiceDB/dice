@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/dicedb/dice/internal/server/abstractserver"
 	"io"
 	"log/slog"
 	"net"
@@ -13,6 +12,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/dicedb/dice/internal/server/abstractserver"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/auth"

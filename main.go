@@ -15,6 +15,8 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/dicedb/dice/internal/server/abstractserver"
+
 	"github.com/dicedb/dice/config"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/logger"
@@ -23,6 +25,7 @@ import (
 	"github.com/dicedb/dice/internal/server/resp"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dice/internal/watchmanager"
 	"github.com/dicedb/dice/internal/worker"
 )
 
@@ -123,7 +126,10 @@ func main() {
 		}
 
 		workerManager := worker.NewWorkerManager(config.DiceConfig.Performance.MaxClients, shardManager)
-		respServer := resp.NewServer(shardManager, workerManager, cmdWatchChan, serverErrCh, logr)
+    var (
+			cmdWatchSubscriptionChan chan watchmanager.WatchSubscription
+		)
+    respServer := resp.NewServer(shardManager, workerManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh, logr)
 		serverWg.Add(1)
 		go runServer(ctx, &serverWg, respServer, logr, serverErrCh)
 	} else {
