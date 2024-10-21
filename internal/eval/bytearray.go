@@ -98,7 +98,7 @@ func ByteSliceToObj(store *dstore.Store, oldObj *object.Obj, b []byte, objType, 
 func ByteSliceToIntObj(store *dstore.Store, oldObj *object.Obj, b []byte) (*object.Obj, error) {
 	intVal, err := strconv.ParseInt(string(b), 10, 64)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse byte slice to int: %v", err)
+		return store.NewObj(string(b), -1, object.ObjTypeString, object.ObjEncodingEmbStr), nil
 	}
 	return store.NewObj(intVal, -1, object.ObjTypeInt, object.ObjEncodingInt), nil
 }
