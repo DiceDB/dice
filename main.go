@@ -5,7 +5,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/dicedb/dice/internal/server/abstractserver"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -14,6 +13,8 @@ import (
 	"runtime/trace"
 	"sync"
 	"syscall"
+
+	"github.com/dicedb/dice/internal/server/abstractserver"
 
 	"github.com/dicedb/dice/config"
 	diceerrors "github.com/dicedb/dice/internal/errors"
