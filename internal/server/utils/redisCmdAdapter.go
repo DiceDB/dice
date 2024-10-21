@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -35,6 +36,7 @@ const (
 )
 
 const QWatch string = "Q.WATCH"
+const QUnwatch string = "Q.UNWATCH"
 
 func ParseHTTPRequest(r *http.Request) (*cmd.DiceDBCmd, error) {
 	commandParts := strings.Split(strings.TrimPrefix(r.URL.Path, "/"), "/")
@@ -138,20 +140,29 @@ func ParseWebsocketMessage(msg []byte) (*cmd.DiceDBCmd, error) {
 
 	// handle commands with args
 	command = strings.ToUpper(cmdStr[:idx])
-	cmdStr = cmdStr[idx+1:]
+	args := cmdStr[idx+1:]
 
 	var cmdArr []string // args
-	// handle qwatch commands
+
+	// handle q.watch command
 	if command == QWatch {
-		// remove quotes from query string
-		cmdStr, err := strconv.Unquote(cmdStr)
+		arr, err := parseQWatchArgs(args)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing q.watch query: %v", err)
+			return nil, err
 		}
-		cmdArr = []string{cmdStr}
-	} else {
+		cmdArr = arr
+
+		// handle q.unwatch command
+	} else if command == QUnwatch {
+		arr, err := parseQUnwatchArgs(args)
+		if err != nil {
+			return nil, err
+		}
+		cmdArr = arr
+
 		// handle other commands
-		cmdArr = strings.Split(cmdStr, " ")
+	} else {
+		cmdArr = strings.Split(args, " ")
 	}
 
 	// if key prefix is empty for JSON.INGEST command
@@ -164,6 +175,54 @@ func ParseWebsocketMessage(msg []byte) (*cmd.DiceDBCmd, error) {
 		Cmd:  command,
 		Args: cmdArr,
 	}, nil
+}
+
+// parseQWatchArgs will parse Q.Watch args
+// example: q.watch "query"
+func parseQWatchArgs(args string) ([]string, error) {
+	// remove quotes from query string
+	query, err := strconv.Unquote(args)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing q.watch query: %v", err)
+	}
+	return []string{query}, nil
+}
+
+// parseQUnwatchArgs will parse Q.Unwatch args
+// example: q.unwatch 615405144 "query"
+func parseQUnwatchArgs(args string) ([]string, error) {
+
+	// check if there are two args
+	idx := strings.Index(args, " \"")
+	if idx == -1 {
+		return nil, fmt.Errorf("error parsing q.unwatch args: clientID or query not found")
+	}
+
+	// extract first arg
+	id, err := strconv.Atoi(args[:idx])
+	if err != nil {
+		return nil, fmt.Errorf("invalid clientID")
+	}
+
+	if id < 0 {
+		return nil, fmt.Errorf("clientID must be positive")
+	}
+
+	if id > math.MaxUint32 {
+		return nil, fmt.Errorf("clientID must be less than 4294967295 (uint32)")
+	}
+
+	// clientID can be safely converted to uint32
+	clientID := strconv.Itoa(id)
+
+	// remove quotes from query string
+	query := args[idx:]
+	query, err = strconv.Unquote(query)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing q.unwatch query: %v", err)
+	}
+
+	return []string{clientID, query}, nil
 }
 
 func processPriorityKeys(jsonBody map[string]interface{}, args *[]string) {
