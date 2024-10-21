@@ -484,6 +484,9 @@ func parseScore(input string) (float64, error) {
 	}
 }
 
+// The ZCOUNT command in DiceDB counts the number of members in a sorted set at the specified key
+// whose scores fall within a given range. The command takes three arguments: the key of the sorted set
+// the minimum score, and the maximum score.
 func evalZCOUNT(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) != 3 {
 		return &EvalResponse{
