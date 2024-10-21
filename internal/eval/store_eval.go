@@ -1069,7 +1069,7 @@ func evalHLEN(args []string, store *dstore.Store) *EvalResponse {
 
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.RespZero,
+			Result: 0,
 			Error:  nil,
 		}
 	}

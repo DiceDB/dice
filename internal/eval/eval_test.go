@@ -3819,27 +3819,27 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 
 func testEvalHLEN(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
-		"wrong number of args": {
+		"HLEN wrong number of args": {
 			input:          []string{},
 			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("HLEN")},
 		},
-		"key does not exist": {
+		"HLEN non-existent key": {
 			input:          []string{"nonexistent_key"},
-			migratedOutput: EvalResponse{Result: clientio.RespZero, Error: nil},
+			migratedOutput: EvalResponse{Result: 0, Error: nil},
 		},
-		"key exists but not a hash": {
+		"HLEN key exists but not a hash": {
 			setup: func() {
 				evalSET([]string{"string_key", "string_value"}, store)
 			},
 			input:          []string{"string_key"},
 			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
-		"empty hash": {
+		"HLEN empty hash": {
 			setup:          func() {},
 			input:          []string{"empty_hash"},
-			migratedOutput: EvalResponse{Result: clientio.RespZero, Error: nil},
+			migratedOutput: EvalResponse{Result: 0, Error: nil},
 		},
-		"hash with elements": {
+		"HLEN hash with elements": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3"}, store)
 			},
