@@ -48,10 +48,11 @@ to it using DiceDB CLI and SDKs, or even Redis CLIs and SDKs.
 ### Multi-Threading Mode (Experimental)
 
 Multi-threading is currently under active development. To run the server with multi-threading enabled, follow these steps:
+
 ```bash
 git clone https://github.com/dicedb/dice
 cd dice
-go run main.go --enable-multithreading=true
+go run main.go --enable-multithreading --enable-watch
 ```
 
 **Note:** Only the following commands are optimized for multithreaded execution: `PING, AUTH, SET, GET, GETSET, ABORT`
@@ -69,8 +70,10 @@ To run DiceDB for local development or running from source, you will need
 ```bash
 git clone https://github.com/dicedb/dice
 cd dice
-go run main.go
+go run main.go --enable-multithreading --enable-watch
 ```
+
+You can skip passing the two flags if you are not working with multi-threading or `.WATCH` features.
 
 1. Install GoLangCI
 
