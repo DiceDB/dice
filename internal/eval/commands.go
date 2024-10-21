@@ -991,11 +991,12 @@ var (
 		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
 	}
 	getRangeCmdMeta = DiceCmdMeta{
-		Name:     "GETRANGE",
-		Info:     `Returns a substring of the string stored at a key.`,
-		Eval:     evalGETRANGE,
-		Arity:    4,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Name:       "GETRANGE",
+		Info:       `Returns a substring of the string stored at a key.`,
+		IsMigrated: true,
+		NewEval:    evalGETRANGE,
+		Arity:      3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	setexCmdMeta = DiceCmdMeta{
 		Name: "SETEX",
@@ -1019,10 +1020,11 @@ var (
 		NewEval:    evalHRANDFIELD,
 	}
 	appendCmdMeta = DiceCmdMeta{
-		Name:  "APPEND",
-		Info:  `Appends a string to the value of a key. Creates the key if it doesn't exist.`,
-		Eval:  evalAPPEND,
-		Arity: 3,
+		Name:       "APPEND",
+		Info:       `Appends a string to the value of a key. Creates the key if it doesn't exist.`,
+		IsMigrated: true,
+		NewEval:    evalAPPEND,
+		Arity:      2,
 	}
 	zaddCmdMeta = DiceCmdMeta{
 		Name: "ZADD",
