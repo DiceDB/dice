@@ -62,19 +62,29 @@ const (
 
 // Watch commands
 const (
-	CmdGetWatch    = "GET.WATCH"
-	CmdZRangeWatch = "ZRANGE.WATCH"
-	CmdZPopMin     = "ZPOPMIN"
-	CmdJSONClear   = "JSON.CLEAR"
-	CmdJSONStrlen  = "JSON.STRLEN"
-	CmdJSONObjlen  = "JSON.OBJLEN"
-	CmdZAdd        = "ZADD"
-	CmdZRange      = "ZRANGE"
-	CmdZRank       = "ZRANK"
-	CmdPFAdd       = "PFADD"
-	CmdPFCount     = "PFCOUNT"
-	CmdPFMerge     = "PFMERGE"
-	CmdZPopMax     = "ZPOPMAX"
+	CmdGetWatch     = "GET.WATCH"
+	CmdZRangeWatch  = "ZRANGE.WATCH"
+	CmdZPopMin      = "ZPOPMIN"
+	CmdJSONClear    = "JSON.CLEAR"
+	CmdJSONStrlen   = "JSON.STRLEN"
+	CmdJSONObjlen   = "JSON.OBJLEN"
+	CmdZAdd         = "ZADD"
+	CmdZRange       = "ZRANGE"
+	CmdZRank        = "ZRANK"
+	CmdPFAdd        = "PFADD"
+	CmdPFCount      = "PFCOUNT"
+	CmdPFMerge      = "PFMERGE"
+	CmdIncr         = "INCR"
+	CmdIncrBy       = "INCRBY"
+	CmdDecr         = "DECR"
+	CmdDecrBy       = "DECRBY"
+	CmdIncrByFloat  = "INCRBYFLOAT"
+	CmdHIncrBy      = "HINCRBY"
+	CmdHIncrByFloat = "HINCRBYFLOAT"
+	CmdHRandField   = "HRANDFIELD"
+	CmdGetRange     = "GETRANGE"
+	CmdAppend       = "APPEND"
+	CmdZPopMax      = "ZPOPMAX"
 )
 
 type CmdMeta struct {
@@ -122,6 +132,9 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdGetSet: {
 		CmdType: SingleShard,
 	},
+	CmdGetRange: {
+		CmdType: SingleShard,
+	},
 	CmdJSONClear: {
 		CmdType: SingleShard,
 	},
@@ -138,6 +151,15 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdPFMerge: {
+		CmdType: SingleShard,
+	},
+	CmdHIncrBy: {
+		CmdType: SingleShard,
+	},
+	CmdHIncrByFloat: {
+		CmdType: SingleShard,
+	},
+	CmdHRandField: {
 		CmdType: SingleShard,
 	},
 
@@ -196,10 +218,28 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdZRange: {
 		CmdType: SingleShard,
 	},
-	CmdZPopMax: {
+	CmdAppend: {
+		CmdType: SingleShard,
+	},
+	CmdIncr: {
+		CmdType: SingleShard,
+	},
+	CmdIncrBy: {
+		CmdType: SingleShard,
+	},
+	CmdDecr: {
+		CmdType: SingleShard,
+	},
+	CmdDecrBy: {
+		CmdType: SingleShard,
+	},
+	CmdIncrByFloat: {
 		CmdType: SingleShard,
 	},
 	CmdZPopMin: {
+		CmdType: SingleShard,
+	},
+	CmdZPopMax: {
 		CmdType: SingleShard,
 	},
 }

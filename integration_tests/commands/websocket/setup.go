@@ -12,6 +12,7 @@ import (
 
 	"github.com/dicedb/dice/config"
 	derrors "github.com/dicedb/dice/internal/errors"
+	"github.com/dicedb/dice/internal/querymanager"
 	"github.com/dicedb/dice/internal/server"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -108,7 +109,9 @@ func RunWebsocketServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerO
 	globalErrChannel := make(chan error)
 	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Performance.WatchChanBufSize)
 	shardManager := shard.NewShardManager(1, watchChan, nil, globalErrChannel, opt.Logger)
-	testServer := server.NewWebSocketServer(shardManager, watchChan, testPort1, opt.Logger)
+	queryWatcherLocal := querymanager.NewQueryManager(opt.Logger)
+	config.WebsocketPort = opt.Port
+	testServer := server.NewWebSocketServer(shardManager, testPort1, opt.Logger)
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
 
 	// run shard manager
@@ -116,6 +119,13 @@ func RunWebsocketServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerO
 	go func() {
 		defer wg.Done()
 		shardManager.Run(shardManagerCtx)
+	}()
+
+	// run query manager
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		queryWatcherLocal.Run(ctx, watchChan)
 	}()
 
 	// start websocket server

@@ -1,6 +1,7 @@
 package eval
 
 import (
+	"fmt"
 	"math"
 	"strconv"
 	"strings"
@@ -323,6 +324,97 @@ func evalSETEX(args []string, store *dstore.Store) *EvalResponse {
 	return evalSET(newArgs, store)
 }
 
+// Key, start and end are mandatory args.
+// Returns a substring from the key(if it's a string) from start -> end.
+// Returns ""(empty string) if key is not present and if start > end.
+func evalGETRANGE(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 3 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("GETRANGE"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: string(""),
+			Error:  nil,
+		}
+	}
+
+	start, err := strconv.Atoi(args[1])
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrIntegerOutOfRange,
+		}
+	}
+	end, err := strconv.Atoi(args[2])
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrIntegerOutOfRange,
+		}
+	}
+
+	var str string
+	switch _, oEnc := object.ExtractTypeEncoding(obj); oEnc {
+	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
+		if val, ok := obj.Value.(string); ok {
+			str = val
+		} else {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("expected string but got another type"),
+			}
+		}
+	case object.ObjEncodingInt:
+		str = strconv.FormatInt(obj.Value.(int64), 10)
+	default:
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if str == "" {
+		return &EvalResponse{
+			Result: string(""),
+			Error:  nil,
+		}
+	}
+
+	if start < 0 {
+		start = len(str) + start
+	}
+
+	if end < 0 {
+		end = len(str) + end
+	}
+
+	if start >= len(str) || end < 0 || start > end {
+		return &EvalResponse{
+			Result: string(""),
+			Error:  nil,
+		}
+	}
+
+	if start < 0 {
+		start = 0
+	}
+
+	if end >= len(str) {
+		end = len(str) - 1
+	}
+
+	return &EvalResponse{
+		Result: str[start : end+1],
+		Error:  nil,
+	}
+}
+
 // evalZADD adds all the specified members with the specified scores to the sorted set stored at key.
 // If a specified member is already a member of the sorted set, the score is updated and the element
 // reinserted at the right position to ensure the correct ordering.
@@ -337,7 +429,6 @@ func evalZADD(args []string, store *dstore.Store) *EvalResponse {
 
 	key := args[0]
 	obj := store.Get(key)
-
 	var sortedSet *sortedset.Set
 
 	if obj != nil {
@@ -453,6 +544,86 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+// evalAPPEND takes two arguments: the key and the value to append to the key's current value.
+// If the key does not exist, it creates a new key with the given value (so APPEND will be similar to SET in this special case)
+// If key already exists and is a string (or integers stored as strings), this command appends the value at the end of the string
+func evalAPPEND(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("APPEND"),
+		}
+	}
+
+	key, value := args[0], args[1]
+	obj := store.Get(key)
+
+	if obj == nil {
+		// Key does not exist path
+
+		// check if the value starts with '0' and has more than 1 character to handle leading zeros
+		if len(value) > 1 && value[0] == '0' {
+			// treat as string if has leading zeros
+			store.Put(key, store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw))
+			return &EvalResponse{
+				Result: len(value),
+				Error:  nil,
+			}
+		}
+
+		// Deduce type and encoding based on the value if no leading zeros
+		oType, oEnc := deduceTypeEncoding(value)
+
+		var storedValue interface{}
+		// Store the value with the appropriate encoding based on the type
+		switch oEnc {
+		case object.ObjEncodingInt:
+			storedValue, _ = strconv.ParseInt(value, 10, 64)
+		case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
+			storedValue = value
+		default:
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			}
+		}
+
+		store.Put(key, store.NewObj(storedValue, -1, oType, oEnc))
+
+		return &EvalResponse{
+			Result: len(value),
+			Error:  nil,
+		}
+	}
+	// Key exists path
+	_, currentEnc := object.ExtractTypeEncoding(obj)
+
+	var currentValueStr string
+	switch currentEnc {
+	case object.ObjEncodingInt:
+		// If the encoding is an integer, convert the current value to a string for concatenation
+		currentValueStr = strconv.FormatInt(obj.Value.(int64), 10)
+	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
+		// If the encoding is a string, retrieve the string value for concatenation
+		currentValueStr = obj.Value.(string)
+	default:
+		// If the encoding is neither integer nor string, return a "wrong type" error
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	newValue := currentValueStr + value
+
+	store.Put(key, store.NewObj(newValue, -1, object.ObjTypeString, object.ObjEncodingRaw))
+
+	return &EvalResponse{
+		Result: len(newValue),
+		Error:  nil,
+	}
+}
+
 // evalZRANK returns the rank of the member in the sorted set stored at key.
 // The rank (or index) is 0-based, which means that the member with the lowest score has rank 0.
 // If the 'WITHSCORE' option is specified, it returns both the rank and the score of the member.
@@ -494,7 +665,6 @@ func evalZRANK(args []string, store *dstore.Store) *EvalResponse {
 			Error:  diceerrors.ErrWrongTypeOperation,
 		}
 	}
-
 	rank, score := sortedSet.RankWithScore(member, false)
 	if rank == -1 {
 		return &EvalResponse{
@@ -996,60 +1166,418 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
-// This command removes the element with the maximum score from the sorted set.
-// If two elements have the same score then the members are aligned in lexicographically and the lexicographically greater element is removed.
-// There is a second optional element called count which specifies the number of element to be removed.
-// Returns the removed elements from the sorted set.
-func evalZPOPMAX(args []string, store *dstore.Store) *EvalResponse {
-	if len(args) < 1 || len(args) > 2 {
+// Increments the number stored at field in the hash stored at key by increment.
+//
+// If key does not exist, a new key holding a hash is created.
+// If field does not exist the value is set to the increment value passed
+//
+// The range of values supported by HINCRBY is limited to 64-bit signed integers.
+//
+// Usage: HINCRBY key field increment
+func evalHINCRBY(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 3 {
 		return &EvalResponse{
-			Result: clientio.NIL,
-			Error:  diceerrors.ErrWrongArgumentCount("ZPOPMAX"),
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("HINCRBY"),
+		}
+	}
+
+	increment, err := strconv.ParseInt(args[2], 10, 64)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrIntegerOutOfRange,
+		}
+	}
+	var hashmap HashMap
+	key := args[0]
+	obj := store.Get(key)
+	if obj != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			}
+		}
+		hashmap = obj.Value.(HashMap)
+	}
+
+	if hashmap == nil {
+		hashmap = make(HashMap)
+	}
+
+	field := args[1]
+	numkey, err := hashmap.incrementValue(field, increment)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(err.Error()),
+		}
+	}
+
+	obj = store.NewObj(hashmap, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
+	store.Put(key, obj)
+
+	return &EvalResponse{
+		Result: numkey,
+		Error:  nil,
+	}
+}
+
+// Increments the number stored at field in the hash stored at key by the specified floating point increment.
+//
+// If key does not exist, a new key holding a hash is created.
+// If field does not exist, the value is set to the increment passed before the operation is performed.
+//
+// The precision of the increment is not restricted to integers, allowing for floating point values.
+//
+// Usage: HINCRBYFLOAT key field increment
+func evalHINCRBYFLOAT(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 3 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("HINCRBYFLOAT"),
+		}
+	}
+
+	increment, err := strconv.ParseFloat(strings.TrimSpace(args[2]), 64)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrInvalidNumberFormat,
 		}
 	}
 
 	key := args[0]
 	obj := store.Get(key)
-	count := 1
-	if len(args) > 1 {
-		ops, err := strconv.Atoi(args[1])
-		if err != nil {
+	var hashmap HashMap
+	if obj != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
 			return &EvalResponse{
-				Result: clientio.NIL,
-				Error:  diceerrors.ErrIntegerOutOfRange, // This error is thrown when then count argument is not an integer
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
 			}
 		}
-		if ops <= 0 {
-			return &EvalResponse{
-				Result: []string{}, // Returns empty array when the count is less than or equal to  0
-				Error:  nil,
-			}
-		}
-		count = ops
+		hashmap = obj.Value.(HashMap)
 	}
 
+	if hashmap == nil {
+		hashmap = make(HashMap)
+	}
+
+	field := args[1]
+	numkey, err := hashmap.incrementFloatValue(field, increment)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(err.Error()),
+		}
+	}
+
+	obj = store.NewObj(hashmap, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
+	store.Put(key, obj)
+
+	return &EvalResponse{
+		Result: numkey,
+		Error:  nil,
+	}
+}
+
+// evalHRANDFIELD returns random fields from a hash stored at key.
+// If only the key is provided, one random field is returned.
+// If count is provided, it returns that many unique random fields. A negative count allows repeated selections.
+// The "WITHVALUES" option returns both fields and values.
+// Returns nil if the key doesn't exist or the hash is empty.
+// Errors: arity error, type error for non-hash, syntax error for "WITHVALUES", or count format error.
+func evalHRANDFIELD(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 || len(args) > 3 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("HRANDFIELD"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
 	if obj == nil {
 		return &EvalResponse{
-			Result: []string{}, // Returns empty array when the object with given key is not present in the store
+			Result: clientio.NIL,
 			Error:  nil,
 		}
 	}
 
-	var sortedSet *sortedset.Set
-	sortedSet, err := sortedset.FromObject(obj)
-	if err != nil {
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
 		return &EvalResponse{
-			Result: clientio.NIL,
-			Error:  diceerrors.ErrWrongTypeOperation, // Returns this error when a key is present in the store but is not of type sortedset.Set
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
 		}
 	}
 
-	var res []string = sortedSet.PopMax(count)
+	hashMap := obj.Value.(HashMap)
+	if len(hashMap) == 0 {
+		return &EvalResponse{
+			Result: clientio.EmptyArray,
+			Error:  nil,
+		}
+	}
 
+	count := 1
+	withValues := false
+
+	if len(args) > 1 {
+		var err error
+		// The second argument is the count.
+		count, err = strconv.Atoi(args[1])
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrIntegerOutOfRange,
+			}
+		}
+
+		// The third argument is the "WITHVALUES" option.
+		if len(args) == 3 {
+			if !strings.EqualFold(args[2], WithValues) {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrSyntax,
+				}
+			}
+			withValues = true
+		}
+	}
+
+	return selectRandomFields(hashMap, count, withValues)
+}
+
+// evalINCR increments the value of the specified key in args by 1,
+// if the key exists and the value is integer format.
+// The key should be the only param in args.
+// If the key does not exist, new key is created with value 0,
+// the value of the new key is then incremented.
+// The value for the queried key should be of integer format,
+// if not evalINCR returns encoded error response.
+// evalINCR returns the incremented value for the key if there are no errors.
+func evalINCR(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("INCR"),
+		}
+	}
+
+	return incrDecrCmd(args, 1, store)
+}
+
+// INCRBY increments the value of the specified key in args by increment integer specified,
+// if the key exists and the value is integer format.
+// The key and the increment integer should be the only param in args.
+// If the key does not exist, new key is created with value 0,
+// the value of the new key is then incremented.
+// The value for the queried key should be of integer format,
+// if not INCRBY returns error response.
+// evalINCRBY returns the incremented value for the key if there are no errors.
+func evalINCRBY(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("INCRBY"),
+		}
+	}
+
+	incrAmount, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrIntegerOutOfRange,
+		}
+	}
+	return incrDecrCmd(args, incrAmount, store)
+}
+
+// evalDECR decrements the value of the specified key in args by 1,
+// if the key exists and the value is integer format.
+// The key should be the only param in args.
+// If the key does not exist, new key is created with value 0,
+// the value of the new key is then decremented.
+// The value for the queried key should be of integer format,
+// if not evalDECR returns error response.
+// evalDECR returns the decremented value for the key if there are no errors.
+func evalDECR(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("DECR"),
+		}
+	}
+	return incrDecrCmd(args, -1, store)
+}
+
+// evalDECRBY decrements the value of the specified key in args by the specified decrement,
+// if the key exists and the value is integer format.
+// The key should be the first parameter in args, and the decrement should be the second parameter.
+// If the key does not exist, new key is created with value 0,
+// the value of the new key is then decremented by specified decrement.
+// The value for the queried key should be of integer format,
+// if not evalDECRBY returns an error response.
+// evalDECRBY returns the decremented value for the key after applying the specified decrement if there are no errors.
+func evalDECRBY(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("DECRBY"),
+		}
+	}
+	decrAmount, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrIntegerOutOfRange,
+		}
+	}
+	return incrDecrCmd(args, -decrAmount, store)
+}
+
+func incrDecrCmd(args []string, incr int64, store *dstore.Store) *EvalResponse {
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		obj = store.NewObj(incr, -1, object.ObjTypeInt, object.ObjEncodingInt)
+		store.Put(key, obj)
+		return &EvalResponse{
+			Result: incr,
+			Error:  nil,
+		}
+	}
+	// if the type is not KV : return wrong type error
+	// if the encoding or type is not int : return value is not an int error
+	errStr := object.AssertType(obj.TypeEncoding, object.ObjTypeString)
+	if errStr == nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrIntegerOutOfRange,
+		}
+	}
+
+	errTypeInt := object.AssertType(obj.TypeEncoding, object.ObjTypeInt)
+	errEncInt := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingInt)
+	if errEncInt != nil || errTypeInt != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+	i, _ := obj.Value.(int64)
+	if (incr < 0 && i < 0 && incr < (math.MinInt64-i)) ||
+		(incr > 0 && i > 0 && incr > (math.MaxInt64-i)) {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrOverflow,
+		}
+	}
+
+	i += incr
+	obj.Value = i
 	return &EvalResponse{
-		Result: res,
+		Result: i,
 		Error:  nil,
 	}
+}
+
+// evalINCRBYFLOAT increments the value of the  key in args by the specified increment,
+// if the key exists and the value is a number.
+// The key should be the first parameter in args, and the increment should be the second parameter.
+// If the key does not exist, a new key is created with increment's value.
+// If the value at the key is a string, it should be parsable to float64,
+// if not evalINCRBYFLOAT returns an  error response.
+// evalINCRBYFLOAT returns the incremented value for the key after applying the specified increment if there are no errors.
+func evalINCRBYFLOAT(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("INCRBYFLOAT"),
+		}
+	}
+	incr, err := strconv.ParseFloat(strings.TrimSpace(args[1]), 64)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("value is not a valid float"),
+		}
+	}
+	return incrByFloatCmd(args, incr, store)
+}
+
+func incrByFloatCmd(args []string, incr float64, store *dstore.Store) *EvalResponse {
+	key := args[0]
+	obj := store.Get(key)
+
+	if obj == nil {
+		strValue := formatFloat(incr, false)
+		oType, oEnc := deduceTypeEncoding(strValue)
+		obj = store.NewObj(strValue, -1, oType, oEnc)
+		store.Put(key, obj)
+		return &EvalResponse{
+			Result: strValue,
+			Error:  nil,
+		}
+	}
+
+	errString := object.AssertType(obj.TypeEncoding, object.ObjTypeString)
+	errInt := object.AssertType(obj.TypeEncoding, object.ObjTypeInt)
+	if errString != nil && errInt != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	value, err := floatValue(obj.Value)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("value is not a valid float"),
+		}
+	}
+	value += incr
+	if math.IsInf(value, 0) {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrValueOutOfRange,
+		}
+	}
+	strValue := formatFloat(value, true)
+
+	oType, oEnc := deduceTypeEncoding(strValue)
+
+	// Remove the trailing decimal for integer values
+	// to maintain consistency with redis
+	strValue = strings.TrimSuffix(strValue, ".0")
+
+	obj.Value = strValue
+	obj.TypeEncoding = oType | oEnc
+
+	return &EvalResponse{
+		Result: strValue,
+		Error:  nil,
+	}
+}
+
+// floatValue returns the float64 value for an interface which
+// contains either a string or an int.
+func floatValue(value interface{}) (float64, error) {
+	switch raw := value.(type) {
+	case string:
+		parsed, err := strconv.ParseFloat(raw, 64)
+		if err != nil {
+			return 0, err
+		}
+		return parsed, nil
+	case int64:
+		return float64(raw), nil
+	}
+
+	return 0, fmt.Errorf(diceerrors.IntOrFloatErr)
 }
 
 // ZPOPMIN Removes and returns the member with the lowest score from the sorted set at the specified key.
@@ -1112,6 +1640,63 @@ func evalZPOPMIN(args []string, store *dstore.Store) *EvalResponse {
 
 	return &EvalResponse{
 		Result: results,
+		Error:  nil,
+	}
+}
+
+// This command removes the element with the maximum score from the sorted set.
+// If two elements have the same score then the members are aligned in lexicographically and the lexicographically greater element is removed.
+// There is a second optional element called count which specifies the number of element to be removed.
+// Returns the removed elements from the sorted set.
+func evalZPOPMAX(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 || len(args) > 2 {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongArgumentCount("ZPOPMAX"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	count := 1
+	if len(args) > 1 {
+		ops, err := strconv.Atoi(args[1])
+		if err != nil {
+			return &EvalResponse{
+				Result: clientio.NIL,
+				Error:  diceerrors.ErrIntegerOutOfRange, // This error is thrown when then count argument is not an integer
+			}
+		}
+		if ops <= 0 {
+			return &EvalResponse{
+				Result: []string{}, // Returns empty array when the count is less than or equal to  0
+				Error:  nil,
+			}
+		}
+		count = ops
+	}
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: []string{}, // Returns empty array when the object with given key is not present in the store
+			Error:  nil,
+		}
+	}
+
+	var sortedSet *sortedset.Set
+	sortedSet, err := sortedset.FromObject(obj)
+	if err != nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongTypeOperation, // Returns this error when a key is present in the store but is not of type sortedset.Set
+		}
+	}
+
+	var res []string = sortedSet.PopMax(count)
+
+	return &EvalResponse{
+		Result: res,
 		Error:  nil,
 	}
 }
