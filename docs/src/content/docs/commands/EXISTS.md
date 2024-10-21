@@ -3,7 +3,6 @@ title: EXISTS
 description: The `EXISTS` command in DiceDB is used to determine if one or more specified keys exist in the database. It returns the number of keys that exist among the specified ones.
 ---
 
-## Description
 The `EXISTS` command in DiceDB is used to determine if one or more specified keys exist in the database. It returns the number of keys that exist among the specified ones.
 
 ## Syntax
