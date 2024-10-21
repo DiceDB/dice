@@ -1166,131 +1166,6 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
-// evalDEL deletes all the specified keys in args list
-// returns the count of total deleted keys
-func evalDEL(args []string, store *dstore.Store) *EvalResponse {
-	if len(args) < 1 {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongArgumentCount("DEL"),
-		}
-	}
-
-	var count int64
-	for _, key := range args {
-		if ok := store.Del(key); ok {
-			count++
-		}
-	}
-
-	return &EvalResponse{
-		Result: count,
-		Error:  nil,
-	}
-}
-
-// evalEXISTS returns the number of keys existing in the db
-// returns the count of total existing keys
-func evalEXISTS(args []string, store *dstore.Store) *EvalResponse {
-	if len(args) < 1 {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongArgumentCount("EXISTS"),
-		}
-	}
-
-	var count int64
-	for _, key := range args {
-		if store.GetNoTouch(key) != nil {
-			count++
-		}
-	}
-
-	return &EvalResponse{
-		Result: count,
-		Error:  nil,
-	}
-}
-
-// evalPERSIST removes the expiry from the key
-func evalPersist(args []string, store *dstore.Store) *EvalResponse {
-	if len(args) < 1 {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongArgumentCount("PERSIST"),
-		}
-	}
-
-	key := args[0]
-	obj := store.Get(key)
-
-	// If the key doesn't exist, return 0
-	if obj == nil {
-		return &EvalResponse{
-			Result: int64(0),
-			Error:  nil,
-		}
-	}
-
-	// If the key has no expiry, return 0
-	_, isExpirySet := dstore.GetExpiry(obj, store)
-	if !isExpirySet {
-		return &EvalResponse{
-			Result: int64(0),
-      
-
-			Error:  nil,
-		}
-	}
-
-	// Remove the expiry from the key
-	dstore.DelExpiry(obj, store)
-
-	return &EvalResponse{
-		Result: int64(1),
-		Error:  nil,
-	}
-}
-
-// evalTYPE returns the type of the value stored at key
-func evalTYPE(args []string, store *dstore.Store) *EvalResponse {
-	if len(args) < 1 {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongArgumentCount("TYPE"),
-		}
-	}
-
-	key := args[0]
-	obj := store.Get(key)
-
-	if obj == nil {
-		return &EvalResponse{
-			Result: "none",
-			Error:  nil,
-		}
-	}
-
-	var typeStr string
-	switch oType, _ := object.ExtractTypeEncoding(obj); oType {
-	case object.ObjTypeString, object.ObjTypeInt, object.ObjTypeByteArray:
-		typeStr = "string"
-	case object.ObjTypeByteList:
-		typeStr = "list"
-	case object.ObjTypeSet:
-		typeStr = "set"
-	case object.ObjTypeHashMap:
-		typeStr = "hash"
-	default:
-		typeStr = "non-supported type"
-	}
-
-	return &EvalResponse{
-		Result: typeStr,
-		Error:  nil,
-	}
-}
-
 // evalINCR increments the value of the specified key in args by 1,
 // if the key exists and the value is integer format.
 // The key should be the only param in args.
@@ -1424,7 +1299,6 @@ func incrDecrCmd(args []string, incr int64, store *dstore.Store) *EvalResponse {
 		Error:  nil,
 	}
 }
-
 
 // Increments the number stored at field in the hash stored at key by increment.
 //
@@ -1766,6 +1640,130 @@ func evalZPOPMIN(args []string, store *dstore.Store) *EvalResponse {
 
 	return &EvalResponse{
 		Result: results,
+		Error:  nil,
+	}
+}
+
+// evalDEL deletes all the specified keys in args list
+// returns the count of total deleted keys
+func evalDEL(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("DEL"),
+		}
+	}
+
+	var count int64
+	for _, key := range args {
+		if ok := store.Del(key); ok {
+			count++
+		}
+	}
+
+	return &EvalResponse{
+		Result: count,
+		Error:  nil,
+	}
+}
+
+// evalEXISTS returns the number of keys existing in the db
+// returns the count of total existing keys
+func evalEXISTS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("EXISTS"),
+		}
+	}
+
+	var count int64
+	for _, key := range args {
+		if store.GetNoTouch(key) != nil {
+			count++
+		}
+	}
+
+	return &EvalResponse{
+		Result: count,
+		Error:  nil,
+	}
+}
+
+// evalPERSIST removes the expiry from the key
+func evalPersist(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("PERSIST"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	// If the key doesn't exist, return 0
+	if obj == nil {
+		return &EvalResponse{
+			Result: int64(0),
+			Error:  nil,
+		}
+	}
+
+	// If the key has no expiry, return 0
+	_, isExpirySet := dstore.GetExpiry(obj, store)
+	if !isExpirySet {
+		return &EvalResponse{
+			Result: int64(0),
+
+			Error: nil,
+		}
+	}
+
+	// Remove the expiry from the key
+	dstore.DelExpiry(obj, store)
+
+	return &EvalResponse{
+		Result: int64(1),
+		Error:  nil,
+	}
+}
+
+// evalTYPE returns the type of the value stored at key
+func evalTYPE(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("TYPE"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: "none",
+			Error:  nil,
+		}
+	}
+
+	var typeStr string
+	switch oType, _ := object.ExtractTypeEncoding(obj); oType {
+	case object.ObjTypeString, object.ObjTypeInt, object.ObjTypeByteArray:
+		typeStr = "string"
+	case object.ObjTypeByteList:
+		typeStr = "list"
+	case object.ObjTypeSet:
+		typeStr = "set"
+	case object.ObjTypeHashMap:
+		typeStr = "hash"
+	default:
+		typeStr = "non-supported type"
+	}
+
+	return &EvalResponse{
+		Result: typeStr,
 		Error:  nil,
 	}
 }
