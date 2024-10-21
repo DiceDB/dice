@@ -43,10 +43,10 @@ const (
 
 // Single-shard commands.
 const (
-	CmdSet    = "SET"
-	CmdGet    = "GET"
-	CmdGetSet = "GETSET"
-  CmdJSONArrAppend = "JSON.ARRAPPEND"
+	CmdSet           = "SET"
+	CmdGet           = "GET"
+	CmdGetSet        = "GETSET"
+	CmdJSONArrAppend = "JSON.ARRAPPEND"
 	CmdJSONArrLen    = "JSON.ARRLEN"
 	CmdJSONArrPop    = "JSON.ARRPOP"
 )
@@ -141,8 +141,8 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdJSONArrPop: {
-    CmdType: SingleShard,
-  }
+		CmdType: SingleShard,
+	},
 	CmdGetRange: {
 		CmdType: SingleShard,
 	},

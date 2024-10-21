@@ -2007,4 +2007,3 @@ func evalJSONARRPOP(args []string, store *dstore.Store) *EvalResponse {
 		Error:  nil,
 	}
 }
-
