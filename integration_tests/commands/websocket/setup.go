@@ -30,11 +30,6 @@ type TestServerOptions struct {
 	Logger *slog.Logger
 }
 
-type CommandExecutor interface {
-	FireCommand(cmd string) interface{}
-	Name() string
-}
-
 type WebsocketCommandExecutor struct {
 	baseURL         string
 	websocketClient *http.Client
@@ -96,8 +91,20 @@ func (e *WebsocketCommandExecutor) FireCommand(conn *websocket.Conn, cmd string)
 	return nil
 }
 
-func (e *WebsocketCommandExecutor) Name() string {
-	return "Websocket"
+func (e *WebsocketCommandExecutor) ReadResponse(conn *websocket.Conn, cmd string) (interface{}, error) {
+	// read the response
+	_, resp, err := conn.ReadMessage()
+	if err != nil {
+		return nil, err
+	}
+
+	// marshal to json
+	var respJSON interface{}
+	if err = json.Unmarshal(resp, &respJSON); err != nil {
+		return nil, fmt.Errorf("error unmarshaling response")
+	}
+
+	return respJSON, nil
 }
 
 func RunWebsocketServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOptions) {
@@ -112,20 +119,20 @@ func RunWebsocketServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerO
 	queryWatcherLocal := querymanager.NewQueryManager(opt.Logger)
 	config.WebsocketPort = opt.Port
 	testServer := server.NewWebSocketServer(shardManager, testPort1, opt.Logger)
-	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
+	setupCtx, cancelSetupCtx := context.WithCancel(ctx)
 
 	// run shard manager
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		shardManager.Run(shardManagerCtx)
+		shardManager.Run(setupCtx)
 	}()
 
 	// run query manager
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		queryWatcherLocal.Run(ctx, watchChan)
+		queryWatcherLocal.Run(setupCtx, watchChan)
 	}()
 
 	// start websocket server
@@ -133,12 +140,12 @@ func RunWebsocketServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerO
 	go func() {
 		defer wg.Done()
 		srverr := testServer.Run(ctx)
+		cancelSetupCtx()
 		if srverr != nil {
-			cancelShardManager()
-			if errors.Is(srverr, derrors.ErrAborted) {
+			if errors.Is(srverr, derrors.ErrAborted) || errors.Is(srverr, http.ErrServerClosed) {
 				return
 			}
-			logger.Debug("Websocket test server encountered an error: %v", slog.Any("error", srverr))
+			logger.Debug("Websocket test server encountered an error", slog.Any("error", srverr))
 		}
 	}()
 }

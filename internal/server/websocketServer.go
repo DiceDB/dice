@@ -34,13 +34,23 @@ var unimplementedCommandsWebsocket = map[string]bool{
 	Qunwatch: true,
 }
 
+type QuerySubscription struct {
+	Subscribe          bool // true for subscribe, false for unsubscribe
+	Cmd                *cmd.DiceDBCmd
+	ClientIdentifierID uint32
+	Client             *websocket.Conn
+}
+
 type WebsocketServer struct {
 	shardManager       *shard.ShardManager
 	ioChan             chan *ops.StoreResponse
 	websocketServer    *http.Server
 	upgrader           websocket.Upgrader
+	subscriptionChan   chan QuerySubscription // to subscribe clients
+	subscribedClients  sync.Map               // to maintain records of subscribed clients
 	qwatchResponseChan chan comm.QwatchResponse
 	shutdownChan       chan struct{}
+	mu                 sync.Mutex
 	logger             *slog.Logger
 }
 
@@ -61,6 +71,8 @@ func NewWebSocketServer(shardManager *shard.ShardManager, port int, logger *slog
 		ioChan:             make(chan *ops.StoreResponse, 1000),
 		websocketServer:    srv,
 		upgrader:           upgrader,
+		subscriptionChan:   make(chan QuerySubscription),
+		subscribedClients:  sync.Map{},
 		qwatchResponseChan: make(chan comm.QwatchResponse),
 		shutdownChan:       make(chan struct{}),
 		logger:             logger,
@@ -74,11 +86,23 @@ func (s *WebsocketServer) Run(ctx context.Context) error {
 	var wg sync.WaitGroup
 	var err error
 
-	websocketCtx, cancelWebsocket := context.WithCancel(ctx)
-	defer cancelWebsocket()
+	wsCtx, cancelWS := context.WithCancel(ctx)
+	defer cancelWS()
 
 	s.shardManager.RegisterWorker("wsServer", s.ioChan, nil)
 
+	// start server
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		s.logger.Info("Websocket Server running", slog.String("port", s.websocketServer.Addr[1:]))
+		err = s.websocketServer.ListenAndServe()
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			s.logger.Error("Error in Websocket Server", slog.Any("time", time.Now()), slog.Any("error", err))
+		}
+	}()
+
+	// shutdown server gracefully
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -86,24 +110,27 @@ func (s *WebsocketServer) Run(ctx context.Context) error {
 		case <-ctx.Done():
 		case <-s.shutdownChan:
 			err = diceerrors.ErrAborted
-			s.logger.Debug("Shutting down Websocket Server", slog.Any("time", time.Now()))
 		}
 
-		shutdownErr := s.websocketServer.Shutdown(websocketCtx)
+		shutdownErr := s.websocketServer.Shutdown(wsCtx)
 		if shutdownErr != nil {
-			s.logger.Error("Websocket Server shutdown failed:", slog.Any("error", err))
+			s.logger.Error("Websocket Server shutdown failed:", slog.Any("error", shutdownErr))
 			return
 		}
 	}()
 
+	// listen for Q.WATCH subscriptions
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		s.logger.Info("Websocket Server running", slog.String("port", s.websocketServer.Addr[1:]))
-		err = s.websocketServer.ListenAndServe()
-		if err != nil {
-			s.logger.Debug("Error in Websocket Server", slog.Any("time", time.Now()), slog.Any("error", err))
-		}
+		s.listenForSubscriptions(wsCtx)
+	}()
+
+	// process Q.WATCH updates
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		s.processQwatchUpdates(wsCtx)
 	}()
 
 	wg.Wait()
@@ -119,6 +146,8 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 
 	// closing handshake
 	defer func() {
+		s.mu.Lock()
+		defer s.mu.Unlock()
 		_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "close 1000 (normal)"))
 		conn.Close()
 	}()
@@ -141,7 +170,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		if errors.Is(err, diceerrors.ErrEmptyCommand) {
 			continue
 		} else if err != nil {
-			if err := WriteResponseWithRetries(conn, []byte("error: parsing failed"), maxRetries); err != nil {
+			if err := s.writeResponseWithRetries(conn, []byte("error: parsing failed"), maxRetries); err != nil {
 				s.logger.Debug(fmt.Sprintf("Error writing message: %v", err))
 			}
 			continue
@@ -154,7 +183,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		}
 
 		if unimplementedCommandsWebsocket[diceDBCmd.Cmd] {
-			if err := WriteResponseWithRetries(conn, []byte("Command is not implemented with Websocket"), maxRetries); err != nil {
+			if err := s.writeResponseWithRetries(conn, []byte("Command is not implemented with Websocket"), maxRetries); err != nil {
 				s.logger.Debug(fmt.Sprintf("Error writing message: %v", err))
 			}
 			continue
@@ -173,8 +202,14 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 			clientIdentifierID := generateUniqueInt32(r)
 			sp.Client = comm.NewHTTPQwatchClient(s.qwatchResponseChan, clientIdentifierID)
 
-			// start a goroutine for subsequent updates
-			go s.processQwatchUpdates(clientIdentifierID, conn, diceDBCmd)
+			// subscribe client for updates
+			event := QuerySubscription{
+				Subscribe:          true,
+				Cmd:                diceDBCmd,
+				ClientIdentifierID: clientIdentifierID,
+				Client:             conn,
+			}
+			s.subscriptionChan <- event
 		}
 
 		s.shardManager.GetShard(0).ReqChan <- sp
@@ -185,17 +220,46 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (s *WebsocketServer) processQwatchUpdates(clientIdentifierID uint32, conn *websocket.Conn, dicDBCmd *cmd.DiceDBCmd) {
+func (s *WebsocketServer) listenForSubscriptions(ctx context.Context) {
+	for {
+		select {
+		case event := <-s.subscriptionChan:
+			if event.Subscribe {
+				s.subscribedClients.LoadOrStore(event.ClientIdentifierID, event.Client)
+			}
+		case <-s.shutdownChan:
+			return
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func (s *WebsocketServer) processQwatchUpdates(ctx context.Context) {
 	for {
 		select {
 		case resp := <-s.qwatchResponseChan:
-			if resp.ClientIdentifierID == clientIdentifierID {
-				if err := s.processResponse(conn, dicDBCmd, resp); err != nil {
-					s.logger.Debug("Error writing response to client. Shutting down goroutine for q.watch updates", slog.Any("clientIdentifierID", clientIdentifierID), slog.Any("error", err))
-					return
-				}
+			client, ok := s.subscribedClients.Load(resp.ClientIdentifierID)
+			if !ok {
+				s.logger.Error("message received but client not found", slog.Any("clientIdentifierID", resp.ClientIdentifierID))
+			}
+			conn, ok := client.(*websocket.Conn)
+			if !ok {
+				s.logger.Error("error typecasting client to *websocket.Conn")
+			}
+
+			dicDBCmd := &cmd.DiceDBCmd{
+				Cmd:  Qwatch,
+				Args: []string{},
+			}
+
+			if err := s.processResponse(conn, dicDBCmd, resp); err != nil {
+				s.logger.Debug("Error writing qwatch update to client", slog.Any("clientIdentifierID", resp.ClientIdentifierID), slog.Any("error", err))
+				continue
 			}
 		case <-s.shutdownChan:
+			return
+		case <-ctx.Done():
 			return
 		}
 	}
@@ -216,7 +280,7 @@ func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.D
 		err = resp.EvalResponse.Error
 	default:
 		s.logger.Debug("Unsupported response type")
-		if err := WriteResponseWithRetries(conn, []byte("error: 500 Internal Server Error"), maxRetries); err != nil {
+		if err := s.writeResponseWithRetries(conn, []byte("error: 500 Internal Server Error"), maxRetries); err != nil {
 			s.logger.Debug(fmt.Sprintf("Error writing message: %v", err))
 			return fmt.Errorf("error writing response: %v", err)
 		}
@@ -248,7 +312,7 @@ func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.D
 		responseValue, err = rp.DecodeOne()
 		if err != nil {
 			s.logger.Debug("Error decoding response", "error", err)
-			if err := WriteResponseWithRetries(conn, []byte("error: 500 Internal Server Error"), maxRetries); err != nil {
+			if err := s.writeResponseWithRetries(conn, []byte("error: 500 Internal Server Error"), maxRetries); err != nil {
 				s.logger.Debug(fmt.Sprintf("Error writing message: %v", err))
 				return fmt.Errorf("error writing response: %v", err)
 			}
@@ -273,7 +337,7 @@ func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.D
 	respBytes, err := json.Marshal(responseValue)
 	if err != nil {
 		s.logger.Debug("Error marshaling json", "error", err)
-		if err := WriteResponseWithRetries(conn, []byte("error: marshaling json"), maxRetries); err != nil {
+		if err := s.writeResponseWithRetries(conn, []byte("error: marshaling json"), maxRetries); err != nil {
 			s.logger.Debug(fmt.Sprintf("Error writing message: %v", err))
 			return fmt.Errorf("error writing response: %v", err)
 		}
@@ -281,8 +345,7 @@ func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.D
 	}
 
 	// success
-	// Write response with retries for transient errors
-	if err := WriteResponseWithRetries(conn, respBytes, config.DiceConfig.WebSocket.MaxWriteResponseRetries); err != nil {
+	if err := s.writeResponseWithRetries(conn, respBytes, config.DiceConfig.WebSocket.MaxWriteResponseRetries); err != nil {
 		s.logger.Debug(fmt.Sprintf("Error writing message: %v", err))
 		return fmt.Errorf("error writing response: %v", err)
 	}
@@ -290,6 +353,13 @@ func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.D
 	return nil
 }
 
+func (s *WebsocketServer) writeResponseWithRetries(conn *websocket.Conn, text []byte, maxRetries int) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return WriteResponseWithRetries(conn, text, maxRetries)
+}
+
+// WriteResponseWithRetries wrties response with retries for transient errors
 func WriteResponseWithRetries(conn *websocket.Conn, text []byte, maxRetries int) error {
 	for attempts := 0; attempts < maxRetries; attempts++ {
 		// Set a write deadline
