@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/internal/server/abstractserver"
-
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dice/internal/watchmanager"
 
