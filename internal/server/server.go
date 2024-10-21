@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/dicedb/dice/internal/server/abstractserver"
 	"io"
 	"log/slog"
 	"net"
@@ -29,6 +30,7 @@ import (
 )
 
 type AsyncServer struct {
+	abstractserver.AbstractServer
 	serverFD               int
 	maxClients             int32
 	multiplexer            iomultiplexer.IOMultiplexer
