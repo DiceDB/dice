@@ -1048,10 +1048,21 @@ var (
 		If multiple members have the same score, the one that comes first alphabetically is returned. 
 		You can also specify a count to remove and return multiple members at once. 
 		If the set is empty, it returns an empty result.`,
-		Arity:      2,
+		Arity:      -1,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 		IsMigrated: true,
 		NewEval:    evalZPOPMIN,
+	}
+	zrankCmdMeta = DiceCmdMeta{
+		Name: "ZRANK",
+		Info: `ZRANK key member [WITHSCORE]
+		Returns the rank of member in the sorted set stored at key, with the scores ordered from low to high.
+		The rank (or index) is 0-based, which means that the member with the lowest score has rank 0.
+		The optional WITHSCORE argument supplements the command's reply with the score of the element returned.`,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalZRANK,
 	}
 	bitfieldCmdMeta = DiceCmdMeta{
 		Name: "BITFIELD",
@@ -1243,6 +1254,7 @@ func init() {
 	DiceCmds["ZADD"] = zaddCmdMeta
 	DiceCmds["ZRANGE"] = zrangeCmdMeta
 	DiceCmds["ZPOPMIN"] = zpopminCmdMeta
+	DiceCmds["ZRANK"] = zrankCmdMeta
 	DiceCmds["JSON.STRAPPEND"] = jsonstrappendCmdMeta
 }
 
