@@ -1,8 +1,10 @@
 package eval
 
 import (
+	"crypto/rand"
 	"fmt"
 	"math"
+	"math/big"
 	"strconv"
 
 	"github.com/dicedb/dice/internal/clientio"
@@ -130,4 +132,49 @@ func (h HashMap) incrementFloatValue(field string, incr float64) (string, error)
 	h[field] = fmt.Sprintf("%v", total)
 
 	return strValue, nil
+}
+
+// selectRandomFields returns random fields from a hashmap.
+func selectRandomFields(hashMap HashMap, count int, withValues bool) *EvalResponse {
+	keys := make([]string, 0, len(hashMap))
+	for k := range hashMap {
+		keys = append(keys, k)
+	}
+
+	var results []string
+	resultSet := make(map[string]struct{})
+
+	abs := func(x int) int {
+		if x < 0 {
+			return -x
+		}
+		return x
+	}
+
+	for i := 0; i < abs(count); i++ {
+		if count > 0 && len(resultSet) == len(keys) {
+			break
+		}
+
+		randomIndex, _ := rand.Int(rand.Reader, big.NewInt(int64(len(keys))))
+		randomField := keys[randomIndex.Int64()]
+
+		if count > 0 {
+			if _, exists := resultSet[randomField]; exists {
+				i--
+				continue
+			}
+			resultSet[randomField] = struct{}{}
+		}
+
+		results = append(results, randomField)
+		if withValues {
+			results = append(results, hashMap[randomField])
+		}
+	}
+
+	return &EvalResponse{
+		Result: results,
+		Error:  nil,
+	}
 }

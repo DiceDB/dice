@@ -31,16 +31,16 @@ When the `DECR` command is executed, the following steps occur:
 - If the specified key doesn't exist, it is created, with -1 as it's value, and same is returned.
 - If the specified key exists with an integer value, value is decremented and new value is returned.
 - If the specified key exists with a non-integer OR out-of-range value, error message is returned as:
-  - `(error) ERROR value is not an integer or out of range`
+  - `(error) ERR value is not an integer or out of range`
 
 ## Errors
 
 The `DECR` command can raise errors in the following scenarios:
 
 1. `Wrong Type Error`: If the key exists but the value is not a string that can be represented as an integer, DiceDB will return an error.
-   - `Error Message`:  `(error) ERROR value is not an integer or out of range`
+   - `Error Message`:  `(error) ERR value is not an integer or out of range`
 1. `Out of Range Error`: If the value of the key is out of the range of a 64-bit signed integer after the decrement operation, DiceDB will return an error.
-   - `Error Message`: `(error) ERROR value is not an integer or out of range`
+   - `Error Message`: `(error) ERR increment or decrement would overflow`
 
 ## Example Usage
 
@@ -78,7 +78,7 @@ OK
 127.0.0.1:7379> SET mystring "hello"
 OK
 127.0.0.1:7379> DECR mystring
-(error) ERROR value is not an integer or out of range
+(error) ERR value is not an integer or out of range
 ```
 
 `Explanation`:
@@ -93,7 +93,7 @@ OK
 127.0.0.1:7379> SET mycounter 234293482390480948029348230948
 OK
 127.0.0.1:7379> DECR mycounter
-(error) ERROR value is not an integer or out of range
+(error) ERR value is not an integer or out of range
 ```
 
 `Explanation`:
@@ -101,3 +101,6 @@ OK
 1. The `SET` command initializes the key `mycounter` with the out-of-range value for a 64-bit signed integer.
 1. The `DECR` command attempts to decrement the value of `mycounter`, but this would result in an overflow, so an error is raised.
 
+## Alternatives
+
+You can also use the `DECRBY` command to decrement the value of a key by a specified amount.
