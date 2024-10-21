@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dicedb/dice/internal/eval/sortedset"
 	"github.com/dicedb/dice/internal/server/utils"
 
 	"github.com/bytedance/sonic"
@@ -108,6 +109,8 @@ func TestEval(t *testing.T) {
 	testEvalHRANDFIELD(t, store)
 	testEvalZADD(t, store)
 	testEvalZRANGE(t, store)
+	testEvalZPOPMIN(t, store)
+	testEvalZRANK(t, store)
 	testEvalHVALS(t, store)
 	testEvalBitField(t, store)
 	testEvalHINCRBYFLOAT(t, store)
@@ -117,6 +120,10 @@ func TestEval(t *testing.T) {
 	testEvalSINTER(t, store)
 	testEvalOBJECTENCODING(t, store)
 	testEvalJSONSTRAPPEND(t, store)
+	testEvalINCR(t, store)
+	testEvalINCRBY(t, store)
+	testEvalDECR(t, store)
+	testEvalDECRBY(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -147,7 +154,8 @@ func testEvalHELLO(t *testing.T, store *dstore.Store) {
 		"id", serverID,
 		"mode", "standalone",
 		"role", "master",
-		"modules", []interface{}{},
+		"modules",
+		[]interface{}{},
 	}
 
 	tests := map[string]evalTestCase{
@@ -161,7 +169,6 @@ func testEvalHELLO(t *testing.T, store *dstore.Store) {
 }
 
 func testEvalSET(t *testing.T, store *dstore.Store) {
-
 	tests := []evalTestCase{
 		{
 			name:           "nil value",
@@ -319,7 +326,6 @@ func testEvalSET(t *testing.T, store *dstore.Store) {
 
 func testEvalGETEX(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
-
 		"key val pair and valid EX": {
 			setup: func() {
 				key := "foo"
@@ -342,11 +348,11 @@ func testEvalGETEX(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:  []string{"foo", Ex, "10000000000000000"},
-			output: []byte("-ERR invalid expire time in 'getex' command\r\n")},
+			output: []byte("-ERR invalid expire time in 'getex' command\r\n"),
+		},
 		"key holding json type": {
 			setup: func() {
 				evalJSONSET([]string{"JSONKEY", "$", "1"}, store)
-
 			},
 			input:  []string{"JSONKEY"},
 			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
@@ -354,7 +360,6 @@ func testEvalGETEX(t *testing.T, store *dstore.Store) {
 		"key holding set type": {
 			setup: func() {
 				evalSADD([]string{"SETKEY", "FRUITS", "APPLE", "MANGO", "BANANA"}, store)
-
 			},
 			input:  []string{"SETKEY"},
 			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
@@ -571,7 +576,6 @@ func testEvalEXPIRE(t *testing.T, store *dstore.Store) {
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
 				store.Put(key, obj)
-
 			},
 			input:  []string{"EXISTING_KEY", strconv.FormatInt(9223372036854776, 10)},
 			output: []byte("-ERR invalid expire time in 'expire' command\r\n"),
@@ -586,7 +590,6 @@ func testEvalEXPIRE(t *testing.T, store *dstore.Store) {
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
 				store.Put(key, obj)
-
 			},
 			input:  []string{"EXISTING_KEY", strconv.FormatInt(-1, 10)},
 			output: []byte("-ERR invalid expire time in 'expire' command\r\n"),
@@ -600,7 +603,6 @@ func testEvalEXPIRE(t *testing.T, store *dstore.Store) {
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
 				store.Put(key, obj)
-
 			},
 			input:  []string{"EXISTING_KEY", ""},
 			output: []byte("-ERR value is not an integer or out of range\r\n"),
@@ -614,7 +616,6 @@ func testEvalEXPIRE(t *testing.T, store *dstore.Store) {
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
 				store.Put(key, obj)
-
 			},
 			input:  []string{"EXISTING_KEY", "0.456"},
 			output: []byte("-ERR value is not an integer or out of range\r\n"),
@@ -707,7 +708,6 @@ func testEvalEXPIREAT(t *testing.T, store *dstore.Store) {
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
 				store.Put(key, obj)
-
 			},
 			input:  []string{"EXISTING_KEY", strconv.FormatInt(9223372036854776, 10)},
 			output: []byte("-ERR invalid expire time in 'expireat' command\r\n"),
@@ -721,7 +721,6 @@ func testEvalEXPIREAT(t *testing.T, store *dstore.Store) {
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
 				store.Put(key, obj)
-
 			},
 			input:  []string{"EXISTING_KEY", strconv.FormatInt(-1, 10)},
 			output: []byte("-ERR invalid expire time in 'expireat' command\r\n"),
@@ -1972,7 +1971,6 @@ func testEvalJSONTOGGLE(t *testing.T, store *dstore.Store) {
 				}
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
-
 			},
 			input:  []string{"EXISTING_KEY", ".active"},
 			output: clientio.Encode([]interface{}{0}, false),
@@ -2285,7 +2283,7 @@ func testEvalPFADD(t *testing.T, store *dstore.Store) {
 				key, value := "EXISTING_KEY", "VALUE"
 				oType, oEnc := deduceTypeEncoding(value)
 				var exDurationMs int64 = -1
-				var keepttl = false
+				keepttl := false
 
 				store.Put(key, store.NewObj(value, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
 			},
@@ -2634,6 +2632,7 @@ func testEvalHVALS(t *testing.T, store *dstore.Store) {
 
 	runEvalTests(t, tests, evalHVALS, store)
 }
+
 func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"wrong number of args passed": {
@@ -3209,8 +3208,6 @@ func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]s
 			if tc.validator != nil {
 				tc.validator(output)
 			} else {
-				fmt.Println(tc.output)
-				fmt.Println(output)
 				assert.Equal(t, string(tc.output), string(output))
 			}
 		})
@@ -3501,6 +3498,7 @@ func BenchmarkEvalHKEYS(b *testing.B) {
 		evalHKEYS([]string{"KEY"}, store)
 	}
 }
+
 func BenchmarkEvalPFCOUNT(b *testing.B) {
 	store := *dstore.NewStore(nil, nil)
 
@@ -3572,7 +3570,6 @@ func BenchmarkEvalPFCOUNT(b *testing.B) {
 
 func testEvalDebug(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
-
 		// invalid subcommand tests
 		"no subcommand passed": {
 			setup:  func() {},
@@ -4351,135 +4348,201 @@ func testEvalGETRANGE(t *testing.T, store *dstore.Store) {
 	}
 	tests := map[string]evalTestCase{
 		"GETRANGE against non-existing key": {
-			setup:  func() {},
-			input:  []string{"NON_EXISTING_KEY", "0", "-1"},
-			output: clientio.Encode("", false),
+			input: []string{"NON_EXISTING_KEY", "0", "-1"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against wrong key type": {
 			setup: func() {
 				evalLPUSH([]string{"LKEY1", "list"}, store)
 			},
-			input:  []string{"LKEY1", "0", "-1"},
-			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+			input: []string{"LKEY1", "0", "-1"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			},
 		},
 		"GETRANGE against string value: 0, 3": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "0", "3"},
-			output: clientio.Encode("Hell", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "0", "3"},
+			migratedOutput: EvalResponse{
+				Result: "Hell",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against string value: 0, -1": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "0", "-1"},
-			output: clientio.Encode("Hello World", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "0", "-1"},
+			migratedOutput: EvalResponse{
+				Result: "Hello World",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against string value: -4, -1": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "-4", "-1"},
-			output: clientio.Encode("orld", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "-4", "-1"},
+			migratedOutput: EvalResponse{
+				Result: "orld",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against string value: 5, 3": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "5", "3"},
-			output: clientio.Encode("", false),
-		},
-		"GETRANGE against string value: 5, 5000": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "5", "5000"},
-			output: clientio.Encode(" World", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "5", "3"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against string value: -5000, 10000": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "-5000", "10000"},
-			output: clientio.Encode("Hello World", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "-5000", "10000"},
+			migratedOutput: EvalResponse{
+				Result: "Hello World",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against string value: 0, -100": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "0", "-100"},
-			output: clientio.Encode("", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "0", "-100"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against string value: 1, -100": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "1", "-100"},
-			output: clientio.Encode("", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "1", "-100"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against string value: -1, -100": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "-1", "-100"},
-			output: clientio.Encode("", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "-1", "-100"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against string value: -100, -100": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "-100", "-100"},
-			output: clientio.Encode("", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "-100", "-100"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against string value: -100, -101": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "-100", "-101"},
-			output: clientio.Encode("", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "-100", "-101"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: 0, 2": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "0", "2"},
-			output: clientio.Encode("123", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "0", "2"},
+			migratedOutput: EvalResponse{
+				Result: "123",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: 0, -1": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "0", "-1"},
-			output: clientio.Encode("1234", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "0", "-1"},
+			migratedOutput: EvalResponse{
+				Result: "1234",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: -3, -1": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "-3", "-1"},
-			output: clientio.Encode("234", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "-3", "-1"},
+			migratedOutput: EvalResponse{
+				Result: "234",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: 5, 3": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "5", "3"},
-			output: clientio.Encode("", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "5", "3"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: 3, 5000": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "3", "5000"},
-			output: clientio.Encode("4", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "3", "5000"},
+			migratedOutput: EvalResponse{
+				Result: "4",
+				Error:  nil,
+			},
 		},
-
 		"GETRANGE against integer value: -5000, 10000": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "-5000", "10000"},
-			output: clientio.Encode("1234", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "-5000", "10000"},
+			migratedOutput: EvalResponse{
+				Result: "1234",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: 0, -100": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "0", "-100"},
-			output: clientio.Encode("", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "0", "-100"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: 1, -100": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "1", "-100"},
-			output: clientio.Encode("", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "1", "-100"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: -1, -100": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "-1", "-100"},
-			output: clientio.Encode("", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "-1", "-100"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: -100, -99": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "-100", "-99"},
-			output: clientio.Encode("", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "-100", "-99"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: -100, -100": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "-100", "-100"},
-			output: clientio.Encode("", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "-100", "-100"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: -100, -101": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "-100", "-101"},
-			output: clientio.Encode("", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "-100", "-101"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 	}
-	runEvalTests(t, tests, evalGETRANGE, store)
+
+	runMigratedEvalTests(t, tests, evalGETRANGE, store)
 }
 
 func BenchmarkEvalGETRANGE(b *testing.B) {
@@ -4594,24 +4657,24 @@ func BenchmarkEvalHINCRBY(b *testing.B) {
 func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"invalid number of args passed": {
-			setup:  func() {},
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'hincrby' command\r\n"),
+			setup:          func() {},
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("HINCRBY")},
 		},
 		"only key is passed in args": {
-			setup:  func() {},
-			input:  []string{"key"},
-			output: []byte("-ERR wrong number of arguments for 'hincrby' command\r\n"),
+			setup:          func() {},
+			input:          []string{"key"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("HINCRBY")},
 		},
 		"only key and field is passed in args": {
-			setup:  func() {},
-			input:  []string{"key field"},
-			output: []byte("-ERR wrong number of arguments for 'hincrby' command\r\n"),
+			setup:          func() {},
+			input:          []string{"key field"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("HINCRBY")},
 		},
 		"key, field and increment passed in args": {
-			setup:  func() {},
-			input:  []string{"key", "field", "10"},
-			output: clientio.Encode(int64(10), false),
+			setup:          func() {},
+			input:          []string{"key", "field", "10"},
+			migratedOutput: EvalResponse{Result: int64(10), Error: nil},
 		},
 		"update the already existing field in the key": {
 			setup: func() {
@@ -4626,18 +4689,18 @@ func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "field", "10"},
-			output: clientio.Encode(int64(20), false),
+			input:          []string{"key", "field", "10"},
+			migratedOutput: EvalResponse{Result: int64(20), Error: nil},
 		},
 		"increment value is not int64": {
-			setup:  func() {},
-			input:  []string{"key", "field", "hello"},
-			output: []byte("-ERR value is not an integer or out of range\r\n"),
+			setup:          func() {},
+			input:          []string{"key", "field", "hello"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrIntegerOutOfRange},
 		},
 		"increment value is greater than the bound of int64": {
-			setup:  func() {},
-			input:  []string{"key", "field", "99999999999999999999999999999999999999999999999999999"},
-			output: []byte("-ERR value is not an integer or out of range\r\n"),
+			setup:          func() {},
+			input:          []string{"key", "field", "99999999999999999999999999999999999999999999999999999"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrIntegerOutOfRange},
 		},
 		"update the existing field whose datatype is not int64": {
 			setup: func() {
@@ -4653,8 +4716,8 @@ func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
 
 				store.Put(key, obj)
 			},
-			input:  []string{"new_key", "new_field", "10"},
-			output: []byte("-ERR hash value is not an integer\r\n"),
+			input:          []string{"new_key", "new_field", "10"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrHashValueNotInteger},
 		},
 		"update the existing field which has spaces": {
 			setup: func() {
@@ -4670,13 +4733,13 @@ func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "field", "10"},
-			output: []byte("-ERR hash value is not an integer\r\n"),
+			input:          []string{"key", "field", "10"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrHashValueNotInteger},
 		},
 		"updating the new field with negative value": {
-			setup:  func() {},
-			input:  []string{"key", "field", "-10"},
-			output: clientio.Encode(int64(-10), false),
+			setup:          func() {},
+			input:          []string{"key", "field", "-10"},
+			migratedOutput: EvalResponse{Result: int64(-10), Error: nil},
 		},
 		"update the existing field with negative value": {
 			setup: func() {
@@ -4692,8 +4755,8 @@ func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "field", "-10"},
-			output: clientio.Encode(int64(-20), false),
+			input:          []string{"key", "field", "-10"},
+			migratedOutput: EvalResponse{Result: int64(-20), Error: nil},
 		},
 		"updating the existing field which would lead to positive overflow": {
 			setup: func() {
@@ -4709,8 +4772,8 @@ func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "field", "10"},
-			output: []byte("-ERR increment or decrement would overflow\r\n"),
+			input:          []string{"key", "field", "10"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrOverflow},
 		},
 		"updating the existing field which would lead to negative overflow": {
 			setup: func() {
@@ -4726,12 +4789,12 @@ func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "field", "-10"},
-			output: []byte("-ERR increment or decrement would overflow\r\n"),
+			input:          []string{"key", "field", "-10"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrOverflow},
 		},
 	}
 
-	runEvalTests(t, tests, evalHINCRBY, store)
+	runMigratedEvalTests(t, tests, evalHINCRBY, store)
 }
 
 func testEvalSETEX(t *testing.T, store *dstore.Store) {
@@ -4862,144 +4925,150 @@ func testEvalFLUSHDB(t *testing.T, store *dstore.Store) {
 }
 
 func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"INCRBYFLOAT on a non existing key": {
-			input:  []string{"float", "0.1"},
-			output: clientio.Encode("0.1", false),
+	tests := []evalTestCase{
+		{
+			name:           "INCRBYFLOAT on a non existing key",
+			input:          []string{"float", "0.1"},
+			migratedOutput: EvalResponse{Result: "0.1", Error: nil},
 		},
-		"INCRBYFLOAT on an existing key": {
+		{
+			name: "INCRBYFLOAT on an existing key",
 			setup: func() {
 				key := "key"
 				value := "2.1"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
+				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "0.1"},
-			output: clientio.Encode("2.2", false),
+			input:          []string{"key", "0.1"},
+			migratedOutput: EvalResponse{Result: "2.2", Error: nil},
 		},
-		"INCRBYFLOAT on a key with integer value": {
+		{
+			name: "INCRBYFLOAT on a key with integer value",
 			setup: func() {
 				key := "key"
 				value := "2"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
+				obj := store.NewObj(value, -1, object.ObjTypeInt, object.ObjEncodingInt)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "0.1"},
-			output: clientio.Encode("2.1", false),
+			input:          []string{"key", "0.1"},
+			migratedOutput: EvalResponse{Result: "2.1", Error: nil},
 		},
-		"INCRBYFLOAT by a negative increment": {
+		{
+			name: "INCRBYFLOAT by a negative increment",
 			setup: func() {
 				key := "key"
 				value := "2"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
+				obj := store.NewObj(value, -1, object.ObjTypeInt, object.ObjEncodingInt)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "-0.1"},
-			output: clientio.Encode("1.9", false),
+			input:          []string{"key", "-0.1"},
+			migratedOutput: EvalResponse{Result: "1.9", Error: nil},
 		},
-		"INCRBYFLOAT by a scientific notation increment": {
+		{
+			name: "INCRBYFLOAT by a scientific notation increment",
 			setup: func() {
 				key := "key"
 				value := "1"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
+				obj := store.NewObj(value, -1, object.ObjTypeInt, object.ObjEncodingInt)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "1e-2"},
-			output: clientio.Encode("1.01", false),
+			input:          []string{"key", "1e-2"},
+			migratedOutput: EvalResponse{Result: "1.01", Error: nil},
 		},
-		"INCRBYFLOAT on a key holding a scientific notation value": {
+		{
+			name: "INCRBYFLOAT on a key holding a scientific notation value",
 			setup: func() {
 				key := "key"
 				value := "1e2"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
+				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingEmbStr)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "1e-1"},
-			output: clientio.Encode("100.1", false),
+			input:          []string{"key", "1e-1"},
+			migratedOutput: EvalResponse{Result: "100.1", Error: nil},
 		},
-		"INCRBYFLOAT by an negative increment of the same value": {
+		{
+			name: "INCRBYFLOAT by an negative increment of the same value",
 			setup: func() {
 				key := "key"
 				value := "0.1"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
+				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingEmbStr)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "-0.1"},
-			output: clientio.Encode("0", false),
+			input:          []string{"key", "-0.1"},
+			migratedOutput: EvalResponse{Result: "0", Error: nil},
 		},
-		"INCRBYFLOAT on a key with spaces": {
+		{
+			name: "INCRBYFLOAT on a key with spaces",
 			setup: func() {
 				key := "key"
 				value := "   2   "
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
+				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingEmbStr)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "0.1"},
-			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+			input:          []string{"key", "0.1"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrGeneral("value is not a valid float")},
 		},
-		"INCRBYFLOAT on a key with non numeric value": {
+		{
+			name: "INCRBYFLOAT on a key with non numeric value",
 			setup: func() {
 				key := "key"
 				value := "string"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
+				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingEmbStr)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "0.1"},
-			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+			input:          []string{"key", "0.1"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrGeneral("value is not a valid float")},
 		},
-		"INCRBYFLOAT by a non numeric increment": {
+		{
+			name: "INCRBYFLOAT by a non numeric increment",
 			setup: func() {
 				key := "key"
 				value := "2.0"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
+				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingEmbStr)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "a"},
-			output: []byte("-ERR value is not an integer or a float\r\n"),
+			input:          []string{"key", "a"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrGeneral("value is not a valid float")},
 		},
-		"INCRBYFLOAT by a number that would turn float64 to Inf": {
+		{
+			name: "INCRBYFLOAT by a number that would turn float64 to Inf",
 			setup: func() {
 				key := "key"
 				value := "1e308"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
+				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingEmbStr)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "1e308"},
-			output: []byte("-ERR value is out of range\r\n"),
+			input:          []string{"key", "1e308"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrValueOutOfRange},
 		},
 	}
 
-	runEvalTests(t, tests, evalINCRBYFLOAT, store)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store = setupTest(store)
+			if tt.setup != nil {
+				tt.setup()
+			}
+
+			response := evalINCRBYFLOAT(tt.input, store)
+			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput)
+
+			// Handle comparison for byte slices
+			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
+				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
+					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+				}
+			} else {
+				assert.Equal(t, tt.migratedOutput.Result, response.Result)
+			}
+
+			if tt.migratedOutput.Error != nil {
+				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+			} else {
+				testifyAssert.NoError(t, response.Error)
+			}
+		})
+	}
 }
 
 func BenchmarkEvalINCRBYFLOAT(b *testing.B) {
@@ -5151,14 +5220,17 @@ func BenchmarkEvalBITOP(b *testing.B) {
 func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"wrong number of args passed": {
-			setup:  func() {},
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'hrandfield' command\r\n"),
+			setup:          func() {},
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("HRANDFIELD")},
 		},
 		"key doesn't exist": {
-			setup:  func() {},
-			input:  []string{"KEY"},
-			output: clientio.RespNIL,
+			setup: func() {},
+			input: []string{"KEY"},
+			migratedOutput: EvalResponse{
+				Result: clientio.RespType(0),
+				Error:  nil,
+			},
 		},
 		"key exists with fields and no count argument": {
 			setup: func() {
@@ -5176,11 +5248,15 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input: []string{"KEY_MOCK"},
-			validator: func(output []byte) {
+			newValidator: func(output interface{}) {
 				assert.Assert(t, output != nil)
-				resultString := string(output)
+				stringSlice, ok := output.([]string)
+				if !ok {
+					testifyAssert.Error(t, diceerrors.ErrUnexpectedType("[]string", reflect.TypeOf(output)))
+				}
+				resultString := strings.Join(stringSlice, " ")
 				assert.Assert(t,
-					resultString == "*1\r\n$6\r\nfield1\r\n" || resultString == "*1\r\n$6\r\nfield2\r\n",
+					resultString == "field1" || resultString == "field2",
 					"Unexpected field returned: %s", resultString)
 			},
 		},
@@ -5199,12 +5275,15 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 				}
 
 				store.Put(key, obj)
-
 			},
 			input: []string{"KEY_MOCK", "2"},
-			validator: func(output []byte) {
+			newValidator: func(output interface{}) {
 				assert.Assert(t, output != nil)
-				decodedResult := string(output)
+				stringSlice, ok := output.([]string)
+				if !ok {
+					testifyAssert.Error(t, diceerrors.ErrUnexpectedType("[]string", reflect.TypeOf(output)))
+				}
+				decodedResult := strings.Join(stringSlice, " ")
 				fields := []string{"field1", "field2", "field3"}
 				count := 0
 
@@ -5232,12 +5311,15 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 				}
 
 				store.Put(key, obj)
-
 			},
 			input: []string{"KEY_MOCK", "2", WithValues},
-			validator: func(output []byte) {
+			newValidator: func(output interface{}) {
 				assert.Assert(t, output != nil)
-				decodedResult := string(output)
+				stringSlice, ok := output.([]string)
+				if !ok {
+					testifyAssert.Error(t, diceerrors.ErrUnexpectedType("[]string", reflect.TypeOf(output)))
+				}
+				decodedResult := strings.Join(stringSlice, " ")
 				fieldsAndValues := []string{"field1", "value1", "field2", "value2", "field3", "value3"}
 				count := 0
 				for _, item := range fieldsAndValues {
@@ -5251,29 +5333,29 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 		},
 	}
 
-	runEvalTests(t, tests, evalHRANDFIELD, store)
+	runMigratedEvalTests(t, tests, evalHRANDFIELD, store)
 }
 
 func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
-			setup:  func() {},
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'append' command\r\n"),
+			setup:          func() {},
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("APPEND")},
 		},
 		"append invalid number of arguments": {
 			setup: func() {
 				store.Del("key")
 			},
-			input:  []string{"key", "val", "val2"},
-			output: []byte("-ERR wrong number of arguments for 'append' command\r\n"),
+			input:          []string{"key", "val", "val2"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("APPEND")},
 		},
 		"append to non-existing key": {
 			setup: func() {
 				store.Del("key")
 			},
-			input:  []string{"key", "val"},
-			output: clientio.Encode(3, false),
+			input:          []string{"key", "val"},
+			migratedOutput: EvalResponse{Result: 3, Error: nil},
 		},
 		"append string value to existing key having string value": {
 			setup: func() {
@@ -5282,15 +5364,15 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "val"},
-			output: clientio.Encode(6, false),
+			input:          []string{"key", "val"},
+			migratedOutput: EvalResponse{Result: 6, Error: nil},
 		},
 		"append integer value to non existing key": {
 			setup: func() {
 				store.Del("key")
 			},
-			input:  []string{"key", "123"},
-			output: clientio.Encode(3, false),
+			input:          []string{"key", "123"},
+			migratedOutput: EvalResponse{Result: 3, Error: nil},
 			validator: func(output []byte) {
 				obj := store.Get("key")
 				_, enc := object.ExtractTypeEncoding(obj)
@@ -5307,15 +5389,15 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(storedValue, -1, object.ObjTypeInt, object.ObjEncodingInt)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "val"},
-			output: clientio.Encode(6, false),
+			input:          []string{"key", "val"},
+			migratedOutput: EvalResponse{Result: 6, Error: nil},
 		},
 		"append empty string to non-existing key": {
 			setup: func() {
 				store.Del("key")
 			},
-			input:  []string{"key", ""},
-			output: clientio.Encode(0, false),
+			input:          []string{"key", ""},
+			migratedOutput: EvalResponse{Result: 0, Error: nil},
 		},
 		"append empty string to existing key having empty string": {
 			setup: func() {
@@ -5324,8 +5406,8 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", ""},
-			output: clientio.Encode(0, false),
+			input:          []string{"key", ""},
+			migratedOutput: EvalResponse{Result: 0, Error: nil},
 		},
 		"append empty string to existing key": {
 			setup: func() {
@@ -5334,8 +5416,8 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", ""},
-			output: clientio.Encode(3, false),
+			input:          []string{"key", ""},
+			migratedOutput: EvalResponse{Result: 3, Error: nil},
 		},
 		"append modifies the encoding from int to raw": {
 			setup: func() {
@@ -5344,8 +5426,8 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(storedValue, -1, object.ObjTypeInt, object.ObjEncodingInt)
 				store.Put("key", obj)
 			},
-			input:  []string{"key", "2"},
-			output: clientio.Encode(2, false),
+			input:          []string{"key", "2"},
+			migratedOutput: EvalResponse{Result: 2, Error: nil},
 			validator: func(output []byte) {
 				obj := store.Get("key")
 				_, enc := object.ExtractTypeEncoding(obj)
@@ -5363,8 +5445,8 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 				obj.Value.(*Deque).LPush(value)
 			},
-			input:  []string{"listKey", "val"},
-			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+			input:          []string{"listKey", "val"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		"append to key created using SADD": {
 			setup: func() {
@@ -5377,8 +5459,8 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(initialValues, -1, object.ObjTypeSet, object.ObjEncodingSetStr)
 				store.Put(key, obj)
 			},
-			input:  []string{"setKey", "val"},
-			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+			input:          []string{"setKey", "val"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		"append to key created using HSET": {
 			setup: func() {
@@ -5391,8 +5473,8 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(initialValues, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
 				store.Put(key, obj)
 			},
-			input:  []string{"hashKey", "val"},
-			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+			input:          []string{"hashKey", "val"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		"append to key created using SETBIT": {
 			setup: func() {
@@ -5403,29 +5485,19 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(initialByteArray, -1, object.ObjTypeByteArray, object.ObjEncodingByteArray)
 				store.Put(key, obj)
 			},
-			input:  []string{"bitKey", "val"},
-			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+			input:          []string{"bitKey", "val"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		"append value with leading zeros": {
 			setup: func() {
 				store.Del("key_with_leading_zeros")
 			},
-			input:  []string{"key_with_leading_zeros", "0043"},
-			output: clientio.Encode(4, false), // The length of "0043" is 4
-			validator: func(output []byte) {
-				obj := store.Get("key_with_leading_zeros")
-				_, enc := object.ExtractTypeEncoding(obj)
-				if enc != object.ObjEncodingRaw {
-					t.Errorf("expected encoding to be Raw for string with leading zeros")
-				}
-				if obj.Value.(string) != "0043" {
-					t.Errorf("expected value to be '0043', got %v", obj.Value)
-				}
-			},
+			input:          []string{"key_with_leading_zeros", "0043"},
+			migratedOutput: EvalResponse{Result: 4, Error: nil}, // The length of "0043" is 4
 		},
 	}
 
-	runEvalTests(t, tests, evalAPPEND, store)
+	runMigratedEvalTests(t, tests, evalAPPEND, store)
 }
 
 func BenchmarkEvalAPPEND(b *testing.B) {
@@ -5779,6 +5851,266 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 	runMigratedEvalTests(t, tests, evalZRANGE, store)
 }
 
+func testEvalZPOPMIN(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"ZPOPMIN on non-existing key with/without count argument": {
+			input: []string{"NON_EXISTING_KEY"},
+			migratedOutput: EvalResponse{
+				Result: []string{},
+				Error:  nil,
+			},
+		},
+		"ZPOPMIN with wrong type of key with/without count argument": {
+			setup: func() {
+				store.Put("mystring", store.NewObj("string_value", -1, object.ObjTypeString, object.ObjEncodingRaw))
+			},
+			input: []string{"mystring", "1"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			},
+		},
+		"ZPOPMIN on existing key (without count argument)": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1", "2", "member2"}, store)
+			},
+			input: []string{"myzset"},
+			migratedOutput: EvalResponse{
+				Result: []string{"1", "member1"},
+				Error:  nil,
+			},
+		},
+		"ZPOPMIN with normal count argument": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+			},
+			input: []string{"myzset", "2"},
+			migratedOutput: EvalResponse{
+				Result: []string{"1", "member1", "2", "member2"},
+				Error:  nil,
+			},
+		},
+		"ZPOPMIN with count argument but multiple members have the same score": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1", "1", "member2", "1", "member3"}, store)
+			},
+			input: []string{"myzset", "2"},
+			migratedOutput: EvalResponse{
+				Result: []string{"1", "member1", "1", "member2"},
+				Error:  nil,
+			},
+		},
+		"ZPOPMIN with negative count argument": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+			},
+			input: []string{"myzset", "-1"},
+			migratedOutput: EvalResponse{
+				Result: []string{},
+				Error:  nil,
+			},
+		},
+		"ZPOPMIN with invalid count argument": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1"}, store)
+			},
+			input: []string{"myzset", "INCORRECT_COUNT_ARGUMENT"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrIntegerOutOfRange,
+			},
+		},
+		"ZPOPMIN with count argument greater than length of sorted set": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1", "2", "member2"}, store)
+			},
+			input: []string{"myzset", "10"},
+			migratedOutput: EvalResponse{
+				Result: []string{"1", "member1", "2", "member2"},
+				Error:  nil,
+			},
+		},
+		"ZPOPMIN on empty sorted set": {
+			setup: func() {
+				store.Put("myzset", store.NewObj(sortedset.New(), -1, object.ObjTypeSortedSet, object.ObjEncodingBTree)) // Ensure the set exists but is empty
+			},
+			input: []string{"myzset"},
+			migratedOutput: EvalResponse{
+				Result: []string{},
+				Error:  nil,
+			},
+		},
+		"ZPOPMIN with floating-point scores": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1.5", "member1", "2.7", "member2"}, store)
+			},
+			input: []string{"myzset"},
+			migratedOutput: EvalResponse{
+				Result: []string{"1.5", "member1"},
+				Error:  nil,
+			},
+		},
+	}
+
+	runMigratedEvalTests(t, tests, evalZPOPMIN, store)
+}
+
+func BenchmarkEvalZPOPMIN(b *testing.B) {
+	// Define benchmark cases with varying sizes of sorted sets
+	benchmarks := []struct {
+		name  string
+		setup func(store *dstore.Store)
+		input []string
+	}{
+		{
+			name: "ZPOPMIN on small sorted set (10 members)",
+			setup: func(store *dstore.Store) {
+				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3", "4", "member4", "5", "member5", "6", "member6", "7", "member7", "8", "member8", "9", "member9", "10", "member10"}, store)
+			},
+			input: []string{"myzset", "3"},
+		},
+		{
+			name: "ZPOPMIN on large sorted set (10000 members)",
+			setup: func(store *dstore.Store) {
+				args := []string{"myzset"}
+				for i := 1; i <= 10000; i++ {
+					args = append(args, fmt.Sprintf("%d", i), fmt.Sprintf("member%d", i))
+				}
+				evalZADD(args, store)
+			},
+			input: []string{"myzset", "10"},
+		},
+		{
+			name: "ZPOPMIN with duplicate scores",
+			setup: func(store *dstore.Store) {
+				evalZADD([]string{"myzset", "1", "member1", "1", "member2", "1", "member3"}, store)
+			},
+			input: []string{"myzset", "2"},
+		},
+	}
+
+	store := dstore.NewStore(nil, nil)
+
+	for _, bm := range benchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			bm.setup(store)
+
+			for i := 0; i < b.N; i++ {
+				// Reset the store before each run to avoid contamination
+				dstore.ResetStore(store)
+				bm.setup(store)
+				evalZPOPMIN(bm.input, store)
+			}
+		})
+	}
+}
+
+func testEvalZRANK(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"ZRANK with non-existing key": {
+			input: []string{"non_existing_key", "member"},
+			migratedOutput: EvalResponse{
+				Result: clientio.NIL,
+				Error:  nil,
+			},
+		},
+		"ZRANK with existing member": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+			},
+			input: []string{"myzset", "member2"},
+			migratedOutput: EvalResponse{
+				Result: int64(1),
+				Error:  nil,
+			},
+		},
+		"ZRANK with non-existing member": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+			},
+			input: []string{"myzset", "non_existing_member"},
+			migratedOutput: EvalResponse{
+				Result: clientio.NIL,
+				Error:  nil,
+			},
+		},
+		"ZRANK with WITHSCORE option": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+			},
+			input: []string{"myzset", "member2", "WITHSCORE"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{int64(1), float64(2)},
+				Error:  nil,
+			},
+		},
+		"ZRANK with invalid option": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+			},
+			input: []string{"myzset", "member2", "INVALID_OPTION"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrSyntax,
+			},
+		},
+		"ZRANK with multiple members having same score": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "member1", "1", "member2", "1", "member3"}, store)
+			},
+			input: []string{"myzset", "member3"},
+			migratedOutput: EvalResponse{
+				Result: int64(2),
+				Error:  nil,
+			},
+		},
+		"ZRANK with non-integer scores": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1.5", "member1", "2.5", "member2"}, store)
+			},
+			input: []string{"myzset", "member2"},
+			migratedOutput: EvalResponse{
+				Result: int64(1),
+				Error:  nil,
+			},
+		},
+		"ZRANK with too many arguments": {
+			input: []string{"myzset", "member", "WITHSCORES", "extra"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("ZRANK"),
+			},
+		},
+	}
+
+	runMigratedEvalTests(t, tests, evalZRANK, store)
+}
+
+func BenchmarkEvalZRANK(b *testing.B) {
+	store := dstore.NewStore(nil, nil)
+
+	// Set up initial sorted set
+	evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+
+	benchmarks := []struct {
+		name      string
+		input     []string
+		withScore bool
+	}{
+		{"ZRANK existing member", []string{"myzset", "member3"}, false},
+		{"ZRANK non-existing member", []string{"myzset", "nonexistent"}, false},
+		{"ZRANK with WITHSCORE", []string{"myzset", "member2", "WITHSCORE"}, true},
+	}
+
+	for _, bm := range benchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				evalZRANK(bm.input, store)
+			}
+		})
+	}
+}
+
 func testEvalBitField(t *testing.T, store *dstore.Store) {
 	testCases := map[string]evalTestCase{
 		"BITFIELD signed SET": {
@@ -5828,12 +6160,13 @@ func testEvalBitField(t *testing.T, store *dstore.Store) {
 	}
 	runEvalTests(t, testCases, evalBITFIELD, store)
 }
+
 func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"HINCRBYFLOAT on a non-existing key and field": {
-			setup:  func() {},
-			input:  []string{"key", "field", "0.1"},
-			output: clientio.Encode("0.1", false),
+			setup:          func() {},
+			input:          []string{"key", "field", "0.1"},
+			migratedOutput: EvalResponse{Result: "0.1", Error: nil},
 		},
 		"HINCRBYFLOAT on an existing key and non-existing field": {
 			setup: func() {
@@ -5846,8 +6179,8 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "field", "0.1"},
-			output: clientio.Encode("0.1", false),
+			input:          []string{"key", "field", "0.1"},
+			migratedOutput: EvalResponse{Result: "0.1", Error: nil},
 		},
 		"HINCRBYFLOAT on an existing key and field with a float value": {
 			setup: func() {
@@ -5862,8 +6195,8 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "field", "0.1"},
-			output: clientio.Encode("2.2", false),
+			input:          []string{"key", "field", "0.1"},
+			migratedOutput: EvalResponse{Result: "2.2", Error: nil},
 		},
 		"HINCRBYFLOAT on an existing key and field with an integer value": {
 			setup: func() {
@@ -5878,8 +6211,8 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "field", "0.1"},
-			output: clientio.Encode("2.1", false),
+			input:          []string{"key", "field", "0.1"},
+			migratedOutput: EvalResponse{Result: "2.1", Error: nil},
 		},
 		"HINCRBYFLOAT with a negative increment": {
 			setup: func() {
@@ -5894,8 +6227,8 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "field", "-0.1"},
-			output: clientio.Encode("1.9", false),
+			input:          []string{"key", "field", "-0.1"},
+			migratedOutput: EvalResponse{Result: "1.9", Error: nil},
 		},
 		"HINCRBYFLOAT by a non-numeric increment": {
 			setup: func() {
@@ -5910,8 +6243,9 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "field", "a"},
-			output: []byte("-ERR value is not an integer or a float\r\n"),
+			input:          []string{"key", "field", "a"},
+			output:         []byte("-ERR value is not an integer or a float\r\n"),
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrInvalidNumberFormat},
 		},
 		"HINCRBYFLOAT on a field with non-numeric value": {
 			setup: func() {
@@ -5926,8 +6260,8 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "field", "0.1"},
-			output: []byte("-ERR value is not an integer or a float\r\n"),
+			input:          []string{"key", "field", "0.1"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrInvalidNumberFormat},
 		},
 		"HINCRBYFLOAT by a value that would turn float64 to Inf": {
 			setup: func() {
@@ -5942,8 +6276,8 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "field", "1e308"},
-			output: []byte("-ERR increment or decrement would overflow\r\n"),
+			input:          []string{"key", "field", "1e308"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrOverflow},
 		},
 		"HINCRBYFLOAT with scientific notation": {
 			setup: func() {
@@ -5958,12 +6292,12 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "field", "1e-1"},
-			output: clientio.Encode("100.1", false),
+			input:          []string{"key", "field", "1e-1"},
+			migratedOutput: EvalResponse{Result: "100.1", Error: nil},
 		},
 	}
 
-	runEvalTests(t, tests, evalHINCRBYFLOAT, store)
+	runMigratedEvalTests(t, tests, evalHINCRBYFLOAT, store)
 }
 
 func BenchmarkEvalHINCRBYFLOAT(b *testing.B) {
@@ -6246,6 +6580,7 @@ func testEvalSINTER(t *testing.T, store *dstore.Store) {
 
 	runEvalTests(t, tests, evalSINTER, store)
 }
+
 func testEvalOBJECTENCODING(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
@@ -6279,6 +6614,7 @@ func testEvalOBJECTENCODING(t *testing.T, store *dstore.Store) {
 
 	runEvalTests(t, tests, evalOBJECT, store)
 }
+
 func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"append to single field": {
@@ -6388,4 +6724,356 @@ func BenchmarkZCOUNT(b *testing.B) {
 			}
 		})
 	})
+}
+
+func testEvalINCR(t *testing.T, store *dstore.Store) {
+	tests := []evalTestCase{
+		{
+			name:           "INCR key does not exist",
+			input:          []string{"KEY1"},
+			migratedOutput: EvalResponse{Result: int64(1), Error: nil},
+		},
+		{
+			name: "INCR key exists",
+			setup: func() {
+				key := "KEY2"
+				obj := store.NewObj(int64(1), -1, object.ObjTypeInt, object.ObjEncodingInt)
+				store.Put(key, obj)
+			},
+			input:          []string{"KEY2"},
+			migratedOutput: EvalResponse{Result: int64(2), Error: nil},
+		},
+		{
+			name: "INCR key holding string value",
+			setup: func() {
+				key := "KEY3"
+				obj := store.NewObj("VAL1", -1, object.ObjTypeString, object.ObjEncodingEmbStr)
+				store.Put(key, obj)
+			},
+			input:          []string{"KEY3"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")},
+		},
+		{
+			name: "INCR key holding SET type",
+			setup: func() {
+				evalSADD([]string{"SET1", "1", "2", "3"}, store)
+			},
+			input:          []string{"SET1"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+		},
+		{
+			name: "INCR key holding MAP type",
+			setup: func() {
+				evalHSET([]string{"MAP1", "a", "1", "b", "2", "c", "3"}, store)
+			},
+			input:          []string{"MAP1"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+		},
+		{
+			name:           "INCR More than one args passed",
+			input:          []string{"KEY4", "ARG2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'incr' command")},
+		},
+		{
+			name: "INCR Max Overflow",
+			setup: func() {
+				key := "KEY5"
+				obj := store.NewObj(int64(math.MaxInt64), -1, object.ObjTypeInt, object.ObjEncodingInt)
+				store.Put(key, obj)
+			},
+			input:          []string{"KEY5"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR increment or decrement would overflow")},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store = setupTest(store)
+			if tt.setup != nil {
+				tt.setup()
+			}
+
+			response := evalINCR(tt.input, store)
+			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput)
+
+			// Handle comparison for byte slices
+			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
+				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
+					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+				}
+			} else {
+				assert.Equal(t, tt.migratedOutput.Result, response.Result)
+			}
+
+			if tt.migratedOutput.Error != nil {
+				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+			} else {
+				testifyAssert.NoError(t, response.Error)
+			}
+		})
+	}
+}
+
+func testEvalINCRBY(t *testing.T, store *dstore.Store) {
+	tests := []evalTestCase{
+		{
+			name:           "INCRBY key does not exist",
+			input:          []string{"KEY1", "2"},
+			migratedOutput: EvalResponse{Result: int64(2), Error: nil},
+		},
+		{
+			name: "INCRBY key exists",
+			setup: func() {
+				key := "KEY2"
+				obj := store.NewObj(int64(1), -1, object.ObjTypeInt, object.ObjEncodingInt)
+				store.Put(key, obj)
+			},
+			input:          []string{"KEY2", "3"},
+			migratedOutput: EvalResponse{Result: int64(4), Error: nil},
+		},
+		{
+			name: "INCRBY key holding string value",
+			setup: func() {
+				key := "KEY3"
+				obj := store.NewObj("VAL1", -1, object.ObjTypeString, object.ObjEncodingEmbStr)
+				store.Put(key, obj)
+			},
+			input:          []string{"KEY3", "2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")},
+		},
+		{
+			name: "INCRBY key holding SET type",
+			setup: func() {
+				evalSADD([]string{"SET1", "1", "2", "3"}, store)
+			},
+			input:          []string{"SET1", "2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+		},
+		{
+			name: "INCRBY key holding MAP type",
+			setup: func() {
+				evalHSET([]string{"MAP1", "a", "1", "b", "2", "c", "3"}, store)
+			},
+			input:          []string{"MAP1", "2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+		},
+		{
+			name:           "INCRBY Wrong number of args passed",
+			input:          []string{"KEY4"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'incrby' command")},
+		},
+		{
+			name: "INCRBY Max Overflow",
+			setup: func() {
+				key := "KEY5"
+				obj := store.NewObj(int64(math.MaxInt64-3), -1, object.ObjTypeInt, object.ObjEncodingInt)
+				store.Put(key, obj)
+			},
+			input:          []string{"KEY5", "4"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR increment or decrement would overflow")},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store = setupTest(store)
+			if tt.setup != nil {
+				tt.setup()
+			}
+
+			response := evalINCRBY(tt.input, store)
+			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput)
+
+			// Handle comparison for byte slices
+			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
+				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
+					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+				}
+			} else {
+				assert.Equal(t, tt.migratedOutput.Result, response.Result)
+			}
+
+			if tt.migratedOutput.Error != nil {
+				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+			} else {
+				testifyAssert.NoError(t, response.Error)
+			}
+		})
+	}
+}
+
+func testEvalDECR(t *testing.T, store *dstore.Store) {
+	tests := []evalTestCase{
+		{
+			name:           "DECR key does not exist",
+			input:          []string{"KEY1"},
+			migratedOutput: EvalResponse{Result: int64(-1), Error: nil},
+		},
+		{
+			name: "DECR key exists",
+			setup: func() {
+				key := "KEY2"
+				obj := store.NewObj(int64(1), -1, object.ObjTypeInt, object.ObjEncodingInt)
+				store.Put(key, obj)
+			},
+			input:          []string{"KEY2"},
+			migratedOutput: EvalResponse{Result: int64(0), Error: nil},
+		},
+		{
+			name: "DECR key holding string value",
+			setup: func() {
+				key := "KEY3"
+				obj := store.NewObj("VAL1", -1, object.ObjTypeString, object.ObjEncodingEmbStr)
+				store.Put(key, obj)
+			},
+			input:          []string{"KEY3"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")},
+		},
+		{
+			name: "DECR key holding SET type",
+			setup: func() {
+				evalSADD([]string{"SET1", "1", "2", "3"}, store)
+			},
+			input:          []string{"SET1"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+		},
+		{
+			name: "DECR key holding MAP type",
+			setup: func() {
+				evalHSET([]string{"MAP1", "a", "1", "b", "2", "c", "3"}, store)
+			},
+			input:          []string{"MAP1"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+		},
+		{
+			name:           "DECR More than one args passed",
+			input:          []string{"KEY4", "ARG2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'decr' command")},
+		},
+		{
+			name: "DECR Min Overflow",
+			setup: func() {
+				key := "KEY5"
+				obj := store.NewObj(int64(math.MinInt64), -1, object.ObjTypeInt, object.ObjEncodingInt)
+				store.Put(key, obj)
+			},
+			input:          []string{"KEY5"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR increment or decrement would overflow")},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store = setupTest(store)
+			if tt.setup != nil {
+				tt.setup()
+			}
+
+			response := evalDECR(tt.input, store)
+			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput)
+
+			// Handle comparison for byte slices
+			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
+				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
+					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+				}
+			} else {
+				assert.Equal(t, tt.migratedOutput.Result, response.Result)
+			}
+
+			if tt.migratedOutput.Error != nil {
+				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+			} else {
+				testifyAssert.NoError(t, response.Error)
+			}
+		})
+	}
+}
+
+func testEvalDECRBY(t *testing.T, store *dstore.Store) {
+	tests := []evalTestCase{
+		{
+			name:           "DECRBY key does not exist",
+			input:          []string{"KEY1", "2"},
+			migratedOutput: EvalResponse{Result: int64(-2), Error: nil},
+		},
+		{
+			name: "DECRBY key exists",
+			setup: func() {
+				key := "KEY2"
+				obj := store.NewObj(int64(1), -1, object.ObjTypeInt, object.ObjEncodingInt)
+				store.Put(key, obj)
+			},
+			input:          []string{"KEY2", "3"},
+			migratedOutput: EvalResponse{Result: int64(-2), Error: nil},
+		},
+		{
+			name: "DECRBY key holding string value",
+			setup: func() {
+				key := "KEY3"
+				obj := store.NewObj("VAL1", -1, object.ObjTypeString, object.ObjEncodingEmbStr)
+				store.Put(key, obj)
+			},
+			input:          []string{"KEY3", "2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")},
+		},
+		{
+			name: "DECRBY key holding SET type",
+			setup: func() {
+				evalSADD([]string{"SET1", "1", "2", "3"}, store)
+			},
+			input:          []string{"SET1", "2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+		},
+		{
+			name: "DECRBY key holding MAP type",
+			setup: func() {
+				evalHSET([]string{"MAP1", "a", "1", "b", "2", "c", "3"}, store)
+			},
+			input:          []string{"MAP1", "2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+		},
+		{
+			name:           "DECRBY Wrong number of args passed",
+			input:          []string{"KEY4"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'decrby' command")},
+		},
+		{
+			name: "DECRBY Min Overflow",
+			setup: func() {
+				key := "KEY5"
+				obj := store.NewObj(int64(math.MinInt64+3), -1, object.ObjTypeInt, object.ObjEncodingInt)
+				store.Put(key, obj)
+			},
+			input:          []string{"KEY5", "4"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR increment or decrement would overflow")},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store = setupTest(store)
+			if tt.setup != nil {
+				tt.setup()
+			}
+
+			response := evalDECRBY(tt.input, store)
+			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput)
+
+			// Handle comparison for byte slices
+			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
+				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
+					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+				}
+			} else {
+				assert.Equal(t, tt.migratedOutput.Result, response.Result)
+			}
+
+			if tt.migratedOutput.Error != nil {
+				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+			} else {
+				testifyAssert.NoError(t, response.Error)
+			}
+		})
+	}
 }
