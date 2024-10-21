@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dicedb/dice/internal/server/abstractserver"
 	"log/slog"
 	"net"
 	"net/http"
@@ -35,6 +36,7 @@ var unimplementedCommandsWebsocket = map[string]bool{
 }
 
 type WebsocketServer struct {
+	abstractserver.AbstractServer
 	shardManager       *shard.ShardManager
 	ioChan             chan *ops.StoreResponse
 	websocketServer    *http.Server

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/dicedb/dice/internal/server/abstractserver"
 	"log/slog"
 	"net"
 	"sync"
@@ -36,6 +37,7 @@ const (
 )
 
 type Server struct {
+	abstractserver.AbstractServer
 	Host            string
 	Port            int
 	serverFD        int

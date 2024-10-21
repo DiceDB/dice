@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/dicedb/dice/internal/server/abstractserver"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -60,17 +61,19 @@ func main() {
 
 	// Handle SIGTERM and SIGINT
 	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
+	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT, syscall.SIGKILL)
 
-	var queryWatchChan chan dstore.QueryWatchEvent = nil
-	var cmdWatchChan chan dstore.CmdWatchEvent = nil
+	var (
+		queryWatchChan chan dstore.QueryWatchEvent
+		cmdWatchChan   chan dstore.CmdWatchEvent
+		serverErrCh    = make(chan error, 2)
+	)
 
 	if config.EnableWatch {
-		queryWatchChan = make(chan dstore.QueryWatchEvent, config.DiceConfig.Performance.WatchChanBufSize)
-		cmdWatchChan = make(chan dstore.CmdWatchEvent, config.DiceConfig.Performance.WatchChanBufSize)
+		bufSize := config.DiceConfig.Performance.WatchChanBufSize
+		queryWatchChan = make(chan dstore.QueryWatchEvent, bufSize)
+		cmdWatchChan = make(chan dstore.CmdWatchEvent, bufSize)
 	}
-
-	var serverErrCh chan error
 
 	// Get the number of available CPU cores on the machine using runtime.NumCPU().
 	// This determines the total number of logical processors that can be utilized
@@ -79,13 +82,10 @@ func main() {
 	// If multithreading is not enabled, server will run on a single core.
 	var numCores int
 	if config.EnableMultiThreading {
-		serverErrCh = make(chan error, 1)
 		numCores = runtime.NumCPU()
 		logr.Debug("The DiceDB server has started in multi-threaded mode.", slog.Int("number of cores", numCores))
 	} else {
-		serverErrCh = make(chan error, 2)
 		logr.Debug("The DiceDB server has started in single-threaded mode.")
-		numCores = 1
 	}
 
 	// The runtime.GOMAXPROCS(numCores) call limits the number of operating system
@@ -107,132 +107,44 @@ func main() {
 
 	var serverWg sync.WaitGroup
 
-	// Initialize the AsyncServer server
-	// Find a port and bind it
-	if !config.EnableMultiThreading {
-		asyncServer := server.NewAsyncServer(shardManager, queryWatchChan, logr)
-		if err := asyncServer.FindPortAndBind(); err != nil {
-			cancel()
-			logr.Error("Error finding and binding port", slog.Any("error", err))
-			os.Exit(1)
-		}
-
-		serverWg.Add(1)
-		go func() {
-			defer serverWg.Done()
-			// Run the server
-			err := asyncServer.Run(ctx)
-
-			// Handling different server errors
-			if err != nil {
-				if errors.Is(err, context.Canceled) {
-					logr.Debug("Server was canceled")
-				} else if errors.Is(err, diceerrors.ErrAborted) {
-					logr.Debug("Server received abort command")
-				} else {
-					logr.Error(
-						"Server error",
-						slog.Any("error", err),
-					)
-				}
-				serverErrCh <- err
-			} else {
-				logr.Debug("Server stopped without error")
-			}
-		}()
-
-		// Goroutine to handle shutdown signals
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			<-sigs
-			asyncServer.InitiateShutdown()
-			cancel()
-		}()
-
-		// Initialize the HTTP server
-		httpServer := server.NewHTTPServer(shardManager, logr)
-		serverWg.Add(1)
-		go func() {
-			defer serverWg.Done()
-			// Run the HTTP server
-			err := httpServer.Run(ctx)
-			if err != nil {
-				if errors.Is(err, context.Canceled) {
-					logr.Debug("HTTP Server was canceled")
-				} else if errors.Is(err, diceerrors.ErrAborted) {
-					logr.Debug("HTTP received abort command")
-				} else {
-					logr.Error("HTTP Server error", slog.Any("error", err))
-				}
-				serverErrCh <- err
-			} else {
-				logr.Debug("HTTP Server stopped without error")
-			}
-		}()
-	} else {
+	if config.EnableMultiThreading {
 		if config.EnableProfiling {
 			stopProfiling, err := startProfiling(logr)
 			if err != nil {
 				logr.Error("Profiling could not be started", slog.Any("error", err))
-				os.Exit(1)
+				sigs <- syscall.SIGKILL
 			}
-
 			defer stopProfiling()
 		}
 
 		workerManager := worker.NewWorkerManager(config.DiceConfig.Performance.MaxClients, shardManager)
-		// Initialize the RESP Server
 		respServer := resp.NewServer(shardManager, workerManager, cmdWatchChan, serverErrCh, logr)
 		serverWg.Add(1)
-		go func() {
-			defer serverWg.Done()
-			// Run the server
-			err := respServer.Run(ctx)
+		go runServer(ctx, &serverWg, respServer, logr, serverErrCh)
+	} else {
+		asyncServer := server.NewAsyncServer(shardManager, queryWatchChan, logr)
+		if err := asyncServer.FindPortAndBind(); err != nil {
+			logr.Error("Error finding and binding port", slog.Any("error", err))
+			sigs <- syscall.SIGKILL
+		}
 
-			// Handling different server errors
-			if err != nil {
-				if errors.Is(err, context.Canceled) {
-					logr.Debug("Server was canceled")
-				} else if errors.Is(err, diceerrors.ErrAborted) {
-					logr.Debug("Server received abort command")
-				} else {
-					logr.Error("Server error", "error", err)
-				}
-				serverErrCh <- err
-			} else {
-				logr.Debug("Server stopped without error")
-			}
-		}()
+		serverWg.Add(1)
+		go runServer(ctx, &serverWg, asyncServer, logr, serverErrCh)
 
-		// Goroutine to handle shutdown signals
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			<-sigs
-			respServer.Shutdown()
-			cancel()
-		}()
+		httpServer := server.NewHTTPServer(shardManager, logr)
+		serverWg.Add(1)
+		go runServer(ctx, &serverWg, httpServer, logr, serverErrCh)
 	}
 
 	websocketServer := server.NewWebSocketServer(shardManager, config.WebsocketPort, logr)
 	serverWg.Add(1)
+	go runServer(ctx, &serverWg, websocketServer, logr, serverErrCh)
+
+	wg.Add(1)
 	go func() {
-		defer serverWg.Done()
-		// Run the Websocket server
-		err := websocketServer.Run(ctx)
-		if err != nil {
-			if errors.Is(err, context.Canceled) {
-				logr.Debug("Websocket Server was canceled")
-			} else if errors.Is(err, diceerrors.ErrAborted) {
-				logr.Debug("Websocket received abort command")
-			} else {
-				logr.Error("Websocket Server error", "error", err)
-			}
-			serverErrCh <- err
-		} else {
-			logr.Debug("Websocket Server stopped without error")
-		}
+		defer wg.Done()
+		<-sigs
+		cancel()
 	}()
 
 	go func() {
@@ -255,6 +167,22 @@ func main() {
 	logr.Debug("Server has shut down gracefully")
 }
 
+func runServer(ctx context.Context, wg *sync.WaitGroup, srv abstractserver.AbstractServer, logr *slog.Logger, errCh chan<- error) {
+	defer wg.Done()
+	if err := srv.Run(ctx); err != nil {
+		switch {
+		case errors.Is(err, context.Canceled):
+			logr.Debug(fmt.Sprintf("%T was canceled", srv))
+		case errors.Is(err, diceerrors.ErrAborted):
+			logr.Debug(fmt.Sprintf("%T received abort command", srv))
+		default:
+			logr.Error(fmt.Sprintf("%T error", srv), slog.Any("error", err))
+		}
+		errCh <- err
+	} else {
+		logr.Debug(fmt.Sprintf("%T stopped without error", srv))
+	}
+}
 func startProfiling(logr *slog.Logger) (func(), error) {
 	// Start CPU profiling
 	cpuFile, err := os.Create("cpu.prof")
