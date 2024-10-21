@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/dicedb/dice/internal/server/abstractserver"
 	"hash/crc32"
 	"log/slog"
 	"net/http"
@@ -34,6 +35,7 @@ var unimplementedCommands = map[string]bool{
 }
 
 type HTTPServer struct {
+	abstractserver.AbstractServer
 	shardManager       *shard.ShardManager
 	ioChan             chan *ops.StoreResponse
 	httpServer         *http.Server
