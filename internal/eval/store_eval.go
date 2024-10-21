@@ -473,17 +473,6 @@ func evalZADD(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
-func parseScore(input string) (float64, error) {
-	switch input {
-	case "-inf":
-		return math.Inf(-1), nil
-	case "+inf":
-		return math.Inf(1), nil
-	default:
-		return strconv.ParseFloat(input, 64)
-	}
-}
-
 // The ZCOUNT command in DiceDB counts the number of members in a sorted set at the specified key
 // whose scores fall within a given range. The command takes three arguments: the key of the sorted set
 // the minimum score, and the maximum score.
@@ -514,8 +503,8 @@ func evalZCOUNT(args []string, store *dstore.Store) *EvalResponse {
 			Error:  diceerrors.ErrWrongTypeOperation,
 		}
 	}
-	min, errMin := parseScore(args[1])
-	max, errMax := parseScore(args[2])
+	min, errMin := utils.ParseScore(args[1])
+	max, errMax := utils.ParseScore(args[2])
 
 	if errMin != nil || errMax != nil {
 		return &EvalResponse{
