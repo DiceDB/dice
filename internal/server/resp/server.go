@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/dicedb/dice/internal/server/abstractserver"
 	"log/slog"
 	"net"
 	"sync"
@@ -39,17 +40,17 @@ const (
 
 type Server struct {
 	abstractserver.AbstractServer
-	Host                     string
-	Port                     int
-	serverFD                 int
-	connBacklogSize          int
-	workerManager            *worker.WorkerManager
-	shardManager             *shard.ShardManager
-	watchManager             *watchmanager.Manager
-	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription
-	cmdWatchChan             chan dstore.CmdWatchEvent
-	globalErrorChan          chan error
-	logger                   *slog.Logger
+	Host            string
+	Port            int
+	serverFD        int
+	connBacklogSize int
+	workerManager   *worker.WorkerManager
+	shardManager    *shard.ShardManager
+	watchManager    *watchmanager.Manager
+	cmdWatchChan    chan dstore.CmdWatchEvent
+  cmdWatchSubscriptionChan chan watchmanager.WatchSubscription
+	globalErrorChan chan error
+	logger          *slog.Logger
 }
 
 func NewServer(shardManager *shard.ShardManager, workerManager *worker.WorkerManager, cmdWatchSubscriptionChan chan watchmanager.WatchSubscription, cmdWatchChan chan dstore.CmdWatchEvent, globalErrChan chan error, l *slog.Logger) *Server {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/dicedb/dice/internal/server/abstractserver"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -125,10 +126,10 @@ func main() {
 		}
 
 		workerManager := worker.NewWorkerManager(config.DiceConfig.Performance.MaxClients, shardManager)
-		var (
+    var (
 			cmdWatchSubscriptionChan chan watchmanager.WatchSubscription
 		)
-		respServer := resp.NewServer(shardManager, workerManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh, logr)
+    respServer := resp.NewServer(shardManager, workerManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh, logr)
 		serverWg.Add(1)
 		go runServer(ctx, &serverWg, respServer, logr, serverErrCh)
 	} else {
