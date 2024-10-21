@@ -40,6 +40,8 @@ func init() {
 		"This flag controls the number of keys each shard holds at startup. You can multiply this number with the "+
 		"total number of shard threads to estimate how much memory will be required at system start up.")
 	flag.BoolVar(&config.EnableProfiling, "enable-profiling", false, "enable profiling for the dicedb server")
+	flag.BoolVar(&config.EnableWatch, "enable-watch", false, "enable reactivity features which power the .WATCH commands")
+
 	flag.Parse()
 
 	config.SetupConfig()
@@ -60,8 +62,14 @@ func main() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
-	queryWatchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Performance.WatchChanBufSize)
-	cmdWatchChan := make(chan dstore.CmdWatchEvent, config.DiceConfig.Memory.KeysLimit)
+	var queryWatchChan chan dstore.QueryWatchEvent = nil
+	var cmdWatchChan chan dstore.CmdWatchEvent = nil
+
+	if config.EnableWatch {
+		queryWatchChan = make(chan dstore.QueryWatchEvent, config.DiceConfig.Performance.WatchChanBufSize)
+		cmdWatchChan = make(chan dstore.CmdWatchEvent, config.DiceConfig.Performance.WatchChanBufSize)
+	}
+
 	var serverErrCh chan error
 
 	// Get the number of available CPU cores on the machine using runtime.NumCPU().

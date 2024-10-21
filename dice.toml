@@ -24,7 +24,7 @@ Enabled = true
 Port = 8379
 
 [Performance]
-WatchChanBufSize = 20000
+WatchChanBufSize = 20000000
 ShardCronFrequency = 1000000000
 MultiplexerPollTimeout = 100000000
 MaxClients = 20000

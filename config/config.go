@@ -52,6 +52,8 @@ var (
 	KeysLimit = DefaultKeysLimit
 
 	EnableProfiling = false
+
+	EnableWatch = true
 )
 
 type Config struct {

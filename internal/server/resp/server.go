@@ -75,12 +75,15 @@ func (s *Server) Run(ctx context.Context) (err error) {
 	errChan := make(chan error, 1)
 	wg := &sync.WaitGroup{}
 
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		s.watchManager.Run(ctx, s.cmdWatchChan)
-	}()
+	if s.cmdWatchChan != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			s.watchManager.Run(ctx, s.cmdWatchChan)
+		}()
+	}
 
+	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
 		if err := s.AcceptConnectionRequests(ctx, wg); err != nil {
