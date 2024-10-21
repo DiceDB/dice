@@ -1,8 +1,9 @@
 package async
 
 import (
-	"gotest.tools/v3/assert"
 	"testing"
+
+	"gotest.tools/v3/assert"
 )
 
 func TestZADD(t *testing.T) {
@@ -116,4 +117,57 @@ func TestZRANGE(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestZCOUNT(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	FireCommand(conn, "DEL key")
+	defer FireCommand(conn, "DEL key")
+
+	FireCommand(conn, "ZADD key 10 member1 20 member2 30 member3 40 member4")
+
+	testCases := []TestCase{
+		{
+			name:     "ZCOUNT with matching members in range 15-35",
+			commands: []string{"ZCOUNT key 15 35"},
+			expected: []interface{}{int64(2)}, // member2 and member3
+		},
+		{
+			name:     "ZCOUNT with full range -inf to +inf",
+			commands: []string{"ZCOUNT key -inf +inf"},
+			expected: []interface{}{int64(4)}, // All members
+		},
+		{
+			name:     "ZCOUNT with no matching members",
+			commands: []string{"ZCOUNT key 50 100"},
+			expected: []interface{}{int64(0)},
+		},
+		{
+			name:     "ZCOUNT with single member at boundary",
+			commands: []string{"ZCOUNT key 20 20"},
+			expected: []interface{}{int64(1)}, // Only member2
+		},
+		{
+			name:     "ZCOUNT with reversed range",
+			commands: []string{"ZCOUNT key 40 10"},
+			expected: []interface{}{int64(0)}, // Invalid range
+		},
+		{
+			name:     "ZCOUNT on non-existent key",
+			commands: []string{"ZCOUNT nonExistingKey 0 100"},
+			expected: []interface{}{int64(0)},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for i, cmd := range tc.commands {
+				result := FireCommand(conn, cmd)
+				assert.DeepEqual(t, tc.expected[i], result)
+			}
+		})
+	}
+
 }

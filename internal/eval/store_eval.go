@@ -382,6 +382,62 @@ func evalZADD(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+func parseScore(input string) (float64, error) {
+	switch input {
+	case "-inf":
+		return math.Inf(-1), nil
+	case "+inf":
+		return math.Inf(1), nil
+	default:
+		return strconv.ParseFloat(input, 64)
+	}
+}
+
+func evalZCOUNT(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 3 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("ZCOUNT"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: 0,
+			Error:  nil,
+		}
+	}
+
+	var sortedSet *sortedset.Set
+	var err []byte
+	sortedSet, err = sortedset.FromObject(obj)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+	min, errMin := parseScore(args[1])
+	max, errMax := parseScore(args[2])
+
+	if errMin != nil || errMax != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrInvalidNumberFormat,
+		}
+	}
+
+	count := sortedSet.CountInRange(min, max)
+
+	return &EvalResponse{
+		Result: count,
+		Error:  nil,
+	}
+}
+
 // evalZRANGE returns the specified range of elements in the sorted set stored at key.
 // The elements are considered to be ordered from the lowest to the highest score.
 func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {

@@ -50,6 +50,7 @@ const (
 	CmdJSONStrlen  = "JSON.STRLEN"
 	CmdJSONObjlen  = "JSON.OBJLEN"
 	CmdZAdd        = "ZADD"
+	CmdZCount      = "ZCOUNT"
 	CmdZRange      = "ZRANGE"
 	CmdPFAdd       = "PFADD"
 	CmdPFCount     = "PFCOUNT"
@@ -125,6 +126,9 @@ var CommandsMeta = map[string]CmdMeta{
 
 	// Sorted set commands
 	CmdZAdd: {
+		CmdType: SingleShard,
+	},
+	CmdZCount: {
 		CmdType: SingleShard,
 	},
 	CmdZRange: {
