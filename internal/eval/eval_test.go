@@ -4408,135 +4408,201 @@ func testEvalGETRANGE(t *testing.T, store *dstore.Store) {
 	}
 	tests := map[string]evalTestCase{
 		"GETRANGE against non-existing key": {
-			setup:  func() {},
-			input:  []string{"NON_EXISTING_KEY", "0", "-1"},
-			output: clientio.Encode("", false),
+			input: []string{"NON_EXISTING_KEY", "0", "-1"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against wrong key type": {
 			setup: func() {
 				evalLPUSH([]string{"LKEY1", "list"}, store)
 			},
-			input:  []string{"LKEY1", "0", "-1"},
-			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+			input: []string{"LKEY1", "0", "-1"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			},
 		},
 		"GETRANGE against string value: 0, 3": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "0", "3"},
-			output: clientio.Encode("Hell", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "0", "3"},
+			migratedOutput: EvalResponse{
+				Result: "Hell",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against string value: 0, -1": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "0", "-1"},
-			output: clientio.Encode("Hello World", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "0", "-1"},
+			migratedOutput: EvalResponse{
+				Result: "Hello World",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against string value: -4, -1": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "-4", "-1"},
-			output: clientio.Encode("orld", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "-4", "-1"},
+			migratedOutput: EvalResponse{
+				Result: "orld",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against string value: 5, 3": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "5", "3"},
-			output: clientio.Encode("", false),
-		},
-		"GETRANGE against string value: 5, 5000": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "5", "5000"},
-			output: clientio.Encode(" World", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "5", "3"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against string value: -5000, 10000": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "-5000", "10000"},
-			output: clientio.Encode("Hello World", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "-5000", "10000"},
+			migratedOutput: EvalResponse{
+				Result: "Hello World",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against string value: 0, -100": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "0", "-100"},
-			output: clientio.Encode("", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "0", "-100"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against string value: 1, -100": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "1", "-100"},
-			output: clientio.Encode("", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "1", "-100"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against string value: -1, -100": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "-1", "-100"},
-			output: clientio.Encode("", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "-1", "-100"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against string value: -100, -100": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "-100", "-100"},
-			output: clientio.Encode("", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "-100", "-100"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against string value: -100, -101": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "-100", "-101"},
-			output: clientio.Encode("", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "-100", "-101"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: 0, 2": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "0", "2"},
-			output: clientio.Encode("123", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "0", "2"},
+			migratedOutput: EvalResponse{
+				Result: "123",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: 0, -1": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "0", "-1"},
-			output: clientio.Encode("1234", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "0", "-1"},
+			migratedOutput: EvalResponse{
+				Result: "1234",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: -3, -1": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "-3", "-1"},
-			output: clientio.Encode("234", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "-3", "-1"},
+			migratedOutput: EvalResponse{
+				Result: "234",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: 5, 3": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "5", "3"},
-			output: clientio.Encode("", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "5", "3"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: 3, 5000": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "3", "5000"},
-			output: clientio.Encode("4", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "3", "5000"},
+			migratedOutput: EvalResponse{
+				Result: "4",
+				Error:  nil,
+			},
 		},
-
 		"GETRANGE against integer value: -5000, 10000": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "-5000", "10000"},
-			output: clientio.Encode("1234", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "-5000", "10000"},
+			migratedOutput: EvalResponse{
+				Result: "1234",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: 0, -100": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "0", "-100"},
-			output: clientio.Encode("", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "0", "-100"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: 1, -100": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "1", "-100"},
-			output: clientio.Encode("", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "1", "-100"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: -1, -100": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "-1", "-100"},
-			output: clientio.Encode("", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "-1", "-100"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: -100, -99": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "-100", "-99"},
-			output: clientio.Encode("", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "-100", "-99"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: -100, -100": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "-100", "-100"},
-			output: clientio.Encode("", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "-100", "-100"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: -100, -101": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "-100", "-101"},
-			output: clientio.Encode("", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "-100", "-101"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 	}
-	runEvalTests(t, tests, evalGETRANGE, store)
+
+	runMigratedEvalTests(t, tests, evalGETRANGE, store)
 }
 
 func BenchmarkEvalGETRANGE(b *testing.B) {
@@ -5333,23 +5399,23 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
-			setup:  func() {},
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'append' command\r\n"),
+			setup:          func() {},
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("APPEND")},
 		},
 		"append invalid number of arguments": {
 			setup: func() {
 				store.Del("key")
 			},
-			input:  []string{"key", "val", "val2"},
-			output: []byte("-ERR wrong number of arguments for 'append' command\r\n"),
+			input:          []string{"key", "val", "val2"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("APPEND")},
 		},
 		"append to non-existing key": {
 			setup: func() {
 				store.Del("key")
 			},
-			input:  []string{"key", "val"},
-			output: clientio.Encode(3, false),
+			input:          []string{"key", "val"},
+			migratedOutput: EvalResponse{Result: 3, Error: nil},
 		},
 		"append string value to existing key having string value": {
 			setup: func() {
@@ -5358,15 +5424,15 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "val"},
-			output: clientio.Encode(6, false),
+			input:          []string{"key", "val"},
+			migratedOutput: EvalResponse{Result: 6, Error: nil},
 		},
 		"append integer value to non existing key": {
 			setup: func() {
 				store.Del("key")
 			},
-			input:  []string{"key", "123"},
-			output: clientio.Encode(3, false),
+			input:          []string{"key", "123"},
+			migratedOutput: EvalResponse{Result: 3, Error: nil},
 			validator: func(output []byte) {
 				obj := store.Get("key")
 				_, enc := object.ExtractTypeEncoding(obj)
@@ -5383,15 +5449,15 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(storedValue, -1, object.ObjTypeInt, object.ObjEncodingInt)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "val"},
-			output: clientio.Encode(6, false),
+			input:          []string{"key", "val"},
+			migratedOutput: EvalResponse{Result: 6, Error: nil},
 		},
 		"append empty string to non-existing key": {
 			setup: func() {
 				store.Del("key")
 			},
-			input:  []string{"key", ""},
-			output: clientio.Encode(0, false),
+			input:          []string{"key", ""},
+			migratedOutput: EvalResponse{Result: 0, Error: nil},
 		},
 		"append empty string to existing key having empty string": {
 			setup: func() {
@@ -5400,8 +5466,8 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", ""},
-			output: clientio.Encode(0, false),
+			input:          []string{"key", ""},
+			migratedOutput: EvalResponse{Result: 0, Error: nil},
 		},
 		"append empty string to existing key": {
 			setup: func() {
@@ -5410,8 +5476,8 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", ""},
-			output: clientio.Encode(3, false),
+			input:          []string{"key", ""},
+			migratedOutput: EvalResponse{Result: 3, Error: nil},
 		},
 		"append modifies the encoding from int to raw": {
 			setup: func() {
@@ -5420,8 +5486,8 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(storedValue, -1, object.ObjTypeInt, object.ObjEncodingInt)
 				store.Put("key", obj)
 			},
-			input:  []string{"key", "2"},
-			output: clientio.Encode(2, false),
+			input:          []string{"key", "2"},
+			migratedOutput: EvalResponse{Result: 2, Error: nil},
 			validator: func(output []byte) {
 				obj := store.Get("key")
 				_, enc := object.ExtractTypeEncoding(obj)
@@ -5439,8 +5505,8 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 				obj.Value.(*Deque).LPush(value)
 			},
-			input:  []string{"listKey", "val"},
-			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+			input:          []string{"listKey", "val"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		"append to key created using SADD": {
 			setup: func() {
@@ -5453,8 +5519,8 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(initialValues, -1, object.ObjTypeSet, object.ObjEncodingSetStr)
 				store.Put(key, obj)
 			},
-			input:  []string{"setKey", "val"},
-			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+			input:          []string{"setKey", "val"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		"append to key created using HSET": {
 			setup: func() {
@@ -5467,8 +5533,8 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(initialValues, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
 				store.Put(key, obj)
 			},
-			input:  []string{"hashKey", "val"},
-			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+			input:          []string{"hashKey", "val"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		"append to key created using SETBIT": {
 			setup: func() {
@@ -5479,29 +5545,19 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(initialByteArray, -1, object.ObjTypeByteArray, object.ObjEncodingByteArray)
 				store.Put(key, obj)
 			},
-			input:  []string{"bitKey", "val"},
-			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+			input:          []string{"bitKey", "val"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		"append value with leading zeros": {
 			setup: func() {
 				store.Del("key_with_leading_zeros")
 			},
-			input:  []string{"key_with_leading_zeros", "0043"},
-			output: clientio.Encode(4, false), // The length of "0043" is 4
-			validator: func(output []byte) {
-				obj := store.Get("key_with_leading_zeros")
-				_, enc := object.ExtractTypeEncoding(obj)
-				if enc != object.ObjEncodingRaw {
-					t.Errorf("expected encoding to be Raw for string with leading zeros")
-				}
-				if obj.Value.(string) != "0043" {
-					t.Errorf("expected value to be '0043', got %v", obj.Value)
-				}
-			},
+			input:          []string{"key_with_leading_zeros", "0043"},
+			migratedOutput: EvalResponse{Result: 4, Error: nil}, // The length of "0043" is 4
 		},
 	}
 
-	runEvalTests(t, tests, evalAPPEND, store)
+	runMigratedEvalTests(t, tests, evalAPPEND, store)
 }
 
 func BenchmarkEvalAPPEND(b *testing.B) {

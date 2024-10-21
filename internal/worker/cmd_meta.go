@@ -86,6 +86,8 @@ const (
 	CmdHIncrBy      = "HINCRBY"
 	CmdHIncrByFloat = "HINCRBYFLOAT"
 	CmdHRandField   = "HRANDFIELD"
+	CmdGetRange     = "GETRANGE"
+	CmdAppend       = "APPEND"
 )
 
 type CmdMeta struct {
@@ -131,6 +133,9 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdGetSet: {
+		CmdType: SingleShard,
+	},
+	CmdGetRange: {
 		CmdType: SingleShard,
 	},
 	CmdJSONClear: {
@@ -228,7 +233,9 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdZRange: {
 		CmdType: SingleShard,
 	},
-
+	CmdAppend: {
+		CmdType: SingleShard,
+	},
 	CmdIncr: {
 		CmdType: SingleShard,
 	},

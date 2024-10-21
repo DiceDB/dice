@@ -62,12 +62,20 @@ var (
 		Cmd:     "SETEX",
 		CmdType: SingleShard,
 	}
+	getrangeCmdMeta = CmdsMeta{
+		Cmd:     "GETRANGE",
+		CmdType: SingleShard,
+	}
 	zaddCmdMeta = CmdsMeta{
 		Cmd:     "ZADD",
 		CmdType: SingleShard,
 	}
 	zrangeCmdMeta = CmdsMeta{
 		Cmd:     "ZRANGE",
+		CmdType: SingleShard,
+	}
+	appendCmdMeta = CmdsMeta{
+		Cmd:     "APPEND",
 		CmdType: SingleShard,
 	}
 	zpopminCmdMeta = CmdsMeta{
@@ -171,6 +179,8 @@ func init() {
 	WorkerCmdsMeta["GET"] = getCmdMeta
 	WorkerCmdsMeta["GETSET"] = getsetCmdMeta
 	WorkerCmdsMeta["SETEX"] = setexCmdMeta
+	WorkerCmdsMeta["GETRANGE"] = getrangeCmdMeta
+	WorkerCmdsMeta["APPEND"] = appendCmdMeta
 	WorkerCmdsMeta["JSON.CLEAR"] = jsonclearCmdMeta
 	WorkerCmdsMeta["JSON.STRLEN"] = jsonstrlenCmdMeta
 	WorkerCmdsMeta["JSON.OBJLEN"] = jsonobjlenCmdMeta
