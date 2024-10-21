@@ -7,26 +7,25 @@ The `ZPOPMIN` command in DiceDB is used to remove and return the members with th
 
 ## Syntax
 
-```
+```bash
 ZPOPMIN key [count]
 ```
 
 ## Parameters
 
-| Parameter  | Description                                                                                  | Type    | Required |
-|------------|----------------------------------------------------------------------------------------------|---------|----------|
-| `key`      | The name of the sorted set data structure. If it does not exist, an empty array is returned. | String  | Yes      |
-| `count`    | The count argument specifies the maximum number of members to return with the lowest scores. | Integer | No       |
+| Parameter  | Description                                                                          | Type    | Required |
+|------------|--------------------------------------------------------------------------------------|---------|----------|
+| `key`      | The name of the sorted set. If it does not exist, an empty array is returned.        | String  | Yes      |
+| `count`    | The count argument specifies the number of members to return with the lowest scores. | Integer | No       |
 
 ## Return values
 
 | Condition                                                | Return Value                             |
 |----------------------------------------------------------|------------------------------------------|
 | If the key is of valid type and records are present      | List of members including their scores   |
-| If the key does not exist or if the sorted set is empty | `(empty list or set)`                     |
+| If the key does not exist or if the sorted set is empty  | `(empty list or set)`                    |
 
 ## Behaviour
-
 - The command first checks if the specified key exists.
 - If the key does not exist, an empty array is returned.
 - If the key exists but is not a sorted set, an error is returned.
@@ -34,30 +33,21 @@ ZPOPMIN key [count]
 - The returned array contains the members and their corresponding scores in the order of lowest to highest.
 
 ## Errors
-1. `Wrong type error`:
+1. `Wrong type of value or key`:
     - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
     - Occurs when trying to use the command on a key that is not a sorted set.
 
-2. `Syntax error`:
+2. `Invalid syntax or conflicting options`:
     - Error Message: `(error) ERROR wrong number of arguments for 'zpopmin' command`
     - Occurs when the command syntax is incorrect or missing required parameters.
 
-3. `Invalid argument type error`:
+3. `Non-integer value for `count\`\`:
     - Error Message : `(error) ERR value is not an integer or out of range`
     - Occurs when the count argument passed to the command is not an integer.
 
 ## Examples
 
-### Non-Existing Key (without count argument)
-
-Attempting to pop the member with the lowest score from a non-existent sorted set:
-
-```bash
-127.0.0.1:7379> ZPOPMIN NON_EXISTENT_KEY
-(empty array)
-```
-
-### Existing Key (without count argument)
+### Basic Usage
 
 Popping the member with the lowest score from an existing sorted set:
 
@@ -68,7 +58,16 @@ Popping the member with the lowest score from an existing sorted set:
 1) 1 "member1"
 ```
 
-### With Count Argument
+### Non-Existing Key
+
+Attempting to pop the member with the lowest score from a non-existent sorted set:
+
+```bash
+127.0.0.1:7379> ZPOPMIN NON_EXISTENT_KEY
+(empty array)
+```
+
+### With count argumment
 
 Popping multiple members with the lowest scores using the count argument:
 
@@ -125,7 +124,7 @@ OK
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
-### Invalid Count Argument
+### Invalid Usage
 
 Using an invalid (non-integer) count argument:
 
@@ -136,7 +135,7 @@ Using an invalid (non-integer) count argument:
 (error) ERR value is not an integer or out of range
 ```
 
-### Wrong Type of Key (without count argument)
+### Wrong Type of Key
 
 Attempting to pop from a key that is not a sorted set:
 
