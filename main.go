@@ -35,6 +35,7 @@ func init() {
 	flag.BoolVar(&config.EnableMultiThreading, "enable-multithreading", false, "run server in multithreading mode")
 	flag.IntVar(&config.HTTPPort, "http-port", 8082, "HTTP port for the dicedb server")
 	flag.IntVar(&config.WebsocketPort, "websocket-port", 8379, "Websocket port for the dicedb server")
+	flag.IntVar(&config.NumShards, "num-shards", -1, "number of shards to create. default = number of cores")
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
 	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the config file")
 	flag.StringVar(&config.FileLocation, "c", config.FileLocation, "file path of the config file")
@@ -85,6 +86,9 @@ func main() {
 	var numCores int
 	if config.EnableMultiThreading {
 		numCores = runtime.NumCPU()
+		if config.NumShards > 0 {
+			numCores = config.NumShards
+		}
 		logr.Debug("The DiceDB server has started in multi-threaded mode.", slog.Int("number of cores", numCores))
 	} else {
 		logr.Debug("The DiceDB server has started in single-threaded mode.")
