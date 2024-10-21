@@ -30,7 +30,7 @@ func TestZRANK(t *testing.T) {
 		{
 			name:     "ZRANK with WITHSCORE option for existing member",
 			commands: []string{"ZRANK key member3 WITHSCORE"},
-			expected: []interface{}{[]interface{}{int64(2), int64(3)}},
+			expected: []interface{}{[]interface{}{int64(2), "3"}},
 		},
 		{
 			name:     "ZRANK with WITHSCORE option for non-existing member",

@@ -71,7 +71,7 @@ func TestZRANK(t *testing.T) {
 					},
 				},
 			},
-			expected: []interface{}{[]interface{}{float64(2), float64(3)}},
+			expected: []interface{}{[]interface{}{float64(2), "3"}},
 		},
 		{
 			name: "ZRANK with WITHSCORE option for non-existing member",
