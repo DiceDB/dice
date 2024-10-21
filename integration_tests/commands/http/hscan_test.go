@@ -24,7 +24,7 @@ func TestHScan(t *testing.T) {
 			},
 			expected: []interface{}{
 				"ERR wrong number of arguments for 'hscan' command"},
-			delays: []time.Duration{0, 0},
+			delays: []time.Duration{0},
 		},
 		{
 			name: "HSCAN with wrong key",
@@ -129,7 +129,7 @@ func TestHScan(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			defer exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": [...]string{"KEY", "key", "key_hLen1", "key_hLen2", "key_hLen3"}}})
+			defer exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": [...]string{"KEY", "string_key", "key_hScan1", "key_hScan2", "key_hScan3", "key_hScan4", "key_hScan5", "key_hScan6", "key_hScan7", "key_hScan8", "key_hScan9", "key_hScan10"}}})
 
 			for i, cmd := range tc.commands {
 				if tc.delays[i] > 0 {
