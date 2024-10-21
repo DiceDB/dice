@@ -2215,7 +2215,7 @@ func testEvalPersist(t *testing.T, store *dstore.Store) {
 		},
 	}
 
-	runMigratedEvalTests(t, tests, evalPersist, store)
+	runMigratedEvalTests(t, tests, evalPERSIST, store)
 }
 
 func testEvalDbsize(t *testing.T, store *dstore.Store) {

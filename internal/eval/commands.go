@@ -546,7 +546,7 @@ var (
 		Name:       "PERSIST",
 		Info:       "PERSIST removes the expiration from a key",
 		IsMigrated: true,
-		NewEval:    evalPersist,
+		NewEval:    evalPERSIST,
 	}
 	copyCmdMeta = DiceCmdMeta{
 		Name:  "COPY",

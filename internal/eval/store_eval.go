@@ -1691,7 +1691,7 @@ func evalEXISTS(args []string, store *dstore.Store) *EvalResponse {
 }
 
 // evalPERSIST removes the expiry from the key
-func evalPersist(args []string, store *dstore.Store) *EvalResponse {
+func evalPERSIST(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) < 1 {
 		return &EvalResponse{
 			Result: nil,
