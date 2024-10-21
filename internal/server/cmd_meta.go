@@ -62,12 +62,20 @@ var (
 		Cmd:     "SETEX",
 		CmdType: SingleShard,
 	}
+	getrangeCmdMeta = CmdsMeta{
+		Cmd:     "GETRANGE",
+		CmdType: SingleShard,
+	}
 	zaddCmdMeta = CmdsMeta{
 		Cmd:     "ZADD",
 		CmdType: SingleShard,
 	}
 	zrangeCmdMeta = CmdsMeta{
 		Cmd:     "ZRANGE",
+		CmdType: SingleShard,
+	}
+	appendCmdMeta = CmdsMeta{
+		Cmd:     "APPEND",
 		CmdType: SingleShard,
 	}
 	zpopminCmdMeta = CmdsMeta{
@@ -105,19 +113,48 @@ var (
 		Cmd:     "JSON.OBJLEN",
 		CmdType: SingleShard,
 	}
-
-	hlenCmdMeta = CmdsMeta{
+  hlenCmdMeta = CmdsMeta{
 		Cmd:     "HLEN",
 		CmdType: SingleShard,
 	}
-
 	hstrlenCmdMeta = CmdsMeta{
 		Cmd:     "HSTRLEN",
 		CmdType: SingleShard,
 	}
-
 	hscanCmdMeta = CmdsMeta{
 		Cmd:     "HSCAN",
+		CmdType: SingleShard,
+	}
+	incrCmdMeta = CmdsMeta{
+		Cmd:     "INCR",
+		CmdType: SingleShard,
+	}
+	incrByCmdMeta = CmdsMeta{
+		Cmd:     "INCRBY",
+		CmdType: SingleShard,
+	}
+	decrCmdMeta = CmdsMeta{
+		Cmd:     "DECR",
+		CmdType: SingleShard,
+	}
+	decrByCmdMeta = CmdsMeta{
+		Cmd:     "DECRBY",
+		CmdType: SingleShard,
+	}
+	incrByFloatCmdMeta = CmdsMeta{
+		Cmd:     "INCRBYFLOAT",
+		CmdType: SingleShard,
+	}
+	hincrbyCmdMeta = CmdsMeta{
+		Cmd:     "HINCRBY",
+		CmdType: SingleShard,
+	}
+	hincrbyfloatCmdMeta = CmdsMeta{
+		Cmd:     "HINCRBYFLOAT",
+		CmdType: SingleShard,
+	}
+	hrandfieldCmdMeta = CmdsMeta{
+		Cmd:     "HRANDFIELD",
 		CmdType: SingleShard,
 	}
 
@@ -137,6 +174,8 @@ func init() {
 	WorkerCmdsMeta["GET"] = getCmdMeta
 	WorkerCmdsMeta["GETSET"] = getsetCmdMeta
 	WorkerCmdsMeta["SETEX"] = setexCmdMeta
+	WorkerCmdsMeta["GETRANGE"] = getrangeCmdMeta
+	WorkerCmdsMeta["APPEND"] = appendCmdMeta
 	WorkerCmdsMeta["JSON.CLEAR"] = jsonclearCmdMeta
 	WorkerCmdsMeta["JSON.STRLEN"] = jsonstrlenCmdMeta
 	WorkerCmdsMeta["JSON.OBJLEN"] = jsonobjlenCmdMeta
@@ -150,5 +189,27 @@ func init() {
 	WorkerCmdsMeta["HLEN"] = hlenCmdMeta
 	WorkerCmdsMeta["HSTRLEN"] = hstrlenCmdMeta
 	WorkerCmdsMeta["HSCAN"] = hscanCmdMeta
+	WorkerCmdsMeta["INCR"] = incrCmdMeta
+	WorkerCmdsMeta["INCRBY"] = incrByCmdMeta
+	WorkerCmdsMeta["INCR"] = incrCmdMeta
+	WorkerCmdsMeta["DECR"] = decrCmdMeta
+	WorkerCmdsMeta["DECRBY"] = decrByCmdMeta
+	WorkerCmdsMeta["INCRBYFLOAT"] = incrByFloatCmdMeta
+	WorkerCmdsMeta["HINCRBY"] = hincrbyCmdMeta
+	WorkerCmdsMeta["HINCRBYFLOAT"] = hincrbyfloatCmdMeta
+	WorkerCmdsMeta["HRANDFIELD"] = hrandfieldCmdMeta
+	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
+	WorkerCmdsMeta["ZPOPMIN"] = zpopminCmdMeta
+	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
+	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
+	WorkerCmdsMeta["HINCRBY"] = hincrbyCmdMeta
+	WorkerCmdsMeta["HINCRBYFLOAT"] = hincrbyfloatCmdMeta
+	WorkerCmdsMeta["HRANDFIELD"] = hrandfieldCmdMeta
+	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
+	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
+	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
+	WorkerCmdsMeta["HINCRBY"] = hincrbyCmdMeta
+	WorkerCmdsMeta["HINCRBYFLOAT"] = hincrbyfloatCmdMeta
+	WorkerCmdsMeta["HRANDFIELD"] = hrandfieldCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }

@@ -62,21 +62,31 @@ const (
 
 // Watch commands
 const (
-	CmdGetWatch    = "GET.WATCH"
-	CmdZRangeWatch = "ZRANGE.WATCH"
-	CmdZPopMin     = "ZPOPMIN"
-	CmdJSONClear   = "JSON.CLEAR"
-	CmdJSONStrlen  = "JSON.STRLEN"
-	CmdJSONObjlen  = "JSON.OBJLEN"
-	CmdZAdd        = "ZADD"
-	CmdZRange      = "ZRANGE"
-	CmdZRank       = "ZRANK"
-	CmdPFAdd       = "PFADD"
-	CmdPFCount     = "PFCOUNT"
-	CmdPFMerge     = "PFMERGE"
-	CmdHLen        = "HLEN"
-	CmdHStrLen     = "HSTRLEN"
-	CmdHScan       = "HSCAN"
+	CmdGetWatch     = "GET.WATCH"
+	CmdZRangeWatch  = "ZRANGE.WATCH"
+	CmdZPopMin      = "ZPOPMIN"
+	CmdJSONClear    = "JSON.CLEAR"
+	CmdJSONStrlen   = "JSON.STRLEN"
+	CmdJSONObjlen   = "JSON.OBJLEN"
+	CmdZAdd         = "ZADD"
+	CmdZRange       = "ZRANGE"
+	CmdZRank        = "ZRANK"
+	CmdPFAdd        = "PFADD"
+	CmdPFCount      = "PFCOUNT"
+	CmdPFMerge      = "PFMERGE"
+	CmdIncr         = "INCR"
+	CmdIncrBy       = "INCRBY"
+	CmdDecr         = "DECR"
+	CmdDecrBy       = "DECRBY"
+	CmdIncrByFloat  = "INCRBYFLOAT"
+	CmdHIncrBy      = "HINCRBY"
+	CmdHIncrByFloat = "HINCRBYFLOAT"
+	CmdHRandField   = "HRANDFIELD"
+	CmdGetRange     = "GETRANGE"
+	CmdAppend       = "APPEND"
+	CmdHLen         = "HLEN"
+	CmdHStrLen      = "HSTRLEN"
+	CmdHScan        = "HSCAN"
 )
 
 type CmdMeta struct {
@@ -124,6 +134,9 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdGetSet: {
 		CmdType: SingleShard,
 	},
+	CmdGetRange: {
+		CmdType: SingleShard,
+	},
 	CmdJSONClear: {
 		CmdType: SingleShard,
 	},
@@ -149,6 +162,15 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdHScan: {
+ 		CmdType: SingleShard,
+	},
+	CmdHIncrBy: {
+		CmdType: SingleShard,
+	},
+	CmdHIncrByFloat: {
+		CmdType: SingleShard,
+	},
+	CmdHRandField: {
 		CmdType: SingleShard,
 	},
 
@@ -205,6 +227,24 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdZRange: {
+		CmdType: SingleShard,
+	},
+	CmdAppend: {
+		CmdType: SingleShard,
+	},
+	CmdIncr: {
+		CmdType: SingleShard,
+	},
+	CmdIncrBy: {
+		CmdType: SingleShard,
+	},
+	CmdDecr: {
+		CmdType: SingleShard,
+	},
+	CmdDecrBy: {
+		CmdType: SingleShard,
+	},
+	CmdIncrByFloat: {
 		CmdType: SingleShard,
 	},
 	CmdZPopMin: {

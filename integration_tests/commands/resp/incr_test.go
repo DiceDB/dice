@@ -1,4 +1,4 @@
-package async
+package resp
 
 import (
 	"fmt"
@@ -132,8 +132,10 @@ func TestINCR(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Clean up keys before each test case
-			keys := []string{"key1", "key2", "max_int", "min_int", "float_key", "string_key", "bool_key",
-				"non_existent", "str_int1", "str_int2", "str_int3", "expiry_key"}
+			keys := []string{
+				"key1", "key2", "max_int", "min_int", "float_key", "string_key", "bool_key",
+				"non_existent", "str_int1", "str_int2", "str_int3", "expiry_key",
+			}
 			for _, key := range keys {
 				FireCommand(conn, fmt.Sprintf("DEL %s", key))
 			}
@@ -270,7 +272,6 @@ func TestINCRBY(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-
 			defer FireCommand(conn, "DEL key unsetKey stringkey")
 
 			for _, cmd := range tc.setCommands {
