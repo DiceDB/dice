@@ -35,8 +35,6 @@ func TestDel(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			conn := exec.ConnectToServer()
-			exec.FireCommand(conn, "del k")
-
 			for i, cmd := range tc.commands {
 				result := exec.FireCommand(conn, cmd)
 				assert.DeepEqual(t, tc.expected[i], result)
