@@ -99,7 +99,6 @@ func TestZPOPMIN(t *testing.T) {
 				Body:    map[string]interface{}{"key": "myzset"},
 			})
 			for i, cmd := range tc.commands {
-				fmt.Println("Checking zpop", cmd)
 				result, _ := exec.FireCommand(cmd)
 
 				assert.Equal(t, tc.expected[i], result)
