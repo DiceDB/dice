@@ -93,7 +93,7 @@ Trying to use `GETRANGE` without giving the value
 (error) ERROR wrong number of arguments for 'getrange' command
 ```
 
-Trying to use `GETRANGE` on an invalid data type..
+Trying to use `GETRANGE` on an invalid data type.
 
 ```bash
 127.0.0.1:7379> LPUSH foo apple
