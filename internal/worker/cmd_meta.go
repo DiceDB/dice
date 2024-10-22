@@ -2,11 +2,8 @@ package worker
 
 import (
 	"context"
-	"fmt"
-
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/eval"
-	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/ops"
 )
 
@@ -62,28 +59,32 @@ const (
 
 // Watch commands
 const (
-	CmdGetWatch    = "GET.WATCH"
-	CmdZRangeWatch = "ZRANGE.WATCH"
-
-	CmdSadd        = "SADD"
-	CmdSrem        = "SREM"
-	CmdScard       = "SCARD"
-	CmdSmembers    = "SMEMBERS"
-	CmdZPopMin     = "ZPOPMIN"
-	CmdJSONClear   = "JSON.CLEAR"
-	CmdJSONStrlen  = "JSON.STRLEN"
-	CmdJSONObjlen  = "JSON.OBJLEN"
-	CmdZAdd        = "ZADD"
-	CmdZRange      = "ZRANGE"
-	CmdZRank       = "ZRANK"
-	CmdPFAdd       = "PFADD"
-	CmdPFCount     = "PFCOUNT"
-	CmdPFMerge     = "PFMERGE"
-	CmdIncr        = "INCR"
-	CmdIncrBy      = "INCRBY"
-	CmdDecr        = "DECR"
-	CmdDecrBy      = "DECRBY"
-	CmdIncrByFloat = "INCRBYFLOAT"
+	CmdSadd         = "SADD"
+	CmdSrem         = "SREM"
+	CmdScard        = "SCARD"
+	CmdSmembers     = "SMEMBERS"
+	CmdGetWatch     = "GET.WATCH"
+	CmdZRangeWatch  = "ZRANGE.WATCH"
+	CmdZPopMin      = "ZPOPMIN"
+	CmdJSONClear    = "JSON.CLEAR"
+	CmdJSONStrlen   = "JSON.STRLEN"
+	CmdJSONObjlen   = "JSON.OBJLEN"
+	CmdZAdd         = "ZADD"
+	CmdZRange       = "ZRANGE"
+	CmdZRank        = "ZRANK"
+	CmdPFAdd        = "PFADD"
+	CmdPFCount      = "PFCOUNT"
+	CmdPFMerge      = "PFMERGE"
+	CmdIncr         = "INCR"
+	CmdIncrBy       = "INCRBY"
+	CmdDecr         = "DECR"
+	CmdDecrBy       = "DECRBY"
+	CmdIncrByFloat  = "INCRBYFLOAT"
+	CmdHIncrBy      = "HINCRBY"
+	CmdHIncrByFloat = "HINCRBYFLOAT"
+	CmdHRandField   = "HRANDFIELD"
+	CmdGetRange     = "GETRANGE"
+	CmdAppend       = "APPEND"
 )
 
 type CmdMeta struct {
@@ -143,6 +144,9 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdSmembers: {
 		CmdType: SingleShard,
 	},
+	CmdGetRange: {
+		CmdType: SingleShard,
+	},
 	CmdJSONClear: {
 		CmdType: SingleShard,
 	},
@@ -159,6 +163,15 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdPFMerge: {
+		CmdType: SingleShard,
+	},
+	CmdHIncrBy: {
+		CmdType: SingleShard,
+	},
+	CmdHIncrByFloat: {
+		CmdType: SingleShard,
+	},
+	CmdHRandField: {
 		CmdType: SingleShard,
 	},
 
@@ -217,7 +230,9 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdZRange: {
 		CmdType: SingleShard,
 	},
-
+	CmdAppend: {
+		CmdType: SingleShard,
+	},
 	CmdIncr: {
 		CmdType: SingleShard,
 	},
@@ -239,11 +254,9 @@ var CommandsMeta = map[string]CmdMeta{
 }
 
 func init() {
-	l := logger.New(logger.Opts{WithTimestamp: true})
-	// Validate the metadata for each command
 	for c, meta := range CommandsMeta {
 		if err := validateCmdMeta(c, meta); err != nil {
-			l.Error("error validating worker command metadata %s: %v", c, err)
+			slog.Error("error validating worker command metadata %s: %v", c, err)
 		}
 	}
 }
@@ -260,7 +273,7 @@ func validateCmdMeta(c string, meta CmdMeta) error {
 			return fmt.Errorf("multi-shard command %s must have both decomposeCommand and composeResponse implemented", c)
 		}
 	case SingleShard, Watch, Custom:
-		// No specific validations for these types currently
+	// No specific validations for these types currently
 	default:
 		return fmt.Errorf("unknown command type for %s", c)
 	}

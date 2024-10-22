@@ -1,43 +1,31 @@
 package logger
 
 import (
-	"io"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/dicedb/dice/config"
 	"github.com/rs/zerolog"
 )
 
-func getLogLevel() slog.Leveler {
-	var level slog.Leveler
+func getSLogLevel() slog.Level {
 	switch config.DiceConfig.Logging.LogLevel {
 	case "debug":
-		level = slog.LevelDebug
-	case "warn":
-		level = slog.LevelWarn
-	case "error":
-		level = slog.LevelError
+		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
 	default:
-		level = slog.LevelInfo
+		return slog.LevelInfo
 	}
-	return level
 }
 
-type Opts struct {
-	WithTimestamp bool
-}
-
-func New(opts Opts) *slog.Logger {
-	var writer io.Writer = os.Stderr
-	if config.DiceConfig.Logging.PrettyPrintLogs {
-		writer = zerolog.ConsoleWriter{Out: os.Stderr}
-	}
-	zerologLogger := zerolog.New(writer).Level(mapLevel(getLogLevel().Level()))
-	if opts.WithTimestamp {
-		zerologLogger = zerologLogger.With().Timestamp().Logger()
-	}
-	logger := slog.New(newZerologHandler(&zerologLogger))
-
-	return logger
+func New() *slog.Logger {
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	zerologLogger := zerolog.New(zerolog.ConsoleWriter{
+		Out:        os.Stderr,
+		NoColor:    true,
+		TimeFormat: time.RFC3339,
+	}).Level(toZerologLevel(getSLogLevel())).With().Timestamp().Logger()
+	return slog.New(newZerologHandler(&zerologLogger))
 }

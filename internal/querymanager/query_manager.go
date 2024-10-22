@@ -107,13 +107,12 @@ func NewCacheStore() CacheStore {
 }
 
 // NewQueryManager initializes a new Manager.
-func NewQueryManager(logger *slog.Logger) *Manager {
+func NewQueryManager() *Manager {
 	QuerySubscriptionChan = make(chan QuerySubscription)
 	AdhocQueryChan = make(chan AdhocQuery, 1000)
 	return &Manager{
 		WatchList:  sync.Map{},
 		QueryCache: NewQueryCacheStore(),
-		logger:     logger,
 	}
 }
 

@@ -2,12 +2,10 @@ package eval
 
 import (
 	"bytes"
-	"crypto/rand"
 	"errors"
 	"fmt"
 	"log/slog"
 	"math"
-	"math/big"
 	"math/bits"
 	"regexp"
 	"sort"
@@ -1778,7 +1776,7 @@ func evalMULTI(args []string, store *dstore.Store) []byte {
 // Every time a key in the watch list is modified, the client will be sent a response
 // containing the new value of the key along with the operation that was performed on it.
 // Contains only one argument, the query to be watched.
-func EvalQWATCH(args []string, httpOp bool, client *comm.Client, store *dstore.Store) []byte {
+func EvalQWATCH(args []string, httpOp, websocketOp bool, client *comm.Client, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("Q.WATCH")
 	}
@@ -1797,7 +1795,7 @@ func EvalQWATCH(args []string, httpOp bool, client *comm.Client, store *dstore.S
 	})
 	var watchSubscription querymanager.QuerySubscription
 
-	if httpOp {
+	if httpOp || websocketOp {
 		watchSubscription = querymanager.QuerySubscription{
 			Subscribe:          true,
 			Query:              query,
@@ -2822,52 +2820,6 @@ func evalHKEYS(args []string, store *dstore.Store) []byte {
 
 	return clientio.Encode(result, false)
 }
-
-// Increments the number stored at field in the hash stored at key by increment.
-//
-// If key does not exist, a new key holding a hash is created.
-// If field does not exist the value is set to 0 before the operation is performed.
-//
-// The range of values supported by HINCRBY is limited to 64-bit signed integers.
-//
-// Usage: HINCRBY key field increment
-func evalHINCRBY(args []string, store *dstore.Store) []byte {
-	if len(args) < 3 {
-		return diceerrors.NewErrArity("HINCRBY")
-	}
-
-	increment, err := strconv.ParseInt(args[2], 10, 64)
-	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
-	}
-
-	key := args[0]
-	obj := store.Get(key)
-	var hashmap HashMap
-
-	if obj != nil {
-		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
-		}
-		hashmap = obj.Value.(HashMap)
-	}
-
-	if hashmap == nil {
-		hashmap = make(HashMap)
-	}
-
-	field := args[1]
-	numkey, err := hashmap.incrementValue(field, increment)
-	if err != nil {
-		return diceerrors.NewErrWithMessage(err.Error())
-	}
-
-	obj = store.NewObj(hashmap, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
-	store.Put(key, obj)
-
-	return clientio.Encode(numkey, false)
-}
-
 func evalHSETNX(args []string, store *dstore.Store) []byte {
 	if len(args) != 3 {
 		return diceerrors.NewErrArity("HSETNX")
@@ -3603,7 +3555,6 @@ func evalSINTER(args []string, store *dstore.Store) []byte {
 	}
 	return clientio.Encode(members, false)
 }
-
 func evalHLEN(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("HLEN")
@@ -3865,224 +3816,6 @@ func evalTYPE(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(typeStr, true)
 }
 
-// evalGETRANGE returns the substring of the string value stored at key, determined by the offsets start and end
-// The offsets are zero-based and can be negative values to index from the end of the string
-//
-// If the start offset is larger than the end offset, or if the start or end offset is greater than the length of the string,
-// an empty string is returned
-func evalGETRANGE(args []string, store *dstore.Store) []byte {
-	if len(args) != 3 {
-		return diceerrors.NewErrArity("GETRANGE")
-	}
-	key := args[0]
-	obj := store.Get(key)
-	if obj == nil {
-		return clientio.Encode("", false)
-	}
-
-	start, err := strconv.Atoi(args[1])
-	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
-	}
-	end, err := strconv.Atoi(args[2])
-	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
-	}
-
-	var str string
-	switch _, oEnc := object.ExtractTypeEncoding(obj); oEnc {
-	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
-		if val, ok := obj.Value.(string); ok {
-			str = val
-		} else {
-			return diceerrors.NewErrWithMessage("expected string but got another type")
-		}
-	case object.ObjEncodingInt:
-		str = strconv.FormatInt(obj.Value.(int64), 10)
-	default:
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	if str == "" {
-		return clientio.Encode("", false)
-	}
-
-	if start < 0 {
-		start = len(str) + start
-	}
-
-	if end < 0 {
-		end = len(str) + end
-	}
-
-	if start >= len(str) || end < 0 || start > end {
-		return clientio.Encode("", false)
-	}
-
-	if start < 0 {
-		start = 0
-	}
-
-	if end >= len(str) {
-		end = len(str) - 1
-	}
-
-	return clientio.Encode(str[start:end+1], false)
-}
-
-// evalHRANDFIELD returns random fields from a hash stored at key.
-// If only the key is provided, one random field is returned.
-// If count is provided, it returns that many unique random fields. A negative count allows repeated selections.
-// The "WITHVALUES" option returns both fields and values.
-// Returns nil if the key doesn't exist or the hash is empty.
-// Errors: arity error, type error for non-hash, syntax error for "WITHVALUES", or count format error.
-func evalHRANDFIELD(args []string, store *dstore.Store) []byte {
-	if len(args) < 1 || len(args) > 3 {
-		return diceerrors.NewErrArity("HRANDFIELD")
-	}
-
-	key := args[0]
-	obj := store.Get(key)
-	if obj == nil {
-		return clientio.RespNIL
-	}
-
-	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
-	}
-
-	hashMap := obj.Value.(HashMap)
-	if len(hashMap) == 0 {
-		return clientio.Encode([]string{}, false)
-	}
-
-	count := 1
-	withValues := false
-
-	if len(args) > 1 {
-		var err error
-		// The second argument is the count.
-		count, err = strconv.Atoi(args[1])
-		if err != nil {
-			return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
-		}
-
-		// The third argument is the "WITHVALUES" option.
-		if len(args) == 3 {
-			if !strings.EqualFold(args[2], WithValues) {
-				return diceerrors.NewErrWithFormattedMessage(diceerrors.SyntaxErr)
-			}
-			withValues = true
-		}
-	}
-
-	return selectRandomFields(hashMap, count, withValues)
-}
-
-// selectRandomFields returns random fields from a hashmap.
-func selectRandomFields(hashMap HashMap, count int, withValues bool) []byte {
-	keys := make([]string, 0, len(hashMap))
-	for k := range hashMap {
-		keys = append(keys, k)
-	}
-
-	var results []string
-	resultSet := make(map[string]struct{})
-
-	abs := func(x int) int {
-		if x < 0 {
-			return -x
-		}
-		return x
-	}
-
-	for i := 0; i < abs(count); i++ {
-		if count > 0 && len(resultSet) == len(keys) {
-			break
-		}
-
-		randomIndex, _ := rand.Int(rand.Reader, big.NewInt(int64(len(keys))))
-		randomField := keys[randomIndex.Int64()]
-
-		if count > 0 {
-			if _, exists := resultSet[randomField]; exists {
-				i--
-				continue
-			}
-			resultSet[randomField] = struct{}{}
-		}
-
-		results = append(results, randomField)
-		if withValues {
-			results = append(results, hashMap[randomField])
-		}
-	}
-
-	return clientio.Encode(results, false)
-}
-
-// evalAPPEND takes two arguments: the key and the value to append to the key's current value.
-// If the key does not exist, it creates a new key with the given value (so APPEND will be similar to SET in this special case)
-// If key already exists and is a string (or integers stored as strings), this command appends the value at the end of the string
-func evalAPPEND(args []string, store *dstore.Store) []byte {
-	if len(args) != 2 {
-		return diceerrors.NewErrArity("APPEND")
-	}
-
-	key, value := args[0], args[1]
-	obj := store.Get(key)
-
-	if obj == nil {
-		// Key does not exist path
-
-		// check if the value starts with '0' and has more than 1 character to handle leading zeros
-		if len(value) > 1 && value[0] == '0' {
-			// treat as string if has leading zeros
-			store.Put(key, store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw))
-			return clientio.Encode(len(value), false)
-		}
-
-		// Deduce type and encoding based on the value if no leading zeros
-		oType, oEnc := deduceTypeEncoding(value)
-
-		var storedValue interface{}
-		// Store the value with the appropriate encoding based on the type
-		switch oEnc {
-		case object.ObjEncodingInt:
-			storedValue, _ = strconv.ParseInt(value, 10, 64)
-		case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
-			storedValue = value
-		default:
-			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-		}
-
-		store.Put(key, store.NewObj(storedValue, -1, oType, oEnc))
-
-		return clientio.Encode(len(value), false)
-	}
-	// Key exists path
-	_, currentEnc := object.ExtractTypeEncoding(obj)
-
-	var currentValueStr string
-	switch currentEnc {
-	case object.ObjEncodingInt:
-		// If the encoding is an integer, convert the current value to a string for concatenation
-		currentValueStr = strconv.FormatInt(obj.Value.(int64), 10)
-	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
-		// If the encoding is a string, retrieve the string value for concatenation
-		currentValueStr = obj.Value.(string)
-	default:
-		// If the encoding is neither integer nor string, return a "wrong type" error
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	newValue := currentValueStr + value
-
-	store.Put(key, store.NewObj(newValue, -1, object.ObjTypeString, object.ObjEncodingRaw))
-
-	return clientio.Encode(len(newValue), false)
-}
-
 func evalJSONRESP(args []string, store *dstore.Store) []byte {
 	if len(args) < 1 {
 		return diceerrors.NewErrArity("json.resp")
@@ -4242,42 +3975,6 @@ func evalBITFIELD(args []string, store *dstore.Store) []byte {
 	return bitfieldEvalGeneric(args, store, false)
 }
 
-func evalHINCRBYFLOAT(args []string, store *dstore.Store) []byte {
-	if len(args) < 3 {
-		return diceerrors.NewErrArity("HINCRBYFLOAT")
-	}
-	incr, err := strconv.ParseFloat(strings.TrimSpace(args[2]), 64)
-	if err != nil {
-		return diceerrors.NewErrWithMessage(diceerrors.IntOrFloatErr)
-	}
-
-	key := args[0]
-	obj := store.Get(key)
-	var hashmap HashMap
-
-	if obj != nil {
-		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
-		}
-		hashmap = obj.Value.(HashMap)
-	}
-
-	if hashmap == nil {
-		hashmap = make(HashMap)
-	}
-
-	field := args[1]
-	numkey, err := hashmap.incrementFloatValue(field, incr)
-	if err != nil {
-		return diceerrors.NewErrWithMessage(err.Error())
-	}
-
-	obj = store.NewObj(hashmap, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
-	store.Put(key, obj)
-
-	return clientio.Encode(numkey, false)
-}
-
 // Read-only variant of the BITFIELD command. It is like the original BITFIELD but only accepts GET subcommand and can safely be used in read-only replicas.
 func evalBITFIELDRO(args []string, store *dstore.Store) []byte {
 	if len(args) < 1 {
@@ -4286,7 +3983,6 @@ func evalBITFIELDRO(args []string, store *dstore.Store) []byte {
 
 	return bitfieldEvalGeneric(args, store, true)
 }
-
 func evalGEOADD(args []string, store *dstore.Store) []byte {
 	if len(args) < 4 {
 		return diceerrors.NewErrArity("GEOADD")

@@ -78,12 +78,20 @@ var (
 		Cmd: "SMEMBERS",
 	}
 
+	getrangeCmdMeta = CmdsMeta{
+		Cmd:     "GETRANGE",
+		CmdType: SingleShard,
+	}
 	zaddCmdMeta = CmdsMeta{
 		Cmd:     "ZADD",
 		CmdType: SingleShard,
 	}
 	zrangeCmdMeta = CmdsMeta{
 		Cmd:     "ZRANGE",
+		CmdType: SingleShard,
+	}
+	appendCmdMeta = CmdsMeta{
+		Cmd:     "APPEND",
 		CmdType: SingleShard,
 	}
 	zpopminCmdMeta = CmdsMeta{
@@ -142,6 +150,18 @@ var (
 		Cmd:     "INCRBYFLOAT",
 		CmdType: SingleShard,
 	}
+	hincrbyCmdMeta = CmdsMeta{
+		Cmd:     "HINCRBY",
+		CmdType: SingleShard,
+	}
+	hincrbyfloatCmdMeta = CmdsMeta{
+		Cmd:     "HINCRBYFLOAT",
+		CmdType: SingleShard,
+	}
+	hrandfieldCmdMeta = CmdsMeta{
+		Cmd:     "HRANDFIELD",
+		CmdType: SingleShard,
+	}
 
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
@@ -163,7 +183,8 @@ func init() {
 	WorkerCmdsMeta["SREM"] = sremCmdMeta
 	WorkerCmdsMeta["SCARD"] = scardCmdMeta
 	WorkerCmdsMeta["SMEMBERS"] = smembersCmdMeta
-
+	WorkerCmdsMeta["GETRANGE"] = getrangeCmdMeta
+	WorkerCmdsMeta["APPEND"] = appendCmdMeta
 	WorkerCmdsMeta["JSON.CLEAR"] = jsonclearCmdMeta
 	WorkerCmdsMeta["JSON.STRLEN"] = jsonstrlenCmdMeta
 	WorkerCmdsMeta["JSON.OBJLEN"] = jsonobjlenCmdMeta
@@ -180,5 +201,21 @@ func init() {
 	WorkerCmdsMeta["DECR"] = decrCmdMeta
 	WorkerCmdsMeta["DECRBY"] = decrByCmdMeta
 	WorkerCmdsMeta["INCRBYFLOAT"] = incrByFloatCmdMeta
+	WorkerCmdsMeta["HINCRBY"] = hincrbyCmdMeta
+	WorkerCmdsMeta["HINCRBYFLOAT"] = hincrbyfloatCmdMeta
+	WorkerCmdsMeta["HRANDFIELD"] = hrandfieldCmdMeta
+	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
+	WorkerCmdsMeta["ZPOPMIN"] = zpopminCmdMeta
+	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
+	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
+	WorkerCmdsMeta["HINCRBY"] = hincrbyCmdMeta
+	WorkerCmdsMeta["HINCRBYFLOAT"] = hincrbyfloatCmdMeta
+	WorkerCmdsMeta["HRANDFIELD"] = hrandfieldCmdMeta
+	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
+	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
+	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
+	WorkerCmdsMeta["HINCRBY"] = hincrbyCmdMeta
+	WorkerCmdsMeta["HINCRBYFLOAT"] = hincrbyfloatCmdMeta
+	WorkerCmdsMeta["HRANDFIELD"] = hrandfieldCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }
