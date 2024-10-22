@@ -29,11 +29,11 @@ EXISTS key [key ...]
 - The command performs a read-only operation and does not modify the database.
 
 ## Errors
-1. **Wrong number of arguments**:
+1. `Wrong number of arguments`:
    - Error Message: `(error) ERR wrong number of arguments for 'exists' command`
    - Occurs when no key is provided.
 
-2. **Wrong type of value or key**:
+2. `Wrong type of value or key`:
    - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
    - Occurs when attempting to use the command on a key that contains a non-string value.
 
