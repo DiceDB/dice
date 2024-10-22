@@ -84,6 +84,8 @@ const (
 	CmdHRandField   = "HRANDFIELD"
 	CmdGetRange     = "GETRANGE"
 	CmdAppend       = "APPEND"
+	CmdGeoAdd       = "GEOADD"
+	CmdGeoDist      = "GEODIST"
 )
 
 type CmdMeta struct {
@@ -159,6 +161,13 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdHRandField: {
+		CmdType: SingleShard,
+	},
+
+	CmdGeoAdd: {
+		CmdType: SingleShard,
+	},
+	CmdGeoDist: {
 		CmdType: SingleShard,
 	},
 
