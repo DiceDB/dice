@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/dicedb/dice/internal/server/abstractserver"
 	"log/slog"
 	"net"
 	"sync"
@@ -11,7 +12,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/dicedb/dice/internal/server/abstractserver"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dice/internal/watchmanager"
 

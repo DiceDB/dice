@@ -125,12 +125,10 @@ func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
 
 	queryWatchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Memory.KeysLimit)
 	cmdWatchChan := make(chan dstore.CmdWatchEvent, config.DiceConfig.Memory.KeysLimit)
+	cmdWatchSubscriptionChan := make(chan watchmanager.WatchSubscription)
 	gec := make(chan error)
 	shardManager := shard.NewShardManager(1, queryWatchChan, cmdWatchChan, gec, logr)
 	workerManager := worker.NewWorkerManager(20000, shardManager)
-	var (
-		cmdWatchSubscriptionChan chan watchmanager.WatchSubscription
-	)
 	// Initialize the RESP Server
 	testServer := resp.NewServer(shardManager, workerManager, cmdWatchSubscriptionChan, cmdWatchChan, gec, logr)
 

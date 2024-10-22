@@ -15,6 +15,7 @@ import (
 	"syscall"
 
 	"github.com/dicedb/dice/internal/server/abstractserver"
+	"github.com/dicedb/dice/internal/watchmanager"
 
 	"github.com/dicedb/dice/config"
 	diceerrors "github.com/dicedb/dice/internal/errors"
@@ -66,9 +67,10 @@ func main() {
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
 	var (
-		queryWatchChan chan dstore.QueryWatchEvent
-		cmdWatchChan   chan dstore.CmdWatchEvent
-		serverErrCh    = make(chan error, 2)
+		queryWatchChan           chan dstore.QueryWatchEvent
+		cmdWatchChan             chan dstore.CmdWatchEvent
+		cmdWatchSubscriptionChan chan watchmanager.WatchSubscription
+		serverErrCh              = make(chan error, 2)
 	)
 
 	if config.EnableWatch {
