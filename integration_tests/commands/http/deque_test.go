@@ -103,7 +103,7 @@ func TestLPush(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.commands {
 				result, _ := exec.FireCommand(cmd)
-				assert.Equal(t, tc.expected[i], result)
+				assert.Equal(t, tc.expected[i], result, "Value mismatch for cmd %s", cmd)
 			}
 		})
 	}
@@ -146,7 +146,7 @@ func TestRPush(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.commands {
 				result, _ := exec.FireCommand(cmd)
-				assert.Equal(t, tc.expected[i], result)
+				assert.Equal(t, tc.expected[i], result, "Value mismatch for cmd %s", cmd)
 			}
 		})
 	}
@@ -560,6 +560,7 @@ func TestLLEN(t *testing.T) {
 func TestLPOPCount(t *testing.T) {
 	deqTestInit()
 	exec := NewHTTPCommandExecutor()
+	exec.FireCommand(HTTPCommand{Command: "FLUSHDB"})
 
 	testCases := []struct {
 		name   string
@@ -586,8 +587,8 @@ func TestLPOPCount(t *testing.T) {
 				float64(4),
 				[]interface{}{"v1", "v2"},
 				[]interface{}{"v3", "v4"},
-				"ERR value is out of range",
 				"ERR value is not an integer or out of range",
+				"ERR value is not an integer or a float",
 				float64(0),
 			},
 		},
@@ -602,4 +603,6 @@ func TestLPOPCount(t *testing.T) {
 			}
 		})
 	}
+
+	exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": [...]string{"k"}}})
 }
