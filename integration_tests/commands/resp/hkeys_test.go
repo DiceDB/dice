@@ -1,6 +1,7 @@
 package resp
 
 import (
+	"fmt"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -11,6 +12,27 @@ func TestHKeys(t *testing.T) {
 	defer conn.Close()
 
 	testCases := []TestCase{
+		{
+			name:     "RESP HKEYS with key containing hash with multiple fields",
+			commands: []string{"HSET key_hkeys field1 value1", "HSET key_hkeys field2 value2", "HKEYS key_hkeys"},
+			expected: []interface{}{int64(1), int64(1), []interface{}{"field1", "field2"}},
+		},
+		{
+			name:     "RESP HKEYS with non-existent key",
+			commands: []string{"HKEYS key_hkeys01"},
+			expected: []interface{}{[]interface{}{}},
+		},
+		{
+			name:     "RESP HKEYS with key containing a non-hash value",
+			commands: []string{"SET key_hkeys02 field1", "HKEYS key_hkeys02"},
+			expected: []interface{}{"OK", "ERR -WRONGTYPE Operation against a key holding the wrong kind of value"},
+		},
+		{
+			name:     "RESP HKEYS with wrong number of arguments",
+			commands: []string{"HKEYS key_hkeys03 x", "HKEYS"},
+			expected: []interface{}{"ERR wrong number of arguments for 'HKEYS' command",
+				"ERR wrong number of arguments for 'HKEYS' command"},
+		},
 		{
 			name:     "RESP One or more keys exist",
 			commands: []string{"HSET key field value", "HSET key field1 value1", "HKEYS key"},
@@ -30,6 +52,7 @@ func TestHKeys(t *testing.T) {
 
 			for i, cmd := range tc.commands {
 				result := FireCommand(conn, cmd)
+				fmt.Printf("%v | %v | %v\n", cmd, tc.expected[i], result)
 				assert.DeepEqual(t, tc.expected[i], result)
 			}
 		})
