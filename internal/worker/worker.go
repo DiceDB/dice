@@ -45,7 +45,6 @@ type BaseWorker struct {
 	adhocReqChan             chan *cmd.DiceDBCmd
 	Session                  *auth.Session
 	globalErrorChan          chan error
-	logger                   *slog.Logger
 	responseChan             chan *ops.StoreResponse
 	preprocessingChan        chan *ops.StoreResponse
 	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription
@@ -54,8 +53,7 @@ type BaseWorker struct {
 func NewWorker(wid string, responseChan, preprocessingChan chan *ops.StoreResponse,
 	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription,
 	ioHandler iohandler.IOHandler, parser requestparser.Parser,
-	shardManager *shard.ShardManager, gec chan error,
-	logger *slog.Logger) *BaseWorker {
+	shardManager *shard.ShardManager, gec chan error) *BaseWorker {
 	return &BaseWorker{
 		id:                       wid,
 		ioHandler:                ioHandler,
@@ -65,7 +63,6 @@ func NewWorker(wid string, responseChan, preprocessingChan chan *ops.StoreRespon
 		responseChan:             responseChan,
 		preprocessingChan:        preprocessingChan,
 		cmdWatchSubscriptionChan: cmdWatchSubscriptionChan,
-		logger:                   logger,
 		Session:                  auth.NewSession(),
 		adhocReqChan:             make(chan *cmd.DiceDBCmd, config.DiceConfig.Performance.AdhocReqChanBufSize),
 	}
@@ -97,13 +94,13 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 		case <-ctx.Done():
 			err := w.Stop()
 			if err != nil {
-				w.logger.Warn("Error stopping worker:", slog.String("workerID", w.id), slog.Any("error", err))
+				slog.Warn("Error stopping worker:", slog.String("workerID", w.id), slog.Any("error", err))
 			}
 			return ctx.Err()
 		case err := <-errChan:
 			if err != nil {
 				if errors.Is(err, net.ErrClosed) || errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) {
-					w.logger.Debug("Connection closed for worker", slog.String("workerID", w.id), slog.Any("error", err))
+					slog.Debug("Connection closed for worker", slog.String("workerID", w.id), slog.Any("error", err))
 					return err
 				}
 			}
@@ -122,14 +119,14 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 			if err != nil {
 				err = w.ioHandler.Write(ctx, err)
 				if err != nil {
-					w.logger.Debug("Write error, connection closed possibly", slog.String("workerID", w.id), slog.Any("error", err))
+					slog.Debug("Write error, connection closed possibly", slog.String("workerID", w.id), slog.Any("error", err))
 					return err
 				}
 			}
 			if len(cmds) == 0 {
 				err = w.ioHandler.Write(ctx, fmt.Errorf("ERR: Invalid request"))
 				if err != nil {
-					w.logger.Debug("Write error, connection closed possibly", slog.String("workerID", w.id), slog.Any("error", err))
+					slog.Debug("Write error, connection closed possibly", slog.String("workerID", w.id), slog.Any("error", err))
 					return err
 				}
 				continue
@@ -140,7 +137,7 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 			if len(cmds) > 1 {
 				err = w.ioHandler.Write(ctx, fmt.Errorf("ERR: Multiple commands not supported"))
 				if err != nil {
-					w.logger.Debug("Write error, connection closed possibly", slog.String("workerID", w.id), slog.Any("error", err))
+					slog.Debug("Write error, connection closed possibly", slog.String("workerID", w.id), slog.Any("error", err))
 					return err
 				}
 			}
@@ -149,7 +146,7 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 			if err != nil {
 				werr := w.ioHandler.Write(ctx, err)
 				if werr != nil {
-					w.logger.Debug("Write error, connection closed possibly", slog.Any("error", errors.Join(err, werr)))
+					slog.Debug("Write error, connection closed possibly", slog.Any("error", errors.Join(err, werr)))
 					return errors.Join(err, werr)
 				}
 			}
@@ -160,7 +157,7 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 				w.executeCommandHandler(execCtx, errChan, cmds, false)
 			}(errChan)
 		case err := <-readErrChan:
-			w.logger.Debug("Read error, connection closed possibly", slog.String("workerID", w.id), slog.Any("error", err))
+			slog.Debug("Read error, connection closed possibly", slog.String("workerID", w.id), slog.Any("error", err))
 			return err
 		}
 	}
@@ -175,9 +172,9 @@ func (w *BaseWorker) executeCommandHandler(execCtx context.Context, errChan chan
 
 	err := w.executeCommand(execCtx, cmds[0], isWatchNotification)
 	if err != nil {
-		w.logger.Error("Error executing command", slog.String("workerID", w.id), slog.Any("error", err))
+		slog.Error("Error executing command", slog.String("workerID", w.id), slog.Any("error", err))
 		if errors.Is(err, net.ErrClosed) || errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.ETIMEDOUT) {
-			w.logger.Debug("Connection closed for worker", slog.String("workerID", w.id), slog.Any("error", err))
+			slog.Debug("Connection closed for worker", slog.String("workerID", w.id), slog.Any("error", err))
 			errChan <- err
 		}
 	}
@@ -199,7 +196,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 		case Global:
 			// If it's a global command, process it immediately without involving any shards.
 			err := w.ioHandler.Write(ctx, meta.WorkerCommandHandler(diceDBCmd.Args))
-			w.logger.Debug("Error executing for worker", slog.String("workerID", w.id), slog.Any("error", err))
+			slog.Debug("Error executing for worker", slog.String("workerID", w.id), slog.Any("error", err))
 			return err
 
 		case SingleShard:
@@ -213,7 +210,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 			if err != nil {
 				workerErr := w.ioHandler.Write(ctx, err)
 				if workerErr != nil {
-					w.logger.Debug("Error executing for worker", slog.String("workerID", w.id), slog.Any("error", workerErr))
+					slog.Debug("Error executing for worker", slog.String("workerID", w.id), slog.Any("error", workerErr))
 				}
 				return workerErr
 			}
@@ -224,15 +221,15 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 			case CmdAuth:
 				err := w.ioHandler.Write(ctx, w.RespAuth(diceDBCmd.Args))
 				if err != nil {
-					w.logger.Error("Error sending auth response to worker", slog.String("workerID", w.id), slog.Any("error", err))
+					slog.Error("Error sending auth response to worker", slog.String("workerID", w.id), slog.Any("error", err))
 				}
 				return err
 			case CmdAbort:
 				err := w.ioHandler.Write(ctx, clientio.OK)
 				if err != nil {
-					w.logger.Error("Error sending abort response to worker", slog.String("workerID", w.id), slog.Any("error", err))
+					slog.Error("Error sending abort response to worker", slog.String("workerID", w.id), slog.Any("error", err))
 				}
-				w.logger.Info("Received ABORT command, initiating server shutdown", slog.String("workerID", w.id))
+				slog.Info("Received ABORT command, initiating server shutdown", slog.String("workerID", w.id))
 				w.globalErrorChan <- diceerrors.ErrAborted
 				return err
 			default:
@@ -319,7 +316,7 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 	for numCmds != 0 {
 		select {
 		case <-ctx.Done():
-			w.logger.Error("Timed out waiting for response from shards", slog.String("workerID", w.id), slog.Any("error", ctx.Err()))
+			slog.Error("Timed out waiting for response from shards", slog.String("workerID", w.id), slog.Any("error", ctx.Err()))
 		case resp, ok := <-w.responseChan:
 			if ok {
 				storeOp = append(storeOp, *resp)
@@ -328,7 +325,7 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 			continue
 		case sError, ok := <-w.shardManager.ShardErrorChan:
 			if ok {
-				w.logger.Error("Error from shard", slog.String("workerID", w.id), slog.Any("error", sError))
+				slog.Error("Error from shard", slog.String("workerID", w.id), slog.Any("error", sError))
 			}
 		}
 	}
@@ -339,14 +336,14 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 		if storeOp[0].EvalResponse.Error != nil {
 			err := w.ioHandler.Write(ctx, querymanager.GenericWatchResponse(diceDBCmd.Cmd, fmt.Sprintf("%d", diceDBCmd.GetFingerprint()), storeOp[0].EvalResponse.Error))
 			if err != nil {
-				w.logger.Debug("Error sending push response to client", slog.String("workerID", w.id), slog.Any("error", err))
+				slog.Debug("Error sending push response to client", slog.String("workerID", w.id), slog.Any("error", err))
 			}
 			return err
 		}
 
 		err := w.ioHandler.Write(ctx, querymanager.GenericWatchResponse(diceDBCmd.Cmd, fmt.Sprintf("%d", diceDBCmd.GetFingerprint()), storeOp[0].EvalResponse.Result))
 		if err != nil {
-			w.logger.Debug("Error sending push response to client", slog.String("workerID", w.id), slog.Any("error", err))
+			slog.Debug("Error sending push response to client", slog.String("workerID", w.id), slog.Any("error", err))
 			return err
 		}
 		return nil // Exit after handling watch case
@@ -357,14 +354,14 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 		if storeOp[0].EvalResponse.Error != nil {
 			err := w.ioHandler.Write(ctx, storeOp[0].EvalResponse.Error)
 			if err != nil {
-				w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
+				slog.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
 			}
 			return err
 		}
 
 		err := w.ioHandler.Write(ctx, storeOp[0].EvalResponse.Result)
 		if err != nil {
-			w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
+			slog.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
 			return err
 		}
 	} else {
@@ -374,29 +371,29 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 			if storeOp[0].EvalResponse.Error != nil {
 				err := w.ioHandler.Write(ctx, storeOp[0].EvalResponse.Error)
 				if err != nil {
-					w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
+					slog.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
 				}
 				return err
 			}
 
 			err := w.ioHandler.Write(ctx, storeOp[0].EvalResponse.Result)
 			if err != nil {
-				w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
+				slog.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
 				return err
 			}
 
 		case MultiShard:
 			err := w.ioHandler.Write(ctx, val.composeResponse(storeOp...))
 			if err != nil {
-				w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
+				slog.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
 				return err
 			}
 
 		default:
-			w.logger.Error("Unknown command type", slog.String("workerID", w.id), slog.String("command", diceDBCmd.Cmd), slog.Any("evalResp", storeOp))
+			slog.Error("Unknown command type", slog.String("workerID", w.id), slog.String("command", diceDBCmd.Cmd), slog.Any("evalResp", storeOp))
 			err := w.ioHandler.Write(ctx, diceerrors.ErrInternalServer)
 			if err != nil {
-				w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
+				slog.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
 				return err
 			}
 		}
@@ -442,7 +439,7 @@ func (w *BaseWorker) RespAuth(args []string) interface{} {
 }
 
 func (w *BaseWorker) Stop() error {
-	w.logger.Info("Stopping worker", slog.String("workerID", w.id))
+	slog.Info("Stopping worker", slog.String("workerID", w.id))
 	w.Session.Expire()
 	return nil
 }

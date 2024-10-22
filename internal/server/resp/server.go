@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/dicedb/dice/internal/server/abstractserver"
 	"log/slog"
 	"net"
 	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
+
+	"github.com/dicedb/dice/internal/server/abstractserver"
 
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dice/internal/watchmanager"
@@ -48,29 +49,27 @@ type Server struct {
 	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription
 	cmdWatchChan             chan dstore.CmdWatchEvent
 	globalErrorChan          chan error
-	logger                   *slog.Logger
 }
 
 func NewServer(shardManager *shard.ShardManager, workerManager *worker.WorkerManager, cmdWatchSubscriptionChan chan watchmanager.WatchSubscription,
-	cmdWatchChan chan dstore.CmdWatchEvent, globalErrChan chan error, l *slog.Logger) *Server {
+	cmdWatchChan chan dstore.CmdWatchEvent, globalErrChan chan error) *Server {
 	return &Server{
 		Host:                     config.DiceConfig.AsyncServer.Addr,
 		Port:                     config.DiceConfig.AsyncServer.Port,
 		connBacklogSize:          DefaultConnBacklogSize,
 		workerManager:            workerManager,
 		shardManager:             shardManager,
-		watchManager:             watchmanager.NewManager(cmdWatchSubscriptionChan, l),
+		watchManager:             watchmanager.NewManager(cmdWatchSubscriptionChan),
 		cmdWatchChan:             cmdWatchChan,
 		cmdWatchSubscriptionChan: cmdWatchSubscriptionChan,
 		globalErrorChan:          globalErrChan,
-		logger:                   l,
 	}
 }
 
 func (s *Server) Run(ctx context.Context) (err error) {
 	// BindAndListen the desired port to the server
 	if err = s.BindAndListen(); err != nil {
-		s.logger.Error("failed to bind server", slog.Any("error", err))
+		slog.Error("failed to bind server", slog.Any("error", err))
 		return err
 	}
 
@@ -96,19 +95,19 @@ func (s *Server) Run(ctx context.Context) (err error) {
 		}
 	}(wg)
 
-	s.logger.Info("DiceDB ready to accept connections on port", slog.Int("resp-port", config.Port))
+	slog.Info("ready to accept and serve requests on", slog.Int("port", config.Port))
 
 	select {
 	case <-ctx.Done():
-		s.logger.Info("Context canceled, initiating shutdown")
+		slog.Info("initiating shutdown")
 	case err = <-errChan:
-		s.logger.Error("Error while accepting connections, initiating shutdown", slog.Any("error", err))
+		slog.Error("error while accepting connections, initiating shutdown", slog.Any("error", err))
 	}
 
 	s.Shutdown()
 
 	wg.Wait() // Wait for the go routines to finish
-	s.logger.Info("All connections are closed, RESP server exiting gracefully.")
+	slog.Info("exiting gracefully")
 
 	return err
 }
@@ -125,9 +124,9 @@ func (s *Server) BindAndListen() error {
 		if err != nil {
 			if closeErr := syscall.Close(serverFD); closeErr != nil {
 				// Wrap the close error with the original bind/listen error
-				s.logger.Error("Error occurred", slog.Any("error", err), "additionally, failed to close socket", slog.Any("close-err", closeErr))
+				slog.Error("Error occurred", slog.Any("error", err), "additionally, failed to close socket", slog.Any("close-err", closeErr))
 			} else {
-				s.logger.Error("Error occurred", slog.Any("error", err))
+				slog.Error("Error occurred", slog.Any("error", err))
 			}
 		}
 	}()
@@ -158,16 +157,13 @@ func (s *Server) BindAndListen() error {
 	}
 
 	s.serverFD = serverFD
-	s.logger.Info("RESP Server successfully bound", slog.String("Host", s.Host), slog.Int("Port", s.Port))
 	return nil
 }
 
 // ReleasePort closes the server socket.
 func (s *Server) ReleasePort() {
 	if err := syscall.Close(s.serverFD); err != nil {
-		s.logger.Error("Failed to close server socket", slog.Any("error", err))
-	} else {
-		s.logger.Debug("Server socket closed successfully")
+		slog.Error("Failed to close server socket", slog.Any("error", err))
 	}
 }
 
@@ -176,7 +172,7 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 	for {
 		select {
 		case <-ctx.Done():
-			s.logger.Info("Context canceled, initiating RESP server shutdown")
+			slog.Info("no new connections will be accepted")
 
 			return ctx.Err()
 		default:
@@ -190,19 +186,19 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 			}
 
 			// Register a new worker for the client
-			ioHandler, err := netconn.NewIOHandler(clientFD, s.logger)
+			ioHandler, err := netconn.NewIOHandler(clientFD)
 			if err != nil {
-				s.logger.Error("Failed to create new IOHandler for clientFD", slog.Int("client-fd", clientFD), slog.Any("error", err))
+				slog.Error("Failed to create new IOHandler for clientFD", slog.Int("client-fd", clientFD), slog.Any("error", err))
 				return err
 			}
 
-			parser := respparser.NewParser(s.logger)
+			parser := respparser.NewParser()
 
 			responseChan := make(chan *ops.StoreResponse)      // responseChan is used for handling common responses from shards
 			preprocessingChan := make(chan *ops.StoreResponse) // preprocessingChan is specifically for handling responses from shards for commands that require preprocessing
 
 			wID := GenerateUniqueWorkerID()
-			w := worker.NewWorker(wID, responseChan, preprocessingChan, s.cmdWatchSubscriptionChan, ioHandler, parser, s.shardManager, s.globalErrorChan, s.logger)
+			w := worker.NewWorker(wID, responseChan, preprocessingChan, s.cmdWatchSubscriptionChan, ioHandler, parser, s.shardManager, s.globalErrorChan)]
 
 			// Register the worker with the worker manager
 			err = s.workerManager.RegisterWorker(w)
@@ -216,14 +212,14 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 				defer func(wm *worker.WorkerManager, workerID string) {
 					err := wm.UnregisterWorker(workerID)
 					if err != nil {
-						s.logger.Warn("Failed to unregister worker", slog.String("worker-id", wID), slog.Any("error", err))
+						slog.Warn("Failed to unregister worker", slog.String("worker-id", wID), slog.Any("error", err))
 					}
 				}(s.workerManager, wID)
 				wctx, cwctx := context.WithCancel(ctx)
 				defer cwctx()
 				err := w.Start(wctx)
 				if err != nil {
-					s.logger.Debug("Worker stopped", slog.String("worker-id", wID), slog.Any("error", err))
+					slog.Debug("Worker stopped", slog.String("worker-id", wID), slog.Any("error", err))
 				}
 			}(wID)
 		}

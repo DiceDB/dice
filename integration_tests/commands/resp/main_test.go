@@ -1,27 +1,20 @@
 package resp
 
 import (
-	"log/slog"
 	"os"
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/dicedb/dice/internal/logger"
 )
 
 func TestMain(m *testing.M) {
-	logger := logger.New(logger.Opts{WithTimestamp: false})
-	slog.SetDefault(logger)
-
 	var wg sync.WaitGroup
 	// Run the test server
 	// This is a synchronous method, because internally it
 	// checks for available port and then forks a goroutine
 	// to start the server
 	opts := TestServerOptions{
-		Port:   9739,
-		Logger: logger,
+		Port: 9739,
 	}
 	RunTestServer(&wg, opts)
 
