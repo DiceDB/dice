@@ -198,7 +198,7 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 			preprocessingChan := make(chan *ops.StoreResponse) // preprocessingChan is specifically for handling responses from shards for commands that require preprocessing
 
 			wID := GenerateUniqueWorkerID()
-			w := worker.NewWorker(wID, responseChan, preprocessingChan, s.cmdWatchSubscriptionChan, ioHandler, parser, s.shardManager, s.globalErrorChan)]
+			w := worker.NewWorker(wID, responseChan, preprocessingChan, s.cmdWatchSubscriptionChan, ioHandler, parser, s.shardManager, s.globalErrorChan)
 
 			// Register the worker with the worker manager
 			err = s.workerManager.RegisterWorker(w)
