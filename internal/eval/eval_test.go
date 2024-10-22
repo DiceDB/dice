@@ -2648,7 +2648,7 @@ func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
 		"key doesn't exist": {
 			setup:          func() {},
 			input:          []string{"KEY", "field_name"},
-			migratedOutput: EvalResponse{Result: 0, Error: nil},
+			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
 		},
 		"key exists but field_name doesn't exists": {
 			setup: func() {
@@ -2666,7 +2666,7 @@ func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:          []string{"KEY_MOCK", "non_existent_key"},
-			migratedOutput: EvalResponse{Result: 0, Error: nil},
+			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
 		},
 		"both key and field_name exists": {
 			setup: func() {
@@ -3819,7 +3819,7 @@ func testEvalHLEN(t *testing.T, store *dstore.Store) {
 		},
 		"HLEN non-existent key": {
 			input:          []string{"nonexistent_key"},
-			migratedOutput: EvalResponse{Result: 0, Error: nil},
+			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
 		},
 		"HLEN key exists but not a hash": {
 			setup: func() {
@@ -3831,7 +3831,7 @@ func testEvalHLEN(t *testing.T, store *dstore.Store) {
 		"HLEN empty hash": {
 			setup:          func() {},
 			input:          []string{"empty_hash"},
-			migratedOutput: EvalResponse{Result: 0, Error: nil},
+			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
 		},
 		"HLEN hash with elements": {
 			setup: func() {

@@ -31,7 +31,7 @@ func TestHLEN(t *testing.T) {
 		{
 			name:   "HLEN with non-existent key",
 			cmds:   []string{"HLEN non_existent_key"},
-			expect: []interface{}{float64(0)},
+			expect: []interface{}{"0"},
 			delays: []time.Duration{0},
 		},
 		{

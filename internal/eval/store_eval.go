@@ -1646,6 +1646,11 @@ func evalZPOPMIN(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+// evalHLEN returns the number of fields contained in the hash stored at key.
+//
+// If key doesn't exist, it returns 0.
+//
+// Usage: HLEN key
 func evalHLEN(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) != 1 {
 		return &EvalResponse{
@@ -1660,7 +1665,7 @@ func evalHLEN(args []string, store *dstore.Store) *EvalResponse {
 
 	if obj == nil {
 		return &EvalResponse{
-			Result: 0,
+			Result: clientio.IntegerZero,
 			Error:  nil,
 		}
 	}
@@ -1710,7 +1715,7 @@ func evalHSTRLEN(args []string, store *dstore.Store) *EvalResponse {
 		hashMap = obj.Value.(HashMap)
 	} else {
 		return &EvalResponse{
-			Result: 0,
+			Result: clientio.IntegerZero,
 			Error:  nil,
 		}
 	}
@@ -1724,11 +1729,18 @@ func evalHSTRLEN(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 	return &EvalResponse{
-		Result: 0,
+		Result: clientio.IntegerZero,
 		Error:  nil,
 	}
 }
 
+// evalHSCAN return a two element multi-bulk reply, where the first element is a string representing an unsigned 64 bit number (the cursor), and the second element is a multi-bulk with an array of elements.
+//
+// The array of elements contain two elements, a field and a value, for every returned element of the Hash.
+//
+// If key doesn't exist, it returns an array containing 0 and empty array.
+//
+// Usage: HSCAN key cursor [MATCH pattern] [COUNT count]
 func evalHSCAN(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) < 2 {
 		return &EvalResponse{
