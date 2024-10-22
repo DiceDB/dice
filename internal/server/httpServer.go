@@ -120,7 +120,7 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		slog.Info("HTTP Server running", slog.String("addr", s.httpServer.Addr))
+		slog.Info("also listenting HTTP on", slog.String("port", s.httpServer.Addr[1:]))
 		err = s.httpServer.ListenAndServe()
 	}()
 

@@ -2,18 +2,13 @@ package websocket
 
 import (
 	"context"
-	"log/slog"
 	"os"
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/dicedb/dice/internal/logger"
 )
 
 func TestMain(m *testing.M) {
-	l := logger.New(logger.Opts{WithTimestamp: false})
-	slog.SetDefault(l)
 	var wg sync.WaitGroup
 
 	// Run the test server

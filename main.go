@@ -14,11 +14,11 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/server/abstractserver"
 
 	"github.com/dicedb/dice/config"
 	diceerrors "github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/observability"
 	"github.com/dicedb/dice/internal/server"
 	"github.com/dicedb/dice/internal/server/resp"
@@ -30,9 +30,9 @@ import (
 func init() {
 	flag.StringVar(&config.Host, "host", "0.0.0.0", "host for the dicedb server")
 	flag.IntVar(&config.Port, "port", 7379, "port for the dicedb server")
+	flag.IntVar(&config.HTTPPort, "http-port", 7380, "HTTP port for the dicedb server")
 	flag.BoolVar(&config.EnableHTTP, "enable-http", true, "run server in HTTP mode as well")
 	flag.BoolVar(&config.EnableMultiThreading, "enable-multithreading", false, "run server in multithreading mode")
-	flag.IntVar(&config.HTTPPort, "http-port", 8082, "HTTP port for the dicedb server")
 	flag.IntVar(&config.WebsocketPort, "websocket-port", 8379, "Websocket port for the dicedb server")
 	flag.IntVar(&config.NumShards, "num-shards", -1, "number of shards to create. default = number of cores")
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
@@ -51,10 +51,11 @@ func init() {
 
 	iid := observability.GetOrCreateInstanceID()
 	config.DiceConfig.InstanceID = iid
+
+	slog.SetDefault(logger.New())
 }
 
 func main() {
-	slog.SetDefault(logger.New(logger.Opts{}))
 	go observability.Ping()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -86,10 +87,10 @@ func main() {
 		if config.NumShards > 0 {
 			numShards = config.NumShards
 		}
-		slog.Debug("The DiceDB server has started in multi-threaded mode.", slog.Int("number of cores", numShards))
+		slog.Info("running with", slog.String("mode", "multi-threaded"), slog.Int("num shards", numShards))
 	} else {
 		numShards = 1
-		slog.Debug("The DiceDB server has started in single-threaded mode.")
+		slog.Info("running with", slog.String("mode", "single-threaded"))
 	}
 
 	// The runtime.GOMAXPROCS(numShards) call limits the number of operating system

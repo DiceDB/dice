@@ -1,9 +1,9 @@
 package logger
 
 import (
-	"io"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/dicedb/dice/config"
 	"github.com/rs/zerolog"
@@ -24,18 +24,12 @@ func getLogLevel() slog.Leveler {
 	return level
 }
 
-type Opts struct {
-	WithTimestamp bool
-}
-
-func New(opts Opts) *slog.Logger {
-	var writer io.Writer = os.Stderr
-	if config.DiceConfig.Logging.PrettyPrintLogs {
-		writer = zerolog.ConsoleWriter{Out: os.Stderr, NoColor: true}
-	}
-	zerologLogger := zerolog.New(writer).
-		Level(mapLevel(getLogLevel().Level())).
-		With().Timestamp().Logger()
-	logger := slog.New(newZerologHandler(&zerologLogger))
-	return logger
+func New() *slog.Logger {
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	zerologLogger := zerolog.New(zerolog.ConsoleWriter{
+		Out:        os.Stderr,
+		NoColor:    true,
+		TimeFormat: time.RFC3339,
+	}).Level(mapLevel(getLogLevel().Level())).With().Timestamp().Logger()
+	return slog.New(newZerologHandler(&zerologLogger))
 }

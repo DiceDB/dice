@@ -100,10 +100,10 @@ func (s *WebsocketServer) Run(ctx context.Context) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		slog.Info("Websocket Server running", slog.String("port", s.websocketServer.Addr[1:]))
+		slog.Info("also listenting WebSocket on", slog.String("port", s.websocketServer.Addr[1:]))
 		err = s.websocketServer.ListenAndServe()
 		if err != nil {
-			slog.Debug("Error in Websocket Server", slog.Any("time", time.Now()), slog.Any("error", err))
+			slog.Debug("Error in Websocket Server", slog.Any("error", err))
 		}
 	}()
 

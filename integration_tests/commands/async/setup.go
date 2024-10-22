@@ -23,7 +23,6 @@ import (
 
 type TestServerOptions struct {
 	Port       int
-	Logger     *slog.Logger
 	MaxClients int32
 }
 

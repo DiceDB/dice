@@ -103,11 +103,7 @@ func (s *AsyncServer) FindPortAndBind() (socketErr error) {
 	}); err != nil {
 		return err
 	}
-	slog.Info(
-		"DiceDB server is running in a single-threaded mode",
-		slog.String("version", config.DiceConfig.Version),
-		slog.Int("port", config.DiceConfig.AsyncServer.Port),
-	)
+	slog.Info("ready to serve the requests")
 	return nil
 }
 
@@ -117,7 +113,7 @@ func (s *AsyncServer) ClosePort() {
 		if err := syscall.Close(s.serverFD); err != nil {
 			slog.Warn("failed to close server socket", slog.Any("error", err))
 		} else {
-			slog.Debug("Server socket closed successfully")
+			slog.Debug("server socket closed successfully")
 		}
 		s.serverFD = 0
 	}

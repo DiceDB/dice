@@ -112,7 +112,7 @@ func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *clientio.RESPParser
 }
 
 func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
-	slog.SetDefault(logger.New(logger.Opts{WithTimestamp: true}))
+	slog.SetDefault(logger.New())
 	config.DiceConfig.Network.IOBufferLength = 16
 	config.DiceConfig.Persistence.WriteAOFOnCleanup = false
 	if opt.Port != 0 {
