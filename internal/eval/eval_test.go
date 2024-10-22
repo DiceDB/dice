@@ -5055,8 +5055,6 @@ func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 			}
 
 			response := evalINCRBYFLOAT(tt.input, store)
-			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput)
-
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
@@ -6744,7 +6742,6 @@ func testEvalINCR(t *testing.T, store *dstore.Store) {
 			}
 
 			response := evalINCR(tt.input, store)
-			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput)
 
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
@@ -6832,7 +6829,6 @@ func testEvalINCRBY(t *testing.T, store *dstore.Store) {
 			}
 
 			response := evalINCRBY(tt.input, store)
-			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput)
 
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
@@ -6920,7 +6916,6 @@ func testEvalDECR(t *testing.T, store *dstore.Store) {
 			}
 
 			response := evalDECR(tt.input, store)
-			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput)
 
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
@@ -7008,7 +7003,6 @@ func testEvalDECRBY(t *testing.T, store *dstore.Store) {
 			}
 
 			response := evalDECRBY(tt.input, store)
-			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput)
 
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {

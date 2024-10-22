@@ -1708,7 +1708,7 @@ func evalBFEXISTS(args []string, store *dstore.Store) *EvalResponse {
 // evalBFINFO evaluates the BF.INFO command responsible for returning the
 // parameters and metadata of an existing bloom filter.
 func evalBFINFO(args []string, store *dstore.Store) *EvalResponse {
-	if len(args) > 2 {
+	if len(args) < 1 || len(args) > 2 {
 		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.INFO"))
 	}
 

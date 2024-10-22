@@ -33,12 +33,9 @@ var (
 	errInvalidCapacityType       = diceerrors.ErrGeneral("bad capacity")
 	errNonPositiveCapacity       = diceerrors.ErrGeneral("(capacity should be larger than 0)")
 
-	errInvalidKey = diceerrors.ErrGeneral("invalid key: no bloom filter found")
-
 	errEmptyValue              = diceerrors.ErrGeneral("empty value provided")
 	errUnableToHash            = diceerrors.ErrGeneral("unable to hash given value")
-	errNotFound                = diceerrors.ErrGeneral("not found")
-	errInvalidInformationValue = fmt.Errorf("Invalid information value")
+	errInvalidInformationValue = diceerrors.ErrGeneral("Invalid information value")
 )
 
 type BloomOpts struct {
@@ -134,11 +131,13 @@ func newBloomFilter(opts *BloomOpts) *Bloom {
 func (b *Bloom) info(opt string) ([]interface{}, error) {
 	result := make([]interface{}, 0, 10)
 	if strings.EqualFold(opt, "") {
-		result = append(result, "Capacity", b.opts.capacity)
-		result = append(result, "Size", b.opts.bits)
-		result = append(result, "Number of filters", len(b.opts.hashFns))
-		result = append(result, "Number of items inserted", b.cnt)
-		result = append(result, "Expansion rate", 2)
+		result = append(result,
+			"Capacity", b.opts.capacity,
+			"Size", b.opts.bits,
+			"Number of filters", len(b.opts.hashFns),
+			"Number of items inserted", b.cnt,
+			"Expansion rate", 2,
+		)
 	} else {
 		switch strings.ToUpper(opt) {
 		case CAPACITY:
@@ -291,7 +290,6 @@ func getOrCreateBloomFilter(key string, store *dstore.Store, opts *BloomOpts) (*
 		bf, err = CreateBloomFilter(key, store, opts)
 	}
 	return bf, err
-
 }
 
 // get the bloom filter

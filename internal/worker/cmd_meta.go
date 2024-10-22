@@ -84,10 +84,10 @@ const (
 	CmdHRandField   = "HRANDFIELD"
 	CmdGetRange     = "GETRANGE"
 	CmdAppend       = "APPEND"
-	CmdBFAdd       = "BF.ADD"
-	CmdBFReserve   = "BF.RESERVE"
-	CmdBFInfo      = "BF.INFO"
-	CmdBFExists    = "BF.EXISTS"
+	CmdBFAdd        = "BF.ADD"
+	CmdBFReserve    = "BF.RESERVE"
+	CmdBFInfo       = "BF.INFO"
+	CmdBFExists     = "BF.EXISTS"
 )
 
 type CmdMeta struct {
