@@ -1734,7 +1734,8 @@ func evalHSTRLEN(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
-// evalHSCAN return a two element multi-bulk reply, where the first element is a string representing an unsigned 64 bit number (the cursor), and the second element is a multi-bulk with an array of elements.
+// evalHSCAN return a two element multi-bulk reply, where the first element is a string representing an unsigned 64 bit number (the cursor),
+// and the second element is a multi-bulk with an array of elements.
 //
 // The array of elements contain two elements, a field and a value, for every returned element of the Hash.
 //
