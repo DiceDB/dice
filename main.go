@@ -54,7 +54,7 @@ func init() {
 }
 
 func main() {
-	slog.SetDefault(logger.New(logger.Opts{WithTimestamp: true}))
+	slog.SetDefault(logger.New(logger.Opts{}))
 	go observability.Ping()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -80,26 +80,26 @@ func main() {
 	// for parallel execution. Setting the maximum number of CPUs to the available
 	// core count ensures the application can make full use of all available hardware.
 	// If multithreading is not enabled, server will run on a single core.
-	var numCores int
+	var numShards int
 	if config.EnableMultiThreading {
-		numCores = runtime.NumCPU()
+		numShards = runtime.NumCPU()
 		if config.NumShards > 0 {
-			numCores = config.NumShards
+			numShards = config.NumShards
 		}
-		slog.Debug("The DiceDB server has started in multi-threaded mode.", slog.Int("number of cores", numCores))
+		slog.Debug("The DiceDB server has started in multi-threaded mode.", slog.Int("number of cores", numShards))
 	} else {
-		numCores = 1
+		numShards = 1
 		slog.Debug("The DiceDB server has started in single-threaded mode.")
 	}
 
-	// The runtime.GOMAXPROCS(numCores) call limits the number of operating system
+	// The runtime.GOMAXPROCS(numShards) call limits the number of operating system
 	// threads that can execute Go code simultaneously to the number of CPU cores.
 	// This enables Go to run more efficiently, maximizing CPU utilization and
 	// improving concurrency performance across multiple goroutines.
-	runtime.GOMAXPROCS(numCores)
+	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	// Initialize the ShardManager
-	shardManager := shard.NewShardManager(uint8(numCores), queryWatchChan, cmdWatchChan, serverErrCh)
+	shardManager := shard.NewShardManager(uint8(numShards), queryWatchChan, cmdWatchChan, serverErrCh)
 
 	wg := sync.WaitGroup{}
 
