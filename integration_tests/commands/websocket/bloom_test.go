@@ -89,7 +89,7 @@ func TestBFEdgeCasesAndErrors(t *testing.T) {
 			cleanUp: []string{"del bf"},
 		},
 		{
-			name:    "BF.RESERVE with zero capacity",
+			name:    "BF.RESERVE with invalid capacity",
 			cmds:    []string{"BF.RESERVE bf 0.01 a"},
 			expect:  []interface{}{"ERR bad capacity"},
 			delays:  []time.Duration{0},
