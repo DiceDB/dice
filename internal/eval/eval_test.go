@@ -2291,7 +2291,7 @@ func testEvalPFADD(t *testing.T, store *dstore.Store) {
 			output: []byte("-WRONGTYPE Key is not a valid HyperLogLog string value"),
 			migratedOutput: EvalResponse{
 				Result: nil,
-				Error:  diceerrors.ErrGeneral("-WRONGTYPE Key is not a valid HyperLogLog string value"),
+				Error:  diceerrors.ErrInvalidHyperLogLogKey,
 			},
 		},
 	}
@@ -2376,7 +2376,7 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 			input: []string{"INVALID_OBJ_DEST_KEY"},
 			migratedOutput: EvalResponse{
 				Result: nil,
-				Error:  diceerrors.ErrGeneral("-WRONGTYPE Key is not a valid HyperLogLog string value"),
+				Error:  diceerrors.ErrInvalidHyperLogLogKey,
 			},
 		},
 		"PFMERGE destKey doesn't exist": {
