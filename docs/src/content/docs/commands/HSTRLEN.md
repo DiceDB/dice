@@ -13,34 +13,42 @@ HSTRLEN key field
 
 ## Parameters
 
-| Parameter       | Description                                      | Type    | Required |
-|-----------------|--------------------------------------------------|---------|----------|
+| Parameter       | Description                                                                              | Type    | Required |
+|-----------------|------------------------------------------------------------------------------------------|---------|----------|
 | `key`           | The key of the hash, which consists of the field whose string length you want to obtain  | String  | Yes      |
-| `field`         | The field present in the hash whose length you want to obtain      | String  | Yes      |
+| `field`         | The field present in the hash whose length you want to obtain                            | String  | Yes      |
 
 ## Return Value
 
-The `HSTRLEN` command returns an integer representing the string length of fields in the hash stored at the specified key. If the key does not exist, it returns `0`.
+| Condition                                      | Return Value                                      |
+|------------------------------------------------|---------------------------------------------------|
+| If specified key and field exists              | string length                                     |
+| If key doesn't exist                           | `0`                                               |
+| If field doesn't exist                         | `0`                                               |
 
 ## Behaviour
 
-When the `HSTRLEN` command is executed:
+- DiceDB checks if the specified key exists.
+- If the key exists, is associated with a hash and specified field exists in the hash, DiceDB returns the string length of value associated with specified field in the hash.
+- If the key does not exist, DiceDB returns `0`.
+- If the key exists and specified field does not exist in the key, DiceDB returns `0`.
 
-1. DiceDB checks if the specified key exists.
-2. If the key exists, is associated with a hash and specified field exists in the hash, DiceDB returns the string length of value associated with specified field in the hash.
-3. If the key does not exist, DiceDB returns `0`.
-4. If the key exists and specified field does not exist in the key, DiceDB returns `0`.
+## Errors
 
-## Error Handling
+1. `Wrong type of key`:
 
-The `HSTRLEN` command can raise the following errors:
+   - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
+   - Occurs when attempting to use the command on a key that contains a non-hash value.
 
-- `WRONGTYPE Operation against a key holding the wrong kind of value`: This error occurs if the specified key exists but is not associated with a hash. For example, if the key is associated with a string, list, set, or any other data type, this error will be raised.
-- `-ERR wrong number of arguments for 'hstrlen' command`: This error occurs if key or field value isn't specified in the command.
+2. `Wrong number of arguments`:
+
+   - Error Message: `(error) -ERR wrong number of arguments for 'hstrlen' command`
+   - Occurs if key or field isn't specified in the command.
 
 ## Example Usage
 
-### Example 1: Basic Usage
+### Basic Usage
+Creating hash `myhash` with two fields `field1` and `field2`. Getting string length of value in `field1`.
 
 ```DiceDB
 > HSET myhash field1 "helloworld" field2 "value2"
@@ -50,18 +58,16 @@ The `HSTRLEN` command can raise the following errors:
 (integer) 10
 ```
 
-In this example, the hash `myhash` is created with two fields, `field1` and `field2`. The `HSTRLEN` command returns `10`, indicating that string length of `helloworld`.
-
-### Example 2: Non-Existent Key
+### Invalid Usage on non-existent key
+Getting string length from a non-existent key `nonExistentHash`.
 
 ```DiceDB
 > HSTRLEN nonExistentHash field1
 (integer) 0
 ```
 
-In this example, the key `nonExistentHash` does not exist. The `HSTRLEN` command returns `0`, indicating that `field1` does not exist in the specified hash.
-
-### Example 3: Key with Wrong Data Type
+### Invalid Usage on non-hash key
+Getting string length from a key `mystring` associated with a non-hash type.
 
 ```DiceDB
 > SET mystring "This is a string"
@@ -71,8 +77,6 @@ OK
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
-In this example, the key `mystring` is associated with a string value. When the `HSTRLEN` command is executed on this key, it raises an error because the key is not associated with a hash.
-
-## Additional Notes
+## Notes
 
 - The `HSTRLEN` command has a constant-time operation, meaning its execution time is O(1), regardless of the number of fields in the hash.
