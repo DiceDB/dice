@@ -63,6 +63,7 @@ release:
 	git push origin --tags
 	docker build --tag dicedb/dicedb:latest --tag dicedb/dicedb:$(VERSION) .
 	docker push dicedb/dicedb:$(VERSION)
+	docker push dicedb/dicedb:latest
 
 GOLANGCI_LINT_VERSION := 1.60.1
 
