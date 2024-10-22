@@ -23,13 +23,13 @@ type PingPayload struct {
 const (
 	token = "p.eyJ1IjogIjhjNWQxMjdlLTczZmYtNGRjZS04Mzk5LTQyMDU0MThhYjc2OSIsI" +
 		"CJpZCI6ICJhZjcxNGExNC0xZWQyLTQ3ZDktOTM0MS0xMzgwNWNiOWFhNDYiLCAiaG9zdCI6ICJ1cy1lYXN0LWF3cyJ9.o9LqZqTZ9YkhbcusZOltsm95RzVQUzJLQOHV2YA7L0E"
-	url = "https://api.us-east.aws.tinybird.co/v0/events?name=ping"
+	url = "https://api.us-east.aws.tinybird.co/v0/events?name=ping2"
 )
 
 type DBConfig struct {
 }
 
-func Ping(logger *slog.Logger) {
+func Ping() {
 	hwConfig, err := GetHardwareMeta()
 	if err != nil {
 		return
@@ -55,7 +55,7 @@ func Ping(logger *slog.Logger) {
 	client := &http.Client{Timeout: time.Second * 5}
 	resp, err := client.Do(req)
 	if err != nil {
-		logger.Error("Error reporting observability metrics.", slog.Any("error", err))
+		slog.Error("Error reporting observability metrics.", slog.Any("error", err))
 		return
 	}
 

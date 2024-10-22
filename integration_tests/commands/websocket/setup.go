@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"sync"
@@ -12,13 +12,18 @@ import (
 
 	"github.com/dicedb/dice/config"
 	derrors "github.com/dicedb/dice/internal/errors"
+	"github.com/dicedb/dice/internal/querymanager"
 	"github.com/dicedb/dice/internal/server"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/gorilla/websocket"
 )
 
-const URL = "ws://localhost:8380"
+const (
+	URL       = "ws://localhost:8380"
+	testPort1 = 8380
+	testPort2 = 8381
+)
 
 type TestServerOptions struct {
 	Port   int
@@ -60,32 +65,35 @@ func (e *WebsocketCommandExecutor) ConnectToServer() *websocket.Conn {
 	return conn
 }
 
-func (e *WebsocketCommandExecutor) FireCommand(conn *websocket.Conn, cmd string) interface{} {
-	command := []byte(cmd)
-
-	// send request
-	err := conn.WriteMessage(websocket.TextMessage, command)
+func (e *WebsocketCommandExecutor) FireCommandAndReadResponse(conn *websocket.Conn, cmd string) (interface{}, error) {
+	err := e.FireCommand(conn, cmd)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	// read the response
 	_, resp, err := conn.ReadMessage()
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	// marshal to json
 	var respJSON interface{}
 	if err = json.Unmarshal(resp, &respJSON); err != nil {
-		return nil
+		return nil, fmt.Errorf("error unmarshaling response")
 	}
 
-	return respJSON
+	return respJSON, nil
 }
 
-func (e *WebsocketCommandExecutor) DisconnectServer(conn *websocket.Conn) {
-	conn.Close()
+func (e *WebsocketCommandExecutor) FireCommand(conn *websocket.Conn, cmd string) error {
+	// send request
+	err := conn.WriteMessage(websocket.TextMessage, []byte(cmd))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (e *WebsocketCommandExecutor) Name() string {
@@ -96,21 +104,30 @@ func RunWebsocketServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerO
 	config.DiceConfig.Network.IOBufferLength = 16
 	config.DiceConfig.Persistence.WriteAOFOnCleanup = false
 
-	// Initialize the WebsocketServer
+	// Initialize WebsocketServer
 	globalErrChannel := make(chan error)
 	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Performance.WatchChanBufSize)
-	shardManager := shard.NewShardManager(1, watchChan, nil, globalErrChannel, opt.Logger)
+	shardManager := shard.NewShardManager(1, watchChan, nil, globalErrChannel)
+	queryWatcherLocal := querymanager.NewQueryManager()
 	config.WebsocketPort = opt.Port
-	testServer := server.NewWebSocketServer(shardManager, watchChan, opt.Logger)
-
+	testServer := server.NewWebSocketServer(shardManager, testPort1)
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
+
+	// run shard manager
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		shardManager.Run(shardManagerCtx)
 	}()
 
-	// Start the server in a goroutine
+	// run query manager
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		queryWatcherLocal.Run(ctx, watchChan)
+	}()
+
+	// start websocket server
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -120,7 +137,7 @@ func RunWebsocketServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerO
 			if errors.Is(srverr, derrors.ErrAborted) {
 				return
 			}
-			log.Printf("Websocket test server encountered an error: %v", srverr)
+			slog.Debug("Websocket test server encountered an error: %v", slog.Any("error", srverr))
 		}
 	}()
 }

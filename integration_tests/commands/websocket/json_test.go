@@ -1,8 +1,9 @@
 package websocket
 
 import (
-	"gotest.tools/v3/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestJSONClearOperations(t *testing.T) {
@@ -10,10 +11,11 @@ func TestJSONClearOperations(t *testing.T) {
 	conn := exec.ConnectToServer()
 	defer conn.Close()
 
-	exec.FireCommand(conn, "DEL user")
+	DeleteKey(t, conn, exec, "user")
 
 	defer func() {
-		resp := exec.FireCommand(conn, "DEL user")
+		resp, err := exec.FireCommandAndReadResponse(conn, "DEL user")
+		assert.Nil(t, err)
 		assert.Equal(t, float64(1), resp)
 	}()
 
@@ -86,7 +88,8 @@ func TestJSONClearOperations(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.commands {
-				result := exec.FireCommand(conn, cmd)
+				result, err := exec.FireCommandAndReadResponse(conn, cmd)
+				assert.Nil(t, err)
 				assert.Equal(t, tc.expected[i], result)
 			}
 		})
@@ -99,10 +102,11 @@ func TestJsonStrlen(t *testing.T) {
 
 	defer conn.Close()
 
-	exec.FireCommand(conn, "DEL doc")
+	DeleteKey(t, conn, exec, "doc")
 
 	defer func() {
-		resp := exec.FireCommand(conn, "DEL doc")
+		resp, err := exec.FireCommandAndReadResponse(conn, "DEL doc")
+		assert.Nil(t, err)
 		assert.Equal(t, float64(1), resp)
 	}()
 
@@ -172,12 +176,13 @@ func TestJsonStrlen(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.commands {
-				result := exec.FireCommand(conn, cmd)
+				result, err := exec.FireCommandAndReadResponse(conn, cmd)
+				assert.Nil(t, err, "error: %v", err)
 				stringResult, ok := result.(string)
 				if ok {
 					assert.Equal(t, tc.expected[i], stringResult)
 				} else {
-					assert.Assert(t, arraysArePermutations(tc.expected[i].([]interface{}), result.([]interface{})))
+					assert.True(t, arraysArePermutations(tc.expected[i].([]interface{}), result.([]interface{})))
 				}
 			}
 		})
@@ -189,7 +194,7 @@ func TestJsonObjLen(t *testing.T) {
 	conn := exec.ConnectToServer()
 	defer conn.Close()
 
-	exec.FireCommand(conn, "DEL obj")
+	DeleteKey(t, conn, exec, "obj")
 
 	a := `{"name":"jerry","partner":{"name":"tom","language":["rust"]}}`
 	b := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"name":"spike","language":["go","rust"]}}`
@@ -197,7 +202,8 @@ func TestJsonObjLen(t *testing.T) {
 	d := `["this","is","an","array"]`
 
 	defer func() {
-		resp := exec.FireCommand(conn, "DEL obj")
+		resp, err := exec.FireCommandAndReadResponse(conn, "DEL obj")
+		assert.Nil(t, err)
 		assert.Equal(t, float64(1), resp)
 	}()
 
@@ -256,16 +262,52 @@ func TestJsonObjLen(t *testing.T) {
 			commands: []string{"json.set obj $ " + c, "json.objlen"},
 			expected: []interface{}{"OK", "ERR wrong number of arguments for 'json.objlen' command"},
 		},
+		{
+			name:     "JSON.OBJLEN with legacy path - root",
+			commands: []string{"json.set obj $ " + c, "json.objlen obj ."},
+			expected: []interface{}{"OK", float64(3)},
+		},
+		{
+			name:     "JSON.OBJLEN with legacy path - inner existing path",
+			commands: []string{"json.set obj $ " + c, "json.objlen obj .partner", "json.objlen obj .partner2",},
+			expected: []interface{}{"OK", float64(2), float64(2)},
+		},
+		{
+			name:     "JSON.OBJLEN with legacy path - inner existing path v2",
+			commands: []string{"json.set obj $ " + c, "json.objlen obj partner", "json.objlen obj partner2",},
+			expected: []interface{}{"OK", float64(2), float64(2)},
+		},
+		{
+			name:     "JSON.OBJLEN with legacy path - inner non-existent path",
+			commands: []string{"json.set obj $ " + c, "json.objlen obj .idonotexist",},
+			expected: []interface{}{"OK", nil},
+		},
+		{
+			name:     "JSON.OBJLEN with legacy path - inner non-existent path v2",
+			commands: []string{"json.set obj $ " + c, "json.objlen obj idonotexist",},
+			expected: []interface{}{"OK", nil},
+		},
+		{
+			name:     "JSON.OBJLEN with legacy path - inner existent path with nonJSON object",
+			commands: []string{"json.set obj $ " + c, "json.objlen obj .name",},
+			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+		},
+		{
+			name:     "JSON.OBJLEN with legacy path - inner existent path recursive object",
+			commands: []string{"json.set obj $ " + c, "json.objlen obj ..partner",},
+			expected: []interface{}{"OK", float64(2)},
+		},
 	}
 
 	for _, tcase := range testCases {
-		exec.FireCommand(conn, "DEL obj")
+		DeleteKey(t, conn, exec, "obj")
 		t.Run(tcase.name, func(t *testing.T) {
 			for i := 0; i < len(tcase.commands); i++ {
 				cmd := tcase.commands[i]
 				out := tcase.expected[i]
-				result := exec.FireCommand(conn, cmd)
-				assert.DeepEqual(t, out, result)
+				result, err := exec.FireCommandAndReadResponse(conn, cmd)
+				assert.Nil(t, err)
+				assert.Equal(t, out, result)
 			}
 		})
 	}
