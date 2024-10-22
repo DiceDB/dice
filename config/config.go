@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	DiceVersion string = "0.0.4"
+	DiceVersion string = "0.0.5"
 
 	DefaultHost           string = "0.0.0.0"
 	DefaultPort           int    = 7379
