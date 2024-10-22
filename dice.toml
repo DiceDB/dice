@@ -5,7 +5,7 @@
 #
 # go run main.go -c /path/to/dice.toml
 
-Version = '0.0.4'
+Version = '0.0.5'
 InstanceID = ''
 
 [AsyncServer]
