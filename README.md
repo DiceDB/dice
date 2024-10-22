@@ -37,7 +37,7 @@ With this, you can build truly real-time applications like [Leaderboard](https:/
 The easiest way to get started with DiceDB is using [Docker](https://www.docker.com/) by running the following command.
 
 ```bash
-docker run -p 7379:7379 dicedb/dicedb
+docker run -p 7379:7379 dicedb/dicedb --enable-multithreading --enable-watch
 ```
 
 The above command will start the DiceDB server running locally on the port `7379` and you can connect
@@ -108,8 +108,6 @@ git clone https://github.com/dicedb/dice
 cd dice
 air
 ```
-
-> The `DICE_ENV` environment variable is used set the environment, by default it is treated as production. `dev` is used to get pretty printed logs and lower log level.
 
 ### Local Setup with Custom Config
 

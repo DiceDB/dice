@@ -224,16 +224,8 @@ var defaultConfig Config
 
 func init() {
 	config := baseConfig
-	env := os.Getenv("DICE_ENV")
-	if env == "prod" {
-		config.Logging.LogLevel = "info"
-		config.Logging.PrettyPrintLogs = false
-	}
-
-	if logLevel := os.Getenv("DICE_LOG_LEVEL"); logLevel != "" {
-		config.Logging.LogLevel = logLevel
-	}
-
+	config.Logging.PrettyPrintLogs = false
+	config.Logging.LogLevel = "debug"
 	defaultConfig = config
 }
 
@@ -351,7 +343,6 @@ func setUpViperConfig(configFilePath string) {
 
 	// override default configurations with command line flags
 	mergeFlagsWithConfig()
-	slog.Info("configurations loaded successfully.")
 }
 
 func mergeFlagsWithConfig() {

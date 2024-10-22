@@ -31,13 +31,11 @@ type Opts struct {
 func New(opts Opts) *slog.Logger {
 	var writer io.Writer = os.Stderr
 	if config.DiceConfig.Logging.PrettyPrintLogs {
-		writer = zerolog.ConsoleWriter{Out: os.Stderr}
+		writer = zerolog.ConsoleWriter{Out: os.Stderr, NoColor: true}
 	}
-	zerologLogger := zerolog.New(writer).Level(mapLevel(getLogLevel().Level()))
-	if opts.WithTimestamp {
-		zerologLogger = zerologLogger.With().Timestamp().Logger()
-	}
+	zerologLogger := zerolog.New(writer).
+		Level(mapLevel(getLogLevel().Level())).
+		With().Timestamp().Logger()
 	logger := slog.New(newZerologHandler(&zerologLogger))
-
 	return logger
 }

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/dicedb/dice/internal/server/abstractserver"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -14,6 +13,8 @@ import (
 	"runtime/trace"
 	"sync"
 	"syscall"
+
+	"github.com/dicedb/dice/internal/server/abstractserver"
 
 	"github.com/dicedb/dice/config"
 	diceerrors "github.com/dicedb/dice/internal/errors"
@@ -53,10 +54,8 @@ func init() {
 }
 
 func main() {
-	logr := logger.New(logger.Opts{WithTimestamp: true})
-	slog.SetDefault(logr)
-
-	go observability.Ping(logr)
+	slog.SetDefault(logger.New(logger.Opts{WithTimestamp: true}))
+	go observability.Ping()
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -87,10 +86,10 @@ func main() {
 		if config.NumShards > 0 {
 			numCores = config.NumShards
 		}
-		logr.Debug("The DiceDB server has started in multi-threaded mode.", slog.Int("number of cores", numCores))
+		slog.Debug("The DiceDB server has started in multi-threaded mode.", slog.Int("number of cores", numCores))
 	} else {
 		numCores = 1
-		logr.Debug("The DiceDB server has started in single-threaded mode.")
+		slog.Debug("The DiceDB server has started in single-threaded mode.")
 	}
 
 	// The runtime.GOMAXPROCS(numCores) call limits the number of operating system
@@ -100,7 +99,7 @@ func main() {
 	runtime.GOMAXPROCS(numCores)
 
 	// Initialize the ShardManager
-	shardManager := shard.NewShardManager(uint8(numCores), queryWatchChan, cmdWatchChan, serverErrCh, logr)
+	shardManager := shard.NewShardManager(uint8(numCores), queryWatchChan, cmdWatchChan, serverErrCh)
 
 	wg := sync.WaitGroup{}
 
@@ -114,36 +113,36 @@ func main() {
 
 	if config.EnableMultiThreading {
 		if config.EnableProfiling {
-			stopProfiling, err := startProfiling(logr)
+			stopProfiling, err := startProfiling()
 			if err != nil {
-				logr.Error("Profiling could not be started", slog.Any("error", err))
+				slog.Error("Profiling could not be started", slog.Any("error", err))
 				sigs <- syscall.SIGKILL
 			}
 			defer stopProfiling()
 		}
 
 		workerManager := worker.NewWorkerManager(config.DiceConfig.Performance.MaxClients, shardManager)
-		respServer := resp.NewServer(shardManager, workerManager, cmdWatchChan, serverErrCh, logr)
+		respServer := resp.NewServer(shardManager, workerManager, cmdWatchChan, serverErrCh)
 		serverWg.Add(1)
-		go runServer(ctx, &serverWg, respServer, logr, serverErrCh)
+		go runServer(ctx, &serverWg, respServer, serverErrCh)
 	} else {
-		asyncServer := server.NewAsyncServer(shardManager, queryWatchChan, logr)
+		asyncServer := server.NewAsyncServer(shardManager, queryWatchChan)
 		if err := asyncServer.FindPortAndBind(); err != nil {
-			logr.Error("Error finding and binding port", slog.Any("error", err))
+			slog.Error("Error finding and binding port", slog.Any("error", err))
 			sigs <- syscall.SIGKILL
 		}
 
 		serverWg.Add(1)
-		go runServer(ctx, &serverWg, asyncServer, logr, serverErrCh)
+		go runServer(ctx, &serverWg, asyncServer, serverErrCh)
 
-		httpServer := server.NewHTTPServer(shardManager, logr)
+		httpServer := server.NewHTTPServer(shardManager)
 		serverWg.Add(1)
-		go runServer(ctx, &serverWg, httpServer, logr, serverErrCh)
+		go runServer(ctx, &serverWg, httpServer, serverErrCh)
 	}
 
-	websocketServer := server.NewWebSocketServer(shardManager, config.WebsocketPort, logr)
+	websocketServer := server.NewWebSocketServer(shardManager, config.WebsocketPort)
 	serverWg.Add(1)
-	go runServer(ctx, &serverWg, websocketServer, logr, serverErrCh)
+	go runServer(ctx, &serverWg, websocketServer, serverErrCh)
 
 	wg.Add(1)
 	go func() {
@@ -169,26 +168,26 @@ func main() {
 	cancel()
 
 	wg.Wait()
-	logr.Debug("Server has shut down gracefully")
+	slog.Debug("Server has shut down gracefully")
 }
 
-func runServer(ctx context.Context, wg *sync.WaitGroup, srv abstractserver.AbstractServer, logr *slog.Logger, errCh chan<- error) {
+func runServer(ctx context.Context, wg *sync.WaitGroup, srv abstractserver.AbstractServer, errCh chan<- error) {
 	defer wg.Done()
 	if err := srv.Run(ctx); err != nil {
 		switch {
 		case errors.Is(err, context.Canceled):
-			logr.Debug(fmt.Sprintf("%T was canceled", srv))
+			slog.Debug(fmt.Sprintf("%T was canceled", srv))
 		case errors.Is(err, diceerrors.ErrAborted):
-			logr.Debug(fmt.Sprintf("%T received abort command", srv))
+			slog.Debug(fmt.Sprintf("%T received abort command", srv))
 		default:
-			logr.Error(fmt.Sprintf("%T error", srv), slog.Any("error", err))
+			slog.Error(fmt.Sprintf("%T error", srv), slog.Any("error", err))
 		}
 		errCh <- err
 	} else {
-		logr.Debug(fmt.Sprintf("%T stopped without error", srv))
+		slog.Debug(fmt.Sprintf("%T stopped without error", srv))
 	}
 }
-func startProfiling(logr *slog.Logger) (func(), error) {
+func startProfiling() (func(), error) {
 	// Start CPU profiling
 	cpuFile, err := os.Create("cpu.prof")
 	if err != nil {
@@ -239,7 +238,7 @@ func startProfiling(logr *slog.Logger) (func(), error) {
 		// Write heap profile
 		runtime.GC()
 		if err := pprof.WriteHeapProfile(memFile); err != nil {
-			logr.Warn("could not write memory profile", slog.Any("error", err))
+			slog.Warn("could not write memory profile", slog.Any("error", err))
 		}
 
 		memFile.Close()
@@ -247,10 +246,10 @@ func startProfiling(logr *slog.Logger) (func(), error) {
 		// Write block profile
 		blockFile, err := os.Create("block.prof")
 		if err != nil {
-			logr.Warn("could not create block profile", slog.Any("error", err))
+			slog.Warn("could not create block profile", slog.Any("error", err))
 		} else {
 			if err := pprof.Lookup("block").WriteTo(blockFile, 0); err != nil {
-				logr.Warn("could not write block profile", slog.Any("error", err))
+				slog.Warn("could not write block profile", slog.Any("error", err))
 			}
 			blockFile.Close()
 		}
