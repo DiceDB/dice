@@ -1,7 +1,6 @@
 package resp
 
 import (
-	"fmt"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -52,7 +51,6 @@ func TestHKeys(t *testing.T) {
 
 			for i, cmd := range tc.commands {
 				result := FireCommand(conn, cmd)
-				fmt.Printf("%v | %v | %v\n", cmd, tc.expected[i], result)
 				assert.DeepEqual(t, tc.expected[i], result)
 			}
 		})
