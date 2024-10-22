@@ -1778,7 +1778,7 @@ func evalSCARD(args []string, store *dstore.Store) *EvalResponse {
 
 	if obj == nil {
 		return &EvalResponse{
-			Result: 0,
+			Result: clientio.IntegerZero,
 			Error:  nil,
 		}
 	}
