@@ -1724,7 +1724,7 @@ func evalSREM(args []string, store *dstore.Store) *EvalResponse {
 	var count = 0
 	if obj == nil {
 		return &EvalResponse{
-			Result: count,
+			Result: clientio.IntegerZero,
 			Error:  nil,
 		}
 	}
