@@ -1,7 +1,6 @@
 package logger
 
 import (
-	"fmt"
 	"log/slog"
 	"os"
 	"time"
@@ -11,7 +10,6 @@ import (
 )
 
 func getSLogLevel() slog.Level {
-	fmt.Println("slog level", config.DiceConfig.Logging.LogLevel)
 	switch config.DiceConfig.Logging.LogLevel {
 	case "debug":
 		return slog.LevelDebug

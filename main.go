@@ -66,7 +66,16 @@ func init() {
 }
 
 func main() {
-	slog.Info("starting DiceDB ...")
+	fmt.Print(`
+██████╗ ██╗ ██████╗███████╗██████╗ ██████╗ 
+██╔══██╗██║██╔════╝██╔════╝██╔══██╗██╔══██╗
+██║  ██║██║██║     █████╗  ██║  ██║██████╔╝
+██║  ██║██║██║     ██╔══╝  ██║  ██║██╔══██╗
+██████╔╝██║╚██████╗███████╗██████╔╝██████╔╝
+╚═════╝ ╚═╝ ╚═════╝╚══════╝╚═════╝ ╚═════╝
+
+`)
+	slog.Info("starting DiceDB", slog.String("version", config.DiceDBVersion))
 	slog.Info("running with", slog.Int("port", config.Port))
 	slog.Info("running with", slog.Bool("enable-watch", config.EnableWatch))
 
