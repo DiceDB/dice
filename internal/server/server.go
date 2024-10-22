@@ -108,8 +108,6 @@ func (s *AsyncServer) ClosePort() {
 	if s.serverFD != 0 {
 		if err := syscall.Close(s.serverFD); err != nil {
 			slog.Warn("failed to close server socket", slog.Any("error", err))
-		} else {
-			slog.Debug("server socket closed successfully")
 		}
 		s.serverFD = 0
 	}

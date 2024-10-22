@@ -96,15 +96,15 @@ func (s *Server) Run(ctx context.Context) (err error) {
 
 	select {
 	case <-ctx.Done():
-		slog.Info("Context canceled, initiating shutdown")
+		slog.Info("initiating shutdown")
 	case err = <-errChan:
-		slog.Error("Error while accepting connections, initiating shutdown", slog.Any("error", err))
+		slog.Error("error while accepting connections, initiating shutdown", slog.Any("error", err))
 	}
 
 	s.Shutdown()
 
 	wg.Wait() // Wait for the go routines to finish
-	slog.Info("All connections are closed, RESP server exiting gracefully.")
+	slog.Info("exiting gracefully")
 
 	return err
 }
@@ -161,8 +161,6 @@ func (s *Server) BindAndListen() error {
 func (s *Server) ReleasePort() {
 	if err := syscall.Close(s.serverFD); err != nil {
 		slog.Error("Failed to close server socket", slog.Any("error", err))
-	} else {
-		slog.Debug("Server socket closed successfully")
 	}
 }
 
@@ -171,7 +169,7 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 	for {
 		select {
 		case <-ctx.Done():
-			slog.Info("Context canceled, initiating RESP server shutdown")
+			slog.Info("no new connections will be accepted")
 
 			return ctx.Err()
 		default:

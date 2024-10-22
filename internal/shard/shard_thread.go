@@ -6,8 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"log/slog"
-
 	"github.com/dicedb/dice/config"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/eval"
@@ -132,7 +130,6 @@ func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 func (shard *ShardThread) cleanup() {
 	close(shard.ReqChan)
 	if !config.DiceConfig.Persistence.WriteAOFOnCleanup {
-		slog.Info("Skipping AOF dump.")
 		return
 	}
 

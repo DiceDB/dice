@@ -102,8 +102,8 @@ func (s *WebsocketServer) Run(ctx context.Context) error {
 		defer wg.Done()
 		slog.Info("also listenting WebSocket on", slog.String("port", s.websocketServer.Addr[1:]))
 		err = s.websocketServer.ListenAndServe()
-		if err != nil {
-			slog.Debug("Error in Websocket Server", slog.Any("error", err))
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			slog.Error("error while listenting on WebSocket", slog.Any("error", err))
 		}
 	}()
 

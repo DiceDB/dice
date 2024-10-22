@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
@@ -183,7 +184,6 @@ func main() {
 	cancel()
 
 	wg.Wait()
-	slog.Debug("Server has shut down gracefully")
 }
 
 func runServer(ctx context.Context, wg *sync.WaitGroup, srv abstractserver.AbstractServer, errCh chan<- error) {
@@ -194,12 +194,14 @@ func runServer(ctx context.Context, wg *sync.WaitGroup, srv abstractserver.Abstr
 			slog.Debug(fmt.Sprintf("%T was canceled", srv))
 		case errors.Is(err, diceerrors.ErrAborted):
 			slog.Debug(fmt.Sprintf("%T received abort command", srv))
+		case errors.Is(err, http.ErrServerClosed):
+			return
 		default:
 			slog.Error(fmt.Sprintf("%T error", srv), slog.Any("error", err))
 		}
 		errCh <- err
 	} else {
-		slog.Debug(fmt.Sprintf("%T stopped without error", srv))
+		slog.Debug("bye.")
 	}
 }
 func startProfiling() (func(), error) {
