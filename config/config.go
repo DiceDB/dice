@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	DiceVersion string = "0.0.4"
+	DiceDBVersion string = "0.0.5"
 
 	DefaultHost           string = "0.0.0.0"
 	DefaultPort           int    = 7379
@@ -125,7 +125,7 @@ type Config struct {
 
 // Default configurations for internal use
 var baseConfig = Config{
-	Version: DiceVersion,
+	Version: DiceDBVersion,
 	AsyncServer: struct {
 		Addr      string `mapstructure:"addr"`
 		Port      int    `mapstructure:"port"`
@@ -201,7 +201,7 @@ var baseConfig = Config{
 		LogLevel        string `mapstructure:"loglevel"`
 		PrettyPrintLogs bool   `mapstructure:"prettyprintlogs"`
 	}{
-		LogLevel:        "debug",
+		LogLevel:        "info",
 		PrettyPrintLogs: true,
 	},
 	Auth: struct {
@@ -224,16 +224,8 @@ var defaultConfig Config
 
 func init() {
 	config := baseConfig
-	env := os.Getenv("DICE_ENV")
-	if env == "prod" {
-		config.Logging.LogLevel = "info"
-		config.Logging.PrettyPrintLogs = false
-	}
-
-	if logLevel := os.Getenv("DICE_LOG_LEVEL"); logLevel != "" {
-		config.Logging.LogLevel = logLevel
-	}
-
+	config.Logging.PrettyPrintLogs = false
+	config.Logging.LogLevel = "info"
 	defaultConfig = config
 }
 
@@ -351,7 +343,6 @@ func setUpViperConfig(configFilePath string) {
 
 	// override default configurations with command line flags
 	mergeFlagsWithConfig()
-	slog.Info("configurations loaded successfully.")
 }
 
 func mergeFlagsWithConfig() {

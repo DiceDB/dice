@@ -69,13 +69,13 @@ func TestHyperLogLogCommands(t *testing.T) {
 			name: "PFMERGE with invalid object",
 			commands: []string{
 				"PFADD INVALID_HLL a b c", "SET INVALID_HLL \"1\"", "PFMERGE INVALID_HLL"},
-			expected: []interface{}{float64(1), "OK", "ERR -WRONGTYPE Key is not a valid HyperLogLog string value."},
+			expected: []interface{}{float64(1), "OK", "WRONGTYPE Key is not a valid HyperLogLog string value"},
 		},
 		{
 			name: "PFMERGE with invalid src object",
 			commands: []string{
 				"PFADD INVALID_SRC_HLL a b c", "SET INVALID_SRC_HLL \"1\"", "PFMERGE HLL INVALID_SRC_HLL"},
-			expected: []interface{}{float64(1), "OK", "ERR -WRONGTYPE Key is not a valid HyperLogLog string value."},
+			expected: []interface{}{float64(1), "OK", "WRONGTYPE Key is not a valid HyperLogLog string value"},
 		},
 	}
 

@@ -3,10 +3,10 @@ package worker
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/eval"
-	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/ops"
 )
 
@@ -241,11 +241,9 @@ var CommandsMeta = map[string]CmdMeta{
 }
 
 func init() {
-	l := logger.New(logger.Opts{WithTimestamp: true})
-	// Validate the metadata for each command
 	for c, meta := range CommandsMeta {
 		if err := validateCmdMeta(c, meta); err != nil {
-			l.Error("error validating worker command metadata %s: %v", c, err)
+			slog.Error("error validating worker command metadata %s: %v", c, err)
 		}
 	}
 }

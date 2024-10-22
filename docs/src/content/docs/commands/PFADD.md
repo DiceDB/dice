@@ -1,5 +1,5 @@
 ---
-title: PFADD  
+title: PFADD
 description: The `PFADD` command in DiceDB is used to add elements to a HyperLogLog data structure. HyperLogLog is a probabilistic data structure used for estimating the cardinality of a set, i.e., the number of unique elements in a dataset.
 ---
 
@@ -37,17 +37,17 @@ PFADD key element [element ...]
 
 1. `Wrong type error`:
 
-   - Error Message: `(error) ERROR WRONGTYPE Key is not a valid HyperLogLog string value.`
+   - Error Message: `(error) WRONGTYPE Key is not a valid HyperLogLog string value`
    - Occurs when trying to use the command on a key that is not a HyperLogLog.
 
 2. `Syntax error`:
 
-   - Error Message: `(error) ERROR wrong number of arguments for 'pfadd' command`
+   - Error Message: `(error) wrong number of arguments for 'pfadd' command`
    - Occurs when the command syntax is incorrect or missing required parameters.
 
-## Examples
+## Example Usage
 
-### Basic Example
+### Basic Usage
 
 Adding a single element to a HyperLogLog:
 
@@ -74,7 +74,7 @@ If the elements do not alter the internal registers:
 (integer) 0
 ```
 
-### Error Example
+### Invalid Usage
 
 Attempting to add elements to a key that is not a HyperLogLog:
 
@@ -82,7 +82,7 @@ Attempting to add elements to a key that is not a HyperLogLog:
 127.0.0.1:7379> SET mykey "notahyperloglog"
 OK
 127.0.0.1:7379> PFADD mykey "element1"
-(error) ERROR WRONGTYPE Key is not a valid HyperLogLog string value.
+(error) WRONGTYPE Key is not a valid HyperLogLog string value
 ```
 
 ---
