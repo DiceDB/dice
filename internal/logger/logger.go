@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"time"
@@ -9,19 +10,16 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func getLogLevel() slog.Leveler {
-	var level slog.Leveler
+func getSLogLevel() slog.Level {
+	fmt.Println("slog level", config.DiceConfig.Logging.LogLevel)
 	switch config.DiceConfig.Logging.LogLevel {
 	case "debug":
-		level = slog.LevelDebug
-	case "warn":
-		level = slog.LevelWarn
-	case "error":
-		level = slog.LevelError
+		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
 	default:
-		level = slog.LevelInfo
+		return slog.LevelInfo
 	}
-	return level
 }
 
 func New() *slog.Logger {
@@ -30,6 +28,6 @@ func New() *slog.Logger {
 		Out:        os.Stderr,
 		NoColor:    true,
 		TimeFormat: time.RFC3339,
-	}).Level(mapLevel(getLogLevel().Level())).With().Timestamp().Logger()
+	}).Level(toZerologLevel(getSLogLevel())).With().Timestamp().Logger()
 	return slog.New(newZerologHandler(&zerologLogger))
 }

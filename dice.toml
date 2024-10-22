@@ -44,10 +44,6 @@ AOFFile = './dice-master.aof'
 PersistenceEnabled = true
 WriteAOFOnCleanup = false
 
-[Logging]
-LogLevel = 'debug'
-PrettyPrintLogs = true
-
 [Auth]
 UserName = 'dice'
 Password = ''

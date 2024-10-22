@@ -10,7 +10,7 @@ PORT ?= 7379 #Port for dicedb
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 
-VERSION=$(shell bash -c 'grep -oP "DiceVersion string = \"\K[^\"]+" config/config.go')
+VERSION=$(shell bash -c 'grep -oP "DiceDBVersion string = \"\K[^\"]+" config/config.go')
 
 .PHONY: build test build-docker run test-one
 
