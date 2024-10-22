@@ -1643,3 +1643,93 @@ func evalZPOPMIN(args []string, store *dstore.Store) *EvalResponse {
 		Error:  nil,
 	}
 }
+
+// evalBF.RESERVE evaluates the BF.RESERVE command responsible for initializing a
+// new bloom filter and allocation it's relevant parameters based on given inputs.
+// If no params are provided, it uses defaults.
+func evalBFRESERVE(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 3 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.RESERVE"))
+	}
+
+	opts, err := newBloomOpts(args[1:])
+	if err != nil {
+		return makeEvalError(err)
+	}
+
+	_, err = CreateBloomFilter(args[0], store, opts)
+	if err != nil {
+		return makeEvalError(err)
+	}
+	return makeEvalResult(clientio.OK)
+}
+
+// evalBFADD evaluates the BF.ADD command responsible for adding an element to a bloom filter. If the filter does not
+// exist, it will create a new one with default parameters.
+func evalBFADD(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 2 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.ADD"))
+	}
+
+	bloom, err := getOrCreateBloomFilter(args[0], store, nil)
+	if err != nil {
+		return makeEvalError(err)
+	}
+
+	result, err := bloom.add(args[1])
+	if err != nil {
+		return makeEvalError(err)
+	}
+
+	return makeEvalResult(result)
+}
+
+// evalBFEXISTS evaluates the BF.EXISTS command responsible for checking existence of an element in a bloom filter.
+func evalBFEXISTS(args []string, store *dstore.Store) *EvalResponse {
+	// todo must work with objects of
+	if len(args) != 2 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.EXISTS"))
+	}
+
+	bloom, err := GetBloomFilter(args[0], store)
+	if err != nil {
+		return makeEvalError(err)
+	}
+	if bloom == nil {
+		return makeEvalResult(clientio.IntegerZero)
+	}
+	result, err := bloom.exists(args[1])
+	if err != nil {
+		return makeEvalError(err)
+	}
+	return makeEvalResult(result)
+}
+
+// evalBFINFO evaluates the BF.INFO command responsible for returning the
+// parameters and metadata of an existing bloom filter.
+func evalBFINFO(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 || len(args) > 2 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.INFO"))
+	}
+
+	bloom, err := GetBloomFilter(args[0], store)
+
+	if err != nil {
+		return makeEvalError(err)
+	}
+
+	if bloom == nil {
+		return makeEvalError(diceerrors.ErrGeneral("not found"))
+	}
+	opt := ""
+	if len(args) == 2 {
+		opt = args[1]
+	}
+	result, err := bloom.info(opt)
+
+	if err != nil {
+		return makeEvalError(err)
+	}
+
+	return makeEvalResult(result)
+}
