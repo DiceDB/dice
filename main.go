@@ -32,10 +32,12 @@ func init() {
 	flag.StringVar(&config.Host, "host", "0.0.0.0", "host for the DiceDB server")
 
 	flag.IntVar(&config.Port, "port", 7379, "port for the DiceDB server")
-	flag.IntVar(&config.HTTPPort, "http-port", 7380, "port for the HTTP variant of DiceDB server")
-	flag.IntVar(&config.WebsocketPort, "websocket-port", 7381, "Websocket port for the DiceDB server")
 
-	flag.BoolVar(&config.EnableHTTP, "enable-http", true, "enable DiceDB to listen, accept, and process HTTP")
+	flag.IntVar(&config.HTTPPort, "http-port", 7380, "port for accepting requets over HTTP")
+	flag.BoolVar(&config.EnableHTTP, "enable-http", false, "enable DiceDB to listen, accept, and process HTTP")
+
+	flag.IntVar(&config.WebsocketPort, "websocket-port", 7381, "port for accepting requets over WebSocket")
+	flag.BoolVar(&config.EnableWebsocket, "enable-websocket", false, "enable DiceDB to listen, accept, and process WebSocket")
 
 	flag.BoolVar(&config.EnableMultiThreading, "enable-multithreading", false, "enable multithreading execution and leverage multiple CPU cores")
 	flag.IntVar(&config.NumShards, "num-shards", -1, "number shards to create. defaults to number of cores")
@@ -151,14 +153,18 @@ func main() {
 		serverWg.Add(1)
 		go runServer(ctx, &serverWg, asyncServer, serverErrCh)
 
-		httpServer := server.NewHTTPServer(shardManager)
-		serverWg.Add(1)
-		go runServer(ctx, &serverWg, httpServer, serverErrCh)
+		if config.EnableHTTP {
+			httpServer := server.NewHTTPServer(shardManager)
+			serverWg.Add(1)
+			go runServer(ctx, &serverWg, httpServer, serverErrCh)
+		}
 	}
 
-	websocketServer := server.NewWebSocketServer(shardManager, config.WebsocketPort)
-	serverWg.Add(1)
-	go runServer(ctx, &serverWg, websocketServer, serverErrCh)
+	if config.EnableWebsocket {
+		websocketServer := server.NewWebSocketServer(shardManager, config.WebsocketPort)
+		serverWg.Add(1)
+		go runServer(ctx, &serverWg, websocketServer, serverErrCh)
+	}
 
 	wg.Add(1)
 	go func() {
@@ -195,7 +201,7 @@ func runServer(ctx context.Context, wg *sync.WaitGroup, srv abstractserver.Abstr
 		case errors.Is(err, diceerrors.ErrAborted):
 			slog.Debug(fmt.Sprintf("%T received abort command", srv))
 		case errors.Is(err, http.ErrServerClosed):
-			return
+			slog.Debug(fmt.Sprintf("%T received abort command", srv))
 		default:
 			slog.Error(fmt.Sprintf("%T error", srv), slog.Any("error", err))
 		}
