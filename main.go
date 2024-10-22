@@ -28,22 +28,28 @@ import (
 )
 
 func init() {
-	flag.StringVar(&config.Host, "host", "0.0.0.0", "host for the dicedb server")
-	flag.IntVar(&config.Port, "port", 7379, "port for the dicedb server")
-	flag.IntVar(&config.HTTPPort, "http-port", 7380, "HTTP port for the dicedb server")
-	flag.BoolVar(&config.EnableHTTP, "enable-http", true, "run server in HTTP mode as well")
-	flag.BoolVar(&config.EnableMultiThreading, "enable-multithreading", false, "run server in multithreading mode")
-	flag.IntVar(&config.WebsocketPort, "websocket-port", 8379, "Websocket port for the dicedb server")
-	flag.IntVar(&config.NumShards, "num-shards", -1, "number of shards to create. default = number of cores")
+	flag.StringVar(&config.Host, "host", "0.0.0.0", "host for the DiceDB server")
+
+	flag.IntVar(&config.Port, "port", 7379, "port for the DiceDB server")
+	flag.IntVar(&config.HTTPPort, "http-port", 7380, "port for the HTTP variant of DiceDB server")
+	flag.IntVar(&config.WebsocketPort, "websocket-port", 7381, "Websocket port for the DiceDB server")
+
+	flag.BoolVar(&config.EnableHTTP, "enable-http", true, "enable DiceDB to listen, accept, and process HTTP")
+
+	flag.BoolVar(&config.EnableMultiThreading, "enable-multithreading", false, "enable multithreading execution and leverage multiple CPU cores")
+	flag.IntVar(&config.NumShards, "num-shards", -1, "number shards to create. defaults to number of cores")
+
+	flag.BoolVar(&config.EnableWatch, "enable-watch", false, "enable support for .WATCH commands and real-time reactivity")
+
+	flag.BoolVar(&config.EnableProfiling, "enable-profiling", false, "enable profiling and capture critical metrics and traces in .prof files")
+
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
 	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the config file")
 	flag.StringVar(&config.FileLocation, "c", config.FileLocation, "file path of the config file")
 	flag.BoolVar(&config.InitConfigCmd, "init-config", false, "initialize a new config file")
-	flag.IntVar(&config.KeysLimit, "keys-limit", config.KeysLimit, "keys limit for the dicedb server. "+
+	flag.IntVar(&config.KeysLimit, "keys-limit", config.KeysLimit, "keys limit for the DiceDB server. "+
 		"This flag controls the number of keys each shard holds at startup. You can multiply this number with the "+
 		"total number of shard threads to estimate how much memory will be required at system start up.")
-	flag.BoolVar(&config.EnableProfiling, "enable-profiling", false, "enable profiling for the dicedb server")
-	flag.BoolVar(&config.EnableWatch, "enable-watch", false, "enable reactivity features which power the .WATCH commands")
 
 	flag.Parse()
 
@@ -56,6 +62,14 @@ func init() {
 }
 
 func main() {
+	slog.Info("starting DiceDB ...")
+	slog.Info("running with", slog.Int("port", config.Port))
+	slog.Info("running with", slog.Bool("enable-watch", config.EnableWatch))
+
+	if config.EnableProfiling {
+		slog.Info("running with", slog.Bool("enable-profiling", config.EnableProfiling))
+	}
+
 	go observability.Ping()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -87,7 +101,7 @@ func main() {
 		if config.NumShards > 0 {
 			numShards = config.NumShards
 		}
-		slog.Info("running with", slog.String("mode", "multi-threaded"), slog.Int("num shards", numShards))
+		slog.Info("running with", slog.String("mode", "multi-threaded"), slog.Int("num-shards", numShards))
 	} else {
 		numShards = 1
 		slog.Info("running with", slog.String("mode", "single-threaded"))

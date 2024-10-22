@@ -97,14 +97,10 @@ func (s *AsyncServer) FindPortAndBind() (socketErr error) {
 		return diceerrors.ErrInvalidIPAddress
 	}
 
-	if err := syscall.Bind(serverFD, &syscall.SockaddrInet4{
+	return syscall.Bind(serverFD, &syscall.SockaddrInet4{
 		Port: config.DiceConfig.AsyncServer.Port,
 		Addr: [4]byte{ip4[0], ip4[1], ip4[2], ip4[3]},
-	}); err != nil {
-		return err
-	}
-	slog.Info("ready to serve the requests")
-	return nil
+	})
 }
 
 // ClosePort ensures the server socket is closed properly.

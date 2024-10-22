@@ -92,7 +92,7 @@ func (s *Server) Run(ctx context.Context) (err error) {
 		}
 	}(wg)
 
-	slog.Info("DiceDB ready to accept connections on port", slog.Int("resp-port", config.Port))
+	slog.Info("ready to accept and serve requests on", slog.Int("port", config.Port))
 
 	select {
 	case <-ctx.Done():
@@ -154,7 +154,6 @@ func (s *Server) BindAndListen() error {
 	}
 
 	s.serverFD = serverFD
-	slog.Info("RESP Server successfully bound", slog.String("Host", s.Host), slog.Int("Port", s.Port))
 	return nil
 }
 
