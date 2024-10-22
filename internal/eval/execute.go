@@ -33,7 +33,7 @@ func ExecuteCommand(c *cmd.DiceDBCmd, client *comm.Client, store *dstore.Store, 
 	case "SUBSCRIBE", "Q.WATCH":
 		return &EvalResponse{Result: EvalQWATCH(c.Args, httpOp, websocketOp, client, store), Error: nil}
 	case "UNSUBSCRIBE", "Q.UNWATCH":
-		return &EvalResponse{Result: EvalQUNWATCH(c.Args, httpOp, client), Error: nil}
+		return &EvalResponse{Result: EvalQUNWATCH(c.Args, httpOp, websocketOp, client), Error: nil}
 	case auth.Cmd:
 		return &EvalResponse{Result: EvalAUTH(c.Args, client), Error: nil}
 	case "ABORT":

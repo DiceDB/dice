@@ -1832,7 +1832,7 @@ func EvalQWATCH(args []string, httpOp, websocketOp bool, client *comm.Client, st
 }
 
 // EvalQUNWATCH removes the specified key from the watch list for the caller client.
-func EvalQUNWATCH(args []string, httpOp bool, client *comm.Client) []byte {
+func EvalQUNWATCH(args []string, httpOp, websocketOp bool, client *comm.Client) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("Q.UNWATCH")
 	}
@@ -1841,7 +1841,7 @@ func EvalQUNWATCH(args []string, httpOp bool, client *comm.Client) []byte {
 		return clientio.Encode(e, false)
 	}
 
-	if httpOp {
+	if httpOp || websocketOp {
 		querymanager.QuerySubscriptionChan <- querymanager.QuerySubscription{
 			Subscribe:          false,
 			Query:              query,
