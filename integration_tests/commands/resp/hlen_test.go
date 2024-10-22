@@ -55,6 +55,24 @@ func TestHLEN(t *testing.T) {
 			expect: []interface{}{int64(3), int64(3)},
 			delays: []time.Duration{0, 0},
 		},
+		{
+			name:   "HLEN with multiple HSET",
+			cmds:   []string{"HSET key_hLen4 field1 value1 field2 value2", "HLEN key_hLen4", "HSET key_hLen4 field3 value3", "HLEN key_hLen4"},
+			expect: []interface{}{int64(2), int64(2), int64(1), int64(3)},
+			delays: []time.Duration{0, 0, 0, 0},
+		},
+		{
+			name:   "HLEN with HDEL",
+			cmds:   []string{"HSET key_hLen5 field1 value1 field2 value2 field3 value3", "HLEN key_hLen5", "HDEL key_hLen5 field3", "HLEN key_hLen5"},
+			expect: []interface{}{int64(3), int64(3), int64(1), int64(2)},
+			delays: []time.Duration{0, 0, 0, 0},
+		},
+		{
+			name:   "HLEN with DEL",
+			cmds:   []string{"HSET key_hLen6 field1 value1 field2 value2 field3 value3", "HLEN key_hLen6", "DEL key_hLen6", "HLEN key_hLen6"},
+			expect: []interface{}{int64(3), int64(3), int64(1), int64(0)},
+			delays: []time.Duration{0, 0, 0, 0},
+		},
 	}
 
 	for _, tc := range testCases {

@@ -20,10 +20,11 @@ func TestHSTRLEN(t *testing.T) {
 	}{
 
 		{
-			name:   "HSTRLEN with wrong number of args",
-			cmds:   []string{"HSTRLEN"},
-			expect: []interface{}{"ERR wrong number of arguments for 'hstrlen' command"},
-			delays: []time.Duration{0},
+			name: "HSTRLEN with wrong number of args",
+			cmds: []string{"HSTRLEN", "HSTRLEN key field another_field"},
+			expect: []interface{}{"ERR wrong number of arguments for 'hstrlen' command",
+				"ERR wrong number of arguments for 'hstrlen' command"},
+			delays: []time.Duration{0, 0},
 		},
 		{
 			name:   "HSTRLEN with missing field",
@@ -43,11 +44,16 @@ func TestHSTRLEN(t *testing.T) {
 			expect: []interface{}{int64(1), int64(0)},
 			delays: []time.Duration{0, 0},
 		},
-
 		{
 			name:   "HSTRLEN with existing key and field",
 			cmds:   []string{"HSET key_hStrLen3 field HelloWorld", "HSTRLEN key_hStrLen3 field"},
 			expect: []interface{}{int64(1), int64(10)},
+			delays: []time.Duration{0, 0},
+		},
+		{
+			name:   "HSTRLEN with non-hash",
+			cmds:   []string{"SET string_key string_value", "HSTRLEN string_key field"},
+			expect: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
 			delays: []time.Duration{0, 0},
 		},
 	}
