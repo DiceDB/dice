@@ -18,6 +18,7 @@ import (
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/cmd"
 	diceerrors "github.com/dicedb/dice/internal/errors"
+	"github.com/dicedb/dice/internal/eval/geo"
 	"github.com/dicedb/dice/internal/eval/sortedset"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/server/utils"
@@ -6170,4 +6171,177 @@ func evalJSONNUMINCRBY(args []string, store *dstore.Store) *EvalResponse {
 	obj.Value = jsonData
 
 	return makeEvalResult(resultString)
+}
+
+func evalGEOADD(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 4 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("GEOADD"),
+		}
+	}
+
+	key := args[0]
+	var nx, xx bool
+	startIdx := 1
+
+	// Parse options
+	for startIdx < len(args) {
+		option := strings.ToUpper(args[startIdx])
+		if option == "NX" {
+			nx = true
+			startIdx++
+		} else if option == "XX" {
+			xx = true
+			startIdx++
+		} else {
+			break
+		}
+	}
+
+	// Check if we have the correct number of arguments after parsing options
+	if (len(args)-startIdx)%3 != 0 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("GEOADD"),
+		}
+	}
+
+	if xx && nx {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("XX and NX options at the same time are not compatible"),
+		}
+	}
+
+	// Get or create sorted set
+	obj := store.Get(key)
+	var ss *sortedset.Set
+	if obj != nil {
+		var err []byte
+		ss, err = sortedset.FromObject(obj)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			}
+		}
+	} else {
+		ss = sortedset.New()
+	}
+
+	added := 0
+	for i := startIdx; i < len(args); i += 3 {
+		longitude, err := strconv.ParseFloat(args[i], 64)
+		if err != nil || math.IsNaN(longitude) || longitude < -180 || longitude > 180 {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("invalid longitude"),
+			}
+		}
+
+		latitude, err := strconv.ParseFloat(args[i+1], 64)
+		if err != nil || math.IsNaN(latitude) || latitude < -85.05112878 || latitude > 85.05112878 {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("invalid latitude"),
+			}
+		}
+
+		member := args[i+2]
+		_, exists := ss.Get(member)
+
+		// Handle XX option: Only update existing elements
+		if xx && !exists {
+			continue
+		}
+
+		// Handle NX option: Only add new elements
+		if nx && exists {
+			continue
+		}
+
+		hash := geo.EncodeHash(latitude, longitude)
+
+		wasInserted := ss.Upsert(hash, member)
+		if wasInserted {
+			added++
+		}
+	}
+
+	obj = store.NewObj(ss, -1, object.ObjTypeSortedSet, object.ObjEncodingBTree)
+	store.Put(key, obj)
+
+	return &EvalResponse{
+		Result: added,
+		Error:  nil,
+	}
+}
+
+func evalGEODIST(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 3 || len(args) > 4 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("GEODIST"),
+		}
+	}
+
+	key := args[0]
+	member1 := args[1]
+	member2 := args[2]
+	unit := "m"
+	if len(args) == 4 {
+		unit = strings.ToLower(args[3])
+	}
+
+	// Get the sorted set
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+	ss, err := sortedset.FromObject(obj)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// Get the scores (geohashes) for both members
+	score1, ok := ss.Get(member1)
+	if !ok {
+		return &EvalResponse{
+			Result: nil,
+			Error:  nil,
+		}
+	}
+	score2, ok := ss.Get(member2)
+	if !ok {
+		return &EvalResponse{
+			Result: nil,
+			Error:  nil,
+		}
+	}
+
+	lat1, lon1 := geo.DecodeHash(score1)
+	lat2, lon2 := geo.DecodeHash(score2)
+
+	distance := geo.GetDistance(lon1, lat1, lon2, lat2)
+
+	result, err := geo.ConvertDistance(distance, unit)
+
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	return &EvalResponse{
+		Result: utils.RoundToDecimals(result, 4),
+		Error:  nil,
+	}
 }
