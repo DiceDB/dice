@@ -64,7 +64,7 @@ func TestGetDel(t *testing.T) {
 				{Command: "GETDEL", Body: map[string]interface{}{"key": "k"}},
 				{Command: "GET", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{float64(0), "@", "@", nil},
+			expected: []interface{}{"0", "@", "@", nil},
 			delays:   []time.Duration{0, 0, 0, 0},
 		},
 		{

@@ -84,6 +84,13 @@ const (
 	CmdHRandField   = "HRANDFIELD"
 	CmdGetRange     = "GETRANGE"
 	CmdAppend       = "APPEND"
+	CmdSetBit       = "SETBIT"
+	CmdGetBit       = "GETBIT"
+	CmdBitCount     = "BITCOUNT"
+	CmdBitField     = "BITFIELD"
+	CmdBitOp        = "BITOP"
+	CmdBitPos       = "BITPOS"
+	CmdBitFieldRO   = "BITFIELD_RO"
 )
 
 type CmdMeta struct {
@@ -159,6 +166,27 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdHRandField: {
+		CmdType: SingleShard,
+	},
+	CmdSetBit: {
+		CmdType: SingleShard,
+	},
+	CmdGetBit: {
+		CmdType: SingleShard,
+	},
+	CmdBitCount: {
+		CmdType: SingleShard,
+	},
+	CmdBitField: {
+		CmdType: SingleShard,
+	},
+	CmdBitOp: {
+		CmdType: SingleShard,
+	},
+	CmdBitPos: {
+		CmdType: SingleShard,
+	},
+	CmdBitFieldRO: {
 		CmdType: SingleShard,
 	},
 
