@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -28,14 +29,9 @@ import (
 
 const Qwatch = "Q.WATCH"
 const Qunwatch = "Q.UNWATCH"
-const Subscribe = "SUBSCRIBE"
-
-var unimplementedCommandsWebsocket = map[string]bool{
-	Qunwatch: true,
-}
 
 type QuerySubscription struct {
-	Subscribe          bool // true for subscribe, false for unsubscribe
+	Subscribe          bool // true for subscribe, not used for unsubscribe
 	Cmd                *cmd.DiceDBCmd
 	ClientIdentifierID uint32
 	Client             *websocket.Conn
@@ -165,12 +161,13 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 			break
 		}
 
-		// parse message to dice command
+		// parse message
 		diceDBCmd, err := utils.ParseWebsocketMessage(msg)
 		if errors.Is(err, diceerrors.ErrEmptyCommand) {
 			continue
 		} else if err != nil {
-			if err := s.writeResponseWithRetries(conn, []byte("error: parsing failed"), maxRetries); err != nil {
+			msg := fmt.Sprintf("error: parsing failed: %v", err)
+			if err := s.writeResponseWithRetries(conn, []byte(msg), maxRetries); err != nil {
 				s.logger.Debug(fmt.Sprintf("Error writing message: %v", err))
 			}
 			continue
@@ -182,13 +179,6 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 			break
 		}
 
-		if unimplementedCommandsWebsocket[diceDBCmd.Cmd] {
-			if err := s.writeResponseWithRetries(conn, []byte("Command is not implemented with Websocket"), maxRetries); err != nil {
-				s.logger.Debug(fmt.Sprintf("Error writing message: %v", err))
-			}
-			continue
-		}
-
 		// create request
 		sp := &ops.StoreOp{
 			Cmd:         diceDBCmd,
@@ -197,27 +187,66 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 			WebsocketOp: true,
 		}
 
-		// handle q.watch commands
-		if diceDBCmd.Cmd == Qwatch || diceDBCmd.Cmd == Subscribe {
-			clientIdentifierID := generateUniqueInt32(r)
-			sp.Client = comm.NewHTTPQwatchClient(s.qwatchResponseChan, clientIdentifierID)
-
-			// subscribe client for updates
-			event := QuerySubscription{
-				Subscribe:          true,
-				Cmd:                diceDBCmd,
-				ClientIdentifierID: clientIdentifierID,
-				Client:             conn,
-			}
-			s.subscriptionChan <- event
+		// subscribe
+		if diceDBCmd.Cmd == Qwatch {
+			id := generateUniqueInt32(r)
+			sp.Client = comm.NewHTTPQwatchClient(s.qwatchResponseChan, id)
+			fmt.Println("id is: ", id)
+			s.subscribe(conn, diceDBCmd, id)
 		}
 
+		// unsubscribe
+		if diceDBCmd.Cmd == Qunwatch {
+			s.unsubscribe(conn, diceDBCmd)
+
+			id, err := strconv.Atoi(diceDBCmd.Args[0])
+			if err != nil {
+				msg := fmt.Sprintf("invalid client id: %v. err: %v", diceDBCmd.Args[0], err)
+				s.writeResponseWithRetries(conn, []byte(msg), maxRetries)
+			}
+			sp.Client = comm.NewHTTPQwatchClient(s.qwatchResponseChan, uint32(id))
+
+			diceDBCmd.Args = diceDBCmd.Args[1:] // pop clientID
+		}
+
+		// execute command
 		s.shardManager.GetShard(0).ReqChan <- sp
 		resp := <-s.ioChan
 		if err := s.processResponse(conn, diceDBCmd, resp); err != nil {
 			break
 		}
 	}
+}
+
+func (s *WebsocketServer) subscribe(conn *websocket.Conn, diceDBCmd *cmd.DiceDBCmd, id uint32) {
+	// subscribe client
+	event := QuerySubscription{
+		Subscribe:          true,
+		Cmd:                diceDBCmd,
+		ClientIdentifierID: id,
+		Client:             conn,
+	}
+	s.subscriptionChan <- event
+}
+
+func (s *WebsocketServer) unsubscribe(conn *websocket.Conn, diceDBCmd *cmd.DiceDBCmd) {
+	maxRetries := config.DiceConfig.WebSocket.MaxWriteResponseRetries
+	// convert id
+	id, err := strconv.Atoi(diceDBCmd.Args[0])
+	if err != nil {
+		msg := fmt.Sprintf("invalid client id: %v. err: %v", diceDBCmd.Args[0], err)
+		s.writeResponseWithRetries(conn, []byte(msg), maxRetries)
+	}
+
+	// check if client exits
+	_, err = s.getClientById(uint32(id))
+	if err != nil {
+		msg := fmt.Sprintf("error getting client: %v", err)
+		s.writeResponseWithRetries(conn, []byte(msg), maxRetries)
+	}
+
+	// remove client
+	s.deleteClientById(uint32(id))
 }
 
 func (s *WebsocketServer) listenForSubscriptions(ctx context.Context) {
@@ -239,13 +268,9 @@ func (s *WebsocketServer) processQwatchUpdates(ctx context.Context) {
 	for {
 		select {
 		case resp := <-s.qwatchResponseChan:
-			client, ok := s.subscribedClients.Load(resp.ClientIdentifierID)
-			if !ok {
-				s.logger.Error("message received but client not found", slog.Any("clientIdentifierID", resp.ClientIdentifierID))
-			}
-			conn, ok := client.(*websocket.Conn)
-			if !ok {
-				s.logger.Error("error typecasting client to *websocket.Conn")
+			client, err := s.getClientById(resp.ClientIdentifierID)
+			if err != nil {
+				s.logger.Error("message received but client not found or invalid", slog.Any("error", err))
 			}
 
 			dicDBCmd := &cmd.DiceDBCmd{
@@ -253,7 +278,7 @@ func (s *WebsocketServer) processQwatchUpdates(ctx context.Context) {
 				Args: []string{},
 			}
 
-			if err := s.processResponse(conn, dicDBCmd, resp); err != nil {
+			if err := s.processResponse(client, dicDBCmd, resp); err != nil {
 				s.logger.Debug("Error writing qwatch update to client", slog.Any("clientIdentifierID", resp.ClientIdentifierID), slog.Any("error", err))
 				continue
 			}
@@ -351,6 +376,22 @@ func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.D
 	}
 
 	return nil
+}
+
+func (s *WebsocketServer) getClientById(id uint32) (*websocket.Conn, error) {
+	client, ok := s.subscribedClients.Load(id)
+	if !ok {
+		return nil, fmt.Errorf("client not found: %v", id)
+	}
+	conn, ok := client.(*websocket.Conn)
+	if !ok {
+		return nil, fmt.Errorf("error typecasting client")
+	}
+	return conn, nil
+}
+
+func (s *WebsocketServer) deleteClientById(id uint32) {
+	s.subscribedClients.Delete(id)
 }
 
 func (s *WebsocketServer) writeResponseWithRetries(conn *websocket.Conn, text []byte, maxRetries int) error {
