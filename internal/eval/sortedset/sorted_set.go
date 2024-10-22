@@ -204,14 +204,14 @@ func (ss *Set) Get(member string) (float64, bool) {
 }
 
 // Iterate over elements in the B-Tree with scores in the [min, max] range
-func (s *Set) CountInRange(min, max float64) int {
+func (ss *Set) CountInRange(minVal, maxVal float64) int {
 	count := 0
-	s.tree.Ascend(func(item btree.Item) bool {
+	ss.tree.Ascend(func(item btree.Item) bool {
 		elem := item.(*Item)
-		if elem.Score < min {
+		if elem.Score < minVal {
 			return true // Continue iteration
 		}
-		if elem.Score > max {
+		if elem.Score > maxVal {
 			return false // Stop iteration
 		}
 		count++

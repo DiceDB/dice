@@ -503,8 +503,8 @@ func evalZCOUNT(args []string, store *dstore.Store) *EvalResponse {
 			Error:  diceerrors.ErrWrongTypeOperation,
 		}
 	}
-	min, errMin := utils.ParseScore(args[1])
-	max, errMax := utils.ParseScore(args[2])
+	minValue, errMin := utils.ParseScore(args[1])
+	maxValue, errMax := utils.ParseScore(args[2])
 
 	if errMin != nil || errMax != nil {
 		return &EvalResponse{
@@ -513,7 +513,7 @@ func evalZCOUNT(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	count := sortedSet.CountInRange(min, max)
+	count := sortedSet.CountInRange(minValue, maxValue)
 
 	return &EvalResponse{
 		Result: count,
