@@ -28,9 +28,9 @@ Make the necessary changes. If the changes you plan to make are too big, make su
 
 ## Making the changes
 
-Follow the best practices when you are making changes. Refer to the following best practices that we follow
+Follow the best practices when you are making changes.
 
-- [Logging Best Practices](CONTRIBUTING/logging.md)
+- [Logging Best Practices](logging.md)
 
 ### Code documentation
 
