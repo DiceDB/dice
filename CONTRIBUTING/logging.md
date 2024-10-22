@@ -1,26 +1,69 @@
 Logging Best Practices
 ===
 
-1. Be concise, yet informative
-   - Bad example: `slog.Info("DiceDB is starting, initialization in progress", slog.String("version", config.DiceDBVersion))`
-   - Good example: `slog.Info("starting DiceDB", slog.String("version", config.DiceDBVersion))`
+## Be concise, yet informative
+Bad practice:
 
-2. Use structured logging with key-value pairs
-   - Bad example: `slog.Info("running on port", config.Port)`
-   - Good example: `slog.Info("running with", slog.Int("port", config.Port))`
+```go
+slog.Info("DiceDB is starting, initialization in progress", slog.String("version", config.DiceDBVersion))
+```
 
-3. Avoid logging redundant information
-   - Bad example: `slog.Info("running in multi-threaded mode with", slog.String("mode", "multi-threaded"), slog.Int("num-shards", numShards))`
-   - Good example: `slog.Info("running with", slog.String("mode", "multi-threaded"), slog.Int("num-shards", numShards))`
+Good practice:
+```go
+slog.Info("starting DiceDB", slog.String("version", config.DiceDBVersion))
+```
 
-4. Use Boolean values effectively
-   - Bad example: `slog.Info("enable-watch is set to true", slog.Bool("enable-watch", true))`
-   - Good example: `slog.Info("running with", slog.Bool("enable-watch", config.EnableWatch))`
+## Use structured logging with key-value pairs
+Bad practice:
+```go
+slog.Info("running on port", config.Port)
+```
 
-5. Log specific details over general statements
-   - Bad example: `slog.Info("server is running")`
-   - Good example: `slog.Info("running with", slog.Int("port", config.Port), slog.Bool("enable-watch", config.EnableWatch))`
+Good practice:
+```go
+slog.Info("running with", slog.Int("port", config.Port))
+```
 
-6. Use lowercase for log messages, except for proper nouns
-   - Bad example: `slog.Info("Starting DiceDB", slog.String("version", config.DiceDBVersion))`
-   - Good example: `slog.Info("starting DiceDB", slog.String("version", config.DiceDBVersion))`
+## Avoid logging redundant information
+Bad practice:
+```go
+slog.Info("running in multi-threaded mode with", slog.String("mode", "multi-threaded"), slog.Int("num-shards", numShards))
+```
+
+Good practice:
+```go
+slog.Info("running with", slog.String("mode", "multi-threaded"), slog.Int("num-shards", numShards))
+```
+
+## Use Boolean values effectively
+Bad practice:
+```go
+slog.Info("enable-watch is set to true", slog.Bool("enable-watch", true))
+```
+
+Good practice:
+```go
+slog.Info("running with", slog.Bool("enable-watch", config.EnableWatch))
+```
+
+## Log specific details over general statements
+Bad practice:
+```go
+slog.Info("server is running")
+```
+
+Good practice:
+```go
+slog.Info("running with", slog.Int("port", config.Port), slog.Bool("enable-watch", config.EnableWatch))
+```
+
+## Use lowercase for log messages, except for proper nouns
+Bad practice:
+```go
+slog.Info("Starting DiceDB", slog.String("version", config.DiceDBVersion))
+```
+
+Good practice:
+```go
+slog.Info("starting DiceDB", slog.String("version", config.DiceDBVersion))
+```
