@@ -216,7 +216,7 @@ func parseQUnwatchArgs(args string) ([]string, error) {
 	clientID := strconv.Itoa(id)
 
 	// remove quotes from query string
-	query := args[idx:]
+	query := args[idx+1:]
 	query, err = strconv.Unquote(query)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing q.unwatch query: %v", err)
