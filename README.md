@@ -45,18 +45,6 @@ to it using DiceDB CLI and SDKs, or even Redis CLIs and SDKs.
 
 > Note: Given it is a drop-in replacement of Redis, you can also use any Redis CLI and SDK to connect to DiceDB.
 
-### Multi-Threading Mode (Experimental)
-
-Multi-threading is currently under active development. To run the server with multi-threading enabled, follow these steps:
-
-```bash
-git clone https://github.com/dicedb/dice
-cd dice
-go run main.go --enable-multithreading --enable-watch
-```
-
-**Note:** Only the following commands are optimized for multithreaded execution: `PING, AUTH, SET, GET, GETSET, ABORT`
-
 ### Setting up DiceDB from source for development and contributions
 
 To run DiceDB for local development or running from source, you will need
