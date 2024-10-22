@@ -35,13 +35,12 @@ type IOHandler struct {
 	conn   net.Conn
 	reader *bufio.Reader
 	writer *bufio.Writer
-	logger *slog.Logger
 }
 
 var _ iohandler.IOHandler = (*IOHandler)(nil)
 
 // NewIOHandler creates a new IOHandler from a file descriptor
-func NewIOHandler(clientFD int, logger *slog.Logger) (*IOHandler, error) {
+func NewIOHandler(clientFD int) (*IOHandler, error) {
 	file := os.NewFile(uintptr(clientFD), "client-connection")
 	if file == nil {
 		return nil, fmt.Errorf("failed to create file from file descriptor")
@@ -54,7 +53,7 @@ func NewIOHandler(clientFD int, logger *slog.Logger) (*IOHandler, error) {
 			// Only close the file if we haven't successfully created a net.Conn
 			err := file.Close()
 			if err != nil {
-				logger.Warn("Error closing file in NewIOHandler:", slog.Any("error", err))
+				slog.Warn("Error closing file in NewIOHandler:", slog.Any("error", err))
 			}
 		}
 	}()
@@ -71,7 +70,6 @@ func NewIOHandler(clientFD int, logger *slog.Logger) (*IOHandler, error) {
 		conn:   conn,
 		reader: bufio.NewReader(conn),
 		writer: bufio.NewWriter(conn),
-		logger: logger,
 	}, nil
 }
 
@@ -112,27 +110,27 @@ func (h *IOHandler) Read(ctx context.Context) ([]byte, error) {
 					// No more data to read at this time
 					return data, nil
 				case errors.Is(err, net.ErrClosed), errors.Is(err, syscall.EPIPE), errors.Is(err, syscall.ECONNRESET):
-					h.logger.Debug("Connection closed", slog.Any("error", err))
+					slog.Debug("Connection closed", slog.Any("error", err))
 					cerr := h.Close()
 					if cerr != nil {
-						h.logger.Warn("Error closing connection", slog.Any("error", errors.Join(err, cerr)))
+						slog.Warn("Error closing connection", slog.Any("error", errors.Join(err, cerr)))
 					}
 					return nil, ErrorClosed
 				case errors.Is(err, syscall.ETIMEDOUT):
-					h.logger.Info("Connection idle timeout", slog.Any("error", err))
+					slog.Info("Connection idle timeout", slog.Any("error", err))
 					cerr := h.Close()
 					if cerr != nil {
-						h.logger.Warn("Error closing connection", slog.Any("error", errors.Join(err, cerr)))
+						slog.Warn("Error closing connection", slog.Any("error", errors.Join(err, cerr)))
 					}
 					return nil, ErrIdleTimeout
 				default:
-					h.logger.Error("Error reading from connection", slog.Any("error", err))
+					slog.Error("Error reading from connection", slog.Any("error", err))
 					return nil, fmt.Errorf("error reading request: %w", err)
 				}
 			}
 
 			if len(data) > maxRequestSize {
-				h.logger.Warn("Request too large", slog.Any("size", len(data)))
+				slog.Warn("Request too large", slog.Any("size", len(data)))
 				return nil, ErrRequestTooLarge
 			}
 
@@ -186,7 +184,7 @@ func (h *IOHandler) Write(ctx context.Context, response interface{}) error {
 					err = errors.Join(err, cerr)
 				}
 
-				h.logger.Debug("Connection closed", slog.Any("error", err))
+				slog.Debug("Connection closed", slog.Any("error", err))
 				return err
 			}
 
@@ -199,7 +197,7 @@ func (h *IOHandler) Write(ctx context.Context, response interface{}) error {
 
 // Close underlying network connection
 func (h *IOHandler) Close() error {
-	h.logger.Info("Closing connection")
+	slog.Info("Closing connection")
 	return errors.Join(h.conn.Close(), h.file.Close())
 }
 

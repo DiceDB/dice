@@ -10,7 +10,7 @@ PORT ?= 7379 #Port for dicedb
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 
-VERSION=$(shell bash -c 'grep -oP "const Version = \"\K[^\"]+" main.go')
+VERSION=$(shell bash -c 'grep -oP "DiceDBVersion string = \"\K[^\"]+" config/config.go')
 
 .PHONY: build test build-docker run test-one
 
@@ -58,10 +58,10 @@ unittest:
 unittest-one:
 	go test -v -race -count=1 --run $(TEST_FUNC) ./internal/...
 
-build-docker:
+release:
+	git tag v$(VERSION)
+	git push origin --tags
 	docker build --tag dicedb/dicedb:latest --tag dicedb/dicedb:$(VERSION) .
-
-push-docker:
 	docker push dicedb/dicedb:$(VERSION)
 
 GOLANGCI_LINT_VERSION := 1.60.1
