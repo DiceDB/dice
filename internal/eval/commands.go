@@ -1324,7 +1324,6 @@ func init() {
 func convertCmdMetaToSlice(cmdMeta *DiceCmdMeta) []interface{} {
 	var result []interface{} = []interface{}{strings.ToLower(cmdMeta.Name), cmdMeta.Arity, cmdMeta.KeySpecs.BeginIndex, cmdMeta.KeySpecs.LastKey, cmdMeta.KeySpecs.Step}
 	var subCommandsList []interface{}
-
 	for _, subCommand := range cmdMeta.SubCommands {
 		key := cmdMeta.Name + "|" + subCommand
 		if val, exists := DiceCmds[key]; exists {
@@ -1334,7 +1333,6 @@ func convertCmdMetaToSlice(cmdMeta *DiceCmdMeta) []interface{} {
 	}
 
 	return append(result, subCommandsList)
-
 }
 
 // Function to convert map[string]DiceCmdMeta{} to []interface{}
@@ -1350,7 +1348,6 @@ func convertCmdMetaToDocs(cmdMeta *DiceCmdMeta) []interface{} {
 	var result []interface{} = []interface{}{"summary", cmdMeta.Info, "arity", cmdMeta.Arity, "beginIndex", cmdMeta.KeySpecs.BeginIndex,
 		"lastIndex", cmdMeta.KeySpecs.LastKey, "step", cmdMeta.KeySpecs.Step}
 	var subCommandsList []interface{}
-
 	for _, subCommand := range cmdMeta.SubCommands {
 		key := cmdMeta.Name + "|" + subCommand
 		if val, exists := DiceCmds[key]; exists {
@@ -1360,12 +1357,10 @@ func convertCmdMetaToDocs(cmdMeta *DiceCmdMeta) []interface{} {
 	}
 
 	if len(subCommandsList) != 0 {
-		result = append(result, "subcommands")
-		result = append(result, subCommandsList)
+		result = append(result, "subcommands", subCommandsList)
 	}
 
 	return []interface{}{strings.ToLower(cmdMeta.Name), result}
-
 }
 
 // Function to convert map[string]DiceCmdMeta{} to []interface{}
