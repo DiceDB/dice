@@ -25,8 +25,7 @@ EXISTS key [key ...]
 
 ## Behaviour
 - The `EXISTS` command checks whether the specified keys are present in the database.
-- If one key is specified, the command returns `1` if the key exists and `0` if it does not.
-- If multiple keys are specified, the command returns the count of keys that exist among the given keys.
+- Returns 1 or 0, or for multiple keys returns the count of existing keys.
 - The command performs a read-only operation and does not modify the database.
 
 ## Errors
@@ -34,9 +33,9 @@ EXISTS key [key ...]
    - Error Message: `(error) ERR wrong number of arguments for 'exists' command`
    - Occurs when no key is provided.
 
-2. **Invalid key type**:
-   - Error Message: `(error) ERR value is not a valid string`
-   - Occurs when a non-string value is provided as a key.
+2. **Wrong type of value or key**:
+   - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
+   - Occurs when attempting to use the command on a key that contains a non-string value.
 
 ## Example Usage
 
