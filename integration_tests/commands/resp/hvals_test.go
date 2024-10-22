@@ -1,6 +1,7 @@
 package resp
 
 import (
+	"fmt"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -11,6 +12,26 @@ func TestHVals(t *testing.T) {
 	defer conn.Close()
 
 	testCases := []TestCase{
+		{
+			name:     "RESP HVALS with multiple fields",
+			commands: []string{"HSET hvalsKey field value", "HSET hvalsKey field2 value_new", "HVALS hvalsKey"},
+			expected: []interface{}{int64(1), int64(1), []any{string("value"), string("value_new")}},
+		},
+		{
+			name:     "RESP HVALS with non-existing key",
+			commands: []string{"HVALS hvalsKey01"},
+			expected: []interface{}{[]any{}},
+		},
+		{
+			name:     "HVALS on wrong key type",
+			commands: []string{"SET hvalsKey02 field", "HVALS hvalsKey02"},
+			expected: []interface{}{"OK", "ERR -WRONGTYPE Operation against a key holding the wrong kind of value"},
+		},
+		{
+			name:     "HVALS with wrong number of arguments",
+			commands: []string{"HVALS hvalsKey03 x", "HVALS"},
+			expected: []interface{}{"ERR wrong number of arguments for 'HVALS' command", "ERR wrong number of arguments for 'HVALS' command"},
+		},
 		{
 			name:     "RESP One or more vals exist",
 			commands: []string{"HSET key field value", "HSET key field1 value1", "HVALS key"},
@@ -30,6 +51,7 @@ func TestHVals(t *testing.T) {
 
 			for i, cmd := range tc.commands {
 				result := FireCommand(conn, cmd)
+				fmt.Printf("%v | %v | %v\n", cmd, tc.expected[i], result)
 				assert.DeepEqual(t, tc.expected[i], result)
 			}
 		})
