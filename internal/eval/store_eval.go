@@ -831,7 +831,7 @@ func evalPFADD(args []string, store *dstore.Store) *EvalResponse {
 	if !ok {
 		return &EvalResponse{
 			Result: nil,
-			Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeHllErr),
+			Error:  diceerrors.ErrInvalidHyperLogLogKey,
 		}
 	}
 	initialCardinality := existingHll.Estimate()
@@ -973,14 +973,14 @@ func evalPFCOUNT(args []string, store *dstore.Store) *EvalResponse {
 			if !ok {
 				return &EvalResponse{
 					Result: nil,
-					Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeHllErr),
+					Error:  diceerrors.ErrInvalidHyperLogLogKey,
 				}
 			}
 			err := unionHll.Merge(currKeyHll)
 			if err != nil {
 				return &EvalResponse{
 					Result: nil,
-					Error:  diceerrors.ErrGeneral(diceerrors.InvalidHllErr),
+					Error:  diceerrors.ErrCorruptedHyperLogLogObject,
 				}
 			}
 		}
@@ -1130,7 +1130,7 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 		if !ok {
 			return &EvalResponse{
 				Result: nil,
-				Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeHllErr),
+				Error:  diceerrors.ErrInvalidHyperLogLogKey,
 			}
 		}
 	}
@@ -1142,7 +1142,7 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 			if !ok {
 				return &EvalResponse{
 					Result: nil,
-					Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeHllErr),
+					Error:  diceerrors.ErrInvalidHyperLogLogKey,
 				}
 			}
 
@@ -1150,7 +1150,7 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 			if err != nil {
 				return &EvalResponse{
 					Result: nil,
-					Error:  diceerrors.ErrGeneral(diceerrors.InvalidHllErr),
+					Error:  diceerrors.ErrCorruptedHyperLogLogObject,
 				}
 			}
 		}
