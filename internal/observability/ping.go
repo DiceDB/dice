@@ -29,7 +29,7 @@ const (
 type DBConfig struct {
 }
 
-func Ping(logger *slog.Logger) {
+func Ping() {
 	hwConfig, err := GetHardwareMeta()
 	if err != nil {
 		return
@@ -55,7 +55,7 @@ func Ping(logger *slog.Logger) {
 	client := &http.Client{Timeout: time.Second * 5}
 	resp, err := client.Do(req)
 	if err != nil {
-		logger.Error("Error reporting observability metrics.", slog.Any("error", err))
+		slog.Error("Error reporting observability metrics.", slog.Any("error", err))
 		return
 	}
 
