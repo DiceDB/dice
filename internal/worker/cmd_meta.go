@@ -2,9 +2,11 @@ package worker
 
 import (
 	"context"
+	"fmt"
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/eval"
 	"github.com/dicedb/dice/internal/ops"
+	"log/slog"
 )
 
 type CmdType int
