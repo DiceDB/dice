@@ -5,8 +5,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/dicedb/dice/internal/server/abstractserver"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
@@ -15,9 +15,11 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/dicedb/dice/internal/logger"
+	"github.com/dicedb/dice/internal/server/abstractserver"
+
 	"github.com/dicedb/dice/config"
 	diceerrors "github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/observability"
 	"github.com/dicedb/dice/internal/server"
 	"github.com/dicedb/dice/internal/server/resp"
@@ -27,22 +29,31 @@ import (
 )
 
 func init() {
-	flag.StringVar(&config.Host, "host", "0.0.0.0", "host for the dicedb server")
-	flag.IntVar(&config.Port, "port", 7379, "port for the dicedb server")
-	flag.BoolVar(&config.EnableHTTP, "enable-http", true, "run server in HTTP mode as well")
-	flag.BoolVar(&config.EnableMultiThreading, "enable-multithreading", false, "run server in multithreading mode")
-	flag.IntVar(&config.HTTPPort, "http-port", 8082, "HTTP port for the dicedb server")
-	flag.IntVar(&config.WebsocketPort, "websocket-port", 8379, "Websocket port for the dicedb server")
-	flag.IntVar(&config.NumShards, "num-shards", -1, "number of shards to create. default = number of cores")
+	flag.StringVar(&config.Host, "host", "0.0.0.0", "host for the DiceDB server")
+
+	flag.IntVar(&config.Port, "port", 7379, "port for the DiceDB server")
+
+	flag.IntVar(&config.HTTPPort, "http-port", 7380, "port for accepting requets over HTTP")
+	flag.BoolVar(&config.EnableHTTP, "enable-http", false, "enable DiceDB to listen, accept, and process HTTP")
+
+	flag.IntVar(&config.WebsocketPort, "websocket-port", 7381, "port for accepting requets over WebSocket")
+	flag.BoolVar(&config.EnableWebsocket, "enable-websocket", false, "enable DiceDB to listen, accept, and process WebSocket")
+
+	flag.BoolVar(&config.EnableMultiThreading, "enable-multithreading", false, "enable multithreading execution and leverage multiple CPU cores")
+	flag.IntVar(&config.NumShards, "num-shards", -1, "number shards to create. defaults to number of cores")
+
+	flag.BoolVar(&config.EnableWatch, "enable-watch", false, "enable support for .WATCH commands and real-time reactivity")
+	flag.BoolVar(&config.EnableProfiling, "enable-profiling", false, "enable profiling and capture critical metrics and traces in .prof files")
+
+	flag.StringVar(&config.DiceConfig.Logging.LogLevel, "log-level", "info", "log level, values: info, debug")
+
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
 	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the config file")
 	flag.StringVar(&config.FileLocation, "c", config.FileLocation, "file path of the config file")
 	flag.BoolVar(&config.InitConfigCmd, "init-config", false, "initialize a new config file")
-	flag.IntVar(&config.KeysLimit, "keys-limit", config.KeysLimit, "keys limit for the dicedb server. "+
+	flag.IntVar(&config.KeysLimit, "keys-limit", config.KeysLimit, "keys limit for the DiceDB server. "+
 		"This flag controls the number of keys each shard holds at startup. You can multiply this number with the "+
 		"total number of shard threads to estimate how much memory will be required at system start up.")
-	flag.BoolVar(&config.EnableProfiling, "enable-profiling", false, "enable profiling for the dicedb server")
-	flag.BoolVar(&config.EnableWatch, "enable-watch", false, "enable reactivity features which power the .WATCH commands")
 
 	flag.Parse()
 
@@ -50,13 +61,29 @@ func init() {
 
 	iid := observability.GetOrCreateInstanceID()
 	config.DiceConfig.InstanceID = iid
+
+	slog.SetDefault(logger.New())
 }
 
 func main() {
-	logr := logger.New(logger.Opts{WithTimestamp: true})
-	slog.SetDefault(logr)
+	fmt.Print(`
+██████╗ ██╗ ██████╗███████╗██████╗ ██████╗ 
+██╔══██╗██║██╔════╝██╔════╝██╔══██╗██╔══██╗
+██║  ██║██║██║     █████╗  ██║  ██║██████╔╝
+██║  ██║██║██║     ██╔══╝  ██║  ██║██╔══██╗
+██████╔╝██║╚██████╗███████╗██████╔╝██████╔╝
+╚═════╝ ╚═╝ ╚═════╝╚══════╝╚═════╝ ╚═════╝
 
-	go observability.Ping(logr)
+`)
+	slog.Info("starting DiceDB", slog.String("version", config.DiceDBVersion))
+	slog.Info("running with", slog.Int("port", config.Port))
+	slog.Info("running with", slog.Bool("enable-watch", config.EnableWatch))
+
+	if config.EnableProfiling {
+		slog.Info("running with", slog.Bool("enable-profiling", config.EnableProfiling))
+	}
+
+	go observability.Ping()
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -81,26 +108,26 @@ func main() {
 	// for parallel execution. Setting the maximum number of CPUs to the available
 	// core count ensures the application can make full use of all available hardware.
 	// If multithreading is not enabled, server will run on a single core.
-	var numCores int
+	var numShards int
 	if config.EnableMultiThreading {
-		numCores = runtime.NumCPU()
+		numShards = runtime.NumCPU()
 		if config.NumShards > 0 {
-			numCores = config.NumShards
+			numShards = config.NumShards
 		}
-		logr.Debug("The DiceDB server has started in multi-threaded mode.", slog.Int("number of cores", numCores))
+		slog.Info("running with", slog.String("mode", "multi-threaded"), slog.Int("num-shards", numShards))
 	} else {
-		numCores = 1
-		logr.Debug("The DiceDB server has started in single-threaded mode.")
+		numShards = 1
+		slog.Info("running with", slog.String("mode", "single-threaded"))
 	}
 
-	// The runtime.GOMAXPROCS(numCores) call limits the number of operating system
+	// The runtime.GOMAXPROCS(numShards) call limits the number of operating system
 	// threads that can execute Go code simultaneously to the number of CPU cores.
 	// This enables Go to run more efficiently, maximizing CPU utilization and
 	// improving concurrency performance across multiple goroutines.
-	runtime.GOMAXPROCS(numCores)
+	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	// Initialize the ShardManager
-	shardManager := shard.NewShardManager(uint8(numCores), queryWatchChan, cmdWatchChan, serverErrCh, logr)
+	shardManager := shard.NewShardManager(uint8(numShards), queryWatchChan, cmdWatchChan, serverErrCh)
 
 	wg := sync.WaitGroup{}
 
@@ -114,36 +141,40 @@ func main() {
 
 	if config.EnableMultiThreading {
 		if config.EnableProfiling {
-			stopProfiling, err := startProfiling(logr)
+			stopProfiling, err := startProfiling()
 			if err != nil {
-				logr.Error("Profiling could not be started", slog.Any("error", err))
+				slog.Error("Profiling could not be started", slog.Any("error", err))
 				sigs <- syscall.SIGKILL
 			}
 			defer stopProfiling()
 		}
 
 		workerManager := worker.NewWorkerManager(config.DiceConfig.Performance.MaxClients, shardManager)
-		respServer := resp.NewServer(shardManager, workerManager, cmdWatchChan, serverErrCh, logr)
+		respServer := resp.NewServer(shardManager, workerManager, cmdWatchChan, serverErrCh)
 		serverWg.Add(1)
-		go runServer(ctx, &serverWg, respServer, logr, serverErrCh)
+		go runServer(ctx, &serverWg, respServer, serverErrCh)
 	} else {
-		asyncServer := server.NewAsyncServer(shardManager, queryWatchChan, logr)
+		asyncServer := server.NewAsyncServer(shardManager, queryWatchChan)
 		if err := asyncServer.FindPortAndBind(); err != nil {
-			logr.Error("Error finding and binding port", slog.Any("error", err))
+			slog.Error("Error finding and binding port", slog.Any("error", err))
 			sigs <- syscall.SIGKILL
 		}
 
 		serverWg.Add(1)
-		go runServer(ctx, &serverWg, asyncServer, logr, serverErrCh)
+		go runServer(ctx, &serverWg, asyncServer, serverErrCh)
 
-		httpServer := server.NewHTTPServer(shardManager, logr)
-		serverWg.Add(1)
-		go runServer(ctx, &serverWg, httpServer, logr, serverErrCh)
+		if config.EnableHTTP {
+			httpServer := server.NewHTTPServer(shardManager)
+			serverWg.Add(1)
+			go runServer(ctx, &serverWg, httpServer, serverErrCh)
+		}
 	}
 
-	websocketServer := server.NewWebSocketServer(shardManager, config.WebsocketPort, logr)
-	serverWg.Add(1)
-	go runServer(ctx, &serverWg, websocketServer, logr, serverErrCh)
+	if config.EnableWebsocket {
+		websocketServer := server.NewWebSocketServer(shardManager, config.WebsocketPort)
+		serverWg.Add(1)
+		go runServer(ctx, &serverWg, websocketServer, serverErrCh)
+	}
 
 	wg.Add(1)
 	go func() {
@@ -169,26 +200,27 @@ func main() {
 	cancel()
 
 	wg.Wait()
-	logr.Debug("Server has shut down gracefully")
 }
 
-func runServer(ctx context.Context, wg *sync.WaitGroup, srv abstractserver.AbstractServer, logr *slog.Logger, errCh chan<- error) {
+func runServer(ctx context.Context, wg *sync.WaitGroup, srv abstractserver.AbstractServer, errCh chan<- error) {
 	defer wg.Done()
 	if err := srv.Run(ctx); err != nil {
 		switch {
 		case errors.Is(err, context.Canceled):
-			logr.Debug(fmt.Sprintf("%T was canceled", srv))
+			slog.Debug(fmt.Sprintf("%T was canceled", srv))
 		case errors.Is(err, diceerrors.ErrAborted):
-			logr.Debug(fmt.Sprintf("%T received abort command", srv))
+			slog.Debug(fmt.Sprintf("%T received abort command", srv))
+		case errors.Is(err, http.ErrServerClosed):
+			slog.Debug(fmt.Sprintf("%T received abort command", srv))
 		default:
-			logr.Error(fmt.Sprintf("%T error", srv), slog.Any("error", err))
+			slog.Error(fmt.Sprintf("%T error", srv), slog.Any("error", err))
 		}
 		errCh <- err
 	} else {
-		logr.Debug(fmt.Sprintf("%T stopped without error", srv))
+		slog.Debug("bye.")
 	}
 }
-func startProfiling(logr *slog.Logger) (func(), error) {
+func startProfiling() (func(), error) {
 	// Start CPU profiling
 	cpuFile, err := os.Create("cpu.prof")
 	if err != nil {
@@ -239,7 +271,7 @@ func startProfiling(logr *slog.Logger) (func(), error) {
 		// Write heap profile
 		runtime.GC()
 		if err := pprof.WriteHeapProfile(memFile); err != nil {
-			logr.Warn("could not write memory profile", slog.Any("error", err))
+			slog.Warn("could not write memory profile", slog.Any("error", err))
 		}
 
 		memFile.Close()
@@ -247,10 +279,10 @@ func startProfiling(logr *slog.Logger) (func(), error) {
 		// Write block profile
 		blockFile, err := os.Create("block.prof")
 		if err != nil {
-			logr.Warn("could not create block profile", slog.Any("error", err))
+			slog.Warn("could not create block profile", slog.Any("error", err))
 		} else {
 			if err := pprof.Lookup("block").WriteTo(blockFile, 0); err != nil {
-				logr.Warn("could not write block profile", slog.Any("error", err))
+				slog.Warn("could not write block profile", slog.Any("error", err))
 			}
 			blockFile.Close()
 		}
