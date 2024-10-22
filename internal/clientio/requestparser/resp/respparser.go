@@ -33,16 +33,14 @@ var CRLF = []byte{'\r', '\n'}
 
 // Parser is responsible for parsing RESP protocol data
 type Parser struct {
-	data   []byte
-	pos    int
-	logger *slog.Logger
+	data []byte
+	pos  int
 }
 
 // NewParser creates a new RESP parser
-func NewParser(l *slog.Logger) *Parser {
+func NewParser() *Parser {
 	return &Parser{
-		pos:    0,
-		logger: l,
+		pos: 0,
 	}
 }
 
@@ -76,7 +74,7 @@ func (p *Parser) parseCommand() (*cmd.DiceDBCmd, error) {
 	// A Dice command should always be an array as it follows RESP2 specifications
 	elements, err := p.parse()
 	if err != nil {
-		p.logger.Error("error while parsing command", slog.Any("cmd", string(p.data)), slog.Any("error", err))
+		slog.Error("error while parsing command", slog.Any("cmd", string(p.data)), slog.Any("error", err))
 		return nil, fmt.Errorf("error parsing command: %w", err)
 	}
 

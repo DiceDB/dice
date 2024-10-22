@@ -1,11 +1,8 @@
 package respparser
 
 import (
-	"log/slog"
 	"reflect"
 	"testing"
-
-	"github.com/dicedb/dice/mocks"
 
 	"github.com/dicedb/dice/internal/cmd"
 )
@@ -127,8 +124,7 @@ func TestParser_Parse(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := slog.New(mocks.SlogNoopHandler{})
-			p := NewParser(l)
+			p := NewParser()
 			got, err := p.Parse([]byte(tt.input))
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Parser.Parse() error = %v, wantErr %v", err, tt.wantErr)

@@ -15,8 +15,7 @@ import (
 )
 
 var testServerOptions = commands.TestServerOptions{
-	Port:   8740,
-	Logger: slog.Default(),
+	Port: 8740,
 }
 
 func TestAbortCommand(t *testing.T) {
@@ -100,11 +99,11 @@ func TestServerRestartAfterAbort(t *testing.T) {
 
 	// wait for the server to shut down
 	time.Sleep(2 * time.Second)
-	testServerOptions.Logger.Info("Wait completed for server shutdown")
+	slog.Info("Wait completed for server shutdown")
 
 	wg.Wait()
 
-	testServerOptions.Logger.Info("Restarting server after abort for server_abort_test")
+	slog.Info("Restarting server after abort for server_abort_test")
 	// restart server
 	ctx2, cancel2 := context.WithCancel(context.Background())
 	t.Cleanup(cancel2)
