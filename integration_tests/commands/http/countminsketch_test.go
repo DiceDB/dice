@@ -4,7 +4,7 @@ import (
 	"log"
 	"testing"
 
-	"gotest.tools/v3/assert"
+	assert "github.com/stretchr/testify/assert"
 )
 
 func TestCMSInitByDim(t *testing.T) {
@@ -206,7 +206,7 @@ func TestCMSInfo(t *testing.T) {
 					log.Println(tc.expected[i])
 					assert.Equal(t, tc.expected[i], err.Error(), "Error message mismatch for cmd %s", cmd)
 				} else {
-					assert.DeepEqual(t, tc.expected[i], result)
+					assert.Equal(t, tc.expected[i], result)
 				}
 			}
 		})
@@ -281,7 +281,7 @@ func TestCMSIncrBy(t *testing.T) {
 					log.Println(tc.expected[i])
 					assert.Equal(t, tc.expected[i], err.Error(), "Error message mismatch for cmd %s", cmd)
 				} else {
-					assert.DeepEqual(t, tc.expected[i], result)
+					assert.Equal(t, tc.expected[i], result)
 				}
 			}
 		})
@@ -333,7 +333,7 @@ func TestCMSQuery(t *testing.T) {
 					log.Println(tc.expected[i])
 					assert.Equal(t, tc.expected[i], err.Error(), "Error message mismatch for cmd %s", cmd)
 				} else {
-					assert.DeepEqual(t, tc.expected[i], result)
+					assert.Equal(t, tc.expected[i], result)
 				}
 			}
 		})
@@ -464,7 +464,7 @@ func TestCMSMerge(t *testing.T) {
 					log.Println(tc.expected[i])
 					assert.Equal(t, tc.expected[i], err.Error(), "Error message mismatch for cmd %s", cmd)
 				} else {
-					assert.DeepEqual(t, tc.expected[i], result)
+					assert.Equal(t, tc.expected[i], result)
 				}
 			}
 		})

@@ -298,7 +298,7 @@ func evalCMSMerge(args []string, store *dstore.Store) *EvalResponse {
 		destination.mergeMatrices(sources, weights, args[0], keys)
 
 		return &EvalResponse{
-			Result: clientio.RespOK,
+			Result: clientio.OK,
 			Error:  nil,
 		}
 	}
@@ -334,7 +334,7 @@ func evalCMSMerge(args []string, store *dstore.Store) *EvalResponse {
 	destination.mergeMatrices(sources, weights, args[0], keys)
 
 	return &EvalResponse{
-		Result: clientio.RespOK,
+		Result: clientio.OK,
 		Error:  nil,
 	}
 }
@@ -363,7 +363,7 @@ func evalCMSQuery(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	return &EvalResponse{
-		Result: clientio.Encode(results, false),
+		Result: results,
 		Error:  nil,
 	}
 }
@@ -414,7 +414,7 @@ func evalCMSIncrBy(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	return &EvalResponse{
-		Result: clientio.Encode(results, false),
+		Result: results,
 		Error:  nil,
 	}
 }
@@ -436,7 +436,7 @@ func evalCMSINFO(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	return &EvalResponse{
-		Result: clientio.Encode(cms.info(), false),
+		Result: cms.info(),
 		Error:  nil,
 	}
 }
@@ -466,7 +466,7 @@ func evalCMSINITBYDIM(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	return &EvalResponse{
-		Result: clientio.RespOK,
+		Result: clientio.OK,
 		Error:  nil,
 	}
 }
@@ -498,7 +498,7 @@ func evalCMSINITBYPROB(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	return &EvalResponse{
-		Result: clientio.RespOK,
+		Result: clientio.OK,
 		Error:  nil,
 	}
 }

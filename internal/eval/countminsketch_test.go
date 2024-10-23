@@ -166,7 +166,7 @@ func testCMSInfo(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"cms_key2"},
 			migratedOutput: EvalResponse{
-				Result: clientio.Encode([]interface{}{"width", 1000, "depth", 5, "count", 0}, false),
+				Result: []interface{}{"width", uint64(1000), "depth", uint64(5), "count", uint64(0)},
 				Error:  nil,
 			},
 		},
@@ -199,7 +199,7 @@ func testCMSIncrBy(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"cms_key3", "test", "10", "test1", "10"},
 			migratedOutput: EvalResponse{
-				Result: clientio.Encode([]uint64{10, 10}, false),
+				Result: []uint64{10, 10},
 				Error:  nil,
 			},
 		},
@@ -260,7 +260,7 @@ func testCMSQuery(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"cms_key4", "test", "test1"},
 			migratedOutput: EvalResponse{
-				Result: clientio.Encode([]uint64{10000, 100}, false),
+				Result: []uint64{10000, 100},
 				Error:  nil,
 			},
 		},
@@ -391,7 +391,7 @@ func testCMSMerge(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"cms_key5", "1", "test"},
 			migratedOutput: EvalResponse{
-				Result: clientio.RespOK,
+				Result: clientio.OK,
 				Error:  nil,
 			},
 		},
@@ -411,7 +411,7 @@ func testCMSMerge(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"cms_key5", "2", "test", "test1", "WEIGHTS", "1", "2"},
 			migratedOutput: EvalResponse{
-				Result: clientio.RespOK,
+				Result: clientio.OK,
 				Error:  nil,
 			},
 		},
