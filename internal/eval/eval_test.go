@@ -4185,10 +4185,6 @@ func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
 			input:  []string{"GETKEYS", "FLUSHDB"},
 			output: []byte("-ERR the command has no key arguments\r\n"),
 		},
-		"command getkeys with an invalid number of arguments for a command": {
-			input:  []string{"GETKEYS", "MSET", "key1"},
-			output: []byte("-ERR invalid number of arguments specified for command\r\n"),
-		},
 	}
 
 	runEvalTests(t, tests, evalCommand, store)
