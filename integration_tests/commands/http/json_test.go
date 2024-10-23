@@ -1070,49 +1070,49 @@ func TestJsonObjLen(t *testing.T) {
 			expected: []interface{}{"ERR Path '$[1' does not exist"},
 		},
 		{
-			name:     "JSON.OBJLEN with legacy path - root",
+			name: "JSON.OBJLEN with legacy path - root",
 			commands: []HTTPCommand{
 				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": "."}},
 			},
 			expected: []interface{}{3.0},
 		},
 		{
-			name:     "JSON.OBJLEN with legacy path - inner existing path",
+			name: "JSON.OBJLEN with legacy path - inner existing path",
 			commands: []HTTPCommand{
 				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": ".partner2"}},
 			},
 			expected: []interface{}{2.0},
 		},
 		{
-			name:     "JSON.OBJLEN with legacy path - inner existing path v2",
+			name: "JSON.OBJLEN with legacy path - inner existing path v2",
 			commands: []HTTPCommand{
 				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": "partner"}},
 			},
 			expected: []interface{}{2.0},
 		},
 		{
-			name:     "JSON.OBJLEN with legacy path - inner non-existent path",
+			name: "JSON.OBJLEN with legacy path - inner non-existent path",
 			commands: []HTTPCommand{
 				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": ".idonotexist"}},
 			},
 			expected: []interface{}{nil},
 		},
 		{
-			name:     "JSON.OBJLEN with legacy path - inner non-existent path v2",
+			name: "JSON.OBJLEN with legacy path - inner non-existent path v2",
 			commands: []HTTPCommand{
 				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": "idonotexist"}},
 			},
 			expected: []interface{}{nil},
 		},
 		{
-			name:     "JSON.OBJLEN with legacy path - inner existent path with nonJSON object",
+			name: "JSON.OBJLEN with legacy path - inner existent path with nonJSON object",
 			commands: []HTTPCommand{
 				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": ".name"}},
 			},
 			expected: []interface{}{"WRONGTYPE Operation against a key holding the wrong kind of value"},
 		},
 		{
-			name:     "JSON.OBJLEN with legacy path - inner existent path recursive object",
+			name: "JSON.OBJLEN with legacy path - inner existent path recursive object",
 			commands: []HTTPCommand{
 				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": "..partner"}},
 			},
@@ -1239,7 +1239,7 @@ func TestJsonARRINSERT(t *testing.T) {
 
 	testCases := []TestCase{
 		{
-			name: "JSON.ARRINSERT index out if bounds",
+			name: "JSON.ARRINSERT index out of bounds",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": a}},
 				{Command: "JSON.ARRINSERT", Body: map[string]interface{}{"key": "k", "path": "$", "index": 4, "value": 3}},
@@ -1254,7 +1254,7 @@ func TestJsonARRINSERT(t *testing.T) {
 				{Command: "JSON.ARRINSERT", Body: map[string]interface{}{"key": "k", "path": "$", "index": "ss", "value": 3}},
 				{Command: "JSON.GET", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"OK", "ERR Couldn't parse as integer", "[1,2]"},
+			expected: []interface{}{"OK", "ERR value is not an integer or out of range", "[1,2]"},
 		},
 		{
 			name: "JSON.ARRINSERT with positive index in root path",
