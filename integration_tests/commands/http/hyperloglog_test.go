@@ -116,7 +116,7 @@ func TestHyperLogLogCommands(t *testing.T) {
 				{Command: "SET", Body: map[string]interface{}{"key": "INVALID_HLL", "value": "1"}},
 				{Command: "PFMERGE", Body: map[string]interface{}{"key": "INVALID_HLL"}},
 			},
-			expected: []interface{}{float64(1), "OK", "ERR -WRONGTYPE Key is not a valid HyperLogLog string value."},
+			expected: []interface{}{float64(1), "OK", "WRONGTYPE Key is not a valid HyperLogLog string value"},
 			delays:   []time.Duration{0, 0, 0},
 		},
 		{
@@ -126,7 +126,7 @@ func TestHyperLogLogCommands(t *testing.T) {
 				{Command: "SET", Body: map[string]interface{}{"key": "INVALID_SRC_HLL", "value": "1"}},
 				{Command: "PFMERGE", Body: map[string]interface{}{"keys": [...]string{"HLL", "INVALID_SRC_HLL"}}},
 			},
-			expected: []interface{}{float64(1), "OK", "ERR -WRONGTYPE Key is not a valid HyperLogLog string value."},
+			expected: []interface{}{float64(1), "OK", "WRONGTYPE Key is not a valid HyperLogLog string value"},
 			delays:   []time.Duration{0, 0, 0},
 		},
 	}

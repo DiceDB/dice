@@ -56,7 +56,6 @@ type (
 		WatchList    sync.Map                          // WatchList is a map of query string to their respective clients, type: map[string]*sync.Map[int]struct{}
 		QueryCache   common.ITable[string, CacheStore] // QueryCache is a map of fingerprints to their respective data caches
 		QueryCacheMu sync.RWMutex
-		logger       *slog.Logger
 	}
 
 	HTTPQwatchResponse struct {
@@ -107,13 +106,12 @@ func NewCacheStore() CacheStore {
 }
 
 // NewQueryManager initializes a new Manager.
-func NewQueryManager(logger *slog.Logger) *Manager {
+func NewQueryManager() *Manager {
 	QuerySubscriptionChan = make(chan QuerySubscription)
 	AdhocQueryChan = make(chan AdhocQuery, 1000)
 	return &Manager{
 		WatchList:  sync.Map{},
 		QueryCache: NewQueryCacheStore(),
-		logger:     logger,
 	}
 }
 
@@ -186,7 +184,7 @@ func (m *Manager) processWatchEvent(event dstore.QueryWatchEvent) {
 
 		query, err := sql.ParseQuery(queryString)
 		if err != nil {
-			m.logger.Error(
+			slog.Error(
 				"error parsing query",
 				slog.String("query", queryString),
 			)
@@ -205,7 +203,7 @@ func (m *Manager) processWatchEvent(event dstore.QueryWatchEvent) {
 
 		queryResult, err := m.runQuery(&query)
 		if err != nil {
-			m.logger.Error(err.Error())
+			slog.Error(err.Error())
 			return true
 		}
 
@@ -221,7 +219,7 @@ func (m *Manager) updateQueryCache(queryFingerprint string, event dstore.QueryWa
 
 	store, ok := m.QueryCache.Get(queryFingerprint)
 	if !ok {
-		m.logger.Warn("Fingerprint not found in CacheStore", slog.String("fingerprint", queryFingerprint))
+		slog.Warn("Fingerprint not found in CacheStore", slog.String("fingerprint", queryFingerprint))
 		return
 	}
 
@@ -231,7 +229,7 @@ func (m *Manager) updateQueryCache(queryFingerprint string, event dstore.QueryWa
 	case dstore.Del:
 		store.Delete(event.Key)
 	default:
-		m.logger.Warn("Unknown operation", slog.String("operation", event.Operation))
+		slog.Warn("Unknown operation", slog.String("operation", event.Operation))
 	}
 }
 
@@ -261,7 +259,7 @@ func (m *Manager) notifyClients(query *sql.DSQLQuery, clients *sync.Map, queryRe
 			// This is a regular client, use clientFD to send the response
 			go m.sendWithRetry(query, clientFD, encodedResult)
 		default:
-			m.logger.Warn("Invalid Client, response channel invalid.")
+			slog.Warn("Invalid Client, response channel invalid.")
 		}
 
 		return true
@@ -285,7 +283,7 @@ func (m *Manager) sendWithRetry(query *sql.DSQLQuery, clientFD int, data []byte)
 			continue
 		}
 
-		m.logger.Error(
+		slog.Error(
 			"error writing to client",
 			slog.Int("client", clientFD),
 			slog.Any("error", err),
@@ -349,12 +347,12 @@ func (m *Manager) removeWatcher(query *sql.DSQLQuery, clientIdentifier ClientIde
 	if clients, ok := m.WatchList.Load(queryString); ok {
 		if qwatchClientChan != nil {
 			clients.(*sync.Map).Delete(clientIdentifier)
-			m.logger.Debug("HTTP client no longer watching query",
+			slog.Debug("HTTP client no longer watching query",
 				slog.Any("clientIdentifierId", clientIdentifier.ClientIdentifierID),
 				slog.Any("queryString", queryString))
 		} else {
 			clients.(*sync.Map).Delete(clientIdentifier)
-			m.logger.Debug("client no longer watching query",
+			slog.Debug("client no longer watching query",
 				slog.Int("client", clientIdentifier.ClientIdentifierID),
 				slog.String("query", queryString))
 		}
@@ -368,7 +366,7 @@ func (m *Manager) removeWatcher(query *sql.DSQLQuery, clientIdentifier ClientIde
 			m.QueryCache.Delete(query.Fingerprint)
 			m.QueryCacheMu.Unlock()
 
-			m.logger.Debug("no longer watching query", slog.String("query", queryString))
+			slog.Debug("no longer watching query", slog.String("query", queryString))
 		}
 	}
 }

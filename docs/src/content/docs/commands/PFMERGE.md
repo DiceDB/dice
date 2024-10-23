@@ -34,7 +34,7 @@ PFMERGE destkey sourcekey [sourcekey ...]
 - The command retrieves the HyperLogLog data structures from the specified `sourcekey` keys.
 - These `sourcekey` keys are merged into a single HyperLogLog and stored in the `destkey`.
 - If the `sourcekey` keys are not valid HyperLogLogs, an error is returned.
-  
+
 
 ## Errors
 
@@ -95,6 +95,6 @@ if a `sourcekey` exists and is not of type HyperLogLog, the command will result 
 
 ```sh
 127.0.0.1:7379> PFMERGE hll_merged not_hyperLogLog
-(error) WRONGTYPE Key is not a valid HyperLogLog string value.
+(error) WRONGTYPE Key is not a valid HyperLogLog string value
 
 ```
