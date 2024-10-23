@@ -47,13 +47,13 @@ The `SLEEP` command can raise errors under the following conditions:
    - Error Message: `ERR value is not an integer or out of range`
    - Occurs if the `seconds` parameter is not a valid integer.
 
-## Examples
+## Example Usage
 
 ### Example 1: Basic Usage
 
 Pause the client for 5 seconds.
 
-```shell
+```bash
 127.0.0.1:7379> SLEEP 5
 OK
 ```
@@ -62,7 +62,7 @@ OK
 
 Attempt to call `SLEEP` without specifying the `seconds` parameter.
 
-```shell
+```bash
 127.0.0.1:7379> SLEEP
 (error) ERR wrong number of arguments for 'sleep' command
 ```
@@ -71,7 +71,7 @@ Attempt to call `SLEEP` without specifying the `seconds` parameter.
 
 Attempt to call `SLEEP` with a non-integer parameter.
 
-```shell
+```bash
 127.0.0.1:7379> SLEEP abc
 (error) ERR value is not an integer or out of range
 ```
