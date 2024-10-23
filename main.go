@@ -153,7 +153,6 @@ func printConfigTable() {
 }
 
 func main() {
-
 	printSplash()
 	printConfigTable()
 

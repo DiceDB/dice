@@ -170,7 +170,6 @@ func (w *BaseWorker) executeCommandHandler(execCtx context.Context, errChan chan
 				slog.Debug("Error executing for worker", slog.String("workerID", w.id), slog.Any("error", err))
 			}
 		}
-
 	}
 
 	err := w.executeCommand(execCtx, cmds[0], isWatchNotification)
