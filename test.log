@@ -1,6 +1,6 @@
 go test -v -race -count=1 -p=1 ./integration_tests/...
 Starting the test server on port 8739
-2024/10/24 00:04:06 WARN running without authentication, consider setting a password
+2024/10/24 01:01:04 WARN running without authentication, consider setting a password
 === RUN   TestBitOp
 --- PASS: TestBitOp (0.01s)
 === RUN   TestBitCount
@@ -164,7 +164,7 @@ Starting the test server on port 8739
     --- PASS: TestBitOpsString/BITOP_XOR_of_keys_containing_strings_and_a_bytearray_and_get_the_destkey (0.00s)
     --- PASS: TestBitOpsString/BITOP_XOR_of_keys_containing_integers_and_get_the_destkey (0.00s)
 === RUN   TestBitfield
-2024/10/24 00:04:08 INFO FLUSHDB called args=[]
+2024/10/24 01:01:07 INFO FLUSHDB called args=[]
 === RUN   TestBitfield/BITFIELD_Arity_Check
 === RUN   TestBitfield/BITFIELD_on_unsupported_type_of_SET
 === RUN   TestBitfield/BITFIELD_on_unsupported_type_of_JSON
@@ -184,7 +184,7 @@ Starting the test server on port 8739
 === RUN   TestBitfield/BITFIELD_signed_overflow_sat
 === RUN   TestBitfield/BITFIELD_regression_1
 === RUN   TestBitfield/BITFIELD_regression_2
-2024/10/24 00:04:08 INFO FLUSHDB called args=[]
+2024/10/24 01:01:07 INFO FLUSHDB called args=[]
 --- PASS: TestBitfield (0.02s)
     --- PASS: TestBitfield/BITFIELD_Arity_Check (0.00s)
     --- PASS: TestBitfield/BITFIELD_on_unsupported_type_of_SET (0.00s)
@@ -206,7 +206,7 @@ Starting the test server on port 8739
     --- PASS: TestBitfield/BITFIELD_regression_1 (0.00s)
     --- PASS: TestBitfield/BITFIELD_regression_2 (0.00s)
 === RUN   TestBitfieldRO
-2024/10/24 00:04:08 INFO FLUSHDB called args=[]
+2024/10/24 01:01:07 INFO FLUSHDB called args=[]
 === RUN   TestBitfieldRO/BITFIELD_RO_Arity_Check
 === RUN   TestBitfieldRO/BITFIELD_RO_on_unsupported_type_of_SET
 === RUN   TestBitfieldRO/BITFIELD_RO_on_unsupported_type_of_JSON
@@ -215,7 +215,7 @@ Starting the test server on port 8739
 === RUN   TestBitfieldRO/BITFIELD_RO_with_syntax_error
 === RUN   TestBitfieldRO/BITFIELD_RO_with_invalid_bitfield_type
 === RUN   TestBitfieldRO/BITFIELD_RO_with_only_key_as_argument
-2024/10/24 00:04:08 INFO FLUSHDB called args=[]
+2024/10/24 01:01:07 INFO FLUSHDB called args=[]
 --- PASS: TestBitfieldRO (0.00s)
     --- PASS: TestBitfieldRO/BITFIELD_RO_Arity_Check (0.00s)
     --- PASS: TestBitfieldRO/BITFIELD_RO_on_unsupported_type_of_SET (0.00s)
@@ -326,10 +326,10 @@ Starting the test server on port 8739
     --- PASS: TestCopy/COPY_with_JSON_array (0.00s)
     --- PASS: TestCopy/COPY_with_JSON_simple_JSON (0.01s)
     --- PASS: TestCopy/COPY_with_no_expiry (0.00s)
-    --- PASS: TestCopy/COPY_with_expiry_making_sure_copy_expires (7.00s)
+    --- PASS: TestCopy/COPY_with_expiry_making_sure_copy_expires (7.01s)
 === RUN   TestDBSIZE
 === RUN   TestDBSIZE/DBSIZE
-2024/10/24 00:04:15 INFO FLUSHDB called args=[]
+2024/10/24 01:01:14 INFO FLUSHDB called args=[]
 === RUN   TestDBSIZE/DBSIZE_with_repeative_keys_in_MSET/SET
 === RUN   TestDBSIZE/DBSIZE_with_expired_keys
 === RUN   TestDBSIZE/DBSIZE_with_deleted_keys
@@ -349,7 +349,7 @@ Starting the test server on port 8739
     --- PASS: TestDel/DEL_with_key_not_set (0.00s)
     --- PASS: TestDel/DEL_with_no_keys_or_arguments (0.00s)
 === RUN   TestLPush
-rand seed: 1729708457824853725=== RUN   TestLPush/LPUSH
+rand seed: 1729711876093813876=== RUN   TestLPush/LPUSH
 === RUN   TestLPush/LPUSH_normal_values
 === RUN   TestLPush/LPUSH_edge_values
 --- PASS: TestLPush (0.01s)
@@ -357,7 +357,7 @@ rand seed: 1729708457824853725=== RUN   TestLPush/LPUSH
     --- PASS: TestLPush/LPUSH_normal_values (0.00s)
     --- PASS: TestLPush/LPUSH_edge_values (0.00s)
 === RUN   TestRPush
-rand seed: 1729708457834669389=== RUN   TestRPush/RPUSH
+rand seed: 1729711876102788765=== RUN   TestRPush/RPUSH
 === RUN   TestRPush/RPUSH_normal_values
 === RUN   TestRPush/RPUSH_edge_values
 --- PASS: TestRPush (0.01s)
@@ -365,7 +365,7 @@ rand seed: 1729708457834669389=== RUN   TestRPush/RPUSH
     --- PASS: TestRPush/RPUSH_normal_values (0.00s)
     --- PASS: TestRPush/RPUSH_edge_values (0.00s)
 === RUN   TestLPushLPop
-rand seed: 1729708457843714062=== RUN   TestLPushLPop/LPUSH_LPOP
+rand seed: 1729711876112198092=== RUN   TestLPushLPop/LPUSH_LPOP
 === RUN   TestLPushLPop/LPUSH_LPOP_normal_values
 === RUN   TestLPushLPop/LPUSH_LPOP_edge_values
 --- PASS: TestLPushLPop (0.01s)
@@ -373,7 +373,7 @@ rand seed: 1729708457843714062=== RUN   TestLPushLPop/LPUSH_LPOP
     --- PASS: TestLPushLPop/LPUSH_LPOP_normal_values (0.00s)
     --- PASS: TestLPushLPop/LPUSH_LPOP_edge_values (0.00s)
 === RUN   TestLPushRPop
-rand seed: 1729708457853263002=== RUN   TestLPushRPop/LPUSH_RPOP
+rand seed: 1729711876120784304=== RUN   TestLPushRPop/LPUSH_RPOP
 === RUN   TestLPushRPop/LPUSH_RPOP_normal_values
 === RUN   TestLPushRPop/LPUSH_RPOP_edge_values
 --- PASS: TestLPushRPop (0.01s)
@@ -381,7 +381,7 @@ rand seed: 1729708457853263002=== RUN   TestLPushRPop/LPUSH_RPOP
     --- PASS: TestLPushRPop/LPUSH_RPOP_normal_values (0.00s)
     --- PASS: TestLPushRPop/LPUSH_RPOP_edge_values (0.00s)
 === RUN   TestRPushLPop
-rand seed: 1729708457861990621=== RUN   TestRPushLPop/RPUSH_LPOP
+rand seed: 1729711876129619770=== RUN   TestRPushLPop/RPUSH_LPOP
 === RUN   TestRPushLPop/RPUSH_LPOP_normal_values
 === RUN   TestRPushLPop/RPUSH_LPOP_edge_values
 --- PASS: TestRPushLPop (0.01s)
@@ -389,7 +389,7 @@ rand seed: 1729708457861990621=== RUN   TestRPushLPop/RPUSH_LPOP
     --- PASS: TestRPushLPop/RPUSH_LPOP_normal_values (0.00s)
     --- PASS: TestRPushLPop/RPUSH_LPOP_edge_values (0.00s)
 === RUN   TestRPushRPop
-rand seed: 1729708457871035275=== RUN   TestRPushRPop/RPUSH_RPOP
+rand seed: 1729711876138514367=== RUN   TestRPushRPop/RPUSH_RPOP
 === RUN   TestRPushRPop/RPUSH_RPOP_normal_values
 === RUN   TestRPushRPop/RPUSH_RPOP_edge_values
 --- PASS: TestRPushRPop (0.01s)
@@ -397,11 +397,11 @@ rand seed: 1729708457871035275=== RUN   TestRPushRPop/RPUSH_RPOP
     --- PASS: TestRPushRPop/RPUSH_RPOP_normal_values (0.00s)
     --- PASS: TestRPushRPop/RPUSH_RPOP_edge_values (0.00s)
 === RUN   TestLRPushLRPop
-rand seed: 1729708457879632693=== RUN   TestLRPushLRPop/L/RPush_L/RPop
+rand seed: 1729711876147614149=== RUN   TestLRPushLRPop/L/RPush_L/RPop
 --- PASS: TestLRPushLRPop (0.00s)
     --- PASS: TestLRPushLRPop/L/RPush_L/RPop (0.00s)
 === RUN   TestLLEN
-rand seed: 1729708457884199390=== RUN   TestLLEN/L/RPush_L/RPop
+rand seed: 1729711876151119925=== RUN   TestLLEN/L/RPush_L/RPop
 --- PASS: TestLLEN (0.00s)
     --- PASS: TestLLEN/L/RPush_L/RPop (0.00s)
 === RUN   TestDiscard
@@ -510,7 +510,7 @@ rand seed: 1729708457884199390=== RUN   TestLLEN/L/RPush_L/RPop
     --- PASS: TestExpiretime/EXPIRETIME_with_invalid_syntax (0.00s)
 === RUN   TestFLUSHDB
 === RUN   TestFLUSHDB/FLUSHDB
-2024/10/24 00:04:32 INFO FLUSHDB called args=[]
+2024/10/24 01:01:30 INFO FLUSHDB called args=[]
 --- PASS: TestFLUSHDB (0.00s)
     --- PASS: TestFLUSHDB/FLUSHDB (0.00s)
 === RUN   TestGet
@@ -525,7 +525,7 @@ rand seed: 1729708457884199390=== RUN   TestLLEN/L/RPush_L/RPop
 === RUN   TestGetDel/Getdel_with_value_created_from_Setbit
 === RUN   TestGetDel/GetDel_with_Set_object_should_return_wrong_type_error
 === RUN   TestGetDel/GetDel_with_JSON_object_should_return_wrong_type_error
---- PASS: TestGetDel (5.00s)
+--- PASS: TestGetDel (5.01s)
     --- PASS: TestGetDel/GetDel (0.00s)
     --- PASS: TestGetDel/GetDel_with_expiration,_checking_if_key_exist_and_is_already_expired,_then_it_should_return_null (3.00s)
     --- PASS: TestGetDel/GetDel_with_expiration,_checking_if_key_exist_and_is_not_yet_expired,_then_it_should_return_its_value (2.00s)
@@ -551,7 +551,7 @@ rand seed: 1729708457884199390=== RUN   TestLLEN/L/RPush_L/RPop
 === RUN   TestGetEx/GetEx_with_key_holding_JSON_type
 === RUN   TestGetEx/GetEx_with_key_holding_JSON_type_with_multiple_set_commands
 === RUN   TestGetEx/GetEx_with_key_holding_SET_type
---- PASS: TestGetEx (14.02s)
+--- PASS: TestGetEx (14.01s)
     --- PASS: TestGetEx/GetEx_Simple_Value (0.00s)
     --- PASS: TestGetEx/GetEx_Non-Existent_Key (0.00s)
     --- PASS: TestGetEx/GetEx_with_EX_option (2.00s)
@@ -868,7 +868,7 @@ rand seed: 1729708457884199390=== RUN   TestLLEN/L/RPush_L/RPop
 === RUN   TestJSONNumIncrBy/incrby_at_non_root_path
 === RUN   TestJSONNumIncrBy/incrby_at_root_path
 === RUN   TestJSONNumIncrBy/incrby_at_root_path#01
---- PASS: TestJSONNumIncrBy (0.01s)
+--- PASS: TestJSONNumIncrBy (0.00s)
     --- PASS: TestJSONNumIncrBy/Invalid_number_of_arguments (0.00s)
     --- PASS: TestJSONNumIncrBy/Non-existent_key (0.00s)
     --- PASS: TestJSONNumIncrBy/Invalid_value_of_increment (0.00s)
@@ -883,7 +883,7 @@ rand seed: 1729708457884199390=== RUN   TestLLEN/L/RPush_L/RPop
 === RUN   TestJsonARRINSERT/JSON.ARRINSERT_with_negative_index_in_root_path
 === RUN   TestJsonARRINSERT/JSON.ARRINSERT_nested_with_positive_index
 === RUN   TestJsonARRINSERT/JSON.ARRINSERT_nested_with_negative_index
---- PASS: TestJsonARRINSERT (0.01s)
+--- PASS: TestJsonARRINSERT (0.00s)
     --- PASS: TestJsonARRINSERT/JSON.ARRINSERT_index_out_of_bounds (0.00s)
     --- PASS: TestJsonARRINSERT/JSON.ARRINSERT_index_is_not_integer (0.00s)
     --- PASS: TestJsonARRINSERT/JSON.ARRINSERT_with_positive_index_in_root_path (0.00s)
@@ -935,15 +935,15 @@ rand seed: 1729708457884199390=== RUN   TestLLEN/L/RPush_L/RPop
     --- PASS: TestJsonARRTRIM/JSON.ARRTRIM_negative_start_larger_than_stop (0.00s)
 === RUN   TestJsonSTRAPPEND
 === RUN   TestJsonSTRAPPEND/STRAPPEND_to_nested_string
-2024/10/24 00:04:56 INFO FLUSHDB called args=[]
+2024/10/24 01:01:54 INFO FLUSHDB called args=[]
 === RUN   TestJsonSTRAPPEND/STRAPPEND_to_multiple_paths
-2024/10/24 00:04:56 INFO FLUSHDB called args=[]
+2024/10/24 01:01:54 INFO FLUSHDB called args=[]
 === RUN   TestJsonSTRAPPEND/STRAPPEND_to_non-string
-2024/10/24 00:04:56 INFO FLUSHDB called args=[]
+2024/10/24 01:01:54 INFO FLUSHDB called args=[]
 === RUN   TestJsonSTRAPPEND/STRAPPEND_with_empty_string
-2024/10/24 00:04:56 INFO FLUSHDB called args=[]
+2024/10/24 01:01:54 INFO FLUSHDB called args=[]
 === RUN   TestJsonSTRAPPEND/STRAPPEND_to_non-existent_path
-2024/10/24 00:04:56 INFO FLUSHDB called args=[]
+2024/10/24 01:01:54 INFO FLUSHDB called args=[]
 --- PASS: TestJsonSTRAPPEND (0.00s)
     --- PASS: TestJsonSTRAPPEND/STRAPPEND_to_nested_string (0.00s)
     --- PASS: TestJsonSTRAPPEND/STRAPPEND_to_multiple_paths (0.00s)
@@ -1043,7 +1043,7 @@ OBJECT ENCODING btreekey btree btree
 === RUN   TestObjectCommand/Object_Encoding_check_for_setstr
 SADD skey one two three 3 3
 OBJECT ENCODING skey setstr setstr
-2024/10/24 00:05:01 INFO FLUSHDB called args=[]
+2024/10/24 01:01:59 INFO FLUSHDB called args=[]
 --- PASS: TestObjectCommand (5.01s)
     --- PASS: TestObjectCommand/Object_Idletime (5.00s)
     --- PASS: TestObjectCommand/Object_Encoding_check_for_raw (0.00s)
@@ -1059,33 +1059,36 @@ OBJECT ENCODING skey setstr setstr
 === RUN   TestQWatchUnwatch
 --- PASS: TestQWatchUnwatch (0.02s)
 === RUN   TestQWATCH
-2024/10/24 00:05:01 ERROR connection reset by peer
-2024/10/24 00:05:01 ERROR error writing to client client=24 error="bad file descriptor"
-2024/10/24 00:05:01 WARN Fingerprint not found in CacheStore fingerprint=f_1414454935579084591
-2024/10/24 00:05:01 ERROR fingerprint was not found in the cache: f_1414454935579084591
-2024/10/24 00:05:01 WARN connection reset
-2024/10/24 00:05:01 WARN connection reset
+2024/10/24 01:01:59 ERROR error writing to client client=24 error="connection reset by peer"
+2024/10/24 01:01:59 ERROR broken pipe
+2024/10/24 01:01:59 WARN connection reset
+2024/10/24 01:01:59 WARN connection reset
 --- PASS: TestQWATCH (0.42s)
-2024/10/24 00:05:01 WARN connection reset
+2024/10/24 01:01:59 WARN connection reset
 === RUN   TestQWATCHWithSDK
-redis: 2024/10/24 00:05:02 qwatch.go:156: redis: discarding bad QWatch connection: read tcp 127.0.0.1:54264->127.0.0.1:8739: use of closed network connection
-redis: 2024/10/24 00:05:02 qwatch.go:156: redis: discarding bad QWatch connection: read tcp 127.0.0.1:54276->127.0.0.1:8739: use of closed network connection
-redis: 2024/10/24 00:05:02 qwatch.go:156: redis: discarding bad QWatch connection: read tcp 127.0.0.1:54292->127.0.0.1:8739: use of closed network connection
+redis: 2024/10/24 01:02:00 qwatch.go:156: redis: discarding bad QWatch connection: read tcp 127.0.0.1:58448->127.0.0.1:8739: use of closed network connection
+redis: 2024/10/24 01:02:00 qwatch.go:156: redis: discarding bad QWatch connection: read tcp 127.0.0.1:58454->127.0.0.1:8739: use of closed network connection
+redis: 2024/10/24 01:02:00 qwatch.go:156: redis: discarding bad QWatch connection: read tcp 127.0.0.1:58462->127.0.0.1:8739: use of closed network connection
 --- PASS: TestQWATCHWithSDK (0.27s)
 === RUN   TestQWatchWhere
-2024/10/24 00:05:02 WARN connection reset
-2024/10/24 00:05:02 WARN connection reset
+2024/10/24 01:02:00 WARN connection reset
+2024/10/24 01:02:00 WARN connection reset
+2024/10/24 01:02:00 WARN connection reset
 --- PASS: TestQWatchWhere (0.41s)
-2024/10/24 00:05:02 WARN connection reset
 === RUN   TestQwatchWithJSON
-2024/10/24 00:05:02 WARN Fingerprint not found in CacheStore fingerprint=f_1417946674181355822
-2024/10/24 00:05:02 ERROR fingerprint was not found in the cache: f_1417946674181355822
+2024/10/24 01:02:00 WARN Fingerprint not found in CacheStore fingerprint=f_7137981359670103785
+2024/10/24 01:02:00 ERROR fingerprint was not found in the cache: f_7137981359670103785
+2024/10/24 01:02:00 WARN Fingerprint not found in CacheStore fingerprint=f_4131985243653060489
+2024/10/24 01:02:00 ERROR fingerprint was not found in the cache: f_4131985243653060489
 --- PASS: TestQwatchWithJSON (0.11s)
 === RUN   TestQwatchWithJSONOrderBy
+2024/10/24 01:02:00 WARN Fingerprint not found in CacheStore fingerprint=f_7282661455000594216
+2024/10/24 01:02:00 ERROR fingerprint was not found in the cache: f_7282661455000594216
 --- PASS: TestQwatchWithJSONOrderBy (0.11s)
+2024/10/24 01:02:00 WARN connection reset
 === RUN   TestQwatchWhereWithJSON
-2024/10/24 00:05:02 WARN Fingerprint not found in CacheStore fingerprint=f_7137981359670103785
-2024/10/24 00:05:02 ERROR fingerprint was not found in the cache: f_7137981359670103785
+2024/10/24 01:02:00 WARN Fingerprint not found in CacheStore fingerprint=f_7137981359670103785
+2024/10/24 01:02:00 ERROR fingerprint was not found in the cache: f_7137981359670103785
 --- PASS: TestQwatchWhereWithJSON (0.11s)
 === RUN   TestSelect
 === RUN   TestSelect/SELECT_command_response
@@ -1244,9 +1247,9 @@ redis: 2024/10/24 00:05:02 qwatch.go:156: redis: discarding bad QWatch connectio
     --- PASS: TestType/TYPE_for_key_with_value_created_from_SETBIT_command (0.00s)
     --- PASS: TestType/TYPE_for_key_with_value_created_from_SETOP_command (0.00s)
 PASS
-ok  	github.com/dicedb/dice/integration_tests/commands/async	82.132s
+ok  	github.com/dicedb/dice/integration_tests/commands/async	82.111s
 Starting the test server on port 8083
-2024/10/24 00:05:30 INFO also listenting HTTP on port=8083
+2024/10/24 01:02:27 INFO also listenting HTTP on port=8083
 === RUN   TestAPPEND
 === RUN   TestAPPEND/APPEND_and_GET_a_new_Val
 === RUN   TestAPPEND/APPEND_to_an_exisiting_key_and_GET
@@ -1353,7 +1356,7 @@ Starting the test server on port 8083
 === RUN   TestCommandGetKeys/Abort_command
 === RUN   TestCommandGetKeys/Invalid_command
 === RUN   TestCommandGetKeys/Wrong_number_of_arguments
---- PASS: TestCommandGetKeys (0.01s)
+--- PASS: TestCommandGetKeys (0.00s)
     --- PASS: TestCommandGetKeys/Set_command (0.00s)
     --- PASS: TestCommandGetKeys/Get_command (0.00s)
     --- PASS: TestCommandGetKeys/TTL_command (0.00s)
@@ -1438,9 +1441,9 @@ Starting the test server on port 8083
 === RUN   TestExistsHttp/Test_EXISTS_command_with_multiple_keys
 === RUN   TestExistsHttp/Test_EXISTS_an_expired_key
 === RUN   TestExistsHttp/Test_EXISTS_with_multiple_keys_and_expired_key
---- PASS: TestExistsHttp (4.02s)
+--- PASS: TestExistsHttp (4.01s)
     --- PASS: TestExistsHttp/Test_EXISTS_command (0.00s)
-    --- PASS: TestExistsHttp/Test_EXISTS_command_with_multiple_keys (0.01s)
+    --- PASS: TestExistsHttp/Test_EXISTS_command_with_multiple_keys (0.00s)
     --- PASS: TestExistsHttp/Test_EXISTS_an_expired_key (2.00s)
     --- PASS: TestExistsHttp/Test_EXISTS_with_multiple_keys_and_expired_key (2.00s)
 === RUN   TestExpireHttp
@@ -1551,7 +1554,7 @@ Starting the test server on port 8083
 === RUN   TestGetEx/GetEx_with_key_holding_JSON_type
 === RUN   TestGetEx/GetEx_with_key_holding_JSON_type_with_multiple_set_commands
 === RUN   TestGetEx/GetEx_with_key_holding_SET_type
---- PASS: TestGetEx (19.05s)
+--- PASS: TestGetEx (19.04s)
     --- PASS: TestGetEx/GetEx_Simple_Value (0.00s)
     --- PASS: TestGetEx/GetEx_Non-Existent_Key (0.00s)
     --- PASS: TestGetEx/GetEx_with_EX_option (2.00s)
@@ -1593,27 +1596,712 @@ Starting the test server on port 8083
     --- PASS: TestGetSet/GETSET_error_when_key_exists_but_does_not_hold_a_string_value (0.00s)
 === RUN   TestHExists
 === RUN   TestHExists/HTTP_Check_if_field_exists_when_k_f_and_v_are_set
---- FAIL: TestHExists (0.00s)
+    hexists_test.go:68: assertion failed: 1 (tc.expected[i] float64) != WRONGTYPE Operation against a key holding the wrong kind of value (result string): Value mismatch for cmd {HSET map[field:f key:k value:v]}, expected 1, got WRONGTYPE Operation against a key holding the wrong kind of value
+=== RUN   TestHExists/HTTP_Check_if_field_exists_when_k_exists_but_not_f_and_v
+    hexists_test.go:68: assertion failed: 1 (tc.expected[i] float64) != WRONGTYPE Operation against a key holding the wrong kind of value (result string): Value mismatch for cmd {HSET map[field:f1 key:k value:v]}, expected 1, got WRONGTYPE Operation against a key holding the wrong kind of value
+=== RUN   TestHExists/HTTP_Check_if_field_exists_when_no_k,f_and_v_exist
+    hexists_test.go:68: assertion failed: 0 (tc.expected[i] string) != ERR -WRONGTYPE Operation against a key holding the wrong kind of value (result string): Value mismatch for cmd {HEXISTS map[field:f key:k]}, expected 0, got ERR -WRONGTYPE Operation against a key holding the wrong kind of value
+--- FAIL: TestHExists (0.01s)
     --- FAIL: TestHExists/HTTP_Check_if_field_exists_when_k_f_and_v_are_set (0.00s)
-panic: runtime error: index out of range [0] with length 0 [recovered]
-	panic: runtime error: index out of range [0] with length 0
-
-goroutine 829 [running]:
-testing.tRunner.func1.2({0x235c4c0, 0xc0001c26a8})
-	/usr/local/go/src/testing/testing.go:1632 +0x3fc
-testing.tRunner.func1()
-	/usr/local/go/src/testing/testing.go:1635 +0x6b6
-panic({0x235c4c0?, 0xc0001c26a8?})
-	/usr/local/go/src/runtime/panic.go:785 +0x132
-github.com/dicedb/dice/integration_tests/commands/http.TestHExists.func1(0xc0001b5380)
-	/mnt/md0/github/dicedb/integration_tests/commands/http/hexists_test.go:59 +0x78a
-testing.tRunner(0xc0001b5380, 0xc000130150)
-	/usr/local/go/src/testing/testing.go:1690 +0x227
-created by testing.(*T).Run in goroutine 828
-	/usr/local/go/src/testing/testing.go:1743 +0x826
-FAIL	github.com/dicedb/dice/integration_tests/commands/http	57.530s
+    --- FAIL: TestHExists/HTTP_Check_if_field_exists_when_k_exists_but_not_f_and_v (0.00s)
+    --- FAIL: TestHExists/HTTP_Check_if_field_exists_when_no_k,f_and_v_exist (0.00s)
+=== RUN   TestHINCRBY
+=== RUN   TestHINCRBY/HINCRBY_Wrong_number_of_arguments_provided
+=== RUN   TestHINCRBY/HINCRBY_should_increment_when_key_doesn't_exist
+=== RUN   TestHINCRBY/HINCRBY_should_increment_when_key_exists_and_a_field_doesn't_exist
+=== RUN   TestHINCRBY/HINCRBY_should_increment_on_existing_key_and_field
+=== RUN   TestHINCRBY/HINCRBY_should_decrement_on_existing_key_and_field
+=== RUN   TestHINCRBY/HINCRBY_should_give_error_when_increment_field_is_greater_than_max_int64_field
+--- PASS: TestHINCRBY (0.00s)
+    --- PASS: TestHINCRBY/HINCRBY_Wrong_number_of_arguments_provided (0.00s)
+    --- PASS: TestHINCRBY/HINCRBY_should_increment_when_key_doesn't_exist (0.00s)
+    --- PASS: TestHINCRBY/HINCRBY_should_increment_when_key_exists_and_a_field_doesn't_exist (0.00s)
+    --- PASS: TestHINCRBY/HINCRBY_should_increment_on_existing_key_and_field (0.00s)
+    --- PASS: TestHINCRBY/HINCRBY_should_decrement_on_existing_key_and_field (0.00s)
+    --- PASS: TestHINCRBY/HINCRBY_should_give_error_when_increment_field_is_greater_than_max_int64_field (0.00s)
+=== RUN   TestHINCRBYFLOAT
+=== RUN   TestHINCRBYFLOAT/HINCRBYFLOAT_Wrong_number_of_arguments_provided
+=== RUN   TestHINCRBYFLOAT/HINCRBYFLOAT_should_increment_when_key_doesn't_exist
+=== RUN   TestHINCRBYFLOAT/HINCRBYFLOAT_should_increment_when_key_exists_and_a_field_doesn't_exist
+=== RUN   TestHINCRBYFLOAT/HINCRBYFLOAT_should_increment_on_existing_key_and_field
+=== RUN   TestHINCRBYFLOAT/HINCRBYFLOAT_should_decrement_on_existing_key_and_field
+=== RUN   TestHINCRBYFLOAT/HINCRBYFLOAT_should_give_error_when_trying_to_increment_a_key_which_is_not_a_hash_value_with_a_value_which_is_not_integer_or_a_float
+--- PASS: TestHINCRBYFLOAT (0.00s)
+    --- PASS: TestHINCRBYFLOAT/HINCRBYFLOAT_Wrong_number_of_arguments_provided (0.00s)
+    --- PASS: TestHINCRBYFLOAT/HINCRBYFLOAT_should_increment_when_key_doesn't_exist (0.00s)
+    --- PASS: TestHINCRBYFLOAT/HINCRBYFLOAT_should_increment_when_key_exists_and_a_field_doesn't_exist (0.00s)
+    --- PASS: TestHINCRBYFLOAT/HINCRBYFLOAT_should_increment_on_existing_key_and_field (0.00s)
+    --- PASS: TestHINCRBYFLOAT/HINCRBYFLOAT_should_decrement_on_existing_key_and_field (0.00s)
+    --- PASS: TestHINCRBYFLOAT/HINCRBYFLOAT_should_give_error_when_trying_to_increment_a_key_which_is_not_a_hash_value_with_a_value_which_is_not_integer_or_a_float (0.00s)
+=== RUN   TestHKeys
+=== RUN   TestHKeys/HTTP_One_or_more_keys_exist
+    hkeys_test.go:45: assertion failed: 
+        --- tc.expected[i]
+        +++ result
+          any(
+        - 	float64(1),
+        + 	string("WRONGTYPE Operation against a key holding the wrong kind of value"),
+          )
+        
+=== RUN   TestHKeys/HTTP_No_keys_exist
+    hkeys_test.go:45: assertion failed: 
+        --- tc.expected[i]
+        +++ result
+          any(
+        + 	string("ERR -WRONGTYPE Operation against a key holding the wrong kind of value"),
+          )
+        
+--- FAIL: TestHKeys (0.00s)
+    --- FAIL: TestHKeys/HTTP_One_or_more_keys_exist (0.00s)
+    --- FAIL: TestHKeys/HTTP_No_keys_exist (0.00s)
+=== RUN   TestHRANDFIELD
+=== RUN   TestHRANDFIELD/Basic_HRANDFIELD_operations
+=== RUN   TestHRANDFIELD/HRANDFIELD_with_count
+=== RUN   TestHRANDFIELD/HRANDFIELD_with_WITHVALUES
+=== RUN   TestHRANDFIELD/HRANDFIELD_on_non-existent_key
+--- PASS: TestHRANDFIELD (0.00s)
+    --- PASS: TestHRANDFIELD/Basic_HRANDFIELD_operations (0.00s)
+    --- PASS: TestHRANDFIELD/HRANDFIELD_with_count (0.00s)
+    --- PASS: TestHRANDFIELD/HRANDFIELD_with_WITHVALUES (0.00s)
+    --- PASS: TestHRANDFIELD/HRANDFIELD_on_non-existent_key (0.00s)
+=== RUN   TestHSetNX
+=== RUN   TestHSetNX/HSetNX_returns_0_when_field_is_already_set
+=== RUN   TestHSetNX/HSetNX_with_new_field
+=== RUN   TestHSetNX/HSetNX_with_wrong_number_of_arguments
+=== RUN   TestHSetNX/HSetNX_with_wrong_type
+--- PASS: TestHSetNX (0.00s)
+    --- PASS: TestHSetNX/HSetNX_returns_0_when_field_is_already_set (0.00s)
+    --- PASS: TestHSetNX/HSetNX_with_new_field (0.00s)
+    --- PASS: TestHSetNX/HSetNX_with_wrong_number_of_arguments (0.00s)
+    --- PASS: TestHSetNX/HSetNX_with_wrong_type (0.00s)
+=== RUN   TestHStrLen
+=== RUN   TestHStrLen/HSTRLEN_with_wrong_number_of_arguments
+=== RUN   TestHStrLen/HSTRLEN_with_wrong_key
+=== RUN   TestHStrLen/HSTRLEN_with_wrong_field
+=== RUN   TestHStrLen/HSTRLEN
+=== RUN   TestHStrLen/HSTRLEN_with_wrong_type
+--- PASS: TestHStrLen (0.01s)
+    --- PASS: TestHStrLen/HSTRLEN_with_wrong_number_of_arguments (0.00s)
+    --- PASS: TestHStrLen/HSTRLEN_with_wrong_key (0.00s)
+    --- PASS: TestHStrLen/HSTRLEN_with_wrong_field (0.00s)
+    --- PASS: TestHStrLen/HSTRLEN (0.00s)
+    --- PASS: TestHStrLen/HSTRLEN_with_wrong_type (0.00s)
+=== RUN   TestHVals
+=== RUN   TestHVals/HTTP_One_or_more_keys_exist
+WRONGTYPE Operation against a key holding the wrong kind of value | 1
+    hvals_test.go:46: assertion failed: 
+        --- tc.expected[i]
+        +++ result
+          any(
+        - 	float64(1),
+        + 	string("WRONGTYPE Operation against a key holding the wrong kind of value"),
+          )
+        
+=== RUN   TestHVals/HTTP_No_keys_exist
+ERR -WRONGTYPE Operation against a key holding the wrong kind of value | []
+    hvals_test.go:46: assertion failed: 
+        --- tc.expected[i]
+        +++ result
+          any(
+        - 	[]any{},
+        + 	string("ERR -WRONGTYPE Operation against a key holding the wrong kind of value"),
+          )
+        
+--- FAIL: TestHVals (0.00s)
+    --- FAIL: TestHVals/HTTP_One_or_more_keys_exist (0.00s)
+    --- FAIL: TestHVals/HTTP_No_keys_exist (0.00s)
+=== RUN   TestHyperLogLogCommands
+=== RUN   TestHyperLogLogCommands/PFADD_with_one_key-value_pair
+=== RUN   TestHyperLogLogCommands/PFADD_with_multiple_key-value_pair
+=== RUN   TestHyperLogLogCommands/PFADD_with_duplicate_key-value_pairs
+=== RUN   TestHyperLogLogCommands/PFADD_with_multiple_keys
+=== RUN   TestHyperLogLogCommands/PFADD_with_non-existing_key
+=== RUN   TestHyperLogLogCommands/PFMERGE_with_srcKey_non-existing
+=== RUN   TestHyperLogLogCommands/PFMERGE_with_destKey_non-existing
+=== RUN   TestHyperLogLogCommands/PFMERGE_with_destKey_existing
+=== RUN   TestHyperLogLogCommands/PFMERGE_with_only_one_destKey_existing
+=== RUN   TestHyperLogLogCommands/PFMERGE_with_invalid_object
+=== RUN   TestHyperLogLogCommands/PFMERGE_with_invalid_src_object
+--- PASS: TestHyperLogLogCommands (0.01s)
+    --- PASS: TestHyperLogLogCommands/PFADD_with_one_key-value_pair (0.00s)
+    --- PASS: TestHyperLogLogCommands/PFADD_with_multiple_key-value_pair (0.00s)
+    --- PASS: TestHyperLogLogCommands/PFADD_with_duplicate_key-value_pairs (0.00s)
+    --- PASS: TestHyperLogLogCommands/PFADD_with_multiple_keys (0.00s)
+    --- PASS: TestHyperLogLogCommands/PFADD_with_non-existing_key (0.00s)
+    --- PASS: TestHyperLogLogCommands/PFMERGE_with_srcKey_non-existing (0.00s)
+    --- PASS: TestHyperLogLogCommands/PFMERGE_with_destKey_non-existing (0.00s)
+    --- PASS: TestHyperLogLogCommands/PFMERGE_with_destKey_existing (0.00s)
+    --- PASS: TestHyperLogLogCommands/PFMERGE_with_only_one_destKey_existing (0.00s)
+    --- PASS: TestHyperLogLogCommands/PFMERGE_with_invalid_object (0.00s)
+    --- PASS: TestHyperLogLogCommands/PFMERGE_with_invalid_src_object (0.00s)
+=== RUN   TestINCRBYFLOAT
+=== RUN   TestINCRBYFLOAT/Invalid_number_of_arguments
+=== RUN   TestINCRBYFLOAT/Increment_a_non_existing_key
+=== RUN   TestINCRBYFLOAT/Increment_a_key_with_an_integer_value
+=== RUN   TestINCRBYFLOAT/Increment_and_then_decrement_a_key_with_the_same_value
+=== RUN   TestINCRBYFLOAT/Increment_a_non_numeric_value
+=== RUN   TestINCRBYFLOAT/Increment_by_a_non_numeric_value
+=== RUN   TestINCRBYFLOAT/Increment_by_both_integer_and_float
+=== RUN   TestINCRBYFLOAT/Increment_that_would_make_the_value_Inf
+=== RUN   TestINCRBYFLOAT/Increment_that_would_make_the_value_-Inf
+--- PASS: TestINCRBYFLOAT (0.01s)
+    --- PASS: TestINCRBYFLOAT/Invalid_number_of_arguments (0.00s)
+    --- PASS: TestINCRBYFLOAT/Increment_a_non_existing_key (0.00s)
+    --- PASS: TestINCRBYFLOAT/Increment_a_key_with_an_integer_value (0.00s)
+    --- PASS: TestINCRBYFLOAT/Increment_and_then_decrement_a_key_with_the_same_value (0.00s)
+    --- PASS: TestINCRBYFLOAT/Increment_a_non_numeric_value (0.00s)
+    --- PASS: TestINCRBYFLOAT/Increment_by_a_non_numeric_value (0.00s)
+    --- PASS: TestINCRBYFLOAT/Increment_by_both_integer_and_float (0.00s)
+    --- PASS: TestINCRBYFLOAT/Increment_that_would_make_the_value_Inf (0.00s)
+    --- PASS: TestINCRBYFLOAT/Increment_that_would_make_the_value_-Inf (0.00s)
+=== RUN   TestINCR
+=== RUN   TestINCR/Increment_multiple_keys
+=== RUN   TestINCR/Increment_to_and_from_max_int64
+=== RUN   TestINCR/Increment_from_min_int64
+=== RUN   TestINCR/Increment_non-integer_values
+=== RUN   TestINCR/Increment_non-existent_key
+=== RUN   TestINCR/Increment_string_representing_integers
+=== RUN   TestINCR/Increment_with_expiry
+--- PASS: TestINCR (1.02s)
+    --- PASS: TestINCR/Increment_multiple_keys (0.00s)
+    --- PASS: TestINCR/Increment_to_and_from_max_int64 (0.00s)
+    --- PASS: TestINCR/Increment_from_min_int64 (0.00s)
+    --- PASS: TestINCR/Increment_non-integer_values (0.00s)
+    --- PASS: TestINCR/Increment_non-existent_key (0.00s)
+    --- PASS: TestINCR/Increment_string_representing_integers (0.00s)
+    --- PASS: TestINCR/Increment_with_expiry (1.00s)
+=== RUN   TestINCRBY
+=== RUN   TestINCRBY/INCRBY_with_positive_increment
+=== RUN   TestINCRBY/INCRBY_with_negative_increment
+=== RUN   TestINCRBY/INCRBY_with_unset_key
+=== RUN   TestINCRBY/edge_case_with_maximum_int_value
+=== RUN   TestINCRBY/edge_case_with_minimum_int_value
+=== RUN   TestINCRBY/edge_case_with_string_values
+--- PASS: TestINCRBY (0.01s)
+    --- PASS: TestINCRBY/INCRBY_with_positive_increment (0.00s)
+    --- PASS: TestINCRBY/INCRBY_with_negative_increment (0.00s)
+    --- PASS: TestINCRBY/INCRBY_with_unset_key (0.00s)
+    --- PASS: TestINCRBY/edge_case_with_maximum_int_value (0.00s)
+    --- PASS: TestINCRBY/edge_case_with_minimum_int_value (0.00s)
+    --- PASS: TestINCRBY/edge_case_with_string_values (0.00s)
+=== RUN   TestJSONARRPOP
+=== RUN   TestJSONARRPOP/update_array_at_root_path
+=== RUN   TestJSONARRPOP/update_nested_array
+=== RUN   TestJSONARRPOP/update_array_with_default_index
+=== RUN   TestJSONARRPOP/update_array_within_array
+=== RUN   TestJSONARRPOP/non-array_path
+=== RUN   TestJSONARRPOP/invalid_json_path
+=== RUN   TestJSONARRPOP/key_doesn't_exist_error
+=== RUN   TestJSONARRPOP/arr_pop_on_wrong_key_type
+=== RUN   TestJSONARRPOP/nil_response_for_arr_pop
+--- PASS: TestJSONARRPOP (0.01s)
+    --- PASS: TestJSONARRPOP/update_array_at_root_path (0.00s)
+    --- PASS: TestJSONARRPOP/update_nested_array (0.00s)
+    --- PASS: TestJSONARRPOP/update_array_with_default_index (0.00s)
+    --- PASS: TestJSONARRPOP/update_array_within_array (0.00s)
+    --- PASS: TestJSONARRPOP/non-array_path (0.00s)
+    --- PASS: TestJSONARRPOP/invalid_json_path (0.00s)
+    --- PASS: TestJSONARRPOP/key_doesn't_exist_error (0.00s)
+    --- PASS: TestJSONARRPOP/arr_pop_on_wrong_key_type (0.00s)
+    --- PASS: TestJSONARRPOP/nil_response_for_arr_pop (0.00s)
+=== RUN   TestJSONOperations
+=== RUN   TestJSONOperations/Single_Ordered_Test_Cases
+=== RUN   TestJSONOperations/Single_Ordered_Test_Cases/Set_and_Get_Integer
+=== RUN   TestJSONOperations/Single_Ordered_Test_Cases/Set_and_Get_Boolean_True
+=== RUN   TestJSONOperations/Single_Ordered_Test_Cases/Set_and_Get_Boolean_False
+=== RUN   TestJSONOperations/Single_Ordered_Test_Cases/Set_and_Get_Simple_JSON
+=== RUN   TestJSONOperations/Single_Ordered_Test_Cases/Set_and_Get_Nested_JSON
+=== RUN   TestJSONOperations/Single_Ordered_Test_Cases/Set_and_Get_JSON_Array
+=== RUN   TestJSONOperations/Single_Ordered_Test_Cases/Set_and_Get_JSON_with_Special_Characters
+=== RUN   TestJSONOperations/Single_Ordered_Test_Cases/Set_Non-JSON_Value
+=== RUN   TestJSONOperations/Single_Ordered_Test_Cases/Set_Empty_JSON_Object
+=== RUN   TestJSONOperations/Single_Ordered_Test_Cases/Set_Empty_JSON_Array
+=== RUN   TestJSONOperations/Single_Ordered_Test_Cases/Set_JSON_with_Unicode
+=== RUN   TestJSONOperations/Single_Ordered_Test_Cases/Set_JSON_with_Escaped_Characters
+=== RUN   TestJSONOperations/Single_Ordered_Test_Cases/Set_and_Get_Complex_JSON
+=== RUN   TestJSONOperations/Single_Ordered_Test_Cases/Get_Nested_Array
+=== RUN   TestJSONOperations/Single_Ordered_Test_Cases/Get_Nested_Object
+=== RUN   TestJSONOperations/Single_Ordered_Test_Cases/Set_Nested_Value
+=== RUN   TestJSONOperations/Multiple_Ordered_Test_Cases
+=== RUN   TestJSONOperations/Multiple_Ordered_Test_Cases/Get_All_Prices
+=== RUN   TestJSONOperations/Multiple_Ordered_Test_Cases/Set_Multiple_Nested_Values
+--- PASS: TestJSONOperations (0.02s)
+    --- PASS: TestJSONOperations/Single_Ordered_Test_Cases (0.02s)
+        --- PASS: TestJSONOperations/Single_Ordered_Test_Cases/Set_and_Get_Integer (0.00s)
+        --- PASS: TestJSONOperations/Single_Ordered_Test_Cases/Set_and_Get_Boolean_True (0.00s)
+        --- PASS: TestJSONOperations/Single_Ordered_Test_Cases/Set_and_Get_Boolean_False (0.00s)
+        --- PASS: TestJSONOperations/Single_Ordered_Test_Cases/Set_and_Get_Simple_JSON (0.00s)
+        --- PASS: TestJSONOperations/Single_Ordered_Test_Cases/Set_and_Get_Nested_JSON (0.00s)
+        --- PASS: TestJSONOperations/Single_Ordered_Test_Cases/Set_and_Get_JSON_Array (0.00s)
+        --- PASS: TestJSONOperations/Single_Ordered_Test_Cases/Set_and_Get_JSON_with_Special_Characters (0.00s)
+        --- PASS: TestJSONOperations/Single_Ordered_Test_Cases/Set_Non-JSON_Value (0.00s)
+        --- PASS: TestJSONOperations/Single_Ordered_Test_Cases/Set_Empty_JSON_Object (0.00s)
+        --- PASS: TestJSONOperations/Single_Ordered_Test_Cases/Set_Empty_JSON_Array (0.00s)
+        --- PASS: TestJSONOperations/Single_Ordered_Test_Cases/Set_JSON_with_Unicode (0.00s)
+        --- PASS: TestJSONOperations/Single_Ordered_Test_Cases/Set_JSON_with_Escaped_Characters (0.00s)
+        --- PASS: TestJSONOperations/Single_Ordered_Test_Cases/Set_and_Get_Complex_JSON (0.00s)
+        --- PASS: TestJSONOperations/Single_Ordered_Test_Cases/Get_Nested_Array (0.00s)
+        --- PASS: TestJSONOperations/Single_Ordered_Test_Cases/Get_Nested_Object (0.00s)
+        --- PASS: TestJSONOperations/Single_Ordered_Test_Cases/Set_Nested_Value (0.00s)
+    --- PASS: TestJSONOperations/Multiple_Ordered_Test_Cases (0.00s)
+        --- PASS: TestJSONOperations/Multiple_Ordered_Test_Cases/Get_All_Prices (0.00s)
+        --- PASS: TestJSONOperations/Multiple_Ordered_Test_Cases/Set_Multiple_Nested_Values (0.00s)
+=== RUN   TestJSONSetWithInvalidCases
+=== RUN   TestJSONSetWithInvalidCases/Set_Invalid_JSON
+=== RUN   TestJSONSetWithInvalidCases/Set_JSON_with_Wrong_Number_of_Arguments
+--- PASS: TestJSONSetWithInvalidCases (0.00s)
+    --- PASS: TestJSONSetWithInvalidCases/Set_Invalid_JSON (0.00s)
+    --- PASS: TestJSONSetWithInvalidCases/Set_JSON_with_Wrong_Number_of_Arguments (0.00s)
+=== RUN   TestJSONSetWithNXAndXX
+=== RUN   TestJSONSetWithNXAndXX/Set_with_XX_on_non-existent_key
+=== RUN   TestJSONSetWithNXAndXX/Set_with_NX_on_existing_key
+=== RUN   TestJSONSetWithNXAndXX/Set_with_XX_on_existing_key
+=== RUN   TestJSONSetWithNXAndXX/Set_with_NX_on_non-existent_key
+=== RUN   TestJSONSetWithNXAndXX/Invalid_combinations_of_NX_and_XX
+--- PASS: TestJSONSetWithNXAndXX (0.01s)
+    --- PASS: TestJSONSetWithNXAndXX/Set_with_XX_on_non-existent_key (0.00s)
+    --- PASS: TestJSONSetWithNXAndXX/Set_with_NX_on_existing_key (0.00s)
+    --- PASS: TestJSONSetWithNXAndXX/Set_with_XX_on_existing_key (0.00s)
+    --- PASS: TestJSONSetWithNXAndXX/Set_with_NX_on_non-existent_key (0.00s)
+    --- PASS: TestJSONSetWithNXAndXX/Invalid_combinations_of_NX_and_XX (0.00s)
+=== RUN   TestJSONClearOperations
+=== RUN   TestJSONClearOperations/jsonclear_clear_root_path
+=== RUN   TestJSONClearOperations/jsonclear_clear_string_type
+=== RUN   TestJSONClearOperations/jsonclear_clear_array_type
+=== RUN   TestJSONClearOperations/jsonclear_clear_bool_type
+=== RUN   TestJSONClearOperations/jsonclear_clear_null_type
+=== RUN   TestJSONClearOperations/jsonclear_clear_integer_type
+=== RUN   TestJSONClearOperations/jsonclear_clear_float_type
+--- PASS: TestJSONClearOperations (0.01s)
+    --- PASS: TestJSONClearOperations/jsonclear_clear_root_path (0.00s)
+    --- PASS: TestJSONClearOperations/jsonclear_clear_string_type (0.00s)
+    --- PASS: TestJSONClearOperations/jsonclear_clear_array_type (0.00s)
+    --- PASS: TestJSONClearOperations/jsonclear_clear_bool_type (0.00s)
+    --- PASS: TestJSONClearOperations/jsonclear_clear_null_type (0.00s)
+    --- PASS: TestJSONClearOperations/jsonclear_clear_integer_type (0.00s)
+    --- PASS: TestJSONClearOperations/jsonclear_clear_float_type (0.00s)
+=== RUN   TestJSONDelOperations
+=== RUN   TestJSONDelOperations/Delete_root_path
+=== RUN   TestJSONDelOperations/Delete_nested_field
+=== RUN   TestJSONDelOperations/del_string_type
+=== RUN   TestJSONDelOperations/del_bool_type
+=== RUN   TestJSONDelOperations/del_null_type
+=== RUN   TestJSONDelOperations/del_array_type
+=== RUN   TestJSONDelOperations/del_integer_type
+=== RUN   TestJSONDelOperations/del_float_type
+--- PASS: TestJSONDelOperations (0.01s)
+    --- PASS: TestJSONDelOperations/Delete_root_path (0.00s)
+    --- PASS: TestJSONDelOperations/Delete_nested_field (0.00s)
+    --- PASS: TestJSONDelOperations/del_string_type (0.00s)
+    --- PASS: TestJSONDelOperations/del_bool_type (0.00s)
+    --- PASS: TestJSONDelOperations/del_null_type (0.00s)
+    --- PASS: TestJSONDelOperations/del_array_type (0.00s)
+    --- PASS: TestJSONDelOperations/del_integer_type (0.00s)
+    --- PASS: TestJSONDelOperations/del_float_type (0.00s)
+=== RUN   TestJSONForgetOperations
+=== RUN   TestJSONForgetOperations/forget_root_path
+=== RUN   TestJSONForgetOperations/forget_nested_field
+=== RUN   TestJSONForgetOperations/forget_string_type
+=== RUN   TestJSONForgetOperations/forget_bool_type
+=== RUN   TestJSONForgetOperations/forget_null_type
+=== RUN   TestJSONForgetOperations/forget_array_type
+=== RUN   TestJSONForgetOperations/forget_integer_type
+=== RUN   TestJSONForgetOperations/forget_float_type
+--- PASS: TestJSONForgetOperations (0.01s)
+    --- PASS: TestJSONForgetOperations/forget_root_path (0.00s)
+    --- PASS: TestJSONForgetOperations/forget_nested_field (0.00s)
+    --- PASS: TestJSONForgetOperations/forget_string_type (0.00s)
+    --- PASS: TestJSONForgetOperations/forget_bool_type (0.00s)
+    --- PASS: TestJSONForgetOperations/forget_null_type (0.00s)
+    --- PASS: TestJSONForgetOperations/forget_array_type (0.00s)
+    --- PASS: TestJSONForgetOperations/forget_integer_type (0.00s)
+    --- PASS: TestJSONForgetOperations/forget_float_type (0.00s)
+=== RUN   TestJsonStrlen
+=== RUN   TestJsonStrlen/jsonstrlen_with_root_path
+=== RUN   TestJsonStrlen/jsonstrlen_nested
+=== RUN   TestJsonStrlen/jsonstrlen_with_no_path_and_object_at_root
+=== RUN   TestJsonStrlen/jsonstrlen_with_no_path_and_object_at_boolean
+=== RUN   TestJsonStrlen/jsonstrlen_with_no_path_and_object_at_array
+=== RUN   TestJsonStrlen/jsonstrlen_with_no_path_and_object_at_integer
+=== RUN   TestJsonStrlen/jsonstrlen_with_no_path_and_object_at_number
+--- PASS: TestJsonStrlen (0.01s)
+    --- PASS: TestJsonStrlen/jsonstrlen_with_root_path (0.00s)
+    --- PASS: TestJsonStrlen/jsonstrlen_nested (0.00s)
+    --- PASS: TestJsonStrlen/jsonstrlen_with_no_path_and_object_at_root (0.00s)
+    --- PASS: TestJsonStrlen/jsonstrlen_with_no_path_and_object_at_boolean (0.00s)
+    --- PASS: TestJsonStrlen/jsonstrlen_with_no_path_and_object_at_array (0.00s)
+    --- PASS: TestJsonStrlen/jsonstrlen_with_no_path_and_object_at_integer (0.00s)
+    --- PASS: TestJsonStrlen/jsonstrlen_with_no_path_and_object_at_number (0.00s)
+=== RUN   TestJSONMGET
+expacting: OK with got: OK
+expacting: OK with got: OK
+expacting: OK with got: OK
+expacting: OK with got: OK
+expacting: OK with got: OK
+=== RUN   TestJSONMGET/MGET_with_root_path
+=== RUN   TestJSONMGET/MGET_with_specific_path
+=== RUN   TestJSONMGET/MGET_with_nested_path
+=== RUN   TestJSONMGET/MGET_error
+=== RUN   TestJSONMGET/MGET_with_recursive_path
+--- PASS: TestJSONMGET (0.01s)
+    --- PASS: TestJSONMGET/MGET_with_root_path (0.00s)
+    --- PASS: TestJSONMGET/MGET_with_specific_path (0.00s)
+    --- PASS: TestJSONMGET/MGET_with_nested_path (0.00s)
+    --- PASS: TestJSONMGET/MGET_error (0.00s)
+    --- PASS: TestJSONMGET/MGET_with_recursive_path (0.00s)
+=== RUN   TestJsonARRAPPEND
+=== RUN   TestJsonARRAPPEND/JSON.ARRAPPEND_with_root_path
+=== RUN   TestJsonARRAPPEND/JSON.ARRAPPEND_nested
+=== RUN   TestJsonARRAPPEND/JSON.ARRAPPEND_nested_with_nil
+=== RUN   TestJsonARRAPPEND/JSON.ARRAPPEND_with_different_datatypes
+--- PASS: TestJsonARRAPPEND (0.01s)
+    --- PASS: TestJsonARRAPPEND/JSON.ARRAPPEND_with_root_path (0.00s)
+    --- PASS: TestJsonARRAPPEND/JSON.ARRAPPEND_nested (0.00s)
+    --- PASS: TestJsonARRAPPEND/JSON.ARRAPPEND_nested_with_nil (0.00s)
+    --- PASS: TestJsonARRAPPEND/JSON.ARRAPPEND_with_different_datatypes (0.00s)
+=== RUN   TestJsonNummultby
+=== RUN   TestJsonNummultby/Invalid_number_of_arguments
+=== RUN   TestJsonNummultby/MultBy_at_non-existent_key
+=== RUN   TestJsonNummultby/Invalid_value_of_multiplier_on_non-existent_key
+=== RUN   TestJsonNummultby/Invalid_value_of_multiplier_on_existent_key
+=== RUN   TestJsonNummultby/MultBy_at_recursive_path
+=== RUN   TestJsonNummultby/MultBy_at_root_path
+--- PASS: TestJsonNummultby (0.02s)
+    --- PASS: TestJsonNummultby/Invalid_number_of_arguments (0.00s)
+    --- PASS: TestJsonNummultby/MultBy_at_non-existent_key (0.00s)
+    --- PASS: TestJsonNummultby/Invalid_value_of_multiplier_on_non-existent_key (0.00s)
+    --- PASS: TestJsonNummultby/Invalid_value_of_multiplier_on_existent_key (0.00s)
+    --- PASS: TestJsonNummultby/MultBy_at_recursive_path (0.01s)
+    --- PASS: TestJsonNummultby/MultBy_at_root_path (0.00s)
+=== RUN   TestJsonObjLen
+=== RUN   TestJsonObjLen/JSON.OBJLEN_with_root_path
+=== RUN   TestJsonObjLen/JSON.OBJLEN_with_nested_path
+=== RUN   TestJsonObjLen/JSON.OBJLEN_with_non-object_path
+=== RUN   TestJsonObjLen/JSON.OBJLEN_with_nested_non-object_path
+=== RUN   TestJsonObjLen/JSON.OBJLEN_nested_objects
+=== RUN   TestJsonObjLen/JSON.OBJLEN_invalid_json_path
+=== RUN   TestJsonObjLen/JSON.OBJLEN_with_non-existent_key
+=== RUN   TestJsonObjLen/JSON.OBJLEN_with_empty_path
+=== RUN   TestJsonObjLen/JSON.OBJLEN_invalid_json_path#01
+=== RUN   TestJsonObjLen/JSON.OBJLEN_with_legacy_path_-_root
+=== RUN   TestJsonObjLen/JSON.OBJLEN_with_legacy_path_-_inner_existing_path
+=== RUN   TestJsonObjLen/JSON.OBJLEN_with_legacy_path_-_inner_existing_path_v2
+=== RUN   TestJsonObjLen/JSON.OBJLEN_with_legacy_path_-_inner_non-existent_path
+=== RUN   TestJsonObjLen/JSON.OBJLEN_with_legacy_path_-_inner_non-existent_path_v2
+=== RUN   TestJsonObjLen/JSON.OBJLEN_with_legacy_path_-_inner_existent_path_with_nonJSON_object
+=== RUN   TestJsonObjLen/JSON.OBJLEN_with_legacy_path_-_inner_existent_path_recursive_object
+--- PASS: TestJsonObjLen (0.01s)
+    --- PASS: TestJsonObjLen/JSON.OBJLEN_with_root_path (0.00s)
+    --- PASS: TestJsonObjLen/JSON.OBJLEN_with_nested_path (0.00s)
+    --- PASS: TestJsonObjLen/JSON.OBJLEN_with_non-object_path (0.00s)
+    --- PASS: TestJsonObjLen/JSON.OBJLEN_with_nested_non-object_path (0.00s)
+    --- PASS: TestJsonObjLen/JSON.OBJLEN_nested_objects (0.00s)
+    --- PASS: TestJsonObjLen/JSON.OBJLEN_invalid_json_path (0.00s)
+    --- PASS: TestJsonObjLen/JSON.OBJLEN_with_non-existent_key (0.00s)
+    --- PASS: TestJsonObjLen/JSON.OBJLEN_with_empty_path (0.00s)
+    --- PASS: TestJsonObjLen/JSON.OBJLEN_invalid_json_path#01 (0.00s)
+    --- PASS: TestJsonObjLen/JSON.OBJLEN_with_legacy_path_-_root (0.00s)
+    --- PASS: TestJsonObjLen/JSON.OBJLEN_with_legacy_path_-_inner_existing_path (0.00s)
+    --- PASS: TestJsonObjLen/JSON.OBJLEN_with_legacy_path_-_inner_existing_path_v2 (0.00s)
+    --- PASS: TestJsonObjLen/JSON.OBJLEN_with_legacy_path_-_inner_non-existent_path (0.00s)
+    --- PASS: TestJsonObjLen/JSON.OBJLEN_with_legacy_path_-_inner_non-existent_path_v2 (0.00s)
+    --- PASS: TestJsonObjLen/JSON.OBJLEN_with_legacy_path_-_inner_existent_path_with_nonJSON_object (0.00s)
+    --- PASS: TestJsonObjLen/JSON.OBJLEN_with_legacy_path_-_inner_existent_path_recursive_object (0.00s)
+=== RUN   TestJSONNumIncrBy
+=== RUN   TestJSONNumIncrBy/Invalid_number_of_arguments
+=== RUN   TestJSONNumIncrBy/Non-existent_key
+=== RUN   TestJSONNumIncrBy/Invalid_value_of_increment
+=== RUN   TestJSONNumIncrBy/incrby_at_non_root_path
+=== RUN   TestJSONNumIncrBy/incrby_at_root_path
+--- PASS: TestJSONNumIncrBy (0.01s)
+    --- PASS: TestJSONNumIncrBy/Invalid_number_of_arguments (0.00s)
+    --- PASS: TestJSONNumIncrBy/Non-existent_key (0.00s)
+    --- PASS: TestJSONNumIncrBy/Invalid_value_of_increment (0.00s)
+    --- PASS: TestJSONNumIncrBy/incrby_at_non_root_path (0.00s)
+    --- PASS: TestJSONNumIncrBy/incrby_at_root_path (0.00s)
+=== RUN   TestJsonARRINSERT
+=== RUN   TestJsonARRINSERT/JSON.ARRINSERT_index_out_if_bounds
+=== RUN   TestJsonARRINSERT/JSON.ARRINSERT_index_is_not_integer
+=== RUN   TestJsonARRINSERT/JSON.ARRINSERT_with_positive_index_in_root_path
+=== RUN   TestJsonARRINSERT/JSON.ARRINSERT_with_negative_index_in_root_path
+=== RUN   TestJsonARRINSERT/JSON.ARRINSERT_nested_with_positive_index
+=== RUN   TestJsonARRINSERT/JSON.ARRINSERT_nested_with_negative_index
+--- PASS: TestJsonARRINSERT (0.01s)
+    --- PASS: TestJsonARRINSERT/JSON.ARRINSERT_index_out_if_bounds (0.00s)
+    --- PASS: TestJsonARRINSERT/JSON.ARRINSERT_index_is_not_integer (0.00s)
+    --- PASS: TestJsonARRINSERT/JSON.ARRINSERT_with_positive_index_in_root_path (0.00s)
+    --- PASS: TestJsonARRINSERT/JSON.ARRINSERT_with_negative_index_in_root_path (0.00s)
+    --- PASS: TestJsonARRINSERT/JSON.ARRINSERT_nested_with_positive_index (0.00s)
+    --- PASS: TestJsonARRINSERT/JSON.ARRINSERT_nested_with_negative_index (0.00s)
+=== RUN   TestJsonObjKeys
+=== RUN   TestJsonObjKeys/JSON.OBJKEYS_root_object
+=== RUN   TestJsonObjKeys/JSON.OBJKEYS_with_nested_path
+=== RUN   TestJsonObjKeys/JSON.OBJKEYS_with_non-object_path
+=== RUN   TestJsonObjKeys/JSON.OBJKEYS_with_nested_non-object_path
+=== RUN   TestJsonObjKeys/JSON.OBJKEYS_with_invalid_json_path_-_1
+=== RUN   TestJsonObjKeys/JSON.OBJKEYS_with_invalid_json_path_-_2
+=== RUN   TestJsonObjKeys/JSON.OBJKEYS_with_invalid_json_path_-_3
+=== RUN   TestJsonObjKeys/JSON.OBJKEYS_with_only_key
+=== RUN   TestJsonObjKeys/JSON.OBJKEYS_with_non-existing_key
+=== RUN   TestJsonObjKeys/JSON.OBJKEYS_with_multiple_json_path
+--- PASS: TestJsonObjKeys (0.01s)
+    --- PASS: TestJsonObjKeys/JSON.OBJKEYS_root_object (0.00s)
+    --- PASS: TestJsonObjKeys/JSON.OBJKEYS_with_nested_path (0.00s)
+    --- PASS: TestJsonObjKeys/JSON.OBJKEYS_with_non-object_path (0.00s)
+    --- PASS: TestJsonObjKeys/JSON.OBJKEYS_with_nested_non-object_path (0.00s)
+    --- PASS: TestJsonObjKeys/JSON.OBJKEYS_with_invalid_json_path_-_1 (0.00s)
+    --- PASS: TestJsonObjKeys/JSON.OBJKEYS_with_invalid_json_path_-_2 (0.00s)
+    --- PASS: TestJsonObjKeys/JSON.OBJKEYS_with_invalid_json_path_-_3 (0.00s)
+    --- PASS: TestJsonObjKeys/JSON.OBJKEYS_with_only_key (0.00s)
+    --- PASS: TestJsonObjKeys/JSON.OBJKEYS_with_non-existing_key (0.00s)
+    --- PASS: TestJsonObjKeys/JSON.OBJKEYS_with_multiple_json_path (0.00s)
+=== RUN   TestKeys
+=== RUN   TestKeys/k_matches_with_k
+=== RUN   TestKeys/g*_matches_good_and_great
+=== RUN   TestKeys/g?od_matches_good
+=== RUN   TestKeys/g?eat_matches_great
+=== RUN   TestKeys/h[^e]llo_matches_hallo_and_hbllo
+=== RUN   TestKeys/h[a-b]llo_matches_hallo_and_hbllo
+--- PASS: TestKeys (0.01s)
+    --- PASS: TestKeys/k_matches_with_k (0.00s)
+    --- PASS: TestKeys/g*_matches_good_and_great (0.00s)
+    --- PASS: TestKeys/g?od_matches_good (0.00s)
+    --- PASS: TestKeys/g?eat_matches_great (0.00s)
+    --- PASS: TestKeys/h[^e]llo_matches_hallo_and_hbllo (0.00s)
+    --- PASS: TestKeys/h[a-b]llo_matches_hallo_and_hbllo (0.00s)
+=== RUN   TestMGET
+=== RUN   TestMGET/MGET_With_non-existing_keys
+=== RUN   TestMGET/MGET_With_existing_keys
+=== RUN   TestMGET/MGET_with_existing_and_non_existing_keys
+--- PASS: TestMGET (0.00s)
+    --- PASS: TestMGET/MGET_With_non-existing_keys (0.00s)
+    --- PASS: TestMGET/MGET_With_existing_keys (0.00s)
+    --- PASS: TestMGET/MGET_with_existing_and_non_existing_keys (0.00s)
+=== RUN   TestMSET
+=== RUN   TestMSET/MSET_with_one_key-value_pair
+=== RUN   TestMSET/MSET_with_multiple_key-value_pairs
+=== RUN   TestMSET/MSET_with_integers_arguments
+--- PASS: TestMSET (0.00s)
+    --- PASS: TestMSET/MSET_with_one_key-value_pair (0.00s)
+    --- PASS: TestMSET/MSET_with_multiple_key-value_pairs (0.00s)
+    --- PASS: TestMSET/MSET_with_integers_arguments (0.00s)
+=== RUN   TestOBJECT
+=== RUN   TestOBJECT/Object_Idletime
+--- PASS: TestOBJECT (5.00s)
+    --- PASS: TestOBJECT/Object_Idletime (5.00s)
+=== RUN   TestQWatch
+=== RUN   TestQWatch/Q.WATCH_Register_Bad_Request
+2024/10/24 01:03:31 ERROR Error parsing HTTP request error="empty JSON object"
+=== RUN   TestQWatch/Q.WATCH_Register
+2024/10/24 01:03:31 INFO Registered client for watching query clientID=974772499 query="SELECT $key, $value WHERE $key LIKE \"match:100:*\" AND $value > 10 ORDER BY $value DESC LIMIT 3"
+2024/10/24 01:03:31 INFO Client disconnected
+--- PASS: TestQWatch (0.00s)
+    --- PASS: TestQWatch/Q.WATCH_Register_Bad_Request (0.00s)
+    --- PASS: TestQWatch/Q.WATCH_Register (0.00s)
+=== RUN   TestQwatchWithSSE
+2024/10/24 01:03:31 http: superfluous response.WriteHeader call from github.com/dicedb/dice/internal/server.writeJSONResponse (httpServer.go:394)
+2024/10/24 01:03:31 INFO Registered client for watching query clientID=2083051766 query="SELECT $key, $value WHERE $key like 'match:100:*' and $value > 10 ORDER BY $value desc LIMIT 3"
+--- PASS: TestQwatchWithSSE (2.00s)
+2024/10/24 01:03:33 INFO Client disconnected
+=== RUN   TestSELECT
+=== RUN   TestSELECT/SELECT_command_response
+2024/10/24 01:03:33 http: superfluous response.WriteHeader call from github.com/dicedb/dice/internal/server.writeJSONResponse (httpServer.go:394)
+=== RUN   TestSELECT/SELECT_command_error_response
+--- PASS: TestSELECT (0.00s)
+    --- PASS: TestSELECT/SELECT_command_response (0.00s)
+    --- PASS: TestSELECT/SELECT_command_error_response (0.00s)
+=== RUN   TestSetDataCmd
+=== RUN   TestSetDataCmd/SADD_simple_value
+=== RUN   TestSetDataCmd/SADD_multiple_values
+=== RUN   TestSetDataCmd/SADD_duplicate_values
+=== RUN   TestSetDataCmd/SADD_wrong_key_value_type
+=== RUN   TestSetDataCmd/SADD_multiple_add_and_multiple_kind_of_values
+=== RUN   TestSetDataCmd/SADD_&_SCARD
+=== RUN   TestSetDataCmd/SADD_&_SCARD_with_non-existing_key
+=== RUN   TestSetDataCmd/SADD_&_SCARD_with_wrong_key_type
+=== RUN   TestSetDataCmd/SADD_&_SMEMBERS
+=== RUN   TestSetDataCmd/SADD_&_SMEMBERS_with_non-existing_key
+=== RUN   TestSetDataCmd/SADD_&_SMEMBERS_with_wrong_key_type
+=== RUN   TestSetDataCmd/SADD_&_SREM
+=== RUN   TestSetDataCmd/SADD_&_SREM_with_non-existing_key
+=== RUN   TestSetDataCmd/SADD_&_SREM_with_wrong_key_type
+=== RUN   TestSetDataCmd/SADD_&_SREM_with_non-existing_value
+=== RUN   TestSetDataCmd/SADD_&_SDIFF
+=== RUN   TestSetDataCmd/SADD_&_SDIFF_with_non-existing_subsequent_key
+=== RUN   TestSetDataCmd/SADD_&_SDIFF_with_wrong_key_type
+=== RUN   TestSetDataCmd/SADD_&_SDIFF_with_subsequent_key_of_wrong_type
+=== RUN   TestSetDataCmd/SADD_&_SDIFF_with_non-existing_first_key
+=== RUN   TestSetDataCmd/SADD_&_SDIFF_with_one_key
+=== RUN   TestSetDataCmd/SADD_&_SINTER
+=== RUN   TestSetDataCmd/SADD_&_SINTER_with_non-existing_subsequent_key
+=== RUN   TestSetDataCmd/SADD_&_SINTER_with_wrong_key_type
+=== RUN   TestSetDataCmd/SADD_&_SINTER_with_subsequent_key_of_wrong_type
+=== RUN   TestSetDataCmd/SADD_&_SINTER_with_single_key
+--- PASS: TestSetDataCmd (0.05s)
+    --- PASS: TestSetDataCmd/SADD_simple_value (0.00s)
+    --- PASS: TestSetDataCmd/SADD_multiple_values (0.00s)
+    --- PASS: TestSetDataCmd/SADD_duplicate_values (0.00s)
+    --- PASS: TestSetDataCmd/SADD_wrong_key_value_type (0.00s)
+    --- PASS: TestSetDataCmd/SADD_multiple_add_and_multiple_kind_of_values (0.00s)
+    --- PASS: TestSetDataCmd/SADD_&_SCARD (0.00s)
+    --- PASS: TestSetDataCmd/SADD_&_SCARD_with_non-existing_key (0.00s)
+    --- PASS: TestSetDataCmd/SADD_&_SCARD_with_wrong_key_type (0.00s)
+    --- PASS: TestSetDataCmd/SADD_&_SMEMBERS (0.00s)
+    --- PASS: TestSetDataCmd/SADD_&_SMEMBERS_with_non-existing_key (0.00s)
+    --- PASS: TestSetDataCmd/SADD_&_SMEMBERS_with_wrong_key_type (0.00s)
+    --- PASS: TestSetDataCmd/SADD_&_SREM (0.00s)
+    --- PASS: TestSetDataCmd/SADD_&_SREM_with_non-existing_key (0.00s)
+    --- PASS: TestSetDataCmd/SADD_&_SREM_with_wrong_key_type (0.00s)
+    --- PASS: TestSetDataCmd/SADD_&_SREM_with_non-existing_value (0.00s)
+    --- PASS: TestSetDataCmd/SADD_&_SDIFF (0.00s)
+    --- PASS: TestSetDataCmd/SADD_&_SDIFF_with_non-existing_subsequent_key (0.00s)
+    --- PASS: TestSetDataCmd/SADD_&_SDIFF_with_wrong_key_type (0.00s)
+    --- PASS: TestSetDataCmd/SADD_&_SDIFF_with_subsequent_key_of_wrong_type (0.00s)
+    --- PASS: TestSetDataCmd/SADD_&_SDIFF_with_non-existing_first_key (0.00s)
+    --- PASS: TestSetDataCmd/SADD_&_SDIFF_with_one_key (0.00s)
+    --- PASS: TestSetDataCmd/SADD_&_SINTER (0.00s)
+    --- PASS: TestSetDataCmd/SADD_&_SINTER_with_non-existing_subsequent_key (0.00s)
+    --- PASS: TestSetDataCmd/SADD_&_SINTER_with_wrong_key_type (0.00s)
+    --- PASS: TestSetDataCmd/SADD_&_SINTER_with_subsequent_key_of_wrong_type (0.00s)
+    --- PASS: TestSetDataCmd/SADD_&_SINTER_with_single_key (0.00s)
+=== RUN   TestSet
+=== RUN   TestSet/Set_and_Get_Simple_Value
+=== RUN   TestSet/Set_and_Get_Integer_Value
+=== RUN   TestSet/Overwrite_Existing_Key
+--- PASS: TestSet (0.00s)
+    --- PASS: TestSet/Set_and_Get_Simple_Value (0.00s)
+    --- PASS: TestSet/Set_and_Get_Integer_Value (0.00s)
+    --- PASS: TestSet/Overwrite_Existing_Key (0.00s)
+=== RUN   TestSetWithOptions
+=== RUN   TestSetWithOptions/Set_with_EX_option
+=== RUN   TestSetWithOptions/Set_with_PX_option
+=== RUN   TestSetWithOptions/Set_with_EX_and_PX_option
+=== RUN   TestSetWithOptions/XX_on_non-existing_key
+=== RUN   TestSetWithOptions/NX_on_non-existing_key
+=== RUN   TestSetWithOptions/NX_on_existing_key
+=== RUN   TestSetWithOptions/PXAT_option
+=== RUN   TestSetWithOptions/PXAT_option_with_delete
+=== RUN   TestSetWithOptions/PXAT_option_with_invalid_unix_time_ms
+=== RUN   TestSetWithOptions/XX_on_existing_key
+=== RUN   TestSetWithOptions/Multiple_XX_operations
+=== RUN   TestSetWithOptions/EX_option
+=== RUN   TestSetWithOptions/XX_option
+--- PASS: TestSetWithOptions (14.04s)
+    --- PASS: TestSetWithOptions/Set_with_EX_option (3.00s)
+    --- PASS: TestSetWithOptions/Set_with_PX_option (3.00s)
+    --- PASS: TestSetWithOptions/Set_with_EX_and_PX_option (0.00s)
+    --- PASS: TestSetWithOptions/XX_on_non-existing_key (0.00s)
+    --- PASS: TestSetWithOptions/NX_on_non-existing_key (0.00s)
+    --- PASS: TestSetWithOptions/NX_on_existing_key (0.00s)
+    --- PASS: TestSetWithOptions/PXAT_option (0.00s)
+    --- PASS: TestSetWithOptions/PXAT_option_with_delete (4.01s)
+    --- PASS: TestSetWithOptions/PXAT_option_with_invalid_unix_time_ms (0.00s)
+    --- PASS: TestSetWithOptions/XX_on_existing_key (0.00s)
+    --- PASS: TestSetWithOptions/Multiple_XX_operations (0.00s)
+    --- PASS: TestSetWithOptions/EX_option (2.00s)
+    --- PASS: TestSetWithOptions/XX_option (2.00s)
+=== RUN   TestSetWithExat
+=== RUN   TestSetWithExat/SET_with_EXAT
+=== RUN   TestSetWithExat/SET_with_invalid_EXAT_expires_key_immediately
+--- PASS: TestSetWithExat (0.00s)
+    --- PASS: TestSetWithExat/SET_with_EXAT (0.00s)
+    --- PASS: TestSetWithExat/SET_with_invalid_EXAT_expires_key_immediately (0.00s)
+=== RUN   TestJSONTOGGLE
+=== RUN   TestJSONTOGGLE/JSON.TOGGLE_with_existing_key
+=== RUN   TestJSONTOGGLE/JSON.TOGGLE_with_non-existing_key
+=== RUN   TestJSONTOGGLE/JSON.TOGGLE_with_invalid_path
+=== RUN   TestJSONTOGGLE/JSON.TOGGLE_with_invalid_command_format
+=== RUN   TestJSONTOGGLE/deeply_nested_JSON_structure_with_multiple_matching_fields
+--- PASS: TestJSONTOGGLE (0.01s)
+    --- PASS: TestJSONTOGGLE/JSON.TOGGLE_with_existing_key (0.00s)
+    --- PASS: TestJSONTOGGLE/JSON.TOGGLE_with_non-existing_key (0.00s)
+    --- PASS: TestJSONTOGGLE/JSON.TOGGLE_with_invalid_path (0.00s)
+    --- PASS: TestJSONTOGGLE/JSON.TOGGLE_with_invalid_command_format (0.00s)
+    --- PASS: TestJSONTOGGLE/deeply_nested_JSON_structure_with_multiple_matching_fields (0.00s)
+=== RUN   TestTouch
+=== RUN   TestTouch/Touch_Simple_Value
+=== RUN   TestTouch/Touch_Multiple_Existing_Keys
+=== RUN   TestTouch/Touch_Multiple_Existing_and_Non-Existing_Keys
+--- PASS: TestTouch (2.01s)
+    --- PASS: TestTouch/Touch_Simple_Value (2.00s)
+    --- PASS: TestTouch/Touch_Multiple_Existing_Keys (0.00s)
+    --- PASS: TestTouch/Touch_Multiple_Existing_and_Non-Existing_Keys (0.00s)
+=== RUN   TestTTLPTTL
+=== RUN   TestTTLPTTL/TTL_Simple_Value
+=== RUN   TestTTLPTTL/PTTL_Simple_Value
+=== RUN   TestTTLPTTL/TTL_&_PTTL_Non-Existent_Key
+=== RUN   TestTTLPTTL/TTL_&_PTTL_without_Expiry
+=== RUN   TestTTLPTTL/TTL_&_PTTL_with_Persist
+=== RUN   TestTTLPTTL/TTL_&_PTTL_with_Expire_and_Expired_Key
+--- PASS: TestTTLPTTL (5.01s)
+    --- PASS: TestTTLPTTL/TTL_Simple_Value (0.00s)
+    --- PASS: TestTTLPTTL/PTTL_Simple_Value (0.00s)
+    --- PASS: TestTTLPTTL/TTL_&_PTTL_Non-Existent_Key (0.00s)
+    --- PASS: TestTTLPTTL/TTL_&_PTTL_without_Expiry (0.00s)
+    --- PASS: TestTTLPTTL/TTL_&_PTTL_with_Persist (0.00s)
+    --- PASS: TestTTLPTTL/TTL_&_PTTL_with_Expire_and_Expired_Key (5.00s)
+=== RUN   TestType
+=== RUN   TestType/TYPE_with_invalid_number_of_arguments
+=== RUN   TestType/TYPE_for_non-existent_key
+=== RUN   TestType/TYPE_for_key_with_String_value
+=== RUN   TestType/TYPE_for_key_with_List_value
+=== RUN   TestType/TYPE_for_key_with_Set_value
+=== RUN   TestType/TYPE_for_key_with_Hash_value
+=== RUN   TestType/TYPE_for_key_with_value_created_from_SETBIT_command
+=== RUN   TestType/TYPE_for_key_with_value_created_from_BITOP_command
+--- PASS: TestType (0.02s)
+    --- PASS: TestType/TYPE_with_invalid_number_of_arguments (0.00s)
+    --- PASS: TestType/TYPE_for_non-existent_key (0.00s)
+    --- PASS: TestType/TYPE_for_key_with_String_value (0.00s)
+    --- PASS: TestType/TYPE_for_key_with_List_value (0.00s)
+    --- PASS: TestType/TYPE_for_key_with_Set_value (0.00s)
+    --- PASS: TestType/TYPE_for_key_with_Hash_value (0.00s)
+    --- PASS: TestType/TYPE_for_key_with_value_created_from_SETBIT_command (0.00s)
+    --- PASS: TestType/TYPE_for_key_with_value_created_from_BITOP_command (0.00s)
+=== RUN   TestZRANK
+=== RUN   TestZRANK/ZRANK_of_existing_member
+=== RUN   TestZRANK/ZRANK_of_non-existing_member
+=== RUN   TestZRANK/ZRANK_with_WITHSCORE_option_for_existing_member
+=== RUN   TestZRANK/ZRANK_with_WITHSCORE_option_for_non-existing_member
+=== RUN   TestZRANK/ZRANK_on_non-existing_key
+=== RUN   TestZRANK/ZRANK_with_wrong_number_of_arguments
+=== RUN   TestZRANK/ZRANK_with_invalid_option
+--- PASS: TestZRANK (0.00s)
+    --- PASS: TestZRANK/ZRANK_of_existing_member (0.00s)
+    --- PASS: TestZRANK/ZRANK_of_non-existing_member (0.00s)
+    --- PASS: TestZRANK/ZRANK_with_WITHSCORE_option_for_existing_member (0.00s)
+    --- PASS: TestZRANK/ZRANK_with_WITHSCORE_option_for_non-existing_member (0.00s)
+    --- PASS: TestZRANK/ZRANK_on_non-existing_key (0.00s)
+    --- PASS: TestZRANK/ZRANK_with_wrong_number_of_arguments (0.00s)
+    --- PASS: TestZRANK/ZRANK_with_invalid_option (0.00s)
+=== RUN   TestZPOPMIN
+=== RUN   TestZPOPMIN/ZPOPMIN_on_non-existing_key_with/without_count_argument
+=== RUN   TestZPOPMIN/ZPOPMIN_with_wrong_type_of_key_with/without_count_argument
+=== RUN   TestZPOPMIN/ZPOPMIN_on_existing_key_(without_count_argument)
+=== RUN   TestZPOPMIN/ZPOPMIN_with_normal_count_argument
+=== RUN   TestZPOPMIN/ZPOPMIN_with_count_argument_but_multiple_members_have_the_same_score
+=== RUN   TestZPOPMIN/ZPOPMIN_with_negative_count_argument
+=== RUN   TestZPOPMIN/ZPOPMIN_with_invalid_count_argument
+=== RUN   TestZPOPMIN/ZPOPMIN_with_count_argument_greater_than_length_of_sorted_set
+=== RUN   TestZPOPMIN/ZPOPMIN_on_empty_sorted_set
+=== RUN   TestZPOPMIN/ZPOPMIN_with_floating-point_scores
+--- PASS: TestZPOPMIN (0.01s)
+    --- PASS: TestZPOPMIN/ZPOPMIN_on_non-existing_key_with/without_count_argument (0.00s)
+    --- PASS: TestZPOPMIN/ZPOPMIN_with_wrong_type_of_key_with/without_count_argument (0.00s)
+    --- PASS: TestZPOPMIN/ZPOPMIN_on_existing_key_(without_count_argument) (0.00s)
+    --- PASS: TestZPOPMIN/ZPOPMIN_with_normal_count_argument (0.00s)
+    --- PASS: TestZPOPMIN/ZPOPMIN_with_count_argument_but_multiple_members_have_the_same_score (0.00s)
+    --- PASS: TestZPOPMIN/ZPOPMIN_with_negative_count_argument (0.00s)
+    --- PASS: TestZPOPMIN/ZPOPMIN_with_invalid_count_argument (0.00s)
+    --- PASS: TestZPOPMIN/ZPOPMIN_with_count_argument_greater_than_length_of_sorted_set (0.00s)
+    --- PASS: TestZPOPMIN/ZPOPMIN_on_empty_sorted_set (0.00s)
+    --- PASS: TestZPOPMIN/ZPOPMIN_with_floating-point_scores (0.00s)
+FAIL
+2024/10/24 01:03:54 ERROR Error parsing HTTP request error=<nil>
+2024/10/24 01:03:54 Http test server encountered an error: http: Server closed
+FAIL	github.com/dicedb/dice/integration_tests/commands/http	86.935s
 Starting the test server on port 9739
-2024-10-24T00:06:29+05:30 INF ready to accept and serve requests on port=7379
+2024-10-24T01:03:55+05:30 INF ready to accept and serve requests on port=7379
 === RUN   TestAPPEND
 === RUN   TestAPPEND/APPEND_and_GET_a_new_Val
 === RUN   TestAPPEND/APPEND_to_an_existing_key_and_GET
@@ -1622,7 +2310,7 @@ Starting the test server on port 9739
 === RUN   TestAPPEND/APPEND_to_key_created_using_LPUSH
 === RUN   TestAPPEND/APPEND_value_with_leading_zeros
 === RUN   TestAPPEND/APPEND_to_key_created_using_SADD
---- PASS: TestAPPEND (0.01s)
+--- PASS: TestAPPEND (0.00s)
     --- PASS: TestAPPEND/APPEND_and_GET_a_new_Val (0.00s)
     --- PASS: TestAPPEND/APPEND_to_an_existing_key_and_GET (0.00s)
     --- PASS: TestAPPEND/APPEND_without_input_value (0.00s)
@@ -1631,9 +2319,9 @@ Starting the test server on port 9739
     --- PASS: TestAPPEND/APPEND_value_with_leading_zeros (0.00s)
     --- PASS: TestAPPEND/APPEND_to_key_created_using_SADD (0.00s)
 === RUN   TestBFReserveAddInfoExists
-2024-10-24T00:06:31+05:30 INF Closing connection
+2024-10-24T01:03:57+05:30 INF Closing connection
 === RUN   TestBFReserveAddInfoExists/BF.RESERVE_and_BF.ADD
-2024-10-24T00:06:31+05:30 INF Stopping worker workerID=W-2038-2
+2024-10-24T01:03:57+05:30 INF Stopping worker workerID=W-2022-2
 === RUN   TestBFReserveAddInfoExists/BF.EXISTS_returns_false_for_non-existing_item
 === RUN   TestBFReserveAddInfoExists/BF.INFO_provides_correct_information
 === RUN   TestBFReserveAddInfoExists/BF.RESERVE_on_existent_filter_returns_error
@@ -1643,9 +2331,9 @@ Starting the test server on port 9739
     --- PASS: TestBFReserveAddInfoExists/BF.INFO_provides_correct_information (0.00s)
     --- PASS: TestBFReserveAddInfoExists/BF.RESERVE_on_existent_filter_returns_error (0.00s)
 === RUN   TestBFEdgeCasesAndErrors
-2024-10-24T00:06:31+05:30 INF Closing connection
-2024-10-24T00:06:31+05:30 INF Stopping worker workerID=W-2044-3
+2024-10-24T01:03:57+05:30 INF Closing connection
 === RUN   TestBFEdgeCasesAndErrors/BF.RESERVE_with_incorrect_number_of_arguments
+2024-10-24T01:03:57+05:30 INF Stopping worker workerID=W-2026-3
 === RUN   TestBFEdgeCasesAndErrors/BF.RESERVE_with_zero_capacity
 === RUN   TestBFEdgeCasesAndErrors/BF.RESERVE_with_zero_capacity#01
 === RUN   TestBFEdgeCasesAndErrors/BF.RESERVE_with_zero_capacity#02
@@ -1683,9 +2371,9 @@ Starting the test server on port 9739
     --- PASS: TestBFEdgeCasesAndErrors/BF.ADD_on_a_key_holding_a_list (0.00s)
     --- PASS: TestBFEdgeCasesAndErrors/BF.INFO_on_a_key_holding_a_hash (0.00s)
 === RUN   TestCommandGetKeys
-2024-10-24T00:06:31+05:30 INF Closing connection
+2024-10-24T01:03:57+05:30 INF Closing connection
+2024-10-24T01:03:57+05:30 INF Stopping worker workerID=W-2029-4
 === RUN   TestCommandGetKeys/Set_command
-2024-10-24T00:06:31+05:30 INF Stopping worker workerID=W-2046-4
 === RUN   TestCommandGetKeys/Get_command
 === RUN   TestCommandGetKeys/TTL_command
 === RUN   TestCommandGetKeys/Del_command
@@ -1709,9 +2397,9 @@ Starting the test server on port 9739
     --- PASS: TestCommandGetKeys/Invalid_command (0.00s)
     --- PASS: TestCommandGetKeys/Wrong_number_of_arguments (0.00s)
 === RUN   TestCommandInfo
+2024-10-24T01:03:57+05:30 INF Closing connection
 === RUN   TestCommandInfo/Set_command
-2024-10-24T00:06:31+05:30 INF Closing connection
-2024-10-24T00:06:31+05:30 INF Stopping worker workerID=W-2055-5
+2024-10-24T01:03:57+05:30 INF Stopping worker workerID=W-2038-5
 === RUN   TestCommandInfo/Get_command
 === RUN   TestCommandInfo/Ping_command
 === RUN   TestCommandInfo/Invalid_command
@@ -1725,34 +2413,34 @@ Starting the test server on port 9739
     --- PASS: TestCommandInfo/Combination_of_valid_and_Invalid_command (0.00s)
     --- PASS: TestCommandInfo/Combination_of_multiple_valid_commands (0.00s)
 === RUN   TestDECR
-2024-10-24T00:06:31+05:30 INF Closing connection
-2024-10-24T00:06:31+05:30 INF Stopping worker workerID=W-2059-6
+2024-10-24T01:03:57+05:30 INF Closing connection
 === RUN   TestDECR/Decrement_multiple_keys
+2024-10-24T01:03:57+05:30 INF Stopping worker workerID=W-2041-6
 --- PASS: TestDECR (0.00s)
     --- PASS: TestDECR/Decrement_multiple_keys (0.00s)
 === RUN   TestDECRBY
-2024-10-24T00:06:31+05:30 INF Closing connection
+2024-10-24T01:03:57+05:30 INF Closing connection
 === RUN   TestDECRBY/Decrement_multiple_keys
-2024-10-24T00:06:31+05:30 INF Stopping worker workerID=W-2062-7
+2024-10-24T01:03:57+05:30 INF Stopping worker workerID=W-2045-7
 --- PASS: TestDECRBY (0.00s)
     --- PASS: TestDECRBY/Decrement_multiple_keys (0.00s)
 === RUN   TestGet
-2024-10-24T00:06:31+05:30 INF Closing connection
+2024-10-24T01:03:57+05:30 INF Closing connection
 === RUN   TestGet/Get_with_expiration
-2024-10-24T00:06:31+05:30 INF Stopping worker workerID=W-2064-8
+2024-10-24T01:03:57+05:30 INF Stopping worker workerID=W-2047-8
 --- PASS: TestGet (5.00s)
     --- PASS: TestGet/Get_with_expiration (5.00s)
 === RUN   TestGETRANGE
-2024-10-24T00:06:36+05:30 INF Closing connection
-2024-10-24T00:06:36+05:30 INF Stopping worker workerID=W-2066-9
-2024-10-24T00:06:36+05:30 INF FLUSHDB called args={}
+2024-10-24T01:04:02+05:30 INF Closing connection
+2024-10-24T01:04:02+05:30 INF Stopping worker workerID=W-2049-9
+2024-10-24T01:04:02+05:30 INF FLUSHDB called args={}
 === RUN   TestGETRANGE/Get_range_on_a_string
 === RUN   TestGETRANGE/Get_range_on_a_non_existent_key
 === RUN   TestGETRANGE/Get_range_on_wrong_key_type
 === RUN   TestGETRANGE/GETRANGE_against_string_value:_0,_-1
 === RUN   TestGETRANGE/GETRANGE_against_string_value:_5,_3
 === RUN   TestGETRANGE/GETRANGE_against_integer_value:_-1,_-100
-2024-10-24T00:06:36+05:30 INF FLUSHDB called args={}
+2024-10-24T01:04:02+05:30 INF FLUSHDB called args={}
 --- PASS: TestGETRANGE (0.00s)
     --- PASS: TestGETRANGE/Get_range_on_a_string (0.00s)
     --- PASS: TestGETRANGE/Get_range_on_a_non_existent_key (0.00s)
@@ -1761,8 +2449,8 @@ Starting the test server on port 9739
     --- PASS: TestGETRANGE/GETRANGE_against_string_value:_5,_3 (0.00s)
     --- PASS: TestGETRANGE/GETRANGE_against_integer_value:_-1,_-100 (0.00s)
 === RUN   TestGetSet
-2024-10-24T00:06:36+05:30 INF Closing connection
-2024-10-24T00:06:36+05:30 INF Stopping worker workerID=W-7068-10
+2024-10-24T01:04:02+05:30 INF Closing connection
+2024-10-24T01:04:02+05:30 INF Stopping worker workerID=W-7050-10
 === RUN   TestGetSet/GETSET_with_INCR
 === RUN   TestGetSet/GETSET_with_SET
 === RUN   TestGetSet/GETSET_with_TTL
@@ -1773,18 +2461,18 @@ Starting the test server on port 9739
     --- PASS: TestGetSet/GETSET_with_TTL (0.00s)
     --- PASS: TestGetSet/GETSET_error_when_key_exists_but_does_not_hold_a_string_value (0.00s)
 === RUN   TestGETWATCH
-2024-10-24T00:06:36+05:30 INF Closing connection
-2024-10-24T00:06:36+05:30 INF Stopping worker workerID=W-7072-11
-2024-10-24T00:06:36+05:30 INF Closing connection
-2024-10-24T00:06:36+05:30 INF Stopping worker workerID=W-7075-12
-2024-10-24T00:06:36+05:30 INF Closing connection
-2024-10-24T00:06:36+05:30 INF Stopping worker workerID=W-7075-13
-2024-10-24T00:06:36+05:30 INF Closing connection
-2024-10-24T00:06:36+05:30 INF Stopping worker workerID=W-7075-14
+2024-10-24T01:04:02+05:30 INF Closing connection
+2024-10-24T01:04:02+05:30 INF Stopping worker workerID=W-7054-11
+2024-10-24T01:04:02+05:30 INF Closing connection
+2024-10-24T01:04:02+05:30 INF Stopping worker workerID=W-7055-12
+2024-10-24T01:04:02+05:30 INF Closing connection
+2024-10-24T01:04:02+05:30 INF Stopping worker workerID=W-7056-13
+2024-10-24T01:04:02+05:30 INF Closing connection
+2024-10-24T01:04:02+05:30 INF Stopping worker workerID=W-7056-14
 --- PASS: TestGETWATCH (0.30s)
 === RUN   TestGETWATCHWithSDK
-2024-10-24T00:06:36+05:30 INF Closing connection
-2024-10-24T00:06:36+05:30 INF Stopping worker workerID=W-7075-15
+2024-10-24T01:04:02+05:30 INF Closing connection
+2024-10-24T01:04:02+05:30 INF Stopping worker workerID=W-7056-15
 --- PASS: TestGETWATCHWithSDK (0.00s)
 === RUN   TestGETWATCHWithSDK2
 --- PASS: TestGETWATCHWithSDK2 (0.00s)
@@ -1807,9 +2495,9 @@ Starting the test server on port 9739
     --- PASS: TestHExists/RESP_Check_if_field_exists_when_no_k,f_and_v_exist (0.00s)
     --- PASS: TestHExists/RESP_HEXISTS_operation_against_a_key_holding_the_wrong_kind_of_value (0.00s)
 === RUN   TestHINCRBY
-2024-10-24T00:06:36+05:30 INF Closing connection
-2024-10-24T00:06:36+05:30 INF Stopping worker workerID=W-7389-24
-2024-10-24T00:06:36+05:30 INF FLUSHDB called args={}
+2024-10-24T01:04:02+05:30 INF Closing connection
+2024-10-24T01:04:02+05:30 INF Stopping worker workerID=W-7369-24
+2024-10-24T01:04:02+05:30 INF FLUSHDB called args={}
 === RUN   TestHINCRBY/HINCRBY_on_non-existing_key
 === RUN   TestHINCRBY/HINCRBY_on_existing_key
 === RUN   TestHINCRBY/HINCRBY_on_non-integer_value
@@ -1822,9 +2510,9 @@ Starting the test server on port 9739
     --- PASS: TestHINCRBY/HINCRBY_on_non-hashmap_key (0.00s)
     --- PASS: TestHINCRBY/HINCRBY_overflow (0.00s)
 === RUN   TestHINCRBYFLOAT
-2024-10-24T00:06:36+05:30 INF Closing connection
-2024-10-24T00:06:36+05:30 INF Stopping worker workerID=W-7397-25
-2024-10-24T00:06:36+05:30 INF FLUSHDB called args={}
+2024-10-24T01:04:03+05:30 INF Closing connection
+2024-10-24T01:04:03+05:30 INF Stopping worker workerID=W-7375-25
+2024-10-24T01:04:03+05:30 INF FLUSHDB called args={}
 === RUN   TestHINCRBYFLOAT/HINCRBYFLOAT_on_non-existing_key
 === RUN   TestHINCRBYFLOAT/HINCRBYFLOAT_on_existing_key
 === RUN   TestHINCRBYFLOAT/HINCRBYFLOAT_on_non-float_or_non-integer_value
@@ -1837,29 +2525,29 @@ Starting the test server on port 9739
     --- PASS: TestHINCRBYFLOAT/HINCRBYFLOAT_on_non-hashmap_key (0.00s)
     --- PASS: TestHINCRBYFLOAT/HINCRBYFLOAT_using_a_non_integer_/_non-float_value (0.00s)
 === RUN   TestHKeys
-2024-10-24T00:06:36+05:30 INF Closing connection
+2024-10-24T01:04:03+05:30 INF Closing connection
 === RUN   TestHKeys/RESP_HKEYS_with_key_containing_hash_with_multiple_fields
-2024-10-24T00:06:36+05:30 INF Stopping worker workerID=W-7400-26
+2024-10-24T01:04:03+05:30 INF Stopping worker workerID=W-7377-26
 === RUN   TestHKeys/RESP_HKEYS_with_non-existent_key
 === RUN   TestHKeys/RESP_HKEYS_with_key_containing_a_non-hash_value
 === RUN   TestHKeys/RESP_HKEYS_with_wrong_number_of_arguments
 === RUN   TestHKeys/RESP_One_or_more_keys_exist
-    hkeys_test.go:54: assertion failed: 
+    hkeys_test.go:55: assertion failed: 
         --- tc.expected[i]
         +++ result
-          any(
-        - 	int64(1),
-        + 	string("WRONGTYPE Operation against a key holding the wrong kind of value"),
-          )
+          any(
+        - 	int64(1),
+        + 	string("WRONGTYPE Operation against a key holding the wrong kind of value"),
+          )
         
 === RUN   TestHKeys/RESP_No_keys_exist
-    hkeys_test.go:54: assertion failed: 
+    hkeys_test.go:55: assertion failed: 
         --- tc.expected[i]
         +++ result
-          any(
-        - 	[]any{},
-        + 	string("ERR -WRONGTYPE Operation against a key holding the wrong kind of value"),
-          )
+          any(
+        - 	[]any{},
+        + 	string("ERR -WRONGTYPE Operation against a key holding the wrong kind of value"),
+          )
         
 --- FAIL: TestHKeys (0.01s)
     --- PASS: TestHKeys/RESP_HKEYS_with_key_containing_hash_with_multiple_fields (0.00s)
@@ -1869,9 +2557,9 @@ Starting the test server on port 9739
     --- FAIL: TestHKeys/RESP_One_or_more_keys_exist (0.00s)
     --- FAIL: TestHKeys/RESP_No_keys_exist (0.00s)
 === RUN   TestHRANDFIELD
-2024-10-24T00:06:36+05:30 INF Closing connection
-2024-10-24T00:06:36+05:30 INF Stopping worker workerID=W-7403-27
-2024-10-24T00:06:36+05:30 INF FLUSHDB called args={}
+2024-10-24T01:04:03+05:30 INF Closing connection
+2024-10-24T01:04:03+05:30 INF Stopping worker workerID=W-7380-27
+2024-10-24T01:04:03+05:30 INF FLUSHDB called args={}
 === RUN   TestHRANDFIELD/Basic_HRANDFIELD_operations
 === RUN   TestHRANDFIELD/HRANDFIELD_with_count
 === RUN   TestHRANDFIELD/HRANDFIELD_with_WITHVALUES
@@ -1884,9 +2572,9 @@ Starting the test server on port 9739
     --- PASS: TestHRANDFIELD/HRANDFIELD_on_non-existent_key (0.00s)
     --- PASS: TestHRANDFIELD/HRANDFIELD_with_wrong_number_of_arguments (0.00s)
 === RUN   TestHVals
-2024-10-24T00:06:36+05:30 INF Closing connection
+2024-10-24T01:04:03+05:30 INF Closing connection
 === RUN   TestHVals/RESP_HVALS_with_multiple_fields
-2024-10-24T00:06:36+05:30 INF Stopping worker workerID=W-7412-28
+2024-10-24T01:04:03+05:30 INF Stopping worker workerID=W-7386-28
 === RUN   TestHVals/RESP_HVALS_with_non-existing_key
 === RUN   TestHVals/HVALS_on_wrong_key_type
 === RUN   TestHVals/HVALS_with_wrong_number_of_arguments
@@ -1900,9 +2588,9 @@ Starting the test server on port 9739
     --- PASS: TestHVals/RESP_One_or_more_vals_exist (0.00s)
     --- PASS: TestHVals/RESP_No_values_exist (0.00s)
 === RUN   TestHyperLogLogCommands
-2024-10-24T00:06:36+05:30 INF Closing connection
+2024-10-24T01:04:03+05:30 INF Closing connection
 === RUN   TestHyperLogLogCommands/PFADD_with_one_key-value_pair
-2024-10-24T00:06:36+05:30 INF Stopping worker workerID=W-7415-29
+2024-10-24T01:04:03+05:30 INF Stopping worker workerID=W-7388-29
 === RUN   TestHyperLogLogCommands/PFADD_with_multiple_key-value_pairs
 === RUN   TestHyperLogLogCommands/PFADD_with_duplicate_key-value_pairs
 === RUN   TestHyperLogLogCommands/PFADD_with_multiple_keys
@@ -1926,9 +2614,9 @@ Starting the test server on port 9739
     --- PASS: TestHyperLogLogCommands/PFMERGE_with_invalid_object (0.00s)
     --- PASS: TestHyperLogLogCommands/PFMERGE_with_invalid_src_object (0.00s)
 === RUN   TestINCRBYFLOAT
-2024-10-24T00:06:36+05:30 INF Closing connection
+2024-10-24T01:04:03+05:30 INF Closing connection
 === RUN   TestINCRBYFLOAT/Invalid_number_of_arguments
-2024-10-24T00:06:36+05:30 INF Stopping worker workerID=W-7419-30
+2024-10-24T01:04:03+05:30 INF Stopping worker workerID=W-7392-30
 === RUN   TestINCRBYFLOAT/Increment_a_non_existing_key
 === RUN   TestINCRBYFLOAT/Increment_a_key_with_an_integer_value
 === RUN   TestINCRBYFLOAT/Increment_and_then_decrement_a_key_with_the_same_value
@@ -1948,9 +2636,9 @@ Starting the test server on port 9739
     --- PASS: TestINCRBYFLOAT/Increment_that_would_make_the_value_Inf (0.00s)
     --- PASS: TestINCRBYFLOAT/Increment_that_would_make_the_value_-Inf (0.00s)
 === RUN   TestINCR
-2024-10-24T00:06:36+05:30 INF Closing connection
+2024-10-24T01:04:03+05:30 INF Closing connection
 === RUN   TestINCR/Increment_multiple_keys
-2024-10-24T00:06:36+05:30 INF Stopping worker workerID=W-7427-31
+2024-10-24T01:04:03+05:30 INF Stopping worker workerID=W-7399-31
 === RUN   TestINCR/Increment_to_and_from_max_int64
 === RUN   TestINCR/Increment_from_min_int64
 === RUN   TestINCR/Increment_non-integer_values
@@ -1966,15 +2654,15 @@ Starting the test server on port 9739
     --- PASS: TestINCR/Increment_string_representing_integers (0.00s)
     --- PASS: TestINCR/Increment_with_expiry (1.10s)
 === RUN   TestINCRBY
-2024-10-24T00:06:37+05:30 INF Closing connection
+2024-10-24T01:04:04+05:30 INF Closing connection
 === RUN   TestINCRBY/happy_flow
-2024-10-24T00:06:37+05:30 INF Stopping worker workerID=W-7434-32
+2024-10-24T01:04:04+05:30 INF Stopping worker workerID=W-7404-32
 === RUN   TestINCRBY/happy_flow_with_negative_increment
 === RUN   TestINCRBY/happy_flow_with_unset_key
 === RUN   TestINCRBY/edge_case_with_maxInt64
 === RUN   TestINCRBY/edge_case_with_negative_increment
 === RUN   TestINCRBY/edge_case_with_string_values
---- PASS: TestINCRBY (0.01s)
+--- PASS: TestINCRBY (0.00s)
     --- PASS: TestINCRBY/happy_flow (0.00s)
     --- PASS: TestINCRBY/happy_flow_with_negative_increment (0.00s)
     --- PASS: TestINCRBY/happy_flow_with_unset_key (0.00s)
@@ -1982,8 +2670,8 @@ Starting the test server on port 9739
     --- PASS: TestINCRBY/edge_case_with_negative_increment (0.00s)
     --- PASS: TestINCRBY/edge_case_with_string_values (0.00s)
 === RUN   TestJsonStrlen
-2024-10-24T00:06:37+05:30 INF Closing connection
-2024-10-24T00:06:37+05:30 INF Stopping worker workerID=W-8553-33
+2024-10-24T01:04:04+05:30 INF Closing connection
+2024-10-24T01:04:04+05:30 INF Stopping worker workerID=W-8520-33
 === RUN   TestJsonStrlen/jsonstrlen_with_root_path
 === RUN   TestJsonStrlen/jsonstrlen_nested
 === RUN   TestJsonStrlen/jsonstrlen_with_no_path_and_object_at_root
@@ -2000,8 +2688,8 @@ Starting the test server on port 9739
     --- PASS: TestJsonStrlen/jsonstrlen_with_no_path_and_object_at_integer (0.00s)
     --- PASS: TestJsonStrlen/jsonstrlen_with_no_path_and_object_at_number (0.00s)
 === RUN   TestJSONClearOperations
-2024-10-24T00:06:37+05:30 INF Closing connection
-2024-10-24T00:06:37+05:30 INF Stopping worker workerID=W-8559-34
+2024-10-24T01:04:04+05:30 INF Closing connection
+2024-10-24T01:04:04+05:30 INF Stopping worker workerID=W-8524-34
 === RUN   TestJSONClearOperations/jsonclear_root_path
 === RUN   TestJSONClearOperations/jsonclear_string_type
 === RUN   TestJSONClearOperations/jsonclear_array_type
@@ -2018,8 +2706,8 @@ Starting the test server on port 9739
     --- PASS: TestJSONClearOperations/jsonclear_integer_type (0.00s)
     --- PASS: TestJSONClearOperations/jsonclear_float_type (0.00s)
 === RUN   TestJsonObjLen
-2024-10-24T00:06:37+05:30 INF Closing connection
-2024-10-24T00:06:37+05:30 INF Stopping worker workerID=W-8570-35
+2024-10-24T01:04:04+05:30 INF Closing connection
+2024-10-24T01:04:04+05:30 INF Stopping worker workerID=W-8535-35
 === RUN   TestJsonObjLen/JSON.OBJLEN_with_root_path
 === RUN   TestJsonObjLen/JSON.OBJLEN_with_nested_path
 === RUN   TestJsonObjLen/JSON.OBJLEN_with_non-object_path
@@ -2056,8 +2744,8 @@ Starting the test server on port 9739
     --- PASS: TestJsonObjLen/JSON.OBJLEN_with_legacy_path_-_inner_existent_path_with_nonJSON_object (0.00s)
     --- PASS: TestJsonObjLen/JSON.OBJLEN_with_legacy_path_-_inner_existent_path_recursive_object (0.00s)
 === RUN   TestSet
-2024-10-24T00:06:37+05:30 INF Closing connection
-2024-10-24T00:06:37+05:30 INF Stopping worker workerID=W-8599-36
+2024-10-24T01:04:04+05:30 INF Closing connection
+2024-10-24T01:04:04+05:30 INF Stopping worker workerID=W-8563-36
 === RUN   TestSet/Set_and_Get_Simple_Value
 === RUN   TestSet/Set_and_Get_Integer_Value
 === RUN   TestSet/Overwrite_Existing_Key
@@ -2066,9 +2754,9 @@ Starting the test server on port 9739
     --- PASS: TestSet/Set_and_Get_Integer_Value (0.00s)
     --- PASS: TestSet/Overwrite_Existing_Key (0.00s)
 === RUN   TestSetWithOptions
-2024-10-24T00:06:37+05:30 INF Closing connection
+2024-10-24T01:04:04+05:30 INF Closing connection
 === RUN   TestSetWithOptions/Set_with_EX_option
-2024-10-24T00:06:37+05:30 INF Stopping worker workerID=W-8613-37
+2024-10-24T01:04:04+05:30 INF Stopping worker workerID=W-8576-37
 === RUN   TestSetWithOptions/Set_with_PX_option
 === RUN   TestSetWithOptions/Set_with_EX_and_PX_option
 === RUN   TestSetWithOptions/XX_on_non-existing_key
@@ -2096,8 +2784,8 @@ Starting the test server on port 9739
     --- PASS: TestSetWithOptions/EX_option (2.00s)
     --- PASS: TestSetWithOptions/XX_option (2.00s)
 === RUN   TestSetWithExat
-2024-10-24T00:06:49+05:30 INF Closing connection
-2024-10-24T00:06:49+05:30 INF Stopping worker workerID=W-8614-38
+2024-10-24T01:04:16+05:30 INF Closing connection
+2024-10-24T01:04:16+05:30 INF Stopping worker workerID=W-8578-38
 === RUN   TestSetWithExat/SET_with_EXAT
 === RUN   TestSetWithExat/SET_with_invalid_EXAT_expires_key_immediately
 === RUN   TestSetWithExat/SET_with_EXAT_and_PXAT_returns_syntax_error
@@ -2106,22 +2794,22 @@ Starting the test server on port 9739
     --- PASS: TestSetWithExat/SET_with_invalid_EXAT_expires_key_immediately (0.00s)
     --- PASS: TestSetWithExat/SET_with_EXAT_and_PXAT_returns_syntax_error (0.00s)
 === RUN   TestWithKeepTTLFlag
-2024-10-24T00:06:55+05:30 INF Closing connection
-2024-10-24T00:06:55+05:30 INF Stopping worker workerID=W-20632-39
+2024-10-24T01:04:22+05:30 INF Closing connection
+2024-10-24T01:04:22+05:30 INF Stopping worker workerID=W-20594-39
 --- PASS: TestWithKeepTTLFlag (2.00s)
 === RUN   TestZRANGEWATCH
-2024-10-24T00:06:57+05:30 INF Closing connection
-2024-10-24T00:06:57+05:30 INF Stopping worker workerID=W-26636-40
-2024-10-24T00:06:57+05:30 INF Closing connection
-2024-10-24T00:06:57+05:30 INF Stopping worker workerID=W-28637-41
-2024-10-24T00:06:58+05:30 INF Closing connection
-2024-10-24T00:06:58+05:30 INF Stopping worker workerID=W-28638-42
-2024-10-24T00:06:58+05:30 INF Closing connection
-2024-10-24T00:06:58+05:30 INF Stopping worker workerID=W-28638-43
---- PASS: TestZRANGEWATCH (0.31s)
+2024-10-24T01:04:24+05:30 INF Closing connection
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-26598-40
+2024-10-24T01:04:24+05:30 INF Closing connection
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28599-41
+2024-10-24T01:04:24+05:30 INF Closing connection
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28600-42
+2024-10-24T01:04:24+05:30 INF Closing connection
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28600-43
+--- PASS: TestZRANGEWATCH (0.30s)
 === RUN   TestZRANGEWATCHWithSDK
-2024-10-24T00:06:58+05:30 INF Closing connection
-2024-10-24T00:06:58+05:30 INF Stopping worker workerID=W-28638-44
+2024-10-24T01:04:24+05:30 INF Closing connection
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28600-44
 --- PASS: TestZRANGEWATCHWithSDK (0.01s)
 === RUN   TestZRANGEWATCHWithSDK2
 --- PASS: TestZRANGEWATCHWithSDK2 (0.01s)
@@ -2142,9 +2830,9 @@ Starting the test server on port 9739
     --- PASS: TestZRANK/ZRANK_with_wrong_number_of_arguments (0.00s)
     --- PASS: TestZRANK/ZRANK_with_invalid_option (0.00s)
 === RUN   TestZPOPMIN
-2024-10-24T00:06:58+05:30 INF Closing connection
+2024-10-24T01:04:24+05:30 INF Closing connection
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28915-53
 === RUN   TestZPOPMIN/ZPOPMIN_on_non-existing_key_with/without_count_argument
-2024-10-24T00:06:58+05:30 INF Stopping worker workerID=W-28955-53
 === RUN   TestZPOPMIN/ZPOPMIN_with_wrong_type_of_key_with/without_count_argument
 === RUN   TestZPOPMIN/ZPOPMIN_on_existing_key_(without_count_argument)
 === RUN   TestZPOPMIN/ZPOPMIN_with_normal_count_argument
@@ -2166,141 +2854,83 @@ Starting the test server on port 9739
     --- PASS: TestZPOPMIN/ZPOPMIN_on_empty_sorted_set (0.00s)
     --- PASS: TestZPOPMIN/ZPOPMIN_with_floating-point_scores (0.00s)
 FAIL
-2024-10-24T00:06:58+05:30 INF Closing connection
-2024-10-24T00:06:58+05:30 INF Stopping worker workerID=W-28958-54
-2024-10-24T00:06:58+05:30 INF Received ABORT command, initiating server shutdown workerID=W-2038-1
-2024-10-24T00:06:58+05:30 INF no new connections will be accepted
-2024-10-24T00:06:58+05:30 INF Stopping worker workerID=W-28944-45
-2024-10-24T00:06:58+05:30 INF Stopping worker workerID=W-7385-21
-2024-10-24T00:06:58+05:30 INF Stopping worker workerID=W-7385-22
-2024-10-24T00:06:58+05:30 INF initiating shutdown
-2024-10-24T00:06:58+05:30 INF Stopping worker workerID=W-28950-50
-2024-10-24T00:06:58+05:30 INF Stopping worker workerID=W-28952-52
-2024-10-24T00:06:58+05:30 INF Stopping worker workerID=W-2038-1
-2024-10-24T00:06:58+05:30 INF Stopping worker workerID=W-28944-45
-2024-10-24T00:06:58+05:30 INF Stopping worker workerID=W-7381-18
-2024-10-24T00:06:58+05:30 INF Stopping worker workerID=W-28945-47
-2024-10-24T00:06:58+05:30 INF Stopping worker workerID=W-7384-20
-2024-10-24T00:06:58+05:30 INF Stopping worker workerID=W-7385-22
-2024-10-24T00:06:58+05:30 INF Stopping worker workerID=W-28945-46
-2024-10-24T00:06:58+05:30 INF Stopping worker workerID=W-7386-23
-2024-10-24T00:06:58+05:30 INF Stopping worker workerID=W-28947-48
-2024-10-24T00:06:58+05:30 INF Stopping worker workerID=W-28952-52
-2024-10-24T00:06:58+05:30 INF Stopping worker workerID=W-7380-17
-2024-10-24T00:06:58+05:30 INF Stopping worker workerID=W-28950-50
-2024-10-24T00:06:58+05:30 INF Stopping worker workerID=W-7385-21
-2024-10-24T00:06:58+05:30 INF exiting gracefully
-2024-10-24T00:06:58+05:30 INF Stopping worker workerID=W-2038-1
-2024-10-24T00:06:58+05:30 INF Stopping worker workerID=W-7384-20
-2024-10-24T00:06:58+05:30 INF Stopping worker workerID=W-7382-19
-2024-10-24T00:06:58+05:30 INF Stopping worker workerID=W-7381-18
-2024-10-24T00:06:58+05:30 INF Stopping worker workerID=W-28950-49
-FAIL	github.com/dicedb/dice/integration_tests/commands/resp	29.085s
+2024-10-24T01:04:24+05:30 INF Closing connection
+2024-10-24T01:04:24+05:30 INF Received ABORT command, initiating server shutdown workerID=W-2022-1
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28917-54
+2024-10-24T01:04:24+05:30 INF initiating shutdown
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28911-51
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7362-19
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28906-47
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28910-50
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7367-23
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28911-52
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7360-17
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-2022-1
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28905-46
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28911-51
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28907-48
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7365-21
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7361-18
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7366-22
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28906-47
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7367-23
+2024-10-24T01:04:24+05:30 INF no new connections will be accepted
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28904-45
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7360-16
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28909-49
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28905-46
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7361-18
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28911-52
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-2022-1
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7362-19
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7365-21
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28907-48
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28910-50
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7364-20
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28904-45
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7360-16
+2024-10-24T01:04:24+05:30 INF exiting gracefully
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7366-22
+2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7360-17
+FAIL	github.com/dicedb/dice/integration_tests/commands/resp	29.042s
 === RUN   TestAbortCommand
 Starting the test server on port 8740
-2024-10-24T00:06:59+05:30 INF ready to accept and serve requests on port=7379
+2024-10-24T01:04:25+05:30 INF ready to accept and serve requests on port=7379
 === RUN   TestAbortCommand/ServerIsRunning
 === RUN   TestAbortCommand/AbortCommandShutdown
-2024-10-24T00:07:01+05:30 INF Closing connection
-2024-10-24T00:07:01+05:30 INF Received ABORT command, initiating server shutdown workerID=W-2051-2
-2024-10-24T00:07:01+05:30 INF Stopping worker workerID=W-2051-1
-2024-10-24T00:07:01+05:30 INF Stopping worker workerID=W-2051-2
-2024-10-24T00:07:01+05:30 INF initiating shutdown
-2024-10-24T00:07:01+05:30 INF no new connections will be accepted
-2024-10-24T00:07:01+05:30 INF Stopping worker workerID=W-2051-2
-2024-10-24T00:07:01+05:30 INF exiting gracefully
+2024-10-24T01:04:27+05:30 INF Received ABORT command, initiating server shutdown workerID=W-2034-2
+2024-10-24T01:04:27+05:30 INF Closing connection
+2024-10-24T01:04:27+05:30 INF initiating shutdown
+2024-10-24T01:04:27+05:30 INF Stopping worker workerID=W-2034-1
+2024-10-24T01:04:27+05:30 INF no new connections will be accepted
+2024-10-24T01:04:27+05:30 INF Stopping worker workerID=W-2034-2
+2024-10-24T01:04:27+05:30 INF exiting gracefully
+2024-10-24T01:04:27+05:30 INF Stopping worker workerID=W-2034-2
 === RUN   TestAbortCommand/PortIsReleased
---- PASS: TestAbortCommand (3.05s)
+--- PASS: TestAbortCommand (3.03s)
     --- PASS: TestAbortCommand/ServerIsRunning (0.00s)
     --- PASS: TestAbortCommand/AbortCommandShutdown (1.00s)
     --- PASS: TestAbortCommand/PortIsReleased (0.00s)
 === RUN   TestServerRestartAfterAbort
 Starting the test server on port 8740
-2024-10-24T00:07:02+05:30 INF ready to accept and serve requests on port=7379
-2024-10-24T00:07:03+05:30 INF Received ABORT command, initiating server shutdown workerID=W-4079-3
-2024-10-24T00:07:03+05:30 INF initiating shutdown
-2024-10-24T00:07:03+05:30 INF no new connections will be accepted
-2024-10-24T00:07:03+05:30 INF Stopping worker workerID=W-4079-3
-2024-10-24T00:07:03+05:30 INF exiting gracefully
-2024-10-24T00:07:03+05:30 INF Stopping worker workerID=W-4079-3
-==================
-WARNING: DATA RACE
-Write at 0x000002712220 by goroutine 46:
-  github.com/dicedb/dice/internal/logger.New()
-      /mnt/md0/github/dicedb/internal/logger/logger.go:24 +0x35
-  github.com/dicedb/dice/integration_tests/commands/resp.RunTestServer()
-      /mnt/md0/github/dicedb/integration_tests/commands/resp/setup.go:116 +0x3b
-  github.com/dicedb/dice/integration_tests/commands/resp/abort.TestServerRestartAfterAbort()
-      /mnt/md0/github/dicedb/integration_tests/commands/resp/abort/server_abort_test.go:112 +0x490
-  testing.tRunner()
-      /usr/local/go/src/testing/testing.go:1690 +0x226
-  testing.(*T).Run.gowrap1()
-      /usr/local/go/src/testing/testing.go:1743 +0x44
-
-Previous read at 0x000002712220 by goroutine 54:
-  github.com/rs/zerolog.(*Event).Timestamp()
-      /home/tarun/go/pkg/mod/github.com/rs/zerolog@v1.33.0/event.go:687 +0x204
-  github.com/rs/zerolog.timestampHook.Run()
-      /home/tarun/go/pkg/mod/github.com/rs/zerolog@v1.33.0/context.go:353 +0x3e
-  github.com/rs/zerolog.(*timestampHook).Run()
-      <autogenerated>:1 +0x17
-  github.com/rs/zerolog.(*Event).msg()
-      /home/tarun/go/pkg/mod/github.com/rs/zerolog@v1.33.0/event.go:143 +0xfc
-  github.com/rs/zerolog.(*Event).Msg()
-      /home/tarun/go/pkg/mod/github.com/rs/zerolog@v1.33.0/event.go:110 +0x146
-  github.com/dicedb/dice/internal/logger.(*ZerologHandler).Handle()
-      /mnt/md0/github/dicedb/internal/logger/zerolog.go:32 +0x132
-  log/slog.(*Logger).log()
-      /usr/local/go/src/log/slog/logger.go:257 +0x228
-  log/slog.Info()
-      /usr/local/go/src/log/slog/logger.go:292 +0x72
-  github.com/dicedb/dice/internal/worker.(*BaseWorker).Stop()
-      /mnt/md0/github/dicedb/internal/worker/worker.go:439 +0xd2
-  github.com/dicedb/dice/internal/worker.(*WorkerManager).UnregisterWorker()
-      /mnt/md0/github/dicedb/internal/worker/workermanager.go:68 +0x103
-  github.com/dicedb/dice/internal/server/resp.(*Server).AcceptConnectionRequests.func1.1()
-      /mnt/md0/github/dicedb/internal/server/resp/server.go:210 +0x70
-  github.com/dicedb/dice/internal/server/resp.(*Server).AcceptConnectionRequests.func1.deferwrap1()
-      /mnt/md0/github/dicedb/internal/server/resp/server.go:214 +0x61
-  runtime.deferreturn()
-      /usr/local/go/src/runtime/panic.go:605 +0x5d
-  github.com/dicedb/dice/internal/server/resp.(*Server).AcceptConnectionRequests.gowrap1()
-      /mnt/md0/github/dicedb/internal/server/resp/server.go:221 +0x4f
-
-Goroutine 46 (running) created at:
-  testing.(*T).Run()
-      /usr/local/go/src/testing/testing.go:1743 +0x825
-  testing.runTests.func1()
-      /usr/local/go/src/testing/testing.go:2168 +0x85
-  testing.tRunner()
-      /usr/local/go/src/testing/testing.go:1690 +0x226
-  testing.runTests()
-      /usr/local/go/src/testing/testing.go:2166 +0x8be
-  testing.(*M).Run()
-      /usr/local/go/src/testing/testing.go:2034 +0xf17
-  main.main()
-      _testmain.go:47 +0x164
-
-Goroutine 54 (finished) created at:
-  github.com/dicedb/dice/internal/server/resp.(*Server).AcceptConnectionRequests()
-      /mnt/md0/github/dicedb/internal/server/resp/server.go:207 +0x4f6
-  github.com/dicedb/dice/internal/server/resp.(*Server).Run.func2()
-      /mnt/md0/github/dicedb/internal/server/resp/server.go:90 +0xd5
-  github.com/dicedb/dice/internal/server/resp.(*Server).Run.gowrap2()
-      /mnt/md0/github/dicedb/internal/server/resp/server.go:93 +0x41
-==================
+2024-10-24T01:04:28+05:30 INF ready to accept and serve requests on port=7379
+2024-10-24T01:04:29+05:30 INF Received ABORT command, initiating server shutdown workerID=W-4068-3
+2024-10-24T01:04:29+05:30 INF Stopping worker workerID=W-4068-3
+2024-10-24T01:04:29+05:30 INF initiating shutdown
+2024-10-24T01:04:29+05:30 INF Stopping worker workerID=W-4068-3
+2024-10-24T01:04:29+05:30 INF no new connections will be accepted
+2024-10-24T01:04:29+05:30 INF exiting gracefully
 Starting the test server on port 8740
-2024-10-24T00:07:05+05:30 INF ready to accept and serve requests on port=7379
-2024-10-24T00:07:07+05:30 INF Received ABORT command, initiating server shutdown workerID=W-8094-4
-2024-10-24T00:07:07+05:30 INF initiating shutdown
-2024-10-24T00:07:07+05:30 INF Stopping worker workerID=W-8094-4
-2024-10-24T00:07:07+05:30 INF no new connections will be accepted
-2024-10-24T00:07:07+05:30 INF exiting gracefully
-    testing.go:1399: race detected during execution of test
---- FAIL: TestServerRestartAfterAbort (5.04s)
-FAIL
-FAIL	github.com/dicedb/dice/integration_tests/commands/resp/abort	8.358s
-2024/10/24 00:07:08 INFO also listenting WebSocket on port=8380
+2024-10-24T01:04:31+05:30 INF ready to accept and serve requests on port=7379
+2024-10-24T01:04:33+05:30 INF Received ABORT command, initiating server shutdown workerID=W-8085-4
+2024-10-24T01:04:33+05:30 INF Stopping worker workerID=W-8085-4
+2024-10-24T01:04:33+05:30 INF no new connections will be accepted
+2024-10-24T01:04:33+05:30 INF initiating shutdown
+2024-10-24T01:04:33+05:30 INF exiting gracefully
+--- PASS: TestServerRestartAfterAbort (5.05s)
+PASS
+ok  	github.com/dicedb/dice/integration_tests/commands/resp/abort	9.335s
+2024/10/24 01:04:35 INFO also listenting WebSocket on port=8380
 === RUN   TestAppend
 === RUN   TestAppend/APPEND_and_GET_a_new_Val
 === RUN   TestAppend/APPEND_to_an_existing_key_and_GET
@@ -2342,7 +2972,7 @@ FAIL	github.com/dicedb/dice/integration_tests/commands/resp/abort	8.358s
 === RUN   TestBFEdgeCasesAndErrors/BF.RESERVE_on_a_key_holding_a_string_value
 === RUN   TestBFEdgeCasesAndErrors/BF.ADD_on_a_key_holding_a_list
 === RUN   TestBFEdgeCasesAndErrors/BF.INFO_on_a_key_holding_a_hash
---- PASS: TestBFEdgeCasesAndErrors (0.02s)
+--- PASS: TestBFEdgeCasesAndErrors (0.01s)
     --- PASS: TestBFEdgeCasesAndErrors/BF.RESERVE_with_incorrect_number_of_arguments (0.00s)
     --- PASS: TestBFEdgeCasesAndErrors/BF.RESERVE_with_zero_capacity (0.00s)
     --- PASS: TestBFEdgeCasesAndErrors/BF.RESERVE_with_zero_capacity#01 (0.00s)
@@ -2378,6 +3008,24 @@ FAIL	github.com/dicedb/dice/integration_tests/commands/resp/abort	8.358s
 === RUN   TestGETRANGE/Get_range_on_a_non_existent_key
 === RUN   TestGETRANGE/Get_range_on_wrong_key_type
 === RUN   TestGETRANGE/GETRANGE_against_string_value:_0,_-1
+2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47754: read: connection reset by peer"
+2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47732: read: connection reset by peer"
+2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47814: read: connection reset by peer"
+2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47788: read: connection reset by peer"
+2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47718: read: connection reset by peer"
+2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47786: read: connection reset by peer"
+2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47772: read: connection reset by peer"
+2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47790: read: connection reset by peer"
+2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47824: read: connection reset by peer"
+2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47796: read: connection reset by peer"
+2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47816: read: connection reset by peer"
+2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47738: read: connection reset by peer"
+2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47780: read: connection reset by peer"
+2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47764: read: connection reset by peer"
+2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47752: read: connection reset by peer"
+2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47758: read: connection reset by peer"
+2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47808: read: connection reset by peer"
+2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47726: read: connection reset by peer"
 === RUN   TestGETRANGE/GETRANGE_against_string_value:_5,_3
 === RUN   TestGETRANGE/GETRANGE_against_integer_value:_-1,_-100
 --- PASS: TestGETRANGE (0.01s)
@@ -2389,51 +3037,25 @@ FAIL	github.com/dicedb/dice/integration_tests/commands/resp/abort	8.358s
     --- PASS: TestGETRANGE/GETRANGE_against_integer_value:_-1,_-100 (0.00s)
 === RUN   TestHExists
 === RUN   TestHExists/WS_Check_if_field_exists_when_k_f_and_v_are_set
-    hexists_test.go:37: assertion failed: 
-        --- tc.expected[i]
-        +++ result
-          any(
-        - 	float64(1),
-          )
-        
+    hexists_test.go:62: Clearing keys before test execution
+    hexists_test.go:67: Executing command: HSET key field value
+    hexists_test.go:73: Received result: 1 for command: HSET key field value
+    hexists_test.go:67: Executing command: HEXISTS key field
+    hexists_test.go:73: Received result: 1 for command: HEXISTS key field
 === RUN   TestHExists/WS_Check_if_field_exists_when_k_exists_but_not_f_and_v
-2024/10/24 00:07:12 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:46582: read: connection reset by peer"
-2024/10/24 00:07:12 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:46460: read: connection reset by peer"
-2024/10/24 00:07:12 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:46540: read: connection reset by peer"
-2024/10/24 00:07:12 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:46416: read: connection reset by peer"
-2024/10/24 00:07:12 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:46534: read: connection reset by peer"
-2024/10/24 00:07:12 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:46552: read: connection reset by peer"
-2024/10/24 00:07:12 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:46500: read: connection reset by peer"
-2024/10/24 00:07:12 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:46572: read: connection reset by peer"
-2024/10/24 00:07:12 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:46484: read: connection reset by peer"
-2024/10/24 00:07:12 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:46470: read: connection reset by peer"
-2024/10/24 00:07:12 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:46554: read: connection reset by peer"
-2024/10/24 00:07:12 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:46522: read: connection reset by peer"
-2024/10/24 00:07:12 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:46548: read: connection reset by peer"
-2024/10/24 00:07:12 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:46536: read: connection reset by peer"
-2024/10/24 00:07:12 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:46558: read: connection reset by peer"
-2024/10/24 00:07:12 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:46512: read: connection reset by peer"
-2024/10/24 00:07:12 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:46444: read: connection reset by peer"
-2024/10/24 00:07:12 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:46432: read: connection reset by peer"
-    hexists_test.go:37: assertion failed: 
-        --- tc.expected[i]
-        +++ result
-          any(
-        - 	float64(1),
-          )
-        
+    hexists_test.go:62: Clearing keys before test execution
+    hexists_test.go:67: Executing command: HSET key field1 value
+    hexists_test.go:73: Received result: 1 for command: HSET key field1 value
+    hexists_test.go:67: Executing command: HEXISTS key field
+    hexists_test.go:73: Received result: 0 for command: HEXISTS key field
 === RUN   TestHExists/WS_Check_if_field_exists_when_no_k,f_and_v_exist
-    hexists_test.go:37: assertion failed: 
-        --- tc.expected[i]
-        +++ result
-          any(
-        - 	string("0"),
-          )
-        
---- FAIL: TestHExists (0.00s)
-    --- FAIL: TestHExists/WS_Check_if_field_exists_when_k_f_and_v_are_set (0.00s)
-    --- FAIL: TestHExists/WS_Check_if_field_exists_when_k_exists_but_not_f_and_v (0.00s)
-    --- FAIL: TestHExists/WS_Check_if_field_exists_when_no_k,f_and_v_exist (0.00s)
+    hexists_test.go:62: Clearing keys before test execution
+    hexists_test.go:67: Executing command: HEXISTS key field
+    hexists_test.go:73: Received result: 0 for command: HEXISTS key field
+--- PASS: TestHExists (0.00s)
+    --- PASS: TestHExists/WS_Check_if_field_exists_when_k_f_and_v_are_set (0.00s)
+    --- PASS: TestHExists/WS_Check_if_field_exists_when_k_exists_but_not_f_and_v (0.00s)
+    --- PASS: TestHExists/WS_Check_if_field_exists_when_no_k,f_and_v_exist (0.00s)
 === RUN   TestHINCRBY
 === RUN   TestHINCRBY/HINCRBY_on_non-existing_key
 === RUN   TestHINCRBY/HINCRBY_on_existing_key
@@ -2458,17 +3080,46 @@ FAIL	github.com/dicedb/dice/integration_tests/commands/resp/abort	8.358s
     --- PASS: TestHINCRBYFLOAT/HINCRBYFLOAT_on_non-hashmap_key (0.00s)
 === RUN   TestHKeys
 === RUN   TestHKeys/WS_One_or_more_keys_exist
-    hkeys_test.go:33: assertion failed: 
-        --- tc.expected[i]
-        +++ result
-          any(
-        - 	float64(1),
-          )
-        
+    hkeys_test.go:40: Executing command: HSET key field value
+    hkeys_test.go:46: Received result: WRONGTYPE Operation against a key holding the wrong kind of value for command: HSET key field value
+    hkeys_test.go:48: 
+        	Error Trace:	/mnt/md0/github/dicedb/integration_tests/commands/websocket/hkeys_test.go:48
+        	Error:      	Not equal: 
+        	            	expected: float64(1)
+        	            	actual  : string("WRONGTYPE Operation against a key holding the wrong kind of value")
+        	Test:       	TestHKeys/WS_One_or_more_keys_exist
+        	Messages:   	Value mismatch for cmd HSET key field value
+    hkeys_test.go:40: Executing command: HSET key field1 value1
+    hkeys_test.go:46: Received result: WRONGTYPE Operation against a key holding the wrong kind of value for command: HSET key field1 value1
+    hkeys_test.go:48: 
+        	Error Trace:	/mnt/md0/github/dicedb/integration_tests/commands/websocket/hkeys_test.go:48
+        	Error:      	Not equal: 
+        	            	expected: float64(1)
+        	            	actual  : string("WRONGTYPE Operation against a key holding the wrong kind of value")
+        	Test:       	TestHKeys/WS_One_or_more_keys_exist
+        	Messages:   	Value mismatch for cmd HSET key field1 value1
+    hkeys_test.go:40: Executing command: HKEYS key
+    hkeys_test.go:46: Received result: ERR -WRONGTYPE Operation against a key holding the wrong kind of value for command: HKEYS key
+    hkeys_test.go:48: 
+        	Error Trace:	/mnt/md0/github/dicedb/integration_tests/commands/websocket/hkeys_test.go:48
+        	Error:      	Not equal: 
+        	            	expected: []interface {}([]interface {}{"field", "field1"})
+        	            	actual  : string("ERR -WRONGTYPE Operation against a key holding the wrong kind of value")
+        	Test:       	TestHKeys/WS_One_or_more_keys_exist
+        	Messages:   	Value mismatch for cmd HKEYS key
 === RUN   TestHKeys/WS_No_keys_exist
---- FAIL: TestHKeys (0.00s)
-    --- FAIL: TestHKeys/WS_One_or_more_keys_exist (0.00s)
-    --- PASS: TestHKeys/WS_No_keys_exist (0.00s)
+    hkeys_test.go:40: Executing command: HKEYS key
+    hkeys_test.go:46: Received result: ERR -WRONGTYPE Operation against a key holding the wrong kind of value for command: HKEYS key
+    hkeys_test.go:48: 
+        	Error Trace:	/mnt/md0/github/dicedb/integration_tests/commands/websocket/hkeys_test.go:48
+        	Error:      	Not equal: 
+        	            	expected: <nil>(<nil>)
+        	            	actual  : string("ERR -WRONGTYPE Operation against a key holding the wrong kind of value")
+        	Test:       	TestHKeys/WS_No_keys_exist
+        	Messages:   	Value mismatch for cmd HKEYS key
+--- FAIL: TestHKeys (3.00s)
+    --- FAIL: TestHKeys/WS_One_or_more_keys_exist (3.00s)
+    --- FAIL: TestHKeys/WS_No_keys_exist (0.00s)
 === RUN   TestHRANDFIELD
 === RUN   TestHRANDFIELD/Basic_HRANDFIELD_operations
 === RUN   TestHRANDFIELD/HRANDFIELD_with_count
@@ -2483,23 +3134,45 @@ FAIL	github.com/dicedb/dice/integration_tests/commands/resp/abort	8.358s
     --- PASS: TestHRANDFIELD/HRANDFIELD_with_wrong_number_of_arguments (0.00s)
 === RUN   TestHVals
 === RUN   TestHVals/WS_One_or_more_vals_exist
-    hvals_test.go:33: assertion failed: 
-        --- tc.expected[i]
-        +++ result
-          any(
-        - 	float64(1),
-          )
-        
+    hvals_test.go:40: Executing command: HSET key field value
+    hvals_test.go:46: Received result: WRONGTYPE Operation against a key holding the wrong kind of value for command: HSET key field value
+    hvals_test.go:48: 
+        	Error Trace:	/mnt/md0/github/dicedb/integration_tests/commands/websocket/hvals_test.go:48
+        	Error:      	Not equal: 
+        	            	expected: float64(1)
+        	            	actual  : string("WRONGTYPE Operation against a key holding the wrong kind of value")
+        	Test:       	TestHVals/WS_One_or_more_vals_exist
+        	Messages:   	Value mismatch for cmd HSET key field value
+    hvals_test.go:40: Executing command: HSET key field1 value1
+    hvals_test.go:46: Received result: WRONGTYPE Operation against a key holding the wrong kind of value for command: HSET key field1 value1
+    hvals_test.go:48: 
+        	Error Trace:	/mnt/md0/github/dicedb/integration_tests/commands/websocket/hvals_test.go:48
+        	Error:      	Not equal: 
+        	            	expected: float64(1)
+        	            	actual  : string("WRONGTYPE Operation against a key holding the wrong kind of value")
+        	Test:       	TestHVals/WS_One_or_more_vals_exist
+        	Messages:   	Value mismatch for cmd HSET key field1 value1
+    hvals_test.go:40: Executing command: HVALS key
+    hvals_test.go:46: Received result: ERR -WRONGTYPE Operation against a key holding the wrong kind of value for command: HVALS key
+    hvals_test.go:48: 
+        	Error Trace:	/mnt/md0/github/dicedb/integration_tests/commands/websocket/hvals_test.go:48
+        	Error:      	Not equal: 
+        	            	expected: []interface {}([]interface {}{"value", "value1"})
+        	            	actual  : string("ERR -WRONGTYPE Operation against a key holding the wrong kind of value")
+        	Test:       	TestHVals/WS_One_or_more_vals_exist
+        	Messages:   	Value mismatch for cmd HVALS key
 === RUN   TestHVals/WS_No_values_exist
-    hvals_test.go:33: assertion failed: 
-        --- tc.expected[i]
-        +++ result
-          any(
-        - 	[]any{},
-          )
-        
---- FAIL: TestHVals (0.00s)
-    --- FAIL: TestHVals/WS_One_or_more_vals_exist (0.00s)
+    hvals_test.go:40: Executing command: HVALS key
+    hvals_test.go:46: Received result: ERR -WRONGTYPE Operation against a key holding the wrong kind of value for command: HVALS key
+    hvals_test.go:48: 
+        	Error Trace:	/mnt/md0/github/dicedb/integration_tests/commands/websocket/hvals_test.go:48
+        	Error:      	Not equal: 
+        	            	expected: []interface {}([]interface {}{})
+        	            	actual  : string("ERR -WRONGTYPE Operation against a key holding the wrong kind of value")
+        	Test:       	TestHVals/WS_No_values_exist
+        	Messages:   	Value mismatch for cmd HVALS key
+--- FAIL: TestHVals (3.00s)
+    --- FAIL: TestHVals/WS_One_or_more_vals_exist (3.00s)
     --- FAIL: TestHVals/WS_No_values_exist (0.00s)
 === RUN   TestHyperLogLogCommands
 === RUN   TestHyperLogLogCommands/PFADD_with_one_key-value_pair
@@ -2512,13 +3185,6 @@ FAIL	github.com/dicedb/dice/integration_tests/commands/resp/abort	8.358s
 === RUN   TestHyperLogLogCommands/PFMERGE_with_destKey_existing
 === RUN   TestHyperLogLogCommands/PFMERGE_with_only_one_destKey_existing
 === RUN   TestHyperLogLogCommands/PFMERGE_with_invalid_object
-2024/10/24 00:07:12 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:46730: read: connection reset by peer"
-2024/10/24 00:07:12 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:46780: read: connection reset by peer"
-2024/10/24 00:07:12 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:46770: read: connection reset by peer"
-2024/10/24 00:07:12 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:46686: read: connection reset by peer"
-2024/10/24 00:07:12 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:46742: read: connection reset by peer"
-2024/10/24 00:07:12 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:46704: read: connection reset by peer"
-2024/10/24 00:07:12 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:46702: read: connection reset by peer"
 === RUN   TestHyperLogLogCommands/PFMERGE_with_invalid_src_object
 --- PASS: TestHyperLogLogCommands (0.01s)
     --- PASS: TestHyperLogLogCommands/PFADD_with_one_key-value_pair (0.00s)
@@ -2696,187 +3362,3 @@ FAIL	github.com/dicedb/dice/integration_tests/commands/resp/abort	8.358s
     --- PASS: TestSetWithOptions/XX_option (2.00s)
 === RUN   TestSetWithExat
 === RUN   TestSetWithExat/SET_with_EXAT
-2024/10/24 00:07:31 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:32988: read: connection reset by peer"
-2024/10/24 00:07:31 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:32994: read: connection reset by peer"
-2024/10/24 00:07:31 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:32982: read: connection reset by peer"
-==================
-WARNING: DATA RACE
-Read at 0x00c0001ec470 by goroutine 529:
-  runtime.chansend()
-      /usr/local/go/src/runtime/chan.go:171 +0x0
-  github.com/dicedb/dice/internal/server.(*WebsocketServer).WebsocketHandler()
-      /mnt/md0/github/dicedb/internal/server/websocketServer.go:181 +0xebd
-  github.com/dicedb/dice/internal/server.(*WebsocketServer).WebsocketHandler-fm()
-      <autogenerated>:1 +0x51
-  net/http.HandlerFunc.ServeHTTP()
-      /usr/local/go/src/net/http/server.go:2220 +0x47
-  net/http.(*ServeMux).ServeHTTP()
-      /usr/local/go/src/net/http/server.go:2747 +0x255
-  net/http.serverHandler.ServeHTTP()
-      /usr/local/go/src/net/http/server.go:3210 +0x2a1
-  net/http.(*conn).serve()
-      /usr/local/go/src/net/http/server.go:2092 +0x12a4
-  net/http.(*Server).Serve.gowrap3()
-      /usr/local/go/src/net/http/server.go:3360 +0x4f
-
-Previous write at 0x00c0001ec470 by goroutine 34:
-  runtime.closechan()
-      /usr/local/go/src/runtime/chan.go:397 +0x0
-  github.com/dicedb/dice/internal/shard.(*ShardThread).cleanup()
-      /mnt/md0/github/dicedb/internal/shard/shard_thread.go:131 +0x264
-  github.com/dicedb/dice/internal/shard.(*ShardThread).Start()
-      /mnt/md0/github/dicedb/internal/shard/shard_thread.go:69 +0x245
-  github.com/ohler55/ojg/jp.MustParse()
-      /home/tarun/go/pkg/mod/github.com/ohler55/ojg@v1.24.0/jp/parse.go:76 +0x9b
-  github.com/ohler55/ojg/jp.Parse()
-      /home/tarun/go/pkg/mod/github.com/ohler55/ojg@v1.24.0/jp/parse.go:68 +0xce
-  github.com/ohler55/ojg/jp.ParseString()
-      /home/tarun/go/pkg/mod/github.com/ohler55/ojg@v1.24.0/jp/parse.go:53 +0xb04
-  github.com/dicedb/dice/internal/eval.evalJSONOBJLEN()
-      /mnt/md0/github/dicedb/internal/eval/store_eval.go:1193 +0xaf0
-  github.com/dicedb/dice/internal/eval.ExecuteCommand()
-      /mnt/md0/github/dicedb/internal/eval/execute.go:25 +0x7fa
-  github.com/dicedb/dice/internal/shard.(*ShardThread).processRequest()
-      /mnt/md0/github/dicedb/internal/shard/shard_thread.go:99 +0x108
-  github.com/dicedb/dice/internal/shard.(*ShardThread).Start()
-      /mnt/md0/github/dicedb/internal/shard/shard_thread.go:65 +0x23e
-  github.com/dicedb/dice/internal/shard.(*ShardThread).processRequest()
-      /mnt/md0/github/dicedb/internal/shard/shard_thread.go:99 +0x108
-  github.com/dicedb/dice/internal/shard.(*ShardThread).Start()
-      /mnt/md0/github/dicedb/internal/shard/shard_thread.go:65 +0x23e
-  github.com/dicedb/dice/internal/shard.(*ShardManager).start.func1()
-      /mnt/md0/github/dicedb/internal/shard/shard_manager.go:79 +0xa4
-
-Goroutine 529 (running) created at:
-  net/http.(*Server).Serve()
-      /usr/local/go/src/net/http/server.go:3360 +0x8ec
-  net/http.(*Server).ListenAndServe()
-      /usr/local/go/src/net/http/server.go:3259 +0xbc
-  github.com/dicedb/dice/internal/server.(*WebsocketServer).Run.func2()
-      /mnt/md0/github/dicedb/internal/server/websocketServer.go:104 +0x1e9
-
-Goroutine 34 (finished) created at:
-  github.com/dicedb/dice/internal/shard.(*ShardManager).start()
-      /mnt/md0/github/dicedb/internal/shard/shard_manager.go:77 +0x5e
-  github.com/dicedb/dice/internal/shard.(*ShardManager).Run()
-      /mnt/md0/github/dicedb/internal/shard/shard_manager.go:58 +0x175
-  github.com/dicedb/dice/integration_tests/commands/websocket.RunWebsocketServer.func1()
-      /mnt/md0/github/dicedb/integration_tests/commands/websocket/setup.go:119 +0xa4
-==================
-2024/10/24 00:07:32 http: panic serving 127.0.0.1:41892: send on closed channel
-goroutine 559 [running]:
-net/http.(*conn).serve.func1()
-	/usr/local/go/src/net/http/server.go:1947 +0x10a
-panic({0x2203520?, 0x25bb320?})
-	/usr/local/go/src/runtime/panic.go:785 +0x132
-github.com/dicedb/dice/internal/server.(*WebsocketServer).WebsocketHandler(0xc00020a1b0, {0x25cec20, 0xc0003ec1c0}, 0xc0001cb400)
-	/mnt/md0/github/dicedb/internal/server/websocketServer.go:181 +0xebe
-net/http.HandlerFunc.ServeHTTP(0xc000050400, {0x25cec20, 0xc0003ec1c0}, 0xc0001cb400)
-	/usr/local/go/src/net/http/server.go:2220 +0x48
-net/http.(*ServeMux).ServeHTTP(0xc00001e1c0, {0x25cec20, 0xc0003ec1c0}, 0xc0001cb400)
-	/usr/local/go/src/net/http/server.go:2747 +0x256
-net/http.serverHandler.ServeHTTP({0xc0005a7b90?}, {0x25cec20, 0xc0003ec1c0}, 0xc0001cb400)
-	/usr/local/go/src/net/http/server.go:3210 +0x2a2
-net/http.(*conn).serve(0xc0001b3e60, {0x25d08b8, 0xc000174240})
-	/usr/local/go/src/net/http/server.go:2092 +0x12a5
-created by net/http.(*Server).Serve in goroutine 39
-	/usr/local/go/src/net/http/server.go:3360 +0x8ed
-    set_test.go:177: 
-        	Error Trace:	/mnt/md0/github/dicedb/integration_tests/commands/websocket/set_test.go:177
-        	Error:      	Expected nil, but got: &websocket.CloseError{Code:1000, Text:"close 1000 (normal)"}
-        	Test:       	TestSetWithExat/SET_with_EXAT
-    set_test.go:178: 
-        	Error Trace:	/mnt/md0/github/dicedb/integration_tests/commands/websocket/set_test.go:178
-        	Error:      	Not equal: 
-        	            	expected: string("(nil)")
-        	            	actual  : <nil>(<nil>)
-        	Test:       	TestSetWithExat/SET_with_EXAT
-        	Messages:   	Value mismatch for cmd GET k
-    set_test.go:181: 
-        	Error Trace:	/mnt/md0/github/dicedb/integration_tests/commands/websocket/set_test.go:181
-        	Error:      	Expected nil, but got: &errors.errorString{s:"websocket: close sent"}
-        	Test:       	TestSetWithExat/SET_with_EXAT
-    set_test.go:183: 
-        	Error Trace:	/mnt/md0/github/dicedb/integration_tests/commands/websocket/set_test.go:183
-        	Error:      	Should be true
-        	Test:       	TestSetWithExat/SET_with_EXAT
-    set_test.go:184: 
-        	Error Trace:	/mnt/md0/github/dicedb/integration_tests/commands/websocket/set_test.go:184
-        	Error:      	Not equal: 
-        	            	expected: -2
-        	            	actual  : 0
-        	Test:       	TestSetWithExat/SET_with_EXAT
-        	Messages:   	Value mismatch for cmd TTL k
-    testing.go:1399: race detected during execution of test
-=== RUN   TestSetWithExat/SET_with_invalid_EXAT_expires_key_immediately
---- FAIL: TestSetWithExat (6.01s)
-    --- FAIL: TestSetWithExat/SET_with_EXAT (6.01s)
-    --- FAIL: TestSetWithExat/SET_with_invalid_EXAT_expires_key_immediately (0.00s)
-panic: runtime error: invalid memory address or nil pointer dereference [recovered]
-	panic: runtime error: invalid memory address or nil pointer dereference
-[signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0xa5b837]
-
-goroutine 599 [running]:
-testing.tRunner.func1.2({0x22032e0, 0x30271c0})
-	/usr/local/go/src/testing/testing.go:1632 +0x3fc
-testing.tRunner.func1()
-	/usr/local/go/src/testing/testing.go:1635 +0x6b6
-panic({0x22032e0?, 0x30271c0?})
-	/usr/local/go/src/runtime/panic.go:785 +0x132
-github.com/gorilla/websocket.(*Conn).WriteMessage(0x0, 0x1, {0xc000282188, 0x5, 0x8})
-	/home/tarun/go/pkg/mod/github.com/gorilla/websocket@v1.5.3/conn.go:760 +0x57
-github.com/dicedb/dice/integration_tests/commands/websocket.(*WebsocketCommandExecutor).FireCommand(...)
-	/mnt/md0/github/dicedb/integration_tests/commands/websocket/setup.go:90
-github.com/dicedb/dice/integration_tests/commands/websocket.(*WebsocketCommandExecutor).FireCommandAndReadResponse(0x604?, 0x0, {0xc00028217b, 0x5})
-	/mnt/md0/github/dicedb/integration_tests/commands/websocket/setup.go:68 +0x69
-github.com/dicedb/dice/integration_tests/commands/websocket.DeleteKey(0xc000612d00, 0x0, 0xc0001e6310, {0x25b4940, 0x1})
-	/mnt/md0/github/dicedb/integration_tests/commands/websocket/helper.go:12 +0x97
-github.com/dicedb/dice/integration_tests/commands/websocket.TestSetWithExat.func2(0xc000612d00)
-	/mnt/md0/github/dicedb/integration_tests/commands/websocket/set_test.go:191 +0x91
-testing.tRunner(0xc000612d00, 0xc00014ed60)
-	/usr/local/go/src/testing/testing.go:1690 +0x227
-created by testing.(*T).Run in goroutine 580
-	/usr/local/go/src/testing/testing.go:1743 +0x826
-FAIL	github.com/dicedb/dice/integration_tests/commands/websocket	24.218s
-=== RUN   TestSetupConfig_CreateAndLoadDefault
-2024/10/24 00:07:32 INFO creating default config file at path=/tmp/TestSetupConfig_CreateAndLoadDefault116135091/001/dice.toml
-2024/10/24 00:07:32 INFO config file created at path=/tmp/TestSetupConfig_CreateAndLoadDefault116135091/001/dice.toml
---- PASS: TestSetupConfig_CreateAndLoadDefault (0.00s)
-=== RUN   TestSetupConfig_DefaultConfig
---- PASS: TestSetupConfig_DefaultConfig (0.00s)
-=== RUN   TestSetupConfig_InvalidConfigFile
-2024/10/24 00:07:32 ERROR Error reading config file error="While parsing config: toml: float can have at most one decimal point"
---- PASS: TestSetupConfig_InvalidConfigFile (0.00s)
-=== RUN   TestSetupConfig_PartialConfigFile
-    config_test.go:92: 7379
---- PASS: TestSetupConfig_PartialConfigFile (0.00s)
-=== RUN   TestSetupConfig_LoadFromFile
---- PASS: TestSetupConfig_LoadFromFile (0.00s)
-PASS
-ok  	github.com/dicedb/dice/integration_tests/config	1.019s
-=== RUN   TestMaxConnection
-Starting the test server on port 8741
-2024/10/24 00:07:34 WARN running without authentication, consider setting a password
-2024/10/24 00:07:36 INFO Closed server for max_conn_test
---- PASS: TestMaxConnection (2.02s)
-=== RUN   TestAbortCommand
-Starting the test server on port 8740
-2024/10/24 00:07:36 WARN running without authentication, consider setting a password
-=== RUN   TestAbortCommand/ServerIsRunning
-=== RUN   TestAbortCommand/AbortCommandShutdown
-=== RUN   TestAbortCommand/PortIsReleased
---- PASS: TestAbortCommand (3.00s)
-    --- PASS: TestAbortCommand/ServerIsRunning (0.00s)
-    --- PASS: TestAbortCommand/AbortCommandShutdown (1.00s)
-    --- PASS: TestAbortCommand/PortIsReleased (0.00s)
-=== RUN   TestServerRestartAfterAbort
-Starting the test server on port 8740
-2024/10/24 00:07:39 WARN running without authentication, consider setting a password
-2024/10/24 00:07:42 INFO Wait completed for server shutdown
-2024/10/24 00:07:42 INFO Restarting server after abort for server_abort_test
-Starting the test server on port 8740
-2024/10/24 00:07:42 WARN running without authentication, consider setting a password
---- PASS: TestServerRestartAfterAbort (5.13s)
-PASS
-ok  	github.com/dicedb/dice/integration_tests/server	11.218s
-FAIL

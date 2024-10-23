@@ -54,6 +54,10 @@ func TestHExists(t *testing.T) {
 				Command: "HDEL",
 				Body:    map[string]interface{}{"key": "k", "field": "f1"},
 			})
+			cmdExec.FireCommand(HTTPCommand{
+				Command: "DEL",
+				Body:    map[string]interface{}{"key": "k"},
+			})
 
 			for i, cmd := range tc.commands {
 				if tc.delays[i] > 0 {
