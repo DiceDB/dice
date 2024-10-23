@@ -405,7 +405,7 @@ func evalHKEYS(args []string, store *dstore.Store) *EvalResponse {
 		hashMap = obj.Value.(HashMap)
 	} else {
 		return &EvalResponse{
-			Result: clientio.RespEmptyArray,
+			Result: clientio.EmptyArray,
 			Error:  nil,
 		}
 	}
@@ -432,7 +432,7 @@ func evalHVALS(args []string, store *dstore.Store) *EvalResponse {
 	if obj == nil {
 		// Return an empty array for non-existent keys
 		return &EvalResponse{
-			Result: clientio.RespEmptyArray,
+			Result: clientio.EmptyArray,
 			Error:  nil,
 		}
 	}

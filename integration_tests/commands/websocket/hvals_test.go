@@ -17,16 +17,16 @@ func TestHVals(t *testing.T) {
 		delays   []time.Duration
 	}{
 		{
-			name:     "WS One or more vals exist",
-			commands: []string{"HSET key field value", "HVALS key"},
-			expected: []interface{}{float64(1), float64(1), []interface{}{"value"}},
-			delays:   []time.Duration{0, 0, 3 * time.Second},
-		},
-		{
 			name:     "WS No values exist",
 			commands: []string{"HVALS key"},
 			expected: []interface{}{[]interface{}{}},
-			delays:   []time.Duration{0 * time.Second},
+			delays:   []time.Duration{3 * time.Second},
+		},
+		{
+			name:     "WS One or more vals exist",
+			commands: []string{"HSET key field value", "HVALS key"},
+			expected: []interface{}{float64(1), []interface{}{"value"}},
+			delays:   []time.Duration{0, 0, 3 * time.Second},
 		},
 	}
 

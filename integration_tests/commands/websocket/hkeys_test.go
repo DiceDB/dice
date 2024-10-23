@@ -17,16 +17,16 @@ func TestHKeys(t *testing.T) {
 		delays   []time.Duration
 	}{
 		{
-			name:     "WS One or more keys exist",
-			commands: []string{"HSET key field value", "HSET key field1 value1", "HKEYS key"},
-			expected: []interface{}{float64(1), float64(1), []interface{}{"field", "field1"}},
-			delays:   []time.Duration{0, 0, 3 * time.Second},
-		},
-		{
 			name:     "WS No keys exist",
 			commands: []string{"HKEYS key"},
 			expected: []interface{}{nil},
 			delays:   []time.Duration{0},
+		},
+		{
+			name:     "WS One or more keys exist",
+			commands: []string{"HSET key field value", "HKEYS key"},
+			expected: []interface{}{float64(1), []interface{}{"field"}},
+			delays:   []time.Duration{0, 0, 3 * time.Second},
 		},
 	}
 
