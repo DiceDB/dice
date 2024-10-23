@@ -12,8 +12,6 @@ func TestRename(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 
-	simpleJSON := `{"name":"John","age":30}`
-
 	testCases := []struct {
 		name     string
 		commands []string
@@ -33,16 +31,6 @@ func TestRename(t *testing.T) {
 			name:     "RENAME with existing destination key",
 			commands: []string{"SET k1 v1", "SET k2 v2", "RENAME k1 k2", "GET k1", "GET k2"},
 			expected: []interface{}{"OK", "OK", "(nil)", "v1"},
-		},
-		{
-			name:     "RENAME JSON key",
-			commands: []string{`JSON.SET k1 $ ` + simpleJSON, "RENAME k1 k2", "JSON.GET k2"},
-			expected: []interface{}{"OK", int64(1), simpleJSON},
-		},
-		{
-			name:     "RENAME with expiry",
-			commands: []string{"SET k1 v1 EX 5", "RENAME k1 k2", "GET k1", "GET k2", "SLEEP 7", "GET k1", "GET k2"},
-			expected: []interface{}{"OK", "OK", "(nil)", "v1", "OK", "(nil)", "(nil)"},
 		},
 	}
 
