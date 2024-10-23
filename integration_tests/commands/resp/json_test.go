@@ -7,8 +7,122 @@ import (
 	"github.com/dicedb/dice/testutils"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	testifyAssert "github.com/stretchr/testify/assert"
+
 	"gotest.tools/v3/assert"
 )
+
+func arraysArePermutations[T comparable](a, b []T) bool {
+	// If lengths are different, they cannot be permutations
+	if len(a) != len(b) {
+		return false
+	}
+
+	// Count occurrences of each element in array 'a'
+	countA := make(map[T]int)
+	for _, elem := range a {
+		countA[elem]++
+	}
+
+	// Subtract occurrences based on array 'b'
+	for _, elem := range b {
+		countA[elem]--
+		if countA[elem] < 0 {
+			return false
+		}
+	}
+
+	// Check if all counts are zero
+	for _, count := range countA {
+		if count != 0 {
+			return false
+		}
+	}
+
+	return true
+}
+
+func TestJsonDel(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+	FireCommand(conn, "DEL doc")
+
+	testCases := []struct {
+		name     string
+		commands []string
+		expected []interface{}
+	}{
+		{
+			name: "jsonstrlen with root path",
+			commands: []string{
+				`JSON.SET doc $ ["hello","world"]`,
+				"JSON.STRLEN doc $",
+			},
+			expected: []interface{}{"OK", []interface{}{"(nil)"}},
+		},
+		{
+			name: "jsonstrlen nested",
+			commands: []string{
+				`JSON.SET doc $ {"name":"jerry","partner":{"name":"tom"}}`,
+				"JSON.STRLEN doc $..name",
+			},
+			expected: []interface{}{"OK", []interface{}{int64(5), int64(3)}},
+		},
+		{
+			name: "jsonstrlen with no path and object at root",
+			commands: []string{
+				`JSON.SET doc $ {"name":"bhima","age":10}`,
+				"JSON.STRLEN doc",
+			},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found object"},
+		},
+		{
+			name: "jsonstrlen with no path and object at boolean",
+			commands: []string{
+				`JSON.SET doc $ true`,
+				"JSON.STRLEN doc",
+			},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found boolean"},
+		},
+		{
+			name: "jsonstrlen with no path and object at array",
+			commands: []string{
+				`JSON.SET doc $ [1,2,3,4]`,
+				"JSON.STRLEN doc",
+			},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found array"},
+		},
+		{
+			name: "jsonstrlen with no path and object at integer",
+			commands: []string{
+				`JSON.SET doc $ 1`,
+				"JSON.STRLEN doc",
+			},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found integer"},
+		},
+		{
+			name: "jsonstrlen with no path and object at number",
+			commands: []string{
+				`JSON.SET doc $ 1.9`,
+				"JSON.STRLEN doc",
+			},
+			expected: []interface{}{"OK", "ERR wrong type of path value - expected string but found number"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for i, cmd := range tc.commands {
+				result := FireCommand(conn, cmd)
+				stringResult, ok := result.(string)
+				if ok {
+					assert.Equal(t, tc.expected[i], stringResult)
+				} else {
+					assert.Assert(t, arraysArePermutations(tc.expected[i].([]interface{}), result.([]interface{})))
+				}
+			}
+		})
+	}
+}
 
 func TestJsonStrlen(t *testing.T) {
 	conn := getLocalConnection()
@@ -293,36 +407,6 @@ func TestJsonObjLen(t *testing.T) {
 			}
 		})
 	}
-}
-
-func arraysArePermutations[T comparable](a, b []T) bool {
-	// If lengths are different, they cannot be permutations
-	if len(a) != len(b) {
-		return false
-	}
-
-	// Count occurrences of each element in array 'a'
-	countA := make(map[T]int)
-	for _, elem := range a {
-		countA[elem]++
-	}
-
-	// Subtract occurrences based on array 'b'
-	for _, elem := range b {
-		countA[elem]--
-		if countA[elem] < 0 {
-			return false
-		}
-	}
-
-	// Check if all counts are zero
-	for _, count := range countA {
-		if count != 0 {
-			return false
-		}
-	}
-
-	return true
 }
 
 func TestJSONARRPOP(t *testing.T) {
