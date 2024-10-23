@@ -49,6 +49,7 @@ func TestHKeys(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			FireCommand(conn, "HDEL key field")
 			FireCommand(conn, "HDEL key field1")
+			FireCommand(conn, "DEL key")
 
 			for i, cmd := range tc.commands {
 				result := FireCommand(conn, cmd)

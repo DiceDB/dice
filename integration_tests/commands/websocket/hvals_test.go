@@ -20,13 +20,13 @@ func TestHVals(t *testing.T) {
 			name:     "WS One or more vals exist",
 			commands: []string{"HSET key field value", "HSET key field1 value1", "HVALS key"},
 			expected: []interface{}{float64(1), float64(1), []interface{}{"value", "value1"}},
-			delays:   []time.Duration{0, 0, 3*time.Second},
+			delays:   []time.Duration{0, 0, 3 * time.Second},
 		},
 		{
 			name:     "WS No values exist",
 			commands: []string{"HVALS key"},
 			expected: []interface{}{[]interface{}{}},
-			delays:   []time.Duration{ 0*time.Second},
+			delays:   []time.Duration{0 * time.Second},
 		},
 	}
 
@@ -35,6 +35,7 @@ func TestHVals(t *testing.T) {
 			conn := exec.ConnectToServer()
 			exec.FireCommandAndReadResponse(conn, "HDEL key field")
 			exec.FireCommandAndReadResponse(conn, "HDEL key field1")
+			exec.FireCommandAndReadResponse(conn, "DEL key")
 
 			for i, cmd := range tc.commands {
 				t.Logf("Executing command: %s", cmd)

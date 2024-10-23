@@ -20,7 +20,7 @@ func TestHKeys(t *testing.T) {
 			name:     "WS One or more keys exist",
 			commands: []string{"HSET key field value", "HSET key field1 value1", "HKEYS key"},
 			expected: []interface{}{float64(1), float64(1), []interface{}{"field", "field1"}},
-			delays:   []time.Duration{0, 0, 3*time.Second},
+			delays:   []time.Duration{0, 0, 3 * time.Second},
 		},
 		{
 			name:     "WS No keys exist",
@@ -35,6 +35,7 @@ func TestHKeys(t *testing.T) {
 			conn := exec.ConnectToServer()
 			exec.FireCommandAndReadResponse(conn, "HDEL key field")
 			exec.FireCommandAndReadResponse(conn, "HDEL key field1")
+			exec.FireCommandAndReadResponse(conn, "DEL key")
 
 			for i, cmd := range tc.commands {
 				t.Logf("Executing command: %s", cmd)

@@ -262,9 +262,9 @@ func TestBitfieldRO(t *testing.T) {
 	FireCommand(conn, "FLUSHDB")
 	defer FireCommand(conn, "FLUSHDB")
 
-	syntaxErrMsg 			:= "ERR syntax error"
-	bitFieldTypeErrMsg 		:= "ERR Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is."
-	unsupportedCmdErrMsg 	:= "ERR BITFIELD_RO only supports the GET subcommand"
+	syntaxErrMsg := "ERR syntax error"
+	bitFieldTypeErrMsg := "ERR Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is."
+	unsupportedCmdErrMsg := "ERR BITFIELD_RO only supports the GET subcommand"
 
 	testCases := []struct {
 		Name     string
@@ -311,7 +311,7 @@ func TestBitfieldRO(t *testing.T) {
 				unsupportedCmdErrMsg,
 				unsupportedCmdErrMsg,
 			},
-			Delay:   []time.Duration{0, 0, },
+			Delay:   []time.Duration{0, 0},
 			CleanUp: []string{"Del bits"},
 		},
 		{
@@ -328,7 +328,7 @@ func TestBitfieldRO(t *testing.T) {
 				syntaxErrMsg,
 				syntaxErrMsg,
 			},
-			Delay:   []time.Duration{0, 0, 0, 0, },
+			Delay:   []time.Duration{0, 0, 0, 0},
 			CleanUp: []string{"Del bits"},
 		},
 		{
@@ -345,7 +345,7 @@ func TestBitfieldRO(t *testing.T) {
 				bitFieldTypeErrMsg,
 				bitFieldTypeErrMsg,
 			},
-			Delay:   []time.Duration{0, 0, 0, 0, },
+			Delay:   []time.Duration{0, 0, 0, 0},
 			CleanUp: []string{"Del bits"},
 		},
 		{

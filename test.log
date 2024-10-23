@@ -1,6 +1,6 @@
 go test -v -race -count=1 -p=1 ./integration_tests/...
 Starting the test server on port 8739
-2024/10/24 01:01:04 WARN running without authentication, consider setting a password
+2024/10/24 01:10:53 WARN running without authentication, consider setting a password
 === RUN   TestBitOp
 --- PASS: TestBitOp (0.01s)
 === RUN   TestBitCount
@@ -164,7 +164,7 @@ Starting the test server on port 8739
     --- PASS: TestBitOpsString/BITOP_XOR_of_keys_containing_strings_and_a_bytearray_and_get_the_destkey (0.00s)
     --- PASS: TestBitOpsString/BITOP_XOR_of_keys_containing_integers_and_get_the_destkey (0.00s)
 === RUN   TestBitfield
-2024/10/24 01:01:07 INFO FLUSHDB called args=[]
+2024/10/24 01:10:55 INFO FLUSHDB called args=[]
 === RUN   TestBitfield/BITFIELD_Arity_Check
 === RUN   TestBitfield/BITFIELD_on_unsupported_type_of_SET
 === RUN   TestBitfield/BITFIELD_on_unsupported_type_of_JSON
@@ -184,7 +184,7 @@ Starting the test server on port 8739
 === RUN   TestBitfield/BITFIELD_signed_overflow_sat
 === RUN   TestBitfield/BITFIELD_regression_1
 === RUN   TestBitfield/BITFIELD_regression_2
-2024/10/24 01:01:07 INFO FLUSHDB called args=[]
+2024/10/24 01:10:55 INFO FLUSHDB called args=[]
 --- PASS: TestBitfield (0.02s)
     --- PASS: TestBitfield/BITFIELD_Arity_Check (0.00s)
     --- PASS: TestBitfield/BITFIELD_on_unsupported_type_of_SET (0.00s)
@@ -206,7 +206,7 @@ Starting the test server on port 8739
     --- PASS: TestBitfield/BITFIELD_regression_1 (0.00s)
     --- PASS: TestBitfield/BITFIELD_regression_2 (0.00s)
 === RUN   TestBitfieldRO
-2024/10/24 01:01:07 INFO FLUSHDB called args=[]
+2024/10/24 01:10:55 INFO FLUSHDB called args=[]
 === RUN   TestBitfieldRO/BITFIELD_RO_Arity_Check
 === RUN   TestBitfieldRO/BITFIELD_RO_on_unsupported_type_of_SET
 === RUN   TestBitfieldRO/BITFIELD_RO_on_unsupported_type_of_JSON
@@ -215,7 +215,7 @@ Starting the test server on port 8739
 === RUN   TestBitfieldRO/BITFIELD_RO_with_syntax_error
 === RUN   TestBitfieldRO/BITFIELD_RO_with_invalid_bitfield_type
 === RUN   TestBitfieldRO/BITFIELD_RO_with_only_key_as_argument
-2024/10/24 01:01:07 INFO FLUSHDB called args=[]
+2024/10/24 01:10:55 INFO FLUSHDB called args=[]
 --- PASS: TestBitfieldRO (0.00s)
     --- PASS: TestBitfieldRO/BITFIELD_RO_Arity_Check (0.00s)
     --- PASS: TestBitfieldRO/BITFIELD_RO_on_unsupported_type_of_SET (0.00s)
@@ -323,13 +323,13 @@ Starting the test server on port 8739
     --- PASS: TestCopy/COPY_with_REPLACE (0.00s)
     --- PASS: TestCopy/COPY_with_JSON_integer (0.00s)
     --- PASS: TestCopy/COPY_with_JSON_boolean (0.00s)
-    --- PASS: TestCopy/COPY_with_JSON_array (0.00s)
+    --- PASS: TestCopy/COPY_with_JSON_array (0.01s)
     --- PASS: TestCopy/COPY_with_JSON_simple_JSON (0.01s)
     --- PASS: TestCopy/COPY_with_no_expiry (0.00s)
     --- PASS: TestCopy/COPY_with_expiry_making_sure_copy_expires (7.01s)
 === RUN   TestDBSIZE
 === RUN   TestDBSIZE/DBSIZE
-2024/10/24 01:01:14 INFO FLUSHDB called args=[]
+2024/10/24 01:11:02 INFO FLUSHDB called args=[]
 === RUN   TestDBSIZE/DBSIZE_with_repeative_keys_in_MSET/SET
 === RUN   TestDBSIZE/DBSIZE_with_expired_keys
 === RUN   TestDBSIZE/DBSIZE_with_deleted_keys
@@ -349,7 +349,7 @@ Starting the test server on port 8739
     --- PASS: TestDel/DEL_with_key_not_set (0.00s)
     --- PASS: TestDel/DEL_with_no_keys_or_arguments (0.00s)
 === RUN   TestLPush
-rand seed: 1729711876093813876=== RUN   TestLPush/LPUSH
+rand seed: 1729712464748309968=== RUN   TestLPush/LPUSH
 === RUN   TestLPush/LPUSH_normal_values
 === RUN   TestLPush/LPUSH_edge_values
 --- PASS: TestLPush (0.01s)
@@ -357,7 +357,7 @@ rand seed: 1729711876093813876=== RUN   TestLPush/LPUSH
     --- PASS: TestLPush/LPUSH_normal_values (0.00s)
     --- PASS: TestLPush/LPUSH_edge_values (0.00s)
 === RUN   TestRPush
-rand seed: 1729711876102788765=== RUN   TestRPush/RPUSH
+rand seed: 1729712464758983429=== RUN   TestRPush/RPUSH
 === RUN   TestRPush/RPUSH_normal_values
 === RUN   TestRPush/RPUSH_edge_values
 --- PASS: TestRPush (0.01s)
@@ -365,7 +365,7 @@ rand seed: 1729711876102788765=== RUN   TestRPush/RPUSH
     --- PASS: TestRPush/RPUSH_normal_values (0.00s)
     --- PASS: TestRPush/RPUSH_edge_values (0.00s)
 === RUN   TestLPushLPop
-rand seed: 1729711876112198092=== RUN   TestLPushLPop/LPUSH_LPOP
+rand seed: 1729712464767989241=== RUN   TestLPushLPop/LPUSH_LPOP
 === RUN   TestLPushLPop/LPUSH_LPOP_normal_values
 === RUN   TestLPushLPop/LPUSH_LPOP_edge_values
 --- PASS: TestLPushLPop (0.01s)
@@ -373,7 +373,7 @@ rand seed: 1729711876112198092=== RUN   TestLPushLPop/LPUSH_LPOP
     --- PASS: TestLPushLPop/LPUSH_LPOP_normal_values (0.00s)
     --- PASS: TestLPushLPop/LPUSH_LPOP_edge_values (0.00s)
 === RUN   TestLPushRPop
-rand seed: 1729711876120784304=== RUN   TestLPushRPop/LPUSH_RPOP
+rand seed: 1729712464778480689=== RUN   TestLPushRPop/LPUSH_RPOP
 === RUN   TestLPushRPop/LPUSH_RPOP_normal_values
 === RUN   TestLPushRPop/LPUSH_RPOP_edge_values
 --- PASS: TestLPushRPop (0.01s)
@@ -381,7 +381,7 @@ rand seed: 1729711876120784304=== RUN   TestLPushRPop/LPUSH_RPOP
     --- PASS: TestLPushRPop/LPUSH_RPOP_normal_values (0.00s)
     --- PASS: TestLPushRPop/LPUSH_RPOP_edge_values (0.00s)
 === RUN   TestRPushLPop
-rand seed: 1729711876129619770=== RUN   TestRPushLPop/RPUSH_LPOP
+rand seed: 1729712464788142042=== RUN   TestRPushLPop/RPUSH_LPOP
 === RUN   TestRPushLPop/RPUSH_LPOP_normal_values
 === RUN   TestRPushLPop/RPUSH_LPOP_edge_values
 --- PASS: TestRPushLPop (0.01s)
@@ -389,7 +389,7 @@ rand seed: 1729711876129619770=== RUN   TestRPushLPop/RPUSH_LPOP
     --- PASS: TestRPushLPop/RPUSH_LPOP_normal_values (0.00s)
     --- PASS: TestRPushLPop/RPUSH_LPOP_edge_values (0.00s)
 === RUN   TestRPushRPop
-rand seed: 1729711876138514367=== RUN   TestRPushRPop/RPUSH_RPOP
+rand seed: 1729712464797100763=== RUN   TestRPushRPop/RPUSH_RPOP
 === RUN   TestRPushRPop/RPUSH_RPOP_normal_values
 === RUN   TestRPushRPop/RPUSH_RPOP_edge_values
 --- PASS: TestRPushRPop (0.01s)
@@ -397,11 +397,11 @@ rand seed: 1729711876138514367=== RUN   TestRPushRPop/RPUSH_RPOP
     --- PASS: TestRPushRPop/RPUSH_RPOP_normal_values (0.00s)
     --- PASS: TestRPushRPop/RPUSH_RPOP_edge_values (0.00s)
 === RUN   TestLRPushLRPop
-rand seed: 1729711876147614149=== RUN   TestLRPushLRPop/L/RPush_L/RPop
+rand seed: 1729712464806533823=== RUN   TestLRPushLRPop/L/RPush_L/RPop
 --- PASS: TestLRPushLRPop (0.00s)
     --- PASS: TestLRPushLRPop/L/RPush_L/RPop (0.00s)
 === RUN   TestLLEN
-rand seed: 1729711876151119925=== RUN   TestLLEN/L/RPush_L/RPop
+rand seed: 1729712464809985584=== RUN   TestLLEN/L/RPush_L/RPop
 --- PASS: TestLLEN (0.00s)
     --- PASS: TestLLEN/L/RPush_L/RPop (0.00s)
 === RUN   TestDiscard
@@ -429,7 +429,7 @@ rand seed: 1729711876151119925=== RUN   TestLLEN/L/RPush_L/RPop
 === RUN   TestExists/Test_EXISTS_command_with_multiple_keys
 === RUN   TestExists/Test_EXISTS_an_expired_key
 === RUN   TestExists/Test_EXISTS_with_multiple_keys_and_expired_key
---- PASS: TestExists (4.00s)
+--- PASS: TestExists (4.01s)
     --- PASS: TestExists/Test_EXISTS_command (0.00s)
     --- PASS: TestExists/Test_EXISTS_command_with_multiple_keys (0.00s)
     --- PASS: TestExists/Test_EXISTS_an_expired_key (2.00s)
@@ -510,7 +510,7 @@ rand seed: 1729711876151119925=== RUN   TestLLEN/L/RPush_L/RPop
     --- PASS: TestExpiretime/EXPIRETIME_with_invalid_syntax (0.00s)
 === RUN   TestFLUSHDB
 === RUN   TestFLUSHDB/FLUSHDB
-2024/10/24 01:01:30 INFO FLUSHDB called args=[]
+2024/10/24 01:11:19 INFO FLUSHDB called args=[]
 --- PASS: TestFLUSHDB (0.00s)
     --- PASS: TestFLUSHDB/FLUSHDB (0.00s)
 === RUN   TestGet
@@ -868,7 +868,7 @@ rand seed: 1729711876151119925=== RUN   TestLLEN/L/RPush_L/RPop
 === RUN   TestJSONNumIncrBy/incrby_at_non_root_path
 === RUN   TestJSONNumIncrBy/incrby_at_root_path
 === RUN   TestJSONNumIncrBy/incrby_at_root_path#01
---- PASS: TestJSONNumIncrBy (0.00s)
+--- PASS: TestJSONNumIncrBy (0.01s)
     --- PASS: TestJSONNumIncrBy/Invalid_number_of_arguments (0.00s)
     --- PASS: TestJSONNumIncrBy/Non-existent_key (0.00s)
     --- PASS: TestJSONNumIncrBy/Invalid_value_of_increment (0.00s)
@@ -883,7 +883,7 @@ rand seed: 1729711876151119925=== RUN   TestLLEN/L/RPush_L/RPop
 === RUN   TestJsonARRINSERT/JSON.ARRINSERT_with_negative_index_in_root_path
 === RUN   TestJsonARRINSERT/JSON.ARRINSERT_nested_with_positive_index
 === RUN   TestJsonARRINSERT/JSON.ARRINSERT_nested_with_negative_index
---- PASS: TestJsonARRINSERT (0.00s)
+--- PASS: TestJsonARRINSERT (0.01s)
     --- PASS: TestJsonARRINSERT/JSON.ARRINSERT_index_out_of_bounds (0.00s)
     --- PASS: TestJsonARRINSERT/JSON.ARRINSERT_index_is_not_integer (0.00s)
     --- PASS: TestJsonARRINSERT/JSON.ARRINSERT_with_positive_index_in_root_path (0.00s)
@@ -935,15 +935,15 @@ rand seed: 1729711876151119925=== RUN   TestLLEN/L/RPush_L/RPop
     --- PASS: TestJsonARRTRIM/JSON.ARRTRIM_negative_start_larger_than_stop (0.00s)
 === RUN   TestJsonSTRAPPEND
 === RUN   TestJsonSTRAPPEND/STRAPPEND_to_nested_string
-2024/10/24 01:01:54 INFO FLUSHDB called args=[]
+2024/10/24 01:11:43 INFO FLUSHDB called args=[]
 === RUN   TestJsonSTRAPPEND/STRAPPEND_to_multiple_paths
-2024/10/24 01:01:54 INFO FLUSHDB called args=[]
+2024/10/24 01:11:43 INFO FLUSHDB called args=[]
 === RUN   TestJsonSTRAPPEND/STRAPPEND_to_non-string
-2024/10/24 01:01:54 INFO FLUSHDB called args=[]
+2024/10/24 01:11:43 INFO FLUSHDB called args=[]
 === RUN   TestJsonSTRAPPEND/STRAPPEND_with_empty_string
-2024/10/24 01:01:54 INFO FLUSHDB called args=[]
+2024/10/24 01:11:43 INFO FLUSHDB called args=[]
 === RUN   TestJsonSTRAPPEND/STRAPPEND_to_non-existent_path
-2024/10/24 01:01:54 INFO FLUSHDB called args=[]
+2024/10/24 01:11:43 INFO FLUSHDB called args=[]
 --- PASS: TestJsonSTRAPPEND (0.00s)
     --- PASS: TestJsonSTRAPPEND/STRAPPEND_to_nested_string (0.00s)
     --- PASS: TestJsonSTRAPPEND/STRAPPEND_to_multiple_paths (0.00s)
@@ -1043,7 +1043,7 @@ OBJECT ENCODING btreekey btree btree
 === RUN   TestObjectCommand/Object_Encoding_check_for_setstr
 SADD skey one two three 3 3
 OBJECT ENCODING skey setstr setstr
-2024/10/24 01:01:59 INFO FLUSHDB called args=[]
+2024/10/24 01:11:48 INFO FLUSHDB called args=[]
 --- PASS: TestObjectCommand (5.01s)
     --- PASS: TestObjectCommand/Object_Idletime (5.00s)
     --- PASS: TestObjectCommand/Object_Encoding_check_for_raw (0.00s)
@@ -1059,36 +1059,35 @@ OBJECT ENCODING skey setstr setstr
 === RUN   TestQWatchUnwatch
 --- PASS: TestQWatchUnwatch (0.02s)
 === RUN   TestQWATCH
-2024/10/24 01:01:59 ERROR error writing to client client=24 error="connection reset by peer"
-2024/10/24 01:01:59 ERROR broken pipe
-2024/10/24 01:01:59 WARN connection reset
-2024/10/24 01:01:59 WARN connection reset
+2024/10/24 01:11:48 ERROR error writing to client client=24 error="connection reset by peer"
+2024/10/24 01:11:48 ERROR broken pipe
+2024/10/24 01:11:48 WARN connection reset
+2024/10/24 01:11:48 WARN connection reset
 --- PASS: TestQWATCH (0.42s)
-2024/10/24 01:01:59 WARN connection reset
+2024/10/24 01:11:48 WARN connection reset
 === RUN   TestQWATCHWithSDK
-redis: 2024/10/24 01:02:00 qwatch.go:156: redis: discarding bad QWatch connection: read tcp 127.0.0.1:58448->127.0.0.1:8739: use of closed network connection
-redis: 2024/10/24 01:02:00 qwatch.go:156: redis: discarding bad QWatch connection: read tcp 127.0.0.1:58454->127.0.0.1:8739: use of closed network connection
-redis: 2024/10/24 01:02:00 qwatch.go:156: redis: discarding bad QWatch connection: read tcp 127.0.0.1:58462->127.0.0.1:8739: use of closed network connection
+redis: 2024/10/24 01:11:48 qwatch.go:156: redis: discarding bad QWatch connection: read tcp 127.0.0.1:47116->127.0.0.1:8739: use of closed network connection
+redis: 2024/10/24 01:11:48 qwatch.go:156: redis: discarding bad QWatch connection: read tcp 127.0.0.1:47124->127.0.0.1:8739: use of closed network connection
+redis: 2024/10/24 01:11:48 qwatch.go:156: redis: discarding bad QWatch connection: read tcp 127.0.0.1:47136->127.0.0.1:8739: use of closed network connection
 --- PASS: TestQWATCHWithSDK (0.27s)
 === RUN   TestQWatchWhere
-2024/10/24 01:02:00 WARN connection reset
-2024/10/24 01:02:00 WARN connection reset
-2024/10/24 01:02:00 WARN connection reset
+2024/10/24 01:11:49 WARN connection reset
+2024/10/24 01:11:49 WARN connection reset
 --- PASS: TestQWatchWhere (0.41s)
+2024/10/24 01:11:49 WARN connection reset
 === RUN   TestQwatchWithJSON
-2024/10/24 01:02:00 WARN Fingerprint not found in CacheStore fingerprint=f_7137981359670103785
-2024/10/24 01:02:00 ERROR fingerprint was not found in the cache: f_7137981359670103785
-2024/10/24 01:02:00 WARN Fingerprint not found in CacheStore fingerprint=f_4131985243653060489
-2024/10/24 01:02:00 ERROR fingerprint was not found in the cache: f_4131985243653060489
+2024/10/24 01:11:49 WARN Fingerprint not found in CacheStore fingerprint=f_1417946674181355822
+2024/10/24 01:11:49 ERROR fingerprint was not found in the cache: f_1417946674181355822
 --- PASS: TestQwatchWithJSON (0.11s)
 === RUN   TestQwatchWithJSONOrderBy
-2024/10/24 01:02:00 WARN Fingerprint not found in CacheStore fingerprint=f_7282661455000594216
-2024/10/24 01:02:00 ERROR fingerprint was not found in the cache: f_7282661455000594216
+2024/10/24 01:11:49 WARN Fingerprint not found in CacheStore fingerprint=f_7282661455000594216
+2024/10/24 01:11:49 ERROR fingerprint was not found in the cache: f_7282661455000594216
+2024/10/24 01:11:49 WARN connection reset
 --- PASS: TestQwatchWithJSONOrderBy (0.11s)
-2024/10/24 01:02:00 WARN connection reset
 === RUN   TestQwatchWhereWithJSON
-2024/10/24 01:02:00 WARN Fingerprint not found in CacheStore fingerprint=f_7137981359670103785
-2024/10/24 01:02:00 ERROR fingerprint was not found in the cache: f_7137981359670103785
+2024/10/24 01:11:49 ERROR error writing to client client=22 error="bad file descriptor"
+2024/10/24 01:11:49 WARN Fingerprint not found in CacheStore fingerprint=f_4131985243653060489
+2024/10/24 01:11:49 ERROR fingerprint was not found in the cache: f_4131985243653060489
 --- PASS: TestQwatchWhereWithJSON (0.11s)
 === RUN   TestSelect
 === RUN   TestSelect/SELECT_command_response
@@ -1247,9 +1246,9 @@ redis: 2024/10/24 01:02:00 qwatch.go:156: redis: discarding bad QWatch connectio
     --- PASS: TestType/TYPE_for_key_with_value_created_from_SETBIT_command (0.00s)
     --- PASS: TestType/TYPE_for_key_with_value_created_from_SETOP_command (0.00s)
 PASS
-ok  	github.com/dicedb/dice/integration_tests/commands/async	82.111s
+ok  	github.com/dicedb/dice/integration_tests/commands/async	82.141s
 Starting the test server on port 8083
-2024/10/24 01:02:27 INFO also listenting HTTP on port=8083
+2024/10/24 01:12:16 INFO also listenting HTTP on port=8083
 === RUN   TestAPPEND
 === RUN   TestAPPEND/APPEND_and_GET_a_new_Val
 === RUN   TestAPPEND/APPEND_to_an_exisiting_key_and_GET
@@ -1428,7 +1427,7 @@ Starting the test server on port 8083
     --- PASS: TestDECR/Decrement_multiple_keys (0.00s)
 === RUN   TestDECRBY
 === RUN   TestDECRBY/Decrement_multiple_keys
---- PASS: TestDECRBY (0.00s)
+--- PASS: TestDECRBY (0.01s)
     --- PASS: TestDECRBY/Decrement_multiple_keys (0.00s)
 === RUN   TestEchoHttp
 === RUN   TestEchoHttp/ECHO_with_invalid_number_of_arguments
@@ -1554,11 +1553,11 @@ Starting the test server on port 8083
 === RUN   TestGetEx/GetEx_with_key_holding_JSON_type
 === RUN   TestGetEx/GetEx_with_key_holding_JSON_type_with_multiple_set_commands
 === RUN   TestGetEx/GetEx_with_key_holding_SET_type
---- PASS: TestGetEx (19.04s)
+--- PASS: TestGetEx (19.05s)
     --- PASS: TestGetEx/GetEx_Simple_Value (0.00s)
     --- PASS: TestGetEx/GetEx_Non-Existent_Key (0.00s)
     --- PASS: TestGetEx/GetEx_with_EX_option (2.00s)
-    --- PASS: TestGetEx/GetEx_with_PX_option (2.00s)
+    --- PASS: TestGetEx/GetEx_with_PX_option (2.01s)
     --- PASS: TestGetEx/GetEx_with_EX_option_and_invalid_value (0.00s)
     --- PASS: TestGetEx/GetEx_with_PX_option_and_invalid_value (0.00s)
     --- PASS: TestGetEx/GetEx_with_EXAT_option (5.00s)
@@ -1596,15 +1595,12 @@ Starting the test server on port 8083
     --- PASS: TestGetSet/GETSET_error_when_key_exists_but_does_not_hold_a_string_value (0.00s)
 === RUN   TestHExists
 === RUN   TestHExists/HTTP_Check_if_field_exists_when_k_f_and_v_are_set
-    hexists_test.go:68: assertion failed: 1 (tc.expected[i] float64) != WRONGTYPE Operation against a key holding the wrong kind of value (result string): Value mismatch for cmd {HSET map[field:f key:k value:v]}, expected 1, got WRONGTYPE Operation against a key holding the wrong kind of value
 === RUN   TestHExists/HTTP_Check_if_field_exists_when_k_exists_but_not_f_and_v
-    hexists_test.go:68: assertion failed: 1 (tc.expected[i] float64) != WRONGTYPE Operation against a key holding the wrong kind of value (result string): Value mismatch for cmd {HSET map[field:f1 key:k value:v]}, expected 1, got WRONGTYPE Operation against a key holding the wrong kind of value
 === RUN   TestHExists/HTTP_Check_if_field_exists_when_no_k,f_and_v_exist
-    hexists_test.go:68: assertion failed: 0 (tc.expected[i] string) != ERR -WRONGTYPE Operation against a key holding the wrong kind of value (result string): Value mismatch for cmd {HEXISTS map[field:f key:k]}, expected 0, got ERR -WRONGTYPE Operation against a key holding the wrong kind of value
---- FAIL: TestHExists (0.01s)
-    --- FAIL: TestHExists/HTTP_Check_if_field_exists_when_k_f_and_v_are_set (0.00s)
-    --- FAIL: TestHExists/HTTP_Check_if_field_exists_when_k_exists_but_not_f_and_v (0.00s)
-    --- FAIL: TestHExists/HTTP_Check_if_field_exists_when_no_k,f_and_v_exist (0.00s)
+--- PASS: TestHExists (0.01s)
+    --- PASS: TestHExists/HTTP_Check_if_field_exists_when_k_f_and_v_are_set (0.00s)
+    --- PASS: TestHExists/HTTP_Check_if_field_exists_when_k_exists_but_not_f_and_v (0.00s)
+    --- PASS: TestHExists/HTTP_Check_if_field_exists_when_no_k,f_and_v_exist (0.00s)
 === RUN   TestHINCRBY
 === RUN   TestHINCRBY/HINCRBY_Wrong_number_of_arguments_provided
 === RUN   TestHINCRBY/HINCRBY_should_increment_when_key_doesn't_exist
@@ -1626,7 +1622,7 @@ Starting the test server on port 8083
 === RUN   TestHINCRBYFLOAT/HINCRBYFLOAT_should_increment_on_existing_key_and_field
 === RUN   TestHINCRBYFLOAT/HINCRBYFLOAT_should_decrement_on_existing_key_and_field
 === RUN   TestHINCRBYFLOAT/HINCRBYFLOAT_should_give_error_when_trying_to_increment_a_key_which_is_not_a_hash_value_with_a_value_which_is_not_integer_or_a_float
---- PASS: TestHINCRBYFLOAT (0.00s)
+--- PASS: TestHINCRBYFLOAT (0.01s)
     --- PASS: TestHINCRBYFLOAT/HINCRBYFLOAT_Wrong_number_of_arguments_provided (0.00s)
     --- PASS: TestHINCRBYFLOAT/HINCRBYFLOAT_should_increment_when_key_doesn't_exist (0.00s)
     --- PASS: TestHINCRBYFLOAT/HINCRBYFLOAT_should_increment_when_key_exists_and_a_field_doesn't_exist (0.00s)
@@ -1635,25 +1631,10 @@ Starting the test server on port 8083
     --- PASS: TestHINCRBYFLOAT/HINCRBYFLOAT_should_give_error_when_trying_to_increment_a_key_which_is_not_a_hash_value_with_a_value_which_is_not_integer_or_a_float (0.00s)
 === RUN   TestHKeys
 === RUN   TestHKeys/HTTP_One_or_more_keys_exist
-    hkeys_test.go:45: assertion failed: 
-        --- tc.expected[i]
-        +++ result
-          any(
-        - 	float64(1),
-        + 	string("WRONGTYPE Operation against a key holding the wrong kind of value"),
-          )
-        
 === RUN   TestHKeys/HTTP_No_keys_exist
-    hkeys_test.go:45: assertion failed: 
-        --- tc.expected[i]
-        +++ result
-          any(
-        + 	string("ERR -WRONGTYPE Operation against a key holding the wrong kind of value"),
-          )
-        
---- FAIL: TestHKeys (0.00s)
-    --- FAIL: TestHKeys/HTTP_One_or_more_keys_exist (0.00s)
-    --- FAIL: TestHKeys/HTTP_No_keys_exist (0.00s)
+--- PASS: TestHKeys (0.00s)
+    --- PASS: TestHKeys/HTTP_One_or_more_keys_exist (0.00s)
+    --- PASS: TestHKeys/HTTP_No_keys_exist (0.00s)
 === RUN   TestHRANDFIELD
 === RUN   TestHRANDFIELD/Basic_HRANDFIELD_operations
 === RUN   TestHRANDFIELD/HRANDFIELD_with_count
@@ -1688,28 +1669,14 @@ Starting the test server on port 8083
     --- PASS: TestHStrLen/HSTRLEN_with_wrong_type (0.00s)
 === RUN   TestHVals
 === RUN   TestHVals/HTTP_One_or_more_keys_exist
-WRONGTYPE Operation against a key holding the wrong kind of value | 1
-    hvals_test.go:46: assertion failed: 
-        --- tc.expected[i]
-        +++ result
-          any(
-        - 	float64(1),
-        + 	string("WRONGTYPE Operation against a key holding the wrong kind of value"),
-          )
-        
+1 | 1
+1 | 1
+[v v1] | [v v1]
 === RUN   TestHVals/HTTP_No_keys_exist
-ERR -WRONGTYPE Operation against a key holding the wrong kind of value | []
-    hvals_test.go:46: assertion failed: 
-        --- tc.expected[i]
-        +++ result
-          any(
-        - 	[]any{},
-        + 	string("ERR -WRONGTYPE Operation against a key holding the wrong kind of value"),
-          )
-        
---- FAIL: TestHVals (0.00s)
-    --- FAIL: TestHVals/HTTP_One_or_more_keys_exist (0.00s)
-    --- FAIL: TestHVals/HTTP_No_keys_exist (0.00s)
+[] | []
+--- PASS: TestHVals (0.00s)
+    --- PASS: TestHVals/HTTP_One_or_more_keys_exist (0.00s)
+    --- PASS: TestHVals/HTTP_No_keys_exist (0.00s)
 === RUN   TestHyperLogLogCommands
 === RUN   TestHyperLogLogCommands/PFADD_with_one_key-value_pair
 === RUN   TestHyperLogLogCommands/PFADD_with_multiple_key-value_pair
@@ -1744,7 +1711,7 @@ ERR -WRONGTYPE Operation against a key holding the wrong kind of value | []
 === RUN   TestINCRBYFLOAT/Increment_by_both_integer_and_float
 === RUN   TestINCRBYFLOAT/Increment_that_would_make_the_value_Inf
 === RUN   TestINCRBYFLOAT/Increment_that_would_make_the_value_-Inf
---- PASS: TestINCRBYFLOAT (0.01s)
+--- PASS: TestINCRBYFLOAT (0.02s)
     --- PASS: TestINCRBYFLOAT/Invalid_number_of_arguments (0.00s)
     --- PASS: TestINCRBYFLOAT/Increment_a_non_existing_key (0.00s)
     --- PASS: TestINCRBYFLOAT/Increment_a_key_with_an_integer_value (0.00s)
@@ -1966,12 +1933,12 @@ expacting: OK with got: OK
 === RUN   TestJsonNummultby/Invalid_value_of_multiplier_on_existent_key
 === RUN   TestJsonNummultby/MultBy_at_recursive_path
 === RUN   TestJsonNummultby/MultBy_at_root_path
---- PASS: TestJsonNummultby (0.02s)
+--- PASS: TestJsonNummultby (0.03s)
     --- PASS: TestJsonNummultby/Invalid_number_of_arguments (0.00s)
     --- PASS: TestJsonNummultby/MultBy_at_non-existent_key (0.00s)
     --- PASS: TestJsonNummultby/Invalid_value_of_multiplier_on_non-existent_key (0.00s)
     --- PASS: TestJsonNummultby/Invalid_value_of_multiplier_on_existent_key (0.00s)
-    --- PASS: TestJsonNummultby/MultBy_at_recursive_path (0.01s)
+    --- PASS: TestJsonNummultby/MultBy_at_recursive_path (0.02s)
     --- PASS: TestJsonNummultby/MultBy_at_root_path (0.00s)
 === RUN   TestJsonObjLen
 === RUN   TestJsonObjLen/JSON.OBJLEN_with_root_path
@@ -1990,7 +1957,7 @@ expacting: OK with got: OK
 === RUN   TestJsonObjLen/JSON.OBJLEN_with_legacy_path_-_inner_non-existent_path_v2
 === RUN   TestJsonObjLen/JSON.OBJLEN_with_legacy_path_-_inner_existent_path_with_nonJSON_object
 === RUN   TestJsonObjLen/JSON.OBJLEN_with_legacy_path_-_inner_existent_path_recursive_object
---- PASS: TestJsonObjLen (0.01s)
+--- PASS: TestJsonObjLen (0.02s)
     --- PASS: TestJsonObjLen/JSON.OBJLEN_with_root_path (0.00s)
     --- PASS: TestJsonObjLen/JSON.OBJLEN_with_nested_path (0.00s)
     --- PASS: TestJsonObjLen/JSON.OBJLEN_with_non-object_path (0.00s)
@@ -2044,7 +2011,7 @@ expacting: OK with got: OK
 === RUN   TestJsonObjKeys/JSON.OBJKEYS_with_only_key
 === RUN   TestJsonObjKeys/JSON.OBJKEYS_with_non-existing_key
 === RUN   TestJsonObjKeys/JSON.OBJKEYS_with_multiple_json_path
---- PASS: TestJsonObjKeys (0.01s)
+--- PASS: TestJsonObjKeys (0.02s)
     --- PASS: TestJsonObjKeys/JSON.OBJKEYS_root_object (0.00s)
     --- PASS: TestJsonObjKeys/JSON.OBJKEYS_with_nested_path (0.00s)
     --- PASS: TestJsonObjKeys/JSON.OBJKEYS_with_non-object_path (0.00s)
@@ -2091,21 +2058,21 @@ expacting: OK with got: OK
     --- PASS: TestOBJECT/Object_Idletime (5.00s)
 === RUN   TestQWatch
 === RUN   TestQWatch/Q.WATCH_Register_Bad_Request
-2024/10/24 01:03:31 ERROR Error parsing HTTP request error="empty JSON object"
+2024/10/24 01:13:20 ERROR Error parsing HTTP request error="empty JSON object"
 === RUN   TestQWatch/Q.WATCH_Register
-2024/10/24 01:03:31 INFO Registered client for watching query clientID=974772499 query="SELECT $key, $value WHERE $key LIKE \"match:100:*\" AND $value > 10 ORDER BY $value DESC LIMIT 3"
-2024/10/24 01:03:31 INFO Client disconnected
+2024/10/24 01:13:20 INFO Registered client for watching query clientID=2699112187 query="SELECT $key, $value WHERE $key LIKE \"match:100:*\" AND $value > 10 ORDER BY $value DESC LIMIT 3"
+2024/10/24 01:13:20 INFO Client disconnected
 --- PASS: TestQWatch (0.00s)
     --- PASS: TestQWatch/Q.WATCH_Register_Bad_Request (0.00s)
     --- PASS: TestQWatch/Q.WATCH_Register (0.00s)
 === RUN   TestQwatchWithSSE
-2024/10/24 01:03:31 http: superfluous response.WriteHeader call from github.com/dicedb/dice/internal/server.writeJSONResponse (httpServer.go:394)
-2024/10/24 01:03:31 INFO Registered client for watching query clientID=2083051766 query="SELECT $key, $value WHERE $key like 'match:100:*' and $value > 10 ORDER BY $value desc LIMIT 3"
+2024/10/24 01:13:20 http: superfluous response.WriteHeader call from github.com/dicedb/dice/internal/server.writeJSONResponse (httpServer.go:394)
+2024/10/24 01:13:20 INFO Registered client for watching query clientID=1515613754 query="SELECT $key, $value WHERE $key like 'match:100:*' and $value > 10 ORDER BY $value desc LIMIT 3"
 --- PASS: TestQwatchWithSSE (2.00s)
-2024/10/24 01:03:33 INFO Client disconnected
 === RUN   TestSELECT
+2024/10/24 01:13:22 INFO Client disconnected
 === RUN   TestSELECT/SELECT_command_response
-2024/10/24 01:03:33 http: superfluous response.WriteHeader call from github.com/dicedb/dice/internal/server.writeJSONResponse (httpServer.go:394)
+2024/10/24 01:13:22 http: superfluous response.WriteHeader call from github.com/dicedb/dice/internal/server.writeJSONResponse (httpServer.go:394)
 === RUN   TestSELECT/SELECT_command_error_response
 --- PASS: TestSELECT (0.00s)
     --- PASS: TestSELECT/SELECT_command_response (0.00s)
@@ -2296,12 +2263,12 @@ expacting: OK with got: OK
     --- PASS: TestZPOPMIN/ZPOPMIN_with_count_argument_greater_than_length_of_sorted_set (0.00s)
     --- PASS: TestZPOPMIN/ZPOPMIN_on_empty_sorted_set (0.00s)
     --- PASS: TestZPOPMIN/ZPOPMIN_with_floating-point_scores (0.00s)
-FAIL
-2024/10/24 01:03:54 ERROR Error parsing HTTP request error=<nil>
-2024/10/24 01:03:54 Http test server encountered an error: http: Server closed
-FAIL	github.com/dicedb/dice/integration_tests/commands/http	86.935s
+PASS
+2024/10/24 01:13:43 ERROR Error parsing HTTP request error=<nil>
+2024/10/24 01:13:43 Http test server encountered an error: http: Server closed
+ok  	github.com/dicedb/dice/integration_tests/commands/http	87.997s
 Starting the test server on port 9739
-2024-10-24T01:03:55+05:30 INF ready to accept and serve requests on port=7379
+2024-10-24T01:13:45+05:30 INF ready to accept and serve requests on port=7379
 === RUN   TestAPPEND
 === RUN   TestAPPEND/APPEND_and_GET_a_new_Val
 === RUN   TestAPPEND/APPEND_to_an_existing_key_and_GET
@@ -2319,9 +2286,9 @@ Starting the test server on port 9739
     --- PASS: TestAPPEND/APPEND_value_with_leading_zeros (0.00s)
     --- PASS: TestAPPEND/APPEND_to_key_created_using_SADD (0.00s)
 === RUN   TestBFReserveAddInfoExists
-2024-10-24T01:03:57+05:30 INF Closing connection
+2024-10-24T01:13:47+05:30 INF Closing connection
 === RUN   TestBFReserveAddInfoExists/BF.RESERVE_and_BF.ADD
-2024-10-24T01:03:57+05:30 INF Stopping worker workerID=W-2022-2
+2024-10-24T01:13:47+05:30 INF Stopping worker workerID=W-2037-2
 === RUN   TestBFReserveAddInfoExists/BF.EXISTS_returns_false_for_non-existing_item
 === RUN   TestBFReserveAddInfoExists/BF.INFO_provides_correct_information
 === RUN   TestBFReserveAddInfoExists/BF.RESERVE_on_existent_filter_returns_error
@@ -2331,9 +2298,9 @@ Starting the test server on port 9739
     --- PASS: TestBFReserveAddInfoExists/BF.INFO_provides_correct_information (0.00s)
     --- PASS: TestBFReserveAddInfoExists/BF.RESERVE_on_existent_filter_returns_error (0.00s)
 === RUN   TestBFEdgeCasesAndErrors
-2024-10-24T01:03:57+05:30 INF Closing connection
+2024-10-24T01:13:47+05:30 INF Closing connection
 === RUN   TestBFEdgeCasesAndErrors/BF.RESERVE_with_incorrect_number_of_arguments
-2024-10-24T01:03:57+05:30 INF Stopping worker workerID=W-2026-3
+2024-10-24T01:13:47+05:30 INF Stopping worker workerID=W-2042-3
 === RUN   TestBFEdgeCasesAndErrors/BF.RESERVE_with_zero_capacity
 === RUN   TestBFEdgeCasesAndErrors/BF.RESERVE_with_zero_capacity#01
 === RUN   TestBFEdgeCasesAndErrors/BF.RESERVE_with_zero_capacity#02
@@ -2371,9 +2338,9 @@ Starting the test server on port 9739
     --- PASS: TestBFEdgeCasesAndErrors/BF.ADD_on_a_key_holding_a_list (0.00s)
     --- PASS: TestBFEdgeCasesAndErrors/BF.INFO_on_a_key_holding_a_hash (0.00s)
 === RUN   TestCommandGetKeys
-2024-10-24T01:03:57+05:30 INF Closing connection
-2024-10-24T01:03:57+05:30 INF Stopping worker workerID=W-2029-4
+2024-10-24T01:13:47+05:30 INF Closing connection
 === RUN   TestCommandGetKeys/Set_command
+2024-10-24T01:13:47+05:30 INF Stopping worker workerID=W-2044-4
 === RUN   TestCommandGetKeys/Get_command
 === RUN   TestCommandGetKeys/TTL_command
 === RUN   TestCommandGetKeys/Del_command
@@ -2397,9 +2364,9 @@ Starting the test server on port 9739
     --- PASS: TestCommandGetKeys/Invalid_command (0.00s)
     --- PASS: TestCommandGetKeys/Wrong_number_of_arguments (0.00s)
 === RUN   TestCommandInfo
-2024-10-24T01:03:57+05:30 INF Closing connection
+2024-10-24T01:13:47+05:30 INF Closing connection
 === RUN   TestCommandInfo/Set_command
-2024-10-24T01:03:57+05:30 INF Stopping worker workerID=W-2038-5
+2024-10-24T01:13:47+05:30 INF Stopping worker workerID=W-2054-5
 === RUN   TestCommandInfo/Get_command
 === RUN   TestCommandInfo/Ping_command
 === RUN   TestCommandInfo/Invalid_command
@@ -2413,34 +2380,34 @@ Starting the test server on port 9739
     --- PASS: TestCommandInfo/Combination_of_valid_and_Invalid_command (0.00s)
     --- PASS: TestCommandInfo/Combination_of_multiple_valid_commands (0.00s)
 === RUN   TestDECR
-2024-10-24T01:03:57+05:30 INF Closing connection
+2024-10-24T01:13:47+05:30 INF Closing connection
 === RUN   TestDECR/Decrement_multiple_keys
-2024-10-24T01:03:57+05:30 INF Stopping worker workerID=W-2041-6
+2024-10-24T01:13:47+05:30 INF Stopping worker workerID=W-2057-6
 --- PASS: TestDECR (0.00s)
     --- PASS: TestDECR/Decrement_multiple_keys (0.00s)
 === RUN   TestDECRBY
-2024-10-24T01:03:57+05:30 INF Closing connection
+2024-10-24T01:13:47+05:30 INF Closing connection
 === RUN   TestDECRBY/Decrement_multiple_keys
-2024-10-24T01:03:57+05:30 INF Stopping worker workerID=W-2045-7
+2024-10-24T01:13:47+05:30 INF Stopping worker workerID=W-2061-7
 --- PASS: TestDECRBY (0.00s)
     --- PASS: TestDECRBY/Decrement_multiple_keys (0.00s)
 === RUN   TestGet
-2024-10-24T01:03:57+05:30 INF Closing connection
+2024-10-24T01:13:47+05:30 INF Closing connection
 === RUN   TestGet/Get_with_expiration
-2024-10-24T01:03:57+05:30 INF Stopping worker workerID=W-2047-8
+2024-10-24T01:13:47+05:30 INF Stopping worker workerID=W-2062-8
 --- PASS: TestGet (5.00s)
     --- PASS: TestGet/Get_with_expiration (5.00s)
 === RUN   TestGETRANGE
-2024-10-24T01:04:02+05:30 INF Closing connection
-2024-10-24T01:04:02+05:30 INF Stopping worker workerID=W-2049-9
-2024-10-24T01:04:02+05:30 INF FLUSHDB called args={}
+2024-10-24T01:13:52+05:30 INF Closing connection
+2024-10-24T01:13:52+05:30 INF Stopping worker workerID=W-2064-9
+2024-10-24T01:13:52+05:30 INF FLUSHDB called args={}
 === RUN   TestGETRANGE/Get_range_on_a_string
 === RUN   TestGETRANGE/Get_range_on_a_non_existent_key
 === RUN   TestGETRANGE/Get_range_on_wrong_key_type
 === RUN   TestGETRANGE/GETRANGE_against_string_value:_0,_-1
 === RUN   TestGETRANGE/GETRANGE_against_string_value:_5,_3
 === RUN   TestGETRANGE/GETRANGE_against_integer_value:_-1,_-100
-2024-10-24T01:04:02+05:30 INF FLUSHDB called args={}
+2024-10-24T01:13:52+05:30 INF FLUSHDB called args={}
 --- PASS: TestGETRANGE (0.00s)
     --- PASS: TestGETRANGE/Get_range_on_a_string (0.00s)
     --- PASS: TestGETRANGE/Get_range_on_a_non_existent_key (0.00s)
@@ -2449,8 +2416,8 @@ Starting the test server on port 9739
     --- PASS: TestGETRANGE/GETRANGE_against_string_value:_5,_3 (0.00s)
     --- PASS: TestGETRANGE/GETRANGE_against_integer_value:_-1,_-100 (0.00s)
 === RUN   TestGetSet
-2024-10-24T01:04:02+05:30 INF Closing connection
-2024-10-24T01:04:02+05:30 INF Stopping worker workerID=W-7050-10
+2024-10-24T01:13:52+05:30 INF Closing connection
+2024-10-24T01:13:52+05:30 INF Stopping worker workerID=W-7065-10
 === RUN   TestGetSet/GETSET_with_INCR
 === RUN   TestGetSet/GETSET_with_SET
 === RUN   TestGetSet/GETSET_with_TTL
@@ -2461,18 +2428,18 @@ Starting the test server on port 9739
     --- PASS: TestGetSet/GETSET_with_TTL (0.00s)
     --- PASS: TestGetSet/GETSET_error_when_key_exists_but_does_not_hold_a_string_value (0.00s)
 === RUN   TestGETWATCH
-2024-10-24T01:04:02+05:30 INF Closing connection
-2024-10-24T01:04:02+05:30 INF Stopping worker workerID=W-7054-11
-2024-10-24T01:04:02+05:30 INF Closing connection
-2024-10-24T01:04:02+05:30 INF Stopping worker workerID=W-7055-12
-2024-10-24T01:04:02+05:30 INF Closing connection
-2024-10-24T01:04:02+05:30 INF Stopping worker workerID=W-7056-13
-2024-10-24T01:04:02+05:30 INF Closing connection
-2024-10-24T01:04:02+05:30 INF Stopping worker workerID=W-7056-14
+2024-10-24T01:13:52+05:30 INF Closing connection
+2024-10-24T01:13:52+05:30 INF Stopping worker workerID=W-7069-11
+2024-10-24T01:13:52+05:30 INF Closing connection
+2024-10-24T01:13:52+05:30 INF Stopping worker workerID=W-7072-12
+2024-10-24T01:13:52+05:30 INF Closing connection
+2024-10-24T01:13:52+05:30 INF Stopping worker workerID=W-7072-13
+2024-10-24T01:13:53+05:30 INF Closing connection
+2024-10-24T01:13:53+05:30 INF Stopping worker workerID=W-7072-14
 --- PASS: TestGETWATCH (0.30s)
 === RUN   TestGETWATCHWithSDK
-2024-10-24T01:04:02+05:30 INF Closing connection
-2024-10-24T01:04:02+05:30 INF Stopping worker workerID=W-7056-15
+2024-10-24T01:13:53+05:30 INF Closing connection
+2024-10-24T01:13:53+05:30 INF Stopping worker workerID=W-7072-15
 --- PASS: TestGETWATCHWithSDK (0.00s)
 === RUN   TestGETWATCHWithSDK2
 --- PASS: TestGETWATCHWithSDK2 (0.00s)
@@ -2495,9 +2462,9 @@ Starting the test server on port 9739
     --- PASS: TestHExists/RESP_Check_if_field_exists_when_no_k,f_and_v_exist (0.00s)
     --- PASS: TestHExists/RESP_HEXISTS_operation_against_a_key_holding_the_wrong_kind_of_value (0.00s)
 === RUN   TestHINCRBY
-2024-10-24T01:04:02+05:30 INF Closing connection
-2024-10-24T01:04:02+05:30 INF Stopping worker workerID=W-7369-24
-2024-10-24T01:04:02+05:30 INF FLUSHDB called args={}
+2024-10-24T01:13:53+05:30 INF Closing connection
+2024-10-24T01:13:53+05:30 INF Stopping worker workerID=W-7386-24
+2024-10-24T01:13:53+05:30 INF FLUSHDB called args={}
 === RUN   TestHINCRBY/HINCRBY_on_non-existing_key
 === RUN   TestHINCRBY/HINCRBY_on_existing_key
 === RUN   TestHINCRBY/HINCRBY_on_non-integer_value
@@ -2510,9 +2477,9 @@ Starting the test server on port 9739
     --- PASS: TestHINCRBY/HINCRBY_on_non-hashmap_key (0.00s)
     --- PASS: TestHINCRBY/HINCRBY_overflow (0.00s)
 === RUN   TestHINCRBYFLOAT
-2024-10-24T01:04:03+05:30 INF Closing connection
-2024-10-24T01:04:03+05:30 INF Stopping worker workerID=W-7375-25
-2024-10-24T01:04:03+05:30 INF FLUSHDB called args={}
+2024-10-24T01:13:53+05:30 INF Closing connection
+2024-10-24T01:13:53+05:30 INF Stopping worker workerID=W-7393-25
+2024-10-24T01:13:53+05:30 INF FLUSHDB called args={}
 === RUN   TestHINCRBYFLOAT/HINCRBYFLOAT_on_non-existing_key
 === RUN   TestHINCRBYFLOAT/HINCRBYFLOAT_on_existing_key
 === RUN   TestHINCRBYFLOAT/HINCRBYFLOAT_on_non-float_or_non-integer_value
@@ -2525,41 +2492,25 @@ Starting the test server on port 9739
     --- PASS: TestHINCRBYFLOAT/HINCRBYFLOAT_on_non-hashmap_key (0.00s)
     --- PASS: TestHINCRBYFLOAT/HINCRBYFLOAT_using_a_non_integer_/_non-float_value (0.00s)
 === RUN   TestHKeys
-2024-10-24T01:04:03+05:30 INF Closing connection
+2024-10-24T01:13:53+05:30 INF Closing connection
 === RUN   TestHKeys/RESP_HKEYS_with_key_containing_hash_with_multiple_fields
-2024-10-24T01:04:03+05:30 INF Stopping worker workerID=W-7377-26
+2024-10-24T01:13:53+05:30 INF Stopping worker workerID=W-7395-26
 === RUN   TestHKeys/RESP_HKEYS_with_non-existent_key
 === RUN   TestHKeys/RESP_HKEYS_with_key_containing_a_non-hash_value
 === RUN   TestHKeys/RESP_HKEYS_with_wrong_number_of_arguments
 === RUN   TestHKeys/RESP_One_or_more_keys_exist
-    hkeys_test.go:55: assertion failed: 
-        --- tc.expected[i]
-        +++ result
-          any(
-        - 	int64(1),
-        + 	string("WRONGTYPE Operation against a key holding the wrong kind of value"),
-          )
-        
 === RUN   TestHKeys/RESP_No_keys_exist
-    hkeys_test.go:55: assertion failed: 
-        --- tc.expected[i]
-        +++ result
-          any(
-        - 	[]any{},
-        + 	string("ERR -WRONGTYPE Operation against a key holding the wrong kind of value"),
-          )
-        
---- FAIL: TestHKeys (0.01s)
+--- PASS: TestHKeys (0.00s)
     --- PASS: TestHKeys/RESP_HKEYS_with_key_containing_hash_with_multiple_fields (0.00s)
     --- PASS: TestHKeys/RESP_HKEYS_with_non-existent_key (0.00s)
     --- PASS: TestHKeys/RESP_HKEYS_with_key_containing_a_non-hash_value (0.00s)
     --- PASS: TestHKeys/RESP_HKEYS_with_wrong_number_of_arguments (0.00s)
-    --- FAIL: TestHKeys/RESP_One_or_more_keys_exist (0.00s)
-    --- FAIL: TestHKeys/RESP_No_keys_exist (0.00s)
+    --- PASS: TestHKeys/RESP_One_or_more_keys_exist (0.00s)
+    --- PASS: TestHKeys/RESP_No_keys_exist (0.00s)
 === RUN   TestHRANDFIELD
-2024-10-24T01:04:03+05:30 INF Closing connection
-2024-10-24T01:04:03+05:30 INF Stopping worker workerID=W-7380-27
-2024-10-24T01:04:03+05:30 INF FLUSHDB called args={}
+2024-10-24T01:13:53+05:30 INF Closing connection
+2024-10-24T01:13:53+05:30 INF Stopping worker workerID=W-7398-27
+2024-10-24T01:13:53+05:30 INF FLUSHDB called args={}
 === RUN   TestHRANDFIELD/Basic_HRANDFIELD_operations
 === RUN   TestHRANDFIELD/HRANDFIELD_with_count
 === RUN   TestHRANDFIELD/HRANDFIELD_with_WITHVALUES
@@ -2572,9 +2523,9 @@ Starting the test server on port 9739
     --- PASS: TestHRANDFIELD/HRANDFIELD_on_non-existent_key (0.00s)
     --- PASS: TestHRANDFIELD/HRANDFIELD_with_wrong_number_of_arguments (0.00s)
 === RUN   TestHVals
-2024-10-24T01:04:03+05:30 INF Closing connection
+2024-10-24T01:13:53+05:30 INF Closing connection
+2024-10-24T01:13:53+05:30 INF Stopping worker workerID=W-7402-28
 === RUN   TestHVals/RESP_HVALS_with_multiple_fields
-2024-10-24T01:04:03+05:30 INF Stopping worker workerID=W-7386-28
 === RUN   TestHVals/RESP_HVALS_with_non-existing_key
 === RUN   TestHVals/HVALS_on_wrong_key_type
 === RUN   TestHVals/HVALS_with_wrong_number_of_arguments
@@ -2588,9 +2539,9 @@ Starting the test server on port 9739
     --- PASS: TestHVals/RESP_One_or_more_vals_exist (0.00s)
     --- PASS: TestHVals/RESP_No_values_exist (0.00s)
 === RUN   TestHyperLogLogCommands
-2024-10-24T01:04:03+05:30 INF Closing connection
 === RUN   TestHyperLogLogCommands/PFADD_with_one_key-value_pair
-2024-10-24T01:04:03+05:30 INF Stopping worker workerID=W-7388-29
+2024-10-24T01:13:53+05:30 INF Closing connection
+2024-10-24T01:13:53+05:30 INF Stopping worker workerID=W-7406-29
 === RUN   TestHyperLogLogCommands/PFADD_with_multiple_key-value_pairs
 === RUN   TestHyperLogLogCommands/PFADD_with_duplicate_key-value_pairs
 === RUN   TestHyperLogLogCommands/PFADD_with_multiple_keys
@@ -2614,9 +2565,9 @@ Starting the test server on port 9739
     --- PASS: TestHyperLogLogCommands/PFMERGE_with_invalid_object (0.00s)
     --- PASS: TestHyperLogLogCommands/PFMERGE_with_invalid_src_object (0.00s)
 === RUN   TestINCRBYFLOAT
-2024-10-24T01:04:03+05:30 INF Closing connection
 === RUN   TestINCRBYFLOAT/Invalid_number_of_arguments
-2024-10-24T01:04:03+05:30 INF Stopping worker workerID=W-7392-30
+2024-10-24T01:13:53+05:30 INF Closing connection
+2024-10-24T01:13:53+05:30 INF Stopping worker workerID=W-7411-30
 === RUN   TestINCRBYFLOAT/Increment_a_non_existing_key
 === RUN   TestINCRBYFLOAT/Increment_a_key_with_an_integer_value
 === RUN   TestINCRBYFLOAT/Increment_and_then_decrement_a_key_with_the_same_value
@@ -2636,27 +2587,27 @@ Starting the test server on port 9739
     --- PASS: TestINCRBYFLOAT/Increment_that_would_make_the_value_Inf (0.00s)
     --- PASS: TestINCRBYFLOAT/Increment_that_would_make_the_value_-Inf (0.00s)
 === RUN   TestINCR
-2024-10-24T01:04:03+05:30 INF Closing connection
 === RUN   TestINCR/Increment_multiple_keys
-2024-10-24T01:04:03+05:30 INF Stopping worker workerID=W-7399-31
+2024-10-24T01:13:53+05:30 INF Closing connection
+2024-10-24T01:13:53+05:30 INF Stopping worker workerID=W-7419-31
 === RUN   TestINCR/Increment_to_and_from_max_int64
 === RUN   TestINCR/Increment_from_min_int64
 === RUN   TestINCR/Increment_non-integer_values
 === RUN   TestINCR/Increment_non-existent_key
 === RUN   TestINCR/Increment_string_representing_integers
 === RUN   TestINCR/Increment_with_expiry
---- PASS: TestINCR (1.12s)
-    --- PASS: TestINCR/Increment_multiple_keys (0.00s)
-    --- PASS: TestINCR/Increment_to_and_from_max_int64 (0.00s)
+--- PASS: TestINCR (1.13s)
+    --- PASS: TestINCR/Increment_multiple_keys (0.01s)
+    --- PASS: TestINCR/Increment_to_and_from_max_int64 (0.01s)
     --- PASS: TestINCR/Increment_from_min_int64 (0.00s)
     --- PASS: TestINCR/Increment_non-integer_values (0.00s)
     --- PASS: TestINCR/Increment_non-existent_key (0.00s)
     --- PASS: TestINCR/Increment_string_representing_integers (0.00s)
     --- PASS: TestINCR/Increment_with_expiry (1.10s)
 === RUN   TestINCRBY
-2024-10-24T01:04:04+05:30 INF Closing connection
+2024-10-24T01:13:54+05:30 INF Closing connection
+2024-10-24T01:13:54+05:30 INF Stopping worker workerID=W-7430-32
 === RUN   TestINCRBY/happy_flow
-2024-10-24T01:04:04+05:30 INF Stopping worker workerID=W-7404-32
 === RUN   TestINCRBY/happy_flow_with_negative_increment
 === RUN   TestINCRBY/happy_flow_with_unset_key
 === RUN   TestINCRBY/edge_case_with_maxInt64
@@ -2670,8 +2621,8 @@ Starting the test server on port 9739
     --- PASS: TestINCRBY/edge_case_with_negative_increment (0.00s)
     --- PASS: TestINCRBY/edge_case_with_string_values (0.00s)
 === RUN   TestJsonStrlen
-2024-10-24T01:04:04+05:30 INF Closing connection
-2024-10-24T01:04:04+05:30 INF Stopping worker workerID=W-8520-33
+2024-10-24T01:13:54+05:30 INF Closing connection
+2024-10-24T01:13:54+05:30 INF Stopping worker workerID=W-8555-33
 === RUN   TestJsonStrlen/jsonstrlen_with_root_path
 === RUN   TestJsonStrlen/jsonstrlen_nested
 === RUN   TestJsonStrlen/jsonstrlen_with_no_path_and_object_at_root
@@ -2688,8 +2639,8 @@ Starting the test server on port 9739
     --- PASS: TestJsonStrlen/jsonstrlen_with_no_path_and_object_at_integer (0.00s)
     --- PASS: TestJsonStrlen/jsonstrlen_with_no_path_and_object_at_number (0.00s)
 === RUN   TestJSONClearOperations
-2024-10-24T01:04:04+05:30 INF Closing connection
-2024-10-24T01:04:04+05:30 INF Stopping worker workerID=W-8524-34
+2024-10-24T01:13:54+05:30 INF Closing connection
+2024-10-24T01:13:54+05:30 INF Stopping worker workerID=W-8560-34
 === RUN   TestJSONClearOperations/jsonclear_root_path
 === RUN   TestJSONClearOperations/jsonclear_string_type
 === RUN   TestJSONClearOperations/jsonclear_array_type
@@ -2706,8 +2657,8 @@ Starting the test server on port 9739
     --- PASS: TestJSONClearOperations/jsonclear_integer_type (0.00s)
     --- PASS: TestJSONClearOperations/jsonclear_float_type (0.00s)
 === RUN   TestJsonObjLen
-2024-10-24T01:04:04+05:30 INF Closing connection
-2024-10-24T01:04:04+05:30 INF Stopping worker workerID=W-8535-35
+2024-10-24T01:13:54+05:30 INF Closing connection
+2024-10-24T01:13:54+05:30 INF Stopping worker workerID=W-8572-35
 === RUN   TestJsonObjLen/JSON.OBJLEN_with_root_path
 === RUN   TestJsonObjLen/JSON.OBJLEN_with_nested_path
 === RUN   TestJsonObjLen/JSON.OBJLEN_with_non-object_path
@@ -2744,9 +2695,9 @@ Starting the test server on port 9739
     --- PASS: TestJsonObjLen/JSON.OBJLEN_with_legacy_path_-_inner_existent_path_with_nonJSON_object (0.00s)
     --- PASS: TestJsonObjLen/JSON.OBJLEN_with_legacy_path_-_inner_existent_path_recursive_object (0.00s)
 === RUN   TestSet
-2024-10-24T01:04:04+05:30 INF Closing connection
-2024-10-24T01:04:04+05:30 INF Stopping worker workerID=W-8563-36
+2024-10-24T01:13:54+05:30 INF Closing connection
 === RUN   TestSet/Set_and_Get_Simple_Value
+2024-10-24T01:13:54+05:30 INF Stopping worker workerID=W-8600-36
 === RUN   TestSet/Set_and_Get_Integer_Value
 === RUN   TestSet/Overwrite_Existing_Key
 --- PASS: TestSet (0.00s)
@@ -2754,9 +2705,9 @@ Starting the test server on port 9739
     --- PASS: TestSet/Set_and_Get_Integer_Value (0.00s)
     --- PASS: TestSet/Overwrite_Existing_Key (0.00s)
 === RUN   TestSetWithOptions
-2024-10-24T01:04:04+05:30 INF Closing connection
+2024-10-24T01:13:54+05:30 INF Closing connection
 === RUN   TestSetWithOptions/Set_with_EX_option
-2024-10-24T01:04:04+05:30 INF Stopping worker workerID=W-8576-37
+2024-10-24T01:13:54+05:30 INF Stopping worker workerID=W-8613-37
 === RUN   TestSetWithOptions/Set_with_PX_option
 === RUN   TestSetWithOptions/Set_with_EX_and_PX_option
 === RUN   TestSetWithOptions/XX_on_non-existing_key
@@ -2784,9 +2735,9 @@ Starting the test server on port 9739
     --- PASS: TestSetWithOptions/EX_option (2.00s)
     --- PASS: TestSetWithOptions/XX_option (2.00s)
 === RUN   TestSetWithExat
-2024-10-24T01:04:16+05:30 INF Closing connection
-2024-10-24T01:04:16+05:30 INF Stopping worker workerID=W-8578-38
+2024-10-24T01:14:06+05:30 INF Closing connection
 === RUN   TestSetWithExat/SET_with_EXAT
+2024-10-24T01:14:06+05:30 INF Stopping worker workerID=W-8615-38
 === RUN   TestSetWithExat/SET_with_invalid_EXAT_expires_key_immediately
 === RUN   TestSetWithExat/SET_with_EXAT_and_PXAT_returns_syntax_error
 --- PASS: TestSetWithExat (6.00s)
@@ -2794,22 +2745,22 @@ Starting the test server on port 9739
     --- PASS: TestSetWithExat/SET_with_invalid_EXAT_expires_key_immediately (0.00s)
     --- PASS: TestSetWithExat/SET_with_EXAT_and_PXAT_returns_syntax_error (0.00s)
 === RUN   TestWithKeepTTLFlag
-2024-10-24T01:04:22+05:30 INF Closing connection
-2024-10-24T01:04:22+05:30 INF Stopping worker workerID=W-20594-39
+2024-10-24T01:14:12+05:30 INF Closing connection
+2024-10-24T01:14:12+05:30 INF Stopping worker workerID=W-20631-39
 --- PASS: TestWithKeepTTLFlag (2.00s)
 === RUN   TestZRANGEWATCH
-2024-10-24T01:04:24+05:30 INF Closing connection
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-26598-40
-2024-10-24T01:04:24+05:30 INF Closing connection
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28599-41
-2024-10-24T01:04:24+05:30 INF Closing connection
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28600-42
-2024-10-24T01:04:24+05:30 INF Closing connection
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28600-43
---- PASS: TestZRANGEWATCH (0.30s)
+2024-10-24T01:14:14+05:30 INF Closing connection
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-26636-40
+2024-10-24T01:14:14+05:30 INF Closing connection
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-28638-41
+2024-10-24T01:14:14+05:30 INF Closing connection
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-28639-42
+2024-10-24T01:14:14+05:30 INF Closing connection
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-28639-43
+--- PASS: TestZRANGEWATCH (0.31s)
 === RUN   TestZRANGEWATCHWithSDK
-2024-10-24T01:04:24+05:30 INF Closing connection
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28600-44
+2024-10-24T01:14:14+05:30 INF Closing connection
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-28639-44
 --- PASS: TestZRANGEWATCHWithSDK (0.01s)
 === RUN   TestZRANGEWATCHWithSDK2
 --- PASS: TestZRANGEWATCHWithSDK2 (0.01s)
@@ -2830,9 +2781,9 @@ Starting the test server on port 9739
     --- PASS: TestZRANK/ZRANK_with_wrong_number_of_arguments (0.00s)
     --- PASS: TestZRANK/ZRANK_with_invalid_option (0.00s)
 === RUN   TestZPOPMIN
-2024-10-24T01:04:24+05:30 INF Closing connection
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28915-53
+2024-10-24T01:14:14+05:30 INF Closing connection
 === RUN   TestZPOPMIN/ZPOPMIN_on_non-existing_key_with/without_count_argument
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-28956-53
 === RUN   TestZPOPMIN/ZPOPMIN_with_wrong_type_of_key_with/without_count_argument
 === RUN   TestZPOPMIN/ZPOPMIN_on_existing_key_(without_count_argument)
 === RUN   TestZPOPMIN/ZPOPMIN_with_normal_count_argument
@@ -2853,59 +2804,61 @@ Starting the test server on port 9739
     --- PASS: TestZPOPMIN/ZPOPMIN_with_count_argument_greater_than_length_of_sorted_set (0.00s)
     --- PASS: TestZPOPMIN/ZPOPMIN_on_empty_sorted_set (0.00s)
     --- PASS: TestZPOPMIN/ZPOPMIN_with_floating-point_scores (0.00s)
-FAIL
-2024-10-24T01:04:24+05:30 INF Closing connection
-2024-10-24T01:04:24+05:30 INF Received ABORT command, initiating server shutdown workerID=W-2022-1
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28917-54
-2024-10-24T01:04:24+05:30 INF initiating shutdown
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28911-51
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7362-19
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28906-47
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28910-50
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7367-23
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28911-52
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7360-17
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-2022-1
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28905-46
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28911-51
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28907-48
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7365-21
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7361-18
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7366-22
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28906-47
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7367-23
-2024-10-24T01:04:24+05:30 INF no new connections will be accepted
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28904-45
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7360-16
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28909-49
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28905-46
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7361-18
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28911-52
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-2022-1
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7362-19
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7365-21
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28907-48
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28910-50
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7364-20
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-28904-45
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7360-16
-2024-10-24T01:04:24+05:30 INF exiting gracefully
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7366-22
-2024-10-24T01:04:24+05:30 INF Stopping worker workerID=W-7360-17
-FAIL	github.com/dicedb/dice/integration_tests/commands/resp	29.042s
+PASS
+2024-10-24T01:14:14+05:30 INF Closing connection
+2024-10-24T01:14:14+05:30 INF Received ABORT command, initiating server shutdown workerID=W-2036-1
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-28959-54
+2024-10-24T01:14:14+05:30 INF no new connections will be accepted
+2024-10-24T01:14:14+05:30 INF initiating shutdown
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-2036-1
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-28946-48
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-7381-20
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-7382-22
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-7381-21
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-7379-19
+2024-10-24T01:14:14+05:30 INF exiting gracefully
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-28951-52
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-7378-18
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-2036-1
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-28946-48
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-7381-21
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-7382-22
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-7377-17
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-7381-20
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-7383-23
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-28950-51
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-7379-19
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-7378-18
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-28943-45
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-28948-49
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-7377-17
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-7376-16
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-28949-50
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-28944-46
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-7383-23
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-28950-51
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-28943-45
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-28951-52
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-28948-49
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-7376-16
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-28945-47
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-28944-46
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-28949-50
+2024-10-24T01:14:14+05:30 INF Stopping worker workerID=W-28945-47
+ok  	github.com/dicedb/dice/integration_tests/commands/resp	30.081s
 === RUN   TestAbortCommand
 Starting the test server on port 8740
-2024-10-24T01:04:25+05:30 INF ready to accept and serve requests on port=7379
+2024-10-24T01:14:16+05:30 INF ready to accept and serve requests on port=7379
 === RUN   TestAbortCommand/ServerIsRunning
 === RUN   TestAbortCommand/AbortCommandShutdown
-2024-10-24T01:04:27+05:30 INF Received ABORT command, initiating server shutdown workerID=W-2034-2
-2024-10-24T01:04:27+05:30 INF Closing connection
-2024-10-24T01:04:27+05:30 INF initiating shutdown
-2024-10-24T01:04:27+05:30 INF Stopping worker workerID=W-2034-1
-2024-10-24T01:04:27+05:30 INF no new connections will be accepted
-2024-10-24T01:04:27+05:30 INF Stopping worker workerID=W-2034-2
-2024-10-24T01:04:27+05:30 INF exiting gracefully
-2024-10-24T01:04:27+05:30 INF Stopping worker workerID=W-2034-2
+2024-10-24T01:14:18+05:30 INF Closing connection
+2024-10-24T01:14:18+05:30 INF Stopping worker workerID=W-2028-1
+2024-10-24T01:14:18+05:30 INF Received ABORT command, initiating server shutdown workerID=W-2029-2
+2024-10-24T01:14:18+05:30 INF initiating shutdown
+2024-10-24T01:14:18+05:30 INF Stopping worker workerID=W-2029-2
+2024-10-24T01:14:18+05:30 INF no new connections will be accepted
+2024-10-24T01:14:18+05:30 INF Stopping worker workerID=W-2029-2
+2024-10-24T01:14:18+05:30 INF exiting gracefully
 === RUN   TestAbortCommand/PortIsReleased
 --- PASS: TestAbortCommand (3.03s)
     --- PASS: TestAbortCommand/ServerIsRunning (0.00s)
@@ -2913,24 +2866,24 @@ Starting the test server on port 8740
     --- PASS: TestAbortCommand/PortIsReleased (0.00s)
 === RUN   TestServerRestartAfterAbort
 Starting the test server on port 8740
-2024-10-24T01:04:28+05:30 INF ready to accept and serve requests on port=7379
-2024-10-24T01:04:29+05:30 INF Received ABORT command, initiating server shutdown workerID=W-4068-3
-2024-10-24T01:04:29+05:30 INF Stopping worker workerID=W-4068-3
-2024-10-24T01:04:29+05:30 INF initiating shutdown
-2024-10-24T01:04:29+05:30 INF Stopping worker workerID=W-4068-3
-2024-10-24T01:04:29+05:30 INF no new connections will be accepted
-2024-10-24T01:04:29+05:30 INF exiting gracefully
+2024-10-24T01:14:19+05:30 INF ready to accept and serve requests on port=7379
+2024-10-24T01:14:20+05:30 INF Received ABORT command, initiating server shutdown workerID=W-4060-3
+2024-10-24T01:14:20+05:30 INF Stopping worker workerID=W-4060-3
+2024-10-24T01:14:20+05:30 INF no new connections will be accepted
+2024-10-24T01:14:20+05:30 INF Stopping worker workerID=W-4060-3
+2024-10-24T01:14:20+05:30 INF initiating shutdown
+2024-10-24T01:14:20+05:30 INF exiting gracefully
 Starting the test server on port 8740
-2024-10-24T01:04:31+05:30 INF ready to accept and serve requests on port=7379
-2024-10-24T01:04:33+05:30 INF Received ABORT command, initiating server shutdown workerID=W-8085-4
-2024-10-24T01:04:33+05:30 INF Stopping worker workerID=W-8085-4
-2024-10-24T01:04:33+05:30 INF no new connections will be accepted
-2024-10-24T01:04:33+05:30 INF initiating shutdown
-2024-10-24T01:04:33+05:30 INF exiting gracefully
---- PASS: TestServerRestartAfterAbort (5.05s)
+2024-10-24T01:14:22+05:30 INF ready to accept and serve requests on port=7379
+2024-10-24T01:14:24+05:30 INF Received ABORT command, initiating server shutdown workerID=W-8074-4
+2024-10-24T01:14:24+05:30 INF Stopping worker workerID=W-8074-4
+2024-10-24T01:14:24+05:30 INF no new connections will be accepted
+2024-10-24T01:14:24+05:30 INF initiating shutdown
+2024-10-24T01:14:24+05:30 INF exiting gracefully
+--- PASS: TestServerRestartAfterAbort (5.04s)
 PASS
-ok  	github.com/dicedb/dice/integration_tests/commands/resp/abort	9.335s
-2024/10/24 01:04:35 INFO also listenting WebSocket on port=8380
+ok  	github.com/dicedb/dice/integration_tests/commands/resp/abort	9.328s
+2024/10/24 01:14:26 INFO also listenting WebSocket on port=8380
 === RUN   TestAppend
 === RUN   TestAppend/APPEND_and_GET_a_new_Val
 === RUN   TestAppend/APPEND_to_an_existing_key_and_GET
@@ -3001,34 +2954,16 @@ ok  	github.com/dicedb/dice/integration_tests/commands/resp/abort	9.335s
     --- PASS: TestDECRBY/Decrement_multiple_keys (0.00s)
 === RUN   TestGet
 === RUN   TestGet/Get_with_expiration
---- PASS: TestGet (2.01s)
+--- PASS: TestGet (2.00s)
     --- PASS: TestGet/Get_with_expiration (2.00s)
 === RUN   TestGETRANGE
 === RUN   TestGETRANGE/Get_range_on_a_string
 === RUN   TestGETRANGE/Get_range_on_a_non_existent_key
 === RUN   TestGETRANGE/Get_range_on_wrong_key_type
 === RUN   TestGETRANGE/GETRANGE_against_string_value:_0,_-1
-2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47754: read: connection reset by peer"
-2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47732: read: connection reset by peer"
-2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47814: read: connection reset by peer"
-2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47788: read: connection reset by peer"
-2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47718: read: connection reset by peer"
-2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47786: read: connection reset by peer"
-2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47772: read: connection reset by peer"
-2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47790: read: connection reset by peer"
-2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47824: read: connection reset by peer"
-2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47796: read: connection reset by peer"
-2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47816: read: connection reset by peer"
-2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47738: read: connection reset by peer"
-2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47780: read: connection reset by peer"
-2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47764: read: connection reset by peer"
-2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47752: read: connection reset by peer"
-2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47758: read: connection reset by peer"
-2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47808: read: connection reset by peer"
-2024/10/24 01:04:39 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:47726: read: connection reset by peer"
 === RUN   TestGETRANGE/GETRANGE_against_string_value:_5,_3
 === RUN   TestGETRANGE/GETRANGE_against_integer_value:_-1,_-100
---- PASS: TestGETRANGE (0.01s)
+--- PASS: TestGETRANGE (0.00s)
     --- PASS: TestGETRANGE/Get_range_on_a_string (0.00s)
     --- PASS: TestGETRANGE/Get_range_on_a_non_existent_key (0.00s)
     --- PASS: TestGETRANGE/Get_range_on_wrong_key_type (0.00s)
@@ -3080,41 +3015,57 @@ ok  	github.com/dicedb/dice/integration_tests/commands/resp/abort	9.335s
     --- PASS: TestHINCRBYFLOAT/HINCRBYFLOAT_on_non-hashmap_key (0.00s)
 === RUN   TestHKeys
 === RUN   TestHKeys/WS_One_or_more_keys_exist
-    hkeys_test.go:40: Executing command: HSET key field value
-    hkeys_test.go:46: Received result: WRONGTYPE Operation against a key holding the wrong kind of value for command: HSET key field value
-    hkeys_test.go:48: 
-        	Error Trace:	/mnt/md0/github/dicedb/integration_tests/commands/websocket/hkeys_test.go:48
+    hkeys_test.go:41: Executing command: HSET key field value
+    hkeys_test.go:47: Received result: 1 for command: HSET key field value
+    hkeys_test.go:41: Executing command: HSET key field1 value1
+    hkeys_test.go:47: Received result: 1 for command: HSET key field1 value1
+    hkeys_test.go:41: Executing command: HKEYS key
+    hkeys_test.go:47: Received result: [field1 field] for command: HKEYS key
+    hkeys_test.go:49: 
+        	Error Trace:	/mnt/md0/github/dicedb/integration_tests/commands/websocket/hkeys_test.go:49
         	Error:      	Not equal: 
-        	            	expected: float64(1)
-        	            	actual  : string("WRONGTYPE Operation against a key holding the wrong kind of value")
-        	Test:       	TestHKeys/WS_One_or_more_keys_exist
-        	Messages:   	Value mismatch for cmd HSET key field value
-    hkeys_test.go:40: Executing command: HSET key field1 value1
-    hkeys_test.go:46: Received result: WRONGTYPE Operation against a key holding the wrong kind of value for command: HSET key field1 value1
-    hkeys_test.go:48: 
-        	Error Trace:	/mnt/md0/github/dicedb/integration_tests/commands/websocket/hkeys_test.go:48
-        	Error:      	Not equal: 
-        	            	expected: float64(1)
-        	            	actual  : string("WRONGTYPE Operation against a key holding the wrong kind of value")
-        	Test:       	TestHKeys/WS_One_or_more_keys_exist
-        	Messages:   	Value mismatch for cmd HSET key field1 value1
-    hkeys_test.go:40: Executing command: HKEYS key
-    hkeys_test.go:46: Received result: ERR -WRONGTYPE Operation against a key holding the wrong kind of value for command: HKEYS key
-    hkeys_test.go:48: 
-        	Error Trace:	/mnt/md0/github/dicedb/integration_tests/commands/websocket/hkeys_test.go:48
-        	Error:      	Not equal: 
-        	            	expected: []interface {}([]interface {}{"field", "field1"})
-        	            	actual  : string("ERR -WRONGTYPE Operation against a key holding the wrong kind of value")
+        	            	expected: []interface {}{"field", "field1"}
+        	            	actual  : []interface {}{"field1", "field"}
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1,4 +1,4 @@
+        	            	 ([]interface {}) (len=2) {
+        	            	- (string) (len=5) "field",
+        	            	- (string) (len=6) "field1"
+        	            	+ (string) (len=6) "field1",
+        	            	+ (string) (len=5) "field"
+        	            	 }
         	Test:       	TestHKeys/WS_One_or_more_keys_exist
         	Messages:   	Value mismatch for cmd HKEYS key
 === RUN   TestHKeys/WS_No_keys_exist
-    hkeys_test.go:40: Executing command: HKEYS key
-    hkeys_test.go:46: Received result: ERR -WRONGTYPE Operation against a key holding the wrong kind of value for command: HKEYS key
-    hkeys_test.go:48: 
-        	Error Trace:	/mnt/md0/github/dicedb/integration_tests/commands/websocket/hkeys_test.go:48
+2024/10/24 01:14:33 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:53218: read: connection reset by peer"
+2024/10/24 01:14:33 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:53198: read: connection reset by peer"
+2024/10/24 01:14:33 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:53246: read: connection reset by peer"
+2024/10/24 01:14:33 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:53148: read: connection reset by peer"
+2024/10/24 01:14:33 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:53126: read: connection reset by peer"
+2024/10/24 01:14:33 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:53112: read: connection reset by peer"
+2024/10/24 01:14:33 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:53228: read: connection reset by peer"
+2024/10/24 01:14:33 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:53192: read: connection reset by peer"
+2024/10/24 01:14:33 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:53180: read: connection reset by peer"
+2024/10/24 01:14:33 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:53208: read: connection reset by peer"
+2024/10/24 01:14:33 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:53130: read: connection reset by peer"
+2024/10/24 01:14:33 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:53170: read: connection reset by peer"
+2024/10/24 01:14:33 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:53162: read: connection reset by peer"
+2024/10/24 01:14:33 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:53146: read: connection reset by peer"
+2024/10/24 01:14:33 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:53098: read: connection reset by peer"
+2024/10/24 01:14:33 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:53176: read: connection reset by peer"
+2024/10/24 01:14:33 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:53158: read: connection reset by peer"
+2024/10/24 01:14:33 WARN failed to read message from client error="read tcp 127.0.0.1:8380->127.0.0.1:53240: read: connection reset by peer"
+    hkeys_test.go:41: Executing command: HKEYS key
+    hkeys_test.go:47: Received result: *0
+         for command: HKEYS key
+    hkeys_test.go:49: 
+        	Error Trace:	/mnt/md0/github/dicedb/integration_tests/commands/websocket/hkeys_test.go:49
         	Error:      	Not equal: 
         	            	expected: <nil>(<nil>)
-        	            	actual  : string("ERR -WRONGTYPE Operation against a key holding the wrong kind of value")
+        	            	actual  : string("*0\r\n")
         	Test:       	TestHKeys/WS_No_keys_exist
         	Messages:   	Value mismatch for cmd HKEYS key
 --- FAIL: TestHKeys (3.00s)
@@ -3134,45 +3085,25 @@ ok  	github.com/dicedb/dice/integration_tests/commands/resp/abort	9.335s
     --- PASS: TestHRANDFIELD/HRANDFIELD_with_wrong_number_of_arguments (0.00s)
 === RUN   TestHVals
 === RUN   TestHVals/WS_One_or_more_vals_exist
-    hvals_test.go:40: Executing command: HSET key field value
-    hvals_test.go:46: Received result: WRONGTYPE Operation against a key holding the wrong kind of value for command: HSET key field value
-    hvals_test.go:48: 
-        	Error Trace:	/mnt/md0/github/dicedb/integration_tests/commands/websocket/hvals_test.go:48
-        	Error:      	Not equal: 
-        	            	expected: float64(1)
-        	            	actual  : string("WRONGTYPE Operation against a key holding the wrong kind of value")
-        	Test:       	TestHVals/WS_One_or_more_vals_exist
-        	Messages:   	Value mismatch for cmd HSET key field value
-    hvals_test.go:40: Executing command: HSET key field1 value1
-    hvals_test.go:46: Received result: WRONGTYPE Operation against a key holding the wrong kind of value for command: HSET key field1 value1
-    hvals_test.go:48: 
-        	Error Trace:	/mnt/md0/github/dicedb/integration_tests/commands/websocket/hvals_test.go:48
-        	Error:      	Not equal: 
-        	            	expected: float64(1)
-        	            	actual  : string("WRONGTYPE Operation against a key holding the wrong kind of value")
-        	Test:       	TestHVals/WS_One_or_more_vals_exist
-        	Messages:   	Value mismatch for cmd HSET key field1 value1
-    hvals_test.go:40: Executing command: HVALS key
-    hvals_test.go:46: Received result: ERR -WRONGTYPE Operation against a key holding the wrong kind of value for command: HVALS key
-    hvals_test.go:48: 
-        	Error Trace:	/mnt/md0/github/dicedb/integration_tests/commands/websocket/hvals_test.go:48
-        	Error:      	Not equal: 
-        	            	expected: []interface {}([]interface {}{"value", "value1"})
-        	            	actual  : string("ERR -WRONGTYPE Operation against a key holding the wrong kind of value")
-        	Test:       	TestHVals/WS_One_or_more_vals_exist
-        	Messages:   	Value mismatch for cmd HVALS key
+    hvals_test.go:41: Executing command: HSET key field value
+    hvals_test.go:47: Received result: 1 for command: HSET key field value
+    hvals_test.go:41: Executing command: HSET key field1 value1
+    hvals_test.go:47: Received result: 1 for command: HSET key field1 value1
+    hvals_test.go:41: Executing command: HVALS key
+    hvals_test.go:47: Received result: [value value1] for command: HVALS key
 === RUN   TestHVals/WS_No_values_exist
-    hvals_test.go:40: Executing command: HVALS key
-    hvals_test.go:46: Received result: ERR -WRONGTYPE Operation against a key holding the wrong kind of value for command: HVALS key
-    hvals_test.go:48: 
-        	Error Trace:	/mnt/md0/github/dicedb/integration_tests/commands/websocket/hvals_test.go:48
+    hvals_test.go:41: Executing command: HVALS key
+    hvals_test.go:47: Received result: *0
+         for command: HVALS key
+    hvals_test.go:49: 
+        	Error Trace:	/mnt/md0/github/dicedb/integration_tests/commands/websocket/hvals_test.go:49
         	Error:      	Not equal: 
         	            	expected: []interface {}([]interface {}{})
-        	            	actual  : string("ERR -WRONGTYPE Operation against a key holding the wrong kind of value")
+        	            	actual  : string("*0\r\n")
         	Test:       	TestHVals/WS_No_values_exist
         	Messages:   	Value mismatch for cmd HVALS key
 --- FAIL: TestHVals (3.00s)
-    --- FAIL: TestHVals/WS_One_or_more_vals_exist (3.00s)
+    --- PASS: TestHVals/WS_One_or_more_vals_exist (3.00s)
     --- FAIL: TestHVals/WS_No_values_exist (0.00s)
 === RUN   TestHyperLogLogCommands
 === RUN   TestHyperLogLogCommands/PFADD_with_one_key-value_pair
@@ -3362,3 +3293,101 @@ ok  	github.com/dicedb/dice/integration_tests/commands/resp/abort	9.335s
     --- PASS: TestSetWithOptions/XX_option (2.00s)
 === RUN   TestSetWithExat
 === RUN   TestSetWithExat/SET_with_EXAT
+=== RUN   TestSetWithExat/SET_with_invalid_EXAT_expires_key_immediately
+=== RUN   TestSetWithExat/SET_with_EXAT_and_PXAT_returns_syntax_error
+--- PASS: TestSetWithExat (6.00s)
+    --- PASS: TestSetWithExat/SET_with_EXAT (6.00s)
+    --- PASS: TestSetWithExat/SET_with_invalid_EXAT_expires_key_immediately (0.00s)
+    --- PASS: TestSetWithExat/SET_with_EXAT_and_PXAT_returns_syntax_error (0.00s)
+=== RUN   TestWithKeepTTLFlag
+--- PASS: TestWithKeepTTLFlag (2.00s)
+=== RUN   TestWriteResponseWithRetries_Success
+--- PASS: TestWriteResponseWithRetries_Success (0.00s)
+=== RUN   TestWriteResponseWithRetries_NetworkError
+--- PASS: TestWriteResponseWithRetries_NetworkError (0.00s)
+=== RUN   TestWriteResponseWithRetries_BrokenPipe
+--- PASS: TestWriteResponseWithRetries_BrokenPipe (0.00s)
+=== RUN   TestWriteResponseWithRetries_EAGAINRetry
+--- PASS: TestWriteResponseWithRetries_EAGAINRetry (29.98s)
+=== RUN   TestZRANK
+=== RUN   TestZRANK/ZRANK_of_existing_member
+=== RUN   TestZRANK/ZRANK_of_non-existing_member
+=== RUN   TestZRANK/ZRANK_with_WITHSCORE_option_for_existing_member
+=== RUN   TestZRANK/ZRANK_with_WITHSCORE_option_for_non-existing_member
+=== RUN   TestZRANK/ZRANK_on_non-existing_myset
+=== RUN   TestZRANK/ZRANK_with_wrong_number_of_arguments
+=== RUN   TestZRANK/ZRANK_with_invalid_option
+--- PASS: TestZRANK (0.00s)
+    --- PASS: TestZRANK/ZRANK_of_existing_member (0.00s)
+    --- PASS: TestZRANK/ZRANK_of_non-existing_member (0.00s)
+    --- PASS: TestZRANK/ZRANK_with_WITHSCORE_option_for_existing_member (0.00s)
+    --- PASS: TestZRANK/ZRANK_with_WITHSCORE_option_for_non-existing_member (0.00s)
+    --- PASS: TestZRANK/ZRANK_on_non-existing_myset (0.00s)
+    --- PASS: TestZRANK/ZRANK_with_wrong_number_of_arguments (0.00s)
+    --- PASS: TestZRANK/ZRANK_with_invalid_option (0.00s)
+=== RUN   TestZPOPMIN
+=== RUN   TestZPOPMIN/ZPOPMIN_on_non-existing_key_with/without_count_argument
+=== RUN   TestZPOPMIN/ZPOPMIN_with_wrong_type_of_key_with/without_count_argument
+=== RUN   TestZPOPMIN/ZPOPMIN_on_existing_key_(without_count_argument)
+=== RUN   TestZPOPMIN/ZPOPMIN_with_normal_count_argument
+=== RUN   TestZPOPMIN/ZPOPMIN_with_count_argument_but_multiple_members_have_the_same_score
+=== RUN   TestZPOPMIN/ZPOPMIN_with_negative_count_argument
+=== RUN   TestZPOPMIN/ZPOPMIN_with_invalid_count_argument
+=== RUN   TestZPOPMIN/ZPOPMIN_with_count_argument_greater_than_length_of_sorted_set
+=== RUN   TestZPOPMIN/ZPOPMIN_on_empty_sorted_set
+=== RUN   TestZPOPMIN/ZPOPMIN_with_floating-point_scores
+--- PASS: TestZPOPMIN (0.01s)
+    --- PASS: TestZPOPMIN/ZPOPMIN_on_non-existing_key_with/without_count_argument (0.00s)
+    --- PASS: TestZPOPMIN/ZPOPMIN_with_wrong_type_of_key_with/without_count_argument (0.00s)
+    --- PASS: TestZPOPMIN/ZPOPMIN_on_existing_key_(without_count_argument) (0.00s)
+    --- PASS: TestZPOPMIN/ZPOPMIN_with_normal_count_argument (0.00s)
+    --- PASS: TestZPOPMIN/ZPOPMIN_with_count_argument_but_multiple_members_have_the_same_score (0.00s)
+    --- PASS: TestZPOPMIN/ZPOPMIN_with_negative_count_argument (0.00s)
+    --- PASS: TestZPOPMIN/ZPOPMIN_with_invalid_count_argument (0.00s)
+    --- PASS: TestZPOPMIN/ZPOPMIN_with_count_argument_greater_than_length_of_sorted_set (0.00s)
+    --- PASS: TestZPOPMIN/ZPOPMIN_on_empty_sorted_set (0.00s)
+    --- PASS: TestZPOPMIN/ZPOPMIN_with_floating-point_scores (0.00s)
+FAIL
+FAIL	github.com/dicedb/dice/integration_tests/commands/websocket	62.202s
+=== RUN   TestSetupConfig_CreateAndLoadDefault
+2024/10/24 01:15:29 INFO creating default config file at path=/tmp/TestSetupConfig_CreateAndLoadDefault3718761389/001/dice.toml
+2024/10/24 01:15:29 INFO config file created at path=/tmp/TestSetupConfig_CreateAndLoadDefault3718761389/001/dice.toml
+--- PASS: TestSetupConfig_CreateAndLoadDefault (0.00s)
+=== RUN   TestSetupConfig_DefaultConfig
+--- PASS: TestSetupConfig_DefaultConfig (0.00s)
+=== RUN   TestSetupConfig_InvalidConfigFile
+2024/10/24 01:15:29 ERROR Error reading config file error="While parsing config: toml: float can have at most one decimal point"
+--- PASS: TestSetupConfig_InvalidConfigFile (0.00s)
+=== RUN   TestSetupConfig_PartialConfigFile
+    config_test.go:92: 7379
+--- PASS: TestSetupConfig_PartialConfigFile (0.00s)
+=== RUN   TestSetupConfig_LoadFromFile
+--- PASS: TestSetupConfig_LoadFromFile (0.00s)
+PASS
+ok  	github.com/dicedb/dice/integration_tests/config	1.025s
+=== RUN   TestMaxConnection
+Starting the test server on port 8741
+2024/10/24 01:15:31 WARN running without authentication, consider setting a password
+2024/10/24 01:15:33 INFO Closed server for max_conn_test
+--- PASS: TestMaxConnection (2.02s)
+=== RUN   TestAbortCommand
+Starting the test server on port 8740
+2024/10/24 01:15:33 WARN running without authentication, consider setting a password
+=== RUN   TestAbortCommand/ServerIsRunning
+=== RUN   TestAbortCommand/AbortCommandShutdown
+=== RUN   TestAbortCommand/PortIsReleased
+--- PASS: TestAbortCommand (3.00s)
+    --- PASS: TestAbortCommand/ServerIsRunning (0.00s)
+    --- PASS: TestAbortCommand/AbortCommandShutdown (1.00s)
+    --- PASS: TestAbortCommand/PortIsReleased (0.00s)
+=== RUN   TestServerRestartAfterAbort
+Starting the test server on port 8740
+2024/10/24 01:15:36 WARN running without authentication, consider setting a password
+2024/10/24 01:15:39 INFO Wait completed for server shutdown
+2024/10/24 01:15:39 INFO Restarting server after abort for server_abort_test
+Starting the test server on port 8740
+2024/10/24 01:15:39 WARN running without authentication, consider setting a password
+--- PASS: TestServerRestartAfterAbort (5.13s)
+PASS
+ok  	github.com/dicedb/dice/integration_tests/server	11.209s
+FAIL
