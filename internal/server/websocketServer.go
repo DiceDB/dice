@@ -244,10 +244,12 @@ func (s *WebsocketServer) processQwatchUpdates(ctx context.Context) {
 			client, ok := s.subscribedClients.Load(resp.ClientIdentifierID)
 			if !ok {
 				slog.Debug("message received but client not found", slog.Any("clientIdentifierID", resp.ClientIdentifierID))
+				continue
 			}
 			conn, ok := client.(*websocket.Conn)
 			if !ok {
 				slog.Debug("error typecasting client to *websocket.Conn")
+				continue
 			}
 
 			dicDBCmd := &cmd.DiceDBCmd{
