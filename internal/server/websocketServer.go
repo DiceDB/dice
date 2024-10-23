@@ -273,6 +273,7 @@ func (s *WebsocketServer) processQwatchUpdates(ctx context.Context) {
 			client, err := s.getClientById(resp.ClientIdentifierID)
 			if err != nil {
 				slog.Debug("message received but client not found or invalid", slog.Any("error", err))
+				continue
 			}
 
 			dicDBCmd := &cmd.DiceDBCmd{
