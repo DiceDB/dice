@@ -218,7 +218,7 @@ func evalGET(args []string, store *dstore.Store) *EvalResponse {
 
 		return &EvalResponse{
 			Result: nil,
-			Error:  diceerrors.ErrUnexpectedType("int64", obj.Value),
+			Error:  diceerrors.ErrUnexpectedType("int64", fmt.Sprintf("%T", obj.Value)),
 		}
 
 	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
@@ -231,7 +231,7 @@ func evalGET(args []string, store *dstore.Store) *EvalResponse {
 		}
 		return &EvalResponse{
 			Result: nil,
-			Error:  diceerrors.ErrUnexpectedType("string", obj.Value),
+			Error:  diceerrors.ErrUnexpectedType("string", fmt.Sprintf("%T", obj.Value)),
 		}
 
 	case object.ObjEncodingByteArray:
@@ -674,7 +674,7 @@ func evalZRANK(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	if withScore {
-		scoreStr := strconv.FormatFloat(score, 'f', -1, 64) 
+		scoreStr := strconv.FormatFloat(score, 'f', -1, 64)
 		return &EvalResponse{
 			Result: []interface{}{rank, scoreStr},
 			Error:  nil,

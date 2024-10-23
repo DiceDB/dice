@@ -334,6 +334,44 @@ var (
 		Eval:  evalHELLO,
 		Arity: -1,
 	}
+
+	msetCmdMeta = DiceCmdMeta{
+		Name: "MSET",
+		Info: `MSET sets multiple keys to multiple values in the db
+		args should contain an even number of elements
+		each pair of elements will be treated as <key, value> pair
+		Returns encoded error response if the number of arguments is not even
+		Returns encoded OK RESP once all entries are added`,
+		Eval:     evalMSET,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 2, LastKey: -1},
+	}
+
+	MGetCmdMeta = DiceCmdMeta{
+		Name: "MGET",
+		Info: `The MGET command returns an array of RESP values corresponding to the provided keys.
+		For each key, if the key is expired or does not exist, the response will be RespNIL;
+		otherwise, the response will be the RESP value of the key.
+		`,
+		Eval:     evalMGET,
+		Arity:    -2,
+		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1, LastKey: -1},
+	}
+
+	copyCmdMeta = DiceCmdMeta{
+		Name:  "COPY",
+		Info:  `COPY command copies the value stored at the source key to the destination key.`,
+		Eval:  evalCOPY,
+		Arity: -2,
+	}
+
+	renameCmdMeta = DiceCmdMeta{
+		Name:  "RENAME",
+		Info:  "Renames a key and overwrites the destination",
+		Eval:  evalRename,
+		Arity: 3,
+	}
+
 	bgrewriteaofCmdMeta = DiceCmdMeta{
 		Name:  "BGREWRITEAOF",
 		Info:  `Instruct Dice to start an Append Only File rewrite process. The rewrite will create a small optimized version of the current Append Only File.`,
@@ -1133,6 +1171,7 @@ func init() {
 	DiceCmds["BITPOS"] = bitposCmdMeta
 	DiceCmds["CLIENT"] = clientCmdMeta
 	DiceCmds["COMMAND"] = commandCmdMeta
+	DiceCmds["COPY"] = copyCmdMeta
 	DiceCmds["DBSIZE"] = dbSizeCmdMeta
 	DiceCmds["DECR"] = decrCmdMeta
 	DiceCmds["DECRBY"] = decrByCmdMeta
@@ -1202,6 +1241,8 @@ func init() {
 	DiceCmds["LPOP"] = lpopCmdMeta
 	DiceCmds["LPUSH"] = lpushCmdMeta
 	DiceCmds["LRU"] = lruCmdMeta
+	DiceCmds["MGET"] = MGetCmdMeta
+	DiceCmds["MSET"] = msetCmdMeta
 	DiceCmds["MULTI"] = MultiCmdMeta
 	DiceCmds["OBJECT"] = objectCmdMeta
 	DiceCmds["PERSIST"] = persistCmdMeta
@@ -1212,6 +1253,7 @@ func init() {
 	DiceCmds["PTTL"] = pttlCmdMeta
 	DiceCmds["Q.UNWATCH"] = qUnwatchCmdMeta
 	DiceCmds["Q.WATCH"] = qwatchCmdMeta
+	DiceCmds["RENAME"] = renameCmdMeta
 	DiceCmds["RESTORE"] = restorekeyCmdMeta
 	DiceCmds["RPOP"] = rpopCmdMeta
 	DiceCmds["RPUSH"] = rpushCmdMeta
