@@ -2803,51 +2803,6 @@ func insertInHashMap(args []string, store *dstore.Store) (numKeys int64, err2 []
 	return numKeys, nil
 }
 
-// Increments the number stored at field in the hash stored at key by increment.
-//
-// If key does not exist, a new key holding a hash is created.
-// If field does not exist the value is set to 0 before the operation is performed.
-//
-// The range of values supported by HINCRBY is limited to 64-bit signed integers.
-//
-// Usage: HINCRBY key field increment
-func evalHINCRBY(args []string, store *dstore.Store) []byte {
-	if len(args) < 3 {
-		return diceerrors.NewErrArity("HINCRBY")
-	}
-
-	increment, err := strconv.ParseInt(args[2], 10, 64)
-	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
-	}
-
-	key := args[0]
-	obj := store.Get(key)
-	var hashmap HashMap
-
-	if obj != nil {
-		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
-		}
-		hashmap = obj.Value.(HashMap)
-	}
-
-	if hashmap == nil {
-		hashmap = make(HashMap)
-	}
-
-	field := args[1]
-	numkey, err := hashmap.incrementValue(field, increment)
-	if err != nil {
-		return diceerrors.NewErrWithMessage(err.Error())
-	}
-
-	obj = store.NewObj(hashmap, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
-	store.Put(key, obj)
-
-	return clientio.Encode(numkey, false)
-}
-
 func evalHSETNX(args []string, store *dstore.Store) []byte {
 	if len(args) != 3 {
 		return diceerrors.NewErrArity("HSETNX")
