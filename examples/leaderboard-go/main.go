@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/dicedb/dicedb-go"
 	"log"
 	"math/rand"
 	"net/http"
@@ -11,13 +12,11 @@ import (
 	"sync"
 	"time"
 
-	redis "github.com/dicedb/go-dice"
-
 	"github.com/gorilla/websocket"
 )
 
 var (
-	dice    *redis.Client
+	dice    *dicedb.Client
 	upgrade = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
 			return true
@@ -44,7 +43,7 @@ func main() {
 		dport = val
 	}
 
-	dice = redis.NewClient(&redis.Options{
+	dice = dicedb.NewClient(&dicedb.Options{
 		Addr:        fmt.Sprintf("%s:%s", dhost, dport),
 		DialTimeout: 10 * time.Second,
 		MaxRetries:  10,
@@ -95,7 +94,7 @@ func watchLeaderboard() {
 	}
 }
 
-func toEntries(updates []redis.KV) []LeaderboardEntry {
+func toEntries(updates []dicedb.KV) []LeaderboardEntry {
 	var entries []LeaderboardEntry
 	for _, update := range updates {
 		var entry LeaderboardEntry

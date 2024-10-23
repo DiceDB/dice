@@ -254,3 +254,124 @@ func TestBitfield(t *testing.T) {
 		})
 	}
 }
+
+func TestBitfieldRO(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	FireCommand(conn, "FLUSHDB")
+	defer FireCommand(conn, "FLUSHDB")
+
+	syntaxErrMsg 			:= "ERR syntax error"
+	bitFieldTypeErrMsg 		:= "ERR Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is."
+	unsupportedCmdErrMsg 	:= "ERR BITFIELD_RO only supports the GET subcommand"
+
+	testCases := []struct {
+		Name     string
+		Commands []string
+		Expected []interface{}
+		Delay    []time.Duration
+		CleanUp  []string
+	}{
+		{
+			Name:     "BITFIELD_RO Arity Check",
+			Commands: []string{"bitfield_ro"},
+			Expected: []interface{}{"ERR wrong number of arguments for 'bitfield_ro' command"},
+			Delay:    []time.Duration{0},
+			CleanUp:  []string{},
+		},
+		{
+			Name:     "BITFIELD_RO on unsupported type of SET",
+			Commands: []string{"SADD bits a b c", "bitfield_ro bits"},
+			Expected: []interface{}{int64(3), "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			Delay:    []time.Duration{0, 0},
+			CleanUp:  []string{"DEL bits"},
+		},
+		{
+			Name:     "BITFIELD_RO on unsupported type of JSON",
+			Commands: []string{"json.set bits $ 1", "bitfield_ro bits"},
+			Expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			Delay:    []time.Duration{0, 0},
+			CleanUp:  []string{"DEL bits"},
+		},
+		{
+			Name:     "BITFIELD_RO on unsupported type of HSET",
+			Commands: []string{"HSET bits a 1", "bitfield_ro bits"},
+			Expected: []interface{}{int64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			Delay:    []time.Duration{0, 0},
+			CleanUp:  []string{"DEL bits"},
+		},
+		{
+			Name: "BITFIELD_RO with unsupported commands",
+			Commands: []string{
+				"bitfield_ro bits set u8 0 255",
+				"bitfield_ro bits incrby u8 0 100",
+			},
+			Expected: []interface{}{
+				unsupportedCmdErrMsg,
+				unsupportedCmdErrMsg,
+			},
+			Delay:   []time.Duration{0, 0, },
+			CleanUp: []string{"Del bits"},
+		},
+		{
+			Name: "BITFIELD_RO with syntax error",
+			Commands: []string{
+				"set bits 1",
+				"bitfield_ro bits get u8",
+				"bitfield_ro bits get",
+				"bitfield_ro bits get somethingrandom",
+			},
+			Expected: []interface{}{
+				"OK",
+				syntaxErrMsg,
+				syntaxErrMsg,
+				syntaxErrMsg,
+			},
+			Delay:   []time.Duration{0, 0, 0, 0, },
+			CleanUp: []string{"Del bits"},
+		},
+		{
+			Name: "BITFIELD_RO with invalid bitfield type",
+			Commands: []string{
+				"set bits 1",
+				"bitfield_ro bits get a8 0",
+				"bitfield_ro bits get s8 0",
+				"bitfield_ro bits get somethingrandom 0",
+			},
+			Expected: []interface{}{
+				"OK",
+				bitFieldTypeErrMsg,
+				bitFieldTypeErrMsg,
+				bitFieldTypeErrMsg,
+			},
+			Delay:   []time.Duration{0, 0, 0, 0, },
+			CleanUp: []string{"Del bits"},
+		},
+		{
+			Name:     "BITFIELD_RO with only key as argument",
+			Commands: []string{"bitfield_ro bits"},
+			Expected: []interface{}{[]interface{}{}},
+			Delay:    []time.Duration{0},
+			CleanUp:  []string{"DEL bits"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+
+			for i := 0; i < len(tc.Commands); i++ {
+				if tc.Delay[i] > 0 {
+					time.Sleep(tc.Delay[i])
+				}
+				result := FireCommand(conn, tc.Commands[i])
+				expected := tc.Expected[i]
+				testifyAssert.Equal(t, expected, result)
+			}
+
+			for _, cmd := range tc.CleanUp {
+				FireCommand(conn, cmd)
+			}
+		})
+	}
+}

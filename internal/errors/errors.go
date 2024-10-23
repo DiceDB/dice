@@ -20,7 +20,7 @@ const (
 	WrongTypeHllErr        = "-WRONGTYPE Key is not a valid HyperLogLog string value."
 	InvalidHllErr          = "-INVALIDOBJ Corrupted HLL object detected"
 	WorkerNotFoundErr      = "worker with ID %s not found"
-	JSONPathValueTypeErr   = "-WRONGTYPE wrong type of path value - expected string but found integer"
+	JSONPathValueTypeErr   = "-WRONGTYPE wrong type of path value - expected string but found %s"
 	HashValueNotIntegerErr = "hash value is not an integer"
 	InternalServerError    = "-ERR: Internal server error, unable to process command"
 	InvalidFloatErr        = "-ERR value is not a valid float"
@@ -28,6 +28,8 @@ const (
 	InvalidBitfieldType    = "-ERR Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is."
 	BitfieldOffsetErr      = "-ERR bit offset is not an integer or out of range"
 	OverflowTypeErr        = "-ERR Invalid OVERFLOW type specified"
+	WrongKeyTypeErr        = "-ERR Existing key has wrong Dice type"
+	NoKeyExistsErr         = "-ERR Could not perform this operation on a key that doesn't exist"
 )
 
 type DiceError struct {

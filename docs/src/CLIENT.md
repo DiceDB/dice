@@ -72,7 +72,7 @@ Each subcommand has its own set of parameters. Below is a detailed description o
 
 ### CLIENT TRACKING
 
-- `Syntax`: `CLIENT TRACKING <ON|OFF> [REDIRECT <id>] [BCAST] [PREFIX <prefix>] [OPTIN] [OPTOUT] [NOLOOP]`
+- `Syntax`: `CLIENT TRACKING <ON|OFF> [REDIRECT <id>] [BCAST] [PREFIX <prefix>] [OPTION] [OPTOUT] [NOLOOP]`
 - `Description`: Enables or disables server-assisted client-side caching.
 
 ### CLIENT CACHING

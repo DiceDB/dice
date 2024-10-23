@@ -49,6 +49,8 @@ const (
 	CmdHExists     = "HEXISTS"
 	CmdHKeys       = "HKEYS"
 	CmdHVals       = "HVALS"
+	CmdZAdd        = "ZADD"
+	CmdZRange      = "ZRANGE"
 )
 
 type CmdMeta struct {
@@ -107,6 +109,14 @@ var CommandsMeta = map[string]CmdMeta{
 	},
 	CmdZRangeWatch: {
 		CmdType: Watch,
+	},
+
+	// Sorted set commands
+	CmdZAdd: {
+		CmdType: SingleShard,
+	},
+	CmdZRange: {
+		CmdType: SingleShard,
 	},
 }
 
