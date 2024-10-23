@@ -5,7 +5,7 @@ DiceDB
 <a href="https://discord.gg/6r8uXWtXh7">![Discord](https://img.shields.io/discord/1232385660460204122?style=flat-square)</a>
 <a href="https://dicedb.io/get-started/installation/">![Docs](https://img.shields.io/badge/docs-00A1FF?style=flat-square)</a>
 
-DiceDB is an in-memory, real-time, and reactive database with Redis and SQL support optimized for modern hardware and building real-time applications.
+DiceDB is a redis-compliant, in-memory, real-time, and reactive database optimized for modern hardware and for building and scaling truly real-time applications. 
 
 We are looking for Early Design Partners, so, if you want to evaluate DiceDB, [block our calendar](https://cal.com/dicedb-arpit). always up for a chat.
 
@@ -16,19 +16,18 @@ We are looking for Early Design Partners, so, if you want to evaluate DiceDB, [b
 We have multiple repositories where you can contribute. So, as per your interest, you can pick one and build a deeper understanding of the project on the go.
 
 - [dicedb/dice](https://github.com/dicedb/dice) for core database features and engine / Stack - Go
+- [dicedb/dicedb-cli](https://github.com/dicedb/dicedb-cli) command line interface for DiceDB / Stack - Go
 - [dicedb/playground-mono](https://github.com/dicedb/playground-mono) backend APIs for DiceDB playground / Stack - Go
-- [dicedb/playground-web](https://github.com/dicedb/playground-web) frontend for DiceDB playground / Stack - NextJS
+- [dicedb/alloy](https://github.com/dicedb/alloy) frontend and marketplace for DiceDB playground / Stack - NextJS
 
 ## How is it different from Redis?
 
 Although DiceDB is a drop-in replacement of Redis, which means almost no learning curve and switching does not require any code change, it still differs in two key aspects and they are
 
 1. DiceDB is multithreaded and follows [shared-nothing architecture](https://en.wikipedia.org/wiki/Shared-nothing_architecture).
-2. DiceDB supports a new command called `QWATCH` that lets clients listen to a SQL query and get notified in real-time whenever something changes.
+2. DiceDB supports `.WATCH` commands like `GET.WATCH`, `ZRANGE.WATCH`, etc. that lets clients listen to data changes and get the result set in real-time whenever something changes.
 
-With this, you can build truly real-time applications like [Leaderboard](https://github.com/DiceDB/dice/tree/master/examples/leaderboard-go) with simple SQL queries.
-
-![Leaderboard with DiceDB](https://github.com/user-attachments/assets/327792c7-d788-47d4-a767-ef2c478d75cb)
+`.WATCH` commands are pretty handy when it comes to building truly real-time applications like [Leaderboard](https://github.com/arpitbbhayani/leaderboard-go-dicedb).
 
 ## Get started
 
@@ -138,14 +137,14 @@ go run main.go -o /path/of/output/dir
 
 ## Setting up CLI
 
-The best way to connect to DiceDB is using DiceDB CLI and you can install it by running the following command.
+The best way to connect to DiceDB is using DiceDB CLI and you can install it by running the following command
 
 ```bash
-pip install dicedb-cli
+sudo su
+curl -sL https://raw.githubusercontent.com/DiceDB/dicedb-cli/refs/heads/master/install.sh | sh
 ```
 
-> Because DiceDB speaks Redis dialect, you can connect to it with any Redis Client and SDK also.
-> But if you are planning to use the `QWATCH` feature then you need to use the DiceDB CLI.
+If you are working on unsupported OS (as per above script), you can always follow the installation instructions mentioned in the [dicedb/cli](https://github.com/DiceDB/dicedb-cli) repository.
 
 ## Running Tests
 
@@ -228,7 +227,7 @@ DiceDB started as a re-implementation of Redis in Golang and the idea was to - b
 
 ## How to contribute
 
-The Code Contribution Guidelines are published at [CONTRIBUTING.md](CONTRIBUTING.md); please read them before you start making any changes. This would allow us to have a consistent standard of coding practices and developer experience.
+The Code Contribution Guidelines are published at [CONTRIBUTING/README.md](CONTRIBUTING/README.md); please read them before you start making any changes. This would allow us to have a consistent standard of coding practices and developer experience.
 
 Contributors can join the [Discord Server](https://discord.gg/6r8uXWtXh7) for quick collaboration.
 

@@ -66,6 +66,10 @@ const (
 	CmdHRandField   = "HRANDFIELD"
 	CmdGetRange     = "GETRANGE"
 	CmdAppend       = "APPEND"
+	CmdBFAdd        = "BF.ADD"
+	CmdBFReserve    = "BF.RESERVE"
+	CmdBFInfo       = "BF.INFO"
+	CmdBFExists     = "BF.EXISTS"
 )
 
 // Multi-shard commands.
@@ -236,6 +240,20 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdZPopMin: {
+		CmdType: SingleShard,
+	},
+
+	// Bloom Filter
+	CmdBFAdd: {
+		CmdType: SingleShard,
+	},
+	CmdBFInfo: {
+		CmdType: SingleShard,
+	},
+	CmdBFExists: {
+		CmdType: SingleShard,
+	},
+	CmdBFReserve: {
 		CmdType: SingleShard,
 	},
 }

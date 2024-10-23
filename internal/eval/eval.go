@@ -54,6 +54,22 @@ type EvalResponse struct {
 	Error  error       // Error holds any error that occurred during the operation. If no error, it will be nil.
 }
 
+//go:inline
+func makeEvalResult(result interface{}) *EvalResponse {
+	return &EvalResponse{
+		Result: result,
+		Error:  nil,
+	}
+}
+
+//go:inline
+func makeEvalError(err error) *EvalResponse {
+	return &EvalResponse{
+		Result: nil,
+		Error:  err,
+	}
+}
+
 type jsonOperation string
 
 const (

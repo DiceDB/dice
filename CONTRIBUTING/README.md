@@ -30,6 +30,8 @@ Make the necessary changes. If the changes you plan to make are too big, make su
 
 Follow the best practices when you are making changes.
 
+- [Logging Best Practices](logging.md)
+
 ### Code documentation
 
 Please ensure your code is adequately documented. Some things to consider for documentation:
