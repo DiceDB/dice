@@ -2,23 +2,17 @@ package websocket
 
 import (
 	"context"
-	"log/slog"
 	"os"
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/dicedb/dice/internal/logger"
 )
 
 func TestMain(m *testing.M) {
-	l := logger.New(logger.Opts{WithTimestamp: false})
-	slog.SetDefault(l)
 	var wg sync.WaitGroup
 
 	opts := TestServerOptions{
-		Port:   testPort1,
-		Logger: l,
+		Port: testPort1,
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

@@ -4,12 +4,9 @@ import (
 	"bufio"
 	"context"
 	"errors"
-	"log/slog"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/dicedb/dice/mocks"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -168,7 +165,6 @@ func TestNetConnIOHandler_RESP(t *testing.T) {
 				conn:   mock,
 				reader: bufio.NewReaderSize(mock, 512),
 				writer: bufio.NewWriterSize(mock, 1024),
-				logger: slog.New(mocks.SlogNoopHandler{}),
 			}
 
 			ctx := context.Background()

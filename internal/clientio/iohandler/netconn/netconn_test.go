@@ -6,14 +6,11 @@ import (
 	"context"
 	"errors"
 	"io"
-	"log/slog"
 	"net"
 	"os"
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/dicedb/dice/mocks"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -131,7 +128,6 @@ func TestNetConnIOHandler(t *testing.T) {
 				conn:   mock,
 				reader: bufio.NewReaderSize(mock, 512),
 				writer: bufio.NewWriterSize(mock, 1024),
-				logger: slog.New(mocks.SlogNoopHandler{}),
 			}
 
 			ctx := context.Background()
@@ -196,8 +192,7 @@ func TestNewNetConnIOHandler(t *testing.T) {
 			require.NoError(t, err, "Setup failed")
 			defer cleanup()
 
-			logger := slog.New(mocks.SlogNoopHandler{})
-			handler, err := NewIOHandler(fd, logger)
+			handler, err := NewIOHandler(fd)
 
 			if tt.expectedErr != nil {
 				assert.Error(t, err)
@@ -255,8 +250,7 @@ func TestNewNetConnIOHandler_RealNetwork(t *testing.T) { // More of an integrati
 
 	fd := int(file.Fd())
 
-	logger := slog.New(mocks.SlogNoopHandler{})
-	handler, err := NewIOHandler(fd, logger)
+	handler, err := NewIOHandler(fd)
 	require.NoError(t, err, "Failed to create IOHandler")
 
 	testData := []byte("Hello, World!")
