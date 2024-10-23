@@ -674,8 +674,9 @@ func evalZRANK(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	if withScore {
+		scoreStr := strconv.FormatFloat(score, 'f', -1, 64) 
 		return &EvalResponse{
-			Result: []interface{}{rank, score},
+			Result: []interface{}{rank, scoreStr},
 			Error:  nil,
 		}
 	}

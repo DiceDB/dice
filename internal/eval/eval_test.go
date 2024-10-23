@@ -6042,7 +6042,7 @@ func testEvalZRANK(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"myzset", "member2", "WITHSCORE"},
 			migratedOutput: EvalResponse{
-				Result: []interface{}{int64(1), float64(2)},
+				Result: []interface{}{int64(1), "2"},
 				Error:  nil,
 			},
 		},
