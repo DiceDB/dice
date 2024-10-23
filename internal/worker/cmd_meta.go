@@ -62,32 +62,38 @@ const (
 
 // Watch commands
 const (
-	CmdGetWatch     = "GET.WATCH"
-	CmdZRangeWatch  = "ZRANGE.WATCH"
-	CmdZPopMin      = "ZPOPMIN"
-	CmdJSONClear    = "JSON.CLEAR"
-	CmdJSONStrlen   = "JSON.STRLEN"
-	CmdJSONObjlen   = "JSON.OBJLEN"
-	CmdZAdd         = "ZADD"
-	CmdZRange       = "ZRANGE"
-	CmdZRank        = "ZRANK"
-	CmdPFAdd        = "PFADD"
-	CmdPFCount      = "PFCOUNT"
-	CmdPFMerge      = "PFMERGE"
-	CmdIncr         = "INCR"
-	CmdIncrBy       = "INCRBY"
-	CmdDecr         = "DECR"
-	CmdDecrBy       = "DECRBY"
-	CmdIncrByFloat  = "INCRBYFLOAT"
-	CmdHIncrBy      = "HINCRBY"
-	CmdHIncrByFloat = "HINCRBYFLOAT"
-	CmdHRandField   = "HRANDFIELD"
-	CmdGetRange     = "GETRANGE"
-	CmdAppend       = "APPEND"
-	CmdBFAdd        = "BF.ADD"
-	CmdBFReserve    = "BF.RESERVE"
-	CmdBFInfo       = "BF.INFO"
-	CmdBFExists     = "BF.EXISTS"
+	CmdGetWatch      = "GET.WATCH"
+	CmdZRangeWatch   = "ZRANGE.WATCH"
+	CmdZPopMin       = "ZPOPMIN"
+	CmdJSONClear     = "JSON.CLEAR"
+	CmdJSONStrlen    = "JSON.STRLEN"
+	CmdJSONObjlen    = "JSON.OBJLEN"
+	CmdZAdd          = "ZADD"
+	CmdZRange        = "ZRANGE"
+	CmdZRank         = "ZRANK"
+	CmdPFAdd         = "PFADD"
+	CmdPFCount       = "PFCOUNT"
+	CmdPFMerge       = "PFMERGE"
+	CmdIncr          = "INCR"
+	CmdIncrBy        = "INCRBY"
+	CmdDecr          = "DECR"
+	CmdDecrBy        = "DECRBY"
+	CmdIncrByFloat   = "INCRBYFLOAT"
+	CmdHIncrBy       = "HINCRBY"
+	CmdHIncrByFloat  = "HINCRBYFLOAT"
+	CmdHRandField    = "HRANDFIELD"
+	CmdGetRange      = "GETRANGE"
+	CmdAppend        = "APPEND"
+	CmdBFAdd         = "BF.ADD"
+	CmdBFReserve     = "BF.RESERVE"
+	CmdBFInfo        = "BF.INFO"
+	CmdBFExists      = "BF.EXISTS"
+	CmdCMSQuery      = "CMS.QUERY"
+	CmdCMSInfo       = "CMS.INFO"
+	CmdCMSInitByDim  = "CMS.INITBYDIM"
+	CmdCMSInitByProb = "CMS.INITBYPROB"
+	CmdCMSMerge      = "CMS.MERGE"
+	CmdCMSIncrBy     = "CMS.INCRBY"
 )
 
 type CmdMeta struct {
@@ -193,6 +199,24 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType:          MultiShard,
 		decomposeCommand: decomposeMGet,
 		composeResponse:  composeMGet,
+	},
+	CmdCMSQuery: {
+		CmdType: SingleShard,
+	},
+	CmdCMSInfo: {
+		CmdType: SingleShard,
+	},
+	CmdCMSIncrBy: {
+		CmdType: SingleShard,
+	},
+	CmdCMSInitByDim: {
+		CmdType: SingleShard,
+	},
+	CmdCMSInitByProb: {
+		CmdType: SingleShard,
+	},
+	CmdCMSMerge: {
+		CmdType: SingleShard,
 	},
 
 	// Custom commands.
