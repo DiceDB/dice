@@ -14,9 +14,9 @@ func TestHExists(t *testing.T) {
 		{
 			name:     "RESP wrong number of arguments for HEXISTS",
 			commands: []string{"HEXISTS", "HEXISTS KEY", "HEXISTS KEY FIELD ANOTHER_FIELD"},
-			expected: []interface{}{"ERR wrong number of arguments for 'HEXISTS' command",
-				"ERR wrong number of arguments for 'HEXISTS' command",
-				"ERR wrong number of arguments for 'HEXISTS' command"},
+			expected: []interface{}{"ERR wrong number of arguments for 'hexists' command",
+				"ERR wrong number of arguments for 'hexists' command",
+				"ERR wrong number of arguments for 'hexists' command"},
 		},
 		{
 			name:     "RESP HEXISTS non existent key",

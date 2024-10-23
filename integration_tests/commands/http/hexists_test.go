@@ -2,6 +2,7 @@ package http
 
 import (
 	"testing"
+	"time"
 
 	"gotest.tools/v3/assert"
 )
@@ -9,7 +10,12 @@ import (
 func TestHExists(t *testing.T) {
 	cmdExec := NewHTTPCommandExecutor()
 
-	testCases := []TestCase{
+	testCases := []struct {
+		name     string
+		commands []HTTPCommand
+		expected []interface{}
+		delays   []time.Duration
+	}{
 		{
 			name: "HTTP Check if field exists when k f and v are set",
 			commands: []HTTPCommand{
@@ -17,6 +23,7 @@ func TestHExists(t *testing.T) {
 				{Command: "HEXISTS", Body: map[string]interface{}{"key": "k", "field": "f"}},
 			},
 			expected: []interface{}{float64(1), "1"},
+			delays:   []time.Duration{0, 0},
 		},
 		{
 			name: "HTTP Check if field exists when k exists but not f and v",
@@ -25,6 +32,7 @@ func TestHExists(t *testing.T) {
 				{Command: "HEXISTS", Body: map[string]interface{}{"key": "k", "field": "f"}},
 			},
 			expected: []interface{}{float64(1), "0"},
+			delays:   []time.Duration{0, 0},
 		},
 		{
 			name: "HTTP Check if field exists when no k,f and v exist",
@@ -32,6 +40,7 @@ func TestHExists(t *testing.T) {
 				{Command: "HEXISTS", Body: map[string]interface{}{"key": "k", "field": "f"}},
 			},
 			expected: []interface{}{"0"},
+			delays:   []time.Duration{0},
 		},
 	}
 
@@ -41,10 +50,23 @@ func TestHExists(t *testing.T) {
 				Command: "HDEL",
 				Body:    map[string]interface{}{"key": "k", "field": "f"},
 			})
+			cmdExec.FireCommand(HTTPCommand{
+				Command: "HDEL",
+				Body:    map[string]interface{}{"key": "k", "field": "f1"},
+			})
 
 			for i, cmd := range tc.commands {
-				result, _ := cmdExec.FireCommand(cmd)
-				assert.DeepEqual(t, tc.expected[i], result)
+				if tc.delays[i] > 0 {
+					time.Sleep(tc.delays[i])
+				}
+
+				result, err := cmdExec.FireCommand(cmd)
+				if err != nil {
+					// Check if the error message matches the expected result
+					assert.Equal(t, tc.expected[i], err.Error(), "Error message mismatch for cmd %s", cmd)
+				} else {
+					assert.Equal(t, tc.expected[i], result, "Value mismatch for cmd %s, expected %v, got %v", cmd, tc.expected[i], result)
+				}
 			}
 		})
 	}

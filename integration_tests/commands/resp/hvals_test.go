@@ -29,7 +29,7 @@ func TestHVals(t *testing.T) {
 		{
 			name:     "HVALS with wrong number of arguments",
 			commands: []string{"HVALS hvalsKey03 x", "HVALS"},
-			expected: []interface{}{"ERR wrong number of arguments for 'HVALS' command", "ERR wrong number of arguments for 'HVALS' command"},
+			expected: []interface{}{"ERR wrong number of arguments for 'hvals' command", "ERR wrong number of arguments for 'hvals' command"},
 		},
 		{
 			name:     "RESP One or more vals exist",

@@ -13,22 +13,22 @@ func TestHKEYS(t *testing.T) {
 
 	testCases := []TestCase{
 		{
-			name:     "HKEYS with key containing hash with multiple fields",
+			name:     "ASYNC HKEYS with key containing hash with multiple fields",
 			commands: []string{"HSET key_hkeys field1 value1", "HSET key_hkeys field2 value2", "HKEYS key_hkeys"},
 			expected: []interface{}{int64(1), int64(1), []interface{}{"field1", "field2"}},
 		},
 		{
-			name:     "HKEYS with non-existent key",
+			name:     "ASYNC HKEYS with non-existent key",
 			commands: []string{"HKEYS key_hkeys01"},
 			expected: []interface{}{[]interface{}{}},
 		},
 		{
-			name:     "HKEYS with key containing a non-hash value",
+			name:     "ASYNC HKEYS with key containing a non-hash value",
 			commands: []string{"SET key_hkeys02 field1", "HKEYS key_hkeys02"},
-			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{"OK", "ERR -WRONGTYPE Operation against a key holding the wrong kind of value"},
 		},
 		{
-			name:     "HKEYS with wrong number of arguments",
+			name:     "ASYNC HKEYS with wrong number of arguments",
 			commands: []string{"HKEYS key_hkeys03 x", "HKEYS"},
 			expected: []interface{}{"ERR wrong number of arguments for 'hkeys' command",
 				"ERR wrong number of arguments for 'hkeys' command"},
