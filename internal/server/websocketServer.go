@@ -256,7 +256,7 @@ func (s *WebsocketServer) processQwatchUpdates(ctx context.Context) {
 			}
 
 			if err := s.processResponse(conn, dicDBCmd, resp); err != nil {
-				slog.Debug("Error writing response to client. Shutting down goroutine for q.watch updates", slog.Any("clientIdentifierID", clientIdentifierID), slog.Any("error", err))
+				slog.Debug("Error writing response to client. Shutting down goroutine for q.watch updates", slog.Any("clientIdentifierID", resp.ClientIdentifierID), slog.Any("error", err))
 				continue
 			}
 		case <-s.shutdownChan:
