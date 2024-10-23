@@ -547,10 +547,11 @@ var (
 		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1, LastKey: -1},
 	}
 	persistCmdMeta = DiceCmdMeta{
-		Name:       "PERSIST",
-		Info:       "PERSIST removes the expiration from a key",
-		IsMigrated: true,
-		NewEval:    evalPERSIST,
+		Name: "PERSIST",
+		Info: "PERSIST removes the expiration from a key",
+		// IsMigrated: true,
+		// NewEval:    evalPERSIST,
+		Eval: evalPersist,
 	}
 	copyCmdMeta = DiceCmdMeta{
 		Name:  "COPY",
