@@ -1,11 +1,15 @@
 ---
-title: QWATCH
-description: The `QWATCH` command is a novel feature designed to provide real-time updates to clients based on changes in underlying data.
+title: Q.WATCH
+description: The `Q.WATCH` command is a novel feature designed to provide real-time updates to clients based on changes in underlying data.
 ---
 
-The `QWATCH` command is a novel feature designed to provide real-time updates to clients based on changes in underlying data. It operates similarly to the `SUBSCRIBE` command but focuses on SQL-like queries over data structures. Whenever data modifications affect the query's results, the updated result set is pushed to the subscribed client. This eliminates the need for clients to constantly poll for changes.
+The `Q.WATCH` command is a novel feature designed to provide real-time updates to clients based on changes in underlying
+data. It operates similarly to the `SUBSCRIBE` command but focuses on SQL-like queries over data structures. Whenever
+data modifications affect the query's results, the updated result set is pushed to the subscribed client. This
+eliminates the need for clients to constantly poll for changes.
 
-This command is what makes DiceDB different from Redis and uniquely positions it as the easiest and most intuitive way to build real-time reactive applications like leaderboards.
+This command is what makes DiceDB different from Redis and uniquely positions it as the easiest and most intuitive way
+to build real-time reactive applications like leaderboards.
 
 ## Protocol Support
 
@@ -13,25 +17,25 @@ This command is what makes DiceDB different from Redis and uniquely positions it
 | -------- | --------- |
 | TCP-RESP | ✅        |
 | HTTP     | ✅        |
-| WebSocket| ❌        |
+| WebSocket| ✅        |
 
 ## Syntax
 
-```
-QWATCH dsql-query
+```bash
+Q.WATCH <dsql-query>
 ```
 
 ## Parameters
 
-- dsql-query: A SQL-like query specifying the data to be monitored and operation to be performed. The query syntax is as follows:
+| Parameter    | Description                                                                         | Type   | Required |
+|--------------|-------------------------------------------------------------------------------------|--------|----------|
+| `dsql-query` | A SQL-like query specifying the data to be monitored and operation to be performed. | String | Yes      |
 
-  - `SELECT`: Specifies the fields to be returned, `$key`, `$value`, and `$value.<attr>`.
-  - `WHERE`: Optional clause for filtering results based on conditions.
-  - `LIKE`: Optional clause within WHERE to specify the key pattern and supports the `%` operator from SQL.
-  - `ORDER BY`: Optional clause for sorting results.
-  - `LIMIT`: Optional clause to limit the number of results.
+## DSQL Query
 
-## Query Syntax
+A SQL-like query specifying the data to be monitored and operation to be performed.
+
+### Syntax
 
 ```sql
 SELECT $key, $value
@@ -39,45 +43,82 @@ WHERE condition
 ORDER BY field [ASC | DESC] LIMIT n
 ```
 
-Special column names:
+### SELECT Clause
+
+Specifies the fields to be returned, `$key`, `$value`, and `$value.<attr>`.
+
+#### Special Column Names
 
 - `$key`: Refers to the key of the key-value pair
 - `$value`: Refers to the value of the key-value pair
 
 ### WHERE Clause
 
-The WHERE clause allows you to filter results based on conditions applied to the key or value. It supports various comparison operators and can include complex logical expressions.
-It also supports the LIKE clause as one of the conditions.
+**Optional clause** for filtering results based on conditions applied to the key or value.
 
-Supported features:
+Supported conditions:
 
 - Comparison operators: `=`, `<`, `>`, `<=`, `>=`, `!=`
 - Logical operators: `AND`, `OR`
 - Parentheses for grouping conditions
 - Comparison between key and value fields
-- LIKE clause: `like 'pattern'`
+- LIKE clause: `LIKE 'pattern'`
+
+### LIKE Clause
+
+**Optional clause** within WHERE to specify the key pattern and supports the `%` operator from SQL.
+
+### ORDER BY Clause
+
+**Optional clause** for sorting results.
+
+### LIMIT Clause
+
+**Optional clause** to limit the number of results.
 
 ## Return Value
 
-- A subscription confirmation message similar to `SUBSCRIBE`.
+| Condition             | Return Value                                               |
+|-----------------------|------------------------------------------------------------|
+| Command is successful | A subscription confirmation message similar to `SUBSCRIBE` |
+| DSQL Query is invalid | error                                                      |
 
 ## Behavior
 
-1. `Query Parsing`: The provided query is parsed to extract the `SELECT`, `WHERE`, `LIKE`, `ORDER BY`, and `LIMIT` clauses.
-2. `Subscription Establishment`: The client establishes a subscription to the specified query.
-3. `Initial Result`: The initial result set based on the current data is sent to the client.
-4. `Data Change Monitoring`: DiceDB continuously monitors the data sources specified in the LIKE clause.
-5. `Query Reevaluation`: Whenever data changes that might affect the query result, the query is reevaluated.
-6. `Result Push`: If the reevaluated result differs from the previous result, the new result set is pushed to the subscribed client.
+- The provided query is parsed to extract the `SELECT`, `WHERE`, `LIKE`, `ORDER BY`, and `LIMIT` clauses.
+- The client establishes a subscription to the specified query.
+- The initial result set based on the current data is sent to the client.
+- DiceDB continuously monitors the data sources specified in the LIKE clause.
+- Whenever data changes that might affect the query result, the query is reevaluated.
+- If the reevaluated result differs from the previous result, the new result set is pushed to the subscribed client.
 
-## Example Usage with Query Flow
+## Errors
 
-Let's explore a practical example of using the `QWATCH` command to create a real-time leaderboard for a game match, including filtering with a `WHERE` clause.
+1. `Missing query`
 
-### Query
+    - Error Message: `(error) ERROR wrong number of arguments for 'q.watch' command`
+    - Occurs if no DSQL Query is provided.
+
+2. `Invalid query`:
+
+    - Error Message: `(error) ERROR error parsing SQL statement: syntax error at position <n>`
+    - Occurs if the provided query is malformed or has unsupported clauses.
+
+3. `Max number of subscriptions reached`:
+
+    - Error Message: `(error) ERROR could not perform this operation on a key that doesn't exist`
+    - Occurs if the maximum number of allowed subscriptions is exceeded.
+
+## Example Usage
+
+### Basic Usage
+
+Let's explore a practical example of using the `Q.WATCH` command to create a real-time leaderboard for a game match,
+including filtering with a `WHERE` clause.
 
 ```bash
-127.0.0.1:7379> QWATCH "SELECT $key, $value WHERE $key like 'match:100:*' AND $value > 10 ORDER BY $value DESC LIMIT 3"
+127.0.0.1:7379> Q.WATCH "SELECT $key, $value WHERE $key like 'match:100:*' AND $value > 10 ORDER BY $value DESC LIMIT 3"
+q.watch    from SELECT $key, $value WHERE $key like 'match:100:*' AND $value > 10 ORDER BY $value asc: []
 ```
 
 This query does the following:
@@ -87,15 +128,15 @@ This query does the following:
 - Orders the results by their values in descending order
 - Limits the results to the top 3 entries
 
-### Scenario
+#### Scenario
 
-Imagine we're tracking player scores in a game match with ID 100. Each player's score is stored in a key formatted as `match:100:user:<userID>`.
+Imagine we're tracking player scores in a game match with ID 100. Each player's score is stored in a key formatted as
+`match:100:user:<userID>`.
 
-Let's walk through a series of updates and see how the `QWATCH` command responds. Please note
+Let's walk through a series of updates and see how the `Q.WATCH` command responds. Please note
 that the response will be RESP encoded and parsing will be handled by the SDK that you are using.
 
-1. Initial state (empty leaderboard):
-   QWATCH response: `[] (empty array)`
+1. Initial state (empty leaderboard): `[]`
 
 2. Player 0 scores 5 points:
 
@@ -103,7 +144,7 @@ that the response will be RESP encoded and parsing will be handled by the SDK th
    127.0.0.1:7379> SET match:100:user:0 5
    ```
 
-   QWATCH response: `[] (no change, score <= 10)`
+   Subscription does not return response as `value < 10`. 
 
 3. Player 1 scores 15 points:
 
@@ -111,7 +152,10 @@ that the response will be RESP encoded and parsing will be handled by the SDK th
    127.0.0.1:7379> SET match:100:user:1 15
    ```
 
-   QWATCH response: `[["match:100:user:1", "15"]]`
+   Q.WATCH Response:
+   ```bash 
+   q.watch    from SELECT $key, $value WHERE $key like 'match:100:*' and $value > 100 ORDER BY $value asc: `[["match:100:user:1", "15"]]`
+   ```
 
 4. Player 2 scores 20 points:
 
@@ -119,7 +163,10 @@ that the response will be RESP encoded and parsing will be handled by the SDK th
    127.0.0.1:7379> SET match:100:user:2 20
    ```
 
-   QWATCH response: `[["match:100:user:2", "20"], ["match:100:user:1", "15"]]`
+   Q.WATCH Response:
+   ```bash 
+   q.watch    from SELECT $key, $value WHERE $key like 'match:100:*' and $value > 100 ORDER BY $value asc: `[["match:100:user:2", "20"], ["match:100:user:1", "15"]]`
+   ```
 
 5. Player 3 scores 12 points:
 
@@ -127,7 +174,10 @@ that the response will be RESP encoded and parsing will be handled by the SDK th
    127.0.0.1:7379> SET match:100:user:3 12
    ```
 
-   QWATCH response: `[["match:100:user:2", "20"], ["match:100:user:1", "15"], ["match:100:user:3", "12"]]`
+   Q.WATCH Response:
+   ```bash 
+   q.watch    from SELECT $key, $value WHERE $key like 'match:100:*' and $value > 100 ORDER BY $value asc: `[["match:100:user:2", "20"], ["match:100:user:1", "15"], ["match:100:user:3", "12"]]`
+   ```
 
 6. Player 4 scores 25 points:
 
@@ -135,22 +185,24 @@ that the response will be RESP encoded and parsing will be handled by the SDK th
    127.0.0.1:7379> SET match:100:user:4 25
    ```
 
-   QWATCH response: `[["match:100:user:4", "25"], ["match:100:user:2", "20"], ["match:100:user:1", "15"]]`
+   Q.WATCH Response:
+   ```bash 
+   q.watch    from SELECT $key, $value WHERE $key like 'match:100:*' and $value > 100 ORDER BY $value asc: `[["match:100:user:4", "25"], ["match:100:user:2", "20"], ["match:100:user:1", "15"]]`
+   ```
 
 7. Player 0 improves their score to 30:
+
    ```bash
    127.0.0.1:7379> SET match:100:user:0 30
    ```
-   QWATCH response: `[["match:100:user:0", "30"], ["match:100:user:4", "25"], ["match:100:user:2", "20"]]`
 
-This example demonstrates how `QWATCH` provides real-time updates as the leaderboard changes, always keeping clients informed of the top 3 scores above 10, without the need for constant polling.
+   Q.WATCH Response:
+   ```bash 
+   q.watch    from SELECT $key, $value WHERE $key like 'match:100:*' and $value > 100 ORDER BY $value asc: `[["match:100:user:0", "30"], ["match:100:user:4", "25"], ["match:100:user:2", "20"]]`
+   ```
 
-## Error Handling
-
-- `ERR invalid query`: If the provided query is malformed or unsupported.
-- `ERR syntax error`: If the query syntax is incorrect.
-- `ERR unknown command`: If the `QWATCH` command is not implemented.
-- `ERR max number of subscriptions reached`: If the maximum number of allowed subscriptions is exceeded.
+This example demonstrates how `Q.WATCH` provides real-time updates as the leaderboard changes, always keeping clients
+informed of the top 3 scores above 10, without the need for constant polling.
 
 ## Best Practices
 

@@ -29,6 +29,7 @@ const (
 	null       string = "null"
 	WithValues string = "WITHVALUES"
 	WithScores string = "WITHSCORES"
+	WithScore  string = "WITHSCORE"
 	REV        string = "REV"
 	GET        string = "GET"
 	SET        string = "SET"
@@ -39,4 +40,9 @@ const (
 	FAIL       string = "FAIL"
 	SIGNED     string = "SIGNED"
 	UNSIGNED   string = "UNSIGNED"
+	CAPACITY   string = "CAPACITY"
+	SIZE       string = "SIZE"
+	FILTERS    string = "FILTER"
+	ITEMS      string = "ITEMS"
+	EXPANSION  string = "EXPANSION"
 )

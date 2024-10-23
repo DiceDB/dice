@@ -361,9 +361,10 @@ var (
 		The value for the queried key should be of integer format,
 		if not INCR returns encoded error response.
 		evalINCR returns the incremented value for the key if there are no errors.`,
-		Eval:     evalINCR,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+		NewEval:    evalINCR,
+		IsMigrated: true,
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
 	}
 	incrByFloatCmdMeta = DiceCmdMeta{
 		Name: "INCRBYFLOAT",
@@ -374,8 +375,9 @@ var (
 		If the value at the key is a string, it should be parsable to float64,
 		if not INCRBYFLOAT returns an  error response.
 		INCRBYFLOAT returns the incremented value for the key after applying the specified increment if there are no errors.`,
-		Eval:  evalINCRBYFLOAT,
-		Arity: 2,
+		Arity:      2,
+		NewEval:    evalINCRBYFLOAT,
+		IsMigrated: true,
 	}
 	infoCmdMeta = DiceCmdMeta{
 		Name: "INFO",
@@ -412,35 +414,39 @@ var (
 		Eval:  evalSLEEP,
 		Arity: 1,
 	}
-	bfinitCmdMeta = DiceCmdMeta{
-		Name: "BFINIT",
-		Info: `BFINIT command initializes a new bloom filter and allocation it's relevant parameters based on given inputs.
+	bfreserveCmdMeta = DiceCmdMeta{
+		Name: "BF.RESERVE",
+		Info: `BF.RESERVE command initializes a new bloom filter and allocation it's relevant parameters based on given inputs.
 		If no params are provided, it uses defaults.`,
-		Eval:     evalBFINIT,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+		IsMigrated: true,
+		NewEval:    evalBFRESERVE,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
 	}
 	bfaddCmdMeta = DiceCmdMeta{
-		Name: "BFADD",
-		Info: `BFADD adds an element to
+		Name: "BF.ADD",
+		Info: `BF.ADD adds an element to
 		a bloom filter. If the filter does not exists, it will create a new one
 		with default parameters.`,
-		Eval:     evalBFADD,
-		Arity:    3,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+		IsMigrated: true,
+		NewEval:    evalBFADD,
+		Arity:      3,
+		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
 	}
 	bfexistsCmdMeta = DiceCmdMeta{
-		Name:     "BFEXISTS",
-		Info:     `BFEXISTS checks existence of an element in a bloom filter.`,
-		Eval:     evalBFEXISTS,
-		Arity:    3,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+		Name:       "BF.EXISTS",
+		Info:       `BF.EXISTS checks existence of an element in a bloom filter.`,
+		NewEval:    evalBFEXISTS,
+		IsMigrated: true,
+		Arity:      3,
+		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
 	}
 	bfinfoCmdMeta = DiceCmdMeta{
-		Name:  "BFINFO",
-		Info:  `BFINFO returns the parameters and metadata of an existing bloom filter.`,
-		Eval:  evalBFINFO,
-		Arity: 2,
+		Name:       "BF.INFO",
+		Info:       `BF.INFO returns the parameters and metadata of an existing bloom filter.`,
+		NewEval:    evalBFINFO,
+		IsMigrated: true,
+		Arity:      2,
 	}
 	// TODO: Remove this override once we support QWATCH in dice-cli.
 	subscribeCmdMeta = DiceCmdMeta{
@@ -560,9 +566,10 @@ var (
 		The value for the queried key should be of integer format,
 		if not DECR returns encoded error response.
 		evalDECR returns the decremented value for the key if there are no errors.`,
-		Eval:     evalDECR,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+		NewEval:    evalDECR,
+		IsMigrated: true,
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
 	}
 	decrByCmdMeta = DiceCmdMeta{
 		Name: "DECRBY",
@@ -574,9 +581,10 @@ var (
 		The value for the queried key should be of integer format,
 		if not, DECRBY returns an encoded error response.
 		evalDECRBY returns the decremented value for the key after applying the specified decrement if there are no errors.`,
-		Eval:     evalDECRBY,
-		Arity:    3,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+		NewEval:    evalDECRBY,
+		IsMigrated: true,
+		Arity:      3,
+		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
 	}
 	existsCmdMeta = DiceCmdMeta{
 		Name: "EXISTS",
@@ -684,9 +692,10 @@ var (
 		Info: `Increments the number stored at field in the hash stored at key by increment.
 		If key does not exist, a new key holding a hash is created.
 		If field does not exist the value is set to 0 before the operation is performed.`,
-		Eval:     evalHINCRBY,
-		Arity:    -4,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -4,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalHINCRBY,
 	}
 	hstrLenCmdMeta = DiceCmdMeta{
 		Name:     "HSTRLEN",
@@ -980,16 +989,18 @@ var (
 		The value for the queried key should be of integer format,
 		if not INCRBY returns encoded error response.
 		evalINCRBY returns the incremented value for the key if there are no errors.`,
-		Eval:     evalINCRBY,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+		NewEval:    evalINCRBY,
+		IsMigrated: true,
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
 	}
 	getRangeCmdMeta = DiceCmdMeta{
-		Name:     "GETRANGE",
-		Info:     `Returns a substring of the string stored at a key.`,
-		Eval:     evalGETRANGE,
-		Arity:    4,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Name:       "GETRANGE",
+		Info:       `Returns a substring of the string stored at a key.`,
+		IsMigrated: true,
+		NewEval:    evalGETRANGE,
+		Arity:      3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	setexCmdMeta = DiceCmdMeta{
 		Name: "SETEX",
@@ -1005,17 +1016,19 @@ var (
 		NewEval:    evalSETEX,
 	}
 	hrandfieldCmdMeta = DiceCmdMeta{
-		Name:     "HRANDFIELD",
-		Info:     `Returns one or more random fields from a hash.`,
-		Eval:     evalHRANDFIELD,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Name:       "HRANDFIELD",
+		Info:       `Returns one or more random fields from a hash.`,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalHRANDFIELD,
 	}
 	appendCmdMeta = DiceCmdMeta{
-		Name:  "APPEND",
-		Info:  `Appends a string to the value of a key. Creates the key if it doesn't exist.`,
-		Eval:  evalAPPEND,
-		Arity: 3,
+		Name:       "APPEND",
+		Info:       `Appends a string to the value of a key. Creates the key if it doesn't exist.`,
+		IsMigrated: true,
+		NewEval:    evalAPPEND,
+		Arity:      2,
 	}
 	zaddCmdMeta = DiceCmdMeta{
 		Name: "ZADD",
@@ -1040,6 +1053,29 @@ var (
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 		IsMigrated: true,
 		NewEval:    evalZRANGE,
+	}
+	zpopminCmdMeta = DiceCmdMeta{
+		Name: "ZPOPMIN",
+		Info: `ZPOPMIN key [count]
+		Removes and returns the member with the lowest score from the sorted set at the specified key. 
+		If multiple members have the same score, the one that comes first alphabetically is returned. 
+		You can also specify a count to remove and return multiple members at once. 
+		If the set is empty, it returns an empty result.`,
+		Arity:      -1,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalZPOPMIN,
+	}
+	zrankCmdMeta = DiceCmdMeta{
+		Name: "ZRANK",
+		Info: `ZRANK key member [WITHSCORE]
+		Returns the rank of member in the sorted set stored at key, with the scores ordered from low to high.
+		The rank (or index) is 0-based, which means that the member with the lowest score has rank 0.
+		The optional WITHSCORE argument supplements the command's reply with the score of the element returned.`,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalZRANK,
 	}
 	bitfieldCmdMeta = DiceCmdMeta{
 		Name: "BITFIELD",
@@ -1081,9 +1117,10 @@ var (
 		If the field contains a value of wrong type or specified increment
 		is not parsable as floating point number, then an error occurs.
 		`,
-		Eval:     evalHINCRBYFLOAT,
-		Arity:    -4,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -4,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalHINCRBYFLOAT,
 	}
 	geoAddCmdMeta = DiceCmdMeta{
 		Name:     "GEOADD",
@@ -1165,10 +1202,10 @@ func init() {
 	DiceCmds["ABORT"] = abortCmdMeta
 	DiceCmds["APPEND"] = appendCmdMeta
 	DiceCmds["AUTH"] = authCmdMeta
-	DiceCmds["BFADD"] = bfaddCmdMeta
-	DiceCmds["BFEXISTS"] = bfexistsCmdMeta
-	DiceCmds["BFINFO"] = bfinfoCmdMeta
-	DiceCmds["BFINIT"] = bfinitCmdMeta
+	DiceCmds["BF.ADD"] = bfaddCmdMeta
+	DiceCmds["BF.EXISTS"] = bfexistsCmdMeta
+	DiceCmds["BF.INFO"] = bfinfoCmdMeta
+	DiceCmds["BF.RESERVE"] = bfreserveCmdMeta
 	DiceCmds["BGREWRITEAOF"] = bgrewriteaofCmdMeta
 	DiceCmds["BITCOUNT"] = bitCountCmdMeta
 	DiceCmds["BITFIELD"] = bitfieldCmdMeta
@@ -1280,6 +1317,8 @@ func init() {
 	DiceCmds["TYPE"] = typeCmdMeta
 	DiceCmds["ZADD"] = zaddCmdMeta
 	DiceCmds["ZRANGE"] = zrangeCmdMeta
+	DiceCmds["ZPOPMIN"] = zpopminCmdMeta
+	DiceCmds["ZRANK"] = zrankCmdMeta
 	DiceCmds["JSON.STRAPPEND"] = jsonstrappendCmdMeta
 	DiceCmds["CMS.INITBYDIM"] = cmsInitByDimCmdMeta
 	DiceCmds["CMS.INITBYPROB"] = cmsInitByProbCmdMeta
