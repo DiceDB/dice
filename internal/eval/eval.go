@@ -1366,7 +1366,7 @@ func executeBitfieldOps(value *ByteArray, ops []utils.BitFieldOp) []interface{} 
 // evalRANDOMKEY returns a random key from the currently selected database.
 func evalRANDOMKEY(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) > 0 {
-		return &EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrArity("RANDOMKEY")))}
+		return &EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("RANDOMKEY")}
 	}
 
 	availKeys, err := store.Keys("*")

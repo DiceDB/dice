@@ -1601,7 +1601,7 @@ func BenchmarkEvalJSONOBJLEN(b *testing.B) {
 func testEvalRANDOMKEY(t *testing.T, store *dstore.Store) {
 	t.Run("invalid no of args", func(t *testing.T) {
 		response := evalRANDOMKEY([]string{"INVALID_ARG"}, store)
-		expectedErr := errors.New("-ERR wrong number of arguments for 'randomkey' command\r\n")
+		expectedErr := diceerrors.ErrWrongArgumentCount("RANDOMKEY")
 
 		assert.Equal(t, nil, response.Result)
 		assert.EqualError(t, response.Error, expectedErr.Error())
