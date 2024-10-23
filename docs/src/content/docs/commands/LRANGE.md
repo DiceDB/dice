@@ -38,7 +38,7 @@ LRANGE key start stop
 
 ## Behaviour
 
- - If the key exists and is associated with a list, the `LRANGE` command returns returns the specified elements of the list stored at key.
+ - If the key exists and is associated with a list, the `LRANGE` command returns the specified elements of the list stored at key.
  - If the key does not exist, the `LRANGE` command returns an empty array.
  - If the key exists but is not associated with a list, an error is returned.
 
