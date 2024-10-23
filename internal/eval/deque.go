@@ -531,7 +531,6 @@ func sanitizeStopIndex(q DequeI, stop int64) int64 {
 func (q *Deque) LRange(start, stop int64) ([]string, error) {
 	start = sanitizeStartIndex(q, start)
 	stop = sanitizeStopIndex(q, stop)
-	fmt.Printf("executing LRange with start: %d, stop: %d\n", start, stop)
 	if start > stop {
 		return []string{}, nil
 	}
