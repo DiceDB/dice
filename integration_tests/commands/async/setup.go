@@ -23,7 +23,6 @@ import (
 
 type TestServerOptions struct {
 	Port       int
-	Logger     *slog.Logger
 	MaxClients int32
 }
 
@@ -122,9 +121,9 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	var err error
 	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Memory.KeysLimit)
 	gec := make(chan error)
-	shardManager := shard.NewShardManager(1, watchChan, nil, gec, opt.Logger)
+	shardManager := shard.NewShardManager(1, watchChan, nil, gec)
 	// Initialize the AsyncServer
-	testServer := server.NewAsyncServer(shardManager, watchChan, opt.Logger)
+	testServer := server.NewAsyncServer(shardManager, watchChan)
 
 	// Try to bind to a port with a maximum of `totalRetries` retries.
 	for i := 0; i < totalRetries; i++ {
@@ -133,19 +132,19 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 		}
 
 		if err.Error() == "address already in use" {
-			opt.Logger.Info("Port already in use, trying port",
+			slog.Info("Port already in use, trying port",
 				slog.Int("port", config.DiceConfig.AsyncServer.Port),
 				slog.Int("new_port", config.DiceConfig.AsyncServer.Port+1),
 			)
 			config.DiceConfig.AsyncServer.Port++
 		} else {
-			opt.Logger.Error("Failed to bind port", slog.Any("error", err))
+			slog.Error("Failed to bind port", slog.Any("error", err))
 			return
 		}
 	}
 
 	if err != nil {
-		opt.Logger.Error("Failed to bind to a port after retries",
+		slog.Error("Failed to bind to a port after retries",
 			slog.Any("error", err),
 			slog.Int("retry_count", totalRetries),
 		)
@@ -172,7 +171,7 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 				cancelShardManager()
 				return
 			}
-			opt.Logger.Error("Test server encountered an error", slog.Any("error", err))
+			slog.Error("Test server encountered an error", slog.Any("error", err))
 			os.Exit(1)
 		}
 	}()

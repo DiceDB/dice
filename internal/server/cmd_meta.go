@@ -62,6 +62,10 @@ var (
 		Cmd:     "SETEX",
 		CmdType: SingleShard,
 	}
+	getrangeCmdMeta = CmdsMeta{
+		Cmd:     "GETRANGE",
+		CmdType: SingleShard,
+	}
 	hexistsCmdMeta = CmdsMeta{
 		Cmd:     "HEXISTS",
 		CmdType: SingleShard,
@@ -82,6 +86,94 @@ var (
 		Cmd:     "ZRANGE",
 		CmdType: SingleShard,
 	}
+	appendCmdMeta = CmdsMeta{
+		Cmd:     "APPEND",
+		CmdType: SingleShard,
+	}
+	zpopminCmdMeta = CmdsMeta{
+		Cmd:     "ZPOPMIN",
+		CmdType: SingleShard,
+	}
+	zrankCmdMeta = CmdsMeta{
+		Cmd:     "ZRANK",
+		CmdType: SingleShard,
+	}
+	pfaddCmdMeta = CmdsMeta{
+		Cmd:     "PFADD",
+		CmdType: SingleShard,
+	}
+	pfcountCmdMeta = CmdsMeta{
+		Cmd:     "PFCOUNT",
+		CmdType: SingleShard,
+	}
+	pfmergeCmdMeta = CmdsMeta{
+		Cmd:     "PFMERGE",
+		CmdType: SingleShard,
+	}
+
+	jsonclearCmdMeta = CmdsMeta{
+		Cmd:     "JSON.CLEAR",
+		CmdType: SingleShard,
+	}
+
+	jsonstrlenCmdMeta = CmdsMeta{
+		Cmd:     "JSON.STRLEN",
+		CmdType: SingleShard,
+	}
+
+	jsonobjlenCmdMeta = CmdsMeta{
+		Cmd:     "JSON.OBJLEN",
+		CmdType: SingleShard,
+	}
+
+	incrCmdMeta = CmdsMeta{
+		Cmd:     "INCR",
+		CmdType: SingleShard,
+	}
+	incrByCmdMeta = CmdsMeta{
+		Cmd:     "INCRBY",
+		CmdType: SingleShard,
+	}
+	decrCmdMeta = CmdsMeta{
+		Cmd:     "DECR",
+		CmdType: SingleShard,
+	}
+	decrByCmdMeta = CmdsMeta{
+		Cmd:     "DECRBY",
+		CmdType: SingleShard,
+	}
+	incrByFloatCmdMeta = CmdsMeta{
+		Cmd:     "INCRBYFLOAT",
+		CmdType: SingleShard,
+	}
+	hincrbyCmdMeta = CmdsMeta{
+		Cmd:     "HINCRBY",
+		CmdType: SingleShard,
+	}
+	hincrbyfloatCmdMeta = CmdsMeta{
+		Cmd:     "HINCRBYFLOAT",
+		CmdType: SingleShard,
+	}
+	hrandfieldCmdMeta = CmdsMeta{
+		Cmd:     "HRANDFIELD",
+		CmdType: SingleShard,
+	}
+	bfaddCmdMeta = CmdsMeta{
+		Cmd:     "BF.ADD",
+		CmdType: SingleShard,
+	}
+	bfreserveCmdMeta = CmdsMeta{
+		Cmd:     "BF.RESERVE",
+		CmdType: SingleShard,
+	}
+	bfexistsCmdMeta = CmdsMeta{
+		Cmd:     "BF.EXISTS",
+		CmdType: SingleShard,
+	}
+	bfinfoCmdMeta = CmdsMeta{
+		Cmd:     "BF.INFO",
+		CmdType: SingleShard,
+	}
 
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
@@ -99,10 +191,46 @@ func init() {
 	WorkerCmdsMeta["GET"] = getCmdMeta
 	WorkerCmdsMeta["GETSET"] = getsetCmdMeta
 	WorkerCmdsMeta["SETEX"] = setexCmdMeta
+	WorkerCmdsMeta["GETRANGE"] = getrangeCmdMeta
+	WorkerCmdsMeta["APPEND"] = appendCmdMeta
+	WorkerCmdsMeta["JSON.CLEAR"] = jsonclearCmdMeta
+	WorkerCmdsMeta["JSON.STRLEN"] = jsonstrlenCmdMeta
+	WorkerCmdsMeta["JSON.OBJLEN"] = jsonobjlenCmdMeta
 	WorkerCmdsMeta["HEXISTS"] = hexistsCmdMeta
 	WorkerCmdsMeta["HKEYS"] = hkeysCmdMeta
 	WorkerCmdsMeta["HVALS"] = hvalsCmdMeta
 	WorkerCmdsMeta["ZADD"] = zaddCmdMeta
 	WorkerCmdsMeta["ZRANGE"] = zrangeCmdMeta
+	WorkerCmdsMeta["ZRANK"] = zrankCmdMeta
+	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
+	WorkerCmdsMeta["ZPOPMIN"] = zpopminCmdMeta
+	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
+	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
+	WorkerCmdsMeta["INCR"] = incrCmdMeta
+	WorkerCmdsMeta["INCRBY"] = incrByCmdMeta
+	WorkerCmdsMeta["INCR"] = incrCmdMeta
+	WorkerCmdsMeta["DECR"] = decrCmdMeta
+	WorkerCmdsMeta["DECRBY"] = decrByCmdMeta
+	WorkerCmdsMeta["INCRBYFLOAT"] = incrByFloatCmdMeta
+	WorkerCmdsMeta["HINCRBY"] = hincrbyCmdMeta
+	WorkerCmdsMeta["HINCRBYFLOAT"] = hincrbyfloatCmdMeta
+	WorkerCmdsMeta["HRANDFIELD"] = hrandfieldCmdMeta
+	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
+	WorkerCmdsMeta["ZPOPMIN"] = zpopminCmdMeta
+	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
+	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
+	WorkerCmdsMeta["HINCRBY"] = hincrbyCmdMeta
+	WorkerCmdsMeta["HINCRBYFLOAT"] = hincrbyfloatCmdMeta
+	WorkerCmdsMeta["HRANDFIELD"] = hrandfieldCmdMeta
+	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
+	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
+	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
+	WorkerCmdsMeta["HINCRBY"] = hincrbyCmdMeta
+	WorkerCmdsMeta["HINCRBYFLOAT"] = hincrbyfloatCmdMeta
+	WorkerCmdsMeta["HRANDFIELD"] = hrandfieldCmdMeta
+	WorkerCmdsMeta["BF.ADD"] = bfaddCmdMeta
+	WorkerCmdsMeta["BF.RESERVE"] = bfreserveCmdMeta
+	WorkerCmdsMeta["BF.EXISTS"] = bfexistsCmdMeta
+	WorkerCmdsMeta["BF.INFO"] = bfinfoCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }

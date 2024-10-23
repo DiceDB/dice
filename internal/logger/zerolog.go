@@ -24,7 +24,7 @@ func newZerologHandler(logger *zerolog.Logger) *ZerologHandler {
 //
 //nolint:gocritic // The slog.Record struct triggers hugeParam, but we don't control the interface (it's a standard library one)
 func (h *ZerologHandler) Handle(_ context.Context, record slog.Record) error {
-	event := h.logger.WithLevel(mapLevel(record.Level))
+	event := h.logger.WithLevel(toZerologLevel(record.Level))
 	record.Attrs(func(attr slog.Attr) bool {
 		addAttrToZerolog(attr, event)
 		return true
@@ -35,7 +35,7 @@ func (h *ZerologHandler) Handle(_ context.Context, record slog.Record) error {
 
 // Enabled implements the slog.Handler interface
 func (h *ZerologHandler) Enabled(_ context.Context, level slog.Level) bool {
-	return h.logger.GetLevel() <= mapLevel(level)
+	return h.logger.GetLevel() <= toZerologLevel(level)
 }
 
 // WithAttrs adds attributes to the log event
@@ -104,8 +104,8 @@ func addAttrToZerolog[T interface {
 	}
 }
 
-// mapLevel maps slog levels to zerolog levels
-func mapLevel(level slog.Level) zerolog.Level {
+// toZerologLevel maps slog levels to zerolog levels
+func toZerologLevel(level slog.Level) zerolog.Level {
 	switch {
 	case level == slog.LevelDebug:
 		return zerolog.DebugLevel

@@ -17,15 +17,6 @@ func ExecuteCommand(c *cmd.DiceDBCmd, client *comm.Client, store *dstore.Store, 
 		return &EvalResponse{Result: diceerrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", c.Cmd, strings.Join(c.Args, " ")), Error: nil}
 	}
 
-	// Till the time we refactor to handle QWATCH differently for websocket
-	if websocketOp {
-		if diceCmd.IsMigrated {
-			return diceCmd.NewEval(c.Args, store)
-		}
-
-		return &EvalResponse{Result: diceCmd.Eval(c.Args, store), Error: nil}
-	}
-
 	// Temporary logic till we move all commands to new eval logic.
 	// MigratedDiceCmds map contains refactored eval commands
 	// For any command we will first check in the existing map
@@ -39,9 +30,9 @@ func ExecuteCommand(c *cmd.DiceDBCmd, client *comm.Client, store *dstore.Store, 
 	switch diceCmd.Name {
 	// Old implementation kept as it is, but we will be moving
 	// to the new implementation soon for all commands
-	case "SUBSCRIBE", "QWATCH":
-		return &EvalResponse{Result: EvalQWATCH(c.Args, httpOp, client, store), Error: nil}
-	case "UNSUBSCRIBE", "QUNWATCH":
+	case "SUBSCRIBE", "Q.WATCH":
+		return &EvalResponse{Result: EvalQWATCH(c.Args, httpOp, websocketOp, client, store), Error: nil}
+	case "UNSUBSCRIBE", "Q.UNWATCH":
 		return &EvalResponse{Result: EvalQUNWATCH(c.Args, httpOp, client), Error: nil}
 	case auth.Cmd:
 		return &EvalResponse{Result: EvalAUTH(c.Args, client), Error: nil}
