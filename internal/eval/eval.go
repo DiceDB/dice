@@ -64,7 +64,6 @@ type EvalResponse struct {
  * @param {interface{}} result - The result of the store operation.
  * @returns {EvalResponse} A new EvalResponse with the given result and nil error.
  */
-//go:inline
 func makeEvalResult(result interface{}) *EvalResponse {
 	return &EvalResponse{
 		Result: result,
@@ -78,7 +77,6 @@ func makeEvalResult(result interface{}) *EvalResponse {
  * @param {error} err - The error that occurred during the store operation.
  * @returns {EvalResponse} A new EvalResponse with the given error and nil result.
  */
-//go:inline
 func makeEvalError(err error) *EvalResponse {
 	return &EvalResponse{
 		Result: nil,
