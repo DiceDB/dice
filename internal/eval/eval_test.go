@@ -45,7 +45,6 @@ func setupTest(store *dstore.Store) *dstore.Store {
 func TestEval(t *testing.T) {
 	store := dstore.NewStore(nil, nil)
 
-	testEvalMSET(t, store)
 	testEvalECHO(t, store)
 	testEvalHELLO(t, store)
 	testEvalSET(t, store)
@@ -367,19 +366,6 @@ func testEvalGETEX(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalGETEX, store)
-}
-
-func testEvalMSET(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"nil value":         {input: nil, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
-		"empty array":       {input: []string{}, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
-		"one value":         {input: []string{"KEY"}, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
-		"key val pair":      {input: []string{"KEY", "VAL"}, output: clientio.RespOK},
-		"odd key val pair":  {input: []string{"KEY", "VAL", "KEY2"}, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
-		"even key val pair": {input: []string{"KEY", "VAL", "KEY2", "VAL2"}, output: clientio.RespOK},
-	}
-
-	runEvalTests(t, tests, evalMSET, store)
 }
 
 func testEvalGET(t *testing.T, store *dstore.Store) {
@@ -3258,14 +3244,6 @@ func runMigratedEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc 
 	}
 }
 
-func BenchmarkEvalMSET(b *testing.B) {
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		store := dstore.NewStore(nil, nil)
-		evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"}, store)
-	}
-}
-
 func BenchmarkEvalHSET(b *testing.B) {
 	store := dstore.NewStore(nil, nil)
 	for i := 0; i < b.N; i++ {
@@ -4630,14 +4608,6 @@ func testEvalHSETNX(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalHSETNX, store)
-}
-
-func TestMSETConsistency(t *testing.T) {
-	store := dstore.NewStore(nil, nil)
-	evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"}, store)
-
-	assert.Equal(t, "VAL", store.Get("KEY").Value)
-	assert.Equal(t, "VAL2", store.Get("KEY2").Value)
 }
 
 func BenchmarkEvalHINCRBY(b *testing.B) {

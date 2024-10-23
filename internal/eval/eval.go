@@ -127,41 +127,6 @@ func EvalAUTH(args []string, c *comm.Client) []byte {
 	return clientio.RespOK
 }
 
-// evalMSET puts multiple <key, value> pairs in db as in the args
-// MSET is atomic, so all given keys are set at once.
-// args must contain key and value pairs.
-
-// Returns encoded error response if at least a <key, value> pair is not part of args
-// Returns encoded OK RESP once new entries are added
-// If the key already exists then the value will be overwritten and expiry will be discarded
-func evalMSET(args []string, store *dstore.Store) []byte {
-	if len(args) <= 1 || len(args)%2 != 0 {
-		return diceerrors.NewErrArity("MSET")
-	}
-
-	// MSET does not have expiry support
-	var exDurationMs int64 = -1
-
-	insertMap := make(map[string]*object.Obj, len(args)/2)
-	for i := 0; i < len(args); i += 2 {
-		key, value := args[i], args[i+1]
-		oType, oEnc := deduceTypeEncoding(value)
-		var storedValue interface{}
-		switch oEnc {
-		case object.ObjEncodingInt:
-			storedValue, _ = strconv.ParseInt(value, 10, 64)
-		case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
-			storedValue = value
-		default:
-			return clientio.Encode(fmt.Errorf("ERR unsupported encoding: %d", oEnc), false)
-		}
-		insertMap[key] = store.NewObj(storedValue, exDurationMs, oType, oEnc)
-	}
-
-	store.PutAll(insertMap)
-	return clientio.RespOK
-}
-
 // evalDBSIZE returns the number of keys in the database.
 func evalDBSIZE(args []string, store *dstore.Store) []byte {
 	if len(args) > 0 {
@@ -2436,50 +2401,6 @@ func evalCommandInfo(args []string) []byte {
 	return clientio.Encode(result, false)
 }
 
-func evalRename(args []string, store *dstore.Store) []byte {
-	if len(args) != 2 {
-		return diceerrors.NewErrArity("RENAME")
-	}
-	sourceKey := args[0]
-	destKey := args[1]
-
-	// if Source key does not exist, return RESP encoded nil
-	sourceObj := store.Get(sourceKey)
-	if sourceObj == nil {
-		return diceerrors.NewErrWithMessage(diceerrors.NoKeyErr)
-	}
-
-	// if Source and Destination Keys are same return RESP encoded ok
-	if sourceKey == destKey {
-		return clientio.RespOK
-	}
-
-	if ok := store.Rename(sourceKey, destKey); ok {
-		return clientio.RespOK
-	}
-	return clientio.RespNIL
-}
-
-// The MGET command returns an array of RESP values corresponding to the provided keys.
-// For each key, if the key is expired or does not exist, the response will be response.RespNIL;
-// otherwise, the response will be the RESP value of the key.
-// MGET is atomic, it retrieves all values at once
-func evalMGET(args []string, store *dstore.Store) []byte {
-	if len(args) < 1 {
-		return diceerrors.NewErrArity("MGET")
-	}
-	values := store.GetAll(args)
-	resp := make([]interface{}, len(args))
-	for i, obj := range values {
-		if obj == nil {
-			resp[i] = clientio.RespNIL
-		} else {
-			resp[i] = obj.Value
-		}
-	}
-	return clientio.Encode(resp, false)
-}
-
 func evalEXISTS(args []string, store *dstore.Store) []byte {
 	if len(args) == 0 {
 		return diceerrors.NewErrArity("EXISTS")
@@ -2518,55 +2439,6 @@ func evalPersist(args []string, store *dstore.Store) []byte {
 	// If the object exists, remove the expiration time
 	dstore.DelExpiry(obj, store)
 
-	return clientio.RespOne
-}
-
-func evalCOPY(args []string, store *dstore.Store) []byte {
-	if len(args) < 2 {
-		return diceerrors.NewErrArity("COPY")
-	}
-
-	isReplace := false
-
-	sourceKey := args[0]
-	destinationKey := args[1]
-	sourceObj := store.Get(sourceKey)
-	if sourceObj == nil {
-		return clientio.RespZero
-	}
-
-	for i := 2; i < len(args); i++ {
-		arg := strings.ToUpper(args[i])
-		if arg == "REPLACE" {
-			isReplace = true
-		}
-	}
-
-	if isReplace {
-		store.Del(destinationKey)
-	}
-
-	destinationObj := store.Get(destinationKey)
-	if destinationObj != nil {
-		return clientio.RespZero
-	}
-
-	copyObj := sourceObj.DeepCopy()
-	if copyObj == nil {
-		return clientio.RespZero
-	}
-
-	exp, ok := dstore.GetExpiry(sourceObj, store)
-	var exDurationMs int64 = -1
-	if ok {
-		exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
-	}
-
-	store.Put(destinationKey, copyObj)
-
-	if exDurationMs > 0 {
-		store.SetExpiry(copyObj, exDurationMs)
-	}
 	return clientio.RespOne
 }
 

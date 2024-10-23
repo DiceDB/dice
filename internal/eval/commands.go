@@ -103,17 +103,6 @@ var (
 		Arity:    2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
-	msetCmdMeta = DiceCmdMeta{
-		Name: "MSET",
-		Info: `MSET sets multiple keys to multiple values in the db
-		args should contain an even number of elements
-		each pair of elements will be treated as <key, value> pair
-		Returns encoded error response if the number of arguments is not even
-		Returns encoded OK RESP once all entries are added`,
-		Eval:     evalMSET,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 2, LastKey: -1},
-	}
 	jsonsetCmdMeta = DiceCmdMeta{
 		Name: "JSON.SET",
 		Info: `JSON.SET key path json-string
@@ -531,27 +520,12 @@ var (
 		Info: "KEYS command is used to get all the keys in the database. Complexity is O(n) where n is the number of keys in the database.",
 		Eval: evalKeys,
 	}
-	MGetCmdMeta = DiceCmdMeta{
-		Name: "MGET",
-		Info: `The MGET command returns an array of RESP values corresponding to the provided keys.
-		For each key, if the key is expired or does not exist, the response will be RespNIL;
-		otherwise, the response will be the RESP value of the key.
-		`,
-		Eval:     evalMGET,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1, LastKey: -1},
-	}
 	persistCmdMeta = DiceCmdMeta{
 		Name: "PERSIST",
 		Info: "PERSIST removes the expiration from a key",
 		Eval: evalPersist,
 	}
-	copyCmdMeta = DiceCmdMeta{
-		Name:  "COPY",
-		Info:  `COPY command copies the value stored at the source key to the destination key.`,
-		Eval:  evalCOPY,
-		Arity: -2,
-	}
+
 	decrCmdMeta = DiceCmdMeta{
 		Name: "DECR",
 		Info: `DECR decrements the value of the specified key in args by 1,
@@ -588,12 +562,7 @@ var (
 		Return value is the number of keys existing.`,
 		Eval: evalEXISTS,
 	}
-	renameCmdMeta = DiceCmdMeta{
-		Name:  "RENAME",
-		Info:  "Renames a key and overwrites the destination",
-		Eval:  evalRename,
-		Arity: 3,
-	}
+
 	getexCmdMeta = DiceCmdMeta{
 		Name: "GETEX",
 		Info: `Get the value of key and optionally set its expiration.
@@ -1160,7 +1129,6 @@ func init() {
 	DiceCmds["BITPOS"] = bitposCmdMeta
 	DiceCmds["CLIENT"] = clientCmdMeta
 	DiceCmds["COMMAND"] = commandCmdMeta
-	DiceCmds["COPY"] = copyCmdMeta
 	DiceCmds["DBSIZE"] = dbSizeCmdMeta
 	DiceCmds["DECR"] = decrCmdMeta
 	DiceCmds["DECRBY"] = decrByCmdMeta
@@ -1230,8 +1198,6 @@ func init() {
 	DiceCmds["LPOP"] = lpopCmdMeta
 	DiceCmds["LPUSH"] = lpushCmdMeta
 	DiceCmds["LRU"] = lruCmdMeta
-	DiceCmds["MGET"] = MGetCmdMeta
-	DiceCmds["MSET"] = msetCmdMeta
 	DiceCmds["MULTI"] = MultiCmdMeta
 	DiceCmds["OBJECT"] = objectCmdMeta
 	DiceCmds["PERSIST"] = persistCmdMeta
@@ -1242,7 +1208,6 @@ func init() {
 	DiceCmds["PTTL"] = pttlCmdMeta
 	DiceCmds["Q.UNWATCH"] = qUnwatchCmdMeta
 	DiceCmds["Q.WATCH"] = qwatchCmdMeta
-	DiceCmds["RENAME"] = renameCmdMeta
 	DiceCmds["RESTORE"] = restorekeyCmdMeta
 	DiceCmds["RPOP"] = rpopCmdMeta
 	DiceCmds["RPUSH"] = rpushCmdMeta

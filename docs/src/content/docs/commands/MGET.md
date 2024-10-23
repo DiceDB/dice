@@ -40,11 +40,13 @@ The `MGET` command returns an array of values corresponding to the specified key
 The `MGET` command can raise errors in the following scenarios:
 
 1. `Wrong type of value or key`:
-   - `Error Message`: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
+
+   - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
    - Occurs when one of the keys holds a value that is not a string.
 
 2. `Invalid syntax`:
-   - `Error Message`: `(error) ERR wrong number of arguments for 'mget' command`
+
+   - Error Message: `(error) ERR wrong number of arguments for 'mget' command`
    - Occurs when the command is issued without any keys.
 
 ## Example Usage

@@ -43,27 +43,9 @@ const (
 
 // Single-shard commands.
 const (
-	CmdSet    = "SET"
-	CmdGet    = "GET"
-	CmdGetSet = "GETSET"
-)
-
-// Multi-shard commands.
-const (
-	CmdMset = "MSET"
-	CmdMget = "MGET"
-)
-
-// Multi-Step-Multi-Shard commands
-const (
-	CmdRename = "RENAME"
-	CmdCopy   = "COPY"
-)
-
-// Watch commands
-const (
-	CmdGetWatch     = "GET.WATCH"
-	CmdZRangeWatch  = "ZRANGE.WATCH"
+	CmdSet          = "SET"
+	CmdGet          = "GET"
+	CmdGetSet       = "GETSET"
 	CmdZPopMin      = "ZPOPMIN"
 	CmdJSONClear    = "JSON.CLEAR"
 	CmdJSONStrlen   = "JSON.STRLEN"
@@ -84,6 +66,24 @@ const (
 	CmdHRandField   = "HRANDFIELD"
 	CmdGetRange     = "GETRANGE"
 	CmdAppend       = "APPEND"
+)
+
+// Multi-shard commands.
+const (
+	CmdMset = "MSET"
+	CmdMget = "MGET"
+)
+
+// Multi-Step-Multi-Shard commands
+const (
+	CmdRename = "RENAME"
+	CmdCopy   = "COPY"
+)
+
+// Watch commands
+const (
+	CmdGetWatch    = "GET.WATCH"
+	CmdZRangeWatch = "ZRANGE.WATCH"
 )
 
 type CmdMeta struct {
@@ -111,7 +111,7 @@ type CmdMeta struct {
 	// is executed. It takes the worker and the original DiceDB command as parameters and
 	// ensures that any required information is retrieved and processed in advance. Use this when set
 	// preProcessingReq = true.
-	preProcessResponse func(worker *BaseWorker, DiceDBCmd *cmd.DiceDBCmd)
+	preProcessResponse func(worker *BaseWorker, DiceDBCmd *cmd.DiceDBCmd) error
 }
 
 var CommandsMeta = map[string]CmdMeta{
