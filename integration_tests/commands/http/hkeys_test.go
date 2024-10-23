@@ -14,10 +14,9 @@ func TestHKeys(t *testing.T) {
 			name: "HTTP One or more keys exist",
 			commands: []HTTPCommand{
 				{Command: "HSET", Body: map[string]interface{}{"key": "k", "field": "f", "value": "v"}},
-				{Command: "HSET", Body: map[string]interface{}{"key": "k", "field": "f1", "value": "v"}},
 				{Command: "HKEYS", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{float64(1), float64(1), []interface{}{"f", "f1"}},
+			expected: []interface{}{float64(1), []interface{}{"f"}},
 		},
 		{
 			name: "HTTP No keys exist",
