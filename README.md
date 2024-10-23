@@ -4,6 +4,7 @@ DiceDB
 <a href="https://dicedb.io">![slatedb.io](https://img.shields.io/badge/site-dicedb.io-00A1FF?style=flat-square)</a>
 <a href="https://discord.gg/6r8uXWtXh7">![Discord](https://img.shields.io/discord/1232385660460204122?style=flat-square)</a>
 <a href="https://dicedb.io/get-started/installation/">![Docs](https://img.shields.io/badge/docs-00A1FF?style=flat-square)</a>
+<a href="https://gurubase.io/g/dicedb"/>![Gurubase](https://img.shields.io/badge/Gurubase-Ask%20DiceDB%20Guru-006BFF)
 
 DiceDB is an in-memory, real-time, and reactive database with Redis and SQL support optimized for modern hardware and building real-time applications.
 
