@@ -228,7 +228,12 @@ func setupFlags() {
 	flag.StringVar(&Host, "host", "0.0.0.0", "host for the dicedb server")
 	flag.IntVar(&Port, "port", 7379, "port for the dicedb server")
 	flag.BoolVar(&EnableHTTP, "enable-http", true, "run server in HTTP mode as well")
+	flag.BoolVar(&EnableWebsocket, "enable-websocket", false, "enable DiceDB to listen, accept, and process WebSocket")
 	flag.BoolVar(&EnableMultiThreading, "enable-multithreading", false, "run server in multithreading mode")
+	flag.IntVar(&NumShards, "num-shards", -1, "number shards to create. defaults to number of cores")
+
+	flag.BoolVar(&EnableWatch, "enable-watch", false, "enable support for .WATCH commands and real-time reactivity")
+	flag.StringVar(&DiceConfig.Logging.LogLevel, "log-level", "info", "log level, values: info, debug")
 	flag.IntVar(&HTTPPort, "http-port", 8082, "HTTP port for the dicedb server")
 	flag.IntVar(&WebsocketPort, "websocket-port", 8379, "Websocket port for the dicedb server")
 	flag.StringVar(&RequirePass, "requirepass", RequirePass, "enable authentication for the default user")
@@ -366,6 +371,9 @@ func setUpViperConfig(configFilePath string) {
 
 func cmdOverrides() {
 	if err := viper.BindPFlag("Performance.EnableMultiThreading", pflag.Lookup("enable-multithreading")); err != nil {
+		slog.Warn("Unable to bind 'enable-multithreading' flag")
+	}
+	if err := viper.BindPFlag("Performance.EnableProfiling", pflag.Lookup("enable-profiling")); err != nil {
 		slog.Warn("Unable to bind 'enable-multithreading' flag")
 	}
 	if err := viper.BindPFlag("Auth.Password", pflag.Lookup("requirepass")); err != nil {
