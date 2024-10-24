@@ -5725,7 +5725,7 @@ func testEvalSREM(t *testing.T, store *dstore.Store) {
 		"SREM with non existing key": {
 			input: []string{"myset", "member"},
 			migratedOutput: EvalResponse{
-				Result: 0,
+				Result: clientio.IntegerZero,
 				Error:  nil,
 			},
 		},
@@ -5796,7 +5796,7 @@ func testEvalSCARD(t *testing.T, store *dstore.Store) {
 		"SCARD with non existing key": {
 			input: []string{"mykey"},
 			migratedOutput: EvalResponse{
-				Result: 0,
+				Result: clientio.IntegerZero,
 				Error:  nil,
 			},
 		},
@@ -5806,7 +5806,7 @@ func testEvalSCARD(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"mykey"},
 			migratedOutput: EvalResponse{
-				Result: 0,
+				Result: clientio.IntegerZero,
 				Error:  nil,
 			},
 		},
