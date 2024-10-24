@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/internal/server/resp"
+	"github.com/dicedb/dice/internal/watchmanager"
 	"github.com/dicedb/dice/internal/worker"
 
 	"github.com/dicedb/dice/config"
@@ -122,11 +123,12 @@ func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
 
 	queryWatchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Memory.KeysLimit)
 	cmdWatchChan := make(chan dstore.CmdWatchEvent, config.DiceConfig.Memory.KeysLimit)
+	cmdWatchSubscriptionChan := make(chan watchmanager.WatchSubscription)
 	gec := make(chan error)
 	shardManager := shard.NewShardManager(1, queryWatchChan, cmdWatchChan, gec)
 	workerManager := worker.NewWorkerManager(20000, shardManager)
 	// Initialize the RESP Server
-	testServer := resp.NewServer(shardManager, workerManager, cmdWatchChan, gec)
+	testServer := resp.NewServer(shardManager, workerManager, cmdWatchSubscriptionChan, cmdWatchChan, gec)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	fmt.Println("Starting the test server on port", config.DiceConfig.AsyncServer.Port)

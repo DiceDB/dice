@@ -39,27 +39,30 @@ const (
 
 type Server struct {
 	abstractserver.AbstractServer
-	Host            string
-	Port            int
-	serverFD        int
-	connBacklogSize int
-	workerManager   *worker.WorkerManager
-	shardManager    *shard.ShardManager
-	watchManager    *watchmanager.Manager
-	cmdWatchChan    chan dstore.CmdWatchEvent
-	globalErrorChan chan error
+	Host                     string
+	Port                     int
+	serverFD                 int
+	connBacklogSize          int
+	workerManager            *worker.WorkerManager
+	shardManager             *shard.ShardManager
+	watchManager             *watchmanager.Manager
+	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription
+	cmdWatchChan             chan dstore.CmdWatchEvent
+	globalErrorChan          chan error
 }
 
-func NewServer(shardManager *shard.ShardManager, workerManager *worker.WorkerManager, cmdWatchChan chan dstore.CmdWatchEvent, globalErrChan chan error) *Server {
+func NewServer(shardManager *shard.ShardManager, workerManager *worker.WorkerManager, cmdWatchSubscriptionChan chan watchmanager.WatchSubscription,
+	cmdWatchChan chan dstore.CmdWatchEvent, globalErrChan chan error) *Server {
 	return &Server{
-		Host:            config.DiceConfig.AsyncServer.Addr,
-		Port:            config.DiceConfig.AsyncServer.Port,
-		connBacklogSize: DefaultConnBacklogSize,
-		workerManager:   workerManager,
-		shardManager:    shardManager,
-		watchManager:    watchmanager.NewManager(),
-		cmdWatchChan:    cmdWatchChan,
-		globalErrorChan: globalErrChan,
+		Host:                     config.DiceConfig.AsyncServer.Addr,
+		Port:                     config.DiceConfig.AsyncServer.Port,
+		connBacklogSize:          DefaultConnBacklogSize,
+		workerManager:            workerManager,
+		shardManager:             shardManager,
+		watchManager:             watchmanager.NewManager(cmdWatchSubscriptionChan),
+		cmdWatchChan:             cmdWatchChan,
+		cmdWatchSubscriptionChan: cmdWatchSubscriptionChan,
+		globalErrorChan:          globalErrChan,
 	}
 }
 
@@ -195,7 +198,7 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 			preprocessingChan := make(chan *ops.StoreResponse) // preprocessingChan is specifically for handling responses from shards for commands that require preprocessing
 
 			wID := GenerateUniqueWorkerID()
-			w := worker.NewWorker(wID, responseChan, preprocessingChan, ioHandler, parser, s.shardManager, s.globalErrorChan)
+			w := worker.NewWorker(wID, responseChan, preprocessingChan, s.cmdWatchSubscriptionChan, ioHandler, parser, s.shardManager, s.globalErrorChan)
 
 			// Register the worker with the worker manager
 			err = s.workerManager.RegisterWorker(w)
