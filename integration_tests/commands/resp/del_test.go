@@ -39,11 +39,6 @@ func TestDel(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// deleteTestKeys([]string{"k1", "k2", "k3"}, store)
-			FireCommand(conn, "DEL k1")
-			FireCommand(conn, "DEL k2")
-			FireCommand(conn, "DEL k3")
-
 			for i, cmd := range tc.commands {
 				result := FireCommand(conn, cmd)
 				assert.Equal(t, tc.expected[i], result, "Value mismatch for cmd %s", cmd)

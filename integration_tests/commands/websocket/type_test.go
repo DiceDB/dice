@@ -3,7 +3,7 @@ package websocket
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestType(t *testing.T) {
@@ -28,36 +28,38 @@ func TestType(t *testing.T) {
 		{
 			name:     "TYPE for key with List value",
 			commands: []string{"LPUSH k1 v1", "TYPE k1"},
-			expected: []interface{}{int64(1), "list"},
+			expected: []interface{}{float64(1), "list"},
 		},
 		{
 			name:     "TYPE for key with Set value",
 			commands: []string{"SADD k1 v1", "TYPE k1"},
-			expected: []interface{}{int64(1), "set"},
+			expected: []interface{}{float64(1), "set"},
 		},
 		{
 			name:     "TYPE for key with Hash value",
 			commands: []string{"HSET k1 field1 v1", "TYPE k1"},
-			expected: []interface{}{int64(1), "hash"},
+			expected: []interface{}{float64(1), "hash"},
 		},
 		{
 			name:     "TYPE for key with value created from SETBIT command",
 			commands: []string{"SETBIT k1 1 1", "TYPE k1"},
-			expected: []interface{}{int64(0), "string"},
+			expected: []interface{}{float64(0), "string"},
 		},
 		{
 			name:     "TYPE for key with value created from SETOP command",
-			commands: []string{"SET key1 \"foobar\"", "SET key2 \"abcdef\"", "BITOP AND dest key1 key2", "TYPE dest"},
-			expected: []interface{}{"OK", "OK", int64(6), "string"},
+			commands: []string{"SET key1 foobar", "SET key2 abcdef", "BITOP AND dest key1 key2", "TYPE dest"},
+			expected: []interface{}{"OK", "OK", float64(6), "string"},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			conn := exec.ConnectToServer()
+			exec.FireCommandAndReadResponse(conn, "FLUSHDB")
 			for i, cmd := range tc.commands {
-				result := exec.FireCommand(conn, cmd)
-				assert.DeepEqual(t, tc.expected[i], result)
+				result, err := exec.FireCommandAndReadResponse(conn, cmd)
+				assert.Nil(t, err)
+				assert.Equal(t, tc.expected[i], result)
 			}
 		})
 	}
