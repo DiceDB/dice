@@ -4131,7 +4131,7 @@ func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"command help": {
 			input: []string{"HELP"},
-			output: []byte("*13\r\n" +
+			output: []byte("*15\r\n" +
 				"$64\r\n" +
 				"COMMAND <subcommand> [<arg> [value] [opt] ...]. Subcommands are:\r\n" +
 				"$15\r\n" +
@@ -4150,6 +4150,10 @@ func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
 				"INFO [<command-name> ...]\r\n" +
 				"$140\r\n" +
 				"     Return details about the specified DiceDB commands. If no command names are given, documentation details for all commands are returned.\r\n" +
+				"$25\r\n" +
+				"DOCS [<command-name> ...]\r\n" +
+				"$147\r\n" +
+				"\tReturn documentation details about multiple diceDB commands.\n\tIf no command names are given, documentation details for all\n\tcommands are returned.\r\n" +
 				"$22\r\n" +
 				"GETKEYS <full-command>\r\n" +
 				"$48\r\n" +
@@ -4165,19 +4169,19 @@ func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
 		},
 		"command info valid command SET": {
 			input:  []string{"INFO", "SET"},
-			output: []byte("*1\r\n*5\r\n$3\r\nSET\r\n:-3\r\n:1\r\n:0\r\n:0\r\n"),
+			output: []byte("*1\r\n*6\r\n$3\r\nset\r\n:-3\r\n:1\r\n:0\r\n:0\r\n*0\r\n"),
 		},
 		"command info valid command GET": {
 			input:  []string{"INFO", "GET"},
-			output: []byte("*1\r\n*5\r\n$3\r\nGET\r\n:2\r\n:1\r\n:0\r\n:0\r\n"),
+			output: []byte("*1\r\n*6\r\n$3\r\nget\r\n:2\r\n:1\r\n:0\r\n:0\r\n*0\r\n"),
 		},
 		"command info valid command PING": {
 			input:  []string{"INFO", "PING"},
-			output: []byte("*1\r\n*5\r\n$4\r\nPING\r\n:-1\r\n:0\r\n:0\r\n:0\r\n"),
+			output: []byte("*1\r\n*6\r\n$4\r\nping\r\n:-1\r\n:0\r\n:0\r\n:0\r\n*0\r\n"),
 		},
 		"command info multiple valid commands": {
 			input:  []string{"INFO", "SET", "GET"},
-			output: []byte("*2\r\n*5\r\n$3\r\nSET\r\n:-3\r\n:1\r\n:0\r\n:0\r\n*5\r\n$3\r\nGET\r\n:2\r\n:1\r\n:0\r\n:0\r\n"),
+			output: []byte("*2\r\n*6\r\n$3\r\nset\r\n:-3\r\n:1\r\n:0\r\n:0\r\n*0\r\n*6\r\n$3\r\nget\r\n:2\r\n:1\r\n:0\r\n:0\r\n*0\r\n"),
 		},
 		"command info invalid command": {
 			input:  []string{"INFO", "INVALID_CMD"},
@@ -4185,7 +4189,7 @@ func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
 		},
 		"command info mixture of valid and invalid commands": {
 			input:  []string{"INFO", "SET", "INVALID_CMD"},
-			output: []byte("*2\r\n*5\r\n$3\r\nSET\r\n:-3\r\n:1\r\n:0\r\n:0\r\n$-1\r\n"),
+			output: []byte("*2\r\n*6\r\n$3\r\nset\r\n:-3\r\n:1\r\n:0\r\n:0\r\n*0\r\n$-1\r\n"),
 		},
 		"command count with wrong number of arguments": {
 			input:  []string{"COUNT", "EXTRA-ARGS"},
@@ -4214,6 +4218,79 @@ func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
 		"command getkeys with an invalid number of arguments for a command": {
 			input:  []string{"GETKEYS", "MSET", "key1"},
 			output: []byte("-ERR invalid number of arguments specified for command\r\n"),
+		},
+		"command docs valid command SET": {
+			input: []string{"DOCS", "SET"},
+			output: []byte("*1\r\n*2\r\n$3\r\nset\r\n*10\r\n$7\r\nsummary\r\n$489\r\n" +
+				"SET puts a new <key, value> pair in db as in the args\n" +
+				"\t\targs must contain key and value.\n" +
+				"\t\targs can also contain multiple options -\n" +
+				"\t\tEX or ex which will set the expiry time(in secs) for the key\n" +
+				"\t\tReturns encoded error response if at least a <key, value> pair is not part of args\n" +
+				"\t\tReturns encoded error response if expiry tme value in not integer\n" +
+				"\t\tReturns encoded OK RESP once new entry is added\n" +
+				"\t\tIf the key already exists then the value will be overwritten and expiry will be discarded\r\n" +
+				"$5\r\narity\r\n" +
+				":-3\r\n$10\r\nbeginIndex\r\n:1\r\n$9\r\nlastIndex\r\n:0\r\n$4\r\nstep\r\n:0\r\n"),
+		},
+		"command docs valid command GET": {
+			input: []string{"DOCS", "GET"},
+			output: []byte(
+				"*1\r\n*2\r\n$3\r\nget\r\n*10\r\n$7\r\nsummary\r\n$210\r\n" +
+					"GET returns the value for the queried key in args\n" +
+					"\t\tThe key should be the only param in args\n" +
+					"\t\tThe RESP value of the key is encoded and then returned\n" +
+					"\t\tGET returns RespNIL if key is expired or it does not exist\r\n" +
+					"$5\r\narity\r\n:2\r\n$10\r\nbeginIndex\r\n" +
+					":1\r\n$9\r\nlastIndex\r\n:0\r\n$4\r\nstep\r\n:0\r\n"),
+		},
+		"command docs valid command PING": {
+			input: []string{"DOCS", "PING"},
+			output: []byte("*1\r\n*2\r\n$4\r\nping\r\n*10\r\n$7\r\nsummary\r\n$111\r\nPING returns with an encoded \"PONG\"" +
+				" If any message is added with the ping command,the message will be returned.\r\n" +
+				"$5\r\narity\r\n:-1\r\n$10\r\nbeginIndex\r\n:0\r\n$9\r\nlastIndex\r\n:0\r\n$4\r\nstep\r\n:0\r\n"),
+		},
+		"command docs multiple valid commands": {
+			input: []string{"DOCS", "SET", "GET"},
+			output: []byte("*2\r\n*2\r\n$3\r\nset\r\n*10\r\n$7\r\n" +
+				"summary\r\n$489\r\n" +
+				"SET puts a new <key, value> pair in db as in the args\n" +
+				"\t\targs must contain key and value.\n" +
+				"\t\targs can also contain multiple options -\n" +
+				"\t\tEX or ex which will set the expiry time(in secs) for the key\n" +
+				"\t\tReturns encoded error response if at least a <key, value> pair is not part of args\n" +
+				"\t\tReturns encoded error response if expiry tme value in not integer\n" +
+				"\t\tReturns encoded OK RESP once new entry is added\n" +
+				"\t\tIf the key already exists then the value will be overwritten and expiry will be discarded\r\n" +
+				"$5\r\narity\r\n" +
+				":-3\r\n$10\r\nbeginIndex\r\n:1\r\n$9\r\nlastIndex\r\n:0\r\n$4\r\nstep\r\n:0\r\n" +
+				"*2\r\n$3\r\nget\r\n*10\r\n$7\r\nsummary\r\n$210\r\n" +
+				"GET returns the value for the queried key in args\n" +
+				"\t\tThe key should be the only param in args\n" +
+				"\t\tThe RESP value of the key is encoded and then returned\n" +
+				"\t\tGET returns RespNIL if key is expired or it does not exist\r\n$5\r\narity\r\n" +
+				":2\r\n$10\r\nbeginIndex\r\n:1\r\n$9\r\nlastIndex\r\n:0\r\n$4\r\nstep\r\n:0\r\n"),
+		},
+		"command docs invalid command": {
+			input:  []string{"DOCS", "INVALID_CMD"},
+			output: []byte("*0\r\n"),
+		},
+		"command docs mixture of valid and invalid commands": {
+			input: []string{"DOCS", "SET", "INVALID_CMD"},
+			output: []byte("*1\r\n*2\r\n$3\r\nset\r\n*10\r\n$7\r\n" +
+				"summary\r\n$489\r\nSET puts a new <key, value> pair in db as in the args\n" +
+				"\t\targs must contain key and value.\n" +
+				"\t\targs can also contain multiple options -\n" +
+				"\t\tEX or ex which will set the expiry time(in secs) for the key\n" +
+				"\t\tReturns encoded error response if at least a <key, value> pair is not part of args\n" +
+				"\t\tReturns encoded error response if expiry tme value in not integer\n" +
+				"\t\tReturns encoded OK RESP once new entry is added\n" +
+				"\t\tIf the key already exists then the value will be overwritten and expiry will be discarded\r\n" +
+				"$5\r\narity\r\n:-3\r\n$10\r\nbeginIndex\r\n:1\r\n$9\r\nlastIndex\r\n:0\r\n$4\r\nstep\r\n:0\r\n"),
+		},
+		"command docs unknown command": {
+			input:  []string{"UNKNOWN"},
+			output: []byte("-ERR unknown subcommand 'UNKNOWN'. Try COMMAND HELP.\r\n"),
 		},
 	}
 
