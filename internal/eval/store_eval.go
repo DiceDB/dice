@@ -676,7 +676,7 @@ func evalZRANK(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	if withScore {
-		scoreStr := strconv.FormatFloat(score, 'f', -1, 64) 
+		scoreStr := strconv.FormatFloat(score, 'f', -1, 64)
 		return &EvalResponse{
 			Result: []interface{}{rank, scoreStr},
 			Error:  nil,
@@ -685,6 +685,39 @@ func evalZRANK(args []string, store *dstore.Store) *EvalResponse {
 
 	return &EvalResponse{
 		Result: rank,
+		Error:  nil,
+	}
+}
+
+// evalZCARD returns the cardinality (number of elements) of the sorted set stored at key.
+// Returns 0 if the key does not exist.
+func evalZCARD(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 || len(args) > 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("ZCARD"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	sortedSet, err := sortedset.FromObject(obj)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+	return &EvalResponse{
+		Result: int64(sortedSet.Len()),
 		Error:  nil,
 	}
 }
@@ -1842,7 +1875,7 @@ func evalHSCAN(args []string, store *dstore.Store) *EvalResponse {
 		Error:  nil,
 	}
 }
-  
+
 // evalBF.RESERVE evaluates the BF.RESERVE command responsible for initializing a
 // new bloom filter and allocation it's relevant parameters based on given inputs.
 // If no params are provided, it uses defaults.

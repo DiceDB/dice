@@ -202,3 +202,8 @@ func (ss *Set) Get(member string) (float64, bool) {
 	score, exists := ss.memberMap[member]
 	return score, exists
 }
+
+func (ss *Set) Len() int {
+	cardinality := len(ss.memberMap)
+	return cardinality
+}

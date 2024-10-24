@@ -1128,6 +1128,15 @@ var (
 		IsMigrated: true,
 		NewEval:    evalZRANK,
 	}
+	zcardCmdMeta = DiceCmdMeta{
+		Name: "ZCARD",
+		Info: `ZCARD key
+		Returns the sorted set cardinality (number of elements) of the sorted set stored at key.`,
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalZCARD,
+	}
 	bitfieldCmdMeta = DiceCmdMeta{
 		Name: "BITFIELD",
 		Info: `The command treats a string as an array of bits as well as bytearray data structure,
@@ -1327,6 +1336,7 @@ func init() {
 	DiceCmds["ZRANGE"] = zrangeCmdMeta
 	DiceCmds["ZPOPMIN"] = zpopminCmdMeta
 	DiceCmds["ZRANK"] = zrankCmdMeta
+	DiceCmds["ZCARD"] = zcardCmdMeta
 	DiceCmds["JSON.STRAPPEND"] = jsonstrappendCmdMeta
 }
 

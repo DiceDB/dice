@@ -86,6 +86,10 @@ var (
 		Cmd:     "ZRANK",
 		CmdType: SingleShard,
 	}
+	zcardCmdMeta = CmdsMeta{
+		Cmd:     "ZCARD",
+		CmdType: SingleShard,
+	}
 	pfaddCmdMeta = CmdsMeta{
 		Cmd:     "PFADD",
 		CmdType: SingleShard,
@@ -113,7 +117,7 @@ var (
 		Cmd:     "JSON.OBJLEN",
 		CmdType: SingleShard,
 	}
-  hlenCmdMeta = CmdsMeta{
+	hlenCmdMeta = CmdsMeta{
 		Cmd:     "HLEN",
 		CmdType: SingleShard,
 	}
@@ -198,6 +202,7 @@ func init() {
 	WorkerCmdsMeta["ZADD"] = zaddCmdMeta
 	WorkerCmdsMeta["ZRANGE"] = zrangeCmdMeta
 	WorkerCmdsMeta["ZRANK"] = zrankCmdMeta
+	WorkerCmdsMeta["ZCARD"] = zcardCmdMeta
 	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
 	WorkerCmdsMeta["ZPOPMIN"] = zpopminCmdMeta
 	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
