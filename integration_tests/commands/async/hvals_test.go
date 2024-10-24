@@ -1,8 +1,9 @@
 package async
 
 import (
-	testifyAssert "github.com/stretchr/testify/assert"
 	"testing"
+
+	testifyAssert "github.com/stretchr/testify/assert"
 
 	"gotest.tools/v3/assert"
 )
@@ -26,7 +27,7 @@ func TestHvals(t *testing.T) {
 		{
 			name:     "HVALS on wrong key type",
 			commands: []string{"SET hvalsKey02 field", "HVALS hvalsKey02"},
-			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{"OK", "ERR -WRONGTYPE Operation against a key holding the wrong kind of value"},
 		},
 		{
 			name:     "HVALS with wrong number of arguments",

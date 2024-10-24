@@ -112,7 +112,7 @@ func TestSimpleStrings(t *testing.T) {
 	var b []byte
 	var buf = bytes.NewBuffer(b)
 	for i := 0; i < 1024; i++ {
-		buf.WriteByte('a' + byte(i % 26))
+		buf.WriteByte('a' + byte(i%26))
 		e := clientio.Encode(buf.String(), true)
 		p := clientio.NewRESPParser(bytes.NewBuffer(e))
 		nv, err := p.DecodeOne()
@@ -130,7 +130,7 @@ func TestBulkStrings(t *testing.T) {
 	var b []byte
 	var buf = bytes.NewBuffer(b)
 	for i := 0; i < 1024; i++ {
-		buf.WriteByte('a' + byte(i % 26))
+		buf.WriteByte('a' + byte(i%26))
 		e := clientio.Encode(buf.String(), false)
 		p := clientio.NewRESPParser(bytes.NewBuffer(e))
 		nv, err := p.DecodeOne()
@@ -163,7 +163,7 @@ func TestArrayInt(t *testing.T) {
 	var b []byte
 	var buf = bytes.NewBuffer(b)
 	for i := 0; i < 1024; i++ {
-		buf.WriteByte('a' + byte(i % 26))
+		buf.WriteByte('a' + byte(i%26))
 		e := clientio.Encode(buf.String(), true)
 		p := clientio.NewRESPParser(bytes.NewBuffer(e))
 		nv, err := p.DecodeOne()

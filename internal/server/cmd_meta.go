@@ -66,6 +66,18 @@ var (
 		Cmd:     "GETRANGE",
 		CmdType: SingleShard,
 	}
+	hexistsCmdMeta = CmdsMeta{
+		Cmd:     "HEXISTS",
+		CmdType: SingleShard,
+	}
+	hkeysCmdMeta = CmdsMeta{
+		Cmd:     "HKEYS",
+		CmdType: SingleShard,
+	}
+	hvalsCmdMeta = CmdsMeta{
+		Cmd:     "HVALS",
+		CmdType: SingleShard,
+	}
 	zaddCmdMeta = CmdsMeta{
 		Cmd:     "ZADD",
 		CmdType: SingleShard,
@@ -184,6 +196,9 @@ func init() {
 	WorkerCmdsMeta["JSON.CLEAR"] = jsonclearCmdMeta
 	WorkerCmdsMeta["JSON.STRLEN"] = jsonstrlenCmdMeta
 	WorkerCmdsMeta["JSON.OBJLEN"] = jsonobjlenCmdMeta
+	WorkerCmdsMeta["HEXISTS"] = hexistsCmdMeta
+	WorkerCmdsMeta["HKEYS"] = hkeysCmdMeta
+	WorkerCmdsMeta["HVALS"] = hvalsCmdMeta
 	WorkerCmdsMeta["ZADD"] = zaddCmdMeta
 	WorkerCmdsMeta["ZRANGE"] = zrangeCmdMeta
 	WorkerCmdsMeta["ZRANK"] = zrankCmdMeta

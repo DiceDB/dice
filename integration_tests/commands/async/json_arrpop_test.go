@@ -19,9 +19,9 @@ func TestJSONARRPOP(t *testing.T) {
 	testCases := []struct {
 		name        string
 		commands    []string
-		expected   []interface{}
-		assertType []string
-		jsonResp   []bool
+		expected    []interface{}
+		assertType  []string
+		jsonResp    []bool
 		nestedArray bool
 		path        string
 	}{

@@ -38,8 +38,8 @@ func TestDumpRestore(t *testing.T) {
 						return false
 					}
 					return len(decoded) > 11 &&
-						decoded[0] == 0x09 && 
-						decoded[1] == 0x00 && 
+						decoded[0] == 0x09 &&
+						decoded[1] == 0x00 &&
 						string(decoded[6:11]) == "hello" &&
 						decoded[11] == 0xFF
 				},

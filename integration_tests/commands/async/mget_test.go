@@ -13,7 +13,7 @@ func TestMGET(t *testing.T) {
 
 	defer FireCommand(conn, "DEL k1")
 	defer FireCommand(conn, "DEL k2")
-	
+
 	testCases := []struct {
 		name     string
 		commands []string
