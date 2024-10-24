@@ -3,10 +3,10 @@ package worker
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/eval"
-	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/ops"
 )
 
@@ -82,6 +82,16 @@ const (
 	CmdHIncrBy      = "HINCRBY"
 	CmdHIncrByFloat = "HINCRBYFLOAT"
 	CmdHRandField   = "HRANDFIELD"
+	CmdGetRange     = "GETRANGE"
+	CmdAppend       = "APPEND"
+	CmdHLen         = "HLEN"
+	CmdHStrLen      = "HSTRLEN"
+	CmdHScan        = "HSCAN"
+	CmdBFAdd        = "BF.ADD"
+	CmdBFReserve    = "BF.RESERVE"
+	CmdBFInfo       = "BF.INFO"
+	CmdBFExists     = "BF.EXISTS"
+
 )
 
 type CmdMeta struct {
@@ -129,6 +139,9 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdGetSet: {
 		CmdType: SingleShard,
 	},
+	CmdGetRange: {
+		CmdType: SingleShard,
+	},
 	CmdJSONClear: {
 		CmdType: SingleShard,
 	},
@@ -146,6 +159,15 @@ var CommandsMeta = map[string]CmdMeta{
 	},
 	CmdPFMerge: {
 		CmdType: SingleShard,
+	},
+	CmdHLen: {
+		CmdType: SingleShard,
+	},
+	CmdHStrLen: {
+		CmdType: SingleShard,
+	},
+	CmdHScan: {
+ 		CmdType: SingleShard,
 	},
 	CmdHIncrBy: {
 		CmdType: SingleShard,
@@ -212,7 +234,9 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdZRange: {
 		CmdType: SingleShard,
 	},
-
+	CmdAppend: {
+		CmdType: SingleShard,
+	},
 	CmdIncr: {
 		CmdType: SingleShard,
 	},
@@ -231,14 +255,26 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdZPopMin: {
 		CmdType: SingleShard,
 	},
+
+	// Bloom Filter
+	CmdBFAdd: {
+		CmdType: SingleShard,
+	},
+	CmdBFInfo: {
+		CmdType: SingleShard,
+	},
+	CmdBFExists: {
+		CmdType: SingleShard,
+	},
+	CmdBFReserve: {
+		CmdType: SingleShard,
+	},
 }
 
 func init() {
-	l := logger.New(logger.Opts{WithTimestamp: true})
-	// Validate the metadata for each command
 	for c, meta := range CommandsMeta {
 		if err := validateCmdMeta(c, meta); err != nil {
-			l.Error("error validating worker command metadata %s: %v", c, err)
+			slog.Error("error validating worker command metadata %s: %v", c, err)
 		}
 	}
 }

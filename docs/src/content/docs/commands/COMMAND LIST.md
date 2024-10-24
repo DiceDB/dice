@@ -39,7 +39,7 @@ When executed, the `COMMAND LIST` command scans the DiceDB server's command regi
 127.0.0.1:7379> COMMAND LIST
   1) "SLEEP"
   2) "SMEMBERS"
-  3) "BFINIT"
+  3) "BF.ADD"
   4) "FLUSHDB"
   .
   .

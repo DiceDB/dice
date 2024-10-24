@@ -3,6 +3,7 @@ package eval
 import (
 	"fmt"
 	"math"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/gobwas/glob"
 	"github.com/ohler55/ojg/jp"
 )
 
@@ -324,6 +326,97 @@ func evalSETEX(args []string, store *dstore.Store) *EvalResponse {
 	return evalSET(newArgs, store)
 }
 
+// Key, start and end are mandatory args.
+// Returns a substring from the key(if it's a string) from start -> end.
+// Returns ""(empty string) if key is not present and if start > end.
+func evalGETRANGE(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 3 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("GETRANGE"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: string(""),
+			Error:  nil,
+		}
+	}
+
+	start, err := strconv.Atoi(args[1])
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrIntegerOutOfRange,
+		}
+	}
+	end, err := strconv.Atoi(args[2])
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrIntegerOutOfRange,
+		}
+	}
+
+	var str string
+	switch _, oEnc := object.ExtractTypeEncoding(obj); oEnc {
+	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
+		if val, ok := obj.Value.(string); ok {
+			str = val
+		} else {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("expected string but got another type"),
+			}
+		}
+	case object.ObjEncodingInt:
+		str = strconv.FormatInt(obj.Value.(int64), 10)
+	default:
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if str == "" {
+		return &EvalResponse{
+			Result: string(""),
+			Error:  nil,
+		}
+	}
+
+	if start < 0 {
+		start = len(str) + start
+	}
+
+	if end < 0 {
+		end = len(str) + end
+	}
+
+	if start >= len(str) || end < 0 || start > end {
+		return &EvalResponse{
+			Result: string(""),
+			Error:  nil,
+		}
+	}
+
+	if start < 0 {
+		start = 0
+	}
+
+	if end >= len(str) {
+		end = len(str) - 1
+	}
+
+	return &EvalResponse{
+		Result: str[start : end+1],
+		Error:  nil,
+	}
+}
+
 // evalZADD adds all the specified members with the specified scores to the sorted set stored at key.
 // If a specified member is already a member of the sorted set, the score is updated and the element
 // reinserted at the right position to ensure the correct ordering.
@@ -338,7 +431,6 @@ func evalZADD(args []string, store *dstore.Store) *EvalResponse {
 
 	key := args[0]
 	obj := store.Get(key)
-
 	var sortedSet *sortedset.Set
 
 	if obj != nil {
@@ -454,6 +546,86 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+// evalAPPEND takes two arguments: the key and the value to append to the key's current value.
+// If the key does not exist, it creates a new key with the given value (so APPEND will be similar to SET in this special case)
+// If key already exists and is a string (or integers stored as strings), this command appends the value at the end of the string
+func evalAPPEND(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("APPEND"),
+		}
+	}
+
+	key, value := args[0], args[1]
+	obj := store.Get(key)
+
+	if obj == nil {
+		// Key does not exist path
+
+		// check if the value starts with '0' and has more than 1 character to handle leading zeros
+		if len(value) > 1 && value[0] == '0' {
+			// treat as string if has leading zeros
+			store.Put(key, store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw))
+			return &EvalResponse{
+				Result: len(value),
+				Error:  nil,
+			}
+		}
+
+		// Deduce type and encoding based on the value if no leading zeros
+		oType, oEnc := deduceTypeEncoding(value)
+
+		var storedValue interface{}
+		// Store the value with the appropriate encoding based on the type
+		switch oEnc {
+		case object.ObjEncodingInt:
+			storedValue, _ = strconv.ParseInt(value, 10, 64)
+		case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
+			storedValue = value
+		default:
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			}
+		}
+
+		store.Put(key, store.NewObj(storedValue, -1, oType, oEnc))
+
+		return &EvalResponse{
+			Result: len(value),
+			Error:  nil,
+		}
+	}
+	// Key exists path
+	_, currentEnc := object.ExtractTypeEncoding(obj)
+
+	var currentValueStr string
+	switch currentEnc {
+	case object.ObjEncodingInt:
+		// If the encoding is an integer, convert the current value to a string for concatenation
+		currentValueStr = strconv.FormatInt(obj.Value.(int64), 10)
+	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
+		// If the encoding is a string, retrieve the string value for concatenation
+		currentValueStr = obj.Value.(string)
+	default:
+		// If the encoding is neither integer nor string, return a "wrong type" error
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	newValue := currentValueStr + value
+
+	store.Put(key, store.NewObj(newValue, -1, object.ObjTypeString, object.ObjEncodingRaw))
+
+	return &EvalResponse{
+		Result: len(newValue),
+		Error:  nil,
+	}
+}
+
 // evalZRANK returns the rank of the member in the sorted set stored at key.
 // The rank (or index) is 0-based, which means that the member with the lowest score has rank 0.
 // If the 'WITHSCORE' option is specified, it returns both the rank and the score of the member.
@@ -495,7 +667,6 @@ func evalZRANK(args []string, store *dstore.Store) *EvalResponse {
 			Error:  diceerrors.ErrWrongTypeOperation,
 		}
 	}
-
 	rank, score := sortedSet.RankWithScore(member, false)
 	if rank == -1 {
 		return &EvalResponse{
@@ -505,8 +676,9 @@ func evalZRANK(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	if withScore {
+		scoreStr := strconv.FormatFloat(score, 'f', -1, 64) 
 		return &EvalResponse{
-			Result: []interface{}{rank, score},
+			Result: []interface{}{rank, scoreStr},
 			Error:  nil,
 		}
 	}
@@ -662,7 +834,7 @@ func evalPFADD(args []string, store *dstore.Store) *EvalResponse {
 	if !ok {
 		return &EvalResponse{
 			Result: nil,
-			Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeHllErr),
+			Error:  diceerrors.ErrInvalidHyperLogLogKey,
 		}
 	}
 	initialCardinality := existingHll.Estimate()
@@ -804,14 +976,14 @@ func evalPFCOUNT(args []string, store *dstore.Store) *EvalResponse {
 			if !ok {
 				return &EvalResponse{
 					Result: nil,
-					Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeHllErr),
+					Error:  diceerrors.ErrInvalidHyperLogLogKey,
 				}
 			}
 			err := unionHll.Merge(currKeyHll)
 			if err != nil {
 				return &EvalResponse{
 					Result: nil,
-					Error:  diceerrors.ErrGeneral(diceerrors.InvalidHllErr),
+					Error:  diceerrors.ErrCorruptedHyperLogLogObject,
 				}
 			}
 		}
@@ -961,7 +1133,7 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 		if !ok {
 			return &EvalResponse{
 				Result: nil,
-				Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeHllErr),
+				Error:  diceerrors.ErrInvalidHyperLogLogKey,
 			}
 		}
 	}
@@ -973,7 +1145,7 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 			if !ok {
 				return &EvalResponse{
 					Result: nil,
-					Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeHllErr),
+					Error:  diceerrors.ErrInvalidHyperLogLogKey,
 				}
 			}
 
@@ -981,7 +1153,7 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 			if err != nil {
 				return &EvalResponse{
 					Result: nil,
-					Error:  diceerrors.ErrGeneral(diceerrors.InvalidHllErr),
+					Error:  diceerrors.ErrCorruptedHyperLogLogObject,
 				}
 			}
 		}
@@ -1473,4 +1645,290 @@ func evalZPOPMIN(args []string, store *dstore.Store) *EvalResponse {
 		Result: results,
 		Error:  nil,
 	}
+}
+
+// evalHLEN returns the number of fields contained in the hash stored at key.
+//
+// If key doesn't exist, it returns 0.
+//
+// Usage: HLEN key
+func evalHLEN(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("HLEN"),
+		}
+	}
+
+	key := args[0]
+
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	hashMap := obj.Value.(HashMap)
+	return &EvalResponse{
+		Result: len(hashMap),
+		Error:  nil,
+	}
+}
+
+// evalHSTRLEN returns the length of value associated with field in the hash stored at key.
+//
+// This command returns 0, if the specified field doesn't exist in the key
+//
+// If key doesn't exist, it returns 0.
+//
+// Usage: HSTRLEN key field value
+func evalHSTRLEN(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("HSTRLEN"),
+		}
+	}
+
+	key := args[0]
+	hmKey := args[1]
+	obj := store.Get(key)
+
+	var hashMap HashMap
+
+	if obj != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			}
+		}
+		hashMap = obj.Value.(HashMap)
+	} else {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	val, ok := hashMap.Get(hmKey)
+	// Return 0, if specified field doesn't exist in the HashMap.
+	if ok {
+		return &EvalResponse{
+			Result: len(*val),
+			Error:  nil,
+		}
+	}
+	return &EvalResponse{
+		Result: clientio.IntegerZero,
+		Error:  nil,
+	}
+}
+
+// evalHSCAN return a two element multi-bulk reply, where the first element is a string representing the cursor,
+// and the second element is a multi-bulk with an array of elements.
+//
+// The array of elements contain two elements, a field and a value, for every returned element of the Hash.
+//
+// If key doesn't exist, it returns an array containing 0 and empty array.
+//
+// Usage: HSCAN key cursor [MATCH pattern] [COUNT count]
+func evalHSCAN(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("HSCAN"),
+		}
+	}
+
+	key := args[0]
+	cursor, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrIntegerOutOfRange,
+		}
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: []interface{}{"0", []string{}},
+			Error:  nil,
+		}
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	hashMap := obj.Value.(HashMap)
+	pattern := "*"
+	count := 10
+
+	// Parse optional arguments
+	for i := 2; i < len(args); i += 2 {
+		switch strings.ToUpper(args[i]) {
+		case "MATCH":
+			if i+1 < len(args) {
+				pattern = args[i+1]
+			}
+		case CountConst:
+			if i+1 < len(args) {
+				parsedCount, err := strconv.Atoi(args[i+1])
+				if err != nil || parsedCount < 1 {
+					return &EvalResponse{
+						Result: nil,
+						Error:  diceerrors.ErrIntegerOutOfRange,
+					}
+				}
+				count = parsedCount
+			}
+		}
+	}
+
+	// Note that this implementation has a time complexity of O(N), where N is the number of keys in 'hashMap'.
+	// This is in contrast to Redis, which implements HSCAN in O(1) time complexity by maintaining a cursor.
+	keys := make([]string, 0, len(hashMap))
+	for k := range hashMap {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	matched := 0
+	results := make([]string, 0, count*2)
+	newCursor := 0
+
+	g, err := glob.Compile(pattern)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(fmt.Sprintf("Invalid glob pattern: %s", err)),
+		}
+	}
+
+	// Scan the keys and add them to the results if they match the pattern
+	for i := int(cursor); i < len(keys); i++ {
+		if g.Match(keys[i]) {
+			results = append(results, keys[i], hashMap[keys[i]])
+			matched++
+			if matched >= count {
+				newCursor = i + 1
+				break
+			}
+		}
+	}
+
+	// If we've scanned all keys, reset cursor to 0
+	if newCursor >= len(keys) {
+		newCursor = 0
+	}
+
+	return &EvalResponse{
+		Result: []interface{}{strconv.Itoa(newCursor), results},
+		Error:  nil,
+	}
+}
+  
+// evalBF.RESERVE evaluates the BF.RESERVE command responsible for initializing a
+// new bloom filter and allocation it's relevant parameters based on given inputs.
+// If no params are provided, it uses defaults.
+func evalBFRESERVE(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 3 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.RESERVE"))
+	}
+
+	opts, err := newBloomOpts(args[1:])
+	if err != nil {
+		return makeEvalError(err)
+	}
+
+	_, err = CreateBloomFilter(args[0], store, opts)
+	if err != nil {
+		return makeEvalError(err)
+	}
+	return makeEvalResult(clientio.OK)
+}
+
+// evalBFADD evaluates the BF.ADD command responsible for adding an element to a bloom filter. If the filter does not
+// exist, it will create a new one with default parameters.
+func evalBFADD(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 2 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.ADD"))
+	}
+
+	bloom, err := getOrCreateBloomFilter(args[0], store, nil)
+	if err != nil {
+		return makeEvalError(err)
+	}
+
+	result, err := bloom.add(args[1])
+	if err != nil {
+		return makeEvalError(err)
+	}
+
+	return makeEvalResult(result)
+}
+
+// evalBFEXISTS evaluates the BF.EXISTS command responsible for checking existence of an element in a bloom filter.
+func evalBFEXISTS(args []string, store *dstore.Store) *EvalResponse {
+	// todo must work with objects of
+	if len(args) != 2 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.EXISTS"))
+	}
+
+	bloom, err := GetBloomFilter(args[0], store)
+	if err != nil {
+		return makeEvalError(err)
+	}
+	if bloom == nil {
+		return makeEvalResult(clientio.IntegerZero)
+	}
+	result, err := bloom.exists(args[1])
+	if err != nil {
+		return makeEvalError(err)
+	}
+	return makeEvalResult(result)
+}
+
+// evalBFINFO evaluates the BF.INFO command responsible for returning the
+// parameters and metadata of an existing bloom filter.
+func evalBFINFO(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 || len(args) > 2 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.INFO"))
+	}
+
+	bloom, err := GetBloomFilter(args[0], store)
+
+	if err != nil {
+		return makeEvalError(err)
+	}
+
+	if bloom == nil {
+		return makeEvalError(diceerrors.ErrGeneral("not found"))
+	}
+	opt := ""
+	if len(args) == 2 {
+		opt = args[1]
+	}
+	result, err := bloom.info(opt)
+
+	if err != nil {
+		return makeEvalError(err)
+	}
+
+	return makeEvalResult(result)
 }

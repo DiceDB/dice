@@ -30,7 +30,6 @@ import (
 	"github.com/dicedb/dice/internal/querymanager"
 	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
-	"github.com/gobwas/glob"
 	"github.com/ohler55/ojg/jp"
 )
 
@@ -52,6 +51,22 @@ var (
 type EvalResponse struct {
 	Result interface{} // Result holds the outcome of the Store operation. Currently, it is expected to be of type []byte, but this may change in the future.
 	Error  error       // Error holds any error that occurred during the operation. If no error, it will be nil.
+}
+
+//go:inline
+func makeEvalResult(result interface{}) *EvalResponse {
+	return &EvalResponse{
+		Result: result,
+		Error:  nil,
+	}
+}
+
+//go:inline
+func makeEvalError(err error) *EvalResponse {
+	return &EvalResponse{
+		Result: nil,
+		Error:  err,
+	}
 }
 
 type jsonOperation string
@@ -1776,7 +1791,7 @@ func evalMULTI(args []string, store *dstore.Store) []byte {
 // Every time a key in the watch list is modified, the client will be sent a response
 // containing the new value of the key along with the operation that was performed on it.
 // Contains only one argument, the query to be watched.
-func EvalQWATCH(args []string, httpOp bool, client *comm.Client, store *dstore.Store) []byte {
+func EvalQWATCH(args []string, httpOp, websocketOp bool, client *comm.Client, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("Q.WATCH")
 	}
@@ -1795,7 +1810,7 @@ func EvalQWATCH(args []string, httpOp bool, client *comm.Client, store *dstore.S
 	})
 	var watchSubscription querymanager.QuerySubscription
 
-	if httpOp {
+	if httpOp || websocketOp {
 		watchSubscription = querymanager.QuerySubscription{
 			Subscribe:          true,
 			Query:              query,
@@ -2980,85 +2995,6 @@ func evalHDEL(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(count, false)
 }
 
-func evalHSCAN(args []string, store *dstore.Store) []byte {
-	if len(args) < 2 {
-		return diceerrors.NewErrArity("HSCAN")
-	}
-
-	key := args[0]
-	cursor, err := strconv.ParseInt(args[1], 10, 64)
-	if err != nil {
-		return diceerrors.NewErrWithMessage(diceerrors.InvalidIntErr)
-	}
-
-	obj := store.Get(key)
-	if obj == nil {
-		return clientio.Encode([]interface{}{"0", []string{}}, false)
-	}
-
-	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
-	}
-
-	hashMap := obj.Value.(HashMap)
-	pattern := "*"
-	count := 10
-
-	// Parse optional arguments
-	for i := 2; i < len(args); i += 2 {
-		switch strings.ToUpper(args[i]) {
-		case "MATCH":
-			if i+1 < len(args) {
-				pattern = args[i+1]
-			}
-		case CountConst:
-			if i+1 < len(args) {
-				parsedCount, err := strconv.Atoi(args[i+1])
-				if err != nil || parsedCount < 1 {
-					return diceerrors.NewErrWithMessage("value is not an integer or out of range")
-				}
-				count = parsedCount
-			}
-		}
-	}
-
-	// Note that this implementation has a time complexity of O(N), where N is the number of keys in 'hashMap'.
-	// This is in contrast to Redis, which implements HSCAN in O(1) time complexity by maintaining a cursor.
-	keys := make([]string, 0, len(hashMap))
-	for k := range hashMap {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	matched := 0
-	results := make([]string, 0, count*2)
-	newCursor := 0
-
-	g, err := glob.Compile(pattern)
-	if err != nil {
-		return diceerrors.NewErrWithMessage(fmt.Sprintf("Invalid glob pattern: %s", err))
-	}
-
-	// Scan the keys and add them to the results if they match the pattern
-	for i := int(cursor); i < len(keys); i++ {
-		if g.Match(keys[i]) {
-			results = append(results, keys[i], hashMap[keys[i]])
-			matched++
-			if matched >= count {
-				newCursor = i + 1
-				break
-			}
-		}
-	}
-
-	// If we've scanned all keys, reset cursor to 0
-	if newCursor >= len(keys) {
-		newCursor = 0
-	}
-
-	return clientio.Encode([]interface{}{strconv.Itoa(newCursor), results}, false)
-}
-
 // evalHKEYS returns all the values in the hash stored at key.
 func evalHVALS(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
@@ -3084,41 +3020,6 @@ func evalHVALS(args []string, store *dstore.Store) []byte {
 	}
 
 	return clientio.Encode(results, false)
-}
-
-// evalHSTRLEN returns the length of value associated with field in the hash stored at key.
-//
-// This command returns 0, if the specified field doesn't exist in the key
-//
-// If key doesn't exist, it returns 0.
-//
-// Usage: HSTRLEN key field value
-func evalHSTRLEN(args []string, store *dstore.Store) []byte {
-	if len(args) != 2 {
-		return diceerrors.NewErrArity("HSTRLEN")
-	}
-
-	key := args[0]
-	hmKey := args[1]
-	obj := store.Get(key)
-
-	var hashMap HashMap
-
-	if obj != nil {
-		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
-		}
-		hashMap = obj.Value.(HashMap)
-	} else {
-		return clientio.Encode(0, false)
-	}
-
-	val, ok := hashMap.Get(hmKey)
-	// Return 0, if specified field doesn't exist in the HashMap.
-	if ok {
-		return clientio.Encode(len(*val), false)
-	}
-	return clientio.Encode(0, false)
 }
 
 // evalHEXISTS returns if field is an existing field in the hash stored at key.
@@ -3726,26 +3627,6 @@ func evalSINTER(args []string, store *dstore.Store) []byte {
 	}
 	return clientio.Encode(members, false)
 }
-func evalHLEN(args []string, store *dstore.Store) []byte {
-	if len(args) != 1 {
-		return diceerrors.NewErrArity("HLEN")
-	}
-
-	key := args[0]
-
-	obj := store.Get(key)
-
-	if obj == nil {
-		return clientio.RespZero
-	}
-
-	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	hashMap := obj.Value.(HashMap)
-	return clientio.Encode(len(hashMap), false)
-}
 
 func evalSELECT(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
@@ -3985,133 +3866,6 @@ func evalTYPE(args []string, store *dstore.Store) []byte {
 	}
 
 	return clientio.Encode(typeStr, true)
-}
-
-// evalGETRANGE returns the substring of the string value stored at key, determined by the offsets start and end
-// The offsets are zero-based and can be negative values to index from the end of the string
-//
-// If the start offset is larger than the end offset, or if the start or end offset is greater than the length of the string,
-// an empty string is returned
-func evalGETRANGE(args []string, store *dstore.Store) []byte {
-	if len(args) != 3 {
-		return diceerrors.NewErrArity("GETRANGE")
-	}
-	key := args[0]
-	obj := store.Get(key)
-	if obj == nil {
-		return clientio.Encode("", false)
-	}
-
-	start, err := strconv.Atoi(args[1])
-	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
-	}
-	end, err := strconv.Atoi(args[2])
-	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
-	}
-
-	var str string
-	switch _, oEnc := object.ExtractTypeEncoding(obj); oEnc {
-	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
-		if val, ok := obj.Value.(string); ok {
-			str = val
-		} else {
-			return diceerrors.NewErrWithMessage("expected string but got another type")
-		}
-	case object.ObjEncodingInt:
-		str = strconv.FormatInt(obj.Value.(int64), 10)
-	default:
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	if str == "" {
-		return clientio.Encode("", false)
-	}
-
-	if start < 0 {
-		start = len(str) + start
-	}
-
-	if end < 0 {
-		end = len(str) + end
-	}
-
-	if start >= len(str) || end < 0 || start > end {
-		return clientio.Encode("", false)
-	}
-
-	if start < 0 {
-		start = 0
-	}
-
-	if end >= len(str) {
-		end = len(str) - 1
-	}
-
-	return clientio.Encode(str[start:end+1], false)
-}
-
-// evalAPPEND takes two arguments: the key and the value to append to the key's current value.
-// If the key does not exist, it creates a new key with the given value (so APPEND will be similar to SET in this special case)
-// If key already exists and is a string (or integers stored as strings), this command appends the value at the end of the string
-func evalAPPEND(args []string, store *dstore.Store) []byte {
-	if len(args) != 2 {
-		return diceerrors.NewErrArity("APPEND")
-	}
-
-	key, value := args[0], args[1]
-	obj := store.Get(key)
-
-	if obj == nil {
-		// Key does not exist path
-
-		// check if the value starts with '0' and has more than 1 character to handle leading zeros
-		if len(value) > 1 && value[0] == '0' {
-			// treat as string if has leading zeros
-			store.Put(key, store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw))
-			return clientio.Encode(len(value), false)
-		}
-
-		// Deduce type and encoding based on the value if no leading zeros
-		oType, oEnc := deduceTypeEncoding(value)
-
-		var storedValue interface{}
-		// Store the value with the appropriate encoding based on the type
-		switch oEnc {
-		case object.ObjEncodingInt:
-			storedValue, _ = strconv.ParseInt(value, 10, 64)
-		case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
-			storedValue = value
-		default:
-			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-		}
-
-		store.Put(key, store.NewObj(storedValue, -1, oType, oEnc))
-
-		return clientio.Encode(len(value), false)
-	}
-	// Key exists path
-	_, currentEnc := object.ExtractTypeEncoding(obj)
-
-	var currentValueStr string
-	switch currentEnc {
-	case object.ObjEncodingInt:
-		// If the encoding is an integer, convert the current value to a string for concatenation
-		currentValueStr = strconv.FormatInt(obj.Value.(int64), 10)
-	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
-		// If the encoding is a string, retrieve the string value for concatenation
-		currentValueStr = obj.Value.(string)
-	default:
-		// If the encoding is neither integer nor string, return a "wrong type" error
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	newValue := currentValueStr + value
-
-	store.Put(key, store.NewObj(newValue, -1, object.ObjTypeString, object.ObjEncodingRaw))
-
-	return clientio.Encode(len(newValue), false)
 }
 
 func evalJSONRESP(args []string, store *dstore.Store) []byte {

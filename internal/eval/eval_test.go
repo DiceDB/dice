@@ -124,6 +124,10 @@ func TestEval(t *testing.T) {
 	testEvalINCRBY(t, store)
 	testEvalDECR(t, store)
 	testEvalDECRBY(t, store)
+	testEvalBFRESERVE(t, store)
+	testEvalBFINFO(t, store)
+	testEvalBFEXISTS(t, store)
+	testEvalBFADD(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -2288,10 +2292,10 @@ func testEvalPFADD(t *testing.T, store *dstore.Store) {
 				store.Put(key, store.NewObj(value, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
 			},
 			input:  []string{"EXISTING_KEY", "1"},
-			output: []byte("-WRONGTYPE Key is not a valid HyperLogLog string value."),
+			output: []byte("-WRONGTYPE Key is not a valid HyperLogLog string value"),
 			migratedOutput: EvalResponse{
 				Result: nil,
-				Error:  diceerrors.ErrGeneral("-WRONGTYPE Key is not a valid HyperLogLog string value."),
+				Error:  diceerrors.ErrInvalidHyperLogLogKey,
 			},
 		},
 	}
@@ -2376,7 +2380,7 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 			input: []string{"INVALID_OBJ_DEST_KEY"},
 			migratedOutput: EvalResponse{
 				Result: nil,
-				Error:  diceerrors.ErrGeneral("-WRONGTYPE Key is not a valid HyperLogLog string value."),
+				Error:  diceerrors.ErrInvalidHyperLogLogKey,
 			},
 		},
 		"PFMERGE destKey doesn't exist": {
@@ -2636,19 +2640,19 @@ func testEvalHVALS(t *testing.T, store *dstore.Store) {
 func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"wrong number of args passed": {
-			setup:  func() {},
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'hstrlen' command\r\n"),
+			setup:          func() {},
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("HSTRLEN")},
 		},
 		"only key passed": {
-			setup:  func() {},
-			input:  []string{"KEY"},
-			output: []byte("-ERR wrong number of arguments for 'hstrlen' command\r\n"),
+			setup:          func() {},
+			input:          []string{"KEY"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("HSTRLEN")},
 		},
 		"key doesn't exist": {
-			setup:  func() {},
-			input:  []string{"KEY", "field_name"},
-			output: clientio.Encode(0, false),
+			setup:          func() {},
+			input:          []string{"KEY", "field_name"},
+			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
 		},
 		"key exists but field_name doesn't exists": {
 			setup: func() {
@@ -2665,8 +2669,8 @@ func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
 
 				store.Put(key, obj)
 			},
-			input:  []string{"KEY_MOCK", "non_existent_key"},
-			output: clientio.Encode(0, false),
+			input:          []string{"KEY_MOCK", "non_existent_key"},
+			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
 		},
 		"both key and field_name exists": {
 			setup: func() {
@@ -2683,12 +2687,12 @@ func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
 
 				store.Put(key, obj)
 			},
-			input:  []string{"KEY_MOCK", "mock_field_name"},
-			output: clientio.Encode(10, false),
+			input:          []string{"KEY_MOCK", "mock_field_name"},
+			migratedOutput: EvalResponse{Result: 10, Error: nil},
 		},
 	}
 
-	runEvalTests(t, tests, evalHSTRLEN, store)
+	runMigratedEvalTests(t, tests, evalHSTRLEN, store)
 }
 
 func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
@@ -2788,86 +2792,86 @@ func testEvalHDEL(t *testing.T, store *dstore.Store) {
 func testEvalHSCAN(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"HSCAN with wrong number of args": {
-			input:  []string{"key"},
-			output: []byte("-ERR wrong number of arguments for 'hscan' command\r\n"),
+			input:          []string{"key"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("HSCAN")},
 		},
 		"HSCAN with key does not exist": {
-			input:  []string{"NONEXISTENT_KEY", "0"},
-			output: []byte("*2\r\n$1\r\n0\r\n*0\r\n"),
+			input:          []string{"NONEXISTENT_KEY", "0"},
+			migratedOutput: EvalResponse{Result: []interface{}{"0", []string{}}, Error: nil},
 		},
 		"HSCAN with key exists but not a hash": {
 			setup: func() {
 				evalSET([]string{"string_key", "string_value"}, store)
 			},
-			input:  []string{"string_key", "0"},
-			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+			input:          []string{"string_key", "0"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		"HSCAN with valid key and cursor": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
 			},
-			input:  []string{"hash_key", "0"},
-			output: []byte("*2\r\n$1\r\n0\r\n*4\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+			input:          []string{"hash_key", "0"},
+			migratedOutput: EvalResponse{Result: []interface{}{"0", []string{"field1", "value1", "field2", "value2"}}, Error: nil},
 		},
 		"HSCAN with cursor at the end": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
 			},
-			input:  []string{"hash_key", "2"},
-			output: []byte("*2\r\n$1\r\n0\r\n*0\r\n"),
+			input:          []string{"hash_key", "2"},
+			migratedOutput: EvalResponse{Result: []interface{}{"0", []string{}}, Error: nil},
 		},
 		"HSCAN with cursor at the beginning": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
 			},
-			input:  []string{"hash_key", "0"},
-			output: []byte("*2\r\n$1\r\n0\r\n*4\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+			input:          []string{"hash_key", "0"},
+			migratedOutput: EvalResponse{Result: []interface{}{"0", []string{"field1", "value1", "field2", "value2"}}, Error: nil},
 		},
 		"HSCAN with cursor in the middle": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
 			},
-			input:  []string{"hash_key", "1"},
-			output: []byte("*2\r\n$1\r\n0\r\n*2\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+			input:          []string{"hash_key", "1"},
+			migratedOutput: EvalResponse{Result: []interface{}{"0", []string{"field2", "value2"}}, Error: nil},
 		},
 		"HSCAN with MATCH argument": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3"}, store)
 			},
-			input:  []string{"hash_key", "0", "MATCH", "field[12]*"},
-			output: []byte("*2\r\n$1\r\n0\r\n*4\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+			input:          []string{"hash_key", "0", "MATCH", "field[12]*"},
+			migratedOutput: EvalResponse{Result: []interface{}{"0", []string{"field1", "value1", "field2", "value2"}}, Error: nil},
 		},
 		"HSCAN with COUNT argument": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3"}, store)
 			},
-			input:  []string{"hash_key", "0", "COUNT", "2"},
-			output: []byte("*2\r\n$1\r\n2\r\n*4\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+			input:          []string{"hash_key", "0", "COUNT", "2"},
+			migratedOutput: EvalResponse{Result: []interface{}{"2", []string{"field1", "value1", "field2", "value2"}}, Error: nil},
 		},
 		"HSCAN with MATCH and COUNT arguments": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3", "field4", "value4"}, store)
 			},
-			input:  []string{"hash_key", "0", "MATCH", "field[13]*", "COUNT", "1"},
-			output: []byte("*2\r\n$1\r\n1\r\n*2\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n"),
+			input:          []string{"hash_key", "0", "MATCH", "field[13]*", "COUNT", "1"},
+			migratedOutput: EvalResponse{Result: []interface{}{"1", []string{"field1", "value1"}}, Error: nil},
 		},
 		"HSCAN with invalid MATCH pattern": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
 			},
-			input:  []string{"hash_key", "0", "MATCH", "[invalid"},
-			output: []byte("-ERR Invalid glob pattern: unexpected end of input\r\n"),
+			input:          []string{"hash_key", "0", "MATCH", "[invalid"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrGeneral("Invalid glob pattern: unexpected end of input")},
 		},
 		"HSCAN with invalid COUNT value": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
 			},
-			input:  []string{"hash_key", "0", "COUNT", "invalid"},
-			output: []byte("-ERR value is not an integer or out of range\r\n"),
+			input:          []string{"hash_key", "0", "COUNT", "invalid"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrIntegerOutOfRange},
 		},
 	}
 
-	runEvalTests(t, tests, evalHSCAN, store)
+	runMigratedEvalTests(t, tests, evalHSCAN, store)
 }
 
 func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
@@ -3813,36 +3817,36 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 
 func testEvalHLEN(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
-		"wrong number of args": {
-			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'hlen' command\r\n"),
+		"HLEN wrong number of args": {
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("HLEN")},
 		},
-		"key does not exist": {
-			input:  []string{"nonexistent_key"},
-			output: clientio.RespZero,
+		"HLEN non-existent key": {
+			input:          []string{"nonexistent_key"},
+			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
 		},
-		"key exists but not a hash": {
+		"HLEN key exists but not a hash": {
 			setup: func() {
 				evalSET([]string{"string_key", "string_value"}, store)
 			},
-			input:  []string{"string_key"},
-			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+			input:          []string{"string_key"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
-		"empty hash": {
-			setup:  func() {},
-			input:  []string{"empty_hash"},
-			output: clientio.RespZero,
+		"HLEN empty hash": {
+			setup:          func() {},
+			input:          []string{"empty_hash"},
+			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
 		},
-		"hash with elements": {
+		"HLEN hash with elements": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3"}, store)
 			},
-			input:  []string{"hash_key"},
-			output: clientio.Encode(int64(3), false),
+			input:          []string{"hash_key"},
+			migratedOutput: EvalResponse{Result: 3, Error: nil},
 		},
 	}
 
-	runEvalTests(t, tests, evalHLEN, store)
+	runMigratedEvalTests(t, tests, evalHLEN, store)
 }
 
 func BenchmarkEvalHLEN(b *testing.B) {
@@ -4425,135 +4429,201 @@ func testEvalGETRANGE(t *testing.T, store *dstore.Store) {
 	}
 	tests := map[string]evalTestCase{
 		"GETRANGE against non-existing key": {
-			setup:  func() {},
-			input:  []string{"NON_EXISTING_KEY", "0", "-1"},
-			output: clientio.Encode("", false),
+			input: []string{"NON_EXISTING_KEY", "0", "-1"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against wrong key type": {
 			setup: func() {
 				evalLPUSH([]string{"LKEY1", "list"}, store)
 			},
-			input:  []string{"LKEY1", "0", "-1"},
-			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+			input: []string{"LKEY1", "0", "-1"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			},
 		},
 		"GETRANGE against string value: 0, 3": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "0", "3"},
-			output: clientio.Encode("Hell", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "0", "3"},
+			migratedOutput: EvalResponse{
+				Result: "Hell",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against string value: 0, -1": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "0", "-1"},
-			output: clientio.Encode("Hello World", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "0", "-1"},
+			migratedOutput: EvalResponse{
+				Result: "Hello World",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against string value: -4, -1": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "-4", "-1"},
-			output: clientio.Encode("orld", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "-4", "-1"},
+			migratedOutput: EvalResponse{
+				Result: "orld",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against string value: 5, 3": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "5", "3"},
-			output: clientio.Encode("", false),
-		},
-		"GETRANGE against string value: 5, 5000": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "5", "5000"},
-			output: clientio.Encode(" World", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "5", "3"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against string value: -5000, 10000": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "-5000", "10000"},
-			output: clientio.Encode("Hello World", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "-5000", "10000"},
+			migratedOutput: EvalResponse{
+				Result: "Hello World",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against string value: 0, -100": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "0", "-100"},
-			output: clientio.Encode("", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "0", "-100"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against string value: 1, -100": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "1", "-100"},
-			output: clientio.Encode("", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "1", "-100"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against string value: -1, -100": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "-1", "-100"},
-			output: clientio.Encode("", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "-1", "-100"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against string value: -100, -100": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "-100", "-100"},
-			output: clientio.Encode("", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "-100", "-100"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against string value: -100, -101": {
-			setup:  setupForStringValue,
-			input:  []string{"STRING_KEY", "-100", "-101"},
-			output: clientio.Encode("", false),
+			setup: setupForStringValue,
+			input: []string{"STRING_KEY", "-100", "-101"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: 0, 2": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "0", "2"},
-			output: clientio.Encode("123", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "0", "2"},
+			migratedOutput: EvalResponse{
+				Result: "123",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: 0, -1": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "0", "-1"},
-			output: clientio.Encode("1234", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "0", "-1"},
+			migratedOutput: EvalResponse{
+				Result: "1234",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: -3, -1": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "-3", "-1"},
-			output: clientio.Encode("234", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "-3", "-1"},
+			migratedOutput: EvalResponse{
+				Result: "234",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: 5, 3": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "5", "3"},
-			output: clientio.Encode("", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "5", "3"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: 3, 5000": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "3", "5000"},
-			output: clientio.Encode("4", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "3", "5000"},
+			migratedOutput: EvalResponse{
+				Result: "4",
+				Error:  nil,
+			},
 		},
-
 		"GETRANGE against integer value: -5000, 10000": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "-5000", "10000"},
-			output: clientio.Encode("1234", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "-5000", "10000"},
+			migratedOutput: EvalResponse{
+				Result: "1234",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: 0, -100": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "0", "-100"},
-			output: clientio.Encode("", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "0", "-100"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: 1, -100": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "1", "-100"},
-			output: clientio.Encode("", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "1", "-100"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: -1, -100": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "-1", "-100"},
-			output: clientio.Encode("", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "-1", "-100"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: -100, -99": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "-100", "-99"},
-			output: clientio.Encode("", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "-100", "-99"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: -100, -100": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "-100", "-100"},
-			output: clientio.Encode("", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "-100", "-100"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 		"GETRANGE against integer value: -100, -101": {
-			setup:  setupForIntegerValue,
-			input:  []string{"INTEGER_KEY", "-100", "-101"},
-			output: clientio.Encode("", false),
+			setup: setupForIntegerValue,
+			input: []string{"INTEGER_KEY", "-100", "-101"},
+			migratedOutput: EvalResponse{
+				Result: "",
+				Error:  nil,
+			},
 		},
 	}
-	runEvalTests(t, tests, evalGETRANGE, store)
+
+	runMigratedEvalTests(t, tests, evalGETRANGE, store)
 }
 
 func BenchmarkEvalGETRANGE(b *testing.B) {
@@ -5062,8 +5132,6 @@ func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 			}
 
 			response := evalINCRBYFLOAT(tt.input, store)
-			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput)
-
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
@@ -5350,23 +5418,23 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
-			setup:  func() {},
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'append' command\r\n"),
+			setup:          func() {},
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("APPEND")},
 		},
 		"append invalid number of arguments": {
 			setup: func() {
 				store.Del("key")
 			},
-			input:  []string{"key", "val", "val2"},
-			output: []byte("-ERR wrong number of arguments for 'append' command\r\n"),
+			input:          []string{"key", "val", "val2"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("APPEND")},
 		},
 		"append to non-existing key": {
 			setup: func() {
 				store.Del("key")
 			},
-			input:  []string{"key", "val"},
-			output: clientio.Encode(3, false),
+			input:          []string{"key", "val"},
+			migratedOutput: EvalResponse{Result: 3, Error: nil},
 		},
 		"append string value to existing key having string value": {
 			setup: func() {
@@ -5375,15 +5443,15 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "val"},
-			output: clientio.Encode(6, false),
+			input:          []string{"key", "val"},
+			migratedOutput: EvalResponse{Result: 6, Error: nil},
 		},
 		"append integer value to non existing key": {
 			setup: func() {
 				store.Del("key")
 			},
-			input:  []string{"key", "123"},
-			output: clientio.Encode(3, false),
+			input:          []string{"key", "123"},
+			migratedOutput: EvalResponse{Result: 3, Error: nil},
 			validator: func(output []byte) {
 				obj := store.Get("key")
 				_, enc := object.ExtractTypeEncoding(obj)
@@ -5400,15 +5468,15 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(storedValue, -1, object.ObjTypeInt, object.ObjEncodingInt)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", "val"},
-			output: clientio.Encode(6, false),
+			input:          []string{"key", "val"},
+			migratedOutput: EvalResponse{Result: 6, Error: nil},
 		},
 		"append empty string to non-existing key": {
 			setup: func() {
 				store.Del("key")
 			},
-			input:  []string{"key", ""},
-			output: clientio.Encode(0, false),
+			input:          []string{"key", ""},
+			migratedOutput: EvalResponse{Result: 0, Error: nil},
 		},
 		"append empty string to existing key having empty string": {
 			setup: func() {
@@ -5417,8 +5485,8 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", ""},
-			output: clientio.Encode(0, false),
+			input:          []string{"key", ""},
+			migratedOutput: EvalResponse{Result: 0, Error: nil},
 		},
 		"append empty string to existing key": {
 			setup: func() {
@@ -5427,8 +5495,8 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
 				store.Put(key, obj)
 			},
-			input:  []string{"key", ""},
-			output: clientio.Encode(3, false),
+			input:          []string{"key", ""},
+			migratedOutput: EvalResponse{Result: 3, Error: nil},
 		},
 		"append modifies the encoding from int to raw": {
 			setup: func() {
@@ -5437,8 +5505,8 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(storedValue, -1, object.ObjTypeInt, object.ObjEncodingInt)
 				store.Put("key", obj)
 			},
-			input:  []string{"key", "2"},
-			output: clientio.Encode(2, false),
+			input:          []string{"key", "2"},
+			migratedOutput: EvalResponse{Result: 2, Error: nil},
 			validator: func(output []byte) {
 				obj := store.Get("key")
 				_, enc := object.ExtractTypeEncoding(obj)
@@ -5456,8 +5524,8 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 				obj.Value.(*Deque).LPush(value)
 			},
-			input:  []string{"listKey", "val"},
-			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+			input:          []string{"listKey", "val"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		"append to key created using SADD": {
 			setup: func() {
@@ -5470,8 +5538,8 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(initialValues, -1, object.ObjTypeSet, object.ObjEncodingSetStr)
 				store.Put(key, obj)
 			},
-			input:  []string{"setKey", "val"},
-			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+			input:          []string{"setKey", "val"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		"append to key created using HSET": {
 			setup: func() {
@@ -5484,8 +5552,8 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(initialValues, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
 				store.Put(key, obj)
 			},
-			input:  []string{"hashKey", "val"},
-			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+			input:          []string{"hashKey", "val"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		"append to key created using SETBIT": {
 			setup: func() {
@@ -5496,29 +5564,19 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(initialByteArray, -1, object.ObjTypeByteArray, object.ObjEncodingByteArray)
 				store.Put(key, obj)
 			},
-			input:  []string{"bitKey", "val"},
-			output: diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr),
+			input:          []string{"bitKey", "val"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		"append value with leading zeros": {
 			setup: func() {
 				store.Del("key_with_leading_zeros")
 			},
-			input:  []string{"key_with_leading_zeros", "0043"},
-			output: clientio.Encode(4, false), // The length of "0043" is 4
-			validator: func(output []byte) {
-				obj := store.Get("key_with_leading_zeros")
-				_, enc := object.ExtractTypeEncoding(obj)
-				if enc != object.ObjEncodingRaw {
-					t.Errorf("expected encoding to be Raw for string with leading zeros")
-				}
-				if obj.Value.(string) != "0043" {
-					t.Errorf("expected value to be '0043', got %v", obj.Value)
-				}
-			},
+			input:          []string{"key_with_leading_zeros", "0043"},
+			migratedOutput: EvalResponse{Result: 4, Error: nil}, // The length of "0043" is 4
 		},
 	}
 
-	runEvalTests(t, tests, evalAPPEND, store)
+	runMigratedEvalTests(t, tests, evalAPPEND, store)
 }
 
 func BenchmarkEvalAPPEND(b *testing.B) {
@@ -6061,7 +6119,7 @@ func testEvalZRANK(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"myzset", "member2", "WITHSCORE"},
 			migratedOutput: EvalResponse{
-				Result: []interface{}{int64(1), float64(2)},
+				Result: []interface{}{int64(1), "2"},
 				Error:  nil,
 			},
 		},
@@ -6761,7 +6819,6 @@ func testEvalINCR(t *testing.T, store *dstore.Store) {
 			}
 
 			response := evalINCR(tt.input, store)
-			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput)
 
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
@@ -6849,7 +6906,6 @@ func testEvalINCRBY(t *testing.T, store *dstore.Store) {
 			}
 
 			response := evalINCRBY(tt.input, store)
-			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput)
 
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
@@ -6937,7 +6993,6 @@ func testEvalDECR(t *testing.T, store *dstore.Store) {
 			}
 
 			response := evalDECR(tt.input, store)
-			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput)
 
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
@@ -7025,7 +7080,6 @@ func testEvalDECRBY(t *testing.T, store *dstore.Store) {
 			}
 
 			response := evalDECRBY(tt.input, store)
-			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput)
 
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
@@ -7040,6 +7094,181 @@ func testEvalDECRBY(t *testing.T, store *dstore.Store) {
 				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
 				testifyAssert.NoError(t, response.Error)
+			}
+		})
+	}
+}
+
+func testEvalBFRESERVE(t *testing.T, store *dstore.Store) {
+	tests := []evalTestCase{
+		{
+			name:           "BF.RESERVE with nil value",
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'bf.reserve' command")},
+		},
+		{
+			name:           "BF.RESERVE with empty array",
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'bf.reserve' command")},
+		},
+		{
+			name:           "BF.RESERVE with invalid error rate",
+			input:          []string{"myBloomFilter", "invalid_rate", "1000"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR bad error rate")},
+		},
+		{
+			name:           "BF.RESERVE successful reserve",
+			input:          []string{"myBloomFilter", "0.01", "1000"},
+			migratedOutput: EvalResponse{Result: clientio.OK, Error: nil},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store = setupTest(store)
+			if tt.setup != nil {
+				tt.setup()
+			}
+
+			response := evalBFRESERVE(tt.input, store)
+
+			assert.Equal(t, tt.migratedOutput.Result, response.Result)
+			if tt.migratedOutput.Error != nil {
+				assert.Error(t, response.Error, tt.migratedOutput.Error.Error())
+			}
+		})
+	}
+}
+
+func testEvalBFINFO(t *testing.T, store *dstore.Store) {
+	tests := []evalTestCase{
+		{
+			name:           "BF.INFO with nil value",
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'bf.info' command")},
+		},
+		{
+			name:           "BF.INFO with empty array",
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'bf.info' command")},
+		},
+		{
+			name:           "BF.INFO on non-existent filter",
+			input:          []string{"nonExistentFilter"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR not found")},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store = setupTest(store)
+			if tt.setup != nil {
+				tt.setup()
+			}
+
+			response := evalBFINFO(tt.input, store)
+			assert.Equal(t, tt.migratedOutput.Result, response.Result)
+
+			if tt.migratedOutput.Error != nil {
+				assert.Error(t, response.Error, tt.migratedOutput.Error.Error())
+			}
+		})
+	}
+}
+
+func testEvalBFADD(t *testing.T, store *dstore.Store) {
+	tests := []evalTestCase{
+		{
+			name:           "BF.ADD with nil value",
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'bf.add' command")},
+		},
+		{
+			name:           "BF.ADD with empty array",
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'bf.add' command")},
+		},
+		{
+			name:           "BF.ADD to non-existent filter",
+			input:          []string{"nonExistentFilter", "element"},
+			migratedOutput: EvalResponse{Result: clientio.IntegerOne, Error: nil},
+		},
+		{
+			name: "BF.ADD to existing filter",
+			setup: func() {
+				evalBFRESERVE([]string{"myBloomFilter", "0.01", "1000"}, store)
+			},
+			input:          []string{"myBloomFilter", "element"},
+			migratedOutput: EvalResponse{Result: clientio.IntegerOne, Error: nil}, // 1 for new addition, 0 if already exists
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store = setupTest(store)
+			if tt.setup != nil {
+				tt.setup()
+			}
+
+			response := evalBFADD(tt.input, store)
+
+			assert.Equal(t, tt.migratedOutput.Result, response.Result)
+			if tt.migratedOutput.Error != nil {
+				assert.Error(t, response.Error, tt.migratedOutput.Error.Error())
+			}
+
+		})
+	}
+}
+
+func testEvalBFEXISTS(t *testing.T, store *dstore.Store) {
+	tests := []evalTestCase{
+		{
+			name:           "BF.EXISTS with nil value",
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'bf.exists' command")},
+		},
+		{
+			name:           "BF.EXISTS with empty array",
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'bf.exists' command")},
+		},
+		{
+			name:           "BF.EXISTS on non-existent filter",
+			input:          []string{"nonExistentFilter", "element"},
+			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil}, // Item does not exist
+		},
+		{
+			name: "BF.EXISTS element not in filter",
+			setup: func() {
+				evalBFRESERVE([]string{"myBloomFilter", "0.01", "1000"}, store)
+			},
+			input:          []string{"myBloomFilter", "element"},
+			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
+		},
+		{
+			name: "BF.EXISTS element in filter",
+			setup: func() {
+				evalBFRESERVE([]string{"myBloomFilter", "0.01", "1000"}, store)
+				evalBFADD([]string{"myBloomFilter", "element"}, store)
+			},
+			input:          []string{"myBloomFilter", "element"},
+			migratedOutput: EvalResponse{Result: clientio.IntegerOne, Error: nil}, // 1 indicates the element exists
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store = setupTest(store)
+			if tt.setup != nil {
+				tt.setup()
+			}
+
+			response := evalBFEXISTS(tt.input, store)
+
+			assert.Equal(t, tt.migratedOutput.Result, response.Result)
+			if tt.migratedOutput.Error != nil {
+				assert.Error(t, response.Error, tt.migratedOutput.Error.Error())
 			}
 		})
 	}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/dicedb/dice/internal/cmd"
@@ -32,6 +33,8 @@ const (
 	Index       = "index"
 	JSON        = "json"
 )
+
+const QWatch string = "Q.WATCH"
 
 func ParseHTTPRequest(r *http.Request) (*cmd.DiceDBCmd, error) {
 	commandParts := strings.Split(strings.TrimPrefix(r.URL.Path, "/"), "/")
@@ -117,16 +120,39 @@ func ParseHTTPRequest(r *http.Request) (*cmd.DiceDBCmd, error) {
 }
 
 func ParseWebsocketMessage(msg []byte) (*cmd.DiceDBCmd, error) {
-	cmdStr := string(msg)
-	cmdStr = strings.TrimSpace(cmdStr)
-
+	cmdStr := strings.TrimSpace(string(msg))
 	if cmdStr == "" {
 		return nil, diceerrors.ErrEmptyCommand
 	}
 
-	cmdArr := strings.Split(cmdStr, " ")
-	command := strings.ToUpper(cmdArr[0])
-	cmdArr = cmdArr[1:] // args
+	var command string
+	idx := strings.Index(cmdStr, " ")
+	// handle commands with no args
+	if idx == -1 {
+		command = strings.ToUpper(cmdStr)
+		return &cmd.DiceDBCmd{
+			Cmd:  command,
+			Args: nil,
+		}, nil
+	}
+
+	// handle commands with args
+	command = strings.ToUpper(cmdStr[:idx])
+	cmdStr = cmdStr[idx+1:]
+
+	var cmdArr []string // args
+	// handle qwatch commands
+	if command == QWatch {
+		// remove quotes from query string
+		cmdStr, err := strconv.Unquote(cmdStr)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing q.watch query: %v", err)
+		}
+		cmdArr = []string{cmdStr}
+	} else {
+		// handle other commands
+		cmdArr = strings.Split(cmdStr, " ")
+	}
 
 	// if key prefix is empty for JSON.INGEST command
 	// add "" to cmdArr
