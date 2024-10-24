@@ -114,6 +114,21 @@ var (
 		CmdType: SingleShard,
 	}
 
+	jsonarrinsertCmdMeta = CmdsMeta{
+		Cmd:     "JSON.ARRINSERT",
+		CmdType: SingleShard,
+	}
+
+	jsonarrtrimCmdMeta = CmdsMeta{
+		Cmd:     "JSON.ARRTRIM",
+		CmdType: SingleShard,
+	}
+
+	jsonobjkeystCmdMeta = CmdsMeta{
+		Cmd:     "JSON.OBJKEYS",
+		CmdType: SingleShard,
+	}
+
 	incrCmdMeta = CmdsMeta{
 		Cmd:     "INCR",
 		CmdType: SingleShard,
@@ -184,6 +199,9 @@ func init() {
 	WorkerCmdsMeta["JSON.CLEAR"] = jsonclearCmdMeta
 	WorkerCmdsMeta["JSON.STRLEN"] = jsonstrlenCmdMeta
 	WorkerCmdsMeta["JSON.OBJLEN"] = jsonobjlenCmdMeta
+	WorkerCmdsMeta["JSON.ARRINSERT"] = jsonarrinsertCmdMeta
+	WorkerCmdsMeta["JSON.ARRTRIM"] = jsonarrtrimCmdMeta
+	WorkerCmdsMeta["JSON.OBJKEYS"] = jsonobjkeystCmdMeta
 	WorkerCmdsMeta["ZADD"] = zaddCmdMeta
 	WorkerCmdsMeta["ZRANGE"] = zrangeCmdMeta
 	WorkerCmdsMeta["ZRANK"] = zrankCmdMeta
