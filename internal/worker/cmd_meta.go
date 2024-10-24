@@ -3,10 +3,10 @@ package worker
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/eval"
-	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/ops"
 )
 
@@ -85,6 +85,13 @@ const (
 	CmdGetRange     = "GETRANGE"
 	CmdAppend       = "APPEND"
 	CmdZPopMax      = "ZPOPMAX"
+	CmdHLen         = "HLEN"
+	CmdHStrLen      = "HSTRLEN"
+	CmdHScan        = "HSCAN"
+	CmdBFAdd        = "BF.ADD"
+	CmdBFReserve    = "BF.RESERVE"
+	CmdBFInfo       = "BF.INFO"
+	CmdBFExists     = "BF.EXISTS"
 )
 
 type CmdMeta struct {
@@ -151,6 +158,15 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdPFMerge: {
+		CmdType: SingleShard,
+	},
+	CmdHLen: {
+		CmdType: SingleShard,
+	},
+	CmdHStrLen: {
+		CmdType: SingleShard,
+	},
+	CmdHScan: {
 		CmdType: SingleShard,
 	},
 	CmdHIncrBy: {
@@ -242,14 +258,26 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdZPopMax: {
 		CmdType: SingleShard,
 	},
+
+	// Bloom Filter
+	CmdBFAdd: {
+		CmdType: SingleShard,
+	},
+	CmdBFInfo: {
+		CmdType: SingleShard,
+	},
+	CmdBFExists: {
+		CmdType: SingleShard,
+	},
+	CmdBFReserve: {
+		CmdType: SingleShard,
+	},
 }
 
 func init() {
-	l := logger.New(logger.Opts{WithTimestamp: true})
-	// Validate the metadata for each command
 	for c, meta := range CommandsMeta {
 		if err := validateCmdMeta(c, meta); err != nil {
-			l.Error("error validating worker command metadata %s: %v", c, err)
+			slog.Error("error validating worker command metadata %s: %v", c, err)
 		}
 	}
 }

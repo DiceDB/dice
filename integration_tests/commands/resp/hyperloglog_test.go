@@ -12,7 +12,11 @@ func TestHyperLogLogCommands(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 
-	testCases := []TestCase{
+	testCases := []struct {
+		name     string
+		commands []string
+		expected []interface{}
+	}{
 		{
 			name:     "PFADD with one key-value pair",
 			commands: []string{"PFADD hll0 v1", "PFCOUNT hll0"},
@@ -72,13 +76,13 @@ func TestHyperLogLogCommands(t *testing.T) {
 			name: "PFMERGE with invalid object",
 			commands: []string{
 				"PFADD INVALID_HLL a b c", "SET INVALID_HLL \"1\"", "PFMERGE INVALID_HLL"},
-			expected: []interface{}{int64(1), "OK", "ERR -WRONGTYPE Key is not a valid HyperLogLog string value."},
+			expected: []interface{}{int64(1), "OK", "WRONGTYPE Key is not a valid HyperLogLog string value"},
 		},
 		{
 			name: "PFMERGE with invalid src object",
 			commands: []string{
 				"PFADD INVALID_SRC_HLL a b c", "SET INVALID_SRC_HLL \"1\"", "PFMERGE HLL INVALID_SRC_HLL"},
-			expected: []interface{}{int64(1), "OK", "ERR -WRONGTYPE Key is not a valid HyperLogLog string value."},
+			expected: []interface{}{int64(1), "OK", "WRONGTYPE Key is not a valid HyperLogLog string value"},
 		},
 	}
 
