@@ -25,8 +25,7 @@ import (
 )
 
 type TestServerOptions struct {
-	Port   int
-	Logger *slog.Logger
+	Port int
 }
 
 //nolint:unused
@@ -112,8 +111,7 @@ func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *clientio.RESPParser
 }
 
 func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
-	logr := logger.New(logger.Opts{WithTimestamp: true})
-	slog.SetDefault(logr)
+	slog.SetDefault(logger.New())
 	config.DiceConfig.Network.IOBufferLength = 16
 	config.DiceConfig.Persistence.WriteAOFOnCleanup = false
 	if opt.Port != 0 {
@@ -125,10 +123,10 @@ func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
 	queryWatchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Memory.KeysLimit)
 	cmdWatchChan := make(chan dstore.CmdWatchEvent, config.DiceConfig.Memory.KeysLimit)
 	gec := make(chan error)
-	shardManager := shard.NewShardManager(1, queryWatchChan, cmdWatchChan, gec, logr)
+	shardManager := shard.NewShardManager(1, queryWatchChan, cmdWatchChan, gec)
 	workerManager := worker.NewWorkerManager(20000, shardManager)
 	// Initialize the RESP Server
-	testServer := resp.NewServer(shardManager, workerManager, cmdWatchChan, gec, logr)
+	testServer := resp.NewServer(shardManager, workerManager, cmdWatchChan, gec)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	fmt.Println("Starting the test server on port", config.DiceConfig.AsyncServer.Port)
@@ -149,7 +147,7 @@ func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
 				cancelShardManager()
 				return
 			}
-			opt.Logger.Error("Test server encountered an error", slog.Any("error", err))
+			slog.Error("Test server encountered an error", slog.Any("error", err))
 			os.Exit(1)
 		}
 	}()

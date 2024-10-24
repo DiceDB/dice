@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	DiceVersion string = "0.0.4"
+	DiceDBVersion string = "0.0.5"
 
 	DefaultHost           string = "0.0.0.0"
 	DefaultPort           int    = 7379
@@ -38,8 +38,9 @@ var (
 	EnableHTTP           = true
 	HTTPPort             = 8082
 
-	EnableWebsocket = true
-	WebsocketPort   = 8379
+	EnableWebsocket     = true
+	WebsocketPort       = 8379
+	NumShards       int = -1
 
 	// if RequirePass is set to an empty string, no authentication is required
 	RequirePass = utils.EmptyStr
@@ -52,6 +53,8 @@ var (
 	KeysLimit = DefaultKeysLimit
 
 	EnableProfiling = false
+
+	EnableWatch = true
 )
 
 type Config struct {
@@ -116,11 +119,13 @@ type Config struct {
 		IOBufferLength    int `mapstructure:"iobufferlength"`
 		IOBufferLengthMAX int `mapstructure:"iobufferlengthmax"`
 	} `mapstructure:"network"`
+
+	NumShards int `mapstructure:"num_shards"`
 }
 
 // Default configurations for internal use
 var baseConfig = Config{
-	Version: DiceVersion,
+	Version: DiceDBVersion,
 	AsyncServer: struct {
 		Addr      string `mapstructure:"addr"`
 		Port      int    `mapstructure:"port"`
@@ -196,7 +201,7 @@ var baseConfig = Config{
 		LogLevel        string `mapstructure:"loglevel"`
 		PrettyPrintLogs bool   `mapstructure:"prettyprintlogs"`
 	}{
-		LogLevel:        "debug",
+		LogLevel:        "info",
 		PrettyPrintLogs: true,
 	},
 	Auth: struct {
@@ -219,16 +224,8 @@ var defaultConfig Config
 
 func init() {
 	config := baseConfig
-	env := os.Getenv("DICE_ENV")
-	if env == "prod" {
-		config.Logging.LogLevel = "info"
-		config.Logging.PrettyPrintLogs = false
-	}
-
-	if logLevel := os.Getenv("DICE_LOG_LEVEL"); logLevel != "" {
-		config.Logging.LogLevel = logLevel
-	}
-
+	config.Logging.PrettyPrintLogs = false
+	config.Logging.LogLevel = "info"
 	defaultConfig = config
 }
 
@@ -346,7 +343,6 @@ func setUpViperConfig(configFilePath string) {
 
 	// override default configurations with command line flags
 	mergeFlagsWithConfig()
-	slog.Info("configurations loaded successfully.")
 }
 
 func mergeFlagsWithConfig() {

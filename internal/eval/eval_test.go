@@ -124,6 +124,10 @@ func TestEval(t *testing.T) {
 	testEvalINCRBY(t, store)
 	testEvalDECR(t, store)
 	testEvalDECRBY(t, store)
+	testEvalBFRESERVE(t, store)
+	testEvalBFINFO(t, store)
+	testEvalBFEXISTS(t, store)
+	testEvalBFADD(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -2288,10 +2292,10 @@ func testEvalPFADD(t *testing.T, store *dstore.Store) {
 				store.Put(key, store.NewObj(value, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
 			},
 			input:  []string{"EXISTING_KEY", "1"},
-			output: []byte("-WRONGTYPE Key is not a valid HyperLogLog string value."),
+			output: []byte("-WRONGTYPE Key is not a valid HyperLogLog string value"),
 			migratedOutput: EvalResponse{
 				Result: nil,
-				Error:  diceerrors.ErrGeneral("-WRONGTYPE Key is not a valid HyperLogLog string value."),
+				Error:  diceerrors.ErrInvalidHyperLogLogKey,
 			},
 		},
 	}
@@ -2376,7 +2380,7 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 			input: []string{"INVALID_OBJ_DEST_KEY"},
 			migratedOutput: EvalResponse{
 				Result: nil,
-				Error:  diceerrors.ErrGeneral("-WRONGTYPE Key is not a valid HyperLogLog string value."),
+				Error:  diceerrors.ErrInvalidHyperLogLogKey,
 			},
 		},
 		"PFMERGE destKey doesn't exist": {
@@ -5051,8 +5055,6 @@ func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 			}
 
 			response := evalINCRBYFLOAT(tt.input, store)
-			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput)
-
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
@@ -6040,7 +6042,7 @@ func testEvalZRANK(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"myzset", "member2", "WITHSCORE"},
 			migratedOutput: EvalResponse{
-				Result: []interface{}{int64(1), float64(2)},
+				Result: []interface{}{int64(1), "2"},
 				Error:  nil,
 			},
 		},
@@ -6740,7 +6742,6 @@ func testEvalINCR(t *testing.T, store *dstore.Store) {
 			}
 
 			response := evalINCR(tt.input, store)
-			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput)
 
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
@@ -6828,7 +6829,6 @@ func testEvalINCRBY(t *testing.T, store *dstore.Store) {
 			}
 
 			response := evalINCRBY(tt.input, store)
-			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput)
 
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
@@ -6916,7 +6916,6 @@ func testEvalDECR(t *testing.T, store *dstore.Store) {
 			}
 
 			response := evalDECR(tt.input, store)
-			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput)
 
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
@@ -7004,7 +7003,6 @@ func testEvalDECRBY(t *testing.T, store *dstore.Store) {
 			}
 
 			response := evalDECRBY(tt.input, store)
-			fmt.Printf("Response: %v |  Expected: %v\n", *response, tt.migratedOutput)
 
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
@@ -7019,6 +7017,181 @@ func testEvalDECRBY(t *testing.T, store *dstore.Store) {
 				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
 				testifyAssert.NoError(t, response.Error)
+			}
+		})
+	}
+}
+
+func testEvalBFRESERVE(t *testing.T, store *dstore.Store) {
+	tests := []evalTestCase{
+		{
+			name:           "BF.RESERVE with nil value",
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'bf.reserve' command")},
+		},
+		{
+			name:           "BF.RESERVE with empty array",
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'bf.reserve' command")},
+		},
+		{
+			name:           "BF.RESERVE with invalid error rate",
+			input:          []string{"myBloomFilter", "invalid_rate", "1000"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR bad error rate")},
+		},
+		{
+			name:           "BF.RESERVE successful reserve",
+			input:          []string{"myBloomFilter", "0.01", "1000"},
+			migratedOutput: EvalResponse{Result: clientio.OK, Error: nil},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store = setupTest(store)
+			if tt.setup != nil {
+				tt.setup()
+			}
+
+			response := evalBFRESERVE(tt.input, store)
+
+			assert.Equal(t, tt.migratedOutput.Result, response.Result)
+			if tt.migratedOutput.Error != nil {
+				assert.Error(t, response.Error, tt.migratedOutput.Error.Error())
+			}
+		})
+	}
+}
+
+func testEvalBFINFO(t *testing.T, store *dstore.Store) {
+	tests := []evalTestCase{
+		{
+			name:           "BF.INFO with nil value",
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'bf.info' command")},
+		},
+		{
+			name:           "BF.INFO with empty array",
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'bf.info' command")},
+		},
+		{
+			name:           "BF.INFO on non-existent filter",
+			input:          []string{"nonExistentFilter"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR not found")},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store = setupTest(store)
+			if tt.setup != nil {
+				tt.setup()
+			}
+
+			response := evalBFINFO(tt.input, store)
+			assert.Equal(t, tt.migratedOutput.Result, response.Result)
+
+			if tt.migratedOutput.Error != nil {
+				assert.Error(t, response.Error, tt.migratedOutput.Error.Error())
+			}
+		})
+	}
+}
+
+func testEvalBFADD(t *testing.T, store *dstore.Store) {
+	tests := []evalTestCase{
+		{
+			name:           "BF.ADD with nil value",
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'bf.add' command")},
+		},
+		{
+			name:           "BF.ADD with empty array",
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'bf.add' command")},
+		},
+		{
+			name:           "BF.ADD to non-existent filter",
+			input:          []string{"nonExistentFilter", "element"},
+			migratedOutput: EvalResponse{Result: clientio.IntegerOne, Error: nil},
+		},
+		{
+			name: "BF.ADD to existing filter",
+			setup: func() {
+				evalBFRESERVE([]string{"myBloomFilter", "0.01", "1000"}, store)
+			},
+			input:          []string{"myBloomFilter", "element"},
+			migratedOutput: EvalResponse{Result: clientio.IntegerOne, Error: nil}, // 1 for new addition, 0 if already exists
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store = setupTest(store)
+			if tt.setup != nil {
+				tt.setup()
+			}
+
+			response := evalBFADD(tt.input, store)
+
+			assert.Equal(t, tt.migratedOutput.Result, response.Result)
+			if tt.migratedOutput.Error != nil {
+				assert.Error(t, response.Error, tt.migratedOutput.Error.Error())
+			}
+
+		})
+	}
+}
+
+func testEvalBFEXISTS(t *testing.T, store *dstore.Store) {
+	tests := []evalTestCase{
+		{
+			name:           "BF.EXISTS with nil value",
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'bf.exists' command")},
+		},
+		{
+			name:           "BF.EXISTS with empty array",
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'bf.exists' command")},
+		},
+		{
+			name:           "BF.EXISTS on non-existent filter",
+			input:          []string{"nonExistentFilter", "element"},
+			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil}, // Item does not exist
+		},
+		{
+			name: "BF.EXISTS element not in filter",
+			setup: func() {
+				evalBFRESERVE([]string{"myBloomFilter", "0.01", "1000"}, store)
+			},
+			input:          []string{"myBloomFilter", "element"},
+			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
+		},
+		{
+			name: "BF.EXISTS element in filter",
+			setup: func() {
+				evalBFRESERVE([]string{"myBloomFilter", "0.01", "1000"}, store)
+				evalBFADD([]string{"myBloomFilter", "element"}, store)
+			},
+			input:          []string{"myBloomFilter", "element"},
+			migratedOutput: EvalResponse{Result: clientio.IntegerOne, Error: nil}, // 1 indicates the element exists
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store = setupTest(store)
+			if tt.setup != nil {
+				tt.setup()
+			}
+
+			response := evalBFEXISTS(tt.input, store)
+
+			assert.Equal(t, tt.migratedOutput.Result, response.Result)
+			if tt.migratedOutput.Error != nil {
+				assert.Error(t, response.Error, tt.migratedOutput.Error.Error())
 			}
 		})
 	}
