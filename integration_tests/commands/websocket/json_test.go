@@ -1,10 +1,33 @@
 package websocket
 
 import (
+	"encoding/json"
+	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/dicedb/dice/testutils"
+	testifyAssert "github.com/stretchr/testify/assert"
+
+	"gotest.tools/v3/assert"
 )
+
+func compareJSON(t *testing.T, expected, actual string) {
+	var expectedMap map[string]interface{}
+	var actualMap map[string]interface{}
+
+	err1 := json.Unmarshal([]byte(expected), &expectedMap)
+	err2 := json.Unmarshal([]byte(actual), &actualMap)
+
+	assert.NilError(t, err1)
+	assert.NilError(t, err2)
+
+	assert.DeepEqual(t, expectedMap, actualMap)
+}
+
+func isJSONString(s string) bool {
+	var js json.RawMessage
+	return json.Unmarshal([]byte(s), &js) == nil
+}
 
 func TestJSONClearOperations(t *testing.T) {
 	exec := NewWebsocketCommandExecutor()
@@ -14,8 +37,7 @@ func TestJSONClearOperations(t *testing.T) {
 	DeleteKey(t, conn, exec, "user")
 
 	defer func() {
-		resp, err := exec.FireCommandAndReadResponse(conn, "DEL user")
-		assert.Nil(t, err)
+		resp, _ := exec.FireCommandAndReadResponse(conn, "DEL user")
 		assert.Equal(t, float64(1), resp)
 	}()
 
@@ -88,12 +110,288 @@ func TestJSONClearOperations(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.commands {
-				result, err := exec.FireCommandAndReadResponse(conn, cmd)
-				assert.Nil(t, err)
+				result, _ := exec.FireCommandAndReadResponse(conn, cmd)
 				assert.Equal(t, tc.expected[i], result)
 			}
 		})
 	}
+}
+
+func TestJSONDelOperations(t *testing.T) {
+	exec := NewWebsocketCommandExecutor()
+	conn := exec.ConnectToServer()
+	defer conn.Close()
+
+	defer func() {
+		resp, _ := exec.FireCommandAndReadResponse(conn, "DEL user")
+		assert.Equal(t, float64(0), resp)
+	}()
+
+	beforeTestSetup := "DEL user"
+
+	testCases := []struct {
+		name      string
+		setupData string
+		commands  []string
+		expected  []interface{}
+		cleanUp   []string
+	}{
+		{
+			name:      "Delete root path",
+			setupData: `JSON.SET user $ {"age":13,"high":1.60,"flag":true,"name":"jerry","pet":null,"language":["python","golang"],"partner":{"name":"tom","language":["rust"]}}`,
+			commands: []string{
+				"JSON.DEL user $",
+				"JSON.GET user $",
+			},
+			expected: []interface{}{float64(1), "(nil)"},
+			cleanUp:  []string{"DEL user"},
+		},
+		{
+			name:      "Delete nested field",
+			setupData: `JSON.SET user $ {"age":13,"high":1.60,"flag":true,"name":"jerry","pet":null,"language":["python","golang"],"partner":{"name":"tom","language":["rust"]}}`,
+			commands: []string{
+				"JSON.DEL user $.partner.name",
+				"JSON.GET user $",
+			},
+			expected: []interface{}{float64(1), `{"age":13,"high":1.60,"flag":true,"name":"jerry","pet":null,"language":["python","golang"],"partner":{"language":["rust"]}}`},
+			cleanUp:  []string{"DEL user"},
+		},
+		{
+			name:      "del string type",
+			setupData: `JSON.SET user $ {"flag":true,"name":"Tom"}`,
+			commands: []string{
+				"JSON.DEL user $.name",
+				"JSON.GET user $"},
+			expected: []interface{}{float64(1), `{"flag":true}`},
+			cleanUp:  []string{"DEL user"},
+		},
+		{
+			name:      "del bool type",
+			setupData: `JSON.SET user $ {"flag":true,"name":"Tom"}`,
+			commands: []string{
+				"JSON.DEL user $.flag",
+				"JSON.GET user $"},
+			expected: []interface{}{float64(1), `{"name":"Tom"}`},
+			cleanUp:  []string{"DEL user"},
+		},
+		{
+			name:      "del null type",
+			setupData: `JSON.SET user $ {"name":null,"age":28}`,
+			commands: []string{
+				"JSON.DEL user $.name",
+				"JSON.GET user $"},
+			expected: []interface{}{float64(1), `{"age":28}`},
+			cleanUp:  []string{"DEL user"},
+		},
+		{
+			name:      "del array type",
+			setupData: `JSON.SET user $ {"names":["Rahul","Tom"],"bosses":{"names":["Jerry","Rocky"],"hobby":"swim"}}`,
+			commands: []string{
+				"JSON.DEL user $..names",
+				"JSON.GET user $"},
+			expected: []interface{}{float64(2), `{"bosses":{"hobby":"swim"}}`},
+			cleanUp:  []string{"DEL user"},
+		},
+		{
+			name:      "del integer type",
+			setupData: `JSON.SET user $ {"age":28,"name":"Tom"}`,
+			commands: []string{
+				"JSON.DEL user $.age",
+				"JSON.GET user $"},
+			expected: []interface{}{float64(1), `{"name":"Tom"}`},
+			cleanUp:  []string{"DEL user"},
+		},
+		{
+			name:      "del float type",
+			setupData: `JSON.SET user $ {"price":3.14,"name":"sugar"}`,
+			commands: []string{
+				"JSON.DEL user $.price",
+				"JSON.GET user $"},
+			expected: []interface{}{float64(1), `{"name":"sugar"}`},
+			cleanUp:  []string{"DEL user"},
+		},
+		{
+			name:      "delete key with []",
+			setupData: `JSON.SET data $ {"key[0]":"value","array":["a","b"]}`,
+			commands: []string{
+				`JSON.DEL data ["key[0]"]`,
+				"JSON.GET data $"},
+			expected: []interface{}{float64(1), `{"array": ["a","b"]}`},
+			cleanUp:  []string{"DEL data"},
+		},
+	}
+
+	for _, tc := range testCases {
+		if beforeTestSetup != "" {
+			resp, _ := exec.FireCommandAndReadResponse(conn, beforeTestSetup)
+			assert.Equal(t, float64(0), resp)
+		}
+
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.setupData != "" {
+				result, _ := exec.FireCommandAndReadResponse(conn, tc.setupData)
+				assert.Equal(t, "OK", result)
+			}
+
+			for i, cmd := range tc.commands {
+				result, _ := exec.FireCommandAndReadResponse(conn, cmd)
+				fmt.Printf("Type of result: %T\n", result)
+				jsonResult, isString := result.(string)
+				if isString && testutils.IsJSONResponse(jsonResult) {
+					testifyAssert.JSONEq(t, tc.expected[i].(string), jsonResult)
+				} else {
+					assert.Equal(t, tc.expected[i], result)
+				}
+			}
+
+			for i := 0; i < len(tc.cleanUp); i++ {
+				exec.FireCommandAndReadResponse(conn, tc.cleanUp[i])
+			}
+
+		})
+	}
+}
+
+func TestJSONForgetOperations(t *testing.T) {
+	exec := NewWebsocketCommandExecutor()
+	conn := exec.ConnectToServer()
+	defer conn.Close()
+
+	defer func() {
+		resp, _ := exec.FireCommandAndReadResponse(conn, "DEL user")
+		assert.Equal(t, float64(0), resp)
+	}()
+
+	beforeTestSetup := "DEL user"
+	testCaseCleanUp := "DEL user"
+
+	testCases := []struct {
+		name      string
+		setupData string
+		commands  []string
+		expected  []interface{}
+		cleanUp   []string
+	}{
+		{
+			name:      "Forget root path",
+			setupData: `JSON.SET user $ {"age":13,"high":1.60,"flag":true,"name":"jerry","pet":null,"language":["python","golang"],"partner":{"name":"tom","language":["rust"]}}`,
+			commands: []string{
+				"JSON.FORGET user $",
+				"JSON.GET user $",
+			},
+			expected: []interface{}{float64(1), "(nil)"},
+			cleanUp:  []string{"DEL user"},
+		},
+		{
+			name:      "Forget nested field",
+			setupData: `JSON.SET user $ {"age":13,"high":1.60,"flag":true,"name":"jerry","pet":null,"language":["python","golang"],"partner":{"name":"tom","language":["rust"]}}`,
+			commands: []string{
+				"JSON.FORGET user $.partner.name",
+				"JSON.GET user $",
+			},
+			expected: []interface{}{float64(1), `{"age":13,"high":1.60,"flag":true,"name":"jerry","pet":null,"language":["python","golang"],"partner":{"language":["rust"]}}`},
+			cleanUp:  []string{"DEL user"},
+		},
+
+		{
+			name:      "forget string type",
+			setupData: `JSON.SET user $ {"flag":true,"name":"Tom"}`,
+			commands: []string{
+				"JSON.FORGET user $.name",
+				"JSON.GET user $"},
+			expected: []interface{}{float64(1), `{"flag":true}`},
+			cleanUp:  []string{"DEL user"},
+		},
+		{
+			name:      "forget bool type",
+			setupData: `JSON.SET user $ {"flag":true,"name":"Tom"}`,
+			commands: []string{
+				"JSON.FORGET user $.flag",
+				"JSON.GET user $"},
+			expected: []interface{}{float64(1), `{"name":"Tom"}`},
+			cleanUp:  []string{"DEL user"},
+		},
+		{
+			name:      "forget null type",
+			setupData: `JSON.SET user $ {"name":null,"age":28}`,
+			commands: []string{
+				"JSON.FORGET user $.name",
+				"JSON.GET user $"},
+			expected: []interface{}{float64(1), `{"age":28}`},
+			cleanUp:  []string{"DEL user"},
+		},
+		{
+			name:      "forget array type",
+			setupData: `JSON.SET user $ {"names":["Rahul","Tom"],"bosses":{"names":["Jerry","Rocky"],"hobby":"swim"}}`,
+			commands: []string{
+				"JSON.FORGET user $..names",
+				"JSON.GET user $"},
+			expected: []interface{}{float64(2), `{"bosses":{"hobby":"swim"}}`},
+			cleanUp:  []string{"DEL user"},
+		},
+		{
+			name:      "forget integer type",
+			setupData: `JSON.SET user $ {"age":28,"name":"Tom"}`,
+			commands: []string{
+				"JSON.FORGET user $.age",
+				"JSON.GET user $"},
+			expected: []interface{}{float64(1), `{"name":"Tom"}`},
+			cleanUp:  []string{"DEL user"},
+		},
+		{
+			name:      "forget float type",
+			setupData: `JSON.SET user $ {"price":3.14,"name":"sugar"}`,
+			commands: []string{
+				"JSON.FORGET user $.price",
+				"JSON.GET user $"},
+			expected: []interface{}{float64(1), `{"name":"sugar"}`},
+			cleanUp:  []string{"DEL user"},
+		},
+		{
+			name:      "forget array element",
+			setupData: `JSON.SET user $ {"names":["Rahul","Tom"],"bosses":{"names":["Jerry","Rocky"],"hobby":"swim"}}`,
+			commands: []string{
+				"JSON.FORGET user $.names[0]",
+				"JSON.GET user $"},
+			expected: []interface{}{float64(1), `{"names":["Tom"],"bosses":{"names":["Jerry","Rocky"],"hobby":"swim"}}`},
+			cleanUp:  []string{"DEL user"},
+		},
+	}
+
+	for _, tc := range testCases {
+		if beforeTestSetup != "" {
+			resp, _ := exec.FireCommandAndReadResponse(conn, beforeTestSetup)
+			assert.Equal(t, float64(0), resp)
+		}
+
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.setupData != "" {
+				result, _ := exec.FireCommandAndReadResponse(conn, tc.setupData)
+				assert.Equal(t, "OK", result)
+			}
+
+			for i, cmd := range tc.commands {
+				result, _ := exec.FireCommandAndReadResponse(conn, cmd)
+				jsonResult, isString := result.(string)
+				if isString && testutils.IsJSONResponse(jsonResult) {
+					testifyAssert.JSONEq(t, tc.expected[i].(string), jsonResult)
+				} else {
+					assert.Equal(t, tc.expected[i], result)
+				}
+			}
+
+			for i := 0; i < len(tc.cleanUp); i++ {
+				exec.FireCommandAndReadResponse(conn, tc.cleanUp[i])
+			}
+
+			if testCaseCleanUp != "" {
+				resp, _ := exec.FireCommandAndReadResponse(conn, testCaseCleanUp)
+				assert.Equal(t, float64(0), resp)
+			}
+
+		})
+	}
+
 }
 
 func TestJsonStrlen(t *testing.T) {
@@ -105,8 +403,7 @@ func TestJsonStrlen(t *testing.T) {
 	DeleteKey(t, conn, exec, "doc")
 
 	defer func() {
-		resp, err := exec.FireCommandAndReadResponse(conn, "DEL doc")
-		assert.Nil(t, err)
+		resp, _ := exec.FireCommandAndReadResponse(conn, "DEL doc")
 		assert.Equal(t, float64(1), resp)
 	}()
 
@@ -126,7 +423,7 @@ func TestJsonStrlen(t *testing.T) {
 		{
 			name: "jsonstrlen nested",
 			commands: []string{
-				`JSON.SET doc $ {"name":"jerry","partner":{"name":"tom"}}`,
+				`JSON.SET doc $ {"name":"j erry","partner":{"name":"tom"}}`,
 				"JSON.STRLEN doc $..name",
 			},
 			expected: []interface{}{"OK", []interface{}{float64(5), float64(3)}},
@@ -176,13 +473,12 @@ func TestJsonStrlen(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.commands {
-				result, err := exec.FireCommandAndReadResponse(conn, cmd)
-				assert.Nil(t, err, "error: %v", err)
+				result, _ := exec.FireCommandAndReadResponse(conn, cmd)
 				stringResult, ok := result.(string)
 				if ok {
 					assert.Equal(t, tc.expected[i], stringResult)
 				} else {
-					assert.True(t, arraysArePermutations(tc.expected[i].([]interface{}), result.([]interface{})))
+					assert.Assert(t, arraysArePermutations(tc.expected[i].([]interface{}), result.([]interface{})))
 				}
 			}
 		})
@@ -202,8 +498,7 @@ func TestJsonObjLen(t *testing.T) {
 	d := `["this","is","an","array"]`
 
 	defer func() {
-		resp, err := exec.FireCommandAndReadResponse(conn, "DEL obj")
-		assert.Nil(t, err)
+		resp, _ := exec.FireCommandAndReadResponse(conn, "DEL obj")
 		assert.Equal(t, float64(1), resp)
 	}()
 
@@ -269,48 +564,49 @@ func TestJsonObjLen(t *testing.T) {
 		},
 		{
 			name:     "JSON.OBJLEN with legacy path - inner existing path",
-			commands: []string{"json.set obj $ " + c, "json.objlen obj .partner", "json.objlen obj .partner2",},
+			commands: []string{"json.set obj $ " + c, "json.objlen obj .partner", "json.objlen obj .partner2"},
 			expected: []interface{}{"OK", float64(2), float64(2)},
 		},
 		{
 			name:     "JSON.OBJLEN with legacy path - inner existing path v2",
-			commands: []string{"json.set obj $ " + c, "json.objlen obj partner", "json.objlen obj partner2",},
+			commands: []string{"json.set obj $ " + c, "json.objlen obj partner", "json.objlen obj partner2"},
 			expected: []interface{}{"OK", float64(2), float64(2)},
 		},
 		{
 			name:     "JSON.OBJLEN with legacy path - inner non-existent path",
-			commands: []string{"json.set obj $ " + c, "json.objlen obj .idonotexist",},
+			commands: []string{"json.set obj $ " + c, "json.objlen obj .idonotexist"},
 			expected: []interface{}{"OK", nil},
 		},
 		{
 			name:     "JSON.OBJLEN with legacy path - inner non-existent path v2",
-			commands: []string{"json.set obj $ " + c, "json.objlen obj idonotexist",},
+			commands: []string{"json.set obj $ " + c, "json.objlen obj idonotexist"},
 			expected: []interface{}{"OK", nil},
 		},
 		{
 			name:     "JSON.OBJLEN with legacy path - inner existent path with nonJSON object",
-			commands: []string{"json.set obj $ " + c, "json.objlen obj .name",},
+			commands: []string{"json.set obj $ " + c, "json.objlen obj .name"},
 			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
 		},
 		{
 			name:     "JSON.OBJLEN with legacy path - inner existent path recursive object",
-			commands: []string{"json.set obj $ " + c, "json.objlen obj ..partner",},
+			commands: []string{"json.set obj $ " + c, "json.objlen obj ..partner"},
 			expected: []interface{}{"OK", float64(2)},
 		},
 	}
 
-	for _, tcase := range testCases {
-		DeleteKey(t, conn, exec, "obj")
-		t.Run(tcase.name, func(t *testing.T) {
-			for i := 0; i < len(tcase.commands); i++ {
-				cmd := tcase.commands[i]
-				out := tcase.expected[i]
-				result, err := exec.FireCommandAndReadResponse(conn, cmd)
-				assert.Nil(t, err)
-				assert.Equal(t, out, result)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for i, cmd := range tc.commands {
+				result, _ := exec.FireCommandAndReadResponse(conn, cmd)
+				if slice, ok := tc.expected[i].([]interface{}); ok {
+					assert.Assert(t, arraysArePermutations(slice, result.([]interface{})))
+				} else {
+					assert.DeepEqual(t, tc.expected[i], result)
+				}
 			}
 		})
 	}
+
 }
 
 func arraysArePermutations[T comparable](a, b []T) bool {

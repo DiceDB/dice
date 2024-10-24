@@ -62,32 +62,37 @@ const (
 
 // Watch commands
 const (
-	CmdGetWatch     = "GET.WATCH"
-	CmdZRangeWatch  = "ZRANGE.WATCH"
-	CmdZPopMin      = "ZPOPMIN"
-	CmdJSONClear    = "JSON.CLEAR"
-	CmdJSONStrlen   = "JSON.STRLEN"
-	CmdJSONObjlen   = "JSON.OBJLEN"
-	CmdZAdd         = "ZADD"
-	CmdZRange       = "ZRANGE"
-	CmdZRank        = "ZRANK"
-	CmdPFAdd        = "PFADD"
-	CmdPFCount      = "PFCOUNT"
-	CmdPFMerge      = "PFMERGE"
-	CmdIncr         = "INCR"
-	CmdIncrBy       = "INCRBY"
-	CmdDecr         = "DECR"
-	CmdDecrBy       = "DECRBY"
-	CmdIncrByFloat  = "INCRBYFLOAT"
-	CmdHIncrBy      = "HINCRBY"
-	CmdHIncrByFloat = "HINCRBYFLOAT"
-	CmdHRandField   = "HRANDFIELD"
-	CmdGetRange     = "GETRANGE"
-	CmdAppend       = "APPEND"
-	CmdBFAdd        = "BF.ADD"
-	CmdBFReserve    = "BF.RESERVE"
-	CmdBFInfo       = "BF.INFO"
-	CmdBFExists     = "BF.EXISTS"
+	CmdGetWatch      = "GET.WATCH"
+	CmdZRangeWatch   = "ZRANGE.WATCH"
+	CmdZPopMin       = "ZPOPMIN"
+	CmdJSONClear     = "JSON.CLEAR"
+	CmdJSONStrlen    = "JSON.STRLEN"
+	CmdJSONObjlen    = "JSON.OBJLEN"
+	CmdJSONForget    = "JSON.FORGET"
+	CmdJSONDel       = "JSON.DEL"
+	CmdJSONToggle    = "JSON.TOGGLE"
+	CmdJSONNumIncrBY = "JSON.NUMINCRBY"
+	CmdJSONNumMultBY = "JSON.NUMMULTBY"
+	CmdZAdd          = "ZADD"
+	CmdZRange        = "ZRANGE"
+	CmdZRank         = "ZRANK"
+	CmdPFAdd         = "PFADD"
+	CmdPFCount       = "PFCOUNT"
+	CmdPFMerge       = "PFMERGE"
+	CmdIncr          = "INCR"
+	CmdIncrBy        = "INCRBY"
+	CmdDecr          = "DECR"
+	CmdDecrBy        = "DECRBY"
+	CmdIncrByFloat   = "INCRBYFLOAT"
+	CmdHIncrBy       = "HINCRBY"
+	CmdHIncrByFloat  = "HINCRBYFLOAT"
+	CmdHRandField    = "HRANDFIELD"
+	CmdGetRange      = "GETRANGE"
+	CmdAppend        = "APPEND"
+	CmdBFAdd         = "BF.ADD"
+	CmdBFReserve     = "BF.RESERVE"
+	CmdBFInfo        = "BF.INFO"
+	CmdBFExists      = "BF.EXISTS"
 )
 
 type CmdMeta struct {
@@ -145,6 +150,21 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdJSONObjlen: {
+		CmdType: SingleShard,
+	},
+	CmdJSONForget: {
+		CmdType: SingleShard,
+	},
+	CmdJSONDel: {
+		CmdType: SingleShard,
+	},
+	CmdJSONToggle: {
+		CmdType: SingleShard,
+	},
+	CmdJSONNumIncrBY: {
+		CmdType: SingleShard,
+	},
+	CmdJSONNumMultBY: {
 		CmdType: SingleShard,
 	},
 	CmdPFAdd: {

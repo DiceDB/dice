@@ -113,6 +113,26 @@ var (
 		Cmd:     "JSON.OBJLEN",
 		CmdType: SingleShard,
 	}
+	jsonforgetCmdMeta = CmdsMeta{
+		Cmd:     "JSON.FORGET",
+		CmdType: SingleShard,
+	}
+	jsondelCmdMeta = CmdsMeta{
+		Cmd:     "JSON.DEL",
+		CmdType: SingleShard,
+	}
+	jsontoggleCmdMeta = CmdsMeta{
+		Cmd:     "JSON.TOGGLE",
+		CmdType: SingleShard,
+	}
+	jsonNumIncrByCmdMeta = CmdsMeta{
+		Cmd:     "JSON.NUMINCRBY",
+		CmdType: SingleShard,
+	}
+	jsonNumMultByCmdMeta = CmdsMeta{
+		Cmd:     "JSON.NUMMULTBY",
+		CmdType: SingleShard,
+	}
 
 	incrCmdMeta = CmdsMeta{
 		Cmd:     "INCR",
@@ -184,6 +204,11 @@ func init() {
 	WorkerCmdsMeta["JSON.CLEAR"] = jsonclearCmdMeta
 	WorkerCmdsMeta["JSON.STRLEN"] = jsonstrlenCmdMeta
 	WorkerCmdsMeta["JSON.OBJLEN"] = jsonobjlenCmdMeta
+	WorkerCmdsMeta["JSON.FORGET"] = jsonforgetCmdMeta
+	WorkerCmdsMeta["JSON.DEL"] = jsondelCmdMeta
+	WorkerCmdsMeta["JSON.TOGGLE"] = jsontoggleCmdMeta
+	WorkerCmdsMeta["JSON.NUMINCRBY"] = jsonNumIncrByCmdMeta
+	WorkerCmdsMeta["JSON.NUMMULTBY"] = jsonNumMultByCmdMeta
 	WorkerCmdsMeta["ZADD"] = zaddCmdMeta
 	WorkerCmdsMeta["ZRANGE"] = zrangeCmdMeta
 	WorkerCmdsMeta["ZRANK"] = zrankCmdMeta

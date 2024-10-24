@@ -1,6 +1,7 @@
 package testutils
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 
@@ -55,4 +56,9 @@ func NormalizeJSON(v interface{}) interface{} {
 	default:
 		return v
 	}
+}
+
+func isJSONString(s string) bool {
+	var js json.RawMessage
+	return json.Unmarshal([]byte(s), &js) == nil
 }

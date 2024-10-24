@@ -14,6 +14,24 @@ import (
 	"gotest.tools/v3/assert"
 )
 
+func compareJSON(t *testing.T, expected, actual string) {
+	var expectedMap map[string]interface{}
+	var actualMap map[string]interface{}
+
+	err1 := json.Unmarshal([]byte(expected), &expectedMap)
+	err2 := json.Unmarshal([]byte(actual), &actualMap)
+
+	assert.NilError(t, err1)
+	assert.NilError(t, err2)
+
+	assert.DeepEqual(t, expectedMap, actualMap)
+}
+
+func isJSONString(s string) bool {
+	var js json.RawMessage
+	return json.Unmarshal([]byte(s), &js) == nil
+}
+
 func TestJSONOperations(t *testing.T) {
 	exec := NewHTTPCommandExecutor()
 	simpleJsonString := `{"name":"John","age":30}`
@@ -628,6 +646,89 @@ func TestJSONForgetOperations(t *testing.T) {
 	exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}})
 }
 
+func TestJSONTOGGLE(t *testing.T) {
+	exec := NewHTTPCommandExecutor()
+
+	simpleJSON := `{"name":true,"age":false}`
+	complexJson := `{"field":true,"nested":{"field":false,"nested":{"field":true}}}`
+
+	testCases := []struct {
+		name     string
+		commands []HTTPCommand
+		expected []interface{}
+	}{
+		{
+			name: "JSON.TOGGLE with existing key",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "user", "path": "$", "value": simpleJSON}},
+				{Command: "JSON.TOGGLE", Body: map[string]interface{}{"key": "user", "path": "$.name"}},
+			},
+			expected: []interface{}{"OK", []any{float64(0)}},
+		},
+		{
+			name: "JSON.TOGGLE with non-existing key",
+			commands: []HTTPCommand{
+				{Command: "JSON.TOGGLE", Body: map[string]interface{}{"key": "user", "path": "$.flag"}},
+			},
+			expected: []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
+		},
+		{
+			name: "JSON.TOGGLE with invalid path",
+			commands: []HTTPCommand{
+				{Command: "JSON.TOGGLE", Body: map[string]interface{}{"key": "user", "path": "$.invalidPath"}},
+			},
+			expected: []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
+		},
+		{
+			name: "JSON.TOGGLE with invalid command format",
+			commands: []HTTPCommand{
+				{Command: "JSON.TOGGLE", Body: map[string]interface{}{"key": "testKey"}},
+			},
+			expected: []interface{}{"ERR wrong number of arguments for 'json.toggle' command"},
+		},
+		{
+			name: "deeply nested JSON structure with multiple matching fields",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "user", "path": "$", "value": complexJson}},
+				{Command: "JSON.GET", Body: map[string]interface{}{"key": "user"}},
+				{Command: "JSON.TOGGLE", Body: map[string]interface{}{"key": "user", "path": "$..field"}},
+				{Command: "JSON.GET", Body: map[string]interface{}{"key": "user"}},
+			},
+			expected: []interface{}{
+				"OK",
+				`{"field":true,"nested":{"field":false,"nested":{"field":true}}}`,
+				[]any{float64(0), float64(1), float64(0)}, // Toggle: true -> false, false -> true, true -> false
+				`{"field":false,"nested":{"field":true,"nested":{"field":false}}}`,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			exec.FireCommand(HTTPCommand{
+				Command: "DEL",
+				Body:    map[string]interface{}{"key": "user"},
+			})
+			for i, cmd := range tc.commands {
+				result, _ := exec.FireCommand(cmd)
+				switch expected := tc.expected[i].(type) {
+				case string:
+					if isJSONString(expected) {
+						compareJSON(t, expected, result.(string))
+					} else {
+						assert.Equal(t, expected, result)
+					}
+				case []interface{}:
+					assert.Assert(t, testutils.UnorderedEqual(expected, result))
+				default:
+					assert.DeepEqual(t, expected, result)
+				}
+			}
+		})
+	}
+
+}
+
 func TestJsonStrlen(t *testing.T) {
 	exec := NewHTTPCommandExecutor()
 	testCases := []TestCase{
@@ -1070,49 +1171,49 @@ func TestJsonObjLen(t *testing.T) {
 			expected: []interface{}{"ERR Path '$[1' does not exist"},
 		},
 		{
-			name:     "JSON.OBJLEN with legacy path - root",
+			name: "JSON.OBJLEN with legacy path - root",
 			commands: []HTTPCommand{
 				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": "."}},
 			},
 			expected: []interface{}{3.0},
 		},
 		{
-			name:     "JSON.OBJLEN with legacy path - inner existing path",
+			name: "JSON.OBJLEN with legacy path - inner existing path",
 			commands: []HTTPCommand{
 				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": ".partner2"}},
 			},
 			expected: []interface{}{2.0},
 		},
 		{
-			name:     "JSON.OBJLEN with legacy path - inner existing path v2",
+			name: "JSON.OBJLEN with legacy path - inner existing path v2",
 			commands: []HTTPCommand{
 				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": "partner"}},
 			},
 			expected: []interface{}{2.0},
 		},
 		{
-			name:     "JSON.OBJLEN with legacy path - inner non-existent path",
+			name: "JSON.OBJLEN with legacy path - inner non-existent path",
 			commands: []HTTPCommand{
 				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": ".idonotexist"}},
 			},
 			expected: []interface{}{nil},
 		},
 		{
-			name:     "JSON.OBJLEN with legacy path - inner non-existent path v2",
+			name: "JSON.OBJLEN with legacy path - inner non-existent path v2",
 			commands: []HTTPCommand{
 				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": "idonotexist"}},
 			},
 			expected: []interface{}{nil},
 		},
 		{
-			name:     "JSON.OBJLEN with legacy path - inner existent path with nonJSON object",
+			name: "JSON.OBJLEN with legacy path - inner existent path with nonJSON object",
 			commands: []HTTPCommand{
 				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": ".name"}},
 			},
 			expected: []interface{}{"WRONGTYPE Operation against a key holding the wrong kind of value"},
 		},
 		{
-			name:     "JSON.OBJLEN with legacy path - inner existent path recursive object",
+			name: "JSON.OBJLEN with legacy path - inner existent path recursive object",
 			commands: []HTTPCommand{
 				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": "..partner"}},
 			},
