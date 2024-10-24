@@ -2,18 +2,13 @@ package websocket
 
 import (
 	"context"
-	"log/slog"
 	"os"
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/dicedb/dice/internal/logger"
 )
 
 func TestMain(m *testing.M) {
-	l := logger.New(logger.Opts{WithTimestamp: false})
-	slog.SetDefault(l)
 	var wg sync.WaitGroup
 
 	// Run the test server
@@ -21,8 +16,7 @@ func TestMain(m *testing.M) {
 	// checks for available port and then forks a goroutine
 	// to start the server
 	opts := TestServerOptions{
-		Port:   testPort1,
-		Logger: l,
+		Port: testPort1,
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	RunWebsocketServer(ctx, &wg, opts)

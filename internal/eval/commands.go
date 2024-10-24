@@ -417,35 +417,39 @@ var (
 		Eval:  evalSLEEP,
 		Arity: 1,
 	}
-	bfinitCmdMeta = DiceCmdMeta{
-		Name: "BFINIT",
-		Info: `BFINIT command initializes a new bloom filter and allocation it's relevant parameters based on given inputs.
+	bfreserveCmdMeta = DiceCmdMeta{
+		Name: "BF.RESERVE",
+		Info: `BF.RESERVE command initializes a new bloom filter and allocation it's relevant parameters based on given inputs.
 		If no params are provided, it uses defaults.`,
-		Eval:     evalBFINIT,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+		IsMigrated: true,
+		NewEval:    evalBFRESERVE,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
 	}
 	bfaddCmdMeta = DiceCmdMeta{
-		Name: "BFADD",
-		Info: `BFADD adds an element to
+		Name: "BF.ADD",
+		Info: `BF.ADD adds an element to
 		a bloom filter. If the filter does not exists, it will create a new one
 		with default parameters.`,
-		Eval:     evalBFADD,
-		Arity:    3,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+		IsMigrated: true,
+		NewEval:    evalBFADD,
+		Arity:      3,
+		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
 	}
 	bfexistsCmdMeta = DiceCmdMeta{
-		Name:     "BFEXISTS",
-		Info:     `BFEXISTS checks existence of an element in a bloom filter.`,
-		Eval:     evalBFEXISTS,
-		Arity:    3,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+		Name:       "BF.EXISTS",
+		Info:       `BF.EXISTS checks existence of an element in a bloom filter.`,
+		NewEval:    evalBFEXISTS,
+		IsMigrated: true,
+		Arity:      3,
+		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
 	}
 	bfinfoCmdMeta = DiceCmdMeta{
-		Name:  "BFINFO",
-		Info:  `BFINFO returns the parameters and metadata of an existing bloom filter.`,
-		Eval:  evalBFINFO,
-		Arity: 2,
+		Name:       "BF.INFO",
+		Info:       `BF.INFO returns the parameters and metadata of an existing bloom filter.`,
+		NewEval:    evalBFINFO,
+		IsMigrated: true,
+		Arity:      2,
 	}
 	// TODO: Remove this override once we support QWATCH in dice-cli.
 	subscribeCmdMeta = DiceCmdMeta{
@@ -697,12 +701,14 @@ var (
 		NewEval:    evalHINCRBY,
 	}
 	hstrLenCmdMeta = DiceCmdMeta{
-		Name:     "HSTRLEN",
-		Info:     `Returns the length of value associated with field in the hash stored at key.`,
-		Eval:     evalHSTRLEN,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Name:       "HSTRLEN",
+		Info:       `Returns the length of value associated with field in the hash stored at key.`,
+		NewEval:    evalHSTRLEN,
+		IsMigrated: true,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
+
 	hdelCmdMeta = DiceCmdMeta{
 		Name: "HDEL",
 		Info: `HDEL removes the specified fields from the hash stored at key.
@@ -721,9 +727,10 @@ var (
 		It returns a cursor and a list of key-value pairs.
 		The cursor is used to paginate through the hash.
 		The command returns a cursor value of 0 when all the elements are iterated.`,
-		Eval:     evalHSCAN,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalHSCAN,
+		IsMigrated: true,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	hexistsCmdMeta = DiceCmdMeta{
 		Name:     "HEXISTS",
@@ -938,8 +945,9 @@ var (
 		Name: "HLEN",
 		Info: `HLEN key
 		Returns the number of fields contained in the hash stored at key.`,
-		Eval:  evalHLEN,
-		Arity: 2,
+		NewEval:    evalHLEN,
+		IsMigrated: true,
+		Arity:      2,
 	}
 	selectCmdMeta = DiceCmdMeta{
 		Name:  "SELECT",
@@ -1151,10 +1159,10 @@ func init() {
 	DiceCmds["ABORT"] = abortCmdMeta
 	DiceCmds["APPEND"] = appendCmdMeta
 	DiceCmds["AUTH"] = authCmdMeta
-	DiceCmds["BFADD"] = bfaddCmdMeta
-	DiceCmds["BFEXISTS"] = bfexistsCmdMeta
-	DiceCmds["BFINFO"] = bfinfoCmdMeta
-	DiceCmds["BFINIT"] = bfinitCmdMeta
+	DiceCmds["BF.ADD"] = bfaddCmdMeta
+	DiceCmds["BF.EXISTS"] = bfexistsCmdMeta
+	DiceCmds["BF.INFO"] = bfinfoCmdMeta
+	DiceCmds["BF.RESERVE"] = bfreserveCmdMeta
 	DiceCmds["BGREWRITEAOF"] = bgrewriteaofCmdMeta
 	DiceCmds["BITCOUNT"] = bitCountCmdMeta
 	DiceCmds["BITFIELD"] = bitfieldCmdMeta

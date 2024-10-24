@@ -125,7 +125,18 @@ var (
 		Cmd:     "JSON.OBJLEN",
 		CmdType: SingleShard,
 	}
-
+  hlenCmdMeta = CmdsMeta{
+		Cmd:     "HLEN",
+		CmdType: SingleShard,
+	}
+	hstrlenCmdMeta = CmdsMeta{
+		Cmd:     "HSTRLEN",
+		CmdType: SingleShard,
+	}
+	hscanCmdMeta = CmdsMeta{
+		Cmd:     "HSCAN",
+		CmdType: SingleShard,
+	}
 	incrCmdMeta = CmdsMeta{
 		Cmd:     "INCR",
 		CmdType: SingleShard,
@@ -156,6 +167,22 @@ var (
 	}
 	hrandfieldCmdMeta = CmdsMeta{
 		Cmd:     "HRANDFIELD",
+		CmdType: SingleShard,
+	}
+	bfaddCmdMeta = CmdsMeta{
+		Cmd:     "BF.ADD",
+		CmdType: SingleShard,
+	}
+	bfreserveCmdMeta = CmdsMeta{
+		Cmd:     "BF.RESERVE",
+		CmdType: SingleShard,
+	}
+	bfexistsCmdMeta = CmdsMeta{
+		Cmd:     "BF.EXISTS",
+		CmdType: SingleShard,
+	}
+	bfinfoCmdMeta = CmdsMeta{
+		Cmd:     "BF.INFO",
 		CmdType: SingleShard,
 	}
 
@@ -190,6 +217,9 @@ func init() {
 	WorkerCmdsMeta["ZPOPMIN"] = zpopminCmdMeta
 	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
 	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
+	WorkerCmdsMeta["HLEN"] = hlenCmdMeta
+	WorkerCmdsMeta["HSTRLEN"] = hstrlenCmdMeta
+	WorkerCmdsMeta["HSCAN"] = hscanCmdMeta
 	WorkerCmdsMeta["INCR"] = incrCmdMeta
 	WorkerCmdsMeta["INCRBY"] = incrByCmdMeta
 	WorkerCmdsMeta["INCR"] = incrCmdMeta
@@ -212,5 +242,9 @@ func init() {
 	WorkerCmdsMeta["HINCRBY"] = hincrbyCmdMeta
 	WorkerCmdsMeta["HINCRBYFLOAT"] = hincrbyfloatCmdMeta
 	WorkerCmdsMeta["HRANDFIELD"] = hrandfieldCmdMeta
+	WorkerCmdsMeta["BF.ADD"] = bfaddCmdMeta
+	WorkerCmdsMeta["BF.RESERVE"] = bfreserveCmdMeta
+	WorkerCmdsMeta["BF.EXISTS"] = bfexistsCmdMeta
+	WorkerCmdsMeta["BF.INFO"] = bfinfoCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }

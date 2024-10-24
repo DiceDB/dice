@@ -5,7 +5,7 @@
 #
 # go run main.go -c /path/to/dice.toml
 
-Version = '0.0.4'
+Version = '0.0.5'
 InstanceID = ''
 
 [AsyncServer]
@@ -43,10 +43,6 @@ LFULogFactor = 10
 AOFFile = './dice-master.aof'
 PersistenceEnabled = true
 WriteAOFOnCleanup = false
-
-[Logging]
-LogLevel = 'debug'
-PrettyPrintLogs = true
 
 [Auth]
 UserName = 'dice'
