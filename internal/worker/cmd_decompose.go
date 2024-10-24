@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/cmd"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/store"
@@ -38,11 +39,6 @@ func decomposeRename(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*
 			val = evalResp.Result.(string)
 		}
 	}
-
-	if len(cd.Args) != 2 {
-		return nil, diceerrors.ErrWrongArgumentCount("RENAME")
-	}
-
 	decomposedCmds := []*cmd.DiceDBCmd{}
 	decomposedCmds = append(decomposedCmds,
 		&cmd.DiceDBCmd{
@@ -64,22 +60,51 @@ func decomposeRename(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*
 func decomposeCopy(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
 	// Waiting for GET command response
 	var val string
-	select {
-	case <-ctx.Done():
-		slog.Error("Timed out waiting for response from shards", slog.String("workerID", w.id), slog.Any("error", ctx.Err()))
-	case preProcessedResp, ok := <-w.preprocessingChan:
-		if ok {
-			evalResp := preProcessedResp.EvalResponse
-			if evalResp.Error != nil {
-				return nil, evalResp.Error
-			}
+	numCmds := 2
 
-			val = evalResp.Result.(string)
+	var k1, k2, isReplace bool
+	for numCmds != 0 {
+		select {
+		case <-ctx.Done():
+			slog.Error("Timed out waiting for response from shards", slog.String("workerID", w.id), slog.Any("error", ctx.Err()))
+		case preProcessedResp, ok := <-w.preprocessingChan:
+			if ok {
+				evalResp := preProcessedResp.EvalResponse
+				if evalResp.Error != nil {
+					return nil, evalResp.Error
+				}
+
+				if preProcessedResp.SeqID == 0 {
+					switch evalResp.Result.(type) {
+					case clientio.RespType:
+						k1 = false
+					default:
+						val = evalResp.Result.(string)
+						k1 = true
+					}
+				}
+
+				if preProcessedResp.SeqID == 1 && evalResp.Result != clientio.NIL {
+					k2 = true
+				}
+				numCmds--
+				continue
+			}
 		}
 	}
 
-	if len(cd.Args) != 2 {
-		return nil, diceerrors.ErrWrongArgumentCount("COPY")
+	if !k1 {
+		return nil, &diceerrors.PreProcessError{Result: clientio.RespZero}
+	}
+
+	if len(cd.Args) > 2 {
+		if cd.Args[2] == "REPLACE" {
+			isReplace = true
+		}
+	}
+
+	if k2 && !isReplace {
+		return nil, diceerrors.ErrGeneral("ERR target key already exists")
 	}
 
 	decomposedCmds := []*cmd.DiceDBCmd{}
