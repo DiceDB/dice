@@ -420,7 +420,13 @@ func evalHKEYS(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
-// evalHKEYS returns all the values in the hash stored at key.
+// evalHKEYS is used to retrieve all the values within a hash.
+//
+// This command returns empty array, if the specified key doesn't exist.
+//
+// Complexity is O(n) where n is the size of the hash.
+//
+// Usage: HVALS key
 func evalHVALS(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) != 1 {
 		return &EvalResponse{Error: diceerrors.ErrWrongArgumentCount("HVALS"), Result: nil}

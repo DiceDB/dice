@@ -19,7 +19,7 @@ func TestHKeys(t *testing.T) {
 		{
 			name:     "WS No keys exist",
 			commands: []string{"HKEYS key"},
-			expected: []interface{}{nil},
+			expected: []interface{}{"*0"},
 			delays:   []time.Duration{0},
 		},
 		{

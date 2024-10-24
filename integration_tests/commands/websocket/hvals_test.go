@@ -19,7 +19,7 @@ func TestHVals(t *testing.T) {
 		{
 			name:     "WS No values exist",
 			commands: []string{"HVALS key"},
-			expected: []interface{}{[]interface{}{}},
+			expected: []interface{}{"*0"},
 			delays:   []time.Duration{3 * time.Second},
 		},
 		{
