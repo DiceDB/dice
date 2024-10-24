@@ -202,3 +202,29 @@ func (ss *Set) Get(member string) (float64, bool) {
 	score, exists := ss.memberMap[member]
 	return score, exists
 }
+
+// This func is used to remove the maximum element from the sortedset.
+// It takes count as an argument which tells the number of elements to be removed from the sortedset.
+func (ss *Set) PopMax(count int) []string {
+	result := make([]string, 2*count)
+
+	size := 0
+	for i := 0; i < count; i++ {
+		item := ss.tree.DeleteMax()
+		if item == nil {
+			break
+		}
+		ssi := item.(*Item)
+		result[2*i] = ssi.Member
+		result[2*i+1] = strconv.FormatFloat(ssi.Score, 'g', -1, 64)
+
+		delete(ss.memberMap, ssi.Member)
+		size++
+	}
+
+	if size < count {
+		result = result[:2*size]
+	}
+
+	return result
+}
