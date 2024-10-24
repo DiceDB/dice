@@ -53,7 +53,16 @@ type EvalResponse struct {
 	Error  error       // Error holds any error that occurred during the operation. If no error, it will be nil.
 }
 
-//go:inline
+// Following functions should be used to create a new EvalResponse with the given result and error.
+// These ensure that result and error are mutually exclusive.
+// If result is nil, then error should be non-nil and vice versa.
+
+// makeEvalResult creates a new EvalResponse with the given result and nil error.
+// This is a helper function to create a new EvalResponse with the given result and nil error.
+/**
+ * @param {interface{}} result - The result of the store operation.
+ * @returns {EvalResponse} A new EvalResponse with the given result and nil error.
+ */
 func makeEvalResult(result interface{}) *EvalResponse {
 	return &EvalResponse{
 		Result: result,
@@ -61,7 +70,12 @@ func makeEvalResult(result interface{}) *EvalResponse {
 	}
 }
 
-//go:inline
+// makeEvalError creates a new EvalResponse with the given error and nil result.
+// This is a helper function to create a new EvalResponse with the given error and nil result.
+/**
+ * @param {error} err - The error that occurred during the store operation.
+ * @returns {EvalResponse} A new EvalResponse with the given error and nil result.
+ */
 func makeEvalError(err error) *EvalResponse {
 	return &EvalResponse{
 		Result: nil,
