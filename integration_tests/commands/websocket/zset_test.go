@@ -134,6 +134,12 @@ func TestZCOUNT(t *testing.T) {
 
 			DeleteKey(t, conn, exec, "myzset")
 
+			//posrcleanup
+
+			t.Cleanup(func() {
+				DeleteKey(t, conn, exec, "myzset")
+			})
+
 			for i, cmd := range tc.commands {
 				result, err := exec.FireCommandAndReadResponse(conn, cmd)
 				assert.Nil(t, err)

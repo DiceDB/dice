@@ -1,7 +1,6 @@
 package http
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -177,8 +176,17 @@ func TestZCOUNT(t *testing.T) {
 				Command: "DEL",
 				Body:    map[string]interface{}{"key": "myzset"},
 			})
+
+			// Ensure post-test cleanup
+			t.Cleanup(func() {
+				exec.FireCommand(HTTPCommand{
+					Command: "DEL",
+					Body:    map[string]interface{}{"key": "myzset"},
+				})
+				t.Log("Pre-test cleanup executed: Deleted key 'myzset'")
+			})
+
 			for i, cmd := range tc.commands {
-				fmt.Println("Checking zpop", cmd)
 				result, _ := exec.FireCommand(cmd)
 
 				assert.Equal(t, tc.expected[i], result)

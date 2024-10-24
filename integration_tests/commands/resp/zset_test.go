@@ -114,6 +114,12 @@ func TestZCOUNT(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			FireCommand(conn, "DEL myzset") // Resetting the key before each test
+
+			// post cleanup
+			t.Cleanup(func() {
+				FireCommand(conn, "DEL myzset")
+			})
+
 			for i, cmd := range tc.commands {
 				result := FireCommand(conn, cmd)
 				assert.Equal(t, tc.expected[i], result)
