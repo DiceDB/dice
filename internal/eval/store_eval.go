@@ -674,7 +674,7 @@ func evalZRANK(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	if withScore {
-		scoreStr := strconv.FormatFloat(score, 'f', -1, 64) 
+		scoreStr := strconv.FormatFloat(score, 'f', -1, 64)
 		return &EvalResponse{
 			Result: []interface{}{rank, scoreStr},
 			Error:  nil,
@@ -1781,44 +1781,44 @@ func evalEXISTS(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
-// // evalPERSIST removes the expiry from the key
-// func evalPERSIST(args []string, store *dstore.Store) *EvalResponse {
-// 	if len(args) < 1 {
-// 		return &EvalResponse{
-// 			Result: nil,
-// 			Error:  diceerrors.ErrWrongArgumentCount("PERSIST"),
-// 		}
-// 	}
+// evalPERSIST removes the expiry from the key
+func evalPERSIST(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("PERSIST"),
+		}
+	}
 
-// 	key := args[0]
-// 	obj := store.Get(key)
+	key := args[0]
+	obj := store.Get(key)
 
-// 	// If the key doesn't exist, return 0
-// 	if obj == nil {
-// 		return &EvalResponse{
-// 			Result: int64(0),
-// 			Error:  nil,
-// 		}
-// 	}
+	// If the key doesn't exist, return 0
+	if obj == nil {
+		return &EvalResponse{
+			Result: int64(0),
+			Error:  nil,
+		}
+	}
 
-// 	// If the key has no expiry, return 0
-// 	_, isExpirySet := dstore.GetExpiry(obj, store)
-// 	if !isExpirySet {
-// 		return &EvalResponse{
-// 			Result: int64(0),
+	// If the key has no expiry, return 0
+	_, isExpirySet := dstore.GetExpiry(obj, store)
+	if !isExpirySet {
+		return &EvalResponse{
+			Result: int64(0),
 
-// 			Error: nil,
-// 		}
-// 	}
+			Error: nil,
+		}
+	}
 
-// 	// Remove the expiry from the key
-// 	dstore.DelExpiry(obj, store)
+	// Remove the expiry from the key
+	dstore.DelExpiry(obj, store)
 
-// 	return &EvalResponse{
-// 		Result: int64(1),
-// 		Error:  nil,
-// 	}
-// }
+	return &EvalResponse{
+		Result: int64(1),
+		Error:  nil,
+	}
+}
 
 // evalTYPE returns the type of the value stored at key
 func evalTYPE(args []string, store *dstore.Store) *EvalResponse {

@@ -4253,29 +4253,3 @@ func evalJSONSTRAPPEND(args []string, store *dstore.Store) []byte {
 	obj.Value = jsonData
 	return clientio.Encode(resultsArray, false)
 }
-
-func evalPersist(args []string, store *dstore.Store) []byte {
-	if len(args) != 1 {
-		return diceerrors.NewErrArity("PERSIST")
-	}
-
-	key := args[0]
-
-	obj := store.Get(key)
-
-	// If the key does not exist, return RESP encoded 0 to denote the key does not exist
-	if obj == nil {
-		return clientio.RespZero
-	}
-
-	// If the object exists but no expiration is set on it, return 0
-	_, isExpirySet := dstore.GetExpiry(obj, store)
-	if !isExpirySet {
-		return clientio.RespZero
-	}
-
-	// If the object exists, remove the expiration time
-	dstore.DelExpiry(obj, store)
-
-	return clientio.RespOne
-}
