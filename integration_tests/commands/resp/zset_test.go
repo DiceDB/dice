@@ -73,3 +73,57 @@ func TestZPOPMIN(t *testing.T) {
 		})
 	}
 }
+
+func TestZCOUNT(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	testCases := []TestCase{
+		{
+			name:     "ZCOUNT on non-existing key",
+			commands: []string{"ZCOUNT NON_EXISTENT_KEY 0 100"},
+			expected: []interface{}{int64(0)},
+		},
+		{
+			name:     "ZCOUNT with valid key and range",
+			commands: []string{"ZADD myzset 10 member1 20 member2 30 member3", "ZCOUNT myzset 15 25"},
+			expected: []interface{}{int64(3), int64(1)}, // Expecting count of 1 from ZCOUNT
+		},
+		{
+			name:     "ZCOUNT with range including all members",
+			commands: []string{"ZADD myzset 10 member1 20 member2 30 member3", "ZCOUNT myzset 0 100"},
+			expected: []interface{}{int64(3), int64(3)}, // Expecting count of 3 from ZCOUNT
+		},
+		{
+			name:     "ZCOUNT with min greater than max",
+			commands: []string{"ZADD myzset 10 member1 20 member2 30 member3", "ZCOUNT myzset 25 15"},
+			expected: []interface{}{int64(3), int64(0)}, // Expecting count of 0 from ZCOUNT
+		},
+		{
+			name:     "ZCOUNT with negative range",
+			commands: []string{"ZADD myzset -5 member1 0 member2 5 member3", "ZCOUNT myzset -10 -1"},
+			expected: []interface{}{int64(3), int64(1)}, // Expecting count of 3 from ZCOUNT
+		},
+		{
+			name:     "ZCOUNT on empty sorted set",
+			commands: []string{"ZADD myzset 1 member1", "DEL myzset", "ZCOUNT myzset 0 100"},
+			expected: []interface{}{int64(1), int64(1), int64(0)}, // Expecting count of 0 from ZCOUNT
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			FireCommand(conn, "DEL myzset") // Resetting the key before each test
+
+			// post cleanup
+			t.Cleanup(func() {
+				FireCommand(conn, "DEL myzset")
+			})
+
+			for i, cmd := range tc.commands {
+				result := FireCommand(conn, cmd)
+				assert.Equal(t, tc.expected[i], result)
+			}
+		})
+	}
+}

@@ -6751,6 +6751,60 @@ func BenchmarkEvalJSONSTRAPPEND(b *testing.B) {
 	}
 }
 
+func BenchmarkZCOUNT(b *testing.B) {
+	store := dstore.NewStore(nil, nil)
+
+	// Populate the sorted set with some members for basic benchmarks
+	evalZADD([]string{"key", "10", "member1", "20", "member2", "30", "member3"}, store)
+
+	// Benchmark for basic ZCOUNT
+	b.Run("Basic ZCOUNT", func(b *testing.B) {
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			evalZCOUNT([]string{"key", "10", "30"}, store) // Count members with scores between 10 and 30
+		}
+	})
+
+	// Benchmark for large ZCOUNT
+	b.Run("Large ZCOUNT", func(b *testing.B) {
+		// Setup a large sorted set
+		for i := 0; i < 10000; i++ {
+			evalZADD([]string{"key", fmt.Sprintf("%d", i), fmt.Sprintf("member%d", i)}, store)
+		}
+
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			evalZCOUNT([]string{"key", "0", "10000"}, store) // Count all members
+		}
+	})
+
+	// Benchmark for edge cases
+	b.Run("Edge Case ZCOUNT", func(b *testing.B) {
+		// Reset the store and set up members
+		store = dstore.NewStore(nil, nil)
+		evalZADD([]string{"key", "5", "member1", "15", "member2", "25", "member3"}, store)
+
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			evalZCOUNT([]string{"key", "-inf", "+inf"}, store) // Count all members
+			evalZCOUNT([]string{"key", "10", "10"}, store)     // Count boundary member
+			evalZCOUNT([]string{"key", "100", "200"}, store)   // Count out-of-range
+		}
+	})
+
+	// Benchmark for concurrent ZCOUNT
+	b.Run("Concurrent ZCOUNT", func(b *testing.B) {
+		// Populate the sorted set with some members
+		evalZADD([]string{"key", "10", "member1", "20", "member2", "30", "member3"}, store)
+
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				evalZCOUNT([]string{"key", "0", "100"}, store) // Perform concurrent ZCOUNT
+			}
+		})
+	})
+}
+
 func testEvalINCR(t *testing.T, store *dstore.Store) {
 	tests := []evalTestCase{
 		{

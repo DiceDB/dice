@@ -71,6 +71,7 @@ const (
 	CmdZAdd         = "ZADD"
 	CmdZRange       = "ZRANGE"
 	CmdZRank        = "ZRANK"
+	CmdZCount       = "ZCOUNT"
 	CmdPFAdd        = "PFADD"
 	CmdPFCount      = "PFCOUNT"
 	CmdPFMerge      = "PFMERGE"
@@ -226,6 +227,9 @@ var CommandsMeta = map[string]CmdMeta{
 
 	// Sorted set commands
 	CmdZAdd: {
+		CmdType: SingleShard,
+	},
+	CmdZCount: {
 		CmdType: SingleShard,
 	},
 	CmdZRank: {
