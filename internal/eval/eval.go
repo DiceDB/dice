@@ -4236,3 +4236,39 @@ func evalJSONSTRAPPEND(args []string, store *dstore.Store) []byte {
 	obj.Value = jsonData
 	return clientio.Encode(resultsArray, false)
 }
+
+// evalRANDOMKEY returns a random key from the currently selected database.
+func evalRANDOMKEY(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) > 0 {
+		return &EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("RANDOMKEY")}
+	}
+
+	availKeys, err := store.Keys("*")
+	if err != nil {
+		return &EvalResponse{Result: nil, Error: diceerrors.ErrUnableToFetchKeys}
+	}
+
+	if len(availKeys) > 0 {
+		maxIters := 128
+		for range maxIters {
+			randKeyIdx, err := rand.Int(rand.Reader, big.NewInt(int64(len(availKeys))))
+			if err != nil {
+				continue
+			}
+
+			randKey := availKeys[randKeyIdx.Uint64()]
+			keyObj := store.Get(randKey)
+			if keyObj == nil {
+				continue
+			}
+
+			currTimeMs := uint64(utils.GetCurrentTime().UnixMilli())
+			expireTimeMs, isExpirySet := dstore.GetExpiry(keyObj, store)
+			if (isExpirySet && expireTimeMs > currTimeMs) || !isExpirySet {
+				return &EvalResponse{Result: clientio.Encode(randKey, false), Error: nil}
+			}
+		}
+	}
+
+	return &EvalResponse{Result: clientio.RespNIL, Error: nil}
+}
