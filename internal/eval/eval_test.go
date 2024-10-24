@@ -2640,19 +2640,19 @@ func testEvalHVALS(t *testing.T, store *dstore.Store) {
 func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"wrong number of args passed": {
-			setup:  func() {},
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'hstrlen' command\r\n"),
+			setup:          func() {},
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("HSTRLEN")},
 		},
 		"only key passed": {
-			setup:  func() {},
-			input:  []string{"KEY"},
-			output: []byte("-ERR wrong number of arguments for 'hstrlen' command\r\n"),
+			setup:          func() {},
+			input:          []string{"KEY"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("HSTRLEN")},
 		},
 		"key doesn't exist": {
-			setup:  func() {},
-			input:  []string{"KEY", "field_name"},
-			output: clientio.Encode(0, false),
+			setup:          func() {},
+			input:          []string{"KEY", "field_name"},
+			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
 		},
 		"key exists but field_name doesn't exists": {
 			setup: func() {
@@ -2669,8 +2669,8 @@ func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
 
 				store.Put(key, obj)
 			},
-			input:  []string{"KEY_MOCK", "non_existent_key"},
-			output: clientio.Encode(0, false),
+			input:          []string{"KEY_MOCK", "non_existent_key"},
+			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
 		},
 		"both key and field_name exists": {
 			setup: func() {
@@ -2687,12 +2687,12 @@ func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
 
 				store.Put(key, obj)
 			},
-			input:  []string{"KEY_MOCK", "mock_field_name"},
-			output: clientio.Encode(10, false),
+			input:          []string{"KEY_MOCK", "mock_field_name"},
+			migratedOutput: EvalResponse{Result: 10, Error: nil},
 		},
 	}
 
-	runEvalTests(t, tests, evalHSTRLEN, store)
+	runMigratedEvalTests(t, tests, evalHSTRLEN, store)
 }
 
 func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
@@ -2792,86 +2792,86 @@ func testEvalHDEL(t *testing.T, store *dstore.Store) {
 func testEvalHSCAN(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"HSCAN with wrong number of args": {
-			input:  []string{"key"},
-			output: []byte("-ERR wrong number of arguments for 'hscan' command\r\n"),
+			input:          []string{"key"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("HSCAN")},
 		},
 		"HSCAN with key does not exist": {
-			input:  []string{"NONEXISTENT_KEY", "0"},
-			output: []byte("*2\r\n$1\r\n0\r\n*0\r\n"),
+			input:          []string{"NONEXISTENT_KEY", "0"},
+			migratedOutput: EvalResponse{Result: []interface{}{"0", []string{}}, Error: nil},
 		},
 		"HSCAN with key exists but not a hash": {
 			setup: func() {
 				evalSET([]string{"string_key", "string_value"}, store)
 			},
-			input:  []string{"string_key", "0"},
-			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+			input:          []string{"string_key", "0"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		"HSCAN with valid key and cursor": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
 			},
-			input:  []string{"hash_key", "0"},
-			output: []byte("*2\r\n$1\r\n0\r\n*4\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+			input:          []string{"hash_key", "0"},
+			migratedOutput: EvalResponse{Result: []interface{}{"0", []string{"field1", "value1", "field2", "value2"}}, Error: nil},
 		},
 		"HSCAN with cursor at the end": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
 			},
-			input:  []string{"hash_key", "2"},
-			output: []byte("*2\r\n$1\r\n0\r\n*0\r\n"),
+			input:          []string{"hash_key", "2"},
+			migratedOutput: EvalResponse{Result: []interface{}{"0", []string{}}, Error: nil},
 		},
 		"HSCAN with cursor at the beginning": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
 			},
-			input:  []string{"hash_key", "0"},
-			output: []byte("*2\r\n$1\r\n0\r\n*4\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+			input:          []string{"hash_key", "0"},
+			migratedOutput: EvalResponse{Result: []interface{}{"0", []string{"field1", "value1", "field2", "value2"}}, Error: nil},
 		},
 		"HSCAN with cursor in the middle": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
 			},
-			input:  []string{"hash_key", "1"},
-			output: []byte("*2\r\n$1\r\n0\r\n*2\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+			input:          []string{"hash_key", "1"},
+			migratedOutput: EvalResponse{Result: []interface{}{"0", []string{"field2", "value2"}}, Error: nil},
 		},
 		"HSCAN with MATCH argument": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3"}, store)
 			},
-			input:  []string{"hash_key", "0", "MATCH", "field[12]*"},
-			output: []byte("*2\r\n$1\r\n0\r\n*4\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+			input:          []string{"hash_key", "0", "MATCH", "field[12]*"},
+			migratedOutput: EvalResponse{Result: []interface{}{"0", []string{"field1", "value1", "field2", "value2"}}, Error: nil},
 		},
 		"HSCAN with COUNT argument": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3"}, store)
 			},
-			input:  []string{"hash_key", "0", "COUNT", "2"},
-			output: []byte("*2\r\n$1\r\n2\r\n*4\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+			input:          []string{"hash_key", "0", "COUNT", "2"},
+			migratedOutput: EvalResponse{Result: []interface{}{"2", []string{"field1", "value1", "field2", "value2"}}, Error: nil},
 		},
 		"HSCAN with MATCH and COUNT arguments": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3", "field4", "value4"}, store)
 			},
-			input:  []string{"hash_key", "0", "MATCH", "field[13]*", "COUNT", "1"},
-			output: []byte("*2\r\n$1\r\n1\r\n*2\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n"),
+			input:          []string{"hash_key", "0", "MATCH", "field[13]*", "COUNT", "1"},
+			migratedOutput: EvalResponse{Result: []interface{}{"1", []string{"field1", "value1"}}, Error: nil},
 		},
 		"HSCAN with invalid MATCH pattern": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
 			},
-			input:  []string{"hash_key", "0", "MATCH", "[invalid"},
-			output: []byte("-ERR Invalid glob pattern: unexpected end of input\r\n"),
+			input:          []string{"hash_key", "0", "MATCH", "[invalid"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrGeneral("Invalid glob pattern: unexpected end of input")},
 		},
 		"HSCAN with invalid COUNT value": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
 			},
-			input:  []string{"hash_key", "0", "COUNT", "invalid"},
-			output: []byte("-ERR value is not an integer or out of range\r\n"),
+			input:          []string{"hash_key", "0", "COUNT", "invalid"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrIntegerOutOfRange},
 		},
 	}
 
-	runEvalTests(t, tests, evalHSCAN, store)
+	runMigratedEvalTests(t, tests, evalHSCAN, store)
 }
 
 func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
@@ -3817,36 +3817,36 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 
 func testEvalHLEN(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
-		"wrong number of args": {
-			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'hlen' command\r\n"),
+		"HLEN wrong number of args": {
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("HLEN")},
 		},
-		"key does not exist": {
-			input:  []string{"nonexistent_key"},
-			output: clientio.RespZero,
+		"HLEN non-existent key": {
+			input:          []string{"nonexistent_key"},
+			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
 		},
-		"key exists but not a hash": {
+		"HLEN key exists but not a hash": {
 			setup: func() {
 				evalSET([]string{"string_key", "string_value"}, store)
 			},
-			input:  []string{"string_key"},
-			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+			input:          []string{"string_key"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
-		"empty hash": {
-			setup:  func() {},
-			input:  []string{"empty_hash"},
-			output: clientio.RespZero,
+		"HLEN empty hash": {
+			setup:          func() {},
+			input:          []string{"empty_hash"},
+			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
 		},
-		"hash with elements": {
+		"HLEN hash with elements": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3"}, store)
 			},
-			input:  []string{"hash_key"},
-			output: clientio.Encode(int64(3), false),
+			input:          []string{"hash_key"},
+			migratedOutput: EvalResponse{Result: 3, Error: nil},
 		},
 	}
 
-	runEvalTests(t, tests, evalHLEN, store)
+	runMigratedEvalTests(t, tests, evalHLEN, store)
 }
 
 func BenchmarkEvalHLEN(b *testing.B) {

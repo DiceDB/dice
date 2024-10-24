@@ -113,7 +113,18 @@ var (
 		Cmd:     "JSON.OBJLEN",
 		CmdType: SingleShard,
 	}
-
+  hlenCmdMeta = CmdsMeta{
+		Cmd:     "HLEN",
+		CmdType: SingleShard,
+	}
+	hstrlenCmdMeta = CmdsMeta{
+		Cmd:     "HSTRLEN",
+		CmdType: SingleShard,
+	}
+	hscanCmdMeta = CmdsMeta{
+		Cmd:     "HSCAN",
+		CmdType: SingleShard,
+	}
 	incrCmdMeta = CmdsMeta{
 		Cmd:     "INCR",
 		CmdType: SingleShard,
@@ -191,6 +202,9 @@ func init() {
 	WorkerCmdsMeta["ZPOPMIN"] = zpopminCmdMeta
 	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
 	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
+	WorkerCmdsMeta["HLEN"] = hlenCmdMeta
+	WorkerCmdsMeta["HSTRLEN"] = hstrlenCmdMeta
+	WorkerCmdsMeta["HSCAN"] = hscanCmdMeta
 	WorkerCmdsMeta["INCR"] = incrCmdMeta
 	WorkerCmdsMeta["INCRBY"] = incrByCmdMeta
 	WorkerCmdsMeta["INCR"] = incrCmdMeta

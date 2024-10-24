@@ -84,10 +84,14 @@ const (
 	CmdHRandField   = "HRANDFIELD"
 	CmdGetRange     = "GETRANGE"
 	CmdAppend       = "APPEND"
+	CmdHLen         = "HLEN"
+	CmdHStrLen      = "HSTRLEN"
+	CmdHScan        = "HSCAN"
 	CmdBFAdd        = "BF.ADD"
 	CmdBFReserve    = "BF.RESERVE"
 	CmdBFInfo       = "BF.INFO"
 	CmdBFExists     = "BF.EXISTS"
+
 )
 
 type CmdMeta struct {
@@ -155,6 +159,15 @@ var CommandsMeta = map[string]CmdMeta{
 	},
 	CmdPFMerge: {
 		CmdType: SingleShard,
+	},
+	CmdHLen: {
+		CmdType: SingleShard,
+	},
+	CmdHStrLen: {
+		CmdType: SingleShard,
+	},
+	CmdHScan: {
+ 		CmdType: SingleShard,
 	},
 	CmdHIncrBy: {
 		CmdType: SingleShard,
