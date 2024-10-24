@@ -71,6 +71,7 @@ const (
 	CmdZAdd         = "ZADD"
 	CmdZRange       = "ZRANGE"
 	CmdZRank        = "ZRANK"
+	CmdZCard        = "ZCARD"
 	CmdPFAdd        = "PFADD"
 	CmdPFCount      = "PFCOUNT"
 	CmdPFMerge      = "PFMERGE"
@@ -91,7 +92,6 @@ const (
 	CmdBFReserve    = "BF.RESERVE"
 	CmdBFInfo       = "BF.INFO"
 	CmdBFExists     = "BF.EXISTS"
-
 )
 
 type CmdMeta struct {
@@ -167,7 +167,7 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdHScan: {
- 		CmdType: SingleShard,
+		CmdType: SingleShard,
 	},
 	CmdHIncrBy: {
 		CmdType: SingleShard,
@@ -232,6 +232,9 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdZRange: {
+		CmdType: SingleShard,
+	},
+	CmdZCard: {
 		CmdType: SingleShard,
 	},
 	CmdAppend: {
