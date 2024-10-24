@@ -120,7 +120,10 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 
 	// closing handshake
 	defer func() {
-		_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "close 1000 (normal)"))
+		closeErr := conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "close 1000 (normal)"))
+		if closeErr != nil {
+			slog.Debug("Error during closing handshake", slog.Any("error", closeErr))
+		}
 		conn.Close()
 	}()
 
@@ -131,9 +134,10 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		if err != nil {
 			// acceptable close errors
 			errs := []int{websocket.CloseNormalClosure, websocket.CloseGoingAway, websocket.CloseAbnormalClosure}
-			if !websocket.IsCloseError(err, errs...) {
-				slog.Warn("failed to read message from client", slog.Any("error", err))
+			if websocket.IsCloseError(err, errs...) {
+				break
 			}
+			slog.Error("Error reading message", slog.Any("error", err))
 			break
 		}
 
