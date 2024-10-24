@@ -146,6 +146,26 @@ var (
 		Cmd:     "HRANDFIELD",
 		CmdType: SingleShard,
 	}
+	lpushCmdMeta = CmdsMeta{
+		Cmd:     "LPUSH",
+		CmdType: SingleShard,
+	}
+	rpushCmdMeta = CmdsMeta{
+		Cmd:     "RPUSH",
+		CmdType: SingleShard,
+	}
+	lpopCmdMeta = CmdsMeta{
+		Cmd:     "LPOP",
+		CmdType: SingleShard,
+	}
+	rpopCmdMeta = CmdsMeta{
+		Cmd:     "RPOP",
+		CmdType: SingleShard,
+	}
+	llenCmdMeta = CmdsMeta{
+		Cmd:     "LLEN",
+		CmdType: SingleShard,
+	}
 	bfaddCmdMeta = CmdsMeta{
 		Cmd:     "BF.ADD",
 		CmdType: SingleShard,
@@ -213,6 +233,11 @@ func init() {
 	WorkerCmdsMeta["HINCRBY"] = hincrbyCmdMeta
 	WorkerCmdsMeta["HINCRBYFLOAT"] = hincrbyfloatCmdMeta
 	WorkerCmdsMeta["HRANDFIELD"] = hrandfieldCmdMeta
+	WorkerCmdsMeta["LPUSH"] = lpushCmdMeta
+	WorkerCmdsMeta["RPUSH"] = rpushCmdMeta
+	WorkerCmdsMeta["LPOP"] = lpopCmdMeta
+	WorkerCmdsMeta["RPOP"] = rpopCmdMeta
+	WorkerCmdsMeta["LLEN"] = llenCmdMeta
 	WorkerCmdsMeta["BF.ADD"] = bfaddCmdMeta
 	WorkerCmdsMeta["BF.RESERVE"] = bfreserveCmdMeta
 	WorkerCmdsMeta["BF.EXISTS"] = bfexistsCmdMeta

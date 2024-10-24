@@ -1,9 +1,8 @@
-package async
+package websocket
 
 import (
 	"fmt"
 	"math/rand"
-	"net"
 	"strings"
 	"testing"
 	"time"
@@ -72,8 +71,7 @@ func deqTestInit() {
 
 func TestLPush(t *testing.T) {
 	deqTestInit()
-	conn := getLocalConnection()
-	defer conn.Close()
+	exec := NewWebsocketCommandExecutor()
 
 	testCases := []struct {
 		name   string
@@ -83,36 +81,38 @@ func TestLPush(t *testing.T) {
 		{
 			name:   "LPUSH",
 			cmds:   []string{"LPUSH k v", "LPUSH k v1 1 v2 2", "LPUSH k 3 3 3 v3 v3 v3"},
-			expect: []any{int64(1), int64(5), int64(11)},
+			expect: []any{float64(1), float64(5), float64(11)},
 		},
 		{
 			name:   "LPUSH normal values",
 			cmds:   []string{"LPUSH k " + strings.Join(deqNormalValues, " ")},
-			expect: []any{int64(25)},
+			expect: []any{float64(25)},
 		},
 		{
 			name:   "LPUSH edge values",
 			cmds:   []string{"LPUSH k " + strings.Join(deqEdgeValues, " ")},
-			expect: []any{int64(42)},
+			expect: []any{float64(42)},
 		},
 	}
 
+	conn := exec.ConnectToServer()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+
 			for i, cmd := range tc.cmds {
-				result := FireCommand(conn, cmd)
+				result, err := exec.FireCommandAndReadResponse(conn, cmd)
+				assert.NilError(t, err)
 				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
 			}
 		})
 	}
 
-	deqCleanUp(conn, "k")
+	DeleteKey(t, conn, exec, "k")
 }
 
 func TestRPush(t *testing.T) {
 	deqTestInit()
-	conn := getLocalConnection()
-	defer conn.Close()
+	exec := NewWebsocketCommandExecutor()
 
 	testCases := []struct {
 		name   string
@@ -122,36 +122,38 @@ func TestRPush(t *testing.T) {
 		{
 			name:   "RPUSH",
 			cmds:   []string{"LPUSH k v", "LPUSH k v1 1 v2 2", "LPUSH k 3 3 3 v3 v3 v3"},
-			expect: []any{int64(1), int64(5), int64(11)},
+			expect: []any{float64(1), float64(5), float64(11)},
 		},
 		{
 			name:   "RPUSH normal values",
 			cmds:   []string{"LPUSH k " + strings.Join(deqNormalValues, " ")},
-			expect: []any{int64(25)},
+			expect: []any{float64(25)},
 		},
 		{
 			name:   "RPUSH edge values",
 			cmds:   []string{"LPUSH k " + strings.Join(deqEdgeValues, " ")},
-			expect: []any{int64(42)},
+			expect: []any{float64(42)},
 		},
 	}
 
+	conn := exec.ConnectToServer()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+
 			for i, cmd := range tc.cmds {
-				result := FireCommand(conn, cmd)
+				result, err := exec.FireCommandAndReadResponse(conn, cmd)
+				assert.NilError(t, err)
 				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
 			}
 		})
 	}
 
-	deqCleanUp(conn, "k")
+	DeleteKey(t, conn, exec, "k")
 }
 
 func TestLPushLPop(t *testing.T) {
 	deqTestInit()
-	conn := getLocalConnection()
-	defer conn.Close()
+	exec := NewWebsocketCommandExecutor()
 
 	getPops := func(values []string) []string {
 		pops := make([]string, len(values)+1)
@@ -176,36 +178,38 @@ func TestLPushLPop(t *testing.T) {
 		{
 			name:   "LPUSH LPOP",
 			cmds:   []string{"LPUSH k v1 1", "LPOP k", "LPOP k", "LPOP k"},
-			expect: []any{int64(2), "1", "v1", "(nil)"},
+			expect: []any{float64(2), "1", "v1", "(nil)"},
 		},
 		{
 			name:   "LPUSH LPOP normal values",
 			cmds:   append([]string{"LPUSH k " + strings.Join(deqNormalValues, " ")}, getPops(deqNormalValues)...),
-			expect: append(append([]any{int64(14)}, getPopExpects(deqNormalValues)...), "(nil)"),
+			expect: append(append([]any{float64(14)}, getPopExpects(deqNormalValues)...), "(nil)"),
 		},
 		{
 			name:   "LPUSH LPOP edge values",
 			cmds:   append([]string{"LPUSH k " + strings.Join(deqEdgeValues, " ")}, getPops(deqEdgeValues)...),
-			expect: append(append([]any{int64(17)}, getPopExpects(deqEdgeValues)...), "(nil)"),
+			expect: append(append([]any{float64(17)}, getPopExpects(deqEdgeValues)...), "(nil)"),
 		},
 	}
 
+	conn := exec.ConnectToServer()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+
 			for i, cmd := range tc.cmds {
-				result := FireCommand(conn, cmd)
+				result, err := exec.FireCommandAndReadResponse(conn, cmd)
+				assert.NilError(t, err)
 				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
 			}
 		})
 	}
 
-	deqCleanUp(conn, "k")
+	DeleteKey(t, conn, exec, "k")
 }
 
 func TestLPushRPop(t *testing.T) {
 	deqTestInit()
-	conn := getLocalConnection()
-	defer conn.Close()
+	exec := NewWebsocketCommandExecutor()
 
 	getPops := func(values []string) []string {
 		pops := make([]string, len(values)+1)
@@ -230,36 +234,38 @@ func TestLPushRPop(t *testing.T) {
 		{
 			name:   "LPUSH RPOP",
 			cmds:   []string{"LPUSH k v1 1", "RPOP k", "RPOP k", "RPOP k"},
-			expect: []any{int64(2), "v1", "1", "(nil)"},
+			expect: []any{float64(2), "v1", "1", "(nil)"},
 		},
 		{
 			name:   "LPUSH RPOP normal values",
 			cmds:   append([]string{"LPUSH k " + strings.Join(deqNormalValues, " ")}, getPops(deqNormalValues)...),
-			expect: append(append([]any{int64(14)}, getPopExpects(deqNormalValues)...), "(nil)"),
+			expect: append(append([]any{float64(14)}, getPopExpects(deqNormalValues)...), "(nil)"),
 		},
 		{
 			name:   "LPUSH RPOP edge values",
 			cmds:   append([]string{"LPUSH k " + strings.Join(deqEdgeValues, " ")}, getPops(deqEdgeValues)...),
-			expect: append(append([]any{int64(17)}, getPopExpects(deqEdgeValues)...), "(nil)"),
+			expect: append(append([]any{float64(17)}, getPopExpects(deqEdgeValues)...), "(nil)"),
 		},
 	}
 
+	conn := exec.ConnectToServer()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+
 			for i, cmd := range tc.cmds {
-				result := FireCommand(conn, cmd)
+				result, err := exec.FireCommandAndReadResponse(conn, cmd)
+				assert.NilError(t, err)
 				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
 			}
 		})
 	}
 
-	deqCleanUp(conn, "k")
+	DeleteKey(t, conn, exec, "k")
 }
 
 func TestRPushLPop(t *testing.T) {
 	deqTestInit()
-	conn := getLocalConnection()
-	defer conn.Close()
+	exec := NewWebsocketCommandExecutor()
 
 	getPops := func(values []string) []string {
 		pops := make([]string, len(values)+1)
@@ -284,36 +290,38 @@ func TestRPushLPop(t *testing.T) {
 		{
 			name:   "RPUSH LPOP",
 			cmds:   []string{"RPUSH k v1 1", "LPOP k", "LPOP k", "LPOP k"},
-			expect: []any{int64(2), "v1", "1", "(nil)"},
+			expect: []any{float64(2), "v1", "1", "(nil)"},
 		},
 		{
 			name:   "RPUSH LPOP normal values",
 			cmds:   append([]string{"RPUSH k " + strings.Join(deqNormalValues, " ")}, getPops(deqNormalValues)...),
-			expect: append(append([]any{int64(14)}, getPopExpects(deqNormalValues)...), "(nil)"),
+			expect: append(append([]any{float64(14)}, getPopExpects(deqNormalValues)...), "(nil)"),
 		},
 		{
 			name:   "RPUSH LPOP edge values",
 			cmds:   append([]string{"RPUSH k " + strings.Join(deqEdgeValues, " ")}, getPops(deqEdgeValues)...),
-			expect: append(append([]any{int64(17)}, getPopExpects(deqEdgeValues)...), "(nil)"),
+			expect: append(append([]any{float64(17)}, getPopExpects(deqEdgeValues)...), "(nil)"),
 		},
 	}
 
+	conn := exec.ConnectToServer()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+
 			for i, cmd := range tc.cmds {
-				result := FireCommand(conn, cmd)
+				result, err := exec.FireCommandAndReadResponse(conn, cmd)
+				assert.NilError(t, err)
 				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
 			}
 		})
 	}
 
-	deqCleanUp(conn, "k")
+	DeleteKey(t, conn, exec, "k")
 }
 
 func TestRPushRPop(t *testing.T) {
 	deqTestInit()
-	conn := getLocalConnection()
-	defer conn.Close()
+	exec := NewWebsocketCommandExecutor()
 
 	getPops := func(values []string) []string {
 		pops := make([]string, len(values)+1)
@@ -338,36 +346,38 @@ func TestRPushRPop(t *testing.T) {
 		{
 			name:   "RPUSH RPOP",
 			cmds:   []string{"RPUSH k v1 1", "RPOP k", "RPOP k", "RPOP k"},
-			expect: []any{int64(2), "1", "v1", "(nil)"},
+			expect: []any{float64(2), "1", "v1", "(nil)"},
 		},
 		{
 			name:   "RPUSH RPOP normal values",
 			cmds:   append([]string{"RPUSH k " + strings.Join(deqNormalValues, " ")}, getPops(deqNormalValues)...),
-			expect: append(append([]any{int64(14)}, getPopExpects(deqNormalValues)...), "(nil)"),
+			expect: append(append([]any{float64(14)}, getPopExpects(deqNormalValues)...), "(nil)"),
 		},
 		{
 			name:   "RPUSH RPOP edge values",
 			cmds:   append([]string{"RPUSH k " + strings.Join(deqEdgeValues, " ")}, getPops(deqEdgeValues)...),
-			expect: append(append([]any{int64(17)}, getPopExpects(deqEdgeValues)...), "(nil)"),
+			expect: append(append([]any{float64(17)}, getPopExpects(deqEdgeValues)...), "(nil)"),
 		},
 	}
 
+	conn := exec.ConnectToServer()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+
 			for i, cmd := range tc.cmds {
-				result := FireCommand(conn, cmd)
+				result, err := exec.FireCommandAndReadResponse(conn, cmd)
+				assert.NilError(t, err)
 				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
 			}
 		})
 	}
 
-	deqCleanUp(conn, "k")
+	DeleteKey(t, conn, exec, "k")
 }
 
 func TestLRPushLRPop(t *testing.T) {
 	deqTestInit()
-	conn := getLocalConnection()
-	defer conn.Close()
+	exec := NewWebsocketCommandExecutor()
 
 	testCases := []struct {
 		name   string
@@ -383,30 +393,32 @@ func TestLRPushLRPop(t *testing.T) {
 				"RPOP k", "LPOP k", "LPOP k", "RPOP k",
 			},
 			expect: []any{
-				int64(2), int64(4),
+				float64(2), float64(4),
 				"1000", "v1000", "2000",
-				int64(2),
+				float64(2),
 				"v2000", "v6", "(nil)", "(nil)",
 			},
 		},
 	}
 
+	conn := exec.ConnectToServer()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+
 			for i, cmd := range tc.cmds {
-				result := FireCommand(conn, cmd)
+				result, err := exec.FireCommandAndReadResponse(conn, cmd)
+				assert.NilError(t, err)
 				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
 			}
 		})
 	}
 
-	deqCleanUp(conn, "k")
+	DeleteKey(t, conn, exec, "k")
 }
 
 func TestLLEN(t *testing.T) {
 	deqTestInit()
-	conn := getLocalConnection()
-	defer conn.Close()
+	exec := NewWebsocketCommandExecutor()
 
 	testCases := []struct {
 		name   string
@@ -422,31 +434,25 @@ func TestLLEN(t *testing.T) {
 				"RPOP k", "LLEN k", "LPOP k", "LPOP k", "RPOP k", "LLEN k",
 			},
 			expect: []any{
-				int64(2), int64(4), int64(4),
-				"1000", int64(3), "v1000", "2000", int64(1),
-				int64(2), int64(2),
-				"v2000", int64(1), "v6", "(nil)", "(nil)", int64(0),
+				float64(2), float64(4), float64(4),
+				"1000", float64(3), "v1000", "2000", float64(1),
+				float64(2), float64(2),
+				"v2000", float64(1), "v6", "(nil)", "(nil)", float64(0),
 			},
 		},
 	}
 
+	conn := exec.ConnectToServer()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+
 			for i, cmd := range tc.cmds {
-				result := FireCommand(conn, cmd)
+				result, err := exec.FireCommandAndReadResponse(conn, cmd)
+				assert.NilError(t, err)
 				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
 			}
 		})
 	}
 
-	deqCleanUp(conn, "k")
-}
-
-func deqCleanUp(conn net.Conn, key string) {
-	for {
-		result := FireCommand(conn, "LPOP "+key)
-		if result == "(nil)" {
-			break
-		}
-	}
+	DeleteKey(t, conn, exec, "k")
 }

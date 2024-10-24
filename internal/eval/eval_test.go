@@ -90,6 +90,10 @@ func TestEval(t *testing.T) {
 	testEvalJSONOBJLEN(t, store)
 	testEvalHLEN(t, store)
 	testEvalSELECT(t, store)
+	testEvalLPUSH(t, store)
+	testEvalRPUSH(t, store)
+	testEvalLPOP(t, store)
+	testEvalRPOP(t, store)
 	testEvalLLEN(t, store)
 	testEvalGETEX(t, store)
 	testEvalJSONNUMINCRBY(t, store)
@@ -3050,41 +3054,198 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 	}
 }
 
-func testEvalLLEN(t *testing.T, store *dstore.Store) {
+func testEvalLPUSH(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'llen' command\r\n"),
+			input:          nil,
+			migratedOutput: EvalResponse{Result: clientio.NIL, Error: errors.New("ERR wrong number of arguments for 'lpush' command")},
 		},
 		"empty args": {
-			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'llen' command\r\n"),
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: clientio.NIL, Error: errors.New("ERR wrong number of arguments for 'lpush' command")},
 		},
 		"wrong number of args": {
-			input:  []string{"KEY1", "KEY2"},
-			output: []byte("-ERR wrong number of arguments for 'llen' command\r\n"),
-		},
-		"key does not exist": {
-			input:  []string{"NONEXISTENT_KEY"},
-			output: clientio.RespZero,
-		},
-		"key exists": {
-			setup: func() {
-				evalLPUSH([]string{"EXISTING_KEY", "mock_value"}, store)
-			},
-			input:  []string{"EXISTING_KEY"},
-			output: clientio.RespOne,
+			input:          []string{"KEY1"},
+			migratedOutput: EvalResponse{Result: clientio.NIL, Error: errors.New("ERR wrong number of arguments for 'lpush' command")},
 		},
 		"key with different type": {
 			setup: func() {
 				evalSET([]string{"EXISTING_KEY", "mock_value"}, store)
 			},
-			input:  []string{"EXISTING_KEY"},
-			output: []byte("-ERR Existing key has wrong Dice type\r\n"),
+			input:          []string{"EXISTING_KEY", "value_1"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+		},
+		"key does not exist": {
+			input:          []string{"NONEXISTENT_KEY", "value_1"},
+			migratedOutput: EvalResponse{Result: int64(1), Error: nil},
+		},
+		"key exists": {
+			setup: func() {
+				evalLPUSH([]string{"EXISTING_KEY", "mock_value"}, store)
+			},
+			input:          []string{"EXISTING_KEY", "value_1", "value_2"},
+			migratedOutput: EvalResponse{Result: int64(3), Error: nil},
+		},
+	}
+	runMigratedEvalTests(t, tests, evalLPUSH, store)
+}
+func testEvalRPUSH(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			input:          nil,
+			migratedOutput: EvalResponse{Result: clientio.NIL, Error: errors.New("ERR wrong number of arguments for 'rpush' command")},
+		},
+		"empty args": {
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: clientio.NIL, Error: errors.New("ERR wrong number of arguments for 'rpush' command")},
+		},
+		"wrong number of args": {
+			input:          []string{"KEY1"},
+			migratedOutput: EvalResponse{Result: clientio.NIL, Error: errors.New("ERR wrong number of arguments for 'rpush' command")},
+		},
+		"key with different type": {
+			setup: func() {
+				evalSET([]string{"EXISTING_KEY", "mock_value"}, store)
+			},
+			input:          []string{"EXISTING_KEY", "value_1"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+		},
+		"key does not exist": {
+			input:          []string{"NONEXISTENT_KEY", "value_1"},
+			migratedOutput: EvalResponse{Result: int64(1), Error: nil},
+		},
+		"key exists": {
+			setup: func() {
+				evalLPUSH([]string{"EXISTING_KEY", "mock_value"}, store)
+			},
+			input:          []string{"EXISTING_KEY", "value_1", "value_2"},
+			migratedOutput: EvalResponse{Result: int64(3), Error: nil},
+		},
+	}
+	runMigratedEvalTests(t, tests, evalRPUSH, store)
+}
+func testEvalLPOP(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			input:          nil,
+			migratedOutput: EvalResponse{Result: clientio.NIL, Error: errors.New("ERR wrong number of arguments for 'lpop' command")},
+		},
+		"empty args": {
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: clientio.NIL, Error: errors.New("ERR wrong number of arguments for 'lpop' command")},
+		},
+		"wrong number of args": {
+			input:          []string{"KEY1", "KEY2"},
+			migratedOutput: EvalResponse{Result: clientio.NIL, Error: errors.New("ERR wrong number of arguments for 'lpop' command")},
+		},
+		"key with different type": {
+			setup: func() {
+				evalSET([]string{"EXISTING_KEY", "mock_value"}, store)
+			},
+			input:          []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+		},
+		"key does not exist": {
+			input:          []string{"NONEXISTENT_KEY"},
+			migratedOutput: EvalResponse{Result: clientio.NIL, Error: nil},
+		},
+		"key exists with 1 value": {
+			setup: func() {
+				evalLPUSH([]string{"EXISTING_KEY", "mock_value"}, store)
+			},
+			input:          []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{Result: "mock_value", Error: nil},
+		},
+		"key exists with multiple values": {
+			setup: func() {
+				evalLPUSH([]string{"EXISTING_KEY", "value_1", "value_2"}, store)
+				evalRPUSH([]string{"EXISTING_KEY", "value_3", "value_4"}, store)
+			},
+			input:          []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{Result: "value_2", Error: nil},
+		},
+	}
+	runMigratedEvalTests(t, tests, evalLPOP, store)
+}
+func testEvalRPOP(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			input:          nil,
+			migratedOutput: EvalResponse{Result: clientio.NIL, Error: errors.New("ERR wrong number of arguments for 'rpop' command")},
+		},
+		"empty args": {
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: clientio.NIL, Error: errors.New("ERR wrong number of arguments for 'rpop' command")},
+		},
+		"wrong number of args": {
+			input:          []string{"KEY1", "KEY2"},
+			migratedOutput: EvalResponse{Result: clientio.NIL, Error: errors.New("ERR wrong number of arguments for 'rpop' command")},
+		},
+		"key with different type": {
+			setup: func() {
+				evalSET([]string{"EXISTING_KEY", "mock_value"}, store)
+			},
+			input:          []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+		},
+		"key does not exist": {
+			input:          []string{"NONEXISTENT_KEY"},
+			migratedOutput: EvalResponse{Result: clientio.NIL, Error: nil},
+		},
+		"key exists with 1 value": {
+			setup: func() {
+				evalLPUSH([]string{"EXISTING_KEY", "mock_value"}, store)
+			},
+			input:          []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{Result: "mock_value", Error: nil},
+		},
+		"key exists with multiple values": {
+			setup: func() {
+				evalLPUSH([]string{"EXISTING_KEY", "value_1", "value_2"}, store)
+				evalRPUSH([]string{"EXISTING_KEY", "value_3", "value_4"}, store)
+			},
+			input:          []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{Result: "value_4", Error: nil},
+		},
+	}
+	runMigratedEvalTests(t, tests, evalRPOP, store)
+}
+
+func testEvalLLEN(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			input:          nil,
+			migratedOutput: EvalResponse{Result: clientio.NIL, Error: errors.New("ERR wrong number of arguments for 'llen' command")},
+		},
+		"empty args": {
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: clientio.NIL, Error: errors.New("ERR wrong number of arguments for 'llen' command")},
+		},
+		"wrong number of args": {
+			input:          []string{"KEY1", "KEY2"},
+			migratedOutput: EvalResponse{Result: clientio.NIL, Error: errors.New("ERR wrong number of arguments for 'llen' command")},
+		},
+		"key does not exist": {
+			input:          []string{"NONEXISTENT_KEY"},
+			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
+		},
+		"key exists": {
+			setup: func() {
+				evalLPUSH([]string{"EXISTING_KEY", "mock_value"}, store)
+			},
+			input:          []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{Result: int64(1), Error: nil},
+		},
+		"key with different type": {
+			setup: func() {
+				evalSET([]string{"EXISTING_KEY", "mock_value"}, store)
+			},
+			input:          []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
 		},
 	}
 
-	runEvalTests(t, tests, evalLLEN, store)
+	runMigratedEvalTests(t, tests, evalLLEN, store)
 }
 
 func testEvalJSONNUMINCRBY(t *testing.T, store *dstore.Store) {

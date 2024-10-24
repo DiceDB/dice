@@ -1,6 +1,7 @@
 package eval
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -674,7 +675,7 @@ func evalZRANK(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	if withScore {
-		scoreStr := strconv.FormatFloat(score, 'f', -1, 64) 
+		scoreStr := strconv.FormatFloat(score, 'f', -1, 64)
 		return &EvalResponse{
 			Result: []interface{}{rank, scoreStr},
 			Error:  nil,
@@ -1641,6 +1642,212 @@ func evalZPOPMIN(args []string, store *dstore.Store) *EvalResponse {
 
 	return &EvalResponse{
 		Result: results,
+		Error:  nil,
+	}
+}
+
+func evalLPUSH(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongArgumentCount("LPUSH"),
+		}
+	}
+
+	obj := store.Get(args[0])
+	if obj == nil {
+		obj = store.NewObj(NewDeque(), -1, object.ObjTypeByteList, object.ObjEncodingDeque)
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeByteList); err != nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingDeque); err != nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	store.Put(args[0], obj)
+	for i := 1; i < len(args); i++ {
+		obj.Value.(*Deque).LPush(args[i])
+	}
+
+	deq := obj.Value.(*Deque)
+
+	return &EvalResponse{
+		Result: deq.Length,
+		Error:  nil,
+	}
+}
+
+func evalRPUSH(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongArgumentCount("RPUSH"),
+		}
+	}
+
+	obj := store.Get(args[0])
+	if obj == nil {
+		obj = store.NewObj(NewDeque(), -1, object.ObjTypeByteList, object.ObjEncodingDeque)
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeByteList); err != nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingDeque); err != nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	store.Put(args[0], obj)
+	for i := 1; i < len(args); i++ {
+		obj.Value.(*Deque).RPush(args[i])
+	}
+
+	deq := obj.Value.(*Deque)
+
+	return &EvalResponse{
+		Result: deq.Length,
+		Error:  nil,
+	}
+}
+
+func evalLPOP(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongArgumentCount("LPOP"),
+		}
+	}
+
+	obj := store.Get(args[0])
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeByteList); err != nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingDeque); err != nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	deq := obj.Value.(*Deque)
+	x, err := deq.LPop()
+	if err != nil {
+		if errors.Is(err, ErrDequeEmpty) {
+			return &EvalResponse{
+				Result: clientio.NIL,
+				Error:  nil,
+			}
+		}
+		panic(fmt.Sprintf("unknown error: %v", err))
+	}
+
+	return &EvalResponse{
+		Result: x,
+		Error:  nil,
+	}
+}
+
+func evalRPOP(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongArgumentCount("RPOP"),
+		}
+	}
+
+	obj := store.Get(args[0])
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeByteList); err != nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingDeque); err != nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	deq := obj.Value.(*Deque)
+	x, err := deq.RPop()
+	if err != nil {
+		if errors.Is(err, ErrDequeEmpty) {
+			return &EvalResponse{
+				Result: clientio.NIL,
+				Error:  nil,
+			}
+		}
+		panic(fmt.Sprintf("unknown error: %v", err))
+	}
+
+	return &EvalResponse{
+		Result: x,
+		Error:  nil,
+	}
+}
+
+func evalLLEN(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongArgumentCount("LLEN"),
+		}
+	}
+
+	obj := store.Get(args[0])
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeByteList, object.ObjEncodingDeque); err != nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	deq := obj.Value.(*Deque)
+	return &EvalResponse{
+		Result: deq.Length,
 		Error:  nil,
 	}
 }
