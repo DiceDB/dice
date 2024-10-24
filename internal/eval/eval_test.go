@@ -2608,13 +2608,13 @@ func testEvalHVALS(t *testing.T, store *dstore.Store) {
 			name:           "HVALS wrong number of args passed",
 			setup:          func() {},
 			input:          nil,
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'HVALS' command")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'hvals' command")},
 		},
 		{
 			name:           "HVALS key doesn't exists",
 			setup:          func() {},
 			input:          []string{"NONEXISTENTHVALSKEY"},
-			migratedOutput: EvalResponse{Result: clientio.RespEmptyArray, Error: nil},
+			migratedOutput: EvalResponse{Result: clientio.EmptyArray, Error: nil},
 		},
 		{
 			name: "HVALS key exists",
@@ -2723,13 +2723,13 @@ func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
 			name:           "HEXISTS wrong number of args passed",
 			setup:          func() {},
 			input:          nil,
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'HEXISTS' command")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'hexists' command")},
 		},
 		{
 			name:           "HEXISTS only key passed",
 			setup:          func() {},
 			input:          []string{"KEY"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'HEXISTS' command")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'hexists' command")},
 		},
 		{
 			name:           "HEXISTS key doesn't exist",
@@ -3502,15 +3502,15 @@ func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 	tests := []evalTestCase{
 		{
 			name:           "HKEYS wrong number of args passed",
-			setup:          func() {},
+			setup:          nil,
 			input:          nil,
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'HKEYS' command")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'hkeys' command")},
 		},
 		{
 			name:           "HKEYS key doesn't exist",
-			setup:          func() {},
+			setup:          nil,
 			input:          []string{"KEY"},
-			migratedOutput: EvalResponse{Result: clientio.Encode([]string{}, false), Error: nil},
+			migratedOutput: EvalResponse{Result: clientio.EmptyArray, Error: nil},
 		},
 		{
 			name: "HKEYS key exists but not a hash",
@@ -3518,7 +3518,7 @@ func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 				evalSET([]string{"string_key", "string_value"}, store)
 			},
 			input:          []string{"string_key"},
-			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
+			migratedOutput: EvalResponse{Result: clientio.EmptyArray, Error: nil},
 		},
 		{
 			name: "HKEYS key exists and is a hash",
@@ -3537,24 +3537,32 @@ func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:          []string{"KEY_MOCK"},
-			migratedOutput: EvalResponse{Result: []string{"mock_field_name"}, Error: nil},
+			migratedOutput: EvalResponse{Result: []byte("mock_field_name"), Error: nil},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+
+			if tt.setup != nil {
+				tt.setup()
+			}
+
 			response := evalHKEYS(tt.input, store)
 
 			// Handle comparison for byte slices
 			if responseBytes, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
+					fmt.Printf("G: %v | %v\n", responseBytes, expectedBytes)
 					testifyAssert.True(t, bytes.Equal(responseBytes, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else {
+				fmt.Printf("G1: %v | %v\n", response.Result, tt.migratedOutput.Result)
 				assert.Equal(t, tt.migratedOutput.Result, response.Result)
 			}
 
 			if tt.migratedOutput.Error != nil {
+				fmt.Printf("E: %v | %v\n", response.Error, tt.migratedOutput.Error.Error())
 				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
 				testifyAssert.NoError(t, response.Error)
