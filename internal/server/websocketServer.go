@@ -122,7 +122,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 	defer func() {
 		closeErr := conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "close 1000 (normal)"))
 		if closeErr != nil {
-			slog.Warn("Error during closing handshake", slog.Any("error", closeErr))
+			slog.Debug("Error during closing handshake", slog.Any("error", closeErr))
 		}
 		conn.Close()
 	}()
@@ -130,20 +130,14 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 	maxRetries := config.DiceConfig.WebSocket.MaxWriteResponseRetries
 	for {
 		// read incoming message
-		messageType, msg, err := conn.ReadMessage()
+		_, msg, err := conn.ReadMessage()
 		if err != nil {
 			// acceptable close errors
 			errs := []int{websocket.CloseNormalClosure, websocket.CloseGoingAway, websocket.CloseAbnormalClosure}
 			if websocket.IsCloseError(err, errs...) {
-				slog.Info("Gracefully Exited")
 				break
 			}
 			slog.Error("Error reading message", slog.Any("error", err))
-			break
-		}
-
-		if messageType == websocket.CloseMessage {
-			slog.Info("graceful shutdown...")
 			break
 		}
 
