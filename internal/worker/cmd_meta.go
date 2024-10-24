@@ -62,6 +62,10 @@ const (
 
 // Watch commands
 const (
+	CmdSadd         = "SADD"
+	CmdSrem         = "SREM"
+	CmdScard        = "SCARD"
+	CmdSmembers     = "SMEMBERS"
 	CmdGetWatch     = "GET.WATCH"
 	CmdZRangeWatch  = "ZRANGE.WATCH"
 	CmdZPopMin      = "ZPOPMIN"
@@ -137,6 +141,18 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdGetSet: {
+		CmdType: SingleShard,
+	},
+	CmdSadd: {
+		CmdType: SingleShard,
+	},
+	CmdSrem: {
+		CmdType: SingleShard,
+	},
+	CmdScard: {
+		CmdType: SingleShard,
+	},
+	CmdSmembers: {
 		CmdType: SingleShard,
 	},
 	CmdGetRange: {
@@ -291,7 +307,7 @@ func validateCmdMeta(c string, meta CmdMeta) error {
 			return fmt.Errorf("multi-shard command %s must have both decomposeCommand and composeResponse implemented", c)
 		}
 	case SingleShard, Watch, Custom:
-		// No specific validations for these types currently
+	// No specific validations for these types currently
 	default:
 		return fmt.Errorf("unknown command type for %s", c)
 	}
