@@ -3,6 +3,7 @@ package eval
 import (
 	"fmt"
 	"math"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/gobwas/glob"
 	"github.com/ohler55/ojg/jp"
 )
 
@@ -1645,6 +1647,202 @@ func evalZPOPMIN(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+// evalHLEN returns the number of fields contained in the hash stored at key.
+//
+// If key doesn't exist, it returns 0.
+//
+// Usage: HLEN key
+func evalHLEN(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("HLEN"),
+		}
+	}
+
+	key := args[0]
+
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	hashMap := obj.Value.(HashMap)
+	return &EvalResponse{
+		Result: len(hashMap),
+		Error:  nil,
+	}
+}
+
+// evalHSTRLEN returns the length of value associated with field in the hash stored at key.
+//
+// This command returns 0, if the specified field doesn't exist in the key
+//
+// If key doesn't exist, it returns 0.
+//
+// Usage: HSTRLEN key field value
+func evalHSTRLEN(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("HSTRLEN"),
+		}
+	}
+
+	key := args[0]
+	hmKey := args[1]
+	obj := store.Get(key)
+
+	var hashMap HashMap
+
+	if obj != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			}
+		}
+		hashMap = obj.Value.(HashMap)
+	} else {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	val, ok := hashMap.Get(hmKey)
+	// Return 0, if specified field doesn't exist in the HashMap.
+	if ok {
+		return &EvalResponse{
+			Result: len(*val),
+			Error:  nil,
+		}
+	}
+	return &EvalResponse{
+		Result: clientio.IntegerZero,
+		Error:  nil,
+	}
+}
+
+// evalHSCAN return a two element multi-bulk reply, where the first element is a string representing the cursor,
+// and the second element is a multi-bulk with an array of elements.
+//
+// The array of elements contain two elements, a field and a value, for every returned element of the Hash.
+//
+// If key doesn't exist, it returns an array containing 0 and empty array.
+//
+// Usage: HSCAN key cursor [MATCH pattern] [COUNT count]
+func evalHSCAN(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("HSCAN"),
+		}
+	}
+
+	key := args[0]
+	cursor, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrIntegerOutOfRange,
+		}
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: []interface{}{"0", []string{}},
+			Error:  nil,
+		}
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	hashMap := obj.Value.(HashMap)
+	pattern := "*"
+	count := 10
+
+	// Parse optional arguments
+	for i := 2; i < len(args); i += 2 {
+		switch strings.ToUpper(args[i]) {
+		case "MATCH":
+			if i+1 < len(args) {
+				pattern = args[i+1]
+			}
+		case CountConst:
+			if i+1 < len(args) {
+				parsedCount, err := strconv.Atoi(args[i+1])
+				if err != nil || parsedCount < 1 {
+					return &EvalResponse{
+						Result: nil,
+						Error:  diceerrors.ErrIntegerOutOfRange,
+					}
+				}
+				count = parsedCount
+			}
+		}
+	}
+
+	// Note that this implementation has a time complexity of O(N), where N is the number of keys in 'hashMap'.
+	// This is in contrast to Redis, which implements HSCAN in O(1) time complexity by maintaining a cursor.
+	keys := make([]string, 0, len(hashMap))
+	for k := range hashMap {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	matched := 0
+	results := make([]string, 0, count*2)
+	newCursor := 0
+
+	g, err := glob.Compile(pattern)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(fmt.Sprintf("Invalid glob pattern: %s", err)),
+		}
+	}
+
+	// Scan the keys and add them to the results if they match the pattern
+	for i := int(cursor); i < len(keys); i++ {
+		if g.Match(keys[i]) {
+			results = append(results, keys[i], hashMap[keys[i]])
+			matched++
+			if matched >= count {
+				newCursor = i + 1
+				break
+			}
+		}
+	}
+
+	// If we've scanned all keys, reset cursor to 0
+	if newCursor >= len(keys) {
+		newCursor = 0
+	}
+
+	return &EvalResponse{
+		Result: []interface{}{strconv.Itoa(newCursor), results},
+		Error:  nil,
+	}
+}
+  
 // evalBF.RESERVE evaluates the BF.RESERVE command responsible for initializing a
 // new bloom filter and allocation it's relevant parameters based on given inputs.
 // If no params are provided, it uses defaults.

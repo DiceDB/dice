@@ -1,6 +1,10 @@
 package eval
 
-import dstore "github.com/dicedb/dice/internal/store"
+import (
+	"strings"
+
+	dstore "github.com/dicedb/dice/internal/store"
+)
 
 type DiceCmdMeta struct {
 	Name  string
@@ -525,12 +529,55 @@ var (
 		Eval: evalBITOP,
 	}
 	commandCmdMeta = DiceCmdMeta{
-		Name:        "COMMAND <subcommand>",
+		Name:        "COMMAND",
 		Info:        "Evaluates COMMAND <subcommand> command based on subcommand",
 		Eval:        evalCommand,
 		Arity:       -1,
-		SubCommands: []string{Count, GetKeys, List, Help, Info},
+		SubCommands: []string{Count, GetKeys, GetKeysandFlags, List, Help, Info, Docs},
 	}
+	commandCountCmdMeta = DiceCmdMeta{
+		Name:  "COMMAND|COUNT",
+		Info:  "Returns a count of commands.",
+		Eval:  evalCommand,
+		Arity: 2,
+	}
+	commandHelpCmdMeta = DiceCmdMeta{
+		Name:  "COMMAND|HELP",
+		Info:  "Returns helpful text about the different subcommands",
+		Eval:  evalCommand,
+		Arity: 2,
+	}
+	commandInfoCmdMeta = DiceCmdMeta{
+		Name:  "COMMAND|INFO",
+		Info:  "Returns information about one, multiple or all commands.",
+		Eval:  evalCommand,
+		Arity: -2,
+	}
+	commandListCmdMeta = DiceCmdMeta{
+		Name:  "COMMAND|LIST",
+		Info:  "Returns a list of command names.",
+		Eval:  evalCommand,
+		Arity: -2,
+	}
+	commandDocsCmdMeta = DiceCmdMeta{
+		Name:  "COMMAND|DOCS",
+		Info:  "Returns documentary information about one, multiple or all commands.",
+		Eval:  evalCommand,
+		Arity: -2,
+	}
+	commandGetKeysCmdMeta = DiceCmdMeta{
+		Name:  "COMMAND|GETKEYS",
+		Info:  "Extracts the key names from an arbitrary command.",
+		Eval:  evalCommand,
+		Arity: -4,
+	}
+	commandGetKeysAndFlagsCmdMeta = DiceCmdMeta{
+		Name:  "COMMAND|GETKEYSANDFLAGS",
+		Info:  "Returns a list of command names.",
+		Eval:  evalCommand,
+		Arity: -4,
+	}
+
 	keysCmdMeta = DiceCmdMeta{
 		Name: "KEYS",
 		Info: "KEYS command is used to get all the keys in the database. Complexity is O(n) where n is the number of keys in the database.",
@@ -701,12 +748,14 @@ var (
 		NewEval:    evalHINCRBY,
 	}
 	hstrLenCmdMeta = DiceCmdMeta{
-		Name:     "HSTRLEN",
-		Info:     `Returns the length of value associated with field in the hash stored at key.`,
-		Eval:     evalHSTRLEN,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Name:       "HSTRLEN",
+		Info:       `Returns the length of value associated with field in the hash stored at key.`,
+		NewEval:    evalHSTRLEN,
+		IsMigrated: true,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
+
 	hdelCmdMeta = DiceCmdMeta{
 		Name: "HDEL",
 		Info: `HDEL removes the specified fields from the hash stored at key.
@@ -725,9 +774,10 @@ var (
 		It returns a cursor and a list of key-value pairs.
 		The cursor is used to paginate through the hash.
 		The command returns a cursor value of 0 when all the elements are iterated.`,
-		Eval:     evalHSCAN,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalHSCAN,
+		IsMigrated: true,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	hexistsCmdMeta = DiceCmdMeta{
 		Name:     "HEXISTS",
@@ -942,8 +992,9 @@ var (
 		Name: "HLEN",
 		Info: `HLEN key
 		Returns the number of fields contained in the hash stored at key.`,
-		Eval:  evalHLEN,
-		Arity: 2,
+		NewEval:    evalHLEN,
+		IsMigrated: true,
+		Arity:      2,
 	}
 	selectCmdMeta = DiceCmdMeta{
 		Name:  "SELECT",
@@ -1168,6 +1219,13 @@ func init() {
 	DiceCmds["BITPOS"] = bitposCmdMeta
 	DiceCmds["CLIENT"] = clientCmdMeta
 	DiceCmds["COMMAND"] = commandCmdMeta
+	DiceCmds["COMMAND|COUNT"] = commandCountCmdMeta
+	DiceCmds["COMMAND|GETKEYS"] = commandGetKeysCmdMeta
+	DiceCmds["COMMAND|LIST"] = commandListCmdMeta
+	DiceCmds["COMMAND|HELP"] = commandHelpCmdMeta
+	DiceCmds["COMMAND|INFO"] = commandInfoCmdMeta
+	DiceCmds["COMMAND|DOCS"] = commandDocsCmdMeta
+	DiceCmds["COMMAND|GETKEYSANDFLAGS"] = commandGetKeysAndFlagsCmdMeta
 	DiceCmds["COPY"] = copyCmdMeta
 	DiceCmds["DBSIZE"] = dbSizeCmdMeta
 	DiceCmds["DECR"] = decrCmdMeta
@@ -1278,7 +1336,17 @@ func init() {
 
 // Function to convert DiceCmdMeta to []interface{}
 func convertCmdMetaToSlice(cmdMeta *DiceCmdMeta) []interface{} {
-	return []interface{}{cmdMeta.Name, cmdMeta.Arity, cmdMeta.KeySpecs.BeginIndex, cmdMeta.KeySpecs.LastKey, cmdMeta.KeySpecs.Step}
+	var result []interface{} = []interface{}{strings.ToLower(cmdMeta.Name), cmdMeta.Arity, cmdMeta.KeySpecs.BeginIndex, cmdMeta.KeySpecs.LastKey, cmdMeta.KeySpecs.Step}
+	var subCommandsList []interface{}
+	for _, subCommand := range cmdMeta.SubCommands {
+		key := cmdMeta.Name + "|" + subCommand
+		if val, exists := DiceCmds[key]; exists {
+			valCopy := val // Store the value in a variable
+			subCommandsList = append(subCommandsList, convertCmdMetaToSlice(&valCopy))
+		}
+	}
+
+	return append(result, subCommandsList)
 }
 
 // Function to convert map[string]DiceCmdMeta{} to []interface{}
@@ -1286,6 +1354,34 @@ func convertDiceCmdsMapToSlice() []interface{} {
 	var result []interface{}
 	for _, cmdMeta := range DiceCmds {
 		result = append(result, convertCmdMetaToSlice(&cmdMeta))
+	}
+	return result
+}
+
+func convertCmdMetaToDocs(cmdMeta *DiceCmdMeta) []interface{} {
+	var result []interface{} = []interface{}{"summary", cmdMeta.Info, "arity", cmdMeta.Arity, "beginIndex", cmdMeta.KeySpecs.BeginIndex,
+		"lastIndex", cmdMeta.KeySpecs.LastKey, "step", cmdMeta.KeySpecs.Step}
+	var subCommandsList []interface{}
+	for _, subCommand := range cmdMeta.SubCommands {
+		key := cmdMeta.Name + "|" + subCommand
+		if val, exists := DiceCmds[key]; exists {
+			valCopy := val // Store the value in a variable
+			subCommandsList = append(subCommandsList, convertCmdMetaToDocs(&valCopy))
+		}
+	}
+
+	if len(subCommandsList) != 0 {
+		result = append(result, "subcommands", subCommandsList)
+	}
+
+	return []interface{}{strings.ToLower(cmdMeta.Name), result}
+}
+
+// Function to convert map[string]DiceCmdMeta{} to []interface{}
+func convertDiceCmdsMapToDocs() []interface{} {
+	var result []interface{}
+	for _, cmdMeta := range DiceCmds {
+		result = append(result, convertCmdMetaToDocs(&cmdMeta))
 	}
 	return result
 }

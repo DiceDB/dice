@@ -2676,19 +2676,19 @@ func testEvalHVALS(t *testing.T, store *dstore.Store) {
 func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"wrong number of args passed": {
-			setup:  func() {},
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'hstrlen' command\r\n"),
+			setup:          func() {},
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("HSTRLEN")},
 		},
 		"only key passed": {
-			setup:  func() {},
-			input:  []string{"KEY"},
-			output: []byte("-ERR wrong number of arguments for 'hstrlen' command\r\n"),
+			setup:          func() {},
+			input:          []string{"KEY"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("HSTRLEN")},
 		},
 		"key doesn't exist": {
-			setup:  func() {},
-			input:  []string{"KEY", "field_name"},
-			output: clientio.Encode(0, false),
+			setup:          func() {},
+			input:          []string{"KEY", "field_name"},
+			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
 		},
 		"key exists but field_name doesn't exists": {
 			setup: func() {
@@ -2705,8 +2705,8 @@ func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
 
 				store.Put(key, obj)
 			},
-			input:  []string{"KEY_MOCK", "non_existent_key"},
-			output: clientio.Encode(0, false),
+			input:          []string{"KEY_MOCK", "non_existent_key"},
+			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
 		},
 		"both key and field_name exists": {
 			setup: func() {
@@ -2723,12 +2723,12 @@ func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
 
 				store.Put(key, obj)
 			},
-			input:  []string{"KEY_MOCK", "mock_field_name"},
-			output: clientio.Encode(10, false),
+			input:          []string{"KEY_MOCK", "mock_field_name"},
+			migratedOutput: EvalResponse{Result: 10, Error: nil},
 		},
 	}
 
-	runEvalTests(t, tests, evalHSTRLEN, store)
+	runMigratedEvalTests(t, tests, evalHSTRLEN, store)
 }
 
 func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
@@ -2828,86 +2828,86 @@ func testEvalHDEL(t *testing.T, store *dstore.Store) {
 func testEvalHSCAN(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"HSCAN with wrong number of args": {
-			input:  []string{"key"},
-			output: []byte("-ERR wrong number of arguments for 'hscan' command\r\n"),
+			input:          []string{"key"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("HSCAN")},
 		},
 		"HSCAN with key does not exist": {
-			input:  []string{"NONEXISTENT_KEY", "0"},
-			output: []byte("*2\r\n$1\r\n0\r\n*0\r\n"),
+			input:          []string{"NONEXISTENT_KEY", "0"},
+			migratedOutput: EvalResponse{Result: []interface{}{"0", []string{}}, Error: nil},
 		},
 		"HSCAN with key exists but not a hash": {
 			setup: func() {
 				evalSET([]string{"string_key", "string_value"}, store)
 			},
-			input:  []string{"string_key", "0"},
-			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+			input:          []string{"string_key", "0"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		"HSCAN with valid key and cursor": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
 			},
-			input:  []string{"hash_key", "0"},
-			output: []byte("*2\r\n$1\r\n0\r\n*4\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+			input:          []string{"hash_key", "0"},
+			migratedOutput: EvalResponse{Result: []interface{}{"0", []string{"field1", "value1", "field2", "value2"}}, Error: nil},
 		},
 		"HSCAN with cursor at the end": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
 			},
-			input:  []string{"hash_key", "2"},
-			output: []byte("*2\r\n$1\r\n0\r\n*0\r\n"),
+			input:          []string{"hash_key", "2"},
+			migratedOutput: EvalResponse{Result: []interface{}{"0", []string{}}, Error: nil},
 		},
 		"HSCAN with cursor at the beginning": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
 			},
-			input:  []string{"hash_key", "0"},
-			output: []byte("*2\r\n$1\r\n0\r\n*4\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+			input:          []string{"hash_key", "0"},
+			migratedOutput: EvalResponse{Result: []interface{}{"0", []string{"field1", "value1", "field2", "value2"}}, Error: nil},
 		},
 		"HSCAN with cursor in the middle": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
 			},
-			input:  []string{"hash_key", "1"},
-			output: []byte("*2\r\n$1\r\n0\r\n*2\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+			input:          []string{"hash_key", "1"},
+			migratedOutput: EvalResponse{Result: []interface{}{"0", []string{"field2", "value2"}}, Error: nil},
 		},
 		"HSCAN with MATCH argument": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3"}, store)
 			},
-			input:  []string{"hash_key", "0", "MATCH", "field[12]*"},
-			output: []byte("*2\r\n$1\r\n0\r\n*4\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+			input:          []string{"hash_key", "0", "MATCH", "field[12]*"},
+			migratedOutput: EvalResponse{Result: []interface{}{"0", []string{"field1", "value1", "field2", "value2"}}, Error: nil},
 		},
 		"HSCAN with COUNT argument": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3"}, store)
 			},
-			input:  []string{"hash_key", "0", "COUNT", "2"},
-			output: []byte("*2\r\n$1\r\n2\r\n*4\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n$6\r\nfield2\r\n$6\r\nvalue2\r\n"),
+			input:          []string{"hash_key", "0", "COUNT", "2"},
+			migratedOutput: EvalResponse{Result: []interface{}{"2", []string{"field1", "value1", "field2", "value2"}}, Error: nil},
 		},
 		"HSCAN with MATCH and COUNT arguments": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3", "field4", "value4"}, store)
 			},
-			input:  []string{"hash_key", "0", "MATCH", "field[13]*", "COUNT", "1"},
-			output: []byte("*2\r\n$1\r\n1\r\n*2\r\n$6\r\nfield1\r\n$6\r\nvalue1\r\n"),
+			input:          []string{"hash_key", "0", "MATCH", "field[13]*", "COUNT", "1"},
+			migratedOutput: EvalResponse{Result: []interface{}{"1", []string{"field1", "value1"}}, Error: nil},
 		},
 		"HSCAN with invalid MATCH pattern": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
 			},
-			input:  []string{"hash_key", "0", "MATCH", "[invalid"},
-			output: []byte("-ERR Invalid glob pattern: unexpected end of input\r\n"),
+			input:          []string{"hash_key", "0", "MATCH", "[invalid"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrGeneral("Invalid glob pattern: unexpected end of input")},
 		},
 		"HSCAN with invalid COUNT value": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
 			},
-			input:  []string{"hash_key", "0", "COUNT", "invalid"},
-			output: []byte("-ERR value is not an integer or out of range\r\n"),
+			input:          []string{"hash_key", "0", "COUNT", "invalid"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrIntegerOutOfRange},
 		},
 	}
 
-	runEvalTests(t, tests, evalHSCAN, store)
+	runMigratedEvalTests(t, tests, evalHSCAN, store)
 }
 
 func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
@@ -3853,36 +3853,36 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 
 func testEvalHLEN(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
-		"wrong number of args": {
-			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'hlen' command\r\n"),
+		"HLEN wrong number of args": {
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("HLEN")},
 		},
-		"key does not exist": {
-			input:  []string{"nonexistent_key"},
-			output: clientio.RespZero,
+		"HLEN non-existent key": {
+			input:          []string{"nonexistent_key"},
+			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
 		},
-		"key exists but not a hash": {
+		"HLEN key exists but not a hash": {
 			setup: func() {
 				evalSET([]string{"string_key", "string_value"}, store)
 			},
-			input:  []string{"string_key"},
-			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+			input:          []string{"string_key"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
-		"empty hash": {
-			setup:  func() {},
-			input:  []string{"empty_hash"},
-			output: clientio.RespZero,
+		"HLEN empty hash": {
+			setup:          func() {},
+			input:          []string{"empty_hash"},
+			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
 		},
-		"hash with elements": {
+		"HLEN hash with elements": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3"}, store)
 			},
-			input:  []string{"hash_key"},
-			output: clientio.Encode(int64(3), false),
+			input:          []string{"hash_key"},
+			migratedOutput: EvalResponse{Result: 3, Error: nil},
 		},
 	}
 
-	runEvalTests(t, tests, evalHLEN, store)
+	runMigratedEvalTests(t, tests, evalHLEN, store)
 }
 
 func BenchmarkEvalHLEN(b *testing.B) {
@@ -4191,7 +4191,7 @@ func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"command help": {
 			input: []string{"HELP"},
-			output: []byte("*13\r\n" +
+			output: []byte("*15\r\n" +
 				"$64\r\n" +
 				"COMMAND <subcommand> [<arg> [value] [opt] ...]. Subcommands are:\r\n" +
 				"$15\r\n" +
@@ -4210,6 +4210,10 @@ func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
 				"INFO [<command-name> ...]\r\n" +
 				"$140\r\n" +
 				"     Return details about the specified DiceDB commands. If no command names are given, documentation details for all commands are returned.\r\n" +
+				"$25\r\n" +
+				"DOCS [<command-name> ...]\r\n" +
+				"$147\r\n" +
+				"\tReturn documentation details about multiple diceDB commands.\n\tIf no command names are given, documentation details for all\n\tcommands are returned.\r\n" +
 				"$22\r\n" +
 				"GETKEYS <full-command>\r\n" +
 				"$48\r\n" +
@@ -4225,19 +4229,19 @@ func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
 		},
 		"command info valid command SET": {
 			input:  []string{"INFO", "SET"},
-			output: []byte("*1\r\n*5\r\n$3\r\nSET\r\n:-3\r\n:1\r\n:0\r\n:0\r\n"),
+			output: []byte("*1\r\n*6\r\n$3\r\nset\r\n:-3\r\n:1\r\n:0\r\n:0\r\n*0\r\n"),
 		},
 		"command info valid command GET": {
 			input:  []string{"INFO", "GET"},
-			output: []byte("*1\r\n*5\r\n$3\r\nGET\r\n:2\r\n:1\r\n:0\r\n:0\r\n"),
+			output: []byte("*1\r\n*6\r\n$3\r\nget\r\n:2\r\n:1\r\n:0\r\n:0\r\n*0\r\n"),
 		},
 		"command info valid command PING": {
 			input:  []string{"INFO", "PING"},
-			output: []byte("*1\r\n*5\r\n$4\r\nPING\r\n:-1\r\n:0\r\n:0\r\n:0\r\n"),
+			output: []byte("*1\r\n*6\r\n$4\r\nping\r\n:-1\r\n:0\r\n:0\r\n:0\r\n*0\r\n"),
 		},
 		"command info multiple valid commands": {
 			input:  []string{"INFO", "SET", "GET"},
-			output: []byte("*2\r\n*5\r\n$3\r\nSET\r\n:-3\r\n:1\r\n:0\r\n:0\r\n*5\r\n$3\r\nGET\r\n:2\r\n:1\r\n:0\r\n:0\r\n"),
+			output: []byte("*2\r\n*6\r\n$3\r\nset\r\n:-3\r\n:1\r\n:0\r\n:0\r\n*0\r\n*6\r\n$3\r\nget\r\n:2\r\n:1\r\n:0\r\n:0\r\n*0\r\n"),
 		},
 		"command info invalid command": {
 			input:  []string{"INFO", "INVALID_CMD"},
@@ -4245,7 +4249,7 @@ func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
 		},
 		"command info mixture of valid and invalid commands": {
 			input:  []string{"INFO", "SET", "INVALID_CMD"},
-			output: []byte("*2\r\n*5\r\n$3\r\nSET\r\n:-3\r\n:1\r\n:0\r\n:0\r\n$-1\r\n"),
+			output: []byte("*2\r\n*6\r\n$3\r\nset\r\n:-3\r\n:1\r\n:0\r\n:0\r\n*0\r\n$-1\r\n"),
 		},
 		"command count with wrong number of arguments": {
 			input:  []string{"COUNT", "EXTRA-ARGS"},
@@ -4274,6 +4278,79 @@ func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
 		"command getkeys with an invalid number of arguments for a command": {
 			input:  []string{"GETKEYS", "MSET", "key1"},
 			output: []byte("-ERR invalid number of arguments specified for command\r\n"),
+		},
+		"command docs valid command SET": {
+			input: []string{"DOCS", "SET"},
+			output: []byte("*1\r\n*2\r\n$3\r\nset\r\n*10\r\n$7\r\nsummary\r\n$489\r\n" +
+				"SET puts a new <key, value> pair in db as in the args\n" +
+				"\t\targs must contain key and value.\n" +
+				"\t\targs can also contain multiple options -\n" +
+				"\t\tEX or ex which will set the expiry time(in secs) for the key\n" +
+				"\t\tReturns encoded error response if at least a <key, value> pair is not part of args\n" +
+				"\t\tReturns encoded error response if expiry tme value in not integer\n" +
+				"\t\tReturns encoded OK RESP once new entry is added\n" +
+				"\t\tIf the key already exists then the value will be overwritten and expiry will be discarded\r\n" +
+				"$5\r\narity\r\n" +
+				":-3\r\n$10\r\nbeginIndex\r\n:1\r\n$9\r\nlastIndex\r\n:0\r\n$4\r\nstep\r\n:0\r\n"),
+		},
+		"command docs valid command GET": {
+			input: []string{"DOCS", "GET"},
+			output: []byte(
+				"*1\r\n*2\r\n$3\r\nget\r\n*10\r\n$7\r\nsummary\r\n$210\r\n" +
+					"GET returns the value for the queried key in args\n" +
+					"\t\tThe key should be the only param in args\n" +
+					"\t\tThe RESP value of the key is encoded and then returned\n" +
+					"\t\tGET returns RespNIL if key is expired or it does not exist\r\n" +
+					"$5\r\narity\r\n:2\r\n$10\r\nbeginIndex\r\n" +
+					":1\r\n$9\r\nlastIndex\r\n:0\r\n$4\r\nstep\r\n:0\r\n"),
+		},
+		"command docs valid command PING": {
+			input: []string{"DOCS", "PING"},
+			output: []byte("*1\r\n*2\r\n$4\r\nping\r\n*10\r\n$7\r\nsummary\r\n$111\r\nPING returns with an encoded \"PONG\"" +
+				" If any message is added with the ping command,the message will be returned.\r\n" +
+				"$5\r\narity\r\n:-1\r\n$10\r\nbeginIndex\r\n:0\r\n$9\r\nlastIndex\r\n:0\r\n$4\r\nstep\r\n:0\r\n"),
+		},
+		"command docs multiple valid commands": {
+			input: []string{"DOCS", "SET", "GET"},
+			output: []byte("*2\r\n*2\r\n$3\r\nset\r\n*10\r\n$7\r\n" +
+				"summary\r\n$489\r\n" +
+				"SET puts a new <key, value> pair in db as in the args\n" +
+				"\t\targs must contain key and value.\n" +
+				"\t\targs can also contain multiple options -\n" +
+				"\t\tEX or ex which will set the expiry time(in secs) for the key\n" +
+				"\t\tReturns encoded error response if at least a <key, value> pair is not part of args\n" +
+				"\t\tReturns encoded error response if expiry tme value in not integer\n" +
+				"\t\tReturns encoded OK RESP once new entry is added\n" +
+				"\t\tIf the key already exists then the value will be overwritten and expiry will be discarded\r\n" +
+				"$5\r\narity\r\n" +
+				":-3\r\n$10\r\nbeginIndex\r\n:1\r\n$9\r\nlastIndex\r\n:0\r\n$4\r\nstep\r\n:0\r\n" +
+				"*2\r\n$3\r\nget\r\n*10\r\n$7\r\nsummary\r\n$210\r\n" +
+				"GET returns the value for the queried key in args\n" +
+				"\t\tThe key should be the only param in args\n" +
+				"\t\tThe RESP value of the key is encoded and then returned\n" +
+				"\t\tGET returns RespNIL if key is expired or it does not exist\r\n$5\r\narity\r\n" +
+				":2\r\n$10\r\nbeginIndex\r\n:1\r\n$9\r\nlastIndex\r\n:0\r\n$4\r\nstep\r\n:0\r\n"),
+		},
+		"command docs invalid command": {
+			input:  []string{"DOCS", "INVALID_CMD"},
+			output: []byte("*0\r\n"),
+		},
+		"command docs mixture of valid and invalid commands": {
+			input: []string{"DOCS", "SET", "INVALID_CMD"},
+			output: []byte("*1\r\n*2\r\n$3\r\nset\r\n*10\r\n$7\r\n" +
+				"summary\r\n$489\r\nSET puts a new <key, value> pair in db as in the args\n" +
+				"\t\targs must contain key and value.\n" +
+				"\t\targs can also contain multiple options -\n" +
+				"\t\tEX or ex which will set the expiry time(in secs) for the key\n" +
+				"\t\tReturns encoded error response if at least a <key, value> pair is not part of args\n" +
+				"\t\tReturns encoded error response if expiry tme value in not integer\n" +
+				"\t\tReturns encoded OK RESP once new entry is added\n" +
+				"\t\tIf the key already exists then the value will be overwritten and expiry will be discarded\r\n" +
+				"$5\r\narity\r\n:-3\r\n$10\r\nbeginIndex\r\n:1\r\n$9\r\nlastIndex\r\n:0\r\n$4\r\nstep\r\n:0\r\n"),
+		},
+		"command docs unknown command": {
+			input:  []string{"UNKNOWN"},
+			output: []byte("-ERR unknown subcommand 'UNKNOWN'. Try COMMAND HELP.\r\n"),
 		},
 	}
 

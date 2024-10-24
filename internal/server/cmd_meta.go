@@ -129,7 +129,18 @@ var (
 		Cmd:     "JSON.OBJLEN",
 		CmdType: SingleShard,
 	}
-
+  hlenCmdMeta = CmdsMeta{
+		Cmd:     "HLEN",
+		CmdType: SingleShard,
+	}
+	hstrlenCmdMeta = CmdsMeta{
+		Cmd:     "HSTRLEN",
+		CmdType: SingleShard,
+	}
+	hscanCmdMeta = CmdsMeta{
+		Cmd:     "HSCAN",
+		CmdType: SingleShard,
+	}
 	incrCmdMeta = CmdsMeta{
 		Cmd:     "INCR",
 		CmdType: SingleShard,
@@ -211,6 +222,9 @@ func init() {
 	WorkerCmdsMeta["EXISTS"] = existsCmdMeta
 	WorkerCmdsMeta["PERSIST"] = persistCmdMeta
 	WorkerCmdsMeta["TYPE"] = typeCmdMeta
+	WorkerCmdsMeta["HLEN"] = hlenCmdMeta
+	WorkerCmdsMeta["HSTRLEN"] = hstrlenCmdMeta
+	WorkerCmdsMeta["HSCAN"] = hscanCmdMeta
 	WorkerCmdsMeta["INCR"] = incrCmdMeta
 	WorkerCmdsMeta["INCRBY"] = incrByCmdMeta
 	WorkerCmdsMeta["INCR"] = incrCmdMeta

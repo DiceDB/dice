@@ -31,7 +31,7 @@ Although DiceDB is a drop-in replacement of Redis, which means almost no learnin
 
 ## Get started
 
-### Using Docker
+### Setting up DiceDB with Docker
 
 The easiest way to get started with DiceDB is using [Docker](https://www.docker.com/) by running the following command.
 
@@ -40,11 +40,20 @@ docker run -p 7379:7379 dicedb/dicedb --enable-multithreading --enable-watch
 ```
 
 The above command will start the DiceDB server running locally on the port `7379` and you can connect
-to it using DiceDB CLI and SDKs, or even Redis CLIs and SDKs.
+to it using [DiceDB CLI](https://github.com/DiceDB/dicedb-cli) and SDKs.
 
-> Note: Given it is a drop-in replacement of Redis, you can also use any Redis CLI and SDK to connect to DiceDB.
+### Setting up CLI
 
-### Setting up DiceDB from source for development and contributions
+The best way to connect to DiceDB is using [DiceDB CLI](https://github.com/DiceDB/dicedb-cli) and you can install it by running the following command
+
+```bash
+sudo su
+curl -sL https://raw.githubusercontent.com/DiceDB/dicedb-cli/refs/heads/master/install.sh | sh
+```
+
+If you are working on unsupported OS (as per above script), you can always follow the installation instructions mentioned in the [dicedb/cli](https://github.com/DiceDB/dicedb-cli) repository.
+
+## For development and contributions
 
 To run DiceDB for local development or running from source, you will need
 
@@ -135,9 +144,9 @@ If you'd like to output the configuration file to a specific location, you can s
 go run main.go -o /path/of/output/dir
 ```
 
-## Setting up CLI
+### Setting up CLI
 
-The best way to connect to DiceDB is using DiceDB CLI and you can install it by running the following command
+The best way to connect to DiceDB is using [DiceDB CLI](https://github.com/DiceDB/dicedb-cli) and you can install it by running the following command
 
 ```bash
 sudo su
