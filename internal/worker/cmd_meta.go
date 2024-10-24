@@ -74,6 +74,10 @@ const (
 	CmdPFAdd        = "PFADD"
 	CmdPFCount      = "PFCOUNT"
 	CmdPFMerge      = "PFMERGE"
+	CmdDel          = "DEL"
+	CmdExists       = "EXISTS"
+	CmdPersist      = "PERSIST"
+	CmdTypeOf       = "TYPE"
 	CmdIncr         = "INCR"
 	CmdIncrBy       = "INCRBY"
 	CmdDecr         = "DECR"
@@ -176,6 +180,18 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdHRandField: {
+		CmdType: SingleShard,
+	},
+	CmdDel: {
+		CmdType: SingleShard,
+	},
+	CmdExists: {
+		CmdType: SingleShard,
+	},
+	CmdPersist: {
+		CmdType: SingleShard,
+	},
+	CmdTypeOf: {
 		CmdType: SingleShard,
 	},
 
