@@ -486,9 +486,13 @@ func evalZCOUNT(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
+	key := args[0]
+	minArg := args[1]
+	maxArg := args[2]
+
 	// 2. Parse the min and max score arguments
-	minValue, errMin := utils.ParseScore(args[1])
-	maxValue, errMax := utils.ParseScore(args[2])
+	minValue, errMin := strconv.ParseFloat(minArg, 64)
+	maxValue, errMax := strconv.ParseFloat(maxArg, 64)
 	if errMin != nil || errMax != nil {
 		return &EvalResponse{
 			Result: nil,
@@ -497,7 +501,6 @@ func evalZCOUNT(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	// 3. Retrieve the object from the store
-	key := args[0]
 	obj := store.Get(key)
 	if obj == nil {
 		// If the key does not exist, return 0 (no error)
