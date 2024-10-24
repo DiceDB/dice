@@ -5,93 +5,30 @@ sidebar:
   order: 1
 ---
 
-DiceDB is an in-memory, real-time, and reactive database with Redis and SQL support optimized for modern hardware and building real-time applications.
+DiceDB is a redis-compliant, in-memory, real-time, and reactive database optimized for modern hardware and for building and scaling truly real-time applications. 
+
+We are looking for Early Design Partners, so, if you want to evaluate DiceDB, [block our calendar](https://cal.com/dicedb-arpit). always up for a chat.
 
 > Note: DiceDB is still in development and it supports a subset of Redis commands. So, please do not use it in production. But, feel free to go through the [open issues](https://github.com/DiceDB/dice/issues) and contribute to help us speed up the development.
 
-## How is it different from Redis?
-
-1. DiceDB is multi-threaded and follows [shared-nothing architecture](https://en.wikipedia.org/wiki/Shared-nothing_architecture).
-2. DiceDB supports a new command called `QWATCH` that lets clients listen to a SQL query and get notified in real-time whenever something changes.
-
-With this, you can build truly real-time applications like [Leaderboard](https://github.com/DiceDB/dice/tree/master/examples/leaderboard-go) with simple SQL query.
-
-![Leaderboard with DiceDB](https://github.com/user-attachments/assets/327792c7-d788-47d4-a767-ef2c478d75cb)
-
-## Get started
-
-### Using Docker
+### Setting up DiceDB server
 
 The easiest way to get started with DiceDB is using [Docker](https://www.docker.com/) by running the following command.
 
-```
-$ docker run dicedb/dicedb
+```bash
+docker run -p 7379:7379 dicedb/dicedb --enable-multithreading --enable-watch
 ```
 
 The above command will start the DiceDB server running locally on the port `7379` and you can connect
-to it using DiceDB CLI and SDKs, or even Redis CLIs and SDKs.
+to it using [DiceDB CLI](https://github.com/DiceDB/dicedb-cli) and SDKs.
 
-> Note: Given it is a drop-in replacement of Redis, you can also use any Redis CLI and SDK to connect to DiceDB.
+### Setting up CLI
 
-### Setting up DiceDB from source for development and contributions
+The best way to connect to DiceDB is using [DiceDB CLI](https://github.com/DiceDB/dicedb-cli) and you can install it by running the following command
 
-To run DiceDB for local development or running from source, you will need
-
-1. [Golang](https://go.dev/)
-2. Any of the below supported platform environment:
-   1. [Linux based environment](https://en.wikipedia.org/wiki/Comparison_of_Linux_distributions)
-   2. [OSX (Darwin) based environment](https://en.wikipedia.org/wiki/MacOS)
-   3. WSL under Windows
-
-```
-$ git clone https://github.com/dicedb/dice
-$ cd dice
-$ go run main.go
+```bash
+sudo su
+curl -sL https://raw.githubusercontent.com/DiceDB/dicedb-cli/refs/heads/master/install.sh | sh
 ```
 
-4. Install GoLangCI
-
-```
-$ sudo su
-$ curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /bin v1.60.1
-```
-
-### Live Development Server
-
-DiceDB provides a hot-reloading development environment, which allows you to instantly view your code changes in a live server. This functionality is supported by [Air](https://github.com/air-verse/air)
-
-To Install Air on your system you have following options.
-
-1. If you're on go 1.22+
-
-```sh
-go install github.com/air-verse/air@latest
-```
-
-2. Install the Air binary
-
-```sh
-# binary will be installed at $(go env GOPATH)/bin/air
-curl -sSfL https://raw.githubusercontent.com/air-verse/air/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
-```
-
-Once `air` is installed you can verify the installation using the command `air -v`
-
-To run the live DiceDB server for local development:
-
-```sh
-$ git clone https://github.com/dicedb/dice
-$ cd dice
-$ air
-```
-
-## Setting up CLI
-
-The best way to connect to DiceDB is using DiceDB CLI and you can install it by running the following command.
-
-```
-$ pip install dicedb-cli
-```
-
-> Because DiceDB speaks Redis dialect, you can connect to it with any Redis Client and SDK also.
-> But if you are planning to use the `QWATCH` feature then you need to use the DiceDB CLI.
+If you are working on unsupported OS (as per above script), you can always follow the installation instructions mentioned in the [dicedb/cli](https://github.com/DiceDB/dicedb-cli) repository.

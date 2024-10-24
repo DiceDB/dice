@@ -1,5 +1,5 @@
 ---
-title: Hello, World
+title: Simple Hello, World!
 description: A simple Hello, World! example to get started with DiceDB.
 sidebar:
   order: 2
@@ -8,53 +8,60 @@ sidebar:
 Before we start with Hello, World program for DiceDB, make sure you have
 
 1. a running instance of DiceDB
-2. installed DiceDB CLI
+2. installed [DiceDB CLI](https://github.com/dicedb/dicedb-cli)
 
-You can follow the steps mentioned in the [installation](/get-started/installation/) guide to get started with DiceDB.
+You can follow the steps mentioned in the [installation](/get-started/installation/) guide to wrap up the installation.
 
 ### Starting DiceDB
 
-```
-dicedb
-```
-
-Once the server starts, you will see output similar to this
+Once the DiceDB server starts, you will see output similar to this
 
 ```
-2024/08/01 23:44:24 INFO starting an asynchronous TCP server on 0.0.0.0=7379
-2024/08/01 23:44:24 INFO ready to accept connections
+██████╗ ██╗ ██████╗███████╗██████╗ ██████╗
+██╔══██╗██║██╔════╝██╔════╝██╔══██╗██╔══██╗
+██║  ██║██║██║     █████╗  ██║  ██║██████╔╝
+██║  ██║██║██║     ██╔══╝  ██║  ██║██╔══██╗
+██████╔╝██║╚██████╗███████╗██████╔╝██████╔╝
+╚═════╝ ╚═╝ ╚═════╝╚══════╝╚═════╝ ╚═════╝
+
+2024-10-24T06:25:32Z INF starting DiceDB version=0.0.5
+2024-10-24T06:25:32Z INF running with port=7379
+2024-10-24T06:25:32Z INF running with enable-watch=true
+2024-10-24T06:25:32Z INF running with mode=multi-threaded num-shards=32
+2024-10-24T06:25:32Z INF ready to accept and serve requests on port=7379
 ```
 
 ### Starting the DiceDB CLI
 
-To begin, ensure DiceDB is running on your system. Open your terminal or command prompt and type:
+Open your terminal or command prompt and fire the following command
 
 ```bash
-dice
+dicedb-cli
 ```
 
-This command launches the DiceDB CLI, presenting you with a prompt similar to this:
+This command launches the DiceDB CLI REPL, presenting you with a prompt similar to this
 
 ```
-127.0.0.1:7379>
+Connected to DiceDB. Type 'exit' or press Ctrl+D to exit.
+dicedb>
 ```
 
-This indicates that you're connected to the default DiceDB instance on your local machine (port 7379).
+This indicates that you're connected to the default DiceDB instance on your local machine on port 7379.
 
 ### Storing Data: The SET Command
 
-Let's store our "Hello, World!" message in DiceDB. We'll use the [`SET`](/commands/set) command, which is responsible for storing a string value under a specified key.
+Let's store `<k1, v1>` in DiceDB. We'll use the [`SET`](/commands/set) command, which is responsible for storing a string value under a specified key.
 
 ```bash
-127.0.0.1:7379> SET mykey "Hello, World!"
+dicedb> SET k1 v1
 OK
 ```
 
 Here's a breakdown of what happened:
 
 - `SET`: This is the DiceDB command to store a value.
-- `mykey`: This is the key we're assigning to the value.
-- `"Hello, World!"`: This is the actual value we want to store. It's a simple string in this case.
+- `k1`: This is the key we're assigning to the value.
+- `v1`: This is the actual value we want to store. It's a simple string in this case.
 - `OK`: DiceDB's response indicating successful storage.
 
 ### Retrieving Data: The GET Command
@@ -62,15 +69,11 @@ Here's a breakdown of what happened:
 Now, let's fetch the stored value using the `GET` command.
 
 ```bash
-127.0.0.1:7379> GET mykey
-"Hello, World!"
+dicedb> GET k1
+v1
 ```
 
-The [`GET`](/commands/get) command retrieves the value associated with the specified key. In this case, we retrieved the "Hello, World!" message we stored earlier.
-
-### Closing the Connection
-
-To exit the DiceDB CLI, you can press `Ctrl+D` or type `exit`.
+The [`GET`](/commands/get) command retrieves the value associated with the specified key. In this case, we retrieved the "v1" message we stored earlier.
 
 ### Conclusion
 
