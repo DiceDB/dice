@@ -41,11 +41,12 @@ When the `COPY` command is executed, DiceDB will:
 
 The `COPY` command can raise the following errors:
 
-1. `WRONGTYPE Operation against a key holding the wrong kind of value`: 
-    - This error occurs if the source key holds a value that is not compatible with the `COPY` operation.
-2.  `ERR no such key`: 
-    - This error occurs if the source key does not exist.
-3. `ERR target key name is busy`: 
+1. `Wrong type of value or key`:  
+    - Error message `(error) WRONGTYPE Operation against a key holding the wrong kind of value`:  
+    - This error occurs if the source key holds a value that is not compatible with the `COPY` operation.  
+2.  `Not existent key`:  
+    -  Error message: `(error) ERR no such key` 
+    - This error occurs if the source key does not exist.  
     - This error occurs if the destination key already exists and the `REPLACE` option is not specified.
 
 ## Example Usage
