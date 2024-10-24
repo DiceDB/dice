@@ -1841,6 +1841,7 @@ func evalHSCAN(args []string, store *dstore.Store) *EvalResponse {
 		Result: []interface{}{strconv.Itoa(newCursor), results},
 		Error:  nil,
 	}
+}
   
 // evalBF.RESERVE evaluates the BF.RESERVE command responsible for initializing a
 // new bloom filter and allocation it's relevant parameters based on given inputs.
