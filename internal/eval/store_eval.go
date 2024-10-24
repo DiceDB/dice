@@ -477,6 +477,8 @@ func evalZADD(args []string, store *dstore.Store) *EvalResponse {
 // whose scores fall within a given range. The command takes three arguments: the key of the sorted set
 // the minimum score, and the maximum score.
 func evalZCOUNT(args []string, store *dstore.Store) *EvalResponse {
+
+	// 1. Check no of arguments
 	if len(args) != 3 {
 		return &EvalResponse{
 			Result: nil,
@@ -484,16 +486,28 @@ func evalZCOUNT(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
+	// 2. Parse the min and max score arguments
+	minValue, errMin := utils.ParseScore(args[1])
+	maxValue, errMax := utils.ParseScore(args[2])
+	if errMin != nil || errMax != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrInvalidNumberFormat,
+		}
+	}
+
+	// 3. Retrieve the object from the store
 	key := args[0]
 	obj := store.Get(key)
-
 	if obj == nil {
+		// If the key does not exist, return 0 (no error)
 		return &EvalResponse{
 			Result: 0,
 			Error:  nil,
 		}
 	}
 
+	// 4. Ensure the object is a valid sorted set
 	var sortedSet *sortedset.Set
 	var err []byte
 	sortedSet, err = sortedset.FromObject(obj)
@@ -501,15 +515,6 @@ func evalZCOUNT(args []string, store *dstore.Store) *EvalResponse {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongTypeOperation,
-		}
-	}
-	minValue, errMin := utils.ParseScore(args[1])
-	maxValue, errMax := utils.ParseScore(args[2])
-
-	if errMin != nil || errMax != nil {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrInvalidNumberFormat,
 		}
 	}
 
