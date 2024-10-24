@@ -11,12 +11,7 @@ func TestDBSize(t *testing.T) {
 
 	exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": [...]string{"key1", "key2", "key3"}}})
 
-	testCases := []struct {
-		name     string
-		commands []HTTPCommand
-		expected []interface{}
-		delays   []time.Duration
-	}{
+	testCases := []TestCase{
 		{
 			name: "DBSIZE with 3 keys",
 			commands: []HTTPCommand{
@@ -26,7 +21,6 @@ func TestDBSize(t *testing.T) {
 				{Command: "DBSIZE", Body: nil},
 			},
 			expected: []interface{}{"OK", "OK", "OK", int64(3)},
-			delays:   []time.Duration{0, 0, 0, 0},
 		},
 		{
 			name: "DBSIZE with repetitive keys",
@@ -39,7 +33,6 @@ func TestDBSize(t *testing.T) {
 				{Command: "DBSIZE", Body: nil},
 			},
 			expected: []interface{}{"OK", "OK", "OK", "OK", "OK", int64(3)},
-			delays:   []time.Duration{0, 0, 0, 0, 0, 0},
 		},
 		{
 			name: "DBSIZE with expired keys",
@@ -49,10 +42,10 @@ func TestDBSize(t *testing.T) {
 				{Command: "SET", Body: map[string]interface{}{"key": "k3", "value": "v3"}},
 				{Command: "DBSIZE", Body: nil},
 				{Command: "EXPIRE", Body: map[string]interface{}{"k3": "v3", "seconds": 1}},
+				{Command: "SLEEP", Body: map[string]interface{}{"key": 2}},
 				{Command: "DBSIZE", Body: nil},
 			},
 			expected: []interface{}{"OK", "OK", "OK", int64(3), int64(1), int64(2)},
-			delays:   []time.Duration{0, 0, 0, 0, 0, 2 * time.Second},
 		},
 		{
 			name: "DBSIZE after deleting a key",
