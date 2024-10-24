@@ -12,10 +12,11 @@ JSON.ARRPOP key [path [index]]
 ```
 
 ## Parameters
-
-- `key`: (String) The key under which the JSON document is stored.
-- `path`: (String) The JSONPath expression that specifies the location within the JSON document where the array is located.
-- `index`: (Integer) The index of the element that needs to be popped from the JSON Array at path(optional).
+| Parameter | Description                                                                   | Type    | Required |
+|-----------|-------------------------------------------------------------------------------|---------|----------|
+| `key`     | The key under which the JSON document is stored.                              | String  | Yes      |
+| `path`    | The JSONPath expression that specifies the location within the JSON document. | String  | Yes      |
+| `index`   | The index of the element that needs to be popped from the JSON Array at path. | Integer | No       |
 
 ## Return Value
 
@@ -35,7 +36,7 @@ When the `JSON.ARRPOP` command is executed, the specified element is popped from
 
 ## Example Usage
 
-### Example 1: Popping value from an array
+### Popping value from an array
 
 ```plaintext
 127.0.0.1:6379> JSON.SET myjson . '{"numbers": [1, 2, 3]}'
@@ -46,14 +47,14 @@ OK
 "{\"numbers\":[1,3]}"
 ```
 
-### Example 2: Error when key does not exist
+### Error when key does not exist
 
 ```plaintext
 127.0.0.1:6379> JSON.ARRPOP nonexistingkey .array 1
 (error) ERR key does not exist
 ```
 
-### Example 3: Error when path does not exist
+### Error when path does not exist
 
 ```plaintext
 127.0.0.1:6379> JSON.SET myjson . '{"numbers": [1, 2, 3]}'
@@ -62,7 +63,7 @@ OK
 (error) ERR path .nonexistingpath does not exist
 ```
 
-### Example 4: Error when path is not an array
+### Error when path is not an array
 
 ```plaintext
 127.0.0.1:6379> JSON.SET myjson . '{"numbers": [1, 2, 3]}'
@@ -77,4 +78,3 @@ OK
 - JSONPath expressions are used to navigate and specify the location within the JSON document. Familiarity with JSONPath syntax is beneficial for effective use of this command.
 
 By following this documentation, users can effectively utilize the `JSON.ARRPOP` command to manipulate JSON arrays within DiceDB.
-
