@@ -69,8 +69,8 @@ Checking if a non-existent key (`nonExistentKey`) is present in the database:
 127.0.0.1:7379> EXISTS nonExistentKey
 (integer) 0
 ```
-### All Non-Existent Keys
 
+### All Non-Existent Keys
 Checking if all non-existent keys return 0:
 
 ```bash
@@ -79,7 +79,6 @@ Checking if all non-existent keys return 0:
 ```
 
 ### Empty Command
-
 Providing no keys should trigger an error:
 
 ```bash
