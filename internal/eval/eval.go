@@ -580,7 +580,14 @@ func evalJSONFORGET(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("JSON.FORGET")
 	}
 
-	return evalJSONDEL(args, store)
+	response := evalJSONDEL(args, store)
+
+	if response.Error != nil {
+		return []byte(response.Error.Error())
+	}
+
+	// Convert the result to []byte
+	return clientio.Encode(response.Result, false)
 }
 
 // evalJSONARRLEN return the length of the JSON array at path in key
@@ -845,151 +852,6 @@ func adjustIndex(idx int, arr []any) int {
 	return idx
 }
 
-// evalJSONDEL delete a value that the given json path include in.
-// Returns response.RespZero if key is expired, or it does not exist
-// Returns encoded error response if incorrect number of arguments
-// Returns an integer reply specified as the number of paths deleted (0 or more)
-func evalJSONDEL(args []string, store *dstore.Store) []byte {
-	if len(args) < 1 {
-		return diceerrors.NewErrArity("JSON.DEL")
-	}
-	key := args[0]
-
-	// Default path is root if not specified
-	path := defaultRootPath
-	if len(args) > 1 {
-		path = args[1]
-	}
-
-	// Retrieve the object from the database
-	obj := store.Get(key)
-	if obj == nil {
-		return clientio.RespZero
-	}
-
-	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
-	if errWithMessage != nil {
-		return errWithMessage
-	}
-
-	jsonData := obj.Value
-
-	_, err := sonic.Marshal(jsonData)
-	if err != nil {
-		return diceerrors.NewErrWithMessage("Existing key has wrong Dice type")
-	}
-
-	if len(args) == 1 || path == defaultRootPath {
-		store.Del(key)
-		return clientio.RespOne
-	}
-
-	expr, err := jp.ParseString(path)
-	if err != nil {
-		return diceerrors.NewErrWithMessage("invalid JSONPath")
-	}
-	results := expr.Get(jsonData)
-
-	hasBrackets := strings.Contains(path, "[") && strings.Contains(path, "]")
-
-	// If the command has square brackets then we have to delete an element inside an array
-	if hasBrackets {
-		_, err = expr.Remove(jsonData)
-	} else {
-		err = expr.Del(jsonData)
-	}
-
-	if err != nil {
-		return diceerrors.NewErrWithMessage(err.Error())
-	}
-	// Create a new object with the updated JSON data
-	newObj := store.NewObj(jsonData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-	store.Put(key, newObj)
-	return clientio.Encode(len(results), false)
-}
-
-// evalJSONTYPE retrieves a JSON value type stored at the specified key
-// args must contain at least the key;  (path unused in this implementation)
-// Returns response.RespNIL if key is expired, or it does not exist
-// Returns encoded error response if incorrect number of arguments
-// The RESP value of the key's value type is encoded and then returned
-func evalJSONTYPE(args []string, store *dstore.Store) []byte {
-	if len(args) < 1 {
-		return diceerrors.NewErrArity("JSON.TYPE")
-	}
-	key := args[0]
-
-	// Default path is root if not specified
-	path := defaultRootPath
-	if len(args) > 1 {
-		path = args[1]
-	}
-	// Retrieve the object from the database
-	obj := store.Get(key)
-	if obj == nil {
-		return clientio.RespNIL
-	}
-
-	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
-	if errWithMessage != nil {
-		return errWithMessage
-	}
-
-	jsonData := obj.Value
-
-	if path == defaultRootPath {
-		_, err := sonic.Marshal(jsonData)
-		if err != nil {
-			return diceerrors.NewErrWithMessage("could not serialize result")
-		}
-		// If path is root and len(args) == 1, return "object" instantly
-		if len(args) == 1 {
-			return clientio.Encode(utils.ObjectType, false)
-		}
-	}
-
-	// Parse the JSONPath expression
-	expr, err := jp.ParseString(path)
-	if err != nil {
-		return diceerrors.NewErrWithMessage("invalid JSONPath")
-	}
-
-	results := expr.Get(jsonData)
-	if len(results) == 0 {
-		return clientio.RespEmptyArray
-	}
-
-	typeList := make([]string, 0, len(results))
-	for _, result := range results {
-		jsonType := utils.GetJSONFieldType(result)
-		typeList = append(typeList, jsonType)
-	}
-	return clientio.Encode(typeList, false)
-}
-
-// evalJSONGET retrieves a JSON value stored at the specified key
-// args must contain at least the key;  (path unused in this implementation)
-// Returns response.RespNIL if key is expired, or it does not exist
-// Returns encoded error response if incorrect number of arguments
-// The RESP value of the key is encoded and then returned
-func evalJSONGET(args []string, store *dstore.Store) []byte {
-	if len(args) < 1 {
-		return diceerrors.NewErrArity("JSON.GET")
-	}
-
-	key := args[0]
-	// Default path is root if not specified
-	path := defaultRootPath
-	if len(args) > 1 {
-		path = args[1]
-	}
-	result, err := jsonGETHelper(store, path, key)
-	if err != nil {
-		return err
-	}
-	return clientio.Encode(result, false)
-}
-
 // helper function used by evalJSONGET and evalJSONMGET to prepare the results
 func jsonGETHelper(store *dstore.Store, path, key string) (result interface{}, err2 []byte) {
 	// Retrieve the object from the database
@@ -1134,96 +996,6 @@ func ReverseSlice[T any](slice []T) []T {
 		reversed[len(slice)-1-i] = v
 	}
 	return reversed
-}
-
-// evalJSONSET stores a JSON value at the specified key
-// args must contain at least the key, path (unused in this implementation), and JSON string
-// Returns encoded error response if incorrect number of arguments
-// Returns encoded error if the JSON string is invalid
-// Returns response.RespOK if the JSON value is successfully stored
-func evalJSONSET(args []string, store *dstore.Store) []byte {
-	// Check if there are enough arguments
-	if len(args) < 3 {
-		return diceerrors.NewErrArity("JSON.SET")
-	}
-
-	key := args[0]
-	path := args[1]
-	jsonStr := args[2]
-	for i := 3; i < len(args); i++ {
-		switch strings.ToUpper(args[i]) {
-		case NX:
-			if i != len(args)-1 {
-				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
-			}
-			obj := store.Get(key)
-			if obj != nil {
-				return clientio.RespNIL
-			}
-		case XX:
-			if i != len(args)-1 {
-				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
-			}
-			obj := store.Get(key)
-			if obj == nil {
-				return clientio.RespNIL
-			}
-
-		default:
-			return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
-		}
-	}
-
-	// Parse the JSON string
-	var jsonValue interface{}
-	if err := sonic.UnmarshalString(jsonStr, &jsonValue); err != nil {
-		return diceerrors.NewErrWithFormattedMessage("invalid JSON: %v", err.Error())
-	}
-
-	// Retrieve existing object or create new one
-	obj := store.Get(key)
-	var rootData interface{}
-
-	if obj == nil {
-		// If the key doesn't exist, create a new object
-		if path != defaultRootPath {
-			rootData = make(map[string]interface{})
-		} else {
-			rootData = jsonValue
-		}
-	} else {
-		// If the key exists, check if it's a JSON object
-		err := object.AssertType(obj.TypeEncoding, object.ObjTypeJSON)
-		if err != nil {
-			return clientio.Encode(err, false)
-		}
-		err = object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingJSON)
-		if err != nil {
-			return clientio.Encode(err, false)
-		}
-		rootData = obj.Value
-	}
-
-	// If path is not root, use JSONPath to set the value
-	if path != defaultRootPath {
-		expr, err := jp.ParseString(path)
-		if err != nil {
-			return diceerrors.NewErrWithMessage("invalid JSONPath")
-		}
-
-		err = expr.Set(rootData, jsonValue)
-		if err != nil {
-			return diceerrors.NewErrWithMessage("failed to set value")
-		}
-	} else {
-		// If path is root, replace the entire JSON
-		rootData = jsonValue
-	}
-
-	// Create a new object with the updated JSON data
-	newObj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-	store.Put(key, newObj)
-	return clientio.RespOK
 }
 
 // Parses and returns the input string as an int64 or float64
@@ -1493,10 +1265,10 @@ func evalJSONINGEST(args []string, store *dstore.Store) []byte {
 	setArgs = append(setArgs, args[1:]...)
 
 	result := evalJSONSET(setArgs, store)
-	if bytes.Equal(result, clientio.RespOK) {
+	if bytes.Equal(result.Result.([]byte), clientio.RespOK) {
 		return clientio.Encode(uniqueID.String(), true)
 	}
-	return result
+	return result.Result.([]byte)
 }
 
 // evalTTL returns Time-to-Live in secs for the queried key in args

@@ -181,7 +181,22 @@ var (
 		Cmd:     "BF.INFO",
 		CmdType: SingleShard,
 	}
-
+	jsonsetCmdMeta = CmdsMeta{
+		Cmd:     "JSON.SET",
+		CmdType: SingleShard,
+	}
+	jsongetCmdMeta = CmdsMeta{
+		Cmd:     "JSON.GET",
+		CmdType: SingleShard,
+	}
+	jsondelCmdMeta = CmdsMeta{
+		Cmd:     "JSON.DEL",
+		CmdType: SingleShard,
+	}
+	jsontypeCmdMeta = CmdsMeta{
+		Cmd:     "JSON.TYPE",
+		CmdType: SingleShard,
+	}
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
 
@@ -241,5 +256,9 @@ func init() {
 	WorkerCmdsMeta["BF.RESERVE"] = bfreserveCmdMeta
 	WorkerCmdsMeta["BF.EXISTS"] = bfexistsCmdMeta
 	WorkerCmdsMeta["BF.INFO"] = bfinfoCmdMeta
+	WorkerCmdsMeta["JSON.SET"] = jsonsetCmdMeta
+	WorkerCmdsMeta["JSON.GET"] = jsongetCmdMeta
+	WorkerCmdsMeta["JSON.DEL"] = jsondelCmdMeta
+	WorkerCmdsMeta["JSON.TYPE"] = jsontypeCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }

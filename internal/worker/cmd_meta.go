@@ -93,6 +93,10 @@ const (
 	CmdBFReserve    = "BF.RESERVE"
 	CmdBFInfo       = "BF.INFO"
 	CmdBFExists     = "BF.EXISTS"
+	CmdJSONSET      = "JSON.SET"
+	CmdJSONGET      = "JSON.GET"
+	CmdJSONDEL      = "JSON.DEL"
+	CmdJSONTYPE     = "JSON.TYPE"
 )
 
 type CmdMeta struct {
@@ -177,6 +181,18 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdHRandField: {
+		CmdType: SingleShard,
+	},
+	CmdJSONSET: {
+		CmdType: SingleShard,
+	},
+	CmdJSONGET: {
+		CmdType: SingleShard,
+	},
+	CmdJSONDEL: {
+		CmdType: SingleShard,
+	},
+	CmdJSONTYPE: {
 		CmdType: SingleShard,
 	},
 

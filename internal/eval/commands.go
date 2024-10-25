@@ -124,9 +124,10 @@ var (
 		Sets a JSON value at the specified key.
 		Returns OK if successful.
 		Returns encoded error message if the number of arguments is incorrect or the JSON string is invalid.`,
-		Eval:     evalJSONSET,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalJSONSET,
 	}
 	jsongetCmdMeta = DiceCmdMeta{
 		Name: "JSON.GET",
@@ -134,9 +135,10 @@ var (
 		Returns the encoded RESP value of the key, if present
 		Null reply: If the key doesn't exist or has expired.
 		Error reply: If the number of arguments is incorrect or the stored value is not a JSON type.`,
-		Eval:     evalJSONGET,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalJSONGET,
 	}
 	jsonMGetCmdMeta = DiceCmdMeta{
 		Name: "JSON.MGET",
@@ -170,9 +172,10 @@ var (
 		Returns string reply for each path, specified as the value's type.
 		Returns RespNIL If the key doesn't exist.
 		Error reply: If the number of arguments is incorrect.`,
-		Eval:     evalJSONTYPE,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalJSONTYPE,
 	}
 	jsonclearCmdMeta = DiceCmdMeta{
 		Name: "JSON.CLEAR",
@@ -191,9 +194,10 @@ var (
 		Returns an integer reply specified as the number of paths deleted (0 or more).
 		Returns RespZero if the key doesn't exist or key is expired.
 		Error reply: If the number of arguments is incorrect.`,
-		Eval:     evalJSONDEL,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalJSONDEL,
 	}
 	jsonarrappendCmdMeta = DiceCmdMeta{
 		Name: "JSON.ARRAPPEND",
