@@ -29,56 +29,63 @@ func TestZPOPMAX(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "ZADD", Body: map[string]interface{}{"key": "sortedSet", "values": [...]string{"1", "member1", "2", "member2", "3", "member3"}}},
 				{Command: "ZPOPMAX", Body: map[string]interface{}{"key": "sortedSet"}},
+				{Command: "ZCOUNT", Body: map[string]interface{}{"key": "sortedSet", "values": [...]string{"1", "2.98"}}},
 			},
-			expected: []interface{}{float64(3), []interface{}{"member3", "3"}},
+			expected: []interface{}{float64(3), []interface{}{"member3", "3"}, float64(2)},
 		},
 		{
 			name: "ZPOPMAX with normal count argument",
 			commands: []HTTPCommand{
 				{Command: "ZADD", Body: map[string]interface{}{"key": "sortedSet", "values": [...]string{"1", "member1", "2", "member2", "3", "member3"}}},
 				{Command: "ZPOPMAX", Body: map[string]interface{}{"key": "sortedSet", "value": int64(2)}},
+				{Command: "ZCOUNT", Body: map[string]interface{}{"key": "sortedSet", "values": [...]string{"0.44", "2"}}},
 			},
-			expected: []interface{}{float64(3), []interface{}{"member3", "3", "member2", "2"}},
+			expected: []interface{}{float64(3), []interface{}{"member3", "3", "member2", "2"}, float64(1)},
 		},
 		{
 			name: "ZPOPMAX with count argument but multiple members have the same score",
 			commands: []HTTPCommand{
 				{Command: "ZADD", Body: map[string]interface{}{"key": "sortedSet", "values": [...]string{"1", "member1", "1", "member2", "1", "member3"}}},
 				{Command: "ZPOPMAX", Body: map[string]interface{}{"key": "sortedSet", "value": int64(2)}},
+				{Command: "ZCOUNT", Body: map[string]interface{}{"key": "sortedSet", "values": [...]string{"1", "2"}}},
 			},
-			expected: []interface{}{float64(3), []interface{}{"member3", "1", "member2", "1"}},
+			expected: []interface{}{float64(3), []interface{}{"member3", "1", "member2", "1"}, float64(1)},
 		},
 		{
 			name: "ZPOPMAX with negative count argument",
 			commands: []HTTPCommand{
 				{Command: "ZADD", Body: map[string]interface{}{"key": "sortedSet", "values": [...]string{"1", "member1", "2", "member2", "3", "member3"}}},
 				{Command: "ZPOPMAX", Body: map[string]interface{}{"key": "sortedSet", "value": int64(-1)}},
+				{Command: "ZCOUNT", Body: map[string]interface{}{"key": "sortedSet", "values": [...]string{"1", "1000"}}},
 			},
-			expected: []interface{}{float64(3), []interface{}{}},
+			expected: []interface{}{float64(3), []interface{}{}, float64(3)},
 		},
 		{
 			name: "ZPOPMAX with invalid count argument",
 			commands: []HTTPCommand{
 				{Command: "ZADD", Body: map[string]interface{}{"key": "sortedSet", "values": [...]string{"1", "member1"}}},
 				{Command: "ZPOPMAX", Body: map[string]interface{}{"key": "sortedSet", "value": "INCORRECT_COUNT_ARGUMENT"}},
+				{Command: "ZCOUNT", Body: map[string]interface{}{"key": "sortedSet", "values": [...]string{"1", "2"}}},
 			},
-			expected: []interface{}{float64(1), "ERR value is not an integer or out of range"},
+			expected: []interface{}{float64(1), "ERR value is not an integer or out of range", float64(1)},
 		},
 		{
 			name: "ZPOPMAX with count argument greater than length of sorted set",
 			commands: []HTTPCommand{
 				{Command: "ZADD", Body: map[string]interface{}{"key": "sortedSet", "values": [...]string{"1", "member1", "2", "member2", "3", "member3"}}},
 				{Command: "ZPOPMAX", Body: map[string]interface{}{"key": "sortedSet", "value": int64(10)}},
+				{Command: "ZCOUNT", Body: map[string]interface{}{"key": "sortedSet", "values": [...]string{"1", "2"}}},
 			},
-			expected: []interface{}{float64(3), []interface{}{"member3", "3", "member2", "2", "member1", "1"}},
+			expected: []interface{}{float64(3), []interface{}{"member3", "3", "member2", "2", "member1", "1"}, float64(0)},
 		},
 		{
 			name: "ZPOPMAX with floating-point scores",
 			commands: []HTTPCommand{
 				{Command: "ZADD", Body: map[string]interface{}{"key": "sortedSet", "values": [...]string{"1.5", "member1", "2.7", "member2", "3.8", "member3"}}},
 				{Command: "ZPOPMAX", Body: map[string]interface{}{"key": "sortedSet"}},
+				{Command: "ZCOUNT", Body: map[string]interface{}{"key": "sortedSet", "values": [...]string{"1.3", "3.6"}}},
 			},
-			expected: []interface{}{float64(3), []interface{}{"member3", "3.8"}},
+			expected: []interface{}{float64(3), []interface{}{"member3", "3.8"}, float64(2)},
 		},
 	}
 
