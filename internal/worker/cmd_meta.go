@@ -85,6 +85,7 @@ const (
 	CmdHRandField   = "HRANDFIELD"
 	CmdGetRange     = "GETRANGE"
 	CmdAppend       = "APPEND"
+	CmdZPopMax      = "ZPOPMAX"
 	CmdHLen         = "HLEN"
 	CmdHStrLen      = "HSTRLEN"
 	CmdHScan        = "HSCAN"
@@ -92,7 +93,6 @@ const (
 	CmdBFReserve    = "BF.RESERVE"
 	CmdBFInfo       = "BF.INFO"
 	CmdBFExists     = "BF.EXISTS"
-
 )
 
 type CmdMeta struct {
@@ -168,7 +168,7 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdHScan: {
- 		CmdType: SingleShard,
+		CmdType: SingleShard,
 	},
 	CmdHIncrBy: {
 		CmdType: SingleShard,
@@ -257,6 +257,9 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdZPopMin: {
+		CmdType: SingleShard,
+	},
+	CmdZPopMax: {
 		CmdType: SingleShard,
 	},
 
