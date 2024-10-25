@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/dicedb/dice/testutils"
+	testifyAssert "github.com/stretchr/testify/assert"
 )
 
 func TestJSONClearOperations(t *testing.T) {
@@ -341,4 +343,129 @@ func arraysArePermutations[T comparable](a, b []T) bool {
 	}
 
 	return true
+}
+
+func TestJSONARRPOP(t *testing.T) {
+	exec := NewWebsocketCommandExecutor()
+	conn := exec.ConnectToServer()
+	defer conn.Close()
+
+	DeleteKey(t, conn, exec, "key")
+
+	arrayAtRoot := `[0,1,2,3]`
+	nestedArray := `{"a":2,"b":[0,1,2,3]}`
+
+	testCases := []struct {
+		name        string
+		commands    []string
+		expected   []interface{}
+		assertType []string
+		jsonResp   []bool
+		nestedArray bool
+		path        string
+	}{
+		{
+			name:       "update array at root path",
+			commands:   []string{"json.set key $ " + arrayAtRoot, "json.arrpop key $ 2", "json.get key"},
+			expected:   []interface{}{"OK", int64(2), "[0,1,3]"},
+			assertType: []string{"equal", "equal", "deep_equal"},
+		},
+		{
+			name:       "update nested array",
+			commands:   []string{"json.set key $ " + nestedArray, "json.arrpop key $.b 2", "json.get key"},
+			expected:   []interface{}{"OK", []interface{}{int64(2)}, `{"a":2,"b":[0,1,3]}`},
+			assertType: []string{"equal", "deep_equal", "na"},
+		},
+	}
+
+	for _, tcase := range testCases {
+		t.Run(tcase.name, func(t *testing.T) {
+			for i := 0; i < len(tcase.commands); i++ {
+				cmd := tcase.commands[i]
+				out := tcase.expected[i]
+				result, err := exec.FireCommandAndReadResponse(conn, cmd)
+				assert.Nil(t, err)
+				jsonResult, isString := result.(string)
+
+				if isString && testutils.IsJSONResponse(jsonResult) {
+					testifyAssert.JSONEq(t, out.(string), jsonResult)
+					continue
+				}
+
+				if tcase.assertType[i] == "equal" {
+					assert.Equal(t, out, result)
+				} else if tcase.assertType[i] == "deep_equal" {
+					assert.True(t, arraysArePermutations(tcase.expected[i].([]interface{}), result.([]interface{})))
+				}
+			}
+		})
+	}
+}
+
+func TestJsonARRAPPEND(t *testing.T) {
+	exec := NewWebsocketCommandExecutor()
+	conn := exec.ConnectToServer()
+	defer conn.Close()
+
+	DeleteKey(t, conn, exec, "key")
+	a := `[1,2]`
+	b := `{"name":"jerry","partner":{"name":"tom","score":[10]},"partner2":{"score":[10,20]}}`
+	c := `{"name":["jerry"],"partner":{"name":"tom","score":[10]},"partner2":{"name":12,"score":"rust"}}`
+
+	testCases := []struct {
+		name       string
+		commands   []string
+		expected   []interface{}
+		assertType []string
+	}{
+
+		{
+			name:       "JSON.ARRAPPEND with root path",
+			commands:   []string{"json.set a $ " + a, `json.arrappend a $ 3`},
+			expected:   []interface{}{"OK", []interface{}{int64(3)}},
+			assertType: []string{"equal", "deep_equal"},
+		},
+		{
+			name:       "JSON.ARRAPPEND nested",
+			commands:   []string{"JSON.SET doc $ " + b, `JSON.ARRAPPEND doc $..score 10`},
+			expected:   []interface{}{"OK", []interface{}{int64(2), int64(3)}},
+			assertType: []string{"equal", "deep_equal"},
+		},
+		{
+			name:       "JSON.ARRAPPEND nested with nil",
+			commands:   []string{"JSON.SET doc $ " + c, `JSON.ARRAPPEND doc $..score 10`},
+			expected:   []interface{}{"OK", []interface{}{int64(2), "(nil)"}},
+			assertType: []string{"equal", "deep_equal"},
+		},
+		{
+			name:       "JSON.ARRAPPEND with different datatypes",
+			commands:   []string{"JSON.SET doc $ " + c, "JSON.ARRAPPEND doc $.name 1"},
+			expected:   []interface{}{"OK", []interface{}{int64(2)}},
+			assertType: []string{"equal", "deep_equal"},
+		},
+	}
+	for _, tcase := range testCases {
+		t.Run(tcase.name, func(t *testing.T) {
+	        DeleteKey(t, conn, exec, "a")
+	        DeleteKey(t, conn, exec, "doc")
+			for i := 0; i < len(tcase.commands); i++ {
+				cmd := tcase.commands[i]
+				out := tcase.expected[i]
+				result, err := exec.FireCommandAndReadResponse(conn, cmd)
+				assert.Nil(t, err)
+				jsonResult, isString := result.(string)
+
+				if isString && testutils.IsJSONResponse(jsonResult) {
+					testifyAssert.JSONEq(t, out.(string), jsonResult)
+					continue
+				}
+
+				if tcase.assertType[i] == "equal" {
+					assert.Equal(t, out, result)
+				} else if tcase.assertType[i] == "deep_equal" {
+					assert.True(t, arraysArePermutations(tcase.expected[i].([]interface{}), result.([]interface{})))
+				}
+			}
+		})
+	}
 }
