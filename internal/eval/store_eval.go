@@ -897,6 +897,9 @@ func evalPFADD(args []string, store *dstore.Store) *EvalResponse {
 		existingHll.Insert([]byte(arg))
 	}
 
+	obj = store.NewObj(existingHll, -1, object.ObjTypeString, object.ObjEncodingRaw)
+	store.Put(key, obj, dstore.WithPutCmd(dstore.PFADD))
+
 	if newCardinality := existingHll.Estimate(); initialCardinality != newCardinality {
 		return &EvalResponse{
 			Result: int64(1),

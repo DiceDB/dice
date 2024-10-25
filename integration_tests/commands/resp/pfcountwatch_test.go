@@ -24,10 +24,10 @@ const (
 )
 
 var pfcountWatchTestCases = []pfcountWatchTestCase{
-	{pfcountWatchKey, "value1", int64(1)},
-	{pfcountWatchKey, "value2", int64(2)},
-	{pfcountWatchKey, "value3", int64(3)},
-	{pfcountWatchKey, "value4", int64(4)},
+	{pfcountWatchKey, "value1", int64(2)},
+	{pfcountWatchKey, "value2", int64(3)},
+	{pfcountWatchKey, "value3", int64(4)},
+	{pfcountWatchKey, "value4", int64(5)},
 }
 
 func TestPFCOUNTWATCH(t *testing.T) {
@@ -48,6 +48,9 @@ func TestPFCOUNTWATCH(t *testing.T) {
 		}
 	}()
 
+	res := FireCommand(publisher, fmt.Sprintf("PFADD %s %s", pfcountWatchKey, "randomvalue"))
+	assert.Equal(t, int64(1), res)
+
 	respParsers := make([]*clientio.RESPParser, len(subscribers))
 	for i, subscriber := range subscribers {
 		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf(pfcountWatchQuery, pfcountWatchKey))
@@ -65,8 +68,8 @@ func TestPFCOUNTWATCH(t *testing.T) {
 
 	// Fire updates to the sorted set and check if the subscribers receive the updates in the push-response form
 	for _, tc := range pfcountWatchTestCases {
-		FireCommand(publisher, fmt.Sprintf("PFADD %s %s", tc.key, tc.val))
-
+		res := FireCommand(publisher, fmt.Sprintf("PFADD %s %s", tc.key, tc.val))
+		assert.Equal(t, int64(1), res)
 		for _, rp := range respParsers {
 			v, err := rp.DecodeOne()
 			assert.NilError(t, err)
@@ -88,10 +91,10 @@ type pfcountWatchSDKTestCase struct {
 }
 
 var PFCountWatchSDKTestCases = []pfcountWatchSDKTestCase{
-	{pfcountWatchKey, "value1", int64(1)},
-	{pfcountWatchKey, "value2", int64(2)},
-	{pfcountWatchKey, "value3", int64(3)},
-	{pfcountWatchKey, "value4", int64(4)},
+	{pfcountWatchKey, "value1", int64(2)},
+	{pfcountWatchKey, "value2", int64(3)},
+	{pfcountWatchKey, "value3", int64(4)},
+	{pfcountWatchKey, "value4", int64(5)},
 }
 
 func TestPFCountWATCHWithSDK(t *testing.T) {
