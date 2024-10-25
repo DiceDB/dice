@@ -1,5 +1,5 @@
 ---
-title: "Building a Realtime Leaderboard with DiceDB"
+title: "Building a Realtime Leaderboard"
 description: "Create a gaming leaderboard in the easiest way possible."
 sidebar:
   order: 4
@@ -15,7 +15,7 @@ But, before we start, make sure you have
 
 1. Go installed (at least version 1.18)
 2. Running instance of DiceDB
-3. Basic familiarity with [DiceDB and its CLI](https://github.com/dicedb/dice?tab=readme-ov-file#dice-in-action)
+3. Basic familiarity with [DiceDB and its CLI](https://github.com/dicedb/dice?tab=readme-ov-file#get-started)
 
 ## Environment setup
 
@@ -96,7 +96,7 @@ This allows users to eradicate the need to continuously poll the server as updat
 2. Data Changes: Whenever a player's score is updated, DiceDB triggers an update.
 3. Push Notifications: The server pushes the updated scores to all connected clients through WebSocket.
 
-## [Code](https://github.com/arpitbbhayani/leaderboard-go-dicedb.git) overview
+## Code overview
 
 1. WebSocket Handling: The code uses WebSocket to push real-time updates to connected users.
     ```go
@@ -206,3 +206,5 @@ without having to
 
 1. periodically poll for the data, or
 2. knowing the internal data structures like Sorted Set.
+
+Find the complete code for this example on [Github](https://github.com/arpitbbhayani/leaderboard-go-dicedb.git).
