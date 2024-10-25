@@ -29,10 +29,27 @@ When the `JSON.ARRPOP` command is executed, the specified element is popped from
 
 ## Error Handling
 
-- `(error) ERR key does not exist`: Raised if the specified key does not exist in the DiceDB database.
-- `(error) ERR path %s does not exist`: Raised if the specified path, s, does not exist within the JSON document.
-- `(error) ERR path is not an array`: Raised if the specified path does not point to a JSON array.
-- `(error) WRONGTYPE Operation against a key holding the wrong kind of value`: Raised if any of the provided JSON values are not valid JSON.
+1. `Wrong type of value or key`:
+
+   - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
+   - Occurs when attempting to use the command on a key that contains a non-string value.
+
+2. `Invalid Key`:
+
+   - Error Message: `(error) ERR key does not exist`
+   - Occurs when attempting to use the command on a key that does not exist.
+
+
+3. `Invalid Path`:
+
+   - Error Message: `(error) ERR path %s does not exist`
+   - Occurs when attempting to use the command on a path that does not exist in the JSON document.
+
+
+4. `Non Array Value at Path`:
+
+   - Error Message: `(error) ERR path is not an array`
+   - Occurs when attempting to use the command on a path that contains a non-array value.
 
 ## Example Usage
 
