@@ -12,7 +12,6 @@ type TestCase struct {
 	name     string
 	commands []string
 	expected []interface{}
-	debug    bool
 }
 
 func TestSet(t *testing.T) {

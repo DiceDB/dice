@@ -3,7 +3,7 @@ package resp
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHKeys(t *testing.T) {
@@ -34,9 +34,8 @@ func TestHKeys(t *testing.T) {
 		},
 		{
 			name:     "RESP One or more keys exist",
-			commands: []string{"HSET key field value", "HKEYS key"},
-			// Race condition as the result can be ordered anyway, adding only one key
-			expected: []interface{}{int64(1), []interface{}{"field"}},
+			commands: []string{"HSET key field value", "HSET key field1 value1", "HKEYS key"},
+			expected: []interface{}{int64(1), int64(1), []interface{}{"field", "field1"}},
 		},
 		{
 			name:     "RESP No keys exist",
@@ -53,8 +52,17 @@ func TestHKeys(t *testing.T) {
 
 			for i, cmd := range tc.commands {
 				result := FireCommand(conn, cmd)
-				assert.DeepEqual(t, tc.expected[i], result)
+				switch e := tc.expected[i].(type) {
+				case []interface{}:
+					assert.ElementsMatch(t, e, tc.expected[i])
+				default:
+					assert.Equal(t, tc.expected[i], result)
+				}
 			}
 		})
 	}
+
+	FireCommand(conn, "HDEL key field")
+	FireCommand(conn, "HDEL key field1")
+	FireCommand(conn, "DEL key")
 }

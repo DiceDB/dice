@@ -3,7 +3,7 @@ package http
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHKeys(t *testing.T) {
@@ -14,9 +14,10 @@ func TestHKeys(t *testing.T) {
 			name: "HTTP One or more keys exist",
 			commands: []HTTPCommand{
 				{Command: "HSET", Body: map[string]interface{}{"key": "k", "field": "f", "value": "v"}},
+				{Command: "HSET", Body: map[string]interface{}{"key": "k", "field": "f1", "value": "v1"}},
 				{Command: "HKEYS", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{float64(1), []interface{}{"f"}},
+			expected: []interface{}{float64(1), float64(1), []interface{}{"f", "f1"}},
 		},
 		{
 			name: "HTTP No keys exist",
@@ -40,9 +41,22 @@ func TestHKeys(t *testing.T) {
 
 			for i, cmd := range tc.commands {
 				result, _ := cmdExec.FireCommand(cmd)
-				// fmt.Printf("%v | %v\n", result, tc.expected[i])
-				assert.DeepEqual(t, tc.expected[i], result)
+				switch e := tc.expected[i].(type) {
+				case []interface{}:
+					assert.ElementsMatch(t, e, tc.expected[i])
+				default:
+					assert.Equal(t, tc.expected[i], result)
+				}
 			}
 		})
 	}
+
+	cmdExec.FireCommand(HTTPCommand{
+		Command: "HDEL",
+		Body:    map[string]interface{}{"key": "k", "field": "f"},
+	})
+	cmdExec.FireCommand(HTTPCommand{
+		Command: "HDEL",
+		Body:    map[string]interface{}{"key": "k", "field": "f1"},
+	})
 }

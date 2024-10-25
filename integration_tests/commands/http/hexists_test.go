@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHExists(t *testing.T) {
@@ -74,4 +74,18 @@ func TestHExists(t *testing.T) {
 			}
 		})
 	}
+
+	// Deleting the used keys
+	cmdExec.FireCommand(HTTPCommand{
+		Command: "HDEL",
+		Body:    map[string]interface{}{"key": "k", "field": "f"},
+	})
+	cmdExec.FireCommand(HTTPCommand{
+		Command: "HDEL",
+		Body:    map[string]interface{}{"key": "k", "field": "f1"},
+	})
+	cmdExec.FireCommand(HTTPCommand{
+		Command: "DEL",
+		Body:    map[string]interface{}{"key": "k"},
+	})
 }

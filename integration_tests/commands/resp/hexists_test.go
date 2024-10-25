@@ -3,7 +3,7 @@ package resp
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHExists(t *testing.T) {
@@ -37,19 +37,16 @@ func TestHExists(t *testing.T) {
 			name:     "RESP Check if field exists when k f and v are set",
 			commands: []string{"HSET key field value", "HEXISTS key field"},
 			expected: []interface{}{int64(1), int64(1)},
-			debug:    true,
 		},
 		{
 			name:     "RESP Check if field exists when k exists but not f and v",
 			commands: []string{"HSET key field1 value", "HEXISTS key field"},
 			expected: []interface{}{int64(1), int64(0)},
-			debug:    true,
 		},
 		{
 			name:     "RESP Check if field exists when no k,f and v exist",
 			commands: []string{"HEXISTS key field"},
 			expected: []interface{}{int64(0)},
-			debug:    true,
 		},
 		{
 			name:     "RESP HEXISTS operation against a key holding the wrong kind of value",
@@ -70,4 +67,8 @@ func TestHExists(t *testing.T) {
 			}
 		})
 	}
+
+	FireCommand(conn, "HDEL key field")
+	FireCommand(conn, "DEL key value")
+	FireCommand(conn, "HDEL key field1")
 }

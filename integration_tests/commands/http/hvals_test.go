@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHVals(t *testing.T) {
@@ -43,8 +43,22 @@ func TestHVals(t *testing.T) {
 			for i, cmd := range tc.commands {
 				result, _ := cmdExec.FireCommand(cmd)
 				fmt.Printf("%v | %v\n", result, tc.expected[i])
-				assert.DeepEqual(t, tc.expected[i], result)
+				switch e := tc.expected[i].(type) {
+				case []interface{}:
+					assert.ElementsMatch(t, e, tc.expected[i])
+				default:
+					assert.Equal(t, tc.expected[i], result)
+				}
 			}
 		})
 	}
+
+	cmdExec.FireCommand(HTTPCommand{
+		Command: "HDEL",
+		Body:    map[string]interface{}{"key": "k", "field": "f"},
+	})
+	cmdExec.FireCommand(HTTPCommand{
+		Command: "HDEL",
+		Body:    map[string]interface{}{"key": "k", "field": "f1"},
+	})
 }

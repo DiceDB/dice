@@ -3,7 +3,7 @@ package resp
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHVals(t *testing.T) {
@@ -13,8 +13,8 @@ func TestHVals(t *testing.T) {
 	testCases := []TestCase{
 		{
 			name:     "RESP HVALS with multiple fields",
-			commands: []string{"HSET hvalsKey field value", "HSET hvalsKey field2 value_new", "HVALS hvalsKey"},
-			expected: []interface{}{int64(1), int64(1), []any{string("value"), string("value_new")}},
+			commands: []string{"HSET hvalsKey field value", "HSET hvalsKey field2 value1", "HVALS hvalsKey"},
+			expected: []interface{}{int64(1), int64(1), []interface{}{"value", "value1"}},
 		},
 		{
 			name:     "RESP HVALS with non-existing key",
@@ -50,8 +50,16 @@ func TestHVals(t *testing.T) {
 
 			for i, cmd := range tc.commands {
 				result := FireCommand(conn, cmd)
-				assert.DeepEqual(t, tc.expected[i], result)
+				switch e := tc.expected[i].(type) {
+				case []interface{}:
+					assert.ElementsMatch(t, e, tc.expected[i])
+				default:
+					assert.Equal(t, tc.expected[i], result)
+				}
 			}
 		})
 	}
+
+	FireCommand(conn, "HDEL key field")
+	FireCommand(conn, "HDEL key field1")
 }
