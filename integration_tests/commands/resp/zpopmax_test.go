@@ -44,7 +44,7 @@ func TestZPOPMax(t *testing.T) {
 		{
 			name:     "ZPOPMAX with invalid count argument",
 			commands: []string{"ZADD sortedSet 1 member1", "ZPOPMAX sortedSet INCORRECT_COUNT_ARGUMENT", "ZCOUNT sortedSet  1 10"},
-			expected: []interface{}{int64(1), "ERR value is not an integer or out of range", int64(1)},
+			expected: []interface{}{int64(1), "ERR value is out of range, must be positive", int64(1)},
 		},
 		{
 			name:     "ZPOPMAX with count argument greater than length of sorted set",

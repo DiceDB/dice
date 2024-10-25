@@ -2009,7 +2009,7 @@ func evalZPOPMAX(args []string, store *dstore.Store) *EvalResponse {
 		if err != nil {
 			return &EvalResponse{
 				Result: clientio.NIL,
-				Error:  diceerrors.ErrIntegerOutOfRange, // This error is thrown when then count argument is not an integer
+				Error:  diceerrors.ErrGeneral("value is out of range, must be positive"), // This error is thrown when then count argument is not an integer
 			}
 		}
 		if ops <= 0 {
