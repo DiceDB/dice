@@ -1092,6 +1092,15 @@ var (
 		IsMigrated: true,
 		NewEval:    evalZADD,
 	}
+	zcountCmdMeta = DiceCmdMeta{
+		Name: "ZCOUNT",
+		Info: `ZCOUNT key min max
+		Counts the number of members in a sorted set with scores between min and max (inclusive).
+		Use -inf and +inf for unbounded ranges. Returns 0 if the key does not exist.`,
+		Arity:      4,
+		IsMigrated: true,
+		NewEval:    evalZCOUNT,
+	}
 	zrangeCmdMeta = DiceCmdMeta{
 		Name: "ZRANGE",
 		Info: `ZRANGE key start stop [WithScores]
@@ -1324,6 +1333,7 @@ func init() {
 	DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["TYPE"] = typeCmdMeta
 	DiceCmds["ZADD"] = zaddCmdMeta
+	DiceCmds["ZCOUNT"] = zcountCmdMeta
 	DiceCmds["ZRANGE"] = zrangeCmdMeta
 	DiceCmds["ZPOPMIN"] = zpopminCmdMeta
 	DiceCmds["ZRANK"] = zrankCmdMeta

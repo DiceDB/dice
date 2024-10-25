@@ -475,6 +475,61 @@ func evalZADD(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+// The ZCOUNT command in DiceDB counts the number of members in a sorted set at the specified key
+// whose scores fall within a given range. The command takes three arguments: the key of the sorted set
+// the minimum score, and the maximum score.
+func evalZCOUNT(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 3 {
+		// 1. Check no of arguments
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("ZCOUNT"),
+		}
+	}
+
+	key := args[0]
+	minArg := args[1]
+	maxArg := args[2]
+
+	// 2. Parse the min and max score arguments
+	minValue, errMin := strconv.ParseFloat(minArg, 64)
+	maxValue, errMax := strconv.ParseFloat(maxArg, 64)
+	if errMin != nil || errMax != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrInvalidNumberFormat,
+		}
+	}
+
+	// 3. Retrieve the object from the store
+	obj := store.Get(key)
+	if obj == nil {
+		// If the key does not exist, return 0 (no error)
+		return &EvalResponse{
+			Result: 0,
+			Error:  nil,
+		}
+	}
+
+	// 4. Ensure the object is a valid sorted set
+	var sortedSet *sortedset.Set
+	var err []byte
+	sortedSet, err = sortedset.FromObject(obj)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	count := sortedSet.CountInRange(minValue, maxValue)
+
+	return &EvalResponse{
+		Result: count,
+		Error:  nil,
+	}
+}
+
 // evalZRANGE returns the specified range of elements in the sorted set stored at key.
 // The elements are considered to be ordered from the lowest to the highest score.
 func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
