@@ -114,6 +114,7 @@ func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *clientio.RESPParser
 
 func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
 	config.DiceConfig.Network.IOBufferLength = 16
+	config.DiceConfig.Memory.KeysLimit = 2000
 	config.DiceConfig.Persistence.WriteAOFOnCleanup = false
 	if opt.Port != 0 {
 		config.DiceConfig.AsyncServer.Port = opt.Port

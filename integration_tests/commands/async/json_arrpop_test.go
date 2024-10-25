@@ -56,7 +56,7 @@ func TestJSONARRPOP(t *testing.T) {
 				if tcase.assertType[i] == "equal" {
 					assert.Equal(t, out, result)
 				} else if tcase.assertType[i] == "deep_equal" {
-					assert.Assert(t, arraysArePermutations(out.([]interface{}), result.([]interface{})))
+					assert.Assert(t, testutils.ArraysArePermutations(out.([]interface{}), result.([]interface{})))
 				}
 			}
 		})

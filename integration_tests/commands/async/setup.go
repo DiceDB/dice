@@ -105,7 +105,7 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	config.DiceConfig.Persistence.WriteAOFOnCleanup = false
 	config.DiceConfig.Performance.StoreMapInitSize = 1024
 	config.DiceConfig.Memory.EvictionRatio = 0.4
-	config.DiceConfig.Memory.KeysLimit = 2000000
+	config.DiceConfig.Memory.KeysLimit = 2000
 
 	if opt.Port != 0 {
 		config.DiceConfig.AsyncServer.Port = opt.Port

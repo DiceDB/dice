@@ -3,6 +3,7 @@ package testutils
 import (
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/bytedance/sonic"
@@ -39,6 +40,19 @@ func compareJSONs(t *testing.T, expected, actual string) bool {
 	return reflect.DeepEqual(NormalizeJSON(expectedJSON), NormalizeJSON(actualJSON))
 }
 
+func CompareJSON(t *testing.T, expected, actual string) {
+	var expectedMap map[string]interface{}
+	var actualMap map[string]interface{}
+
+	err1 := json.Unmarshal([]byte(expected), &expectedMap)
+	err2 := json.Unmarshal([]byte(actual), &actualMap)
+
+	assert.NilError(t, err1)
+	assert.NilError(t, err2)
+
+	assert.DeepEqual(t, expectedMap, actualMap)
+}
+
 func NormalizeJSON(v interface{}) interface{} {
 	switch v := v.(type) {
 	case map[string]interface{}:
@@ -58,7 +72,47 @@ func NormalizeJSON(v interface{}) interface{} {
 	}
 }
 
-func isJSONString(s string) bool {
+func ConvertToArray(input string) []string {
+	input = strings.Trim(input, `"[`)
+	input = strings.Trim(input, `]"`)
+	elements := strings.Split(input, ",")
+	for i, element := range elements {
+		elements[i] = strings.TrimSpace(element)
+	}
+	return elements
+}
+
+func IsJSONString(s string) bool {
 	var js json.RawMessage
 	return json.Unmarshal([]byte(s), &js) == nil
+}
+
+func ArraysArePermutations[T comparable](a, b []T) bool {
+	// If lengths are different, they cannot be permutations
+	if len(a) != len(b) {
+		return false
+	}
+
+	// Count occurrences of each element in array 'a'
+	countA := make(map[T]int)
+	for _, elem := range a {
+		countA[elem]++
+	}
+
+	// Subtract occurrences based on array 'b'
+	for _, elem := range b {
+		countA[elem]--
+		if countA[elem] < 0 {
+			return false
+		}
+	}
+
+	// Check if all counts are zero
+	for _, count := range countA {
+		if count != 0 {
+			return false
+		}
+	}
+
+	return true
 }

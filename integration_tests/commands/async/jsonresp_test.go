@@ -3,6 +3,7 @@ package async
 import (
 	"testing"
 
+	"github.com/dicedb/dice/testutils"
 	testifyAssert "github.com/stretchr/testify/assert"
 	"gotest.tools/v3/assert"
 )
@@ -54,7 +55,7 @@ func TestJSONRESP(t *testing.T) {
 				if tcase.assert_type[i] == "equal" {
 					testifyAssert.Equal(t, out, result)
 				} else if tcase.assert_type[i] == "deep_equal" {
-					assert.Assert(t, arraysArePermutations(out.([]interface{}), result.([]interface{})))
+					assert.Assert(t, testutils.ArraysArePermutations(out.([]interface{}), result.([]interface{})))
 				}
 			}
 		})

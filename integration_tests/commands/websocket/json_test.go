@@ -1,33 +1,69 @@
 package websocket
 
 import (
-	"encoding/json"
 	"fmt"
 	"testing"
 
 	"github.com/dicedb/dice/testutils"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/gorilla/websocket"
 	testifyAssert "github.com/stretchr/testify/assert"
 
 	"gotest.tools/v3/assert"
 )
 
-func compareJSON(t *testing.T, expected, actual string) {
-	var expectedMap map[string]interface{}
-	var actualMap map[string]interface{}
-
-	err1 := json.Unmarshal([]byte(expected), &expectedMap)
-	err2 := json.Unmarshal([]byte(actual), &actualMap)
-
-	assert.NilError(t, err1)
-	assert.NilError(t, err2)
-
-	assert.DeepEqual(t, expectedMap, actualMap)
+type IntegrationTestCase struct {
+	name       string
+	setupData  string
+	commands   []string
+	expected   []interface{}
+	assertType []string
+	cleanUp    []string
 }
 
-func isJSONString(s string) bool {
-	var js json.RawMessage
-	return json.Unmarshal([]byte(s), &js) == nil
+func runIntegrationTests(t *testing.T, exec *WebsocketCommandExecutor, conn *websocket.Conn, testCases []IntegrationTestCase, preTestChecksCommand string, postTestChecksCommand string) {
+	for _, tc := range testCases {
+		if preTestChecksCommand != "" {
+			resp, _ := exec.FireCommandAndReadResponse(conn, preTestChecksCommand)
+			assert.Equal(t, float64(0), resp)
+		}
+
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.setupData != "" {
+				result, _ := exec.FireCommandAndReadResponse(conn, tc.setupData)
+				assert.Equal(t, "OK", result)
+			}
+
+			cleanupAndPostTestChecks := func() {
+				for _, cmd := range tc.cleanUp {
+					exec.FireCommandAndReadResponse(conn, cmd)
+				}
+
+				if postTestChecksCommand != "" {
+					resp, _ := exec.FireCommandAndReadResponse(conn, postTestChecksCommand)
+					assert.Equal(t, float64(0), resp)
+				}
+			}
+			defer cleanupAndPostTestChecks()
+
+			for i := 0; i < len(tc.commands); i++ {
+				cmd := tc.commands[i]
+				out := tc.expected[i]
+				result, _ := exec.FireCommandAndReadResponse(conn, cmd)
+
+				switch tc.assertType[i] {
+				case "equal":
+					assert.Equal(t, out, result)
+				case "perm_equal":
+					assert.Assert(t, testutils.ArraysArePermutations(testutils.ConvertToArray(out.(string)), testutils.ConvertToArray(result.(string))))
+				case "range":
+					assert.Assert(t, result.(float64) <= out.(float64) && result.(float64) > 0, "Expected %v to be within 0 to %v", result, out)
+				case "json_equal":
+					testifyAssert.JSONEq(t, out.(string), result.(string))
+				}
+			}
+		})
+	}
 }
 
 func TestJSONClearOperations(t *testing.T) {
@@ -120,7 +156,7 @@ func TestJSONClearOperations(t *testing.T) {
 	}
 }
 
-func TestJSONDelOperations(t *testing.T) {
+func TestJSONDel(t *testing.T) {
 	exec := NewWebsocketCommandExecutor()
 	conn := exec.ConnectToServer()
 	defer conn.Close()
@@ -130,15 +166,10 @@ func TestJSONDelOperations(t *testing.T) {
 		assert.Equal(t, float64(0), resp)
 	}()
 
-	beforeTestSetup := "DEL user"
+	preTestChecksCommand := "DEL user"
+	postTestChecksCommand := "DEL user"
 
-	testCases := []struct {
-		name      string
-		setupData string
-		commands  []string
-		expected  []interface{}
-		cleanUp   []string
-	}{
+	testCases := []IntegrationTestCase{
 		{
 			name:      "Delete root path",
 			setupData: `JSON.SET user $ {"age":13,"high":1.60,"flag":true,"name":"jerry","pet":null,"language":["python","golang"],"partner":{"name":"tom","language":["rust"]}}`,
@@ -146,8 +177,9 @@ func TestJSONDelOperations(t *testing.T) {
 				"JSON.DEL user $",
 				"JSON.GET user $",
 			},
-			expected: []interface{}{float64(1), "(nil)"},
-			cleanUp:  []string{"DEL user"},
+			expected:   []interface{}{float64(1), "(nil)"},
+			assertType: []string{"equal", "equal"},
+			cleanUp:    []string{"DEL user"},
 		},
 		{
 			name:      "Delete nested field",
@@ -156,8 +188,9 @@ func TestJSONDelOperations(t *testing.T) {
 				"JSON.DEL user $.partner.name",
 				"JSON.GET user $",
 			},
-			expected: []interface{}{float64(1), `{"age":13,"high":1.60,"flag":true,"name":"jerry","pet":null,"language":["python","golang"],"partner":{"language":["rust"]}}`},
-			cleanUp:  []string{"DEL user"},
+			expected:   []interface{}{float64(1), `{"age":13,"high":1.60,"flag":true,"name":"jerry","pet":null,"language":["python","golang"],"partner":{"language":["rust"]}}`},
+			assertType: []string{"equal", "jsoneq"},
+			cleanUp:    []string{"DEL user"},
 		},
 		{
 			name:      "del string type",
@@ -165,8 +198,9 @@ func TestJSONDelOperations(t *testing.T) {
 			commands: []string{
 				"JSON.DEL user $.name",
 				"JSON.GET user $"},
-			expected: []interface{}{float64(1), `{"flag":true}`},
-			cleanUp:  []string{"DEL user"},
+			expected:   []interface{}{float64(1), `{"flag":true}`},
+			assertType: []string{"equal", "jsoneq"},
+			cleanUp:    []string{"DEL user"},
 		},
 		{
 			name:      "del bool type",
@@ -174,8 +208,9 @@ func TestJSONDelOperations(t *testing.T) {
 			commands: []string{
 				"JSON.DEL user $.flag",
 				"JSON.GET user $"},
-			expected: []interface{}{float64(1), `{"name":"Tom"}`},
-			cleanUp:  []string{"DEL user"},
+			expected:   []interface{}{float64(1), `{"name":"Tom"}`},
+			assertType: []string{"equal", "jsoneq"},
+			cleanUp:    []string{"DEL user"},
 		},
 		{
 			name:      "del null type",
@@ -183,8 +218,9 @@ func TestJSONDelOperations(t *testing.T) {
 			commands: []string{
 				"JSON.DEL user $.name",
 				"JSON.GET user $"},
-			expected: []interface{}{float64(1), `{"age":28}`},
-			cleanUp:  []string{"DEL user"},
+			expected:   []interface{}{float64(1), `{"age":28}`},
+			assertType: []string{"equal", "jsoneq"},
+			cleanUp:    []string{"DEL user"},
 		},
 		{
 			name:      "del array type",
@@ -192,8 +228,9 @@ func TestJSONDelOperations(t *testing.T) {
 			commands: []string{
 				"JSON.DEL user $..names",
 				"JSON.GET user $"},
-			expected: []interface{}{float64(2), `{"bosses":{"hobby":"swim"}}`},
-			cleanUp:  []string{"DEL user"},
+			expected:   []interface{}{float64(2), `{"bosses":{"hobby":"swim"}}`},
+			assertType: []string{"equal", "jsoneq"},
+			cleanUp:    []string{"DEL user"},
 		},
 		{
 			name:      "del integer type",
@@ -201,8 +238,9 @@ func TestJSONDelOperations(t *testing.T) {
 			commands: []string{
 				"JSON.DEL user $.age",
 				"JSON.GET user $"},
-			expected: []interface{}{float64(1), `{"name":"Tom"}`},
-			cleanUp:  []string{"DEL user"},
+			expected:   []interface{}{float64(1), `{"name":"Tom"}`},
+			assertType: []string{"equal", "jsoneq"},
+			cleanUp:    []string{"DEL user"},
 		},
 		{
 			name:      "del float type",
@@ -210,52 +248,26 @@ func TestJSONDelOperations(t *testing.T) {
 			commands: []string{
 				"JSON.DEL user $.price",
 				"JSON.GET user $"},
-			expected: []interface{}{float64(1), `{"name":"sugar"}`},
-			cleanUp:  []string{"DEL user"},
+			expected:   []interface{}{float64(1), `{"name":"sugar"}`},
+			assertType: []string{"equal", "jsoneq"},
+			cleanUp:    []string{"DEL user"},
 		},
 		{
 			name:      "delete key with []",
-			setupData: `JSON.SET data $ {"key[0]":"value","array":["a","b"]}`,
+			setupData: `JSON.SET user $ {"key[0]":"value","array":["a","b"]}`,
 			commands: []string{
-				`JSON.DEL data ["key[0]"]`,
-				"JSON.GET data $"},
-			expected: []interface{}{float64(1), `{"array": ["a","b"]}`},
-			cleanUp:  []string{"DEL data"},
+				`JSON.DEL user ["key[0]"]`,
+				"JSON.GET user $"},
+			expected:   []interface{}{float64(1), `{"array": ["a","b"]}`},
+			assertType: []string{"equal", "jsoneq"},
+			cleanUp:    []string{"DEL user"},
 		},
 	}
 
-	for _, tc := range testCases {
-		if beforeTestSetup != "" {
-			resp, _ := exec.FireCommandAndReadResponse(conn, beforeTestSetup)
-			assert.Equal(t, float64(0), resp)
-		}
-
-		t.Run(tc.name, func(t *testing.T) {
-			if tc.setupData != "" {
-				result, _ := exec.FireCommandAndReadResponse(conn, tc.setupData)
-				assert.Equal(t, "OK", result)
-			}
-
-			for i, cmd := range tc.commands {
-				result, _ := exec.FireCommandAndReadResponse(conn, cmd)
-				fmt.Printf("Type of result: %T\n", result)
-				jsonResult, isString := result.(string)
-				if isString && testutils.IsJSONResponse(jsonResult) {
-					testifyAssert.JSONEq(t, tc.expected[i].(string), jsonResult)
-				} else {
-					assert.Equal(t, tc.expected[i], result)
-				}
-			}
-
-			for i := 0; i < len(tc.cleanUp); i++ {
-				exec.FireCommandAndReadResponse(conn, tc.cleanUp[i])
-			}
-
-		})
-	}
+	runIntegrationTests(t, exec, conn, testCases, preTestChecksCommand, postTestChecksCommand)
 }
 
-func TestJSONForgetOperations(t *testing.T) {
+func TestJSONForget(t *testing.T) {
 	exec := NewWebsocketCommandExecutor()
 	conn := exec.ConnectToServer()
 	defer conn.Close()
@@ -265,16 +277,10 @@ func TestJSONForgetOperations(t *testing.T) {
 		assert.Equal(t, float64(0), resp)
 	}()
 
-	beforeTestSetup := "DEL user"
-	testCaseCleanUp := "DEL user"
+	preTestChecksCommand := "DEL user"
+	postTestChecksCommand := "DEL user"
 
-	testCases := []struct {
-		name      string
-		setupData string
-		commands  []string
-		expected  []interface{}
-		cleanUp   []string
-	}{
+	testCases := []IntegrationTestCase{
 		{
 			name:      "Forget root path",
 			setupData: `JSON.SET user $ {"age":13,"high":1.60,"flag":true,"name":"jerry","pet":null,"language":["python","golang"],"partner":{"name":"tom","language":["rust"]}}`,
@@ -282,8 +288,9 @@ func TestJSONForgetOperations(t *testing.T) {
 				"JSON.FORGET user $",
 				"JSON.GET user $",
 			},
-			expected: []interface{}{float64(1), "(nil)"},
-			cleanUp:  []string{"DEL user"},
+			expected:   []interface{}{float64(1), "(nil)"},
+			assertType: []string{"equal", "equal"},
+			cleanUp:    []string{"DEL user"},
 		},
 		{
 			name:      "Forget nested field",
@@ -292,8 +299,9 @@ func TestJSONForgetOperations(t *testing.T) {
 				"JSON.FORGET user $.partner.name",
 				"JSON.GET user $",
 			},
-			expected: []interface{}{float64(1), `{"age":13,"high":1.60,"flag":true,"name":"jerry","pet":null,"language":["python","golang"],"partner":{"language":["rust"]}}`},
-			cleanUp:  []string{"DEL user"},
+			expected:   []interface{}{float64(1), `{"age":13,"high":1.60,"flag":true,"name":"jerry","pet":null,"language":["python","golang"],"partner":{"language":["rust"]}}`},
+			assertType: []string{"equal", "jsoneq"},
+			cleanUp:    []string{"DEL user"},
 		},
 
 		{
@@ -302,8 +310,9 @@ func TestJSONForgetOperations(t *testing.T) {
 			commands: []string{
 				"JSON.FORGET user $.name",
 				"JSON.GET user $"},
-			expected: []interface{}{float64(1), `{"flag":true}`},
-			cleanUp:  []string{"DEL user"},
+			expected:   []interface{}{float64(1), `{"flag":true}`},
+			assertType: []string{"equal", "jsoneq"},
+			cleanUp:    []string{"DEL user"},
 		},
 		{
 			name:      "forget bool type",
@@ -311,8 +320,9 @@ func TestJSONForgetOperations(t *testing.T) {
 			commands: []string{
 				"JSON.FORGET user $.flag",
 				"JSON.GET user $"},
-			expected: []interface{}{float64(1), `{"name":"Tom"}`},
-			cleanUp:  []string{"DEL user"},
+			expected:   []interface{}{float64(1), `{"name":"Tom"}`},
+			assertType: []string{"equal", "jsoneq"},
+			cleanUp:    []string{"DEL user"},
 		},
 		{
 			name:      "forget null type",
@@ -320,8 +330,9 @@ func TestJSONForgetOperations(t *testing.T) {
 			commands: []string{
 				"JSON.FORGET user $.name",
 				"JSON.GET user $"},
-			expected: []interface{}{float64(1), `{"age":28}`},
-			cleanUp:  []string{"DEL user"},
+			expected:   []interface{}{float64(1), `{"age":28}`},
+			assertType: []string{"equal", "jsoneq"},
+			cleanUp:    []string{"DEL user"},
 		},
 		{
 			name:      "forget array type",
@@ -329,8 +340,9 @@ func TestJSONForgetOperations(t *testing.T) {
 			commands: []string{
 				"JSON.FORGET user $..names",
 				"JSON.GET user $"},
-			expected: []interface{}{float64(2), `{"bosses":{"hobby":"swim"}}`},
-			cleanUp:  []string{"DEL user"},
+			expected:   []interface{}{float64(2), `{"bosses":{"hobby":"swim"}}`},
+			assertType: []string{"equal", "jsoneq"},
+			cleanUp:    []string{"DEL user"},
 		},
 		{
 			name:      "forget integer type",
@@ -338,8 +350,9 @@ func TestJSONForgetOperations(t *testing.T) {
 			commands: []string{
 				"JSON.FORGET user $.age",
 				"JSON.GET user $"},
-			expected: []interface{}{float64(1), `{"name":"Tom"}`},
-			cleanUp:  []string{"DEL user"},
+			expected:   []interface{}{float64(1), `{"name":"Tom"}`},
+			assertType: []string{"equal", "jsoneq"},
+			cleanUp:    []string{"DEL user"},
 		},
 		{
 			name:      "forget float type",
@@ -347,8 +360,9 @@ func TestJSONForgetOperations(t *testing.T) {
 			commands: []string{
 				"JSON.FORGET user $.price",
 				"JSON.GET user $"},
-			expected: []interface{}{float64(1), `{"name":"sugar"}`},
-			cleanUp:  []string{"DEL user"},
+			expected:   []interface{}{float64(1), `{"name":"sugar"}`},
+			assertType: []string{"equal", "jsoneq"},
+			cleanUp:    []string{"DEL user"},
 		},
 		{
 			name:      "forget array element",
@@ -356,45 +370,217 @@ func TestJSONForgetOperations(t *testing.T) {
 			commands: []string{
 				"JSON.FORGET user $.names[0]",
 				"JSON.GET user $"},
-			expected: []interface{}{float64(1), `{"names":["Tom"],"bosses":{"names":["Jerry","Rocky"],"hobby":"swim"}}`},
-			cleanUp:  []string{"DEL user"},
+			expected:   []interface{}{float64(1), `{"names":["Tom"],"bosses":{"names":["Jerry","Rocky"],"hobby":"swim"}}`},
+			assertType: []string{"equal", "jsoneq"},
+			cleanUp:    []string{"DEL user"},
 		},
 	}
 
-	for _, tc := range testCases {
-		if beforeTestSetup != "" {
-			resp, _ := exec.FireCommandAndReadResponse(conn, beforeTestSetup)
-			assert.Equal(t, float64(0), resp)
-		}
+	runIntegrationTests(t, exec, conn, testCases, preTestChecksCommand, postTestChecksCommand)
+}
 
-		t.Run(tc.name, func(t *testing.T) {
-			if tc.setupData != "" {
-				result, _ := exec.FireCommandAndReadResponse(conn, tc.setupData)
-				assert.Equal(t, "OK", result)
-			}
+func TestJSONToggle(t *testing.T) {
+	exec := NewWebsocketCommandExecutor()
+	conn := exec.ConnectToServer()
+	defer conn.Close()
 
-			for i, cmd := range tc.commands {
-				result, _ := exec.FireCommandAndReadResponse(conn, cmd)
-				jsonResult, isString := result.(string)
-				if isString && testutils.IsJSONResponse(jsonResult) {
-					testifyAssert.JSONEq(t, tc.expected[i].(string), jsonResult)
-				} else {
-					assert.Equal(t, tc.expected[i], result)
-				}
-			}
+	defer func() {
+		resp, _ := exec.FireCommandAndReadResponse(conn, "DEL user")
+		assert.Equal(t, float64(0), resp)
+	}()
 
-			for i := 0; i < len(tc.cleanUp); i++ {
-				exec.FireCommandAndReadResponse(conn, tc.cleanUp[i])
-			}
+	preTestChecksCommand := "DEL user"
+	postTestChecksCommand := "DEL user"
 
-			if testCaseCleanUp != "" {
-				resp, _ := exec.FireCommandAndReadResponse(conn, testCaseCleanUp)
-				assert.Equal(t, float64(0), resp)
-			}
+	simpleJSON := `{"name":"DiceDB","hasAccess":false}`
+	complexJson := `{"field":true,"nested":{"field":false,"nested":{"field":true}}}`
 
-		})
+	testCases := []IntegrationTestCase{
+		{
+			name:       "JSON.TOGGLE with existing key",
+			setupData:  `JSON.SET user $ ` + simpleJSON,
+			commands:   []string{"JSON.TOGGLE user $.hasAccess"},
+			expected:   []interface{}{[]interface{}{float64(1)}},
+			assertType: []string{"jsoneq"},
+			cleanUp:    []string{"DEL user"},
+		},
+		{
+			name:       "JSON.TOGGLE with non-existing key",
+			setupData:  "",
+			commands:   []string{"JSON.TOGGLE user $.flag"},
+			expected:   []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
+			assertType: []string{"equal"},
+			cleanUp:    []string{},
+		},
+		{
+			name:       "JSON.TOGGLE with invalid path",
+			setupData:  "",
+			commands:   []string{"JSON.TOGGLE user $.invalidPath"},
+			expected:   []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
+			assertType: []string{"equal"},
+			cleanUp:    []string{},
+		},
+		{
+			name:       "JSON.TOGGLE with invalid command format",
+			setupData:  "",
+			commands:   []string{"JSON.TOGGLE testKey"},
+			expected:   []interface{}{"ERR wrong number of arguments for 'json.toggle' command"},
+			assertType: []string{"equal"},
+			cleanUp:    []string{"DEL user"},
+		},
+		{
+			name:      "deeply nested JSON structure with multiple matching fields",
+			setupData: `JSON.SET user $ ` + complexJson,
+			commands: []string{
+				"JSON.GET user",
+				"JSON.TOGGLE user $..field",
+				"JSON.GET user",
+			},
+			expected: []interface{}{
+				complexJson,
+				[]any{float64(0), float64(1), float64(0)}, // Toggle: true -> false, false -> true, true -> false
+				`{"field":false,"nested":{"field":true,"nested":{"field":false}}}`,
+			},
+			assertType: []string{"jsoneq", "jsoneq", "jsoneq"},
+			cleanUp:    []string{"DEL user"},
+		},
 	}
 
+	runIntegrationTests(t, exec, conn, testCases, preTestChecksCommand, postTestChecksCommand)
+}
+
+func TestJSONNumIncrBy(t *testing.T) {
+	exec := NewWebsocketCommandExecutor()
+	conn := exec.ConnectToServer()
+	defer conn.Close()
+
+	defer func() {
+		resp, _ := exec.FireCommandAndReadResponse(conn, "DEL foo")
+		assert.Equal(t, float64(0), resp)
+	}()
+
+	preTestChecksCommand := "DEL foo"
+	postTestChecksCommand := "DEL foo"
+
+	invalidArgMessage := "ERR wrong number of arguments for 'json.numincrby' command"
+
+	testCases := []IntegrationTestCase{
+		{
+			name:       "Invalid number of arguments",
+			setupData:  "",
+			commands:   []string{"JSON.NUMINCRBY ", "JSON.NUMINCRBY foo", "JSON.NUMINCRBY foo $"},
+			expected:   []interface{}{invalidArgMessage, invalidArgMessage, invalidArgMessage},
+			assertType: []string{"equal", "equal", "equal"},
+			cleanUp:    []string{},
+		},
+		{
+			name:       "Non-existent key",
+			setupData:  "",
+			commands:   []string{"JSON.NUMINCRBY foo $ 1"},
+			expected:   []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
+			assertType: []string{"equal"},
+			cleanUp:    []string{},
+		},
+		{
+			name:       "Invalid value of increment",
+			setupData:  "JSON.SET foo $ 1",
+			commands:   []string{"JSON.GET foo $", "JSON.NUMINCRBY foo $ @", "JSON.NUMINCRBY foo $ 122@"},
+			expected:   []interface{}{"1", "ERR expected value at line 1 column 1", "ERR trailing characters at line 1 column 4"},
+			assertType: []string{"equal", "equal", "equal"},
+			cleanUp:    []string{"DEL foo"},
+		},
+		{
+			name:       "incrby at non root path",
+			setupData:  fmt.Sprintf("JSON.SET %s $ %s", "foo", `{"a":"b","b":[{"a":2.2},{"a":5},{"a":"c"}]}`),
+			commands:   []string{"JSON.NUMINCRBY foo $..a 2", "JSON.NUMINCRBY foo $.a 2", "JSON.GET foo", "JSON.NUMINCRBY foo $..a -2", "JSON.GET foo"},
+			expected:   []interface{}{"[null,4.2,7,null]", "[null]", "{\"a\":\"b\",\"b\":[{\"a\":4.2},{\"a\":7},{\"a\":\"c\"}]}", "[null,2.2,5,null]", "{\"a\":\"b\",\"b\":[{\"a\":2.2},{\"a\":5},{\"a\":\"c\"}]}"},
+			assertType: []string{"perm_equal", "perm_equal", "json_equal", "perm_equal", "json_equal"},
+			cleanUp:    []string{"DEL foo"},
+		},
+		{
+			name:       "incrby at root path",
+			setupData:  "JSON.SET foo $ 1",
+			commands:   []string{"JSON.NUMINCRBY foo $ 1", "JSON.GET foo $", "JSON.NUMINCRBY foo $ -1", "JSON.GET foo $"},
+			expected:   []interface{}{"[2]", "2", "[1]", "1"},
+			assertType: []string{"perm_equal", "json_equal", "perm_equal", "json_equal"},
+			cleanUp:    []string{"DEL foo"},
+		},
+		{
+			name:       "incrby at root path",
+			setupData:  "JSON.SET foo $ 1",
+			commands:   []string{"expire foo 10", "JSON.NUMINCRBY foo $ 1", "ttl foo", "JSON.GET foo $", "JSON.NUMINCRBY foo $ -1", "JSON.GET foo $"},
+			expected:   []interface{}{float64(1), "[2]", float64(10), "2", "[1]", "1"},
+			assertType: []string{"equal", "equal", "range", "equal", "equal", "equal"},
+			cleanUp:    []string{"DEL foo"},
+		},
+	}
+	runIntegrationTests(t, exec, conn, testCases, preTestChecksCommand, postTestChecksCommand)
+}
+
+func TestJsonNumMultBy(t *testing.T) {
+	exec := NewWebsocketCommandExecutor()
+	conn := exec.ConnectToServer()
+	defer conn.Close()
+
+	defer func() {
+		resp, _ := exec.FireCommandAndReadResponse(conn, "DEL docu")
+		assert.Equal(t, float64(0), resp)
+	}()
+
+	preTestChecksCommand := "DEL docu"
+	postTestChecksCommand := "DEL docu"
+
+	a := `{"a":"b","b":[{"a":2},{"a":5},{"a":"c"}]}`
+	invalidArgMessage := "ERR wrong number of arguments for 'json.nummultby' command"
+
+	testCases := []IntegrationTestCase{
+		{
+			name:       "Invalid number of arguments",
+			commands:   []string{"JSON.NUMMULTBY ", "JSON.NUMMULTBY docu", "JSON.NUMMULTBY docu $"},
+			expected:   []interface{}{invalidArgMessage, invalidArgMessage, invalidArgMessage},
+			assertType: []string{"equal", "equal", "equal"},
+		},
+		{
+			name:       "MultBy at non-existent key",
+			commands:   []string{"JSON.NUMMULTBY docu $ 1"},
+			expected:   []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
+			assertType: []string{"equal"},
+		},
+		{
+			name:       "Invalid value of multiplier on non-existent key",
+			setupData:  "JSON.SET docu $ " + a,
+			commands:   []string{"JSON.NUMMULTBY docu $.fe x"},
+			expected:   []interface{}{"[]"},
+			assertType: []string{"equal"},
+			cleanUp:    []string{"DEL docu"},
+		},
+		{
+			name:       "Invalid value of multiplier on existent key",
+			setupData:  "JSON.SET docu $ " + a,
+			commands:   []string{"JSON.NUMMULTBY docu $.a x"},
+			expected:   []interface{}{"ERR expected value at line 1 column 1"},
+			assertType: []string{"equal"},
+			cleanUp:    []string{"DEL docu"},
+		},
+		{
+			name:       "MultBy at recursive path",
+			setupData:  "JSON.SET docu $ " + a,
+			commands:   []string{"JSON.NUMMULTBY docu $..a 2"},
+			expected:   []interface{}{"[4,null,10,null]"},
+			assertType: []string{"perm_equal"},
+			cleanUp:    []string{"DEL docu"},
+		},
+		{
+			name:       "MultBy at root path",
+			setupData:  "JSON.SET docu $ " + a,
+			commands:   []string{"JSON.NUMMULTBY docu $.a 2"},
+			expected:   []interface{}{"[null]"},
+			assertType: []string{"perm_equal"},
+			cleanUp:    []string{"DEL docu"},
+		},
+	}
+
+	runIntegrationTests(t, exec, conn, testCases, preTestChecksCommand, postTestChecksCommand)
 }
 
 func TestJsonStrlen(t *testing.T) {
@@ -427,7 +613,7 @@ func TestJsonStrlen(t *testing.T) {
 		{
 			name: "jsonstrlen nested",
 			commands: []string{
-				`JSON.SET doc $ {"name":"j erry","partner":{"name":"tom"}}`,
+				`JSON.SET doc $ {"name":"jerry","partner":{"name":"tom"}}`,
 				"JSON.STRLEN doc $..name",
 			},
 			expected: []interface{}{"OK", []interface{}{float64(5), float64(3)}},
@@ -483,7 +669,7 @@ func TestJsonStrlen(t *testing.T) {
 				if ok {
 					testifyAssert.Equal(t, tc.expected[i], stringResult)
 				} else {
-					testifyAssert.True(t, arraysArePermutations(tc.expected[i].([]interface{}), result.([]interface{})))
+					assert.Assert(t, testutils.ArraysArePermutations(tc.expected[i].([]interface{}), result.([]interface{})))
 				}
 			}
 		})
