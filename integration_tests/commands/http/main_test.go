@@ -2,8 +2,6 @@ package http
 
 import (
 	"context"
-	"github.com/dicedb/dice/internal/logger"
-	"log/slog"
 	"os"
 	"sync"
 	"testing"
@@ -11,8 +9,6 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	l := logger.New(logger.Opts{WithTimestamp: false})
-	slog.SetDefault(l)
 	var wg sync.WaitGroup
 
 	// Run the test server
@@ -20,8 +16,7 @@ func TestMain(m *testing.M) {
 	// checks for available port and then forks a goroutine
 	// to start the server
 	opts := TestServerOptions{
-		Port:   8083,
-		Logger: l,
+		Port: 8083,
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	RunHTTPServer(ctx, &wg, opts)

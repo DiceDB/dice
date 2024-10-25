@@ -63,7 +63,9 @@ The `PFCOUNT` command can raise errors in the following scenarios:
    (error) ERR wrong number of arguments for 'pfcount' command
    ```
 
-## Examples
+## Example usage
+
+### Basic Usage
 
 ### Single Key
 
@@ -91,4 +93,3 @@ The `PFCOUNT` command can raise errors in the following scenarios:
 - HyperLogLog is particularly useful for large datasets where an exact count is not feasible due to memory constraints.
 
 By understanding the `PFCOUNT` command, you can efficiently estimate the cardinality of large sets with minimal memory usage, making it a powerful tool for various applications such as analytics and monitoring.
-
