@@ -58,25 +58,19 @@ func TestDBSize(t *testing.T) {
 				{Command: "DBSIZE", Body: nil},
 			},
 			expected: []interface{}{"OK", "OK", "OK", int64(3), int64(1), int64(2)},
-			delays:   []time.Duration{0, 0, 0, 0, 0, 0},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			defer exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": [...]string{"key1", "key2", "key3"}}})
+			exec.FireCommand(HTTPCommand{
+				Command: "DEL",
+				Body:    map[string]interface{}{"key": "k"},
+			})
 
 			for i, cmd := range tc.commands {
-				if tc.delays[i] > 0 {
-					time.Sleep(tc.delays[i])
-				}
-				result, err := exec.FireCommand(cmd)
-				if err != nil {
-					// Check if the error message matches the expected result
-					assert.Equal(t, tc.expected[i], err.Error(), "Error message mismatch for cmd %s", cmd)
-				} else {
-					assert.Equal(t, tc.expected[i], result, "Value mismatch for cmd %s, expected %v, got %v", cmd, tc.expected[i], result)
-				}
+				result, _ := exec.FireCommand(cmd)
+				assert.DeepEqual(t, tc.expected[i], result)
 			}
 		})
 	}
