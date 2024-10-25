@@ -91,10 +91,10 @@ type pfcountWatchSDKTestCase struct {
 }
 
 var PFCountWatchSDKTestCases = []pfcountWatchSDKTestCase{
-	{pfcountWatchKey, "value1", int64(2)},
-	{pfcountWatchKey, "value2", int64(3)},
-	{pfcountWatchKey, "value3", int64(4)},
-	{pfcountWatchKey, "value4", int64(5)},
+	{pfcountWatchKey, "value1", int64(1)},
+	{pfcountWatchKey, "value2", int64(2)},
+	{pfcountWatchKey, "value3", int64(3)},
+	{pfcountWatchKey, "value4", int64(4)},
 }
 
 func TestPFCountWATCHWithSDK(t *testing.T) {
