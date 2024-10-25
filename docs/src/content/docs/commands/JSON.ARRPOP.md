@@ -7,7 +7,7 @@ The `JSON.ARRPOP` command in DiceDB is used to pop an element from JSON array lo
 
 ## Syntax
 
-```plaintext
+```bash
 JSON.ARRPOP key [path [index]]
 ```
 
@@ -30,24 +30,18 @@ When the `JSON.ARRPOP` command is executed, the specified element is popped from
 ## Error Handling
 
 1. `Wrong type of value or key`:
-
    - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
    - Occurs when attempting to use the command on a key that contains a non-string value.
 
 2. `Invalid Key`:
-
    - Error Message: `(error) ERR key does not exist`
    - Occurs when attempting to use the command on a key that does not exist.
 
-
 3. `Invalid Path`:
-
    - Error Message: `(error) ERR path %s does not exist`
    - Occurs when attempting to use the command on a path that does not exist in the JSON document.
 
-
 4. `Non Array Value at Path`:
-
    - Error Message: `(error) ERR path is not an array`
    - Occurs when attempting to use the command on a path that contains a non-array value.
 
@@ -55,7 +49,7 @@ When the `JSON.ARRPOP` command is executed, the specified element is popped from
 
 ### Popping value from an array
 
-```plaintext
+```bash
 127.0.0.1:6379> JSON.SET myjson . '{"numbers": [1, 2, 3]}'
 OK
 127.0.0.1:6379> JSON.ARRPOP myjson .numbers 1
@@ -66,14 +60,14 @@ OK
 
 ### Error when key does not exist
 
-```plaintext
+```bash
 127.0.0.1:6379> JSON.ARRPOP nonexistingkey .array 1
 (error) ERR key does not exist
 ```
 
 ### Error when path does not exist
 
-```plaintext
+```bash
 127.0.0.1:6379> JSON.SET myjson . '{"numbers": [1, 2, 3]}'
 OK
 127.0.0.1:6379> JSON.ARRPOP myjson .nonexistingpath 4
@@ -82,7 +76,7 @@ OK
 
 ### Error when path is not an array
 
-```plaintext
+```bash
 127.0.0.1:6379> JSON.SET myjson . '{"numbers": [1, 2, 3]}'
 OK
 127.0.0.1:6379> JSON.ARRPOP myjson .numbers 4
