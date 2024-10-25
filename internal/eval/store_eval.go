@@ -475,6 +475,61 @@ func evalZADD(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+// The ZCOUNT command in DiceDB counts the number of members in a sorted set at the specified key
+// whose scores fall within a given range. The command takes three arguments: the key of the sorted set
+// the minimum score, and the maximum score.
+func evalZCOUNT(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 3 {
+		// 1. Check no of arguments
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("ZCOUNT"),
+		}
+	}
+
+	key := args[0]
+	minArg := args[1]
+	maxArg := args[2]
+
+	// 2. Parse the min and max score arguments
+	minValue, errMin := strconv.ParseFloat(minArg, 64)
+	maxValue, errMax := strconv.ParseFloat(maxArg, 64)
+	if errMin != nil || errMax != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrInvalidNumberFormat,
+		}
+	}
+
+	// 3. Retrieve the object from the store
+	obj := store.Get(key)
+	if obj == nil {
+		// If the key does not exist, return 0 (no error)
+		return &EvalResponse{
+			Result: 0,
+			Error:  nil,
+		}
+	}
+
+	// 4. Ensure the object is a valid sorted set
+	var sortedSet *sortedset.Set
+	var err []byte
+	sortedSet, err = sortedset.FromObject(obj)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	count := sortedSet.CountInRange(minValue, maxValue)
+
+	return &EvalResponse{
+		Result: count,
+		Error:  nil,
+	}
+}
+
 // evalZRANGE returns the specified range of elements in the sorted set stored at key.
 // The elements are considered to be ordered from the lowest to the highest score.
 func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
@@ -676,7 +731,7 @@ func evalZRANK(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	if withScore {
-		scoreStr := strconv.FormatFloat(score, 'f', -1, 64) 
+		scoreStr := strconv.FormatFloat(score, 'f', -1, 64)
 		return &EvalResponse{
 			Result: []interface{}{rank, scoreStr},
 			Error:  nil,
@@ -1842,7 +1897,7 @@ func evalHSCAN(args []string, store *dstore.Store) *EvalResponse {
 		Error:  nil,
 	}
 }
-  
+
 // evalBF.RESERVE evaluates the BF.RESERVE command responsible for initializing a
 // new bloom filter and allocation it's relevant parameters based on given inputs.
 // If no params are provided, it uses defaults.
@@ -1931,6 +1986,63 @@ func evalBFINFO(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	return makeEvalResult(result)
+}
+
+// This command removes the element with the maximum score from the sorted set.
+// If two elements have the same score then the members are aligned in lexicographically and the lexicographically greater element is removed.
+// There is a second optional element called count which specifies the number of element to be removed.
+// Returns the removed elements from the sorted set.
+func evalZPOPMAX(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 || len(args) > 2 {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongArgumentCount("ZPOPMAX"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	count := 1
+	if len(args) > 1 {
+		ops, err := strconv.Atoi(args[1])
+		if err != nil {
+			return &EvalResponse{
+				Result: clientio.NIL,
+				Error:  diceerrors.ErrGeneral("value is out of range, must be positive"), // This error is thrown when then count argument is not an integer
+			}
+		}
+		if ops <= 0 {
+			return &EvalResponse{
+				Result: []string{}, // Returns empty array when the count is less than or equal to  0
+				Error:  nil,
+			}
+		}
+		count = ops
+	}
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: []string{}, // Returns empty array when the object with given key is not present in the store
+			Error:  nil,
+		}
+	}
+
+	var sortedSet *sortedset.Set
+	sortedSet, err := sortedset.FromObject(obj)
+	if err != nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongTypeOperation, // Returns this error when a key is present in the store but is not of type sortedset.Set
+		}
+	}
+
+	var res []string = sortedSet.PopMax(count)
+
+	return &EvalResponse{
+		Result: res,
+		Error:  nil,
+	}
 }
 
 // evalJSONARRAPPEND appends the value(s) provided in the args to the given array path
