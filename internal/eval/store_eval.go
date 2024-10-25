@@ -477,9 +477,8 @@ func evalZADD(args []string, store *dstore.Store) *EvalResponse {
 // whose scores fall within a given range. The command takes three arguments: the key of the sorted set
 // the minimum score, and the maximum score.
 func evalZCOUNT(args []string, store *dstore.Store) *EvalResponse {
-
-	// 1. Check no of arguments
 	if len(args) != 3 {
+		// 1. Check no of arguments
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongArgumentCount("ZCOUNT"),
