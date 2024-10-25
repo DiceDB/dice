@@ -3,7 +3,6 @@ package http
 import (
 	"gotest.tools/v3/assert"
 	"testing"
-	"time"
 )
 
 func TestDBSize(t *testing.T) {
@@ -20,7 +19,7 @@ func TestDBSize(t *testing.T) {
 				{Command: "SET", Body: map[string]interface{}{"key": "k3", "value": "v3"}},
 				{Command: "DBSIZE", Body: nil},
 			},
-			expected: []interface{}{"OK", "OK", "OK", int64(3)},
+			expected: []interface{}{"OK", "OK", "OK", float64(3)},
 		},
 		{
 			name: "DBSIZE with repetitive keys",
@@ -32,7 +31,7 @@ func TestDBSize(t *testing.T) {
 				{Command: "SET", Body: map[string]interface{}{"key": "k2", "value": "v22"}},
 				{Command: "DBSIZE", Body: nil},
 			},
-			expected: []interface{}{"OK", "OK", "OK", "OK", "OK", int64(3)},
+			expected: []interface{}{"OK", "OK", "OK", "OK", "OK", float64(3)},
 		},
 		{
 			name: "DBSIZE with expired keys",
@@ -41,11 +40,11 @@ func TestDBSize(t *testing.T) {
 				{Command: "SET", Body: map[string]interface{}{"key": "k2", "value": "v2"}},
 				{Command: "SET", Body: map[string]interface{}{"key": "k3", "value": "v3"}},
 				{Command: "DBSIZE", Body: nil},
-				{Command: "EXPIRE", Body: map[string]interface{}{"k3": "v3", "seconds": 1}},
+				{Command: "EXPIRE", Body: map[string]interface{}{"key": "k3", "seconds": 1}},
 				{Command: "SLEEP", Body: map[string]interface{}{"key": 2}},
 				{Command: "DBSIZE", Body: nil},
 			},
-			expected: []interface{}{"OK", "OK", "OK", int64(3), int64(1), int64(2)},
+			expected: []interface{}{"OK", "OK", "OK", float64(3), float64(1), "OK", float64(2)},
 		},
 		{
 			name: "DBSIZE after deleting a key",
@@ -57,7 +56,7 @@ func TestDBSize(t *testing.T) {
 				{Command: "DEL", Body: map[string]interface{}{"key": "k1"}},
 				{Command: "DBSIZE", Body: nil},
 			},
-			expected: []interface{}{"OK", "OK", "OK", int64(3), int64(1), int64(2)},
+			expected: []interface{}{"OK", "OK", "OK", float64(3), float64(1), float64(2)},
 		},
 	}
 
