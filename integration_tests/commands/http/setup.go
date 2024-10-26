@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
@@ -24,8 +23,7 @@ import (
 )
 
 type TestServerOptions struct {
-	Port   int
-	Logger *slog.Logger
+	Port int
 }
 
 type CommandExecutor interface {

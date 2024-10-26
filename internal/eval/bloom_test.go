@@ -1,7 +1,6 @@
 package eval
 
 import (
-	"bytes"
 	"errors"
 	"hash"
 	"hash/fnv"
@@ -9,145 +8,120 @@ import (
 	"testing"
 
 	"github.com/dicedb/dice/internal/clientio"
-	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
-	"gotest.tools/v3/assert"
+	assert "github.com/stretchr/testify/assert"
 )
 
 func TestBloomFilter(t *testing.T) {
 	store := dstore.NewStore(nil, nil)
 	// This test only contains some basic checks for all the bloom filter
-	// operations like BFINIT, BFADD, BFEXISTS. It assumes that the
+	// operations like BFRESERVE, BFADD, BFEXISTS. It assumes that the
 	// functions called in the main function are working correctly and
 	// are tested independently.
 	t.Parallel()
 
-	// BFINIT
+	// BF.RESERVE
 	var args []string // empty args
-	resp := evalBFINIT(args, store)
+	resp := evalBFRESERVE(args, store)
+	assert.Nil(t, resp.Result)
+	assert.Error(t, resp.Error, "ERR wrong number of arguments for 'bf.reserve' command")
 
-	// We're just checking if the response is an error or not. This test does not check the type of error. That is kept
-	//for different test.
-	if bytes.Equal(resp, clientio.RespOK) {
-		t.Errorf("BFINIT: invalid response, args: %v - expected an error, got: %s", args, string(resp))
-	}
-
-	// BFINIT bf 0.01 10000
+	// BF.RESERVE bf 0.01 10000
 	args = append(args, "bf", "0.01", "10000") // Add key, error rate and capacity
-	resp = evalBFINIT(args, store)
-	if !bytes.Equal(resp, clientio.RespOK) {
-		t.Errorf("BFINIT: invalid response, args: %v - expected: %s, got error: %s", args, string(clientio.RespOK), string(resp))
-	}
+	resp = evalBFRESERVE(args, store)
+	assert.Nil(t, resp.Error)
+	assert.ObjectsAreEqualValues(resp.Result, clientio.OK)
 
-	// BFINIT bf1
+	// BF.RESERVE bf1
 	args = []string{"bf1"}
-	resp = evalBFINIT(args, store)
-	if !bytes.Equal(resp, clientio.RespOK) {
-		t.Errorf("BFINIT: invalid response, args: %v - expected: %s, got error: %s", args, string(clientio.RespOK), string(resp))
-	}
+	resp = evalBFRESERVE(args, store)
+	assert.Error(t, resp.Error, "ERR wrong number of arguments for 'bf.reserve' command")
+	assert.Nil(t, resp.Result)
 
-	// BFADD
+	// BF.ADD with wrong arguments, must return non-nil error and nil result
 	args = []string{"bf"}
 	resp = evalBFADD(args, store)
-	if bytes.Equal(resp, clientio.RespMinusOne) || bytes.Equal(resp, clientio.RespZero) || bytes.Equal(resp, clientio.RespOne) {
-		t.Errorf("BFADD: invalid response, args: %v - expected an error, got: %s", args, string(resp))
-	}
+	assert.EqualError(t, resp.Error, "ERR wrong number of arguments for 'bf.add' command")
+	assert.Nil(t, resp.Result)
 
-	args = []string{"bf", "hello"} // BFADD bf hello
+	// BF.ADD bf hello, must return 1 and nil error
+	args = []string{"bf", "hello"} // BF.ADD bf hello
 	resp = evalBFADD(args, store)
-	if !bytes.Equal(resp, clientio.RespOne) {
-		t.Errorf("BFADD: invalid response, args: %v - expected: %s, got error: %s", args, string(clientio.RespOne), string(resp))
-	}
+	assert.Nil(t, resp.Error)
+	assert.ObjectsAreEqualValues(resp.Result, clientio.IntegerOne)
 
-	args[1] = "world" // BFADD bf world
+	args[1] = "world" // BF.ADD bf world
 	resp = evalBFADD(args, store)
-	if !bytes.Equal(resp, clientio.RespOne) {
-		t.Errorf("BFADD: invalid response, args: %v - expected: %s, got error: %s", args, string(clientio.RespOne), string(resp))
-	}
+	assert.Nil(t, resp.Error)
+	assert.ObjectsAreEqualValues(resp.Result, clientio.IntegerOne)
 
-	args[1] = "hello" // BFADD bf hello
+	args[1] = "hello" // BF.ADD bf hello
 	resp = evalBFADD(args, store)
-	if !bytes.Equal(resp, clientio.RespZero) {
-		t.Errorf("BFADD: invalid response, args: %v - expected: %s, got error: %s", args, string(clientio.RespZero), string(resp))
-	}
-
+	assert.Nil(t, resp.Error)
+	assert.ObjectsAreEqualValues(resp.Result, clientio.IntegerZero)
 	// Try adding element into a non-existing filter
-	args = []string{"bf2", "hello"} // BFADD bf2 hello
+	args = []string{"bf2", "hello"} // BF.ADD bf2 hello
 	resp = evalBFADD(args, store)
-	if !bytes.Equal(resp, clientio.RespOne) {
-		t.Errorf("BFADD: invalid response, args: %v - expected: %s, got error: %s", args, string(clientio.RespOne), string(resp))
-	}
+	assert.Nil(t, resp.Error)
+	assert.ObjectsAreEqualValues(resp.Result, clientio.IntegerOne)
 
-	// BFEXISTS
+	// BF.EXISTS arity test
 	args = []string{"bf"}
 	resp = evalBFEXISTS(args, store)
-	if bytes.Equal(resp, clientio.RespMinusOne) || bytes.Equal(resp, clientio.RespZero) || bytes.Equal(resp, clientio.RespOne) {
-		t.Errorf("BFEXISTS: invalid response, args: %v - expected an error, got: %s", args, string(resp))
-	}
+	assert.EqualError(t, resp.Error, "ERR wrong number of arguments for 'bf.exists' command")
+	assert.Nil(t, resp.Result)
 
-	args = []string{"bf", "hello"} // BFEXISTS bf hello
+	args = []string{"bf", "hello"} // BF.EXISTS bf hello
 	resp = evalBFEXISTS(args, store)
-	if !bytes.Equal(resp, clientio.RespOne) {
-		t.Errorf("BFEXISTS: invalid response, args: %v - expected: %s, got error: %s", args, string(clientio.RespOne), string(resp))
-	}
+	assert.Nil(t, resp.Error)
+	assert.ObjectsAreEqualValues(resp.Result, clientio.IntegerOne)
 
-	args[1] = "hello" // BFEXISTS bf world
+	args[1] = "hello" // BF.EXISTS bf world
 	resp = evalBFEXISTS(args, store)
-	if !bytes.Equal(resp, clientio.RespOne) {
-		t.Errorf("BFEXISTS: invalid response, args: %v - expected: %s, got error: %s", args, string(clientio.RespOne), string(resp))
-	}
+	assert.Nil(t, resp.Error)
+	assert.ObjectsAreEqualValues(resp.Result, clientio.IntegerOne)
 
-	args[1] = "programming" // BFEXISTS bf programming
+	args[1] = "programming" // BF.EXISTS bf programming
 	resp = evalBFEXISTS(args, store)
-	if !bytes.Equal(resp, clientio.RespZero) {
-		t.Errorf("BFEXISTS: invalid response, args: %v - expected: %s, got error: %s", args, string(clientio.RespZero), string(resp))
-	}
+	assert.Nil(t, resp.Error)
+	assert.ObjectsAreEqualValues(resp.Result, clientio.IntegerZero)
 
 	// Try searching for an element in a non-existing filter
-	args = []string{"bf3", "hello"} // BFEXISTS bf3 hello
+	args = []string{"bf3", "hello"} // BF.EXISTS bf3 hello
 	resp = evalBFEXISTS(args, store)
-	if bytes.Equal(resp, clientio.RespMinusOne) || bytes.Equal(resp, clientio.RespZero) || bytes.Equal(resp, clientio.RespOne) {
-		t.Errorf("BFEXISTS: invalid response, args: %v - expected an error, got error: %s", args, string(resp))
-	}
+	assert.Nil(t, resp.Error)
+	assert.ObjectsAreEqualValues(resp.Result, clientio.IntegerZero)
 }
 
 func TestGetOrCreateBloomFilter(t *testing.T) {
 	store := dstore.NewStore(nil, nil)
 	// Create a key and default opts
 	key := "bf"
-	opts, _ := newBloomOpts([]string{}, true)
+	opts := defaultBloomOpts()
 
 	// Should create a new filter under the key `key`.
-	bloom, err := getOrCreateBloomFilter(key, opts, store)
+	bloom, err := getOrCreateBloomFilter(key, store, opts)
 	if bloom == nil || err != nil {
 		t.Errorf("nil bloom or non-nil error returned while creating new filter - key: %s, opts: %+v, err: %v", key, opts, err)
 	}
 
 	// Should get the filter (which was created above)
-	bloom, err = getOrCreateBloomFilter(key, opts, store)
+	bloom, err = getOrCreateBloomFilter(key, store, opts)
 	if bloom == nil || err != nil {
 		t.Errorf("nil bloom or non-nil error returned while fetching existing filter - key: %s, opts: %+v, err: %v", key, opts, err)
 	}
 
 	// Should get the filter with nil opts
-	bloom, err = getOrCreateBloomFilter(key, nil, store)
+	bloom, err = getOrCreateBloomFilter(key, store, nil)
 	if bloom == nil || err != nil {
 		t.Errorf("nil bloom or non-nil error returned while fetching existing filter - key: %s, opts: %+v, err: %v", key, opts, err)
-	}
-
-	// Should return an error (errInvalidKey) for fetching a bloom filter
-	// against a non existing key
-	key = "bf1"
-	_, err = getOrCreateBloomFilter(key, nil, store)
-	if !errors.Is(err, errInvalidKey) {
-		t.Errorf("nil or wrong error while fetching non existing bloom filter - key: %s, opts: %+v, err: %v", key, opts, err)
 	}
 }
 
 func TestUpdateIndexes(t *testing.T) {
 	// Create a value, default opts and initialize all params of the filter
 	value := "hello"
-	opts, _ := newBloomOpts([]string{}, true)
+	opts := defaultBloomOpts()
 	bloom := newBloomFilter(opts)
 
 	err := opts.updateIndexes(value)
@@ -174,17 +148,16 @@ func TestBloomOpts(t *testing.T) {
 		response    *BloomOpts
 		err         error
 	}{
-		{"default values", []string{utils.EmptyStr}, true, &BloomOpts{errorRate: defaultErrorRate, capacity: defaultCapacity}, nil},
 		{"should return valid values - 1", []string{"0.01", "1000"}, false, &BloomOpts{errorRate: 0.01, capacity: 1000}, nil},
 		{"should return valid values - 2", []string{"0.1", "200"}, false, &BloomOpts{errorRate: 0.1, capacity: 200}, nil},
-		{"should return invalid error rate type - 1", []string{"aa", "100"}, false, nil, errInvalidErrorRateType},
-		{"should return invalid error rate type - 2", []string{"0.1a", "100"}, false, nil, errInvalidErrorRateType},
-		{"should return invalid error rate - 1", []string{"-0.1", "100"}, false, nil, errInvalidErrorRate},
-		{"should return invalid error rate - 2", []string{"1.001", "100"}, false, nil, errInvalidErrorRate},
+		{"should return invalid error rate type - 1", []string{"aa", "100"}, false, nil, errInvalidErrorRate},
+		{"should return invalid error rate type - 2", []string{"0.1a", "100"}, false, nil, errInvalidErrorRate},
+		{"should return invalid error rate - 1", []string{"-0.1", "100"}, false, nil, errInvalidRangeErrorRateType},
+		{"should return invalid error rate - 2", []string{"1.001", "100"}, false, nil, errInvalidRangeErrorRateType},
 		{"should return invalid capacity type - 1", []string{"0.01", "aa"}, false, nil, errInvalidCapacityType},
 		{"should return invalid capacity type - 2", []string{"0.01", "100a"}, false, nil, errInvalidCapacityType},
-		{"should return invalid capacity type - 3", []string{"0.01", "-1"}, false, nil, errInvalidCapacityType},
-		{"should return invalid capacity - 1", []string{"0.01", "0"}, false, nil, errInvalidCapacity},
+		{"should return invalid capacity type - 3", []string{"0.01", "-1"}, false, nil, errNonPositiveCapacity},
+		{"should return invalid capacity - 1", []string{"0.01", "0"}, false, nil, errNonPositiveCapacity},
 	}
 
 	for _, tc := range testCases {
@@ -192,7 +165,7 @@ func TestBloomOpts(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			opts, err := newBloomOpts(tc.args, tc.useDefaults)
+			opts, err := newBloomOpts(tc.args)
 			// Using reflect.DeepEqual as we have pointers to struct and direct value
 			// comparison is not possible because of []hash.Hash64 type.
 			if !reflect.DeepEqual(opts, tc.response) {
@@ -298,14 +271,14 @@ func TestBloomDeepCopy(t *testing.T) {
 	copyBloom := original.DeepCopy()
 
 	// Verify that the copy is not nil
-	assert.Assert(t, copyBloom != nil, "DeepCopy returned nil, expected a valid copy")
+	assert.NotNil(t, copyBloom, "DeepCopy returned nil, expected a valid copy")
 
-	assert.Assert(t, original.opts.indexes[0] == copyBloom.opts.indexes[0], "Original and copy indexes values should be same")
-	assert.Assert(t, original.bitset[0] == copyBloom.bitset[0], "Original and copy bitset values should be same")
+	assert.True(t, original.opts.indexes[0] == copyBloom.opts.indexes[0], "Original and copy indexes values should be same")
+	assert.True(t, original.bitset[0] == copyBloom.bitset[0], "Original and copy bitset values should be same")
 
 	// Verify that changes to the copy do not affect the original
 	copyBloom.opts.indexes[0] = 10
 	copyBloom.bitset[0] = 0xFF
-	assert.Assert(t, original.opts.indexes[0] != copyBloom.opts.indexes[0], "Original and copy indexes should not be linked")
-	assert.Assert(t, original.bitset[0] != copyBloom.bitset[0], "Original and copy bitset should not be linked")
+	assert.True(t, original.opts.indexes[0] != copyBloom.opts.indexes[0], "Original and copy indexes should not be linked")
+	assert.True(t, original.bitset[0] != copyBloom.bitset[0], "Original and copy bitset should not be linked")
 }
