@@ -8,8 +8,6 @@ import (
 func TestDBSize(t *testing.T) {
 	exec := NewHTTPCommandExecutor()
 
-	exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": [...]string{"key1", "key2", "key3"}}})
-
 	testCases := []TestCase{
 		{
 			name: "DBSIZE with 3 keys",
@@ -62,10 +60,7 @@ func TestDBSize(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			exec.FireCommand(HTTPCommand{
-				Command: "DEL",
-				Body:    map[string]interface{}{"key": "k"},
-			})
+			exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": [...]string{"k1", "k2", "k3"}}})
 
 			for i, cmd := range tc.commands {
 				result, _ := exec.FireCommand(cmd)
