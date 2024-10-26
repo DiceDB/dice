@@ -70,6 +70,10 @@ var (
 		Cmd:     "ZADD",
 		CmdType: SingleShard,
 	}
+	zcountCmdMeta = CmdsMeta{
+		Cmd:     "ZCOUNT",
+		CmdType: SingleShard,
+	}
 	zrangeCmdMeta = CmdsMeta{
 		Cmd:     "ZRANGE",
 		CmdType: SingleShard,
@@ -129,7 +133,7 @@ var (
 		Cmd:     "JSON.OBJLEN",
 		CmdType: SingleShard,
 	}
-  hlenCmdMeta = CmdsMeta{
+	hlenCmdMeta = CmdsMeta{
 		Cmd:     "HLEN",
 		CmdType: SingleShard,
 	}
@@ -173,6 +177,10 @@ var (
 		Cmd:     "HRANDFIELD",
 		CmdType: SingleShard,
 	}
+	zpopmaxCmdMeta = CmdsMeta{
+		Cmd:     "ZPOPMAX",
+		CmdType: SingleShard,
+	}
 	bfaddCmdMeta = CmdsMeta{
 		Cmd:     "BF.ADD",
 		CmdType: SingleShard,
@@ -212,6 +220,7 @@ func init() {
 	WorkerCmdsMeta["JSON.STRLEN"] = jsonstrlenCmdMeta
 	WorkerCmdsMeta["JSON.OBJLEN"] = jsonobjlenCmdMeta
 	WorkerCmdsMeta["ZADD"] = zaddCmdMeta
+	WorkerCmdsMeta["ZCOUNT"] = zcountCmdMeta
 	WorkerCmdsMeta["ZRANGE"] = zrangeCmdMeta
 	WorkerCmdsMeta["ZRANK"] = zrankCmdMeta
 	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
@@ -247,6 +256,7 @@ func init() {
 	WorkerCmdsMeta["HINCRBY"] = hincrbyCmdMeta
 	WorkerCmdsMeta["HINCRBYFLOAT"] = hincrbyfloatCmdMeta
 	WorkerCmdsMeta["HRANDFIELD"] = hrandfieldCmdMeta
+	WorkerCmdsMeta["ZPOPMAX"] = zpopmaxCmdMeta
 	WorkerCmdsMeta["BF.ADD"] = bfaddCmdMeta
 	WorkerCmdsMeta["BF.RESERVE"] = bfreserveCmdMeta
 	WorkerCmdsMeta["BF.EXISTS"] = bfexistsCmdMeta

@@ -1096,6 +1096,15 @@ var (
 		IsMigrated: true,
 		NewEval:    evalZADD,
 	}
+	zcountCmdMeta = DiceCmdMeta{
+		Name: "ZCOUNT",
+		Info: `ZCOUNT key min max
+		Counts the number of members in a sorted set with scores between min and max (inclusive).
+		Use -inf and +inf for unbounded ranges. Returns 0 if the key does not exist.`,
+		Arity:      4,
+		IsMigrated: true,
+		NewEval:    evalZCOUNT,
+	}
 	zrangeCmdMeta = DiceCmdMeta{
 		Name: "ZRANGE",
 		Info: `ZRANGE key start stop [WithScores]
@@ -1108,6 +1117,18 @@ var (
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 		IsMigrated: true,
 		NewEval:    evalZRANGE,
+	}
+	zpopmaxCmdMeta = DiceCmdMeta{
+		Name: "ZPOPMAX",
+		Info: `ZPOPMAX  key [count]
+		Pops count number of elements from the sorted set from highest to lowest and returns those score and member.
+		If count is not provided '1' is considered by default.
+		The element with the highest score is removed first
+		if two elements have same score then the element which is lexicographically higher is popped first`,
+		Arity:      -1,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalZPOPMAX,
 	}
 	zpopminCmdMeta = DiceCmdMeta{
 		Name: "ZPOPMIN",
@@ -1328,7 +1349,9 @@ func init() {
 	DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["TYPE"] = typeCmdMeta
 	DiceCmds["ZADD"] = zaddCmdMeta
+	DiceCmds["ZCOUNT"] = zcountCmdMeta
 	DiceCmds["ZRANGE"] = zrangeCmdMeta
+	DiceCmds["ZPOPMAX"] = zpopmaxCmdMeta
 	DiceCmds["ZPOPMIN"] = zpopminCmdMeta
 	DiceCmds["ZRANK"] = zrankCmdMeta
 	DiceCmds["JSON.STRAPPEND"] = jsonstrappendCmdMeta

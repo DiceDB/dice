@@ -1,0 +1,210 @@
+---
+title: "Building a Realtime Leaderboard"
+description: "Create a gaming leaderboard in the easiest way possible."
+sidebar:
+  order: 4
+---
+
+In the world of gaming, leaderboards are a critical part of many real-time systems and are essential for tracking player
+rankings and improving engagement.
+DiceDB is a truly reactive database which allows you to eradicate the need to poll the database for changes by allowing clients to subscribe to changes in a sorted set (like a leaderboard).
+thus making it an excellent fit for implementing leaderboards.
+The goal of this example is to build a real-time leaderboard with DiceDB. We'll walk through the process of creating a gaming leaderboard using sorted set commands and our DiceDB SDK.
+
+But, before we start, make sure you have
+
+1. Go installed (at least version 1.18)
+2. Running instance of DiceDB
+3. Basic familiarity with [DiceDB and its CLI](https://github.com/dicedb/dice?tab=readme-ov-file#get-started)
+
+## Environment setup
+
+### Starting DiceDB
+
+Start the DiceDB server with the two flags `--enable-multithreading`, and `--enable-watch`
+to enable multi-threading and watch mode, respectively. Your command would look something
+like this
+
+```bash
+docker run -p 7379:7379 dicedb/dicedb --enable-multithreading --enable-watch
+```
+
+Once the DiceDB server starts, you will see output similar to this
+
+```
+██████╗ ██╗ ██████╗███████╗██████╗ ██████╗
+██╔══██╗██║██╔════╝██╔════╝██╔══██╗██╔══██╗
+██║  ██║██║██║     █████╗  ██║  ██║██████╔╝
+██║  ██║██║██║     ██╔══╝  ██║  ██║██╔══██╗
+██████╔╝██║╚██████╗███████╗██████╔╝██████╔╝
+╚═════╝ ╚═╝ ╚═════╝╚══════╝╚═════╝ ╚═════╝
+
+2024-10-24T18:35:55Z INF starting DiceDB version=0.0.5
+2024-10-24T18:35:55Z INF running with port=7379
+2024-10-24T18:35:55Z INF running with enable-watch=true
+2024-10-24T18:35:55Z INF running with mode=multi-threaded num-shards=12
+2024-10-24T18:35:55Z INF ready to accept and serve requests on port=7379
+```
+
+### Starting the application server
+
+1. Clone the repository
+     ```bash
+     git clone https://github.com/arpitbbhayani/leaderboard-go-dicedb.git
+     cd leaderboard-go-dicedb
+     ```
+2. Start the application
+    ```bash
+    go run main.go
+    ```
+    This will start the application server on port 8080 by default, you should see output similar to
+    ```bash
+    2024/10/25 00:05:59 Server starting on :8080
+    ```
+
+### Interacting with the application
+1. Navigate to the application server from your desired browser at http://localhost:8080.
+2. Update player with their respective scores.
+3. As more player with scores get added, we can see players getting ranked accordingly.
+
+## Key Components
+
+1. DiceDB: As the in-memory data store to realtime track user scores.
+2. DiceDB Go SDK: To allow interaction between application server and DiceDB.
+3. `ZRANGEWATCH` command: Allows the application to subscribe to changes in the leaderboard.
+4. `ZADD` command: We'd leverage this command to add scores for users.
+5. Websocket: To push real-time updates to connected users.
+
+In this application, every player assigned with higher score is ranked at the top of leaderboard.
+
+```
+Client (WebSocket)  →  Go Application  →  DiceDB (ZADD)
+             ↑                                  ↓
+Leaderboard Update  ←  Go Application ← DiceDB (ZRANGEWATCH)
+                                         (Real-Time Update)
+```
+
+## Understanding Real-Time Reactivity with `ZRANGEWATCH`
+
+The `ZRANGEWATCH` command allows the application to subscribe to changes in the leaderboard.
+This allows users to eradicate the need to continuously poll the server as updates are automatically delivered whenever changes occur.
+`ZRANGEWATCH` only sends the relevant changes to clients, making the process highly efficient in terms of both bandwidth and processing power.
+
+### Flow of `ZRANGEWATCH`:
+
+1. Setup: The client subscribes to updates on the leaderboard using `ZRANGEWATCH`.
+2. Data Changes: Whenever a player's score is updated, DiceDB triggers an update.
+3. Push Notifications: The server pushes the updated scores to all connected clients through WebSocket.
+
+## Code overview
+
+1. WebSocket Handling: The code uses WebSocket to push real-time updates to connected users.
+    ```go
+    func handleWebSocket(w http.ResponseWriter, r *http.Request) {
+        conn, err := upgrader.Upgrade(w, r, nil)
+        if err != nil {
+            log.Println(err)
+            return
+        }
+
+        connectedUsers = append(connectedUsers, conn)
+    }
+    ```
+    - This function establishes a WebSocket connection with clients. All connected clients are stored in connectedUsers.
+    - Once connected, clients will receive real-time updates whenever there is a change in the leaderboard.
+
+2. Score Updates: The `handleUpdate` function processes incoming HTTP requests to update player scores.
+    ```go
+    func handleUpdate(w http.ResponseWriter, r *http.Request) {
+         var score Score
+         if err := json.NewDecoder(r.Body).Decode(&score); err != nil {
+             http.Error(w, err.Error(), http.StatusBadRequest)
+             return
+         }
+
+         // ZADD command to add player with scores to leaderboard
+         err := client.ZAdd(r.Context(), "leaderboard", dicedb.Z{
+             Score:  float64(score.Score),
+             Member: score.Name,
+         }).Err()
+
+         if err != nil {
+             http.Error(w, err.Error(), http.StatusInternalServerError)
+             return
+         }
+
+         w.WriteHeader(http.StatusOK)
+    }
+    ```
+    - This function receives a JSON payload with a player's name and score, and then updates the leaderboard using `ZADD` command.
+    - If the player already exists, their score is updated. Otherwise, a new player is added to the leaderboard.
+
+3. Watch Loop: This is where the magic happens. The `watchLoop` function listens for updates from DiceDB and pushes them to all connected clients.
+    ```go
+    func watchLoop() {
+        ctx := context.Background()
+
+        // Established watch connection with DiceDB using WatchConn.
+        watchConn = client.WatchConn(ctx)
+        if watchConn == nil {
+            log.Fatal("failed to create watch connection")
+            return
+        }
+
+        // ZRANGEWATCH Command to subscribe to updates from DiceDB. Arguments are as follows:
+        // ctx: context object for the request.
+        // "leaderboard": The name of the key set to be watched.
+        // "0": The starting index of the watch range.
+        // "5": The ending index of the range. This tells the watch command to monitor up to the 5th element in the leaderboard.
+        // "REV": Specifies that the result should be in descending order of scores.
+        // "WITHSCORES": Ensures that both the player name and score are returned in the response.
+        res, err := watchConn.ZRangeWatch(ctx, "leaderboard", "0", "5", "REV", "WITHSCORES")
+        if err != nil {
+            log.Println("failed to create watch connection:", err)
+            return
+        }
+        watchTopics[res.Fingerprint] = "global_leaderboard"
+
+        watchCh = watchConn.Channel()
+
+        // Loop over channel to listen for updates from DiceDB
+        for {
+            select {
+            case msg := <-watchCh:
+                switch watchTopics[msg.Fingerprint] {
+                case "global_leaderboard":
+                    var scores []Score
+                    for _, z := range msg.Data.([]dicedb.Z) {
+                        scores = append(scores, Score{
+                            Name:  z.Member.(string),
+                            Score: int(z.Score),
+                        })
+                    }
+
+                    // Loop over connected users to send the score updates
+                    for _, conn := range connectedUsers {
+                        if err := conn.WriteJSON(scores); err != nil {
+                            log.Println("websocket write error:", err)
+                        }
+                    }
+                }
+            case <-ctx.Done():
+                return
+            }
+        }
+    }
+    ```
+    - Watch Connection: A Watch Connection is established with DiceDB using WatchConn.
+    - `ZRANGEWATCH`: This command watches the top 5 scores of the leaderboard.
+    - Real-Time Updates: Whenever there's a change in the leaderboard, the watch channel(`watchCh`) receives an update, which is then broadcast to all connected clients via WebSocket.
+
+## Conclusion
+
+DiceDB provides a powerful and efficient solution for implementing gaming leaderboards.
+By using DiceDB reactivity feature, you can create fast, scalable, and feature-rich leaderboards for your games,
+without having to
+
+1. periodically poll for the data, or
+2. knowing the internal data structures like Sorted Set.
+
+Find the complete code for this example on [Github](https://github.com/arpitbbhayani/leaderboard-go-dicedb.git).
