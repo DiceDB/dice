@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/internal/server/abstractserver"
+	"github.com/dicedb/dice/internal/wal"
 
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dice/internal/watchmanager"
@@ -48,9 +49,10 @@ type Server struct {
 	watchManager    *watchmanager.Manager
 	cmdWatchChan    chan dstore.CmdWatchEvent
 	globalErrorChan chan error
+	wl              *wal.WAL
 }
 
-func NewServer(shardManager *shard.ShardManager, workerManager *worker.WorkerManager, cmdWatchChan chan dstore.CmdWatchEvent, globalErrChan chan error) *Server {
+func NewServer(shardManager *shard.ShardManager, workerManager *worker.WorkerManager, cmdWatchChan chan dstore.CmdWatchEvent, globalErrChan chan error, wl *wal.WAL) *Server {
 	return &Server{
 		Host:            config.DiceConfig.AsyncServer.Addr,
 		Port:            config.DiceConfig.AsyncServer.Port,
@@ -60,6 +62,7 @@ func NewServer(shardManager *shard.ShardManager, workerManager *worker.WorkerMan
 		watchManager:    watchmanager.NewManager(),
 		cmdWatchChan:    cmdWatchChan,
 		globalErrorChan: globalErrChan,
+		wl:              wl,
 	}
 }
 

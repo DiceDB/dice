@@ -17,6 +17,7 @@ import (
 
 	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/server/abstractserver"
+	"github.com/dicedb/dice/internal/wal"
 
 	"github.com/dicedb/dice/config"
 	diceerrors "github.com/dicedb/dice/internal/errors"
@@ -46,6 +47,7 @@ func init() {
 	flag.BoolVar(&config.EnableProfiling, "enable-profiling", false, "enable profiling and capture critical metrics and traces in .prof files")
 
 	flag.StringVar(&config.DiceConfig.Logging.LogLevel, "log-level", "info", "log level, values: info, debug")
+	flag.StringVar(&config.LogDir, "log-dir", "/var/log/dicedb", "log directory path")
 
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
 	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the config file")
@@ -92,10 +94,19 @@ func main() {
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
 	var (
+		err            error
 		queryWatchChan chan dstore.QueryWatchEvent
 		cmdWatchChan   chan dstore.CmdWatchEvent
 		serverErrCh    = make(chan error, 2)
+		wl             *wal.WAL
 	)
+
+	wl, err = wal.NewWAL(config.LogDir)
+	if err != nil {
+		slog.Error("could not create WAL at", slog.String("log-dir", config.LogDir), slog.Any("error", err))
+		sigs <- syscall.SIGKILL
+		return
+	}
 
 	if config.EnableWatch {
 		bufSize := config.DiceConfig.Performance.WatchChanBufSize
@@ -150,11 +161,11 @@ func main() {
 		}
 
 		workerManager := worker.NewWorkerManager(config.DiceConfig.Performance.MaxClients, shardManager)
-		respServer := resp.NewServer(shardManager, workerManager, cmdWatchChan, serverErrCh)
+		respServer := resp.NewServer(shardManager, workerManager, cmdWatchChan, serverErrCh, wl)
 		serverWg.Add(1)
 		go runServer(ctx, &serverWg, respServer, serverErrCh)
 	} else {
-		asyncServer := server.NewAsyncServer(shardManager, queryWatchChan)
+		asyncServer := server.NewAsyncServer(shardManager, queryWatchChan, wl)
 		if err := asyncServer.FindPortAndBind(); err != nil {
 			slog.Error("Error finding and binding port", slog.Any("error", err))
 			sigs <- syscall.SIGKILL
@@ -164,14 +175,14 @@ func main() {
 		go runServer(ctx, &serverWg, asyncServer, serverErrCh)
 
 		if config.EnableHTTP {
-			httpServer := server.NewHTTPServer(shardManager)
+			httpServer := server.NewHTTPServer(shardManager, wl)
 			serverWg.Add(1)
 			go runServer(ctx, &serverWg, httpServer, serverErrCh)
 		}
 	}
 
 	if config.EnableWebsocket {
-		websocketServer := server.NewWebSocketServer(shardManager, config.WebsocketPort)
+		websocketServer := server.NewWebSocketServer(shardManager, config.WebsocketPort, wl)
 		serverWg.Add(1)
 		go runServer(ctx, &serverWg, websocketServer, serverErrCh)
 	}
