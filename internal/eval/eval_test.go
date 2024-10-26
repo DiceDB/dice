@@ -2656,7 +2656,7 @@ func testEvalHVALS(t *testing.T, store *dstore.Store) {
 				}
 			} else {
 				fmt.Printf("G1: %v | %v\n", response.Result, tt.migratedOutput.Result)
-				switch e := tt.migratedOutput.Result.(type){
+				switch e := tt.migratedOutput.Result.(type) {
 				case []interface{}, []string:
 					testifyAssert.ElementsMatch(t, e, response.Result)
 				default:
@@ -3579,7 +3579,7 @@ func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 				}
 			} else {
 				// fmt.Printf("G1: %v | %v\n", response.Result, tt.migratedOutput.Result)
-				switch e := tt.migratedOutput.Result.(type){
+				switch e := tt.migratedOutput.Result.(type) {
 				case []interface{}, []string:
 					testifyAssert.ElementsMatch(t, e, response.Result)
 				default:
