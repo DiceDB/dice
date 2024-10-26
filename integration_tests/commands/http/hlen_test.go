@@ -34,7 +34,7 @@ func TestHLen(t *testing.T) {
 				{Command: "HSET", Body: map[string]interface{}{"key": "key_hLen1", "field": "field", "value": "value"}},
 				{Command: "HLEN", Body: map[string]interface{}{"key": "wrong_key_hLen1"}},
 			},
-			expected: []interface{}{float64(1), "0"},
+			expected: []interface{}{float64(1), float64(0)},
 			delays:   []time.Duration{0, 0},
 		},
 		{

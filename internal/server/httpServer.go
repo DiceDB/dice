@@ -407,17 +407,6 @@ func writeJSONResponse(writer http.ResponseWriter, response utils.HTTPResponse, 
 }
 
 func createHTTPResponse(responseValue interface{}) utils.HTTPResponse {
-	respArr := []string{
-		"(nil)",  // Represents a RESP Nil Bulk String, which indicates a null value.
-		"OK",     // Represents a RESP Simple String with value "OK".
-		"QUEUED", // Represents a Simple String indicating that a command has been queued.
-		"0",      // Represents a RESP Integer with value 0.
-		"1",      // Represents a RESP Integer with value 1.
-		"-1",     // Represents a RESP Integer with value -1.
-		"-2",     // Represents a RESP Integer with value -2.
-		"*0",     // Represents an empty RESP Array.
-	}
-
 	switch v := responseValue.(type) {
 	case []interface{}:
 		// Parses []interface{} as part of EvalResponse e.g. JSON.ARRPOP
@@ -426,10 +415,10 @@ func createHTTPResponse(responseValue interface{}) utils.HTTPResponse {
 		r := make([]interface{}, 0, len(v))
 		for _, resp := range v {
 			if val, ok := resp.(clientio.RespType); ok {
-				if stringNil == respArr[val] {
+				if stringNil == respTypeToValue(val) {
 					r = append(r, nil)
 				} else {
-					r = append(r, respArr[val])
+					r = append(r, respTypeToValue(val))
 				}
 			} else {
 				r = append(r, resp)
@@ -441,7 +430,7 @@ func createHTTPResponse(responseValue interface{}) utils.HTTPResponse {
 		return utils.HTTPResponse{Data: string(v)}
 
 	case clientio.RespType:
-		responseValue = respArr[v]
+		responseValue = respTypeToValue(v)
 		if responseValue == stringNil {
 			responseValue = nil // in order to convert it in json null
 		}
@@ -450,7 +439,7 @@ func createHTTPResponse(responseValue interface{}) utils.HTTPResponse {
 
 	case interface{}:
 		if val, ok := v.(clientio.RespType); ok {
-			return utils.HTTPResponse{Data: respArr[val]}
+			return utils.HTTPResponse{Data: respTypeToValue(val)}
 		}
 	}
 
@@ -491,4 +480,31 @@ func replaceNilInInterface(data interface{}) interface{} {
 		// For other types, return as is
 		return data
 	}
+}
+
+func respTypeToValue(respType clientio.RespType) interface{} {
+	var respArrString = map[clientio.RespType]string{
+		clientio.NIL:           "(nil)",  // Represents a RESP Nil Bulk String, which indicates a null value.
+		clientio.OK:            "OK",     // Represents a RESP Simple String with value "OK".
+		clientio.CommandQueued: "QUEUED", // Represents a Simple String indicating that a command has been queued.
+		clientio.EmptyArray:    "*0",     // Represents an empty RESP Array.
+	}
+
+	var respArrInt = map[clientio.RespType]float64{
+		clientio.IntegerZero:        0,  // Represents a RESP Integer with value 0.
+		clientio.IntegerOne:         1,  // Represents a RESP Integer with value 1.
+		clientio.IntegerNegativeOne: -1, // Represents a RESP Integer with value -1.
+		clientio.IntegerNegativeTwo: -2, // Represents a RESP Integer with value -2.
+	}
+
+	if val, exists := respArrString[respType]; exists {
+		return val
+	}
+	// Check if respType exists in respArrInt map
+	if val, exists := respArrInt[respType]; exists {
+		return val
+	}
+
+	// Default to nil if respType is not recognized
+	return nil
 }
