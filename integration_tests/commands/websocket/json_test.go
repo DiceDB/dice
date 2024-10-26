@@ -445,25 +445,25 @@ func TestJsonARRINSERT(t *testing.T) {
 			name:       "JSON.ARRINSERT with positive index in root path",
 			commands:   []string{"json.set a $ " + a, `JSON.ARRINSERT a $ 2 3 4 5`, "JSON.GET a"},
 			expected:   []interface{}{"OK", []interface{}{float64(5)}, "[1,2,3,4,5]"},
-			assertType: []string{"equal", "deep_equal", "equal"},
+			assertType: []string{"equal", "equal", "equal"},
 		},
 		{
 			name:       "JSON.ARRINSERT with negative index in root path",
 			commands:   []string{"json.set a $ " + a, `JSON.ARRINSERT a $ -2 3 4 5`, "JSON.GET a"},
 			expected:   []interface{}{"OK", []interface{}{float64(5)}, "[3,4,5,1,2]"},
-			assertType: []string{"equal", "deep_equal", "equal"},
+			assertType: []string{"equal", "equal", "equal"},
 		},
 		{
 			name:       "JSON.ARRINSERT nested with positive index",
 			commands:   []string{"JSON.SET b $ " + b, `JSON.ARRINSERT b $..score 1 5 6 true`, "JSON.GET b"},
 			expected:   []interface{}{"OK", []interface{}{float64(5), float64(5)}, `{"name":"tom","score":[10,5,6,true,20],"partner2":{"score":[10,5,6,true,20]}}`},
-			assertType: []string{"equal", "deep_equal", "equal"},
+			assertType: []string{"equal", "equal", "jsoneq"},
 		},
 		{
 			name:       "JSON.ARRINSERT nested with negative index",
 			commands:   []string{"JSON.SET b $ " + b, `JSON.ARRINSERT b $..score -2 5 6 true`, "JSON.GET b"},
 			expected:   []interface{}{"OK", []interface{}{float64(5), float64(5)}, `{"name":"tom","score":[5,6,true,10,20],"partner2":{"score":[5,6,true,10,20]}}`},
-			assertType: []string{"equal", "deep_equal", "equal"},
+			assertType: []string{"equal", "equal", "jsoneq"},
 		},
 	}
 
@@ -478,6 +478,8 @@ func TestJsonARRINSERT(t *testing.T) {
 					testifyAssert.Equal(t, out, result)
 				} else if tcase.assertType[i] == "deep_equal" {
 					assert.Assert(t, arraysArePermutations(out.([]interface{}), result.([]interface{})))
+				} else if tcase.assertType[i] == "jsoneq" {
+					testifyAssert.JSONEq(t, out.(string), result.(string))
 				}
 			}
 		})
