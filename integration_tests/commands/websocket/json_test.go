@@ -314,6 +314,97 @@ func TestJsonObjLen(t *testing.T) {
 	}
 }
 
+func TestJsonARRTRIM(t *testing.T) {
+	exec := NewWebsocketCommandExecutor()
+	conn := exec.ConnectToServer()
+	defer conn.Close()
+
+	a := `[0,1,2]`
+	b := `{"connection":{"wireless":true,"names":[0,1,2,3,4]},"names":[0,1,2,3,4]}`
+
+	defer func() {
+		resp1, err := exec.FireCommandAndReadResponse(conn, "DEL a")
+		resp2, err := exec.FireCommandAndReadResponse(conn, "DEL b")
+		testifyAssert.Nil(t, err)
+		testifyAssert.Equal(t, float64(1), resp1)
+		testifyAssert.Equal(t, float64(1), resp2)
+	}()
+
+	testCases := []struct {
+		name       string
+		commands   []string
+		expected   []interface{}
+		assertType []string
+	}{
+		{
+			name:       "JSON.ARRTRIM not array",
+			commands:   []string{"JSON.SET b $ " + b, `JSON.ARRTRIM b $ 0 10`, "JSON.GET b"},
+			expected:   []interface{}{"OK", []interface{}{nil}, b},
+			assertType: []string{"equal", "deep_equal", "jsoneq"},
+		},
+		{
+			name:       "JSON.ARRTRIM stop index out of bounds",
+			commands:   []string{"JSON.SET a $ " + a, `JSON.ARRTRIM a $ -10 10`, "JSON.GET a"},
+			expected:   []interface{}{"OK", []interface{}{float64(3)}, "[0,1,2]"},
+			assertType: []string{"equal", "deep_equal", "equal"},
+		},
+		{
+			name:       "JSON.ARRTRIM start&stop are positive",
+			commands:   []string{"JSON.SET a $ " + a, `JSON.ARRTRIM a $ 1 2`, "JSON.GET a"},
+			expected:   []interface{}{"OK", []interface{}{float64(2)}, "[1,2]"},
+			assertType: []string{"equal", "deep_equal", "equal"},
+		},
+		{
+			name:       "JSON.ARRTRIM start&stop are negative",
+			commands:   []string{"JSON.SET a $ " + a, `JSON.ARRTRIM a $ -2 -1 `, "JSON.GET a"},
+			expected:   []interface{}{"OK", []interface{}{float64(2)}, "[1,2]"},
+			assertType: []string{"equal", "deep_equal", "equal"},
+		},
+		{
+			name:       "JSON.ARRTRIM subpath trim",
+			commands:   []string{"JSON.SET b $ " + b, `JSON.ARRTRIM b $..names 1 4`, "JSON.GET b"},
+			expected:   []interface{}{"OK", []interface{}{float64(4), float64(4)}, `{"connection":{"wireless":true,"names":[1,2,3,4]},"names":[1,2,3,4]}`},
+			assertType: []string{"equal", "deep_equal", "jsoneq"},
+		},
+		{
+			name:       "JSON.ARRTRIM subpath not array",
+			commands:   []string{"JSON.SET b $ " + b, `JSON.ARRTRIM b $.connection 0 1`, "JSON.GET b"},
+			expected:   []interface{}{"OK", []interface{}{nil}, b},
+			assertType: []string{"equal", "deep_equal", "jsoneq"},
+		},
+		{
+			name:       "JSON.ARRTRIM positive start larger than stop",
+			commands:   []string{"JSON.SET b $ " + b, `JSON.ARRTRIM b $.names 3 1`, "JSON.GET b"},
+			expected:   []interface{}{"OK", []interface{}{float64(0)}, `{"names":[],"connection":{"wireless":true,"names":[0,1,2,3,4]}}`},
+			assertType: []string{"equal", "deep_equal", "jsoneq"},
+		},
+		{
+			name:       "JSON.ARRTRIM negative start larger than stop",
+			commands:   []string{"JSON.SET b $ " + b, `JSON.ARRTRIM b $.names -1 -3`, "JSON.GET b"},
+			expected:   []interface{}{"OK", []interface{}{float64(0)}, `{"names":[],"connection":{"wireless":true,"names":[0,1,2,3,4]}}`},
+			assertType: []string{"equal", "deep_equal", "jsoneq"},
+		},
+	}
+
+	for _, tcase := range testCases {
+		t.Run(tcase.name, func(t *testing.T) {
+			for i := 0; i < len(tcase.commands); i++ {
+				cmd := tcase.commands[i]
+				out := tcase.expected[i]
+				result, err := exec.FireCommandAndReadResponse(conn, cmd)
+				testifyAssert.Nil(t, err)
+				if tcase.assertType[i] == "equal" {
+					testifyAssert.Equal(t, out, result)
+				} else if tcase.assertType[i] == "deep_equal" {
+					assert.Assert(t, arraysArePermutations(out.([]interface{}), result.([]interface{})))
+				} else if tcase.assertType[i] == "jsoneq" {
+					testifyAssert.JSONEq(t, out.(string), result.(string))
+				}
+			}
+		})
+	}
+}
+
 func TestJsonARRINSERT(t *testing.T) {
 	exec := NewWebsocketCommandExecutor()
 	conn := exec.ConnectToServer()
