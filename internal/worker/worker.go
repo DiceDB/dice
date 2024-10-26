@@ -245,7 +245,37 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 			}
 			cmdList = append(cmdList, watchCmd)
 			isWatchNotification = true
+
+		case Unwatch:
+			// Generate the Cmd being unwatched. All we need to do is remove the .UNWATCH suffix from the command and pass
+			// it along as is.
+			// Modify the command name to remove the .UNWATCH suffix, this will allow us to generate a consistent
+			// fingerprint (which uses the command name without the suffix)
+			diceDBCmd.Cmd = diceDBCmd.Cmd[:len(diceDBCmd.Cmd)-8]
+			watchCmd := &cmd.DiceDBCmd{
+				Cmd:  diceDBCmd.Cmd,
+				Args: diceDBCmd.Args,
+			}
+			cmdList = append(cmdList, watchCmd)
+			isWatchNotification = false
 		}
+	}
+
+	// Unsubscribe Unwatch command type
+	if meta.CmdType == Unwatch {
+		cmd := cmdList[len(cmdList)-1]
+		watchmanager.CmdWatchSubscriptionChan <- watchmanager.WatchSubscription{
+			Subscribe:    false,
+			WatchCmd:     cmd,
+			AdhocReqChan: w.adhocReqChan,
+			Fingerprint:  cmd.GetFingerprint(),
+		}
+
+		err := w.ioHandler.Write(ctx, "OK")
+		if err != nil {
+			return fmt.Errorf("error sending push response to client: %v", err)
+		}
+		return nil
 	}
 
 	// Scatter the broken-down commands to the appropriate shards.
