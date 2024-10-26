@@ -1,8 +1,10 @@
 package websocket
 
 import (
+	"fmt"
 	"testing"
 
+	"github.com/google/go-cmp/cmp/cmpopts"
 	testifyAssert "github.com/stretchr/testify/assert"
 	"gotest.tools/v3/assert"
 )
@@ -477,6 +479,121 @@ func TestJsonARRINSERT(t *testing.T) {
 				} else if tcase.assertType[i] == "deep_equal" {
 					assert.Assert(t, arraysArePermutations(out.([]interface{}), result.([]interface{})))
 				}
+			}
+		})
+	}
+}
+
+func TestJsonObjKeyslmao(t *testing.T) {
+	exec := NewWebsocketCommandExecutor()
+	conn := exec.ConnectToServer()
+	defer conn.Close()
+
+	a := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"language":["rust"]}}`
+	b := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"name":12,"language":["rust"]}}`
+	c := `{"name":"jerry","partner":{"name":"tom","language":["rust"]},"partner2":{"name":12,"language":["rust"],"extra_key":"value"}}`
+
+	d := `{"a":[3],"nested":{"a":{"b":2,"c":1}}}`
+
+	testCases := []struct {
+		name        string
+		setCommand  string
+		testCommand string
+		expected    []interface{}
+	}{
+		{
+			name:        "JSON.OBJKEYS root object",
+			setCommand:  "json.set doc $ " + a,
+			testCommand: "json.objkeys doc $",
+			expected: []interface{}{
+				[]interface{}{"name", "partner", "partner2"},
+			},
+		},
+		{
+			name:        "JSON.OBJKEYS with nested path",
+			setCommand:  "json.set doc $ " + b,
+			testCommand: "json.objkeys doc $.partner",
+			expected: []interface{}{
+				[]interface{}{"name", "language"},
+			},
+		},
+		{
+			name:        "JSON.OBJKEYS with non-object path",
+			setCommand:  "json.set doc $ " + c,
+			testCommand: "json.objkeys doc $.name",
+			expected:    []interface{}{nil},
+		},
+		{
+			name:        "JSON.OBJKEYS with nested non-object path",
+			setCommand:  "json.set doc $ " + b,
+			testCommand: "json.objkeys doc $.partner.language",
+			expected:    []interface{}{nil},
+		},
+		{
+			name:        "JSON.OBJKEYS with invalid json path - 1",
+			setCommand:  "json.set doc $ " + b,
+			testCommand: "json.objkeys doc $..invalidpath*somethingrandomadded",
+			expected:    []interface{}{"ERR parse error at 16 in $..invalidpath*somethingrandomadded"},
+		},
+		{
+			name:        "JSON.OBJKEYS with invalid json path - 2",
+			setCommand:  "json.set doc $ " + c,
+			testCommand: "json.objkeys doc $[1",
+			expected:    []interface{}{"ERR expected a number at 4 in $[1"},
+		},
+		{
+			name:        "JSON.OBJKEYS with invalid json path - 3",
+			setCommand:  "json.set doc $ " + c,
+			testCommand: "json.objkeys doc $[random",
+			expected:    []interface{}{"ERR parse error at 3 in $[random"},
+		},
+		{
+			name:        "JSON.OBJKEYS with only command",
+			setCommand:  "json.set doc $ " + c,
+			testCommand: "json.objkeys",
+			expected:    []interface{}{"ERR wrong number of arguments for 'json.objkeys' command"},
+		},
+		{
+			name:        "JSON.OBJKEYS with non-existing key",
+			setCommand:  "json.set doc $ " + c,
+			testCommand: "json.objkeys thisdoesnotexist $",
+			expected:    []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
+		},
+		{
+			name:        "JSON.OBJKEYS with empty path",
+			setCommand:  "json.set doc $ " + c,
+			testCommand: "json.objkeys doc",
+			expected: []interface{}{
+				"name", "partner", "partner2",
+			},
+		},
+		{
+			name:        "JSON.OBJKEYS with multiple json path",
+			setCommand:  "json.set doc $ " + d,
+			testCommand: "json.objkeys doc $..a",
+			expected: []interface{}{
+				[]interface{}{"b", "c"},
+				nil,
+			},
+		},
+	}
+
+	for _, tcase := range testCases {
+		t.Run(tcase.name, func(t *testing.T) {
+			_, err := exec.FireCommandAndReadResponse(conn, tcase.setCommand)
+			testifyAssert.Nil(t, err)
+			expected := tcase.expected
+			out, err := exec.FireCommandAndReadResponse(conn, tcase.testCommand)
+
+			_, isString := out.(string)
+			if isString {
+				outInterface := []interface{}{out}
+				assert.DeepEqual(t, outInterface, expected)
+			} else {
+				assert.DeepEqual(t, out.([]interface{}), expected,
+					cmpopts.SortSlices(func(a, b interface{}) bool {
+						return fmt.Sprintf("%v", a) < fmt.Sprintf("%v", b)
+					}))
 			}
 		})
 	}
