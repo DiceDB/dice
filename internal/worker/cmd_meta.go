@@ -3,10 +3,10 @@ package worker
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/eval"
-	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/ops"
 )
 
@@ -62,17 +62,37 @@ const (
 
 // Watch commands
 const (
-	CmdGetWatch    = "GET.WATCH"
-	CmdZRangeWatch = "ZRANGE.WATCH"
-	CmdZPopMin     = "ZPOPMIN"
-	CmdJSONClear   = "JSON.CLEAR"
-	CmdJSONStrlen  = "JSON.STRLEN"
-	CmdJSONObjlen  = "JSON.OBJLEN"
-	CmdZAdd        = "ZADD"
-	CmdZRange      = "ZRANGE"
-	CmdPFAdd       = "PFADD"
-	CmdPFCount     = "PFCOUNT"
-	CmdPFMerge     = "PFMERGE"
+	CmdGetWatch     = "GET.WATCH"
+	CmdZRangeWatch  = "ZRANGE.WATCH"
+	CmdZPopMin      = "ZPOPMIN"
+	CmdJSONClear    = "JSON.CLEAR"
+	CmdJSONStrlen   = "JSON.STRLEN"
+	CmdJSONObjlen   = "JSON.OBJLEN"
+	CmdZAdd         = "ZADD"
+	CmdZRange       = "ZRANGE"
+	CmdZRank        = "ZRANK"
+	CmdZCount       = "ZCOUNT"
+	CmdPFAdd        = "PFADD"
+	CmdPFCount      = "PFCOUNT"
+	CmdPFMerge      = "PFMERGE"
+	CmdIncr         = "INCR"
+	CmdIncrBy       = "INCRBY"
+	CmdDecr         = "DECR"
+	CmdDecrBy       = "DECRBY"
+	CmdIncrByFloat  = "INCRBYFLOAT"
+	CmdHIncrBy      = "HINCRBY"
+	CmdHIncrByFloat = "HINCRBYFLOAT"
+	CmdHRandField   = "HRANDFIELD"
+	CmdGetRange     = "GETRANGE"
+	CmdAppend       = "APPEND"
+	CmdZPopMax      = "ZPOPMAX"
+	CmdHLen         = "HLEN"
+	CmdHStrLen      = "HSTRLEN"
+	CmdHScan        = "HSCAN"
+	CmdBFAdd        = "BF.ADD"
+	CmdBFReserve    = "BF.RESERVE"
+	CmdBFInfo       = "BF.INFO"
+	CmdBFExists     = "BF.EXISTS"
 )
 
 type CmdMeta struct {
@@ -120,6 +140,9 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdGetSet: {
 		CmdType: SingleShard,
 	},
+	CmdGetRange: {
+		CmdType: SingleShard,
+	},
 	CmdJSONClear: {
 		CmdType: SingleShard,
 	},
@@ -136,6 +159,24 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdPFMerge: {
+		CmdType: SingleShard,
+	},
+	CmdHLen: {
+		CmdType: SingleShard,
+	},
+	CmdHStrLen: {
+		CmdType: SingleShard,
+	},
+	CmdHScan: {
+		CmdType: SingleShard,
+	},
+	CmdHIncrBy: {
+		CmdType: SingleShard,
+	},
+	CmdHIncrByFloat: {
+		CmdType: SingleShard,
+	},
+	CmdHRandField: {
 		CmdType: SingleShard,
 	},
 
@@ -188,20 +229,59 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdZAdd: {
 		CmdType: SingleShard,
 	},
+	CmdZCount: {
+		CmdType: SingleShard,
+	},
+	CmdZRank: {
+		CmdType: SingleShard,
+	},
 	CmdZRange: {
+		CmdType: SingleShard,
+	},
+	CmdAppend: {
+		CmdType: SingleShard,
+	},
+	CmdIncr: {
+		CmdType: SingleShard,
+	},
+	CmdIncrBy: {
+		CmdType: SingleShard,
+	},
+	CmdDecr: {
+		CmdType: SingleShard,
+	},
+	CmdDecrBy: {
+		CmdType: SingleShard,
+	},
+	CmdIncrByFloat: {
 		CmdType: SingleShard,
 	},
 	CmdZPopMin: {
 		CmdType: SingleShard,
 	},
+	CmdZPopMax: {
+		CmdType: SingleShard,
+	},
+
+	// Bloom Filter
+	CmdBFAdd: {
+		CmdType: SingleShard,
+	},
+	CmdBFInfo: {
+		CmdType: SingleShard,
+	},
+	CmdBFExists: {
+		CmdType: SingleShard,
+	},
+	CmdBFReserve: {
+		CmdType: SingleShard,
+	},
 }
 
 func init() {
-	l := logger.New(logger.Opts{WithTimestamp: true})
-	// Validate the metadata for each command
 	for c, meta := range CommandsMeta {
 		if err := validateCmdMeta(c, meta); err != nil {
-			l.Error("error validating worker command metadata %s: %v", c, err)
+			slog.Error("error validating worker command metadata %s: %v", c, err)
 		}
 	}
 }

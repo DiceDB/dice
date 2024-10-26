@@ -1,0 +1,79 @@
+---
+title: Reactive Hello, World!
+description: A simple Hello, World! example to get a taste of reactivity.
+sidebar:
+  order: 3
+---
+
+DiceDB is a truly reactive database allows you to create query subscriptions on the database
+and get notified whenever the data changes, thus eradicating the need to poll the database for changes. This is a simple Hello, World! example to get a taste of reactivity.
+
+But, before we start, make sure you have
+
+1. a running instance of DiceDB
+2. installed [DiceDB CLI](https://github.com/dicedb/dicedb-cli)
+
+### Starting DiceDB
+
+Start the DiceDB server with the two flags `--enable-multithreading` and `--enable-watch`
+to enable multi-threading and watch mode, respectively. Your command would look something
+like this
+
+```bash
+docker run -p 7379:7379 dicedb/dicedb --enable-multithreading --enable-watch
+```
+
+Also, connect to the database using the CLI as mentioned in the above installation steps or
+the previous hello world example.
+
+### Storing Data: The SET Command
+
+Let's store `<k1, v1>` in DiceDB. We'll use the [`SET`](/commands/set) command, which is responsible for storing a string value under a specified key.
+
+```bash
+dicedb> SET k1 v1
+OK
+```
+
+### Watch `k1` in two terminal sessions
+
+Now, open two terminal sessions, connect both with the same DiceDB server using the DiceDB CLI
+and watch the changes on the key `k1` in both the sessions.
+
+```bash
+dicedb> GET.WATCH k1
+```
+
+In return you will get fingerprint and initial data which you can ignore for now.
+
+At this step you have total 3 terminal sessions,
+
+1. one where you fired the `SET k1 v1` command
+2. two where you fired the `GET.WATCH k1` command
+
+### Update the value of `k1`
+
+Now, go back to the first terminal session and update the value of `k1` to `v2` using the `SET` command.
+
+```bash
+dicedb> set k1 v2
+OK
+```
+
+Now, you will see the changes in the other two terminal sessions where you have watched the key `k1`
+and you will get the updated value `v2` in both the sessions.
+
+This is the reactivity in action. You can create multiple subscriptions on the database and get notified whenever the data changes.
+[CDC (Change Data Capture)](https://www.confluent.io/learn/change-data-capture/) notifies the subscribers
+about the changes in the database and sends an event with the delta, but but DiceDB
+evaluates the query/command and sends the updated result set to the subscribers.
+
+This can be used to build real-time applications like leaderboards, monitoring, alerting, instant recommendations, etc.
+
+## WATCH commands
+
+We are in process of implementing the `.WATCH` commands for all query commands in DiceDB,
+but today we support `GET.WATCH` and `ZRANGE.WATCH`, you can read more about them
+in the commands documentation.
+
+With subsequent releases, we will keep shipping `.WATCH` commands for all the query commands in DiceDB.

@@ -6,6 +6,7 @@ import (
 	"math"
 	"math/rand"
 	"strconv"
+	"strings"
 
 	"github.com/dicedb/dice/internal/object"
 
@@ -27,15 +28,14 @@ var (
 )
 
 var (
-	errInvalidErrorRateType = diceerrors.NewErr("only float values can be provided for error rate")
-	errInvalidErrorRate     = diceerrors.NewErr("invalid error rate value provided")
-	errInvalidCapacityType  = diceerrors.NewErr("only integer values can be provided for capacity")
-	errInvalidCapacity      = diceerrors.NewErr("invalid capacity value provided")
+	errInvalidRangeErrorRateType = diceerrors.ErrGeneral("(0 < error rate range < 1) ")
+	errInvalidErrorRate          = diceerrors.ErrGeneral("bad error rate")
+	errInvalidCapacityType       = diceerrors.ErrGeneral("bad capacity")
+	errNonPositiveCapacity       = diceerrors.ErrGeneral("(capacity should be larger than 0)")
 
-	errInvalidKey = diceerrors.NewErr("invalid key: no bloom filter found")
-
-	errEmptyValue   = diceerrors.NewErr("empty value provided")
-	errUnableToHash = diceerrors.NewErr("unable to hash given value")
+	errEmptyValue              = diceerrors.ErrGeneral("empty value provided")
+	errUnableToHash            = diceerrors.ErrGeneral("unable to hash given value")
+	errInvalidInformationValue = diceerrors.ErrGeneral("Invalid information value")
 )
 
 type BloomOpts struct {
@@ -55,35 +55,39 @@ type BloomOpts struct {
 type Bloom struct {
 	opts   *BloomOpts // options for the bloom filter
 	bitset []byte     // underlying bit representation
+	cnt    uint64     // number of elements in the bloom
 }
 
 // newBloomOpts extracts the user defined values from `args`. It falls back to
 // default values if `useDefaults` is set to true. Using those values, it
 // creates and returns the options for bloom filter.
-func newBloomOpts(args []string, useDefaults bool) (*BloomOpts, error) {
-	if useDefaults {
-		return &BloomOpts{errorRate: defaultErrorRate, capacity: defaultCapacity}, nil
-	}
 
+func defaultBloomOpts() *BloomOpts {
+	return &BloomOpts{errorRate: defaultErrorRate, capacity: defaultCapacity}
+}
+
+func newBloomOpts(args []string) (*BloomOpts, error) {
 	errorRate, err := strconv.ParseFloat(args[0], 64)
 	if err != nil {
-		return nil, errInvalidErrorRateType
-	}
-
-	if errorRate <= 0 || errorRate >= 1.0 {
 		return nil, errInvalidErrorRate
 	}
 
-	capacity, err := strconv.ParseUint(args[1], 10, 64)
+	if errorRate <= 0 || errorRate >= 1.0 {
+		return nil, errInvalidRangeErrorRateType
+	}
+
+	capacity, err := strconv.ParseInt(args[1], 10, 64)
 	if err != nil {
 		return nil, errInvalidCapacityType
 	}
 
-	if capacity < 1 {
-		return nil, errInvalidCapacity
+	if capacity <= 0 {
+		return nil, errNonPositiveCapacity
 	}
 
-	return &BloomOpts{errorRate: errorRate, capacity: capacity}, nil
+	capacityUint, _ := strconv.ParseUint(args[1], 10, 64)
+
+	return &BloomOpts{errorRate: errorRate, capacity: capacityUint}, nil
 }
 
 // newBloomFilter creates and returns a new filter. It is responsible for initializing the
@@ -121,39 +125,54 @@ func newBloomFilter(opts *BloomOpts) *Bloom {
 
 	bitset := make([]byte, bytes)
 
-	return &Bloom{opts, bitset}
+	return &Bloom{opts, bitset, 0}
 }
 
-func (b *Bloom) info(name string) string {
-	info := utils.EmptyStr
-	if name != utils.EmptyStr {
-		info = "name: " + name + ", "
+func (b *Bloom) info(opt string) ([]interface{}, error) {
+	result := make([]interface{}, 0, 10)
+	if strings.EqualFold(opt, "") {
+		result = append(result,
+			"Capacity", b.opts.capacity,
+			"Size", b.opts.bits,
+			"Number of filters", len(b.opts.hashFns),
+			"Number of items inserted", b.cnt,
+			"Expansion rate", 2,
+		)
+	} else {
+		switch strings.ToUpper(opt) {
+		case CAPACITY:
+			result = append(result, "Capacity", b.opts.capacity)
+		case SIZE:
+			result = append(result, "Size", b.opts.bits)
+		case FILTERS:
+			result = append(result, "Number of filters", len(b.opts.hashFns))
+		case ITEMS:
+			result = append(result, "Number of items inserted", b.cnt)
+		case EXPANSION:
+			result = append(result, "Expansion rate", 2)
+		default:
+			return nil, errInvalidInformationValue
+		}
 	}
-	info += fmt.Sprintf("error rate: %f, ", b.opts.errorRate)
-	info += fmt.Sprintf("capacity: %d, ", b.opts.capacity)
-	info += fmt.Sprintf("total bits reserved: %d, ", b.opts.bits)
-	info += fmt.Sprintf("bits per element: %f, ", b.opts.bpe)
-	info += fmt.Sprintf("hash functions: %d", len(b.opts.hashFns))
-
-	return info
+	return result, nil
 }
 
 // add adds a new entry for `value` in the filter. It hashes the given
 // value and sets the bit of the underlying bitset. Returns "-1" in
 // case of errors, "0" if all the bits were already set and "1" if
 // at least 1 new bit was set.
-func (b *Bloom) add(value string) ([]byte, error) {
+func (b *Bloom) add(value string) (interface{}, error) {
 	// We're sure that empty values will be handled upper functions itself.
 	// This is just a property check for the bloom struct.
 	if value == utils.EmptyStr {
-		return clientio.RespMinusOne, errEmptyValue
+		return clientio.IntegerNegativeOne, errEmptyValue
 	}
 
 	// Update the indexes where bits are supposed to be set
 	err := b.opts.updateIndexes(value)
 	if err != nil {
 		fmt.Println("error in getting indexes for value:", value, "err:", err)
-		return clientio.RespMinusOne, errUnableToHash
+		return clientio.IntegerNegativeOne, errUnableToHash
 	}
 
 	// Set the bits and keep a count of already set ones
@@ -168,10 +187,10 @@ func (b *Bloom) add(value string) ([]byte, error) {
 
 	if count == len(b.opts.indexes) {
 		// All the bits were already set, return 0 in that case.
-		return clientio.RespZero, nil
+		return clientio.IntegerZero, nil
 	}
-
-	return clientio.RespOne, nil
+	b.cnt++
+	return clientio.IntegerOne, nil
 }
 
 // exists checks if the given `value` exists in the filter or not.
@@ -179,18 +198,18 @@ func (b *Bloom) add(value string) ([]byte, error) {
 // the underlying bitset. Returns "-1" in case of errors, "0" if the
 // element surely does not exist in the filter, and "1" if the element
 // may or may not exist in the filter.
-func (b *Bloom) exists(value string) ([]byte, error) {
+func (b *Bloom) exists(value string) (clientio.RespType, error) {
 	// We're sure that empty values will be handled upper functions itself.
 	// This is just a property check for the bloom struct.
 	if value == utils.EmptyStr {
-		return clientio.RespMinusOne, errEmptyValue
+		return clientio.IntegerOne, errEmptyValue
 	}
 
 	// Update the indexes where bits are supposed to be set
 	err := b.opts.updateIndexes(value)
 	if err != nil {
 		fmt.Println("error in getting indexes for value:", value, "err:", err)
-		return clientio.RespMinusOne, errUnableToHash
+		return clientio.IntegerNegativeOne, errUnableToHash
 	}
 
 	// Check if all the bits at given indexes are set or not
@@ -198,12 +217,12 @@ func (b *Bloom) exists(value string) ([]byte, error) {
 	for _, v := range b.opts.indexes {
 		if !isBitSet(b.bitset, v) {
 			// Return with "0" as we found one non-set bit (which is enough to conclude)
-			return clientio.RespZero, nil
+			return clientio.IntegerZero, nil
 		}
 	}
 
 	// We reached here, which means the element may exist in the filter. Return "1" now.
-	return clientio.RespOne, nil
+	return clientio.IntegerOne, nil
 }
 
 // DeepCopy creates a deep copy of the Bloom struct
@@ -235,6 +254,7 @@ func (b *Bloom) DeepCopy() *Bloom {
 	return &Bloom{
 		opts:   copyOpts,
 		bitset: copyBitset,
+		cnt:    b.cnt,
 	}
 }
 
@@ -258,112 +278,48 @@ func (opts *BloomOpts) updateIndexes(value string) error {
 	return nil
 }
 
-// evalBFINIT evaluates the BFINIT command responsible for initializing a
-// new bloom filter and allocation it's relevant parameters based on given inputs.
-// If no params are provided, it uses defaults.
-func evalBFINIT(args []string, store *dstore.Store) []byte {
-	if len(args) != 1 && len(args) != 3 {
-		return diceerrors.NewErrArity("BFINIT")
-	}
-
-	useDefaults := false
-	if len(args) == 1 {
-		useDefaults = true
-	}
-
-	opts, err := newBloomOpts(args[1:], useDefaults)
-	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%w for 'BFINIT' command", err)
-	}
-
-	_, err = getOrCreateBloomFilter(args[0], opts, store)
-	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%w for 'BFINIT' command", err)
-	}
-
-	return clientio.RespOK
-}
-
-// evalBFADD evaluates the BFADD command responsible for adding an element to a bloom filter. If the filter does not
-// exist, it will create a new one with default parameters.
-func evalBFADD(args []string, store *dstore.Store) []byte {
-	if len(args) != 2 {
-		return diceerrors.NewErrArity("BFADD")
-	}
-
-	opts, _ := newBloomOpts(args[1:], true)
-
-	bloom, err := getOrCreateBloomFilter(args[0], opts, store)
-	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%w for 'BFADD' command", err)
-	}
-
-	resp, err := bloom.add(args[1])
-	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%w for 'BFADD' command", err)
-	}
-
-	return resp
-}
-
-// evalBFEXISTS evaluates the BFEXISTS command responsible for checking existence of an element in a bloom filter.
-func evalBFEXISTS(args []string, store *dstore.Store) []byte {
-	if len(args) != 2 {
-		return diceerrors.NewErrArity("BFEXISTS")
-	}
-
-	bloom, err := getOrCreateBloomFilter(args[0], nil, store)
-	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%w for 'BFEXISTS' command", err)
-	}
-
-	resp, err := bloom.exists(args[1])
-	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%w for 'BFEXISTS' command", err)
-	}
-
-	return resp
-}
-
-// evalBFINFO evaluates the BFINFO command responsible for returning the
-// parameters and metadata of an existing bloom filter.
-func evalBFINFO(args []string, store *dstore.Store) []byte {
-	if len(args) != 1 {
-		return diceerrors.NewErrArity("BFINFO")
-	}
-
-	bloom, err := getOrCreateBloomFilter(args[0], nil, store)
-	if err != nil {
-		return diceerrors.NewErrWithFormattedMessage("%w for 'BFINFO' command", err)
-	}
-
-	return clientio.Encode(bloom.info(args[0]), false)
-}
-
 // getOrCreateBloomFilter attempts to fetch an existing bloom filter from
 // the kv store. If it does not exist, it tries to create one with
 // given `opts` and returns it.
-func getOrCreateBloomFilter(key string, opts *BloomOpts, store *dstore.Store) (*Bloom, error) {
-	obj := store.Get(key)
-
-	// If we don't have a filter yet and `opts` are provided, create one.
-	if obj == nil && opts != nil {
-		obj = store.NewObj(newBloomFilter(opts), -1, object.ObjTypeBitSet, object.ObjEncodingBF)
-		store.Put(key, obj)
-	}
-
-	// If no `opts` are provided for filter creation, return err
-	if obj == nil && opts == nil {
-		return nil, errInvalidKey
-	}
-
-	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeBitSet); err != nil {
+func getOrCreateBloomFilter(key string, store *dstore.Store, opts *BloomOpts) (*Bloom, error) {
+	bf, err := GetBloomFilter(key, store)
+	if err != nil {
 		return nil, err
+	}
+	if bf == nil {
+		bf, err = CreateBloomFilter(key, store, opts)
+	}
+	return bf, err
+}
+
+// get the bloom filter
+func GetBloomFilter(key string, store *dstore.Store) (*Bloom, error) {
+	obj := store.Get(key)
+	if obj == nil {
+		return nil, nil
+	}
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeBitSet); err != nil {
+		return nil, diceerrors.ErrWrongTypeOperation
 	}
 
 	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingBF); err != nil {
+		return nil, diceerrors.ErrWrongTypeOperation
+	}
+	return obj.Value.(*Bloom), nil
+}
+
+func CreateBloomFilter(key string, store *dstore.Store, opts *BloomOpts) (*Bloom, error) {
+	bf, err := GetBloomFilter(key, store)
+	if bf != nil {
+		return nil, diceerrors.ErrGeneral("item exists")
+	}
+	if err != nil {
 		return nil, err
 	}
-
+	if opts == nil {
+		opts = defaultBloomOpts()
+	}
+	obj := store.NewObj(newBloomFilter(opts), -1, object.ObjTypeBitSet, object.ObjEncodingBF)
+	store.Put(key, obj)
 	return obj.Value.(*Bloom), nil
 }
