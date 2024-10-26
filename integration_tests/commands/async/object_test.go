@@ -1,6 +1,7 @@
 package async
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -63,7 +64,7 @@ func TestObjectCommand(t *testing.T) {
 		},
 		{
 			name:       "Object Encoding check for bf",
-			commands:   []string{"BFADD bloomkey value1", "BFADD bloomkey value2", "OBJECT ENCODING bloomkey"},
+			commands:   []string{"BF.ADD bloomkey value1", "BF.ADD bloomkey value2", "OBJECT ENCODING bloomkey"},
 			expected:   []interface{}{int64(1), int64(1), "bf"},
 			assertType: []string{"assert", "assert", "equal"},
 			delay:      []time.Duration{0, 0, 0},
@@ -122,6 +123,8 @@ func TestObjectCommand(t *testing.T) {
 				}
 
 				result := FireCommand(conn, cmd)
+
+				fmt.Println(cmd, result, tc.expected[i])
 				if tc.assertType[i] == "equal" {
 					assert.DeepEqual(t, tc.expected[i], result)
 				} else {

@@ -3,6 +3,7 @@ package eval
 import (
 	"fmt"
 	"math"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/gobwas/glob"
 	"github.com/ohler55/ojg/jp"
 )
 
@@ -473,6 +475,61 @@ func evalZADD(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+// The ZCOUNT command in DiceDB counts the number of members in a sorted set at the specified key
+// whose scores fall within a given range. The command takes three arguments: the key of the sorted set
+// the minimum score, and the maximum score.
+func evalZCOUNT(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 3 {
+		// 1. Check no of arguments
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("ZCOUNT"),
+		}
+	}
+
+	key := args[0]
+	minArg := args[1]
+	maxArg := args[2]
+
+	// 2. Parse the min and max score arguments
+	minValue, errMin := strconv.ParseFloat(minArg, 64)
+	maxValue, errMax := strconv.ParseFloat(maxArg, 64)
+	if errMin != nil || errMax != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrInvalidNumberFormat,
+		}
+	}
+
+	// 3. Retrieve the object from the store
+	obj := store.Get(key)
+	if obj == nil {
+		// If the key does not exist, return 0 (no error)
+		return &EvalResponse{
+			Result: 0,
+			Error:  nil,
+		}
+	}
+
+	// 4. Ensure the object is a valid sorted set
+	var sortedSet *sortedset.Set
+	var err []byte
+	sortedSet, err = sortedset.FromObject(obj)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	count := sortedSet.CountInRange(minValue, maxValue)
+
+	return &EvalResponse{
+		Result: count,
+		Error:  nil,
+	}
+}
+
 // evalZRANGE returns the specified range of elements in the sorted set stored at key.
 // The elements are considered to be ordered from the lowest to the highest score.
 func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
@@ -674,8 +731,9 @@ func evalZRANK(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	if withScore {
+		scoreStr := strconv.FormatFloat(score, 'f', -1, 64)
 		return &EvalResponse{
-			Result: []interface{}{rank, score},
+			Result: []interface{}{rank, scoreStr},
 			Error:  nil,
 		}
 	}
@@ -1640,6 +1698,349 @@ func evalZPOPMIN(args []string, store *dstore.Store) *EvalResponse {
 
 	return &EvalResponse{
 		Result: results,
+		Error:  nil,
+	}
+}
+
+// evalHLEN returns the number of fields contained in the hash stored at key.
+//
+// If key doesn't exist, it returns 0.
+//
+// Usage: HLEN key
+func evalHLEN(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("HLEN"),
+		}
+	}
+
+	key := args[0]
+
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	hashMap := obj.Value.(HashMap)
+	return &EvalResponse{
+		Result: len(hashMap),
+		Error:  nil,
+	}
+}
+
+// evalHSTRLEN returns the length of value associated with field in the hash stored at key.
+//
+// This command returns 0, if the specified field doesn't exist in the key
+//
+// If key doesn't exist, it returns 0.
+//
+// Usage: HSTRLEN key field value
+func evalHSTRLEN(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("HSTRLEN"),
+		}
+	}
+
+	key := args[0]
+	hmKey := args[1]
+	obj := store.Get(key)
+
+	var hashMap HashMap
+
+	if obj != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			}
+		}
+		hashMap = obj.Value.(HashMap)
+	} else {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	val, ok := hashMap.Get(hmKey)
+	// Return 0, if specified field doesn't exist in the HashMap.
+	if ok {
+		return &EvalResponse{
+			Result: len(*val),
+			Error:  nil,
+		}
+	}
+	return &EvalResponse{
+		Result: clientio.IntegerZero,
+		Error:  nil,
+	}
+}
+
+// evalHSCAN return a two element multi-bulk reply, where the first element is a string representing the cursor,
+// and the second element is a multi-bulk with an array of elements.
+//
+// The array of elements contain two elements, a field and a value, for every returned element of the Hash.
+//
+// If key doesn't exist, it returns an array containing 0 and empty array.
+//
+// Usage: HSCAN key cursor [MATCH pattern] [COUNT count]
+func evalHSCAN(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("HSCAN"),
+		}
+	}
+
+	key := args[0]
+	cursor, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrIntegerOutOfRange,
+		}
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: []interface{}{"0", []string{}},
+			Error:  nil,
+		}
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	hashMap := obj.Value.(HashMap)
+	pattern := "*"
+	count := 10
+
+	// Parse optional arguments
+	for i := 2; i < len(args); i += 2 {
+		switch strings.ToUpper(args[i]) {
+		case "MATCH":
+			if i+1 < len(args) {
+				pattern = args[i+1]
+			}
+		case CountConst:
+			if i+1 < len(args) {
+				parsedCount, err := strconv.Atoi(args[i+1])
+				if err != nil || parsedCount < 1 {
+					return &EvalResponse{
+						Result: nil,
+						Error:  diceerrors.ErrIntegerOutOfRange,
+					}
+				}
+				count = parsedCount
+			}
+		}
+	}
+
+	// Note that this implementation has a time complexity of O(N), where N is the number of keys in 'hashMap'.
+	// This is in contrast to Redis, which implements HSCAN in O(1) time complexity by maintaining a cursor.
+	keys := make([]string, 0, len(hashMap))
+	for k := range hashMap {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	matched := 0
+	results := make([]string, 0, count*2)
+	newCursor := 0
+
+	g, err := glob.Compile(pattern)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(fmt.Sprintf("Invalid glob pattern: %s", err)),
+		}
+	}
+
+	// Scan the keys and add them to the results if they match the pattern
+	for i := int(cursor); i < len(keys); i++ {
+		if g.Match(keys[i]) {
+			results = append(results, keys[i], hashMap[keys[i]])
+			matched++
+			if matched >= count {
+				newCursor = i + 1
+				break
+			}
+		}
+	}
+
+	// If we've scanned all keys, reset cursor to 0
+	if newCursor >= len(keys) {
+		newCursor = 0
+	}
+
+	return &EvalResponse{
+		Result: []interface{}{strconv.Itoa(newCursor), results},
+		Error:  nil,
+	}
+}
+
+// evalBF.RESERVE evaluates the BF.RESERVE command responsible for initializing a
+// new bloom filter and allocation it's relevant parameters based on given inputs.
+// If no params are provided, it uses defaults.
+func evalBFRESERVE(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 3 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.RESERVE"))
+	}
+
+	opts, err := newBloomOpts(args[1:])
+	if err != nil {
+		return makeEvalError(err)
+	}
+
+	_, err = CreateBloomFilter(args[0], store, opts)
+	if err != nil {
+		return makeEvalError(err)
+	}
+	return makeEvalResult(clientio.OK)
+}
+
+// evalBFADD evaluates the BF.ADD command responsible for adding an element to a bloom filter. If the filter does not
+// exist, it will create a new one with default parameters.
+func evalBFADD(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 2 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.ADD"))
+	}
+
+	bloom, err := getOrCreateBloomFilter(args[0], store, nil)
+	if err != nil {
+		return makeEvalError(err)
+	}
+
+	result, err := bloom.add(args[1])
+	if err != nil {
+		return makeEvalError(err)
+	}
+
+	return makeEvalResult(result)
+}
+
+// evalBFEXISTS evaluates the BF.EXISTS command responsible for checking existence of an element in a bloom filter.
+func evalBFEXISTS(args []string, store *dstore.Store) *EvalResponse {
+	// todo must work with objects of
+	if len(args) != 2 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.EXISTS"))
+	}
+
+	bloom, err := GetBloomFilter(args[0], store)
+	if err != nil {
+		return makeEvalError(err)
+	}
+	if bloom == nil {
+		return makeEvalResult(clientio.IntegerZero)
+	}
+	result, err := bloom.exists(args[1])
+	if err != nil {
+		return makeEvalError(err)
+	}
+	return makeEvalResult(result)
+}
+
+// evalBFINFO evaluates the BF.INFO command responsible for returning the
+// parameters and metadata of an existing bloom filter.
+func evalBFINFO(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 || len(args) > 2 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.INFO"))
+	}
+
+	bloom, err := GetBloomFilter(args[0], store)
+
+	if err != nil {
+		return makeEvalError(err)
+	}
+
+	if bloom == nil {
+		return makeEvalError(diceerrors.ErrGeneral("not found"))
+	}
+	opt := ""
+	if len(args) == 2 {
+		opt = args[1]
+	}
+	result, err := bloom.info(opt)
+
+	if err != nil {
+		return makeEvalError(err)
+	}
+
+	return makeEvalResult(result)
+}
+
+// This command removes the element with the maximum score from the sorted set.
+// If two elements have the same score then the members are aligned in lexicographically and the lexicographically greater element is removed.
+// There is a second optional element called count which specifies the number of element to be removed.
+// Returns the removed elements from the sorted set.
+func evalZPOPMAX(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 || len(args) > 2 {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongArgumentCount("ZPOPMAX"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	count := 1
+	if len(args) > 1 {
+		ops, err := strconv.Atoi(args[1])
+		if err != nil {
+			return &EvalResponse{
+				Result: clientio.NIL,
+				Error:  diceerrors.ErrGeneral("value is out of range, must be positive"), // This error is thrown when then count argument is not an integer
+			}
+		}
+		if ops <= 0 {
+			return &EvalResponse{
+				Result: []string{}, // Returns empty array when the count is less than or equal to  0
+				Error:  nil,
+			}
+		}
+		count = ops
+	}
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: []string{}, // Returns empty array when the object with given key is not present in the store
+			Error:  nil,
+		}
+	}
+
+	var sortedSet *sortedset.Set
+	sortedSet, err := sortedset.FromObject(obj)
+	if err != nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  diceerrors.ErrWrongTypeOperation, // Returns this error when a key is present in the store but is not of type sortedset.Set
+		}
+	}
+
+	var res []string = sortedSet.PopMax(count)
+
+	return &EvalResponse{
+		Result: res,
 		Error:  nil,
 	}
 }
