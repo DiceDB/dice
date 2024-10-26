@@ -2606,23 +2606,23 @@ func testEvalHVALS(t *testing.T, store *dstore.Store) {
 	tests := []evalTestCase{
 		{
 			name:           "HVALS wrong number of args passed",
-			setup:          func() {},
+			setup:          nil,
 			input:          nil,
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'hvals' command")},
 		},
 		{
 			name:           "HVALS key doesn't exists",
-			setup:          func() {},
+			setup:          nil,
 			input:          []string{"NONEXISTENTHVALSKEY"},
 			migratedOutput: EvalResponse{Result: clientio.EmptyArray, Error: nil},
 		},
 		{
 			name: "HVALS key exists",
 			setup: func() {
-				key := "KEY_MOCK"
-				field := "mock_field_name"
+				key := "MOCK_KEY"
+				field := "mock_field"
 				newMap := make(HashMap)
-				newMap[field] = "mock_field_value"
+				newMap[field] = "mock_value"
 
 				obj := &object.Obj{
 					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
@@ -2632,14 +2632,21 @@ func testEvalHVALS(t *testing.T, store *dstore.Store) {
 
 				store.Put(key, obj)
 			},
-			input:          []string{"KEY_MOCK"},
-			migratedOutput: EvalResponse{Result: []string{"mock_field_value"}, Error: nil},
+			input:          []string{"MOCK_KEY"},
+			migratedOutput: EvalResponse{Result: []string{"mock_value"}, Error: nil},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+
+			if tt.setup != nil {
+				tt.setup()
+			}
+
 			response := evalHVALS(tt.input, store)
+
+			fmt.Printf("Eval Response: %v\n", response)
 
 			// Handle comparison for byte slices
 			if responseBytes, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
@@ -2647,7 +2654,13 @@ func testEvalHVALS(t *testing.T, store *dstore.Store) {
 					testifyAssert.True(t, bytes.Equal(responseBytes, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else {
-				assert.Equal(t, tt.migratedOutput.Result, response.Result)
+				fmt.Printf("G1: %v | %v\n", response.Result, tt.migratedOutput.Result)
+				switch e := tt.migratedOutput.Result.(type){
+				case []interface{}, []string:
+					testifyAssert.ElementsMatch(t, e, response.Result)
+				default:
+					assert.Equal(t, tt.migratedOutput.Result, response.Result)
+				}
 			}
 
 			if tt.migratedOutput.Error != nil {
@@ -3518,7 +3531,7 @@ func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 				evalSET([]string{"string_key", "string_value"}, store)
 			},
 			input:          []string{"string_key"},
-			migratedOutput: EvalResponse{Result: clientio.EmptyArray, Error: nil},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR -WRONGTYPE Operation against a key holding the wrong kind of value")},
 		},
 		{
 			name: "HKEYS key exists and is a hash",
@@ -3537,7 +3550,7 @@ func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:          []string{"KEY_MOCK"},
-			migratedOutput: EvalResponse{Result: []byte("mock_field_name"), Error: nil},
+			migratedOutput: EvalResponse{Result: []string{"mock_field_name"}, Error: nil},
 		},
 	}
 
@@ -3550,19 +3563,26 @@ func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 
 			response := evalHKEYS(tt.input, store)
 
+			// fmt.Printf("EvalReponse: %v\n", response)
+
 			// Handle comparison for byte slices
 			if responseBytes, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-					fmt.Printf("G: %v | %v\n", responseBytes, expectedBytes)
+					// fmt.Printf("G: %v | %v\n", responseBytes, expectedBytes)
 					testifyAssert.True(t, bytes.Equal(responseBytes, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else {
-				fmt.Printf("G1: %v | %v\n", response.Result, tt.migratedOutput.Result)
-				assert.Equal(t, tt.migratedOutput.Result, response.Result)
+				// fmt.Printf("G1: %v | %v\n", response.Result, tt.migratedOutput.Result)
+				switch e := tt.migratedOutput.Result.(type){
+				case []interface{}, []string:
+					testifyAssert.ElementsMatch(t, e, response.Result)
+				default:
+					assert.Equal(t, tt.migratedOutput.Result, response.Result)
+				}
 			}
 
 			if tt.migratedOutput.Error != nil {
-				fmt.Printf("E: %v | %v\n", response.Error, tt.migratedOutput.Error.Error())
+				// fmt.Printf("E: %v | %v\n", response.Error, tt.migratedOutput.Error.Error())
 				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
 				testifyAssert.NoError(t, response.Error)
