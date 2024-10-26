@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/internal/querymanager"
+	"github.com/dicedb/dice/internal/wal"
 	"github.com/dicedb/dice/internal/watchmanager"
 
 	"github.com/dicedb/dice/config"
@@ -47,11 +48,12 @@ type BaseWorker struct {
 	globalErrorChan   chan error
 	responseChan      chan *ops.StoreResponse
 	preprocessingChan chan *ops.StoreResponse
+	wl                *wal.WAL
 }
 
 func NewWorker(wid string, responseChan, preprocessingChan chan *ops.StoreResponse,
 	ioHandler iohandler.IOHandler, parser requestparser.Parser,
-	shardManager *shard.ShardManager, gec chan error) *BaseWorker {
+	shardManager *shard.ShardManager, gec chan error, wl *wal.WAL) *BaseWorker {
 	return &BaseWorker{
 		id:                wid,
 		ioHandler:         ioHandler,
@@ -62,6 +64,7 @@ func NewWorker(wid string, responseChan, preprocessingChan chan *ops.StoreRespon
 		preprocessingChan: preprocessingChan,
 		Session:           auth.NewSession(),
 		adhocReqChan:      make(chan *cmd.DiceDBCmd, config.DiceConfig.Performance.AdhocReqChanBufSize),
+		wl:                wl,
 	}
 }
 
@@ -379,12 +382,16 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 				return err
 			}
 
+			fmt.Println("done command", diceDBCmd.Cmd)
+
 		case MultiShard:
 			err := w.ioHandler.Write(ctx, val.composeResponse(storeOp...))
 			if err != nil {
 				slog.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
 				return err
 			}
+
+			fmt.Println("done command", diceDBCmd.Cmd)
 
 		default:
 			slog.Error("Unknown command type", slog.String("workerID", w.id), slog.String("command", diceDBCmd.Cmd), slog.Any("evalResp", storeOp))

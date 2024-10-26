@@ -47,7 +47,7 @@ func init() {
 	flag.BoolVar(&config.EnableProfiling, "enable-profiling", false, "enable profiling and capture critical metrics and traces in .prof files")
 
 	flag.StringVar(&config.DiceConfig.Logging.LogLevel, "log-level", "info", "log level, values: info, debug")
-	flag.StringVar(&config.LogDir, "log-dir", "/var/log/dicedb", "log directory path")
+	flag.StringVar(&config.LogDir, "log-dir", "/tmp/dicedb", "log directory path")
 
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
 	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the config file")

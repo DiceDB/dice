@@ -29,6 +29,11 @@ func NewWAL(logDir string) (*WAL, error) {
 		stopCh: make(chan struct{}),
 	}
 
+	// Ensure the log directory exists
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create log directory: %v", err)
+	}
+
 	if err := wal.rotateLogFile(); err != nil {
 		return nil, fmt.Errorf("failed to create initial log file: %v", err)
 	}
