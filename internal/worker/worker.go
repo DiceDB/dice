@@ -43,13 +43,11 @@ type BaseWorker struct {
 	ioHandler       	iohandler.IOHandler
 	parser          	requestparser.Parser
 	shardManager    	*shard.ShardManager
-	respChan        	chan *ops.StoreResponse
 	adhocReqChan    	chan *cmd.DiceDBCmd
 	lastActivity      	time.Time
 	lastActivityMux   	sync.RWMutex
 	keepAliveInterval 	int32
 	clientTimeout     	int32
-	connectionTimeout 	int32
 	clientTimeoutTimer	*time.Timer
 	Session         	*auth.Session
 	globalErrorChan 	chan error
@@ -68,13 +66,12 @@ func NewWorker(wid string, responseChan, preprocessingChan chan *ops.StoreRespon
 		parser:          parser,
 		shardManager:    shardManager,
 		globalErrorChan: gec,
-		respChan:        respChan,
+		responseChan:    responseChan,
 		logger:          logger,
 		Session:         auth.NewSession(),
 		adhocReqChan:    make(chan *cmd.DiceDBCmd, config.DiceConfig.Performance.AdhocReqChanBufSize),
 		keepAliveInterval: config.DiceConfig.AsyncServer.KeepAlive,
 		clientTimeout:     config.DiceConfig.AsyncServer.Timeout,
-		connectionTimeout: config.DiceConfig.AsyncServer.Timeout,
 	}
 }
 
@@ -101,9 +98,6 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 
 	keepAliveTicker := time.NewTicker(time.Duration(w.keepAliveInterval)*time.Second)
 	defer keepAliveTicker.Stop()
-
-	connectionTimer := time.NewTimer(time.Duration(w.connectionTimeout)*time.Second)
-	defer connectionTimer.Stop()
 
 	w.clientTimeoutTimer = time.NewTimer(time.Duration(w.clientTimeout) * time.Second)
 	defer w.clientTimeoutTimer.Stop()
@@ -184,15 +178,9 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 			if err := w.sendKeepAlive(ctx); err!=nil{
 				return err
 			}
-		case <-connectionTimer.C:
-			return w.handleConnectionTimeout()
 		case <-w.clientTimeoutTimer.C:
 			return w.handleClientTimeout()
 		}
-		if !connectionTimer.Stop() {
-			<-connectionTimer.C
-		}
-		connectionTimer.Reset(time.Duration(w.connectionTimeout)*time.Second)
 
 		if !w.clientTimeoutTimer.Stop() {
 			<-w.clientTimeoutTimer.C
@@ -495,11 +483,6 @@ func (w *BaseWorker) updateLastActivity() {
 
 func (w *BaseWorker) sendKeepAlive(ctx context.Context) error {
 	return w.ioHandler.Write(ctx, "PING")
-}
-
-func (w *BaseWorker) handleConnectionTimeout() error {
-	w.logger.Info("Connection timeout reached", slog.String("workerID", w.id))
-	return w.Stop()
 }
 
 func (w *BaseWorker) handleClientTimeout() error {
