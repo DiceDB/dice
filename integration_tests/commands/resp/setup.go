@@ -26,8 +26,7 @@ import (
 )
 
 type TestServerOptions struct {
-	Port   int
-	Logger *slog.Logger
+	Port int
 }
 
 //nolint:unused

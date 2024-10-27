@@ -62,28 +62,43 @@ const (
 
 // Watch commands
 const (
-	CmdGetWatch     = "GET.WATCH"
-	CmdZRangeWatch  = "ZRANGE.WATCH"
-	CmdZPopMin      = "ZPOPMIN"
-	CmdJSONClear    = "JSON.CLEAR"
-	CmdJSONStrlen   = "JSON.STRLEN"
-	CmdJSONObjlen   = "JSON.OBJLEN"
-	CmdZAdd         = "ZADD"
-	CmdZRange       = "ZRANGE"
-	CmdZRank        = "ZRANK"
-	CmdPFAdd        = "PFADD"
-	CmdPFCount      = "PFCOUNT"
-	CmdPFMerge      = "PFMERGE"
-	CmdIncr         = "INCR"
-	CmdIncrBy       = "INCRBY"
-	CmdDecr         = "DECR"
-	CmdDecrBy       = "DECRBY"
-	CmdIncrByFloat  = "INCRBYFLOAT"
-	CmdHIncrBy      = "HINCRBY"
-	CmdHIncrByFloat = "HINCRBYFLOAT"
-	CmdHRandField   = "HRANDFIELD"
-	CmdGetRange     = "GETRANGE"
-	CmdAppend       = "APPEND"
+	CmdGetWatch      = "GET.WATCH"
+	CmdZRangeWatch   = "ZRANGE.WATCH"
+	CmdZPopMin       = "ZPOPMIN"
+	CmdJSONClear     = "JSON.CLEAR"
+	CmdJSONStrlen    = "JSON.STRLEN"
+	CmdJSONObjlen    = "JSON.OBJLEN"
+	CmdZAdd          = "ZADD"
+	CmdZRange        = "ZRANGE"
+	CmdZRank         = "ZRANK"
+	CmdZCount        = "ZCOUNT"
+	CmdPFAdd         = "PFADD"
+	CmdPFCount       = "PFCOUNT"
+	CmdPFMerge       = "PFMERGE"
+	CmdIncr          = "INCR"
+	CmdIncrBy        = "INCRBY"
+	CmdDecr          = "DECR"
+	CmdDecrBy        = "DECRBY"
+	CmdIncrByFloat   = "INCRBYFLOAT"
+	CmdHIncrBy       = "HINCRBY"
+	CmdHIncrByFloat  = "HINCRBYFLOAT"
+	CmdHRandField    = "HRANDFIELD"
+	CmdGetRange      = "GETRANGE"
+	CmdAppend        = "APPEND"
+	CmdZPopMax       = "ZPOPMAX"
+	CmdHLen          = "HLEN"
+	CmdHStrLen       = "HSTRLEN"
+	CmdHScan         = "HSCAN"
+	CmdBFAdd         = "BF.ADD"
+	CmdBFReserve     = "BF.RESERVE"
+	CmdBFInfo        = "BF.INFO"
+	CmdBFExists      = "BF.EXISTS"
+	CmdCMSQuery      = "CMS.QUERY"
+	CmdCMSInfo       = "CMS.INFO"
+	CmdCMSInitByDim  = "CMS.INITBYDIM"
+	CmdCMSInitByProb = "CMS.INITBYPROB"
+	CmdCMSMerge      = "CMS.MERGE"
+	CmdCMSIncrBy     = "CMS.INCRBY"
 )
 
 type CmdMeta struct {
@@ -152,6 +167,15 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdPFMerge: {
 		CmdType: SingleShard,
 	},
+	CmdHLen: {
+		CmdType: SingleShard,
+	},
+	CmdHStrLen: {
+		CmdType: SingleShard,
+	},
+	CmdHScan: {
+		CmdType: SingleShard,
+	},
 	CmdHIncrBy: {
 		CmdType: SingleShard,
 	},
@@ -190,6 +214,24 @@ var CommandsMeta = map[string]CmdMeta{
 		decomposeCommand: decomposeMGet,
 		composeResponse:  composeMGet,
 	},
+	CmdCMSQuery: {
+		CmdType: SingleShard,
+	},
+	CmdCMSInfo: {
+		CmdType: SingleShard,
+	},
+	CmdCMSIncrBy: {
+		CmdType: SingleShard,
+	},
+	CmdCMSInitByDim: {
+		CmdType: SingleShard,
+	},
+	CmdCMSInitByProb: {
+		CmdType: SingleShard,
+	},
+	CmdCMSMerge: {
+		CmdType: SingleShard,
+	},
 
 	// Custom commands.
 	CmdAbort: {
@@ -209,6 +251,9 @@ var CommandsMeta = map[string]CmdMeta{
 
 	// Sorted set commands
 	CmdZAdd: {
+		CmdType: SingleShard,
+	},
+	CmdZCount: {
 		CmdType: SingleShard,
 	},
 	CmdZRank: {
@@ -236,6 +281,23 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdZPopMin: {
+		CmdType: SingleShard,
+	},
+	CmdZPopMax: {
+		CmdType: SingleShard,
+	},
+
+	// Bloom Filter
+	CmdBFAdd: {
+		CmdType: SingleShard,
+	},
+	CmdBFInfo: {
+		CmdType: SingleShard,
+	},
+	CmdBFExists: {
+		CmdType: SingleShard,
+	},
+	CmdBFReserve: {
 		CmdType: SingleShard,
 	},
 }

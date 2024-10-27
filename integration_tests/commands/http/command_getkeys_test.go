@@ -53,13 +53,6 @@ func TestCommandGetKeys(t *testing.T) {
 			expected: []interface{}{[]interface{}{"key"}},
 		},
 		{
-			name: "BFINIT command",
-			commands: []HTTPCommand{
-				{Command: "COMMAND/GETKEYS", Body: map[string]interface{}{"key": "BFINIT", "field": "bloom", "values": []interface{}{"some", "parameters"}}},
-			},
-			expected: []interface{}{[]interface{}{"bloom"}},
-		},
-		{
 			name: "PING command",
 			commands: []HTTPCommand{
 				{Command: "COMMAND/GETKEYS", Body: map[string]interface{}{"key": "PING"}},
