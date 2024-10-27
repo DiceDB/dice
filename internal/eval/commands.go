@@ -1149,6 +1149,16 @@ var (
 		IsMigrated: true,
 		NewEval:    evalZRANK,
 	}
+	zremCmdMeta = DiceCmdMeta{
+		Name: "ZREM",
+		Info: `ZREM key member [member ...]
+		Removes the specified members from the sorted set stored at key. Non existing members are ignored.
+		An error is returned when key exists and does not hold a sorted set.`,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalZREM,
+	}
 	bitfieldCmdMeta = DiceCmdMeta{
 		Name: "BITFIELD",
 		Info: `The command treats a string as an array of bits as well as bytearray data structure,
@@ -1400,6 +1410,7 @@ func init() {
 	DiceCmds["ZPOPMAX"] = zpopmaxCmdMeta
 	DiceCmds["ZPOPMIN"] = zpopminCmdMeta
 	DiceCmds["ZRANK"] = zrankCmdMeta
+	DiceCmds["ZREM"] = zremCmdMeta
 	DiceCmds["JSON.STRAPPEND"] = jsonstrappendCmdMeta
 	DiceCmds["CMS.INITBYDIM"] = cmsInitByDimCmdMeta
 	DiceCmds["CMS.INITBYPROB"] = cmsInitByProbCmdMeta
