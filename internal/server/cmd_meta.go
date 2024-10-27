@@ -182,6 +182,36 @@ var (
 		CmdType: SingleShard,
 	}
 
+	cmsInitByDimCmdMeta = CmdsMeta{
+		Cmd:     "CMS.INITBYDIM",
+		CmdType: SingleShard,
+	}
+
+	cmsInitByProbCmdMeta = CmdsMeta{
+		Cmd:     "CMS.INITBYPROB",
+		CmdType: SingleShard,
+	}
+
+	cmsInfoCmdMeta = CmdsMeta{
+		Cmd:     "CMS.INFO",
+		CmdType: SingleShard,
+	}
+
+	cmsIncrByCmdMeta = CmdsMeta{
+		Cmd:     "CMS.INCRBY",
+		CmdType: SingleShard,
+	}
+
+	cmsQueryCmdMeta = CmdsMeta{
+		Cmd:     "CMS.QUERY",
+		CmdType: SingleShard,
+	}
+
+	cmsMergeCmdMeta = CmdsMeta{
+		Cmd:     "CMS.MERGE",
+		CmdType: SingleShard,
+	}
+
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
 
@@ -241,5 +271,11 @@ func init() {
 	WorkerCmdsMeta["BF.RESERVE"] = bfreserveCmdMeta
 	WorkerCmdsMeta["BF.EXISTS"] = bfexistsCmdMeta
 	WorkerCmdsMeta["BF.INFO"] = bfinfoCmdMeta
+	WorkerCmdsMeta["CMS.INITBYDIM"] = cmsInitByDimCmdMeta
+	WorkerCmdsMeta["CMS.INITBYPROB"] = cmsInitByProbCmdMeta
+	WorkerCmdsMeta["CMS.INFO"] = cmsInfoCmdMeta
+	WorkerCmdsMeta["CMS.INCRBY"] = cmsIncrByCmdMeta
+	WorkerCmdsMeta["CMS.QUERY"] = cmsQueryCmdMeta
+	WorkerCmdsMeta["CMS.MERGE"] = cmsMergeCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }
