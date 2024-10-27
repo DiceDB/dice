@@ -54,8 +54,10 @@ var (
 
 	EnableProfiling = false
 
-	EnableWatch    = true
-	LogDir         = ""
+	EnableWatch = true
+	LogDir      = ""
+
+	EnableWAL      = true
 	RestoreFromWAL = false
 	WALEngine      = "sqlite"
 )

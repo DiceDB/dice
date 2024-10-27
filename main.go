@@ -49,7 +49,9 @@ func init() {
 
 	flag.StringVar(&config.DiceConfig.Logging.LogLevel, "log-level", "info", "log level, values: info, debug")
 	flag.StringVar(&config.LogDir, "log-dir", "/tmp/dicedb", "log directory path")
-	flag.BoolVar(&config.RestoreFromWAL, "wal-restore", true, "restore the database from the WAL files")
+
+	flag.BoolVar(&config.EnableWAL, "enable-wal", false, "enable write-ahead logging")
+	flag.BoolVar(&config.RestoreFromWAL, "wal-restore", false, "restore the database from the WAL files")
 	flag.StringVar(&config.WALEngine, "wal-engine", "sqlite", "wal engine to use, values: sqlite, aof")
 
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
@@ -103,34 +105,41 @@ func main() {
 		wl             wal.AbstractWAL
 	)
 
-	if config.WALEngine == "sqlite" {
-		_wl, err := wal.NewSQLiteWAL(config.LogDir)
-		if err != nil {
-			slog.Warn("could not create WAL with", slog.String("wal-engine", config.WALEngine), slog.Any("error", err))
+	slog.Info("running with", slog.Bool("enable-wal", config.EnableWAL))
+	if config.EnableWAL {
+		if config.WALEngine == "sqlite" {
+			_wl, err := wal.NewSQLiteWAL(config.LogDir)
+			if err != nil {
+				slog.Warn("could not create WAL with", slog.String("wal-engine", config.WALEngine), slog.Any("error", err))
+				sigs <- syscall.SIGKILL
+				return
+			}
+			wl = _wl
+		} else {
+			slog.Error("unsupported WAL engine", slog.String("engine", config.WALEngine))
 			sigs <- syscall.SIGKILL
 			return
 		}
-		wl = _wl
-	} else {
-		slog.Error("unsupported WAL engine", slog.String("engine", config.WALEngine))
-		sigs <- syscall.SIGKILL
-		return
-	}
 
-	if err := wl.Init(time.Now()); err != nil {
-		slog.Error("could not initialize WAL", slog.Any("error", err))
-	} else {
-		go wal.InitBG(wl)
+		if err := wl.Init(time.Now()); err != nil {
+			slog.Error("could not initialize WAL", slog.Any("error", err))
+		} else {
+			go wal.InitBG(wl)
+		}
+
+		slog.Debug("WAL initialization complete")
+
+		if config.RestoreFromWAL {
+			slog.Info("restoring database from WAL")
+			wal.ReplayWAL(wl)
+			slog.Info("database restored from WAL")
+		}
 	}
 
 	if config.EnableWatch {
 		bufSize := config.DiceConfig.Performance.WatchChanBufSize
 		queryWatchChan = make(chan dstore.QueryWatchEvent, bufSize)
 		cmdWatchChan = make(chan dstore.CmdWatchEvent, bufSize)
-	}
-
-	if config.RestoreFromWAL {
-		wal.ReplayWAL(wl)
 	}
 
 	// Get the number of available CPU cores on the machine using runtime.NumCPU().
@@ -228,7 +237,9 @@ func main() {
 
 	close(sigs)
 
-	wal.ShutdownBG()
+	if config.EnableWAL {
+		wal.ShutdownBG()
+	}
 
 	cancel()
 
