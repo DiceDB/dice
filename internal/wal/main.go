@@ -53,7 +53,7 @@ func (w *WAL) rotateLogFile() error {
 
 	// Create new file with minute-level timestamp suffix
 	timestamp := time.Now().Format("20060102_1504")
-	filePath := filepath.Join(w.logDir, fmt.Sprintf("redis_wal_%s.log", timestamp))
+	filePath := filepath.Join(w.logDir, fmt.Sprintf("wal_%s.log", timestamp))
 	newFile, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to open new WAL file: %v", err)
