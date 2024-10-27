@@ -1,12 +1,12 @@
 package eval
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
+	"github.com/dicedb/dice/internal/object"
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
@@ -44,6 +44,7 @@ type CuckooFilter struct {
 	opts            *CuckooOpts
 	buckets         []bucket
 	bucketIndexMask uint
+	count           uint
 }
 
 // Bucket operations implement starts
@@ -56,44 +57,8 @@ const (
 	fingerPrintSizeBits = 16
 	maxFingerPrint      = (1 << fingerPrintSizeBits) - 1
 	nullFingerPrint     = 0
+	maxDisplacements    = 500
 )
-
-// func (b *bucket) contains(fp fingerPrint) bool {
-// 	for _, val := range *b {
-// 		if val == fp {
-// 			return true
-// 		}
-// 	}
-// 	return false
-// }
-
-// func (b *bucket) insert(fp fingerPrint) bool {
-// 	for i, val := range *b {
-// 		if val == nullFingerPrint {
-// 			(*b)[i] = fp
-// 			return true
-// 		}
-// 	}
-// 	return false
-// }
-
-// func (b *bucket) delete(fp fingerPrint) bool {
-// 	for i, val := range *b {
-// 		if val == fp {
-// 			(*b)[i] = nullFingerPrint
-// 			return true
-// 		}
-// 	}
-// 	return false
-// }
-
-// func (b *bucket) reset() {
-// 	for i := range *b {
-// 		(*b)[i] = nullFingerPrint
-// 	}
-// }
-
-// Bucket operations implement ends
 
 func newCuckooOpts(args []string, useDefaults bool) (*CuckooOpts, error) {
 
@@ -173,7 +138,7 @@ func newCuckooOpts(args []string, useDefaults bool) (*CuckooOpts, error) {
 }
 
 // @TODO also return , error
-func newCuckooFilter(opts *CuckooOpts) *CuckooFilter {
+func newCuckooFilter(opts *CuckooOpts) (*CuckooFilter, error) {
 	numOfBuckets := uint64(opts.capacity) / uint64(opts.bucketSize)
 	numOfBuckets = getNextPow2(numOfBuckets)
 
@@ -187,13 +152,19 @@ func newCuckooFilter(opts *CuckooOpts) *CuckooFilter {
 
 	buckets := make([]bucket, numOfBuckets)
 
+	for i := range buckets {
+		buckets[i] = make(bucket, opts.bucketSize)
+	}
+
 	return &CuckooFilter{
 		buckets:         buckets,
 		bucketIndexMask: uint(len(buckets) - 1),
 		opts:            opts,
-	}
+	}, nil
 
 }
+
+// command evaluators
 
 func evalCFRESERVE(args []string, store *dstore.Store) []byte {
 	if len(args) < 2 {
@@ -211,10 +182,54 @@ func evalCFRESERVE(args []string, store *dstore.Store) []byte {
 	if err != nil {
 		return diceerrors.NewErrWithFormattedMessage("%w for 'CF.RESERVE' command", err)
 	}
-	// call newCuckooFilter(opts) here
-	cf := newCuckooFilter(opts)
 
-	fmt.Println(cf)
+	cf, _ := newCuckooFilter(opts)
+	obj := store.NewObj(cf, -1, object.ObjTypeBitSet, object.ObjEncodingCF)
 
-	return clientio.Encode(args[0]+" just a simple echo testing.....", false)
+	store.Put(args[0], obj)
+	return clientio.RespOK
+}
+
+// @TODO init filter if does not exist here
+func evalCFADD(args []string, store *dstore.Store) []byte {
+
+	if len(args) != 2 {
+		return diceerrors.NewErrArity("CF.ADD")
+	}
+
+	key := args[0]
+	item := []byte(args[1])
+
+	cfInstance := store.Get(key)
+
+	cf, ok := cfInstance.Value.(*CuckooFilter)
+
+	if !ok {
+		return clientio.RespEmptyArray
+	}
+
+	if added := cf.add(item); !added {
+		return clientio.RespEmptyArray
+	}
+
+	return clientio.RespOne
+}
+
+func evalCFEXISTS(args []string, store *dstore.Store) []byte {
+	if len(args) != 2 {
+		return diceerrors.NewErrArity("CF.EXISTS")
+	}
+	key := args[0]
+	item := []byte(args[1])
+	cfInstance := store.Get(key)
+	cf, ok := cfInstance.Value.(*CuckooFilter)
+	if !ok {
+		return clientio.RespEmptyArray
+	}
+
+	if exists := cf.lookup(item); !exists {
+		return clientio.RespZero
+	}
+
+	return clientio.RespOne
 }

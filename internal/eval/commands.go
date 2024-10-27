@@ -1413,6 +1413,44 @@ var (
 		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+
+	cfAddCmdMeta = DiceCmdMeta{
+		Name: "CF.ADD",
+		Info: `CF.ADD key item
+		The CF.ADD command adds an item to an existing Cuckoo Filter.
+
+		Parameters:
+		- key: The name of the Cuckoo Filter.
+		- item: The item to add to the filter.
+
+		Returns:
+		- 1: If the item was successfully added to the filter.
+		- 0: If the item already exists in the filter.
+		- Error: If the filter does not exist or if invalid parameters are provided.
+			`,
+		Eval:     evalCFADD,
+		Arity:    3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+
+	cfExistsCmdMeta = DiceCmdMeta{
+		Name: "CF.EXISTS",
+		Info: `CF.EXISTS key item
+		The CF.EXISTS command checks if an item exists in an existing Cuckoo Filter.
+
+		Parameters:
+		- key: The name of the Cuckoo Filter.
+		- item: The item to check for existence in the filter.
+
+		Returns:
+		- 1: If the item may exist in the filter (probabilistically).
+		- 0: If the item does not exist in the filter.
+		- Error: If the filter does not exist or if invalid parameters are provided.
+			`,
+		Eval:     evalCFEXISTS,
+		Arity:    3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -1559,6 +1597,8 @@ func init() {
 	DiceCmds["LINSERT"] = linsertCmdMeta
 	DiceCmds["LRANGE"] = lrangeCmdMeta
 	DiceCmds["CF.RESERVE"] = cfreserveCmdMeta
+	DiceCmds["CF.ADD"] = cfAddCmdMeta
+	DiceCmds["CF.EXISTS"] = cfExistsCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

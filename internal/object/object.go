@@ -102,6 +102,9 @@ var ObjTypeHashMap uint8 = 7 << 4
 var ObjTypeSortedSet uint8 = 8 << 4
 var ObjEncodingBTree uint8 = 8
 
+var ObjTypeCuckooFilter uint8 = 9 << 4 // 144
+var ObjEncodingCF uint8 = 5
+
 var ObjTypeCountMinSketch uint8 = 9 << 4
 var ObjEncodingMatrix uint8 = 9
 
