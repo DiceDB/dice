@@ -62,12 +62,28 @@ var (
 		Cmd:     "SETEX",
 		CmdType: SingleShard,
 	}
+	jsonArrAppendCmdMeta = CmdsMeta{
+		Cmd:     "JSON.ARRAPPEND",
+		CmdType: SingleShard,
+	}
+	jsonArrLenCmdMeta = CmdsMeta{
+		Cmd:     "JSON.ARRLEN",
+		CmdType: SingleShard,
+	}
+	jsonArrPopCmdMeta = CmdsMeta{
+		Cmd:     "JSON.ARRPOP",
+		CmdType: SingleShard,
+	}
 	getrangeCmdMeta = CmdsMeta{
 		Cmd:     "GETRANGE",
 		CmdType: SingleShard,
 	}
 	zaddCmdMeta = CmdsMeta{
 		Cmd:     "ZADD",
+		CmdType: SingleShard,
+	}
+	zcountCmdMeta = CmdsMeta{
+		Cmd:     "ZCOUNT",
 		CmdType: SingleShard,
 	}
 	zrangeCmdMeta = CmdsMeta{
@@ -113,7 +129,18 @@ var (
 		Cmd:     "JSON.OBJLEN",
 		CmdType: SingleShard,
 	}
-
+	hlenCmdMeta = CmdsMeta{
+		Cmd:     "HLEN",
+		CmdType: SingleShard,
+	}
+	hstrlenCmdMeta = CmdsMeta{
+		Cmd:     "HSTRLEN",
+		CmdType: SingleShard,
+	}
+	hscanCmdMeta = CmdsMeta{
+		Cmd:     "HSCAN",
+		CmdType: SingleShard,
+	}
 	incrCmdMeta = CmdsMeta{
 		Cmd:     "INCR",
 		CmdType: SingleShard,
@@ -146,6 +173,10 @@ var (
 		Cmd:     "HRANDFIELD",
 		CmdType: SingleShard,
 	}
+	zpopmaxCmdMeta = CmdsMeta{
+		Cmd:     "ZPOPMAX",
+		CmdType: SingleShard,
+	}
 	bfaddCmdMeta = CmdsMeta{
 		Cmd:     "BF.ADD",
 		CmdType: SingleShard,
@@ -160,6 +191,36 @@ var (
 	}
 	bfinfoCmdMeta = CmdsMeta{
 		Cmd:     "BF.INFO",
+		CmdType: SingleShard,
+	}
+
+	cmsInitByDimCmdMeta = CmdsMeta{
+		Cmd:     "CMS.INITBYDIM",
+		CmdType: SingleShard,
+	}
+
+	cmsInitByProbCmdMeta = CmdsMeta{
+		Cmd:     "CMS.INITBYPROB",
+		CmdType: SingleShard,
+	}
+
+	cmsInfoCmdMeta = CmdsMeta{
+		Cmd:     "CMS.INFO",
+		CmdType: SingleShard,
+	}
+
+	cmsIncrByCmdMeta = CmdsMeta{
+		Cmd:     "CMS.INCRBY",
+		CmdType: SingleShard,
+	}
+
+	cmsQueryCmdMeta = CmdsMeta{
+		Cmd:     "CMS.QUERY",
+		CmdType: SingleShard,
+	}
+
+	cmsMergeCmdMeta = CmdsMeta{
+		Cmd:     "CMS.MERGE",
 		CmdType: SingleShard,
 	}
 
@@ -179,18 +240,25 @@ func init() {
 	WorkerCmdsMeta["GET"] = getCmdMeta
 	WorkerCmdsMeta["GETSET"] = getsetCmdMeta
 	WorkerCmdsMeta["SETEX"] = setexCmdMeta
+	WorkerCmdsMeta["JSON.ARRAPPEND"] = jsonArrAppendCmdMeta
+	WorkerCmdsMeta["JSON.ARRLEN"] = jsonArrLenCmdMeta
+	WorkerCmdsMeta["JSON.ARRPOP"] = jsonArrPopCmdMeta
 	WorkerCmdsMeta["GETRANGE"] = getrangeCmdMeta
 	WorkerCmdsMeta["APPEND"] = appendCmdMeta
 	WorkerCmdsMeta["JSON.CLEAR"] = jsonclearCmdMeta
 	WorkerCmdsMeta["JSON.STRLEN"] = jsonstrlenCmdMeta
 	WorkerCmdsMeta["JSON.OBJLEN"] = jsonobjlenCmdMeta
 	WorkerCmdsMeta["ZADD"] = zaddCmdMeta
+	WorkerCmdsMeta["ZCOUNT"] = zcountCmdMeta
 	WorkerCmdsMeta["ZRANGE"] = zrangeCmdMeta
 	WorkerCmdsMeta["ZRANK"] = zrankCmdMeta
 	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
 	WorkerCmdsMeta["ZPOPMIN"] = zpopminCmdMeta
 	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
 	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
+	WorkerCmdsMeta["HLEN"] = hlenCmdMeta
+	WorkerCmdsMeta["HSTRLEN"] = hstrlenCmdMeta
+	WorkerCmdsMeta["HSCAN"] = hscanCmdMeta
 	WorkerCmdsMeta["INCR"] = incrCmdMeta
 	WorkerCmdsMeta["INCRBY"] = incrByCmdMeta
 	WorkerCmdsMeta["INCR"] = incrCmdMeta
@@ -213,9 +281,16 @@ func init() {
 	WorkerCmdsMeta["HINCRBY"] = hincrbyCmdMeta
 	WorkerCmdsMeta["HINCRBYFLOAT"] = hincrbyfloatCmdMeta
 	WorkerCmdsMeta["HRANDFIELD"] = hrandfieldCmdMeta
+	WorkerCmdsMeta["ZPOPMAX"] = zpopmaxCmdMeta
 	WorkerCmdsMeta["BF.ADD"] = bfaddCmdMeta
 	WorkerCmdsMeta["BF.RESERVE"] = bfreserveCmdMeta
 	WorkerCmdsMeta["BF.EXISTS"] = bfexistsCmdMeta
 	WorkerCmdsMeta["BF.INFO"] = bfinfoCmdMeta
+	WorkerCmdsMeta["CMS.INITBYDIM"] = cmsInitByDimCmdMeta
+	WorkerCmdsMeta["CMS.INITBYPROB"] = cmsInitByProbCmdMeta
+	WorkerCmdsMeta["CMS.INFO"] = cmsInfoCmdMeta
+	WorkerCmdsMeta["CMS.INCRBY"] = cmsIncrByCmdMeta
+	WorkerCmdsMeta["CMS.QUERY"] = cmsQueryCmdMeta
+	WorkerCmdsMeta["CMS.MERGE"] = cmsMergeCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }
