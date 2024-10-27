@@ -1,6 +1,7 @@
 package wal
 
 import (
+	"fmt"
 	"log/slog"
 	sync "sync"
 	"time"
@@ -10,9 +11,9 @@ import (
 
 type AbstractWAL interface {
 	LogCommand(c *cmd.DiceDBCmd)
-	Iterate() error
 	Close() error
 	Init(t time.Time) error
+	ForEachCommand(f func(c cmd.DiceDBCmd) error) error
 }
 
 var (
@@ -57,4 +58,15 @@ func InitBG(wl AbstractWAL) {
 func ShutdownBG() {
 	close(stopCh)
 	ticker.Stop()
+}
+
+func ReplayWAL(wl AbstractWAL) {
+	err := wl.ForEachCommand(func(c cmd.DiceDBCmd) error {
+		fmt.Println("replaying", c.Cmd, c.Args)
+		return nil
+	})
+
+	if err != nil {
+		slog.Warn("error replaying WAL", slog.Any("error", err))
+	}
 }

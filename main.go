@@ -129,6 +129,10 @@ func main() {
 		cmdWatchChan = make(chan dstore.CmdWatchEvent, bufSize)
 	}
 
+	if config.RestoreFromWAL {
+		wal.ReplayWAL(wl)
+	}
+
 	// Get the number of available CPU cores on the machine using runtime.NumCPU().
 	// This determines the total number of logical processors that can be utilized
 	// for parallel execution. Setting the maximum number of CPUs to the available

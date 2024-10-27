@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 	sync "sync"
 	"time"
 
@@ -73,5 +75,77 @@ func (w *WALSQLite) Close() error {
 }
 
 func (w *WALSQLite) Iterate() error {
+	return nil
+}
+
+func (w *WALSQLite) ForEachCommand(f func(c cmd.DiceDBCmd) error) error {
+	files, err := os.ReadDir(w.logDir)
+	if err != nil {
+		return fmt.Errorf("failed to read log directory: %v", err)
+	}
+
+	var walFiles []os.DirEntry
+
+	for _, file := range files {
+		if !file.IsDir() && filepath.Ext(file.Name()) == ".sqlite3" {
+			walFiles = append(walFiles, file)
+		}
+	}
+
+	if len(walFiles) == 0 {
+		return fmt.Errorf("no valid WAL files found in log directory")
+	}
+
+	// Sort files by timestamp in ascending order
+	sort.Slice(walFiles, func(i, j int) bool {
+		timestampStrI := walFiles[i].Name()[4:17]
+		timestampStrJ := walFiles[j].Name()[4:17]
+		timestampI, errI := time.Parse("20060102_1504", timestampStrI)
+		timestampJ, errJ := time.Parse("20060102_1504", timestampStrJ)
+		if errI != nil || errJ != nil {
+			return false
+		}
+		return timestampI.Before(timestampJ)
+	})
+
+	for _, file := range walFiles {
+		filePath := filepath.Join(w.logDir, file.Name())
+
+		slog.Debug("loading WAL", slog.Any("file", filePath))
+
+		db, err := sql.Open("sqlite3", filePath)
+		if err != nil {
+			return fmt.Errorf("failed to open WAL file %s: %v", file.Name(), err)
+		}
+
+		rows, err := db.Query("SELECT command FROM wal")
+		if err != nil {
+			return fmt.Errorf("failed to query WAL file %s: %v", file.Name(), err)
+		}
+
+		for rows.Next() {
+			var command string
+			if err := rows.Scan(&command); err != nil {
+				return fmt.Errorf("failed to scan WAL file %s: %v", file.Name(), err)
+			}
+
+			tokens := strings.Split(command, " ")
+			if err := f(cmd.DiceDBCmd{
+				Cmd:  tokens[0],
+				Args: tokens[1:],
+			}); err != nil {
+				return err
+			}
+		}
+
+		if err := rows.Err(); err != nil {
+			return fmt.Errorf("failed to iterate WAL file %s: %v", file.Name(), err)
+		}
+
+		if err := db.Close(); err != nil {
+			return fmt.Errorf("failed to close WAL file %s: %v", file.Name(), err)
+		}
+	}
+
 	return nil
 }
