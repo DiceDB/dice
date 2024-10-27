@@ -611,6 +611,7 @@ func evalZREM(args []string, store *dstore.Store) *EvalResponse {
 			Error:  diceerrors.ErrWrongArgumentCount("ZREM"),
 		}
 	}
+
 	key := args[0]
 	obj := store.Get(key)
 
@@ -635,11 +636,11 @@ func evalZREM(args []string, store *dstore.Store) *EvalResponse {
 			countRem += 1
 		}
 	}
+
 	return &EvalResponse{
 		Result: int64(countRem),
 		Error:  nil,
 	}
-
 }
 
 // evalAPPEND takes two arguments: the key and the value to append to the key's current value.
