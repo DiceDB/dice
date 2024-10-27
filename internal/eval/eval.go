@@ -30,7 +30,6 @@ import (
 	"github.com/dicedb/dice/internal/querymanager"
 	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
-	"github.com/gobwas/glob"
 	"github.com/ohler55/ojg/jp"
 )
 
@@ -2309,6 +2308,8 @@ func evalCommand(args []string, store *dstore.Store) []byte {
 		return evalCommandHelp(args[1:])
 	case Info:
 		return evalCommandInfo(args[1:])
+	case Docs:
+		return evalCommandDocs(args[1:])
 	default:
 		return diceerrors.NewErrWithFormattedMessage("unknown subcommand '%s'. Try COMMAND HELP.", subcommand)
 	}
@@ -2329,6 +2330,8 @@ func evalCommandHelp(args []string) []byte {
 	listMessage := "     Return a list of all commands in this DiceDB server."
 	infoTitle := "INFO [<command-name> ...]"
 	infoMessage := "     Return details about the specified DiceDB commands. If no command names are given, documentation details for all commands are returned."
+	docsTitle := "DOCS [<command-name> ...]"
+	docsMessage := "\tReturn documentation details about multiple diceDB commands.\n\tIf no command names are given, documentation details for all\n\tcommands are returned."
 	getKeysTitle := "GETKEYS <full-command>"
 	getKeysMessage := "     Return the keys from a full DiceDB command."
 	helpTitle := "HELP"
@@ -2343,6 +2346,8 @@ func evalCommandHelp(args []string) []byte {
 		listMessage,
 		infoTitle,
 		infoMessage,
+		docsTitle,
+		docsMessage,
 		getKeysTitle,
 		getKeysMessage,
 		helpTitle,
@@ -2429,6 +2434,11 @@ func evalCommandGetKeys(args []string) []byte {
 	return clientio.Encode(keys, false)
 }
 
+func evalCommandDefaultDocs() []byte {
+	cmds := convertDiceCmdsMapToDocs()
+	return clientio.Encode(cmds, false)
+}
+
 func evalCommandInfo(args []string) []byte {
 	if len(args) == 0 {
 		return evalCommandDefault()
@@ -2446,6 +2456,27 @@ func evalCommandInfo(args []string) []byte {
 			result = append(result, cmdMeta)
 		} else {
 			result = append(result, clientio.RespNIL)
+		}
+	}
+
+	return clientio.Encode(result, false)
+}
+
+func evalCommandDocs(args []string) []byte {
+	if len(args) == 0 {
+		return evalCommandDefaultDocs()
+	}
+
+	cmdMetaMap := make(map[string]interface{})
+	for _, cmdMeta := range DiceCmds {
+		cmdMetaMap[cmdMeta.Name] = convertCmdMetaToDocs(&cmdMeta)
+	}
+
+	var result []interface{}
+	for _, arg := range args {
+		arg = strings.ToUpper(arg)
+		if cmdMeta, found := cmdMetaMap[arg]; found {
+			result = append(result, cmdMeta)
 		}
 	}
 
@@ -2964,85 +2995,6 @@ func evalHDEL(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(count, false)
 }
 
-func evalHSCAN(args []string, store *dstore.Store) []byte {
-	if len(args) < 2 {
-		return diceerrors.NewErrArity("HSCAN")
-	}
-
-	key := args[0]
-	cursor, err := strconv.ParseInt(args[1], 10, 64)
-	if err != nil {
-		return diceerrors.NewErrWithMessage(diceerrors.InvalidIntErr)
-	}
-
-	obj := store.Get(key)
-	if obj == nil {
-		return clientio.Encode([]interface{}{"0", []string{}}, false)
-	}
-
-	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
-	}
-
-	hashMap := obj.Value.(HashMap)
-	pattern := "*"
-	count := 10
-
-	// Parse optional arguments
-	for i := 2; i < len(args); i += 2 {
-		switch strings.ToUpper(args[i]) {
-		case "MATCH":
-			if i+1 < len(args) {
-				pattern = args[i+1]
-			}
-		case CountConst:
-			if i+1 < len(args) {
-				parsedCount, err := strconv.Atoi(args[i+1])
-				if err != nil || parsedCount < 1 {
-					return diceerrors.NewErrWithMessage("value is not an integer or out of range")
-				}
-				count = parsedCount
-			}
-		}
-	}
-
-	// Note that this implementation has a time complexity of O(N), where N is the number of keys in 'hashMap'.
-	// This is in contrast to Redis, which implements HSCAN in O(1) time complexity by maintaining a cursor.
-	keys := make([]string, 0, len(hashMap))
-	for k := range hashMap {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	matched := 0
-	results := make([]string, 0, count*2)
-	newCursor := 0
-
-	g, err := glob.Compile(pattern)
-	if err != nil {
-		return diceerrors.NewErrWithMessage(fmt.Sprintf("Invalid glob pattern: %s", err))
-	}
-
-	// Scan the keys and add them to the results if they match the pattern
-	for i := int(cursor); i < len(keys); i++ {
-		if g.Match(keys[i]) {
-			results = append(results, keys[i], hashMap[keys[i]])
-			matched++
-			if matched >= count {
-				newCursor = i + 1
-				break
-			}
-		}
-	}
-
-	// If we've scanned all keys, reset cursor to 0
-	if newCursor >= len(keys) {
-		newCursor = 0
-	}
-
-	return clientio.Encode([]interface{}{strconv.Itoa(newCursor), results}, false)
-}
-
 // evalHKEYS returns all the values in the hash stored at key.
 func evalHVALS(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
@@ -3068,41 +3020,6 @@ func evalHVALS(args []string, store *dstore.Store) []byte {
 	}
 
 	return clientio.Encode(results, false)
-}
-
-// evalHSTRLEN returns the length of value associated with field in the hash stored at key.
-//
-// This command returns 0, if the specified field doesn't exist in the key
-//
-// If key doesn't exist, it returns 0.
-//
-// Usage: HSTRLEN key field value
-func evalHSTRLEN(args []string, store *dstore.Store) []byte {
-	if len(args) != 2 {
-		return diceerrors.NewErrArity("HSTRLEN")
-	}
-
-	key := args[0]
-	hmKey := args[1]
-	obj := store.Get(key)
-
-	var hashMap HashMap
-
-	if obj != nil {
-		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
-		}
-		hashMap = obj.Value.(HashMap)
-	} else {
-		return clientio.Encode(0, false)
-	}
-
-	val, ok := hashMap.Get(hmKey)
-	// Return 0, if specified field doesn't exist in the HashMap.
-	if ok {
-		return clientio.Encode(len(*val), false)
-	}
-	return clientio.Encode(0, false)
 }
 
 // evalHEXISTS returns if field is an existing field in the hash stored at key.
@@ -3709,26 +3626,6 @@ func evalSINTER(args []string, store *dstore.Store) []byte {
 		members = append(members, k)
 	}
 	return clientio.Encode(members, false)
-}
-func evalHLEN(args []string, store *dstore.Store) []byte {
-	if len(args) != 1 {
-		return diceerrors.NewErrArity("HLEN")
-	}
-
-	key := args[0]
-
-	obj := store.Get(key)
-
-	if obj == nil {
-		return clientio.RespZero
-	}
-
-	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	hashMap := obj.Value.(HashMap)
-	return clientio.Encode(len(hashMap), false)
 }
 
 func evalSELECT(args []string, store *dstore.Store) []byte {

@@ -71,6 +71,7 @@ const (
 	CmdZAdd          = "ZADD"
 	CmdZRange        = "ZRANGE"
 	CmdZRank         = "ZRANK"
+	CmdZCount        = "ZCOUNT"
 	CmdPFAdd         = "PFADD"
 	CmdPFCount       = "PFCOUNT"
 	CmdPFMerge       = "PFMERGE"
@@ -84,6 +85,10 @@ const (
 	CmdHRandField    = "HRANDFIELD"
 	CmdGetRange      = "GETRANGE"
 	CmdAppend        = "APPEND"
+	CmdZPopMax       = "ZPOPMAX"
+	CmdHLen          = "HLEN"
+	CmdHStrLen       = "HSTRLEN"
+	CmdHScan         = "HSCAN"
 	CmdBFAdd         = "BF.ADD"
 	CmdBFReserve     = "BF.RESERVE"
 	CmdBFInfo        = "BF.INFO"
@@ -160,6 +165,15 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdPFMerge: {
+		CmdType: SingleShard,
+	},
+	CmdHLen: {
+		CmdType: SingleShard,
+	},
+	CmdHStrLen: {
+		CmdType: SingleShard,
+	},
+	CmdHScan: {
 		CmdType: SingleShard,
 	},
 	CmdHIncrBy: {
@@ -239,6 +253,9 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdZAdd: {
 		CmdType: SingleShard,
 	},
+	CmdZCount: {
+		CmdType: SingleShard,
+	},
 	CmdZRank: {
 		CmdType: SingleShard,
 	},
@@ -264,6 +281,9 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdZPopMin: {
+		CmdType: SingleShard,
+	},
+	CmdZPopMax: {
 		CmdType: SingleShard,
 	},
 
