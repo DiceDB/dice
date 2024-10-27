@@ -360,46 +360,43 @@ func evalGETRANGE(args []string, store *dstore.Store) *EvalResponse {
 			Error:  diceerrors.ErrIntegerOutOfRange,
 		}
 	}
-
-	var str string
-	switch _, oEnc := object.ExtractTypeEncoding(obj); oEnc {
-	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
-		if val, ok := obj.Value.(string); ok {
-			str = val
-		} else {
-			return &EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrGeneral("expected string but got another type"),
-			}
-		}
-	case object.ObjEncodingInt:
-		str = strconv.FormatInt(obj.Value.(int64), 10)
-	default:
+	// only valid flags works
+	if err := validateFlagsAndArgs(args[nextIndex:], flags); err != nil {
 		return &EvalResponse{
 			Result: nil,
-			Error:  diceerrors.ErrWrongTypeOperation,
+			Error:  err,
 		}
 	}
+	// all processing takes place here for flags
+	return processMembersWithFlags(args[nextIndex:], sortedSet, store, key, flags)
+}
 
-	if str == "" {
-		return &EvalResponse{
-			Result: string(""),
-			Error:  nil,
-		}
+// parseFlags identifies and parses the flags used in ZADD.
+func parseFlags(args []string) (parsedFlags map[string]bool, nextIndex int) {
+	parsedFlags = map[string]bool{
+		"NX":   false,
+		"XX":   false,
+		"LT":   false,
+		"GT":   false,
+		"CH":   false,
+		"INCR": false,
 	}
-
-	if start < 0 {
-		start = len(str) + start
-	}
-
-	if end < 0 {
-		end = len(str) + end
-	}
-
-	if start >= len(str) || end < 0 || start > end {
-		return &EvalResponse{
-			Result: string(""),
-			Error:  nil,
+	for i := 0; i < len(args); i++ {
+		switch strings.ToUpper(args[i]) {
+		case "NX":
+			parsedFlags["NX"] = true
+		case "XX":
+			parsedFlags["XX"] = true
+		case "LT":
+			parsedFlags["LT"] = true
+		case "GT":
+			parsedFlags["GT"] = true
+		case "CH":
+			parsedFlags["CH"] = true
+		case "INCR":
+			parsedFlags["INCR"] = true
+		default:
+			return parsedFlags, i + 1
 		}
 	}
 
