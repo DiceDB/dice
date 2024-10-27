@@ -48,12 +48,12 @@ type BaseWorker struct {
 	globalErrorChan   chan error
 	responseChan      chan *ops.StoreResponse
 	preprocessingChan chan *ops.StoreResponse
-	wl                *wal.WAL
+	wl                wal.AbstractWAL
 }
 
 func NewWorker(wid string, responseChan, preprocessingChan chan *ops.StoreResponse,
 	ioHandler iohandler.IOHandler, parser requestparser.Parser,
-	shardManager *shard.ShardManager, gec chan error, wl *wal.WAL) *BaseWorker {
+	shardManager *shard.ShardManager, gec chan error, wl wal.AbstractWAL) *BaseWorker {
 	return &BaseWorker{
 		id:                wid,
 		ioHandler:         ioHandler,

@@ -17,7 +17,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type WAL struct {
+type WALAOF struct {
 	file   *os.File
 	mutex  sync.Mutex
 	logDir string
@@ -25,8 +25,8 @@ type WAL struct {
 	stopCh chan struct{}
 }
 
-func NewWAL(logDir string) (*WAL, error) {
-	wal := &WAL{
+func NewWAL(logDir string) (*WALAOF, error) {
+	wal := &WALAOF{
 		logDir: logDir,
 		ticker: time.NewTicker(1 * time.Minute),
 		stopCh: make(chan struct{}),
@@ -46,7 +46,7 @@ func NewWAL(logDir string) (*WAL, error) {
 }
 
 // rotateLogFile closes the current WAL file and opens a new one with a timestamped name.
-func (w *WAL) rotateLogFile() error {
+func (w *WALAOF) rotateLogFile() error {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
 
@@ -66,7 +66,7 @@ func (w *WAL) rotateLogFile() error {
 	return nil
 }
 
-func (w *WAL) rotateLogPeriodically() {
+func (w *WALAOF) rotateLogPeriodically() {
 	for {
 		select {
 		case <-w.ticker.C:
@@ -80,7 +80,7 @@ func (w *WAL) rotateLogPeriodically() {
 }
 
 // LogCommand serializes a WALLogEntry and writes it to the current WAL file.
-func (w *WAL) LogCommand(c *cmd.DiceDBCmd) {
+func (w *WALAOF) LogCommand(c *cmd.DiceDBCmd) {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
 
@@ -117,7 +117,7 @@ func checksum(command string) []byte {
 }
 
 // LoadWAL loads all WAL files from the log directory starting with the oldest file first.
-func (w *WAL) LoadWAL() error {
+func (w *WALAOF) LoadWAL() error {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
 
@@ -196,7 +196,7 @@ func (w *WAL) LoadWAL() error {
 }
 
 // CloseWAL stops log rotation and closes the current WAL file.
-func (w *WAL) CloseWAL() error {
+func (w *WALAOF) CloseWAL() error {
 	close(w.stopCh) // Stop rotation goroutine
 	w.ticker.Stop() // Stop the ticker
 

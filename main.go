@@ -14,6 +14,7 @@ import (
 	"runtime/trace"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/server/abstractserver"
@@ -49,6 +50,7 @@ func init() {
 	flag.StringVar(&config.DiceConfig.Logging.LogLevel, "log-level", "info", "log level, values: info, debug")
 	flag.StringVar(&config.LogDir, "log-dir", "/tmp/dicedb", "log directory path")
 	flag.BoolVar(&config.RestoreFromWAL, "wal-restore", true, "restore the database from the WAL files")
+	flag.StringVar(&config.WALEngine, "wal-engine", "sqlite", "wal engine to use, values: sqlite, aof")
 
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
 	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the config file")
@@ -95,26 +97,30 @@ func main() {
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
 	var (
-		err            error
 		queryWatchChan chan dstore.QueryWatchEvent
 		cmdWatchChan   chan dstore.CmdWatchEvent
 		serverErrCh    = make(chan error, 2)
-		wl             *wal.WAL
+		wl             wal.AbstractWAL
 	)
 
-	wl, err = wal.NewWAL(config.LogDir)
-	if err != nil {
-		slog.Error("could not create WAL at", slog.String("log-dir", config.LogDir), slog.Any("error", err))
+	if config.WALEngine == "sqlite" {
+		_wl, err := wal.NewSQLiteWAL(config.LogDir)
+		if err != nil {
+			slog.Warn("could not create WAL with", slog.String("wal-engine", config.WALEngine), slog.Any("error", err))
+			sigs <- syscall.SIGKILL
+			return
+		}
+		wl = _wl
+	} else {
+		slog.Error("unsupported WAL engine", slog.String("engine", config.WALEngine))
 		sigs <- syscall.SIGKILL
 		return
 	}
 
-	if config.RestoreFromWAL {
-		if err := wl.LoadWAL(); err != nil {
-			slog.Error("could not restore WAL", slog.Any("error", err))
-			sigs <- syscall.SIGKILL
-			return
-		}
+	if err := wl.Init(time.Now()); err != nil {
+		slog.Error("could not initialize WAL", slog.Any("error", err))
+	} else {
+		go wal.InitBG(wl)
 	}
 
 	if config.EnableWatch {
@@ -217,6 +223,9 @@ func main() {
 	}
 
 	close(sigs)
+
+	wal.ShutdownBG()
+
 	cancel()
 
 	wg.Wait()

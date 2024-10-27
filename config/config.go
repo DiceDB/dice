@@ -57,6 +57,7 @@ var (
 	EnableWatch    = true
 	LogDir         = ""
 	RestoreFromWAL = false
+	WALEngine      = "sqlite"
 )
 
 type Config struct {

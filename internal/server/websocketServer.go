@@ -47,7 +47,7 @@ type WebsocketServer struct {
 	shutdownChan       chan struct{}
 }
 
-func NewWebSocketServer(shardManager *shard.ShardManager, port int, wl *wal.WAL) *WebsocketServer {
+func NewWebSocketServer(shardManager *shard.ShardManager, port int, wl wal.AbstractWAL) *WebsocketServer {
 	mux := http.NewServeMux()
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", port),

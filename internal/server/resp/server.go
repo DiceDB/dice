@@ -49,10 +49,10 @@ type Server struct {
 	watchManager    *watchmanager.Manager
 	cmdWatchChan    chan dstore.CmdWatchEvent
 	globalErrorChan chan error
-	wl              *wal.WAL
+	wl              wal.AbstractWAL
 }
 
-func NewServer(shardManager *shard.ShardManager, workerManager *worker.WorkerManager, cmdWatchChan chan dstore.CmdWatchEvent, globalErrChan chan error, wl *wal.WAL) *Server {
+func NewServer(shardManager *shard.ShardManager, workerManager *worker.WorkerManager, cmdWatchChan chan dstore.CmdWatchEvent, globalErrChan chan error, wl wal.AbstractWAL) *Server {
 	return &Server{
 		Host:            config.DiceConfig.AsyncServer.Addr,
 		Port:            config.DiceConfig.AsyncServer.Port,

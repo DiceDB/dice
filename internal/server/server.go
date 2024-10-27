@@ -45,7 +45,7 @@ type AsyncServer struct {
 }
 
 // NewAsyncServer initializes a new AsyncServer
-func NewAsyncServer(shardManager *shard.ShardManager, queryWatchChan chan dstore.QueryWatchEvent, wl *wal.WAL) *AsyncServer {
+func NewAsyncServer(shardManager *shard.ShardManager, queryWatchChan chan dstore.QueryWatchEvent, wl wal.AbstractWAL) *AsyncServer {
 	return &AsyncServer{
 		maxClients:             config.DiceConfig.Performance.MaxClients,
 		connectedClients:       make(map[int]*comm.Client),
