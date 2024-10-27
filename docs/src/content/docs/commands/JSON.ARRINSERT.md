@@ -1,45 +1,76 @@
 ---
 title: JSON.ARRINSERT
-description: Documentation for the DiceDB command JSON.ARRINSERT
+description: The JSON.ARRINSERT command in DiceDB is used to insert one or more JSON values into an array at a specified path before a given index. This command shifts all existing elements in the array to the right, making room for the new elements.
 ---
 
-The `JSON.ARRINSERT` command allows you to insert one or more JSON values into an array at a specified path before a given index. All existing elements in the array are shifted to the right to make room for the new elements.
+The JSON.ARRINSERT command allows you to insert one or more JSON values into an array at a specified path before a given index. All existing elements in the array are shifted to the right to make room for the new elements.
 
 This command returns an array of integer replies for each path, where each integer represents the new size of the array after the insertion. If the path does not exist or is not an array, it returns an error.
 
 ## Syntax
 
-```plaintext
+```bash
 JSON.ARRINSERT <key> <path> <index> <value> [value ...]
 ```
 
 ## Parameters
-- `key`: (String) The key in the Redis database that holds the JSON object.
-- `path`: (String) the path is a valid JSON path pointing to an array inside the JSON object.
-- `index`: The index is a position at which to insert the values. Positive values count from the beginning of the array, and negative values count from the end.
-- `value`: The value is one or more JSON values to insert into the array.
 
+| Parameter | Description                                                                                      | Type    | Required |
+|-----------|--------------------------------------------------------------------------------------------------|---------|----------|
+| `key`     | The name of the key holding the JSON document.                                                   | String  | Yes      |
+| `path`    | JSONPath pointing to an array within the JSON document.                                          | String  | Yes      |
+| `index`   | Position where values will be inserted. Positive for start-to-end, negative for end-to-start.    | Integer | Yes      |
+| `value`   | JSON value(s) to be inserted into the array.                                                     | JSON    | Yes      |
 
-## Return Value
-- On success, it returns an `Integer` representing the new size of the array at each matched path.
-- On failure, an `error` message is returned.
+## Return Values
+
+| Condition                     | Return Value                                                           |
+|-------------------------------|------------------------------------------------------------------------|
+| Array successfully updated    | (Int) `Integer representing the new array size at each matched path`   |
+| Key does not exist            | Error: `(error) ERR key does not exist`                                |
+| Path is not valid             | Error: `(error) ERR Existing key has wrong Dice type`                  |
+| Invalid JSON value            | Error: `(error) ERR Path <path> does not exist`                        |
+| Invalid index                 | Error: `(error) ERR index out of bounds`                               |
 
 ## Behaviour
 
-When the JSON.ARRINSERT command is executed, it inserts one or more specified JSON values into an array located at the given path within the document stored under the specified key. The values are inserted before the provided index, shifting existing elements to the right to make room for the new elements. If the index is out of bounds, it is adjusted to the nearest valid position (either the beginning or end of the array).
-If the path does not point to an array or does not exist, an error is returned. If the specified index is not a valid integer, an error will also be raised.
+- The command inserts specified JSON values into the array located at the provided path within the document stored under the given key.
+- Values are inserted before the specified index, shifting existing elements to the right.
+- If the index is out of bounds, it is adjusted to the nearest valid position within the array.
+- Errors are returned if the path does not point to an array or if the index provided is not a valid integer.
 
-## Error Handling
+## Errors
 
-- `(error) ERR wrong number of arguments for JSON.ARRINSERT command`: Raised if the number of arguments are less or more than expected.
-- `(error) ERR key does not exist`: Raised if the specified key does not exist in the DiceDB database.
-- `(error) ERR Existing key has wrong Dice type`:Raised if thevalue of the specified key doesn't match the specified value in DIceDb
-- `(error) ERR Path <path> does not exist`: Raised if any of the provided JSON values are not valid JSON.
-- `(error) ERR failed to modify JSON data`: Raised if the argument specifying path contains an invalide path.
+1. `Wrong number of arguments`:
+
+   - Error Message: `(error) ERR wrong number of arguments for JSON.ARRINSERT command`
+   - Raised if the number of arguments are less or more than expected.
+
+2. `Key doesn't exist`:
+
+   - Error Message: `(error) ERR key does not exist`
+   - Raised if the specified key does not exist in the DiceDB database.
+
+3. `Key has wrong Dice type`:
+
+   - Error Message: `(error) ERR Existing key has wrong Dice type`
+   - Raised if thevalue of the specified key doesn't match the specified value in DIceDb
+
+4. `Path doesn't exist`:
+
+   - Error Message: `(error) ERR Path <path> does not exist`
+   - Raised if any of the provided JSON values are not valid JSON.
+
+5. `failed to do the operation`:
+
+   - Error Message: `(error) ERR failed to modify JSON data`
+   - Raised if the argument specifying path contains an invalide path.
 
 ## Example Usage
 
-### Example 1: Inserting at a valid index in the root path
+### Basic Usage
+
+Inserting at a valid index in the root path
 
 ```plaintext
 127.0.0.1:6379> JSON.SET a $ '[1,2]'
@@ -50,7 +81,9 @@ OK
 [1,2,3,4,5]
 ```
 
-### Example 2: Inserting at a negative index
+### Using negative index
+
+Inserting at a negative index
 
 ```plaintext
 127.0.0.1:6379> JSON.SET a $ '[1,2]'
@@ -61,7 +94,10 @@ OK
 [3,4,5,1,2]
 ```
 
-### Example 3: Handling nested arrays
+### Having nested arrays as value
+
+Handling nested arrays
+
 ```plaintext
 127.0.0.1:6379> JSON.SET b $ '{"name":"tom","score":[10,20],"partner2":{"score":[10,20]}}'
 OK
@@ -71,7 +107,9 @@ OK
 {"name":"tom","score":[10,5,6,true,20],"partner2":{"score":[10,5,6,true,20]}}
 ```
 
-### Example 4: Inserting with an out-of-bounds index
+### Using out of bounds index
+
+Inserting with an out-of-bounds index
 
 ```plaintext
 127.0.0.1:6379> JSON.SET a $ '[1,2]'
@@ -82,7 +120,9 @@ ERR index out of bounds
 [1,2]
 ```
 
-### Example 5: Invalid index type
+### Invalid index type
+
+Invalid index type
 
 ```plaintext
 127.0.0.1:6379> JSON.SET a $ '[1,2]'
@@ -92,11 +132,3 @@ ERR value is not an integer or out of range
 127.0.0.1:6379> JSON.GET a
 [1,2]
 ```
-
-## Notes
-
-- Ensure that the DiceDBJSON module is loaded in your DiceDB instance to use the `JSON.ARRINSERT` command.
-- JSONPath expressions are used to navigate and specify the location within the JSON document. Familiarity with JSONPath syntax is beneficial for effective use of this command.
-
-By following this documentation, users can effectively utilize the `JSON.ARRINSERT` command to manipulate JSON arrays within DiceDB.
-

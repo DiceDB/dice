@@ -1,23 +1,35 @@
 ---
 title: JSON.OBJKEYS
-description: Documentation for the DiceDB command JSON.OBJKEYS
+description: The `JSON.OBJKEYS` command command in DiceDB retrieves the keys of a JSON object located at a specified path within the document stored under the given key. This command is useful when you want to list the fields within a JSON object stored in a database.
+
 ---
 
-The `JSON.OBJKEYS` command command in DiceDB retrieves the keys of a JSON object located at a specified path within the document stored under the given key. This command is useful when you want to list the fields within a JSON object stored in a database.
+The `JSON.OBJKEYS` command in DiceDB allows users to access the keys of a JSON object stored at a specific path within a document identified by a given key. By executing this command, users can easily retrieve a list of the fields present in the JSON object, making it a valuable tool for exploring and managing the structure of JSON data stored in the database. 
+
+This functionality is particularly useful for developers working with complex JSON structures who need to quickly identify and manipulate the various attributes within their data.
 
 ## Syntax
 
-```plaintext
+```bash
 JSON.OBJKEYS key [path]
 ```
 
 ## Parameters
-- `key`: (String) The key under which the JSON document is stored.
-- `path`: (String) The JSONPath expression that specifies the location within the JSON document where the array is located.
+| Parameter | Description                                                                                      | Type    | Required |
+|-----------|--------------------------------------------------------------------------------------------------|---------|----------|
+| `key`     | The name of the key holding the JSON document.                                                   | String  | Yes      |
+| `path`    | JSONPath pointing to an array within the JSON document.                                          | String  | No       |
 
-## Return Value
+## Return Values
 
-- `[]String`: It returns an array of strings. This array contains the keys present within the JSON object at the specified path. Each entry in the array represents a key found in the JSON object.
+| Condition                     | Return Value                                                                                               |
+|-------------------------------|------------------------------------------------------------------------------------------------------------|
+| Success                       | ([]String) `Array of strings containing the keys present within the JSON object at the specified path.`   |
+| Key does not exist            | Error: `(error) ERR could not perform this operation on a key that doesn't exist`                        |
+| Wrong number of arguments      | Error: `(error) ERR wrong number of arguments for JSON.ARRTRIM command`                                  |
+| Key has wrong type            | Error: `(error) ERR Existing key has wrong Dice type`                                                    |
+| Operation attempted on a key with an incompatible type | Error: `(error) ERR WRONGTYPE Operation against a key holding the wrong kind of value`   |
+
 
 ## Behaviour
 
@@ -26,17 +38,34 @@ JSON.OBJKEYS key [path]
 - Non-existing Key: If the specified key does not exist in the database, an error is returned.
 - Invalid JSON Path: If the provided JSONPath expression is invalid, an error message with the details of the parse error is returned.
 
+## Errors
 
-## Error Handling
+1. `Wrong number of arguments`:
 
-- `(error) ERR wrong number of arguments for JSON.OBJKEYS command`: Raised if the number of arguments are less or more than expected.
-- `(error) ERR could not perform this operation on a key that doesn't exist`: Raised if the specified key does not exist in the DiceDB database.
-- `(error) ERR Existing key has wrong Dice type`:Raised if thevalue of the specified key doesn't match the specified value in DIceDb
-- `(error) ERR WRONGTYPE Operation against a key holding the wrong kind of value`: Raised if an operation attempted on a key with an incompatible type.
+   - Error Message: `(error) ERR wrong number of arguments for JSON.ARRINSERT command`
+   - Raised if the number of arguments are less or more than expected.
+
+2. `Key doesn't exist`:
+
+   - Error Message: `(error) ERR could not perform this operation on a key that doesn't exist`
+   - Raised if the specified key does not exist in the DiceDB database.
+
+3. `Key has wrong Dice type`:
+
+   - Error Message: `(error) ERR Existing key has wrong Dice type`
+   - Raised if thevalue of the specified key doesn't match the specified value in DIceDb
+
+4. `Path doesn't exist`:
+
+   - Error Message: `(error) ERR WRONGTYPE Operation against a key holding the wrong kind of value`
+   - Raised if an operation attempted on a key with an incompatible type.
+
 
 ## Example Usage
 
-### Example 1: Retrieving Keys of the Root Object
+### Basic usage
+
+Retrieving Keys of the Root Object
 
 ```plaintext
 127.0.0.1:6379> JSON.SET a $ '{"name": "Alice", "age": 30, "address": {"city": "Wonderland", "zipcode": "12345"}}'
@@ -47,7 +76,9 @@ JSON.OBJKEYS key [path]
 3) "address"
 ```
 
-### Example 2: Retrieving Keys of a Nested Object
+### Fetching keys of nested object
+
+Retrieving Keys of a Nested Object
 
 ```plaintext
 127.0.0.1:6379> JSON.SET b $ '{"name": "Alice", "partner": {"name": "Bob", "age": 28}}'
@@ -57,7 +88,9 @@ JSON.OBJKEYS key [path]
 2) "age"
 ```
 
-### Example 3: Error When Path Points to a Non-Object Type
+### path pointing to non-object type
+
+Error When Path Points to a Non-Object Type
 
 ```plaintext
 127.0.0.1:6379> JSON.SET c $ '{"name": "Alice", "age": 30}'
@@ -66,7 +99,9 @@ JSON.OBJKEYS key [path]
 (nil)
 ```
 
-### Example 4: Error When Path Does Not Exist
+### When path doesn't exist
+
+Error When Path Does Not Exist
 
 ```plaintext
 127.0.0.1:6379> JSON.SET d $ '{"name": "Alice", "address": {"city": "Wonderland"}}'
@@ -75,17 +110,12 @@ JSON.OBJKEYS key [path]
 (empty list or set)
 ```
 
-### Example 5: Error When Key Does Not Exist
+### When key doesn't exist
+
+Error When Key Does Not Exist
 
 ```plaintext
 127.0.0.1:6379> JSON.OBJKEYS nonexistent_key $
 (error) ERROR could not perform this operation on a key that doesn't exist
 ```
-
-## Notes
-
-- Ensure that the DiceDBJSON module is loaded in your DiceDB instance to use the `JSON.OBJKEYS` command.
-- JSONPath expressions are used to navigate and specify the location within the JSON document. Familiarity with JSONPath syntax is beneficial for effective use of this command.
-
-By following this documentation, users can effectively utilize the `JSON.OBJKEYS` command to manipulate JSON arrays within DiceDB.
 
