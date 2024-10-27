@@ -108,7 +108,7 @@ type CmdMeta struct {
 	// If set to true, it signals that a preliminary step (such as fetching values from shards)
 	// is necessary before the main command is executed. This is important for commands that depend
 	// on the current state of data in the database.
-	preProcessingReq bool
+	preProcessing bool
 
 	// preProcessResponse is a function that handles the preprocessing of a DiceDB command by
 	// preparing the necessary operations (e.g., fetching values from shards) before the command
@@ -169,7 +169,7 @@ var CommandsMeta = map[string]CmdMeta{
 	// Multi-shard commands.
 	CmdRename: {
 		CmdType:            MultiShard,
-		preProcessingReq:   true,
+		preProcessing:      true,
 		preProcessResponse: preProcessRename,
 		decomposeCommand:   decomposeRename,
 		composeResponse:    composeRename,
@@ -177,8 +177,8 @@ var CommandsMeta = map[string]CmdMeta{
 
 	CmdCopy: {
 		CmdType:            MultiShard,
-		preProcessingReq:   true,
-		preProcessResponse: preProcessCopy,
+		preProcessing:      true,
+		preProcessResponse: customProcessCopy,
 		decomposeCommand:   decomposeCopy,
 		composeResponse:    composeCopy,
 	},

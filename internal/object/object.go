@@ -12,9 +12,8 @@ type Obj struct {
 }
 
 var ObjTypeString uint8 = 0 << 4
-
 var ObjEncodingRaw uint8 = 0
-var ObjEncodingInt uint8 = 1
+
 var ObjEncodingEmbStr uint8 = 8
 
 var ObjTypeByteList uint8 = 1 << 4
@@ -30,6 +29,7 @@ var ObjTypeByteArray uint8 = 4 << 4 // 01000000
 var ObjEncodingByteArray uint8 = 4
 
 var ObjTypeInt uint8 = 5 << 4 // 01010000
+var ObjEncodingInt uint8 = 1
 
 var ObjTypeSet uint8 = 6 << 4 // 01010000
 var ObjEncodingSetInt uint8 = 11

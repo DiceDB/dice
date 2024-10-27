@@ -38,7 +38,7 @@ func preProcessRename(w *BaseWorker, diceDBCmd *cmd.DiceDBCmd) error {
 // preProcessCopy prepares the COPY command for preprocessing by sending a GET command
 // to retrieve the value of the original key. The retrieved value is used later in the
 // decomposeCopy function to copy the value to the destination key.
-func preProcessCopy(w *BaseWorker, diceDBCmd *cmd.DiceDBCmd) error {
+func customProcessCopy(w *BaseWorker, diceDBCmd *cmd.DiceDBCmd) error {
 	if len(diceDBCmd.Args) < 2 {
 		return diceerrors.ErrWrongArgumentCount("COPY")
 	}
@@ -47,12 +47,12 @@ func preProcessCopy(w *BaseWorker, diceDBCmd *cmd.DiceDBCmd) error {
 	sid2, rc2 := w.shardManager.GetShardInfo(diceDBCmd.Args[1])
 
 	preCmdk1 := cmd.DiceDBCmd{
-		Cmd:  CmdGet,
+		Cmd:  "COPY",
 		Args: []string{diceDBCmd.Args[0]},
 	}
 
 	preCmdk2 := cmd.DiceDBCmd{
-		Cmd:  CmdGet,
+		Cmd:  "COPY",
 		Args: []string{diceDBCmd.Args[1]},
 	}
 

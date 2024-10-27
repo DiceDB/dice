@@ -5,11 +5,13 @@ import (
 	"strings"
 
 	"github.com/dgryski/go-farm"
+	"github.com/dicedb/dice/internal/object"
 )
 
 type DiceDBCmd struct {
 	Cmd  string
 	Args []string
+	Obj  *object.Obj
 }
 
 type RedisCmds struct {

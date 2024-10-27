@@ -6,7 +6,9 @@ package eval
 
 import (
 	"github.com/dicedb/dice/internal/clientio"
+	"github.com/dicedb/dice/internal/cmd"
 	diceerrors "github.com/dicedb/dice/internal/errors"
+	dstore "github.com/dicedb/dice/internal/store"
 )
 
 // RespPING evaluates the PING command and returns the appropriate response.
@@ -25,4 +27,32 @@ func RespPING(args []string) []byte {
 	}
 	// If one argument is provided, return the argument as the response.
 	return clientio.Encode(args[0], false) // Encode the argument and return it as the response.
+}
+
+func preProcessCOPY(cmd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cmd.Args
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrInternalServer,
+		}
+	}
+
+	key := args[0]
+
+	obj := store.Get(key)
+
+	// if key does not exist, return RESP encoded nil
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	// Decode and return the value based on its encoding
+	return &EvalResponse{
+		Result: obj,
+		Error:  nil,
+	}
 }

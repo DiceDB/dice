@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/eval/sortedset"
 	"github.com/dicedb/dice/internal/server/utils"
 
@@ -307,7 +308,11 @@ func testEvalSET(t *testing.T, store *dstore.Store) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			response := evalSET(tt.input, store)
+
+			cd := &cmd.DiceDBCmd{
+				Args: tt.input,
+			}
+			response := evalSET(cd, store)
 
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
@@ -431,8 +436,10 @@ func testEvalGET(t *testing.T, store *dstore.Store) {
 			if tt.setup != nil {
 				tt.setup()
 			}
-
-			response := evalGET(tt.input, store)
+			cd := &cmd.DiceDBCmd{
+				Args: tt.input,
+			}
+			response := evalGET(cd, store)
 
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
@@ -505,8 +512,10 @@ func testEvalGETSET(t *testing.T, store *dstore.Store) {
 			if tt.setup != nil {
 				tt.setup()
 			}
-
-			response := evalGETSET(tt.input, store)
+			cd := &cmd.DiceDBCmd{
+				Args: tt.input,
+			}
+			response := evalGETSET(cd, store)
 
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
@@ -1190,8 +1199,10 @@ func testEvalJSONOBJLEN(t *testing.T, store *dstore.Store) {
 			if tt.setup != nil {
 				tt.setup()
 			}
-
-			response := evalJSONOBJLEN(tt.input, store)
+			cd := &cmd.DiceDBCmd{
+				Args: tt.input,
+			}
+			response := evalJSONOBJLEN(cd, store)
 			if tt.migratedOutput.Result != nil {
 				if slice, ok := tt.migratedOutput.Result.([]interface{}); ok {
 					assert.DeepEqual(t, slice, response.Result)
@@ -1232,7 +1243,10 @@ func BenchmarkEvalJSONOBJLEN(b *testing.B) {
 
 			// Benchmark the evalJSONOBJLEN function
 			for i := 0; i < b.N; i++ {
-				_ = evalJSONOBJLEN([]string{key, "$"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{key, "$"},
+				}
+				_ = evalJSONOBJLEN(cd, store)
 			}
 		})
 	}
@@ -1506,8 +1520,10 @@ func testEvalJSONCLEAR(t *testing.T, store *dstore.Store) {
 			if tt.setup != nil {
 				tt.setup()
 			}
-
-			response := evalJSONCLEAR(tt.input, store)
+			cd := &cmd.DiceDBCmd{
+				Args: tt.input,
+			}
+			response := evalJSONCLEAR(cd, store)
 			if tt.migratedOutput.Result != nil {
 				if slice, ok := tt.migratedOutput.Result.([]interface{}); ok {
 					assert.DeepEqual(t, slice, response.Result)
@@ -2148,14 +2164,20 @@ func testEvalPersist(t *testing.T, store *dstore.Store) {
 		"key exists but no expiration set": {
 			input: []string{"existent_no_expiry"},
 			setup: func() {
-				evalSET([]string{"existent_no_expiry", "value"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"existent_no_expiry", "value"},
+				}
+				evalSET(cd, store)
 			},
 			output: clientio.RespZero,
 		},
 		"key exists and expiration removed": {
 			input: []string{"existent_with_expiry"},
 			setup: func() {
-				evalSET([]string{"existent_with_expiry", "value", Ex, "1"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"existent_with_expiry", "value", Ex, "1"},
+				}
+				evalSET(cd, store)
 			},
 			output: clientio.RespOne,
 		},
@@ -2163,7 +2185,10 @@ func testEvalPersist(t *testing.T, store *dstore.Store) {
 			input: []string{"existent_with_expiry_not_expired"},
 			setup: func() {
 				// Simulate setting a key with an expiration time that has not yet passed
-				evalSET([]string{"existent_with_expiry_not_expired", "value", Ex, "10000"}, store) // 10000 seconds in the future
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"existent_with_expiry_not_expired", "value", Ex, "10000"},
+				}
+				evalSET(cd, store) // 10000 seconds in the future
 			},
 			output: clientio.RespOne,
 		},
@@ -2184,32 +2209,59 @@ func testEvalDbsize(t *testing.T, store *dstore.Store) {
 		},
 		"one key exists in db": {
 			setup: func() {
-				evalSET([]string{"key", "val"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"key", "val"},
+				}
+				evalSET(cd, store)
 			},
 			input:  nil,
 			output: []byte(":1\r\n"),
 		},
 		"two keys exist in db": {
 			setup: func() {
-				evalSET([]string{"key1", "val1"}, store)
-				evalSET([]string{"key2", "val2"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"key1", "val1"},
+				}
+				evalSET(cd, store)
+				cd = &cmd.DiceDBCmd{
+					Args: []string{"key", "val"},
+				}
+				evalSET(cd, store)
 			},
 			input:  nil,
 			output: []byte(":2\r\n"),
 		},
 		"repeating keys shall result in same dbsize": {
 			setup: func() {
-				evalSET([]string{"key1", "val1"}, store)
-				evalSET([]string{"key2", "val2"}, store)
-				evalSET([]string{"key2", "val2"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"key1", "val1"},
+				}
+				evalSET(cd, store)
+				cd = &cmd.DiceDBCmd{
+					Args: []string{"key2", "val2"},
+				}
+				evalSET(cd, store)
+				cd = &cmd.DiceDBCmd{
+					Args: []string{"key2", "val2"},
+				}
+				evalSET(cd, store)
 			},
 			input:  nil,
 			output: []byte(":2\r\n"),
 		},
 		"deleted keys shall be reflected in dbsize": {
 			setup: func() {
-				evalSET([]string{"key1", "val1"}, store)
-				evalSET([]string{"key2", "val2"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"key1", "val1"},
+				}
+				evalSET(cd, store)
+				cd = &cmd.DiceDBCmd{
+					Args: []string{"key2", "val2"},
+				}
+				evalSET(cd, store)
+				cd = &cmd.DiceDBCmd{
+					Args: []string{"key"},
+				}
 				evalDEL([]string{"key2"}, store)
 			},
 			input:  nil,
@@ -2751,7 +2803,10 @@ func testEvalHDEL(t *testing.T, store *dstore.Store) {
 		},
 		"HDEL with key exists but not a hash": {
 			setup: func() {
-				evalSET([]string{"string_key", "string_value"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"string_key", "string_value"},
+				}
+				evalSET(cd, store)
 			},
 			input:  []string{"string_key", "field"},
 			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
@@ -2787,7 +2842,10 @@ func testEvalHSCAN(t *testing.T, store *dstore.Store) {
 		},
 		"HSCAN with key exists but not a hash": {
 			setup: func() {
-				evalSET([]string{"string_key", "string_value"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"string_key", "string_value"},
+				}
+				evalSET(cd, store)
 			},
 			input:  []string{"string_key", "0"},
 			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
@@ -3017,8 +3075,10 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 			if tt.setup != nil {
 				tt.setup()
 			}
-
-			response := evalJSONSTRLEN(tt.input, store)
+			cd := &cmd.DiceDBCmd{
+				Args: tt.input,
+			}
+			response := evalJSONSTRLEN(cd, store)
 			if tt.migratedOutput.Result != nil {
 				if slice, ok := tt.migratedOutput.Result.([]interface{}); ok {
 					assert.DeepEqual(t, slice, response.Result)
@@ -3063,7 +3123,10 @@ func testEvalLLEN(t *testing.T, store *dstore.Store) {
 		},
 		"key with different type": {
 			setup: func() {
-				evalSET([]string{"EXISTING_KEY", "mock_value"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"EXISTING_KEY", "mock_value"},
+				}
+				evalSET(cd, store)
 			},
 			input:  []string{"EXISTING_KEY"},
 			output: []byte("-ERR Existing key has wrong Dice type\r\n"),
@@ -3204,7 +3267,7 @@ func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]s
 	}
 }
 
-func runMigratedEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]string, *dstore.Store) *EvalResponse, store *dstore.Store) {
+func runMigratedEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func(*cmd.DiceDBCmd, *dstore.Store) *EvalResponse, store *dstore.Store) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			store = setupTest(store)
@@ -3212,8 +3275,10 @@ func runMigratedEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc 
 			if tc.setup != nil {
 				tc.setup()
 			}
-
-			output := evalFunc(tc.input, store)
+			cd := &cmd.DiceDBCmd{
+				Args: tc.input,
+			}
+			output := evalFunc(cd, store)
 
 			if tc.newValidator != nil {
 				if tc.migratedOutput.Error != nil {
@@ -3441,7 +3506,10 @@ func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 		},
 		"key exists but not a hash": {
 			setup: func() {
-				evalSET([]string{"string_key", "string_value"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"string_key", "string_value"},
+				}
+				evalSET(cd, store)
 			},
 			input:  []string{"string_key"},
 			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
@@ -3544,7 +3612,10 @@ func BenchmarkEvalPFCOUNT(b *testing.B) {
 	for _, tt := range tests {
 		b.Run(tt.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				evalPFCOUNT(tt.args, &store)
+				cd := &cmd.DiceDBCmd{
+					Args: tt.args,
+				}
+				evalPFCOUNT(cd, &store)
 			}
 		})
 	}
@@ -3805,7 +3876,10 @@ func testEvalHLEN(t *testing.T, store *dstore.Store) {
 		},
 		"key exists but not a hash": {
 			setup: func() {
-				evalSET([]string{"string_key", "string_value"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"string_key", "string_value"},
+				}
+				evalSET(cd, store)
 			},
 			input:  []string{"string_key"},
 			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
@@ -4542,7 +4616,10 @@ func BenchmarkEvalGETRANGE(b *testing.B) {
 	for _, input := range inputs {
 		b.Run(fmt.Sprintf("GETRANGE start=%s end=%s", input.start, input.end), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				_ = evalGETRANGE([]string{"BENCHMARK_KEY", input.start, input.end}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"BENCHMARK_KEY", input.start, input.end},
+				}
+				_ = evalGETRANGE(cd, store)
 			}
 		})
 	}
@@ -4615,12 +4692,18 @@ func BenchmarkEvalHINCRBY(b *testing.B) {
 
 	// creating new fields
 	for i := 0; i < b.N; i++ {
-		evalHINCRBY([]string{"KEY", fmt.Sprintf("FIELD_%d", i), fmt.Sprintf("%d", i)}, store)
+		cd := &cmd.DiceDBCmd{
+			Args: []string{"KEY", fmt.Sprintf("FIELD_%d", i), fmt.Sprintf("%d", i)},
+		}
+		evalHINCRBY(cd, store)
 	}
 
 	// updating the existing fields
 	for i := 0; i < b.N; i++ {
-		evalHINCRBY([]string{"KEY", fmt.Sprintf("FIELD_%d", i), fmt.Sprintf("%d", i*10)}, store)
+		cd := &cmd.DiceDBCmd{
+			Args: []string{"KEY", fmt.Sprintf("FIELD_%d", i), fmt.Sprintf("%d", i*10)},
+		}
+		evalHINCRBY(cd, store)
 	}
 }
 
@@ -4790,9 +4873,12 @@ func testEvalSETEX(t *testing.T, store *dstore.Store) {
 			input: []string{"TEST_KEY", "5", "TEST_VALUE"},
 			newValidator: func(output interface{}) {
 				assert.Equal(t, clientio.OK, output)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"TEST_KEY"},
+				}
 
 				// Check if the key was set correctly
-				getValue := evalGET([]string{"TEST_KEY"}, store)
+				getValue := evalGET(cd, store)
 				assert.Equal(t, "TEST_VALUE", getValue.Result)
 
 				// Check if the TTL is set correctly (should be 5 seconds or less)
@@ -4805,20 +4891,29 @@ func testEvalSETEX(t *testing.T, store *dstore.Store) {
 				mockTime.SetTime(mockTime.CurrTime.Add(6 * time.Second))
 
 				// Check if the key has been deleted after expiry
-				expiredValue := evalGET([]string{"TEST_KEY"}, store)
+				cd = &cmd.DiceDBCmd{
+					Args: []string{"TEST_KEY"},
+				}
+				expiredValue := evalGET(cd, store)
 				assert.Equal(t, clientio.NIL, expiredValue.Result)
 			},
 		},
 		"update existing key": {
 			setup: func() {
-				evalSET([]string{"EXISTING_KEY", "OLD_VALUE"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"EXISTING_KEY", "OLD_VALUE"},
+				}
+				evalSET(cd, store)
 			},
 			input: []string{"EXISTING_KEY", "10", "NEW_VALUE"},
 			newValidator: func(output interface{}) {
 				assert.Equal(t, clientio.OK, output)
 
 				// Check if the key was updated correctly
-				getValue := evalGET([]string{"EXISTING_KEY"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"EXISTING_KEY"},
+				}
+				getValue := evalGET(cd, store)
 				assert.Equal(t, "NEW_VALUE", getValue.Result)
 
 				// Check if the TTL is set correctly
@@ -4832,7 +4927,10 @@ func testEvalSETEX(t *testing.T, store *dstore.Store) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			response := evalSETEX(tt.input, store)
+			cd := &cmd.DiceDBCmd{
+				Args: tt.input,
+			}
+			response := evalSETEX(cd, store)
 
 			if tt.newValidator != nil {
 				if tt.migratedOutput.Error != nil {
@@ -4869,7 +4967,10 @@ func BenchmarkEvalSETEX(b *testing.B) {
 		value := fmt.Sprintf("value_%d", i)
 		expiry := "10" // 10 seconds expiry
 
-		evalSETEX([]string{key, expiry, value}, store)
+		cd := &cmd.DiceDBCmd{
+			Args: []string{key, expiry, value},
+		}
+		evalSETEX(cd, store)
 	}
 }
 
@@ -4877,15 +4978,24 @@ func testEvalFLUSHDB(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"one key exists in db": {
 			setup: func() {
-				evalSET([]string{"key", "val"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"key", "val"},
+				}
+				evalSET(cd, store)
 			},
 			input:  nil,
 			output: clientio.RespOK,
 		},
 		"two keys exist in db": {
 			setup: func() {
-				evalSET([]string{"key1", "val1"}, store)
-				evalSET([]string{"key2", "val2"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"key1", "val1"},
+				}
+				evalSET(cd, store)
+				cd = &cmd.DiceDBCmd{
+					Args: []string{"key2", "val2"},
+				}
+				evalSET(cd, store)
 			},
 			input:  nil,
 			output: clientio.RespOK,
@@ -5019,8 +5129,10 @@ func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 			if tt.setup != nil {
 				tt.setup()
 			}
-
-			response := evalINCRBYFLOAT(tt.input, store)
+			cd := &cmd.DiceDBCmd{
+				Args: tt.input,
+			}
+			response := evalINCRBYFLOAT(cd, store)
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
@@ -5058,7 +5170,10 @@ func BenchmarkEvalINCRBYFLOAT(b *testing.B) {
 	for _, input := range inputs {
 		b.Run(fmt.Sprintf("INCRBYFLOAT %s %s", input.key, input.incr), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				_ = evalGETRANGE([]string{"INCRBYFLOAT", input.key, input.incr}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"INCRBYFLOAT", input.key, input.incr},
+				}
+				_ = evalGETRANGE(cd, store)
 			}
 		})
 	}
@@ -5471,7 +5586,10 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 func BenchmarkEvalAPPEND(b *testing.B) {
 	store := dstore.NewStore(nil, nil)
 	for i := 0; i < b.N; i++ {
-		evalAPPEND([]string{"key", fmt.Sprintf("val_%d", i)}, store)
+		cd := &cmd.DiceDBCmd{
+			Args: []string{"key", fmt.Sprintf("val_%d", i)},
+		}
+		evalAPPEND(cd, store)
 	}
 }
 
@@ -5624,7 +5742,10 @@ func testEvalZADD(t *testing.T, store *dstore.Store) {
 		},
 		"ZADD existing member with updated score": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "member1"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "member1"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "2", "member1"},
 			migratedOutput: EvalResponse{
@@ -5634,7 +5755,10 @@ func testEvalZADD(t *testing.T, store *dstore.Store) {
 		},
 		"ZADD multiple members": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "member1"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "member1"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "2", "member2", "3", "member3"},
 			migratedOutput: EvalResponse{
@@ -5651,7 +5775,10 @@ func testEvalZADD(t *testing.T, store *dstore.Store) {
 		},
 		"ZADD with duplicate members": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "member1"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "member1"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "2", "member1", "2", "member1"},
 			migratedOutput: EvalResponse{
@@ -5716,7 +5843,10 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 		},
 		"ZRANGE with normal indices": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "member1", "2", "member2", "3", "member3"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "0", "1"},
 			migratedOutput: EvalResponse{
@@ -5726,7 +5856,10 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 		},
 		"ZRANGE with negative indices": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "member1", "2", "member2", "3", "member3"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "-2", "-1"},
 			migratedOutput: EvalResponse{
@@ -5736,7 +5869,10 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 		},
 		"ZRANGE with start > stop": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "member1", "2", "member2", "3", "member3"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "2", "1"},
 			migratedOutput: EvalResponse{
@@ -5746,7 +5882,10 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 		},
 		"ZRANGE with indices out of bounds": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "member1"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "member1"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "0", "5"},
 			migratedOutput: EvalResponse{
@@ -5756,7 +5895,10 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 		},
 		"ZRANGE WITHSCORES option": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "member1", "2", "member2"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "member1", "2", "member2"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "0", "-1", "WITHSCORES"},
 			migratedOutput: EvalResponse{
@@ -5766,7 +5908,10 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 		},
 		"ZRANGE with invalid option": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "member1"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "member1"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "0", "-1", "INVALIDOPTION"},
 			migratedOutput: EvalResponse{
@@ -5776,7 +5921,10 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 		},
 		"ZRANGE with REV option": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "member1", "2", "member2", "3", "member3"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "0", "-1", "REV"},
 			migratedOutput: EvalResponse{
@@ -5786,7 +5934,10 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 		},
 		"ZRANGE with REV and WITHSCORES options": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "member1", "2", "member2", "3", "member3"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "0", "-1", "REV", "WITHSCORES"},
 			migratedOutput: EvalResponse{
@@ -5796,7 +5947,10 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 		},
 		"ZRANGE with start index greater than length": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "member1"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "member1", "2", "member2", "3", "member3"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "5", "10"},
 			migratedOutput: EvalResponse{
@@ -5806,7 +5960,10 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 		},
 		"ZRANGE with negative start index greater than length": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "member1"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "member1"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "-10", "-5"},
 			migratedOutput: EvalResponse{
@@ -5840,7 +5997,10 @@ func testEvalZPOPMIN(t *testing.T, store *dstore.Store) {
 		},
 		"ZPOPMIN on existing key (without count argument)": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "member1", "2", "member2"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "member1", "2", "member2"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset"},
 			migratedOutput: EvalResponse{
@@ -5850,7 +6010,10 @@ func testEvalZPOPMIN(t *testing.T, store *dstore.Store) {
 		},
 		"ZPOPMIN with normal count argument": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "member1", "2", "member2", "3", "member3"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "2"},
 			migratedOutput: EvalResponse{
@@ -5860,7 +6023,10 @@ func testEvalZPOPMIN(t *testing.T, store *dstore.Store) {
 		},
 		"ZPOPMIN with count argument but multiple members have the same score": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "member1", "1", "member2", "1", "member3"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "member1", "1", "member2", "1", "member3"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "2"},
 			migratedOutput: EvalResponse{
@@ -5870,7 +6036,10 @@ func testEvalZPOPMIN(t *testing.T, store *dstore.Store) {
 		},
 		"ZPOPMIN with negative count argument": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "member1", "2", "member2", "3", "member3"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "-1"},
 			migratedOutput: EvalResponse{
@@ -5880,7 +6049,10 @@ func testEvalZPOPMIN(t *testing.T, store *dstore.Store) {
 		},
 		"ZPOPMIN with invalid count argument": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "member1"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "member1"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "INCORRECT_COUNT_ARGUMENT"},
 			migratedOutput: EvalResponse{
@@ -5890,7 +6062,10 @@ func testEvalZPOPMIN(t *testing.T, store *dstore.Store) {
 		},
 		"ZPOPMIN with count argument greater than length of sorted set": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "member1", "2", "member2"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "member1", "2", "member2"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "10"},
 			migratedOutput: EvalResponse{
@@ -5910,7 +6085,10 @@ func testEvalZPOPMIN(t *testing.T, store *dstore.Store) {
 		},
 		"ZPOPMIN with floating-point scores": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1.5", "member1", "2.7", "member2"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1.5", "member1", "2.7", "member2"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset"},
 			migratedOutput: EvalResponse{
@@ -5933,7 +6111,10 @@ func BenchmarkEvalZPOPMIN(b *testing.B) {
 		{
 			name: "ZPOPMIN on small sorted set (10 members)",
 			setup: func(store *dstore.Store) {
-				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3", "4", "member4", "5", "member5", "6", "member6", "7", "member7", "8", "member8", "9", "member9", "10", "member10"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "member1", "2", "member2", "3", "member3", "4", "member4", "5", "member5", "6", "member6", "7", "member7", "8", "member8", "9", "member9", "10", "member10"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "3"},
 		},
@@ -5944,14 +6125,20 @@ func BenchmarkEvalZPOPMIN(b *testing.B) {
 				for i := 1; i <= 10000; i++ {
 					args = append(args, fmt.Sprintf("%d", i), fmt.Sprintf("member%d", i))
 				}
-				evalZADD(args, store)
+				cd := &cmd.DiceDBCmd{
+					Args: args,
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "10"},
 		},
 		{
 			name: "ZPOPMIN with duplicate scores",
 			setup: func(store *dstore.Store) {
-				evalZADD([]string{"myzset", "1", "member1", "1", "member2", "1", "member3"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "member1", "1", "member2", "1", "member3"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "2"},
 		},
@@ -5967,7 +6154,10 @@ func BenchmarkEvalZPOPMIN(b *testing.B) {
 				// Reset the store before each run to avoid contamination
 				dstore.ResetStore(store)
 				bm.setup(store)
-				evalZPOPMIN(bm.input, store)
+				cd := &cmd.DiceDBCmd{
+					Args: bm.input,
+				}
+				evalZPOPMIN(cd, store)
 			}
 		})
 	}
@@ -5984,7 +6174,10 @@ func testEvalZRANK(t *testing.T, store *dstore.Store) {
 		},
 		"ZRANK with existing member": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "member1", "2", "member2", "3", "member3"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "member2"},
 			migratedOutput: EvalResponse{
@@ -5994,7 +6187,10 @@ func testEvalZRANK(t *testing.T, store *dstore.Store) {
 		},
 		"ZRANK with non-existing member": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "member1", "2", "member2", "3", "member3"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "non_existing_member"},
 			migratedOutput: EvalResponse{
@@ -6004,7 +6200,10 @@ func testEvalZRANK(t *testing.T, store *dstore.Store) {
 		},
 		"ZRANK with WITHSCORE option": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "member1", "2", "member2", "3", "member3"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "member2", "WITHSCORE"},
 			migratedOutput: EvalResponse{
@@ -6014,7 +6213,10 @@ func testEvalZRANK(t *testing.T, store *dstore.Store) {
 		},
 		"ZRANK with invalid option": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "member1", "2", "member2", "3", "member3"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "member2", "INVALID_OPTION"},
 			migratedOutput: EvalResponse{
@@ -6024,7 +6226,10 @@ func testEvalZRANK(t *testing.T, store *dstore.Store) {
 		},
 		"ZRANK with multiple members having same score": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "member1", "1", "member2", "1", "member3"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "member1", "1", "member2", "1", "member3"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "member3"},
 			migratedOutput: EvalResponse{
@@ -6034,7 +6239,10 @@ func testEvalZRANK(t *testing.T, store *dstore.Store) {
 		},
 		"ZRANK with non-integer scores": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1.5", "member1", "2.5", "member2"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1.5", "member1", "2.5", "member2"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "member2"},
 			migratedOutput: EvalResponse{
@@ -6058,7 +6266,10 @@ func BenchmarkEvalZRANK(b *testing.B) {
 	store := dstore.NewStore(nil, nil)
 
 	// Set up initial sorted set
-	evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+	cd := &cmd.DiceDBCmd{
+		Args: []string{"myzset", "1", "member1", "2", "member2", "3", "member3"},
+	}
+	evalZADD(cd, store)
 
 	benchmarks := []struct {
 		name      string
@@ -6073,7 +6284,10 @@ func BenchmarkEvalZRANK(b *testing.B) {
 	for _, bm := range benchmarks {
 		b.Run(bm.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				evalZRANK(bm.input, store)
+				cd := &cmd.DiceDBCmd{
+					Args: bm.input,
+				}
+				evalZRANK(cd, store)
 			}
 		})
 	}
@@ -6292,7 +6506,10 @@ func BenchmarkEvalHINCRBYFLOAT(b *testing.B) {
 	for _, input := range inputs {
 		b.Run(fmt.Sprintf("HINCRBYFLOAT %s %s %s", input.key, input.field, input.incr), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				_ = evalHINCRBYFLOAT([]string{"HINCRBYFLOAT", input.key, input.field, input.incr}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"HINCRBYFLOAT", input.key, input.field, input.incr},
+				}
+				_ = evalHINCRBYFLOAT(cd, store)
 			}
 		})
 	}
@@ -6706,8 +6923,10 @@ func testEvalINCR(t *testing.T, store *dstore.Store) {
 			if tt.setup != nil {
 				tt.setup()
 			}
-
-			response := evalINCR(tt.input, store)
+			cd := &cmd.DiceDBCmd{
+				Args: tt.input,
+			}
+			response := evalINCR(cd, store)
 
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
@@ -6793,8 +7012,10 @@ func testEvalINCRBY(t *testing.T, store *dstore.Store) {
 			if tt.setup != nil {
 				tt.setup()
 			}
-
-			response := evalINCRBY(tt.input, store)
+			cd := &cmd.DiceDBCmd{
+				Args: tt.input,
+			}
+			response := evalINCRBY(cd, store)
 
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
@@ -6880,8 +7101,10 @@ func testEvalDECR(t *testing.T, store *dstore.Store) {
 			if tt.setup != nil {
 				tt.setup()
 			}
-
-			response := evalDECR(tt.input, store)
+			cd := &cmd.DiceDBCmd{
+				Args: tt.input,
+			}
+			response := evalDECR(cd, store)
 
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
@@ -6967,8 +7190,10 @@ func testEvalDECRBY(t *testing.T, store *dstore.Store) {
 			if tt.setup != nil {
 				tt.setup()
 			}
-
-			response := evalDECRBY(tt.input, store)
+			cd := &cmd.DiceDBCmd{
+				Args: tt.input,
+			}
+			response := evalDECRBY(cd, store)
 
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
@@ -7018,8 +7243,10 @@ func testEvalBFRESERVE(t *testing.T, store *dstore.Store) {
 			if tt.setup != nil {
 				tt.setup()
 			}
-
-			response := evalBFRESERVE(tt.input, store)
+			cd := &cmd.DiceDBCmd{
+				Args: tt.input,
+			}
+			response := evalBFRESERVE(cd, store)
 
 			assert.Equal(t, tt.migratedOutput.Result, response.Result)
 			if tt.migratedOutput.Error != nil {
@@ -7054,8 +7281,10 @@ func testEvalBFINFO(t *testing.T, store *dstore.Store) {
 			if tt.setup != nil {
 				tt.setup()
 			}
-
-			response := evalBFINFO(tt.input, store)
+			cd := &cmd.DiceDBCmd{
+				Args: tt.input,
+			}
+			response := evalBFINFO(cd, store)
 			assert.Equal(t, tt.migratedOutput.Result, response.Result)
 
 			if tt.migratedOutput.Error != nil {
@@ -7085,7 +7314,10 @@ func testEvalBFADD(t *testing.T, store *dstore.Store) {
 		{
 			name: "BF.ADD to existing filter",
 			setup: func() {
-				evalBFRESERVE([]string{"myBloomFilter", "0.01", "1000"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myBloomFilter", "0.01", "1000"},
+				}
+				evalBFRESERVE(cd, store)
 			},
 			input:          []string{"myBloomFilter", "element"},
 			migratedOutput: EvalResponse{Result: clientio.IntegerOne, Error: nil}, // 1 for new addition, 0 if already exists
@@ -7098,8 +7330,10 @@ func testEvalBFADD(t *testing.T, store *dstore.Store) {
 			if tt.setup != nil {
 				tt.setup()
 			}
-
-			response := evalBFADD(tt.input, store)
+			cd := &cmd.DiceDBCmd{
+				Args: tt.input,
+			}
+			response := evalBFADD(cd, store)
 
 			assert.Equal(t, tt.migratedOutput.Result, response.Result)
 			if tt.migratedOutput.Error != nil {
@@ -7130,7 +7364,10 @@ func testEvalBFEXISTS(t *testing.T, store *dstore.Store) {
 		{
 			name: "BF.EXISTS element not in filter",
 			setup: func() {
-				evalBFRESERVE([]string{"myBloomFilter", "0.01", "1000"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myBloomFilter", "0.01", "1000"},
+				}
+				evalBFRESERVE(cd, store)
 			},
 			input:          []string{"myBloomFilter", "element"},
 			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
@@ -7138,8 +7375,14 @@ func testEvalBFEXISTS(t *testing.T, store *dstore.Store) {
 		{
 			name: "BF.EXISTS element in filter",
 			setup: func() {
-				evalBFRESERVE([]string{"myBloomFilter", "0.01", "1000"}, store)
-				evalBFADD([]string{"myBloomFilter", "element"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myBloomFilter", "0.01", "1000"},
+				}
+				evalBFRESERVE(cd, store)
+				cd = &cmd.DiceDBCmd{
+					Args: []string{"myBloomFilter", "element"},
+				}
+				evalBFADD(cd, store)
 			},
 			input:          []string{"myBloomFilter", "element"},
 			migratedOutput: EvalResponse{Result: clientio.IntegerOne, Error: nil}, // 1 indicates the element exists
@@ -7152,8 +7395,10 @@ func testEvalBFEXISTS(t *testing.T, store *dstore.Store) {
 			if tt.setup != nil {
 				tt.setup()
 			}
-
-			response := evalBFEXISTS(tt.input, store)
+			cd := &cmd.DiceDBCmd{
+				Args: tt.input,
+			}
+			response := evalBFEXISTS(cd, store)
 
 			assert.Equal(t, tt.migratedOutput.Result, response.Result)
 			if tt.migratedOutput.Error != nil {

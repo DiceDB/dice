@@ -1,6 +1,9 @@
 package eval
 
-import dstore "github.com/dicedb/dice/internal/store"
+import (
+	"github.com/dicedb/dice/internal/cmd"
+	dstore "github.com/dicedb/dice/internal/store"
+)
 
 type DiceCmdMeta struct {
 	Name  string
@@ -24,7 +27,7 @@ type DiceCmdMeta struct {
 	// instead of just raw bytes. Commands that have been migrated to this new model
 	// will utilize this function for evaluation, allowing for better handling of
 	// complex command execution scenarios and improved response consistency.
-	NewEval func([]string, *dstore.Store) *EvalResponse
+	NewEval func(*cmd.DiceDBCmd, *dstore.Store) *EvalResponse
 }
 
 type KeySpecs struct {
@@ -1153,9 +1156,22 @@ var (
 		Arity:    3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+
+	customCopyCmdMeta = DiceCmdMeta{
+		Name:       "CUSTOMCOPY",
+		NewEval:    evalCustomCOPY,
+		IsMigrated: true,
+		Arity:      -2,
+	}
+)
+
+var (
+	PreProcessing = map[string]func(*cmd.DiceDBCmd, *dstore.Store) *EvalResponse{}
 )
 
 func init() {
+	PreProcessing["COPY"] = preProcessCOPY
+
 	DiceCmds["ABORT"] = abortCmdMeta
 	DiceCmds["APPEND"] = appendCmdMeta
 	DiceCmds["AUTH"] = authCmdMeta
@@ -1172,6 +1188,7 @@ func init() {
 	DiceCmds["CLIENT"] = clientCmdMeta
 	DiceCmds["COMMAND"] = commandCmdMeta
 	DiceCmds["COPY"] = copyCmdMeta
+	DiceCmds["CUSTOMCOPY"] = customCopyCmdMeta
 	DiceCmds["DBSIZE"] = dbSizeCmdMeta
 	DiceCmds["DECR"] = decrCmdMeta
 	DiceCmds["DECRBY"] = decrByCmdMeta
@@ -1232,6 +1249,7 @@ func init() {
 	DiceCmds["JSON.OBJLEN"] = jsonobjlenCmdMeta
 	DiceCmds["JSON.RESP"] = jsonrespCmdMeta
 	DiceCmds["JSON.SET"] = jsonsetCmdMeta
+	DiceCmds["JSON.STRAPPEND"] = jsonstrappendCmdMeta
 	DiceCmds["JSON.STRLEN"] = jsonStrlenCmdMeta
 	DiceCmds["JSON.TOGGLE"] = jsontoggleCmdMeta
 	DiceCmds["JSON.TYPE"] = jsontypeCmdMeta
@@ -1276,7 +1294,6 @@ func init() {
 	DiceCmds["ZRANGE"] = zrangeCmdMeta
 	DiceCmds["ZPOPMIN"] = zpopminCmdMeta
 	DiceCmds["ZRANK"] = zrankCmdMeta
-	DiceCmds["JSON.STRAPPEND"] = jsonstrappendCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

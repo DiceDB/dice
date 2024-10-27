@@ -163,7 +163,7 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 func (w *BaseWorker) executeCommandHandler(execCtx context.Context, errChan chan error, cmds []*cmd.DiceDBCmd, isWatchNotification bool) {
 	// Retrieve metadata for the command to determine if multisharding is supported.
 	meta, ok := CommandsMeta[cmds[0].Cmd]
-	if ok && meta.preProcessingReq {
+	if ok && meta.preProcessing {
 		if err := meta.preProcessResponse(w, cmds[0]); err != nil {
 			e := w.ioHandler.Write(execCtx, err)
 			if e != nil {

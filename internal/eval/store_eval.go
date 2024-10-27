@@ -9,6 +9,7 @@ import (
 	"github.com/axiomhq/hyperloglog"
 	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/internal/clientio"
+	"github.com/dicedb/dice/internal/cmd"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/eval/sortedset"
 	"github.com/dicedb/dice/internal/object"
@@ -33,7 +34,8 @@ import (
 // Returns encoded error response if both PX and EX flags are present
 // Returns encoded OK RESP once new entry is added
 // If the key already exists then the value will be overwritten and expiry will be discarded
-func evalSET(args []string, store *dstore.Store) *EvalResponse {
+func evalSET(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) <= 1 {
 		return &EvalResponse{
 			Result: nil,
@@ -185,7 +187,8 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 // The key should be the only param in args
 // The RESP value of the key is encoded and then returned
 // evalGET returns response.clientio.NIL if key is expired or it does not exist
-func evalGET(args []string, store *dstore.Store) *EvalResponse {
+func evalGET(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) != 1 {
 		return &EvalResponse{
 			Result: nil,
@@ -264,7 +267,8 @@ func evalGET(args []string, store *dstore.Store) *EvalResponse {
 // Returns:
 // Bulk string reply: the old value stored at the key.
 // Nil reply: if the key does not exist.
-func evalGETSET(args []string, store *dstore.Store) *EvalResponse {
+func evalGETSET(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) != 2 {
 		return &EvalResponse{
 			Result: nil,
@@ -273,14 +277,20 @@ func evalGETSET(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	key, value := args[0], args[1]
-	getResp := evalGET([]string{key}, store)
+	getResp := evalGET(&cmd.DiceDBCmd{
+		Cmd:  GET,
+		Args: []string{key},
+	}, store)
 	// Check if it's an error resp from GET
 	if getResp.Error != nil {
 		return getResp
 	}
 
 	// Previous TTL needs to be reset
-	setResp := evalSET([]string{key, value}, store)
+	setResp := evalSET(&cmd.DiceDBCmd{
+		Cmd:  GET,
+		Args: []string{key, value},
+	}, store)
 	// Check if it's an error resp from SET
 	if setResp.Error != nil {
 		return setResp
@@ -295,7 +305,8 @@ func evalGETSET(args []string, store *dstore.Store) *EvalResponse {
 // Returns encoded error response if expiry time value in not integer
 // Returns encoded OK RESP once new entry is added
 // If the key already exists then the value and expiry will be overwritten
-func evalSETEX(args []string, store *dstore.Store) *EvalResponse {
+func evalSETEX(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) != 3 {
 		return &EvalResponse{
 			Result: nil,
@@ -321,13 +332,17 @@ func evalSETEX(args []string, store *dstore.Store) *EvalResponse {
 	}
 	newArgs := []string{key, value, Ex, args[1]}
 
-	return evalSET(newArgs, store)
+	return evalSET(&cmd.DiceDBCmd{
+		Cmd:  GET,
+		Args: newArgs,
+	}, store)
 }
 
 // Key, start and end are mandatory args.
 // Returns a substring from the key(if it's a string) from start -> end.
 // Returns ""(empty string) if key is not present and if start > end.
-func evalGETRANGE(args []string, store *dstore.Store) *EvalResponse {
+func evalGETRANGE(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) != 3 {
 		return &EvalResponse{
 			Result: nil,
@@ -419,7 +434,8 @@ func evalGETRANGE(args []string, store *dstore.Store) *EvalResponse {
 // If a specified member is already a member of the sorted set, the score is updated and the element
 // reinserted at the right position to ensure the correct ordering.
 // If key does not exist, a new sorted set with the specified members as sole members is created.
-func evalZADD(args []string, store *dstore.Store) *EvalResponse {
+func evalZADD(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) < 3 || len(args)%2 == 0 {
 		return &EvalResponse{
 			Result: nil,
@@ -475,7 +491,8 @@ func evalZADD(args []string, store *dstore.Store) *EvalResponse {
 
 // evalZRANGE returns the specified range of elements in the sorted set stored at key.
 // The elements are considered to be ordered from the lowest to the highest score.
-func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
+func evalZRANGE(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) < 3 {
 		return &EvalResponse{
 			Result: nil,
@@ -547,7 +564,8 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 // evalAPPEND takes two arguments: the key and the value to append to the key's current value.
 // If the key does not exist, it creates a new key with the given value (so APPEND will be similar to SET in this special case)
 // If key already exists and is a string (or integers stored as strings), this command appends the value at the end of the string
-func evalAPPEND(args []string, store *dstore.Store) *EvalResponse {
+func evalAPPEND(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) != 2 {
 		return &EvalResponse{
 			Result: nil,
@@ -628,7 +646,8 @@ func evalAPPEND(args []string, store *dstore.Store) *EvalResponse {
 // The rank (or index) is 0-based, which means that the member with the lowest score has rank 0.
 // If the 'WITHSCORE' option is specified, it returns both the rank and the score of the member.
 // Returns nil if the key does not exist or the member is not a member of the sorted set.
-func evalZRANK(args []string, store *dstore.Store) *EvalResponse {
+func evalZRANK(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) < 2 || len(args) > 3 {
 		return &EvalResponse{
 			Result: nil,
@@ -694,7 +713,8 @@ func evalZRANK(args []string, store *dstore.Store) *EvalResponse {
 // Returns encoded error response if incorrect number of arguments
 // Returns an integer reply specifying the number of matching JSON arrays
 // and objects cleared + number of matching JSON numerical values zeroed.
-func evalJSONCLEAR(args []string, store *dstore.Store) *EvalResponse {
+func evalJSONCLEAR(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) < 1 {
 		return &EvalResponse{
 			Result: nil,
@@ -801,7 +821,8 @@ func evalJSONCLEAR(args []string, store *dstore.Store) *EvalResponse {
 // Returns:
 // If the approximated cardinality estimated by the HyperLogLog changed after executing the command,
 // returns 1, otherwise 0 is returned.
-func evalPFADD(args []string, store *dstore.Store) *EvalResponse {
+func evalPFADD(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) < 1 {
 		return &EvalResponse{
 			Result: nil,
@@ -856,7 +877,8 @@ func evalPFADD(args []string, store *dstore.Store) *EvalResponse {
 // evalJSONSTRLEN Report the length of the JSON String at path in key
 // Returns by recursive descent an array of integer replies for each path,
 // the string's length, or nil, if the matching JSON value is not a string.
-func evalJSONSTRLEN(args []string, store *dstore.Store) *EvalResponse {
+func evalJSONSTRLEN(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) < 1 {
 		return &EvalResponse{
 			Result: nil,
@@ -957,7 +979,8 @@ func evalJSONSTRLEN(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
-func evalPFCOUNT(args []string, store *dstore.Store) *EvalResponse {
+func evalPFCOUNT(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) < 1 {
 		return &EvalResponse{
 			Result: nil,
@@ -998,7 +1021,8 @@ func evalPFCOUNT(args []string, store *dstore.Store) *EvalResponse {
 // which is the json objects length, or nil, if the matching value is not a json.
 // Returns encoded error if the key doesn't exist or key is expired or the matching value is not an array.
 // Returns encoded error response if incorrect number of arguments
-func evalJSONOBJLEN(args []string, store *dstore.Store) *EvalResponse {
+func evalJSONOBJLEN(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) < 1 {
 		return &EvalResponse{
 			Result: nil,
@@ -1110,7 +1134,8 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
-func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
+func evalPFMERGE(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) < 1 {
 		return &EvalResponse{
 			Result: nil,
@@ -1175,7 +1200,8 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 // The range of values supported by HINCRBY is limited to 64-bit signed integers.
 //
 // Usage: HINCRBY key field increment
-func evalHINCRBY(args []string, store *dstore.Store) *EvalResponse {
+func evalHINCRBY(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) < 3 {
 		return &EvalResponse{
 			Result: nil,
@@ -1233,7 +1259,8 @@ func evalHINCRBY(args []string, store *dstore.Store) *EvalResponse {
 // The precision of the increment is not restricted to integers, allowing for floating point values.
 //
 // Usage: HINCRBYFLOAT key field increment
-func evalHINCRBYFLOAT(args []string, store *dstore.Store) *EvalResponse {
+func evalHINCRBYFLOAT(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) < 3 {
 		return &EvalResponse{
 			Result: nil,
@@ -1290,7 +1317,8 @@ func evalHINCRBYFLOAT(args []string, store *dstore.Store) *EvalResponse {
 // The "WITHVALUES" option returns both fields and values.
 // Returns nil if the key doesn't exist or the hash is empty.
 // Errors: arity error, type error for non-hash, syntax error for "WITHVALUES", or count format error.
-func evalHRANDFIELD(args []string, store *dstore.Store) *EvalResponse {
+func evalHRANDFIELD(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) < 1 || len(args) > 3 {
 		return &EvalResponse{
 			Result: nil,
@@ -1359,7 +1387,8 @@ func evalHRANDFIELD(args []string, store *dstore.Store) *EvalResponse {
 // The value for the queried key should be of integer format,
 // if not evalINCR returns encoded error response.
 // evalINCR returns the incremented value for the key if there are no errors.
-func evalINCR(args []string, store *dstore.Store) *EvalResponse {
+func evalINCR(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) != 1 {
 		return &EvalResponse{
 			Result: nil,
@@ -1378,7 +1407,8 @@ func evalINCR(args []string, store *dstore.Store) *EvalResponse {
 // The value for the queried key should be of integer format,
 // if not INCRBY returns error response.
 // evalINCRBY returns the incremented value for the key if there are no errors.
-func evalINCRBY(args []string, store *dstore.Store) *EvalResponse {
+func evalINCRBY(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) != 2 {
 		return &EvalResponse{
 			Result: nil,
@@ -1404,7 +1434,8 @@ func evalINCRBY(args []string, store *dstore.Store) *EvalResponse {
 // The value for the queried key should be of integer format,
 // if not evalDECR returns error response.
 // evalDECR returns the decremented value for the key if there are no errors.
-func evalDECR(args []string, store *dstore.Store) *EvalResponse {
+func evalDECR(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) != 1 {
 		return &EvalResponse{
 			Result: nil,
@@ -1422,7 +1453,8 @@ func evalDECR(args []string, store *dstore.Store) *EvalResponse {
 // The value for the queried key should be of integer format,
 // if not evalDECRBY returns an error response.
 // evalDECRBY returns the decremented value for the key after applying the specified decrement if there are no errors.
-func evalDECRBY(args []string, store *dstore.Store) *EvalResponse {
+func evalDECRBY(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) != 2 {
 		return &EvalResponse{
 			Result: nil,
@@ -1492,7 +1524,8 @@ func incrDecrCmd(args []string, incr int64, store *dstore.Store) *EvalResponse {
 // If the value at the key is a string, it should be parsable to float64,
 // if not evalINCRBYFLOAT returns an  error response.
 // evalINCRBYFLOAT returns the incremented value for the key after applying the specified increment if there are no errors.
-func evalINCRBYFLOAT(args []string, store *dstore.Store) *EvalResponse {
+func evalINCRBYFLOAT(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) != 2 {
 		return &EvalResponse{
 			Result: nil,
@@ -1585,7 +1618,8 @@ func floatValue(value interface{}) (float64, error) {
 // If multiple members have the same score, the one that comes first alphabetically is returned.
 // You can also specify a count to remove and return multiple members at once.
 // If the set is empty, it returns an empty result.
-func evalZPOPMIN(args []string, store *dstore.Store) *EvalResponse {
+func evalZPOPMIN(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	// Incorrect number of arguments should return error
 	if len(args) < 1 || len(args) > 2 {
 		return &EvalResponse{
@@ -1648,7 +1682,8 @@ func evalZPOPMIN(args []string, store *dstore.Store) *EvalResponse {
 // evalBF.RESERVE evaluates the BF.RESERVE command responsible for initializing a
 // new bloom filter and allocation it's relevant parameters based on given inputs.
 // If no params are provided, it uses defaults.
-func evalBFRESERVE(args []string, store *dstore.Store) *EvalResponse {
+func evalBFRESERVE(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) < 3 {
 		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.RESERVE"))
 	}
@@ -1667,7 +1702,8 @@ func evalBFRESERVE(args []string, store *dstore.Store) *EvalResponse {
 
 // evalBFADD evaluates the BF.ADD command responsible for adding an element to a bloom filter. If the filter does not
 // exist, it will create a new one with default parameters.
-func evalBFADD(args []string, store *dstore.Store) *EvalResponse {
+func evalBFADD(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) != 2 {
 		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.ADD"))
 	}
@@ -1686,7 +1722,8 @@ func evalBFADD(args []string, store *dstore.Store) *EvalResponse {
 }
 
 // evalBFEXISTS evaluates the BF.EXISTS command responsible for checking existence of an element in a bloom filter.
-func evalBFEXISTS(args []string, store *dstore.Store) *EvalResponse {
+func evalBFEXISTS(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	// todo must work with objects of
 	if len(args) != 2 {
 		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.EXISTS"))
@@ -1708,7 +1745,8 @@ func evalBFEXISTS(args []string, store *dstore.Store) *EvalResponse {
 
 // evalBFINFO evaluates the BF.INFO command responsible for returning the
 // parameters and metadata of an existing bloom filter.
-func evalBFINFO(args []string, store *dstore.Store) *EvalResponse {
+func evalBFINFO(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) < 1 || len(args) > 2 {
 		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.INFO"))
 	}
@@ -1733,4 +1771,36 @@ func evalBFINFO(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	return makeEvalResult(result)
+}
+
+func evalCustomCOPY(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
+	key := args[0]
+
+	store.Del(key)
+
+	copyObj := cd.Obj.DeepCopy()
+	if copyObj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	exp, ok := dstore.GetExpiry(cd.Obj, store)
+	var exDurationMs int64 = -1
+	if ok {
+		exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
+	}
+
+	store.Put(key, copyObj)
+
+	if exDurationMs > 0 {
+		store.SetExpiry(copyObj, exDurationMs)
+	}
+
+	return &EvalResponse{
+		Result: clientio.IntegerOne,
+		Error:  nil,
+	}
 }
