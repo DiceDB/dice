@@ -1,6 +1,6 @@
 ---
 title: ZCOUNT
-description: The ZCOUNT command in DiceDB counts the number of members in a sorted set at the specified key whose scores fall within a given range. The command takes three arguments: the key of the sorted set, the minimum score, and the maximum score. If the key does not exist or contains no members, the command returns 0. It allows for flexible range queries by using special values like -inf and +inf to specify unbounded limits.
+description: The ZCOUNT command in DiceDB counts the number of members in a sorted set at the specified key whose scores fall within a given range. The command takes three arguments - the key of the sorted set, the minimum score, and the maximum score. If the key does not exist or contains no members, the command returns 0. It allows for flexible range queries by using special values like -inf and +inf to specify unbounded limits.
 ---
 
 The ZCOUNT command in DiceDB counts the number of members in a sorted set at the specified key whose scores fall within a given range. The command takes three arguments: the key of the sorted set, the minimum score, and the maximum score. If the key does not exist or contains no members, the command returns 0. It allows for flexible range queries by using special values like -inf and +inf to specify unbounded limits.
