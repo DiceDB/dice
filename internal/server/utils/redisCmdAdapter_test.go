@@ -432,7 +432,7 @@ func TestParseWebsocketMessage(t *testing.T) {
 			name:         "Test complex JSON.SET command with nested JSON object and quoted strings",
 			message:      `json.set k1 $ '{"name": "John", "contact": {"email": "john@example.com", "phone": "123-456"}}'`,
 			expectedCmd:  "JSON.SET",
-			expectedArgs: []string{"k1", "$", {"name": "John", "contact": {"email": "john@example.com", "phone": "123-456"}}},
+			expectedArgs: []string{"k1", "$", `{"name": "John", "contact": {"email": "john@example.com", "phone": "123-456"}}`},
 		},
 		{
 			name:         "Test simple JSON.GET command with JSON path",
