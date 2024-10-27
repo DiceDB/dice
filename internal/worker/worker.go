@@ -382,9 +382,7 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 				return err
 			}
 
-			if w.wl.LogCommand(diceDBCmd.Cmd) != nil {
-				slog.Error("Error logging command", slog.String("workerID", w.id), slog.String("command", diceDBCmd.Cmd))
-			}
+			w.wl.LogCommand(diceDBCmd)
 
 		case MultiShard:
 			err := w.ioHandler.Write(ctx, val.composeResponse(storeOp...))
@@ -393,9 +391,7 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 				return err
 			}
 
-			if w.wl.LogCommand(diceDBCmd.Cmd) != nil {
-				slog.Error("Error logging command", slog.String("workerID", w.id), slog.String("command", diceDBCmd.Cmd))
-			}
+			w.wl.LogCommand(diceDBCmd)
 
 		default:
 			slog.Error("Unknown command type", slog.String("workerID", w.id), slog.String("command", diceDBCmd.Cmd), slog.Any("evalResp", storeOp))

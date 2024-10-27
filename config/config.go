@@ -54,8 +54,9 @@ var (
 
 	EnableProfiling = false
 
-	EnableWatch = true
-	LogDir      = ""
+	EnableWatch    = true
+	LogDir         = ""
+	RestoreFromWAL = false
 )
 
 type Config struct {

@@ -48,6 +48,7 @@ func init() {
 
 	flag.StringVar(&config.DiceConfig.Logging.LogLevel, "log-level", "info", "log level, values: info, debug")
 	flag.StringVar(&config.LogDir, "log-dir", "/tmp/dicedb", "log directory path")
+	flag.BoolVar(&config.RestoreFromWAL, "wal-restore", true, "restore the database from the WAL files")
 
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
 	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the config file")
@@ -106,6 +107,14 @@ func main() {
 		slog.Error("could not create WAL at", slog.String("log-dir", config.LogDir), slog.Any("error", err))
 		sigs <- syscall.SIGKILL
 		return
+	}
+
+	if config.RestoreFromWAL {
+		if err := wl.LoadWAL(); err != nil {
+			slog.Error("could not restore WAL", slog.Any("error", err))
+			sigs <- syscall.SIGKILL
+			return
+		}
 	}
 
 	if config.EnableWatch {
