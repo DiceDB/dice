@@ -674,7 +674,7 @@ func processMembersWithFlags(args []string, sortedSet *sortedset.Set, store *dst
 		member := args[i+1]
 
 		score, err := strconv.ParseFloat(scoreStr, 64)
-		if err != nil || math.IsNaN(score) {
+		if err != nil {
 			return &EvalResponse{
 				Result: nil,
 				Error:  diceerrors.ErrInvalidNumberFormat,
