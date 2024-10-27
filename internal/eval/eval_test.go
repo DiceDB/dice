@@ -112,6 +112,7 @@ func TestEval(t *testing.T) {
 	testEvalZPOPMAX(t, store)
 	testEvalZPOPMIN(t, store)
 	testEvalZRANK(t, store)
+	testEvalZREM(t, store)
 	testEvalHVALS(t, store)
 	testEvalBitField(t, store)
 	testEvalHINCRBYFLOAT(t, store)
@@ -6164,6 +6165,74 @@ func testEvalZRANK(t *testing.T, store *dstore.Store) {
 	}
 
 	runMigratedEvalTests(t, tests, evalZRANK, store)
+}
+
+func testEvalZREM(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"ZREM with wrong number of arguments": {
+			input: []string{"myzset"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("ZREM"),
+			},
+		},
+		"ZREM with missing key": {
+			input: []string{},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("ZREM"),
+			},
+		},
+		"ZREM with wrong type key": {
+			setup: func() {
+				store.Put("string_key", store.NewObj("string_value", -1, object.ObjTypeString, object.ObjEncodingRaw))
+			},
+			input: []string{"string_key", "field"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			},
+		},
+		"ZREM with non-existent key": {
+			input: []string{"non_existent_key", "field"},
+			migratedOutput: EvalResponse{
+				Result: clientio.IntegerZero,
+				Error:  nil,
+			},
+		},
+		"ZREM with non-existent element": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "one"}, store)
+			},
+			input: []string{"myzset", "two"},
+			migratedOutput: EvalResponse{
+				Result: int64(0),
+				Error:  nil,
+			},
+		},
+		"ZREM with sorted set holding single element": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "one"}, store)
+			},
+			input: []string{"myzset", "one"},
+			migratedOutput: EvalResponse{
+				Result: int64(1),
+				Error:  nil,
+			},
+		},
+		"ZREM with sorted set holding multiple elements": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "one", "2", "two", "3", "three"}, store)
+			},
+			input: []string{"myzset", "one", "two"},
+			migratedOutput: EvalResponse{
+				Result: int64(2),
+				Error:  nil,
+			},
+		},
+	}
+
+	runMigratedEvalTests(t, tests, evalZREM, store)
 }
 
 func BenchmarkEvalZRANK(b *testing.B) {
