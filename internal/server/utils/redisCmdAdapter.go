@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"io"
 	"net/http"
 	"regexp"
@@ -33,6 +34,7 @@ const (
 	Members     = "members"
 	Index       = "index"
 	JSON        = "json"
+	ABORT       = "ABORT"
 )
 
 const QWatch string = "Q.WATCH"
@@ -77,7 +79,7 @@ func ParseHTTPRequest(r *http.Request) (*cmd.DiceDBCmd, error) {
 				return nil, err
 			}
 
-			if len(jsonBody) == 0 {
+			if len(jsonBody) == 0 && command != ABORT {
 				return nil, fmt.Errorf("empty JSON object")
 			}
 
