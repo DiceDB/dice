@@ -3,9 +3,6 @@ package http
 import (
 	"fmt"
 	"math/rand"
-
-	// "net"
-	// "strings"
 	"testing"
 	"time"
 
