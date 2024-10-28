@@ -58,7 +58,6 @@ func (e *HTTPCommandExecutor) FireCommand(cmd HTTPCommand) (interface{}, error) 
 		body, err = json.Marshal(cmd.Body)
 		// Handle error during JSON marshaling
 		if err != nil {
-			fmt.Printf("********* ERROR WHILE MARSHALLING ******")
 			return nil, err
 		}
 	}
