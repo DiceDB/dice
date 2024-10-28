@@ -50,56 +50,23 @@ func flattenStringArgs(args interface{}) (string, error) {
 	return strings.Join(result, " "), nil
 }
 
-// orderAndEncodeArgs encodes arguments based on ArgsOrder for any Redis command.
-func orderAndEncodeArgs(command string, args map[string]interface{}) (string, error) {
-	argsOrder := DiceCmdAdapters[command].ArgsOrder
-	// Start with the command name
-	result := command
-
-	for _, arg := range argsOrder {
-		switch v := arg.(type) {
-		case string:
-			// For regular fields like "key" and "value"
-			if argVal, ok := args[v]; ok {
-				// If it's a flag (e.g., "nx": "nx"), only add the value once
-				if argVal == v {
-					result += fmt.Sprintf(" %s", v)
-				} else if v == "key" || v == "value" {
-					result += fmt.Sprintf(" %s", argVal)
-				} else {
-					result += fmt.Sprintf(" %s %s", v, argVal)
-				}
-			}
-		case []interface{}:
-			// For optional parameters or flags like ["ex", "EX", "px", "PX"] and any order
-			for i := 0; i < len(v); i += 2 {
-				paramKey := v[i].(string)
-				redisKeyword := v[i+1].(string)
-				if argVal, ok := args[paramKey]; ok {
-					// Add only the Redis keyword if it's a flag
-					if argVal == redisKeyword {
-						result += fmt.Sprintf(" %s", redisKeyword)
-					} else {
-						result += fmt.Sprintf(" %s %s", redisKeyword, argVal)
-					}
-				}
-			}
-		}
-	}
-
-	return result, nil
-}
-
 // encodeArgs encodes arguments into a Redis command string based on command metadata.
 func encodeArgs(args map[string]interface{}, meta DiceDBAdapterMeta) (string, error) {
 	// Initialize command parts with the command name
 	commandParts := []string{meta.Command}
-
+	fromEnd := 0
+	fromStart := 0
 	// Append required arguments
-	argNames := make([]string, len(meta.RequiredArgs))
+	allArgNames := make([]string, len(meta.RequiredArgs))
 	for argName, position := range meta.RequiredArgs {
-		argNames[position.BeginIndex] = argName
+		if position.BeginIndex < 0 {
+			fromEnd++
+			continue
+		}
+		fromStart++
+		allArgNames[position.BeginIndex] = argName
 	}
+	argNames := allArgNames[:fromStart]
 	for _, argName := range argNames {
 		value, exists := args[argName]
 		// fmt.Println(argName, value, exists)
@@ -136,18 +103,59 @@ func encodeArgs(args map[string]interface{}, meta DiceDBAdapterMeta) (string, er
 			}
 		}
 	}
-
-	// Append flags
-	for flagName, flagKey := range meta.Flags {
+	// Append flags after sorting them based on their index
+	allFlags := make([]string, len(meta.Flags))
+	for flagName, flagIndex := range meta.Flags {
+		allFlags[flagIndex] = flagName
+	}
+	for _, flagName := range allFlags {
 		if _, exists := args[flagName]; exists {
-			commandParts = append(commandParts, flagKey) // Add the flag
+			commandParts = append(commandParts, flagName) // Add the flag
 		}
 	}
 
-	// Append optional arguments
-	for optArgName, optArgKey := range meta.OptionalArgs {
+	allOptionalArgs := make([]string, len(meta.OptionalArgs))
+	for optArgName, optArgIndex := range meta.OptionalArgs {
+		allOptionalArgs[optArgIndex] = optArgName
+	}
+	for _, optArgName := range allOptionalArgs {
 		if value, exists := args[optArgName]; exists {
-			commandParts = append(commandParts, optArgKey, value.(string)) // Add key-value pair
+			commandParts = append(commandParts, optArgName, value.(string)) // Add key-value pair
+		}
+	}
+	// Append optional arguments
+	// for optArgName, _ := range meta.OptionalArgs {
+	// 	if value, exists := args[optArgName]; exists {
+	// 		commandParts = append(commandParts, optArgName, value.(string)) // Add key-value pair
+	// 	}
+	// }
+
+	// process the required args that are not yet processed
+	// Append required arguments
+	argNames = make([]string, fromEnd)
+	for argName, position := range meta.RequiredArgs {
+		if position.BeginIndex < 0 {
+			argNames[fromEnd+position.BeginIndex] = argName
+		}
+	}
+
+	for _, argName := range argNames {
+		value, exists := args[argName]
+		// fmt.Println(argName, value, exists)
+		if !exists {
+			continue
+		}
+		switch v := value.(type) {
+		case string:
+			fmt.Println("value is string", value)
+			commandParts = append(commandParts, v) // Add the value
+		default:
+			fmt.Println("value is possible list", value)
+			s, err := flattenStringArgs(value)
+			if err != nil {
+				return "", err
+			}
+			commandParts = append(commandParts, s) // Add the values
 		}
 	}
 	// Join command parts to form the complete command string
@@ -183,4 +191,8 @@ func bitopEncoder(args map[string]interface{}) (string, error) {
 
 func bitfieldEncoder(args map[string]interface{}) (string, error) {
 	return encodeArgs(args, DiceCmdAdapters["BITFIELD"])
+}
+
+func zaddEncoder(args map[string]interface{}) (string, error) {
+	return encodeArgs(args, DiceCmdAdapters["ZADD"])
 }

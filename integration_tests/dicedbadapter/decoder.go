@@ -141,3 +141,7 @@ func bitopDecoder(commandParts []string) (map[string]interface{}, error) {
 func bitfieldDecoder(commandParts []string) (map[string]interface{}, error) {
 	return decodeArgs(commandParts, DiceCmdAdapters["BITFIELD"])
 }
+
+func zaddDecoder(commandParts []string) (map[string]interface{}, error) {
+	return decodeArgs(commandParts, DiceCmdAdapters["ZADD"])
+}

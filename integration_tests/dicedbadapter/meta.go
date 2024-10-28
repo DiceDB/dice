@@ -11,9 +11,9 @@ type DiceDBAdapterMeta struct {
 	Encoder      CommandEncoder
 	Decoder      CommandDecoder
 	ArgsOrder    []interface{}
-	Flags        map[string]string
+	Flags        map[string]int
 	RequiredArgs map[string]Position
-	OptionalArgs map[string]string
+	OptionalArgs map[string]int
 	Subcommands  map[string]DiceDBAdapterMeta
 }
 
@@ -35,8 +35,8 @@ func init() {
 			EndIndex:   1,
 			Step:       1,
 		}},
-		Flags:        map[string]string{"nx": "nx", "xx": "xx", "keepttl": "keepttl", "get": "get"},
-		OptionalArgs: map[string]string{"ex": "ex", "px": "px", "pxat": "pxat", "exat": "exat"},
+		Flags:        map[string]int{"nx": 0, "xx": 1, "keepttl": 2, "get": 3},
+		OptionalArgs: map[string]int{"ex": 0, "px": 1, "pxat": 2, "exat": 3},
 	}
 
 	getCmdAdapterMeta := DiceDBAdapterMeta{
@@ -78,8 +78,6 @@ func init() {
 				Step:       1,
 			},
 		}, // MGET requires keys but no specific required args
-		Flags:        map[string]string{}, // No flags for MGET
-		OptionalArgs: map[string]string{}, // No optional args for MGET
 	}
 
 	msetCmdAdapterMeta := DiceDBAdapterMeta{
@@ -94,8 +92,6 @@ func init() {
 				Step:       2,
 			},
 		}, // MSET requires key-value pairs but no specific required args
-		Flags:        map[string]string{}, // No flags for MSET
-		OptionalArgs: map[string]string{}, // No optional args for MSET
 	}
 
 	bitopCmdAdapterMeta := DiceDBAdapterMeta{
@@ -120,8 +116,6 @@ func init() {
 				Step:       1,
 			},
 		},
-		Flags:        map[string]string{},
-		OptionalArgs: map[string]string{},
 	}
 	bitfieldSubcommandGetAdapterMeta := DiceDBAdapterMeta{
 		RequiredArgs: map[string]Position{
@@ -136,8 +130,6 @@ func init() {
 				Step:       1,
 			},
 		},
-		Flags:        map[string]string{},
-		OptionalArgs: map[string]string{},
 	}
 
 	bitfieldSubcommandSetAdapterMeta := DiceDBAdapterMeta{
@@ -158,8 +150,6 @@ func init() {
 				Step:       1,
 			},
 		},
-		Flags:        map[string]string{},
-		OptionalArgs: map[string]string{},
 	}
 
 	bitfieldCmdAdapterMeta := DiceDBAdapterMeta{
@@ -182,6 +172,26 @@ func init() {
 		},
 	}
 
+	zaddCmdAdapterMeta := DiceDBAdapterMeta{
+		Route:   "/zadd",
+		Command: "ZADD",
+		Encoder: zaddEncoder,
+		Decoder: zaddDecoder,
+		RequiredArgs: map[string]Position{
+			"key": {
+				BeginIndex: 0,
+				EndIndex:   0,
+				Step:       1,
+			},
+			"score-members": {
+				BeginIndex: -1,
+				EndIndex:   -1,
+				Step:       2,
+			},
+		},
+		Flags: map[string]int{"nx": 0, "xx": 1, "gt": 2, "lt": 3, "ch": 4, "incr": 5},
+	}
+
 	DiceCmdAdapters["SET"] = setCmdAdapterMeta
 
 	DiceCmdAdapters["GET"] = getCmdAdapterMeta
@@ -195,5 +205,7 @@ func init() {
 	DiceCmdAdapters["BITOP"] = bitopCmdAdapterMeta
 
 	DiceCmdAdapters["BITFIELD"] = bitfieldCmdAdapterMeta
+
+	DiceCmdAdapters["ZADD"] = zaddCmdAdapterMeta
 
 }

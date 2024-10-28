@@ -472,3 +472,65 @@ func TestDecodeCommandBitfield(t *testing.T) {
 	assert.Equal(t, expected.Route, result.Route)
 	assert.Equal(t, expected.Body, result.Body)
 }
+
+func TestEncodeCommandZadd(t *testing.T) {
+	cmd := DiceDBCommand{
+		Route: "/zadd",
+		Body: map[string]interface{}{
+			"key": "myKey",
+			"score-members": []interface{}{
+				"1",
+				"one",
+				"2",
+				"two",
+			},
+		},
+	}
+	expected := "ZADD myKey 1 one 2 two"
+	result, err := EncodeCommand(cmd)
+	assert.Nil(t, err)
+	assert.Equal(t, expected, result)
+
+	// zadd with NX and CH flags
+	cmd = DiceDBCommand{
+		Route: "/zadd",
+		Body: map[string]interface{}{
+			"key": "myKey",
+			"score-members": []interface{}{
+				"1",
+				"one",
+				"2",
+				"two",
+			},
+			"nx": "nx",
+			"ch": "ch",
+		},
+	}
+	expected = "ZADD myKey nx ch 1 one 2 two"
+	result, err = EncodeCommand(cmd)
+	assert.Nil(t, err)
+	assert.Equal(t, expected, result)
+
+	// zadd with extra flags
+	cmd = DiceDBCommand{
+		Route: "/zadd",
+		Body: map[string]interface{}{
+			"key": "myKey",
+			"score-members": []interface{}{
+				"1",
+				"one",
+				"2",
+				"two",
+			},
+			"xx":   "xx",
+			"incr": "incr",
+			"ch":   "ch",
+			"lt":   "lt",
+			"gt":   "gt",
+		},
+	}
+	expected = "ZADD myKey xx gt lt ch incr 1 one 2 two"
+	result, err = EncodeCommand(cmd)
+	assert.Nil(t, err)
+	assert.Equal(t, expected, result)
+}
