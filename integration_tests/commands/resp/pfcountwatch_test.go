@@ -79,6 +79,7 @@ func TestPFCOUNTWATCH(t *testing.T) {
 			}
 			assert.Equal(t, 3, len(castedValue))
 			assert.Equal(t, "PFCOUNT", castedValue[0])
+			assert.Equal(t, "1580567186", castedValue[1])
 			assert.DeepEqual(t, tc.result, castedValue[2])
 		}
 	}
@@ -122,7 +123,7 @@ func TestPFCountWATCHWithSDK(t *testing.T) {
 			v := <-channel
 
 			assert.Equal(t, "PFCOUNT", v.Command)         // command
-			// assert.Equal(t, "2491069200", v.Fingerprint) // Fingerprint
+			assert.Equal(t, "1580567186", v.Fingerprint) // Fingerprint
 			assert.DeepEqual(t, tc.result, v.Data)       // data
 		}
 	}
