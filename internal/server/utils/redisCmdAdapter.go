@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
-	"strconv"
-	"strings"
-	"regexp"
 	"github.com/dicedb/dice/internal/cmd"
 	diceerrors "github.com/dicedb/dice/internal/errors"
+	"io"
+	"net/http"
+	"regexp"
+	"strconv"
+	"strings"
 )
 
 const (
@@ -32,6 +32,7 @@ const (
 	Members     = "members"
 	Index       = "index"
 	JSON        = "json"
+	ABORT       = "ABORT"
 )
 
 const QWatch string = "Q.WATCH"
@@ -76,7 +77,7 @@ func ParseHTTPRequest(r *http.Request) (*cmd.DiceDBCmd, error) {
 				return nil, err
 			}
 
-			if len(jsonBody) == 0 {
+			if len(jsonBody) == 0 && command != ABORT {
 				return nil, fmt.Errorf("empty JSON object")
 			}
 
@@ -158,9 +159,9 @@ func ParseWebsocketMessage(msg []byte) (*cmd.DiceDBCmd, error) {
 		// handle other commands
 		for _, match := range matches {
 			if match[1] != "" {
-				cmdArr = append(cmdArr, match[1]) 
+				cmdArr = append(cmdArr, match[1])
 			} else if match[2] != "" {
-				cmdArr = append(cmdArr, match[2]) 
+				cmdArr = append(cmdArr, match[2])
 			} else {
 				cmdArr = append(cmdArr, match[3])
 			}
