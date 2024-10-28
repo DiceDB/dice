@@ -12,9 +12,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dicedb/dice/internal/server/abstractserver"
-
 	"github.com/dicedb/dice/internal/eval"
+
+	"github.com/dicedb/dice/internal/server/abstractserver"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
@@ -342,7 +342,7 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.Store
 	_, ok := WorkerCmdsMeta[diceDBCmd.Cmd]
 	// TODO: Remove this conditional check and if (true) condition when all commands are migrated
 	if !ok {
-		responseValue, err = decodeEvalResponse(result.EvalResponse)
+		responseValue, err = DecodeEvalResponse(result.EvalResponse)
 		if err != nil {
 			slog.Error("Error decoding response", "error", err)
 			httpResponse = utils.HTTPResponse{Status: utils.HTTPStatusError, Data: "Internal Server Error"}
@@ -359,7 +359,7 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.Store
 	}
 
 	// Create the HTTP response
-	httpResponse = createHTTPResponse(responseValue)
+	httpResponse = utils.HTTPResponse{Data: ResponseParser(responseValue)}
 	if isDiceErr {
 		httpResponse.Status = utils.HTTPStatusError
 	} else {
@@ -368,24 +368,6 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.Store
 
 	// Write the response back to the client
 	writeJSONResponse(writer, httpResponse, http.StatusOK)
-}
-
-// Helper function to decode EvalResponse based on the error or result
-func decodeEvalResponse(evalResp *eval.EvalResponse) (interface{}, error) {
-	var rp *clientio.RESPParser
-
-	if evalResp.Error != nil {
-		rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(evalResp.Error.Error())))
-	} else {
-		rp = clientio.NewRESPParser(bytes.NewBuffer(evalResp.Result.([]byte)))
-	}
-
-	res, err := rp.DecodeOne()
-	if err != nil {
-		return nil, err
-	}
-
-	return replaceNilInInterface(res), nil
 }
 
 // Helper function to write the JSON response
@@ -406,7 +388,9 @@ func writeJSONResponse(writer http.ResponseWriter, response utils.HTTPResponse, 
 	}
 }
 
-func createHTTPResponse(responseValue interface{}) utils.HTTPResponse {
+// ResponseParser parses the response value for both migrated and non-migrated cmds and
+// returns response to be rendered for HTTP/WS response
+func ResponseParser(responseValue interface{}) interface{} {
 	switch v := responseValue.(type) {
 	case []interface{}:
 		// Parses []interface{} as part of EvalResponse e.g. JSON.ARRPOP
@@ -415,35 +399,35 @@ func createHTTPResponse(responseValue interface{}) utils.HTTPResponse {
 		r := make([]interface{}, 0, len(v))
 		for _, resp := range v {
 			if val, ok := resp.(clientio.RespType); ok {
-				if stringNil == respTypeToValue(val) {
+				if stringNil == RespTypeToValue(val) {
 					r = append(r, nil)
 				} else {
-					r = append(r, respTypeToValue(val))
+					r = append(r, RespTypeToValue(val))
 				}
 			} else {
 				r = append(r, resp)
 			}
 		}
-		return utils.HTTPResponse{Data: r}
+		return r
 
 	case []byte:
-		return utils.HTTPResponse{Data: string(v)}
+		return string(v)
 
 	case clientio.RespType:
-		responseValue = respTypeToValue(v)
+		responseValue = RespTypeToValue(v)
 		if responseValue == stringNil {
 			responseValue = nil // in order to convert it in json null
 		}
 
-		return utils.HTTPResponse{Data: responseValue}
+		return responseValue
 
 	case interface{}:
 		if val, ok := v.(clientio.RespType); ok {
-			return utils.HTTPResponse{Data: respTypeToValue(val)}
+			return RespTypeToValue(val)
 		}
 	}
 
-	return utils.HTTPResponse{Data: responseValue}
+	return responseValue
 }
 
 func generateUniqueInt32(r *http.Request) uint32 {
@@ -455,6 +439,24 @@ func generateUniqueInt32(r *http.Request) uint32 {
 
 	// Hash the string using CRC32 and cast it to an int32
 	return crc32.ChecksumIEEE([]byte(sb.String()))
+}
+
+// DecodeEvalResponse Helper function to decode EvalResponse based on the error or result
+func DecodeEvalResponse(evalResp *eval.EvalResponse) (interface{}, error) {
+	var rp *clientio.RESPParser
+
+	if evalResp.Error != nil {
+		rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(evalResp.Error.Error())))
+	} else {
+		rp = clientio.NewRESPParser(bytes.NewBuffer(evalResp.Result.([]byte)))
+	}
+
+	res, err := rp.DecodeOne()
+	if err != nil {
+		return nil, err
+	}
+
+	return replaceNilInInterface(res), nil
 }
 
 func replaceNilInInterface(data interface{}) interface{} {
@@ -482,7 +484,7 @@ func replaceNilInInterface(data interface{}) interface{} {
 	}
 }
 
-func respTypeToValue(respType clientio.RespType) interface{} {
+func RespTypeToValue(respType clientio.RespType) interface{} {
 	var respArrString = map[clientio.RespType]string{
 		clientio.NIL:           "(nil)",  // Represents a RESP Nil Bulk String, which indicates a null value.
 		clientio.OK:            "OK",     // Represents a RESP Simple String with value "OK".

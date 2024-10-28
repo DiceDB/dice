@@ -32,9 +32,9 @@ const (
 	Members     = "members"
 	Index       = "index"
 	JSON        = "json"
+	stringNil   = "(nil)"
+	QWatch      = "Q.WATCH"
 )
-
-const QWatch string = "Q.WATCH"
 
 func ParseHTTPRequest(r *http.Request) (*cmd.DiceDBCmd, error) {
 	commandParts := strings.Split(strings.TrimPrefix(r.URL.Path, "/"), "/")
