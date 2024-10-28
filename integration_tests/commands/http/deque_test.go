@@ -3,6 +3,7 @@ package http
 import (
 	"fmt"
 	"math/rand"
+
 	// "net"
 	// "strings"
 	"testing"
@@ -109,4 +110,444 @@ func TestLPush(t *testing.T) {
 		})
 	}
 
+	exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": [...]string{"k"}}})
+}
+
+func TestRPush(t *testing.T) {
+	deqTestInit()
+	exec := NewHTTPCommandExecutor()
+
+	testCases := []TestCase{
+		{
+			name: "RPUSH",
+			commands: []HTTPCommand{
+				{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "values": []interface{}{"v"}}},
+				{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "values": []interface{}{"v1", 1, "v2", 2}}},
+				{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "values": []interface{}{3, 3, 3, "v3", "v3", "v3"}}},
+			},
+			expected: []interface{}{float64(1), float64(5), float64(11)},
+		},
+		{
+			name: "RPUSH normal values",
+			commands: []HTTPCommand{
+				{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "values": deqNormalValues}},
+			},
+			expected: []interface{}{float64(25)},
+		},
+		{
+			name: "RPUSH edge values",
+			commands: []HTTPCommand{
+				{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "values": deqEdgeValues}},
+			},
+			expected: []interface{}{float64(42)},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for i, cmd := range tc.commands {
+				result, _ := exec.FireCommand(cmd)
+				assert.DeepEqual(t, tc.expected[i], result)
+			}
+		})
+	}
+
+	exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": [...]string{"k"}}})
+}
+
+func TestLPushLPop(t *testing.T) {
+	deqTestInit()
+	exec := NewHTTPCommandExecutor()
+
+	getPops := func(values []string) []HTTPCommand {
+		pops := make([]HTTPCommand, len(values)+1)
+		for i := 0; i < len(values)+1; i++ {
+			pops[i] = HTTPCommand{
+				Command: "LPOP",
+				Body:    map[string]interface{}{"key": "k"},
+			}
+		}
+		return pops
+	}
+	getPopExpects := func(values []string) []interface{} {
+		expects := make([]interface{}, len(values))
+		for i := 0; i < len(values); i++ {
+			expects[i] = values[len(values)-1-i]
+		}
+		return expects
+	}
+
+	testCases := []TestCase{
+		{
+			name: "LPUSH LPOP",
+			commands: []HTTPCommand{
+				{Command: "LPUSH", Body: map[string]interface{}{"key": "k", "values": []interface{}{"v1", 1}}},
+				{Command: "LPOP", Body: map[string]interface{}{"key": "k"}},
+				{Command: "LPOP", Body: map[string]interface{}{"key": "k"}},
+				{Command: "LPOP", Body: map[string]interface{}{"key": "k"}},
+			},
+			expected: []interface{}{float64(2), "1", "v1", nil},
+		},
+		{
+			name: "LPUSH LPOP normal values",
+			commands: append(
+				[]HTTPCommand{
+					{Command: "LPUSH", Body: map[string]interface{}{"key": "k", "values": deqNormalValues}},
+				},
+				getPops(deqNormalValues)...,
+			),
+			expected: append(
+				append(
+					[]interface{}{float64(14)},
+					getPopExpects(deqNormalValues)...),
+				nil,
+			),
+		},
+		{
+			name: "LPUSH LPOP edge values",
+			commands: append(
+				[]HTTPCommand{
+					{Command: "LPUSH", Body: map[string]interface{}{"key": "k", "values": deqEdgeValues}},
+				},
+				getPops(deqEdgeValues)...,
+			),
+			expected: append(
+				append(
+					[]interface{}{float64(17)},
+					getPopExpects(deqEdgeValues)...),
+				nil,
+			),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for i, cmd := range tc.commands {
+				result, _ := exec.FireCommand(cmd)
+				assert.DeepEqual(t, tc.expected[i], result)
+			}
+		})
+	}
+
+	exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": [...]string{"k"}}})
+}
+
+func TestLPushRPop(t *testing.T) {
+	deqTestInit()
+	exec := NewHTTPCommandExecutor()
+
+	getPops := func(values []string) []HTTPCommand {
+		pops := make([]HTTPCommand, len(values)+1)
+		for i := 0; i < len(values)+1; i++ {
+			pops[i] = HTTPCommand{
+				Command: "RPOP",
+				Body:    map[string]interface{}{"key": "k"},
+			}
+		}
+		return pops
+	}
+	getPopExpects := func(values []string) []interface{} {
+		expects := make([]interface{}, len(values))
+		for i := 0; i < len(values); i++ {
+			expects[i] = values[i]
+		}
+		return expects
+	}
+
+	testCases := []TestCase{
+		{
+			name: "LPUSH RPOP",
+			commands: []HTTPCommand{
+				{Command: "LPUSH", Body: map[string]interface{}{"key": "k", "values": []interface{}{"v1", 1}}},
+				{Command: "RPOP", Body: map[string]interface{}{"key": "k"}},
+				{Command: "RPOP", Body: map[string]interface{}{"key": "k"}},
+				{Command: "RPOP", Body: map[string]interface{}{"key": "k"}},
+			},
+			expected: []interface{}{float64(2), "v1", "1", nil},
+		},
+		{
+			name: "LPUSH RPOP normal values",
+			commands: append(
+				[]HTTPCommand{
+					{Command: "LPUSH", Body: map[string]interface{}{"key": "k", "values": deqNormalValues}},
+				},
+				getPops(deqNormalValues)...,
+			),
+			expected: append(
+				append(
+					[]interface{}{float64(14)},
+					getPopExpects(deqNormalValues)...,
+				),
+				nil,
+			),
+		},
+		{
+			name: "LPUSH RPOP edge values",
+			commands: append(
+				[]HTTPCommand{
+					{Command: "LPUSH", Body: map[string]interface{}{"key": "k", "values": deqEdgeValues}},
+				},
+				getPops(deqEdgeValues)...,
+			),
+			expected: append(
+				append(
+					[]interface{}{float64(17)},
+					getPopExpects(deqEdgeValues)...),
+				nil,
+			),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for i, cmd := range tc.commands {
+				result, _ := exec.FireCommand(cmd)
+				assert.DeepEqual(t, tc.expected[i], result)
+			}
+		})
+	}
+
+	exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": [...]string{"k"}}})
+}
+
+func TestRPushLPop(t *testing.T) {
+	deqTestInit()
+	exec := NewHTTPCommandExecutor()
+
+	getPops := func(values []string) []HTTPCommand {
+		pops := make([]HTTPCommand, len(values)+1)
+		for i := 0; i < len(values)+1; i++ {
+			pops[i] = HTTPCommand{
+				Command: "LPOP",
+				Body:    map[string]interface{}{"key": "k"},
+			}
+		}
+		return pops
+	}
+	getPopExpects := func(values []string) []interface{} {
+		expects := make([]interface{}, len(values))
+		for i := 0; i < len(values); i++ {
+			expects[i] = values[i]
+		}
+		return expects
+	}
+
+	testCases := []TestCase{
+		{
+			name: "RPUSH LPOP",
+			commands: []HTTPCommand{
+				{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "values": []interface{}{"v1", 1}}},
+				{Command: "LPOP", Body: map[string]interface{}{"key": "k"}},
+				{Command: "LPOP", Body: map[string]interface{}{"key": "k"}},
+				{Command: "LPOP", Body: map[string]interface{}{"key": "k"}},
+			},
+			expected: []interface{}{float64(2), "v1", "1", nil},
+		},
+		{
+			name: "RPUSH LPOP normal values",
+			commands: append(
+				[]HTTPCommand{
+					{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "values": deqNormalValues}},
+				},
+				getPops(deqNormalValues)...,
+			),
+			expected: append(
+				append(
+					[]interface{}{float64(14)},
+					getPopExpects(deqNormalValues)...,
+				),
+				nil,
+			),
+		},
+		{
+			name: "RPUSH LPOP edge values",
+			commands: append(
+				[]HTTPCommand{
+					{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "values": deqEdgeValues}},
+				},
+				getPops(deqEdgeValues)...,
+			),
+			expected: append(
+				append(
+					[]interface{}{float64(17)},
+					getPopExpects(deqEdgeValues)...),
+				nil,
+			),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for i, cmd := range tc.commands {
+				result, _ := exec.FireCommand(cmd)
+				assert.DeepEqual(t, tc.expected[i], result)
+			}
+		})
+	}
+
+	exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": [...]string{"k"}}})
+}
+
+func TestRPushRPop(t *testing.T) {
+	deqTestInit()
+	exec := NewHTTPCommandExecutor()
+
+	getPops := func(values []string) []HTTPCommand {
+		pops := make([]HTTPCommand, len(values)+1)
+		for i := 0; i < len(values)+1; i++ {
+			pops[i] = HTTPCommand{
+				Command: "RPOP",
+				Body:    map[string]interface{}{"key": "k"},
+			}
+		}
+		return pops
+	}
+	getPopExpects := func(values []string) []interface{} {
+		expects := make([]interface{}, len(values))
+		for i := 0; i < len(values); i++ {
+			expects[i] = values[len(values)-1-i]
+		}
+		return expects
+	}
+
+	testCases := []TestCase{
+		{
+			name: "RPUSH RPOP",
+			commands: []HTTPCommand{
+				{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "values": []interface{}{"v1", 1}}},
+				{Command: "RPOP", Body: map[string]interface{}{"key": "k"}},
+				{Command: "RPOP", Body: map[string]interface{}{"key": "k"}},
+				{Command: "RPOP", Body: map[string]interface{}{"key": "k"}},
+			},
+			expected: []interface{}{float64(2), "1", "v1", nil},
+		},
+		{
+			name: "RPUSH RPOP normal values",
+			commands: append(
+				[]HTTPCommand{
+					{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "values": deqNormalValues}},
+				},
+				getPops(deqNormalValues)...,
+			),
+			expected: append(
+				append(
+					[]interface{}{float64(14)},
+					getPopExpects(deqNormalValues)...,
+				),
+				nil,
+			),
+		},
+		{
+			name: "RPUSH RPOP edge values",
+			commands: append(
+				[]HTTPCommand{
+					{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "values": deqEdgeValues}},
+				},
+				getPops(deqEdgeValues)...,
+			),
+			expected: append(
+				append(
+					[]interface{}{float64(17)},
+					getPopExpects(deqEdgeValues)...),
+				nil,
+			),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for i, cmd := range tc.commands {
+				result, _ := exec.FireCommand(cmd)
+				assert.DeepEqual(t, tc.expected[i], result)
+			}
+		})
+	}
+
+	exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": [...]string{"k"}}})
+}
+
+func TestLRPushLRPop(t *testing.T) {
+	deqTestInit()
+	exec := NewHTTPCommandExecutor()
+
+	testCases := []TestCase{
+		{
+			name: "L/RPush L/RPop",
+			commands: []HTTPCommand{
+				{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "values": []interface{}{"v1000", 1000}}},
+				{Command: "LPUSH", Body: map[string]interface{}{"key": "k", "values": []interface{}{"v2000", 2000}}},
+				{Command: "RPOP", Body: map[string]interface{}{"key": "k"}},
+				{Command: "RPOP", Body: map[string]interface{}{"key": "k"}},
+				{Command: "LPOP", Body: map[string]interface{}{"key": "k"}},
+				{Command: "LPUSH", Body: map[string]interface{}{"key": "k", "values": []interface{}{"v6"}}},
+				{Command: "RPOP", Body: map[string]interface{}{"key": "k"}},
+				{Command: "LPOP", Body: map[string]interface{}{"key": "k"}},
+				{Command: "LPOP", Body: map[string]interface{}{"key": "k"}},
+				{Command: "RPOP", Body: map[string]interface{}{"key": "k"}},
+			},
+			expected: []interface{}{
+				float64(2), float64(4),
+				"1000", "v1000", "2000",
+				float64(2),
+				"v2000", "v6", nil, nil,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for i, cmd := range tc.commands {
+				result, _ := exec.FireCommand(cmd)
+				assert.DeepEqual(t, tc.expected[i], result)
+			}
+		})
+	}
+
+	exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": [...]string{"k"}}})
+}
+
+func TestLLEN(t *testing.T) {
+	deqTestInit()
+	exec := NewHTTPCommandExecutor()
+
+	testCases := []TestCase{
+		{
+			name: "LLEN",
+			commands: []HTTPCommand{
+				{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "values": []interface{}{"v1000", 1000}}},
+				{Command: "LPUSH", Body: map[string]interface{}{"key": "k", "values": []interface{}{"v2000", 2000}}},
+				{Command: "LLEN", Body: map[string]interface{}{"key": "k"}},
+				{Command: "RPOP", Body: map[string]interface{}{"key": "k"}},
+				{Command: "LLEN", Body: map[string]interface{}{"key": "k"}},
+				{Command: "RPOP", Body: map[string]interface{}{"key": "k"}},
+				{Command: "LPOP", Body: map[string]interface{}{"key": "k"}},
+				{Command: "LLEN", Body: map[string]interface{}{"key": "k"}},
+				{Command: "LPUSH", Body: map[string]interface{}{"key": "k", "values": []interface{}{"v6"}}},
+				{Command: "LLEN", Body: map[string]interface{}{"key": "k"}},
+				{Command: "RPOP", Body: map[string]interface{}{"key": "k"}},
+				{Command: "LLEN", Body: map[string]interface{}{"key": "k"}},
+				{Command: "LPOP", Body: map[string]interface{}{"key": "k"}},
+				{Command: "LPOP", Body: map[string]interface{}{"key": "k"}},
+				{Command: "RPOP", Body: map[string]interface{}{"key": "k"}},
+				{Command: "LLEN", Body: map[string]interface{}{"key": "k"}},
+			},
+			expected: []any{
+				float64(2), float64(4), float64(4),
+				"1000", float64(3), "v1000", "2000", float64(1),
+				float64(2), float64(2),
+				"v2000", float64(1), "v6", nil, nil, float64(0),
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for i, cmd := range tc.commands {
+				result, _ := exec.FireCommand(cmd)
+				assert.DeepEqual(t, tc.expected[i], result)
+			}
+		})
+	}
+
+	exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": [...]string{"k"}}})
 }
