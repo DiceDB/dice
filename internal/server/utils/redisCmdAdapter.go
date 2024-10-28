@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
-	"regexp"
+
 	"github.com/dicedb/dice/internal/cmd"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 )
@@ -158,9 +159,9 @@ func ParseWebsocketMessage(msg []byte) (*cmd.DiceDBCmd, error) {
 		// handle other commands
 		for _, match := range matches {
 			if match[1] != "" {
-				cmdArr = append(cmdArr, match[1]) 
+				cmdArr = append(cmdArr, match[1])
 			} else if match[2] != "" {
-				cmdArr = append(cmdArr, match[2]) 
+				cmdArr = append(cmdArr, match[2])
 			} else {
 				cmdArr = append(cmdArr, match[3])
 			}

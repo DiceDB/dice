@@ -260,9 +260,9 @@ var (
 		Retrieves the keys of a JSON object stored at path specified.
 		Null reply: If the key doesn't exist or has expired.
 		Error reply: If the number of arguments is incorrect or the stored value is not a JSON type.`,
-		NewEval:  evalJSONOBJKEYS,
+		NewEval:    evalJSONOBJKEYS,
 		IsMigrated: true,
-		Arity: 2,
+		Arity:      2,
 	}
 	jsonarrpopCmdMeta = DiceCmdMeta{
 		Name: "JSON.ARRPOP",
@@ -294,10 +294,10 @@ var (
 		Returns nil if the matching JSON value is not an array.
 		Returns error response if the key doesn't exist or key is expired or the matching value is not an array.
 		Error reply: If the number of arguments is incorrect.`,
-		NewEval:     evalJSONARRINSERT,
+		NewEval:    evalJSONARRINSERT,
 		IsMigrated: true,
-		Arity:    -5,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -5,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	jsonrespCmdMeta = DiceCmdMeta{
 		Name: "JSON.RESP",
@@ -314,9 +314,9 @@ var (
 		Returns an array of integer replies for each path.
 		Returns error response if the key doesn't exist or key is expired.
 		Error reply: If the number of arguments is incorrect.`,
-		NewEval:  evalJSONARRTRIM,
+		NewEval:    evalJSONARRTRIM,
 		IsMigrated: true,
-		Arity: -5,
+		Arity:      -5,
 	}
 	ttlCmdMeta = DiceCmdMeta{
 		Name: "TTL",

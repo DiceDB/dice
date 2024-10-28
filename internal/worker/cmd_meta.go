@@ -65,10 +65,10 @@ const (
 
 // Watch commands
 const (
-	CmdSadd         = "SADD"
-	CmdSrem         = "SREM"
-	CmdScard        = "SCARD"
-	CmdSmembers     = "SMEMBERS"
+	CmdSadd     = "SADD"
+	CmdSrem     = "SREM"
+	CmdScard    = "SCARD"
+	CmdSmembers = "SMEMBERS"
 
 	CmdGetWatch      = "GET.WATCH"
 	CmdZRangeWatch   = "ZRANGE.WATCH"
