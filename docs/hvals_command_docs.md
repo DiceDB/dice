@@ -61,7 +61,7 @@ If the hash stored at `user:1002` exists but has no fields:
 
 ```bash
 127.0.0.1:7379> HVALS user:1002
-(empty array)
+(nil)
 ```
 
 ### Non-existent key
@@ -70,7 +70,7 @@ If the hash `user:1003` does not exist:
 
 ```bash
 127.0.0.1:7379> HVALS user:1003
-(empty array)
+(nil)
 ```
 
 ## Best Practices
