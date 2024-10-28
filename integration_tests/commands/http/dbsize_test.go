@@ -1,8 +1,9 @@
 package http
 
 import (
-	"gotest.tools/v3/assert"
 	"testing"
+
+	"gotest.tools/v3/assert"
 )
 
 func TestDBSize(t *testing.T) {
