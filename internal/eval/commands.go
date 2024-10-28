@@ -200,8 +200,9 @@ var (
 		Info: `JSON.ARRAPPEND key [path] value [value ...]
         Returns an array of integer replies for each path, the array's new size,
         or nil, if the matching JSON value is not an array.`,
-		Eval:  evalJSONARRAPPEND,
-		Arity: -3,
+		Arity:      -3,
+		IsMigrated: true,
+		NewEval:    evalJSONARRAPPEND,
 	}
 	jsonforgetCmdMeta = DiceCmdMeta{
 		Name: "JSON.FORGET",
@@ -219,9 +220,10 @@ var (
 		Returns an array of integer replies.
 		Returns error response if the key doesn't exist or key is expired or the matching value is not an array.
 		Error reply: If the number of arguments is incorrect.`,
-		Eval:     evalJSONARRLEN,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalJSONARRLEN,
 	}
 	jsonnummultbyCmdMeta = DiceCmdMeta{
 		Name: "JSON.NUMMULTBY",
@@ -258,7 +260,8 @@ var (
 		Retrieves the keys of a JSON object stored at path specified.
 		Null reply: If the key doesn't exist or has expired.
 		Error reply: If the number of arguments is incorrect or the stored value is not a JSON type.`,
-		Eval:  evalJSONOBJKEYS,
+		NewEval:  evalJSONOBJKEYS,
+		IsMigrated: true,
 		Arity: 2,
 	}
 	jsonarrpopCmdMeta = DiceCmdMeta{
@@ -269,8 +272,9 @@ var (
 		Return nil if array is empty or there is no array at the path.
 		It supports negative index and is out of bound safe.
 		`,
-		Eval:  evalJSONARRPOP,
-		Arity: -2,
+		Arity:      -2,
+		IsMigrated: true,
+		NewEval:    evalJSONARRPOP,
 	}
 	jsoningestCmdMeta = DiceCmdMeta{
 		Name: "JSON.INGEST",
@@ -290,7 +294,8 @@ var (
 		Returns nil if the matching JSON value is not an array.
 		Returns error response if the key doesn't exist or key is expired or the matching value is not an array.
 		Error reply: If the number of arguments is incorrect.`,
-		Eval:     evalJSONARRINSERT,
+		NewEval:     evalJSONARRINSERT,
+		IsMigrated: true,
 		Arity:    -5,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
@@ -309,7 +314,8 @@ var (
 		Returns an array of integer replies for each path.
 		Returns error response if the key doesn't exist or key is expired.
 		Error reply: If the number of arguments is incorrect.`,
-		Eval:  evalJSONARRTRIM,
+		NewEval:  evalJSONARRTRIM,
+		IsMigrated: true,
 		Arity: -5,
 	}
 	ttlCmdMeta = DiceCmdMeta{
@@ -1218,6 +1224,56 @@ var (
 		Arity:    3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	cmsInitByDimCmdMeta = DiceCmdMeta{
+		Name:       "CMS.INITBYDIM",
+		Info:       `Sets up count min sketch`,
+		Arity:      3,
+		IsMigrated: true,
+		NewEval:    evalCMSINITBYDIM,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+	}
+	cmsInitByProbCmdMeta = DiceCmdMeta{
+		Name:       "CMS.INITBYPROB",
+		Info:       `Sets up count min sketch with given error rate and probability`,
+		Arity:      3,
+		IsMigrated: true,
+		NewEval:    evalCMSINITBYPROB,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+	}
+	cmsInfoCmdMeta = DiceCmdMeta{
+		Name:       "CMS.INFO",
+		Info:       `Get info about count min sketch`,
+		Arity:      1,
+		IsMigrated: true,
+		NewEval:    evalCMSINFO,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+	}
+	cmsQueryCmdMeta = DiceCmdMeta{
+		Name:       "CMS.QUERY",
+		Info:       `Query count min sketch with for given list of keys`,
+		Arity:      -2,
+		IsMigrated: true,
+		NewEval:    evalCMSQuery,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+	}
+	cmsIncrByCmdMeta = DiceCmdMeta{
+		Name:       "CMS.INCRBY",
+		Info:       `Increase count of the list of keys to count min sketch`,
+		Arity:      -3,
+		IsMigrated: true,
+		NewEval:    evalCMSIncrBy,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+	}
+	cmsMergeCmdMeta = DiceCmdMeta{
+		Name: "CMS.MERGE",
+		Info: `Merges several sketches into one sketch.
+				 All sketches must have identical width and depth.
+				 Weights can be used to multiply certain sketches. Default weight is 1.`,
+		Arity:      -3,
+		IsMigrated: true,
+		NewEval:    evalCMSMerge,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -1351,6 +1407,12 @@ func init() {
 	DiceCmds["ZPOPMIN"] = zpopminCmdMeta
 	DiceCmds["ZRANK"] = zrankCmdMeta
 	DiceCmds["JSON.STRAPPEND"] = jsonstrappendCmdMeta
+	DiceCmds["CMS.INITBYDIM"] = cmsInitByDimCmdMeta
+	DiceCmds["CMS.INITBYPROB"] = cmsInitByProbCmdMeta
+	DiceCmds["CMS.INFO"] = cmsInfoCmdMeta
+	DiceCmds["CMS.QUERY"] = cmsQueryCmdMeta
+	DiceCmds["CMS.INCRBY"] = cmsIncrByCmdMeta
+	DiceCmds["CMS.MERGE"] = cmsMergeCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

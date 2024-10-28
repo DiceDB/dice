@@ -62,6 +62,18 @@ var (
 		Cmd:     "SETEX",
 		CmdType: SingleShard,
 	}
+	jsonArrAppendCmdMeta = CmdsMeta{
+		Cmd:     "JSON.ARRAPPEND",
+		CmdType: SingleShard,
+	}
+	jsonArrLenCmdMeta = CmdsMeta{
+		Cmd:     "JSON.ARRLEN",
+		CmdType: SingleShard,
+	}
+	jsonArrPopCmdMeta = CmdsMeta{
+		Cmd:     "JSON.ARRPOP",
+		CmdType: SingleShard,
+	}
 	getrangeCmdMeta = CmdsMeta{
 		Cmd:     "GETRANGE",
 		CmdType: SingleShard,
@@ -129,6 +141,22 @@ var (
 		Cmd:     "HSCAN",
 		CmdType: SingleShard,
 	}
+
+	jsonarrinsertCmdMeta = CmdsMeta{
+		Cmd:     "JSON.ARRINSERT",
+		CmdType: SingleShard,
+	}
+
+	jsonarrtrimCmdMeta = CmdsMeta{
+		Cmd:     "JSON.ARRTRIM",
+		CmdType: SingleShard,
+	}
+
+	jsonobjkeystCmdMeta = CmdsMeta{
+		Cmd:     "JSON.OBJKEYS",
+		CmdType: SingleShard,
+	}
+
 	incrCmdMeta = CmdsMeta{
 		Cmd:     "INCR",
 		CmdType: SingleShard,
@@ -182,6 +210,36 @@ var (
 		CmdType: SingleShard,
 	}
 
+	cmsInitByDimCmdMeta = CmdsMeta{
+		Cmd:     "CMS.INITBYDIM",
+		CmdType: SingleShard,
+	}
+
+	cmsInitByProbCmdMeta = CmdsMeta{
+		Cmd:     "CMS.INITBYPROB",
+		CmdType: SingleShard,
+	}
+
+	cmsInfoCmdMeta = CmdsMeta{
+		Cmd:     "CMS.INFO",
+		CmdType: SingleShard,
+	}
+
+	cmsIncrByCmdMeta = CmdsMeta{
+		Cmd:     "CMS.INCRBY",
+		CmdType: SingleShard,
+	}
+
+	cmsQueryCmdMeta = CmdsMeta{
+		Cmd:     "CMS.QUERY",
+		CmdType: SingleShard,
+	}
+
+	cmsMergeCmdMeta = CmdsMeta{
+		Cmd:     "CMS.MERGE",
+		CmdType: SingleShard,
+	}
+
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
 
@@ -198,11 +256,17 @@ func init() {
 	WorkerCmdsMeta["GET"] = getCmdMeta
 	WorkerCmdsMeta["GETSET"] = getsetCmdMeta
 	WorkerCmdsMeta["SETEX"] = setexCmdMeta
+	WorkerCmdsMeta["JSON.ARRAPPEND"] = jsonArrAppendCmdMeta
+	WorkerCmdsMeta["JSON.ARRLEN"] = jsonArrLenCmdMeta
+	WorkerCmdsMeta["JSON.ARRPOP"] = jsonArrPopCmdMeta
 	WorkerCmdsMeta["GETRANGE"] = getrangeCmdMeta
 	WorkerCmdsMeta["APPEND"] = appendCmdMeta
 	WorkerCmdsMeta["JSON.CLEAR"] = jsonclearCmdMeta
 	WorkerCmdsMeta["JSON.STRLEN"] = jsonstrlenCmdMeta
 	WorkerCmdsMeta["JSON.OBJLEN"] = jsonobjlenCmdMeta
+	WorkerCmdsMeta["JSON.ARRINSERT"] = jsonarrinsertCmdMeta
+	WorkerCmdsMeta["JSON.ARRTRIM"] = jsonarrtrimCmdMeta
+	WorkerCmdsMeta["JSON.OBJKEYS"] = jsonobjkeystCmdMeta
 	WorkerCmdsMeta["ZADD"] = zaddCmdMeta
 	WorkerCmdsMeta["ZCOUNT"] = zcountCmdMeta
 	WorkerCmdsMeta["ZRANGE"] = zrangeCmdMeta
@@ -241,5 +305,11 @@ func init() {
 	WorkerCmdsMeta["BF.RESERVE"] = bfreserveCmdMeta
 	WorkerCmdsMeta["BF.EXISTS"] = bfexistsCmdMeta
 	WorkerCmdsMeta["BF.INFO"] = bfinfoCmdMeta
+	WorkerCmdsMeta["CMS.INITBYDIM"] = cmsInitByDimCmdMeta
+	WorkerCmdsMeta["CMS.INITBYPROB"] = cmsInitByProbCmdMeta
+	WorkerCmdsMeta["CMS.INFO"] = cmsInfoCmdMeta
+	WorkerCmdsMeta["CMS.INCRBY"] = cmsIncrByCmdMeta
+	WorkerCmdsMeta["CMS.QUERY"] = cmsQueryCmdMeta
+	WorkerCmdsMeta["CMS.MERGE"] = cmsMergeCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }

@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-
+	"regexp"
 	"github.com/dicedb/dice/internal/cmd"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 )
@@ -140,7 +140,12 @@ func ParseWebsocketMessage(msg []byte) (*cmd.DiceDBCmd, error) {
 	command = strings.ToUpper(cmdStr[:idx])
 	cmdStr = cmdStr[idx+1:]
 
+	regexPattern := `"(.*?)"|'(.*?)'|(\S+)`
+	re := regexp.MustCompile(regexPattern)
+	matches := re.FindAllStringSubmatch(cmdStr, -1)
+
 	var cmdArr []string // args
+
 	// handle qwatch commands
 	if command == QWatch {
 		// remove quotes from query string
@@ -151,7 +156,15 @@ func ParseWebsocketMessage(msg []byte) (*cmd.DiceDBCmd, error) {
 		cmdArr = []string{cmdStr}
 	} else {
 		// handle other commands
-		cmdArr = strings.Split(cmdStr, " ")
+		for _, match := range matches {
+			if match[1] != "" {
+				cmdArr = append(cmdArr, match[1]) 
+			} else if match[2] != "" {
+				cmdArr = append(cmdArr, match[2]) 
+			} else {
+				cmdArr = append(cmdArr, match[3])
+			}
+		}
 	}
 
 	// if key prefix is empty for JSON.INGEST command

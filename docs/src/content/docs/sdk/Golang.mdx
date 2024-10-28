@@ -1,0 +1,142 @@
+---
+title: Golang
+description: A golang SDK for building high performance applications with DiceDB.
+---
+
+The DiceDB Go SDK provides support for all the standard Redis commands plus specialized DiceDB watch commands for monitoring changes to data in real-time.
+
+## Installation
+
+To install the DiceDB Go SDK, use `go get`:
+
+```bash
+go get github.com/dicedb/dicedb-go
+```
+
+## Basic Usage
+
+The SDK maintains compatibility with [go-redis](https://github.com/redis/go-redis) for standard Redis operations. If you're using go-redis, you can transparently switch to dicedb-go with minimal changes to your application code.
+
+```go
+import "github.com/dicedb/dicedb-go"
+
+func main() {
+    client := dicedb.NewClient(&dicedb.Options{
+        Addr: "localhost:6379",
+    })
+    defer client.Close()
+
+    // Use like standard go-redis
+    err := client.Set(ctx, "key", "value", 0).Err()
+    val, err := client.Get(ctx, "key").Result()
+}
+```
+
+## Watch Commands
+
+### Creating a Watch Connection
+
+`WatchConn` creates a new watch connection. You can listen on results of different commands using this connection.
+
+```go
+watch := client.WatchConn(ctx)
+defer watch.Close()
+```
+
+#### Watching Commands
+
+There are two ways to watch commands using a `WatchConn` object:
+
+##### 1. Generic Watch method
+
+The first argument is the context, followed by the command and its arguments:
+
+```go
+result, err := watch.Watch(ctx, "GET", "mykey")
+// Or
+result, err := watch.Watch(ctx, "ZRANGE", "myset", "0", "-1", "REV", "WITHSCORES")
+```
+
+Note: Ensure that the command you're watching is supports reactivity.
+
+##### 2. Command-specific convenience methods:
+
+The first argument is the context, followed by the command's arguments.
+
+```go
+// convenience method for GET.WATCH
+result, err := watch.GetWatch(ctx, "mykey")
+
+// Or
+
+// convenience method for ZRANGE.WATCH
+result, err := watch.ZRangeWatch(ctx, "myset", "0", "-1", "REV", "WITHSCORES")
+```
+
+Each watch command returns a `WatchResult` object containing the initial result of the watched command.
+
+#### WatchResult Structure
+The `WatchResult` object contains the updated data along with the command being watched and a unique fingerprint to identify the source of the update:
+
+```go
+type WatchResult struct {
+    Command     string      // The command being watched
+    Fingerprint string      // Unique identifier for the watch command to help identify the source of the update.
+    Data        interface{} // Command result data
+}
+```
+
+The `Data` field contains the result of the watched command, and can be type-asserted based on the command being watched.
+
+For example, the `Data` field for:
+1. `ZRANGE.WATCH` command will be of type `[]dicedb.Z`.
+2. `GET.WATCH` command will be of type `string`.
+
+#### Channel-based Monitoring
+
+To receive subsequent updates to the result set, use the Channel method:
+
+```go
+ch := watch.Channel(dicedb.WithWChannelSize(100))
+for msg := range ch {
+    // Process msg.Data based on msg.Command
+}
+```
+Note: The `Channel` method must be called after the initial watch command has been executed.
+
+Channel configuration options:
+- `WithWChannelSize(size int)`: Set channel buffer size (default: 100)
+- `WithWChannelHealthCheckInterval(d time.Duration)`: Set health check interval (default: 3s)
+- `WithWChannelSendTimeout(d time.Duration)`: Set message send timeout (default: 60s)
+
+
+### Watching a Sorted Set
+
+```go
+func watchZSet() {
+    ctx := context.Background()
+    client := dicedb.NewClient(&dicedb.Options{
+        Addr: "localhost:6379",
+    })
+    defer client.Close()
+
+    // Create a watch connection
+    watch := client.WatchConn(ctx)
+    defer watch.Close()
+
+    // Start watching ZRANGE results
+    result, err := watch.ZRangeWatch(ctx, "myset", "0", "-1", "REV", "WITHSCORES")
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Get updates through channel
+    ch := watch.Channel()
+    for msg := range ch {
+        scores := msg.Data.([]dicedb.Z)
+        for _, z := range scores {
+            fmt.Printf("Member: %s, Score: %f\n", z.Member, z.Score)
+        }
+    }
+}
+```
