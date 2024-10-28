@@ -76,7 +76,7 @@ func ParseHTTPRequest(r *http.Request) (*cmd.DiceDBCmd, error) {
 				return nil, err
 			}
 
-			if len(jsonBody) == 0 {
+			if len(jsonBody) == 0 && command != "ABORT" {
 				return nil, fmt.Errorf("empty JSON object")
 			}
 
