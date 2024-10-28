@@ -51,7 +51,7 @@ JSON.ARRLEN <key> [path]
    - Error Message: `(error) ERROR Path 'NON_ARRAY_PATH' does not exist or not array`
    - Occurs when the specified path does not point to a JSON array.
 
-## Examples
+## Examples Usage
 
 ### Basic Usage
 
