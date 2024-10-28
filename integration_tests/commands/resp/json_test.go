@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"testing"
-
 	"github.com/dicedb/dice/testutils"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	testifyAssert "github.com/stretchr/testify/assert"
