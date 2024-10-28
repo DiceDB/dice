@@ -62,6 +62,18 @@ var (
 		Cmd:     "SETEX",
 		CmdType: SingleShard,
 	}
+	jsonArrAppendCmdMeta = CmdsMeta{
+		Cmd:     "JSON.ARRAPPEND",
+		CmdType: SingleShard,
+	}
+	jsonArrLenCmdMeta = CmdsMeta{
+		Cmd:     "JSON.ARRLEN",
+		CmdType: SingleShard,
+	}
+	jsonArrPopCmdMeta = CmdsMeta{
+		Cmd:     "JSON.ARRPOP",
+		CmdType: SingleShard,
+	}
 	getrangeCmdMeta = CmdsMeta{
 		Cmd:     "GETRANGE",
 		CmdType: SingleShard,
@@ -129,6 +141,22 @@ var (
 		Cmd:     "HSCAN",
 		CmdType: SingleShard,
 	}
+
+	jsonarrinsertCmdMeta = CmdsMeta{
+		Cmd:     "JSON.ARRINSERT",
+		CmdType: SingleShard,
+	}
+
+	jsonarrtrimCmdMeta = CmdsMeta{
+		Cmd:     "JSON.ARRTRIM",
+		CmdType: SingleShard,
+	}
+
+	jsonobjkeystCmdMeta = CmdsMeta{
+		Cmd:     "JSON.OBJKEYS",
+		CmdType: SingleShard,
+	}
+
 	incrCmdMeta = CmdsMeta{
 		Cmd:     "INCR",
 		CmdType: SingleShard,
@@ -228,11 +256,17 @@ func init() {
 	WorkerCmdsMeta["GET"] = getCmdMeta
 	WorkerCmdsMeta["GETSET"] = getsetCmdMeta
 	WorkerCmdsMeta["SETEX"] = setexCmdMeta
+	WorkerCmdsMeta["JSON.ARRAPPEND"] = jsonArrAppendCmdMeta
+	WorkerCmdsMeta["JSON.ARRLEN"] = jsonArrLenCmdMeta
+	WorkerCmdsMeta["JSON.ARRPOP"] = jsonArrPopCmdMeta
 	WorkerCmdsMeta["GETRANGE"] = getrangeCmdMeta
 	WorkerCmdsMeta["APPEND"] = appendCmdMeta
 	WorkerCmdsMeta["JSON.CLEAR"] = jsonclearCmdMeta
 	WorkerCmdsMeta["JSON.STRLEN"] = jsonstrlenCmdMeta
 	WorkerCmdsMeta["JSON.OBJLEN"] = jsonobjlenCmdMeta
+	WorkerCmdsMeta["JSON.ARRINSERT"] = jsonarrinsertCmdMeta
+	WorkerCmdsMeta["JSON.ARRTRIM"] = jsonarrtrimCmdMeta
+	WorkerCmdsMeta["JSON.OBJKEYS"] = jsonobjkeystCmdMeta
 	WorkerCmdsMeta["ZADD"] = zaddCmdMeta
 	WorkerCmdsMeta["ZCOUNT"] = zcountCmdMeta
 	WorkerCmdsMeta["ZRANGE"] = zrangeCmdMeta
