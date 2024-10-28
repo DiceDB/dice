@@ -84,4 +84,3 @@ If the hash `user:1002` does not exist:
 - If `key` is not of type hash, consider using commands specifically designed for other data types.
 
 By utilizing the `HEXISTS` command, you can conditionally manage hash data in DiceDB, verifying field presence before performing operations based on field existence.
-```
