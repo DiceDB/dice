@@ -71,6 +71,7 @@ func deqTestInit() {
 func TestLPush(t *testing.T) {
 	deqTestInit()
 	exec := NewHTTPCommandExecutor()
+	exec.FireCommand(HTTPCommand{Command: "FLUSHDB"})
 
 	testCases := []TestCase{
 		{
@@ -113,6 +114,7 @@ func TestLPush(t *testing.T) {
 func TestRPush(t *testing.T) {
 	deqTestInit()
 	exec := NewHTTPCommandExecutor()
+	exec.FireCommand(HTTPCommand{Command: "FLUSHDB"})
 
 	testCases := []TestCase{
 		{
@@ -155,6 +157,7 @@ func TestRPush(t *testing.T) {
 func TestLPushLPop(t *testing.T) {
 	deqTestInit()
 	exec := NewHTTPCommandExecutor()
+	exec.FireCommand(HTTPCommand{Command: "FLUSHDB"})
 
 	getPops := func(values []string) []HTTPCommand {
 		pops := make([]HTTPCommand, len(values)+1)
@@ -232,6 +235,7 @@ func TestLPushLPop(t *testing.T) {
 func TestLPushRPop(t *testing.T) {
 	deqTestInit()
 	exec := NewHTTPCommandExecutor()
+	exec.FireCommand(HTTPCommand{Command: "FLUSHDB"})
 
 	getPops := func(values []string) []HTTPCommand {
 		pops := make([]HTTPCommand, len(values)+1)
@@ -310,6 +314,7 @@ func TestLPushRPop(t *testing.T) {
 func TestRPushLPop(t *testing.T) {
 	deqTestInit()
 	exec := NewHTTPCommandExecutor()
+	exec.FireCommand(HTTPCommand{Command: "FLUSHDB"})
 
 	getPops := func(values []string) []HTTPCommand {
 		pops := make([]HTTPCommand, len(values)+1)
@@ -388,6 +393,7 @@ func TestRPushLPop(t *testing.T) {
 func TestRPushRPop(t *testing.T) {
 	deqTestInit()
 	exec := NewHTTPCommandExecutor()
+	exec.FireCommand(HTTPCommand{Command: "FLUSHDB"})
 
 	getPops := func(values []string) []HTTPCommand {
 		pops := make([]HTTPCommand, len(values)+1)
@@ -466,6 +472,7 @@ func TestRPushRPop(t *testing.T) {
 func TestLRPushLRPop(t *testing.T) {
 	deqTestInit()
 	exec := NewHTTPCommandExecutor()
+	exec.FireCommand(HTTPCommand{Command: "FLUSHDB"})
 
 	testCases := []TestCase{
 		{
@@ -506,6 +513,7 @@ func TestLRPushLRPop(t *testing.T) {
 func TestLLEN(t *testing.T) {
 	deqTestInit()
 	exec := NewHTTPCommandExecutor()
+	exec.FireCommand(HTTPCommand{Command: "FLUSHDB"})
 
 	testCases := []TestCase{
 		{

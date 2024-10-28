@@ -7,6 +7,7 @@ import (
 
 func TestDel(t *testing.T) {
 	exec := NewHTTPCommandExecutor()
+	exec.FireCommand(HTTPCommand{Command: "FLUSHDB"})
 
 	testCases := []TestCase{
 		{

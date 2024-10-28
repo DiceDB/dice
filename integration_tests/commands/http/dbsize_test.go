@@ -8,6 +8,7 @@ import (
 
 func TestDBSize(t *testing.T) {
 	exec := NewHTTPCommandExecutor()
+	exec.FireCommand(HTTPCommand{Command: "FLUSHDB"})
 
 	testCases := []TestCase{
 		{
