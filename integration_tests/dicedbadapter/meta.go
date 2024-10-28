@@ -14,7 +14,7 @@ type DiceDBAdapterMeta struct {
 	Flags        map[string]string
 	RequiredArgs map[string]Position
 	OptionalArgs map[string]string
-	SubCommands  map[string]DiceDBAdapterMeta
+	Subcommands  map[string]DiceDBAdapterMeta
 }
 
 var DiceCmdAdapters = map[string]DiceDBAdapterMeta{}
@@ -98,6 +98,90 @@ func init() {
 		OptionalArgs: map[string]string{}, // No optional args for MSET
 	}
 
+	bitopCmdAdapterMeta := DiceDBAdapterMeta{
+		Route:   "/bitop",
+		Command: "BITOP",
+		Encoder: bitopEncoder,
+		Decoder: bitopDecoder,
+		RequiredArgs: map[string]Position{
+			"operation": {
+				BeginIndex: 0,
+				EndIndex:   0,
+				Step:       1,
+			},
+			"destkey": {
+				BeginIndex: 1,
+				EndIndex:   1,
+				Step:       1,
+			},
+			"keys": {
+				BeginIndex: 2,
+				EndIndex:   -1,
+				Step:       1,
+			},
+		},
+		Flags:        map[string]string{},
+		OptionalArgs: map[string]string{},
+	}
+	bitfieldSubcommandGetAdapterMeta := DiceDBAdapterMeta{
+		RequiredArgs: map[string]Position{
+			"encoding": {
+				BeginIndex: 0,
+				EndIndex:   0,
+				Step:       1,
+			},
+			"offset": {
+				BeginIndex: 1,
+				EndIndex:   1,
+				Step:       1,
+			},
+		},
+		Flags:        map[string]string{},
+		OptionalArgs: map[string]string{},
+	}
+
+	bitfieldSubcommandSetAdapterMeta := DiceDBAdapterMeta{
+		RequiredArgs: map[string]Position{
+			"encoding": {
+				BeginIndex: 0,
+				EndIndex:   0,
+				Step:       1,
+			},
+			"offset": {
+				BeginIndex: 1,
+				EndIndex:   1,
+				Step:       1,
+			},
+			"value": {
+				BeginIndex: 2,
+				EndIndex:   2,
+				Step:       1,
+			},
+		},
+		Flags:        map[string]string{},
+		OptionalArgs: map[string]string{},
+	}
+
+	bitfieldCmdAdapterMeta := DiceDBAdapterMeta{
+		Route:   "/bitfield",
+		Command: "BITFIELD",
+		Encoder: bitfieldEncoder,
+		Decoder: bitfieldDecoder,
+		RequiredArgs: map[string]Position{
+			"key": {
+				BeginIndex: 0,
+				EndIndex:   0,
+				Step:       1,
+			},
+		},
+		Subcommands: map[string]DiceDBAdapterMeta{
+			"get": bitfieldSubcommandGetAdapterMeta,
+			"set": bitfieldSubcommandSetAdapterMeta,
+			// "incrby":   bitfieldSubcommandIncrbyAdapterMeta,
+			// "overflow": bitfieldSubcommandOverflowAdapterMeta,
+		},
+	}
+
 	DiceCmdAdapters["SET"] = setCmdAdapterMeta
 
 	DiceCmdAdapters["GET"] = getCmdAdapterMeta
@@ -107,5 +191,9 @@ func init() {
 	DiceCmdAdapters["MGET"] = mgetCmdAdapterMeta
 
 	DiceCmdAdapters["MSET"] = msetCmdAdapterMeta
+
+	DiceCmdAdapters["BITOP"] = bitopCmdAdapterMeta
+
+	DiceCmdAdapters["BITFIELD"] = bitfieldCmdAdapterMeta
 
 }

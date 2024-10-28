@@ -231,14 +231,7 @@ func TestDecodeCommandMGET(t *testing.T) {
 	}
 
 	result, err := DecodeCommand(commandStr)
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-
-	if result.Route != expected.Route {
-		t.Errorf("expected route %q, got %q", expected.Route, result.Route)
-	}
-	fmt.Println("result", result, "expected", expected)
+	assert.Nil(t, err)
 	assert.Equal(t, expected.Route, result.Route)
 	assert.Equal(t, expected.Body, result.Body)
 }
@@ -266,14 +259,10 @@ func TestEncodeCommandMSET(t *testing.T) {
 			"key-values": []interface{}{[]interface{}{"key1", "value1"}, []interface{}{"key2", "value2"}, []interface{}{"key3", ""}},
 		},
 	}
-	expected = "MSET key1 value1 key2 value2 key3 "
+	expected = "MSET key1 value1 key2 value2 key3"
 	result, err = EncodeCommand(cmd)
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-	if result != expected {
-		t.Errorf("expected %q, got %q", expected, result)
-	}
+	assert.Nil(t, err)
+	assert.Equal(t, expected, result)
 }
 
 func TestDecodeCommandMSET(t *testing.T) {
@@ -293,7 +282,6 @@ func TestDecodeCommandMSET(t *testing.T) {
 	assert.Equal(t, expected.Route, result.Route)
 	assert.Equal(t, expected.Body, result.Body)
 
-
 	// Test with missing values
 	commandStr = "MSET key1 value1 key2 value2 key3 "
 	expected = DiceDBCommand{
@@ -308,6 +296,179 @@ func TestDecodeCommandMSET(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
+	assert.Equal(t, expected.Route, result.Route)
+	assert.Equal(t, expected.Body, result.Body)
+}
+
+func TestEncodeCommandDEL(t *testing.T) {
+	cmd := DiceDBCommand{
+		Route: "/del",
+		Body: map[string]interface{}{
+			"keys": []interface{}{"key1", "key2", "key3"},
+		},
+	}
+	expected := "DEL key1 key2 key3"
+	result, err := EncodeCommand(cmd)
+	assert.Nil(t, err)
+	assert.Equal(t, expected, result)
+}
+
+func TestDecodeCommandDEL(t *testing.T) {
+	commandStr := "DEL key1 key2 key3"
+	expected := DiceDBCommand{
+		Route: "/del",
+		Body: map[string]interface{}{
+			"keys": []interface{}{"key1", "key2", "key3"},
+		},
+	}
+
+	result, err := DecodeCommand(commandStr)
+	assert.Nil(t, err)
+	assert.Equal(t, expected.Route, result.Route)
+	assert.Equal(t, expected.Body, result.Body)
+}
+
+func TestEncodeCommandBitop(t *testing.T) {
+	cmd := DiceDBCommand{
+		Route: "/bitop",
+		Body: map[string]interface{}{
+			"operation": "AND",
+			"destkey":   "destkey",
+			"keys":      []interface{}{"key1", "key2", "key3"},
+		},
+	}
+	expected := "BITOP AND destkey key1 key2 key3"
+	result, err := EncodeCommand(cmd)
+	assert.Nil(t, err)
+	assert.Equal(t, expected, result)
+
+	// NOT operation
+	cmd = DiceDBCommand{
+		Route: "/bitop",
+		Body: map[string]interface{}{
+			"operation": "NOT",
+			"destkey":   "destkey",
+			"keys":      []interface{}{"key1"},
+		},
+	}
+	expected = "BITOP NOT destkey key1"
+	result, err = EncodeCommand(cmd)
+	assert.Nil(t, err)
+	assert.Equal(t, expected, result)
+
+	//Missing destkey
+	cmd = DiceDBCommand{
+		Route: "/bitop",
+		Body: map[string]interface{}{
+			"operation": "NOT",
+			"keys":      []interface{}{"key1"},
+		},
+	}
+	expected = "BITOP NOT key1"
+	result, err = EncodeCommand(cmd)
+	assert.Nil(t, err)
+	assert.Equal(t, expected, result)
+}
+
+func TestDecodeCommandBitop(t *testing.T) {
+	commandStr := "BITOP AND destkey key1 key2 key3"
+	expected := DiceDBCommand{
+		Route: "/bitop",
+		Body: map[string]interface{}{
+			"operation": "AND",
+			"destkey":   "destkey",
+			"keys":      []interface{}{"key1", "key2", "key3"},
+		},
+	}
+
+	result, err := DecodeCommand(commandStr)
+	assert.Nil(t, err)
+	assert.Equal(t, expected.Route, result.Route)
+	assert.Equal(t, expected.Body, result.Body)
+
+	// NOT operation
+	commandStr = "BITOP NOT destkey key1"
+	expected = DiceDBCommand{
+		Route: "/bitop",
+		Body: map[string]interface{}{
+			"operation": "NOT",
+			"destkey":   "destkey",
+			"keys":      []interface{}{"key1"},
+		},
+	}
+
+	result, err = DecodeCommand(commandStr)
+	assert.Nil(t, err)
+	assert.Equal(t, expected.Route, result.Route)
+	assert.Equal(t, expected.Body, result.Body)
+
+	//Missing destkey
+	commandStr = "BITOP NOT key1"
+	expected = DiceDBCommand{
+		Route: "/bitop",
+		Body: map[string]interface{}{
+			"operation": "NOT",
+			"destkey":   "key1",
+			"keys":      []interface{}{},
+		},
+	}
+
+	result, err = DecodeCommand(commandStr)
+	assert.Nil(t, err)
+	assert.Equal(t, expected.Route, result.Route)
+	assert.Equal(t, expected.Body, result.Body)
+}
+
+func TestEncodeCommandBitfield(t *testing.T) {
+	cmd := DiceDBCommand{
+		Route: "/bitfield",
+		Body: map[string]interface{}{
+			"key": "myKey",
+			"subcommands": []map[string]interface{}{
+				{
+					"subcommand": "get",
+					"encoding":   "u4",
+					"offset":     "0",
+				},
+				{
+					"subcommand": "set",
+					"encoding":   "u4",
+					"offset":     "0",
+					"value":      "1",
+				},
+			},
+		},
+	}
+	expected := "BITFIELD myKey get u4 0 set u4 0 1"
+	result, err := EncodeCommand(cmd)
+	assert.Nil(t, err)
+	assert.Equal(t, expected, result)
+}
+
+func TestDecodeCommandBitfield(t *testing.T) {
+	commandStr := "BITFIELD myKey GET u4 0 SET u4 0 1"
+	expected := DiceDBCommand{
+		Route: "/bitfield",
+		Body: map[string]interface{}{
+			"key": "myKey",
+			"subcommands": []map[string]interface{}{
+				{
+					"subcommand": "get",
+					"encoding":   "u4",
+					"offset":     "0",
+				},
+				{
+					"subcommand": "set",
+					"encoding":   "u4",
+					"offset":     "0",
+					"value":      "1",
+				},
+			},
+		},
+	}
+
+	result, err := DecodeCommand(commandStr)
+	assert.Nil(t, err)
 	assert.Equal(t, expected.Route, result.Route)
 	assert.Equal(t, expected.Body, result.Body)
 }

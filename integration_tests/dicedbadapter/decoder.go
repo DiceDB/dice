@@ -54,10 +54,43 @@ func decodeArgs(commandParts []string, meta DiceDBAdapterMeta) (map[string]inter
 			decodedArgs[argName] = commandParts[position.BeginIndex]
 			argIndex++
 		} else {
-			return nil, fmt.Errorf("missing required argument '%s'", argName)
+			// missing required argument
+			// we do not validate the command here
+			// only server side should validate the command
+			decodedArgs[argName] = ""
+			argIndex++
 		}
 	}
-	fmt.Println(decodedArgs, argIndex, (commandParts))
+
+	// Decode Subcommands
+	if len(meta.Subcommands) > 0 {
+		decodedArgs["subcommands"] = make([]map[string]interface{}, 0)
+		for argIndex < len(commandParts) {
+			subcommand := strings.ToLower(commandParts[argIndex])
+			argIndex++
+			if _, exists := meta.Subcommands[subcommand]; !exists {
+				decodedArgs[subcommand] = ""
+				continue
+			}
+			subcommandMeta := meta.Subcommands[subcommand]
+			subCommandParts := make([]string, 0)
+			for j := 0; j < len(subcommandMeta.RequiredArgs); j++ {
+				if argIndex >= len(commandParts) {
+					subCommandParts = append(subCommandParts, "")
+					continue
+				}
+				subCommandParts = append(subCommandParts, commandParts[argIndex])
+				argIndex++
+			}
+			subCommandArgs, err := decodeArgs(subCommandParts, subcommandMeta)
+			if err != nil {
+				return nil, err
+			}
+			subCommandArgs["subcommand"] = subcommand
+			decodedArgs["subcommands"] = append(decodedArgs["subcommands"].([]map[string]interface{}), subCommandArgs)
+		}
+	}
+
 	for i := argIndex; i < len(commandParts); i++ {
 		// Decode optional arguments
 		arg := strings.ToLower(commandParts[i])
@@ -74,6 +107,7 @@ func decodeArgs(commandParts []string, meta DiceDBAdapterMeta) (map[string]inter
 			return nil, fmt.Errorf("unexpected argument '%s'", arg)
 		}
 	}
+	fmt.Println(decodedArgs)
 	return decodedArgs, nil
 }
 
@@ -98,4 +132,12 @@ func mgetDecoder(commandParts []string) (map[string]interface{}, error) {
 
 func msetDecoder(commandParts []string) (map[string]interface{}, error) {
 	return decodeArgs(commandParts, DiceCmdAdapters["MSET"])
+}
+
+func bitopDecoder(commandParts []string) (map[string]interface{}, error) {
+	return decodeArgs(commandParts, DiceCmdAdapters["BITOP"])
+}
+
+func bitfieldDecoder(commandParts []string) (map[string]interface{}, error) {
+	return decodeArgs(commandParts, DiceCmdAdapters["BITFIELD"])
 }

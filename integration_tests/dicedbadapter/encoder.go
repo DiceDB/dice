@@ -96,14 +96,19 @@ func encodeArgs(args map[string]interface{}, meta DiceDBAdapterMeta) (string, er
 	commandParts := []string{meta.Command}
 
 	// Append required arguments
-	for argName, _ := range meta.RequiredArgs {
+	argNames := make([]string, len(meta.RequiredArgs))
+	for argName, position := range meta.RequiredArgs {
+		argNames[position.BeginIndex] = argName
+	}
+	for _, argName := range argNames {
 		value, exists := args[argName]
+		// fmt.Println(argName, value, exists)
 		if !exists {
-			return "", fmt.Errorf("missing required argument '%s'", argName)
+			continue
 		}
 		switch v := value.(type) {
 		case string:
-			fmt.Println("value is sting", value)
+			fmt.Println("value is string", value)
 			commandParts = append(commandParts, v) // Add the value
 		default:
 			fmt.Println("value is possible list", value)
@@ -112,6 +117,23 @@ func encodeArgs(args map[string]interface{}, meta DiceDBAdapterMeta) (string, er
 				return "", err
 			}
 			commandParts = append(commandParts, s) // Add the values
+		}
+	}
+	// if command can have subcommands
+	if len(meta.Subcommands) > 0 {
+		// Append subcommands
+		if subCommand, exists := args["subcommands"]; exists {
+			for _, subcommand := range subCommand.([]map[string]interface{}) {
+				subcommandName := subcommand["subcommand"].(string)
+				commandParts = append(commandParts, subcommandName)
+				delete(subcommand, "subcommand")
+				subCommandStrings, err := encodeArgs(subcommand, meta.Subcommands[subcommandName])
+				if err != nil {
+					return "", err
+				}
+				commandParts = append(commandParts, subCommandStrings)
+
+			}
 		}
 	}
 
@@ -128,9 +150,8 @@ func encodeArgs(args map[string]interface{}, meta DiceDBAdapterMeta) (string, er
 			commandParts = append(commandParts, optArgKey, value.(string)) // Add key-value pair
 		}
 	}
-
 	// Join command parts to form the complete command string
-	return strings.Join(commandParts, " "), nil
+	return strings.TrimSpace(strings.Join(commandParts, " ")), nil
 }
 
 // setEncoder encodes the SET command.
@@ -154,4 +175,12 @@ func mgetEncoder(args map[string]interface{}) (string, error) {
 
 func msetEncoder(args map[string]interface{}) (string, error) {
 	return encodeArgs(args, DiceCmdAdapters["MSET"])
+}
+
+func bitopEncoder(args map[string]interface{}) (string, error) {
+	return encodeArgs(args, DiceCmdAdapters["BITOP"])
+}
+
+func bitfieldEncoder(args map[string]interface{}) (string, error) {
+	return encodeArgs(args, DiceCmdAdapters["BITFIELD"])
 }
