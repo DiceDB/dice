@@ -70,9 +70,10 @@ OK
 
 ## Best Practices
 1. Always verify the key type before using SMEMBERS to avoid type errors
-2. For large sets, consider using SSCAN instead of SMEMBERS to avoid blocking operations
-3. Implement proper error handling in your application for WRONGTYPE errors
-4. Use EXISTS command to check for key presence before SMEMBERS if key existence is uncertain
+2. Implement proper error handling in your application for WRONGTYPE errors
+3. Use EXISTS command to check for key presence before SMEMBERS if key existence is uncertain
+<!--  TODO: uncomment when SSCAN is implemented -->
+<!-- 4. For large sets, consider using SSCAN instead of SMEMBERS to avoid blocking operations -->
 
 
 ## Notes
