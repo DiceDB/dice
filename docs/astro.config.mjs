@@ -25,12 +25,16 @@ export default defineConfig({
         // 	autogenerate: { directory: 'tutorials' }
         // },
         {
-          label: "Commands",
-          autogenerate: { directory: "commands" },
+          label: "SDK",
+            autogenerate: { directory: "sdk" },
         },
         {
           label: "Connection Protocols",
           autogenerate: { directory: "protocols" },
+        },
+        {
+          label: "Commands",
+          autogenerate: { directory: "commands" },
         },
         {
           label: "Metrics",
