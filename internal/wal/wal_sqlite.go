@@ -74,10 +74,6 @@ func (w *WALSQLite) Close() error {
 	return w.curDB.Close()
 }
 
-func (w *WALSQLite) Iterate() error {
-	return nil
-}
-
 func (w *WALSQLite) ForEachCommand(f func(c cmd.DiceDBCmd) error) error {
 	files, err := os.ReadDir(w.logDir)
 	if err != nil {

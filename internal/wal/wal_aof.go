@@ -21,62 +21,30 @@ type WALAOF struct {
 	file   *os.File
 	mutex  sync.Mutex
 	logDir string
-	ticker *time.Ticker
-	stopCh chan struct{}
 }
 
-func NewWAL(logDir string) (*WALAOF, error) {
-	wal := &WALAOF{
+func NewAOFWAL(logDir string) (*WALAOF, error) {
+	return &WALAOF{
 		logDir: logDir,
-		ticker: time.NewTicker(1 * time.Minute),
-		stopCh: make(chan struct{}),
-	}
-
-	// Ensure the log directory exists
-	if err := os.MkdirAll(logDir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create log directory: %v", err)
-	}
-
-	if err := wal.rotateLogFile(); err != nil {
-		return nil, fmt.Errorf("failed to create initial log file: %v", err)
-	}
-
-	go wal.rotateLogPeriodically()
-	return wal, nil
+	}, nil
 }
 
-// rotateLogFile closes the current WAL file and opens a new one with a timestamped name.
-func (w *WALAOF) rotateLogFile() error {
-	w.mutex.Lock()
-	defer w.mutex.Unlock()
-
-	if w.file != nil {
-		w.file.Close()
+func (w *WALAOF) Init(t time.Time) error {
+	slog.Debug("initializing WAL at", slog.Any("log-dir", w.logDir))
+	if err := os.MkdirAll(w.logDir, os.ModePerm); err != nil {
+		return fmt.Errorf("failed to create log directory: %w", err)
 	}
 
-	// Create new file with minute-level timestamp suffix
-	timestamp := time.Now().Format("20060102_1504")
-	filePath := filepath.Join(w.logDir, fmt.Sprintf("wal_%s.log", timestamp))
-	newFile, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	timestamp := t.Format("20060102_1504")
+	path := filepath.Join(w.logDir, fmt.Sprintf("wal_%s.aof", timestamp))
+
+	newFile, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to open new WAL file: %v", err)
 	}
 
 	w.file = newFile
 	return nil
-}
-
-func (w *WALAOF) rotateLogPeriodically() {
-	for {
-		select {
-		case <-w.ticker.C:
-			if err := w.rotateLogFile(); err != nil {
-				fmt.Printf("Error rotating log file: %v\n", err)
-			}
-		case <-w.stopCh:
-			return
-		}
-	}
 }
 
 // LogCommand serializes a WALLogEntry and writes it to the current WAL file.
@@ -91,23 +59,25 @@ func (w *WALAOF) LogCommand(c *cmd.DiceDBCmd) {
 		Checksum: checksum(repr),
 	}
 
-	fmt.Println("entry", entry)
-
-	// Serialize entry to protobuf binary format
 	data, err := proto.Marshal(entry)
 	if err != nil {
 		slog.Warn("failed to serialize command", slog.Any("error", err.Error()))
 	}
 
-	// Write data to the file
 	if _, err := w.file.Write(data); err != nil {
 		slog.Warn("failed to write serialized command to WAL", slog.Any("error", err.Error()))
 	}
 
-	// Ensure data is flushed to disk for durability
 	if err := w.file.Sync(); err != nil {
 		slog.Warn("failed to sync WAL", slog.Any("error", err.Error()))
 	}
+}
+
+func (w *WALAOF) Close() error {
+	if w.file == nil {
+		return nil
+	}
+	return w.file.Close()
 }
 
 // checksum generates a SHA-256 hash for the given command.
@@ -116,11 +86,7 @@ func checksum(command string) []byte {
 	return hash[:]
 }
 
-// LoadWAL loads all WAL files from the log directory starting with the oldest file first.
-func (w *WALAOF) LoadWAL() error {
-	w.mutex.Lock()
-	defer w.mutex.Unlock()
-
+func (w *WALAOF) ForEachCommand(f func(c cmd.DiceDBCmd) error) error {
 	files, err := os.ReadDir(w.logDir)
 	if err != nil {
 		return fmt.Errorf("failed to read log directory: %v", err)
@@ -129,7 +95,7 @@ func (w *WALAOF) LoadWAL() error {
 	var walFiles []os.DirEntry
 
 	for _, file := range files {
-		if !file.IsDir() && filepath.Ext(file.Name()) == ".log" {
+		if !file.IsDir() && filepath.Ext(file.Name()) == ".aof" {
 			walFiles = append(walFiles, file)
 		}
 	}
@@ -192,19 +158,5 @@ func (w *WALAOF) LoadWAL() error {
 		file.Close()
 	}
 
-	return nil
-}
-
-// CloseWAL stops log rotation and closes the current WAL file.
-func (w *WALAOF) CloseWAL() error {
-	close(w.stopCh) // Stop rotation goroutine
-	w.ticker.Stop() // Stop the ticker
-
-	w.mutex.Lock()
-	defer w.mutex.Unlock()
-
-	if w.file != nil {
-		return w.file.Close()
-	}
 	return nil
 }

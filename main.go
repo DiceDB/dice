@@ -115,6 +115,14 @@ func main() {
 				return
 			}
 			wl = _wl
+		} else if config.WALEngine == "aof" {
+			_wl, err := wal.NewAOFWAL(config.LogDir)
+			if err != nil {
+				slog.Warn("could not create WAL with", slog.String("wal-engine", config.WALEngine), slog.Any("error", err))
+				sigs <- syscall.SIGKILL
+				return
+			}
+			wl = _wl
 		} else {
 			slog.Error("unsupported WAL engine", slog.String("engine", config.WALEngine))
 			sigs <- syscall.SIGKILL
