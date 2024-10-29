@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -32,7 +33,6 @@ const (
 	Members     = "members"
 	Index       = "index"
 	JSON        = "json"
-	stringNil   = "(nil)"
 	QWatch      = "Q.WATCH"
 )
 
@@ -205,9 +205,28 @@ func getPriorityKeys() []string {
 func formatValue(val interface{}) string {
 	switch v := val.(type) {
 	case string:
+		if isBase64Encoded(v) {
+			decoded, err := base64.StdEncoding.DecodeString(v)
+			if err == nil {
+				// Replace the base64 string with the decoded `[]byte`
+				return string(decoded)
+			}
+		}
 		return v
 	default:
 		jsonBytes, _ := json.Marshal(v)
 		return string(jsonBytes)
 	}
+}
+
+func isBase64Encoded(s string) bool {
+	if len(s)%4 == 0 && s != "" {
+		for _, r := range s {
+			if !(r >= 'A' && r <= 'Z') && !(r >= 'a' && r <= 'z') && !(r >= '0' && r <= '9') && r != '+' && r != '/' && r != '=' {
+				return false
+			}
+		}
+		return true
+	}
+	return false
 }
