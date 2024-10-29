@@ -1158,6 +1158,15 @@ var (
 		IsMigrated: true,
 		NewEval:    evalZRANK,
 	}
+	zcardCmdMeta = DiceCmdMeta{
+		Name: "ZCARD",
+		Info: `ZCARD key
+		Returns the sorted set cardinality (number of elements) of the sorted set stored at key.`,
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalZCARD,
+	}
 	zremCmdMeta = DiceCmdMeta{
 		Name: "ZREM",
 		Info: `ZREM key member [member ...]
@@ -1419,6 +1428,7 @@ func init() {
 	DiceCmds["ZPOPMAX"] = zpopmaxCmdMeta
 	DiceCmds["ZPOPMIN"] = zpopminCmdMeta
 	DiceCmds["ZRANK"] = zrankCmdMeta
+	DiceCmds["ZCARD"] = zcardCmdMeta
 	DiceCmds["ZREM"] = zremCmdMeta
 	DiceCmds["JSON.STRAPPEND"] = jsonstrappendCmdMeta
 	DiceCmds["CMS.INITBYDIM"] = cmsInitByDimCmdMeta

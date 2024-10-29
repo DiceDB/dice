@@ -8,7 +8,7 @@ import (
 	testifyAssert "github.com/stretchr/testify/assert"
 )
 
-func TestZREM(t *testing.T) {
+func TestZCARD(t *testing.T) {
 	exec := NewHTTPCommandExecutor()
 
 	testCases := []struct {
@@ -18,61 +18,55 @@ func TestZREM(t *testing.T) {
 		delays   []time.Duration
 	}{
 		{
-			name: "ZREM with wrong number of arguments",
+			name: "ZCARD with wrong number of arguments",
 			commands: []HTTPCommand{
-				{Command: "ZREM", Body: nil},
-				{Command: "ZREM", Body: map[string]interface{}{"key": "myzset"}},
+				{Command: "ZCARD", Body: nil},
+				{Command: "ZCARD", Body: map[string]interface{}{"key": "myzset", "field": "field"}},
 			},
 			expected: []interface{}{
-				"ERR wrong number of arguments for 'zrem' command",
-				"ERR wrong number of arguments for 'zrem' command"},
+				"ERR wrong number of arguments for 'zcard' command",
+				"ERR wrong number of arguments for 'zcard' command"},
 			delays: []time.Duration{0, 0},
 		},
 		{
-			name: "ZREM with wrong type of key",
+			name: "ZCARD with wrong type of key",
 			commands: []HTTPCommand{
 				{Command: "SET", Body: map[string]interface{}{"key": "string_key", "value": "string_value"}},
-				{Command: "ZREM", Body: map[string]interface{}{"key": "string_key", "field": "string_value"}},
+				{Command: "ZCARD", Body: map[string]interface{}{"key": "string_key"}},
 			},
 			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
 			delays:   []time.Duration{0, 0},
 		},
 		{
-			name: "ZREM with non-existent key",
+			name: "ZCARD with non-existent key",
 			commands: []HTTPCommand{
 				{Command: "ZADD", Body: map[string]interface{}{"key": "myzset", "values": []string{"1", "one"}}},
-				{Command: "ZREM", Body: map[string]interface{}{"key": "wrong_myzset", "field": "one"}},
+				{Command: "ZCARD", Body: map[string]interface{}{"key": "wrong_myzset"}},
 			},
 			expected: []interface{}{float64(1), float64(0)},
 			delays:   []time.Duration{0, 0},
 		},
 		{
-			name: "ZREM with non-existent element",
+			name: "ZCARD with sorted set holding single element",
 			commands: []HTTPCommand{
 				{Command: "ZADD", Body: map[string]interface{}{"key": "myzset", "values": []string{"1", "one"}}},
-				{Command: "ZREM", Body: map[string]interface{}{"key": "wrong_myzset", "field": "two"}},
-			},
-			expected: []interface{}{float64(1), float64(0)},
-			delays:   []time.Duration{0, 0},
-		},
-		{
-			name: "ZREM with sorted set holding single element",
-			commands: []HTTPCommand{
-				{Command: "ZADD", Body: map[string]interface{}{"key": "myzset", "values": []string{"1", "one"}}},
-				{Command: "ZREM", Body: map[string]interface{}{"key": "myzset", "values": []string{"one"}}},
+				{Command: "ZCARD", Body: map[string]interface{}{"key": "myzset"}},
 			},
 			expected: []interface{}{float64(1), float64(1)},
 			delays:   []time.Duration{0, 0},
 		},
 		{
-			name: "ZREM with sorted set holding multiple elements",
+			name: "ZCARD with sorted set holding multiple elements",
 			commands: []HTTPCommand{
-				{Command: "ZADD", Body: map[string]interface{}{"key": "myzset", "values": []string{"1", "one", "2", "two", "3", "three", "4", "four"}}},
-				{Command: "ZREM", Body: map[string]interface{}{"key": "myzset", "values": []string{"four", "five"}}},
-				{Command: "ZREM", Body: map[string]interface{}{"key": "myzset", "values": []string{"one", "two"}}},
+				{Command: "ZADD", Body: map[string]interface{}{"key": "myzset", "values": []string{"1", "one", "2", "two"}}},
+				{Command: "ZCARD", Body: map[string]interface{}{"key": "myzset"}},
+				{Command: "ZADD", Body: map[string]interface{}{"key": "myzset", "values": []string{"3", "three"}}},
+				{Command: "ZCARD", Body: map[string]interface{}{"key": "myzset"}},
+				{Command: "ZREM", Body: map[string]interface{}{"key": "myzset", "field": "two"}},
+				{Command: "ZCARD", Body: map[string]interface{}{"key": "myzset"}},
 			},
-			expected: []interface{}{float64(4), float64(1), float64(2)},
-			delays:   []time.Duration{0, 0, 0},
+			expected: []interface{}{float64(2), float64(2), float64(1), float64(3), float64(1), float64(2)},
+			delays:   []time.Duration{0, 0, 0, 0, 0, 0},
 		},
 	}
 
