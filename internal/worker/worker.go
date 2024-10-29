@@ -51,7 +51,6 @@ type BaseWorker struct {
 	clientTimeoutTimer	*time.Timer
 	Session         	*auth.Session
 	globalErrorChan 	chan error
-	logger          	*slog.Logger
 	responseChan      chan *ops.StoreResponse
 	preprocessingChan chan *ops.StoreResponse
 }
@@ -66,7 +65,6 @@ func NewWorker(wid string, responseChan, preprocessingChan chan *ops.StoreRespon
 		shardManager:    shardManager,
 		globalErrorChan: gec,
 		responseChan:    responseChan,
-		logger:          logger,
 		Session:         auth.NewSession(),
 		adhocReqChan:    make(chan *cmd.DiceDBCmd, config.DiceConfig.Performance.AdhocReqChanBufSize),
 		keepAliveInterval: config.DiceConfig.AsyncServer.KeepAlive,
@@ -485,7 +483,7 @@ func (w *BaseWorker) sendKeepAlive(ctx context.Context) error {
 }
 
 func (w *BaseWorker) handleClientTimeout() error {
-	w.logger.Info("Client timeout reached", slog.String("workerID", w.id))
+	slog.Info("Client timeout reached", slog.String("workerID", w.id))
 	return fmt.Errorf("client timeout reached")
 }
 
