@@ -398,6 +398,48 @@ func TestParseWebsocketMessage(t *testing.T) {
 			expectedCmd:  "Q.WATCH",
 			expectedArgs: []string{"SELECT $key, $value WHERE $key LIKE 'player:*' AND '$value.score' > 10 ORDER BY $value.score DESC LIMIT 5"},
 		},
+		{
+			name:         "Test SET command with spaces in quoted string",
+			message:      `set k1 "New York City" nx`,
+			expectedCmd:  "SET",
+			expectedArgs: []string{"k1", "New York City", "nx"},
+		},
+		{
+			name:         "Test GET command with spaces in quoted string",
+			message:      `get k1`,
+			expectedCmd:  "GET",
+			expectedArgs: []string{"k1"},
+		},
+		{
+			name:         "Test SET command with single quotes inside double-quoted string",
+			message:      `set k1 "It's a test value" nx`,
+			expectedCmd:  "SET",
+			expectedArgs: []string{"k1", "It's a test value", "nx"},
+		},
+		{
+			name:         "Test SET command with empty quoted string",
+			message:      `set k1 "" nx`,
+			expectedCmd:  "SET",
+			expectedArgs: []string{"k1", "", "nx"},
+		},
+		{
+			name:         "Test SET command with multiple quoted arguments",
+			message:      `set k1 "value one" "value two" nx`,
+			expectedCmd:  "SET",
+			expectedArgs: []string{"k1", "value one", "value two", "nx"},
+		},
+		{
+			name:         "Test complex JSON.SET command with nested JSON object and quoted strings",
+			message:      `json.set k1 $ '{"name": "John", "contact": {"email": "john@example.com", "phone": "123-456"}}'`,
+			expectedCmd:  "JSON.SET",
+			expectedArgs: []string{"k1", "$", `{"name": "John", "contact": {"email": "john@example.com", "phone": "123-456"}}`},
+		},
+		{
+			name:         "Test simple JSON.GET command with JSON path",
+			message:      `json.get k1 "$.contact.email"`,
+			expectedCmd:  "JSON.GET",
+			expectedArgs: []string{"k1", "$.contact.email"},
+		},		
 	}
 
 	for _, tc := range commands {
