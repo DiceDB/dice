@@ -61,7 +61,7 @@ func TestCopy(t *testing.T) {
 		},
 		{
 			name:     "COPY with expiry making sure copy expires",
-			commands: []string{"SET k1 v1 EX 5", "COPY k1 k2", "GET k1", "GET k2", "SLEEP 7", "GET k1", "GET k2"},
+			commands: []string{"SET k1 v1 EX 5", "COPY k1 k2", "GET k1", "GET k2", "SLEEP 3", "GET k1", "GET k2"},
 			expected: []interface{}{"OK", int64(1), "v1", "v1", "OK", "(nil)", "(nil)"},
 		},
 	}
