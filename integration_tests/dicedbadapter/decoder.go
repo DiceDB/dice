@@ -15,8 +15,22 @@ func decodeArgs(commandParts []string, meta DiceDBAdapterMeta) (map[string]inter
 	decodedArgs := make(map[string]interface{})
 	argIndex := 0 // Start after the command name
 
-	// Decode required arguments
+	// Decode required arguments with positive begin index
+	fromStart := 0
+	fromEnd := 0
+	allRequiredArgs := make([]string, len(meta.RequiredArgs))
 	for argName, position := range meta.RequiredArgs {
+		if position.BeginIndex >= 0 {
+			fromStart++
+			allRequiredArgs[position.BeginIndex] = argName
+		} else {
+			fromEnd++
+		}
+	}
+	allFrontRequiredArgs := allRequiredArgs[:fromStart]
+	// fmt.Println(allFrontRequiredArgs)
+	for _, argName := range allFrontRequiredArgs {
+		position := meta.RequiredArgs[argName]
 		// the required argument is a list till the end of the command
 		if position.EndIndex == -1 {
 			position.EndIndex = len(commandParts) - 1
@@ -41,7 +55,6 @@ func decodeArgs(commandParts []string, meta DiceDBAdapterMeta) (map[string]inter
 					argVal = append(argVal, temp)
 				}
 				decodedArgs[argName] = argVal
-
 			} else {
 				for i := position.BeginIndex; i <= position.EndIndex; i += position.Step {
 					argVal = append(argVal, commandParts[i])
@@ -61,7 +74,7 @@ func decodeArgs(commandParts []string, meta DiceDBAdapterMeta) (map[string]inter
 			argIndex++
 		}
 	}
-
+	// fmt.Println(decodedArgs, argIndex, commandParts)
 	// Decode Subcommands
 	if len(meta.Subcommands) > 0 {
 		decodedArgs["subcommands"] = make([]map[string]interface{}, 0)
@@ -90,24 +103,76 @@ func decodeArgs(commandParts []string, meta DiceDBAdapterMeta) (map[string]inter
 			decodedArgs["subcommands"] = append(decodedArgs["subcommands"].([]map[string]interface{}), subCommandArgs)
 		}
 	}
+	// fmt.Println(decodedArgs, argIndex, commandParts)
 
-	for i := argIndex; i < len(commandParts); i++ {
+	for ; argIndex < len(commandParts); argIndex++ {
 		// Decode optional arguments
-		arg := strings.ToLower(commandParts[i])
+		arg := strings.ToLower(commandParts[argIndex])
 		if _, exists := meta.OptionalArgs[arg]; exists {
-			if i+1 < len(commandParts) {
-				decodedArgs[arg] = commandParts[i+1]
+			if argIndex+1 < len(commandParts) {
+				decodedArgs[arg] = commandParts[argIndex+1]
 			} else {
-				return nil, fmt.Errorf("missing value for optional argument '%s'", arg)
+				decodedArgs[arg] = ""
 			}
-			i++
+			argIndex++
 		} else if _, exists := meta.Flags[arg]; exists {
 			decodedArgs[arg] = arg
 		} else {
-			return nil, fmt.Errorf("unexpected argument '%s'", arg)
+			break
 		}
 	}
-	fmt.Println(decodedArgs)
+	// fmt.Println(decodedArgs, argIndex, commandParts)
+	allEndRequiredArgs := make([]string, fromEnd)
+	for argName, position := range meta.RequiredArgs {
+		if position.BeginIndex < 0 {
+			allEndRequiredArgs[fromEnd+position.BeginIndex] = argName
+		}
+	}
+	// fmt.Println(allEndRequiredArgs)
+
+	for _, argName := range allEndRequiredArgs {
+		position := meta.RequiredArgs[argName]
+		// the required argument is a list till the end of the command
+		if position.EndIndex == -1 {
+			position.EndIndex = len(commandParts) - 1
+			argVal := make([]interface{}, 0)
+			if position.Step > 1 {
+				for ; argIndex <= position.EndIndex; argIndex += position.Step {
+					temp := make([]interface{}, 0, position.Step)
+					for j := 0; ; j++ {
+						// if we have reached the end of the command
+						// and we still need more arguments
+						// then we append an empty string
+						if argIndex+j >= len(commandParts) && j < position.Step {
+							temp = append(temp, "")
+							break
+						}
+						// if we have reached the end of the command
+						if j >= position.Step {
+							break
+						}
+						temp = append(temp, commandParts[argIndex+j])
+					}
+					argVal = append(argVal, temp)
+				}
+				decodedArgs[argName] = argVal
+			} else {
+				for ; argIndex <= position.EndIndex; argIndex += position.Step {
+					argVal = append(argVal, commandParts[argIndex])
+				}
+				decodedArgs[argName] = argVal
+			}
+			argIndex += position.EndIndex - position.BeginIndex + 1
+		} else if position.BeginIndex < len(commandParts) {
+			decodedArgs[argName] = commandParts[position.BeginIndex]
+			argIndex++
+		} else {
+			// missing required argument
+			// we do not validate the command here
+			// only server side should validate the command
+			decodedArgs[argName] = ""
+		}
+	}
 	return decodedArgs, nil
 }
 

@@ -20,7 +20,6 @@ func flattenStringArgs(args interface{}) (string, error) {
 	// Helper function to recursively flatten the arguments
 	var flatten func([]interface{}) error
 	flatten = func(items []interface{}) error {
-
 		for _, item := range items {
 			switch v := item.(type) {
 			case string:
@@ -99,7 +98,6 @@ func encodeArgs(args map[string]interface{}, meta DiceDBAdapterMeta) (string, er
 					return "", err
 				}
 				commandParts = append(commandParts, subCommandStrings)
-
 			}
 		}
 	}

@@ -20,7 +20,6 @@ type DiceDBAdapterMeta struct {
 var DiceCmdAdapters = map[string]DiceDBAdapterMeta{}
 
 func init() {
-
 	setCmdAdapterMeta := DiceDBAdapterMeta{
 		Route:   "/set",
 		Command: "SET",
@@ -207,5 +206,4 @@ func init() {
 	DiceCmdAdapters["BITFIELD"] = bitfieldCmdAdapterMeta
 
 	DiceCmdAdapters["ZADD"] = zaddCmdAdapterMeta
-
 }

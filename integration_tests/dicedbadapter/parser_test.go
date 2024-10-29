@@ -479,10 +479,8 @@ func TestEncodeCommandZadd(t *testing.T) {
 		Body: map[string]interface{}{
 			"key": "myKey",
 			"score-members": []interface{}{
-				"1",
-				"one",
-				"2",
-				"two",
+				[]interface{}{"1", "one"},
+				[]interface{}{"2", "two"},
 			},
 		},
 	}
@@ -497,10 +495,8 @@ func TestEncodeCommandZadd(t *testing.T) {
 		Body: map[string]interface{}{
 			"key": "myKey",
 			"score-members": []interface{}{
-				"1",
-				"one",
-				"2",
-				"two",
+				[]interface{}{"1", "one"},
+				[]interface{}{"2", "two"},
 			},
 			"nx": "nx",
 			"ch": "ch",
@@ -517,10 +513,8 @@ func TestEncodeCommandZadd(t *testing.T) {
 		Body: map[string]interface{}{
 			"key": "myKey",
 			"score-members": []interface{}{
-				"1",
-				"one",
-				"2",
-				"two",
+				[]interface{}{"1", "one"},
+				[]interface{}{"2", "two"},
 			},
 			"xx":   "xx",
 			"incr": "incr",
@@ -533,4 +527,48 @@ func TestEncodeCommandZadd(t *testing.T) {
 	result, err = EncodeCommand(cmd)
 	assert.Nil(t, err)
 	assert.Equal(t, expected, result)
+}
+
+func TestDecodeCommandZadd(t *testing.T) {
+	commandStr := "ZADD myKey nx ch 1 one 2 two"
+	expected := DiceDBCommand{
+		Route: "/zadd",
+		Body: map[string]interface{}{
+			"key": "myKey",
+			"score-members": []interface{}{
+				[]interface{}{"1", "one"},
+				[]interface{}{"2", "two"},
+			},
+			"nx": "nx",
+			"ch": "ch",
+		},
+	}
+
+	result, err := DecodeCommand(commandStr)
+	assert.Nil(t, err)
+	assert.Equal(t, expected.Route, result.Route)
+	assert.Equal(t, expected.Body, result.Body)
+
+	// zadd with extra flags
+	commandStr = "ZADD myKey xx gt lt ch incr 1 one 2 two"
+	expected = DiceDBCommand{
+		Route: "/zadd",
+		Body: map[string]interface{}{
+			"key": "myKey",
+			"score-members": []interface{}{
+				[]interface{}{"1", "one"},
+				[]interface{}{"2", "two"},
+			},
+			"xx":   "xx",
+			"incr": "incr",
+			"ch":   "ch",
+			"lt":   "lt",
+			"gt":   "gt",
+		},
+	}
+
+	result, err = DecodeCommand(commandStr)
+	assert.Nil(t, err)
+	assert.Equal(t, expected.Route, result.Route)
+	assert.Equal(t, expected.Body, result.Body)
 }
