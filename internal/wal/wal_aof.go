@@ -3,6 +3,7 @@ package wal
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"log/slog"
@@ -16,6 +17,8 @@ import (
 	"github.com/dicedb/dice/internal/cmd"
 	"google.golang.org/protobuf/proto"
 )
+
+var writeBuf bytes.Buffer
 
 type WALAOF struct {
 	file   *os.File
@@ -64,13 +67,22 @@ func (w *WALAOF) LogCommand(c *cmd.DiceDBCmd) {
 		slog.Warn("failed to serialize command", slog.Any("error", err.Error()))
 	}
 
-	if _, err := w.file.Write(data); err != nil {
+	writeBuf.Reset()
+	writeBuf.Grow(4 + len(data))
+	if binary.Write(&writeBuf, binary.BigEndian, uint32(len(data))) != nil {
+		slog.Warn("failed to write entry length to WAL", slog.Any("error", err.Error()))
+	}
+	writeBuf.Write(data)
+
+	if _, err := w.file.Write(writeBuf.Bytes()); err != nil {
 		slog.Warn("failed to write serialized command to WAL", slog.Any("error", err.Error()))
 	}
 
 	if err := w.file.Sync(); err != nil {
 		slog.Warn("failed to sync WAL", slog.Any("error", err.Error()))
 	}
+
+	slog.Debug("logged command in WAL", slog.Any("command", c.Repr()))
 }
 
 func (w *WALAOF) Close() error {
@@ -87,6 +99,8 @@ func checksum(command string) []byte {
 }
 
 func (w *WALAOF) ForEachCommand(f func(c cmd.DiceDBCmd) error) error {
+	var length uint32
+
 	files, err := os.ReadDir(w.logDir)
 	if err != nil {
 		return fmt.Errorf("failed to read log directory: %v", err)
@@ -126,32 +140,38 @@ func (w *WALAOF) ForEachCommand(f func(c cmd.DiceDBCmd) error) error {
 			return fmt.Errorf("failed to open WAL file %s: %v", file.Name(), err)
 		}
 
-		reader := bytes.NewBuffer(nil)
 		for {
-			buf := make([]byte, 4096)
-			n, err := file.Read(buf)
-			if err != nil {
+			if err := binary.Read(file, binary.BigEndian, &length); err != nil {
 				if err == io.EOF {
 					break
 				}
-				return fmt.Errorf("failed to read WAL file %s: %v", file.Name(), err)
+				return fmt.Errorf("failed to read entry length: %v", err)
 			}
 
-			reader.Write(buf[:n])
-			for {
-				entry := &WALLogEntry{}
-				if err := proto.Unmarshal(reader.Bytes(), entry); err != nil {
-					if err == io.ErrUnexpectedEOF {
-						break
-					}
-					return fmt.Errorf("failed to unmarshal WAL entry: %v", err)
-				}
+			// TODO: Optimize this allocation.
+			// Pre-allocate and reuse rather than allocating for each entry.
+			readBufBytes := make([]byte, length)
+			if _, err := io.ReadFull(file, readBufBytes); err != nil {
+				return fmt.Errorf("failed to read entry data: %v", err)
+			}
 
-				if entry.Checksum == nil || entry.Command == "" {
-					break
-				}
+			entry := &WALLogEntry{}
+			if err := proto.Unmarshal(readBufBytes, entry); err != nil {
+				return fmt.Errorf("failed to unmarshal WAL entry: %v", err)
+			}
 
-				slog.Debug("loading log entry", slog.Any("command", entry.Command))
+			commandParts := strings.SplitN(entry.Command, " ", 2)
+			if len(commandParts) < 2 {
+				return fmt.Errorf("invalid command format in WAL entry: %s", entry.Command)
+			}
+
+			c := cmd.DiceDBCmd{
+				Cmd:  commandParts[0],
+				Args: strings.Split(commandParts[1], " "),
+			}
+
+			if err := f(c); err != nil {
+				return fmt.Errorf("error processing command: %v", err)
 			}
 		}
 
