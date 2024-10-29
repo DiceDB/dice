@@ -1061,6 +1061,39 @@ func evalZRANK(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+// evalZCARD returns the cardinality (number of elements) of the sorted set stored at key.
+// Returns 0 if the key does not exist.
+func evalZCARD(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 || len(args) > 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("ZCARD"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	sortedSet, err := sortedset.FromObject(obj)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+	return &EvalResponse{
+		Result: int64(sortedSet.Len()),
+		Error:  nil,
+	}
+}
+
 // evalJSONCLEAR Clear container values (arrays/objects) and set numeric values to 0,
 // Already cleared values are ignored for empty containers and zero numbers
 // args must contain at least the key;  (path unused in this implementation)
