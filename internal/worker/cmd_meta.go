@@ -67,6 +67,9 @@ const (
 const (
 	CmdGetWatch      = "GET.WATCH"
 	CmdZRangeWatch   = "ZRANGE.WATCH"
+	CmdHExists       = "HEXISTS"
+	CmdHKeys         = "HKEYS"
+	CmdHVals         = "HVALS"
 	CmdZPopMin       = "ZPOPMIN"
 	CmdJSONClear     = "JSON.CLEAR"
 	CmdJSONStrlen    = "JSON.STRLEN"
@@ -148,6 +151,15 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdGetSet: {
+		CmdType: SingleShard,
+	},
+	CmdHExists: {
+		CmdType: SingleShard,
+	},
+	CmdHKeys: {
+		CmdType: SingleShard,
+	},
+	CmdHVals: {
 		CmdType: SingleShard,
 	},
 	CmdJSONArrAppend: {
