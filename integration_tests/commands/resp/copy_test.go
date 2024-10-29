@@ -2,6 +2,7 @@ package resp
 
 import (
 	"testing"
+	"time"
 
 	"github.com/dicedb/dice/testutils"
 	testifyAssert "github.com/stretchr/testify/assert"
@@ -18,6 +19,7 @@ func TestCopy(t *testing.T) {
 		name     string
 		commands []string
 		expected []interface{}
+		delays   []time.Duration
 	}{
 		{
 			name:     "COPY when source key doesn't exist",
@@ -61,8 +63,9 @@ func TestCopy(t *testing.T) {
 		},
 		{
 			name:     "COPY with expiry making sure copy expires",
-			commands: []string{"SET k1 v1 EX 5", "COPY k1 k2", "GET k1", "GET k2", "SLEEP 3", "GET k1", "GET k2"},
-			expected: []interface{}{"OK", int64(1), "v1", "v1", "OK", "(nil)", "(nil)"},
+			commands: []string{"SET k1 v1 EX 5", "COPY k1 k2", "GET k1", "GET k2", "GET k1", "GET k2"},
+			expected: []interface{}{"OK", int64(1), "v1", "v1", "(nil)", "(nil)"},
+			delays:   []time.Duration{0, 0, 0, 0, 5 * time.Second, 0},
 		},
 	}
 
@@ -76,10 +79,13 @@ func TestCopy(t *testing.T) {
 			FireCommand(conn, "DEL k1")
 			FireCommand(conn, "DEL k2")
 			for i, cmd := range tc.commands {
+				if len(tc.delays) > 0 && tc.delays[i] > 0 {
+					time.Sleep(tc.delays[i])
+				}
+
 				result := FireCommand(conn, cmd)
 				resStr, resOk := result.(string)
 				expStr, expOk := tc.expected[i].(string)
-
 				// If both are valid JSON strings, then compare the JSON values.
 				// else compare the values as is.
 				// This is to handle cases where the expected value is a json string with a different key order.
