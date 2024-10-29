@@ -27,7 +27,7 @@ func TestBloomFilter(t *testing.T) {
 					Body:    map[string]interface{}{"key": "bf", "value": "item1"},
 				},
 			},
-			expected: []interface{}{"OK", "1", "1"},
+			expected: []interface{}{"OK", float64(1), float64(1)},
 		},
 		{
 			name: "BF.EXISTS returns false for non-existing item",
@@ -41,7 +41,7 @@ func TestBloomFilter(t *testing.T) {
 					Body:    map[string]interface{}{"key": "bf", "value": "item2"},
 				},
 			},
-			expected: []interface{}{"OK", "0"},
+			expected: []interface{}{"OK", float64(0)},
 		},
 		{
 			name: "BF.INFO provides correct information",
@@ -61,7 +61,7 @@ func TestBloomFilter(t *testing.T) {
 			},
 			expected: []interface{}{
 				"OK",
-				"1",
+				float64(1),
 				[]interface{}{
 					"Capacity", float64(1000),
 					"Size", float64(10104),
@@ -179,7 +179,7 @@ func TestBFEdgeCasesAndErrors(t *testing.T) {
 					Body:    map[string]interface{}{"key": "bf", "value": "item1"},
 				},
 			},
-			expected: []interface{}{"1"},
+			expected: []interface{}{float64(1)},
 		},
 		{
 			name: "BF.EXISTS on an unreserved filter",
@@ -189,7 +189,7 @@ func TestBFEdgeCasesAndErrors(t *testing.T) {
 					Body:    map[string]interface{}{"key": "bf", "value": "item1"},
 				},
 			},
-			expected: []interface{}{"0"},
+			expected: []interface{}{float64(0)},
 		},
 		{
 			name: "BF.INFO on a non-existent filter",
@@ -249,7 +249,7 @@ func TestBFEdgeCasesAndErrors(t *testing.T) {
 					Body:    map[string]interface{}{"key": "bf", "value": "item3"},
 				},
 			},
-			expected: []interface{}{"OK", "1", "1", "1", "1", "0"},
+			expected: []interface{}{"OK", float64(1), float64(1), float64(1), float64(1), float64(0)},
 		},
 		{
 			name: "BF.EXISTS after BF.ADD returns false on non-existing item",
@@ -267,7 +267,7 @@ func TestBFEdgeCasesAndErrors(t *testing.T) {
 					Body:    map[string]interface{}{"key": "bf", "value": "item2"},
 				},
 			},
-			expected: []interface{}{"OK", "1", "0"},
+			expected: []interface{}{"OK", float64(1), float64(0)},
 		},
 		{
 			name: "BF.RESERVE with duplicate filter name",
@@ -305,8 +305,8 @@ func TestBFEdgeCasesAndErrors(t *testing.T) {
 			},
 			expected: []interface{}{
 				"OK",
-				"1",
-				"1",
+				float64(1),
+				float64(1),
 				[]interface{}{
 					"Capacity", float64(1000),
 					"Size", float64(10104),
