@@ -896,6 +896,13 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	pfDebugMeta = DiceCmdMeta{
+		Name:     "PFDEBUG",
+		Info:     `PFDEBUG subcommand key`,
+		Eval:     evalPFDEBUG,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	pfCountCmdMeta = DiceCmdMeta{
 		Name: "PFCOUNT",
 		Info: `PFCOUNT key [key ...]
@@ -1188,6 +1195,7 @@ func init() {
 	DiceCmds["PFADD"] = pfAddCmdMeta
 	DiceCmds["PFCOUNT"] = pfCountCmdMeta
 	DiceCmds["PFMERGE"] = pfMergeCmdMeta
+	DiceCmds["PFDEBUG"] = pfDebugMeta
 	DiceCmds["PING"] = pingCmdMeta
 	DiceCmds["PTTL"] = pttlCmdMeta
 	DiceCmds["QUNWATCH"] = qUnwatchCmdMeta

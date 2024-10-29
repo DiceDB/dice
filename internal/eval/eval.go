@@ -12,6 +12,7 @@ import (
 	"math"
 	"math/big"
 	"math/bits"
+	"reflect"
 	"regexp"
 	"sort"
 	"strconv"
@@ -4106,6 +4107,80 @@ func evalPFMERGE(args []string, store *dstore.Store) []byte {
 	store.Put(destKey, obj)
 
 	return clientio.RespOK
+}
+
+func evalPFDEBUG(args []string, store *dstore.Store) []byte {
+	if len(args) != 2 {
+		return diceerrors.NewErrArity("PFDEBUG")
+	}
+
+	subcommand := strings.ToUpper(args[0])
+	key := args[1]
+
+	obj := store.Get(key)
+	if obj == nil {
+		return diceerrors.NewErrWithMessage("Key does not exist")
+	}
+
+	hll, ok := obj.Value.(*hyperloglog.Sketch)
+	if !ok {
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeHllErr)
+	}
+
+	sparseField := reflect.ValueOf(hll).Elem().FieldByName("sparseList")
+	sparseFieldValue := reflect.NewAt(sparseField.Type(), unsafe.Pointer(sparseField.UnsafeAddr())).Elem()
+
+	var encoding string
+	if sparseFieldValue.IsNil() {
+		encoding = "dense"
+	} else {
+		encoding = "sparse"
+	}
+
+	switch subcommand {
+	case "GETREG":
+		// For call to GETREG, encoding is converted from sparse to dense.
+		// We'll merge a sparse and an empty dense HLL to get a dense HLL
+		// with values of sparse HLL.
+		if encoding == "sparse" {
+			emptyDenseHLL := hyperloglog.NewNoSparse()
+			err := hll.Merge(emptyDenseHLL)
+
+			if err != nil {
+				return diceerrors.NewErrWithMessage(diceerrors.InvalidHllErr)
+			}
+		}
+
+		registers := reflect.ValueOf(hll).Elem().FieldByName("regs")
+		registersValue := reflect.NewAt(registers.Type(), unsafe.Pointer(registers.UnsafeAddr())).Elem()
+		return clientio.Encode(registersValue, false)
+
+	case "DECODE":
+		if encoding != "sparse" {
+			return diceerrors.NewErrWithMessage(diceerrors.HllEncodingErr)
+		}
+
+		return clientio.Encode("Dont know what to do, heheh", false)
+
+	case "ENCODING":
+		return clientio.Encode(encoding, false)
+
+	case "TODENSE":
+		changed := 0
+		if encoding == "sparse" {
+			emptyDenseHLL := hyperloglog.NewNoSparse()
+			err := hll.Merge(emptyDenseHLL)
+			changed = 1
+
+			if err != nil {
+				return diceerrors.NewErrWithMessage(diceerrors.InvalidHllErr)
+			}
+		}
+		return clientio.Encode(changed, false)
+
+	default:
+		return diceerrors.NewErrWithMessage(fmt.Sprintf("Unknown PFDEBUG subcommand: %s", subcommand))
+	}
 }
 
 func evalJSONSTRLEN(args []string, store *dstore.Store) []byte {

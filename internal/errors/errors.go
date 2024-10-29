@@ -19,6 +19,7 @@ const (
 	WrongTypeErr           = "-WRONGTYPE Operation against a key holding the wrong kind of value"
 	WrongTypeHllErr        = "-WRONGTYPE Key is not a valid HyperLogLog string value."
 	InvalidHllErr          = "-INVALIDOBJ Corrupted HLL object detected"
+	HllEncodingErr         = "HLL encoding is not sparse"
 	WorkerNotFoundErr      = "worker with ID %s not found"
 	JSONPathValueTypeErr   = "-WRONGTYPE wrong type of path value - expected string but found integer"
 	HashValueNotIntegerErr = "hash value is not an integer"
