@@ -38,13 +38,16 @@ func decomposeRename(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*
 				return nil, evalResp.Error
 			}
 
-			switch evalResp.Result.(type) {
+			switch v := evalResp.Result.(type) {
 			case string:
-				val = evalResp.Result.(string)
-			case clientio.RespType: // always expected NIL response if key does not exist
+				val = v
+			case clientio.RespType: // Expected NIL response if the key does not exist
+				// Return an error if 'val' is of type 'clientio.RespType'
 				return nil, diceerrors.ErrGeneral("no such key")
+			default:
+				// Optional: Handle unexpected types if needed
+				return nil, diceerrors.ErrGeneral("unexpected result type")
 			}
-
 		}
 	}
 	decomposedCmds := []*cmd.DiceDBCmd{}

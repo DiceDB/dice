@@ -20,7 +20,7 @@ type Eval struct {
 	isPreprocessOperation bool
 }
 
-func NewEval(c *cmd.DiceDBCmd, client *comm.Client, store *dstore.Store, httpOp bool, websocketOp bool, preProcessing bool) *Eval {
+func NewEval(c *cmd.DiceDBCmd, client *comm.Client, store *dstore.Store, httpOp, websocketOp, preProcessing bool) *Eval {
 	return &Eval{
 		cmd:                   c,
 		client:                client,

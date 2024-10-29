@@ -3014,8 +3014,8 @@ func evalJSONOBJKEYS(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
 // If the key is not found, it returns a RESP-encoded nil response.
 // Otherwise, it returns the object wrapped in an ExtendedObj with expiry details (if applicable).
 // This function is usually specifc to multishard multi-op commands
-func evalGetObject(cmd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
-	args := cmd.Args
+func evalGetObject(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) != 1 {
 		return &EvalResponse{
 			Result: nil,
