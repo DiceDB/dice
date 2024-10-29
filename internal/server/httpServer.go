@@ -12,9 +12,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dicedb/dice/internal/server/abstractserver"
-
 	"github.com/dicedb/dice/internal/eval"
+
+	"github.com/dicedb/dice/internal/server/abstractserver"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
@@ -92,7 +92,7 @@ func NewHTTPServer(shardManager *shard.ShardManager) *HTTPServer {
 
 func (s *HTTPServer) Run(ctx context.Context) error {
 	var wg sync.WaitGroup
-	var err error
+	var shutdownErr, listenErr error
 
 	httpCtx, cancelHTTP := context.WithCancel(ctx)
 	defer cancelHTTP()
@@ -105,14 +105,14 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 		case <-s.shutdownChan:
-			err = derrors.ErrAborted
+			shutdownErr = derrors.ErrAborted
 			slog.Debug("Shutting down HTTP Server")
 		}
 
-		shutdownErr := s.httpServer.Shutdown(httpCtx)
-		if shutdownErr != nil {
+		err := s.httpServer.Shutdown(httpCtx)
+		if err != nil {
 			slog.Error("HTTP Server Shutdown Failed", slog.Any("error", err))
-			err = shutdownErr
+			shutdownErr = err
 			return
 		}
 	}()
@@ -120,12 +120,17 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		slog.Info("also listenting HTTP on", slog.String("port", s.httpServer.Addr[1:]))
-		err = s.httpServer.ListenAndServe()
+		slog.Info("also listening HTTP on", slog.String("port", s.httpServer.Addr[1:]))
+		listenErr = s.httpServer.ListenAndServe()
 	}()
 
 	wg.Wait()
-	return err
+	// Return the appropriate error
+	if shutdownErr != nil {
+		return shutdownErr
+	}
+
+	return listenErr
 }
 
 func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.Request) {
@@ -342,7 +347,7 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.Store
 	_, ok := WorkerCmdsMeta[diceDBCmd.Cmd]
 	// TODO: Remove this conditional check and if (true) condition when all commands are migrated
 	if !ok {
-		responseValue, err = decodeEvalResponse(result.EvalResponse)
+		responseValue, err = DecodeEvalResponse(result.EvalResponse)
 		if err != nil {
 			slog.Error("Error decoding response", "error", err)
 			httpResponse = utils.HTTPResponse{Status: utils.HTTPStatusError, Data: "Internal Server Error"}
@@ -359,7 +364,7 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.Store
 	}
 
 	// Create the HTTP response
-	httpResponse = createHTTPResponse(responseValue)
+	httpResponse = utils.HTTPResponse{Data: ResponseParser(responseValue)}
 	if isDiceErr {
 		httpResponse.Status = utils.HTTPStatusError
 	} else {
@@ -368,24 +373,6 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.Store
 
 	// Write the response back to the client
 	writeJSONResponse(writer, httpResponse, http.StatusOK)
-}
-
-// Helper function to decode EvalResponse based on the error or result
-func decodeEvalResponse(evalResp *eval.EvalResponse) (interface{}, error) {
-	var rp *clientio.RESPParser
-
-	if evalResp.Error != nil {
-		rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(evalResp.Error.Error())))
-	} else {
-		rp = clientio.NewRESPParser(bytes.NewBuffer(evalResp.Result.([]byte)))
-	}
-
-	res, err := rp.DecodeOne()
-	if err != nil {
-		return nil, err
-	}
-
-	return replaceNilInInterface(res), nil
 }
 
 // Helper function to write the JSON response
@@ -406,18 +393,9 @@ func writeJSONResponse(writer http.ResponseWriter, response utils.HTTPResponse, 
 	}
 }
 
-func createHTTPResponse(responseValue interface{}) utils.HTTPResponse {
-	respArr := []string{
-		"(nil)",  // Represents a RESP Nil Bulk String, which indicates a null value.
-		"OK",     // Represents a RESP Simple String with value "OK".
-		"QUEUED", // Represents a Simple String indicating that a command has been queued.
-		"0",      // Represents a RESP Integer with value 0.
-		"1",      // Represents a RESP Integer with value 1.
-		"-1",     // Represents a RESP Integer with value -1.
-		"-2",     // Represents a RESP Integer with value -2.
-		"*0",     // Represents an empty RESP Array.
-	}
-
+// ResponseParser parses the response value for both migrated and non-migrated cmds and
+// returns response to be rendered for HTTP/WS response
+func ResponseParser(responseValue interface{}) interface{} {
 	switch v := responseValue.(type) {
 	case []interface{}:
 		// Parses []interface{} as part of EvalResponse e.g. JSON.ARRPOP
@@ -426,35 +404,35 @@ func createHTTPResponse(responseValue interface{}) utils.HTTPResponse {
 		r := make([]interface{}, 0, len(v))
 		for _, resp := range v {
 			if val, ok := resp.(clientio.RespType); ok {
-				if stringNil == respArr[val] {
+				if stringNil == RespTypeToValue(val) {
 					r = append(r, nil)
 				} else {
-					r = append(r, respArr[val])
+					r = append(r, RespTypeToValue(val))
 				}
 			} else {
 				r = append(r, resp)
 			}
 		}
-		return utils.HTTPResponse{Data: r}
+		return r
 
 	case []byte:
-		return utils.HTTPResponse{Data: string(v)}
+		return string(v)
 
 	case clientio.RespType:
-		responseValue = respArr[v]
+		responseValue = RespTypeToValue(v)
 		if responseValue == stringNil {
 			responseValue = nil // in order to convert it in json null
 		}
 
-		return utils.HTTPResponse{Data: responseValue}
+		return responseValue
 
 	case interface{}:
 		if val, ok := v.(clientio.RespType); ok {
-			return utils.HTTPResponse{Data: respArr[val]}
+			return RespTypeToValue(val)
 		}
 	}
 
-	return utils.HTTPResponse{Data: responseValue}
+	return responseValue
 }
 
 func generateUniqueInt32(r *http.Request) uint32 {
@@ -466,6 +444,24 @@ func generateUniqueInt32(r *http.Request) uint32 {
 
 	// Hash the string using CRC32 and cast it to an int32
 	return crc32.ChecksumIEEE([]byte(sb.String()))
+}
+
+// DecodeEvalResponse Helper function to decode EvalResponse based on the error or result
+func DecodeEvalResponse(evalResp *eval.EvalResponse) (interface{}, error) {
+	var rp *clientio.RESPParser
+
+	if evalResp.Error != nil {
+		rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(evalResp.Error.Error())))
+	} else {
+		rp = clientio.NewRESPParser(bytes.NewBuffer(evalResp.Result.([]byte)))
+	}
+
+	res, err := rp.DecodeOne()
+	if err != nil {
+		return nil, err
+	}
+
+	return replaceNilInInterface(res), nil
 }
 
 func replaceNilInInterface(data interface{}) interface{} {
@@ -491,4 +487,31 @@ func replaceNilInInterface(data interface{}) interface{} {
 		// For other types, return as is
 		return data
 	}
+}
+
+func RespTypeToValue(respType clientio.RespType) interface{} {
+	var respArrString = map[clientio.RespType]string{
+		clientio.NIL:           "(nil)",  // Represents a RESP Nil Bulk String, which indicates a null value.
+		clientio.OK:            "OK",     // Represents a RESP Simple String with value "OK".
+		clientio.CommandQueued: "QUEUED", // Represents a Simple String indicating that a command has been queued.
+		clientio.EmptyArray:    "*0",     // Represents an empty RESP Array.
+	}
+
+	var respArrInt = map[clientio.RespType]float64{
+		clientio.IntegerZero:        0,  // Represents a RESP Integer with value 0.
+		clientio.IntegerOne:         1,  // Represents a RESP Integer with value 1.
+		clientio.IntegerNegativeOne: -1, // Represents a RESP Integer with value -1.
+		clientio.IntegerNegativeTwo: -2, // Represents a RESP Integer with value -2.
+	}
+
+	if val, exists := respArrString[respType]; exists {
+		return val
+	}
+	// Check if respType exists in respArrInt map
+	if val, exists := respArrInt[respType]; exists {
+		return val
+	}
+
+	// Default to nil if respType is not recognized
+	return nil
 }

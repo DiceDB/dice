@@ -1070,49 +1070,49 @@ func TestJsonObjLen(t *testing.T) {
 			expected: []interface{}{"ERR Path '$[1' does not exist"},
 		},
 		{
-			name:     "JSON.OBJLEN with legacy path - root",
+			name: "JSON.OBJLEN with legacy path - root",
 			commands: []HTTPCommand{
 				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": "."}},
 			},
 			expected: []interface{}{3.0},
 		},
 		{
-			name:     "JSON.OBJLEN with legacy path - inner existing path",
+			name: "JSON.OBJLEN with legacy path - inner existing path",
 			commands: []HTTPCommand{
 				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": ".partner2"}},
 			},
 			expected: []interface{}{2.0},
 		},
 		{
-			name:     "JSON.OBJLEN with legacy path - inner existing path v2",
+			name: "JSON.OBJLEN with legacy path - inner existing path v2",
 			commands: []HTTPCommand{
 				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": "partner"}},
 			},
 			expected: []interface{}{2.0},
 		},
 		{
-			name:     "JSON.OBJLEN with legacy path - inner non-existent path",
+			name: "JSON.OBJLEN with legacy path - inner non-existent path",
 			commands: []HTTPCommand{
 				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": ".idonotexist"}},
 			},
 			expected: []interface{}{nil},
 		},
 		{
-			name:     "JSON.OBJLEN with legacy path - inner non-existent path v2",
+			name: "JSON.OBJLEN with legacy path - inner non-existent path v2",
 			commands: []HTTPCommand{
 				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": "idonotexist"}},
 			},
 			expected: []interface{}{nil},
 		},
 		{
-			name:     "JSON.OBJLEN with legacy path - inner existent path with nonJSON object",
+			name: "JSON.OBJLEN with legacy path - inner existent path with nonJSON object",
 			commands: []HTTPCommand{
 				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": ".name"}},
 			},
 			expected: []interface{}{"WRONGTYPE Operation against a key holding the wrong kind of value"},
 		},
 		{
-			name:     "JSON.OBJLEN with legacy path - inner existent path recursive object",
+			name: "JSON.OBJLEN with legacy path - inner existent path recursive object",
 			commands: []HTTPCommand{
 				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": "..partner"}},
 			},
@@ -1239,7 +1239,7 @@ func TestJsonARRINSERT(t *testing.T) {
 
 	testCases := []TestCase{
 		{
-			name: "JSON.ARRINSERT index out if bounds",
+			name: "JSON.ARRINSERT index out of bounds",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": a}},
 				{Command: "JSON.ARRINSERT", Body: map[string]interface{}{"key": "k", "path": "$", "index": 4, "value": 3}},
@@ -1254,7 +1254,7 @@ func TestJsonARRINSERT(t *testing.T) {
 				{Command: "JSON.ARRINSERT", Body: map[string]interface{}{"key": "k", "path": "$", "index": "ss", "value": 3}},
 				{Command: "JSON.GET", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"OK", "ERR Couldn't parse as integer", "[1,2]"},
+			expected: []interface{}{"OK", "ERR value is not an integer or out of range", "[1,2]"},
 		},
 		{
 			name: "JSON.ARRINSERT with positive index in root path",
@@ -1442,4 +1442,106 @@ func TestJsonObjKeys(t *testing.T) {
 	for key := range setupData {
 		exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": key}})
 	}
+}
+
+func TestJsonARRTRIM(t *testing.T) {
+	exec := NewHTTPCommandExecutor()
+	a := `[0,1,2]`
+	b := `{"connection":{"wireless":true,"names":[0,1,2,3,4]},"names":[0,1,2,3,4]}`
+
+	testCases := []TestCase{
+		{
+			name: "JSON.ARRTRIM not array",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "b", "path": "$", "json": json.RawMessage(b)}},
+				{Command: "JSON.ARRTRIM", Body: map[string]interface{}{"key": "b", "path": "$", "index": 0, "value": 10}},
+				{Command: "JSON.GET", Body: map[string]interface{}{"key": "b"}},
+			},
+			expected: []interface{}{"OK", []interface{}{nil}, b},
+		},
+		{
+			name: "JSON.ARRTRIM stop index out of bounds",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "a", "path": "$", "json": json.RawMessage(a)}},
+				{Command: "JSON.ARRTRIM", Body: map[string]interface{}{"key": "a", "path": "$", "index": -10, "value": 10}},
+				{Command: "JSON.GET", Body: map[string]interface{}{"key": "a"}},
+			},
+
+			expected: []interface{}{"OK", []interface{}{float64(3)}, "[0,1,2]"},
+		},
+		{
+			name: "JSON.ARRTRIM start & stop are positive",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "a", "path": "$", "json": json.RawMessage(a)}},
+				{Command: "JSON.ARRTRIM", Body: map[string]interface{}{"key": "a", "path": "$", "index": 1, "value": 2}},
+				{Command: "JSON.GET", Body: map[string]interface{}{"key": "a"}},
+			},
+			expected: []interface{}{"OK", []interface{}{float64(2)}, "[1,2]"},
+		},
+		{
+			name: "JSON.ARRTRIM start & stop are negative",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "a", "path": "$", "json": json.RawMessage(a)}},
+				{Command: "JSON.ARRTRIM", Body: map[string]interface{}{"key": "a", "path": "$", "index": -2, "value": -1}},
+				{Command: "JSON.GET", Body: map[string]interface{}{"key": "a"}},
+			},
+			expected: []interface{}{"OK", []interface{}{float64(2)}, "[1,2]"},
+		},
+		{
+			name: "JSON.ARRTRIM subpath trim",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "b", "path": "$", "json": json.RawMessage(b)}},
+				{Command: "JSON.ARRTRIM", Body: map[string]interface{}{"key": "b", "path": "$..names", "index": 1, "value": 4}},
+				{Command: "JSON.GET", Body: map[string]interface{}{"key": "b"}},
+			},
+			expected: []interface{}{"OK", []interface{}{float64(4), float64(4)}, `{"connection":{"wireless":true,"names":[1,2,3,4]},"names":[1,2,3,4]}`},
+		},
+		{
+			name: "JSON.ARRTRIM subpath not array",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "b", "path": "$", "json": json.RawMessage(b)}},
+				{Command: "JSON.ARRTRIM", Body: map[string]interface{}{"key": "b", "path": "$.connection", "index": 0, "value": 1}},
+				{Command: "JSON.GET", Body: map[string]interface{}{"key": "b"}},
+			},
+			expected: []interface{}{"OK", []interface{}{nil}, b},
+		},
+		{
+			name: "JSON.ARRTRIM positive start larger than stop",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "b", "path": "$", "json": json.RawMessage(b)}},
+				{Command: "JSON.ARRTRIM", Body: map[string]interface{}{"key": "b", "path": "$.names", "index": 3, "value": 1}},
+				{Command: "JSON.GET", Body: map[string]interface{}{"key": "b"}},
+			},
+			expected: []interface{}{"OK", []interface{}{float64(0)}, `{"names":[],"connection":{"wireless":true,"names":[0,1,2,3,4]}}`},
+		},
+		{
+			name: "JSON.ARRTRIM negative start larger than stop",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "b", "path": "$", "json": json.RawMessage(b)}},
+				{Command: "JSON.ARRTRIM", Body: map[string]interface{}{"key": "b", "path": "$.names", "index": -1, "value": -3}},
+				{Command: "JSON.GET", Body: map[string]interface{}{"key": "b"}},
+			},
+			expected: []interface{}{"OK", []interface{}{float64(0)}, `{"names":[],"connection":{"wireless":true,"names":[0,1,2,3,4]}}`},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for i, cmd := range tc.commands {
+				result, _ := exec.FireCommand(cmd)
+
+				if slice, ok := tc.expected[i].([]interface{}); ok {
+					assert.Assert(t, testutils.UnorderedEqual(slice, result))
+				} else if testutils.IsJSONResponse(tc.expected[i].(string)) {
+					testifyAssert.JSONEq(t, tc.expected[i].(string), result.(string))
+				} else {
+					assert.DeepEqual(t, tc.expected[i], result)
+				}
+			}
+		})
+	}
+
+	// Clean up the keys
+	exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "a"}})
+	exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "b"}})
 }
