@@ -12,7 +12,7 @@ func TestCopy(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 
-	// simpleJSON := `{"name":"John","age":30}`
+	simpleJSON := `{"name":"John","age":30}`
 
 	testCases := []struct {
 		name     string
@@ -34,26 +34,26 @@ func TestCopy(t *testing.T) {
 			commands: []string{"SET k1 v1", "SET k2 v2", "GET k2", "COPY k1 k2 REPLACE", "GET k2"},
 			expected: []interface{}{"OK", "OK", "v2", int64(1), "v1"},
 		},
-		// {
-		// 	name:     "COPY with JSON integer",
-		// 	commands: []string{"JSON.SET k1 $ 2", "COPY k1 k2", "JSON.GET k2"},
-		// 	expected: []interface{}{"OK", int64(1), "2"},
-		// },
-		// {
-		// 	name:     "COPY with JSON boolean",
-		// 	commands: []string{"JSON.SET k1 $ true", "COPY k1 k2", "JSON.GET k2"},
-		// 	expected: []interface{}{"OK", int64(1), "true"},
-		// },
-		// {
-		// 	name:     "COPY with JSON array",
-		// 	commands: []string{`JSON.SET k1 $ [1,2,3]`, "COPY k1 k2", "JSON.GET k2"},
-		// 	expected: []interface{}{"OK", int64(1), `[1,2,3]`},
-		// },
-		// {
-		// 	name:     "COPY with JSON simple JSON",
-		// 	commands: []string{`JSON.SET k1 $ ` + simpleJSON, "COPY k1 k2", "JSON.GET k2"},
-		// 	expected: []interface{}{"OK", int64(1), simpleJSON},
-		// },
+		{
+			name:     "COPY with JSON integer",
+			commands: []string{"JSON.SET k1 $ 2", "COPY k1 k2", "JSON.GET k2"},
+			expected: []interface{}{"OK", int64(1), "2"},
+		},
+		{
+			name:     "COPY with JSON boolean",
+			commands: []string{"JSON.SET k1 $ true", "COPY k1 k2", "JSON.GET k2"},
+			expected: []interface{}{"OK", int64(1), "true"},
+		},
+		{
+			name:     "COPY with JSON array",
+			commands: []string{`JSON.SET k1 $ [1,2,3]`, "COPY k1 k2", "JSON.GET k2"},
+			expected: []interface{}{"OK", int64(1), `[1,2,3]`},
+		},
+		{
+			name:     "COPY with JSON simple JSON",
+			commands: []string{`JSON.SET k1 $ ` + simpleJSON, "COPY k1 k2", "JSON.GET k2"},
+			expected: []interface{}{"OK", int64(1), simpleJSON},
+		},
 		{
 			name:     "COPY with no expiry",
 			commands: []string{"SET k1 v1", "COPY k1 k2", "TTL k1", "TTL k2"},

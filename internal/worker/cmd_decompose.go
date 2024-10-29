@@ -97,7 +97,10 @@ func decomposeCopy(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cm
 		return nil, diceerrors.ErrGeneral("ERR target key already exists")
 	}
 
-	newObj := respk1.EvalResponse.Result.(*object.Obj)
+	newObj, ok := respk1.EvalResponse.Result.(*object.ExtendedObj)
+	if !ok {
+		return nil, diceerrors.ErrInternalServer
+	}
 
 	decomposedCmds := []*cmd.DiceDBCmd{
 		{

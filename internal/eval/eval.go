@@ -49,9 +49,8 @@ var (
 // EvalResponse represents the response of an evaluation operation for a command from store.
 // It contains the sequence ID, the result of the store operation, and any error encountered during the operation.
 type EvalResponse struct {
-	Result     interface{} // Result holds the outcome of the Store operation. Currently, it is expected to be of type []byte, but this may change in the future.
-	Error      error       // Error holds any error that occurred during the operation. If no error, it will be nil.
-	ResultType interface{} // ResultType holds the underlying type of the value stored
+	Result interface{} // Result holds the outcome of the Store operation. Currently, it is expected to be of type []byte, but this may change in the future.
+	Error  error       // Error holds any error that occurred during the operation. If no error, it will be nil.
 }
 
 //go:inline
@@ -146,22 +145,6 @@ func evalRename(args []string, store *dstore.Store) []byte {
 		return clientio.RespOK
 	}
 	return clientio.RespNIL
-}
-
-func evalMGET(args []string, store *dstore.Store) []byte {
-	if len(args) < 1 {
-		return diceerrors.NewErrArity("MGET")
-	}
-	values := store.GetAll(args)
-	resp := make([]interface{}, len(args))
-	for i, obj := range values {
-		if obj == nil {
-			resp[i] = clientio.RespNIL
-		} else {
-			resp[i] = obj.Value
-		}
-	}
-	return clientio.Encode(resp, false)
 }
 
 func evalCOPY(args []string, store *dstore.Store) []byte {
@@ -2130,30 +2113,6 @@ func evalCommandDocs(args []string) []byte {
 	}
 
 	return clientio.Encode(result, false)
-}
-
-func evalRename(args []string, store *dstore.Store) []byte {
-	if len(args) != 2 {
-		return diceerrors.NewErrArity("RENAME")
-	}
-	sourceKey := args[0]
-	destKey := args[1]
-
-	// if Source key does not exist, return RESP encoded nil
-	sourceObj := store.Get(sourceKey)
-	if sourceObj == nil {
-		return diceerrors.NewErrWithMessage(diceerrors.NoKeyErr)
-	}
-
-	// if Source and Destination Keys are same return RESP encoded ok
-	if sourceKey == destKey {
-		return clientio.RespOK
-	}
-
-	if ok := store.Rename(sourceKey, destKey); ok {
-		return clientio.RespOK
-	}
-	return clientio.RespNIL
 }
 
 // The MGET command returns an array of RESP values corresponding to the provided keys.

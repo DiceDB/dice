@@ -911,8 +911,11 @@ func testEvalJSONARRTRIM(t *testing.T, store *dstore.Store) {
 			if tt.setup != nil {
 				tt.setup()
 			}
+			cd := &cmd.DiceDBCmd{
+				Args: tt.input,
+			}
 
-			response := evalJSONARRTRIM(tt.input, store)
+			response := evalJSONARRTRIM(cd, store)
 
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
@@ -1080,8 +1083,11 @@ func testEvalJSONARRINSERT(t *testing.T, store *dstore.Store) {
 			if tt.setup != nil {
 				tt.setup()
 			}
+			cd := &cmd.DiceDBCmd{
+				Args: tt.input,
+			}
 
-			response := evalJSONARRINSERT(tt.input, store)
+			response := evalJSONARRINSERT(cd, store)
 
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
@@ -1195,7 +1201,10 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 			if tt.setup != nil {
 				tt.setup()
 			}
-			response := evalJSONARRLEN(tt.input, store)
+			cd := &cmd.DiceDBCmd{
+				Args: tt.input,
+			}
+			response := evalJSONARRLEN(cd, store)
 
 			if tt.migratedOutput.Result != nil {
 				if slice, ok := tt.migratedOutput.Result.([]interface{}); ok {
@@ -2169,7 +2178,10 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 			if tt.setup != nil {
 				tt.setup()
 			}
-			response := evalJSONARRAPPEND(tt.input, store)
+			cd := &cmd.DiceDBCmd{
+				Args: tt.input,
+			}
+			response := evalJSONARRAPPEND(cd, store)
 
 			if tt.migratedOutput.Result != nil {
 				actual, ok := response.Result.([]int64)
@@ -2920,7 +2932,10 @@ func testEvalHVALS(t *testing.T, store *dstore.Store) {
 				tt.setup()
 			}
 
-			response := evalHVALS(tt.input, store)
+			cd := &cmd.DiceDBCmd{
+				Args: tt.input,
+			}
+			response := evalHVALS(cd, store)
 
 			fmt.Printf("Eval Response: %v\n", response)
 
@@ -3073,7 +3088,10 @@ func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
 				tt.setup()
 			}
 
-			response := evalHEXISTS(tt.input, store)
+			cd := &cmd.DiceDBCmd{
+				Args: tt.input,
+			}
+			response := evalHEXISTS(cd, store)
 
 			// Handle comparison for byte slices
 			if responseBytes, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
@@ -3849,8 +3867,11 @@ func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 			if tt.setup != nil {
 				tt.setup()
 			}
+			cd := &cmd.DiceDBCmd{
+				Args: tt.input,
+			}
 
-			response := evalHKEYS(tt.input, store)
+			response := evalHKEYS(cd, store)
 
 			// fmt.Printf("EvalReponse: %v\n", response)
 
@@ -3888,7 +3909,10 @@ func BenchmarkEvalHKEYS(b *testing.B) {
 	}
 	// Benchmark HKEYS
 	for i := 0; i < b.N; i++ {
-		evalHKEYS([]string{"KEY"}, store)
+		cd := &cmd.DiceDBCmd{
+			Args: []string{"KEY"},
+		}
+		evalHKEYS(cd, store)
 	}
 }
 
@@ -4261,7 +4285,10 @@ func BenchmarkEvalHLEN(b *testing.B) {
 			b.ResetTimer()
 			b.ReportAllocs()
 			for i := 0; i < b.N; i++ {
-				evalHLEN([]string{key}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{key},
+				}
+				evalHLEN(cd, store)
 			}
 		})
 	}
@@ -4494,7 +4521,10 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			if tt.setup != nil {
 				tt.setup()
 			}
-			response := evalJSONARRPOP(tt.input, store)
+			cd := &cmd.DiceDBCmd{
+				Args: tt.input,
+			}
+			response := evalJSONARRPOP(cd, store)
 
 			if tt.migratedOutput.Result != nil {
 				if slice, ok := tt.migratedOutput.Result.([]interface{}); ok {
@@ -4880,8 +4910,11 @@ func testEvalJSONOBJKEYS(t *testing.T, store *dstore.Store) {
 			if tt.setup != nil {
 				tt.setup()
 			}
+			cd := &cmd.DiceDBCmd{
+				Args: tt.input,
+			}
 
-			response := evalJSONOBJKEYS(tt.input, store)
+			response := evalJSONOBJKEYS(cd, store)
 
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
@@ -4923,7 +4956,10 @@ func BenchmarkEvalJSONOBJKEYS(b *testing.B) {
 
 			// Benchmark the evalJSONOBJKEYS function
 			for i := 0; i < b.N; i++ {
-				_ = evalJSONOBJKEYS([]string{key, "$"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{key, "$"},
+				}
+				_ = evalJSONOBJKEYS(cd, store)
 			}
 		})
 	}
@@ -6835,7 +6871,10 @@ func testEvalZREM(t *testing.T, store *dstore.Store) {
 		},
 		"ZREM with non-existent element": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "one"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "one"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "two"},
 			migratedOutput: EvalResponse{
@@ -6845,7 +6884,10 @@ func testEvalZREM(t *testing.T, store *dstore.Store) {
 		},
 		"ZREM with sorted set holding single element": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "one"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "one"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "one"},
 			migratedOutput: EvalResponse{
@@ -6855,7 +6897,10 @@ func testEvalZREM(t *testing.T, store *dstore.Store) {
 		},
 		"ZREM with sorted set holding multiple elements": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "one", "2", "two", "3", "three"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "one", "2", "two", "3", "three"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset", "one", "two"},
 			migratedOutput: EvalResponse{
@@ -6934,7 +6979,10 @@ func testEvalZCARD(t *testing.T, store *dstore.Store) {
 		},
 		"ZCARD with sorted set holding single element": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "one"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "one"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset"},
 			migratedOutput: EvalResponse{
@@ -6944,7 +6992,10 @@ func testEvalZCARD(t *testing.T, store *dstore.Store) {
 		},
 		"ZCARD with sorted set holding multiple elements": {
 			setup: func() {
-				evalZADD([]string{"myzset", "1", "one", "2", "two", "3", "three"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"myzset", "1", "one", "2", "two", "3", "three"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"myzset"},
 			migratedOutput: EvalResponse{
@@ -7523,7 +7574,10 @@ func BenchmarkEvalJSONSTRAPPEND(b *testing.B) {
 
 func testEvalZPOPMAX(t *testing.T, store *dstore.Store) {
 	setup := func() {
-		evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
+		cd := &cmd.DiceDBCmd{
+			Args: []string{"myzset", "1", "member1", "2", "member2", "3", "member3"},
+		}
+		evalZADD(cd, store)
 	}
 
 	tests := map[string]evalTestCase{
@@ -7537,7 +7591,10 @@ func testEvalZPOPMAX(t *testing.T, store *dstore.Store) {
 		},
 		"ZPOPMAX on wrongtype of key": {
 			setup: func() {
-				evalSET([]string{"mystring", "shankar"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"mystring", "shankar"},
+				}
+				evalSET(cd, store)
 			},
 			input: []string{"mystring", "1"},
 			migratedOutput: EvalResponse{
@@ -7600,7 +7657,10 @@ func BenchmarkEvalZPOPMAX(b *testing.B) {
 		{
 			name: "ZPOPMAX on small sorted set (10 members)",
 			setup: func(store *dstore.Store) {
-				evalZADD([]string{"sortedSet", "1", "member1", "2", "member2", "3", "member3", "4", "member4", "5", "member5", "6", "member6", "7", "member7", "8", "member8", "9", "member9", "10", "member10"}, store)
+				cd := &cmd.DiceDBCmd{
+					Args: []string{"sortedSet", "1", "member1", "2", "member2", "3", "member3", "4", "member4", "5", "member5", "6", "member6", "7", "member7", "8", "member8", "9", "member9", "10", "member10"},
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"sortedSet", "3"},
 		},
@@ -7611,7 +7671,10 @@ func BenchmarkEvalZPOPMAX(b *testing.B) {
 				for i := 1; i <= 10000; i++ {
 					args = append(args, fmt.Sprintf("%d", i), fmt.Sprintf("member%d", i))
 				}
-				evalZADD(args, store)
+				cd := &cmd.DiceDBCmd{
+					Args: args,
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"sortedSet", "10"},
 		},
@@ -7622,7 +7685,10 @@ func BenchmarkEvalZPOPMAX(b *testing.B) {
 				for i := 1; i <= 10000; i++ {
 					args = append(args, "1", fmt.Sprintf("member%d", i))
 				}
-				evalZADD(args, store)
+				cd := &cmd.DiceDBCmd{
+					Args: args,
+				}
+				evalZADD(cd, store)
 			},
 			input: []string{"sortedSet", "2"},
 		},
@@ -7638,7 +7704,10 @@ func BenchmarkEvalZPOPMAX(b *testing.B) {
 				// Reset the store before each run to avoid contamination
 				dstore.ResetStore(store)
 				bm.setup(store)
-				evalZPOPMAX(bm.input, store)
+				cd := &cmd.DiceDBCmd{
+					Args: bm.input,
+				}
+				evalZPOPMAX(cd, store)
 			}
 		})
 	}
@@ -7646,14 +7715,20 @@ func BenchmarkEvalZPOPMAX(b *testing.B) {
 func BenchmarkZCOUNT(b *testing.B) {
 	store := dstore.NewStore(nil, nil)
 
+	cd := &cmd.DiceDBCmd{
+		Args: []string{"key", "10", "member1", "20", "member2", "30", "member3"},
+	}
 	// Populate the sorted set with some members for basic benchmarks
-	evalZADD([]string{"key", "10", "member1", "20", "member2", "30", "member3"}, store)
+	evalZADD(cd, store)
 
 	// Benchmark for basic ZCOUNT
 	b.Run("Basic ZCOUNT", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			evalZCOUNT([]string{"key", "10", "30"}, store) // Count members with scores between 10 and 30
+			cd := &cmd.DiceDBCmd{
+				Args: []string{"key", "10", "30"},
+			}
+			evalZCOUNT(cd, store) // Count members with scores between 10 and 30
 		}
 	})
 
@@ -7661,12 +7736,18 @@ func BenchmarkZCOUNT(b *testing.B) {
 	b.Run("Large ZCOUNT", func(b *testing.B) {
 		// Setup a large sorted set
 		for i := 0; i < 10000; i++ {
-			evalZADD([]string{"key", fmt.Sprintf("%d", i), fmt.Sprintf("member%d", i)}, store)
+			cd := &cmd.DiceDBCmd{
+				Args: []string{"key", fmt.Sprintf("%d", i), fmt.Sprintf("member%d", i)},
+			}
+			evalZADD(cd, store)
 		}
 
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			evalZCOUNT([]string{"key", "0", "10000"}, store) // Count all members
+			cd := &cmd.DiceDBCmd{
+				Args: []string{"key", "0", "10000"},
+			}
+			evalZCOUNT(cd, store) // Count all members
 		}
 	})
 
@@ -7674,24 +7755,42 @@ func BenchmarkZCOUNT(b *testing.B) {
 	b.Run("Edge Case ZCOUNT", func(b *testing.B) {
 		// Reset the store and set up members
 		store = dstore.NewStore(nil, nil)
-		evalZADD([]string{"key", "5", "member1", "15", "member2", "25", "member3"}, store)
+		cd := &cmd.DiceDBCmd{
+			Args: []string{"key", "5", "member1", "15", "member2", "25", "member3"},
+		}
+		evalZADD(cd, store)
 
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			evalZCOUNT([]string{"key", "-inf", "+inf"}, store) // Count all members
-			evalZCOUNT([]string{"key", "10", "10"}, store)     // Count boundary member
-			evalZCOUNT([]string{"key", "100", "200"}, store)   // Count out-of-range
+			cd := &cmd.DiceDBCmd{
+				Args: []string{"key", "-inf", "+inf"},
+			}
+			evalZCOUNT(cd, store) // Count all members
+			cd = &cmd.DiceDBCmd{
+				Args: []string{"key", "10", "10"},
+			}
+			evalZCOUNT(cd, store) // Count boundary member
+			cd = &cmd.DiceDBCmd{
+				Args: []string{"key", "100", "200"},
+			}
+			evalZCOUNT(cd, store) // Count out-of-range
 		}
 	})
 
 	// Benchmark for concurrent ZCOUNT
 	b.Run("Concurrent ZCOUNT", func(b *testing.B) {
 		// Populate the sorted set with some members
-		evalZADD([]string{"key", "10", "member1", "20", "member2", "30", "member3"}, store)
+		cd = &cmd.DiceDBCmd{
+			Args: []string{"key", "10", "member1", "20", "member2", "30", "member3"},
+		}
+		evalZADD(cd, store)
 
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
-				evalZCOUNT([]string{"key", "0", "100"}, store) // Perform concurrent ZCOUNT
+				cd = &cmd.DiceDBCmd{
+					Args: []string{"key", "0", "100"},
+				}
+				evalZCOUNT(cd, store) // Perform concurrent ZCOUNT
 			}
 		})
 	})

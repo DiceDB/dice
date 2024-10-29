@@ -1258,14 +1258,22 @@ var (
 
 	customCopyCmdMeta = DiceCmdMeta{
 		Name:       "CUSTOMCOPY",
-		NewEval:    evalCustomCOPY,
+		NewEval:    evalSetObject,
+		IsMigrated: true,
+		Arity:      -2,
+	}
+
+	customRenameMeta = DiceCmdMeta{
+		Name:       "CUSTOMRENAME",
+		NewEval:    evalSetObject,
 		IsMigrated: true,
 		Arity:      -2,
 	}
 )
 
 var (
-	PreProcessing       = map[string]func(*cmd.DiceDBCmd, *dstore.Store) *EvalResponse{}
+	PreProcessing = map[string]func(*cmd.DiceDBCmd, *dstore.Store) *EvalResponse{}
+
 	cmsInitByDimCmdMeta = DiceCmdMeta{
 		Name:       "CMS.INITBYDIM",
 		Info:       `Sets up count min sketch`,
@@ -1319,7 +1327,8 @@ var (
 )
 
 func init() {
-	PreProcessing["COPY"] = preProcessCOPY
+	PreProcessing["COPY"] = evalGetObject
+	PreProcessing["RENAME"] = evalGET
 
 	DiceCmds["ABORT"] = abortCmdMeta
 	DiceCmds["APPEND"] = appendCmdMeta
@@ -1428,6 +1437,7 @@ func init() {
 	DiceCmds["Q.UNWATCH"] = qUnwatchCmdMeta
 	DiceCmds["Q.WATCH"] = qwatchCmdMeta
 	DiceCmds["RENAME"] = renameCmdMeta
+	DiceCmds["CUSTOMRENAME"] = customRenameMeta
 	DiceCmds["RESTORE"] = restorekeyCmdMeta
 	DiceCmds["RPOP"] = rpopCmdMeta
 	DiceCmds["RPUSH"] = rpushCmdMeta

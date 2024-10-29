@@ -11,6 +11,11 @@ type Obj struct {
 	Value          interface{}
 }
 
+type ExtendedObj struct {
+	Obj        *Obj
+	ExDuration int64
+}
+
 var ObjTypeString uint8 = 0 << 4
 var ObjEncodingRaw uint8 = 0
 

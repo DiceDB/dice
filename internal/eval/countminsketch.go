@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/dicedb/dice/internal/clientio"
+	"github.com/dicedb/dice/internal/cmd"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -235,7 +236,8 @@ func (c *CountMinSketch) mergeMatrices(sources []*CountMinSketch, weights []uint
 // evalCMSMerge is used to merge multiple sketches into one. The final sketch
 // contains the weighted sum of the values in each of the source sketches. If
 // weights are not provided, default is 1.
-func evalCMSMerge(args []string, store *dstore.Store) *EvalResponse {
+func evalCMSMerge(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) < 3 {
 		return &EvalResponse{
 			Result: nil,
@@ -340,7 +342,8 @@ func evalCMSMerge(args []string, store *dstore.Store) *EvalResponse {
 }
 
 // evalCMSQuery returns the count for one or more items in a sketch.
-func evalCMSQuery(args []string, store *dstore.Store) *EvalResponse {
+func evalCMSQuery(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) < 2 {
 		return &EvalResponse{
 			Result: nil,
@@ -369,7 +372,8 @@ func evalCMSQuery(args []string, store *dstore.Store) *EvalResponse {
 }
 
 // evalCMSIncrBy increases the count of item by increment. Multiple items can be increased with one call.
-func evalCMSIncrBy(args []string, store *dstore.Store) *EvalResponse {
+func evalCMSIncrBy(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) < 3 || len(args)%2 == 0 {
 		return &EvalResponse{
 			Result: nil,
@@ -420,7 +424,8 @@ func evalCMSIncrBy(args []string, store *dstore.Store) *EvalResponse {
 }
 
 // evalCMSINFO returns width, depth and total count of the sketch.
-func evalCMSINFO(args []string, store *dstore.Store) *EvalResponse {
+func evalCMSINFO(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) != 1 {
 		return &EvalResponse{
 			Result: nil,
@@ -442,7 +447,8 @@ func evalCMSINFO(args []string, store *dstore.Store) *EvalResponse {
 }
 
 // evalCMSINITBYDIM initializes a Count-Min Sketch by dimensions (width and depth) specified in the call.
-func evalCMSINITBYDIM(args []string, store *dstore.Store) *EvalResponse {
+func evalCMSINITBYDIM(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) != 3 {
 		return &EvalResponse{
 			Result: nil,
@@ -474,7 +480,8 @@ func evalCMSINITBYDIM(args []string, store *dstore.Store) *EvalResponse {
 // evalCMSINITBYPROB initializes a Count-Min Sketch for a given error rate and probability.
 // Error rate is used to calculate the width while probability is used to calculate the depth
 // of the sketch.
-func evalCMSINITBYPROB(args []string, store *dstore.Store) *EvalResponse {
+func evalCMSINITBYPROB(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) != 3 {
 		return &EvalResponse{
 			Result: nil,

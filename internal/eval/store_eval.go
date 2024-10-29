@@ -347,7 +347,8 @@ func evalSETEX(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
 // If key doesn't exist, it returns 0.
 //
 // Usage: HEXISTS key field
-func evalHEXISTS(args []string, store *dstore.Store) *EvalResponse {
+func evalHEXISTS(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) != 2 {
 		return &EvalResponse{
 			Result: nil,
@@ -397,7 +398,8 @@ func evalHEXISTS(args []string, store *dstore.Store) *EvalResponse {
 // Complexity is O(n) where n is the size of the hash.
 //
 // Usage: HKEYS key
-func evalHKEYS(args []string, store *dstore.Store) *EvalResponse {
+func evalHKEYS(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) != 1 {
 		return &EvalResponse{
 			Result: nil,
@@ -443,7 +445,8 @@ func evalHKEYS(args []string, store *dstore.Store) *EvalResponse {
 // Complexity is O(n) where n is the size of the hash.
 //
 // Usage: HVALS key
-func evalHVALS(args []string, store *dstore.Store) *EvalResponse {
+func evalHVALS(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) != 1 {
 		return &EvalResponse{Error: diceerrors.ErrWrongArgumentCount("HVALS"), Result: nil}
 	}
@@ -633,7 +636,8 @@ func evalZADD(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
 // The ZCOUNT command in DiceDB counts the number of members in a sorted set at the specified key
 // whose scores fall within a given range. The command takes three arguments: the key of the sorted set
 // the minimum score, and the maximum score.
-func evalZCOUNT(args []string, store *dstore.Store) *EvalResponse {
+func evalZCOUNT(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) != 3 {
 		// 1. Check no of arguments
 		return &EvalResponse{
@@ -760,7 +764,8 @@ func evalZRANGE(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
 // evalZREM removes the specified members from the sorted set stored at key.
 // Non-existing members are ignored.
 // Returns the number of members removed.
-func evalZREM(args []string, store *dstore.Store) *EvalResponse {
+func evalZREM(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) < 2 {
 		return &EvalResponse{
 			Result: nil,
@@ -946,7 +951,8 @@ func evalZRANK(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
 
 // evalZCARD returns the cardinality (number of elements) of the sorted set stored at key.
 // Returns 0 if the key does not exist.
-func evalZCARD(args []string, store *dstore.Store) *EvalResponse {
+func evalZCARD(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) < 1 || len(args) > 1 {
 		return &EvalResponse{
 			Result: nil,
@@ -1955,7 +1961,8 @@ func evalZPOPMIN(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
 // If key doesn't exist, it returns 0.
 //
 // Usage: HLEN key
-func evalHLEN(args []string, store *dstore.Store) *EvalResponse {
+func evalHLEN(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) != 1 {
 		return &EvalResponse{
 			Result: nil,
@@ -1995,7 +2002,8 @@ func evalHLEN(args []string, store *dstore.Store) *EvalResponse {
 // If key doesn't exist, it returns 0.
 //
 // Usage: HSTRLEN key field value
-func evalHSTRLEN(args []string, store *dstore.Store) *EvalResponse {
+func evalHSTRLEN(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) != 2 {
 		return &EvalResponse{
 			Result: nil,
@@ -2046,7 +2054,8 @@ func evalHSTRLEN(args []string, store *dstore.Store) *EvalResponse {
 // If key doesn't exist, it returns an array containing 0 and empty array.
 //
 // Usage: HSCAN key cursor [MATCH pattern] [COUNT count]
-func evalHSCAN(args []string, store *dstore.Store) *EvalResponse {
+func evalHSCAN(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) < 2 {
 		return &EvalResponse{
 			Result: nil,
@@ -2244,7 +2253,8 @@ func evalBFINFO(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
 // If two elements have the same score then the members are aligned in lexicographically and the lexicographically greater element is removed.
 // There is a second optional element called count which specifies the number of element to be removed.
 // Returns the removed elements from the sorted set.
-func evalZPOPMAX(args []string, store *dstore.Store) *EvalResponse {
+func evalZPOPMAX(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) < 1 || len(args) > 2 {
 		return &EvalResponse{
 			Result: clientio.NIL,
@@ -2299,7 +2309,8 @@ func evalZPOPMAX(args []string, store *dstore.Store) *EvalResponse {
 
 // evalJSONARRTRIM trim an array so that it contains only the specified inclusive range of elements
 // an array of integer replies for each path, the array's new size, or nil, if the matching JSON value is not an array.
-func evalJSONARRTRIM(args []string, store *dstore.Store) *EvalResponse {
+func evalJSONARRTRIM(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) != 4 {
 		return &EvalResponse{
 			Result: nil,
@@ -2407,7 +2418,8 @@ func evalJSONARRTRIM(args []string, store *dstore.Store) *EvalResponse {
 // If the key does not exist or is expired, it returns response.NIL.
 // If the object at given path is not an array, it returns response.NIL.
 // Returns the new length of the array at path.
-func evalJSONARRAPPEND(args []string, store *dstore.Store) *EvalResponse {
+func evalJSONARRAPPEND(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) < 3 {
 		return &EvalResponse{
 			Result: nil,
@@ -2509,7 +2521,8 @@ func evalJSONARRAPPEND(args []string, store *dstore.Store) *EvalResponse {
 // each is the array's length, or nil, if the matching value is not an array.
 // Returns encoded error if the key doesn't exist or key is expired or the matching value is not an array.
 // Returns encoded error response if incorrect number of arguments
-func evalJSONARRLEN(args []string, store *dstore.Store) *EvalResponse {
+func evalJSONARRLEN(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) < 1 {
 		return &EvalResponse{
 			Result: nil,
@@ -2644,7 +2657,8 @@ func popElementAndUpdateArray(arr []any, index string) (popElem any, updatedArra
 	return popElem, arr, nil
 }
 
-func evalJSONARRPOP(args []string, store *dstore.Store) *EvalResponse {
+func evalJSONARRPOP(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) < 1 {
 		return &EvalResponse{
 			Result: nil,
@@ -2767,7 +2781,8 @@ func evalJSONARRPOP(args []string, store *dstore.Store) *EvalResponse {
 
 // evalJSONARRINSERT insert the json values into the array at path before the index (shifts to the right)
 // returns an array of integer replies for each path, the array's new size, or nil.
-func evalJSONARRINSERT(args []string, store *dstore.Store) *EvalResponse {
+func evalJSONARRINSERT(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) < 4 {
 		return &EvalResponse{
 			Result: nil,
@@ -2895,7 +2910,8 @@ func evalJSONARRINSERT(args []string, store *dstore.Store) *EvalResponse {
 // evalJSONOBJKEYS retrieves the keys of a JSON object stored at path specified.
 // It takes two arguments: the key where the JSON document is stored, and an optional JSON path.
 // It returns a list of keys from the object at the specified path or an error if the path is invalid.
-func evalJSONOBJKEYS(args []string, store *dstore.Store) *EvalResponse {
+func evalJSONOBJKEYS(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
 	if len(args) < 1 {
 		return &EvalResponse{
 			Result: nil,
@@ -2990,6 +3006,80 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) *EvalResponse {
 
 	return &EvalResponse{
 		Result: keysList,
+		Error:  nil,
+	}
+}
+
+// evalGetObject retrieves an object from the store based on the key provided in the command.
+// If the key is not found, it returns a RESP-encoded nil response.
+// Otherwise, it returns the object wrapped in an ExtendedObj with expiry details (if applicable).
+// This function is usually specifc to multishard multi-op commands
+func evalGetObject(cmd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cmd.Args
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrInternalServer,
+		}
+	}
+
+	key := args[0]
+
+	obj := store.Get(key)
+
+	// if key does not exist, return RESP encoded nil
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	exp, ok := dstore.GetExpiry(obj, store)
+	var exDurationMs int64 = -1
+	if ok {
+		exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
+	}
+
+	exObj := &object.ExtendedObj{
+		Obj:        obj,
+		ExDuration: exDurationMs,
+	}
+
+	// Decode and return the value based on its encoding
+	return &EvalResponse{
+		Result: exObj,
+		Error:  nil,
+	}
+}
+
+// evalSetObject stores an object in the store with a given key and optional expiry.
+// If an object with the same key exists, it is replaced.
+// This function is usually specifc to multishard multi-op commands
+func evalSetObject(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
+	key := args[0]
+
+	store.Del(key)
+
+	copyObj := cd.Obj.Obj.DeepCopy()
+	if copyObj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	exDurationMs := cd.Obj.ExDuration
+
+	store.Put(key, copyObj)
+
+	if exDurationMs > 0 {
+		store.SetExpiry(copyObj, exDurationMs)
+	}
+
+	return &EvalResponse{
+		Result: clientio.IntegerOne,
 		Error:  nil,
 	}
 }

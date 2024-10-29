@@ -11,14 +11,14 @@ import (
 // decomposeRename function to delete the old key and set the new key.
 func preProcessRename(w *BaseWorker, diceDBCmd *cmd.DiceDBCmd) error {
 	if len(diceDBCmd.Args) < 2 {
-		return diceerrors.ErrWrongArgumentCount("COPY")
+		return diceerrors.ErrWrongArgumentCount("RENAME")
 	}
 
 	key := diceDBCmd.Args[0]
 	sid, rc := w.shardManager.GetShardInfo(key)
 
 	preCmd := cmd.DiceDBCmd{
-		Cmd:  CmdGet,
+		Cmd:  "RENAME",
 		Args: []string{key},
 	}
 
