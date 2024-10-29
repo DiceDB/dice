@@ -20,7 +20,7 @@ func TestRename(t *testing.T) {
 		{
 			name:     "RENAME when source key doesn't exist",
 			commands: []string{"RENAME k1 k2"},
-			expected: []interface{}{int64(0)},
+			expected: []interface{}{"ERR no such key"},
 		},
 		{
 			name:     "RENAME with existing source key",
@@ -30,7 +30,7 @@ func TestRename(t *testing.T) {
 		{
 			name:     "RENAME with existing destination key",
 			commands: []string{"SET k1 v1", "SET k2 v2", "RENAME k1 k2", "GET k1", "GET k2"},
-			expected: []interface{}{"OK", "OK", "(nil)", "v1"},
+			expected: []interface{}{"OK", "OK", "OK", "(nil)", "v1"},
 		},
 	}
 
