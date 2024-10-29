@@ -22,7 +22,7 @@ func TestHExists(t *testing.T) {
 				{Command: "HSET", Body: map[string]interface{}{"key": "k", "field": "f", "value": "v"}},
 				{Command: "HEXISTS", Body: map[string]interface{}{"key": "k", "field": "f"}},
 			},
-			expected: []interface{}{float64(1), "1"},
+			expected: []interface{}{float64(1), float64(1)},
 			delays:   []time.Duration{0, 0},
 		},
 		{
@@ -31,7 +31,7 @@ func TestHExists(t *testing.T) {
 				{Command: "HSET", Body: map[string]interface{}{"key": "k", "field": "f1", "value": "v"}},
 				{Command: "HEXISTS", Body: map[string]interface{}{"key": "k", "field": "f"}},
 			},
-			expected: []interface{}{float64(1), "0"},
+			expected: []interface{}{float64(1), float64(0)},
 			delays:   []time.Duration{0, 0},
 		},
 		{
@@ -39,7 +39,7 @@ func TestHExists(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "HEXISTS", Body: map[string]interface{}{"key": "k", "field": "f"}},
 			},
-			expected: []interface{}{"0"},
+			expected: []interface{}{float64(0)},
 			delays:   []time.Duration{0},
 		},
 	}

@@ -38,19 +38,19 @@ func TestHExists(t *testing.T) {
 			name:     "WS Check if field exists when k f and v are set",
 			commands: []string{"HSET key field value", "HEXISTS key field"},
 			// Adjusted expected values to match the actual float64 type
-			expected: []interface{}{float64(1), "1"},
+			expected: []interface{}{float64(1), float64(1)},
 			delays:   []time.Duration{0, 0},
 		},
 		{
 			name:     "WS Check if field exists when k exists but not f and v",
 			commands: []string{"HSET key field1 value", "HEXISTS key field"},
-			expected: []interface{}{float64(1), "0"},
+			expected: []interface{}{float64(1), float64(0)},
 			delays:   []time.Duration{0, 0},
 		},
 		{
 			name:     "WS Check if field exists when no k,f and v exist",
 			commands: []string{"HEXISTS key field"},
-			expected: []interface{}{"0"},
+			expected: []interface{}{float64(0)},
 			delays:   []time.Duration{0},
 		},
 	}

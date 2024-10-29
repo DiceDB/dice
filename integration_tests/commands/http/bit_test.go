@@ -75,7 +75,7 @@ func TestBitPos(t *testing.T) {
 				case []byte:
 					setCmd = HTTPCommand{
 						Command: "SET",
-						Body:    map[string]interface{}{"key": "testkey", "value": v},
+						Body:    map[string]interface{}{"key": "testkey", "value": v, "isByteEncodedVal": true},
 					}
 				case string:
 					setCmd = HTTPCommand{

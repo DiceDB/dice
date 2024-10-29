@@ -16,26 +16,27 @@ import (
 )
 
 const (
-	Key         = "key"
-	Keys        = "keys"
-	KeyPrefix   = "key_prefix"
-	Field       = "field"
-	Path        = "path"
-	Value       = "value"
-	Values      = "values"
-	User        = "user"
-	Password    = "password"
-	Seconds     = "seconds"
-	KeyValues   = "key_values"
-	True        = "true"
-	QwatchQuery = "query"
-	Offset      = "offset"
-	Member      = "member"
-	Members     = "members"
-	Index       = "index"
-	JSON        = "json"
-	QWatch      = "Q.WATCH"
-	ABORT       = "ABORT"
+	Key              = "key"
+	Keys             = "keys"
+	KeyPrefix        = "key_prefix"
+	Field            = "field"
+	Path             = "path"
+	Value            = "value"
+	Values           = "values"
+	User             = "user"
+	Password         = "password"
+	Seconds          = "seconds"
+	KeyValues        = "key_values"
+	True             = "true"
+	QwatchQuery      = "query"
+	Offset           = "offset"
+	Member           = "member"
+	Members          = "members"
+	Index            = "index"
+	JSON             = "json"
+	QWatch           = "Q.WATCH"
+	ABORT            = "ABORT"
+	IsByteEncodedVal = "isByteEncodedVal"
 )
 
 func ParseHTTPRequest(r *http.Request) (*cmd.DiceDBCmd, error) {
@@ -197,7 +198,13 @@ func processPriorityKeys(jsonBody map[string]interface{}, args *[]string) {
 					*args = append(*args, k, fmt.Sprintf("%v", v))
 				}
 			case Value:
-				*args = append(*args, formatValue(val))
+				if _, ok := jsonBody[IsByteEncodedVal]; ok {
+					*args = append(*args, formatValue(true, val))
+				} else {
+					*args = append(*args, formatValue(false, val))
+				}
+				// Delete the byte encoded val key as it's not required once value is decoded
+				delete(jsonBody, IsByteEncodedVal)
 			case Values:
 				for _, v := range val.([]interface{}) {
 					*args = append(*args, fmt.Sprintf("%v", v))
@@ -217,10 +224,10 @@ func getPriorityKeys() []string {
 	}
 }
 
-func formatValue(val interface{}) string {
+func formatValue(isByteEncodedVal bool, val interface{}) string {
 	switch v := val.(type) {
 	case string:
-		if isBase64Encoded(v) {
+		if isByteEncodedVal && isBase64Encoded(v) {
 			decoded, err := base64.StdEncoding.DecodeString(v)
 			if err == nil {
 				// Replace the base64 string with the decoded `[]byte`
