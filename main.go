@@ -111,9 +111,6 @@ func configuration() {
 
 	// Add whether the watch feature is enabled to the configuration table
 	addEntry("Watch Enabled", config.EnableWatch)
-
-	// Add whether profiling is enabled to the configuration table
-	addEntry("Profiling Enabled", config.EnableProfiling)
 }
 
 func addEntry(k string, v interface{}) {
