@@ -34,7 +34,7 @@ func TestHStrLen(t *testing.T) {
 				{Command: "HSET", Body: map[string]interface{}{"key": "key_hStrLen1", "field": "field", "value": "value"}},
 				{Command: "HSTRLEN", Body: map[string]interface{}{"key": "wrong_key_hStrLen", "field": "field"}},
 			},
-			expected: []interface{}{float64(1), "0"},
+			expected: []interface{}{float64(1), float64(0)},
 			delays:   []time.Duration{0, 0},
 		},
 		{
@@ -43,7 +43,7 @@ func TestHStrLen(t *testing.T) {
 				{Command: "HSET", Body: map[string]interface{}{"key": "key_hStrLen2", "field": "field", "value": "value"}},
 				{Command: "HSTRLEN", Body: map[string]interface{}{"key": "key_hStrLen2", "field": "wrong_field"}},
 			},
-			expected: []interface{}{float64(1), "0"},
+			expected: []interface{}{float64(1), float64(0)},
 			delays:   []time.Duration{0, 0},
 		},
 		{
