@@ -59,12 +59,12 @@ func TestSetWithOptions(t *testing.T) {
 		{
 			name:     "Set with EX option",
 			commands: []string{"SET k v EX 2", "GET k", "SLEEP 3", "GET k"},
-			expected: []interface{}{"OK", "v", "OK", "(nil)"},
+			expected: []interface{}{"OK", "v", "OK", nil},
 		},
 		{
 			name:     "Set with PX option",
 			commands: []string{"SET k v PX 2000", "GET k", "SLEEP 3", "GET k"},
-			expected: []interface{}{"OK", "v", "OK", "(nil)"},
+			expected: []interface{}{"OK", "v", "OK", nil},
 		},
 		{
 			name:     "Set with EX and PX option",
@@ -74,7 +74,7 @@ func TestSetWithOptions(t *testing.T) {
 		{
 			name:     "XX on non-existing key",
 			commands: []string{"DEL k", "SET k v XX", "GET k"},
-			expected: []interface{}{float64(0), "(nil)", "(nil)"},
+			expected: []interface{}{float64(0), nil, nil},
 		},
 		{
 			name:     "NX on non-existing key",
@@ -84,7 +84,7 @@ func TestSetWithOptions(t *testing.T) {
 		{
 			name:     "NX on existing key",
 			commands: []string{"DEL k", "SET k v NX", "GET k", "SET k v NX"},
-			expected: []interface{}{float64(0), "OK", "v", "(nil)"},
+			expected: []interface{}{float64(0), "OK", "v", nil},
 		},
 		{
 			name:     "PXAT option",
@@ -99,7 +99,7 @@ func TestSetWithOptions(t *testing.T) {
 		{
 			name:     "PXAT option with invalid unix time ms",
 			commands: []string{"SET k2 v2 PXAT 123123", "GET k2"},
-			expected: []interface{}{"OK", "(nil)"},
+			expected: []interface{}{"OK", nil},
 		},
 		{
 			name:     "XX on existing key",
@@ -114,12 +114,12 @@ func TestSetWithOptions(t *testing.T) {
 		{
 			name:     "EX option",
 			commands: []string{"SET k v EX 1", "GET k", "SLEEP 2", "GET k"},
-			expected: []interface{}{"OK", "v", "OK", "(nil)"},
+			expected: []interface{}{"OK", "v", "OK", nil},
 		},
 		{
 			name:     "XX option",
 			commands: []string{"SET k v XX EX 1", "GET k", "SLEEP 2", "GET k", "SET k v XX EX 1", "GET k"},
-			expected: []interface{}{"(nil)", "(nil)", "OK", "(nil)", "(nil)", "(nil)"},
+			expected: []interface{}{nil, nil, "OK", nil, nil, nil},
 		},
 	}
 
@@ -175,7 +175,7 @@ func TestSetWithExat(t *testing.T) {
 			time.Sleep(3 * time.Second)
 			resp, err = exec.FireCommandAndReadResponse(conn, "GET k")
 			assert.Nil(t, err)
-			assert.Equal(t, "(nil)", resp, "Value mismatch for cmd GET k")
+			assert.Equal(t, nil, resp, "Value mismatch for cmd GET k")
 
 			resp, err = exec.FireCommandAndReadResponse(conn, "TTL k")
 			assert.Nil(t, err)
@@ -196,7 +196,7 @@ func TestSetWithExat(t *testing.T) {
 
 			resp, err = exec.FireCommandAndReadResponse(conn, "GET k")
 			assert.Nil(t, err)
-			assert.Equal(t, "(nil)", resp, "Value mismatch for cmd GET k")
+			assert.Equal(t, nil, resp, "Value mismatch for cmd GET k")
 
 			resp, err = exec.FireCommandAndReadResponse(conn, "TTL k")
 			assert.Nil(t, err)
@@ -217,7 +217,7 @@ func TestSetWithExat(t *testing.T) {
 
 			resp, err = exec.FireCommandAndReadResponse(conn, "GET k")
 			assert.Nil(t, err)
-			assert.Equal(t, "(nil)", resp, "Value mismatch for cmd GET k")
+			assert.Equal(t, nil, resp, "Value mismatch for cmd GET k")
 		})
 }
 
@@ -243,8 +243,7 @@ func TestWithKeepTTLFlag(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 	cmd := "GET k"
-	out := "(nil)"
 	resp, err := exec.FireCommandAndReadResponse(conn, cmd)
 	assert.Nil(t, err)
-	assert.Equal(t, out, resp, "Value mismatch for cmd %s\n.", cmd)
+	assert.Equal(t, nil, resp, "Value mismatch for cmd %s\n.", cmd)
 }

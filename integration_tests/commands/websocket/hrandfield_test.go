@@ -41,7 +41,7 @@ func TestHRANDFIELD(t *testing.T) {
 		{
 			name:   "HRANDFIELD on non-existent key",
 			cmds:   []string{"HRANDFIELD key_hrandfield_nonexistent"},
-			expect: []interface{}{"(nil)"},
+			expect: []interface{}{nil},
 			delays: []time.Duration{0},
 		},
 		{
