@@ -38,7 +38,7 @@ func TestZCARD(t *testing.T) {
 		{
 			name:   "ZCARD with non-existent key",
 			cmds:   []string{"ZADD myzset1 1 one", "ZCARD wrong_myzset1"},
-			expect: []interface{}{float64(1), "0"},
+			expect: []interface{}{float64(1), float64(0)},
 			delays: []time.Duration{0, 0},
 		},
 		{
@@ -49,9 +49,9 @@ func TestZCARD(t *testing.T) {
 		},
 		{
 			name:   "ZCARD with sorted set holding multiple elements",
-			cmds:   []string{"ZADD myzset3 1 one 2 two", "ZCARD myzset3", "ZADD myzset3 3 three", "ZCARD myzset3"},
-			expect: []interface{}{float64(2), float64(2), float64(1), float64(3)},
-			delays: []time.Duration{0, 0, 0, 0},
+			cmds:   []string{"ZADD myzset3 1 one 2 two", "ZCARD myzset3", "ZADD myzset3 3 three", "ZCARD myzset3", "ZREM myzset3 two", "ZCARD myzset3"},
+			expect: []interface{}{float64(2), float64(2), float64(1), float64(3), float64(1), float64(2)},
+			delays: []time.Duration{0, 0, 0, 0, 0, 0},
 		},
 	}
 

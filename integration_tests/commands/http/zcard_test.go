@@ -43,7 +43,7 @@ func TestZCARD(t *testing.T) {
 				{Command: "ZADD", Body: map[string]interface{}{"key": "myzset", "values": []string{"1", "one"}}},
 				{Command: "ZCARD", Body: map[string]interface{}{"key": "wrong_myzset"}},
 			},
-			expected: []interface{}{float64(1), "0"},
+			expected: []interface{}{float64(1), float64(0)},
 			delays:   []time.Duration{0, 0},
 		},
 		{
@@ -62,9 +62,11 @@ func TestZCARD(t *testing.T) {
 				{Command: "ZCARD", Body: map[string]interface{}{"key": "myzset"}},
 				{Command: "ZADD", Body: map[string]interface{}{"key": "myzset", "values": []string{"3", "three"}}},
 				{Command: "ZCARD", Body: map[string]interface{}{"key": "myzset"}},
+				{Command: "ZREM", Body: map[string]interface{}{"key": "myzset", "field": "two"}},
+				{Command: "ZCARD", Body: map[string]interface{}{"key": "myzset"}},
 			},
-			expected: []interface{}{float64(2), float64(2), float64(1), float64(3)},
-			delays:   []time.Duration{0, 0, 0, 0},
+			expected: []interface{}{float64(2), float64(2), float64(1), float64(3), float64(1), float64(2)},
+			delays:   []time.Duration{0, 0, 0, 0, 0, 0},
 		},
 	}
 

@@ -39,7 +39,7 @@ func TestZREM(t *testing.T) {
 		{
 			name:   "ZREM with non-existent key",
 			cmds:   []string{"ZADD myzset1 1 one", "ZREM wrong_myzset1 one"},
-			expect: []interface{}{float64(1), "0"},
+			expect: []interface{}{float64(1), float64(0)},
 			delays: []time.Duration{0, 0},
 		},
 		{

@@ -43,7 +43,7 @@ func TestZREM(t *testing.T) {
 				{Command: "ZADD", Body: map[string]interface{}{"key": "myzset", "values": []string{"1", "one"}}},
 				{Command: "ZREM", Body: map[string]interface{}{"key": "wrong_myzset", "field": "one"}},
 			},
-			expected: []interface{}{float64(1), "0"},
+			expected: []interface{}{float64(1), float64(0)},
 			delays:   []time.Duration{0, 0},
 		},
 		{
@@ -52,7 +52,7 @@ func TestZREM(t *testing.T) {
 				{Command: "ZADD", Body: map[string]interface{}{"key": "myzset", "values": []string{"1", "one"}}},
 				{Command: "ZREM", Body: map[string]interface{}{"key": "wrong_myzset", "field": "two"}},
 			},
-			expected: []interface{}{float64(1), "0"},
+			expected: []interface{}{float64(1), float64(0)},
 			delays:   []time.Duration{0, 0},
 		},
 		{

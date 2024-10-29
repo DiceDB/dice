@@ -45,9 +45,9 @@ func TestZCARD(t *testing.T) {
 		},
 		{
 			name:   "ZCARD with sorted set holding multiple elements",
-			cmds:   []string{"ZADD myzset 1 one 2 two", "ZCARD myzset", "ZADD myzset 3 three", "ZCARD myzset"},
-			expect: []interface{}{int64(2), int64(2), int64(1), int64(3)},
-			delays: []time.Duration{0, 0, 0, 0},
+			cmds:   []string{"ZADD myzset 1 one 2 two", "ZCARD myzset", "ZADD myzset 3 three", "ZCARD myzset", "ZREM myzset two", "ZCARD myzset"},
+			expect: []interface{}{int64(2), int64(2), int64(1), int64(3), int64(1), int64(2)},
+			delays: []time.Duration{0, 0, 0, 0, 0, 0},
 		},
 	}
 
