@@ -92,7 +92,7 @@ func NewHTTPServer(shardManager *shard.ShardManager) *HTTPServer {
 
 func (s *HTTPServer) Run(ctx context.Context) error {
 	var wg sync.WaitGroup
-	var err error
+	var shutdownErr, listenErr error
 
 	httpCtx, cancelHTTP := context.WithCancel(ctx)
 	defer cancelHTTP()
@@ -105,14 +105,14 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 		case <-s.shutdownChan:
-			err = derrors.ErrAborted
+			shutdownErr = derrors.ErrAborted
 			slog.Debug("Shutting down HTTP Server")
 		}
 
-		shutdownErr := s.httpServer.Shutdown(httpCtx)
-		if shutdownErr != nil {
+		err := s.httpServer.Shutdown(httpCtx)
+		if err != nil {
 			slog.Error("HTTP Server Shutdown Failed", slog.Any("error", err))
-			err = shutdownErr
+			shutdownErr = err
 			return
 		}
 	}()
@@ -120,12 +120,17 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		slog.Info("also listenting HTTP on", slog.String("port", s.httpServer.Addr[1:]))
-		err = s.httpServer.ListenAndServe()
+		slog.Info("also listening HTTP on", slog.String("port", s.httpServer.Addr[1:]))
+		listenErr = s.httpServer.ListenAndServe()
 	}()
 
 	wg.Wait()
-	return err
+	// Return the appropriate error
+	if shutdownErr != nil {
+		return shutdownErr
+	}
+
+	return listenErr
 }
 
 func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.Request) {
