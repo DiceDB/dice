@@ -258,6 +258,7 @@ func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
 		return err
 	}
 
+	// function used within package, limit the scope
 	s.EvalAndRespond(commands, client)
 	if hasAbort {
 		return diceerrors.ErrAborted

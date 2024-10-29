@@ -20,6 +20,10 @@ COPY source destination [REPLACE]
 | `REPLACE`      | (Optional) If specified, the command will overwrite the destination key if it already exists.                                | None | No       |
 
 ## Return Value
+| Condition | Return Value |
+|-----------| :-------------:|
+| key was copied successfully | `1` |
+| key was not copied | `0` | 
 
 <!-- add all scenarios, see below example for SET -->
 
@@ -55,16 +59,18 @@ When the `COPY` command is executed, DiceDB will:
 
 Copy the value from `key1` to `key2` in the same database.
 
-```plaintext
-COPY key1 key2
+```bash
+127.0.0.1:7379> COPY key1 key2
+(integer) 1
 ```
 
 ### Copy with REPLACE
 
 Copy the value from `key1` to `key2`, replacing `key2` if it already exists.
 
-```plaintext
-COPY key1 key2 REPLACE
+```bash
+127.0.0.1:7379> COPY key1 key2 REPLACE
+(integer) 1
 ```
 
 ### Invalid usage
@@ -75,7 +81,6 @@ Trying to copy value from `key1` to `key2` without `REPLACE` option and `key2` v
 127.0.0.1:7379> COPY key1 key2
 (error) ERR target key already exists
 ```
-
 ## Notes
 
 - The `COPY` command is atomic, meaning that the copy operation is performed as a single, indivisible operation.

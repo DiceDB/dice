@@ -16,6 +16,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/dicedb/dice/internal/watchmanager"
 	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/server/abstractserver"
 
@@ -165,9 +166,10 @@ func main() {
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
 	var (
-		queryWatchChan chan dstore.QueryWatchEvent
-		cmdWatchChan   chan dstore.CmdWatchEvent
-		serverErrCh    = make(chan error, 2)
+		queryWatchChan           chan dstore.QueryWatchEvent
+		cmdWatchChan             chan dstore.CmdWatchEvent
+		cmdWatchSubscriptionChan chan watchmanager.WatchSubscription
+		serverErrCh              = make(chan error, 2)
 	)
 
 	if config.EnableWatch {
@@ -221,7 +223,7 @@ func main() {
 		}
 
 		workerManager := worker.NewWorkerManager(config.DiceConfig.Performance.MaxClients, shardManager)
-		respServer := resp.NewServer(shardManager, workerManager, cmdWatchChan, serverErrCh)
+		respServer := resp.NewServer(shardManager, workerManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh)
 		serverWg.Add(1)
 		go runServer(ctx, &serverWg, respServer, serverErrCh)
 	} else {

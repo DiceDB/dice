@@ -13,33 +13,42 @@ HSCAN key cursor [MATCH pattern] [COUNT count]
 
 ## Parameters
 
-- `key`: The key of the hash to scan.
-- `cursor`: The cursor indicating the starting position of the scan.
-- `MATCH pattern` (optional): Specifies a pattern to match against the fields. Only the fields that match the pattern will be returned.
-- `COUNT count` (optional): Specifies the maximum number of fields to return.
+| Parameter       | Description                                                                                              | Type     | Required |
+|-----------------|----------------------------------------------------------------------------------------------------------|---------|----------|
+| `key`           | The key of the hash to scan.                                                                             | String   | Yes      |
+| `cursor`        | The cursor indicating the starting position of the scan.                                                 | String   | Yes      |
+| `MATCH pattern` | Specifies a pattern to match against the fields. Only the fields that match the pattern will be returned.| String   | No       |
+| `COUNT count`   | Specifies the maximum number of fields to return.                                                        | String   | Yes      |
+
 
 ## Return Value
 
 The `HSCAN` command returns an array containing the next cursor and the matching fields. The format of the returned array is `[nextCursor, [field1, value1, field2, value2, ...]]`.
 
 ## Behaviour
-When the `HSCAN` command is executed:
 
-1. DiceDB checks if the specified key exists.
-2. If the key exists and is associated with a hash, DiceDB scans the fields of the hash and returns the next cursor and the matching fields.
-3. If the key does not exist, DiceDB returns an empty array.
-4. If the key exists but is not associated with a hash, an error is returned.
-5. If the key exists and all keys have been scanned, cursor is reset to 0.
+- DiceDB checks if the specified key exists.
+- If the key exists and is associated with a hash, DiceDB scans the fields of the hash and returns the next cursor and the matching fields.
+- If the key does not exist, DiceDB returns an empty array.
+- If the key exists but is not associated with a hash, an error is returned.
+- If the key exists and all keys have been scanned, cursor is reset to 0.
 
 ## Error handling
-The `HSCAN` command can raise the following errors:
 
-- `WRONGTYPE Operation against a key holding the wrong kind of value`: This error occurs if the specified key exists but is not associated with a hash. For example, if the key is associated with a string, list, set, or any other data type, this error will be raised.
-- `Invalid integer value for COUNT`: This error occurs if the value provided for the `COUNT` option is not a valid integer or is out of range.
+1. `Wrong type of key`:
 
+   - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
+   - Occurs when attempting to use the command on a key that contains a non-hash value.
 
+2. `Invalid integer`:
+
+   - Error Message: `(error) Invalid integer value for COUNT`
+   - Occurs if the value provided for the `COUNT` option is not a valid integer or is out of range.
 
 ## Examples
+
+### Basic Usage
+Creating a hash `myhash` with two fields `field1` and `field2`. Getting `HSCAN` on `myhash` with valid cursors.
 
 ```bash
 > HSET myhash field1 "value1" field2 "value2"
@@ -62,9 +71,16 @@ The `HSCAN` command can raise the following errors:
 2) 1) "field2"
    2) "value2"
 ```
+### Invalid Usage on non-existent key
+Getting `HSCAN` on nonExistentHash.
 
+```bash
+> HSCAN nonExistentHash 0
+1) "0"
+2) (empty array)
+```
 
-## Additional Notes
+## Notes
 
 - The `HSCAN` command has a time complexity of O(N), where N is the number of keys in the hash. This is in contrast to Redis, which implements `HSCAN` in O(1) time complexity by maintaining a cursor.
 - The `HSCAN` command is particularly useful for iterating over the fields of a hash in a cursor-based manner, allowing for efficient processing of large hashes.
