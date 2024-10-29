@@ -740,6 +740,48 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+// evalZREM removes the specified members from the sorted set stored at key.
+// Non-existing members are ignored.
+// Returns the number of members removed.
+func evalZREM(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("ZREM"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	sortedSet, err := sortedset.FromObject(obj)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	countRem := 0
+	for i := 1; i < len(args); i++ {
+		if sortedSet.Remove(args[i]) {
+			countRem += 1
+		}
+	}
+
+	return &EvalResponse{
+		Result: int64(countRem),
+		Error:  nil,
+	}
+}
+
 // evalAPPEND takes two arguments: the key and the value to append to the key's current value.
 // If the key does not exist, it creates a new key with the given value (so APPEND will be similar to SET in this special case)
 // If key already exists and is a string (or integers stored as strings), this command appends the value at the end of the string

@@ -114,6 +114,10 @@ var (
 		Cmd:     "ZRANK",
 		CmdType: SingleShard,
 	}
+	zremCmdMeta = CmdsMeta{
+		Cmd:     "ZREM",
+		CmdType: SingleShard,
+	}
 	pfaddCmdMeta = CmdsMeta{
 		Cmd:     "PFADD",
 		CmdType: SingleShard,
@@ -286,6 +290,7 @@ func init() {
 	WorkerCmdsMeta["ZCOUNT"] = zcountCmdMeta
 	WorkerCmdsMeta["ZRANGE"] = zrangeCmdMeta
 	WorkerCmdsMeta["ZRANK"] = zrankCmdMeta
+	WorkerCmdsMeta["ZREM"] = zremCmdMeta
 	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
 	WorkerCmdsMeta["ZPOPMIN"] = zpopminCmdMeta
 	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
