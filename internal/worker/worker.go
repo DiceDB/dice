@@ -38,30 +38,33 @@ type Worker interface {
 }
 
 type BaseWorker struct {
-	id                string
-	ioHandler         iohandler.IOHandler
-	parser            requestparser.Parser
-	shardManager      *shard.ShardManager
-	adhocReqChan      chan *cmd.DiceDBCmd
-	Session           *auth.Session
-	globalErrorChan   chan error
-	responseChan      chan *ops.StoreResponse
-	preprocessingChan chan *ops.StoreResponse
+	id                       string
+	ioHandler                iohandler.IOHandler
+	parser                   requestparser.Parser
+	shardManager             *shard.ShardManager
+	adhocReqChan             chan *cmd.DiceDBCmd
+	Session                  *auth.Session
+	globalErrorChan          chan error
+	responseChan             chan *ops.StoreResponse
+	preprocessingChan        chan *ops.StoreResponse
+	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription
 }
 
 func NewWorker(wid string, responseChan, preprocessingChan chan *ops.StoreResponse,
+	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription,
 	ioHandler iohandler.IOHandler, parser requestparser.Parser,
 	shardManager *shard.ShardManager, gec chan error) *BaseWorker {
 	return &BaseWorker{
-		id:                wid,
-		ioHandler:         ioHandler,
-		parser:            parser,
-		shardManager:      shardManager,
-		globalErrorChan:   gec,
-		responseChan:      responseChan,
-		preprocessingChan: preprocessingChan,
-		Session:           auth.NewSession(),
-		adhocReqChan:      make(chan *cmd.DiceDBCmd, config.DiceConfig.Performance.AdhocReqChanBufSize),
+		id:                       wid,
+		ioHandler:                ioHandler,
+		parser:                   parser,
+		shardManager:             shardManager,
+		globalErrorChan:          gec,
+		responseChan:             responseChan,
+		preprocessingChan:        preprocessingChan,
+		cmdWatchSubscriptionChan: cmdWatchSubscriptionChan,
+		Session:                  auth.NewSession(),
+		adhocReqChan:             make(chan *cmd.DiceDBCmd, config.DiceConfig.Performance.AdhocReqChanBufSize),
 	}
 }
 
@@ -260,7 +263,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 
 	if meta.CmdType == Watch {
 		// Proceed to subscribe after successful execution
-		watchmanager.CmdWatchSubscriptionChan <- watchmanager.WatchSubscription{
+		w.cmdWatchSubscriptionChan <- watchmanager.WatchSubscription{
 			Subscribe:    true,
 			WatchCmd:     cmdList[len(cmdList)-1],
 			AdhocReqChan: w.adhocReqChan,
