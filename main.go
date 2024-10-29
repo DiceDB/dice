@@ -51,7 +51,7 @@ func init() {
 	flag.StringVar(&config.LogDir, "log-dir", "/tmp/dicedb", "log directory path")
 
 	flag.BoolVar(&config.EnableWAL, "enable-wal", false, "enable write-ahead logging")
-	flag.BoolVar(&config.RestoreFromWAL, "wal-restore", false, "restore the database from the WAL files")
+	flag.BoolVar(&config.RestoreFromWAL, "restore-wal", false, "restore the database from the WAL files")
 	flag.StringVar(&config.WALEngine, "wal-engine", "sqlite", "wal engine to use, values: sqlite, aof")
 
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
