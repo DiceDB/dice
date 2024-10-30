@@ -102,10 +102,14 @@ func configuration() {
 	addEntry("Cores", runtime.NumCPU())
 
 	// Conditionally add the number of shards to be used for DiceDB to the configuration table
-	if config.NumShards > 0 {
-		configTable = append(configTable, configEntry{"Shards", config.NumShards})
+	if config.EnableMultiThreading {
+		if config.NumShards > 0 {
+			configTable = append(configTable, configEntry{"Shards", config.NumShards})
+		} else {
+			configTable = append(configTable, configEntry{"Shards", runtime.NumCPU()})
+		}
 	} else {
-		configTable = append(configTable, configEntry{"Shards", runtime.NumCPU()})
+		configTable = append(configTable, configEntry{"Shards", 1})
 	}
 
 	// Add whether the watch feature is enabled to the configuration table
