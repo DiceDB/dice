@@ -1451,7 +1451,7 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 
 	// Save the mergedHll
 	obj = store.NewObj(mergedHll, -1, object.ObjTypeString, object.ObjEncodingRaw)
-	store.Put(destKey, obj)
+	store.Put(destKey, obj, dstore.WithPutCmd(dstore.PFMERGE))
 
 	return &EvalResponse{
 		Result: clientio.OK,

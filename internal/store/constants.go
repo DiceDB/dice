@@ -9,4 +9,5 @@ const (
 	ZRange string = "ZRANGE"
 	PFADD  string = "PFADD"
 	PFCOUNT string = "PFCOUNT"
+	PFMERGE string = "PFMERGE"
 )
