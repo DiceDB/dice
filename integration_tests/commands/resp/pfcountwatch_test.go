@@ -100,6 +100,7 @@ func TestPFCOUNTWATCH(t *testing.T) {
 
 	// Test for PFMERGE Case
 	for _, tc := range pfcountWatchhWithPFMergeTestCases {
+		FireCommand(publisher, fmt.Sprintf("DEL %s %s", tc.dest_key_1, tc.dest_key_2))
 		FireCommand(publisher, fmt.Sprintf("PFADD %s %s", tc.dest_key_1, tc.dest_value_1))
 		FireCommand(publisher, fmt.Sprintf("PFADD %s %s", tc.dest_key_2, tc.dest_value_2))
 		FireCommand(publisher, fmt.Sprintf("PFMERGE %s %s %s", pfcountWatchKey, tc.dest_key_1, tc.dest_key_2))
@@ -177,6 +178,7 @@ func TestPFCountWATCHWithSDK(t *testing.T) {
 	}
 
 	for _, tc := range pfcountWatchSDKhWithPFMergeTestCases {
+		publisher.Del(context.Background(), tc.dest_key_1, tc.dest_key_2)
 		publisher.PFAdd(context.Background(), tc.dest_key_1, tc.dest_value_1).Err()
 		publisher.PFAdd(context.Background(), tc.dest_key_2, tc.dest_value_2).Err()
 		publisher.PFMerge(context.Background(), pfcountWatchKey, tc.dest_key_1, tc.dest_key_2).Err()
