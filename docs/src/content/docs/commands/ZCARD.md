@@ -50,36 +50,36 @@ ZCARD key
 ### Basic Usage
 Creating sorted set `myzset` with two fields `one`, `two` with scores 1, 2 respectively. Getting cardinality of `myzset`. Adding new element into `myzset` and getting updated cardinality.
 
-```DiceDB
-> ZADD myzset 1 "one" 2 "two"
+```bash
+127.0.0.1:7379> ZADD myzset 1 "one" 2 "two"
 (integer) 2
 
-> ZCARD myzset
+127.0.0.1:7379> ZCARD myzset
 (integer) 2
 
-> ZADD myzset 3 "three"
+127.0.0.1:7379> ZADD myzset 3 "three"
 (integer) 1
 
-> ZCARD myzset
+127.0.0.1:7379> ZCARD myzset
 (integer) 3
 ```
 
 ### Invalid Usage on non-existent sorted set
 Getting cardinality of a non-existent sorted set `nonExistentZSet`.
 
-```DiceDB
-> ZCARD nonExistentZSet
+```bash
+127.0.0.1:7379> ZCARD nonExistentZSet
 (integer) 0
 ```
 
 ### Invalid Usage on a non sorted set key
-Getting cardinality of a key `myzset` associated with a non sorted set type.
+Getting cardinality of a key `mystring` associated with a non sorted set type.
 
-```DiceDB
-> SET mystring "This is a string"
+```bash
+127.0.0.1:7379> SET mystring "This is a string"
 OK
 
-> ZCARD mystring
+127.0.0.1:7379> ZCARD mystring
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 

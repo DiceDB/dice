@@ -306,6 +306,51 @@ func testEvalSET(t *testing.T, store *dstore.Store) {
 			input:          []string{"KEY", "VAL", Pxat, strconv.FormatInt(time.Now().Add(2*time.Minute).UnixMilli(), 10)},
 			migratedOutput: EvalResponse{Result: clientio.OK, Error: nil},
 		},
+		{
+			name: 		 "key val pair and invalid EX and PX",
+			input: 		 []string{"KEY", "VAL", Ex, "2", Px, "2000"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
+		},
+		{
+			name:           "key val pair and invalid EX and PXAT",
+			input:          []string{"KEY", "VAL", Ex, "2", Pxat, "2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
+		},
+		{
+			name:           "key val pair and invalid PX and PXAT",
+			input:          []string{"KEY", "VAL", Px, "2000", Pxat, "2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
+		},
+		{
+			name:           "key val pair and KeepTTL",
+			input:          []string{"KEY", "VAL", KeepTTL},
+			migratedOutput: EvalResponse{Result: clientio.OK, Error: nil},
+		},
+		{
+			name:           "key val pair and invalid KeepTTL",
+			input:          []string{"KEY", "VAL", KeepTTL, "2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
+		},
+		{
+			name:           "key val pair and KeepTTL, EX",
+			input:          []string{"KEY", "VAL", Ex, "2", KeepTTL},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
+		},
+		{
+			name:           "key val pair and KeepTTL, PX",
+			input:          []string{"KEY", "VAL", Px, "2000", KeepTTL},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
+		},
+		{
+			name:           "key val pair and KeepTTL, PXAT",
+			input:          []string{"KEY", "VAL", Pxat, strconv.FormatInt(time.Now().Add(2*time.Minute).UnixMilli(), 10), KeepTTL},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
+		},
+		{
+			name:           "key val pair and KeepTTL, invalid PXAT",
+			input:          []string{"KEY", "VAL", Pxat, "invalid_expiry_val", KeepTTL},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")},
+		},
 	}
 
 	for _, tt := range tests {
