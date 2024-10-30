@@ -1,109 +1,5 @@
 package http
 
-import (
-	"fmt"
-	testifyAssert "github.com/stretchr/testify/assert"
-	"testing"
-)
-
-func TestBitPos(t *testing.T) {
-	exec := NewHTTPCommandExecutor()
-
-	exec.FireCommand(HTTPCommand{Command: "FLUSHDB"})
-	defer exec.FireCommand(HTTPCommand{Command: "FLUSHDB"}) // clean up after all test cases
-	testcases := []struct {
-		name         string
-		val          interface{}
-		inCmd        HTTPCommand
-		out          interface{}
-		setCmdSETBIT bool
-	}{
-		{
-			name:  "FindsFirstZeroBit",
-			val:   []byte("\xff\xf0\x00"),
-			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "value": 0}},
-			out:   float64(12),
-		},
-		{
-			name:  "FindsFirstOneBit",
-			val:   []byte("\x00\x0f\xff"),
-			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "value": 1}},
-			out:   float64(12),
-		},
-		{
-			name:  "NoZeroBitFound",
-			val:   []byte("\xff\xff\xff"),
-			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "value": 0}},
-			out:   float64(24),
-		},
-		{
-			name:  "NoZeroBitFoundWithRangeStartPos",
-			val:   []byte("\xff\xff\xff"),
-			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "values": []interface{}{0, 2}}},
-			out:   float64(24),
-		},
-		{
-			name:  "NoZeroBitFoundWithOOBRangeStartPos",
-			val:   []byte("\xff\xff\xff"),
-			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "values": []interface{}{0, 4}}},
-			out:   float64(-1),
-		},
-		{
-			name:  "NoZeroBitFoundWithRange",
-			val:   []byte("\xff\xff\xff"),
-			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "values": []interface{}{0, 2, 2}}},
-			out:   float64(-1),
-		},
-		{
-			name:  "NoZeroBitFoundWithRangeAndRangeType",
-			val:   []byte("\xff\xff\xff"),
-			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "values": []interface{}{0, 2, 2, "BIT"}}},
-			out:   float64(-1),
-		},
-	}
-
-	for _, tc := range testcases {
-		t.Run(tc.name, func(t *testing.T) {
-			var setCmd HTTPCommand
-			if tc.setCmdSETBIT {
-				setCmd = HTTPCommand{
-					Command: "SETBIT",
-					Body:    map[string]interface{}{"key": "testkeysb", "value": fmt.Sprintf("%s", tc.val.(string))},
-				}
-			} else {
-				switch v := tc.val.(type) {
-				case []byte:
-					setCmd = HTTPCommand{
-						Command: "SET",
-						Body:    map[string]interface{}{"key": "testkey", "value": v, "isByteEncodedVal": true},
-					}
-				case string:
-					setCmd = HTTPCommand{
-						Command: "SET",
-						Body:    map[string]interface{}{"key": "testkey", "value": fmt.Sprintf("%s", v)},
-					}
-				case int:
-					setCmd = HTTPCommand{
-						Command: "SET",
-						Body:    map[string]interface{}{"key": "testkey", "value": fmt.Sprintf("%d", v)},
-					}
-				default:
-					// For test cases where we don't set a value (e.g., error cases)
-					setCmd = HTTPCommand{Command: ""}
-				}
-			}
-
-			if setCmd.Command != "" {
-				_, _ = exec.FireCommand(setCmd)
-			}
-
-			result, _ := exec.FireCommand(tc.inCmd)
-			testifyAssert.Equal(t, tc.out, result, "Mismatch for cmd %s\n", tc.inCmd)
-		})
-	}
-}
-package http
-
 // The following commands are a part of this test class:
 // SETBIT, GETBIT, BITCOUNT, BITOP, BITPOS, BITFIELD, BITFIELD_RO
 
@@ -134,7 +30,7 @@ func TestBitOp(t *testing.T) {
 				{Command: "SETBIT", Body: map[string]interface{}{"key": "unitTestKeyA", "values": []interface{}{7, 1}}},
 				{Command: "SETBIT", Body: map[string]interface{}{"key": "unitTestKeyA", "values": []interface{}{8, 1}}},
 			},
-			Out: []interface{}{"0", "0", "0", "0", "0"},
+			Out: []interface{}{float64(0), float64(0), float64(0), float64(0), float64(0)},
 		},
 		{
 			InCmds: []HTTPCommand{
@@ -142,7 +38,7 @@ func TestBitOp(t *testing.T) {
 				{Command: "SETBIT", Body: map[string]interface{}{"key": "unitTestKeyB", "values": []interface{}{4, 1}}},
 				{Command: "SETBIT", Body: map[string]interface{}{"key": "unitTestKeyB", "values": []interface{}{7, 1}}},
 			},
-			Out: []interface{}{"0", "0", "0"},
+			Out: []interface{}{float64(0), float64(0), float64(0)},
 		},
 		{
 			InCmds: []HTTPCommand{
@@ -152,7 +48,7 @@ func TestBitOp(t *testing.T) {
 				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{7, 1}}},
 				{Command: "GET", Body: map[string]interface{}{"key": "foo"}},
 			},
-			Out: []interface{}{"OK", "1", "0", "0", "kar"},
+			Out: []interface{}{"OK", float64(1), float64(0), float64(0), "kar"},
 		},
 		{
 			InCmds: []HTTPCommand{
@@ -162,7 +58,7 @@ func TestBitOp(t *testing.T) {
 				{Command: "SETBIT", Body: map[string]interface{}{"key": "mykey12", "values": []interface{}{7, 1}}},
 				{Command: "GET", Body: map[string]interface{}{"key": "mykey12"}},
 			},
-			Out: []interface{}{"OK", "1", "0", "1", float64(9343)},
+			Out: []interface{}{"OK", float64(1), float64(0), float64(1), float64(9343)},
 		},
 		{
 			InCmds: []HTTPCommand{{Command: "SET", Body: map[string]interface{}{"key": "foo12", "value": "bar"}},
@@ -171,7 +67,7 @@ func TestBitOp(t *testing.T) {
 				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo12", "values": []interface{}{7, 1}}},
 				{Command: "GET", Body: map[string]interface{}{"key": "foo12"}},
 			},
-			Out: []interface{}{"OK", "1", "0", "0", "kar"},
+			Out: []interface{}{"OK", float64(1), float64(0), float64(0), "kar"},
 		},
 		{
 			InCmds: []HTTPCommand{
@@ -187,7 +83,7 @@ func TestBitOp(t *testing.T) {
 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyNOT", "values": []interface{}{8}}},
 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyNOT", "values": []interface{}{9}}},
 			},
-			Out: []interface{}{"0", "1", "0", "0", "1"},
+			Out: []interface{}{float64(0), float64(1), float64(0), float64(0), float64(1)},
 		},
 		{
 			InCmds: []HTTPCommand{
@@ -205,7 +101,7 @@ func TestBitOp(t *testing.T) {
 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyOR", "values": []interface{}{9}}},
 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyOR", "values": []interface{}{12}}},
 			},
-			Out: []interface{}{"1", "1", "1", "1", "1", "0", "0"},
+			Out: []interface{}{float64(1), float64(1), float64(1), float64(1), float64(1), float64(0), float64(0)},
 		},
 		{
 			InCmds: []HTTPCommand{
@@ -221,7 +117,7 @@ func TestBitOp(t *testing.T) {
 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyAND", "values": []interface{}{8}}},
 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyAND", "values": []interface{}{9}}},
 			},
-			Out: []interface{}{"0", "0", "1", "0", "0"},
+			Out: []interface{}{float64(0), float64(0), float64(1), float64(0), float64(0)},
 		},
 		{
 			InCmds: []HTTPCommand{
@@ -237,7 +133,7 @@ func TestBitOp(t *testing.T) {
 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyXOR", "values": []interface{}{7}}},
 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyXOR", "values": []interface{}{8}}},
 			},
-			Out: []interface{}{"1", "1", "1", "0", "1"},
+			Out: []interface{}{float64(1), float64(1), float64(1), float64(0), float64(1)},
 		},
 	}
 
@@ -272,7 +168,7 @@ func TestBitOpsString(t *testing.T) {
 
 	for i := 1; i < 8+1; i++ {
 		getBitTestCommands[i] = HTTPCommand{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "value": fmt.Sprintf("%d", testOffsets[i-1])}}
-		getBitTestExpected[i] = string(fooBarBits[testOffsets[i-1]])
+		getBitTestExpected[i] = float64(fooBarBits[testOffsets[i-1]] - '0')
 	}
 
 	testCases := []struct {
@@ -300,7 +196,7 @@ func TestBitOpsString(t *testing.T) {
 				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "6"}},
 				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "7"}},
 			},
-			expected:   []interface{}{"OK", "0", "0", "1", "1", "0", "0", "0", "1"},
+			expected:   []interface{}{"OK", float64(0), float64(0), float64(1), float64(1), float64(0), float64(0), float64(0), float64(1)},
 			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
 		},
 		{
@@ -316,7 +212,7 @@ func TestBitOpsString(t *testing.T) {
 				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "14"}},
 				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "15"}},
 			},
-			expected:   []interface{}{"OK", "0", "0", "1", "1", "0", "0", "0", "0"},
+			expected:   []interface{}{"OK", float64(0), float64(0), float64(1), float64(1), float64(0), float64(0), float64(0), float64(0)},
 			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
 		},
 		{
@@ -327,7 +223,7 @@ func TestBitOpsString(t *testing.T) {
 				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "48"}},
 				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "47"}},
 			},
-			expected:   []interface{}{"OK", "0", "0", "0"},
+			expected:   []interface{}{"OK", float64(0), float64(0), float64(0)},
 			assertType: []string{"equal", "equal", "equal", "equal"},
 		},
 		{
@@ -370,7 +266,7 @@ func TestBitOpsString(t *testing.T) {
 				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{49, 0}}},
 				{Command: "GET", Body: map[string]interface{}{"key": "foo"}},
 			},
-			expected:   []interface{}{"OK", "0", "goobar", "0", "0", "goobar`", "1", "goobar "},
+			expected:   []interface{}{"OK", float64(0), "goobar", float64(0), float64(0), "goobar`", float64(1), "goobar "},
 			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
 		},
 		{
@@ -382,7 +278,7 @@ func TestBitOpsString(t *testing.T) {
 				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{7, 1}}},
 				{Command: "TTL", Body: map[string]interface{}{"key": "foo"}},
 			},
-			expected:   []interface{}{"OK", float64(1), float64(100), "0", float64(100)},
+			expected:   []interface{}{"OK", float64(1), float64(100), float64(0), float64(100)},
 			assertType: []string{"equal", "equal", "less", "equal", "less"},
 		},
 		{
@@ -393,7 +289,7 @@ func TestBitOpsString(t *testing.T) {
 				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{7, 1}}},
 				{Command: "TTL", Body: map[string]interface{}{"key": "foo"}},
 			},
-			expected:   []interface{}{"OK", float64(-1), "0", float64(-1)},
+			expected:   []interface{}{"OK", float64(-1), float64(0), float64(-1)},
 			assertType: []string{"equal", "equal", "equal", "equal"},
 		},
 		{
@@ -427,7 +323,7 @@ func TestBitOpsString(t *testing.T) {
 				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{3, 1}}},
 				{Command: "GET", Body: map[string]interface{}{"key": "foo"}},
 			},
-			expected:   []interface{}{"0", "0", "P"},
+			expected:   []interface{}{float64(0), float64(0), "P"},
 			assertType: []string{"equal", "equal", "equal"},
 		},
 		{
@@ -460,7 +356,7 @@ func TestBitOpsString(t *testing.T) {
 				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"AND", "bazzz", "foo", "baz", "bazz"}}},
 				{Command: "GET", Body: map[string]interface{}{"key": "bazzz"}},
 			},
-			expected:   []interface{}{"OK", "0", float64(6), "\x00\x00\x00\x00\x00\x00"},
+			expected:   []interface{}{"OK", float64(0), float64(6), "\x00\x00\x00\x00\x00\x00"},
 			assertType: []string{"equal", "equal", "equal", "equal"},
 		},
 		{
@@ -496,7 +392,7 @@ func TestBitOpsString(t *testing.T) {
 				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"OR", "bazzz", "foo", "baz", "bazz"}}},
 				{Command: "GET", Body: map[string]interface{}{"key": "bazzz"}},
 			},
-			expected:   []interface{}{"OK", "0", float64(6), "g\xefofev", "1", "0", float64(7), "goofev@"},
+			expected:   []interface{}{"OK", float64(0), float64(6), "g\xefofev", float64(1), float64(0), float64(7), "goofev@"},
 			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
 		},
 		{
@@ -524,7 +420,7 @@ func TestBitOpsString(t *testing.T) {
 				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"XOR", "bazzz", "foo", "baz", "bazz"}}},
 				{Command: "GET", Body: map[string]interface{}{"key": "bazzz"}},
 			},
-			expected:   []interface{}{"OK", "0", float64(6), "\x07\x8d\x0c\x06\x04\x14", "1", "0", float64(7), "\x07\r\x0c\x06\x04\x14@", "1", float64(7), "\x07\r\x0c\x06\x04\x14\x00"},
+			expected:   []interface{}{"OK", float64(0), float64(6), "\x07\x8d\x0c\x06\x04\x14", float64(1), float64(0), float64(7), "\x07\r\x0c\x06\x04\x14@", float64(1), float64(7), "\x07\r\x0c\x06\x04\x14\x00"},
 			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
 		},
 		{
@@ -569,79 +465,79 @@ func TestBitCount(t *testing.T) {
 	}{
 		{
 			InCmds: []HTTPCommand{
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "mykey", "offset": "7", "value": "1"}},
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "mykey", "values": []interface{}{7, 1}}},
 			},
 			Out: []interface{}{float64(0)},
 		},
 		{
 			InCmds: []HTTPCommand{
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "mykey", "offset": "7", "value": "1"}},
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "mykey", "values": []interface{}{7, 1}}},
 			},
 			Out: []interface{}{float64(1)},
 		},
 		{
 			InCmds: []HTTPCommand{
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "mykey", "offset": "122", "value": "1"}},
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "mykey", "values": []interface{}{122, 1}}},
 			},
 			Out: []interface{}{float64(0)},
 		},
 		{
 			InCmds: []HTTPCommand{
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "mykey", "offset": "122"}},
+				{Command: "GETBIT", Body: map[string]interface{}{"key": "mykey", "values": []interface{}{122}}},
 			},
 			Out: []interface{}{float64(1)},
 		},
 		{
 			InCmds: []HTTPCommand{
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "mykey", "offset": "122", "value": "0"}},
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "mykey", "values": []interface{}{122, 0}}},
 			},
 			Out: []interface{}{float64(1)},
 		},
 		{
 			InCmds: []HTTPCommand{
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "mykey", "offset": "122"}},
+				{Command: "GETBIT", Body: map[string]interface{}{"key": "mykey", "values": []interface{}{122}}},
 			},
 			Out: []interface{}{float64(0)},
 		},
 		{
 			InCmds: []HTTPCommand{
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "mykey", "offset": "1223232"}},
+				{Command: "GETBIT", Body: map[string]interface{}{"key": "mykey", "value": 1223232}},
 			},
 			Out: []interface{}{float64(0)},
 		},
 		{
 			InCmds: []HTTPCommand{
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "mykey", "offset": "7"}},
+				{Command: "GETBIT", Body: map[string]interface{}{"key": "mykey", "values": []interface{}{7}}},
 			},
 			Out: []interface{}{float64(1)},
 		},
 		{
 			InCmds: []HTTPCommand{
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "mykey", "offset": "8"}},
+				{Command: "GETBIT", Body: map[string]interface{}{"key": "mykey", "values": []interface{}{8}}},
 			},
 			Out: []interface{}{float64(0)},
 		},
 		{
 			InCmds: []HTTPCommand{
-				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "mykey", "start": "3", "end": "7", "mode": "BIT"}},
+				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "mykey", "values": []interface{}{3, 7, "BIT"}}},
 			},
 			Out: []interface{}{float64(1)},
 		},
 		{
 			InCmds: []HTTPCommand{
-				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "mykey", "start": "3", "end": "7"}},
+				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "mykey", "values": []interface{}{3, 7}}},
 			},
 			Out: []interface{}{float64(0)},
 		},
 		{
 			InCmds: []HTTPCommand{
-				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "mykey", "start": "0", "end": "0"}},
+				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "mykey", "values": []interface{}{0, 0}}},
 			},
 			Out: []interface{}{float64(1)},
 		},
 		{
 			InCmds: []HTTPCommand{
-				{Command: "BITCOUNT", Body: map[string]interface{}{}},
+				{Command: "BITCOUNT"},
 			},
 			Out: []interface{}{"ERR wrong number of arguments for 'bitcount' command"},
 		},
@@ -653,7 +549,7 @@ func TestBitCount(t *testing.T) {
 		},
 		{
 			InCmds: []HTTPCommand{
-				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "mykey", "start": "0"}},
+				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "mykey", "values": []interface{}{0}}},
 			},
 			Out: []interface{}{"ERR syntax error"},
 		},
@@ -664,7 +560,7 @@ func TestBitCount(t *testing.T) {
 			cmd := tcase.InCmds[i]
 			out := tcase.Out[i]
 			res, _ := exec.FireCommand(cmd)
-			assert.Equal(t, out, res, "Value mismatch for cmd %s\n.", cmd)
+			testifyAssert.Equal(t, out, res, "Value mismatch for cmd %s\n.", cmd)
 		}
 	}
 }
@@ -713,13 +609,13 @@ func TestBitPos(t *testing.T) {
 		},
 		{
 			name:  "FindsFirstZeroBit",
-			val:   "\xff\xf0\x00",
+			val:   []byte("\xff\xf0\x00"),
 			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "value": 0}},
 			out:   float64(12),
 		},
 		{
 			name:  "FindsFirstOneBit",
-			val:   "\x00\x0f\xff",
+			val:   []byte("\x00\x0f\xff"),
 			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "value": 1}},
 			out:   float64(12),
 		},
@@ -731,37 +627,37 @@ func TestBitPos(t *testing.T) {
 		},
 		{
 			name:  "NoZeroBitFound",
-			val:   "\xff\xff\xff",
+			val:   []byte("\xff\xff\xff"),
 			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "value": 0}},
 			out:   float64(24),
 		},
 		{
 			name:  "NoZeroBitFoundWithRangeStartPos",
-			val:   "\xff\xff\xff",
+			val:   []byte("\xff\xff\xff"),
 			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "values": []interface{}{0, 2}}},
 			out:   float64(24),
 		},
 		{
 			name:  "NoZeroBitFoundWithOOBRangeStartPos",
-			val:   "\xff\xff\xff",
+			val:   []byte("\xff\xff\xff"),
 			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "values": []interface{}{0, 4}}},
 			out:   float64(-1),
 		},
 		{
 			name:  "NoZeroBitFoundWithRange",
-			val:   "\xff\xff\xff",
+			val:   []byte("\xff\xff\xff"),
 			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "values": []interface{}{0, 2, 2}}},
 			out:   float64(-1),
 		},
 		{
 			name:  "NoZeroBitFoundWithRangeAndRangeType",
-			val:   "\xff\xff\xff",
+			val:   []byte("\xff\xff\xff"),
 			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "values": []interface{}{0, 2, 2, "BIT"}}},
 			out:   float64(-1),
 		},
 		{
 			name:  "FindsFirstZeroBitInRange",
-			val:   "\xff\xf0\xff",
+			val:   []byte("\xff\xf0\xff"),
 			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "values": []interface{}{0, 1, 2}}},
 			out:   float64(12),
 		},
@@ -779,19 +675,19 @@ func TestBitPos(t *testing.T) {
 		},
 		{
 			name:  "FindsFirstOneBitWithNegativeStart",
-			val:   "\x00\x00\xf0",
-			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "values": []interface{}{0, 1, 2}}},
+			val:   []byte("\x00\x00\xf0"),
+			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "values": []interface{}{1, -2, -1}}},
 			out:   float64(16),
 		},
 		{
 			name:  "FindsFirstZeroBitWithNegativeEnd",
-			val:   "\xff\xf0\xff",
+			val:   []byte("\xff\xf0\xff"),
 			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "values": []interface{}{0, 1, -1}}},
 			out:   float64(12),
 		},
 		{
 			name:  "FindsFirstZeroBitInByteRange",
-			val:   "\xff\x00\xff",
+			val:   []byte("\xff\x00\xff"),
 			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "values": []interface{}{0, 1, 2, "BYTE"}}},
 			out:   float64(8),
 		},
@@ -803,7 +699,7 @@ func TestBitPos(t *testing.T) {
 		},
 		{
 			name:  "NoBitFoundInByteRange",
-			val:   "\xff\xff\xff",
+			val:   []byte("\xff\xff\xff"),
 			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "values": []interface{}{0, 0, 2, "BYTE"}}},
 			out:   float64(-1),
 		},
@@ -815,13 +711,13 @@ func TestBitPos(t *testing.T) {
 		},
 		{
 			name:  "EmptyStringReturnsMinusOneForZeroBit",
-			val:   "\"\"",
+			val:   []byte(""),
 			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "value": 0}},
 			out:   float64(-1),
 		},
 		{
 			name:  "EmptyStringReturnsMinusOneForOneBit",
-			val:   "\"\"",
+			val:   []byte(""),
 			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "value": 1}},
 			out:   float64(-1),
 		},
@@ -865,12 +761,12 @@ func TestBitPos(t *testing.T) {
 		{
 			name:  "NonExistentKeyForZeroBit",
 			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "nonexistentkey", "value": 0}},
-			out:   "0",
+			out:   float64(0),
 		},
 		{
 			name:  "NonExistentKeyForOneBit",
 			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "nonexistentkey", "value": 1}},
-			out:   "-1",
+			out:   float64(-1),
 		},
 		{
 			name:  "IntegerValue",
@@ -898,26 +794,26 @@ func TestBitPos(t *testing.T) {
 		},
 		{
 			name:  "BitRangeStartGreaterThanBitLength",
-			val:   "\xff\xff\xff",
+			val:   []byte("\xff\xff\xff"),
 			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "values": []interface{}{0, 25, 30, "BIT"}}},
 			out:   float64(-1),
 		},
 		{
 			name:  "BitRangeEndExceedsBitLength",
-			val:   "\xff\xff\xff",
+			val:   []byte("\xff\xff\xff"),
 			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "values": []interface{}{0, 0, 30, "BIT"}}},
 			out:   float64(-1),
 		},
 		{
 			name:  "NegativeStartInBitRange",
-			val:   "\x00\xff\xff",
+			val:   []byte("\x00\xff\xff"),
 			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "values": []interface{}{1, -16, -1, "BIT"}}},
 			out:   float64(8),
 		},
 		{
 			name:  "LargeNegativeStart",
-			val:   "\x00\xff\xff",
-			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "values": []interface{}{0, -100, -1}}},
+			val:   []byte("\x00\xff\xff"),
+			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "values": []interface{}{1, -100, -1}}},
 			out:   float64(8),
 		},
 		{
@@ -928,7 +824,7 @@ func TestBitPos(t *testing.T) {
 		},
 		{
 			name:  "StartAndEndEqualInByteRange",
-			val:   "\x0f\xff\xff",
+			val:   []byte("\x0f\xff\xff"),
 			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "values": []interface{}{0, 1, 1, "BYTE"}}},
 			out:   float64(-1),
 		},
@@ -940,13 +836,13 @@ func TestBitPos(t *testing.T) {
 		},
 		{
 			name:  "FindFirstZeroBitInNegativeRange",
-			val:   "\xff\x00\xff",
+			val:   []byte("\xff\x00\xff"),
 			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "values": []interface{}{0, -2, -1}}},
 			out:   float64(8),
 		},
 		{
 			name:  "FindFirstOneBitInNegativeRangeBIT",
-			val:   "\x00\x00\x80",
+			val:   []byte("\x00\x00\x80"),
 			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "values": []interface{}{1, -8, -1, "BIT"}}},
 			out:   float64(16),
 		},
@@ -976,7 +872,7 @@ func TestBitPos(t *testing.T) {
 		},
 		{
 			name:  "AllBitsSetExceptLast",
-			val:   "\xff\xff\xfe",
+			val:   []byte("\xff\xff\xfe"),
 			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "value": 0}},
 			out:   float64(23),
 		},
@@ -988,26 +884,26 @@ func TestBitPos(t *testing.T) {
 		},
 		{
 			name:  "AlternatingBitsLongString",
-			val:   "\xaa\xaa\xaa\xaa\xaa",
+			val:   []byte("\xaa\xaa\xaa\xaa\xaa"),
 			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "value": 0}},
 			out:   float64(1),
 		},
 		{
 			name:  "VeryLargeByteString",
-			val:   strings.Repeat("\xff", 1000) + "\x00",
+			val:   []byte(strings.Repeat("\xff", 1000) + "\x00"),
 			inCmd: HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkey", "value": 0}},
 			out:   float64(8000),
 		},
 		{
 			name:         "FindZeroBitOnSetBitKey",
-			val:          "8 1",
+			val:          []interface{}{8, 1},
 			inCmd:        HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkeysb", "value": 1}},
 			out:          float64(8),
 			setCmdSETBIT: true,
 		},
 		{
 			name:         "FindOneBitOnSetBitKey",
-			val:          "1 1",
+			val:          []interface{}{1, 1},
 			inCmd:        HTTPCommand{Command: "BITPOS", Body: map[string]interface{}{"key": "testkeysb", "value": 1}},
 			out:          float64(1),
 			setCmdSETBIT: true,
@@ -1020,14 +916,19 @@ func TestBitPos(t *testing.T) {
 			if tc.setCmdSETBIT {
 				setCmd = HTTPCommand{
 					Command: "SETBIT",
-					Body:    map[string]interface{}{"key": "testkeysb", "value": fmt.Sprintf("%s", tc.val.(string))},
+					Body:    map[string]interface{}{"key": "testkeysb", "values": tc.val},
 				}
 			} else {
 				switch v := tc.val.(type) {
+				case []byte:
+					setCmd = HTTPCommand{
+						Command: "SET",
+						Body:    map[string]interface{}{"key": "testkey", "value": v, "isByteEncodedVal": true},
+					}
 				case string:
 					setCmd = HTTPCommand{
 						Command: "SET",
-						Body:    map[string]interface{}{"key": "testkey", "value": fmt.Sprintf("%s", v)},
+						Body:    map[string]interface{}{"key": "testkey", "value": v},
 					}
 				case int:
 					setCmd = HTTPCommand{

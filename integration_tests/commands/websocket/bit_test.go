@@ -22,23 +22,23 @@ func TestBitOp(t *testing.T) {
 	}{
 		{
 			InCmds: []string{"SETBIT unitTestKeyA 1 1", "SETBIT unitTestKeyA 3 1", "SETBIT unitTestKeyA 5 1", "SETBIT unitTestKeyA 7 1", "SETBIT unitTestKeyA 8 1"},
-			Out:    []interface{}{"0", "0", "0", "0", "0"},
+			Out:    []interface{}{float64(0), float64(0), float64(0), float64(0), float64(0)},
 		},
 		{
 			InCmds: []string{"SETBIT unitTestKeyB 2 1", "SETBIT unitTestKeyB 4 1", "SETBIT unitTestKeyB 7 1"},
-			Out:    []interface{}{"0", "0", "0"},
+			Out:    []interface{}{float64(0), float64(0), float64(0)},
 		},
 		{
 			InCmds: []string{"SET foo bar", "SETBIT foo 2 1", "SETBIT foo 4 1", "SETBIT foo 7 1", "GET foo"},
-			Out:    []interface{}{"OK", "1", "0", "0", "kar"},
+			Out:    []interface{}{"OK", float64(1), float64(0), float64(0), "kar"},
 		},
 		{
 			InCmds: []string{"SET mykey12 1343", "SETBIT mykey12 2 1", "SETBIT mykey12 4 1", "SETBIT mykey12 7 1", "GET mykey12"},
-			Out:    []interface{}{"OK", "1", "0", "1", float64(9343)},
+			Out:    []interface{}{"OK", float64(1), float64(0), float64(1), float64(9343)},
 		},
 		{
 			InCmds: []string{"SET foo12 bar", "SETBIT foo12 2 1", "SETBIT foo12 4 1", "SETBIT foo12 7 1", "GET foo12"},
-			Out:    []interface{}{"OK", "1", "0", "0", "kar"},
+			Out:    []interface{}{"OK", float64(1), float64(0), float64(0), "kar"},
 		},
 		{
 			InCmds: []string{"BITOP NOT unitTestKeyNOT unitTestKeyA "},
@@ -46,7 +46,7 @@ func TestBitOp(t *testing.T) {
 		},
 		{
 			InCmds: []string{"GETBIT unitTestKeyNOT 1", "GETBIT unitTestKeyNOT 2", "GETBIT unitTestKeyNOT 7", "GETBIT unitTestKeyNOT 8", "GETBIT unitTestKeyNOT 9"},
-			Out:    []interface{}{"0", "1", "0", "0", "1"},
+			Out:    []interface{}{float64(0), float64(1), float64(0), float64(0), float64(1)},
 		},
 		{
 			InCmds: []string{"BITOP OR unitTestKeyOR unitTestKeyB unitTestKeyA"},
@@ -54,7 +54,7 @@ func TestBitOp(t *testing.T) {
 		},
 		{
 			InCmds: []string{"GETBIT unitTestKeyOR 1", "GETBIT unitTestKeyOR 2", "GETBIT unitTestKeyOR 3", "GETBIT unitTestKeyOR 7", "GETBIT unitTestKeyOR 8", "GETBIT unitTestKeyOR 9", "GETBIT unitTestKeyOR 12"},
-			Out:    []interface{}{"1", "1", "1", "1", "1", "0", "0"},
+			Out:    []interface{}{float64(1), float64(1), float64(1), float64(1), float64(1), float64(0), float64(0)},
 		},
 		{
 			InCmds: []string{"BITOP AND unitTestKeyAND unitTestKeyB unitTestKeyA"},
@@ -62,7 +62,7 @@ func TestBitOp(t *testing.T) {
 		},
 		{
 			InCmds: []string{"GETBIT unitTestKeyAND 1", "GETBIT unitTestKeyAND 2", "GETBIT unitTestKeyAND 7", "GETBIT unitTestKeyAND 8", "GETBIT unitTestKeyAND 9"},
-			Out:    []interface{}{"0", "0", "1", "0", "0"},
+			Out:    []interface{}{float64(0), float64(0), float64(1), float64(0), float64(0)},
 		},
 		{
 			InCmds: []string{"BITOP XOR unitTestKeyXOR unitTestKeyB unitTestKeyA"},
@@ -70,7 +70,7 @@ func TestBitOp(t *testing.T) {
 		},
 		{
 			InCmds: []string{"GETBIT unitTestKeyXOR 1", "GETBIT unitTestKeyXOR 2", "GETBIT unitTestKeyXOR 3", "GETBIT unitTestKeyXOR 7", "GETBIT unitTestKeyXOR 8"},
-			Out:    []interface{}{"1", "1", "1", "0", "1"},
+			Out:    []interface{}{float64(1), float64(1), float64(1), float64(0), float64(1)},
 		},
 	}
 
@@ -107,7 +107,7 @@ func TestBitOpsString(t *testing.T) {
 
 	for i := 1; i < 8+1; i++ {
 		getBitTestCommands[i] = fmt.Sprintf("GETBIT foo %d", testOffsets[i-1])
-		getBitTestExpected[i] = string(fooBarBits[testOffsets[i-1]])
+		getBitTestExpected[i] = float64(fooBarBits[testOffsets[i-1]] - '0')
 	}
 
 	testCases := []struct {
@@ -125,18 +125,18 @@ func TestBitOpsString(t *testing.T) {
 		{
 			name:       "Getbit of a key containing an integer",
 			cmds:       []string{"SET foo 10", "GETBIT foo 0", "GETBIT foo 1", "GETBIT foo 2", "GETBIT foo 3", "GETBIT foo 4", "GETBIT foo 5", "GETBIT foo 6", "GETBIT foo 7"},
-			expected:   []interface{}{"OK", "0", "0", "1", "1", "0", "0", "0", "1"},
+			expected:   []interface{}{"OK", float64(0), float64(0), float64(1), float64(1), float64(0), float64(0), float64(0), float64(1)},
 			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
 		}, {
 			name:       "Getbit of a key containing an integer 2nd byte",
 			cmds:       []string{"SET foo 10", "GETBIT foo 8", "GETBIT foo 9", "GETBIT foo 10", "GETBIT foo 11", "GETBIT foo 12", "GETBIT foo 13", "GETBIT foo 14", "GETBIT foo 15"},
-			expected:   []interface{}{"OK", "0", "0", "1", "1", "0", "0", "0", "0"},
+			expected:   []interface{}{"OK", float64(0), float64(0), float64(1), float64(1), float64(0), float64(0), float64(0), float64(0)},
 			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
 		},
 		{
 			name:       "Getbit of a key with an offset greater than the length of the string in bits",
 			cmds:       []string{"SET foo foobar", "GETBIT foo 100", "GETBIT foo 48", "GETBIT foo 47"},
-			expected:   []interface{}{"OK", "0", "0", "0"},
+			expected:   []interface{}{"OK", float64(0), float64(0), float64(0)},
 			assertType: []string{"equal", "equal", "equal", "equal"},
 		},
 		{
@@ -154,19 +154,19 @@ func TestBitOpsString(t *testing.T) {
 		{
 			name:       "Setbit of a key containing a string",
 			cmds:       []string{"SET foo foobar", "setbit foo 7 1", "get foo", "setbit foo 49 1", "setbit foo 50 1", "get foo", "setbit foo 49 0", "get foo"},
-			expected:   []interface{}{"OK", "0", "goobar", "0", "0", "goobar`", "1", "goobar "},
+			expected:   []interface{}{"OK", float64(0), "goobar", float64(0), float64(0), "goobar`", float64(1), "goobar "},
 			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
 		},
 		{
 			name:       "Setbit of a key must not change the expiry of the key if expiry is set",
 			cmds:       []string{"SET foo foobar", "EXPIRE foo 100", "TTL foo", "SETBIT foo 7 1", "TTL foo"},
-			expected:   []interface{}{"OK", float64(1), float64(100), "0", float64(100)},
+			expected:   []interface{}{"OK", float64(1), float64(100), float64(0), float64(100)},
 			assertType: []string{"equal", "equal", "less", "equal", "less"},
 		},
 		{
 			name:       "Setbit of a key must not add expiry to the key if expiry is not set",
 			cmds:       []string{"SET foo foobar", "TTL foo", "SETBIT foo 7 1", "TTL foo"},
-			expected:   []interface{}{"OK", float64(-1), "0", float64(-1)},
+			expected:   []interface{}{"OK", float64(-1), float64(0), float64(-1)},
 			assertType: []string{"equal", "equal", "equal", "equal"},
 		},
 		{
@@ -184,7 +184,7 @@ func TestBitOpsString(t *testing.T) {
 		{
 			name:       "Get a string created with setbit",
 			cmds:       []string{"SETBIT foo 1 1", "SETBIT foo 3 1", "GET foo"},
-			expected:   []interface{}{"0", "0", "P"},
+			expected:   []interface{}{float64(0), float64(0), "P"},
 			assertType: []string{"equal", "equal", "equal"},
 		},
 		{
@@ -202,7 +202,7 @@ func TestBitOpsString(t *testing.T) {
 		{
 			name:       "Bitop or of keys containing a string, a bytearray and get the destkey",
 			cmds:       []string{"MSET foo foobar baz abcdef", "SETBIT bazz 8 1", "BITOP and bazzz foo baz bazz", "GET bazzz"},
-			expected:   []interface{}{"OK", "0", float64(6), "\x00\x00\x00\x00\x00\x00"},
+			expected:   []interface{}{"OK", float64(0), float64(6), "\x00\x00\x00\x00\x00\x00"},
 			assertType: []string{"equal", "equal", "equal", "equal"},
 		},
 		{
@@ -220,7 +220,7 @@ func TestBitOpsString(t *testing.T) {
 		{
 			name:       "BITOP OR of keys containing strings and a bytearray and get the destkey",
 			cmds:       []string{"MSET foo foobar baz abcdef", "SETBIT bazz 8 1", "BITOP OR bazzz foo baz bazz", "GET bazzz", "SETBIT bazz 8 0", "SETBIT bazz 49 1", "BITOP OR bazzz foo baz bazz", "GET bazzz"},
-			expected:   []interface{}{"OK", "0", float64(6), "g\xefofev", "1", "0", float64(7), "goofev@"},
+			expected:   []interface{}{"OK", float64(0), float64(6), "g\xefofev", float64(1), float64(0), float64(7), "goofev@"},
 			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
 		},
 		{
@@ -232,7 +232,7 @@ func TestBitOpsString(t *testing.T) {
 		{
 			name:       "BITOP XOR of keys containing strings and a bytearray and get the destkey",
 			cmds:       []string{"MSET foo foobar baz abcdef", "SETBIT bazz 8 1", "BITOP XOR bazzz foo baz bazz", "GET bazzz", "SETBIT bazz 8 0", "SETBIT bazz 49 1", "BITOP XOR bazzz foo baz bazz", "GET bazzz", "Setbit bazz 49 0", "bitop xor bazzz foo baz bazz", "get bazzz"},
-			expected:   []interface{}{"OK", "0", float64(6), "\x07\x8d\x0c\x06\x04\x14", "1", "0", float64(7), "\x07\r\x0c\x06\x04\x14@", "1", float64(7), "\x07\r\x0c\x06\x04\x14\x00"},
+			expected:   []interface{}{"OK", float64(0), float64(6), "\x07\x8d\x0c\x06\x04\x14", float64(1), float64(0), float64(7), "\x07\r\x0c\x06\x04\x14@", float64(1), float64(7), "\x07\r\x0c\x06\x04\x14\x00"},
 			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
 		},
 		{
@@ -274,39 +274,39 @@ func TestBitCount(t *testing.T) {
 	}{
 		{
 			InCmds: []string{"SETBIT mykey 7 1"},
-			Out:    []interface{}{"0"},
+			Out:    []interface{}{float64(0)},
 		},
 		{
 			InCmds: []string{"SETBIT mykey 7 1"},
-			Out:    []interface{}{"1"},
+			Out:    []interface{}{float64(1)},
 		},
 		{
 			InCmds: []string{"SETBIT mykey 122 1"},
-			Out:    []interface{}{"0"},
+			Out:    []interface{}{float64(0)},
 		},
 		{
 			InCmds: []string{"GETBIT mykey 122"},
-			Out:    []interface{}{"1"},
+			Out:    []interface{}{float64(1)},
 		},
 		{
 			InCmds: []string{"SETBIT mykey 122 0"},
-			Out:    []interface{}{"1"},
+			Out:    []interface{}{float64(1)},
 		},
 		{
 			InCmds: []string{"GETBIT mykey 122"},
-			Out:    []interface{}{"0"},
+			Out:    []interface{}{float64(0)},
 		},
 		{
 			InCmds: []string{"GETBIT mykey 1223232"},
-			Out:    []interface{}{"0"},
+			Out:    []interface{}{float64(0)},
 		},
 		{
 			InCmds: []string{"GETBIT mykey 7"},
-			Out:    []interface{}{"1"},
+			Out:    []interface{}{float64(1)},
 		},
 		{
 			InCmds: []string{"GETBIT mykey 8"},
-			Out:    []interface{}{"0"},
+			Out:    []interface{}{float64(0)},
 		},
 		{
 			InCmds: []string{"BITCOUNT mykey 3 7 BIT"},
@@ -340,7 +340,7 @@ func TestBitCount(t *testing.T) {
 			out := tcase.Out[i]
 			res, err := exec.FireCommandAndReadResponse(conn, cmd)
 			testifyAssert.Nil(t, err)
-			assert.Equal(t, out, res, "Value mismatch for cmd %s\n.", cmd)
+			testifyAssert.Equal(t, out, res, "Value mismatch for cmd %s\n.", cmd)
 		}
 	}
 }
@@ -539,12 +539,12 @@ func TestBitPos(t *testing.T) {
 		{
 			name:  "NonExistentKeyForZeroBit",
 			inCmd: "BITPOS nonexistentkey 0",
-			out:   "0",
+			out:   float64(0),
 		},
 		{
 			name:  "NonExistentKeyForOneBit",
 			inCmd: "BITPOS nonexistentkey 1",
-			out:   "-1",
+			out:   float64(-1),
 		},
 		{
 			name:  "IntegerValue",
@@ -813,7 +813,7 @@ func TestBitfield(t *testing.T) {
 		{
 			Name:     "BITFIELD with only key as argument",
 			Commands: []string{"bitfield bits"},
-			Expected: []interface{}{nil},
+			Expected: []interface{}{[]interface{}{}},
 			Delay:    []time.Duration{0},
 			CleanUp:  []string{"DEL bits"},
 		},
@@ -1063,7 +1063,7 @@ func TestBitfieldRO(t *testing.T) {
 		{
 			Name:     "BITFIELD_RO with only key as argument",
 			Commands: []string{"bitfield_ro bits"},
-			Expected: []interface{}{nil},
+			Expected: []interface{}{[]interface{}{}},
 			Delay:    []time.Duration{0},
 			CleanUp:  []string{"DEL bits"},
 		},

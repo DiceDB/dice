@@ -230,7 +230,7 @@ func TestBitOpsString(t *testing.T) {
 		},
 		{
 			name:       "BITOP XOR of keys containing strings and a bytearray and get the destkey",
-			cmds:       []string{"MSET foo foobar baz abcdef", "SETBIT bazz 8 1", "BITOP XOR bazzz foo baz bazz", "GET bazzz", "SETBIT bazz 8 0", "SETBIT bazz 49 1", "BITOP XOR bazzz foo baz bazz", "GET bazzz", "Setbit bazz 49 0", "bitop xor bazzz foo baz bazz", "get bazzz"},
+			cmds:       []string{"MSET foo foobar baz abcdef", "SETBIT bazz 8 1", "BITOP XOR bazzz foo baz bazz", "GET bazzz", "SETBIT bazz 8 0", "SETBIT bazz 49 1", "BITOP XOR bazzz foo baz bazz", "GET bazzz", "Setbit bazz 49 0", "BITOP XOR bazzz foo baz bazz", "GET bazzz"},
 			expected:   []interface{}{"OK", int64(0), int64(6), "\x07\x8d\x0c\x06\x04\x14", int64(1), int64(0), int64(7), "\x07\r\x0c\x06\x04\x14@", int64(1), int64(7), "\x07\r\x0c\x06\x04\x14\x00"},
 			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
 		},
