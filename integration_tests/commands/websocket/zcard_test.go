@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	testifyAssert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestZCARD(t *testing.T) {
@@ -63,8 +63,8 @@ func TestZCARD(t *testing.T) {
 					time.Sleep(tc.delays[i])
 				}
 				result, err := exec.FireCommandAndReadResponse(conn, cmd)
-				testifyAssert.Nil(t, err)
-				testifyAssert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
+				assert.Nil(t, err)
+				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
 			}
 		})
 	}

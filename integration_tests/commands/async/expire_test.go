@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestExpire(t *testing.T) {
@@ -232,10 +232,10 @@ func TestExpire(t *testing.T) {
 				}
 
 				if expected == "(nil)" {
-					assert.Assert(t, results[i] == "(nil)" || results[i] == "",
+					assert.True(t, results[i] == "(nil)" || results[i] == "",
 						"Expected nil or empty result, got %v", results[i])
 				} else {
-					assert.DeepEqual(t, expected, results[i])
+					assert.Equal(t, expected, results[i])
 				}
 			}
 		})

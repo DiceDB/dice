@@ -2,7 +2,7 @@ package http
 
 import (
 	"fmt"
-	testifyAssert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -98,7 +98,7 @@ func TestBitPos(t *testing.T) {
 			}
 
 			result, _ := exec.FireCommand(tc.inCmd)
-			testifyAssert.Equal(t, tc.out, result, "Mismatch for cmd %s\n", tc.inCmd)
+			assert.Equal(t, tc.out, result, "Mismatch for cmd %s\n", tc.inCmd)
 		})
 	}
 }
