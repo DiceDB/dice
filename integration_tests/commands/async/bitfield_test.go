@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	testifyAssert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBitfield(t *testing.T) {
@@ -245,7 +245,7 @@ func TestBitfield(t *testing.T) {
 				}
 				result := FireCommand(conn, tc.Commands[i])
 				expected := tc.Expected[i]
-				testifyAssert.Equal(t, expected, result)
+				assert.Equal(t, expected, result)
 			}
 
 			for _, cmd := range tc.CleanUp {
@@ -366,7 +366,7 @@ func TestBitfieldRO(t *testing.T) {
 				}
 				result := FireCommand(conn, tc.Commands[i])
 				expected := tc.Expected[i]
-				testifyAssert.Equal(t, expected, result)
+				assert.Equal(t, expected, result)
 			}
 
 			for _, cmd := range tc.CleanUp {

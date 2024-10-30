@@ -94,11 +94,20 @@ func startWebSocketServer() {
 // Helper to create a WebSocket connection for testing
 func createWebSocketConn(t *testing.T) *websocket.Conn {
 	once.Do(startWebSocketServer)
+	var conn *websocket.Conn
+  var err error
 
 	u := url.URL{Scheme: "ws", Host: serverAddr, Path: "/ws"}
-	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
-	if err != nil {
-		t.Fatalf("Failed to connect to WebSocket server: %v", err)
+
+	// Retry up to 5 times with a short delay
+	for i := 0; i < 5; i++ {
+			conn, _, err = websocket.DefaultDialer.Dial(u.String(), nil)
+			if err == nil {
+					return conn
+			}
+			time.Sleep(200 * time.Millisecond) // Adjust delay as necessary
 	}
-	return conn
+
+	t.Fatalf("Failed to connect to WebSocket server: %v", err)
+	return nil
 }

@@ -4,8 +4,7 @@ import (
 	"testing"
 
 	"github.com/dicedb/dice/testutils"
-	testifyAssert "github.com/stretchr/testify/assert"
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestJSONARRPOP(t *testing.T) {
@@ -169,14 +168,14 @@ func TestJSONARRPOP(t *testing.T) {
 
                 jsonResult, isString := result.(string)
 				if isString && testutils.IsJSONResponse(jsonResult) {
-					testifyAssert.JSONEq(t, tc.expected[i].(string), jsonResult)
+					assert.JSONEq(t, tc.expected[i].(string), jsonResult)
 					continue
 				}
 
 				if slice, ok := tc.expected[i].([]interface{}); ok {
-					assert.Assert(t, testutils.UnorderedEqual(slice, result))
+					assert.True(t, testutils.UnorderedEqual(slice, result))
 				} else {
-					assert.DeepEqual(t, tc.expected[i], result)
+					assert.Equal(t, tc.expected[i], result)
 				}
 			}
 		})

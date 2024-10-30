@@ -5,7 +5,7 @@ import (
 	"net"
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCommandList(t *testing.T) {
@@ -14,7 +14,7 @@ func TestCommandList(t *testing.T) {
 
 	t.Run("Command list should not be empty", func(t *testing.T) {
 		commandList := getCommandList(conn)
-		assert.Assert(t, len(commandList) > 0,
+		assert.True(t, len(commandList) > 0,
 			fmt.Sprintf("Unexpected number of CLI commands found. expected greater than 0, %d found", len(commandList)))
 	})
 }
