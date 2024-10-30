@@ -58,7 +58,7 @@ The `JSON.DEBUG` command can raise errors in the following scenarios:
 ### Example 1: Debugging Memory Usage of Entire JSON Data
 
 ```sh
-127.0.0.1:6379> JSON.DEBUG MEMORY myjson
+127.0.0.1:7379> JSON.DEBUG MEMORY myjson
 (integer) 256
 ```
 
@@ -67,7 +67,7 @@ In this example, the `JSON.DEBUG MEMORY` command is used to get the memory usage
 ### Example 2: Debugging Memory Usage of a Specific Path
 
 ```sh
-127.0.0.1:6379> JSON.DEBUG MEMORY myjson $.store.book[0]
+127.0.0.1:7379> JSON.DEBUG MEMORY myjson $.store.book[0]
 (integer) 64
 ```
 
@@ -76,7 +76,7 @@ In this example, the `JSON.DEBUG MEMORY` command is used to get the memory usage
 ### Example 3: Handling Non-Existent Key
 
 ```sh
-127.0.0.1:6379> JSON.DEBUG MEMORY nonExistentKey
+127.0.0.1:7379> JSON.DEBUG MEMORY nonExistentKey
 (error) ERR no such key
 ```
 
@@ -85,7 +85,7 @@ In this example, the `JSON.DEBUG MEMORY` command is used on a non-existent key `
 ### Example 4: Handling Invalid Path
 
 ```sh
-127.0.0.1:6379> JSON.DEBUG MEMORY myjson $.nonExistentPath
+127.0.0.1:7379> JSON.DEBUG MEMORY myjson $.nonExistentPath
 (error) ERR path '$.nonExistentPath' does not exist
 ```
 
