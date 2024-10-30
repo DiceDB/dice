@@ -30,6 +30,8 @@ Make the necessary changes. If the changes you plan to make are too big, make su
 
 Follow the best practices when you are making changes.
 
+- [Logging Best Practices](logging.md)
+
 ### Code documentation
 
 Please ensure your code is adequately documented. Some things to consider for documentation:
@@ -99,6 +101,7 @@ $ git add <updated files>
 $ git commit -m "Meaningful message for the update"
 # pull new changes
 $ git checkout master
+$ git fetch upstream
 $ git merge upstream/master
 $ git checkout <your issue branch>
 $ git rebase master

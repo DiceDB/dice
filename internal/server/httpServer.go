@@ -14,6 +14,8 @@ import (
 
 	"github.com/dicedb/dice/internal/eval"
 
+	"github.com/dicedb/dice/internal/server/abstractserver"
+
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/cmd"
@@ -34,10 +36,10 @@ var unimplementedCommands = map[string]bool{
 }
 
 type HTTPServer struct {
+	abstractserver.AbstractServer
 	shardManager       *shard.ShardManager
 	ioChan             chan *ops.StoreResponse
 	httpServer         *http.Server
-	logger             *slog.Logger
 	qwatchResponseChan chan comm.QwatchResponse
 	shutdownChan       chan struct{}
 }
@@ -59,7 +61,7 @@ func (cim *CaseInsensitiveMux) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	cim.mux.ServeHTTP(w, r)
 }
 
-func NewHTTPServer(shardManager *shard.ShardManager, logger *slog.Logger) *HTTPServer {
+func NewHTTPServer(shardManager *shard.ShardManager) *HTTPServer {
 	mux := http.NewServeMux()
 	caseInsensitiveMux := &CaseInsensitiveMux{mux: mux}
 	srv := &http.Server{
@@ -72,7 +74,6 @@ func NewHTTPServer(shardManager *shard.ShardManager, logger *slog.Logger) *HTTPS
 		shardManager:       shardManager,
 		ioChan:             make(chan *ops.StoreResponse, 1000),
 		httpServer:         srv,
-		logger:             logger,
 		qwatchResponseChan: make(chan comm.QwatchResponse),
 		shutdownChan:       make(chan struct{}),
 	}
@@ -91,7 +92,7 @@ func NewHTTPServer(shardManager *shard.ShardManager, logger *slog.Logger) *HTTPS
 
 func (s *HTTPServer) Run(ctx context.Context) error {
 	var wg sync.WaitGroup
-	var err error
+	var shutdownErr, listenErr error
 
 	httpCtx, cancelHTTP := context.WithCancel(ctx)
 	defer cancelHTTP()
@@ -104,14 +105,14 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 		case <-s.shutdownChan:
-			err = derrors.ErrAborted
-			s.logger.Debug("Shutting down HTTP Server")
+			shutdownErr = derrors.ErrAborted
+			slog.Debug("Shutting down HTTP Server")
 		}
 
-		shutdownErr := s.httpServer.Shutdown(httpCtx)
-		if shutdownErr != nil {
-			s.logger.Error("HTTP Server Shutdown Failed", slog.Any("error", err))
-			err = shutdownErr
+		err := s.httpServer.Shutdown(httpCtx)
+		if err != nil {
+			slog.Error("HTTP Server Shutdown Failed", slog.Any("error", err))
+			shutdownErr = err
 			return
 		}
 	}()
@@ -119,12 +120,17 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		s.logger.Info("HTTP Server running", slog.String("addr", s.httpServer.Addr))
-		err = s.httpServer.ListenAndServe()
+		slog.Info("also listening HTTP on", slog.String("port", s.httpServer.Addr[1:]))
+		listenErr = s.httpServer.ListenAndServe()
 	}()
 
 	wg.Wait()
-	return err
+	// Return the appropriate error
+	if shutdownErr != nil {
+		return shutdownErr
+	}
+
+	return listenErr
 }
 
 func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.Request) {
@@ -136,15 +142,15 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 		writer.WriteHeader(http.StatusBadRequest) // Set HTTP status code to 500
 		_, err = writer.Write(responseJSON)
 		if err != nil {
-			s.logger.Error("Error writing response", "error", err)
+			slog.Error("Error writing response", "error", err)
 		}
-		s.logger.Error("Error parsing HTTP request", slog.Any("error", err))
+		slog.Error("Error parsing HTTP request", slog.Any("error", err))
 		return
 	}
 
 	if diceDBCmd.Cmd == Abort {
-		s.logger.Debug("ABORT command received")
-		s.logger.Debug("Shutting down HTTP Server")
+		slog.Debug("ABORT command received")
+		slog.Debug("Shutting down HTTP Server")
 		close(s.shutdownChan)
 		return
 	}
@@ -155,9 +161,9 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 		writer.WriteHeader(http.StatusBadRequest) // Set HTTP status code to 500
 		_, err = writer.Write(responseJSON)
 		if err != nil {
-			s.logger.Error("Error writing response", "error", err)
+			slog.Error("Error writing response", "error", err)
 		}
-		s.logger.Error("Command %s is not implemented", slog.String("cmd", diceDBCmd.Cmd))
+		slog.Error("Command %s is not implemented", slog.String("cmd", diceDBCmd.Cmd))
 		return
 	}
 
@@ -180,12 +186,12 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 	diceDBCmd, err := utils.ParseHTTPRequest(request)
 	if err != nil {
 		http.Error(writer, "Error parsing HTTP request", http.StatusBadRequest)
-		s.logger.Error("Error parsing HTTP request", slog.Any("error", err))
+		slog.Error("Error parsing HTTP request", slog.Any("error", err))
 		return
 	}
 
 	if len(diceDBCmd.Args) < 1 {
-		s.logger.Error("Invalid request for QWATCH")
+		slog.Error("Invalid request for QWATCH")
 		http.Error(writer, "Invalid request for QWATCH", http.StatusBadRequest)
 		return
 	}
@@ -221,7 +227,7 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 		HTTPOp:   true,
 	}
 
-	s.logger.Info("Registered client for watching query", slog.Any("clientID", clientIdentifierID),
+	slog.Info("Registered client for watching query", slog.Any("clientID", clientIdentifierID),
 		slog.Any("query", qwatchQuery))
 	s.shardManager.GetShard(0).ReqChan <- storeOp
 
@@ -242,7 +248,7 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 			return
 		case <-doneChan:
 			// Client disconnected or request finished
-			s.logger.Info("Client disconnected")
+			slog.Info("Client disconnected")
 			unWatchCmd := &cmd.DiceDBCmd{
 				Cmd:  "Q.UNWATCH",
 				Args: []string{qwatchQuery},
@@ -269,7 +275,7 @@ func (s *HTTPServer) writeQWatchResponse(writer http.ResponseWriter, response in
 		result = resp.EvalResponse.Result
 		err = resp.EvalResponse.Error
 	default:
-		s.logger.Error("Unsupported response type")
+		slog.Error("Unsupported response type")
 		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -283,7 +289,7 @@ func (s *HTTPServer) writeQWatchResponse(writer http.ResponseWriter, response in
 
 	val, err := rp.DecodeOne()
 	if err != nil {
-		s.logger.Error("Error decoding response: %v", slog.Any("error", err))
+		slog.Error("Error decoding response: %v", slog.Any("error", err))
 		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -306,7 +312,7 @@ func (s *HTTPServer) writeQWatchResponse(writer http.ResponseWriter, response in
 	}
 
 	if err != nil {
-		s.logger.Error("Error marshaling QueryData to JSON: %v", slog.Any("error", err))
+		slog.Error("Error marshaling QueryData to JSON: %v", slog.Any("error", err))
 		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -314,7 +320,7 @@ func (s *HTTPServer) writeQWatchResponse(writer http.ResponseWriter, response in
 	// Format the response as SSE event
 	_, err = writer.Write(responseJSON)
 	if err != nil {
-		s.logger.Error("Error writing SSE data: %v", slog.Any("error", err))
+		slog.Error("Error writing SSE data: %v", slog.Any("error", err))
 		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -341,9 +347,9 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.Store
 	_, ok := WorkerCmdsMeta[diceDBCmd.Cmd]
 	// TODO: Remove this conditional check and if (true) condition when all commands are migrated
 	if !ok {
-		responseValue, err = decodeEvalResponse(result.EvalResponse)
+		responseValue, err = DecodeEvalResponse(result.EvalResponse)
 		if err != nil {
-			s.logger.Error("Error decoding response", "error", err)
+			slog.Error("Error decoding response", "error", err)
 			httpResponse = utils.HTTPResponse{Status: utils.HTTPStatusError, Data: "Internal Server Error"}
 			writeJSONResponse(writer, httpResponse, http.StatusInternalServerError)
 			return
@@ -358,7 +364,7 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.Store
 	}
 
 	// Create the HTTP response
-	httpResponse = createHTTPResponse(responseValue)
+	httpResponse = utils.HTTPResponse{Data: ResponseParser(responseValue)}
 	if isDiceErr {
 		httpResponse.Status = utils.HTTPStatusError
 	} else {
@@ -367,24 +373,6 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.Store
 
 	// Write the response back to the client
 	writeJSONResponse(writer, httpResponse, http.StatusOK)
-}
-
-// Helper function to decode EvalResponse based on the error or result
-func decodeEvalResponse(evalResp *eval.EvalResponse) (interface{}, error) {
-	var rp *clientio.RESPParser
-
-	if evalResp.Error != nil {
-		rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(evalResp.Error.Error())))
-	} else {
-		rp = clientio.NewRESPParser(bytes.NewBuffer(evalResp.Result.([]byte)))
-	}
-
-	res, err := rp.DecodeOne()
-	if err != nil {
-		return nil, err
-	}
-
-	return replaceNilInInterface(res), nil
 }
 
 // Helper function to write the JSON response
@@ -405,18 +393,9 @@ func writeJSONResponse(writer http.ResponseWriter, response utils.HTTPResponse, 
 	}
 }
 
-func createHTTPResponse(responseValue interface{}) utils.HTTPResponse {
-	respArr := []string{
-		"(nil)",  // Represents a RESP Nil Bulk String, which indicates a null value.
-		"OK",     // Represents a RESP Simple String with value "OK".
-		"QUEUED", // Represents a Simple String indicating that a command has been queued.
-		"0",      // Represents a RESP Integer with value 0.
-		"1",      // Represents a RESP Integer with value 1.
-		"-1",     // Represents a RESP Integer with value -1.
-		"-2",     // Represents a RESP Integer with value -2.
-		"*0",     // Represents an empty RESP Array.
-	}
-
+// ResponseParser parses the response value for both migrated and non-migrated cmds and
+// returns response to be rendered for HTTP/WS response
+func ResponseParser(responseValue interface{}) interface{} {
 	switch v := responseValue.(type) {
 	case []interface{}:
 		// Parses []interface{} as part of EvalResponse e.g. JSON.ARRPOP
@@ -425,35 +404,35 @@ func createHTTPResponse(responseValue interface{}) utils.HTTPResponse {
 		r := make([]interface{}, 0, len(v))
 		for _, resp := range v {
 			if val, ok := resp.(clientio.RespType); ok {
-				if stringNil == respArr[val] {
+				if stringNil == RespTypeToValue(val) {
 					r = append(r, nil)
 				} else {
-					r = append(r, respArr[val])
+					r = append(r, RespTypeToValue(val))
 				}
 			} else {
 				r = append(r, resp)
 			}
 		}
-		return utils.HTTPResponse{Data: r}
+		return r
 
 	case []byte:
-		return utils.HTTPResponse{Data: string(v)}
+		return string(v)
 
 	case clientio.RespType:
-		responseValue = respArr[v]
+		responseValue = RespTypeToValue(v)
 		if responseValue == stringNil {
 			responseValue = nil // in order to convert it in json null
 		}
 
-		return utils.HTTPResponse{Data: responseValue}
+		return responseValue
 
 	case interface{}:
 		if val, ok := v.(clientio.RespType); ok {
-			return utils.HTTPResponse{Data: respArr[val]}
+			return RespTypeToValue(val)
 		}
 	}
 
-	return utils.HTTPResponse{Data: responseValue}
+	return responseValue
 }
 
 func generateUniqueInt32(r *http.Request) uint32 {
@@ -465,6 +444,24 @@ func generateUniqueInt32(r *http.Request) uint32 {
 
 	// Hash the string using CRC32 and cast it to an int32
 	return crc32.ChecksumIEEE([]byte(sb.String()))
+}
+
+// DecodeEvalResponse Helper function to decode EvalResponse based on the error or result
+func DecodeEvalResponse(evalResp *eval.EvalResponse) (interface{}, error) {
+	var rp *clientio.RESPParser
+
+	if evalResp.Error != nil {
+		rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(evalResp.Error.Error())))
+	} else {
+		rp = clientio.NewRESPParser(bytes.NewBuffer(evalResp.Result.([]byte)))
+	}
+
+	res, err := rp.DecodeOne()
+	if err != nil {
+		return nil, err
+	}
+
+	return replaceNilInInterface(res), nil
 }
 
 func replaceNilInInterface(data interface{}) interface{} {
@@ -490,4 +487,31 @@ func replaceNilInInterface(data interface{}) interface{} {
 		// For other types, return as is
 		return data
 	}
+}
+
+func RespTypeToValue(respType clientio.RespType) interface{} {
+	var respArrString = map[clientio.RespType]string{
+		clientio.NIL:           "(nil)",  // Represents a RESP Nil Bulk String, which indicates a null value.
+		clientio.OK:            "OK",     // Represents a RESP Simple String with value "OK".
+		clientio.CommandQueued: "QUEUED", // Represents a Simple String indicating that a command has been queued.
+		clientio.EmptyArray:    "*0",     // Represents an empty RESP Array.
+	}
+
+	var respArrInt = map[clientio.RespType]float64{
+		clientio.IntegerZero:        0,  // Represents a RESP Integer with value 0.
+		clientio.IntegerOne:         1,  // Represents a RESP Integer with value 1.
+		clientio.IntegerNegativeOne: -1, // Represents a RESP Integer with value -1.
+		clientio.IntegerNegativeTwo: -2, // Represents a RESP Integer with value -2.
+	}
+
+	if val, exists := respArrString[respType]; exists {
+		return val
+	}
+	// Check if respType exists in respArrInt map
+	if val, exists := respArrInt[respType]; exists {
+		return val
+	}
+
+	// Default to nil if respType is not recognized
+	return nil
 }

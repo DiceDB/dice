@@ -1,11 +1,14 @@
 package utils
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/dicedb/dice/internal/cmd"
@@ -13,24 +16,27 @@ import (
 )
 
 const (
-	Key         = "key"
-	Keys        = "keys"
-	KeyPrefix   = "key_prefix"
-	Field       = "field"
-	Path        = "path"
-	Value       = "value"
-	Values      = "values"
-	User        = "user"
-	Password    = "password"
-	Seconds     = "seconds"
-	KeyValues   = "key_values"
-	True        = "true"
-	QwatchQuery = "query"
-	Offset      = "offset"
-	Member      = "member"
-	Members     = "members"
-	Index       = "index"
-	JSON        = "json"
+	Key              = "key"
+	Keys             = "keys"
+	KeyPrefix        = "key_prefix"
+	Field            = "field"
+	Path             = "path"
+	Value            = "value"
+	Values           = "values"
+	User             = "user"
+	Password         = "password"
+	Seconds          = "seconds"
+	KeyValues        = "key_values"
+	True             = "true"
+	QwatchQuery      = "query"
+	Offset           = "offset"
+	Member           = "member"
+	Members          = "members"
+	Index            = "index"
+	JSON             = "json"
+	QWatch           = "Q.WATCH"
+	ABORT            = "ABORT"
+	IsByteEncodedVal = "isByteEncodedVal"
 )
 
 func ParseHTTPRequest(r *http.Request) (*cmd.DiceDBCmd, error) {
@@ -73,7 +79,7 @@ func ParseHTTPRequest(r *http.Request) (*cmd.DiceDBCmd, error) {
 				return nil, err
 			}
 
-			if len(jsonBody) == 0 {
+			if len(jsonBody) == 0 && command != ABORT {
 				return nil, fmt.Errorf("empty JSON object")
 			}
 
@@ -117,16 +123,52 @@ func ParseHTTPRequest(r *http.Request) (*cmd.DiceDBCmd, error) {
 }
 
 func ParseWebsocketMessage(msg []byte) (*cmd.DiceDBCmd, error) {
-	cmdStr := string(msg)
-	cmdStr = strings.TrimSpace(cmdStr)
-
+	cmdStr := strings.TrimSpace(string(msg))
 	if cmdStr == "" {
 		return nil, diceerrors.ErrEmptyCommand
 	}
 
-	cmdArr := strings.Split(cmdStr, " ")
-	command := strings.ToUpper(cmdArr[0])
-	cmdArr = cmdArr[1:] // args
+	var command string
+	idx := strings.Index(cmdStr, " ")
+	// handle commands with no args
+	if idx == -1 {
+		command = strings.ToUpper(cmdStr)
+		return &cmd.DiceDBCmd{
+			Cmd:  command,
+			Args: nil,
+		}, nil
+	}
+
+	// handle commands with args
+	command = strings.ToUpper(cmdStr[:idx])
+	cmdStr = cmdStr[idx+1:]
+
+	regexPattern := `"(.*?)"|'(.*?)'|(\S+)`
+	re := regexp.MustCompile(regexPattern)
+	matches := re.FindAllStringSubmatch(cmdStr, -1)
+
+	var cmdArr []string // args
+
+	// handle qwatch commands
+	if command == QWatch {
+		// remove quotes from query string
+		cmdStr, err := strconv.Unquote(cmdStr)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing q.watch query: %v", err)
+		}
+		cmdArr = []string{cmdStr}
+	} else {
+		// handle other commands
+		for _, match := range matches {
+			if match[1] != "" {
+				cmdArr = append(cmdArr, match[1])
+			} else if match[2] != "" {
+				cmdArr = append(cmdArr, match[2])
+			} else {
+				cmdArr = append(cmdArr, match[3])
+			}
+		}
+	}
 
 	// if key prefix is empty for JSON.INGEST command
 	// add "" to cmdArr
@@ -156,7 +198,13 @@ func processPriorityKeys(jsonBody map[string]interface{}, args *[]string) {
 					*args = append(*args, k, fmt.Sprintf("%v", v))
 				}
 			case Value:
-				*args = append(*args, formatValue(val))
+				if _, ok := jsonBody[IsByteEncodedVal]; ok {
+					*args = append(*args, formatValue(true, val))
+				} else {
+					*args = append(*args, formatValue(false, val))
+				}
+				// Delete the byte encoded val key as it's not required once value is decoded
+				delete(jsonBody, IsByteEncodedVal)
 			case Values:
 				for _, v := range val.([]interface{}) {
 					*args = append(*args, fmt.Sprintf("%v", v))
@@ -176,12 +224,31 @@ func getPriorityKeys() []string {
 	}
 }
 
-func formatValue(val interface{}) string {
+func formatValue(isByteEncodedVal bool, val interface{}) string {
 	switch v := val.(type) {
 	case string:
+		if isByteEncodedVal && isBase64Encoded(v) {
+			decoded, err := base64.StdEncoding.DecodeString(v)
+			if err == nil {
+				// Replace the base64 string with the decoded `[]byte`
+				return string(decoded)
+			}
+		}
 		return v
 	default:
 		jsonBytes, _ := json.Marshal(v)
 		return string(jsonBytes)
 	}
+}
+
+func isBase64Encoded(s string) bool {
+	if len(s)%4 == 0 && s != "" {
+		for _, r := range s {
+			if !(r >= 'A' && r <= 'Z') && !(r >= 'a' && r <= 'z') && !(r >= '0' && r <= '9') && r != '+' && r != '/' && r != '=' {
+				return false
+			}
+		}
+		return true
+	}
+	return false
 }

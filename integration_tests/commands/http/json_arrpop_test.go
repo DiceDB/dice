@@ -120,7 +120,7 @@ func TestJSONARRPOP(t *testing.T) {
 					Body:    map[string]interface{}{"key": "k", "path": "$..invalid*path", "index": "1"},
 				},
 			},
-			expected: []interface{}{"OK", "ERR invalid JSONPath"},
+			expected: []interface{}{"OK", "ERR Path '$..invalid*path' does not exist"},
 		},
 		{
 			name: "key doesn't exist error",
@@ -130,7 +130,7 @@ func TestJSONARRPOP(t *testing.T) {
 					Body:    map[string]interface{}{"key": "doc_new"},
 				},
 			},
-			expected: []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
+			expected: []interface{}{"ERR no such key"},
 		},
 		{
 			name: "arr pop on wrong key type",
@@ -144,7 +144,7 @@ func TestJSONARRPOP(t *testing.T) {
 					Body:    map[string]interface{}{"key": "doc_new"},
 				},
 			},
-			expected: []interface{}{"OK", "ERR Existing key has wrong Dice type"},
+			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
 		},
 		{
 			name: "nil response for arr pop",
@@ -166,8 +166,8 @@ func TestJSONARRPOP(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.commands {
 				result, _ := exec.FireCommand(cmd)
-				jsonResult, isString := result.(string)
 
+                jsonResult, isString := result.(string)
 				if isString && testutils.IsJSONResponse(jsonResult) {
 					testifyAssert.JSONEq(t, tc.expected[i].(string), jsonResult)
 					continue

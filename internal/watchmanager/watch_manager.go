@@ -18,16 +18,15 @@ type (
 	}
 
 	Manager struct {
-		querySubscriptionMap map[string]map[uint32]struct{}              // querySubscriptionMap is a map of Key -> [fingerprint1, fingerprint2, ...]
-		tcpSubscriptionMap   map[uint32]map[chan *cmd.DiceDBCmd]struct{} // tcpSubscriptionMap is a map of fingerprint -> [client1Chan, client2Chan, ...]
-		fingerprintCmdMap    map[uint32]*cmd.DiceDBCmd                   // fingerprintCmdMap is a map of fingerprint -> DiceDBCmd
-		logger               *slog.Logger
+		querySubscriptionMap     map[string]map[uint32]struct{}              // querySubscriptionMap is a map of Key -> [fingerprint1, fingerprint2, ...]
+		tcpSubscriptionMap       map[uint32]map[chan *cmd.DiceDBCmd]struct{} // tcpSubscriptionMap is a map of fingerprint -> [client1Chan, client2Chan, ...]
+		fingerprintCmdMap        map[uint32]*cmd.DiceDBCmd                   // fingerprintCmdMap is a map of fingerprint -> DiceDBCmd
+		cmdWatchSubscriptionChan chan WatchSubscription                      // cmdWatchSubscriptionChan is the channel to send/receive watch subscription requests.
 	}
 )
 
 var (
-	CmdWatchSubscriptionChan chan WatchSubscription
-	affectedCmdMap           = map[string]map[string]struct{}{
+	affectedCmdMap = map[string]map[string]struct{}{
 		dstore.Set:    {dstore.Get: struct{}{}},
 		dstore.Del:    {dstore.Get: struct{}{}},
 		dstore.Rename: {dstore.Get: struct{}{}},
@@ -35,13 +34,12 @@ var (
 	}
 )
 
-func NewManager(logger *slog.Logger) *Manager {
-	CmdWatchSubscriptionChan = make(chan WatchSubscription)
+func NewManager(cmdWatchSubscriptionChan chan WatchSubscription) *Manager {
 	return &Manager{
-		querySubscriptionMap: make(map[string]map[uint32]struct{}),
-		tcpSubscriptionMap:   make(map[uint32]map[chan *cmd.DiceDBCmd]struct{}),
-		fingerprintCmdMap:    make(map[uint32]*cmd.DiceDBCmd),
-		logger:               logger,
+		querySubscriptionMap:     make(map[string]map[uint32]struct{}),
+		tcpSubscriptionMap:       make(map[uint32]map[chan *cmd.DiceDBCmd]struct{}),
+		fingerprintCmdMap:        make(map[uint32]*cmd.DiceDBCmd),
+		cmdWatchSubscriptionChan: cmdWatchSubscriptionChan,
 	}
 }
 
@@ -65,7 +63,7 @@ func (m *Manager) listenForEvents(ctx context.Context, cmdWatchChan chan dstore.
 		select {
 		case <-ctx.Done():
 			return
-		case sub := <-CmdWatchSubscriptionChan:
+		case sub := <-m.cmdWatchSubscriptionChan:
 			if sub.Subscribe {
 				m.handleSubscription(sub)
 			} else {
@@ -137,7 +135,7 @@ func (m *Manager) handleWatchEvent(event dstore.CmdWatchEvent) {
 
 	affectedCommands, cmdExists := affectedCmdMap[event.Cmd]
 	if !cmdExists {
-		m.logger.Error("Received a watch event for an unknown command type",
+		slog.Error("Received a watch event for an unknown command type",
 			slog.String("cmd", event.Cmd))
 		return
 	}
@@ -159,7 +157,7 @@ func (m *Manager) handleWatchEvent(event dstore.CmdWatchEvent) {
 func (m *Manager) notifyClients(fingerprint uint32, diceDBCmd *cmd.DiceDBCmd) {
 	clients, exists := m.tcpSubscriptionMap[fingerprint]
 	if !exists {
-		m.logger.Warn("No clients found for fingerprint",
+		slog.Warn("No clients found for fingerprint",
 			slog.Uint64("fingerprint", uint64(fingerprint)))
 		return
 	}

@@ -31,22 +31,22 @@ func TestZRANK(t *testing.T) {
 		{
 			name:     "ZRANK of non-existing member",
 			commands: []string{"ZRANK myset member6"},
-			expected: []interface{}{"(nil)"},
+			expected: []interface{}{nil},
 		},
 		{
 			name:     "ZRANK with WITHSCORE option for existing member",
 			commands: []string{"ZRANK myset member3 WITHSCORE"},
-			expected: []interface{}{[]interface{}{float64(2), float64(3)}},
+			expected: []interface{}{[]interface{}{float64(2), "3"}},
 		},
 		{
 			name:     "ZRANK with WITHSCORE option for non-existing member",
 			commands: []string{"ZRANK myset member6 WITHSCORE"},
-			expected: []interface{}{"(nil)"},
+			expected: []interface{}{nil},
 		},
 		{
 			name:     "ZRANK on non-existing myset",
 			commands: []string{"ZRANK nonexisting member1"},
-			expected: []interface{}{"(nil)"},
+			expected: []interface{}{nil},
 		},
 		{
 			name:     "ZRANK with wrong number of arguments",

@@ -27,7 +27,7 @@ func decomposeRename(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*
 	var val string
 	select {
 	case <-ctx.Done():
-		w.logger.Error("Timed out waiting for response from shards", slog.String("workerID", w.id), slog.Any("error", ctx.Err()))
+		slog.Error("Timed out waiting for response from shards", slog.String("workerID", w.id), slog.Any("error", ctx.Err()))
 	case preProcessedResp, ok := <-w.preprocessingChan:
 		if ok {
 			evalResp := preProcessedResp.EvalResponse
@@ -66,7 +66,7 @@ func decomposeCopy(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cm
 	var val string
 	select {
 	case <-ctx.Done():
-		w.logger.Error("Timed out waiting for response from shards", slog.String("workerID", w.id), slog.Any("error", ctx.Err()))
+		slog.Error("Timed out waiting for response from shards", slog.String("workerID", w.id), slog.Any("error", ctx.Err()))
 	case preProcessedResp, ok := <-w.preprocessingChan:
 		if ok {
 			evalResp := preProcessedResp.EvalResponse

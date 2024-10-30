@@ -1,91 +1,83 @@
 ---
 title: SMEMBERS
-description: Documentation for the DiceDB command SMEMBERS
+description: The SMEMBERS command retrieves all members from a set stored at a specified key in DiceDB. Sets are unordered collections of unique strings, and this command provides a way to access all elements within a set for inspection or processing.
 ---
 
-The `SMEMBERS` command in DiceDB is used to retrieve all the members of a set stored at a specified key. Sets in DiceDB are unordered collections of unique strings. This command is useful for obtaining the entire set of elements for further processing or inspection.
+The `SMEMBERS` command retrieves all members from a set stored at a specified key in DiceDB. Sets are unordered collections of unique strings, and this command provides a way to access all elements within a set for inspection or processing.
 
 ## Syntax
 
-```
+```bash
 SMEMBERS key
 ```
 
 ## Parameters
+| Parameter | Description                                         | Type   | Required |
+|-----------|-----------------------------------------------------|--------|----------|
+| key       | The key identifying the set to retrieve members from | string | Yes      |
 
-- `key`: The key of the set from which you want to retrieve all members. This parameter is required and must be a valid string.
-
-## Return Value
-
-The `SMEMBERS` command returns an array of all the members in the set stored at the specified key. If the key does not exist, an empty array is returned.
+## Return values
+| Condition                        | Return Value                                             |
+|----------------------------------|----------------------------------------------------------|
+| Key exists and is a set          | Array containing all members of the set                  |
+| Key does not exist               | Empty array                                              |
+| Key exists but is not a set      | Error message indicating wrong type                      |
 
 ## Behaviour
+- Checks if the provided key exists in the database
+- Verifies if the key is associated with a set data structure
+- If key exists and is a set, retrieves all members from the set
+- Returns an empty array if the key doesn't exist
+- Returns error if key exists but holds a different data type
+- The order of elements in the returned array is not guaranteed to be consistent
 
-When the `SMEMBERS` command is executed:
-
-1. DiceDB checks if the key exists.
-2. If the key exists and is of type set, DiceDB retrieves all the members of the set.
-3. If the key does not exist, DiceDB returns an empty array.
-4. If the key exists but is not of type set, an error is returned.
-
-## Error Handling
-
-The `SMEMBERS` command can raise the following errors:
-
-- `WRONGTYPE Operation against a key holding the wrong kind of value`: This error occurs if the key exists but is not associated with a set. DiceDB expects the key to be of type set, and if it is not, this error is raised.
+## Errors
+1. `Wrong type of key`:
+   - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
+   - Occurs when attempting to use SMEMBERS on a key that contains a non-set value
 
 ## Example Usage
 
-### Example 1: Retrieving Members from an Existing Set
-
-```DiceDB
-SADD myset "apple" "banana" "cherry"
-SMEMBERS myset
-```
-
-`Output:`
-
-```
+### Basic Usage
+```bash
+127.0.0.1:7379> SADD myset "apple" "banana" "cherry"
+(integer) 3
+127.0.0.1:7379> SMEMBERS myset
 1) "apple"
 2) "banana"
 3) "cherry"
 ```
 
-### Example 2: Retrieving Members from a Non-Existent Set
-
-```DiceDB
-SMEMBERS nonexistentset
-```
-
-`Output:`
-
-```
+### Empty Set
+```bash
+127.0.0.1:7379> SMEMBERS nonexistentset
 (empty array)
 ```
 
-### Example 3: Error Case - Key Exists but is Not a Set
-
-```DiceDB
-SET mystring "hello"
-SMEMBERS mystring
+### Invalid Usage
+```bash
+127.0.0.1:7379> SMEMBERS
+(error) ERR wrong number of arguments for 'smembers' command
 ```
 
-`Output:`
-
-```
+### Wrong Type Error
+```bash
+127.0.0.1:7379> SET mystring "hello"
+OK
+127.0.0.1:7379> SMEMBERS mystring
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
-## Notes
-
-- The order of elements returned by `SMEMBERS` is not guaranteed to be consistent. Sets in DiceDB are unordered collections, so the order of elements may vary.
-- For large sets, consider using the `SSCAN` command to iterate over the set incrementally to avoid blocking the DiceDB server for a long time.
-
 ## Best Practices
+1. Always verify the key type before using SMEMBERS to avoid type errors
+2. Implement proper error handling in your application for WRONGTYPE errors
+3. Use EXISTS command to check for key presence before SMEMBERS if key existence is uncertain
+<!--  TODO: uncomment when SSCAN is implemented -->
+<!-- 4. For large sets, consider using SSCAN instead of SMEMBERS to avoid blocking operations -->
 
-- Always ensure that the key you are querying with `SMEMBERS` is of type set to avoid type errors.
-- Use `EXISTS` command to check if a key exists before using `SMEMBERS` if you are unsure about the key's existence.
-- For very large sets, prefer using `SSCAN` to avoid performance issues.
 
-By following this documentation, you should be able to effectively use the `SMEMBERS` command in DiceDB to retrieve all members of a set.
-
+## Notes
+1. The command returns all members at once, which may impact performance for very large sets
+2. The order of returned elements is not guaranteed and may vary between calls
+3. Memory usage scales linearly with the size of the set
+4. This command has O(N) time complexity where N is the set size
