@@ -83,7 +83,6 @@ func printSplash() {
 	██████╔╝██║╚██████╗███████╗██████╔╝██████╔╝
 	╚═════╝ ╚═╝ ╚═════╝╚══════╝╚═════╝ ╚═════╝
 			
-			Lets Roll!!!
 	`)
 }
 
@@ -111,6 +110,12 @@ func configuration() {
 
 	// Add whether the watch feature is enabled to the configuration table
 	addEntry("Watch Enabled", config.EnableWatch)
+
+	// Add whether the watch feature is enabled to the configuration table
+	addEntry("HTTP Enabled", config.EnableHTTP)
+
+	// Add whether the watch feature is enabled to the configuration table
+	addEntry("Websocket Enabled", config.EnableWebsocket)
 }
 
 func addEntry(k string, v interface{}) {
