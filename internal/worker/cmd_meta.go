@@ -78,6 +78,8 @@ const (
 	CmdZRange        = "ZRANGE"
 	CmdZRank         = "ZRANK"
 	CmdZCount        = "ZCOUNT"
+	CmdZRem          = "ZREM"
+ 	CmdZCard         = "ZCARD"
 	CmdPFAdd         = "PFADD"
 	CmdPFCount       = "PFCOUNT"
 	CmdPFCountWatch  = "PFCOUNT.WATCH"
@@ -288,6 +290,12 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdZRange: {
+		CmdType: SingleShard,
+	},
+	CmdZCard: {
+		CmdType: SingleShard,
+	},
+	CmdZRem: {
 		CmdType: SingleShard,
 	},
 	CmdAppend: {

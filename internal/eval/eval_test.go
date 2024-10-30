@@ -112,6 +112,8 @@ func TestEval(t *testing.T) {
 	testEvalZPOPMAX(t, store)
 	testEvalZPOPMIN(t, store)
 	testEvalZRANK(t, store)
+	testEvalZCARD(t, store)
+	testEvalZREM(t, store)
 	testEvalHVALS(t, store)
 	testEvalBitField(t, store)
 	testEvalHINCRBYFLOAT(t, store)
@@ -304,6 +306,51 @@ func testEvalSET(t *testing.T, store *dstore.Store) {
 			name:           "key val pair and valid PXAT",
 			input:          []string{"KEY", "VAL", Pxat, strconv.FormatInt(time.Now().Add(2*time.Minute).UnixMilli(), 10)},
 			migratedOutput: EvalResponse{Result: clientio.OK, Error: nil},
+		},
+		{
+			name: 		 "key val pair and invalid EX and PX",
+			input: 		 []string{"KEY", "VAL", Ex, "2", Px, "2000"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
+		},
+		{
+			name:           "key val pair and invalid EX and PXAT",
+			input:          []string{"KEY", "VAL", Ex, "2", Pxat, "2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
+		},
+		{
+			name:           "key val pair and invalid PX and PXAT",
+			input:          []string{"KEY", "VAL", Px, "2000", Pxat, "2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
+		},
+		{
+			name:           "key val pair and KeepTTL",
+			input:          []string{"KEY", "VAL", KeepTTL},
+			migratedOutput: EvalResponse{Result: clientio.OK, Error: nil},
+		},
+		{
+			name:           "key val pair and invalid KeepTTL",
+			input:          []string{"KEY", "VAL", KeepTTL, "2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
+		},
+		{
+			name:           "key val pair and KeepTTL, EX",
+			input:          []string{"KEY", "VAL", Ex, "2", KeepTTL},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
+		},
+		{
+			name:           "key val pair and KeepTTL, PX",
+			input:          []string{"KEY", "VAL", Px, "2000", KeepTTL},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
+		},
+		{
+			name:           "key val pair and KeepTTL, PXAT",
+			input:          []string{"KEY", "VAL", Pxat, strconv.FormatInt(time.Now().Add(2*time.Minute).UnixMilli(), 10), KeepTTL},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
+		},
+		{
+			name:           "key val pair and KeepTTL, invalid PXAT",
+			input:          []string{"KEY", "VAL", Pxat, "invalid_expiry_val", KeepTTL},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")},
 		},
 	}
 
@@ -6621,6 +6668,74 @@ func testEvalZRANK(t *testing.T, store *dstore.Store) {
 	runMigratedEvalTests(t, tests, evalZRANK, store)
 }
 
+func testEvalZREM(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"ZREM with wrong number of arguments": {
+			input: []string{"myzset"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("ZREM"),
+			},
+		},
+		"ZREM with missing key": {
+			input: []string{},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("ZREM"),
+			},
+		},
+		"ZREM with wrong type key": {
+			setup: func() {
+				store.Put("string_key", store.NewObj("string_value", -1, object.ObjTypeString, object.ObjEncodingRaw))
+			},
+			input: []string{"string_key", "field"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			},
+		},
+		"ZREM with non-existent key": {
+			input: []string{"non_existent_key", "field"},
+			migratedOutput: EvalResponse{
+				Result: clientio.IntegerZero,
+				Error:  nil,
+			},
+		},
+		"ZREM with non-existent element": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "one"}, store)
+			},
+			input: []string{"myzset", "two"},
+			migratedOutput: EvalResponse{
+				Result: int64(0),
+				Error:  nil,
+			},
+		},
+		"ZREM with sorted set holding single element": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "one"}, store)
+			},
+			input: []string{"myzset", "one"},
+			migratedOutput: EvalResponse{
+				Result: int64(1),
+				Error:  nil,
+			},
+		},
+		"ZREM with sorted set holding multiple elements": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "one", "2", "two", "3", "three"}, store)
+			},
+			input: []string{"myzset", "one", "two"},
+			migratedOutput: EvalResponse{
+				Result: int64(2),
+				Error:  nil,
+			},
+		},
+	}
+
+	runMigratedEvalTests(t, tests, evalZREM, store)
+}
+
 func BenchmarkEvalZRANK(b *testing.B) {
 	store := dstore.NewStore(nil, nil)
 
@@ -6644,6 +6759,64 @@ func BenchmarkEvalZRANK(b *testing.B) {
 			}
 		})
 	}
+}
+
+func testEvalZCARD(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"ZCARD with wrong number of arguments": {
+			input: []string{"myzset", "field"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("ZCARD"),
+			},
+		},
+		"ZCARD with missing key": {
+			input: []string{},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("ZCARD"),
+			},
+		},
+		"ZCARD with wrong type key": {
+			setup: func() {
+				store.Put("string_key", store.NewObj("string_value", -1, object.ObjTypeString, object.ObjEncodingRaw))
+			},
+			input: []string{"string_key"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			},
+		},
+		"ZCARD with non-existent key": {
+			input: []string{"non_existent_key"},
+			migratedOutput: EvalResponse{
+				Result: clientio.IntegerZero,
+				Error:  nil,
+			},
+		},
+		"ZCARD with sorted set holding single element": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "one"}, store)
+			},
+			input: []string{"myzset"},
+			migratedOutput: EvalResponse{
+				Result: int64(1),
+				Error:  nil,
+			},
+		},
+		"ZCARD with sorted set holding multiple elements": {
+			setup: func() {
+				evalZADD([]string{"myzset", "1", "one", "2", "two", "3", "three"}, store)
+			},
+			input: []string{"myzset"},
+			migratedOutput: EvalResponse{
+				Result: int64(3),
+				Error:  nil,
+			},
+		},
+	}
+
+	runMigratedEvalTests(t, tests, evalZCARD, store)
 }
 
 func testEvalBitField(t *testing.T, store *dstore.Store) {

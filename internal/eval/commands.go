@@ -260,9 +260,9 @@ var (
 		Retrieves the keys of a JSON object stored at path specified.
 		Null reply: If the key doesn't exist or has expired.
 		Error reply: If the number of arguments is incorrect or the stored value is not a JSON type.`,
-		NewEval:  evalJSONOBJKEYS,
+		NewEval:    evalJSONOBJKEYS,
 		IsMigrated: true,
-		Arity: 2,
+		Arity:      2,
 	}
 	jsonarrpopCmdMeta = DiceCmdMeta{
 		Name: "JSON.ARRPOP",
@@ -294,10 +294,10 @@ var (
 		Returns nil if the matching JSON value is not an array.
 		Returns error response if the key doesn't exist or key is expired or the matching value is not an array.
 		Error reply: If the number of arguments is incorrect.`,
-		NewEval:     evalJSONARRINSERT,
+		NewEval:    evalJSONARRINSERT,
 		IsMigrated: true,
-		Arity:    -5,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -5,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	jsonrespCmdMeta = DiceCmdMeta{
 		Name: "JSON.RESP",
@@ -314,9 +314,9 @@ var (
 		Returns an array of integer replies for each path.
 		Returns error response if the key doesn't exist or key is expired.
 		Error reply: If the number of arguments is incorrect.`,
-		NewEval:  evalJSONARRTRIM,
+		NewEval:    evalJSONARRTRIM,
 		IsMigrated: true,
-		Arity: -5,
+		Arity:      -5,
 	}
 	ttlCmdMeta = DiceCmdMeta{
 		Name: "TTL",
@@ -1138,9 +1138,9 @@ var (
 	zpopminCmdMeta = DiceCmdMeta{
 		Name: "ZPOPMIN",
 		Info: `ZPOPMIN key [count]
-		Removes and returns the member with the lowest score from the sorted set at the specified key. 
-		If multiple members have the same score, the one that comes first alphabetically is returned. 
-		You can also specify a count to remove and return multiple members at once. 
+		Removes and returns the member with the lowest score from the sorted set at the specified key.
+		If multiple members have the same score, the one that comes first alphabetically is returned.
+		You can also specify a count to remove and return multiple members at once.
 		If the set is empty, it returns an empty result.`,
 		Arity:      -1,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
@@ -1157,6 +1157,25 @@ var (
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 		IsMigrated: true,
 		NewEval:    evalZRANK,
+	}
+	zcardCmdMeta = DiceCmdMeta{
+		Name: "ZCARD",
+		Info: `ZCARD key
+		Returns the sorted set cardinality (number of elements) of the sorted set stored at key.`,
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalZCARD,
+	}
+	zremCmdMeta = DiceCmdMeta{
+		Name: "ZREM",
+		Info: `ZREM key member [member ...]
+		Removes the specified members from the sorted set stored at key. Non existing members are ignored.
+		An error is returned when key exists and does not hold a sorted set.`,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalZREM,
 	}
 	bitfieldCmdMeta = DiceCmdMeta{
 		Name: "BITFIELD",
@@ -1184,7 +1203,7 @@ var (
 	}
 	bitfieldroCmdMeta = DiceCmdMeta{
 		Name: "BITFIELD_RO",
-		Info: `It is read-only variant of the BITFIELD command. 
+		Info: `It is read-only variant of the BITFIELD command.
 		It is like the original BITFIELD but only accepts GET subcommand.`,
 		Arity:    -1,
 		KeySpecs: KeySpecs{BeginIndex: 1},
@@ -1221,7 +1240,7 @@ var (
 		Name: "JSON.STRAPPEND",
 		Info: `JSON.STRAPPEND key [path] value
 		Append the JSON string values to the string at path
-		Returns an array of integer replies for each path, the string's new length, or nil, if the matching JSON value is not a string. 
+		Returns an array of integer replies for each path, the string's new length, or nil, if the matching JSON value is not a string.
 		Error reply: If the value at path is not a string or if the key doesn't exist.`,
 		Eval:     evalJSONSTRAPPEND,
 		Arity:    3,
@@ -1409,6 +1428,8 @@ func init() {
 	DiceCmds["ZPOPMAX"] = zpopmaxCmdMeta
 	DiceCmds["ZPOPMIN"] = zpopminCmdMeta
 	DiceCmds["ZRANK"] = zrankCmdMeta
+	DiceCmds["ZCARD"] = zcardCmdMeta
+	DiceCmds["ZREM"] = zremCmdMeta
 	DiceCmds["JSON.STRAPPEND"] = jsonstrappendCmdMeta
 	DiceCmds["CMS.INITBYDIM"] = cmsInitByDimCmdMeta
 	DiceCmds["CMS.INITBYPROB"] = cmsInitByProbCmdMeta

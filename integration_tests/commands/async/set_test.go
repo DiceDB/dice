@@ -169,12 +169,13 @@ func TestSetWithExat(t *testing.T) {
 
 func TestWithKeepTTLFlag(t *testing.T) {
 	conn := getLocalConnection()
+	expiryTime := strconv.FormatInt(time.Now().Add(1*time.Minute).UnixMilli(), 10)
 	defer conn.Close()
 
 	for _, tcase := range []TestCase{
 		{
-			commands: []string{"SET k v EX 2", "SET k vv KEEPTTL", "GET k", "SET kk vv", "SET kk vvv KEEPTTL", "GET kk"},
-			expected: []interface{}{"OK", "OK", "vv", "OK", "OK", "vvv"},
+			commands: []string{"SET k v EX 2", "SET k vv KEEPTTL", "GET k", "SET kk vv", "SET kk vvv KEEPTTL", "GET kk", "SET K V EX 2 KEEPTTL", "SET K1 vv PX 2000 KEEPTTL", "SET K2 vv EXAT " + expiryTime + " KEEPTTL"},
+			expected: []interface{}{"OK", "OK", "vv", "OK", "OK", "vvv", "ERR syntax error", "ERR syntax error", "ERR syntax error"},
 		},
 	} {
 		for i := 0; i < len(tcase.commands); i++ {
