@@ -50,30 +50,30 @@ HLEN key
 ### Basic Usage
 Creating hash `myhash` with two fields `field1` and `field2`. Getting hash length of `myhash`.
 
-```DiceDB
-> HSET myhash field1 "value1" field2 "value2"
+```bash
+127.0.0.1:7379> HSET myhash field1 "value1" field2 "value2"
 (integer) 2
 
-> HLEN myhash
+127.0.0.1:7379> HLEN myhash
 (integer) 2
 ```
 
 ### Invalid Usage on non-existent key
 Getting hash length from a non-existent hash key `nonExistentHash`.
 
-```DiceDB
-> HLEN nonExistentHash
+```bash
+127.0.0.1:7379> HLEN nonExistentHash
 (integer) 0
 ```
 
 ### Invalid Usage on non-hash key
 Getting hash length from a key `mystring` associated with a non-hash type.
 
-```DiceDB
-> SET mystring "This is a string"
+```bash
+127.0.0.1:7379> SET mystring "This is a string"
 OK
 
-> HLEN mystring
+127.0.0.1:7379> HLEN mystring
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
