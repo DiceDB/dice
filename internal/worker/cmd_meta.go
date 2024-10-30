@@ -84,7 +84,7 @@ const (
 	CmdZRank         = "ZRANK"
 	CmdZCount        = "ZCOUNT"
 	CmdZRem          = "ZREM"
- 	CmdZCard         = "ZCARD"
+	CmdZCard         = "ZCARD"
 	CmdPFAdd         = "PFADD"
 	CmdPFCount       = "PFCOUNT"
 	CmdPFMerge       = "PFMERGE"

@@ -15,9 +15,9 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/dicedb/dice/internal/watchmanager"
 	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/server/abstractserver"
+	"github.com/dicedb/dice/internal/watchmanager"
 
 	"github.com/dicedb/dice/config"
 	diceerrors "github.com/dicedb/dice/internal/errors"
