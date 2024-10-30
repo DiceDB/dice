@@ -3,13 +3,13 @@ title: SELECT
 description: Documentation for the DiceDB command SELECT
 ---
 
-**Note:** As of today, DiceDB does not support multiple databases. Therefore, the `SELECT` command is currently a dummy method and does not affect the database. It remains as a placeholder.
+> **Important Note:** As of the current version, DiceDB does not support multiple databases. Therefore, the `SELECT` command is currently a dummy method and does not affect the database. It remains as a placeholder.
 
 The `SELECT` command is used to switch the currently selected database for the current connection in DiceDB. By default, DiceDB starts with database 0, but it supports multiple databases, which can be accessed by using the `SELECT` command. This command is essential for managing data across different logical databases within a single DiceDB instance.
 
 ## Syntax
 
-```
+```bash
 SELECT index
 ```
 
@@ -39,48 +39,45 @@ When the `SELECT` command is issued, the current connection's context is switche
 
 1. `Invalid Database Index`:
 
-   - `Error`: `(error) ERR DB index is out of range`
-   - `Condition`: If the specified database index is outside the range of available databases.
+   - Error Message: `(error) ERR DB index is out of range`
+   - Occurs when the specified database index exceeds the configured maximum (default 15)
 
 2. `Non-Integer Index`:
-
-   - `Error`: `(error) ERR value is not an integer or out of range`
-   - `Condition`: If the provided index is not a valid integer.
+   - Error Message: `(error) ERR value is not an integer or out of range`
+   - Occurs when the provided index is not a valid integer
 
 ## Example Usage
 
 ### Switching to Database 1
 
-```shell
+```bash
 127.0.0.1:7379> SELECT 1
 OK
 ```
 
-In this example, the connection switches to database 1. All subsequent commands will operate on database 1.
+### Switching Back to Default Database
 
-### Switching to Database 0
-
-```shell
+```bash
 127.0.0.1:7379> SELECT 0
 OK
 ```
 
-Here, the connection switches back to the default database 0.
+### Invalid Database Index
 
 ### Error Example: Invalid Database Index
 
-```shell
+```bash
 127.0.0.1:7379> SELECT 16
 (error) ERR DB index is out of range
 ```
 
-In this example, an error is raised because the specified database index 16 is outside the default range of 0-15.
+### Invalid Input Type
 
-### Error Example: Non-Integer Index
-
-```shell
+```bash
 127.0.0.1:7379> SELECT one
 (error) ERR value is not an integer or out of range
 ```
 
-In this example, an error is raised because the provided index is not a valid integer.
+## Notes
+
+As mentioned at the beginning of this document, the current version of DiceDB does not support multiple databases. The `SELECT` command is implemented as a placeholder for future functionality. All operations, regardless of the SELECT command, will continue to operate on a single database space.

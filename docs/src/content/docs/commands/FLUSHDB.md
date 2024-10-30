@@ -1,19 +1,28 @@
 ---
 title: FLUSHDB
-description: Documentation for the DiceDB command FLUSHDB
+description: The FLUSHDB command removes all keys from the currently selected database, providing a way to clear all data in a specific database space.
 ---
 
 The `FLUSHDB` command is used to remove all keys from the currently selected database in a DiceDB instance. This command is useful when you need to clear all the data in a specific database without affecting other databases in the same DiceDB instance.
+
+## Syntax
+
+```bash
+FLUSHDB
+```
 
 ## Parameters
 
 The `FLUSHDB` command does not take any parameters.
 
-## Return Value
+## Return Values
 
-The `FLUSHDB` command returns a simple string reply:
-
-- `OK`: Indicates that the operation was successful and all keys in the current database have been removed.
+| Condition                | Return Value |
+|--------------------------|--------------|
+| Command is successful    | `OK`         |
+| Authentication required  | Error: `NOAUTH Authentication required` |
+| Permission denied       | Error: `NOPERM this user has no permissions to run the 'flushdb' command` |
+| Read-only mode          | Error: `READONLY You can't write against a read-only replica` |
 
 ## Behaviour
 
@@ -27,46 +36,57 @@ When the `FLUSHDB` command is executed, the following actions occur:
 
 The `FLUSHDB` command is straightforward and does not typically raise errors under normal circumstances. However, there are a few scenarios where issues might arise:
 
-1. `Permission Denied`: If the DiceDB instance is configured with ACLs (Access Control Lists) and the user does not have the necessary permissions to execute the `FLUSHDB` command, an error will be raised.
+1. `Authentication Issues`:
+   - Error Message: `(error) NOAUTH Authentication required`
+   - Occurs when authentication is required but not provided
 
-   - Error: `(error) NOAUTH Authentication required.` or `(error) NOPERM this user has no permissions to run the 'flushdb' command`
+2. `Permission Issues`:
+   - Error Message: `(error) NOPERM this user has no permissions to run the 'flushdb' command`
+   - Occurs when the user lacks necessary permissions to execute the command
 
-2. `Read-Only Mode`: If the DiceDB instance is in read-only mode (e.g., a read-only replica), the `FLUSHDB` command will not be allowed.
-
-   - Error: `(error) READONLY You can't write against a read-only replica.`
+3. `Read-Only Mode`:
+   - Error Message: `(error) READONLY You can't write against a read-only replica`
+   - Occurs when attempting to execute on a read-only instance
 
 ## Example Usage
 
 ### Basic Usage
 
-To clear all keys from the currently selected database:
-
-```sh
-127.0.0.1:6379> FLUSHDB
+```bash
+127.0.0.1:7379> FLUSHDB
 OK
 ```
 
-### Using with Multiple Databases
+### Verifying Empty Database
 
-If you have multiple databases and want to clear a specific one, you need to select the database first using the `SELECT` command, then execute `FLUSHDB`:
-
-```sh
-127.0.0.1:6379> SELECT 1
+```bash
+127.0.0.1:7379> FLUSHDB
 OK
-127.0.0.1:6379[1]> FLUSHDB
-OK
-```
-
-### Checking the Result
-
-After executing `FLUSHDB`, you can verify that the database is empty by using the `DBSIZE` command, which returns the number of keys in the currently selected database:
-
-```sh
-127.0.0.1:6379> DBSIZE
+127.0.0.1:7379> DBSIZE
 (integer) 0
 ```
 
+### Example with SELECT Command
+
+While the following example shows the traditional syntax for working with multiple databases, please note that in the current version, all operations occur on a single database space:
+
+```bash
+127.0.0.1:7379> SELECT 1
+OK
+127.0.0.1:7379> FLUSHDB
+OK
+127.0.0.1:7379> DBSIZE
+(integer) 0
+```
+
+## Best Practices
+
+- Always verify that you're operating on the intended database before executing FLUSHDB
+- Consider using backup mechanisms before executing FLUSHDB in production environments
+- Use appropriate access controls to restrict FLUSHDB usage to authorized users only
+
 ## Notes
 
-- `Data Loss`: The `FLUSHDB` command will result in the loss of all data in the selected database. Use this command with caution, especially in production environments.
-- `Atomic Operation`: The `FLUSHDB` command is atomic, meaning that all keys are removed in a single operation without any intermediate states.
+- The current version of DiceDB operates on a single database space. While the `SELECT` command is available as a placeholder, switching databases will not affect the operation of the `FLUSHDB` command, and it will always clear the keys from the single available database space.
+
+- The command is particularly powerful and should be used with caution as it results in immediate, irreversible data loss for all keys in the database.
