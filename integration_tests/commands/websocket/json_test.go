@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"sort"
 	"testing"
 
 	"github.com/dicedb/dice/testutils"
@@ -584,15 +585,28 @@ func TestJsonObjKeyslmao(t *testing.T) {
 			_, err := exec.FireCommandAndReadResponse(conn, tcase.setCommand)
 			assert.Nil(t, err)
 			expected := tcase.expected
-			out, err := exec.FireCommandAndReadResponse(conn, tcase.testCommand)
+			out, _ := exec.FireCommandAndReadResponse(conn, tcase.testCommand)
+			
+			sortNested := func(data []interface{}) {
+				for _, elem := range data {
+						if innerSlice, ok := elem.([]interface{}); ok {
+								sort.Slice(innerSlice, func(i, j int) bool {
+										return innerSlice[i].(string) < innerSlice[j].(string)
+								})
+						}
+				}
+      }
 
-			_, isString := out.(string)
-			if isString {
-				outInterface := []interface{}{out}
-				assert.Equal(t, outInterface, expected)
-			} else {
-				assert.ElementsMatch(t, out.([]interface{}), expected)
+			if expected != nil {
+				sortNested(expected)
 			}
+			if outSlice, ok := out.([]interface{}); ok {
+					sortNested(outSlice)
+					assert.ElementsMatch(t, expected, outSlice)
+			} else {
+					outInterface := []interface{}{out}
+					assert.ElementsMatch(t, expected, outInterface)
+      }
 		})
 	}
 }
