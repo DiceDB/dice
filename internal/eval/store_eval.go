@@ -374,29 +374,40 @@ func evalGET(args []string, store *dstore.Store) *EvalResponse {
 	switch _, oEnc := object.ExtractTypeEncoding(obj); oEnc {
 	case object.ObjEncodingInt:
 		// Value is stored as an int64, so use type assertion
-		if val, ok := obj.Value.(int64); ok {
+		if IsInt64(obj.Value) {
 			return &EvalResponse{
-				Result: val,
+				Result: obj.Value,
 				Error:  nil,
 			}
-		}
-
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrUnexpectedType("int64", obj.Value),
+		} else if IsString(obj.Value) {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrUnexpectedType("int64", "string"),
+			}
+		} else {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrUnexpectedType("int64", "unkown"),
+			}
 		}
 
 	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
 		// Value is stored as a string, use type assertion
-		if val, ok := obj.Value.(string); ok {
+		if IsString(obj.Value) {
 			return &EvalResponse{
-				Result: val,
+				Result: obj.Value,
 				Error:  nil,
 			}
-		}
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrUnexpectedType("string", obj.Value),
+		} else if IsInt64(obj.Value) {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrUnexpectedType("string", "int64"),
+			}
+		} else {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrUnexpectedType("string", "unkown"),
+			}
 		}
 
 	case object.ObjEncodingByteArray:
@@ -3415,28 +3426,40 @@ func evalGETDEL(args []string, store *dstore.Store) *EvalResponse {
 	switch _, oEnc := object.ExtractTypeEncoding(objVal); oEnc {
 	case object.ObjEncodingInt:
 		// Value is stored as an int64, so use type assertion
-		if val, ok := objVal.Value.(int64); ok {
+		if IsInt64(objVal.Value) {
 			return &EvalResponse{
-				Result: val,
+				Result: objVal.Value,
 				Error:  nil,
 			}
-		}
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrUnexpectedType("int64", obj.Value),
+		} else if IsString(objVal.Value) {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrUnexpectedType("int64", "string"),
+			}
+		} else {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrUnexpectedType("int64", "unkown"),
+			}
 		}
 
 	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
 		// Value is stored as a string, use type assertion
-		if val, ok := objVal.Value.(string); ok {
+		if IsString(objVal.Value) {
 			return &EvalResponse{
-				Result: val,
+				Result: objVal.Value,
 				Error:  nil,
 			}
-		}
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrUnexpectedType("string", obj.Value),
+		} else if IsInt64(objVal.Value) {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrUnexpectedType("string", "int64"),
+			}
+		} else {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrUnexpectedType("string", "unkown"),
+			}
 		}
 
 	case object.ObjEncodingByteArray:
