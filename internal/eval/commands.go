@@ -1315,9 +1315,10 @@ var (
 			0 when the key doesn't exist.
 			-1 when the pivot wasn't found.
 		`,
-		Eval:     evalLINSERT,
-		Arity:    4,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalLINSERT,
+		IsMigrated: true,
+		Arity:      5,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	lrangeCmdMeta = DiceCmdMeta{
 		Name: "LRANGE",
@@ -1336,9 +1337,10 @@ var (
 		Returns:
 			Array reply: a list of elements in the specified range, or an empty array if the key doesn't exist.
 		`,
-		Eval:     evalLRANGE,
-		Arity:    3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalLRANGE,
+		IsMigrated: true,
+		Arity:      4,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 )
 

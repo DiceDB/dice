@@ -4,7 +4,7 @@ import (
 	"net"
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLInsert(t *testing.T) {
@@ -29,7 +29,12 @@ func TestLInsert(t *testing.T) {
 		{
 			name:   "LINSERT wrong number of args",
 			cmds:   []string{"LINSERT k before e1"},
-			expect: []any{"wrong number of arguments for LINSERT"},
+			expect: []any{"-wrong number of arguments for LINSERT"},
+		},
+		{
+			name:   "LINSERT wrong type",
+			cmds:   []string{"SET k1 val1", "LINSERT k1 before val1 val2"},
+			expect: []any{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
 		},
 	}
 
@@ -37,7 +42,8 @@ func TestLInsert(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.cmds {
 				result := FireCommand(conn, cmd)
-				assert.DeepEqual(t, tc.expect[i], result)
+				// assert.DeepEqual(t, tc.expect[i], result)
+				assert.EqualValues(t, tc.expect[i], result)
 			}
 		})
 	}
@@ -67,7 +73,12 @@ func TestLRange(t *testing.T) {
 		{
 			name:   "LRANGE wrong number of args",
 			cmds:   []string{"LRANGE k -100"},
-			expect: []any{"wrong number of arguments for LRANGE"},
+			expect: []any{"-wrong number of arguments for LRANGE"},
+		},
+		{
+			name:   "LRANGE wrong type",
+			cmds:   []string{"SET k1 val1", "LRANGE k1 0 100"},
+			expect: []any{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
 		},
 	}
 
@@ -75,7 +86,8 @@ func TestLRange(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.cmds {
 				result := FireCommand(conn, cmd)
-				assert.DeepEqual(t, tc.expect[i], result)
+				// assert.DeepEqual(t, tc.expect[i], result)
+				assert.EqualValues(t, tc.expect[i], result)
 			}
 		})
 	}
