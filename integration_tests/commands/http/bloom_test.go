@@ -3,7 +3,7 @@ package http
 import (
 	"testing"
 
-	assert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBloomFilter(t *testing.T) {

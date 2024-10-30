@@ -23,8 +23,7 @@ import (
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	dstore "github.com/dicedb/dice/internal/store"
-	testifyAssert "github.com/stretchr/testify/assert"
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 type evalTestCase struct {
@@ -361,16 +360,16 @@ func testEvalSET(t *testing.T, store *dstore.Store) {
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+					assert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else {
 				assert.Equal(t, tt.migratedOutput.Result, response.Result)
 			}
 
 			if tt.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
-				testifyAssert.NoError(t, response.Error)
+				assert.NoError(t, response.Error)
 			}
 		})
 	}
@@ -499,16 +498,16 @@ func testEvalGET(t *testing.T, store *dstore.Store) {
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+					assert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else {
 				assert.Equal(t, tt.migratedOutput.Result, response.Result)
 			}
 
 			if tt.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
-				testifyAssert.NoError(t, response.Error)
+				assert.NoError(t, response.Error)
 			}
 		})
 	}
@@ -573,16 +572,16 @@ func testEvalGETSET(t *testing.T, store *dstore.Store) {
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+					assert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else {
 				assert.Equal(t, tt.migratedOutput.Result, response.Result)
 			}
 
 			if tt.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
-				testifyAssert.NoError(t, response.Error)
+				assert.NoError(t, response.Error)
 			}
 		})
 	}
@@ -967,16 +966,16 @@ func testEvalJSONARRTRIM(t *testing.T, store *dstore.Store) {
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+					assert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else {
-				testifyAssert.Equal(t, tt.migratedOutput.Result, response.Result)
+				assert.Equal(t, tt.migratedOutput.Result, response.Result)
 			}
 
 			if tt.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
-				testifyAssert.NoError(t, response.Error)
+				assert.NoError(t, response.Error)
 			}
 		})
 	}
@@ -1135,16 +1134,16 @@ func testEvalJSONARRINSERT(t *testing.T, store *dstore.Store) {
 
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+					assert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else {
-				testifyAssert.Equal(t, tt.migratedOutput.Result, response.Result)
+				assert.Equal(t, tt.migratedOutput.Result, response.Result)
 			}
 
 			if tt.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
-				testifyAssert.NoError(t, response.Error)
+				assert.NoError(t, response.Error)
 			}
 		})
 	}
@@ -1249,16 +1248,16 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 
 			if tt.migratedOutput.Result != nil {
 				if slice, ok := tt.migratedOutput.Result.([]interface{}); ok {
-					assert.DeepEqual(t, slice, response.Result)
+					assert.Equal(t, slice, response.Result)
 				} else {
                     assert.Equal(t, tt.migratedOutput.Result, response.Result)
                 }
 			}
 
 			if tt.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
-				testifyAssert.NoError(t, response.Error)
+				assert.NoError(t, response.Error)
 			}
 		})
 	}
@@ -1433,16 +1432,16 @@ func testEvalJSONOBJLEN(t *testing.T, store *dstore.Store) {
 			response := evalJSONOBJLEN(tt.input, store)
 			if tt.migratedOutput.Result != nil {
 				if slice, ok := tt.migratedOutput.Result.([]interface{}); ok {
-					assert.DeepEqual(t, slice, response.Result)
+					assert.Equal(t, slice, response.Result)
 				} else {
 					assert.Equal(t, tt.migratedOutput.Result, response.Result)
 				}
 			}
 
 			if tt.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
-				testifyAssert.NoError(t, response.Error)
+				assert.NoError(t, response.Error)
 			}
 		})
 	}
@@ -1749,16 +1748,16 @@ func testEvalJSONCLEAR(t *testing.T, store *dstore.Store) {
 			response := evalJSONCLEAR(tt.input, store)
 			if tt.migratedOutput.Result != nil {
 				if slice, ok := tt.migratedOutput.Result.([]interface{}); ok {
-					assert.DeepEqual(t, slice, response.Result)
+					assert.Equal(t, slice, response.Result)
 				} else {
 					assert.Equal(t, tt.migratedOutput.Result, response.Result)
 				}
 			}
 
 			if tt.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
-				testifyAssert.NoError(t, response.Error)
+				assert.NoError(t, response.Error)
 			}
 		})
 	}
@@ -1962,8 +1961,8 @@ func testEvalJSONSET(t *testing.T, store *dstore.Store) {
 			input:  []string{"doc", "$", "{\"a\":}"},
 			output: nil,
 			validator: func(output []byte) {
-				assert.Assert(t, output != nil)
-				assert.Assert(t, strings.Contains(string(output), "-ERR invalid JSON:"))
+				assert.True(t, output != nil)
+				assert.True(t, strings.Contains(string(output), "-ERR invalid JSON:"))
 			},
 		},
 		"valid json path": {
@@ -2222,9 +2221,9 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 			}
 
 			if tt.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
-				testifyAssert.NoError(t, response.Error)
+				assert.NoError(t, response.Error)
 			}
 		})
 	}
@@ -2368,9 +2367,9 @@ func testEvalTTL(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"EXISTING_KEY"},
 			validator: func(output []byte) {
-				assert.Assert(t, output != nil)
-				assert.Assert(t, !bytes.Equal(output, clientio.RespMinusOne))
-				assert.Assert(t, !bytes.Equal(output, clientio.RespMinusTwo))
+				assert.True(t, output != nil)
+				assert.True(t, !bytes.Equal(output, clientio.RespMinusOne))
+				assert.True(t, !bytes.Equal(output, clientio.RespMinusTwo))
 			},
 		},
 		"key exists but expired": {
@@ -2934,22 +2933,22 @@ func testEvalHVALS(t *testing.T, store *dstore.Store) {
 			// Handle comparison for byte slices
 			if responseBytes, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-					testifyAssert.True(t, bytes.Equal(responseBytes, expectedBytes), "expected and actual byte slices should be equal")
+					assert.True(t, bytes.Equal(responseBytes, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else {
 				fmt.Printf("G1: %v | %v\n", response.Result, tt.migratedOutput.Result)
 				switch e := tt.migratedOutput.Result.(type) {
 				case []interface{}, []string:
-					testifyAssert.ElementsMatch(t, e, response.Result)
+					assert.ElementsMatch(t, e, response.Result)
 				default:
 					assert.Equal(t, tt.migratedOutput.Result, response.Result)
 				}
 			}
 
 			if tt.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
-				testifyAssert.NoError(t, response.Error)
+				assert.NoError(t, response.Error)
 			}
 		})
 	}
@@ -3087,7 +3086,7 @@ func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
 				// If has result
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
 					// fmt.Printf("%v | %v\n", responseBytes, expectedBytes)
-					testifyAssert.True(t, bytes.Equal(responseBytes, expectedBytes), "expected and actual byte slices should be equal")
+					assert.True(t, bytes.Equal(responseBytes, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else {
 				// If has error
@@ -3095,9 +3094,9 @@ func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
 			}
 
 			if tt.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
-				testifyAssert.NoError(t, response.Error)
+				assert.NoError(t, response.Error)
 			}
 		})
 	}
@@ -3385,16 +3384,16 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 			response := evalJSONSTRLEN(tt.input, store)
 			if tt.migratedOutput.Result != nil {
 				if slice, ok := tt.migratedOutput.Result.([]interface{}); ok {
-					assert.DeepEqual(t, slice, response.Result)
+					assert.Equal(t, slice, response.Result)
 				} else {
 					assert.Equal(t, tt.migratedOutput.Result, response.Result)
 				}
 			}
 
 			if tt.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
-				testifyAssert.NoError(t, response.Error)
+				assert.NoError(t, response.Error)
 			}
 		})
 	}
@@ -3482,7 +3481,7 @@ func testEvalJSONNUMINCRBY(t *testing.T, store *dstore.Store) {
 				endIndex := strings.Index(outPutString, "]")
 				arrayString := outPutString[startIndex+1 : endIndex]
 				arr := strings.Split(arrayString, ",")
-				testifyAssert.ElementsMatch(t, arr, []string{"25", "20", "7", "15", "null", "null"})
+				assert.ElementsMatch(t, arr, []string{"25", "20", "7", "15", "null", "null"})
 			},
 		},
 
@@ -3527,7 +3526,7 @@ func testEvalJSONNUMINCRBY(t *testing.T, store *dstore.Store) {
 				endIndex := strings.Index(outPutString, "]")
 				arrayString := outPutString[startIndex+1 : endIndex]
 				arr := strings.Split(arrayString, ",")
-				testifyAssert.ElementsMatch(t, arr, []string{"3", "4", "7", "null", "null"})
+				assert.ElementsMatch(t, arr, []string{"3", "4", "7", "null", "null"})
 			},
 		},
 
@@ -3589,7 +3588,7 @@ func runMigratedEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc 
 			}
 
 			if tc.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, output.Error, tc.migratedOutput.Error.Error())
+				assert.EqualError(t, output.Error, tc.migratedOutput.Error.Error())
 				return
 			}
 
@@ -3597,17 +3596,17 @@ func runMigratedEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc 
 			// TODO: Make this generic so that all kind of slices can be handled
 			if b, ok := output.Result.([]byte); ok && tc.migratedOutput.Result != nil {
 				if expectedBytes, ok := tc.migratedOutput.Result.([]byte); ok {
-					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+					assert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else if a, ok := output.Result.([]string); ok && tc.migratedOutput.Result != nil {
 				if expectedStringSlice, ok := tc.migratedOutput.Result.([]string); ok {
-					testifyAssert.ElementsMatch(t, a, expectedStringSlice)
+					assert.ElementsMatch(t, a, expectedStringSlice)
 				}
 			} else {
-				testifyAssert.Equal(t, tc.migratedOutput.Result, output.Result)
+				assert.Equal(t, tc.migratedOutput.Result, output.Result)
 			}
 
-			testifyAssert.NoError(t, output.Error)
+			assert.NoError(t, output.Error)
 		})
 	}
 }
@@ -3696,8 +3695,8 @@ func testEvalHSET(t *testing.T, store *dstore.Store) {
 				// Check if the map is saved correctly in the store
 				res, err := getValueFromHashMap(key, field, store)
 
-				assert.Assert(t, err == nil)
-				assert.DeepEqual(t, res, clientio.Encode(mockValue, false))
+				assert.Nil(t, err)
+				assert.Equal(t, res, clientio.Encode(mockValue, false))
 			},
 			input: []string{
 				"KEY_MOCK",
@@ -3782,8 +3781,8 @@ func testEvalHMSET(t *testing.T, store *dstore.Store) {
 				// Check if the map is saved correctly in the store
 				res, err := getValueFromHashMap(key, field, store)
 
-				assert.Assert(t, err == nil)
-				assert.DeepEqual(t, res, clientio.Encode(mockValue, false))
+				assert.True(t, err == nil)
+				assert.Equal(t, res, clientio.Encode(mockValue, false))
 			},
 			input: []string{
 				"KEY_MOCK",
@@ -3857,13 +3856,13 @@ func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 			if responseBytes, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
 					// fmt.Printf("G: %v | %v\n", responseBytes, expectedBytes)
-					testifyAssert.True(t, bytes.Equal(responseBytes, expectedBytes), "expected and actual byte slices should be equal")
+					assert.True(t, bytes.Equal(responseBytes, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else {
 				// fmt.Printf("G1: %v | %v\n", response.Result, tt.migratedOutput.Result)
 				switch e := tt.migratedOutput.Result.(type) {
 				case []interface{}, []string:
-					testifyAssert.ElementsMatch(t, e, response.Result)
+					assert.ElementsMatch(t, e, response.Result)
 				default:
 					assert.Equal(t, tt.migratedOutput.Result, response.Result)
 				}
@@ -3871,9 +3870,9 @@ func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 
 			if tt.migratedOutput.Error != nil {
 				// fmt.Printf("E: %v | %v\n", response.Error, tt.migratedOutput.Error.Error())
-				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
-				testifyAssert.NoError(t, response.Error)
+				assert.NoError(t, response.Error)
 			}
 		})
 	}
@@ -4464,7 +4463,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 				obj := store.Get(key)
 
 				expr, err := jp.ParseString(path)
-				assert.NilError(t, err, "error parsing path")
+				assert.Nil(t, err, "error parsing path")
 
 				results := expr.Get(obj.Value)
 				assert.Equal(t, len(results), 1)
@@ -4491,16 +4490,16 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 
 			if tt.migratedOutput.Result != nil {
 				if slice, ok := tt.migratedOutput.Result.([]interface{}); ok {
-					assert.DeepEqual(t, slice, response.Result)
+					assert.Equal(t, slice, response.Result)
 				} else {
                     assert.Equal(t, tt.migratedOutput.Result, response.Result)
                 }
 			}
 
 			if tt.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
-				testifyAssert.NoError(t, response.Error)
+				assert.NoError(t, response.Error)
 			}
 		})
 	}
@@ -4878,16 +4877,16 @@ func testEvalJSONOBJKEYS(t *testing.T, store *dstore.Store) {
 
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+					assert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else {
-				testifyAssert.Equal(t, tt.migratedOutput.Result, response.Result)
+				assert.Equal(t, tt.migratedOutput.Result, response.Result)
 			}
 
 			if tt.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
-				testifyAssert.NoError(t, response.Error)
+				assert.NoError(t, response.Error)
 			}
 		})
 	}
@@ -5412,8 +5411,8 @@ func testEvalSETEX(t *testing.T, store *dstore.Store) {
 				// Check if the TTL is set correctly (should be 5 seconds or less)
 				ttlValue := evalTTL([]string{"TEST_KEY"}, store)
 				ttl, err := strconv.Atoi(strings.TrimPrefix(strings.TrimSpace(string(ttlValue)), ":"))
-				assert.NilError(t, err, "Failed to parse TTL")
-				assert.Assert(t, ttl > 0 && ttl <= 5)
+				assert.Nil(t, err, "Failed to parse TTL")
+				assert.True(t, ttl > 0 && ttl <= 5)
 
 				// Wait for the key to expire
 				mockTime.SetTime(mockTime.CurrTime.Add(6 * time.Second))
@@ -5438,8 +5437,8 @@ func testEvalSETEX(t *testing.T, store *dstore.Store) {
 				// Check if the TTL is set correctly
 				ttlValue := evalTTL([]string{"EXISTING_KEY"}, store)
 				ttl, err := strconv.Atoi(strings.TrimPrefix(strings.TrimSpace(string(ttlValue)), ":"))
-				assert.NilError(t, err, "Failed to parse TTL")
-				assert.Assert(t, ttl > 0 && ttl <= 10)
+				assert.Nil(t, err, "Failed to parse TTL")
+				assert.True(t, ttl > 0 && ttl <= 10)
 			},
 		},
 	}
@@ -5458,16 +5457,16 @@ func testEvalSETEX(t *testing.T, store *dstore.Store) {
 				// Handle comparison for byte slices
 				if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 					if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-						testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+						assert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
 					}
 				} else {
 					assert.Equal(t, tt.migratedOutput.Result, response.Result)
 				}
 
 				if tt.migratedOutput.Error != nil {
-					testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+					assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 				} else {
-					testifyAssert.NoError(t, response.Error)
+					assert.NoError(t, response.Error)
 				}
 			}
 		})
@@ -5638,16 +5637,16 @@ func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+					assert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else {
 				assert.Equal(t, tt.migratedOutput.Result, response.Result)
 			}
 
 			if tt.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
-				testifyAssert.NoError(t, response.Error)
+				assert.NoError(t, response.Error)
 			}
 		})
 	}
@@ -5688,7 +5687,7 @@ func testEvalBITOP(t *testing.T, store *dstore.Store) {
 			output: clientio.Encode(0, true),
 			validator: func(output []byte) {
 				expectedResult := []byte{}
-				assert.DeepEqual(t, expectedResult, store.Get("dest{t}").Value.(*ByteArray).data)
+				assert.Equal(t, expectedResult, store.Get("dest{t}").Value.(*ByteArray).data)
 			},
 		},
 		"BITOP NOT (known string)": {
@@ -5699,7 +5698,7 @@ func testEvalBITOP(t *testing.T, store *dstore.Store) {
 			output: clientio.Encode(4, true),
 			validator: func(output []byte) {
 				expectedResult := []byte{0x55, 0xff, 0x00, 0xaa}
-				assert.DeepEqual(t, expectedResult, store.Get("dest{t}").Value.(*ByteArray).data)
+				assert.Equal(t, expectedResult, store.Get("dest{t}").Value.(*ByteArray).data)
 			},
 		},
 		"BITOP where dest and target are the same key": {
@@ -5710,7 +5709,7 @@ func testEvalBITOP(t *testing.T, store *dstore.Store) {
 			output: clientio.Encode(4, true),
 			validator: func(output []byte) {
 				expectedResult := []byte{0x55, 0xff, 0x00, 0xaa}
-				assert.DeepEqual(t, expectedResult, store.Get("s").Value.(*ByteArray).data)
+				assert.Equal(t, expectedResult, store.Get("s").Value.(*ByteArray).data)
 			},
 		},
 		"BITOP AND|OR|XOR don't change the string with single input key": {
@@ -5721,7 +5720,7 @@ func testEvalBITOP(t *testing.T, store *dstore.Store) {
 			output: clientio.Encode(3, true),
 			validator: func(output []byte) {
 				expectedResult := []byte{0x01, 0x02, 0xff}
-				assert.DeepEqual(t, expectedResult, store.Get("res1{t}").Value.(*ByteArray).data)
+				assert.Equal(t, expectedResult, store.Get("res1{t}").Value.(*ByteArray).data)
 			},
 		},
 		"BITOP missing key is considered a stream of zero": {
@@ -5732,7 +5731,7 @@ func testEvalBITOP(t *testing.T, store *dstore.Store) {
 			output: clientio.Encode(3, true),
 			validator: func(output []byte) {
 				expectedResult := []byte{0x00, 0x00, 0x00}
-				assert.DeepEqual(t, expectedResult, store.Get("res1{t}").Value.(*ByteArray).data)
+				assert.Equal(t, expectedResult, store.Get("res1{t}").Value.(*ByteArray).data)
 			},
 		},
 		"BITOP shorter keys are zero-padded to the key with max length": {
@@ -5744,7 +5743,7 @@ func testEvalBITOP(t *testing.T, store *dstore.Store) {
 			output: clientio.Encode(4, true),
 			validator: func(output []byte) {
 				expectedResult := []byte{0x01, 0x02, 0xff, 0x00}
-				assert.DeepEqual(t, expectedResult, store.Get("res1{t}").Value.(*ByteArray).data)
+				assert.Equal(t, expectedResult, store.Get("res1{t}").Value.(*ByteArray).data)
 			},
 		},
 		"BITOP with non string source key": {
@@ -5831,13 +5830,13 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"KEY_MOCK"},
 			newValidator: func(output interface{}) {
-				assert.Assert(t, output != nil)
+				assert.True(t, output != nil)
 				stringSlice, ok := output.([]string)
 				if !ok {
-					testifyAssert.Error(t, diceerrors.ErrUnexpectedType("[]string", reflect.TypeOf(output)))
+					assert.Error(t, diceerrors.ErrUnexpectedType("[]string", reflect.TypeOf(output)))
 				}
 				resultString := strings.Join(stringSlice, " ")
-				assert.Assert(t,
+				assert.True(t,
 					resultString == "field1" || resultString == "field2",
 					"Unexpected field returned: %s", resultString)
 			},
@@ -5860,10 +5859,10 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"KEY_MOCK", "2"},
 			newValidator: func(output interface{}) {
-				assert.Assert(t, output != nil)
+				assert.True(t, output != nil)
 				stringSlice, ok := output.([]string)
 				if !ok {
-					testifyAssert.Error(t, diceerrors.ErrUnexpectedType("[]string", reflect.TypeOf(output)))
+					assert.Error(t, diceerrors.ErrUnexpectedType("[]string", reflect.TypeOf(output)))
 				}
 				decodedResult := strings.Join(stringSlice, " ")
 				fields := []string{"field1", "field2", "field3"}
@@ -5875,7 +5874,7 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 					}
 				}
 
-				assert.Assert(t, count == 2)
+				assert.True(t, count == 2)
 			},
 		},
 		"key exists with count and WITHVALUES argument": {
@@ -5896,10 +5895,10 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"KEY_MOCK", "2", WithValues},
 			newValidator: func(output interface{}) {
-				assert.Assert(t, output != nil)
+				assert.True(t, output != nil)
 				stringSlice, ok := output.([]string)
 				if !ok {
-					testifyAssert.Error(t, diceerrors.ErrUnexpectedType("[]string", reflect.TypeOf(output)))
+					assert.Error(t, diceerrors.ErrUnexpectedType("[]string", reflect.TypeOf(output)))
 				}
 				decodedResult := strings.Join(stringSlice, " ")
 				fieldsAndValues := []string{"field1", "value1", "field2", "value2", "field3", "value3"}
@@ -7628,16 +7627,16 @@ func testEvalINCR(t *testing.T, store *dstore.Store) {
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+					assert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else {
 				assert.Equal(t, tt.migratedOutput.Result, response.Result)
 			}
 
 			if tt.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
-				testifyAssert.NoError(t, response.Error)
+				assert.NoError(t, response.Error)
 			}
 		})
 	}
@@ -7715,16 +7714,16 @@ func testEvalINCRBY(t *testing.T, store *dstore.Store) {
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+					assert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else {
 				assert.Equal(t, tt.migratedOutput.Result, response.Result)
 			}
 
 			if tt.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
-				testifyAssert.NoError(t, response.Error)
+				assert.NoError(t, response.Error)
 			}
 		})
 	}
@@ -7802,16 +7801,16 @@ func testEvalDECR(t *testing.T, store *dstore.Store) {
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+					assert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else {
 				assert.Equal(t, tt.migratedOutput.Result, response.Result)
 			}
 
 			if tt.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
-				testifyAssert.NoError(t, response.Error)
+				assert.NoError(t, response.Error)
 			}
 		})
 	}
@@ -7889,16 +7888,16 @@ func testEvalDECRBY(t *testing.T, store *dstore.Store) {
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+					assert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else {
 				assert.Equal(t, tt.migratedOutput.Result, response.Result)
 			}
 
 			if tt.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
-				testifyAssert.NoError(t, response.Error)
+				assert.NoError(t, response.Error)
 			}
 		})
 	}
