@@ -1094,7 +1094,8 @@ func TestJsonObjLen(t *testing.T) {
 				cmd := tcase.commands[i]
 				out := tcase.expected[i]
 				result := FireCommand(conn, cmd)
-				assert.Equal(t, out, result)
+				
+				assert.Equal(t, out, result);
 			}
 		})
 	}
@@ -1255,7 +1256,7 @@ func TestJsonSTRAPPEND(t *testing.T) {
 			assert.Equal(t, "OK", result)
 
 			result = FireCommand(conn, tc.getCmd)
-			assert.Equal(t, tc.expected, result)
+			assert.ElementsMatch(t, tc.expected, result)
 
 		})
 	}

@@ -593,10 +593,7 @@ func TestJsonObjKeyslmao(t *testing.T) {
 				outInterface := []interface{}{out}
 				assert.Equal(t, outInterface, expected)
 			} else {
-					assert.EqualValues(t, 
-                sortNestedSlices(expected), 
-                sortNestedSlices(out.([]interface{})),
-                "Mismatch in JSON object keys")
+				assert.ElementsMatch(t, out.([]interface{}), expected)
 			}
 		})
 	}

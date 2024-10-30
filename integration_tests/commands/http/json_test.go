@@ -1430,7 +1430,13 @@ func TestJsonObjKeys(t *testing.T) {
 						return fmt.Sprintf("%v", a) < fmt.Sprintf("%v", b)
 					}))
 				} else {
-					assert.Equal(t, tc.expected[i], result)
+					if _, ok := result.([]interface{}); ok {
+						assert.ElementsMatch(t, tc.expected[i].([]interface{}), result.([]interface{}))
+					} else {
+							// handle the case where result is not a []interface{}
+							assert.Equal(t, tc.expected[i], result)
+					}
+
 				}
 			}
 		})

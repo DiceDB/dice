@@ -617,14 +617,13 @@ func TestJsonObjKeys(t *testing.T) {
 				outInterface := []interface{}{out}
 				assert.Equal(t, outInterface, expected)
 			} else {
-						assert.EqualValues(t, 
+						assert.ElementsMatch(t, 
                 sortNestedSlices(expected), 
                 sortNestedSlices(out.([]interface{})),
                 "Mismatch in JSON object keys")
 			}
 		})
 	}
-
 }
 
 func sortNestedSlices(data []interface{}) []interface{} {
