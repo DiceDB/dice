@@ -30,6 +30,8 @@ const (
 	DefaultKeysLimit int = 200000000
 )
 
+var LatencyThreshold int64 = 100
+
 var (
 	Host = DefaultHost
 	Port = DefaultPort
@@ -37,7 +39,6 @@ var (
 	EnableMultiThreading = false
 	EnableHTTP           = true
 	HTTPPort             = 8082
-
 	EnableWebsocket     = true
 	WebsocketPort       = 8379
 	NumShards       int = -1

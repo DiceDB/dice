@@ -17,6 +17,7 @@ import (
 
 	"github.com/dicedb/dice/internal/eval/geo"
 	"github.com/dicedb/dice/internal/eval/sortedset"
+	"github.com/dicedb/dice/internal/eval/latency"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/rs/xid"
 
@@ -1751,6 +1752,40 @@ func evalCLIENT(args []string, store *dstore.Store) []byte {
 
 // TODO: Placeholder to support monitoring
 func evalLATENCY(args []string, store *dstore.Store) []byte {
+	if(config.LatencyThreshold == 0){
+		return diceerrors.NewErrWithMessage("The Latency Threshold is not set")
+	}
+	if len(args) < 2 {
+		return diceerrors.NewErrArity("LATENCY")
+	}
+	command := strings.ToLower(args[1])
+	switch command {
+		case "latest":
+			if len(args) != 2 {				
+				return diceerrors.NewErrArity("LATENCY ")
+			}
+			latency.latest()
+		case "history":
+			if len(args) != 3 {
+				return diceerrors.NewErrArity("LATENCY ")
+			}
+			latency.history()
+		case "reset":
+			if len(args) == 2 {
+
+			}else {
+				resets := 0
+				for j := 2; j < len(args); j++ {
+					resets += latency.LatencyResetEvent(argv[j])
+				} 
+			}				
+
+		case "help":
+
+		default:
+			return clientio.Encode([]string{"ERR: Unknown command"}, false)
+	}
+
 	return clientio.Encode([]string{}, false)
 }
 
