@@ -696,11 +696,12 @@ var (
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	hkeysCmdMeta = DiceCmdMeta{
-		Name:     "HKEYS",
-		Info:     `HKEYS command is used to retrieve all the keys(or field names) within a hash. Complexity is O(n) where n is the size of the hash.`,
-		Eval:     evalHKEYS,
-		Arity:    1,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Name:       "HKEYS",
+		Info:       `HKEYS command is used to retrieve all the keys(or field names) within a hash. Complexity is O(n) where n is the size of the hash.`,
+		NewEval:    evalHKEYS,
+		Arity:      1,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	hsetnxCmdMeta = DiceCmdMeta{
 		Name: "HSETNX",
@@ -734,11 +735,12 @@ var (
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	hValsCmdMeta = DiceCmdMeta{
-		Name:     "HVALS",
-		Info:     `Returns all values of the hash stored at key. The length of the reply is same as the size of the hash.`,
-		Eval:     evalHVALS,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Name:       "HVALS",
+		Info:       `Returns all values of the hash stored at key. The length of the reply is same as the size of the hash.`,
+		NewEval:    evalHVALS,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	hincrbyCmdMeta = DiceCmdMeta{
 		Name: "HINCRBY",
@@ -783,11 +785,12 @@ var (
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	hexistsCmdMeta = DiceCmdMeta{
-		Name:     "HEXISTS",
-		Info:     `Returns if field is an existing field in the hash stored at key.`,
-		Eval:     evalHEXISTS,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Name:       "HEXISTS",
+		Info:       `Returns if field is an existing field in the hash stored at key.`,
+		NewEval:    evalHEXISTS,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 
 	objectCmdMeta = DiceCmdMeta{
@@ -1139,9 +1142,9 @@ var (
 	zpopminCmdMeta = DiceCmdMeta{
 		Name: "ZPOPMIN",
 		Info: `ZPOPMIN key [count]
-		Removes and returns the member with the lowest score from the sorted set at the specified key. 
-		If multiple members have the same score, the one that comes first alphabetically is returned. 
-		You can also specify a count to remove and return multiple members at once. 
+		Removes and returns the member with the lowest score from the sorted set at the specified key.
+		If multiple members have the same score, the one that comes first alphabetically is returned.
+		You can also specify a count to remove and return multiple members at once.
 		If the set is empty, it returns an empty result.`,
 		Arity:      -1,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
@@ -1158,6 +1161,25 @@ var (
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 		IsMigrated: true,
 		NewEval:    evalZRANK,
+	}
+	zcardCmdMeta = DiceCmdMeta{
+		Name: "ZCARD",
+		Info: `ZCARD key
+		Returns the sorted set cardinality (number of elements) of the sorted set stored at key.`,
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalZCARD,
+	}
+	zremCmdMeta = DiceCmdMeta{
+		Name: "ZREM",
+		Info: `ZREM key member [member ...]
+		Removes the specified members from the sorted set stored at key. Non existing members are ignored.
+		An error is returned when key exists and does not hold a sorted set.`,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalZREM,
 	}
 	bitfieldCmdMeta = DiceCmdMeta{
 		Name: "BITFIELD",
@@ -1185,7 +1207,7 @@ var (
 	}
 	bitfieldroCmdMeta = DiceCmdMeta{
 		Name: "BITFIELD_RO",
-		Info: `It is read-only variant of the BITFIELD command. 
+		Info: `It is read-only variant of the BITFIELD command.
 		It is like the original BITFIELD but only accepts GET subcommand.`,
 		Arity:    -1,
 		KeySpecs: KeySpecs{BeginIndex: 1},
@@ -1222,7 +1244,7 @@ var (
 		Name: "JSON.STRAPPEND",
 		Info: `JSON.STRAPPEND key [path] value
 		Append the JSON string values to the string at path
-		Returns an array of integer replies for each path, the string's new length, or nil, if the matching JSON value is not a string. 
+		Returns an array of integer replies for each path, the string's new length, or nil, if the matching JSON value is not a string.
 		Error reply: If the value at path is not a string or if the key doesn't exist.`,
 		Eval:     evalJSONSTRAPPEND,
 		Arity:    3,
@@ -1410,6 +1432,8 @@ func init() {
 	DiceCmds["ZPOPMAX"] = zpopmaxCmdMeta
 	DiceCmds["ZPOPMIN"] = zpopminCmdMeta
 	DiceCmds["ZRANK"] = zrankCmdMeta
+	DiceCmds["ZCARD"] = zcardCmdMeta
+	DiceCmds["ZREM"] = zremCmdMeta
 	DiceCmds["JSON.STRAPPEND"] = jsonstrappendCmdMeta
 	DiceCmds["CMS.INITBYDIM"] = cmsInitByDimCmdMeta
 	DiceCmds["CMS.INITBYPROB"] = cmsInitByProbCmdMeta

@@ -72,6 +72,9 @@ const (
 
 	CmdGetWatch      = "GET.WATCH"
 	CmdZRangeWatch   = "ZRANGE.WATCH"
+	CmdHExists       = "HEXISTS"
+	CmdHKeys         = "HKEYS"
+	CmdHVals         = "HVALS"
 	CmdZPopMin       = "ZPOPMIN"
 	CmdJSONClear     = "JSON.CLEAR"
 	CmdJSONStrlen    = "JSON.STRLEN"
@@ -80,6 +83,8 @@ const (
 	CmdZRange        = "ZRANGE"
 	CmdZRank         = "ZRANK"
 	CmdZCount        = "ZCOUNT"
+	CmdZRem          = "ZREM"
+ 	CmdZCard         = "ZCARD"
 	CmdPFAdd         = "PFADD"
 	CmdPFCount       = "PFCOUNT"
 	CmdPFMerge       = "PFMERGE"
@@ -164,6 +169,15 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdSmembers: {
+		CmdType: SingleShard,
+	},
+	CmdHExists: {
+		CmdType: SingleShard,
+	},
+	CmdHKeys: {
+		CmdType: SingleShard,
+	},
+	CmdHVals: {
 		CmdType: SingleShard,
 	},
 	CmdJSONArrAppend: {
@@ -289,6 +303,12 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdZRange: {
+		CmdType: SingleShard,
+	},
+	CmdZCard: {
+		CmdType: SingleShard,
+	},
+	CmdZRem: {
 		CmdType: SingleShard,
 	},
 	CmdAppend: {
