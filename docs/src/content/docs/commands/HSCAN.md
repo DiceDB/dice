@@ -51,31 +51,31 @@ The `HSCAN` command returns an array containing the next cursor and the matching
 Creating a hash `myhash` with two fields `field1` and `field2`. Getting `HSCAN` on `myhash` with valid cursors.
 
 ```bash
-> HSET myhash field1 "value1" field2 "value2"
+127.0.0.1:7379> HSET myhash field1 "value1" field2 "value2"
 1) (integer) 2
 
-> HSCAN myhash 0
+127.0.0.1:7379> HSCAN myhash 0
 1) "2"
 2) 1) "field1"
    2) "value1"
    3) "field2"
    4) "value2"
 
-> HSCAN myhash 0 MATCH field* COUNT 1
+127.0.0.1:7379> HSCAN myhash 0 MATCH field* COUNT 1
 1) "1"
 2) 1) "field1"
    2) "value1"
 
-> HSCAN myhash 1 MATCH field* COUNT 1
+127.0.0.1:7379> HSCAN myhash 1 MATCH field* COUNT 1
 1) "0"
 2) 1) "field2"
    2) "value2"
 ```
 ### Invalid Usage on non-existent key
-Getting `HSCAN` on nonExistentHash.
+Getting `HSCAN` on `nonExistentHash`.
 
 ```bash
-> HSCAN nonExistentHash 0
+127.0.0.1:7379> HSCAN nonExistentHash 0
 1) "0"
 2) (empty array)
 ```
