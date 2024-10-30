@@ -1,8 +1,6 @@
 package websocket
 
 import (
-	"fmt"
-	"sort"
 	"testing"
 
 	"github.com/dicedb/dice/testutils"
@@ -597,23 +595,6 @@ func TestJsonObjKeyslmao(t *testing.T) {
 			}
 		})
 	}
-}
-
-func sortNestedSlices(data []interface{}) []interface{} {
-    result := make([]interface{}, len(data))
-    for i, item := range data {
-        if slice, ok := item.([]interface{}); ok {
-            sorted := make([]interface{}, len(slice))
-            copy(sorted, slice)
-            sort.Slice(sorted, func(i, j int) bool {
-                return fmt.Sprintf("%v", sorted[i]) < fmt.Sprintf("%v", sorted[j])
-            })
-            result[i] = sorted
-        } else {
-            result[i] = item
-        }
-    }
-    return result
 }
 
 func arraysArePermutations[T comparable](a, b []T) bool {
