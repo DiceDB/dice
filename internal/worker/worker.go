@@ -213,7 +213,13 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 			// If the command supports multisharding, break it down into multiple commands.
 			cmdList, err = meta.decomposeCommand(ctx, w, diceDBCmd)
 			if err != nil {
-				workerErr := w.ioHandler.Write(ctx, err)
+				var workerErr error
+				// Check if it's a CustomError
+				if customErr, ok := err.(*diceerrors.PreProcessError); ok {
+					workerErr = w.ioHandler.Write(ctx, customErr.Result)
+				} else {
+					workerErr = w.ioHandler.Write(ctx, err)
+				}
 				if workerErr != nil {
 					slog.Debug("Error executing for worker", slog.String("workerID", w.id), slog.Any("error", workerErr))
 				}

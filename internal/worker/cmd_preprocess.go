@@ -45,7 +45,7 @@ func preProcessCopy(w *BaseWorker, diceDBCmd *cmd.DiceDBCmd) error {
 
 	sid, rc := w.shardManager.GetShardInfo(diceDBCmd.Args[0])
 
-	preCmdk1 := cmd.DiceDBCmd{
+	preCmdk := cmd.DiceDBCmd{
 		Cmd:  "COPY",
 		Args: []string{diceDBCmd.Args[0]},
 	}
@@ -54,7 +54,7 @@ func preProcessCopy(w *BaseWorker, diceDBCmd *cmd.DiceDBCmd) error {
 	rc <- &ops.StoreOp{
 		SeqID:         0,
 		RequestID:     GenerateUniqueRequestID(),
-		Cmd:           &preCmdk1,
+		Cmd:           &preCmdk,
 		WorkerID:      w.id,
 		ShardID:       sid,
 		Client:        nil,
