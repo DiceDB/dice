@@ -8,7 +8,7 @@ import (
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/sql"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 // need to test the following here:
@@ -40,7 +40,7 @@ func TestQWatchUnwatch(t *testing.T) {
 
 		// Check if the response is OK
 		resp, err := rp.DecodeOne()
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, 3, len(resp.([]interface{})))
 	}
 
@@ -51,7 +51,7 @@ func TestQWatchUnwatch(t *testing.T) {
 	for _, sub := range subscribers[0:2] {
 		rp := fireCommandAndGetRESPParser(sub, "Q.UNWATCH \""+qWatchQuery+"\"")
 		resp, err := rp.DecodeOne()
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, "OK", resp)
 	}
 
@@ -60,21 +60,21 @@ func TestQWatchUnwatch(t *testing.T) {
 	// continue from the qwatch scenarios that ran previously
 	FireCommand(publisher, "SET match:100:user:1 62")
 	resp, err := respParsers[2].DecodeOne()
-	assert.NilError(t, err)
+	assert.Nil(t, err)
 	expectedUpdate := []interface{}{[]interface{}{"match:100:user:5", int64(70)}, []interface{}{"match:100:user:1", int64(62)}, []interface{}{"match:100:user:0", int64(60)}}
-	assert.DeepEqual(t, []interface{}{sql.Qwatch, qWatchQuery, expectedUpdate}, resp)
+	assert.Equal(t, []interface{}{sql.Qwatch, qWatchQuery, expectedUpdate}, resp)
 
 	FireCommand(publisher, "SET match:100:user:5 75")
 	resp, err = respParsers[2].DecodeOne()
-	assert.NilError(t, err)
+	assert.Nil(t, err)
 	expectedUpdate = []interface{}{[]interface{}{"match:100:user:5", int64(75)}, []interface{}{"match:100:user:1", int64(62)}, []interface{}{"match:100:user:0", int64(60)}}
-	assert.DeepEqual(t, []interface{}{sql.Qwatch, qWatchQuery, expectedUpdate}, resp)
+	assert.Equal(t, []interface{}{sql.Qwatch, qWatchQuery, expectedUpdate}, resp)
 
 	FireCommand(publisher, "SET match:100:user:0 80")
 	resp, err = respParsers[2].DecodeOne()
-	assert.NilError(t, err)
+	assert.Nil(t, err)
 	expectedUpdate = []interface{}{[]interface{}{"match:100:user:0", int64(80)}, []interface{}{"match:100:user:5", int64(75)}, []interface{}{"match:100:user:1", int64(62)}}
-	assert.DeepEqual(t, []interface{}{sql.Qwatch, qWatchQuery, expectedUpdate}, resp)
+	assert.Equal(t, []interface{}{sql.Qwatch, qWatchQuery, expectedUpdate}, resp)
 
 	// Cleanup store for next tests
 	for _, tc := range qWatchTestCases {

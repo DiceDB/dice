@@ -2,7 +2,7 @@ package eval
 
 import (
 	"bytes"
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -95,9 +95,9 @@ func TestByteListDeepCopy(t *testing.T) {
 
 	// Verify that changes to the deepCopy do not affect the original
 	deepCopy.head.buf[0] = 9
-	assert.Assert(t, original.head.buf[0] != deepCopy.head.buf[0], "Original and deepCopy head buffer should not be linked")
+	assert.True(t, original.head.buf[0] != deepCopy.head.buf[0], "Original and deepCopy head buffer should not be linked")
 
 	// Verify that changes to the original do not affect the deepCopy
 	original.head.buf[1] = 8
-	assert.Assert(t, original.head.buf[1] != deepCopy.head.buf[1], "Original and deepCopy head buffer should not be linked")
+	assert.True(t, original.head.buf[1] != deepCopy.head.buf[1], "Original and deepCopy head buffer should not be linked")
 }

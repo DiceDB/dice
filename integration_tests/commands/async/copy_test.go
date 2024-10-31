@@ -4,8 +4,7 @@ import (
 	"testing"
 
 	"github.com/dicedb/dice/testutils"
-	testifyAssert "github.com/stretchr/testify/assert"
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCopy(t *testing.T) {
@@ -84,7 +83,7 @@ func TestCopy(t *testing.T) {
 				// else compare the values as is.
 				// This is to handle cases where the expected value is a json string with a different key order.
 				if resOk && expOk && testutils.IsJSONResponse(resStr) && testutils.IsJSONResponse(expStr) {
-					testifyAssert.JSONEq(t, expStr, resStr)
+					assert.JSONEq(t, expStr, resStr)
 				} else {
 					assert.Equal(t, tc.expected[i], result, "Value mismatch for cmd %s", cmd)
 				}

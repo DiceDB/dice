@@ -5,7 +5,7 @@ import (
 	"net"
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCommandCount(t *testing.T) {
@@ -14,7 +14,7 @@ func TestCommandCount(t *testing.T) {
 
 	t.Run("Command count should be positive", func(t *testing.T) {
 		commandCount := getCommandCount(conn)
-		assert.Assert(t, commandCount > 0,
+		assert.True(t, commandCount > 0,
 			fmt.Sprintf("Unexpected number of CLI commands found. expected greater than 0, %d found", commandCount))
 	})
 }

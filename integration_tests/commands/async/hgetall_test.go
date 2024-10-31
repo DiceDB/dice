@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHGETALL(t *testing.T) {
@@ -52,7 +52,7 @@ func TestHGETALL(t *testing.T) {
 					}
 
 				} else {
-					assert.DeepEqual(t, tc.expected[i], result)
+					assert.Equal(t, tc.expected[i], result)
 				}
 			}
 		})

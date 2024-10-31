@@ -3,7 +3,7 @@ package async
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSelect(t *testing.T) {
@@ -12,11 +12,11 @@ func TestSelect(t *testing.T) {
 
 	t.Run("SELECT command response", func(t *testing.T) {
 		actual := FireCommand(conn, "SELECT 1")
-		assert.DeepEqual(t, "OK", actual)
+		assert.Equal(t, "OK", actual)
 	})
 
 	t.Run("SELECT command error response", func(t *testing.T) {
 		actual := FireCommand(conn, "SELECT")
-		assert.DeepEqual(t, "ERR wrong number of arguments for 'select' command", actual)
+		assert.Equal(t, "ERR wrong number of arguments for 'select' command", actual)
 	})
 }
