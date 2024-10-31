@@ -7,9 +7,8 @@ import (
 	"testing"
 	"time"
 
-	testifyAssert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 	"golang.org/x/exp/rand"
-	"gotest.tools/v3/assert"
 )
 
 func TestBitOp(t *testing.T) {
@@ -79,8 +78,8 @@ func TestBitOp(t *testing.T) {
 			cmd := tcase.InCmds[i]
 			out := tcase.Out[i]
 			result, err := exec.FireCommandAndReadResponse(conn, cmd)
-			testifyAssert.Nil(t, err)
-			testifyAssert.Equal(t, out, result, "Value mismatch for cmd %s\n.", cmd)
+			assert.Nil(t, err)
+			assert.Equal(t, out, result, "Value mismatch for cmd %s\n.", cmd)
 		}
 	}
 }
@@ -252,13 +251,13 @@ func TestBitOpsString(t *testing.T) {
 			_, _ = exec.FireCommandAndReadResponse(conn, "DEL bazzz")
 			for i := 0; i < len(tc.cmds); i++ {
 				res, err := exec.FireCommandAndReadResponse(conn, tc.cmds[i])
-				testifyAssert.Nil(t, err)
+				assert.Nil(t, err)
 
 				switch tc.assertType[i] {
 				case "equal":
-					testifyAssert.Equal(t, tc.expected[i], res)
+					assert.Equal(t, tc.expected[i], res)
 				case "less":
-					assert.Assert(t, res.(float64) <= tc.expected[i].(float64), "CMD: %s Expected %d to be less than or equal to %d", tc.cmds[i], res, tc.expected[i])
+					assert.True(t, res.(float64) <= tc.expected[i].(float64), "CMD: %s Expected %d to be less than or equal to %d", tc.cmds[i], res, tc.expected[i])
 				}
 			}
 		})
@@ -339,8 +338,8 @@ func TestBitCount(t *testing.T) {
 			cmd := tcase.InCmds[i]
 			out := tcase.Out[i]
 			res, err := exec.FireCommandAndReadResponse(conn, cmd)
-			testifyAssert.Nil(t, err)
-			testifyAssert.Equal(t, out, res, "Value mismatch for cmd %s\n.", cmd)
+			assert.Nil(t, err)
+			assert.Equal(t, out, res, "Value mismatch for cmd %s\n.", cmd)
 		}
 	}
 }
@@ -710,8 +709,8 @@ func TestBitPos(t *testing.T) {
 			}
 
 			result, err := exec.FireCommandAndReadResponse(conn, tc.inCmd)
-			testifyAssert.Nil(t, err)
-			testifyAssert.Equal(t, tc.out, result, "Mismatch for cmd %s\n", tc.inCmd)
+			assert.Nil(t, err)
+			assert.Equal(t, tc.out, result, "Mismatch for cmd %s\n", tc.inCmd)
 		})
 	}
 }
@@ -954,9 +953,9 @@ func TestBitfield(t *testing.T) {
 					time.Sleep(tc.Delay[i])
 				}
 				result, err := exec.FireCommandAndReadResponse(conn, tc.Commands[i])
-				testifyAssert.Nil(t, err)
+				assert.Nil(t, err)
 				expected := tc.Expected[i]
-				testifyAssert.Equal(t, expected, result)
+				assert.Equal(t, expected, result)
 			}
 
 			for _, cmd := range tc.CleanUp {
@@ -1077,9 +1076,9 @@ func TestBitfieldRO(t *testing.T) {
 					time.Sleep(tc.Delay[i])
 				}
 				result, err := exec.FireCommandAndReadResponse(conn, tc.Commands[i])
-				testifyAssert.Nil(t, err)
+				assert.Nil(t, err)
 				expected := tc.Expected[i]
-				testifyAssert.Equal(t, expected, result)
+				assert.Equal(t, expected, result)
 			}
 
 			for _, cmd := range tc.CleanUp {

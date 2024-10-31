@@ -10,9 +10,8 @@ import (
 	"testing"
 	"time"
 
-	testifyAssert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 	"golang.org/x/exp/rand"
-	"gotest.tools/v3/assert"
 )
 
 func TestBitOp(t *testing.T) {
@@ -80,7 +79,7 @@ func TestBitOp(t *testing.T) {
 		for i := 0; i < len(tcase.InCmds); i++ {
 			cmd := tcase.InCmds[i]
 			out := tcase.Out[i]
-			testifyAssert.Equal(t, out, FireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
+			assert.Equal(t, out, FireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
 		}
 	}
 }
@@ -254,9 +253,9 @@ func TestBitOpsString(t *testing.T) {
 
 				switch tc.assertType[i] {
 				case "equal":
-					testifyAssert.Equal(t, tc.expected[i], res)
+					assert.Equal(t, tc.expected[i], res)
 				case "less":
-					assert.Assert(t, res.(int64) <= tc.expected[i].(int64), "CMD: %s Expected %d to be less than or equal to %d", tc.cmds[i], res, tc.expected[i])
+					assert.True(t, res.(int64) <= tc.expected[i].(int64), "CMD: %s Expected %d to be less than or equal to %d", tc.cmds[i], res, tc.expected[i])
 				}
 			}
 		})
@@ -704,7 +703,7 @@ func TestBitPos(t *testing.T) {
 			}
 
 			result := FireCommand(conn, tc.inCmd)
-			testifyAssert.Equal(t, tc.out, result, "Mismatch for cmd %s\n", tc.inCmd)
+			assert.Equal(t, tc.out, result, "Mismatch for cmd %s\n", tc.inCmd)
 		})
 	}
 }
@@ -947,7 +946,7 @@ func TestBitfield(t *testing.T) {
 				}
 				result := FireCommand(conn, tc.Commands[i])
 				expected := tc.Expected[i]
-				testifyAssert.Equal(t, expected, result)
+				assert.Equal(t, expected, result)
 			}
 
 			for _, cmd := range tc.CleanUp {
@@ -1068,7 +1067,7 @@ func TestBitfieldRO(t *testing.T) {
 				}
 				result := FireCommand(conn, tc.Commands[i])
 				expected := tc.Expected[i]
-				testifyAssert.Equal(t, expected, result)
+				assert.Equal(t, expected, result)
 			}
 
 			for _, cmd := range tc.CleanUp {

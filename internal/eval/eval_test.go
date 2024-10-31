@@ -307,8 +307,8 @@ func testEvalSET(t *testing.T, store *dstore.Store) {
 			migratedOutput: EvalResponse{Result: clientio.OK, Error: nil},
 		},
 		{
-			name: 		 "key val pair and invalid EX and PX",
-			input: 		 []string{"KEY", "VAL", Ex, "2", Px, "2000"},
+			name:           "key val pair and invalid EX and PX",
+			input:          []string{"KEY", "VAL", Ex, "2", Px, "2000"},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
 		},
 		{
@@ -1155,19 +1155,19 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 			setup:  func() {},
 			input:  nil,
 			output: []byte("-ERR wrong number of arguments for 'json.arrlen' command\r\n"),
-            migratedOutput: EvalResponse{
-                Result: nil,
-			    Error:  diceerrors.ErrWrongArgumentCount("JSON.ARRLEN"),
-            },
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("JSON.ARRLEN"),
+			},
 		},
 		"key does not exist": {
 			setup:  func() {},
 			input:  []string{"NONEXISTENT_KEY"},
 			output: []byte("$-1\r\n"),
-            migratedOutput: EvalResponse{
-                Result: clientio.NIL,
-                Error: nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: clientio.NIL,
+				Error:  nil,
+			},
 		},
 		"root not array arrlen": {
 			setup: func() {
@@ -1180,10 +1180,10 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"EXISTING_KEY"},
 			output: []byte("-ERR Path '$' does not exist or not an array\r\n"),
-            migratedOutput: EvalResponse{
-                Result: nil,
-                Error: diceerrors.ErrWrongTypeOperation,
-            },
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			},
 		},
 		"root array arrlen": {
 			setup: func() {
@@ -1196,10 +1196,10 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"EXISTING_KEY"},
 			output: []byte(":3\r\n"),
-            migratedOutput: EvalResponse{
-                Result: 3,
-                Error: nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: 3,
+				Error:  nil,
+			},
 		},
 		"wildcase no array arrlen": {
 			setup: func() {
@@ -1213,10 +1213,10 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 
 			input:  []string{"EXISTING_KEY", "$.*"},
 			output: []byte("*5\r\n$-1\r\n$-1\r\n$-1\r\n$-1\r\n$-1\r\n"),
-            migratedOutput: EvalResponse{
-                Result: []interface{}{clientio.NIL,clientio.NIL,clientio.NIL,clientio.NIL,clientio.NIL},
-                Error: nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: []interface{}{clientio.NIL, clientio.NIL, clientio.NIL, clientio.NIL, clientio.NIL},
+				Error:  nil,
+			},
 		},
 		"subpath array arrlen": {
 			setup: func() {
@@ -1231,10 +1231,10 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 
 			input:  []string{"EXISTING_KEY", "$.language"},
 			output: []byte(":2\r\n"),
-            migratedOutput: EvalResponse{
-                Result: 2,
-                Error: nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: 2,
+				Error:  nil,
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -1250,8 +1250,8 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 				if slice, ok := tt.migratedOutput.Result.([]interface{}); ok {
 					assert.Equal(t, slice, response.Result)
 				} else {
-                    assert.Equal(t, tt.migratedOutput.Result, response.Result)
-                }
+					assert.Equal(t, tt.migratedOutput.Result, response.Result)
+				}
 			}
 
 			if tt.migratedOutput.Error != nil {
@@ -2070,10 +2070,10 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"array", "$.a", "6"},
 			output: []byte("*1\r\n$-1\r\n"),
-            migratedOutput: EvalResponse{
-                Result: nil,
-			    Error:  diceerrors.ErrJSONPathNotFound("$.a"),
-            },
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrJSONPathNotFound("$.a"),
+			},
 		},
 		"arr append single element to an array field": {
 			setup: func() {
@@ -2086,10 +2086,10 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"array", "$.a", "6"},
 			output: []byte("*1\r\n:3\r\n"),
-            migratedOutput: EvalResponse{
-                Result: []int64{3},
-		        Error:  nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: []int64{3},
+				Error:  nil,
+			},
 		},
 		"arr append multiple elements to an array field": {
 			setup: func() {
@@ -2102,10 +2102,10 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"array", "$.a", "6", "7", "8"},
 			output: []byte("*1\r\n:5\r\n"),
-            migratedOutput: EvalResponse{
-                Result: []int64{5},
-		        Error:  nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: []int64{5},
+				Error:  nil,
+			},
 		},
 		"arr append string value": {
 			setup: func() {
@@ -2118,10 +2118,10 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"array", "$.b", `"d"`},
 			output: []byte("*1\r\n:3\r\n"),
-            migratedOutput: EvalResponse{
-                Result: []int64{3},
-		        Error:  nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: []int64{3},
+				Error:  nil,
+			},
 		},
 		"arr append nested array value": {
 			setup: func() {
@@ -2134,10 +2134,10 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"array", "$.a", "[1,2,3]"},
 			output: []byte("*1\r\n:2\r\n"),
-            migratedOutput: EvalResponse{
-                Result: []int64{2},
-		        Error:  nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: []int64{2},
+				Error:  nil,
+			},
 		},
 		"arr append with json value": {
 			setup: func() {
@@ -2150,10 +2150,10 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"array", "$.a", "{\"c\": 3}"},
 			output: []byte("*1\r\n:2\r\n"),
-            migratedOutput: EvalResponse{
-                Result: []int64{2},
-		        Error:  nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: []int64{2},
+				Error:  nil,
+			},
 		},
 		"arr append to append on multiple fields": {
 			setup: func() {
@@ -2166,10 +2166,10 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"array", "$..a", "6"},
 			output: []byte("*2\r\n:2\r\n:3\r\n"),
-            migratedOutput: EvalResponse{
-                Result: []int64{2,3},
-		        Error:  nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: []int64{2, 3},
+				Error:  nil,
+			},
 		},
 		"arr append to append on root node": {
 			setup: func() {
@@ -2182,10 +2182,10 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"array", "$", "6"},
 			output: []byte("*1\r\n:4\r\n"),
-            migratedOutput: EvalResponse{
-                Result: []int64{4},
-		        Error:  nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: []int64{4},
+				Error:  nil,
+			},
 		},
 		"arr append to an array with different type": {
 			setup: func() {
@@ -2198,10 +2198,10 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"array", "$.a", `"blue"`},
 			output: []byte("*1\r\n:3\r\n"),
-            migratedOutput: EvalResponse{
-                Result: []int64{3},
-		        Error:  nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: []int64{3},
+				Error:  nil,
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -2211,13 +2211,13 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 			if tt.setup != nil {
 				tt.setup()
 			}
-            response := evalJSONARRAPPEND(tt.input, store)
+			response := evalJSONARRAPPEND(tt.input, store)
 
 			if tt.migratedOutput.Result != nil {
-                actual, ok := response.Result.([]int64)
-                if ok {
-                    assert.Equal(t, tt.migratedOutput.Result, actual)
-                }
+				actual, ok := response.Result.([]int64)
+				if ok {
+					assert.Equal(t, tt.migratedOutput.Result, actual)
+				}
 			}
 
 			if tt.migratedOutput.Error != nil {
@@ -4281,19 +4281,19 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			setup:  func() {},
 			input:  nil,
 			output: []byte("-ERR wrong number of arguments for 'json.arrpop' command\r\n"),
-            migratedOutput: EvalResponse{
-                Result: nil,
-			    Error:  diceerrors.ErrWrongArgumentCount("JSON.ARRPOP"),
-            },
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("JSON.ARRPOP"),
+			},
 		},
 		"key does not exist": {
 			setup:  func() {},
 			input:  []string{"NOTEXISTANT_KEY"},
 			output: []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
-            migratedOutput: EvalResponse{
-                Result: nil,
-                Error: diceerrors.ErrKeyNotFound,
-            },
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrKeyNotFound,
+			},
 		},
 		"empty array at root path": {
 			setup: func() {
@@ -4306,10 +4306,10 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"MOCK_KEY"},
 			output: []byte("-ERR Path '$' does not exist or not an array\r\n"),
-            migratedOutput: EvalResponse{
-                Result: nil,
-                Error: diceerrors.ErrWrongTypeOperation,
-            },
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			},
 		},
 		"empty array at nested path": {
 			setup: func() {
@@ -4322,10 +4322,10 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"MOCK_KEY", "$.b"},
 			output: []byte("*1\r\n$-1\r\n"),
-            migratedOutput: EvalResponse{
-                Result: []interface{}{clientio.NIL},
-                Error: nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: []interface{}{clientio.NIL},
+				Error:  nil,
+			},
 		},
 		"all paths with asterix": {
 			setup: func() {
@@ -4338,10 +4338,10 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"MOCK_KEY", "$.*"},
 			output: []byte("*2\r\n$-1\r\n$-1\r\n"),
-            migratedOutput: EvalResponse{
-                Result: []interface{}{clientio.NIL,clientio.NIL},
-                Error: nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: []interface{}{clientio.NIL, clientio.NIL},
+				Error:  nil,
+			},
 		},
 		"array root path no index": {
 			setup: func() {
@@ -4354,10 +4354,10 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"MOCK_KEY"},
 			output: []byte(":5\r\n"),
-            migratedOutput: EvalResponse{
-                Result: float64(5),
-                Error: nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: float64(5),
+				Error:  nil,
+			},
 		},
 		"array root path valid positive index": {
 			setup: func() {
@@ -4370,10 +4370,10 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"MOCK_KEY", "$", "2"},
 			output: []byte(":2\r\n"),
-            migratedOutput: EvalResponse{
-                Result: float64(2),
-                Error: nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: float64(2),
+				Error:  nil,
+			},
 		},
 		"array root path out of bound positive index": {
 			setup: func() {
@@ -4386,10 +4386,10 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"MOCK_KEY", "$", "10"},
 			output: []byte(":5\r\n"),
-            migratedOutput: EvalResponse{
-                Result: float64(5),
-                Error: nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: float64(5),
+				Error:  nil,
+			},
 		},
 		"array root path valid negative index": {
 			setup: func() {
@@ -4402,10 +4402,10 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"MOCK_KEY", "$", "-2"},
 			output: []byte(":4\r\n"),
-            migratedOutput: EvalResponse{
-                Result: float64(4),
-                Error: nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: float64(4),
+				Error:  nil,
+			},
 		},
 		"array root path out of bound negative index": {
 			setup: func() {
@@ -4418,10 +4418,10 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"MOCK_KEY", "$", "-10"},
 			output: []byte(":0\r\n"),
-            migratedOutput: EvalResponse{
-                Result: float64(0),
-                Error: nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: float64(0),
+				Error:  nil,
+			},
 		},
 		"array at root path updated correctly": {
 			setup: func() {
@@ -4441,10 +4441,10 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 				equal := reflect.DeepEqual(obj.Value, want)
 				assert.Equal(t, equal, true)
 			},
-            migratedOutput: EvalResponse{
-                Result: float64(2),
-                Error: nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: float64(2),
+				Error:  nil,
+			},
 		},
 		"nested array updated correctly": {
 			setup: func() {
@@ -4473,10 +4473,10 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 				equal := reflect.DeepEqual(results[0], want)
 				assert.Equal(t, equal, true)
 			},
-            migratedOutput: EvalResponse{
-                Result: []interface{}{float64(2)},
-                Error: nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: []interface{}{float64(2)},
+				Error:  nil,
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -4492,8 +4492,8 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 				if slice, ok := tt.migratedOutput.Result.([]interface{}); ok {
 					assert.Equal(t, slice, response.Result)
 				} else {
-                    assert.Equal(t, tt.migratedOutput.Result, response.Result)
-                }
+					assert.Equal(t, tt.migratedOutput.Result, response.Result)
+				}
 			}
 
 			if tt.migratedOutput.Error != nil {
@@ -4891,7 +4891,6 @@ func testEvalJSONOBJKEYS(t *testing.T, store *dstore.Store) {
 		})
 	}
 }
-
 
 func BenchmarkEvalJSONOBJKEYS(b *testing.B) {
 	sizes := []int{0, 10, 100, 1000, 10000, 100000} // Various sizes of JSON objects
@@ -5783,16 +5782,16 @@ func testEvalBITOP(t *testing.T, store *dstore.Store) {
 				// Handle comparison for byte slices
 				if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 					if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-						testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+						assert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
 					}
 				} else {
 					assert.Equal(t, tt.migratedOutput.Result, response.Result)
 				}
 
 				if tt.migratedOutput.Error != nil {
-					testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+					assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 				} else {
-					testifyAssert.NoError(t, response.Error)
+					assert.NoError(t, response.Error)
 				}
 			}
 		})
@@ -6918,16 +6917,16 @@ func testEvalBitField(t *testing.T, store *dstore.Store) {
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+					assert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else {
-				assert.DeepEqual(t, tt.migratedOutput.Result, response.Result)
+				assert.Equal(t, tt.migratedOutput.Result, response.Result)
 			}
 
 			if tt.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
-				testifyAssert.NoError(t, response.Error)
+				assert.NoError(t, response.Error)
 			}
 		})
 	}
@@ -7201,16 +7200,16 @@ func testEvalBitFieldRO(t *testing.T, store *dstore.Store) {
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-					testifyAssert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+					assert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else {
-				assert.DeepEqual(t, tt.migratedOutput.Result, response.Result)
+				assert.Equal(t, tt.migratedOutput.Result, response.Result)
 			}
 
 			if tt.migratedOutput.Error != nil {
-				testifyAssert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
 			} else {
-				testifyAssert.NoError(t, response.Error)
+				assert.NoError(t, response.Error)
 			}
 		})
 	}
