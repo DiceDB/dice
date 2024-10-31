@@ -3,6 +3,7 @@ package eval
 import (
 	"strings"
 
+	"github.com/dicedb/dice/internal/cmd"
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
@@ -29,6 +30,8 @@ type DiceCmdMeta struct {
 	// will utilize this function for evaluation, allowing for better handling of
 	// complex command execution scenarios and improved response consistency.
 	NewEval func([]string, *dstore.Store) *EvalResponse
+
+	StoreObjectEval func(*cmd.DiceDBCmd, *dstore.Store) *EvalResponse
 }
 
 type KeySpecs struct {
@@ -38,8 +41,11 @@ type KeySpecs struct {
 }
 
 var (
-	DiceCmds = map[string]DiceCmdMeta{}
+	PreProcessing = map[string]func([]string, *dstore.Store) *EvalResponse{}
+	DiceCmds      = map[string]DiceCmdMeta{}
+)
 
+var (
 	echoCmdMeta = DiceCmdMeta{
 		Name:  "ECHO",
 		Info:  `ECHO returns the string given as argument.`,
@@ -604,10 +610,11 @@ var (
 		Eval: evalPersist,
 	}
 	copyCmdMeta = DiceCmdMeta{
-		Name:  "COPY",
-		Info:  `COPY command copies the value stored at the source key to the destination key.`,
-		Eval:  evalCOPY,
-		Arity: -2,
+		Name:            "COPY",
+		Info:            `COPY command copies the value stored at the source key to the destination key.`,
+		StoreObjectEval: evalCOPYObject,
+		IsMigrated:      true,
+		Arity:           -2,
 	}
 	decrCmdMeta = DiceCmdMeta{
 		Name: "DECR",
@@ -1299,6 +1306,9 @@ var (
 )
 
 func init() {
+	PreProcessing["COPY"] = evalGetObject
+	PreProcessing["RENAME"] = evalGET
+
 	DiceCmds["ABORT"] = abortCmdMeta
 	DiceCmds["APPEND"] = appendCmdMeta
 	DiceCmds["AUTH"] = authCmdMeta

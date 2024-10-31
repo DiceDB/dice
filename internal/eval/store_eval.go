@@ -10,6 +10,7 @@ import (
 	"github.com/axiomhq/hyperloglog"
 	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/internal/clientio"
+	"github.com/dicedb/dice/internal/cmd"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/eval/sortedset"
 	"github.com/dicedb/dice/internal/object"
@@ -36,169 +37,169 @@ import (
 // Returns encoded OK RESP once new entry is added
 // If the key already exists then the value will be overwritten and expiry will be discarded
 func evalSET(args []string, store *dstore.Store) *EvalResponse {
-    if len(args) <= 1 {
-        return &EvalResponse{
-            Result: nil,
-            Error:  diceerrors.ErrWrongArgumentCount("SET"),
-        }
-    }
+	if len(args) <= 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("SET"),
+		}
+	}
 
-    var key, value string
-    var exDurationMs int64 = -1
-    var state exDurationState = Uninitialized
-    var keepttl bool = false
-	
+	var key, value string
+	var exDurationMs int64 = -1
+	var state exDurationState = Uninitialized
+	var keepttl bool = false
+
 	key, value = args[0], args[1]
-    oType, oEnc := deduceTypeEncoding(value)
+	oType, oEnc := deduceTypeEncoding(value)
 
-    for i := 2; i < len(args); i++ {
-        arg := strings.ToUpper(args[i])
-        switch arg {
-        case Ex, Px:
-            if state != Uninitialized {
-                return &EvalResponse{
-                    Result: nil,
-                    Error:  diceerrors.ErrSyntax,
-                }
-            }
-            if keepttl {
-                return &EvalResponse{
-                    Result: nil,
-                    Error:  diceerrors.ErrSyntax,
-                }
-            }
-            i++
-            if i == len(args) {
-                return &EvalResponse{
-                    Result: nil,
-                    Error:  diceerrors.ErrSyntax,
-                }
-            }
+	for i := 2; i < len(args); i++ {
+		arg := strings.ToUpper(args[i])
+		switch arg {
+		case Ex, Px:
+			if state != Uninitialized {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrSyntax,
+				}
+			}
+			if keepttl {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrSyntax,
+				}
+			}
+			i++
+			if i == len(args) {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrSyntax,
+				}
+			}
 
-            exDuration, err := strconv.ParseInt(args[i], 10, 64)
-            if err != nil {
-                return &EvalResponse{
-                    Result: nil,
-                    Error:  diceerrors.ErrIntegerOutOfRange,
-                }
-            }
+			exDuration, err := strconv.ParseInt(args[i], 10, 64)
+			if err != nil {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrIntegerOutOfRange,
+				}
+			}
 
-            if exDuration <= 0 || exDuration >= maxExDuration {
-                return &EvalResponse{
-                    Result: nil,
-                    Error:  diceerrors.ErrInvalidExpireTime("SET"),
-                }
-            }
+			if exDuration <= 0 || exDuration >= maxExDuration {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrInvalidExpireTime("SET"),
+				}
+			}
 
-            // converting seconds to milliseconds
-            if arg == Ex {
-                exDuration *= 1000
-            }
-            exDurationMs = exDuration
-            state = Initialized
+			// converting seconds to milliseconds
+			if arg == Ex {
+				exDuration *= 1000
+			}
+			exDurationMs = exDuration
+			state = Initialized
 
-        case Pxat, Exat:
-            if state != Uninitialized {
-                return &EvalResponse{
-                    Result: nil,
-                    Error:  diceerrors.ErrSyntax,
-                }
-            }
-            if keepttl {
-                return &EvalResponse{
-                    Result: nil,
-                    Error:  diceerrors.ErrSyntax,
-                }
-            }
-            i++
-            if i == len(args) {
-                return &EvalResponse{
-                    Result: nil,
-                    Error:  diceerrors.ErrSyntax,
-                }
-            }
-            exDuration, err := strconv.ParseInt(args[i], 10, 64)
-            if err != nil {
-                return &EvalResponse{
-                    Result: nil,
-                    Error:  diceerrors.ErrIntegerOutOfRange,
-                }
-            }
+		case Pxat, Exat:
+			if state != Uninitialized {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrSyntax,
+				}
+			}
+			if keepttl {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrSyntax,
+				}
+			}
+			i++
+			if i == len(args) {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrSyntax,
+				}
+			}
+			exDuration, err := strconv.ParseInt(args[i], 10, 64)
+			if err != nil {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrIntegerOutOfRange,
+				}
+			}
 
-            if exDuration < 0 {
-                return &EvalResponse{
-                    Result: nil,
-                    Error:  diceerrors.ErrInvalidExpireTime("SET"),
-                }
-            }
+			if exDuration < 0 {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrInvalidExpireTime("SET"),
+				}
+			}
 
-            if arg == Exat {
-                exDuration *= 1000
-            }
-            exDurationMs = exDuration - utils.GetCurrentTime().UnixMilli()
-            // If the expiry time is in the past, set exDurationMs to 0
-            // This will be used to signal immediate expiration
-            if exDurationMs < 0 {
-                exDurationMs = 0
-            }
-            state = Initialized
+			if arg == Exat {
+				exDuration *= 1000
+			}
+			exDurationMs = exDuration - utils.GetCurrentTime().UnixMilli()
+			// If the expiry time is in the past, set exDurationMs to 0
+			// This will be used to signal immediate expiration
+			if exDurationMs < 0 {
+				exDurationMs = 0
+			}
+			state = Initialized
 
-        case XX:
-            // Get the key from the hash table
-            obj := store.Get(key)
+		case XX:
+			// Get the key from the hash table
+			obj := store.Get(key)
 
-            // if key does not exist, return RESP encoded nil
-            if obj == nil {
-                return &EvalResponse{
-                    Result: clientio.NIL,
-                    Error:  nil,
-                }
-            }
-        case NX:
-            obj := store.Get(key)
-            if obj != nil {
-                return &EvalResponse{
-                    Result: clientio.NIL,
-                    Error:  nil,
-                }
-            }
-        case KeepTTL:
-            if state != Uninitialized {
-                return &EvalResponse{
-                    Result: nil,
-                    Error:  diceerrors.ErrSyntax,
-                }
-            }
-            keepttl = true
-        default:
-            return &EvalResponse{
-                Result: nil,
-                Error:  diceerrors.ErrSyntax,
-            }
-        }
-    }
+			// if key does not exist, return RESP encoded nil
+			if obj == nil {
+				return &EvalResponse{
+					Result: clientio.NIL,
+					Error:  nil,
+				}
+			}
+		case NX:
+			obj := store.Get(key)
+			if obj != nil {
+				return &EvalResponse{
+					Result: clientio.NIL,
+					Error:  nil,
+				}
+			}
+		case KeepTTL:
+			if state != Uninitialized {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrSyntax,
+				}
+			}
+			keepttl = true
+		default:
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrSyntax,
+			}
+		}
+	}
 
-    // Cast the value properly based on the encoding type
-    var storedValue interface{}
-    switch oEnc {
-    case object.ObjEncodingInt:
-        storedValue, _ = strconv.ParseInt(value, 10, 64)
-    case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
-        storedValue = value
-    default:
-        return &EvalResponse{
-            Result: nil,
-            Error:  diceerrors.ErrUnsupportedEncoding(int(oEnc)),
-        }
-    }
+	// Cast the value properly based on the encoding type
+	var storedValue interface{}
+	switch oEnc {
+	case object.ObjEncodingInt:
+		storedValue, _ = strconv.ParseInt(value, 10, 64)
+	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
+		storedValue = value
+	default:
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrUnsupportedEncoding(int(oEnc)),
+		}
+	}
 
-    // putting the k and value in a Hash Table
-    store.Put(key, store.NewObj(storedValue, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
+	// putting the k and value in a Hash Table
+	store.Put(key, store.NewObj(storedValue, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
 
-    return &EvalResponse{
-        Result: clientio.OK,
-        Error:  nil,
-    }
+	return &EvalResponse{
+		Result: clientio.OK,
+		Error:  nil,
+	}
 }
 
 // evalGET returns the value for the queried key in args
@@ -2970,6 +2971,92 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) *EvalResponse {
 
 	return &EvalResponse{
 		Result: keysList,
+		Error:  nil,
+	}
+}
+
+func evalGetObject(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrInternalServer,
+		}
+	}
+
+	key := args[0]
+
+	obj := store.Get(key)
+
+	// if key does not exist, return RESP encoded nil
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	exp, ok := dstore.GetExpiry(obj, store)
+	var exDurationMs int64 = -1
+	if ok {
+		exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
+	}
+
+	exObj := &object.ExtendedObj{
+		Obj:        obj,
+		ExDuration: exDurationMs,
+	}
+
+	// Decode and return the value based on its encoding
+	return &EvalResponse{
+		Result: exObj,
+		Error:  nil,
+	}
+}
+
+// evalSetObject stores an object in the store with a given key and optional expiry.
+// If an object with the same key exists, it is replaced.
+// This function is usually specifc to multishard multi-op commands
+func evalCOPYObject(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
+
+	var isReplace bool
+	if len(cd.Args) > 1 {
+		if cd.Args[1] == "REPLACE" {
+			isReplace = true
+		}
+	}
+
+	key := args[0]
+
+	obj := store.Get(key)
+
+	if !isReplace && obj != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("ERR target key already exists"),
+		}
+	}
+
+	store.Del(key)
+
+	copyObj := cd.Obj.Obj.DeepCopy()
+	if copyObj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	exDurationMs := cd.Obj.ExDuration
+
+	store.Put(key, copyObj)
+
+	if exDurationMs > 0 {
+		store.SetExpiry(copyObj, exDurationMs)
+	}
+
+	return &EvalResponse{
+		Result: clientio.IntegerOne,
 		Error:  nil,
 	}
 }

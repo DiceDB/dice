@@ -45,7 +45,7 @@ func composeCopy(responses ...ops.StoreResponse) interface{} {
 		}
 	}
 
-	return clientio.OK
+	return clientio.IntegerOne
 }
 
 // composeMSet processes responses from multiple shards for an "MSet" operation

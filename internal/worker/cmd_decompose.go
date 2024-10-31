@@ -4,8 +4,11 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/cmd"
 	diceerrors "github.com/dicedb/dice/internal/errors"
+	"github.com/dicedb/dice/internal/object"
+	"github.com/dicedb/dice/internal/ops"
 	"github.com/dicedb/dice/internal/store"
 )
 
@@ -63,32 +66,36 @@ func decomposeRename(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*
 // sets the value to the destination key using a SET command.
 func decomposeCopy(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
 	// Waiting for GET command response
-	var val string
+	var resp *ops.StoreResponse
 	select {
 	case <-ctx.Done():
 		slog.Error("Timed out waiting for response from shards", slog.String("workerID", w.id), slog.Any("error", ctx.Err()))
 	case preProcessedResp, ok := <-w.preprocessingChan:
 		if ok {
-			evalResp := preProcessedResp.EvalResponse
-			if evalResp.Error != nil {
-				return nil, evalResp.Error
-			}
-
-			val = evalResp.Result.(string)
+			resp = preProcessedResp
 		}
 	}
 
-	if len(cd.Args) != 2 {
+	if resp.EvalResponse.Error != nil || resp.EvalResponse.Result == clientio.IntegerZero {
+		return nil, &diceerrors.PreProcessError{Result: clientio.IntegerZero}
+	}
+
+	if len(cd.Args) < 2 {
 		return nil, diceerrors.ErrWrongArgumentCount("COPY")
 	}
 
-	decomposedCmds := []*cmd.DiceDBCmd{}
-	decomposedCmds = append(decomposedCmds,
-		&cmd.DiceDBCmd{
-			Cmd:  store.Set,
-			Args: []string{cd.Args[1], val},
+	newObj, ok := resp.EvalResponse.Result.(*object.ExtendedObj)
+	if !ok {
+		return nil, diceerrors.ErrInternalServer
+	}
+
+	decomposedCmds := []*cmd.DiceDBCmd{
+		{
+			Cmd:  "COPY",
+			Args: cd.Args[1:],
+			Obj:  newObj,
 		},
-	)
+	}
 
 	return decomposedCmds, nil
 }

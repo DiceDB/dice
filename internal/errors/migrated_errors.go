@@ -71,3 +71,11 @@ var (
 		return fmt.Errorf("ERR wrong type of path value - expected %s but found %s", expectedType, actualType) // Signals an unexpected type received when an integer was expected.
 	}
 )
+
+type PreProcessError struct {
+	Result interface{}
+}
+
+func (e *PreProcessError) Error() string {
+	return fmt.Sprintf("%v", e.Result)
+}

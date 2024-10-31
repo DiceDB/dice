@@ -108,7 +108,7 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 		case cmdReq := <-w.adhocReqChan:
 			// Handle adhoc requests of DiceDBCmd
 			func() {
-				execCtx, cancel := context.WithTimeout(ctx, 6*time.Second) // Timeout set to 6 seconds for integration tests
+				execCtx, cancel := context.WithTimeout(ctx, 1000*time.Second) // Timeout set to 6 seconds for integration tests
 				defer cancel()
 
 				// adhoc requests should be classified as watch requests
@@ -152,7 +152,7 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 			}
 			// executeCommand executes the command and return the response back to the client
 			func(errChan chan error) {
-				execCtx, cancel := context.WithTimeout(ctx, 6*time.Second) // Timeout set to 6 seconds for integration tests
+				execCtx, cancel := context.WithTimeout(ctx, 1000*time.Second) // Timeout set to 6 seconds for integration tests
 				defer cancel()
 				w.executeCommandHandler(execCtx, errChan, cmds, false)
 			}(errChan)
@@ -166,8 +166,13 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 func (w *BaseWorker) executeCommandHandler(execCtx context.Context, errChan chan error, cmds []*cmd.DiceDBCmd, isWatchNotification bool) {
 	// Retrieve metadata for the command to determine if multisharding is supported.
 	meta, ok := CommandsMeta[cmds[0].Cmd]
-	if ok && meta.preProcessingReq {
-		meta.preProcessResponse(w, cmds[0])
+	if ok && meta.preProcessing {
+		if err := meta.preProcessResponse(w, cmds[0]); err != nil {
+			e := w.ioHandler.Write(execCtx, err)
+			if e != nil {
+				slog.Debug("Error executing for worker", slog.String("workerID", w.id), slog.Any("error", err))
+			}
+		}
 	}
 
 	err := w.executeCommand(execCtx, cmds[0], isWatchNotification)
