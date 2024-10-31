@@ -224,7 +224,7 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdCopy: {
 		CmdType:            MultiShard,
 		preProcessing:      true,
-		preProcessResponse: customProcessCopy,
+		preProcessResponse: preProcessCopy,
 		decomposeCommand:   decomposeCopy,
 		composeResponse:    composeCopy,
 	},
