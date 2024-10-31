@@ -5,7 +5,7 @@ import (
 
 	"github.com/dicedb/dice/testutils"
 
-	testifyAssert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCopy(t *testing.T) {
@@ -110,20 +110,20 @@ func TestCopy(t *testing.T) {
 				result, _ := exec.FireCommand(cmd)
 
 				if result == nil {
-					testifyAssert.Equal(t, tc.expected[i], result, "Expected result to be nil for command %v", cmd)
+					assert.Equal(t, tc.expected[i], result, "Expected result to be nil for command %v", cmd)
 					continue
 				}
 
 				if floatResult, ok := result.(float64); ok {
-					testifyAssert.Equal(t, tc.expected[i], floatResult, "Mismatch for command %v", cmd)
+					assert.Equal(t, tc.expected[i], floatResult, "Mismatch for command %v", cmd)
 					continue
 				}
 
 				if resultStr, ok := result.(string); ok {
 					if testutils.IsJSONResponse(resultStr) {
-						testifyAssert.JSONEq(t, tc.expected[i].(string), resultStr, "Mismatch in JSON response for command %v", cmd)
+						assert.JSONEq(t, tc.expected[i].(string), resultStr, "Mismatch in JSON response for command %v", cmd)
 					} else {
-						testifyAssert.Equal(t, tc.expected[i], resultStr, "Mismatch for command %v", cmd)
+						assert.Equal(t, tc.expected[i], resultStr, "Mismatch for command %v", cmd)
 					}
 				} else {
 					t.Fatalf("command %v returned unexpected type: %T", cmd, result)

@@ -2,12 +2,11 @@ package resp
 
 import (
 	"fmt"
+	"sort"
 	"testing"
 
 	"github.com/dicedb/dice/testutils"
-	"github.com/google/go-cmp/cmp/cmpopts"
-	testifyAssert "github.com/stretchr/testify/assert"
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestJsonStrlen(t *testing.T) {
@@ -86,7 +85,7 @@ func TestJsonStrlen(t *testing.T) {
 				if ok {
 					assert.Equal(t, tc.expected[i], stringResult)
 				} else {
-					assert.Assert(t, arraysArePermutations(tc.expected[i].([]interface{}), result.([]interface{})))
+					assert.True(t, arraysArePermutations(tc.expected[i].([]interface{}), result.([]interface{})))
 				}
 			}
 		})
@@ -289,7 +288,7 @@ func TestJsonObjLen(t *testing.T) {
 				cmd := tcase.commands[i]
 				out := tcase.expected[i]
 				result := FireCommand(conn, cmd)
-				assert.DeepEqual(t, out, result)
+				assert.Equal(t, out, result)
 			}
 		})
 	}
@@ -366,14 +365,14 @@ func TestJSONARRPOP(t *testing.T) {
 				jsonResult, isString := result.(string)
 
 				if isString && testutils.IsJSONResponse(jsonResult) {
-					testifyAssert.JSONEq(t, out.(string), jsonResult)
+					assert.JSONEq(t, out.(string), jsonResult)
 					continue
 				}
 
 				if tcase.assertType[i] == "equal" {
 					assert.Equal(t, out, result)
 				} else if tcase.assertType[i] == "deep_equal" {
-					assert.Assert(t, arraysArePermutations(out.([]interface{}), result.([]interface{})))
+					assert.True(t, arraysArePermutations(out.([]interface{}), result.([]interface{})))
 				}
 			}
 		})
@@ -430,7 +429,7 @@ func TestJsonARRAPPEND(t *testing.T) {
 				if tcase.assertType[i] == "equal" {
 					assert.Equal(t, out, result)
 				} else if tcase.assertType[i] == "deep_equal" {
-					assert.Assert(t, arraysArePermutations(out.([]interface{}), result.([]interface{})))
+					assert.True(t, arraysArePermutations(out.([]interface{}), result.([]interface{})))
 				}
 			}
 		})
@@ -502,9 +501,9 @@ func TestJsonARRINSERT(t *testing.T) {
 				if tcase.assertType[i] == "equal" {
 					assert.Equal(t, out, result)
 				} else if tcase.assertType[i] == "deep_equal" {
-					assert.Assert(t, arraysArePermutations(out.([]interface{}), result.([]interface{})))
+					assert.True(t, arraysArePermutations(out.([]interface{}), result.([]interface{})))
 				} else if tcase.assertType[i] == "jsoneq" {
-					testifyAssert.JSONEq(t, out.(string), result.(string))
+					assert.JSONEq(t, out.(string), result.(string))
 				}
 			}
 		})
@@ -616,16 +615,32 @@ func TestJsonObjKeys(t *testing.T) {
 			_, isString := out.(string)
 			if isString {
 				outInterface := []interface{}{out}
-				assert.DeepEqual(t, outInterface, expected)
+				assert.Equal(t, outInterface, expected)
 			} else {
-				assert.DeepEqual(t, out.([]interface{}), expected,
-					cmpopts.SortSlices(func(a, b interface{}) bool {
-						return fmt.Sprintf("%v", a) < fmt.Sprintf("%v", b)
-					}))
+						assert.ElementsMatch(t, 
+                sortNestedSlices(expected), 
+                sortNestedSlices(out.([]interface{})),
+                "Mismatch in JSON object keys")
 			}
 		})
 	}
+}
 
+func sortNestedSlices(data []interface{}) []interface{} {
+    result := make([]interface{}, len(data))
+    for i, item := range data {
+        if slice, ok := item.([]interface{}); ok {
+            sorted := make([]interface{}, len(slice))
+            copy(sorted, slice)
+            sort.Slice(sorted, func(i, j int) bool {
+                return fmt.Sprintf("%v", sorted[i]) < fmt.Sprintf("%v", sorted[j])
+            })
+            result[i] = sorted
+        } else {
+            result[i] = item
+        }
+    }
+    return result
 }
 
 func TestJsonARRTRIM(t *testing.T) {
@@ -702,9 +717,9 @@ func TestJsonARRTRIM(t *testing.T) {
 				if tcase.assertType[i] == "equal" {
 					assert.Equal(t, out, result)
 				} else if tcase.assertType[i] == "deep_equal" {
-					assert.Assert(t, arraysArePermutations(out.([]interface{}), result.([]interface{})))
+					assert.True(t, arraysArePermutations(out.([]interface{}), result.([]interface{})))
 				} else if tcase.assertType[i] == "jsoneq" {
-					testifyAssert.JSONEq(t, out.(string), result.(string))
+					assert.JSONEq(t, out.(string), result.(string))
 				}
 			}
 		})
