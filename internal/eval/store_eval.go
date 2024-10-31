@@ -3021,7 +3021,7 @@ func evalCOPYObject(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
 
 	var isReplace bool
 	if len(cd.Args) > 1 {
-		if cd.Args[1] == "REPLACE" {
+		if cd.Args[1] == dstore.Replace {
 			isReplace = true
 		}
 	}

@@ -2157,7 +2157,7 @@ func evalCOPY(args []string, store *dstore.Store) []byte {
 
 	for i := 2; i < len(args); i++ {
 		arg := strings.ToUpper(args[i])
-		if arg == "REPLACE" {
+		if arg == dstore.Replace {
 			isReplace = true
 		}
 	}
