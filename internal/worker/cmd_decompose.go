@@ -91,7 +91,7 @@ func decomposeCopy(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cm
 
 	decomposedCmds := []*cmd.DiceDBCmd{
 		{
-			Cmd:  "COPY",
+			Cmd:  "OBJECTCOPY",
 			Args: cd.Args[1:],
 			Obj:  newObj,
 		},

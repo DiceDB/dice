@@ -609,13 +609,24 @@ var (
 		Info: "PERSIST removes the expiration from a key",
 		Eval: evalPersist,
 	}
+
+	//TODO: supports only http protocol, needs to be removed once http is migrated to multishard
 	copyCmdMeta = DiceCmdMeta{
-		Name:            "COPY",
+		Name:  "COPY",
+		Info:  `COPY command copies the value stored at the source key to the destination key.`,
+		Eval:  evalCOPY,
+		Arity: -2,
+	}
+
+	//TODO: supports only http protocol, needs to be removed once http is migrated to multishard
+	objectCopyCmdMeta = DiceCmdMeta{
+		Name:            "OBJECTCOPY",
 		Info:            `COPY command copies the value stored at the source key to the destination key.`,
 		StoreObjectEval: evalCOPYObject,
 		IsMigrated:      true,
 		Arity:           -2,
 	}
+
 	decrCmdMeta = DiceCmdMeta{
 		Name: "DECR",
 		Info: `DECR decrements the value of the specified key in args by 1,
@@ -1332,6 +1343,7 @@ func init() {
 	DiceCmds["COMMAND|DOCS"] = commandDocsCmdMeta
 	DiceCmds["COMMAND|GETKEYSANDFLAGS"] = commandGetKeysAndFlagsCmdMeta
 	DiceCmds["COPY"] = copyCmdMeta
+	DiceCmds["OBJECTCOPY"] = objectCopyCmdMeta
 	DiceCmds["DBSIZE"] = dbSizeCmdMeta
 	DiceCmds["DECR"] = decrCmdMeta
 	DiceCmds["DECRBY"] = decrByCmdMeta

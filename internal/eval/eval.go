@@ -2141,6 +2141,55 @@ func evalPersist(args []string, store *dstore.Store) []byte {
 	return clientio.RespOne
 }
 
+func evalCOPY(args []string, store *dstore.Store) []byte {
+	if len(args) < 2 {
+		return diceerrors.NewErrArity("COPY")
+	}
+
+	isReplace := false
+
+	sourceKey := args[0]
+	destinationKey := args[1]
+	sourceObj := store.Get(sourceKey)
+	if sourceObj == nil {
+		return clientio.RespZero
+	}
+
+	for i := 2; i < len(args); i++ {
+		arg := strings.ToUpper(args[i])
+		if arg == "REPLACE" {
+			isReplace = true
+		}
+	}
+
+	if isReplace {
+		store.Del(destinationKey)
+	}
+
+	destinationObj := store.Get(destinationKey)
+	if destinationObj != nil {
+		return clientio.RespZero
+	}
+
+	copyObj := sourceObj.DeepCopy()
+	if copyObj == nil {
+		return clientio.RespZero
+	}
+
+	exp, ok := dstore.GetExpiry(sourceObj, store)
+	var exDurationMs int64 = -1
+	if ok {
+		exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
+	}
+
+	store.Put(destinationKey, copyObj)
+
+	if exDurationMs > 0 {
+		store.SetExpiry(copyObj, exDurationMs)
+	}
+	return clientio.RespOne
+}
+
 // GETEX key [EX seconds | PX milliseconds | EXAT unix-time-seconds |
 // PXAT unix-time-milliseconds | PERSIST]
 // Get the value of key and optionally set its expiration.
