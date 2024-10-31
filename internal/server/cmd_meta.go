@@ -62,8 +62,32 @@ var (
 		Cmd:     "SETEX",
 		CmdType: SingleShard,
 	}
+	jsonArrAppendCmdMeta = CmdsMeta{
+		Cmd:     "JSON.ARRAPPEND",
+		CmdType: SingleShard,
+	}
+	jsonArrLenCmdMeta = CmdsMeta{
+		Cmd:     "JSON.ARRLEN",
+		CmdType: SingleShard,
+	}
+	jsonArrPopCmdMeta = CmdsMeta{
+		Cmd:     "JSON.ARRPOP",
+		CmdType: SingleShard,
+	}
 	getrangeCmdMeta = CmdsMeta{
 		Cmd:     "GETRANGE",
+		CmdType: SingleShard,
+	}
+	hexistsCmdMeta = CmdsMeta{
+		Cmd:     "HEXISTS",
+		CmdType: SingleShard,
+	}
+	hkeysCmdMeta = CmdsMeta{
+		Cmd:     "HKEYS",
+		CmdType: SingleShard,
+	}
+	hvalsCmdMeta = CmdsMeta{
+		Cmd:     "HVALS",
 		CmdType: SingleShard,
 	}
 	zaddCmdMeta = CmdsMeta{
@@ -88,6 +112,14 @@ var (
 	}
 	zrankCmdMeta = CmdsMeta{
 		Cmd:     "ZRANK",
+		CmdType: SingleShard,
+	}
+	zcardCmdMeta = CmdsMeta{
+		Cmd:     "ZCARD",
+		CmdType: SingleShard,
+	}
+	zremCmdMeta = CmdsMeta{
+		Cmd:     "ZREM",
 		CmdType: SingleShard,
 	}
 	pfaddCmdMeta = CmdsMeta{
@@ -117,7 +149,7 @@ var (
 		Cmd:     "JSON.OBJLEN",
 		CmdType: SingleShard,
 	}
-  hlenCmdMeta = CmdsMeta{
+	hlenCmdMeta = CmdsMeta{
 		Cmd:     "HLEN",
 		CmdType: SingleShard,
 	}
@@ -129,6 +161,22 @@ var (
 		Cmd:     "HSCAN",
 		CmdType: SingleShard,
 	}
+
+	jsonarrinsertCmdMeta = CmdsMeta{
+		Cmd:     "JSON.ARRINSERT",
+		CmdType: SingleShard,
+	}
+
+	jsonarrtrimCmdMeta = CmdsMeta{
+		Cmd:     "JSON.ARRTRIM",
+		CmdType: SingleShard,
+	}
+
+	jsonobjkeystCmdMeta = CmdsMeta{
+		Cmd:     "JSON.OBJKEYS",
+		CmdType: SingleShard,
+	}
+
 	incrCmdMeta = CmdsMeta{
 		Cmd:     "INCR",
 		CmdType: SingleShard,
@@ -161,6 +209,10 @@ var (
 		Cmd:     "HRANDFIELD",
 		CmdType: SingleShard,
 	}
+	zpopmaxCmdMeta = CmdsMeta{
+		Cmd:     "ZPOPMAX",
+		CmdType: SingleShard,
+	}
 	bfaddCmdMeta = CmdsMeta{
 		Cmd:     "BF.ADD",
 		CmdType: SingleShard,
@@ -175,6 +227,36 @@ var (
 	}
 	bfinfoCmdMeta = CmdsMeta{
 		Cmd:     "BF.INFO",
+		CmdType: SingleShard,
+	}
+
+	cmsInitByDimCmdMeta = CmdsMeta{
+		Cmd:     "CMS.INITBYDIM",
+		CmdType: SingleShard,
+	}
+
+	cmsInitByProbCmdMeta = CmdsMeta{
+		Cmd:     "CMS.INITBYPROB",
+		CmdType: SingleShard,
+	}
+
+	cmsInfoCmdMeta = CmdsMeta{
+		Cmd:     "CMS.INFO",
+		CmdType: SingleShard,
+	}
+
+	cmsIncrByCmdMeta = CmdsMeta{
+		Cmd:     "CMS.INCRBY",
+		CmdType: SingleShard,
+	}
+
+	cmsQueryCmdMeta = CmdsMeta{
+		Cmd:     "CMS.QUERY",
+		CmdType: SingleShard,
+	}
+
+	cmsMergeCmdMeta = CmdsMeta{
+		Cmd:     "CMS.MERGE",
 		CmdType: SingleShard,
 	}
 
@@ -194,15 +276,26 @@ func init() {
 	WorkerCmdsMeta["GET"] = getCmdMeta
 	WorkerCmdsMeta["GETSET"] = getsetCmdMeta
 	WorkerCmdsMeta["SETEX"] = setexCmdMeta
+	WorkerCmdsMeta["JSON.ARRAPPEND"] = jsonArrAppendCmdMeta
+	WorkerCmdsMeta["JSON.ARRLEN"] = jsonArrLenCmdMeta
+	WorkerCmdsMeta["JSON.ARRPOP"] = jsonArrPopCmdMeta
 	WorkerCmdsMeta["GETRANGE"] = getrangeCmdMeta
 	WorkerCmdsMeta["APPEND"] = appendCmdMeta
 	WorkerCmdsMeta["JSON.CLEAR"] = jsonclearCmdMeta
 	WorkerCmdsMeta["JSON.STRLEN"] = jsonstrlenCmdMeta
 	WorkerCmdsMeta["JSON.OBJLEN"] = jsonobjlenCmdMeta
+	WorkerCmdsMeta["HEXISTS"] = hexistsCmdMeta
+	WorkerCmdsMeta["HKEYS"] = hkeysCmdMeta
+	WorkerCmdsMeta["HVALS"] = hvalsCmdMeta
+	WorkerCmdsMeta["JSON.ARRINSERT"] = jsonarrinsertCmdMeta
+	WorkerCmdsMeta["JSON.ARRTRIM"] = jsonarrtrimCmdMeta
+	WorkerCmdsMeta["JSON.OBJKEYS"] = jsonobjkeystCmdMeta
 	WorkerCmdsMeta["ZADD"] = zaddCmdMeta
 	WorkerCmdsMeta["ZCOUNT"] = zcountCmdMeta
 	WorkerCmdsMeta["ZRANGE"] = zrangeCmdMeta
 	WorkerCmdsMeta["ZRANK"] = zrankCmdMeta
+	WorkerCmdsMeta["ZCARD"] = zcardCmdMeta
+	WorkerCmdsMeta["ZREM"] = zremCmdMeta
 	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
 	WorkerCmdsMeta["ZPOPMIN"] = zpopminCmdMeta
 	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
@@ -232,9 +325,16 @@ func init() {
 	WorkerCmdsMeta["HINCRBY"] = hincrbyCmdMeta
 	WorkerCmdsMeta["HINCRBYFLOAT"] = hincrbyfloatCmdMeta
 	WorkerCmdsMeta["HRANDFIELD"] = hrandfieldCmdMeta
+	WorkerCmdsMeta["ZPOPMAX"] = zpopmaxCmdMeta
 	WorkerCmdsMeta["BF.ADD"] = bfaddCmdMeta
 	WorkerCmdsMeta["BF.RESERVE"] = bfreserveCmdMeta
 	WorkerCmdsMeta["BF.EXISTS"] = bfexistsCmdMeta
 	WorkerCmdsMeta["BF.INFO"] = bfinfoCmdMeta
+	WorkerCmdsMeta["CMS.INITBYDIM"] = cmsInitByDimCmdMeta
+	WorkerCmdsMeta["CMS.INITBYPROB"] = cmsInitByProbCmdMeta
+	WorkerCmdsMeta["CMS.INFO"] = cmsInfoCmdMeta
+	WorkerCmdsMeta["CMS.INCRBY"] = cmsIncrByCmdMeta
+	WorkerCmdsMeta["CMS.QUERY"] = cmsQueryCmdMeta
+	WorkerCmdsMeta["CMS.MERGE"] = cmsMergeCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }

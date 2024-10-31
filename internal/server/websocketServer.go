@@ -120,7 +120,10 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 
 	// closing handshake
 	defer func() {
-		_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "close 1000 (normal)"))
+		closeErr := conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "close 1000 (normal)"))
+		if closeErr != nil {
+			slog.Debug("Error during closing handshake", slog.Any("error", closeErr))
+		}
 		conn.Close()
 	}()
 
@@ -131,9 +134,10 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		if err != nil {
 			// acceptable close errors
 			errs := []int{websocket.CloseNormalClosure, websocket.CloseGoingAway, websocket.CloseAbnormalClosure}
-			if !websocket.IsCloseError(err, errs...) {
-				slog.Warn("failed to read message from client", slog.Any("error", err))
+			if websocket.IsCloseError(err, errs...) {
+				break
 			}
+			slog.Error("Error reading message", slog.Any("error", err))
 			break
 		}
 
@@ -175,7 +179,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 			sp.Client = comm.NewHTTPQwatchClient(s.qwatchResponseChan, clientIdentifierID)
 
 			// start a goroutine for subsequent updates
-			go s.processQwatchUpdates(clientIdentifierID, conn, diceDBCmd)
+			go s.processQwatchUpdates(clientIdentifierID, conn)
 		}
 
 		s.shardManager.GetShard(0).ReqChan <- sp
@@ -186,12 +190,12 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (s *WebsocketServer) processQwatchUpdates(clientIdentifierID uint32, conn *websocket.Conn, dicDBCmd *cmd.DiceDBCmd) {
+func (s *WebsocketServer) processQwatchUpdates(clientIdentifierID uint32, conn *websocket.Conn) {
 	for {
 		select {
 		case resp := <-s.qwatchResponseChan:
 			if resp.ClientIdentifierID == clientIdentifierID {
-				if err := s.processResponse(conn, dicDBCmd, resp); err != nil {
+				if err := s.processQwatchResponse(conn, resp); err != nil {
 					slog.Debug("Error writing response to client. Shutting down goroutine for q.watch updates", slog.Any("clientIdentifierID", clientIdentifierID), slog.Any("error", err))
 					return
 				}
@@ -202,7 +206,7 @@ func (s *WebsocketServer) processQwatchUpdates(clientIdentifierID uint32, conn *
 	}
 }
 
-func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.DiceDBCmd, response interface{}) error {
+func (s *WebsocketServer) processQwatchResponse(conn *websocket.Conn, response interface{}) error {
 	var result interface{}
 	var err error
 	maxRetries := config.DiceConfig.WebSocket.MaxWriteResponseRetries
@@ -212,9 +216,6 @@ func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.D
 	case comm.QwatchResponse:
 		result = resp.Result
 		err = resp.Error
-	case *ops.StoreResponse:
-		result = resp.EvalResponse.Result
-		err = resp.EvalResponse.Error
 	default:
 		slog.Debug("Unsupported response type")
 		if err := WriteResponseWithRetries(conn, []byte("error: 500 Internal Server Error"), maxRetries); err != nil {
@@ -224,29 +225,55 @@ func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.D
 		return nil
 	}
 
-	_, ok := WorkerCmdsMeta[diceDBCmd.Cmd]
-	respArr := []string{
-		"(nil)",  // Represents a RESP Nil Bulk String, which indicates a null value.
-		"OK",     // Represents a RESP Simple String with value "OK".
-		"QUEUED", // Represents a Simple String indicating that a command has been queued.
-		"0",      // Represents a RESP Integer with value 0.
-		"1",      // Represents a RESP Integer with value 1.
-		"-1",     // Represents a RESP Integer with value -1.
-		"-2",     // Represents a RESP Integer with value -2.
-		"*0",     // Represents an empty RESP Array.
+	var responseValue interface{}
+	var rp *clientio.RESPParser
+	if err != nil {
+		rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(err.Error())))
+	} else {
+		rp = clientio.NewRESPParser(bytes.NewBuffer(result.([]byte)))
 	}
 
+	responseValue, err = rp.DecodeOne()
+	if err != nil {
+		slog.Debug("Error decoding response", "error", err)
+		if err := WriteResponseWithRetries(conn, []byte("error: 500 Internal Server Error"), maxRetries); err != nil {
+			slog.Debug(fmt.Sprintf("Error writing message: %v", err))
+			return fmt.Errorf("error writing response: %v", err)
+		}
+		return nil
+	}
+
+	respBytes, err := json.Marshal(responseValue)
+	if err != nil {
+		slog.Debug("Error marshaling json", "error", err)
+		if err := WriteResponseWithRetries(conn, []byte("error: marshaling json"), maxRetries); err != nil {
+			slog.Debug(fmt.Sprintf("Error writing message: %v", err))
+			return fmt.Errorf("error writing response: %v", err)
+		}
+		return nil
+	}
+
+	// success
+	// Write response with retries for transient errors
+	if err := WriteResponseWithRetries(conn, respBytes, config.DiceConfig.WebSocket.MaxWriteResponseRetries); err != nil {
+		slog.Debug(fmt.Sprintf("Error writing message: %v", err))
+		return fmt.Errorf("error writing response: %v", err)
+	}
+
+	return nil
+}
+
+func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.DiceDBCmd, response *ops.StoreResponse) error {
+	var err error
+	maxRetries := config.DiceConfig.WebSocket.MaxWriteResponseRetries
+
 	var responseValue interface{}
+	// Check if the command is migrated, if it is we use EvalResponse values
+	// else we use RESPParser to decode the response
+	_, ok := WorkerCmdsMeta[diceDBCmd.Cmd]
 	// TODO: Remove this conditional check and if (true) condition when all commands are migrated
 	if !ok {
-		var rp *clientio.RESPParser
-		if err != nil {
-			rp = clientio.NewRESPParser(bytes.NewBuffer([]byte(err.Error())))
-		} else {
-			rp = clientio.NewRESPParser(bytes.NewBuffer(result.([]byte)))
-		}
-
-		responseValue, err = rp.DecodeOne()
+		responseValue, err = DecodeEvalResponse(response.EvalResponse)
 		if err != nil {
 			slog.Debug("Error decoding response", "error", err)
 			if err := WriteResponseWithRetries(conn, []byte("error: 500 Internal Server Error"), maxRetries); err != nil {
@@ -256,22 +283,16 @@ func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.D
 			return nil
 		}
 	} else {
-		if err != nil {
-			responseValue = err.Error()
+		if response.EvalResponse.Error != nil {
+			responseValue = response.EvalResponse.Error.Error()
 		} else {
-			responseValue = result
+			responseValue = response.EvalResponse.Result
 		}
 	}
 
-	if val, ok := responseValue.(clientio.RespType); ok {
-		responseValue = respArr[val]
-	}
-
-	if bt, ok := responseValue.([]byte); ok {
-		responseValue = string(bt)
-	}
-
-	respBytes, err := json.Marshal(responseValue)
+	// Create websocket response
+	wsResponse := ResponseParser(responseValue)
+	respBytes, err := json.Marshal(wsResponse)
 	if err != nil {
 		slog.Debug("Error marshaling json", "error", err)
 		if err := WriteResponseWithRetries(conn, []byte("error: marshaling json"), maxRetries); err != nil {

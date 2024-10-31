@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/xwb1989/sqlparser"
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestExpressionString(t *testing.T) {
@@ -112,7 +112,7 @@ func TestCombineOr(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.DeepEqual(t, tt.expected, combineOr(tt.a, tt.b))
+			assert.Equal(t, tt.expected, combineOr(tt.a, tt.b))
 		})
 	}
 }
@@ -207,7 +207,7 @@ func TestCombineAnd(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.DeepEqual(t, tt.expected, combineAnd(tt.a, tt.b))
+			assert.Equal(t, tt.expected, combineAnd(tt.a, tt.b))
 		})
 	}
 }
@@ -350,8 +350,8 @@ func TestGenerateFingerprintAndParseAstExpression(t *testing.T) {
 				if err != nil {
 					t.Fail()
 				}
-				assert.DeepEqual(t, tt.expression, parseAstExpression(where).String())
-				assert.DeepEqual(t, tt.fingerprint, generateFingerprint(where))
+				assert.Equal(t, tt.expression, parseAstExpression(where).String())
+				assert.Equal(t, tt.fingerprint, generateFingerprint(where))
 			}
 		})
 	}

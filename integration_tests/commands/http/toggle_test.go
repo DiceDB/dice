@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/dicedb/dice/testutils"
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func compareJSON(t *testing.T, expected, actual string) {
@@ -15,10 +15,10 @@ func compareJSON(t *testing.T, expected, actual string) {
 	err1 := json.Unmarshal([]byte(expected), &expectedMap)
 	err2 := json.Unmarshal([]byte(actual), &actualMap)
 
-	assert.NilError(t, err1)
-	assert.NilError(t, err2)
+	assert.Nil(t, err1)
+	assert.Nil(t, err2)
 
-	assert.DeepEqual(t, expectedMap, actualMap)
+	assert.Equal(t, expectedMap, actualMap)
 }
 func TestJSONTOGGLE(t *testing.T) {
 	exec := NewHTTPCommandExecutor()
@@ -93,9 +93,9 @@ func TestJSONTOGGLE(t *testing.T) {
 						assert.Equal(t, expected, result)
 					}
 				case []interface{}:
-					assert.Assert(t, testutils.UnorderedEqual(expected, result))
+					assert.True(t, testutils.UnorderedEqual(expected, result))
 				default:
-					assert.DeepEqual(t, expected, result)
+					assert.Equal(t, expected, result)
 				}
 			}
 		})

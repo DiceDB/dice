@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 type TestCase struct {
@@ -43,7 +43,7 @@ func TestSet(t *testing.T) {
 
 			for i, cmd := range tc.commands {
 				result := FireCommand(conn, cmd)
-				assert.DeepEqual(t, tc.expected[i], result)
+				assert.Equal(t, tc.expected[i], result)
 			}
 		})
 	}
@@ -148,9 +148,9 @@ func TestSetWithExat(t *testing.T) {
 			FireCommand(conn, "DEL k")
 			assert.Equal(t, "OK", FireCommand(conn, "SET k v EXAT "+Etime), "Value mismatch for cmd SET k v EXAT "+Etime)
 			assert.Equal(t, "v", FireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
-			assert.Assert(t, FireCommand(conn, "TTL k").(int64) <= 5, "Value mismatch for cmd TTL k")
+			assert.True(t, FireCommand(conn, "TTL k").(int64) <= 5, "Value mismatch for cmd TTL k")
 			time.Sleep(3 * time.Second)
-			assert.Assert(t, FireCommand(conn, "TTL k").(int64) <= 3, "Value mismatch for cmd TTL k")
+			assert.True(t, FireCommand(conn, "TTL k").(int64) <= 3, "Value mismatch for cmd TTL k")
 			time.Sleep(3 * time.Second)
 			assert.Equal(t, "(nil)", FireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
 			assert.Equal(t, int64(-2), FireCommand(conn, "TTL k"), "Value mismatch for cmd TTL k")
@@ -176,12 +176,13 @@ func TestSetWithExat(t *testing.T) {
 
 func TestWithKeepTTLFlag(t *testing.T) {
 	conn := getLocalConnection()
+	expiryTime := strconv.FormatInt(time.Now().Add(1*time.Minute).UnixMilli(), 10)
 	defer conn.Close()
 
 	for _, tcase := range []TestCase{
 		{
-			commands: []string{"SET k v EX 2", "SET k vv KEEPTTL", "GET k", "SET kk vv", "SET kk vvv KEEPTTL", "GET kk"},
-			expected: []interface{}{"OK", "OK", "vv", "OK", "OK", "vvv"},
+			commands: []string{"SET k v EX 2", "SET k vv KEEPTTL", "GET k", "SET kk vv", "SET kk vvv KEEPTTL", "GET kk", "SET K V EX 2 KEEPTTL", "SET K1 vv PX 2000 KEEPTTL", "SET K2 vv EXAT " + expiryTime + " KEEPTTL"},
+			expected: []interface{}{"OK", "OK", "vv", "OK", "OK", "vvv", "ERR syntax error", "ERR syntax error", "ERR syntax error"},
 		},
 	} {
 		for i := 0; i < len(tcase.commands); i++ {

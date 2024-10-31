@@ -19,19 +19,19 @@ func TestBFReserveAddInfoExists(t *testing.T) {
 		{
 			name:    "BF.RESERVE and BF.ADD",
 			cmds:    []string{"BF.RESERVE bf 0.01 1000", "BF.ADD bf item1", "BF.EXISTS bf item1"},
-			expect:  []interface{}{"OK", "1", "1"},
+			expect:  []interface{}{"OK", float64(1), float64(1)},
 			cleanUp: []string{"DEL bf"},
 		},
 		{
 			name:    "BF.EXISTS returns false for non-existing item",
 			cmds:    []string{"BF.RESERVE bf 0.01 1000", "BF.EXISTS bf item2"},
-			expect:  []interface{}{"OK", "0"},
+			expect:  []interface{}{"OK", float64(0)},
 			cleanUp: []string{"DEL bf"},
 		},
 		{
 			name:    "BF.INFO provides correct information",
 			cmds:    []string{"BF.RESERVE bf 0.01 1000", "BF.ADD bf item1", "BF.INFO bf"},
-			expect:  []interface{}{"OK", "1", []interface{}{"Capacity", float64(1000), "Size", float64(10104), "Number of filters", float64(7), "Number of items inserted", float64(1), "Expansion rate", float64(2)}},
+			expect:  []interface{}{"OK", float64(1), []interface{}{"Capacity", float64(1000), "Size", float64(10104), "Number of filters", float64(7), "Number of items inserted", float64(1), "Expansion rate", float64(2)}},
 			cleanUp: []string{"DEL bf"},
 		},
 		{
@@ -112,14 +112,14 @@ func TestBFEdgeCasesAndErrors(t *testing.T) {
 		{
 			name:    "BF.ADD to a Bloom filter without reserving",
 			cmds:    []string{"BF.ADD bf item1"},
-			expect:  []interface{}{"1"},
+			expect:  []interface{}{float64(1)},
 			delays:  []time.Duration{0},
 			cleanUp: []string{"del bf"},
 		},
 		{
 			name:    "BF.EXISTS on an unreserved filter",
 			cmds:    []string{"BF.EXISTS bf item1"},
-			expect:  []interface{}{"0"},
+			expect:  []interface{}{float64(0)},
 			delays:  []time.Duration{0},
 			cleanUp: []string{"del bf"},
 		},
@@ -147,14 +147,14 @@ func TestBFEdgeCasesAndErrors(t *testing.T) {
 		{
 			name:    "BF.ADD multiple items and check existence",
 			cmds:    []string{"BF.RESERVE bf 0.01 1000", "BF.ADD bf item1", "BF.ADD bf item2", "BF.EXISTS bf item1", "BF.EXISTS bf item2", "BF.EXISTS bf item3"},
-			expect:  []interface{}{"OK", "1", "1", "1", "1", "0"},
+			expect:  []interface{}{"OK", float64(1), float64(1), float64(1), float64(1), float64(0)},
 			delays:  []time.Duration{0, 0, 0, 0, 0, 0},
 			cleanUp: []string{"del bf"},
 		},
 		{
 			name:    "BF.EXISTS after BF.ADD returns false on non-existing item",
 			cmds:    []string{"BF.RESERVE bf 0.01 1000", "BF.ADD bf item1", "BF.EXISTS bf nonExistentItem"},
-			expect:  []interface{}{"OK", "1", "0"},
+			expect:  []interface{}{"OK", float64(1), float64(0)},
 			delays:  []time.Duration{0, 0, 0},
 			cleanUp: []string{"del bf"},
 		},
@@ -168,7 +168,7 @@ func TestBFEdgeCasesAndErrors(t *testing.T) {
 		{
 			name:    "BF.INFO after multiple additions",
 			cmds:    []string{"BF.RESERVE bf 0.01 1000", "BF.ADD bf item1", "BF.ADD bf item2", "BF.ADD bf item3", "BF.INFO bf"},
-			expect:  []interface{}{"OK", "1", "1", "1", []interface{}{"Capacity", float64(1000), "Size", float64(10104), "Number of filters", float64(7), "Number of items inserted", float64(3), "Expansion rate", float64(2)}},
+			expect:  []interface{}{"OK", float64(1), float64(1), float64(1), []interface{}{"Capacity", float64(1000), "Size", float64(10104), "Number of filters", float64(7), "Number of items inserted", float64(3), "Expansion rate", float64(2)}},
 			delays:  []time.Duration{0, 0, 0, 0, 0},
 			cleanUp: []string{"del bf"},
 		},

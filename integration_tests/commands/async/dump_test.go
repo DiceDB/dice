@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/dicedb/dice/testutils"
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDumpRestore(t *testing.T) {
@@ -38,8 +38,8 @@ func TestDumpRestore(t *testing.T) {
 						return false
 					}
 					return len(decoded) > 11 &&
-						decoded[0] == 0x09 && 
-						decoded[1] == 0x00 && 
+						decoded[0] == 0x09 &&
+						decoded[1] == 0x00 &&
 						string(decoded[6:11]) == "hello" &&
 						decoded[11] == 0xFF
 				},
@@ -96,13 +96,13 @@ func TestDumpRestore(t *testing.T) {
 
 				switch exp := expected.(type) {
 				case string:
-					assert.DeepEqual(t, exp, result)
+					assert.Equal(t, exp, result)
 				case []interface{}:
-					assert.Assert(t, testutils.UnorderedEqual(exp, result))
+					assert.True(t, testutils.UnorderedEqual(exp, result))
 				case func(interface{}) bool:
-					assert.Assert(t, exp(result), cmd)
+					assert.True(t, exp(result), cmd)
 				default:
-					assert.DeepEqual(t, expected, result)
+					assert.Equal(t, expected, result)
 				}
 			}
 		})

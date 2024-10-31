@@ -50,30 +50,30 @@ HSTRLEN key field
 ### Basic Usage
 Creating hash `myhash` with two fields `field1` and `field2`. Getting string length of value in `field1`.
 
-```DiceDB
-> HSET myhash field1 "helloworld" field2 "value2"
+```bash
+127.0.0.1:7379> HSET myhash field1 "helloworld" field2 "value2"
 (integer) 1
 
-> HSTRLEN myhash field1
+127.0.0.1:7379> HSTRLEN myhash field1
 (integer) 10
 ```
 
 ### Invalid Usage on non-existent key
 Getting string length from a non-existent key `nonExistentHash`.
 
-```DiceDB
-> HSTRLEN nonExistentHash field1
+```bash
+127.0.0.1:7379> HSTRLEN nonExistentHash field1
 (integer) 0
 ```
 
 ### Invalid Usage on non-hash key
 Getting string length from a key `mystring` associated with a non-hash type.
 
-```DiceDB
-> SET mystring "This is a string"
+```bash
+127.0.0.1:7379> SET mystring "This is a string"
 OK
 
-> HSTRLEN mystring field1
+127.0.0.1:7379> HSTRLEN mystring field1
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
