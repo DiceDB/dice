@@ -267,7 +267,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 	// Unsubscribe Unwatch command type
 	if meta.CmdType == Unwatch {
 		command := cmdList[len(cmdList)-1]
-		watchmanager.CmdWatchSubscriptionChan <- watchmanager.WatchSubscription{
+		w.cmdWatchSubscriptionChan <- watchmanager.WatchSubscription{
 			Subscribe:    false,
 			WatchCmd:     command,
 			AdhocReqChan: w.adhocReqChan,
