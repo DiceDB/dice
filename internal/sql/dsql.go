@@ -5,7 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/xwb1989/sqlparser"
+	"github.com/antlr4-go/antlr/v4"
+	parser "github.com/dicedb/dice/internal/sql/parser"
 )
 
 // Constants for custom syntax replacements
@@ -17,36 +18,157 @@ const (
 	TempValue   = TempPrefix + "value"
 )
 
-// UnsupportedDSQLStatementError is returned when a DSQL statement is not supported
-type UnsupportedDSQLStatementError struct {
-	Stmt sqlparser.Statement
+type ComparisonOp string
+
+const (
+	OpEq      ComparisonOp = "="
+	OpNeq     ComparisonOp = "!="
+	OpGt      ComparisonOp = ">"
+	OpGte     ComparisonOp = ">="
+	OpLt      ComparisonOp = "<"
+	OpLte     ComparisonOp = "<="
+	OpLike    ComparisonOp = "like"
+	OpNotLike ComparisonOp = "notlike"
+)
+
+type FieldType string
+
+const (
+	FieldJson   FieldType = "json"
+	FieldKey    FieldType = "key"
+	FieldVal    FieldType = "value"
+	FieldInt    FieldType = "int64"
+	FieldString FieldType = "string"
+	FieldFloat  FieldType = "float"
+	FieldOth    FieldType = "other"
+)
+
+type Value struct {
+	Type  FieldType
+	Value string
 }
 
-func (e *UnsupportedDSQLStatementError) Error() string {
-	return fmt.Sprintf("unsupported DSQL statement: %T", e.Stmt)
+func newJsonType(val string) Value {
+	return Value{
+		Value: val,
+		Type:  FieldJson,
+	}
 }
 
-func newUnsupportedSQLStatementError(stmt sqlparser.Statement) *UnsupportedDSQLStatementError {
-	return &UnsupportedDSQLStatementError{Stmt: stmt}
+func newIntType(val string) Value {
+	return Value{
+		Value: val,
+		Type:  FieldInt,
+	}
 }
 
-// QuerySelection represents the SELECT expressions in the query
+func newStringType(val string) Value {
+	return Value{
+		Value: val,
+		Type:  FieldString,
+	}
+}
+
+func newFloatType(val string) Value {
+	return Value{
+		Value: val,
+		Type:  FieldFloat,
+	}
+}
+
+func newKeyType() Value {
+	return Value{
+		Value: TempKey,
+		Type:  FieldKey,
+	}
+}
+
+func newValueType() Value {
+	return Value{
+		Value: TempValue,
+		Type:  FieldVal,
+	}
+}
+
+// ConditionNode represents any node in the condition tree.
+type ConditionNode interface {
+	isConditionNode()
+}
+
+type AndNode struct {
+	Left  ConditionNode
+	Right ConditionNode
+}
+
+func (a AndNode) isConditionNode() {}
+
+type OrNode struct {
+	Left  ConditionNode
+	Right ConditionNode
+}
+
+func (o OrNode) isConditionNode() {}
+
+type ComparisonNode struct {
+	Left     Value        // _key or _value
+	Operator ComparisonOp // Comparison operator
+	Right    Value        // Resolved value to compare with
+}
+
+func (c ComparisonNode) isConditionNode() {}
+
 type QuerySelection struct {
 	KeySelection   bool
 	ValueSelection bool
 }
 
 type QueryOrder struct {
-	OrderBy string
+	OrderBy Value
 	Order   string
 }
 
 type DSQLQuery struct {
 	Selection   QuerySelection
-	Where       sqlparser.Expr
+	Where       ConditionNode
 	OrderBy     QueryOrder
 	Limit       int
 	Fingerprint string
+}
+
+type dsqlListner struct {
+	*parser.BasedsqlListener
+	dsqlQuery *DSQLQuery
+}
+
+type dsqlErrorListener struct {
+	*antlr.DefaultErrorListener
+	Errors []error
+}
+
+func newDsqlErrorListner() *dsqlErrorListener {
+	return &dsqlErrorListener{
+		DefaultErrorListener: antlr.NewDefaultErrorListener(),
+	}
+}
+
+func (l *dsqlErrorListener) SyntaxError(_ antlr.Recognizer, _ interface{}, line, col int, msg string, _ antlr.RecognitionException) {
+	l.Errors = append(l.Errors, fmt.Errorf("syntax error at line %d:%d - %s", line, col, msg))
+}
+
+func (v *dsqlListner) ExitSelectStmt(ctx *parser.SelectStmtContext) {
+	v.dsqlQuery.Selection = parseSelectExpressions(ctx.SelectFields())
+}
+
+func (v *dsqlListner) ExitOrderByClause(ctx *parser.OrderByClauseContext) {
+	v.dsqlQuery.OrderBy, _ = parseOrderBy(ctx)
+}
+
+func (l *dsqlListner) ExitLimitClause(ctx *parser.LimitClauseContext) {
+	l.dsqlQuery.Limit = parseLimit(ctx)
+}
+
+func (l *dsqlListner) ExitWhereClause(ctx *parser.WhereClauseContext) {
+	l.dsqlQuery.Where, _ = ParseWhereClause(ctx)
 }
 
 // replacePlaceholders replaces temporary placeholders with custom ones
@@ -57,8 +179,6 @@ func replacePlaceholders(s string) string {
 	)
 	return replacer.Replace(s)
 }
-
-// parseSelectExpressions parses the SELECT expressions in the query
 
 func (q DSQLQuery) String() string {
 	var parts []string
@@ -79,14 +199,14 @@ func (q DSQLQuery) String() string {
 
 	// Where
 	if q.Where != nil {
-		whereClause := sqlparser.String(q.Where)
+		whereClause := whereClauseToSQL(q.Where)
 		whereClause = replacePlaceholders(whereClause)
 		parts = append(parts, fmt.Sprintf("WHERE %s", whereClause))
 	}
 
 	// OrderBy
-	if q.OrderBy.OrderBy != "" {
-		orderByClause := replacePlaceholders(q.OrderBy.OrderBy)
+	if q.OrderBy.OrderBy.Value != "" {
+		orderByClause := replacePlaceholders(q.OrderBy.OrderBy.Value)
 		parts = append(parts, fmt.Sprintf("ORDER BY %s %s", orderByClause, q.OrderBy.Order))
 	}
 
@@ -107,141 +227,205 @@ func replaceCustomSyntax(sql string) string {
 }
 
 // ParseQuery takes a SQL query string and returns a DSQLQuery struct
-func ParseQuery(sql string) (DSQLQuery, error) {
-	// Replace custom syntax before parsing
+func ParseQuery(sql string) (*DSQLQuery, error) {
 	sql = replaceCustomSyntax(sql)
 
-	stmt, err := sqlparser.Parse(sql)
-	if err != nil {
-		return DSQLQuery{}, fmt.Errorf("error parsing SQL statement: %v", err)
+	is := antlr.NewInputStream(sql)
+
+	errorListener := newDsqlErrorListner()
+
+	lexer := parser.NewdsqlLexer(is)
+	lexer.RemoveErrorListeners()
+	lexer.AddErrorListener(errorListener)
+
+	stream := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
+	p := parser.NewdsqlParser(stream)
+	p.RemoveErrorListeners()
+	p.AddErrorListener(errorListener)
+
+	listner := &dsqlListner{
+		dsqlQuery: &DSQLQuery{},
+	}
+	antlr.ParseTreeWalkerDefault.Walk(listner, p.Query())
+
+	if len(errorListener.Errors) > 0 {
+		return nil, fmt.Errorf("error parsing SQL statement: %v", errorListener.Errors)
 	}
 
-	selectStmt, ok := stmt.(*sqlparser.Select)
-	if !ok {
-		return DSQLQuery{}, newUnsupportedSQLStatementError(stmt)
-	}
-
-	// Ensure no unsupported clauses are present
-	if err := checkUnsupportedClauses(selectStmt); err != nil {
-		return DSQLQuery{}, err
-	}
-
-	querySelection, err := parseSelectExpressions(selectStmt)
-	if err != nil {
-		return DSQLQuery{}, err
-	}
-
-	if err := parseTableName(selectStmt); err != nil {
-		return DSQLQuery{}, err
-	}
-
-	where := parseWhere(selectStmt)
-
-	orderBy, err := parseOrderBy(selectStmt)
-	if err != nil {
-		return DSQLQuery{}, err
-	}
-
-	limit, err := parseLimit(selectStmt)
-	if err != nil {
-		return DSQLQuery{}, err
-	}
-
-	return DSQLQuery{
-		Selection:   querySelection,
-		Where:       where,
-		OrderBy:     orderBy,
-		Limit:       limit,
-		Fingerprint: generateFingerprint(where),
-	}, nil
+	listner.dsqlQuery.Fingerprint = generateFingerprint(listner.dsqlQuery.Where)
+	return listner.dsqlQuery, nil
 }
 
-// Function to validate unsupported clauses such as GROUP BY and HAVING
-func checkUnsupportedClauses(selectStmt *sqlparser.Select) error {
-	if selectStmt.GroupBy != nil || selectStmt.Having != nil {
-		return fmt.Errorf("HAVING and GROUP BY clauses are not supported")
-	}
-	return nil
-}
+func parseSelectExpressions(ctx parser.ISelectFieldsContext) QuerySelection {
+	selection := QuerySelection{}
 
-// Function to parse SELECT expressions
-func parseSelectExpressions(selectStmt *sqlparser.Select) (QuerySelection, error) {
-	if len(selectStmt.SelectExprs) < 1 {
-		return QuerySelection{}, fmt.Errorf("no fields selected in result set")
-	} else if len(selectStmt.SelectExprs) > 2 {
-		return QuerySelection{}, fmt.Errorf("only $key and $value are supported in SELECT expressions")
+	if ctx == nil {
+		return selection
 	}
 
-	keySelection := false
-	valueSelection := false
-	for _, expr := range selectStmt.SelectExprs {
-		aliasedExpr, ok := expr.(*sqlparser.AliasedExpr)
-		if !ok {
-			return QuerySelection{}, fmt.Errorf("error parsing SELECT expression: %v", expr)
-		}
-		colName, ok := aliasedExpr.Expr.(*sqlparser.ColName)
-		if !ok {
-			return QuerySelection{}, fmt.Errorf("only column names are supported in SELECT")
-		}
-		switch colName.Name.String() {
+	if ctx.STAR() != nil {
+		selection.KeySelection = true
+		selection.ValueSelection = true
+		return selection
+	}
+
+	for _, field := range ctx.AllField() {
+		switch field.GetText() {
 		case TempKey:
-			keySelection = true
+			selection.KeySelection = true
 		case TempValue:
-			valueSelection = true
-		default:
-			return QuerySelection{}, fmt.Errorf("only $key and $value are supported in SELECT expressions")
+			selection.ValueSelection = true
 		}
 	}
 
-	return QuerySelection{KeySelection: keySelection, ValueSelection: valueSelection}, nil
+	return selection
 }
 
-// Function to parse table name
-func parseTableName(selectStmt *sqlparser.Select) error {
-	tableExpr, ok := selectStmt.From[0].(*sqlparser.AliasedTableExpr)
-	if !ok {
-		return fmt.Errorf("error parsing table name")
+func parseOrderBy(ctx parser.IOrderByClauseContext) (QueryOrder, error) {
+	if ctx == nil {
+		return QueryOrder{}, nil
 	}
 
-	// Remove backticks from table name if present.
-	tableName := strings.Trim(sqlparser.String(tableExpr.Expr), "`")
+	orderBy := Value{}
+	orderBy.Value = trimQuotesOrBackticks(ctx.OrderByField().FieldWithString().GetText())
+	orderBy.Type = getType(orderBy.Value)
 
-	// Ensure table name is not dual, which means no table name was provided.
-	if tableName != "dual" {
-		return fmt.Errorf("FROM clause is not supported")
+	if orderBy.Type == FieldInt || orderBy.Type == FieldFloat {
+		return QueryOrder{}, fmt.Errorf("invalid order by field type %s", orderBy.Type)
 	}
 
-	return nil
+	if ctx.OrderByField().DESC() != nil {
+		return QueryOrder{OrderBy: orderBy, Order: Desc}, nil
+	}
+	return QueryOrder{OrderBy: orderBy, Order: Asc}, nil
+
 }
 
-// Function to parse ORDER BY clause
-func parseOrderBy(selectStmt *sqlparser.Select) (QueryOrder, error) {
-	orderBy := QueryOrder{}
+func parseLimit(ctx parser.ILimitClauseContext) int {
+	if ctx != nil {
+		if ctx.NUMBER() != nil {
+			limitStr := ctx.NUMBER().GetText()
+			limit, err := strconv.Atoi(limitStr)
+			if err != nil {
+				panic("error in grammar")
+			}
+			return limit
+		}
+	}
+	return 0
+}
 
-	// Support only one ORDER BY clause
-	if len(selectStmt.OrderBy) > 1 {
-		return QueryOrder{}, fmt.Errorf("only one ORDER BY clause is supported")
+// ParseWhereClause parses and returns the root of the condition tree.
+func ParseWhereClause(ctx parser.IWhereClauseContext) (ConditionNode, error) {
+	root, err := buildConditionNode(ctx.Condition())
+	if err != nil {
+		return nil, err
+	}
+	return compact(root), nil
+}
+
+// Recursive function to build the condition AST with parentheses support.
+func buildConditionNode(ctx parser.IConditionContext) (ConditionNode, error) {
+	if ctx.LPAREN() != nil && ctx.RPAREN() != nil {
+		innerCtx := ctx.GetChild(1).(*parser.ConditionContext)
+		return buildConditionNode(innerCtx)
 	}
 
-	if len(selectStmt.OrderBy) == 0 {
-		// No ORDER BY clause, return empty order
-		return orderBy, nil
+	if ctx.AND() != nil || ctx.OR() != nil {
+		// Parse both sides of the logical expression
+		leftExpr := ctx.GetChild(0).(*parser.ConditionContext)
+		rightExpr := ctx.GetChild(2).(*parser.ConditionContext)
+
+		leftNode, err := buildConditionNode(leftExpr)
+		if err != nil {
+			return nil, err
+		}
+		rightNode, err := buildConditionNode(rightExpr)
+		if err != nil {
+			return nil, err
+		}
+
+		if ctx.AND() != nil {
+			return AndNode{Left: leftNode, Right: rightNode}, nil
+		}
+		return OrNode{Left: leftNode, Right: rightNode}, nil
 	}
 
-	// Extract the ORDER BY expression
-	orderExpr := strings.Trim(sqlparser.String(selectStmt.OrderBy[0].Expr), "`")
-	orderExpr = trimQuotesOrBackticks(orderExpr)
+	// Handle leaf nodes with comparison expressions
+	if ctx.Expression() != nil {
+		expr := ctx.Expression().(*parser.ExpressionContext)
+		field := trimQuotesOrBackticks(expr.FieldWithString().GetText())
+		operator := ComparisonOp(strings.ToLower(expr.ComparisonOp().GetText()))
+		value := trimQuotesOrBackticks(expr.Value().GetText())
 
-	// Validate that ORDER BY is either $key or $value
-	if orderExpr != TempKey && orderExpr != TempValue && !strings.HasPrefix(orderExpr, TempValue) {
-		return QueryOrder{}, fmt.Errorf("only $key and $value expressions are supported in ORDER BY clause")
+		return ComparisonNode{
+			Left:     Value{Value: field, Type: getType(field)},
+			Operator: operator,
+			Right:    Value{Value: value, Type: getType(value)},
+		}, nil
 	}
+	return nil, fmt.Errorf("invalid condition context")
+}
 
-	// Assign values to QueryOrder
-	orderBy.OrderBy = orderExpr
-	orderBy.Order = selectStmt.OrderBy[0].Direction
+func compact(node ConditionNode) ConditionNode {
+	switch n := node.(type) {
+	case ComparisonNode:
+		return n // Leaf node, return as-is
+	case AndNode:
+		left := compact(n.Left)
+		right := compact(n.Right)
+		if isEqualNode(left, right) {
+			return left
+		}
+		return AndNode{Left: left, Right: right}
+	case OrNode:
+		left := compact(n.Left)
+		right := compact(n.Right)
+		if isEqualNode(left, right) {
+			return left
+		}
+		return OrNode{Left: left, Right: right}
+	}
+	return node
+}
 
-	return orderBy, nil
+func isEqualNode(a, b ConditionNode) bool {
+	switch a := a.(type) {
+	case ComparisonNode:
+		b, ok := b.(ComparisonNode)
+		return ok && a == b
+	case AndNode:
+		b, ok := b.(AndNode)
+		return ok && isEqualNode(a.Left, b.Left) && isEqualNode(a.Right, b.Right)
+	case OrNode:
+		b, ok := b.(OrNode)
+		return ok && isEqualNode(a.Left, b.Left) && isEqualNode(a.Right, b.Right)
+	default:
+		return false
+	}
+}
+
+func getType(value string) FieldType {
+	switch value {
+	case TempKey:
+		return FieldKey
+	case TempValue:
+		return FieldVal
+	default:
+		if strings.HasPrefix(value, TempPrefix) {
+			return FieldJson
+		}
+
+		if _, err := strconv.Atoi(value); err == nil {
+			return FieldInt
+		}
+
+		if _, err := strconv.ParseFloat(value, 64); err == nil {
+			return FieldFloat
+		}
+
+		return FieldString
+	}
 }
 
 // Helper function to trim both single and double quotes/backticks
@@ -253,23 +437,41 @@ func trimQuotesOrBackticks(input string) string {
 	return input
 }
 
-// Function to parse LIMIT clause
-func parseLimit(selectStmt *sqlparser.Select) (int, error) {
-	limit := 0
-	if selectStmt.Limit != nil {
-		limitVal, err := strconv.Atoi(sqlparser.String(selectStmt.Limit.Rowcount))
-		if err != nil {
-			return 0, fmt.Errorf("invalid LIMIT value")
-		}
-		limit = limitVal
+// Helper function to convert ConditionNode to SQL
+func conditionNodeToSQL(node ConditionNode) string {
+	if node == nil {
+		return ""
 	}
-	return limit, nil
+
+	// Check if the node is a logical operation
+	switch node := node.(type) {
+	case ComparisonNode:
+		return comparisonExprToSQL(node)
+	case OrNode:
+		leftSQL := conditionNodeToSQL(node.Left)
+		rightSQL := conditionNodeToSQL(node.Right)
+		return fmt.Sprintf("%s %s %s", leftSQL, "OR", rightSQL)
+	case AndNode:
+		leftSQL := conditionNodeToSQL(node.Left)
+		rightSQL := conditionNodeToSQL(node.Right)
+		return fmt.Sprintf("%s %s %s", leftSQL, "AND", rightSQL)
+	default:
+		return ""
+	}
 }
 
-// Function to parse WHERE clause
-func parseWhere(selectStmt *sqlparser.Select) sqlparser.Expr {
-	if selectStmt.Where == nil {
-		return nil
-	}
-	return selectStmt.Where.Expr
+// Helper function to convert ComparisonExpr to SQL
+func comparisonExprToSQL(expr ComparisonNode) string {
+	sqlBuilder := &strings.Builder{}
+	sqlBuilder.WriteString(expr.Left.Value)
+	sqlBuilder.WriteString(" ")
+	sqlBuilder.WriteString(string(expr.Operator))
+	sqlBuilder.WriteString(" ")
+	sqlBuilder.WriteString(expr.Right.Value)
+
+	return sqlBuilder.String()
+}
+
+func whereClauseToSQL(node ConditionNode) string {
+	return conditionNodeToSQL(node)
 }

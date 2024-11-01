@@ -238,21 +238,20 @@ func TestGenerateFingerprintAndParseAstExpression(t *testing.T) {
 			fingerprint: "f_8696580727138087340",
 		},
 		{
-			// ideally this and below test should spit same output
 			name: "Simple comparison operator (comparison value in backticks)",
 			similarExpr: []string{
 				"_key like `match:1:*`",
 			},
-			expression:  "like_key`match:1:*`",
-			fingerprint: "f_15929225480754059748",
+			expression:  "like_keymatch:1:*",
+			fingerprint: "f_14043620698046892003",
 		},
 		{
 			name: "Simple comparison operator (comparison value in single quotes)",
 			similarExpr: []string{
 				"_key like 'match:1:*'",
 			},
-			expression:  "like_key'match:1:*'",
-			fingerprint: "f_5313097907453016110",
+			expression:  "like_keymatch:1:*",
+			fingerprint: "f_14043620698046892003",
 		},
 		{
 			name: "Simple comparison operator with multiple redundant parentheses",
@@ -262,8 +261,8 @@ func TestGenerateFingerprintAndParseAstExpression(t *testing.T) {
 				"((_key like 'match:1:*'))",
 				"(((_key like 'match:1:*')))",
 			},
-			expression:  "like_key'match:1:*'",
-			fingerprint: "f_5313097907453016110",
+			expression:  "like_keymatch:1:*",
+			fingerprint: "f_14043620698046892003",
 		},
 		{
 			name: "Expression with duplicate terms (or Idempotent law)",
@@ -271,8 +270,8 @@ func TestGenerateFingerprintAndParseAstExpression(t *testing.T) {
 				"_key like 'match:1:*' AND _key like 'match:1:*'",
 				"_key like 'match:1:*'",
 			},
-			expression:  "like_key'match:1:*'",
-			fingerprint: "f_5313097907453016110",
+			expression:  "like_keymatch:1:*",
+			fingerprint: "f_14043620698046892003",
 		},
 		{
 			name: "expression with exactly 1 term, multiple AND OR (Idempotent law)",
@@ -295,8 +294,8 @@ func TestGenerateFingerprintAndParseAstExpression(t *testing.T) {
 				"(_value > 10 AND _key LIKE 'test:*') OR (_value < 5 AND _key LIKE 'test:*')",
 				"(_value < 5 AND _key LIKE 'test:*') OR (_value > 10 AND _key LIKE 'test:*')",
 			},
-			expression:  "<_value5 AND like_key'test:*' OR >_value10 AND like_key'test:*'",
-			fingerprint: "f_6936111135456499050",
+			expression:  "<_value5 AND like_keytest:* OR >_value10 AND like_keytest:*",
+			fingerprint: "f_14644600448447301706",
 		},
 		{
 			// ideally this and below test should spit same output
@@ -310,8 +309,8 @@ func TestGenerateFingerprintAndParseAstExpression(t *testing.T) {
 				// "(_key LIKE 'test:*' OR _value > 10) AND (_key LIKE 'test:*' OR _value < 5)",
 				// "((_key LIKE 'test:*') OR (_value > 10)) AND ((_key LIKE 'test:*') OR (_value < 5))",
 			},
-			expression:  "<_value5 AND >_value10 OR like_key'test:*'",
-			fingerprint: "f_655732287561200780",
+			expression:  "<_value5 AND >_value10 OR like_keytest:*",
+			fingerprint: "f_126358187933784574",
 		},
 		{
 			name: "Complex expression with multiple redundant parentheses",
@@ -319,8 +318,8 @@ func TestGenerateFingerprintAndParseAstExpression(t *testing.T) {
 				"(_key LIKE 'test:*' OR _value > 10) AND (_key LIKE 'test:*' OR _value < 5)",
 				"((_key LIKE 'test:*') OR (_value > 10)) AND ((_key LIKE 'test:*') OR (_value < 5))",
 			},
-			expression:  "<_value5 AND >_value10 OR <_value5 AND like_key'test:*' OR >_value10 AND like_key'test:*' OR like_key'test:*'",
-			fingerprint: "f_1509117529358989129",
+			expression:  "<_value5 AND >_value10 OR <_value5 AND like_keytest:* OR >_value10 AND like_keytest:* OR like_keytest:*",
+			fingerprint: "f_10309558519338035401",
 		},
 		{
 			name: "Test Precedence: AND before OR with LIKE and Value Comparison",
@@ -328,8 +327,8 @@ func TestGenerateFingerprintAndParseAstExpression(t *testing.T) {
 				"_key LIKE 'test:*' AND _value > 10 OR _value < 5",
 				"(_key LIKE 'test:*' AND _value > 10) OR _value < 5",
 			},
-			expression:  "<_value5 OR >_value10 AND like_key'test:*'",
-			fingerprint: "f_8791273852316817684",
+			expression:  "<_value5 OR >_value10 AND like_keytest:*",
+			fingerprint: "f_17306158009974528132",
 		},
 		{
 			name: "Simple JSON expression",
@@ -338,8 +337,8 @@ func TestGenerateFingerprintAndParseAstExpression(t *testing.T) {
 				"'_value.age' > 30 and _key like 'user:*'",
 				"_key like 'user:*' and '_value.age' > 30 ",
 			},
-			expression:  ">'_value.age'30 AND like_key'user:*'",
-			fingerprint: "f_5016002712062179335",
+			expression:  ">_value.age30 AND like_keyuser:*",
+			fingerprint: "f_15905043006648123583",
 		},
 	}
 
@@ -367,7 +366,7 @@ func BenchmarkGenerateFingerprint(b *testing.B) {
 		{"OrExpression", "SELECT * WHERE _key LIKE 'match:1:*' OR _value > 10"},
 		{"AndExpression", "SELECT * WHERE _key LIKE 'match:1:*' AND _value > 10"},
 		{"NestedOrAnd", "SELECT * WHERE _key LIKE 'match:1:*' OR (_value > 10 AND _value < 5)"},
-		{"DeepNested", "SELECT * FROM table WHERE _key LIKE 'match:1:*' OR (_value > 10 AND (_value < 5 OR '_value.age' > 18))"},
+		{"DeepNested", "SELECT * WHERE _key LIKE 'match:1:*' OR (_value > 10 AND (_value < 5 OR '_value.age' > 18))"},
 	}
 
 	for _, tt := range queries {
@@ -387,16 +386,10 @@ func BenchmarkGenerateFingerprint(b *testing.B) {
 }
 
 // helper
-func parseSQL(query string) (sqlparser.Expr, error) {
-	stmt, err := sqlparser.Parse(query)
+func parseSQL(query string) (ConditionNode, error) {
+	stmt, err := ParseQuery(query)
 	if err != nil {
 		return nil, err
 	}
-
-	selectStmt, ok := stmt.(*sqlparser.Select)
-	if !ok {
-		return nil, err
-	}
-
-	return selectStmt.Where.Expr, nil
+	return stmt.Where, nil
 }

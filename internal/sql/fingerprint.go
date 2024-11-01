@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	hash "github.com/dgryski/go-farm"
-	"github.com/xwb1989/sqlparser"
 )
 
 // OR terms containing AND expressions
@@ -24,25 +23,23 @@ func (expr expression) String() string {
 	return strings.Join(orTerms, " OR ")
 }
 
-func generateFingerprint(where sqlparser.Expr) string {
+func generateFingerprint(where ConditionNode) string {
 	expr := parseAstExpression(where)
 	return fmt.Sprintf("f_%d", hash.Hash64([]byte(expr.String())))
 }
 
-func parseAstExpression(expr sqlparser.Expr) expression {
+func parseAstExpression(expr ConditionNode) expression {
 	switch expr := expr.(type) {
-	case *sqlparser.AndExpr:
-		leftExpr := parseAstExpression(expr.Left)
-		rightExpr := parseAstExpression(expr.Right)
-		return combineAnd(leftExpr, rightExpr)
-	case *sqlparser.OrExpr:
+	case OrNode:
 		leftExpr := parseAstExpression(expr.Left)
 		rightExpr := parseAstExpression(expr.Right)
 		return combineOr(leftExpr, rightExpr)
-	case *sqlparser.ParenExpr:
-		return parseAstExpression(expr.Expr)
-	case *sqlparser.ComparisonExpr:
-		return expression([][]string{{expr.Operator + sqlparser.String(expr.Left) + sqlparser.String(expr.Right)}})
+	case AndNode:
+		leftExpr := parseAstExpression(expr.Left)
+		rightExpr := parseAstExpression(expr.Right)
+		return combineAnd(leftExpr, rightExpr)
+	case ComparisonNode:
+		return expression([][]string{{string(expr.Operator) + expr.Left.Value + expr.Right.Value}})
 	default:
 		return expression{}
 	}

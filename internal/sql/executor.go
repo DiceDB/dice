@@ -14,7 +14,6 @@ import (
 	"github.com/dicedb/dice/internal/regex"
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/ohler55/ojg/jp"
-	"github.com/xwb1989/sqlparser"
 )
 
 var ErrNoResultsFound = errors.New("ERR No results found")
@@ -63,7 +62,7 @@ func ExecuteQuery(query *DSQLQuery, store common.ITable[string, *object.Obj]) ([
 		result = append(result, row)
 
 		// Early termination if limit is reached and no sorting is required
-		if query.Limit > 0 && len(result) >= query.Limit && query.OrderBy.OrderBy == utils.EmptyStr {
+		if query.Limit > 0 && len(result) >= query.Limit && query.OrderBy.OrderBy.Value == utils.EmptyStr {
 			return false
 		}
 
@@ -75,12 +74,12 @@ func ExecuteQuery(query *DSQLQuery, store common.ITable[string, *object.Obj]) ([
 	}
 
 	// Precompute order-by values and sort if necessary
-	if query.OrderBy.OrderBy != utils.EmptyStr {
-		resultWithOrder, err := precomputeOrderByValues(query, result, jsonPathCache)
+	if query.OrderBy.OrderBy.Value != utils.EmptyStr {
+		resultWithOrder, err := precomputeOrderByValues(&query.OrderBy.OrderBy, result, jsonPathCache)
 		if err != nil {
 			return nil, err
 		}
-		sortResults(query, resultWithOrder)
+		sortResults(query.OrderBy.Order, resultWithOrder)
 		// Extract sorted rows
 		for i := range resultWithOrder {
 			result[i] = resultWithOrder[i].Row
@@ -128,10 +127,10 @@ func MarshalResultIfJSON(row *QueryResultRow) error {
 	return nil
 }
 
-func precomputeOrderByValues(query *DSQLQuery, result []QueryResultRow, jsonPathCache map[string]jp.Expr) ([]QueryResultRowWithOrder, error) {
+func precomputeOrderByValues(orderBy *Value, result []QueryResultRow, jsonPathCache map[string]jp.Expr) ([]QueryResultRowWithOrder, error) {
 	resultWithOrder := make([]QueryResultRowWithOrder, len(result))
 	for i, row := range result {
-		val, valType, err := getOrderByValue(query.OrderBy.OrderBy, row, jsonPathCache)
+		val, valType, err := getOrderByValue(orderBy, row, jsonPathCache)
 		if err != nil {
 			return nil, err
 		}
@@ -144,7 +143,7 @@ func precomputeOrderByValues(query *DSQLQuery, result []QueryResultRow, jsonPath
 	return resultWithOrder, nil
 }
 
-func sortResults(query *DSQLQuery, result []QueryResultRowWithOrder) {
+func sortResults(order string, result []QueryResultRowWithOrder) {
 	sort.Slice(result, func(i, j int) bool {
 		valI := result[i].OrderByValue
 		valJ := result[j].OrderByValue
@@ -156,10 +155,10 @@ func sortResults(query *DSQLQuery, result []QueryResultRowWithOrder) {
 			return false // They are equal
 		}
 		if typeI == Nil {
-			return query.OrderBy.Order == Desc // Place Nil values at the beginning in Descending order
+			return order == Desc // Place Nil values at the beginning in Descending order
 		}
 		if typeJ == Nil {
-			return query.OrderBy.Order == Asc // Place Nil values at the end in Ascending order
+			return order == Asc // Place Nil values at the end in Ascending order
 		}
 
 		// Only compare values if types are the same
@@ -167,7 +166,7 @@ func sortResults(query *DSQLQuery, result []QueryResultRowWithOrder) {
 			return false // Types differ; cannot compare
 		}
 
-		comparison, err := compareOrderByValues(valI, valJ, typeI, typeJ, query.OrderBy.Order)
+		comparison, err := compareOrderByValues(valI, valJ, typeI, typeJ, order)
 		if err != nil {
 			return false // Cannot compare; treat as equal
 		}
@@ -176,15 +175,15 @@ func sortResults(query *DSQLQuery, result []QueryResultRowWithOrder) {
 	})
 }
 
-func getOrderByValue(orderBy string, row QueryResultRow, jsonPathCache map[string]jp.Expr) (value interface{}, valueType string, err error) {
-	switch orderBy {
-	case TempKey:
+func getOrderByValue(orderBy *Value, row QueryResultRow, jsonPathCache map[string]jp.Expr) (value interface{}, valueType string, err error) {
+	switch orderBy.Type {
+	case FieldKey:
 		return row.Key, String, nil
-	case TempValue:
+	case FieldVal:
 		return getValueAndType(&row.Value)
-	default:
-		if isJSONField(&sqlparser.SQLVal{Val: []byte(orderBy)}, &row.Value) {
-			return retrieveValueFromJSON(orderBy, &row.Value, jsonPathCache)
+	case FieldJson:
+		if isJSON(&row.Value) {
+			return retrieveValueFromJSON(orderBy.Value, &row.Value, jsonPathCache)
 		}
 	}
 	return nil, "", fmt.Errorf("invalid ORDER BY clause: %s", orderBy)
@@ -242,33 +241,36 @@ func compareBoolValues(order string, valI, valJ bool) bool {
 	return valI && !valJ
 }
 
-func EvaluateWhereClause(expr sqlparser.Expr, row QueryResultRow, jsonPathCache map[string]jp.Expr) (bool, error) {
-	switch expr := expr.(type) {
-	case *sqlparser.ParenExpr:
-		return EvaluateWhereClause(expr.Expr, row, jsonPathCache)
-	case *sqlparser.ComparisonExpr:
-		return evaluateComparison(expr, row, jsonPathCache)
-	case *sqlparser.AndExpr:
-		left, err := EvaluateWhereClause(expr.Left, row, jsonPathCache)
+func EvaluateWhereClause(node ConditionNode, row QueryResultRow, jsonPathCache map[string]jp.Expr) (bool, error) {
+	if node == nil {
+		return false, fmt.Errorf("condition node is nil")
+	}
+
+	switch node := node.(type) {
+	case AndNode:
+		left, err := EvaluateWhereClause(node.Left, row, jsonPathCache)
 		if err != nil || !left {
 			return false, err
 		}
-		return EvaluateWhereClause(expr.Right, row, jsonPathCache)
-	case *sqlparser.OrExpr:
-		left, err := EvaluateWhereClause(expr.Left, row, jsonPathCache)
+		return EvaluateWhereClause(node.Right, row, jsonPathCache)
+	case OrNode:
+		left, err := EvaluateWhereClause(node.Left, row, jsonPathCache)
 		if err != nil {
 			return false, err
 		}
 		if left {
 			return true, nil
 		}
-		return EvaluateWhereClause(expr.Right, row, jsonPathCache)
-	default:
-		return false, fmt.Errorf("unsupported expression type: %T", expr)
+		return EvaluateWhereClause(node.Right, row, jsonPathCache)
+	case ComparisonNode:
+		return evaluateComparisonExpr(node, row, jsonPathCache)
 	}
+
+	return false, fmt.Errorf("unsupported condition node structure")
 }
 
-func evaluateComparison(expr *sqlparser.ComparisonExpr, row QueryResultRow, jsonPathCache map[string]jp.Expr) (bool, error) {
+// Function to evaluate a ComparisonExpr node
+func evaluateComparisonExpr(expr ComparisonNode, row QueryResultRow, jsonPathCache map[string]jp.Expr) (bool, error) {
 	left, leftType, err := getExprValueAndType(expr.Left, row, jsonPathCache)
 	if err != nil {
 		if errors.Is(err, ErrNoResultsFound) {
@@ -276,6 +278,7 @@ func evaluateComparison(expr *sqlparser.ComparisonExpr, row QueryResultRow, json
 		}
 		return false, err
 	}
+
 	right, rightType, err := getExprValueAndType(expr.Right, row, jsonPathCache)
 	if err != nil {
 		if errors.Is(err, ErrNoResultsFound) {
@@ -307,32 +310,29 @@ func evaluateComparison(expr *sqlparser.ComparisonExpr, row QueryResultRow, json
 	}
 }
 
-func getExprValueAndType(expr sqlparser.Expr, row QueryResultRow, jsonPathCache map[string]jp.Expr) (value interface{}, valueType string, err error) {
-	switch expr := expr.(type) {
-	case *sqlparser.ColName:
-		switch expr.Name.String() {
-		case TempKey:
-			return row.Key, String, nil
-		case TempValue:
-			return getValueAndType(&row.Value)
-		default:
-			return nil, "", fmt.Errorf("unknown column: %s", expr.Name.String())
-		}
-	case *sqlparser.SQLVal:
-		// we currently treat JSON query expression as a string value so we will need to differentiate between JSON and
-		// SQL strings
-		if isJSONField(expr, &row.Value) {
-			return retrieveValueFromJSON(string(expr.Val), &row.Value, jsonPathCache)
-		}
-		return sqlValToGoValue(expr)
-	case *sqlparser.NullVal:
-		return nil, Nil, nil
+// Function to extract value and type from an expression
+func getExprValueAndType(expr Value, row QueryResultRow, jsonPathCache map[string]jp.Expr) (value interface{}, valueType string, err error) {
+	switch expr.Type {
+	case FieldKey:
+		return row.Key, String, nil
+	case FieldVal:
+		return getValueAndType(&row.Value)
+	case FieldFloat:
+		f, _ := strconv.ParseFloat(expr.Value, 64)
+		return f, Float, nil
+	case FieldInt:
+		i, _ := strconv.Atoi(expr.Value)
+		return int64(i), Int64, nil
+	case FieldString:
+		return expr.Value, String, nil
+	case FieldJson:
+		return retrieveValueFromJSON(expr.Value, &row.Value, jsonPathCache) // FIX: ensure row.Value is json
 	default:
-		return nil, "", fmt.Errorf("unsupported expression type: %T", expr)
+		return nil, utils.EmptyStr, fmt.Errorf("unsupported expression type: %T", expr)
 	}
 }
 
-func isJSONField(expr *sqlparser.SQLVal, obj *object.Obj) bool {
+func isJSON(obj *object.Obj) bool {
 	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingJSON); err != nil {
 		return false
 	}
@@ -341,13 +341,14 @@ func isJSONField(expr *sqlparser.SQLVal, obj *object.Obj) bool {
 		return false
 	}
 
-	// We convert the $key and $value fields to _key, _value before querying. hence fields starting with _ are
-	// considered to be stored values
-	return expr.Type == sqlparser.StrVal &&
-		strings.HasPrefix(string(expr.Val), TempPrefix)
+	return true
 }
 
 func retrieveValueFromJSON(path string, jsonData *object.Obj, jsonPathCache map[string]jp.Expr) (value interface{}, valueType string, err error) {
+	if !isJSON(jsonData) {
+		return nil, Nil, nil
+	}
+
 	// path is in the format '_value.field1.field2'. We need to remove _value reference from the prefix to get the json
 	// path.
 	jsonPath := strings.Split(path, ".")
@@ -427,83 +428,61 @@ func getValueAndType(obj *object.Obj) (val interface{}, s string, e error) {
 	}
 }
 
-// sqlValToGoValue converts SQLVal to Go value, and returns the type of the value.
-func sqlValToGoValue(sqlVal *sqlparser.SQLVal) (val interface{}, s string, e error) {
-	switch sqlVal.Type {
-	case sqlparser.StrVal:
-		return string(sqlVal.Val), String, nil
-	case sqlparser.IntVal:
-		i, err := strconv.ParseInt(string(sqlVal.Val), 10, 64)
-		if err != nil {
-			return nil, utils.EmptyStr, err
-		}
-		return i, Int64, nil
-	case sqlparser.FloatVal:
-		f, err := strconv.ParseFloat(string(sqlVal.Val), 64)
-		if err != nil {
-			return nil, utils.EmptyStr, err
-		}
-		return f, Float, nil
-	default:
-		return nil, utils.EmptyStr, fmt.Errorf("unsupported SQLVal type: %v", sqlVal.Type)
-	}
-}
-
-func compareStrings(left, right, operator string) (bool, error) {
-	switch strings.ToLower(operator) {
-	case sqlparser.EqualStr:
+func compareStrings(left, right string, operator ComparisonOp) (bool, error) {
+	switch operator {
+	case OpEq:
 		return left == right, nil
-	case sqlparser.NotEqualStr:
+	case OpNeq:
 		return left != right, nil
-	case sqlparser.LessThanStr:
+	case OpLt:
 		return left < right, nil
-	case sqlparser.LessEqualStr:
+	case OpLte:
 		return left <= right, nil
-	case sqlparser.GreaterThanStr:
+	case OpGt:
 		return left > right, nil
-	case sqlparser.GreaterEqualStr:
+	case OpGte:
 		return left >= right, nil
-	case sqlparser.LikeStr:
+	case OpLike:
 		return regex.WildCardMatch(right, left), nil
-	case sqlparser.NotLikeStr:
+	case OpNotLike:
 		return !regex.WildCardMatch(right, left), nil
 	default:
 		return false, fmt.Errorf("unsupported operator for strings: %s", operator)
 	}
 }
 
-func compareInt64s(left, right int64, operator string) (bool, error) {
+func compareInt64s(left, right int64, operator ComparisonOp) (bool, error) {
 	switch operator {
-	case sqlparser.EqualStr:
+	case OpEq:
 		return left == right, nil
-	case sqlparser.NotEqualStr:
+	case OpNeq:
 		return left != right, nil
-	case sqlparser.LessThanStr:
+	case OpLt:
 		return left < right, nil
-	case sqlparser.LessEqualStr:
+	case OpLte:
 		return left <= right, nil
-	case sqlparser.GreaterThanStr:
+	case OpGt:
 		return left > right, nil
-	case sqlparser.GreaterEqualStr:
+	case OpGte:
 		return left >= right, nil
 	default:
 		return false, fmt.Errorf("unsupported operator for integers: %s", operator)
 	}
 }
 
-func compareFloats(left, right float64, operator string) (bool, error) {
+func compareFloats(left, right float64, operator ComparisonOp) (bool, error) {
 	switch operator {
-	case sqlparser.EqualStr:
+	case OpEq:
 		return left == right, nil
-	case sqlparser.NotEqualStr:
+	case OpNeq:
 		return left != right, nil
-	case sqlparser.LessThanStr:
+	case OpLt:
 		return left < right, nil
-	case sqlparser.LessEqualStr:
+	case OpLte:
 		return left <= right, nil
-	case sqlparser.GreaterThanStr:
+	case OpGt:
 		return left > right, nil
-	case sqlparser.GreaterEqualStr:
+	case OpGte:
 		return left >= right, nil
 	default:
 		return false, fmt.Errorf("unsupported operator for floats: %s", operator)

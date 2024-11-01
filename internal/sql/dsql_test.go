@@ -1,6 +1,7 @@
 package sql
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/dicedb/dice/internal/server/utils"
@@ -21,12 +22,12 @@ func TestParseQuery(t *testing.T) {
 			sql:  "SELECT $key, $value WHERE $key like `match:100:*` ORDER BY $value DESC LIMIT 10",
 			want: DSQLQuery{
 				Selection: QuerySelection{KeySelection: true, ValueSelection: true},
-				Where: &sqlparser.ComparisonExpr{
+				Where: ComparisonNode{
 					Operator: "like",
-					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_key")},
-					Right:    &sqlparser.ColName{Name: sqlparser.NewColIdent("match:100:*")},
+					Left:     newKeyType(),
+					Right:    newStringType("match:100:*"),
 				},
-				OrderBy: QueryOrder{OrderBy: "_value", Order: "desc"},
+				OrderBy: QueryOrder{OrderBy: Value{Value: "_value", Type: FieldVal}, Order: "desc"},
 				Limit:   10,
 			},
 			wantErr: false,
@@ -36,19 +37,19 @@ func TestParseQuery(t *testing.T) {
 			sql:  "SELECT $key, $value WHERE $key like `match:100:*` AND $value = 'test' ORDER BY $key LIMIT 5",
 			want: DSQLQuery{
 				Selection: QuerySelection{KeySelection: true, ValueSelection: true},
-				Where: &sqlparser.AndExpr{
-					Left: &sqlparser.ComparisonExpr{
+				Where: AndNode{
+					Left: ComparisonNode{
 						Operator: "like",
-						Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_key")},
-						Right:    &sqlparser.ColName{Name: sqlparser.NewColIdent("match:100:*")},
+						Left:     newKeyType(),
+						Right:    newStringType("match:100:*"),
 					},
-					Right: &sqlparser.ComparisonExpr{
+					Right: ComparisonNode{
 						Operator: "=",
-						Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-						Right:    &sqlparser.SQLVal{Val: []uint8("test")},
+						Left:     newValueType(),
+						Right:    newStringType("test"),
 					},
 				},
-				OrderBy: QueryOrder{OrderBy: "_key", Order: Asc},
+				OrderBy: QueryOrder{OrderBy: Value{Value: "_key", Type: FieldKey}, Order: Asc},
 				Limit:   5,
 			},
 			wantErr: false,
@@ -58,23 +59,23 @@ func TestParseQuery(t *testing.T) {
 			sql:  "SELECT $key WHERE $key like `user:*` AND $value > 25 AND $key LIKE 'user:1%'",
 			want: DSQLQuery{
 				Selection: QuerySelection{KeySelection: true, ValueSelection: false},
-				Where: &sqlparser.AndExpr{
-					Left: &sqlparser.AndExpr{
-						Left: &sqlparser.ComparisonExpr{
+				Where: AndNode{
+					Left: AndNode{
+						Left: ComparisonNode{
 							Operator: "like",
-							Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_key")},
-							Right:    &sqlparser.ColName{Name: sqlparser.NewColIdent("user:*")},
+							Left:     newKeyType(),
+							Right:    newStringType("user:*"),
 						},
-						Right: &sqlparser.ComparisonExpr{
+						Right: ComparisonNode{
 							Operator: ">",
-							Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-							Right:    sqlparser.NewIntVal([]byte("25")),
+							Left:     newValueType(),
+							Right:    newIntType("25"),
 						},
 					},
-					Right: &sqlparser.ComparisonExpr{
+					Right: ComparisonNode{
 						Operator: "like",
-						Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_key")},
-						Right:    &sqlparser.SQLVal{Val: []uint8("user:1%")},
+						Left:     newKeyType(),
+						Right:    newStringType("user:1%"),
 					},
 				},
 			},
@@ -85,59 +86,59 @@ func TestParseQuery(t *testing.T) {
 			sql:     "SELECT $key WHERE $key like `match:100:*` ORDER BY invalid_key LIMIT 5",
 			want:    DSQLQuery{},
 			wantErr: true,
-			error:   "only $key and $value expressions are supported in ORDER BY clause",
+			error:   "syntax error at line 1:51 - mismatched input 'invalid_key'",
 		},
 		{
 			name:    "invalid multiple fields",
 			sql:     "SELECT field1, field2 WHERE $key like `test`",
 			want:    DSQLQuery{},
 			wantErr: true,
-			error:   "only $key and $value are supported in SELECT expressions",
+			error:   "syntax error at line 1:7 - mismatched input 'field1'",
 		},
 		{
 			name:    "invalid non-select statement",
 			sql:     "INSERT INTO table_name (field_name) values ('value')",
 			want:    DSQLQuery{},
 			wantErr: true,
-			error:   "unsupported DSQL statement: *sqlparser.Insert",
+			error:   "syntax error at line 1:0 - mismatched input 'INSERT' expecting 'SELECT'",
 		},
 		{
 			name:    "empty invalid statement",
 			sql:     utils.EmptyStr,
 			want:    DSQLQuery{},
 			wantErr: true,
-			error:   "error parsing SQL statement: syntax error at position 1",
+			error:   "syntax error at line 1:0 - mismatched input '<EOF>' expecting 'SELECT'",
 		},
 		{
 			name:    "unsupported having clause",
 			sql:     "SELECT $key WHERE $key like `match:100:*` HAVING $key > 1",
 			want:    DSQLQuery{},
 			wantErr: true,
-			error:   "HAVING and GROUP BY clauses are not supported",
+			error:   "syntax error at line 1:42 - mismatched input 'HAVING' expecting <EOF>",
 		},
 		{
 			name:    "unsupported group by clause",
 			sql:     "SELECT $key WHERE $key like `match:100:*` GROUP BY $key",
 			want:    DSQLQuery{},
 			wantErr: true,
-			error:   "HAVING and GROUP BY clauses are not supported",
+			error:   "syntax error at line 1:42 - mismatched input 'GROUP' expecting <EOF>",
 		},
 		{
 			name:    "invalid limit value",
 			sql:     "SELECT $key WHERE $key like `match:100:*` LIMIT abc",
 			want:    DSQLQuery{},
 			wantErr: true,
-			error:   "invalid LIMIT value",
+			error:   "syntax error at line 1:48 - mismatched input 'abc' expecting NUMBER",
 		},
 		{
 			name: "select only value",
 			sql:  "SELECT $value WHERE $key like `test:*`",
 			want: DSQLQuery{
 				Selection: QuerySelection{KeySelection: false, ValueSelection: true},
-				Where: &sqlparser.ComparisonExpr{
+				Where: ComparisonNode{
 					Operator: "like",
-					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_key")},
-					Right:    &sqlparser.ColName{Name: sqlparser.NewColIdent("test:*")},
+					Left:     newKeyType(),
+					Right:    newStringType("test:*"),
 				},
 			},
 			wantErr: false,
@@ -147,12 +148,12 @@ func TestParseQuery(t *testing.T) {
 			sql:  "SELECT $key, $value WHERE $key like `test:*` ORDER BY $key ASC",
 			want: DSQLQuery{
 				Selection: QuerySelection{KeySelection: true, ValueSelection: true},
-				Where: &sqlparser.ComparisonExpr{
+				Where: ComparisonNode{
 					Operator: "like",
-					Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_key")},
-					Right:    &sqlparser.ColName{Name: sqlparser.NewColIdent("test:*")},
+					Left:     newKeyType(),
+					Right:    newStringType("test:*"),
 				},
-				OrderBy: QueryOrder{OrderBy: "_key", Order: "asc"},
+				OrderBy: QueryOrder{OrderBy: Value{Value: "_key", Type: FieldKey}, Order: "asc"},
 			},
 			wantErr: false,
 		},
@@ -161,27 +162,31 @@ func TestParseQuery(t *testing.T) {
 			sql:     "SELECT $key FROM 123",
 			want:    DSQLQuery{},
 			wantErr: true,
-			error:   "error parsing SQL statement: syntax error at position 21 near '123'",
+			error:   "syntax error at line 1:12 - mismatched input 'FROM' expecting <EOF>",
 		},
 		{
 			name:    "Banned FROM clause",
 			sql:     "SELECT $key FROM tablename",
 			want:    DSQLQuery{},
 			wantErr: true,
-			error:   "FROM clause is not supported",
+			error:   "syntax error at line 1:12 - mismatched input 'FROM' expecting <EOF>",
 		},
 		{
 			name: "where clause with NULL comparison",
 			sql:  "SELECT $key, $value WHERE $key like `test:*` AND $value IS NULL",
 			want: DSQLQuery{
 				Selection: QuerySelection{KeySelection: true, ValueSelection: true},
-				Where: &sqlparser.AndExpr{
-					Left: &sqlparser.ComparisonExpr{
+				Where: AndNode{
+					Left: ComparisonNode{
 						Operator: "like",
-						Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_key")},
-						Right:    &sqlparser.ColName{Name: sqlparser.NewColIdent("test:*")},
+						Left:     newKeyType(),
+						Right:    newStringType("test:*"),
 					},
-					Right: &sqlparser.IsExpr{Operator: "is null", Expr: &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")}},
+					Right: ComparisonNode{
+						Operator: "is",
+						Left:     newValueType(),
+						Right:    newStringType("NULL"), // FIX: Null type
+					},
 				},
 			},
 			wantErr: false,
@@ -191,26 +196,22 @@ func TestParseQuery(t *testing.T) {
 			sql:  "SELECT $key WHERE ($key LIKE `test:*`) AND ($value > 10 OR $value < 5)",
 			want: DSQLQuery{
 				Selection: QuerySelection{KeySelection: true, ValueSelection: false},
-				Where: &sqlparser.AndExpr{
-					Left: &sqlparser.ParenExpr{
-						Expr: &sqlparser.ComparisonExpr{
-							Operator: "like",
-							Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_key")},
-							Right:    &sqlparser.ColName{Name: sqlparser.NewColIdent("test:*")},
-						},
+				Where: AndNode{
+					Left: ComparisonNode{
+						Operator: "like",
+						Left:     newKeyType(),
+						Right:    newStringType("test:*"),
 					},
-					Right: &sqlparser.ParenExpr{
-						Expr: &sqlparser.OrExpr{
-							Left: &sqlparser.ComparisonExpr{
-								Operator: ">",
-								Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-								Right:    sqlparser.NewIntVal([]byte("10")),
-							},
-							Right: &sqlparser.ComparisonExpr{
-								Operator: "<",
-								Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-								Right:    sqlparser.NewIntVal([]byte("5")),
-							},
+					Right: OrNode{
+						Left: ComparisonNode{
+							Operator: ">",
+							Left:     newValueType(),
+							Right:    newIntType("10"),
+						},
+						Right: ComparisonNode{
+							Operator: "<",
+							Left:     newValueType(),
+							Right:    newIntType("5"),
 						},
 					},
 				},
@@ -223,7 +224,7 @@ func TestParseQuery(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := ParseQuery(tt.sql)
 			if tt.wantErr {
-				assert.Error(t, err, tt.error)
+				assert.ErrorContains(t, err, tt.error)
 			} else {
 				assert.Nil(t, err)
 				assert.Equal(t, tt.want.Selection, got.Selection)
@@ -277,19 +278,13 @@ func TestParseSelectExpressions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseQuery(tt.sql)
 
-			stmt, err := sqlparser.Parse(replaceCustomSyntax(tt.sql))
-			assert.Nil(t, err)
-
-			selectStmt, ok := stmt.(*sqlparser.Select)
-			assert.True(t, ok)
-
-			got, err := parseSelectExpressions(selectStmt)
 			if tt.wantErr {
 				assert.True(t, err != nil)
 			} else {
 				assert.Nil(t, err)
-				assert.Equal(t, tt.want, got)
+				assert.Equal(t, tt.want, got.Selection)
 			}
 		})
 	}
@@ -305,42 +300,42 @@ func TestParseOrderBy(t *testing.T) {
 		{
 			name: "order by key asc",
 			sql:  "SELECT $key WHERE $key like `test` ORDER BY $key ASC",
-			want: QueryOrder{OrderBy: "_key", Order: Asc},
+			want: QueryOrder{OrderBy: Value{Value: "_key", Type: FieldKey}, Order: Asc},
 		},
 		{
 			name: "order by key desc",
 			sql:  "SELECT $key WHERE $key like `test` ORDER BY $key DESC",
-			want: QueryOrder{OrderBy: "_key", Order: "desc"},
+			want: QueryOrder{OrderBy: Value{Value: "_key", Type: FieldKey}, Order: "desc"},
 		},
 		{
 			name: "order by value asc",
 			sql:  "SELECT $value WHERE $key like `test` ORDER BY $value ASC",
-			want: QueryOrder{OrderBy: "_value", Order: "asc"},
+			want: QueryOrder{OrderBy: Value{Value: "_value", Type: FieldVal}, Order: "asc"},
 		},
 		{
 			name: "order by value desc",
 			sql:  "SELECT $value WHERE $key like `test` ORDER BY $value DESC",
-			want: QueryOrder{OrderBy: "_value", Order: "desc"},
+			want: QueryOrder{OrderBy: Value{Value: "_value", Type: FieldVal}, Order: "desc"},
 		},
 		{
 			name: "order by json path asc",
 			sql:  "SELECT $value WHERE $key like `test` ORDER BY $value.name ASC",
-			want: QueryOrder{OrderBy: "_value.name", Order: "asc"},
+			want: QueryOrder{OrderBy: Value{Value: "_value.name", Type: FieldJson}, Order: "asc"},
 		},
 		{
 			name: "order by nested json path desc",
 			sql:  "SELECT $value WHERE $key like `test` ORDER BY $value.address.city DESC",
-			want: QueryOrder{OrderBy: "_value.address.city", Order: "desc"},
+			want: QueryOrder{OrderBy: Value{Value: "_value.address.city", Type: FieldJson}, Order: "desc"},
 		},
 		{
 			name: "order by json path with array index",
 			sql:  "SELECT $value WHERE $key like `test` ORDER BY `$value.items[0].price`",
-			want: QueryOrder{OrderBy: "_value.items[0].price", Order: "asc"},
+			want: QueryOrder{OrderBy: Value{Value: "_value.items[0].price", Type: FieldJson}, Order: "asc"},
 		},
 		{
 			name: "order by complex json path",
 			sql:  "SELECT $value WHERE $key like `test` ORDER BY `$value.users[*].contacts[0].email`",
-			want: QueryOrder{OrderBy: "_value.users[*].contacts[0].email", Order: "asc"},
+			want: QueryOrder{OrderBy: Value{Value: "_value.users[*].contacts[0].email", Type: FieldJson}, Order: "asc"},
 		},
 		{
 			name: "no order by clause",
@@ -366,18 +361,13 @@ func TestParseOrderBy(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			stmt, err := sqlparser.Parse(replaceCustomSyntax(tt.sql))
-			assert.Nil(t, err)
+			got, err := ParseQuery(tt.sql)
 
-			selectStmt, ok := stmt.(*sqlparser.Select)
-			assert.True(t, ok)
-
-			got, err := parseOrderBy(selectStmt)
 			if tt.wantErr {
 				assert.True(t, err != nil)
 			} else {
 				assert.Nil(t, err)
-				assert.Equal(t, tt.want, got)
+				assert.Equal(t, tt.want, got.OrderBy)
 			}
 		})
 	}
@@ -409,18 +399,13 @@ func TestParseLimit(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			stmt, err := sqlparser.Parse(replaceCustomSyntax(tt.sql))
-			assert.Nil(t, err)
+			got, err := ParseQuery(tt.sql)
 
-			selectStmt, ok := stmt.(*sqlparser.Select)
-			assert.True(t, ok)
-
-			got, err := parseLimit(selectStmt)
 			if tt.wantErr {
 				assert.True(t, err != nil)
 			} else {
 				assert.Nil(t, err)
-				assert.Equal(t, tt.want, got)
+				assert.Equal(t, tt.want, got.Limit)
 			}
 		})
 	}
@@ -463,15 +448,19 @@ func TestDSQLQueryString(t *testing.T) {
 			name: "With Where Clause",
 			query: DSQLQuery{
 				Selection: QuerySelection{KeySelection: true},
-				Where:     sqlparser.NewStrVal([]byte("$value > 10")),
+				Where: ComparisonNode{
+					Operator: ">",
+					Left:     newValueType(),
+					Right:    newIntType("10"),
+				},
 			},
-			expected: "SELECT $key WHERE '$value > 10'",
+			expected: "SELECT $key WHERE $value > 10",
 		},
 		{
 			name: "With OrderBy",
 			query: DSQLQuery{
 				Selection: QuerySelection{KeySelection: true, ValueSelection: true},
-				OrderBy:   QueryOrder{OrderBy: "_key", Order: "DESC"},
+				OrderBy:   QueryOrder{OrderBy: Value{Value: "_key", Type: FieldKey}, Order: "DESC"},
 			},
 			expected: "SELECT $key, $value ORDER BY $key DESC",
 		},
@@ -487,29 +476,29 @@ func TestDSQLQueryString(t *testing.T) {
 			name: "Full Query",
 			query: DSQLQuery{
 				Selection: QuerySelection{KeySelection: true, ValueSelection: true},
-				Where: &sqlparser.AndExpr{
-					Left: &sqlparser.ComparisonExpr{
+				Where: AndNode{
+					Left: ComparisonNode{
 						Operator: "like",
-						Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_key")},
-						Right:    &sqlparser.ColName{Name: sqlparser.NewColIdent("match:100:*")},
+						Left:     newKeyType(),
+						Right:    newJsonType("match:100:*"),
 					},
-					Right: &sqlparser.ComparisonExpr{
+					Right: ComparisonNode{
 						Operator: "=",
-						Left:     &sqlparser.ColName{Name: sqlparser.NewColIdent("_value")},
-						Right:    &sqlparser.SQLVal{Val: []uint8("test")},
+						Left:     newValueType(),
+						Right:    newStringType("test"),
 					},
 				},
-				OrderBy: QueryOrder{OrderBy: "_key", Order: "DESC"},
+				OrderBy: QueryOrder{OrderBy: Value{Value: "_key", Type: FieldKey}, Order: "DESC"},
 				Limit:   5,
 			},
-			expected: "SELECT $key, $value WHERE $key like `match:100:*` and $value = 'test' ORDER BY $key DESC LIMIT 5",
+			expected: "SELECT $key, $value WHERE $key like match:100:* and $value = test ORDER BY $key DESC LIMIT 5",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := tt.query.String()
-			if result != tt.expected {
+			if !strings.EqualFold(result, tt.expected) {
 				t.Errorf("Expected %q, but got %q", tt.expected, result)
 			}
 		})

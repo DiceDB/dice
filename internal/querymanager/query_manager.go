@@ -201,13 +201,13 @@ func (m *Manager) processWatchEvent(event dstore.QueryWatchEvent) {
 
 		m.updateQueryCache(query.Fingerprint, event)
 
-		queryResult, err := m.runQuery(&query)
+		queryResult, err := m.runQuery(query)
 		if err != nil {
 			slog.Error(err.Error())
 			return true
 		}
 
-		m.notifyClients(&query, clients, queryResult)
+		m.notifyClients(query, clients, queryResult)
 		return true
 	})
 }
