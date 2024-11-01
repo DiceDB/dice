@@ -768,6 +768,8 @@ func getOrCreateSortedSet(store *dstore.Store, key string) (*sortedset.Set, erro
 	return sortedset.New(), nil
 }
 
+// **************************************************************************************************************************************************************
+
 // The ZCOUNT command in DiceDB counts the number of members in a sorted set at the specified key
 // whose scores fall within a given range. The command takes three arguments: the key of the sorted set
 // the minimum score, and the maximum score.
@@ -870,6 +872,7 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	obj := store.Get(key)
+
 	if obj == nil {
 		return &EvalResponse{
 			Result: []string{},

@@ -40,7 +40,7 @@ func TestZADD(t *testing.T) {
 			expected: []interface{}{"ERR wrong number of arguments for 'zadd' command"},
 		},
 
-		// ************************************* ZADD with XX options validation starts now, including XX with GT, LT, NX, INCR, CH **************************
+		// *************************************** ZADD with XX options validation starts now, including XX with GT, LT, NX, INCR, CH **************************
 		{
 			name:     "ZADD XX option without existing key",
 			commands: []string{"ZADD key XX 10 member9"},
