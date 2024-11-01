@@ -7,7 +7,7 @@ The `PERSIST` command is used to remove the expiration from a key in DiceDB. If 
 
 ## Syntax
 
-```
+```bash
 PERSIST key
 ```
 

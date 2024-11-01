@@ -7,7 +7,7 @@ The `GETBIT` command is used to retrieve the bit value at a specified offset in 
 
 ## Syntax
 
-```
+```bash
 GETBIT key offset
 ```
 

@@ -7,7 +7,7 @@ The `ZREM` command in DiceDB is used to remove the specified members from the so
 
 ## Syntax
 
-```
+```bash
 ZREM key member [member ...]
 ```
 

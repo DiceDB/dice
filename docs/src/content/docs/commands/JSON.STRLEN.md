@@ -7,7 +7,7 @@ The `JSON.STRLEN` command is used to determine the length of a JSON string at a 
 
 ## Syntax
 
-```
+```bash
 JSON.STRLEN <key> <path>
 ```
 

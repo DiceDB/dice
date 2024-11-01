@@ -7,7 +7,7 @@ The `PFADD` command in DiceDB is used to add elements to a HyperLogLog data stru
 
 ## Syntax
 
-```
+```bash
 PFADD key element [element ...]
 ```
 

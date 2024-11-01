@@ -7,7 +7,7 @@ The `EXPIRETIME` command in DiceDB is used to retrieve the absolute Unix timesta
 
 ## Syntax
 
-```
+```bash
 EXPIRETIME key
 ```
 

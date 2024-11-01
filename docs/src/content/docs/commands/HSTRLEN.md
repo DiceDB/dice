@@ -7,7 +7,7 @@ The `HSTRLEN` command in DiceDB is used to obtain the string length of value ass
 
 ## Syntax
 
-```
+```bash
 HSTRLEN key field
 ```
 

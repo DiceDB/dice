@@ -7,7 +7,7 @@ The `EXPIREAT` command is used to set the expiration time of a key in DiceDB. Un
 
 ## Syntax
 
-```plaintext
+```bash
 EXPIREAT key timestamp [NX|XX|GT|LT]
 ```
 

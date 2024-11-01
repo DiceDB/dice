@@ -7,7 +7,7 @@ The `PTTL` command in DiceDB is used to retrieve the remaining time to live (TTL
 
 ## Syntax
 
-```
+```bash
 PTTL key
 ```
 

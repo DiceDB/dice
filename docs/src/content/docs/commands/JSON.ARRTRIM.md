@@ -72,7 +72,7 @@ JSON.ARRTRIM <key> <path> <start> <stop>
 
 Trimming an array to a specific range
 
-```plaintext
+```bash
 127.0.0.1:7379> JSON.SET b $ '[1, 2, 3, 4, 5]'
 "OK"
 127.0.0.1:7379> JSON.ARRTRIM b $ 1 3
@@ -86,7 +86,7 @@ Trimming an array to a specific range
 
 Trimming an array to a single element
 
-```plaintext
+```bash
 127.0.0.1:7379> JSON.SET a $ '[0,1,2]'
 "OK"
 127.0.0.1:7379> JSON.ARRTRIM a $ 1 1
@@ -100,7 +100,7 @@ Trimming an array to a single element
 
 Trimming an array with out-of-bounds indices
 
-```plaintext
+```bash
 127.0.0.1:7379> JSON.SET c $ '[1, 2, 3, 4, 5]'
 "OK"
 127.0.0.1:7379> JSON.ARRTRIM c $ -10 10
@@ -113,7 +113,7 @@ Trimming an array with out-of-bounds indices
 
 Error when path does not exist
 
-```plaintext
+```bash
 127.0.0.1:7379> JSON.SET d $ '[1, 2, 3, 4, 5]'
 "OK"
 127.0.0.1:7379> JSON.ARRTRIM d . -10 10
@@ -124,7 +124,7 @@ Error when path does not exist
 
 Error when key does not exist
 
-```plaintext
+```bash
 127.0.0.1:7379> JSON.SET a $ '[1, 2, 3, 4, 5]'
 "OK"
 127.0.0.1:7379> JSON.ARRTRIM aa . -10 10

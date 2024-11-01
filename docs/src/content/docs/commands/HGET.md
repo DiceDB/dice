@@ -7,7 +7,7 @@ The `HGET` command in DiceDB is used to retrieve the value associated with a spe
 
 ## Syntax
 
-```
+```bash
 HGET key field
 ```
 
@@ -38,7 +38,7 @@ When the `HGET` command is executed, DiceDB performs the following steps:
 
 ### Example 1: Retrieving a value from a hash
 
-```DiceDB
+```bash
 HSET user:1000 name "John Doe"
 HSET user:1000 age "30"
 HGET user:1000 name
@@ -52,7 +52,7 @@ HGET user:1000 name
 
 ### Example 2: Field does not exist
 
-```DiceDB
+```bash
 HGET user:1000 email
 ```
 
@@ -64,7 +64,7 @@ HGET user:1000 email
 
 ### Example 3: Key does not exist
 
-```DiceDB
+```bash
 HGET user:2000 name
 ```
 
@@ -76,7 +76,7 @@ HGET user:2000 name
 
 ### Example 4: Key is not a hash
 
-```DiceDB
+```bash
 SET user:3000 "Not a hash"
 HGET user:3000 name
 ```

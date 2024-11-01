@@ -7,7 +7,7 @@ The `SREM` command is used to remove one or more members from a set stored at a 
 
 ## Syntax
 
-```
+```bash
 SREM key member [member ...]
 ```
 
@@ -39,7 +39,7 @@ When the `SREM` command is executed, the following steps occur:
 
 ### Example 1: Removing a single member from a set
 
-```DiceDB
+```bash
 SADD myset "one" "two" "three"
 SREM myset "two"
 ```
@@ -54,7 +54,7 @@ SREM myset "two"
 
 ### Example 2: Removing multiple members from a set
 
-```DiceDB
+```bash
 SADD myset "one" "two" "three"
 SREM myset "two" "three"
 ```
@@ -69,7 +69,7 @@ SREM myset "two" "three"
 
 ### Example 3: Removing a non-existing member from a set
 
-```DiceDB
+```bash
 SADD myset "one" "two" "three"
 SREM myset "four"
 ```
@@ -84,7 +84,7 @@ SREM myset "four"
 
 ### Example 4: Removing members from a non-existing set
 
-```DiceDB
+```bash
 SREM myset "one"
 ```
 
@@ -98,7 +98,7 @@ SREM myset "one"
 
 ### Example 5: Error when key is not a set
 
-```DiceDB
+```bash
 SET mykey "value"
 SREM mykey "one"
 ```

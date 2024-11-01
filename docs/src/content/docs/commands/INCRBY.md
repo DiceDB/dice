@@ -7,7 +7,7 @@ The `INCRBY` command in DiceDB is used to increment the integer value of a key b
 
 ## Syntax
 
-```
+```bash
 INCRBY key delta
 ```
 

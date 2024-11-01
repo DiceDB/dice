@@ -67,7 +67,7 @@ JSON.OBJKEYS key [path]
 
 Retrieving Keys of the Root Object
 
-```plaintext
+```bash
 127.0.0.1:7379> JSON.SET a $ '{"name": "Alice", "age": 30, "address": {"city": "Wonderland", "zipcode": "12345"}}'
 "OK"
 127.0.0.1:7379> JSON.OBJKEYS a $
@@ -80,7 +80,7 @@ Retrieving Keys of the Root Object
 
 Retrieving Keys of a Nested Object
 
-```plaintext
+```bash
 127.0.0.1:7379> JSON.SET b $ '{"name": "Alice", "partner": {"name": "Bob", "age": 28}}'
 "OK"
 127.0.0.1:7379> JSON.OBJKEYS b $.partner
@@ -92,7 +92,7 @@ Retrieving Keys of a Nested Object
 
 Error When Path Points to a Non-Object Type
 
-```plaintext
+```bash
 127.0.0.1:7379> JSON.SET c $ '{"name": "Alice", "age": 30}'
 "OK"
 127.0.0.1:7379> JSON.OBJKEYS c $.age
@@ -103,7 +103,7 @@ Error When Path Points to a Non-Object Type
 
 Error When Path Does Not Exist
 
-```plaintext
+```bash
 127.0.0.1:7379> JSON.SET d $ '{"name": "Alice", "address": {"city": "Wonderland"}}'
 "OK"
 127.0.0.1:7379> JSON.OBJKEYS d $.nonexistentPath
@@ -114,7 +114,7 @@ Error When Path Does Not Exist
 
 Error When Key Does Not Exist
 
-```plaintext
+```bash
 127.0.0.1:7379> JSON.OBJKEYS nonexistent_key $
 (error) ERROR could not perform this operation on a key that doesn't exist
 ```

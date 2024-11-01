@@ -72,7 +72,7 @@ JSON.ARRINSERT <key> <path> <index> <value> [value ...]
 
 Inserting at a valid index in the root path
 
-```plaintext
+```bash
 127.0.0.1:7379> JSON.SET a $ '[1,2]'
 OK
 127.0.0.1:7379> JSON.ARRINSERT a $ 2 3 4 5
@@ -85,7 +85,7 @@ OK
 
 Inserting at a negative index
 
-```plaintext
+```bash
 127.0.0.1:7379> JSON.SET a $ '[1,2]'
 OK
 127.0.0.1:7379> JSON.ARRINSERT a $ -2 3 4 5
@@ -98,7 +98,7 @@ OK
 
 Handling nested arrays
 
-```plaintext
+```bash
 127.0.0.1:7379> JSON.SET b $ '{"name":"tom","score":[10,20],"partner2":{"score":[10,20]}}'
 OK
 127.0.0.1:7379> JSON.ARRINSERT b $..score 1 5 6 true
@@ -111,7 +111,7 @@ OK
 
 Inserting with an out-of-bounds index
 
-```plaintext
+```bash
 127.0.0.1:7379> JSON.SET a $ '[1,2]'
 OK
 127.0.0.1:7379> JSON.ARRINSERT a $ 4 3
@@ -124,7 +124,7 @@ ERR index out of bounds
 
 Invalid index type
 
-```plaintext
+```bash
 127.0.0.1:7379> JSON.SET a $ '[1,2]'
 OK
 127.0.0.1:7379> JSON.ARRINSERT a $ ss 3

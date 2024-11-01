@@ -50,7 +50,7 @@ The `DBSIZE` command is straightforward and does not typically result in errors 
 
 Getting the number of keys in the currently selected database:
 
-```shell
+```bash
 127.0.0.1:7379> DBSIZE
 (integer) 42
 ```
@@ -61,7 +61,7 @@ In this example, the currently selected database contains 42 keys.
 
 While the following example shows the traditional syntax for working with multiple databases, please note that in the current version of DiceDB, all operations occur on a single database space:
 
-```shell
+```bash
 127.0.0.1:7379> SELECT 0
 OK
 127.0.0.1:7379> DBSIZE
@@ -79,7 +79,7 @@ In the current implementation, both commands will return the same count as they 
 
 1. Attempting to use `DBSIZE` without proper authentication:
 
-```shell
+```bash
 127.0.0.1:7379> DBSIZE
 (error) NOAUTH Authentication required
 ```

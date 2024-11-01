@@ -7,7 +7,7 @@ The `JSON.GET` command allows you to store, update, and retrieve JSON values in 
 
 ## Syntax
 
-```
+```bash
 JSON.GET <key> [path]
 ```
 

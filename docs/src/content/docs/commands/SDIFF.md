@@ -7,7 +7,7 @@ The `SDIFF` command in DiceDB is used to compute the difference between multiple
 
 ## Syntax
 
-```
+```bash
 SDIFF key1 [key2 ... keyN]
 ```
 

@@ -7,7 +7,7 @@ The `DECRBY` command in DiceDB is used to decrement the integer value of a key b
 
 ## Syntax
 
-```
+```bash
 DECRBY key delta
 ```
 

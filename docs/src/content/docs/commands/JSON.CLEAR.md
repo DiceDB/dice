@@ -7,7 +7,7 @@ The `JSON.CLEAR` command allows you to manipulate JSON data stored in DiceDB. Th
 
 ## Syntax
 
-```
+```bash
 JSON.CLEAR key [path]
 ```
 

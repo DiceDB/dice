@@ -48,7 +48,7 @@ The `JSON.DEL` command can raise the following errors:
 
 ### Deleting an Entire JSON Document
 
-```shell
+```bash
 127.0.0.1:7379> JSON.SET myjson $ '{"name": "John", "age": 30, "city": "New York"}'
 OK
 127.0.0.1:7379> JSON.DEL myjson
@@ -59,7 +59,7 @@ OK
 
 ### Deleting a Specific Path
 
-```shell
+```bash
 127.0.0.1:7379> JSON.SET myjson $ '{"name": "John", "age": 30, "city": "New York"}'
 OK
 127.0.0.1:7379> JSON.DEL myjson $.age
@@ -70,7 +70,7 @@ OK
 
 ### Deleting a Non-Existent Path
 
-```shell
+```bash
 127.0.0.1:7379> JSON.SET myjson $ '{"name": "John", "age": 30, "city": "New York"}'
 OK
 127.0.0.1:7379> JSON.DEL myjson $.address
@@ -79,7 +79,7 @@ OK
 
 ### Error: Key Does Not Hold a JSON Document
 
-```shell
+```bash
 127.0.0.1:7379> SET mystring "Hello, World!"
 OK
 127.0.0.1:7379> JSON.DEL mystring

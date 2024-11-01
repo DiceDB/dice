@@ -7,7 +7,7 @@ The `KEYS` command in DiceDB is used to find all keys matching a given pattern. 
 
 ## Syntax
 
-```plaintext
+```bash
 KEYS pattern
 ```
 
@@ -37,7 +37,7 @@ Use `\` to escape special characters if you want to match them verbatim.
 
 ### Basic example
 
-```plaintext
+```bash
 127.0.0.1:7379> SET key1 "value1"
 OK
 127.0.0.1:7379> SET key2 "value2"
@@ -51,7 +51,7 @@ OK
 
 ### Using wildcards
 
-```plaintext
+```bash
 127.0.0.1:7379> SET key1 "value1"
 OK
 127.0.0.1:7379> SET key2 "value2"
@@ -66,7 +66,7 @@ OK
 
 ### Using character ranges
 
-```plaintext
+```bash
 127.0.0.1:7379> SET key1 "value1"
 OK
 127.0.0.1:7379> SET key2 "value2"
@@ -80,7 +80,7 @@ OK
 
 ### Using \ to escape special characters
 
-```plaintext
+```bash
 127.0.0.1:7379> SET key1 "value1"
 OK
 127.0.0.1:7379> SET key2 "value2"
@@ -122,7 +122,7 @@ The `KEYS` command is straightforward and does not have many error conditions. H
 
 - `SCAN`: The `SCAN` command is a cursor-based iterator that allows you to incrementally iterate over the keyspace without blocking the server. It is a more efficient alternative to `KEYS` for large datasets.
 
-```plaintext
+```bash
 127.0.0.1:7379> SCAN 0 MATCH key*
 1) "0"
 2) 1) "key1"

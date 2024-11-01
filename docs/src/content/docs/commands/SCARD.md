@@ -7,7 +7,7 @@ The `SCARD` command in DiceDB is used to get the number of members in a set. Thi
 
 ## Syntax
 
-```
+```bash
 SCARD key
 ```
 
