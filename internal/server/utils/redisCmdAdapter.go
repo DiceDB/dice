@@ -1,7 +1,7 @@
 package utils
 
 import (
-	bytes_ext "bytes"
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -257,11 +257,9 @@ func isBase64Encoded(s string) bool {
 
 func unmarshalRequestBody(data []byte, v *map[string]interface{}) error {
 	var rawMap map[string]interface{}
-
 	if err := json.Unmarshal(data, &rawMap); err != nil {
 		return err
 	}
-
 	for key, val := range rawMap {
 		switch val := val.(type) {
 		case float64:
@@ -299,13 +297,12 @@ func unmarshalRequestBody(data []byte, v *map[string]interface{}) error {
 		}
 	}
 
-	bytes, err := json.Marshal(rawMap)
+	jsonBytes, err := json.Marshal(rawMap)
 	if err != nil {
 		return err
 	}
 
-	decoder := json.NewDecoder(bytes_ext.NewReader(bytes))
+	decoder := json.NewDecoder(bytes.NewReader(jsonBytes))
 	decoder.UseNumber() // Ensures all numbers are kept as json.Number
 	return decoder.Decode(&v)
-
 }
