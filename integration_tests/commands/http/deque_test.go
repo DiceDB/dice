@@ -556,7 +556,8 @@ func TestLLEN(t *testing.T) {
 
 	exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": [...]string{"k"}}})
 }
-func TestLPopCount(t *testing.T) {
+
+func TestLPOPCount(t *testing.T) {
 	deqTestInit()
 	exec := NewHTTPCommandExecutor()
 
