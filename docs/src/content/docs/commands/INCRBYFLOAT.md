@@ -7,7 +7,7 @@ The `INCRBYFLOAT` command in DiceDB is used to increment the numeric value of a 
 
 ## Syntax
 
-```
+```bash
 INCRBYFLOAT key delta
 ```
 

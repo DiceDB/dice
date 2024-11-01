@@ -7,7 +7,7 @@ The `EXPIRE` command in DiceDB is used to set a timeout on a specified key. Afte
 
 ## Syntax
 
-```
+```bash
 EXPIRE key seconds [NX | XX | GT | LT]
 ```
 

@@ -7,7 +7,7 @@ The `JSON.TYPE` command allows you to work with JSON data structures in DiceDB. 
 
 ## Syntax
 
-```
+```bash
 JSON.TYPE <key> <path>
 ```
 

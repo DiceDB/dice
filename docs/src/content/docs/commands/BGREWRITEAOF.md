@@ -7,7 +7,7 @@ The `BGREWRITEAOF` command in DiceDB is used to asynchronously rewrite the Appen
 
 ## Syntax
 
-```
+```bash
 BGREWRITEAOF
 ```
 
@@ -42,7 +42,7 @@ When the `BGREWRITEAOF` command is issued, DiceDB performs the following steps:
 ## Example Usage
 
 ### Basic Usage
-```sh
+```bash
 127.0.0.1:7379> BGREWRITEAOF
 OK
 ```

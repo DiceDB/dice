@@ -9,7 +9,7 @@ The `DEL` command in DiceDB is used to remove one or more keys from the database
 
 ## Syntax
 
-```
+```bash
 DEL key [key ...]
 ```
 

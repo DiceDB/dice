@@ -7,7 +7,7 @@ The `SINTER` command in DiceDB is used to compute the intersection of multiple s
 
 ## Syntax
 
-```
+```bash
 SINTER key [key ...]
 ```
 ## Parameters
@@ -45,7 +45,7 @@ If any of the specified keys do not exist, they are treated as empty sets. The i
 
 ### Example 1: Basic Intersection
 
-```shell
+```bash
 # Add elements to sets
 127.0.0.1:7379> SADD set1 "a" "b" "c"
 (integer) 3
@@ -61,7 +61,7 @@ If any of the specified keys do not exist, they are treated as empty sets. The i
 
 ### Example 2: Intersection with Non-Existent Set
 
-```shell
+```bash
 # Add elements to sets
 127.0.0.1:7379> SADD set1 "a" "b" "c"
 (integer) 3
@@ -76,7 +76,7 @@ Note: By default, non-existent keys (such as set3 in the example above) are trea
 
 ### Example 3: Error Handling - Wrong Type
 
-```shell
+```bash
 # Add elements to sets
 127.0.0.1:7379> SADD set1 "a" "b" "c"
 (integer) 3
@@ -91,7 +91,7 @@ SINTER set1 stringKey
 
 ### Example 4: Error Handling - No Keys Provided
 
-```shell
+```bash
 # Attempt to compute intersection without providing any keys
 127.0.0.1:7379> SINTER
 (error) ERR wrong number of arguments for 'sinter' command

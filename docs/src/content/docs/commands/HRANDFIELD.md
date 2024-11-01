@@ -7,7 +7,7 @@ The `HRANDFIELD` command in DiceDB is used to return one or more random fields f
 
 ## Syntax
 
-```
+```bash
 HRANDFIELD key [count [WITHVALUES]]
 ```
 
@@ -54,16 +54,16 @@ HRANDFIELD key [count [WITHVALUES]]
 ### Basic Usage
 Executing `HRANDFIELD` on a key without any parameters
 ```bash
-127.0.0.1:6379> HSET keys field1 value1 field2 value2 field3 value3
+127.0.0.1:7379> HSET keys field1 value1 field2 value2 field3 value3
 (integer) 3
-127.0.0.1:6379> HRANDFIELD keys
+127.0.0.1:7379> HRANDFIELD keys
 "field1"
 ```
 
 ### Usage with `count` parameter
 Executing `HRANDFIELD` on a key with a `count` parameter of 2
 ```bash
-127.0.0.1:6379> HRANDFIELD keys 2
+127.0.0.1:7379> HRANDFIELD keys 2
 1) "field2"
 2) "field1"
 ```
@@ -71,7 +71,7 @@ Executing `HRANDFIELD` on a key with a `count` parameter of 2
 ### Usage with `WITHVALUES` parameter
 Executing `HRANDFIELD` with the `WITHVALUES` parameter
 ```bash
-127.0.0.1:6379> HRANDFIELD keys 2 WITHVALUES
+127.0.0.1:7379> HRANDFIELD keys 2 WITHVALUES
 1) "field2"
 2) "value2"
 3) "field1"
@@ -82,9 +82,9 @@ Executing `HRANDFIELD` with the `WITHVALUES` parameter
 Executing `hrandfield` on a non-hash key
 
 ```bash
-127.0.0.1:6379> SET key "not a hash"
+127.0.0.1:7379> SET key "not a hash"
 OK
-127.0.0.1:6379> HRANDFIELD key
+127.0.0.1:7379> HRANDFIELD key
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
@@ -92,14 +92,14 @@ OK
 Non-integer value passed as `count` 
 
 ```bash
-127.0.0.1:6379> HRANDFIELD keys hello
+127.0.0.1:7379> HRANDFIELD keys hello
 (error) ERROR value is not an integer or out of range
 ```
 
 ### Invalid number of arguments
 Passing invalid number of arguments to the `hrandfield` command
 ```bash
-127.0.0.1:6379> HRANDFIELD
+127.0.0.1:7379> HRANDFIELD
 (error) ERR wrong number of arguments for 'hrandfield' command
 ```
 

@@ -67,10 +67,10 @@ JSON.OBJKEYS key [path]
 
 Retrieving Keys of the Root Object
 
-```plaintext
-127.0.0.1:6379> JSON.SET a $ '{"name": "Alice", "age": 30, "address": {"city": "Wonderland", "zipcode": "12345"}}'
+```bash
+127.0.0.1:7379> JSON.SET a $ '{"name": "Alice", "age": 30, "address": {"city": "Wonderland", "zipcode": "12345"}}'
 "OK"
-127.0.0.1:6379> JSON.OBJKEYS a $
+127.0.0.1:7379> JSON.OBJKEYS a $
 1) "name"
 2) "age"
 3) "address"
@@ -80,10 +80,10 @@ Retrieving Keys of the Root Object
 
 Retrieving Keys of a Nested Object
 
-```plaintext
-127.0.0.1:6379> JSON.SET b $ '{"name": "Alice", "partner": {"name": "Bob", "age": 28}}'
+```bash
+127.0.0.1:7379> JSON.SET b $ '{"name": "Alice", "partner": {"name": "Bob", "age": 28}}'
 "OK"
-127.0.0.1:6379> JSON.OBJKEYS b $.partner
+127.0.0.1:7379> JSON.OBJKEYS b $.partner
 1) "name"
 2) "age"
 ```
@@ -92,10 +92,10 @@ Retrieving Keys of a Nested Object
 
 Error When Path Points to a Non-Object Type
 
-```plaintext
-127.0.0.1:6379> JSON.SET c $ '{"name": "Alice", "age": 30}'
+```bash
+127.0.0.1:7379> JSON.SET c $ '{"name": "Alice", "age": 30}'
 "OK"
-127.0.0.1:6379> JSON.OBJKEYS c $.age
+127.0.0.1:7379> JSON.OBJKEYS c $.age
 (nil)
 ```
 
@@ -103,10 +103,10 @@ Error When Path Points to a Non-Object Type
 
 Error When Path Does Not Exist
 
-```plaintext
-127.0.0.1:6379> JSON.SET d $ '{"name": "Alice", "address": {"city": "Wonderland"}}'
+```bash
+127.0.0.1:7379> JSON.SET d $ '{"name": "Alice", "address": {"city": "Wonderland"}}'
 "OK"
-127.0.0.1:6379> JSON.OBJKEYS d $.nonexistentPath
+127.0.0.1:7379> JSON.OBJKEYS d $.nonexistentPath
 (empty list or set)
 ```
 
@@ -114,8 +114,8 @@ Error When Path Does Not Exist
 
 Error When Key Does Not Exist
 
-```plaintext
-127.0.0.1:6379> JSON.OBJKEYS nonexistent_key $
+```bash
+127.0.0.1:7379> JSON.OBJKEYS nonexistent_key $
 (error) ERROR could not perform this operation on a key that doesn't exist
 ```
 

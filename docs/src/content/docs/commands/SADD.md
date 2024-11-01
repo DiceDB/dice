@@ -7,7 +7,7 @@ The `SADD` command in DiceDB is used to add one or more members to a set. If the
 
 ## Syntax
 
-```
+```bash
 SADD key member [member ...]
 ```
 

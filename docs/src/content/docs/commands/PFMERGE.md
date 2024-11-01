@@ -7,7 +7,7 @@ The `PFMERGE` command in DiceDB is used to merge multiple HyperLogLog data struc
 
 ## Syntax
 
-```
+```bash
 PFMERGE destkey sourcekey [sourcekey ...]
 ```
 
@@ -52,7 +52,7 @@ The `PFMERGE` command can raise errors in the following scenarios:
 
 Suppose you have three HyperLogLogs stored at keys `hll1`, `hll2`, and `hll3`, and you want to merge them into a new HyperLogLog stored at key `hll_merged`.
 
-```sh
+```bash
 127.0.0.1:7379> PFADD hll1 "a" "b" "c"
 (integer) 1
 127.0.0.1:7379> PFADD hll2 "c" "d" "e"
@@ -69,7 +69,7 @@ OK
 
 If the `destkey` already exists, it will be overwritten by the merged HyperLogLog.
 
-```sh
+```bash
 127.0.0.1:7379> PFADD hll_merged "x" "y" "z"
 (integer) 1
 127.0.0.1:7379> PFMERGE hll_merged hll1 hll2 hll3
@@ -82,7 +82,7 @@ OK
 
 If a `sourcekey` does not exist, DiceDB will treat it as an empty HyperLogLog.
 
-```sh
+```bash
 127.0.0.1:7379> PFMERGE hll_merged hll1 hll2 non_existent_key
 OK
 127.0.0.1:7379> PFCOUNT hll_merged
@@ -93,7 +93,7 @@ OK
 
 if a `sourcekey` exists and is not of type HyperLogLog, the command will result in an error
 
-```sh
+```bash
 127.0.0.1:7379> PFMERGE hll_merged not_hyperLogLog
 (error) WRONGTYPE Key is not a valid HyperLogLog string value
 

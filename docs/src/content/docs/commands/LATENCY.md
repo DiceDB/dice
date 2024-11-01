@@ -8,7 +8,7 @@ The `LATENCY` command in DiceDB is used to measure and analyze the latency of va
 
 ## Command Syntax
 
-```plaintext
+```bash
 LATENCY [SUBCOMMAND] [ARGUMENTS]
 ```
 

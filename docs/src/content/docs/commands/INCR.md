@@ -7,7 +7,7 @@ The `INCR` command in DiceDB is used to increment the integer value of a key by 
 
 ## Syntax
 
-```plaintext
+```bash
 INCR key
 ```
 

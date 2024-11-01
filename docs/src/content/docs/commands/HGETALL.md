@@ -7,7 +7,7 @@ The `HGETALL` command in DiceDB is used to retrieve all the fields and values of
 
 ## Syntax
 
-```
+```bash
 HGETALL key
 ```
 
@@ -46,7 +46,7 @@ The `HGETALL` command can raise the following errors:
 
 ### Example 1: Retrieving all fields and values from an existing hash
 
-```DiceDB
+```bash
 127.0.0.1:7379> HSET user:1000 name "John Doe" age "30" country "USA"
 (integer) 3
 127.0.0.1:7379> HGETALL user:1000
@@ -65,7 +65,7 @@ The `HGETALL` command can raise the following errors:
 
 ### Example 2: Retrieving from a non-existing key
 
-```DiceDB
+```bash
 127.0.0.1:7379> HGETALL user:2000
 ```
 
@@ -78,7 +78,7 @@ The `HGETALL` command can raise the following errors:
 ### Error Example:
 Key is not a hash
 
-```DiceDB
+```bash
 127.0.0.1:7379> SET user:3000 "This is a string"
 OK
 127.0.0.1:7379> HGETALL user:3000
@@ -93,7 +93,7 @@ OK
 ### Error Example: 
 Invalid number of arguments are passed
 
-```DiceDB
+```bash
 127.0.0.1:7379> HGETALL user:3000 helloworld
 ```
 `Output:`
