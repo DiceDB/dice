@@ -556,3 +556,50 @@ func TestLLEN(t *testing.T) {
 
 	exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": [...]string{"k"}}})
 }
+func TestLPopCount(t *testing.T) {
+	deqTestInit()
+	exec := NewHTTPCommandExecutor()
+
+	testCases := []struct {
+		name   string
+		cmds   []HTTPCommand
+		expect []any
+	}{
+		{
+			name: "LPOP with count argument - valid, invalid, and edge cases",
+			cmds: []HTTPCommand{
+				{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "value": "v1"}},
+				{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "value": "v2"}},
+				{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "value": "v3"}},
+				{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "value": "v4"}},
+				{Command: "LPOP", Body: map[string]interface{}{"key": "k", "value": 2}}, 
+				{Command: "LPOP", Body: map[string]interface{}{"key": "k", "value": 2}}, 
+				{Command: "LPOP", Body: map[string]interface{}{"key": "k", "value": -1}}, 
+				{Command: "LPOP", Body: map[string]interface{}{"key": "k", "value": "abc"}}, 
+				{Command: "LLEN", Body: map[string]interface{}{"key": "k"}},
+			},
+			expect: []any{
+				float64(1),
+				float64(2),
+				float64(3),
+				float64(4),
+				[]interface{}{"v1", "v2"},
+				[]interface{}{"v3", "v4"},
+				"ERR value is out of range",                   
+				"ERR value is not an integer or out of range", 
+                float64(0),
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": []interface{}{"k"}}})
+			for i, cmd := range tc.cmds {
+				result, _ := exec.FireCommand(cmd)
+					assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %v", cmd)
+			}
+		})
+	}
+}
+

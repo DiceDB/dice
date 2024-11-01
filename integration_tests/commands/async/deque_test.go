@@ -121,17 +121,17 @@ func TestRPush(t *testing.T) {
 	}{
 		{
 			name:   "RPUSH",
-			cmds:   []string{"LPUSH k v", "LPUSH k v1 1 v2 2", "LPUSH k 3 3 3 v3 v3 v3"},
+			cmds:   []string{"RPUSH k v", "RPUSH k v1 1 v2 2", "RPUSH k 3 3 3 v3 v3 v3"},
 			expect: []any{int64(1), int64(5), int64(11)},
 		},
 		{
 			name:   "RPUSH normal values",
-			cmds:   []string{"LPUSH k " + strings.Join(deqNormalValues, " ")},
+			cmds:   []string{"RPUSH k " + strings.Join(deqNormalValues, " ")},
 			expect: []any{int64(25)},
 		},
 		{
 			name:   "RPUSH edge values",
-			cmds:   []string{"LPUSH k " + strings.Join(deqEdgeValues, " ")},
+			cmds:   []string{"RPUSH k " + strings.Join(deqEdgeValues, " ")},
 			expect: []any{int64(42)},
 		},
 	}
@@ -485,7 +485,7 @@ func TestLPOPCount(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.cmds {
 				result := FireCommand(conn, cmd)
-				assert.DeepEqual(t, tc.expect[i], result)
+				assert.Equal(t, tc.expect[i], result)
 			}
 		})
 	}
