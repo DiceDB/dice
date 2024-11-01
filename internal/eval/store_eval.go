@@ -36,151 +36,169 @@ import (
 // Returns encoded OK RESP once new entry is added
 // If the key already exists then the value will be overwritten and expiry will be discarded
 func evalSET(args []string, store *dstore.Store) *EvalResponse {
-	if len(args) <= 1 {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongArgumentCount("SET"),
-		}
-	}
+    if len(args) <= 1 {
+        return &EvalResponse{
+            Result: nil,
+            Error:  diceerrors.ErrWrongArgumentCount("SET"),
+        }
+    }
 
-	var key, value string
-	var exDurationMs int64 = -1
-	var state exDurationState = Uninitialized
-	var keepttl bool = false
-
+    var key, value string
+    var exDurationMs int64 = -1
+    var state exDurationState = Uninitialized
+    var keepttl bool = false
+	
 	key, value = args[0], args[1]
-	oType, oEnc := deduceTypeEncoding(value)
+    oType, oEnc := deduceTypeEncoding(value)
 
-	for i := 2; i < len(args); i++ {
-		arg := strings.ToUpper(args[i])
-		switch arg {
-		case Ex, Px:
-			if state != Uninitialized {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrSyntax,
-				}
-			}
-			i++
-			if i == len(args) {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrSyntax,
-				}
-			}
+    for i := 2; i < len(args); i++ {
+        arg := strings.ToUpper(args[i])
+        switch arg {
+        case Ex, Px:
+            if state != Uninitialized {
+                return &EvalResponse{
+                    Result: nil,
+                    Error:  diceerrors.ErrSyntax,
+                }
+            }
+            if keepttl {
+                return &EvalResponse{
+                    Result: nil,
+                    Error:  diceerrors.ErrSyntax,
+                }
+            }
+            i++
+            if i == len(args) {
+                return &EvalResponse{
+                    Result: nil,
+                    Error:  diceerrors.ErrSyntax,
+                }
+            }
 
-			exDuration, err := strconv.ParseInt(args[i], 10, 64)
-			if err != nil {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrIntegerOutOfRange,
-				}
-			}
+            exDuration, err := strconv.ParseInt(args[i], 10, 64)
+            if err != nil {
+                return &EvalResponse{
+                    Result: nil,
+                    Error:  diceerrors.ErrIntegerOutOfRange,
+                }
+            }
 
-			if exDuration <= 0 || exDuration >= maxExDuration {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrInvalidExpireTime("SET"),
-				}
-			}
+            if exDuration <= 0 || exDuration >= maxExDuration {
+                return &EvalResponse{
+                    Result: nil,
+                    Error:  diceerrors.ErrInvalidExpireTime("SET"),
+                }
+            }
 
-			// converting seconds to milliseconds
-			if arg == Ex {
-				exDuration *= 1000
-			}
-			exDurationMs = exDuration
-			state = Initialized
+            // converting seconds to milliseconds
+            if arg == Ex {
+                exDuration *= 1000
+            }
+            exDurationMs = exDuration
+            state = Initialized
 
-		case Pxat, Exat:
-			if state != Uninitialized {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrSyntax,
-				}
-			}
-			i++
-			if i == len(args) {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrSyntax,
-				}
-			}
-			exDuration, err := strconv.ParseInt(args[i], 10, 64)
-			if err != nil {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrIntegerOutOfRange,
-				}
-			}
+        case Pxat, Exat:
+            if state != Uninitialized {
+                return &EvalResponse{
+                    Result: nil,
+                    Error:  diceerrors.ErrSyntax,
+                }
+            }
+            if keepttl {
+                return &EvalResponse{
+                    Result: nil,
+                    Error:  diceerrors.ErrSyntax,
+                }
+            }
+            i++
+            if i == len(args) {
+                return &EvalResponse{
+                    Result: nil,
+                    Error:  diceerrors.ErrSyntax,
+                }
+            }
+            exDuration, err := strconv.ParseInt(args[i], 10, 64)
+            if err != nil {
+                return &EvalResponse{
+                    Result: nil,
+                    Error:  diceerrors.ErrIntegerOutOfRange,
+                }
+            }
 
-			if exDuration < 0 {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrInvalidExpireTime("SET"),
-				}
-			}
+            if exDuration < 0 {
+                return &EvalResponse{
+                    Result: nil,
+                    Error:  diceerrors.ErrInvalidExpireTime("SET"),
+                }
+            }
 
-			if arg == Exat {
-				exDuration *= 1000
-			}
-			exDurationMs = exDuration - utils.GetCurrentTime().UnixMilli()
-			// If the expiry time is in the past, set exDurationMs to 0
-			// This will be used to signal immediate expiration
-			if exDurationMs < 0 {
-				exDurationMs = 0
-			}
-			state = Initialized
+            if arg == Exat {
+                exDuration *= 1000
+            }
+            exDurationMs = exDuration - utils.GetCurrentTime().UnixMilli()
+            // If the expiry time is in the past, set exDurationMs to 0
+            // This will be used to signal immediate expiration
+            if exDurationMs < 0 {
+                exDurationMs = 0
+            }
+            state = Initialized
 
-		case XX:
-			// Get the key from the hash table
-			obj := store.Get(key)
+        case XX:
+            // Get the key from the hash table
+            obj := store.Get(key)
 
-			// if key does not exist, return RESP encoded nil
-			if obj == nil {
-				return &EvalResponse{
-					Result: clientio.NIL,
-					Error:  nil,
-				}
-			}
-		case NX:
-			obj := store.Get(key)
-			if obj != nil {
-				return &EvalResponse{
-					Result: clientio.NIL,
-					Error:  nil,
-				}
-			}
-		case KeepTTL:
-			keepttl = true
-		default:
-			return &EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrSyntax,
-			}
-		}
-	}
+            // if key does not exist, return RESP encoded nil
+            if obj == nil {
+                return &EvalResponse{
+                    Result: clientio.NIL,
+                    Error:  nil,
+                }
+            }
+        case NX:
+            obj := store.Get(key)
+            if obj != nil {
+                return &EvalResponse{
+                    Result: clientio.NIL,
+                    Error:  nil,
+                }
+            }
+        case KeepTTL:
+            if state != Uninitialized {
+                return &EvalResponse{
+                    Result: nil,
+                    Error:  diceerrors.ErrSyntax,
+                }
+            }
+            keepttl = true
+        default:
+            return &EvalResponse{
+                Result: nil,
+                Error:  diceerrors.ErrSyntax,
+            }
+        }
+    }
 
-	// Cast the value properly based on the encoding type
-	var storedValue interface{}
-	switch oEnc {
-	case object.ObjEncodingInt:
-		storedValue, _ = strconv.ParseInt(value, 10, 64)
-	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
-		storedValue = value
-	default:
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrUnsupportedEncoding(int(oEnc)),
-		}
-	}
+    // Cast the value properly based on the encoding type
+    var storedValue interface{}
+    switch oEnc {
+    case object.ObjEncodingInt:
+        storedValue, _ = strconv.ParseInt(value, 10, 64)
+    case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
+        storedValue = value
+    default:
+        return &EvalResponse{
+            Result: nil,
+            Error:  diceerrors.ErrUnsupportedEncoding(int(oEnc)),
+        }
+    }
 
-	// putting the k and value in a Hash Table
-	store.Put(key, store.NewObj(storedValue, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
+    // putting the k and value in a Hash Table
+    store.Put(key, store.NewObj(storedValue, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
 
-	return &EvalResponse{
-		Result: clientio.OK,
-		Error:  nil,
-	}
+    return &EvalResponse{
+        Result: clientio.OK,
+        Error:  nil,
+    }
 }
 
 // evalGET returns the value for the queried key in args
@@ -324,6 +342,145 @@ func evalSETEX(args []string, store *dstore.Store) *EvalResponse {
 	newArgs := []string{key, value, Ex, args[1]}
 
 	return evalSET(newArgs, store)
+}
+
+// evalHEXISTS returns if field is an existing field in the hash stored at key.
+//
+// This command returns 0, if the specified field doesn't exist in the key and 1 if it exists.
+//
+// If key doesn't exist, it returns 0.
+//
+// Usage: HEXISTS key field
+func evalHEXISTS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("HEXISTS"),
+		}
+	}
+
+	key := args[0]
+	hmKey := args[1]
+	obj := store.Get(key)
+
+	var hashMap HashMap
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return &EvalResponse{
+			Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeErr),
+			Result: nil,
+		}
+	}
+
+	hashMap = obj.Value.(HashMap)
+
+	_, ok := hashMap.Get(hmKey)
+	if ok {
+		return &EvalResponse{
+			Result: clientio.IntegerOne,
+			Error:  nil,
+		}
+	}
+	// Return 0, if specified field doesn't exist in the HashMap.
+	return &EvalResponse{
+		Result: clientio.IntegerZero,
+		Error:  nil,
+	}
+}
+
+// evalHKEYS is used to retrieve all the keys(or field names) within a hash.
+//
+// This command returns empty array, if the specified key doesn't exist.
+//
+// Complexity is O(n) where n is the size of the hash.
+//
+// Usage: HKEYS key
+func evalHKEYS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("HKEYS"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	var hashMap HashMap
+	var result []string
+
+	if obj != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+			return &EvalResponse{
+				Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeErr),
+				Result: nil,
+			}
+		}
+		hashMap = obj.Value.(HashMap)
+	} else {
+		return &EvalResponse{
+			Result: clientio.EmptyArray,
+			Error:  nil,
+		}
+	}
+
+	for hmKey := range hashMap {
+		result = append(result, hmKey)
+	}
+
+	return &EvalResponse{
+		Result: result,
+		Error:  nil,
+	}
+}
+
+// evalHKEYS is used to retrieve all the values within a hash.
+//
+// This command returns empty array, if the specified key doesn't exist.
+//
+// Complexity is O(n) where n is the size of the hash.
+//
+// Usage: HVALS key
+func evalHVALS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{Error: diceerrors.ErrWrongArgumentCount("HVALS"), Result: nil}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	if obj == nil {
+		// Return an empty array for non-existent keys
+		return &EvalResponse{
+			Result: clientio.EmptyArray,
+			Error:  nil,
+		}
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return &EvalResponse{
+			Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeErr),
+			Result: nil,
+		}
+	}
+
+	hashMap := obj.Value.(HashMap)
+	results := make([]string, 0, len(hashMap))
+
+	for _, value := range hashMap {
+		results = append(results, value)
+	}
+
+	return &EvalResponse{
+		Result: results,
+		Error:  nil,
+	}
 }
 
 // Key, start and end are mandatory args.
@@ -601,6 +758,48 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+// evalZREM removes the specified members from the sorted set stored at key.
+// Non-existing members are ignored.
+// Returns the number of members removed.
+func evalZREM(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("ZREM"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	sortedSet, err := sortedset.FromObject(obj)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	countRem := 0
+	for i := 1; i < len(args); i++ {
+		if sortedSet.Remove(args[i]) {
+			countRem += 1
+		}
+	}
+
+	return &EvalResponse{
+		Result: int64(countRem),
+		Error:  nil,
+	}
+}
+
 // evalAPPEND takes two arguments: the key and the value to append to the key's current value.
 // If the key does not exist, it creates a new key with the given value (so APPEND will be similar to SET in this special case)
 // If key already exists and is a string (or integers stored as strings), this command appends the value at the end of the string
@@ -740,6 +939,39 @@ func evalZRANK(args []string, store *dstore.Store) *EvalResponse {
 
 	return &EvalResponse{
 		Result: rank,
+		Error:  nil,
+	}
+}
+
+// evalZCARD returns the cardinality (number of elements) of the sorted set stored at key.
+// Returns 0 if the key does not exist.
+func evalZCARD(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 || len(args) > 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("ZCARD"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	sortedSet, err := sortedset.FromObject(obj)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+	return &EvalResponse{
+		Result: int64(sortedSet.Len()),
 		Error:  nil,
 	}
 }

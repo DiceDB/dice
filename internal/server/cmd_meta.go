@@ -78,6 +78,18 @@ var (
 		Cmd:     "GETRANGE",
 		CmdType: SingleShard,
 	}
+	hexistsCmdMeta = CmdsMeta{
+		Cmd:     "HEXISTS",
+		CmdType: SingleShard,
+	}
+	hkeysCmdMeta = CmdsMeta{
+		Cmd:     "HKEYS",
+		CmdType: SingleShard,
+	}
+	hvalsCmdMeta = CmdsMeta{
+		Cmd:     "HVALS",
+		CmdType: SingleShard,
+	}
 	zaddCmdMeta = CmdsMeta{
 		Cmd:     "ZADD",
 		CmdType: SingleShard,
@@ -100,6 +112,14 @@ var (
 	}
 	zrankCmdMeta = CmdsMeta{
 		Cmd:     "ZRANK",
+		CmdType: SingleShard,
+	}
+	zcardCmdMeta = CmdsMeta{
+		Cmd:     "ZCARD",
+		CmdType: SingleShard,
+	}
+	zremCmdMeta = CmdsMeta{
+		Cmd:     "ZREM",
 		CmdType: SingleShard,
 	}
 	pfaddCmdMeta = CmdsMeta{
@@ -264,6 +284,9 @@ func init() {
 	WorkerCmdsMeta["JSON.CLEAR"] = jsonclearCmdMeta
 	WorkerCmdsMeta["JSON.STRLEN"] = jsonstrlenCmdMeta
 	WorkerCmdsMeta["JSON.OBJLEN"] = jsonobjlenCmdMeta
+	WorkerCmdsMeta["HEXISTS"] = hexistsCmdMeta
+	WorkerCmdsMeta["HKEYS"] = hkeysCmdMeta
+	WorkerCmdsMeta["HVALS"] = hvalsCmdMeta
 	WorkerCmdsMeta["JSON.ARRINSERT"] = jsonarrinsertCmdMeta
 	WorkerCmdsMeta["JSON.ARRTRIM"] = jsonarrtrimCmdMeta
 	WorkerCmdsMeta["JSON.OBJKEYS"] = jsonobjkeystCmdMeta
@@ -271,6 +294,8 @@ func init() {
 	WorkerCmdsMeta["ZCOUNT"] = zcountCmdMeta
 	WorkerCmdsMeta["ZRANGE"] = zrangeCmdMeta
 	WorkerCmdsMeta["ZRANK"] = zrankCmdMeta
+	WorkerCmdsMeta["ZCARD"] = zcardCmdMeta
+	WorkerCmdsMeta["ZREM"] = zremCmdMeta
 	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
 	WorkerCmdsMeta["ZPOPMIN"] = zpopminCmdMeta
 	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta

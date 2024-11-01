@@ -3,8 +3,7 @@ package async
 import (
 	"testing"
 
-	testifyAssert "github.com/stretchr/testify/assert"
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestJSONRESP(t *testing.T) {
@@ -52,9 +51,9 @@ func TestJSONRESP(t *testing.T) {
 				result := FireCommand(conn, cmd)
 
 				if tcase.assert_type[i] == "equal" {
-					testifyAssert.Equal(t, out, result)
+					assert.Equal(t, out, result)
 				} else if tcase.assert_type[i] == "deep_equal" {
-					assert.Assert(t, arraysArePermutations(out.([]interface{}), result.([]interface{})))
+					assert.True(t, arraysArePermutations(out.([]interface{}), result.([]interface{})))
 				}
 			}
 		})
