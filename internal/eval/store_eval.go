@@ -533,6 +533,7 @@ func evalGETRANGE(args []string, store *dstore.Store) *EvalResponse {
 		str = strconv.FormatInt(obj.Value.(int64), 10)
 	case object.ObjEncodingByteArray:
 		if val, ok := obj.Value.(*ByteArray); ok {
+			fmt.Println(val)
 			str = string(val.data)
 		} else {
 			return &EvalResponse{
