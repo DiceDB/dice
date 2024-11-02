@@ -12,19 +12,16 @@ PTTL key
 ```
 
 ## Parameters
-
-| Parameter       | Description                                                              | Type    | Required |
-|-----------------|--------------------------------------------------------------------------|---------|----------|
-| `key`           | The key for which the remaining TTL is to be retrieved.                  | String  | Yes      |
+| Parameter | Description                                                  | Type   | Required |
+|-----------|--------------------------------------------------------------|--------|----------|
+| `key`     | The key for which the remaining TTL is to be retrieved        | String | Yes      |
 
 ## Return values
-
-| Condition                                                  | Return Value      |
-|------------------------------------------------------------|-------------------|
-| Command is successful                                      | Returns a positive integer value representing the remaining time to live of the key in milliseconds |
-| The key exists but has no associated expiration            | `-1`              |
-| The key does not exist                                     | `-2`              |
-
+| Condition                                           | Return Value                                                                               |
+|-----------------------------------------------------|--------------------------------------------------------------------------------------------|
+| Command is successful                               | Positive integer representing the remaining time to live of the key in milliseconds        |
+| Key exists but has no associated expiration         | `-1`                                                                                       |
+| Key does not exist                                  | `-2`                                                                                       |
 
 ## Behaviour
 
@@ -42,7 +39,7 @@ PTTL key
 
 ## Example Usage
 
-### Example 1: Key with Expiration
+### Key with Expiration
 
 ```bash
 127.0.0.1:7379> SET mykey "Hello"
@@ -53,7 +50,7 @@ PTTL key
 
 In this example, the key `mykey` is set with a value of "Hello" and an expiration of 10 seconds. The `PTTL` command returns `10000`, indicating that the key will expire in 10000 milliseconds.
 
-### Example 2: Key without Expiration
+### Key without Expiration
 
 ```bash
 127.0.0.1:7379> SET mykey "Hello"
@@ -63,7 +60,7 @@ In this example, the key `mykey` is set with a value of "Hello" and an expiratio
 
 In this example, the key `mykey` is set with a value of "Hello" but no expiration is set. The `PTTL` command returns `-1`, indicating that the key exists but has no associated expiration.
 
-### Example 3: Non-existent Key
+### Non-existent Key
 
 ```bash
 127.0.0.1:7379> PTTL nonExistentKey
@@ -72,7 +69,7 @@ In this example, the key `mykey` is set with a value of "Hello" but no expiratio
 
 In this example, the key `nonExistentKey` does not exist in the DiceDB database. The `PTTL` command returns `-2`, indicating that the key does not exist.
 
-### Example 4: Invalid usage
+### Invalid usage
 
 ```bash
 127.0.0.1:7379> SET newkey "value"
@@ -81,3 +78,9 @@ In this example, the key `nonExistentKey` does not exist in the DiceDB database.
 ```
 
 In this example, the `PTTL` command is used with an extra argument. This results in an error, as the `PTTL` command accepts only one argument.
+
+## Best Practices
+- Use `PTTL` in conjunction with `EXPIRE` or `PEXPIRE` commands to manage key expiration effectively
+
+## Alternatives
+- `TTL`: Similar to `PTTL` but returns the time-to-live in seconds instead of milliseconds

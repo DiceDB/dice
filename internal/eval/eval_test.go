@@ -66,6 +66,7 @@ func TestEval(t *testing.T) {
 	testEvalJSONARRAPPEND(t, store)
 	testEvalJSONRESP(t, store)
 	testEvalTTL(t, store)
+	testEvalPTTL(t, store)
 	testEvalDel(t, store)
 	testEvalPersist(t, store)
 	testEvalEXPIRE(t, store)
@@ -307,8 +308,8 @@ func testEvalSET(t *testing.T, store *dstore.Store) {
 			migratedOutput: EvalResponse{Result: clientio.OK, Error: nil},
 		},
 		{
-			name: 		 "key val pair and invalid EX and PX",
-			input: 		 []string{"KEY", "VAL", Ex, "2", Px, "2000"},
+			name:           "key val pair and invalid EX and PX",
+			input:          []string{"KEY", "VAL", Ex, "2", Px, "2000"},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
 		},
 		{
@@ -590,20 +591,48 @@ func testEvalGETSET(t *testing.T, store *dstore.Store) {
 func testEvalEXPIRE(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'expire' command\r\n"),
+			input: nil,
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("EXPIRE"),
+			},
 		},
 		"empty args": {
-			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'expire' command\r\n"),
+			input: []string{},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("EXPIRE"),
+			},
 		},
 		"wrong number of args": {
-			input:  []string{"KEY1"},
-			output: []byte("-ERR wrong number of arguments for 'expire' command\r\n"),
+			input: []string{"KEY1"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("EXPIRE"),
+			},
 		},
 		"key does not exist": {
-			input:  []string{"NONEXISTENT_KEY", strconv.FormatInt(1, 10)},
-			output: clientio.RespZero,
+			input: []string{"NONEXISTENT_KEY", strconv.FormatInt(1, 10)},
+			migratedOutput: EvalResponse{
+				Result: clientio.IntegerZero,
+				Error:  nil,
+			},
+		},
+		"invalid expiry time - 0": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "mock_value"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input: []string{"EXISTING_KEY", "0"},
+			migratedOutput: EvalResponse{
+				Result: clientio.IntegerOne,
+				Error:  nil,
+			},
 		},
 		"key exists": {
 			setup: func() {
@@ -615,10 +644,13 @@ func testEvalEXPIRE(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input:  []string{"EXISTING_KEY", strconv.FormatInt(1, 10)},
-			output: clientio.RespOne,
+			input: []string{"EXISTING_KEY", strconv.FormatInt(1, 10)},
+			migratedOutput: EvalResponse{
+				Result: clientio.IntegerOne,
+				Error:  nil,
+			},
 		},
-		"invalid expiry time exists - very large integer": {
+		"invalid expiry time - very large integer": {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
@@ -628,11 +660,14 @@ func testEvalEXPIRE(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input:  []string{"EXISTING_KEY", strconv.FormatInt(9223372036854776, 10)},
-			output: []byte("-ERR invalid expire time in 'expire' command\r\n"),
+			input: []string{"EXISTING_KEY", strconv.FormatInt(9223372036854776, 10)},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrInvalidExpireTime("EXPIRE"),
+			},
 		},
 
-		"invalid expiry time exists - negative integer": {
+		"invalid expiry time - negative integer": {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
@@ -642,10 +677,13 @@ func testEvalEXPIRE(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input:  []string{"EXISTING_KEY", strconv.FormatInt(-1, 10)},
-			output: []byte("-ERR invalid expire time in 'expire' command\r\n"),
+			input: []string{"EXISTING_KEY", strconv.FormatInt(-1, 10)},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrInvalidExpireTime("EXPIRE"),
+			},
 		},
-		"invalid expiry time exists - empty string": {
+		"invalid expiry time - empty string": {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
@@ -655,10 +693,13 @@ func testEvalEXPIRE(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input:  []string{"EXISTING_KEY", ""},
-			output: []byte("-ERR value is not an integer or out of range\r\n"),
+			input: []string{"EXISTING_KEY", ""},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrIntegerOutOfRange,
+			},
 		},
-		"invalid expiry time exists - with float number": {
+		"invalid expiry time - with float number": {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
@@ -668,23 +709,32 @@ func testEvalEXPIRE(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input:  []string{"EXISTING_KEY", "0.456"},
-			output: []byte("-ERR value is not an integer or out of range\r\n"),
+			input: []string{"EXISTING_KEY", "0.456"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrIntegerOutOfRange,
+			},
 		},
 	}
 
-	runEvalTests(t, tests, evalEXPIRE, store)
+	runMigratedEvalTests(t, tests, evalEXPIRE, store)
 }
 
 func testEvalEXPIRETIME(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"wrong number of args": {
-			input:  []string{"KEY1", "KEY2"},
-			output: []byte("-ERR wrong number of arguments for 'expiretime' command\r\n"),
+			input: []string{"KEY1", "KEY2"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("EXPIRETIME"),
+			},
 		},
 		"key does not exist": {
-			input:  []string{"NONEXISTENT_KEY"},
-			output: clientio.RespMinusTwo,
+			input: []string{"NONEXISTENT_KEY"},
+			migratedOutput: EvalResponse{
+				Result: clientio.IntegerNegativeTwo,
+				Error:  nil,
+			},
 		},
 		"key exists without expiry": {
 			setup: func() {
@@ -696,8 +746,11 @@ func testEvalEXPIRETIME(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input:  []string{"EXISTING_KEY"},
-			output: clientio.RespMinusOne,
+			input: []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{
+				Result: clientio.IntegerNegativeOne,
+				Error:  nil,
+			},
 		},
 		"key exists with expiry": {
 			setup: func() {
@@ -711,31 +764,46 @@ func testEvalEXPIRETIME(t *testing.T, store *dstore.Store) {
 
 				store.SetUnixTimeExpiry(obj, 2724123456123)
 			},
-			input:  []string{"EXISTING_KEY"},
-			output: []byte(fmt.Sprintf(":%d\r\n", 2724123456123)),
+			input: []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{
+				Result: uint64(2724123456123),
+				Error:  nil,
+			},
 		},
 	}
 
-	runEvalTests(t, tests, evalEXPIRETIME, store)
+	runMigratedEvalTests(t, tests, evalEXPIRETIME, store)
 }
 
 func testEvalEXPIREAT(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'expireat' command\r\n"),
+			input: nil,
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("EXPIREAT"),
+			},
 		},
 		"empty args": {
-			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'expireat' command\r\n"),
+			input: []string{},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("EXPIREAT"),
+			},
 		},
 		"wrong number of args": {
-			input:  []string{"KEY1"},
-			output: []byte("-ERR wrong number of arguments for 'expireat' command\r\n"),
+			input: []string{"KEY1"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("EXPIREAT"),
+			},
 		},
 		"key does not exist": {
-			input:  []string{"NONEXISTENT_KEY", strconv.FormatInt(time.Now().Add(2*time.Minute).Unix(), 10)},
-			output: clientio.RespZero,
+			input: []string{"NONEXISTENT_KEY", strconv.FormatInt(time.Now().Add(2*time.Minute).Unix(), 10)},
+			migratedOutput: EvalResponse{
+				Result: clientio.IntegerZero,
+				Error:  nil,
+			},
 		},
 		"key exists": {
 			setup: func() {
@@ -747,8 +815,11 @@ func testEvalEXPIREAT(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input:  []string{"EXISTING_KEY", strconv.FormatInt(time.Now().Add(2*time.Minute).Unix(), 10)},
-			output: clientio.RespOne,
+			input: []string{"EXISTING_KEY", strconv.FormatInt(time.Now().Add(2*time.Minute).Unix(), 10)},
+			migratedOutput: EvalResponse{
+				Result: clientio.IntegerOne,
+				Error:  nil,
+			},
 		},
 		"invalid expire time - very large integer": {
 			setup: func() {
@@ -760,8 +831,11 @@ func testEvalEXPIREAT(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input:  []string{"EXISTING_KEY", strconv.FormatInt(9223372036854776, 10)},
-			output: []byte("-ERR invalid expire time in 'expireat' command\r\n"),
+			input: []string{"EXISTING_KEY", strconv.FormatInt(9223372036854776, 10)},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrInvalidExpireTime("EXPIREAT"),
+			},
 		},
 		"invalid expire time - negative integer": {
 			setup: func() {
@@ -773,12 +847,15 @@ func testEvalEXPIREAT(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input:  []string{"EXISTING_KEY", strconv.FormatInt(-1, 10)},
-			output: []byte("-ERR invalid expire time in 'expireat' command\r\n"),
+			input: []string{"EXISTING_KEY", strconv.FormatInt(-1, 10)},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrInvalidExpireTime("EXPIREAT"),
+			},
 		},
 	}
 
-	runEvalTests(t, tests, evalEXPIREAT, store)
+	runMigratedEvalTests(t, tests, evalEXPIREAT, store)
 }
 
 func testEvalJSONARRTRIM(t *testing.T, store *dstore.Store) {
@@ -1155,19 +1232,19 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 			setup:  func() {},
 			input:  nil,
 			output: []byte("-ERR wrong number of arguments for 'json.arrlen' command\r\n"),
-            migratedOutput: EvalResponse{
-                Result: nil,
-			    Error:  diceerrors.ErrWrongArgumentCount("JSON.ARRLEN"),
-            },
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("JSON.ARRLEN"),
+			},
 		},
 		"key does not exist": {
 			setup:  func() {},
 			input:  []string{"NONEXISTENT_KEY"},
 			output: []byte("$-1\r\n"),
-            migratedOutput: EvalResponse{
-                Result: clientio.NIL,
-                Error: nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: clientio.NIL,
+				Error:  nil,
+			},
 		},
 		"root not array arrlen": {
 			setup: func() {
@@ -1180,10 +1257,10 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"EXISTING_KEY"},
 			output: []byte("-ERR Path '$' does not exist or not an array\r\n"),
-            migratedOutput: EvalResponse{
-                Result: nil,
-                Error: diceerrors.ErrWrongTypeOperation,
-            },
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			},
 		},
 		"root array arrlen": {
 			setup: func() {
@@ -1196,10 +1273,10 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"EXISTING_KEY"},
 			output: []byte(":3\r\n"),
-            migratedOutput: EvalResponse{
-                Result: 3,
-                Error: nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: 3,
+				Error:  nil,
+			},
 		},
 		"wildcase no array arrlen": {
 			setup: func() {
@@ -1213,10 +1290,10 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 
 			input:  []string{"EXISTING_KEY", "$.*"},
 			output: []byte("*5\r\n$-1\r\n$-1\r\n$-1\r\n$-1\r\n$-1\r\n"),
-            migratedOutput: EvalResponse{
-                Result: []interface{}{clientio.NIL,clientio.NIL,clientio.NIL,clientio.NIL,clientio.NIL},
-                Error: nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: []interface{}{clientio.NIL, clientio.NIL, clientio.NIL, clientio.NIL, clientio.NIL},
+				Error:  nil,
+			},
 		},
 		"subpath array arrlen": {
 			setup: func() {
@@ -1231,10 +1308,10 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 
 			input:  []string{"EXISTING_KEY", "$.language"},
 			output: []byte(":2\r\n"),
-            migratedOutput: EvalResponse{
-                Result: 2,
-                Error: nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: 2,
+				Error:  nil,
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -1250,8 +1327,8 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 				if slice, ok := tt.migratedOutput.Result.([]interface{}); ok {
 					assert.Equal(t, slice, response.Result)
 				} else {
-                    assert.Equal(t, tt.migratedOutput.Result, response.Result)
-                }
+					assert.Equal(t, tt.migratedOutput.Result, response.Result)
+				}
 			}
 
 			if tt.migratedOutput.Error != nil {
@@ -2070,10 +2147,10 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"array", "$.a", "6"},
 			output: []byte("*1\r\n$-1\r\n"),
-            migratedOutput: EvalResponse{
-                Result: nil,
-			    Error:  diceerrors.ErrJSONPathNotFound("$.a"),
-            },
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrJSONPathNotFound("$.a"),
+			},
 		},
 		"arr append single element to an array field": {
 			setup: func() {
@@ -2086,10 +2163,10 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"array", "$.a", "6"},
 			output: []byte("*1\r\n:3\r\n"),
-            migratedOutput: EvalResponse{
-                Result: []int64{3},
-		        Error:  nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: []int64{3},
+				Error:  nil,
+			},
 		},
 		"arr append multiple elements to an array field": {
 			setup: func() {
@@ -2102,10 +2179,10 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"array", "$.a", "6", "7", "8"},
 			output: []byte("*1\r\n:5\r\n"),
-            migratedOutput: EvalResponse{
-                Result: []int64{5},
-		        Error:  nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: []int64{5},
+				Error:  nil,
+			},
 		},
 		"arr append string value": {
 			setup: func() {
@@ -2118,10 +2195,10 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"array", "$.b", `"d"`},
 			output: []byte("*1\r\n:3\r\n"),
-            migratedOutput: EvalResponse{
-                Result: []int64{3},
-		        Error:  nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: []int64{3},
+				Error:  nil,
+			},
 		},
 		"arr append nested array value": {
 			setup: func() {
@@ -2134,10 +2211,10 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"array", "$.a", "[1,2,3]"},
 			output: []byte("*1\r\n:2\r\n"),
-            migratedOutput: EvalResponse{
-                Result: []int64{2},
-		        Error:  nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: []int64{2},
+				Error:  nil,
+			},
 		},
 		"arr append with json value": {
 			setup: func() {
@@ -2150,10 +2227,10 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"array", "$.a", "{\"c\": 3}"},
 			output: []byte("*1\r\n:2\r\n"),
-            migratedOutput: EvalResponse{
-                Result: []int64{2},
-		        Error:  nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: []int64{2},
+				Error:  nil,
+			},
 		},
 		"arr append to append on multiple fields": {
 			setup: func() {
@@ -2166,10 +2243,10 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"array", "$..a", "6"},
 			output: []byte("*2\r\n:2\r\n:3\r\n"),
-            migratedOutput: EvalResponse{
-                Result: []int64{2,3},
-		        Error:  nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: []int64{2, 3},
+				Error:  nil,
+			},
 		},
 		"arr append to append on root node": {
 			setup: func() {
@@ -2182,10 +2259,10 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"array", "$", "6"},
 			output: []byte("*1\r\n:4\r\n"),
-            migratedOutput: EvalResponse{
-                Result: []int64{4},
-		        Error:  nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: []int64{4},
+				Error:  nil,
+			},
 		},
 		"arr append to an array with different type": {
 			setup: func() {
@@ -2198,10 +2275,10 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"array", "$.a", `"blue"`},
 			output: []byte("*1\r\n:3\r\n"),
-            migratedOutput: EvalResponse{
-                Result: []int64{3},
-		        Error:  nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: []int64{3},
+				Error:  nil,
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -2211,13 +2288,13 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 			if tt.setup != nil {
 				tt.setup()
 			}
-            response := evalJSONARRAPPEND(tt.input, store)
+			response := evalJSONARRAPPEND(tt.input, store)
 
 			if tt.migratedOutput.Result != nil {
-                actual, ok := response.Result.([]int64)
-                if ok {
-                    assert.Equal(t, tt.migratedOutput.Result, actual)
-                }
+				actual, ok := response.Result.([]int64)
+				if ok {
+					assert.Equal(t, tt.migratedOutput.Result, actual)
+				}
 			}
 
 			if tt.migratedOutput.Error != nil {
@@ -2318,27 +2395,39 @@ func testEvalJSONTOGGLE(t *testing.T, store *dstore.Store) {
 	runEvalTests(t, tests, evalJSONTOGGLE, store)
 }
 
-func testEvalTTL(t *testing.T, store *dstore.Store) {
+func testEvalPTTL(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
-			setup:  func() {},
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'ttl' command\r\n"),
+			setup: func() {},
+			input: nil,
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("PTTL"),
+			},
 		},
 		"empty array": {
-			setup:  func() {},
-			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'ttl' command\r\n"),
+			setup: func() {},
+			input: []string{},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("PTTL"),
+			},
 		},
 		"key does not exist": {
-			setup:  func() {},
-			input:  []string{"NONEXISTENT_KEY"},
-			output: clientio.RespMinusTwo,
+			setup: func() {},
+			input: []string{"NONEXISTENT_KEY"},
+			migratedOutput: EvalResponse{
+				Result: clientio.IntegerNegativeTwo,
+				Error:  nil,
+			},
 		},
 		"multiple arguments": {
-			setup:  func() {},
-			input:  []string{"KEY1", "KEY2"},
-			output: []byte("-ERR wrong number of arguments for 'ttl' command\r\n"),
+			setup: func() {},
+			input: []string{"KEY1", "KEY2"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("PTTL"),
+			},
 		},
 		"key exists expiry not set": {
 			setup: func() {
@@ -2350,8 +2439,11 @@ func testEvalTTL(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input:  []string{"EXISTING_KEY"},
-			output: clientio.RespMinusOne,
+			input: []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{
+				Result: clientio.IntegerNegativeOne,
+				Error:  nil,
+			},
 		},
 		"key exists not expired": {
 			setup: func() {
@@ -2366,10 +2458,10 @@ func testEvalTTL(t *testing.T, store *dstore.Store) {
 				store.SetExpiry(obj, int64(2*time.Millisecond))
 			},
 			input: []string{"EXISTING_KEY"},
-			validator: func(output []byte) {
+			newValidator: func(output interface{}) {
 				assert.True(t, output != nil)
-				assert.True(t, !bytes.Equal(output, clientio.RespMinusOne))
-				assert.True(t, !bytes.Equal(output, clientio.RespMinusTwo))
+				assert.True(t, output != clientio.IntegerNegativeOne)
+				assert.True(t, output != clientio.IntegerNegativeTwo)
 			},
 		},
 		"key exists but expired": {
@@ -2384,12 +2476,107 @@ func testEvalTTL(t *testing.T, store *dstore.Store) {
 
 				store.SetExpiry(obj, int64(-2*time.Millisecond))
 			},
-			input:  []string{"EXISTING_KEY"},
-			output: clientio.RespMinusTwo,
+			input: []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{
+				Result: clientio.IntegerNegativeTwo,
+				Error:  nil,
+			},
 		},
 	}
 
-	runEvalTests(t, tests, evalTTL, store)
+	runMigratedEvalTests(t, tests, evalPTTL, store)
+}
+
+func testEvalTTL(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			setup: func() {},
+			input: nil,
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("TTL"),
+			},
+		},
+		"empty array": {
+			setup: func() {},
+			input: []string{},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("TTL"),
+			},
+		},
+		"key does not exist": {
+			setup: func() {},
+			input: []string{"NONEXISTENT_KEY"},
+			migratedOutput: EvalResponse{
+				Result: clientio.IntegerNegativeTwo,
+				Error:  nil,
+			},
+		},
+		"multiple arguments": {
+			setup: func() {},
+			input: []string{"KEY1", "KEY2"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("TTL"),
+			},
+		},
+		"key exists expiry not set": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "mock_value"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input: []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{
+				Result: clientio.IntegerNegativeOne,
+				Error:  nil,
+			},
+		},
+		"key exists not expired": {
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "mock_value"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+
+				store.SetExpiry(obj, int64(2*time.Millisecond))
+			},
+			input: []string{"EXISTING_KEY"},
+			newValidator: func(output interface{}) {
+				assert.True(t, output != nil)
+				assert.True(t, output != clientio.IntegerNegativeOne)
+				assert.True(t, output != clientio.IntegerNegativeTwo)
+			},
+		},
+		"key exists but expired": {
+			setup: func() {
+				key := "EXISTING_EXPIRED_KEY"
+				value := "mock_value"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+
+				store.SetExpiry(obj, int64(-2*time.Millisecond))
+			},
+			input: []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{
+				Result: clientio.IntegerNegativeTwo,
+				Error:  nil,
+			},
+		},
+	}
+
+	runMigratedEvalTests(t, tests, evalTTL, store)
 }
 
 func testEvalDel(t *testing.T, store *dstore.Store) {
@@ -4281,19 +4468,19 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			setup:  func() {},
 			input:  nil,
 			output: []byte("-ERR wrong number of arguments for 'json.arrpop' command\r\n"),
-            migratedOutput: EvalResponse{
-                Result: nil,
-			    Error:  diceerrors.ErrWrongArgumentCount("JSON.ARRPOP"),
-            },
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("JSON.ARRPOP"),
+			},
 		},
 		"key does not exist": {
 			setup:  func() {},
 			input:  []string{"NOTEXISTANT_KEY"},
 			output: []byte("-ERR could not perform this operation on a key that doesn't exist\r\n"),
-            migratedOutput: EvalResponse{
-                Result: nil,
-                Error: diceerrors.ErrKeyNotFound,
-            },
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrKeyNotFound,
+			},
 		},
 		"empty array at root path": {
 			setup: func() {
@@ -4306,10 +4493,10 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"MOCK_KEY"},
 			output: []byte("-ERR Path '$' does not exist or not an array\r\n"),
-            migratedOutput: EvalResponse{
-                Result: nil,
-                Error: diceerrors.ErrWrongTypeOperation,
-            },
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			},
 		},
 		"empty array at nested path": {
 			setup: func() {
@@ -4322,10 +4509,10 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"MOCK_KEY", "$.b"},
 			output: []byte("*1\r\n$-1\r\n"),
-            migratedOutput: EvalResponse{
-                Result: []interface{}{clientio.NIL},
-                Error: nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: []interface{}{clientio.NIL},
+				Error:  nil,
+			},
 		},
 		"all paths with asterix": {
 			setup: func() {
@@ -4338,10 +4525,10 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"MOCK_KEY", "$.*"},
 			output: []byte("*2\r\n$-1\r\n$-1\r\n"),
-            migratedOutput: EvalResponse{
-                Result: []interface{}{clientio.NIL,clientio.NIL},
-                Error: nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: []interface{}{clientio.NIL, clientio.NIL},
+				Error:  nil,
+			},
 		},
 		"array root path no index": {
 			setup: func() {
@@ -4354,10 +4541,10 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"MOCK_KEY"},
 			output: []byte(":5\r\n"),
-            migratedOutput: EvalResponse{
-                Result: float64(5),
-                Error: nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: float64(5),
+				Error:  nil,
+			},
 		},
 		"array root path valid positive index": {
 			setup: func() {
@@ -4370,10 +4557,10 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"MOCK_KEY", "$", "2"},
 			output: []byte(":2\r\n"),
-            migratedOutput: EvalResponse{
-                Result: float64(2),
-                Error: nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: float64(2),
+				Error:  nil,
+			},
 		},
 		"array root path out of bound positive index": {
 			setup: func() {
@@ -4386,10 +4573,10 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"MOCK_KEY", "$", "10"},
 			output: []byte(":5\r\n"),
-            migratedOutput: EvalResponse{
-                Result: float64(5),
-                Error: nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: float64(5),
+				Error:  nil,
+			},
 		},
 		"array root path valid negative index": {
 			setup: func() {
@@ -4402,10 +4589,10 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"MOCK_KEY", "$", "-2"},
 			output: []byte(":4\r\n"),
-            migratedOutput: EvalResponse{
-                Result: float64(4),
-                Error: nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: float64(4),
+				Error:  nil,
+			},
 		},
 		"array root path out of bound negative index": {
 			setup: func() {
@@ -4418,10 +4605,10 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"MOCK_KEY", "$", "-10"},
 			output: []byte(":0\r\n"),
-            migratedOutput: EvalResponse{
-                Result: float64(0),
-                Error: nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: float64(0),
+				Error:  nil,
+			},
 		},
 		"array at root path updated correctly": {
 			setup: func() {
@@ -4441,10 +4628,10 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 				equal := reflect.DeepEqual(obj.Value, want)
 				assert.Equal(t, equal, true)
 			},
-            migratedOutput: EvalResponse{
-                Result: float64(2),
-                Error: nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: float64(2),
+				Error:  nil,
+			},
 		},
 		"nested array updated correctly": {
 			setup: func() {
@@ -4473,10 +4660,10 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 				equal := reflect.DeepEqual(results[0], want)
 				assert.Equal(t, equal, true)
 			},
-            migratedOutput: EvalResponse{
-                Result: []interface{}{float64(2)},
-                Error: nil,
-            },
+			migratedOutput: EvalResponse{
+				Result: []interface{}{float64(2)},
+				Error:  nil,
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -4492,8 +4679,8 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 				if slice, ok := tt.migratedOutput.Result.([]interface{}); ok {
 					assert.Equal(t, slice, response.Result)
 				} else {
-                    assert.Equal(t, tt.migratedOutput.Result, response.Result)
-                }
+					assert.Equal(t, tt.migratedOutput.Result, response.Result)
+				}
 			}
 
 			if tt.migratedOutput.Error != nil {
@@ -4891,7 +5078,6 @@ func testEvalJSONOBJKEYS(t *testing.T, store *dstore.Store) {
 		})
 	}
 }
-
 
 func BenchmarkEvalJSONOBJKEYS(b *testing.B) {
 	sizes := []int{0, 10, 100, 1000, 10000, 100000} // Various sizes of JSON objects
@@ -5409,10 +5595,11 @@ func testEvalSETEX(t *testing.T, store *dstore.Store) {
 				assert.Equal(t, "TEST_VALUE", getValue.Result)
 
 				// Check if the TTL is set correctly (should be 5 seconds or less)
-				ttlValue := evalTTL([]string{"TEST_KEY"}, store)
-				ttl, err := strconv.Atoi(strings.TrimPrefix(strings.TrimSpace(string(ttlValue)), ":"))
-				assert.Nil(t, err, "Failed to parse TTL")
-				assert.True(t, ttl > 0 && ttl <= 5)
+				ttlResponse := evalTTL([]string{"TEST_KEY"}, store)
+				ttl, ok := ttlResponse.Result.(uint64)
+				assert.True(t, ok, "TTL result should be an uint64")
+				assert.True(t, ttl > 0 && ttl <= 5, "TTL should be between 0 and 5 seconds")
+				assert.Nil(t, ttlResponse.Error, "TTL command should not return an error")
 
 				// Wait for the key to expire
 				mockTime.SetTime(mockTime.CurrTime.Add(6 * time.Second))
@@ -5435,10 +5622,11 @@ func testEvalSETEX(t *testing.T, store *dstore.Store) {
 				assert.Equal(t, "NEW_VALUE", getValue.Result)
 
 				// Check if the TTL is set correctly
-				ttlValue := evalTTL([]string{"EXISTING_KEY"}, store)
-				ttl, err := strconv.Atoi(strings.TrimPrefix(strings.TrimSpace(string(ttlValue)), ":"))
-				assert.Nil(t, err, "Failed to parse TTL")
-				assert.True(t, ttl > 0 && ttl <= 10)
+				ttlResponse := evalTTL([]string{"EXISTING_KEY"}, store)
+				ttl, ok := ttlResponse.Result.(uint64)
+				assert.True(t, ok, "TTL result should be an uint64")
+				assert.True(t, ttl > 0 && ttl <= 10, "TTL should be between 0 and 10 seconds")
+				assert.Nil(t, ttlResponse.Error, "TTL command should not return an error")
 			},
 		},
 	}
