@@ -233,3 +233,24 @@ func evalCFEXISTS(args []string, store *dstore.Store) []byte {
 
 	return clientio.RespOne
 }
+
+func evalCFDEL(args []string, store *dstore.Store) []byte {
+	if len(args) != 2 {
+		return diceerrors.NewErrArity("CF.DEL")
+	}
+	key := args[0]
+	item := []byte(args[1])
+
+	cfInstance := store.Get(key)
+	cf, ok := cfInstance.Value.(*CuckooFilter)
+
+	if !ok {
+		return clientio.RespEmptyArray
+	}
+
+	if isDeleted := cf.remove(item); !isDeleted {
+		return clientio.RespZero
+	}
+
+	return clientio.RespOne
+}

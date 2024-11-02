@@ -1451,6 +1451,25 @@ var (
 		Arity:    3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+
+	cfDelCmdMeta = DiceCmdMeta{
+		Name: "CF.DEL",
+		Info: `CF.DEL key item
+		The CF.DEL command deletes an item from an existing Cuckoo Filter.
+
+		Parameters:
+		- key: The name of the Cuckoo Filter.
+		- item: The item to delete from the filter.
+
+		Returns:
+		- 1: If the item was successfully deleted.
+		- 0: If the item was not found in the filter.
+		- Error: If the filter does not exist or if invalid parameters are provided.
+		`,
+		Eval:     evalCFDEL,
+		Arity:    3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -1599,6 +1618,7 @@ func init() {
 	DiceCmds["CF.RESERVE"] = cfreserveCmdMeta
 	DiceCmds["CF.ADD"] = cfAddCmdMeta
 	DiceCmds["CF.EXISTS"] = cfExistsCmdMeta
+	DiceCmds["CF.DEL"] = cfDelCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

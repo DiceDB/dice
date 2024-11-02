@@ -130,6 +130,14 @@ func (cf *CuckooFilter) lookup(data []byte) bool {
 	return b.contains(fp)
 }
 
+func (cf *CuckooFilter) remove(data []byte) bool {
+	primaryIndex, fp := getPrimaryIndexAndFingerprint(data, cf.bucketIndexMask)
+
+	secondaryIndex := getSecondaryIndex(fp, primaryIndex, cf.bucketIndexMask)
+
+	return cf.delete(fp, primaryIndex) || cf.delete(fp, secondaryIndex)
+}
+
 func (cf *CuckooFilter) insert(fp fingerPrint, index uint) bool {
 
 	if cf.buckets[index].insert(fp) {
@@ -150,5 +158,13 @@ func (cf *CuckooFilter) reinsert(fp fingerPrint, index uint) bool {
 		}
 	}
 
+	return false
+}
+
+func (cf *CuckooFilter) delete(fp fingerPrint, index uint) bool {
+	if cf.buckets[index].delete(fp) {
+		cf.count--
+		return true
+	}
 	return false
 }
