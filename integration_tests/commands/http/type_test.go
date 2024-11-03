@@ -68,7 +68,7 @@ func TestType(t *testing.T) {
 				{Command: "SETBIT", Body: map[string]interface{}{"values": []interface{}{"k1", 1, 1}}},
 				{Command: "TYPE", Body: map[string]interface{}{"key": "k1"}},
 			},
-			expected:      []interface{}{"0", "string"},
+			expected:      []interface{}{float64(0), "string"},
 			errorExpected: false,
 		},
 		{
