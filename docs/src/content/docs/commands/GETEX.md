@@ -7,7 +7,7 @@ The `GETEX` command in DiceDB is used to retrieve the value of a specified key a
 
 ## Syntax
 
-```
+```bash
 GETEX key [EX seconds|PX milliseconds|EXAT timestamp|PXAT milliseconds-timestamp|PERSIST]
 ```
 

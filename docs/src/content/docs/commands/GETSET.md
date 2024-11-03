@@ -7,7 +7,7 @@ The `GETSET` command in DiceDB is a powerful atomic operation that combines the 
 
 ## Syntax
 
-```
+```bash
 GETSET key value
 ```
 
@@ -53,7 +53,7 @@ The `GETSET` command can raise errors in the following scenarios:
 
 ### Basic Example
 
-```DiceDB
+```bash
 127.0.0.1:7379> SET mykey "Hello"
 127.0.0.1:7379> GETSET mykey "World"
 "Hello"
@@ -67,7 +67,7 @@ The `GETSET` command can raise errors in the following scenarios:
 
 ### Example with Non-Existent Key
 
-```DiceDB
+```bash
 127.0.0.1:7379> GETSET newkey "NewValue"
 (nil)
 ```
@@ -80,7 +80,7 @@ The `GETSET` command can raise errors in the following scenarios:
 
 
 ### Example with Key having pre-existing TTL
-```DiceDB
+```bash
 127.0.0.1:7379> SET newkey "test"
 OK
 127.0.0.1:7379> EXPIRE newkey 60
@@ -102,7 +102,7 @@ OK
 
 ### Error Example: Wrong Type
 
-```DiceDB
+```bash
 127.0.0.1:7379> LPUSH mylist "item"
 127.0.0.1:7379> GETSET mylist "NewValue"
 (error) ERROR WRONGTYPE Operation against a key holding the wrong kind of value
@@ -115,7 +115,7 @@ OK
 
 ### Error Example: Syntax Error
 
-```DiceDB
+```bash
 127.0.0.1:7379> GETSET mykey
 (error) ERROR wrong number of arguments for 'getset' command
 ```

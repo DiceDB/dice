@@ -7,7 +7,7 @@ The `AUTH` command is a DiceDB command that enables you to authenticate a client
 
 ## Syntax
 
-```
+```bash
 AUTH password
 ```
 

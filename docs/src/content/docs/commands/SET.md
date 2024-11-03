@@ -7,7 +7,7 @@ The `SET` command in DiceDB is used to set the value of a key. If the key alread
 
 ## Syntax
 
-```
+```bash
 SET key value [EX seconds | PX milliseconds | EXAT unix-time-seconds | PXAT unix-time-milliseconds | KEEPTTL] [NX | XX]
 ```
 

@@ -7,7 +7,7 @@ The `LLEN` command in DiceDB is used to obtain the length of a list stored at a 
 
 ## Syntax
 
-```
+```bash
 LLEN key
 ```
 

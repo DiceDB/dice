@@ -7,7 +7,7 @@ The `RPUSH` command is used in DiceDB to insert one or multiple values at the ta
 
 ## Syntax
 
-```
+```bash
 RPUSH key value [value ...]
 ```
 

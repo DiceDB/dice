@@ -7,7 +7,7 @@ The `ZPOPMAX` command in DiceDB is used to remove and return the members with th
 
 ## Syntax
 
-```
+```bash
 ZPOPMAX key [count]
 ```
 

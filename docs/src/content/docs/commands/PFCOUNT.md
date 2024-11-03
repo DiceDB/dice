@@ -7,7 +7,7 @@ The `PFCOUNT` command in DiceDB is used to return the approximate cardinality (i
 
 ## Syntax
 
-```
+```bash
 PFCOUNT key [key ...]
 ```
 

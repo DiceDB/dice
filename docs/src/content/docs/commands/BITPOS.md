@@ -7,7 +7,7 @@ The `BITPOS` command in DiceDB is used to find the position of the first bit set
 
 ## Syntax
 
-```plaintext
+```bash
 BITPOS key bit [start] [end]
 ```
 
@@ -54,7 +54,7 @@ The `BITPOS` command can raise errors in the following cases:
 
 Find the position of the first bit set to 1 in the string stored at key `mykey`:
 
-```Bash
+```bash
 127.0.0.1:7379> SET mykey "foobar"
 OK
 127.0.0.1:7379> BITPOS mykey 1
@@ -65,7 +65,7 @@ OK
 
 Find the position of the first bit set to 0 in the string stored at key `mykey`, starting from byte position 2 and ending at byte position 4:
 
-```Bash
+```bash
 127.0.0.1:7379> SET mykey "foobar"
 OK
 127.0.0.1:7379> BITPOS mykey 0 2 4
@@ -75,7 +75,7 @@ OK
 
 If the specified bit is not found within the specified range, the command returns -1:
 
-```Bash
+```bash
 127.0.0.1:7379> SET mykey "foobar"
 OK
 127.0.0.1:7379> BITPOS mykey 1 2 4
@@ -88,7 +88,7 @@ OK
 
 Attempting to use `BITPOS` on a key that holds a non-string value:
 
-```Bash
+```bash
 127.0.0.1:7379> LPUSH mylist "item"
 (integer) 1
 127.0.0.1:7379> BITPOS mylist 1
@@ -99,7 +99,7 @@ Attempting to use `BITPOS` on a key that holds a non-string value:
 
 Using a bit value other than 0 or 1:
 
-```Bash
+```bash
 127.0.0.1:7379> SET mykey "foobar"
 OK
 127.0.0.1:7379> BITPOS mykey 2
@@ -110,7 +110,7 @@ OK
 
 Using non-integer values for the `start` or `end` parameters:
 
-```Bash
+```bash
 127.0.0.1:7379> SET mykey "foobar"
 OK
 127.0.0.1:7379> BITPOS mykey 1 "a" "b"

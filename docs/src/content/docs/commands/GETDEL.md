@@ -7,7 +7,7 @@ The `GETDEL` command in DiceDB is used to retrieve the value of a specified key 
 
 ## Syntax
 
-```
+```bash
 GETDEL key
 ```
 

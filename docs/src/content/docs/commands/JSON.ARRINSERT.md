@@ -3,7 +3,7 @@ title: JSON.ARRINSERT
 description: The JSON.ARRINSERT command in DiceDB is used to insert one or more JSON values into an array at a specified path before a given index. This command shifts all existing elements in the array to the right, making room for the new elements.
 ---
 
-The JSON.ARRINSERT command allows you to insert one or more JSON values into an array at a specified path before a given index. All existing elements in the array are shifted to the right to make room for the new elements.
+The `JSON.ARRINSERT` command allows you to insert one or more JSON values into an array at a specified path before a given index. All existing elements in the array are shifted to the right to make room for the new elements.
 
 This command returns an array of integer replies for each path, where each integer represents the new size of the array after the insertion. If the path does not exist or is not an array, it returns an error.
 
@@ -72,12 +72,12 @@ JSON.ARRINSERT <key> <path> <index> <value> [value ...]
 
 Inserting at a valid index in the root path
 
-```plaintext
-127.0.0.1:6379> JSON.SET a $ '[1,2]'
+```bash
+127.0.0.1:7379> JSON.SET a $ '[1,2]'
 OK
-127.0.0.1:6379> JSON.ARRINSERT a $ 2 3 4 5
+127.0.0.1:7379> JSON.ARRINSERT a $ 2 3 4 5
 (integer) 5
-127.0.0.1:6379> JSON.GET a
+127.0.0.1:7379> JSON.GET a
 [1,2,3,4,5]
 ```
 
@@ -85,12 +85,12 @@ OK
 
 Inserting at a negative index
 
-```plaintext
-127.0.0.1:6379> JSON.SET a $ '[1,2]'
+```bash
+127.0.0.1:7379> JSON.SET a $ '[1,2]'
 OK
-127.0.0.1:6379> JSON.ARRINSERT a $ -2 3 4 5
+127.0.0.1:7379> JSON.ARRINSERT a $ -2 3 4 5
 (integer) 5
-127.0.0.1:6379> JSON.GET a
+127.0.0.1:7379> JSON.GET a
 [3,4,5,1,2]
 ```
 
@@ -98,12 +98,12 @@ OK
 
 Handling nested arrays
 
-```plaintext
-127.0.0.1:6379> JSON.SET b $ '{"name":"tom","score":[10,20],"partner2":{"score":[10,20]}}'
+```bash
+127.0.0.1:7379> JSON.SET b $ '{"name":"tom","score":[10,20],"partner2":{"score":[10,20]}}'
 OK
-127.0.0.1:6379> JSON.ARRINSERT b $..score 1 5 6 true
+127.0.0.1:7379> JSON.ARRINSERT b $..score 1 5 6 true
 (integer) 5
-127.0.0.1:6379> JSON.GET b
+127.0.0.1:7379> JSON.GET b
 {"name":"tom","score":[10,5,6,true,20],"partner2":{"score":[10,5,6,true,20]}}
 ```
 
@@ -111,12 +111,12 @@ OK
 
 Inserting with an out-of-bounds index
 
-```plaintext
-127.0.0.1:6379> JSON.SET a $ '[1,2]'
+```bash
+127.0.0.1:7379> JSON.SET a $ '[1,2]'
 OK
-127.0.0.1:6379> JSON.ARRINSERT a $ 4 3
+127.0.0.1:7379> JSON.ARRINSERT a $ 4 3
 ERR index out of bounds
-127.0.0.1:6379> JSON.GET a
+127.0.0.1:7379> JSON.GET a
 [1,2]
 ```
 
@@ -124,11 +124,11 @@ ERR index out of bounds
 
 Invalid index type
 
-```plaintext
-127.0.0.1:6379> JSON.SET a $ '[1,2]'
+```bash
+127.0.0.1:7379> JSON.SET a $ '[1,2]'
 OK
-127.0.0.1:6379> JSON.ARRINSERT a $ ss 3
+127.0.0.1:7379> JSON.ARRINSERT a $ ss 3
 ERR value is not an integer or out of range
-127.0.0.1:6379> JSON.GET a
+127.0.0.1:7379> JSON.GET a
 [1,2]
 ```

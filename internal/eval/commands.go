@@ -326,9 +326,10 @@ var (
 		RESP encoded time (in secs) remaining for the key to expire
 		RESP encoded -2 stating key doesn't exist or key is expired
 		RESP encoded -1 in case no expiration is set on the key`,
-		Eval:     evalTTL,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalTTL,
+		IsMigrated: true,
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	delCmdMeta = DiceCmdMeta{
 		Name: "DEL",
@@ -345,9 +346,31 @@ var (
 		The expiry time should be in integer format; if not, it returns encoded error response
 		Returns RespOne if expiry was set on the key successfully.
 		Once the time is lapsed, the key will be deleted automatically`,
-		Eval:     evalEXPIRE,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+		NewEval:    evalEXPIRE,
+		IsMigrated: true,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
+	}
+	expiretimeCmdMeta = DiceCmdMeta{
+		Name: "EXPIRETIME",
+		Info: `EXPIRETIME returns the absolute Unix timestamp (since January 1, 1970) in seconds
+		at which the given key will expire`,
+		NewEval:    evalEXPIRETIME,
+		IsMigrated: true,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
+	}
+	expireatCmdMeta = DiceCmdMeta{
+		Name: "EXPIREAT",
+		Info: `EXPIREAT sets a expiry time(in unix-time-seconds) on the specified key in args
+		args should contain 2 values, key and the expiry time to be set for the key
+		The expiry time should be in integer format; if not, it returns encoded error response
+		Returns RespOne if expiry was set on the key successfully.
+		Once the time is lapsed, the key will be deleted automatically`,
+		NewEval:    evalEXPIREAT,
+		IsMigrated: true,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
 	}
 	helloCmdMeta = DiceCmdMeta{
 		Name:  "HELLO",
@@ -671,9 +694,10 @@ var (
 		RESP encoded time (in secs) remaining for the key to expire
 		RESP encoded -2 stating key doesn't exist or key is expired
 		RESP encoded -1 in case no expiration is set on the key`,
-		Eval:     evalPTTL,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalPTTL,
+		IsMigrated: true,
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	hsetCmdMeta = DiceCmdMeta{
 		Name: "HSET",
@@ -813,25 +837,6 @@ var (
 		Eval:     evalTOUCH,
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
-	}
-	expiretimeCmdMeta = DiceCmdMeta{
-		Name: "EXPIRETIME",
-		Info: `EXPIRETIME returns the absolute Unix timestamp (since January 1, 1970) in seconds
-		at which the given key will expire`,
-		Eval:     evalEXPIRETIME,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
-	}
-	expireatCmdMeta = DiceCmdMeta{
-		Name: "EXPIREAT",
-		Info: `EXPIREAT sets a expiry time(in unix-time-seconds) on the specified key in args
-		args should contain 2 values, key and the expiry time to be set for the key
-		The expiry time should be in integer format; if not, it returns encoded error response
-		Returns RespOne if expiry was set on the key successfully.
-		Once the time is lapsed, the key will be deleted automatically`,
-		Eval:     evalEXPIREAT,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
 	}
 	lpushCmdMeta = DiceCmdMeta{
 		Name:  "LPUSH",

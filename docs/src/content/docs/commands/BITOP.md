@@ -7,7 +7,7 @@ The `BITOP` command in DiceDB is used to perform bitwise operations between stri
 
 ## Syntax
 
-```BASH
+```bash
 BITOP operation destkey key [key ...]
 ```
 
@@ -61,7 +61,7 @@ The `BITOP` command can raise errors in the following cases:
 
 ### Example 1: Bitwise AND Operation
 
-```Bash
+```bash
 127.0.0.1:7379> SET key1 "foo"
 OK
 127.0.0.1:7379> SET key2 "bar"
@@ -81,7 +81,7 @@ OK
 
 ### Example 2: Bitwise OR Operation
 
-```Bash
+```bash
 127.0.0.1:7379> SET key1 "foo"
 OK
 127.0.0.1:7379> SET key2 "bar"
@@ -101,7 +101,7 @@ OK
 
 ### Example 3: Bitwise XOR Operation
 
-```Bash
+```bash
 127.0.0.1:7379> SET key1 "foo"
 OK
 127.0.0.1:7379> SET key2 "bar"
@@ -121,7 +121,7 @@ OK
 
 ### Example 4: Bitwise NOT Operation
 
-```Bash
+```bash
 127.0.0.1:7379> SET key1 "foo"
 OK
 127.0.0.1:7379> BITOP NOT result key1

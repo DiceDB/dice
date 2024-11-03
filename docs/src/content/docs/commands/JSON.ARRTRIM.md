@@ -72,40 +72,40 @@ JSON.ARRTRIM <key> <path> <start> <stop>
 
 Trimming an array to a specific range
 
-```plaintext
-127.0.0.1:6379> JSON.SET b $ '[1, 2, 3, 4, 5]'
+```bash
+127.0.0.1:7379> JSON.SET b $ '[1, 2, 3, 4, 5]'
 "OK"
-127.0.0.1:6379> JSON.ARRTRIM b $ 1 3
+127.0.0.1:7379> JSON.ARRTRIM b $ 1 3
 1) "3"
-127.0.0.1:6379> JSON.GET b
+127.0.0.1:7379> JSON.GET b
 "[2,3,4]"
-127.0.0.1:6379>
+127.0.0.1:7379>
 ```
 
 ### Trim array down to 1 element
 
 Trimming an array to a single element
 
-```plaintext
-127.0.0.1:6379> JSON.SET a $ '[0,1,2]'
+```bash
+127.0.0.1:7379> JSON.SET a $ '[0,1,2]'
 "OK"
-127.0.0.1:6379> JSON.ARRTRIM a $ 1 1
+127.0.0.1:7379> JSON.ARRTRIM a $ 1 1
 "1"
-127.0.0.1:6379> JSON.GET a
+127.0.0.1:7379> JSON.GET a
 "[1]"
-127.0.0.1:6379>
+127.0.0.1:7379>
 ```
 
 ### Trimming array with out of bound index
 
 Trimming an array with out-of-bounds indices
 
-```plaintext
-127.0.0.1:6379> JSON.SET c $ '[1, 2, 3, 4, 5]'
+```bash
+127.0.0.1:7379> JSON.SET c $ '[1, 2, 3, 4, 5]'
 "OK"
-127.0.0.1:6379> JSON.ARRTRIM c $ -10 10
+127.0.0.1:7379> JSON.ARRTRIM c $ -10 10
 1) "5"
-127.0.0.1:6379> JSON.GET c
+127.0.0.1:7379> JSON.GET c
 "[1,2,3,4,5]"
 ```
 
@@ -113,10 +113,10 @@ Trimming an array with out-of-bounds indices
 
 Error when path does not exist
 
-```plaintext
-127.0.0.1:6379> JSON.SET d $ '[1, 2, 3, 4, 5]'
+```bash
+127.0.0.1:7379> JSON.SET d $ '[1, 2, 3, 4, 5]'
 "OK"
-127.0.0.1:6379> JSON.ARRTRIM d . -10 10
+127.0.0.1:7379> JSON.ARRTRIM d . -10 10
 (error) ERROR Path '.' does not exist
 ```
 
@@ -124,10 +124,10 @@ Error when path does not exist
 
 Error when key does not exist
 
-```plaintext
-127.0.0.1:6379> JSON.SET a $ '[1, 2, 3, 4, 5]'
+```bash
+127.0.0.1:7379> JSON.SET a $ '[1, 2, 3, 4, 5]'
 "OK"
-127.0.0.1:6379> JSON.ARRTRIM aa . -10 10
+127.0.0.1:7379> JSON.ARRTRIM aa . -10 10
 (error) ERROR key does not exist
 
 ```

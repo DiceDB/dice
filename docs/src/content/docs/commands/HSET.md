@@ -7,7 +7,7 @@ The `HSET` command in DiceDB is used to set the value of a field in a hash. If t
 
 ## Syntax
 
-```
+```bash
 HSET key field value [field value ...]
 ```
 
@@ -42,7 +42,7 @@ The `HSET` command can raise errors in the following scenarios:
 
 ### Basic Example
 
-```DiceDB
+```bash
 HSET user:1000 name "John Doe" age 30
 ```
 
@@ -50,7 +50,7 @@ This command sets the `name` field to "John Doe" and the `age` field to 30 in th
 
 ### Multiple Field-Value Pairs
 
-```DiceDB
+```bash
 HSET user:1000 name "John Doe" age 30 email "john.doe@example.com"
 ```
 
@@ -58,7 +58,7 @@ This command sets the `name`, `age`, and `email` fields in the hash stored at `u
 
 ### Updating Existing Fields
 
-```DiceDB
+```bash
 HSET user:1000 age 31
 ```
 
@@ -68,7 +68,7 @@ This command updates the `age` field to 31 in the hash stored at `user:1000`. If
 
 ### Creating a New Hash
 
-```DiceDB
+```bash
 HSET product:2000 name "Laptop" price 999.99 stock 50
 ```
 
@@ -77,7 +77,7 @@ HSET product:2000 name "Laptop" price 999.99 stock 50
 
 ### Updating an Existing Hash
 
-```DiceDB
+```bash
 HSET product:2000 price 899.99 stock 45
 ```
 
@@ -86,7 +86,7 @@ HSET product:2000 price 899.99 stock 45
 
 ### Error Handling Example
 
-```DiceDB
+```bash
 SET product:2000 "This is a string"
 HSET product:2000 name "Laptop"
 ```

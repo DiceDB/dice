@@ -9,7 +9,7 @@ The `PING` command in DiceDB is used to test the connection between the client a
 
 The basic syntax of the `PING` command is as follows:
 
-```
+```bash
 PING [message]
 ```
 

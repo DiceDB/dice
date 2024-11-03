@@ -7,7 +7,7 @@ The `JSON.DEL` command is part of the DiceDBJSON module, which allows you to man
 
 ## Syntax
 
-```
+```bash
 JSON.DEL key [path]
 ```
 
@@ -48,41 +48,41 @@ The `JSON.DEL` command can raise the following errors:
 
 ### Deleting an Entire JSON Document
 
-```shell
-127.0.0.1:6379> JSON.SET myjson $ '{"name": "John", "age": 30, "city": "New York"}'
+```bash
+127.0.0.1:7379> JSON.SET myjson $ '{"name": "John", "age": 30, "city": "New York"}'
 OK
-127.0.0.1:6379> JSON.DEL myjson
+127.0.0.1:7379> JSON.DEL myjson
 (integer) 1
-127.0.0.1:6379> JSON.GET myjson
+127.0.0.1:7379> JSON.GET myjson
 (nil)
 ```
 
 ### Deleting a Specific Path
 
-```shell
-127.0.0.1:6379> JSON.SET myjson $ '{"name": "John", "age": 30, "city": "New York"}'
+```bash
+127.0.0.1:7379> JSON.SET myjson $ '{"name": "John", "age": 30, "city": "New York"}'
 OK
-127.0.0.1:6379> JSON.DEL myjson $.age
+127.0.0.1:7379> JSON.DEL myjson $.age
 (integer) 1
-127.0.0.1:6379> JSON.GET myjson
+127.0.0.1:7379> JSON.GET myjson
 "{\"name\":\"John\",\"city\":\"New York\"}"
 ```
 
 ### Deleting a Non-Existent Path
 
-```shell
-127.0.0.1:6379> JSON.SET myjson $ '{"name": "John", "age": 30, "city": "New York"}'
+```bash
+127.0.0.1:7379> JSON.SET myjson $ '{"name": "John", "age": 30, "city": "New York"}'
 OK
-127.0.0.1:6379> JSON.DEL myjson $.address
+127.0.0.1:7379> JSON.DEL myjson $.address
 (integer) 0
 ```
 
 ### Error: Key Does Not Hold a JSON Document
 
-```shell
-127.0.0.1:6379> SET mystring "Hello, World!"
+```bash
+127.0.0.1:7379> SET mystring "Hello, World!"
 OK
-127.0.0.1:6379> JSON.DEL mystring
+127.0.0.1:7379> JSON.DEL mystring
 (error) ERROR Existing key has wrong Dice type
 ```
 
