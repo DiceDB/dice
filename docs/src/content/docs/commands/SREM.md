@@ -47,7 +47,7 @@ SREM myset "two"
 `Expected Output:`
 
 ```
-(integer) 1
+1
 ```
 
 `Explanation:` The member "two" is removed from the set `myset`. The command returns 1 because one member was removed.
@@ -62,7 +62,7 @@ SREM myset "two" "three"
 `Expected Output:`
 
 ```
-(integer) 2
+2
 ```
 
 `Explanation:` The members "two" and "three" are removed from the set `myset`. The command returns 2 because two members were removed.
@@ -77,7 +77,7 @@ SREM myset "four"
 `Expected Output:`
 
 ```
-(integer) 0
+0
 ```
 
 `Explanation:` The member "four" does not exist in the set `myset`. The command returns 0 because no members were removed.
@@ -91,7 +91,7 @@ SREM myset "one"
 `Expected Output:`
 
 ```
-(integer) 0
+0
 ```
 
 `Explanation:` The set `myset` does not exist. The command returns 0 because no members were removed.
