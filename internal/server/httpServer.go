@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/dicedb/dice/internal/eval"
 
@@ -425,7 +426,12 @@ func ResponseParser(responseValue interface{}) interface{} {
 		}
 
 		return responseValue
-
+	case string:
+		if !utf8.ValidString(v) {
+			return toHexFormat([]byte(v))
+		} else {
+			return v
+		}
 	case interface{}:
 		if val, ok := v.(clientio.RespType); ok {
 			return RespTypeToValue(val)
@@ -514,4 +520,13 @@ func RespTypeToValue(respType clientio.RespType) interface{} {
 
 	// Default to nil if respType is not recognized
 	return nil
+}
+
+// converts byte slice to a formatted hex string
+func toHexFormat(data []byte) string {
+	hexString := ""
+	for _, b := range data {
+		hexString += fmt.Sprintf("\\x%02x", b) // Format each byte as \xHH
+	}
+	return hexString
 }

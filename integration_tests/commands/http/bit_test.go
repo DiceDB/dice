@@ -300,7 +300,7 @@ func TestBitOpsString(t *testing.T) {
 				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"NOT", "bazz", "baz"}}},
 				{Command: "GET", Body: map[string]interface{}{"key": "bazz"}},
 			},
-			expected:   []interface{}{"OK", float64(6), "\x99\x90\x90\x9d\x9e\x8d", float64(6), "foobar"},
+			expected:   []interface{}{"OK", float64(6), "\\x99\\x90\\x90\\x9d\\x9e\\x8d", float64(6), "foobar"},
 			assertType: []string{"equal", "equal", "equal", "equal", "equal"},
 		},
 		{
@@ -312,7 +312,7 @@ func TestBitOpsString(t *testing.T) {
 				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"NOT", "bazz", "baz"}}},
 				{Command: "GET", Body: map[string]interface{}{"key": "bazz"}},
 			},
-			expected:   []interface{}{"OK", float64(2), "\xce\xcf", float64(2), float64(10)},
+			expected:   []interface{}{"OK", float64(2), "\\xce\\xcf", float64(2), float64(10)},
 			assertType: []string{"equal", "equal", "equal", "equal", "equal"},
 		},
 		{

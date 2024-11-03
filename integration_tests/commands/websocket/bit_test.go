@@ -171,13 +171,13 @@ func TestBitOpsString(t *testing.T) {
 		{
 			name:       "Bitop not of a key containing a string",
 			cmds:       []string{"SET foo foobar", "BITOP NOT baz foo", "GET baz", "BITOP NOT bazz baz", "GET bazz"},
-			expected:   []interface{}{"OK", float64(6), "\x99\x90\x90\x9d\x9e\x8d", float64(6), "foobar"},
+			expected:   []interface{}{"OK", float64(6), "\\x99\\x90\\x90\\x9d\\x9e\\x8d", float64(6), "foobar"},
 			assertType: []string{"equal", "equal", "equal", "equal", "equal"},
 		},
 		{
 			name:       "Bitop not of a key containing an integer",
 			cmds:       []string{"SET foo 10", "BITOP NOT baz foo", "GET baz", "BITOP NOT bazz baz", "GET bazz"},
-			expected:   []interface{}{"OK", float64(2), "\xce\xcf", float64(2), float64(10)},
+			expected:   []interface{}{"OK", float64(2), "\\xce\\xcf", float64(2), float64(10)},
 			assertType: []string{"equal", "equal", "equal", "equal", "equal"},
 		},
 		{
