@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"strconv"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -266,12 +267,22 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 
 	// Unsubscribe Unwatch command type
 	if meta.CmdType == Unwatch {
+		// extract the fingerprint
 		command := cmdList[len(cmdList)-1]
+		fp, fperr := strconv.ParseUint(command.Args[0], 10, 32)
+		if fperr != nil {
+			err := w.ioHandler.Write(ctx, diceerrors.ErrInvalidFingerprint)
+			if err != nil {
+				return fmt.Errorf("error sending push response to client: %v", err)
+			}
+			return fperr
+		}
+
+		// send the unsubscribe request
 		w.cmdWatchSubscriptionChan <- watchmanager.WatchSubscription{
 			Subscribe:    false,
-			WatchCmd:     command,
 			AdhocReqChan: w.adhocReqChan,
-			Fingerprint:  command.GetFingerprint(),
+			Fingerprint:  uint32(fp),
 		}
 
 		err := w.ioHandler.Write(ctx, "OK")
