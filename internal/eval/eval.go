@@ -4152,9 +4152,14 @@ func evalPFDEBUG(args []string, store *dstore.Store) []byte {
 			}
 		}
 
-		registers := reflect.ValueOf(hll).Elem().FieldByName("regs")
-		registersValue := reflect.NewAt(registers.Type(), unsafe.Pointer(registers.UnsafeAddr())).Elem()
-		return clientio.Encode(registersValue, false)
+		// registers := reflect.ValueOf(hll).Elem().FieldByName("regs")
+		// registersValue := reflect.NewAt(registers.Type(), unsafe.Pointer(registers.UnsafeAddr())).Elem()
+		data, error := hll.MarshalBinary()
+		if error != nil {
+			return diceerrors.NewErrWithMessage(diceerrors.InvalidHllErr)
+		}
+
+		return clientio.Encode(base64.StdEncoding.EncodeToString(data), false)
 
 	case "DECODE":
 		if encoding != "sparse" {
@@ -4162,6 +4167,7 @@ func evalPFDEBUG(args []string, store *dstore.Store) []byte {
 		}
 
 		data, err := hll.MarshalBinary()
+
 		if err != nil {
 			return diceerrors.NewErrWithMessage(diceerrors.InvalidHllErr)
 		}
