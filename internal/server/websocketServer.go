@@ -298,7 +298,7 @@ func (s *WebsocketServer) processQwatchResponse(conn *websocket.Conn, response i
 	responseValue, err = rp.DecodeOne()
 	if err != nil {
 		slog.Debug("Error decoding response", "error", err)
-		if err := WriteResponseWithRetries(conn, []byte("error: 500 Internal Server Error"), maxRetries); err != nil {
+		if err := s.writeResponseWithRetries(conn, []byte("error: 500 Internal Server Error"), maxRetries); err != nil {
 			slog.Debug(fmt.Sprintf("Error writing message: %v", err))
 			return fmt.Errorf("error writing response: %v", err)
 		}
@@ -308,7 +308,7 @@ func (s *WebsocketServer) processQwatchResponse(conn *websocket.Conn, response i
 	respBytes, err := json.Marshal(responseValue)
 	if err != nil {
 		slog.Debug("Error marshaling json", "error", err)
-		if err := WriteResponseWithRetries(conn, []byte("error: marshaling json"), maxRetries); err != nil {
+		if err := s.writeResponseWithRetries(conn, []byte("error: marshaling json"), maxRetries); err != nil {
 			slog.Debug(fmt.Sprintf("Error writing message: %v", err))
 			return fmt.Errorf("error writing response: %v", err)
 		}
@@ -317,7 +317,7 @@ func (s *WebsocketServer) processQwatchResponse(conn *websocket.Conn, response i
 
 	// success
 	// Write response with retries for transient errors
-	if err := WriteResponseWithRetries(conn, respBytes, config.DiceConfig.WebSocket.MaxWriteResponseRetries); err != nil {
+	if err := s.writeResponseWithRetries(conn, respBytes, config.DiceConfig.WebSocket.MaxWriteResponseRetries); err != nil {
 		slog.Debug(fmt.Sprintf("Error writing message: %v", err))
 		return fmt.Errorf("error writing response: %v", err)
 	}
