@@ -12,7 +12,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const getUnwatchKey = "getunwatchkey"
+const (
+	getUnwatchKey = "getunwatchkey"
+	fingerprint   = "3557732805"
+)
 
 type getUnwatchTestCase struct {
 	key string
@@ -77,14 +80,14 @@ func TestGETUNWATCH(t *testing.T) {
 			}
 			assert.Equal(t, 3, len(castedValue))
 			assert.Equal(t, "GET", castedValue[0])
-			assert.Equal(t, "3557732805", castedValue[1])
+			assert.Equal(t, fingerprint, castedValue[1])
 			assert.Equal(t, tc.val, castedValue[2])
 		}
 	}
 
 	// unsubscribe from updates
 	for _, subscriber := range subscribers {
-		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("GET.UNWATCH %s", getUnwatchKey))
+		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("GET.UNWATCH %s", fingerprint))
 		assert.NotNil(t, rp)
 
 		v, err := rp.DecodeOne()
@@ -141,7 +144,7 @@ func TestGETUNWATCHWithSDK(t *testing.T) {
 		firstMsg, err := watch.Watch(context.Background(), "GET", getUnwatchKey)
 		assert.Nil(t, err)
 		assert.Equal(t, firstMsg.Command, "GET")
-		assert.Equal(t, firstMsg.Fingerprint, "3557732805")
+		assert.Equal(t, firstMsg.Fingerprint, fingerprint)
 		channels[i] = watch.Channel()
 	}
 
@@ -151,14 +154,14 @@ func TestGETUNWATCHWithSDK(t *testing.T) {
 
 	for _, channel := range channels {
 		v := <-channel
-		assert.Equal(t, "GET", v.Command)            // command
-		assert.Equal(t, "3557732805", v.Fingerprint) // Fingerprint
-		assert.Equal(t, "check", v.Data.(string))    // data
+		assert.Equal(t, "GET", v.Command)           // command
+		assert.Equal(t, fingerprint, v.Fingerprint) // Fingerprint
+		assert.Equal(t, "check", v.Data.(string))   // data
 	}
 
 	// unsubscribe from updates
 	for _, subscriber := range subscribers {
-		err := subscriber.watch.Unwatch(context.Background(), "GET", getUnwatchKey)
+		err := subscriber.watch.Unwatch(context.Background(), "GET", fingerprint)
 		assert.Nil(t, err)
 	}
 
