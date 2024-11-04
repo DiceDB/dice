@@ -409,27 +409,6 @@ func evalINFO(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(buf.String(), false)
 }
 
-// TODO: Placeholder to support monitoring
-// func evalCLIENT(args []string, store *dstore.Store) []byte {
-// 	return clientio.RespOK
-// }
-
-// id=10
-// addr=127.0.0.1:56938
-// laddr=127.0.0.1:6379
-// fd=8
-// name=
-// age=4
-// idle=0
-// flags=N
-// db=0
-// sub=0
-// psub=0
-// ssub=0
-// multi=-1
-// qbuf=26
-// qbuf-free=16864
-// argv-mem=10 multi-mem=0 rbs=1024 rbp=0 obl=0 oll=0 omem=0 tot-mem=18730 events=r cmd=client|info user=default redir=-1 resp=2 lib-name= lib-ver=
 func EvalCLIENT(args []string, httpOp bool, client *comm.Client, store *dstore.Store) []byte {
 	subcommand := strings.ToUpper(args[0])
 	fmt.Println("clien id", client.ClientIdentifierID)

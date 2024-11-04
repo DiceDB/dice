@@ -1,7 +1,6 @@
 package comm
 
 import (
-	"fmt"
 	"io"
 	"net"
 	"strconv"
@@ -134,18 +133,6 @@ func (c *Client) TxnQueue(diceDBCmd *cmd.DiceDBCmd) {
 
 func NewClient(fd int) *Client {
 	cmds := make([]*cmd.DiceDBCmd, 0)
-
-	addr, err := syscall.Getsockname(fd)
-	fmt.Println("addr: ", addr, err)
-	switch v := addr.(type) {
-	case *syscall.SockaddrInet4:
-		fmt.Println("addr: ", v.Addr, v.Port)
-	case *syscall.SockaddrInet6:
-		fmt.Println("addr: ", v.Addr, v.Port, v.ZoneId)
-	}
-
-	// remoteAddr, err := syscall.Getpeername(fd)
-	// fmt.Println("addr: ", remoteAddr, err)
 
 	return &Client{
 		Fd: fd,
