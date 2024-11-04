@@ -49,6 +49,8 @@ const (
 	CmdSet           = "SET"
 	CmdGet           = "GET"
 	CmdGetSet        = "GETSET"
+	CmdGetEx         = "GETEX"
+	CmdGetDel        = "GETDEL"
 	CmdJSONArrAppend = "JSON.ARRAPPEND"
 	CmdJSONArrLen    = "JSON.ARRLEN"
 	CmdJSONArrPop    = "JSON.ARRPOP"
@@ -166,6 +168,12 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdGetSet: {
+		CmdType: SingleShard,
+	},
+	CmdGetEx: {
+		CmdType: SingleShard,
+	},
+	CmdGetDel: {
 		CmdType: SingleShard,
 	},
 	CmdHExists: {

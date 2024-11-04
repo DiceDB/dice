@@ -279,6 +279,14 @@ var (
 		Cmd:     "CMS.MERGE",
 		CmdType: SingleShard,
 	}
+	getexCmdMeta = CmdsMeta{
+		Cmd:     "GETEX",
+		CmdType: SingleShard,
+	}
+	getdelCmdMeta = CmdsMeta{
+		Cmd:     "GETDEL",
+		CmdType: SingleShard,
+	}
 
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
@@ -361,5 +369,8 @@ func init() {
 	WorkerCmdsMeta["CMS.INCRBY"] = cmsIncrByCmdMeta
 	WorkerCmdsMeta["CMS.QUERY"] = cmsQueryCmdMeta
 	WorkerCmdsMeta["CMS.MERGE"] = cmsMergeCmdMeta
+	WorkerCmdsMeta["GETEX"] = getexCmdMeta
+	WorkerCmdsMeta["GETDEL"] = getdelCmdMeta
+
 	// Additional commands (multishard, custom) can be added here as needed.
 }
