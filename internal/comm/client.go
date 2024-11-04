@@ -13,6 +13,11 @@ import (
 	"github.com/dicedb/dice/internal/id"
 )
 
+const (
+	flagTxn  = "x"
+	flagNrml = "N"
+)
+
 type CmdWatchResponse struct {
 	ClientIdentifierID uint32
 	Result             interface{}
@@ -35,6 +40,13 @@ type Client struct {
 	Session                *auth.Session
 	ClientIdentifierID     uint32
 	LastCmd                *cmd.DiceDBCmd
+}
+
+func (c *Client) flag() string {
+	if c.IsTxn {
+		return flagTxn
+	}
+	return flagNrml
 }
 
 func (c *Client) String() string {
@@ -94,6 +106,11 @@ func (c *Client) String() string {
 	// idle
 	s.WriteString("idle=")
 	s.WriteString(strconv.FormatFloat(time.Since(c.Session.LastAccessedAt).Seconds(), 'f', 0, 64))
+	s.WriteString(" ")
+
+	// flags
+	s.WriteString("flags=")
+	s.WriteString(c.flag())
 	s.WriteString(" ")
 
 	// cmd
