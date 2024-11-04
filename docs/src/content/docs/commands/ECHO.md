@@ -5,7 +5,7 @@ description: The `ECHO` command in DiceDB is used to print a message
 
 ### Syntax
 
-```
+```bash
 ECHO message
 
 ```

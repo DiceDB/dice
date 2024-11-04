@@ -3,11 +3,13 @@ title: DBSIZE
 description: The `DBSIZE` command in DiceDB returns the number of keys in the currently selected database, providing a quick way to understand the size of your database.
 ---
 
+> **Important Note:** As of the current version, DiceDB does not support multiple databases. Therefore, while the documentation mentions database selection via the `SELECT` command, all operations occur on a single database space.
+
 The `DBSIZE` command in DiceDB is used to return the number of keys in the currently selected database. This command is useful for monitoring and managing the size of your DiceDB database, providing a quick way to understand the number of keys stored.
 
 ## Syntax
 
-```
+```bash
 DBSIZE
 ```
 
@@ -31,8 +33,8 @@ The `DBSIZE` command does not take any parameters.
 - If multiple databases are in use, `DBSIZE` will only count keys in the currently selected database.
 
 ## Errors
-The `DBSIZE` command is straightforward and does not typically result in errors under normal usage. However, there are a few scenarios where errors might be encountered:
 
+The `DBSIZE` command is straightforward and does not typically result in errors under normal usage. However, there are a few scenarios where errors might be encountered:
 
 1. `Connection Issues`:
    - Error Message: `ERR Connection lost`
@@ -48,7 +50,7 @@ The `DBSIZE` command is straightforward and does not typically result in errors 
 
 Getting the number of keys in the currently selected database:
 
-```shell
+```bash
 127.0.0.1:7379> DBSIZE
 (integer) 42
 ```
@@ -57,9 +59,9 @@ In this example, the currently selected database contains 42 keys.
 
 ### Using with Multiple Databases
 
-If you are working with multiple databases, you can switch between them using the `SELECT` command and then use `DBSIZE` to get the number of keys in each database:
+While the following example shows the traditional syntax for working with multiple databases, please note that in the current version of DiceDB, all operations occur on a single database space:
 
-```shell
+```bash
 127.0.0.1:7379> SELECT 0
 OK
 127.0.0.1:7379> DBSIZE
@@ -68,16 +70,20 @@ OK
 127.0.0.1:7379> SELECT 1
 OK
 127.0.0.1:7379> DBSIZE
-(integer) 15
+(integer) 42
 ```
 
-In this example, database 0 contains 42 keys, and database 1 contains 15 keys.
+In the current implementation, both commands will return the same count as they operate on the same database space.
 
 ### Error Scenarios
 
 1. Attempting to use `DBSIZE` without proper authentication:
 
-```shell
+```bash
 127.0.0.1:7379> DBSIZE
 (error) NOAUTH Authentication required
 ```
+
+## Notes
+
+As mentioned at the beginning of this document, the current version of DiceDB operates on a single database space. While the `SELECT` command is available as a placeholder, switching databases will not affect the operation of the `DBSIZE` command, and it will always return the count of keys from the single available database space.

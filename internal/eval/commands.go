@@ -1,6 +1,10 @@
 package eval
 
-import dstore "github.com/dicedb/dice/internal/store"
+import (
+	"strings"
+
+	dstore "github.com/dicedb/dice/internal/store"
+)
 
 type DiceCmdMeta struct {
 	Name  string
@@ -196,8 +200,9 @@ var (
 		Info: `JSON.ARRAPPEND key [path] value [value ...]
         Returns an array of integer replies for each path, the array's new size,
         or nil, if the matching JSON value is not an array.`,
-		Eval:  evalJSONARRAPPEND,
-		Arity: -3,
+		Arity:      -3,
+		IsMigrated: true,
+		NewEval:    evalJSONARRAPPEND,
 	}
 	jsonforgetCmdMeta = DiceCmdMeta{
 		Name: "JSON.FORGET",
@@ -215,9 +220,10 @@ var (
 		Returns an array of integer replies.
 		Returns error response if the key doesn't exist or key is expired or the matching value is not an array.
 		Error reply: If the number of arguments is incorrect.`,
-		Eval:     evalJSONARRLEN,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalJSONARRLEN,
 	}
 	jsonnummultbyCmdMeta = DiceCmdMeta{
 		Name: "JSON.NUMMULTBY",
@@ -254,8 +260,9 @@ var (
 		Retrieves the keys of a JSON object stored at path specified.
 		Null reply: If the key doesn't exist or has expired.
 		Error reply: If the number of arguments is incorrect or the stored value is not a JSON type.`,
-		Eval:  evalJSONOBJKEYS,
-		Arity: 2,
+		NewEval:    evalJSONOBJKEYS,
+		IsMigrated: true,
+		Arity:      2,
 	}
 	jsonarrpopCmdMeta = DiceCmdMeta{
 		Name: "JSON.ARRPOP",
@@ -265,8 +272,9 @@ var (
 		Return nil if array is empty or there is no array at the path.
 		It supports negative index and is out of bound safe.
 		`,
-		Eval:  evalJSONARRPOP,
-		Arity: -2,
+		Arity:      -2,
+		IsMigrated: true,
+		NewEval:    evalJSONARRPOP,
 	}
 	jsoningestCmdMeta = DiceCmdMeta{
 		Name: "JSON.INGEST",
@@ -286,9 +294,10 @@ var (
 		Returns nil if the matching JSON value is not an array.
 		Returns error response if the key doesn't exist or key is expired or the matching value is not an array.
 		Error reply: If the number of arguments is incorrect.`,
-		Eval:     evalJSONARRINSERT,
-		Arity:    -5,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalJSONARRINSERT,
+		IsMigrated: true,
+		Arity:      -5,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	jsonrespCmdMeta = DiceCmdMeta{
 		Name: "JSON.RESP",
@@ -305,8 +314,9 @@ var (
 		Returns an array of integer replies for each path.
 		Returns error response if the key doesn't exist or key is expired.
 		Error reply: If the number of arguments is incorrect.`,
-		Eval:  evalJSONARRTRIM,
-		Arity: -5,
+		NewEval:    evalJSONARRTRIM,
+		IsMigrated: true,
+		Arity:      -5,
 	}
 	ttlCmdMeta = DiceCmdMeta{
 		Name: "TTL",
@@ -316,9 +326,10 @@ var (
 		RESP encoded time (in secs) remaining for the key to expire
 		RESP encoded -2 stating key doesn't exist or key is expired
 		RESP encoded -1 in case no expiration is set on the key`,
-		Eval:     evalTTL,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalTTL,
+		IsMigrated: true,
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	delCmdMeta = DiceCmdMeta{
 		Name: "DEL",
@@ -335,9 +346,31 @@ var (
 		The expiry time should be in integer format; if not, it returns encoded error response
 		Returns RespOne if expiry was set on the key successfully.
 		Once the time is lapsed, the key will be deleted automatically`,
-		Eval:     evalEXPIRE,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+		NewEval:    evalEXPIRE,
+		IsMigrated: true,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
+	}
+	expiretimeCmdMeta = DiceCmdMeta{
+		Name: "EXPIRETIME",
+		Info: `EXPIRETIME returns the absolute Unix timestamp (since January 1, 1970) in seconds
+		at which the given key will expire`,
+		NewEval:    evalEXPIRETIME,
+		IsMigrated: true,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
+	}
+	expireatCmdMeta = DiceCmdMeta{
+		Name: "EXPIREAT",
+		Info: `EXPIREAT sets a expiry time(in unix-time-seconds) on the specified key in args
+		args should contain 2 values, key and the expiry time to be set for the key
+		The expiry time should be in integer format; if not, it returns encoded error response
+		Returns RespOne if expiry was set on the key successfully.
+		Once the time is lapsed, the key will be deleted automatically`,
+		NewEval:    evalEXPIREAT,
+		IsMigrated: true,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
 	}
 	helloCmdMeta = DiceCmdMeta{
 		Name:  "HELLO",
@@ -524,12 +557,55 @@ var (
 		Eval: evalBITOP,
 	}
 	commandCmdMeta = DiceCmdMeta{
-		Name:        "COMMAND <subcommand>",
+		Name:        "COMMAND",
 		Info:        "Evaluates COMMAND <subcommand> command based on subcommand",
 		Eval:        evalCommand,
 		Arity:       -1,
-		SubCommands: []string{Count, GetKeys, List, Help, Info},
+		SubCommands: []string{Count, GetKeys, GetKeysandFlags, List, Help, Info, Docs},
 	}
+	commandCountCmdMeta = DiceCmdMeta{
+		Name:  "COMMAND|COUNT",
+		Info:  "Returns a count of commands.",
+		Eval:  evalCommand,
+		Arity: 2,
+	}
+	commandHelpCmdMeta = DiceCmdMeta{
+		Name:  "COMMAND|HELP",
+		Info:  "Returns helpful text about the different subcommands",
+		Eval:  evalCommand,
+		Arity: 2,
+	}
+	commandInfoCmdMeta = DiceCmdMeta{
+		Name:  "COMMAND|INFO",
+		Info:  "Returns information about one, multiple or all commands.",
+		Eval:  evalCommand,
+		Arity: -2,
+	}
+	commandListCmdMeta = DiceCmdMeta{
+		Name:  "COMMAND|LIST",
+		Info:  "Returns a list of command names.",
+		Eval:  evalCommand,
+		Arity: -2,
+	}
+	commandDocsCmdMeta = DiceCmdMeta{
+		Name:  "COMMAND|DOCS",
+		Info:  "Returns documentary information about one, multiple or all commands.",
+		Eval:  evalCommand,
+		Arity: -2,
+	}
+	commandGetKeysCmdMeta = DiceCmdMeta{
+		Name:  "COMMAND|GETKEYS",
+		Info:  "Extracts the key names from an arbitrary command.",
+		Eval:  evalCommand,
+		Arity: -4,
+	}
+	commandGetKeysAndFlagsCmdMeta = DiceCmdMeta{
+		Name:  "COMMAND|GETKEYSANDFLAGS",
+		Info:  "Returns a list of command names.",
+		Eval:  evalCommand,
+		Arity: -4,
+	}
+
 	keysCmdMeta = DiceCmdMeta{
 		Name: "KEYS",
 		Info: "KEYS command is used to get all the keys in the database. Complexity is O(n) where n is the number of keys in the database.",
@@ -614,9 +690,10 @@ var (
 		RESP encoded time (in secs) remaining for the key to expire
 		RESP encoded -2 stating key doesn't exist or key is expired
 		RESP encoded -1 in case no expiration is set on the key`,
-		Eval:     evalPTTL,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalPTTL,
+		IsMigrated: true,
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	hsetCmdMeta = DiceCmdMeta{
 		Name: "HSET",
@@ -643,11 +720,12 @@ var (
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	hkeysCmdMeta = DiceCmdMeta{
-		Name:     "HKEYS",
-		Info:     `HKEYS command is used to retrieve all the keys(or field names) within a hash. Complexity is O(n) where n is the size of the hash.`,
-		Eval:     evalHKEYS,
-		Arity:    1,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Name:       "HKEYS",
+		Info:       `HKEYS command is used to retrieve all the keys(or field names) within a hash. Complexity is O(n) where n is the size of the hash.`,
+		NewEval:    evalHKEYS,
+		Arity:      1,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	hsetnxCmdMeta = DiceCmdMeta{
 		Name: "HSETNX",
@@ -681,11 +759,12 @@ var (
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	hValsCmdMeta = DiceCmdMeta{
-		Name:     "HVALS",
-		Info:     `Returns all values of the hash stored at key. The length of the reply is same as the size of the hash.`,
-		Eval:     evalHVALS,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Name:       "HVALS",
+		Info:       `Returns all values of the hash stored at key. The length of the reply is same as the size of the hash.`,
+		NewEval:    evalHVALS,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	hincrbyCmdMeta = DiceCmdMeta{
 		Name: "HINCRBY",
@@ -698,12 +777,14 @@ var (
 		NewEval:    evalHINCRBY,
 	}
 	hstrLenCmdMeta = DiceCmdMeta{
-		Name:     "HSTRLEN",
-		Info:     `Returns the length of value associated with field in the hash stored at key.`,
-		Eval:     evalHSTRLEN,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Name:       "HSTRLEN",
+		Info:       `Returns the length of value associated with field in the hash stored at key.`,
+		NewEval:    evalHSTRLEN,
+		IsMigrated: true,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
+
 	hdelCmdMeta = DiceCmdMeta{
 		Name: "HDEL",
 		Info: `HDEL removes the specified fields from the hash stored at key.
@@ -722,16 +803,18 @@ var (
 		It returns a cursor and a list of key-value pairs.
 		The cursor is used to paginate through the hash.
 		The command returns a cursor value of 0 when all the elements are iterated.`,
-		Eval:     evalHSCAN,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalHSCAN,
+		IsMigrated: true,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	hexistsCmdMeta = DiceCmdMeta{
-		Name:     "HEXISTS",
-		Info:     `Returns if field is an existing field in the hash stored at key.`,
-		Eval:     evalHEXISTS,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Name:       "HEXISTS",
+		Info:       `Returns if field is an existing field in the hash stored at key.`,
+		NewEval:    evalHEXISTS,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 
 	objectCmdMeta = DiceCmdMeta{
@@ -750,25 +833,6 @@ var (
 		Eval:     evalTOUCH,
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
-	}
-	expiretimeCmdMeta = DiceCmdMeta{
-		Name: "EXPIRETIME",
-		Info: `EXPIRETIME returns the absolute Unix timestamp (since January 1, 1970) in seconds
-		at which the given key will expire`,
-		Eval:     evalEXPIRETIME,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
-	}
-	expireatCmdMeta = DiceCmdMeta{
-		Name: "EXPIREAT",
-		Info: `EXPIREAT sets a expiry time(in unix-time-seconds) on the specified key in args
-		args should contain 2 values, key and the expiry time to be set for the key
-		The expiry time should be in integer format; if not, it returns encoded error response
-		Returns RespOne if expiry was set on the key successfully.
-		Once the time is lapsed, the key will be deleted automatically`,
-		Eval:     evalEXPIREAT,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
 	}
 	lpushCmdMeta = DiceCmdMeta{
 		Name:  "LPUSH",
@@ -939,8 +1003,9 @@ var (
 		Name: "HLEN",
 		Info: `HLEN key
 		Returns the number of fields contained in the hash stored at key.`,
-		Eval:  evalHLEN,
-		Arity: 2,
+		NewEval:    evalHLEN,
+		IsMigrated: true,
+		Arity:      2,
 	}
 	selectCmdMeta = DiceCmdMeta{
 		Name:  "SELECT",
@@ -1041,6 +1106,15 @@ var (
 		IsMigrated: true,
 		NewEval:    evalZADD,
 	}
+	zcountCmdMeta = DiceCmdMeta{
+		Name: "ZCOUNT",
+		Info: `ZCOUNT key min max
+		Counts the number of members in a sorted set with scores between min and max (inclusive).
+		Use -inf and +inf for unbounded ranges. Returns 0 if the key does not exist.`,
+		Arity:      4,
+		IsMigrated: true,
+		NewEval:    evalZCOUNT,
+	}
 	zrangeCmdMeta = DiceCmdMeta{
 		Name: "ZRANGE",
 		Info: `ZRANGE key start stop [WithScores]
@@ -1054,12 +1128,24 @@ var (
 		IsMigrated: true,
 		NewEval:    evalZRANGE,
 	}
+	zpopmaxCmdMeta = DiceCmdMeta{
+		Name: "ZPOPMAX",
+		Info: `ZPOPMAX  key [count]
+		Pops count number of elements from the sorted set from highest to lowest and returns those score and member.
+		If count is not provided '1' is considered by default.
+		The element with the highest score is removed first
+		if two elements have same score then the element which is lexicographically higher is popped first`,
+		Arity:      -1,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalZPOPMAX,
+	}
 	zpopminCmdMeta = DiceCmdMeta{
 		Name: "ZPOPMIN",
 		Info: `ZPOPMIN key [count]
-		Removes and returns the member with the lowest score from the sorted set at the specified key. 
-		If multiple members have the same score, the one that comes first alphabetically is returned. 
-		You can also specify a count to remove and return multiple members at once. 
+		Removes and returns the member with the lowest score from the sorted set at the specified key.
+		If multiple members have the same score, the one that comes first alphabetically is returned.
+		You can also specify a count to remove and return multiple members at once.
 		If the set is empty, it returns an empty result.`,
 		Arity:      -1,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
@@ -1076,6 +1162,25 @@ var (
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 		IsMigrated: true,
 		NewEval:    evalZRANK,
+	}
+	zcardCmdMeta = DiceCmdMeta{
+		Name: "ZCARD",
+		Info: `ZCARD key
+		Returns the sorted set cardinality (number of elements) of the sorted set stored at key.`,
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalZCARD,
+	}
+	zremCmdMeta = DiceCmdMeta{
+		Name: "ZREM",
+		Info: `ZREM key member [member ...]
+		Removes the specified members from the sorted set stored at key. Non existing members are ignored.
+		An error is returned when key exists and does not hold a sorted set.`,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalZREM,
 	}
 	bitfieldCmdMeta = DiceCmdMeta{
 		Name: "BITFIELD",
@@ -1103,7 +1208,7 @@ var (
 	}
 	bitfieldroCmdMeta = DiceCmdMeta{
 		Name: "BITFIELD_RO",
-		Info: `It is read-only variant of the BITFIELD command. 
+		Info: `It is read-only variant of the BITFIELD command.
 		It is like the original BITFIELD but only accepts GET subcommand.`,
 		Arity:    -1,
 		KeySpecs: KeySpecs{BeginIndex: 1},
@@ -1140,11 +1245,61 @@ var (
 		Name: "JSON.STRAPPEND",
 		Info: `JSON.STRAPPEND key [path] value
 		Append the JSON string values to the string at path
-		Returns an array of integer replies for each path, the string's new length, or nil, if the matching JSON value is not a string. 
+		Returns an array of integer replies for each path, the string's new length, or nil, if the matching JSON value is not a string.
 		Error reply: If the value at path is not a string or if the key doesn't exist.`,
 		Eval:     evalJSONSTRAPPEND,
 		Arity:    3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	cmsInitByDimCmdMeta = DiceCmdMeta{
+		Name:       "CMS.INITBYDIM",
+		Info:       `Sets up count min sketch`,
+		Arity:      3,
+		IsMigrated: true,
+		NewEval:    evalCMSINITBYDIM,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+	}
+	cmsInitByProbCmdMeta = DiceCmdMeta{
+		Name:       "CMS.INITBYPROB",
+		Info:       `Sets up count min sketch with given error rate and probability`,
+		Arity:      3,
+		IsMigrated: true,
+		NewEval:    evalCMSINITBYPROB,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+	}
+	cmsInfoCmdMeta = DiceCmdMeta{
+		Name:       "CMS.INFO",
+		Info:       `Get info about count min sketch`,
+		Arity:      1,
+		IsMigrated: true,
+		NewEval:    evalCMSINFO,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+	}
+	cmsQueryCmdMeta = DiceCmdMeta{
+		Name:       "CMS.QUERY",
+		Info:       `Query count min sketch with for given list of keys`,
+		Arity:      -2,
+		IsMigrated: true,
+		NewEval:    evalCMSQuery,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+	}
+	cmsIncrByCmdMeta = DiceCmdMeta{
+		Name:       "CMS.INCRBY",
+		Info:       `Increase count of the list of keys to count min sketch`,
+		Arity:      -3,
+		IsMigrated: true,
+		NewEval:    evalCMSIncrBy,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+	}
+	cmsMergeCmdMeta = DiceCmdMeta{
+		Name: "CMS.MERGE",
+		Info: `Merges several sketches into one sketch.
+				 All sketches must have identical width and depth.
+				 Weights can be used to multiply certain sketches. Default weight is 1.`,
+		Arity:      -3,
+		IsMigrated: true,
+		NewEval:    evalCMSMerge,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 )
 
@@ -1164,6 +1319,13 @@ func init() {
 	DiceCmds["BITPOS"] = bitposCmdMeta
 	DiceCmds["CLIENT"] = clientCmdMeta
 	DiceCmds["COMMAND"] = commandCmdMeta
+	DiceCmds["COMMAND|COUNT"] = commandCountCmdMeta
+	DiceCmds["COMMAND|GETKEYS"] = commandGetKeysCmdMeta
+	DiceCmds["COMMAND|LIST"] = commandListCmdMeta
+	DiceCmds["COMMAND|HELP"] = commandHelpCmdMeta
+	DiceCmds["COMMAND|INFO"] = commandInfoCmdMeta
+	DiceCmds["COMMAND|DOCS"] = commandDocsCmdMeta
+	DiceCmds["COMMAND|GETKEYSANDFLAGS"] = commandGetKeysAndFlagsCmdMeta
 	DiceCmds["COPY"] = copyCmdMeta
 	DiceCmds["DBSIZE"] = dbSizeCmdMeta
 	DiceCmds["DECR"] = decrCmdMeta
@@ -1266,15 +1428,35 @@ func init() {
 	DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["TYPE"] = typeCmdMeta
 	DiceCmds["ZADD"] = zaddCmdMeta
+	DiceCmds["ZCOUNT"] = zcountCmdMeta
 	DiceCmds["ZRANGE"] = zrangeCmdMeta
+	DiceCmds["ZPOPMAX"] = zpopmaxCmdMeta
 	DiceCmds["ZPOPMIN"] = zpopminCmdMeta
 	DiceCmds["ZRANK"] = zrankCmdMeta
+	DiceCmds["ZCARD"] = zcardCmdMeta
+	DiceCmds["ZREM"] = zremCmdMeta
 	DiceCmds["JSON.STRAPPEND"] = jsonstrappendCmdMeta
+	DiceCmds["CMS.INITBYDIM"] = cmsInitByDimCmdMeta
+	DiceCmds["CMS.INITBYPROB"] = cmsInitByProbCmdMeta
+	DiceCmds["CMS.INFO"] = cmsInfoCmdMeta
+	DiceCmds["CMS.QUERY"] = cmsQueryCmdMeta
+	DiceCmds["CMS.INCRBY"] = cmsIncrByCmdMeta
+	DiceCmds["CMS.MERGE"] = cmsMergeCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}
 func convertCmdMetaToSlice(cmdMeta *DiceCmdMeta) []interface{} {
-	return []interface{}{cmdMeta.Name, cmdMeta.Arity, cmdMeta.KeySpecs.BeginIndex, cmdMeta.KeySpecs.LastKey, cmdMeta.KeySpecs.Step}
+	var result []interface{} = []interface{}{strings.ToLower(cmdMeta.Name), cmdMeta.Arity, cmdMeta.KeySpecs.BeginIndex, cmdMeta.KeySpecs.LastKey, cmdMeta.KeySpecs.Step}
+	var subCommandsList []interface{}
+	for _, subCommand := range cmdMeta.SubCommands {
+		key := cmdMeta.Name + "|" + subCommand
+		if val, exists := DiceCmds[key]; exists {
+			valCopy := val // Store the value in a variable
+			subCommandsList = append(subCommandsList, convertCmdMetaToSlice(&valCopy))
+		}
+	}
+
+	return append(result, subCommandsList)
 }
 
 // Function to convert map[string]DiceCmdMeta{} to []interface{}
@@ -1282,6 +1464,34 @@ func convertDiceCmdsMapToSlice() []interface{} {
 	var result []interface{}
 	for _, cmdMeta := range DiceCmds {
 		result = append(result, convertCmdMetaToSlice(&cmdMeta))
+	}
+	return result
+}
+
+func convertCmdMetaToDocs(cmdMeta *DiceCmdMeta) []interface{} {
+	var result []interface{} = []interface{}{"summary", cmdMeta.Info, "arity", cmdMeta.Arity, "beginIndex", cmdMeta.KeySpecs.BeginIndex,
+		"lastIndex", cmdMeta.KeySpecs.LastKey, "step", cmdMeta.KeySpecs.Step}
+	var subCommandsList []interface{}
+	for _, subCommand := range cmdMeta.SubCommands {
+		key := cmdMeta.Name + "|" + subCommand
+		if val, exists := DiceCmds[key]; exists {
+			valCopy := val // Store the value in a variable
+			subCommandsList = append(subCommandsList, convertCmdMetaToDocs(&valCopy))
+		}
+	}
+
+	if len(subCommandsList) != 0 {
+		result = append(result, "subcommands", subCommandsList)
+	}
+
+	return []interface{}{strings.ToLower(cmdMeta.Name), result}
+}
+
+// Function to convert map[string]DiceCmdMeta{} to []interface{}
+func convertDiceCmdsMapToDocs() []interface{} {
+	var result []interface{}
+	for _, cmdMeta := range DiceCmds {
+		result = append(result, convertCmdMetaToDocs(&cmdMeta))
 	}
 	return result
 }

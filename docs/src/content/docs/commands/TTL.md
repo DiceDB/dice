@@ -33,16 +33,13 @@ TTL key
 
 ## Errors
 
-The `TTL` command can raise errors in the following scenarios:
+1. `Wrong number of arguments`:
+   - Error Message: `(error) ERR wrong number of arguments for 'ttl' command`
+   - Occurs when attempting to use the command with incorrect number of arguments
 
-- `Syntax Error`:
+## Example Usage
 
-   - (error) ERROR syntax error
-   - Occurs when attempting to use the command with more than one argument.
-
-## Examples
-
-### Example 1: Key with Expiration
+### Check TTL for key with expiration
 
 ```bash
 127.0.0.1:7379> SET mykey "Hello"
@@ -51,9 +48,10 @@ The `TTL` command can raise errors in the following scenarios:
 (integer) 10
 ```
 
-In this example, the key `mykey` is set with a value of "Hello" and an expiration time of 10 seconds. The `TTL` command returns `10`, indicating that the key will expire in 10 seconds.
+In this example, a key `mykey` is created with a value "Hello". Then, an expiration time of 10 seconds is set using the `EXPIRE` command. When `TTL` is called on `mykey`, it returns 10, indicating that the key will expire in 10 seconds.
 
-### Example 2: Key without Expiration
+
+### Check TTL for key without expiration
 
 ```bash
 127.0.0.1:7379> SET mykey "Hello"
@@ -61,24 +59,29 @@ In this example, the key `mykey` is set with a value of "Hello" and an expiratio
 (integer) -1
 ```
 
-Here, the key `mykey` is set with a value of "Hello" but no expiration time is set. The `TTL` command returns `-1`, indicating that the key has no expiration.
+In this example, the key `mykey` is set with a value of "Hello" but no expiration is set. The `TTL` command returns `-1`, indicating that the key exists but has no associated expiration.
 
-### Example 3: Non-Existent Key
+### Check TTL for non-existent key
 
 ```bash
 127.0.0.1:7379> TTL non_existent_key
 (integer) -2
 ```
 
-In this example, the key `non_existent_key` does not exist in the database. The `TTL` command returns `-2`, indicating that the key does not exist.
+In this example, the key `non_existent_key` does not exist in the DiceDB database. The `TTL` command returns `-2`, indicating that the key does not exist.
 
+### Invalid usage
 
-### Example 4: Invalid usage
 ```bash
 127.0.0.1:7379> SET newkey "value"
 127.0.0.1:7379> TTL newkey value
 (error) ERR wrong number of arguments for 'ttl' command
 ```
 
-- The `TTL` command requires exactly one argument: `key`
-- Since only more than one argument is provided, DiceDB returns a syntax error.
+In this example, the `TTL` command is used with an extra argument. This results in an error, as the `TTL` command accepts only one argument.
+
+## Best Practices
+- Use `TTL` in conjunction with `EXPIRE` or `EXPIREAT` commands to manage key expiration effectively
+
+## Alternatives
+- `PTTL`: Similar to `TTL` but returns the time-to-live in milliseconds instead of seconds

@@ -7,7 +7,7 @@ The `BITCOUNT` command in DiceDB is used to count the number of set bits (i.e., 
 
 ## Syntax
 
-```
+```bash
 BITCOUNT key [start end [BYTE | BIT]]
 ```
 

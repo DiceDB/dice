@@ -18,15 +18,15 @@ type (
 	}
 
 	Manager struct {
-		querySubscriptionMap map[string]map[uint32]struct{}              // querySubscriptionMap is a map of Key -> [fingerprint1, fingerprint2, ...]
-		tcpSubscriptionMap   map[uint32]map[chan *cmd.DiceDBCmd]struct{} // tcpSubscriptionMap is a map of fingerprint -> [client1Chan, client2Chan, ...]
-		fingerprintCmdMap    map[uint32]*cmd.DiceDBCmd                   // fingerprintCmdMap is a map of fingerprint -> DiceDBCmd
+		querySubscriptionMap     map[string]map[uint32]struct{}              // querySubscriptionMap is a map of Key -> [fingerprint1, fingerprint2, ...]
+		tcpSubscriptionMap       map[uint32]map[chan *cmd.DiceDBCmd]struct{} // tcpSubscriptionMap is a map of fingerprint -> [client1Chan, client2Chan, ...]
+		fingerprintCmdMap        map[uint32]*cmd.DiceDBCmd                   // fingerprintCmdMap is a map of fingerprint -> DiceDBCmd
+		cmdWatchSubscriptionChan chan WatchSubscription                      // cmdWatchSubscriptionChan is the channel to send/receive watch subscription requests.
 	}
 )
 
 var (
-	CmdWatchSubscriptionChan chan WatchSubscription
-	affectedCmdMap           = map[string]map[string]struct{}{
+	affectedCmdMap = map[string]map[string]struct{}{
 		dstore.Set:    {dstore.Get: struct{}{}},
 		dstore.Del:    {dstore.Get: struct{}{}},
 		dstore.Rename: {dstore.Get: struct{}{}},
@@ -34,12 +34,12 @@ var (
 	}
 )
 
-func NewManager() *Manager {
-	CmdWatchSubscriptionChan = make(chan WatchSubscription)
+func NewManager(cmdWatchSubscriptionChan chan WatchSubscription) *Manager {
 	return &Manager{
-		querySubscriptionMap: make(map[string]map[uint32]struct{}),
-		tcpSubscriptionMap:   make(map[uint32]map[chan *cmd.DiceDBCmd]struct{}),
-		fingerprintCmdMap:    make(map[uint32]*cmd.DiceDBCmd),
+		querySubscriptionMap:     make(map[string]map[uint32]struct{}),
+		tcpSubscriptionMap:       make(map[uint32]map[chan *cmd.DiceDBCmd]struct{}),
+		fingerprintCmdMap:        make(map[uint32]*cmd.DiceDBCmd),
+		cmdWatchSubscriptionChan: cmdWatchSubscriptionChan,
 	}
 }
 
@@ -63,7 +63,7 @@ func (m *Manager) listenForEvents(ctx context.Context, cmdWatchChan chan dstore.
 		select {
 		case <-ctx.Done():
 			return
-		case sub := <-CmdWatchSubscriptionChan:
+		case sub := <-m.cmdWatchSubscriptionChan:
 			if sub.Subscribe {
 				m.handleSubscription(sub)
 			} else {

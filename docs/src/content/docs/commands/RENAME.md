@@ -7,7 +7,7 @@ The `RENAME` command in DiceDB is used to change the name of an existing key to 
 
 ## Syntax
 
-```plaintext
+```bash
 RENAME oldkey newkey
 ```
 

@@ -7,7 +7,7 @@ The `RPOP` command in DiceDB is used to remove and return the last element of a 
 
 ## Syntax
 
-```
+```bash
 RPOP key
 ```
 

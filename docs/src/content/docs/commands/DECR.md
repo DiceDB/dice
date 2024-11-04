@@ -7,7 +7,7 @@ The `DECR` command in DiceDB is used to decrement the integer value of a key by 
 
 ## Syntax
 
-```plaintext
+```bash
 DECR key
 ```
 

@@ -7,7 +7,7 @@ The `LPUSH` command is used to insert one or multiple values at the head (left) 
 
 ## Syntax
 
-```
+```bash
 LPUSH key value [value ...]
 ```
 
@@ -50,7 +50,7 @@ LPUSH key value [value ...]
 
 Insert the value `world` at the head of the list stored at key `mylist`. If `mylist` does not exist, a new list is created.
 
-```shell
+```bash
 127.0.0.1:7379> LPUSH mylist "world"
 (integer) 1
 ```
@@ -60,7 +60,7 @@ Insert the value `world` at the head of the list stored at key `mylist`. If `myl
 Insert the value `hello` and `world` at the head of the list stored at key `mylist`.  After execution, `world` will be the first element, followed by `hello`.
 <!-- Once LRANGE command is added, update docs to use LRANGE in examples. -->
 
-```shell
+```bash
 127.0.0.1:7379> LPUSH mylist "hello" "world"
 (integer) 2
 ```
@@ -69,7 +69,7 @@ Insert the value `hello` and `world` at the head of the list stored at key `myli
 
 Create a new list with the key `newlist` and inserts the value `first` at the head.
 
-```shell
+```bash
 127.0.0.1:7379> LPUSH newlist "first"
 (integer) 1
 ```
@@ -78,7 +78,7 @@ Create a new list with the key `newlist` and inserts the value `first` at the he
 
 Insert the value `value` at the head of the key `mystring`, which stores a string, not a list.
 
-```shell
+```bash
 127.0.0.1:7379> SET mystring "not a list"
 OK
 127.0.0.1:7379> LPUSH mystring "value"

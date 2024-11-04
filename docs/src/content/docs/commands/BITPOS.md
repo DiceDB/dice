@@ -7,7 +7,7 @@ The `BITPOS` command in DiceDB is used to find the position of the first bit set
 
 ## Syntax
 
-```plaintext
+```bash
 BITPOS key bit [start] [end]
 ```
 
@@ -49,14 +49,14 @@ The `BITPOS` command can raise errors in the following cases:
 
 Find the position of the first bit set to 1 in the string stored at key `mykey`:
 
-```plaintext
+```bash
 SET mykey "foobar"
 BITPOS mykey 1
 ```
 
 `Output`:
 
-```plaintext
+```bash
 6
 ```
 
@@ -64,14 +64,14 @@ BITPOS mykey 1
 
 Find the position of the first bit set to 0 in the string stored at key `mykey`, starting from byte position 2 and ending at byte position 4:
 
-```plaintext
+```bash
 SET mykey "foobar"
 BITPOS mykey 0 2 4
 ```
 
 `Output`:
 
-```plaintext
+```bash
 16
 ```
 
@@ -79,14 +79,14 @@ BITPOS mykey 0 2 4
 
 If the specified bit is not found within the specified range, the command returns -1:
 
-```plaintext
+```bash
 SET mykey "foobar"
 BITPOS mykey 1 2 4
 ```
 
 `Output`:
 
-```plaintext
+```bash
 -1
 ```
 
@@ -96,14 +96,14 @@ BITPOS mykey 1 2 4
 
 Attempting to use `BITPOS` on a key that holds a non-string value:
 
-```plaintext
+```bash
 LPUSH mylist "item"
 BITPOS mylist 1
 ```
 
 `Output`:
 
-```plaintext
+```bash
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
@@ -111,14 +111,14 @@ BITPOS mylist 1
 
 Using a bit value other than 0 or 1:
 
-```plaintext
+```bash
 SET mykey "foobar"
 BITPOS mykey 2
 ```
 
 `Output`:
 
-```plaintext
+```bash
 (error) ERR bit is not an integer or out of range
 ```
 
@@ -126,13 +126,13 @@ BITPOS mykey 2
 
 Using non-integer values for the `start` or `end` parameters:
 
-```plaintext
+```bash
 SET mykey "foobar"
 BITPOS mykey 1 "a" "b"
 ```
 
 `Output`:
 
-```plaintext
+```bash
 (error) ERR value is not an integer or out of range
 ```

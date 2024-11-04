@@ -7,7 +7,7 @@ The `MGET` command in DiceDB is used to retrieve the values of multiple keys in 
 
 ## Syntax
 
-```
+```bash
 MGET key [key ...]
 ```
 

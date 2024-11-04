@@ -12,12 +12,12 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/internal/server/resp"
+	"github.com/dicedb/dice/internal/watchmanager"
 	"github.com/dicedb/dice/internal/worker"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
 	derrors "github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dice/testutils"
@@ -28,6 +28,8 @@ type TestServerOptions struct {
 	Port int
 }
 
+// getLocalConnection returns a local TCP connection to the database
+//
 //nolint:unused
 func getLocalConnection() net.Conn {
 	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.DiceConfig.AsyncServer.Port))
@@ -111,7 +113,6 @@ func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *clientio.RESPParser
 }
 
 func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
-	slog.SetDefault(logger.New())
 	config.DiceConfig.Network.IOBufferLength = 16
 	config.DiceConfig.Persistence.WriteAOFOnCleanup = false
 	if opt.Port != 0 {
@@ -122,11 +123,12 @@ func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
 
 	queryWatchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Memory.KeysLimit)
 	cmdWatchChan := make(chan dstore.CmdWatchEvent, config.DiceConfig.Memory.KeysLimit)
+	cmdWatchSubscriptionChan := make(chan watchmanager.WatchSubscription)
 	gec := make(chan error)
 	shardManager := shard.NewShardManager(1, queryWatchChan, cmdWatchChan, gec)
 	workerManager := worker.NewWorkerManager(20000, shardManager)
 	// Initialize the RESP Server
-	testServer := resp.NewServer(shardManager, workerManager, cmdWatchChan, gec)
+	testServer := resp.NewServer(shardManager, workerManager, cmdWatchSubscriptionChan, cmdWatchChan, gec)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	fmt.Println("Starting the test server on port", config.DiceConfig.AsyncServer.Port)

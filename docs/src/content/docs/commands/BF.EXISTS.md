@@ -50,9 +50,9 @@ The `BF.EXISTS` command can raise errors in the following scenarios:
 ### Checking for an existing item
 
 ```bash
-127.0.0.1:6379> BF.ADD myBloomFilter "apple"
+127.0.0.1:7379> BF.ADD myBloomFilter "apple"
 (integer) 1
-127.0.0.1:6379> BF.EXISTS myBloomFilter "apple"
+127.0.0.1:7379> BF.EXISTS myBloomFilter "apple"
 (integer) 1
 ```
 
@@ -61,7 +61,7 @@ In this example, the item "apple" is added to the Bloom Filter `myBloomFilter`. 
 ### Checking for a non-existing item
 
 ```bash
-127.0.0.1:6379> BF.EXISTS myBloomFilter "banana"
+127.0.0.1:7379> BF.EXISTS myBloomFilter "banana"
 (integer) 0
 ```
 
@@ -70,7 +70,7 @@ In this example, the item "banana" is checked in the Bloom Filter `myBloomFilter
 ### Handling a non-existing key
 
 ```bash
-127.0.0.1:6379> BF.EXISTS nonExistingKey "apple"
+127.0.0.1:7379> BF.EXISTS nonExistingKey "apple"
 (integer) 0
 ```
 
@@ -79,9 +79,9 @@ In this example, the key `nonExistingKey` does not exist in the database. The co
 ### Handling a wrong type of key
 
 ```bash
-127.0.0.1:6379> SET myString "hello"
+127.0.0.1:7379> SET myString "hello"
 OK
-127.0.0.1:6379> BF.EXISTS myString "apple"
+127.0.0.1:7379> BF.EXISTS myString "apple"
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
@@ -90,7 +90,7 @@ In this example, the key `myString` is associated with a string value, not a Blo
 ### Incorrect number of arguments
 
 ```bash
-127.0.0.1:6379> BF.EXISTS myBloomFilter
+127.0.0.1:7379> BF.EXISTS myBloomFilter
 (error) ERR wrong number of arguments for 'bf.exists' command
 ```
 
