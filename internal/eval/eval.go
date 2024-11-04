@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/internal/object"
+	"github.com/dicedb/dice/internal/server/abstractserver"
+	"github.com/rs/xid"
 
 	"github.com/dicedb/dice/internal/sql"
 
@@ -408,9 +410,9 @@ func evalINFO(args []string, store *dstore.Store) []byte {
 }
 
 // TODO: Placeholder to support monitoring
-func evalCLIENT(args []string, store *dstore.Store) []byte {
-	return clientio.RespOK
-}
+// func evalCLIENT(args []string, store *dstore.Store) []byte {
+// 	return clientio.RespOK
+// }
 
 // id=10
 // addr=127.0.0.1:56938
@@ -433,11 +435,12 @@ func EvalCLIENT(args []string, httpOp bool, client *comm.Client, store *dstore.S
 	fmt.Println("clien id", client.ClientIdentifierID)
 	switch subcommand {
 	case List:
-		var s strings.Builder
-		s.WriteString("id=")
-		s.WriteString(strconv.Itoa(int(client.ClientIdentifierID)))
-		s.WriteString(" ")
-		return clientio.Encode(s.String(), true)
+		fmt.Println("client len", len(abstractserver.Clients))
+		o := make([]string, 0, len(abstractserver.Clients))
+		for _, client := range abstractserver.Clients {
+			o = append(o, client.String())
+		}
+		return clientio.Encode(strings.Join(o, "\r\n"), false)
 	default:
 		return clientio.Encode(diceerrors.ErrWrongArgumentCount("CLIENT"), false)
 	}

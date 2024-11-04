@@ -126,6 +126,7 @@ func (s *AsyncServer) InitiateShutdown() {
 		if err := syscall.Close(fd); err != nil {
 			slog.Warn("failed to close client connection", slog.Any("error", err))
 		}
+		// todo: delete from `abstractserver.Clients`
 		delete(s.connectedClients, fd)
 	}
 }
@@ -232,7 +233,10 @@ func (s *AsyncServer) acceptConnection() error {
 		return err
 	}
 
-	s.connectedClients[fd] = comm.NewClient(fd)
+	client := comm.NewClient(fd)
+	s.connectedClients[fd] = client
+	abstractserver.Clients = append(abstractserver.Clients, client)
+
 	if err := syscall.SetNonblock(fd, true); err != nil {
 		return err
 	}
@@ -256,9 +260,11 @@ func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
 			slog.Error("error closing client connection", slog.Any("error", err))
 		}
 		delete(s.connectedClients, event.Fd)
+		// todo: delete from `abstractserver.Clients`
 		return err
 	}
 
+	client.LastCmd = commands.Cmds[len(commands.Cmds)-1]
 	// function used within package, limit the scope
 	s.EvalAndRespond(commands, client)
 	if hasAbort {
