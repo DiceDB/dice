@@ -3,6 +3,7 @@ package eval
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/base64"
 
 	"errors"
 	"fmt"
@@ -4165,7 +4166,7 @@ func evalPFDEBUG(args []string, store *dstore.Store) []byte {
 			return diceerrors.NewErrWithMessage(diceerrors.InvalidHllErr)
 		}
 
-		return clientio.Encode(data, false)
+		return clientio.Encode(base64.StdEncoding.EncodeToString(data), false)
 
 	case "ENCODING":
 		return clientio.Encode(encoding, false)
