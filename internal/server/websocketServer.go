@@ -99,7 +99,7 @@ func (s *WebsocketServer) Run(ctx context.Context) error {
 		slog.Info("also listenting WebSocket on", slog.String("port", s.websocketServer.Addr[1:]))
 		err = s.websocketServer.ListenAndServe()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			slog.Error("error while listenting on WebSocket", slog.Any("error", err))
+			slog.Error("error while listening on WebSocket", slog.Any("error", err))
 		}
 	}()
 
@@ -257,7 +257,7 @@ func (s *WebsocketServer) processQwatchUpdates(ctx context.Context) {
 			}
 
 			if err := s.processQwatchResponse(conn, resp); err != nil {
-				slog.Debug("Error writing response to client. Shutting down goroutine for q.watch updates", slog.Any("clientIdentifierID", resp.ClientIdentifierID), slog.Any("error", err))
+				slog.Debug("Error writing response to client", slog.Any("clientIdentifierID", resp.ClientIdentifierID), slog.Any("error", err))
 				continue
 			}
 		case <-s.shutdownChan:
