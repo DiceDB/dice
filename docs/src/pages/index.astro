@@ -2,28 +2,21 @@
 import Layout from "../layouts/Layout.astro";
 import Hero from "../components/Hero.astro";
 
-import site from "../data/site.json";
-
 const title =
-  "DiceDB - an in-memory, real-time, and reactive database with Redis and SQL support optimized for modern hardware and building real-time applications.";
+  "DiceDB - a super cache;"
 const description =
-  "DiceDB is an in-memory, real-time, and reactive database with Redis and SQL support optimized for modern hardware and building real-time applications.";
+  "DiceDB is a redis-compliant, scalable, highly available, unified cache optimized for modern hardware";
 ---
 
 <Layout {title} {description}>
   <Hero />
-  <div class="section" style="margin: 3em 0;">
-    <div class="columns is-multiline">
-      {
-        site.featureHighlights.map((s) => (
-          <div class="column is-4">
-            <div class="box">
-              <h2 class="title is-size-5">{s.title}</h2>
-              <p class="is-size-6">{s.description}</p>
-            </div>
-          </div>
-        ))
-      }
-    </div>
+  <div class="section content">
+    <p>DiceDB is</p>
+    <ul>
+      <li>Redis-compliant - a drop-in replacement of Redis</li>
+      <li>Scalable - scales out and scales in with load<span class="has-text-danger">*</span></li>
+      <li>Highly available - failovers and durability<span class="has-text-danger">*</span></li>
+      <li>Unified cache - multi-tenant and shared everything architecture<span class="has-text-danger">*</span></li>
+      <li>Optimized for modern hardware - multi-threaded with shared-nothing architecture<span class="has-text-danger">*</span></li>
   </div>
 </Layout>
