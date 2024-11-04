@@ -119,6 +119,12 @@ const (
 	CmdCMSInitByProb = "CMS.INITBYPROB"
 	CmdCMSMerge      = "CMS.MERGE"
 	CmdCMSIncrBy     = "CMS.INCRBY"
+	CmdHSet          = "HSET"
+	CmdHGet          = "HGET"
+	CmdHSetnx        = "HSETNX"
+	CmdHDel          = "HDEL"
+	CmdHMSet         = "HMSET"
+	CmdHMGet         = "HMGET"
 )
 
 type CmdMeta struct {
@@ -289,6 +295,24 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdCMSMerge: {
+		CmdType: SingleShard,
+	},
+	CmdHSet: {
+		CmdType: SingleShard,
+	},
+	CmdHGet: {
+		CmdType: SingleShard,
+	},
+	CmdHSetnx: {
+		CmdType: SingleShard,
+	},
+	CmdHDel: {
+		CmdType: SingleShard,
+	},
+	CmdHMSet: {
+		CmdType: SingleShard,
+	},
+	CmdHMGet: {
 		CmdType: SingleShard,
 	},
 
