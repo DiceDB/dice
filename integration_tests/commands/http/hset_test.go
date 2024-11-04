@@ -76,6 +76,7 @@ func TestHSet(t *testing.T) {
 				if tc.delays[i] > 0 {
 					time.Sleep(tc.delays[i])
 				}
+
 				result, err := exec.FireCommand(cmd)
 				if err != nil {
 					log.Println(tc.expected[i])
