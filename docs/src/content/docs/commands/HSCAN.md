@@ -7,7 +7,7 @@ The `HSCAN` command is used to incrementally iterate over the fields of a hash s
 
 ## Syntax
 
-```
+```bash
 HSCAN key cursor [MATCH pattern] [COUNT count]
 ```
 

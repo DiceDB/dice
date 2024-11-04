@@ -17,7 +17,7 @@ The `JSON.MSET` command requires an even number of arguments. The arguments are 
 
 ### Example
 
-```plaintext
+```bash
 JSON.MSET key1 json1 key2 json2 ... keyN jsonN
 ```
 
@@ -56,8 +56,8 @@ The `JSON.MSET` command can raise errors in the following scenarios:
 
 ### Setting Multiple JSON Values
 
-```plaintext
-127.0.0.1:6379> JSON.MSET user:1 '{"name": "Alice", "age": 30}' user:2 '{"name": "Bob", "age": 25}'
+```bash
+127.0.0.1:7379> JSON.MSET user:1 '{"name": "Alice", "age": 30}' user:2 '{"name": "Bob", "age": 25}'
 OK
 ```
 
@@ -65,8 +65,8 @@ In this example, two keys (`user:1` and `user:2`) are set with their respective 
 
 ### Error Example: Odd Number of Arguments
 
-```plaintext
-127.0.0.1:6379> JSON.MSET user:1 '{"name": "Alice", "age": 30}' user:2
+```bash
+127.0.0.1:7379> JSON.MSET user:1 '{"name": "Alice", "age": 30}' user:2
 (error) ERR wrong number of arguments for 'JSON.MSET' command
 ```
 
@@ -74,8 +74,8 @@ In this example, the command fails because the number of arguments is odd. DiceD
 
 ### Error Example: Invalid JSON
 
-```plaintext
-127.0.0.1:6379> JSON.MSET user:1 '{"name": "Alice", "age": 30}' user:2 '{name: "Bob", age: 25}'
+```bash
+127.0.0.1:7379> JSON.MSET user:1 '{"name": "Alice", "age": 30}' user:2 '{name: "Bob", age: 25}'
 (error) ERR invalid JSON string
 ```
 

@@ -7,7 +7,7 @@ The `LPOP` command in DiceDB removes and returns the first element of a list at 
 
 ## Syntax
 
-```plaintext
+```bash
 LPOP key
 ```
 

@@ -7,7 +7,7 @@ The ZCOUNT command in DiceDB counts the number of members in a sorted set at the
 
 ## Syntax
 
-```
+```bash
 ZCOUNT key min max
 ```
 

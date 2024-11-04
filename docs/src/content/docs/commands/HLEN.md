@@ -7,7 +7,7 @@ The `HLEN` command in DiceDB is used to obtain the number of fields contained wi
 
 ## Syntax
 
-```
+```bash
 HLEN key
 ```
 

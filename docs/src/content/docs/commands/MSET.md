@@ -7,7 +7,7 @@ The `MSET` command in DiceDB is used to set multiple key-value pairs in a single
 
 ## Syntax
 
-```plaintext
+```bash
 MSET key1 value1 [key2 value2 ...]
 ```
 
@@ -76,7 +76,7 @@ OK
 
 Attempting to set an odd number of arguments:
 
-```sh
+```bash
 127.0.0.1:7379> MSET key1 "value1" key2
 (error) ERROR wrong number of arguments for 'mset' command
 ```

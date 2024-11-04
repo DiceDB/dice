@@ -47,6 +47,9 @@ const (
 
 // Single-shard commands.
 const (
+	CmdExpire        = "EXPIRE"
+	CmdExpireAt      = "EXPIREAT"
+	CmdExpireTime    = "EXPIRETIME"
 	CmdSet           = "SET"
 	CmdGet           = "GET"
 	CmdGetSet        = "GETSET"
@@ -88,6 +91,8 @@ const (
 	CmdPFAdd         = "PFADD"
 	CmdPFCount       = "PFCOUNT"
 	CmdPFMerge       = "PFMERGE"
+	CmdTTL           = "TTL"
+	CmdPTTL          = "PTTL"
 	CmdIncr          = "INCR"
 	CmdIncrBy        = "INCRBY"
 	CmdDecr          = "DECR"
@@ -153,6 +158,15 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdSet: {
 		CmdType: SingleShard,
 	},
+	CmdExpire: {
+		CmdType: SingleShard,
+	},
+	CmdExpireAt: {
+		CmdType: SingleShard,
+	},
+	CmdExpireTime: {
+		CmdType: SingleShard,
+	},
 	CmdGet: {
 		CmdType: SingleShard,
 	},
@@ -196,6 +210,12 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdPFMerge: {
+		CmdType: SingleShard,
+	},
+	CmdTTL: {
+		CmdType: SingleShard,
+	},
+	CmdPTTL: {
 		CmdType: SingleShard,
 	},
 	CmdHLen: {

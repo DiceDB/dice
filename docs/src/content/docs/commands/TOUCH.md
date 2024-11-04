@@ -7,7 +7,7 @@ The `TOUCH` command in DiceDB is used to update the last access time of one or m
 
 ## Syntax
 
-```plaintext
+```bash
 TOUCH key [key ...]
 ```
 
@@ -43,7 +43,7 @@ The `TOUCH` command can raise the following errors:
 
 ### Single Key
 
-```plaintext
+```bash
 SET mykey "Hello"
 TOUCH mykey
 ```
@@ -52,7 +52,7 @@ In this example, the `TOUCH` command updates the last access time of the key `my
 
 ### Multiple Keys
 
-```plaintext
+```bash
 SET key1 "value1"
 SET key2 "value2"
 TOUCH key1 key2 key3
@@ -64,7 +64,7 @@ In this example, the `TOUCH` command attempts to update the last access time for
 
 Trying to touch key `mylist` will result in a `WRONGTYPE` error because `mylist` is a list, not a string.
 
-```plaintext
+```bash
 LPUSH mylist "element"
 TOUCH mylist
 ``` 

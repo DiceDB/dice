@@ -7,7 +7,7 @@ The `ZCARD` command in DiceDB is used to obtain the cardinality (number of eleme
 
 ## Syntax
 
-```
+```bash
 ZCARD key
 ```
 

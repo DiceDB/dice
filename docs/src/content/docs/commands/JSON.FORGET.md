@@ -7,7 +7,7 @@ The `JSON.FORGET` command in DiceDB is used to delete a specified path from a JS
 
 ## Syntax
 
-```
+```bash
 JSON.FORGET key path
 ```
 
