@@ -705,9 +705,10 @@ var (
 		Returns
 		This command returns the number of keys that are stored at given key.
 		`,
-		Eval:     evalHSET,
-		Arity:    -4,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalHSET,
+		Arity:      -4,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	hmsetCmdMeta = DiceCmdMeta{
 		Name: "HMSET",
@@ -717,9 +718,10 @@ var (
 		Returns
 		This command returns the number of keys that are stored at given key.
 		`,
-		Eval:     evalHMSET,
-		Arity:    -4,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalHMSET,
+		Arity:      -4,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	hkeysCmdMeta = DiceCmdMeta{
 		Name:       "HKEYS",
@@ -734,23 +736,26 @@ var (
 		Info: `Sets field in the hash stored at key to value, only if field does not yet exist.
 		If key does not exist, a new key holding a hash is created. If field already exists,
 		this operation has no effect.`,
-		Eval:     evalHSETNX,
-		Arity:    4,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalHSETNX,
+		Arity:      4,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	hgetCmdMeta = DiceCmdMeta{
-		Name:     "HGET",
-		Info:     `Returns the value associated with field in the hash stored at key.`,
-		Eval:     evalHGET,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Name:       "HGET",
+		Info:       `Returns the value associated with field in the hash stored at key.`,
+		NewEval:    evalHGET,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	hmgetCmdMeta = DiceCmdMeta{
-		Name:     "HMGET",
-		Info:     `Returns the values associated with the specified fields in the hash stored at key.`,
-		Eval:     evalHMGET,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Name:       "HMGET",
+		Info:       `Returns the values associated with the specified fields in the hash stored at key.`,
+		NewEval:    evalHMGET,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	hgetAllCmdMeta = DiceCmdMeta{
 		Name: "HGETALL",
@@ -795,9 +800,10 @@ var (
 		If key does not exist, it is treated as an empty hash and this command returns 0.
 		Returns
 		The number of fields that were removed from the hash, not including specified but non-existing fields.`,
-		Eval:     evalHDEL,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalHDEL,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	hscanCmdMeta = DiceCmdMeta{
 		Name: "HSCAN",
