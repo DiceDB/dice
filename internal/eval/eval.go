@@ -4160,7 +4160,12 @@ func evalPFDEBUG(args []string, store *dstore.Store) []byte {
 			return diceerrors.NewErrWithMessage(diceerrors.HllEncodingErr)
 		}
 
-		return clientio.Encode("Dont know what to do, heheh", false)
+		data, err := hll.MarshalBinary()
+		if err != nil {
+			return diceerrors.NewErrWithMessage(diceerrors.InvalidHllErr)
+		}
+
+		return clientio.Encode(data, false)
 
 	case "ENCODING":
 		return clientio.Encode(encoding, false)
