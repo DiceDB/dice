@@ -415,7 +415,7 @@ func validateCmdMeta(c string, meta CmdMeta) error {
 		if meta.decomposeCommand == nil || meta.composeResponse == nil {
 			return fmt.Errorf("multi-shard command %s must have both decomposeCommand and composeResponse implemented", c)
 		}
-	case SingleShard, Watch, Custom:
+	case SingleShard, Watch, Unwatch, Custom:
 		// No specific validations for these types currently
 	default:
 		return fmt.Errorf("unknown command type for %s", c)
