@@ -1,4 +1,4 @@
-package async
+package resp
 
 import (
 	"github.com/stretchr/testify/assert"

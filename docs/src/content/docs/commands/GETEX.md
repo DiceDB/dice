@@ -1,6 +1,6 @@
 ---
 title: GETEX
-description: Documentation for the DiceDB command GETEX
+description: The `GETEX` command in DiceDB is used to retrieve the value of a specified key and simultaneously set its expiration time. This command is particularly useful when you want to access the value of a key and ensure that it expires after a certain period, all in a single atomic operation.
 ---
 
 The `GETEX` command in DiceDB is used to retrieve the value of a specified key and simultaneously set its expiration time. This command is particularly useful when you want to access the value of a key and ensure that it expires after a certain period, all in a single atomic operation.
@@ -32,29 +32,33 @@ GETEX key [EX seconds|PX milliseconds|EXAT timestamp|PXAT milliseconds-timestamp
 
 ## Behaviour
 
-When the `GETEX` command is executed, it performs the following actions:
-
-1. Retrieves the value of the specified key.
-2. Sets the expiration time for the key based on the provided option (`EX`, `PX`, `EXAT`, `PXAT`, or `PERSIST`).
-3. Returns the value of the key.
-
-If the key does not exist, the command will return `nil` and no expiration time will be set.
+- If the specified key does not exist, `GETEX` will return nil, and no expiration time will be set.
+- If the key exists, `GETEX` retrieves and returns its current value.
+- When used with the `EX`, `PX`, `EXAT`, or `PXAT` options, `GETEX` will adjust the key's expiration time according to the specified option.
+- Using the `PERSIST` option removes any existing expiration, making the key persist indefinitely.
 
 ## Errors
 
-The `GETEX` command can raise errors in the following scenarios:
+1. `Wrong number of arguments`:
 
-1. `Wrong number of arguments`: If the command is not provided with the correct number of arguments, it will return an error.
-   - Error message: `(error) ERR wrong number of arguments for 'getex' command`
-2. `Invalid expiration option`: If an invalid expiration option is provided, it will return an error.
-   - Error message: `(error) ERR syntax error`
-3. `Invalid expiration time`: If the expiration time is not a valid integer or timestamp, it will return an error.
-   - Error message: `(error) ERR value is not an integer or out of range`
+   - Error Message: `(error) ERR wrong number of arguments for 'getex' command`
+   - Occurs when the command is executed with an incorrect number of arguments.
+
+2. `Invalid expiration option`:
+
+   - Error Message: `(error) ERR syntax error`
+   - Occurs when an unrecognized or incorrect expiration option is specified.
+
+3. `Invalid expiration time`:
+
+   - Error Message: `(error) ERR value is not an integer or out of range`
+   - Occurs when the expiration time provided is not a valid integer or timestamp.
 
 ## Example Usage
 
-### Example 1: Retrieve value and set expiration in seconds
+### Retrieve value and set expiration in seconds
 
+This command will return `"Hello"` and set the expiration time of `mykey` to 10 seconds.
 
 ```bash
 127.0.0.1:7379> SET mykey "Hello"
@@ -63,9 +67,9 @@ OK
 127.0.0.1:7379> "Hello"
 ```
 
-- This command will return `"Hello"` and set the expiration time of `mykey` to 10 seconds.
+### Retrieve value and set expiration in milliseconds
 
-### Example 2: Retrieve value and set expiration in milliseconds
+This command will return `"Hello"` and set the expiration time of `mykey` to 10,000 milliseconds (10 seconds).
 
 ```bash
 127.0.0.1:7379> SET mykey "Hello"
@@ -74,9 +78,9 @@ OK
 127.0.0.1:7379> "Hello"
 ```
 
-- This command will return `"Hello"` and set the expiration time of `mykey` to 10,000 milliseconds (10 seconds).
+### Retrieve value and set expiration as Unix timestamp in seconds
 
-### Example 3: Retrieve value and set expiration as Unix timestamp in seconds
+This command will return `"Hello"` and set the expiration time of `mykey` to the Unix timestamp `1672531199`.
 
 ```bash
 127.0.0.1:7379> SET mykey "Hello"
@@ -85,9 +89,9 @@ OK
 127.0.0.1:7379> "Hello"
 ```
 
-- This command will return `"Hello"` and set the expiration time of `mykey` to the Unix timestamp `1672531199`.
+### Retrieve value and set expiration as Unix timestamp in milliseconds
 
-### Example 4: Retrieve value and set expiration as Unix timestamp in milliseconds
+This command will return `"Hello"` and set the expiration time of `mykey` to the Unix timestamp `1672531199000` milliseconds.
 
 ```bash
 127.0.0.1:7379> SET mykey "Hello"
@@ -96,9 +100,9 @@ OK
 127.0.0.1:7379> "Hello"
 ```
 
-- This command will return `"Hello"` and set the expiration time of `mykey` to the Unix timestamp `1672531199000` milliseconds.
+### Retrieve value and remove expiration
 
-### Example 5: Retrieve value and remove expiration
+This command will return `"Hello"` and remove the expiration time of `mykey`, making it persistent.
 
 ```bash
 127.0.0.1:7379> SET mykey "Hello"
@@ -108,8 +112,6 @@ OK
 127.0.0.1:7379> GETEX mykey PERSIST
 127.0.0.1:7379> "Hello"
 ```
-
-- This command will return `"Hello"` and remove the expiration time of `mykey`, making it persistent.
 
 ## Notes
 
