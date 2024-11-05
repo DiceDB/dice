@@ -52,6 +52,7 @@ func TestSet(t *testing.T) {
 func TestSetWithOptions(t *testing.T) {
 	conn := getLocalConnection()
 	expiryTime := strconv.FormatInt(time.Now().Add(1*time.Minute).UnixMilli(), 10)
+	defer FireCommand(conn, "FLUSHDB")
 	defer conn.Close()
 
 	testCases := []TestCase{
@@ -119,6 +120,21 @@ func TestSetWithOptions(t *testing.T) {
 			name:     "XX option",
 			commands: []string{"SET k v XX EX 1", "GET k", "SLEEP 2", "GET k", "SET k v XX EX 1", "GET k"},
 			expected: []interface{}{"(nil)", "(nil)", "OK", "(nil)", "(nil)", "(nil)"},
+		},
+		{
+			name:     "GET with Existing Value",
+			commands: []string{"SET k v", "SET k vv GET"},
+			expected: []interface{}{"OK", "v"},
+		},
+		{
+			name:     "GET with Non-Existing Value",
+			commands: []string{"SET k vv GET"},
+			expected: []interface{}{"(nil)"},
+		},
+		{
+			name:     "GET with wrong type of value",
+			commands: []string{"sadd k v", "SET k vv GET"},
+			expected: []interface{}{int64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
 		},
 	}
 
