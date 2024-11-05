@@ -17,12 +17,12 @@ The `FLUSHDB` command does not take any parameters.
 
 ## Return Values
 
-| Condition                | Return Value |
-|--------------------------|--------------|
-| Command is successful    | `OK`         |
-| Authentication required  | Error: `NOAUTH Authentication required` |
+| Condition               | Return Value                                                              |
+| ----------------------- | ------------------------------------------------------------------------- |
+| Command is successful   | `OK`                                                                      |
+| Authentication required | Error: `NOAUTH Authentication required`                                   |
 | Permission denied       | Error: `NOPERM this user has no permissions to run the 'flushdb' command` |
-| Read-only mode          | Error: `READONLY You can't write against a read-only replica` |
+| Read-only mode          | Error: `READONLY You can't write against a read-only replica`             |
 
 ## Behaviour
 
@@ -37,10 +37,12 @@ When the `FLUSHDB` command is executed, the following actions occur:
 The `FLUSHDB` command is straightforward and does not typically raise errors under normal circumstances. However, there are a few scenarios where issues might arise:
 
 1. `Authentication Issues`:
+
    - Error Message: `(error) NOAUTH Authentication required`
    - Occurs when authentication is required but not provided
 
 2. `Permission Issues`:
+
    - Error Message: `(error) NOPERM this user has no permissions to run the 'flushdb' command`
    - Occurs when the user lacks necessary permissions to execute the command
 

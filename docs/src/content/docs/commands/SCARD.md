@@ -13,19 +13,17 @@ SCARD key
 
 ## Parameters
 
-| Parameter  | Description                                                                     | Type   | Required |
-|------------|---------------------------------------------------------------------------------|--------|----------|
-| `key`      | The key of the set whose cardinality (number of members) you want to retrieve.  | String |  Yes     |
-
+| Parameter | Description                                                                    | Type   | Required |
+| --------- | ------------------------------------------------------------------------------ | ------ | -------- |
+| `key`     | The key of the set whose cardinality (number of members) you want to retrieve. | String | Yes      |
 
 ## Return Values
 
-| Condition                               | Return Value                     |
-|-----------------------------------------|----------------------------------|
-| Key of Set type exists                  | Number of elements in the set    |
-| Key doesn't exist                       | `0`                              |
-| Invalid syntax/key is of the wrong type | error                            |
-
+| Condition                               | Return Value                  |
+| --------------------------------------- | ----------------------------- |
+| Key of Set type exists                  | Number of elements in the set |
+| Key doesn't exist                       | `0`                           |
+| Invalid syntax/key is of the wrong type | error                         |
 
 ## Behaviour
 
@@ -40,14 +38,13 @@ When the `SCARD` command is executed, DiceDB will:
 
 1. `Wrong type of key`:
 
-    - Error Message: `(error) ERROR WRONGTYPE Operation against a key holding the wrong kind of value`
-    - Occurs if the key exists but is not a set. DiceDB expects the key to be associated with a set data type. If the key is associated with a different data type (e.g., a string, list, hash, or sorted set), this error will be raised.
+   - Error Message: `(error) ERROR WRONGTYPE Operation against a key holding the wrong kind of value`
+   - Occurs if the key exists but is not a set. DiceDB expects the key to be associated with a set data type. If the key is associated with a different data type (e.g., a string, list, hash, or sorted set), this error will be raised.
 
 2. `Wrong number of arguments`:
 
-    - Error Message: `(error) ERROR wrong number of arguments for 'scard' command`
-    - Occurs if wrong number of keys is passed to the command, such as passing more than 1 key, or passing no key.
-
+   - Error Message: `(error) ERROR wrong number of arguments for 'scard' command`
+   - Occurs if wrong number of keys is passed to the command, such as passing more than 1 key, or passing no key.
 
 ## Examples
 

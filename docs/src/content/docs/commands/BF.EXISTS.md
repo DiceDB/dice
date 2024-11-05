@@ -13,19 +13,18 @@ BF.EXISTS key item
 
 ## Parameters
 
-| Parameter | Description                                                                 | Type   | Required |
-|-----------|-----------------------------------------------------------------------------|--------|----------|
-| `key`     | The key under which the Bloom Filter is stored.                             | String | Yes      |
-| `item`    | The item to check for existence in the Bloom Filter.                        | String | Yes      |
-
+| Parameter | Description                                          | Type   | Required |
+| --------- | ---------------------------------------------------- | ------ | -------- |
+| `key`     | The key under which the Bloom Filter is stored.      | String | Yes      |
+| `item`    | The item to check for existence in the Bloom Filter. | String | Yes      |
 
 ## Return Value
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| Item may exist in the Bloom Filter             | `1`                                               |
-| Item definitely does not exist in the Bloom Filter | `0`                                               |
-| Key does not exist                             | `0`                                               |
+| Condition                                          | Return Value |
+| -------------------------------------------------- | ------------ |
+| Item may exist in the Bloom Filter                 | `1`          |
+| Item definitely does not exist in the Bloom Filter | `0`          |
+| Key does not exist                                 | `0`          |
 
 ## Behaviour
 
@@ -37,13 +36,13 @@ When the `BF.EXISTS` command is executed, it checks the Bloom Filter associated 
 ## Errors
 
 The `BF.EXISTS` command can raise errors in the following scenarios:
-1. `Incorrect number of arguments`: 
-    - Error message: `(error) ERR wrong number of arguments for 'bf.exists' command`
-    - The command requires exactly two arguments: the key and the item to check for existence in the Bloom Filter.
-2. `Key is not a Bloom Filter`:
-    - Error message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
-    - The specified key does not refer to a Bloom Filter.
 
+1. `Incorrect number of arguments`:
+   - Error message: `(error) ERR wrong number of arguments for 'bf.exists' command`
+   - The command requires exactly two arguments: the key and the item to check for existence in the Bloom Filter.
+2. `Key is not a Bloom Filter`:
+   - Error message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
+   - The specified key does not refer to a Bloom Filter.
 
 ## Example Usage
 

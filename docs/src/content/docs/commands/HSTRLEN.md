@@ -3,7 +3,7 @@ title: HSTRLEN
 description: Documentation for the DiceDB command HSTRLEN
 ---
 
-The `HSTRLEN` command in DiceDB is used to obtain the string length of value associated with field in the hash stored at a specified key. 
+The `HSTRLEN` command in DiceDB is used to obtain the string length of value associated with field in the hash stored at a specified key.
 
 ## Syntax
 
@@ -13,18 +13,18 @@ HSTRLEN key field
 
 ## Parameters
 
-| Parameter       | Description                                                                              | Type    | Required |
-|-----------------|------------------------------------------------------------------------------------------|---------|----------|
-| `key`           | The key of the hash, which consists of the field whose string length you want to obtain  | String  | Yes      |
-| `field`         | The field present in the hash whose length you want to obtain                            | String  | Yes      |
+| Parameter | Description                                                                             | Type   | Required |
+| --------- | --------------------------------------------------------------------------------------- | ------ | -------- |
+| `key`     | The key of the hash, which consists of the field whose string length you want to obtain | String | Yes      |
+| `field`   | The field present in the hash whose length you want to obtain                           | String | Yes      |
 
 ## Return Value
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| If specified key and field exists              | string length                                     |
-| If key doesn't exist                           | `0`                                               |
-| If field doesn't exist                         | `0`                                               |
+| Condition                         | Return Value  |
+| --------------------------------- | ------------- |
+| If specified key and field exists | string length |
+| If key doesn't exist              | `0`           |
+| If field doesn't exist            | `0`           |
 
 ## Behaviour
 
@@ -48,6 +48,7 @@ HSTRLEN key field
 ## Example Usage
 
 ### Basic Usage
+
 Creating hash `myhash` with two fields `field1` and `field2`. Getting string length of value in `field1`.
 
 ```bash
@@ -59,6 +60,7 @@ Creating hash `myhash` with two fields `field1` and `field2`. Getting string len
 ```
 
 ### Invalid Usage on non-existent key
+
 Getting string length from a non-existent key `nonExistentHash`.
 
 ```bash
@@ -67,6 +69,7 @@ Getting string length from a non-existent key `nonExistentHash`.
 ```
 
 ### Invalid Usage on non-hash key
+
 Getting string length from a key `mystring` associated with a non-hash type.
 
 ```bash

@@ -37,6 +37,7 @@ The `DBSIZE` command does not take any parameters.
 The `DBSIZE` command is straightforward and does not typically result in errors under normal usage. However, there are a few scenarios where errors might be encountered:
 
 1. `Connection Issues`:
+
    - Error Message: `ERR Connection lost`
    - Occurs when there is a problem with the connection to the DiceDB server.
 

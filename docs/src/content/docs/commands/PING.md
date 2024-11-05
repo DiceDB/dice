@@ -18,16 +18,16 @@ PING [message]
 
 ## Parameters
 
-| Parameter       | Description                                      | Type    | Required |
-|-----------------|--------------------------------------------------|---------|----------|
-| `message`       | `message` echoed in the response                 | String  | No       |
+| Parameter | Description                      | Type   | Required |
+| --------- | -------------------------------- | ------ | -------- |
+| `message` | `message` echoed in the response | String | No       |
 
 ## Return values
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| No `message` provided                          | `PONG`                                            |
-| `message` provided                             | `message`                                         |
+| Condition             | Return Value |
+| --------------------- | ------------ |
+| No `message` provided | `PONG`       |
+| `message` provided    | `message`    |
 
 ## Behaviour
 
@@ -35,7 +35,7 @@ When the `PING` command is fired:
 
 - If no `message` is given, it sends back a `PONG`.
 - If a `message` is provided, it sends back the same message in the response.
-- If `message` provided is non-string value, the value is internally coerced to string and echoed as response. 
+- If `message` provided is non-string value, the value is internally coerced to string and echoed as response.
 
 This helps clients determine if the server is up and responsive. Essentially, it acts as a keep-alive or heartbeat mechanism for clients to validate their connection with the DiceDB server.
 
@@ -53,7 +53,7 @@ This helps clients determine if the server is up and responsive. Essentially, it
 
 ## Example Usage
 
-### Basic Usage 
+### Basic Usage
 
 `PING` DiceDB server without a message and the server echoes with `PONG`.
 

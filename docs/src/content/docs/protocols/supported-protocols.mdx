@@ -1,4 +1,4 @@
---- 
+---
 title: Supported Protocols
 description: A guide on all the protocols that dice supports and all ways to connect to dice.
 sidebar:
@@ -6,18 +6,18 @@ sidebar:
 ---
 
 DiceDB supports 3 ways to connect to the database:
+
 1. [TCP-RESP](#tcp-resp)
 2. [HTTP](#http)
 3. [WebSockets](#websockets)
 
 ## TCP-RESP
 
-RESP is a standard protocol over TCP, developed by redis. This is the default mode of communication with dicedb and allows dice to be a drop-in replacement for Redis. 
+RESP is a standard protocol over TCP, developed by redis. This is the default mode of communication with dicedb and allows dice to be a drop-in replacement for Redis.
 
-
-| Name | Value | Configuration | 
-|-|-|-|
-| Default Port | 7379 | `server.port` in config file |
+| Name         | Value | Configuration                |
+| ------------ | ----- | ---------------------------- |
+| Default Port | 7379  | `server.port` in config file |
 
 To use Dice over TCP/RESP, you can use the official [DiceDB CLI](https://github.com/DiceDB/cli) or use any Redis CLI/SDKs for non-dice features.
 
@@ -25,12 +25,11 @@ To use Dice over TCP/RESP, you can use the official [DiceDB CLI](https://github.
 
 Clients can also connect to DiceDB over HTTP. This allows clients to connect to dice over the web stack, enabling frontends to have direct access to dice.
 
+| Name         | Value | Configuration      |
+| ------------ | ----- | ------------------ |
+| Default Port | 8082  | `--http-port` flag |
 
-| Name | Value | Configuration | 
-|-|-|-|
-| Default Port | 8082 | `--http-port` flag |
-
-For all commands except `QWATCH`, the HTTP API is synchronous and will return the result of the command immediately. 
+For all commands except `QWATCH`, the HTTP API is synchronous and will return the result of the command immediately.
 
 For [`QWATCH`](/commands/qwatch), we use [SSE](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events) to be able to respond with changes to the result set of the queries.
 
@@ -43,21 +42,18 @@ To understand the request and response format better, please refer to the [HTTP 
 - With small number of queries you want to `QWATCH`.
 - Integrate dice with other web services using HTTP Webhooks.
 
-
 ### Limitations
 
 - `QWATCH` uses SSE or Server Sent Events, and current implementation of HTTP in DiceDB is based on HTTP 1.1. This means that there would be a limit to how many queries you can `QWATCH` at a time ([ref](https://developer.mozilla.org/en-US/docs/Web/API/EventSource)).
 - `QWATCH` using SSE also implies that the connection is stateful and the client needs to handle reconnections in case of network failures.
 
-
 ## WebSockets
 
 WebSockets protocol on DiceDB allows clients to connect to dice over a persistent websocket connection. This allows clients to connect to dice over the web while also being able to bypass the limitations of SSE. Websocket being a full-duplex protocol, allows clients to send and receive messages simultaneously.
 
-
-| Name | Value | Configuration |
-|-|-|-|
-| Default Port | 8379 | `--websocket-port` flag |
+| Name         | Value | Configuration           |
+| ------------ | ----- | ----------------------- |
+| Default Port | 8379  | `--websocket-port` flag |
 
 To understand the request and response format better, please refer to the [WebSockets Protocol](/protocols/websockets) documentation.
 

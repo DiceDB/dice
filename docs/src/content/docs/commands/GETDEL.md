@@ -13,16 +13,16 @@ GETDEL key
 
 ## Parameters
 
-| Parameter | Description                                                               | Type    | Required |
-|-----------|---------------------------------------------------------------------------|---------|----------|
-| `key`     | The key whose value you want to retrieve and delete.                      | String  | Yes      |
+| Parameter | Description                                          | Type   | Required |
+| --------- | ---------------------------------------------------- | ------ | -------- |
+| `key`     | The key whose value you want to retrieve and delete. | String | Yes      |
 
 ## Return values
 
-| Condition            | Return Value                                                     |
-|----------------------|------------------------------------------------------------------|
-| Key exists           | `String`: The command returns the value associated with the key. |
-| Key does not exist   | `nil`: The command returns `nil`.                                |
+| Condition          | Return Value                                                     |
+| ------------------ | ---------------------------------------------------------------- |
+| Key exists         | `String`: The command returns the value associated with the key. |
+| Key does not exist | `nil`: The command returns `nil`.                                |
 
 ## Behaviour
 
@@ -57,7 +57,11 @@ OK
 (nil)
 ```
 
+<<<<<<< HEAD
+`Explanation:`
+=======
 ### Using `GETDEL` on a Non-Existent Key
+>>>>>>> d43577926873d0df0c8f189cdde6afa65c515ccb
 
 Trying to retrieve and delete a key `nonexistingkey` that does not exist.
 
@@ -66,7 +70,14 @@ Trying to retrieve and delete a key `nonexistingkey` that does not exist.
 (nil)
 ```
 
+<<<<<<< HEAD
+`Explanation:`
+
+- The key `nonexistingkey` does not exist in the database.
+- The `GETDEL` command returns `nil` since the key is not found.
+=======
 ### Using `GETDEL` on a Key with a Different Data Type
+>>>>>>> d43577926873d0df0c8f189cdde6afa65c515ccb
 
 Setting a key `mylist` as a list and then trying to use `GETDEL`, which is incompatible with non-string data types.
 
@@ -74,5 +85,15 @@ Setting a key `mylist` as a list and then trying to use `GETDEL`, which is incom
 127.0.0.1:7379> LPUSH mylist "item1"
 (integer) 1
 127.0.0.1:7379> GETDEL mylist
+<<<<<<< HEAD
+ERROR WRONGTYPE Operation against a key holding the wrong kind of value
+```
+
+`Explanation:`
+
+- The key `mylist` is a list, not a string.
+- The `GETDEL` command raises a `WRONGTYPE` error because it expects the key to be a string.
+=======
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
+>>>>>>> d43577926873d0df0c8f189cdde6afa65c515ccb

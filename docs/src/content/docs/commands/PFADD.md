@@ -13,17 +13,17 @@ PFADD key element [element ...]
 
 ## Parameters
 
-| Parameter  | Description                                                                                              | Type    | Required |
-|------------|----------------------------------------------------------------------------------------------------------|---------|----------|
-| `key`      | The name of the HyperLogLog data structure. If it does not exist, a new one is created.                  | String  | Yes      |
-| `element`  | One or more elements to add to the HyperLogLog. Multiple elements can be specified, separated by spaces. | String  | Yes      |
+| Parameter | Description                                                                                              | Type   | Required |
+| --------- | -------------------------------------------------------------------------------------------------------- | ------ | -------- |
+| `key`     | The name of the HyperLogLog data structure. If it does not exist, a new one is created.                  | String | Yes      |
+| `element` | One or more elements to add to the HyperLogLog. Multiple elements can be specified, separated by spaces. | String | Yes      |
 
 ## Return values
 
-| Condition                                           | Return Value    |
-|-----------------------------------------------------|-----------------|
-| At least one internal register was altered          | `1`             |
-| No internal register was altered                    | `0`             |
+| Condition                                  | Return Value |
+| ------------------------------------------ | ------------ |
+| At least one internal register was altered | `1`          |
+| No internal register was altered           | `0`          |
 
 ## Behaviour
 

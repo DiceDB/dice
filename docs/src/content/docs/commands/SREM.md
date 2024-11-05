@@ -118,4 +118,3 @@ SREM mykey "one"
 - If the set becomes empty after the removal of members, the key is automatically deleted from the database.
 
 By understanding the `SREM` command, you can effectively manage the members of sets in your DiceDB database, ensuring efficient and error-free operations.
-

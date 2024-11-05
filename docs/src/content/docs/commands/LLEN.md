@@ -13,23 +13,23 @@ LLEN key
 
 ## Parameters
 
-| Parameter | Description                                                               | Type    | Required |
-|-----------|---------------------------------------------------------------------------|---------|----------|
-| `key`     | The key associated with the list whose length you want to retrieve.       | String  | Yes      |
+| Parameter | Description                                                         | Type   | Required |
+| --------- | ------------------------------------------------------------------- | ------ | -------- |
+| `key`     | The key associated with the list whose length you want to retrieve. | String | Yes      |
 
 ## Return values
 
-| Condition                                      | Return Value                                                    |
-|------------------------------------------------|-----------------------------------------------------------------|
-| Command is successful                          | `Integer` denoting the length of the list at the specified key. |
-| If the key does not exist                      | `0` (the key is interpreted as an empty list)                   |
-| Syntax or specified constraints are invalid    | error                                                           |
+| Condition                                   | Return Value                                                    |
+| ------------------------------------------- | --------------------------------------------------------------- |
+| Command is successful                       | `Integer` denoting the length of the list at the specified key. |
+| If the key does not exist                   | `0` (the key is interpreted as an empty list)                   |
+| Syntax or specified constraints are invalid | error                                                           |
 
 ## Behaviour
 
- - If the key exists and is associated with a list, the `LLEN` command returns the number of elements in the list.
- - If the key does not exist, the `LLEN` command returns `0`, indicating that the list is empty.
- - If the key exists but is not associated with a list, an error is returned.
+- If the key exists and is associated with a list, the `LLEN` command returns the number of elements in the list.
+- If the key does not exist, the `LLEN` command returns `0`, indicating that the list is empty.
+- If the key exists but is not associated with a list, an error is returned.
 
 ## Errors
 

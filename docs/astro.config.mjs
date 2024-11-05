@@ -26,7 +26,7 @@ export default defineConfig({
         // },
         {
           label: "SDK",
-            autogenerate: { directory: "sdk" },
+          autogenerate: { directory: "sdk" },
         },
         {
           label: "Connection Protocols",

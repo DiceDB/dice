@@ -28,14 +28,17 @@ When the `JSON.ARRAPPEND` command is executed, the specified JSON values are app
 ## Error Handling
 
 1. `Wrong type of value or key`:
+
    - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
    - Occurs when attempting to use the command on a key that contains a non-string value.
 
 2. `Invalid Key`:
+
    - Error Message: `(error) ERR key does not exist`
    - Occurs when attempting to use the command on a key that does not exist.
 
 3. `Invalid Path`:
+
    - Error Message: `(error) ERR path %s does not exist`
    - Occurs when attempting to use the command on a path that does not exist in the JSON document.
 
@@ -107,4 +110,3 @@ OK
 - JSONPath expressions are used to navigate and specify the location within the JSON document. Familiarity with JSONPath syntax is beneficial for effective use of this command.
 
 By following this documentation, users can effectively utilize the `JSON.ARRAPPEND` command to manipulate JSON arrays within DiceDB.
-

@@ -116,4 +116,3 @@ Wrong Number of Arguments for HGET Command
 - The `HGET` command is a read-only command and does not modify the hash or any other data in the DiceDB database.
 
 By understanding the `HGET` command, you can efficiently retrieve values from hashes stored in your DiceDB database, ensuring that your application can access the necessary data quickly and reliably.
-
