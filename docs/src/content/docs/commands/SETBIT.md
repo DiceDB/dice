@@ -7,7 +7,7 @@ The `SETBIT` command in DiceDB is used to set or clear the bit at a specified of
 
 ## Syntax
 
-```
+```bash
 SETBIT key offset value
 ```
 
@@ -37,7 +37,7 @@ The command returns the original bit value stored at the specified offset before
 
 ### Setting a Bit
 
-```DiceDB
+```bash
 SETBIT mykey 7 1
 ```
 
@@ -45,7 +45,7 @@ This command sets the bit at offset 7 in the string value stored at `mykey` to 1
 
 ### Clearing a Bit
 
-```DiceDB
+```bash
 SETBIT mykey 7 0
 ```
 
@@ -53,7 +53,7 @@ This command clears the bit at offset 7 in the string value stored at `mykey` to
 
 ### Checking the Original Bit Value
 
-```DiceDB
+```bash
 SETBIT mykey 7 1
 ```
 
@@ -61,7 +61,7 @@ If the bit at offset 7 was previously 0, this command will return 0 and then set
 
 ### Extending the String
 
-```DiceDB
+```bash
 SETBIT mykey 100 1
 ```
 
@@ -71,7 +71,7 @@ If the string stored at `mykey` is shorter than 101 bits, it will be extended, a
 
 ### Invalid Offset
 
-```DiceDB
+```bash
 SETBIT mykey -1 1
 ```
 
@@ -79,7 +79,7 @@ This command will raise an error: `ERR bit is not an integer or out of range` be
 
 ### Invalid Value
 
-```DiceDB
+```bash
 SETBIT mykey 7 2
 ```
 
@@ -87,7 +87,7 @@ This command will raise an error: `ERR bit is not an integer or out of range` be
 
 ### Wrong Type
 
-```DiceDB
+```bash
 SET mykey "Hello"
 SETBIT mykey 7 1
 ```

@@ -1,4 +1,4 @@
-package async
+package resp
 
 import (
 	"strconv"
@@ -147,7 +147,6 @@ func TestGetEx(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// deleteTestKeys([]string{"foo"}, store)
 			FireCommand(conn, "DEL foo")
 
 			for i, cmd := range tc.commands {

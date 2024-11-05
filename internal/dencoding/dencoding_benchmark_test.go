@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/dicedb/dice/internal/dencoding"
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func BenchmarkEncodeDecodeInt(b *testing.B) {

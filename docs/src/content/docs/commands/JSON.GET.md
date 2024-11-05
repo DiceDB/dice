@@ -7,26 +7,25 @@ The `JSON.GET` command allows you to store, update, and retrieve JSON values in 
 
 ## Syntax
 
-```
+```bash
 JSON.GET <key> [path]
 ```
 
 ## Parameters
 
-| Parameter | Description                                                                                                                                                     | Type   | Required |
-|-----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|----------|
-| `key`     | The key against which the JSON data is stored in DiceDB                                                                                                         | String | Yes      |
+| Parameter | Description                                                                                                                                                      | Type   | Required |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | -------- |
+| `key`     | The key against which the JSON data is stored in DiceDB                                                                                                          | String | Yes      |
 | `path`    | A JSONPath expression to specify the part of the JSON document to retrieve. If not provided, the entire JSON document is returned. Default value is **$** (root) | String | No       |
-
 
 ## Return Values
 
 | Condition                                                                    | Return Value                                         |
 | ---------------------------------------------------------------------------- | ---------------------------------------------------- |
 | The specified key does not exists                                            | `nil`                                                |
-| The specified key exists and path argument is not specified                  | `String`: The entire JSON data for the key                |
+| The specified key exists and path argument is not specified                  | `String`: The entire JSON data for the key           |
 | The specified key exists and the specified path exists in the JSON data      | `String`: The data for the key at the specified path |
-| The specified key exists and specified path does not exists in the JSON data | `error`                                                |
+| The specified key exists and specified path does not exists in the JSON data | `error`                                              |
 | Syntax or specified constraints are invalid                                  | error                                                |
 
 ## Behaviour
@@ -41,11 +40,11 @@ When the `JSON.GET` command is executed:
 ## Errors
 
 1. `Incorrect number of arguments`
-    - Error Message: `(error) ERR wrong number of arguments for 'json.get' command`
+   - Error Message: `(error) ERR wrong number of arguments for 'json.get' command`
 2. `Invalid JSONPath expression`
-    - Error Message: `(error) ERR invalid JSONPath`
+   - Error Message: `(error) ERR invalid JSONPath`
 3. `Non-Existent JSONPath in the JSON data stored against a key`
-    - Error Message: `(error) ERR Path '$.<path>' does not exist`
+   - Error Message: `(error) ERR Path '$.<path>' does not exist`
 
 ## Example Usage
 

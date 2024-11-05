@@ -1,9 +1,9 @@
-package async
+package resp
 
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHMGET(t *testing.T) {
@@ -50,7 +50,7 @@ func TestHMGET(t *testing.T) {
 			for i, cmd := range tc.commands {
 				// Fire the command and get the result
 				result := FireCommand(conn, cmd)
-				assert.DeepEqual(t, result, tc.expected[i])
+				assert.Equal(t, result, tc.expected[i])
 			}
 		})
 	}

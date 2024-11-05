@@ -1,9 +1,9 @@
-package async
+package resp
 
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 var ZERO int64 = 0
@@ -40,7 +40,7 @@ func TestHSET(t *testing.T) {
 	for _, tc := range testCases {
 		for i, cmd := range tc.commands {
 			result := FireCommand(conn, cmd)
-			assert.DeepEqual(t, tc.expected[i], result)
+			assert.Equal(t, tc.expected[i], result)
 		}
 	}
 }

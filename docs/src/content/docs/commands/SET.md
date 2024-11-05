@@ -7,14 +7,14 @@ The `SET` command in DiceDB is used to set the value of a key. If the key alread
 
 ## Syntax
 
-```
+```bash
 SET key value [EX seconds | PX milliseconds | EXAT unix-time-seconds | PXAT unix-time-milliseconds | KEEPTTL] [NX | XX]
 ```
 
 ## Parameters
 
 | Parameter | Description                                                               | Type    | Required |
-|-----------|---------------------------------------------------------------------------|---------|----------|
+| --------- | ------------------------------------------------------------------------- | ------- | -------- |
 | `key`     | The name of the key to be set.                                            | String  | Yes      |
 | `value`   | The value to be set for the key.                                          | String  | Yes      |
 | `EX`      | Set the specified expire time, in seconds.                                | Integer | No       |
@@ -27,11 +27,11 @@ SET key value [EX seconds | PX milliseconds | EXAT unix-time-seconds | PXAT unix
 
 ## Return values
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| Command is successful                          | `OK`                                              |
-| `NX` or `XX` conditions are not met            | `nil`                                             |
-| Syntax or specified constraints are invalid    | error                                             |
+| Condition                                   | Return Value |
+| ------------------------------------------- | ------------ |
+| Command is successful                       | `OK`         |
+| `NX` or `XX` conditions are not met         | `nil`        |
+| Syntax or specified constraints are invalid | error        |
 
 ## Behaviour
 

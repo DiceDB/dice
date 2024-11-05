@@ -49,7 +49,7 @@ func hashMapBuilder(keyValuePairs []string, currentHashMap HashMap) (HashMap, in
 
 	for iter <= argLength-1 {
 		if iter >= argLength-1 || iter+1 > argLength-1 {
-			return hmap, -1, diceerrors.NewErr(fmt.Sprintf(diceerrors.ArityErr, "HSET"))
+			return hmap, -1, diceerrors.ErrWrongArgumentCount("HSET")
 		}
 
 		k := keyValuePairs[iter]
@@ -65,27 +65,35 @@ func hashMapBuilder(keyValuePairs []string, currentHashMap HashMap) (HashMap, in
 	return hmap, numKeysNewlySet, nil
 }
 
-func getValueFromHashMap(key, field string, store *dstore.Store) (val, err []byte) {
-	var value string
-
+func getValueFromHashMap(key, field string, store *dstore.Store) *EvalResponse {
 	obj := store.Get(key)
-
 	if obj == nil {
-		return clientio.RespNIL, nil
-	}
-
-	switch currentVal := obj.Value.(type) {
-	case HashMap:
-		val, present := currentVal.Get(field)
-		if !present {
-			return clientio.RespNIL, nil
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
 		}
-		value = *val
-	default:
-		return nil, diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
-	return clientio.Encode(value, false), nil
+	hashMap, ok := obj.Value.(HashMap)
+	if !ok {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	val, present := hashMap.Get(field)
+	if !present {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	return &EvalResponse{
+		Result: *val,
+		Error:  nil,
+	}
 }
 
 func (h HashMap) incrementValue(field string, increment int64) (int64, error) {

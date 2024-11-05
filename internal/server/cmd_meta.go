@@ -50,6 +50,18 @@ var (
 		Cmd:     "SET",
 		CmdType: SingleShard,
 	}
+	expireCmdMeta = CmdsMeta{
+		Cmd:     "EXPIRE",
+		CmdType: SingleShard,
+	}
+	expireAtCmdMeta = CmdsMeta{
+		Cmd:     "EXPIREAT",
+		CmdType: SingleShard,
+	}
+	expireTimeCmdMeta = CmdsMeta{
+		Cmd:     "EXPIRETIME",
+		CmdType: SingleShard,
+	}
 	getCmdMeta = CmdsMeta{
 		Cmd:     "GET",
 		CmdType: SingleShard,
@@ -149,6 +161,14 @@ var (
 	}
 	pfmergeCmdMeta = CmdsMeta{
 		Cmd:     "PFMERGE",
+		CmdType: SingleShard,
+	}
+	ttlCmdMeta = CmdsMeta{
+		Cmd:     "TTL",
+		CmdType: SingleShard,
+	}
+	pttlCmdMeta = CmdsMeta{
+		Cmd:     "PTTL",
 		CmdType: SingleShard,
 	}
 
@@ -276,6 +296,38 @@ var (
 		Cmd:     "CMS.MERGE",
 		CmdType: SingleShard,
 	}
+	getexCmdMeta = CmdsMeta{
+		Cmd:     "GETEX",
+		CmdType: SingleShard,
+	}
+	getdelCmdMeta = CmdsMeta{
+		Cmd:     "GETDEL",
+		CmdType: SingleShard,
+	}
+	hsetCmdMeta = CmdsMeta{
+		Cmd:     "HSET",
+		CmdType: SingleShard,
+	}
+	hgetCmdMeta = CmdsMeta{
+		Cmd:     "HGET",
+		CmdType: SingleShard,
+	}
+	hsetnxCmdMeta = CmdsMeta{
+		Cmd:     "HSETNX",
+		CmdType: SingleShard,
+	}
+	hdelCmdMeta = CmdsMeta{
+		Cmd:     "HDEL",
+		CmdType: SingleShard,
+	}
+	hmsetCmdMeta = CmdsMeta{
+		Cmd:     "HMSET",
+		CmdType: SingleShard,
+	}
+	hmgetCmdMeta = CmdsMeta{
+		Cmd:     "HMGET",
+		CmdType: SingleShard,
+	}
 
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
@@ -290,6 +342,9 @@ func init() {
 
 	// Single-shard commands.
 	WorkerCmdsMeta["SET"] = setCmdMeta
+	WorkerCmdsMeta["EXPIRE"] = expireCmdMeta
+	WorkerCmdsMeta["EXPIREAT"] = expireAtCmdMeta
+	WorkerCmdsMeta["EXPIRETIME"] = expireTimeCmdMeta
 	WorkerCmdsMeta["GET"] = getCmdMeta
 	WorkerCmdsMeta["GETSET"] = getsetCmdMeta
 	WorkerCmdsMeta["SETEX"] = setexCmdMeta
@@ -340,6 +395,8 @@ func init() {
 	WorkerCmdsMeta["ZPOPMIN"] = zpopminCmdMeta
 	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
 	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
+	WorkerCmdsMeta["TTL"] = ttlCmdMeta
+	WorkerCmdsMeta["PTTL"] = pttlCmdMeta
 	WorkerCmdsMeta["HINCRBY"] = hincrbyCmdMeta
 	WorkerCmdsMeta["HINCRBYFLOAT"] = hincrbyfloatCmdMeta
 	WorkerCmdsMeta["HRANDFIELD"] = hrandfieldCmdMeta
@@ -360,5 +417,13 @@ func init() {
 	WorkerCmdsMeta["CMS.INCRBY"] = cmsIncrByCmdMeta
 	WorkerCmdsMeta["CMS.QUERY"] = cmsQueryCmdMeta
 	WorkerCmdsMeta["CMS.MERGE"] = cmsMergeCmdMeta
+	WorkerCmdsMeta["GETEX"] = getexCmdMeta
+	WorkerCmdsMeta["GETDEL"] = getdelCmdMeta
+	WorkerCmdsMeta["HSET"] = hsetCmdMeta
+	WorkerCmdsMeta["HGET"] = hgetCmdMeta
+	WorkerCmdsMeta["HSETNX"] = hsetnxCmdMeta
+	WorkerCmdsMeta["HDEL"] = hdelCmdMeta
+	WorkerCmdsMeta["HMSET"] = hmsetCmdMeta
+	WorkerCmdsMeta["HMGET"] = hmgetCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }

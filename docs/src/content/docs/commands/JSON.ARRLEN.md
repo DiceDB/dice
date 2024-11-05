@@ -13,15 +13,15 @@ JSON.ARRLEN <key> [path]
 
 ## Parameters
 
-| Parameter | Description                                                             | Type   | Required |
-|-----------|-------------------------------------------------------------------------|--------|----------|
-| `key`     | The key under which the JSON document is stored.                        | String | Yes      |
-| `path`    | The JSONPath to the array within the JSON document. Defaults to root.   | String | No       |
+| Parameter | Description                                                           | Type   | Required |
+| --------- | --------------------------------------------------------------------- | ------ | -------- |
+| `key`     | The key under which the JSON document is stored.                      | String | Yes      |
+| `path`    | The JSONPath to the array within the JSON document. Defaults to root. | String | No       |
 
 ## Return values
 
 | Condition                                 | Return Value                                                                    |
-|-------------------------------------------|---------------------------------------------------------------------------------|
+| ----------------------------------------- | ------------------------------------------------------------------------------- |
 | JSON array is found at the specified path | Length of the JSON array                                                        |
 | JSONPath contains `*` wildcard            | Indicates the length of each key in the JSON. Returns `nil` for non-array keys. |
 
@@ -36,14 +36,17 @@ JSON.ARRLEN <key> [path]
 ## Errors
 
 1. `Wrong number of arguments`:
+
    - Error Message: `(error) ERROR wrong number of arguments for 'JSON.ARRLEN' command`
    - Occurs when the command is executed with less than one argument or with an invalid number of parameters.
 
 2. `Invalid JSONPath`:
+
    - Error Message: `(error) ERROR Invalid JSONPath`
    - Occurs when the specified JSONPath is not valid or incorrect
 
 3. `Path does not exist`:
+
    - Error Message: `(error) ERROR Path 'NON_EXISTANT_PATH' does not exist`
    - Occurs when the provided JSON path does not exist in the document.
 

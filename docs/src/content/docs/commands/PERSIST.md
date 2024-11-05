@@ -7,22 +7,22 @@ The `PERSIST` command is used to remove the expiration from a key in DiceDB. If 
 
 ## Syntax
 
-```
+```bash
 PERSIST key
 ```
 
 ## Parameters
 
-| Parameter | Description                                                               | Type    | Required |
-|-----------|---------------------------------------------------------------------------|---------|----------|
-| `key`     | The name of the key to persist.                                            | String  | Yes      |
+| Parameter | Description                     | Type   | Required |
+| --------- | ------------------------------- | ------ | -------- |
+| `key`     | The name of the key to persist. | String | Yes      |
 
 ## Return Value
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| The timeout was successfully removed           | `1`                                              |
-| The key does not exist or does not have a timeout| `0`                                             |
+| Condition                                         | Return Value |
+| ------------------------------------------------- | ------------ |
+| The timeout was successfully removed              | `1`          |
+| The key does not exist or does not have a timeout | `0`          |
 
 ## Behaviour
 
@@ -35,10 +35,10 @@ When the `PERSIST` command is executed:
 ## Error Handling
 
 1. `Wrong type of value or key`:
-    - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
-    - Occurs when attempting to use the command on a key that contains a non-string value or one that does not support expiration.
+   - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
+   - Occurs when attempting to use the command on a key that contains a non-string value or one that does not support expiration.
 2. `No timeout to persist`:
-    - This is not an error but occurs when the key either does not exist or does not have an expiration time. The command will return `0` in such cases.    
+   - This is not an error but occurs when the key either does not exist or does not have an expiration time. The command will return `0` in such cases.
 
 ## Example Usage
 
@@ -48,14 +48,17 @@ When the `PERSIST` command is executed:
 127.0.0.1:7379> SET mykey "Hello"
 OK
 ```
+
 ```bash
 127.0.0.1:7379> EXPIRE mykey 10
 (integer) 1
 ```
+
 ```bash
 127.0.0.1:7379> PERSIST mykey
 (integer) 1
 ```
+
 ```bash
 127.0.0.1:7379> TTL mykey
 (integer) -1
@@ -95,8 +98,6 @@ OK
 
 - The command returns `0` because `mykey` does not have an expiration time set.
 
-
 ## Summary
 
 The `PERSIST` command is a useful tool for managing the lifecycle of keys in a DiceDB database. By removing the expiration from a key, you can ensure that the key remains in the database until explicitly deleted. This command is straightforward but powerful, allowing for greater control over key persistence.
-
