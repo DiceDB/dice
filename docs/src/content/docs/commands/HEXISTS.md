@@ -14,16 +14,16 @@ HEXISTS key field
 ## Parameters
 
 | Parameter | Description                        | Type   | Required |
-|-----------|------------------------------------|--------|----------|
+| --------- | ---------------------------------- | ------ | -------- |
 | `key`     | The name of the key holding a hash | String | Yes      |
 | `field`   | The field to check within the hash | String | Yes      |
 
 ## Return values
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| If the field exists within the hash            | `1`                                               |
-| If the field does not exist within the hash    | `0`                                               |
+| Condition                                   | Return Value |
+| ------------------------------------------- | ------------ |
+| If the field exists within the hash         | `1`          |
+| If the field does not exist within the hash | `0`          |
 
 ## Behaviour
 

@@ -24,10 +24,10 @@ EXPIREAT key timestamp [NX|XX|GT|LT]
 
 ## Return Values
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| Timeout was successfully set.                  | `1`                                              |
-| Timeout was not set (e.g., key does not exist, or conditions not met).| `0`                                             |
+| Condition                                                              | Return Value |
+| ---------------------------------------------------------------------- | ------------ |
+| Timeout was successfully set.                                          | `1`          |
+| Timeout was not set (e.g., key does not exist, or conditions not met). | `0`          |
 
 ## Behaviour
 
@@ -39,10 +39,12 @@ EXPIREAT key timestamp [NX|XX|GT|LT]
 ## Errors
 
 1. `Syntax Error`:
+
    - Error Message: `(error) ERROR wrong number of arguments for 'expireat' command`
    - Returned if the command is issued with an incorrect number of arguments.
 
 2. `Invalid Timestamp`:
+
    - Error Message: `(error) ERROR value is not an integer or out of range`
    - Returned if the timestamp is not a valid integer.
 
@@ -53,6 +55,7 @@ EXPIREAT key timestamp [NX|XX|GT|LT]
 ## Example Usage
 
 ### Basic Usage
+
 This example demonstrates setting a key to expire at a specific Unix timestamp.
 
 ```bash
@@ -92,12 +95,12 @@ Here, the `XX` option is used to set the expiration time only if the key already
 
 ```bash
 127.0.0.1:7379> SET key value
-OK                                                                           
+OK
 127.0.0.1:7379> EXPIREAT key 12345677777 XX
 (integer) 0
 127.0.0.1:7379> EXPIREAT key 12345677777
 (integer) 1
-127.0.0.1:7379> EXPIREAT key 123456777722 XX 
+127.0.0.1:7379> EXPIREAT key 123456777722 XX
 (integer) 1
 ```
 
@@ -107,12 +110,12 @@ The `GT` option is used to set the expiration time only if the new expiration ti
 
 ```bash
 127.0.0.1:7379> SET key value
-OK                             
+OK
 127.0.0.1:7379> EXPIREAT key 12334444444
 (integer) 1
-127.0.0.1:7379> EXPIREAT key 12334444424 GT 
+127.0.0.1:7379> EXPIREAT key 12334444424 GT
 (integer) 0
-127.0.0.1:7379> EXPIREAT key 12334444524 GT 
+127.0.0.1:7379> EXPIREAT key 12334444524 GT
 (integer) 1
 ```
 
@@ -122,7 +125,7 @@ Similar to the `GT` option, the `LT` option is used to set the expiration time o
 
 ```bash
 127.0.0.1:7379> SET key value
-OK          
+OK
 127.0.0.1:7379> EXPIREAT key 12334444444
 (integer) 1
 127.0.0.1:7379> EXPIREAT key 12334444445 LT

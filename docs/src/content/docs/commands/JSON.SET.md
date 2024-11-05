@@ -13,22 +13,21 @@ JSON.SET <key> <path> <json> [NX | XX]
 
 ## Parameters
 
-| Parameter | Description                                                                                                                                                     | Type   | Required |
-|-----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|----------|
-| `key`| The key under which the JSON document is stored. If the key does not exist, it will be created| String | Yes
-| `path`| The path within the JSON document where the value should be set. The path should be specified in JSONPath format. Use `$` to refer to the root of the document | String | Yes
-| `json`| The JSON value to set at the specified path. This should be a valid JSON string | JSON | Yes
-| `NX` | Optional flag. Only set the value if the key does not already exist | Flag | No
-| `XX`| Optional flag. Only set the value if the key already exists  | Flag | No
+| Parameter | Description                                                                                                                                                    | Type   | Required |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | -------- |
+| `key`     | The key under which the JSON document is stored. If the key does not exist, it will be created                                                                 | String | Yes      |
+| `path`    | The path within the JSON document where the value should be set. The path should be specified in JSONPath format. Use `$` to refer to the root of the document | String | Yes      |
+| `json`    | The JSON value to set at the specified path. This should be a valid JSON string                                                                                | JSON   | Yes      |
+| `NX`      | Optional flag. Only set the value if the key does not already exist                                                                                            | Flag   | No       |
+| `XX`      | Optional flag. Only set the value if the key already exists                                                                                                    | Flag   | No       |
 
 ## Return Values
 
-
-| Condition                                              | Return Value                                                                                       |
-|--------------------------------------------------------|---------------------------------------------------------------------------------------------------|
-| Command is successful  | returns `OK` |
-| NX or XX conditions not met | returns `nil` |
-| Syntax or specified constraints are invalid | error |
+| Condition                                   | Return Value  |
+| ------------------------------------------- | ------------- |
+| Command is successful                       | returns `OK`  |
+| NX or XX conditions not met                 | returns `nil` |
+| Syntax or specified constraints are invalid | error         |
 
 ### JSONPath Support
 
@@ -50,21 +49,19 @@ When the `JSON.SET` command is executed, the following behaviors are observed:
 
 ## Errors
 
-
 1. `Incorrect number of arguments`
    - `Error Message`: `(error) ERR wrong number of arguments for 'JSON.SET' command`
 2. `Invalid JSON`: If the provided JSON value is not a valid JSON string, an error will be raised.
    - `Error Message`: `(error) expected value at line 1 column 1`
-3. `Invalid JSONPath expression`: 
+3. `Invalid JSONPath expression`:
    1. If the object is being created and the path is not root:
       - Error Message: `ERR new objects must be created at the root`
    1. If the specified path is static but does not exist/cannot be created
       - Error Message: `(error) Err wrong static path`
-   2. If the specified path does not exist and cannot be created
+   1. If the specified path does not exist and cannot be created
       - Error Message: `Error occurred on position {}, "$.. <<<<----", expected one of the following: <string>, '*'`
 4. `NX/XX Conflict`: If both `NX` and `XX` flags are provided, an error will be raised.
    - `Error Message`: `(error) ERR syntax error`
-
 
 ## Example Usage
 

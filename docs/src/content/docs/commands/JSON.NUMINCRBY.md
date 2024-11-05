@@ -14,7 +14,7 @@ JSON.NUMINCRBY <key> <path> <increment>
 ## Parameters
 
 | Parameter   | Description                                                                             | Type           | Required |
-|-------------|-----------------------------------------------------------------------------------------|----------------|----------|
+| ----------- | --------------------------------------------------------------------------------------- | -------------- | -------- |
 | `key`       | The key under which the JSON document is stored.                                        | String         | Yes      |
 | `path`      | The JSONPath expression specifying the location of the numeric value to be incremented. | String         | Yes      |
 | `increment` | The numeric value by which to increment the target value.                               | Floating Point | Yes      |
@@ -22,7 +22,7 @@ JSON.NUMINCRBY <key> <path> <increment>
 ## Return Value
 
 | Condition                                  | Return Value                          |
-|--------------------------------------------|---------------------------------------|
+| ------------------------------------------ | ------------------------------------- |
 | Command is successful                      | Array of new value for update objects |
 | Key does not exist or JSON path is invalid | error                                 |
 
@@ -35,13 +35,13 @@ JSON.NUMINCRBY <key> <path> <increment>
 
 1. `Key does not exist`:
 
-    - Error Message: `(error) ERROR could not perform this operation on a key that doesn't exist`
-    - Occurs when the specified key does not exist in the DiceDB database. 
+   - Error Message: `(error) ERROR could not perform this operation on a key that doesn't exist`
+   - Occurs when the specified key does not exist in the DiceDB database.
 
 2. `Invalid JSON path`:
 
-    - Error Message: `(error) ERROR invalid JSONPath`
-    - Occurs when the provided JSONPath expression is not valid.
+   - Error Message: `(error) ERROR invalid JSONPath`
+   - Occurs when the provided JSONPath expression is not valid.
 
 ## Example Usage
 

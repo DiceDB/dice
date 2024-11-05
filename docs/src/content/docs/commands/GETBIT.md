@@ -13,17 +13,17 @@ GETBIT key offset
 
 ## Parameters
 
-| Parameter | Description                                                               | Type    | Required |
-|-----------|---------------------------------------------------------------------------|---------|----------|
-| `key`     | The key of the string from which the bit value is to be retrieved. This key must reference a string value.                                            | String  | Yes      |
-| `offset`   | The position of the bit to retrieve. The offset is a zero-based integer, meaning the first bit is at position 0. | Integer | Yes |
+| Parameter | Description                                                                                                      | Type    | Required |
+| --------- | ---------------------------------------------------------------------------------------------------------------- | ------- | -------- |
+| `key`     | The key of the string from which the bit value is to be retrieved. This key must reference a string value.       | String  | Yes      |
+| `offset`  | The position of the bit to retrieve. The offset is a zero-based integer, meaning the first bit is at position 0. | Integer | Yes      |
 
 ## Return Values
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| Command is successful                           | `0` or `1`  |
-| Syntax or specified constraints are invalid     | error       |
+| Condition                                   | Return Value |
+| ------------------------------------------- | ------------ |
+| Command is successful                       | `0` or `1`   |
+| Syntax or specified constraints are invalid | error        |
 
 ## Behaviour
 
@@ -37,18 +37,18 @@ GETBIT key offset
 
 1. `Wrong number of arguments`:
 
-    - Error Message: `(error) wrong number of arguments for 'GETBIT' command`
-    - Occurs if both key and offset are not provided.
+   - Error Message: `(error) wrong number of arguments for 'GETBIT' command`
+   - Occurs if both key and offset are not provided.
 
 2. `Non-string value stored against the key`:
 
-    - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
-    - Occurs if the key exists but does not contain a string value.
+   - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
+   - Occurs if the key exists but does not contain a string value.
 
 3. `Non-integer or negative value for offset`:
 
-    - Error Message: `(error) ERR bit offset is not an integer or out of range`
-    - Occurs if the offset is not a valid integer or is negative.
+   - Error Message: `(error) ERR bit offset is not an integer or out of range`
+   - Occurs if the offset is not a valid integer or is negative.
 
 ## Example Usage
 

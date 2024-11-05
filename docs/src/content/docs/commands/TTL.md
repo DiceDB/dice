@@ -12,18 +12,18 @@ TTL key
 ```
 
 ## Parameters
-| Parameter       | Description                                      | Type    | Required |
-|-----------------|--------------------------------------------------|---------|----------|
-| `key`           | The key for which you want to check the TTL.                   | String  | Yes      |
+
+| Parameter | Description                                  | Type   | Required |
+| --------- | -------------------------------------------- | ------ | -------- |
+| `key`     | The key for which you want to check the TTL. | String | Yes      |
 
 ## Return values
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| The remaining TTL in seconds                         | A positive integer                                              |
-| The key exists but has no associated expiration time            | `-1`                                             |
-| The key does not exist.    | `-2`                                             |
-
+| Condition                                            | Return Value       |
+| ---------------------------------------------------- | ------------------ |
+| The remaining TTL in seconds                         | A positive integer |
+| The key exists but has no associated expiration time | `-1`               |
+| The key does not exist.                              | `-2`               |
 
 ## Behaviour
 
@@ -49,7 +49,6 @@ TTL key
 ```
 
 In this example, a key `mykey` is created with a value "Hello". Then, an expiration time of 10 seconds is set using the `EXPIRE` command. When `TTL` is called on `mykey`, it returns 10, indicating that the key will expire in 10 seconds.
-
 
 ### Check TTL for key without expiration
 
@@ -81,7 +80,9 @@ In this example, the key `non_existent_key` does not exist in the DiceDB databas
 In this example, the `TTL` command is used with an extra argument. This results in an error, as the `TTL` command accepts only one argument.
 
 ## Best Practices
+
 - Use `TTL` in conjunction with `EXPIRE` or `EXPIREAT` commands to manage key expiration effectively
 
 ## Alternatives
+
 - `PTTL`: Similar to `TTL` but returns the time-to-live in milliseconds instead of seconds

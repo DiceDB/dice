@@ -1,7 +1,7 @@
-@import url("https://fonts.googleapis.com/css2?family=Assistant:wght@500;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Spline+Sans+Mono:ital,wght@0,300..700;1,300..700&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700;1,900&display=swap");
 
-$family-serif: "Assistant";
+$family-serif: "Spline Sans Mono", monospace;
 $family-primary: $family-serif;
 $family-secondary: "Merriweather", serif;
 
@@ -33,11 +33,11 @@ $button-border-color: #111;
 $button-hover-border-color: $link;
 
 pre {
-    background-color: #111 !important;
+  background-color: #111 !important;
 }
 
 figcaption.header {
-    display: none !important;
+  display: none !important;
 }
 
 .hnavbar {
@@ -105,6 +105,10 @@ ul.horizontal a {
     0 4px 8px 0 rgba(100, 100, 100, 0.2),
     0 6px 20px 0 rgba(500, 500, 500, 0.19);
   cursor: pointer;
+}
+
+.content img {
+  border-radius: 0.5em;
 }
 
 img.logo {

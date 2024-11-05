@@ -13,18 +13,16 @@ HGETALL key
 
 ## Parameters
 
-| Parameter       | Description                                      | Type    | Required |
-|-----------------|--------------------------------------------------|---------|----------|
-| `key`           | The key of the hash from which you want to retrieve all fields and values.                   | String  | Yes      |
-
+| Parameter | Description                                                                | Type   | Required |
+| --------- | -------------------------------------------------------------------------- | ------ | -------- |
+| `key`     | The key of the hash from which you want to retrieve all fields and values. | String | Yes      |
 
 ## Return values
 
-
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| The `key` exists and is a hash | Array of strings
-| The `key` does not exist           |  Empty array                                            |
+| Condition                      | Return Value     |
+| ------------------------------ | ---------------- |
+| The `key` exists and is a hash | Array of strings |
+| The `key` does not exist       | Empty array      |
 
 ## Behaviour
 
@@ -42,6 +40,7 @@ The `HGETALL` command can raise the following errors:
 - `(error) ERROR WRONGTYPE Operation against a key holding the wrong kind of value`: This error is raised if the specified key exists but is not a hash. DiceDB expects the key to be associated with a hash data structure, and if it is associated with a different data type (e.g., string, list, set, etc.), this error will be triggered.
 - `(empty array)` : This error is raised if the specified key does not exist.
 - `(error) ERROR wrong number of arguments for 'hgetall' command` : This error is raised if an invalid number of arguments are passed to the `HGETALL` command.
+
 ## Example Usage
 
 ### Example 1: Retrieving all fields and values from an existing hash
@@ -76,6 +75,7 @@ The `HGETALL` command can raise the following errors:
 ```
 
 ### Error Example:
+
 Key is not a hash
 
 ```bash
@@ -90,12 +90,14 @@ OK
 (error) ERROR WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
-### Error Example: 
+### Error Example:
+
 Invalid number of arguments are passed
 
 ```bash
 127.0.0.1:7379> HGETALL user:3000 helloworld
 ```
+
 `Output:`
 
 ```

@@ -14,7 +14,7 @@ SADD key member [member ...]
 ## Parameters
 
 | Parameter | Description                                        | Type   | Required | Multiple |
-|-----------|----------------------------------------------------|--------|----------|----------|
+| --------- | -------------------------------------------------- | ------ | -------- | -------- |
 | `key`     | The name of the set to which members will be added | String | Yes      | No       |
 | `member`  | One or more members to add to the set              | String | Yes      | Yes      |
 
@@ -23,10 +23,10 @@ SADD key member [member ...]
 
 ## Return values
 
-| Condition                             | Return Value                                         |
-|---------------------------------------|------------------------------------------------------|
-| Command is successful                 | Integer: Number of members added to the set          |
-| Key exists but is not a set           | Error                                                |
+| Condition                   | Return Value                                |
+| --------------------------- | ------------------------------------------- |
+| Command is successful       | Integer: Number of members added to the set |
+| Key exists but is not a set | Error                                       |
 
 - The integer returned represents the number of members that were actually added to the set, not including elements that were already present.
 - If all specified members already exist in the set, the command returns 0.
@@ -34,11 +34,13 @@ SADD key member [member ...]
 ## Behaviour
 
 1. **Key Existence Check**:
+
    - If the key does not exist, DiceDB creates a new set and adds the specified members to it.
    - If the key exists and is a set, the command adds the new members to the existing set.
    - If the key exists but is not a set, an error is returned.
 
 2. **Member Addition**:
+
    - Each specified member is added to the set if it's not already present.
    - If a member already exists in the set, it is ignored, and no error is raised.
    - The order in which members are specified does not affect the set, as sets are unordered.
@@ -47,14 +49,12 @@ SADD key member [member ...]
    - Sets only store unique elements. Attempting to add a duplicate element has no effect on the set.
    - The uniqueness is based on string comparison. For example, "1" and 1 are considered different members.
 
-
 ## Errors
 
 1. `Wrong type of value or key`:
    - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
    - Occurs when attempting to use the command on a key that contains a non-set value (e.g., string, list, hash).
    - This error ensures type safety in DiceDB operations.
-
 
 ## Example Usage
 

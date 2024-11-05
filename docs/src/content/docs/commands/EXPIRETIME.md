@@ -13,17 +13,17 @@ EXPIRETIME key
 
 ## Parameters
 
-| Parameter | Description                                                               | Type    | Required |
-|-----------|---------------------------------------------------------------------------|---------|----------|
-| `key`     | The name of the key whose expiration time is to be retrieved              | String  | Yes      |
+| Parameter | Description                                                  | Type   | Required |
+| --------- | ------------------------------------------------------------ | ------ | -------- |
+| `key`     | The name of the key whose expiration time is to be retrieved | String | Yes      |
 
 ## Return Values
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| The key exists and has an expiration time      | Unix timestamp (in seconds)                       |
-| The key exists but has no expiration time      | -1                                                |
-| The key does not exist                         | -2                                                |
+| Condition                                 | Return Value                |
+| ----------------------------------------- | --------------------------- |
+| The key exists and has an expiration time | Unix timestamp (in seconds) |
+| The key exists but has no expiration time | -1                          |
+| The key does not exist                    | -2                          |
 
 ## Behaviour
 
@@ -70,6 +70,7 @@ In this example, the key `mykey` is set with a value "Hello" but no expiration t
 127.0.0.1:7379> EXPIRETIME nonExistentKey
 (integer) -2
 ```
+
 In this example, the key `nonExistentKey` does not exist in the database. The `EXPIRETIME` command returns `-2` indicating that the key does not exist.
 
 ## Alternatives
