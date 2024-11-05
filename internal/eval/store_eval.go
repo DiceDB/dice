@@ -252,9 +252,7 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 			exDurationMs = exDuration - utils.GetCurrentTime().UnixMilli()
 			// If the expiry time is in the past, set exDurationMs to 0
 			// This will be used to signal immediate expiration
-			if exDurationMs < 0 {
-				exDurationMs = 0
-			}
+			exDurationMs = int64(math.Max(0, float64(exDurationMs)))
 			state = Initialized
 
 		case XX:
