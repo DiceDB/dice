@@ -1,6 +1,14 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import Hero from "../components/Hero.astro";
+import { MoveUpRight } from "lucide-astro";
+
+import { getCollection } from "astro:content";
+
+const blogs = await getCollection("blog", ({ id }) => id !== null);
+const recentBlogs = blogs
+  .sort((a, b) => b.data.published_at - a.data.published_at)
+  .slice(0, 3);
 
 const title = "DiceDB - a super cache;";
 const description =
@@ -38,5 +46,42 @@ const description =
         architecture <span class="has-text-danger">*</span>
       </li>
     </ul>
+  </div>
+  <div class="section content has-text-centered">
+    <p class="has-text-weight-bold has-text-danger">DICEDB BLOG</p>
+    <h2 class="is-size-3">Explore our insights</h2>
+    <p>
+      Explore our blogs to stay informed on internal details, announcements, and
+      use cases; and see what we are up to.
+    </p>
+    <br />
+    <div class="columns has-text-left">
+      {
+        recentBlogs.map((blog) => {
+          return (
+            <div class="column is-4">
+              <div class="box content">
+                <div>
+                  <p class="title is-size-5">
+                    <a href={`/blog/${blog.slug}`} class="has-text-danger">
+                      {blog.data.title}
+                    </a>
+                  </p>
+                  <p>{blog.data.description.slice(0, 128)}...</p>
+                  <p class="has-text-right">
+                    <a class="button is-small" href={`/blog/${blog.slug}`}>
+                      <span>Read post</span>
+                      <span class="icon">
+                        <MoveUpRight />
+                      </span>
+                    </a>
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        })
+      }
+    </div>
   </div>
 </Layout>
