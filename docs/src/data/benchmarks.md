@@ -80,9 +80,9 @@ The benchmark run tested DiceDB with 24 threads, 50 client connections per threa
 - the peak throughput DiceDB can handle is 1,940,109 ops/sec
 - the average throughput was 536,901 ops/sec, evenly split between GETs and SETs
 - the average latency for the overall benchmark was 1.99 milliseconds, pretty fast.
-  - p50 latency was 1.33 ms
-  - p99 latency was 8.83 ms, indicating that 99% of requests were faster than this.
-  - p99.9 latency reached 13.50 ms, showing how the highest-latency outliers behaved.
+    - p50 latency was 1.33 ms
+    - p99 latency was 8.83 ms, indicating that 99% of requests were faster than this.
+    - p99.9 latency reached 13.50 ms, showing how the highest-latency outliers behaved.
 
 ## Redis Benchmark
 
@@ -130,20 +130,20 @@ The benchmark run tested Redis with 24 threads, 50 client connections per thread
 - the peak throughput Redis can handle is 202,925 ops/sec
 - the average throughput was 192,485 ops/sec, evenly split between GETs and SETs
 - the average latency for the overall benchmark was 1.99 milliseconds, pretty fast.
-  - p50 latency was 5.69 ms
-  - p99 latency was 11.26 ms, indicating that 99% of requests were faster than this.
-  - p99.9 latency reached 14.01 ms, showing how the highest-latency outliers behaved.
+    - p50 latency was 5.69 ms
+    - p99 latency was 11.26 ms, indicating that 99% of requests were faster than this.
+    - p99.9 latency reached 14.01 ms, showing how the highest-latency outliers behaved.
 
 ## DiceDB vs Redis
 
-| Metric                | DiceDB                       | Redis                        |
-|---------------------------|-----------------------------------|-----------------------------------|
-| Peak Throughput (ops/sec) | 1,940,109                     | 202,925                          |
-| Average Throughput (ops/sec) | 536,901                    | 192,485                          |
-| Average Latency (ms)   | 2.23                             | 6.23                             |
-| p50 Latency (ms)       | 1.33                             | 5.69                             |
-| p99 Latency (ms)       | 8.83                             | 11.26                            |
-| p99.9 Latency (ms)     | 13.50                            | 14.01                            |
+| Metric                       | DiceDB                            | Redis                             |
+| ---------------------------- | --------------------------------- | --------------------------------- |
+| Peak Throughput (ops/sec)    | 1,940,109                         | 202,925                           |
+| Average Throughput (ops/sec) | 536,901                           | 192,485                           |
+| Average Latency (ms)         | 2.23                              | 6.23                              |
+| p50 Latency (ms)             | 1.33                              | 5.69                              |
+| p99 Latency (ms)             | 8.83                              | 11.26                             |
+| p99.9 Latency (ms)           | 13.50                             | 14.01                             |
 
 The benchmark results demonstrate that DiceDB significantly outperforms Redis in terms of throughput. DiceDB's peak throughput is ~9 times higher than Redis, reaching **1,940,109 ops per second** compared to Redis' 202,925 ops/sec. Additionally, DiceDB's average throughput is also much higher, clocking in at **536,901 ops/sec**, while Redis achieves 192,485 ops/sec. This indicates that DiceDB can handle far more operations in a given period, making it a better choice for applications requiring high throughput, such as real-time or reactive systems.
 

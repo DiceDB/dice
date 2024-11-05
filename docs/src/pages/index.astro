@@ -2,8 +2,7 @@
 import Layout from "../layouts/Layout.astro";
 import Hero from "../components/Hero.astro";
 
-const title =
-  "DiceDB - a super cache;"
+const title = "DiceDB - a super cache;";
 const description =
   "DiceDB is a redis-compliant, scalable, highly available, unified cache optimized for modern hardware";
 ---
@@ -13,10 +12,28 @@ const description =
   <div class="section content">
     <p>DiceDB is</p>
     <ul>
-      <li>Redis-compliant - a drop-in replacement of Redis (<a href="/blog/dicedb-is-redis-replacement">here's why</a>)</li>
-      <li>Scalable - scales out and scales in with load <span class="has-text-danger">*</span></li>
-      <li>Highly available - failovers and durability <span class="has-text-danger">*</span></li>
-      <li>Unified cache - multi-tenant and shared everything architecture <span class="has-text-danger">*</span></li>
-      <li>Optimized for modern hardware - multi-threaded with shared-nothing architecture <span class="has-text-danger">*</span></li>
+      <li>
+        Redis-compliant - a drop-in (<a href="/redis-compatability">36.4%</a>)
+        replacement of Redis (<a href="/blog/dicedb-is-redis-replacement"
+          >here's why</a
+        >)
+      </li>
+      <li>
+        Scalable - scales out and scales in with load <span
+          class="has-text-danger">*</span>
+      </li>
+      <li>
+        Highly available - failovers and durability <span
+          class="has-text-danger">*</span>
+      </li>
+      <li>
+        Unified cache - multi-tenant and shared everything architecture <span
+          class="has-text-danger">*</span>
+      </li>
+      <li>
+        Optimized for modern hardware - multi-threaded with shared-nothing
+        architecture <span class="has-text-danger">*</span>
+      </li>
+    </ul>
   </div>
 </Layout>
