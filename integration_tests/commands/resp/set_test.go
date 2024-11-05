@@ -52,7 +52,6 @@ func TestSet(t *testing.T) {
 func TestSetWithOptions(t *testing.T) {
 	conn := getLocalConnection()
 	expiryTime := strconv.FormatInt(time.Now().Add(1*time.Minute).UnixMilli(), 10)
-	defer FireCommand(conn, "FLUSHDB")
 	defer conn.Close()
 
 	testCases := []TestCase{
@@ -150,6 +149,8 @@ func TestSetWithOptions(t *testing.T) {
 			}
 		})
 	}
+
+	FireCommand(conn, "FLUSHDB")
 }
 
 func TestSetWithExat(t *testing.T) {

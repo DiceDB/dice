@@ -191,6 +191,7 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 	var state exDurationState = Uninitialized
 	var keepttl bool = false
 	var getVal bool = false
+	var getOldVal interface{}
 
 	key, value = args[0], args[1]
 	oType, oEnc := deduceTypeEncoding(value)
@@ -252,7 +253,9 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 			exDurationMs = exDuration - utils.GetCurrentTime().UnixMilli()
 			// If the expiry time is in the past, set exDurationMs to 0
 			// This will be used to signal immediate expiration
-			exDurationMs = int64(math.Max(0, float64(exDurationMs)))
+			if exDurationMs < 0 {
+				exDurationMs = 0
+			}
 			state = Initialized
 
 		case XX:
@@ -275,18 +278,14 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 			keepttl = true
 		case GET:
 			getVal = true
+			oldVal := evalGET([]string{key}, store)
+			if oldVal.Error != nil {
+				return makeEvalError(diceerrors.ErrWrongTypeOperation)
+			}
+			getOldVal = oldVal.Result
 		default:
 			return makeEvalError(diceerrors.ErrSyntax)
 		}
-	}
-	// get the old value if GET flag is set
-	var getOldVal interface{}
-	if getVal {
-		oldVal := evalGET([]string{key}, store)
-		if oldVal.Error != nil {
-			return makeEvalError(diceerrors.ErrWrongTypeOperation)
-		}
-		getOldVal = oldVal.Result
 	}
 
 	// Cast the value properly based on the encoding type
