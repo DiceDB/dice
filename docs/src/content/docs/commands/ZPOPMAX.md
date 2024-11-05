@@ -1,5 +1,5 @@
 ---
-title: ZPOPMAX  
+title: ZPOPMAX
 description: The `ZPOPMAX` command in DiceDB is used to remove and return the members with the highest scores from the sorted set data structure at the specified key. The second argument count is optional which specifies the number of elements that needs to be popped from the sorted set.
 ---
 
@@ -13,17 +13,17 @@ ZPOPMAX key [count]
 
 ## Parameters
 
-| Parameter  | Description                                                                                  | Type    | Required |
-|------------|----------------------------------------------------------------------------------------------|---------|----------|
-| `key`      | The name of the sorted set data structure. If it does not exist, an empty array is returned. | String  | Yes      |
-| `count`    | The count argument specifies the maximum number of members to return from highest to lowest. | Integer | No       |
+| Parameter | Description                                                                                  | Type    | Required |
+| --------- | -------------------------------------------------------------------------------------------- | ------- | -------- |
+| `key`     | The name of the sorted set data structure. If it does not exist, an empty array is returned. | String  | Yes      |
+| `count`   | The count argument specifies the maximum number of members to return from highest to lowest. | Integer | No       |
 
 ## Return values
 
-| Condition                                                | Return Value                             |
-|----------------------------------------------------------|------------------------------------------|
-| If the key is of valid type and records are present      | List of members including their scores   |
-| If the key does not exist or if the sorted set is empty | `(empty list or set)`                     |
+| Condition                                               | Return Value                           |
+| ------------------------------------------------------- | -------------------------------------- |
+| If the key is of valid type and records are present     | List of members including their scores |
+| If the key does not exist or if the sorted set is empty | `(empty list or set)`                  |
 
 ## Behaviour
 
@@ -34,17 +34,20 @@ ZPOPMAX key [count]
 - The returned array contains the members and their corresponding scores in the order of highest to lowest.
 
 ## Errors
+
 1. `Wrong type error`:
-    - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
-    - Occurs when trying to use the command on a key that is not a sorted set.
+
+   - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
+   - Occurs when trying to use the command on a key that is not a sorted set.
 
 2. `Syntax error`:
-    - Error Message: `(error) ERROR wrong number of arguments for 'zpopMAX' command`
-    - Occurs when the command syntax is incorrect or missing required parameters.
+
+   - Error Message: `(error) ERROR wrong number of arguments for 'zpopMAX' command`
+   - Occurs when the command syntax is incorrect or missing required parameters.
 
 3. `Invalid argument type error`:
-    - Error Message : `(error) ERR value is not an integer or out of range`
-    - Occurs when the count argument passed to the command is not an integer.
+   - Error Message : `(error) ERR value is not an integer or out of range`
+   - Occurs when the count argument passed to the command is not an integer.
 
 ## Examples
 

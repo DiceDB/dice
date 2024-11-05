@@ -12,22 +12,23 @@ PTTL key
 ```
 
 ## Parameters
-| Parameter | Description                                                  | Type   | Required |
-|-----------|--------------------------------------------------------------|--------|----------|
-| `key`     | The key for which the remaining TTL is to be retrieved        | String | Yes      |
+
+| Parameter | Description                                            | Type   | Required |
+| --------- | ------------------------------------------------------ | ------ | -------- |
+| `key`     | The key for which the remaining TTL is to be retrieved | String | Yes      |
 
 ## Return values
-| Condition                                           | Return Value                                                                               |
-|-----------------------------------------------------|--------------------------------------------------------------------------------------------|
-| Command is successful                               | Positive integer representing the remaining time to live of the key in milliseconds        |
-| Key exists but has no associated expiration         | `-1`                                                                                       |
-| Key does not exist                                  | `-2`                                                                                       |
+
+| Condition                                   | Return Value                                                                        |
+| ------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Command is successful                       | Positive integer representing the remaining time to live of the key in milliseconds |
+| Key exists but has no associated expiration | `-1`                                                                                |
+| Key does not exist                          | `-2`                                                                                |
 
 ## Behaviour
 
 - The command is non-destructive and does not modify the key or its expiration in any way.
 - If a key's TTL is modified (e.g., by `EXPIRE` or `PEXPIRE` commands), subsequent `PTTL` calls will reflect the updated remaining time.
-
 
 ## Errors
 
@@ -35,7 +36,6 @@ PTTL key
 
    - Error Message: `(error) ERR wrong number of arguments for 'pttl' command`
    - Occurs when attempting to use this command without any arguments or with more than one argument.
-
 
 ## Example Usage
 
@@ -80,7 +80,9 @@ In this example, the key `nonExistentKey` does not exist in the DiceDB database.
 In this example, the `PTTL` command is used with an extra argument. This results in an error, as the `PTTL` command accepts only one argument.
 
 ## Best Practices
+
 - Use `PTTL` in conjunction with `EXPIRE` or `PEXPIRE` commands to manage key expiration effectively
 
 ## Alternatives
+
 - `TTL`: Similar to `PTTL` but returns the time-to-live in seconds instead of milliseconds

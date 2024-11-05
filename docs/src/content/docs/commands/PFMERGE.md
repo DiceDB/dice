@@ -13,20 +13,17 @@ PFMERGE destkey sourcekey [sourcekey ...]
 
 ## Parameters
 
-
-| Parameter  | Description                                                                     | Type         | Required |
-|------------|---------------------------------------------------------------------------------|--------------|----------|
-| `destkey`  | The key where the merged HyperLogLog will be stored. If this key already exists, it will be overwritten. | String       | Yes      |
-| `sourcekey`| One or more keys of the HyperLogLogs that you want to merge. These keys must already exist and contain HyperLogLog data. | List[String] | Yes      |
+| Parameter   | Description                                                                                                              | Type         | Required |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------ | ------------ | -------- |
+| `destkey`   | The key where the merged HyperLogLog will be stored. If this key already exists, it will be overwritten.                 | String       | Yes      |
+| `sourcekey` | One or more keys of the HyperLogLogs that you want to merge. These keys must already exist and contain HyperLogLog data. | List[String] | Yes      |
 
 ## Return Values
 
-
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| Command is successful                          | `OK`                                              |
-| Syntax or specified constraints are invalid    | `(error)`                                             |
-
+| Condition                                   | Return Value |
+| ------------------------------------------- | ------------ |
+| Command is successful                       | `OK`         |
+| Syntax or specified constraints are invalid | `(error)`    |
 
 ## Behaviour
 
@@ -34,7 +31,6 @@ PFMERGE destkey sourcekey [sourcekey ...]
 - The command retrieves the HyperLogLog data structures from the specified `sourcekey` keys.
 - These `sourcekey` keys are merged into a single HyperLogLog and stored in the `destkey`.
 - If the `sourcekey` keys are not valid HyperLogLogs, an error is returned.
-
 
 ## Errors
 

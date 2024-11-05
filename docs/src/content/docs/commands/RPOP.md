@@ -13,23 +13,21 @@ RPOP key
 
 ## Parameters
 
-| Parameter | Description                                                          | Type   | Required |
-|-----------|----------------------------------------------------------------------|--------|----------|
-| `key`     | The key of the list from which the last element will be removed.      | String | Yes      |
-
+| Parameter | Description                                                      | Type   | Required |
+| --------- | ---------------------------------------------------------------- | ------ | -------- |
+| `key`     | The key of the list from which the last element will be removed. | String | Yes      |
 
 ## Return values
 
-| Condition                                      | Return Value                                   |
-|------------------------------------------------|------------------------------------------------|
-| The command is successful                      | The value of the last element in the list      |
-| The list is empty or the key does not exist    | `nil`                                          |
-| The key is of the wrong type                   | Error: `WRONGTYPE Operation against a key holding the wrong kind of value` |
-
+| Condition                                   | Return Value                                                               |
+| ------------------------------------------- | -------------------------------------------------------------------------- |
+| The command is successful                   | The value of the last element in the list                                  |
+| The list is empty or the key does not exist | `nil`                                                                      |
+| The key is of the wrong type                | Error: `WRONGTYPE Operation against a key holding the wrong kind of value` |
 
 ## Behaviour
 
-- The `RPOP` command checks if the key exists and whether it contains a list. 
+- The `RPOP` command checks if the key exists and whether it contains a list.
 - If the key does not exist, the command treats it as an empty list and returns `nil`.
 - If the key exists but the list is empty, `nil` is returned.
 - If the list has elements, the last element is removed and returned.
@@ -38,6 +36,7 @@ RPOP key
 ## Errors
 
 1. **Wrong type of value or key**:
+
    - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
    - Occurs when attempting to run `RPOP` on a key that is not a list.
 
@@ -82,4 +81,3 @@ OK
 - `LPOP`: Removes and returns the first element of the list stored at key.
 
 By understanding the `RPOP` command, you can effectively manage lists in DiceDB, ensuring that you can retrieve and process elements in a LIFO order.
-

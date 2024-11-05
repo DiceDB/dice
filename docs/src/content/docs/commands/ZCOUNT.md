@@ -14,21 +14,21 @@ ZCOUNT key min max
 ## Parameters
 
 | Parameter | Description                                      | Type   | Required |
-|-----------|--------------------------------------------------|--------|----------|
+| --------- | ------------------------------------------------ | ------ | -------- |
 | key       | The name of the sorted set to operate on.        | String | Yes      |
 | min       | Minimum score (inclusive) of the range to count. | Int    | Yes      |
 | max       | Maximum score (inclusive) of the range to count. | Int    | Yes      |
 
 ## Return Values
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| If the key exists and is a sorted set          | Returns the count of elements in the specified range. |
-| If the key does not exist                      | Returns `0`.                                       |
-| If the key is not a sorted set                 | Returns an error.                                  |
-
+| Condition                             | Return Value                                          |
+| ------------------------------------- | ----------------------------------------------------- |
+| If the key exists and is a sorted set | Returns the count of elements in the specified range. |
+| If the key does not exist             | Returns `0`.                                          |
+| If the key is not a sorted set        | Returns an error.                                     |
 
 ## Behaviour
+
 Retrieves the sorted set associated with the given key.
 Counts all elements whose scores fall between the given min and max (inclusive).
 If the key does not exist, it behaves as if it is an empty sorted set and returns 0.
@@ -36,13 +36,13 @@ If the key is not of the sorted set type, an error is returned.
 
 ## Errors
 
-1. **Wrong Type**: 
+1. **Wrong Type**:
    - **Message**: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
-2. **Wrong Argument Count**: 
+2. **Wrong Argument Count**:
    - **Message**: `(error) ERROR wrong number of arguments for 'zcount' command`
 
-
 ## Example Usage
+
 ```bash
 127.0.0.1:7379> ZCOUNT NON_EXISTENT_KEY 0 100
 0
@@ -58,6 +58,7 @@ If the key is not of the sorted set type, an error is returned.
 127.0.0.1:7379> ZCOUNT myzset 30 10
 0
 ```
+
 ### Invalid usage
 
 ```bash

@@ -76,6 +76,7 @@ result, err := watch.ZRangeWatch(ctx, "myset", "0", "-1", "REV", "WITHSCORES")
 Each watch command returns a `WatchResult` object containing the initial result of the watched command.
 
 #### WatchResult Structure
+
 The `WatchResult` object contains the updated data along with the command being watched and a unique fingerprint to identify the source of the update:
 
 ```go
@@ -89,6 +90,7 @@ type WatchResult struct {
 The `Data` field contains the result of the watched command, and can be type-asserted based on the command being watched.
 
 For example, the `Data` field for:
+
 1. `ZRANGE.WATCH` command will be of type `[]dicedb.Z`.
 2. `GET.WATCH` command will be of type `string`.
 
@@ -102,13 +104,14 @@ for msg := range ch {
     // Process msg.Data based on msg.Command
 }
 ```
+
 Note: The `Channel` method must be called after the initial watch command has been executed.
 
 Channel configuration options:
+
 - `WithWChannelSize(size int)`: Set channel buffer size (default: 100)
 - `WithWChannelHealthCheckInterval(d time.Duration)`: Set health check interval (default: 3s)
 - `WithWChannelSendTimeout(d time.Duration)`: Set message send timeout (default: 60s)
-
 
 ### Watching a Sorted Set
 

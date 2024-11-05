@@ -13,25 +13,26 @@ KEYS pattern
 
 ## Parameters
 
-| Parameter       | Description                                      | Type    | Required |
-|-----------------|--------------------------------------------------|---------|----------|
-| `pattern`           | A string representing the pattern to match against the keys in DiceDB database.| String  | Yes      |
+| Parameter | Description                                                                     | Type   | Required |
+| --------- | ------------------------------------------------------------------------------- | ------ | -------- |
+| `pattern` | A string representing the pattern to match against the keys in DiceDB database. | String | Yes      |
 
 Supported glob-style characters:
-   - `*` matches any number of characters (including zero).
-   - `?` matches exactly one character.
-   - `[abc]` matches any one of the characters inside the brackets.
-   - `[a-z]` matches any character in the specified range.
+
+- `*` matches any number of characters (including zero).
+- `?` matches exactly one character.
+- `[abc]` matches any one of the characters inside the brackets.
+- `[a-z]` matches any character in the specified range.
 
 Use `\` to escape special characters if you want to match them verbatim.
 
 ## Return values
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| Command is successful                          | Array of strings, where each string is key that matches the specified pattern.|
-| Command is successful but key not found        | `(empty list or set)`  |
-| Syntax or specified constraints are invalid    | error   |
+| Condition                                   | Return Value                                                                   |
+| ------------------------------------------- | ------------------------------------------------------------------------------ |
+| Command is successful                       | Array of strings, where each string is key that matches the specified pattern. |
+| Command is successful but key not found     | `(empty list or set)`                                                          |
+| Syntax or specified constraints are invalid | error                                                                          |
 
 ## Example usage
 

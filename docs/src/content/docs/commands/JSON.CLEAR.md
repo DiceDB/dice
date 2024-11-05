@@ -13,17 +13,17 @@ JSON.CLEAR key [path]
 
 ## Parameters
 
-| Parameter | Description                                                               | Type    | Required |
-|-----------|---------------------------------------------------------------------------|---------|----------|
-| `key`     | (String) The key under which the JSON document is stored.                 | String  | Yes      |
-| `path`    | (String) The path within the JSON document that you want to clear. The path should be specified in JSONPath format. If the path is omitted, the root path (`$`) is assumed. | String  | No       |
+| Parameter | Description                                                                                                                                                                 | Type   | Required |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | -------- |
+| `key`     | (String) The key under which the JSON document is stored.                                                                                                                   | String | Yes      |
+| `path`    | (String) The path within the JSON document that you want to clear. The path should be specified in JSONPath format. If the path is omitted, the root path (`$`) is assumed. | String | No       |
 
 ## Return values
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| Command is successful                          | `Integer` (The number of paths that were cleared) |
-| Syntax or specified constraints are invalid    | error                                             |
+| Condition                                   | Return Value                                      |
+| ------------------------------------------- | ------------------------------------------------- |
+| Command is successful                       | `Integer` (The number of paths that were cleared) |
+| Syntax or specified constraints are invalid | error                                             |
 
 ## Behaviour
 

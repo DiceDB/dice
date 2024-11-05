@@ -93,4 +93,3 @@ HGET user:3000 name
 - It is a constant time operation, O(1), meaning it executes in the same amount of time regardless of the size of the hash.
 
 By understanding the `HGET` command, you can efficiently retrieve values from hashes stored in your DiceDB database, ensuring that your application can access the necessary data quickly and reliably.
-

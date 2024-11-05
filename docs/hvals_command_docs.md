@@ -14,15 +14,15 @@ HVALS key
 ## Parameters
 
 | Parameter | Description                        | Type   | Required |
-|-----------|------------------------------------|--------|----------|
+| --------- | ---------------------------------- | ------ | -------- |
 | `key`     | The name of the key holding a hash | String | Yes      |
 
 ## Return values
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| If the key exists and holds a hash             | Array of values within the hash                   |
-| If the key does not exist or is empty          | Empty array `[]`                                  |
+| Condition                             | Return Value                    |
+| ------------------------------------- | ------------------------------- |
+| If the key exists and holds a hash    | Array of values within the hash |
+| If the key does not exist or is empty | Empty array `[]`                |
 
 ## Behaviour
 

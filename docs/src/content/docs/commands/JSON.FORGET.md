@@ -13,18 +13,18 @@ JSON.FORGET key path
 
 ## Parameters
 
-| Parameter | Description                                                                  | Type    | Required |
-|-----------|------------------------------------------------------------------------------|---------|----------|
-| `key`     | The name of the key under which the JSON document is stored.	                | String  | Yes      |
-| `path`    | The JSONPath expression specifying the part of the JSON document to delete.  | String  | Yes      |
+| Parameter | Description                                                                 | Type   | Required |
+| --------- | --------------------------------------------------------------------------- | ------ | -------- |
+| `key`     | The name of the key under which the JSON document is stored.                | String | Yes      |
+| `path`    | The JSONPath expression specifying the part of the JSON document to delete. | String | Yes      |
 
 ## Return values
 
-| Condition                            | Return Value                            |
-|--------------------------------------|-----------------------------------------|
-| Command successfully deletes a path	 | `The number of paths deleted (Integer)` |
-| Path does not exist	                 | `0`                                     |
-| Invalid key or path	                 | error                                   |
+| Condition                           | Return Value                            |
+| ----------------------------------- | --------------------------------------- |
+| Command successfully deletes a path | `The number of paths deleted (Integer)` |
+| Path does not exist                 | `0`                                     |
+| Invalid key or path                 | error                                   |
 
 ## Behaviour
 
@@ -38,23 +38,23 @@ JSON.FORGET key path
 
 1. `Wrong number of arguments`:
 
-    - Error Message: `(error) ERR wrong number of arguments for 'JSON.FORGET' command`
-    - Occurs when the command is called with an incorrect number of arguments.
+   - Error Message: `(error) ERR wrong number of arguments for 'JSON.FORGET' command`
+   - Occurs when the command is called with an incorrect number of arguments.
 
 2. `Key does not exist`:
 
-    - Error Message: `(error) ERR key does not exist`
-    - Occurs if the specified key is not present in the database.
+   - Error Message: `(error) ERR key does not exist`
+   - Occurs if the specified key is not present in the database.
 
 3. `Invalid JSONPath expression`:
 
-    - Error Message: `(error) ERR invalid path`
-    - Occurs when the provided JSONPath expression is invalid or malformed.
+   - Error Message: `(error) ERR invalid path`
+   - Occurs when the provided JSONPath expression is invalid or malformed.
 
 4. `Path does not exist`:
 
-    - Error Message: `(error) ERR path does not exist`
-    - Occurs if the specified path does not exist within the JSON document.
+   - Error Message: `(error) ERR path does not exist`
+   - Occurs if the specified path does not exist within the JSON document.
 
 ## Example Usage
 
@@ -77,6 +77,7 @@ Deleting the second element (`"swimming"`) from the `hobbies` array in the JSON 
 ```
 
 #### The updated document:
+
 ```json
 {
   "name": "Jane Doe",

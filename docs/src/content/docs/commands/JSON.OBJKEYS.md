@@ -1,10 +1,9 @@
 ---
 title: JSON.OBJKEYS
 description: The `JSON.OBJKEYS` command command in DiceDB retrieves the keys of a JSON object located at a specified path within the document stored under the given key. This command is useful when you want to list the fields within a JSON object stored in a database.
-
 ---
 
-The `JSON.OBJKEYS` command in DiceDB allows users to access the keys of a JSON object stored at a specific path within a document identified by a given key. By executing this command, users can easily retrieve a list of the fields present in the JSON object, making it a valuable tool for exploring and managing the structure of JSON data stored in the database. 
+The `JSON.OBJKEYS` command in DiceDB allows users to access the keys of a JSON object stored at a specific path within a document identified by a given key. By executing this command, users can easily retrieve a list of the fields present in the JSON object, making it a valuable tool for exploring and managing the structure of JSON data stored in the database.
 
 This functionality is particularly useful for developers working with complex JSON structures who need to quickly identify and manipulate the various attributes within their data.
 
@@ -15,21 +14,21 @@ JSON.OBJKEYS key [path]
 ```
 
 ## Parameters
-| Parameter | Description                                                                                      | Type    | Required |
-|-----------|--------------------------------------------------------------------------------------------------|---------|----------|
-| `key`     | The name of the key holding the JSON document.                                                   | String  | Yes      |
-| `path`    | JSONPath pointing to an array within the JSON document.                                          | String  | No       |
+
+| Parameter | Description                                             | Type   | Required |
+| --------- | ------------------------------------------------------- | ------ | -------- |
+| `key`     | The name of the key holding the JSON document.          | String | Yes      |
+| `path`    | JSONPath pointing to an array within the JSON document. | String | No       |
 
 ## Return Values
 
-| Condition                     | Return Value                                                                                               |
-|-------------------------------|------------------------------------------------------------------------------------------------------------|
-| Success                       | ([]String) `Array of strings containing the keys present within the JSON object at the specified path.`   |
-| Key does not exist            | Error: `(error) ERR could not perform this operation on a key that doesn't exist`                        |
-| Wrong number of arguments      | Error: `(error) ERR wrong number of arguments for JSON.ARRTRIM command`                                  |
-| Key has wrong type            | Error: `(error) ERR Existing key has wrong Dice type`                                                    |
-| Operation attempted on a key with an incompatible type | Error: `(error) ERR WRONGTYPE Operation against a key holding the wrong kind of value`   |
-
+| Condition                                              | Return Value                                                                                            |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| Success                                                | ([]String) `Array of strings containing the keys present within the JSON object at the specified path.` |
+| Key does not exist                                     | Error: `(error) ERR could not perform this operation on a key that doesn't exist`                       |
+| Wrong number of arguments                              | Error: `(error) ERR wrong number of arguments for JSON.ARRTRIM command`                                 |
+| Key has wrong type                                     | Error: `(error) ERR Existing key has wrong Dice type`                                                   |
+| Operation attempted on a key with an incompatible type | Error: `(error) ERR WRONGTYPE Operation against a key holding the wrong kind of value`                  |
 
 ## Behaviour
 
@@ -59,7 +58,6 @@ JSON.OBJKEYS key [path]
 
    - Error Message: `(error) ERR WRONGTYPE Operation against a key holding the wrong kind of value`
    - Raised if an operation attempted on a key with an incompatible type.
-
 
 ## Example Usage
 
@@ -118,4 +116,3 @@ Error When Key Does Not Exist
 127.0.0.1:7379> JSON.OBJKEYS nonexistent_key $
 (error) ERROR could not perform this operation on a key that doesn't exist
 ```
-

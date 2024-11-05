@@ -13,21 +13,21 @@ EXPIRE key seconds [NX | XX | GT | LT]
 
 ## Parameters
 
-| Parameter | Description                                                               | Type    | Required |
-|-----------|---------------------------------------------------------------------------|---------|----------|
-| `key`     | The key to set the timeout on. Must be an existing key.                   | String  | Yes      |
-| `seconds` | Timeout duration in seconds. Must be a positive integer.                  | Integer | Yes      |
-| `NX`      | Set expiry only if the key does not already have an expiry.               | None    | No       |
-| `XX`      | Set expiry only if the key already has an expiry.                         | None    | No       |
-| `GT`      | Set expiry only if the new expiry is greater than the current one.        | None    | No       |
-| `LT`      | Set expiry only if the new expiry is less than the current one.           | None    | No       |
+| Parameter | Description                                                        | Type    | Required |
+| --------- | ------------------------------------------------------------------ | ------- | -------- |
+| `key`     | The key to set the timeout on. Must be an existing key.            | String  | Yes      |
+| `seconds` | Timeout duration in seconds. Must be a positive integer.           | Integer | Yes      |
+| `NX`      | Set expiry only if the key does not already have an expiry.        | None    | No       |
+| `XX`      | Set expiry only if the key already has an expiry.                  | None    | No       |
+| `GT`      | Set expiry only if the new expiry is greater than the current one. | None    | No       |
+| `LT`      | Set expiry only if the new expiry is less than the current one.    | None    | No       |
 
 ## Return Values
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| Timeout was successfully set.                  | `1`                                              |
-| Timeout was not set (e.g., key does not exist, or conditions not met).| `0`                                             |
+| Condition                                                              | Return Value |
+| ---------------------------------------------------------------------- | ------------ |
+| Timeout was successfully set.                                          | `1`          |
+| Timeout was not set (e.g., key does not exist, or conditions not met). | `0`          |
 
 ## Behaviour
 
@@ -45,6 +45,7 @@ EXPIRE key seconds [NX | XX | GT | LT]
 ## Example Usage
 
 ### Basic Usage
+
 This example demonstrates the fundamental usage of the EXPIRE command. First, we set a key with a value, then set it to expire in 10 seconds. The TTL command shows the remaining time to live.
 
 ```bash
@@ -57,6 +58,7 @@ OK
 ```
 
 ### Using Conditional Flags
+
 This example shows how to use the NX and XX flags to conditionally set expiration times. NX sets the expiry only when there isn't one, while XX updates an existing expiry.
 
 ```bash
@@ -69,6 +71,7 @@ OK
 ```
 
 ### Replacing an Existing Timeout
+
 This example illustrates how EXPIRE can replace an existing timeout with a new value. The final TTL command confirms the updated expiration time.
 
 ```bash
@@ -83,6 +86,7 @@ OK
 ```
 
 ### Invalid Key
+
 This example shows what happens when trying to set an expiration on a non-existent key. The command returns 0 to indicate failure.
 
 ```bash

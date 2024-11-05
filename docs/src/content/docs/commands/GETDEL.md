@@ -13,25 +13,26 @@ GETDEL key
 
 ## Parameters
 
-| Parameter | Description                                                               | Type    | Required |
-|-----------|---------------------------------------------------------------------------|---------|----------|
-| `key`     | The key whose value you want to retrieve and delete.                      | String  | Yes      |
+| Parameter | Description                                          | Type   | Required |
+| --------- | ---------------------------------------------------- | ------ | -------- |
+| `key`     | The key whose value you want to retrieve and delete. | String | Yes      |
 
 ## Return values
 
-| Condition            | Return Value                                                     |
-|----------------------|------------------------------------------------------------------|
-| Key exists           | `String`: The command returns the value associated with the key. |
-| Key does not exist   | `nil`: The command returns `nil`.                                |
+| Condition          | Return Value                                                     |
+| ------------------ | ---------------------------------------------------------------- |
+| Key exists         | `String`: The command returns the value associated with the key. |
+| Key does not exist | `nil`: The command returns `nil`.                                |
 
 ## Behaviour
 
 When the `GETDEL` command is executed, the following steps occur:
-  1. The command checks if the specified key exists in the DiceDB database.
-  2. If the key exists, the value associated with the key is retrieved.
-  3. The key is then deleted from the database.
-  4. The retrieved value is returned to the client.
-  5. If the key does not exist, `nil` is returned, and no deletion occurs.
+
+1. The command checks if the specified key exists in the DiceDB database.
+2. If the key exists, the value associated with the key is retrieved.
+3. The key is then deleted from the database.
+4. The retrieved value is returned to the client.
+5. If the key does not exist, `nil` is returned, and no deletion occurs.
 
 ## Errors
 
@@ -60,7 +61,7 @@ OK
 (nil)
 ```
 
-`Explanation:` 
+`Explanation:`
 
 - The key `mykey` is set with the value `"Hello, World!"`.
 - The `GETDEL` command retrieves the value `"Hello, World!"` and deletes the key `mykey` from the database.
@@ -73,7 +74,7 @@ OK
 (nil)
 ```
 
-`Explanation:` 
+`Explanation:`
 
 - The key `nonexistingkey` does not exist in the database.
 - The `GETDEL` command returns `nil` since the key is not found.
@@ -87,7 +88,7 @@ OK
 ERROR WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
-`Explanation:` 
+`Explanation:`
 
 - The key `mylist` is a list, not a string.
 - The `GETDEL` command raises a `WRONGTYPE` error because it expects the key to be a string.
