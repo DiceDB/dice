@@ -174,7 +174,7 @@ func main() {
 	var (
 		queryWatchChan           chan dstore.QueryWatchEvent
 		cmdWatchChan             chan dstore.CmdWatchEvent
-		cmdWatchSubscriptionChan chan watchmanager.WatchSubscription
+		cmdWatchSubscriptionChan = make(chan watchmanager.WatchSubscription)
 		serverErrCh              = make(chan error, 2)
 	)
 
