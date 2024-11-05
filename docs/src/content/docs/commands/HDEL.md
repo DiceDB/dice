@@ -4,6 +4,7 @@ description: The HDEL command in DiceDB deletes a specified field within a hash 
 ---
 
 # HDEL
+
 The HDEL command in DiceDB deletes a specified field within a hash stored at a given key. If either the key or field does not exist, no action is taken, and 0 is returned.
 
 ## Syntax
@@ -14,20 +15,20 @@ HDEL key field [field ...]
 
 ## Parameters
 
-| Parameter | Description                                                       | Type    | Required |
-|-----------|-------------------------------------------------------------------|---------|----------|
-| `key`     | The key of the hash from which the field(s) are to be deleted.    | String  | Yes      |
-| `field`   | One or more fields within the hash to be deleted.                 | String  | Yes      |
+| Parameter | Description                                                    | Type   | Required |
+| --------- | -------------------------------------------------------------- | ------ | -------- |
+| `key`     | The key of the hash from which the field(s) are to be deleted. | String | Yes      |
+| `field`   | One or more fields within the hash to be deleted.              | String | Yes      |
 
 ## Return Values
 
-| Condition                                   | Return Value                                                                |
-|---------------------------------------------|-----------------------------------------------------------------------------|
-| Field(s) deleted successfully               | `Integer` (Number of fields deleted)                                        |
-| Field does not exist                        | `0`                                                                         |
-| Key does not exist                          | `0`                                                                         |
-| Wrong data type                             | `(error) WRONGTYPE Operation against a key holding the wrong kind of value` |
-| Incorrect Argument Count                    | `(error) ERR wrong number of arguments for 'hdel' command`                  |
+| Condition                     | Return Value                                                                |
+| ----------------------------- | --------------------------------------------------------------------------- |
+| Field(s) deleted successfully | `Integer` (Number of fields deleted)                                        |
+| Field does not exist          | `0`                                                                         |
+| Key does not exist            | `0`                                                                         |
+| Wrong data type               | `(error) WRONGTYPE Operation against a key holding the wrong kind of value` |
+| Incorrect Argument Count      | `(error) ERR wrong number of arguments for 'hdel' command`                  |
 
 ## Behaviour
 
@@ -122,11 +123,10 @@ Wrong Number of Arguments for HDEL Command
 127.0.0.1:7379> HDEL user:5000
 (error) ERR wrong number of arguments for 'hdel' command
 ```
+
 - **Behavior**: The `HDEL` command requires at least two arguments: the key and the field name.
 - **Error**: The command fails because `HDEL` requires at least a `key` and one `field` as arguments. If these are not provided, DiceDB raises an error indicating an incorrect number of arguments.
 
 ## Notes
 
 - The `HDEL` command is essential for managing hash data in DiceDB, allowing fields to be efficiently removed when no longer needed.
-
-

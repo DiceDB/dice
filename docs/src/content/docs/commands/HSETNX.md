@@ -1,6 +1,6 @@
 ---
 title: HSETNX
-description: The `HSETNX` command in DiceDB is used to set the value of a field in a hash only if the field does not already exist. This command is useful for ensuring that a value is only set if it is not already present. 
+description: The `HSETNX` command in DiceDB is used to set the value of a field in a hash only if the field does not already exist. This command is useful for ensuring that a value is only set if it is not already present.
 ---
 
 The `HSETNX` command in DiceDB is used to set the value of a field in a hash only if the field does not already exist. This command is useful for ensuring that a value is only set if it is not already present.
@@ -13,20 +13,20 @@ HSETNX key field value
 
 ## Parameters
 
-| Parameter | Description                                              | Type    | Required |
-|-----------|----------------------------------------------------------|---------|----------|
-| `key`     | The name of the hash.                                    | String  | Yes      |
-| `field`   | The field within the hash to set the value for.          | String  | Yes      |
-| `value`   | The value to set for the specified field.                | String  | Yes      |
+| Parameter | Description                                     | Type   | Required |
+| --------- | ----------------------------------------------- | ------ | -------- |
+| `key`     | The name of the hash.                           | String | Yes      |
+| `field`   | The field within the hash to set the value for. | String | Yes      |
+| `value`   | The value to set for the specified field.       | String | Yes      |
 
 ## Return Values
 
-| Condition                                   | Return Value                                                                |
-|---------------------------------------------|-----------------------------------------------------------------------------|
-| Field added                                 | `1`                                                                         |
-| Field already exists                        | `0`                                                                         |
-| Wrong data type                             | `(error) WRONGTYPE Operation against a key holding the wrong kind of value` |
-| Incorrect Argument Count                    | `(error) ERR wrong number of arguments for 'hsetnx' command`                |
+| Condition                | Return Value                                                                |
+| ------------------------ | --------------------------------------------------------------------------- |
+| Field added              | `1`                                                                         |
+| Field already exists     | `0`                                                                         |
+| Wrong data type          | `(error) WRONGTYPE Operation against a key holding the wrong kind of value` |
+| Incorrect Argument Count | `(error) ERR wrong number of arguments for 'hsetnx' command`                |
 
 ## Behaviour
 
@@ -61,6 +61,7 @@ The `HSETNX` command can raise errors in the following scenarios:
 127.0.0.1:7379> HSETNX product:3000 name "Smartphone"
 1
 ```
+
 - **Behaviour**: A new hash is created with the key `product:3000`. The field `name` is set with the value "Smartphone".
 - **Return Value**: `1` (since the field was added).
 
@@ -97,6 +98,7 @@ Wrong Number of Arguments for `HSETNX` Command
 127.0.0.1:7379> HSETNX product:3000 name
 (error) ERR wrong number of arguments for 'hsetnx' command
 ```
+
 - **Behavior**: The `HSETNX` command requires atleast three arguments: the key, the field name, and the field value.
 - **Error**: The command fails because it requires the `key`, `field`, and `value` parameters. If insufficient arguments are provided, DiceDB raises an error indicating that the number of arguments is incorrect.
 

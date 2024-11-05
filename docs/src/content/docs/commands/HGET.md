@@ -13,19 +13,19 @@ HGET key field
 
 ## Parameters
 
-| Parameter | Description                                                           | Type    | Required |
-|-----------|-----------------------------------------------------------------------|---------|----------|
-| `key`     | The key of the hash from which the field's value is to be retrieved.  | String  | Yes      |
-| `field`   | The field within the hash whose value is to be retrieved.             | String  | Yes      |
+| Parameter | Description                                                          | Type   | Required |
+| --------- | -------------------------------------------------------------------- | ------ | -------- |
+| `key`     | The key of the hash from which the field's value is to be retrieved. | String | Yes      |
+| `field`   | The field within the hash whose value is to be retrieved.            | String | Yes      |
 
 ## Return Values
 
-| Condition                                   | Return Value                                                                |
-|---------------------------------------------|-----------------------------------------------------------------------------|
-| Field exists in the hash                    | `String` (value of the field)                                               |
-| Key does not exist or field not present     | `nil`                                                                       |
-| Wrong data type                             | `(error) WRONGTYPE Operation against a key holding the wrong kind of value` |
-| Incorrect Argument Count                    | `(error) ERR wrong number of arguments for 'hget' command`                  |
+| Condition                               | Return Value                                                                |
+| --------------------------------------- | --------------------------------------------------------------------------- |
+| Field exists in the hash                | `String` (value of the field)                                               |
+| Key does not exist or field not present | `nil`                                                                       |
+| Wrong data type                         | `(error) WRONGTYPE Operation against a key holding the wrong kind of value` |
+| Incorrect Argument Count                | `(error) ERR wrong number of arguments for 'hget' command`                  |
 
 ## Behaviour
 
@@ -96,6 +96,7 @@ OK
 127.0.0.1:7379> HGET product:2000 name
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
+
 - **Behavior**: The `SET` command sets the key `product:2000` to a string value.
 - **Error**: The `HGET` command will raise a WRONGTYPE error because `product:2000` is not a hash.
 
@@ -108,6 +109,7 @@ Wrong Number of Arguments for HGET Command
 127.0.0.1:7379> HGET product:2000 name name2
 (error) ERR wrong number of arguments for 'hget' command
 ```
+
 - **Behavior**: The `HGET` command requires exactly two arguments: the key and the field name.
 - **Error**: The command will raise an error if provided with an incorrect number of arguments, indicating that the command requires a specific count.
 

@@ -13,23 +13,22 @@ HMSET key field value [field value ...]
 
 ## Parameters
 
-| Parameter           | Description                                                   | Type    | Required |
-|---------------------|---------------------------------------------------------------|---------|----------|
-| `key`               | The name of the hash.                                         | String  | Yes      |
-| `field`             | The field within the hash to set the value for.               | String  | Yes      |
-| `value`             | The value to set for the specified field.                     | String  | Yes      |
-| `[field value ...]` | Additional field-value pairs to set in the hash.              | String  | No       |
+| Parameter           | Description                                      | Type   | Required |
+| ------------------- | ------------------------------------------------ | ------ | -------- |
+| `key`               | The name of the hash.                            | String | Yes      |
+| `field`             | The field within the hash to set the value for.  | String | Yes      |
+| `value`             | The value to set for the specified field.        | String | Yes      |
+| `[field value ...]` | Additional field-value pairs to set in the hash. | String | No       |
 
 ## Return Values
 
-| Condition                                    | Return Value                                                                |
-|----------------------------------------------|-----------------------------------------------------------------------------|
-| A new field added                            | `OK`                                                                        |
-| Existing field updated                       | `OK`                                                                        |
-| Multiple fields added                        | `OK`                                                                        |
-| Non-hash type or wrong data type             | `(error) WRONGTYPE Operation against a key holding the wrong kind of value` |
-| Incorrect Argument Count                     | `(error) ERR wrong number of arguments for 'hmset' command`                 |
-
+| Condition                        | Return Value                                                                |
+| -------------------------------- | --------------------------------------------------------------------------- |
+| A new field added                | `OK`                                                                        |
+| Existing field updated           | `OK`                                                                        |
+| Multiple fields added            | `OK`                                                                        |
+| Non-hash type or wrong data type | `(error) WRONGTYPE Operation against a key holding the wrong kind of value` |
+| Incorrect Argument Count         | `(error) ERR wrong number of arguments for 'hmset' command`                 |
 
 ## Behaviour
 
@@ -64,6 +63,7 @@ The `HMSET` command can raise errors in the following scenarios:
 127.0.0.1:7379> HMSET product:4000 name "Tablet" price 299.99 stock 30
 OK
 ```
+
 - **Behaviour**: A new hash is created with the key `product:4000`. The fields `name`, `price`, and `stock` are set with the respective values.
 - **Return Value**: `OK`
 
@@ -73,6 +73,7 @@ OK
 127.0.0.1:7379> HMSET product:4000 price 279.99 stock 25
 OK
 ```
+
 - **Behaviour**: The `price` and `stock` fields in the hash `product:4000` are updated with the new values.
 - **Return Value**: `OK`
 
@@ -99,6 +100,7 @@ Wrong Number of Arguments for HMSET Command
 127.0.0.1:7379> HMSET product:4000 name
 (error) ERR wrong number of arguments for 'hmset' command
 ```
+
 - **Behavior**: The `HMSET` command requires atleast three arguments: the key, the field name, and the field value.
 - **Error**: The command fails because it requires at least one field-value pair in addition to the key. If insufficient arguments are provided, DiceDB raises an error indicating that the number of arguments is incorrect.
 
