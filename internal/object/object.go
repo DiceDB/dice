@@ -35,7 +35,8 @@ var ObjTypeSet uint8 = 6 << 4 // 01010000
 var ObjEncodingSetInt uint8 = 11
 var ObjEncodingSetStr uint8 = 12
 
-var ObjEncodingHashMap uint8 = 6
+var ObjEncodingSimpleMap uint8 = 6
+var ObjEncodingComplexMap uint8 = 7 // reserved for future use
 var ObjTypeHashMap uint8 = 7 << 4
 
 var ObjTypeSortedSet uint8 = 8 << 4

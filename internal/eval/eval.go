@@ -1941,7 +1941,7 @@ func evalHGETALL(args []string, store *dstore.Store) []byte {
 	var results []string
 
 	if obj != nil {
-		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingSimpleMap); err != nil {
 			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 		}
 		hashMap = obj.Value.(HashMap)
@@ -2009,7 +2009,7 @@ func evalObjectEncoding(key string, store *dstore.Store) []byte {
 		encodingTypeStr = "setint"
 		return clientio.Encode(encodingTypeStr, false)
 
-	case oType == object.ObjTypeHashMap && oEnc == object.ObjEncodingHashMap:
+	case oType == object.ObjTypeHashMap && oEnc == object.ObjEncodingSimpleMap:
 		encodingTypeStr = "hashmap"
 		return clientio.Encode(encodingTypeStr, false)
 

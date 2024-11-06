@@ -3083,7 +3083,7 @@ func testEvalHGET(t *testing.T, store *dstore.Store) {
 				newMap[field] = "mock_field_value"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -3104,7 +3104,7 @@ func testEvalHGET(t *testing.T, store *dstore.Store) {
 				newMap[field] = "mock_field_value"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -3156,7 +3156,7 @@ func testEvalHMGET(t *testing.T, store *dstore.Store) {
 				newMap[field] = "mock_field_value"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -3177,7 +3177,7 @@ func testEvalHMGET(t *testing.T, store *dstore.Store) {
 				newMap[field] = "mock_field_value"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -3198,7 +3198,7 @@ func testEvalHMGET(t *testing.T, store *dstore.Store) {
 					"field2": "value2",
 				}
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -3239,7 +3239,7 @@ func testEvalHVALS(t *testing.T, store *dstore.Store) {
 				newMap[field] = "mock_value"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -3308,7 +3308,7 @@ func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
 				newMap[field] = "mock_field_value"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -3326,7 +3326,7 @@ func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
 				newMap[field] = "HelloWorld"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -3370,7 +3370,7 @@ func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
 				newMap[field] = "mock_field_value"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -3389,7 +3389,7 @@ func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
 				newMap[field] = "HelloWorld"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -4027,7 +4027,7 @@ func testEvalHSET(t *testing.T, store *dstore.Store) {
 				newMap[field] = "mock_field_value"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -4049,7 +4049,7 @@ func testEvalHSET(t *testing.T, store *dstore.Store) {
 				newMap[field] = mockValue
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -4130,7 +4130,7 @@ func testEvalHMSET(t *testing.T, store *dstore.Store) {
 				newMap[field] = "mock_field_value"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -4152,7 +4152,7 @@ func testEvalHMSET(t *testing.T, store *dstore.Store) {
 				newMap[field] = mockValue
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -4206,7 +4206,7 @@ func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 				newMap[field1] = "HelloWorld"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -5594,7 +5594,7 @@ func testEvalHSETNX(t *testing.T, store *dstore.Store) {
 				newMap[field] = "mock_field_value"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -5615,7 +5615,7 @@ func testEvalHSETNX(t *testing.T, store *dstore.Store) {
 				newMap[field] = "existing_value"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -5683,7 +5683,7 @@ func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
 				h := make(HashMap)
 				h[field] = "10"
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          h,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -5709,7 +5709,7 @@ func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
 				newMap := make(HashMap)
 				newMap[field] = "new_value"
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -5727,7 +5727,7 @@ func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
 				h[field] = " 10  "
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          h,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -5749,7 +5749,7 @@ func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
 
 				h[field] = "-10"
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          h,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -5766,7 +5766,7 @@ func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
 
 				h[field] = fmt.Sprintf("%v", math.MaxInt64)
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          h,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -5783,7 +5783,7 @@ func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
 
 				h[field] = fmt.Sprintf("%v", math.MinInt64)
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          h,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -6240,7 +6240,7 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 				newMap["field2"] = "Value2"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -6269,7 +6269,7 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 				newMap["field3"] = "value3"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -6305,7 +6305,7 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 				newMap["field3"] = "value3"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -6470,7 +6470,7 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 					"field1": "value1",
 					"field2": "value2",
 				}
-				obj := store.NewObj(initialValues, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
+				obj := store.NewObj(initialValues, -1, object.ObjTypeHashMap, object.ObjEncodingSimpleMap)
 				store.Put(key, obj)
 			},
 			input:          []string{"hashKey", "val"},
@@ -7539,7 +7539,7 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 				key := "key"
 				h := make(HashMap)
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          h,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -7555,7 +7555,7 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 				h := make(HashMap)
 				h[field] = "2.1"
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          h,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -7571,7 +7571,7 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 				h := make(HashMap)
 				h[field] = "2"
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          h,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -7587,7 +7587,7 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 				h := make(HashMap)
 				h[field] = "2.0"
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          h,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -7603,7 +7603,7 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 				h := make(HashMap)
 				h[field] = "2.0"
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          h,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -7620,7 +7620,7 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 				h := make(HashMap)
 				h[field] = "non_numeric"
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          h,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -7636,7 +7636,7 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 				h := make(HashMap)
 				h[field] = "1e308"
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          h,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -7652,7 +7652,7 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 				h := make(HashMap)
 				h[field] = "1e2"
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 					Value:          h,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -7670,8 +7670,8 @@ func BenchmarkEvalHINCRBYFLOAT(b *testing.B) {
 	store := dstore.NewStore(nil, nil)
 
 	// Setting initial fields with some values
-	store.Put("key1", store.NewObj(HashMap{"field1": "1.0", "field2": "1.2"}, maxExDuration, object.ObjTypeHashMap, object.ObjEncodingHashMap))
-	store.Put("key2", store.NewObj(HashMap{"field1": "0.1"}, maxExDuration, object.ObjTypeHashMap, object.ObjEncodingHashMap))
+	store.Put("key1", store.NewObj(HashMap{"field1": "1.0", "field2": "1.2"}, maxExDuration, object.ObjTypeHashMap, object.ObjEncodingSimpleMap))
+	store.Put("key2", store.NewObj(HashMap{"field1": "0.1"}, maxExDuration, object.ObjTypeHashMap, object.ObjEncodingSimpleMap))
 
 	inputs := []struct {
 		key   string

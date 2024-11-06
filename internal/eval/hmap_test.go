@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"testing"
 	"time"
-
+	"fmt"
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
@@ -79,7 +79,7 @@ func TestGetValueFromHashMap(t *testing.T) {
 	hmap.Set(field, value)
 
 	obj := &object.Obj{
-		TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+		TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingSimpleMap,
 		Value:          hmap,
 		LastAccessedAt: uint32(time.Now().Unix()),
 	}
@@ -128,4 +128,40 @@ func TestHashMapIncrementFloatValue(t *testing.T) {
 	val, err = hmap.incrementFloatValue("field1", -inf-float64(1e308))
 	assert.NotNil(t, err, "Expected error when incrementing a overflowing value")
 	assert.Equal(t, errors.IncrDecrOverflowErr, err.Error(), "Expected overflow to be detected")
+}
+
+// Benchmark for Set method
+func BenchmarkHashMapSetString(b *testing.B) {
+	m := make(HashMap)
+	for i := 0; i < b.N; i++ {
+		m.Set(fmt.Sprintf("key%d", i), fmt.Sprintf("value%d", i))
+	}
+}
+
+// Benchmark for Get method
+func BenchmarkHashMapGetString(b *testing.B) {
+	m := make(HashMap)
+	// Pre-fill the map with some data
+	for i := 0; i < 1000; i++ {
+		m.Set(fmt.Sprintf("key%d", i), fmt.Sprintf("value%d", i))
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		m.Get(fmt.Sprintf("key%d", i))
+	}
+}
+
+// Benchmark for Delete method
+func BenchmarkHashMapDelete(b *testing.B) {
+	m := make(HashMap)
+	// Pre-fill the map with some data
+	for i := 0; i < 1000; i++ {
+		m.Set(fmt.Sprintf("key%d", i), fmt.Sprintf("value%d", i))
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		delete(m,fmt.Sprintf("key%d", i))
+	}
 }

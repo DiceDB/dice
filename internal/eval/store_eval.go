@@ -528,7 +528,7 @@ func evalHEXISTS(args []string, store *dstore.Store) *EvalResponse {
 			Error:  nil,
 		}
 	}
-	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingSimpleMap); err != nil {
 		return &EvalResponse{
 			Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeErr),
 			Result: nil,
@@ -573,7 +573,7 @@ func evalHKEYS(args []string, store *dstore.Store) *EvalResponse {
 	var result []string
 
 	if obj != nil {
-		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingSimpleMap); err != nil {
 			return &EvalResponse{
 				Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeErr),
 				Result: nil,
@@ -620,7 +620,7 @@ func evalHVALS(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingSimpleMap); err != nil {
 		return &EvalResponse{
 			Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeErr),
 			Result: nil,
@@ -1728,7 +1728,7 @@ func evalHINCRBY(args []string, store *dstore.Store) *EvalResponse {
 	key := args[0]
 	obj := store.Get(key)
 	if obj != nil {
-		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingSimpleMap); err != nil {
 			return &EvalResponse{
 				Result: nil,
 				Error:  diceerrors.ErrWrongTypeOperation,
@@ -1750,7 +1750,7 @@ func evalHINCRBY(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	obj = store.NewObj(hashmap, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
+	obj = store.NewObj(hashmap, -1, object.ObjTypeHashMap, object.ObjEncodingSimpleMap)
 	store.Put(key, obj)
 
 	return &EvalResponse{
@@ -1787,7 +1787,7 @@ func evalHINCRBYFLOAT(args []string, store *dstore.Store) *EvalResponse {
 	obj := store.Get(key)
 	var hashmap HashMap
 	if obj != nil {
-		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingSimpleMap); err != nil {
 			return &EvalResponse{
 				Result: nil,
 				Error:  diceerrors.ErrWrongTypeOperation,
@@ -1809,7 +1809,7 @@ func evalHINCRBYFLOAT(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	obj = store.NewObj(hashmap, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
+	obj = store.NewObj(hashmap, -1, object.ObjTypeHashMap, object.ObjEncodingSimpleMap)
 	store.Put(key, obj)
 
 	return &EvalResponse{
@@ -1841,7 +1841,7 @@ func evalHRANDFIELD(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingSimpleMap); err != nil {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongTypeOperation,
@@ -2203,7 +2203,7 @@ func evalHLEN(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingSimpleMap); err != nil {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongTypeOperation,
@@ -2239,7 +2239,7 @@ func evalHSTRLEN(args []string, store *dstore.Store) *EvalResponse {
 	var hashMap HashMap
 
 	if obj != nil {
-		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingSimpleMap); err != nil {
 			return &EvalResponse{
 				Result: nil,
 				Error:  diceerrors.ErrWrongTypeOperation,
@@ -2300,7 +2300,7 @@ func evalHSCAN(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingSimpleMap); err != nil {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongTypeOperation,
@@ -3493,7 +3493,7 @@ func insertInHashMap(args []string, store *dstore.Store) (int64, error) {
 	var hashMap HashMap
 
 	if obj != nil {
-		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingSimpleMap); err != nil {
 			return 0, diceerrors.ErrWrongTypeOperation
 		}
 		hashMap = obj.Value.(HashMap)
@@ -3506,7 +3506,7 @@ func insertInHashMap(args []string, store *dstore.Store) (int64, error) {
 		return 0, err
 	}
 
-	obj = store.NewObj(hashMap, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
+	obj = store.NewObj(hashMap, -1, object.ObjTypeHashMap, object.ObjEncodingSimpleMap)
 	store.Put(key, obj)
 
 	return numKeys, nil
@@ -3605,7 +3605,7 @@ func evalHMGET(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	// Assert that the object is of type HashMap
-	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingSimpleMap); err != nil {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongTypeOperation,
@@ -3710,7 +3710,7 @@ func evalHDEL(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingSimpleMap); err != nil {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongTypeOperation,
