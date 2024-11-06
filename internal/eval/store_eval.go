@@ -3763,7 +3763,7 @@ func evalSADD(args []string, store *dstore.Store) *EvalResponse {
 		value := make(map[string]struct{}, lengthOfItems)
 		// Create a new object.
 		obj = store.NewObj(value, exDurationMs, object.ObjTypeSet, object.ObjEncodingSetStr)
-		store.Put(key, obj, dstore.WithKeepTTL(keepttl))
+		store.Put(key, obj, dstore.WithPutCmd(dstore.SAdd), dstore.WithKeepTTL(keepttl))
 	}
 
 	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err != nil {
