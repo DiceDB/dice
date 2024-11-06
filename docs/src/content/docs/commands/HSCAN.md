@@ -13,13 +13,12 @@ HSCAN key cursor [MATCH pattern] [COUNT count]
 
 ## Parameters
 
-| Parameter       | Description                                                                                              | Type     | Required |
-|-----------------|----------------------------------------------------------------------------------------------------------|---------|----------|
-| `key`           | The key of the hash to scan.                                                                             | String   | Yes      |
-| `cursor`        | The cursor indicating the starting position of the scan.                                                 | String   | Yes      |
-| `MATCH pattern` | Specifies a pattern to match against the fields. Only the fields that match the pattern will be returned.| String   | No       |
-| `COUNT count`   | Specifies the maximum number of fields to return.                                                        | String   | Yes      |
-
+| Parameter       | Description                                                                                               | Type   | Required |
+| --------------- | --------------------------------------------------------------------------------------------------------- | ------ | -------- |
+| `key`           | The key of the hash to scan.                                                                              | String | Yes      |
+| `cursor`        | The cursor indicating the starting position of the scan.                                                  | String | Yes      |
+| `MATCH pattern` | Specifies a pattern to match against the fields. Only the fields that match the pattern will be returned. | String | No       |
+| `COUNT count`   | Specifies the maximum number of fields to return.                                                         | String | Yes      |
 
 ## Return Value
 
@@ -48,6 +47,7 @@ The `HSCAN` command returns an array containing the next cursor and the matching
 ## Examples
 
 ### Basic Usage
+
 Creating a hash `myhash` with two fields `field1` and `field2`. Getting `HSCAN` on `myhash` with valid cursors.
 
 ```bash
@@ -71,7 +71,9 @@ Creating a hash `myhash` with two fields `field1` and `field2`. Getting `HSCAN` 
 2) 1) "field2"
    2) "value2"
 ```
+
 ### Invalid Usage on non-existent key
+
 Getting `HSCAN` on `nonExistentHash`.
 
 ```bash

@@ -1,0 +1,34 @@
+---
+import { getCollection } from "astro:content";
+
+import Layout from "../../layouts/Layout.astro";
+import RecentReleases from "../../components/RecentReleases.astro";
+const releases = (await getCollection("releases")).sort(
+  (a, b) => b.data.published_at.getTime() - a.data.published_at.getTime(),
+);
+const title = "DiceDB Releases";
+const description = "";
+---
+
+<Layout {title} {description}>
+  <div class="section">
+    <div class="columns">
+      <div class="column is-6-desktop is-6-tablet is-12-mobile">
+        <div class="content">
+          <h1 class="title is-size-4 is-family-secondary is-italic">
+            Releases
+          </h1>
+        </div>
+      </div>
+    </div>
+    <div>
+      {
+        (
+          <div class="content">
+            <RecentReleases releases={releases} />
+          </div>
+        )
+      }
+    </div>
+  </div>
+</Layout>

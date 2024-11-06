@@ -15,15 +15,15 @@ SELECT index
 
 ## Parameters
 
-| Parameter | Description                                     | Type    | Required |
-|-----------|-------------------------------------------------|---------|----------|
+| Parameter | Description                                                                                                                                                                                         | Type    | Required |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | -------- |
 | `index`   | The zero-based index of the database to select. DiceDB databases are indexed starting from 0 up to a configurable maximum (default is 15, configurable via the `databases` configuration directive) | Integer | Yes      |
 
 ## Return Value
 
-| Condition                | Return Value |
-|--------------------------|--------------|
-| Command is successful    | `OK`         |
+| Condition             | Return Value |
+| --------------------- | ------------ |
+| Command is successful | `OK`         |
 
 ## Behaviour
 

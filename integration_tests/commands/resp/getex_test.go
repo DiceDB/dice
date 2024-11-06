@@ -1,11 +1,11 @@
-package async
+package resp
 
 import (
 	"strconv"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"gotest.tools/v3/assert"
 )
 
 func TestGetEx(t *testing.T) {
@@ -147,7 +147,6 @@ func TestGetEx(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// deleteTestKeys([]string{"foo"}, store)
 			FireCommand(conn, "DEL foo")
 
 			for i, cmd := range tc.commands {
@@ -156,9 +155,9 @@ func TestGetEx(t *testing.T) {
 				}
 				result := FireCommand(conn, cmd)
 				if tc.assertType[i] == "equal" {
-					assert.Equal(t, tc.expected[i], result)
+					assert.DeepEqual(t, tc.expected[i], result)
 				} else if tc.assertType[i] == "assert" {
-					assert.True(t, result.(int64) <= tc.expected[i].(int64), "Expected %v to be less than or equal to %v", result, tc.expected[i])
+					assert.Assert(t, result.(int64) <= tc.expected[i].(int64), "Expected %v to be less than or equal to %v", result, tc.expected[i])
 				}
 			}
 		})

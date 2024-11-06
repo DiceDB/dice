@@ -74,6 +74,22 @@ var (
 		Cmd:     "SETEX",
 		CmdType: SingleShard,
 	}
+	saddCmdMeta = CmdsMeta{
+		Cmd:     "SADD",
+		CmdType: SingleShard,
+	}
+	sremCmdMeta = CmdsMeta{
+		Cmd:     "SREM",
+		CmdType: SingleShard,
+	}
+	scardCmdMeta = CmdsMeta{
+		Cmd:     "SCARD",
+		CmdType: SingleShard,
+	}
+	smembersCmdMeta = CmdsMeta{
+		Cmd: "SMEMBERS",
+	}
+
 	jsonArrAppendCmdMeta = CmdsMeta{
 		Cmd:     "JSON.ARRAPPEND",
 		CmdType: SingleShard,
@@ -86,6 +102,7 @@ var (
 		Cmd:     "JSON.ARRPOP",
 		CmdType: SingleShard,
 	}
+
 	getrangeCmdMeta = CmdsMeta{
 		Cmd:     "GETRANGE",
 		CmdType: SingleShard,
@@ -307,6 +324,38 @@ var (
 		Cmd:     "CMS.MERGE",
 		CmdType: SingleShard,
 	}
+	getexCmdMeta = CmdsMeta{
+		Cmd:     "GETEX",
+		CmdType: SingleShard,
+	}
+	getdelCmdMeta = CmdsMeta{
+		Cmd:     "GETDEL",
+		CmdType: SingleShard,
+	}
+	hsetCmdMeta = CmdsMeta{
+		Cmd:     "HSET",
+		CmdType: SingleShard,
+	}
+	hgetCmdMeta = CmdsMeta{
+		Cmd:     "HGET",
+		CmdType: SingleShard,
+	}
+	hsetnxCmdMeta = CmdsMeta{
+		Cmd:     "HSETNX",
+		CmdType: SingleShard,
+	}
+	hdelCmdMeta = CmdsMeta{
+		Cmd:     "HDEL",
+		CmdType: SingleShard,
+	}
+	hmsetCmdMeta = CmdsMeta{
+		Cmd:     "HMSET",
+		CmdType: SingleShard,
+	}
+	hmgetCmdMeta = CmdsMeta{
+		Cmd:     "HMGET",
+		CmdType: SingleShard,
+	}
 
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
@@ -327,9 +376,16 @@ func init() {
 	WorkerCmdsMeta["GET"] = getCmdMeta
 	WorkerCmdsMeta["GETSET"] = getsetCmdMeta
 	WorkerCmdsMeta["SETEX"] = setexCmdMeta
+
+	WorkerCmdsMeta["SADD"] = saddCmdMeta
+	WorkerCmdsMeta["SREM"] = sremCmdMeta
+	WorkerCmdsMeta["SCARD"] = scardCmdMeta
+	WorkerCmdsMeta["SMEMBERS"] = smembersCmdMeta
+
 	WorkerCmdsMeta["JSON.ARRAPPEND"] = jsonArrAppendCmdMeta
 	WorkerCmdsMeta["JSON.ARRLEN"] = jsonArrLenCmdMeta
 	WorkerCmdsMeta["JSON.ARRPOP"] = jsonArrPopCmdMeta
+
 	WorkerCmdsMeta["GETRANGE"] = getrangeCmdMeta
 	WorkerCmdsMeta["APPEND"] = appendCmdMeta
 	WorkerCmdsMeta["JSON.CLEAR"] = jsonclearCmdMeta
@@ -389,6 +445,14 @@ func init() {
 	WorkerCmdsMeta["CMS.INCRBY"] = cmsIncrByCmdMeta
 	WorkerCmdsMeta["CMS.QUERY"] = cmsQueryCmdMeta
 	WorkerCmdsMeta["CMS.MERGE"] = cmsMergeCmdMeta
+	WorkerCmdsMeta["GETEX"] = getexCmdMeta
+	WorkerCmdsMeta["GETDEL"] = getdelCmdMeta
+	WorkerCmdsMeta["HSET"] = hsetCmdMeta
+	WorkerCmdsMeta["HGET"] = hgetCmdMeta
+	WorkerCmdsMeta["HSETNX"] = hsetnxCmdMeta
+	WorkerCmdsMeta["HDEL"] = hdelCmdMeta
+	WorkerCmdsMeta["HMSET"] = hmsetCmdMeta
+	WorkerCmdsMeta["HMGET"] = hmgetCmdMeta
 	WorkerCmdsMeta["SETBIT"] = setbitCmdMeta
 	WorkerCmdsMeta["GETBIT"] = getbitCmdMeta
 	WorkerCmdsMeta["BITCOUNT"] = bitcountCmdMeta

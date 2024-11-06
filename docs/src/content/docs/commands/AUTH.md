@@ -13,16 +13,16 @@ AUTH password
 
 ## Parameters
 
-| Parameter | Description                                                               | Type    | Required |
-|-----------|---------------------------------------------------------------------------|---------|----------|
-| `password`| The password that you have set for the DiceDB server.                     | String  | Yes      |
+| Parameter  | Description                                           | Type   | Required |
+| ---------- | ----------------------------------------------------- | ------ | -------- |
+| `password` | The password that you have set for the DiceDB server. | String | Yes      |
 
 ## Return values
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| Authentication is successful                   | `OK`                                               |
-| Syntax or specified constraints are invalid    | error                                             |
+| Condition                                   | Return Value |
+| ------------------------------------------- | ------------ |
+| Authentication is successful                | `OK`         |
+| Syntax or specified constraints are invalid | error        |
 
 ## Behaviour
 

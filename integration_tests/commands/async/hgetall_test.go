@@ -7,6 +7,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var ZERO int64 = 0
+var ONE int64 = 1
+var TWO int64 = 2
+
 func TestHGETALL(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()

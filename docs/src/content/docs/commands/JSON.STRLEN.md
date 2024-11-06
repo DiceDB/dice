@@ -13,18 +13,17 @@ JSON.STRLEN <key> <path>
 
 ## Parameters
 
-| Parameter | Description                                                             | Type   | Required |
-|-----------|-------------------------------------------------------------------------|--------|----------|
-| `key`     | The key under which the JSON document is stored.                        | String | Yes      |
-| `path`    | The JSONPath to the string within the JSON document. The path must contain a string.  | String | No       |
+| Parameter | Description                                                                          | Type   | Required |
+| --------- | ------------------------------------------------------------------------------------ | ------ | -------- |
+| `key`     | The key under which the JSON document is stored.                                     | String | Yes      |
+| `path`    | The JSONPath to the string within the JSON document. The path must contain a string. | String | No       |
 
 ## Return Value
 
-| Condition                                 | Return Value                                                                    |
-|-------------------------------------------|---------------------------------------------------------------------------------|
-| JSON string is found at the specified path| Length of the JSON string.                                                      |
-| JSONPath contains `*` wildcard            | Indicates the length of each key in the JSON. Returns `nil` for non-string keys.|
-
+| Condition                                  | Return Value                                                                     |
+| ------------------------------------------ | -------------------------------------------------------------------------------- |
+| JSON string is found at the specified path | Length of the JSON string.                                                       |
+| JSONPath contains `*` wildcard             | Indicates the length of each key in the JSON. Returns `nil` for non-string keys. |
 
 ## Behaviour
 
@@ -34,7 +33,7 @@ When the `JSON.STRLEN` command is executed, DiceDB will:
 2. If `path` is not specified, the command takes `$` as root path and if the data at root path is string, returns an integer that represents the length of the string and if the data at root is not a string, returns an error indicating a type mismatch.
 3. `$` is considered as root path which returns the length of the string if the data at root path is of type string or returns `nil` if the data at root is not of type string.
 4. If the specified path exists and points to a JSON string, the command returns the length of the string.
-5. Multiple results are represented as a list in case of wildcards(*), where each string length is returned in order of appearance and `nil` is returned if it's not a string.
+5. Multiple results are represented as a list in case of wildcards(\*), where each string length is returned in order of appearance and `nil` is returned if it's not a string.
 
 ## Errors
 
@@ -102,4 +101,3 @@ JSON.STRLEN user:1001 $.address
 - JSONPath expressions are used to navigate within the JSON document. Ensure that the path provided is valid and points to a JSON string to avoid errors.
 
 By following this documentation, users should be able to effectively utilize the `JSON.STRLEN` command to determine the length of JSON strings stored within their DiceDB database.
-

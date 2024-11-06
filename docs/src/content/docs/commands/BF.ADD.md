@@ -13,17 +13,17 @@ BF.ADD key item
 
 ## Parameters
 
-| Parameter | Description                                      | Type   | Required |
-|-----------|--------------------------------------------------|--------|----------|
+| Parameter | Description                                                   | Type   | Required |
+| --------- | ------------------------------------------------------------- | ------ | -------- |
 | `key`     | The name of the Bloom Filter to which the item will be added. | String | Yes      |
-| `item`    | The item to be added to the Bloom Filter.        | String | Yes      |
+| `item`    | The item to be added to the Bloom Filter.                     | String | Yes      |
 
 ## Return values
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| Item was not already present in the Bloom Filter | `1`                                              |
-| Item was already present in the Bloom Filter (could be wrong)   | `0`                                              |
+| Condition                                                     | Return Value |
+| ------------------------------------------------------------- | ------------ |
+| Item was not already present in the Bloom Filter              | `1`          |
+| Item was already present in the Bloom Filter (could be wrong) | `0`          |
 
 ## Behaviour
 
@@ -34,12 +34,12 @@ When the `BF.ADD` command is executed, the specified item is added to the Bloom 
 
 ## Errors
 
-1. `Incorrect number of arguments`: 
-    - Error message: `(error) ERR wrong number of arguments for 'BF.ADD' command`
-    - The command requires exactly two arguments: the key and the item to be added to the Bloom Filter.
+1. `Incorrect number of arguments`:
+   - Error message: `(error) ERR wrong number of arguments for 'BF.ADD' command`
+   - The command requires exactly two arguments: the key and the item to be added to the Bloom Filter.
 2. `Key is not a Bloom Filter`:
-    - Error message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
-    - The specified key does not refer to a Bloom Filter.
+   - Error message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
+   - The specified key does not refer to a Bloom Filter.
 
 ## Example Usage
 

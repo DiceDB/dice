@@ -1,10 +1,10 @@
-package async
+package resp
 
 import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"gotest.tools/v3/assert"
 )
 
 func TestGetDel(t *testing.T) {
