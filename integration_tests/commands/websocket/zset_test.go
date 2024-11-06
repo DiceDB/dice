@@ -22,43 +22,43 @@ func TestZPOPMIN(t *testing.T) {
 		},
 		{
 			name:     "ZPOPMIN on existing key (without count argument)",
-			commands: []string{"ZADD myzset 1 member1 2 member2 3 member3", "ZPOPMIN myzset"},
-			expected: []interface{}{float64(3), []interface{}{"member1", "1"}},
+			commands: []string{"ZADD myzset 1 member1 2 member2 3 member3", "ZPOPMIN myzset", "ZCOUNT myzset  1 10"},
+			expected: []interface{}{float64(3), []interface{}{"member1", "1"}, float64(2)},
 		},
 		{
 			name:     "ZPOPMIN with normal count argument",
-			commands: []string{"ZADD myzset 1 member1 2 member2 3 member3", "ZPOPMIN myzset 2"},
-			expected: []interface{}{float64(3), []interface{}{"member1", "1", "member2", "2"}},
+			commands: []string{"ZADD myzset 1 member1 2 member2 3 member3", "ZPOPMIN myzset 2", "ZCOUNT myzset  1 2"},
+			expected: []interface{}{float64(3), []interface{}{"member1", "1", "member2", "2"}, float64(0)},
 		},
 		{
 			name:     "ZPOPMIN with count argument but multiple members have the same score",
-			commands: []string{"ZADD myzset 1 member1 1 member2 1 member3", "ZPOPMIN myzset 2"},
-			expected: []interface{}{float64(3), []interface{}{"member1", "1", "member2", "1"}},
+			commands: []string{"ZADD myzset 1 member1 1 member2 1 member3", "ZPOPMIN myzset 2", "ZCOUNT myzset 1 1"},
+			expected: []interface{}{float64(3), []interface{}{"member1", "1", "member2", "1"}, float64(1)},
 		},
 		{
 			name:     "ZPOPMIN with negative count argument",
-			commands: []string{"ZADD myzset 1 member1 2 member2 3 member3", "ZPOPMIN myzset -1"},
-			expected: []interface{}{float64(3), []interface{}{}},
+			commands: []string{"ZADD myzset 1 member1 2 member2 3 member3", "ZPOPMIN myzset -1", "ZCOUNT myzset 0.6 3.231"},
+			expected: []interface{}{float64(3), []interface{}{}, float64(3)},
 		},
 		{
 			name:     "ZPOPMIN with invalid count argument",
-			commands: []string{"ZADD myzset 1 member1", "ZPOPMIN myzset INCORRECT_COUNT_ARGUMENT"},
-			expected: []interface{}{float64(1), "ERR value is not an integer or out of range"},
+			commands: []string{"ZADD myzset 1 member1", "ZPOPMIN myzset INCORRECT_COUNT_ARGUMENT", "ZCOUNT myzset 1 10"},
+			expected: []interface{}{float64(1), "ERR value is not an integer or out of range", float64(1)},
 		},
 		{
 			name:     "ZPOPMIN with count argument greater than length of sorted set",
-			commands: []string{"ZADD myzset 1 member1 2 member2 3 member3", "ZPOPMIN myzset 10"},
-			expected: []interface{}{float64(3), []interface{}{"member1", "1", "member2", "2", "member3", "3"}},
+			commands: []string{"ZADD myzset 1 member1 2 member2 3 member3", "ZPOPMIN myzset 10", "ZCOUNT myzset 1 10"},
+			expected: []interface{}{float64(3), []interface{}{"member1", "1", "member2", "2", "member3", "3"}, float64(0)},
 		},
 		{
 			name:     "ZPOPMIN on empty sorted set",
-			commands: []string{"ZADD myzset 1 member1", "ZPOPMIN myzset 1", "ZPOPMIN myzset"},
-			expected: []interface{}{float64(1), []interface{}{"member1", "1"}, []interface{}{}},
+			commands: []string{"ZADD myzset 1 member1", "ZPOPMIN myzset 1", "ZPOPMIN myzset", "ZCOUNT myzset  0 10000"},
+			expected: []interface{}{float64(1), []interface{}{"member1", "1"}, []interface{}{}, float64(0)},
 		},
 		{
 			name:     "ZPOPMIN with floating-point scores",
-			commands: []string{"ZADD myzset 1.5 member1 2.7 member2 3.8 member3", "ZPOPMIN myzset"},
-			expected: []interface{}{float64(3), []interface{}{"member1", "1.5"}},
+			commands: []string{"ZADD myzset 1.5 member1 2.7 member2 3.8 member3", "ZPOPMIN myzset", "ZCOUNT myzset 1.499 2.711"},
+			expected: []interface{}{float64(3), []interface{}{"member1", "1.5"}, float64(1)},
 		},
 	}
 
@@ -66,13 +66,12 @@ func TestZPOPMIN(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			conn := exec.ConnectToServer()
 
-			DeleteKey(t, conn, exec, "myzset")
-
 			for i, cmd := range tc.commands {
 				result, err := exec.FireCommandAndReadResponse(conn, cmd)
 				assert.Nil(t, err)
 				assert.Equal(t, tc.expected[i], result)
 			}
+			DeleteKey(t, conn, exec, "myzset")
 		})
 	}
 }
