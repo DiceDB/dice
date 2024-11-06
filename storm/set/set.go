@@ -30,7 +30,6 @@ func stormSet(wg *sync.WaitGroup) {
 		k, v := getRandomKeyValue()
 		var buf [512]byte
 		cmd := fmt.Sprintf("SET %s %d", k, v)
-		fmt.Println(cmd)
 		_, err = conn.Write(clientio.Encode(strings.Split(cmd, " "), false))
 		if err != nil {
 			panic(err)
