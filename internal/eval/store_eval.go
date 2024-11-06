@@ -4033,5 +4033,4 @@ func evalLINSERT(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalError(err)
 	}
 	return makeEvalResult(res)
-
 }
