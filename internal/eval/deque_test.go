@@ -2,7 +2,6 @@ package eval_test
 
 import (
 	"fmt"
-	"gotest.tools/v3/assert"
 	"math/rand"
 	"strconv"
 	"strings"
