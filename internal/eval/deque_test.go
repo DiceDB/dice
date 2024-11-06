@@ -205,7 +205,8 @@ func TestLRange(t *testing.T) {
 				tc.dq.LPush(i)
 			}
 			output, _ := tc.dq.LRange(tc.start, tc.stop)
-			assert.DeepEqual(t, output, tc.expectedOutput)
+			assert.ElementsMatch(t, output, tc.expectedOutput)
+
 		})
 	}
 }

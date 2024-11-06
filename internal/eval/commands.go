@@ -922,17 +922,19 @@ var (
 		Specified members that are already a member of this set are ignored
 		Non existing keys are treated as empty sets.
 		An error is returned when the value stored at key is not a set.`,
-		Eval:     evalSADD,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalSADD,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	smembersCmdMeta = DiceCmdMeta{
 		Name: "SMEMBERS",
 		Info: `SMEMBERS key
 		Returns all the members of the set value stored at key.`,
-		Eval:     evalSMEMBERS,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalSMEMBERS,
 	}
 	sremCmdMeta = DiceCmdMeta{
 		Name: "SREM",
@@ -940,18 +942,20 @@ var (
 		Removes the specified members from the set stored at key.
 		Non existing keys are treated as empty sets.
 		An error is returned when the value stored at key is not a set.`,
-		Eval:     evalSREM,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalSREM,
 	}
 	scardCmdMeta = DiceCmdMeta{
 		Name: "SCARD",
 		Info: `SCARD key
 		Returns the number of elements of the set stored at key.
 		An error is returned when the value stored at key is not a set.`,
-		Eval:     evalSCARD,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalSCARD,
 	}
 	sdiffCmdMeta = DiceCmdMeta{
 		Name: "SDIFF",

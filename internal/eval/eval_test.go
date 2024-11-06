@@ -107,6 +107,10 @@ func TestEval(t *testing.T) {
 	testEvalBITOP(t, store)
 	testEvalAPPEND(t, store)
 	testEvalHRANDFIELD(t, store)
+	testEvalSADD(t, store)
+	testEvalSREM(t, store)
+	testEvalSCARD(t, store)
+	testEvalSMEMBERS(t, store)
 	testEvalZADD(t, store)
 	testEvalZRANGE(t, store)
 	testEvalZPOPMAX(t, store)
@@ -6625,6 +6629,246 @@ func testEvalJSONRESP(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalJSONRESP, store)
+}
+
+func testEvalSADD(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"SADD with wrong number of arguments": {
+			input: []string{},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("SADD"),
+			},
+		},
+		"SADD new member to non existing key": {
+			input: []string{"myset", "member"},
+			migratedOutput: EvalResponse{
+				Result: 1,
+				Error:  nil,
+			},
+		},
+		"SADD new members to non existing key": {
+			input: []string{"myset", "member1", "member2"},
+			migratedOutput: EvalResponse{
+				Result: 2,
+				Error:  nil,
+			},
+		},
+		"SADD new member to existing key": {
+			setup: func() {
+				evalSADD([]string{"myset", "member1"}, store)
+			},
+			input: []string{"myset", "member2"},
+			migratedOutput: EvalResponse{
+				Result: 1,
+				Error:  nil,
+			},
+		},
+		"SADD existing member to existing key": {
+			setup: func() {
+				evalSADD([]string{"myset", "member1"}, store)
+			},
+			input: []string{"myset", "member1"},
+			migratedOutput: EvalResponse{
+				Result: 0,
+				Error:  nil,
+			},
+		},
+		"SADD new and existing member to existing key": {
+			setup: func() {
+				evalSADD([]string{"myset", "member1"}, store)
+			},
+			input: []string{"myset", "member1", "member2", "member3"},
+			migratedOutput: EvalResponse{
+				Result: 2,
+				Error:  nil,
+			},
+		},
+		"SADD member to key with invalid type": {
+			setup: func() {
+				evalSET([]string{"key", "value"}, store)
+			},
+			input: []string{"key", "member"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			},
+		},
+	}
+
+	runMigratedEvalTests(t, tests, evalSADD, store)
+}
+
+func testEvalSREM(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"SREM with wrong number of arguments": {
+			input: []string{},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("SREM"),
+			},
+		},
+		"SREM on key with invalid type": {
+			setup: func() {
+				evalSET([]string{"key", "value"}, store)
+			},
+			input: []string{"key", "member"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			},
+		},
+		"SREM with non existing key": {
+			input: []string{"myset", "member"},
+			migratedOutput: EvalResponse{
+				Result: 0,
+				Error:  nil,
+			},
+		},
+		"SREM on existing key with existing member": {
+			setup: func() {
+				evalSADD([]string{"myset", "a"}, store)
+			},
+			input: []string{"myset", "a"},
+			migratedOutput: EvalResponse{
+				Result: 1,
+				Error:  nil,
+			},
+		},
+		"SREM on existing key with not existing member": {
+			setup: func() {
+				evalSADD([]string{"myset", "a"}, store)
+			},
+			input: []string{"myset", "b"},
+			migratedOutput: EvalResponse{
+				Result: 0,
+				Error:  nil,
+			},
+		},
+		"SREM on existing key with existing and not existing members": {
+			setup: func() {
+				evalSADD([]string{"myset", "a"}, store)
+			},
+			input: []string{"myset", "a", "b"},
+			migratedOutput: EvalResponse{
+				Result: 1,
+				Error:  nil,
+			},
+		},
+		"SREM on existing key with repeated existing members": {
+			setup: func() {
+				evalSADD([]string{"myset", "a"}, store)
+			},
+			input: []string{"myset", "a", "b", "a"},
+			migratedOutput: EvalResponse{
+				Result: 1,
+				Error:  nil,
+			},
+		},
+	}
+
+	runMigratedEvalTests(t, tests, evalSREM, store)
+}
+
+func testEvalSCARD(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"SCARD with wrong number of arguments": {
+			input: []string{"mykey", "value"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("SCARD"),
+			},
+		},
+		"SCARD on key with invalid type": {
+			setup: func() {
+				evalSET([]string{"mykey", "value"}, store)
+			},
+			input: []string{"mykey"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			},
+		},
+		"SCARD with non existing key": {
+			input: []string{"mykey"},
+			migratedOutput: EvalResponse{
+				Result: 0,
+				Error:  nil,
+			},
+		},
+		"SCARD with existing key and no member": {
+			setup: func() {
+				evalSADD([]string{"mykey"}, store)
+			},
+			input: []string{"mykey"},
+			migratedOutput: EvalResponse{
+				Result: 0,
+				Error:  nil,
+			},
+		},
+		"SCARD with existing key": {
+			setup: func() {
+				evalSADD([]string{"mykey", "a", "b"}, store)
+			},
+			input: []string{"mykey"},
+			migratedOutput: EvalResponse{
+				Result: 2,
+				Error:  nil,
+			},
+		},
+	}
+
+	runMigratedEvalTests(t, tests, evalSCARD, store)
+}
+
+func testEvalSMEMBERS(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"SMEMBERS with wrong number of arguments": {
+			input: []string{"mykey", "mykey"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("SMEMBERS"),
+			},
+		},
+		"SMEMBERS on key with invalid type": {
+			setup: func() {
+				evalSET([]string{"mykey", "value"}, store)
+			},
+			input: []string{"mykey"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			},
+		},
+		"SMEMBERS with non existing key": {
+			input: []string{"mykey"},
+			migratedOutput: EvalResponse{
+				Result: []string{},
+				Error:  nil,
+			},
+		},
+		"SMEMBERS with  existing key": {
+			setup: func() {
+				evalSADD([]string{"mykey", "a", "b"}, store)
+			},
+			input: []string{"mykey"},
+			migratedOutput: EvalResponse{
+				Result: []string{"a", "b"},
+				Error:  nil,
+			},
+		},
+		"SMEMBERS with  existing key and no members": {
+			setup: func() {
+				evalSADD([]string{"mykey"}, store)
+			},
+			input: []string{"mykey"},
+			migratedOutput: EvalResponse{
+				Result: []string{},
+				Error:  nil,
+			},
+		},
+	}
+	runMigratedEvalTests(t, tests, evalSMEMBERS, store)
 }
 
 func testEvalZADD(t *testing.T, store *dstore.Store) {
