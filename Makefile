@@ -49,6 +49,26 @@ run:
 test:
 	go test -v -race -count=1 -p=1 ./integration_tests/...
 
+test-http:
+	go test -v -race -count=1 -p=1 ./integration_tests/commands/http/...
+
+test-resp:
+	go test -v -race -count=1 -p=1 ./integration_tests/commands/resp/...
+
+test-ws:
+	go test -v -race -count=1 -p=1 ./integration_tests/commands/websocket/...
+
+test-all:
+	@echo "Running all tests in parallel with console output and error logging..."
+	(go test -v -race -count=1 ./integration_tests/commands/resp/... & \
+	 go test -v -race -count=1 ./integration_tests/commands/websocket/... & \
+	 go test -v -race -count=1 ./integration_tests/commands/http/... & \
+	 go test -v -race -count=1 ./integration_tests/commands/abort/... & \
+	 go test -v -race -count=1 ./integration_tests/commands/async/... & \
+	 wait)
+
+	@echo "All tests completed. Check logs/error.log for failures and errors."
+
 test-one:
 	go test -v -race -count=1 --run $(TEST_FUNC) ./integration_tests/...
 

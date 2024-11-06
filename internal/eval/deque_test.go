@@ -206,7 +206,6 @@ func TestLRange(t *testing.T) {
 			}
 			output, _ := tc.dq.LRange(tc.start, tc.stop)
 			assert.ElementsMatch(t, output, tc.expectedOutput)
-
 		})
 	}
 }
