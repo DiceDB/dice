@@ -2,6 +2,7 @@ package eval_test
 
 import (
 	"fmt"
+	"gotest.tools/v3/assert"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -9,7 +10,6 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/internal/eval"
-	"github.com/stretchr/testify/assert"
 )
 
 var deqRandGenerator *rand.Rand
