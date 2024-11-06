@@ -1,7 +1,6 @@
 package async
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -124,7 +123,6 @@ func TestObjectCommand(t *testing.T) {
 
 				result := FireCommand(conn, cmd)
 
-				fmt.Println(cmd, result, tc.expected[i])
 				if tc.assertType[i] == "equal" {
 					assert.Equal(t, tc.expected[i], result)
 				} else {

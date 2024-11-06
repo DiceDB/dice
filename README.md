@@ -32,7 +32,7 @@ Although DiceDB is a drop-in replacement of Redis, which means almost no learnin
 
 ## Get started
 
-### Setting up DiceDB with Dockerc
+### Setting up DiceDB with Docker
 
 The easiest way to get started with DiceDB is using [Docker](https://www.docker.com/) by running the following command.
 

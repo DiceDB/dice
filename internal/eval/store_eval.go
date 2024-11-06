@@ -1,6 +1,7 @@
 package eval
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -3946,4 +3947,91 @@ func evalSMEMBERS(args []string, store *dstore.Store) *EvalResponse {
 		Result: members,
 		Error:  nil,
 	}
+}
+
+// evalLRANGE returns the specified elements of the list stored at key.
+//
+// Returns Array reply: a list of elements in the specified range, or an empty array if the key doesn't exist.
+//
+// Usage: LRANGE key start stop
+func evalLRANGE(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 3 {
+		return makeEvalError(errors.New("-wrong number of arguments for LRANGE"))
+	}
+	key := args[0]
+	start, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return makeEvalError(errors.New("-ERR value is not an integer or out of range"))
+	}
+	stop, err := strconv.ParseInt(args[2], 10, 64)
+	if err != nil {
+		return makeEvalError(errors.New("-ERR value is not an integer or out of range"))
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return makeEvalResult([]string{})
+	}
+
+	// if object is a set type, return error
+	if object.AssertType(obj.TypeEncoding, object.ObjTypeSet) == nil {
+		return makeEvalError(errors.New(diceerrors.WrongTypeErr))
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeByteList); err != nil {
+		return makeEvalError(err)
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingDeque); err != nil {
+		return makeEvalError(err)
+	}
+
+	q := obj.Value.(*Deque)
+	res, err := q.LRange(start, stop)
+	if err != nil {
+		return makeEvalError(err)
+	}
+	return makeEvalResult(res)
+}
+
+// evalLINSERT command inserts the element at a key before / after the pivot element.
+//
+// Returns the list length (integer) after a successful insert operation, 0 when the key doesn't exist, -1 when the pivot wasn't found.
+//
+// Usage: LINSERT key <BEFORE | AFTER> pivot element
+func evalLINSERT(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 4 {
+		return makeEvalError(errors.New("-wrong number of arguments for LINSERT"))
+	}
+
+	key := args[0]
+	beforeAfter := strings.ToLower(args[1])
+	pivot := args[2]
+	element := args[3]
+
+	obj := store.Get(key)
+	if obj == nil {
+		return makeEvalResult(0)
+	}
+
+	// if object is a set type, return error
+	if object.AssertType(obj.TypeEncoding, object.ObjTypeSet) == nil {
+		return makeEvalError(errors.New(diceerrors.WrongTypeErr))
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeByteList); err != nil {
+		return makeEvalError(err)
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingDeque); err != nil {
+		return makeEvalError(err)
+	}
+
+	q := obj.Value.(*Deque)
+	res, err := q.LInsert(pivot, element, beforeAfter)
+	if err != nil {
+		return makeEvalError(err)
+	}
+	return makeEvalResult(res)
+
 }

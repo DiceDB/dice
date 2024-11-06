@@ -135,6 +135,8 @@ func TestEval(t *testing.T) {
 	testEvalBFINFO(t, store)
 	testEvalBFEXISTS(t, store)
 	testEvalBFADD(t, store)
+	testEvalLINSERT(t, store)
+	testEvalLRANGE(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -3258,15 +3260,12 @@ func testEvalHVALS(t *testing.T, store *dstore.Store) {
 
 			response := evalHVALS(tt.input, store)
 
-			fmt.Printf("Eval Response: %v\n", response)
-
 			// Handle comparison for byte slices
 			if responseBytes, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
 				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
 					assert.True(t, bytes.Equal(responseBytes, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else {
-				fmt.Printf("G1: %v | %v\n", response.Result, tt.migratedOutput.Result)
 				switch e := tt.migratedOutput.Result.(type) {
 				case []interface{}, []string:
 					assert.ElementsMatch(t, e, response.Result)
@@ -8736,4 +8735,86 @@ func testEvalBFEXISTS(t *testing.T, store *dstore.Store) {
 			}
 		})
 	}
+}
+
+func testEvalLINSERT(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-wrong number of arguments for LINSERT")},
+		},
+		"empty args": {
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-wrong number of arguments for LINSERT")},
+		},
+		"wrong number of args": {
+			input:          []string{"KEY1", "KEY2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-wrong number of arguments for LINSERT")},
+		},
+		"key does not exist": {
+			input:          []string{"NONEXISTENT_KEY", "before", "pivot", "element"},
+			migratedOutput: EvalResponse{Result: 0, Error: nil},
+		},
+		"key exists": {
+			setup: func() {
+				evalLPUSH([]string{"EXISTING_KEY", "mock_value"}, store)
+			},
+			input:          []string{"EXISTING_KEY", "before", "mock_value", "element"},
+			migratedOutput: EvalResponse{Result: int64(2), Error: nil},
+		},
+		"key with different type": {
+			setup: func() {
+				evalSET([]string{"EXISTING_KEY", "mock_value"}, store)
+			},
+			input:          []string{"EXISTING_KEY", "before", "mock_value", "element"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+		},
+	}
+	runMigratedEvalTests(t, tests, evalLINSERT, store)
+}
+
+func testEvalLRANGE(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-wrong number of arguments for LRANGE")},
+		},
+		"empty args": {
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-wrong number of arguments for LRANGE")},
+		},
+		"wrong number of args": {
+			input:          []string{"KEY1"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-wrong number of arguments for LRANGE")},
+		},
+		"invalid start": {
+			input:          []string{"KEY1", "014f", "2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR value is not an integer or out of range")},
+		},
+		"invalid stop": {
+			input:          []string{"KEY1", "2", "f2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-ERR value is not an integer or out of range")},
+		},
+		"key does not exist": {
+			input:          []string{"NONEXISTENT_KEY", "2", "4"},
+			migratedOutput: EvalResponse{Result: []string{}, Error: nil},
+		},
+		"key exists": {
+			setup: func() {
+				evalLPUSH([]string{"EXISTING_KEY", "pivot_value"}, store)
+				evalLINSERT([]string{"EXISTING_KEY", "before", "pivot_value", "before_value"}, store)
+				evalLINSERT([]string{"EXISTING_KEY", "after", "pivot_value", "after_value"}, store)
+			},
+			input:          []string{"EXISTING_KEY", "0", "5"},
+			migratedOutput: EvalResponse{Result: []string{"before_value", "pivot_value", "after_value"}, Error: nil},
+		},
+		"key with different type": {
+			setup: func() {
+				evalSET([]string{"EXISTING_KEY", "mock_value"}, store)
+			},
+			input:          []string{"EXISTING_KEY", "0", "4"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+		},
+	}
+	runMigratedEvalTests(t, tests, evalLRANGE, store)
 }
