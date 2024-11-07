@@ -128,7 +128,7 @@ func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
 	shardManager := shard.NewShardManager(1, queryWatchChan, cmdWatchChan, gec)
 	workerManager := worker.NewWorkerManager(20000, shardManager)
 	// Initialize the RESP Server
-	testServer := resp.NewServer(shardManager, workerManager, cmdWatchChan, gec, nil)
+	testServer := resp.NewServer(shardManager, workerManager, cmdWatchSubscriptionChan, cmdWatchChan, gec, nil)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	fmt.Println("Starting the test server on port", config.DiceConfig.AsyncServer.Port)

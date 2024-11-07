@@ -53,7 +53,8 @@ type Server struct {
 	wl                       wal.AbstractWAL
 }
 
-func NewServer(shardManager *shard.ShardManager, workerManager *worker.WorkerManager, cmdWatchSubscriptionChan chan watchmanager.WatchSubscription, cmdWatchChan chan dstore.CmdWatchEvent, globalErrChan chan error, wl wal.AbstractWAL) *Server {
+func NewServer(shardManager *shard.ShardManager, workerManager *worker.WorkerManager,
+	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription, cmdWatchChan chan dstore.CmdWatchEvent, globalErrChan chan error, wl wal.AbstractWAL) *Server {
 	return &Server{
 		Host:            config.DiceConfig.AsyncServer.Addr,
 		Port:            config.DiceConfig.AsyncServer.Port,
