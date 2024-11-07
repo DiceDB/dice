@@ -47,6 +47,7 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
+	github.com/mattn/go-sqlite3 v1.14.24
 	github.com/mmcloughlin/geohash v0.10.0
 	github.com/ohler55/ojg v1.25.0
 	github.com/pelletier/go-toml/v2 v2.2.3
@@ -58,4 +59,5 @@ require (
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
 	golang.org/x/crypto v0.28.0
 	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c
+	google.golang.org/protobuf v1.35.1
 )

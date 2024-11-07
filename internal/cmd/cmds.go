@@ -17,9 +17,14 @@ type RedisCmds struct {
 	RequestID uint32
 }
 
+// Repr returns a string representation of the command.
+func (cmd *DiceDBCmd) Repr() string {
+	return fmt.Sprintf("%s %s", cmd.Cmd, strings.Join(cmd.Args, " "))
+}
+
 // GetFingerprint returns a 32-bit fingerprint of the command and its arguments.
 func (cmd *DiceDBCmd) GetFingerprint() uint32 {
-	return farm.Fingerprint32([]byte(fmt.Sprintf("%s-%s", cmd.Cmd, strings.Join(cmd.Args, " "))))
+	return farm.Fingerprint32([]byte(cmd.Repr()))
 }
 
 // GetKey Returns the key which the command operates on.
