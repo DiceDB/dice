@@ -61,7 +61,7 @@ func init() {
 
 	flag.BoolVar(&config.EnableWAL, "enable-wal", false, "enable write-ahead logging")
 	flag.BoolVar(&config.RestoreFromWAL, "restore-wal", false, "restore the database from the WAL files")
-	flag.StringVar(&config.WALEngine, "wal-engine", "sqlite", "wal engine to use, values: sqlite, aof")
+	flag.StringVar(&config.WALEngine, "wal-engine", "null", "wal engine to use, values: sqlite, aof")
 
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
 	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the config file")
@@ -186,6 +186,7 @@ func main() {
 		wl                       wal.AbstractWAL
 	)
 
+	wl, _ = wal.NewNullWAL()
 	slog.Info("running with", slog.Bool("enable-wal", config.EnableWAL))
 	if config.EnableWAL {
 		if config.WALEngine == "sqlite" {
