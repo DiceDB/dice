@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 // this file may contain test cases for checking error messages across all commands
@@ -14,8 +14,8 @@ func TestErrorsForSetData(t *testing.T) {
 
 	setErrorMsg := "WRONGTYPE Operation against a key holding the wrong kind of value"
 	testCases := []struct {
-		name        string
-		cmd         []string
+		name       string
+		cmd        []string
 		expected   []interface{}
 		assertType []string
 		delay      []time.Duration

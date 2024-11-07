@@ -1,28 +1,86 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import Hero from "../components/Hero.astro";
+import { MoveUpRight } from "lucide-astro";
 
-import site from "../data/site.json";
+import { getCollection } from "astro:content";
 
-const title =
-  "DiceDB - an in-memory, real-time, and reactive database with Redis and SQL support optimized for modern hardware and building real-time applications.";
+const blogs = await getCollection("blog", ({ id }) => id !== null);
+const recentBlogs = blogs
+  .sort((a, b) => b.data.published_at - a.data.published_at)
+  .slice(0, 3);
+
+const title = "DiceDB - a super cache;";
 const description =
-  "DiceDB is an in-memory, real-time, and reactive database with Redis and SQL support optimized for modern hardware and building real-time applications.";
+  "DiceDB is a redis-compliant, scalable, highly available, unified cache optimized for modern hardware";
 ---
 
 <Layout {title} {description}>
   <Hero />
-  <div class="section" style="margin: 3em 0;">
-    <div class="columns is-multiline">
+  <div class="section content">
+    <p>DiceDB is</p>
+    <ul>
+      <li>
+        Redis-compliant - a drop-in (<a href="/redis-compatability">36.4%</a>)
+        replacement of Redis (<a href="/blog/dicedb-is-redis-replacement"
+          >here's why</a
+        >)
+      </li>
+      <li>
+        Scalable - scales out and scales in with load <span
+          class="has-text-danger">*</span
+        >
+      </li>
+      <li>
+        Highly available - failovers and durability <span
+          class="has-text-danger">*</span
+        >
+      </li>
+      <li>
+        Unified cache - multi-tenant and shared everything architecture <span
+          class="has-text-danger">*</span
+        >
+      </li>
+      <li>
+        Optimized for modern hardware - multi-threaded with shared-nothing
+        architecture <span class="has-text-danger">*</span>
+      </li>
+    </ul>
+  </div>
+  <div class="section content has-text-centered">
+    <p class="has-text-weight-bold has-text-danger">DICEDB BLOG</p>
+    <h2 class="is-size-3">Explore our insights</h2>
+    <p>
+      Explore our blogs to stay informed on internal details, announcements, and
+      use cases; and see what we are up to.
+    </p>
+    <br />
+    <div class="columns has-text-left">
       {
-        site.featureHighlights.map((s) => (
-          <div class="column is-4">
-            <div class="box">
-              <h2 class="title is-size-5">{s.title}</h2>
-              <p class="is-size-6">{s.description}</p>
+        recentBlogs.map((blog) => {
+          return (
+            <div class="column is-4">
+              <div class="box content">
+                <div>
+                  <p class="title is-size-5">
+                    <a href={`/blog/${blog.slug}`} class="has-text-danger">
+                      {blog.data.title}
+                    </a>
+                  </p>
+                  <p>{blog.data.description.slice(0, 128)}...</p>
+                  <p class="has-text-right">
+                    <a class="button is-small" href={`/blog/${blog.slug}`}>
+                      <span>Read post</span>
+                      <span class="icon">
+                        <MoveUpRight />
+                      </span>
+                    </a>
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
-        ))
+          );
+        })
       }
     </div>
   </div>

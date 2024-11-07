@@ -7,14 +7,14 @@ The `JSON.NUMINCRBY` command is part of the DiceDBJSON module, which allows for 
 
 ## Syntax
 
-```plaintext
+```bash
 JSON.NUMINCRBY <key> <path> <increment>
 ```
 
 ## Parameters
 
 | Parameter   | Description                                                                             | Type           | Required |
-|-------------|-----------------------------------------------------------------------------------------|----------------|----------|
+| ----------- | --------------------------------------------------------------------------------------- | -------------- | -------- |
 | `key`       | The key under which the JSON document is stored.                                        | String         | Yes      |
 | `path`      | The JSONPath expression specifying the location of the numeric value to be incremented. | String         | Yes      |
 | `increment` | The numeric value by which to increment the target value.                               | Floating Point | Yes      |
@@ -22,7 +22,7 @@ JSON.NUMINCRBY <key> <path> <increment>
 ## Return Value
 
 | Condition                                  | Return Value                          |
-|--------------------------------------------|---------------------------------------|
+| ------------------------------------------ | ------------------------------------- |
 | Command is successful                      | Array of new value for update objects |
 | Key does not exist or JSON path is invalid | error                                 |
 
@@ -35,19 +35,19 @@ JSON.NUMINCRBY <key> <path> <increment>
 
 1. `Key does not exist`:
 
-    - Error Message: `(error) ERROR could not perform this operation on a key that doesn't exist`
-    - Occurs when the specified key does not exist in the DiceDB database. 
+   - Error Message: `(error) ERROR could not perform this operation on a key that doesn't exist`
+   - Occurs when the specified key does not exist in the DiceDB database.
 
 2. `Invalid JSON path`:
 
-    - Error Message: `(error) ERROR invalid JSONPath`
-    - Occurs when the provided JSONPath expression is not valid.
+   - Error Message: `(error) ERROR invalid JSONPath`
+   - Occurs when the provided JSONPath expression is not valid.
 
 ## Example Usage
 
 Create a document:
 
-```shell
+```bash
 127.0.0.1:7379> JSON.SET user:1001 $ '{"name": "John Doe", "age": 30, "balance": 100.50, "account": {"id": 0, "lien": 0, "balance": 100.50}}'
 "OK"
 ```
@@ -56,7 +56,7 @@ Create a document:
 
 Incrementing the value of `age` object by 1
 
-```shell
+```bash
 127.0.0.1:7379> JSON.NUMINCRBY user:1001 $.age 1
 "[31]"
 ```
@@ -65,7 +65,7 @@ Incrementing the value of `age` object by 1
 
 Incrementing the value of `balance` object by 25.75
 
-```shell
+```bash
 127.0.0.1:7379> JSON.NUMINCRBY user:1001 $.balance 25.75
 "[126.25]"
 ```
@@ -74,7 +74,7 @@ Incrementing the value of `balance` object by 25.75
 
 Finding and recursively incrementing the values of both `balance` objects by 25.75
 
-```shell
+```bash
 127.0.0.1:7379> JSON.NUMINCRBY user:1001 $..balance 25.75
 "[126.25,126.25]"
 ```
@@ -83,7 +83,7 @@ Finding and recursively incrementing the values of both `balance` objects by 25.
 
 Incrementing a non-numeric value
 
-```shell
+```bash
 127.0.0.1:7379> JSON.NUMINCRBY user:1001 $.name 5
 "[null]"
 ```
@@ -92,7 +92,7 @@ Incrementing a non-numeric value
 
 Incrementing a non-existent path
 
-```shell
+```bash
 127.0.0.1:7379> JSON.NUMINCRBY user:1001 $.nonexistent 10
 "[]"
 ```
@@ -101,7 +101,7 @@ Incrementing a non-existent path
 
 Trying to increment an invalid path will result in an error
 
-```shell
+```bash
 127.0.0.1:7379> JSON.NUMINCRBY user:1001 . 5
 (error) ERROR invalid JSONPath
 ```
@@ -110,7 +110,7 @@ Trying to increment an invalid path will result in an error
 
 Trying to increment a path for a non-existent key will result in an error
 
-```shell
+```bash
 127.0.0.1:7379> JSON.NUMINCRBY user:1002 . 5
 (error) ERROR could not perform this operation on a key that doesn't exist
 ```

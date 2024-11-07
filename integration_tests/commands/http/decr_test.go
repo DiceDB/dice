@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDECR(t *testing.T) {
 	exec := NewHTTPCommandExecutor()
-
+	exec.FireCommand(HTTPCommand{Command: "FLUSHDB"})
 	exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": [...]string{"key1", "key2", "key3"}}})
 
 	testCases := []struct {
@@ -60,7 +60,7 @@ func TestDECR(t *testing.T) {
 
 func TestDECRBY(t *testing.T) {
 	exec := NewHTTPCommandExecutor()
-
+	exec.FireCommand(HTTPCommand{Command: "FLUSHDB"})
 	exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": [...]string{"key1", "key2", "key3"}}})
 
 	testCases := []struct {

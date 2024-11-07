@@ -1,0 +1,20 @@
+---
+import { getCollection } from "astro:content";
+import BlogLayout from "../../layouts/BlogLayout.astro";
+export async function getStaticPaths() {
+  const releases = (await getCollection("releases")).sort(
+    (a, b) => b.data.published_at.getTime() - a.data.published_at.getTime(),
+  );
+  return releases.map((release) => ({
+    params: { slug: release.slug },
+    props: { release },
+  }));
+}
+
+const { release } = Astro.props;
+const { Content } = await release.render();
+---
+
+<BlogLayout blog={release} type="release">
+  <Content />
+</BlogLayout>

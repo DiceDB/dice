@@ -7,28 +7,27 @@ The `JSON.TYPE` command allows you to work with JSON data structures in DiceDB. 
 
 ## Syntax
 
-```
+```bash
 JSON.TYPE <key> <path>
 ```
 
 ## Parameters
 
-| Key | Description | Example | Required |
-|-----|-------------|---------|----------|
-| key | The key under which the JSON document is stored. | `user:1001` | yes |
-| path | The JSONPath expression that specifies the location within the JSON. The default path is the root($) | `$.address.city` | yes  |
+| Key  | Description                                                                                          | Example          | Required |
+| ---- | ---------------------------------------------------------------------------------------------------- | ---------------- | -------- |
+| key  | The key under which the JSON document is stored.                                                     | `user:1001`      | yes      |
+| path | The JSONPath expression that specifies the location within the JSON. The default path is the root($) | `$.address.city` | yes      |
 
 ## Return Value
 
-
-| Condition  | Value  |
-|------------|--------|
-| Value is null  | `null`   |
-| Value is a boolean  | `boolean`   |
-| Value is an integer or float  | `number`   |
-| Value is a string  | `string`   |
-| Value is an array  | `array`   |
-| Value is an object   | `object`    |
+| Condition                    | Value     |
+| ---------------------------- | --------- |
+| Value is null                | `null`    |
+| Value is a boolean           | `boolean` |
+| Value is an integer or float | `number`  |
+| Value is a string            | `string`  |
+| Value is an array            | `array`   |
+| Value is an object           | `object`  |
 
 ### Type
 

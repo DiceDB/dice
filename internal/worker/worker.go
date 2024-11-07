@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"strconv"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -52,6 +53,7 @@ type BaseWorker struct {
 }
 
 func NewWorker(wid string, responseChan, preprocessingChan chan *ops.StoreResponse,
+	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription,
 	ioHandler iohandler.IOHandler, parser requestparser.Parser,
 	shardManager *shard.ShardManager, gec chan error, wl wal.AbstractWAL) *BaseWorker {
 	return &BaseWorker{
@@ -248,7 +250,47 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 			}
 			cmdList = append(cmdList, watchCmd)
 			isWatchNotification = true
+
+		case Unwatch:
+			// Generate the Cmd being unwatched. All we need to do is remove the .UNWATCH suffix from the command and pass
+			// it along as is.
+			// Modify the command name to remove the .UNWATCH suffix, this will allow us to generate a consistent
+			// fingerprint (which uses the command name without the suffix)
+			diceDBCmd.Cmd = diceDBCmd.Cmd[:len(diceDBCmd.Cmd)-8]
+			watchCmd := &cmd.DiceDBCmd{
+				Cmd:  diceDBCmd.Cmd,
+				Args: diceDBCmd.Args,
+			}
+			cmdList = append(cmdList, watchCmd)
+			isWatchNotification = false
 		}
+	}
+
+	// Unsubscribe Unwatch command type
+	if meta.CmdType == Unwatch {
+		// extract the fingerprint
+		command := cmdList[len(cmdList)-1]
+		fp, fperr := strconv.ParseUint(command.Args[0], 10, 32)
+		if fperr != nil {
+			err := w.ioHandler.Write(ctx, diceerrors.ErrInvalidFingerprint)
+			if err != nil {
+				return fmt.Errorf("error sending push response to client: %v", err)
+			}
+			return fperr
+		}
+
+		// send the unsubscribe request
+		w.cmdWatchSubscriptionChan <- watchmanager.WatchSubscription{
+			Subscribe:    false,
+			AdhocReqChan: w.adhocReqChan,
+			Fingerprint:  uint32(fp),
+		}
+
+		err := w.ioHandler.Write(ctx, "OK")
+		if err != nil {
+			return fmt.Errorf("error sending push response to client: %v", err)
+		}
+		return nil
 	}
 
 	// Scatter the broken-down commands to the appropriate shards.
@@ -263,7 +305,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 
 	if meta.CmdType == Watch {
 		// Proceed to subscribe after successful execution
-		watchmanager.CmdWatchSubscriptionChan <- watchmanager.WatchSubscription{
+		w.cmdWatchSubscriptionChan <- watchmanager.WatchSubscription{
 			Subscribe:    true,
 			WatchCmd:     cmdList[len(cmdList)-1],
 			AdhocReqChan: w.adhocReqChan,

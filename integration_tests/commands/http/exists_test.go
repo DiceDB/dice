@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestExistsHttp(t *testing.T) {
@@ -86,7 +86,7 @@ func TestExistsHttp(t *testing.T) {
 				if err != nil {
 					log.Printf("Error executing command: %v", err)
 				}
-				assert.DeepEqual(t, tc.expected[i], result)
+				assert.Equal(t, tc.expected[i], result)
 			}
 		})
 	}
