@@ -26,7 +26,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
       - name: Setup Go
@@ -37,7 +36,73 @@ jobs:
         run: go get .
       - name: Build
         run: make build
+
+  unittest:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23.x"
+      - name: Install dependencies
+        run: go get .
       - name: Run Unit tests
         run: make unittest
-      - name: Run Integration tests
-        run: make test
+  
+  test-resp:
+    runs-on: ubuntu-latest
+    needs: [ build, unittest ]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23.x"
+      - name: Install dependencies
+        run: go get .
+      - name: Run Resp tests
+        run: make test-resp
+
+  test-ws:
+    runs-on: ubuntu-latest
+    needs: [ build, unittest ]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23.x"
+      - name: Install dependencies
+        run: go get .
+      - name: Run Web Sockets tests
+        run: make test-ws
+    
+  test-http:
+    runs-on: ubuntu-latest
+    needs: [ build, unittest ]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23.x"
+      - name: Install dependencies
+        run: go get .
+      - name: Run Http tests
+        run: make test-http
+  
+  test-async:
+    runs-on: ubuntu-latest
+    needs: [ build, unittest ]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23.x"
+      - name: Install dependencies
+        run: go get .
+      - name: Run Async tests
+        run: make test-async

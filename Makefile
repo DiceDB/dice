@@ -49,6 +49,9 @@ run:
 test:
 	go test -v -race -count=1 -p=1 ./integration_tests/...
 
+test-async:
+	go test -v -race -count=1 -p=1 ./integration_tests/commands/async/...
+
 test-http:
 	go test -v -race -count=1 -p=1 ./integration_tests/commands/http/...
 
@@ -58,6 +61,8 @@ test-resp:
 test-ws:
 	go test -v -race -count=1 -p=1 ./integration_tests/commands/websocket/...
 
+# Run all tests in parallel with console output and error logging
+# only for development
 test-all:
 	@echo "Running all tests in parallel with console output and error logging..."
 	(go test -v -race -count=1 ./integration_tests/commands/resp/... & \
