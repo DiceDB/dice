@@ -73,13 +73,15 @@ func readStringUntilSr(buf *bytes.Buffer) (string, error) {
 
 			// If the next byte is '\n', we've found a valid end of string
 			if nextByte == '\n' {
-				return string(result[:len(result)-1]), nil // Return without the '\r'
+				break
 			} else {
 				// Otherwise, add the next byte to the result and continue
 				result = append(result, nextByte)
 			}
 		}
 	}
+	// Return without the last '\r'
+	return string(result[:len(result)-1]), nil
 }
 
 // reads a RESP encoded simple string from data and returns
