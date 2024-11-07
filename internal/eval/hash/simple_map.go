@@ -1,15 +1,13 @@
 package hash
 
-
 import (
 	"path"
 
 	"github.com/dicedb/dice/internal/server/utils"
 )
 
-
-type SimpleMap[K comparable,V any] struct {
-	hmap map[K]V
+type SimpleMap[K comparable, V any] struct {
+	hmap    map[K]V
 	expires map[K]uint64
 }
 
@@ -65,7 +63,8 @@ func (h *SimpleMap[K, V]) Get(key K) (*V, bool) {
 // If the key does not exist in the map, the method does nothing.
 //
 // Parameters:
-//   key (K): The key of the entry to be removed.
+//
+//	key (K): The key of the entry to be removed.
 func (h *SimpleMap[K, V]) Delete(key K) {
 	delete(h.hmap, key)
 	delete(h.expires, key)
@@ -83,7 +82,6 @@ func (h *SimpleMap[K, V]) Len() int64 {
 func (h *SimpleMap[K, V]) ALen() int64 {
 	return int64(len(h.hmap))
 }
-
 
 // Keys returns all valid keys in the map.
 // Any key which is past its ttl will be deleted
@@ -212,19 +210,15 @@ func (h *SimpleMap[K, V]) SetExpiry(key K, expiryMs int64) int64 {
 //	- `EXPIRY_SET` if the expiry time is successfully set.
 func (h *SimpleMap[K, V]) SetExpiryUnixMilli(key K, expiryMs uint64) int64 {
 	if _, exists := h.Get(key); !exists {
-		return NOT_FOUND
+		return NotFound
 	}
 	if expiryMs <= uint64(utils.GetCurrentTime().UnixMilli()) {
 		h.Delete(key)
-		return PAST
+		return Past
 	}
 	h.expires[key] = expiryMs
-	return EXPIRY_SET
+	return ExpirySet
 }
-
-
-
-
 
 // ModifyOrCreate modifies the value associated with the given key using the provided modifier function.
 // If the key does not exist, a new value will be created based on the modifier's logic.
@@ -264,7 +258,7 @@ func (h *SimpleMap[K, V]) SetExpiryUnixMilli(key K, expiryMs uint64) int64 {
 // to their zero values (empty string for Name and Email, 0 for Age), and increment the Age to 1.
 //
 // The ModifyOrCreate method allows for flexible modifications of complex data types based on the provided logic.
-func (h *SimpleMap[K, V]) CreateOrModify(key K, modifier func(old V)(V, error)) (*V, error) {
+func (h *SimpleMap[K, V]) CreateOrModify(key K, modifier func(old V) (V, error)) (*V, error) {
 	val, ok := h.Get(key)
 	if !ok {
 		val = new(V)
