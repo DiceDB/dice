@@ -2203,7 +2203,7 @@ func evalLPOP(args []string, store *dstore.Store) []byte {
 	deq := obj.Value.(*Deque)
 
 	// holds the elements popped
-	var str []string
+	var elements []string
 	for iter := 0; iter < popNumber; iter++ {
 		x, err := deq.LPop()
 		if err != nil {
@@ -2212,18 +2212,18 @@ func evalLPOP(args []string, store *dstore.Store) []byte {
 			}
 			panic(fmt.Sprintf("unknown error: %v", err))
 		}
-		str = append(str, x)
+		elements = append(elements, x)
 	}
 
-	if len(str) == 0 {
+	if len(elements) == 0 {
 		return clientio.RespNIL
 	}
 
-	if len(str) == 1 {
-		return clientio.Encode(str[0], false)
+	if len(elements) == 1 {
+		return clientio.Encode(elements[0], false)
 	}
 
-	return clientio.Encode(str, false)
+	return clientio.Encode(elements, false)
 }
 
 func evalLLEN(args []string, store *dstore.Store) []byte {
