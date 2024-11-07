@@ -40,16 +40,17 @@ type Worker interface {
 }
 
 type BaseWorker struct {
-	id                string
-	ioHandler         iohandler.IOHandler
-	parser            requestparser.Parser
-	shardManager      *shard.ShardManager
-	adhocReqChan      chan *cmd.DiceDBCmd
-	Session           *auth.Session
-	globalErrorChan   chan error
-	responseChan      chan *ops.StoreResponse
-	preprocessingChan chan *ops.StoreResponse
-	wl                wal.AbstractWAL
+	id                       string
+	ioHandler                iohandler.IOHandler
+	parser                   requestparser.Parser
+	shardManager             *shard.ShardManager
+	adhocReqChan             chan *cmd.DiceDBCmd
+	Session                  *auth.Session
+	globalErrorChan          chan error
+	responseChan             chan *ops.StoreResponse
+	preprocessingChan        chan *ops.StoreResponse
+	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription
+	wl                       wal.AbstractWAL
 }
 
 func NewWorker(wid string, responseChan, preprocessingChan chan *ops.StoreResponse,

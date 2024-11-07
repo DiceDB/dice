@@ -20,6 +20,7 @@ import (
 	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/server/abstractserver"
 	"github.com/dicedb/dice/internal/wal"
+	"github.com/dicedb/dice/internal/watchmanager"
 
 	"github.com/dicedb/dice/config"
 	diceerrors "github.com/dicedb/dice/internal/errors"
@@ -178,10 +179,11 @@ func main() {
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
 	var (
-		queryWatchChan chan dstore.QueryWatchEvent
-		cmdWatchChan   chan dstore.CmdWatchEvent
-		serverErrCh    = make(chan error, 2)
-		wl             wal.AbstractWAL
+		queryWatchChan           chan dstore.QueryWatchEvent
+		cmdWatchChan             chan dstore.CmdWatchEvent
+		serverErrCh              = make(chan error, 2)
+		cmdWatchSubscriptionChan = make(chan watchmanager.WatchSubscription)
+		wl                       wal.AbstractWAL
 	)
 
 	slog.Info("running with", slog.Bool("enable-wal", config.EnableWAL))
@@ -274,7 +276,7 @@ func main() {
 		}
 
 		workerManager := worker.NewWorkerManager(config.DiceConfig.Performance.MaxClients, shardManager)
-		respServer := resp.NewServer(shardManager, workerManager, cmdWatchChan, serverErrCh, wl)
+		respServer := resp.NewServer(shardManager, workerManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh, wl)
 		serverWg.Add(1)
 		go runServer(ctx, &serverWg, respServer, serverErrCh)
 	} else {

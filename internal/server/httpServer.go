@@ -12,12 +12,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dicedb/dice/internal/eval"
 	"github.com/dicedb/dice/internal/server/abstractserver"
 	"github.com/dicedb/dice/internal/wal"
-
-	"github.com/dicedb/dice/internal/eval"
-
-	"github.com/dicedb/dice/internal/server/abstractserver"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
