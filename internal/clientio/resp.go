@@ -75,6 +75,7 @@ func readStringUntilSr(buf *bytes.Buffer) (string, error) {
 			if nextByte == '\n' {
 				break
 			}
+
 			// Otherwise, add the next byte to the result and continue
 			result = append(result, nextByte)
 		}
