@@ -88,7 +88,6 @@ Setting a key `mylist` as a list and then trying to use `GETDEL`, which is incom
 127.0.0.1:7379> LPUSH mylist "item1"
 (integer) 1
 127.0.0.1:7379> GETDEL mylist
-<<<<<<< HEAD
 ERROR WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
@@ -97,7 +96,3 @@ ERROR WRONGTYPE Operation against a key holding the wrong kind of value
 - The key `mylist` is a list, not a string.
 - # The `GETDEL` command raises a `WRONGTYPE` error because it expects the key to be a string.
   (error) WRONGTYPE Operation against a key holding the wrong kind of value
-
-```
->>>>>>> d43577926873d0df0c8f189cdde6afa65c515ccb
-```

@@ -19,11 +19,7 @@ import (
 
 	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/server/abstractserver"
-<<<<<<< HEAD
 	"github.com/dicedb/dice/internal/wal"
-=======
-	"github.com/dicedb/dice/internal/watchmanager"
->>>>>>> 5067809df5642c23f5b36fe1e812d0832b9a37c8
 
 	"github.com/dicedb/dice/config"
 	diceerrors "github.com/dicedb/dice/internal/errors"

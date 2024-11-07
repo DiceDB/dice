@@ -57,9 +57,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/twmb/murmur3 v1.1.8
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
-	golang.org/x/crypto v0.27.0
-	golang.org/x/exp v0.0.0-20240909161429-701f63a606c0
 	golang.org/x/crypto v0.28.0
 	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c
-    google.golang.org/protobuf v1.35.1
+	google.golang.org/protobuf v1.35.1
 )
