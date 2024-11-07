@@ -74,10 +74,9 @@ func readStringUntilSr(buf *bytes.Buffer) (string, error) {
 			// If the next byte is '\n', we've found a valid end of string
 			if nextByte == '\n' {
 				break
-			} else {
-				// Otherwise, add the next byte to the result and continue
-				result = append(result, nextByte)
 			}
+			// Otherwise, add the next byte to the result and continue
+			result = append(result, nextByte)
 		}
 	}
 	// Return without the last '\r'
