@@ -86,12 +86,14 @@ func TestEval(t *testing.T) {
 	testEvalHEXISTS(t, store)
 	testEvalHDEL(t, store)
 	testEvalHSCAN(t, store)
+	testEvalPFMERGE(t, store)
 	testEvalJSONSTRLEN(t, store)
 	testEvalJSONOBJLEN(t, store)
 	testEvalHLEN(t, store)
 	testEvalSELECT(t, store)
 	testEvalLLEN(t, store)
 	testEvalGETDEL(t, store)
+	testEvalGETEX(t, store)
 	testEvalJSONNUMINCRBY(t, store)
 	testEvalDUMP(t, store)
 	testEvalTYPE(t, store)
@@ -118,6 +120,8 @@ func TestEval(t *testing.T) {
 	testEvalZRANK(t, store)
 	testEvalZCARD(t, store)
 	testEvalZREM(t, store)
+	testEvalZADD(t, store)
+	testEvalZRANGE(t, store)
 	testEvalHVALS(t, store)
 	testEvalBitField(t, store)
 	testEvalHINCRBYFLOAT(t, store)
@@ -137,6 +141,7 @@ func TestEval(t *testing.T) {
 	testEvalBFADD(t, store)
 	testEvalLINSERT(t, store)
 	testEvalLRANGE(t, store)
+	testEvalLPOP(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -3777,6 +3782,57 @@ func testEvalLLEN(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalLLEN, store)
+}
+
+func testEvalLPOP(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"empty args": {
+			input:  nil,
+			output: []byte("-ERR wrong number of arguments for 'lpop' command\r\n"),
+		},
+		"more than 2 args": {
+			input:  []string{"k", "2", "3"},
+			output: []byte("-ERR wrong number of arguments for 'lpop' command\r\n"),
+		},
+		"pop one element": {
+			setup: func() {
+				evalRPUSH([]string{"k", "v1", "v2", "v3", "v4"}, store)
+			},
+			input:  []string{"k"},
+			output: []byte("$2\r\nv1\r\n"),
+		},
+		"pop two elements": {
+			setup: func() {
+				evalRPUSH([]string{"k", "v1", "v2", "v3", "v4"}, store)
+			},
+			input:  []string{"k", "2"},
+			output: []byte("*2\r\n$2\r\nv1\r\n$2\r\nv2\r\n")},
+		"pop more elements than available": {
+			setup: func() {
+				evalRPUSH([]string{"k", "v1", "v2"}, store)
+			},
+			input:  []string{"k", "5"},
+			output: []byte("*2\r\n$2\r\nv1\r\n$2\r\nv2\r\n")},
+		"pop 0 elements": {
+			setup: func() {
+				evalRPUSH([]string{"k", "v1", "v2"}, store)
+			},
+			input:  []string{"k", "0"},
+			output: []byte("*0\r\n")},
+		"negative count": {
+			input:  []string{"k", "-1"},
+			output: []byte("-ERR value is out of range\r\n"),
+		},
+		"non-integer count": {
+			input:  []string{"k", "abc"},
+			output: []byte("-ERR value is not an integer or out of range\r\n"),
+		},
+		"key does not exist": {
+			input:  []string{"nonexistent_key"},
+			output: []byte("$-1\r\n"),
+		},
+	}
+	runEvalTests(t, tests, evalLPOP, store)
 }
 
 func testEvalJSONNUMINCRBY(t *testing.T, store *dstore.Store) {
