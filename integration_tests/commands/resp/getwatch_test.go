@@ -83,7 +83,7 @@ func TestGETWATCH(t *testing.T) {
 			}
 			assert.Equal(t, 3, len(castedValue))
 			assert.Equal(t, "GET", castedValue[0])
-			assert.Equal(t, "1768826704", castedValue[1])
+			assert.Equal(t, "2714318480", castedValue[1])
 			assert.Equal(t, tc.val, castedValue[2])
 		}
 	}
@@ -103,7 +103,7 @@ func TestGETWATCHWithSDK(t *testing.T) {
 		firstMsg, err := watch.Watch(context.Background(), "GET", getWatchKey)
 		assert.Nil(t, err)
 		assert.Equal(t, firstMsg.Command, "GET")
-		assert.Equal(t, firstMsg.Fingerprint, "1768826704")
+		assert.Equal(t, firstMsg.Fingerprint, "2714318480")
 		channels[i] = watch.Channel()
 	}
 
@@ -114,7 +114,7 @@ func TestGETWATCHWithSDK(t *testing.T) {
 		for _, channel := range channels {
 			v := <-channel
 			assert.Equal(t, "GET", v.Command)            // command
-			assert.Equal(t, "1768826704", v.Fingerprint) // Fingerprint
+			assert.Equal(t, "2714318480", v.Fingerprint) // Fingerprint
 			assert.Equal(t, tc.val, v.Data.(string))     // data
 		}
 	}
@@ -134,7 +134,7 @@ func TestGETWATCHWithSDK2(t *testing.T) {
 		firstMsg, err := watch.GetWatch(context.Background(), getWatchKey)
 		assert.Nil(t, err)
 		assert.Equal(t, firstMsg.Command, "GET")
-		assert.Equal(t, firstMsg.Fingerprint, "1768826704")
+		assert.Equal(t, firstMsg.Fingerprint, "2714318480")
 		channels[i] = watch.Channel()
 	}
 
@@ -145,7 +145,7 @@ func TestGETWATCHWithSDK2(t *testing.T) {
 		for _, channel := range channels {
 			v := <-channel
 			assert.Equal(t, "GET", v.Command)            // command
-			assert.Equal(t, "1768826704", v.Fingerprint) // Fingerprint
+			assert.Equal(t, "2714318480", v.Fingerprint) // Fingerprint
 			assert.Equal(t, tc.val, v.Data.(string))     // data
 		}
 	}
