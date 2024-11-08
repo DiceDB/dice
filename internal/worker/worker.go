@@ -463,7 +463,7 @@ func (w *BaseWorker) handleCommand(ctx context.Context, cmdMeta CmdMeta, diceDBC
 		err = w.writeResponse(ctx, diceerrors.ErrInternalServer)
 	}
 
-	if err == nil {
+	if err == nil && w.wl != nil {
 		w.wl.LogCommand(diceDBCmd)
 	}
 
