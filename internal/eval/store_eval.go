@@ -190,8 +190,7 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 	var exDurationMs int64 = -1
 	var state exDurationState = Uninitialized
 	var keepttl bool = false
-	var getVal bool = false
-	var getOldVal interface{}
+	var oldVal *interface{}
 
 	key, value = args[0], args[1]
 	oType, oEnc := deduceTypeEncoding(value)
@@ -277,12 +276,11 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 			}
 			keepttl = true
 		case GET:
-			getVal = true
-			oldVal := evalGET([]string{key}, store)
-			if oldVal.Error != nil {
+			getResult := evalGET([]string{key}, store)
+			if getResult.Error != nil {
 				return makeEvalError(diceerrors.ErrWrongTypeOperation)
 			}
-			getOldVal = oldVal.Result
+			oldVal = &getResult.Result
 		default:
 			return makeEvalError(diceerrors.ErrSyntax)
 		}
@@ -301,8 +299,8 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 
 	// putting the k and value in a Hash Table
 	store.Put(key, store.NewObj(storedValue, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
-	if getVal {
-		return makeEvalResult(getOldVal)
+	if oldVal != nil {
+		return makeEvalResult(*oldVal)
 	}
 	return makeEvalResult(clientio.OK)
 }
