@@ -12,7 +12,7 @@ const recentBlogs = blogs
 
 const title = "DiceDB - a super cache;";
 const description =
-  "DiceDB is a redis-compliant, scalable, highly available, unified cache optimized for modern hardware";
+  "DiceDB is a redis-compliant, reactive, scalable, highly available, unified cache optimized for modern hardware.";
 ---
 
 <Layout {title} {description}>
@@ -25,6 +25,9 @@ const description =
         replacement of Redis (<a href="/blog/dicedb-is-redis-replacement"
           >here's why</a
         >)
+      </li>
+      <li>
+        Reactive - native support for query subscriptions and push
       </li>
       <li>
         Scalable - scales out and scales in with load <span
@@ -55,7 +58,7 @@ const description =
       use cases; and see what we are up to.
     </p>
     <br />
-    <div class="columns has-text-left">
+    <div class="columns is-centered has-text-left">
       {
         recentBlogs.map((blog) => {
           return (
