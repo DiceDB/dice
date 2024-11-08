@@ -329,6 +329,9 @@ func (w *BaseWorker) handleCommandUnwatch(ctx context.Context, cmdList []*cmd.Di
 
 // scatter distributes the DiceDB commands to the respective shards based on the key.
 // For each command, it calculates the shard ID and sends the command to the shard's request channel for processing.
+// scatter distributes DiceDB commands to their respective shards based on key.
+// For each command, it calculates the shard ID and sends the command to the appropriate
+// shard's request channel for processing.
 func (w *BaseWorker) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd) error {
 	// Otherwise check for the shard based on the key using hash
 	// and send it to the particular shard
@@ -337,28 +340,27 @@ func (w *BaseWorker) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd) error {
 		return ctx.Err()
 	default:
 		for i := uint8(0); i < uint8(len(cmds)); i++ {
-			var rc chan *ops.StoreOp
-			var sid shard.ShardID
-			var key string
-			if len(cmds[i].Args) > 0 {
-				key = cmds[i].Args[0]
-			} else {
-				key = cmds[i].Cmd
-			}
+			shardID, responseChan := w.shardManager.GetShardInfo(getRoutingKeyFromCommand(cmds[i]))
 
-			sid, rc = w.shardManager.GetShardInfo(key)
-
-			rc <- &ops.StoreOp{
+			responseChan <- &ops.StoreOp{
 				SeqID:     i,
 				RequestID: GenerateUniqueRequestID(),
 				Cmd:       cmds[i],
 				WorkerID:  w.id,
-				ShardID:   sid,
+				ShardID:   shardID,
 				Client:    nil,
 			}
 		}
 	}
 	return nil
+}
+
+// getRoutingKeyFromCommand determines the key used for shard routing
+func getRoutingKeyFromCommand(cmd *cmd.DiceDBCmd) string {
+	if len(cmd.Args) > 0 {
+		return cmd.Args[0]
+	}
+	return cmd.Cmd
 }
 
 // gather collects the responses from multiple shards and writes the results into the provided buffer.
