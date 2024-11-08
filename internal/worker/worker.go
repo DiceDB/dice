@@ -357,11 +357,11 @@ func (w *BaseWorker) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd) error {
 }
 
 // getRoutingKeyFromCommand determines the key used for shard routing
-func getRoutingKeyFromCommand(cmd *cmd.DiceDBCmd) string {
-	if len(cmd.Args) > 0 {
-		return cmd.Args[0]
+func getRoutingKeyFromCommand(diceDBCmd *cmd.DiceDBCmd) string {
+	if len(diceDBCmd.Args) > 0 {
+		return diceDBCmd.Args[0]
 	}
-	return cmd.Cmd
+	return diceDBCmd.Cmd
 }
 
 // gather collects the responses from multiple shards and writes the results into the provided buffer.
@@ -377,7 +377,7 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 		slog.Error("No response from shards",
 			slog.String("workerID", w.id),
 			slog.String("command", diceDBCmd.Cmd))
-		return errors.New(fmt.Sprintf("No response from shards for command: %s", diceDBCmd.Cmd))
+		return fmt.Errorf("no response from shards for command: %s", diceDBCmd.Cmd)
 	}
 
 	if isWatchNotification {
