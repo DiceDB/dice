@@ -76,7 +76,7 @@ func TestZRANGEWATCH(t *testing.T) {
 			}
 			assert.Equal(t, 3, len(castedValue))
 			assert.Equal(t, "ZRANGE", castedValue[0])
-			assert.Equal(t, "2491069200", castedValue[1])
+			assert.Equal(t, "1178068413", castedValue[1])
 			assert.DeepEqual(t, tc.result, castedValue[2])
 		}
 	}
@@ -124,7 +124,7 @@ func TestZRANGEWATCHWithSDK(t *testing.T) {
 		firstMsg, err := watch.Watch(context.Background(), "ZRANGE", zrangeWatchKey, "0", "-1", "REV", "WITHSCORES")
 		assert.NilError(t, err)
 		assert.Equal(t, firstMsg.Command, "ZRANGE")
-		assert.Equal(t, firstMsg.Fingerprint, "2491069200")
+		assert.Equal(t, firstMsg.Fingerprint, "1178068413")
 		channels[i] = watch.Channel()
 	}
 
@@ -139,7 +139,7 @@ func TestZRANGEWATCHWithSDK(t *testing.T) {
 			v := <-channel
 
 			assert.Equal(t, "ZRANGE", v.Command)         // command
-			assert.Equal(t, "2491069200", v.Fingerprint) // Fingerprint
+			assert.Equal(t, "1178068413", v.Fingerprint) // Fingerprint
 			assert.DeepEqual(t, tc.result, v.Data)       // data
 		}
 	}
@@ -158,7 +158,7 @@ func TestZRANGEWATCHWithSDK2(t *testing.T) {
 		firstMsg, err := conn.ZRangeWatch(context.Background(), zrangeWatchKey, "0", "-1", "REV", "WITHSCORES")
 		assert.NilError(t, err)
 		assert.Equal(t, firstMsg.Command, "ZRANGE")
-		assert.Equal(t, firstMsg.Fingerprint, "2491069200")
+		assert.Equal(t, firstMsg.Fingerprint, "1178068413")
 		channels[i] = conn.Channel()
 	}
 
@@ -173,7 +173,7 @@ func TestZRANGEWATCHWithSDK2(t *testing.T) {
 			v := <-channel
 
 			assert.Equal(t, "ZRANGE", v.Command)
-			assert.Equal(t, "2491069200", v.Fingerprint)
+			assert.Equal(t, "1178068413", v.Fingerprint)
 			assert.DeepEqual(t, tc.result, v.Data)
 		}
 	}

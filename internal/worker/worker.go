@@ -58,16 +58,17 @@ func NewWorker(wid string, responseChan, preprocessingChan chan *ops.StoreRespon
 	ioHandler iohandler.IOHandler, parser requestparser.Parser,
 	shardManager *shard.ShardManager, gec chan error, wl wal.AbstractWAL) *BaseWorker {
 	return &BaseWorker{
-		id:                wid,
-		ioHandler:         ioHandler,
-		parser:            parser,
-		shardManager:      shardManager,
-		globalErrorChan:   gec,
-		responseChan:      responseChan,
-		preprocessingChan: preprocessingChan,
-		Session:           auth.NewSession(),
-		adhocReqChan:      make(chan *cmd.DiceDBCmd, config.DiceConfig.Performance.AdhocReqChanBufSize),
-		wl:                wl,
+		id:                       wid,
+		ioHandler:                ioHandler,
+		parser:                   parser,
+		shardManager:             shardManager,
+		globalErrorChan:          gec,
+		responseChan:             responseChan,
+		preprocessingChan:        preprocessingChan,
+		Session:                  auth.NewSession(),
+		adhocReqChan:             make(chan *cmd.DiceDBCmd, config.DiceConfig.Performance.AdhocReqChanBufSize),
+		cmdWatchSubscriptionChan: cmdWatchSubscriptionChan,
+		wl:                       wl,
 	}
 }
 

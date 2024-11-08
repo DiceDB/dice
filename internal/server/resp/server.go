@@ -48,7 +48,6 @@ type Server struct {
 	shardManager             *shard.ShardManager
 	watchManager             *watchmanager.Manager
 	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription
-	cmdWatchChan             chan dstore.CmdWatchEvent
 	globalErrorChan          chan error
 	wl                       wal.AbstractWAL
 }
@@ -56,15 +55,15 @@ type Server struct {
 func NewServer(shardManager *shard.ShardManager, workerManager *worker.WorkerManager,
 	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription, cmdWatchChan chan dstore.CmdWatchEvent, globalErrChan chan error, wl wal.AbstractWAL) *Server {
 	return &Server{
-		Host:            config.DiceConfig.AsyncServer.Addr,
-		Port:            config.DiceConfig.AsyncServer.Port,
-		connBacklogSize: DefaultConnBacklogSize,
-		workerManager:   workerManager,
-		shardManager:    shardManager,
-		watchManager:    watchmanager.NewManager(cmdWatchSubscriptionChan),
-		cmdWatchChan:    cmdWatchChan,
-		globalErrorChan: globalErrChan,
-		wl:              wl,
+		Host:                     config.DiceConfig.AsyncServer.Addr,
+		Port:                     config.DiceConfig.AsyncServer.Port,
+		connBacklogSize:          DefaultConnBacklogSize,
+		workerManager:            workerManager,
+		shardManager:             shardManager,
+		watchManager:             watchmanager.NewManager(cmdWatchSubscriptionChan, cmdWatchChan),
+		cmdWatchSubscriptionChan: cmdWatchSubscriptionChan,
+		globalErrorChan:          globalErrChan,
+		wl:                       wl,
 	}
 }
 
@@ -81,11 +80,11 @@ func (s *Server) Run(ctx context.Context) (err error) {
 	errChan := make(chan error, 1)
 	wg := &sync.WaitGroup{}
 
-	if s.cmdWatchChan != nil {
+	if s.cmdWatchSubscriptionChan != nil {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			s.watchManager.Run(ctx, s.cmdWatchChan)
+			s.watchManager.Run(ctx)
 		}()
 	}
 
