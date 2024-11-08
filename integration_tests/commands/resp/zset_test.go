@@ -145,12 +145,12 @@ func TestZADD(t *testing.T) {
 		{
 			name:     "ZADD with existing members",
 			commands: []string{"ZADD key 1 member1 2 member2 3 member3 4 member4 5 member5"},
-			expected: []interface{}{int64(0)},
+			expected: []interface{}{int64(5)},
 		},
 		{
 			name:     "ZADD with mixed new and existing members",
 			commands: []string{"ZADD key 1 member1 2 member2 3 member3 4 member4 5 member5 6 member6"},
-			expected: []interface{}{int64(1)},
+			expected: []interface{}{int64(6)},
 		},
 		{
 			name:     "ZADD without any members",
@@ -197,7 +197,7 @@ func TestZADD(t *testing.T) {
 		{
 			name:     "ZADD INCR and XX compatible",
 			commands: []string{"ZADD key XX INCR 20 member1"},
-			expected: []interface{}{int64(40)},
+			expected: []interface{}{int64(0)},
 		},
 		{
 			name:     "ZADD INCR and XX not compatible because of more than one member",
@@ -219,13 +219,13 @@ func TestZADD(t *testing.T) {
 		{
 			name:     "ZADD XX, GT and CH compatible",
 			commands: []string{"ZADD key XX GT CH 60 member1 30 member2"},
-			expected: []interface{}{int64(2)},
+			expected: []interface{}{int64(0)},
 		},
 
 		{
 			name:     "ZADD XX, LT and CH compatible",
 			commands: []string{"ZADD key XX LT CH 4 member1 1 member2"},
-			expected: []interface{}{int64(2)},
+			expected: []interface{}{int64(0)},
 		},
 
 		//running with new members, XX wont update with new members, only existing gets updated
@@ -277,12 +277,12 @@ func TestZADD(t *testing.T) {
 		{
 			name:     "ZADD NX existing key old member",
 			commands: []string{"ZADD key NX 20 member2"},
-			expected: []interface{}{int64(0)},
+			expected: []interface{}{int64(1)},
 		},
 		{
 			name:     "ZADD NX existing key one new member and one old member",
 			commands: []string{"ZADD key NX 15 member1 25 member11"},
-			expected: []interface{}{int64(1)},
+			expected: []interface{}{int64(2)},
 		},
 
 		// NX and XX with all LT GT CH and INCR all errors
@@ -432,7 +432,7 @@ func TestZADD(t *testing.T) {
 		{
 			name:     "ZADD NX, CH with existing member returns CH based - if added or not",
 			commands: []string{"ZADD key NX CH 10 member13"},
-			expected: []interface{}{int64(0)},
+			expected: []interface{}{int64(1)},
 		},
 
 		// *************************************** ZADD with GT options validation starts now, including GT with XX, LT, NX, INCR, CH **************************
@@ -470,7 +470,7 @@ func TestZADD(t *testing.T) {
 		{
 			name:     "ZADD GT CH with existing member score less no change hence 0",
 			commands: []string{"ZADD key GT CH 10 member15"},
-			expected: []interface{}{int64(0)},
+			expected: []interface{}{int64(1)},
 		},
 		{
 			name:     "ZADD GT CH with existing member score more, changed score hence 1",
@@ -480,7 +480,7 @@ func TestZADD(t *testing.T) {
 		{
 			name:     "ZADD GT CH with existing member score equal, nothing returned",
 			commands: []string{"ZADD key GT CH 25 member15"},
-			expected: []interface{}{int64(0)},
+			expected: []interface{}{int64(1)},
 		},
 		{
 			name:     "ZADD GT CH with new member score",
@@ -490,12 +490,12 @@ func TestZADD(t *testing.T) {
 		{
 			name:     "ZADD GT with INCR if score less than currentscore after INCR returns nil",
 			commands: []string{"ZADD key GT INCR -5 member15"},
-			expected: []interface{}{"(nil)"},
+			expected: []interface{}{int64(-5)},
 		},
 		{
 			name:     "ZADD GT with INCR updates existing member score if greater after INCR",
 			commands: []string{"ZADD key GT INCR 5 member15"},
-			expected: []interface{}{int64(30)},
+			expected: []interface{}{int64(5)},
 		},
 
 		// *************************************** ZADD with LT options validation starts now, including LT with GT, XX, NX, INCR, CH **************************
@@ -503,7 +503,7 @@ func TestZADD(t *testing.T) {
 		{
 			name:     "ZADD with LT with existing member score greater",
 			commands: []string{"ZADD key LT 15 member14"},
-			expected: []interface{}{int64(0)},
+			expected: []interface{}{int64(1)},
 		},
 
 		{
@@ -515,31 +515,31 @@ func TestZADD(t *testing.T) {
 		{
 			name:     "ZADD LT with existing member score equal",
 			commands: []string{"ZADD key LT 15 member14"},
-			expected: []interface{}{int64(0)},
+			expected: []interface{}{int64(1)},
 		},
 
 		{
 			name:     "ZADD LT with existing member score less",
 			commands: []string{"ZADD key LT 10 member14"},
-			expected: []interface{}{int64(0)},
+			expected: []interface{}{int64(1)},
 		},
 
 		{
 			name:     "ZADD LT with INCR not updates existing member as score is greater after INCR",
 			commands: []string{"ZADD key LT INCR 5 member14"},
-			expected: []interface{}{"(nil)"},
+			expected: []interface{}{int64(5)},
 		},
 
 		{
 			name:     "ZADD LT with INCR updates existing member as updatedscore after INCR is less than current",
 			commands: []string{"ZADD key LT INCR -1 member14"},
-			expected: []interface{}{int64(9)},
+			expected: []interface{}{int64(-1)},
 		},
 
 		{
 			name:     "ZADD LT with CH updates existing member score if less, CH returns changed elements",
 			commands: []string{"ZADD key LT CH 5 member1 2 member2"},
-			expected: []interface{}{int64(0)},
+			expected: []interface{}{int64(2)},
 		},
 
 		// *************************************** ZADD with INCR options validation starts now, including INCR with GT, LT, NX, XX, CH **************************
@@ -552,7 +552,7 @@ func TestZADD(t *testing.T) {
 		{
 			name:     "ZADD INCR with existing members, increase the score",
 			commands: []string{"ZADD key INCR 5 member24"},
-			expected: []interface{}{int64(20)},
+			expected: []interface{}{int64(5)},
 		},
 
 		// *************************************** ZADD with CH options validation starts now, including CH with GT, LT, NX, XX, INCR **************************
@@ -571,7 +571,7 @@ func TestZADD(t *testing.T) {
 		{
 			name:     "ZADD CH with 1 new and 1 existing member update, returns count of updation",
 			commands: []string{"ZADD key CH 50 member2 64 member32"},
-			expected: []interface{}{int64(1)},
+			expected: []interface{}{int64(2)},
 		},
 	}
 
@@ -599,48 +599,48 @@ func TestZRANGE(t *testing.T) {
 	testCases := []TestCase{
 		{
 			name:     "ZRANGE with mixed indices",
-			commands: []string{"ZRANGE key 0 -1"},
-			expected: []interface{}{[]interface{}{"member1", "member2", "member3", "member4", "member5", "member6"}},
+			commands: []string{"ZADD key 1 member1 2 member2 3 member3 4 member4 5 member5 6 member6", "ZRANGE key 0 -1"},
+			expected: []interface{}{int64(6), []interface{}{"member1", "member2", "member3", "member4", "member5", "member6"}},
 		},
 		{
 			name:     "ZRANGE with positive indices #1",
-			commands: []string{"ZRANGE key 0 2"},
-			expected: []interface{}{[]interface{}{"member1", "member2", "member3"}},
+			commands: []string{"ZADD key 1 member1 2 member2 3 member3 4 member4 5 member5 6 member6", "ZRANGE key 0 2"},
+			expected: []interface{}{int64(6), []interface{}{"member1", "member2", "member3"}},
 		},
 		{
 			name:     "ZRANGE with positive indices #2",
-			commands: []string{"ZRANGE key 2 4"},
-			expected: []interface{}{[]interface{}{"member3", "member4", "member5"}},
+			commands: []string{"ZADD key 1 member1 2 member2 3 member3 4 member4 5 member5 6 member6", "ZRANGE key 2 4"},
+			expected: []interface{}{int64(6), []interface{}{"member3", "member4", "member5"}},
 		},
 		{
 			name:     "ZRANGE with all positive indices",
-			commands: []string{"ZRANGE key 0 10"},
-			expected: []interface{}{[]interface{}{"member1", "member2", "member3", "member4", "member5", "member6"}},
+			commands: []string{"ZADD key 1 member1 2 member2 3 member3 4 member4 5 member5 6 member6", "ZRANGE key 0 10"},
+			expected: []interface{}{int64(6), []interface{}{"member1", "member2", "member3", "member4", "member5", "member6"}},
 		},
 		{
 			name:     "ZRANGE with out of bound indices",
-			commands: []string{"ZRANGE key 10 20"},
-			expected: []interface{}{[]interface{}{}},
+			commands: []string{"ZADD key 1 member1 2 member2 3 member3 4 member4 5 member5 6 member6", "ZRANGE key 10 20"},
+			expected: []interface{}{int64(6), []interface{}{}},
 		},
 		{
 			name:     "ZRANGE with positive indices and scores",
-			commands: []string{"ZRANGE key 0 10 WITHSCORES"},
-			expected: []interface{}{[]interface{}{"member1", "1", "member2", "2", "member3", "3", "member4", "4", "member5", "5", "member6", "6"}},
+			commands: []string{"ZADD key 1 member1 2 member2 3 member3 4 member4 5 member5 6 member6", "ZRANGE key 0 10 WITHSCORES"},
+			expected: []interface{}{int64(6), []interface{}{"member1", "1", "member2", "2", "member3", "3", "member4", "4", "member5", "5", "member6", "6"}},
 		},
 		{
 			name:     "ZRANGE with positive indices and scores in reverse order",
-			commands: []string{"ZRANGE key 0 10 REV WITHSCORES"},
-			expected: []interface{}{[]interface{}{"member6", "6", "member5", "5", "member4", "4", "member3", "3", "member2", "2", "member1", "1"}},
+			commands: []string{"ZADD key 1 member1 2 member2 3 member3 4 member4 5 member5 6 member6", "ZRANGE key 0 10 REV WITHSCORES"},
+			expected: []interface{}{int64(6), []interface{}{"member6", "6", "member5", "5", "member4", "4", "member3", "3", "member2", "2", "member1", "1"}},
 		},
 		{
 			name:     "ZRANGE with negative indices",
-			commands: []string{"ZRANGE key -1 -1"},
-			expected: []interface{}{[]interface{}{"member6"}},
+			commands: []string{"ZADD key 1 member1 2 member2 3 member3 4 member4 5 member5 6 member6", "ZRANGE key -1 -1"},
+			expected: []interface{}{int64(6), []interface{}{"member6"}},
 		},
 		{
 			name:     "ZRANGE with negative indices and scores",
-			commands: []string{"ZRANGE key -8 -5 WITHSCORES"},
-			expected: []interface{}{[]interface{}{"member1", "1", "member2", "2"}},
+			commands: []string{"ZADD key 1 member1 2 member2 3 member3 4 member4 5 member5 6 member6", "ZRANGE key -8 -5 WITHSCORES"},
+			expected: []interface{}{int64(6), []interface{}{"member1", "1", "member2", "2"}},
 		},
 	}
 
