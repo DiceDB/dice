@@ -454,9 +454,15 @@ func (w *BaseWorker) handleCommand(ctx context.Context, cmdMeta CmdMeta, diceDBC
 			err = w.writeResponse(ctx, storeOp[0].EvalResponse.Result)
 		}
 
+		if err == nil && w.wl != nil {
+			w.wl.LogCommand(diceDBCmd)
+		}
 	case MultiShard:
 		err = w.writeResponse(ctx, cmdMeta.composeResponse(storeOp...))
 
+		if err == nil && w.wl != nil {
+			w.wl.LogCommand(diceDBCmd)
+		}
 	default:
 		slog.Error("Unknown command type",
 			slog.String("workerID", w.id),
@@ -464,11 +470,6 @@ func (w *BaseWorker) handleCommand(ctx context.Context, cmdMeta CmdMeta, diceDBC
 			slog.Any("evalResp", storeOp))
 		err = w.writeResponse(ctx, diceerrors.ErrInternalServer)
 	}
-
-	if err == nil && w.wl != nil {
-		w.wl.LogCommand(diceDBCmd)
-	}
-
 	return err
 }
 
