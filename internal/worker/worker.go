@@ -269,29 +269,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 
 	// Unsubscribe Unwatch command type
 	if meta.CmdType == Unwatch {
-		// extract the fingerprint
-		command := cmdList[len(cmdList)-1]
-		fp, fperr := strconv.ParseUint(command.Args[0], 10, 32)
-		if fperr != nil {
-			err := w.ioHandler.Write(ctx, diceerrors.ErrInvalidFingerprint)
-			if err != nil {
-				return fmt.Errorf("error sending push response to client: %v", err)
-			}
-			return fperr
-		}
-
-		// send the unsubscribe request
-		w.cmdWatchSubscriptionChan <- watchmanager.WatchSubscription{
-			Subscribe:    false,
-			AdhocReqChan: w.adhocReqChan,
-			Fingerprint:  uint32(fp),
-		}
-
-		err := w.ioHandler.Write(ctx, "OK")
-		if err != nil {
-			return fmt.Errorf("error sending push response to client: %v", err)
-		}
-		return nil
+		return w.handleCommandUnwatch(ctx, cmdList)
 	}
 
 	// Scatter the broken-down commands to the appropriate shards.
@@ -306,13 +284,46 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 
 	if meta.CmdType == Watch {
 		// Proceed to subscribe after successful execution
-		w.cmdWatchSubscriptionChan <- watchmanager.WatchSubscription{
-			Subscribe:    true,
-			WatchCmd:     cmdList[len(cmdList)-1],
-			AdhocReqChan: w.adhocReqChan,
-		}
+		w.handleCommandWatch(cmdList)
 	}
 
+	return nil
+}
+
+// handleCommandWatch sends a watch subscription request to the watch manager.
+func (w *BaseWorker) handleCommandWatch(cmdList []*cmd.DiceDBCmd) {
+	w.cmdWatchSubscriptionChan <- watchmanager.WatchSubscription{
+		Subscribe:    true,
+		WatchCmd:     cmdList[len(cmdList)-1],
+		AdhocReqChan: w.adhocReqChan,
+	}
+}
+
+// handleCommandUnwatch sends an unwatch subscription request to the watch manager. It also sends a response to the client.
+// The response is sent before the unwatch request is processed by the watch manager.
+func (w *BaseWorker) handleCommandUnwatch(ctx context.Context, cmdList []*cmd.DiceDBCmd) error {
+	// extract the fingerprint
+	command := cmdList[len(cmdList)-1]
+	fp, parseErr := strconv.ParseUint(command.Args[0], 10, 32)
+	if parseErr != nil {
+		err := w.ioHandler.Write(ctx, diceerrors.ErrInvalidFingerprint)
+		if err != nil {
+			return fmt.Errorf("error sending push response to client: %v", err)
+		}
+		return parseErr
+	}
+
+	// send the unsubscribe request
+	w.cmdWatchSubscriptionChan <- watchmanager.WatchSubscription{
+		Subscribe:    false,
+		AdhocReqChan: w.adhocReqChan,
+		Fingerprint:  uint32(fp),
+	}
+
+	err := w.ioHandler.Write(ctx, clientio.RespOK)
+	if err != nil {
+		return fmt.Errorf("error sending push response to client: %v", err)
+	}
 	return nil
 }
 
@@ -347,7 +358,6 @@ func (w *BaseWorker) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd) error {
 			}
 		}
 	}
-
 	return nil
 }
 
