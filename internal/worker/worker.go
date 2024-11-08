@@ -330,9 +330,6 @@ func (w *BaseWorker) handleCommandUnwatch(ctx context.Context, cmdList []*cmd.Di
 
 // scatter distributes the DiceDB commands to the respective shards based on the key.
 // For each command, it calculates the shard ID and sends the command to the shard's request channel for processing.
-// scatter distributes DiceDB commands to their respective shards based on key.
-// For each command, it calculates the shard ID and sends the command to the appropriate
-// shard's request channel for processing.
 func (w *BaseWorker) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd) error {
 	// Otherwise check for the shard based on the key using hash
 	// and send it to the particular shard
