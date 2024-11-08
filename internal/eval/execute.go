@@ -48,12 +48,20 @@ func (e *Eval) ExecuteCommand() *EvalResponse {
 	// MigratedDiceCmds map contains refactored eval commands
 	// For any command we will first check in the existing map
 	// if command is NA then we will check in the new map
-
+	// Check if the dice command has been migrated
 	if diceCmd.IsMigrated {
+		// ===============================================================================
+		// dealing with store object is not recommended for all commands
+		// These operations are specialised for the commands which requires
+		// transfering data across multiple shards. e.g COPY, RENAME
+		// ===============================================================================
 		if e.cmd.Obj != nil {
+			// This involves handling object at store level, evaluating it, modifying it, and then storing it back.
 			return diceCmd.StoreObjectEval(e.cmd, e.store)
 		}
 
+		// If the 'Obj' field is nil, handle the command using the arguments.
+		// This path likely involves evaluating the command based on its provided arguments.
 		return diceCmd.NewEval(e.cmd.Args, e.store)
 	}
 

@@ -31,6 +31,13 @@ type DiceCmdMeta struct {
 	// complex command execution scenarios and improved response consistency.
 	NewEval func([]string, *dstore.Store) *EvalResponse
 
+	// StoreObjectEval is a specialized evaluation function for commands that operate on an object.
+	// It is designed for scenarios where the command and subsequent dependent command requires
+	// an object as part of its execution. This function processes the command,
+	// evaluates it based on the provided object, and returns an EvalResponse struct
+	// Commands that involve object manipulation, is not recommended for general use.
+	// Only commands that really requires full object definition to pass across multiple shards
+	// should implement this function. e.g. COPY, RENAME etc
 	StoreObjectEval func(*cmd.DiceDBCmd, *dstore.Store) *EvalResponse
 }
 
