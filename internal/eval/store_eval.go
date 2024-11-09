@@ -1009,16 +1009,12 @@ func evalAPPEND(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 	// Key exists path
-
-	// Check if the current object type is not a string
-	if object.AssertType(obj.TypeEncoding, object.ObjTypeString) != nil {
-        return &EvalResponse{
-            Result: nil,
-            Error:  diceerrors.ErrWrongTypeOperation,
-        }
-    }
-
-	// At this point, the type is guaranteed to be string-compatible.
+	if _, ok := obj.Value.(*sortedset.Set); ok {
+		return &EvalResponse{
+			Result: nil,
+			Error: diceerrors.ErrWrongTypeOperation,
+		}
+	}
 	_, currentEnc := object.ExtractTypeEncoding(obj)
 
 	var currentValueStr string
