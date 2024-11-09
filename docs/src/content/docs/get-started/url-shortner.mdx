@@ -1,0 +1,306 @@
+---
+title: "Building a URL Shortner"
+description: "Create a simple URL Shortner using DiceDB Go SDK."
+sidebar:
+  order: 5
+---
+
+This tutorial guides you through creating a URL shortener using DiceDB, a key-value store, with Go. We’ll set up endpoints to generate short URLs and redirect them to the original URLs.
+
+Prerequisites
+
+1. Go installed (at least version 1.18)
+2. DiceDB server running locally
+3. Basic familiarity with Go and DiceDB
+
+## Environment setup
+
+Refer to [DiceDB Installation Guide](https://dicedb.io/get-started/installation/) to get your DiceDB server up and running with a simple Docker command.
+
+## Starting the application server
+
+1. Clone the repository
+   ```bash
+   git clone https://github.com/Prachi-Jamdade/url-shortner-go-dicedb
+   cd url-shortner-go-dicedb
+   ```
+2. Start the application
+   ```bash
+   go run main.go
+   ```
+   This will start the application server on port 8080 by default, you should see output similar to
+   ```bash
+   [GIN-debug] Listening and serving HTTP on :8080
+   ```
+
+## Interacting with the application
+
+1. *Start DiceDB*: Ensure DiceDB is running.
+2. *Test the API*:
+    - Shorten URL:
+        Send a POST request to `/shorten` with JSON body on Postman:
+        ```
+        {
+            "long_url": "https://example.com"
+        }
+        ```
+
+        OR
+
+        ```curl
+        curl -X POST -H "Content-Type: application/json" 
+            -d '{"long_url": "https://example.com"}' http://localhost:8080/shorten
+        ```
+
+    - Redirect to Original URL:
+        Send a GET request to `/:id` with the short URL ID on Postman
+
+        OR
+
+        ```curl
+        curl -L http://localhost:8080/{short_id}
+        ```
+
+## DiceDB Commands Used
+
+Here are the main DiceDB commands we’ll use to store and retrieve URLs.
+
+1. `Set` Command: Stores a key-value pair in DiceDB.
+Syntax - `Set(key, value, expiration)`
+`key`: Unique identifier (e.g., short URL code)
+`value`: The data to store (serialized JSON)
+`expiration`: Optional; 0 means no expiration
+
+2. `Get` Command: Retrieves the value associated with a key.
+Syntax - `Get(key)`
+`key`: The identifier for the data to retrieve.
+
+## Project Structure
+
+The project is organized into several packages:
+
+- `models`: Defines the URL data structure.
+- `repository`: Handles database interactions with DiceDB.
+- `services`: Implements business logic for URL shortening.
+- `handlers`: Contains HTTP route handlers for the API.
+- `utils`: Provides helper functions for API responses.
+
+## Code overview
+
+1. `models/url.go`: Defines the URL struct, which represents the data to be stored in DiceDB.
+
+    ```go
+    package models
+
+    type URL struct {
+        ID       string `json:"id"`
+        LongURL  string `json:"long_url"`
+        ShortURL string `json:"short_url"`
+    }
+    ```
+
+    - This struct will be serialized to JSON before saving in DiceDB.
+
+2. `repository/url_repository.go`: Handles interactions with DiceDB, using `Set` and `Get` commands to store and retrieve URL data.
+
+    ```go
+    package repository
+
+    import (
+        "context"
+        "encoding/json"
+        "errors"
+        "fmt"
+        "url-shortner-dicedb/models"
+
+        "github.com/dicedb/dicedb-go" // DiceDB Go SDK
+    )
+
+    var db *dicedb.Client
+
+    func init() {
+        db = dicedb.NewClient(&dicedb.Options{
+            Addr: "localhost:7379", 
+        })
+    }
+
+    // SaveURL stores a URL in DiceDB
+    func SaveURL(url models.URL) error {
+        ctx := context.Background()
+
+        // Serialize the URL struct to JSON
+        urlData, err := json.Marshal(url)
+        if err != nil {
+            return fmt.Errorf("failed to serialize URL: %w", err)
+        }
+
+        // Store the serialized URL JSON in DiceDB
+        statusCmd := db.Set(ctx, url.ID, urlData, 0)
+        _, err = statusCmd.Result()
+        if err != nil {
+            return fmt.Errorf("failed to save URL: %w", err)
+        }
+        return nil
+    }
+
+    // FindURLByID retrieves a URL by its ID
+    func FindURLByID(id string) (models.URL, error) {
+        ctx := context.Background()
+
+        // Retrieve the serialized URL data from DiceDB
+        stringCmd := db.Get(ctx, id)
+        urlData, err := stringCmd.Result()
+        if err != nil {
+            if err == dicedb.Nil {
+                return models.URL{}, errors.New("URL not found")
+            }
+            return models.URL{}, fmt.Errorf("failed to retrieve URL: %w", err)
+        }
+
+        // Deserialize the JSON data back into the URL struct
+        var url models.URL
+        err = json.Unmarshal([]byte(urlData), &url)
+        if err != nil {
+            return models.URL{}, fmt.Errorf("failed to decode URL data: %w", err)
+        }
+        return url, nil
+    }
+    ```
+
+    - `Marshaling` (converting struct to JSON) and `unmarshaling` (converting JSON to struct) are necessary because DiceDB stores data as strings, and we need structured data to access individual fields easily.
+
+3. `services/url_service.go`: Implements business logic for creating and retrieving URLs.
+
+    ```go
+    package services
+
+    import (
+        "fmt"
+        "url-shortner-dicedb/models"
+        "url-shortner-dicedb/repository"
+
+        "github.com/google/uuid"
+    )
+
+    func CreateShortURLService(longURL string) (string, error) {
+        id := uuid.New().String()[:8] // Shorten ID for URL
+
+        url := models.URL{
+            ID:       id,
+            LongURL:  longURL,
+            ShortURL: "http://localhost:8080/" + id,
+        }
+
+        if err := repository.SaveURL(url); err != nil {
+            fmt.Println(err)
+            return "", err
+        }
+
+        return url.ShortURL, nil
+    }
+
+    func GetOriginalURLService(id string) (string, error) {
+        url, err := repository.FindURLByID(id)
+        if err != nil {
+            return "", err
+        }
+
+        return url.LongURL, nil
+    }
+
+    ```
+
+    - The `CreateShortURLService` function generates a unique ID for each URL and stores it using `SaveURL`.
+
+4. `handlers/url_handler.go`: Defines HTTP endpoints for creating and redirecting URLs.
+
+    ```go
+    package handlers
+
+    import (
+        "net/http"
+        "url-shortner-dicedb/models"
+        "url-shortner-dicedb/services"
+        "url-shortner-dicedb/utils"
+
+        "github.com/gin-gonic/gin"
+    )
+
+    func RegisterRoutes(router *gin.Engine) {
+        router.POST("/shorten", CreateShortURL)
+        router.GET("/:id", RedirectURL)
+    }
+
+    func CreateShortURL(c *gin.Context) {
+        var requestBody models.URL
+        if err := c.ShouldBindJSON(&requestBody); err != nil {
+            utils.RespondWithError(c, http.StatusBadRequest, "Invalid request")
+            return
+        }
+
+        shortURL, err := services.CreateShortURLService(requestBody.LongURL)
+        if err != nil {
+            utils.RespondWithError(c, http.StatusInternalServerError, "Error creating short URL")
+            return
+        }
+
+        utils.RespondWithJSON(c, http.StatusCreated, gin.H{"short_url": shortURL})
+    }
+
+    func RedirectURL(c *gin.Context) {
+        id := c.Param("id")
+        longURL, err := services.GetOriginalURLService(id)
+        if err != nil {
+            utils.RespondWithError(c, http.StatusNotFound, "URL not found")
+            return
+        }
+
+        c.Redirect(http.StatusFound, longURL)
+    }
+    ```
+
+    - `CreateShortURL` handles POST requests to generate a short URL.
+    - `RedirectURL` redirects to the original URL based on the short ID.
+
+5. `utils/response.go`: Provides helper functions for consistent JSON responses.
+
+    ```go
+    package utils
+
+    import (
+        "github.com/gin-gonic/gin"
+    )
+
+    func RespondWithError(c *gin.Context, code int, message string) {
+        c.JSON(code, gin.H{"error": message})
+    }
+
+    func RespondWithJSON(c *gin.Context, code int, payload interface{}) {
+        c.JSON(code, payload)
+    }
+    ```
+
+6. `main.go`: Sets up the Gin (a HTTP Web Framework) router and registers routes. This is the entry point of the application.
+
+    ```go
+    package main
+
+    import (
+        "log"
+        "url-shortner-dicedb/handlers"
+        "github.com/gin-gonic/gin"
+    )
+
+    func main() {
+        router := gin.Default()
+        handlers.RegisterRoutes(router)
+        log.Fatal(router.Run(":8080"))
+    }
+    ```
+
+## Conclusion
+
+This project demonstrates how to set up a simple yet functional API for URL shortening, which can be expanded further with additional features or integrated into a larger application. With Go’s performance and DiceDB’s efficiency, this offers a lightweight solution for URL management. 
+
+Find the complete code for this example on [Github](https://github.com/Prachi-Jamdade/url-shortner-go-dicedb).
+
