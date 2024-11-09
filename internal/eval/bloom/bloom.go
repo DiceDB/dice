@@ -1,7 +1,8 @@
-package eval
+package bloom
 
 import (
 	"fmt"
+	"github.com/dicedb/dice/internal/eval"
 	"hash"
 	"math"
 	"math/rand"
@@ -140,15 +141,15 @@ func (b *Bloom) info(opt string) ([]interface{}, error) {
 		)
 	} else {
 		switch strings.ToUpper(opt) {
-		case CAPACITY:
+		case eval.CAPACITY:
 			result = append(result, "Capacity", b.opts.capacity)
-		case SIZE:
+		case eval.SIZE:
 			result = append(result, "Size", b.opts.bits)
-		case FILTERS:
+		case eval.FILTERS:
 			result = append(result, "Number of filters", len(b.opts.hashFns))
-		case ITEMS:
+		case eval.ITEMS:
 			result = append(result, "Number of items inserted", b.cnt)
-		case EXPANSION:
+		case eval.EXPANSION:
 			result = append(result, "Expansion rate", 2)
 		default:
 			return nil, errInvalidInformationValue

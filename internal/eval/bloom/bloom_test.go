@@ -1,7 +1,8 @@
-package eval
+package bloom
 
 import (
 	"errors"
+	"github.com/dicedb/dice/internal/eval"
 	"hash"
 	"hash/fnv"
 	"reflect"
@@ -22,73 +23,73 @@ func TestBloomFilter(t *testing.T) {
 
 	// BF.RESERVE
 	var args []string // empty args
-	resp := evalBFRESERVE(args, store)
+	resp := eval.evalBFRESERVE(args, store)
 	assert.Nil(t, resp.Result)
 	assert.Error(t, resp.Error, "ERR wrong number of arguments for 'bf.reserve' command")
 
 	// BF.RESERVE bf 0.01 10000
 	args = append(args, "bf", "0.01", "10000") // Add key, error rate and capacity
-	resp = evalBFRESERVE(args, store)
+	resp = eval.evalBFRESERVE(args, store)
 	assert.Nil(t, resp.Error)
 	assert.ObjectsAreEqualValues(resp.Result, clientio.OK)
 
 	// BF.RESERVE bf1
 	args = []string{"bf1"}
-	resp = evalBFRESERVE(args, store)
+	resp = eval.evalBFRESERVE(args, store)
 	assert.Error(t, resp.Error, "ERR wrong number of arguments for 'bf.reserve' command")
 	assert.Nil(t, resp.Result)
 
 	// BF.ADD with wrong arguments, must return non-nil error and nil result
 	args = []string{"bf"}
-	resp = evalBFADD(args, store)
+	resp = eval.evalBFADD(args, store)
 	assert.EqualError(t, resp.Error, "ERR wrong number of arguments for 'bf.add' command")
 	assert.Nil(t, resp.Result)
 
 	// BF.ADD bf hello, must return 1 and nil error
 	args = []string{"bf", "hello"} // BF.ADD bf hello
-	resp = evalBFADD(args, store)
+	resp = eval.evalBFADD(args, store)
 	assert.Nil(t, resp.Error)
 	assert.ObjectsAreEqualValues(resp.Result, clientio.IntegerOne)
 
 	args[1] = "world" // BF.ADD bf world
-	resp = evalBFADD(args, store)
+	resp = eval.evalBFADD(args, store)
 	assert.Nil(t, resp.Error)
 	assert.ObjectsAreEqualValues(resp.Result, clientio.IntegerOne)
 
 	args[1] = "hello" // BF.ADD bf hello
-	resp = evalBFADD(args, store)
+	resp = eval.evalBFADD(args, store)
 	assert.Nil(t, resp.Error)
 	assert.ObjectsAreEqualValues(resp.Result, clientio.IntegerZero)
 	// Try adding element into a non-existing filter
 	args = []string{"bf2", "hello"} // BF.ADD bf2 hello
-	resp = evalBFADD(args, store)
+	resp = eval.evalBFADD(args, store)
 	assert.Nil(t, resp.Error)
 	assert.ObjectsAreEqualValues(resp.Result, clientio.IntegerOne)
 
 	// BF.EXISTS arity test
 	args = []string{"bf"}
-	resp = evalBFEXISTS(args, store)
+	resp = eval.evalBFEXISTS(args, store)
 	assert.EqualError(t, resp.Error, "ERR wrong number of arguments for 'bf.exists' command")
 	assert.Nil(t, resp.Result)
 
 	args = []string{"bf", "hello"} // BF.EXISTS bf hello
-	resp = evalBFEXISTS(args, store)
+	resp = eval.evalBFEXISTS(args, store)
 	assert.Nil(t, resp.Error)
 	assert.ObjectsAreEqualValues(resp.Result, clientio.IntegerOne)
 
 	args[1] = "hello" // BF.EXISTS bf world
-	resp = evalBFEXISTS(args, store)
+	resp = eval.evalBFEXISTS(args, store)
 	assert.Nil(t, resp.Error)
 	assert.ObjectsAreEqualValues(resp.Result, clientio.IntegerOne)
 
 	args[1] = "programming" // BF.EXISTS bf programming
-	resp = evalBFEXISTS(args, store)
+	resp = eval.evalBFEXISTS(args, store)
 	assert.Nil(t, resp.Error)
 	assert.ObjectsAreEqualValues(resp.Result, clientio.IntegerZero)
 
 	// Try searching for an element in a non-existing filter
 	args = []string{"bf3", "hello"} // BF.EXISTS bf3 hello
-	resp = evalBFEXISTS(args, store)
+	resp = eval.evalBFEXISTS(args, store)
 	assert.Nil(t, resp.Error)
 	assert.ObjectsAreEqualValues(resp.Result, clientio.IntegerZero)
 }

@@ -2,6 +2,7 @@ package eval
 
 import (
 	"errors"
+	"github.com/dicedb/dice/internal/eval/bytearray"
 	"strconv"
 	"strings"
 
@@ -31,7 +32,7 @@ func evalBITPOS(args []string, store *dstore.Store) []byte {
 		return clientio.Encode(-1, true)
 	}
 
-	byteSlice, err := getValueAsByteSlice(obj)
+	byteSlice, err := bytearray.getValueAsByteSlice(obj)
 	if err != nil {
 		return diceerrors.NewErrWithMessage(err.Error())
 	}

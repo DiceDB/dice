@@ -264,52 +264,73 @@ func (s *WebsocketServer) processQwatchResponse(conn *websocket.Conn, response i
 	return nil
 }
 
+// ProcessResponse handles the processing and sending of responses over a WebSocket connection
 func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.DiceDBCmd, response *ops.StoreResponse) error {
-	var err error
 	maxRetries := config.DiceConfig.WebSocket.MaxWriteResponseRetries
 
-	var responseValue interface{}
-	// Check if the command is migrated, if it is we use EvalResponse values
-	// else we use RESPParser to decode the response
-	_, ok := WorkerCmdsMeta[diceDBCmd.Cmd]
-	// TODO: Remove this conditional check and if (true) condition when all commands are migrated
-	if !ok {
-		responseValue, err = DecodeEvalResponse(response.EvalResponse)
-		if err != nil {
-			slog.Debug("Error decoding response", "error", err)
-			if err := WriteResponseWithRetries(conn, []byte("error: 500 Internal Server Error"), maxRetries); err != nil {
-				slog.Debug(fmt.Sprintf("Error writing message: %v", err))
-				return fmt.Errorf("error writing response: %v", err)
-			}
-			return nil
-		}
-	} else {
-		if response.EvalResponse.Error != nil {
-			responseValue = response.EvalResponse.Error.Error()
-		} else {
-			responseValue = response.EvalResponse.Result
-		}
+	// Get response value based on command type
+	responseValue, err := s.extractResponseValue(diceDBCmd, response)
+	if err != nil {
+		return s.writeErrorResponse(conn, "error: 500 Internal Server Error", maxRetries)
 	}
 
-	// Create websocket response
-	wsResponse := ResponseParser(responseValue)
+	// Create and encode WebSocket response
+	respBytes, err := s.encodeWebSocketResponse(responseValue)
+	if err != nil {
+		return s.writeErrorResponse(conn, "error: marshaling json", maxRetries)
+	}
+
+	// Write final response
+	if err := WriteResponseWithRetries(conn, respBytes, maxRetries); err != nil {
+		return fmt.Errorf("failed to write response: %w", err)
+	}
+
+	return nil
+}
+
+// extractResponseValue determines the appropriate response value based on command type
+func (s *WebsocketServer) extractResponseValue(diceDBCmd *cmd.DiceDBCmd, response *ops.StoreResponse) (interface{}, error) {
+	if _, isMigrated := WorkerCmdsMeta[diceDBCmd.Cmd]; !isMigrated {
+		// Legacy command path
+		value, err := DecodeEvalResponse(response.EvalResponse)
+		if err != nil {
+			slog.Debug("Failed to decode legacy response",
+				"command", diceDBCmd.Cmd,
+				"error", err)
+			return nil, err
+		}
+		return value, nil
+	}
+
+	// Migrated command path
+	if response.EvalResponse.Error != nil {
+		return response.EvalResponse.Error.Error(), nil
+	}
+	return response.EvalResponse.Result, nil
+}
+
+// encodeWebSocketResponse creates and encodes a WebSocket response
+func (s *WebsocketServer) encodeWebSocketResponse(value interface{}) ([]byte, error) {
+	wsResponse := ResponseParser(value)
 	respBytes, err := json.Marshal(wsResponse)
 	if err != nil {
-		slog.Debug("Error marshaling json", "error", err)
-		if err := WriteResponseWithRetries(conn, []byte("error: marshaling json"), maxRetries); err != nil {
-			slog.Debug(fmt.Sprintf("Error writing message: %v", err))
-			return fmt.Errorf("error writing response: %v", err)
-		}
-		return nil
+		slog.Debug("Failed to marshal WebSocket response",
+			"error", err,
+			"response", value)
+		return nil, fmt.Errorf("failed to marshal response: %w", err)
 	}
+	return respBytes, nil
+}
 
-	// success
-	// Write response with retries for transient errors
-	if err := WriteResponseWithRetries(conn, respBytes, config.DiceConfig.WebSocket.MaxWriteResponseRetries); err != nil {
-		slog.Debug(fmt.Sprintf("Error writing message: %v", err))
-		return fmt.Errorf("error writing response: %v", err)
+// writeErrorResponse handles writing error responses with retries
+func (s *WebsocketServer) writeErrorResponse(conn *websocket.Conn, errMsg string, maxRetries int) error {
+	err := WriteResponseWithRetries(conn, []byte(errMsg), maxRetries)
+	if err != nil {
+		slog.Debug("Failed to write error response",
+			"error", err,
+			"message", errMsg)
+		return fmt.Errorf("failed to write error response: %w", err)
 	}
-
 	return nil
 }
 

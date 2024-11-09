@@ -3,6 +3,9 @@ package eval
 import (
 	"errors"
 	"fmt"
+	"github.com/dicedb/dice/internal/eval/bloom"
+	"github.com/dicedb/dice/internal/eval/bytearray"
+	"github.com/dicedb/dice/internal/eval/list"
 	"math"
 	"sort"
 	"strconv"
@@ -413,7 +416,7 @@ func evalGET(args []string, store *dstore.Store) *EvalResponse {
 
 	case object.ObjEncodingByteArray:
 		// Value is stored as a bytearray, use type assertion
-		if val, ok := obj.Value.(*ByteArray); ok {
+		if val, ok := obj.Value.(*bytearray.ByteArray); ok {
 			return &EvalResponse{
 				Result: string(val.data),
 				Error:  nil,
@@ -2383,12 +2386,12 @@ func evalBFRESERVE(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.RESERVE"))
 	}
 
-	opts, err := newBloomOpts(args[1:])
+	opts, err := bloom.newBloomOpts(args[1:])
 	if err != nil {
 		return makeEvalError(err)
 	}
 
-	_, err = CreateBloomFilter(args[0], store, opts)
+	_, err = bloom.CreateBloomFilter(args[0], store, opts)
 	if err != nil {
 		return makeEvalError(err)
 	}
@@ -2402,7 +2405,7 @@ func evalBFADD(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.ADD"))
 	}
 
-	bloom, err := getOrCreateBloomFilter(args[0], store, nil)
+	bloom, err := bloom.getOrCreateBloomFilter(args[0], store, nil)
 	if err != nil {
 		return makeEvalError(err)
 	}
@@ -2422,7 +2425,7 @@ func evalBFEXISTS(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.EXISTS"))
 	}
 
-	bloom, err := GetBloomFilter(args[0], store)
+	bloom, err := bloom.GetBloomFilter(args[0], store)
 	if err != nil {
 		return makeEvalError(err)
 	}
@@ -2443,7 +2446,7 @@ func evalBFINFO(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.INFO"))
 	}
 
-	bloom, err := GetBloomFilter(args[0], store)
+	bloom, err := bloom.GetBloomFilter(args[0], store)
 
 	if err != nil {
 		return makeEvalError(err)
@@ -3465,7 +3468,7 @@ func evalGETDEL(args []string, store *dstore.Store) *EvalResponse {
 
 	case object.ObjEncodingByteArray:
 		// Value is stored as a bytearray, use type assertion
-		if val, ok := objVal.Value.(*ByteArray); ok {
+		if val, ok := objVal.Value.(*bytearray.ByteArray); ok {
 			return &EvalResponse{
 				Result: string(val.data),
 				Error:  nil,
@@ -3986,7 +3989,7 @@ func evalLRANGE(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalError(err)
 	}
 
-	q := obj.Value.(*Deque)
+	q := obj.Value.(*list.Deque)
 	res, err := q.LRange(start, stop)
 	if err != nil {
 		return makeEvalError(err)
@@ -4027,7 +4030,7 @@ func evalLINSERT(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalError(err)
 	}
 
-	q := obj.Value.(*Deque)
+	q := obj.Value.(*list.Deque)
 	res, err := q.LInsert(pivot, element, beforeAfter)
 	if err != nil {
 		return makeEvalError(err)

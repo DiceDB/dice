@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/dicedb/dice/internal/eval/bytearray"
+	"github.com/dicedb/dice/internal/eval/list"
 	"log/slog"
 	"math"
 	"math/bits"
@@ -1208,21 +1210,21 @@ func evalSETBIT(args []string, store *dstore.Store) []byte {
 	requiredByteArraySize := offset>>3 + 1
 
 	if obj == nil {
-		obj = store.NewObj(NewByteArray(int(requiredByteArraySize)), -1, object.ObjTypeByteArray, object.ObjEncodingByteArray)
+		obj = store.NewObj(bytearray.NewByteArray(int(requiredByteArraySize)), -1, object.ObjTypeByteArray, object.ObjEncodingByteArray)
 		store.Put(args[0], obj)
 	}
 
 	if object.AssertType(obj.TypeEncoding, object.ObjTypeByteArray) == nil ||
 		object.AssertType(obj.TypeEncoding, object.ObjTypeString) == nil ||
 		object.AssertType(obj.TypeEncoding, object.ObjTypeInt) == nil {
-		var byteArray *ByteArray
+		var byteArray *bytearray.ByteArray
 		oType, oEnc := object.ExtractTypeEncoding(obj)
 
 		switch oType {
 		case object.ObjTypeByteArray:
-			byteArray = obj.Value.(*ByteArray)
+			byteArray = obj.Value.(*bytearray.ByteArray)
 		case object.ObjTypeString, object.ObjTypeInt:
-			byteArray, err = NewByteArrayFromObj(obj)
+			byteArray, err = bytearray.NewByteArrayFromObj(obj)
 			if err != nil {
 				return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 			}
@@ -1244,7 +1246,7 @@ func evalSETBIT(args []string, store *dstore.Store) []byte {
 
 		// We are returning newObject here so it is thread-safe
 		// Old will be removed by GC
-		newObj, err := ByteSliceToObj(store, obj, byteArray.data, oType, oEnc)
+		newObj, err := bytearray.ByteSliceToObj(store, obj, byteArray.data, oType, oEnc)
 		if err != nil {
 			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 		}
@@ -1292,7 +1294,7 @@ func evalGETBIT(args []string, store *dstore.Store) []byte {
 	case object.ObjTypeSet:
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	case object.ObjTypeByteArray:
-		byteArray := obj.Value.(*ByteArray)
+		byteArray := obj.Value.(*bytearray.ByteArray)
 		byteArrayLength := byteArray.Length
 
 		// check whether offset, length exists or not
@@ -1305,7 +1307,7 @@ func evalGETBIT(args []string, store *dstore.Store) []byte {
 		}
 		return clientio.Encode(0, true)
 	case object.ObjTypeString, object.ObjTypeInt:
-		byteArray, err := NewByteArrayFromObj(obj)
+		byteArray, err := bytearray.NewByteArrayFromObj(obj)
 		if err != nil {
 			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
 		}
@@ -1347,7 +1349,7 @@ func evalBITCOUNT(args []string, store *dstore.Store) []byte {
 
 	switch {
 	case object.AssertType(obj.TypeEncoding, object.ObjTypeByteArray) == nil:
-		byteArray := obj.Value.(*ByteArray)
+		byteArray := obj.Value.(*bytearray.ByteArray)
 		value = byteArray.data
 		valueLength = byteArray.Length
 	case object.AssertType(obj.TypeEncoding, object.ObjTypeString) == nil:
@@ -1475,7 +1477,7 @@ func evalBITOP(args []string, store *dstore.Store) []byte {
 
 		switch oType, _ := object.ExtractTypeEncoding(obj); oType {
 		case object.ObjTypeByteArray:
-			byteArray := obj.Value.(*ByteArray)
+			byteArray := obj.Value.(*bytearray.ByteArray)
 			byteArrayObject := *byteArray
 			value = byteArrayObject.data
 			// perform the operation
@@ -1485,7 +1487,7 @@ func evalBITOP(args []string, store *dstore.Store) []byte {
 			}
 
 			// initialize result with byteArray
-			operationResult := NewByteArray(len(result))
+			operationResult := bytearray.NewByteArray(len(result))
 			operationResult.data = result
 			operationResult.Length = int64(len(result))
 
@@ -1534,7 +1536,7 @@ func evalBITOP(args []string, store *dstore.Store) []byte {
 			// handle the case when it is byte array
 			switch oType, _ := object.ExtractTypeEncoding(obj); oType {
 			case object.ObjTypeByteArray:
-				byteArray := obj.Value.(*ByteArray)
+				byteArray := obj.Value.(*bytearray.ByteArray)
 				byteArrayObject := *byteArray
 				values[i] = byteArrayObject.data
 			case object.ObjTypeString:
@@ -1588,7 +1590,7 @@ func evalBITOP(args []string, store *dstore.Store) []byte {
 		}
 	}
 	// initialize result with byteArray
-	operationResult := NewByteArray(len(result))
+	operationResult := bytearray.NewByteArray(len(result))
 	operationResult.data = result
 	operationResult.Length = int64(len(result))
 
@@ -2062,7 +2064,7 @@ func evalLPUSH(args []string, store *dstore.Store) []byte {
 
 	obj := store.Get(args[0])
 	if obj == nil {
-		obj = store.NewObj(NewDeque(), -1, object.ObjTypeByteList, object.ObjEncodingDeque)
+		obj = store.NewObj(list.NewDeque(), -1, object.ObjTypeByteList, object.ObjEncodingDeque)
 	}
 
 	// if object is a set type, return error
@@ -2080,10 +2082,10 @@ func evalLPUSH(args []string, store *dstore.Store) []byte {
 
 	store.Put(args[0], obj)
 	for i := 1; i < len(args); i++ {
-		obj.Value.(*Deque).LPush(args[i])
+		obj.Value.(*list.Deque).LPush(args[i])
 	}
 
-	deq := obj.Value.(*Deque)
+	deq := obj.Value.(*list.Deque)
 
 	return clientio.Encode(deq.Length, false)
 }
@@ -2095,7 +2097,7 @@ func evalRPUSH(args []string, store *dstore.Store) []byte {
 
 	obj := store.Get(args[0])
 	if obj == nil {
-		obj = store.NewObj(NewDeque(), -1, object.ObjTypeByteList, object.ObjEncodingDeque)
+		obj = store.NewObj(list.NewDeque(), -1, object.ObjTypeByteList, object.ObjEncodingDeque)
 	}
 
 	// if object is a set type, return error
@@ -2113,10 +2115,10 @@ func evalRPUSH(args []string, store *dstore.Store) []byte {
 
 	store.Put(args[0], obj)
 	for i := 1; i < len(args); i++ {
-		obj.Value.(*Deque).RPush(args[i])
+		obj.Value.(*list.Deque).RPush(args[i])
 	}
 
-	deq := obj.Value.(*Deque)
+	deq := obj.Value.(*list.Deque)
 
 	return clientio.Encode(deq.Length, false)
 }
@@ -2144,10 +2146,10 @@ func evalRPOP(args []string, store *dstore.Store) []byte {
 		return clientio.Encode(err, false)
 	}
 
-	deq := obj.Value.(*Deque)
+	deq := obj.Value.(*list.Deque)
 	x, err := deq.RPop()
 	if err != nil {
-		if errors.Is(err, ErrDequeEmpty) {
+		if errors.Is(err, list.ErrDequeEmpty) {
 			return clientio.RespNIL
 		}
 		panic(fmt.Sprintf("unknown error: %v", err))
@@ -2200,14 +2202,14 @@ func evalLPOP(args []string, store *dstore.Store) []byte {
 		return clientio.Encode(err, false)
 	}
 
-	deq := obj.Value.(*Deque)
+	deq := obj.Value.(*list.Deque)
 
 	// holds the elements popped
 	var elements []string
 	for iter := 0; iter < popNumber; iter++ {
 		x, err := deq.LPop()
 		if err != nil {
-			if errors.Is(err, ErrDequeEmpty) {
+			if errors.Is(err, list.ErrDequeEmpty) {
 				break
 			}
 			panic(fmt.Sprintf("unknown error: %v", err))
@@ -2240,7 +2242,7 @@ func evalLLEN(args []string, store *dstore.Store) []byte {
 		return err
 	}
 
-	deq := obj.Value.(*Deque)
+	deq := obj.Value.(*list.Deque)
 	return clientio.Encode(deq.Length, false)
 }
 
@@ -2664,7 +2666,7 @@ func parseJSONStructure(jsonData interface{}, nested bool) (resp []any) {
 }
 
 // This method executes each operation, contained in ops array, based on commands used.
-func executeBitfieldOps(value *ByteArray, ops []utils.BitFieldOp) []interface{} {
+func executeBitfieldOps(value *bytearray.ByteArray, ops []utils.BitFieldOp) []interface{} {
 	overflowType := WRAP
 	var result []interface{}
 	for _, op := range ops {
@@ -2703,17 +2705,17 @@ func bitfieldEvalGeneric(args []string, store *dstore.Store, isReadOnly bool) []
 	key := args[0]
 	obj := store.Get(key)
 	if obj == nil {
-		obj = store.NewObj(NewByteArray(1), -1, object.ObjTypeByteArray, object.ObjEncodingByteArray)
+		obj = store.NewObj(bytearray.NewByteArray(1), -1, object.ObjTypeByteArray, object.ObjEncodingByteArray)
 		store.Put(args[0], obj)
 	}
-	var value *ByteArray
+	var value *bytearray.ByteArray
 	var err error
 
 	switch oType, _ := object.ExtractTypeEncoding(obj); oType {
 	case object.ObjTypeByteArray:
-		value = obj.Value.(*ByteArray)
+		value = obj.Value.(*bytearray.ByteArray)
 	case object.ObjTypeString, object.ObjTypeInt:
-		value, err = NewByteArrayFromObj(obj)
+		value, err = bytearray.NewByteArrayFromObj(obj)
 		if err != nil {
 			return diceerrors.NewErrWithMessage("value is not a valid byte array")
 		}

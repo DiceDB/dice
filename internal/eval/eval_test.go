@@ -5,6 +5,8 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/dicedb/dice/internal/eval/bytearray"
+	"github.com/dicedb/dice/internal/eval/list"
 	"math"
 	"reflect"
 	"strconv"
@@ -6156,69 +6158,69 @@ func testEvalBITOP(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"BITOP NOT (empty string)": {
 			setup: func() {
-				store.Put("s{t}", store.NewObj(&ByteArray{data: []byte("")}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+				store.Put("s{t}", store.NewObj(&bytearray.ByteArray{data: []byte("")}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
 			},
 			input:  []string{"NOT", "dest{t}", "s{t}"},
 			output: clientio.Encode(0, true),
 			validator: func(output []byte) {
 				expectedResult := []byte{}
-				assert.Equal(t, expectedResult, store.Get("dest{t}").Value.(*ByteArray).data)
+				assert.Equal(t, expectedResult, store.Get("dest{t}").Value.(*bytearray.ByteArray).data)
 			},
 		},
 		"BITOP NOT (known string)": {
 			setup: func() {
-				store.Put("s{t}", store.NewObj(&ByteArray{data: []byte{0xaa, 0x00, 0xff, 0x55}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+				store.Put("s{t}", store.NewObj(&bytearray.ByteArray{data: []byte{0xaa, 0x00, 0xff, 0x55}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
 			},
 			input:  []string{"NOT", "dest{t}", "s{t}"},
 			output: clientio.Encode(4, true),
 			validator: func(output []byte) {
 				expectedResult := []byte{0x55, 0xff, 0x00, 0xaa}
-				assert.Equal(t, expectedResult, store.Get("dest{t}").Value.(*ByteArray).data)
+				assert.Equal(t, expectedResult, store.Get("dest{t}").Value.(*bytearray.ByteArray).data)
 			},
 		},
 		"BITOP where dest and target are the same key": {
 			setup: func() {
-				store.Put("s", store.NewObj(&ByteArray{data: []byte{0xaa, 0x00, 0xff, 0x55}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+				store.Put("s", store.NewObj(&bytearray.ByteArray{data: []byte{0xaa, 0x00, 0xff, 0x55}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
 			},
 			input:  []string{"NOT", "s", "s"},
 			output: clientio.Encode(4, true),
 			validator: func(output []byte) {
 				expectedResult := []byte{0x55, 0xff, 0x00, 0xaa}
-				assert.Equal(t, expectedResult, store.Get("s").Value.(*ByteArray).data)
+				assert.Equal(t, expectedResult, store.Get("s").Value.(*bytearray.ByteArray).data)
 			},
 		},
 		"BITOP AND|OR|XOR don't change the string with single input key": {
 			setup: func() {
-				store.Put("a{t}", store.NewObj(&ByteArray{data: []byte{0x01, 0x02, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+				store.Put("a{t}", store.NewObj(&bytearray.ByteArray{data: []byte{0x01, 0x02, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
 			},
 			input:  []string{"AND", "res1{t}", "a{t}"},
 			output: clientio.Encode(3, true),
 			validator: func(output []byte) {
 				expectedResult := []byte{0x01, 0x02, 0xff}
-				assert.Equal(t, expectedResult, store.Get("res1{t}").Value.(*ByteArray).data)
+				assert.Equal(t, expectedResult, store.Get("res1{t}").Value.(*bytearray.ByteArray).data)
 			},
 		},
 		"BITOP missing key is considered a stream of zero": {
 			setup: func() {
-				store.Put("a{t}", store.NewObj(&ByteArray{data: []byte{0x01, 0x02, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+				store.Put("a{t}", store.NewObj(&bytearray.ByteArray{data: []byte{0x01, 0x02, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
 			},
 			input:  []string{"AND", "res1{t}", "no-such-key{t}", "a{t}"},
 			output: clientio.Encode(3, true),
 			validator: func(output []byte) {
 				expectedResult := []byte{0x00, 0x00, 0x00}
-				assert.Equal(t, expectedResult, store.Get("res1{t}").Value.(*ByteArray).data)
+				assert.Equal(t, expectedResult, store.Get("res1{t}").Value.(*bytearray.ByteArray).data)
 			},
 		},
 		"BITOP shorter keys are zero-padded to the key with max length": {
 			setup: func() {
-				store.Put("a{t}", store.NewObj(&ByteArray{data: []byte{0x01, 0x02, 0xff, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
-				store.Put("b{t}", store.NewObj(&ByteArray{data: []byte{0x01, 0x02, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+				store.Put("a{t}", store.NewObj(&bytearray.ByteArray{data: []byte{0x01, 0x02, 0xff, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+				store.Put("b{t}", store.NewObj(&bytearray.ByteArray{data: []byte{0x01, 0x02, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
 			},
 			input:  []string{"AND", "res1{t}", "a{t}", "b{t}"},
 			output: clientio.Encode(4, true),
 			validator: func(output []byte) {
 				expectedResult := []byte{0x01, 0x02, 0xff, 0x00}
-				assert.Equal(t, expectedResult, store.Get("res1{t}").Value.(*ByteArray).data)
+				assert.Equal(t, expectedResult, store.Get("res1{t}").Value.(*bytearray.ByteArray).data)
 			},
 		},
 		"BITOP with non string source key": {
@@ -6232,7 +6234,7 @@ func testEvalBITOP(t *testing.T, store *dstore.Store) {
 		},
 		"BITOP with empty string after non empty string": {
 			setup: func() {
-				store.Put("a{t}", store.NewObj(&ByteArray{data: []byte("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")}, -1, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+				store.Put("a{t}", store.NewObj(&bytearray.ByteArray{data: []byte("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")}, -1, object.ObjTypeByteArray, object.ObjEncodingByteArray))
 			},
 			input:  []string{"OR", "x{t}", "a{t}", "b{t}"},
 			output: clientio.Encode(32, true),
@@ -6246,8 +6248,8 @@ func BenchmarkEvalBITOP(b *testing.B) {
 	store := dstore.NewStore(nil, nil)
 
 	// Setup initial data for benchmarking
-	store.Put("key1", store.NewObj(&ByteArray{data: []byte{0x01, 0x02, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
-	store.Put("key2", store.NewObj(&ByteArray{data: []byte{0x01, 0x02, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+	store.Put("key1", store.NewObj(&bytearray.ByteArray{data: []byte{0x01, 0x02, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+	store.Put("key2", store.NewObj(&bytearray.ByteArray{data: []byte{0x01, 0x02, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
 
 	// Define different operations to benchmark
 	operations := []struct {
@@ -6497,9 +6499,9 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				key := "listKey"
 				value := "val"
 				// Create a new list object
-				obj := store.NewObj(NewDeque(), -1, object.ObjTypeByteList, object.ObjEncodingDeque)
+				obj := store.NewObj(list.NewDeque(), -1, object.ObjTypeByteList, object.ObjEncodingDeque)
 				store.Put(key, obj)
-				obj.Value.(*Deque).LPush(value)
+				obj.Value.(*list.Deque).LPush(value)
 			},
 			input:          []string{"listKey", "val"},
 			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
@@ -6536,8 +6538,8 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "bitKey"
 				// Create a new byte array object
-				initialByteArray := NewByteArray(1) // Initialize with 1 byte
-				initialByteArray.SetBit(0, true)    // Set the first bit to 1
+				initialByteArray := bytearray.NewByteArray(1) // Initialize with 1 byte
+				initialByteArray.SetBit(0, true)              // Set the first bit to 1
 				obj := store.NewObj(initialByteArray, -1, object.ObjTypeByteArray, object.ObjEncodingByteArray)
 				store.Put(key, obj)
 			},

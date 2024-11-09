@@ -1,14 +1,14 @@
-package eval_test
+package list_test
 
 import (
 	"fmt"
+	"github.com/dicedb/dice/internal/eval/list"
 	"math/rand"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/dicedb/dice/internal/eval"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -69,24 +69,24 @@ func TestDeqEncodeEntryString(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		x, _ := eval.DecodeDeqEntry(eval.EncodeDeqEntry(tc))
+		x, _ := list.DecodeDeqEntry(list.EncodeDeqEntry(tc))
 		assert.Equal(t, tc, x)
 	}
 }
 
-func dequeRPushIntStrMany(howmany int, deq eval.DequeI) {
+func dequeRPushIntStrMany(howmany int, deq list.DequeI) {
 	for i := 0; i < howmany; i++ {
 		deq.RPush(strconv.FormatInt(int64(i), 10))
 	}
 }
 
-func dequeLPushIntStrMany(howmany int, deq eval.DequeI) {
+func dequeLPushIntStrMany(howmany int, deq list.DequeI) {
 	for i := 0; i < howmany; i++ {
 		deq.LPush(strconv.FormatInt(int64(i), 10))
 	}
 }
 
-func dequeLInsertIntStrMany(howMany int, beforeAfter string, deq eval.DequeI) {
+func dequeLInsertIntStrMany(howMany int, beforeAfter string, deq list.DequeI) {
 	const pivot string = "10"
 	const element string = "50"
 	deq.LPush(pivot)
@@ -97,107 +97,107 @@ func dequeLInsertIntStrMany(howMany int, beforeAfter string, deq eval.DequeI) {
 
 func BenchmarkBasicDequeLInsertBefore2000(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		dequeLInsertIntStrMany(2000, "before", eval.NewBasicDeque())
+		dequeLInsertIntStrMany(2000, "before", list.NewBasicDeque())
 	}
 }
 
 func BenchmarkBasicDequeLInsertAfter2000(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		dequeLInsertIntStrMany(2000, "after", eval.NewBasicDeque())
+		dequeLInsertIntStrMany(2000, "after", list.NewBasicDeque())
 	}
 }
 
 func BenchmarkDequeLInsertBefore2000(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		dequeLInsertIntStrMany(2000, "before", eval.NewDeque())
+		dequeLInsertIntStrMany(2000, "before", list.NewDeque())
 	}
 }
 
 func BenchmarkDequeLInsertAfter2000(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		dequeLInsertIntStrMany(2000, "after", eval.NewDeque())
+		dequeLInsertIntStrMany(2000, "after", list.NewDeque())
 	}
 }
 
 func BenchmarkBasicDequeRPush20(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		dequeRPushIntStrMany(20, eval.NewBasicDeque())
+		dequeRPushIntStrMany(20, list.NewBasicDeque())
 	}
 }
 
 func BenchmarkBasicDequeRPush200(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		dequeRPushIntStrMany(200, eval.NewBasicDeque())
+		dequeRPushIntStrMany(200, list.NewBasicDeque())
 	}
 }
 
 func BenchmarkBasicDequeRPush2000(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		dequeRPushIntStrMany(2000, eval.NewBasicDeque())
+		dequeRPushIntStrMany(2000, list.NewBasicDeque())
 	}
 }
 
 func BenchmarkDequeRPush20(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		dequeRPushIntStrMany(20, eval.NewDeque())
+		dequeRPushIntStrMany(20, list.NewDeque())
 	}
 }
 
 func BenchmarkDequeRPush200(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		dequeRPushIntStrMany(200, eval.NewDeque())
+		dequeRPushIntStrMany(200, list.NewDeque())
 	}
 }
 
 func BenchmarkDequeRPush2000(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		dequeRPushIntStrMany(2000, eval.NewDeque())
+		dequeRPushIntStrMany(2000, list.NewDeque())
 	}
 }
 
 func BenchmarkDequeLPush20(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		dequeLPushIntStrMany(20, eval.NewDeque())
+		dequeLPushIntStrMany(20, list.NewDeque())
 	}
 }
 
 func BenchmarkDequeLPush200(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		dequeLPushIntStrMany(200, eval.NewDeque())
+		dequeLPushIntStrMany(200, list.NewDeque())
 	}
 }
 
 func BenchmarkDequeLPush2000(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		dequeLPushIntStrMany(2000, eval.NewDeque())
+		dequeLPushIntStrMany(2000, list.NewDeque())
 	}
 }
 
 func TestLRange(t *testing.T) {
 	testCases := []struct {
 		name           string
-		dq             eval.DequeI
+		dq             list.DequeI
 		input          []string
 		expectedOutput []string
 		start          int64
 		stop           int64
 	}{
-		{"DequeWithStartStopPositiveAndInRange", eval.NewDeque(), []string{"a", "b", "c"}, []string{"c", "b", "a"}, 0, 2},
-		{"DequeWhereStopIsOutOfRange", eval.NewDeque(), []string{"a", "b", "c"}, []string{"c", "b", "a"}, 0, 20},
-		{"DequeWhereStartIsOutOfRange", eval.NewDeque(), []string{"a", "b", "c"}, []string{}, 10, 2},
-		{"DequeWhereStartIsNegative", eval.NewDeque(), []string{"a", "b", "c"}, []string{"b", "a"}, -2, 2},
-		{"DequeWhereStartIsNegativeOutOfRange", eval.NewDeque(), []string{"a", "b", "c"}, []string{"c", "b", "a"}, -20, 2},
-		{"DequeWhereStopIsNegative", eval.NewDeque(), []string{"a", "b", "c"}, []string{"c", "b"}, 0, -2},
-		{"DequeWhereStopIsNegativeOutOfRange", eval.NewDeque(), []string{"a", "b", "c"}, []string{}, 0, -4},
-		{"DequeWhereStartGreaterThanStop", eval.NewDeque(), []string{"a", "b", "c"}, []string{}, 2, 0},
-		{"BasicDequeWithStartStopPositiveAndInRange", eval.NewBasicDeque(), []string{"a", "b", "c"}, []string{"c", "b", "a"}, 0, 2},
-		{"BasicDequeWhereStopIsOutOfRange", eval.NewBasicDeque(), []string{"a", "b", "c"}, []string{"c", "b", "a"}, 0, 20},
-		{"BasicDequeWhereStartIsOutOfRange", eval.NewBasicDeque(), []string{"a", "b", "c"}, []string{}, 10, 2},
-		{"BasicDequeWhereStartIsNegative", eval.NewBasicDeque(), []string{"a", "b", "c"}, []string{"b", "a"}, -2, 2},
-		{"BasicDequeWhereStartIsNegativeOutOfRange", eval.NewBasicDeque(), []string{"a", "b", "c"}, []string{"c", "b", "a"}, -20, 2},
-		{"BasicDequeWhereStopIsNegative", eval.NewBasicDeque(), []string{"a", "b", "c"}, []string{"c", "b"}, 0, -2},
-		{"BasicDequeWhereStopIsNegativeOutOfRange", eval.NewBasicDeque(), []string{"a", "b", "c"}, []string{}, 0, -4},
-		{"BasicDequeWhereStartGreaterThanStop", eval.NewBasicDeque(), []string{"a", "b", "c"}, []string{}, 2, 0},
+		{"DequeWithStartStopPositiveAndInRange", list.NewDeque(), []string{"a", "b", "c"}, []string{"c", "b", "a"}, 0, 2},
+		{"DequeWhereStopIsOutOfRange", list.NewDeque(), []string{"a", "b", "c"}, []string{"c", "b", "a"}, 0, 20},
+		{"DequeWhereStartIsOutOfRange", list.NewDeque(), []string{"a", "b", "c"}, []string{}, 10, 2},
+		{"DequeWhereStartIsNegative", list.NewDeque(), []string{"a", "b", "c"}, []string{"b", "a"}, -2, 2},
+		{"DequeWhereStartIsNegativeOutOfRange", list.NewDeque(), []string{"a", "b", "c"}, []string{"c", "b", "a"}, -20, 2},
+		{"DequeWhereStopIsNegative", list.NewDeque(), []string{"a", "b", "c"}, []string{"c", "b"}, 0, -2},
+		{"DequeWhereStopIsNegativeOutOfRange", list.NewDeque(), []string{"a", "b", "c"}, []string{}, 0, -4},
+		{"DequeWhereStartGreaterThanStop", list.NewDeque(), []string{"a", "b", "c"}, []string{}, 2, 0},
+		{"BasicDequeWithStartStopPositiveAndInRange", list.NewBasicDeque(), []string{"a", "b", "c"}, []string{"c", "b", "a"}, 0, 2},
+		{"BasicDequeWhereStopIsOutOfRange", list.NewBasicDeque(), []string{"a", "b", "c"}, []string{"c", "b", "a"}, 0, 20},
+		{"BasicDequeWhereStartIsOutOfRange", list.NewBasicDeque(), []string{"a", "b", "c"}, []string{}, 10, 2},
+		{"BasicDequeWhereStartIsNegative", list.NewBasicDeque(), []string{"a", "b", "c"}, []string{"b", "a"}, -2, 2},
+		{"BasicDequeWhereStartIsNegativeOutOfRange", list.NewBasicDeque(), []string{"a", "b", "c"}, []string{"c", "b", "a"}, -20, 2},
+		{"BasicDequeWhereStopIsNegative", list.NewBasicDeque(), []string{"a", "b", "c"}, []string{"c", "b"}, 0, -2},
+		{"BasicDequeWhereStopIsNegativeOutOfRange", list.NewBasicDeque(), []string{"a", "b", "c"}, []string{}, 0, -4},
+		{"BasicDequeWhereStartGreaterThanStop", list.NewBasicDeque(), []string{"a", "b", "c"}, []string{}, 2, 0},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -214,10 +214,10 @@ func TestLRange(t *testing.T) {
 func TestLInsertOnInvalidOperationTypeReturnsError(t *testing.T) {
 	testCases := []struct {
 		name string
-		dq   eval.DequeI
+		dq   list.DequeI
 	}{
-		{"WithDeque", eval.NewDeque()},
-		{"WithBasicDeque", eval.NewBasicDeque()},
+		{"WithDeque", list.NewDeque()},
+		{"WithBasicDeque", list.NewBasicDeque()},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -236,7 +236,7 @@ func TestLInsertOnInvalidOperationTypeReturnsError(t *testing.T) {
 }
 
 func TestLInsertBasicDeque(t *testing.T) {
-	dq := eval.NewBasicDeque()
+	dq := list.NewBasicDeque()
 	dq.RPush("a")
 	dq.RPush("b")
 	dq.RPush("c")
@@ -280,13 +280,13 @@ func TestLInsertBasicDeque(t *testing.T) {
 }
 
 type DequeLInsertFixture struct {
-	dq                   *eval.Deque
+	dq                   *list.Deque
 	initialElements      []string
 	elementsToBeInserted []string
 }
 
 func newDequeLInsertFixture() *DequeLInsertFixture {
-	dq := eval.NewDeque()
+	dq := list.NewDeque()
 	initElements := []string{deqRandStr(10), deqRandStr(100), deqRandStr(250), deqRandStr(150), deqRandStr(200)}
 	for _, elem := range initElements {
 		dq.LPush(elem)

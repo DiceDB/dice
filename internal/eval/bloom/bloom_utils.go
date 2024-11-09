@@ -1,4 +1,4 @@
-package eval
+package bloom
 
 // setBit sets the bit at index `b` to "1" in `buf`.
 func setBit(buf []byte, b uint64) {

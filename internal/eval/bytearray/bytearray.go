@@ -1,8 +1,9 @@
-package eval
+package bytearray
 
 import (
 	"errors"
 	"fmt"
+	"github.com/dicedb/dice/internal/eval"
 	"strconv"
 
 	"github.com/dicedb/dice/internal/object"
@@ -268,21 +269,21 @@ func (b *ByteArray) incrByBits(offset, width int, increment int64, overflow stri
 	}
 
 	switch overflow {
-	case WRAP:
+	case eval.WRAP:
 		if signed {
 			rangeSize := maxVal - minVal + 1
 			newValue = ((newValue-minVal)%rangeSize+rangeSize)%rangeSize + minVal
 		} else {
 			newValue %= maxVal + 1
 		}
-	case SAT:
+	case eval.SAT:
 		// Handle saturation
 		if newValue > maxVal {
 			newValue = maxVal
 		} else if newValue < minVal {
 			newValue = minVal
 		}
-	case FAIL:
+	case eval.FAIL:
 		// Handle failure on overflow
 		if newValue > maxVal || newValue < minVal {
 			return value, errors.New("overflow detected")

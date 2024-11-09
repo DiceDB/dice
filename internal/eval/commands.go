@@ -1,6 +1,7 @@
 package eval
 
 import (
+	"github.com/dicedb/dice/internal/eval/cms"
 	"strings"
 
 	dstore "github.com/dicedb/dice/internal/store"
@@ -468,9 +469,10 @@ var (
 		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
 	}
 	bfexistsCmdMeta = DiceCmdMeta{
-		Name:       "BF.EXISTS",
-		Info:       `BF.EXISTS checks existence of an element in a bloom filter.`,
-		NewEval:    evalBFEXISTS,
+		Name:    "BF.EXISTS",
+		Info:    `BF.EXISTS checks existence of an element in a bloom filter.`,
+		NewEval: evalBFEXISTS,
+
 		IsMigrated: true,
 		Arity:      3,
 		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
@@ -1268,7 +1270,7 @@ var (
 		Info:       `Sets up count min sketch`,
 		Arity:      3,
 		IsMigrated: true,
-		NewEval:    evalCMSINITBYDIM,
+		NewEval:    cms.evalCMSINITBYDIM,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	cmsInitByProbCmdMeta = DiceCmdMeta{
@@ -1276,7 +1278,7 @@ var (
 		Info:       `Sets up count min sketch with given error rate and probability`,
 		Arity:      3,
 		IsMigrated: true,
-		NewEval:    evalCMSINITBYPROB,
+		NewEval:    cms.evalCMSINITBYPROB,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	cmsInfoCmdMeta = DiceCmdMeta{
@@ -1284,7 +1286,7 @@ var (
 		Info:       `Get info about count min sketch`,
 		Arity:      1,
 		IsMigrated: true,
-		NewEval:    evalCMSINFO,
+		NewEval:    cms.evalCMSINFO,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	cmsQueryCmdMeta = DiceCmdMeta{
@@ -1292,7 +1294,7 @@ var (
 		Info:       `Query count min sketch with for given list of keys`,
 		Arity:      -2,
 		IsMigrated: true,
-		NewEval:    evalCMSQuery,
+		NewEval:    cms.evalCMSQuery,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	cmsIncrByCmdMeta = DiceCmdMeta{
@@ -1300,7 +1302,7 @@ var (
 		Info:       `Increase count of the list of keys to count min sketch`,
 		Arity:      -3,
 		IsMigrated: true,
-		NewEval:    evalCMSIncrBy,
+		NewEval:    cms.evalCMSIncrBy,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	cmsMergeCmdMeta = DiceCmdMeta{
@@ -1310,7 +1312,7 @@ var (
 				 Weights can be used to multiply certain sketches. Default weight is 1.`,
 		Arity:      -3,
 		IsMigrated: true,
-		NewEval:    evalCMSMerge,
+		NewEval:    cms.evalCMSMerge,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	linsertCmdMeta = DiceCmdMeta{
