@@ -8,13 +8,21 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/internal/clientio"
+	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dicedb-go"
 	"github.com/stretchr/testify/assert"
 )
 
+func generateFingrprint(cmdName string, key string) string {
+	cmd := cmd.DiceDBCmd{
+		Cmd:  cmdName,
+		Args: []string{key},
+	}
+	return fmt.Sprintf("%d", cmd.GetFingerprint())
+}
+
 const (
 	getUnwatchKey = "getunwatchkey"
-	fingerprint   = "426696421"
 )
 
 type getUnwatchTestCase struct {
@@ -28,6 +36,8 @@ var getUnwatchTestCases = []getUnwatchTestCase{
 	{getUnwatchKey, "value3"},
 	{getUnwatchKey, "value4"},
 }
+
+var fingerprint = generateFingrprint("GET", getUnwatchKey)
 
 func TestGETUNWATCH(t *testing.T) {
 	publisher := getLocalConnection()
@@ -78,6 +88,7 @@ func TestGETUNWATCH(t *testing.T) {
 			if !ok {
 				t.Errorf("Type assertion to []interface{} failed for value: %v", v)
 			}
+
 			assert.Equal(t, 3, len(castedValue))
 			assert.Equal(t, "GET", castedValue[0])
 			assert.Equal(t, fingerprint, castedValue[1])
@@ -98,7 +109,6 @@ func TestGETUNWATCH(t *testing.T) {
 		}
 		assert.Equal(t, castedValue, "OK")
 	}
-
 	// Test updates are not sent after unsubscribing
 	for _, tc := range getUnwatchTestCases[2:] {
 		res := FireCommand(publisher, fmt.Sprintf("SET %s %s", tc.key, tc.val))
@@ -144,7 +154,7 @@ func TestGETUNWATCHWithSDK(t *testing.T) {
 		firstMsg, err := watch.Watch(context.Background(), "GET", getUnwatchKey)
 		assert.Nil(t, err)
 		assert.Equal(t, firstMsg.Command, "GET")
-		assert.Equal(t, firstMsg.Fingerprint, fingerprint)
+		assert.Equal(t, fingerprint, firstMsg.Fingerprint)
 		channels[i] = watch.Channel()
 	}
 
