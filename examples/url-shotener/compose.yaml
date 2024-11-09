@@ -1,0 +1,17 @@
+services:
+  dicedb:
+    image: dicedb/dicedb:latest
+    ports:
+      - "7379:7379"
+
+  url-shortener:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    depends_on:
+        - dicedb
+    environment:
+      - DICEDB_HOST=dicedb
+      - DICEDB_PORT=7379
