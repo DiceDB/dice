@@ -21,7 +21,7 @@ which has 48 vCPUs, 96 GB memory, and 12 Gbps network bandwidth. The benchmarks 
 
 ### Infrastructure Setup
 
-Take two AWS c5.12xlarge machines, one machine to run meatier while the other to run DiceDB.
+Take two AWS c5.12xlarge machines, one machine to run memtier while the other to run DiceDB.
 
 ## DiceDB Benchmark
 

@@ -33,8 +33,16 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.23.x"
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with: # Cache the Go modules
+          path: |
+            vendor/
+          key: ${{ runner.os }}-go-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
       - name: Install dependencies
-        run: go get .
+        run: go get -v . # Check if there is any version changes from the cache
       - name: Build
         run: make build
       - name: Run Unit tests

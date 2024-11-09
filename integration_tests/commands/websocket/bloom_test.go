@@ -211,5 +211,7 @@ func TestBFEdgeCasesAndErrors(t *testing.T) {
 				exec.FireCommand(conn, cmd)
 			}
 		})
+		conn := exec.ConnectToServer()
+		exec.FireCommandAndReadResponse(conn, "FLUSHDB")
 	}
 }

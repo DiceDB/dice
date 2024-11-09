@@ -218,5 +218,6 @@ func TestBFEdgeCasesAndErrors(t *testing.T) {
 				FireCommand(conn, cmd)
 			}
 		})
+		FireCommand(conn, "FLUSHDB")
 	}
 }

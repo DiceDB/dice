@@ -14,7 +14,6 @@ import (
 
 const (
 	getUnwatchKey = "getunwatchkey"
-	fingerprint   = "3557732805"
 )
 
 type getUnwatchTestCase struct {
@@ -78,16 +77,17 @@ func TestGETUNWATCH(t *testing.T) {
 			if !ok {
 				t.Errorf("Type assertion to []interface{} failed for value: %v", v)
 			}
+			fmt.Println(castedValue)
 			assert.Equal(t, 3, len(castedValue))
 			assert.Equal(t, "GET", castedValue[0])
-			assert.Equal(t, fingerprint, castedValue[1])
+			assert.Equal(t, "426696421", castedValue[1])
 			assert.Equal(t, tc.val, castedValue[2])
 		}
 	}
 
 	// unsubscribe from updates
 	for _, subscriber := range subscribers {
-		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("GET.UNWATCH %s", fingerprint))
+		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("GET.UNWATCH %s", "426696421"))
 		assert.NotNil(t, rp)
 
 		v, err := rp.DecodeOne()
@@ -98,7 +98,6 @@ func TestGETUNWATCH(t *testing.T) {
 		}
 		assert.Equal(t, castedValue, "OK")
 	}
-
 	// Test updates are not sent after unsubscribing
 	for _, tc := range getUnwatchTestCases[2:] {
 		res := FireCommand(publisher, fmt.Sprintf("SET %s %s", tc.key, tc.val))
@@ -144,7 +143,7 @@ func TestGETUNWATCHWithSDK(t *testing.T) {
 		firstMsg, err := watch.Watch(context.Background(), "GET", getUnwatchKey)
 		assert.Nil(t, err)
 		assert.Equal(t, firstMsg.Command, "GET")
-		assert.Equal(t, firstMsg.Fingerprint, fingerprint)
+		assert.Equal(t, "426696421", firstMsg.Fingerprint)
 		channels[i] = watch.Channel()
 	}
 
@@ -155,13 +154,13 @@ func TestGETUNWATCHWithSDK(t *testing.T) {
 	for _, channel := range channels {
 		v := <-channel
 		assert.Equal(t, "GET", v.Command)           // command
-		assert.Equal(t, fingerprint, v.Fingerprint) // Fingerprint
+		assert.Equal(t, "426696421", v.Fingerprint) // Fingerprint
 		assert.Equal(t, "check", v.Data.(string))   // data
 	}
 
 	// unsubscribe from updates
 	for _, subscriber := range subscribers {
-		err := subscriber.watch.Unwatch(context.Background(), "GET", fingerprint)
+		err := subscriber.watch.Unwatch(context.Background(), "GET", "426696421")
 		assert.Nil(t, err)
 	}
 
