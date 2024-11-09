@@ -690,37 +690,102 @@ func evalGETRANGE(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+// **********************************************************************************************************************************************
+
 // evalZADD adds all the specified members with the specified scores to the sorted set stored at key.
 // If a specified member is already a member of the sorted set, the score is updated and the element
 // reinserted at the right position to ensure the correct ordering.
 // If key does not exist, a new sorted set with the specified members as sole members is created.
 func evalZADD(args []string, store *dstore.Store) *EvalResponse {
-	if len(args) < 3 || len(args)%2 == 0 {
+	// if length of command is 3, throw error as it is not possible
+	if len(args) < 3 {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongArgumentCount("ZADD"),
 		}
 	}
-
+	// fetch key and sort the set
 	key := args[0]
-	obj := store.Get(key)
-	var sortedSet *sortedset.Set
-
-	if obj != nil {
-		var err []byte
-		sortedSet, err = sortedset.FromObject(obj)
-		if err != nil {
-			return &EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrWrongTypeOperation,
-			}
+	sortedSet, err := getOrCreateSortedSet(store, key)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  err,
 		}
-	} else {
-		sortedSet = sortedset.New()
+	}
+	// flags parsing
+	flags, nextIndex := parseFlags(args[1:])
+	if nextIndex >= len(args) || (len(args)-nextIndex)%2 != 0 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("ZADD"),
+		}
+	}
+	// only valid flags works
+	if err := validateFlagsAndArgs(args[nextIndex:], flags); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  err,
+		}
+	}
+	// all processing takes place here
+	return processMembersWithFlags(args[nextIndex:], sortedSet, store, key, flags)
+}
+
+// parseFlags identifies and parses the flags used in ZADD.
+func parseFlags(args []string) (parsedFlags map[string]bool, nextIndex int) {
+	parsedFlags = map[string]bool{
+		"NX":   false,
+		"XX":   false,
+		"LT":   false,
+		"GT":   false,
+		"CH":   false,
+		"INCR": false,
+	}
+	for i := 0; i < len(args); i++ {
+		switch strings.ToUpper(args[i]) {
+		case "NX":
+			parsedFlags["NX"] = true
+		case "XX":
+			parsedFlags["XX"] = true
+		case "LT":
+			parsedFlags["LT"] = true
+		case "GT":
+			parsedFlags["GT"] = true
+		case "CH":
+			parsedFlags["CH"] = true
+		case "INCR":
+			parsedFlags["INCR"] = true
+		default:
+			return parsedFlags, i + 1
+		}
 	}
 
-	added := 0
-	for i := 1; i < len(args); i += 2 {
+	return parsedFlags, len(args) + 1
+}
+
+// only valid combination of options works
+func validateFlagsAndArgs(args []string, flags map[string]bool) error {
+	if len(args)%2 != 0 {
+		return diceerrors.ErrGeneral("syntax error")
+	}
+	if flags["NX"] && flags["XX"] {
+		return diceerrors.ErrGeneral("xx and nx options at the same time are not compatible")
+	}
+	if (flags["GT"] && flags["NX"]) || (flags["LT"] && flags["NX"]) || (flags["GT"] && flags["LT"]) {
+		return diceerrors.ErrGeneral("gt and LT and NX options at the same time are not compatible")
+	}
+	if flags["INCR"] && len(args)/2 > 1 {
+		return diceerrors.ErrGeneral("incr option supports a single increment-element pair")
+	}
+	return nil
+}
+
+// processMembersWithFlags processes the members and scores while handling flags.
+func processMembersWithFlags(args []string, sortedSet *sortedset.Set, store *dstore.Store, key string, flags map[string]bool) *EvalResponse {
+	added, updated := 0, 0
+
+	for i := 0; i < len(args); i += 2 {
 		scoreStr := args[i]
 		member := args[i+1]
 
@@ -732,21 +797,94 @@ func evalZADD(args []string, store *dstore.Store) *EvalResponse {
 			}
 		}
 
+		currentScore, exists := sortedSet.Get(member)
+
+		// If INCR is used, increment the score first
+		if flags["INCR"] {
+			if exists {
+				score += currentScore
+			} else {
+				score = 0.0 + score
+			}
+
+			// Now check GT and LT conditions based on the incremented score
+			if (flags["GT"] && exists && score <= currentScore) ||
+				(flags["LT"] && exists && score >= currentScore) {
+				return &EvalResponse{
+					Result: nil,
+					Error:  nil,
+				}
+			}
+		}
+
+		// Check if the member should be skipped based on NX or XX flags
+		if shouldSkipMember(score, currentScore, exists, flags) {
+			continue
+		}
+
+		// Insert or update the member in the sorted set
 		wasInserted := sortedSet.Upsert(score, member)
 
-		if wasInserted {
-			added += 1
+		if wasInserted && !exists {
+			added++
+		} else if exists && score != currentScore {
+			updated++
+		}
+
+		// If INCR is used, exit after processing one score-member pair
+		if flags["INCR"] {
+			return &EvalResponse{
+				Result: score,
+				Error:  nil,
+			}
 		}
 	}
 
-	obj = store.NewObj(sortedSet, -1, object.ObjTypeSortedSet, object.ObjEncodingBTree)
-	store.Put(key, obj, dstore.WithPutCmd(dstore.ZAdd))
+	// Store the updated sorted set in the store
+	storeUpdatedSet(store, key, sortedSet)
 
+	if flags["CH"] {
+		return &EvalResponse{
+			Result: added + updated,
+			Error:  nil,
+		}
+	}
+
+	// Return only the count of added members
 	return &EvalResponse{
 		Result: added,
 		Error:  nil,
 	}
 }
+
+// shouldSkipMember determines if a member should be skipped based on flags.
+func shouldSkipMember(score, currentScore float64, exists bool, flags map[string]bool) bool {
+	useNX, useXX, useLT, useGT := flags["NX"], flags["XX"], flags["LT"], flags["GT"]
+
+	return (useNX && exists) || (useXX && !exists) ||
+		(exists && useLT && score >= currentScore) ||
+		(exists && useGT && score <= currentScore)
+}
+
+// storeUpdatedSet stores the updated sorted set in the store.
+func storeUpdatedSet(store *dstore.Store, key string, sortedSet *sortedset.Set) {
+	store.Put(key, store.NewObj(sortedSet, -1, object.ObjTypeSortedSet, object.ObjEncodingBTree), dstore.WithPutCmd(dstore.ZAdd))
+}
+
+// getOrCreateSortedSet fetches the sorted set if it exists, otherwise creates a new one.
+func getOrCreateSortedSet(store *dstore.Store, key string) (*sortedset.Set, error) {
+	obj := store.Get(key)
+	if obj != nil {
+		sortedSet, err := sortedset.FromObject(obj)
+		if err != nil {
+			return nil, diceerrors.ErrWrongTypeOperation
+		}
+		return sortedSet, nil
+	}
+	return sortedset.New(), nil
+}
+
+// **************************************************************************************************************************************************************
 
 // The ZCOUNT command in DiceDB counts the number of members in a sorted set at the specified key
 // whose scores fall within a given range. The command takes three arguments: the key of the sorted set
