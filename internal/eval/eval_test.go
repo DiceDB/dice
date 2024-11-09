@@ -6077,6 +6077,130 @@ func BenchmarkEvalINCRBYFLOAT(b *testing.B) {
 	}
 }
 
+// TODO: BITOP has not been migrated yet. Once done, we can uncomment the tests - please check accuracy and validate for expected values.
+
+// func testEvalBITOP(t *testing.T, store *dstore.Store) {
+// 	tests := map[string]evalTestCase{
+// 		"BITOP NOT (empty string)": {
+// 			setup: func() {
+// 				store.Put("s{t}", store.NewObj(&ByteArray{data: []byte("")}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+// 			},
+// 			input:          []string{"NOT", "dest{t}", "s{t}"},
+// 			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
+// 			newValidator: func(output interface{}) {
+// 				expectedResult := []byte{}
+// 				assert.Equal(t, expectedResult, store.Get("dest{t}").Value.(*ByteArray).data)
+// 			},
+// 		},
+// 		"BITOP NOT (known string)": {
+// 			setup: func() {
+// 				store.Put("s{t}", store.NewObj(&ByteArray{data: []byte{0xaa, 0x00, 0xff, 0x55}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+// 			},
+// 			input:          []string{"NOT", "dest{t}", "s{t}"},
+// 			migratedOutput: EvalResponse{Result: 4, Error: nil},
+// 			newValidator: func(output interface{}) {
+// 				expectedResult := []byte{0x55, 0xff, 0x00, 0xaa}
+// 				assert.Equal(t, expectedResult, store.Get("dest{t}").Value.(*ByteArray).data)
+// 			},
+// 		},
+// 		"BITOP where dest and target are the same key": {
+// 			setup: func() {
+// 				store.Put("s", store.NewObj(&ByteArray{data: []byte{0xaa, 0x00, 0xff, 0x55}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+// 			},
+// 			input:          []string{"NOT", "s", "s"},
+// 			migratedOutput: EvalResponse{Result: 4, Error: nil},
+// 			newValidator: func(output interface{}) {
+// 				expectedResult := []byte{0x55, 0xff, 0x00, 0xaa}
+// 				assert.Equal(t, expectedResult, store.Get("s").Value.(*ByteArray).data)
+// 			},
+// 		},
+// 		"BITOP AND|OR|XOR don't change the string with single input key": {
+// 			setup: func() {
+// 				store.Put("a{t}", store.NewObj(&ByteArray{data: []byte{0x01, 0x02, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+// 			},
+// 			input:          []string{"AND", "res1{t}", "a{t}"},
+// 			migratedOutput: EvalResponse{Result: 3, Error: nil},
+// 			newValidator: func(output interface{}) {
+// 				expectedResult := []byte{0x01, 0x02, 0xff}
+// 				assert.Equal(t, expectedResult, store.Get("res1{t}").Value.(*ByteArray).data)
+// 			},
+// 		},
+// 		"BITOP missing key is considered a stream of zero": {
+// 			setup: func() {
+// 				store.Put("a{t}", store.NewObj(&ByteArray{data: []byte{0x01, 0x02, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+// 			},
+// 			input:          []string{"AND", "res1{t}", "no-such-key{t}", "a{t}"},
+// 			migratedOutput: EvalResponse{Result: 3, Error: nil},
+// 			newValidator: func(output interface{}) {
+// 				expectedResult := []byte{0x00, 0x00, 0x00}
+// 				assert.Equal(t, expectedResult, store.Get("res1{t}").Value.(*ByteArray).data)
+// 			},
+// 		},
+// 		"BITOP shorter keys are zero-padded to the key with max length": {
+// 			setup: func() {
+// 				store.Put("a{t}", store.NewObj(&ByteArray{data: []byte{0x01, 0x02, 0xff, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+// 				store.Put("b{t}", store.NewObj(&ByteArray{data: []byte{0x01, 0x02, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+// 			},
+// 			input:          []string{"AND", "res1{t}", "a{t}", "b{t}"},
+// 			migratedOutput: EvalResponse{Result: 4, Error: nil},
+// 			newValidator: func(output interface{}) {
+// 				expectedResult := []byte{0x01, 0x02, 0xff, 0x00}
+// 				assert.Equal(t, expectedResult, store.Get("res1{t}").Value.(*ByteArray).data)
+// 			},
+// 		},
+// 		"BITOP with non string source key": {
+// 			setup: func() {
+// 				store.Put("a{t}", store.NewObj("1", maxExDuration, object.ObjTypeString, object.ObjEncodingRaw))
+// 				store.Put("b{t}", store.NewObj("2", maxExDuration, object.ObjTypeString, object.ObjEncodingRaw))
+// 				store.Put("c{t}", store.NewObj([]byte("foo"), maxExDuration, object.ObjTypeByteList, object.ObjEncodingRaw))
+// 			},
+// 			input:          []string{"XOR", "dest{t}", "a{t}", "b{t}", "c{t}", "d{t}"},
+// 			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
+// 		},
+// 		"BITOP with empty string after non empty string": {
+// 			setup: func() {
+// 				store.Put("a{t}", store.NewObj(&ByteArray{data: []byte("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")}, -1, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+// 			},
+// 			input:          []string{"OR", "x{t}", "a{t}", "b{t}"},
+// 			migratedOutput: EvalResponse{Result: 32, Error: nil},
+// 		},
+// 	}
+
+// 	//runEvalTests(t, tests, evalBITOP, store)
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+
+// 			if tt.setup != nil {
+// 				tt.setup()
+// 			}
+// 			response := evalBITOP(tt.input, store)
+
+// 			if tt.newValidator != nil {
+// 				if tt.migratedOutput.Error != nil {
+// 					tt.newValidator(tt.migratedOutput.Error)
+// 				} else {
+// 					tt.newValidator(response.Result)
+// 				}
+// 			} else {
+// 				// Handle comparison for byte slices
+// 				if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
+// 					if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
+// 						assert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+// 					}
+// 				} else {
+// 					assert.Equal(t, tt.migratedOutput.Result, response.Result)
+// 				}
+
+// 				if tt.migratedOutput.Error != nil {
+// 					assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+// 				} else {
+// 					assert.NoError(t, response.Error)
+// 				}
+// 			}
+// 		})
+// 	}
+// }
+
 func testEvalBITOP(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"BITOP NOT (empty string)": {
@@ -7461,51 +7585,61 @@ func testEvalZCARD(t *testing.T, store *dstore.Store) {
 func testEvalBitField(t *testing.T, store *dstore.Store) {
 	testCases := map[string]evalTestCase{
 		"BITFIELD signed SET": {
-			input:  []string{"bits", "set", "i8", "0", "-100"},
-			output: clientio.Encode([]int64{0}, false),
+			input: []string{"bits", "set", "i8", "0", "-100"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{int64(0)},
+				Error:  nil,
+			},
 		},
 		"BITFIELD GET": {
 			setup: func() {
 				args := []string{"bits", "set", "u8", "0", "255"}
 				evalBITFIELD(args, store)
 			},
-			input:  []string{"bits", "get", "u8", "0"},
-			output: clientio.Encode([]int64{255}, false),
+			input: []string{"bits", "get", "u8", "0"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{int64(255)},
+				Error:  nil,
+			},
 		},
 		"BITFIELD INCRBY": {
 			setup: func() {
 				args := []string{"bits", "set", "u8", "0", "255"}
 				evalBITFIELD(args, store)
 			},
-			input:  []string{"bits", "incrby", "u8", "0", "100"},
-			output: clientio.Encode([]int64{99}, false),
+			input: []string{"bits", "incrby", "u8", "0", "100"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{int64(99)},
+				Error:  nil,
+			},
 		},
 		"BITFIELD Arity": {
-			input:  []string{},
-			output: diceerrors.NewErrArity("BITFIELD"),
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("BITFIELD")},
 		},
 		"BITFIELD invalid combination of commands in a single operation": {
-			input:  []string{"bits", "SET", "u8", "0", "255", "INCRBY", "u8", "0", "100", "GET", "u8"},
-			output: []byte("-ERR syntax error\r\n"),
+			input:          []string{"bits", "SET", "u8", "0", "255", "INCRBY", "u8", "0", "100", "GET", "u8"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrSyntax},
 		},
 		"BITFIELD invalid bitfield type": {
-			input:  []string{"bits", "SET", "a8", "0", "255", "INCRBY", "u8", "0", "100", "GET", "u8"},
-			output: []byte("-ERR Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is.\r\n"),
+			input:          []string{"bits", "SET", "a8", "0", "255", "INCRBY", "u8", "0", "100", "GET", "u8"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrGeneral("Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is")},
 		},
 		"BITFIELD invalid bit offset": {
-			input:  []string{"bits", "SET", "u8", "a", "255", "INCRBY", "u8", "0", "100", "GET", "u8"},
-			output: []byte("-ERR bit offset is not an integer or out of range\r\n"),
+			input:          []string{"bits", "SET", "u8", "a", "255", "INCRBY", "u8", "0", "100", "GET", "u8"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrGeneral("bit offset is not an integer or out of range")},
 		},
 		"BITFIELD invalid overflow type": {
-			input:  []string{"bits", "SET", "u8", "0", "255", "INCRBY", "u8", "0", "100", "OVERFLOW", "wraap"},
-			output: []byte("-ERR Invalid OVERFLOW type specified\r\n"),
+			input:          []string{"bits", "SET", "u8", "0", "255", "INCRBY", "u8", "0", "100", "OVERFLOW", "wraap"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrGeneral("Invalid OVERFLOW type specified")},
 		},
 		"BITFIELD missing arguments in SET": {
-			input:  []string{"bits", "SET", "u8", "0", "INCRBY", "u8", "0", "100", "GET", "u8", "288"},
-			output: []byte("-ERR value is not an integer or out of range\r\n"),
+			input:          []string{"bits", "SET", "u8", "0", "INCRBY", "u8", "0", "100", "GET", "u8", "288"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrIntegerOutOfRange},
 		},
 	}
-	runEvalTests(t, testCases, evalBITFIELD, store)
+
+	runMigratedEvalTests(t, testCases, evalBITFIELD, store)
 }
 
 func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
@@ -7745,23 +7879,27 @@ func testEvalDUMP(t *testing.T, store *dstore.Store) {
 func testEvalBitFieldRO(t *testing.T, store *dstore.Store) {
 	testCases := map[string]evalTestCase{
 		"BITFIELD_RO Arity": {
-			input:  []string{},
-			output: diceerrors.NewErrArity("BITFIELD_RO"),
+			input: []string{},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("BITFIELD_RO"),
+			},
 		},
 		"BITFIELD_RO syntax error": {
-			input:  []string{"bits", "GET", "u8"},
-			output: []byte("-ERR syntax error\r\n"),
+			input:          []string{"bits", "GET", "u8"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrSyntax},
 		},
 		"BITFIELD_RO invalid bitfield type": {
-			input:  []string{"bits", "GET", "a8", "0", "255"},
-			output: []byte("-ERR Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is.\r\n"),
+			input:          []string{"bits", "GET", "a8", "0", "255"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrGeneral("Invalid bitfield type. Use something like i16 u8. Note that u64 is not supported but i64 is")},
 		},
 		"BITFIELD_RO unsupported commands": {
-			input:  []string{"bits", "set", "u8", "0", "255"},
-			output: []byte("-ERR BITFIELD_RO only supports the GET subcommand\r\n"),
+			input:          []string{"bits", "set", "u8", "0", "255"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrGeneral("BITFIELD_RO only supports the GET subcommand")},
 		},
 	}
-	runEvalTests(t, testCases, evalBITFIELDRO, store)
+
+	runMigratedEvalTests(t, testCases, evalBITFIELDRO, store)
 }
 
 func testEvalGEOADD(t *testing.T, store *dstore.Store) {
