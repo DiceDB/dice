@@ -35,16 +35,6 @@ Syntax - `Set(key, value, expiration)`
 Syntax - `Get(key)`
 `key`: The identifier for the data to retrieve.
 
-## Project Structure
-
-The project is organized into several packages:
-
-- `models`: Defines the URL data structure.
-- `repository`: Handles database interactions with DiceDB.
-- `services`: Implements business logic for URL shortening.
-- `handlers`: Contains HTTP route handlers for the API.
-- `utils`: Provides helper functions for API responses.
-
 ## Code overview
 
 - `main.go`:
