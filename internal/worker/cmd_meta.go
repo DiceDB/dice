@@ -130,6 +130,7 @@ const (
 	CmdHDel          = "HDEL"
 	CmdHMSet         = "HMSET"
 	CmdHMGet         = "HMGET"
+	CmdSMembersWatch = "SMEMBERS.WATCH"
 )
 
 type CmdMeta struct {
@@ -346,6 +347,9 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: Watch,
 	},
 	CmdZRangeWatch: {
+		CmdType: Watch,
+	},
+	CmdSMembersWatch: {
 		CmdType: Watch,
 	},
 
