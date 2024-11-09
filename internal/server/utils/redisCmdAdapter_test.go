@@ -439,7 +439,7 @@ func TestParseWebsocketMessage(t *testing.T) {
 			message:      `json.get k1 "$.contact.email"`,
 			expectedCmd:  "JSON.GET",
 			expectedArgs: []string{"k1", "$.contact.email"},
-		},		
+		},
 	}
 
 	for _, tc := range commands {
