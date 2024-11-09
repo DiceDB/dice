@@ -8,18 +8,9 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/internal/clientio"
-	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dicedb-go"
 	"github.com/stretchr/testify/assert"
 )
-
-func generateFingrprint(cmdName string, key string) string {
-	cmd := cmd.DiceDBCmd{
-		Cmd:  cmdName,
-		Args: []string{key},
-	}
-	return fmt.Sprintf("%d", cmd.GetFingerprint())
-}
 
 const (
 	getUnwatchKey = "getunwatchkey"
@@ -36,8 +27,6 @@ var getUnwatchTestCases = []getUnwatchTestCase{
 	{getUnwatchKey, "value3"},
 	{getUnwatchKey, "value4"},
 }
-
-var fingerprint = generateFingrprint("GET", getUnwatchKey)
 
 func TestGETUNWATCH(t *testing.T) {
 	publisher := getLocalConnection()
@@ -88,17 +77,17 @@ func TestGETUNWATCH(t *testing.T) {
 			if !ok {
 				t.Errorf("Type assertion to []interface{} failed for value: %v", v)
 			}
-
+			fmt.Println(castedValue)
 			assert.Equal(t, 3, len(castedValue))
 			assert.Equal(t, "GET", castedValue[0])
-			assert.Equal(t, fingerprint, castedValue[1])
+			assert.Equal(t, "426696421", castedValue[1])
 			assert.Equal(t, tc.val, castedValue[2])
 		}
 	}
 
 	// unsubscribe from updates
 	for _, subscriber := range subscribers {
-		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("GET.UNWATCH %s", fingerprint))
+		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("GET.UNWATCH %s", "426696421"))
 		assert.NotNil(t, rp)
 
 		v, err := rp.DecodeOne()
@@ -154,7 +143,7 @@ func TestGETUNWATCHWithSDK(t *testing.T) {
 		firstMsg, err := watch.Watch(context.Background(), "GET", getUnwatchKey)
 		assert.Nil(t, err)
 		assert.Equal(t, firstMsg.Command, "GET")
-		assert.Equal(t, fingerprint, firstMsg.Fingerprint)
+		assert.Equal(t, "426696421", firstMsg.Fingerprint)
 		channels[i] = watch.Channel()
 	}
 
@@ -165,13 +154,13 @@ func TestGETUNWATCHWithSDK(t *testing.T) {
 	for _, channel := range channels {
 		v := <-channel
 		assert.Equal(t, "GET", v.Command)           // command
-		assert.Equal(t, fingerprint, v.Fingerprint) // Fingerprint
+		assert.Equal(t, "426696421", v.Fingerprint) // Fingerprint
 		assert.Equal(t, "check", v.Data.(string))   // data
 	}
 
 	// unsubscribe from updates
 	for _, subscriber := range subscribers {
-		err := subscriber.watch.Unwatch(context.Background(), "GET", fingerprint)
+		err := subscriber.watch.Unwatch(context.Background(), "GET", "426696421")
 		assert.Nil(t, err)
 	}
 
