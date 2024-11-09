@@ -36,16 +36,6 @@ export default defineConfig({
           label: "Commands",
           autogenerate: { directory: "commands" },
         },
-        {
-          label: "Metrics",
-          items: [
-            {
-              label: "Memtier Benchmark",
-              link: "https://dicedb.io/metrics/memtier.html",
-              attrs: { target: "_blank" },
-            },
-          ],
-        },
       ],
     }),
   ],

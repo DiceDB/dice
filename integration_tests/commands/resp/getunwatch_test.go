@@ -14,7 +14,7 @@ import (
 
 const (
 	getUnwatchKey = "getunwatchkey"
-	fingerprint   = "3557732805"
+	fingerprint   = "426696421"
 )
 
 type getUnwatchTestCase struct {

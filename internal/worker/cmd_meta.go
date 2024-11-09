@@ -74,6 +74,11 @@ const (
 
 // Watch commands
 const (
+	CmdSadd     = "SADD"
+	CmdSrem     = "SREM"
+	CmdScard    = "SCARD"
+	CmdSmembers = "SMEMBERS"
+
 	CmdGetWatch      = "GET.WATCH"
 	CmdGetUnWatch    = "GET.UNWATCH"
 	CmdZRangeWatch   = "ZRANGE.WATCH"
@@ -185,6 +190,18 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdGetDel: {
+		CmdType: SingleShard,
+	},
+	CmdSadd: {
+		CmdType: SingleShard,
+	},
+	CmdSrem: {
+		CmdType: SingleShard,
+	},
+	CmdScard: {
+		CmdType: SingleShard,
+	},
+	CmdSmembers: {
 		CmdType: SingleShard,
 	},
 	CmdHExists: {

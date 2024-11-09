@@ -1,6 +1,7 @@
 package eval
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -3743,4 +3744,303 @@ func evalHDEL(args []string, store *dstore.Store) *EvalResponse {
 		Result: count,
 		Error:  nil,
 	}
+}
+
+// evalSADD adds one or more members to a set
+// args must contain a key and one or more members to add the set
+// If the set does not exist, a new set is created and members are added to it
+// An error response is returned if the command is used on a key that contains a non-set value(eg: string)
+// Returns an integer which represents the number of members that were added to the set, not including
+// the members that were already present
+func evalSADD(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("SADD"),
+		}
+	}
+	key := args[0]
+
+	// Get the set object from the store.
+	obj := store.Get(key)
+	lengthOfItems := len(args[1:])
+
+	var count = 0
+	if obj == nil {
+		var exDurationMs int64 = -1
+		var keepttl = false
+		// If the object does not exist, create a new set object.
+		value := make(map[string]struct{}, lengthOfItems)
+		// Create a new object.
+		obj = store.NewObj(value, exDurationMs, object.ObjTypeSet, object.ObjEncodingSetStr)
+		store.Put(key, obj, dstore.WithKeepTTL(keepttl))
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingSetStr); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// Get the set object.
+	set := obj.Value.(map[string]struct{})
+
+	for _, arg := range args[1:] {
+		if _, ok := set[arg]; !ok {
+			set[arg] = struct{}{}
+			count++
+		}
+	}
+
+	return &EvalResponse{
+		Result: count,
+		Error:  nil,
+	}
+}
+
+// evalSREM removes one or more members from a set
+// Members that are not member of this set are ignored
+// Returns the number of members that are removed from set
+// If set does not exist, 0 is returned
+// An error response is returned if the command is used on a key that contains a non-set value(eg: string)
+func evalSREM(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("SREM"),
+		}
+	}
+	key := args[0]
+
+	// Get the set object from the store.
+	obj := store.Get(key)
+
+	var count = 0
+	if obj == nil {
+		return &EvalResponse{
+			Result: 0,
+			Error:  nil,
+		}
+	}
+
+	// If the object exists, check if it is a set object.
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingSetStr); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// Get the set object.
+	set := obj.Value.(map[string]struct{})
+
+	for _, arg := range args[1:] {
+		if _, ok := set[arg]; ok {
+			delete(set, arg)
+			count++
+		}
+	}
+
+	return &EvalResponse{
+		Result: count,
+		Error:  nil,
+	}
+}
+
+// evalSCARD returns the number of elements of the set stored at key
+// Returns 0 if the key does not exist
+// An error response is returned if the command is used on a key that contains a non-set value(eg: string)
+func evalSCARD(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("SCARD"),
+		}
+	}
+
+	key := args[0]
+
+	// Get the set object from the store.
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: 0,
+			Error:  nil,
+		}
+	}
+
+	// If the object exists, check if it is a set object.
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingSetStr); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// Get the set object.
+	count := len(obj.Value.(map[string]struct{}))
+	return &EvalResponse{
+		Result: count,
+		Error:  nil,
+	}
+}
+
+// evalSMEMBERS returns all the members of a set
+// An error response is returned if the command is used on a key that contains a non-set value(eg: string)
+// An empty set is returned if no set exists for given key
+func evalSMEMBERS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("SMEMBERS"),
+		}
+	}
+	key := args[0]
+
+	// Get the set object from the store.
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: []string{},
+			Error:  nil,
+		}
+	}
+
+	// If the object exists, check if it is a set object.
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingSetStr); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// Get the set object.
+	set := obj.Value.(map[string]struct{})
+	// Get the members of the set.
+	members := make([]string, 0, len(set))
+	for k := range set {
+		members = append(members, k)
+	}
+
+	return &EvalResponse{
+		Result: members,
+		Error:  nil,
+	}
+}
+
+// evalLRANGE returns the specified elements of the list stored at key.
+//
+// Returns Array reply: a list of elements in the specified range, or an empty array if the key doesn't exist.
+//
+// Usage: LRANGE key start stop
+func evalLRANGE(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 3 {
+		return makeEvalError(errors.New("-wrong number of arguments for LRANGE"))
+	}
+	key := args[0]
+	start, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return makeEvalError(errors.New("-ERR value is not an integer or out of range"))
+	}
+	stop, err := strconv.ParseInt(args[2], 10, 64)
+	if err != nil {
+		return makeEvalError(errors.New("-ERR value is not an integer or out of range"))
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return makeEvalResult([]string{})
+	}
+
+	// if object is a set type, return error
+	if object.AssertType(obj.TypeEncoding, object.ObjTypeSet) == nil {
+		return makeEvalError(errors.New(diceerrors.WrongTypeErr))
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeByteList); err != nil {
+		return makeEvalError(err)
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingDeque); err != nil {
+		return makeEvalError(err)
+	}
+
+	q := obj.Value.(*Deque)
+	res, err := q.LRange(start, stop)
+	if err != nil {
+		return makeEvalError(err)
+	}
+	return makeEvalResult(res)
+}
+
+// evalLINSERT command inserts the element at a key before / after the pivot element.
+//
+// Returns the list length (integer) after a successful insert operation, 0 when the key doesn't exist, -1 when the pivot wasn't found.
+//
+// Usage: LINSERT key <BEFORE | AFTER> pivot element
+func evalLINSERT(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 4 {
+		return makeEvalError(errors.New("-wrong number of arguments for LINSERT"))
+	}
+
+	key := args[0]
+	beforeAfter := strings.ToLower(args[1])
+	pivot := args[2]
+	element := args[3]
+
+	obj := store.Get(key)
+	if obj == nil {
+		return makeEvalResult(0)
+	}
+
+	// if object is a set type, return error
+	if object.AssertType(obj.TypeEncoding, object.ObjTypeSet) == nil {
+		return makeEvalError(errors.New(diceerrors.WrongTypeErr))
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeByteList); err != nil {
+		return makeEvalError(err)
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingDeque); err != nil {
+		return makeEvalError(err)
+	}
+
+	q := obj.Value.(*Deque)
+	res, err := q.LInsert(pivot, element, beforeAfter)
+	if err != nil {
+		return makeEvalError(err)
+	}
+	return makeEvalResult(res)
 }

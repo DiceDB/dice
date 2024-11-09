@@ -922,17 +922,19 @@ var (
 		Specified members that are already a member of this set are ignored
 		Non existing keys are treated as empty sets.
 		An error is returned when the value stored at key is not a set.`,
-		Eval:     evalSADD,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalSADD,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	smembersCmdMeta = DiceCmdMeta{
 		Name: "SMEMBERS",
 		Info: `SMEMBERS key
 		Returns all the members of the set value stored at key.`,
-		Eval:     evalSMEMBERS,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalSMEMBERS,
 	}
 	sremCmdMeta = DiceCmdMeta{
 		Name: "SREM",
@@ -940,18 +942,20 @@ var (
 		Removes the specified members from the set stored at key.
 		Non existing keys are treated as empty sets.
 		An error is returned when the value stored at key is not a set.`,
-		Eval:     evalSREM,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalSREM,
 	}
 	scardCmdMeta = DiceCmdMeta{
 		Name: "SCARD",
 		Info: `SCARD key
 		Returns the number of elements of the set stored at key.
 		An error is returned when the value stored at key is not a set.`,
-		Eval:     evalSCARD,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalSCARD,
 	}
 	sdiffCmdMeta = DiceCmdMeta{
 		Name: "SDIFF",
@@ -1309,6 +1313,47 @@ var (
 		NewEval:    evalCMSMerge,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
+	linsertCmdMeta = DiceCmdMeta{
+		Name: "LINSERT",
+		Info: `
+		Usage:
+			LINSERT key <BEFORE | AFTER> pivot element
+		Info:
+			Inserts element in the list stored at key either before or after the reference value pivot.
+			When key does not exist, it is considered an empty list and no operation is performed.
+			An error is returned when key exists but does not hold a list value.
+		Returns:
+			Integer - the list length after a successful insert operation.
+			0 when the key doesn't exist.
+			-1 when the pivot wasn't found.
+		`,
+		NewEval:    evalLINSERT,
+		IsMigrated: true,
+		Arity:      5,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+	}
+	lrangeCmdMeta = DiceCmdMeta{
+		Name: "LRANGE",
+		Info: `
+		Usage:
+			LRANGE key start stop
+		Info:
+			Returns the specified elements of the list stored at key.
+			The offsets start and stop are zero-based indexes, with 0 being the first element of the list (the head of the list), 1 being the next element and so on.
+
+			These offsets can also be negative numbers indicating offsets starting at the end of the list.
+			For example, -1 is the last element of the list, -2 the penultimate, and so on.
+			
+			Out of range indexes will not produce an error. If start is larger than the end of the list, an empty list is returned.
+			If stop is larger than the actual end of the list it will be treated like the last element of the list.
+		Returns:
+			Array reply: a list of elements in the specified range, or an empty array if the key doesn't exist.
+		`,
+		NewEval:    evalLRANGE,
+		IsMigrated: true,
+		Arity:      4,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -1450,6 +1495,8 @@ func init() {
 	DiceCmds["CMS.QUERY"] = cmsQueryCmdMeta
 	DiceCmds["CMS.INCRBY"] = cmsIncrByCmdMeta
 	DiceCmds["CMS.MERGE"] = cmsMergeCmdMeta
+	DiceCmds["LINSERT"] = linsertCmdMeta
+	DiceCmds["LRANGE"] = lrangeCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

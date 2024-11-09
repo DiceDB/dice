@@ -3,7 +3,7 @@ import { getEntry } from "astro:content";
 import Layout from "./Layout.astro";
 import AboutMeVertical from "../components/AboutMeVertical.astro";
 
-const { blog } = Astro.props;
+const { blog, type } = Astro.props;
 const author = await getEntry("authors", blog.data.author.id);
 
 const JSONLD = {
@@ -46,7 +46,17 @@ const JSONLD = {
       <nav class="breadcrumb is-hidden-mobile" aria-label="breadcrumbs">
         <ul>
           <li><a href="/">DiceDB</a></li>
-          <li><a href=`/blog`>Blog</a></li>
+          {
+            type === "release" ? (
+              <li>
+                <a href="/releases">Releases</a>
+              </li>
+            ) : (
+              <li>
+                <a href="/blog">Blog</a>
+              </li>
+            )
+          }
         </ul>
       </nav>
       <div class="columns">

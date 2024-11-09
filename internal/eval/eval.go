@@ -2157,8 +2157,29 @@ func evalRPOP(args []string, store *dstore.Store) []byte {
 }
 
 func evalLPOP(args []string, store *dstore.Store) []byte {
-	if len(args) != 1 {
+	// By default we pop only 1
+	popNumber := 1
+
+	// LPOP accepts 1 or 2 arguments only - LPOP key [count]
+	if len(args) < 1 || len(args) > 2 {
 		return diceerrors.NewErrArity("LPOP")
+	}
+
+	// to updated the number of pops
+	if len(args) == 2 {
+		nos, err := strconv.Atoi(args[1])
+		if err != nil {
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
+		}
+		if nos == 0 {
+			// returns empty string if count given is 0
+			return clientio.Encode([]string{}, false)
+		}
+		if nos < 0 {
+			// returns an out of range err if count is negetive
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.ValOutOfRangeErr)
+		}
+		popNumber = nos
 	}
 
 	obj := store.Get(args[0])
@@ -2180,15 +2201,29 @@ func evalLPOP(args []string, store *dstore.Store) []byte {
 	}
 
 	deq := obj.Value.(*Deque)
-	x, err := deq.LPop()
-	if err != nil {
-		if errors.Is(err, ErrDequeEmpty) {
-			return clientio.RespNIL
+
+	// holds the elements popped
+	var elements []string
+	for iter := 0; iter < popNumber; iter++ {
+		x, err := deq.LPop()
+		if err != nil {
+			if errors.Is(err, ErrDequeEmpty) {
+				break
+			}
+			panic(fmt.Sprintf("unknown error: %v", err))
 		}
-		panic(fmt.Sprintf("unknown error: %v", err))
+		elements = append(elements, x)
 	}
 
-	return clientio.Encode(x, false)
+	if len(elements) == 0 {
+		return clientio.RespNIL
+	}
+
+	if len(elements) == 1 {
+		return clientio.Encode(elements[0], false)
+	}
+
+	return clientio.Encode(elements, false)
 }
 
 func evalLLEN(args []string, store *dstore.Store) []byte {
@@ -2229,145 +2264,6 @@ func evalFLUSHDB(args []string, store *dstore.Store) []byte {
 	}
 
 	return clientio.RespOK
-}
-
-func evalSADD(args []string, store *dstore.Store) []byte {
-	if len(args) < 2 {
-		return diceerrors.NewErrArity("SADD")
-	}
-	key := args[0]
-
-	// Get the set object from the store.
-	obj := store.Get(key)
-	lengthOfItems := len(args[1:])
-
-	count := 0
-	if obj == nil {
-		var exDurationMs int64 = -1
-		keepttl := false
-		// If the object does not exist, create a new set object.
-		value := make(map[string]struct{}, lengthOfItems)
-		// Create a new object.
-		obj = store.NewObj(value, exDurationMs, object.ObjTypeSet, object.ObjEncodingSetStr)
-		store.Put(key, obj, dstore.WithKeepTTL(keepttl))
-	}
-
-	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err != nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingSetStr); err != nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	// Get the set object.
-	set := obj.Value.(map[string]struct{})
-
-	for _, arg := range args[1:] {
-		if _, ok := set[arg]; !ok {
-			set[arg] = struct{}{}
-			count++
-		}
-	}
-
-	return clientio.Encode(count, false)
-}
-
-func evalSMEMBERS(args []string, store *dstore.Store) []byte {
-	if len(args) != 1 {
-		return diceerrors.NewErrArity("SMEMBERS")
-	}
-	key := args[0]
-
-	// Get the set object from the store.
-	obj := store.Get(key)
-
-	if obj == nil {
-		return clientio.Encode([]string{}, false)
-	}
-
-	// If the object exists, check if it is a set object.
-	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err != nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingSetStr); err != nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	// Get the set object.
-	set := obj.Value.(map[string]struct{})
-	// Get the members of the set.
-	members := make([]string, 0, len(set))
-	for k := range set {
-		members = append(members, k)
-	}
-
-	return clientio.Encode(members, false)
-}
-
-func evalSREM(args []string, store *dstore.Store) []byte {
-	if len(args) < 2 {
-		return diceerrors.NewErrArity("SREM")
-	}
-	key := args[0]
-
-	// Get the set object from the store.
-	obj := store.Get(key)
-
-	count := 0
-	if obj == nil {
-		return clientio.Encode(count, false)
-	}
-
-	// If the object exists, check if it is a set object.
-	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err != nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingSetStr); err != nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	// Get the set object.
-	set := obj.Value.(map[string]struct{})
-
-	for _, arg := range args[1:] {
-		if _, ok := set[arg]; ok {
-			delete(set, arg)
-			count++
-		}
-	}
-
-	return clientio.Encode(count, false)
-}
-
-func evalSCARD(args []string, store *dstore.Store) []byte {
-	if len(args) != 1 {
-		return diceerrors.NewErrArity("SCARD")
-	}
-
-	key := args[0]
-
-	// Get the set object from the store.
-	obj := store.Get(key)
-
-	if obj == nil {
-		return clientio.Encode(0, false)
-	}
-
-	// If the object exists, check if it is a set object.
-	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err != nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingSetStr); err != nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	// Get the set object.
-	count := len(obj.Value.(map[string]struct{}))
-	return clientio.Encode(count, false)
 }
 
 func evalSDIFF(args []string, store *dstore.Store) []byte {

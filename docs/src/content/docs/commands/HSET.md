@@ -13,22 +13,22 @@ HSET key field value [field value ...]
 
 ## Parameters
 
-| Parameter           | Description                                                   | Type    | Required |
-|---------------------|---------------------------------------------------------------|---------|----------|
-| `key`               | The name of the hash.                                         | String  | Yes      |
-| `field`             | The field within the hash to set the value for.               | String  | Yes      |
-| `value`             | The value to set for the specified field.                     | String  | Yes      |
-| `[field value ...]` | Optional additional field-value pairs to set in the hash.     | String  | No       |
+| Parameter           | Description                                               | Type   | Required |
+| ------------------- | --------------------------------------------------------- | ------ | -------- |
+| `key`               | The name of the hash.                                     | String | Yes      |
+| `field`             | The field within the hash to set the value for.           | String | Yes      |
+| `value`             | The value to set for the specified field.                 | String | Yes      |
+| `[field value ...]` | Optional additional field-value pairs to set in the hash. | String | No       |
 
 ## Return Values
 
-| Condition                                   | Return Value                                                                |
-|---------------------------------------------|-----------------------------------------------------------------------------|
-| A new field added                           | `1`                                                                         |
-| Existing field updated                      | `0`                                                                         |
-| Multiple fields added                       | `Integer` (count of new fields)                                             |
-| Wrong data type                             | `(error) WRONGTYPE Operation against a key holding the wrong kind of value` |
-| Incorrect Argument Count                    | `(error) ERR wrong number of arguments for 'hset' command`                  |
+| Condition                | Return Value                                                                |
+| ------------------------ | --------------------------------------------------------------------------- |
+| A new field added        | `1`                                                                         |
+| Existing field updated   | `0`                                                                         |
+| Multiple fields added    | `Integer` (count of new fields)                                             |
+| Wrong data type          | `(error) WRONGTYPE Operation against a key holding the wrong kind of value` |
+| Incorrect Argument Count | `(error) ERR wrong number of arguments for 'hset' command`                  |
 
 ## Behaviour
 
@@ -63,6 +63,7 @@ The `HSET` command can raise errors in the following scenarios:
 127.0.0.1:7379> HSET product:2000 name "Laptop" price 999.99 stock 50
 3
 ```
+
 - **Behaviour**: A new hash is created with the key `product:2000`. The fields `name`, `price`, and `stock` are set with the respective values.
 - **Return Value**: `3` (since three new fields were added).
 
@@ -122,6 +123,7 @@ Wrong Number of Arguments for HSET Command
 127.0.0.1:7379> HSET product:2000 name
 (error) ERR wrong number of arguments for 'hset' command
 ```
+
 - **Behavior**: The `HSET` command requires atleast three arguments: the key, the field name, and the field value.
 - **Error**: The command fails because it requires at least one field-value pair in addition to the key. If insufficient arguments are provided, DiceDB raises an error indicating that the number of arguments is incorrect.
 
@@ -132,4 +134,4 @@ Wrong Number of Arguments for HSET Command
 ## Notes
 
 - `HSET` can also accept multiple field-value pairs, making it efficient for adding or updating multiple fields in a single command.
-By understanding the `HSET` command, you can effectively update or expand hashes in your DiceDB database, allowing for quick modifications and optimizations when handling key-value pairs within hashes.
+  By understanding the `HSET` command, you can effectively update or expand hashes in your DiceDB database, allowing for quick modifications and optimizations when handling key-value pairs within hashes.

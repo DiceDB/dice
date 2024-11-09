@@ -21,8 +21,19 @@ const authors = defineCollection({
   }),
 });
 
+const releases = defineCollection({
+  type: "content",
+  schema: z.object({
+    title: z.string(),
+    description: z.string(),
+    published_at: z.coerce.date(),
+    author: reference("authors"),
+  }),
+});
+
 export const collections = {
   blog,
   authors,
+  releases,
   docs: defineCollection({ schema: docsSchema() }),
 };
