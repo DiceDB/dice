@@ -187,10 +187,6 @@ var (
 		Cmd:     "BITFIELD",
 		CmdType: SingleShard,
 	}
-	bitopCmdMeta = CmdsMeta{
-		Cmd:     "BITOP",
-		CmdType: SingleShard,
-	}
 	bitposCmdMeta = CmdsMeta{
 		Cmd:     "BITPOS",
 		CmdType: SingleShard,
@@ -457,7 +453,6 @@ func init() {
 	WorkerCmdsMeta["GETBIT"] = getbitCmdMeta
 	WorkerCmdsMeta["BITCOUNT"] = bitcountCmdMeta
 	WorkerCmdsMeta["BITFIELD"] = bitfieldCmdMeta
-	WorkerCmdsMeta["BITOP"] = bitopCmdMeta
 	WorkerCmdsMeta["BITPOS"] = bitposCmdMeta
 	WorkerCmdsMeta["BITFIELD_RO"] = bitfieldroCmdMeta
 

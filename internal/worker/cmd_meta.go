@@ -134,7 +134,6 @@ const (
 	CmdGetBit        = "GETBIT"
 	CmdBitCount      = "BITCOUNT"
 	CmdBitField      = "BITFIELD"
-	CmdBitOp         = "BITOP"
 	CmdBitPos        = "BITPOS"
 	CmdBitFieldRO    = "BITFIELD_RO"
 )
@@ -284,9 +283,6 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdBitField: {
-		CmdType: SingleShard,
-	},
-	CmdBitOp: {
 		CmdType: SingleShard,
 	},
 	CmdBitPos: {

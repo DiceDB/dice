@@ -6077,15 +6077,139 @@ func BenchmarkEvalINCRBYFLOAT(b *testing.B) {
 	}
 }
 
+// TODO: BITOP has not been migrated yet. Once done, we can uncomment the tests - please check accuracy and validate for expected values.
+
+// func testEvalBITOP(t *testing.T, store *dstore.Store) {
+// 	tests := map[string]evalTestCase{
+// 		"BITOP NOT (empty string)": {
+// 			setup: func() {
+// 				store.Put("s{t}", store.NewObj(&ByteArray{data: []byte("")}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+// 			},
+// 			input:          []string{"NOT", "dest{t}", "s{t}"},
+// 			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
+// 			newValidator: func(output interface{}) {
+// 				expectedResult := []byte{}
+// 				assert.Equal(t, expectedResult, store.Get("dest{t}").Value.(*ByteArray).data)
+// 			},
+// 		},
+// 		"BITOP NOT (known string)": {
+// 			setup: func() {
+// 				store.Put("s{t}", store.NewObj(&ByteArray{data: []byte{0xaa, 0x00, 0xff, 0x55}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+// 			},
+// 			input:          []string{"NOT", "dest{t}", "s{t}"},
+// 			migratedOutput: EvalResponse{Result: 4, Error: nil},
+// 			newValidator: func(output interface{}) {
+// 				expectedResult := []byte{0x55, 0xff, 0x00, 0xaa}
+// 				assert.Equal(t, expectedResult, store.Get("dest{t}").Value.(*ByteArray).data)
+// 			},
+// 		},
+// 		"BITOP where dest and target are the same key": {
+// 			setup: func() {
+// 				store.Put("s", store.NewObj(&ByteArray{data: []byte{0xaa, 0x00, 0xff, 0x55}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+// 			},
+// 			input:          []string{"NOT", "s", "s"},
+// 			migratedOutput: EvalResponse{Result: 4, Error: nil},
+// 			newValidator: func(output interface{}) {
+// 				expectedResult := []byte{0x55, 0xff, 0x00, 0xaa}
+// 				assert.Equal(t, expectedResult, store.Get("s").Value.(*ByteArray).data)
+// 			},
+// 		},
+// 		"BITOP AND|OR|XOR don't change the string with single input key": {
+// 			setup: func() {
+// 				store.Put("a{t}", store.NewObj(&ByteArray{data: []byte{0x01, 0x02, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+// 			},
+// 			input:          []string{"AND", "res1{t}", "a{t}"},
+// 			migratedOutput: EvalResponse{Result: 3, Error: nil},
+// 			newValidator: func(output interface{}) {
+// 				expectedResult := []byte{0x01, 0x02, 0xff}
+// 				assert.Equal(t, expectedResult, store.Get("res1{t}").Value.(*ByteArray).data)
+// 			},
+// 		},
+// 		"BITOP missing key is considered a stream of zero": {
+// 			setup: func() {
+// 				store.Put("a{t}", store.NewObj(&ByteArray{data: []byte{0x01, 0x02, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+// 			},
+// 			input:          []string{"AND", "res1{t}", "no-such-key{t}", "a{t}"},
+// 			migratedOutput: EvalResponse{Result: 3, Error: nil},
+// 			newValidator: func(output interface{}) {
+// 				expectedResult := []byte{0x00, 0x00, 0x00}
+// 				assert.Equal(t, expectedResult, store.Get("res1{t}").Value.(*ByteArray).data)
+// 			},
+// 		},
+// 		"BITOP shorter keys are zero-padded to the key with max length": {
+// 			setup: func() {
+// 				store.Put("a{t}", store.NewObj(&ByteArray{data: []byte{0x01, 0x02, 0xff, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+// 				store.Put("b{t}", store.NewObj(&ByteArray{data: []byte{0x01, 0x02, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+// 			},
+// 			input:          []string{"AND", "res1{t}", "a{t}", "b{t}"},
+// 			migratedOutput: EvalResponse{Result: 4, Error: nil},
+// 			newValidator: func(output interface{}) {
+// 				expectedResult := []byte{0x01, 0x02, 0xff, 0x00}
+// 				assert.Equal(t, expectedResult, store.Get("res1{t}").Value.(*ByteArray).data)
+// 			},
+// 		},
+// 		"BITOP with non string source key": {
+// 			setup: func() {
+// 				store.Put("a{t}", store.NewObj("1", maxExDuration, object.ObjTypeString, object.ObjEncodingRaw))
+// 				store.Put("b{t}", store.NewObj("2", maxExDuration, object.ObjTypeString, object.ObjEncodingRaw))
+// 				store.Put("c{t}", store.NewObj([]byte("foo"), maxExDuration, object.ObjTypeByteList, object.ObjEncodingRaw))
+// 			},
+// 			input:          []string{"XOR", "dest{t}", "a{t}", "b{t}", "c{t}", "d{t}"},
+// 			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
+// 		},
+// 		"BITOP with empty string after non empty string": {
+// 			setup: func() {
+// 				store.Put("a{t}", store.NewObj(&ByteArray{data: []byte("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")}, -1, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+// 			},
+// 			input:          []string{"OR", "x{t}", "a{t}", "b{t}"},
+// 			migratedOutput: EvalResponse{Result: 32, Error: nil},
+// 		},
+// 	}
+
+// 	//runEvalTests(t, tests, evalBITOP, store)
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+
+// 			if tt.setup != nil {
+// 				tt.setup()
+// 			}
+// 			response := evalBITOP(tt.input, store)
+
+// 			if tt.newValidator != nil {
+// 				if tt.migratedOutput.Error != nil {
+// 					tt.newValidator(tt.migratedOutput.Error)
+// 				} else {
+// 					tt.newValidator(response.Result)
+// 				}
+// 			} else {
+// 				// Handle comparison for byte slices
+// 				if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
+// 					if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
+// 						assert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
+// 					}
+// 				} else {
+// 					assert.Equal(t, tt.migratedOutput.Result, response.Result)
+// 				}
+
+// 				if tt.migratedOutput.Error != nil {
+// 					assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+// 				} else {
+// 					assert.NoError(t, response.Error)
+// 				}
+// 			}
+// 		})
+// 	}
+// }
+
 func testEvalBITOP(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"BITOP NOT (empty string)": {
 			setup: func() {
 				store.Put("s{t}", store.NewObj(&ByteArray{data: []byte("")}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
 			},
-			input:          []string{"NOT", "dest{t}", "s{t}"},
-			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
-			newValidator: func(output interface{}) {
+			input:  []string{"NOT", "dest{t}", "s{t}"},
+			output: clientio.Encode(0, true),
+			validator: func(output []byte) {
 				expectedResult := []byte{}
 				assert.Equal(t, expectedResult, store.Get("dest{t}").Value.(*ByteArray).data)
 			},
@@ -6094,9 +6218,9 @@ func testEvalBITOP(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				store.Put("s{t}", store.NewObj(&ByteArray{data: []byte{0xaa, 0x00, 0xff, 0x55}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
 			},
-			input:          []string{"NOT", "dest{t}", "s{t}"},
-			migratedOutput: EvalResponse{Result: 4, Error: nil},
-			newValidator: func(output interface{}) {
+			input:  []string{"NOT", "dest{t}", "s{t}"},
+			output: clientio.Encode(4, true),
+			validator: func(output []byte) {
 				expectedResult := []byte{0x55, 0xff, 0x00, 0xaa}
 				assert.Equal(t, expectedResult, store.Get("dest{t}").Value.(*ByteArray).data)
 			},
@@ -6105,9 +6229,9 @@ func testEvalBITOP(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				store.Put("s", store.NewObj(&ByteArray{data: []byte{0xaa, 0x00, 0xff, 0x55}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
 			},
-			input:          []string{"NOT", "s", "s"},
-			migratedOutput: EvalResponse{Result: 4, Error: nil},
-			newValidator: func(output interface{}) {
+			input:  []string{"NOT", "s", "s"},
+			output: clientio.Encode(4, true),
+			validator: func(output []byte) {
 				expectedResult := []byte{0x55, 0xff, 0x00, 0xaa}
 				assert.Equal(t, expectedResult, store.Get("s").Value.(*ByteArray).data)
 			},
@@ -6116,9 +6240,9 @@ func testEvalBITOP(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				store.Put("a{t}", store.NewObj(&ByteArray{data: []byte{0x01, 0x02, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
 			},
-			input:          []string{"AND", "res1{t}", "a{t}"},
-			migratedOutput: EvalResponse{Result: 3, Error: nil},
-			newValidator: func(output interface{}) {
+			input:  []string{"AND", "res1{t}", "a{t}"},
+			output: clientio.Encode(3, true),
+			validator: func(output []byte) {
 				expectedResult := []byte{0x01, 0x02, 0xff}
 				assert.Equal(t, expectedResult, store.Get("res1{t}").Value.(*ByteArray).data)
 			},
@@ -6127,9 +6251,9 @@ func testEvalBITOP(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				store.Put("a{t}", store.NewObj(&ByteArray{data: []byte{0x01, 0x02, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
 			},
-			input:          []string{"AND", "res1{t}", "no-such-key{t}", "a{t}"},
-			migratedOutput: EvalResponse{Result: 3, Error: nil},
-			newValidator: func(output interface{}) {
+			input:  []string{"AND", "res1{t}", "no-such-key{t}", "a{t}"},
+			output: clientio.Encode(3, true),
+			validator: func(output []byte) {
 				expectedResult := []byte{0x00, 0x00, 0x00}
 				assert.Equal(t, expectedResult, store.Get("res1{t}").Value.(*ByteArray).data)
 			},
@@ -6139,9 +6263,9 @@ func testEvalBITOP(t *testing.T, store *dstore.Store) {
 				store.Put("a{t}", store.NewObj(&ByteArray{data: []byte{0x01, 0x02, 0xff, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
 				store.Put("b{t}", store.NewObj(&ByteArray{data: []byte{0x01, 0x02, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
 			},
-			input:          []string{"AND", "res1{t}", "a{t}", "b{t}"},
-			migratedOutput: EvalResponse{Result: 4, Error: nil},
-			newValidator: func(output interface{}) {
+			input:  []string{"AND", "res1{t}", "a{t}", "b{t}"},
+			output: clientio.Encode(4, true),
+			validator: func(output []byte) {
 				expectedResult := []byte{0x01, 0x02, 0xff, 0x00}
 				assert.Equal(t, expectedResult, store.Get("res1{t}").Value.(*ByteArray).data)
 			},
@@ -6152,51 +6276,19 @@ func testEvalBITOP(t *testing.T, store *dstore.Store) {
 				store.Put("b{t}", store.NewObj("2", maxExDuration, object.ObjTypeString, object.ObjEncodingRaw))
 				store.Put("c{t}", store.NewObj([]byte("foo"), maxExDuration, object.ObjTypeByteList, object.ObjEncodingRaw))
 			},
-			input:          []string{"XOR", "dest{t}", "a{t}", "b{t}", "c{t}", "d{t}"},
-			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
+			input:  []string{"XOR", "dest{t}", "a{t}", "b{t}", "c{t}", "d{t}"},
+			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
 		},
 		"BITOP with empty string after non empty string": {
 			setup: func() {
 				store.Put("a{t}", store.NewObj(&ByteArray{data: []byte("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")}, -1, object.ObjTypeByteArray, object.ObjEncodingByteArray))
 			},
-			input:          []string{"OR", "x{t}", "a{t}", "b{t}"},
-			migratedOutput: EvalResponse{Result: 32, Error: nil},
+			input:  []string{"OR", "x{t}", "a{t}", "b{t}"},
+			output: clientio.Encode(32, true),
 		},
 	}
 
-	//runEvalTests(t, tests, evalBITOP, store)
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-
-			if tt.setup != nil {
-				tt.setup()
-			}
-			response := evalBITOP(tt.input, store)
-
-			if tt.newValidator != nil {
-				if tt.migratedOutput.Error != nil {
-					tt.newValidator(tt.migratedOutput.Error)
-				} else {
-					tt.newValidator(response.Result)
-				}
-			} else {
-				// Handle comparison for byte slices
-				if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
-					if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-						assert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
-					}
-				} else {
-					assert.Equal(t, tt.migratedOutput.Result, response.Result)
-				}
-
-				if tt.migratedOutput.Error != nil {
-					assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
-				} else {
-					assert.NoError(t, response.Error)
-				}
-			}
-		})
-	}
+	runEvalTests(t, tests, evalBITOP, store)
 }
 
 func BenchmarkEvalBITOP(b *testing.B) {

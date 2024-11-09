@@ -556,10 +556,9 @@ var (
 		NewEval:    evalBITCOUNT,
 	}
 	bitOpCmdMeta = DiceCmdMeta{
-		Name:       "BITOP",
-		Info:       "BITOP performs bitwise operations between multiple keys",
-		IsMigrated: true,
-		NewEval:    evalBITOP,
+		Name: "BITOP",
+		Info: "BITOP performs bitwise operations between multiple keys",
+		Eval: evalBITOP,
 	}
 	commandCmdMeta = DiceCmdMeta{
 		Name:        "COMMAND",

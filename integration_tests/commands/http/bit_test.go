@@ -11,450 +11,451 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/exp/rand"
 )
 
-func TestBitOp(t *testing.T) {
-	exec := NewHTTPCommandExecutor()
+// TODO: BITOP has not been migrated yet. Once done, we can uncomment the tests - please check accuracy and validate for expected values.
 
-	testcases := []struct {
-		InCmds []HTTPCommand
-		Out    []interface{}
-	}{
-		{
-			InCmds: []HTTPCommand{
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "unitTestKeyA", "values": []interface{}{1, 1}}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "unitTestKeyA", "values": []interface{}{3, 1}}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "unitTestKeyA", "values": []interface{}{5, 1}}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "unitTestKeyA", "values": []interface{}{7, 1}}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "unitTestKeyA", "values": []interface{}{8, 1}}},
-			},
-			Out: []interface{}{float64(0), float64(0), float64(0), float64(0), float64(0)},
-		},
-		{
-			InCmds: []HTTPCommand{
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "unitTestKeyB", "values": []interface{}{2, 1}}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "unitTestKeyB", "values": []interface{}{4, 1}}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "unitTestKeyB", "values": []interface{}{7, 1}}},
-			},
-			Out: []interface{}{float64(0), float64(0), float64(0)},
-		},
-		{
-			InCmds: []HTTPCommand{
-				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "bar"}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{2, 1}}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{4, 1}}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{7, 1}}},
-				{Command: "GET", Body: map[string]interface{}{"key": "foo"}},
-			},
-			Out: []interface{}{"OK", float64(1), float64(0), float64(0), "kar"},
-		},
-		{
-			InCmds: []HTTPCommand{
-				{Command: "SET", Body: map[string]interface{}{"key": "mykey12", "value": "1343"}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "mykey12", "values": []interface{}{2, 1}}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "mykey12", "values": []interface{}{4, 1}}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "mykey12", "values": []interface{}{7, 1}}},
-				{Command: "GET", Body: map[string]interface{}{"key": "mykey12"}},
-			},
-			Out: []interface{}{"OK", float64(1), float64(0), float64(1), float64(9343)},
-		},
-		{
-			InCmds: []HTTPCommand{{Command: "SET", Body: map[string]interface{}{"key": "foo12", "value": "bar"}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo12", "values": []interface{}{2, 1}}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo12", "values": []interface{}{4, 1}}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo12", "values": []interface{}{7, 1}}},
-				{Command: "GET", Body: map[string]interface{}{"key": "foo12"}},
-			},
-			Out: []interface{}{"OK", float64(1), float64(0), float64(0), "kar"},
-		},
-		{
-			InCmds: []HTTPCommand{
-				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"NOT", "unitTestKeyNOT", "unitTestKeyA"}}},
-			},
-			Out: []interface{}{float64(2)},
-		},
-		{
-			InCmds: []HTTPCommand{
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyNOT", "values": []interface{}{1}}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyNOT", "values": []interface{}{2}}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyNOT", "values": []interface{}{7}}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyNOT", "values": []interface{}{8}}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyNOT", "values": []interface{}{9}}},
-			},
-			Out: []interface{}{float64(0), float64(1), float64(0), float64(0), float64(1)},
-		},
-		{
-			InCmds: []HTTPCommand{
-				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"OR", "unitTestKeyOR", "unitTestKeyB", "unitTestKeyA"}}},
-			},
-			Out: []interface{}{float64(2)},
-		},
-		{
-			InCmds: []HTTPCommand{
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyOR", "values": []interface{}{1}}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyOR", "values": []interface{}{2}}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyOR", "values": []interface{}{3}}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyOR", "values": []interface{}{7}}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyOR", "values": []interface{}{8}}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyOR", "values": []interface{}{9}}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyOR", "values": []interface{}{12}}},
-			},
-			Out: []interface{}{float64(1), float64(1), float64(1), float64(1), float64(1), float64(0), float64(0)},
-		},
-		{
-			InCmds: []HTTPCommand{
-				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"AND", "unitTestKeyAND", "unitTestKeyB", "unitTestKeyA"}}},
-			},
-			Out: []interface{}{float64(2)},
-		},
-		{
-			InCmds: []HTTPCommand{
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyAND", "values": []interface{}{1}}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyAND", "values": []interface{}{2}}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyAND", "values": []interface{}{7}}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyAND", "values": []interface{}{8}}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyAND", "values": []interface{}{9}}},
-			},
-			Out: []interface{}{float64(0), float64(0), float64(1), float64(0), float64(0)},
-		},
-		{
-			InCmds: []HTTPCommand{
-				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"XOR", "unitTestKeyXOR", "unitTestKeyB", "unitTestKeyA"}}},
-			},
-			Out: []interface{}{float64(2)},
-		},
-		{
-			InCmds: []HTTPCommand{
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyXOR", "values": []interface{}{1}}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyXOR", "values": []interface{}{2}}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyXOR", "values": []interface{}{3}}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyXOR", "values": []interface{}{7}}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyXOR", "values": []interface{}{8}}},
-			},
-			Out: []interface{}{float64(1), float64(1), float64(1), float64(0), float64(1)},
-		},
-	}
+// func TestBitOp(t *testing.T) {
+// 	exec := NewHTTPCommandExecutor()
 
-	for _, tcase := range testcases {
-		for i := 0; i < len(tcase.InCmds); i++ {
-			cmd := tcase.InCmds[i]
-			out := tcase.Out[i]
-			res, _ := exec.FireCommand(cmd)
-			assert.Equal(t, out, res, "Value mismatch for cmd %s\n.", cmd)
-		}
-	}
-}
+// 	testcases := []struct {
+// 		InCmds []HTTPCommand
+// 		Out    []interface{}
+// 	}{
+// 		{
+// 			InCmds: []HTTPCommand{
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "unitTestKeyA", "values": []interface{}{1, 1}}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "unitTestKeyA", "values": []interface{}{3, 1}}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "unitTestKeyA", "values": []interface{}{5, 1}}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "unitTestKeyA", "values": []interface{}{7, 1}}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "unitTestKeyA", "values": []interface{}{8, 1}}},
+// 			},
+// 			Out: []interface{}{float64(0), float64(0), float64(0), float64(0), float64(0)},
+// 		},
+// 		{
+// 			InCmds: []HTTPCommand{
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "unitTestKeyB", "values": []interface{}{2, 1}}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "unitTestKeyB", "values": []interface{}{4, 1}}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "unitTestKeyB", "values": []interface{}{7, 1}}},
+// 			},
+// 			Out: []interface{}{float64(0), float64(0), float64(0)},
+// 		},
+// 		{
+// 			InCmds: []HTTPCommand{
+// 				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "bar"}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{2, 1}}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{4, 1}}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{7, 1}}},
+// 				{Command: "GET", Body: map[string]interface{}{"key": "foo"}},
+// 			},
+// 			Out: []interface{}{"OK", float64(1), float64(0), float64(0), "kar"},
+// 		},
+// 		{
+// 			InCmds: []HTTPCommand{
+// 				{Command: "SET", Body: map[string]interface{}{"key": "mykey12", "value": "1343"}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "mykey12", "values": []interface{}{2, 1}}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "mykey12", "values": []interface{}{4, 1}}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "mykey12", "values": []interface{}{7, 1}}},
+// 				{Command: "GET", Body: map[string]interface{}{"key": "mykey12"}},
+// 			},
+// 			Out: []interface{}{"OK", float64(1), float64(0), float64(1), float64(9343)},
+// 		},
+// 		{
+// 			InCmds: []HTTPCommand{{Command: "SET", Body: map[string]interface{}{"key": "foo12", "value": "bar"}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo12", "values": []interface{}{2, 1}}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo12", "values": []interface{}{4, 1}}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo12", "values": []interface{}{7, 1}}},
+// 				{Command: "GET", Body: map[string]interface{}{"key": "foo12"}},
+// 			},
+// 			Out: []interface{}{"OK", float64(1), float64(0), float64(0), "kar"},
+// 		},
+// 		{
+// 			InCmds: []HTTPCommand{
+// 				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"NOT", "unitTestKeyNOT", "unitTestKeyA"}}},
+// 			},
+// 			Out: []interface{}{float64(2)},
+// 		},
+// 		{
+// 			InCmds: []HTTPCommand{
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyNOT", "values": []interface{}{1}}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyNOT", "values": []interface{}{2}}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyNOT", "values": []interface{}{7}}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyNOT", "values": []interface{}{8}}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyNOT", "values": []interface{}{9}}},
+// 			},
+// 			Out: []interface{}{float64(0), float64(1), float64(0), float64(0), float64(1)},
+// 		},
+// 		{
+// 			InCmds: []HTTPCommand{
+// 				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"OR", "unitTestKeyOR", "unitTestKeyB", "unitTestKeyA"}}},
+// 			},
+// 			Out: []interface{}{float64(2)},
+// 		},
+// 		{
+// 			InCmds: []HTTPCommand{
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyOR", "values": []interface{}{1}}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyOR", "values": []interface{}{2}}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyOR", "values": []interface{}{3}}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyOR", "values": []interface{}{7}}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyOR", "values": []interface{}{8}}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyOR", "values": []interface{}{9}}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyOR", "values": []interface{}{12}}},
+// 			},
+// 			Out: []interface{}{float64(1), float64(1), float64(1), float64(1), float64(1), float64(0), float64(0)},
+// 		},
+// 		{
+// 			InCmds: []HTTPCommand{
+// 				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"AND", "unitTestKeyAND", "unitTestKeyB", "unitTestKeyA"}}},
+// 			},
+// 			Out: []interface{}{float64(2)},
+// 		},
+// 		{
+// 			InCmds: []HTTPCommand{
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyAND", "values": []interface{}{1}}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyAND", "values": []interface{}{2}}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyAND", "values": []interface{}{7}}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyAND", "values": []interface{}{8}}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyAND", "values": []interface{}{9}}},
+// 			},
+// 			Out: []interface{}{float64(0), float64(0), float64(1), float64(0), float64(0)},
+// 		},
+// 		{
+// 			InCmds: []HTTPCommand{
+// 				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"XOR", "unitTestKeyXOR", "unitTestKeyB", "unitTestKeyA"}}},
+// 			},
+// 			Out: []interface{}{float64(2)},
+// 		},
+// 		{
+// 			InCmds: []HTTPCommand{
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyXOR", "values": []interface{}{1}}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyXOR", "values": []interface{}{2}}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyXOR", "values": []interface{}{3}}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyXOR", "values": []interface{}{7}}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "unitTestKeyXOR", "values": []interface{}{8}}},
+// 			},
+// 			Out: []interface{}{float64(1), float64(1), float64(1), float64(0), float64(1)},
+// 		},
+// 	}
 
-func TestBitOpsString(t *testing.T) {
+// 	for _, tcase := range testcases {
+// 		for i := 0; i < len(tcase.InCmds); i++ {
+// 			cmd := tcase.InCmds[i]
+// 			out := tcase.Out[i]
+// 			res, _ := exec.FireCommand(cmd)
+// 			assert.Equal(t, out, res, "Value mismatch for cmd %s\n.", cmd)
+// 		}
+// 	}
+// }
 
-	exec := NewHTTPCommandExecutor()
+// func TestBitOpsString(t *testing.T) {
 
-	// foobar in bits is 01100110 01101111 01101111 01100010 01100001 01110010
-	fooBarBits := "011001100110111101101111011000100110000101110010"
-	// randomly get 8 bits for testing
-	testOffsets := make([]int, 8)
+// 	exec := NewHTTPCommandExecutor()
 
-	for i := 0; i < 8; i++ {
-		testOffsets[i] = rand.Intn(len(fooBarBits))
-	}
+// 	// foobar in bits is 01100110 01101111 01101111 01100010 01100001 01110010
+// 	fooBarBits := "011001100110111101101111011000100110000101110010"
+// 	// randomly get 8 bits for testing
+// 	testOffsets := make([]int, 8)
 
-	getBitTestCommands := make([]HTTPCommand, 8+1)
-	getBitTestExpected := make([]interface{}, 8+1)
+// 	for i := 0; i < 8; i++ {
+// 		testOffsets[i] = rand.Intn(len(fooBarBits))
+// 	}
 
-	getBitTestCommands[0] = HTTPCommand{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "foobar"}}
-	getBitTestExpected[0] = "OK"
+// 	getBitTestCommands := make([]HTTPCommand, 8+1)
+// 	getBitTestExpected := make([]interface{}, 8+1)
 
-	for i := 1; i < 8+1; i++ {
-		getBitTestCommands[i] = HTTPCommand{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "value": fmt.Sprintf("%d", testOffsets[i-1])}}
-		getBitTestExpected[i] = float64(fooBarBits[testOffsets[i-1]] - '0')
-	}
+// 	getBitTestCommands[0] = HTTPCommand{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "foobar"}}
+// 	getBitTestExpected[0] = "OK"
 
-	testCases := []struct {
-		name       string
-		cmds       []HTTPCommand
-		expected   []interface{}
-		assertType []string
-	}{
-		{
-			name:       "Getbit of a key containing a string",
-			cmds:       getBitTestCommands,
-			expected:   getBitTestExpected,
-			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
-		},
-		{
-			name: "Getbit of a key containing an integer",
-			cmds: []HTTPCommand{
-				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "10"}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "0"}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "1"}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "2"}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "3"}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "4"}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "5"}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "6"}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "7"}},
-			},
-			expected:   []interface{}{"OK", float64(0), float64(0), float64(1), float64(1), float64(0), float64(0), float64(0), float64(1)},
-			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
-		},
-		{
-			name: "Getbit of a key containing an integer 2nd byte",
-			cmds: []HTTPCommand{
-				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "10"}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "8"}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "9"}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "10"}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "11"}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "12"}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "13"}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "14"}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "15"}},
-			},
-			expected:   []interface{}{"OK", float64(0), float64(0), float64(1), float64(1), float64(0), float64(0), float64(0), float64(0)},
-			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
-		},
-		{
-			name: "Getbit of a key with an offset greater than the length of the string in bits",
-			cmds: []HTTPCommand{
-				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "foobar"}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "100"}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "48"}},
-				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "47"}},
-			},
-			expected:   []interface{}{"OK", float64(0), float64(0), float64(0)},
-			assertType: []string{"equal", "equal", "equal", "equal"},
-		},
-		{
-			name: "Bitcount of a key containing a string",
-			cmds: []HTTPCommand{
-				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "foobar"}},
-				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{0, -1}}},
-				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo"}},
-				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{0, 0}}},
-				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{1, 1}}},
-				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{1, 1, "BYTE"}}},
-				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{5, 30, "BIT"}}},
-			},
-			expected:   []interface{}{"OK", float64(26), float64(26), float64(4), float64(6), float64(6), float64(17)},
-			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal"},
-		},
-		{
-			name: "Bitcount of a key containing an integer",
-			cmds: []HTTPCommand{
-				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "10"}},
-				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{0, -1}}},
-				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo"}},
-				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{0, 0}}},
-				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{1, 1}}},
-				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{1, 1, "BYTE"}}},
-				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{5, 30, "BIT"}}},
-			},
-			expected:   []interface{}{"OK", float64(5), float64(5), float64(3), float64(2), float64(2), float64(3)},
-			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal"},
-		},
-		{
-			name: "Setbit of a key containing a string",
-			cmds: []HTTPCommand{
-				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "foobar"}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{7, 1}}},
-				{Command: "GET", Body: map[string]interface{}{"key": "foo"}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{49, 1}}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{50, 1}}},
-				{Command: "GET", Body: map[string]interface{}{"key": "foo"}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{49, 0}}},
-				{Command: "GET", Body: map[string]interface{}{"key": "foo"}},
-			},
-			expected:   []interface{}{"OK", float64(0), "goobar", float64(0), float64(0), "goobar`", float64(1), "goobar "},
-			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
-		},
-		{
-			name: "Setbit of a key must not change the expiry of the key if expiry is set",
-			cmds: []HTTPCommand{
-				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "foobar"}},
-				{Command: "EXPIRE", Body: map[string]interface{}{"key": "foo", "values": []interface{}{100}}},
-				{Command: "TTL", Body: map[string]interface{}{"key": "foo"}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{7, 1}}},
-				{Command: "TTL", Body: map[string]interface{}{"key": "foo"}},
-			},
-			expected:   []interface{}{"OK", float64(1), float64(100), float64(0), float64(100)},
-			assertType: []string{"equal", "equal", "less", "equal", "less"},
-		},
-		{
-			name: "Setbit of a key must not add expiry to the key if expiry is not set",
-			cmds: []HTTPCommand{
-				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "foobar"}},
-				{Command: "TTL", Body: map[string]interface{}{"key": "foo"}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{7, 1}}},
-				{Command: "TTL", Body: map[string]interface{}{"key": "foo"}},
-			},
-			expected:   []interface{}{"OK", float64(-1), float64(0), float64(-1)},
-			assertType: []string{"equal", "equal", "equal", "equal"},
-		},
-		{
-			name: "Bitop not of a key containing a string",
-			cmds: []HTTPCommand{
-				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "foobar"}},
-				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"NOT", "baz", "foo"}}},
-				{Command: "GET", Body: map[string]interface{}{"key": "baz"}},
-				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"NOT", "bazz", "baz"}}},
-				{Command: "GET", Body: map[string]interface{}{"key": "bazz"}},
-			},
-			expected:   []interface{}{"OK", float64(6), "\\x99\\x90\\x90\\x9d\\x9e\\x8d", float64(6), "foobar"},
-			assertType: []string{"equal", "equal", "equal", "equal", "equal"},
-		},
-		{
-			name: "Bitop not of a key containing an integer",
-			cmds: []HTTPCommand{
-				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": 10}},
-				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"NOT", "baz", "foo"}}},
-				{Command: "GET", Body: map[string]interface{}{"key": "baz"}},
-				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"NOT", "bazz", "baz"}}},
-				{Command: "GET", Body: map[string]interface{}{"key": "bazz"}},
-			},
-			expected:   []interface{}{"OK", float64(2), "\\xce\\xcf", float64(2), float64(10)},
-			assertType: []string{"equal", "equal", "equal", "equal", "equal"},
-		},
-		{
-			name: "Get a string created with setbit",
-			cmds: []HTTPCommand{
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{1, 1}}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{3, 1}}},
-				{Command: "GET", Body: map[string]interface{}{"key": "foo"}},
-			},
-			expected:   []interface{}{float64(0), float64(0), "P"},
-			assertType: []string{"equal", "equal", "equal"},
-		},
-		{
-			name: "Bitop and of keys containing a string and get the destkey",
-			cmds: []HTTPCommand{
-				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "foobar"}},
-				{Command: "SET", Body: map[string]interface{}{"key": "baz", "value": "abcdef"}},
-				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"AND", "bazz", "foo", "baz"}}},
-				{Command: "GET", Body: map[string]interface{}{"key": "bazz"}},
-			},
-			expected:   []interface{}{"OK", "OK", float64(6), "`bc`ab"},
-			assertType: []string{"equal", "equal", "equal", "equal"},
-		},
-		{
-			name: "BITOP AND of keys containing integers and get the destkey",
-			cmds: []HTTPCommand{
-				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": 10}},
-				{Command: "SET", Body: map[string]interface{}{"key": "baz", "value": 5}},
-				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"AND", "bazz", "foo", "baz"}}},
-				{Command: "GET", Body: map[string]interface{}{"key": "bazz"}},
-			},
-			expected:   []interface{}{"OK", "OK", float64(2), "1\x00"},
-			assertType: []string{"equal", "equal", "equal", "equal"},
-		},
-		{
-			name: "Bitop or of keys containing a string, a bytearray and get the destkey",
-			cmds: []HTTPCommand{
-				{Command: "MSET", Body: map[string]interface{}{"keys": []interface{}{"foo", "foobar", "baz", "abcdef"}}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "bazz", "values": []interface{}{8, 1}}},
-				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"AND", "bazzz", "foo", "baz", "bazz"}}},
-				{Command: "GET", Body: map[string]interface{}{"key": "bazzz"}},
-			},
-			expected:   []interface{}{"OK", float64(0), float64(6), "\x00\x00\x00\x00\x00\x00"},
-			assertType: []string{"equal", "equal", "equal", "equal"},
-		},
-		{
-			name: "BITOP OR of keys containing strings and get the destkey",
-			cmds: []HTTPCommand{
-				{Command: "MSET", Body: map[string]interface{}{"keys": []interface{}{"foo", "foobar", "baz", "abcdef"}}},
-				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"OR", "bazz", "foo", "baz"}}},
-				{Command: "GET", Body: map[string]interface{}{"key": "bazz"}},
-			},
-			expected:   []interface{}{"OK", float64(6), "goofev"},
-			assertType: []string{"equal", "equal", "equal"},
-		},
-		{
-			name: "BITOP OR of keys containing integers and get the destkey",
-			cmds: []HTTPCommand{
-				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": 10}},
-				{Command: "SET", Body: map[string]interface{}{"key": "baz", "value": 5}},
-				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"OR", "bazz", "foo", "baz"}}},
-				{Command: "GET", Body: map[string]interface{}{"key": "bazz"}},
-			},
-			expected:   []interface{}{"OK", "OK", float64(2), "50"},
-			assertType: []string{"equal", "equal", "equal", "equal"},
-		},
-		{
-			name: "BITOP OR of keys containing strings and a bytearray and get the destkey",
-			cmds: []HTTPCommand{
-				{Command: "MSET", Body: map[string]interface{}{"keys": []interface{}{"foo", "foobar", "baz", "abcdef"}}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "bazz", "values": []interface{}{8, 1}}},
-				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"OR", "bazzz", "foo", "baz", "bazz"}}},
-				{Command: "GET", Body: map[string]interface{}{"key": "bazzz"}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "bazz", "values": []interface{}{8, 0}}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "bazz", "values": []interface{}{49, 1}}},
-				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"OR", "bazzz", "foo", "baz", "bazz"}}},
-				{Command: "GET", Body: map[string]interface{}{"key": "bazzz"}},
-			},
-			expected:   []interface{}{"OK", float64(0), float64(6), "g\xefofev", float64(1), float64(0), float64(7), "goofev@"},
-			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
-		},
-		{
-			name: "BITOP XOR of keys containing strings and get the destkey",
-			cmds: []HTTPCommand{
-				{Command: "MSET", Body: map[string]interface{}{"keys": []interface{}{"foo", "foobar", "baz", "abcdef"}}},
-				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"XOR", "bazz", "foo", "baz"}}},
-				{Command: "GET", Body: map[string]interface{}{"key": "bazz"}},
-			},
-			expected:   []interface{}{"OK", float64(6), "\x07\x0d\x0c\x06\x04\x14"},
-			assertType: []string{"equal", "equal", "equal"},
-		},
-		{
-			name: "BITOP XOR of keys containing strings and a bytearray and get the destkey",
-			cmds: []HTTPCommand{
-				{Command: "MSET", Body: map[string]interface{}{"keys": []interface{}{"foo", "foobar", "baz", "abcdef"}}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "bazz", "values": []interface{}{8, 1}}},
-				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"XOR", "bazzz", "foo", "baz", "bazz"}}},
-				{Command: "GET", Body: map[string]interface{}{"key": "bazzz"}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "bazz", "values": []interface{}{8, 0}}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "bazz", "values": []interface{}{49, 1}}},
-				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"XOR", "bazzz", "foo", "baz", "bazz"}}},
-				{Command: "GET", Body: map[string]interface{}{"key": "bazzz"}},
-				{Command: "SETBIT", Body: map[string]interface{}{"key": "bazz", "values": []interface{}{49, 0}}},
-				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"XOR", "bazzz", "foo", "baz", "bazz"}}},
-				{Command: "GET", Body: map[string]interface{}{"key": "bazzz"}},
-			},
-			expected:   []interface{}{"OK", float64(0), float64(6), "\x07\x8d\x0c\x06\x04\x14", float64(1), float64(0), float64(7), "\x07\r\x0c\x06\x04\x14@", float64(1), float64(7), "\x07\r\x0c\x06\x04\x14\x00"},
-			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
-		},
-		{
-			name: "BITOP XOR of keys containing integers and get the destkey",
-			cmds: []HTTPCommand{
-				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": 10}},
-				{Command: "SET", Body: map[string]interface{}{"key": "baz", "value": 5}},
-				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"XOR", "bazz", "foo", "baz"}}},
-				{Command: "GET", Body: map[string]interface{}{"key": "bazz"}},
-			},
-			expected:   []interface{}{"OK", "OK", float64(2), "\x040"},
-			assertType: []string{"equal", "equal", "equal", "equal"},
-		},
-	}
+// 	for i := 1; i < 8+1; i++ {
+// 		getBitTestCommands[i] = HTTPCommand{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "value": fmt.Sprintf("%d", testOffsets[i-1])}}
+// 		getBitTestExpected[i] = float64(fooBarBits[testOffsets[i-1]] - '0')
+// 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			// Delete the key before running the test
-			exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "foo"}})
-			exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "baz"}})
-			exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "bazz"}})
-			exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "bazzz"}})
-			for i := 0; i < len(tc.cmds); i++ {
-				res, _ := exec.FireCommand(tc.cmds[i])
+// 	testCases := []struct {
+// 		name       string
+// 		cmds       []HTTPCommand
+// 		expected   []interface{}
+// 		assertType []string
+// 	}{
+// 		{
+// 			name:       "Getbit of a key containing a string",
+// 			cmds:       getBitTestCommands,
+// 			expected:   getBitTestExpected,
+// 			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
+// 		},
+// 		{
+// 			name: "Getbit of a key containing an integer",
+// 			cmds: []HTTPCommand{
+// 				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "10"}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "0"}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "1"}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "2"}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "3"}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "4"}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "5"}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "6"}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "7"}},
+// 			},
+// 			expected:   []interface{}{"OK", float64(0), float64(0), float64(1), float64(1), float64(0), float64(0), float64(0), float64(1)},
+// 			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
+// 		},
+// 		{
+// 			name: "Getbit of a key containing an integer 2nd byte",
+// 			cmds: []HTTPCommand{
+// 				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "10"}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "8"}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "9"}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "10"}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "11"}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "12"}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "13"}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "14"}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "15"}},
+// 			},
+// 			expected:   []interface{}{"OK", float64(0), float64(0), float64(1), float64(1), float64(0), float64(0), float64(0), float64(0)},
+// 			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
+// 		},
+// 		{
+// 			name: "Getbit of a key with an offset greater than the length of the string in bits",
+// 			cmds: []HTTPCommand{
+// 				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "foobar"}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "100"}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "48"}},
+// 				{Command: "GETBIT", Body: map[string]interface{}{"key": "foo", "offset": "47"}},
+// 			},
+// 			expected:   []interface{}{"OK", float64(0), float64(0), float64(0)},
+// 			assertType: []string{"equal", "equal", "equal", "equal"},
+// 		},
+// 		{
+// 			name: "Bitcount of a key containing a string",
+// 			cmds: []HTTPCommand{
+// 				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "foobar"}},
+// 				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{0, -1}}},
+// 				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo"}},
+// 				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{0, 0}}},
+// 				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{1, 1}}},
+// 				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{1, 1, "BYTE"}}},
+// 				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{5, 30, "BIT"}}},
+// 			},
+// 			expected:   []interface{}{"OK", float64(26), float64(26), float64(4), float64(6), float64(6), float64(17)},
+// 			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal"},
+// 		},
+// 		{
+// 			name: "Bitcount of a key containing an integer",
+// 			cmds: []HTTPCommand{
+// 				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "10"}},
+// 				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{0, -1}}},
+// 				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo"}},
+// 				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{0, 0}}},
+// 				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{1, 1}}},
+// 				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{1, 1, "BYTE"}}},
+// 				{Command: "BITCOUNT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{5, 30, "BIT"}}},
+// 			},
+// 			expected:   []interface{}{"OK", float64(5), float64(5), float64(3), float64(2), float64(2), float64(3)},
+// 			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal"},
+// 		},
+// 		{
+// 			name: "Setbit of a key containing a string",
+// 			cmds: []HTTPCommand{
+// 				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "foobar"}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{7, 1}}},
+// 				{Command: "GET", Body: map[string]interface{}{"key": "foo"}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{49, 1}}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{50, 1}}},
+// 				{Command: "GET", Body: map[string]interface{}{"key": "foo"}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{49, 0}}},
+// 				{Command: "GET", Body: map[string]interface{}{"key": "foo"}},
+// 			},
+// 			expected:   []interface{}{"OK", float64(0), "goobar", float64(0), float64(0), "goobar`", float64(1), "goobar "},
+// 			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
+// 		},
+// 		{
+// 			name: "Setbit of a key must not change the expiry of the key if expiry is set",
+// 			cmds: []HTTPCommand{
+// 				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "foobar"}},
+// 				{Command: "EXPIRE", Body: map[string]interface{}{"key": "foo", "values": []interface{}{100}}},
+// 				{Command: "TTL", Body: map[string]interface{}{"key": "foo"}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{7, 1}}},
+// 				{Command: "TTL", Body: map[string]interface{}{"key": "foo"}},
+// 			},
+// 			expected:   []interface{}{"OK", float64(1), float64(100), float64(0), float64(100)},
+// 			assertType: []string{"equal", "equal", "less", "equal", "less"},
+// 		},
+// 		{
+// 			name: "Setbit of a key must not add expiry to the key if expiry is not set",
+// 			cmds: []HTTPCommand{
+// 				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "foobar"}},
+// 				{Command: "TTL", Body: map[string]interface{}{"key": "foo"}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{7, 1}}},
+// 				{Command: "TTL", Body: map[string]interface{}{"key": "foo"}},
+// 			},
+// 			expected:   []interface{}{"OK", float64(-1), float64(0), float64(-1)},
+// 			assertType: []string{"equal", "equal", "equal", "equal"},
+// 		},
+// 		{
+// 			name: "Bitop not of a key containing a string",
+// 			cmds: []HTTPCommand{
+// 				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "foobar"}},
+// 				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"NOT", "baz", "foo"}}},
+// 				{Command: "GET", Body: map[string]interface{}{"key": "baz"}},
+// 				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"NOT", "bazz", "baz"}}},
+// 				{Command: "GET", Body: map[string]interface{}{"key": "bazz"}},
+// 			},
+// 			expected:   []interface{}{"OK", float64(6), "\\x99\\x90\\x90\\x9d\\x9e\\x8d", float64(6), "foobar"},
+// 			assertType: []string{"equal", "equal", "equal", "equal", "equal"},
+// 		},
+// 		{
+// 			name: "Bitop not of a key containing an integer",
+// 			cmds: []HTTPCommand{
+// 				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": 10}},
+// 				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"NOT", "baz", "foo"}}},
+// 				{Command: "GET", Body: map[string]interface{}{"key": "baz"}},
+// 				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"NOT", "bazz", "baz"}}},
+// 				{Command: "GET", Body: map[string]interface{}{"key": "bazz"}},
+// 			},
+// 			expected:   []interface{}{"OK", float64(2), "\\xce\\xcf", float64(2), float64(10)},
+// 			assertType: []string{"equal", "equal", "equal", "equal", "equal"},
+// 		},
+// 		{
+// 			name: "Get a string created with setbit",
+// 			cmds: []HTTPCommand{
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{1, 1}}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "foo", "values": []interface{}{3, 1}}},
+// 				{Command: "GET", Body: map[string]interface{}{"key": "foo"}},
+// 			},
+// 			expected:   []interface{}{float64(0), float64(0), "P"},
+// 			assertType: []string{"equal", "equal", "equal"},
+// 		},
+// 		{
+// 			name: "Bitop and of keys containing a string and get the destkey",
+// 			cmds: []HTTPCommand{
+// 				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "foobar"}},
+// 				{Command: "SET", Body: map[string]interface{}{"key": "baz", "value": "abcdef"}},
+// 				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"AND", "bazz", "foo", "baz"}}},
+// 				{Command: "GET", Body: map[string]interface{}{"key": "bazz"}},
+// 			},
+// 			expected:   []interface{}{"OK", "OK", float64(6), "`bc`ab"},
+// 			assertType: []string{"equal", "equal", "equal", "equal"},
+// 		},
+// 		{
+// 			name: "BITOP AND of keys containing integers and get the destkey",
+// 			cmds: []HTTPCommand{
+// 				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": 10}},
+// 				{Command: "SET", Body: map[string]interface{}{"key": "baz", "value": 5}},
+// 				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"AND", "bazz", "foo", "baz"}}},
+// 				{Command: "GET", Body: map[string]interface{}{"key": "bazz"}},
+// 			},
+// 			expected:   []interface{}{"OK", "OK", float64(2), "1\x00"},
+// 			assertType: []string{"equal", "equal", "equal", "equal"},
+// 		},
+// 		{
+// 			name: "Bitop or of keys containing a string, a bytearray and get the destkey",
+// 			cmds: []HTTPCommand{
+// 				{Command: "MSET", Body: map[string]interface{}{"keys": []interface{}{"foo", "foobar", "baz", "abcdef"}}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "bazz", "values": []interface{}{8, 1}}},
+// 				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"AND", "bazzz", "foo", "baz", "bazz"}}},
+// 				{Command: "GET", Body: map[string]interface{}{"key": "bazzz"}},
+// 			},
+// 			expected:   []interface{}{"OK", float64(0), float64(6), "\x00\x00\x00\x00\x00\x00"},
+// 			assertType: []string{"equal", "equal", "equal", "equal"},
+// 		},
+// 		{
+// 			name: "BITOP OR of keys containing strings and get the destkey",
+// 			cmds: []HTTPCommand{
+// 				{Command: "MSET", Body: map[string]interface{}{"keys": []interface{}{"foo", "foobar", "baz", "abcdef"}}},
+// 				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"OR", "bazz", "foo", "baz"}}},
+// 				{Command: "GET", Body: map[string]interface{}{"key": "bazz"}},
+// 			},
+// 			expected:   []interface{}{"OK", float64(6), "goofev"},
+// 			assertType: []string{"equal", "equal", "equal"},
+// 		},
+// 		{
+// 			name: "BITOP OR of keys containing integers and get the destkey",
+// 			cmds: []HTTPCommand{
+// 				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": 10}},
+// 				{Command: "SET", Body: map[string]interface{}{"key": "baz", "value": 5}},
+// 				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"OR", "bazz", "foo", "baz"}}},
+// 				{Command: "GET", Body: map[string]interface{}{"key": "bazz"}},
+// 			},
+// 			expected:   []interface{}{"OK", "OK", float64(2), "50"},
+// 			assertType: []string{"equal", "equal", "equal", "equal"},
+// 		},
+// 		{
+// 			name: "BITOP OR of keys containing strings and a bytearray and get the destkey",
+// 			cmds: []HTTPCommand{
+// 				{Command: "MSET", Body: map[string]interface{}{"keys": []interface{}{"foo", "foobar", "baz", "abcdef"}}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "bazz", "values": []interface{}{8, 1}}},
+// 				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"OR", "bazzz", "foo", "baz", "bazz"}}},
+// 				{Command: "GET", Body: map[string]interface{}{"key": "bazzz"}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "bazz", "values": []interface{}{8, 0}}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "bazz", "values": []interface{}{49, 1}}},
+// 				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"OR", "bazzz", "foo", "baz", "bazz"}}},
+// 				{Command: "GET", Body: map[string]interface{}{"key": "bazzz"}},
+// 			},
+// 			expected:   []interface{}{"OK", float64(0), float64(6), "g\xefofev", float64(1), float64(0), float64(7), "goofev@"},
+// 			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
+// 		},
+// 		{
+// 			name: "BITOP XOR of keys containing strings and get the destkey",
+// 			cmds: []HTTPCommand{
+// 				{Command: "MSET", Body: map[string]interface{}{"keys": []interface{}{"foo", "foobar", "baz", "abcdef"}}},
+// 				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"XOR", "bazz", "foo", "baz"}}},
+// 				{Command: "GET", Body: map[string]interface{}{"key": "bazz"}},
+// 			},
+// 			expected:   []interface{}{"OK", float64(6), "\x07\x0d\x0c\x06\x04\x14"},
+// 			assertType: []string{"equal", "equal", "equal"},
+// 		},
+// 		{
+// 			name: "BITOP XOR of keys containing strings and a bytearray and get the destkey",
+// 			cmds: []HTTPCommand{
+// 				{Command: "MSET", Body: map[string]interface{}{"keys": []interface{}{"foo", "foobar", "baz", "abcdef"}}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "bazz", "values": []interface{}{8, 1}}},
+// 				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"XOR", "bazzz", "foo", "baz", "bazz"}}},
+// 				{Command: "GET", Body: map[string]interface{}{"key": "bazzz"}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "bazz", "values": []interface{}{8, 0}}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "bazz", "values": []interface{}{49, 1}}},
+// 				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"XOR", "bazzz", "foo", "baz", "bazz"}}},
+// 				{Command: "GET", Body: map[string]interface{}{"key": "bazzz"}},
+// 				{Command: "SETBIT", Body: map[string]interface{}{"key": "bazz", "values": []interface{}{49, 0}}},
+// 				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"XOR", "bazzz", "foo", "baz", "bazz"}}},
+// 				{Command: "GET", Body: map[string]interface{}{"key": "bazzz"}},
+// 			},
+// 			expected:   []interface{}{"OK", float64(0), float64(6), "\x07\x8d\x0c\x06\x04\x14", float64(1), float64(0), float64(7), "\x07\r\x0c\x06\x04\x14@", float64(1), float64(7), "\x07\r\x0c\x06\x04\x14\x00"},
+// 			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal", "equal"},
+// 		},
+// 		{
+// 			name: "BITOP XOR of keys containing integers and get the destkey",
+// 			cmds: []HTTPCommand{
+// 				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": 10}},
+// 				{Command: "SET", Body: map[string]interface{}{"key": "baz", "value": 5}},
+// 				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"XOR", "bazz", "foo", "baz"}}},
+// 				{Command: "GET", Body: map[string]interface{}{"key": "bazz"}},
+// 			},
+// 			expected:   []interface{}{"OK", "OK", float64(2), "\x040"},
+// 			assertType: []string{"equal", "equal", "equal", "equal"},
+// 		},
+// 	}
 
-				switch tc.assertType[i] {
-				case "equal":
-					assert.Equal(t, tc.expected[i], res)
-				case "less":
-					assert.True(t, res.(float64) <= tc.expected[i].(float64), "CMD: %s Expected %d to be less than or equal to %d", tc.cmds[i], res, tc.expected[i])
-				}
-			}
-		})
-	}
-}
+// 	for _, tc := range testCases {
+// 		t.Run(tc.name, func(t *testing.T) {
+// 			// Delete the key before running the test
+// 			exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "foo"}})
+// 			exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "baz"}})
+// 			exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "bazz"}})
+// 			exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "bazzz"}})
+// 			for i := 0; i < len(tc.cmds); i++ {
+// 				res, _ := exec.FireCommand(tc.cmds[i])
+
+// 				switch tc.assertType[i] {
+// 				case "equal":
+// 					assert.Equal(t, tc.expected[i], res)
+// 				case "less":
+// 					assert.True(t, res.(float64) <= tc.expected[i].(float64), "CMD: %s Expected %d to be less than or equal to %d", tc.cmds[i], res, tc.expected[i])
+// 				}
+// 			}
+// 		})
+// 	}
+// }
 
 func TestBitCount(t *testing.T) {
 	exec := NewHTTPCommandExecutor()
