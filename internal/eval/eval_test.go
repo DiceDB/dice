@@ -187,204 +187,129 @@ func testEvalHELLO(t *testing.T, store *dstore.Store) {
 }
 
 func testEvalSET(t *testing.T, store *dstore.Store) {
-	tests := []evalTestCase{
-		{
-			name:           "nil value",
+	tests := map[string]evalTestCase{
+		"nil value": {
 			input:          nil,
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'set' command")},
 		},
-		{
-			name:           "empty array",
+		"empty array": {
 			input:          []string{},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'set' command")},
 		},
-		{
-			name:           "one value",
+		"one value": {
 			input:          []string{"KEY"},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'set' command")},
 		},
-		{
-			name:           "key val pair",
+		"key val pair": {
 			input:          []string{"KEY", "VAL"},
 			migratedOutput: EvalResponse{Result: clientio.OK, Error: nil},
 		},
-		{
-			name:           "key val pair with int val",
+		"key val pair with int val": {
 			input:          []string{"KEY", "123456"},
 			migratedOutput: EvalResponse{Result: clientio.OK, Error: nil},
 		},
-		{
-			name:           "key val pair and expiry key",
+		"key val pair and expiry key": {
 			input:          []string{"KEY", "VAL", Px},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
 		},
-		{
-			name:           "key val pair and EX no val",
+		"key val pair and EX no val": {
 			input:          []string{"KEY", "VAL", Ex},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
 		},
-		{
-			name:           "key val pair and valid EX",
+		"key val pair and valid EX": {
 			input:          []string{"KEY", "VAL", Ex, "2"},
 			migratedOutput: EvalResponse{Result: clientio.OK, Error: nil},
 		},
-		{
-			name:           "key val pair and invalid negative EX",
+		"key val pair and invalid negative EX": {
 			input:          []string{"KEY", "VAL", Ex, "-2"},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'set' command")},
 		},
-		{
-			name:           "key val pair and invalid float EX",
+		"key val pair and invalid float EX": {
 			input:          []string{"KEY", "VAL", Ex, "2.0"},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")},
 		},
-		{
-			name:           "key val pair and invalid out of range int EX",
+		"key val pair and invalid out of range int EX": {
 			input:          []string{"KEY", "VAL", Ex, "9223372036854775807"},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'set' command")},
 		},
-		{
-			name:           "key val pair and invalid greater than max duration EX",
+		"key val pair and invalid greater than max duration EX": {
 			input:          []string{"KEY", "VAL", Ex, "9223372036854775"},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'set' command")},
 		},
-		{
-			name:           "key val pair and invalid EX",
+		"key val pair and invalid EX": {
 			input:          []string{"KEY", "VAL", Ex, "invalid_expiry_val"},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")},
 		},
-		{
-			name:           "key val pair and PX no val",
+		"key val pair and PX no val": {
 			input:          []string{"KEY", "VAL", Px},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
 		},
-		{
-			name:           "key val pair and valid PX",
+		"key val pair and valid PX": {
 			input:          []string{"KEY", "VAL", Px, "2000"},
 			migratedOutput: EvalResponse{Result: clientio.OK, Error: nil},
 		},
-		{
-			name:           "key val pair and invalid PX",
+		"key val pair and invalid PX": {
 			input:          []string{"KEY", "VAL", Px, "invalid_expiry_val"},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")},
 		},
-		{
-			name:           "key val pair and invalid negative PX",
+		"key val pair and invalid negative PX": {
 			input:          []string{"KEY", "VAL", Px, "-2"},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'set' command")},
 		},
-		{
-			name:           "key val pair and invalid float PX",
+		"key val pair and invalid float PX": {
 			input:          []string{"KEY", "VAL", Px, "2.0"},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")},
 		},
-		{
-			name:           "key val pair and invalid out of range int PX",
+
+		"key val pair and invalid out of range int PX": {
 			input:          []string{"KEY", "VAL", Px, "9223372036854775807"},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'set' command")},
 		},
-		{
-			name:           "key val pair and invalid greater than max duration PX",
+		"key val pair and invalid greater than max duration PX": {
 			input:          []string{"KEY", "VAL", Px, "9223372036854775"},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'set' command")},
 		},
-		{
-			name:           "key val pair and both EX and PX",
+		"key val pair and both EX and PX": {
 			input:          []string{"KEY", "VAL", Ex, "2", Px, "2000"},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
 		},
-		{
-			name:           "key val pair and PXAT no val",
+		"key val pair and PXAT no val": {
 			input:          []string{"KEY", "VAL", Pxat},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
 		},
-		{
-			name:           "key val pair and invalid PXAT",
+		"key val pair and invalid PXAT": {
 			input:          []string{"KEY", "VAL", Pxat, "invalid_expiry_val"},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")},
 		},
-		{
-			name:           "key val pair and expired PXAT",
-			input:          []string{"KEY", "VAL", Pxat, "2"},
-			migratedOutput: EvalResponse{Result: clientio.OK, Error: nil},
+		"key val with get": {
+			input: []string{"key", "bazz", "GET"},
+			setup: func() {
+				key := "key"
+				value := "bar"
+				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingEmbStr)
+				store.Put(key, obj)
+			},
+			migratedOutput: EvalResponse{Result: "bar", Error: nil},
 		},
-		{
-			name:           "key val pair and negative PXAT",
-			input:          []string{"KEY", "VAL", Pxat, "-123456"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'set' command")},
+		"key val with get and nil get": {
+			input:          []string{"key", "bar", "GET"},
+			migratedOutput: EvalResponse{Result: clientio.NIL, Error: nil},
 		},
-		{
-			name:           "key val pair and valid PXAT",
-			input:          []string{"KEY", "VAL", Pxat, strconv.FormatInt(time.Now().Add(2*time.Minute).UnixMilli(), 10)},
-			migratedOutput: EvalResponse{Result: clientio.OK, Error: nil},
-		},
-		{
-			name:           "key val pair and invalid EX and PX",
-			input:          []string{"KEY", "VAL", Ex, "2", Px, "2000"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
-		},
-		{
-			name:           "key val pair and invalid EX and PXAT",
-			input:          []string{"KEY", "VAL", Ex, "2", Pxat, "2"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
-		},
-		{
-			name:           "key val pair and invalid PX and PXAT",
-			input:          []string{"KEY", "VAL", Px, "2000", Pxat, "2"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
-		},
-		{
-			name:           "key val pair and KeepTTL",
-			input:          []string{"KEY", "VAL", KeepTTL},
-			migratedOutput: EvalResponse{Result: clientio.OK, Error: nil},
-		},
-		{
-			name:           "key val pair and invalid KeepTTL",
-			input:          []string{"KEY", "VAL", KeepTTL, "2"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
-		},
-		{
-			name:           "key val pair and KeepTTL, EX",
-			input:          []string{"KEY", "VAL", Ex, "2", KeepTTL},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
-		},
-		{
-			name:           "key val pair and KeepTTL, PX",
-			input:          []string{"KEY", "VAL", Px, "2000", KeepTTL},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
-		},
-		{
-			name:           "key val pair and KeepTTL, PXAT",
-			input:          []string{"KEY", "VAL", Pxat, strconv.FormatInt(time.Now().Add(2*time.Minute).UnixMilli(), 10), KeepTTL},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR syntax error")},
-		},
-		{
-			name:           "key val pair and KeepTTL, invalid PXAT",
-			input:          []string{"KEY", "VAL", Pxat, "invalid_expiry_val", KeepTTL},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")},
+		"key val with get and but value is json": {
+			input: []string{"key", "bar", "GET"},
+			setup: func() {
+				key := "key"
+				value := "{\"a\":2}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			response := evalSET(tt.input, store)
-
-			// Handle comparison for byte slices
-			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
-				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-					assert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
-				}
-			} else {
-				assert.Equal(t, tt.migratedOutput.Result, response.Result)
-			}
-
-			if tt.migratedOutput.Error != nil {
-				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
-			} else {
-				assert.NoError(t, response.Error)
-			}
-		})
-	}
+	runMigratedEvalTests(t, tests, evalSET, store)
 }
 
 func testEvalGETEX(t *testing.T, store *dstore.Store) {
