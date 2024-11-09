@@ -7638,31 +7638,8 @@ func testEvalBitField(t *testing.T, store *dstore.Store) {
 			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrIntegerOutOfRange},
 		},
 	}
-	// runEvalTests(t, testCases, evalBITFIELD, store)
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
 
-			if tt.setup != nil {
-				tt.setup()
-			}
-			response := evalBITFIELD(tt.input, store)
-
-			// Handle comparison for byte slices
-			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
-				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-					assert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
-				}
-			} else {
-				assert.Equal(t, tt.migratedOutput.Result, response.Result)
-			}
-
-			if tt.migratedOutput.Error != nil {
-				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
-			} else {
-				assert.NoError(t, response.Error)
-			}
-		})
-	}
+	runMigratedEvalTests(t, testCases, evalBITFIELD, store)
 }
 
 func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
@@ -7921,31 +7898,8 @@ func testEvalBitFieldRO(t *testing.T, store *dstore.Store) {
 			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrGeneral("BITFIELD_RO only supports the GET subcommand")},
 		},
 	}
-	//runEvalTests(t, testCases, evalBITFIELDRO, store)
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
 
-			if tt.setup != nil {
-				tt.setup()
-			}
-			response := evalBITFIELDRO(tt.input, store)
-
-			// Handle comparison for byte slices
-			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
-				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-					assert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
-				}
-			} else {
-				assert.Equal(t, tt.migratedOutput.Result, response.Result)
-			}
-
-			if tt.migratedOutput.Error != nil {
-				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
-			} else {
-				assert.NoError(t, response.Error)
-			}
-		})
-	}
+	runMigratedEvalTests(t, testCases, evalBITFIELDRO, store)
 }
 
 func testEvalGEOADD(t *testing.T, store *dstore.Store) {
