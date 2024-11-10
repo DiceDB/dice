@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	testifyAssert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHLen(t *testing.T) {
@@ -34,7 +34,7 @@ func TestHLen(t *testing.T) {
 				{Command: "HSET", Body: map[string]interface{}{"key": "key_hLen1", "field": "field", "value": "value"}},
 				{Command: "HLEN", Body: map[string]interface{}{"key": "wrong_key_hLen1"}},
 			},
-			expected: []interface{}{float64(1), "0"},
+			expected: []interface{}{float64(1), float64(0)},
 			delays:   []time.Duration{0, 0},
 		},
 		{
@@ -79,9 +79,9 @@ func TestHLen(t *testing.T) {
 				if err != nil {
 					// Check if the error message matches the expected result
 					log.Println(tc.expected[i])
-					testifyAssert.Equal(t, tc.expected[i], err.Error(), "Error message mismatch for cmd %s", cmd)
+					assert.Equal(t, tc.expected[i], err.Error(), "Error message mismatch for cmd %s", cmd)
 				} else {
-					testifyAssert.Equal(t, tc.expected[i], result, "Value mismatch for cmd %s, expected %v, got %v", cmd, tc.expected[i], result)
+					assert.Equal(t, tc.expected[i], result, "Value mismatch for cmd %s, expected %v, got %v", cmd, tc.expected[i], result)
 				}
 			}
 		})

@@ -3,7 +3,7 @@ package eval
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMixedOperations(t *testing.T) {
@@ -143,9 +143,9 @@ func TestDeepCopy(t *testing.T) {
 
 	// Modify the deepCopy's data to ensure it's independent of the original
 	deepCopy.data[0] = 9
-	assert.Assert(t, deepCopy.data[0] != original.data[0], "ByteArray DeepCopy did not create an independent deepCopy, original and deepCopy data are linked")
+	assert.True(t, deepCopy.data[0] != original.data[0], "ByteArray DeepCopy did not create an independent deepCopy, original and deepCopy data are linked")
 
 	// Modify the original's data to ensure it doesn't affect the deepCopy
 	original.data[1] = 8
-	assert.Assert(t, deepCopy.data[1] != original.data[1], "ByteArray DeepCopy did not create an independent deepCopy, original and deepCopy data are linked")
+	assert.True(t, deepCopy.data[1] != original.data[1], "ByteArray DeepCopy did not create an independent deepCopy, original and deepCopy data are linked")
 }

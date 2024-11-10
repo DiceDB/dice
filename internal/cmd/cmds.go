@@ -17,9 +17,14 @@ type RedisCmds struct {
 	RequestID uint32
 }
 
+// Repr returns a string representation of the command.
+func (cmd *DiceDBCmd) Repr() string {
+	return fmt.Sprintf("%s %s", cmd.Cmd, strings.Join(cmd.Args, " "))
+}
+
 // GetFingerprint returns a 32-bit fingerprint of the command and its arguments.
 func (cmd *DiceDBCmd) GetFingerprint() uint32 {
-	return farm.Fingerprint32([]byte(fmt.Sprintf("%s-%s", cmd.Cmd, strings.Join(cmd.Args, " "))))
+	return farm.Fingerprint32([]byte(cmd.Repr()))
 }
 
 // GetKey Returns the key which the command operates on.
@@ -28,5 +33,9 @@ func (cmd *DiceDBCmd) GetFingerprint() uint32 {
 // This is not true for all commands, however, for now this is only used by the watch manager,
 // which as of now only supports a small subset of commands (all of which fit this implementation).
 func (cmd *DiceDBCmd) GetKey() string {
-	return cmd.Args[0]
+	var c string
+	if len(cmd.Args) > 0 {
+		c = cmd.Args[0]
+	}
+	return c
 }

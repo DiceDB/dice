@@ -123,7 +123,7 @@ func RunTestServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	gec := make(chan error)
 	shardManager := shard.NewShardManager(1, watchChan, nil, gec)
 	// Initialize the AsyncServer
-	testServer := server.NewAsyncServer(shardManager, watchChan)
+	testServer := server.NewAsyncServer(shardManager, watchChan, nil)
 
 	// Try to bind to a port with a maximum of `totalRetries` retries.
 	for i := 0; i < totalRetries; i++ {

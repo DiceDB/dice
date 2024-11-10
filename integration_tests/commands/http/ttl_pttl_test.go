@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestTTLPTTL(t *testing.T) {
@@ -111,9 +111,9 @@ func TestTTLPTTL(t *testing.T) {
 				}
 				result, _ := exec.FireCommand(cmd)
 				if tc.assert_type[i] == "equal" {
-					assert.DeepEqual(t, tc.expected[i], result)
+					assert.Equal(t, tc.expected[i], result)
 				} else if tc.assert_type[i] == "assert" {
-					assert.Assert(t, result.(float64) <= tc.expected[i].(float64), "Expected %v to be less than or equal to %v", result, tc.expected[i])
+					assert.True(t, result.(float64) <= tc.expected[i].(float64), "Expected %v to be less than or equal to %v", result, tc.expected[i])
 				}
 			}
 		})

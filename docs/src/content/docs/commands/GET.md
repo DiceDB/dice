@@ -14,17 +14,17 @@ GET key
 
 ## Parameters
 
-| Parameter | Description                                                              | Type   | Required |
-|-----------|--------------------------------------------------------------------------|--------|----------|
-| key       | The name of the key whose value you want to retrieve. The key is a string.| string | Yes      |
+| Parameter | Description                                                                | Type   | Required |
+| --------- | -------------------------------------------------------------------------- | ------ | -------- |
+| key       | The name of the key whose value you want to retrieve. The key is a string. | string | Yes      |
 
 ## Return Values
 
-| Condition                                              | Return Value                                                                                       |
-|--------------------------------------------------------|---------------------------------------------------------------------------------------------------|
-| The specified key exists and holds a string value      | The string value stored at the key.                                                               |
-| The specified key does not exist                       | `nil`                                                                                             |
-| The specified key exists but is not a string, or multiple keys are passed | error                                                                                         |
+| Condition                                                                 | Return Value                        |
+| ------------------------------------------------------------------------- | ----------------------------------- |
+| The specified key exists and holds a string value                         | The string value stored at the key. |
+| The specified key does not exist                                          | `nil`                               |
+| The specified key exists but is not a string, or multiple keys are passed | error                               |
 
 ## Behaviour
 
@@ -38,14 +38,15 @@ When the GET command is issued, DiceDB checks the existence of the specified key
 The GET command is a read-only operation and does not modify the state of the DiceDB database.
 
 ## Errors
+
 1. **Expected string but got another type:**
-    - Error Message: (error) ERR expected string but got another type
-    - Occurs when the specified key holds a value that is not a string (e.g., a list, set, hash, or zset). DiceDB uses strict type checking to ensure that the correct type of operation is performed on the appropriate data type.
+
+   - Error Message: (error) ERR expected string but got another type
+   - Occurs when the specified key holds a value that is not a string (e.g., a list, set, hash, or zset). DiceDB uses strict type checking to ensure that the correct type of operation is performed on the appropriate data type.
 
 2. **Wrong number of arguments for 'GET' command:**
-    - Error Message: (error) ERR wrong number of arguments for 'get' command
-    - Occurs when multiple keys are passed as parameters.
-	
+   - Error Message: (error) ERR wrong number of arguments for 'get' command
+   - Occurs when multiple keys are passed as parameters.
 
 ## Example Usage
 

@@ -7,7 +7,7 @@ import (
 
 	"github.com/dicedb/dice/internal/dencoding"
 	"github.com/dicedb/dice/testutils"
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDencodingUInt(t *testing.T) {
@@ -51,7 +51,7 @@ func TestDencodingUInt(t *testing.T) {
 		for value, expected := range testCases {
 			t.Run(fmt.Sprintf("value_%d", value), func(t *testing.T) {
 				encoded := dencoding.EncodeUInt(uint64(value))
-				assert.Assert(t, testutils.EqualByteSlice(encoded, expected), "Unexpected encoding")
+				assert.True(t, testutils.EqualByteSlice(encoded, expected), "Unexpected encoding")
 			})
 		}
 	})
@@ -102,7 +102,7 @@ func TestDencodingInt(t *testing.T) {
 		for value, expected := range testCases {
 			t.Run(fmt.Sprintf("value_%d", value), func(t *testing.T) {
 				encoded := dencoding.EncodeInt(int64(value))
-				assert.Assert(t, testutils.EqualByteSlice(encoded, expected), "Unexpected encoding")
+				assert.True(t, testutils.EqualByteSlice(encoded, expected), "Unexpected encoding")
 			})
 		}
 	})
