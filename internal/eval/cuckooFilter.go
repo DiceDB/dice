@@ -19,6 +19,7 @@ const (
 	defaultBucketSize    BucketSize    = 2
 	defaultMaxIterations MaxIterations = 20
 	defaultExpansion     Expansion     = 1
+	defaultCapacityCF    Capacity      = 1000
 )
 
 var (
@@ -61,16 +62,24 @@ const (
 )
 
 func newCuckooOpts(args []string, useDefaults bool) (*CuckooOpts, error) {
+	var capacity Capacity
 
-	capacity, err := strconv.ParseUint(args[1], 10, 64)
+	if useDefaults {
+		capacity = defaultCapacityCF
+	} else {
+		parsedCapacity, err := strconv.ParseUint(args[1], 10, 64)
 
-	if err != nil {
-		return nil, errCFInvalidCapacityType
+		if err != nil {
+			return nil, errCFInvalidCapacityType
+		}
+
+		if parsedCapacity < 1 {
+			return nil, errCFInvalidCapacity
+		}
+
+		capacity = Capacity(parsedCapacity)
 	}
 
-	if capacity < 1 {
-		return nil, errCFInvalidCapacity
-	}
 	opts := &CuckooOpts{
 		capacity:      Capacity(capacity),
 		bucketSize:    defaultBucketSize,
@@ -164,6 +173,21 @@ func newCuckooFilter(opts *CuckooOpts) (*CuckooFilter, error) {
 
 }
 
+func createAndStoreCuckooFilter(store *dstore.Store, key string, args []string, useDefaults bool) ([]byte, error) {
+
+	opts, err := newCuckooOpts(args, useDefaults)
+
+	if err != nil {
+
+		return nil, diceerrors.NewErr("Error setting options for CF filter")
+	}
+
+	cf, _ := newCuckooFilter(opts)
+	obj := store.NewObj(cf, -1, object.ObjTypeBitSet, object.ObjEncodingCF)
+	store.Put(key, obj)
+	return clientio.RespOK, nil
+}
+
 // command evaluators
 
 func evalCFRESERVE(args []string, store *dstore.Store) []byte {
@@ -177,17 +201,13 @@ func evalCFRESERVE(args []string, store *dstore.Store) []byte {
 		useDefaults = true
 	}
 
-	opts, err := newCuckooOpts(args, useDefaults)
-	// InitCF
+	response, err := createAndStoreCuckooFilter(store, args[0], args, useDefaults)
+
 	if err != nil {
 		return diceerrors.NewErrWithFormattedMessage("%w for 'CF.RESERVE' command", err)
 	}
 
-	cf, _ := newCuckooFilter(opts)
-	obj := store.NewObj(cf, -1, object.ObjTypeBitSet, object.ObjEncodingCF)
-
-	store.Put(args[0], obj)
-	return clientio.RespOK
+	return response
 }
 
 // @TODO init filter if does not exist here
@@ -201,6 +221,15 @@ func evalCFADD(args []string, store *dstore.Store) []byte {
 	item := []byte(args[1])
 
 	cfInstance := store.Get(key)
+
+	if cfInstance == nil {
+		_, err := createAndStoreCuckooFilter(store, key, args, true)
+		if err != nil {
+			return diceerrors.NewErrWithFormattedMessage("%w for 'CF.ADD' command", err)
+		}
+
+		cfInstance = store.Get(key)
+	}
 
 	cf, ok := cfInstance.Value.(*CuckooFilter)
 
