@@ -4418,7 +4418,7 @@ func bitfieldEvalGeneric(args []string, store *dstore.Store, isReadOnly bool) *E
 // (if a negative increment is given) the specified bit field and returns the new value.
 // There is another subcommand that only changes the behavior of successive
 // INCRBY and SET subcommands calls by setting the overflow behavior:
-// OVERFLOW [WRAP|SAT|FAIL]`.
+// OVERFLOW [WRAP|SAT|FAIL]`
 func evalBITFIELD(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) < 1 {
 		return &EvalResponse{
