@@ -58,30 +58,6 @@ const (
 	CmdJSONArrAppend = "JSON.ARRAPPEND"
 	CmdJSONArrLen    = "JSON.ARRLEN"
 	CmdJSONArrPop    = "JSON.ARRPOP"
-)
-
-// Multi-shard commands.
-const (
-	CmdMset = "MSET"
-	CmdMget = "MGET"
-)
-
-// Multi-Step-Multi-Shard commands
-const (
-	CmdRename = "RENAME"
-	CmdCopy   = "COPY"
-)
-
-// Watch commands
-const (
-	CmdSadd     = "SADD"
-	CmdSrem     = "SREM"
-	CmdScard    = "SCARD"
-	CmdSmembers = "SMEMBERS"
-
-	CmdGetWatch      = "GET.WATCH"
-	CmdGetUnWatch    = "GET.UNWATCH"
-	CmdZRangeWatch   = "ZRANGE.WATCH"
 	CmdHExists       = "HEXISTS"
 	CmdHKeys         = "HKEYS"
 	CmdHVals         = "HVALS"
@@ -136,6 +112,31 @@ const (
 	CmdBitField      = "BITFIELD"
 	CmdBitPos        = "BITPOS"
 	CmdBitFieldRO    = "BITFIELD_RO"
+	CmdSadd          = "SADD"
+	CmdSrem          = "SREM"
+	CmdScard         = "SCARD"
+	CmdSmembers      = "SMEMBERS"
+)
+
+// Multi-shard commands.
+const (
+	CmdMset   = "MSET"
+	CmdMget   = "MGET"
+	CmdSInter = "SINTER"
+	CmdSDiff  = "SDIFF"
+)
+
+// Multi-Step-Multi-Shard commands
+const (
+	CmdRename = "RENAME"
+	CmdCopy   = "COPY"
+)
+
+// Watch commands
+const (
+	CmdGetWatch    = "GET.WATCH"
+	CmdGetUnWatch  = "GET.UNWATCH"
+	CmdZRangeWatch = "ZRANGE.WATCH"
 )
 
 type CmdMeta struct {
@@ -291,36 +292,6 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdBitFieldRO: {
 		CmdType: SingleShard,
 	},
-
-	// Multi-shard commands.
-	CmdRename: {
-		CmdType:            MultiShard,
-		preProcessing:      true,
-		preProcessResponse: preProcessRename,
-		decomposeCommand:   decomposeRename,
-		composeResponse:    composeRename,
-	},
-
-	CmdCopy: {
-		CmdType:            MultiShard,
-		preProcessing:      true,
-		preProcessResponse: preProcessCopy,
-		decomposeCommand:   decomposeCopy,
-		composeResponse:    composeCopy,
-	},
-
-	CmdMset: {
-		CmdType:          MultiShard,
-		decomposeCommand: decomposeMSet,
-		composeResponse:  composeMSet,
-	},
-
-	CmdMget: {
-		CmdType:          MultiShard,
-		decomposeCommand: decomposeMGet,
-		composeResponse:  composeMGet,
-	},
-
 	CmdCMSQuery: {
 		CmdType: SingleShard,
 	},
@@ -357,28 +328,6 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdHMGet: {
 		CmdType: SingleShard,
 	},
-
-	// Custom commands.
-	CmdAbort: {
-		CmdType: Custom,
-	},
-	CmdAuth: {
-		CmdType: Custom,
-	},
-
-	// Watch commands
-	CmdGetWatch: {
-		CmdType: Watch,
-	},
-	CmdZRangeWatch: {
-		CmdType: Watch,
-	},
-
-	// Unwatch commands
-	CmdGetUnWatch: {
-		CmdType: Unwatch,
-	},
-
 	// Sorted set commands
 	CmdZAdd: {
 		CmdType: SingleShard,
@@ -422,7 +371,6 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdZPopMax: {
 		CmdType: SingleShard,
 	},
-
 	// Bloom Filter
 	CmdBFAdd: {
 		CmdType: SingleShard,
@@ -435,6 +383,68 @@ var CommandsMeta = map[string]CmdMeta{
 	},
 	CmdBFReserve: {
 		CmdType: SingleShard,
+	},
+
+	// Multi-shard commands.
+	CmdRename: {
+		CmdType:            MultiShard,
+		preProcessing:      true,
+		preProcessResponse: preProcessRename,
+		decomposeCommand:   decomposeRename,
+		composeResponse:    composeRename,
+	},
+
+	CmdCopy: {
+		CmdType:            MultiShard,
+		preProcessing:      true,
+		preProcessResponse: customProcessCopy,
+		decomposeCommand:   decomposeCopy,
+		composeResponse:    composeCopy,
+	},
+
+	CmdMset: {
+		CmdType:          MultiShard,
+		decomposeCommand: decomposeMSet,
+		composeResponse:  composeMSet,
+	},
+
+	CmdMget: {
+		CmdType:          MultiShard,
+		decomposeCommand: decomposeMGet,
+		composeResponse:  composeMGet,
+	},
+
+	CmdSInter: {
+		CmdType:          MultiShard,
+		decomposeCommand: decomposeSInter,
+		composeResponse:  composeSInter,
+	},
+
+	CmdSDiff: {
+		CmdType:          MultiShard,
+		decomposeCommand: decomposeSDiff,
+		composeResponse:  composeSDiff,
+	},
+
+	// Custom commands.
+	CmdAbort: {
+		CmdType: Custom,
+	},
+	CmdAuth: {
+		CmdType: Custom,
+	},
+
+	// Watch commands
+	CmdGetWatch: {
+		CmdType: Watch,
+	},
+	CmdZRangeWatch: {
+		CmdType: Watch,
+	},
+
+	// Unwatch commands
+	CmdGetUnWatch: {
+		CmdType: Unwatch,
 	},
 }
 

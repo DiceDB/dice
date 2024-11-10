@@ -143,9 +143,25 @@ func decomposeMGet(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.
 	return decomposedCmds, nil
 }
 
-func decomposeSinter(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+func decomposeSInter(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
 	if len(cd.Args) < 1 {
 		return nil, diceerrors.ErrWrongArgumentCount("SINTER")
+	}
+	decomposedCmds := make([]*cmd.DiceDBCmd, 0, len(cd.Args))
+	for i := 0; i < len(cd.Args); i++ {
+		decomposedCmds = append(decomposedCmds,
+			&cmd.DiceDBCmd{
+				Cmd:  store.Smembers,
+				Args: []string{cd.Args[i]},
+			},
+		)
+	}
+	return decomposedCmds, nil
+}
+
+func decomposeSDiff(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+	if len(cd.Args) < 1 {
+		return nil, diceerrors.ErrWrongArgumentCount("SDIFF")
 	}
 	decomposedCmds := make([]*cmd.DiceDBCmd, 0, len(cd.Args))
 	for i := 0; i < len(cd.Args); i++ {

@@ -2081,6 +2081,7 @@ func evalSDIFF(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(members, false)
 }
 
+// Migrated to the new eval, but kept for http and websocket
 func evalSINTER(args []string, store *dstore.Store) []byte {
 	if len(args) < 1 {
 		return diceerrors.NewErrArity("SINTER")
