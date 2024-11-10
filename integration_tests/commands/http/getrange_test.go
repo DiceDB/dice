@@ -3,7 +3,7 @@ package http
 import (
 	"testing"
 
-	testifyAssert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGETRANGE(t *testing.T) {
@@ -75,7 +75,7 @@ func TestGETRANGE(t *testing.T) {
 
 			for i, cmd := range tc.commands {
 				result, _ := exec.FireCommand(cmd)
-				testifyAssert.Equal(t, tc.expected[i], result)
+				assert.Equal(t, tc.expected[i], result)
 			}
 			exec.FireCommand(tc.cleanup[0])
 		})

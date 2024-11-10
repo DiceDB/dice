@@ -3,7 +3,7 @@ package resp
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCMSInitByDim(t *testing.T) {
@@ -154,7 +154,7 @@ func TestCMSInfo(t *testing.T) {
 			FireCommand(conn, "DEL cms_key2")
 			for i, cmd := range tc.commands {
 				result := FireCommand(conn, cmd)
-				assert.DeepEqual(t, tc.expected[i], result)
+				assert.Equal(t, tc.expected[i], result)
 			}
 		})
 	}
@@ -219,7 +219,7 @@ func TestCMSIncrBy(t *testing.T) {
 			FireCommand(conn, "DEL cms_key3")
 			for i, cmd := range tc.commands {
 				result := FireCommand(conn, cmd)
-				assert.DeepEqual(t, tc.expected[i], result)
+				assert.Equal(t, tc.expected[i], result)
 			}
 		})
 	}
@@ -261,7 +261,7 @@ func TestCMSQuery(t *testing.T) {
 			FireCommand(conn, "DEL cms_key4")
 			for i, cmd := range tc.commands {
 				result := FireCommand(conn, cmd)
-				assert.DeepEqual(t, tc.expected[i], result)
+				assert.Equal(t, tc.expected[i], result)
 			}
 		})
 	}
@@ -408,7 +408,7 @@ func TestCMSMerge(t *testing.T) {
 			FireCommand(conn, "DEL cms_key5 test test1")
 			for i, cmd := range tc.commands {
 				result := FireCommand(conn, cmd)
-				assert.DeepEqual(t, tc.expected[i], result)
+				assert.Equal(t, tc.expected[i], result)
 			}
 		})
 	}

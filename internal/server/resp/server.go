@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/internal/server/abstractserver"
+	"github.com/dicedb/dice/internal/wal"
 
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dice/internal/watchmanager"
@@ -39,27 +40,30 @@ const (
 
 type Server struct {
 	abstractserver.AbstractServer
-	Host            string
-	Port            int
-	serverFD        int
-	connBacklogSize int
-	workerManager   *worker.WorkerManager
-	shardManager    *shard.ShardManager
-	watchManager    *watchmanager.Manager
-	cmdWatchChan    chan dstore.CmdWatchEvent
-	globalErrorChan chan error
+	Host                     string
+	Port                     int
+	serverFD                 int
+	connBacklogSize          int
+	workerManager            *worker.WorkerManager
+	shardManager             *shard.ShardManager
+	watchManager             *watchmanager.Manager
+	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription
+	globalErrorChan          chan error
+	wl                       wal.AbstractWAL
 }
 
-func NewServer(shardManager *shard.ShardManager, workerManager *worker.WorkerManager, cmdWatchChan chan dstore.CmdWatchEvent, globalErrChan chan error) *Server {
+func NewServer(shardManager *shard.ShardManager, workerManager *worker.WorkerManager,
+	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription, cmdWatchChan chan dstore.CmdWatchEvent, globalErrChan chan error, wl wal.AbstractWAL) *Server {
 	return &Server{
-		Host:            config.DiceConfig.AsyncServer.Addr,
-		Port:            config.DiceConfig.AsyncServer.Port,
-		connBacklogSize: DefaultConnBacklogSize,
-		workerManager:   workerManager,
-		shardManager:    shardManager,
-		watchManager:    watchmanager.NewManager(),
-		cmdWatchChan:    cmdWatchChan,
-		globalErrorChan: globalErrChan,
+		Host:                     config.DiceConfig.AsyncServer.Addr,
+		Port:                     config.DiceConfig.AsyncServer.Port,
+		connBacklogSize:          DefaultConnBacklogSize,
+		workerManager:            workerManager,
+		shardManager:             shardManager,
+		watchManager:             watchmanager.NewManager(cmdWatchSubscriptionChan, cmdWatchChan),
+		cmdWatchSubscriptionChan: cmdWatchSubscriptionChan,
+		globalErrorChan:          globalErrChan,
+		wl:                       wl,
 	}
 }
 
@@ -76,11 +80,11 @@ func (s *Server) Run(ctx context.Context) (err error) {
 	errChan := make(chan error, 1)
 	wg := &sync.WaitGroup{}
 
-	if s.cmdWatchChan != nil {
+	if s.cmdWatchSubscriptionChan != nil {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			s.watchManager.Run(ctx, s.cmdWatchChan)
+			s.watchManager.Run(ctx)
 		}()
 	}
 
@@ -195,7 +199,7 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 			preprocessingChan := make(chan *ops.StoreResponse) // preprocessingChan is specifically for handling responses from shards for commands that require preprocessing
 
 			wID := GenerateUniqueWorkerID()
-			w := worker.NewWorker(wID, responseChan, preprocessingChan, ioHandler, parser, s.shardManager, s.globalErrorChan)
+			w := worker.NewWorker(wID, responseChan, preprocessingChan, s.cmdWatchSubscriptionChan, ioHandler, parser, s.shardManager, s.globalErrorChan, s.wl)
 
 			// Register the worker with the worker manager
 			err = s.workerManager.RegisterWorker(w)

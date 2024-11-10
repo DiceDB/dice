@@ -7,7 +7,7 @@ The `OBJECT` command in DiceDB is used to inspect the internals of DiceDB object
 
 ## Syntax
 
-```plaintext
+```bash
 OBJECT <subcommand> <key>
 ```
 
@@ -54,13 +54,13 @@ The `OBJECT` command can raise errors in the following scenarios:
 
 ### Example 1: Using the `REFCOUNT` Subcommand
 
-```plaintext
+```bash
 OBJECT REFCOUNT mykey
 ```
 
 `Response:`
 
-```plaintext
+```bash
 (integer) 1
 ```
 
@@ -68,13 +68,13 @@ This response indicates that the value associated with `mykey` has a reference c
 
 ### Example 2: Using the `ENCODING` Subcommand
 
-```plaintext
+```bash
 OBJECT ENCODING mykey
 ```
 
 `Response:`
 
-```plaintext
+```bash
 "embstr"
 ```
 
@@ -82,13 +82,13 @@ This response indicates that the value associated with `mykey` is stored using t
 
 ### Example 3: Using the `IDLETIME` Subcommand
 
-```plaintext
+```bash
 OBJECT IDLETIME mykey
 ```
 
 `Response:`
 
-```plaintext
+```bash
 (integer) 120
 ```
 
@@ -96,13 +96,13 @@ This response indicates that `mykey` has been idle for 120 seconds.
 
 ### Example 4: Using the `FREQ` Subcommand
 
-```plaintext
+```bash
 OBJECT FREQ mykey
 ```
 
 `Response:`
 
-```plaintext
+```bash
 (integer) 5
 ```
 

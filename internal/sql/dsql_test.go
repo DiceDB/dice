@@ -5,7 +5,7 @@ import (
 
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/xwb1989/sqlparser"
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestParseQuery(t *testing.T) {
@@ -225,16 +225,16 @@ func TestParseQuery(t *testing.T) {
 			if tt.wantErr {
 				assert.Error(t, err, tt.error)
 			} else {
-				assert.NilError(t, err)
-				assert.DeepEqual(t, tt.want.Selection, got.Selection)
-				assert.DeepEqual(t, tt.want.OrderBy, got.OrderBy)
+				assert.Nil(t, err)
+				assert.Equal(t, tt.want.Selection, got.Selection)
+				assert.Equal(t, tt.want.OrderBy, got.OrderBy)
 				assert.Equal(t, tt.want.Limit, got.Limit)
 
 				//if tt.want.Where == nil {
 				//	assert.Assert(t, got.Where == nil)
 				//} else {
-				assert.Assert(t, got.Where != nil)
-				assert.DeepEqual(t, tt.want.Where, got.Where)
+				assert.True(t, got.Where != nil)
+				assert.Equal(t, tt.want.Where, got.Where)
 				//}
 			}
 		})
@@ -279,17 +279,17 @@ func TestParseSelectExpressions(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 
 			stmt, err := sqlparser.Parse(replaceCustomSyntax(tt.sql))
-			assert.NilError(t, err)
+			assert.Nil(t, err)
 
 			selectStmt, ok := stmt.(*sqlparser.Select)
-			assert.Assert(t, ok)
+			assert.True(t, ok)
 
 			got, err := parseSelectExpressions(selectStmt)
 			if tt.wantErr {
-				assert.Assert(t, err != nil)
+				assert.True(t, err != nil)
 			} else {
-				assert.NilError(t, err)
-				assert.DeepEqual(t, tt.want, got)
+				assert.Nil(t, err)
+				assert.Equal(t, tt.want, got)
 			}
 		})
 	}
@@ -367,17 +367,17 @@ func TestParseOrderBy(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			stmt, err := sqlparser.Parse(replaceCustomSyntax(tt.sql))
-			assert.NilError(t, err)
+			assert.Nil(t, err)
 
 			selectStmt, ok := stmt.(*sqlparser.Select)
-			assert.Assert(t, ok)
+			assert.True(t, ok)
 
 			got, err := parseOrderBy(selectStmt)
 			if tt.wantErr {
-				assert.Assert(t, err != nil)
+				assert.True(t, err != nil)
 			} else {
-				assert.NilError(t, err)
-				assert.DeepEqual(t, tt.want, got)
+				assert.Nil(t, err)
+				assert.Equal(t, tt.want, got)
 			}
 		})
 	}
@@ -410,16 +410,16 @@ func TestParseLimit(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			stmt, err := sqlparser.Parse(replaceCustomSyntax(tt.sql))
-			assert.NilError(t, err)
+			assert.Nil(t, err)
 
 			selectStmt, ok := stmt.(*sqlparser.Select)
-			assert.Assert(t, ok)
+			assert.True(t, ok)
 
 			got, err := parseLimit(selectStmt)
 			if tt.wantErr {
-				assert.Assert(t, err != nil)
+				assert.True(t, err != nil)
 			} else {
-				assert.NilError(t, err)
+				assert.Nil(t, err)
 				assert.Equal(t, tt.want, got)
 			}
 		})

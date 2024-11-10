@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	assert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBFReserveAddInfoExists(t *testing.T) {
@@ -218,5 +218,6 @@ func TestBFEdgeCasesAndErrors(t *testing.T) {
 				FireCommand(conn, cmd)
 			}
 		})
+		FireCommand(conn, "FLUSHDB")
 	}
 }

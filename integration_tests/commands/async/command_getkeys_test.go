@@ -3,7 +3,7 @@ package async
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 var getKeysTestCases = []struct {
@@ -31,7 +31,7 @@ func TestCommandGetKeys(t *testing.T) {
 	for _, tc := range getKeysTestCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result := FireCommand(conn, "COMMAND GETKEYS "+tc.inCmd)
-			assert.DeepEqual(t, tc.expected, result)
+			assert.Equal(t, tc.expected, result)
 		})
 	}
 }

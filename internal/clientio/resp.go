@@ -54,15 +54,34 @@ func readLength(buf *bytes.Buffer) (int64, error) {
 }
 
 func readStringUntilSr(buf *bytes.Buffer) (string, error) {
-	s, err := buf.ReadString('\r')
-	if err != nil {
-		return utils.EmptyStr, err
+	var result []byte
+
+	for {
+		byteRead, err := buf.ReadByte()
+		if err != nil {
+			return utils.EmptyStr, err
+		}
+
+		result = append(result, byteRead)
+
+		// If we find '\r', we check the next byte for '\n'
+		if byteRead == '\r' {
+			nextByte, err := buf.ReadByte() // Peek the next byte
+			if err != nil {
+				return utils.EmptyStr, err
+			}
+
+			// If the next byte is '\n', we've found a valid end of string
+			if nextByte == '\n' {
+				break
+			}
+
+			// Otherwise, add the next byte to the result and continue
+			result = append(result, nextByte)
+		}
 	}
-	// incrementing to skip `\n`
-	if _, err := buf.ReadByte(); err != nil {
-		return utils.EmptyStr, err
-	}
-	return s[:len(s)-1], nil
+	// Return without the last '\r'
+	return string(result[:len(result)-1]), nil
 }
 
 // reads a RESP encoded simple string from data and returns

@@ -13,16 +13,16 @@ PERSIST key
 
 ## Parameters
 
-| Parameter | Description                      | Type   | Required |
-|-----------|----------------------------------|--------|----------|
-| `key`     | The name of the key to persist.   | String | Yes      |
+| Parameter | Description                     | Type   | Required |
+| --------- | ------------------------------- | ------ | -------- |
+| `key`     | The name of the key to persist. | String | Yes      |
 
 ## Return Value
 
-| Condition                                    | Return Value                                      |
-|----------------------------------------------|---------------------------------------------------|
-| Timeout is successfully removed              | `1`                                               |
-| Key does not exist or lacks an expiration     | `0`                                               |
+| Condition                                         | Return Value |
+| ------------------------------------------------- | ------------ |
+| The timeout was successfully removed              | `1`          |
+| The key does not exist or does not have a timeout | `0`          |
 
 ## Behaviour
 
@@ -33,11 +33,10 @@ PERSIST key
 ## Error Handling
 
 1. `Wrong type of value or key`:
-    - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
-    - Occurs when the command is used on a key that holds a non-string value or a type that does not support expiration.
-
+   - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
+   - Occurs when attempting to use the command on a key that contains a non-string value or one that does not support expiration.
 2. `No timeout to persist`:
-    - Although this is not classified as an error, the command returns `0` when trying to persist a key that either does not exist or does not have an expiration.
+   - This is not an error but occurs when the key either does not exist or does not have an expiration time. The command will return `0` in such cases.
 
 ## Example Usage
 
@@ -47,14 +46,17 @@ PERSIST key
 127.0.0.1:7379> SET mykey "Hello"
 OK
 ```
+
 ```bash
 127.0.0.1:7379> EXPIRE mykey 10
 (integer) 1
 ```
+
 ```bash
 127.0.0.1:7379> PERSIST mykey
 (integer) 1
 ```
+
 ```bash
 127.0.0.1:7379> TTL mykey
 (integer) -1
@@ -88,9 +90,8 @@ OK
 
 **Explanation**:
 
-- The command returns `0` because the key `mykey` does not have an expiration time set.
+- The command returns `0` because `mykey` does not have an expiration time set.
 
 ## Summary
 
-The `PERSIST` command is a simple but powerful tool for managing the lifetime of keys in DiceDB. By removing the expiration from a key, you ensure that it remains in the database until explicitly deleted, giving you more control over key persistence in your system.
-
+The `PERSIST` command is a useful tool for managing the lifecycle of keys in a DiceDB database. By removing the expiration from a key, you can ensure that the key remains in the database until explicitly deleted. This command is straightforward but powerful, allowing for greater control over key persistence.

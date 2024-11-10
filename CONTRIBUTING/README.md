@@ -101,6 +101,7 @@ $ git add <updated files>
 $ git commit -m "Meaningful message for the update"
 # pull new changes
 $ git checkout master
+$ git fetch upstream
 $ git merge upstream/master
 $ git checkout <your issue branch>
 $ git rebase master

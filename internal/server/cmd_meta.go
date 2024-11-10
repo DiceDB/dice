@@ -50,6 +50,18 @@ var (
 		Cmd:     "SET",
 		CmdType: SingleShard,
 	}
+	expireCmdMeta = CmdsMeta{
+		Cmd:     "EXPIRE",
+		CmdType: SingleShard,
+	}
+	expireAtCmdMeta = CmdsMeta{
+		Cmd:     "EXPIREAT",
+		CmdType: SingleShard,
+	}
+	expireTimeCmdMeta = CmdsMeta{
+		Cmd:     "EXPIRETIME",
+		CmdType: SingleShard,
+	}
 	getCmdMeta = CmdsMeta{
 		Cmd:     "GET",
 		CmdType: SingleShard,
@@ -62,8 +74,49 @@ var (
 		Cmd:     "SETEX",
 		CmdType: SingleShard,
 	}
+	saddCmdMeta = CmdsMeta{
+		Cmd:     "SADD",
+		CmdType: SingleShard,
+	}
+	sremCmdMeta = CmdsMeta{
+		Cmd:     "SREM",
+		CmdType: SingleShard,
+	}
+	scardCmdMeta = CmdsMeta{
+		Cmd:     "SCARD",
+		CmdType: SingleShard,
+	}
+	smembersCmdMeta = CmdsMeta{
+		Cmd: "SMEMBERS",
+	}
+
+	jsonArrAppendCmdMeta = CmdsMeta{
+		Cmd:     "JSON.ARRAPPEND",
+		CmdType: SingleShard,
+	}
+	jsonArrLenCmdMeta = CmdsMeta{
+		Cmd:     "JSON.ARRLEN",
+		CmdType: SingleShard,
+	}
+	jsonArrPopCmdMeta = CmdsMeta{
+		Cmd:     "JSON.ARRPOP",
+		CmdType: SingleShard,
+	}
+
 	getrangeCmdMeta = CmdsMeta{
 		Cmd:     "GETRANGE",
+		CmdType: SingleShard,
+	}
+	hexistsCmdMeta = CmdsMeta{
+		Cmd:     "HEXISTS",
+		CmdType: SingleShard,
+	}
+	hkeysCmdMeta = CmdsMeta{
+		Cmd:     "HKEYS",
+		CmdType: SingleShard,
+	}
+	hvalsCmdMeta = CmdsMeta{
+		Cmd:     "HVALS",
 		CmdType: SingleShard,
 	}
 	zaddCmdMeta = CmdsMeta{
@@ -90,6 +143,14 @@ var (
 		Cmd:     "ZRANK",
 		CmdType: SingleShard,
 	}
+	zcardCmdMeta = CmdsMeta{
+		Cmd:     "ZCARD",
+		CmdType: SingleShard,
+	}
+	zremCmdMeta = CmdsMeta{
+		Cmd:     "ZREM",
+		CmdType: SingleShard,
+	}
 	pfaddCmdMeta = CmdsMeta{
 		Cmd:     "PFADD",
 		CmdType: SingleShard,
@@ -100,6 +161,38 @@ var (
 	}
 	pfmergeCmdMeta = CmdsMeta{
 		Cmd:     "PFMERGE",
+		CmdType: SingleShard,
+	}
+	ttlCmdMeta = CmdsMeta{
+		Cmd:     "TTL",
+		CmdType: SingleShard,
+	}
+	pttlCmdMeta = CmdsMeta{
+		Cmd:     "PTTL",
+		CmdType: SingleShard,
+	}
+	setbitCmdMeta = CmdsMeta{
+		Cmd:     "SETBIT",
+		CmdType: SingleShard,
+	}
+	getbitCmdMeta = CmdsMeta{
+		Cmd:     "GETBIT",
+		CmdType: SingleShard,
+	}
+	bitcountCmdMeta = CmdsMeta{
+		Cmd:     "BITCOUNT",
+		CmdType: SingleShard,
+	}
+	bitfieldCmdMeta = CmdsMeta{
+		Cmd:     "BITFIELD",
+		CmdType: SingleShard,
+	}
+	bitposCmdMeta = CmdsMeta{
+		Cmd:     "BITPOS",
+		CmdType: SingleShard,
+	}
+	bitfieldroCmdMeta = CmdsMeta{
+		Cmd:     "BITFIELD_RO",
 		CmdType: SingleShard,
 	}
 	delCmdMeta = CmdsMeta{
@@ -145,6 +238,22 @@ var (
 		Cmd:     "HSCAN",
 		CmdType: SingleShard,
 	}
+
+	jsonarrinsertCmdMeta = CmdsMeta{
+		Cmd:     "JSON.ARRINSERT",
+		CmdType: SingleShard,
+	}
+
+	jsonarrtrimCmdMeta = CmdsMeta{
+		Cmd:     "JSON.ARRTRIM",
+		CmdType: SingleShard,
+	}
+
+	jsonobjkeystCmdMeta = CmdsMeta{
+		Cmd:     "JSON.OBJKEYS",
+		CmdType: SingleShard,
+	}
+
 	incrCmdMeta = CmdsMeta{
 		Cmd:     "INCR",
 		CmdType: SingleShard,
@@ -227,6 +336,38 @@ var (
 		Cmd:     "CMS.MERGE",
 		CmdType: SingleShard,
 	}
+	getexCmdMeta = CmdsMeta{
+		Cmd:     "GETEX",
+		CmdType: SingleShard,
+	}
+	getdelCmdMeta = CmdsMeta{
+		Cmd:     "GETDEL",
+		CmdType: SingleShard,
+	}
+	hsetCmdMeta = CmdsMeta{
+		Cmd:     "HSET",
+		CmdType: SingleShard,
+	}
+	hgetCmdMeta = CmdsMeta{
+		Cmd:     "HGET",
+		CmdType: SingleShard,
+	}
+	hsetnxCmdMeta = CmdsMeta{
+		Cmd:     "HSETNX",
+		CmdType: SingleShard,
+	}
+	hdelCmdMeta = CmdsMeta{
+		Cmd:     "HDEL",
+		CmdType: SingleShard,
+	}
+	hmsetCmdMeta = CmdsMeta{
+		Cmd:     "HMSET",
+		CmdType: SingleShard,
+	}
+	hmgetCmdMeta = CmdsMeta{
+		Cmd:     "HMGET",
+		CmdType: SingleShard,
+	}
 
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
@@ -241,18 +382,39 @@ func init() {
 
 	// Single-shard commands.
 	WorkerCmdsMeta["SET"] = setCmdMeta
+	WorkerCmdsMeta["EXPIRE"] = expireCmdMeta
+	WorkerCmdsMeta["EXPIREAT"] = expireAtCmdMeta
+	WorkerCmdsMeta["EXPIRETIME"] = expireTimeCmdMeta
 	WorkerCmdsMeta["GET"] = getCmdMeta
 	WorkerCmdsMeta["GETSET"] = getsetCmdMeta
 	WorkerCmdsMeta["SETEX"] = setexCmdMeta
+
+	WorkerCmdsMeta["SADD"] = saddCmdMeta
+	WorkerCmdsMeta["SREM"] = sremCmdMeta
+	WorkerCmdsMeta["SCARD"] = scardCmdMeta
+	WorkerCmdsMeta["SMEMBERS"] = smembersCmdMeta
+
+	WorkerCmdsMeta["JSON.ARRAPPEND"] = jsonArrAppendCmdMeta
+	WorkerCmdsMeta["JSON.ARRLEN"] = jsonArrLenCmdMeta
+	WorkerCmdsMeta["JSON.ARRPOP"] = jsonArrPopCmdMeta
+
 	WorkerCmdsMeta["GETRANGE"] = getrangeCmdMeta
 	WorkerCmdsMeta["APPEND"] = appendCmdMeta
 	WorkerCmdsMeta["JSON.CLEAR"] = jsonclearCmdMeta
 	WorkerCmdsMeta["JSON.STRLEN"] = jsonstrlenCmdMeta
 	WorkerCmdsMeta["JSON.OBJLEN"] = jsonobjlenCmdMeta
+	WorkerCmdsMeta["HEXISTS"] = hexistsCmdMeta
+	WorkerCmdsMeta["HKEYS"] = hkeysCmdMeta
+	WorkerCmdsMeta["HVALS"] = hvalsCmdMeta
+	WorkerCmdsMeta["JSON.ARRINSERT"] = jsonarrinsertCmdMeta
+	WorkerCmdsMeta["JSON.ARRTRIM"] = jsonarrtrimCmdMeta
+	WorkerCmdsMeta["JSON.OBJKEYS"] = jsonobjkeystCmdMeta
 	WorkerCmdsMeta["ZADD"] = zaddCmdMeta
 	WorkerCmdsMeta["ZCOUNT"] = zcountCmdMeta
 	WorkerCmdsMeta["ZRANGE"] = zrangeCmdMeta
 	WorkerCmdsMeta["ZRANK"] = zrankCmdMeta
+	WorkerCmdsMeta["ZCARD"] = zcardCmdMeta
+	WorkerCmdsMeta["ZREM"] = zremCmdMeta
 	WorkerCmdsMeta["PFADD"] = pfaddCmdMeta
 	WorkerCmdsMeta["ZPOPMIN"] = zpopminCmdMeta
 	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
@@ -277,6 +439,8 @@ func init() {
 	WorkerCmdsMeta["ZPOPMIN"] = zpopminCmdMeta
 	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
 	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
+	WorkerCmdsMeta["TTL"] = ttlCmdMeta
+	WorkerCmdsMeta["PTTL"] = pttlCmdMeta
 	WorkerCmdsMeta["HINCRBY"] = hincrbyCmdMeta
 	WorkerCmdsMeta["HINCRBYFLOAT"] = hincrbyfloatCmdMeta
 	WorkerCmdsMeta["HRANDFIELD"] = hrandfieldCmdMeta
@@ -297,5 +461,20 @@ func init() {
 	WorkerCmdsMeta["CMS.INCRBY"] = cmsIncrByCmdMeta
 	WorkerCmdsMeta["CMS.QUERY"] = cmsQueryCmdMeta
 	WorkerCmdsMeta["CMS.MERGE"] = cmsMergeCmdMeta
+	WorkerCmdsMeta["GETEX"] = getexCmdMeta
+	WorkerCmdsMeta["GETDEL"] = getdelCmdMeta
+	WorkerCmdsMeta["HSET"] = hsetCmdMeta
+	WorkerCmdsMeta["HGET"] = hgetCmdMeta
+	WorkerCmdsMeta["HSETNX"] = hsetnxCmdMeta
+	WorkerCmdsMeta["HDEL"] = hdelCmdMeta
+	WorkerCmdsMeta["HMSET"] = hmsetCmdMeta
+	WorkerCmdsMeta["HMGET"] = hmgetCmdMeta
+	WorkerCmdsMeta["SETBIT"] = setbitCmdMeta
+	WorkerCmdsMeta["GETBIT"] = getbitCmdMeta
+	WorkerCmdsMeta["BITCOUNT"] = bitcountCmdMeta
+	WorkerCmdsMeta["BITFIELD"] = bitfieldCmdMeta
+	WorkerCmdsMeta["BITPOS"] = bitposCmdMeta
+	WorkerCmdsMeta["BITFIELD_RO"] = bitfieldroCmdMeta
+
 	// Additional commands (multishard, custom) can be added here as needed.
 }
