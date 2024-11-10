@@ -107,6 +107,7 @@ const (
 	CmdCMSInitByProb = "CMS.INITBYPROB"
 	CmdCMSMerge      = "CMS.MERGE"
 	CmdCMSIncrBy     = "CMS.INCRBY"
+	CmdSmembers      = "SMEMBERS"
 )
 
 type CmdMeta struct {
@@ -240,6 +241,11 @@ var CommandsMeta = map[string]CmdMeta{
 		decomposeCommand: decomposeMGet,
 		composeResponse:  composeMGet,
 	},
+	CmdSmembers: {
+		CmdType:          MultiShard,
+		decomposeCommand: decomposeSinter,
+	},
+
 	CmdCMSQuery: {
 		CmdType: SingleShard,
 	},
