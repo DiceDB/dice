@@ -4503,7 +4503,7 @@ func evalPERSIST(args []string, store *dstore.Store) *EvalResponse {
 	// If the key doesn't exist, return 0
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.IntegerZero,
+			Result: int64(0),
 			Error:  nil,
 		}
 	}
@@ -4512,7 +4512,7 @@ func evalPERSIST(args []string, store *dstore.Store) *EvalResponse {
 	_, isExpirySet := dstore.GetExpiry(obj, store)
 	if !isExpirySet {
 		return &EvalResponse{
-			Result: clientio.IntegerZero,
+			Result: int64(0),
 			Error:  nil,
 		}
 	}
@@ -4521,7 +4521,7 @@ func evalPERSIST(args []string, store *dstore.Store) *EvalResponse {
 	dstore.DelExpiry(obj, store)
 
 	return &EvalResponse{
-		Result: clientio.IntegerOne,
+		Result: int64(1),
 		Error:  nil,
 	}
 }
