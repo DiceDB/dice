@@ -12,6 +12,7 @@ import (
 	"github.com/axiomhq/hyperloglog"
 	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/internal/clientio"
+	"github.com/dicedb/dice/internal/cmd"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/eval/sortedset"
 	"github.com/dicedb/dice/internal/object"
@@ -4440,4 +4441,90 @@ func evalBITFIELDRO(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	return bitfieldEvalGeneric(args, store, true)
+}
+
+func evalGetObject(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrInternalServer,
+		}
+	}
+
+	key := args[0]
+
+	obj := store.Get(key)
+
+	// if key does not exist, return RESP encoded nil
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	exp, ok := dstore.GetExpiry(obj, store)
+	var exDurationMs int64 = -1
+	if ok {
+		exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
+	}
+
+	exObj := &object.ExtendedObj{
+		Obj:        obj,
+		ExDuration: exDurationMs,
+	}
+
+	// Decode and return the value based on its encoding
+	return &EvalResponse{
+		Result: exObj,
+		Error:  nil,
+	}
+}
+
+// evalSetObject stores an object in the store with a given key and optional expiry.
+// If an object with the same key exists, it is replaced.
+// This function is usually specifc to multishard multi-op commands
+func evalCOPYObject(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
+
+	var isReplace bool
+	if len(cd.Args) > 1 {
+		if cd.Args[1] == "REPLACE" {
+			isReplace = true
+		}
+	}
+
+	key := args[0]
+
+	obj := store.Get(key)
+
+	if !isReplace && obj != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("ERR target key already exists"),
+		}
+	}
+
+	store.Del(key)
+
+	copyObj := cd.Obj.Obj.DeepCopy()
+	if copyObj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	exDurationMs := cd.Obj.ExDuration
+
+	store.Put(key, copyObj)
+
+	if exDurationMs > 0 {
+		store.SetExpiry(copyObj, exDurationMs)
+	}
+
+	return &EvalResponse{
+		Result: clientio.IntegerOne,
+		Error:  nil,
+	}
 }

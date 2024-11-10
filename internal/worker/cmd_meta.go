@@ -320,10 +320,6 @@ var CommandsMeta = map[string]CmdMeta{
 		decomposeCommand: decomposeMGet,
 		composeResponse:  composeMGet,
 	},
-	CmdSmembers: {
-		CmdType:          MultiShard,
-		decomposeCommand: decomposeSinter,
-	},
 
 	CmdCMSQuery: {
 		CmdType: SingleShard,
