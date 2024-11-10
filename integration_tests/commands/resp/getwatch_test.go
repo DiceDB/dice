@@ -114,9 +114,9 @@ func TestGETWATCHWithSDK(t *testing.T) {
 
 		for _, channel := range channels {
 			v := <-channel
-			assert.Equal(t, "GET", v.Command)           // command
+			assert.Equal(t, "GET", v.Command)            // command
 			assert.Equal(t, "2714318480", v.Fingerprint) // Fingerprint
-			assert.Equal(t, tc.val, v.Data.(string))    // data
+			assert.Equal(t, tc.val, v.Data.(string))     // data
 		}
 	}
 }
@@ -145,9 +145,9 @@ func TestGETWATCHWithSDK2(t *testing.T) {
 
 		for _, channel := range channels {
 			v := <-channel
-			assert.Equal(t, "GET", v.Command)           // command
+			assert.Equal(t, "GET", v.Command)            // command
 			assert.Equal(t, "2714318480", v.Fingerprint) // Fingerprint
-			assert.Equal(t, tc.val, v.Data.(string))    // data
+			assert.Equal(t, tc.val, v.Data.(string))     // data
 		}
 	}
 }

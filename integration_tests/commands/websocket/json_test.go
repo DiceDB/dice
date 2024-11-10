@@ -7,9 +7,7 @@ import (
 
 	"github.com/dicedb/dice/testutils"
 	"github.com/gorilla/websocket"
-	testifyAssert "github.com/stretchr/testify/assert"
-
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 type IntegrationTestCase struct {
@@ -50,17 +48,16 @@ func runIntegrationTests(t *testing.T, exec *WebsocketCommandExecutor, conn *web
 				cmd := tc.commands[i]
 				out := tc.expected[i]
 				result, _ := exec.FireCommandAndReadResponse(conn, cmd)
-				fmt.Println(result, out, 53)
 
 				switch tc.assertType[i] {
 				case "equal":
 					assert.Equal(t, out, result)
 				case "perm_equal":
-					assert.Assert(t, testutils.ArraysArePermutations(testutils.ConvertToArray(out.(string)), testutils.ConvertToArray(result.(string))))
+					assert.True(t, testutils.ArraysArePermutations(testutils.ConvertToArray(out.(string)), testutils.ConvertToArray(result.(string))))
 				case "range":
-					assert.Assert(t, result.(float64) <= out.(float64) && result.(float64) > 0, "Expected %v to be within 0 to %v", result, out)
+					assert.True(t, result.(float64) <= out.(float64) && result.(float64) > 0, "Expected %v to be within 0 to %v", result, out)
 				case "json_equal":
-					testifyAssert.JSONEq(t, out.(string), result.(string))
+					assert.JSONEq(t, out.(string), result.(string))
 				}
 			}
 		})
@@ -76,7 +73,7 @@ func TestJSONClearOperations(t *testing.T) {
 
 	defer func() {
 		resp, err := exec.FireCommandAndReadResponse(conn, "DEL user")
-		testifyAssert.Nil(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, float64(1), resp)
 	}()
 
@@ -150,7 +147,7 @@ func TestJSONClearOperations(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.commands {
 				result, err := exec.FireCommandAndReadResponse(conn, cmd)
-				testifyAssert.Nil(t, err)
+				assert.Nil(t, err)
 				assert.Equal(t, tc.expected[i], result)
 			}
 		})
@@ -167,7 +164,7 @@ func TestJsonStrlen(t *testing.T) {
 
 	defer func() {
 		resp, err := exec.FireCommandAndReadResponse(conn, "DEL doc")
-		testifyAssert.Nil(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, float64(1), resp)
 	}()
 
@@ -238,12 +235,12 @@ func TestJsonStrlen(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.commands {
 				result, err := exec.FireCommandAndReadResponse(conn, cmd)
-				testifyAssert.Nil(t, err, "error: %v", err)
+				assert.Nil(t, err, "error: %v", err)
 				stringResult, ok := result.(string)
 				if ok {
 					assert.Equal(t, tc.expected[i], stringResult)
 				} else {
-					assert.Assert(t, testutils.ArraysArePermutations(tc.expected[i].([]interface{}), result.([]interface{})))
+					assert.True(t, testutils.ArraysArePermutations(tc.expected[i].([]interface{}), result.([]interface{})))
 				}
 			}
 		})
@@ -264,7 +261,7 @@ func TestJsonObjLen(t *testing.T) {
 
 	defer func() {
 		resp, err := exec.FireCommandAndReadResponse(conn, "DEL obj")
-		testifyAssert.Nil(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, float64(1), resp)
 	}()
 
@@ -367,8 +364,8 @@ func TestJsonObjLen(t *testing.T) {
 				cmd := tcase.commands[i]
 				out := tcase.expected[i]
 				result, err := exec.FireCommandAndReadResponse(conn, cmd)
-				testifyAssert.Nil(t, err)
-				assert.DeepEqual(t, out, result)
+				assert.Nil(t, err)
+				assert.Equal(t, out, result)
 			}
 		})
 	}
@@ -385,7 +382,7 @@ func TestJsonARRTRIM(t *testing.T) {
 	defer func() {
 		resp1, err := exec.FireCommandAndReadResponse(conn, "DEL a")
 		resp2, err := exec.FireCommandAndReadResponse(conn, "DEL b")
-		testifyAssert.Nil(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, float64(1), resp1)
 		assert.Equal(t, float64(1), resp2)
 	}()
@@ -452,13 +449,13 @@ func TestJsonARRTRIM(t *testing.T) {
 				cmd := tcase.commands[i]
 				out := tcase.expected[i]
 				result, err := exec.FireCommandAndReadResponse(conn, cmd)
-				testifyAssert.Nil(t, err)
+				assert.Nil(t, err)
 				if tcase.assertType[i] == "equal" {
 					assert.Equal(t, out, result)
 				} else if tcase.assertType[i] == "deep_equal" {
-					assert.Assert(t, testutils.ArraysArePermutations(out.([]interface{}), result.([]interface{})))
+					assert.True(t, testutils.ArraysArePermutations(out.([]interface{}), result.([]interface{})))
 				} else if tcase.assertType[i] == "jsoneq" {
-					testifyAssert.JSONEq(t, out.(string), result.(string))
+					assert.JSONEq(t, out.(string), result.(string))
 				}
 			}
 		})
@@ -476,7 +473,7 @@ func TestJsonARRINSERT(t *testing.T) {
 	defer func() {
 		resp1, err := exec.FireCommandAndReadResponse(conn, "DEL a")
 		resp2, err := exec.FireCommandAndReadResponse(conn, "DEL b")
-		testifyAssert.Nil(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, float64(1), resp1)
 		assert.Equal(t, float64(1), resp2)
 	}()
@@ -531,14 +528,13 @@ func TestJsonARRINSERT(t *testing.T) {
 				cmd := tcase.commands[i]
 				out := tcase.expected[i]
 				result, err := exec.FireCommandAndReadResponse(conn, cmd)
-				fmt.Println(result, out, err)
-				testifyAssert.Nil(t, err)
+				assert.Nil(t, err)
 				if tcase.assertType[i] == "equal" {
 					assert.Equal(t, out, result)
 				} else if tcase.assertType[i] == "deep_equal" {
-					assert.Assert(t, testutils.ArraysArePermutations(out.([]interface{}), result.([]interface{})))
+					assert.True(t, testutils.ArraysArePermutations(out.([]interface{}), result.([]interface{})))
 				} else if tcase.assertType[i] == "jsoneq" {
-					testifyAssert.JSONEq(t, out.(string), result.(string))
+					assert.JSONEq(t, out.(string), result.(string))
 				}
 			}
 		})
@@ -642,7 +638,7 @@ func TestJsonObjKeyslmao(t *testing.T) {
 	for _, tcase := range testCases {
 		t.Run(tcase.name, func(t *testing.T) {
 			_, err := exec.FireCommandAndReadResponse(conn, tcase.setCommand)
-			testifyAssert.Nil(t, err)
+			assert.Nil(t, err)
 			expected := tcase.expected
 			out, _ := exec.FireCommandAndReadResponse(conn, tcase.testCommand)
 
@@ -661,10 +657,10 @@ func TestJsonObjKeyslmao(t *testing.T) {
 			}
 			if outSlice, ok := out.([]interface{}); ok {
 				sortNested(outSlice)
-				testifyAssert.ElementsMatch(t, expected, outSlice)
+				assert.ElementsMatch(t, expected, outSlice)
 			} else {
 				outInterface := []interface{}{out}
-				testifyAssert.ElementsMatch(t, expected, outInterface)
+				assert.ElementsMatch(t, expected, outInterface)
 			}
 		})
 	}
@@ -709,18 +705,18 @@ func TestJSONARRPOP(t *testing.T) {
 				cmd := tcase.commands[i]
 				out := tcase.expected[i]
 				result, err := exec.FireCommandAndReadResponse(conn, cmd)
-				testifyAssert.Nil(t, err)
+				assert.Nil(t, err)
 				jsonResult, isString := result.(string)
 
 				if isString && testutils.IsJSONResponse(jsonResult) {
-					testifyAssert.JSONEq(t, out.(string), jsonResult)
+					assert.JSONEq(t, out.(string), jsonResult)
 					continue
 				}
 
 				if tcase.assertType[i] == "equal" {
 					assert.Equal(t, out, result)
 				} else if tcase.assertType[i] == "deep_equal" {
-					assert.Assert(t, testutils.ArraysArePermutations(tcase.expected[i].([]interface{}), result.([]interface{})))
+					assert.True(t, testutils.ArraysArePermutations(tcase.expected[i].([]interface{}), result.([]interface{})))
 				}
 			}
 		})
@@ -777,18 +773,18 @@ func TestJsonARRAPPEND(t *testing.T) {
 				cmd := tcase.commands[i]
 				out := tcase.expected[i]
 				result, err := exec.FireCommandAndReadResponse(conn, cmd)
-				testifyAssert.Nil(t, err)
+				assert.Nil(t, err)
 				jsonResult, isString := result.(string)
 
 				if isString && testutils.IsJSONResponse(jsonResult) {
-					testifyAssert.JSONEq(t, out.(string), jsonResult)
+					assert.JSONEq(t, out.(string), jsonResult)
 					continue
 				}
 
 				if tcase.assertType[i] == "equal" {
 					assert.Equal(t, out, result)
 				} else if tcase.assertType[i] == "deep_equal" {
-					assert.Assert(t, testutils.ArraysArePermutations(tcase.expected[i].([]interface{}), result.([]interface{})))
+					assert.True(t, testutils.ArraysArePermutations(tcase.expected[i].([]interface{}), result.([]interface{})))
 				}
 			}
 		})

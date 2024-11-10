@@ -8,8 +8,7 @@ import (
 	"testing"
 
 	"github.com/dicedb/dice/testutils"
-	testifyAssert "github.com/stretchr/testify/assert"
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 type IntegrationTestCase struct {
@@ -59,11 +58,11 @@ func runIntegrationTests(t *testing.T, exec *HTTPCommandExecutor, testCases []In
 				case "equal":
 					assert.Equal(t, out, result)
 				case "perm_equal":
-					assert.Assert(t, testutils.ArraysArePermutations(testutils.ConvertToArray(out.(string)), testutils.ConvertToArray(result.(string))))
+					assert.True(t, testutils.ArraysArePermutations(testutils.ConvertToArray(out.(string)), testutils.ConvertToArray(result.(string))))
 				case "range":
-					assert.Assert(t, result.(float64) <= out.(float64) && result.(float64) > 0, "Expected %v to be within 0 to %v", result, out)
+					assert.True(t, result.(float64) <= out.(float64) && result.(float64) > 0, "Expected %v to be within 0 to %v", result, out)
 				case "json_equal":
-					testifyAssert.JSONEq(t, out.(string), result.(string))
+					assert.JSONEq(t, out.(string), result.(string))
 				}
 			}
 		})
@@ -250,7 +249,7 @@ func TestJSONOperations(t *testing.T) {
 					result, _ := exec.FireCommand(cmd)
 
 					if jsonResult, ok := result.(string); ok && testutils.IsJSONResponse(jsonResult) {
-						testifyAssert.JSONEq(t, tc.expected[i].(string), jsonResult)
+						assert.JSONEq(t, tc.expected[i].(string), jsonResult)
 					} else {
 						assert.Equal(t, tc.expected[i], result)
 					}
@@ -268,7 +267,7 @@ func TestJSONOperations(t *testing.T) {
 					if jsonResult, ok := result.(string); ok && testutils.IsJSONResponse(jsonResult) {
 						var jsonPayload []interface{}
 						json.Unmarshal([]byte(jsonResult), &jsonPayload)
-						assert.Assert(t, testutils.UnorderedEqual(tc.expected[i], jsonPayload))
+						assert.True(t, testutils.UnorderedEqual(tc.expected[i], jsonPayload))
 					} else {
 						assert.Equal(t, tc.expected[i], result)
 					}
@@ -309,7 +308,7 @@ func TestJSONSetWithInvalidCases(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.commands {
 				result, _ := exec.FireCommand(cmd)
-				assert.Assert(t, strings.HasPrefix(result.(string), tc.expected[i].(string)), fmt.Sprintf("Expected: %s, Got: %s", tc.expected[i], result))
+				assert.True(t, strings.HasPrefix(result.(string), tc.expected[i].(string)), fmt.Sprintf("Expected: %s, Got: %s", tc.expected[i], result))
 			}
 		})
 	}
@@ -377,7 +376,7 @@ func TestJSONSetWithNXAndXX(t *testing.T) {
 				result, _ := exec.FireCommand(cmd)
 				jsonResult, isString := result.(string)
 				if isString && testutils.IsJSONResponse(jsonResult) {
-					testifyAssert.JSONEq(t, tc.expected[i].(string), jsonResult)
+					assert.JSONEq(t, tc.expected[i].(string), jsonResult)
 				} else {
 					assert.Equal(t, tc.expected[i], result)
 				}
@@ -869,7 +868,7 @@ func TestJsonStrlen(t *testing.T) {
 				if stringResult, ok := result.(string); ok {
 					assert.Equal(t, tc.expected[i], stringResult)
 				} else {
-					assert.Assert(t, testutils.UnorderedEqual(tc.expected[i], result.([]interface{})))
+					assert.True(t, testutils.UnorderedEqual(tc.expected[i], result.([]interface{})))
 				}
 			}
 		})
@@ -960,7 +959,7 @@ func TestJSONMGET(t *testing.T) {
 						resultStr, resultIsString := resultVal.(string)
 
 						if isString && resultIsString && testutils.IsJSONResponse(expectedStr) {
-							testifyAssert.JSONEq(t, expectedStr, resultStr)
+							assert.JSONEq(t, expectedStr, resultStr)
 						} else {
 							assert.Equal(t, expectedVal, resultVal)
 						}
@@ -976,7 +975,7 @@ func TestJSONMGET(t *testing.T) {
 	t.Run("MGET with recursive path", func(t *testing.T) {
 		result, _ := exec.FireCommand(HTTPCommand{Command: "JSON.MGET", Body: map[string]interface{}{"keys": []interface{}{"doc1", "doc2"}, "path": "$..a"}})
 		results, ok := result.([]interface{})
-		assert.Assert(t, ok, "Expected result to be a slice of interface{}")
+		assert.True(t, ok, "Expected result to be a slice of interface{}")
 		expectedResults := [][]int{{1, 3}, {4, 6}}
 		assert.Equal(t, len(expectedResults), len(results), "Expected 2 results")
 
@@ -1052,9 +1051,9 @@ func TestJsonARRAPPEND(t *testing.T) {
 
 				// because the order of keys is not guaranteed, we need to check if the result is an array
 				if slice, ok := tc.expected[i].([]interface{}); ok {
-					assert.Assert(t, testutils.UnorderedEqual(slice, result))
+					assert.True(t, testutils.UnorderedEqual(slice, result))
 				} else if testutils.IsJSONResponse(tc.expected[i].(string)) {
-					testifyAssert.JSONEq(t, tc.expected[i].(string), result.(string))
+					assert.JSONEq(t, tc.expected[i].(string), result.(string))
 				} else {
 					assert.Equal(t, tc.expected[i], result)
 				}
@@ -1302,7 +1301,7 @@ func TestJsonObjLen(t *testing.T) {
 				result, _ := exec.FireCommand(cmd)
 
 				if slice, ok := tc.expected[i].([]interface{}); ok {
-					assert.Assert(t, testutils.UnorderedEqual(slice, result))
+					assert.True(t, testutils.UnorderedEqual(slice, result))
 				} else {
 					assert.Equal(t, tc.expected[i], result)
 				}
@@ -1493,9 +1492,9 @@ func TestJsonARRINSERT(t *testing.T) {
 
 				// because the order of keys is not guaranteed, we need to check if the result is an array
 				if slice, ok := tc.expected[i].([]interface{}); ok {
-					assert.Assert(t, testutils.UnorderedEqual(slice, result))
+					assert.True(t, testutils.UnorderedEqual(slice, result))
 				} else if testutils.IsJSONResponse(tc.expected[i].(string)) {
-					testifyAssert.JSONEq(t, tc.expected[i].(string), result.(string))
+					assert.JSONEq(t, tc.expected[i].(string), result.(string))
 				} else {
 					assert.Equal(t, tc.expected[i], result)
 				}
@@ -1633,11 +1632,11 @@ func TestJsonObjKeys(t *testing.T) {
 				if tc.assertType[i] == "equal" {
 					assert.Equal(t, out, result)
 				} else if tc.assertType[i] == "perm_equal" {
-					assert.Assert(t, testutils.ArraysArePermutations(out.([]interface{}), result.([]interface{})))
+					assert.True(t, testutils.ArraysArePermutations(out.([]interface{}), result.([]interface{})))
 				} else if tc.assertType[i] == "json_equal" {
-					testifyAssert.JSONEq(t, out.(string), result.(string))
+					assert.JSONEq(t, out.(string), result.(string))
 				} else if tc.assertType[i] == "nested_perm_equal" {
-					testifyAssert.ElementsMatch(t,
+					assert.ElementsMatch(t,
 						sortNestedSlices(out.([]interface{})),
 						sortNestedSlices(result.([]interface{})),
 						"Mismatch in JSON object keys",
@@ -1757,9 +1756,9 @@ func TestJsonARRTRIM(t *testing.T) {
 				result, _ := exec.FireCommand(cmd)
 
 				if slice, ok := tc.expected[i].([]interface{}); ok {
-					assert.Assert(t, testutils.UnorderedEqual(slice, result))
+					assert.True(t, testutils.UnorderedEqual(slice, result))
 				} else if testutils.IsJSONResponse(tc.expected[i].(string)) {
-					testifyAssert.JSONEq(t, tc.expected[i].(string), result.(string))
+					assert.JSONEq(t, tc.expected[i].(string), result.(string))
 				} else {
 					assert.Equal(t, tc.expected[i], result)
 				}
