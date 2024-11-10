@@ -1,31 +1,29 @@
 ---
 title: DEL
 description: The `DEL` command in DiceDB is used to remove one or more keys from the database. If a given key does not exist, it is ignored. This command is fundamental for data management in DiceDB, allowing for the deletion of key-value pairs. The command returns the number of keys that were removed.
-
-
 ---
 
 The `DEL` command in DiceDB is used to remove one or more keys from the database. If a given key does not exist, it is ignored. This command is fundamental for data management in DiceDB, allowing for the deletion of key-value pairs. The command returns the number of keys that were removed.
 
 ## Syntax
 
-```
+```bash
 DEL key [key ...]
 ```
 
 ## Parameters
 
-| Parameter | Description                                      | Type   | Required |
-|-----------|--------------------------------------------------|--------|----------|
-| `key`     | The name of the key(s) to be deleted.            | String | Yes      |
+| Parameter | Description                           | Type   | Required |
+| --------- | ------------------------------------- | ------ | -------- |
+| `key`     | The name of the key(s) to be deleted. | String | Yes      |
 
 ## Return values
 
-| Condition                           | Return Value                                      |
-|-------------------------------------|---------------------------------------------------|
-| Command is successful               | Integer (number of keys successfully deleted)     |
-| No keys match the specified pattern | 0                                                 |
-| Syntax or specified constraints are invalid | error                                     |
+| Condition                                   | Return Value                                  |
+| ------------------------------------------- | --------------------------------------------- |
+| Command is successful                       | Integer (number of keys successfully deleted) |
+| No keys match the specified pattern         | 0                                             |
+| Syntax or specified constraints are invalid | error                                         |
 
 ## Behaviour
 
@@ -48,7 +46,6 @@ The `DEL` command is generally robust and straightforward, but there are a few s
 2. `No Arguments Provided`: If no keys are provided to the `DEL` command, DiceDB will raise a syntax error.
 
    - `Error Message`: `(error) ERR wrong number of arguments for 'del' command`
-
 
 ## Example Usage
 
@@ -97,6 +94,7 @@ OK
 ```
 
 In this example:
+
 - Three keys are set: `key1`, `key2`, and `key3`.
 - The `DEL` command attempts to delete `key1`, `key2`, and `key4`.
 - `key1` and `key2` are successfully deleted.
@@ -111,5 +109,3 @@ Calling `DEL` without any arguments:
 127.0.0.1:7379> DEL
 (error) ERR wrong number of arguments for 'del' command
 ```
-
-

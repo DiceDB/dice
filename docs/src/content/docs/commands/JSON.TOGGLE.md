@@ -76,13 +76,13 @@ The `JSON.TOGGLE` command can raise the following errors:
 
 #### Command
 
-```shell
+```bash
 JSON.TOGGLE user:1001 $.active
 ```
 
 #### Result
 
-```shell
+```bash
 (integer) 1
 ```
 
@@ -102,13 +102,13 @@ JSON.TOGGLE user:1001 $.active
 
 #### Command
 
-```shell
+```bash
 JSON.TOGGLE user:1001 $.settings.notifications
 ```
 
 #### Result
 
-```shell
+```bash
 (integer) 1
 ```
 
@@ -128,13 +128,13 @@ JSON.TOGGLE user:1001 $.settings.notifications
 
 #### Command
 
-```shell
+```bash
 JSON.TOGGLE user:1001 $.nonexistent
 ```
 
 #### Result
 
-```shell
+```bash
 (integer) 0
 ```
 
@@ -142,12 +142,12 @@ JSON.TOGGLE user:1001 $.nonexistent
 
 #### Command
 
-```shell
+```bash
 JSON.TOGGLE user:1001 $.name
 ```
 
 #### Result
 
-```shell
+```bash
 (error) ERR value at path is not a boolean
 ```

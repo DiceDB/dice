@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/internal/eval"
-
 	"github.com/dicedb/dice/internal/server/abstractserver"
+	"github.com/dicedb/dice/internal/wal"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
@@ -61,7 +61,7 @@ func (cim *CaseInsensitiveMux) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	cim.mux.ServeHTTP(w, r)
 }
 
-func NewHTTPServer(shardManager *shard.ShardManager) *HTTPServer {
+func NewHTTPServer(shardManager *shard.ShardManager, wl wal.AbstractWAL) *HTTPServer {
 	mux := http.NewServeMux()
 	caseInsensitiveMux := &CaseInsensitiveMux{mux: mux}
 	srv := &http.Server{

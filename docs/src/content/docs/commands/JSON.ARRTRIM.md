@@ -1,7 +1,6 @@
 ---
 title: JSON.ARRTRIM
 description: The `JSON.ARRTRIM` command in DiceDB is used to trim a JSON array to only include elements within a specified range. It removes elements outside of this range, modifying the array in place. This command is part of the DiceDBJSON module, which provides native JSON capabilities in DiceDB.
-
 ---
 
 The `JSON.ARRTRIM` command in DiceDB modifies a JSON array by removing elements outside a specified range, effectively trimming it to contain only desired elements. This in-place operation is part of the DiceDBJSON module, which enables seamless handling and manipulation of JSON data within DiceDB.
@@ -13,24 +12,24 @@ JSON.ARRTRIM <key> <path> <start> <stop>
 ```
 
 ## Parameters
-| Parameter | Description                                                                                      | Type    | Required |
-|-----------|--------------------------------------------------------------------------------------------------|---------|----------|
-| `key`     | The name of the key holding the JSON document.                                                   | String  | Yes      |
-| `path`    | JSONPath pointing to an array within the JSON document.                                          | String  | Yes      |
-| `index`   | The index of the first element to retain in the array (0-based index).                           | Integer | Yes      |
-| `value`   | The index of the last element to retain in the array (inclusive).                                | Integer | Yes      |
 
+| Parameter | Description                                                            | Type    | Required |
+| --------- | ---------------------------------------------------------------------- | ------- | -------- |
+| `key`     | The name of the key holding the JSON document.                         | String  | Yes      |
+| `path`    | JSONPath pointing to an array within the JSON document.                | String  | Yes      |
+| `index`   | The index of the first element to retain in the array (0-based index). | Integer | Yes      |
+| `value`   | The index of the last element to retain in the array (inclusive).      | Integer | Yes      |
 
 ## Return Values
 
-| Condition                     | Return Value                                                                    |
-|-------------------------------|---------------------------------------------------------------------------------|
-| Success                       | (Int) `Integer representing the length of the array after the append operation.`|
-| Key does not exist            | Error: `(error) ERR key does not exist`                                         |
-| Wrong number of arguments     | Error: `(error) ERR wrong number of arguments for JSON.ARRTRIM command`         |
-| Key has wrong type            | Error: `(error) ERR Existing key has wrong Dice type`                           |
-| Path doesn't exist            | Error: `(error) ERR Path <path> does not exist`                                 |
-| Operation failed              | Error: `(error) ERR failed to modify JSON data`                                 |
+| Condition                 | Return Value                                                                     |
+| ------------------------- | -------------------------------------------------------------------------------- |
+| Success                   | (Int) `Integer representing the length of the array after the append operation.` |
+| Key does not exist        | Error: `(error) ERR key does not exist`                                          |
+| Wrong number of arguments | Error: `(error) ERR wrong number of arguments for JSON.ARRTRIM command`          |
+| Key has wrong type        | Error: `(error) ERR Existing key has wrong Dice type`                            |
+| Path doesn't exist        | Error: `(error) ERR Path <path> does not exist`                                  |
+| Operation failed          | Error: `(error) ERR failed to modify JSON data`                                  |
 
 ## Behaviour
 
@@ -72,40 +71,40 @@ JSON.ARRTRIM <key> <path> <start> <stop>
 
 Trimming an array to a specific range
 
-```plaintext
-127.0.0.1:6379> JSON.SET b $ '[1, 2, 3, 4, 5]'
+```bash
+127.0.0.1:7379> JSON.SET b $ '[1, 2, 3, 4, 5]'
 "OK"
-127.0.0.1:6379> JSON.ARRTRIM b $ 1 3
+127.0.0.1:7379> JSON.ARRTRIM b $ 1 3
 1) "3"
-127.0.0.1:6379> JSON.GET b
+127.0.0.1:7379> JSON.GET b
 "[2,3,4]"
-127.0.0.1:6379>
+127.0.0.1:7379>
 ```
 
 ### Trim array down to 1 element
 
 Trimming an array to a single element
 
-```plaintext
-127.0.0.1:6379> JSON.SET a $ '[0,1,2]'
+```bash
+127.0.0.1:7379> JSON.SET a $ '[0,1,2]'
 "OK"
-127.0.0.1:6379> JSON.ARRTRIM a $ 1 1
+127.0.0.1:7379> JSON.ARRTRIM a $ 1 1
 "1"
-127.0.0.1:6379> JSON.GET a
+127.0.0.1:7379> JSON.GET a
 "[1]"
-127.0.0.1:6379>
+127.0.0.1:7379>
 ```
 
 ### Trimming array with out of bound index
 
 Trimming an array with out-of-bounds indices
 
-```plaintext
-127.0.0.1:6379> JSON.SET c $ '[1, 2, 3, 4, 5]'
+```bash
+127.0.0.1:7379> JSON.SET c $ '[1, 2, 3, 4, 5]'
 "OK"
-127.0.0.1:6379> JSON.ARRTRIM c $ -10 10
+127.0.0.1:7379> JSON.ARRTRIM c $ -10 10
 1) "5"
-127.0.0.1:6379> JSON.GET c
+127.0.0.1:7379> JSON.GET c
 "[1,2,3,4,5]"
 ```
 
@@ -113,10 +112,10 @@ Trimming an array with out-of-bounds indices
 
 Error when path does not exist
 
-```plaintext
-127.0.0.1:6379> JSON.SET d $ '[1, 2, 3, 4, 5]'
+```bash
+127.0.0.1:7379> JSON.SET d $ '[1, 2, 3, 4, 5]'
 "OK"
-127.0.0.1:6379> JSON.ARRTRIM d . -10 10
+127.0.0.1:7379> JSON.ARRTRIM d . -10 10
 (error) ERROR Path '.' does not exist
 ```
 
@@ -124,10 +123,10 @@ Error when path does not exist
 
 Error when key does not exist
 
-```plaintext
-127.0.0.1:6379> JSON.SET a $ '[1, 2, 3, 4, 5]'
+```bash
+127.0.0.1:7379> JSON.SET a $ '[1, 2, 3, 4, 5]'
 "OK"
-127.0.0.1:6379> JSON.ARRTRIM aa . -10 10
+127.0.0.1:7379> JSON.ARRTRIM aa . -10 10
 (error) ERROR key does not exist
 
 ```

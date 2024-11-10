@@ -13,19 +13,18 @@ BF.EXISTS key item
 
 ## Parameters
 
-| Parameter | Description                                                                 | Type   | Required |
-|-----------|-----------------------------------------------------------------------------|--------|----------|
-| `key`     | The key under which the Bloom Filter is stored.                             | String | Yes      |
-| `item`    | The item to check for existence in the Bloom Filter.                        | String | Yes      |
-
+| Parameter | Description                                          | Type   | Required |
+| --------- | ---------------------------------------------------- | ------ | -------- |
+| `key`     | The key under which the Bloom Filter is stored.      | String | Yes      |
+| `item`    | The item to check for existence in the Bloom Filter. | String | Yes      |
 
 ## Return Value
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| Item may exist in the Bloom Filter             | `1`                                               |
-| Item definitely does not exist in the Bloom Filter | `0`                                               |
-| Key does not exist                             | `0`                                               |
+| Condition                                          | Return Value |
+| -------------------------------------------------- | ------------ |
+| Item may exist in the Bloom Filter                 | `1`          |
+| Item definitely does not exist in the Bloom Filter | `0`          |
+| Key does not exist                                 | `0`          |
 
 ## Behaviour
 
@@ -37,22 +36,22 @@ When the `BF.EXISTS` command is executed, it checks the Bloom Filter associated 
 ## Errors
 
 The `BF.EXISTS` command can raise errors in the following scenarios:
-1. `Incorrect number of arguments`: 
-    - Error message: `(error) ERR wrong number of arguments for 'bf.exists' command`
-    - The command requires exactly two arguments: the key and the item to check for existence in the Bloom Filter.
-2. `Key is not a Bloom Filter`:
-    - Error message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
-    - The specified key does not refer to a Bloom Filter.
 
+1. `Incorrect number of arguments`:
+   - Error message: `(error) ERR wrong number of arguments for 'bf.exists' command`
+   - The command requires exactly two arguments: the key and the item to check for existence in the Bloom Filter.
+2. `Key is not a Bloom Filter`:
+   - Error message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
+   - The specified key does not refer to a Bloom Filter.
 
 ## Example Usage
 
 ### Checking for an existing item
 
 ```bash
-127.0.0.1:6379> BF.ADD myBloomFilter "apple"
+127.0.0.1:7379> BF.ADD myBloomFilter "apple"
 (integer) 1
-127.0.0.1:6379> BF.EXISTS myBloomFilter "apple"
+127.0.0.1:7379> BF.EXISTS myBloomFilter "apple"
 (integer) 1
 ```
 
@@ -61,7 +60,7 @@ In this example, the item "apple" is added to the Bloom Filter `myBloomFilter`. 
 ### Checking for a non-existing item
 
 ```bash
-127.0.0.1:6379> BF.EXISTS myBloomFilter "banana"
+127.0.0.1:7379> BF.EXISTS myBloomFilter "banana"
 (integer) 0
 ```
 
@@ -70,7 +69,7 @@ In this example, the item "banana" is checked in the Bloom Filter `myBloomFilter
 ### Handling a non-existing key
 
 ```bash
-127.0.0.1:6379> BF.EXISTS nonExistingKey "apple"
+127.0.0.1:7379> BF.EXISTS nonExistingKey "apple"
 (integer) 0
 ```
 
@@ -79,9 +78,9 @@ In this example, the key `nonExistingKey` does not exist in the database. The co
 ### Handling a wrong type of key
 
 ```bash
-127.0.0.1:6379> SET myString "hello"
+127.0.0.1:7379> SET myString "hello"
 OK
-127.0.0.1:6379> BF.EXISTS myString "apple"
+127.0.0.1:7379> BF.EXISTS myString "apple"
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
@@ -90,7 +89,7 @@ In this example, the key `myString` is associated with a string value, not a Blo
 ### Incorrect number of arguments
 
 ```bash
-127.0.0.1:6379> BF.EXISTS myBloomFilter
+127.0.0.1:7379> BF.EXISTS myBloomFilter
 (error) ERR wrong number of arguments for 'bf.exists' command
 ```
 

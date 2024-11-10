@@ -28,14 +28,17 @@ When the `JSON.ARRAPPEND` command is executed, the specified JSON values are app
 ## Error Handling
 
 1. `Wrong type of value or key`:
+
    - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
    - Occurs when attempting to use the command on a key that contains a non-string value.
 
 2. `Invalid Key`:
+
    - Error Message: `(error) ERR key does not exist`
    - Occurs when attempting to use the command on a key that does not exist.
 
 3. `Invalid Path`:
+
    - Error Message: `(error) ERR path %s does not exist`
    - Occurs when attempting to use the command on a path that does not exist in the JSON document.
 
@@ -48,56 +51,56 @@ When the `JSON.ARRAPPEND` command is executed, the specified JSON values are app
 ### Example 1: Appending a single value to an array
 
 ```bash
-127.0.0.1:6379> JSON.SET myjson . '{"numbers": [1, 2, 3]}'
+127.0.0.1:7379> JSON.SET myjson . '{"numbers": [1, 2, 3]}'
 OK
-127.0.0.1:6379> JSON.ARRAPPEND myjson .numbers 4
+127.0.0.1:7379> JSON.ARRAPPEND myjson .numbers 4
 (integer) 4
-127.0.0.1:6379> JSON.GET myjson
+127.0.0.1:7379> JSON.GET myjson
 "{\"numbers\":[1,2,3,4]}"
 ```
 
 ### Example 2: Appending multiple values to an array
 
 ```bash
-127.0.0.1:6379> JSON.SET myjson . '{"fruits": ["apple", "banana"]}'
+127.0.0.1:7379> JSON.SET myjson . '{"fruits": ["apple", "banana"]}'
 OK
-127.0.0.1:6379> JSON.ARRAPPEND myjson .fruits "cherry" "date"
+127.0.0.1:7379> JSON.ARRAPPEND myjson .fruits "cherry" "date"
 (integer) 4
-127.0.0.1:6379> JSON.GET myjson
+127.0.0.1:7379> JSON.GET myjson
 "{\"fruits\":[\"apple\",\"banana\",\"cherry\",\"date\"]}"
 ```
 
 ### Example 3: Error when key does not exist
 
 ```bash
-127.0.0.1:6379> JSON.ARRAPPEND nonexistingkey .array 1
+127.0.0.1:7379> JSON.ARRAPPEND nonexistingkey .array 1
 (error) ERR key does not exist
 ```
 
 ### Example 4: Error when path does not exist
 
 ```bash
-127.0.0.1:6379> JSON.SET myjson . '{"numbers": [1, 2, 3]}'
+127.0.0.1:7379> JSON.SET myjson . '{"numbers": [1, 2, 3]}'
 OK
-127.0.0.1:6379> JSON.ARRAPPEND myjson .nonexistingpath 4
+127.0.0.1:7379> JSON.ARRAPPEND myjson .nonexistingpath 4
 (error) ERR path .nonexistingpath does not exist
 ```
 
 ### Example 5: Error when path is not an array
 
 ```bash
-127.0.0.1:6379> JSON.SET myjson . '{"object": {"key": "value"}}'
+127.0.0.1:7379> JSON.SET myjson . '{"object": {"key": "value"}}'
 OK
-127.0.0.1:6379> JSON.ARRAPPEND myjson .object 4
+127.0.0.1:7379> JSON.ARRAPPEND myjson .object 4
 (error) ERR path is not an array
 ```
 
 ### Example 6: Error when invalid JSON is provided
 
 ```bash
-127.0.0.1:6379> JSON.SET myjson . '{"numbers": [1, 2, 3]}'
+127.0.0.1:7379> JSON.SET myjson . '{"numbers": [1, 2, 3]}'
 OK
-127.0.0.1:6379> JSON.ARRAPPEND myjson .numbers invalidjson
+127.0.0.1:7379> JSON.ARRAPPEND myjson .numbers invalidjson
 (error) ERR invalid JSON
 ```
 
@@ -107,4 +110,3 @@ OK
 - JSONPath expressions are used to navigate and specify the location within the JSON document. Familiarity with JSONPath syntax is beneficial for effective use of this command.
 
 By following this documentation, users can effectively utilize the `JSON.ARRAPPEND` command to manipulate JSON arrays within DiceDB.
-

@@ -31,6 +31,7 @@ var (
 	ErrAborted                    = errors.New("server received ABORT command")
 	ErrEmptyCommand               = errors.New("empty command")
 	ErrInvalidIPAddress           = errors.New("invalid IP address")
+	ErrInvalidFingerprint         = errors.New("invalid fingerprint")
 
 	// Error generation functions for specific error messages with dynamic parameters.
 	ErrWrongArgumentCount = func(command string) error {

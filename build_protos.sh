@@ -1,0 +1,1 @@
+protoc --go_out=. ./internal/wal/wal.proto

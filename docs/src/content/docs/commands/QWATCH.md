@@ -13,11 +13,11 @@ to build real-time reactive applications like leaderboards.
 
 ## Protocol Support
 
-| Protocol | Supported |
-| -------- | --------- |
-| TCP-RESP | ✅        |
-| HTTP     | ✅        |
-| WebSocket| ✅        |
+| Protocol  | Supported |
+| --------- | --------- |
+| TCP-RESP  | ✅        |
+| HTTP      | ✅        |
+| WebSocket | ✅        |
 
 ## Syntax
 
@@ -28,7 +28,7 @@ Q.WATCH <dsql-query>
 ## Parameters
 
 | Parameter    | Description                                                                         | Type   | Required |
-|--------------|-------------------------------------------------------------------------------------|--------|----------|
+| ------------ | ----------------------------------------------------------------------------------- | ------ | -------- |
 | `dsql-query` | A SQL-like query specifying the data to be monitored and operation to be performed. | String | Yes      |
 
 ## DSQL Query
@@ -79,7 +79,7 @@ Supported conditions:
 ## Return Value
 
 | Condition             | Return Value                                               |
-|-----------------------|------------------------------------------------------------|
+| --------------------- | ---------------------------------------------------------- |
 | Command is successful | A subscription confirmation message similar to `SUBSCRIBE` |
 | DSQL Query is invalid | error                                                      |
 
@@ -96,18 +96,18 @@ Supported conditions:
 
 1. `Missing query`
 
-    - Error Message: `(error) ERROR wrong number of arguments for 'q.watch' command`
-    - Occurs if no DSQL Query is provided.
+   - Error Message: `(error) ERROR wrong number of arguments for 'q.watch' command`
+   - Occurs if no DSQL Query is provided.
 
 2. `Invalid query`:
 
-    - Error Message: `(error) ERROR error parsing SQL statement: syntax error at position <n>`
-    - Occurs if the provided query is malformed or has unsupported clauses.
+   - Error Message: `(error) ERROR error parsing SQL statement: syntax error at position <n>`
+   - Occurs if the provided query is malformed or has unsupported clauses.
 
 3. `Max number of subscriptions reached`:
 
-    - Error Message: `(error) ERROR could not perform this operation on a key that doesn't exist`
-    - Occurs if the maximum number of allowed subscriptions is exceeded.
+   - Error Message: `(error) ERROR could not perform this operation on a key that doesn't exist`
+   - Occurs if the maximum number of allowed subscriptions is exceeded.
 
 ## Example Usage
 
@@ -144,7 +144,7 @@ that the response will be RESP encoded and parsing will be handled by the SDK th
    127.0.0.1:7379> SET match:100:user:0 5
    ```
 
-   Subscription does not return response as `value < 10`. 
+   Subscription does not return response as `value < 10`.
 
 3. Player 1 scores 15 points:
 
@@ -153,7 +153,8 @@ that the response will be RESP encoded and parsing will be handled by the SDK th
    ```
 
    Q.WATCH Response:
-   ```bash 
+
+   ```bash
    q.watch    from SELECT $key, $value WHERE $key like 'match:100:*' and $value > 100 ORDER BY $value asc: `[["match:100:user:1", "15"]]`
    ```
 
@@ -164,7 +165,8 @@ that the response will be RESP encoded and parsing will be handled by the SDK th
    ```
 
    Q.WATCH Response:
-   ```bash 
+
+   ```bash
    q.watch    from SELECT $key, $value WHERE $key like 'match:100:*' and $value > 100 ORDER BY $value asc: `[["match:100:user:2", "20"], ["match:100:user:1", "15"]]`
    ```
 
@@ -175,7 +177,8 @@ that the response will be RESP encoded and parsing will be handled by the SDK th
    ```
 
    Q.WATCH Response:
-   ```bash 
+
+   ```bash
    q.watch    from SELECT $key, $value WHERE $key like 'match:100:*' and $value > 100 ORDER BY $value asc: `[["match:100:user:2", "20"], ["match:100:user:1", "15"], ["match:100:user:3", "12"]]`
    ```
 
@@ -186,7 +189,8 @@ that the response will be RESP encoded and parsing will be handled by the SDK th
    ```
 
    Q.WATCH Response:
-   ```bash 
+
+   ```bash
    q.watch    from SELECT $key, $value WHERE $key like 'match:100:*' and $value > 100 ORDER BY $value asc: `[["match:100:user:4", "25"], ["match:100:user:2", "20"], ["match:100:user:1", "15"]]`
    ```
 
@@ -197,7 +201,8 @@ that the response will be RESP encoded and parsing will be handled by the SDK th
    ```
 
    Q.WATCH Response:
-   ```bash 
+
+   ```bash
    q.watch    from SELECT $key, $value WHERE $key like 'match:100:*' and $value > 100 ORDER BY $value asc: `[["match:100:user:0", "30"], ["match:100:user:4", "25"], ["match:100:user:2", "20"]]`
    ```
 

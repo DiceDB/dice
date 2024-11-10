@@ -15,9 +15,11 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/server/abstractserver"
+	"github.com/dicedb/dice/internal/wal"
 	"github.com/dicedb/dice/internal/watchmanager"
 
 	"github.com/dicedb/dice/config"
@@ -55,6 +57,11 @@ func init() {
 	flag.BoolVar(&config.EnableProfiling, "enable-profiling", false, "enable profiling and capture critical metrics and traces in .prof files")
 
 	flag.StringVar(&config.DiceConfig.Logging.LogLevel, "log-level", "info", "log level, values: info, debug")
+	flag.StringVar(&config.LogDir, "log-dir", "/tmp/dicedb", "log directory path")
+
+	flag.BoolVar(&config.EnableWAL, "enable-wal", false, "enable write-ahead logging")
+	flag.BoolVar(&config.RestoreFromWAL, "restore-wal", false, "restore the database from the WAL files")
+	flag.StringVar(&config.WALEngine, "wal-engine", "null", "wal engine to use, values: sqlite, aof")
 
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
 	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the config file")
@@ -174,9 +181,50 @@ func main() {
 	var (
 		queryWatchChan           chan dstore.QueryWatchEvent
 		cmdWatchChan             chan dstore.CmdWatchEvent
-		cmdWatchSubscriptionChan chan watchmanager.WatchSubscription
 		serverErrCh              = make(chan error, 2)
+		cmdWatchSubscriptionChan = make(chan watchmanager.WatchSubscription)
+		wl                       wal.AbstractWAL
 	)
+
+	wl, _ = wal.NewNullWAL()
+	slog.Info("running with", slog.Bool("enable-wal", config.EnableWAL))
+	if config.EnableWAL {
+		if config.WALEngine == "sqlite" {
+			_wl, err := wal.NewSQLiteWAL(config.LogDir)
+			if err != nil {
+				slog.Warn("could not create WAL with", slog.String("wal-engine", config.WALEngine), slog.Any("error", err))
+				sigs <- syscall.SIGKILL
+				return
+			}
+			wl = _wl
+		} else if config.WALEngine == "aof" {
+			_wl, err := wal.NewAOFWAL(config.LogDir)
+			if err != nil {
+				slog.Warn("could not create WAL with", slog.String("wal-engine", config.WALEngine), slog.Any("error", err))
+				sigs <- syscall.SIGKILL
+				return
+			}
+			wl = _wl
+		} else {
+			slog.Error("unsupported WAL engine", slog.String("engine", config.WALEngine))
+			sigs <- syscall.SIGKILL
+			return
+		}
+
+		if err := wl.Init(time.Now()); err != nil {
+			slog.Error("could not initialize WAL", slog.Any("error", err))
+		} else {
+			go wal.InitBG(wl)
+		}
+
+		slog.Debug("WAL initialization complete")
+
+		if config.RestoreFromWAL {
+			slog.Info("restoring database from WAL")
+			wal.ReplayWAL(wl)
+			slog.Info("database restored from WAL")
+		}
+	}
 
 	if config.EnableWatch {
 		bufSize := config.DiceConfig.Performance.WatchChanBufSize
@@ -229,11 +277,11 @@ func main() {
 		}
 
 		workerManager := worker.NewWorkerManager(config.DiceConfig.Performance.MaxClients, shardManager)
-		respServer := resp.NewServer(shardManager, workerManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh)
+		respServer := resp.NewServer(shardManager, workerManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh, wl)
 		serverWg.Add(1)
 		go runServer(ctx, &serverWg, respServer, serverErrCh)
 	} else {
-		asyncServer := server.NewAsyncServer(shardManager, queryWatchChan)
+		asyncServer := server.NewAsyncServer(shardManager, queryWatchChan, wl)
 		if err := asyncServer.FindPortAndBind(); err != nil {
 			slog.Error("Error finding and binding port", slog.Any("error", err))
 			sigs <- syscall.SIGKILL
@@ -243,14 +291,14 @@ func main() {
 		go runServer(ctx, &serverWg, asyncServer, serverErrCh)
 
 		if config.EnableHTTP {
-			httpServer := server.NewHTTPServer(shardManager)
+			httpServer := server.NewHTTPServer(shardManager, wl)
 			serverWg.Add(1)
 			go runServer(ctx, &serverWg, httpServer, serverErrCh)
 		}
 	}
 
 	if config.EnableWebsocket {
-		websocketServer := server.NewWebSocketServer(shardManager, config.WebsocketPort)
+		websocketServer := server.NewWebSocketServer(shardManager, config.WebsocketPort, wl)
 		serverWg.Add(1)
 		go runServer(ctx, &serverWg, websocketServer, serverErrCh)
 	}
@@ -276,6 +324,11 @@ func main() {
 	}
 
 	close(sigs)
+
+	if config.EnableWAL {
+		wal.ShutdownBG()
+	}
+
 	cancel()
 
 	wg.Wait()

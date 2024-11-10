@@ -32,6 +32,10 @@ const (
 	// Watch represents a command that is used to monitor changes or events.
 	// This type of command listens for changes on specific keys or resources and responds accordingly.
 	Watch
+
+	// Unwatch represents a command that is used to stop monitoring changes or events.
+	// This type of command stops listening for changes on specific keys or resources.
+	Unwatch
 )
 
 // Global commands
@@ -43,9 +47,14 @@ const (
 
 // Single-shard commands.
 const (
+	CmdExpire        = "EXPIRE"
+	CmdExpireAt      = "EXPIREAT"
+	CmdExpireTime    = "EXPIRETIME"
 	CmdSet           = "SET"
 	CmdGet           = "GET"
 	CmdGetSet        = "GETSET"
+	CmdGetEx         = "GETEX"
+	CmdGetDel        = "GETDEL"
 	CmdJSONArrAppend = "JSON.ARRAPPEND"
 	CmdJSONArrLen    = "JSON.ARRLEN"
 	CmdJSONArrPop    = "JSON.ARRPOP"
@@ -65,7 +74,13 @@ const (
 
 // Watch commands
 const (
+	CmdSadd     = "SADD"
+	CmdSrem     = "SREM"
+	CmdScard    = "SCARD"
+	CmdSmembers = "SMEMBERS"
+
 	CmdGetWatch      = "GET.WATCH"
+	CmdGetUnWatch    = "GET.UNWATCH"
 	CmdZRangeWatch   = "ZRANGE.WATCH"
 	CmdHExists       = "HEXISTS"
 	CmdHKeys         = "HKEYS"
@@ -83,6 +98,8 @@ const (
 	CmdPFAdd         = "PFADD"
 	CmdPFCount       = "PFCOUNT"
 	CmdPFMerge       = "PFMERGE"
+	CmdTTL           = "TTL"
+	CmdPTTL          = "PTTL"
 	CmdIncr          = "INCR"
 	CmdIncrBy        = "INCRBY"
 	CmdDecr          = "DECR"
@@ -107,7 +124,18 @@ const (
 	CmdCMSInitByProb = "CMS.INITBYPROB"
 	CmdCMSMerge      = "CMS.MERGE"
 	CmdCMSIncrBy     = "CMS.INCRBY"
-	CmdSmembers      = "SMEMBERS"
+	CmdHSet          = "HSET"
+	CmdHGet          = "HGET"
+	CmdHSetnx        = "HSETNX"
+	CmdHDel          = "HDEL"
+	CmdHMSet         = "HMSET"
+	CmdHMGet         = "HMGET"
+	CmdSetBit        = "SETBIT"
+	CmdGetBit        = "GETBIT"
+	CmdBitCount      = "BITCOUNT"
+	CmdBitField      = "BITFIELD"
+	CmdBitPos        = "BITPOS"
+	CmdBitFieldRO    = "BITFIELD_RO"
 )
 
 type CmdMeta struct {
@@ -149,10 +177,37 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdSet: {
 		CmdType: SingleShard,
 	},
+	CmdExpire: {
+		CmdType: SingleShard,
+	},
+	CmdExpireAt: {
+		CmdType: SingleShard,
+	},
+	CmdExpireTime: {
+		CmdType: SingleShard,
+	},
 	CmdGet: {
 		CmdType: SingleShard,
 	},
 	CmdGetSet: {
+		CmdType: SingleShard,
+	},
+	CmdGetEx: {
+		CmdType: SingleShard,
+	},
+	CmdGetDel: {
+		CmdType: SingleShard,
+	},
+	CmdSadd: {
+		CmdType: SingleShard,
+	},
+	CmdSrem: {
+		CmdType: SingleShard,
+	},
+	CmdScard: {
+		CmdType: SingleShard,
+	},
+	CmdSmembers: {
 		CmdType: SingleShard,
 	},
 	CmdHExists: {
@@ -194,6 +249,12 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdPFMerge: {
 		CmdType: SingleShard,
 	},
+	CmdTTL: {
+		CmdType: SingleShard,
+	},
+	CmdPTTL: {
+		CmdType: SingleShard,
+	},
 	CmdHLen: {
 		CmdType: SingleShard,
 	},
@@ -210,6 +271,24 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdHRandField: {
+		CmdType: SingleShard,
+	},
+	CmdSetBit: {
+		CmdType: SingleShard,
+	},
+	CmdGetBit: {
+		CmdType: SingleShard,
+	},
+	CmdBitCount: {
+		CmdType: SingleShard,
+	},
+	CmdBitField: {
+		CmdType: SingleShard,
+	},
+	CmdBitPos: {
+		CmdType: SingleShard,
+	},
+	CmdBitFieldRO: {
 		CmdType: SingleShard,
 	},
 
@@ -264,6 +343,24 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdCMSMerge: {
 		CmdType: SingleShard,
 	},
+	CmdHSet: {
+		CmdType: SingleShard,
+	},
+	CmdHGet: {
+		CmdType: SingleShard,
+	},
+	CmdHSetnx: {
+		CmdType: SingleShard,
+	},
+	CmdHDel: {
+		CmdType: SingleShard,
+	},
+	CmdHMSet: {
+		CmdType: SingleShard,
+	},
+	CmdHMGet: {
+		CmdType: SingleShard,
+	},
 
 	// Custom commands.
 	CmdAbort: {
@@ -279,6 +376,11 @@ var CommandsMeta = map[string]CmdMeta{
 	},
 	CmdZRangeWatch: {
 		CmdType: Watch,
+	},
+
+	// Unwatch commands
+	CmdGetUnWatch: {
+		CmdType: Unwatch,
 	},
 
 	// Sorted set commands
@@ -359,7 +461,7 @@ func validateCmdMeta(c string, meta CmdMeta) error {
 		if meta.decomposeCommand == nil || meta.composeResponse == nil {
 			return fmt.Errorf("multi-shard command %s must have both decomposeCommand and composeResponse implemented", c)
 		}
-	case SingleShard, Watch, Custom:
+	case SingleShard, Watch, Unwatch, Custom:
 		// No specific validations for these types currently
 	default:
 		return fmt.Errorf("unknown command type for %s", c)
