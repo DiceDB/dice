@@ -3,7 +3,7 @@ package resp
 import (
 	"testing"
 
-	testifyAssert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGETRANGE(t *testing.T) {
@@ -62,7 +62,7 @@ func TestGETRANGE(t *testing.T) {
 			for i := 0; i < len(tc.commands); i++ {
 				result := FireCommand(conn, tc.commands[i])
 				expected := tc.expected[i]
-				testifyAssert.Equal(t, expected, result)
+				assert.Equal(t, expected, result)
 			}
 
 			for _, cmd := range tc.cleanup {

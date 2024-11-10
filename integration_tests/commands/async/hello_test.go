@@ -3,7 +3,7 @@ package async
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHello(t *testing.T) {
@@ -20,6 +20,6 @@ func TestHello(t *testing.T) {
 
 	t.Run("HELLO command response", func(t *testing.T) {
 		actual := FireCommand(conn, "HELLO")
-		assert.DeepEqual(t, expected, actual)
+		assert.Equal(t, expected, actual)
 	})
 }

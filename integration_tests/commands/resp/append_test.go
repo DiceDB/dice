@@ -3,11 +3,12 @@ package resp
 import (
 	"testing"
 
-	testifyAssert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAPPEND(t *testing.T) {
 	conn := getLocalConnection()
+	FireCommand(conn, "FLUSHDB")
 	defer conn.Close()
 
 	testCases := []struct {
@@ -65,7 +66,7 @@ func TestAPPEND(t *testing.T) {
 			for i := 0; i < len(tc.commands); i++ {
 				result := FireCommand(conn, tc.commands[i])
 				expected := tc.expected[i]
-				testifyAssert.Equal(t, expected, result)
+				assert.Equal(t, expected, result)
 			}
 
 			for _, cmd := range tc.cleanup {

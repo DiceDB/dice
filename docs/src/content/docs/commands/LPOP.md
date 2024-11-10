@@ -7,27 +7,23 @@ The `LPOP` command in DiceDB removes and returns the first element of a list at 
 
 ## Syntax
 
-```plaintext
+```bash
 LPOP key
 ```
 
 ## Parameters
 
-| Parameter   | Description                                                                     | Type    | Required |
-| ----------- | --------------------------------------------------------------------------------| ------- | -------- |
-| `key`       | The key of the list from which the first element will be removed and returned.  | String  | Yes      |
-
-
+| Parameter | Description                                                                    | Type   | Required |
+| --------- | ------------------------------------------------------------------------------ | ------ | -------- |
+| `key`     | The key of the list from which the first element will be removed and returned. | String | Yes      |
 
 ## Return Value
 
 | Condition                                      | Return Value                                                                              |
-|------------------------------------------------|-------------------------------------------------------------------------------------------|
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | Command is successful                          | `String` The value of the first element in the list, if the list exists and is not empty. |
 | If the key does not exist or the list is empty | `nil`                                                                                     |
-| Syntax or specified constraints are invalid    |  error                                                                                    |
-
-
+| Syntax or specified constraints are invalid    | error                                                                                     |
 
 ## Behavior
 
@@ -46,6 +42,7 @@ When the `LPOP` command is executed for a key that exists but is not associated 
 127.0.0.1:7379> LPOP mystring
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
+
 2. `Wrong number of arguments`
 
 If the `LPOP` command is executed with more than one key or no key, the following error is returned:
@@ -63,11 +60,13 @@ If the `LPOP` command is executed with more than one key or no key, the followin
 ## Example Usage
 
 ### Basic Usage
+
 Setting a list `mylist` with elements \["one", "two", "three"\].
 
 ```bash
 RPUSH mylist "one" "two" "three"
 ```
+
 Removing the first element from the list `mylist`
 
 ```bash
@@ -78,14 +77,13 @@ LPOP mylist
 The list `mylist` now contains \["two", "three"\].
 
 If the LPOP command is executed one more time:
+
 ```bash
 LPOP mylist
 "two"
 ```
 
 The list `mylist` now contains \["three"\].
-
-
 
 ### Empty List or Non-Existent Key
 
@@ -95,9 +93,6 @@ Returns `(nil)` if the list is empty or the provided key is non-existent
 LPOP emptylist
 (nil)
 ```
-
-
-
 
 ### Key is Not a List
 
@@ -138,4 +133,3 @@ LPOP mylist secondlist
 - `LRANGE`: Get a range of elements from a list.
 
 By understanding and using the `LPOP` command effectively, you can manage list data structures in DiceDB efficiently, implementing queue-like behaviors and more.
-

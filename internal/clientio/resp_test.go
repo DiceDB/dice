@@ -8,12 +8,14 @@ import (
 
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/server/utils"
-	testifyAssert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSimpleStringDecode(t *testing.T) {
 	cases := map[string]string{
-		"+OK\r\n": "OK",
+		"+OK\r\n":                  "OK",
+		"+Hello\rWorld\r\n":        "Hello\rWorld",
+		"+Hello\rWorld\rAgain\r\n": "Hello\rWorld\rAgain",
 	}
 	for k, v := range cases {
 		p := clientio.NewRESPParser(bytes.NewBuffer([]byte(k)))
@@ -25,6 +27,7 @@ func TestSimpleStringDecode(t *testing.T) {
 		if v != value {
 			t.Fail()
 		}
+		fmt.Println(v, value)
 	}
 }
 
@@ -112,7 +115,7 @@ func TestSimpleStrings(t *testing.T) {
 	var b []byte
 	var buf = bytes.NewBuffer(b)
 	for i := 0; i < 1024; i++ {
-		buf.WriteByte('a' + byte(i % 26))
+		buf.WriteByte('a' + byte(i%26))
 		e := clientio.Encode(buf.String(), true)
 		p := clientio.NewRESPParser(bytes.NewBuffer(e))
 		nv, err := p.DecodeOne()
@@ -130,7 +133,7 @@ func TestBulkStrings(t *testing.T) {
 	var b []byte
 	var buf = bytes.NewBuffer(b)
 	for i := 0; i < 1024; i++ {
-		buf.WriteByte('a' + byte(i % 26))
+		buf.WriteByte('a' + byte(i%26))
 		e := clientio.Encode(buf.String(), false)
 		p := clientio.NewRESPParser(bytes.NewBuffer(e))
 		nv, err := p.DecodeOne()
@@ -163,7 +166,7 @@ func TestArrayInt(t *testing.T) {
 	var b []byte
 	var buf = bytes.NewBuffer(b)
 	for i := 0; i < 1024; i++ {
-		buf.WriteByte('a' + byte(i % 26))
+		buf.WriteByte('a' + byte(i%26))
 		e := clientio.Encode(buf.String(), true)
 		p := clientio.NewRESPParser(bytes.NewBuffer(e))
 		nv, err := p.DecodeOne()
@@ -194,7 +197,7 @@ func TestBoolean(t *testing.T) {
 
 	for _, v := range tests {
 		ev := clientio.Encode(v.input, false)
-		testifyAssert.Equal(t, ev, v.output)
+		assert.Equal(t, ev, v.output)
 	}
 }
 
@@ -215,6 +218,6 @@ func TestInteger(t *testing.T) {
 
 	for _, v := range tests {
 		ev := clientio.Encode(v.input, false)
-		testifyAssert.Equal(t, ev, v.output)
+		assert.Equal(t, ev, v.output)
 	}
 }

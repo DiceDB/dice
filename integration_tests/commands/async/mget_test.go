@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/dicedb/dice/testutils"
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMGET(t *testing.T) {
@@ -13,7 +13,7 @@ func TestMGET(t *testing.T) {
 
 	defer FireCommand(conn, "DEL k1")
 	defer FireCommand(conn, "DEL k2")
-	
+
 	testCases := []struct {
 		name     string
 		commands []string
@@ -49,9 +49,9 @@ func TestMGET(t *testing.T) {
 			for i, cmd := range tc.commands {
 				result := FireCommand(conn, cmd)
 				if slice, ok := tc.expected[i].([]interface{}); ok {
-					assert.Assert(t, testutils.UnorderedEqual(slice, result))
+					assert.True(t, testutils.UnorderedEqual(slice, result))
 				} else {
-					assert.DeepEqual(t, tc.expected[i], result)
+					assert.Equal(t, tc.expected[i], result)
 				}
 			}
 		})

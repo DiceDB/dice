@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	testifyAssert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHSTRLEN(t *testing.T) {
@@ -36,13 +36,13 @@ func TestHSTRLEN(t *testing.T) {
 		{
 			name:   "HSTRLEN with non-existent key",
 			cmds:   []string{"HSTRLEN non_existent_key field"},
-			expect: []interface{}{"0"},
+			expect: []interface{}{float64(0)},
 			delays: []time.Duration{0},
 		},
 		{
 			name:   "HSTRLEN with non-existent field",
 			cmds:   []string{"HSET key_hStrLen2 field value", "HSTRLEN key_hStrLen2 wrong_field"},
-			expect: []interface{}{float64(1), "0"},
+			expect: []interface{}{float64(1), float64(0)},
 			delays: []time.Duration{0, 0},
 		},
 
@@ -62,8 +62,8 @@ func TestHSTRLEN(t *testing.T) {
 					time.Sleep(tc.delays[i])
 				}
 				result, err := exec.FireCommandAndReadResponse(conn, cmd)
-				testifyAssert.Nil(t, err)
-				testifyAssert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
+				assert.Nil(t, err)
+				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
 			}
 		})
 	}

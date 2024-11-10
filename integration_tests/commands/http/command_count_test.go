@@ -3,7 +3,7 @@ package http
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCommandCount(t *testing.T) {
@@ -39,9 +39,9 @@ func TestCommandCount(t *testing.T) {
 				result, _ := exec.FireCommand(cmd)
 				switch tc.assertType[c] {
 				case "equal":
-					assert.DeepEqual(t, tc.expected[c], result)
+					assert.Equal(t, tc.expected[c], result)
 				case "greater":
-					assert.Assert(t, result.(float64) >= tc.expected[c].(float64))
+					assert.True(t, result.(float64) >= tc.expected[c].(float64))
 				}
 			}
 

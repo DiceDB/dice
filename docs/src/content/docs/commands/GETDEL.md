@@ -7,35 +7,30 @@ The `GETDEL` command in DiceDB is used to retrieve the value of a specified key 
 
 ## Syntax
 
-```
+```bash
 GETDEL key
 ```
 
 ## Parameters
 
-| Parameter | Description                                                               | Type    | Required |
-|-----------|---------------------------------------------------------------------------|---------|----------|
-| `key`     | The key whose value you want to retrieve and delete.                      | String  | Yes      |
+| Parameter | Description                                          | Type   | Required |
+| --------- | ---------------------------------------------------- | ------ | -------- |
+| `key`     | The key whose value you want to retrieve and delete. | String | Yes      |
 
 ## Return values
 
-| Condition            | Return Value                                                     |
-|----------------------|------------------------------------------------------------------|
-| Key exists           | `String`: The command returns the value associated with the key. |
-| Key does not exist   | `nil`: The command returns `nil`.                                |
+| Condition          | Return Value                                                     |
+| ------------------ | ---------------------------------------------------------------- |
+| Key exists         | `String`: The command returns the value associated with the key. |
+| Key does not exist | `nil`: The command returns `nil`.                                |
 
 ## Behaviour
 
-When the `GETDEL` command is executed, the following steps occur:
-  1. The command checks if the specified key exists in the DiceDB database.
-  2. If the key exists, the value associated with the key is retrieved.
-  3. The key is then deleted from the database.
-  4. The retrieved value is returned to the client.
-  5. If the key does not exist, `nil` is returned, and no deletion occurs.
+- If the specified key exists, `GETDEL` retrieves its value and then deletes the key from the database.
+- The retrieved value is returned to the client.
+- If the key does not exist, `GETDEL` returns `nil` and no deletion is performed.
 
 ## Errors
-
-The `GETDEL` command can raise errors in the following scenarios:
 
 1. `Wrong Type Error`:
 
@@ -47,9 +42,11 @@ The `GETDEL` command can raise errors in the following scenarios:
    - Error Message: `ERROR wrong number of arguments for 'getdel' command`
    - Occurs if the command is called without the required parameter.
 
-## Examples
+## Example Usage
 
-### Example with Existent key
+### Retreive and Delete an Existing Key
+
+Setting a key `mykey` with the value `"Hello, World!"` and then using `GETDEL` to retrieve and delete it.
 
 ```bash
 127.0.0.1:7379> SET mykey "Hello, World!"
@@ -60,25 +57,32 @@ OK
 (nil)
 ```
 
-`Explanation:` 
+<<<<<<< HEAD
+`Explanation:`
+=======
 
-- The key `mykey` is set with the value `"Hello, World!"`.
-- The `GETDEL` command retrieves the value `"Hello, World!"` and deletes the key `mykey` from the database.
-- The `GET` command attempts to retrieve the value associated with the key `mykey` and returns `nil` as the key no longer exists.
+### Using `GETDEL` on a Non-Existent Key
 
-### Example with a Non-Existent Key
+> > > > > > > d43577926873d0df0c8f189cdde6afa65c515ccb
+
+Trying to retrieve and delete a key `nonexistingkey` that does not exist.
 
 ```bash
 127.0.0.1:7379> GETDEL nonexistingkey
 (nil)
 ```
 
-`Explanation:` 
+<<<<<<< HEAD
+`Explanation:`
 
 - The key `nonexistingkey` does not exist in the database.
-- The `GETDEL` command returns `nil` since the key is not found.
+- # The `GETDEL` command returns `nil` since the key is not found.
 
-### Example with a Wrong Type of Key
+### Using `GETDEL` on a Key with a Different Data Type
+
+> > > > > > > d43577926873d0df0c8f189cdde6afa65c515ccb
+
+Setting a key `mylist` as a list and then trying to use `GETDEL`, which is incompatible with non-string data types.
 
 ```bash
 127.0.0.1:7379> LPUSH mylist "item1"
@@ -87,7 +91,8 @@ OK
 ERROR WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
-`Explanation:` 
+`Explanation:`
 
 - The key `mylist` is a list, not a string.
-- The `GETDEL` command raises a `WRONGTYPE` error because it expects the key to be a string.
+- # The `GETDEL` command raises a `WRONGTYPE` error because it expects the key to be a string.
+  (error) WRONGTYPE Operation against a key holding the wrong kind of value

@@ -1,0 +1,1424 @@
+---
+import Layout from "../layouts/Layout.astro";
+const title = "DiceDB's Redis Compatability";
+const description = "";
+---
+
+<Layout {title} {description}>
+  <div>
+    <div class="columns has-text-centered is-centered">
+      <div class="column is-4 box">
+        <h1 class="is-size-1 has-text-weight-bold">36.4%</h1>
+        <p>Redis 7.4.1 compatability</p>
+      </div>
+    </div>
+    <br />
+    <div class="columns is-centered">
+      <div class="column is-8">
+        <table class="table is-fullwidth">
+          <thead>
+            <tr>
+              <th>Supported Commands</th>
+              <th>Unsupported Commands</th>
+              <th>New commands in DiceDB</th>
+            </tr>
+            <tr>
+              <td><a href="/commands/append">APPEND</a></td>
+              <td>ACL</td>
+              <td><a href="/commands/abort">ABORT</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/auth">AUTH</a></td>
+              <td>ACL|CAT</td>
+              <td><a href="/commands/bfadd">BF.ADD</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/bgrewriteaof">BGREWRITEAOF</a></td>
+              <td>ACL|DELUSER</td>
+              <td><a href="/commands/bfexists">BF.EXISTS</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/bitcount">BITCOUNT</a></td>
+              <td>ACL|DRYRUN</td>
+              <td><a href="/commands/bfinfo">BF.INFO</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/bitfield">BITFIELD</a></td>
+              <td>ACL|GENPASS</td>
+              <td><a href="/commands/bfreserve">BF.RESERVE</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/bitfield_ro">BITFIELD_RO</a></td>
+              <td>ACL|GETUSER</td>
+              <td><a href="/commands/cmsincrby">CMS.INCRBY</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/bitop">BITOP</a></td>
+              <td>ACL|HELP</td>
+              <td><a href="/commands/cmsinfo">CMS.INFO</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/bitpos">BITPOS</a></td>
+              <td>ACL|LIST</td>
+              <td><a href="/commands/cmsinitbydim">CMS.INITBYDIM</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/client">CLIENT</a></td>
+              <td>ACL|LOAD</td>
+              <td><a href="/commands/cmsinitbyprob">CMS.INITBYPROB</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/command">COMMAND</a></td>
+              <td>ACL|LOG</td>
+              <td><a href="/commands/cmsmerge">CMS.MERGE</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/command-count">COMMAND|COUNT</a></td>
+              <td>ACL|SAVE</td>
+              <td><a href="/commands/cmsquery">CMS.QUERY</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/command-docs">COMMAND|DOCS</a></td>
+              <td>ACL|SETUSER</td>
+              <td><a href="/commands/jsonarrappend">JSON.ARRAPPEND</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/command-getkeys">COMMAND|GETKEYS</a></td>
+              <td>ACL|USERS</td>
+              <td><a href="/commands/jsonarrinsert">JSON.ARRINSERT</a></td>
+            </tr>
+            <tr>
+              <td
+                ><a href="/commands/command-getkeysandflags"
+                  >COMMAND|GETKEYSANDFLAGS</a
+                ></td
+              >
+              <td>ACL|WHOAMI</td>
+              <td><a href="/commands/jsonarrlen">JSON.ARRLEN</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/command-help">COMMAND|HELP</a></td>
+              <td>ASKING</td>
+              <td><a href="/commands/jsonarrpop">JSON.ARRPOP</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/command-info">COMMAND|INFO</a></td>
+              <td>BGSAVE</td>
+              <td><a href="/commands/jsonarrtrim">JSON.ARRTRIM</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/command-list">COMMAND|LIST</a></td>
+              <td>BLMOVE</td>
+              <td><a href="/commands/jsonclear">JSON.CLEAR</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/copy">COPY</a></td>
+              <td>BLMPOP</td>
+              <td><a href="/commands/jsondebug">JSON.DEBUG</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/dbsize">DBSIZE</a></td>
+              <td>BLPOP</td>
+              <td><a href="/commands/jsondel">JSON.DEL</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/decr">DECR</a></td>
+              <td>BRPOP</td>
+              <td><a href="/commands/jsonforget">JSON.FORGET</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/decrby">DECRBY</a></td>
+              <td>BRPOPLPUSH</td>
+              <td><a href="/commands/jsonget">JSON.GET</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/del">DEL</a></td>
+              <td>BZMPOP</td>
+              <td><a href="/commands/jsoningest">JSON.INGEST</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/discard">DISCARD</a></td>
+              <td>BZPOPMAX</td>
+              <td><a href="/commands/jsonmget">JSON.MGET</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/dump">DUMP</a></td>
+              <td>BZPOPMIN</td>
+              <td><a href="/commands/jsonnumincrby">JSON.NUMINCRBY</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/echo">ECHO</a></td>
+              <td>CLIENT|CACHING</td>
+              <td><a href="/commands/jsonnummultby">JSON.NUMMULTBY</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/exec">EXEC</a></td>
+              <td>CLIENT|GETNAME</td>
+              <td><a href="/commands/jsonobjkeys">JSON.OBJKEYS</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/exists">EXISTS</a></td>
+              <td>CLIENT|GETREDIR</td>
+              <td><a href="/commands/jsonobjlen">JSON.OBJLEN</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/expire">EXPIRE</a></td>
+              <td>CLIENT|HELP</td>
+              <td><a href="/commands/jsonresp">JSON.RESP</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/expireat">EXPIREAT</a></td>
+              <td>CLIENT|ID</td>
+              <td><a href="/commands/jsonset">JSON.SET</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/expiretime">EXPIRETIME</a></td>
+              <td>CLIENT|INFO</td>
+              <td><a href="/commands/jsonstrappend">JSON.STRAPPEND</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/flushdb">FLUSHDB</a></td>
+              <td>CLIENT|KILL</td>
+              <td><a href="/commands/jsonstrlen">JSON.STRLEN</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/geoadd">GEOADD</a></td>
+              <td>CLIENT|LIST</td>
+              <td><a href="/commands/jsontoggle">JSON.TOGGLE</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/geodist">GEODIST</a></td>
+              <td>CLIENT|NO-EVICT</td>
+              <td><a href="/commands/jsontype">JSON.TYPE</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/get">GET</a></td>
+              <td>CLIENT|NO-TOUCH</td>
+              <td><a href="/commands/lru">LRU</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/getbit">GETBIT</a></td>
+              <td>CLIENT|PAUSE</td>
+              <td><a href="/commands/qunwatch">Q.UNWATCH</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/getdel">GETDEL</a></td>
+              <td>CLIENT|REPLY</td>
+              <td><a href="/commands/qwatch">Q.WATCH</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/getex">GETEX</a></td>
+              <td>CLIENT|SETINFO</td>
+              <td><a href="/commands/sleep">SLEEP</a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/getrange">GETRANGE</a></td>
+              <td>CLIENT|SETNAME</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/getset">GETSET</a></td>
+              <td>CLIENT|TRACKING</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/hdel">HDEL</a></td>
+              <td>CLIENT|TRACKINGINFO</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/hello">HELLO</a></td>
+              <td>CLIENT|UNBLOCK</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/hexists">HEXISTS</a></td>
+              <td>CLIENT|UNPAUSE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/hget">HGET</a></td>
+              <td>CLUSTER</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/hgetall">HGETALL</a></td>
+              <td>CLUSTER|ADDSLOTS</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/hincrby">HINCRBY</a></td>
+              <td>CLUSTER|ADDSLOTSRANGE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/hincrbyfloat">HINCRBYFLOAT</a></td>
+              <td>CLUSTER|BUMPEPOCH</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/hkeys">HKEYS</a></td>
+              <td>CLUSTER|COUNT-FAILURE-REPORTS</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/hlen">HLEN</a></td>
+              <td>CLUSTER|COUNTKEYSINSLOT</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/hmget">HMGET</a></td>
+              <td>CLUSTER|DELSLOTS</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/hmset">HMSET</a></td>
+              <td>CLUSTER|DELSLOTSRANGE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/hrandfield">HRANDFIELD</a></td>
+              <td>CLUSTER|FAILOVER</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/hscan">HSCAN</a></td>
+              <td>CLUSTER|FLUSHSLOTS</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/hset">HSET</a></td>
+              <td>CLUSTER|FORGET</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/hsetnx">HSETNX</a></td>
+              <td>CLUSTER|GETKEYSINSLOT</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/hstrlen">HSTRLEN</a></td>
+              <td>CLUSTER|HELP</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/hvals">HVALS</a></td>
+              <td>CLUSTER|INFO</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/incr">INCR</a></td>
+              <td>CLUSTER|KEYSLOT</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/incrby">INCRBY</a></td>
+              <td>CLUSTER|LINKS</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/incrbyfloat">INCRBYFLOAT</a></td>
+              <td>CLUSTER|MEET</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/info">INFO</a></td>
+              <td>CLUSTER|MYID</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/keys">KEYS</a></td>
+              <td>CLUSTER|MYSHARDID</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/latency">LATENCY</a></td>
+              <td>CLUSTER|NODES</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/llen">LLEN</a></td>
+              <td>CLUSTER|REPLICAS</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/lpop">LPOP</a></td>
+              <td>CLUSTER|REPLICATE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/lpush">LPUSH</a></td>
+              <td>CLUSTER|RESET</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/mget">MGET</a></td>
+              <td>CLUSTER|SAVECONFIG</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/mset">MSET</a></td>
+              <td>CLUSTER|SET-CONFIG-EPOCH</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/multi">MULTI</a></td>
+              <td>CLUSTER|SETSLOT</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/object">OBJECT</a></td>
+              <td>CLUSTER|SHARDS</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/persist">PERSIST</a></td>
+              <td>CLUSTER|SLAVES</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/pfadd">PFADD</a></td>
+              <td>CLUSTER|SLOTS</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/pfcount">PFCOUNT</a></td>
+              <td>CONFIG</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/pfmerge">PFMERGE</a></td>
+              <td>CONFIG|GET</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/ping">PING</a></td>
+              <td>CONFIG|HELP</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/pttl">PTTL</a></td>
+              <td>CONFIG|RESETSTAT</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/rename">RENAME</a></td>
+              <td>CONFIG|REWRITE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/restore">RESTORE</a></td>
+              <td>CONFIG|SET</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/rpop">RPOP</a></td>
+              <td>DEBUG</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/rpush">RPUSH</a></td>
+              <td>EVAL</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/sadd">SADD</a></td>
+              <td>EVALSHA</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/scard">SCARD</a></td>
+              <td>EVALSHA_RO</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/sdiff">SDIFF</a></td>
+              <td>EVAL_RO</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/select">SELECT</a></td>
+              <td>FAILOVER</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/set">SET</a></td>
+              <td>FCALL</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/setbit">SETBIT</a></td>
+              <td>FCALL_RO</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/setex">SETEX</a></td>
+              <td>FLUSHALL</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/sinter">SINTER</a></td>
+              <td>FUNCTION</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/smembers">SMEMBERS</a></td>
+              <td>FUNCTION|DELETE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/srem">SREM</a></td>
+              <td>FUNCTION|DUMP</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/subscribe">SUBSCRIBE</a></td>
+              <td>FUNCTION|FLUSH</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/touch">TOUCH</a></td>
+              <td>FUNCTION|HELP</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/ttl">TTL</a></td>
+              <td>FUNCTION|KILL</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/type">TYPE</a></td>
+              <td>FUNCTION|LIST</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/zadd">ZADD</a></td>
+              <td>FUNCTION|LOAD</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/zcard">ZCARD</a></td>
+              <td>FUNCTION|RESTORE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/zcount">ZCOUNT</a></td>
+              <td>FUNCTION|STATS</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/zpopmax">ZPOPMAX</a></td>
+              <td>GEOHASH</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/zpopmin">ZPOPMIN</a></td>
+              <td>GEOPOS</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/zrange">ZRANGE</a></td>
+              <td>GEORADIUS</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/zrank">ZRANK</a></td>
+              <td>GEORADIUSBYMEMBER</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/zrem">ZREM</a></td>
+              <td>GEORADIUSBYMEMBER_RO</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>GEORADIUS_RO</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>GEOSEARCH</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>GEOSEARCHSTORE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>HEXPIRE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>HEXPIREAT</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>HEXPIRETIME</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>HPERSIST</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>HPEXPIRE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>HPEXPIREAT</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>HPEXPIRETIME</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>HPTTL</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>HTTL</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>LASTSAVE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>LATENCY|DOCTOR</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>LATENCY|GRAPH</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>LATENCY|HELP</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>LATENCY|HISTOGRAM</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>LATENCY|HISTORY</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>LATENCY|LATEST</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>LATENCY|RESET</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>LCS</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>LINDEX</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>LINSERT</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>LMOVE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>LMPOP</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>LOLWUT</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>LPOS</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>LPUSHX</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>LRANGE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>LREM</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>LSET</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>LTRIM</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>MEMORY</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>MEMORY|DOCTOR</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>MEMORY|HELP</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>MEMORY|MALLOC-STATS</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>MEMORY|PURGE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>MEMORY|STATS</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>MEMORY|USAGE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>MIGRATE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>MODULE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>MODULE|HELP</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>MODULE|LIST</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>MODULE|LOAD</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>MODULE|LOADEX</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>MODULE|UNLOAD</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>MONITOR</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>MOVE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>MSETNX</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>OBJECT|ENCODING</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>OBJECT|FREQ</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>OBJECT|HELP</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>OBJECT|IDLETIME</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>OBJECT|REFCOUNT</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>PEXPIRE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>PEXPIREAT</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>PEXPIRETIME</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>PFDEBUG</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>PFSELFTEST</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>PSETEX</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>PSUBSCRIBE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>PSYNC</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>PUBLISH</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>PUBSUB</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>PUBSUB|CHANNELS</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>PUBSUB|HELP</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>PUBSUB|NUMPAT</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>PUBSUB|NUMSUB</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>PUBSUB|SHARDCHANNELS</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>PUBSUB|SHARDNUMSUB</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>PUNSUBSCRIBE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>QUIT</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>RANDOMKEY</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>READONLY</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>READWRITE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>RENAMENX</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>REPLCONF</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>REPLICAOF</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>RESET</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>RESTORE-ASKING</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>ROLE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>RPOPLPUSH</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>RPUSHX</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SAVE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SCAN</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SCRIPT</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SCRIPT|DEBUG</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SCRIPT|EXISTS</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SCRIPT|FLUSH</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SCRIPT|HELP</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SCRIPT|KILL</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SCRIPT|LOAD</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SDIFFSTORE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SETNX</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SETRANGE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SHUTDOWN</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SINTERCARD</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SINTERSTORE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SISMEMBER</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SLAVEOF</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SLOWLOG</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SLOWLOG|GET</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SLOWLOG|HELP</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SLOWLOG|LEN</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SLOWLOG|RESET</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SMISMEMBER</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SMOVE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SORT</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SORT_RO</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SPOP</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SPUBLISH</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SRANDMEMBER</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SSCAN</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SSUBSCRIBE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>STRLEN</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SUBSTR</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SUNION</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SUNIONSTORE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SUNSUBSCRIBE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SWAPDB</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>SYNC</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>TIME</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>UNLINK</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>UNSUBSCRIBE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>UNWATCH</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>WAIT</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>WAITAOF</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>WATCH</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>XACK</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>XADD</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>XAUTOCLAIM</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>XCLAIM</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>XDEL</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>XGROUP</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>XGROUP|CREATE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>XGROUP|CREATECONSUMER</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>XGROUP|DELCONSUMER</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>XGROUP|DESTROY</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>XGROUP|HELP</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>XGROUP|SETID</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>XINFO</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>XINFO|CONSUMERS</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>XINFO|GROUPS</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>XINFO|HELP</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>XINFO|STREAM</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>XLEN</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>XPENDING</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>XRANGE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>XREAD</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>XREADGROUP</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>XREVRANGE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>XSETID</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>XTRIM</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>ZDIFF</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>ZDIFFSTORE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>ZINCRBY</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>ZINTER</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>ZINTERCARD</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>ZINTERSTORE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>ZLEXCOUNT</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>ZMPOP</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>ZMSCORE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>ZRANDMEMBER</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>ZRANGEBYLEX</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>ZRANGEBYSCORE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>ZRANGESTORE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>ZREMRANGEBYLEX</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>ZREMRANGEBYRANK</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>ZREMRANGEBYSCORE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>ZREVRANGE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>ZREVRANGEBYLEX</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>ZREVRANGEBYSCORE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>ZREVRANK</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>ZSCAN</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>ZSCORE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>ZUNION</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+            <tr>
+              <td><a href="/commands/"></a></td>
+              <td>ZUNIONSTORE</td>
+              <td><a href="/commands/"></a></td>
+            </tr>
+          </thead>
+        </table>
+      </div>
+    </div>
+  </div>
+</Layout>

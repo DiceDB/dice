@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	testifyAssert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHLEN(t *testing.T) {
@@ -83,7 +83,7 @@ func TestHLEN(t *testing.T) {
 					time.Sleep(tc.delays[i])
 				}
 				result := FireCommand(conn, cmd)
-				testifyAssert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
+				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
 			}
 		})
 	}
