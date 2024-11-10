@@ -4439,5 +4439,6 @@ func evalBITFIELDRO(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
+	fmt.print("testing")
 	return bitfieldEvalGeneric(args, store, true)
 }
