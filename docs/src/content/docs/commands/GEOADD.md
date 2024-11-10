@@ -51,11 +51,11 @@ When the GEOADD command is issued, DiceDB performs the following steps:
    - Error Message: (error) ERR wrong number of arguments for 'geoadd' command.
    - Occurs when the command is executed with an incorrect number of arguments.
 
-2. `Longitutde not a valid number or is out of range `
+2. `Longitude not a valid number or is out of range `
    - Error Message: (error) ERR invalid longitude.
    - Occurs when longitude is out of range(-180 to 180) or not a valid number.
 
-3. `Latitdude not a valid number or is out of range `
+3. `Latitude not a valid number or is out of range `
    - Error Message: (error) ERR invalid latitude.
    - Occurs when latitude is out of range(-85.05112878 to 85.05112878) or not a valid number.
 
