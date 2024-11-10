@@ -13,17 +13,17 @@ func TestDel(t *testing.T) {
 		{
 			name:     "DEL with set key",
 			commands: []string{"SET k1 v1", "DEL k1", "GET k1"},
-			expected: []interface{}{"OK", float64(1), "(nil)"},
+			expected: []interface{}{"OK", float64(1), nil},
 		},
 		{
 			name:     "DEL with multiple keys",
 			commands: []string{"SET k1 v1", "SET k2 v2", "DEL k1 k2", "GET k1", "GET k2"},
-			expected: []interface{}{"OK", "OK", float64(2), "(nil)", "(nil)"},
+			expected: []interface{}{"OK", "OK", float64(2), nil, nil},
 		},
 		{
 			name:     "DEL with key not set",
 			commands: []string{"GET k3", "DEL k3"},
-			expected: []interface{}{"(nil)", float64(0)},
+			expected: []interface{}{nil, float64(0)},
 		},
 		{
 			name:     "DEL with no keys or arguments",
