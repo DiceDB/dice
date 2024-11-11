@@ -15,22 +15,22 @@ JSON.ARRINSERT <key> <path> <index> <value> [value ...]
 
 ## Parameters
 
-| Parameter | Description                                                                                      | Type    | Required |
-|-----------|--------------------------------------------------------------------------------------------------|---------|----------|
-| `key`     | The name of the key holding the JSON document.                                                   | String  | Yes      |
-| `path`    | JSONPath pointing to an array within the JSON document.                                          | String  | Yes      |
-| `index`   | Position where values will be inserted. Positive for start-to-end, negative for end-to-start.    | Integer | Yes      |
-| `value`   | JSON value(s) to be inserted into the array.                                                     | JSON    | Yes      |
+| Parameter | Description                                                                                   | Type    | Required |
+| --------- | --------------------------------------------------------------------------------------------- | ------- | -------- |
+| `key`     | The name of the key holding the JSON document.                                                | String  | Yes      |
+| `path`    | JSONPath pointing to an array within the JSON document.                                       | String  | Yes      |
+| `index`   | Position where values will be inserted. Positive for start-to-end, negative for end-to-start. | Integer | Yes      |
+| `value`   | JSON value(s) to be inserted into the array.                                                  | JSON    | Yes      |
 
 ## Return Values
 
-| Condition                     | Return Value                                                           |
-|-------------------------------|------------------------------------------------------------------------|
-| Array successfully updated    | (Int) `Integer representing the new array size at each matched path`   |
-| Key does not exist            | Error: `(error) ERR key does not exist`                                |
-| Path is not valid             | Error: `(error) ERR Existing key has wrong Dice type`                  |
-| Invalid JSON value            | Error: `(error) ERR Path <path> does not exist`                        |
-| Invalid index                 | Error: `(error) ERR index out of bounds`                               |
+| Condition                  | Return Value                                                         |
+| -------------------------- | -------------------------------------------------------------------- |
+| Array successfully updated | (Int) `Integer representing the new array size at each matched path` |
+| Key does not exist         | Error: `(error) ERR key does not exist`                              |
+| Path is not valid          | Error: `(error) ERR Existing key has wrong Dice type`                |
+| Invalid JSON value         | Error: `(error) ERR Path <path> does not exist`                      |
+| Invalid index              | Error: `(error) ERR index out of bounds`                             |
 
 ## Behaviour
 

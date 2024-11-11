@@ -1,8 +1,10 @@
 package eval
 
 import (
+	"errors"
 	"fmt"
 	"math"
+	"math/bits"
 	"sort"
 	"strconv"
 	"strings"
@@ -182,16 +184,14 @@ func evalEXPIRETIME(args []string, store *dstore.Store) *EvalResponse {
 // If the key already exists then the value will be overwritten and expiry will be discarded
 func evalSET(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) <= 1 {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongArgumentCount("SET"),
-		}
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("SET"))
 	}
 
 	var key, value string
 	var exDurationMs int64 = -1
 	var state exDurationState = Uninitialized
 	var keepttl bool = false
+	var oldVal *interface{}
 
 	key, value = args[0], args[1]
 	oType, oEnc := deduceTypeEncoding(value)
@@ -201,38 +201,23 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 		switch arg {
 		case Ex, Px:
 			if state != Uninitialized {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrSyntax,
-				}
+				return makeEvalError(diceerrors.ErrSyntax)
 			}
 			if keepttl {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrSyntax,
-				}
+				return makeEvalError(diceerrors.ErrSyntax)
 			}
 			i++
 			if i == len(args) {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrSyntax,
-				}
+				return makeEvalError(diceerrors.ErrSyntax)
 			}
 
 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrIntegerOutOfRange,
-				}
+				return makeEvalError(diceerrors.ErrIntegerOutOfRange)
 			}
 
 			if exDuration <= 0 || exDuration >= maxExDuration {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrInvalidExpireTime("SET"),
-				}
+				return makeEvalError(diceerrors.ErrInvalidExpireTime("SET"))
 			}
 
 			// converting seconds to milliseconds
@@ -244,37 +229,22 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 
 		case Pxat, Exat:
 			if state != Uninitialized {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrSyntax,
-				}
+				return makeEvalError(diceerrors.ErrSyntax)
 			}
 			if keepttl {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrSyntax,
-				}
+				return makeEvalError(diceerrors.ErrSyntax)
 			}
 			i++
 			if i == len(args) {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrSyntax,
-				}
+				return makeEvalError(diceerrors.ErrSyntax)
 			}
 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrIntegerOutOfRange,
-				}
+				return makeEvalError(diceerrors.ErrIntegerOutOfRange)
 			}
 
 			if exDuration < 0 {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrInvalidExpireTime("SET"),
-				}
+				return makeEvalError(diceerrors.ErrInvalidExpireTime("SET"))
 			}
 
 			if arg == Exat {
@@ -294,32 +264,26 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 
 			// if key does not exist, return RESP encoded nil
 			if obj == nil {
-				return &EvalResponse{
-					Result: clientio.NIL,
-					Error:  nil,
-				}
+				return makeEvalResult(clientio.NIL)
 			}
 		case NX:
 			obj := store.Get(key)
 			if obj != nil {
-				return &EvalResponse{
-					Result: clientio.NIL,
-					Error:  nil,
-				}
+				return makeEvalResult(clientio.NIL)
 			}
 		case KeepTTL:
 			if state != Uninitialized {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrSyntax,
-				}
+				return makeEvalError(diceerrors.ErrSyntax)
 			}
 			keepttl = true
-		default:
-			return &EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrSyntax,
+		case GET:
+			getResult := evalGET([]string{key}, store)
+			if getResult.Error != nil {
+				return makeEvalError(diceerrors.ErrWrongTypeOperation)
 			}
+			oldVal = &getResult.Result
+		default:
+			return makeEvalError(diceerrors.ErrSyntax)
 		}
 	}
 
@@ -331,19 +295,15 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
 		storedValue = value
 	default:
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrUnsupportedEncoding(int(oEnc)),
-		}
+		return makeEvalError(diceerrors.ErrUnsupportedEncoding(int(oEnc)))
 	}
 
 	// putting the k and value in a Hash Table
 	store.Put(key, store.NewObj(storedValue, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
-
-	return &EvalResponse{
-		Result: clientio.OK,
-		Error:  nil,
+	if oldVal != nil {
+		return makeEvalResult(*oldVal)
 	}
+	return makeEvalResult(clientio.OK)
 }
 
 // evalGET returns the value for the queried key in args
@@ -3733,4 +3693,751 @@ func evalHDEL(args []string, store *dstore.Store) *EvalResponse {
 		Result: count,
 		Error:  nil,
 	}
+}
+
+// evalSADD adds one or more members to a set
+// args must contain a key and one or more members to add the set
+// If the set does not exist, a new set is created and members are added to it
+// An error response is returned if the command is used on a key that contains a non-set value(eg: string)
+// Returns an integer which represents the number of members that were added to the set, not including
+// the members that were already present
+func evalSADD(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("SADD"),
+		}
+	}
+	key := args[0]
+
+	// Get the set object from the store.
+	obj := store.Get(key)
+	lengthOfItems := len(args[1:])
+
+	var count = 0
+	if obj == nil {
+		var exDurationMs int64 = -1
+		var keepttl = false
+		// If the object does not exist, create a new set object.
+		value := make(map[string]struct{}, lengthOfItems)
+		// Create a new object.
+		obj = store.NewObj(value, exDurationMs, object.ObjTypeSet, object.ObjEncodingSetStr)
+		store.Put(key, obj, dstore.WithKeepTTL(keepttl))
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingSetStr); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// Get the set object.
+	set := obj.Value.(map[string]struct{})
+
+	for _, arg := range args[1:] {
+		if _, ok := set[arg]; !ok {
+			set[arg] = struct{}{}
+			count++
+		}
+	}
+
+	return &EvalResponse{
+		Result: count,
+		Error:  nil,
+	}
+}
+
+// evalSREM removes one or more members from a set
+// Members that are not member of this set are ignored
+// Returns the number of members that are removed from set
+// If set does not exist, 0 is returned
+// An error response is returned if the command is used on a key that contains a non-set value(eg: string)
+func evalSREM(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("SREM"),
+		}
+	}
+	key := args[0]
+
+	// Get the set object from the store.
+	obj := store.Get(key)
+
+	var count = 0
+	if obj == nil {
+		return &EvalResponse{
+			Result: 0,
+			Error:  nil,
+		}
+	}
+
+	// If the object exists, check if it is a set object.
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingSetStr); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// Get the set object.
+	set := obj.Value.(map[string]struct{})
+
+	for _, arg := range args[1:] {
+		if _, ok := set[arg]; ok {
+			delete(set, arg)
+			count++
+		}
+	}
+
+	return &EvalResponse{
+		Result: count,
+		Error:  nil,
+	}
+}
+
+// evalSCARD returns the number of elements of the set stored at key
+// Returns 0 if the key does not exist
+// An error response is returned if the command is used on a key that contains a non-set value(eg: string)
+func evalSCARD(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("SCARD"),
+		}
+	}
+
+	key := args[0]
+
+	// Get the set object from the store.
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: 0,
+			Error:  nil,
+		}
+	}
+
+	// If the object exists, check if it is a set object.
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingSetStr); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// Get the set object.
+	count := len(obj.Value.(map[string]struct{}))
+	return &EvalResponse{
+		Result: count,
+		Error:  nil,
+	}
+}
+
+// evalSMEMBERS returns all the members of a set
+// An error response is returned if the command is used on a key that contains a non-set value(eg: string)
+// An empty set is returned if no set exists for given key
+func evalSMEMBERS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("SMEMBERS"),
+		}
+	}
+	key := args[0]
+
+	// Get the set object from the store.
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: []string{},
+			Error:  nil,
+		}
+	}
+
+	// If the object exists, check if it is a set object.
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingSetStr); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// Get the set object.
+	set := obj.Value.(map[string]struct{})
+	// Get the members of the set.
+	members := make([]string, 0, len(set))
+	for k := range set {
+		members = append(members, k)
+	}
+
+	return &EvalResponse{
+		Result: members,
+		Error:  nil,
+	}
+}
+
+// evalLRANGE returns the specified elements of the list stored at key.
+//
+// Returns Array reply: a list of elements in the specified range, or an empty array if the key doesn't exist.
+//
+// Usage: LRANGE key start stop
+func evalLRANGE(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 3 {
+		return makeEvalError(errors.New("-wrong number of arguments for LRANGE"))
+	}
+	key := args[0]
+	start, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return makeEvalError(errors.New("-ERR value is not an integer or out of range"))
+	}
+	stop, err := strconv.ParseInt(args[2], 10, 64)
+	if err != nil {
+		return makeEvalError(errors.New("-ERR value is not an integer or out of range"))
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return makeEvalResult([]string{})
+	}
+
+	// if object is a set type, return error
+	if object.AssertType(obj.TypeEncoding, object.ObjTypeSet) == nil {
+		return makeEvalError(errors.New(diceerrors.WrongTypeErr))
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeByteList); err != nil {
+		return makeEvalError(err)
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingDeque); err != nil {
+		return makeEvalError(err)
+	}
+
+	q := obj.Value.(*Deque)
+	res, err := q.LRange(start, stop)
+	if err != nil {
+		return makeEvalError(err)
+	}
+	return makeEvalResult(res)
+}
+
+// evalLINSERT command inserts the element at a key before / after the pivot element.
+//
+// Returns the list length (integer) after a successful insert operation, 0 when the key doesn't exist, -1 when the pivot wasn't found.
+//
+// Usage: LINSERT key <BEFORE | AFTER> pivot element
+func evalLINSERT(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 4 {
+		return makeEvalError(errors.New("-wrong number of arguments for LINSERT"))
+	}
+
+	key := args[0]
+	beforeAfter := strings.ToLower(args[1])
+	pivot := args[2]
+	element := args[3]
+
+	obj := store.Get(key)
+	if obj == nil {
+		return makeEvalResult(0)
+	}
+
+	// if object is a set type, return error
+	if object.AssertType(obj.TypeEncoding, object.ObjTypeSet) == nil {
+		return makeEvalError(errors.New(diceerrors.WrongTypeErr))
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeByteList); err != nil {
+		return makeEvalError(err)
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingDeque); err != nil {
+		return makeEvalError(err)
+	}
+
+	q := obj.Value.(*Deque)
+	res, err := q.LInsert(pivot, element, beforeAfter)
+	if err != nil {
+		return makeEvalError(err)
+	}
+	return makeEvalResult(res)
+}
+
+// SETBIT key offset value
+func evalSETBIT(args []string, store *dstore.Store) *EvalResponse {
+	var err error
+
+	if len(args) != 3 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("SETBIT"),
+		}
+	}
+
+	key := args[0]
+	offset, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("bit offset is not an integer or out of range"),
+		}
+	}
+
+	value, err := strconv.ParseBool(args[2])
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("bit is not an integer or out of range"),
+		}
+	}
+
+	obj := store.Get(key)
+	requiredByteArraySize := offset>>3 + 1
+
+	if obj == nil {
+		obj = store.NewObj(NewByteArray(int(requiredByteArraySize)), -1, object.ObjTypeByteArray, object.ObjEncodingByteArray)
+		store.Put(args[0], obj)
+	}
+
+	if object.AssertType(obj.TypeEncoding, object.ObjTypeByteArray) == nil ||
+		object.AssertType(obj.TypeEncoding, object.ObjTypeString) == nil ||
+		object.AssertType(obj.TypeEncoding, object.ObjTypeInt) == nil {
+		var byteArray *ByteArray
+		oType, oEnc := object.ExtractTypeEncoding(obj)
+
+		switch oType {
+		case object.ObjTypeByteArray:
+			byteArray = obj.Value.(*ByteArray)
+		case object.ObjTypeString, object.ObjTypeInt:
+			byteArray, err = NewByteArrayFromObj(obj)
+			if err != nil {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrWrongTypeOperation,
+				}
+			}
+		default:
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			}
+		}
+
+		// Perform the resizing check
+		byteArrayLength := byteArray.Length
+
+		// check whether resize required or not
+		if requiredByteArraySize > byteArrayLength {
+			// resize as per the offset
+			byteArray = byteArray.IncreaseSize(int(requiredByteArraySize))
+		}
+
+		resp := byteArray.GetBit(int(offset))
+		byteArray.SetBit(int(offset), value)
+
+		// We are returning newObject here so it is thread-safe
+		// Old will be removed by GC
+		newObj, err := ByteSliceToObj(store, obj, byteArray.data, oType, oEnc)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			}
+		}
+
+		exp, ok := dstore.GetExpiry(obj, store)
+		var exDurationMs int64 = -1
+		if ok {
+			exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
+		}
+		// newObj has bydefault expiry time -1 , we need to set it
+		if exDurationMs > 0 {
+			store.SetExpiry(newObj, exDurationMs)
+		}
+
+		store.Put(key, newObj)
+		if resp {
+			return &EvalResponse{
+				Result: clientio.IntegerOne,
+				Error:  nil,
+			}
+		}
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+	return &EvalResponse{
+		Result: nil,
+		Error:  diceerrors.ErrWrongTypeOperation,
+	}
+}
+
+// GETBIT key offset
+func evalGETBIT(args []string, store *dstore.Store) *EvalResponse {
+	var err error
+
+	if len(args) != 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("GETBIT"),
+		}
+	}
+
+	key := args[0]
+	offset, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrIntegerOutOfRange,
+		}
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	requiredByteArraySize := offset>>3 + 1
+	switch oType, _ := object.ExtractTypeEncoding(obj); oType {
+	case object.ObjTypeSet:
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	case object.ObjTypeByteArray:
+		byteArray := obj.Value.(*ByteArray)
+		byteArrayLength := byteArray.Length
+
+		// check whether offset, length exists or not
+		if requiredByteArraySize > byteArrayLength {
+			return &EvalResponse{
+				Result: clientio.IntegerZero,
+				Error:  nil,
+			}
+		}
+		value := byteArray.GetBit(int(offset))
+		if value {
+			return &EvalResponse{
+				Result: clientio.IntegerOne,
+				Error:  nil,
+			}
+		}
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+
+	case object.ObjTypeString, object.ObjTypeInt:
+		byteArray, err := NewByteArrayFromObj(obj)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			}
+		}
+		if requiredByteArraySize > byteArray.Length {
+			return &EvalResponse{
+				Result: clientio.IntegerZero,
+				Error:  nil,
+			}
+		}
+		value := byteArray.GetBit(int(offset))
+		if value {
+			return &EvalResponse{
+				Result: clientio.IntegerOne,
+				Error:  nil,
+			}
+		}
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+
+	default:
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+}
+
+func evalBITCOUNT(args []string, store *dstore.Store) *EvalResponse {
+	var err error
+
+	// if no key is provided, return error
+	if len(args) == 0 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("BITCOUNT"),
+		}
+	}
+
+	// if more than 4 arguments are provided, return error
+	if len(args) > 4 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrSyntax,
+		}
+	}
+
+	// fetching value of the key
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	var value []byte
+	var valueLength int64
+
+	switch {
+	case object.AssertType(obj.TypeEncoding, object.ObjTypeByteArray) == nil:
+		byteArray := obj.Value.(*ByteArray)
+		value = byteArray.data
+		valueLength = byteArray.Length
+	case object.AssertType(obj.TypeEncoding, object.ObjTypeString) == nil:
+		value = []byte(obj.Value.(string))
+		valueLength = int64(len(value))
+	case object.AssertType(obj.TypeEncoding, object.ObjTypeInt) == nil:
+		value = []byte(strconv.FormatInt(obj.Value.(int64), 10))
+		valueLength = int64(len(value))
+	default:
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// defining constants of the function
+	start, end := int64(0), valueLength-1
+	unit := BYTE
+
+	// checking which arguments are present and validating arguments
+	if len(args) > 1 {
+		start, err = strconv.ParseInt(args[1], 10, 64)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrIntegerOutOfRange,
+			}
+		}
+		if len(args) <= 2 {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrSyntax,
+			}
+		}
+		end, err = strconv.ParseInt(args[2], 10, 64)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrIntegerOutOfRange,
+			}
+		}
+	}
+	if len(args) > 3 {
+		unit = strings.ToUpper(args[3])
+	}
+
+	switch unit {
+	case BYTE:
+		if start < 0 {
+			start += valueLength
+		}
+		if end < 0 {
+			end += valueLength
+		}
+		if start > end || start >= valueLength {
+			return &EvalResponse{
+				Result: clientio.IntegerZero,
+				Error:  nil,
+			}
+		}
+		end = min(end, valueLength-1)
+		bitCount := 0
+		for i := start; i <= end; i++ {
+			bitCount += bits.OnesCount8(value[i])
+		}
+		return &EvalResponse{
+			Result: bitCount,
+			Error:  nil,
+		}
+	case BIT:
+		if start < 0 {
+			start += valueLength * 8
+		}
+		if end < 0 {
+			end += valueLength * 8
+		}
+		if start > end {
+			return &EvalResponse{
+				Result: clientio.IntegerZero,
+				Error:  nil,
+			}
+		}
+		startByte, endByte := start/8, min(end/8, valueLength-1)
+		startBitOffset, endBitOffset := start%8, end%8
+
+		if endByte == valueLength-1 {
+			endBitOffset = 7
+		}
+
+		if startByte >= valueLength {
+			return &EvalResponse{
+				Result: clientio.IntegerZero,
+				Error:  nil,
+			}
+		}
+
+		bitCount := 0
+
+		// Use bit masks to count the bits instead of a loop
+		if startByte == endByte {
+			mask := byte(0xFF >> startBitOffset)
+			mask &= byte(0xFF << (7 - endBitOffset))
+			bitCount = bits.OnesCount8(value[startByte] & mask)
+		} else {
+			// Handle first byte
+			firstByteMask := byte(0xFF >> startBitOffset)
+			bitCount += bits.OnesCount8(value[startByte] & firstByteMask)
+
+			// Handle all the middle ones
+			for i := startByte + 1; i < endByte; i++ {
+				bitCount += bits.OnesCount8(value[i])
+			}
+
+			// Handle last byte
+			lastByteMask := byte(0xFF << (7 - endBitOffset))
+			bitCount += bits.OnesCount8(value[endByte] & lastByteMask)
+		}
+		return &EvalResponse{
+			Result: bitCount,
+			Error:  nil,
+		}
+	default:
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrSyntax,
+		}
+	}
+}
+
+// Generic method for both BITFIELD and BITFIELD_RO.
+// isReadOnly method is true for BITFIELD_RO command.
+func bitfieldEvalGeneric(args []string, store *dstore.Store, isReadOnly bool) *EvalResponse {
+	var ops []utils.BitFieldOp
+	ops, err2 := utils.ParseBitfieldOps(args, isReadOnly)
+
+	if err2 != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  err2,
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		obj = store.NewObj(NewByteArray(1), -1, object.ObjTypeByteArray, object.ObjEncodingByteArray)
+		store.Put(args[0], obj)
+	}
+	var value *ByteArray
+	var err error
+
+	switch oType, _ := object.ExtractTypeEncoding(obj); oType {
+	case object.ObjTypeByteArray:
+		value = obj.Value.(*ByteArray)
+	case object.ObjTypeString, object.ObjTypeInt:
+		value, err = NewByteArrayFromObj(obj)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("value is not a valid byte array"),
+			}
+		}
+	default:
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	result := executeBitfieldOps(value, ops)
+	return &EvalResponse{
+		Result: result,
+		Error:  nil,
+	}
+}
+
+// evalBITFIELD evaluates BITFIELD operations on a key store string, int or bytearray types
+// it returns an array of results depending on the subcommands
+// it allows mutation using SET and INCRBY commands
+// returns arity error, offset type error, overflow type error, encoding type error, integer error, syntax error
+// GET <encoding> <offset> -- Returns the specified bit field.
+// SET <encoding> <offset> <value> -- Set the specified bit field
+// and returns its old value.
+// INCRBY <encoding> <offset> <increment> -- Increments or decrements
+// (if a negative increment is given) the specified bit field and returns the new value.
+// There is another subcommand that only changes the behavior of successive
+// INCRBY and SET subcommands calls by setting the overflow behavior:
+// OVERFLOW [WRAP|SAT|FAIL]`
+func evalBITFIELD(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("BITFIELD"),
+		}
+	}
+
+	return bitfieldEvalGeneric(args, store, false)
+}
+
+// Read-only variant of the BITFIELD command. It is like the original BITFIELD but only accepts GET subcommand and can safely be used in read-only replicas.
+func evalBITFIELDRO(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("BITFIELD_RO"),
+		}
+	}
+
+	return bitfieldEvalGeneric(args, store, true)
 }

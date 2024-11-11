@@ -13,17 +13,16 @@ ZCARD key
 
 ## Parameters
 
-| Parameter       | Description                                                                              | Type    | Required |
-|-----------------|------------------------------------------------------------------------------------------|---------|----------|
-| `key`           | The key associated with the sorted set for whose cardinality is to be retrieved       | String  | Yes      |
-
+| Parameter | Description                                                                     | Type   | Required |
+| --------- | ------------------------------------------------------------------------------- | ------ | -------- |
+| `key`     | The key associated with the sorted set for whose cardinality is to be retrieved | String | Yes      |
 
 ## Return Value
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| If specified key exists                        | cardinality of the sorted set at key               |
-| If key doesn't exist                           | `0`                                               |
+| Condition               | Return Value                         |
+| ----------------------- | ------------------------------------ |
+| If specified key exists | cardinality of the sorted set at key |
+| If key doesn't exist    | `0`                                  |
 
 ## Behaviour
 
@@ -44,10 +43,10 @@ ZCARD key
    - Error Message: `(error) -ERR wrong number of arguments for 'ZCARD' command`
    - Occurs if key isn't specified in the command.
 
-
 ## Example Usage
 
 ### Basic Usage
+
 Creating sorted set `myzset` with two fields `one`, `two` with scores 1, 2 respectively. Getting cardinality of `myzset`. Adding new element into `myzset` and getting updated cardinality.
 
 ```bash
@@ -65,6 +64,7 @@ Creating sorted set `myzset` with two fields `one`, `two` with scores 1, 2 respe
 ```
 
 ### Invalid Usage on non-existent sorted set
+
 Getting cardinality of a non-existent sorted set `nonExistentZSet`.
 
 ```bash
@@ -73,6 +73,7 @@ Getting cardinality of a non-existent sorted set `nonExistentZSet`.
 ```
 
 ### Invalid Usage on a non sorted set key
+
 Getting cardinality of a key `mystring` associated with a non sorted set type.
 
 ```bash
@@ -87,4 +88,3 @@ OK
 
 - The `ZCARD` command is a constant-time operation, meaning its execution time is O(1) regardless of the number of elements in the sorted set.
 - This command is useful for quickly determining the size of the sorted set without needing to retrieve all the fields and values.
-

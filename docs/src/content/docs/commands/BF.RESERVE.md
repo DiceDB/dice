@@ -13,19 +13,18 @@ BF.RESERVE key [options]
 
 ## Parameters
 
-| Parameter | Description | Type | Required |
-|---|---|---|---|
-| `key` | The key under which the Bloom Filter will be stored. | String | Yes |
-| `error_rate` | The desired probability of false positives. The default value is 0.01 (1%). | Float | No |
-| `initial_capacity` | The initial capacity of the Bloom Filter. The default value is 1000 elements. | Integer | No |
+| Parameter          | Description                                                                   | Type    | Required |
+| ------------------ | ----------------------------------------------------------------------------- | ------- | -------- |
+| `key`              | The key under which the Bloom Filter will be stored.                          | String  | Yes      |
+| `error_rate`       | The desired probability of false positives. The default value is 0.01 (1%).   | Float   | No       |
+| `initial_capacity` | The initial capacity of the Bloom Filter. The default value is 1000 elements. | Integer | No       |
 
 ## Return Value
 
-| Condition | Return Value |
-|---|---|
-| Command successful | Simple string reply: `OK` |
-| Unsuccessful command | `error` |
-
+| Condition            | Return Value              |
+| -------------------- | ------------------------- |
+| Command successful   | Simple string reply: `OK` |
+| Unsuccessful command | `error`                   |
 
 ## Behaviour
 
@@ -33,25 +32,35 @@ When the `BF.RESERVE` command is executed, DiceDB will create a new Bloom Filter
 
 ## Errors
 
-1. `Incorrect Number of Arguments`: 
-  - Error message: `(error) ERR wrong number of arguments for 'BF.RESERVE' command`
-  - This error occurs when the command does not have the correct number of arguments.
-2. `Invalid Error Rate Range`: 
-  - Error message: `(error) Err (0 < error rate range < 1) `
-  - This error occurs when the error rate is not within the valid range (0, 1).
-3. `Invalid Initial Capacity`:
-  - Error message: `(error) ERR (capacity should be larger than 0)`
-  - This error occurs when the initial capacity is not a valid positive integer.
-4. `Invalid Data Type`:
-  - Error message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
-  - This error occurs when the key is already associated with a value of a different data type.
-5. `Bad error rate`:
-  - Error message: `(error) ERR bad error rate`
-  - This error occurs when the error rate is not a valid float value.
-6. `Bad initial capacity`:
-  - Error message: `(error) ERR bad capacity`
-  - This error occurs when the initial capacity is not a valid integer value.
+1. `Incorrect Number of Arguments`:
 
+- Error message: `(error) ERR wrong number of arguments for 'BF.RESERVE' command`
+- This error occurs when the command does not have the correct number of arguments.
+
+2. `Invalid Error Rate Range`:
+
+- Error message: `(error) Err (0 < error rate range < 1) `
+- This error occurs when the error rate is not within the valid range (0, 1).
+
+3. `Invalid Initial Capacity`:
+
+- Error message: `(error) ERR (capacity should be larger than 0)`
+- This error occurs when the initial capacity is not a valid positive integer.
+
+4. `Invalid Data Type`:
+
+- Error message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
+- This error occurs when the key is already associated with a value of a different data type.
+
+5. `Bad error rate`:
+
+- Error message: `(error) ERR bad error rate`
+- This error occurs when the error rate is not a valid float value.
+
+6. `Bad initial capacity`:
+
+- Error message: `(error) ERR bad capacity`
+- This error occurs when the initial capacity is not a valid integer value.
 
 ## Example Usage
 
@@ -61,6 +70,7 @@ When the `BF.RESERVE` command is executed, DiceDB will create a new Bloom Filter
 127.0.0.1:7379> BF.RESERVE my_bloom_filter 0.005 5000
 OK
 ```
+
 This command initializes a Bloom Filter named `my_bloom_filter` with an error rate of 0.005 (0.5%) and an initial capacity of 5000 elements.
 
 ### Wrong Data Error
@@ -89,5 +99,3 @@ This sequence of commands will result in an error because `my_bloom_filter` is a
 ```
 
 This command will result in an error because the initial capacity is not a valid positive integer.
-
-

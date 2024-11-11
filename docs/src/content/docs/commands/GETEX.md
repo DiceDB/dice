@@ -13,22 +13,22 @@ GETEX key [EX seconds|PX milliseconds|EXAT timestamp|PXAT milliseconds-timestamp
 
 ## Parameters
 
-| Parameter | Description                                                               | Type    | Required |
-|-----------|---------------------------------------------------------------------------|---------|----------|
-| `key`     | The key whose value you want to retrieve and set an expiration for.       | String  | Yes      |
-| `EX`      | Set the expiration time in seconds.                                       | Integer | No       |
-| `EXAT`    | Set the expiration time as a Unix timestamp in seconds.                   | Integer | No       |
-| `PX`      | Set the expiration time in milliseconds.                                  | Integer | No       |
-| `PXAT`    | Set the expiration time as a Unix timestamp in milliseconds.              | Integer | No       |
-| `PERSIST` | Remove the existing expiration time, making the key persistent.           | None    | No       |
+| Parameter | Description                                                         | Type    | Required |
+| --------- | ------------------------------------------------------------------- | ------- | -------- |
+| `key`     | The key whose value you want to retrieve and set an expiration for. | String  | Yes      |
+| `EX`      | Set the expiration time in seconds.                                 | Integer | No       |
+| `EXAT`    | Set the expiration time as a Unix timestamp in seconds.             | Integer | No       |
+| `PX`      | Set the expiration time in milliseconds.                            | Integer | No       |
+| `PXAT`    | Set the expiration time as a Unix timestamp in milliseconds.        | Integer | No       |
+| `PERSIST` | Remove the existing expiration time, making the key persistent.     | None    | No       |
 
 ## Return Values
 
-| Condition                                         | Return Value                                      |
-|---------------------------------------------------|---------------------------------------------------|
-| The specified key exists and holds a value        | The value stored at the key                       |
-| The specified key does not exist                  | `nil`                                             |
-| Syntax or specified constraints are invalid       | error                                             |
+| Condition                                   | Return Value                |
+| ------------------------------------------- | --------------------------- |
+| The specified key exists and holds a value  | The value stored at the key |
+| The specified key does not exist            | `nil`                       |
+| Syntax or specified constraints are invalid | error                       |
 
 ## Behaviour
 
@@ -120,4 +120,3 @@ OK
 - The `PERSIST` option is useful when you want to make a key persistent again after it has been set to expire.
 
 By understanding and utilizing the `GETEX` command, you can efficiently manage key-value pairs in DiceDB with precise control over their expiration times.
-

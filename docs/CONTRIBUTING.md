@@ -1,9 +1,9 @@
-DiceDB welcomes your contributions! Whether you're fixing bugs, adding new features, or improving the documentation, your help is valuable. 
+DiceDB welcomes your contributions! Whether you're fixing bugs, adding new features, or improving the documentation, your help is valuable.
 
 To maintain the project's quality and consistency, please follow these guidelines:
 
-- Keep the code consistent: Use the same coding style and conventions throughout the project. 
-- Keep the git repository consistent: Follow proper git practices to avoid conflicts and ensure a clean history. 
+- Keep the code consistent: Use the same coding style and conventions throughout the project.
+- Keep the git repository consistent: Follow proper git practices to avoid conflicts and ensure a clean history.
 
 # Contribution Guidelines
 

@@ -74,6 +74,11 @@ const (
 
 // Watch commands
 const (
+	CmdSadd     = "SADD"
+	CmdSrem     = "SREM"
+	CmdScard    = "SCARD"
+	CmdSmembers = "SMEMBERS"
+
 	CmdGetWatch      = "GET.WATCH"
 	CmdGetUnWatch    = "GET.UNWATCH"
 	CmdZRangeWatch   = "ZRANGE.WATCH"
@@ -125,6 +130,12 @@ const (
 	CmdHDel          = "HDEL"
 	CmdHMSet         = "HMSET"
 	CmdHMGet         = "HMGET"
+	CmdSetBit        = "SETBIT"
+	CmdGetBit        = "GETBIT"
+	CmdBitCount      = "BITCOUNT"
+	CmdBitField      = "BITFIELD"
+	CmdBitPos        = "BITPOS"
+	CmdBitFieldRO    = "BITFIELD_RO"
 )
 
 type CmdMeta struct {
@@ -185,6 +196,18 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdGetDel: {
+		CmdType: SingleShard,
+	},
+	CmdSadd: {
+		CmdType: SingleShard,
+	},
+	CmdSrem: {
+		CmdType: SingleShard,
+	},
+	CmdScard: {
+		CmdType: SingleShard,
+	},
+	CmdSmembers: {
 		CmdType: SingleShard,
 	},
 	CmdHExists: {
@@ -248,6 +271,24 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdHRandField: {
+		CmdType: SingleShard,
+	},
+	CmdSetBit: {
+		CmdType: SingleShard,
+	},
+	CmdGetBit: {
+		CmdType: SingleShard,
+	},
+	CmdBitCount: {
+		CmdType: SingleShard,
+	},
+	CmdBitField: {
+		CmdType: SingleShard,
+	},
+	CmdBitPos: {
+		CmdType: SingleShard,
+	},
+	CmdBitFieldRO: {
 		CmdType: SingleShard,
 	},
 

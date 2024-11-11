@@ -12,14 +12,15 @@ BITOP operation destkey key [key ...]
 ```
 
 ## Parameters
+| Parameter         | Description                                                                    | Type         | Required |
+|-------------------|--------------------------------------------------------------------------------|--------------|----------|
+|   `AND`           | Perform a bitwise AND operation.                                               |  Operation   |   Yes    |
+|   `OR`            | Perform a bitwise OR operation.                                                |  Operation   |   Yes    |
+|   `XOR`           | Perform a bitwise XOR operation.                                               |  Operation   |   Yes    |
+|   `NOT`           | Perform a bitwise NOT operation (only one key is allowed for this operation).  |  Operation   |   Yes    |
+|   `destkey`       | The key where the result of the bitwise operation will be stored.              |  String      |   Yes    |
+|   `key [key ...]` | One or more keys containing the strings to be used in the bitwise operation. For the `NOT` operation, only one key is allowed.|  String  |   Yes    |
 
-- `operation`: The bitwise operation to perform. It can be one of the following:
-  - `AND`: Perform a bitwise AND operation.
-  - `OR`: Perform a bitwise OR operation.
-  - `XOR`: Perform a bitwise XOR operation.
-  - `NOT`: Perform a bitwise NOT operation (only one key is allowed for this operation).
-- `destkey`: The key where the result of the bitwise operation will be stored.
-- `key [key ...]`: One or more keys containing the strings to be used in the bitwise operation. For the `NOT` operation, only one key is allowed.
 
 ## Return Value
 
@@ -61,10 +62,14 @@ The `BITOP` command can raise errors in the following cases:
 ### Example 1: Bitwise AND Operation
 
 ```bash
-SET key1 "foo"
-SET key2 "bar"
-BITOP AND result key1 key2
-GET result
+127.0.0.1:7379> SET key1 "foo"
+OK
+127.0.0.1:7379> SET key2 "bar"
+OK
+127.0.0.1:7379> BITOP AND result key1 key2
+(integer) 3
+127.0.0.1:7379> GET result
+"bab"
 ```
 
 `Explanation`:
@@ -77,10 +82,14 @@ GET result
 ### Example 2: Bitwise OR Operation
 
 ```bash
-SET key1 "foo"
-SET key2 "bar"
-BITOP OR result key1 key2
-GET result
+127.0.0.1:7379> SET key1 "foo"
+OK
+127.0.0.1:7379> SET key2 "bar"
+OK
+127.0.0.1:7379> BITOP OR result key1 key2
+(integer) 3
+127.0.0.1:7379> GET result
+"fo\x7f"
 ```
 
 `Explanation`:
@@ -93,10 +102,14 @@ GET result
 ### Example 3: Bitwise XOR Operation
 
 ```bash
-SET key1 "foo"
-SET key2 "bar"
-BITOP XOR result key1 key2
-GET result
+127.0.0.1:7379> SET key1 "foo"
+OK
+127.0.0.1:7379> SET key2 "bar"
+OK
+127.0.0.1:7379> BITOP XOR result key1 key2
+(integer) 3
+127.0.0.1:7379> GET result
+"\x04\x0e\x1d"
 ```
 
 `Explanation`:
@@ -109,9 +122,12 @@ GET result
 ### Example 4: Bitwise NOT Operation
 
 ```bash
-SET key1 "foo"
-BITOP NOT result key1
-GET result
+127.0.0.1:7379> SET key1 "foo"
+OK
+127.0.0.1:7379> BITOP NOT result key1
+(integer) 3
+127.0.0.1:7379> GET result
+"\x99\x90\x90"
 ```
 
 `Explanation`:

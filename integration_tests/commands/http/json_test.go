@@ -727,7 +727,6 @@ func TestJSONMGET(t *testing.T) {
 			},
 		})
 
-		fmt.Printf("expacting: %s with got: %s\n", "OK", resp)
 		assert.Equal(t, "OK", resp)
 	}
 
@@ -1433,8 +1432,8 @@ func TestJsonObjKeys(t *testing.T) {
 					if _, ok := result.([]interface{}); ok {
 						assert.ElementsMatch(t, tc.expected[i].([]interface{}), result.([]interface{}))
 					} else {
-							// handle the case where result is not a []interface{}
-							assert.Equal(t, tc.expected[i], result)
+						// handle the case where result is not a []interface{}
+						assert.Equal(t, tc.expected[i], result)
 					}
 
 				}

@@ -13,30 +13,30 @@ MSET key1 value1 [key2 value2 ...]
 
 ## Parameters
 
-| Parameter       | Description                                      | Type    | Required |
-|-----------------|--------------------------------------------------|---------|----------|
-| `key1, key2, ...`           | The keys to be set.  | String  | Yes      |
-| `value1, value2, ...`           | The values to be associated with the respective keys. | String  | Yes      |
-
+| Parameter             | Description                                           | Type   | Required |
+| --------------------- | ----------------------------------------------------- | ------ | -------- |
+| `key1, key2, ...`     | The keys to be set.                                   | String | Yes      |
+| `value1, value2, ...` | The values to be associated with the respective keys. | String | Yes      |
 
 ## Return values
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| The command returns `OK` if the operation is successful.                       | A string value                                             |
-
+| Condition                                                | Return Value   |
+| -------------------------------------------------------- | -------------- |
+| The command returns `OK` if the operation is successful. | A string value |
 
 ## Behaviour
 
-When the `MSET` command is executed: 
-- DiceDB sets the specified keys to their respective values. 
-- This operation is atomic, meaning that either all the keys are set, or none of them are. 
+When the `MSET` command is executed:
+
+- DiceDB sets the specified keys to their respective values.
+- This operation is atomic, meaning that either all the keys are set, or none of them are.
 - This ensures data consistency and integrity.
 - Any pre-existing keys are overwritten and their respective TTL (if set) are reset.
 
 ## Errors
 
 The `MSET` command can raise errors in the following scenarios:
+
 - `Wrong number of arguments`: If the number of arguments is not even (i.e., there is a key without a corresponding value), DiceDB will return an error:
   ```bash
   (error) ERROR wrong number of arguments for 'mset' command

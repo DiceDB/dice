@@ -74,6 +74,22 @@ var (
 		Cmd:     "SETEX",
 		CmdType: SingleShard,
 	}
+	saddCmdMeta = CmdsMeta{
+		Cmd:     "SADD",
+		CmdType: SingleShard,
+	}
+	sremCmdMeta = CmdsMeta{
+		Cmd:     "SREM",
+		CmdType: SingleShard,
+	}
+	scardCmdMeta = CmdsMeta{
+		Cmd:     "SCARD",
+		CmdType: SingleShard,
+	}
+	smembersCmdMeta = CmdsMeta{
+		Cmd: "SMEMBERS",
+	}
+
 	jsonArrAppendCmdMeta = CmdsMeta{
 		Cmd:     "JSON.ARRAPPEND",
 		CmdType: SingleShard,
@@ -86,6 +102,7 @@ var (
 		Cmd:     "JSON.ARRPOP",
 		CmdType: SingleShard,
 	}
+
 	getrangeCmdMeta = CmdsMeta{
 		Cmd:     "GETRANGE",
 		CmdType: SingleShard,
@@ -152,6 +169,30 @@ var (
 	}
 	pttlCmdMeta = CmdsMeta{
 		Cmd:     "PTTL",
+		CmdType: SingleShard,
+	}
+	setbitCmdMeta = CmdsMeta{
+		Cmd:     "SETBIT",
+		CmdType: SingleShard,
+	}
+	getbitCmdMeta = CmdsMeta{
+		Cmd:     "GETBIT",
+		CmdType: SingleShard,
+	}
+	bitcountCmdMeta = CmdsMeta{
+		Cmd:     "BITCOUNT",
+		CmdType: SingleShard,
+	}
+	bitfieldCmdMeta = CmdsMeta{
+		Cmd:     "BITFIELD",
+		CmdType: SingleShard,
+	}
+	bitposCmdMeta = CmdsMeta{
+		Cmd:     "BITPOS",
+		CmdType: SingleShard,
+	}
+	bitfieldroCmdMeta = CmdsMeta{
+		Cmd:     "BITFIELD_RO",
 		CmdType: SingleShard,
 	}
 
@@ -331,9 +372,16 @@ func init() {
 	WorkerCmdsMeta["GET"] = getCmdMeta
 	WorkerCmdsMeta["GETSET"] = getsetCmdMeta
 	WorkerCmdsMeta["SETEX"] = setexCmdMeta
+
+	WorkerCmdsMeta["SADD"] = saddCmdMeta
+	WorkerCmdsMeta["SREM"] = sremCmdMeta
+	WorkerCmdsMeta["SCARD"] = scardCmdMeta
+	WorkerCmdsMeta["SMEMBERS"] = smembersCmdMeta
+
 	WorkerCmdsMeta["JSON.ARRAPPEND"] = jsonArrAppendCmdMeta
 	WorkerCmdsMeta["JSON.ARRLEN"] = jsonArrLenCmdMeta
 	WorkerCmdsMeta["JSON.ARRPOP"] = jsonArrPopCmdMeta
+
 	WorkerCmdsMeta["GETRANGE"] = getrangeCmdMeta
 	WorkerCmdsMeta["APPEND"] = appendCmdMeta
 	WorkerCmdsMeta["JSON.CLEAR"] = jsonclearCmdMeta
@@ -401,5 +449,12 @@ func init() {
 	WorkerCmdsMeta["HDEL"] = hdelCmdMeta
 	WorkerCmdsMeta["HMSET"] = hmsetCmdMeta
 	WorkerCmdsMeta["HMGET"] = hmgetCmdMeta
+	WorkerCmdsMeta["SETBIT"] = setbitCmdMeta
+	WorkerCmdsMeta["GETBIT"] = getbitCmdMeta
+	WorkerCmdsMeta["BITCOUNT"] = bitcountCmdMeta
+	WorkerCmdsMeta["BITFIELD"] = bitfieldCmdMeta
+	WorkerCmdsMeta["BITPOS"] = bitposCmdMeta
+	WorkerCmdsMeta["BITFIELD_RO"] = bitfieldroCmdMeta
+
 	// Additional commands (multishard, custom) can be added here as needed.
 }

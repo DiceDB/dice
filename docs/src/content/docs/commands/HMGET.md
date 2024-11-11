@@ -13,21 +13,21 @@ HMGET key field [field ...]
 
 ## Parameters
 
-| Parameter       | Description                                                   | Type    | Required |
-|-----------------|---------------------------------------------------------------|---------|----------|
-| `key`           | The name of the hash.                                         | String  | Yes      |
-| `field`         | The field within the hash to retrieve the value for.          | String  | Yes      |
-| `[field ...]`   | Additional fields to retrieve from the hash.                  | String  | No       |
+| Parameter     | Description                                          | Type   | Required |
+| ------------- | ---------------------------------------------------- | ------ | -------- |
+| `key`         | The name of the hash.                                | String | Yes      |
+| `field`       | The field within the hash to retrieve the value for. | String | Yes      |
+| `[field ...]` | Additional fields to retrieve from the hash.         | String | No       |
 
 ## Return Values
 
-| Condition                                    | Return Value                                                                |
-|----------------------------------------------|-----------------------------------------------------------------------------|
-| Field exists                                 | `String` (The value of the field)                                           |
-| Field does not exist                         | `nil`                                                                       |
-| Multiple fields retrieved                    | List of values for each field                                               |
-| Wrong data type                              | `(error) WRONGTYPE Operation against a key holding the wrong kind of value` |
-| Incorrect Argument Count                     | `(error) ERR wrong number of arguments for 'hmget' command`                 |
+| Condition                 | Return Value                                                                |
+| ------------------------- | --------------------------------------------------------------------------- |
+| Field exists              | `String` (The value of the field)                                           |
+| Field does not exist      | `nil`                                                                       |
+| Multiple fields retrieved | List of values for each field                                               |
+| Wrong data type           | `(error) WRONGTYPE Operation against a key holding the wrong kind of value` |
+| Incorrect Argument Count  | `(error) ERR wrong number of arguments for 'hmget' command`                 |
 
 ## Behaviour
 
@@ -64,6 +64,7 @@ The `HMGET` command can raise errors in the following scenarios:
 2) "999.99"
 3) "50"
 ```
+
 - **Behaviour**: The values of the fields `name`, `price`, and `stock` from the hash `product:2000` are retrieved and returned in the order specified.
 - **Return Value**: List of field values.
 
@@ -74,6 +75,7 @@ The `HMGET` command can raise errors in the following scenarios:
 1) "Laptop"
 2) (nil)
 ```
+
 - **Behaviour**: The `name` field exists, so its value is returned. The `description` field does not exist in the hash, so `nil` is returned.
 - **Return Value**: List with value and `nil`.
 
@@ -100,6 +102,7 @@ Missing Key or Field Arguments
 127.0.0.1:7379> HMGET product:2000
 (error) ERR wrong number of arguments for 'hmget' command
 ```
+
 - **Behavior**: The `HGET` command requires at least two arguments: the key and the field name.
 - **Error**: The command fails if no key or fields are specified. DiceDB raises an error indicating that the number of arguments is incorrect.
 

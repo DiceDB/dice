@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/internal/server/abstractserver"
+	"github.com/dicedb/dice/internal/wal"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
@@ -56,7 +57,7 @@ type WebsocketServer struct {
 	mu                 sync.Mutex
 }
 
-func NewWebSocketServer(shardManager *shard.ShardManager, port int) *WebsocketServer {
+func NewWebSocketServer(shardManager *shard.ShardManager, port int, wl wal.AbstractWAL) *WebsocketServer {
 	mux := http.NewServeMux()
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", port),
