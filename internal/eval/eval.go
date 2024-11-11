@@ -80,6 +80,15 @@ func makeEvalError(err error) *EvalResponse {
 	}
 }
 
+// ReplyFormatOptions holds formatting options for the JSON reply.
+type ReplyFormatOptions struct {
+	format  string
+	indent  string
+	newline string
+	space   string
+	resp3   bool
+}
+
 type jsonOperation string
 
 const (
@@ -87,6 +96,7 @@ const (
 	MultBy = "MULTBY"
 )
 
+const legacyDefaultRootPath = "."
 const (
 	defaultRootPath = "$"
 	maxExDuration   = 9223372036854775
