@@ -22,7 +22,7 @@ type (
 		querySubscriptionMap     map[string]map[uint32]struct{}              // querySubscriptionMap is a map of Key -> [fingerprint1, fingerprint2, ...]
 		tcpSubscriptionMap       map[uint32]map[chan *cmd.DiceDBCmd]struct{} // tcpSubscriptionMap is a map of fingerprint -> [client1Chan, client2Chan, ...]
 		fingerprintCmdMap        map[uint32]*cmd.DiceDBCmd                   // fingerprintCmdMap is a map of fingerprint -> DiceDBCmd
-		fingerprintLabelMap      map[uint32]string                           // fingerprintLabelMap is a map of fingerprint -> watch label
+		fingerprintWatchLabelMap map[uint32]string                           // fingerprintLabelMap is a map of fingerprint -> watch label
 		cmdWatchSubscriptionChan chan WatchSubscription                      // cmdWatchSubscriptionChan is the channel to send/receive watch subscription requests.
 		cmdWatchChan             chan dstore.CmdWatchEvent                   // cmdWatchChan is the channel to send/receive watch events.
 	}
@@ -42,7 +42,7 @@ func NewManager(cmdWatchSubscriptionChan chan WatchSubscription, cmdWatchChan ch
 		querySubscriptionMap:     make(map[string]map[uint32]struct{}),
 		tcpSubscriptionMap:       make(map[uint32]map[chan *cmd.DiceDBCmd]struct{}),
 		fingerprintCmdMap:        make(map[uint32]*cmd.DiceDBCmd),
-		fingerprintLabelMap:      make(map[uint32]string),
+		fingerprintWatchLabelMap: make(map[uint32]string),
 		cmdWatchSubscriptionChan: cmdWatchSubscriptionChan,
 		cmdWatchChan:             cmdWatchChan,
 	}
@@ -101,7 +101,7 @@ func (m *Manager) handleSubscription(sub WatchSubscription) {
 	m.tcpSubscriptionMap[fingerprint][sub.AdhocReqChan] = struct{}{}
 
 	// Add watch label to fingerprintLabelMap
-	m.fingerprintLabelMap[fingerprint] = sub.WatchLabel
+	m.fingerprintWatchLabelMap[fingerprint] = sub.WatchLabel
 }
 
 // handleUnsubscription processes an unsubscription request
@@ -130,7 +130,7 @@ func (m *Manager) handleUnsubscription(sub WatchSubscription) {
 			}
 		}
 		// Remove the watch label from fingerprintLabelMap
-		delete(m.fingerprintLabelMap, fingerprint)
+		delete(m.fingerprintWatchLabelMap, fingerprint)
 
 		// Also remove the fingerprint from fingerprintCmdMap
 		delete(m.fingerprintCmdMap, fingerprint)
