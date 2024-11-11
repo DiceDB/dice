@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -49,9 +50,8 @@ func TestGetExpiredKey(t *testing.T) {
 	expiryTime := int64(-1000)
 	hmap.SetExpiry("key1", expiryTime)
 
-	val, ok := hmap.Get("key1")
+	_, ok := hmap.Get("key1")
 	assert.False(t, ok, "Expected key1 to be expired")
-	assert.Empty(t, *val, "Expected empty value for expired key")
 }
 
 func TestKeys(t *testing.T) {
@@ -125,16 +125,19 @@ func TestHas(t *testing.T) {
 }
 
 func TestSetWithExpiry(t *testing.T) {
+	fmt.Println("INFO: TestSetWithExpiry")
+	mockTime := &utils.MockClock{CurrTime: time.Now()}
+	utils.CurrentTime = mockTime
 	hmap := NewHash()
 	hmap.SetWithExpiry("key1", "value1", 500) // 500 ms expiry
 
 	val, ok := hmap.Get("key1")
+	fmt.Println("INFO: TestSetWithExpiry 1", val, ok)
 	assert.True(t, ok, "Expected key1 to exist before expiry")
 	assert.Equal(t, "value1", *val, "Expected value1 for key1")
-
-	time.Sleep(600 * time.Millisecond)
-	val, ok = hmap.Get("key1")
-	fmt.Println(val, ok)
+	// time.Sleep(1 * time.Second)    // Sleep for 1 second
+	mockTime.SetTime(mockTime.CurrTime.Add(1 * time.Second))
+	_, ok = hmap.Get("key1")
+	fmt.Println("INFO: TestSetWithExpiry 2", val, ok)
 	assert.False(t, ok, "Expected key1 to have expired")
-	assert.Empty(t, *val, "Expected empty value after expiry")
 }

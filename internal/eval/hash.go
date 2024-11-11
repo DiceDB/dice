@@ -1,6 +1,8 @@
 package eval
 
 import (
+	"fmt"
+
 	"github.com/dicedb/dice/internal/server/utils"
 )
 
@@ -31,12 +33,13 @@ type Hash interface {
 }
 
 type HashItem struct {
-	Value  string
-	Expiry uint64 // MSB = 1 if the element has no expiry
+	Value   string
+	Expiry  uint64
+	Persist bool
 }
 
 func (i *HashItem) IsPersistent() bool {
-	return (i.Expiry>>63)&1 == 1
+	return i.Persist
 }
 
 // HashImpl implements the Hash interface
@@ -54,7 +57,7 @@ func NewHash() Hash {
 // Set inserts a value into the hash without expiry.
 func (h *HashImpl) Set(field, value string) bool {
 	existed := h.Has(field)
-	h.data[field] = HashItem{Value: value, Expiry: 1 << 63}
+	h.data[field] = HashItem{Value: value, Persist: true}
 	return existed
 }
 
@@ -63,7 +66,7 @@ func (h *HashImpl) SetWithExpiry(field, value string, expiryMs int64) bool {
 	existed := h.Has(field)
 	if expiryMs > 0 {
 		expiryUnixMs := uint64(utils.GetCurrentTime().UnixMilli() + expiryMs)
-		h.data[field] = HashItem{Value: value, Expiry: expiryUnixMs}
+		h.data[field] = HashItem{Value: value, Expiry: expiryUnixMs, Persist: false}
 	} else {
 		h.Delete(field)
 	}
@@ -78,12 +81,14 @@ func (h *HashImpl) GetWithExpiry(field string) (*HashItem, bool) {
 		return &HashItem{}, false
 	}
 
+	fmt.Println(item.Expiry, uint64(utils.GetCurrentTime().UnixMilli()), item.Persist, item.Value, item.Expiry <= uint64(utils.GetCurrentTime().UnixMilli()))
 	// If the item has no expiry, return it
-	if (item.Expiry>>63)&1 == 1 {
+	if item.IsPersistent() {
 		return &item, true
 	}
 	// If the item has expired, delete it
 	if item.Expiry <= uint64(utils.GetCurrentTime().UnixMilli()) {
+		fmt.Println("deleting", field)
 		delete(h.data, field)
 		return &HashItem{}, false
 	}
