@@ -804,7 +804,7 @@ func processMembersWithFlags(args []string, sortedSet *sortedset.Set, store *dst
 				score = 0.0 + score
 			}
 
-			// Now check GT and LT conditions based on the incremented score
+			// Now check GT and LT conditions based on the incremented score and return accordingly
 			if (flags[GT] && exists && score <= currentScore) ||
 				(flags[LT] && exists && score >= currentScore) {
 				return &EvalResponse{
