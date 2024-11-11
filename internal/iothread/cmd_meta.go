@@ -187,6 +187,7 @@ const (
 	CmdZRangeUnWatch  = "ZRANGE.UNWATCH"
 	CmdPFCountWatch   = "PFCOUNT.WATCH"
 	CmdPFCountUnWatch = "PFCOUNT.UNWATCH"
+	CmdHMGetAll      = "HMGETALL"
 )
 
 type CmdMeta struct {
@@ -373,6 +374,9 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdBitFieldRO: {
+		CmdType: SingleShard,
+	},
+	CmdHMGetAll: {
 		CmdType: SingleShard,
 	},
 	CmdLrange: {

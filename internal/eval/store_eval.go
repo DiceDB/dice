@@ -7,7 +7,6 @@ import (
 	"math"
 	"math/bits"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"unicode"
@@ -465,145 +464,6 @@ func evalSETEX(args []string, store *dstore.Store) *EvalResponse {
 	newArgs := []string{key, value, Ex, args[1]}
 
 	return evalSET(newArgs, store)
-}
-
-// evalHEXISTS returns if field is an existing field in the hash stored at key.
-//
-// This command returns 0, if the specified field doesn't exist in the key and 1 if it exists.
-//
-// If key doesn't exist, it returns 0.
-//
-// Usage: HEXISTS key field
-func evalHEXISTS(args []string, store *dstore.Store) *EvalResponse {
-	if len(args) != 2 {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongArgumentCount("HEXISTS"),
-		}
-	}
-
-	key := args[0]
-	hmKey := args[1]
-	obj := store.Get(key)
-
-	var hashMap HashMap
-
-	if obj == nil {
-		return &EvalResponse{
-			Result: clientio.IntegerZero,
-			Error:  nil,
-		}
-	}
-	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-		return &EvalResponse{
-			Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeErr),
-			Result: nil,
-		}
-	}
-
-	hashMap = obj.Value.(HashMap)
-
-	_, ok := hashMap.Get(hmKey)
-	if ok {
-		return &EvalResponse{
-			Result: clientio.IntegerOne,
-			Error:  nil,
-		}
-	}
-	// Return 0, if specified field doesn't exist in the HashMap.
-	return &EvalResponse{
-		Result: clientio.IntegerZero,
-		Error:  nil,
-	}
-}
-
-// evalHKEYS is used to retrieve all the keys(or field names) within a hash.
-//
-// This command returns empty array, if the specified key doesn't exist.
-//
-// Complexity is O(n) where n is the size of the hash.
-//
-// Usage: HKEYS key
-func evalHKEYS(args []string, store *dstore.Store) *EvalResponse {
-	if len(args) != 1 {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongArgumentCount("HKEYS"),
-		}
-	}
-
-	key := args[0]
-	obj := store.Get(key)
-
-	var hashMap HashMap
-	var result []string
-
-	if obj != nil {
-		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-			return &EvalResponse{
-				Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeErr),
-				Result: nil,
-			}
-		}
-		hashMap = obj.Value.(HashMap)
-	} else {
-		return &EvalResponse{
-			Result: clientio.EmptyArray,
-			Error:  nil,
-		}
-	}
-
-	for hmKey := range hashMap {
-		result = append(result, hmKey)
-	}
-
-	return &EvalResponse{
-		Result: result,
-		Error:  nil,
-	}
-}
-
-// evalHKEYS is used to retrieve all the values within a hash.
-//
-// This command returns empty array, if the specified key doesn't exist.
-//
-// Complexity is O(n) where n is the size of the hash.
-//
-// Usage: HVALS key
-func evalHVALS(args []string, store *dstore.Store) *EvalResponse {
-	if len(args) != 1 {
-		return &EvalResponse{Error: diceerrors.ErrWrongArgumentCount("HVALS"), Result: nil}
-	}
-
-	key := args[0]
-	obj := store.Get(key)
-
-	if obj == nil {
-		// Return an empty array for non-existent keys
-		return &EvalResponse{
-			Result: clientio.EmptyArray,
-			Error:  nil,
-		}
-	}
-
-	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-		return &EvalResponse{
-			Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeErr),
-			Result: nil,
-		}
-	}
-
-	hashMap := obj.Value.(HashMap)
-	results := make([]string, 0, len(hashMap))
-
-	for _, value := range hashMap {
-		results = append(results, value)
-	}
-
-	return &EvalResponse{
-		Result: results,
-		Error:  nil,
-	}
 }
 
 // Key, start and end are mandatory args.
@@ -2156,190 +2016,6 @@ func evalTTL(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
-// Increments the number stored at field in the hash stored at key by increment.
-//
-// If key does not exist, a new key holding a hash is created.
-// If field does not exist the value is set to the increment value passed
-//
-// The range of values supported by HINCRBY is limited to 64-bit signed integers.
-//
-// Usage: HINCRBY key field increment
-func evalHINCRBY(args []string, store *dstore.Store) *EvalResponse {
-	if len(args) < 3 {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongArgumentCount("HINCRBY"),
-		}
-	}
-
-	increment, err := strconv.ParseInt(args[2], 10, 64)
-	if err != nil {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrIntegerOutOfRange,
-		}
-	}
-	var hashmap HashMap
-	key := args[0]
-	obj := store.Get(key)
-	if obj != nil {
-		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-			return &EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrWrongTypeOperation,
-			}
-		}
-		hashmap = obj.Value.(HashMap)
-	}
-
-	if hashmap == nil {
-		hashmap = make(HashMap)
-	}
-
-	field := args[1]
-	numkey, err := hashmap.incrementValue(field, increment)
-	if err != nil {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrGeneral(err.Error()),
-		}
-	}
-
-	obj = store.NewObj(hashmap, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
-	store.Put(key, obj)
-
-	return &EvalResponse{
-		Result: numkey,
-		Error:  nil,
-	}
-}
-
-// Increments the number stored at field in the hash stored at key by the specified floating point increment.
-//
-// If key does not exist, a new key holding a hash is created.
-// If field does not exist, the value is set to the increment passed before the operation is performed.
-//
-// The precision of the increment is not restricted to integers, allowing for floating point values.
-//
-// Usage: HINCRBYFLOAT key field increment
-func evalHINCRBYFLOAT(args []string, store *dstore.Store) *EvalResponse {
-	if len(args) < 3 {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongArgumentCount("HINCRBYFLOAT"),
-		}
-	}
-
-	increment, err := strconv.ParseFloat(strings.TrimSpace(args[2]), 64)
-	if err != nil {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrInvalidNumberFormat,
-		}
-	}
-
-	key := args[0]
-	obj := store.Get(key)
-	var hashmap HashMap
-	if obj != nil {
-		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-			return &EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrWrongTypeOperation,
-			}
-		}
-		hashmap = obj.Value.(HashMap)
-	}
-
-	if hashmap == nil {
-		hashmap = make(HashMap)
-	}
-
-	field := args[1]
-	numkey, err := hashmap.incrementFloatValue(field, increment)
-	if err != nil {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrGeneral(err.Error()),
-		}
-	}
-
-	obj = store.NewObj(hashmap, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
-	store.Put(key, obj)
-
-	return &EvalResponse{
-		Result: numkey,
-		Error:  nil,
-	}
-}
-
-// evalHRANDFIELD returns random fields from a hash stored at key.
-// If only the key is provided, one random field is returned.
-// If count is provided, it returns that many unique random fields. A negative count allows repeated selections.
-// The "WITHVALUES" option returns both fields and values.
-// Returns nil if the key doesn't exist or the hash is empty.
-// Errors: arity error, type error for non-hash, syntax error for "WITHVALUES", or count format error.
-func evalHRANDFIELD(args []string, store *dstore.Store) *EvalResponse {
-	if len(args) < 1 || len(args) > 3 {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongArgumentCount("HRANDFIELD"),
-		}
-	}
-
-	key := args[0]
-	obj := store.Get(key)
-	if obj == nil {
-		return &EvalResponse{
-			Result: clientio.NIL,
-			Error:  nil,
-		}
-	}
-
-	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongTypeOperation,
-		}
-	}
-
-	hashMap := obj.Value.(HashMap)
-	if len(hashMap) == 0 {
-		return &EvalResponse{
-			Result: clientio.EmptyArray,
-			Error:  nil,
-		}
-	}
-
-	count := 1
-	withValues := false
-
-	if len(args) > 1 {
-		var err error
-		// The second argument is the count.
-		count, err = strconv.Atoi(args[1])
-		if err != nil {
-			return &EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrIntegerOutOfRange,
-			}
-		}
-
-		// The third argument is the "WITHVALUES" option.
-		if len(args) == 3 {
-			if !strings.EqualFold(args[2], WithValues) {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrSyntax,
-				}
-			}
-			withValues = true
-		}
-	}
-
-	return selectRandomFields(hashMap, count, withValues)
-}
-
 // evalINCR increments the value of the specified key in args by 1,
 // if the key exists and the value is integer format.
 // The key should be the only param in args.
@@ -2683,202 +2359,6 @@ func evalRestore(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	return makeEvalResult(clientio.OK)
-}
-
-// evalHLEN returns the number of fields contained in the hash stored at key.
-//
-// If key doesn't exist, it returns 0.
-//
-// Usage: HLEN key
-func evalHLEN(args []string, store *dstore.Store) *EvalResponse {
-	if len(args) != 1 {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongArgumentCount("HLEN"),
-		}
-	}
-
-	key := args[0]
-
-	obj := store.Get(key)
-
-	if obj == nil {
-		return &EvalResponse{
-			Result: clientio.IntegerZero,
-			Error:  nil,
-		}
-	}
-
-	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongTypeOperation,
-		}
-	}
-
-	hashMap := obj.Value.(HashMap)
-	return &EvalResponse{
-		Result: len(hashMap),
-		Error:  nil,
-	}
-}
-
-// evalHSTRLEN returns the length of value associated with field in the hash stored at key.
-//
-// This command returns 0, if the specified field doesn't exist in the key
-//
-// If key doesn't exist, it returns 0.
-//
-// Usage: HSTRLEN key field value
-func evalHSTRLEN(args []string, store *dstore.Store) *EvalResponse {
-	if len(args) != 2 {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongArgumentCount("HSTRLEN"),
-		}
-	}
-
-	key := args[0]
-	hmKey := args[1]
-	obj := store.Get(key)
-
-	var hashMap HashMap
-
-	if obj != nil {
-		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-			return &EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrWrongTypeOperation,
-			}
-		}
-		hashMap = obj.Value.(HashMap)
-	} else {
-		return &EvalResponse{
-			Result: clientio.IntegerZero,
-			Error:  nil,
-		}
-	}
-
-	val, ok := hashMap.Get(hmKey)
-	// Return 0, if specified field doesn't exist in the HashMap.
-	if ok {
-		return &EvalResponse{
-			Result: len(*val),
-			Error:  nil,
-		}
-	}
-	return &EvalResponse{
-		Result: clientio.IntegerZero,
-		Error:  nil,
-	}
-}
-
-// evalHSCAN return a two element multi-bulk reply, where the first element is a string representing the cursor,
-// and the second element is a multi-bulk with an array of elements.
-//
-// The array of elements contain two elements, a field and a value, for every returned element of the Hash.
-//
-// If key doesn't exist, it returns an array containing 0 and empty array.
-//
-// Usage: HSCAN key cursor [MATCH pattern] [COUNT count]
-func evalHSCAN(args []string, store *dstore.Store) *EvalResponse {
-	if len(args) < 2 {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongArgumentCount("HSCAN"),
-		}
-	}
-
-	key := args[0]
-	cursor, err := strconv.ParseInt(args[1], 10, 64)
-	if err != nil {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrIntegerOutOfRange,
-		}
-	}
-
-	obj := store.Get(key)
-	if obj == nil {
-		return &EvalResponse{
-			Result: []interface{}{"0", []string{}},
-			Error:  nil,
-		}
-	}
-
-	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongTypeOperation,
-		}
-	}
-
-	hashMap := obj.Value.(HashMap)
-	pattern := "*"
-	count := 10
-
-	// Parse optional arguments
-	for i := 2; i < len(args); i += 2 {
-		switch strings.ToUpper(args[i]) {
-		case "MATCH":
-			if i+1 < len(args) {
-				pattern = args[i+1]
-			}
-		case CountConst:
-			if i+1 < len(args) {
-				parsedCount, err := strconv.Atoi(args[i+1])
-				if err != nil || parsedCount < 1 {
-					return &EvalResponse{
-						Result: nil,
-						Error:  diceerrors.ErrIntegerOutOfRange,
-					}
-				}
-				count = parsedCount
-			}
-		}
-	}
-
-	// Note that this implementation has a time complexity of O(N), where N is the number of keys in 'hashMap'.
-	// This is in contrast to Redis, which implements HSCAN in O(1) time complexity by maintaining a cursor.
-	keys := make([]string, 0, len(hashMap))
-	for k := range hashMap {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	matched := 0
-	results := make([]string, 0, count*2)
-	newCursor := 0
-
-	g, err := glob.Compile(pattern)
-	if err != nil {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrGeneral(fmt.Sprintf("Invalid glob pattern: %s", err)),
-		}
-	}
-
-	// Scan the keys and add them to the results if they match the pattern
-	for i := int(cursor); i < len(keys); i++ {
-		if g.Match(keys[i]) {
-			results = append(results, keys[i], hashMap[keys[i]])
-			matched++
-			if matched >= count {
-				newCursor = i + 1
-				break
-			}
-		}
-	}
-
-	// If we've scanned all keys, reset cursor to 0
-	if newCursor >= len(keys) {
-		newCursor = 0
-	}
-
-	return &EvalResponse{
-		Result: []interface{}{strconv.Itoa(newCursor), results},
-		Error:  nil,
-	}
 }
 
 // evalBF.RESERVE evaluates the BF.RESERVE command responsible for initializing a
@@ -6943,4 +6423,599 @@ func evalCommandDocs(args []string) *EvalResponse {
 	}
 
 	return makeEvalResult(result)
+}
+
+// evalHEXISTS implements the HEXISTS command which checks if a field exists in a hash.
+//
+// Returns:
+//   - 1 if the hash contains the specified field
+//   - 0 if the hash does not contain the field or the key does not exist
+//   - Error if wrong number of arguments or if the key exists but contains a value of wrong type
+//
+// Time complexity: O(1)
+func evalHEXISTS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 2 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("HEXISTS"))
+	}
+
+	key := args[0]
+	hmKey := args[1]
+	obj := store.Get(key)
+
+	var hashMap Hash
+
+	if obj == nil {
+		return makeEvalResult(clientio.IntegerZero)
+	}
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return makeEvalError(diceerrors.ErrWrongTypeOperation)
+	}
+
+	hashMap = obj.Value.(Hash)
+
+	if ok := hashMap.Has(hmKey); ok {
+		return makeEvalResult(clientio.IntegerOne)
+	}
+	return makeEvalResult(clientio.IntegerZero)
+
+}
+
+// evalHKEYS implements the HKEYS command for a hash map data structure.
+// It returns all field names (keys) in the hash stored at the given key.
+//
+// Example:
+//
+//	HKEYS myhash -> returns all field names in myhash
+func evalHKEYS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("HKEYS"))
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	var hashMap Hash
+
+	if obj != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+			return makeEvalError(diceerrors.ErrWrongTypeOperation)
+		}
+		hashMap = obj.Value.(Hash)
+	} else {
+		return makeEvalResult(clientio.EmptyArray)
+	}
+	return makeEvalResult(hashMap.Keys())
+}
+
+// evalHVALS implements the HVALS command which returns all values in a hash stored at key.
+// If the key is not found, it returns an empty array.
+// If the key exists but holds a wrong type of value, an error is returned.
+//
+// Returns:
+//   - EvalResponse containing:
+//   - Result: Slice of strings containing all values in the hash
+//   - Error: If wrong number of arguments or wrong value type
+func evalHVALS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("HVALS"))
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	if obj == nil {
+		return makeEvalResult(clientio.EmptyArray)
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return makeEvalError(diceerrors.ErrWrongTypeOperation)
+	}
+
+	hashMap := obj.Value.(Hash)
+
+	return makeEvalResult(hashMap.Values())
+}
+
+func hMultiSetGeneric(cmd string, args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 3 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount(cmd))
+	}
+
+	key := args[0]
+	size := len(args) - 1
+	if size < 0 || size%2 != 0 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount(cmd))
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		obj = store.NewObj(NewHash(), -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
+		store.Put(key, obj)
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return makeEvalError(diceerrors.ErrWrongTypeOperation)
+	}
+
+	hs := obj.Value.(Hash)
+	count := int64(0)
+	for i := 1; i < len(args); i += 2 {
+		if ok := hs.Set(args[i], args[i+1]); !ok {
+			count++
+		}
+	}
+	switch cmd {
+	case "HSET":
+		return makeEvalResult(count)
+	default:
+		return makeEvalResult(clientio.OK)
+	}
+}
+
+// evalHSET sets the specified fields to their
+// respective values in a hashmap stored at key
+//
+// This command overwrites the values of specified
+// fields that exist in the hash.
+//
+// If key doesn't exist, a new key holding a hash is created.
+//
+// Usage: HSET key field value [field value ...]
+func evalHSET(args []string, store *dstore.Store) *EvalResponse {
+	return hMultiSetGeneric("HSET", args, store)
+}
+
+// evalHMSET sets the specified fields to their
+// respective values in a hashmap stored at key
+//
+// This command overwrites the values of specified
+// fields that exist in the hash.
+//
+// If key doesn't exist, a new key holding a hash is created.
+//
+// Usage: HMSET key field value [field value ...]
+func evalHMSET(args []string, store *dstore.Store) *EvalResponse {
+	return hMultiSetGeneric("HMSET", args, store)
+}
+
+// evalHGETALL returns all fields and values of the hash stored at key.
+// If the key does not exist, an empty array is returned.
+// If the key exists but holds a wrong type of value, an error is returned.
+func evalHSETNX(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 3 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("HSETNX"))
+	}
+
+	key := args[0]
+	field := args[1]
+	val := args[2]
+	obj := store.Get(key)
+
+	if obj == nil {
+		value := NewHash()
+		obj = store.NewObj(value, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
+		store.Put(key, obj)
+	}
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeHashMap); err != nil {
+		return makeEvalError(diceerrors.ErrWrongTypeOperation)
+	}
+	hashMap := obj.Value.(Hash)
+	ok := hashMap.Has(field)
+	if ok {
+		return makeEvalResult(int64(0))
+	} else {
+		hashMap.Set(field, val)
+		return makeEvalResult(int64(1))
+	}
+}
+
+// evalHMGET returns an array of values associated with the given fields,
+// in the same order as they are requested.
+// If a field does not exist, returns a corresponding nil value in the array.
+// If the key does not exist, returns an array of nil values.
+func evalHMGET(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("HMGET"))
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+	results := make([]interface{}, 0, len(args)-1)
+
+	// If the object is nil, return empty results for all requested fields
+	if obj == nil {
+		for i := 0; i < len(args[1:]); i++ {
+			results = append(results, nil)
+		}
+		return makeEvalResult(results)
+	}
+
+	// Assert that the object is of type HashMap
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return makeEvalError(diceerrors.ErrWrongTypeOperation)
+	}
+
+	hashMap := obj.Value.(Hash)
+
+	// Loop through the requested fields
+	for _, hmKey := range args[1:] {
+		value, ok := hashMap.Get(hmKey)
+		if ok {
+			results = append(results, *value)
+		} else {
+			results = append(results, nil)
+		}
+	}
+
+	return makeEvalResult(results)
+}
+
+func evalHGET(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 2 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("HGET"))
+	}
+
+	key := args[0]
+	field := args[1]
+
+	obj := store.Get(key)
+
+	if obj == nil {
+		return makeEvalResult(clientio.NIL)
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeHashMap); err != nil {
+		return makeEvalError(diceerrors.ErrWrongTypeOperation)
+	}
+
+	hs := obj.Value.(Hash)
+	if val, ok := hs.Get(field); ok {
+		return makeEvalResult(*val)
+	}
+
+	return makeEvalResult(clientio.NIL)
+}
+
+// evalHDEL evaluates the HDEL command which removes the specified fields from a hash stored at the given key.
+// It returns the number of fields that were removed from the hash.
+//
+
+// Returns:
+//   - *EvaResponse: Contains either the number of fields removed or an error if:
+//   - Wrong number of arguments (less than 2)
+//   - Key exists but contains a value that is not a hash
+//   - For non-existing keys, returns 0
+func evalHDEL(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("HDEL"))
+	}
+
+	key := args[0]
+	fields := args[1:]
+
+	obj := store.Get(key)
+	if obj == nil {
+		return makeEvalResult(int64(0))
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return makeEvalError(diceerrors.ErrWrongTypeOperation)
+	}
+
+	hashMap := obj.Value.(Hash)
+	count := int64(0)
+	for _, field := range fields {
+		if ok := hashMap.Delete(field); ok {
+			count++
+		}
+	}
+	return makeEvalResult(count)
+}
+
+// Increments the number stored at field in the hash stored at key by increment.
+//
+// If key does not exist, a new key holding a hash is created.
+// If field does not exist the value is set to the increment value passed
+//
+// The range of values supported by HINCRBY is limited to 64-bit signed integers.
+//
+// Usage: HINCRBY key field increment
+func evalHINCRBY(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 3 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("HINCRBY"))
+	}
+
+	increment, err := strconv.ParseInt(args[2], 10, 64)
+	if err != nil {
+		return makeEvalError(diceerrors.ErrIntegerOutOfRange)
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	if obj == nil {
+		value := NewHash()
+		obj = store.NewObj(value, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
+		store.Put(key, obj)
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeHashMap); err != nil {
+		return makeEvalError(diceerrors.ErrWrongTypeOperation)
+	}
+
+	hashmap := obj.Value.(Hash)
+	field := args[1]
+	value, ok := hashmap.Get(field)
+
+	if !ok {
+		*value = "0"
+	}
+	newVal, err := hashIncrementValue(value, increment)
+	if err != nil {
+		return makeEvalError(diceerrors.ErrGeneral(err.Error()))
+	}
+	newValStr := strconv.FormatInt(newVal, 10)
+	hashmap.Set(field, newValStr)
+
+	return makeEvalResult(newVal)
+}
+
+// Increments the number stored at field in the hash stored at key by the specified floating point increment.
+//
+// If key does not exist, a new key holding a hash is created.
+// If field does not exist, the value is set to the increment passed before the operation is performed.
+//
+// The precision of the increment is not restricted to integers, allowing for floating point values.
+//
+// Usage: HINCRBYFLOAT key field increment
+func evalHINCRBYFLOAT(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 3 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("HINCRBYFLOAT"))
+	}
+
+	incr, err := strconv.ParseFloat(strings.TrimSpace(args[2]), 64)
+	if err != nil {
+		return makeEvalError(diceerrors.ErrInvalidNumberFormat)
+	}
+
+	key := args[0]
+	field := args[1]
+	obj := store.Get(key)
+
+	if obj == nil {
+		value := NewHash()
+		obj = store.NewObj(value, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
+		store.Put(key, obj)
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeHashMap); err != nil {
+		return makeEvalError(diceerrors.ErrWrongTypeOperation)
+	}
+
+	hs := obj.Value.(Hash)
+	val, ok := hs.Get(field)
+	if !ok {
+		*val = "0"
+	}
+
+	numkey, err := hashIncrementFloatValue(val, incr)
+	if err != nil {
+		return makeEvalError(err)
+	}
+
+	hs.Set(field, *numkey)
+	return makeEvalResult(*numkey)
+}
+
+// evalHRANDFIELD returns random fields from a hash stored at key.
+// If only the key is provided, one random field is returned.
+// If count is provided, it returns that many unique random fields. A negative count allows repeated selections.
+// The "WITHVALUES" option returns both fields and values.
+// Returns nil if the key doesn't exist or the hash is empty.
+// Errors: arity error, type error for non-hash, syntax error for "WITHVALUES", or count format error.
+func evalHRANDFIELD(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 || len(args) > 3 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("HRANDFIELD"))
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		return makeEvalResult(clientio.NIL)
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return makeEvalError(diceerrors.ErrWrongTypeOperation)
+	}
+
+	hs := obj.Value.(Hash)
+	if hs.Len() == 0 {
+		return makeEvalResult([]string{})
+	}
+
+	count := 1
+	withValues := false
+
+	if len(args) > 1 {
+		var err error
+		// The second argument is the count.
+		count, err = strconv.Atoi(args[1])
+		if err != nil {
+			return makeEvalError(diceerrors.ErrIntegerOutOfRange)
+		}
+
+		// The third argument is the "WITHVALUES" option.
+		if len(args) == 3 {
+			if !strings.EqualFold(args[2], WithValues) {
+				return makeEvalError(diceerrors.ErrSyntax)
+			}
+			withValues = true
+		}
+	}
+	return makeEvalResult(*hashRandomFields(&hs, count, withValues))
+}
+
+// evalHLEN returns the number of fields contained in the hash stored at key.
+//
+// If key doesn't exist, it returns 0.
+//
+// Usage: HLEN key
+func evalHLEN(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("HLEN"))
+	}
+
+	key := args[0]
+
+	obj := store.Get(key)
+
+	if obj == nil {
+		return makeEvalResult(clientio.IntegerZero)
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return makeEvalError(diceerrors.ErrWrongTypeOperation)
+	}
+
+	hashMap := obj.Value.(Hash)
+	return makeEvalResult(hashMap.Len())
+}
+
+// evalHSTRLEN returns the length of value associated with field in the hash stored at key.
+//
+// This command returns 0, if the specified field doesn't exist in the key
+//
+// If key doesn't exist, it returns 0.
+//
+// Usage: HSTRLEN key field value
+func evalHSTRLEN(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 2 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("HSTRLEN"))
+	}
+
+	key := args[0]
+	hmKey := args[1]
+	obj := store.Get(key)
+
+	var hashMap Hash
+
+	if obj != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+			return makeEvalError(diceerrors.ErrWrongTypeOperation)
+		}
+		hashMap = obj.Value.(Hash)
+	} else {
+		return makeEvalResult(clientio.IntegerZero)
+	}
+
+	val, ok := hashMap.Get(hmKey)
+	if ok {
+		return makeEvalResult(len(*val))
+	}
+	return makeEvalResult(clientio.IntegerZero)
+}
+
+// evalHSCAN return a two element multi-bulk reply, where the first element is a string representing the cursor,
+// and the second element is a multi-bulk with an array of elements.
+//
+// The array of elements contain two elements, a field and a value, for every returned element of the Hash.
+//
+// If key doesn't exist, it returns an array containing 0 and empty array.
+//
+// Usage: HSCAN key cursor [MATCH pattern] [COUNT count]
+func evalHSCAN(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("HSCAN"))
+	}
+
+	key := args[0]
+	cursor, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return makeEvalError(diceerrors.ErrValueOutOfRange)
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return makeEvalResult([]interface{}{"0", []string{}})
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return makeEvalError(diceerrors.ErrWrongTypeOperation)
+	}
+
+	hashMap := obj.Value.(Hash)
+	pattern := "*"
+	count := 10
+
+	// Parse optional arguments
+	for i := 2; i < len(args); i += 2 {
+		switch strings.ToUpper(args[i]) {
+		case "MATCH":
+			if i+1 < len(args) {
+				pattern = args[i+1]
+			}
+		case CountConst:
+			if i+1 < len(args) {
+				parsedCount, err := strconv.Atoi(args[i+1])
+				if err != nil || parsedCount < 1 {
+					return makeEvalError(diceerrors.ErrIntegerOutOfRange)
+				}
+				count = parsedCount
+			}
+		}
+	}
+
+	matched := 0
+	results := make([]string, 0, count*2)
+	newCursor := 0
+
+	g, err := glob.Compile(pattern)
+	if err != nil {
+		return makeEvalError(diceerrors.ErrGeneral(fmt.Sprintf("Invalid glob pattern: %s", err)))
+	}
+
+	items := hashMap.Items()
+
+	// Scan the keys and add them to the results if they match the pattern
+	for i := int(cursor); i < len(items); i++ {
+		key := items[i][0]
+		if g.Match(key) {
+			results = append(results, items[i]...)
+			matched++
+			if matched >= count {
+				newCursor = i + 1
+				break
+			}
+		}
+	}
+
+	// If we've scanned all keys, reset cursor to 0
+	if newCursor >= len(items) {
+		newCursor = 0
+	}
+
+	return makeEvalResult([]interface{}{strconv.Itoa(newCursor), results})
+}
+
+func evalHGETALL(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("HGETALL"))
+	}
+
+	key := args[0]
+
+	obj := store.Get(key)
+
+	if obj == nil {
+		value := NewHash()
+		obj = store.NewObj(value, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
+		store.Put(key, obj)
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeHashMap); err != nil {
+		return makeEvalError(diceerrors.ErrWrongTypeOperation)
+	}
+
+	hashMap := obj.Value.(Hash)
+	return makeEvalResult(hashMap.Items())
 }
