@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dicedb-go"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,15 +22,16 @@ type WatchSubscriber struct {
 const getWatchKey = "getwatchkey"
 
 type getWatchTestCase struct {
-	key string
-	val string
+	key         string
+	fingerprint string
+	val         string
 }
 
 var getWatchTestCases = []getWatchTestCase{
-	{getWatchKey, "value1"},
-	{getWatchKey, "value2"},
-	{getWatchKey, "value3"},
-	{getWatchKey, "value4"},
+	{getWatchKey, "1768826704", "value1"},
+	{getWatchKey, "1768826704", "value2"},
+	{getWatchKey, "1768826704", "value3"},
+	{getWatchKey, "1768826704", "value4"},
 }
 
 func TestGETWATCH(t *testing.T) {
@@ -83,7 +86,7 @@ func TestGETWATCH(t *testing.T) {
 			}
 			assert.Equal(t, 3, len(castedValue))
 			assert.Equal(t, "GET", castedValue[0])
-			assert.Equal(t, "1768826704", castedValue[1])
+			assert.Equal(t, tc.fingerprint, castedValue[1])
 			assert.Equal(t, tc.val, castedValue[2])
 		}
 	}
@@ -149,4 +152,123 @@ func TestGETWATCHWithSDK2(t *testing.T) {
 			assert.Equal(t, tc.val, v.Data.(string))     // data
 		}
 	}
+}
+
+var getWatchWithLabelTestCases = []getWatchTestCase{
+	{"k1", "2402418009", "k1-initial"},
+	{"k2", "29586164", "k2-initial"},
+}
+
+type getWatchUpdates struct {
+	key string
+	val string
+}
+
+var getWatchWithLabelUpdates = []getWatchUpdates{
+	{"k1", "k1-firstupdate"},
+	{"k1", "k1-secondupdate"},
+}
+
+func TestGETWATCHWithLabelWithSDK(t *testing.T) {
+	publisher := getLocalSdk()
+	subscribers := []WatchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// delete keys if they already exist
+	publisher.Del(ctx, getWatchWithLabelTestCases[0].key)
+	publisher.Del(ctx, getWatchWithLabelTestCases[1].key)
+
+	channels := make([]<-chan *dicedb.WatchResult, len(subscribers))
+
+	// set initial values
+	publisher.Set(ctx, getWatchWithLabelTestCases[0].key, getWatchWithLabelTestCases[0].val, 0)
+	publisher.Set(ctx, getWatchWithLabelTestCases[1].key, getWatchWithLabelTestCases[1].val, 0)
+
+	// subscribe first key
+	for i, subscriber := range subscribers {
+		watch := subscriber.client.WatchConn(ctx)
+		assert.True(t, watch != nil)
+		subscribers[i].watch = watch
+
+		uuid := uuid.New().String()
+		firstMsg, err := watch.GetWatch(ctx, getWatchWithLabelTestCases[0].key, uuid)
+
+		assert.Nil(t, err)
+		assert.NotNil(t, firstMsg)
+
+		assert.Equal(t, firstMsg.Command, uuid)
+		assert.Equal(t, getWatchWithLabelTestCases[0].fingerprint, firstMsg.Fingerprint)
+
+		val, ok := firstMsg.Data.(string)
+		assert.True(t, ok)
+		assert.Equal(t, getWatchWithLabelTestCases[0].val, val)
+
+		// Get the channel after calling GetWatch
+		channels[i] = watch.Channel()
+	}
+
+	// Cocurrently do the following:
+	// 1. Update already subscribed key
+	// 2. Subscribe new key
+
+	wg := sync.WaitGroup{}
+
+	// 1. update already subscribed key
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		publisher.Set(context.Background(), getWatchWithLabelTestCases[0].key, "k1-firstupdate", 0)
+		time.Sleep(100 * time.Millisecond)
+		publisher.Set(context.Background(), getWatchWithLabelTestCases[0].key, "k1-secondupdate", 0)
+	}()
+
+	// 2. subscribe new key
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		watch := subscribers[0].watch
+
+		uuid := uuid.New().String()
+		firstMsg, err := watch.GetWatch(ctx, getWatchWithLabelTestCases[1].key, uuid)
+
+		assert.Nil(t, err)
+		assert.NotNil(t, firstMsg)
+		assert.Equal(t, firstMsg.Command, uuid)
+		assert.Equal(t, getWatchWithLabelTestCases[1].fingerprint, firstMsg.Fingerprint)
+
+		val, ok := firstMsg.Data.(string)
+		assert.True(t, ok)
+		assert.Equal(t, getWatchWithLabelTestCases[1].val, val)
+	}()
+
+	wg.Wait()
+
+	// check if the subscribers received the updates
+	for _, channel := range channels {
+		for i := 0; i < 2; i++ {
+			select {
+			case v := <-channel:
+				assert.NotNil(t, v)
+
+				assert.Equal(t, "GET", v.Command)
+				assert.Equal(t, getWatchWithLabelTestCases[0].fingerprint, v.Fingerprint)
+
+				val, ok := v.Data.(string)
+				assert.True(t, ok)
+				assert.Equal(t, getWatchWithLabelUpdates[i].val, val)
+			case <-ctx.Done():
+				t.Errorf("Timeout waiting for update %d", i)
+			}
+		}
+	}
+
+	// Cleanup
+	for _, sub := range subscribers {
+		if sub.watch != nil {
+			sub.watch.Close()
+		}
+	}
+	publisher.Close()
 }

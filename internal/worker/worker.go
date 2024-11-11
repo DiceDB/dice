@@ -15,6 +15,7 @@ import (
 
 	"github.com/dicedb/dice/internal/querymanager"
 	"github.com/dicedb/dice/internal/watchmanager"
+	"github.com/google/uuid"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/auth"
@@ -185,6 +186,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 	// Break down the single command into multiple commands if multisharding is supported.
 	// The length of cmdList helps determine how many shards to wait for responses.
 	cmdList := make([]*cmd.DiceDBCmd, 0)
+	var watchLabel string
 
 	// Retrieve metadata for the command to determine if multisharding is supported.
 	meta, ok := CommandsMeta[diceDBCmd.Cmd]
@@ -243,6 +245,18 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 			// Modify the command name to remove the .WATCH suffix, this will allow us to generate a consistent
 			// fingerprint (which uses the command name without the suffix)
 			diceDBCmd.Cmd = diceDBCmd.Cmd[:len(diceDBCmd.Cmd)-6]
+
+			// extract the watch label
+			watchLabel = diceDBCmd.Args[len(diceDBCmd.Args)-1]
+
+			// validate the watch label
+			if _, err := uuid.Parse(watchLabel); err != nil {
+				return fmt.Errorf("watch label is not a valid UUID: %s", watchLabel)
+			}
+
+			// remove the watch label from the args
+			diceDBCmd.Args = diceDBCmd.Args[:len(diceDBCmd.Args)-1]
+
 			watchCmd := &cmd.DiceDBCmd{
 				Cmd:  diceDBCmd.Cmd,
 				Args: diceDBCmd.Args,
@@ -298,7 +312,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 	}
 
 	// Gather the responses from the shards and write them to the buffer.
-	if err := w.gather(ctx, diceDBCmd, len(cmdList), isWatchNotification); err != nil {
+	if err := w.gather(ctx, diceDBCmd, len(cmdList), isWatchNotification, watchLabel); err != nil {
 		return err
 	}
 
@@ -351,7 +365,7 @@ func (w *BaseWorker) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd) error {
 
 // gather collects the responses from multiple shards and writes the results into the provided buffer.
 // It first waits for responses from all the shards and then processes the result based on the command type (SingleShard, Custom, or Multishard).
-func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCmds int, isWatchNotification bool) error {
+func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCmds int, isWatchNotification bool, watchLabel string) error {
 	// Loop to wait for messages from number of shards
 	var storeOp []ops.StoreResponse
 	for numCmds != 0 {
@@ -374,15 +388,22 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 	val, ok := CommandsMeta[diceDBCmd.Cmd]
 
 	if isWatchNotification {
+		// if watch label is not empty, then this is the first response for the watch command
+		// hence, we need to send the watch label as part of the response
+		firstRespElem := diceDBCmd.Cmd
+		if watchLabel != "" {
+			firstRespElem = watchLabel
+		}
+
 		if storeOp[0].EvalResponse.Error != nil {
-			err := w.ioHandler.Write(ctx, querymanager.GenericWatchResponse(diceDBCmd.Cmd, fmt.Sprintf("%d", diceDBCmd.GetFingerprint()), storeOp[0].EvalResponse.Error))
+			err := w.ioHandler.Write(ctx, querymanager.GenericWatchResponse(firstRespElem, fmt.Sprintf("%d", diceDBCmd.GetFingerprint()), storeOp[0].EvalResponse.Error))
 			if err != nil {
 				slog.Debug("Error sending push response to client", slog.String("workerID", w.id), slog.Any("error", err))
 			}
 			return err
 		}
 
-		err := w.ioHandler.Write(ctx, querymanager.GenericWatchResponse(diceDBCmd.Cmd, fmt.Sprintf("%d", diceDBCmd.GetFingerprint()), storeOp[0].EvalResponse.Result))
+		err := w.ioHandler.Write(ctx, querymanager.GenericWatchResponse(firstRespElem, fmt.Sprintf("%d", diceDBCmd.GetFingerprint()), storeOp[0].EvalResponse.Result))
 		if err != nil {
 			slog.Debug("Error sending push response to client", slog.String("workerID", w.id), slog.Any("error", err))
 			return err
