@@ -376,5 +376,10 @@ func TestBFEdgeCasesAndErrors(t *testing.T) {
 				Body:    map[string]interface{}{"key": "foo"},
 			})
 		})
+		exec.FireCommand(HTTPCommand{
+			Command: "FLUSHDB",
+			Body:    map[string]interface{}{"values": []interface{}{}},
+		},
+		)
 	}
 }

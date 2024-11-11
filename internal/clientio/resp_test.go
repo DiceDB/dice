@@ -13,7 +13,9 @@ import (
 
 func TestSimpleStringDecode(t *testing.T) {
 	cases := map[string]string{
-		"+OK\r\n": "OK",
+		"+OK\r\n":                  "OK",
+		"+Hello\rWorld\r\n":        "Hello\rWorld",
+		"+Hello\rWorld\rAgain\r\n": "Hello\rWorld\rAgain",
 	}
 	for k, v := range cases {
 		p := clientio.NewRESPParser(bytes.NewBuffer([]byte(k)))
@@ -25,6 +27,7 @@ func TestSimpleStringDecode(t *testing.T) {
 		if v != value {
 			t.Fail()
 		}
+		fmt.Println(v, value)
 	}
 }
 

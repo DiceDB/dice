@@ -537,20 +537,23 @@ var (
 		Arity: 1,
 	}
 	setBitCmdMeta = DiceCmdMeta{
-		Name: "SETBIT",
-		Info: "SETBIT sets or clears the bit at offset in the string value stored at key",
-		Eval: evalSETBIT,
+		Name:       "SETBIT",
+		Info:       "SETBIT sets or clears the bit at offset in the string value stored at key",
+		IsMigrated: true,
+		NewEval:    evalSETBIT,
 	}
 	getBitCmdMeta = DiceCmdMeta{
-		Name: "GETBIT",
-		Info: "GETBIT returns the bit value at offset in the string value stored at key",
-		Eval: evalGETBIT,
+		Name:       "GETBIT",
+		Info:       "GETBIT returns the bit value at offset in the string value stored at key",
+		IsMigrated: true,
+		NewEval:    evalGETBIT,
 	}
 	bitCountCmdMeta = DiceCmdMeta{
-		Name:  "BITCOUNT",
-		Info:  "BITCOUNT counts the number of set bits in the string value stored at key",
-		Eval:  evalBITCOUNT,
-		Arity: -1,
+		Name:       "BITCOUNT",
+		Info:       "BITCOUNT counts the number of set bits in the string value stored at key",
+		Arity:      -1,
+		IsMigrated: true,
+		NewEval:    evalBITCOUNT,
 	}
 	bitOpCmdMeta = DiceCmdMeta{
 		Name: "BITOP",
@@ -912,8 +915,9 @@ var (
 		 RESP encoded -1 in case the bit argument is 1 and the string is empty or composed of just zero bytes.
 		 RESP encoded -1 if we look for set bits and the string is empty or composed of just zero bytes, -1 is returned.
 		 RESP encoded -1 if a clear bit isn't found in the specified range.`,
-		Eval:  evalBITPOS,
-		Arity: -2,
+		IsMigrated: true,
+		NewEval:    evalBITPOS,
+		Arity:      -2,
 	}
 	saddCmdMeta = DiceCmdMeta{
 		Name: "SADD",
@@ -1214,17 +1218,19 @@ var (
 		There is another subcommand that only changes the behavior of successive
 		INCRBY and SET subcommands calls by setting the overflow behavior:
 		OVERFLOW [WRAP|SAT|FAIL]`,
-		Arity:    -1,
-		KeySpecs: KeySpecs{BeginIndex: 1},
-		Eval:     evalBITFIELD,
+		Arity:      -1,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalBITFIELD,
 	}
 	bitfieldroCmdMeta = DiceCmdMeta{
 		Name: "BITFIELD_RO",
 		Info: `It is read-only variant of the BITFIELD command.
 		It is like the original BITFIELD but only accepts GET subcommand.`,
-		Arity:    -1,
-		KeySpecs: KeySpecs{BeginIndex: 1},
-		Eval:     evalBITFIELDRO,
+		Arity:      -1,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalBITFIELDRO,
 	}
 	hincrbyFloatCmdMeta = DiceCmdMeta{
 		Name: "HINCRBYFLOAT",

@@ -29,6 +29,7 @@ func TestZPOPMIN(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "ZADD", Body: map[string]interface{}{"key": "myzset", "values": [...]string{"1", "member1", "2", "member2", "3", "member3"}}},
 				{Command: "ZPOPMIN", Body: map[string]interface{}{"key": "myzset"}},
+				{Command: "ZCOUNT", Body: map[string]interface{}{"key": "myzset", "values": [...]string{"1", "2.98"}}},
 			},
 			expected: []interface{}{float64(3), []interface{}{"member1", "1"}, float64(1)},
 		},
@@ -37,14 +38,16 @@ func TestZPOPMIN(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "ZADD", Body: map[string]interface{}{"key": "myzset", "values": [...]string{"1", "member1", "2", "member2", "3", "member3"}}},
 				{Command: "ZPOPMIN", Body: map[string]interface{}{"key": "myzset", "value": int64(2)}},
+				{Command: "ZCOUNT", Body: map[string]interface{}{"key": "myzset", "values": [...]string{"0.44", "2"}}},
 			},
-			expected: []interface{}{float64(3), []interface{}{"member1", "1", "member2", "2"}, float64(1)},
+			expected: []interface{}{float64(3), []interface{}{"member1", "1", "member2", "2"}, float64(0)},
 		},
 		{
 			name: "ZPOPMIN with count argument but multiple members have the same score",
 			commands: []HTTPCommand{
 				{Command: "ZADD", Body: map[string]interface{}{"key": "myzset", "values": [...]string{"1", "member1", "1", "member2", "1", "member3"}}},
 				{Command: "ZPOPMIN", Body: map[string]interface{}{"key": "myzset", "value": int64(2)}},
+				{Command: "ZCOUNT", Body: map[string]interface{}{"key": "myzset", "values": [...]string{"1", "2"}}},
 			},
 			expected: []interface{}{float64(3), []interface{}{"member1", "1", "member2", "1"}, float64(1)},
 		},
@@ -53,14 +56,16 @@ func TestZPOPMIN(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "ZADD", Body: map[string]interface{}{"key": "myzset", "values": [...]string{"1", "member1", "2", "member2", "3", "member3"}}},
 				{Command: "ZPOPMIN", Body: map[string]interface{}{"key": "myzset", "value": int64(-1)}},
+				{Command: "ZCOUNT", Body: map[string]interface{}{"key": "myzset", "values": [...]string{"1", "1000"}}},
 			},
-			expected: []interface{}{float64(3), []interface{}{}, float64(1)},
+			expected: []interface{}{float64(3), []interface{}{}, float64(3)},
 		},
 		{
 			name: "ZPOPMIN with invalid count argument",
 			commands: []HTTPCommand{
 				{Command: "ZADD", Body: map[string]interface{}{"key": "myzset", "values": [...]string{"1", "member1"}}},
 				{Command: "ZPOPMIN", Body: map[string]interface{}{"key": "myzset", "value": "INCORRECT_COUNT_ARGUMENT"}},
+				{Command: "ZCOUNT", Body: map[string]interface{}{"key": "myzset", "values": [...]string{"1", "2"}}},
 			},
 			expected: []interface{}{float64(1), "ERR value is not an integer or out of range", float64(1)},
 		},
@@ -69,8 +74,9 @@ func TestZPOPMIN(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "ZADD", Body: map[string]interface{}{"key": "myzset", "values": [...]string{"1", "member1", "2", "member2", "3", "member3"}}},
 				{Command: "ZPOPMIN", Body: map[string]interface{}{"key": "myzset", "value": int64(10)}},
+				{Command: "ZCOUNT", Body: map[string]interface{}{"key": "myzset", "values": [...]string{"1", "2"}}},
 			},
-			expected: []interface{}{float64(3), []interface{}{"member1", "1", "member2", "2", "member3", "3"}, float64(1)},
+			expected: []interface{}{float64(3), []interface{}{"member1", "1", "member2", "2", "member3", "3"}, float64(0)},
 		},
 		{
 			name: "ZPOPMIN on empty sorted set",
@@ -86,6 +92,7 @@ func TestZPOPMIN(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "ZADD", Body: map[string]interface{}{"key": "myzset", "values": [...]string{"1.5", "member1", "2.7", "member2", "3.8", "member3"}}},
 				{Command: "ZPOPMIN", Body: map[string]interface{}{"key": "myzset"}},
+				{Command: "ZCOUNT", Body: map[string]interface{}{"key": "myzset", "values": [...]string{"1.3", "3.6"}}},
 			},
 			expected: []interface{}{float64(3), []interface{}{"member1", "1.5"}, float64(1)},
 		},
@@ -93,15 +100,14 @@ func TestZPOPMIN(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			for i, cmd := range tc.commands {
+				result, _ := exec.FireCommand(cmd)
+				assert.Equal(t, tc.expected[i], result)
+			}
 			exec.FireCommand(HTTPCommand{
 				Command: "DEL",
 				Body:    map[string]interface{}{"key": "myzset"},
 			})
-			for i, cmd := range tc.commands {
-				result, _ := exec.FireCommand(cmd)
-
-				assert.Equal(t, tc.expected[i], result)
-			}
 		})
 	}
 }

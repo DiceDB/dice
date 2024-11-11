@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
-	"math/bits"
 	"regexp"
 	"sort"
 	"strconv"
@@ -1185,268 +1184,6 @@ func EvalQUNWATCH(args []string, httpOp bool, client *comm.Client) []byte {
 	return clientio.RespOK
 }
 
-// SETBIT key offset value
-func evalSETBIT(args []string, store *dstore.Store) []byte {
-	var err error
-
-	if len(args) != 3 {
-		return diceerrors.NewErrArity("SETBIT")
-	}
-
-	key := args[0]
-	offset, err := strconv.ParseInt(args[1], 10, 64)
-	if err != nil {
-		return diceerrors.NewErrWithMessage("bit offset is not an integer or out of range")
-	}
-
-	value, err := strconv.ParseBool(args[2])
-	if err != nil {
-		return diceerrors.NewErrWithMessage("bit is not an integer or out of range")
-	}
-
-	obj := store.Get(key)
-	requiredByteArraySize := offset>>3 + 1
-
-	if obj == nil {
-		obj = store.NewObj(NewByteArray(int(requiredByteArraySize)), -1, object.ObjTypeByteArray, object.ObjEncodingByteArray)
-		store.Put(args[0], obj)
-	}
-
-	if object.AssertType(obj.TypeEncoding, object.ObjTypeByteArray) == nil ||
-		object.AssertType(obj.TypeEncoding, object.ObjTypeString) == nil ||
-		object.AssertType(obj.TypeEncoding, object.ObjTypeInt) == nil {
-		var byteArray *ByteArray
-		oType, oEnc := object.ExtractTypeEncoding(obj)
-
-		switch oType {
-		case object.ObjTypeByteArray:
-			byteArray = obj.Value.(*ByteArray)
-		case object.ObjTypeString, object.ObjTypeInt:
-			byteArray, err = NewByteArrayFromObj(obj)
-			if err != nil {
-				return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
-			}
-		default:
-			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
-		}
-
-		// Perform the resizing check
-		byteArrayLength := byteArray.Length
-
-		// check whether resize required or not
-		if requiredByteArraySize > byteArrayLength {
-			// resize as per the offset
-			byteArray = byteArray.IncreaseSize(int(requiredByteArraySize))
-		}
-
-		resp := byteArray.GetBit(int(offset))
-		byteArray.SetBit(int(offset), value)
-
-		// We are returning newObject here so it is thread-safe
-		// Old will be removed by GC
-		newObj, err := ByteSliceToObj(store, obj, byteArray.data, oType, oEnc)
-		if err != nil {
-			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
-		}
-
-		exp, ok := dstore.GetExpiry(obj, store)
-		var exDurationMs int64 = -1
-		if ok {
-			exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
-		}
-		// newObj has bydefault expiry time -1 , we need to set it
-		if exDurationMs > 0 {
-			store.SetExpiry(newObj, exDurationMs)
-		}
-
-		store.Put(key, newObj)
-		if resp {
-			return clientio.Encode(1, true)
-		}
-		return clientio.Encode(0, true)
-	}
-	return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
-}
-
-// GETBIT key offset
-func evalGETBIT(args []string, store *dstore.Store) []byte {
-	var err error
-
-	if len(args) != 2 {
-		return diceerrors.NewErrArity("GETBIT")
-	}
-
-	key := args[0]
-	offset, err := strconv.ParseInt(args[1], 10, 64)
-	if err != nil {
-		return diceerrors.NewErrWithMessage("bit offset is not an integer or out of range")
-	}
-
-	obj := store.Get(key)
-	if obj == nil {
-		return clientio.Encode(0, true)
-	}
-
-	requiredByteArraySize := offset>>3 + 1
-	switch oType, _ := object.ExtractTypeEncoding(obj); oType {
-	case object.ObjTypeSet:
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	case object.ObjTypeByteArray:
-		byteArray := obj.Value.(*ByteArray)
-		byteArrayLength := byteArray.Length
-
-		// check whether offset, length exists or not
-		if requiredByteArraySize > byteArrayLength {
-			return clientio.Encode(0, true)
-		}
-		value := byteArray.GetBit(int(offset))
-		if value {
-			return clientio.Encode(1, true)
-		}
-		return clientio.Encode(0, true)
-	case object.ObjTypeString, object.ObjTypeInt:
-		byteArray, err := NewByteArrayFromObj(obj)
-		if err != nil {
-			return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
-		}
-		if requiredByteArraySize > byteArray.Length {
-			return clientio.Encode(0, true)
-		}
-		value := byteArray.GetBit(int(offset))
-		if value {
-			return clientio.Encode(1, true)
-		}
-		return clientio.Encode(0, true)
-	default:
-		return clientio.Encode(0, true)
-	}
-}
-
-func evalBITCOUNT(args []string, store *dstore.Store) []byte {
-	var err error
-
-	// if no key is provided, return error
-	if len(args) == 0 {
-		return diceerrors.NewErrArity("BITCOUNT")
-	}
-
-	// if more than 4 arguments are provided, return error
-	if len(args) > 4 {
-		return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
-	}
-
-	// fetching value of the key
-	key := args[0]
-	obj := store.Get(key)
-	if obj == nil {
-		return clientio.Encode(0, false)
-	}
-
-	var value []byte
-	var valueLength int64
-
-	switch {
-	case object.AssertType(obj.TypeEncoding, object.ObjTypeByteArray) == nil:
-		byteArray := obj.Value.(*ByteArray)
-		value = byteArray.data
-		valueLength = byteArray.Length
-	case object.AssertType(obj.TypeEncoding, object.ObjTypeString) == nil:
-		value = []byte(obj.Value.(string))
-		valueLength = int64(len(value))
-	case object.AssertType(obj.TypeEncoding, object.ObjTypeInt) == nil:
-		value = []byte(strconv.FormatInt(obj.Value.(int64), 10))
-		valueLength = int64(len(value))
-	default:
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	// defining constants of the function
-	start, end := int64(0), valueLength-1
-	unit := BYTE
-
-	// checking which arguments are present and validating arguments
-	if len(args) > 1 {
-		start, err = strconv.ParseInt(args[1], 10, 64)
-		if err != nil {
-			return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
-		}
-		if len(args) <= 2 {
-			return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
-		}
-		end, err = strconv.ParseInt(args[2], 10, 64)
-		if err != nil {
-			return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
-		}
-	}
-	if len(args) > 3 {
-		unit = strings.ToUpper(args[3])
-	}
-
-	switch unit {
-	case BYTE:
-		if start < 0 {
-			start += valueLength
-		}
-		if end < 0 {
-			end += valueLength
-		}
-		if start > end || start >= valueLength {
-			return clientio.Encode(0, true)
-		}
-		end = min(end, valueLength-1)
-		bitCount := 0
-		for i := start; i <= end; i++ {
-			bitCount += bits.OnesCount8(value[i])
-		}
-		return clientio.Encode(bitCount, true)
-	case BIT:
-		if start < 0 {
-			start += valueLength * 8
-		}
-		if end < 0 {
-			end += valueLength * 8
-		}
-		if start > end {
-			return clientio.Encode(0, true)
-		}
-		startByte, endByte := start/8, min(end/8, valueLength-1)
-		startBitOffset, endBitOffset := start%8, end%8
-
-		if endByte == valueLength-1 {
-			endBitOffset = 7
-		}
-
-		if startByte >= valueLength {
-			return clientio.Encode(0, true)
-		}
-
-		bitCount := 0
-
-		// Use bit masks to count the bits instead of a loop
-		if startByte == endByte {
-			mask := byte(0xFF >> startBitOffset)
-			mask &= byte(0xFF << (7 - endBitOffset))
-			bitCount = bits.OnesCount8(value[startByte] & mask)
-		} else {
-			// Handle first byte
-			firstByteMask := byte(0xFF >> startBitOffset)
-			bitCount += bits.OnesCount8(value[startByte] & firstByteMask)
-
-			// Handle all the middle ones
-			for i := startByte + 1; i < endByte; i++ {
-				bitCount += bits.OnesCount8(value[i])
-			}
-
-			// Handle last byte
-			lastByteMask := byte(0xFF << (7 - endBitOffset))
-			bitCount += bits.OnesCount8(value[endByte] & lastByteMask)
-		}
-		return clientio.Encode(bitCount, true)
-	default:
-		return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
-	}
-}
-
 // BITOP <AND | OR | XOR | NOT> destkey key [key ...]
 func evalBITOP(args []string, store *dstore.Store) []byte {
 	operation, destKey := args[0], args[1]
@@ -2157,8 +1894,29 @@ func evalRPOP(args []string, store *dstore.Store) []byte {
 }
 
 func evalLPOP(args []string, store *dstore.Store) []byte {
-	if len(args) != 1 {
+	// By default we pop only 1
+	popNumber := 1
+
+	// LPOP accepts 1 or 2 arguments only - LPOP key [count]
+	if len(args) < 1 || len(args) > 2 {
 		return diceerrors.NewErrArity("LPOP")
+	}
+
+	// to updated the number of pops
+	if len(args) == 2 {
+		nos, err := strconv.Atoi(args[1])
+		if err != nil {
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
+		}
+		if nos == 0 {
+			// returns empty string if count given is 0
+			return clientio.Encode([]string{}, false)
+		}
+		if nos < 0 {
+			// returns an out of range err if count is negetive
+			return diceerrors.NewErrWithFormattedMessage(diceerrors.ValOutOfRangeErr)
+		}
+		popNumber = nos
 	}
 
 	obj := store.Get(args[0])
@@ -2180,15 +1938,29 @@ func evalLPOP(args []string, store *dstore.Store) []byte {
 	}
 
 	deq := obj.Value.(*Deque)
-	x, err := deq.LPop()
-	if err != nil {
-		if errors.Is(err, ErrDequeEmpty) {
-			return clientio.RespNIL
+
+	// holds the elements popped
+	var elements []string
+	for iter := 0; iter < popNumber; iter++ {
+		x, err := deq.LPop()
+		if err != nil {
+			if errors.Is(err, ErrDequeEmpty) {
+				break
+			}
+			panic(fmt.Sprintf("unknown error: %v", err))
 		}
-		panic(fmt.Sprintf("unknown error: %v", err))
+		elements = append(elements, x)
 	}
 
-	return clientio.Encode(x, false)
+	if len(elements) == 0 {
+		return clientio.RespNIL
+	}
+
+	if len(elements) == 1 {
+		return clientio.Encode(elements[0], false)
+	}
+
+	return clientio.Encode(elements, false)
 }
 
 func evalLLEN(args []string, store *dstore.Store) []byte {
@@ -2653,70 +2425,6 @@ func executeBitfieldOps(value *ByteArray, ops []utils.BitFieldOp) []interface{} 
 		}
 	}
 	return result
-}
-
-// Generic method for both BITFIELD and BITFIELD_RO.
-// isReadOnly method is true for BITFIELD_RO command.
-func bitfieldEvalGeneric(args []string, store *dstore.Store, isReadOnly bool) []byte {
-	var ops []utils.BitFieldOp
-	ops, err2 := utils.ParseBitfieldOps(args, isReadOnly)
-
-	if err2 != nil {
-		return err2
-	}
-
-	key := args[0]
-	obj := store.Get(key)
-	if obj == nil {
-		obj = store.NewObj(NewByteArray(1), -1, object.ObjTypeByteArray, object.ObjEncodingByteArray)
-		store.Put(args[0], obj)
-	}
-	var value *ByteArray
-	var err error
-
-	switch oType, _ := object.ExtractTypeEncoding(obj); oType {
-	case object.ObjTypeByteArray:
-		value = obj.Value.(*ByteArray)
-	case object.ObjTypeString, object.ObjTypeInt:
-		value, err = NewByteArrayFromObj(obj)
-		if err != nil {
-			return diceerrors.NewErrWithMessage("value is not a valid byte array")
-		}
-	default:
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	result := executeBitfieldOps(value, ops)
-	return clientio.Encode(result, false)
-}
-
-// evalBITFIELD evaluates BITFIELD operations on a key store string, int or bytearray types
-// it returns an array of results depending on the subcommands
-// it allows mutation using SET and INCRBY commands
-// returns arity error, offset type error, overflow type error, encoding type error, integer error, syntax error
-// GET <encoding> <offset> -- Returns the specified bit field.
-// SET <encoding> <offset> <value> -- Set the specified bit field
-// and returns its old value.
-// INCRBY <encoding> <offset> <increment> -- Increments or decrements
-// (if a negative increment is given) the specified bit field and returns the new value.
-// There is another subcommand that only changes the behavior of successive
-// INCRBY and SET subcommands calls by setting the overflow behavior:
-// OVERFLOW [WRAP|SAT|FAIL]`
-func evalBITFIELD(args []string, store *dstore.Store) []byte {
-	if len(args) < 1 {
-		return diceerrors.NewErrArity("BITFIELD")
-	}
-
-	return bitfieldEvalGeneric(args, store, false)
-}
-
-// Read-only variant of the BITFIELD command. It is like the original BITFIELD but only accepts GET subcommand and can safely be used in read-only replicas.
-func evalBITFIELDRO(args []string, store *dstore.Store) []byte {
-	if len(args) < 1 {
-		return diceerrors.NewErrArity("BITFIELD_RO")
-	}
-
-	return bitfieldEvalGeneric(args, store, true)
 }
 func evalGEOADD(args []string, store *dstore.Store) []byte {
 	if len(args) < 4 {

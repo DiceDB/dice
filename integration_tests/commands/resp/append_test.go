@@ -8,6 +8,7 @@ import (
 
 func TestAPPEND(t *testing.T) {
 	conn := getLocalConnection()
+	FireCommand(conn, "FLUSHDB")
 	defer conn.Close()
 
 	testCases := []struct {
