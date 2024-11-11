@@ -138,9 +138,10 @@ var (
 		Sets a JSON value at the specified key.
 		Returns OK if successful.
 		Returns encoded error message if the number of arguments is incorrect or the JSON string is invalid.`,
-		Eval:     evalJSONSET,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalJSONSET,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	jsongetCmdMeta = DiceCmdMeta{
 		Name: "JSON.GET",
@@ -148,9 +149,10 @@ var (
 		Returns the encoded RESP value of the key, if present
 		Null reply: If the key doesn't exist or has expired.
 		Error reply: If the number of arguments is incorrect or the stored value is not a JSON type.`,
-		Eval:     evalJSONGET,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalJSONGET,
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	jsonMGetCmdMeta = DiceCmdMeta{
 		Name: "JSON.MGET",
@@ -174,9 +176,10 @@ var (
     	1.String ("true"/"false") that represents the resulting Boolean value.
     	2.NONEXISTENT if the document key does not exist.
     	3.WRONGTYPE error if the value at the path is not a Boolean value.`,
-		Eval:     evalJSONTOGGLE,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalJSONTOGGLE,
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	jsontypeCmdMeta = DiceCmdMeta{
 		Name: "JSON.TYPE",
@@ -184,9 +187,10 @@ var (
 		Returns string reply for each path, specified as the value's type.
 		Returns RespNIL If the key doesn't exist.
 		Error reply: If the number of arguments is incorrect.`,
-		Eval:     evalJSONTYPE,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalJSONTYPE,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	jsonclearCmdMeta = DiceCmdMeta{
 		Name: "JSON.CLEAR",
@@ -205,9 +209,10 @@ var (
 		Returns an integer reply specified as the number of paths deleted (0 or more).
 		Returns RespZero if the key doesn't exist or key is expired.
 		Error reply: If the number of arguments is incorrect.`,
-		Eval:     evalJSONDEL,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalJSONDEL,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	jsonarrappendCmdMeta = DiceCmdMeta{
 		Name: "JSON.ARRAPPEND",
@@ -224,9 +229,10 @@ var (
 		Returns an integer reply specified as the number of paths deleted (0 or more).
 		Returns RespZero if the key doesn't exist or key is expired.
 		Error reply: If the number of arguments is incorrect.`,
-		Eval:     evalJSONFORGET,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalJSONFORGET,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	jsonarrlenCmdMeta = DiceCmdMeta{
 		Name: "JSON.ARRLEN",
@@ -243,9 +249,10 @@ var (
 		Name: "JSON.NUMMULTBY",
 		Info: `JSON.NUMMULTBY key path value
 		Multiply the number value stored at the specified path by a value.`,
-		Eval:     evalJSONNUMMULTBY,
-		Arity:    3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalJSONNUMMULTBY,
+		Arity:      3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	jsonobjlenCmdMeta = DiceCmdMeta{
 		Name: "JSON.OBJLEN",
@@ -297,9 +304,10 @@ var (
 		the generated key is then used to store the provided JSON value at specified path.
 		Returns unique identifier if successful.
 		Returns encoded error message if the number of arguments is incorrect or the JSON string is invalid.`,
-		Eval:     evalJSONINGEST,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalJSONINGEST,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	jsonarrinsertCmdMeta = DiceCmdMeta{
 		Name: "JSON.ARRINSERT",
@@ -789,9 +797,10 @@ var (
 		Name: "HGETALL",
 		Info: `Returns all fields and values of the hash stored at key. In the returned value,
         every field name is followed by its value, so the length of the reply is twice the size of the hash.`,
-		Eval:     evalHGETALL,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalHGETALL,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	hValsCmdMeta = DiceCmdMeta{
 		Name:       "HVALS",
@@ -1055,11 +1064,12 @@ var (
 		Arity: 1,
 	}
 	jsonnumincrbyCmdMeta = DiceCmdMeta{
-		Name:     "JSON.NUMINCRBY",
-		Info:     `Increment the number value stored at path by number.`,
-		Eval:     evalJSONNUMINCRBY,
-		Arity:    3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Name:       "JSON.NUMINCRBY",
+		Info:       `Increment the number value stored at path by number.`,
+		NewEval:    evalJSONNUMINCRBY,
+		Arity:      3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	dumpkeyCMmdMeta = DiceCmdMeta{
 		Name: "DUMP",

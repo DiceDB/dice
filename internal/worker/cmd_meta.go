@@ -58,13 +58,20 @@ const (
 	CmdJSONArrAppend = "JSON.ARRAPPEND"
 	CmdJSONArrLen    = "JSON.ARRLEN"
 	CmdJSONArrPop    = "JSON.ARRPOP"
+	CmdJSONClear     = "JSON.CLEAR"
+	CmdJSONDel       = "JSON.DEL"
+	CmdJSONForget    = "JSON.FORGET"
+	CmdJSONGet       = "JSON.GET"
+	CmdJSONStrlen    = "JSON.STRLEN"
+	CmdJSONObjlen    = "JSON.OBJLEN"
+	CmdJSONNumIncrBY = "JSON.NUMINCRBY"
+	CmdJSONNumMultBy = "JSON.NUMMULTBY"
+	CmdJSONType      = "JSON.TYPE"
+	CmdJSONToggle    = "JSON.TOGGLE"
 	CmdHExists       = "HEXISTS"
 	CmdHKeys         = "HKEYS"
 	CmdHVals         = "HVALS"
 	CmdZPopMin       = "ZPOPMIN"
-	CmdJSONClear     = "JSON.CLEAR"
-	CmdJSONStrlen    = "JSON.STRLEN"
-	CmdJSONObjlen    = "JSON.OBJLEN"
 	CmdZAdd          = "ZADD"
 	CmdZRange        = "ZRANGE"
 	CmdZRank         = "ZRANK"
@@ -120,10 +127,11 @@ const (
 
 // Multi-shard commands.
 const (
-	CmdMset   = "MSET"
-	CmdMget   = "MGET"
-	CmdSInter = "SINTER"
-	CmdSDiff  = "SDIFF"
+	CmdMset     = "MSET"
+	CmdMget     = "MGET"
+	CmdSInter   = "SINTER"
+	CmdSDiff    = "SDIFF"
+	CmdJSONMget = "JSON.MGET"
 )
 
 // Multi-Step-Multi-Shard commands
@@ -229,16 +237,37 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdJSONArrPop: {
 		CmdType: SingleShard,
 	},
-	CmdGetRange: {
+	CmdJSONClear: {
 		CmdType: SingleShard,
 	},
-	CmdJSONClear: {
+	CmdJSONDel: {
+		CmdType: SingleShard,
+	},
+	CmdJSONForget: {
+		CmdType: SingleShard,
+	},
+	CmdJSONGet: {
 		CmdType: SingleShard,
 	},
 	CmdJSONStrlen: {
 		CmdType: SingleShard,
 	},
 	CmdJSONObjlen: {
+		CmdType: SingleShard,
+	},
+	CmdJSONNumIncrBY: {
+		CmdType: SingleShard,
+	},
+	CmdJSONNumMultBy: {
+		CmdType: SingleShard,
+	},
+	CmdJSONType: {
+		CmdType: SingleShard,
+	},
+	CmdJSONToggle: {
+		CmdType: SingleShard,
+	},
+	CmdGetRange: {
 		CmdType: SingleShard,
 	},
 	CmdPFAdd: {
@@ -424,6 +453,12 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType:          MultiShard,
 		decomposeCommand: decomposeSDiff,
 		composeResponse:  composeSDiff,
+	},
+
+	CmdJSONMget: {
+		CmdType:          MultiShard,
+		decomposeCommand: decomposeJSONMget,
+		composeResponse:  composeJSONMget,
 	},
 
 	// Custom commands.

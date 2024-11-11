@@ -178,3 +178,21 @@ func composeSDiff(responses ...ops.StoreResponse) interface{} {
 
 	return resp
 }
+
+func composeJSONMget(responses ...ops.StoreResponse) interface{} {
+	sort.Slice(responses, func(i, j int) bool {
+		return responses[i].SeqID < responses[j].SeqID
+	})
+
+	results := []string{}
+	for idx := range responses {
+		if responses[idx].EvalResponse.Error != nil {
+			return responses[idx].EvalResponse.Error
+		}
+
+		results = append(results, responses[idx].EvalResponse.Result.(string))
+	}
+
+	return results
+
+}

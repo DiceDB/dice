@@ -174,3 +174,22 @@ func decomposeSDiff(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd
 	}
 	return decomposedCmds, nil
 }
+
+func decomposeJSONMget(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+	if len(cd.Args) < 2 {
+		return nil, diceerrors.ErrWrongArgumentCount("JSON.MGET")
+	}
+
+	pattern := cd.Args[len(cd.Args)-1]
+
+	decomposedCmds := make([]*cmd.DiceDBCmd, 0, len(cd.Args))
+	for i := 0; i < len(cd.Args)-1; i++ {
+		decomposedCmds = append(decomposedCmds,
+			&cmd.DiceDBCmd{
+				Cmd:  store.JSONGet,
+				Args: []string{cd.Args[i], pattern},
+			},
+		)
+	}
+	return decomposedCmds, nil
+}

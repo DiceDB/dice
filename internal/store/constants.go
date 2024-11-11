@@ -9,4 +9,5 @@ const (
 	ZRange   string = "ZRANGE"
 	Replace  string = "REPLACE"
 	Smembers string = "SMEMBERS"
+	JSONGet  string = "JSON.GET"
 )
