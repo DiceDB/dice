@@ -247,23 +247,10 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 			// it along as is.
 			// Modify the command name to remove the .WATCH suffix, this will allow us to generate a consistent
 			// fingerprint (which uses the command name without the suffix)
-
-			if len(diceDBCmd.Args) <= 1 {
-				return fmt.Errorf("watch command requires at least two arguments")
-			}
-
 			diceDBCmd.Cmd = diceDBCmd.Cmd[:len(diceDBCmd.Cmd)-6]
 
-			// extract the watch label
-			watchLabel = diceDBCmd.Args[len(diceDBCmd.Args)-1]
-
-			// validate the watch label
-			if _, err := uuid.Parse(watchLabel); err != nil {
-				return fmt.Errorf("watch label is not a valid UUID: %s", watchLabel)
-			}
-
-			// remove the watch label from the args
-			diceDBCmd.Args = diceDBCmd.Args[:len(diceDBCmd.Args)-1]
+			// generate a watch label
+			watchLabel = uuid.New().String()
 
 			watchCmd := &cmd.DiceDBCmd{
 				Cmd:  diceDBCmd.Cmd,
