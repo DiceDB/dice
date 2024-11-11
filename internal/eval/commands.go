@@ -453,13 +453,6 @@ var (
 		Eval:  evalLATENCY,
 		Arity: -2,
 	}
-	lruCmdMeta = DiceCmdMeta{
-		Name: "LRU",
-		Info: `LRU deletes all the keys from the LRU
-		returns encoded RESP OK`,
-		Eval:  evalLRU,
-		Arity: 1,
-	}
 	sleepCmdMeta = DiceCmdMeta{
 		Name: "SLEEP",
 		Info: `SLEEP sets db to sleep for the specified number of seconds.
@@ -1493,7 +1486,6 @@ func init() {
 	DiceCmds["LLEN"] = llenCmdMeta
 	DiceCmds["LPOP"] = lpopCmdMeta
 	DiceCmds["LPUSH"] = lpushCmdMeta
-	DiceCmds["LRU"] = lruCmdMeta
 	DiceCmds["MGET"] = MGetCmdMeta
 	DiceCmds["MSET"] = msetCmdMeta
 	DiceCmds["OBJECT"] = objectCmdMeta

@@ -3,16 +3,14 @@ package store
 import (
 	"path"
 
-	"github.com/ohler55/ojg/jp"
+	"github.com/dicedb/dice/config"
 
 	"github.com/dicedb/dice/internal/common"
 	"github.com/dicedb/dice/internal/object"
-	"github.com/dicedb/dice/internal/sql"
-	"github.com/xwb1989/sqlparser"
-
 	"github.com/dicedb/dice/internal/server/utils"
-
-	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/internal/sql"
+	"github.com/ohler55/ojg/jp"
+	"github.com/xwb1989/sqlparser"
 )
 
 func NewStoreRegMap() common.ITable[string, *object.Obj] {
@@ -35,6 +33,13 @@ func NewExpireMap() common.ITable[*object.Obj, uint64] {
 	return NewExpireRegMap()
 }
 
+func NewDefaultEviction() EvictionStrategy {
+	return &BatchEvictionLRU{
+		maxKeys:       config.DefaultKeysLimit,
+		evictionRatio: config.DefaultEvictionRatio,
+	}
+}
+
 // QueryWatchEvent represents a change in a watched key.
 type QueryWatchEvent struct {
 	Key       string
@@ -48,20 +53,27 @@ type CmdWatchEvent struct {
 }
 
 type Store struct {
-	store          common.ITable[string, *object.Obj]
-	expires        common.ITable[*object.Obj, uint64] // Does not need to be thread-safe as it is only accessed by a single thread.
-	numKeys        int
-	queryWatchChan chan QueryWatchEvent
-	cmdWatchChan   chan CmdWatchEvent
+	store            common.ITable[string, *object.Obj]
+	expires          common.ITable[*object.Obj, uint64] // Does not need to be thread-safe as it is only accessed by a single thread.
+	numKeys          int
+	queryWatchChan   chan QueryWatchEvent
+	cmdWatchChan     chan CmdWatchEvent
+	evictionStrategy EvictionStrategy
 }
 
-func NewStore(queryWatchChan chan QueryWatchEvent, cmdWatchChan chan CmdWatchEvent) *Store {
-	return &Store{
-		store:          NewStoreRegMap(),
-		expires:        NewExpireRegMap(),
-		queryWatchChan: queryWatchChan,
-		cmdWatchChan:   cmdWatchChan,
+func NewStore(queryWatchChan chan QueryWatchEvent, cmdWatchChan chan CmdWatchEvent, evictionStrategy EvictionStrategy) *Store {
+	store := &Store{
+		store:            NewStoreRegMap(),
+		expires:          NewExpireRegMap(),
+		queryWatchChan:   queryWatchChan,
+		cmdWatchChan:     cmdWatchChan,
+		evictionStrategy: evictionStrategy,
 	}
+	if evictionStrategy == nil {
+		store.evictionStrategy = NewDefaultEviction()
+	}
+
+	return store
 }
 
 func ResetStore(store *Store) *Store {
@@ -119,9 +131,6 @@ func (store *Store) putHelper(k string, obj *object.Obj, opts ...PutOption) {
 		optApplier(options)
 	}
 
-	if store.store.Len() >= config.DiceConfig.Memory.KeysLimit {
-		store.evict()
-	}
 	obj.LastAccessedAt = getCurrentClock()
 	currentObject, ok := store.store.Get(k)
 	if ok {
@@ -134,9 +143,17 @@ func (store *Store) putHelper(k string, obj *object.Obj, opts ...PutOption) {
 		}
 		store.expires.Delete(currentObject)
 	} else {
+		// TODO: Inform all the workers and shards about the eviction.
+		// TODO: Start the eviction only when all the workers and shards have acknowledged the eviction.
+		evictCount := store.evictionStrategy.ShouldEvict(store)
+		if evictCount > 0 {
+			store.evict(evictCount)
+		}
 		store.numKeys++
 	}
+
 	store.store.Put(k, obj)
+	store.evictionStrategy.OnAccess(k, obj, AccessSet)
 
 	if store.queryWatchChan != nil {
 		store.notifyQueryManager(k, Set, *obj)
@@ -148,17 +165,18 @@ func (store *Store) putHelper(k string, obj *object.Obj, opts ...PutOption) {
 
 // getHelper is a helper function to get the object from the store. It also updates the last accessed time if touch is true.
 func (store *Store) getHelper(k string, touch bool) *object.Obj {
-	var v *object.Obj
-	v, _ = store.store.Get(k)
-	if v != nil {
-		if hasExpired(v, store) {
-			store.deleteKey(k, v)
-			v = nil
+	var obj *object.Obj
+	obj, _ = store.store.Get(k)
+	if obj != nil {
+		if hasExpired(obj, store) {
+			store.deleteKey(k, obj)
+			obj = nil
 		} else if touch {
-			v.LastAccessedAt = UpdateLastAccessedAt(v.LastAccessedAt)
+			obj.LastAccessedAt = getCurrentClock()
+			store.evictionStrategy.OnAccess(k, obj, AccessGet)
 		}
 	}
-	return v
+	return obj
 }
 
 func (store *Store) GetAll(keys []string) []*object.Obj {
@@ -170,7 +188,7 @@ func (store *Store) GetAll(keys []string) []*object.Obj {
 				store.deleteKey(k, v)
 				response = append(response, nil)
 			} else {
-				v.LastAccessedAt = UpdateLastAccessedAt(v.LastAccessedAt)
+				v.LastAccessedAt = getCurrentClock()
 				response = append(response, v)
 			}
 		} else {
@@ -293,6 +311,8 @@ func (store *Store) deleteKey(k string, obj *object.Obj, opts ...DelOption) bool
 		store.expires.Delete(obj)
 		store.numKeys--
 
+		store.evictionStrategy.OnAccess(k, obj, AccessDel)
+
 		if store.queryWatchChan != nil {
 			store.notifyQueryManager(k, Del, *obj)
 		}
@@ -351,4 +371,9 @@ func (store *Store) CacheKeysForQuery(whereClause sqlparser.Expr, cacheChannel c
 		return true
 	})
 	cacheChannel <- &shardCache
+}
+
+func (store *Store) evict(evictCount int) bool {
+	store.evictionStrategy.EvictVictims(store, evictCount)
+	return true
 }
