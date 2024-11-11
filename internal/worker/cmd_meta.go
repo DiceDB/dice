@@ -97,6 +97,7 @@ const (
 	CmdZCard         = "ZCARD"
 	CmdPFAdd         = "PFADD"
 	CmdPFCount       = "PFCOUNT"
+	CmdPFCountWatch  = "PFCOUNT.WATCH"
 	CmdPFMerge       = "PFMERGE"
 	CmdTTL           = "TTL"
 	CmdPTTL          = "PTTL"
@@ -370,6 +371,9 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: Watch,
 	},
 	CmdZRangeWatch: {
+		CmdType: Watch,
+	},
+	CmdPFCountWatch: {
 		CmdType: Watch,
 	},
 

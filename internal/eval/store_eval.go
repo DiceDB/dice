@@ -1226,7 +1226,7 @@ func evalPFADD(args []string, store *dstore.Store) *EvalResponse {
 
 		obj = store.NewObj(hll, -1, object.ObjTypeString, object.ObjEncodingRaw)
 
-		store.Put(key, obj)
+		store.Put(key, obj, dstore.WithPutCmd(dstore.PFADD))
 		return &EvalResponse{
 			Result: int64(1),
 			Error:  nil,
@@ -1244,6 +1244,9 @@ func evalPFADD(args []string, store *dstore.Store) *EvalResponse {
 	for _, arg := range args[1:] {
 		existingHll.Insert([]byte(arg))
 	}
+
+	obj = store.NewObj(existingHll, -1, object.ObjTypeString, object.ObjEncodingRaw)
+	store.Put(key, obj, dstore.WithPutCmd(dstore.PFADD))
 
 	if newCardinality := existingHll.Estimate(); initialCardinality != newCardinality {
 		return &EvalResponse{
@@ -1564,7 +1567,7 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 
 	// Save the mergedHll
 	obj = store.NewObj(mergedHll, -1, object.ObjTypeString, object.ObjEncodingRaw)
-	store.Put(destKey, obj)
+	store.Put(destKey, obj, dstore.WithPutCmd(dstore.PFMERGE))
 
 	return &EvalResponse{
 		Result: clientio.OK,
