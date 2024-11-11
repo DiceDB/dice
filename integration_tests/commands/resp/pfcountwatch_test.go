@@ -19,16 +19,18 @@ type pfcountWatchTestCase struct {
 }
 
 type pfcountWatchWithPFMergeTestCase struct {
-	dest_key_1    string
-	dest_value_1  []string
-	dest_key_2 	  string
-	dest_value_2  []string
-	result 		  int64
+	destKey1    string
+	destValue1  []string
+	destKey2 	string
+	destValue2  []string
+	result 		int64
 }
 
 const (
-	pfcountWatchKey   = "hllkey"
-	pfcountWatchQuery = "PFCOUNT.WATCH %s"
+	pfcountCommand          = "PFCOUNT"
+	pfcountWatchKey         = "hllkey"
+	pfcountWatchQuery       = "PFCOUNT.WATCH %s"
+	pfcountWatchFingerPrint = "1832643469"
 )
 
 var pfcountWatchTestCases = []pfcountWatchTestCase{
@@ -46,7 +48,7 @@ var pfcountWatchhWithPFMergeTestCases = []pfcountWatchWithPFMergeTestCase{
 
 func TestPFCOUNTWATCH(t *testing.T) {
 	publisher := getLocalConnection()
-	subscribers := []net.Conn{getLocalConnection(), getLocalConnection(), getLocalConnection()}
+	subscribers := setupSubscribers(3)
 
 	FireCommand(publisher, fmt.Sprintf("DEL %s", pfcountWatchKey))
 
@@ -65,6 +67,29 @@ func TestPFCOUNTWATCH(t *testing.T) {
 	res := FireCommand(publisher, fmt.Sprintf("PFADD %s %s", pfcountWatchKey, "randomvalue"))
 	assert.Equal(t, int64(1), res)
 
+	respParsers := setUpRespParsers(t, subscribers)
+
+	t.Run("Basic PFCount Operations", func(t *testing.T) { 
+			testPFCountAdd(t, publisher, respParsers)
+		},
+	)
+
+	t.Run("PFCount Operations including PFMerge", func(t *testing.T) { 
+			testPFCountMerge(t, publisher, respParsers)
+		},
+	)
+}
+
+func setupSubscribers(count int) []net.Conn {
+    subscribers := make([]net.Conn, 0, count)
+    for i := 0; i < count; i++ {
+        conn := getLocalConnection()
+        subscribers = append(subscribers, conn)
+    }
+    return subscribers
+}
+
+func setUpRespParsers(t *testing.T, subscribers []net.Conn) []*clientio.RESPParser {
 	respParsers := make([]*clientio.RESPParser, len(subscribers))
 	for i, subscriber := range subscribers {
 		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf(pfcountWatchQuery, pfcountWatchKey))
@@ -79,8 +104,10 @@ func TestPFCOUNTWATCH(t *testing.T) {
 		}
 		assert.Equal(t, 3, len(castedValue))
 	}
+	return respParsers
+}
 
-	// Add elements with PFADD
+func testPFCountAdd(t *testing.T, publisher net.Conn, respParsers []*clientio.RESPParser) {
 	for _, tc := range pfcountWatchTestCases {
 		res := FireCommand(publisher, fmt.Sprintf("PFADD %s %s", tc.key, tc.val))
 		assert.Equal(t, int64(1), res)
@@ -92,19 +119,19 @@ func TestPFCOUNTWATCH(t *testing.T) {
 				t.Errorf("Type assertion to []interface{} failed for value: %v", v)
 			}
 			assert.Equal(t, 3, len(castedValue))
-			assert.Equal(t, "PFCOUNT", castedValue[0])
-			assert.Equal(t, "1580567186", castedValue[1])
+			assert.Equal(t, pfcountCommand, castedValue[0])
+			assert.Equal(t, pfcountWatchFingerPrint, castedValue[1])
 			assert.DeepEqual(t, tc.result, castedValue[2])
 		}
 	}
+}
 
-	// Test for PFMERGE Case
+func testPFCountMerge(t *testing.T, publisher net.Conn, respParsers []*clientio.RESPParser) {
 	for _, tc := range pfcountWatchhWithPFMergeTestCases {
-		FireCommand(publisher, fmt.Sprintf("DEL %s %s", tc.dest_key_1, tc.dest_key_2))
-		FireCommand(publisher, fmt.Sprintf("PFADD %s %s", tc.dest_key_1, tc.dest_value_1))
-		FireCommand(publisher, fmt.Sprintf("PFADD %s %s", tc.dest_key_2, tc.dest_value_2))
-		FireCommand(publisher, fmt.Sprintf("PFMERGE %s %s %s", pfcountWatchKey, tc.dest_key_1, tc.dest_key_2))
-		assert.Equal(t, int64(1), res)
+		FireCommand(publisher, fmt.Sprintf("DEL %s %s", tc.destKey1, tc.destKey2))
+		FireCommand(publisher, fmt.Sprintf("PFADD %s %s", tc.destKey1, tc.destValue1))
+		FireCommand(publisher, fmt.Sprintf("PFADD %s %s", tc.destKey2, tc.destValue2))
+		FireCommand(publisher, fmt.Sprintf("PFMERGE %s %s %s", pfcountWatchKey, tc.destKey1, tc.destKey2))
 		for _, rp := range respParsers {
 			v, err := rp.DecodeOne()
 			assert.NilError(t, err)
@@ -113,12 +140,20 @@ func TestPFCOUNTWATCH(t *testing.T) {
 				t.Errorf("Type assertion to []interface{} failed for value: %v", v)
 			}
 			assert.Equal(t, 3, len(castedValue))
-			assert.Equal(t, "PFCOUNT", castedValue[0])
-			assert.Equal(t, "1580567186", castedValue[1])
+			assert.Equal(t, pfcountCommand, castedValue[0])
+			assert.Equal(t, pfcountWatchFingerPrint, castedValue[1])
 			assert.DeepEqual(t, tc.result, castedValue[2])
 		}
 	}
 }
+
+const (
+	pfcountCommandSDK          = "PFCOUNT"
+	pfcountWatchKeySDK         = "hllkey"
+	pfcountWatchQuerySDK       = "PFCOUNT.WATCH %s"
+	pfcountWatchFingerPrintSDK = "1832643469"
+	defaultTimeout             = 5 * time.Second
+)
 
 type pfcountWatchSDKTestCase struct {
 	key    string
@@ -127,18 +162,18 @@ type pfcountWatchSDKTestCase struct {
 }
 
 type pfcountWatchSDKWithPFMergeTestCase struct {
-	dest_key_1    string
-	dest_value_1  []string
-	dest_key_2 	  string
-	dest_value_2  []string
-	result 		  int64
+	destKey1    string
+	destValue1  []string
+	destKey2 	string
+	destValue2  []string
+	result 		int64
 }
 
 var PFCountWatchSDKTestCases = []pfcountWatchSDKTestCase{
-	{pfcountWatchKey, "value1", int64(1)},
-	{pfcountWatchKey, "value2", int64(2)},
-	{pfcountWatchKey, "value3", int64(3)},
-	{pfcountWatchKey, "value4", int64(4)},
+	{pfcountWatchKeySDK, "value1", int64(1)},
+	{pfcountWatchKeySDK, "value2", int64(2)},
+	{pfcountWatchKeySDK, "value3", int64(3)},
+	{pfcountWatchKeySDK, "value4", int64(4)},
 }
 
 var pfcountWatchSDKhWithPFMergeTestCases = []pfcountWatchSDKWithPFMergeTestCase{
@@ -148,46 +183,85 @@ var pfcountWatchSDKhWithPFMergeTestCases = []pfcountWatchSDKWithPFMergeTestCase{
 }
 
 func TestPFCountWATCHWithSDK(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout) 
+	defer cancel()
+
 	publisher := getLocalSdk()
-	subscribers := []WatchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
+	subscribers := setupSubscribersSDK(3)
+	defer cleanupSubscribersSDK(subscribers)
 
-	publisher.Del(context.Background(), pfcountWatchKey)
+	publisher.Del(ctx, pfcountWatchKey)
 
+	channels := setUpWatchChannelsSDK(t, ctx, subscribers)
+
+	t.Run("Basic PFCount Operations", func(t *testing.T) { 
+			testPFCountAddSDK(t, ctx, channels, publisher) 
+		},
+	)
+
+	t.Run("PFCount Operations including PFMerge", func(t *testing.T) { 
+			testPFCountMergeSDK(t, ctx, channels, publisher) 
+		},
+	)
+}
+
+func setupSubscribersSDK(count int) []WatchSubscriber { 
+	subscribers := make([]WatchSubscriber, count) 
+	for i := range subscribers { 
+		subscribers[i].client = getLocalSdk()
+	} 
+	return subscribers 
+}
+
+func cleanupSubscribersSDK(subscribers []WatchSubscriber) { 
+	for _, sub := range subscribers { 
+		if sub.watch != nil { 
+			sub.watch.Close() 
+		} 
+	} 
+}
+
+func setUpWatchChannelsSDK(t *testing.T, ctx context.Context, subscribers []WatchSubscriber) []<-chan *dicedb.WatchResult {
 	channels := make([]<-chan *dicedb.WatchResult, len(subscribers))
 	for i, subscriber := range subscribers {
-		watch := subscriber.client.WatchConn(context.Background())
+		watch := subscriber.client.WatchConn(ctx)
 		subscribers[i].watch = watch
 		assert.Assert(t, watch != nil)
-		firstMsg, err := watch.Watch(context.Background(), "PFCOUNT", pfcountWatchKey)
+		firstMsg, err := watch.Watch(ctx, pfcountCommandSDK, pfcountWatchKey)
 		assert.NilError(t, err)
-		assert.Equal(t, firstMsg.Command, "PFCOUNT")
+		assert.Equal(t, firstMsg.Command, pfcountCommandSDK)
 		channels[i] = watch.Channel()
 	}
+	return channels
+}
 
+func testPFCountAddSDK(t *testing.T, ctx context.Context, channels []<-chan *dicedb.WatchResult, publisher *dicedb.Client) {
 	for _, tc := range PFCountWatchSDKTestCases {
-		err := publisher.PFAdd(context.Background(), tc.key, tc.val).Err()
+		err := publisher.PFAdd(ctx, tc.key, tc.val).Err()
 		assert.NilError(t, err)
 
 		for _, channel := range channels {
 			v := <-channel
 
-			assert.Equal(t, "PFCOUNT", v.Command)         // command
-			assert.Equal(t, "1580567186", v.Fingerprint) // Fingerprint
+			assert.Equal(t, pfcountCommandSDK, v.Command)         // command
+			assert.Equal(t, pfcountWatchFingerPrint, v.Fingerprint) // Fingerprint
 			assert.DeepEqual(t, tc.result, v.Data)       // data
 		}
 	}
+}
 
+func testPFCountMergeSDK(t *testing.T, ctx context.Context, channels []<-chan *dicedb.WatchResult, publisher *dicedb.Client) {
 	for _, tc := range pfcountWatchSDKhWithPFMergeTestCases {
-		publisher.Del(context.Background(), tc.dest_key_1, tc.dest_key_2)
-		publisher.PFAdd(context.Background(), tc.dest_key_1, tc.dest_value_1).Err()
-		publisher.PFAdd(context.Background(), tc.dest_key_2, tc.dest_value_2).Err()
-		publisher.PFMerge(context.Background(), pfcountWatchKey, tc.dest_key_1, tc.dest_key_2).Err()
+		publisher.Del(ctx, tc.destKey1, tc.destKey2)
+		publisher.PFAdd(ctx, tc.destKey1, tc.destValue1).Err()
+		publisher.PFAdd(ctx, tc.destKey2, tc.destValue2).Err()
+		publisher.PFMerge(ctx, pfcountWatchKey, tc.destKey1, tc.destKey2).Err()
 
 		for _, channel := range channels {
 			v := <-channel
 
-			assert.Equal(t, "PFCOUNT", v.Command)         // command
-			assert.Equal(t, "1580567186", v.Fingerprint) // Fingerprint
+			assert.Equal(t, pfcountCommandSDK, v.Command)         // command
+			assert.Equal(t, pfcountWatchFingerPrint, v.Fingerprint) // Fingerprint
 			assert.DeepEqual(t, tc.result, v.Data)       // data
 		}
 	}
