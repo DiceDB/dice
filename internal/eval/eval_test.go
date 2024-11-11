@@ -5480,6 +5480,30 @@ func testEvalGETRANGE(t *testing.T, store *dstore.Store) {
 				Error:  nil,
 			},
 		},
+		"GETRANGE against byte array with valid range: 0 4": {
+			setup: func() {
+				key := "BYTEARRAY_KEY"
+				store.Put(key, store.NewObj(&ByteArray{data: []byte{0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+			},
+			input:          []string{"BYTEARRAY_KEY", "0", "4"},
+			migratedOutput: EvalResponse{Result: "hello", Error: nil},
+		},
+		"GETRANGE against byte array with valid range: 6 -1": {
+			setup: func() {
+				key := "BYTEARRAY_KEY"
+				store.Put(key, store.NewObj(&ByteArray{data: []byte{0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+			},
+			input:          []string{"BYTEARRAY_KEY", "6", "-1"},
+			migratedOutput: EvalResponse{Result: "world", Error: nil},
+		},
+		"GETRANGE against byte array with invalid range: 20 30": {
+			setup: func() {
+				key := "BYTEARRAY_KEY"
+				store.Put(key, store.NewObj(&ByteArray{data: []byte{0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+			},
+			input:          []string{"BYTEARRAY_KEY", "20", "30"},
+			migratedOutput: EvalResponse{Result: "", Error: nil},
+		},
 	}
 
 	runMigratedEvalTests(t, tests, evalGETRANGE, store)

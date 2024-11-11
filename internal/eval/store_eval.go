@@ -647,6 +647,15 @@ func evalGETRANGE(args []string, store *dstore.Store) *EvalResponse {
 		}
 	case object.ObjEncodingInt:
 		str = strconv.FormatInt(obj.Value.(int64), 10)
+	case object.ObjEncodingByteArray:
+		if val, ok := obj.Value.(*ByteArray); ok {
+			str = string(val.data)
+		} else {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			}
+		}
 	default:
 		return &EvalResponse{
 			Result: nil,
