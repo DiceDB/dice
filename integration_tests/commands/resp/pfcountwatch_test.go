@@ -111,18 +111,8 @@ func testPFCountAdd(t *testing.T, publisher net.Conn, respParsers []*clientio.RE
 	for _, tc := range pfcountWatchTestCases {
 		res := FireCommand(publisher, fmt.Sprintf("PFADD %s %s", tc.key, tc.val))
 		assert.Equal(t, int64(1), res)
-		for _, rp := range respParsers {
-			v, err := rp.DecodeOne()
-			assert.NilError(t, err)
-			castedValue, ok := v.([]interface{})
-			if !ok {
-				t.Errorf("Type assertion to []interface{} failed for value: %v", v)
-			}
-			assert.Equal(t, 3, len(castedValue))
-			assert.Equal(t, pfcountCommand, castedValue[0])
-			assert.Equal(t, pfcountWatchFingerPrint, castedValue[1])
-			assert.DeepEqual(t, tc.result, castedValue[2])
-		}
+		
+		verifyWatchResults(t, respParsers, tc.result)
 	}
 }
 
@@ -132,18 +122,23 @@ func testPFCountMerge(t *testing.T, publisher net.Conn, respParsers []*clientio.
 		FireCommand(publisher, fmt.Sprintf("PFADD %s %s", tc.destKey1, tc.destValue1))
 		FireCommand(publisher, fmt.Sprintf("PFADD %s %s", tc.destKey2, tc.destValue2))
 		FireCommand(publisher, fmt.Sprintf("PFMERGE %s %s %s", pfcountWatchKey, tc.destKey1, tc.destKey2))
-		for _, rp := range respParsers {
-			v, err := rp.DecodeOne()
-			assert.NilError(t, err)
-			castedValue, ok := v.([]interface{})
-			if !ok {
-				t.Errorf("Type assertion to []interface{} failed for value: %v", v)
-			}
-			assert.Equal(t, 3, len(castedValue))
-			assert.Equal(t, pfcountCommand, castedValue[0])
-			assert.Equal(t, pfcountWatchFingerPrint, castedValue[1])
-			assert.DeepEqual(t, tc.result, castedValue[2])
+		
+		verifyWatchResults(t, respParsers, tc.result)
+	}
+}
+
+func verifyWatchResults(t *testing.T, respParsers []*clientio.RESPParser, expected int64) {
+	for _, rp := range respParsers {
+		v, err := rp.DecodeOne()
+		assert.NilError(t, err)
+		castedValue, ok := v.([]interface{})
+		if !ok {
+			t.Errorf("Type assertion to []interface{} failed for value: %v", v)
 		}
+		assert.Equal(t, 3, len(castedValue))
+		assert.Equal(t, pfcountCommand, castedValue[0])
+		assert.Equal(t, pfcountWatchFingerPrint, castedValue[1])
+		assert.DeepEqual(t, expected, castedValue[2])
 	}
 }
 
@@ -240,13 +235,7 @@ func testPFCountAddSDK(t *testing.T, ctx context.Context, channels []<-chan *dic
 		err := publisher.PFAdd(ctx, tc.key, tc.val).Err()
 		assert.NilError(t, err)
 
-		for _, channel := range channels {
-			v := <-channel
-
-			assert.Equal(t, pfcountCommandSDK, v.Command)         // command
-			assert.Equal(t, pfcountWatchFingerPrint, v.Fingerprint) // Fingerprint
-			assert.DeepEqual(t, tc.result, v.Data)       // data
-		}
+		verifyWatchResultsSDK(t, channels, tc.result)
 	}
 }
 
@@ -257,12 +246,19 @@ func testPFCountMergeSDK(t *testing.T, ctx context.Context, channels []<-chan *d
 		publisher.PFAdd(ctx, tc.destKey2, tc.destValue2).Err()
 		publisher.PFMerge(ctx, pfcountWatchKey, tc.destKey1, tc.destKey2).Err()
 
-		for _, channel := range channels {
-			v := <-channel
+		verifyWatchResultsSDK(t, channels, tc.result)
+	}
+}
 
-			assert.Equal(t, pfcountCommandSDK, v.Command)         // command
-			assert.Equal(t, pfcountWatchFingerPrint, v.Fingerprint) // Fingerprint
-			assert.DeepEqual(t, tc.result, v.Data)       // data
+func verifyWatchResultsSDK(t *testing.T, channels []<-chan *dicedb.WatchResult, expected int64) {
+	for _, channel := range channels {
+		select {
+			case v := <-channel:
+				assert.Equal(t, pfcountCommandSDK, v.Command)         // command
+				assert.Equal(t, pfcountWatchFingerPrint, v.Fingerprint) // Fingerprint
+				assert.DeepEqual(t, expected, v.Data)       // data
+			case <-time.After(defaultTimeout):
+				t.Fatal("timeout waiting for watch result")
 		}
 	}
 }
