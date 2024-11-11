@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 type TestCase struct {
@@ -55,7 +55,7 @@ func TestSet(t *testing.T) {
 
 			for i, cmd := range tc.commands {
 				result, _ := exec.FireCommand(cmd)
-				assert.DeepEqual(t, tc.expected[i], result)
+				assert.Equal(t, tc.expected[i], result)
 			}
 		})
 	}
@@ -188,6 +188,29 @@ func TestSetWithOptions(t *testing.T) {
 			},
 			expected: []interface{}{nil, nil, "OK", nil, nil, nil},
 		},
+		{
+			name: "GET with Existing Value",
+			commands: []HTTPCommand{
+				{Command: "SET", Body: map[string]interface{}{"key": "k", "value": "v"}},
+				{Command: "SET", Body: map[string]interface{}{"key": "k", "value": "vv", "get": true}},
+			},
+			expected: []interface{}{"OK", "v"},
+		},
+		{
+			name: "GET with Non-Existing Value",
+			commands: []HTTPCommand{
+				{Command: "SET", Body: map[string]interface{}{"key": "k", "value": "vv", "get": true}},
+			},
+			expected: []interface{}{nil},
+		},
+		{
+			name: "GET with wrong type of value",
+			commands: []HTTPCommand{
+				{Command: "SADD", Body: map[string]interface{}{"key": "k", "value": "b"}},
+				{Command: "SET", Body: map[string]interface{}{"key": "k", "value": "v", "get": true}},
+			},
+			expected: []interface{}{float64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -207,7 +230,7 @@ func TestWithKeepTTLFlag(t *testing.T) {
 	exec := NewHTTPCommandExecutor()
 	expiryTime := strconv.FormatInt(time.Now().Add(1*time.Minute).UnixMilli(), 10)
 
-	testCases := []TestCase {
+	testCases := []TestCase{
 		{
 			name: "SET WITH KEEP TTL",
 			commands: []HTTPCommand{
@@ -228,7 +251,7 @@ func TestWithKeepTTLFlag(t *testing.T) {
 		},
 		{
 			name: "SET WITH KEEPTTL with PX",
-			commands: []HTTPCommand {
+			commands: []HTTPCommand{
 				{Command: "SET", Body: map[string]interface{}{"key": "k", "value": "v", "px": 2000, "keepttl": true}},
 				{Command: "GET", Body: map[string]interface{}{"key": "k"}},
 			},
@@ -236,7 +259,7 @@ func TestWithKeepTTLFlag(t *testing.T) {
 		},
 		{
 			name: "SET WITH KEEPTTL with EX",
-			commands: []HTTPCommand {
+			commands: []HTTPCommand{
 				{Command: "SET", Body: map[string]interface{}{"key": "k", "value": "v", "ex": 3, "keepttl": true}},
 				{Command: "GET", Body: map[string]interface{}{"key": "k"}},
 			},
@@ -244,7 +267,7 @@ func TestWithKeepTTLFlag(t *testing.T) {
 		},
 		{
 			name: "SET WITH KEEPTTL with NX",
-			commands: []HTTPCommand {
+			commands: []HTTPCommand{
 				{Command: "SET", Body: map[string]interface{}{"key": "k", "value": "v", "nx": true, "keepttl": true}},
 				{Command: "GET", Body: map[string]interface{}{"key": "k"}},
 			},
@@ -252,7 +275,7 @@ func TestWithKeepTTLFlag(t *testing.T) {
 		},
 		{
 			name: "SET WITH KEEPTTL with XX",
-			commands: []HTTPCommand {
+			commands: []HTTPCommand{
 				{Command: "SET", Body: map[string]interface{}{"key": "k", "value": "v", "xx": true, "keepttl": true}},
 				{Command: "GET", Body: map[string]interface{}{"key": "k"}},
 			},
@@ -260,7 +283,7 @@ func TestWithKeepTTLFlag(t *testing.T) {
 		},
 		{
 			name: "SET WITH KEEPTTL with PXAT",
-			commands: []HTTPCommand {
+			commands: []HTTPCommand{
 				{Command: "SET", Body: map[string]interface{}{"key": "k", "value": "v", "pxat": expiryTime, "keepttl": true}},
 				{Command: "GET", Body: map[string]interface{}{"key": "k"}},
 			},
@@ -269,7 +292,7 @@ func TestWithKeepTTLFlag(t *testing.T) {
 		{
 
 			name: "SET WITH KEEPTTL with EXAT",
-			commands: []HTTPCommand {
+			commands: []HTTPCommand{
 				{Command: "SET", Body: map[string]interface{}{"key": "k", "value": "v", "exat": expiryTime, "keepttl": true}},
 				{Command: "GET", Body: map[string]interface{}{"key": "k"}},
 			},
@@ -330,9 +353,9 @@ func TestSetWithExat(t *testing.T) {
 			for i, cmd := range tc.commands {
 				result, _ := exec.FireCommand(cmd)
 				if cmd.Command == "TTL" {
-					assert.Assert(t, result.(float64) <= tc.expected[i].(float64))
+					assert.True(t, result.(float64) <= tc.expected[i].(float64))
 				} else {
-					assert.DeepEqual(t, tc.expected[i], result)
+					assert.Equal(t, tc.expected[i], result)
 				}
 			}
 		})

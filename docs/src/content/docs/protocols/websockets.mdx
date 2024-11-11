@@ -1,13 +1,11 @@
---- 
+---
 title: WebSockets
 description: DiceDB supports WebSocket protocol for clients to connect to the database. This document explains the request and response format.
 sidebar:
   order: 2
 ---
 
-import { Tabs, TabItem } from '@astrojs/starlight/components';
-
-
+import { Tabs, TabItem } from "@astrojs/starlight/components";
 
 ## Introduction
 
@@ -16,11 +14,12 @@ DiceDB supports WebSocket for connecting to the database, allowing for real-time
 ## Connecting to the WebSocket Server
 
 To connect to the WebSocket server, use the following URL:
+
 ```
 ws://your-server-address:port/
 ```
-Replace `your-server-address` and `port` with the appropriate values for your server.
 
+Replace `your-server-address` and `port` with the appropriate values for your server.
 
 ## Message Format
 
@@ -61,7 +60,7 @@ Here's a simple example of how to interact with the WebSocket server:
 
     ws.onopen = function() {
         console.log('Connected to WebSocket server');
-        
+
         // Set a key
         ws.send('SET mykey "Hello, WebSocket!"');
     };
@@ -78,6 +77,7 @@ Here's a simple example of how to interact with the WebSocket server:
         console.log('WebSocket connection closed:', event.code, event.reason);
     };
     ```
+
 </TabItem>
 
 <TabItem label="CLI">
@@ -90,5 +90,3 @@ Here's a simple example of how to interact with the WebSocket server:
     ```
 </TabItem>
 </Tabs>
-
-

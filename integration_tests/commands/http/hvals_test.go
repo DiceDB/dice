@@ -1,7 +1,6 @@
 package http
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -42,7 +41,6 @@ func TestHVals(t *testing.T) {
 
 			for i, cmd := range tc.commands {
 				result, _ := cmdExec.FireCommand(cmd)
-				fmt.Printf("%v | %v\n", result, tc.expected[i])
 				switch e := tc.expected[i].(type) {
 				case []interface{}:
 					assert.ElementsMatch(t, e, tc.expected[i])

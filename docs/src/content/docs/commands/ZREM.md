@@ -7,25 +7,24 @@ The `ZREM` command in DiceDB is used to remove the specified members from the so
 
 ## Syntax
 
-```
+```bash
 ZREM key member [member ...]
 ```
 
 ## Parameters
 
-| Parameter | Description                                        | Type   | Required | Multiple |
-|-----------|----------------------------------------------------|--------|----------|----------|
+| Parameter | Description                                                            | Type   | Required | Multiple |
+| --------- | ---------------------------------------------------------------------- | ------ | -------- | -------- |
 | `key`     | The key associated with the sorted set whose members are to be removed | String | Yes      | No       |
-| `member`  | One or more members to remove from the sorted set              | String | Yes      | Yes      |
-
+| `member`  | One or more members to remove from the sorted set                      | String | Yes      | Yes      |
 
 ## Return Value
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| If specified key and members exists            | Count of members removed from the sorted set at key               |
-| If key doesn't exist                           | `0`                                               |
-| If member doesn't exist                           | `0`                                               |
+| Condition                           | Return Value                                        |
+| ----------------------------------- | --------------------------------------------------- |
+| If specified key and members exists | Count of members removed from the sorted set at key |
+| If key doesn't exist                | `0`                                                 |
+| If member doesn't exist             | `0`                                                 |
 
 ## Behaviour
 
@@ -46,10 +45,10 @@ ZREM key member [member ...]
    - Error Message: `(error) -ERR wrong number of arguments for 'ZREM' command`
    - Occurs if key or member isn't specified in the command.
 
-
 ## Example Usage
 
 ### Basic Usage
+
 Creating sorted set `myzset` with fields `one`, `two`, `three`, `four`, `five` with scores 1, 2, 3, 4, 5 respectively. Removing elements from `myzset`.
 
 ```bash
@@ -64,6 +63,7 @@ Creating sorted set `myzset` with fields `one`, `two`, `three`, `four`, `five` w
 ```
 
 ### Invalid Usage on non-existent sorted set
+
 Removing element from a non-existent sorted set `nonExistentZSet`.
 
 ```bash
@@ -72,6 +72,7 @@ Removing element from a non-existent sorted set `nonExistentZSet`.
 ```
 
 ### Invalid Usage on a non sorted set key
+
 Getting cardinality of a key `mystring` associated with a non sorted set type.
 
 ```bash
@@ -83,4 +84,4 @@ OK
 
 ## Notes
 
-- The `ZREM` command is a O(M*log(N)) time-complexity operation, with N being the number of elements in the sorted set and M the number of elements to be removed.
+- The `ZREM` command is a O(M\*log(N)) time-complexity operation, with N being the number of elements in the sorted set and M the number of elements to be removed.

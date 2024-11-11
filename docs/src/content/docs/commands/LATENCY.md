@@ -2,38 +2,39 @@
 title: LATENCY
 description: The `LATENCY` command in DiceDB is used to measure and analyze the latency of various operations within the DiceDB server. This command provides insights into the performance and responsiveness of the DiceDB instance, helping administrators to identify and troubleshoot latency issues.
 ---
+
 Note: `Not yet supported`
 
 The `LATENCY` command in DiceDB is used to measure and analyze the latency of various operations within the DiceDB server. This command provides insights into the performance and responsiveness of the DiceDB instance, helping administrators to identify and troubleshoot latency issues.
 
 ## Command Syntax
 
-```plaintext
+```bash
 LATENCY [SUBCOMMAND] [ARGUMENTS]
 ```
 
 ## Parameters
 
-| Parameter    | Subcommand | Description                                                          | Return Type | Required |
-|--------------|------------|----------------------------------------------------------------------|-------------|----------|
-| `SUBCOMMAND` |            | Specifies the operation to perform. Available subcommands are:       | String      | Yes      |
-|              | `LATEST`   | Returns the latest latency spikes.                                   | Array       | Yes      |
-|              | `HISTORY`  | Returns the latency history for a specific event.                    | Array       | Yes      |
-|              | `RESET`    | Resets the latency data for specific events or all events.           | Integer     | Yes      |
-|              | `GRAPH`    | Returns a latency graph for a specific event.                        | String      | Yes      |
-|              | `DOCTOR`   | Provides a human-readable report of latency issues.                  | String      | Yes      |
-| `ARGUMENTS`  | N/A        | Additional arguments required by certain subcommands (if applicable).| Varies      | No       |
+| Parameter    | Subcommand | Description                                                           | Return Type | Required |
+| ------------ | ---------- | --------------------------------------------------------------------- | ----------- | -------- |
+| `SUBCOMMAND` |            | Specifies the operation to perform. Available subcommands are:        | String      | Yes      |
+|              | `LATEST`   | Returns the latest latency spikes.                                    | Array       | Yes      |
+|              | `HISTORY`  | Returns the latency history for a specific event.                     | Array       | Yes      |
+|              | `RESET`    | Resets the latency data for specific events or all events.            | Integer     | Yes      |
+|              | `GRAPH`    | Returns a latency graph for a specific event.                         | String      | Yes      |
+|              | `DOCTOR`   | Provides a human-readable report of latency issues.                   | String      | Yes      |
+| `ARGUMENTS`  | N/A        | Additional arguments required by certain subcommands (if applicable). | Varies      | No       |
 
 ## Return Values
 
-| Condition                                        | Return Value                                      |
-|--------------------------------------------------|---------------------------------------------------|
-| `LATEST`                                         | Array of latency spikes                           |
-| `HISTORY`                                        | Array of latency samples (timestamp, latency)     |
-| `RESET`                                          | Integer (number of events reset)                  |
-| `GRAPH`                                          | String (graph representing latency data)          |
-| `DOCTOR`                                         | String (detailed report with suggestions)         |
-| `Syntax or specified constraints are invalid`    | error                                             |
+| Condition                                     | Return Value                                  |
+| --------------------------------------------- | --------------------------------------------- |
+| `LATEST`                                      | Array of latency spikes                       |
+| `HISTORY`                                     | Array of latency samples (timestamp, latency) |
+| `RESET`                                       | Integer (number of events reset)              |
+| `GRAPH`                                       | String (graph representing latency data)      |
+| `DOCTOR`                                      | String (detailed report with suggestions)     |
+| `Syntax or specified constraints are invalid` | error                                         |
 
 ## Behaviour
 

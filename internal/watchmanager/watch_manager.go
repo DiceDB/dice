@@ -22,6 +22,7 @@ type (
 		tcpSubscriptionMap       map[uint32]map[chan *cmd.DiceDBCmd]struct{} // tcpSubscriptionMap is a map of fingerprint -> [client1Chan, client2Chan, ...]
 		fingerprintCmdMap        map[uint32]*cmd.DiceDBCmd                   // fingerprintCmdMap is a map of fingerprint -> DiceDBCmd
 		cmdWatchSubscriptionChan chan WatchSubscription                      // cmdWatchSubscriptionChan is the channel to send/receive watch subscription requests.
+		cmdWatchChan             chan dstore.CmdWatchEvent                   // cmdWatchChan is the channel to send/receive watch events.
 	}
 )
 
@@ -36,31 +37,32 @@ var (
 	}
 )
 
-func NewManager(cmdWatchSubscriptionChan chan WatchSubscription) *Manager {
+func NewManager(cmdWatchSubscriptionChan chan WatchSubscription, cmdWatchChan chan dstore.CmdWatchEvent) *Manager {
 	return &Manager{
 		querySubscriptionMap:     make(map[string]map[uint32]struct{}),
 		tcpSubscriptionMap:       make(map[uint32]map[chan *cmd.DiceDBCmd]struct{}),
 		fingerprintCmdMap:        make(map[uint32]*cmd.DiceDBCmd),
 		cmdWatchSubscriptionChan: cmdWatchSubscriptionChan,
+		cmdWatchChan:             cmdWatchChan,
 	}
 }
 
 // Run starts the watch manager, listening for subscription requests and events
-func (m *Manager) Run(ctx context.Context, cmdWatchChan chan dstore.CmdWatchEvent) {
+func (m *Manager) Run(ctx context.Context) {
 	var wg sync.WaitGroup
 
 	wg.Add(1)
 
 	go func() {
 		defer wg.Done()
-		m.listenForEvents(ctx, cmdWatchChan)
+		m.listenForEvents(ctx)
 	}()
 
 	<-ctx.Done()
 	wg.Wait()
 }
 
-func (m *Manager) listenForEvents(ctx context.Context, cmdWatchChan chan dstore.CmdWatchEvent) {
+func (m *Manager) listenForEvents(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -71,7 +73,7 @@ func (m *Manager) listenForEvents(ctx context.Context, cmdWatchChan chan dstore.
 			} else {
 				m.handleUnsubscription(sub)
 			}
-		case watchEvent := <-cmdWatchChan:
+		case watchEvent := <-m.cmdWatchChan:
 			m.handleWatchEvent(watchEvent)
 		}
 	}
@@ -109,8 +111,6 @@ func (m *Manager) handleUnsubscription(sub WatchSubscription) {
 		if len(clients) == 0 {
 			// Remove the fingerprint from tcpSubscriptionMap
 			delete(m.tcpSubscriptionMap, fingerprint)
-			// Also remove the fingerprint from fingerprintCmdMap
-			delete(m.fingerprintCmdMap, fingerprint)
 		}
 	}
 
@@ -125,6 +125,8 @@ func (m *Manager) handleUnsubscription(sub WatchSubscription) {
 				delete(m.querySubscriptionMap, key)
 			}
 		}
+		// Also remove the fingerprint from fingerprintCmdMap
+		delete(m.fingerprintCmdMap, fingerprint)
 	}
 }
 

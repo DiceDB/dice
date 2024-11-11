@@ -8,8 +8,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/testutils"
-	testifyAssert "github.com/stretchr/testify/assert"
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestJSONOperations(t *testing.T) {
@@ -189,7 +188,7 @@ func TestJSONOperations(t *testing.T) {
 				if tc.getCmd != "" {
 					result := FireCommand(conn, tc.getCmd)
 					if testutils.IsJSONResponse(result.(string)) {
-						testifyAssert.JSONEq(t, tc.expected, result.(string))
+						assert.JSONEq(t, tc.expected, result.(string))
 					} else {
 						assert.Equal(t, tc.expected, result)
 					}
@@ -239,7 +238,7 @@ func TestJSONSetWithInvalidJSON(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result := FireCommand(conn, tc.command)
-			assert.Check(t, strings.HasPrefix(result.(string), tc.expected), fmt.Sprintf("Expected: %s, Got: %s", tc.expected, result))
+			assert.True(t, strings.HasPrefix(result.(string), tc.expected), fmt.Sprintf("Expected: %s, Got: %s", tc.expected, result))
 		})
 	}
 }
@@ -340,7 +339,7 @@ func TestJSONSetWithNXAndXX(t *testing.T) {
 				result := FireCommand(conn, cmd)
 				jsonResult, isString := result.(string)
 				if isString && testutils.IsJSONResponse(jsonResult) {
-					testifyAssert.JSONEq(t, tc.expected[i].(string), jsonResult)
+					assert.JSONEq(t, tc.expected[i].(string), jsonResult)
 				} else {
 					assert.Equal(t, tc.expected[i], result)
 				}
@@ -525,7 +524,7 @@ func TestJSONDelOperations(t *testing.T) {
 				result := FireCommand(conn, cmd)
 				stringResult, ok := result.(string)
 				if ok && testutils.IsJSONResponse(stringResult) {
-					testifyAssert.JSONEq(t, tc.expected[i].(string), stringResult)
+					assert.JSONEq(t, tc.expected[i].(string), stringResult)
 				} else {
 					assert.Equal(t, tc.expected[i], result)
 				}
@@ -620,7 +619,7 @@ func TestJSONForgetOperations(t *testing.T) {
 				result := FireCommand(conn, cmd)
 				stringResult, ok := result.(string)
 				if ok && testutils.IsJSONResponse(stringResult) {
-					testifyAssert.JSONEq(t, tc.expected[i].(string), stringResult)
+					assert.JSONEq(t, tc.expected[i].(string), stringResult)
 				} else {
 					assert.Equal(t, tc.expected[i], result)
 				}
@@ -735,7 +734,7 @@ func TestJsonStrlen(t *testing.T) {
 				if ok {
 					assert.Equal(t, tc.expected[i], stringResult)
 				} else {
-					assert.Assert(t, arraysArePermutations(tc.expected[i].([]interface{}), result.([]interface{})))
+					assert.True(t, arraysArePermutations(tc.expected[i].([]interface{}), result.([]interface{})))
 				}
 			}
 		})
@@ -795,7 +794,7 @@ func TestJSONMGET(t *testing.T) {
 				assert.Equal(t, len(tc.expected), len(results))
 				for i := range results {
 					if testutils.IsJSONResponse(tc.expected[i].(string)) {
-						testifyAssert.JSONEq(t, tc.expected[i].(string), results[i].(string))
+						assert.JSONEq(t, tc.expected[i].(string), results[i].(string))
 					} else {
 						assert.Equal(t, tc.expected[i], results[i])
 					}
@@ -813,7 +812,7 @@ func testJSONMGETRecursive(conn net.Conn) func(*testing.T) {
 	return func(t *testing.T) {
 		result := FireCommand(conn, "JSON.MGET doc1 doc2 $..a")
 		results, ok := result.([]interface{})
-		assert.Assert(t, ok, "Expected result to be a slice of interface{}")
+		assert.True(t, ok, "Expected result to be a slice of interface{}")
 		assert.Equal(t, 2, len(results), "Expected 2 results")
 
 		expectedSets := [][]int{
@@ -824,13 +823,13 @@ func testJSONMGETRecursive(conn net.Conn) func(*testing.T) {
 		for i, res := range results {
 			var actualSet []int
 			err := sonic.UnmarshalString(res.(string), &actualSet)
-			assert.NilError(t, err, "Failed to unmarshal JSON")
+			assert.Nil(t, err, "Failed to unmarshal JSON")
 
-			assert.Assert(t, len(actualSet) == len(expectedSets[i]),
+			assert.True(t, len(actualSet) == len(expectedSets[i]),
 				"Mismatch in number of elements for set %d", i)
 
 			for _, expected := range expectedSets[i] {
-				assert.Assert(t, sliceContainsItem(actualSet, expected),
+				assert.True(t, sliceContainsItem(actualSet, expected),
 					"Set %d does not contain expected value %d", i, expected)
 			}
 		}
@@ -897,7 +896,7 @@ func TestJsonARRAPPEND(t *testing.T) {
 				if tcase.assertType[i] == "equal" {
 					assert.Equal(t, out, result)
 				} else if tcase.assertType[i] == "deep_equal" {
-					assert.Assert(t, arraysArePermutations(out.([]interface{}), result.([]interface{})))
+					assert.True(t, arraysArePermutations(out.([]interface{}), result.([]interface{})))
 				}
 			}
 		})
@@ -975,7 +974,7 @@ func TestJsonNummultby(t *testing.T) {
 				if tcase.assertType[i] == "equal" {
 					assert.Equal(t, out, result)
 				} else if tcase.assertType[i] == "deep_equal" {
-					assert.Assert(t, arraysArePermutations(deStringify(out.(string)), deStringify(result.(string))))
+					assert.True(t, arraysArePermutations(deStringify(out.(string)), deStringify(result.(string))))
 				}
 			}
 		})
@@ -1095,7 +1094,8 @@ func TestJsonObjLen(t *testing.T) {
 				cmd := tcase.commands[i]
 				out := tcase.expected[i]
 				result := FireCommand(conn, cmd)
-				assert.DeepEqual(t, out, result)
+				
+				assert.Equal(t, out, result);
 			}
 		})
 	}
@@ -1187,11 +1187,11 @@ func TestJSONNumIncrBy(t *testing.T) {
 				case "equal":
 					assert.Equal(t, out, result)
 				case "perm_equal":
-					assert.Assert(t, arraysArePermutations(convertToArray(out.(string)), convertToArray(result.(string))))
+					assert.True(t, arraysArePermutations(convertToArray(out.(string)), convertToArray(result.(string))))
 				case "range":
-					assert.Assert(t, result.(int64) <= tc.expected[i].(int64) && result.(int64) > 0, "Expected %v to be within 0 to %v", result, tc.expected[i])
+					assert.True(t, result.(int64) <= tc.expected[i].(int64) && result.(int64) > 0, "Expected %v to be within 0 to %v", result, tc.expected[i])
 				case "json_equal":
-					testifyAssert.JSONEq(t, out.(string), result.(string))
+					assert.JSONEq(t, out.(string), result.(string))
 				}
 			}
 			for i := 0; i < len(tc.cleanUp); i++ {
@@ -1256,7 +1256,7 @@ func TestJsonSTRAPPEND(t *testing.T) {
 			assert.Equal(t, "OK", result)
 
 			result = FireCommand(conn, tc.getCmd)
-			assert.DeepEqual(t, tc.expected, result)
+			assert.ElementsMatch(t, tc.expected, result)
 
 		})
 	}

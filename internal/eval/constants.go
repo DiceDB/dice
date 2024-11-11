@@ -11,6 +11,7 @@ const (
 
 	Ex              string = "EX"
 	Px              string = "PX"
+	Persist         string = "PERSIST"
 	Pxat            string = "PXAT"
 	Exat            string = "EXAT"
 	XX              string = "XX"

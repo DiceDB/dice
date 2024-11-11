@@ -11,19 +11,19 @@ ZRANK key member [WITHSCORE]
 
 ## Parameters
 
-| Parameter   | Description                                                                 | Type   | Required |
-|-------------|-----------------------------------------------------------------------------|--------|----------|
-| `key`       | The key of the sorted set.                                                  | String | Yes      |
-| `member`    | The member whose rank is to be determined.                                  | String | Yes      |
-| `WITHSCORE` | If provided, the command will also return the score of the member.          | String | No       |
+| Parameter   | Description                                                        | Type   | Required |
+| ----------- | ------------------------------------------------------------------ | ------ | -------- |
+| `key`       | The key of the sorted set.                                         | String | Yes      |
+| `member`    | The member whose rank is to be determined.                         | String | Yes      |
+| `WITHSCORE` | If provided, the command will also return the score of the member. | String | No       |
 
 ## Return values
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| If member exists in the sorted set             | Integer (rank of the member)                      |
-| If `WITHSCORE` option is used                  | Array (rank and score of the member)              |
-| If member or key does not exist                | `nil`                                             |
+| Condition                          | Return Value                         |
+| ---------------------------------- | ------------------------------------ |
+| If member exists in the sorted set | Integer (rank of the member)         |
+| If `WITHSCORE` option is used      | Array (rank and score of the member) |
+| If member or key does not exist    | `nil`                                |
 
 ## Behaviour
 
@@ -35,10 +35,12 @@ ZRANK key member [WITHSCORE]
 ## Errors
 
 1. `Wrong type of value or key`:
+
    - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
    - Occurs when the specified key exists but is not associated with a sorted set.
 
 2. `Invalid syntax or number of arguments`:
+
    - Error Message: `(error) ERR wrong number of arguments for 'zrank' command`
    - Occurs if the command is issued with an incorrect number of arguments.
 

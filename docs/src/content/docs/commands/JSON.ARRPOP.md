@@ -12,8 +12,9 @@ JSON.ARRPOP key [path [index]]
 ```
 
 ## Parameters
+
 | Parameter | Description                                                                   | Type    | Required |
-|-----------|-------------------------------------------------------------------------------|---------|----------|
+| --------- | ----------------------------------------------------------------------------- | ------- | -------- |
 | `key`     | The key under which the JSON document is stored.                              | String  | Yes      |
 | `path`    | The JSONPath expression that specifies the location within the JSON document. | String  | Yes      |
 | `index`   | The index of the element that needs to be popped from the JSON Array at path. | Integer | No       |
@@ -30,14 +31,17 @@ When the `JSON.ARRPOP` command is executed, the specified element is popped from
 ## Error Handling
 
 1. `Wrong type of value or key`:
+
    - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
    - Occurs when attempting to use the command on a key that contains a non-string value.
 
 2. `Invalid Key`:
+
    - Error Message: `(error) ERR key does not exist`
    - Occurs when attempting to use the command on a key that does not exist.
 
 3. `Invalid Path`:
+
    - Error Message: `(error) ERR path %s does not exist`
    - Occurs when attempting to use the command on a path that does not exist in the JSON document.
 
@@ -50,36 +54,36 @@ When the `JSON.ARRPOP` command is executed, the specified element is popped from
 ### Popping value from an array
 
 ```bash
-127.0.0.1:6379> JSON.SET myjson . '{"numbers": [1, 2, 3]}'
+127.0.0.1:7379> JSON.SET myjson . '{"numbers": [1, 2, 3]}'
 OK
-127.0.0.1:6379> JSON.ARRPOP myjson .numbers 1
+127.0.0.1:7379> JSON.ARRPOP myjson .numbers 1
 (integer) 2
-127.0.0.1:6379> JSON.GET myjson
+127.0.0.1:7379> JSON.GET myjson
 "{\"numbers\":[1,3]}"
 ```
 
 ### Error when key does not exist
 
 ```bash
-127.0.0.1:6379> JSON.ARRPOP nonexistingkey .array 1
+127.0.0.1:7379> JSON.ARRPOP nonexistingkey .array 1
 (error) ERR key does not exist
 ```
 
 ### Error when path does not exist
 
 ```bash
-127.0.0.1:6379> JSON.SET myjson . '{"numbers": [1, 2, 3]}'
+127.0.0.1:7379> JSON.SET myjson . '{"numbers": [1, 2, 3]}'
 OK
-127.0.0.1:6379> JSON.ARRPOP myjson .nonexistingpath 4
+127.0.0.1:7379> JSON.ARRPOP myjson .nonexistingpath 4
 (error) ERR path .nonexistingpath does not exist
 ```
 
 ### Error when path is not an array
 
 ```bash
-127.0.0.1:6379> JSON.SET myjson . '{"numbers": [1, 2, 3]}'
+127.0.0.1:7379> JSON.SET myjson . '{"numbers": [1, 2, 3]}'
 OK
-127.0.0.1:6379> JSON.ARRPOP myjson .numbers 4
+127.0.0.1:7379> JSON.ARRPOP myjson .numbers 4
 (error) ERR path is not an array
 ```
 

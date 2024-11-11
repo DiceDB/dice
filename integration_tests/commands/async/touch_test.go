@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestTouch(t *testing.T) {
@@ -52,9 +52,9 @@ func TestTouch(t *testing.T) {
 				}
 				result := FireCommand(conn, cmd)
 				if tc.assertType[i] == "equal" {
-					assert.DeepEqual(t, tc.expected[i], result)
+					assert.Equal(t, tc.expected[i], result)
 				} else {
-					assert.Assert(t, result.(int64) >= tc.expected[i].(int64), "Expected %v to be less than or equal to %v", result, tc.expected[i])
+					assert.True(t, result.(int64) >= tc.expected[i].(int64), "Expected %v to be less than or equal to %v", result, tc.expected[i])
 				}
 			}
 		})

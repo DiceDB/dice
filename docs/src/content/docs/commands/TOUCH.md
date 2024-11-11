@@ -7,26 +7,24 @@ The `TOUCH` command in DiceDB is used to update the last access time of one or m
 
 ## Syntax
 
-```plaintext
+```bash
 TOUCH key [key ...]
 ```
 
 ## Parameters
 
-| Parameter | Description                                                               | Type    | Required |
-|-----------|---------------------------------------------------------------------------|---------|----------|
-| `key`     | The key(s) whose last access time you want to update. You can specify multiple keys separated by spaces. | String  | Yes |
+| Parameter | Description                                                                                              | Type   | Required |
+| --------- | -------------------------------------------------------------------------------------------------------- | ------ | -------- |
+| `key`     | The key(s) whose last access time you want to update. You can specify multiple keys separated by spaces. | String | Yes      |
 
 ## Return Value
- 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| The access time of the key(s) was successfully updated. | `integer`                                |
-| The type of key is unsupported. | `error`                                |
+
+| Condition                                               | Return Value |
+| ------------------------------------------------------- | ------------ |
+| The access time of the key(s) was successfully updated. | `integer`    |
+| The type of key is unsupported.                         | `error`      |
 
 ## Behaviour
-
-
 
 - When the `TOUCH` command is executed, it will Check whether or not the specified key(s) exists in the database.
 - If a key exists, its last access time will be updated to the current time.
@@ -43,7 +41,7 @@ The `TOUCH` command can raise the following errors:
 
 ### Single Key
 
-```plaintext
+```bash
 SET mykey "Hello"
 TOUCH mykey
 ```
@@ -52,7 +50,7 @@ In this example, the `TOUCH` command updates the last access time of the key `my
 
 ### Multiple Keys
 
-```plaintext
+```bash
 SET key1 "value1"
 SET key2 "value2"
 TOUCH key1 key2 key3
@@ -64,7 +62,7 @@ In this example, the `TOUCH` command attempts to update the last access time for
 
 Trying to touch key `mylist` will result in a `WRONGTYPE` error because `mylist` is a list, not a string.
 
-```plaintext
+```bash
 LPUSH mylist "element"
 TOUCH mylist
-``` 
+```

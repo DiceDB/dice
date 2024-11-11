@@ -2,6 +2,7 @@
 title: JSON.MGET
 description: Documentation for the DiceDB command JSON.MGET
 ---
+
 # JSON.MGET
 
 The `JSON.MGET` command in DiceDB is used to retrieve the values of specific JSON keys from multiple JSON documents stored at different keys. This command is particularly useful when you need to fetch the same JSON path from multiple JSON objects in a single operation, thereby reducing the number of round trips to the DiceDB server.
@@ -14,18 +15,17 @@ JSON.MGET key [key ...] path
 
 ## Parameters
 
-| Parameter | Description                                                                                     | Type   | Required |
-|-----------|-------------------------------------------------------------------------------------------------|--------|----------|
+| Parameter | Description                                                                                                                | Type   | Required |
+| --------- | -------------------------------------------------------------------------------------------------------------------------- | ------ | -------- |
 | `key`     | One or more keys from which the JSON values will be retrieved. These keys should point to JSON documents stored in DiceDB. | String | Yes      |
-| `path`    | The JSON path to retrieve from each of the specified keys. The path should be specified in JSONPath format. | String | Yes      |
+| `path`    | The JSON path to retrieve from each of the specified keys. The path should be specified in JSONPath format.                | String | Yes      |
 
 ## Return values
 
-| Condition                                                  | Return Value                                                                                |
-|-----------------------------------------------------------|---------------------------------------------------------------------------------------------|
-| Command is successful                                      | An array of JSON values corresponding to the specified path from each of the provided keys. |
+| Condition                                                                 | Return Value                                                                                |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Command is successful                                                     | An array of JSON values corresponding to the specified path from each of the provided keys. |
 | If a key does not exist or the path does not exist within a JSON document | The corresponding entry in the returned array will be `nil`.                                |
-
 
 ## Behaviour
 
@@ -45,9 +45,9 @@ Here’s the revised error section for the `JSON.MGET` command documentation in 
 ## Errors
 
 1. `Key does not exist`:
+
    - **Error Message**: `(error) ERROR could not perform this operation on a key that doesn't exist`
    - This error occurs when the specified key does not exist in the DiceDB database.
-
 
 2. `Invalid JSON path`:
    - **Error Message**: `(error) ERROR invalid JSONPath`
@@ -98,4 +98,3 @@ To retrieve the `address` field, which does not exist in the documents:
 ```
 
 In this case, `user:3` does not exist, and the `address` field does not exist in `user:1` and `user:2`, so `nil` is returned for each key.
-

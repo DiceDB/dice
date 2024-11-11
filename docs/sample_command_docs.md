@@ -2,7 +2,9 @@
 title: SET
 description: The `SET` command in DiceDB is used to set the value of a key. If the key already holds a value, it is overwritten, regardless of its type. This is one of the most fundamental operations in DiceDB as it allows for both creating and updating key-value pairs.
 ---
+
 <!-- description in 2 to 3 sentences, following is an example -->
+
 The `SET` command in DiceDB is used to set the value of a key. If the key already holds a value, it is overwritten, regardless of its type. This is one of the most fundamental operations in DiceDB as it allows for both creating and updating key-value pairs.
 
 ## Syntax
@@ -10,13 +12,16 @@ The `SET` command in DiceDB is used to set the value of a key. If the key alread
 ```bash
 SET key value [EX seconds | PX milliseconds | EXAT unix-time-seconds | PXAT unix-time-milliseconds | KEEPTTL] [NX | XX]
 ```
+
 <!-- If the command have subcommands please mention but do not consider them as arguments -->
 <!-- please mention them in subcommands section and create their individual documents -->
 
 ## Parameters
+
 <!-- please add all parameters, small description, type and required, see example for SET command-->
+
 | Parameter | Description                                                               | Type    | Required |
-|-----------|---------------------------------------------------------------------------|---------|----------|
+| --------- | ------------------------------------------------------------------------- | ------- | -------- |
 | `key`     | The name of the key to be set.                                            | String  | Yes      |
 | `value`   | The value to be set for the key.                                          | String  | Yes      |
 | `EX`      | Set the specified expire time, in seconds.                                | Integer | No       |
@@ -28,18 +33,21 @@ SET key value [EX seconds | PX milliseconds | EXAT unix-time-seconds | PXAT unix
 | `KEEPTTL` | Retain the time-to-live associated with the key.                          | None    | No       |
 
 ## Return values
+
 <!-- add all scenarios, see below example for SET -->
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| if key is set successfully                     | `OK`                                              |
-| If `NX` is used and key already exists         | `nil`                                             |
-| If `XX` is used and key doesn't exist          | `nil`                                             |
+| Condition                              | Return Value |
+| -------------------------------------- | ------------ |
+| if key is set successfully             | `OK`         |
+| If `NX` is used and key already exists | `nil`        |
+| If `XX` is used and key doesn't exist  | `nil`        |
 
 ## Behaviour
+
 <!-- How does the command execute goes here, kind of explaining the underlying algorithm -->
 <!-- see below example for SET command -->
 <!-- Please modify for the command by going through the code -->
+
 - If the specified key already exists, the `SET` command will overwrite the existing key-value pair with the new value unless the `NX` option is provided.
 - If the `NX` option is present, the command will set the key only if it does not already exist. If the key exists, no operation is performed and `nil` is returned.
 - If the `XX` option is present, the command will set the key only if it already exists. If the key does not exist, no operation is performed and `nil` is returned.
@@ -47,8 +55,8 @@ SET key value [EX seconds | PX milliseconds | EXAT unix-time-seconds | PXAT unix
 - When provided, `EX` sets the expiry time in seconds and `PX` sets the expiry time in milliseconds.
 - The `KEEPTTL` option ensures that the key's existing TTL is retained.
 
-
 ## Errors
+
 <!-- sample errors, please update for commands-->
 <!-- please add all the errors here -->
 <!-- incase of a dynamic error message, feel free to use variable names -->
@@ -71,6 +79,7 @@ SET key value [EX seconds | PX milliseconds | EXAT unix-time-seconds | PXAT unix
 ## Example Usage
 
 ### Basic Usage
+
 <!-- examples here are for set, please update them for the command -->
 
 Setting a key `foo` with the value `bar`
@@ -79,7 +88,9 @@ Setting a key `foo` with the value `bar`
 127.0.0.1:7379> SET foo bar
 OK
 ```
+
 <!-- Please use detailed scenarios and edges cases if possible -->
+
 ### Using expiration time (in seconds)
 
 Setting a key `foo` with the value `bar` to expire in 10 seconds
@@ -141,6 +152,7 @@ Trying to set key `foo` with both `EX` and `KEEPTTL` will result in an error
 127.0.0.1:7379> SET foo bar EX 10 KEEPTTL
 (error) ERR syntax error
 ```
+
 <!-- Optional: Used when additional information is to conveyed to users -->
 <!-- For example warnings about usage ex: Keys * -->
 <!-- OR alternatives of the commands -->
@@ -148,29 +160,41 @@ Trying to set key `foo` with both `EX` and `KEEPTTL` will result in an error
 <!-- anything related to the command which cannot be shared in other sections -->
 
 <!-- Optional -->
+
 ## Best Practices
+
 <!-- below example from Keys command -->
+
 - `Avoid in Production`: Due to its potential to slow down the server, avoid using the `KEYS` command in a production environment. Instead, consider using the `SCAN` command, which is more efficient for large keyspaces.
 - `Use Specific Patterns`: When using the `KEYS` command, try to use the most specific pattern possible to minimize the number of keys returned and reduce the load on the server.
 
 <!-- Optional -->
+
 ## Alternatives
+
 <!-- below example from keys command -->
+
 - `SCAN`: The `SCAN` command is a cursor-based iterator that allows you to incrementally iterate over the keyspace without blocking the server. It is a more efficient alternative to `KEYS` for large datasets.
 
 <!-- Optional -->
+
 ## Notes
+
 <!-- below example from json.get command -->
+
 - JSONPath expressions allow you to navigate and retrieve specific parts of a JSON document. Ensure that your JSONPath expressions are correctly formatted to avoid errors.
 
 By understanding the `JSON.GET` command, you can efficiently retrieve JSON data stored in your DiceDB database, enabling you to build powerful and flexible applications that leverage the capabilities of DiceDB.
 
 <!-- Optional -->
+
 ## Subcommands
+
 <!-- if the command you are working on has subcommands -->
 <!-- please mention them here and add links to the pages -->
 <!-- please see below example for COMMAND docs -->
 <!-- follow below bullet structure -->
+
 - **subcommand**: Optional. Available subcommands include:
   - `COUNT` : Returns the total number of commands in the DiceDB server.
   - `GETKEYS` : Returns the keys from the provided command and arguments.

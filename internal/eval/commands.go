@@ -103,9 +103,10 @@ var (
 		The key should be the only param in args And If the key exists, it will be deleted before its value is returned.
 		The RESP value of the key is encoded and then returned
 		GETDEL returns RespNIL if key is expired or it does not exist`,
-		Eval:     evalGETDEL,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalGETDEL,
 	}
 	msetCmdMeta = DiceCmdMeta{
 		Name: "MSET",
@@ -326,9 +327,10 @@ var (
 		RESP encoded time (in secs) remaining for the key to expire
 		RESP encoded -2 stating key doesn't exist or key is expired
 		RESP encoded -1 in case no expiration is set on the key`,
-		Eval:     evalTTL,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalTTL,
+		IsMigrated: true,
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	delCmdMeta = DiceCmdMeta{
 		Name: "DEL",
@@ -345,9 +347,31 @@ var (
 		The expiry time should be in integer format; if not, it returns encoded error response
 		Returns RespOne if expiry was set on the key successfully.
 		Once the time is lapsed, the key will be deleted automatically`,
-		Eval:     evalEXPIRE,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
+		NewEval:    evalEXPIRE,
+		IsMigrated: true,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
+	}
+	expiretimeCmdMeta = DiceCmdMeta{
+		Name: "EXPIRETIME",
+		Info: `EXPIRETIME returns the absolute Unix timestamp (since January 1, 1970) in seconds
+		at which the given key will expire`,
+		NewEval:    evalEXPIRETIME,
+		IsMigrated: true,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
+	}
+	expireatCmdMeta = DiceCmdMeta{
+		Name: "EXPIREAT",
+		Info: `EXPIREAT sets a expiry time(in unix-time-seconds) on the specified key in args
+		args should contain 2 values, key and the expiry time to be set for the key
+		The expiry time should be in integer format; if not, it returns encoded error response
+		Returns RespOne if expiry was set on the key successfully.
+		Once the time is lapsed, the key will be deleted automatically`,
+		NewEval:    evalEXPIREAT,
+		IsMigrated: true,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
 	}
 	helloCmdMeta = DiceCmdMeta{
 		Name:  "HELLO",
@@ -513,20 +537,23 @@ var (
 		Arity: 1,
 	}
 	setBitCmdMeta = DiceCmdMeta{
-		Name: "SETBIT",
-		Info: "SETBIT sets or clears the bit at offset in the string value stored at key",
-		Eval: evalSETBIT,
+		Name:       "SETBIT",
+		Info:       "SETBIT sets or clears the bit at offset in the string value stored at key",
+		IsMigrated: true,
+		NewEval:    evalSETBIT,
 	}
 	getBitCmdMeta = DiceCmdMeta{
-		Name: "GETBIT",
-		Info: "GETBIT returns the bit value at offset in the string value stored at key",
-		Eval: evalGETBIT,
+		Name:       "GETBIT",
+		Info:       "GETBIT returns the bit value at offset in the string value stored at key",
+		IsMigrated: true,
+		NewEval:    evalGETBIT,
 	}
 	bitCountCmdMeta = DiceCmdMeta{
-		Name:  "BITCOUNT",
-		Info:  "BITCOUNT counts the number of set bits in the string value stored at key",
-		Eval:  evalBITCOUNT,
-		Arity: -1,
+		Name:       "BITCOUNT",
+		Info:       "BITCOUNT counts the number of set bits in the string value stored at key",
+		Arity:      -1,
+		IsMigrated: true,
+		NewEval:    evalBITCOUNT,
 	}
 	bitOpCmdMeta = DiceCmdMeta{
 		Name: "BITOP",
@@ -655,9 +682,10 @@ var (
 		Name: "GETEX",
 		Info: `Get the value of key and optionally set its expiration.
 		GETEX is similar to GET, but is a write command with additional options.`,
-		Eval:     evalGETEX,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalGETEX,
 	}
 	pttlCmdMeta = DiceCmdMeta{
 		Name: "PTTL",
@@ -667,9 +695,10 @@ var (
 		RESP encoded time (in secs) remaining for the key to expire
 		RESP encoded -2 stating key doesn't exist or key is expired
 		RESP encoded -1 in case no expiration is set on the key`,
-		Eval:     evalPTTL,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalPTTL,
+		IsMigrated: true,
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	hsetCmdMeta = DiceCmdMeta{
 		Name: "HSET",
@@ -679,9 +708,10 @@ var (
 		Returns
 		This command returns the number of keys that are stored at given key.
 		`,
-		Eval:     evalHSET,
-		Arity:    -4,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalHSET,
+		Arity:      -4,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	hmsetCmdMeta = DiceCmdMeta{
 		Name: "HMSET",
@@ -691,9 +721,10 @@ var (
 		Returns
 		This command returns the number of keys that are stored at given key.
 		`,
-		Eval:     evalHMSET,
-		Arity:    -4,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalHMSET,
+		Arity:      -4,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	hkeysCmdMeta = DiceCmdMeta{
 		Name:       "HKEYS",
@@ -708,23 +739,26 @@ var (
 		Info: `Sets field in the hash stored at key to value, only if field does not yet exist.
 		If key does not exist, a new key holding a hash is created. If field already exists,
 		this operation has no effect.`,
-		Eval:     evalHSETNX,
-		Arity:    4,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalHSETNX,
+		Arity:      4,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	hgetCmdMeta = DiceCmdMeta{
-		Name:     "HGET",
-		Info:     `Returns the value associated with field in the hash stored at key.`,
-		Eval:     evalHGET,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Name:       "HGET",
+		Info:       `Returns the value associated with field in the hash stored at key.`,
+		NewEval:    evalHGET,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	hmgetCmdMeta = DiceCmdMeta{
-		Name:     "HMGET",
-		Info:     `Returns the values associated with the specified fields in the hash stored at key.`,
-		Eval:     evalHMGET,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Name:       "HMGET",
+		Info:       `Returns the values associated with the specified fields in the hash stored at key.`,
+		NewEval:    evalHMGET,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	hgetAllCmdMeta = DiceCmdMeta{
 		Name: "HGETALL",
@@ -769,9 +803,10 @@ var (
 		If key does not exist, it is treated as an empty hash and this command returns 0.
 		Returns
 		The number of fields that were removed from the hash, not including specified but non-existing fields.`,
-		Eval:     evalHDEL,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalHDEL,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	hscanCmdMeta = DiceCmdMeta{
 		Name: "HSCAN",
@@ -809,25 +844,6 @@ var (
 		Eval:     evalTOUCH,
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
-	}
-	expiretimeCmdMeta = DiceCmdMeta{
-		Name: "EXPIRETIME",
-		Info: `EXPIRETIME returns the absolute Unix timestamp (since January 1, 1970) in seconds
-		at which the given key will expire`,
-		Eval:     evalEXPIRETIME,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
-	}
-	expireatCmdMeta = DiceCmdMeta{
-		Name: "EXPIREAT",
-		Info: `EXPIREAT sets a expiry time(in unix-time-seconds) on the specified key in args
-		args should contain 2 values, key and the expiry time to be set for the key
-		The expiry time should be in integer format; if not, it returns encoded error response
-		Returns RespOne if expiry was set on the key successfully.
-		Once the time is lapsed, the key will be deleted automatically`,
-		Eval:     evalEXPIREAT,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1},
 	}
 	lpushCmdMeta = DiceCmdMeta{
 		Name:  "LPUSH",
@@ -899,8 +915,9 @@ var (
 		 RESP encoded -1 in case the bit argument is 1 and the string is empty or composed of just zero bytes.
 		 RESP encoded -1 if we look for set bits and the string is empty or composed of just zero bytes, -1 is returned.
 		 RESP encoded -1 if a clear bit isn't found in the specified range.`,
-		Eval:  evalBITPOS,
-		Arity: -2,
+		IsMigrated: true,
+		NewEval:    evalBITPOS,
+		Arity:      -2,
 	}
 	saddCmdMeta = DiceCmdMeta{
 		Name: "SADD",
@@ -909,17 +926,19 @@ var (
 		Specified members that are already a member of this set are ignored
 		Non existing keys are treated as empty sets.
 		An error is returned when the value stored at key is not a set.`,
-		Eval:     evalSADD,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalSADD,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	smembersCmdMeta = DiceCmdMeta{
 		Name: "SMEMBERS",
 		Info: `SMEMBERS key
 		Returns all the members of the set value stored at key.`,
-		Eval:     evalSMEMBERS,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalSMEMBERS,
 	}
 	sremCmdMeta = DiceCmdMeta{
 		Name: "SREM",
@@ -927,18 +946,20 @@ var (
 		Removes the specified members from the set stored at key.
 		Non existing keys are treated as empty sets.
 		An error is returned when the value stored at key is not a set.`,
-		Eval:     evalSREM,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalSREM,
 	}
 	scardCmdMeta = DiceCmdMeta{
 		Name: "SCARD",
 		Info: `SCARD key
 		Returns the number of elements of the set stored at key.
 		An error is returned when the value stored at key is not a set.`,
-		Eval:     evalSCARD,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalSCARD,
 	}
 	sdiffCmdMeta = DiceCmdMeta{
 		Name: "SDIFF",
@@ -1197,17 +1218,19 @@ var (
 		There is another subcommand that only changes the behavior of successive
 		INCRBY and SET subcommands calls by setting the overflow behavior:
 		OVERFLOW [WRAP|SAT|FAIL]`,
-		Arity:    -1,
-		KeySpecs: KeySpecs{BeginIndex: 1},
-		Eval:     evalBITFIELD,
+		Arity:      -1,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalBITFIELD,
 	}
 	bitfieldroCmdMeta = DiceCmdMeta{
 		Name: "BITFIELD_RO",
 		Info: `It is read-only variant of the BITFIELD command.
 		It is like the original BITFIELD but only accepts GET subcommand.`,
-		Arity:    -1,
-		KeySpecs: KeySpecs{BeginIndex: 1},
-		Eval:     evalBITFIELDRO,
+		Arity:      -1,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalBITFIELDRO,
 	}
 	hincrbyFloatCmdMeta = DiceCmdMeta{
 		Name: "HINCRBYFLOAT",
@@ -1294,6 +1317,47 @@ var (
 		Arity:      -3,
 		IsMigrated: true,
 		NewEval:    evalCMSMerge,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+	}
+	linsertCmdMeta = DiceCmdMeta{
+		Name: "LINSERT",
+		Info: `
+		Usage:
+			LINSERT key <BEFORE | AFTER> pivot element
+		Info:
+			Inserts element in the list stored at key either before or after the reference value pivot.
+			When key does not exist, it is considered an empty list and no operation is performed.
+			An error is returned when key exists but does not hold a list value.
+		Returns:
+			Integer - the list length after a successful insert operation.
+			0 when the key doesn't exist.
+			-1 when the pivot wasn't found.
+		`,
+		NewEval:    evalLINSERT,
+		IsMigrated: true,
+		Arity:      5,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+	}
+	lrangeCmdMeta = DiceCmdMeta{
+		Name: "LRANGE",
+		Info: `
+		Usage:
+			LRANGE key start stop
+		Info:
+			Returns the specified elements of the list stored at key.
+			The offsets start and stop are zero-based indexes, with 0 being the first element of the list (the head of the list), 1 being the next element and so on.
+
+			These offsets can also be negative numbers indicating offsets starting at the end of the list.
+			For example, -1 is the last element of the list, -2 the penultimate, and so on.
+			
+			Out of range indexes will not produce an error. If start is larger than the end of the list, an empty list is returned.
+			If stop is larger than the actual end of the list it will be treated like the last element of the list.
+		Returns:
+			Array reply: a list of elements in the specified range, or an empty array if the key doesn't exist.
+		`,
+		NewEval:    evalLRANGE,
+		IsMigrated: true,
+		Arity:      4,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 )
@@ -1437,6 +1501,8 @@ func init() {
 	DiceCmds["CMS.QUERY"] = cmsQueryCmdMeta
 	DiceCmds["CMS.INCRBY"] = cmsIncrByCmdMeta
 	DiceCmds["CMS.MERGE"] = cmsMergeCmdMeta
+	DiceCmds["LINSERT"] = linsertCmdMeta
+	DiceCmds["LRANGE"] = lrangeCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

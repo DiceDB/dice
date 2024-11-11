@@ -3,7 +3,7 @@ package http
 import (
 	"testing"
 
-	assert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBloomFilter(t *testing.T) {
@@ -376,5 +376,10 @@ func TestBFEdgeCasesAndErrors(t *testing.T) {
 				Body:    map[string]interface{}{"key": "foo"},
 			})
 		})
+		exec.FireCommand(HTTPCommand{
+			Command: "FLUSHDB",
+			Body:    map[string]interface{}{"values": []interface{}{}},
+		},
+		)
 	}
 }

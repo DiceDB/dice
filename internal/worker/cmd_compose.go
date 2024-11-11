@@ -33,11 +33,10 @@ func composeRename(responses ...ops.StoreResponse) interface{} {
 	return clientio.OK
 }
 
-// composeRename processes responses from multiple shards for a "Copy" operation.
+// composeCopy processes responses from multiple shards for a "Copy" operation.
 // It iterates through all shard responses, checking for any errors. If an error is found
 // in any shard response, it returns that error immediately. If all responses are successful,
-// it returns an "OK" response to indicate that the Rename operation succeeded across all shards.
-
+// it returns an "OK" response to indicate that the Copy operation succeeded across all shards.
 func composeCopy(responses ...ops.StoreResponse) interface{} {
 	for idx := range responses {
 		if responses[idx].EvalResponse.Error != nil {

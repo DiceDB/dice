@@ -7,26 +7,25 @@ The `MGET` command in DiceDB is used to retrieve the values of multiple keys in 
 
 ## Syntax
 
-```
+```bash
 MGET key [key ...]
 ```
 
 ## Parameters
 
-| Parameter  | Description                                             | Type    | Required |
-|------------|---------------------------------------------------------|---------|----------|
-| `key`      | One or more keys for which the values need to be retrieved. Each key is a string.       |String   |  Yes     |
-                                      
+| Parameter | Description                                                                       | Type   | Required |
+| --------- | --------------------------------------------------------------------------------- | ------ | -------- |
+| `key`     | One or more keys for which the values need to be retrieved. Each key is a string. | String | Yes      |
 
 ## Return Value
 
 The `MGET` command returns an array of values corresponding to the specified keys. If a key does not exist, the corresponding value in the array will be `nil`.
 
-| Condition                         | Return Value                                                |
-|-----------------------------------|-------------------------------------------------------------|
-| All specified keys exist          | An array of values corresponding to the specified keys       |
-| Some keys do not exist            | An array where non-existent keys have `nil` as their value   |
-| Keys are of the wrong type        | error                                                       |
+| Condition                  | Return Value                                               |
+| -------------------------- | ---------------------------------------------------------- |
+| All specified keys exist   | An array of values corresponding to the specified keys     |
+| Some keys do not exist     | An array where non-existent keys have `nil` as their value |
+| Keys are of the wrong type | error                                                      |
 
 ## Behaviour
 
@@ -34,12 +33,12 @@ The `MGET` command returns an array of values corresponding to the specified key
 - If a key does not exist, its corresponding position in the returned array will contain `nil`.
 - If any of the keys hold non-string values (e.g., lists or sets), the `MGET` command will return an error indicating that the operation was attempted on the wrong type of key.
 
-
 ## Error Handling
 
 The `MGET` command can raise errors in the following scenarios:
 
 1. `Wrong type of value or key`:
+
    - `Error Message`: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
    - Occurs when one of the keys holds a value that is not a string.
 
@@ -53,19 +52,21 @@ The `MGET` command can raise errors in the following scenarios:
 
 Retrieving the values of multiple keys `key1`, `key2`, and `key3`:
 
-
 ```bash
 127.0.0.1:7379> SET key1 "value1"
 OK
 ```
+
 ```bash
 127.0.0.1:7379> SET key2 "value2"
 OK
 ```
+
 ```bash
 127.0.0.1:7379> SET key3 "value3"
 OK
 ```
+
 ```bash
 127.0.0.1:7379> MGET key1 key2 key3
 ```
@@ -84,13 +85,16 @@ OK
 127.0.0.1:7379> SET key1 "value1"
 OK
 ```
+
 ```bash
 127.0.0.1:7379> SET key2 "value2"
 OK
 ```
+
 ```bash
 127.0.0.1:7379> MGET key1 key2 key3
 ```
+
 `Output:`
 
 ```
@@ -107,10 +111,12 @@ OK
 127.0.0.1:7379> SET key1 "value1"
 OK
 ```
+
 ```bash
 127.0.0.1:7379> LPUSH key2 "value2"
 (integer) 1
 ```
+
 ```bash
 127.0.0.1:7379> MGET key1 key2
 ```
@@ -128,14 +134,17 @@ OK
 127.0.0.1:7379> SET key1 "value1"
 OK
 ```
+
 ```bash
 127.0.0.1:7379> SET key2 "value2"
 OK
 ```
+
 ```bash
 127.0.0.1:7379> LPUSH key2 "value3"
 (error) ERROR WRONGTYPE Operation against a key holding the wrong kind of value
 ```
+
 ```bash
 127.0.0.1:7379> MGET key1 key2
 ```

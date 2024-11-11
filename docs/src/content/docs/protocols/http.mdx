@@ -1,11 +1,11 @@
---- 
+---
 title: HTTP
 description: DiceDB supports HTTP protocol for clients to connect to the database. This document explains the request and response format.
 sidebar:
   order: 1
 ---
 
-import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Tabs, TabItem } from "@astrojs/starlight/components";
 
 ## Table of Contents
 
@@ -21,7 +21,6 @@ DiceDB supports HTTP protocol for clients to connect to the database. This allow
 
 All commands except `QWATCH` are synchronous and will return the result of the command immediately. For `QWATCH`, we use [SSE](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events) to be able to respond with changes to the result set of the queries.
 
-
 ## API Endpoint
 
 All requests should be sent to the base URL of your server, followed by the command name:
@@ -34,7 +33,7 @@ http://your-server-address:port/<command>
 
 - **HTTP Method**: POST for all operations
 - **Path**: The DiceDB command name (e.g., `/GET`, `/SET`, `/HGET`)
-- **Headers**: 
+- **Headers**:
   - `Content-Type: application/json`
 - **Body**: JSON object containing command arguments
 
@@ -55,6 +54,7 @@ Our HTTP API supports all DiceDB commands. Please refer to our comprehensive com
 ### Setting a Key-Value Pair
 
 **Request:**
+
 <Tabs syncKey="http-request-format">
   <TabItem label="HTTP Request">
   ```http
@@ -62,36 +62,39 @@ Our HTTP API supports all DiceDB commands. Please refer to our comprehensive com
   Host: your-server-address
   Content-Type: application/json
 
-  {
-    "key": "mykey",
-    "value": "Hello, World!"
-  }
-  ```
+{
+"key": "mykey",
+"value": "Hello, World!"
+}
+
+````
 </TabItem>
-  <TabItem label="cURL">
-  ```bash
-  curl --location 'http://your-server-address:PORT/SET' \
-  --header 'Content-Type: application/json' \
-  --data '{
-    "key": "mykey",
-    "value": "Hello, World!"
-  }'
-  ```
+<TabItem label="cURL">
+```bash
+curl --location 'http://your-server-address:PORT/SET' \
+--header 'Content-Type: application/json' \
+--data '{
+  "key": "mykey",
+  "value": "Hello, World!"
+}'
+````
+
   </TabItem>
 </Tabs>
 
-
 **Response:**
+
 ```json
 {
-    "status": "success",
-    "data": "OK"
+  "status": "success",
+  "data": "OK"
 }
 ```
 
 ### Getting a Value
 
 **Request:**
+
 <Tabs syncKey="http-request-format">
   <TabItem label="HTTP Request">
   ```http
@@ -99,34 +102,37 @@ Our HTTP API supports all DiceDB commands. Please refer to our comprehensive com
   Host: your-server-address
   Content-Type: application/json
 
-  {
-    "key": "mykey"
-  }
-  ```
+{
+"key": "mykey"
+}
+
+````
 </TabItem>
-  <TabItem label="cURL">
-  ```bash
-  curl --location 'http://your-server-address:PORT/GET' \
-  --header 'Content-Type: application/json' \
-  --data '{
-    "key": "mykey"
-  }'
-  ```
+<TabItem label="cURL">
+```bash
+curl --location 'http://your-server-address:PORT/GET' \
+--header 'Content-Type: application/json' \
+--data '{
+  "key": "mykey"
+}'
+````
+
   </TabItem>
 </Tabs>
 
-
 **Response:**
+
 ```json
 {
-    "status": "success",
-    "data": "Hello, World!"
+  "status": "success",
+  "data": "Hello, World!"
 }
 ```
 
 ### Setting a field in Hash
 
 **Request:**
+
 <Tabs syncKey="http-request-format">
   <TabItem label="HTTP Request">
   ```http
@@ -135,11 +141,12 @@ Host: your-server-address
 Content-Type: application/json
 
 {
-	"key": "test",
-	"field": "test",
-	"value": "test"
+"key": "test",
+"field": "test",
+"value": "test"
 }
-```
+
+````
 </TabItem>
   <TabItem label="cURL">
   ```bash
@@ -150,22 +157,24 @@ Content-Type: application/json
     "field": "test",
     "value": "test"
   }'
-  ```
+````
+
   </TabItem>
 </Tabs>
 
-
 **Response:**
+
 ```json
 {
-    "status": "success",
-    "data": 1
+  "status": "success",
+  "data": 1
 }
 ```
 
 ### Getting a field in a HashSet
 
 **Request:**
+
 <Tabs syncKey="http-request-format">
   <TabItem label="HTTP Request">
 ```http
@@ -174,10 +183,11 @@ Host: your-server-address
 Content-Type: application/json
 
 {
-  "key": "test",
-  "field": "test"
+"key": "test",
+"field": "test"
 }
-```
+
+````
 </TabItem>
   <TabItem label="cURL">
  ```bash
@@ -187,15 +197,17 @@ curl --location 'http://your-server-address:PORT/HGET' \
   "key": "test",
   "field": "test"
 }'
-```
+````
+
   </TabItem>
 </Tabs>
 
 **Response:**
+
 ```json
 {
-    "status": "success",
-    "data": "test"
+  "status": "success",
+  "data": "test"
 }
 ```
 
@@ -204,6 +216,7 @@ curl --location 'http://your-server-address:PORT/HGET' \
 **NOTE**: The `QWATCH` command is asynchronous and requires the use of Server-Sent Events (SSE) to receive updates. The following example demonstrates how to use `QWATCH` with SSE.
 
 **Request:**
+
 <Tabs syncKey="http-request-format">
   <TabItem label="HTTP Request">
 ```http
@@ -212,9 +225,10 @@ Host: your-server-address
 Content-Type: application/json
 
 {
-  "query": "SELECT $key, $value WHERE $key like 'match:100:*' AND $value > 10 ORDER BY $value DESC LIMIT 3"
+"query": "SELECT $key, $value WHERE $key like 'match:100:\*' AND $value > 10 ORDER BY $value DESC LIMIT 3"
 }
-```
+
+````
 
 </TabItem>
   <TabItem label="cURL">
@@ -224,9 +238,7 @@ curl --location 'http://your-server-address:PORT/QWATCH' \
 --data '{
   "query": "SELECT $key, $value WHERE $key like '\''match:100:*'\'' AND $value > 10 ORDER BY $value DESC LIMIT 3"
 }'
-```
+````
+
   </TabItem>
 </Tabs>
-
-
-
