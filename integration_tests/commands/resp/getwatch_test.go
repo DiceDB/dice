@@ -30,10 +30,10 @@ type getWatchTestCase struct {
 }
 
 var getWatchTestCases = []getWatchTestCase{
-	{getWatchKey, "1768826704", "value1"},
-	{getWatchKey, "1768826704", "value2"},
-	{getWatchKey, "1768826704", "value3"},
-	{getWatchKey, "1768826704", "value4"},
+	{getWatchKey, "2714318480", "value1"},
+	{getWatchKey, "2714318480", "value2"},
+	{getWatchKey, "2714318480", "value3"},
+	{getWatchKey, "2714318480", "value4"},
 }
 
 func TestGETWATCH(t *testing.T) {
@@ -60,7 +60,8 @@ func TestGETWATCH(t *testing.T) {
 
 	respParsers := make([]*clientio.RESPParser, len(subscribers))
 	for i, subscriber := range subscribers {
-		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("GET.WATCH %s", getWatchKey))
+		uuid := uuid.New().String()
+		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("GET.WATCH %s %s", getWatchKey, uuid))
 		assert.True(t, rp != nil)
 		respParsers[i] = rp
 
@@ -104,10 +105,13 @@ func TestGETWATCHWithSDK(t *testing.T) {
 		watch := subscriber.client.WatchConn(context.Background())
 		subscribers[i].watch = watch
 		assert.True(t, watch != nil)
-		firstMsg, err := watch.Watch(context.Background(), "GET", getWatchKey)
+
+		uuid := uuid.New().String()
+		firstMsg, err := watch.Watch(context.Background(), "GET", getWatchKey, uuid)
 		assert.Nil(t, err)
-		assert.Equal(t, firstMsg.Command, "GET")
+		assert.Equal(t, uuid, firstMsg.Command)
 		assert.Equal(t, "2714318480", firstMsg.Fingerprint)
+
 		channels[i] = watch.Channel()
 	}
 
@@ -117,7 +121,7 @@ func TestGETWATCHWithSDK(t *testing.T) {
 
 		for _, channel := range channels {
 			v := <-channel
-			assert.Equal(t, "GET", v.Command)            // command
+			assert.Equal(t, "GET", v.Command)
 			assert.Equal(t, "2714318480", v.Fingerprint) // Fingerprint
 			assert.Equal(t, tc.val, v.Data.(string))     // data
 		}
@@ -135,9 +139,10 @@ func TestGETWATCHWithSDK2(t *testing.T) {
 		watch := subscriber.client.WatchConn(context.Background())
 		subscribers[i].watch = watch
 		assert.True(t, watch != nil)
-		firstMsg, err := watch.GetWatch(context.Background(), getWatchKey)
+		uuid := uuid.New().String()
+		firstMsg, err := watch.GetWatch(context.Background(), getWatchKey, uuid)
 		assert.Nil(t, err)
-		assert.Equal(t, firstMsg.Command, "GET")
+		assert.Equal(t, uuid, firstMsg.Command)
 		assert.Equal(t, "2714318480", firstMsg.Fingerprint)
 		channels[i] = watch.Channel()
 	}
@@ -148,7 +153,7 @@ func TestGETWATCHWithSDK2(t *testing.T) {
 
 		for _, channel := range channels {
 			v := <-channel
-			assert.Equal(t, "GET", v.Command)            // command
+			assert.Equal(t, "GET", v.Command)
 			assert.Equal(t, "2714318480", v.Fingerprint) // Fingerprint
 			assert.Equal(t, tc.val, v.Data.(string))     // data
 		}
@@ -156,8 +161,8 @@ func TestGETWATCHWithSDK2(t *testing.T) {
 }
 
 var getWatchWithLabelTestCases = []getWatchTestCase{
-	{"k1", "2402418009", "k1-initial"},
-	{"k2", "29586164", "k2-initial"},
+	{"k1", "1207366008", "k1-initial"},
+	{"k2", "605425024", "k2-initial"},
 }
 
 type getWatchUpdates struct {
