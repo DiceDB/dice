@@ -304,18 +304,19 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 
 	if meta.CmdType == Watch {
 		// Proceed to subscribe after successful execution
-		w.handleCommandWatch(cmdList)
+		w.handleCommandWatch(cmdList, watchLabel)
 	}
 
 	return nil
 }
 
 // handleCommandWatch sends a watch subscription request to the watch manager.
-func (w *BaseWorker) handleCommandWatch(cmdList []*cmd.DiceDBCmd) {
+func (w *BaseWorker) handleCommandWatch(cmdList []*cmd.DiceDBCmd, watchLabel string) {
 	w.cmdWatchSubscriptionChan <- watchmanager.WatchSubscription{
 		Subscribe:    true,
 		WatchCmd:     cmdList[len(cmdList)-1],
 		AdhocReqChan: w.adhocReqChan,
+		WatchLabel:   watchLabel,
 	}
 }
 
