@@ -149,6 +149,8 @@ const (
 	CmdSrem          = "SREM"
 	CmdScard         = "SCARD"
 	CmdSmembers      = "SMEMBERS"
+	CmdDump          = "DUMP"
+	CmdRestore       = "RESTORE"
 )
 
 // Watch commands
@@ -437,6 +439,12 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdBFReserve: {
+		CmdType: SingleShard,
+	},
+	CmdDump: {
+		CmdType: SingleShard,
+	},
+	CmdRestore: {
 		CmdType: SingleShard,
 	},
 

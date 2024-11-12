@@ -1070,17 +1070,19 @@ var (
 		Name: "DUMP",
 		Info: `Serialize the value stored at key in a Redis-specific format and return it to the user.
 				The returned value can be synthesized back into a Redis key using the RESTORE command.`,
-		Eval:     evalDUMP,
-		Arity:    1,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalDUMP,
+		IsMigrated: true,
+		Arity:      1,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	restorekeyCmdMeta = DiceCmdMeta{
 		Name: "RESTORE",
 		Info: `Serialize the value stored at key in a Redis-specific format and return it to the user.
 				The returned value can be synthesized back into a Redis key using the RESTORE command.`,
-		Eval:     evalRestore,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalRestore,
+		IsMigrated: true,
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	typeCmdMeta = DiceCmdMeta{
 		Name:  "TYPE",

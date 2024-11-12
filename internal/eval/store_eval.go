@@ -1,6 +1,7 @@
 package eval
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"math"
@@ -2634,6 +2635,57 @@ func evalZPOPMIN(args []string, store *dstore.Store) *EvalResponse {
 		Result: results,
 		Error:  nil,
 	}
+}
+
+func evalDUMP(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("DUMP"))
+	}
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		return makeEvalResult(clientio.NIL)
+	}
+
+	serializedValue, err := rdbSerialize(obj)
+	if err != nil {
+		return makeEvalError(diceerrors.ErrGeneral("serialization failed"))
+	}
+	encodedResult := base64.StdEncoding.EncodeToString(serializedValue)
+
+	return makeEvalResult(encodedResult)
+}
+
+func evalRestore(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 3 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("RESTORE"))
+	}
+
+	key := args[0]
+	ttlStr := args[1]
+	ttl, _ := strconv.ParseInt(ttlStr, 10, 64)
+
+	encodedValue := args[2]
+	serializedData, err := base64.StdEncoding.DecodeString(encodedValue)
+	if err != nil {
+		return makeEvalError(diceerrors.ErrGeneral("failed to decode base64 value"))
+	}
+
+	obj, err := rdbDeserialize(serializedData)
+	if err != nil {
+		return makeEvalError(diceerrors.ErrGeneral("deserialization failed"))
+	}
+
+	newobj := store.NewObj(obj.Value, ttl, obj.TypeEncoding, obj.TypeEncoding)
+	var keepttl = true
+
+	if ttl > 0 {
+		store.Put(key, newobj, dstore.WithKeepTTL(keepttl))
+	} else {
+		store.Put(key, obj)
+	}
+
+	return makeEvalResult(clientio.OK)
 }
 
 // evalHLEN returns the number of fields contained in the hash stored at key.

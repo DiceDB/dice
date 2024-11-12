@@ -8267,14 +8267,20 @@ func BenchmarkEvalHINCRBYFLOAT(b *testing.B) {
 func testEvalDUMP(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
-			setup:  func() {},
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'dump' command\r\n"),
+			setup: func() {},
+			input: nil,
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("DUMP"),
+			},
 		},
 		"empty array": {
-			setup:  func() {},
-			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'dump' command\r\n"),
+			setup: func() {},
+			input: []string{},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("DUMP"),
+			},
 		},
 		"key does not exist": {
 			setup:  func() {},
@@ -8288,13 +8294,15 @@ func testEvalDUMP(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input: []string{"user"},
-			output: clientio.Encode(
-				base64.StdEncoding.EncodeToString([]byte{
+			migratedOutput: EvalResponse{
+				Result: base64.StdEncoding.EncodeToString([]byte{
 					0x09, 0x00, 0x00, 0x00, 0x00, 0x05, 0x68, 0x65, 0x6c, 0x6c, 0x6f,
 					0xFF, // End marker
 					// CRC64 checksum here:
 					0x00, 0x47, 0x97, 0x93, 0xBE, 0x36, 0x45, 0xC7,
-				}), false),
+				}),
+				Error: nil,
+			},
 		},
 		"dump integer value": {
 			setup: func() {
@@ -8304,13 +8312,16 @@ func testEvalDUMP(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input: []string{"INTEGER_KEY"},
-			output: clientio.Encode(base64.StdEncoding.EncodeToString([]byte{
-				0x09,
-				0xC0,
-				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A,
-				0xFF,
-				0x12, 0x77, 0xDE, 0x29, 0x53, 0xDB, 0x44, 0xC2,
-			}), false),
+			migratedOutput: EvalResponse{
+				Result: base64.StdEncoding.EncodeToString([]byte{
+					0x09,
+					0xC0,
+					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A,
+					0xFF,
+					0x12, 0x77, 0xDE, 0x29, 0x53, 0xDB, 0x44, 0xC2,
+				}),
+				Error: nil,
+			},
 		},
 		"dump expired key": {
 			setup: func() {
@@ -8321,12 +8332,15 @@ func testEvalDUMP(t *testing.T, store *dstore.Store) {
 				var exDurationMs int64 = -1
 				store.SetExpiry(obj, exDurationMs)
 			},
-			input:  []string{"EXPIRED_KEY"},
-			output: []byte("-ERR nil\r\n"),
+			input: []string{"EXPIRED_KEY"},
+			migratedOutput: EvalResponse{
+				Result: clientio.NIL,
+				Error:  nil,
+			},
 		},
 	}
 
-	runEvalTests(t, tests, evalDUMP, store)
+	runMigratedEvalTests(t, tests, evalDUMP, store)
 }
 
 func testEvalBitFieldRO(t *testing.T, store *dstore.Store) {
