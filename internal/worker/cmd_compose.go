@@ -192,7 +192,5 @@ func composeJSONMget(responses ...ops.StoreResponse) interface{} {
 
 		results = append(results, responses[idx].EvalResponse.Result.(string))
 	}
-
 	return results
-
 }

@@ -494,13 +494,6 @@ func jsonMGETHelper(store *dstore.Store, path, key string) (result interface{}, 
 	return string(resultBytes), nil
 }
 
-func boolToInt(b bool) int {
-	if b {
-		return 1
-	}
-	return 0
-}
-
 // ReverseSlice takes a slice of any type and returns a new slice with the elements reversed.
 func ReverseSlice[T any](slice []T) []T {
 	reversed := make([]T, len(slice))

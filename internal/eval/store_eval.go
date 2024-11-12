@@ -5315,7 +5315,6 @@ func evalJSONTOGGLE(args []string, store *dstore.Store) *EvalResponse {
 
 	if err != nil {
 		return makeEvalError(diceerrors.ErrWrongTypeOperation)
-
 	}
 
 	expr, err := jp.ParseString(path)
