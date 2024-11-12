@@ -303,6 +303,8 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdLinsert: {
+		CmdType: SingleShard,
+	},
 	CmdJSONForget: {
 		CmdType: SingleShard,
 	},
