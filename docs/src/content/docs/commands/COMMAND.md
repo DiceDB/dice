@@ -17,13 +17,13 @@ COMMAND
 
 This command does not accept any parameters.
 
-## Behavior
-
-When no subcommand is provided, this command functions as the default implementation of the `COMMAND INFO` command in the absence of a specified command name. It iterates through the list of registered commands and subcommands, returning an array containing detailed metadata for each command.
 
 ## Return values
 
-Returns an array, where each element is a nested array containing the following details for each command
+| Condition | Return Value |
+|-----------|--------------|
+| Command is successful | Array containing detailed information about all commands supported by the DiceDB server. |
+| Error | An error is returned if the command fails. |
 
 - **Command Name**: The name of the command.
 - **Arity**: An integer representing the number of arguments the command expects.
@@ -48,6 +48,11 @@ Returns an array, where each element is a nested array containing the following 
   .
   .
 ```
+
+## Behavior
+
+When no subcommand is provided, this command functions as the default implementation of the `COMMAND INFO` command in the absence of a specified command name. It iterates through the list of registered commands and subcommands, returning an array containing detailed metadata for each command.
+
 
 ## Errors
 
@@ -104,15 +109,15 @@ COMMAND <subcommand>
 
 **For more details on each subcommand, please refer to their respective documentation pages.**
 
-### Errors
+## Errors
 
 1.  `Unknown subcommand`
     - Error Message: ` (error) ERR unknown subcommand 'sucommand-name'. Try COMMAND HELP.`
     - This error may occur if the subcommand is misspelled or not recognized by the DiceDB server.
 
-### Example Usage
+## Example Usage
 
-#### Invalid usage
+### Invalid usage
 
 An error is thrown when an incorrect or unsupported subcommand name is provided.
 

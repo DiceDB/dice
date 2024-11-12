@@ -55,7 +55,7 @@ The `DECRBY` command can raise errors in the following scenarios:
    - Error Message: `(error) ERR increment or decrement would overflow`
    - If the decrement operation causes the value to exceed the maximum integer value that DiceDB can handle, an overflow error will occur.
 
-## Examples
+## Example Usage
 
 ### Example with Decrementing the Value of an Existing Key
 

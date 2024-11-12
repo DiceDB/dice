@@ -37,7 +37,7 @@ The BITFIELD command in DiceDB allows for direct bitwise manipulation within a b
 - INCRBY: Increments the value at a specific offset by a given amount, useful for counters.
 - OVERFLOW: Defines the overflow behavior (WRAP, SAT, FAIL) for INCRBY, determining how to handle values that exceed the bitfield’s limits.
 
-#### Overflow Options:
+### Overflow Options:
 - WRAP: Cycles values back to zero on overflow (default behavior).
 - SAT: Saturates to the maximum or minimum value for the bit width.
 - FAIL: Prevents overflow by causing INCRBY to fail if it would exceed the limits.

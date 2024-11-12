@@ -76,9 +76,9 @@ OK
 
 In the current implementation, both commands will return the same count as they operate on the same database space.
 
-### Error Scenarios
+### Errors
 
-1. Attempting to use `DBSIZE` without proper authentication:
+Attempting to use `DBSIZE` without proper authentication:
 
 ```bash
 127.0.0.1:7379> DBSIZE
