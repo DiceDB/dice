@@ -352,6 +352,10 @@ var (
 		Cmd:     "HMGET",
 		CmdType: SingleShard,
 	}
+	lrangeCmdMeta = CmdsMeta{
+		Cmd:     "LRANGE",
+		CmdType: SingleShard,
+	}
 
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
@@ -455,6 +459,7 @@ func init() {
 	WorkerCmdsMeta["BITFIELD"] = bitfieldCmdMeta
 	WorkerCmdsMeta["BITPOS"] = bitposCmdMeta
 	WorkerCmdsMeta["BITFIELD_RO"] = bitfieldroCmdMeta
+	WorkerCmdsMeta["LRANGE"] = lrangeCmdMeta
 
 	// Additional commands (multishard, custom) can be added here as needed.
 }
