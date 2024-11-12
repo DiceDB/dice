@@ -1632,7 +1632,7 @@ func testEvalJSONDEL(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"EXISTING_KEY"},
 			migratedOutput: EvalResponse{
-				Result: clientio.IntegerOne,
+				Result: 1,
 				Error:  nil,
 			},
 		},
@@ -1709,7 +1709,7 @@ func testEvalJSONFORGET(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"EXISTING_KEY"},
 			migratedOutput: EvalResponse{
-				Result: clientio.IntegerOne,
+				Result: 1,
 				Error:  nil,
 			},
 		},
@@ -8283,9 +8283,12 @@ func testEvalDUMP(t *testing.T, store *dstore.Store) {
 			},
 		},
 		"key does not exist": {
-			setup:  func() {},
-			input:  []string{"NONEXISTENT_KEY"},
-			output: []byte("-ERR nil\r\n"),
+			setup: func() {},
+			input: []string{"NONEXISTENT_KEY"},
+			migratedOutput: EvalResponse{
+				Result: clientio.NIL,
+				Error:  nil,
+			},
 		}, "dump string value": {
 			setup: func() {
 				key := "user"

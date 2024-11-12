@@ -5443,7 +5443,7 @@ func evalJSONDEL(args []string, store *dstore.Store) *EvalResponse {
 	// Retrieve the object from the database
 	obj := store.Get(key)
 	if obj == nil {
-		return makeEvalResult(0)
+		return makeEvalResult(clientio.IntegerZero)
 	}
 
 	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
@@ -5460,7 +5460,7 @@ func evalJSONDEL(args []string, store *dstore.Store) *EvalResponse {
 
 	if len(args) == 1 || path == defaultRootPath {
 		store.Del(key)
-		return makeEvalResult(int64(1))
+		return makeEvalResult(1)
 	}
 
 	expr, err := jp.ParseString(path)
@@ -5479,13 +5479,13 @@ func evalJSONDEL(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	if err != nil {
-		return makeEvalError(diceerrors.ErrGeneral(err.Error()))
+		return makeEvalError(diceerrors.ErrInternalServer) // no need to send actual internal error
 	}
 	// Create a new object with the updated JSON data
 	newObj := store.NewObj(jsonData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 	store.Put(key, newObj)
 
-	return makeEvalResult(int64(len(results)))
+	return makeEvalResult(len(results))
 }
 
 // Returns the new value after incrementing or multiplying the existing value
