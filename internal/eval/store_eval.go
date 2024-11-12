@@ -2115,7 +2115,7 @@ func evalPTTL(args []string, store *dstore.Store) *EvalResponse {
 }
 
 // evalKeys returns the list of keys that match the pattern should be the only param in args
-func evalKeys(args []string, store *dstore.Store) *EvalResponse {
+func evalKeysPerShard(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) != 1 {
 		return makeEvalError(diceerrors.ErrWrongArgumentCount("KEYS"))
 	}

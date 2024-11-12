@@ -927,6 +927,22 @@ func evalCommandList(args []string) []byte {
 	return clientio.Encode(cmds, false)
 }
 
+// evalKeys returns the list of keys that match the pattern should be the only param in args
+// TODO: Needs to be removed after http and websocket migrated to the multithreading
+func evalKeys(args []string, store *dstore.Store) []byte {
+	if len(args) != 1 {
+		return diceerrors.NewErrArity("KEYS")
+	}
+
+	pattern := args[0]
+	keys, err := store.Keys(pattern)
+	if err != nil {
+		return clientio.Encode(err, false)
+	}
+
+	return clientio.Encode(keys, false)
+}
+
 // evalCommandCount returns a number of commands supported by DiceDB
 func evalCommandCount(args []string) []byte {
 	if len(args) > 0 {
