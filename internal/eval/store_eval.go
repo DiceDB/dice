@@ -1110,6 +1110,12 @@ func evalAPPEND(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 	// Key exists path
+	if _, ok := obj.Value.(*sortedset.Set); ok {
+		return &EvalResponse{
+			Result: nil,
+			Error: diceerrors.ErrWrongTypeOperation,
+		}
+	}
 	_, currentEnc := object.ExtractTypeEncoding(obj)
 
 	var currentValueStr string
