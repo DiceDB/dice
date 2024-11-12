@@ -607,15 +607,6 @@ func evalSLEEP(args []string, store *dstore.Store) []byte {
 	return clientio.RespOK
 }
 
-// evalMULTI marks the start of the transaction for the client.
-// All subsequent commands fired will be queued for atomic execution.
-// The commands will not be executed until EXEC is triggered.
-// Once EXEC is triggered it executes all the commands in queue,
-// and closes the MULTI transaction.
-func evalMULTI(args []string, store *dstore.Store) []byte {
-	return clientio.RespOK
-}
-
 // EvalQWATCH adds the specified key to the watch list for the caller client.
 // Every time a key in the watch list is modified, the client will be sent a response
 // containing the new value of the key along with the operation that was performed on it.

@@ -529,16 +529,6 @@ var (
 		Eval:  nil,
 		Arity: 1,
 	}
-	MultiCmdMeta = DiceCmdMeta{
-		Name: "MULTI",
-		Info: `MULTI marks the start of the transaction for the client.
-		All subsequent commands fired will be queued for atomic execution.
-		The commands will not be executed until EXEC is triggered.
-		Once EXEC is triggered it executes all the commands in queue,
-		and closes the MULTI transaction.`,
-		Eval:  evalMULTI,
-		Arity: 1,
-	}
 	ExecCmdMeta = DiceCmdMeta{
 		Name:  "EXEC",
 		Info:  `EXEC executes commands in a transaction, which is initiated by MULTI`,
@@ -1501,7 +1491,6 @@ func init() {
 	DiceCmds["LRU"] = lruCmdMeta
 	DiceCmds["MGET"] = MGetCmdMeta
 	DiceCmds["MSET"] = msetCmdMeta
-	DiceCmds["MULTI"] = MultiCmdMeta
 	DiceCmds["OBJECT"] = objectCmdMeta
 	DiceCmds["PERSIST"] = persistCmdMeta
 	DiceCmds["PFADD"] = pfAddCmdMeta
