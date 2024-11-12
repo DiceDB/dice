@@ -54,9 +54,7 @@ The `HMGET` command can raise errors in the following scenarios:
 
 ## Example Usage
 
-### Basic Usage
-
-#### Retrieving Multiple Fields
+### Retrieving Multiple Fields
 
 ```bash
 127.0.0.1:7379> HMGET product:2000 name price stock
@@ -65,10 +63,7 @@ The `HMGET` command can raise errors in the following scenarios:
 3) "50"
 ```
 
-- **Behaviour**: The values of the fields `name`, `price`, and `stock` from the hash `product:2000` are retrieved and returned in the order specified.
-- **Return Value**: List of field values.
-
-#### Retrieving Fields with Missing Values
+### Retrieving Fields with Missing Values
 
 ```bash
 127.0.0.1:7379> HMGET product:2000 name description
@@ -76,8 +71,6 @@ The `HMGET` command can raise errors in the following scenarios:
 2) (nil)
 ```
 
-- **Behaviour**: The `name` field exists, so its value is returned. The `description` field does not exist in the hash, so `nil` is returned.
-- **Return Value**: List with value and `nil`.
 
 ### Invalid Usage
 
@@ -90,9 +83,6 @@ OK
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
-- **Behaviour**: The `SET` command sets the key `product:2000` to a string value.
-- **Error**: The `HMGET` command will raise a `WRONGTYPE` error because `product:2000` is not a hash.
-
 Missing Key or Field Arguments
 
 ```bash
@@ -102,9 +92,6 @@ Missing Key or Field Arguments
 127.0.0.1:7379> HMGET product:2000
 (error) ERR wrong number of arguments for 'hmget' command
 ```
-
-- **Behavior**: The `HGET` command requires at least two arguments: the key and the field name.
-- **Error**: The command fails if no key or fields are specified. DiceDB raises an error indicating that the number of arguments is incorrect.
 
 ## Best Practices
 

@@ -63,9 +63,6 @@ The `HSET` command can raise errors in the following scenarios:
 3
 ```
 
-- **Behaviour**: A new hash is created with the key `product:2000`. The fields `name`, `price`, and `stock` are set with the respective values.
-- **Return Value**: `3` (since three new fields were added).
-
 ### Updating an Existing Hash
 
 Updating existing fields in a hash `product:2000`.
@@ -73,9 +70,6 @@ Updating existing fields in a hash `product:2000`.
 ```bash
 127.0.0.1:7379> HSET product:2000 price 899.99 stock 45
 ```
-
-- **Behavior**: The `price` and `stock` fields in the hash `product:2000` are updated with the new values.
-- **Return Value**: `0` (since no new fields were added, only existing fields were updated).
 
 ### Setting Multiple Field-Value Pairs
 
@@ -85,9 +79,6 @@ Setting multiple fields in a hash `user:1000`.
 127.0.0.1:7379> HSET user:1000 name "John Doe" age 30 email "john.doe@example.com"
 ```
 
-- **Behavior**: This command sets the `name`, `age`, and `email` fields in the hash stored at `user:1000`. If the hash does not exist, it will be created.
-- **Return Value**: `3` (if all three fields were added).
-
 ### Updating Existing Fields
 
 Updating a field in an existing hash `user:1000`.
@@ -95,9 +86,6 @@ Updating a field in an existing hash `user:1000`.
 ```bash
 127.0.0.1:7379> HSET user:1000 age 31
 ```
-
-- **Behavior**: This command updates the `age` field to 31 in the hash stored at `user:1000`. If the `age` field already exists, its value is updated.
-- **Return Value**: `0` (if the field was already present and only updated).
 
 ### Invalid Usage
 
@@ -110,9 +98,6 @@ OK
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
-- **Behavior**: The `SET` command sets the key `product:2000` to a string value.
-- **Error**: The `HSET` command will raise a `WRONGTYPE` error because `product:2000` is not a hash.
-
 Wrong Number of Arguments for HSET Command
 
 ```bash
@@ -122,9 +107,6 @@ Wrong Number of Arguments for HSET Command
 127.0.0.1:7379> HSET product:2000 name
 (error) ERR wrong number of arguments for 'hset' command
 ```
-
-- **Behavior**: The `HSET` command requires atleast three arguments: the key, the field name, and the field value.
-- **Error**: The command fails because it requires at least one field-value pair in addition to the key. If insufficient arguments are provided, DiceDB raises an error indicating that the number of arguments is incorrect.
 
 ### Best Practices
 

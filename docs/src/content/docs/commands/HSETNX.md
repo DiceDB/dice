@@ -53,27 +53,19 @@ The `HSETNX` command can raise errors in the following scenarios:
 
 ## Example Usage
 
-### Basic Usage
-
-#### Creating a New Hash with `HSETNX`
+### Creating a New Hash with `HSETNX`
 
 ```bash
 127.0.0.1:7379> HSETNX product:3000 name "Smartphone"
 1
 ```
 
-- **Behaviour**: A new hash is created with the key `product:3000`. The field `name` is set with the value "Smartphone".
-- **Return Value**: `1` (since the field was added).
-
-#### Attempting to Set an Existing Field
+### Attempting to Set an Existing Field
 
 ```bash
 127.0.0.1:7379> HSETNX product:3000 name "Tablet"
 0
 ```
-
-- **Behaviour**: The command attempts to set the `name` field to "Tablet", but since `name` already exists in the hash, it does not change the value.
-- **Return Value**: `0` (since the field was not added).
 
 ### Invalid Usage
 
@@ -86,9 +78,6 @@ OK
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
-- **Behaviour**: The `SET` command sets the key `product:3000` to a string value.
-- **Error**: The `HSETNX` command raises a `WRONGTYPE` error because `product:3000` is not a hash.
-
 Wrong Number of Arguments for `HSETNX` Command
 
 ```bash
@@ -98,9 +87,6 @@ Wrong Number of Arguments for `HSETNX` Command
 127.0.0.1:7379> HSETNX product:3000 name
 (error) ERR wrong number of arguments for 'hsetnx' command
 ```
-
-- **Behavior**: The `HSETNX` command requires atleast three arguments: the key, the field name, and the field value.
-- **Error**: The command fails because it requires the `key`, `field`, and `value` parameters. If insufficient arguments are provided, DiceDB raises an error indicating that the number of arguments is incorrect.
 
 ## Best Practices
 

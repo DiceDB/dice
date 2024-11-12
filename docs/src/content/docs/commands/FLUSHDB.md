@@ -32,7 +32,7 @@ When the `FLUSHDB` command is executed, the following actions occur:
 2. `Database Isolation`: Only the keys in the currently selected database are affected. Other databases in the same DiceDB instance remain unchanged.
 3. `Persistence`: If DiceDB persistence is enabled (e.g., RDB snapshots or AOF), the deletion of keys will be reflected in the next persistence operation.
 
-## Error Handling
+## Errors
 
 The `FLUSHDB` command is straightforward and does not typically raise errors under normal circumstances. However, there are a few scenarios where issues might arise:
 
