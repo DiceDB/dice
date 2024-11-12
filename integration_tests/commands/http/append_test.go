@@ -90,6 +90,17 @@ func TestAPPEND(t *testing.T) {
 				{Command: "del", Body: map[string]interface{}{"key": "key"}},
 			},
 		},
+		{
+			name: "APPEND to key created using ZADD",
+			commands: []HTTPCommand{
+				{Command: "ZADD", Body: map[string]interface{}{"key": "myzset", "values": []string{"1", "one"}}},
+				{Command: "APPEND", Body: map[string]interface{}{"key": "myzset", "value": "two"}},
+			},
+			expected: []interface{}{float64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			cleanup: []HTTPCommand{
+				{Command: "del", Body: map[string]interface{}{"key": "myzset"}},
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
