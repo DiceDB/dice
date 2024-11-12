@@ -53,9 +53,7 @@ When the `HDEL` command is executed, DiceDB performs the following steps:
 
 ## Example Usage
 
-### Basic Usage
-
-#### Deleting a field from a hash
+### Deleting a field from a hash
 
 ```bash
 127.0.0.1:7379> HSET user:1000 name "John Doe"
@@ -66,7 +64,7 @@ When the `HDEL` command is executed, DiceDB performs the following steps:
 (nil)
 ```
 
-#### Deleting multiple fields from a hash
+### Deleting multiple fields from a hash
 
 ```bash
 127.0.0.1:7379> HSET user:1000 name "John Doe"
@@ -77,21 +75,21 @@ When the `HDEL` command is executed, DiceDB performs the following steps:
 (integer) 2
 ```
 
-#### Field does not exist
+### Field does not exist
 
 ```bash
 127.0.0.1:7379> HDEL user:1000 email
 (integer) 0
 ```
 
-#### Key does not exist
+### Key does not exist
 
 ```bash
 127.0.0.1:7379> HDEL user:2000 name
 (integer) 0
 ```
 
-#### Key is not a hash
+### Key is not a hash
 
 ```bash
 127.0.0.1:7379> SET user:3000 "Not a hash"
@@ -100,9 +98,7 @@ OK
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
-### Invalid Usage
-
-Attempting to delete a field in a key that is not a hash
+### Attempting to delete a field in a key that is not a hash
 
 ```bash
 127.0.0.1:7379> SET user:5000 "This is a string"
@@ -114,7 +110,7 @@ OK
 - **Behavior**: The `SET` command sets the key `user:5000` to a string value.
 - **Error**: The `HDEL` command raises a `WRONGTYPE` error because user:5000 is not a hash, and `HDEL` only operates on hash data structures.
 
-Wrong Number of Arguments for HDEL Command
+### Wrong Number of Arguments
 
 ```bash
 127.0.0.1:7379> HDEL

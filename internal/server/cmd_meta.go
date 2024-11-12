@@ -290,32 +290,26 @@ var (
 		Cmd:     "BF.INFO",
 		CmdType: SingleShard,
 	}
-
 	cmsInitByDimCmdMeta = CmdsMeta{
 		Cmd:     "CMS.INITBYDIM",
 		CmdType: SingleShard,
 	}
-
 	cmsInitByProbCmdMeta = CmdsMeta{
 		Cmd:     "CMS.INITBYPROB",
 		CmdType: SingleShard,
 	}
-
 	cmsInfoCmdMeta = CmdsMeta{
 		Cmd:     "CMS.INFO",
 		CmdType: SingleShard,
 	}
-
 	cmsIncrByCmdMeta = CmdsMeta{
 		Cmd:     "CMS.INCRBY",
 		CmdType: SingleShard,
 	}
-
 	cmsQueryCmdMeta = CmdsMeta{
 		Cmd:     "CMS.QUERY",
 		CmdType: SingleShard,
 	}
-
 	cmsMergeCmdMeta = CmdsMeta{
 		Cmd:     "CMS.MERGE",
 		CmdType: SingleShard,
@@ -358,9 +352,28 @@ var (
 	}
 	linsertCmdMeta = CmdsMeta{
 		Cmd:	 "LINSERT",
+    CmdType: SingleShard,
+  }
+	lpushCmdMeta = CmdsMeta{
+		Cmd:     "LPUSH",
 		CmdType: SingleShard,
 	}
-
+	rpushCmdMeta = CmdsMeta{
+		Cmd:     "RPUSH",
+		CmdType: SingleShard,
+	}
+	lpopCmdMeta = CmdsMeta{
+		Cmd:     "LPOP",
+		CmdType: SingleShard,
+	}
+	rpopCmdMeta = CmdsMeta{
+		Cmd:     "RPOP",
+		CmdType: SingleShard,
+	}
+	llenCmdMeta = CmdsMeta{
+		Cmd:     "LLEN",
+		CmdType: SingleShard,
+	}
 	jsonForgetCmdMeta = CmdsMeta{
 		Cmd:     "JSON.FORGET",
 		CmdType: SingleShard,
@@ -486,7 +499,11 @@ func init() {
 	WorkerCmdsMeta["BITFIELD_RO"] = bitfieldroCmdMeta
 	WorkerCmdsMeta["LRANGE"] = lrangeCmdMeta
 	WorkerCmdsMeta["LINSERT"] = linsertCmdMeta
-
+	WorkerCmdsMeta["LPUSH"] = lpushCmdMeta
+	WorkerCmdsMeta["RPUSH"] = rpushCmdMeta
+	WorkerCmdsMeta["LPOP"] = lpopCmdMeta
+	WorkerCmdsMeta["RPOP"] = rpopCmdMeta
+	WorkerCmdsMeta["LLEN"] = llenCmdMeta
 	WorkerCmdsMeta["JSON.FORGET"] = jsonForgetCmdMeta
 	WorkerCmdsMeta["JSON.DEL"] = jsonDelCmdMeta
 	WorkerCmdsMeta["JSON.TOGGLE"] = jsonToggleCmdMeta

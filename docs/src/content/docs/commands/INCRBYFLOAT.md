@@ -66,8 +66,6 @@ OK
 "13.4"
 ```
 
-`Explanation:`
-
 - In this example, the value of `mycounter` is set to 10
 - The `INCRBYFLOAT` command incremented `mycounter` by 3.4, resulting in a new value of 13.4
 
@@ -77,8 +75,6 @@ OK
 127.0.0.1:7379>INCRBYFLOAT newcounter 5.3
 "5.3"
 ```
-
-`Explanation:`
 
 - In this example, since `newcounter` does not exist, DiceDB treats its value as 0 and increments it by 5.3, resulting in a new value of 5.3.
 
@@ -91,8 +87,6 @@ OK
 (error) ERR value is not a valid float
 ```
 
-`Explanation:`
-
 - In this example, the key `mystring` holds a string value, so the `INCRBYFLOAT` command returns an error.
 
 ### Example with Error Due to Invalid Increment Value (Non-Integer Decrement)
@@ -101,7 +95,5 @@ OK
 127.0.0.1:7379>INCRBYFLOAT mycounter "two"
 (error) ERR value is not a valid float
 ```
-
-`Explanation:`
 
 - In this example, the increment value "two" is not a valid number, so the `INCRBYFLOAT` command returns an error.
