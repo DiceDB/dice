@@ -573,10 +573,10 @@ func TestLPOPCount(t *testing.T) {
 				{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "value": "v2"}},
 				{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "value": "v3"}},
 				{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "value": "v4"}},
-				{Command: "LPOP", Body: map[string]interface{}{"key": "k", "value": 2}}, 
-				{Command: "LPOP", Body: map[string]interface{}{"key": "k", "value": 2}}, 
-				{Command: "LPOP", Body: map[string]interface{}{"key": "k", "value": -1}}, 
-				{Command: "LPOP", Body: map[string]interface{}{"key": "k", "value": "abc"}}, 
+				{Command: "LPOP", Body: map[string]interface{}{"key": "k", "value": 2}},
+				{Command: "LPOP", Body: map[string]interface{}{"key": "k", "value": 2}},
+				{Command: "LPOP", Body: map[string]interface{}{"key": "k", "value": -1}},
+				{Command: "LPOP", Body: map[string]interface{}{"key": "k", "value": "abc"}},
 				{Command: "LLEN", Body: map[string]interface{}{"key": "k"}},
 			},
 			expect: []any{
@@ -586,9 +586,9 @@ func TestLPOPCount(t *testing.T) {
 				float64(4),
 				[]interface{}{"v1", "v2"},
 				[]interface{}{"v3", "v4"},
-				"ERR value is out of range",                   
-				"ERR value is not an integer or out of range", 
-                float64(0),
+				"ERR value is out of range",
+				"ERR value is not an integer or out of range",
+				float64(0),
 			},
 		},
 	}
@@ -598,9 +598,8 @@ func TestLPOPCount(t *testing.T) {
 			exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": []interface{}{"k"}}})
 			for i, cmd := range tc.cmds {
 				result, _ := exec.FireCommand(cmd)
-					assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %v", cmd)
+				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %v", cmd)
 			}
 		})
 	}
 }
-
