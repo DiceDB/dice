@@ -408,8 +408,10 @@ func TestJSONDel(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 
-	preTestChecksCommand := "DEL user"
-	postTestChecksCommand := "DEL user"
+	FireCommand(conn, "DEL user")
+
+	// preTestChecksCommand := "DEL user"
+	// postTestChecksCommand := "DEL user"
 
 	testCases := []IntegrationTestCase{
 		{
@@ -506,7 +508,7 @@ func TestJSONDel(t *testing.T) {
 		},
 	}
 
-	runIntegrationTests(t, conn, testCases, preTestChecksCommand, postTestChecksCommand)
+	runIntegrationTests(t, conn, testCases, "", "")
 }
 
 func TestJSONMGET(t *testing.T) {
