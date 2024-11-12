@@ -7020,5 +7020,10 @@ func evalHGETALL(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	hashMap := obj.Value.(Hash)
-	return makeEvalResult(hashMap.Items())
+	items := hashMap.Items()
+	result := make([]string, 0, len(items)*2)
+	for _, item := range items {
+		result = append(result, item...)
+	}
+	return makeEvalResult(result)
 }
