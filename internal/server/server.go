@@ -421,9 +421,6 @@ func (s *AsyncServer) handleTransactionCommand(diceDBCmd *cmd.DiceDBCmd, c *comm
 
 func (s *AsyncServer) handleNonTransactionCommand(diceDBCmd *cmd.DiceDBCmd, c *comm.Client, buf *bytes.Buffer) {
 	switch diceDBCmd.Cmd {
-	case eval.MultiCmdMeta.Name:
-		c.TxnBegin()
-		buf.Write(clientio.RespOK)
 	case eval.ExecCmdMeta.Name:
 		buf.Write(diceerrors.NewErrWithMessage("EXEC without MULTI"))
 	case eval.DiscardCmdMeta.Name:
