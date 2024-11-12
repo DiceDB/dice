@@ -361,6 +361,27 @@ var (
 		CmdType: SingleShard,
 	}
 
+	jsonForgetCmdMeta = CmdsMeta{
+		Cmd:     "JSON.FORGET",
+		CmdType: SingleShard,
+	}
+	jsonDelCmdMeta = CmdsMeta{
+		Cmd:     "JSON.DEL",
+		CmdType: SingleShard,
+	}
+	jsonToggleCmdMeta = CmdsMeta{
+		Cmd:     "JSON.TOGGLE",
+		CmdType: SingleShard,
+	}
+	jsonNumIncrByCmdMeta = CmdsMeta{
+		Cmd:     "JSON.NUMINCRBY",
+		CmdType: SingleShard,
+	}
+	jsonNumMultByCmdMeta = CmdsMeta{
+		Cmd:     "JSON.NUMMULTBY",
+		CmdType: SingleShard,
+	}
+
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
 
@@ -466,5 +487,10 @@ func init() {
 	WorkerCmdsMeta["LRANGE"] = lrangeCmdMeta
 	WorkerCmdsMeta["LINSERT"] = linsertCmdMeta
 
+	WorkerCmdsMeta["JSON.FORGET"] = jsonForgetCmdMeta
+	WorkerCmdsMeta["JSON.DEL"] = jsonDelCmdMeta
+	WorkerCmdsMeta["JSON.TOGGLE"] = jsonToggleCmdMeta
+	WorkerCmdsMeta["JSON.NUMINCRBY"] = jsonNumIncrByCmdMeta
+	WorkerCmdsMeta["JSON.NUMMULTBY"] = jsonNumMultByCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }

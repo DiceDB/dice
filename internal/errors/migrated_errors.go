@@ -32,6 +32,7 @@ var (
 	ErrEmptyCommand               = errors.New("empty command")
 	ErrInvalidIPAddress           = errors.New("invalid IP address")
 	ErrInvalidFingerprint         = errors.New("invalid fingerprint")
+	ErrKeyDoesNotExist            = errors.New("ERR could not perform this operation on a key that doesn't exist")
 
 	// Error generation functions for specific error messages with dynamic parameters.
 	ErrWrongArgumentCount = func(command string) error {
