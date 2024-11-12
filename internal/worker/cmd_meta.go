@@ -511,6 +511,9 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdZRangeWatch: {
 		CmdType: Watch,
 	},
+	CmdPFCountWatch: {
+		CmdType: Watch,
+	},
 
 	// Unwatch commands
 	CmdGetUnWatch: {

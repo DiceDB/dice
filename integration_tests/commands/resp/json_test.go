@@ -202,7 +202,7 @@ func TestJSONOperations(t *testing.T) {
 			name:     "Get JSON with non-existent path",
 			setCmd:   `JSON.SET user $ ` + simpleJSON,
 			getCmd:   `JSON.GET user $.nonExistent`,
-			expected: `ERR Path '$.nonExistent' does not exist`,
+			expected: `(nil)`,
 		},
 	}
 

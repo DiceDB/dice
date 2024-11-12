@@ -155,7 +155,7 @@ func TestJSONOperations(t *testing.T) {
 				{Command: "SET", Body: map[string]interface{}{"key": "k1", "value": "1"}},
 				{Command: "JSON.GET", Body: map[string]interface{}{"key": "k1"}},
 			},
-			expected: []interface{}{"OK", "ERR Existing key has wrong Dice type"},
+			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
 		},
 		{
 			name: "Set Empty JSON Object",
