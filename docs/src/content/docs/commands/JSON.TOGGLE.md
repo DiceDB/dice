@@ -60,9 +60,9 @@ The `JSON.TOGGLE` command can raise the following errors:
 
 ## Example Usage
 
-### Example 1: Toggling a Boolean Value
+### Toggling a Boolean Value
 
-#### JSON Document
+JSON Document
 
 ```json
 {
@@ -74,19 +74,12 @@ The `JSON.TOGGLE` command can raise the following errors:
 }
 ```
 
-#### Command
-
 ```bash
-JSON.TOGGLE user:1001 $.active
-```
-
-#### Result
-
-```bash
+127.0.0.1:7379> JSON.TOGGLE user:1001 $.active
 (integer) 1
 ```
 
-#### Updated JSON Document
+Updated JSON Document
 
 ```json
 {
@@ -98,21 +91,14 @@ JSON.TOGGLE user:1001 $.active
 }
 ```
 
-### Example 2: Toggling a Nested Boolean Value
-
-#### Command
+### Toggling a Nested Boolean Value
 
 ```bash
-JSON.TOGGLE user:1001 $.settings.notifications
-```
-
-#### Result
-
-```bash
+127.0.0.1:7379> JSON.TOGGLE user:1001 $.settings.notifications
 (integer) 1
 ```
 
-#### Updated JSON Document
+Updated JSON Document
 
 ```json
 {
@@ -124,30 +110,16 @@ JSON.TOGGLE user:1001 $.settings.notifications
 }
 ```
 
-### Example 3: Path Does Not Exist
-
-#### Command
+### Path Does Not Exist
 
 ```bash
-JSON.TOGGLE user:1001 $.nonexistent
-```
-
-#### Result
-
-```bash
+127.0.0.1:7379> JSON.TOGGLE user:1001 $.nonexistent
 (integer) 0
 ```
 
-### Example 4: Value at Path is Not a Boolean
-
-#### Command
+### Value at Path is Not a Boolean
 
 ```bash
-JSON.TOGGLE user:1001 $.name
-```
-
-#### Result
-
-```bash
+127.0.0.1:7379> JSON.TOGGLE user:1001 $.name
 (error) ERR value at path is not a boolean
 ```
