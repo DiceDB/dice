@@ -59,6 +59,7 @@ const (
 	CmdJSONArrLen    = "JSON.ARRLEN"
 	CmdJSONArrPop    = "JSON.ARRPOP"
 	CmdLrange		= "LRANGE"
+	CmdLinsert		= "LINSERT"
 )
 
 // Multi-shard commands.
@@ -294,6 +295,9 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdLrange: {
+		CmdType: SingleShard,
+	},
+	CmdLinsert: {
 		CmdType: SingleShard,
 	},
 
