@@ -5327,7 +5327,7 @@ func evalGetObject(args []string, store *dstore.Store) *EvalResponse {
 		exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
 	}
 
-	exObj := &object.ExtendedObj{
+	exObj := &object.InternalObj{
 		Obj:        obj,
 		ExDuration: exDurationMs,
 	}
@@ -5734,7 +5734,7 @@ func evalCOPYObject(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
 
 	store.Del(key)
 
-	copyObj := cd.Obj.Obj.DeepCopy()
+	copyObj := cd.InternalObj.Obj.DeepCopy()
 	if copyObj == nil {
 		return &EvalResponse{
 			Result: clientio.IntegerZero,
@@ -5742,7 +5742,7 @@ func evalCOPYObject(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	exDurationMs := cd.Obj.ExDuration
+	exDurationMs := cd.InternalObj.ExDuration
 
 	store.Put(key, copyObj)
 

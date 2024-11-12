@@ -46,7 +46,7 @@ type Obj struct {
 // field can represent the lifespan, expiration time, or any other time-related
 // characteristic associated with the object.
 //
-// **Caution**: `ExtendedObj` should be used selectively and with caution.
+// **Caution**: `InternalObj` should be used selectively and with caution.
 // It is intended for commands that require the additional metadata provided by
 // the `ExDuration` field. Using this for all objects can complicate logic and
 // may lead to unnecessary overhead. It is recommended to use `ExtendedObj` only
@@ -54,6 +54,7 @@ type Obj struct {
 // necessary for the functionality of the command.
 //
 // Fields:
+//
 //   - Obj: A pointer to the underlying `Obj` that contains the core object data
 //     (such as encoding type, last accessed timestamp, and the actual value of the object).
 //     This allows the extended object to retain all of the functionality of the basic object
@@ -62,7 +63,7 @@ type Obj struct {
 //   - ExDuration: Represents a time-based property, such as the duration for which
 //     the object is valid or the time it should be stored or processed. This allows for
 //     managing the object with respect to time-based characteristics, such as expiration.
-type ExtendedObj struct {
+type InternalObj struct {
 	// Obj holds the core object structure with the basic metadata and value
 	Obj *Obj
 

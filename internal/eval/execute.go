@@ -55,7 +55,7 @@ func (e *Eval) ExecuteCommand() *EvalResponse {
 		// These operations are specialised for the commands which requires
 		// transfering data across multiple shards. e.g COPY, RENAME
 		// ===============================================================================
-		if e.cmd.Obj != nil {
+		if e.cmd.InternalObj != nil {
 			// This involves handling object at store level, evaluating it, modifying it, and then storing it back.
 			return diceCmd.StoreObjectEval(e.cmd, e.store)
 		}

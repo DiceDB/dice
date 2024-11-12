@@ -84,16 +84,16 @@ func decomposeCopy(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cm
 		return nil, diceerrors.ErrWrongArgumentCount("COPY")
 	}
 
-	newObj, ok := resp.EvalResponse.Result.(*object.ExtendedObj)
+	newObj, ok := resp.EvalResponse.Result.(*object.InternalObj)
 	if !ok {
 		return nil, diceerrors.ErrInternalServer
 	}
 
 	decomposedCmds := []*cmd.DiceDBCmd{
 		{
-			Cmd:  "OBJECTCOPY",
-			Args: cd.Args[1:],
-			Obj:  newObj,
+			Cmd:         "OBJECTCOPY",
+			Args:        cd.Args[1:],
+			InternalObj: newObj,
 		},
 	}
 
