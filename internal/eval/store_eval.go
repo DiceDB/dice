@@ -2114,21 +2114,6 @@ func evalPTTL(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
-// evalKeys returns the list of keys that match the pattern should be the only param in args
-func evalKeysPerShard(args []string, store *dstore.Store) *EvalResponse {
-	if len(args) != 1 {
-		return makeEvalError(diceerrors.ErrWrongArgumentCount("KEYS"))
-	}
-
-	pattern := args[0]
-	keys, err := store.Keys(pattern)
-	if err != nil {
-		return makeEvalError(diceerrors.ErrGeneral("bad pattern"))
-	}
-
-	return makeEvalResult(keys)
-}
-
 // evalTTL returns Time-to-Live in secs for the queried key in args
 // The key should be the only param in args else returns with an error
 // Returns	RESP encoded time (in secs) remaining for the key to expire

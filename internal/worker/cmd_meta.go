@@ -83,6 +83,7 @@ const (
 	CmdSInter   = "SINTER"
 	CmdSDiff    = "SDIFF"
 	CmdJSONMget = "JSON.MGET"
+	CmdKeys     = "KEYS"
 )
 
 // Multi-Step-Multi-Shard commands

@@ -115,6 +115,7 @@ var (
 		Cmd:     "HKEYS",
 		CmdType: SingleShard,
 	}
+
 	hvalsCmdMeta = CmdsMeta{
 		Cmd:     "HVALS",
 		CmdType: SingleShard,

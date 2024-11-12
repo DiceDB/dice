@@ -628,14 +628,6 @@ var (
 		Arity: 1,
 	}
 
-	multiKeysCmdMeta = DiceCmdMeta{
-		Name:       "KEYSPERSHARD",
-		Info:       "KEYS command is used to get all the keys in the database. Complexity is O(n) where n is the number of keys in the database.",
-		NewEval:    evalKeysPerShard,
-		IsMigrated: true,
-		Arity:      1,
-	}
-
 	MGetCmdMeta = DiceCmdMeta{
 		Name: "MGET",
 		Info: `The MGET command returns an array of RESP values corresponding to the provided keys.
@@ -1497,7 +1489,6 @@ func init() {
 	DiceCmds["JSON.TOGGLE"] = jsontoggleCmdMeta
 	DiceCmds["JSON.TYPE"] = jsontypeCmdMeta
 	DiceCmds["KEYS"] = keysCmdMeta
-	DiceCmds["KEYSPERSHARD"] = multiKeysCmdMeta
 	DiceCmds["LATENCY"] = latencyCmdMeta
 	DiceCmds["LLEN"] = llenCmdMeta
 	DiceCmds["LPOP"] = lpopCmdMeta
