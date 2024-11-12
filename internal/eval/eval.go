@@ -2438,10 +2438,10 @@ func evalGEOADD(args []string, store *dstore.Store) []byte {
 	// Parse options
 	for startIdx < len(args) {
 		option := strings.ToUpper(args[startIdx])
-		if option == "NX" {
+		if option == NX {
 			nx = true
 			startIdx++
-		} else if option == "XX" {
+		} else if option == XX {
 			xx = true
 			startIdx++
 		} else {
