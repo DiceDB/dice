@@ -55,9 +55,8 @@ The `HSET` command can raise errors in the following scenarios:
 
 ## Example Usage
 
-### Basic Usage
 
-#### Creating a New Hash
+### Creating a New Hash
 
 ```bash
 127.0.0.1:7379> HSET product:2000 name "Laptop" price 999.99 stock 50
@@ -67,7 +66,7 @@ The `HSET` command can raise errors in the following scenarios:
 - **Behaviour**: A new hash is created with the key `product:2000`. The fields `name`, `price`, and `stock` are set with the respective values.
 - **Return Value**: `3` (since three new fields were added).
 
-#### Updating an Existing Hash
+### Updating an Existing Hash
 
 Updating existing fields in a hash `product:2000`.
 
@@ -78,7 +77,7 @@ Updating existing fields in a hash `product:2000`.
 - **Behavior**: The `price` and `stock` fields in the hash `product:2000` are updated with the new values.
 - **Return Value**: `0` (since no new fields were added, only existing fields were updated).
 
-#### Setting Multiple Field-Value Pairs
+### Setting Multiple Field-Value Pairs
 
 Setting multiple fields in a hash `user:1000`.
 
@@ -89,7 +88,7 @@ Setting multiple fields in a hash `user:1000`.
 - **Behavior**: This command sets the `name`, `age`, and `email` fields in the hash stored at `user:1000`. If the hash does not exist, it will be created.
 - **Return Value**: `3` (if all three fields were added).
 
-#### Updating Existing Fields
+### Updating Existing Fields
 
 Updating a field in an existing hash `user:1000`.
 

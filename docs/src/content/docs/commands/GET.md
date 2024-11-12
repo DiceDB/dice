@@ -52,7 +52,7 @@ The GET command is a read-only operation and does not modify the state of the Di
 
 Here are a few examples demonstrating the usage of the GET command:
 
-### Example 1: Key Exists and Holds a String Value
+### Key Exists and Holds a String Value
 
 ```bash
 127.0.0.1:7379> SET mykey "Hello, DiceDB!"
@@ -60,7 +60,7 @@ Here are a few examples demonstrating the usage of the GET command:
 "Hello, DiceDB!"
 ```
 
-### Example 2: Key Does Not Exist
+### Key Does Not Exist
 
 ```bash
 127.0.0.1:7379> GET nonexistingkey

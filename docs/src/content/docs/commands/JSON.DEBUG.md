@@ -55,7 +55,7 @@ The `JSON.DEBUG` command can raise errors in the following scenarios:
 
 ## Example Usage
 
-### Example 1: Debugging Memory Usage of Entire JSON Data
+### Debugging Memory Usage of Entire JSON Data
 
 ```bash
 127.0.0.1:7379> JSON.DEBUG MEMORY myjson
@@ -64,7 +64,7 @@ The `JSON.DEBUG` command can raise errors in the following scenarios:
 
 In this example, the `JSON.DEBUG MEMORY` command is used to get the memory usage of the entire JSON data stored under the key `myjson`. The command returns `256`, indicating that the JSON data occupies 256 bytes of memory.
 
-### Example 2: Debugging Memory Usage of a Specific Path
+### Debugging Memory Usage of a Specific Path
 
 ```bash
 127.0.0.1:7379> JSON.DEBUG MEMORY myjson $.store.book[0]
@@ -73,7 +73,7 @@ In this example, the `JSON.DEBUG MEMORY` command is used to get the memory usage
 
 In this example, the `JSON.DEBUG MEMORY` command is used to get the memory usage of the JSON value at the path `$.store.book[0]` within the JSON data stored under the key `myjson`. The command returns `64`, indicating that the specified JSON value occupies 64 bytes of memory.
 
-### Example 3: Handling Non-Existent Key
+### Handling Non-Existent Key
 
 ```bash
 127.0.0.1:7379> JSON.DEBUG MEMORY nonExistentKey
@@ -82,7 +82,7 @@ In this example, the `JSON.DEBUG MEMORY` command is used to get the memory usage
 
 In this example, the `JSON.DEBUG MEMORY` command is used on a non-existent key `nonExistentKey`. DiceDB returns an error indicating that the key does not exist.
 
-### Example 4: Handling Invalid Path
+### Handling Invalid Path
 
 ```bash
 127.0.0.1:7379> JSON.DEBUG MEMORY myjson $.nonExistentPath

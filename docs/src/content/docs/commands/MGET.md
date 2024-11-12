@@ -69,11 +69,6 @@ OK
 
 ```bash
 127.0.0.1:7379> MGET key1 key2 key3
-```
-
-`Output:`
-
-```
 1) "value1"
 2) "value2"
 3) "value3"
@@ -93,19 +88,12 @@ OK
 
 ```bash
 127.0.0.1:7379> MGET key1 key2 key3
-```
-
-`Output:`
-
-```
 1) "value1"
 2) "value2"
 3) (nil)
 ```
 
-### Example with Mixed Types
-
-###### Key2 doesn't exist previously
+### Key doesn't exist previously
 
 ```bash
 127.0.0.1:7379> SET key1 "value1"
@@ -119,16 +107,11 @@ OK
 
 ```bash
 127.0.0.1:7379> MGET key1 key2
-```
-
-`Output:`
-
-```
 1) "value1"
 2) (nil)
 ```
 
-###### Key2 exists previously with different datatype
+### Key exists previously with different datatype
 
 ```bash
 127.0.0.1:7379> SET key1 "value1"
@@ -147,11 +130,6 @@ OK
 
 ```bash
 127.0.0.1:7379> MGET key1 key2
-```
-
-`Output:`
-
-```
 1) "value1"
 2) "value2"
 ```

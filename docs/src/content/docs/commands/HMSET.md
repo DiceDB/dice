@@ -104,6 +104,6 @@ Wrong Number of Arguments for HMSET Command
 - **Behavior**: The `HMSET` command requires atleast three arguments: the key, the field name, and the field value.
 - **Error**: The command fails because it requires at least one field-value pair in addition to the key. If insufficient arguments are provided, DiceDB raises an error indicating that the number of arguments is incorrect.
 
-### Best Practices
+## Best Practices
 
 - **Use HMSET for Batch Updates**: Utilize `HMSET` when you need to set multiple fields at once in a hash to reduce command overhead and improve performance.

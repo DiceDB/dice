@@ -106,6 +106,6 @@ Missing Key or Field Arguments
 - **Behavior**: The `HGET` command requires at least two arguments: the key and the field name.
 - **Error**: The command fails if no key or fields are specified. DiceDB raises an error indicating that the number of arguments is incorrect.
 
-### Best Practices
+## Best Practices
 
 - Use `HMGET` to fetch only the fields you need from a hash to minimize data transfer and improve performance.

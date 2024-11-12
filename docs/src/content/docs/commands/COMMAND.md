@@ -96,11 +96,11 @@ COMMAND <subcommand>
 ### Parameters
 
 - **subcommand**: Optional. Available subcommands include:
-  - `COUNT` : Returns the total number of commands in the DiceDB server.
-  - `GETKEYS` : Returns the keys from the provided command and arguments.
-  - `LIST` : Returns the list of all the commands in the DiceDB server.
-  - `INFO` : Returns details about the specified commands.
-  - `HELP` : Displays the help section for `COMMAND`, providing information about each available subcommand.
+  - [`COUNT`](/commands/command-count) : Returns the total number of commands in the DiceDB server.
+  - [`GETKEYS`](/commands/command-getkeys) : Returns the keys from the provided command and arguments.
+  - [`LIST`](/commands/command-list): Returns the list of all the commands in the DiceDB server.
+  - [`INFO`](/commands/command-info): Returns details about the specified commands.
+  - [`HELP`](/commands/command-help) : Displays the help section for `COMMAND`, providing information about each available subcommand.
 
 **For more details on each subcommand, please refer to their respective documentation pages.**
 

@@ -128,7 +128,7 @@ This query does the following:
 - Orders the results by their values in descending order
 - Limits the results to the top 3 entries
 
-#### Scenario
+### Scenario
 
 Imagine we're tracking player scores in a game match with ID 100. Each player's score is stored in a key formatted as
 `match:100:user:<userID>`.

@@ -43,7 +43,7 @@ The `HGETALL` command can raise the following errors:
 
 ## Example Usage
 
-### Example 1: Retrieving all fields and values from an existing hash
+### Retrieving all fields and values from an existing hash
 
 ```bash
 127.0.0.1:7379> HSET user:1000 name "John Doe" age "30" country "USA"
@@ -62,7 +62,7 @@ The `HGETALL` command can raise the following errors:
 6) "USA"
 ```
 
-### Example 2: Retrieving from a non-existing key
+### Retrieving from a non-existing key
 
 ```bash
 127.0.0.1:7379> HGETALL user:2000

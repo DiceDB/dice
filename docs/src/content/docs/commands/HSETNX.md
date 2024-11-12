@@ -102,6 +102,6 @@ Wrong Number of Arguments for `HSETNX` Command
 - **Behavior**: The `HSETNX` command requires atleast three arguments: the key, the field name, and the field value.
 - **Error**: The command fails because it requires the `key`, `field`, and `value` parameters. If insufficient arguments are provided, DiceDB raises an error indicating that the number of arguments is incorrect.
 
-### Best Practices
+## Best Practices
 
 - Use `HSETNX` when you need to ensure that a field is only set if it does not already exist, preventing accidental overwrites.

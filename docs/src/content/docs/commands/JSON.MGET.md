@@ -55,7 +55,7 @@ Here’s the revised error section for the `JSON.MGET` command documentation in 
 
 ## Example Usage
 
-### Example 1: Basic Usage
+### Basic Usage
 
 Assume we have the following JSON documents stored in DiceDB:
 
@@ -77,7 +77,7 @@ To retrieve the `name` field from each of these JSON documents:
 3) "\"Charlie\""
 ```
 
-### Example 2: Handling Non-Existent Keys and Paths
+### Handling Non-Existent Keys and Paths
 
 Assume we have the following JSON documents stored in DiceDB:
 
