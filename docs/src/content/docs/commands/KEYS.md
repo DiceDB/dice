@@ -102,7 +102,7 @@ When the `KEYS` command is executed, DiceDB scans the entire keyspace to find al
 
 Additionally, the ordering of the output keys can be different if you run the same command subsequently.
 
-## Error Handling
+## Errors
 
 The `KEYS` command is straightforward and does not have many error conditions. However, there are a few scenarios where errors might occur:
 

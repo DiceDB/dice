@@ -57,13 +57,7 @@ OK
 (nil)
 ```
 
-<<<<<<< HEAD
-`Explanation:`
-=======
-
 ### Using `GETDEL` on a Non-Existent Key
-
-> > > > > > > d43577926873d0df0c8f189cdde6afa65c515ccb
 
 Trying to retrieve and delete a key `nonexistingkey` that does not exist.
 
@@ -71,16 +65,10 @@ Trying to retrieve and delete a key `nonexistingkey` that does not exist.
 127.0.0.1:7379> GETDEL nonexistingkey
 (nil)
 ```
-
-<<<<<<< HEAD
-`Explanation:`
-
 - The key `nonexistingkey` does not exist in the database.
-- # The `GETDEL` command returns `nil` since the key is not found.
+- The `GETDEL` command returns `nil` since the key is not found.
 
 ### Using `GETDEL` on a Key with a Different Data Type
-
-> > > > > > > d43577926873d0df0c8f189cdde6afa65c515ccb
 
 Setting a key `mylist` as a list and then trying to use `GETDEL`, which is incompatible with non-string data types.
 
@@ -91,8 +79,6 @@ Setting a key `mylist` as a list and then trying to use `GETDEL`, which is incom
 ERROR WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
-`Explanation:`
-
 - The key `mylist` is a list, not a string.
-- # The `GETDEL` command raises a `WRONGTYPE` error because it expects the key to be a string.
+- The `GETDEL` command raises a `WRONGTYPE` error because it expects the key to be a string.
   (error) WRONGTYPE Operation against a key holding the wrong kind of value
