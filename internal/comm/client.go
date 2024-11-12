@@ -40,6 +40,7 @@ type Client struct {
 	Session                *auth.Session
 	ClientIdentifierID     uint32
 	LastCmd                *cmd.DiceDBCmd
+	ArgLenSum              int
 }
 
 func (c *Client) flag() string {
@@ -79,13 +80,14 @@ func (c *Client) String() string {
 	if err != nil {
 		return ""
 	}
+	var laddr string
 	switch v := sa.(type) {
 	case *syscall.SockaddrInet4:
-		addr = net.IP(v.Addr[:]).String() + ":" + strconv.Itoa(v.Port)
+		laddr = net.IP(v.Addr[:]).String() + ":" + strconv.Itoa(v.Port)
 	case *syscall.SockaddrInet6:
-		addr = net.IP(v.Addr[:]).String() + ":" + strconv.Itoa(v.Port)
+		laddr = net.IP(v.Addr[:]).String() + ":" + strconv.Itoa(v.Port)
 	}
-	s.WriteString(addr)
+	s.WriteString(laddr)
 	s.WriteString(" ")
 
 	// fd
@@ -116,14 +118,23 @@ func (c *Client) String() string {
 	// cmd
 	s.WriteString("cmd=")
 	// todo: handle `CLIENT ID` as "client|id" and `SET k 1` as "set"
-	s.WriteString(c.LastCmd.Cmd)
+	s.WriteString(strings.ToLower(c.LastCmd.Cmd))
 	s.WriteString(" ")
 
-	// this breaks
 	// user
-	// s.WriteString("user=")
-	// s.WriteString(c.Session.User.Username)
-	// s.WriteString(" ")
+	s.WriteString("user=")
+	if c.Session == nil || c.Session.User == nil {
+		s.WriteString("default")
+	} else {
+		s.WriteString(c.Session.User.Username)
+	}
+	s.WriteString(" ")
+
+	// argv-mem
+	s.WriteString("argv-mem=")
+	s.WriteString(strconv.FormatInt(int64(c.ArgLenSum), 10))
+	s.WriteString(" ")
+
 	return s.String()
 }
 

@@ -264,9 +264,20 @@ func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
 		return err
 	}
 
+	// pre execution
 	client.LastCmd = commands.Cmds[len(commands.Cmds)-1]
+	argLenSum := len(client.LastCmd.Cmd)
+	for _, arg := range client.LastCmd.Args {
+		argLenSum += len(arg)
+	}
+	client.ArgLenSum = argLenSum
+
 	// function used within package, limit the scope
 	s.EvalAndRespond(commands, client)
+
+	// post execution
+	client.ArgLenSum = 0
+
 	if hasAbort {
 		return diceerrors.ErrAborted
 	}

@@ -410,16 +410,18 @@ func evalINFO(args []string, store *dstore.Store) []byte {
 }
 
 func EvalCLIENT(args []string, httpOp bool, client *comm.Client, store *dstore.Store) []byte {
+	if len(args) == 0 {
+		return clientio.Encode(diceerrors.ErrWrongArgumentCount("CLIENT"), false)
+	}
+
 	subcommand := strings.ToUpper(args[0])
-	fmt.Println("clien id", client.ClientIdentifierID)
 	switch subcommand {
 	case List:
-		fmt.Println("client len", len(abstractserver.Clients))
 		o := make([]string, 0, len(abstractserver.Clients))
 		for _, client := range abstractserver.Clients {
 			o = append(o, client.String())
 		}
-		return clientio.Encode(strings.Join(o, "\r\n"), false)
+		return clientio.Encode(strings.Join(o, "\n"), false)
 	default:
 		return clientio.Encode(diceerrors.ErrWrongArgumentCount("CLIENT"), false)
 	}
