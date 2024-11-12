@@ -1418,7 +1418,7 @@ func jsonGETHelper(store *dstore.Store, path, key string) *EvalResponse {
 	if err != nil {
 		return &EvalResponse{
 			Result: nil,
-			Error:  diceerrors.ErrGeneral("invalid jsonpath"),
+			Error:  diceerrors.ErrGeneral("invalid JSONPath"),
 		}
 	}
 
@@ -1426,8 +1426,8 @@ func jsonGETHelper(store *dstore.Store, path, key string) *EvalResponse {
 	results := expr.Get(jsonData)
 	if len(results) == 0 {
 		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrGeneral(fmt.Sprintf("Path '%s' does not exist", path)),
+			Result: clientio.NIL,
+			Error:  nil,
 		}
 	}
 
@@ -2112,6 +2112,21 @@ func evalPTTL(args []string, store *dstore.Store) *EvalResponse {
 		Result: durationMs,
 		Error:  nil,
 	}
+}
+
+// evalKeys returns the list of keys that match the pattern should be the only param in args
+func evalKeys(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("KEYS"))
+	}
+
+	pattern := args[0]
+	keys, err := store.Keys(pattern)
+	if err != nil {
+		return makeEvalError(diceerrors.ErrGeneral("bad pattern"))
+	}
+
+	return makeEvalResult(keys)
 }
 
 // evalTTL returns Time-to-Live in secs for the queried key in args

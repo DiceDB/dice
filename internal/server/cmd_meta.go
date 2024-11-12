@@ -403,8 +403,8 @@ var (
 		Cmd:     "JSON.INGEST",
 		CmdType: SingleShard,
 	}
-	jsonHGetAllCmdMeta = CmdsMeta{
-		Cmd:     "JSON.HGETALL",
+	hGetAllCmdMeta = CmdsMeta{
+		Cmd:     "HGETALL",
 		CmdType: SingleShard,
 	}
 	dumpCmdMeta = CmdsMeta{
@@ -532,7 +532,7 @@ func init() {
 	WorkerCmdsMeta["JSON.GET"] = jsonGetCmdMeta
 	WorkerCmdsMeta["JSON.TYPE"] = jsonTypeCmdMeta
 	WorkerCmdsMeta["JSON.INGEST"] = jsonIngestCmdMeta
-	WorkerCmdsMeta["JSON.HGETALL"] = jsonHGetAllCmdMeta
+	WorkerCmdsMeta["HGETALL"] = hGetAllCmdMeta
 	WorkerCmdsMeta["DUMP"] = dumpCmdMeta
 	WorkerCmdsMeta["RESTORE"] = restoreCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.

@@ -184,13 +184,12 @@ func composeJSONMget(responses ...ops.StoreResponse) interface{} {
 		return responses[i].SeqID < responses[j].SeqID
 	})
 
-	results := []string{}
+	results := []interface{}{}
 	for idx := range responses {
 		if responses[idx].EvalResponse.Error != nil {
 			return responses[idx].EvalResponse.Error
 		}
-
-		results = append(results, responses[idx].EvalResponse.Result.(string))
+		results = append(results, responses[idx].EvalResponse.Result)
 	}
 	return results
 }

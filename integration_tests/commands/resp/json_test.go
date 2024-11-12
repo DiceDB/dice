@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"net"
 	"sort"
+	"strings"
 	"testing"
 
+	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/testutils"
 
 	"github.com/stretchr/testify/assert"
@@ -59,6 +61,343 @@ func runIntegrationTests(t *testing.T, conn net.Conn, testCases []IntegrationTes
 					assert.True(t, result.(int64) <= out.(int64) && result.(int64) > 0, "Expected %v to be within 0 to %v", result, out)
 				case "json_equal":
 					assert.JSONEq(t, out.(string), result.(string))
+				}
+			}
+		})
+	}
+}
+
+func TestJSONOperations(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	simpleJSON := `{"name":"John","age":30}`
+	nestedJSON := `{"name":"Alice","address":{"city":"New York","zip":"10001"},"array":[1,2,3,4,5]}`
+	specialCharsJSON := `{"key":"value with spaces","emoji":"😀"}`
+	unicodeJSON := `{"unicode":"こんにちは世界"}`
+	escapedCharsJSON := `{"escaped":"\"quoted\", \\backslash\\ and /forward/slash"}`
+	complexJSON := `{"inventory":{"mountain_bikes":[{"id":"bike:1","model":"Phoebe","price":1920,"specs":{"material":"carbon","weight":13.1},"colors":["black","silver"]},{"id":"bike:2","model":"Quaoar","price":2072,"specs":{"material":"aluminium","weight":7.9},"colors":["black","white"]},{"id":"bike:3","model":"Weywot","price":3264,"specs":{"material":"alloy","weight":13.8}}],"commuter_bikes":[{"id":"bike:4","model":"Salacia","price":1475,"specs":{"material":"aluminium","weight":16.6},"colors":["black","silver"]},{"id":"bike:5","model":"Mimas","price":3941,"specs":{"material":"alloy","weight":11.6}}]}}`
+
+	// Background:
+	// Ordering in JSON objects is not guaranteed
+	// Ordering in JSON arrays is guaranteed
+	// Ordering of arrays which are constructed using a key of an object is not maintained across objects
+
+	// Single ordered test cases will cover all JSON operations which have a single possible order of expected elements
+	// different JSON Key orderings are not considered as different JSONs, hence will be considered in this category
+	// What goes here:
+	// - Cases where the possible order of the result is a single permutation
+	// 		- JSON Arrays fetched without any JSONPath
+	// 		- JSON Objects (key ordering is taken care of)
+	// ref: https://github.com/DiceDB/dice/pull/365
+	singleOrderedTestCases := []struct {
+		name     string
+		setCmd   string
+		getCmd   string
+		expected string
+	}{
+		{
+			name:     "Set and Get Integer",
+			setCmd:   `JSON.SET tools $ 2`,
+			getCmd:   `JSON.GET tools`,
+			expected: "2",
+		},
+		{
+			name:     "Set and Get Boolean True",
+			setCmd:   `JSON.SET booleanTrue $ true`,
+			getCmd:   `JSON.GET booleanTrue`,
+			expected: "true",
+		},
+		{
+			name:     "Set and Get Boolean False",
+			setCmd:   `JSON.SET booleanFalse $ false`,
+			getCmd:   `JSON.GET booleanFalse`,
+			expected: "false",
+		},
+		{
+			name:     "Set and Get Simple JSON",
+			setCmd:   `JSON.SET user $ ` + simpleJSON,
+			getCmd:   `JSON.GET user`,
+			expected: simpleJSON,
+		},
+		{
+			name:     "Set and Get Nested JSON",
+			setCmd:   `JSON.SET user:2 $ ` + nestedJSON,
+			getCmd:   `JSON.GET user:2`,
+			expected: nestedJSON,
+		},
+		{
+			name:     "Set and Get JSON Array",
+			setCmd:   `JSON.SET numbers $ [1,2,3,4,5]`,
+			getCmd:   `JSON.GET numbers`,
+			expected: `[1,2,3,4,5]`,
+		},
+		{
+			name:     "Set and Get JSON with Special Characters",
+			setCmd:   `JSON.SET special $ ` + specialCharsJSON,
+			getCmd:   `JSON.GET special`,
+			expected: specialCharsJSON,
+		},
+		{
+			name:     "Get JSON with Wrong Number of Arguments",
+			setCmd:   ``,
+			getCmd:   `JSON.GET`,
+			expected: "ERR wrong number of arguments for 'json.get' command",
+		},
+		{
+			name:     "Set Non-JSON Value",
+			setCmd:   `SET nonJson "not a json"`,
+			getCmd:   `JSON.GET nonJson`,
+			expected: "WRONGTYPE Operation against a key holding the wrong kind of value",
+		},
+		{
+			name:     "Set Empty JSON Object",
+			setCmd:   `JSON.SET empty $ {}`,
+			getCmd:   `JSON.GET empty`,
+			expected: `{}`,
+		},
+		{
+			name:     "Set Empty JSON Array",
+			setCmd:   `JSON.SET emptyArray $ []`,
+			getCmd:   `JSON.GET emptyArray`,
+			expected: `[]`,
+		},
+		{
+			name:     "Set JSON with Unicode",
+			setCmd:   `JSON.SET unicode $ ` + unicodeJSON,
+			getCmd:   `JSON.GET unicode`,
+			expected: unicodeJSON,
+		},
+		{
+			name:     "Set JSON with Escaped Characters",
+			setCmd:   `JSON.SET escaped $ ` + escapedCharsJSON,
+			getCmd:   `JSON.GET escaped`,
+			expected: escapedCharsJSON,
+		},
+		{
+			name:     "Set and Get Complex JSON",
+			setCmd:   `JSON.SET inventory $ ` + complexJSON,
+			getCmd:   `JSON.GET inventory`,
+			expected: complexJSON,
+		},
+		{
+			name:     "Get Nested Array",
+			setCmd:   `JSON.SET inventory $ ` + complexJSON,
+			getCmd:   `JSON.GET inventory $.inventory.mountain_bikes[*].model`,
+			expected: `["Phoebe","Quaoar","Weywot"]`,
+		},
+		{
+			name:     "Get Nested Object",
+			setCmd:   `JSON.SET inventory $ ` + complexJSON,
+			getCmd:   `JSON.GET inventory $.inventory.mountain_bikes[0].specs`,
+			expected: `{"material":"carbon","weight":13.1}`,
+		},
+		{
+			name:     "Set Nested Value",
+			setCmd:   `JSON.SET inventory $.inventory.mountain_bikes[0].price 2000`,
+			getCmd:   `JSON.GET inventory $.inventory.mountain_bikes[0].price`,
+			expected: `2000`,
+		},
+		{
+			name:     "Get JSON with non-existent path",
+			setCmd:   `JSON.SET user $ ` + simpleJSON,
+			getCmd:   `JSON.GET user $.nonExistent`,
+			expected: `ERR Path '$.nonExistent' does not exist`,
+		},
+	}
+
+	// Multiple test cases will address JSON operations where the order of elements can vary, but all orders are "valid" and to be accepted
+	// The variation in order is due to the inherent nature of JSON objects.
+	// When dealing with a resultant array that contains elements from multiple objects, the order of these elements can have several valid permutations.
+	// Which then means, the overall order of elements in the resultant array is not fixed, although each sub-array within it is guaranteed to be ordered.
+	// What goes here:
+	// - Cases where the possible order of the resultant array is multiple permutations
+	// ref: https://github.com/DiceDB/dice/pull/365
+	multipleOrderedTestCases := []struct {
+		name     string
+		setCmd   string
+		getCmd   string
+		expected []string
+	}{
+		{
+			name:     "Get All Prices",
+			setCmd:   `JSON.SET inventory $ ` + complexJSON,
+			getCmd:   `JSON.GET inventory $..price`,
+			expected: []string{`[1475,3941,1920,2072,3264]`, `[1920,2072,3264,1475,3941]`}, // Ordering agnostic
+		},
+		{
+			name:     "Set Multiple Nested Values",
+			setCmd:   `JSON.SET inventory $.inventory.*[?(@.price<2000)].price 1500`,
+			getCmd:   `JSON.GET inventory $..price`,
+			expected: []string{`[1500,3941,1500,2072,3264]`, `[1500,2072,3264,1500,3941]`}, // Ordering agnostic
+		},
+	}
+
+	t.Run("Single Ordered Test Cases", func(t *testing.T) {
+		for _, tc := range singleOrderedTestCases {
+			t.Run(tc.name, func(t *testing.T) {
+				if tc.setCmd != "" {
+					result := FireCommand(conn, tc.setCmd)
+					assert.Equal(t, "OK", result)
+				}
+
+				if tc.getCmd != "" {
+					result := FireCommand(conn, tc.getCmd)
+					if testutils.IsJSONResponse(result.(string)) {
+						assert.JSONEq(t, tc.expected, result.(string))
+					} else {
+						assert.Equal(t, tc.expected, result)
+					}
+				}
+			})
+		}
+	})
+
+	t.Run("Multiple Ordered Test Cases", func(t *testing.T) {
+		for _, tc := range multipleOrderedTestCases {
+			t.Run(tc.name, func(t *testing.T) {
+				if tc.setCmd != "" {
+					result := FireCommand(conn, tc.setCmd)
+					assert.Equal(t, "OK", result)
+				}
+
+				if tc.getCmd != "" {
+					result := FireCommand(conn, tc.getCmd)
+					testutils.AssertJSONEqualList(t, tc.expected, result.(string))
+				}
+			})
+		}
+	})
+}
+
+func TestJSONSetWithInvalidJSON(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	testCases := []struct {
+		name     string
+		command  string
+		expected string
+	}{
+		{
+			name:     "Set Invalid JSON",
+			command:  `JSON.SET invalid $ {invalid:json}`,
+			expected: "ERR invalid JSON",
+		},
+		{
+			name:     "Set JSON with Wrong Number of Arguments",
+			command:  `JSON.SET`,
+			expected: "ERR wrong number of arguments for 'json.set' command",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := FireCommand(conn, tc.command)
+			assert.True(t, strings.HasPrefix(result.(string), tc.expected), fmt.Sprintf("Expected: %s, Got: %s", tc.expected, result))
+		})
+	}
+}
+
+func TestUnsupportedJSONPathPatterns(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+	complexJSON := `{"inventory":{"mountain_bikes":[{"id":"bike:1","model":"Phoebe","price":1920,"specs":{"material":"carbon","weight":13.1},"colors":["black","silver"]},{"id":"bike:2","model":"Quaoar","price":2072,"specs":{"material":"aluminium","weight":7.9},"colors":["black","white"]},{"id":"bike:3","model":"Weywot","price":3264,"specs":{"material":"alloy","weight":13.8}}],"commuter_bikes":[{"id":"bike:4","model":"Salacia","price":1475,"specs":{"material":"aluminium","weight":16.6},"colors":["black","silver"]},{"id":"bike:5","model":"Mimas","price":3941,"specs":{"material":"alloy","weight":11.6}}]}}`
+
+	setupCmd := `JSON.SET bikes:inventory $ ` + complexJSON
+	result := FireCommand(conn, setupCmd)
+	assert.Equal(t, "OK", result)
+
+	testCases := []struct {
+		name     string
+		command  string
+		expected string
+	}{
+		{
+			name:     "Regex in JSONPath",
+			command:  `JSON.GET bikes:inventory '$..[?(@.specs.material =~ "(?i)al")].model'`,
+			expected: "ERR invalid JSONPath",
+		},
+		{
+			name:     "Using @ for referencing other fields",
+			command:  `JSON.GET bikes:inventory '$.inventory.mountain_bikes[?(@.specs.material =~ @.regex_pat)].model'`,
+			expected: "ERR invalid JSONPath",
+		},
+		{
+			name:     "Complex condition with multiple comparisons",
+			command:  `JSON.GET bikes:inventory '$..mountain_bikes[?(@.price < 3000 && @.specs.weight < 10)]'`,
+			expected: "ERR invalid JSONPath",
+		},
+		{
+			name:     "Get all colors",
+			command:  `JSON.GET bikes:inventory '$..[*].colors'`,
+			expected: "ERR invalid JSONPath",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := FireCommand(conn, tc.command)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestJSONSetWithNXAndXX(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	FireCommand(conn, "DEL user")
+
+	user1 := `{"name":"John","age":30}`
+	user2 := `{"name":"Rahul","age":28}`
+
+	testCases := []struct {
+		name     string
+		commands []string
+		expected []interface{}
+	}{
+		{
+			name:     "Set with XX on non-existent key",
+			commands: []string{"JSON.SET user $ " + user1 + " XX", "JSON.SET user $ " + user1 + " NX", "JSON.GET user"},
+			expected: []interface{}{"(nil)", "OK", user1},
+		},
+		{
+			name:     "Set with NX on existing key",
+			commands: []string{"DEL user", "JSON.SET user $ " + user1, "JSON.SET user $ " + user1 + " NX"},
+			expected: []interface{}{int64(1), "OK", "(nil)"},
+		},
+		{
+			name:     "Set with XX on existing key",
+			commands: []string{"JSON.SET user $ " + user2 + " XX", "JSON.GET user", "DEL user"},
+			expected: []interface{}{"OK", user2, int64(1)},
+		},
+		{
+			name:     "Set with NX on non-existent key",
+			commands: []string{"JSON.SET user $ " + user2 + " NX", "JSON.SET user $ " + user1 + " NX", "JSON.GET user"},
+			expected: []interface{}{"OK", "(nil)", user2},
+		},
+		{
+			name:     "Invalid combinations of NX and XX",
+			commands: []string{"JSON.SET user $ " + user2 + " NX NX", "JSON.SET user $ " + user2 + " NX XX", "JSON.SET user $ " + user2 + " NX Abcd", "JSON.SET user $ " + user2 + " NX "},
+			expected: []interface{}{"ERR syntax error", "ERR syntax error", "ERR syntax error", "(nil)"},
+		},
+		{
+			name:     "Invalid combinations of XX",
+			commands: []string{"JSON.SET user $ " + user2 + " XX XX", "JSON.SET user $ " + user2 + " XX NX", "JSON.SET user $ " + user2 + " XX Abcd", "JSON.SET user $ " + user2 + " XX "},
+			expected: []interface{}{"ERR syntax error", "ERR syntax error", "ERR syntax error", "OK"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for i, cmd := range tc.commands {
+				result := FireCommand(conn, cmd)
+				jsonResult, isString := result.(string)
+				if isString && testutils.IsJSONResponse(jsonResult) {
+					assert.JSONEq(t, tc.expected[i].(string), jsonResult)
+				} else {
+					assert.Equal(t, tc.expected[i], result)
 				}
 			}
 		})
@@ -168,6 +507,110 @@ func TestJSONDel(t *testing.T) {
 	}
 
 	runIntegrationTests(t, conn, testCases, preTestChecksCommand, postTestChecksCommand)
+}
+
+func TestJSONMGET(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+	defer FireCommand(conn, "DEL xx yy zz p q r t u v doc1 doc2")
+
+	setupData := map[string]string{
+		"xx":   `["hehhhe","hello"]`,
+		"yy":   `{"name":"jerry","partner":{"name":"jerry","language":["rust"]},"partner2":{"language":["rust"]}}`,
+		"zz":   `{"name":"tom","partner":{"name":"tom","language":["rust"]},"partner2":{"age":12,"language":["rust"]}}`,
+		"doc1": `{"a":1,"b":2,"nested":{"a":3},"c":null}`,
+		"doc2": `{"a":4,"b":5,"nested":{"a":6},"c":null}`,
+	}
+
+	for key, value := range setupData {
+		resp := FireCommand(conn, fmt.Sprintf("JSON.SET %s $ %s", key, value))
+		assert.Equal(t, "OK", resp)
+	}
+
+	testCases := []struct {
+		name     string
+		command  string
+		expected []interface{}
+	}{
+		{
+			name:     "MGET with root path",
+			command:  "JSON.MGET xx yy zz $",
+			expected: []interface{}{setupData["xx"], setupData["yy"], setupData["zz"]},
+		},
+		{
+			name:     "MGET with specific path",
+			command:  "JSON.MGET xx yy zz $.name",
+			expected: []interface{}{"(nil)", `"jerry"`, `"tom"`},
+		},
+		{
+			name:     "MGET with nested path",
+			command:  "JSON.MGET xx yy zz $.partner2.age",
+			expected: []interface{}{"(nil)", "(nil)", "12"},
+		},
+		{
+			name:     "MGET error",
+			command:  "JSON.MGET t",
+			expected: []interface{}{"ERR wrong number of arguments for 'json.mget' command"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := FireCommand(conn, tc.command)
+			results, ok := result.([]interface{})
+			if ok {
+				assert.Equal(t, len(tc.expected), len(results))
+				for i := range results {
+					if testutils.IsJSONResponse(tc.expected[i].(string)) {
+						assert.JSONEq(t, tc.expected[i].(string), results[i].(string))
+					} else {
+						assert.Equal(t, tc.expected[i], results[i])
+					}
+				}
+			} else {
+				assert.Equal(t, tc.expected[0], result)
+			}
+		})
+	}
+
+	t.Run("MGET with recursive path", testJSONMGETRecursive(conn))
+}
+
+func sliceContainsItem(slice []int, item int) bool {
+	for _, v := range slice {
+		if v == item {
+			return true
+		}
+	}
+	return false
+}
+
+func testJSONMGETRecursive(conn net.Conn) func(*testing.T) {
+	return func(t *testing.T) {
+		result := FireCommand(conn, "JSON.MGET doc1 doc2 $..a")
+		results, ok := result.([]interface{})
+		assert.True(t, ok, "Expected result to be a slice of interface{}")
+		assert.Equal(t, 2, len(results), "Expected 2 results")
+
+		expectedSets := [][]int{
+			{1, 3},
+			{4, 6},
+		}
+
+		for i, res := range results {
+			var actualSet []int
+			err := sonic.UnmarshalString(res.(string), &actualSet)
+			assert.Nil(t, err, "Failed to unmarshal JSON")
+
+			assert.True(t, len(actualSet) == len(expectedSets[i]),
+				"Mismatch in number of elements for set %d", i)
+
+			for _, expected := range expectedSets[i] {
+				assert.True(t, sliceContainsItem(actualSet, expected),
+					"Set %d does not contain expected value %d", i, expected)
+			}
+		}
+	}
 }
 
 func TestJSONForget(t *testing.T) {
