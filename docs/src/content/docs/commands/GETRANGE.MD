@@ -89,6 +89,25 @@ OK
 "apple"
 ```
 
+`GETRANGE` returns string representation of byte array stored in bitmap
+
+```bash
+127.0.0.1:7379> SETBIT bitmapkey 2 1
+(integer) 0
+127.0.0.1:7379> SETBIT bitmapkey 3 1
+(integer) 0
+127.0.0.1:7379> SETBIT bitmapkey 5 1
+(integer) 0
+127.0.0.1:7379> SETBIT bitmapkey 10 1
+(integer) 0
+127.0.0.1:7379> SETBIT bitmapkey 11 1
+(integer) 0
+127.0.0.1:7379> SETBIT bitmapkey 14 1
+(integer) 0
+127.0.0.1:7379> GETRANGE bitmapkey 0 -1
+"42"
+```
+
 ### Invalid usage
 
 Trying to use `GETRANGE` without giving the value

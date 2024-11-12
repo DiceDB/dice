@@ -97,6 +97,7 @@ const (
 	CmdZCard         = "ZCARD"
 	CmdPFAdd         = "PFADD"
 	CmdPFCount       = "PFCOUNT"
+	CmdPFCountWatch  = "PFCOUNT.WATCH"
 	CmdPFMerge       = "PFMERGE"
 	CmdTTL           = "TTL"
 	CmdPTTL          = "PTTL"
@@ -130,6 +131,12 @@ const (
 	CmdHDel          = "HDEL"
 	CmdHMSet         = "HMSET"
 	CmdHMGet         = "HMGET"
+	CmdSetBit        = "SETBIT"
+	CmdGetBit        = "GETBIT"
+	CmdBitCount      = "BITCOUNT"
+	CmdBitField      = "BITFIELD"
+	CmdBitPos        = "BITPOS"
+	CmdBitFieldRO    = "BITFIELD_RO"
 )
 
 type CmdMeta struct {
@@ -267,6 +274,24 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdHRandField: {
 		CmdType: SingleShard,
 	},
+	CmdSetBit: {
+		CmdType: SingleShard,
+	},
+	CmdGetBit: {
+		CmdType: SingleShard,
+	},
+	CmdBitCount: {
+		CmdType: SingleShard,
+	},
+	CmdBitField: {
+		CmdType: SingleShard,
+	},
+	CmdBitPos: {
+		CmdType: SingleShard,
+	},
+	CmdBitFieldRO: {
+		CmdType: SingleShard,
+	},
 
 	// Multi-shard commands.
 	CmdRename: {
@@ -346,6 +371,9 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: Watch,
 	},
 	CmdZRangeWatch: {
+		CmdType: Watch,
+	},
+	CmdPFCountWatch: {
 		CmdType: Watch,
 	},
 

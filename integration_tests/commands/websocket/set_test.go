@@ -121,6 +121,21 @@ func TestSetWithOptions(t *testing.T) {
 			commands: []string{"SET k v XX EX 1", "GET k", "SLEEP 2", "GET k", "SET k v XX EX 1", "GET k"},
 			expected: []interface{}{nil, nil, "OK", nil, nil, nil},
 		},
+		{
+			name:     "GET with Existing Value",
+			commands: []string{"SET k v", "SET k vv GET"},
+			expected: []interface{}{"OK", "v"},
+		},
+		{
+			name:     "GET with Non-Existing Value",
+			commands: []string{"SET k vv GET"},
+			expected: []interface{}{nil},
+		},
+		{
+			name:     "GET with wrong type of value",
+			commands: []string{"sadd k v", "SET k vv GET"},
+			expected: []interface{}{float64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
+		},
 	}
 
 	for _, tc := range testCases {

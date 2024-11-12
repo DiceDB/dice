@@ -13,15 +13,20 @@ BITPOS key bit [start] [end]
 
 ## Parameters
 
-- `key`: The key of the string in which to search for the bit.
-- `bit`: The bit value to search for, which can be either 0 or 1.
-- `start`: (Optional) The starting byte position to begin the search. If not specified, the search starts from the beginning of the string.
-- `end`: (Optional) The ending byte position to end the search. If not specified, the search continues until the end of the string.
+| Parameter | Description                                                                                                                          | Type     | Required |
+|-----------|--------------------------------------------------------------------------------------------------------------------------------------|----------|----------|
+| `key`     | The key of the string in which to search for the bit.                                                                                | String   | Yes      |
+| `bit`     | The value to be set for the key.                                                                                                     | Bit      | Yes      |
+| `start`   | (Optional) The starting byte position to begin the search. If not specified, the search starts from the beginning of the string.     | Integer  | No       |
+| `end`     | (Optional) The ending byte position to end the search. If not specified, the search continues until the end of the string.           | Integer  | No       |
 
 ## Return Value
 
-- `Integer`: The position of the first bit set to the specified value (0 or 1). The position is returned as a zero-based integer.
-- `-1`: If the specified bit is not found within the specified range.
+| Condition                                                      | Return Value            |
+|----------------------------------------------------------------|-------------------------|
+| Command is successful                                          | `Integer`               |
+| If the specified bit is not found within the specified range.  | `-1`                    |
+| Syntax or specified constraints are invalid                    | error                   |
 
 ## Behaviour
 
@@ -50,14 +55,10 @@ The `BITPOS` command can raise errors in the following cases:
 Find the position of the first bit set to 1 in the string stored at key `mykey`:
 
 ```bash
-SET mykey "foobar"
-BITPOS mykey 1
-```
-
-`Output`:
-
-```bash
-6
+127.0.0.1:7379> SET mykey "foobar"
+OK
+127.0.0.1:7379> BITPOS mykey 1
+(integer) 1
 ```
 
 ### Specifying a Range
@@ -65,29 +66,20 @@ BITPOS mykey 1
 Find the position of the first bit set to 0 in the string stored at key `mykey`, starting from byte position 2 and ending at byte position 4:
 
 ```bash
-SET mykey "foobar"
-BITPOS mykey 0 2 4
+127.0.0.1:7379> SET mykey "foobar"
+OK
+127.0.0.1:7379> BITPOS mykey 0 2 4
+(integer) 16
 ```
-
-`Output`:
-
-```bash
-16
-```
-
 ### Bit Not Found
 
 If the specified bit is not found within the specified range, the command returns -1:
 
 ```bash
-SET mykey "foobar"
-BITPOS mykey 1 2 4
-```
-
-`Output`:
-
-```bash
--1
+127.0.0.1:7379> SET mykey "foobar"
+OK
+127.0.0.1:7379> BITPOS mykey 1 2 4
+(integer) -1
 ```
 
 ### Error Cases
@@ -97,13 +89,9 @@ BITPOS mykey 1 2 4
 Attempting to use `BITPOS` on a key that holds a non-string value:
 
 ```bash
-LPUSH mylist "item"
-BITPOS mylist 1
-```
-
-`Output`:
-
-```bash
+127.0.0.1:7379> LPUSH mylist "item"
+(integer) 1
+127.0.0.1:7379> BITPOS mylist 1
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
@@ -112,13 +100,9 @@ BITPOS mylist 1
 Using a bit value other than 0 or 1:
 
 ```bash
-SET mykey "foobar"
-BITPOS mykey 2
-```
-
-`Output`:
-
-```bash
+127.0.0.1:7379> SET mykey "foobar"
+OK
+127.0.0.1:7379> BITPOS mykey 2
 (error) ERR bit is not an integer or out of range
 ```
 
@@ -127,12 +111,8 @@ BITPOS mykey 2
 Using non-integer values for the `start` or `end` parameters:
 
 ```bash
-SET mykey "foobar"
-BITPOS mykey 1 "a" "b"
-```
-
-`Output`:
-
-```bash
+127.0.0.1:7379> SET mykey "foobar"
+OK
+127.0.0.1:7379> BITPOS mykey 1 "a" "b"
 (error) ERR value is not an integer or out of range
 ```
