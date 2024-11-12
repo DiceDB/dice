@@ -2737,6 +2737,280 @@ func evalJSONARRTRIM(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+// evalLPUSH inserts value(s) one by one at the head of of the list
+//
+// # Returns list length after command execution
+//
+// Usage: LPUSH key value [value...]
+func evalLPUSH(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("LPUSH"),
+		}
+	}
+
+	obj := store.Get(args[0])
+	if obj == nil {
+		obj = store.NewObj(NewDeque(), -1, object.ObjTypeByteList, object.ObjEncodingDeque)
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeByteList); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingDeque); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	store.Put(args[0], obj)
+	for i := 1; i < len(args); i++ {
+		obj.Value.(*Deque).LPush(args[i])
+	}
+
+	deq := obj.Value.(*Deque)
+
+	return &EvalResponse{
+		Result: deq.Length,
+		Error:  nil,
+	}
+}
+
+// evalRPUSH inserts value(s) one by one at the tail of of the list
+//
+// # Returns list length after command execution
+//
+// Usage: RPUSH key value [value...]
+func evalRPUSH(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("RPUSH"),
+		}
+	}
+
+	obj := store.Get(args[0])
+	if obj == nil {
+		obj = store.NewObj(NewDeque(), -1, object.ObjTypeByteList, object.ObjEncodingDeque)
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeByteList); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingDeque); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	store.Put(args[0], obj)
+	for i := 1; i < len(args); i++ {
+		obj.Value.(*Deque).RPush(args[i])
+	}
+
+	deq := obj.Value.(*Deque)
+
+	return &EvalResponse{
+		Result: deq.Length,
+		Error:  nil,
+	}
+}
+
+// evalLPOP pops the element at the head of the list and returns it
+//
+// # Returns the element at the head of the list
+//
+// Usage: LPOP key
+func evalLPOP(args []string, store *dstore.Store) *EvalResponse {
+	// By default we pop only 1
+	popNumber := 1
+
+	// LPOP accepts 1 or 2 arguments only - LPOP key [count]
+
+	if len(args) < 1 || len(args) > 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("LPOP"),
+		}
+	}
+
+	if len(args) == 2 {
+		nos, err := strconv.Atoi(args[1])
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error: diceerrors.ErrInvalidNumberFormat,
+			}
+		}
+		if nos == 0 {
+			// returns empty string if count given is 0
+			return &EvalResponse{
+				Result: clientio.NIL,
+				Error: nil,
+			}
+		}
+		if nos < 0 {
+			// returns an out of range err if count is negetive
+			return &EvalResponse{
+				Result: nil,
+				Error: diceerrors.ErrIntegerOutOfRange,
+			}
+		}
+		popNumber = nos
+	}
+
+	obj := store.Get(args[0])
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeByteList); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingDeque); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	deq := obj.Value.(*Deque)
+
+	// holds the elements popped
+	var elements []string
+	for iter := 0; iter < popNumber; iter++ {
+		x, err := deq.LPop()
+		if err != nil {
+			if errors.Is(err, ErrDequeEmpty) {
+				break
+			}
+		}
+		elements = append(elements, x)
+	}
+
+	if len(elements) == 0 {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	if len(elements) == 1 {
+		return &EvalResponse{
+			Result: elements[0],
+			Error:  nil,
+		}
+	}
+
+	return &EvalResponse{
+		Result: elements,
+		Error:  nil,
+	}
+}
+
+// evalRPOP pops the element at the tail of the list and returns it
+//
+// # Returns the element at the tail of the list
+//
+// Usage: RPOP key
+func evalRPOP(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("RPOP"),
+		}
+	}
+
+	obj := store.Get(args[0])
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeByteList); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingDeque); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	deq := obj.Value.(*Deque)
+	x, err := deq.RPop()
+	if err != nil {
+		if errors.Is(err, ErrDequeEmpty) {
+			return &EvalResponse{
+				Result: clientio.NIL,
+				Error:  nil,
+			}
+		}
+	}
+
+	return &EvalResponse{
+		Result: x,
+		Error:  nil,
+	}
+}
+
+// evalLLEN returns the number of elements in the list
+//
+// Usage: LLEN key
+func evalLLEN(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("LLEN"),
+		}
+	}
+
+	obj := store.Get(args[0])
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeByteList, object.ObjEncodingDeque); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	deq := obj.Value.(*Deque)
+	return &EvalResponse{
+		Result: deq.Length,
+		Error:  nil,
+	}
+}
+
 // evalJSONARRAPPEND appends the value(s) provided in the args to the given array path
 // in the JSON object saved at key in arguments.
 // Args must contain atleast a key, path and value.

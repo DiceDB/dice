@@ -38,6 +38,11 @@ LLEN key
    - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
    - Occurs if the key exists but is not associated with a list.
 
+2. `Wrong number of arguments`
+
+   - Error Message: `(error) ERR wrong number of arguments for 'llen' command`
+   - Occurs if command is executed without any arguments or with 2 or more arguments
+
 ## Example Usage
 
 ### Basic Usage
@@ -64,7 +69,7 @@ Getting the `LLEN` of a list `nonExistentList` which does not exist.
 (integer) 0
 ```
 
-### Invalid usage
+### Invalid Usage: Key is Not a List
 
 Trying to get the `LLEN` of a key `mystring` which is holding wrong data type `string`.
 

@@ -16,7 +16,7 @@ LPUSH key value [value ...]
 | Parameter          | Description                                                                               | Type   | Required |
 | ------------------ | ----------------------------------------------------------------------------------------- | ------ | -------- |
 | `key`              | The name of the list where values are inserted. If it does not exist, it will be created. | String | Yes      |
-| `value [value...]` | One or more values to be inserted at the head of the list.                                | String | Yes      |
+| `value [value...]` | One or more space separated values to be inserted at the head of the list.                | String | Yes      |
 
 ## Return Value
 
@@ -46,7 +46,7 @@ LPUSH key value [value ...]
 
 ## Example Usage
 
-### Single Value Insertion
+### Basic Usage
 
 Insert the value `world` at the head of the list stored at key `mylist`. If `mylist` does not exist, a new list is created.
 
@@ -55,7 +55,7 @@ Insert the value `world` at the head of the list stored at key `mylist`. If `myl
 (integer) 1
 ```
 
-### Multiple Values Insertion
+### Inserting Multiple Values
 
 Insert the value `hello` and `world` at the head of the list stored at key `mylist`. After execution, `world` will be the first element, followed by `hello`.
 
@@ -75,7 +75,7 @@ Create a new list with the key `newlist` and inserts the value `first` at the he
 (integer) 1
 ```
 
-### Error: Wrong Type
+### Invalid Usage: Key is Not a List
 
 Insert the value `value` at the head of the key `mystring`, which stores a string, not a list.
 
@@ -86,9 +86,19 @@ OK
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
-## Notes
+### Invalid Usage: Wrong Number of Arguments
 
-- The `LPUSH` command is often used in conjunction with the `RPUSH` command, which inserts values at the tail (right) of the list.
+Calling `LPUSH` without passing any values:
+
+```bash
+LPUSH mylist
+(error) ERR wrong number of arguments for 'lpush' command
+```
+
+## Best Practices
+
+- `Check Key Type`: Before using `LPUSH`, ensure that the key is associated with a list to avoid errors.
+- `Use in Conjunction with Other List Commands`: The `LPUSH` command is often used alongside other list commands like `RPUSH`, `LLEN`, `LPOP`, and `RPOP` to manage and process lists effectively.
 - The `LPUSH` command can be used to implement a stack (LIFO) by always pushing new elements to the head of the list.
 
 By understanding the `LPUSH` command, you can efficiently manage lists in DiceDB, ensuring that elements are added to the head of the list as needed.
