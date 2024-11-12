@@ -33,7 +33,7 @@ The return value of the `JSON.DEBUG` command depends on the subcommand used:
 
 When the `JSON.DEBUG` command is executed, DiceDB will perform the specified debug operation on the JSON data stored at the given key and path. For the `MEMORY` subcommand, it will calculate and return the memory usage of the JSON value at the specified path. If the path is not provided, it defaults to the root of the JSON data.
 
-## Error Handling
+## Errors
 
 The `JSON.DEBUG` command can raise errors in the following scenarios:
 
