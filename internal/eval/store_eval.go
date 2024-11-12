@@ -5354,6 +5354,77 @@ func evalGetObject(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+// evalJSONSTRAPPEND appends a string value to the JSON string value at the specified path
+// in the JSON object saved at the key in arguments.
+// Args must contain at least a key and the string value to append.
+// If the key does not exist or is expired, it returns an error response.
+// If the value at the specified path is not a string, it returns an error response.
+// Returns the new length of the string at the specified path if successful.
+func evalJSONSTRAPPEND(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 3 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("JSON.STRAPPEND"))
+	}
+
+	key := args[0]
+	path := args[1]
+	value := args[2]
+
+	obj := store.Get(key)
+	if obj == nil {
+		return makeEvalError(diceerrors.ErrKeyDoesNotExist)
+	}
+
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return makeEvalError(diceerrors.ErrWrongTypeOperation)
+	}
+
+	jsonData := obj.Value
+
+	var resultsArray []interface{}
+
+	if path == "$" {
+		// Handle root-level string
+		if str, ok := jsonData.(string); ok {
+			unquotedValue := strings.Trim(value, "\"")
+			newValue := str + unquotedValue
+			resultsArray = append(resultsArray, len(newValue))
+			jsonData = newValue
+		} else {
+			return makeEvalResult(clientio.EmptyArray)
+		}
+	} else {
+		expr, err := jp.ParseString(path)
+		if err != nil {
+			return makeEvalResult(clientio.EmptyArray)
+		}
+
+		_, modifyErr := expr.Modify(jsonData, func(data any) (interface{}, bool) {
+			switch v := data.(type) {
+			case string:
+				unquotedValue := strings.Trim(value, "\"")
+				newValue := v + unquotedValue
+				resultsArray = append([]interface{}{len(newValue)}, resultsArray...)
+				return newValue, true
+			default:
+				resultsArray = append([]interface{}{clientio.RespNIL}, resultsArray...)
+				return data, false
+			}
+		})
+
+		if modifyErr != nil {
+			return makeEvalResult(clientio.EmptyArray)
+		}
+	}
+
+	if len(resultsArray) == 0 {
+		return makeEvalResult(clientio.EmptyArray)
+	}
+
+	obj.Value = jsonData
+	return makeEvalResult(resultsArray[0])
+}
+
 // evalJSONTOGGLE toggles a boolean value stored at the specified key and path.
 // args must contain at least the key and path (where the boolean is located).
 // If the key does not exist or is expired, it returns response.RespNIL.

@@ -8581,15 +8581,21 @@ func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"doc1", "$.nested1.a", "\"baz\""},
-			output: []byte("*1\r\n:8\r\n"), // Expected length after append
+			input: []string{"doc1", "$.nested1.a", "\"baz\""},
+			migratedOutput: EvalResponse{
+				Result: 8,
+				Error:  nil,
+			},
 		},
 		"append to non-existing key": {
 			setup: func() {
 				// No setup needed as we are testing a non-existing document.
 			},
-			input:  []string{"non_existing_doc", "$..a", "\"err\""},
-			output: []byte("-ERR Could not perform this operation on a key that doesn't exist\r\n"),
+			input: []string{"non_existing_doc", "$..a", "\"err\""},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrKeyDoesNotExist,
+			},
 		},
 		"append to root node": {
 			setup: func() {
@@ -8600,13 +8606,16 @@ func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"doc1", "$", "\"piu\""},
-			output: []byte("*1\r\n:7\r\n"), // Expected length after appending to "abcd"
+			input: []string{"doc1", "$", "\"piu\""},
+			migratedOutput: EvalResponse{
+				Result: 7,
+				Error:  nil,
+			},
 		},
 	}
 
 	// Run the tests
-	runEvalTests(t, tests, evalJSONSTRAPPEND, store)
+	runMigratedEvalTests(t, tests, evalJSONSTRAPPEND, store)
 }
 
 func BenchmarkEvalJSONSTRAPPEND(b *testing.B) {

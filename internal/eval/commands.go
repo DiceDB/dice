@@ -1300,9 +1300,10 @@ var (
 		Append the JSON string values to the string at path
 		Returns an array of integer replies for each path, the string's new length, or nil, if the matching JSON value is not a string.
 		Error reply: If the value at path is not a string or if the key doesn't exist.`,
-		Eval:     evalJSONSTRAPPEND,
-		Arity:    3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalJSONSTRAPPEND,
+		IsMigrated: true,
+		Arity:      3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	cmsInitByDimCmdMeta = DiceCmdMeta{
 		Name:       "CMS.INITBYDIM",

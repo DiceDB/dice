@@ -403,6 +403,10 @@ var (
 		Cmd:     "JSON.INGEST",
 		CmdType: SingleShard,
 	}
+	jsonArrStrAppendCmdMeta = CmdsMeta{
+		Cmd:     "JSON.STRAPPEND",
+		CmdType: SingleShard,
+	}
 	hGetAllCmdMeta = CmdsMeta{
 		Cmd:     "HGETALL",
 		CmdType: SingleShard,
@@ -532,6 +536,7 @@ func init() {
 	WorkerCmdsMeta["JSON.GET"] = jsonGetCmdMeta
 	WorkerCmdsMeta["JSON.TYPE"] = jsonTypeCmdMeta
 	WorkerCmdsMeta["JSON.INGEST"] = jsonIngestCmdMeta
+	WorkerCmdsMeta["JSON.STRAPPEND"] = jsonArrStrAppendCmdMeta
 	WorkerCmdsMeta["HGETALL"] = hGetAllCmdMeta
 	WorkerCmdsMeta["DUMP"] = dumpCmdMeta
 	WorkerCmdsMeta["RESTORE"] = restoreCmdMeta
