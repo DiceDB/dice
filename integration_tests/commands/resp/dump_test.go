@@ -1,4 +1,4 @@
-package async
+package resp
 
 import (
 	"encoding/base64"
@@ -81,7 +81,7 @@ func TestDumpRestore(t *testing.T) {
 				"DUMP nonexistentkey",
 			},
 			expected: []interface{}{
-				"ERR nil",
+				"(nil)",
 			},
 		},
 	}

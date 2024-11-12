@@ -387,7 +387,34 @@ var (
 		Cmd:     "JSON.NUMMULTBY",
 		CmdType: SingleShard,
 	}
-
+	jsonSetCmdMeta = CmdsMeta{
+		Cmd:     "JSON.SET",
+		CmdType: SingleShard,
+	}
+	jsonGetCmdMeta = CmdsMeta{
+		Cmd:     "JSON.GET",
+		CmdType: SingleShard,
+	}
+	jsonTypeCmdMeta = CmdsMeta{
+		Cmd:     "JSON.TYPE",
+		CmdType: SingleShard,
+	}
+	jsonIngestCmdMeta = CmdsMeta{
+		Cmd:     "JSON.INGEST",
+		CmdType: SingleShard,
+	}
+	jsonHGetAllCmdMeta = CmdsMeta{
+		Cmd:     "JSON.HGETALL",
+		CmdType: SingleShard,
+	}
+	dumpCmdMeta = CmdsMeta{
+		Cmd:     "DUMP",
+		CmdType: SingleShard,
+	}
+	restoreCmdMeta = CmdsMeta{
+		Cmd:     "RESTORE",
+		CmdType: SingleShard,
+	}
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
 
@@ -501,5 +528,12 @@ func init() {
 	WorkerCmdsMeta["JSON.TOGGLE"] = jsonToggleCmdMeta
 	WorkerCmdsMeta["JSON.NUMINCRBY"] = jsonNumIncrByCmdMeta
 	WorkerCmdsMeta["JSON.NUMMULTBY"] = jsonNumMultByCmdMeta
+	WorkerCmdsMeta["JSON.SET"] = jsonSetCmdMeta
+	WorkerCmdsMeta["JSON.GET"] = jsonGetCmdMeta
+	WorkerCmdsMeta["JSON.TYPE"] = jsonTypeCmdMeta
+	WorkerCmdsMeta["JSON.INGEST"] = jsonIngestCmdMeta
+	WorkerCmdsMeta["JSON.HGETALL"] = jsonHGetAllCmdMeta
+	WorkerCmdsMeta["DUMP"] = dumpCmdMeta
+	WorkerCmdsMeta["RESTORE"] = restoreCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }
