@@ -6458,7 +6458,6 @@ func evalHEXISTS(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalResult(clientio.IntegerOne)
 	}
 	return makeEvalResult(clientio.IntegerZero)
-
 }
 
 // evalHKEYS implements the HKEYS command for a hash map data structure.
@@ -6604,10 +6603,9 @@ func evalHSETNX(args []string, store *dstore.Store) *EvalResponse {
 	ok := hashMap.Has(field)
 	if ok {
 		return makeEvalResult(int64(0))
-	} else {
-		hashMap.Set(field, val)
-		return makeEvalResult(int64(1))
 	}
+	hashMap.Set(field, val)
+	return makeEvalResult(int64(1))
 }
 
 // evalHMGET returns an array of values associated with the given fields,
@@ -6853,7 +6851,7 @@ func evalHRANDFIELD(args []string, store *dstore.Store) *EvalResponse {
 			withValues = true
 		}
 	}
-	return makeEvalResult(*hashRandomFields(&hs, count, withValues))
+	return makeEvalResult(*hashRandomFields(hs, count, withValues))
 }
 
 // evalHLEN returns the number of fields contained in the hash stored at key.
