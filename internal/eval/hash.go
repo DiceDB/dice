@@ -1,8 +1,6 @@
 package eval
 
 import (
-	"fmt"
-
 	"github.com/dicedb/dice/internal/server/utils"
 )
 
@@ -81,14 +79,12 @@ func (h *HashImpl) GetWithExpiry(field string) (*HashItem, bool) {
 		return &HashItem{}, false
 	}
 
-	fmt.Println(item.Expiry, uint64(utils.GetCurrentTime().UnixMilli()), item.Persist, item.Value, item.Expiry <= uint64(utils.GetCurrentTime().UnixMilli()))
 	// If the item has no expiry, return it
 	if item.IsPersistent() {
 		return &item, true
 	}
 	// If the item has expired, delete it
 	if item.Expiry <= uint64(utils.GetCurrentTime().UnixMilli()) {
-		fmt.Println("deleting", field)
 		delete(h.data, field)
 		return &HashItem{}, false
 	}

@@ -51,7 +51,7 @@ func TestHExists(t *testing.T) {
 		{
 			name:     "RESP HEXISTS operation against a key holding the wrong kind of value",
 			commands: []string{"SET key value", "HEXISTS key field"},
-			expected: []interface{}{"OK", "ERR -WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
 		},
 	}
 

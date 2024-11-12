@@ -36,6 +36,15 @@ build: ## generate the dicedb binary for the current OS and architecture
 test: ## run the integration tests
 	go test -v -race -count=1 -p=1 ./integration_tests/...
 
+test-resp:
+	go test -v -race -count=1 -p=1 ./integration_tests/commands/resp
+
+test-http:
+	go test -v -race -count=1 -p=1 ./integration_tests/commands/http
+
+test-ws:
+	go test -v -race -count=1 -p=1 ./integration_tests/commands/websocket
+
 test-one: ## run a single integration test function by name (e.g. make test-one TEST_FUNC=TestSetGet)
 	go test -v -race -count=1 --run $(TEST_FUNC) ./integration_tests/...
 

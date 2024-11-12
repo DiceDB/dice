@@ -7,6 +7,7 @@ import (
 	"math"
 	"math/bits"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"unicode"
@@ -6975,7 +6976,9 @@ func evalHSCAN(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	items := hashMap.Items()
-
+	sort.Slice(items, func(i, j int) bool {
+		return items[i][0] < items[j][0]
+	})
 	// Scan the keys and add them to the results if they match the pattern
 	for i := int(cursor); i < len(items); i++ {
 		key := items[i][0]

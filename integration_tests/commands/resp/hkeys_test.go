@@ -24,7 +24,7 @@ func TestHKeys(t *testing.T) {
 		{
 			name:     "RESP HKEYS with key containing a non-hash value",
 			commands: []string{"SET key_hkeys02 field1", "HKEYS key_hkeys02"},
-			expected: []interface{}{"OK", "ERR -WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
 		},
 		{
 			name:     "RESP HKEYS with wrong number of arguments",

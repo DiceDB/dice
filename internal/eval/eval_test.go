@@ -3696,14 +3696,8 @@ func testEvalHSCAN(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
 			},
-			input: []string{"hash_key", "0"},
-			newValidator: func(output interface{}) {
-				result := output.([]interface{})
-				cursor := result[0].(string)
-				fields := result[1].([]string)
-				assert.Equal(t, "0", cursor)
-				assert.ElementsMatch(t, []string{"field1", "value1", "field2", "value2"}, fields)
-			},
+			input:          []string{"hash_key", "0"},
+			migratedOutput: EvalResponse{Result: []interface{}{"0", []string{"field1", "value1", "field2", "value2"}}, Error: nil},
 		},
 		"HSCAN with cursor at the end": {
 			setup: func() {
@@ -3716,70 +3710,36 @@ func testEvalHSCAN(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
 			},
-			input: []string{"hash_key", "0"},
-			newValidator: func(output interface{}) {
-				result := output.([]interface{})
-				cursor := result[0].(string)
-				fields := result[1].([]string)
-				assert.Equal(t, "0", cursor)
-				assert.ElementsMatch(t, []string{"field1", "value1", "field2", "value2"}, fields)
-			},
+			input:          []string{"hash_key", "0"},
+			migratedOutput: EvalResponse{Result: []interface{}{"0", []string{"field1", "value1", "field2", "value2"}}, Error: nil},
 		},
 		"HSCAN with cursor in the middle": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2"}, store)
 			},
-			input: []string{"hash_key", "1"},
-			newValidator: func(output interface{}) {
-				result := output.([]interface{})
-				cursor := result[0].(string)
-				fields := result[1].([]string)
-				assert.Equal(t, "0", cursor)
-				for _, field := range fields {
-					assert.Contains(t, []string{"field1", "value1", "field2", "value2"}, field)
-				}
-			},
+			input:          []string{"hash_key", "1"},
+			migratedOutput: EvalResponse{Result: []interface{}{"0", []string{"field2", "value2"}}, Error: nil},
 		},
 		"HSCAN with MATCH argument": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3"}, store)
 			},
-			input: []string{"hash_key", "0", "MATCH", "field[12]*"},
-			newValidator: func(output interface{}) {
-				result := output.([]interface{})
-				cursor := result[0].(string)
-				fields := result[1].([]string)
-				assert.Equal(t, "0", cursor)
-				assert.ElementsMatch(t, []string{"field1", "value1", "field2", "value2"}, fields)
-			},
+			input:          []string{"hash_key", "0", "MATCH", "field[12]*"},
+			migratedOutput: EvalResponse{Result: []interface{}{"0", []string{"field1", "value1", "field2", "value2"}}, Error: nil},
 		},
 		"HSCAN with COUNT argument": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3"}, store)
 			},
-			input: []string{"hash_key", "0", "COUNT", "2"},
-			newValidator: func(output interface{}) {
-				result := output.([]interface{})
-				cursor := result[0].(string)
-				assert.Equal(t, "2", cursor)
-				for _, fields := range result[1].([]string) {
-					assert.Contains(t, []string{"field1", "value1", "field2", "value2", "field3", "value3"}, fields)
-				}
-			},
+			input:          []string{"hash_key", "0", "COUNT", "2"},
+			migratedOutput: EvalResponse{Result: []interface{}{"2", []string{"field1", "value1", "field2", "value2"}}, Error: nil},
 		},
 		"HSCAN with MATCH and COUNT arguments": {
 			setup: func() {
 				evalHSET([]string{"hash_key", "field1", "value1", "field2", "value2", "field3", "value3", "field4", "value4"}, store)
 			},
-			input: []string{"hash_key", "0", "MATCH", "field[13]*", "COUNT", "1"},
-			newValidator: func(output interface{}) {
-				result := output.([]interface{})
-				cursor := result[0].(string)
-				assert.Equal(t, "1", cursor)
-				for _, fields := range result[1].([]string) {
-					assert.Contains(t, []string{"field1", "value1", "field3", "value3"}, fields)
-				}
-			},
+			input:          []string{"hash_key", "0", "MATCH", "field[13]*", "COUNT", "1"},
+			migratedOutput: EvalResponse{Result: []interface{}{"1", []string{"field1", "value1"}}, Error: nil},
 		},
 		"HSCAN with invalid MATCH pattern": {
 			setup: func() {

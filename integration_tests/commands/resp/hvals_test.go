@@ -24,7 +24,7 @@ func TestHVals(t *testing.T) {
 		{
 			name:     "HVALS on wrong key type",
 			commands: []string{"SET hvalsKey02 field", "HVALS hvalsKey02"},
-			expected: []interface{}{"OK", "ERR -WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
 		},
 		{
 			name:     "HVALS with wrong number of arguments",
