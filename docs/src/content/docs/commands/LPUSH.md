@@ -75,7 +75,7 @@ Create a new list with the key `newlist` and inserts the value `first` at the he
 (integer) 1
 ```
 
-### Error Case - Wrong Type
+### Error: Wrong Type
 
 Insert the value `value` at the head of the key `mystring`, which stores a string, not a list.
 

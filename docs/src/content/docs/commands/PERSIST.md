@@ -32,7 +32,7 @@ When the `PERSIST` command is executed:
 2. If the key does not exist or does not have an expiration, the command does nothing and returns `0`.
 3. This command does not alter the key’s value, only its expiration state.
 
-## Error Handling
+## Errors
 
 1. `Wrong type of value or key`:
    - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`

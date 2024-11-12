@@ -47,7 +47,7 @@ ORDER BY field [ASC | DESC] LIMIT n
 
 Specifies the fields to be returned, `$key`, `$value`, and `$value.<attr>`.
 
-#### Special Column Names
+### Special Column Names
 
 - `$key`: Refers to the key of the key-value pair
 - `$value`: Refers to the value of the key-value pair
@@ -90,7 +90,6 @@ Supported conditions:
 - The initial result set based on the current data is sent to the client.
 - DiceDB continuously monitors the data sources specified in the LIKE clause.
 - Whenever data changes that might affect the query result, the query is reevaluated.
-- If the reevaluated result differs from the previous result, the new result set is pushed to the subscribed client.
 
 ## Errors
 

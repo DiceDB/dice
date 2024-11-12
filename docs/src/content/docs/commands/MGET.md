@@ -33,7 +33,7 @@ The `MGET` command returns an array of values corresponding to the specified key
 - If a key does not exist, its corresponding position in the returned array will contain `nil`.
 - If any of the keys hold non-string values (e.g., lists or sets), the `MGET` command will return an error indicating that the operation was attempted on the wrong type of key.
 
-## Error Handling
+## Errors
 
 The `MGET` command can raise errors in the following scenarios:
 

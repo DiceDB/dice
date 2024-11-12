@@ -42,7 +42,7 @@ When the `OBJECT` command is executed, DiceDB inspects the specified key and ret
 - `IDLETIME`: This subcommand provides the time in seconds since the key was last accessed. It is useful for identifying stale keys.
 - `FREQ`: This subcommand returns the access frequency of the key, which is useful when using the LFU eviction policy.
 
-## Error Handling
+## Errors
 
 The `OBJECT` command can raise errors in the following scenarios:
 
