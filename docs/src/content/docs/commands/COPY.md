@@ -36,7 +36,7 @@ When the `COPY` command is executed, DiceDB will:
 4. Copy the value from the source key to the destination key.
 5. Return `1` if the copy operation was successful.
 
-## Error Handling
+## Errors
 
 The `COPY` command can raise the following errors:
 

@@ -14,6 +14,10 @@ func TestINCRBYFLOAT(t *testing.T) {
 	invalidIncrTypeMessage := "ERR value is not a valid float"
 	valueOutOfRangeMessage := "ERR value is out of range"
 
+	defer func() {
+		exec.FireCommandAndReadResponse(conn, "DEL foo")
+	}()
+
 	testCases := []struct {
 		name   string
 		cmds   []string

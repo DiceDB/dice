@@ -10,4 +10,7 @@ const (
 	Replace  string = "REPLACE"
 	Smembers string = "SMEMBERS"
 	JSONGet  string = "JSON.GET"
+	PFADD    string = "PFADD"
+	PFCOUNT  string = "PFCOUNT"
+	PFMERGE  string = "PFMERGE"
 )

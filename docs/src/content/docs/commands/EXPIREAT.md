@@ -76,7 +76,7 @@ Trying to set an expiration time for a non-existing key.
 (integer) 0
 ```
 
-### Setting an EXPIRYTIME only if not exists
+### Setting an EXPIRYTIME with NX option
 
 Here, the `NX` option is used to set the expiration time only if the key does not already have an expiration time.
 
@@ -89,7 +89,7 @@ OK
 (integer) 0
 ```
 
-### Setting an EXPIRYTIME only if it already has one
+### Setting an EXPIRYTIME with XX option
 
 Here, the `XX` option is used to set the expiration time only if the key already has an expiration time.
 
@@ -104,7 +104,7 @@ OK
 (integer) 1
 ```
 
-### Setting an EXPIRYTIME only if the new expiry time is greater than or equal to the current one
+### Setting an EXPIRYTIME with GT option
 
 The `GT` option is used to set the expiration time only if the new expiration time is greater than or equal to the current one.
 
@@ -119,7 +119,7 @@ OK
 (integer) 1
 ```
 
-### Setting an EXPIRYTIME only if the new expiry time is less than or equal to the current one
+### Setting an EXPIRYTIME with LT option
 
 Similar to the `GT` option, the `LT` option is used to set the expiration time only if the new expiration time is less than (or equal to) the current one.
 
@@ -140,7 +140,7 @@ OK
 - Consider using `PERSIST` command to remove expiration if needed
 - Choose appropriate conditional flags (NX, XX, GT, LT) based on your use case
 - Ensure Unix timestamps are in seconds, not milliseconds
-- Be aware of the timestamp limit of [9223372036854775](https://github.com/DiceDB/dice/blob/b74dc8ffd5e518eaa9b82020d2b25a592c6472d4/internal/eval/eval.go#L69)
+- Be aware of the timestamp limit of [9223372036854775]
 
 ## Alternatives
 

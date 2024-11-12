@@ -93,7 +93,13 @@ func TestEval(t *testing.T) {
 	testEvalJSONOBJLEN(t, store)
 	testEvalHLEN(t, store)
 	testEvalSELECT(t, store)
+	testEvalLPUSH(t, store)
+	testEvalRPUSH(t, store)
+	testEvalLPOP(t, store)
+	testEvalRPOP(t, store)
 	testEvalLLEN(t, store)
+	testEvalLINSERT(t, store)
+	testEvalLRANGE(t, store)
 	testEvalGETDEL(t, store)
 	testEvalGETEX(t, store)
 	testEvalDUMP(t, store)
@@ -140,9 +146,6 @@ func TestEval(t *testing.T) {
 	testEvalBFINFO(t, store)
 	testEvalBFEXISTS(t, store)
 	testEvalBFADD(t, store)
-	testEvalLINSERT(t, store)
-	testEvalLRANGE(t, store)
-	testEvalLPOP(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -1598,7 +1601,8 @@ func BenchmarkEvalJSONOBJLEN(b *testing.B) {
 
 func testEvalJSONDEL(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
-		"nil value": {
+		"JSON.DEL : nil value": {
+			name:  "JSON.DEL : nil value",
 			setup: func() {},
 			input: nil,
 			migratedOutput: EvalResponse{
@@ -1606,7 +1610,8 @@ func testEvalJSONDEL(t *testing.T, store *dstore.Store) {
 				Error:  diceerrors.ErrWrongArgumentCount("JSON.DEL"),
 			},
 		},
-		"key does not exist": {
+		"JSON.DEL : key does not exist": {
+			name:  "JSON.DEL : key does not exist",
 			setup: func() {},
 			input: []string{"NONEXISTENT_KEY"},
 			migratedOutput: EvalResponse{
@@ -1614,7 +1619,8 @@ func testEvalJSONDEL(t *testing.T, store *dstore.Store) {
 				Error:  nil,
 			},
 		},
-		"root path del": {
+		"JSON.DEL : root path del": {
+			name: "JSON.DEL : root path del",
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "{\"age\":13,\"high\":1.60,\"pet\":null,\"language\":[\"python\",\"golang\"], " +
@@ -1630,7 +1636,8 @@ func testEvalJSONDEL(t *testing.T, store *dstore.Store) {
 				Error:  nil,
 			},
 		},
-		"part path del": {
+		"JSON.DEL : partial path del": {
+			name: "JSON.DEL : partial path del",
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "{\"age\":13,\"high\":1.60,\"pet\":null,\"language\":[\"python\",\"golang\"], " +
@@ -1647,7 +1654,8 @@ func testEvalJSONDEL(t *testing.T, store *dstore.Store) {
 				Error:  nil,
 			},
 		},
-		"wildcard path del": {
+		"JSON.DEL : wildcard path del": {
+			name: "JSON.DEL : wildcard path del",
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "{\"age\":13,\"high\":1.60,\"pet\":null,\"language\":[\"python\",\"golang\"], " +
@@ -1670,7 +1678,8 @@ func testEvalJSONDEL(t *testing.T, store *dstore.Store) {
 
 func testEvalJSONFORGET(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
-		"nil value": {
+		"JSON.FORGET : nil value": {
+			name:  "JSON.FORGET : nil value",
 			setup: func() {},
 			input: nil,
 			migratedOutput: EvalResponse{
@@ -1678,7 +1687,8 @@ func testEvalJSONFORGET(t *testing.T, store *dstore.Store) {
 				Error:  diceerrors.ErrWrongArgumentCount("JSON.FORGET"),
 			},
 		},
-		"key does not exist": {
+		"JSON.FORGET : key does not exist": {
+			name:  "JSON.FORGET : key does not exist",
 			setup: func() {},
 			input: []string{"NONEXISTENT_KEY"},
 			migratedOutput: EvalResponse{
@@ -1686,7 +1696,8 @@ func testEvalJSONFORGET(t *testing.T, store *dstore.Store) {
 				Error:  nil,
 			},
 		},
-		"root path forget": {
+		"JSON.FORGET : root path forget": {
+			name: "JSON.FORGET : root path forget",
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "{\"age\":13,\"high\":1.60,\"pet\":null,\"language\":[\"python\",\"golang\"], " +
@@ -1702,7 +1713,8 @@ func testEvalJSONFORGET(t *testing.T, store *dstore.Store) {
 				Error:  nil,
 			},
 		},
-		"part path forget": {
+		"JSON.FORGET : partial path forget": {
+			name: "JSON.FORGET : partial path forget",
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "{\"age\":13,\"high\":1.60,\"pet\":null,\"language\":[\"python\",\"golang\"], " +
@@ -1719,7 +1731,8 @@ func testEvalJSONFORGET(t *testing.T, store *dstore.Store) {
 				Error:  nil,
 			},
 		},
-		"wildcard path forget": {
+		"JSON.FORGET : wildcard path forget": {
+			name: "JSON.FORGET : wildcard path forget",
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "{\"age\":13,\"high\":1.60,\"pet\":null,\"language\":[\"python\",\"golang\"], " +
@@ -1911,118 +1924,6 @@ func testEvalJSONCLEAR(t *testing.T, store *dstore.Store) {
 			}
 		})
 	}
-}
-func testEvalJSONTOGGLE(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"nil value": {
-			setup: func() {},
-			input: nil,
-			migratedOutput: EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrWrongArgumentCount("JSON.TOGGLE"),
-			},
-		},
-		"empty array": {
-			setup: func() {},
-			input: []string{},
-			migratedOutput: EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrWrongArgumentCount("JSON.TOGGLE"),
-			},
-		},
-		"key does not exist": {
-			setup: func() {},
-			input: []string{"NONEXISTENT_KEY", ".active"},
-			migratedOutput: EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrGeneral("could not perform this operation on a key that doesn't exist"),
-			},
-		},
-		"key exists, toggling boolean true to false": {
-			setup: func() {
-				key := "EXISTING_KEY"
-				value := `{"active":true}`
-				var rootData interface{}
-				err := sonic.Unmarshal([]byte(value), &rootData)
-				if err != nil {
-					fmt.Printf("Debug: Error unmarshaling JSON: %v\n", err)
-				}
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-				store.Put(key, obj)
-			},
-			input: []string{"EXISTING_KEY", ".active"},
-			migratedOutput: EvalResponse{
-				Result: []interface{}{0},
-				Error:  nil,
-			},
-		},
-		"key exists, toggling boolean false to true": {
-			setup: func() {
-				key := "EXISTING_KEY"
-				value := `{"active":false}`
-				var rootData interface{}
-				err := sonic.Unmarshal([]byte(value), &rootData)
-				if err != nil {
-					fmt.Printf("Debug: Error unmarshaling JSON: %v\n", err)
-				}
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-				store.Put(key, obj)
-			},
-			input: []string{"EXISTING_KEY", ".active"},
-			migratedOutput: EvalResponse{
-				Result: []interface{}{1},
-				Error:  nil,
-			},
-		},
-		"key exists but expired": {
-			setup: func() {
-				key := "EXISTING_KEY"
-				value := "{\"active\":true}"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
-				store.Put(key, obj)
-				store.SetExpiry(obj, int64(-2*time.Millisecond))
-			},
-			input: []string{"EXISTING_KEY", ".active"},
-			migratedOutput: EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrGeneral("could not perform this operation on a key that doesn't exist"),
-			},
-		},
-		"nested JSON structure with multiple booleans": {
-			setup: func() {
-				key := "NESTED_KEY"
-				value := `{"isSimple":true,"nested":{"isSimple":false}}`
-				var rootData interface{}
-				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-				store.Put(key, obj)
-			},
-			input: []string{"NESTED_KEY", "$..isSimple"},
-			migratedOutput: EvalResponse{
-				Result: []interface{}{0, 1},
-				Error:  nil,
-			},
-		},
-		"deeply nested JSON structure with multiple matching fields": {
-			setup: func() {
-				key := "DEEP_NESTED_KEY"
-				value := `{"field": true, "nested": {"field": false, "nested": {"field": true}}}`
-				var rootData interface{}
-				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-				store.Put(key, obj)
-			},
-			input: []string{"DEEP_NESTED_KEY", "$..field"},
-			migratedOutput: EvalResponse{
-				Result: []interface{}{0, 1, 0},
-				Error:  nil,
-			},
-		},
-	}
-	runMigratedEvalTests(t, tests, evalJSONTOGGLE, store)
 }
 
 func testEvalJSONTYPE(t *testing.T, store *dstore.Store) {
@@ -2296,141 +2197,10 @@ func testEvalJSONSET(t *testing.T, store *dstore.Store) {
 	runMigratedEvalTests(t, tests, evalJSONSET, store)
 }
 
-func testEvalJSONNUMINCRBY(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"incr on numeric field": {
-			setup: func() {
-				key := "number"
-				value := "{\"a\": 2}"
-				var rootData interface{}
-				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-				store.Put(key, obj)
-			},
-			input: []string{"number", "$.a", "3"},
-			migratedOutput: EvalResponse{
-				Result: "[5]",
-				Error:  nil,
-			},
-		},
-
-		"incr on float field": {
-			setup: func() {
-				key := "number"
-				value := "{\"a\": 2.5}"
-				var rootData interface{}
-				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-				store.Put(key, obj)
-			},
-			input: []string{"number", "$.a", "1.5"},
-			migratedOutput: EvalResponse{
-				Result: "[4.0]",
-				Error:  nil,
-			},
-		},
-
-		"incr on multiple fields": {
-			setup: func() {
-				key := "number"
-				value := "{\"a\": 2, \"b\": 10, \"c\": [15, {\"d\": 20}]}"
-				var rootData interface{}
-				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-				store.Put(key, obj)
-			},
-			input: []string{"number", "$..*", "5"},
-			migratedOutput: EvalResponse{
-				Result: "[25,20,null,7,15,null]",
-				Error:  nil,
-			},
-			newValidator: func(output interface{}) {
-				outPutString := output.(string)
-				startIndex := strings.Index(outPutString, "[")
-				endIndex := strings.Index(outPutString, "]")
-				arrayString := outPutString[startIndex+1 : endIndex]
-				arr := strings.Split(arrayString, ",")
-				assert.ElementsMatch(t, arr, []string{"25", "20", "7", "15", "null", "null"})
-			},
-		},
-
-		"incr on array element": {
-			setup: func() {
-				key := "number"
-				value := "{\"a\": [1, 2, 3]}"
-				var rootData interface{}
-				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-				store.Put(key, obj)
-			},
-			input: []string{"number", "$.a[1]", "5"},
-			migratedOutput: EvalResponse{
-				Result: "[7]",
-				Error:  nil,
-			},
-		},
-		"incr on non-existent field": {
-			setup: func() {
-				key := "number"
-				value := "{\"a\": 2}"
-				var rootData interface{}
-				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-				store.Put(key, obj)
-			},
-			input: []string{"number", "$.b", "3"},
-			migratedOutput: EvalResponse{
-				Result: "[]",
-				Error:  nil,
-			},
-		},
-		"incr with mixed fields": {
-			setup: func() {
-				key := "number"
-				value := "{\"a\": 5, \"b\": \"not a number\", \"c\": [1, 2]}"
-				var rootData interface{}
-				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-				store.Put(key, obj)
-			},
-			input: []string{"number", "$..*", "2"},
-			migratedOutput: EvalResponse{
-				Result: "[3,4,null,7,null]",
-				Error:  nil,
-			},
-			newValidator: func(output interface{}) {
-				outPutString := output.(string)
-				startIndex := strings.Index(outPutString, "[")
-				endIndex := strings.Index(outPutString, "]")
-				arrayString := outPutString[startIndex+1 : endIndex]
-				arr := strings.Split(arrayString, ",")
-				assert.ElementsMatch(t, arr, []string{"3", "4", "7", "null", "null"})
-			},
-		},
-
-		"incr on nested fields": {
-			setup: func() {
-				key := "number"
-				value := "{\"a\": {\"b\": {\"c\": 10}}}"
-				var rootData interface{}
-				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
-				store.Put(key, obj)
-			},
-			input: []string{"number", "$..c", "5"},
-			migratedOutput: EvalResponse{
-				Result: "[15]",
-				Error:  nil,
-			},
-		},
-	}
-
-	runMigratedEvalTests(t, tests, evalJSONNUMINCRBY, store)
-}
-
 func testEvalJSONNUMMULTBY(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
-		"nil value": {
+		"JSON.NUMMULTBY : nil value": {
+			name:  "JSON.NUMMULTBY : nil value",
 			setup: func() {},
 			input: nil,
 			migratedOutput: EvalResponse{
@@ -2438,7 +2208,8 @@ func testEvalJSONNUMMULTBY(t *testing.T, store *dstore.Store) {
 				Error:  diceerrors.ErrWrongArgumentCount("JSON.NUMMULTBY"),
 			},
 		},
-		"empty array": {
+		"JSON.NUMMULTBY : empty array": {
+			name:  "JSON.NUMMULTBY : empty array",
 			setup: func() {},
 			input: []string{},
 			migratedOutput: EvalResponse{
@@ -2446,7 +2217,8 @@ func testEvalJSONNUMMULTBY(t *testing.T, store *dstore.Store) {
 				Error:  diceerrors.ErrWrongArgumentCount("JSON.NUMMULTBY"),
 			},
 		},
-		"insufficient args": {
+		"JSON.NUMMULTBY : insufficient args": {
+			name:  "JSON.NUMMULTBY : insufficient args",
 			setup: func() {},
 			input: []string{"doc"},
 			migratedOutput: EvalResponse{
@@ -2454,7 +2226,8 @@ func testEvalJSONNUMMULTBY(t *testing.T, store *dstore.Store) {
 				Error:  diceerrors.ErrWrongArgumentCount("JSON.NUMMULTBY"),
 			},
 		},
-		"non-numeric multiplier on existing key": {
+		"JSON.NUMMULTBY : non-numeric multiplier on existing key": {
+			name: "JSON.NUMMULTBY : non-numeric multiplier on existing key",
 			setup: func() {
 				key := "doc"
 				value := "{\"a\":10,\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
@@ -2469,7 +2242,8 @@ func testEvalJSONNUMMULTBY(t *testing.T, store *dstore.Store) {
 				Error:  diceerrors.ErrGeneral("expected value at line 1 column 1"),
 			},
 		},
-		"nummultby on non integer root fields": {
+		"JSON.NUMMULTBY : nummultby on non integer root fields": {
+			name: "JSON.NUMMULTBY : nummultby on non integer root fields",
 			setup: func() {
 				key := "doc"
 				value := "{\"a\": \"b\",\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
@@ -2484,7 +2258,8 @@ func testEvalJSONNUMMULTBY(t *testing.T, store *dstore.Store) {
 				Error:  nil,
 			},
 		},
-		"nummultby on recursive fields": {
+		"JSON.NUMMULTBY : nummultby on recursive fields": {
+			name: "JSON.NUMMULTBY : nummultby on recursive fields",
 			setup: func() {
 				key := "doc"
 				value := "{\"a\": \"b\",\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
@@ -2499,7 +2274,8 @@ func testEvalJSONNUMMULTBY(t *testing.T, store *dstore.Store) {
 				Error:  nil,
 			},
 		},
-		"nummultby on integer root fields": {
+		"JSON.NUMMULTBY : nummultby on integer root fields": {
+			name: "JSON.NUMMULTBY : nummultby on integer root fields",
 			setup: func() {
 				key := "doc"
 				value := "{\"a\":10,\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
@@ -2514,7 +2290,8 @@ func testEvalJSONNUMMULTBY(t *testing.T, store *dstore.Store) {
 				Error:  nil,
 			},
 		},
-		"nummultby on non-existent key": {
+		"JSON.NUMMULTBY : nummultby on non-existent key": {
+			name: "JSON.NUMMULTBY : nummultby on non-existent key",
 			setup: func() {
 				key := "doc"
 				value := "{\"a\":10,\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
@@ -2703,6 +2480,127 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 			}
 		})
 	}
+}
+
+func testEvalJSONTOGGLE(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"JSON.TOGGLE : nil value": {
+			name:  "JSON.TOGGLE : nil value",
+			setup: func() {},
+			input: nil,
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("JSON.TOGGLE"),
+			},
+		},
+		"JSON.TOGGLE : no arguments supplied": {
+			name:  "JSON.TOGGLE : no arguments supplied",
+			setup: func() {},
+			input: []string{},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("JSON.TOGGLE"),
+			},
+		},
+		"JSON.TOGGLE : key does not exist": {
+			name:  "JSON.TOGGLE : key does not exist",
+			setup: func() {},
+			input: []string{"NONEXISTENT_KEY", ".active"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrKeyDoesNotExist,
+			},
+		},
+		"JSON.TOGGLE : key exists, toggling boolean true to false": {
+			name: "JSON.TOGGLE : key exists, toggling boolean true to false",
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := `{"active":true}`
+				var rootData interface{}
+				err := sonic.Unmarshal([]byte(value), &rootData)
+				if err != nil {
+					fmt.Printf("Debug: Error unmarshaling JSON: %v\n", err)
+				}
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input: []string{"EXISTING_KEY", ".active"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{0},
+				Error:  nil,
+			},
+		},
+		"JSON.TOGGLE : key exists, toggling boolean false to true": {
+			name: "JSON.TOGGLE : key exists, toggling boolean false to true",
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := `{"active":false}`
+				var rootData interface{}
+				err := sonic.Unmarshal([]byte(value), &rootData)
+				if err != nil {
+					fmt.Printf("Debug: Error unmarshaling JSON: %v\n", err)
+				}
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input: []string{"EXISTING_KEY", ".active"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{1},
+				Error:  nil,
+			},
+		},
+		"JSON.TOGGLE : key exists but expired": {
+			name: "JSON.TOGGLE : key exists but expired",
+			setup: func() {
+				key := "EXISTING_KEY"
+				value := "{\"active\":true}"
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+				store.SetExpiry(obj, int64(-2*time.Millisecond))
+			},
+			input: []string{"EXISTING_KEY", ".active"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrKeyDoesNotExist,
+			},
+		},
+		"JSON.TOGGLE : nested JSON structure with multiple booleans": {
+			name: "JSON.TOGGLE : nested JSON structure with multiple booleans",
+			setup: func() {
+				key := "NESTED_KEY"
+				value := `{"isSimple":true,"nested":{"isSimple":false}}`
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input: []string{"NESTED_KEY", "$..isSimple"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{0, 1},
+				Error:  nil,
+			},
+		},
+		"JSON.TOGGLE : deeply nested JSON structure with multiple matching fields": {
+			name: "JSON.TOGGLE : deeply nested JSON structure with multiple matching fields",
+			setup: func() {
+				key := "DEEP_NESTED_KEY"
+				value := `{"field": true, "nested": {"field": false, "nested": {"field": true}}}`
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input: []string{"DEEP_NESTED_KEY", "$..field"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{0, 1, 0},
+				Error:  nil,
+			},
+		},
+	}
+	runMigratedEvalTests(t, tests, evalJSONTOGGLE, store)
 }
 
 func testEvalPTTL(t *testing.T, store *dstore.Store) {
@@ -4004,92 +3902,400 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 	}
 }
 
-func testEvalLLEN(t *testing.T, store *dstore.Store) {
+func testEvalLPUSH(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'llen' command\r\n"),
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'lpush' command")},
 		},
 		"empty args": {
-			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'llen' command\r\n"),
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'lpush' command")},
 		},
 		"wrong number of args": {
-			input:  []string{"KEY1", "KEY2"},
-			output: []byte("-ERR wrong number of arguments for 'llen' command\r\n"),
-		},
-		"key does not exist": {
-			input:  []string{"NONEXISTENT_KEY"},
-			output: clientio.RespZero,
-		},
-		"key exists": {
-			setup: func() {
-				evalLPUSH([]string{"EXISTING_KEY", "mock_value"}, store)
-			},
-			input:  []string{"EXISTING_KEY"},
-			output: clientio.RespOne,
+			input:          []string{"KEY1"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'lpush' command")},
 		},
 		"key with different type": {
 			setup: func() {
 				evalSET([]string{"EXISTING_KEY", "mock_value"}, store)
 			},
-			input:  []string{"EXISTING_KEY"},
-			output: []byte("-ERR Existing key has wrong Dice type\r\n"),
+			input:          []string{"EXISTING_KEY", "value_1"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+		},
+		"key does not exist": {
+			input:          []string{"NONEXISTENT_KEY", "value_1"},
+			migratedOutput: EvalResponse{Result: int64(1), Error: nil},
+		},
+		"key exists": {
+			setup: func() {
+				evalLPUSH([]string{"EXISTING_KEY", "mock_value"}, store)
+			},
+			input:          []string{"EXISTING_KEY", "value_1", "value_2"},
+			migratedOutput: EvalResponse{Result: int64(3), Error: nil},
 		},
 	}
-
-	runEvalTests(t, tests, evalLLEN, store)
+	runMigratedEvalTests(t, tests, evalLPUSH, store)
 }
-
+func testEvalRPUSH(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'rpush' command")},
+		},
+		"empty args": {
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'rpush' command")},
+		},
+		"wrong number of args": {
+			input:          []string{"KEY1"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'rpush' command")},
+		},
+		"key with different type": {
+			setup: func() {
+				evalSET([]string{"EXISTING_KEY", "mock_value"}, store)
+			},
+			input:          []string{"EXISTING_KEY", "value_1"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+		},
+		"key does not exist": {
+			input:          []string{"NONEXISTENT_KEY", "value_1"},
+			migratedOutput: EvalResponse{Result: int64(1), Error: nil},
+		},
+		"key exists": {
+			setup: func() {
+				evalLPUSH([]string{"EXISTING_KEY", "mock_value"}, store)
+			},
+			input:          []string{"EXISTING_KEY", "value_1", "value_2"},
+			migratedOutput: EvalResponse{Result: int64(3), Error: nil},
+		},
+	}
+	runMigratedEvalTests(t, tests, evalRPUSH, store)
+}
 func testEvalLPOP(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
+		"nil value": {
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'lpop' command")},
+		},
 		"empty args": {
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'lpop' command\r\n"),
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'lpop' command")},
 		},
 		"more than 2 args": {
-			input:  []string{"k", "2", "3"},
-			output: []byte("-ERR wrong number of arguments for 'lpop' command\r\n"),
+			input:          []string{"k", "2", "3"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'lpop' command")},
+		},
+		"non-integer count": {
+			input:          []string{"k", "abc"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or a float")},
+		},
+		"negative count": {
+			input:          []string{"k", "-1"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")},
+		},
+		"key with different type": {
+			setup: func() {
+				evalSET([]string{"EXISTING_KEY", "mock_value"}, store)
+			},
+			input:          []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+		},
+		"key does not exist": {
+			input:          []string{"NONEXISTENT_KEY"},
+			migratedOutput: EvalResponse{Result: clientio.NIL, Error: nil},
+		},
+		"key exists with 1 value": {
+			setup: func() {
+				evalLPUSH([]string{"EXISTING_KEY", "mock_value"}, store)
+			},
+			input:          []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{Result: "mock_value", Error: nil},
+		},
+		"key exists with multiple values": {
+			setup: func() {
+				evalLPUSH([]string{"EXISTING_KEY", "value_1", "value_2"}, store)
+				evalRPUSH([]string{"EXISTING_KEY", "value_3", "value_4"}, store)
+			},
+			input:          []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{Result: "value_2", Error: nil},
 		},
 		"pop one element": {
 			setup: func() {
 				evalRPUSH([]string{"k", "v1", "v2", "v3", "v4"}, store)
 			},
-			input:  []string{"k"},
-			output: []byte("$2\r\nv1\r\n"),
+			input:          []string{"k"},
+			migratedOutput: EvalResponse{Result: "v1", Error: nil},
 		},
 		"pop two elements": {
 			setup: func() {
 				evalRPUSH([]string{"k", "v1", "v2", "v3", "v4"}, store)
 			},
-			input:  []string{"k", "2"},
-			output: []byte("*2\r\n$2\r\nv1\r\n$2\r\nv2\r\n")},
+			input:          []string{"k", "2"},
+			migratedOutput: EvalResponse{Result: []string{"v1", "v2"}, Error: nil},
+		},
 		"pop more elements than available": {
 			setup: func() {
 				evalRPUSH([]string{"k", "v1", "v2"}, store)
 			},
-			input:  []string{"k", "5"},
-			output: []byte("*2\r\n$2\r\nv1\r\n$2\r\nv2\r\n")},
+			input:          []string{"k", "5"},
+			migratedOutput: EvalResponse{Result: []string{"v1", "v2"}, Error: nil},
+		},
 		"pop 0 elements": {
 			setup: func() {
 				evalRPUSH([]string{"k", "v1", "v2"}, store)
 			},
-			input:  []string{"k", "0"},
-			output: []byte("*0\r\n")},
-		"negative count": {
-			input:  []string{"k", "-1"},
-			output: []byte("-ERR value is out of range\r\n"),
-		},
-		"non-integer count": {
-			input:  []string{"k", "abc"},
-			output: []byte("-ERR value is not an integer or out of range\r\n"),
-		},
-		"key does not exist": {
-			input:  []string{"nonexistent_key"},
-			output: []byte("$-1\r\n"),
+			input:          []string{"k", "0"},
+			migratedOutput: EvalResponse{Result: clientio.NIL, Error: nil},
 		},
 	}
-	runEvalTests(t, tests, evalLPOP, store)
+	runMigratedEvalTests(t, tests, evalLPOP, store)
+}
+
+func testEvalRPOP(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'rpop' command")},
+		},
+		"empty args": {
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'rpop' command")},
+		},
+		"wrong number of args": {
+			input:          []string{"KEY1", "KEY2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'rpop' command")},
+		},
+		"key with different type": {
+			setup: func() {
+				evalSET([]string{"EXISTING_KEY", "mock_value"}, store)
+			},
+			input:          []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+		},
+		"key does not exist": {
+			input:          []string{"NONEXISTENT_KEY"},
+			migratedOutput: EvalResponse{Result: clientio.NIL, Error: nil},
+		},
+		"key exists with 1 value": {
+			setup: func() {
+				evalLPUSH([]string{"EXISTING_KEY", "mock_value"}, store)
+			},
+			input:          []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{Result: "mock_value", Error: nil},
+		},
+		"key exists with multiple values": {
+			setup: func() {
+				evalLPUSH([]string{"EXISTING_KEY", "value_1", "value_2"}, store)
+				evalRPUSH([]string{"EXISTING_KEY", "value_3", "value_4"}, store)
+			},
+			input:          []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{Result: "value_4", Error: nil},
+		},
+	}
+	runMigratedEvalTests(t, tests, evalRPOP, store)
+}
+
+func testEvalLLEN(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'llen' command")},
+		},
+		"empty args": {
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'llen' command")},
+		},
+		"wrong number of args": {
+			input:          []string{"KEY1", "KEY2"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'llen' command")},
+		},
+		"key does not exist": {
+			input:          []string{"NONEXISTENT_KEY"},
+			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
+		},
+		"key exists": {
+			setup: func() {
+				evalLPUSH([]string{"EXISTING_KEY", "mock_value"}, store)
+			},
+			input:          []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{Result: int64(1), Error: nil},
+		},
+		"key with different type": {
+			setup: func() {
+				evalSET([]string{"EXISTING_KEY", "mock_value"}, store)
+			},
+			input:          []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+		},
+	}
+
+	runMigratedEvalTests(t, tests, evalLLEN, store)
+}
+
+func testEvalJSONNUMINCRBY(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"JSON.NUMINCRBY : incr on numeric field": {
+			name: "JSON.NUMINCRBY : incr on numeric field",
+			setup: func() {
+				key := "number"
+				value := "{\"a\": 2}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input: []string{"number", "$.a", "3"},
+			migratedOutput: EvalResponse{
+				Result: "[5]",
+				Error:  nil,
+			},
+		},
+
+		"JSON.NUMINCRBY : incr on float field": {
+			name: "JSON.NUMINCRBY : incr on float field",
+			setup: func() {
+				key := "number"
+				value := "{\"a\": 2.5}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input: []string{"number", "$.a", "1.5"},
+			migratedOutput: EvalResponse{
+				Result: "[4.0]",
+				Error:  nil,
+			},
+		},
+
+		"JSON.NUMINCRBY : incr on multiple fields": {
+			name: "JSON.NUMINCRBY : incr on multiple fields",
+			setup: func() {
+				key := "number"
+				value := "{\"a\": 2, \"b\": 10, \"c\": [15, {\"d\": 20}]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input: []string{"number", "$..*", "5"},
+			migratedOutput: EvalResponse{
+				Result: "[25,20,null,7,15,null]",
+				Error:  nil,
+			},
+			newValidator: func(output interface{}) {
+				outPutString, ok := output.(string)
+				if !ok {
+					t.Errorf("expected output to be of type string, got %T", output)
+					return
+				}
+
+				startIndex := strings.Index(outPutString, "[")
+				endIndex := strings.Index(outPutString, "]")
+				arrayString := outPutString[startIndex+1 : endIndex]
+				arr := strings.Split(arrayString, ",")
+				assert.ElementsMatch(t, arr, []string{"25", "20", "7", "15", "null", "null"})
+			},
+		},
+
+		"JSON.NUMINCRBY : incr on array element": {
+			name: "JSON.NUMINCRBY : incr on array element",
+			setup: func() {
+				key := "number"
+				value := "{\"a\": [1, 2, 3]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input: []string{"number", "$.a[1]", "5"},
+			migratedOutput: EvalResponse{
+				Result: "[7]",
+				Error:  nil,
+			},
+		},
+		"JSON.NUMINCRBY : incr on non-existent field": {
+			name: "JSON.NUMINCRBY : incr on non-existent field",
+			setup: func() {
+				key := "number"
+				value := "{\"a\": 2}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input: []string{"number", "$.b", "3"},
+			migratedOutput: EvalResponse{
+				Result: "[]",
+				Error:  nil,
+			},
+		},
+		"JSON.NUMINCRBY : incr with mixed fields": {
+			name: "JSON.NUMINCRBY : incr with mixed fields",
+			setup: func() {
+				key := "number"
+				value := "{\"a\": 5, \"b\": \"not a number\", \"c\": [1, 2]}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input: []string{"number", "$..*", "2"},
+			migratedOutput: EvalResponse{
+				Result: "[3,4,7,null,null]",
+				Error:  nil,
+			},
+			newValidator: func(output interface{}) {
+				// Ensure that the output is a string before proceeding
+				outPutString, ok := output.(string)
+				if !ok {
+					t.Errorf("expected output to be of type string, got %T", output)
+					return
+				}
+
+				// Find the positions of the first "[" and the last "]"
+				startIndex := strings.Index(outPutString, "[")
+				endIndex := strings.LastIndex(outPutString, "]")
+
+				// Check if both brackets are found
+				if startIndex == -1 || endIndex == -1 || startIndex >= endIndex {
+					t.Errorf("invalid array format in output string: %s", outPutString)
+					return
+				}
+
+				// Extract the array substring between the brackets
+				arrayString := outPutString[startIndex+1 : endIndex]
+
+				// Split the array string by commas and trim spaces around elements
+				arr := strings.Split(arrayString, ",")
+				for i := range arr {
+					arr[i] = strings.TrimSpace(arr[i])
+				}
+
+				// Validate that the array contains the expected elements
+				assert.ElementsMatch(t, arr, []string{"3", "4", "7", "null", "null"})
+			},
+		},
+
+		"JSON.NUMINCRBY : incr on nested fields": {
+			name: "JSON.NUMINCRBY : incr on nested fields",
+			setup: func() {
+				key := "number"
+				value := "{\"a\": {\"b\": {\"c\": 10}}}"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(value), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				store.Put(key, obj)
+			},
+			input: []string{"number", "$..c", "5"},
+			migratedOutput: EvalResponse{
+				Result: "[15]",
+				Error:  nil,
+			},
+		},
+	}
+	runMigratedEvalTests(t, tests, evalJSONNUMINCRBY, store)
 }
 
 func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]string, *dstore.Store) []byte, store *dstore.Store) {
@@ -5702,6 +5908,30 @@ func testEvalGETRANGE(t *testing.T, store *dstore.Store) {
 				Result: "",
 				Error:  nil,
 			},
+		},
+		"GETRANGE against byte array with valid range: 0 4": {
+			setup: func() {
+				key := "BYTEARRAY_KEY"
+				store.Put(key, store.NewObj(&ByteArray{data: []byte{0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+			},
+			input:          []string{"BYTEARRAY_KEY", "0", "4"},
+			migratedOutput: EvalResponse{Result: "hello", Error: nil},
+		},
+		"GETRANGE against byte array with valid range: 6 -1": {
+			setup: func() {
+				key := "BYTEARRAY_KEY"
+				store.Put(key, store.NewObj(&ByteArray{data: []byte{0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+			},
+			input:          []string{"BYTEARRAY_KEY", "6", "-1"},
+			migratedOutput: EvalResponse{Result: "world", Error: nil},
+		},
+		"GETRANGE against byte array with invalid range: 20 30": {
+			setup: func() {
+				key := "BYTEARRAY_KEY"
+				store.Put(key, store.NewObj(&ByteArray{data: []byte{0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+			},
+			input:          []string{"BYTEARRAY_KEY", "20", "30"},
+			migratedOutput: EvalResponse{Result: "", Error: nil},
 		},
 	}
 

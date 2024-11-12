@@ -133,7 +133,7 @@ func TestExecuteQueryNoMatch(t *testing.T) {
 	result, err := sql.ExecuteQuery(&query, store.GetStore())
 
 	assert.Nil(t, err)
-		assert.Equal(t, len(result), 0) // No keys match "x*"
+	assert.Equal(t, len(result), 0) // No keys match "x*"
 }
 
 func TestExecuteQueryWithWhere(t *testing.T) {

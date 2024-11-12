@@ -45,6 +45,12 @@ func TestAppend(t *testing.T) {
 			expected:   []interface{}{float64(4)},
 			cleanupKey: "key1",
 		},
+		{
+			name:       "APPEND to key created using ZADD",
+			commands:   []string{"ZADD key 1 one", "APPEND key two"},
+			expected:   []interface{}{float64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			cleanupKey: "key",
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

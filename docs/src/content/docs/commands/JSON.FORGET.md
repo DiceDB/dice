@@ -76,7 +76,7 @@ Deleting the second element (`"swimming"`) from the `hobbies` array in the JSON 
 (integer) 1
 ```
 
-#### The updated document:
+updated document:
 
 ```json
 {

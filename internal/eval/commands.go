@@ -880,28 +880,32 @@ var (
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	lpushCmdMeta = DiceCmdMeta{
-		Name:  "LPUSH",
-		Info:  "LPUSH pushes values into the left side of the deque",
-		Eval:  evalLPUSH,
-		Arity: -3,
+		Name:       "LPUSH",
+		Info:       "LPUSH pushes values into the left side of the deque",
+		NewEval:    evalLPUSH,
+		IsMigrated: true,
+		Arity:      -3,
 	}
 	rpushCmdMeta = DiceCmdMeta{
-		Name:  "RPUSH",
-		Info:  "RPUSH pushes values into the right side of the deque",
-		Eval:  evalRPUSH,
-		Arity: -3,
+		Name:       "RPUSH",
+		Info:       "RPUSH pushes values into the right side of the deque",
+		NewEval:    evalRPUSH,
+		IsMigrated: true,
+		Arity:      -3,
 	}
 	lpopCmdMeta = DiceCmdMeta{
-		Name:  "LPOP",
-		Info:  "LPOP pops a value from the left side of the deque",
-		Eval:  evalLPOP,
-		Arity: 2,
+		Name:       "LPOP",
+		Info:       "LPOP pops a value from the left side of the deque",
+		NewEval:    evalLPOP,
+		IsMigrated: true,
+		Arity:      2,
 	}
 	rpopCmdMeta = DiceCmdMeta{
-		Name:  "RPOP",
-		Info:  "RPOP pops a value from the right side of the deque",
-		Eval:  evalRPOP,
-		Arity: 2,
+		Name:       "RPOP",
+		Info:       "RPOP pops a value from the right side of the deque",
+		NewEval:    evalRPOP,
+		IsMigrated: true,
+		Arity:      2,
 	}
 	llenCmdMeta = DiceCmdMeta{
 		Name: "LLEN",
@@ -909,8 +913,9 @@ var (
 		Returns the length of the list stored at key. If key does not exist,
 		it is interpreted as an empty list and 0 is returned.
 		An error is returned when the value stored at key is not a list.`,
-		Eval:  evalLLEN,
-		Arity: 1,
+		NewEval:    evalLLEN,
+		IsMigrated: true,
+		Arity:      1,
 	}
 	dbSizeCmdMeta = DiceCmdMeta{
 		Name:  "DBSIZE",

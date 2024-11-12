@@ -48,7 +48,7 @@ The `SLEEP` command can raise errors under the following conditions:
 
 ## Example Usage
 
-### Example 1: Basic Usage
+### Basic Usage
 
 Pause the client for 5 seconds.
 
@@ -57,7 +57,7 @@ Pause the client for 5 seconds.
 OK
 ```
 
-### Example 2: Error Handling - Missing Parameter
+### Error Handling - Missing Parameter
 
 Attempt to call `SLEEP` without specifying the `seconds` parameter.
 
@@ -66,7 +66,7 @@ Attempt to call `SLEEP` without specifying the `seconds` parameter.
 (error) ERR wrong number of arguments for 'sleep' command
 ```
 
-### Example 3: Error Handling - Invalid Parameter Type
+### Error Handling - Invalid Parameter Type
 
 Attempt to call `SLEEP` with a non-integer parameter.
 

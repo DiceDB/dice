@@ -529,60 +529,6 @@ func parseFloatInt(input string) (result interface{}, err error) {
 	return
 }
 
-// Returns the new value after incrementing or multiplying the existing value
-func incrMultValue(value any, multiplier interface{}, operation jsonOperation) (newVal interface{}, resultString string, isModified bool) {
-	switch utils.GetJSONFieldType(value) {
-	case utils.NumberType:
-		oldVal := value.(float64)
-		var newVal float64
-		if v, ok := multiplier.(float64); ok {
-			switch operation {
-			case IncrBy:
-				newVal = oldVal + v
-			case MultBy:
-				newVal = oldVal * v
-			}
-		} else {
-			v, _ := multiplier.(int64)
-			switch operation {
-			case IncrBy:
-				newVal = oldVal + float64(v)
-			case MultBy:
-				newVal = oldVal * float64(v)
-			}
-		}
-		resultString := strconv.FormatFloat(newVal, 'f', -1, 64)
-		return newVal, resultString, true
-	case utils.IntegerType:
-		if v, ok := multiplier.(float64); ok {
-			oldVal := float64(value.(int64))
-			var newVal float64
-			switch operation {
-			case IncrBy:
-				newVal = oldVal + v
-			case MultBy:
-				newVal = oldVal * v
-			}
-			resultString := strconv.FormatFloat(newVal, 'f', -1, 64)
-			return newVal, resultString, true
-		} else {
-			v, _ := multiplier.(int64)
-			oldVal := value.(int64)
-			var newVal int64
-			switch operation {
-			case IncrBy:
-				newVal = oldVal + v
-			case MultBy:
-				newVal = oldVal * v
-			}
-			resultString := strconv.FormatInt(newVal, 10)
-			return newVal, resultString, true
-		}
-	default:
-		return value, "null", false
-	}
-}
-
 // evalDEL deletes all the specified keys in args list
 // returns the count of total deleted keys after encoding
 func evalDEL(args []string, store *dstore.Store) []byte {
@@ -1342,195 +1288,6 @@ func evalTOUCH(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(count, false)
 }
 
-func evalLPUSH(args []string, store *dstore.Store) []byte {
-	if len(args) < 2 {
-		return diceerrors.NewErrArity("LPUSH")
-	}
-
-	obj := store.Get(args[0])
-	if obj == nil {
-		obj = store.NewObj(NewDeque(), -1, object.ObjTypeByteList, object.ObjEncodingDeque)
-	}
-
-	// if object is a set type, return error
-	if object.AssertType(obj.TypeEncoding, object.ObjTypeSet) == nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeByteList); err != nil {
-		return clientio.Encode(err, false)
-	}
-
-	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingDeque); err != nil {
-		return clientio.Encode(err, false)
-	}
-
-	store.Put(args[0], obj)
-	for i := 1; i < len(args); i++ {
-		obj.Value.(*Deque).LPush(args[i])
-	}
-
-	deq := obj.Value.(*Deque)
-
-	return clientio.Encode(deq.Length, false)
-}
-
-func evalRPUSH(args []string, store *dstore.Store) []byte {
-	if len(args) < 2 {
-		return diceerrors.NewErrArity("RPUSH")
-	}
-
-	obj := store.Get(args[0])
-	if obj == nil {
-		obj = store.NewObj(NewDeque(), -1, object.ObjTypeByteList, object.ObjEncodingDeque)
-	}
-
-	// if object is a set type, return error
-	if object.AssertType(obj.TypeEncoding, object.ObjTypeSet) == nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeByteList); err != nil {
-		return clientio.Encode(err, false)
-	}
-
-	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingDeque); err != nil {
-		return clientio.Encode(err, false)
-	}
-
-	store.Put(args[0], obj)
-	for i := 1; i < len(args); i++ {
-		obj.Value.(*Deque).RPush(args[i])
-	}
-
-	deq := obj.Value.(*Deque)
-
-	return clientio.Encode(deq.Length, false)
-}
-
-func evalRPOP(args []string, store *dstore.Store) []byte {
-	if len(args) != 1 {
-		return diceerrors.NewErrArity("RPOP")
-	}
-
-	obj := store.Get(args[0])
-	if obj == nil {
-		return clientio.RespNIL
-	}
-
-	// if object is a set type, return error
-	if object.AssertType(obj.TypeEncoding, object.ObjTypeSet) == nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeByteList); err != nil {
-		return clientio.Encode(err, false)
-	}
-
-	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingDeque); err != nil {
-		return clientio.Encode(err, false)
-	}
-
-	deq := obj.Value.(*Deque)
-	x, err := deq.RPop()
-	if err != nil {
-		if errors.Is(err, ErrDequeEmpty) {
-			return clientio.RespNIL
-		}
-		panic(fmt.Sprintf("unknown error: %v", err))
-	}
-
-	return clientio.Encode(x, false)
-}
-
-func evalLPOP(args []string, store *dstore.Store) []byte {
-	// By default we pop only 1
-	popNumber := 1
-
-	// LPOP accepts 1 or 2 arguments only - LPOP key [count]
-	if len(args) < 1 || len(args) > 2 {
-		return diceerrors.NewErrArity("LPOP")
-	}
-
-	// to updated the number of pops
-	if len(args) == 2 {
-		nos, err := strconv.Atoi(args[1])
-		if err != nil {
-			return diceerrors.NewErrWithFormattedMessage(diceerrors.IntOrOutOfRangeErr)
-		}
-		if nos == 0 {
-			// returns empty string if count given is 0
-			return clientio.Encode([]string{}, false)
-		}
-		if nos < 0 {
-			// returns an out of range err if count is negetive
-			return diceerrors.NewErrWithFormattedMessage(diceerrors.ValOutOfRangeErr)
-		}
-		popNumber = nos
-	}
-
-	obj := store.Get(args[0])
-	if obj == nil {
-		return clientio.RespNIL
-	}
-
-	// if object is a set type, return error
-	if object.AssertType(obj.TypeEncoding, object.ObjTypeSet) == nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeByteList); err != nil {
-		return clientio.Encode(err, false)
-	}
-
-	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingDeque); err != nil {
-		return clientio.Encode(err, false)
-	}
-
-	deq := obj.Value.(*Deque)
-
-	// holds the elements popped
-	var elements []string
-	for iter := 0; iter < popNumber; iter++ {
-		x, err := deq.LPop()
-		if err != nil {
-			if errors.Is(err, ErrDequeEmpty) {
-				break
-			}
-			panic(fmt.Sprintf("unknown error: %v", err))
-		}
-		elements = append(elements, x)
-	}
-
-	if len(elements) == 0 {
-		return clientio.RespNIL
-	}
-
-	if len(elements) == 1 {
-		return clientio.Encode(elements[0], false)
-	}
-
-	return clientio.Encode(elements, false)
-}
-
-func evalLLEN(args []string, store *dstore.Store) []byte {
-	if len(args) != 1 {
-		return diceerrors.NewErrArity("LLEN")
-	}
-
-	obj := store.Get(args[0])
-	if obj == nil {
-		return clientio.Encode(0, false)
-	}
-
-	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeByteList, object.ObjEncodingDeque); err != nil {
-		return err
-	}
-
-	deq := obj.Value.(*Deque)
-	return clientio.Encode(deq.Length, false)
-}
-
 func evalFLUSHDB(args []string, store *dstore.Store) []byte {
 	slog.Info("FLUSHDB called", slog.Any("args", args))
 	if len(args) > 1 {
@@ -1731,37 +1488,6 @@ func formatFloat(f float64, b bool) string {
 	return formatted
 }
 
-// takes original value, increment values (float or int), a flag representing if increment is float
-// returns new value, string representation, a boolean representing if the value was modified
-func incrementValue(value any, isIncrFloat bool, incrFloat float64, incrInt int64) (newVal interface{}, stringRepresentation string, isModified bool) {
-	switch utils.GetJSONFieldType(value) {
-	case utils.NumberType:
-		oldVal := value.(float64)
-		var newVal float64
-		if isIncrFloat {
-			newVal = oldVal + incrFloat
-		} else {
-			newVal = oldVal + float64(incrInt)
-		}
-		resultString := formatFloat(newVal, isIncrFloat)
-		return newVal, resultString, true
-	case utils.IntegerType:
-		if isIncrFloat {
-			oldVal := float64(value.(int64))
-			newVal := oldVal + incrFloat
-			resultString := formatFloat(newVal, isIncrFloat)
-			return newVal, resultString, true
-		} else {
-			oldVal := value.(int64)
-			newVal := oldVal + incrInt
-			resultString := fmt.Sprintf("%d", newVal)
-			return newVal, resultString, true
-		}
-	default:
-		return value, null, false
-	}
-}
-
 func evalTYPE(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
 		return diceerrors.NewErrArity("TYPE")
@@ -1904,10 +1630,10 @@ func evalGEOADD(args []string, store *dstore.Store) []byte {
 	// Parse options
 	for startIdx < len(args) {
 		option := strings.ToUpper(args[startIdx])
-		if option == "NX" {
+		if option == NX {
 			nx = true
 			startIdx++
-		} else if option == "XX" {
+		} else if option == XX {
 			xx = true
 			startIdx++
 		} else {

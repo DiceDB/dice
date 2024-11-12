@@ -15,17 +15,19 @@ COMMAND GETKEYS command arg [arg ...]
 
 ## Parameters
 
-- **`command`**: The DiceDB command from which the keys will be extracted (e.g., MSET, DEL, etc.).
-- **`arg [arg ...]`**: The arguments for the command, which may include keys, values, or other command parameters.
+| Parameter | Description                                                                 | Type   | Required |
+|-----------|-----------------------------------------------------------------------------|--------|----------|
+| `command` | The command for which keys need to be extracted.                            | String | Yes      |
+| `arg`     | Arguments for the specified command.                                        | String | Yes      |
+
 
 ## Return values
 
-- **Array**: Returns an array of keys found in the provided command and its arguments.
-  - For example, if the command is `MSET key1 value1 key2 value2`, the return value will be:
-    ```bash
-    1) "key1"
-    2) "key2"
-    ```
+| Condition | Return Value |
+|-----------|--------------|
+| Command is successful | Array of keys |
+| Error | An error is returned if the command fails. |
+
 
 ## Behavior
 

@@ -50,6 +50,10 @@ type HTTPCommand struct {
 	Body    map[string]interface{}
 }
 
+func (cmd HTTPCommand) IsEmptyCommand() bool {
+	return cmd.Command == ""
+}
+
 func (e *HTTPCommandExecutor) FireCommand(cmd HTTPCommand) (interface{}, error) {
 	command := strings.ToUpper(cmd.Command)
 	var body []byte

@@ -56,7 +56,7 @@ GETEX key [EX seconds|PX milliseconds|EXAT timestamp|PXAT milliseconds-timestamp
 
 ## Example Usage
 
-### Retrieve value and set expiration in seconds
+### Retrieve value with EX
 
 This command will return `"Hello"` and set the expiration time of `mykey` to 10 seconds.
 
@@ -67,7 +67,7 @@ OK
 127.0.0.1:7379> "Hello"
 ```
 
-### Retrieve value and set expiration in milliseconds
+### Retrieve value with PX
 
 This command will return `"Hello"` and set the expiration time of `mykey` to 10,000 milliseconds (10 seconds).
 
@@ -78,7 +78,7 @@ OK
 127.0.0.1:7379> "Hello"
 ```
 
-### Retrieve value and set expiration as Unix timestamp in seconds
+### Retrieve value with EXAT
 
 This command will return `"Hello"` and set the expiration time of `mykey` to the Unix timestamp `1672531199`.
 
@@ -89,7 +89,7 @@ OK
 127.0.0.1:7379> "Hello"
 ```
 
-### Retrieve value and set expiration as Unix timestamp in milliseconds
+### Retrieve value with PXAT
 
 This command will return `"Hello"` and set the expiration time of `mykey` to the Unix timestamp `1672531199000` milliseconds.
 
@@ -100,7 +100,7 @@ OK
 127.0.0.1:7379> "Hello"
 ```
 
-### Retrieve value and remove expiration
+### Retrieve value and make key persistent
 
 This command will return `"Hello"` and remove the expiration time of `mykey`, making it persistent.
 

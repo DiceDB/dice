@@ -24,7 +24,10 @@ BITOP operation destkey key [key ...]
 
 ## Return Value
 
-The command returns the size of the string stored in the destination key, which is equal to the size of the longest input string.
+| Condition | Return Value |
+|--------------|-------------|
+| Integer      | The command returns an integer value representing the length of the resulting string. |
+| Error        | An error is returned if the command fails. |
 
 ## Behaviour
 

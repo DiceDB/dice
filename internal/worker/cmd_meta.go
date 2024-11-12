@@ -68,6 +68,31 @@ const (
 	CmdJSONNumMultBy = "JSON.NUMMULTBY"
 	CmdJSONType      = "JSON.TYPE"
 	CmdJSONToggle    = "JSON.TOGGLE"
+	CmdJSONNumMultBY = "JSON.NUMMULTBY"
+	CmdLPush         = "LPUSH"
+	CmdRPush         = "RPUSH"
+	CmdLPop          = "LPOP"
+	CmdRPop          = "RPOP"
+	CmdLLEN          = "LLEN"
+)
+
+// Multi-shard commands.
+const (
+	CmdMset     = "MSET"
+	CmdMget     = "MGET"
+	CmdSInter   = "SINTER"
+	CmdSDiff    = "SDIFF"
+	CmdJSONMget = "JSON.MGET"
+)
+
+// Multi-Step-Multi-Shard commands
+const (
+	CmdRename = "RENAME"
+	CmdCopy   = "COPY"
+)
+
+// Watch commands
+const (
 	CmdHExists       = "HEXISTS"
 	CmdHKeys         = "HKEYS"
 	CmdHVals         = "HVALS"
@@ -80,6 +105,7 @@ const (
 	CmdZCard         = "ZCARD"
 	CmdPFAdd         = "PFADD"
 	CmdPFCount       = "PFCOUNT"
+	CmdPFCountWatch  = "PFCOUNT.WATCH"
 	CmdPFMerge       = "PFMERGE"
 	CmdTTL           = "TTL"
 	CmdPTTL          = "PTTL"
@@ -123,21 +149,6 @@ const (
 	CmdSrem          = "SREM"
 	CmdScard         = "SCARD"
 	CmdSmembers      = "SMEMBERS"
-)
-
-// Multi-shard commands.
-const (
-	CmdMset     = "MSET"
-	CmdMget     = "MGET"
-	CmdSInter   = "SINTER"
-	CmdSDiff    = "SDIFF"
-	CmdJSONMget = "JSON.MGET"
-)
-
-// Multi-Step-Multi-Shard commands
-const (
-	CmdRename = "RENAME"
-	CmdCopy   = "COPY"
 )
 
 // Watch commands
@@ -319,6 +330,21 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdBitFieldRO: {
+		CmdType: SingleShard,
+	},
+	CmdLPush: {
+		CmdType: SingleShard,
+	},
+	CmdRPush: {
+		CmdType: SingleShard,
+	},
+	CmdLPop: {
+		CmdType: SingleShard,
+	},
+	CmdRPop: {
+		CmdType: SingleShard,
+	},
+	CmdLLEN: {
 		CmdType: SingleShard,
 	},
 	CmdCMSQuery: {
