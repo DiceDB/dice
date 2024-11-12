@@ -36,7 +36,7 @@ When the `LRU` command is executed, DiceDB performs the following actions:
 
 This command is useful for understanding which keys are candidates for eviction when the DiceDB memory limit is reached and the `maxmemory-policy` is set to `allkeys-lru` or `volatile-lru`.
 
-## Error Handling
+## Errors
 
 The `LRU` command may raise errors in the following scenarios:
 

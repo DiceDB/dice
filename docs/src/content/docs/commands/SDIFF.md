@@ -52,7 +52,7 @@ The `SDIFF` command returns an array of elements that are present in the first s
 
 ## Example Usage
 
-### Example 1: Basic Usage
+### Basic Usage
 
 In this example, the difference between set1 and the union of set2 and set3 is computed. The element “b” is unique to set1.
 
@@ -65,7 +65,7 @@ In this example, the difference between set1 and the union of set2 and set3 is c
 "b"
 ```
 
-### Example 2: Single Set
+### Single Set
 
 In this example, since only one set is provided, the command returns all elements of `set1`.
 
@@ -77,7 +77,7 @@ In this example, since only one set is provided, the command returns all element
 3) "c"
 ```
 
-### Example 3: Non-Existent Sets
+### Non-Existent Sets
 
 In this example, since neither `set1` nor `set2` exist, the command returns an empty array.
 
@@ -86,9 +86,7 @@ In this example, since neither `set1` nor `set2` exist, the command returns an e
 (empty array)
 ```
 
-## Error Handling Examples
-
-### Example 1: Wrong Type Error
+### Wrong Type Error
 
 In this example, `not_a_set` is not a set, so DiceDB returns a `WRONGTYPE` error.
 
@@ -98,7 +96,7 @@ In this example, `not_a_set` is not a set, so DiceDB returns a `WRONGTYPE` error
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
-### Example 2: Syntax Error
+### Syntax Error
 
 In this example, no keys are provided, so DiceDB returns a syntax error.
 
