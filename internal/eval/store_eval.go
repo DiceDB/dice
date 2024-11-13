@@ -4056,7 +4056,8 @@ func evalJSONRESP(args []string, store *dstore.Store) *EvalResponse {
 	results := expr.Get(jsonData)
 
 	// process value at each path
-	ret := []any{}
+	ret := make([]any, 0, len(results))
+
 	for _, result := range results {
 		resp := parseJSONStructure(result, false)
 		ret = append(ret, resp)

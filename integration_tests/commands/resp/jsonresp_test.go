@@ -10,9 +10,7 @@ func TestJSONRESP(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 
-	FireCommand(conn, "DEL k1")
-	FireCommand(conn, "DEL k2")
-	FireCommand(conn, "DEL k3")
+	FireCommand(conn, "DEL k1 k2 k3")
 
 	testCases := []struct {
 		name     string
@@ -53,4 +51,5 @@ func TestJSONRESP(t *testing.T) {
 			}
 		})
 	}
+	FireCommand(conn, "FLUSHDB")
 }

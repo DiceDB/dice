@@ -19,12 +19,6 @@ func TestJSONDEBUG(t *testing.T) {
 	DeleteKey(t, conn, exec, "k6")
 	DeleteKey(t, conn, exec, "k7")
 
-	defer func() {
-		resp, err := exec.FireCommandAndReadResponse(conn, "DEL k1 k2 k3 k4 k5 k6 k7")
-		assert.Nil(t, err)
-		assert.Equal(t, float64(7), resp)
-	}()
-
 	testCases := []struct {
 		name     string
 		commands []string
@@ -97,4 +91,5 @@ func TestJSONDEBUG(t *testing.T) {
 			}
 		})
 	}
+	exec.FireCommandAndReadResponse(conn, "FLUSHDB")
 }

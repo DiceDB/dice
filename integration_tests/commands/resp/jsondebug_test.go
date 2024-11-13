@@ -83,4 +83,5 @@ func TestJSONDEBUG(t *testing.T) {
 			}
 		})
 	}
+	FireCommand(conn, "FLUSHDB")
 }
