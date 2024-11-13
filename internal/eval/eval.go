@@ -596,6 +596,9 @@ func EvalCLIENT(args []string, httpOp bool, client *comm.Client, store *dstore.S
 	subcommand := strings.ToUpper(args[0])
 	switch subcommand {
 	case GETNAME:
+		if len(args) != 1 {
+			return clientio.Encode(diceerrors.ErrWrongArgumentCount("CLIENT|GETNAME"), false)
+		}
 		if client.Name == utils.EmptyStr {
 			return clientio.RespNIL
 		}
