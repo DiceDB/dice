@@ -112,7 +112,7 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 		case cmdReq := <-w.adhocReqChan:
 			// Handle adhoc requests of DiceDBCmd
 			func() {
-				execCtx, cancel := context.WithTimeout(ctx, 1000*time.Second) // Timeout set to 6 seconds for integration tests
+				execCtx, cancel := context.WithTimeout(ctx, 6*time.Second) // Timeout set to 6 seconds for integration tests
 				defer cancel()
 
 				// adhoc requests should be classified as watch requests
@@ -156,7 +156,7 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 			}
 			// executeCommand executes the command and return the response back to the client
 			func(errChan chan error) {
-				execCtx, cancel := context.WithTimeout(ctx, 1000*time.Second) // Timeout set to 6 seconds for integration tests
+				execCtx, cancel := context.WithTimeout(ctx, 6*time.Second) // Timeout set to 6 seconds for integration tests
 				defer cancel()
 				w.executeCommandHandler(execCtx, errChan, cmds, false)
 			}(errChan)
