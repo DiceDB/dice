@@ -71,11 +71,11 @@ func TestObjectCommand(t *testing.T) {
 		},
 		{
 			name:       "Object Encoding check for json",
-			commands:   []string{`JSON.SET k1 $ ` + simpleJSON, "OBJECT ENCODING k1"},
+			commands:   []string{`JSON.SET k10 $ ` + simpleJSON, "OBJECT ENCODING k10"},
 			expected:   []interface{}{"OK", "json"},
 			assertType: []string{"equal", "equal"},
 			delay:      []time.Duration{0, 0},
-			cleanup:    []string{"DEL k1"},
+			cleanup:    []string{"DEL k10"},
 		},
 		{
 			name:       "Object Encoding check for bytearray",

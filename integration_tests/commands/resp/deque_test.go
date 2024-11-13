@@ -27,7 +27,7 @@ func deqRandStr(n int) string {
 	return string(b)
 }
 
-func deqTestInit() {
+func deqTestInit() (deqNormalValues, deqEdgeValues []string) {
 	randSeed := time.Now().UnixNano()
 	deqRandGenerator = rand.New(rand.NewSource(randSeed))
 	fmt.Printf("rand seed: %v", randSeed)
@@ -68,10 +68,11 @@ func deqTestInit() {
 		"-9223372036854775808", // min 64 bit int
 		"9223372036854775807",  // max 64 bit int
 	}
+	return deqNormalValues, deqEdgeValues
 }
 
 func TestLPush(t *testing.T) {
-	deqTestInit()
+	deqNormalValues, deqEdgeValues := deqTestInit()
 	conn := getLocalConnection()
 	defer conn.Close()
 
@@ -110,7 +111,7 @@ func TestLPush(t *testing.T) {
 }
 
 func TestRPush(t *testing.T) {
-	deqTestInit()
+	deqNormalValues, deqEdgeValues := deqTestInit()
 	conn := getLocalConnection()
 	defer conn.Close()
 
@@ -149,7 +150,7 @@ func TestRPush(t *testing.T) {
 }
 
 func TestLPushLPop(t *testing.T) {
-	deqTestInit()
+	deqNormalValues, deqEdgeValues := deqTestInit()
 	conn := getLocalConnection()
 	defer conn.Close()
 
@@ -203,7 +204,7 @@ func TestLPushLPop(t *testing.T) {
 }
 
 func TestLPushRPop(t *testing.T) {
-	deqTestInit()
+	deqNormalValues, deqEdgeValues := deqTestInit()
 	conn := getLocalConnection()
 	defer conn.Close()
 
@@ -257,7 +258,7 @@ func TestLPushRPop(t *testing.T) {
 }
 
 func TestRPushLPop(t *testing.T) {
-	deqTestInit()
+	deqNormalValues, deqEdgeValues := deqTestInit()
 	conn := getLocalConnection()
 	defer conn.Close()
 
@@ -311,7 +312,7 @@ func TestRPushLPop(t *testing.T) {
 }
 
 func TestRPushRPop(t *testing.T) {
-	deqTestInit()
+	deqNormalValues, deqEdgeValues := deqTestInit()
 	conn := getLocalConnection()
 	defer conn.Close()
 
@@ -365,7 +366,6 @@ func TestRPushRPop(t *testing.T) {
 }
 
 func TestLRPushLRPop(t *testing.T) {
-	deqTestInit()
 	conn := getLocalConnection()
 	defer conn.Close()
 
@@ -404,7 +404,6 @@ func TestLRPushLRPop(t *testing.T) {
 }
 
 func TestLLEN(t *testing.T) {
-	deqTestInit()
 	conn := getLocalConnection()
 	defer conn.Close()
 
@@ -531,7 +530,6 @@ func TestLRange(t *testing.T) {
 }
 
 func TestLPOPCount(t *testing.T) {
-	deqTestInit()
 	conn := getLocalConnection()
 	defer conn.Close()
 
@@ -543,28 +541,28 @@ func TestLPOPCount(t *testing.T) {
 		{
 			name: "LPOP with count argument - valid, invalid, and edge cases",
 			cmds: []string{
-				"RPUSH k v1 v2 v3 v4", 
-				"LPOP k 2",            
-                "LLEN k",
-				"LPOP k 0",            
-                "LLEN k",
-				"LPOP k 5",            
-                "LLEN k",
-				"LPOP k -1",           
-				"LPOP k abc",          
-				"LLEN k",              
+				"RPUSH k v1 v2 v3 v4",
+				"LPOP k 2",
+				"LLEN k",
+				"LPOP k 0",
+				"LLEN k",
+				"LPOP k 5",
+				"LLEN k",
+				"LPOP k -1",
+				"LPOP k abc",
+				"LLEN k",
 			},
 			expect: []any{
-				int64(4),                  
-				[]interface{}{"v1", "v2"}, 
-                int64(2),
-				"(nil)",           
-                int64(2),
-				[]interface{}{"v3", "v4"}, 
-                int64(0),
-				"ERR value is not an integer or out of range", 
-				"ERR value is not an integer or a float", 
-				int64(0),                                      
+				int64(4),
+				[]interface{}{"v1", "v2"},
+				int64(2),
+				"(nil)",
+				int64(2),
+				[]interface{}{"v3", "v4"},
+				int64(0),
+				"ERR value is not an integer or out of range",
+				"ERR value is not an integer or a float",
+				int64(0),
 			},
 		},
 	}

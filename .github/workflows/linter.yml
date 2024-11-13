@@ -1,15 +1,15 @@
-name: Linter
+name: linter
 
 on:
   push:
     branches: [master]
     paths:
-      - '*.go'
+      - '**/*.go'
 
   pull_request:
     branches: [master]
     paths:
-      - '*.go'
+      - '**/*.go'
 
 permissions:
   contents: read
@@ -28,4 +28,3 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.60.1
-          
