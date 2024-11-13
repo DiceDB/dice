@@ -354,6 +354,14 @@ var (
 		Cmd:     "HMGET",
 		CmdType: SingleShard,
 	}
+	lrangeCmdMeta = CmdsMeta{
+		Cmd:     "LRANGE",
+		CmdType: SingleShard,
+	}
+	linsertCmdMeta = CmdsMeta{
+		Cmd:	 "LINSERT",
+    CmdType: SingleShard,
+  }
 	lpushCmdMeta = CmdsMeta{
 		Cmd:     "LPUSH",
 		CmdType: SingleShard,
@@ -374,7 +382,6 @@ var (
 		Cmd:     "LLEN",
 		CmdType: SingleShard,
 	}
-
 	jsonForgetCmdMeta = CmdsMeta{
 		Cmd:     "JSON.FORGET",
 		CmdType: SingleShard,
@@ -500,12 +507,13 @@ func init() {
 	WorkerCmdsMeta["BITFIELD"] = bitfieldCmdMeta
 	WorkerCmdsMeta["BITPOS"] = bitposCmdMeta
 	WorkerCmdsMeta["BITFIELD_RO"] = bitfieldroCmdMeta
+	WorkerCmdsMeta["LRANGE"] = lrangeCmdMeta
+	WorkerCmdsMeta["LINSERT"] = linsertCmdMeta
 	WorkerCmdsMeta["LPUSH"] = lpushCmdMeta
 	WorkerCmdsMeta["RPUSH"] = rpushCmdMeta
 	WorkerCmdsMeta["LPOP"] = lpopCmdMeta
 	WorkerCmdsMeta["RPOP"] = rpopCmdMeta
 	WorkerCmdsMeta["LLEN"] = llenCmdMeta
-
 	WorkerCmdsMeta["JSON.FORGET"] = jsonForgetCmdMeta
 	WorkerCmdsMeta["JSON.DEL"] = jsonDelCmdMeta
 	WorkerCmdsMeta["JSON.TOGGLE"] = jsonToggleCmdMeta
