@@ -1094,8 +1094,8 @@ func TestJsonObjLen(t *testing.T) {
 				cmd := tcase.commands[i]
 				out := tcase.expected[i]
 				result := FireCommand(conn, cmd)
-				
-				assert.Equal(t, out, result);
+
+				assert.Equal(t, out, result)
 			}
 		})
 	}
@@ -1200,7 +1200,6 @@ func TestJSONNumIncrBy(t *testing.T) {
 		})
 	}
 }
-
 
 func TestJsonSTRAPPEND(t *testing.T) {
 	conn := getLocalConnection()

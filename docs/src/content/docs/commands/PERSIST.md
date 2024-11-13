@@ -32,7 +32,7 @@ When the `PERSIST` command is executed:
 2. If the key does not exist or does not have an expiration, the command does nothing and returns `0`.
 3. This command does not alter the key’s value, only its expiration state.
 
-## Error Handling
+## Errors
 
 1. `Wrong type of value or key`:
    - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
@@ -42,7 +42,7 @@ When the `PERSIST` command is executed:
 
 ## Example Usage
 
-### Example 1: Removing Expiration from a Key
+### Removing Expiration from a Key
 
 ```bash
 127.0.0.1:7379> SET mykey "Hello"
@@ -64,25 +64,21 @@ OK
 (integer) -1
 ```
 
-`Explanation`:
-
 1. `SET mykey "Hello"`: Sets the value of `mykey` to "Hello".
 2. `EXPIRE mykey 10`: Sets an expiration of 10 seconds on `mykey`.
 3. `PERSIST mykey`: Removes the expiration from `mykey`.
 4. `TTL mykey`: Returns `-1`, indicating that `mykey` does not have an expiration time.
 
-### Example 2: Attempting to Persist a Non-Existent Key
+### Attempting to Persist a Non-Existent Key
 
 ```bash
 127.0.0.1:7379> PERSIST mykey
 (integer) 0
 ```
 
-`Explanation`:
-
 - The command returns `0` because `mykey` does not exist in the database.
 
-### Example 3: Persisting a Key Without Expiration
+### Persisting a Key Without Expiration
 
 ```bash
 127.0.0.1:7379> SET mykey
@@ -94,10 +90,8 @@ OK
 (integer) 0
 ```
 
-`Explanation`:
-
 - The command returns `0` because `mykey` does not have an expiration time set.
 
-## Summary
+## Conclusion
 
 The `PERSIST` command is a useful tool for managing the lifecycle of keys in a DiceDB database. By removing the expiration from a key, you can ensure that the key remains in the database until explicitly deleted. This command is straightforward but powerful, allowing for greater control over key persistence.

@@ -42,7 +42,7 @@ When the `OBJECT` command is executed, DiceDB inspects the specified key and ret
 - `IDLETIME`: This subcommand provides the time in seconds since the key was last accessed. It is useful for identifying stale keys.
 - `FREQ`: This subcommand returns the access frequency of the key, which is useful when using the LFU eviction policy.
 
-## Error Handling
+## Errors
 
 The `OBJECT` command can raise errors in the following scenarios:
 
@@ -52,57 +52,37 @@ The `OBJECT` command can raise errors in the following scenarios:
 
 ## Example Usage
 
-### Example 1: Using the `REFCOUNT` Subcommand
+### Using the `REFCOUNT` Subcommand
 
 ```bash
 OBJECT REFCOUNT mykey
-```
-
-`Response:`
-
-```bash
 (integer) 1
 ```
 
 This response indicates that the value associated with `mykey` has a reference count of 1.
 
-### Example 2: Using the `ENCODING` Subcommand
+### Using the `ENCODING` Subcommand
 
 ```bash
 OBJECT ENCODING mykey
-```
-
-`Response:`
-
-```bash
 "embstr"
 ```
 
 This response indicates that the value associated with `mykey` is stored using the `embstr` encoding.
 
-### Example 3: Using the `IDLETIME` Subcommand
+### Using the `IDLETIME` Subcommand
 
 ```bash
 OBJECT IDLETIME mykey
-```
-
-`Response:`
-
-```bash
 (integer) 120
 ```
 
 This response indicates that `mykey` has been idle for 120 seconds.
 
-### Example 4: Using the `FREQ` Subcommand
+### Using the `FREQ` Subcommand
 
 ```bash
 OBJECT FREQ mykey
-```
-
-`Response:`
-
-```bash
 (integer) 5
 ```
 

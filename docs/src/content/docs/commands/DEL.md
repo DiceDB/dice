@@ -35,7 +35,7 @@ When the `DEL` command is executed, DiceDB will attempt to remove the specified 
 4. `Ignore Non-existent Keys`: If a specified key does not exist, it is simply ignored and does not affect the count of removed keys.
 5. `Return Count`: The total count of removed keys is returned as the result of the command.
 
-## Error Handling
+## Errors
 
 The `DEL` command is generally robust and straightforward, but there are a few scenarios where errors might occur:
 

@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/dicedb/dice/internal/server/utils"
-	"github.com/xwb1989/sqlparser"
 	"github.com/stretchr/testify/assert"
+	"github.com/xwb1989/sqlparser"
 )
 
 func TestParseQuery(t *testing.T) {
