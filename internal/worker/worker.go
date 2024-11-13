@@ -249,8 +249,14 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 			// fingerprint (which uses the command name without the suffix)
 			diceDBCmd.Cmd = diceDBCmd.Cmd[:len(diceDBCmd.Cmd)-6]
 
-			// generate a watch label
-			watchLabel = uuid.New().String()
+			// check if the last argument is a watch label
+			label := diceDBCmd.Args[len(diceDBCmd.Args)-1]
+			if _, err := uuid.Parse(label); err == nil {
+				watchLabel = label
+
+				// remove the watch label from the args
+				diceDBCmd.Args = diceDBCmd.Args[:len(diceDBCmd.Args)-1]
+			}
 
 			watchCmd := &cmd.DiceDBCmd{
 				Cmd:  diceDBCmd.Cmd,
