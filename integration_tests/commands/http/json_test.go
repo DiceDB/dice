@@ -62,6 +62,8 @@ func runIntegrationTests(t *testing.T, exec *HTTPCommandExecutor, testCases []In
 				case "range":
 					assert.True(t, result.(float64) <= out.(float64) && result.(float64) > 0, "Expected %v to be within 0 to %v", result, out)
 				case "json_equal":
+					// fmt.Println("hi expected : ", out)
+					// fmt.Println("hi actual :", result)
 					assert.JSONEq(t, out.(string), result.(string))
 				}
 			}
