@@ -359,9 +359,9 @@ var (
 		CmdType: SingleShard,
 	}
 	linsertCmdMeta = CmdsMeta{
-		Cmd:	 "LINSERT",
-    CmdType: SingleShard,
-  }
+		Cmd:     "LINSERT",
+		CmdType: SingleShard,
+	}
 	lpushCmdMeta = CmdsMeta{
 		Cmd:     "LPUSH",
 		CmdType: SingleShard,
