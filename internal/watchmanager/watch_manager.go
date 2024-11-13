@@ -15,14 +15,12 @@ type (
 		AdhocReqChan chan *cmd.DiceDBCmd // AdhocReqChan is the channel to send adhoc requests to the worker. Required.
 		WatchCmd     *cmd.DiceDBCmd      // WatchCmd Represents a unique key for each watch artifact, only populated for subscriptions.
 		Fingerprint  uint32              // Fingerprint is a unique identifier for each watch artifact, only populated for unsubscriptions.
-		WatchLabel   string              // WatchLabel is the watch label for the watch command
 	}
 
 	Manager struct {
 		querySubscriptionMap     map[string]map[uint32]struct{}              // querySubscriptionMap is a map of Key -> [fingerprint1, fingerprint2, ...]
 		tcpSubscriptionMap       map[uint32]map[chan *cmd.DiceDBCmd]struct{} // tcpSubscriptionMap is a map of fingerprint -> [client1Chan, client2Chan, ...]
 		fingerprintCmdMap        map[uint32]*cmd.DiceDBCmd                   // fingerprintCmdMap is a map of fingerprint -> DiceDBCmd
-		fingerprintWatchLabelMap map[uint32]string                           // fingerprintLabelMap is a map of fingerprint -> watch label
 		cmdWatchSubscriptionChan chan WatchSubscription                      // cmdWatchSubscriptionChan is the channel to send/receive watch subscription requests.
 		cmdWatchChan             chan dstore.CmdWatchEvent                   // cmdWatchChan is the channel to send/receive watch events.
 	}
@@ -42,7 +40,6 @@ func NewManager(cmdWatchSubscriptionChan chan WatchSubscription, cmdWatchChan ch
 		querySubscriptionMap:     make(map[string]map[uint32]struct{}),
 		tcpSubscriptionMap:       make(map[uint32]map[chan *cmd.DiceDBCmd]struct{}),
 		fingerprintCmdMap:        make(map[uint32]*cmd.DiceDBCmd),
-		fingerprintWatchLabelMap: make(map[uint32]string),
 		cmdWatchSubscriptionChan: cmdWatchSubscriptionChan,
 		cmdWatchChan:             cmdWatchChan,
 	}
@@ -99,9 +96,6 @@ func (m *Manager) handleSubscription(sub WatchSubscription) {
 		m.tcpSubscriptionMap[fingerprint] = make(map[chan *cmd.DiceDBCmd]struct{})
 	}
 	m.tcpSubscriptionMap[fingerprint][sub.AdhocReqChan] = struct{}{}
-
-	// Add watch label to fingerprintLabelMap
-	m.fingerprintWatchLabelMap[fingerprint] = sub.WatchLabel
 }
 
 // handleUnsubscription processes an unsubscription request
@@ -129,8 +123,6 @@ func (m *Manager) handleUnsubscription(sub WatchSubscription) {
 				delete(m.querySubscriptionMap, key)
 			}
 		}
-		// Remove the watch label from fingerprintLabelMap
-		delete(m.fingerprintWatchLabelMap, fingerprint)
 
 		// Also remove the fingerprint from fingerprintCmdMap
 		delete(m.fingerprintCmdMap, fingerprint)
