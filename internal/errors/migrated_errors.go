@@ -37,8 +37,8 @@ var (
 	// Error generation functions for specific error messages with dynamic parameters.
 
 	// Indicates an subcommand for a given command.
-	ErrUnknownSubcommand = func(subcommand string) error {
-		return fmt.Errorf("ERR unknown subcommand '%s'. Try %s HELP.", strings.ToLower(subcommand), strings.ToLower(subcommand)) //nolint: stylecheck
+	ErrUnknownSubcommand = func(command, subcommand string) error {
+		return fmt.Errorf("ERR unknown subcommand '%s'. Try %s HELP.", subcommand, strings.ToUpper(command)) //nolint: stylecheck
 	}
 
 	ErrWrongArgumentCount = func(command string) error {

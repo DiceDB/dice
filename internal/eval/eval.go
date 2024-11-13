@@ -611,7 +611,7 @@ func EvalCLIENT(args []string, httpOp bool, client *comm.Client, store *dstore.S
 		client.Name = clientName
 		return clientio.RespOK
 	default:
-		return clientio.Encode(diceerrors.ErrUnknownSubcommand(subcommand), false)
+		return clientio.Encode(diceerrors.ErrUnknownSubcommand("CLIENT", subcommand), false)
 	}
 }
 
@@ -877,7 +877,7 @@ func evalCommand(args []string, store *dstore.Store) []byte {
 	case Docs:
 		return evalCommandDocs(args[1:])
 	default:
-		return clientio.Encode(diceerrors.ErrUnknownSubcommand(subcommand), false)
+		return clientio.Encode(diceerrors.ErrUnknownSubcommand("COMMAND", subcommand), false)
 	}
 }
 
