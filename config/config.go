@@ -22,12 +22,10 @@ const (
 	DefaultConfigName     string = "dice.toml"
 	DefaultConfigFilePath string = "./"
 
-	EvictSimpleFirst   = "simple-first"
-	EvictAllKeysRandom = "allkeys-random"
-	EvictAllKeysLRU    = "allkeys-lru"
-	EvictAllKeysLFU    = "allkeys-lfu"
+	EvictBatchKeysLRU string = "batch_keys_lru"
 
-	DefaultKeysLimit int = 200000000
+	DefaultKeysLimit     int     = 200000000
+	DefaultEvictionRatio float64 = 0.1
 )
 
 var (
@@ -50,7 +48,8 @@ var (
 
 	InitConfigCmd = false
 
-	KeysLimit = DefaultKeysLimit
+	KeysLimit     = DefaultKeysLimit
+	EvictionRatio = DefaultEvictionRatio
 
 	EnableProfiling = false
 
@@ -97,11 +96,11 @@ type Config struct {
 	} `mapstructure:"performance"`
 
 	Memory struct {
-		MaxMemory      int64   `mapstructure:"maxmemory"`
-		EvictionPolicy string  `mapstructure:"evictionpolicy"`
-		EvictionRatio  float64 `mapstructure:"evictionratio"`
-		KeysLimit      int     `mapstructure:"keyslimit"`
-		LFULogFactor   int     `mapstructure:"lfulogfactor"`
+		MaxMemory        int64   `mapstructure:"maxmemory"`
+		EvictionStrategy string  `mapstructure:"evictionstrategy"`
+		EvictionRatio    float64 `mapstructure:"evictionratio"`
+		KeysLimit        int     `mapstructure:"keyslimit"`
+		LFULogFactor     int     `mapstructure:"lfulogfactor"`
 	} `mapstructure:"memory"`
 
 	Persistence struct {
@@ -181,17 +180,17 @@ var baseConfig = Config{
 		AdhocReqChanBufSize:    20, // assuming we wouldn't have more than 20 adhoc requests being sent at a time.
 	},
 	Memory: struct {
-		MaxMemory      int64   `mapstructure:"maxmemory"`
-		EvictionPolicy string  `mapstructure:"evictionpolicy"`
-		EvictionRatio  float64 `mapstructure:"evictionratio"`
-		KeysLimit      int     `mapstructure:"keyslimit"`
-		LFULogFactor   int     `mapstructure:"lfulogfactor"`
+		MaxMemory        int64   `mapstructure:"maxmemory"`
+		EvictionStrategy string  `mapstructure:"evictionstrategy"`
+		EvictionRatio    float64 `mapstructure:"evictionratio"`
+		KeysLimit        int     `mapstructure:"keyslimit"`
+		LFULogFactor     int     `mapstructure:"lfulogfactor"`
 	}{
-		MaxMemory:      0,
-		EvictionPolicy: EvictAllKeysLFU,
-		EvictionRatio:  0.9,
-		KeysLimit:      DefaultKeysLimit,
-		LFULogFactor:   10,
+		MaxMemory:        0,
+		EvictionStrategy: EvictBatchKeysLRU,
+		EvictionRatio:    DefaultEvictionRatio,
+		KeysLimit:        DefaultKeysLimit,
+		LFULogFactor:     10,
 	},
 	Persistence: struct {
 		AOFFile            string `mapstructure:"aoffile"`
@@ -365,6 +364,10 @@ func mergeFlagsWithConfig() {
 
 	if KeysLimit != DefaultKeysLimit {
 		DiceConfig.Memory.KeysLimit = KeysLimit
+	}
+
+	if EvictionRatio != DefaultEvictionRatio {
+		DiceConfig.Memory.EvictionRatio = EvictionRatio
 	}
 }
 

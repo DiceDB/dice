@@ -576,13 +576,6 @@ func evalLATENCY(args []string, store *dstore.Store) []byte {
 	return clientio.Encode([]string{}, false)
 }
 
-// evalLRU deletes all the keys from the LRU
-// returns encoded RESP OK
-func evalLRU(args []string, store *dstore.Store) []byte {
-	dstore.EvictAllkeysLRUOrLFU(store)
-	return clientio.RespOK
-}
-
 // evalSLEEP sets db to sleep for the specified number of seconds.
 // The sleep time should be the only param in args.
 // Returns error response if the time param in args is not of integer format.

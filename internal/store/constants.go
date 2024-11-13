@@ -14,4 +14,5 @@ const (
 	PFCOUNT      string = "PFCOUNT"
 	PFMERGE      string = "PFMERGE"
 	KEYSPERSHARD string = "KEYSPERSHARD"
+	Evict   	 string = "EVICT"
 )
