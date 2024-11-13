@@ -59,7 +59,7 @@ func TestGETWATCH(t *testing.T) {
 
 	respParsers := make([]*clientio.RESPParser, len(subscribers))
 	for i, subscriber := range subscribers {
-		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("GET.WATCH %s %s", getWatchKey))
+		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("GET.WATCH %s", getWatchKey))
 		assert.True(t, rp != nil)
 		respParsers[i] = rp
 
