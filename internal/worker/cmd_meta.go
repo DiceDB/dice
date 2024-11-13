@@ -55,6 +55,8 @@ const (
 	CmdGetSet        = "GETSET"
 	CmdGetEx         = "GETEX"
 	CmdGetDel        = "GETDEL"
+	CmdLrange        = "LRANGE"
+	CmdLinsert       = "LINSERT"
 	CmdJSONArrAppend = "JSON.ARRAPPEND"
 	CmdJSONArrLen    = "JSON.ARRLEN"
 	CmdJSONArrPop    = "JSON.ARRPOP"
@@ -333,6 +335,12 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdBitFieldRO: {
+		CmdType: SingleShard,
+	},
+	CmdLrange: {
+		CmdType: SingleShard,
+	},
+	CmdLinsert: {
 		CmdType: SingleShard,
 	},
 	CmdLPush: {
