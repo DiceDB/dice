@@ -10,8 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
-	"unsafe"
 
 	"github.com/dicedb/dice/internal/eval/geo"
 	"github.com/dicedb/dice/internal/eval/sortedset"
@@ -200,20 +198,6 @@ func evalDBSIZE(args []string, store *dstore.Store) []byte {
 	dstore.DeleteExpiredKeys(store)
 	// return the RESP encoded value
 	return clientio.Encode(store.GetDBSize(), false)
-}
-
-// evaLJSONFORGET removes the field specified by the given JSONPath from the JSON document stored under the provided key.
-// calls the evalJSONDEL() with the arguments passed
-// Returns response.RespZero if key is expired, or it does not exist
-// Returns encoded error response if incorrect number of arguments
-// If the JSONPath points to the root of the JSON document, the entire key is deleted from the store.
-// Returns an integer reply specified as the number of paths deleted (0 or more)
-func evalJSONFORGET(args []string, store *dstore.Store) []byte {
-	if len(args) < 1 {
-		return diceerrors.NewErrArity("JSON.FORGET")
-	}
-
-	return evalJSONDEL(args, store)
 }
 
 // trimElementAndUpdateArray trim the array between the given start and stop index

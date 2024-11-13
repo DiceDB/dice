@@ -9,8 +9,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"unsafe"
 	"unicode"
+	"unsafe"
 
 	"github.com/axiomhq/hyperloglog"
 	"github.com/bytedance/sonic"
@@ -2852,21 +2852,21 @@ func evalLPOP(args []string, store *dstore.Store) *EvalResponse {
 		if err != nil {
 			return &EvalResponse{
 				Result: nil,
-				Error: diceerrors.ErrInvalidNumberFormat,
+				Error:  diceerrors.ErrInvalidNumberFormat,
 			}
 		}
 		if nos == 0 {
 			// returns empty string if count given is 0
 			return &EvalResponse{
 				Result: clientio.NIL,
-				Error: nil,
+				Error:  nil,
 			}
 		}
 		if nos < 0 {
 			// returns an out of range err if count is negetive
 			return &EvalResponse{
 				Result: nil,
-				Error: diceerrors.ErrIntegerOutOfRange,
+				Error:  diceerrors.ErrIntegerOutOfRange,
 			}
 		}
 		popNumber = nos
@@ -5186,7 +5186,6 @@ func evalJSONTOGGLE(args []string, store *dstore.Store) *EvalResponse {
 
 	if err != nil {
 		return makeEvalError(diceerrors.ErrWrongTypeOperation)
-
 	}
 
 	expr, err := jp.ParseString(path)
