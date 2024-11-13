@@ -18,6 +18,8 @@ const (
 	NX              string = "NX"
 	GT              string = "GT"
 	LT              string = "LT"
+	CH              string = "CH"
+	INCR            string = "INCR"
 	KeepTTL         string = "KEEPTTL"
 	Sync            string = "SYNC"
 	Async           string = "ASYNC"

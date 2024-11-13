@@ -55,7 +55,7 @@ The `GETSET` command can raise errors in the following scenarios:
 "Hello"
 ```
 
-`Explanation:`
+ 
 
 - The initial value of `mykey` is set to "Hello".
 - The `GETSET` command retrieves the current value "Hello" and sets the new value "World".
@@ -68,7 +68,7 @@ The `GETSET` command can raise errors in the following scenarios:
 (nil)
 ```
 
-`Explanation:`
+ 
 
 - The key `newkey` does not exist.
 - The `GETSET` command sets the value of `newkey` to "NewValue".
@@ -89,13 +89,13 @@ OK
 (integer) -1
 ```
 
-`Explanation:`
+ 
 
 - The `newkey` used in the `GETSET` command had an existing `TTL` set to expire in 60 seconds
 - When `GETSET` is executed on the mentioned key, it updates the value and resets the `TTL` on the key.
 - Hence, the `TTL` on `newkey` post `GETSET` returns `-1` , suggesting that the key exists without any `TTL` configured
 
-### Error Example: Wrong Type
+### Wrong Type
 
 ```bash
 127.0.0.1:7379> LPUSH mylist "item"
@@ -103,19 +103,15 @@ OK
 (error) ERROR WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
-`Explanation:`
-
 - The key `mylist` is a list, not a string.
 - The `GETSET` command cannot operate on a list and returns a `WRONGTYPE` error.
 
-### Error Example: Syntax Error
+### Syntax Error
 
 ```bash
 127.0.0.1:7379> GETSET mykey
 (error) ERROR wrong number of arguments for 'getset' command
 ```
-
-`Explanation:`
 
 - The `GETSET` command requires exactly two arguments: a key and a value.
 - Since only one argument is provided, DiceDB returns a syntax error.

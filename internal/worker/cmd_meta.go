@@ -58,6 +58,18 @@ const (
 	CmdJSONArrAppend = "JSON.ARRAPPEND"
 	CmdJSONArrLen    = "JSON.ARRLEN"
 	CmdJSONArrPop    = "JSON.ARRPOP"
+	CmdLrange		= "LRANGE"
+	CmdLinsert		= "LINSERT"
+	CmdJSONForget    = "JSON.FORGET"
+	CmdJSONDel       = "JSON.DEL"
+	CmdJSONToggle    = "JSON.TOGGLE"
+	CmdJSONNumIncrBY = "JSON.NUMINCRBY"
+	CmdJSONNumMultBY = "JSON.NUMMULTBY"
+	CmdLPush         = "LPUSH"
+	CmdRPush         = "RPUSH"
+	CmdLPop          = "LPOP"
+	CmdRPop          = "RPOP"
+	CmdLLEN          = "LLEN"
 )
 
 // Multi-shard commands.
@@ -97,6 +109,7 @@ const (
 	CmdZCard         = "ZCARD"
 	CmdPFAdd         = "PFADD"
 	CmdPFCount       = "PFCOUNT"
+	CmdPFCountWatch  = "PFCOUNT.WATCH"
 	CmdPFMerge       = "PFMERGE"
 	CmdTTL           = "TTL"
 	CmdPTTL          = "PTTL"
@@ -291,6 +304,42 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdBitFieldRO: {
 		CmdType: SingleShard,
 	},
+	CmdLrange: {
+		CmdType: SingleShard,
+	},
+	CmdLinsert: {
+		CmdType: SingleShard,
+	},
+	CmdJSONForget: {
+		CmdType: SingleShard,
+	},
+	CmdJSONDel: {
+		CmdType: SingleShard,
+	},
+	CmdJSONToggle: {
+		CmdType: SingleShard,
+	},
+	CmdJSONNumIncrBY: {
+		CmdType: SingleShard,
+	},
+	CmdJSONNumMultBY: {
+		CmdType: SingleShard,
+	},
+	CmdLPush: {
+		CmdType: SingleShard,
+	},
+	CmdRPush: {
+		CmdType: SingleShard,
+	},
+	CmdLPop: {
+		CmdType: SingleShard,
+	},
+	CmdRPop: {
+		CmdType: SingleShard,
+	},
+	CmdLLEN: {
+		CmdType: SingleShard,
+	},
 
 	// Multi-shard commands.
 	CmdRename: {
@@ -370,6 +419,9 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: Watch,
 	},
 	CmdZRangeWatch: {
+		CmdType: Watch,
+	},
+	CmdPFCountWatch: {
 		CmdType: Watch,
 	},
 

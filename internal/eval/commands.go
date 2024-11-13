@@ -161,9 +161,10 @@ var (
     	1.String ("true"/"false") that represents the resulting Boolean value.
     	2.NONEXISTENT if the document key does not exist.
     	3.WRONGTYPE error if the value at the path is not a Boolean value.`,
-		Eval:     evalJSONTOGGLE,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalJSONTOGGLE,
 	}
 	jsontypeCmdMeta = DiceCmdMeta{
 		Name: "JSON.TYPE",
@@ -192,9 +193,10 @@ var (
 		Returns an integer reply specified as the number of paths deleted (0 or more).
 		Returns RespZero if the key doesn't exist or key is expired.
 		Error reply: If the number of arguments is incorrect.`,
-		Eval:     evalJSONDEL,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalJSONDEL,
 	}
 	jsonarrappendCmdMeta = DiceCmdMeta{
 		Name: "JSON.ARRAPPEND",
@@ -211,9 +213,10 @@ var (
 		Returns an integer reply specified as the number of paths deleted (0 or more).
 		Returns RespZero if the key doesn't exist or key is expired.
 		Error reply: If the number of arguments is incorrect.`,
-		Eval:     evalJSONFORGET,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalJSONFORGET,
 	}
 	jsonarrlenCmdMeta = DiceCmdMeta{
 		Name: "JSON.ARRLEN",
@@ -230,9 +233,10 @@ var (
 		Name: "JSON.NUMMULTBY",
 		Info: `JSON.NUMMULTBY key path value
 		Multiply the number value stored at the specified path by a value.`,
-		Eval:     evalJSONNUMMULTBY,
-		Arity:    3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalJSONNUMMULTBY,
 	}
 	jsonobjlenCmdMeta = DiceCmdMeta{
 		Name: "JSON.OBJLEN",
@@ -846,28 +850,32 @@ var (
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	lpushCmdMeta = DiceCmdMeta{
-		Name:  "LPUSH",
-		Info:  "LPUSH pushes values into the left side of the deque",
-		Eval:  evalLPUSH,
-		Arity: -3,
+		Name:       "LPUSH",
+		Info:       "LPUSH pushes values into the left side of the deque",
+		NewEval:    evalLPUSH,
+		IsMigrated: true,
+		Arity:      -3,
 	}
 	rpushCmdMeta = DiceCmdMeta{
-		Name:  "RPUSH",
-		Info:  "RPUSH pushes values into the right side of the deque",
-		Eval:  evalRPUSH,
-		Arity: -3,
+		Name:       "RPUSH",
+		Info:       "RPUSH pushes values into the right side of the deque",
+		NewEval:    evalRPUSH,
+		IsMigrated: true,
+		Arity:      -3,
 	}
 	lpopCmdMeta = DiceCmdMeta{
-		Name:  "LPOP",
-		Info:  "LPOP pops a value from the left side of the deque",
-		Eval:  evalLPOP,
-		Arity: 2,
+		Name:       "LPOP",
+		Info:       "LPOP pops a value from the left side of the deque",
+		NewEval:    evalLPOP,
+		IsMigrated: true,
+		Arity:      2,
 	}
 	rpopCmdMeta = DiceCmdMeta{
-		Name:  "RPOP",
-		Info:  "RPOP pops a value from the right side of the deque",
-		Eval:  evalRPOP,
-		Arity: 2,
+		Name:       "RPOP",
+		Info:       "RPOP pops a value from the right side of the deque",
+		NewEval:    evalRPOP,
+		IsMigrated: true,
+		Arity:      2,
 	}
 	llenCmdMeta = DiceCmdMeta{
 		Name: "LLEN",
@@ -875,8 +883,9 @@ var (
 		Returns the length of the list stored at key. If key does not exist,
 		it is interpreted as an empty list and 0 is returned.
 		An error is returned when the value stored at key is not a list.`,
-		Eval:  evalLLEN,
-		Arity: 1,
+		NewEval:    evalLLEN,
+		IsMigrated: true,
+		Arity:      1,
 	}
 	dbSizeCmdMeta = DiceCmdMeta{
 		Name:  "DBSIZE",
@@ -1030,11 +1039,12 @@ var (
 		Arity: 1,
 	}
 	jsonnumincrbyCmdMeta = DiceCmdMeta{
-		Name:     "JSON.NUMINCRBY",
-		Info:     `Increment the number value stored at path by number.`,
-		Eval:     evalJSONNUMINCRBY,
-		Arity:    3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Name:       "JSON.NUMINCRBY",
+		Info:       `Increment the number value stored at path by number.`,
+		Arity:      3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalJSONNUMINCRBY,
 	}
 	dumpkeyCMmdMeta = DiceCmdMeta{
 		Name: "DUMP",

@@ -290,32 +290,26 @@ var (
 		Cmd:     "BF.INFO",
 		CmdType: SingleShard,
 	}
-
 	cmsInitByDimCmdMeta = CmdsMeta{
 		Cmd:     "CMS.INITBYDIM",
 		CmdType: SingleShard,
 	}
-
 	cmsInitByProbCmdMeta = CmdsMeta{
 		Cmd:     "CMS.INITBYPROB",
 		CmdType: SingleShard,
 	}
-
 	cmsInfoCmdMeta = CmdsMeta{
 		Cmd:     "CMS.INFO",
 		CmdType: SingleShard,
 	}
-
 	cmsIncrByCmdMeta = CmdsMeta{
 		Cmd:     "CMS.INCRBY",
 		CmdType: SingleShard,
 	}
-
 	cmsQueryCmdMeta = CmdsMeta{
 		Cmd:     "CMS.QUERY",
 		CmdType: SingleShard,
 	}
-
 	cmsMergeCmdMeta = CmdsMeta{
 		Cmd:     "CMS.MERGE",
 		CmdType: SingleShard,
@@ -350,6 +344,54 @@ var (
 	}
 	hmgetCmdMeta = CmdsMeta{
 		Cmd:     "HMGET",
+		CmdType: SingleShard,
+	}
+	lrangeCmdMeta = CmdsMeta{
+		Cmd:     "LRANGE",
+		CmdType: SingleShard,
+	}
+	linsertCmdMeta = CmdsMeta{
+		Cmd:	 "LINSERT",
+    CmdType: SingleShard,
+  }
+	lpushCmdMeta = CmdsMeta{
+		Cmd:     "LPUSH",
+		CmdType: SingleShard,
+	}
+	rpushCmdMeta = CmdsMeta{
+		Cmd:     "RPUSH",
+		CmdType: SingleShard,
+	}
+	lpopCmdMeta = CmdsMeta{
+		Cmd:     "LPOP",
+		CmdType: SingleShard,
+	}
+	rpopCmdMeta = CmdsMeta{
+		Cmd:     "RPOP",
+		CmdType: SingleShard,
+	}
+	llenCmdMeta = CmdsMeta{
+		Cmd:     "LLEN",
+		CmdType: SingleShard,
+	}
+	jsonForgetCmdMeta = CmdsMeta{
+		Cmd:     "JSON.FORGET",
+		CmdType: SingleShard,
+	}
+	jsonDelCmdMeta = CmdsMeta{
+		Cmd:     "JSON.DEL",
+		CmdType: SingleShard,
+	}
+	jsonToggleCmdMeta = CmdsMeta{
+		Cmd:     "JSON.TOGGLE",
+		CmdType: SingleShard,
+	}
+	jsonNumIncrByCmdMeta = CmdsMeta{
+		Cmd:     "JSON.NUMINCRBY",
+		CmdType: SingleShard,
+	}
+	jsonNumMultByCmdMeta = CmdsMeta{
+		Cmd:     "JSON.NUMMULTBY",
 		CmdType: SingleShard,
 	}
 
@@ -455,6 +497,17 @@ func init() {
 	WorkerCmdsMeta["BITFIELD"] = bitfieldCmdMeta
 	WorkerCmdsMeta["BITPOS"] = bitposCmdMeta
 	WorkerCmdsMeta["BITFIELD_RO"] = bitfieldroCmdMeta
-
+	WorkerCmdsMeta["LRANGE"] = lrangeCmdMeta
+	WorkerCmdsMeta["LINSERT"] = linsertCmdMeta
+	WorkerCmdsMeta["LPUSH"] = lpushCmdMeta
+	WorkerCmdsMeta["RPUSH"] = rpushCmdMeta
+	WorkerCmdsMeta["LPOP"] = lpopCmdMeta
+	WorkerCmdsMeta["RPOP"] = rpopCmdMeta
+	WorkerCmdsMeta["LLEN"] = llenCmdMeta
+	WorkerCmdsMeta["JSON.FORGET"] = jsonForgetCmdMeta
+	WorkerCmdsMeta["JSON.DEL"] = jsonDelCmdMeta
+	WorkerCmdsMeta["JSON.TOGGLE"] = jsonToggleCmdMeta
+	WorkerCmdsMeta["JSON.NUMINCRBY"] = jsonNumIncrByCmdMeta
+	WorkerCmdsMeta["JSON.NUMMULTBY"] = jsonNumMultByCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }

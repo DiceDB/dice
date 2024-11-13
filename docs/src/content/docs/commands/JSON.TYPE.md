@@ -71,7 +71,7 @@ If the path does not exist within the JSON document, the command will return `nu
 
 ## Example Usage
 
-### Example 1: Basic Usage
+### Basic Usage
 
 ```bash
 127.0.0.1:7379> JSON.SET user:1001 $ '{"name": "John", "age": 30, "address": {"city": "New York", "zip": "10001"}}'
@@ -86,28 +86,28 @@ OK
 "string"
 ```
 
-### Example 2: Non-Existent Path
+### Non-Existent Path
 
 ```bash
 127.0.0.1:7379> JSON.TYPE user:1001 $.nonexistent
 (empty array)
 ```
 
-### Example 3: Key Does Not Exist
+### Key Does Not Exist
 
 ```bash
 127.0.0.1:7379> JSON.TYPE user:9999 $.name
 (nil)
 ```
 
-### Example 4: Invalid JSONPath
+### Invalid JSONPath
 
 ```bash
 127.0.0.1:7379> JSON.TYPE user:1001 $..name
 "string"
 ```
 
-### Example 5: Non-JSON Data
+### Non-JSON Data
 
 ```bash
 127.0.0.1:7379> SET mykey "This is a string"

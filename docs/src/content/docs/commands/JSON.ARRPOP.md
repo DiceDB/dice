@@ -28,7 +28,7 @@ JSON.ARRPOP key [path [index]]
 
 When the `JSON.ARRPOP` command is executed, the specified element is popped from the array located at the given index at the given path within the JSON document stored under the specified key. If the path does not exist or does not point to an array, an error will be raised.
 
-## Error Handling
+## Errors
 
 1. `Wrong type of value or key`:
 

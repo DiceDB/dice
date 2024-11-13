@@ -48,7 +48,7 @@ When the `JSON.ARRAPPEND` command is executed, the specified JSON values are app
 
 ## Example Usage
 
-### Example 1: Appending a single value to an array
+### Appending a single value to an array
 
 ```bash
 127.0.0.1:7379> JSON.SET myjson . '{"numbers": [1, 2, 3]}'
@@ -59,7 +59,7 @@ OK
 "{\"numbers\":[1,2,3,4]}"
 ```
 
-### Example 2: Appending multiple values to an array
+### Appending multiple values to an array
 
 ```bash
 127.0.0.1:7379> JSON.SET myjson . '{"fruits": ["apple", "banana"]}'
@@ -70,14 +70,14 @@ OK
 "{\"fruits\":[\"apple\",\"banana\",\"cherry\",\"date\"]}"
 ```
 
-### Example 3: Error when key does not exist
+### Error when key does not exist
 
 ```bash
 127.0.0.1:7379> JSON.ARRAPPEND nonexistingkey .array 1
 (error) ERR key does not exist
 ```
 
-### Example 4: Error when path does not exist
+### Error when path does not exist
 
 ```bash
 127.0.0.1:7379> JSON.SET myjson . '{"numbers": [1, 2, 3]}'
@@ -86,7 +86,7 @@ OK
 (error) ERR path .nonexistingpath does not exist
 ```
 
-### Example 5: Error when path is not an array
+### Error when path is not an array
 
 ```bash
 127.0.0.1:7379> JSON.SET myjson . '{"object": {"key": "value"}}'
@@ -95,7 +95,7 @@ OK
 (error) ERR path is not an array
 ```
 
-### Example 6: Error when invalid JSON is provided
+### Error when invalid JSON is provided
 
 ```bash
 127.0.0.1:7379> JSON.SET myjson . '{"numbers": [1, 2, 3]}'

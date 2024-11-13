@@ -6,35 +6,25 @@ description: Documentation for the DiceDB command JSON.TOGGLE
 The `JSON.TOGGLE` command is part of the DiceDBJSON module, which allows you to manipulate JSON data stored in DiceDB. This command is used to toggle the boolean value at a specified path within a JSON document. If the value at the specified path is `true`, it will be changed to `false`, and vice versa.
 
 ## Parameters
+| Parameter | Description                                                                 | Type   | Required |
+| --------- | --------------------------------------------------------------------------- | ------ | -------- |
+| `key`     | The key under which the JSON document is stored.                          | String | Yes      |
+| `path`    | The JSONPath expression specifying the location within the JSON document. | String | Yes      |
 
-- `key`: (String) The key under which the JSON document is stored.
-- `path`: (String) The JSONPath expression specifying the location within the JSON document where the boolean value should be toggled.
 
-### Detailed Parameter Description
+## Return Values
 
-1. `key`:
+| Condition                           | Return Value                                                                 |
+| ----------------------------------- | ---------------------------------------------------------------------------- |
+| Command is successful               | The number of values that were toggled.                                    |
+| Path does not exist                 | `0`                                                                          |
 
-   - `Type`: String
-   - `Description`: The unique identifier for the JSON document stored in DiceDB.
-   - `Example`: `"user:1001"`
-
-2. `path`:
-
-   - `Type`: String
-   - `Description`: A JSONPath expression that specifies the exact location of the boolean value within the JSON document.
-   - `Example`: `$.active`
-
-## Return Value
-
-- `Type`: Integer
-- `Description`: The number of values that were toggled.
-- `Example`: `1` if one boolean value was toggled, `0` if no boolean values were toggled.
 
 ## Behaviour
 
 When the `JSON.TOGGLE` command is executed, it will locate the boolean value at the specified path within the JSON document stored under the given key. If the value is `true`, it will be changed to `false`, and if it is `false`, it will be changed to `true`. If the path does not exist or the value at the path is not a boolean, the command will not perform any toggling and will return `0`.
 
-## Error Handling
+## Errors
 
 The `JSON.TOGGLE` command can raise the following errors:
 
@@ -60,9 +50,9 @@ The `JSON.TOGGLE` command can raise the following errors:
 
 ## Example Usage
 
-### Example 1: Toggling a Boolean Value
+### Toggling a Boolean Value
 
-#### JSON Document
+JSON Document
 
 ```json
 {
@@ -74,19 +64,12 @@ The `JSON.TOGGLE` command can raise the following errors:
 }
 ```
 
-#### Command
-
 ```bash
-JSON.TOGGLE user:1001 $.active
-```
-
-#### Result
-
-```bash
+127.0.0.1:7379> JSON.TOGGLE user:1001 $.active
 (integer) 1
 ```
 
-#### Updated JSON Document
+Updated JSON Document
 
 ```json
 {
@@ -98,21 +81,14 @@ JSON.TOGGLE user:1001 $.active
 }
 ```
 
-### Example 2: Toggling a Nested Boolean Value
-
-#### Command
+### Toggling a Nested Boolean Value
 
 ```bash
-JSON.TOGGLE user:1001 $.settings.notifications
-```
-
-#### Result
-
-```bash
+127.0.0.1:7379> JSON.TOGGLE user:1001 $.settings.notifications
 (integer) 1
 ```
 
-#### Updated JSON Document
+Updated JSON Document
 
 ```json
 {
@@ -124,30 +100,16 @@ JSON.TOGGLE user:1001 $.settings.notifications
 }
 ```
 
-### Example 3: Path Does Not Exist
-
-#### Command
+### Path Does Not Exist
 
 ```bash
-JSON.TOGGLE user:1001 $.nonexistent
-```
-
-#### Result
-
-```bash
+127.0.0.1:7379> JSON.TOGGLE user:1001 $.nonexistent
 (integer) 0
 ```
 
-### Example 4: Value at Path is Not a Boolean
-
-#### Command
+### Value at Path is Not a Boolean
 
 ```bash
-JSON.TOGGLE user:1001 $.name
-```
-
-#### Result
-
-```bash
+127.0.0.1:7379> JSON.TOGGLE user:1001 $.name
 (error) ERR value at path is not a boolean
 ```
