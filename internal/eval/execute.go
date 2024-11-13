@@ -11,18 +11,58 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
-func ExecuteCommand(c *cmd.DiceDBCmd, client *comm.Client, store *dstore.Store, httpOp, websocketOp bool) *EvalResponse {
-	diceCmd, ok := DiceCmds[c.Cmd]
+type Eval struct {
+	cmd                   *cmd.DiceDBCmd
+	client                *comm.Client
+	store                 *dstore.Store
+	isHTTPOperation       bool
+	isWebSocketOperation  bool
+	isPreprocessOperation bool
+}
+
+func NewEval(c *cmd.DiceDBCmd, client *comm.Client, store *dstore.Store, httpOp, websocketOp, preProcessing bool) *Eval {
+	return &Eval{
+		cmd:                   c,
+		client:                client,
+		store:                 store,
+		isHTTPOperation:       httpOp,
+		isWebSocketOperation:  websocketOp,
+		isPreprocessOperation: preProcessing,
+	}
+}
+
+func (e *Eval) PreProcessCommand() *EvalResponse {
+	if f, ok := PreProcessing[e.cmd.Cmd]; ok {
+		return f(e.cmd.Args, e.store)
+	}
+	return &EvalResponse{Result: nil, Error: diceerrors.ErrInternalServer}
+}
+
+func (e *Eval) ExecuteCommand() *EvalResponse {
+	diceCmd, ok := DiceCmds[e.cmd.Cmd]
 	if !ok {
-		return &EvalResponse{Result: diceerrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", c.Cmd, strings.Join(c.Args, " ")), Error: nil}
+		return &EvalResponse{Result: diceerrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", e.cmd.Cmd, strings.Join(e.cmd.Args, " ")), Error: nil}
 	}
 
 	// Temporary logic till we move all commands to new eval logic.
 	// MigratedDiceCmds map contains refactored eval commands
 	// For any command we will first check in the existing map
 	// if command is NA then we will check in the new map
+	// Check if the dice command has been migrated
 	if diceCmd.IsMigrated {
-		return diceCmd.NewEval(c.Args, store)
+		// ===============================================================================
+		// dealing with store object is not recommended for all commands
+		// These operations are specialised for the commands which requires
+		// transfering data across multiple shards. e.g COPY, RENAME
+		// ===============================================================================
+		if e.cmd.InternalObj != nil {
+			// This involves handling object at store level, evaluating it, modifying it, and then storing it back.
+			return diceCmd.StoreObjectEval(e.cmd, e.store)
+		}
+
+		// If the 'Obj' field is nil, handle the command using the arguments.
+		// This path likely involves evaluating the command based on its provided arguments.
+		return diceCmd.NewEval(e.cmd.Args, e.store)
 	}
 
 	// The following commands could be handled at the shard level, however, we can randomly let any shard handle them
@@ -31,14 +71,14 @@ func ExecuteCommand(c *cmd.DiceDBCmd, client *comm.Client, store *dstore.Store, 
 	// Old implementation kept as it is, but we will be moving
 	// to the new implementation soon for all commands
 	case "SUBSCRIBE", "Q.WATCH":
-		return &EvalResponse{Result: EvalQWATCH(c.Args, httpOp, websocketOp, client, store), Error: nil}
+		return &EvalResponse{Result: EvalQWATCH(e.cmd.Args, e.isHTTPOperation, e.isWebSocketOperation, e.client, e.store), Error: nil}
 	case "UNSUBSCRIBE", "Q.UNWATCH":
-		return &EvalResponse{Result: EvalQUNWATCH(c.Args, httpOp, client), Error: nil}
+		return &EvalResponse{Result: EvalQUNWATCH(e.cmd.Args, e.isHTTPOperation, e.client), Error: nil}
 	case auth.Cmd:
-		return &EvalResponse{Result: EvalAUTH(c.Args, client), Error: nil}
+		return &EvalResponse{Result: EvalAUTH(e.cmd.Args, e.client), Error: nil}
 	case "ABORT":
 		return &EvalResponse{Result: clientio.RespOK, Error: nil}
 	default:
-		return &EvalResponse{Result: diceCmd.Eval(c.Args, store), Error: nil}
+		return &EvalResponse{Result: diceCmd.Eval(e.cmd.Args, e.store), Error: nil}
 	}
 }

@@ -96,8 +96,6 @@ func (shard *ShardThread) unregisterWorker(workerID string) {
 
 // processRequest processes a Store operation for the shard.
 func (shard *ShardThread) processRequest(op *ops.StoreOp) {
-	resp := eval.ExecuteCommand(op.Cmd, op.Client, shard.store, op.HTTPOp, op.WebsocketOp)
-
 	shard.workerMutex.RLock()
 	workerChans, ok := shard.workerMap[op.WorkerID]
 	shard.workerMutex.RUnlock()
@@ -110,6 +108,16 @@ func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 		SeqID:     op.SeqID,
 	}
 
+	e := eval.NewEval(op.Cmd, op.Client, shard.store, op.HTTPOp, op.WebsocketOp, op.PreProcessing)
+
+	if op.PreProcessing {
+		resp := e.PreProcessCommand()
+		sp.EvalResponse = resp
+		preProcessChan <- sp
+		return
+	}
+
+	resp := e.ExecuteCommand()
 	if ok {
 		sp.EvalResponse = resp
 	} else {
@@ -119,11 +127,7 @@ func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 		}
 	}
 
-	if op.PreProcessing {
-		preProcessChan <- sp
-	} else {
-		workerChan <- sp
-	}
+	workerChan <- sp
 }
 
 // cleanup handles cleanup logic when the shard stops.

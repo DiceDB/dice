@@ -170,8 +170,13 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 func (w *BaseWorker) executeCommandHandler(execCtx context.Context, errChan chan error, cmds []*cmd.DiceDBCmd, isWatchNotification bool) {
 	// Retrieve metadata for the command to determine if multisharding is supported.
 	meta, ok := CommandsMeta[cmds[0].Cmd]
-	if ok && meta.preProcessingReq {
-		meta.preProcessResponse(w, cmds[0])
+	if ok && meta.preProcessing {
+		if err := meta.preProcessResponse(w, cmds[0]); err != nil {
+			e := w.ioHandler.Write(execCtx, err)
+			if e != nil {
+				slog.Debug("Error executing for worker", slog.String("workerID", w.id), slog.Any("error", err))
+			}
+		}
 	}
 
 	err := w.executeCommand(execCtx, cmds[0], isWatchNotification)
@@ -212,7 +217,13 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 			// If the command supports multisharding, break it down into multiple commands.
 			cmdList, err = meta.decomposeCommand(ctx, w, diceDBCmd)
 			if err != nil {
-				workerErr := w.ioHandler.Write(ctx, err)
+				var workerErr error
+				// Check if it's a CustomError
+				if customErr, ok := err.(*diceerrors.PreProcessError); ok {
+					workerErr = w.ioHandler.Write(ctx, customErr.Result)
+				} else {
+					workerErr = w.ioHandler.Write(ctx, err)
+				}
 				if workerErr != nil {
 					slog.Debug("Error executing for worker", slog.String("workerID", w.id), slog.Any("error", workerErr))
 				}
