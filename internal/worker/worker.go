@@ -309,7 +309,6 @@ func (w *BaseWorker) handleCommandWatch(cmdList []*cmd.DiceDBCmd, watchLabel str
 		Subscribe:    true,
 		WatchCmd:     cmdList[len(cmdList)-1],
 		AdhocReqChan: w.adhocReqChan,
-		WatchLabel:   watchLabel,
 	}
 }
 

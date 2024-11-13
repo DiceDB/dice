@@ -10,7 +10,6 @@ import (
 
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dicedb-go"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -60,8 +59,7 @@ func TestGETWATCH(t *testing.T) {
 
 	respParsers := make([]*clientio.RESPParser, len(subscribers))
 	for i, subscriber := range subscribers {
-		uuid := uuid.New().String()
-		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("GET.WATCH %s %s", getWatchKey, uuid))
+		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("GET.WATCH %s %s", getWatchKey))
 		assert.True(t, rp != nil)
 		respParsers[i] = rp
 
@@ -106,10 +104,8 @@ func TestGETWATCHWithSDK(t *testing.T) {
 		subscribers[i].watch = watch
 		assert.True(t, watch != nil)
 
-		uuid := uuid.New().String()
-		firstMsg, err := watch.Watch(context.Background(), "GET", getWatchKey, uuid)
+		firstMsg, err := watch.Watch(context.Background(), "GET", getWatchKey)
 		assert.Nil(t, err)
-		assert.Equal(t, uuid, firstMsg.Command)
 		assert.Equal(t, "2714318480", firstMsg.Fingerprint)
 
 		channels[i] = watch.Channel()
@@ -139,10 +135,8 @@ func TestGETWATCHWithSDK2(t *testing.T) {
 		watch := subscriber.client.WatchConn(context.Background())
 		subscribers[i].watch = watch
 		assert.True(t, watch != nil)
-		uuid := uuid.New().String()
-		firstMsg, err := watch.GetWatch(context.Background(), getWatchKey, uuid)
+		firstMsg, err := watch.GetWatch(context.Background(), getWatchKey)
 		assert.Nil(t, err)
-		assert.Equal(t, uuid, firstMsg.Command)
 		assert.Equal(t, "2714318480", firstMsg.Fingerprint)
 		channels[i] = watch.Channel()
 	}
@@ -198,13 +192,11 @@ func TestGETWATCHWithLabelWithSDK(t *testing.T) {
 		assert.True(t, watch != nil)
 		subscribers[i].watch = watch
 
-		uuid := uuid.New().String()
-		firstMsg, err := watch.GetWatch(ctx, getWatchWithLabelTestCases[0].key, uuid)
+		firstMsg, err := watch.GetWatch(ctx, getWatchWithLabelTestCases[0].key)
 
 		assert.Nil(t, err)
 		assert.NotNil(t, firstMsg)
 
-		assert.Equal(t, firstMsg.Command, uuid)
 		assert.Equal(t, getWatchWithLabelTestCases[0].fingerprint, firstMsg.Fingerprint)
 
 		val, ok := firstMsg.Data.(string)
@@ -236,12 +228,10 @@ func TestGETWATCHWithLabelWithSDK(t *testing.T) {
 		defer wg.Done()
 		watch := subscribers[0].watch
 
-		uuid := uuid.New().String()
-		firstMsg, err := watch.GetWatch(ctx, getWatchWithLabelTestCases[1].key, uuid)
+		firstMsg, err := watch.GetWatch(ctx, getWatchWithLabelTestCases[1].key)
 
 		assert.Nil(t, err)
 		assert.NotNil(t, firstMsg)
-		assert.Equal(t, firstMsg.Command, uuid)
 		assert.Equal(t, getWatchWithLabelTestCases[1].fingerprint, firstMsg.Fingerprint)
 
 		val, ok := firstMsg.Data.(string)

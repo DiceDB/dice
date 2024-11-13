@@ -15,7 +15,6 @@ type (
 		AdhocReqChan chan *cmd.DiceDBCmd // AdhocReqChan is the channel to send adhoc requests to the worker. Required.
 		WatchCmd     *cmd.DiceDBCmd      // WatchCmd Represents a unique key for each watch artifact, only populated for subscriptions.
 		Fingerprint  uint32              // Fingerprint is a unique identifier for each watch artifact, only populated for unsubscriptions.
-		WatchLabel   string              // WatchLabel is the watch label for the watch command
 	}
 
 	Manager struct {
@@ -126,7 +125,6 @@ func (m *Manager) handleUnsubscription(sub WatchSubscription) {
 				delete(m.querySubscriptionMap, key)
 			}
 		}
-
 		// Also remove the fingerprint from fingerprintCmdMap
 		delete(m.fingerprintCmdMap, fingerprint)
 	}
