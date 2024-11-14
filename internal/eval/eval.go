@@ -2,9 +2,11 @@ package eval
 
 import (
 	"bytes"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"log/slog"
+	"math/big"
 	"sort"
 	"strconv"
 	"strings"
@@ -1359,4 +1361,29 @@ func executeBitfieldOps(value *ByteArray, ops []utils.BitFieldOp) []interface{} 
 		}
 	}
 	return result
+}
+
+// evalRANDOMKEY returns a random key from the currently selected database.
+func evalRANDOMKEY(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) > 0 {
+		return &EvalResponse{Result: nil, Error: errors.New(string(diceerrors.NewErrArity("RANDOMKEY")))}
+	}
+
+	availKeys, err := store.Keys("*")
+	if err != nil {
+		return &EvalResponse{Result: nil,
+			Error: errors.New(string(diceerrors.NewErrWithMessage("could not fetch keys to extract a random key")))}
+	}
+
+	if len(availKeys) > 0 {
+		randKeyIdx, err := rand.Int(rand.Reader, big.NewInt(int64(len(availKeys))))
+		if err != nil {
+			return &EvalResponse{Result: nil,
+				Error: errors.New(string(diceerrors.NewErrWithMessage("could not generate a random key seed")))}
+		}
+
+		return &EvalResponse{Result: availKeys[randKeyIdx.Uint64()], Error: nil}
+	}
+
+	return &EvalResponse{Result: clientio.RespNIL, Error: nil}
 }

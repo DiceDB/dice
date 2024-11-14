@@ -96,6 +96,14 @@ var (
 		NewEval:    evalGET,
 	}
 
+	randomKeyCmdMeta = DiceCmdMeta{
+		Name:       "RANDOMKEY",
+		Info:       `RANDOMKEY returns a random key from the currently selected database.`,
+		Arity:      1,
+		IsMigrated: true,
+		NewEval:    evalRANDOMKEY,
+	}
+
 	getSetCmdMeta = DiceCmdMeta{
 		Name:       "GETSET",
 		Info:       `GETSET returns the previous string value of a key after setting it to a new value.`,
@@ -1501,6 +1509,7 @@ func init() {
 	DiceCmds["PTTL"] = pttlCmdMeta
 	DiceCmds["Q.UNWATCH"] = qUnwatchCmdMeta
 	DiceCmds["Q.WATCH"] = qwatchCmdMeta
+	DiceCmds["RANDOMKEY"] = randomKeyCmdMeta
 	DiceCmds["RENAME"] = renameCmdMeta
 	DiceCmds["RESTORE"] = restorekeyCmdMeta
 	DiceCmds["RPOP"] = rpopCmdMeta
