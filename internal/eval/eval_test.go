@@ -7031,17 +7031,22 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 			input:          []string{"hashKey", "val"},
 			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
-		"append to key created using SETBIT": {
+		"append to key containing byte array": {
 			setup: func() {
 				key := "bitKey"
 				// Create a new byte array object
-				initialByteArray := NewByteArray(1) // Initialize with 1 byte
-				initialByteArray.SetBit(0, true)    // Set the first bit to 1
+				initialByteArray := NewByteArray(2) // Initialize with 2 byte
+				initialByteArray.SetBit(2, true)    // Set the third bit to 1
+				initialByteArray.SetBit(3, true)    // Set the fourth bit to 1
+				initialByteArray.SetBit(5, true)    // Set the sixth bit to 1
+				initialByteArray.SetBit(10, true)   // Set the eleventh bit to 1
+				initialByteArray.SetBit(11, true)   // Set the twelfth bit to 1
+				initialByteArray.SetBit(14, true)   // Set the fifteenth bit to 1
 				obj := store.NewObj(initialByteArray, -1, object.ObjTypeByteArray, object.ObjEncodingByteArray)
 				store.Put(key, obj)
 			},
-			input:          []string{"bitKey", "val"},
-			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
+			input:          []string{"bitKey", "1"},
+			migratedOutput: EvalResponse{Result: 3, Error: nil},
 		},
 		"append value with leading zeros": {
 			setup: func() {

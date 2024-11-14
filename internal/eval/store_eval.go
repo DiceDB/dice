@@ -1115,25 +1115,33 @@ func evalAPPEND(args []string, store *dstore.Store) *EvalResponse {
 			Error:  nil,
 		}
 	}
-	// Key exists path
-	if _, ok := obj.Value.(*sortedset.Set); ok {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongTypeOperation,
-		}
-	}
-	_, currentEnc := object.ExtractTypeEncoding(obj)
 
 	var currentValueStr string
-	switch currentEnc {
+	switch currentType, currentEnc := object.ExtractTypeEncoding(obj); currentEnc {
 	case object.ObjEncodingInt:
 		// If the encoding is an integer, convert the current value to a string for concatenation
 		currentValueStr = strconv.FormatInt(obj.Value.(int64), 10)
 	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
-		// If the encoding is a string, retrieve the string value for concatenation
-		currentValueStr = obj.Value.(string)
+		// If the encoding and type is a string, retrieve the string value for concatenation
+		if currentType == object.ObjTypeString {
+			currentValueStr = obj.Value.(string)
+		} else {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			}
+		}
+	case object.ObjEncodingByteArray:
+		if val, ok := obj.Value.(*ByteArray); ok {
+			currentValueStr = string(val.data)
+		} else {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			}
+		}
 	default:
-		// If the encoding is neither integer nor string, return a "wrong type" error
+		// If the encoding is neither integer, string, nor byte array, return a "wrong type" error
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongTypeOperation,
@@ -1401,7 +1409,6 @@ func jsonGETHelper(store *dstore.Store, path, key string) *EvalResponse {
 	// If path is root, return the entire JSON
 	if path == defaultRootPath {
 		resultBytes, err := sonic.Marshal(jsonData)
-		fmt.Println(string(resultBytes))
 		if err != nil {
 			return &EvalResponse{
 				Result: nil,
@@ -5212,7 +5219,6 @@ func evalSETBIT(args []string, store *dstore.Store) *EvalResponse {
 			// resize as per the offset
 			byteArray = byteArray.IncreaseSize(int(requiredByteArraySize))
 		}
-
 		resp := byteArray.GetBit(int(offset))
 		byteArray.SetBit(int(offset), value)
 
