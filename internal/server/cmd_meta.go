@@ -102,6 +102,14 @@ var (
 		Cmd:     "JSON.ARRPOP",
 		CmdType: SingleShard,
 	}
+	jsonDebugCmdMeta = CmdsMeta{
+		Cmd:     "JSON.DEBUG",
+		CmdType: SingleShard,
+	}
+	jsonRespCmdMeta = CmdsMeta{
+		Cmd:     "JSON.RESP",
+		CmdType: SingleShard,
+	}
 
 	getrangeCmdMeta = CmdsMeta{
 		Cmd:     "GETRANGE",
@@ -352,9 +360,9 @@ var (
 		CmdType: SingleShard,
 	}
 	linsertCmdMeta = CmdsMeta{
-		Cmd:	 "LINSERT",
-    CmdType: SingleShard,
-  }
+		Cmd:     "LINSERT",
+		CmdType: SingleShard,
+	}
 	lpushCmdMeta = CmdsMeta{
 		Cmd:     "LPUSH",
 		CmdType: SingleShard,
@@ -455,6 +463,8 @@ func init() {
 	WorkerCmdsMeta["JSON.ARRAPPEND"] = jsonArrAppendCmdMeta
 	WorkerCmdsMeta["JSON.ARRLEN"] = jsonArrLenCmdMeta
 	WorkerCmdsMeta["JSON.ARRPOP"] = jsonArrPopCmdMeta
+	WorkerCmdsMeta["JSON.DEBUG"] = jsonDebugCmdMeta
+	WorkerCmdsMeta["JSON.RESP"] = jsonRespCmdMeta
 
 	WorkerCmdsMeta["GETRANGE"] = getrangeCmdMeta
 	WorkerCmdsMeta["APPEND"] = appendCmdMeta

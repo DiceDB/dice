@@ -71,6 +71,8 @@ const (
 	CmdJSONType      = "JSON.TYPE"
 	CmdJSONToggle    = "JSON.TOGGLE"
 	CmdJSONNumMultBY = "JSON.NUMMULTBY"
+	CmdJSONDebug     = "JSON.DEBUG"
+	CmdJSONResp      = "JSON.RESP"
 	CmdLPush         = "LPUSH"
 	CmdRPush         = "RPUSH"
 	CmdLPop          = "LPOP"
@@ -281,6 +283,12 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdJSONToggle: {
+		CmdType: SingleShard,
+	},
+	CmdJSONDebug: {
+		CmdType: SingleShard,
+	},
+	CmdJSONResp: {
 		CmdType: SingleShard,
 	},
 	CmdGetRange: {

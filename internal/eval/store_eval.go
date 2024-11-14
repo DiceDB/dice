@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"math"
 	"math/bits"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"unicode"
+	"unsafe"
 
 	"github.com/axiomhq/hyperloglog"
 	"github.com/bytedance/sonic"
@@ -3999,6 +4001,295 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) *EvalResponse {
 	return &EvalResponse{
 		Result: keysList,
 		Error:  nil,
+	}
+}
+
+func evalJSONRESP(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("JSON.RESP"),
+		}
+	}
+	key := args[0]
+
+	path := defaultRootPath
+	if len(args) > 1 {
+		path = args[1]
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	// Check if the object is of JSON type
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	jsonData := obj.Value
+	if path == defaultRootPath {
+		resp := parseJSONStructure(jsonData, false)
+
+		return &EvalResponse{
+			Result: resp,
+			Error:  nil,
+		}
+	}
+
+	// if path is not root then extract value at path
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrInvalidJSONPathType,
+		}
+	}
+	results := expr.Get(jsonData)
+
+	// process value at each path
+	ret := make([]any, 0, len(results))
+
+	for _, result := range results {
+		resp := parseJSONStructure(result, false)
+		ret = append(ret, resp)
+	}
+
+	return &EvalResponse{
+		Result: ret,
+		Error:  nil,
+	}
+}
+
+func parseJSONStructure(jsonData interface{}, nested bool) (resp []any) {
+	switch json := jsonData.(type) {
+	case string, bool:
+		resp = append(resp, json)
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, nil:
+		resp = append(resp, json)
+	case map[string]interface{}:
+		resp = append(resp, "{")
+		for key, value := range json {
+			resp = append(resp, key)
+			resp = append(resp, parseJSONStructure(value, true)...)
+		}
+		// wrap in another array to offset print
+		if nested {
+			resp = []interface{}{resp}
+		}
+	case []interface{}:
+		resp = append(resp, "[")
+		for _, value := range json {
+			resp = append(resp, parseJSONStructure(value, true)...)
+		}
+		// wrap in another array to offset print
+		if nested {
+			resp = []interface{}{resp}
+		}
+	default:
+		resp = append(resp, []byte("(unsupported type)"))
+	}
+	return resp
+}
+
+// evalJSONDEBUG reports value's memory usage in bytes
+// Returns arity error if subcommand is missing
+// Supports only two subcommand as of now - HELP and MEMORY
+func evalJSONDebug(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("JSON.DEBUG"),
+		}
+	}
+	subcommand := strings.ToUpper(args[0])
+	switch subcommand {
+	case Help:
+		return evalJSONDebugHelp()
+	case Memory:
+		return evalJSONDebugMemory(args[1:], store)
+	default:
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("unknown subcommand - try `JSON.DEBUG HELP`"),
+		}
+	}
+}
+
+// evalJSONDebugHelp implements HELP subcommand for evalJSONDebug
+// It returns help text
+// It ignore any other args
+func evalJSONDebugHelp() *EvalResponse {
+	memoryText := "MEMORY <key> [path] - reports memory usage"
+	helpText := "HELP                - this message"
+	message := []string{memoryText, helpText}
+	return &EvalResponse{
+		Result: message,
+		Error:  nil,
+	}
+}
+
+// evalJSONDebugMemory implements MEMORY subcommand for evalJSONDebug
+// It returns value's memory usage in bytes
+func evalJSONDebugMemory(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("JSON.DEBUG"),
+		}
+	}
+	key := args[0]
+
+	// default path is root if not specified
+	path := defaultRootPath
+	if len(args) > 1 {
+		path = args[1] // anymore args are ignored for this command altogether
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	// check if the object is a valid JSON
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrInvalidJSONPathType,
+		}
+	}
+
+	// handle root path
+	if path == defaultRootPath {
+		jsonData := obj.Value
+
+		// memory used by json data
+		size := calculateSizeInBytes(jsonData)
+		if size == -1 {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			}
+		}
+		// add memory used by storage object
+		size += int(unsafe.Sizeof(obj)) + calculateSizeInBytes(obj.LastAccessedAt) + calculateSizeInBytes(obj.TypeEncoding)
+
+		return &EvalResponse{
+			Result: size,
+			Error:  nil,
+		}
+	}
+
+	// handle nested paths
+	var results []any
+	if path != defaultRootPath {
+		// check if path is valid
+		expr, err := jp.ParseString(path)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrInvalidJSONPathType,
+			}
+		}
+
+		results = expr.Get(obj.Value)
+
+		// handle error cases
+		if len(results) == 0 {
+			// this block will return '[]' for out of bound index for an array json type
+			// this will maintain consistency with redis
+			isArray := utils.IsArray(obj.Value)
+			if isArray {
+				arr, ok := obj.Value.([]any)
+				if !ok {
+					return &EvalResponse{
+						Result: nil,
+						Error:  diceerrors.ErrGeneral("invalid array json"),
+					}
+				}
+				// extract index from arg
+				reg := regexp.MustCompile(`^\$\.?\[(\d+|\*)\]`)
+				matches := reg.FindStringSubmatch(path)
+
+				if len(matches) == 2 {
+					// convert index to int
+					index, err := strconv.Atoi(matches[1])
+					if err != nil {
+						return &EvalResponse{
+							Result: nil,
+							Error:  diceerrors.ErrGeneral("unable to extract index"),
+						}
+					}
+					// if index is out of bound return empty array
+					if index >= len(arr) {
+						return &EvalResponse{
+							Result: clientio.EmptyArray,
+							Error:  nil,
+						}
+					}
+				}
+			}
+
+			// for rest json types, throw error
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrFormatted("Path '$.%v' does not exist", path),
+			}
+		}
+	}
+
+	// get memory used by each path
+	sizeList := make([]interface{}, 0, len(results))
+	for _, result := range results {
+		size := calculateSizeInBytes(result)
+		sizeList = append(sizeList, size)
+	}
+
+	return &EvalResponse{
+		Result: sizeList,
+		Error:  nil,
+	}
+}
+
+func calculateSizeInBytes(value interface{}) int {
+	switch convertedValue := value.(type) {
+	case string:
+		return int(unsafe.Sizeof(value)) + len(convertedValue)
+
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool, nil:
+		return int(unsafe.Sizeof(value))
+
+	// object
+	case map[string]interface{}:
+		size := int(unsafe.Sizeof(value))
+		for k, v := range convertedValue {
+			size += int(unsafe.Sizeof(k)) + len(k) + calculateSizeInBytes(v)
+		}
+		return size
+
+	// array
+	case []interface{}:
+		size := int(unsafe.Sizeof(value))
+		for _, elem := range convertedValue {
+			size += calculateSizeInBytes(elem)
+		}
+		return size
+
+	// unknown type
+	default:
+		return -1
 	}
 }
 
