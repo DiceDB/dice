@@ -10,7 +10,7 @@ import (
 )
 
 var deqRandGenerator *rand.Rand
-var deqRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_!@#$%^&*()-=+[]\\;':,.<>/?~.|")
+var deqRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 func deqRandStr(n int) string {
 	b := make([]rune, n)
