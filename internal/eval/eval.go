@@ -1375,8 +1375,7 @@ func evalRANDOMKEY(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	if len(availKeys) > 0 {
-		maxIters := 128
-		for range maxIters {
+		for range len(availKeys) {
 			randKeyIdx, err := rand.Int(rand.Reader, big.NewInt(int64(len(availKeys))))
 			if err != nil {
 				continue
