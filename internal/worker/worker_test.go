@@ -1,4 +1,4 @@
-package server
+package worker_test
 
 import(
 	"testing"
@@ -11,25 +11,27 @@ import(
 	"net/http"
 	"time"
 
-	
 	dice "github.com/dicedb/dicedb-go"
 	diceerrors "github.com/dicedb/dice/internal/errors"
+	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dice/internal/watchmanager"
+	"github.com/dicedb/dice/internal/wal"
 	"github.com/dicedb/dice/internal/shard"
 	"github.com/dicedb/dice/config"
-	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dice/internal/server/resp"
-	"github.com/dicedb/dice/internal/worker"
 	"github.com/dicedb/dice/internal/server/abstractserver"
-
+	"github.com/dicedb/dice/internal/worker"
 )
 
-func BenchmarkStart(b *testing.B){
+func BenchmarkWorkerStart(b *testing.B) {
 	numShards := runtime.NumCPU()
 	runtime.GOMAXPROCS(numShards)
 
 	var queryWatchChan chan dstore.QueryWatchEvent
 	var cmdWatchChan   chan dstore.CmdWatchEvent
+	var cmdWatchSubscriptionChan = make(chan watchmanager.WatchSubscription)
 	var serverErrCh = make(chan error, 2)
+	var wl wal.AbstractWAL
 
 	shardManager := shard.NewShardManager(uint8(numShards), queryWatchChan, cmdWatchChan, serverErrCh)
 
@@ -46,8 +48,7 @@ func BenchmarkStart(b *testing.B){
 	var serverWg sync.WaitGroup
 
 	workerManager := worker.NewWorkerManager(config.DiceConfig.Performance.MaxClients, shardManager)
-	respServer := resp.NewServer(shardManager, workerManager, cmdWatchChan, serverErrCh)
-
+	respServer := resp.NewServer(shardManager, workerManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh, wl)
 	serverWg.Add(1)
 	go runServer(ctx, &serverWg, respServer, serverErrCh)
 
@@ -94,7 +95,7 @@ func BenchmarkStart(b *testing.B){
 	}
 	cancel()
 	wg.Wait()
-	serverWg.Wait()
+	serverWg.Wait() 
 }
 
 func runServer(ctx context.Context, wg *sync.WaitGroup, srv abstractserver.AbstractServer, errCh chan<- error) {
