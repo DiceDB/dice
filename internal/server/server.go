@@ -126,8 +126,8 @@ func (s *AsyncServer) InitiateShutdown() {
 		if err := syscall.Close(fd); err != nil {
 			slog.Warn("failed to close client connection", slog.Any("error", err))
 		}
-		// todo: delete from `abstractserver.Clients`
 		delete(s.connectedClients, fd)
+		abstractserver.RemoveClientByFd(fd)
 	}
 }
 
@@ -260,7 +260,7 @@ func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
 			slog.Error("error closing client connection", slog.Any("error", err))
 		}
 		delete(s.connectedClients, event.Fd)
-		// todo: delete from `abstractserver.Clients`
+		abstractserver.RemoveClientByFd(event.Fd)
 		return err
 	}
 
