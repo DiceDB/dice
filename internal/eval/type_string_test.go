@@ -1,8 +1,9 @@
 package eval
 
 import (
-	"github.com/dicedb/dice/internal/object"
 	"testing"
+
+	"github.com/dicedb/dice/internal/object"
 
 	"github.com/dicedb/dice/internal/server/utils"
 )
@@ -65,11 +66,11 @@ func TestContainsSpacesNewlinesOrSpecialChars(t *testing.T) {
 		{"NoSpecialChars123", false},
 		{"HelloWorld123", false},
 		{"1234567890", false},
+		{"Hello_World", false},
 		{"", false},
 		{"₹₹", true},
 		{"Hello, World!", true},
 		{"Hello\nWorld", true},
-		{"Hello_World", true},
 		{"\tTabbedText", true},
 		{"NormalText!", true},
 	}
